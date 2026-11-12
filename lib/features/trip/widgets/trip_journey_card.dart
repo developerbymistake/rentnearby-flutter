@@ -1,8 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:bakhli/design/design.dart';
 import 'package:get/get.dart';
-import '../../../config/app_colors.dart';
-import '../../../config/module_palette.dart';
 import '../../../utils/app_toast.dart';
 import '../../../widgets/location_switch_sheet.dart';
 import '../../taxi/journeys/journey_actions.dart';
@@ -14,7 +13,6 @@ import '../controllers/trip_plan_controller.dart';
 import '../models/trip_enquiry_model.dart';
 import '../models/trip_journey_model.dart';
 import '../models/trip_plan_model.dart';
-import '../trip_colors.dart';
 import '../trip_navigation.dart';
 import '../trip_strings_v2_find.dart';
 import '../utils/trip_travel_rules.dart';
@@ -161,7 +159,7 @@ class TripJourneyCard {
   static Future<void> pickStart(BuildContext context) async {
     final c = TripPlanController.to;
     if (c.isReadOnly) return;
-    final p = await LocationSwitchSheet.pick(context, palette: ModulePalette.trip, title: TripStringsJourneyCard.pickStart);
+    final p = await LocationSwitchSheet.pick(context, palette: templateModulePalette, title: TripStringsJourneyCard.pickStart);
     if (p == null) return;
     final moved = await c.setStartFrom(TripStartFrom(name: p.name, lat: p.latitude, lon: p.longitude));
     if (moved && context.mounted) await askSearchAgain(context);
@@ -173,34 +171,20 @@ class TripJourneyCard {
     final again = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: const RoundedRectangleBorder(borderRadius: CardRadius.tile),
         title: const Text(
           TripStringsJourneyCard.startChanged,
-          style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 17),
+          style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontWeight: FontWeight.w600, fontSize: 17),
         ),
         content: Text(
           TripStringsJourneyCard.searchFromAgain(city),
-          style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textMedium),
+          style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 13, color: FitnessAppTheme.darkText),
         ),
         actionsOverflowDirection: VerticalDirection.down,
         actionsOverflowButtonSpacing: 4,
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            style: TextButton.styleFrom(minimumSize: const Size(64, 44)),
-            child: const Text(
-              TripStringsJourneyCard.later,
-              style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, color: AppColors.textLight),
-            ),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: TextButton.styleFrom(minimumSize: const Size(64, 44)),
-            child: const Text(
-              TripStringsJourneyCard.searchAgain,
-              style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, color: TripColors.accentDark),
-            ),
-          ),
+          TextLink(label: TripStringsJourneyCard.later, onTap: () => Navigator.pop(ctx, false), tone: KitTone.trip),
+          TextLink(label: TripStringsJourneyCard.searchAgain, onTap: () => Navigator.pop(ctx, true), tone: KitTone.trip),
         ],
       ),
     );

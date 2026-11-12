@@ -69,6 +69,7 @@ class TripSkipReasons {
   static const String blocked = 'Blocked';
   static const String limitReached = 'LimitReached';
   static const String alreadyBooked = 'AlreadyBooked';
+  static const String openInAnotherTrip = 'OpenInAnotherTrip';
 }
 
 class TripContextDay {
@@ -560,12 +561,41 @@ class TripSkipped {
 List<TripEnquiryModel> _enquiryList(Object? raw) =>
     ((raw as List?) ?? const []).whereType<Map<String, dynamic>>().map(TripEnquiryModel.fromJson).toList();
 
+class TripSendResult {
+  final String listingId;
+  final String status;
+  final String? enquiryId;
+  final String? reason;
+
+  const TripSendResult({required this.listingId, required this.status, this.enquiryId, this.reason});
+
+  bool get ok => status == 'Sent' || status == 'AlreadyOpen' || status == 'Replayed';
+
+  bool get otherTrip => status == TripSkipReasons.openInAnotherTrip;
+
+  bool get gone => status == 'NotAvailable' || status == 'Blocked';
+
+  bool get created => status == 'Sent' || status == 'Replayed';
+
+  factory TripSendResult.fromJson(Map<String, dynamic> j) => TripSendResult(
+        listingId: j['listingId'] as String? ?? j['taxiId'] as String? ?? '',
+        status: j['status'] as String? ?? 'Failed',
+        enquiryId: j['enquiryId'] as String?,
+        reason: j['reason'] as String?,
+      );
+
+  static List<TripSendResult> parseList(Object? raw) => [
+        for (final m in ((raw as List?) ?? const []).whereType<Map<String, dynamic>>()) TripSendResult.fromJson(m),
+      ];
+}
+
 class TripEnquiryBatch {
   final List<TripEnquiryModel> items;
   final List<TripSkipped> skipped;
   final bool veryShortNotice;
   final List<String> updated;
   final int? asksLeft;
+  final List<TripSendResult> results;
 
   const TripEnquiryBatch({
     required this.items,
@@ -573,7 +603,25 @@ class TripEnquiryBatch {
     required this.veryShortNotice,
     this.updated = const [],
     this.asksLeft,
+    this.results = const [],
   });
+
+  List<TripSendResult> get perRecipient {
+    if (results.isNotEmpty) return results;
+    return [
+      for (final e in items) TripSendResult(listingId: e.listingId, status: 'Sent', enquiryId: e.id),
+      for (final s in skipped) TripSendResult(listingId: s.listingId, status: _statusOfSkip(s.reason), reason: s.reason),
+    ];
+  }
+
+  static String _statusOfSkip(String reason) => switch (reason) {
+        TripSkipReasons.alreadyOpen => 'AlreadyOpen',
+        TripSkipReasons.openInAnotherTrip => 'OpenInAnotherTrip',
+        TripSkipReasons.notAvailable => 'NotAvailable',
+        TripSkipReasons.blocked => 'Blocked',
+        TripSkipReasons.limitReached => 'LimitReached',
+        _ => 'Failed',
+      };
 
   factory TripEnquiryBatch.fromJson(Map<String, dynamic> json, {int? asksLeft}) => TripEnquiryBatch(
         items: _enquiryList(json['items']),
@@ -584,6 +632,7 @@ class TripEnquiryBatch {
         veryShortNotice: json['veryShortNotice'] == true,
         updated: ((json['updated'] as List?) ?? const []).whereType<String>().toList(),
         asksLeft: asksLeft,
+        results: TripSendResult.parseList(json['results']),
       );
 
   bool isUpdated(String enquiryId) => updated.contains(enquiryId);

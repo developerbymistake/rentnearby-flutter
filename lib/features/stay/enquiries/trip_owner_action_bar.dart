@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../../../config/app_colors.dart';
+import 'package:bakhli/design/design.dart';
 import '../../trip/models/trip_enquiry_model.dart';
 import '../../trip/trip_strings.dart';
 import '../../trip/widgets/trip_status.dart';
@@ -22,7 +22,11 @@ class TripOwnerActionBar extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-      color: Colors.white,
+      decoration: BoxDecoration(
+        color: DesignColors.surface,
+        border: const Border(top: BorderSide(color: DesignColors.dividerSoft)),
+        boxShadow: StayBrowseTokens.topBarShadow,
+      ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
         if (_revisedWaiting)
           const Padding(
@@ -30,7 +34,7 @@ class TripOwnerActionBar extends StatelessWidget {
             child: Text('${TripStrings.revisedOffer} · ${TripStrings.notAcceptedYet}',
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.warningText)),
+                style: TextStyle(fontFamily: TypeTokens.family, fontSize: 12, fontWeight: FontWeight.w600, color: DesignColors.textStrong)),
           ),
         Wrap(spacing: 8, runSpacing: 8, children: buttons),
         if (advanceRow.isNotEmpty) ...[
@@ -84,8 +88,9 @@ class TripOwnerActionBar extends StatelessWidget {
       child: PopupMenuButton<String>(
         padding: EdgeInsets.zero,
         tooltip: '',
-        icon: const Icon(Icons.more_vert_rounded, size: 20, color: AppColors.textMedium),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        icon: const Icon(Icons.more_vert_rounded, size: 20, color: DesignColors.textGrey),
+        color: DesignColors.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         onSelected: (v) async {
           if (ctrl.busyIds.contains(enquiry.id)) return;
           final done = v == 'ask'
@@ -96,11 +101,11 @@ class TripOwnerActionBar extends StatelessWidget {
         itemBuilder: (_) => [
           if (!cancelOnly)
             const PopupMenuItem<String>(
-                value: 'ask', height: 44, child: Text(TripStrings.askAgain, style: TextStyle(fontSize: 13))),
+                value: 'ask', height: 44, child: Text(TripStrings.askAgain, style: TextStyle(fontFamily: TypeTokens.family, fontSize: 13, color: DesignColors.textStrong))),
           const PopupMenuItem<String>(
               value: 'cancel',
               height: 44,
-              child: Text(TripStrings.cancelBooking, style: TextStyle(fontSize: 13, color: AppColors.error))),
+              child: Text(TripStrings.cancelBooking, style: TextStyle(fontFamily: TypeTokens.family, fontSize: 13, color: DesignColors.error))),
         ],
       ),
     );

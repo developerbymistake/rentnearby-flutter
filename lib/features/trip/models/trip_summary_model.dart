@@ -377,13 +377,28 @@ class TripSummaryArrangement {
   final String title;
   final TripRowState state;
   final String? detail;
+  final bool partial;
+  final int? nightsCovered;
+  final int? nightsTotal;
 
   const TripSummaryArrangement({
     required this.key,
     this.title = '',
     this.state = TripRowState.todo,
     this.detail,
+    this.partial = false,
+    this.nightsCovered,
+    this.nightsTotal,
   });
+
+  bool get isDone => state.isDone && !partial;
+
+  String? get detailLine {
+    final d = detail;
+    if (d != null && d.isNotEmpty) return d;
+    if (partial && nightsCovered != null && nightsTotal != null) return '$nightsCovered of $nightsTotal nights';
+    return null;
+  }
 
   static TripSummaryArrangement? tryParse(Object? raw) {
     if (raw is! Map) return null;
@@ -391,11 +406,19 @@ class TripSummaryArrangement {
     final key = TripEasyRowKey.parse(id is String ? id : null);
     if (key == null) return null;
     final detail = raw['detail'];
+    final covered = (raw['nightsCovered'] as num?)?.toInt();
+    final total = (raw['nightsTotal'] as num?)?.toInt();
+    final partial = raw['partial'] is bool
+        ? raw['partial'] as bool
+        : (total != null && total > 0 && covered != null && covered < total);
     return TripSummaryArrangement(
       key: key,
       title: raw['title'] as String? ?? '',
       state: TripRowState.parse(raw['state']),
       detail: detail is String && detail.trim().isNotEmpty ? detail.trim() : null,
+      partial: partial,
+      nightsCovered: covered,
+      nightsTotal: total,
     );
   }
 }
@@ -409,6 +432,7 @@ class TripSummaryRecord {
   final int adults;
   final int kids;
   final String bookingState;
+  final String status;
   final int agreedTotal;
   final DateTime? generatedAt;
   final List<TripSummaryNight> nights;
@@ -430,6 +454,7 @@ class TripSummaryRecord {
     this.adults = 0,
     this.kids = 0,
     this.bookingState = 'draft',
+    this.status = '',
     this.agreedTotal = 0,
     this.generatedAt,
     this.nights = const [],
@@ -457,6 +482,7 @@ class TripSummaryRecord {
         adults: (json['adults'] as num?)?.toInt() ?? 0,
         kids: (json['kids'] as num?)?.toInt() ?? 0,
         bookingState: json['bookingState'] as String? ?? 'draft',
+        status: json['status'] as String? ?? '',
         agreedTotal: (json['agreedTotal'] as num?)?.toInt() ?? 0,
         generatedAt: tripInstant(json['generatedAt']),
         nights: _list(json['nights'], TripSummaryNight.fromJson),
@@ -491,6 +517,7 @@ class TripSummaryRecord {
       adults: adults,
       kids: kids,
       bookingState: bookingState,
+      status: status,
       agreedTotal: agreedTotal,
       generatedAt: generatedAt,
       nights: nights,
@@ -529,4 +556,29 @@ class TripSummaryRecord {
 
   bool get isBlank => isEmpty && !hasItinerary;
   int get people => adults + kids;
+}
+
+extension TripSummaryProgress on TripSummaryRecord {
+  List<TripSummaryArrangement> get shownRows => [for (final a in arrangements) if (a.state != TripRowState.skipped) a];
+
+  List<TripSummaryArrangement> get stillToDo => [for (final a in shownRows) if (!a.isDone) a];
+
+  bool get isPast {
+    final end = endDate ?? startDate;
+    if (end == null) return false;
+    final now = DateTime.now().toUtc().add(const Duration(hours: 5, minutes: 30));
+    return DateTime(end.year, end.month, end.day).isBefore(DateTime(now.year, now.month, now.day));
+  }
+
+  bool get isCompleted => bookingState.toLowerCase() == 'completed' || status.toLowerCase() == 'completed' || isPast;
+
+  int? get percentDone {
+    final rows = shownRows;
+    if (rows.isEmpty) return null;
+    return (rows.where((a) => a.isDone).length * 100 / rows.length).round();
+  }
+
+  List<TripSummaryNight> get allNights => isMultiCity ? [for (final l in legs) ...l.nights] : nights;
+
+  List<TripSummaryTaxi> get allTaxis => isMultiCity ? [for (final l in legs) ...l.taxis] : taxis;
 }

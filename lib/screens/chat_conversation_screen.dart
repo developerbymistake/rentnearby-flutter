@@ -1,9 +1,10 @@
-import 'package:animate_do/animate_do.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:uuid/uuid.dart';
-import '../config/app_colors.dart';
+import 'package:bakhli/design/design.dart';
+import 'package:bakhli/design/extra/chat_kit.dart';
+import 'package:bakhli/design/extra/replies_kit.dart';
 import '../config/app_routes.dart';
 import '../controllers/chat_controller.dart';
 import '../features/stay/enquiries/stay_enquiries_controller.dart';
@@ -29,7 +30,6 @@ import '../services/chat_hub_service.dart';
 import '../services/notification_service.dart';
 import '../utils/app_toast.dart';
 import '../utils/contact_launcher.dart';
-import '../utils/listing_kind_visuals.dart';
 import '../widgets/chat_message_bubble.dart';
 import '../widgets/chat_next_slot_bubble.dart';
 import '../widgets/chat_plus_menu_sheet.dart';
@@ -47,10 +47,12 @@ class ChatConversationScreen extends StatefulWidget {
 class _ChatConversationScreenState extends State<ChatConversationScreen>
     with WidgetsBindingObserver {
   final _chatCtrl = Get.find<ChatController>();
+  static const KitTone _badTone = KitTone.danger;
 
   late final String _conversationId;
   late final String _listingType;
-  Color get _accent => ListingKindVisuals.accentOf(_listingType);
+  ChatKindStyle get _kind => ChatKindStyle.of(_listingType);
+  Color get _accent => _kind.dark;
   late final String? _stayTypeId;
   late final String _otherPartyId;
   late final String _otherPartyName;
@@ -397,22 +399,21 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
         final ok = await showDialog<bool>(
           context: context,
           builder: (ctx) => AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            title: Text(TripStrings.keepPriceQ(money),
-                style: const TextStyle(fontFamily: 'Poppins', fontSize: 15, fontWeight: FontWeight.w600)),
-            content: const Text(TripStrings.keepPriceBody,
-                style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textMedium, height: 1.4)),
+            title: Text(TripStrings.keepPriceQ(money), style: FitnessAppTheme.title),
+            content: Text(TripStrings.keepPriceBody,
+                style: FitnessAppTheme.body2.copyWith(color: FitnessAppTheme.lightText, height: 1.4)),
             actions: [
               TextButton(
                 style: TextButton.styleFrom(minimumSize: const Size(64, 48)),
                 onPressed: () => Navigator.pop(ctx, false),
-                child: const Text(TripStrings.cancelAction, style: TextStyle(fontFamily: 'Poppins', color: AppColors.textLight)),
+                child: Text(TripStrings.cancelAction,
+                    style: FitnessAppTheme.body2.copyWith(color: FitnessAppTheme.lightText, fontWeight: FontWeight.w500)),
               ),
               TextButton(
                 style: TextButton.styleFrom(minimumSize: const Size(64, 48)),
                 onPressed: () => Navigator.pop(ctx, true),
                 child: Text(TripStrings.keepPrice(money),
-                    style: const TextStyle(fontFamily: 'Poppins', color: AppColors.textDark, fontWeight: FontWeight.w600)),
+                    style: FitnessAppTheme.body2.copyWith(color: FitnessAppTheme.darkerText, fontWeight: FontWeight.w700)),
               ),
             ],
           ),
@@ -451,22 +452,21 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
       final ok = await showDialog<bool>(
         context: context,
         builder: (ctx) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: const Text(TripStrings.declineQuestion,
-              style: TextStyle(fontFamily: 'Poppins', fontSize: 15, fontWeight: FontWeight.w600)),
-          content: const Text(TripStrings.declineNote,
-              style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textMedium, height: 1.4)),
+          title: Text(TripStrings.declineQuestion, style: FitnessAppTheme.title),
+          content: Text(TripStrings.declineNote,
+              style: FitnessAppTheme.body2.copyWith(color: FitnessAppTheme.lightText, height: 1.4)),
           actions: [
             TextButton(
               style: TextButton.styleFrom(minimumSize: const Size(64, 48)),
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text(TripStrings.keep, style: TextStyle(fontFamily: 'Poppins', color: AppColors.textLight)),
+              child: Text(TripStrings.keep,
+                  style: FitnessAppTheme.body2.copyWith(color: FitnessAppTheme.lightText, fontWeight: FontWeight.w500)),
             ),
             TextButton(
               style: TextButton.styleFrom(minimumSize: const Size(64, 48)),
               onPressed: () => Navigator.pop(ctx, true),
-              child: const Text(TripStrings.decline,
-                  style: TextStyle(fontFamily: 'Poppins', color: AppColors.error, fontWeight: FontWeight.w600)),
+              child: Text(TripStrings.decline,
+                  style: FitnessAppTheme.body2.copyWith(color: RepliesTone.bad, fontWeight: FontWeight.w700)),
             ),
           ],
         ),
@@ -704,7 +704,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
         _scrollCtrl.animateTo(
           target,
           duration: const Duration(milliseconds: 280),
-          curve: Curves.easeOutCubic,
+          curve: Curves.fastOutSlowIn,
         );
       } else {
         _scrollCtrl.jumpTo(target);
@@ -872,17 +872,19 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
     // gradient-headed screen already renders correctly against.
     if (_invalidArgs) {
       return const Scaffold(
-        backgroundColor: AppColors.surfaceWarm,
-        body: Center(child: CircularProgressIndicator(color: AppColors.primary)),
+        backgroundColor: DesignColors.scaffold,
+        body: Center(child: CircularProgressIndicator(color: DesignColors.primary)),
       );
     }
     return Scaffold(
-      backgroundColor: AppColors.surfaceWarm,
-      body: Column(
+      backgroundColor: DesignColors.scaffold,
+      body: StaggerHost(
+        count: 3,
+        child: Column(
         children: [
-          _buildHeader(context),
-          if (_isStay) _buildTripStrip(),
-          _buildSafetyStrip(),
+          StaggerItem(index: 0, offset: 30, child: _buildHeader(context)),
+          if (_isStay) StaggerItem(index: 1, child: _buildTripStrip()),
+          StaggerItem(index: 2, child: _buildSafetyStrip()),
           Expanded(
             child: SafeArea(
               top: false,
@@ -891,11 +893,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
                   Expanded(
                     child: Obx(() {
                       if (_loading.value) {
-                        return Center(
-                          child: CircularProgressIndicator(
-                            color: _accent,
-                          ),
-                        );
+                        return _buildSkeleton();
                       }
                       // Built *after* the loading check so a brand-new, empty conversation still gets
                       // the inline "next slot" bubble as its only item — that's the only way to open
@@ -919,12 +917,13 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
                       // shorter than the viewport.
                       return RefreshIndicator(
                         color: _accent,
+                        backgroundColor: DesignColors.surface,
                         onRefresh: _loadHistory,
                         child: ListView(
                           controller: _scrollCtrl,
-                          physics: const AlwaysScrollableScrollPhysics(),
+                          physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
+                            horizontal: KitMetrics.gutter,
                             vertical: 10,
                           ),
                           children: renderList,
@@ -942,6 +941,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
             ),
           ),
         ],
+        ),
       ),
     );
   }
@@ -1044,17 +1044,32 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
   }
 
   // Keys each bubble by its stable message id so Flutter's reconciliation reuses the same
-  // Element/State across unrelated Obx rebuilds (e.g. a read-receipt flip) — FadeInUp only
+  // Element/State across unrelated Obx rebuilds (e.g. a read-receipt flip) — ChatReveal only
   // (re)starts from initState, so a preserved State means the entrance plays exactly once,
   // on first mount, and never replays on messages that were already on screen.
   Widget _animatedBubble(String id, Widget child) => KeyedSubtree(
     key: ValueKey(id),
-    child: FadeInUp(
-      duration: const Duration(milliseconds: 320),
-      from: 16,
-      child: child,
-    ),
+    child: ChatReveal(animate: !_loadingOlder.value, child: child),
   );
+
+  Widget _buildSkeleton() {
+    const widths = [180.0, 140.0, 220.0, 120.0, 190.0];
+    return ListView.builder(
+      physics: const NeverScrollableScrollPhysics(),
+      padding: const EdgeInsets.symmetric(horizontal: KitMetrics.gutter, vertical: 10),
+      itemCount: widths.length,
+      itemBuilder: (_, i) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Align(
+          alignment: i.isOdd ? Alignment.centerRight : Alignment.centerLeft,
+          child: EntranceOnce(
+            index: i,
+            child: TemplatePlaceholder(height: 40, width: widths[i], radius: 16),
+          ),
+        ),
+      ),
+    );
+  }
 
   // Fixed, non-dismissible, unconditional (both owner and renter) — always visible for the
   // whole life of the screen, not gated on any state or event. Sits outside the scrollable
@@ -1064,20 +1079,19 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
   Widget _buildSafetyStrip() {
     return Container(
       width: double.infinity,
-      color: AppColors.surface,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+      decoration: const BoxDecoration(
+        color: DesignColors.surface,
+        boxShadow: ShadowTokens.elev1,
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: KitMetrics.gutter, vertical: 8),
       child: Row(
         children: [
-          const Icon(Icons.info_outline_rounded, size: 14, color: AppColors.primaryLight),
-          const SizedBox(width: 6),
+          const Icon(Icons.info_outline_rounded, size: 16, color: DesignColors.primaryLight),
+          const SizedBox(width: 8),
           Expanded(
             child: Text(
               'Bakhli never collects rent or advance. Always meet and visit before paying.',
-              style: const TextStyle(
-                fontFamily: 'Poppins',
-                fontSize: 11,
-                color: AppColors.textMedium,
-              ),
+              style: TypeTokens.style(12, FontWeight.w500, color: TypeTokens.secondary),
             ),
           ),
         ],
@@ -1086,133 +1100,89 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
   }
 
   Widget _buildHeader(BuildContext context) {
-    // SafeArea lives INSIDE the gradient Container (not wrapping it) — same pattern
-    // explore_screen.dart's header already uses — so the gradient's own paint area starts
-    // at the very top of the screen, genuinely extending behind the status bar, and only the
-    // Row's content gets padded down to clear it. This is what makes the status bar read as
-    // "part of the navy header" instead of a separate light strip above it.
-    return Container(
-      decoration: BoxDecoration(gradient: ListingKindVisuals.gradientOf(_listingType)),
-      child: SafeArea(
-        bottom: false,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-          child: Row(
-            children: [
-              IconButton(
-                onPressed: () => Get.back(),
-                icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
-              ),
-              CircleAvatar(
-                radius: 18,
-                backgroundColor: Colors.white.withValues(alpha: 0.2),
-                child: Text(
-                  _otherPartyName.isNotEmpty
-                      ? _otherPartyName[0].toUpperCase()
-                      : '?',
-                  style: const TextStyle(
-                    fontFamily: 'Poppins',
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white,
+    final subtitleStyle = TypeTokens.onGradientBody;
+    return ModuleHeader(
+      onBack: () => Get.back(),
+      gradient: _kind.gradient,
+      tone: KitTone.solid(_kind.dark),
+      autoHeight: true,
+      animate: false,
+      title: _otherPartyName,
+      leading: Container(
+        width: 40,
+        height: 40,
+        alignment: Alignment.center,
+        decoration: const BoxDecoration(color: DesignColors.whiteSoft, shape: BoxShape.circle),
+        child: Text(
+          _otherPartyName.isNotEmpty ? _otherPartyName[0].toUpperCase() : '?',
+          style: TypeTokens.style(17, FontWeight.w700, color: DesignColors.surface),
+        ),
+      ),
+      subtitleWidget: Text.rich(
+        TextSpan(children: [
+          WidgetSpan(
+            alignment: PlaceholderAlignment.middle,
+            child: TravelIcon(_listingType == 'Stay' ? TravelIcon.stay : TravelIcon.place, size: 14),
+          ),
+          TextSpan(
+            text: ' $_listingTitle'
+                '${_area != null && _area.isNotEmpty ? ' · $_area' : ''}',
+          ),
+        ]),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: subtitleStyle,
+      ),
+      trailing: [
+        Obx(() {
+          final isBlocked = _isBlockedByMe.value;
+          return PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert_rounded, color: DesignColors.surface),
+            color: DesignColors.surface,
+            elevation: 4,
+            shadowColor: DesignColors.shadowBase,
+            shape: const RoundedRectangleBorder(borderRadius: CardRadius.tile),
+            onSelected: (v) {
+              if (v == 'report') {
+                _isOwner ? _reportTraveller() : _reportHost(_listingId);
+              } else {
+                isBlocked ? _confirmUnblockUser() : _confirmBlockUser();
+              }
+            },
+            itemBuilder: (_) => [
+              if (_isStay && (!_isOwner || _enquiry.value != null))
+                PopupMenuItem(
+                  value: 'report',
+                  height: 48,
+                  child: Row(
+                    children: [
+                      const Icon(Icons.flag_outlined, size: 18, color: FitnessAppTheme.lightText),
+                      const SizedBox(width: 10),
+                      Text(TripStrings.report, style: FitnessAppTheme.body2.copyWith(color: FitnessAppTheme.darkerText)),
+                    ],
                   ),
                 ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
+              PopupMenuItem(
+                value: isBlocked ? 'unblock' : 'block',
+                child: Row(
                   children: [
-                    Text(
-                      _otherPartyName,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontFamily: 'Poppins',
-                        fontSize: 14.5,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
-                      ),
+                    Icon(
+                      isBlocked ? Icons.check_circle_outline_rounded : Icons.block_rounded,
+                      size: 18,
+                      color: isBlocked ? DesignColors.goodDeep : RepliesTone.bad,
                     ),
+                    const SizedBox(width: 10),
                     Text(
-                      '${_listingType == 'Stay' ? '🏡' : '🏠'} $_listingTitle'
-                      '${_area != null && _area.isNotEmpty ? ' · $_area' : ''}',
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontFamily: 'Poppins',
-                        fontSize: 11,
-                        color: Colors.white.withValues(alpha: 0.8),
-                      ),
+                      isBlocked ? 'Unblock the user' : 'Block this user',
+                      style: FitnessAppTheme.body2.copyWith(color: isBlocked ? DesignColors.goodDeep : RepliesTone.bad),
                     ),
                   ],
                 ),
               ),
-              // Either party can block the other (the backend has no owner/renter
-              // restriction on BlockUser) — no _isOwner gate here.
-              Obx(() {
-                  // Keyed off whether THIS user did the blocking, not the generic Blocked
-                  // status — if the other party blocked me, offering me a "Block this user"
-                  // action (an independent, still-meaningful choice) is correct; offering
-                  // "Unblock" would be wrong (and a no-op server-side, since UnblockUser
-                  // only ever undoes a block the caller themselves placed).
-                  final isBlocked = _isBlockedByMe.value;
-                  return PopupMenuButton<String>(
-                    icon: const Icon(
-                      Icons.more_vert_rounded,
-                      color: Colors.white,
-                    ),
-                    elevation: 6,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    onSelected: (v) {
-                      if (v == 'report') {
-                        _isOwner ? _reportTraveller() : _reportHost(_listingId);
-                      } else {
-                        isBlocked ? _confirmUnblockUser() : _confirmBlockUser();
-                      }
-                    },
-                    itemBuilder: (_) => [
-                      if (_isStay && (!_isOwner || _enquiry.value != null))
-                        const PopupMenuItem(
-                          value: 'report',
-                          height: 48,
-                          child: Row(
-                            children: [
-                              Icon(Icons.flag_outlined, size: 18, color: AppColors.textMedium),
-                              SizedBox(width: 10),
-                              Text(TripStrings.report, style: TextStyle(fontFamily: 'Poppins', color: AppColors.textDark)),
-                            ],
-                          ),
-                        ),
-                      PopupMenuItem(
-                        value: isBlocked ? 'unblock' : 'block',
-                        child: Row(
-                          children: [
-                            Icon(
-                              isBlocked
-                                  ? Icons.check_circle_outline_rounded
-                                  : Icons.block_rounded,
-                              size: 18,
-                              color: isBlocked ? AppColors.primary : AppColors.error,
-                            ),
-                            const SizedBox(width: 10),
-                            Text(
-                              isBlocked ? 'Unblock the user' : 'Block this user',
-                              style: TextStyle(
-                                fontFamily: 'Poppins',
-                                color: isBlocked ? AppColors.primary : AppColors.error,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  );
-                }),
             ],
-          ),
-        ),
-      ),
+          );
+        }),
+      ],
     );
   }
 
@@ -1224,42 +1194,22 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
       barrierDismissible: false,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          title: const Text(
-            'Block this user?',
-            style: TextStyle(
-              fontFamily: 'Poppins',
-              fontWeight: FontWeight.w600,
-            ),
-          ),
+          title: Text('Block this user?', style: FitnessAppTheme.title),
           content: Text(
             '$_otherPartyName will no longer be able to message you in any conversation.',
-            style: const TextStyle(
-              fontFamily: 'Poppins',
-              fontSize: 13.5,
-              color: AppColors.textMedium,
-            ),
+            style: FitnessAppTheme.body2.copyWith(color: FitnessAppTheme.lightText),
           ),
           actions: [
             TextButton(
               onPressed: blocking ? null : () => Navigator.pop(ctx, false),
-              child: const Text(
-                'Cancel',
-                style: TextStyle(
-                  fontFamily: 'Poppins',
-                  color: AppColors.textLight,
-                ),
-              ),
+              child: Text('Cancel',
+                  style: FitnessAppTheme.body2.copyWith(color: FitnessAppTheme.lightText, fontWeight: FontWeight.w500)),
             ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.error,
-                foregroundColor: Colors.white,
-                minimumSize: Size.zero,
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-              ),
+            PrimaryButton(
+              label: 'Block',
+              tone: _badTone,
+              expand: false,
+              loading: blocking,
               onPressed: blocking
                   ? null
                   : () async {
@@ -1267,19 +1217,6 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
                       final ok = await _chatCtrl.blockUser(_otherPartyId);
                       if (ctx.mounted) Navigator.pop(ctx, ok);
                     },
-              child: blocking
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
-                  : const Text(
-                      'Block',
-                      style: TextStyle(fontFamily: 'Poppins'),
-                    ),
             ),
           ],
         ),
@@ -1287,7 +1224,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
     );
     if (confirmed == true && mounted) {
       _status.value = 'Blocked';
-      _isBlockedByMe.value = true; // this device is the one that just did the blocking
+      _isBlockedByMe.value = true;
     }
   }
 
@@ -1299,42 +1236,21 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
       barrierDismissible: false,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          title: const Text(
-            'Unblock this user?',
-            style: TextStyle(
-              fontFamily: 'Poppins',
-              fontWeight: FontWeight.w600,
-            ),
-          ),
+          title: Text('Unblock this user?', style: FitnessAppTheme.title),
           content: Text(
             '$_otherPartyName will be able to message you again.',
-            style: const TextStyle(
-              fontFamily: 'Poppins',
-              fontSize: 13.5,
-              color: AppColors.textMedium,
-            ),
+            style: FitnessAppTheme.body2.copyWith(color: FitnessAppTheme.lightText),
           ),
           actions: [
             TextButton(
               onPressed: unblocking ? null : () => Navigator.pop(ctx, false),
-              child: const Text(
-                'Cancel',
-                style: TextStyle(
-                  fontFamily: 'Poppins',
-                  color: AppColors.textLight,
-                ),
-              ),
+              child: Text('Cancel',
+                  style: FitnessAppTheme.body2.copyWith(color: FitnessAppTheme.lightText, fontWeight: FontWeight.w500)),
             ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-                minimumSize: Size.zero,
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-              ),
+            PrimaryButton(
+              label: 'Unblock',
+              expand: false,
+              loading: unblocking,
               onPressed: unblocking
                   ? null
                   : () async {
@@ -1342,19 +1258,6 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
                       final ok = await _chatCtrl.unblockUser(_otherPartyId);
                       if (ctx.mounted) Navigator.pop(ctx, ok);
                     },
-              child: unblocking
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
-                  : const Text(
-                      'Unblock',
-                      style: TextStyle(fontFamily: 'Poppins'),
-                    ),
             ),
           ],
         ),
@@ -1366,33 +1269,9 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
     }
   }
 
-  // Only reachable once the conversation is no longer Active (an Active conversation always
-  // has at least the inline "next slot" bubble as an item) — the inactive notice below
-  // already explains why messaging is unavailable, so this just needs to say there's
-  // nothing here.
-  Widget _buildEmpty() => Center(
-    child: Padding(
-      padding: const EdgeInsets.all(32),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(
-            Icons.waving_hand_rounded,
-            size: 44,
-            color: AppColors.textHint,
-          ),
-          const SizedBox(height: 12),
-          const Text(
-            'No messages in this conversation',
-            style: TextStyle(
-              fontFamily: 'Poppins',
-              fontSize: 13,
-              color: AppColors.textLight,
-            ),
-          ),
-        ],
-      ),
-    ),
+  Widget _buildEmpty() => const StateCard(
+    asset: TravelIcon.chat,
+    title: 'No messages in this conversation',
   );
 
   Widget _buildBubble(MessageModel m, {bool answered = false}) {
@@ -1434,6 +1313,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
     return ChatMessageBubble(
       message: m,
       accent: _accent,
+      gradient: _kind.gradient,
       templates: _chatCtrl.questionTemplates,
       onAnswerQuestion: canAnswer
           ? (answerKey, answerText) =>
@@ -1506,19 +1386,11 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
       _ => 'This conversation is no longer active.',
     };
     return Container(
-      // Bottom safe-area is already reserved once by the SafeArea(top:false) wrapping the
-      // whole column this sits in (default bottom:true) — adding MediaQuery's bottom inset
-      // again here would double it up.
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+      padding: const EdgeInsets.fromLTRB(KitMetrics.gutter, 12, KitMetrics.gutter, 12),
       decoration: const BoxDecoration(
-        color: AppColors.cardBg,
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.shadow,
-            blurRadius: 10,
-            offset: Offset(0, -3),
-          ),
-        ],
+        color: DesignColors.surface,
+        borderRadius: CardRadius.sheet,
+        boxShadow: TripEntryStyle.topShadow,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -1526,23 +1398,15 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
           Text(
             text,
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontFamily: 'Poppins',
-              fontSize: 12.5,
-              color: AppColors.textLight,
-            ),
+            style: TypeTokens.style(12, FontWeight.w500, color: TypeTokens.secondary),
           ),
           if (isBlockedByMe) ...[
             const SizedBox(height: 6),
             TextButton(
               onPressed: _confirmUnblockUser,
-              child: const Text(
+              child: Text(
                 'Unblock',
-                style: TextStyle(
-                  fontFamily: 'Poppins',
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.primary,
-                ),
+                style: FitnessAppTheme.body2.copyWith(fontWeight: FontWeight.w600, color: FitnessAppTheme.nearlyDarkBlue),
               ),
             ),
           ],

@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import '../../../../config/app_colors.dart';
-import '../../../trip/trip_colors.dart';
+import 'package:bakhli/design/design.dart';
+import 'package:bakhli/design/extra/trip_plan_look.dart';
 import '../../../trip/utils/trip_format.dart';
-import '../../taxi_option_sets.dart';
 import '../models/taxi_ways_models.dart';
 import '../taxi_ways_strings.dart';
 import '../trip_strings_a6.dart';
@@ -12,7 +11,7 @@ import 'journey_driver_card.dart';
 enum RailMarker { start, end, change, none }
 
 class JourneyRail extends StatelessWidget {
-  static const List<Color> legColors = [TaxiColors.accent, TripStatusColors.booked, TripStatusColors.advance];
+  static const List<Color> legColors = WaysTokens.legColors;
 
   static Color colorFor(int legIndex) => legColors[(legIndex - 1).abs() % legColors.length];
 
@@ -70,7 +69,7 @@ class JourneyRail extends StatelessWidget {
       above: colorFor(legs.last.index),
       child: _placeText(legs.last.to.name, TaxiWaysStrings.youArrive),
     ));
-    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: items);
+    return TemplateStagger(children: items);
   }
 
   Widget _placeText(String name, String caption) => Padding(
@@ -80,13 +79,13 @@ class JourneyRail extends StatelessWidget {
             name,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontFamily: 'Poppins', fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textDark),
+            style: FitnessAppTheme.title.copyWith(fontSize: 15),
           ),
           Text(
             caption,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontFamily: 'Poppins', fontSize: 11.5, color: AppColors.textLight),
+            style: FitnessAppTheme.caption.copyWith(fontSize: 11.5),
           ),
         ]),
       );
@@ -158,19 +157,20 @@ class _GutterPainter extends CustomPainter {
       ..strokeWidth = 3;
     switch (marker) {
       case RailMarker.change:
-        fill.color = AppColors.warningSurface;
-        ring.color = AppColors.warning;
+        fill.color = TripLook.warningSurface;
+        ring.color = WaysTokens.changeAccent;
+        canvas.drawCircle(Offset(x, midY), 11, Paint()..color = DesignColors.surface);
         canvas.drawCircle(Offset(x, midY), 11, fill);
         canvas.drawCircle(Offset(x, midY), 11, ring);
       case RailMarker.start:
-        fill.color = Colors.white;
-        ring.color = below ?? TaxiColors.accentDark;
+        fill.color = DesignColors.surface;
+        ring.color = below ?? DesignColors.primary;
         canvas.drawCircle(Offset(x, midY), 8, fill);
         canvas.drawCircle(Offset(x, midY), 8, ring);
       case RailMarker.end:
-        fill.color = above ?? TaxiColors.accentDark;
+        fill.color = above ?? DesignColors.primary;
         canvas.drawCircle(Offset(x, midY), 9, fill);
-        fill.color = Colors.white;
+        fill.color = DesignColors.surface;
         canvas.drawCircle(Offset(x, midY), 3.5, fill);
       case RailMarker.none:
         break;

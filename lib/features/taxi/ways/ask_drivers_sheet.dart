@@ -1,15 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:iconsax/iconsax.dart';
-import '../../../config/app_colors.dart';
+import 'package:bakhli/design/design.dart';
+import 'package:bakhli/design/extra/trip_plan_look.dart';
 import '../../../models/browse_item.dart';
 import '../../../utils/app_toast.dart';
-import '../../../widgets/gradient_button.dart';
 import '../../trip/trip_strings_v2_find.dart';
 import '../../trip/utils/trip_enquiry_rules.dart';
 import '../../trip/utils/trip_format.dart';
 import '../../trip/widgets/trip_payment_line.dart';
 import '../../trip/widgets/trip_sheet_frame.dart';
-import '../taxi_option_sets.dart';
 import 'models/ask_models.dart';
 import 'models/taxi_ways_models.dart';
 import 'taxi_ways_ask_repository.dart';
@@ -106,6 +104,8 @@ class _AskBodyState extends State<_AskBody> {
     }
   }
 
+  Widget _w(Widget child) => SizedBox(width: double.infinity, child: child);
+
   @override
   Widget build(BuildContext context) {
     final req = widget.request;
@@ -118,66 +118,68 @@ class _AskBodyState extends State<_AskBody> {
         title: TaxiWaysStrings.askDrivers,
         description: '${TripFormat.shortDate(req.date)} · ${TaxiWaysStrings.peopleChip(req.people)}',
         children: [
+          TemplateStagger(children: [
           for (final l in req.legs) ...[
-            _LegTile(
+            _w(_LegTile(
               leg: l,
               way: legs.firstWhere((x) => x.index == l.legIndex),
               pick: widget.chosen[l.legIndex],
               multi: req.legs.length > 1,
               people: req.people,
-            ),
+            )),
             const SizedBox(height: 8),
           ],
           if (cars > 1) ...[
-            Text(
+            _w(Text(
               TripStringsA6.carsPerLeg(cars),
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: TaxiColors.accentDark),
-            ),
+              style: FitnessAppTheme.caption.copyWith(fontSize: 12, fontWeight: FontWeight.w700, color: DesignColors.primary),
+            )),
             const SizedBox(height: 4),
           ],
           if (short) ...[
             const SizedBox(height: 8),
-            Container(
+            _w(Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              decoration: BoxDecoration(color: AppColors.warningSurface, borderRadius: BorderRadius.circular(12)),
+              decoration: BoxDecoration(color: TripLook.warningSurface, borderRadius: BorderRadius.circular(12)),
               child: Row(
                 children: [
-                  const Icon(Iconsax.warning_2, size: 16, color: AppColors.warningText),
+                  const Icon(Icons.warning_amber_rounded, size: 16, color: WaysTokens.changeAccent),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(TripStringsV2Find.veryShortNoticeDriver,
-                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.warningText)),
+                        style: FitnessAppTheme.caption.copyWith(fontSize: 12, fontWeight: FontWeight.w600, color: TripLook.warningText)),
                   ),
                 ],
               ),
-            ),
+            )),
           ],
           const SizedBox(height: 4),
-          Text(
+          _w(Text(
             TaxiWaysStrings.listedFares,
-            style: const TextStyle(fontSize: 11, color: AppColors.textLight, height: 1.35),
-          ),
+            style: FitnessAppTheme.caption.copyWith(fontSize: 11, height: 1.35),
+          )),
           const SizedBox(height: 4),
-          TripPaymentLine(text: TaxiWaysStrings.payLine),
+          _w(TripPaymentLine(text: TaxiWaysStrings.payLine)),
           if (_error != null) ...[
             const SizedBox(height: 10),
-            Container(
+            _w(Container(
               width: double.infinity,
               padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(color: AppColors.errorSurface, borderRadius: BorderRadius.circular(12)),
+              decoration: BoxDecoration(color: TripLook.errorSurface, borderRadius: BorderRadius.circular(12)),
               child: Text(
                 _error!,
-                style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.errorText, height: 1.35),
+                style: FitnessAppTheme.caption.copyWith(fontSize: 12.5, fontWeight: FontWeight.w600, color: TripLook.errorText, height: 1.35),
               ),
-            ),
+            )),
           ],
+          ]),
         ],
-        footer: GradientButton(
+        footer: PickButton(
           label: _buttonLabel,
           isLoading: _sending,
           onPressed: _sending ? null : _send,
-          gradient: TaxiColors.gradient,
-          shadowColor: TaxiColors.accent,
+          gradient: PickKit.taxiGradient,
+          shadowColor: PickKit.taxi,
         ),
       ),
     );
@@ -216,11 +218,7 @@ class _LegTile extends StatelessWidget {
     final note = pick == null ? TripStringsA6.legSeats(way) : TripStringsA6.seatsNote(pick!.seats, cars, people);
     return Container(
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: TaxiColors.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.divider, width: 1.2),
-      ),
+      decoration: TripLook.card(radius: TripLook.softRadius),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -229,26 +227,32 @@ class _LegTile extends StatelessWidget {
               padding: const EdgeInsets.only(bottom: 4),
               child: Text(
                 TaxiWaysStrings.carOf(leg.legIndex, leg.carOf),
-                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: TaxiColors.accentDark),
+                style: FitnessAppTheme.caption.copyWith(fontSize: 11, fontWeight: FontWeight.w700, color: DesignColors.primary),
               ),
             ),
           Text(
             TaxiWaysStrings.driversOn(leg.fromName, leg.toName, leg.taxiIds.length),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textDark),
+            style: FitnessAppTheme.title.copyWith(fontSize: 13),
           ),
           const SizedBox(height: 6),
           Row(
             children: [
-              const Icon(Iconsax.car, size: 16, color: TaxiColors.accentDark),
+              Container(
+                width: 28,
+                height: 28,
+                alignment: Alignment.center,
+                decoration: const BoxDecoration(color: PickKit.taxiTint, shape: BoxShape.circle),
+                child: const TravelIcon(TravelIcon.taxi, size: 20),
+              ),
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
                   names,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 12.5, color: AppColors.textMedium),
+                  style: FitnessAppTheme.body2.copyWith(fontSize: 12.5, color: DesignColors.textGrey),
                 ),
               ),
               if (fare != null)
@@ -256,7 +260,7 @@ class _LegTile extends StatelessWidget {
                   fit: BoxFit.scaleDown,
                   child: Text(
                     BrowseItem.inr(fare),
-                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.warningText),
+                    style: FitnessAppTheme.title.copyWith(fontSize: 13, fontWeight: FontWeight.w800, color: DesignColors.primary),
                   ),
                 ),
             ],
@@ -266,7 +270,7 @@ class _LegTile extends StatelessWidget {
               padding: const EdgeInsets.only(top: 4),
               child: Text(
                 note,
-                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textMedium),
+                style: FitnessAppTheme.caption.copyWith(fontSize: 11, fontWeight: FontWeight.w600, color: DesignColors.textGrey),
               ),
             ),
           if (backups > 0)
@@ -274,7 +278,7 @@ class _LegTile extends StatelessWidget {
               padding: const EdgeInsets.only(top: 4),
               child: Text(
                 TaxiWaysStrings.askBackups(backups),
-                style: const TextStyle(fontSize: 11, color: AppColors.textLight),
+                style: FitnessAppTheme.caption.copyWith(fontSize: 11),
               ),
             ),
           if (leg.comesFrom != null)
@@ -282,7 +286,7 @@ class _LegTile extends StatelessWidget {
               padding: const EdgeInsets.only(top: 4),
               child: Text(
                 TaxiWaysStrings.comesFrom(leg.comesFrom!),
-                style: const TextStyle(fontSize: 11, color: AppColors.textLight),
+                style: FitnessAppTheme.caption.copyWith(fontSize: 11),
               ),
             ),
         ],

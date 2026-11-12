@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import '../../../config/app_colors.dart';
+import 'package:bakhli/features/trip/widgets/trip_ui.dart';
+import 'package:bakhli/design/design.dart';
+import 'package:bakhli/design/extra/replies_kit.dart';
 import '../controllers/trip_enquiry_controller.dart';
 import '../models/trip_enquiry_model.dart';
 import '../trip_strings.dart';
@@ -12,7 +14,7 @@ class TripTwoButtons extends StatelessWidget {
     required this.primaryLabel,
     required this.onSecondary,
     required this.onPrimary,
-    this.primaryColor = AppColors.error,
+    this.primaryColor = RepliesTone.bad,
     this.busy = false,
   });
 
@@ -25,33 +27,18 @@ class TripTwoButtons extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final secondary = OutlinedButton(
-      onPressed: busy ? null : onSecondary,
-      style: OutlinedButton.styleFrom(
-        minimumSize: const Size(0, 48),
-        side: const BorderSide(color: AppColors.divider),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
-      child: Text(secondaryLabel,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(fontFamily: 'Poppins', color: AppColors.textMedium)),
+    final secondary = TripActionChip(
+      height: 48,
+      fontSize: 14,
+      color: DesignColors.textSecondary,
+      label: secondaryLabel,
+      onTap: busy ? null : onSecondary,
     );
-    final primary = ElevatedButton(
+    final primary = TripButton(
+      color: primaryColor,
+      label: primaryLabel,
+      loading: busy,
       onPressed: busy ? null : onPrimary,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: primaryColor,
-        foregroundColor: Colors.white,
-        disabledBackgroundColor: primaryColor.withValues(alpha: 0.5),
-        disabledForegroundColor: Colors.white,
-        minimumSize: const Size(0, 48),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
-      child: busy
-          ? const SizedBox(
-              width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-          : Text(primaryLabel,
-              maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontFamily: 'Poppins')),
     );
     return LayoutBuilder(builder: (context, c) {
       if (c.maxWidth < 340) {
@@ -84,10 +71,12 @@ class TripWithdrawSheet {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        content: const Text(TripStrings.withdrawToo, style: TextStyle(fontFamily: 'Poppins', fontSize: 14)),
+        shape: const RoundedRectangleBorder(borderRadius: RepliesCard.radius),
+        backgroundColor: DesignColors.surface,
+        content: const Text(TripStrings.withdrawToo, style: FitnessAppTheme.body2),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text(TripStrings.keepAsking)),
-          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text(TripStrings.withdraw)),
+          TextLink(label: TripStrings.keepAsking, onTap: () => Navigator.pop(ctx, false), tone: KitTone.trip),
+          TextLink(label: TripStrings.withdraw, onTap: () => Navigator.pop(ctx, true), tone: KitTone.trip),
         ],
       ),
     );
@@ -137,12 +126,15 @@ class _WithdrawBodyState extends State<_WithdrawBody> {
       title: widget.title,
       description: TripStrings.hostSeesWithdraw,
       children: [
+        TemplateStagger(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
         if (names.isNotEmpty) ...[
           Text(names,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
-                  fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                  fontFamily: FitnessAppTheme.fontName, fontSize: 13, fontWeight: FontWeight.w600, color: DesignColors.textStrong)),
           const SizedBox(height: 16),
         ],
         TripTwoButtons(
@@ -151,6 +143,8 @@ class _WithdrawBodyState extends State<_WithdrawBody> {
           busy: _busy,
           onSecondary: () => Navigator.pop(context, false),
           onPrimary: _withdraw,
+        ),
+          ],
         ),
       ],
     );

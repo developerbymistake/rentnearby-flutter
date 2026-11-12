@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:iconsax/iconsax.dart';
-import '../../../../config/app_colors.dart';
-import '../../../../config/app_shadows.dart';
+import 'package:bakhli/design/design.dart';
+import 'package:bakhli/design/extra/trip_plan_look.dart';
 import '../../../../models/place_result_model.dart';
-import '../../taxi_option_sets.dart';
 import '../taxi_ways_navigation.dart';
 import '../taxi_ways_strings.dart';
 
@@ -31,42 +29,41 @@ class TaxiWaysEntryCard extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           onTap: () => TaxiWaysNavigation.openFeed(from: from, to: to, fromMyLocation: fromMyLocation),
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: TripLook.cardRadius,
           child: Ink(
             padding: const EdgeInsets.fromLTRB(14, 14, 10, 14),
-            decoration: BoxDecoration(
-              gradient: TaxiColors.heroGradient,
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: TaxiColors.accent.withValues(alpha: 0.35)),
-              boxShadow: AppShadows.premium(TaxiColors.accent, alpha: 0.10, blur: 14, offset: const Offset(0, 5)),
-            ),
+            decoration: TripLook.gradientCard(PickKit.taxi, WaysTokens.changeAccentSoft),
             child: Row(children: [
               Container(
-                width: 46,
-                height: 46,
-                decoration: BoxDecoration(gradient: TaxiColors.gradient, borderRadius: BorderRadius.circular(14)),
-                child: const Icon(Iconsax.routing_2, size: 22, color: Colors.white),
+                width: 56,
+                height: 56,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: DesignColors.surfaceAlt.withValues(alpha: Alpha.soft),
+                  shape: BoxShape.circle,
+                ),
+                child: const TravelIcon(TravelIcon.taxi, size: 36),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Text(
                     title,
-                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w700, color: TaxiColors.accentDark),
+                    style: FitnessAppTheme.title.copyWith(fontSize: 15, color: DesignColors.surface),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     body,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 11.5, color: AppColors.textMedium),
+                    style: FitnessAppTheme.caption.copyWith(fontSize: 11.5, color: DesignColors.surface.withValues(alpha: Alpha.high)),
                   ),
                 ]),
               ),
               const SizedBox(
                 width: 44,
                 height: 44,
-                child: Icon(Icons.chevron_right_rounded, size: 24, color: TaxiColors.accentDark),
+                child: Icon(Icons.chevron_right_rounded, size: 24, color: DesignColors.surface),
               ),
             ]),
           ),

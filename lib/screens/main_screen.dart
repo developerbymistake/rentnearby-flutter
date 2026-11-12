@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:iconsax/iconsax.dart';
-import '../config/app_colors.dart';
+import '../design/design.dart';
+import '../design/extra/template_nav.dart';
 import '../config/app_routes.dart';
 import '../config/app_tabs.dart';
 import '../controllers/app_version_controller.dart';
@@ -206,91 +206,64 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   void _showExitConfirmation() {
     showDialog(
       context: context,
-      builder: (_) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        backgroundColor: Colors.white,
+      builder: (dialogContext) => Dialog(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
         insetPadding: const EdgeInsets.symmetric(horizontal: 36),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 60,
-                height: 60,
-                decoration: BoxDecoration(
-                  color: AppColors.error.withValues(alpha: 0.1),
-                  shape: BoxShape.circle,
+        child: DecoratedBox(
+          decoration: const BoxDecoration(
+            color: DesignColors.surface,
+            borderRadius: CardRadius.hero,
+            boxShadow: ShadowTokens.elev3,
+          ),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 72,
+                  height: 72,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: KitTone.rose.gradient,
+                    boxShadow: ShadowTokens.glow(KitTone.rose.glow),
+                  ),
+                  child: const Icon(Icons.logout_rounded, size: 32, color: DesignColors.onPrimary),
                 ),
-                child: const Icon(Icons.logout_rounded, size: 28, color: AppColors.error),
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'Exit App?',
-                style: TextStyle(
-                  fontFamily: 'Poppins',
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textDark,
+                const SizedBox(height: 16),
+                Text(
+                  'Exit App?',
+                  style: TypeTokens.style(18, FontWeight.w700, color: DesignColors.textStrong),
                 ),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Are you sure you want to exit?',
-                style: TextStyle(
-                  fontFamily: 'Poppins',
-                  fontSize: 13,
-                  color: AppColors.textMedium,
-                  height: 1.5,
+                const SizedBox(height: 8),
+                Text(
+                  'Are you sure you want to exit?',
+                  textAlign: TextAlign.center,
+                  style: TypeTokens.style(14, FontWeight.w400, color: TypeTokens.secondary, height: 1.5),
                 ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 24),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Navigator.pop(context),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: AppColors.textMedium,
-                        side: BorderSide(color: Colors.grey.shade300),
-                        padding: const EdgeInsets.symmetric(vertical: 13),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      child: const Text(
-                        'Cancel',
-                        style: TextStyle(
-                          fontFamily: 'Poppins',
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                        ),
+                const SizedBox(height: 24),
+                Row(
+                  children: [
+                    Expanded(
+                      child: SecondaryButton(
+                        label: 'Cancel',
+                        neutral: true,
+                        onPressed: () => Navigator.pop(dialogContext),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () => SystemNavigator.pop(),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.error,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 13),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        elevation: 0,
-                      ),
-                      child: const Text(
-                        'Exit',
-                        style: TextStyle(
-                          fontFamily: 'Poppins',
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                        ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: PrimaryButton(
+                        label: 'Exit',
+                        tone: KitTone.rose,
+                        onPressed: () => SystemNavigator.pop(),
                       ),
                     ),
-                  ),
-                ],
-              ),
-            ],
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -326,6 +299,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
         children: [
           Scaffold(
             resizeToAvoidBottomInset: false,
+            extendBody: true,
             body: Obx(() => IndexedStack(
               index: _auth.tabIndex.value,
               children: _screens,
@@ -335,7 +309,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
               children: [
                 Obx(() => _locationCtrl.hasActiveGate || _auth.isLoggingOut.value
                     ? const SizedBox.shrink()
-                    : const TripBar()),
+                    : Transform.translate(offset: const Offset(0, 38), child: const TripBar())),
                 Obx(() => _buildBottomNav()),
               ],
             ),
@@ -383,42 +357,26 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   Widget _buildLocationLoadingOverlay() {
     return Positioned.fill(
       child: Container(
-        color: Colors.black.withValues(alpha: 0.45),
+        color: DesignColors.scrim,
         child: Center(
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.15),
-                    blurRadius: 20,
-                    offset: const Offset(0, 6)),
-              ],
+            decoration: const BoxDecoration(
+              color: DesignColors.surface,
+              borderRadius: CardRadius.hero,
+              boxShadow: ShadowTokens.elev3,
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const CircularProgressIndicator(
-                    color: AppColors.primary, strokeWidth: 3),
+                const KitDots(color: DesignColors.primary, size: 9),
                 const SizedBox(height: 16),
-                const Text(
+                Text(
                   'Getting your location...',
-                  style: TextStyle(
-                      fontFamily: 'Poppins',
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textDark),
+                  style: TypeTokens.style(16, FontWeight.w600, color: DesignColors.textStrong),
                 ),
                 const SizedBox(height: 4),
-                Text(
-                  'Please wait a moment',
-                  style: TextStyle(
-                      fontFamily: 'Poppins',
-                      fontSize: 12,
-                      color: AppColors.textLight),
-                ),
+                Text('Please wait a moment', style: TypeTokens.style(12, FontWeight.w500, color: TypeTokens.secondary)),
               ],
             ),
           ),
@@ -429,134 +387,57 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
 
   Widget _buildBottomNav() {
     final bottomInset = MediaQuery.of(context).viewPadding.bottom;
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.08),
-            blurRadius: 20,
-            offset: const Offset(0, -5),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: EdgeInsets.fromLTRB(4, 8, 4, 8 + bottomInset),
-        // Home/Profile are always active (structural, never admin-deactivatable) so they're
-        // unconditional; every other tab drops out of the row entirely (not just hidden —
-        // Expanded would otherwise still reserve their flex slot) the moment the master table
-        // marks them inactive. _buildBottomNav() is already called from inside an Obx (see
-        // bottomNavigationBar above), so these reactive reads make the whole row rebuild live.
-        child: Row(
-          children: [
-            _navItem(AppTabs.home, Iconsax.home, Iconsax.home5,
-                _tabConfigCtrl.displayNameForIndex(AppTabs.home, 'Home')),
-            if (_tabConfigCtrl.isActive(AppTabKeys.stays))
-              KeyedSubtree(
-                key: TourKeys.homeStaysNavIcon,
-                child: _navItem(AppTabs.stays, Iconsax.building_4, Iconsax.building_45,
-                    _tabConfigCtrl.displayNameForIndex(AppTabs.stays, 'Stays')),
-              ),
-            _navItem(AppTabs.trips, Iconsax.routing_2, Iconsax.routing_2,
-                _tabConfigCtrl.displayNameForIndex(AppTabs.trips, 'Trips')),
-            if (_tabConfigCtrl.isActive(AppTabKeys.taxi))
-              KeyedSubtree(
-                key: TourKeys.homeTaxiNavIcon,
-                child: _navItem(AppTabs.taxi, Iconsax.car, Iconsax.car5,
-                    _tabConfigCtrl.displayNameForIndex(AppTabs.taxi, 'Taxi')),
-              ),
-            KeyedSubtree(
-              key: TourKeys.homeProfileNavIcon,
-              child: _navItem(AppTabs.profile, Iconsax.user, Iconsax.user5,
-                  _tabConfigCtrl.displayNameForIndex(AppTabs.profile, 'Profile')),
-            ),
-          ],
-        ),
-      ),
+    const fit = 'assets/images/design/fitness_app/';
+    const t3d = 'assets/images/design/travel3d/';
+    return TemplateBottomBar(
+      bottomInset: bottomInset,
+      selectedIndex: _auth.tabIndex.value,
+      onTap: _onNavTap,
+      items: [
+        TemplateNavItem(
+            index: AppTabs.home,
+            image: '${fit}tab_1.png',
+            selectedImage: '${fit}tab_1s.png',
+            label: _tabConfigCtrl.displayNameForIndex(AppTabs.home, 'Home')),
+        if (_tabConfigCtrl.isActive(AppTabKeys.stays))
+          TemplateNavItem(
+              index: AppTabs.stays,
+              image: '${t3d}hotel.png',
+              itemKey: TourKeys.homeStaysNavIcon,
+              label: _tabConfigCtrl.displayNameForIndex(AppTabs.stays, 'Stays')),
+        TemplateNavItem(
+            index: AppTabs.trips,
+            image: '${t3d}compass.png',
+            center: true,
+            label: _tabConfigCtrl.displayNameForIndex(AppTabs.trips, 'Trips')),
+        if (_tabConfigCtrl.isActive(AppTabKeys.taxi))
+          TemplateNavItem(
+              index: AppTabs.taxi,
+              image: '${t3d}taxi.png',
+              itemKey: TourKeys.homeTaxiNavIcon,
+              label: _tabConfigCtrl.displayNameForIndex(AppTabs.taxi, 'Taxi')),
+        TemplateNavItem(
+            index: AppTabs.profile,
+            image: '${fit}tab_4.png',
+            selectedImage: '${fit}tab_4s.png',
+            itemKey: TourKeys.homeProfileNavIcon,
+            label: _tabConfigCtrl.displayNameForIndex(AppTabs.profile, 'Profile')),
+      ],
     );
   }
 
-  Widget _navItem(int index, IconData icon, IconData activeIcon, String label, {int badgeCount = 0}) {
-    final isActive = _auth.tabIndex.value == index;
-    return Expanded(
-      child: GestureDetector(
-        onTap: () {
-          final stays = Get.isRegistered<StayLandingController>(tag: 'stays')
-              ? Get.find<StayLandingController>(tag: 'stays')
-              : null;
-          if (index == AppTabs.stays && _auth.tabIndex.value != AppTabs.stays) {
-            stays?.exploreRefreshTrigger.value++;
-          }
-          if (index == AppTabs.taxi && Get.isRegistered<TaxiListController>(tag: TaxiListController.tag)) {
-            Get.find<TaxiListController>(tag: TaxiListController.tag).refreshIfStale();
-          }
-          if (index == AppTabs.profile && _auth.tabIndex.value != AppTabs.profile) _auth.profileTabTrigger.value++;
-          stays?.filterResetTrigger.value++;
-          _auth.switchToTab(index);
-        },
-        behavior: HitTestBehavior.opaque,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeInOut,
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          decoration: BoxDecoration(
-            color: isActive ? AppColors.primary.withValues(alpha: 0.08) : Colors.transparent,
-            borderRadius: BorderRadius.circular(14),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Stack(clipBehavior: Clip.none, children: [
-                AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 200),
-                  child: Icon(
-                    isActive ? activeIcon : icon,
-                    key: ValueKey(isActive),
-                    color: isActive ? AppColors.primary : AppColors.textHint,
-                    size: 22,
-                  ),
-                ),
-                if (badgeCount > 0)
-                  Positioned(
-                    right: -6, top: -4,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                      constraints: const BoxConstraints(minWidth: 16),
-                      decoration: BoxDecoration(color: AppColors.error, borderRadius: BorderRadius.circular(20)),
-                      child: Text(
-                        badgeCount > 99 ? '99+' : '$badgeCount',
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(fontFamily: 'Poppins', fontSize: 9, fontWeight: FontWeight.w700, color: Colors.white),
-                      ),
-                    ),
-                  ),
-              ]),
-              const SizedBox(height: 4),
-              AnimatedDefaultTextStyle(
-                duration: const Duration(milliseconds: 200),
-                style: TextStyle(
-                  fontFamily: 'Poppins',
-                  fontSize: 10.5,
-                  fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
-                  color: isActive ? AppColors.primary : AppColors.textHint,
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 2),
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text(
-                      label,
-                      maxLines: 1,
-                      softWrap: false,
-                      textScaler: MediaQuery.textScalerOf(context).clamp(maxScaleFactor: 1.15),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
+  void _onNavTap(int index) {
+    final stays = Get.isRegistered<StayLandingController>(tag: 'stays')
+        ? Get.find<StayLandingController>(tag: 'stays')
+        : null;
+    if (index == AppTabs.stays && _auth.tabIndex.value != AppTabs.stays) {
+      stays?.exploreRefreshTrigger.value++;
+    }
+    if (index == AppTabs.taxi && Get.isRegistered<TaxiListController>(tag: TaxiListController.tag)) {
+      Get.find<TaxiListController>(tag: TaxiListController.tag).refreshIfStale();
+    }
+    if (index == AppTabs.profile && _auth.tabIndex.value != AppTabs.profile) _auth.profileTabTrigger.value++;
+    stays?.filterResetTrigger.value++;
+    _auth.switchToTab(index);
   }
 }

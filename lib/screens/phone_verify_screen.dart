@@ -2,10 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:pinput/pinput.dart';
-import '../config/app_colors.dart';
 import '../controllers/auth_controller.dart';
+import '../design/design.dart';
 import '../utils/app_toast.dart';
-import '../widgets/gradient_button.dart';
 
 class PhoneVerifyScreen extends StatefulWidget {
   const PhoneVerifyScreen({super.key});
@@ -13,11 +12,13 @@ class PhoneVerifyScreen extends StatefulWidget {
   State<PhoneVerifyScreen> createState() => _PhoneVerifyScreenState();
 }
 
-class _PhoneVerifyScreenState extends State<PhoneVerifyScreen> {
+class _PhoneVerifyScreenState extends State<PhoneVerifyScreen> with TickerProviderStateMixin {
   final _phoneCtrl = TextEditingController();
   final _otpCtrl = TextEditingController();
   final _otpFocus = FocusNode();
   final _auth = Get.find<AuthController>();
+  late final AnimationController _enter =
+      AnimationController(duration: const Duration(milliseconds: 600), vsync: this);
 
   bool _otpSent = false;
   bool _isChange = false;
@@ -36,40 +37,28 @@ class _PhoneVerifyScreenState extends State<PhoneVerifyScreen> {
     final args = Get.arguments as Map<String, dynamic>?;
     _isChange = args?['isChange'] as bool? ?? false;
     if (!_isChange) {
-      // Verifying existing number — pre-fill
       final existing = _auth.user.value?.phoneNumber ?? '';
       if (existing.isNotEmpty) _phoneCtrl.text = existing;
     }
-    // isChange == true → empty field, user enters new number
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    if (KitMotion.reduce(context)) {
+      _enter.value = 1;
+    } else if (!_enter.isAnimating && _enter.value == 0) {
+      _enter.forward();
+    }
     final boxSize = ((MediaQuery.of(context).size.width - 56 - 36) / 4).clamp(56.0, 72.0);
-    _defaultTheme = PinTheme(
-      width: boxSize, height: boxSize + 8,
-      textStyle: TextStyle(fontFamily: 'Poppins', fontSize: boxSize * 0.38, fontWeight: FontWeight.w700, color: AppColors.primary),
-      decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(14), border: Border.all(color: AppColors.divider, width: 1.5)),
-    );
-    _focusedTheme = _defaultTheme.copyWith(
-      decoration: BoxDecoration(
-        color: Colors.white, borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.primary, width: 2),
-        boxShadow: [BoxShadow(color: AppColors.primary.withValues(alpha: 0.15), blurRadius: 8, offset: const Offset(0, 2))],
-      ),
-    );
-    _submittedTheme = _defaultTheme.copyWith(
-      decoration: BoxDecoration(
-        color: AppColors.primary.withValues(alpha: 0.07),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.primary.withValues(alpha: 0.4), width: 1.5),
-      ),
-    );
+    _defaultTheme = GatePinThemes.base(boxSize);
+    _focusedTheme = GatePinThemes.focused(boxSize);
+    _submittedTheme = GatePinThemes.submitted(boxSize);
   }
 
   @override
   void dispose() {
+    _enter.dispose();
     _phoneCtrl.dispose();
     _otpCtrl.dispose();
     _otpFocus.dispose();
@@ -84,7 +73,6 @@ class _PhoneVerifyScreenState extends State<PhoneVerifyScreen> {
     }
     FocusScope.of(context).unfocus();
 
-    // Guard: if changing number but entered same verified number
     if (_isChange &&
         phone == (_auth.user.value?.phoneNumber ?? '') &&
         (_auth.user.value?.isPhoneVerified ?? false)) {
@@ -92,7 +80,6 @@ class _PhoneVerifyScreenState extends State<PhoneVerifyScreen> {
       return;
     }
 
-    // Confirm dialog
     final confirmed = await _showConfirmDialog(phone);
     if (confirmed != true) return;
 
@@ -147,57 +134,16 @@ class _PhoneVerifyScreenState extends State<PhoneVerifyScreen> {
     return showDialog<void>(
       context: context,
       barrierDismissible: false,
-      barrierColor: Colors.black.withValues(alpha: 0.6),
-      builder: (_) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        insetPadding: const EdgeInsets.symmetric(horizontal: 32),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 32, 24, 28),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 72, height: 72,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFECFDF5),
-                  shape: BoxShape.circle,
-                  border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.3), width: 2),
-                ),
-                child: const Icon(Icons.check_rounded, color: Color(0xFF10B981), size: 36),
-              ),
-              const SizedBox(height: 20),
-              Text(
-                _isChange ? 'Number Changed!' : 'Phone Verified!',
-                style: const TextStyle(fontFamily: 'Poppins', fontSize: 20, fontWeight: FontWeight.w700, color: AppColors.textDark),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                _isChange
-                    ? 'Your mobile number has been updated to +91 ${_phoneCtrl.text}. All future OTPs will be sent to this number.'
-                    : 'Your mobile number +91 ${_phoneCtrl.text} is now verified. You can post listings on RentNearby.',
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textMedium, height: 1.5),
-              ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: Container(
-                  decoration: BoxDecoration(gradient: AppColors.primaryGradient, borderRadius: BorderRadius.circular(12)),
-                  child: ElevatedButton(
-                    onPressed: () => Navigator.pop(context),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.transparent,
-                      shadowColor: Colors.transparent,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    child: const Text('Continue', style: TextStyle(fontFamily: 'Poppins', fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white)),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
+      barrierColor: GateKit.scrim,
+      builder: (dialogContext) => GateDialog(
+        asset: TravelIcon.star,
+        title: _isChange ? 'Number Changed!' : 'Phone Verified!',
+        body: _isChange
+            ? 'Your mobile number has been updated to +91 ${_phoneCtrl.text}. All future OTPs will be sent to this number.'
+            : 'Your mobile number +91 ${_phoneCtrl.text} is now verified. You can post listings on RentNearby.',
+        actions: [
+          GateButton(label: 'Continue', onPressed: () => Navigator.pop(dialogContext)),
+        ],
       ),
     );
   }
@@ -205,81 +151,44 @@ class _PhoneVerifyScreenState extends State<PhoneVerifyScreen> {
   Future<bool?> _showConfirmDialog(String phone) {
     return showDialog<bool>(
       context: context,
-      barrierColor: Colors.black.withValues(alpha: 0.6),
-      builder: (_) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        insetPadding: const EdgeInsets.symmetric(horizontal: 32),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 56, height: 56,
-                decoration: const BoxDecoration(
-                  gradient: AppColors.primaryGradient,
-                  shape: BoxShape.circle,
+      barrierColor: GateKit.scrim,
+      builder: (dialogContext) => GateDialog(
+        asset: TravelIcon.chat,
+        title: 'Confirm your number',
+        body: 'We will send an OTP on WhatsApp to',
+        content: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              decoration: const BoxDecoration(color: FitnessAppTheme.background, borderRadius: CardRadius.chip),
+              child: Text(
+                '+91 $phone',
+                style: FitnessAppTheme.title.copyWith(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: FitnessAppTheme.nearlyDarkBlue,
+                  letterSpacing: 1.5,
                 ),
-                child: const Icon(Icons.phone_android_rounded, color: Colors.white, size: 28),
               ),
-              const SizedBox(height: 16),
-              const Text('Confirm your number',
-                  style: TextStyle(fontFamily: 'Poppins', fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textDark)),
-              const SizedBox(height: 8),
-              const Text('We will send an OTP on WhatsApp to',
-                  style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textLight)),
-              const SizedBox(height: 12),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(12)),
-                child: Text('+91 $phone',
-                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.primary, letterSpacing: 1.5)),
-              ),
-              const SizedBox(height: 10),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Image.asset('assets/images/whatsapp_icon.png', width: 16, height: 16, errorBuilder: (_, _, _) => const Icon(Icons.chat, color: Color(0xFF25D366), size: 16)),
-                  const SizedBox(width: 6),
-                  const Text('via WhatsApp',
-                      style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: Color(0xFF25D366), fontWeight: FontWeight.w600)),
-                ],
-              ),
-              const SizedBox(height: 24),
-              Row(children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => Navigator.pop(context, false),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      side: const BorderSide(color: AppColors.divider),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    child: const Text('Edit',
-                        style: TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textMedium)),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Container(
-                    decoration: BoxDecoration(gradient: AppColors.primaryGradient, borderRadius: BorderRadius.circular(12)),
-                    child: ElevatedButton(
-                      onPressed: () => Navigator.pop(context, true),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.transparent,
-                        shadowColor: Colors.transparent,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      child: const Text('Confirm',
-                          style: TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white)),
-                    ),
-                  ),
-                ),
-              ]),
-            ],
-          ),
+            ),
+            const SizedBox(height: 10),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const TravelIcon(TravelIcon.chat, size: 16),
+                const SizedBox(width: 6),
+                Text('via WhatsApp',
+                    style: FitnessAppTheme.caption
+                        .copyWith(color: GateKit.whatsApp, fontWeight: FontWeight.w600)),
+              ],
+            ),
+          ],
         ),
+        horizontalActions: true,
+        actions: [
+          GateOutlineButton(label: 'Edit', height: 48, onPressed: () => Navigator.pop(dialogContext, false)),
+          GateButton(label: 'Confirm', height: 48, onPressed: () => Navigator.pop(dialogContext, true)),
+        ],
       ),
     );
   }
@@ -287,46 +196,22 @@ class _PhoneVerifyScreenState extends State<PhoneVerifyScreen> {
   void _showPhoneClaimedDialog(String phone) {
     showDialog(
       context: context,
-      builder: (_) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        insetPadding: const EdgeInsets.symmetric(horizontal: 32),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Container(
-              width: 56, height: 56,
-              decoration: BoxDecoration(color: AppColors.warning.withValues(alpha: 0.12), shape: BoxShape.circle),
-              child: const Icon(Icons.warning_amber_rounded, color: AppColors.warning, size: 28),
-            ),
-            const SizedBox(height: 16),
-            const Text('Number Not Available',
-                style: TextStyle(fontFamily: 'Poppins', fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textDark)),
-            const SizedBox(height: 10),
-            Text('This number is already registered in our system.\n\nPlease use a different number.',
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textMedium, height: 1.5)),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  _phoneCtrl.clear();
-                  setState(() => _otpSent = false);
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  minimumSize: const Size(0, 48),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  elevation: 0,
-                ),
-                child: const Text('Use Different Number',
-                    style: TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600)),
-              ),
-            ),
-          ]),
-        ),
+      builder: (dialogContext) => GateDialog(
+        glyph: Icons.warning_amber_rounded,
+        gradient: TripEntryStyle.rose,
+        title: 'Number Not Available',
+        body: 'This number is already registered in our system.\n\nPlease use a different number.',
+        actions: [
+          GateButton(
+            label: 'Use Different Number',
+            height: 48,
+            onPressed: () {
+              Navigator.pop(dialogContext);
+              _phoneCtrl.clear();
+              setState(() => _otpSent = false);
+            },
+          ),
+        ],
       ),
     );
   }
@@ -335,161 +220,139 @@ class _PhoneVerifyScreenState extends State<PhoneVerifyScreen> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (_) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        insetPadding: const EdgeInsets.symmetric(horizontal: 32),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Container(
-              width: 56, height: 56,
-              decoration: BoxDecoration(color: AppColors.error.withValues(alpha: 0.1), shape: BoxShape.circle),
-              child: const Icon(Icons.lock_outline_rounded, color: AppColors.error, size: 28),
-            ),
-            const SizedBox(height: 16),
-            const Text('Too many attempts',
-                style: TextStyle(fontFamily: 'Poppins', fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textDark)),
-            const SizedBox(height: 10),
-            const Text('Please go back and try again later.',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textMedium, height: 1.5)),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  Get.back();
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  minimumSize: const Size(0, 48),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  elevation: 0,
-                ),
-                child: const Text('Go Back',
-                    style: TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600)),
-              ),
-            ),
-          ]),
-        ),
+      builder: (dialogContext) => GateDialog(
+        glyph: Icons.lock_outline_rounded,
+        gradient: TripEntryStyle.rose,
+        title: 'Too many attempts',
+        body: 'Please go back and try again later.',
+        actions: [
+          GateButton(
+            label: 'Go Back',
+            height: 48,
+            onPressed: () {
+              Navigator.pop(dialogContext);
+              Get.back();
+            },
+          ),
+        ],
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final screenH = MediaQuery.of(context).size.height;
     return PopScope(
       canPop: !_otpSent,
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop && _otpSent) {
           _otpCtrl.clear();
-          setState(() { _otpSent = false; _attempts = 0; });
+          setState(() {
+            _otpSent = false;
+            _attempts = 0;
+          });
         }
       },
       child: Scaffold(
-        body: Stack(
-          children: [
-            Container(
-              height: screenH * 0.45,
-              decoration: const BoxDecoration(gradient: AppColors.primaryGradient),
-            ),
-            SafeArea(
-              child: SingleChildScrollView(
-                child: Column(
-                  children: [
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: Padding(
-                        padding: const EdgeInsets.only(left: 4, top: 4),
-                        child: IconButton(
-                          onPressed: () {
-                            FocusScope.of(context).unfocus();
-                            if (_otpSent) {
-                              _otpCtrl.clear();
-                              setState(() { _otpSent = false; _attempts = 0; });
-                            } else {
-                              Get.back();
-                            }
-                          },
-                          icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white, size: 20),
-                        ),
+        backgroundColor: FitnessAppTheme.background,
+        body: MediaQuery.withClampedTextScaling(
+          maxScaleFactor: 1.3,
+          child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+            child: GateHeroLayout(
+              heroHeight: 304,
+              overlap: 48,
+              hero: TemplateEntrance(
+                animation: templateInterval(_enter, 0, 2),
+                animationController: _enter,
+                child: GateHeroHeader(
+                  asset: TravelIcon.checkout,
+                  title: _isChange ? 'Change Number' : 'Verify Mobile',
+                  titleSize: 24,
+                  subtitle: _isChange ? 'Enter your new mobile number' : 'Required to post listings',
+                  top: Align(
+                    alignment: Alignment.centerLeft,
+                    child: SizedBox(
+                      width: KitMetrics.touch,
+                      height: KitMetrics.touch,
+                      child: IconButton(
+                        padding: EdgeInsets.zero,
+                        alignment: Alignment.centerLeft,
+                        onPressed: () {
+                          FocusScope.of(context).unfocus();
+                          if (_otpSent) {
+                            _otpCtrl.clear();
+                            setState(() {
+                              _otpSent = false;
+                              _attempts = 0;
+                            });
+                          } else {
+                            Get.back();
+                          }
+                        },
+                        icon: const Icon(Icons.arrow_back_ios_new_rounded, color: FitnessAppTheme.white, size: 18),
                       ),
                     ),
-                    SizedBox(height: screenH * 0.02),
-                    Column(children: [
-                      const Icon(Icons.phone_android_rounded, size: 40, color: Colors.white),
-                      const SizedBox(height: 10),
-                      Text(
-                        _isChange ? 'Change Number' : 'Verify Mobile',
-                        style: const TextStyle(fontFamily: 'Poppins', fontSize: 24, fontWeight: FontWeight.w700, color: Colors.white),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        _isChange ? 'Enter your new mobile number' : 'Required to post listings',
-                        style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, color: Colors.white70),
-                      ),
-                    ]),
-                    SizedBox(height: screenH * 0.04),
-                    Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 20),
-                        padding: const EdgeInsets.all(28),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(24),
-                          boxShadow: [BoxShadow(color: AppColors.primary.withValues(alpha: 0.12), blurRadius: 30, offset: const Offset(0, 10))],
-                        ),
-                        child: AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 350),
-                          transitionBuilder: (child, anim) => FadeTransition(opacity: anim, child: child),
-                          child: _otpSent ? _otpSection() : _phoneSection(),
-                        ),
-                      ),
-                    const SizedBox(height: 24),
-                  ],
+                  ),
+                ),
+              ),
+              child: Padding(
+                padding: EdgeInsets.only(bottom: 24 + MediaQuery.paddingOf(context).bottom),
+                child: TemplateEntrance(
+                  animation: templateInterval(_enter, 1, 2),
+                  animationController: _enter,
+                  child: Container(
+                    width: double.infinity,
+                    margin: const EdgeInsets.symmetric(horizontal: KitMetrics.gutter),
+                    padding: const EdgeInsets.all(24),
+                    decoration: GateKit.heroCard(),
+                    child: GateSwitcher(
+                      reverse: !_otpSent,
+                      child: _otpSent ? _otpSection() : _phoneSection(),
+                    ),
+                  ),
                 ),
               ),
             ),
-          ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _phoneSection() => Column(
+  Widget _phoneSection() => TemplateStagger(
         key: const ValueKey('phone'),
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             _isChange ? 'Enter your new number' : 'Enter your mobile number',
-            style: const TextStyle(fontFamily: 'Poppins', fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.textDark),
+            style: FitnessAppTheme.headline.copyWith(fontSize: 18),
           ),
           const SizedBox(height: 6),
           Text(
             _isChange ? 'Your old number will be replaced after verification' : 'You\'ll receive an OTP on WhatsApp',
-            style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textLight),
+            style: FitnessAppTheme.caption,
           ),
           const SizedBox(height: 28),
           TextFormField(
             controller: _phoneCtrl,
             keyboardType: TextInputType.phone,
             inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(10)],
-            style: const TextStyle(fontFamily: 'Poppins', fontSize: 16, fontWeight: FontWeight.w500),
+            style: FitnessAppTheme.title.copyWith(fontWeight: FontWeight.w500),
             decoration: InputDecoration(
               prefixIcon: Container(
                 margin: const EdgeInsets.all(12),
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(8)),
-                child: const Text('+91',
-                    style: TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.primary)),
+                decoration: const BoxDecoration(color: FitnessAppTheme.spacer, borderRadius: CardRadius.chip),
+                child: Text('+91',
+                    style: FitnessAppTheme.body2
+                        .copyWith(fontWeight: FontWeight.w700, color: FitnessAppTheme.nearlyDarkBlue)),
               ),
               hintText: 'Enter mobile number',
             ),
           ),
           const SizedBox(height: 24),
-          Obx(() => GradientButton(
+          Obx(() => GateButton(
                 onPressed: _auth.isLoading.value ? null : _sendOtp,
                 isLoading: _auth.isLoading.value,
                 label: 'Send OTP',
@@ -498,39 +361,45 @@ class _PhoneVerifyScreenState extends State<PhoneVerifyScreen> {
       );
 
   Widget _otpSection() {
-    return Column(
+    return TemplateStagger(
       key: const ValueKey('otp'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(children: [
-          GestureDetector(
+          InkResponse(
+            radius: 22,
             onTap: () {
               FocusScope.of(context).unfocus();
               _otpCtrl.clear();
-              setState(() { _otpSent = false; _attempts = 0; });
+              setState(() {
+                _otpSent = false;
+                _attempts = 0;
+              });
             },
-            child: const Icon(Icons.arrow_back_ios_rounded, size: 20, color: AppColors.primary),
+            child: const SizedBox(
+              width: KitMetrics.touch,
+              height: KitMetrics.touch,
+              child: Icon(Icons.arrow_back_ios_new_rounded, size: 18, color: FitnessAppTheme.nearlyDarkBlue),
+            ),
           ),
-          const SizedBox(width: 8),
-          const Text('Enter OTP',
-              style: TextStyle(fontFamily: 'Poppins', fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+          const SizedBox(width: 4),
+          Text('Enter OTP', style: FitnessAppTheme.headline.copyWith(fontSize: 18)),
         ]),
         const SizedBox(height: 6),
-        Text('Sent to +91 ${_phoneCtrl.text}',
-            style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textLight)),
+        Text('Sent to +91 ${_phoneCtrl.text}', style: FitnessAppTheme.caption),
         const SizedBox(height: 4),
         Row(
           children: [
-            const Icon(Icons.chat_rounded, color: Color(0xFF25D366), size: 14),
-            const SizedBox(width: 4),
-            const Text('Check your WhatsApp for the OTP',
-                style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: Color(0xFF25D366), fontWeight: FontWeight.w500)),
+            const TravelIcon(TravelIcon.chat, size: 16),
+            const SizedBox(width: 6),
+            Text('Check your WhatsApp for the OTP',
+                style: FitnessAppTheme.caption.copyWith(color: GateKit.whatsApp, fontWeight: FontWeight.w600)),
           ],
         ),
         if (_attempts > 0) ...[
           const SizedBox(height: 6),
           Text('${_maxAttempts - _attempts} attempt${_maxAttempts - _attempts == 1 ? '' : 's'} remaining',
-              style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.warning)),
+              style: FitnessAppTheme.caption.copyWith(color: PickKit.warn)),
         ],
         const SizedBox(height: 28),
         Center(
@@ -546,31 +415,28 @@ class _PhoneVerifyScreenState extends State<PhoneVerifyScreen> {
             focusedPinTheme: _focusedTheme,
             submittedPinTheme: _submittedTheme,
             cursor: Column(mainAxisAlignment: MainAxisAlignment.end, children: [
-              Container(margin: const EdgeInsets.only(bottom: 9), width: 22, height: 2,
-                  decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(2))),
+              Container(
+                  margin: const EdgeInsets.only(bottom: 9),
+                  width: 22,
+                  height: 2,
+                  decoration: BoxDecoration(
+                      color: FitnessAppTheme.nearlyDarkBlue, borderRadius: BorderRadius.circular(2))),
             ]),
             onCompleted: (pin) => _verifyOtp(pin),
           ),
         ),
         const SizedBox(height: 28),
-        Obx(() => GradientButton(
+        Obx(() => GateButton(
               onPressed: _auth.isLoading.value ? null : () => _verifyOtp(),
               isLoading: _auth.isLoading.value,
               label: 'Verify Number',
             )),
         const SizedBox(height: 16),
         Center(
-          child: Obx(() => TextButton(
-            onPressed: (_auth.isLoading.value || _resends >= _maxResends) ? null : _resendOtp,
-            child: Text(
-              _resends >= _maxResends ? 'No more resends' : 'Resend OTP (${_maxResends - _resends} left)',
-              style: TextStyle(
-                fontFamily: 'Poppins',
-                color: _resends >= _maxResends ? AppColors.textLight : AppColors.primary,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          )),
+          child: Obx(() => GateTextButton(
+                label: _resends >= _maxResends ? 'No more resends' : 'Resend OTP (${_maxResends - _resends} left)',
+                onPressed: (_auth.isLoading.value || _resends >= _maxResends) ? null : _resendOtp,
+              )),
         ),
       ],
     );

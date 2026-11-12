@@ -1,22 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:iconsax/iconsax.dart';
-import '../../../config/app_colors.dart';
 import '../../../config/app_routes.dart';
-import '../../../config/app_shadows.dart';
 import '../../../config/app_tabs.dart';
-import '../../../config/module_palette.dart';
 import '../../../controllers/auth_controller.dart';
 import '../../../controllers/tab_config_controller.dart';
+import '../../../design/design.dart';
 import '../../../utils/app_toast.dart';
-import '../../../widgets/empty_state_view.dart';
 import '../../../widgets/location_switch_sheet.dart';
 import '../models/taxi_browse_item.dart';
-import '../taxi_option_sets.dart';
+import '../ways/widgets/taxi_ways_entry_card.dart';
 import 'taxi_card.dart';
 import 'taxi_list_controller.dart';
 import 'taxi_navigation.dart';
-import '../ways/widgets/taxi_ways_entry_card.dart';
 
 class TaxiListScreen extends StatefulWidget {
   final bool root;
@@ -77,7 +72,7 @@ class _TaxiListScreenState extends State<TaxiListScreen> {
     try {
       final picked = await LocationSwitchSheet.pick(
         context,
-        palette: TaxiColors.palette,
+        palette: templateModulePalette,
         title: isFrom ? 'From city' : 'To city',
       );
       if (picked == null || !mounted) return;
@@ -96,185 +91,162 @@ class _TaxiListScreenState extends State<TaxiListScreen> {
     }
   }
 
+  Widget _in(int i, Widget child) => EntranceOnce(index: i, child: child);
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.scaffoldBg,
+    final bottom = widget.root
+        ? BarMetrics.bodyBottomOf(context)
+        : 32 + MediaQuery.paddingOf(context).bottom;
+    final body = Scaffold(
+      backgroundColor: DesignColors.scaffold,
       body: RefreshIndicator(
-        color: TaxiColors.accent,
+        color: DesignColors.primary,
+        backgroundColor: DesignColors.surface,
         onRefresh: _ctrl.pullRefresh,
         child: CustomScrollView(
           controller: _scroll,
           physics: const AlwaysScrollableScrollPhysics(),
           slivers: [
             SliverToBoxAdapter(child: _buildHeader(context)),
-            SliverToBoxAdapter(child: _buildReviewStrip()),
-            SliverToBoxAdapter(child: _buildTiles()),
-            SliverToBoxAdapter(child: _buildListHeader()),
-            SliverToBoxAdapter(child: _buildWaysEntry()),
+            SliverToBoxAdapter(child: _in(0, _buildReviewStrip())),
+            SliverToBoxAdapter(child: _in(1, _buildTiles())),
+            SliverToBoxAdapter(child: _in(2, _buildListHeader())),
+            SliverToBoxAdapter(child: _in(3, _buildWaysEntry())),
             _buildBody(),
-            SliverToBoxAdapter(child: _buildFooter()),
+            SliverToBoxAdapter(child: _buildFooter(bottom)),
           ],
         ),
       ),
     );
+    return widget.root ? TabEntrance(tab: AppTabs.taxi, child: body) : body;
   }
 
+  static const double _selectorCard = 88;
+  static const double _headerBottom = 44;
+  static const double _selectorOverlap = _headerBottom + ModuleHeader.paddingBottom;
+
   Widget _buildHeader(BuildContext context) {
-    final top = MediaQuery.paddingOf(context).top;
-    final subtitle = Obx(() => Text(
-          _ctrl.to.value != null ? 'Taxis for your route' : 'Local taxis near you',
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            fontFamily: 'Poppins',
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            color: Colors.white.withValues(alpha: 0.85),
-          ),
-        ));
-    const titleStyle = TextStyle(fontFamily: 'Poppins', fontSize: 22, fontWeight: FontWeight.w700, color: Colors.white);
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: TaxiColors.gradient,
-        borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
-      ),
-      padding: EdgeInsets.fromLTRB(widget.root ? 20 : 12, top + (widget.root ? 16 : 8), 20, 18),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(children: [
-            if (!widget.root) ...[
-              IconButton(
-                onPressed: () => Get.back(),
-                icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
-              ),
-              const SizedBox(width: 2),
-            ],
-            Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                widget.root
-                    ? Obx(() => Text(
-                          Get.find<TabConfigController>().displayNameForIndex(AppTabs.taxi, 'Taxi'),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: titleStyle,
-                        ))
-                    : const Text('Taxi', maxLines: 1, overflow: TextOverflow.ellipsis, style: titleStyle),
-                const SizedBox(height: 2),
-                subtitle,
-              ]),
+    final headerH = ModuleHeader.heightOf(context, hasSubtitle: true, bottomHeight: _headerBottom);
+    return Obx(() {
+      final title = widget.root
+          ? Get.find<TabConfigController>().displayNameForIndex(AppTabs.taxi, 'Taxi')
+          : 'Taxi';
+      return SizedBox(
+        height: headerH + (_selectorCard - _selectorOverlap) + 12,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            ModuleHeader(
+              title: title,
+              subtitle: _ctrl.to.value != null ? 'Taxis for your route' : 'Local taxis near you',
+              tone: KitTone.taxi,
+              tabRoot: widget.root,
+              onBack: widget.root ? null : () => Get.back(),
+              bottomHeight: _headerBottom,
+              bottom: const SizedBox.shrink(),
             ),
-          ]),
-          SizedBox(height: widget.root ? 18 : 12),
-          Padding(
-            padding: EdgeInsets.only(left: widget.root ? 0 : 8),
-            child: _buildSelectors(),
-          ),
-        ],
-      ),
-    );
+            Positioned(
+              left: KitMetrics.gutter,
+              right: KitMetrics.gutter,
+              top: headerH - _selectorOverlap,
+              child: _buildSelectors(),
+            ),
+          ],
+        ),
+      );
+    });
   }
 
   Widget _buildSelectors() {
     return Obx(() {
       final f = _ctrl.from.value;
       final t = _ctrl.to.value;
-      return Column(children: [
-        _selector(
-          label: 'From',
-          icon: Icons.my_location_rounded,
-          value: f?.name,
-          placeholder: 'Pick a city',
-          onTap: () => _pick(isFrom: true),
-          trailing: _ctrl.fromIsCurrent.value || f == null && _ctrl.isLoading.value
-              ? null
-              : _trailingButton(Iconsax.gps, _ctrl.useCurrentFrom),
+      return DecoratedBox(
+        decoration: BoxDecoration(
+          color: DesignColors.surface,
+          borderRadius: CardRadius.tile,
+          boxShadow: ShadowTokens.elev3,
         ),
-        const SizedBox(height: 10),
-        _selector(
-          label: 'To',
-          icon: Icons.location_on_outlined,
-          value: t?.name,
-          placeholder: 'Anywhere / pick a city',
-          onTap: () => _pick(isFrom: false),
-          trailing: t != null ? _trailingButton(Iconsax.close_circle, _ctrl.clearTo) : null,
+        child: SizedBox(
+          height: _selectorCard,
+          child: Column(children: [
+            Expanded(
+              child: _selector(
+                label: 'From',
+                asset: TravelIcon.place,
+                value: f?.name,
+                placeholder: 'Pick a city',
+                onTap: () => _pick(isFrom: true),
+                trailing: _ctrl.fromIsCurrent.value || f == null && _ctrl.isLoading.value
+                    ? null
+                    : _trailingButton(Image.asset(TravelIcon.pin, width: 22, height: 22), _ctrl.useCurrentFrom),
+              ),
+            ),
+            const Divider(height: 1, indent: 16, endIndent: 16, color: DesignColors.dividerSoft),
+            Expanded(
+              child: _selector(
+                label: 'To',
+                asset: TravelIcon.map,
+                value: t?.name,
+                placeholder: 'Anywhere / pick a city',
+                onTap: () => _pick(isFrom: false),
+                trailing: t != null
+                    ? _trailingButton(
+                        const Icon(Icons.close_rounded, size: 18, color: DesignColors.primary), _ctrl.clearTo)
+                    : null,
+              ),
+            ),
+          ]),
         ),
-      ]);
+      );
     });
   }
 
-  Widget _trailingButton(IconData icon, VoidCallback onTap) {
+  Widget _trailingButton(Widget icon, VoidCallback onTap) {
     return InkResponse(
       onTap: onTap,
       radius: 22,
-      child: SizedBox(
-        width: 36,
-        height: 40,
-        child: Icon(icon, size: 18, color: TaxiColors.accentDark),
-      ),
+      child: SizedBox(width: 44, height: 44, child: Center(child: icon)),
     );
   }
 
   Widget _selector({
     required String label,
-    required IconData icon,
+    required String asset,
     required String? value,
     required String placeholder,
     required VoidCallback onTap,
     Widget? trailing,
   }) {
     final isSet = value != null;
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
+    return InkWell(
       onTap: onTap,
-      child: Container(
-        constraints: const BoxConstraints(minHeight: 50),
-        padding: EdgeInsets.only(left: 14, right: trailing != null ? 4 : 10),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: AppShadows.premium(TaxiColors.accent, alpha: 0.16, blur: 16, offset: const Offset(0, 6)),
-        ),
+      splashColor: DesignColors.splash,
+      child: Padding(
+        padding: EdgeInsets.only(left: 16, right: trailing != null ? 4 : 12),
         child: Row(
           children: [
-            Icon(icon, size: 17, color: TaxiColors.accentDark),
-            const SizedBox(width: 8),
+            Image.asset(asset, width: 24, height: 24),
+            const SizedBox(width: 12),
             Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 7),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      label,
-                      maxLines: 1,
-                      style: const TextStyle(fontFamily: 'Poppins', fontSize: 10.5, fontWeight: FontWeight.w600, color: AppColors.textLight),
-                    ),
-                    Text(
-                      value ?? placeholder,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontFamily: 'Poppins',
-                        fontSize: 13,
-                        fontWeight: isSet ? FontWeight.w700 : FontWeight.w500,
-                        color: isSet ? TaxiColors.accentDark : AppColors.textHint,
-                      ),
-                    ),
-                  ],
-                ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(label, maxLines: 1, style: TypeTokens.caption),
+                  Text(
+                    value ?? placeholder,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TypeTokens.style(14, isSet ? FontWeight.w700 : FontWeight.w500,
+                        color: isSet ? DesignColors.textStrong : DesignColors.textMuted),
+                  ),
+                ],
               ),
             ),
             const SizedBox(width: 6),
-            trailing ??
-                Container(
-                  width: 26,
-                  height: 26,
-                  decoration: const BoxDecoration(color: AppColors.neutralChip, shape: BoxShape.circle),
-                  child: Icon(Icons.keyboard_arrow_down_rounded, size: 16, color: TaxiColors.accentDark),
-                ),
+            trailing ?? const Icon(Icons.keyboard_arrow_down_rounded, size: 22, color: DesignColors.primary),
           ],
         ),
       ),
@@ -285,33 +257,11 @@ class _TaxiListScreenState extends State<TaxiListScreen> {
     return Obx(() {
       final pending = _auth.taxisEnabled && _auth.user.value?.taxiStatus == 'PendingReview';
       if (!pending) return const SizedBox.shrink();
-      return Padding(
-        padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          decoration: BoxDecoration(
-            color: TaxiColors.accent.withValues(alpha: 0.10),
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: TaxiColors.accent.withValues(alpha: 0.35)),
-          ),
-          child: Row(
-            children: [
-              Icon(Iconsax.clock, size: 20, color: TaxiColors.accentDark),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Under review',
-                        style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700, color: TaxiColors.accentDark)),
-                    const Text('Your taxi is being checked',
-                        style: TextStyle(fontFamily: 'Poppins', fontSize: 11.5, color: AppColors.textMedium)),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
+      return const SlimBar(
+        title: 'Under review',
+        subtitle: 'Your taxi is being checked',
+        leadingAsset: TravelIcon.note,
+        tone: KitTone.taxi,
       );
     });
   }
@@ -320,36 +270,24 @@ class _TaxiListScreenState extends State<TaxiListScreen> {
     return Obx(() {
       final enabled = _auth.taxisEnabled;
       if (!widget.root || !enabled) return const SizedBox.shrink();
-      return Padding(
-        padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
-        child: Row(
-          children: [
-            Expanded(
-              child: _OptionTile(
-                label: 'My Taxi',
-                icon: Iconsax.car,
-                gradient: AppColors.warningGradient,
-                onTap: () => Get.toNamed(AppRoutes.myTaxi),
-              ),
-            ),
-            const SizedBox(width: 10),
-            const Spacer(),
-            const SizedBox(width: 10),
-            const Spacer(),
-          ],
-        ),
+      return ListRow(
+        title: 'My Taxi',
+        iconAsset: TravelIcon.taxi,
+        tone: KitTone.taxi,
+        compact: true,
+        onTap: () => Get.toNamed(AppRoutes.myTaxi),
       );
     });
   }
 
   Widget _buildListHeader() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+      padding: const EdgeInsets.fromLTRB(KitMetrics.gutter, 12, KitMetrics.gutter, 4),
       child: Obx(() => Text(
             _ctrl.to.value != null ? 'Route taxis' : 'Taxis near you',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontFamily: 'Poppins', fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textDark),
+            style: TypeTokens.style(16, FontWeight.w700, color: DesignColors.textStrong),
           )),
     );
   }
@@ -363,20 +301,31 @@ class _TaxiListScreenState extends State<TaxiListScreen> {
     });
   }
 
+  Widget _empty({String? asset, bool error = false, required String title, required String subtitle, VoidCallback? onRetry}) =>
+      SliverToBoxAdapter(
+        child: error
+            ? StateCard.error(
+                title: title,
+                message: subtitle,
+                kit: KitTone.taxi,
+                actionLabel: onRetry == null ? null : 'Try again',
+                onAction: onRetry,
+              )
+            : StateCard(
+                title: title,
+                message: subtitle,
+                kit: KitTone.taxi,
+                asset: asset ?? TravelIcon.taxi,
+              ),
+      );
+
   Widget _buildBody() {
     return Obx(() {
       final items = _ctrl.items;
       if (items.isEmpty) {
-        if (_ctrl.isLoading.value) return _buildShimmer();
+        if (_ctrl.isLoading.value) return _buildSkeleton();
         if (_ctrl.from.value == null) {
-          return SliverToBoxAdapter(
-            child: EmptyStateView(
-              icon: Iconsax.location,
-              title: 'Pick where you start',
-              subtitle: 'Tap From to choose a city',
-              palette: ModulePalette.taxi,
-            ),
-          );
+          return _empty(asset: TravelIcon.place, title: 'Pick where you start', subtitle: 'Tap From to choose a city');
         }
         final failed = _ctrl.loadFailed.value;
         final f = _ctrl.from.value;
@@ -387,120 +336,50 @@ class _TaxiListScreenState extends State<TaxiListScreen> {
           );
         }
         final hint = _ctrl.to.value != null ? 'Try another city' : 'Pick a To city for route taxis';
-        return SliverToBoxAdapter(
-          child: EmptyStateView(
-            icon: failed ? Iconsax.cloud_cross : Iconsax.car,
-            title: failed ? "Couldn't load taxis" : 'No taxis yet',
-            subtitle: failed ? 'Check your connection and try again' : hint,
-            onRetry: failed ? _ctrl.retry : null,
-            palette: ModulePalette.taxi,
-          ),
+        return _empty(
+          asset: TravelIcon.taxi,
+          error: failed,
+          title: failed ? "Couldn't load taxis" : 'No taxis yet',
+          subtitle: failed ? 'Check your connection and try again' : hint,
+          onRetry: failed ? _ctrl.retry : null,
         );
       }
-      return SliverPadding(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-        sliver: SliverList.separated(
-          itemCount: items.length,
-          separatorBuilder: (_, _) => const SizedBox(height: 12),
-          itemBuilder: (_, i) {
-            final t = items[i];
-            return TaxiCard(key: ValueKey(t.id), item: t, onOpen: () => _open(t));
-          },
-        ),
+      return SliverList.builder(
+        itemCount: items.length,
+        itemBuilder: (_, i) {
+          final t = items[i];
+          return EntranceOnce(
+            key: ValueKey(t.id),
+            index: i,
+            child: TaxiCard(item: t, onOpen: () => _open(t)),
+          );
+        },
       );
     });
   }
 
-  Widget _buildShimmer() {
-    return SliverPadding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-      sliver: SliverList.separated(
-        itemCount: 4,
-        separatorBuilder: (_, _) => const SizedBox(height: 12),
-        itemBuilder: (_, _) => const TaxiCardSkeleton(),
-      ),
+  Widget _buildSkeleton() {
+    return SliverList.builder(
+      itemCount: 4,
+      itemBuilder: (_, _) => const TaxiCardSkeleton(),
     );
   }
 
-  Widget _buildFooter() {
+  Widget _buildFooter(double bottom) {
     return Obx(() {
-      if (_ctrl.items.isEmpty) return const SizedBox(height: 32);
+      if (_ctrl.items.isEmpty) return SizedBox(height: bottom);
       Widget child = const SizedBox.shrink();
       if (_ctrl.isLoadingMore.value) {
-        child = Center(child: CircularProgressIndicator(strokeWidth: 2, color: TaxiColors.accent));
+        child = const Center(child: CircularProgressIndicator(strokeWidth: 2, color: DesignColors.primary));
       } else if (_ctrl.loadMoreFailed.value) {
         child = Center(
-          child: TextButton(
-            onPressed: _ctrl.retryLoadMore,
-            child: Text(
-              "Couldn't load more. Tap to retry",
-              style: TextStyle(
-                  fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: TaxiColors.accentDark),
-            ),
-          ),
+          child: TextLink(label: "Couldn't load more. Tap to retry", onTap: _ctrl.retryLoadMore),
         );
       }
       return Padding(
-        padding: const EdgeInsets.only(top: 12, bottom: 32),
-        child: SizedBox(height: 36, child: child),
+        padding: EdgeInsets.only(top: 12, bottom: bottom),
+        child: SizedBox(height: 44, child: child),
       );
     });
-  }
-}
-
-class _OptionTile extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final Gradient gradient;
-  final VoidCallback onTap;
-
-  const _OptionTile({
-    required this.label,
-    required this.icon,
-    required this.gradient,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.divider.withValues(alpha: 0.7)),
-          boxShadow: AppShadows.premium(TaxiColors.accent, alpha: 0.05, blur: 8, offset: const Offset(0, 2)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 52,
-              height: 52,
-              decoration: BoxDecoration(
-                gradient: gradient,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.7), width: 1),
-              ),
-              child: Icon(icon, size: 26, color: Colors.white),
-            ),
-            const SizedBox(height: 6),
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Text(
-                label,
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                softWrap: false,
-                style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.textDark),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 }

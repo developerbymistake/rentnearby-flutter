@@ -1,36 +1,36 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'package:iconsax/iconsax.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
-import '../config/app_colors.dart';
 import '../config/module_palette.dart';
+import '../design/design.dart';
 import '../models/place_result_model.dart';
 import '../services/photon_service.dart';
 import '../utils/input_formatters.dart';
 
-/// Location-search bottom sheet, backed by the self-hosted Photon service.
-/// Deliberately standalone — no LocationController, no Get.find, no shared
-/// state of any kind. Pure input (a query) -> output (a picked [PlaceResult]
-/// popped back to the caller). This isolation is what makes it safe to reuse
-/// identically from Stay, Taxi and Trip screens without coupling
-/// any screen's location state to another.
 class LocationSearchSheet extends StatefulWidget {
   final LatLng? bias;
   final ModulePalette palette;
   final String? preferState;
   const LocationSearchSheet(
-      {super.key, this.bias, this.palette = ModulePalette.rooms, this.preferState});
+      {super.key,
+      this.bias,
+      this.palette = templateModulePalette,
+      this.preferState});
 
   static Future<PlaceResult?> show(BuildContext context,
-      {LatLng? bias, ModulePalette palette = ModulePalette.rooms, String? preferState}) {
+      {LatLng? bias,
+      ModulePalette palette = templateModulePalette,
+      String? preferState}) {
     return showModalBottomSheet<PlaceResult>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
+      backgroundColor: FitnessAppTheme.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (_) => LocationSearchSheet(bias: bias, palette: palette, preferState: preferState),
+      builder: (_) => LocationSearchSheet(
+          bias: bias, palette: palette, preferState: preferState),
     );
   }
 
@@ -38,20 +38,22 @@ class LocationSearchSheet extends StatefulWidget {
   State<LocationSearchSheet> createState() => _LocationSearchSheetState();
 }
 
-class _LocationSearchSheetState extends State<LocationSearchSheet> {
-  Color get _accent => widget.palette.accent;
-  Gradient get _gradient => widget.palette.gradient;
+class _LocationSearchSheetState extends State<LocationSearchSheet>
+    with TickerProviderStateMixin {
   final _searchCtrl = TextEditingController();
   Timer? _debounce;
+  late final AnimationController _enter = AnimationController(
+      duration: const Duration(milliseconds: 600), vsync: this)
+    ..forward();
+  late final AnimationController _rows = AnimationController(
+      duration: const Duration(milliseconds: 600), vsync: this)
+    ..forward();
 
   List<PlaceResult> _results = [];
   bool _loading = false;
   String? _error;
   bool _searched = false;
 
-  // Same frozen-baseline approach as LocationSwitchSheet — this sheet also
-  // has a TextField, so it's subject to the same adjustResize shrink-on-
-  // keyboard-open behaviour if height were computed live in build().
   double? _baseHeight;
   double? _baseTopPadding;
 
@@ -67,6 +69,8 @@ class _LocationSearchSheetState extends State<LocationSearchSheet> {
   void dispose() {
     _debounce?.cancel();
     _searchCtrl.dispose();
+    _enter.dispose();
+    _rows.dispose();
     super.dispose();
   }
 
@@ -81,7 +85,8 @@ class _LocationSearchSheetState extends State<LocationSearchSheet> {
       });
       return;
     }
-    _debounce = Timer(const Duration(milliseconds: 600), () => _runSearch(query));
+    _debounce =
+        Timer(const Duration(milliseconds: 600), () => _runSearch(query));
   }
 
   Future<void> _runSearch(String query) async {
@@ -90,13 +95,15 @@ class _LocationSearchSheetState extends State<LocationSearchSheet> {
       _error = null;
     });
     try {
-      final results = await PhotonService.search(query, bias: widget.bias, preferState: widget.preferState);
+      final results = await PhotonService.search(query,
+          bias: widget.bias, preferState: widget.preferState);
       if (!mounted) return;
       setState(() {
         _results = results;
         _loading = false;
         _searched = true;
       });
+      _rows.forward(from: 0);
     } catch (_) {
       if (!mounted) return;
       setState(() {
@@ -119,48 +126,24 @@ class _LocationSearchSheetState extends State<LocationSearchSheet> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _buildHeader(),
-          _buildSearchBox(),
-          Expanded(child: _buildBody()),
-          const SizedBox(height: 12),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildHeader() {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(20, 14, 20, 18),
-      decoration: BoxDecoration(
-        gradient: _gradient,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      child: Column(
-        children: [
-          Container(
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.5),
-              borderRadius: BorderRadius.circular(2),
+          TemplateEntrance(
+            animation: templateInterval(_enter, 0, 3),
+            animationController: _enter,
+            child: const GateSheetHeader(title: 'Search location'),
+          ),
+          TemplateEntrance(
+            animation: templateInterval(_enter, 1, 3),
+            animationController: _enter,
+            child: _buildSearchBox(),
+          ),
+          Expanded(
+            child: TemplateEntrance(
+              animation: templateInterval(_enter, 2, 3),
+              animationController: _enter,
+              child: _buildBody(),
             ),
           ),
-          const SizedBox(height: 14),
-          const Row(
-            children: [
-              Expanded(
-                child: Text(
-                  'Search location',
-                  style: TextStyle(
-                    fontFamily: 'Poppins',
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-            ],
-          ),
+          const SizedBox(height: 12),
         ],
       ),
     );
@@ -169,38 +152,18 @@ class _LocationSearchSheetState extends State<LocationSearchSheet> {
   Widget _buildSearchBox() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 14, 20, 6),
-      child: TextField(
+      child: GateSearchBar(
         controller: _searchCtrl,
         autofocus: true,
-        cursorColor: _accent,
+        hint: 'Search area, locality, landmark...',
         inputFormatters: noEmojiInputFormatters,
         onChanged: _onChanged,
-        style: const TextStyle(fontFamily: 'Poppins', fontSize: 14),
-        decoration: InputDecoration(
-          hintText: 'Search area, locality, landmark...',
-          hintStyle: const TextStyle(
-              fontFamily: 'Poppins', fontSize: 14, color: AppColors.textHint),
-          prefixIcon: const Icon(Icons.search_rounded,
-              size: 20, color: AppColors.textHint),
-          filled: true,
-          fillColor: widget.palette.surface,
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide.none,
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: _accent, width: 1.5),
-          ),
-        ),
       ),
     );
   }
 
   Widget _buildBody() {
-    if (_loading) return _loadingIndicator();
+    if (_loading) return _loadingRows();
     if (_error != null) {
       return _errorState(_error!, () => _runSearch(_searchCtrl.text));
     }
@@ -208,96 +171,115 @@ class _LocationSearchSheetState extends State<LocationSearchSheet> {
     if (_results.isEmpty) {
       return _emptyState('No results for "${_searchCtrl.text}"');
     }
+    final count = math.min(_results.length, 10);
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       itemCount: _results.length,
-      itemBuilder: (context, i) => _resultRow(_results[i]),
-    );
-  }
-
-  Widget _resultRow(PlaceResult result) {
-    return InkWell(
-      onTap: () => Navigator.pop(context, result),
-      borderRadius: BorderRadius.circular(10),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 11),
-        child: Row(
-          children: [
-            Icon(Iconsax.location, size: 17, color: _accent),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    result.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontFamily: 'Poppins',
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textDark,
-                    ),
-                  ),
-                  if (result.subtitle.isNotEmpty)
-                    Text(
-                      result.subtitle,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontFamily: 'Poppins',
-                        fontSize: 12,
-                        color: AppColors.textLight,
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ],
-        ),
+      itemBuilder: (context, i) => TemplateEntrance(
+        animation: templateInterval(_rows, math.min(i, count - 1), count),
+        animationController: _rows,
+        child: _resultRow(_results[i]),
       ),
     );
   }
 
-  Widget _loadingIndicator() => Padding(
-        padding: EdgeInsets.symmetric(vertical: 48),
-        child: Center(
-          child: SizedBox(
-            width: 26,
-            height: 26,
-            child: CircularProgressIndicator(strokeWidth: 2.5, color: _accent),
+  Widget _resultRow(PlaceResult result) {
+    return Column(
+      children: [
+        Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () => Navigator.pop(context, result),
+            borderRadius: BorderRadius.circular(8),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 11),
+              child: Row(
+                children: [
+                  const TravelIcon(TravelIcon.place, size: 22),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          result.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TripKit.text(14, weight: FontWeight.w600),
+                        ),
+                        if (result.subtitle.isNotEmpty)
+                          Text(
+                            result.subtitle,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: FitnessAppTheme.caption,
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
+        const Divider(height: 1, color: FitnessAppTheme.spacer),
+      ],
+    );
+  }
+
+  Widget _loadingRows() => ListView(
+        physics: const NeverScrollableScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        children: [
+          for (var i = 0; i < 4; i++)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 10),
+              child: Row(
+                children: [
+                  TemplatePlaceholder(height: 40, width: 40, radius: 20),
+                  SizedBox(width: 12),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      TemplatePlaceholder(height: 12, width: 160),
+                      SizedBox(height: 8),
+                      TemplatePlaceholder(height: 10, width: 100),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+        ],
       );
 
   Widget _emptyState(String message) => Padding(
         padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 24),
-        child: Center(
-          child: Text(
-            message,
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textLight),
-          ),
+        child: Column(
+          children: [
+            const TravelIcon(TravelIcon.map, size: 44),
+            const SizedBox(height: 10),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: FitnessAppTheme.caption,
+            ),
+          ],
         ),
       );
 
   Widget _errorState(String message, VoidCallback onRetry) => Padding(
         padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 24),
         child: Column(
-          mainAxisSize: MainAxisSize.min,
           children: [
+            const TravelIcon(TravelIcon.map, size: 44),
+            const SizedBox(height: 10),
             Text(
               message,
               textAlign: TextAlign.center,
-              style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textLight),
+              style: FitnessAppTheme.caption,
             ),
             const SizedBox(height: 10),
-            TextButton(
-              onPressed: onRetry,
-              child: Text('Retry',
-                  style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, color: _accent)),
-            ),
+            GateTextButton(label: 'Retry', onPressed: onRetry),
           ],
         ),
       );

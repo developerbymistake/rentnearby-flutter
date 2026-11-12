@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
-import '../../../config/app_colors.dart';
+import '../../../design/design.dart';
 
 class TripSpotCategory {
   static IconData iconOf(String category) => switch (category) {
@@ -22,10 +22,10 @@ class TripSpotCategory {
       };
 
   static Color colorOf(String category) => switch (category) {
-        'lake' || 'waterfall' || 'ghat' || 'beach' => AppColors.accent,
-        'viewpoint' || 'park' || 'garden' || 'zoo' || 'wildlife' => AppColors.plot,
-        'temple' || 'fort' || 'palace' || 'museum' || 'historic' || 'cave' || 'bridge' => AppColors.gold,
-        _ => AppColors.trip,
+        'lake' || 'waterfall' || 'ghat' || 'beach' => TripTokens.spotWater,
+        'viewpoint' || 'park' || 'garden' || 'zoo' || 'wildlife' => TripTokens.spotNature,
+        'temple' || 'fort' || 'palace' || 'museum' || 'historic' || 'cave' || 'bridge' => TripTokens.spotHeritage,
+        _ => TripTokens.spotOther,
       };
 
   static String label(String category) {

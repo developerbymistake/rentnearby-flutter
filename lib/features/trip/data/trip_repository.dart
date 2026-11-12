@@ -92,15 +92,15 @@ class TripRepository {
     return data is Map<String, dynamic> ? data : const {};
   }
 
-  Future<TripCityVersion> citiesVersion() async =>
-      TripCityVersion.fromJson(_data(await withRetry(() => ApiService.get('/trips/cities/version'))));
+  Future<TripCityVersion> citiesVersion({bool once = false}) async =>
+      TripCityVersion.fromJson(_data(await withRetry(() => ApiService.get('/trips/cities/version'), once: once)));
 
-  Future<TripCityPage> cities({int page = 1, int pageSize = TripConstants.citiesPageSize, String? q}) async =>
+  Future<TripCityPage> cities({int page = 1, int pageSize = TripConstants.citiesPageSize, String? q, bool once = false}) async =>
       TripCityPage.fromJson(_data(await withRetry(() => ApiService.get('/trips/cities', params: {
             'page': page,
             'pageSize': pageSize,
             'q': ?q,
-          }))));
+          }), once: once)));
 
   Future<TripSpotsPage> spots(int cityKey, {String? cursor, int pageSize = TripConstants.spotsPageSize}) async =>
       TripSpotsPage.fromJson(_data(await withRetry(() => ApiService.get('/trips/cities/$cityKey/spots', params: {

@@ -1,5 +1,6 @@
+import 'trip_ui.dart';
+import 'package:bakhli/design/template/fitness_app_theme.dart';
 import 'package:flutter/material.dart';
-import '../../../config/app_colors.dart';
 import '../../../models/browse_item.dart';
 import '../models/trip_enquiry_model.dart';
 import '../trip_strings.dart';
@@ -120,9 +121,9 @@ class TripEnquiryStrip extends StatelessWidget {
     final advance = _advanceLine();
     final menu = actions.isNotEmpty && onAction != null;
     return Material(
-      color: AppColors.cardBg,
+      color: FitnessAppTheme.white,
       child: DecoratedBox(
-        decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: AppColors.divider))),
+        decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: FitnessAppTheme.spacer))),
         child: IntrinsicHeight(
           child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             Container(width: 4, color: advance != null && status == TripDisplayStatus.confirmedByBoth ? TripStatusVisuals.advanceBar(enquiry.advance.status) : TripStatusVisuals.bar(status)),
@@ -140,23 +141,23 @@ class TripEnquiryStrip extends StatelessWidget {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
-                                  fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                                  fontFamily: FitnessAppTheme.fontName, fontSize: 12.5, fontWeight: FontWeight.w600, color: FitnessAppTheme.darkerText)),
                           Text(_detail(),
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(fontFamily: 'Poppins', fontSize: 11.5, color: AppColors.textMedium)),
+                              style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 11.5, color: FitnessAppTheme.darkText)),
                           Text.rich(
                               TextSpan(text: _statusLine(), children: [
                                 if (status == TripDisplayStatus.confirmedByBoth && enquiry.hasPendingRevised)
                                   TextSpan(
                                     text: ' · ${TripStrings.notAcceptedYet}',
-                                    style: const TextStyle(fontWeight: FontWeight.w500, color: AppColors.textLight),
+                                    style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontWeight: FontWeight.w500, color: FitnessAppTheme.lightText),
                                   ),
                               ]),
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
-                                  fontFamily: 'Poppins',
+                                  fontFamily: FitnessAppTheme.fontName,
                                   fontSize: 11,
                                   fontWeight: FontWeight.w600,
                                   color: TripStatusVisuals.text(status))),
@@ -165,10 +166,10 @@ class TripEnquiryStrip extends StatelessWidget {
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
-                                    fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w600, color: advance.$2)),
+                                    fontFamily: FitnessAppTheme.fontName, fontSize: 11, fontWeight: FontWeight.w600, color: advance.$2)),
                         ]),
                       ),
-                      const Icon(Icons.chevron_right_rounded, size: 20, color: AppColors.textHint),
+                      const Icon(Icons.chevron_right_rounded, size: 20, color: FitnessAppTheme.deactivatedText),
                     ]),
                   ),
                 ),
@@ -180,8 +181,8 @@ class TripEnquiryStrip extends StatelessWidget {
                 child: PopupMenuButton<String>(
                   padding: EdgeInsets.zero,
                   tooltip: '',
-                  icon: const Icon(Icons.more_vert_rounded, size: 20, color: AppColors.textMedium),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  icon: const Icon(Icons.more_vert_rounded, size: 20, color: FitnessAppTheme.darkText),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
                   onSelected: onAction,
                   itemBuilder: (_) => [
                     for (final a in actions)
@@ -191,9 +192,9 @@ class TripEnquiryStrip extends StatelessWidget {
                         height: 44,
                         child: Text(a.label,
                             style: TextStyle(
-                                fontFamily: 'Poppins',
+                                fontFamily: FitnessAppTheme.fontName,
                                 fontSize: 13,
-                                color: a.destructive ? AppColors.error : AppColors.textDark)),
+                                color: a.destructive ? TripUi.bad : FitnessAppTheme.darkerText)),
                       ),
                   ],
                 ),

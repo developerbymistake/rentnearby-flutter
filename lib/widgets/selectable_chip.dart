@@ -1,19 +1,6 @@
 import 'package:flutter/material.dart';
-import '../config/app_colors.dart';
+import '../design/design.dart';
 
-/// Selectable chip (AnimatedContainer, 200ms, rounded-10, solid
-/// [activeColor] + white text when selected), shared by Stay, Taxi, Jobs and
-/// Trip so filter and type chips stay pixel-identical.
-///
-/// [icon] and [gradient] are optional, backward-compatible additions for
-/// contexts that want a richer/more elevated selected state (e.g. Home's
-/// hero toggle) — when [gradient] is set, it replaces the flat [activeColor]
-/// fill and adds a matching shadow on selection; existing callers that don't
-/// pass either keep the original flat look untouched.
-///
-/// [padding] is also optional/backward-compatible — dense grids (type chips) keep the default compact padding, while a single-row context
-/// like a sort-option button can pass a taller value so it reads as a real
-/// button instead of a cramped label.
 class SelectableChip extends StatelessWidget {
   final String label;
   final bool selected;
@@ -28,7 +15,7 @@ class SelectableChip extends StatelessWidget {
     required this.label,
     required this.selected,
     required this.onTap,
-    this.activeColor = AppColors.primary,
+    this.activeColor = FitnessAppTheme.nearlyBlue,
     this.icon,
     this.gradient,
     this.padding,
@@ -36,44 +23,50 @@ class SelectableChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: padding ?? const EdgeInsets.symmetric(vertical: 7, horizontal: 10),
-        decoration: BoxDecoration(
-          color: selected && gradient == null ? activeColor : (selected ? null : Colors.white),
-          gradient: selected ? gradient : null,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: selected ? activeColor : AppColors.divider,
-            width: 1.5,
-          ),
-          boxShadow: selected && gradient != null
-              ? [BoxShadow(color: activeColor.withValues(alpha: 0.32), blurRadius: 12, offset: const Offset(0, 5))]
-              : null,
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            if (icon != null) ...[
-              Icon(icon, size: 15, color: selected ? Colors.white : AppColors.textHint),
-              const SizedBox(width: 6),
-            ],
-            Flexible(
-              child: Text(
-                label,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontFamily: 'Poppins',
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: selected ? Colors.white : AppColors.textDark,
+    const radius = BorderRadius.all(Radius.circular(24));
+    final fg = selected ? FitnessAppTheme.white : activeColor;
+    return Container(
+      decoration: BoxDecoration(
+        color: selected && gradient == null ? activeColor : (selected ? null : FitnessAppTheme.nearlyWhite),
+        gradient: selected ? gradient : null,
+        borderRadius: radius,
+        border: Border.all(color: activeColor),
+        boxShadow: selected && gradient != null
+            ? [ShadowTokens.tint(activeColor, ShadowSpec.lift)]
+            : null,
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: radius,
+          splashColor: FitnessAppTheme.white.withValues(alpha: Alpha.soft),
+          highlightColor: Colors.transparent,
+          onTap: onTap,
+          child: Padding(
+            padding: padding ?? const EdgeInsets.symmetric(vertical: 8, horizontal: 14),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (icon != null) ...[
+                  Icon(icon, size: 15, color: fg),
+                  const SizedBox(width: 6),
+                ],
+                Flexible(
+                  child: Text(
+                    label,
+                    overflow: TextOverflow.ellipsis,
+                    style: FitnessAppTheme.body2.copyWith(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.27,
+                      color: fg,
+                    ),
+                  ),
                 ),
-              ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );

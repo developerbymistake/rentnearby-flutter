@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:bakhli/features/trip/widgets/trip_ui.dart';
+import 'package:bakhli/design/design.dart';
+import 'package:bakhli/design/extra/replies_kit.dart';
 import 'package:flutter/services.dart';
-import 'package:iconsax/iconsax.dart';
-import '../../../config/app_colors.dart';
 import '../../../models/browse_item.dart';
 import '../../../utils/app_toast.dart';
 import '../../../utils/input_formatters.dart';
-import '../../../widgets/gradient_button.dart';
 import '../controllers/trip_enquiry_controller.dart';
 import '../models/trip_enquiry_model.dart';
 import '../models/trip_offer_model.dart';
-import '../trip_colors.dart';
 import '../trip_constants.dart';
 import '../trip_strings.dart';
 import '../trip_strings_a5.dart';
@@ -35,7 +34,7 @@ class _CounterBody extends StatefulWidget {
 }
 
 class _CounterBodyState extends State<_CounterBody> {
-  static const _inputStyle = TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textDark);
+  static const _inputStyle = TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 14, color: FitnessAppTheme.darkerText);
 
   final _price = TextEditingController();
   final _note = TextEditingController();
@@ -120,6 +119,9 @@ class _CounterBodyState extends State<_CounterBody> {
       description: widget.enquiry.listingName.isEmpty ? null : widget.enquiry.listingName,
       footer: const TripPaymentLine(text: TripStrings.noPaymentLine),
       children: [
+        TemplateStagger(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
         if (listed != null && listed > 0) ...[
           _listedRow(listed),
           const SizedBox(height: 14),
@@ -137,19 +139,22 @@ class _CounterBodyState extends State<_CounterBody> {
           onChanged: (_) => setState(() => _fieldError = null),
           decoration: _decoration(prefix: '₹ ', error: _fieldError),
         ),
-        if (_totalLine() != null) ...[
+        if (_totalLine() != null)
+          Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           const SizedBox(height: 6),
           Text(_totalLine()!,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
-                  fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w600, color: TripColors.accentDark)),
+                  fontFamily: FitnessAppTheme.fontName, fontSize: 12.5, fontWeight: FontWeight.w600, color: RepliesTone.accent)),
           if (_basisDates != null)
             Text(_basisDates!,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
-        ],
+                style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, color: FitnessAppTheme.deactivatedText)),
+        ])
+        else
+          const SizedBox.shrink(),
         const SizedBox(height: 14),
         _label(TripStrings.note),
         TextField(
@@ -165,21 +170,21 @@ class _CounterBodyState extends State<_CounterBody> {
         const SizedBox(height: 14),
         _info(TripStrings.counterInfo),
         const SizedBox(height: 16),
-        GradientButton(
+        TripButton(
           onPressed: _busy ? null : _send,
           label: TripStrings.sendMyPrice,
-          isLoading: _busy,
+          loading: _busy,
           height: 52,
-          gradient: TripColors.gradient,
-          shadowColor: TripColors.accent,
         ),
         if (_serverError != null) ...[
           const SizedBox(height: 8),
           Text(_serverError!,
               maxLines: 3,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.error)),
+              style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, fontWeight: FontWeight.w600, color: RepliesTone.bad)),
         ],
+          ],
+        ),
       ],
     );
   }
@@ -188,13 +193,12 @@ class _CounterBodyState extends State<_CounterBody> {
         constraints: const BoxConstraints(minHeight: 48),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
-          color: AppColors.neutralChip,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.divider),
+          color: FitnessAppTheme.background,
+          borderRadius: BorderRadius.circular(16),
         ),
         child: Row(children: [
           const Text(TripStrings.listedLabel,
-              maxLines: 1, style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
+              maxLines: 1, style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, color: FitnessAppTheme.deactivatedText)),
           const SizedBox(width: 12),
           Expanded(
             child: Wrap(
@@ -204,34 +208,25 @@ class _CounterBodyState extends State<_CounterBody> {
               children: [
                 Text(BrowseItem.inr(listed),
                     style: const TextStyle(
-                      fontFamily: 'Poppins',
+                      fontFamily: FitnessAppTheme.fontName,
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
-                      color: AppColors.textLight,
+                      color: FitnessAppTheme.deactivatedText,
                       decoration: TextDecoration.lineThrough,
                     )),
                 const Text(TripStringsA5.perRoomNightShort,
-                    style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
+                    style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, color: FitnessAppTheme.deactivatedText)),
               ],
             ),
           ),
         ]),
       );
 
-  Widget _info(String text) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        decoration: BoxDecoration(color: TripColors.surface, borderRadius: BorderRadius.circular(12)),
-        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const Padding(
-            padding: EdgeInsets.only(top: 1),
-            child: Icon(Iconsax.info_circle, size: 16, color: TripColors.accentDark),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(text,
-                style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textMedium, height: 1.4)),
-          ),
-        ]),
+  Widget _info(String text) => TripNote(
+        iconAsset: TravelIcon.money,
+        iconSize: 18,
+        child: Text(text,
+            style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, color: FitnessAppTheme.lightText, height: 1.4)),
       );
 
   Widget _label(String text) => Padding(
@@ -239,7 +234,7 @@ class _CounterBodyState extends State<_CounterBody> {
         child: Text(text,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.textMedium)),
+            style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12.5, fontWeight: FontWeight.w600, color: FitnessAppTheme.lightText)),
       );
 
   InputDecoration _decoration({String? prefix, String? error}) => InputDecoration(
@@ -247,14 +242,14 @@ class _CounterBodyState extends State<_CounterBody> {
         errorText: error,
         errorMaxLines: 2,
         filled: true,
-        fillColor: AppColors.scaffoldBg,
+        fillColor: FitnessAppTheme.background,
         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.divider)),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Colors.transparent)),
         focusedBorder:
-            OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: TripColors.accent, width: 1.5)),
-        errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.error)),
+            OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: RepliesTone.accent, width: 1.5)),
+        errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: RepliesTone.bad)),
         focusedErrorBorder:
-            OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.error, width: 1.5)),
+            OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: RepliesTone.bad, width: 1.5)),
       );
 }

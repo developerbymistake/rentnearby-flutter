@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:bakhli/design/design.dart';
 import 'package:get/get.dart';
-import 'package:iconsax/iconsax.dart';
-import '../../../config/app_colors.dart';
 import '../../../models/browse_item.dart';
 import '../../../utils/contact_launcher.dart';
-import '../../taxi/taxi_option_sets.dart';
 import '../../taxi/ways/trip_strings_mcb_a2.dart';
 import '../controllers/trip_plan_controller.dart';
 import '../models/trip_journey_model.dart';
@@ -53,7 +51,7 @@ class TripMapTravelBlock extends StatelessWidget {
         final own = leg.travelMark?.isOwn ?? false;
         rows.add(_row(
           initial: null,
-          icon: Iconsax.routing_2,
+          icon: 'compass',
           title: own ? TripStringsV2Plan.todayYourTravel : TripStringsMcaA3.travelTo(leg.cityName),
           subtitle: own ? null : TripStringsMcaA3.notPlannedYet,
           phone: null,
@@ -66,25 +64,17 @@ class TripMapTravelBlock extends StatelessWidget {
           }
           open = Align(
             alignment: Alignment.centerLeft,
-            child: TextButton.icon(
-              onPressed: () => TripNavigation.openJourney(j.id),
-              style: TextButton.styleFrom(
-                minimumSize: const Size(44, 44),
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-              ),
-              icon: const Icon(Iconsax.routing_2, size: 16, color: TaxiColors.accentDark),
-              label: const Text(
-                TripStringsMcbA2.openJourney,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w700, color: TaxiColors.accentDark),
-              ),
+            child: TripPillButton(
+              onTap: () => TripNavigation.openJourney(j.id),
+              accent: DesignColors.error,
+              icon: const TravelIcon(TravelIcon.route, size: 16),
+              label: TripStringsMcbA2.openJourney,
             ),
           );
         } else {
           rows.add(_row(
             initial: null,
-            icon: Iconsax.routing_2,
+            icon: 'compass',
             title: TripStringsMcaA3.travelTo(leg.cityName),
             subtitle: _lineOf(c),
             phone: null,
@@ -97,14 +87,14 @@ class TripMapTravelBlock extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(Iconsax.car, size: 14, color: TaxiColors.accentDark),
+              const TravelIcon(TravelIcon.taxi, size: 14),
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
                   route,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w700, color: AppColors.textDark),
+                  style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12.5, fontWeight: FontWeight.w700, color: DesignColors.textStrong),
                 ),
               ),
             ],
@@ -129,7 +119,7 @@ class TripMapTravelBlock extends StatelessWidget {
     final name = TripJourneyStrip.driverOf(l.driverName);
     return _row(
       initial: name.isEmpty ? null : name.substring(0, 1).toUpperCase(),
-      icon: Iconsax.car,
+      icon: 'taxi',
       title: name,
       subtitle: subtitle,
       phone: _phoneOf([booking?.owner.phone, l.phone, l.whatsApp]),
@@ -139,11 +129,11 @@ class TripMapTravelBlock extends StatelessWidget {
 
   Widget _row({
     required String? initial,
-    required IconData icon,
+    required String icon,
     required String title,
     required String? subtitle,
     required String? phone,
-    Color tone = TaxiColors.accentDark,
+    Color tone = DesignColors.error,
   }) {
     return Row(
       children: [
@@ -151,14 +141,14 @@ class TripMapTravelBlock extends StatelessWidget {
           width: 30,
           height: 30,
           alignment: Alignment.center,
-          decoration: const BoxDecoration(color: TaxiColors.surface, shape: BoxShape.circle),
+          decoration: const BoxDecoration(color: DesignColors.scaffold, shape: BoxShape.circle),
           child: initial != null
               ? Text(
                   initial,
                   maxLines: 1,
-                  style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700, color: tone),
+                  style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 13, fontWeight: FontWeight.w700, color: tone),
                 )
-              : Icon(icon, size: 15, color: tone),
+              : Image.asset('assets/images/design/travel3d/$icon.png', width: 18, height: 18),
         ),
         const SizedBox(width: 10),
         Expanded(
@@ -170,28 +160,24 @@ class TripMapTravelBlock extends StatelessWidget {
                 title,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w700, color: AppColors.textDark),
+                style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12.5, fontWeight: FontWeight.w700, color: DesignColors.textStrong),
               ),
               if (subtitle != null && subtitle.isNotEmpty)
                 Text(
                   subtitle,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 11.5, color: AppColors.textLight),
+                  style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 11.5, color: DesignColors.textSecondary),
                 ),
             ],
           ),
         ),
         if (phone != null)
-          TextButton.icon(
-            onPressed: () => ContactLauncher.call(phone),
-            style: TextButton.styleFrom(minimumSize: const Size(44, 44), padding: const EdgeInsets.symmetric(horizontal: 10)),
-            icon: const Icon(Iconsax.call, size: 16, color: TaxiColors.accentDark),
-            label: const Text(
-              TripStringsMcbA2.call,
-              maxLines: 1,
-              style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w700, color: TaxiColors.accentDark),
-            ),
+          TripPillButton(
+            onTap: () => ContactLauncher.call(phone),
+            accent: DesignColors.error,
+            icon: const Icon(Icons.call_rounded, size: 16, color: DesignColors.error),
+            label: TripStringsMcbA2.call,
           ),
       ],
     );

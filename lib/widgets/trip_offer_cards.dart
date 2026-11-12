@@ -1,6 +1,8 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import '../config/app_colors.dart';
+import 'package:bakhli/features/trip/widgets/trip_ui.dart';
+import 'package:bakhli/design/design.dart';
+import 'package:bakhli/design/extra/replies_kit.dart';
 import '../features/trip/models/trip_enquiry_model.dart';
 import '../features/trip/trip_strings.dart';
 import '../features/trip/trip_strings_a5.dart';
@@ -60,7 +62,7 @@ class TripOfferCards {
       context,
       m,
       accent: accent,
-      icon: Icons.currency_rupee_rounded,
+      icon: TravelIcon.money,
       title: title,
       subtitle: cb.listingTitle.isEmpty ? null : cb.listingTitle,
       pill: _counterPill(status, stayConfirmed: cb.agreedTotal != null),
@@ -68,7 +70,7 @@ class TripOfferCards {
         if (price != null)
           Text(TripStringsA5.priceRoomNight(BrowseItem.inr(price)),
               style: const TextStyle(
-                  fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textDark)),
+                  fontFamily: FitnessAppTheme.fontName, fontSize: 14, fontWeight: FontWeight.w700, color: DesignColors.textStrong)),
         if (total != null)
           Padding(
             padding: const EdgeInsets.only(top: 2),
@@ -154,7 +156,7 @@ class TripOfferCards {
       context,
       m,
       accent: accent,
-      icon: Icons.autorenew_rounded,
+      icon: TravelIcon.note,
       title: TripStrings.revisedOffer,
       subtitle: cb.listingTitle.isEmpty ? null : cb.listingTitle,
       pill: _revisedPill(status, oldTotal == null ? lockedMoney : BrowseItem.inr(oldTotal)),
@@ -167,7 +169,7 @@ class TripOfferCards {
               TripStrings.totalArrow(oldTotal == null ? lockedMoney : BrowseItem.inr(oldTotal), BrowseItem.inr(total)),
               maxLines: 1,
               style: const TextStyle(
-                  fontFamily: 'Poppins', fontSize: 20, fontWeight: FontWeight.w700, color: AppColors.textDark),
+                  fontFamily: FitnessAppTheme.fontName, fontSize: 20, fontWeight: FontWeight.w700, color: DesignColors.textStrong),
             ),
           ),
         if (reason != null && reason.isNotEmpty) ...[
@@ -252,7 +254,7 @@ class TripOfferCards {
       context,
       m,
       accent: accent,
-      icon: Icons.edit_calendar_rounded,
+      icon: TravelIcon.calendar,
       title: isOwner ? TripStrings.changeRequest : TripStrings.changeRequestSent,
       subtitle: isOwner ? name : (cb.listingTitle.isEmpty ? null : cb.listingTitle),
       pill: _changePill(status),
@@ -308,19 +310,19 @@ class TripOfferCards {
           if (old != null) ...[
             Text(old,
                 style: const TextStyle(
-                  fontFamily: 'Poppins',
+                  fontFamily: FitnessAppTheme.fontName,
                   fontSize: 12.5,
-                  color: AppColors.textLight,
+                  color: DesignColors.textMuted,
                   decoration: TextDecoration.lineThrough,
                 )),
-            const Icon(Icons.arrow_forward_rounded, size: 14, color: AppColors.textHint),
+            const Icon(Icons.arrow_forward_rounded, size: 14, color: DesignColors.textMuted),
           ],
           Text(newValue,
               style: TextStyle(
-                fontFamily: 'Poppins',
+                fontFamily: FitnessAppTheme.fontName,
                 fontSize: 12.5,
                 fontWeight: changed ? FontWeight.w700 : FontWeight.w500,
-                color: changed ? AppColors.textDark : AppColors.textMedium,
+                color: changed ? DesignColors.textStrong : DesignColors.textSecondary,
               )),
         ],
       ),
@@ -329,9 +331,9 @@ class TripOfferCards {
 
   // ── building blocks ──────────────────────────────────────────────────────
 
-  static const _body = TextStyle(fontFamily: 'Poppins', fontSize: 12.5, color: AppColors.textMedium, height: 1.35);
-  static const _small = TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight, height: 1.35);
-  static const _fine = TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight, height: 1.35);
+  static const _body = TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12.5, color: DesignColors.textSecondary, height: 1.35);
+  static const _small = TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, color: DesignColors.textMuted, height: 1.35);
+  static const _fine = TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 11, color: DesignColors.textMuted, height: 1.35);
 
   static String? _firstName(String? name) {
     final n = name?.trim();
@@ -353,7 +355,7 @@ class TripOfferCards {
         maxLines: 2,
         overflow: TextOverflow.ellipsis,
         style: const TextStyle(
-            fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.textDark, height: 1.35),
+            fontFamily: FitnessAppTheme.fontName, fontSize: 12.5, fontWeight: FontWeight.w600, color: DesignColors.textStrong, height: 1.35),
       ),
     );
   }
@@ -369,7 +371,7 @@ class TripOfferCards {
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
-                    fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                    fontFamily: FitnessAppTheme.fontName, fontSize: 12.5, fontWeight: FontWeight.w600, color: DesignColors.textStrong)),
           ),
         ]),
       );
@@ -377,12 +379,12 @@ class TripOfferCards {
   static Widget _warn(String text) => Container(
         width: double.infinity,
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        decoration: BoxDecoration(color: AppColors.warningSurface, borderRadius: BorderRadius.circular(10)),
+        decoration: BoxDecoration(color: DesignColors.statusAskedSoft, borderRadius: BorderRadius.circular(8)),
         child: Text(text,
             maxLines: 3,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(
-                fontFamily: 'Poppins', fontSize: 11.5, fontWeight: FontWeight.w500, color: AppColors.warningText, height: 1.35)),
+                fontFamily: FitnessAppTheme.fontName, fontSize: 11.5, fontWeight: FontWeight.w500, color: DesignColors.statusAttention, height: 1.35)),
       );
 
   static Widget _pair(Widget a, Widget b) => LayoutBuilder(
@@ -395,41 +397,18 @@ class TripOfferCards {
       );
 
   static Widget _button(String label, {required _Btn kind, required Color accent, VoidCallback? onTap}) {
-    final disabled = onTap == null;
     final filled = kind == _Btn.primary || kind == _Btn.positive;
-    final fill = kind == _Btn.positive ? AppColors.successDark : accent;
-    final text = Text(label,
-        maxLines: 2,
-        textAlign: TextAlign.center,
-        overflow: TextOverflow.ellipsis,
-        style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600));
-    final shape = RoundedRectangleBorder(borderRadius: BorderRadius.circular(12));
+    final fill = kind == _Btn.positive ? DesignColors.primaryLight : accent;
     return SizedBox(
       width: double.infinity,
       child: filled
-          ? ElevatedButton(
-              onPressed: onTap,
-              style: ElevatedButton.styleFrom(
-                minimumSize: const Size.fromHeight(48),
-                backgroundColor: disabled ? AppColors.divider : fill,
-                foregroundColor: disabled ? AppColors.textHint : Colors.white,
-                disabledBackgroundColor: AppColors.divider,
-                disabledForegroundColor: AppColors.textHint,
-                elevation: 0,
-                shape: shape,
-              ),
-              child: text,
-            )
-          : OutlinedButton(
-              onPressed: onTap,
-              style: OutlinedButton.styleFrom(
-                minimumSize: const Size.fromHeight(48),
-                foregroundColor: kind == _Btn.negative ? AppColors.error : AppColors.textMedium,
-                side: BorderSide(
-                    color: kind == _Btn.negative && !disabled ? AppColors.error.withValues(alpha: 0.4) : AppColors.divider),
-                shape: shape,
-              ),
-              child: text,
+          ? TripButton(color: fill, label: label, onPressed: onTap)
+          : TripActionChip(
+              height: 48,
+              fontSize: 13,
+              color: kind == _Btn.negative ? DesignColors.statusSaved : DesignColors.textSecondary,
+              label: label,
+              onTap: onTap,
             ),
     );
   }
@@ -438,32 +417,39 @@ class TripOfferCards {
     BuildContext context,
     MessageModel m, {
     required Color accent,
-    required IconData icon,
+    required String icon,
     required String title,
     String? subtitle,
     Widget? pill,
     required List<Widget> children,
   }) {
     final maxWidth = math.min(300.0, MediaQuery.sizeOf(context).width - 40);
-    return Align(
+    final recent = DateTime.now().difference(m.createdAt).inSeconds.abs() < 10;
+    return RepliesEntrance(
+      animate: recent,
+      child: Align(
       alignment: m.isMine ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 4),
         constraints: BoxConstraints(maxWidth: maxWidth),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: AppColors.cardBg,
-          border: Border.all(color: AppColors.divider),
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: const [BoxShadow(color: AppColors.shadow, blurRadius: 8, offset: Offset(0, 3))],
+          color: DesignColors.surface,
+          borderRadius: RepliesCard.radius,
+          boxShadow: DesignShadows.card,
         ),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
           Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Container(
               width: 30,
               height: 30,
-              decoration: BoxDecoration(color: accent.withValues(alpha: 0.10), borderRadius: BorderRadius.circular(9)),
-              child: Icon(icon, size: 16, color: accent),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                    colors: [accent.withValues(alpha: Alpha.scrim), accent.withValues(alpha: Alpha.hairline)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight),
+                shape: BoxShape.circle),
+              child: Padding(padding: const EdgeInsets.all(5), child: TravelIcon(icon, size: 20)),
             ),
             const SizedBox(width: 8),
             Expanded(
@@ -472,7 +458,7 @@ class TripOfferCards {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                        fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textDark)),
+                        fontFamily: FitnessAppTheme.fontName, fontSize: 13, fontWeight: FontWeight.w700, color: DesignColors.textStrong)),
                 if (subtitle != null) Text(subtitle, maxLines: 1, overflow: TextOverflow.ellipsis, style: _small),
               ]),
             ),
@@ -490,11 +476,12 @@ class TripOfferCards {
               child: Icon(
                 m.readAt != null ? Icons.done_all_rounded : Icons.done_rounded,
                 size: 14,
-                color: m.readAt != null ? AppColors.readTick : AppColors.textHint,
+                color: m.readAt != null ? DesignColors.primaryLight : DesignColors.textMuted,
               ),
             ),
           ],
         ]),
+      ),
       ),
     );
   }

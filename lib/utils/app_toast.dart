@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:toastification/toastification.dart';
-import '../config/app_colors.dart';
-import '../config/app_shadows.dart';
+import '../design/design.dart';
 
+import 'package:bakhli/design/tokens/shadow_tokens.dart';
 class AppToast {
   /// Root-level host above every app-wide gate; the Navigator's own overlay sits beneath them.
   static final overlayKey = GlobalKey<OverlayState>();
@@ -25,16 +25,16 @@ class AppToast {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(
-            color: AppColors.cardBg,
+            color: UtilTokens.toastSurface,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppColors.divider),
-            boxShadow: AppShadows.premium(accent, alpha: 0.12, blur: 18, offset: const Offset(0, 6)),
+            border: Border.all(color: UtilTokens.toastBorder),
+            boxShadow: [ShadowTokens.tint(accent, ShadowSpec.elev2Spec)],
           ),
           child: Row(children: [
             Container(
               width: 36,
               height: 36,
-              decoration: BoxDecoration(color: accent.withValues(alpha: 0.10), borderRadius: BorderRadius.circular(10)),
+              decoration: BoxDecoration(color: accent.withValues(alpha: Alpha.v10), borderRadius: BorderRadius.circular(10)),
               child: Icon(Icons.search_off_rounded, size: 20, color: accent),
             ),
             const SizedBox(width: 12),
@@ -42,11 +42,11 @@ class AppToast {
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
                 Text(title,
                     style: const TextStyle(
-                        fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textDark, decoration: TextDecoration.none)),
+                        fontFamily: FitnessAppTheme.fontName, fontSize: 13, fontWeight: FontWeight.w700, color: UtilTokens.toastTitle, decoration: TextDecoration.none)),
                 const SizedBox(height: 2),
                 Text(subtitle,
                     style: const TextStyle(
-                        fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w400, color: AppColors.textLight, decoration: TextDecoration.none)),
+                        fontFamily: FitnessAppTheme.fontName, fontSize: 11, fontWeight: FontWeight.w400, color: UtilTokens.toastSubtitle, decoration: TextDecoration.none)),
               ]),
             ),
           ]),
@@ -56,15 +56,15 @@ class AppToast {
   }
 
   // App-branded accent per severity, not toastification's own generic defaults — info in
-  // particular uses AppColors.primary (the app's real navy) instead of an unrelated blue, so a
+  // particular uses the brand primary token instead of an unrelated blue, so a
   // toast never reads as a different app's default styling dropped into ours.
   static Color _accentColor(ToastificationType type) {
     switch (type) {
-      case ToastificationType.success: return AppColors.success;
-      case ToastificationType.error: return AppColors.error;
-      case ToastificationType.warning: return AppColors.warning;
-      case ToastificationType.info: return AppColors.primary;
-      default: return AppColors.primary;
+      case ToastificationType.success: return UtilTokens.toastSuccess;
+      case ToastificationType.error: return UtilTokens.toastError;
+      case ToastificationType.warning: return UtilTokens.toastWarning;
+      case ToastificationType.info: return UtilTokens.toastInfo;
+      default: return UtilTokens.toastInfo;
     }
   }
 
@@ -93,15 +93,15 @@ class AppToast {
       description: Text(
         message,
         style: TextStyle(
-          fontFamily: 'Poppins',
+          fontFamily: FitnessAppTheme.fontName,
           fontSize: compact ? 12 : 13,
           fontWeight: FontWeight.w600,
           color: accent,
         ),
       ),
-      backgroundColor: Colors.white,
+      backgroundColor: UtilTokens.toastSurface,
       foregroundColor: accent,
-      borderSide: BorderSide(color: accent.withValues(alpha: 0.35), width: 1.4),
+      borderSide: BorderSide(color: accent.withValues(alpha: Alpha.scrim), width: 1.4),
       alignment: alignment,
       autoCloseDuration: const Duration(seconds: 4),
       closeButton: const ToastCloseButton(showType: CloseButtonShowType.none),
@@ -111,9 +111,7 @@ class AppToast {
       padding: compact
           ? const EdgeInsets.symmetric(horizontal: 12, vertical: 9)
           : const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      boxShadow: [
-        BoxShadow(color: AppColors.shadow, blurRadius: 12, offset: const Offset(0, 4)),
-      ],
+      boxShadow: DesignShadows.card,
     );
   }
 }

@@ -1,11 +1,10 @@
 import 'dart:async';
 import 'dart:math';
+import 'package:bakhli/design/design.dart';
+import 'package:bakhli/design/extra/stay_grid_card.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:iconsax/iconsax.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
-import 'package:shimmer/shimmer.dart';
-import '../../../config/app_colors.dart';
 import '../../../config/app_constants.dart';
 import '../../../config/app_insets.dart';
 import '../../../config/app_map_state.dart';
@@ -18,18 +17,14 @@ import '../../../models/browse_item.dart';
 import '../../../screens/explore_location_search_mixin.dart';
 import '../../../utils/map_clustering.dart';
 import '../../../utils/money_format.dart';
-import '../../../widgets/add_listing_shortcut_button.dart';
 import '../../../widgets/empty_radius_hint.dart';
 import '../../../widgets/location_pill.dart';
-import '../../../widgets/nearby_item_row.dart';
 import '../../../widgets/nearest_confirm_sheet.dart';
 import '../../../widgets/nearest_control_bar.dart';
-import '../setup/stay_option_sets.dart';
 import '../models/stay_nearby_model.dart';
 import 'stay_bottom_sheet.dart';
 import 'stay_guest_controller.dart';
 import 'stay_landing_controller.dart';
-
 
 class StayMapScreen extends StatefulWidget {
   const StayMapScreen({super.key});
@@ -37,8 +32,7 @@ class StayMapScreen extends StatefulWidget {
   State<StayMapScreen> createState() => _StayMapScreenState();
 }
 
-class _StayMapScreenState extends State<StayMapScreen>
-    with TickerProviderStateMixin, WidgetsBindingObserver, ExploreLocationSearchMixin<StayMapScreen> {
+class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateMixin, WidgetsBindingObserver, ExploreLocationSearchMixin<StayMapScreen> {
   MapLibreMapController? _mapController;
   double _currentZoom = 13.0;
   Size _screenSize = Size.zero;
@@ -70,6 +64,7 @@ class _StayMapScreenState extends State<StayMapScreen>
   int _revealedCount = 0;
   Timer? _revealTimer;
   late AnimationController _radarController;
+  late final AnimationController _chromeController = AnimationController(vsync: this, duration: const Duration(milliseconds: 600));
 
   late final AnimationController _nearestCircleController;
   Animation<double>? _nearestCircleAnim;
@@ -78,13 +73,14 @@ class _StayMapScreenState extends State<StayMapScreen>
   bool get _onStaysTab => _auth.tabIndex.value == AppTabs.stays;
 
   @override
-  ModulePalette get searchPalette => StayColors.palette;
+  ModulePalette get searchPalette => templateModulePalette;
 
   @override
   void initState() {
     super.initState();
 
     _radarController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1800));
+    _chromeController.forward();
 
     _nearestCircleController = AnimationController(vsync: this, duration: const Duration(milliseconds: 400))
       ..addListener(() {
@@ -97,7 +93,8 @@ class _StayMapScreenState extends State<StayMapScreen>
 
     WidgetsBinding.instance.addObserver(this);
 
-    _workers.add(ever(_locationCtrl.selectedDistrict, (_) {
+    _workers.add(
+      ever(_locationCtrl.selectedDistrict, (_) {
       if (_locationCtrl.selectedDistrict.value != null) {
         if (_onStaysTab && !mapShouldPause.value) {
           _precomputeCircleCache();
@@ -107,9 +104,11 @@ class _StayMapScreenState extends State<StayMapScreen>
           _stale = true;
         }
       }
-    }));
+      }),
+    );
 
-    _workers.add(ever(_locationCtrl.locationSelectionChanged, (_) {
+    _workers.add(
+      ever(_locationCtrl.locationSelectionChanged, (_) {
       if (isSearchActive && _preSearchRadius == null) {
         _preSearchRadius = _radius;
         setState(() => _radius = AppConstants.radiusOptions.last);
@@ -124,9 +123,11 @@ class _StayMapScreenState extends State<StayMapScreen>
       } else {
         _stale = true;
       }
-    }));
+      }),
+    );
 
-    _workers.add(ever(_locationCtrl.locationRefreshedTrigger, (_) {
+    _workers.add(
+      ever(_locationCtrl.locationRefreshedTrigger, (_) {
       if (!mounted) return;
       if (_locationCtrl.browsingCity.value == null) {
         _precomputeCircleCache();
@@ -136,9 +137,11 @@ class _StayMapScreenState extends State<StayMapScreen>
         }
       }
       setState(() {});
-    }));
+      }),
+    );
 
-    _workers.add(ever(_locationCtrl.userLocation, (_) {
+    _workers.add(
+      ever(_locationCtrl.userLocation, (_) {
       if (!mounted) return;
       if (_mapReady) {
         final loc = _locationCtrl.userLocation.value;
@@ -163,32 +166,41 @@ class _StayMapScreenState extends State<StayMapScreen>
         }
       }
       if (_pinsVisible && !_isCameraMoving) setState(() {});
-    }));
+      }),
+    );
 
     if (Get.isRegistered<StayLandingController>(tag: StayLandingController.tag)) {
       final landing = Get.find<StayLandingController>(tag: StayLandingController.tag);
-      _workers.add(ever(landing.stayPostedTrigger, (_) {
+      _workers.add(
+        ever(landing.stayPostedTrigger, (_) {
         _stale = true;
         if (_onStaysTab && !mapShouldPause.value) _loadNearby();
-      }));
-      _workers.add(ever(landing.exploreRefreshTrigger, (_) {
+        }),
+      );
+      _workers.add(
+        ever(landing.exploreRefreshTrigger, (_) {
         _stale = true;
         if (_locationCtrl.effectiveDistrict != null && _onStaysTab && !mapShouldPause.value) _loadNearby();
-      }));
-      _workers.add(ever(landing.filterResetTrigger, (_) {
+        }),
+      );
+      _workers.add(
+        ever(landing.filterResetTrigger, (_) {
         if (!mounted || !_mapReady) return;
         _precomputeCircleCache();
         _updateNativeRadiusCircle();
         _fitToRadius();
-      }));
+        }),
+      );
     }
 
-    _workers.add(ever(_guest.isLoading, (loading) {
+    _workers.add(
+      ever(_guest.isLoading, (loading) {
       if (!loading && _radarController.isAnimating) {
         _radarController.stop();
         _radarController.reset();
       }
-    }));
+      }),
+    );
 
     _mapPauseWorker = ever(mapShouldPause, (bool paused) {
       if (!mounted) return;
@@ -206,7 +218,8 @@ class _StayMapScreenState extends State<StayMapScreen>
       }
     });
 
-    _workers.add(ever(_auth.tabIndex, (index) {
+    _workers.add(
+      ever(_auth.tabIndex, (index) {
       if (index == AppTabs.stays) {
         if (_stale && !mapShouldPause.value) {
           _loadNearby();
@@ -222,9 +235,11 @@ class _StayMapScreenState extends State<StayMapScreen>
           _stale = true;
         }
       }
-    }));
+      }),
+    );
 
-    _workers.add(ever(_guest.nearestActive, (bool active) {
+    _workers.add(
+      ever(_guest.nearestActive, (bool active) {
       if (!mounted) return;
       if (active) {
         _updateNearestFocus();
@@ -238,11 +253,14 @@ class _StayMapScreenState extends State<StayMapScreen>
         }
         _buildMarkers(animate: false);
       }
-    }));
-    _workers.add(ever(_guest.nearestFocusIndex, (_) {
+      }),
+    );
+    _workers.add(
+      ever(_guest.nearestFocusIndex, (_) {
       if (!mounted) return;
       if (_guest.nearestActive.value) _updateNearestFocus();
-    }));
+      }),
+    );
 
     _mapActive = !mapShouldPause.value;
     if (isSearchActive) {
@@ -267,6 +285,7 @@ class _StayMapScreenState extends State<StayMapScreen>
     if (_guest.nearestActive.value) _guest.nearestActive.value = false;
     _guest.clearNearest();
     _radarController.dispose();
+    _chromeController.dispose();
     _nearestCircleController.dispose();
     _revealTimer?.cancel();
     _loadNearbyDebounceTimer?.cancel();
@@ -298,9 +317,7 @@ class _StayMapScreenState extends State<StayMapScreen>
   void _animateNearestCircle(double targetKm, LatLng center) {
     final begin = _nearestCircleAnim?.value ?? _radius;
     _nearestCircleCenter = center;
-    _nearestCircleAnim = Tween<double>(begin: begin, end: targetKm).animate(
-      CurvedAnimation(parent: _nearestCircleController, curve: Curves.easeOut),
-    );
+    _nearestCircleAnim = Tween<double>(begin: begin, end: targetKm).animate(CurvedAnimation(parent: _nearestCircleController, curve: Curves.easeOut));
     _nearestCircleController
       ..reset()
       ..forward();
@@ -324,7 +341,7 @@ class _StayMapScreenState extends State<StayMapScreen>
     NearestConfirmSheet.show(
       context,
       itemLabel: 'stays',
-      palette: StayColors.palette,
+      palette: templateModulePalette,
       onConfirm: () => _guest.loadNearest(center.latitude, center.longitude, district.id),
     );
   }
@@ -334,11 +351,9 @@ class _StayMapScreenState extends State<StayMapScreen>
     if (ctrl == null || !mounted) return;
     _precomputeCircleCache();
     await ctrl.addGeoJsonSource('radius-source', _circleCache[_radius]!);
-    await ctrl.addFillLayer('radius-source', 'radius-fill', FillLayerProperties(fillColor: AppColors.stayHex, fillOpacity: 0.06));
-    await ctrl.addLineLayer('radius-source', 'radius-glow',
-        LineLayerProperties(lineColor: AppColors.stayHex, lineWidth: 6.0, lineOpacity: 0.15, lineBlur: 3.0));
-    await ctrl.addLineLayer('radius-source', 'radius-border',
-        LineLayerProperties(lineColor: AppColors.stayHex, lineWidth: 1.8, lineOpacity: 0.65));
+    await ctrl.addFillLayer('radius-source', 'radius-fill', FillLayerProperties(fillColor: SetupKit.stayHex, fillOpacity: 0.06));
+    await ctrl.addLineLayer('radius-source', 'radius-glow', LineLayerProperties(lineColor: SetupKit.stayHex, lineWidth: 6.0, lineOpacity: 0.15, lineBlur: 3.0));
+    await ctrl.addLineLayer('radius-source', 'radius-border', LineLayerProperties(lineColor: SetupKit.stayHex, lineWidth: 1.8, lineOpacity: 0.65));
   }
 
   void _updateNativeRadiusCircle() {
@@ -351,14 +366,16 @@ class _StayMapScreenState extends State<StayMapScreen>
     final ctrl = _mapController;
     final loc = _locationCtrl.userLocation.value;
     if (ctrl == null || loc == null || !mounted) return;
-    _nativeUserDot = await ctrl.addCircle(CircleOptions(
+    _nativeUserDot = await ctrl.addCircle(
+      CircleOptions(
       geometry: loc,
       circleRadius: 8.0,
-      circleColor: AppColors.userDotHex,
+        circleColor: SetupKit.userDotHex,
       circleOpacity: 1.0,
-      circleStrokeColor: AppColors.hexOf(AppColors.textWhite),
+        circleStrokeColor: TripKit.hexOf(DesignColors.surface),
       circleStrokeWidth: 2.5,
-    ));
+      ),
+    );
   }
 
   void _updateNativeUserDot() {
@@ -468,7 +485,7 @@ class _StayMapScreenState extends State<StayMapScreen>
       widget: AnimatedBuilder(
         animation: _radarController,
         builder: (context2, child2) => CustomPaint(
-          painter: _RadarPainter(progress: _radarController.value, color: AppColors.userDot),
+          painter: _RadarPainter(progress: _radarController.value, color: DesignColors.primaryLight),
         ),
       ),
     );
@@ -488,7 +505,8 @@ class _StayMapScreenState extends State<StayMapScreen>
 
       if (count == 1) {
         final priceText = rep.minPricePerNight != null ? _pinPrice(rep.minPricePerNight!) : 'Stay';
-        data.add(_MapMarkerData(
+        data.add(
+          _MapMarkerData(
           position: cluster.center,
           width: _chipWidth(priceText),
           height: 34,
@@ -497,23 +515,30 @@ class _StayMapScreenState extends State<StayMapScreen>
             child: _AnimatedPin(
               child: Container(
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                    color: DesignColors.surface,
                   borderRadius: BorderRadius.circular(17),
-                  border: Border.all(color: StayColors.accent, width: 2),
-                  boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 6, offset: Offset(0, 2))],
+                    border: Border.all(color: DesignColors.primary, width: 2),
+                    boxShadow: ShadowTokens.elev2,
                 ),
                 child: Center(
                   child: Text(
                     priceText,
-                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w700, color: StayColors.accentDark),
+                      style: const TextStyle(
+                        fontFamily: TypeTokens.family,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: DesignColors.primary,
+                      ),
+                    ),
                   ),
                 ),
               ),
             ),
           ),
-        ));
+        );
       } else {
-        data.add(_MapMarkerData(
+        data.add(
+          _MapMarkerData(
           position: cluster.center,
           width: 48,
           height: 48,
@@ -521,21 +546,18 @@ class _StayMapScreenState extends State<StayMapScreen>
             onTap: () => _zoomToCluster(cluster),
             child: _AnimatedPin(
               child: Container(
-                decoration: const BoxDecoration(
-                  gradient: StayColors.gradient,
-                  shape: BoxShape.circle,
-                  boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 8, offset: Offset(0, 3))],
-                ),
+                  decoration: BoxDecoration(gradient: KitTone.stay.gradient, shape: BoxShape.circle, boxShadow: ShadowTokens.elev3),
                 child: Center(
                   child: Text(
                     '$count',
-                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white),
+                      style: const TextStyle(fontFamily: TypeTokens.family, fontSize: 14, fontWeight: FontWeight.w700, color: DesignColors.onPrimary),
                   ),
                 ),
               ),
             ),
           ),
-        ));
+          ),
+        );
       }
     }
 
@@ -545,7 +567,8 @@ class _StayMapScreenState extends State<StayMapScreen>
       if (idx >= 0 && idx < nearest.length) {
         final focused = nearest[idx];
         final priceText = focused.minPricePerNight != null ? _pinPrice(focused.minPricePerNight!) : 'Stay';
-        data.add(_MapMarkerData(
+        data.add(
+          _MapMarkerData(
           position: LatLng(focused.latitude, focused.longitude),
           width: _chipWidth(priceText) + 10,
           height: 38,
@@ -554,21 +577,22 @@ class _StayMapScreenState extends State<StayMapScreen>
             child: _AnimatedPin(
               child: Container(
                 decoration: BoxDecoration(
-                  gradient: StayColors.gradient,
+                    gradient: KitTone.stay.gradient,
                   borderRadius: BorderRadius.circular(19),
-                  border: Border.all(color: Colors.white, width: 2.5),
-                  boxShadow: const [BoxShadow(color: Colors.black38, blurRadius: 8, offset: Offset(0, 3))],
+                    border: Border.all(color: DesignColors.surface, width: 2.5),
+                    boxShadow: ShadowTokens.elev3,
                 ),
                 child: Center(
                   child: Text(
                     priceText,
-                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white),
+                      style: const TextStyle(fontFamily: TypeTokens.family, fontSize: 12, fontWeight: FontWeight.w700, color: DesignColors.onPrimary),
                   ),
                 ),
               ),
             ),
           ),
-        ));
+          ),
+        );
       }
     }
 
@@ -610,9 +634,7 @@ class _StayMapScreenState extends State<StayMapScreen>
       if (py > maxPy) maxPy = py;
     }
     final span = max(maxPx - minPx, maxPy - minPy);
-    final targetZoom = span < 1e-10
-        ? (_currentZoom + 2.5).clamp(10.0, 18.0)
-        : (log(144.0 / (span * 512.0)) / log(2.0)).clamp(10.0, 18.0);
+    final targetZoom = span < 1e-10 ? (_currentZoom + 2.5).clamp(10.0, 18.0) : (log(144.0 / (span * 512.0)) / log(2.0)).clamp(10.0, 18.0);
     _animateTo(cluster.center, targetZoom);
   }
 
@@ -648,11 +670,13 @@ class _StayMapScreenState extends State<StayMapScreen>
           'type': 'Feature',
           'geometry': {
             'type': 'Polygon',
-            'coordinates': [pts.map((p) => [p.longitude, p.latitude]).toList()]
+            'coordinates': [
+              pts.map((p) => [p.longitude, p.latitude]).toList(),
+            ],
           },
-          'properties': <String, dynamic>{}
-        }
-      ]
+          'properties': <String, dynamic>{},
+        },
+      ],
     };
   }
 
@@ -700,12 +724,7 @@ class _StayMapScreenState extends State<StayMapScreen>
   void _showDetail(String id) {
     final stay = _guest.nearbyStays.firstWhereOrNull((l) => l.id == id);
     if (stay == null) return;
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => StayBottomSheet(stay: stay),
-    );
+    SheetFrame.show(context, builder: (_) => StayBottomSheet(stay: stay));
   }
 
   @override
@@ -715,6 +734,7 @@ class _StayMapScreenState extends State<StayMapScreen>
       body: LayoutBuilder(
         builder: (context, constraints) {
           _screenSize = constraints.biggest;
+          final lift = BarMetrics.bodyBottomOf(context) - BarMetrics.bodyGap;
           return Stack(
             children: [
               if (_mapActive)
@@ -743,7 +763,7 @@ class _StayMapScreenState extends State<StayMapScreen>
                     onCameraIdle: _onCameraIdle,
                   ),
                 ),
-              if (!_mapActive || !_mapReady || _locationCtrl.userLocation.value == null) _buildMapShimmer(),
+              if (!_mapActive || !_mapReady || _locationCtrl.userLocation.value == null) _buildMapSkeleton(),
               if (_mapReady)
                 IgnorePointer(
                   ignoring: !_pinsVisible,
@@ -754,30 +774,14 @@ class _StayMapScreenState extends State<StayMapScreen>
                       fit: StackFit.expand,
                       children: [
                         ..._markerData.take(_revealedCount).map((d) {
-                          final sp = _projectToScreen(
-                            d.position,
-                            _cameraCenter ?? _searchCenter,
-                            _currentZoom,
-                            constraints.biggest,
-                          );
-                          return Positioned(
-                            left: sp.dx - d.width / 2,
-                            top: sp.dy - d.height / 2,
-                            width: d.width,
-                            height: d.height,
-                            child: d.widget,
-                          );
+                          final sp = _projectToScreen(d.position, _cameraCenter ?? _searchCenter, _currentZoom, constraints.biggest);
+                          return Positioned(left: sp.dx - d.width / 2, top: sp.dy - d.height / 2, width: d.width, height: d.height, child: d.widget);
                         }),
                         if (_guest.nearbyStays.isEmpty && !_loadingNearby && !_reloadPending && _hasLoadedOnce)
                           Obx(() {
                             if (_guest.nearestActive.value) return const SizedBox.shrink();
                             final radiusPx = _radiusPixelRadius(constraints.biggest);
-                            final sp = _projectToScreen(
-                              _searchCenter,
-                              _cameraCenter ?? _searchCenter,
-                              _currentZoom,
-                              constraints.biggest,
-                            );
+                            final sp = _projectToScreen(_searchCenter, _cameraCenter ?? _searchCenter, _currentZoom, constraints.biggest);
                             final anchor = _radiusTopAnchor(sp, radiusPx, constraints.biggest);
                             return Positioned(
                               left: anchor.dx,
@@ -787,7 +791,7 @@ class _StayMapScreenState extends State<StayMapScreen>
                                 child: EmptyRadiusHint(
                                   label: 'No stays in this radius — try Nearest',
                                   circleRadiusPx: radiusPx,
-                                  palette: StayColors.palette,
+                                  palette: templateModulePalette,
                                 ),
                               ),
                             );
@@ -802,30 +806,38 @@ class _StayMapScreenState extends State<StayMapScreen>
                 right: 0,
                 child: Column(
                   children: [
-                    Container(
-                      decoration: const BoxDecoration(gradient: StayColors.gradient),
+                    TemplateEntrance(
+                      animation: templateInterval(_chromeController, 0, 3),
+                      animationController: _chromeController,
+                      offset: -30,
+                      child: Container(
+                        decoration: BoxDecoration(gradient: KitTone.stay.gradient, borderRadius: CardRadius.header, boxShadow: ShadowTokens.elev3),
                       child: SafeArea(
                         bottom: false,
                         child: Padding(
                           padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
-                          child: Column(children: [
-                            Row(children: [
+                            child: Column(
+                              children: [
+                                Row(
+                                  children: [
                               _buildBackButton(),
                               const SizedBox(width: 10),
                               const Expanded(
-                                child: SizedBox(
-                                  height: 40,
-                                  child: LocationPill(palette: StayColors.palette),
+                                      child: SizedBox(height: 40, child: LocationPill(palette: templateModulePalette)),
                                 ),
+                                  ],
                               ),
-                            ]),
                             const SizedBox(height: 10),
-                            Row(children: [
+                                Row(
+                                  children: [
                               Expanded(child: _buildRadiusChips()),
                               const SizedBox(width: 10),
                               _buildSearchToggleButton(),
-                            ]),
-                          ]),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
                       ),
                     ),
@@ -833,7 +845,12 @@ class _StayMapScreenState extends State<StayMapScreen>
                       padding: const EdgeInsets.only(top: 12, left: 20, right: 20),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.end,
-                        children: [_buildLocationFab()],
+                        children: [
+                          ScaleTransition(
+                            scale: CurvedAnimation(parent: _chromeController, curve: Curves.fastOutSlowIn),
+                            child: _buildLocationFab(),
+                          ),
+                        ],
                       ),
                     ),
                   ],
@@ -842,36 +859,30 @@ class _StayMapScreenState extends State<StayMapScreen>
               Obx(() {
                 if (!_guest.nearestActive.value) {
                   return Positioned(
-                    bottom: 24,
+                    bottom: lift + 24,
                     left: 20,
                     right: 20,
+                    child: TemplateEntrance(
+                      animation: templateInterval(_chromeController, 2, 3),
+                      animationController: _chromeController,
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         if (_guest.nearbyStays.isNotEmpty) _buildViewListButton() else const SizedBox.shrink(),
-                        AddListingShortcutButton(
-                          label: 'Find Nearest',
-                          icon: Icons.travel_explore_rounded,
-                          gradient: StayColors.gradient,
-                          onTap: _openNearestConfirm,
-                        ),
+                          PressScale(child: StayFloatingPill(label: 'Find Nearest', iconAsset: TravelIcon.route, onTap: _openNearestConfirm)),
                       ],
+                    ),
                     ),
                   );
                 }
-                return Positioned(
-                  bottom: 86,
-                  left: 20,
-                  right: 20,
-                  child: _buildNearestPreviewCard(),
-                );
+                return Positioned(bottom: lift + 86, left: 20, right: 20, child: _buildNearestPreviewCard());
               }),
               Obx(() {
                 if (!_guest.nearestActive.value) return const SizedBox.shrink();
                 final total = _guest.nearestStays.length;
                 final idx = _guest.nearestFocusIndex.value;
                 return Positioned(
-                  bottom: 20,
+                  bottom: lift + 20,
                   left: 20,
                   right: 20,
                   child: NearestControlBar(
@@ -884,14 +895,17 @@ class _StayMapScreenState extends State<StayMapScreen>
                       if (idx < total - 1) _guest.nearestFocusIndex.value = idx + 1;
                     },
                     onCancel: () => _guest.nearestActive.value = false,
-                    palette: StayColors.palette,
+                    palette: templateModulePalette,
                   ),
                 );
               }),
-              const Positioned(
-                bottom: 4,
+              Positioned(
+                bottom: lift + 4,
                 left: 8,
-                child: Text('© OpenStreetMap contributors', style: TextStyle(fontSize: 9, color: Colors.black45)),
+                child: const Text(
+                  '© OpenStreetMap contributors',
+                  style: TextStyle(fontFamily: TypeTokens.family, fontSize: 11, color: DesignColors.textGrey),
+                ),
               ),
             ],
           );
@@ -901,7 +915,8 @@ class _StayMapScreenState extends State<StayMapScreen>
   }
 
   Widget _buildBackButton() {
-    return GestureDetector(
+    return PressScale(
+      child: GestureDetector(
       onTap: () {
         if (_guest.isLoadingNearest.value) return;
         Navigator.of(context).maybePop();
@@ -909,59 +924,59 @@ class _StayMapScreenState extends State<StayMapScreen>
       child: Container(
         width: 40,
         height: 40,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          shape: BoxShape.circle,
-          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.12), blurRadius: 8, offset: const Offset(0, 2))],
+          decoration: BoxDecoration(color: DesignColors.surface, shape: BoxShape.circle, boxShadow: ShadowTokens.elev2),
+          child: const Icon(Icons.chevron_left_rounded, color: DesignColors.primary, size: 24),
         ),
-        child: const Icon(Icons.chevron_left_rounded, color: StayColors.accentDark, size: 24),
       ),
     );
   }
 
   Widget _buildSearchToggleButton() {
-    return Obx(() => GestureDetector(
+    return Obx(
+      () => GestureDetector(
           onTap: searchResolving ? null : () => onSearchToggleTap(context),
           child: Container(
             height: 34,
             padding: const EdgeInsets.symmetric(horizontal: 13),
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: isSearchActive ? AppColors.error : Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.12), blurRadius: 8, offset: const Offset(0, 2))],
+            color: isSearchActive ? DesignColors.error : DesignColors.surface,
+            borderRadius: BorderRadius.circular(38),
+            boxShadow: ShadowTokens.elev1,
             ),
             child: searchResolving
-                ? const SizedBox(
-                    width: 15,
-                    height: 15,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: StayColors.accentDark),
-                  )
+              ? const KitDots(color: DesignColors.primary, size: 6)
                 : (isSearchActive
-                    ? const Text('Cancel',
-                        style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white))
+                    ? const Text(
+                        'Cancel',
+                        style: TextStyle(fontFamily: TypeTokens.family, fontSize: 12, fontWeight: FontWeight.w700, color: DesignColors.onPrimary),
+                      )
                     : const Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.search_rounded, color: StayColors.accentDark, size: 15),
+                          Icon(Icons.search_rounded, color: DesignColors.primary, size: 16),
                           SizedBox(width: 5),
-                          Text('Search',
-                              style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w700, color: StayColors.accentDark)),
+                          Text(
+                            'Search',
+                            style: TextStyle(
+                              fontFamily: TypeTokens.family,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: DesignColors.primary,
+                            ),
+                          ),
                         ],
                       )),
           ),
-        ));
+      ),
+    );
   }
 
   Widget _buildRadiusChips() {
     final radii = AppConstants.radiusOptions;
     return Container(
       padding: const EdgeInsets.all(3),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.12), blurRadius: 8, offset: const Offset(0, 2))],
-      ),
+      decoration: BoxDecoration(color: DesignColors.surface, borderRadius: BorderRadius.circular(24), boxShadow: ShadowTokens.elev2),
       child: Row(
         children: radii.asMap().entries.map((entry) {
           final i = entry.key;
@@ -982,20 +997,20 @@ class _StayMapScreenState extends State<StayMapScreen>
                 margin: EdgeInsets.only(right: i < radii.length - 1 ? 4 : 0),
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  gradient: active ? StayColors.gradient : null,
-                  borderRadius: BorderRadius.circular(11),
-                  boxShadow: active
-                      ? [BoxShadow(color: StayColors.accent.withValues(alpha: 0.32), blurRadius: 8, offset: const Offset(0, 3))]
-                      : null,
+                  color: active ? DesignColors.primary : Colors.transparent,
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: active ? ShadowTokens.elev1 : null,
                 ),
-                child: Text('${r.toInt()} km',
+                child: Text(
+                  '${r.toInt()} km',
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      fontFamily: 'Poppins',
-                      fontSize: 11,
+                    fontFamily: TypeTokens.family,
+                    fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: active ? Colors.white : AppColors.textLight,
-                    )),
+                    color: active ? DesignColors.surface : DesignColors.textSecondary,
+                  ),
+                ),
               ),
             ),
           );
@@ -1005,7 +1020,8 @@ class _StayMapScreenState extends State<StayMapScreen>
   }
 
   Widget _buildLocationFab() {
-    return GestureDetector(
+    return PressScale(
+      child: GestureDetector(
       onTap: () {
         _locationCtrl.resetBrowsing();
         _precomputeCircleCache();
@@ -1015,12 +1031,9 @@ class _StayMapScreenState extends State<StayMapScreen>
       child: Container(
         width: 46,
         height: 46,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          shape: BoxShape.circle,
-          boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 12, offset: const Offset(0, 4))],
+          decoration: BoxDecoration(color: DesignColors.surface, shape: BoxShape.circle, boxShadow: ShadowTokens.elev2),
+          child: const Icon(Icons.my_location_rounded, color: DesignColors.primary, size: 22),
         ),
-        child: const Icon(Icons.my_location_rounded, color: StayColors.accentDark, size: 22),
       ),
     );
   }
@@ -1033,140 +1046,159 @@ class _StayMapScreenState extends State<StayMapScreen>
   }
 
   Widget _nearbyRow(StayNearbyModel s, {bool elevated = false}) {
-    return NearbyItemRow(
+    return ListRow(
       thumbnailUrl: s.thumbnailUrl,
       tag: 'FOR STAY',
       title: s.title,
-      subtitle: [
-        if (s.stayTypeName != null && s.stayTypeName!.isNotEmpty) s.stayTypeName!,
-        '${s.distanceKm.toStringAsFixed(1)} km',
-      ].join(' · '),
-      caption: 'FROM',
-      value: s.minPricePerNight != null ? BrowseItem.inr(s.minPricePerNight!) : 'On request',
-      unit: s.minPricePerNight != null ? '/night' : '',
-      palette: StayColors.palette,
-      placeholderIcon: Iconsax.building_4,
-      elevated: elevated,
+      subtitle: [if (s.stayTypeName != null && s.stayTypeName!.isNotEmpty) s.stayTypeName!, '${s.distanceKm.toStringAsFixed(1)} km'].join(' · '),
+      priceCaption: 'FROM',
+      priceValue: s.minPricePerNight != null ? BrowseItem.inr(s.minPricePerNight!) : 'On request',
+      priceUnit: s.minPricePerNight != null ? '/night' : '',
+      iconAsset: TravelIcon.stay,
       isFeatured: s.isFeatured,
+      margin: elevated ? EdgeInsets.zero : const EdgeInsets.symmetric(horizontal: KitMetrics.gutter, vertical: 6),
       onTap: () => Get.toNamed(AppRoutes.stayDetail, arguments: {'id': s.id, 'distanceKm': s.distanceKm}),
     );
   }
 
   Widget _buildViewListButton() {
     final count = _guest.nearbyStays.length;
-    return GestureDetector(
+    return PressScale(
+      child: GestureDetector(
       onTap: _showListSheet,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: StayColors.accent, width: 1.4),
-          boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 12, offset: const Offset(0, 4))],
+            color: DesignColors.surface,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: DesignColors.primary, width: 1.5),
+            boxShadow: ShadowTokens.elev2,
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.format_list_bulleted_rounded, color: StayColors.accentDark, size: 16),
+              const Icon(Icons.format_list_bulleted_rounded, color: DesignColors.primary, size: 16),
             const SizedBox(width: 6),
-            const Text('View List',
-                style: TextStyle(fontFamily: 'Poppins', fontSize: 11.5, fontWeight: FontWeight.w700, color: StayColors.accentDark)),
+              const Text(
+                'View List',
+                style: TextStyle(fontFamily: TypeTokens.family, fontSize: 12, fontWeight: FontWeight.w700, color: DesignColors.primary),
+              ),
             const SizedBox(width: 6),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(color: StayColors.accent, borderRadius: BorderRadius.circular(10)),
-              child: Text('$count',
-                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 10, fontWeight: FontWeight.w800, color: Colors.white)),
+                decoration: BoxDecoration(color: DesignColors.primary, borderRadius: BorderRadius.circular(10)),
+                child: Text(
+                  '$count',
+                  style: TypeTokens.style(11, FontWeight.w800, color: DesignColors.onPrimary),
+                ),
             ),
           ],
         ),
+      ),
       ),
     );
   }
 
   void _showListSheet() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
+    SheetFrame.show(
+      context,
       builder: (_) => DraggableScrollableSheet(
         initialChildSize: 0.6,
         minChildSize: 0.4,
         maxChildSize: 0.9,
         expand: false,
         builder: (sheetContext, scrollController) {
-          return Container(
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-            ),
-            child: Column(
-              children: [
-                Container(
-                  decoration: const BoxDecoration(
-                    gradient: StayColors.gradient,
-                    borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          return _ListSheetBody(guest: _guest, scrollController: scrollController, sheetContext: sheetContext, rowBuilder: _nearbyRow);
+        },
                   ),
+    );
+  }
+
+  Widget _buildMapSkeleton() {
+    return TemplatePlaceholder(height: _screenSize.height, radius: 0);
+  }
+}
+
+class _ListSheetBody extends StatefulWidget {
+  final StayGuestController guest;
+  final ScrollController scrollController;
+  final BuildContext sheetContext;
+  final Widget Function(StayNearbyModel) rowBuilder;
+
+  const _ListSheetBody({required this.guest, required this.scrollController, required this.sheetContext, required this.rowBuilder});
+
+  @override
+  State<_ListSheetBody> createState() => _ListSheetBodyState();
+}
+
+class _ListSheetBodyState extends State<_ListSheetBody> {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(color: DesignColors.sheet, borderRadius: CardRadius.sheet, boxShadow: DesignShadows.top),
                   child: Column(
                     children: [
                       Container(
-                        width: 40,
+            width: 36,
                         height: 4,
-                        margin: const EdgeInsets.only(top: 12, bottom: 12),
-                        decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.5), borderRadius: BorderRadius.circular(2)),
+            margin: const EdgeInsets.only(top: 10, bottom: 14),
+            decoration: BoxDecoration(color: DesignColors.tint(DesignColors.textGrey, Alpha.half), borderRadius: BorderRadius.circular(2)),
                       ),
                       Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+            padding: const EdgeInsets.fromLTRB(KitMetrics.gutter, 0, KitMetrics.gutter, 12),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Obx(() {
-                              final count = _guest.nearbyStays.length;
-                              return Text('$count Stay${count == 1 ? '' : 's'} Nearby',
-                                  style: const TextStyle(
-                                      fontFamily: 'Poppins', fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white));
+                  final count = widget.guest.nearbyStays.length;
+                  return Text(
+                    '$count Stay${count == 1 ? '' : 's'} Nearby',
+                    style: TypeTokens.style(18, FontWeight.w700, color: DesignColors.textStrong, letterSpacing: 0.27),
+                  );
                             }),
-                            GestureDetector(
-                              onTap: () => Navigator.pop(sheetContext),
+                PressScale(
+                  child: SizedBox(
+                    width: KitMetrics.touch,
+                    height: KitMetrics.touch,
+                    child: InkWell(
+                      customBorder: const CircleBorder(),
+                      splashColor: DesignColors.splash,
+                      highlightColor: Colors.transparent,
+                      onTap: () => Navigator.pop(widget.sheetContext),
+                      child: Center(
                               child: Container(
                                 width: 28,
                                 height: 28,
-                                decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.18), shape: BoxShape.circle),
-                                child: const Icon(Icons.close_rounded, size: 16, color: Colors.white),
+                          decoration: const BoxDecoration(color: DesignColors.scaffold, shape: BoxShape.circle),
+                          child: const Icon(Icons.close_rounded, size: 16, color: DesignColors.textStrong),
+                        ),
                               ),
                             ),
-                          ],
                         ),
                       ),
                     ],
                   ),
                 ),
+          const Divider(height: 1, color: DesignColors.dividerSoft),
                 const SizedBox(height: 8),
                 Expanded(
                   child: Obx(() {
-                    final items = _guest.nearbyStays.toList();
+              final items = widget.guest.nearbyStays.toList();
                     return ListView.builder(
-                      controller: scrollController,
+                controller: widget.scrollController,
+                physics: const BouncingScrollPhysics(),
                       padding: EdgeInsets.only(bottom: 16 + AppInsets.bottomViewPadding(context)),
                       itemCount: items.length,
-                      itemBuilder: (_, i) => _nearbyRow(items[i]),
+                itemBuilder: (_, i) {
+                  final row = widget.rowBuilder(items[i]);
+                  return i >= 10 ? row : KitCardEntrance(key: ValueKey(items[i].id), index: i, child: row);
+                },
                     );
                   }),
                 ),
               ],
             ),
           );
-        },
-      ),
-    );
-  }
-
-  Widget _buildMapShimmer() {
-    return Shimmer.fromColors(
-      baseColor: AppColors.shimmerBase,
-      highlightColor: AppColors.shimmerHighlight,
-      child: Container(color: AppColors.shimmerBase),
-    );
   }
 }
 
@@ -1177,13 +1209,7 @@ class _MapMarkerData {
   final double height;
   final bool isUser;
 
-  _MapMarkerData({
-    required this.position,
-    required this.widget,
-    required this.width,
-    required this.height,
-    this.isUser = false,
-  });
+  _MapMarkerData({required this.position, required this.widget, required this.width, required this.height, this.isUser = false});
 }
 
 class _Cluster {
@@ -1209,8 +1235,8 @@ class _AnimatedPinState extends State<_AnimatedPin> with SingleTickerProviderSta
   @override
   void initState() {
     super.initState();
-    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 300));
-    _scale = CurvedAnimation(parent: _ctrl, curve: Curves.elasticOut);
+    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 400));
+    _scale = CurvedAnimation(parent: _ctrl, curve: Curves.fastOutSlowIn);
     _ctrl.forward();
   }
 

@@ -51,7 +51,7 @@ class TripSummaryText {
   static String arrangementLine(TripSummaryArrangement a) {
     final detail = (a.detail ?? '').trim();
     final line = TripStrings.joinDots([a.title, detail.isEmpty ? null : detail, stateWord(a.state)]);
-    return '${isDone(a.state) ? TripStringsV2Easy.shareDone : TripStringsV2Easy.shareWaiting}: $line';
+    return '${a.isDone ? TripStringsV2Easy.shareDone : TripStringsV2Easy.shareWaiting}: $line';
   }
 
   static bool hasContent(TripSummaryRecord r) =>

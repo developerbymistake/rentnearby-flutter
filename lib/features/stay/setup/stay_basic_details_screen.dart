@@ -1,14 +1,13 @@
+import 'stay_page_header.dart';
 import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:iconsax/iconsax.dart';
+import 'package:animations/animations.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:maplibre_gl/maplibre_gl.dart' show LatLng;
 import 'package:permission_handler/permission_handler.dart';
-import '../../../config/app_colors.dart';
 import '../../../config/app_constants.dart';
-import '../../../config/app_insets.dart';
 import '../../../config/app_routes.dart';
 import '../../../controllers/auth_controller.dart';
 import '../../../models/city_model.dart';
@@ -16,10 +15,8 @@ import '../../../screens/add_listing_location_mixin.dart';
 import '../../../utils/app_toast.dart';
 import '../../../utils/concurrency.dart';
 import '../../../utils/input_formatters.dart';
-import '../../../widgets/app_loading_overlay.dart';
-import '../../../widgets/gradient_button.dart';
+import '../../../design/design.dart';
 import '../../../widgets/onboarding_closed_dialog.dart';
-import '../../../widgets/selectable_chip.dart';
 import '../models/stay_owner_model.dart';
 import '../models/stay_registration_type_model.dart';
 import '../stay_registration_types_controller.dart';
@@ -43,7 +40,8 @@ class StayBasicDetailsScreen extends StatefulWidget {
 }
 
 class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
-    with AddListingLocationMixin<StayBasicDetailsScreen> {
+    with AddListingLocationMixin<StayBasicDetailsScreen>, TickerProviderStateMixin {
+  int _prevStep = 0;
   final _ctrl = StaySetupController.ensure();
   final _nameCtrl = TextEditingController();
   final _nameFocusNode = FocusNode();
@@ -80,11 +78,11 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
   int _step = 0;
 
   static final _locationStyle = LocationStepStyle(
-    circleColorHex: AppColors.stayHex,
-    userDotColorHex: AppColors.userDotHex,
-    accentColor: StayColors.accent,
-    addressSpinnerColor: StayColors.accent,
-    addressPrefixIcon: Iconsax.building_4,
+    circleColorHex: SetupKit.stayHex,
+    userDotColorHex: SetupKit.userDotHex,
+    accentColor: DesignColors.primary,
+    addressSpinnerColor: DesignColors.primary,
+    addressPrefixIcon: Icons.hotel_rounded,
     pinStepTitle: 'Pin Your Location *',
     pinHintNoun: 'stay',
   );
@@ -276,35 +274,17 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
   void _confirmDiscard() {
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Discard changes?',
-            style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, color: AppColors.textDark)),
-        content: const Text(
-          'Unsaved changes will be lost.',
-          style: TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textMedium),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Keep Editing',
-                style: TextStyle(fontFamily: 'Poppins', color: StayColors.accentDark, fontWeight: FontWeight.w600)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.error,
-              foregroundColor: Colors.white,
-              minimumSize: Size.zero,
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            ),
-            onPressed: () {
-              Navigator.pop(context);
-              Get.back();
-            },
-            child: const Text('Discard', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
-          ),
-        ],
+      builder: (_) => StayConfirmDialog(
+        title: 'Discard changes?',
+        body: 'Unsaved changes will be lost.',
+        cancelLabel: 'Keep Editing',
+        confirmLabel: 'Discard',
+        destructive: true,
+        onCancel: () => Navigator.pop(context),
+        onConfirm: () {
+          Navigator.pop(context);
+          Get.back();
+        },
       ),
     );
   }
@@ -312,75 +292,39 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
   void _showPermissionDeniedDialog(String type) {
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text('$type Permission Required',
-            style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, color: AppColors.textDark)),
-        content: Text(
-          'Please enable $type access in your device Settings to add photos.',
-          style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textMedium),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel', style: TextStyle(fontFamily: 'Poppins', color: AppColors.textLight)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: StayColors.accent,
-              foregroundColor: Colors.white,
-              minimumSize: Size.zero,
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            ),
-            onPressed: () {
-              Navigator.pop(context);
-              openAppSettings();
-            },
-            child: const Text('Open Settings', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
-          ),
-        ],
+      builder: (_) => StayConfirmDialog(
+        title: '$type Permission Required',
+        body: 'Please enable $type access in your device Settings to add photos.',
+        cancelLabel: 'Cancel',
+        confirmLabel: 'Open Settings',
+        onCancel: () => Navigator.pop(context),
+        onConfirm: () {
+          Navigator.pop(context);
+          openAppSettings();
+        },
       ),
     );
   }
 
   Future<void> _pickPhoto() async {
     if (_photos.length >= AppConstants.maxPhotos) return;
-    final source = await showModalBottomSheet<ImageSource>(
-      context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+    final source = await SetupKit.sheet<ImageSource>(
+      context,
       builder: (_) => SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8),
+          padding: const EdgeInsets.only(bottom: 8),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Container(width: 40, height: 4, margin: const EdgeInsets.only(bottom: 16),
-                  decoration: BoxDecoration(color: AppColors.divider, borderRadius: BorderRadius.circular(2))),
-              const Text('Add Photo', style: TextStyle(fontFamily: 'Poppins', fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+              SetupKit.grabber(),
+              Text('Add Photo', style: TripKit.text(18)),
               const SizedBox(height: 8),
-              ListTile(
-                leading: Container(
-                  width: 44, height: 44,
-                  decoration: BoxDecoration(color: StayColors.surface, borderRadius: BorderRadius.circular(12)),
-                  child: const Icon(Icons.camera_alt_rounded, color: StayColors.accent, size: 22),
-                ),
-                title: const Text('Take Photo', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w500, color: AppColors.textDark)),
-                subtitle: const Text('Use camera to capture now', style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
-                onTap: () => Navigator.pop(context, ImageSource.camera),
+              TemplateStagger(
+                children: [
+                  _sourceRow(SetupAssets.camera, 'Take Photo', 'Use camera to capture now', ImageSource.camera),
+                  _sourceRow(SetupAssets.luggage, 'Choose from Gallery', 'Pick existing photos', ImageSource.gallery),
+                ],
               ),
-              ListTile(
-                leading: Container(
-                  width: 44, height: 44,
-                  decoration: BoxDecoration(color: StayColors.surface, borderRadius: BorderRadius.circular(12)),
-                  child: const Icon(Icons.photo_library_rounded, color: StayColors.accent, size: 22),
-                ),
-                title: const Text('Choose from Gallery', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w500, color: AppColors.textDark)),
-                subtitle: const Text('Pick existing photos', style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
-                onTap: () => Navigator.pop(context, ImageSource.gallery),
-              ),
-              const SizedBox(height: 8),
             ],
           ),
         ),
@@ -594,28 +538,13 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
       final retry = await showDialog<bool>(
         context: context,
         barrierDismissible: false,
-        builder: (_) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: const Text('Upload Failed', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
-          content: Text(
-            '${failed.length} photo${failed.length > 1 ? 's' : ''} could not be uploaded. Retry?',
-            style: const TextStyle(fontFamily: 'Poppins', fontSize: 14),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Skip', style: TextStyle(fontFamily: 'Poppins', color: AppColors.textLight)),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.pop(context, true),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: StayColors.accent,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              ),
-              child: const Text('Retry', style: TextStyle(fontFamily: 'Poppins')),
-            ),
-          ],
+        builder: (_) => StayConfirmDialog(
+          title: 'Upload Failed',
+          body: '${failed.length} photo${failed.length > 1 ? 's' : ''} could not be uploaded. Retry?',
+          cancelLabel: 'Skip',
+          confirmLabel: 'Retry',
+          onCancel: () => Navigator.pop(context, false),
+          onConfirm: () => Navigator.pop(context, true),
         ),
       );
       if (retry == true && mounted) {
@@ -632,16 +561,33 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
     return [for (final i in failed) files[i]];
   }
 
-  InputDecoration _inputDec(String hint) => InputDecoration(
-        hintText: hint,
-        hintStyle: const TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textHint),
-        filled: true,
-        fillColor: StayColors.surface,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.divider)),
-        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: StayColors.accent, width: 1.5)),
+  Widget _sourceRow(String asset, String title, String subtitle, ImageSource source) => SizedBox(
+        width: double.infinity,
+        child: InkWell(
+          onTap: () => Navigator.pop(context, source),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+            child: Row(children: [
+              Container(
+                width: 44,
+                height: 44,
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(color: PickKit.stayTint, borderRadius: BorderRadius.circular(12)),
+                child: Image.asset(asset),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(title, style: TripKit.text(14)),
+                  Text(subtitle, style: TripKit.text(12, color: DesignColors.textSecondary)),
+                ]),
+              ),
+            ]),
+          ),
+        ),
       );
+
+  InputDecoration _inputDec(String hint) => SetupKit.input(hint: hint);
 
   Widget _buildUploadOverlay() {
     final overall = _uploadProgress.clamp(0.0, 1.0);
@@ -649,48 +595,67 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
     final statusText = percent >= 95 ? 'Almost done!' : '${_uploadDone.length} of $_uploadTotal uploaded';
     return Positioned.fill(
       child: Material(
-        color: Colors.black.withValues(alpha: 0.6),
+        color: DesignColors.textInk.withValues(alpha: Alpha.strong),
         child: Center(
           child: Container(
             width: 300,
-            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 32),
+            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 28),
             decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(28),
-              boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.25), blurRadius: 40, offset: const Offset(0, 12))],
+              color: DesignColors.surface,
+              borderRadius: TripKit.cardRadiusSmall,
+              boxShadow: ShadowTokens.elev1,
             ),
             child: Column(mainAxisSize: MainAxisSize.min, children: [
               Container(
-                width: 68, height: 68,
-                decoration: const BoxDecoration(gradient: StayColors.gradient, shape: BoxShape.circle),
-                child: const Center(child: Icon(Icons.cloud_upload_rounded, color: Colors.white, size: 32)),
+                width: 68,
+                height: 68,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  gradient: PickKit.stayGradient,
+                  shape: BoxShape.circle,
+                  boxShadow: ShadowTokens.elev2,
+                ),
+                child: Image.asset(SetupAssets.airplane),
               ),
-              const SizedBox(height: 20),
-              const Text('Uploading Photos',
-                  style: TextStyle(fontFamily: 'Poppins', fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textDark, decoration: TextDecoration.none)),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
+              Text('Uploading Photos',
+                  style: TripKit.text(16, weight: FontWeight.w700).copyWith(decoration: TextDecoration.none)),
+              const SizedBox(height: 16),
               TweenAnimationBuilder<double>(
                 tween: Tween(begin: 0.0, end: overall),
                 duration: const Duration(milliseconds: 350),
-                curve: Curves.easeOut,
+                curve: Curves.fastOutSlowIn,
                 builder: (context, value, _) => Column(children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
-                    child: Stack(children: [
-                      Container(height: 10, color: AppColors.divider),
-                      FractionallySizedBox(
-                        widthFactor: value.clamp(0.0, 1.0),
-                        child: Container(height: 10, decoration: const BoxDecoration(gradient: StayColors.gradient)),
+                  Stack(alignment: Alignment.center, children: [
+                    Container(
+                      width: 100,
+                      height: 100,
+                      decoration: BoxDecoration(
+                        color: DesignColors.surface,
+                        shape: BoxShape.circle,
+                        border: Border.all(width: 4, color: DesignColors.primary.withValues(alpha: Alpha.soft)),
                       ),
-                    ]),
-                  ),
-                  const SizedBox(height: 10),
-                  Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                    Text(statusText,
-                        style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textHint, decoration: TextDecoration.none)),
-                    Text('${(value * 100).toInt()}%',
-                        style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700, color: StayColors.accentDark, decoration: TextDecoration.none)),
+                      alignment: Alignment.center,
+                      child: Text('${(value * 100).toInt()}%',
+                          style: TripKit.text(24, weight: FontWeight.normal, color: DesignColors.primary)
+                              .copyWith(decoration: TextDecoration.none)),
+                    ),
+                    CustomPaint(
+                      painter: CurvePainter(
+                        colors: const <Color>[
+                          DesignColors.primary,
+                          TravelPalette.ringLight,
+                          TravelPalette.ringLight,
+                        ],
+                        angle: 5 + 360 * value.clamp(0.0, 1.0),
+                      ),
+                      child: const SizedBox(width: 108, height: 108),
+                    ),
                   ]),
+                  const SizedBox(height: 12),
+                  Text(statusText,
+                      style: TripKit.text(12, color: DesignColors.textMuted)
+                          .copyWith(decoration: TextDecoration.none)),
                 ]),
               ),
             ]),
@@ -700,66 +665,59 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
     );
   }
 
+  void _handleBack() {
+    if (_hasChanges) {
+      _confirmDiscard();
+    } else {
+      Get.back();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final reverse = _step < _prevStep;
+    _prevStep = _step;
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
         if (didPop || _isUploading || _isFinalizing || _ctrl.isSaving.value) return;
-        if (_hasChanges) {
-          _confirmDiscard();
-        } else {
-          Get.back();
-        }
+        _handleBack();
       },
       child: Stack(children: [
         Scaffold(
-          backgroundColor: AppColors.scaffoldBg,
+          backgroundColor: DesignColors.scaffold,
           body: Column(children: [
-            Container(
-              decoration: const BoxDecoration(gradient: StayColors.gradient),
-              child: SafeArea(
-                bottom: false,
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(4, 8, 20, 20),
-                  child: Row(children: [
-                    IconButton(
-                      onPressed: _isUploading
-                          ? null
-                          : () {
-                              if (_hasChanges) {
-                                _confirmDiscard();
-                              } else {
-                                Get.back();
-                              }
-                            },
-                      icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white),
-                    ),
-                    const Text('Basic Details',
-                        style: TextStyle(fontFamily: 'Poppins', fontSize: 18, fontWeight: FontWeight.w600, color: Colors.white)),
-                  ]),
-                ),
-              ),
+            StayPageHeader(
+              title: 'Basic Details',
+              onBack: _isUploading ? null : _handleBack,
+              asset: SetupAssets.hotel,
             ),
             Container(
-              color: Colors.white,
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+              decoration: BoxDecoration(
+                color: DesignColors.surface,
+                boxShadow: ShadowTokens.elev3Up,
+              ),
+              padding: const EdgeInsets.fromLTRB(20, 14, 20, 14),
               child: Row(children: [
-                _stepDot(0, 'Details'),
-                Expanded(child: Container(height: 2, color: _step >= 1 ? StayColors.accent : AppColors.divider)),
-                _stepDot(1, 'Location'),
-                Expanded(child: Container(height: 2, color: _step >= 2 ? StayColors.accent : AppColors.divider)),
-                _stepDot(2, 'Address'),
-                Expanded(child: Container(height: 2, color: _step >= 3 ? StayColors.accent : AppColors.divider)),
-                _stepDot(3, 'Photos'),
+                _StepDot(index: 0, step: _step, label: 'Details'),
+                _line(1),
+                _StepDot(index: 1, step: _step, label: 'Location'),
+                _line(2),
+                _StepDot(index: 2, step: _step, label: 'Address'),
+                _line(3),
+                _StepDot(index: 3, step: _step, label: 'Photos'),
               ]),
             ),
             Expanded(
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 280),
-                transitionBuilder: (child, anim) => SlideTransition(
-                  position: Tween<Offset>(begin: const Offset(0.08, 0), end: Offset.zero).animate(anim),
-                  child: FadeTransition(opacity: anim, child: child),
+              child: PageTransitionSwitcher(
+                duration: templateTransitionDuration,
+                reverse: reverse,
+                transitionBuilder: (child, animation, secondaryAnimation) => SharedAxisTransition(
+                  fillColor: Colors.transparent,
+                  animation: animation,
+                  secondaryAnimation: secondaryAnimation,
+                  transitionType: SharedAxisTransitionType.horizontal,
+                  child: child,
                 ),
                 child: _step == 0
                     ? _detailsStep()
@@ -770,24 +728,17 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
                             : _photosStep(),
               ),
             ),
-            Container(
-              color: Colors.white,
-              padding: EdgeInsets.fromLTRB(20, 12, 20, AppInsets.bottomViewPadding(context) + 12),
+            StayFooter(
               child: Row(children: [
                 if (_step > 0) ...[
                   Expanded(
-                    child: OutlinedButton(
+                    child: SecondaryButton(
+                      tone: KitTone.stay,
+                      label: 'Back',
                       onPressed: () {
                         if (_step == 1) setLocationStepActive(false);
                         setState(() => _step--);
                       },
-                      style: OutlinedButton.styleFrom(
-                        minimumSize: const Size(0, 52),
-                        side: const BorderSide(color: StayColors.accent),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                      ),
-                      child: const Text('Back',
-                          style: TextStyle(fontFamily: 'Poppins', color: StayColors.accentDark, fontWeight: FontWeight.w600)),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -799,9 +750,10 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
                     final disabled = saving ||
                         _isFinalizing ||
                         (_step == 2 && (isResolvingDistrict || selectedDistrictId == null || !hasAddressText));
-                    return GradientButton(
+                    return PrimaryButton(
+ tone: KitTone.stay,
                       onPressed: disabled ? null : _handleNext,
-                      isLoading: saving || _isFinalizing,
+                      loading: saving || _isFinalizing,
                       label: _step == 0
                           ? 'Next: Location'
                           : _step == 1
@@ -809,8 +761,6 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
                               : _step == 2
                                   ? 'Next: Photos'
                                   : 'Save',
-                      gradient: StayColors.gradient,
-                      shadowColor: StayColors.accent,
                     );
                   }),
                 ),
@@ -819,60 +769,33 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
           ]),
         ),
         if (_isUploading) _buildUploadOverlay(),
-        Obx(() => _ctrl.isSaving.value
-            ? AppLoadingOverlay.stackChild(message: 'Saving your stay...', indicatorColor: StayColors.accent)
-            : const SizedBox.shrink()),
-        if (_isFinalizing) AppLoadingOverlay.stackChild(message: 'Please wait...', indicatorColor: StayColors.accent),
-        if (_step == 2 && showAddressResolveOverlay) AppLoadingOverlay.stackChild(message: 'Please wait...', indicatorColor: StayColors.accent),
+        Obx(() => _ctrl.isSaving.value ? const StayBusy(message: 'Saving your stay...') : const SizedBox.shrink()),
+        if (_isFinalizing) const StayBusy(message: 'Please wait...'),
+        if (_step == 2 && showAddressResolveOverlay) const StayBusy(message: 'Please wait...'),
       ]),
     );
   }
 
-  Widget _stepDot(int index, String label) {
-    final active = _step == index;
-    final done = _step > index;
-    return Column(mainAxisSize: MainAxisSize.min, children: [
-      AnimatedContainer(
-        duration: const Duration(milliseconds: 250),
-        width: 32, height: 32,
-        decoration: BoxDecoration(
-          color: (active || done) ? StayColors.accent : AppColors.divider,
-          shape: BoxShape.circle,
+  Widget _line(int reachedAt) => Expanded(
+        child: Container(
+          height: 2,
+          alignment: Alignment.centerLeft,
+          color: DesignColors.dividerSoft,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 250),
+            height: 2,
+            width: _step >= reachedAt ? 400 : 0,
+            color: DesignColors.primary,
+          ),
         ),
-        child: Center(
-          child: done
-              ? const Icon(Icons.check_rounded, color: Colors.white, size: 16)
-              : Text('${index + 1}',
-                  style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700,
-                      color: active ? Colors.white : AppColors.textLight)),
-        ),
-      ),
-      const SizedBox(height: 4),
-      Text(label,
-          style: TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w500,
-              color: (active || done) ? StayColors.accentDark : AppColors.textLight)),
-    ]);
-  }
-
-  Widget _sectionCard({required String title, required Widget child}) => Container(
-        margin: const EdgeInsets.only(bottom: 16),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 8, offset: const Offset(0, 2))],
-        ),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(title, style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-          const SizedBox(height: 10),
-          child,
-        ]),
       );
+
+  Widget _sectionCard({required String title, required Widget child}) => SectionTile(tone: KitTone.stay, title: title, margin: const EdgeInsets.only(bottom: 16), child: child);
 
   Widget _detailsStep() => SingleChildScrollView(
         key: const ValueKey(0),
         padding: const EdgeInsets.all(16),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        child: TemplateStagger(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           _sectionCard(
             title: 'Stay Name *',
             child: TextFormField(
@@ -881,8 +804,9 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
               maxLength: 80,
               inputFormatters: noEmojiInputFormatters,
               textCapitalization: TextCapitalization.words,
-              style: const TextStyle(fontFamily: 'Poppins', fontSize: 14),
-              decoration: _inputDec('e.g. Himalayan Home').copyWith(counterText: ''),
+              cursorColor: DesignColors.primary,
+              style: SetupKit.fieldText(),
+              decoration: _inputDec('e.g. Himalayan Home'),
             ),
           ),
           _sectionCard(
@@ -890,34 +814,14 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
             child: Obx(() {
               final types = _types.types;
               if (types.isEmpty) {
-                if (_types.isLoading.value) {
-                  return const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 12),
-                    child: Center(
-                      child: SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: StayColors.accent),
-                      ),
-                    ),
-                  );
-                }
-                return GestureDetector(
-                  onTap: _types.load,
-                  child: const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 12),
-                    child: Center(
-                      child: Text("Couldn't load stay types. Tap to retry.",
-                          style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: StayColors.accentDark)),
-                    ),
-                  ),
-                );
+                if (_types.isLoading.value) return _spinner();
+                return _retry("Couldn't load stay types. Tap to retry.", _types.load);
               }
               return StayOptionGrid(
                 crossAxisCount: 3,
                 childAspectRatio: 2.6,
                 labels: types.map((t) => t.name).toList(),
-                accent: StayColors.accent,
+                accent: PickKit.stay,
                 isActive: (i) => _stayTypeId == types[i].id,
                 onTap: (i) => setState(() {
                   _stayTypeId = types[i].id;
@@ -934,7 +838,7 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
               crossAxisCount: 3,
               childAspectRatio: 2.6,
               labels: StayOptionSets.vehicleAccess.map((o) => o.label).toList(),
-              accent: StayColors.accent,
+              accent: PickKit.stay,
               isActive: (i) => _vehicleAccess == StayOptionSets.vehicleAccess[i].value,
               onTap: (i) => setState(() {
                 _vehicleAccess = StayOptionSets.vehicleAccess[i].value;
@@ -948,7 +852,7 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
               crossAxisCount: 2,
               childAspectRatio: 3.9,
               labels: const ['Yes', 'No'],
-              accent: StayColors.accent,
+              accent: PickKit.stay,
               isActive: (i) => _hostLivesHere == (i == 0),
               onTap: (i) => setState(() {
                 _hostLivesHere = i == 0;
@@ -963,10 +867,10 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
               runSpacing: 8,
               children: [
                 for (final o in StayOptionSets.facilities)
-                  SelectableChip(
+                  PickChip(
                     label: o.label,
                     selected: _facilities.contains(o.value),
-                    activeColor: StayColors.accent,
+                    activeColor: PickKit.stay,
                     padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
                     onTap: () => setState(() {
                       if (!_facilities.remove(o.value)) _facilities.add(o.value);
@@ -983,25 +887,34 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
               maxLines: 3,
               maxLength: 300,
               inputFormatters: noEmojiInputFormatters,
-              style: const TextStyle(fontFamily: 'Poppins', fontSize: 14),
+              cursorColor: DesignColors.primary,
+              style: SetupKit.fieldText(),
               decoration: _inputDec('Describe amenities, nearby facilities, rules...'),
             ),
           ),
         ]),
       );
 
+  Widget _spinner() => const Padding(
+        padding: EdgeInsets.symmetric(vertical: 12),
+        child: Center(child: KitDots(color: DesignColors.primary)),
+      );
+
+  Widget _retry(String text, VoidCallback onTap) => InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          child: Center(
+            child: Text(text, style: TripKit.text(12, weight: FontWeight.w600, color: DesignColors.primary)),
+          ),
+        ),
+      );
+
   InputDecoration _fieldDec(String hint, {String? errorText, String? helperText, String? suffixText}) =>
-      _inputDec(hint).copyWith(
-        errorText: errorText,
-        errorMaxLines: 2,
-        helperText: helperText,
+      SetupKit.input(hint: hint, error: errorText, helper: helperText, errorMaxLines: 2).copyWith(
         helperMaxLines: 2,
-        helperStyle: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight),
-        errorStyle: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.error),
         suffixText: suffixText,
-        suffixStyle: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: StayColors.accentDark),
-        errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.error)),
-        focusedErrorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.error, width: 1.5)),
+        suffixStyle: TripKit.text(12, color: DesignColors.primary),
       );
 
   Widget _registrationCard() => _sectionCard(
@@ -1009,28 +922,8 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
         child: Obx(() {
           final types = _regTypes.types;
           if (types.isEmpty) {
-            if (_regTypes.isLoading.value) {
-              return const Padding(
-                padding: EdgeInsets.symmetric(vertical: 12),
-                child: Center(
-                  child: SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: StayColors.accent),
-                  ),
-                ),
-              );
-            }
-            return GestureDetector(
-              onTap: _regTypes.load,
-              child: const Padding(
-                padding: EdgeInsets.symmetric(vertical: 12),
-                child: Center(
-                  child: Text("Couldn't load registration types. Tap to retry.",
-                      style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: StayColors.accentDark)),
-                ),
-              ),
-            );
+            if (_regTypes.isLoading.value) return _spinner();
+            return _retry("Couldn't load registration types. Tap to retry.", _regTypes.load);
           }
           final type = _selectedRegType;
           final isUdyam = type?.code == StayRegistrationValidators.udyamCode;
@@ -1040,8 +933,11 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
               key: ValueKey(type?.id),
               initialValue: type?.id,
               isExpanded: true,
+              icon: const Icon(Icons.keyboard_arrow_down_rounded),
+              dropdownColor: DesignColors.surface,
+              borderRadius: const BorderRadius.all(Radius.circular(8)),
               decoration: _fieldDec('Select type', errorText: _typeFieldError),
-              style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textDark),
+              style: SetupKit.fieldText(),
               items: [
                 for (final t in types)
                   DropdownMenuItem<String>(value: t.id, child: Text(t.name, overflow: TextOverflow.ellipsis)),
@@ -1063,7 +959,8 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
                   inputFormatters: StayRegistrationValidators.otherNameInputFormatters,
                   textCapitalization: TextCapitalization.words,
                   onChanged: (_) => setState(() => _serverOtherError = null),
-                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 14),
+                  cursorColor: DesignColors.primary,
+                  style: SetupKit.fieldText(),
                   decoration: _fieldDec('e.g. Gram Panchayat NOC', errorText: _otherNameFieldError)
                       .copyWith(labelText: 'Document name'),
                 ),
@@ -1075,7 +972,8 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
                 inputFormatters: StayRegistrationValidators.registrationInputFormatters,
                 textCapitalization: TextCapitalization.characters,
                 onChanged: (_) => setState(() => _serverNumberError = null),
-                style: const TextStyle(fontFamily: 'Poppins', fontSize: 14),
+                cursorColor: DesignColors.primary,
+                style: SetupKit.fieldText(),
                 decoration: _fieldDec(
                   numberHint,
                   errorText: _numberFieldError,
@@ -1101,7 +999,8 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
           inputFormatters: StayRegistrationValidators.gstinInputFormatters,
           textCapitalization: TextCapitalization.characters,
           onChanged: (_) => setState(() => _serverGstinError = null),
-          style: const TextStyle(fontFamily: 'Poppins', fontSize: 14),
+          cursorColor: DesignColors.primary,
+          style: SetupKit.fieldText(),
           decoration: _fieldDec(
             '05ABCDE1234F1Z6',
             errorText: _gstinFieldError,
@@ -1119,7 +1018,7 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
                 _dirty = true;
               }),
               child: Text(_clearGstin ? 'Will be removed · Undo' : 'Saved · Remove',
-                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: StayColors.accentDark)),
+                  style: TripKit.text(12, weight: FontWeight.w600, color: DesignColors.primary)),
             ),
           ),
       ]),
@@ -1128,6 +1027,12 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
 
   Widget _photoTile(int i) {
     final p = _photos[i];
+    const tileRadius = BorderRadius.only(
+      topLeft: Radius.circular(8),
+      topRight: Radius.circular(24),
+      bottomLeft: Radius.circular(8),
+      bottomRight: Radius.circular(8),
+    );
     final image = p.local != null
         ? Image.file(p.local!, fit: BoxFit.cover, width: double.infinity, height: double.infinity)
         : CachedNetworkImage(
@@ -1135,36 +1040,44 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
             fit: BoxFit.cover,
             width: double.infinity,
             height: double.infinity,
-            placeholder: (_, _) => Container(color: AppColors.shimmerBase),
-            errorWidget: (_, _, _) => Container(color: AppColors.shimmerBase),
+            placeholder: (_, _) => const TemplatePlaceholder(radius: 0, height: double.infinity),
+            errorWidget: (_, _, _) => const TemplatePlaceholder(radius: 0, height: double.infinity),
           );
-    return Stack(children: [
-      ClipRRect(borderRadius: BorderRadius.circular(12), child: image),
-      if (i == 0)
-        Positioned(
-          bottom: 0, left: 0, right: 0,
-          child: Container(
-            padding: const EdgeInsets.symmetric(vertical: 4),
-            decoration: BoxDecoration(
-              color: StayColors.accentDark.withValues(alpha: 0.85),
-              borderRadius: const BorderRadius.vertical(bottom: Radius.circular(12)),
+    return TemplateEntranceOnce(
+      key: ObjectKey(p),
+      child: Stack(children: [
+        Positioned.fill(child: ClipRRect(borderRadius: tileRadius, child: image)),
+        if (i == 0)
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(0, 14, 0, 4),
+              decoration: const BoxDecoration(
+                gradient: TripKit.scrimShort,
+                borderRadius: BorderRadius.only(bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8)),
+              ),
+              child: Text('Cover',
+                  textAlign: TextAlign.center,
+                  style: TripKit.text(10, weight: FontWeight.w600, color: DesignColors.onPrimary)),
             ),
-            child: const Text('Cover', textAlign: TextAlign.center,
-                style: TextStyle(fontFamily: 'Poppins', fontSize: 10, color: Colors.white, fontWeight: FontWeight.w600)),
+          ),
+        Positioned(
+          top: 4,
+          right: 4,
+          child: GestureDetector(
+            onTap: () => _removePhoto(i),
+            child: Container(
+              width: 22,
+              height: 22,
+              decoration: const BoxDecoration(gradient: SetupKit.rose, shape: BoxShape.circle),
+              child: const Icon(Icons.close_rounded, color: DesignColors.onPrimary, size: 12),
+            ),
           ),
         ),
-      Positioned(
-        top: 4, right: 4,
-        child: GestureDetector(
-          onTap: () => _removePhoto(i),
-          child: Container(
-            padding: const EdgeInsets.all(4),
-            decoration: const BoxDecoration(color: AppColors.error, shape: BoxShape.circle),
-            child: const Icon(Icons.close_rounded, color: Colors.white, size: 11),
-          ),
-        ),
-      ),
-    ]);
+      ]),
+    );
   }
 
   Widget _photosStep() {
@@ -1173,66 +1086,68 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
     return SingleChildScrollView(
       key: const ValueKey(3),
       padding: const EdgeInsets.all(16),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      child: TemplateStagger(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         _sectionCard(
           title: 'Stay Photos *',
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(children: [
-              Text('${_photos.length}/$max photos added',
-                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textLight)),
+              Text('${_photos.length}/$max photos added', style: TripKit.text(13, color: DesignColors.textSecondary)),
               const Spacer(),
-              const Text('Required', style: TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textHint)),
+              Text('Required', style: TripKit.text(11, color: DesignColors.textMuted)),
             ]),
             const SizedBox(height: 4),
-            const Text('Good photos get 3x more responses',
-                style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: StayColors.accentDark)),
+            Text('Good photos get 3x more responses', style: TripKit.text(12, color: DesignColors.primary)),
             const SizedBox(height: 16),
             if (_photos.isEmpty)
-              GestureDetector(
-                onTap: _pickPhoto,
-                child: Container(
-                  width: double.infinity,
-                  height: 140,
-                  decoration: BoxDecoration(
-                    color: StayColors.surface,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: StayColors.accent.withValues(alpha: 0.3), width: 1.5),
+              Material(
+                color: DesignColors.scaffold,
+                shape: RoundedRectangleBorder(
+                  borderRadius: TripKit.cardRadiusSmall,
+                  side: BorderSide(color: DesignColors.primary.withValues(alpha: Alpha.scrim), width: 1.5),
+                ),
+                child: InkWell(
+                  borderRadius: TripKit.cardRadiusSmall,
+                  onTap: _pickPhoto,
+                  child: SizedBox(
+                    width: double.infinity,
+                    height: 150,
+                    child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                      Container(
+                        width: 72,
+                        height: 72,
+                        padding: const EdgeInsets.all(12),
+                        decoration: const BoxDecoration(color: PickKit.stayTint, shape: BoxShape.circle),
+                        child: Image.asset(SetupAssets.camera),
+                      ),
+                      const SizedBox(height: 8),
+                      Text('Add Stay Photos',
+                          style: TripKit.text(14, weight: FontWeight.w600, color: DesignColors.primary)),
+                      const SizedBox(height: 2),
+                      Text('Camera or Gallery', style: TripKit.text(12, color: DesignColors.textSecondary)),
+                    ]),
                   ),
-                  child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                    Container(
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(color: StayColors.accent.withValues(alpha: 0.12), shape: BoxShape.circle),
-                      child: const Icon(Icons.add_a_photo_rounded, color: StayColors.accent, size: 28),
-                    ),
-                    const SizedBox(height: 10),
-                    const Text('Add Stay Photos',
-                        style: TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600, color: StayColors.accentDark)),
-                    const SizedBox(height: 4),
-                    const Text('Camera or Gallery', style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
-                  ]),
                 ),
               )
             else
               GridView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
+                padding: EdgeInsets.zero,
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 3, crossAxisSpacing: 10, mainAxisSpacing: 10),
                 itemCount: _photos.length + (left > 0 ? 1 : 0),
                 itemBuilder: (_, i) {
                   if (i == _photos.length) {
-                    return GestureDetector(
-                      onTap: _pickPhoto,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: StayColors.surface,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: AppColors.divider),
-                        ),
-                        child: const Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                          Icon(Icons.add_rounded, color: StayColors.accent, size: 28),
-                          SizedBox(height: 4),
-                          Text('Add', style: TextStyle(fontFamily: 'Poppins', fontSize: 11, color: StayColors.accentDark, fontWeight: FontWeight.w500)),
+                    return Material(
+                      color: PickKit.stayTint,
+                      borderRadius: const BorderRadius.all(Radius.circular(8)),
+                      child: InkWell(
+                        borderRadius: const BorderRadius.all(Radius.circular(8)),
+                        onTap: _pickPhoto,
+                        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                          const Icon(Icons.add_rounded, color: DesignColors.primary, size: 28),
+                          const SizedBox(height: 4),
+                          Text('Add', style: TripKit.text(11, color: DesignColors.primary)),
                         ]),
                       ),
                     );
@@ -1242,19 +1157,87 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
               ),
             if (_photos.isNotEmpty && left > 0) ...[
               const SizedBox(height: 14),
-              GestureDetector(
+              InkWell(
                 onTap: _pickPhoto,
-                child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                  const Icon(Icons.add_a_photo_rounded, color: StayColors.accent, size: 16),
-                  const SizedBox(width: 6),
-                  Text('Add $left more photo${left == 1 ? '' : 's'}',
-                      style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, color: StayColors.accentDark, fontWeight: FontWeight.w500)),
-                ]),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                    Image.asset(SetupAssets.camera, width: 20, height: 20),
+                    const SizedBox(width: 6),
+                    Text('Add $left more photo${left == 1 ? '' : 's'}',
+                        style: TripKit.text(13, color: DesignColors.primary)),
+                  ]),
+                ),
               ),
             ],
           ]),
         ),
       ]),
     );
+  }
+}
+
+class _StepDot extends StatefulWidget {
+  const _StepDot({required this.index, required this.step, required this.label});
+  final int index;
+  final int step;
+  final String label;
+
+  @override
+  State<_StepDot> createState() => _StepDotState();
+}
+
+class _StepDotState extends State<_StepDot> with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(duration: const Duration(milliseconds: 400), vsync: this)
+    ..value = 1;
+  late final Animation<double> _scale =
+      Tween<double>(begin: 0.8, end: 1.0).animate(CurvedAnimation(parent: _c, curve: Curves.fastOutSlowIn));
+
+  @override
+  void didUpdateWidget(_StepDot old) {
+    super.didUpdateWidget(old);
+    final was = old.step >= widget.index;
+    final now = widget.step >= widget.index;
+    if (now && !was && !MediaQuery.of(context).disableAnimations) _c.forward(from: 0);
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final active = widget.step == widget.index;
+    final done = widget.step > widget.index;
+    return Column(mainAxisSize: MainAxisSize.min, children: [
+      ScaleTransition(
+        scale: _scale,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 250),
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            gradient: (active || done) ? PickKit.stayGradient : null,
+            color: (active || done) ? null : DesignColors.dividerSoft,
+            shape: BoxShape.circle,
+            boxShadow: (active || done) ? ShadowTokens.elev2 : const [],
+          ),
+          child: Center(
+            child: done
+                ? const Icon(Icons.check_rounded, color: DesignColors.onPrimary, size: 16)
+                : Text('${widget.index + 1}',
+                    style: TripKit.text(13,
+                        weight: FontWeight.w700,
+                        color: active ? DesignColors.surface : DesignColors.textSecondary)),
+          ),
+        ),
+      ),
+      const SizedBox(height: 4),
+      Text(widget.label,
+          style: TripKit.text(11,
+              color: (active || done) ? DesignColors.primary : DesignColors.textSecondary)),
+    ]);
   }
 }

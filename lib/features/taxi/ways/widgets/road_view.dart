@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import '../../../../config/app_colors.dart';
+import 'package:bakhli/design/design.dart';
+import 'package:bakhli/design/extra/trip_plan_look.dart';
 import '../../../../models/browse_item.dart';
 import '../models/taxi_ways_models.dart';
 import '../taxi_ways_strings.dart';
@@ -25,7 +26,7 @@ class RoadView extends StatelessWidget {
   Color _color(int legIndex) {
     final c = JourneyRail.colorFor(legIndex);
     final sel = selectedLeg;
-    return sel == null || sel == legIndex ? c : c.withValues(alpha: 0.3);
+    return sel == null || sel == legIndex ? c : c.withValues(alpha: Alpha.scrim);
   }
 
   @override
@@ -73,7 +74,7 @@ class RoadView extends StatelessWidget {
       dashed: !legs.last.hasRoadLine,
       child: _place(legs.last.to.name, TaxiWaysStrings.youArrive),
     ));
-    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: rows);
+    return TemplateStagger(children: rows);
   }
 
   Widget _place(String name, String caption, {String? note, bool change = false}) => Padding(
@@ -83,15 +84,14 @@ class RoadView extends StatelessWidget {
             name,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontFamily: 'Poppins', fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textDark),
+            style: FitnessAppTheme.title.copyWith(fontSize: 15),
           ),
           Text(
             caption,
-            style: TextStyle(
-              fontFamily: 'Poppins',
+            style: FitnessAppTheme.caption.copyWith(
               fontSize: 11.5,
               fontWeight: change ? FontWeight.w700 : FontWeight.w400,
-              color: change ? AppColors.warningText : AppColors.textLight,
+              color: change ? TripLook.warningText : DesignColors.textSecondary,
             ),
           ),
           if (note != null)
@@ -99,7 +99,7 @@ class RoadView extends StatelessWidget {
               note,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textMedium),
+              style: FitnessAppTheme.caption.copyWith(fontSize: 11, color: DesignColors.textGrey),
             ),
         ]),
       );
@@ -118,24 +118,31 @@ class RoadView extends StatelessWidget {
       selected: selected,
       child: InkWell(
         onTap: () => onSelectLeg(leg.index),
-        borderRadius: BorderRadius.circular(14),
-        child: Ink(
+        borderRadius: TripLook.softRadius,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
           decoration: BoxDecoration(
-            color: selected ? color.withValues(alpha: 0.08) : Colors.white,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: selected ? color : AppColors.divider),
+            color: selected ? color.withValues(alpha: Alpha.hairline) : DesignColors.surface,
+            borderRadius: TripLook.softRadius,
+            boxShadow: selected ? TripLook.shadowFor(color) : TripLook.card().boxShadow,
           ),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
               if (d != null) ...[
-                CircleAvatar(
-                  radius: 16,
-                  backgroundColor: color.withValues(alpha: 0.16),
-                  child: Text(
-                    d.initial,
-                    style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700, color: color.withValues(alpha: 1)),
+                Container(
+                  width: 32,
+                  height: 32,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      colors: [color.withValues(alpha: Alpha.full), color.withValues(alpha: Alpha.strong)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
                   ),
+                  child: Text(d.initial, style: FitnessAppTheme.title.copyWith(fontSize: 13, color: DesignColors.surface)),
                 ),
                 const SizedBox(width: 10),
               ],
@@ -146,20 +153,20 @@ class RoadView extends StatelessWidget {
                       d.driverName,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontFamily: 'Poppins', fontSize: 13.5, fontWeight: FontWeight.w700, color: AppColors.textDark),
+                      style: FitnessAppTheme.title.copyWith(fontSize: 13.5),
                     ),
                   Text(
                     line,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 11.5, color: AppColors.textLight),
+                    style: FitnessAppTheme.caption.copyWith(fontSize: 11.5),
                   ),
                 ]),
               ),
               const SizedBox(width: 8),
               Text(
                 BrowseItem.inr(chosen[leg.index]?.groupFare(people) ?? leg.listedFare),
-                style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.textDark),
+                style: FitnessAppTheme.title.copyWith(fontSize: 14, fontWeight: FontWeight.w800),
               ),
             ]),
             if (geometry != null) ...[
@@ -167,7 +174,7 @@ class RoadView extends StatelessWidget {
               SizedBox(
                 height: 44,
                 width: double.infinity,
-                child: CustomPaint(painter: _LineSketchPainter(points: geometry, color: color.withValues(alpha: 1))),
+                child: CustomPaint(painter: _LineSketchPainter(points: geometry, color: color.withValues(alpha: Alpha.full))),
               ),
             ],
             if (leg.passes.isNotEmpty) ...[
@@ -176,14 +183,14 @@ class RoadView extends StatelessWidget {
                 TaxiWaysStrings.passes(leg.passes),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontFamily: 'Poppins', fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textMedium),
+                style: FitnessAppTheme.caption.copyWith(fontSize: 11.5, fontWeight: FontWeight.w600, color: DesignColors.textGrey),
               ),
             ],
             if (!leg.hasRoadLine) ...[
               const SizedBox(height: 6),
-              const Text(
+              Text(
                 TaxiWaysStrings.noRoadLine,
-                style: TextStyle(fontFamily: 'Poppins', fontSize: 11, fontStyle: FontStyle.italic, color: AppColors.textHint),
+                style: FitnessAppTheme.caption.copyWith(fontSize: 11, fontStyle: FontStyle.italic, color: DesignColors.textMuted),
               ),
             ],
           ]),

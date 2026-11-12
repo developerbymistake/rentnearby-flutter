@@ -1,12 +1,9 @@
+import 'package:bakhli/design/design.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:iconsax/iconsax.dart';
-import 'package:shimmer/shimmer.dart';
-import '../../../config/app_colors.dart';
 import '../../../config/app_routes.dart';
-import '../../../config/app_shadows.dart';
 import '../../../controllers/auth_controller.dart';
 import '../../../controllers/chat_controller.dart';
 import '../../../controllers/report_controller.dart';
@@ -15,7 +12,6 @@ import '../../../models/browse_item.dart';
 import '../../../services/listing_share_service.dart';
 import '../../../widgets/app_loading_overlay.dart';
 import '../../../widgets/detail_action_bar.dart';
-import '../../../widgets/detail_header.dart';
 import '../../../widgets/report_listing_sheet.dart';
 import '../models/stay_detail_model.dart';
 import '../models/stay_owner_model.dart';
@@ -23,12 +19,16 @@ import '../../taxi/guest/stay_taxis_section.dart';
 import '../setup/stay_option_sets.dart';
 import 'stay_guest_controller.dart';
 
-const _kAccent = StayColors.accent;
-const _kGradient = StayColors.gradient;
+const _kAccent = DesignColors.primary;
+const _kTone = KitTone.stay;
 const _kDivider = Padding(
   padding: EdgeInsets.symmetric(vertical: 10),
-  child: Divider(height: 1, color: AppColors.divider),
+  child: Divider(height: 1, color: DesignColors.dividerSoft),
 );
+const _kSections = 7;
+
+TextStyle _t(double size, FontWeight w, Color c, {double? height, double? spacing}) =>
+    TypeTokens.style(size, w, color: c, height: height, letterSpacing: spacing);
 
 class StayDetailScreen extends StatefulWidget {
   const StayDetailScreen({super.key});
@@ -37,11 +37,51 @@ class StayDetailScreen extends StatefulWidget {
 }
 
 class _StayDetailScreenState extends State<StayDetailScreen> {
+  Widget _sec(int i, Widget child) => StaggerItem(index: i, child: child);
+
+  Widget _glass({required Widget child, EdgeInsetsGeometry? margin, VoidCallback? onTap, EdgeInsetsGeometry? padding, bool pill = false}) {
+    return Padding(
+      padding: margin ?? EdgeInsets.zero,
+      child: PressScale(
+        child: GestureDetector(
+          onTap: onTap,
+          child: Container(
+            padding: padding ?? const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: StayBrowseTokens.glass,
+              shape: pill ? BoxShape.rectangle : BoxShape.circle,
+              borderRadius: pill ? CardRadius.pill : null,
+              boxShadow: ShadowTokens.elev2,
+            ),
+            child: child,
+          ),
+        ),
+      ),
+    );
+  }
+
   final _auth = Get.find<AuthController>();
   final _isSharing = false.obs;
   StayDetailModel? _stay;
   bool _loading = true;
   int _currentPhoto = 0;
+  static const double _heroHeight = 380;
+  final _scroll = ScrollController();
+  final _barOn = ValueNotifier<bool>(false);
+
+  void _onScroll() {
+    if (!_scroll.hasClients) return;
+    final on = _scroll.offset > _heroHeight - ScrollFadeTopBar.heightOf(context);
+    if (on != _barOn.value) _barOn.value = on;
+  }
+
+  @override
+  void dispose() {
+    _scroll.removeListener(_onScroll);
+    _scroll.dispose();
+    _barOn.dispose();
+    super.dispose();
+  }
 
   bool get _isOwner => _stay != null && _auth.user.value?.id == _stay!.userId;
 
@@ -50,6 +90,7 @@ class _StayDetailScreenState extends State<StayDetailScreen> {
     super.initState();
     final args = Get.arguments;
     _id = args is Map ? args['id'] as String : args as String;
+    _scroll.addListener(_onScroll);
     _fetch();
   }
 
@@ -58,7 +99,9 @@ class _StayDetailScreenState extends State<StayDetailScreen> {
   void _fetch() {
     if (!_loading) setState(() => _loading = true);
     StayGuestController.to.getById(_id).then((s) {
-      if (mounted) setState(() { _stay = s; _loading = false; });
+      if (mounted) {
+        setState(() { _stay = s; _loading = false; });
+      }
     }).catchError((_) {
       if (mounted) setState(() => _loading = false);
     });
@@ -86,11 +129,11 @@ class _StayDetailScreenState extends State<StayDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.scaffoldBg,
+      backgroundColor: DesignColors.scaffold,
       body: Obx(() => AppLoadingOverlay(
             isLoading: _isSharing.value,
             message: 'Sharing...',
-            indicatorColor: StayColors.accent,
+            indicatorColor: _kAccent,
             child: _loading ? _buildLoader() : _buildContent(),
           )),
       bottomNavigationBar: _loading || _stay == null ? null : _buildActionBar(),
@@ -105,57 +148,37 @@ class _StayDetailScreenState extends State<StayDetailScreen> {
         ),
         child: Stack(
           children: [
-            Shimmer.fromColors(
-              baseColor: AppColors.shimmerBase,
-              highlightColor: AppColors.shimmerHighlight,
-              child: SingleChildScrollView(
-                physics: const NeverScrollableScrollPhysics(),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(height: 380 + MediaQuery.of(context).padding.top, color: Colors.white),
-                    Padding(
-                      padding: const EdgeInsets.all(20),
-                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Row(children: [
-                          Expanded(
-                              child: Container(
-                                  height: 28,
-                                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8)))),
-                          const SizedBox(width: 12),
-                          Container(
-                              width: 90,
-                              height: 36,
-                              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10))),
-                        ]),
-                        const SizedBox(height: 16),
-                        Container(
-                            height: 120,
-                            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16))),
-                        const SizedBox(height: 24),
-                        Container(
-                            height: 14, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(4))),
-                        const SizedBox(height: 8),
-                        Container(
-                            height: 14,
-                            width: 200,
-                            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(4))),
+            SingleChildScrollView(
+              physics: const NeverScrollableScrollPhysics(),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TemplatePlaceholder(height: 380 + MediaQuery.of(context).padding.top, radius: 0),
+                  const Padding(
+                    padding: EdgeInsets.all(20),
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Row(children: [
+                        Expanded(child: TemplatePlaceholder(height: 28, radius: 8)),
+                        SizedBox(width: 12),
+                        TemplatePlaceholder(width: 90, height: 36, radius: 8),
                       ]),
-                    ),
-                  ],
-                ),
+                      SizedBox(height: 16),
+                      TemplatePlaceholder(height: 120, radius: 12),
+                      SizedBox(height: 24),
+                      TemplatePlaceholder(height: 14, radius: 4),
+                      SizedBox(height: 8),
+                      TemplatePlaceholder(height: 14, width: 200, radius: 4),
+                    ]),
+                  ),
+                ],
               ),
             ),
             Positioned(
               top: MediaQuery.of(context).padding.top + 8,
               left: 8,
-              child: GestureDetector(
+              child: _glass(
                 onTap: () => Get.back(),
-                child: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: const BoxDecoration(color: Colors.black26, shape: BoxShape.circle),
-                  child: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 18),
-                ),
+                child: const Icon(Icons.arrow_back_ios_new_rounded, color: DesignColors.textStrong, size: 16),
               ),
             ),
           ],
@@ -171,22 +194,19 @@ class _StayDetailScreenState extends State<StayDetailScreen> {
               alignment: Alignment.centerLeft,
               child: IconButton(
                 onPressed: () => Get.back(),
-                icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20, color: AppColors.textDark),
+                icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20, color: DesignColors.textStrong),
               ),
             ),
             Expanded(
               child: Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Text('Stay not found',
-                        style: TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textMedium)),
-                    TextButton(
-                      onPressed: _fetch,
-                      style: TextButton.styleFrom(minimumSize: const Size(64, 48)),
-                      child: const Text('Try again', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700)),
-                    ),
-                  ],
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: StateCard.error(
+                    kit: _kTone,
+                    title: 'Stay not found',
+                    actionLabel: 'Try again',
+                    onAction: _fetch,
+                  ),
                 ),
               ),
             ),
@@ -195,113 +215,170 @@ class _StayDetailScreenState extends State<StayDetailScreen> {
       );
     }
     final s = _stay!;
+    return ValueListenableBuilder<bool>(
+      valueListenable: _barOn,
+      builder: (context, barOn, content) => KitStatusBar(lightIcons: !barOn, child: content!),
+      child: Stack(
+        children: [
+          StaggerHost(
+            count: _kSections,
+            child: _scrollView(s),
+          ),
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: ValueListenableBuilder<bool>(
+              valueListenable: _barOn,
+              builder: (context, on, bar) => IgnorePointer(
+                ignoring: !on,
+                child: AnimatedOpacity(
+                  opacity: on ? 1 : 0,
+                  duration: KitMotion.reduce(context) ? Duration.zero : templateTransitionReverseDuration,
+                  child: bar,
+                ),
+              ),
+              child: ScrollFadeTopBar(
+                title: s.title,
+                scrollController: _scroll,
+                onBack: () => Get.back(),
+                trailing: [
+                  if (!_isOwner && s.slug != null)
+                    PressScale(
+                      child: InkWell(
+                        borderRadius: CardRadius.pill,
+                        onTap: () => _share(s),
+                        child: const SizedBox(
+                          width: KitMetrics.touch,
+                          height: KitMetrics.touch,
+                          child: Icon(Icons.ios_share_rounded, color: _kAccent, size: 20),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _scrollView(StayDetailModel s) {
     return CustomScrollView(
+      controller: _scroll,
+      physics: const BouncingScrollPhysics(),
       slivers: [
         SliverAppBar(
-          expandedHeight: 380,
-          pinned: true,
+          expandedHeight: _heroHeight,
+          pinned: false,
           backgroundColor: _kAccent,
-          leading: GestureDetector(
+          leading: _glass(
             onTap: () => Get.back(),
-            child: Container(
-              margin: const EdgeInsets.all(8),
-              decoration: const BoxDecoration(color: Colors.black26, shape: BoxShape.circle),
-              child: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 18),
-            ),
+            margin: const EdgeInsets.all(8),
+            child: const Icon(Icons.arrow_back_ios_new_rounded, color: DesignColors.textStrong, size: 16),
           ),
           actions: [
             if (!_isOwner && s.slug != null)
-              GestureDetector(
+              _glass(
                 onTap: () => _share(s),
-                child: Container(
-                  margin: const EdgeInsets.all(8),
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(color: Colors.black26, borderRadius: BorderRadius.circular(20)),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Iconsax.export_1, color: Colors.white, size: 18),
-                      SizedBox(width: 6),
-                      Text('Share',
-                          style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white)),
-                    ],
-                  ),
+                margin: const EdgeInsets.all(8),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                pill: true,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.ios_share_rounded, color: _kAccent, size: 16),
+                    const SizedBox(width: 6),
+                    Text('Share', style: _t(13, FontWeight.w600, _kAccent)),
+                  ],
                 ),
               ),
           ],
           flexibleSpace: FlexibleSpaceBar(
-            background: s.photos.isEmpty
-                ? Container(
-                    decoration: const BoxDecoration(gradient: _kGradient),
-                    child: const Center(child: Icon(Iconsax.building_4, size: 80, color: Colors.white38)),
-                  )
-                : Stack(
-                    children: [
-                      PageView.builder(
-                        itemCount: s.photos.length,
-                        onPageChanged: (i) => setState(() => _currentPhoto = i),
-                        itemBuilder: (_, i) => CachedNetworkImage(
-                          imageUrl: s.photos[i],
-                          fit: BoxFit.cover,
-                          placeholder: (ctx, url) => Container(color: AppColors.shimmerBase),
-                          errorWidget: (ctx, url, err) => Container(
-                            color: AppColors.shimmerBase,
-                            child: const Icon(Icons.broken_image_rounded, size: 48, color: AppColors.textHint),
+            background: Stack(
+              fit: StackFit.expand,
+              children: [
+                s.photos.isEmpty
+                    ? const PlaceholderTile(tone: _kTone, iconSize: 80)
+                    : Stack(
+                        children: [
+                          PageView.builder(
+                            itemCount: s.photos.length,
+                            onPageChanged: (i) => setState(() => _currentPhoto = i),
+                            itemBuilder: (_, i) => CachedNetworkImage(
+                              imageUrl: s.photos[i],
+                              fit: BoxFit.cover,
+                              placeholder: (ctx, url) => const TemplatePlaceholder(height: double.infinity, radius: 0),
+                              errorWidget: (ctx, url, err) =>
+                                  const PlaceholderTile(tone: _kTone, asset: TravelIcon.photo, iconSize: 48),
+                            ),
                           ),
-                        ),
+                          if (s.photos.length > 1)
+                            Positioned(
+                              bottom: 36,
+                              left: 0,
+                              right: 0,
+                              child: IgnorePointer(
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: List.generate(
+                                      s.photos.length,
+                                      (i) => AnimatedContainer(
+                                            duration: const Duration(milliseconds: 250),
+                                            margin: const EdgeInsets.symmetric(horizontal: 3),
+                                            width: _currentPhoto == i ? 20 : 6,
+                                            height: 6,
+                                            decoration: BoxDecoration(
+                                              color: _currentPhoto == i
+                                                  ? DesignColors.onPrimary
+                                                  : StayBrowseTokens.dotInactive,
+                                              borderRadius: BorderRadius.circular(3),
+                                            ),
+                                          )),
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
-                      if (s.photos.length > 1)
-                        Positioned(
-                          bottom: 16,
-                          left: 0,
-                          right: 0,
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: List.generate(
-                                s.photos.length,
-                                (i) => AnimatedContainer(
-                                      duration: const Duration(milliseconds: 250),
-                                      margin: const EdgeInsets.symmetric(horizontal: 3),
-                                      width: _currentPhoto == i ? 20 : 6,
-                                      height: 6,
-                                      decoration: BoxDecoration(
-                                        color: _currentPhoto == i ? Colors.white : Colors.white54,
-                                        borderRadius: BorderRadius.circular(3),
-                                      ),
-                                    )),
-                          ),
-                        ),
-                    ],
+                const Positioned(
+                  left: 0,
+                  right: 0,
+                  top: 0,
+                  height: 120,
+                  child: IgnorePointer(child: DecoratedBox(decoration: BoxDecoration(gradient: DesignGradients.scrimTop))),
+                ),
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: -1,
+                  child: IgnorePointer(
+                    child: Container(
+                      height: 24,
+                      decoration: const BoxDecoration(
+                        color: DesignColors.scaffold,
+                        borderRadius: CardRadius.sheet,
+                      ),
+                    ),
                   ),
+                ),
+              ],
+            ),
           ),
         ),
         SliverToBoxAdapter(
           child: Padding(
             padding: const EdgeInsets.all(20),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              DetailTitleRow(
-                accent: _kAccent,
-                tag: 'FOR STAY',
-                icon: Iconsax.building_4,
-                title: s.title,
-                caption: 'FROM',
-                value: _price,
-                unit: s.minPricePerNight != null ? '/night' : '',
-              ),
+              _sec(0, _titleRow(s)),
               const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: AppShadows.premium(_kAccent, alpha: 0.06, blur: 12, offset: const Offset(0, 4)),
-                ),
+              _sec(1, SectionTile(
+                tone: _kTone,
                 child: Column(children: [
                   if (s.rooms.isNotEmpty) ...[
-                    const Align(
+                    Align(
                       alignment: Alignment.centerLeft,
-                      child: Text('Rooms',
-                          style: TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                      child: Text('Rooms', style: _t(16, FontWeight.w700, DesignColors.textStrong)),
                     ),
                     const SizedBox(height: 8),
                     for (var i = 0; i < s.rooms.length; i++) ...[
@@ -311,19 +388,19 @@ class _StayDetailScreenState extends State<StayDetailScreen> {
                     _kDivider,
                   ],
                   if (s.stayTypeName != null && s.stayTypeName!.isNotEmpty) ...[
-                    _infoRow(Iconsax.building_4, 'Stay type', s.stayTypeName!),
+                    _infoRow(TravelIcon.stay, TravelPalette.skyStart, TravelPalette.skyEnd, 'Stay type', s.stayTypeName!),
                     _kDivider,
                   ],
                   if (s.vehicleAccess != null && s.vehicleAccess!.isNotEmpty) ...[
-                    _infoRow(Iconsax.car, 'Vehicle access', StayOptionSets.labelOf(StayOptionSets.vehicleAccess, s.vehicleAccess)),
+                    _infoRow(TravelIcon.taxi, TravelPalette.sunriseStart, TravelPalette.sunriseEnd, 'Vehicle access', StayOptionSets.labelOf(StayOptionSets.vehicleAccess, s.vehicleAccess)),
                     _kDivider,
                   ],
-                  _infoRow(Iconsax.location, 'Location', s.locality.isEmpty ? '-' : s.locality),
+                  _infoRow(TravelIcon.place, TravelPalette.roseStart, TravelPalette.roseEnd, 'Location', s.locality.isEmpty ? '-' : s.locality),
                 ]),
-              ),
+              )),
               if (s.taxiTarget case final to?)
                 Obx(() => TabConfigController.to.isTaxiActive
-                    ? Column(
+                    ? _sec(2, Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const SizedBox(height: 24),
@@ -336,38 +413,39 @@ class _StayDetailScreenState extends State<StayDetailScreen> {
                             toLng: to.lng,
                           ),
                         ],
-                      )
+                      ))
                     : const SizedBox.shrink()),
-              if (s.facilities.isNotEmpty) ...[
-                const SizedBox(height: 24),
-                _sectionTitle('Facilities'),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: s.facilities.map(_facilityChip).toList(),
-                ),
-              ],
-              if (s.rules != null) ...[
-                const SizedBox(height: 24),
-                _sectionTitle('House rules'),
-                const SizedBox(height: 8),
-                _rulesCard(s.rules!),
-              ],
-              if (s.description != null && s.description!.isNotEmpty) ...[
-                const SizedBox(height: 24),
-                _sectionTitle('About this stay'),
-                const SizedBox(height: 8),
-                Text(s.description!,
-                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textMedium, height: 1.6)),
-              ],
+              if (s.facilities.isNotEmpty)
+                _sec(3, Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  const SizedBox(height: 24),
+                  _sectionTitle('Facilities'),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: s.facilities.map(_facilityChip).toList(),
+                  ),
+                ])),
+              if (s.rules != null)
+                _sec(4, Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  const SizedBox(height: 24),
+                  _sectionTitle('House rules'),
+                  const SizedBox(height: 8),
+                  _rulesCard(s.rules!),
+                ])),
+              if (s.description != null && s.description!.isNotEmpty)
+                _sec(5, Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  const SizedBox(height: 24),
+                  _sectionTitle('About this stay'),
+                  const SizedBox(height: 8),
+                  Text(s.description!, style: _t(14, FontWeight.w400, TypeTokens.secondary, height: 1.6)),
+                ])),
               const SizedBox(height: 16),
-              Row(children: [
-                const Icon(Iconsax.clock, size: 13, color: AppColors.textHint),
+              _sec(6, Row(children: [
+                const TravelIcon(TravelIcon.calendar, size: 16),
                 const SizedBox(width: 4),
-                Text('Posted ${_timeAgo(s.createdAt)}',
-                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textHint)),
-              ]),
+                Text('Posted ${_timeAgo(s.createdAt)}', style: _t(12, FontWeight.w400, TypeTokens.secondary)),
+              ])),
               const SizedBox(height: 20),
             ]),
           ),
@@ -376,8 +454,32 @@ class _StayDetailScreenState extends State<StayDetailScreen> {
     );
   }
 
-  Widget _sectionTitle(String text) => Text(text,
-      style: const TextStyle(fontFamily: 'Poppins', fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textDark));
+  Widget _sectionTitle(String text) => Text(text, style: _t(16, FontWeight.w700, DesignColors.textStrong, spacing: 0.18));
+
+  Widget _titleRow(StayDetailModel s) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [
+              const TravelIcon(TravelIcon.stay, size: 14),
+              const SizedBox(width: 4),
+              Text('FOR STAY', style: _t(10, FontWeight.w500, _kTone.accentDark, spacing: 0.2)),
+            ]),
+            const SizedBox(height: 4),
+            Text(s.title, maxLines: 2, overflow: TextOverflow.ellipsis, style: _t(22, FontWeight.w600, DesignColors.textStrong, spacing: 0.27)),
+          ]),
+        ),
+        const SizedBox(width: 12),
+        Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+          Text('FROM', style: _t(10, FontWeight.w500, TypeTokens.secondary, spacing: 0.2)),
+          Text(_price, style: _t(22, FontWeight.w500, _kAccent)),
+          if (s.minPricePerNight != null) Text('/night', style: _t(12, FontWeight.w400, TypeTokens.secondary)),
+        ]),
+      ],
+    );
+  }
 
   Widget _roomRow(StayRoomModel r) {
     return Row(
@@ -388,7 +490,7 @@ class _StayDetailScreenState extends State<StayDetailScreen> {
             Text(r.label,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textDark)),
+                style: _t(14, FontWeight.w500, DesignColors.textStrong)),
             const SizedBox(height: 2),
             Text(
               [
@@ -397,16 +499,15 @@ class _StayDetailScreenState extends State<StayDetailScreen> {
               ]
                   .where((e) => e.isNotEmpty)
                   .join(' · '),
-              style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight),
+              style: _t(12, FontWeight.w400, TypeTokens.secondary),
             ),
           ]),
         ),
         const SizedBox(width: 8),
         Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
           Text(BrowseItem.inr(r.pricePerNight),
-              style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.gold)),
-          const Text('/night',
-              style: TextStyle(fontFamily: 'Poppins', fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.textLight)),
+              style: _t(16, FontWeight.w600, PickKit.gold)),
+          Text('/night', style: _t(12, FontWeight.w400, TypeTokens.secondary)),
         ]),
       ],
     );
@@ -415,39 +516,29 @@ class _StayDetailScreenState extends State<StayDetailScreen> {
   Widget _facilityChip(String f) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: _kAccent.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: _kAccent.withValues(alpha: 0.3)),
-      ),
-      child: Text(StayOptionSets.labelOf(StayOptionSets.facilities, f),
-          style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w500, color: StayColors.accentDark)),
+      decoration: BoxDecoration(color: _kTone.tint, borderRadius: CardRadius.pill),
+      child: Text(StayOptionSets.labelOf(StayOptionSets.facilities, f), style: _t(12, FontWeight.w500, _kAccent)),
     );
   }
 
   Widget _rulesCard(StayRulesModel r) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: AppShadows.premium(_kAccent, alpha: 0.06, blur: 12, offset: const Offset(0, 4)),
-      ),
+    return SectionTile(
+      tone: _kTone,
       child: Column(children: [
         IntrinsicHeight(
           child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            Expanded(child: _ruleTile(Iconsax.login, 'Check-in', StayOptionSets.time12(r.checkInTime))),
+            Expanded(child: _ruleTile(const Icon(Icons.login_rounded, size: 20, color: _kAccent), 'Check-in', StayOptionSets.time12(r.checkInTime))),
             const SizedBox(width: 8),
-            Expanded(child: _ruleTile(Iconsax.logout, 'Check-out', StayOptionSets.time12(r.checkOutTime))),
+            Expanded(child: _ruleTile(const Icon(Icons.logout_rounded, size: 20, color: _kAccent), 'Check-out', StayOptionSets.time12(r.checkOutTime))),
           ]),
         ),
         const SizedBox(height: 8),
         IntrinsicHeight(
           child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            Expanded(child: _ruleTile(Iconsax.pet, 'Pets', _yesNo(r.petsAllowed))),
+            Expanded(child: _ruleTile(const Icon(Icons.pets_rounded, size: 18, color: _kAccent), 'Pets', _yesNo(r.petsAllowed))),
             const SizedBox(width: 8),
             Expanded(
-              child: _ruleTile(Iconsax.calendar_remove, 'Cancellation',
+              child: _ruleTile(const TravelIcon(TravelIcon.note, size: 20), 'Cancellation',
                   StayOptionSets.labelOf(StayOptionSets.cancellation, r.cancellationPolicy)),
             ),
           ]),
@@ -456,18 +547,20 @@ class _StayDetailScreenState extends State<StayDetailScreen> {
     );
   }
 
-  Widget _ruleTile(IconData icon, String label, String value) {
+  Widget _ruleTile(Widget icon, String label, String value) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      decoration: BoxDecoration(color: AppColors.scaffoldBg, borderRadius: BorderRadius.circular(12)),
+      decoration: BoxDecoration(
+        color: DesignColors.scaffold,
+        borderRadius: KitMetrics.tileSmall,
+      ),
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Icon(icon, size: 16, color: _kAccent),
+        icon,
         const SizedBox(width: 8),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(label, style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight)),
-            Text(value.isEmpty ? '-' : value,
-                style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+            Text(label, style: _t(11, FontWeight.w400, TypeTokens.secondary)),
+            Text(value.isEmpty ? '-' : value, style: _t(13, FontWeight.w600, DesignColors.textStrong)),
           ]),
         ),
       ]),
@@ -497,9 +590,9 @@ class _StayDetailScreenState extends State<StayDetailScreen> {
           longitude: s.longitude,
           ownerPhone: _isOwner ? null : s.ownerPhone,
           isOwner: _isOwner,
-          onReport: reported ? null : () => ReportListingSheet.show(context, listingId: s.id, listingType: 'Stay', palette: StayColors.palette),
+          onReport: reported ? null : () => ReportListingSheet.show(context, listingId: s.id, listingType: 'Stay', palette: templateModulePalette),
           onChat: _isOwner ? null : () => _openChat(s),
-          palette: StayColors.palette,
+          palette: templateModulePalette,
         );
     });
   }
@@ -521,17 +614,25 @@ class _StayDetailScreenState extends State<StayDetailScreen> {
     });
   }
 
-  Widget _infoRow(IconData icon, String label, String value) => Row(
+  Widget _infoRow(String icon, Color start, Color end, String label, String value) => Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 18, color: _kAccent),
+          Container(
+            width: 36,
+            height: 36,
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(colors: [start, end], begin: Alignment.topLeft, end: Alignment.bottomRight),
+              shape: BoxShape.circle,
+            ),
+            child: TravelIcon(icon, size: 24),
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(label, style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight)),
+              Text(label, style: _t(11, FontWeight.w500, TypeTokens.secondary)),
               const SizedBox(height: 2),
-              Text(value,
-                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.textDark)),
+              Text(value, style: _t(14, FontWeight.w500, DesignColors.textStrong)),
             ]),
           ),
         ],

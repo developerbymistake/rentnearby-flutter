@@ -1,14 +1,11 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:iconsax/iconsax.dart';
-import '../../../config/app_colors.dart';
-import '../../../config/app_shadows.dart';
+import '../../../design/design.dart';
 import '../../../models/browse_item.dart';
+import '../../../models/card_fact.dart';
 import '../../trip/trip_strings.dart';
 import '../enquiries/stay_enquiry_strings.dart';
 import '../models/stay_owner_model.dart';
-import 'stay_option_sets.dart';
 
 class StayOwnerCard extends StatelessWidget {
   final StayOwnerModel stay;
@@ -38,276 +35,141 @@ class StayOwnerCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: AppShadows.premium(StayColors.accentDark, alpha: 0.10, blur: 16, offset: const Offset(0, 6)),
-      ),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+    final photo = stay.photos.isNotEmpty ? stay.photos.first.url : null;
+    final (String label, Color color) = _status();
+    return OwnerListingCard(
+      title: stay.name ?? 'My Stay',
+      subtitle: _timeAgo(stay.createdAt),
+      thumbnailUrl: photo,
+      iconAsset: TravelIcon.stay,
+      tone: KitTone.stay,
+      status: label,
+      statusColor: color,
+      facts: [if (stay.minPricePerNight != null) CardFact('From ${BrowseItem.inr(stay.minPricePerNight!)}/night')],
+      margin: EdgeInsets.zero,
+      body: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+        Text('LOCALITY',
+            style: TypeTokens.style(11, FontWeight.w700, color: DesignColors.textMuted, letterSpacing: 0.6)),
+        const SizedBox(height: 3),
+        Row(children: [
+          const TravelIcon(TravelIcon.place, size: 14),
+          const SizedBox(width: 4),
+          Expanded(child: Text(stay.locality, maxLines: 1, overflow: TextOverflow.ellipsis, style: TypeTokens.caption)),
+        ]),
+      ]),
+      toggle: stay.isApproved ? _toggle() : null,
+      rows: [
+        if (stay.rooms.isNotEmpty) _rooms(),
+        if (onEnquiries != null && !stay.isDraft) ...[_divider, _enquiriesRow()],
+        if (onDelete != null || onPreview != null || onShare != null) ...[_divider, _actions()],
+      ],
+      strips: [
         if (stay.pendingReportCount > 0) _reportStrip(),
-        _photoSection(),
-        _content(),
         if (stay.isRejected) _rejectStrip(),
         if (stay.isDraft)
-          _bottomStrip(
-            color: StayColors.accentDark,
-            icon: Iconsax.clock,
+          _strip(
+            color: KitTone.stay.accentDark,
+            icon: Icons.edit_calendar_rounded,
             text: 'Setup not finished',
             action: 'Continue setup',
             onTap: onOpenSetup,
           ),
         if (stay.isPendingReview)
-          _bottomStrip(
-            color: AppColors.warning,
-            icon: Iconsax.clock,
-            text: 'Under review · We will notify you',
-          ),
-      ]),
+          _strip(color: DesignColors.warnDeep, icon: Icons.hourglass_top_rounded, text: 'Under review · We will notify you'),
+      ],
     );
   }
+
+  static const Widget _divider = Divider(height: 1, color: DesignColors.dividerSoft);
+
+  (String, Color) _status() => switch (stay.status) {
+        StayStatus.approved when stay.acceptingGuests => ('LIVE', DesignColors.goodDeep),
+        StayStatus.approved => ('PAUSED', DesignColors.textMuted),
+        StayStatus.pendingReview => ('UNDER REVIEW', DesignColors.warnDeep),
+        StayStatus.rejected => ('REJECTED', KitTone.danger.accentDark),
+        _ => ('DRAFT', DesignColors.textMuted),
+      };
+
+  Widget _toggle() => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(color: KitTone.stay.tint, borderRadius: CardRadius.chip),
+        child: Row(children: [
+          Expanded(
+            child: Text('Accepting guests', style: TypeTokens.style(12, FontWeight.w600, color: KitTone.stay.accentDark)),
+          ),
+          SetupSwitch(value: stay.acceptingGuests, onChanged: onAcceptingChanged),
+        ]),
+      );
+
+  Widget _rooms() => Column(children: [
+        for (var i = 0; i < stay.rooms.length; i++) ...[
+          if (i > 0) _divider,
+          _roomRow(stay.rooms[i]),
+        ],
+      ]);
 
   Widget _reportStrip() {
     final count = stay.pendingReportCount;
-    return ClipRRect(
-      borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-      child: GestureDetector(
-        onTap: onReportsTap,
-        child: Container(
-          width: double.infinity,
-          color: AppColors.reportAlert,
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          child: Row(children: [
-            const Icon(Iconsax.warning_2, size: 15, color: Colors.white),
-            const SizedBox(width: 6),
-            Expanded(
-              child: Text('$count report${count == 1 ? '' : 's'} on this stay',
-                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white)),
-            ),
-            const Icon(Iconsax.arrow_right_3, size: 14, color: Colors.white),
-          ]),
-        ),
-      ),
-    );
-  }
-
-  Widget _bottomStrip({
-    required Color color,
-    required IconData icon,
-    required String text,
-    String? action,
-    VoidCallback? onTap,
-  }) {
-    return ClipRRect(
-      borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          width: double.infinity,
-          color: color,
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          child: Row(children: [
-            Icon(icon, size: 15, color: Colors.white),
-            const SizedBox(width: 6),
-            Expanded(
-              child: Text(text,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white)),
-            ),
-            if (action != null) ...[
-              const SizedBox(width: 8),
-              _stripAction(action),
-            ],
-          ]),
-        ),
-      ),
+    return _strip(
+      color: KitTone.danger.accentDark,
+      icon: Icons.warning_amber_rounded,
+      text: '$count report${count == 1 ? '' : 's'} on this stay',
+      onTap: onReportsTap,
+      chevron: true,
     );
   }
 
   Widget _rejectStrip() {
     final reason = stay.rejectedReason;
-    return ClipRRect(
-      borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
-      child: GestureDetector(
-        onTap: onOpenSetup,
-        child: Container(
-          width: double.infinity,
-          color: AppColors.error,
-          padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              const Icon(Iconsax.close_circle, size: 15, color: Colors.white),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text(reason != null && reason.isNotEmpty ? 'Rejected: $reason' : 'Rejected',
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white)),
-              ),
-            ]),
-            const SizedBox(height: 6),
-            Align(alignment: Alignment.centerRight, child: _stripAction('Fix and resubmit')),
-          ]),
-        ),
-      ),
+    return _strip(
+      color: KitTone.danger.accentDark,
+      icon: Icons.close_rounded,
+      text: reason != null && reason.isNotEmpty ? 'Rejected: $reason' : 'Rejected',
+      action: 'Fix and resubmit',
+      onTap: onOpenSetup,
     );
   }
 
-  Widget _stripAction(String text) => Text(text,
-      style: const TextStyle(
-          fontFamily: 'Poppins',
-          fontSize: 12,
-          fontWeight: FontWeight.w700,
-          color: Colors.white,
-          decoration: TextDecoration.underline,
-          decorationColor: Colors.white));
-
-  Widget _photoSection() {
-    final photo = stay.photos.isNotEmpty ? stay.photos.first.url : null;
-    return Stack(children: [
-      ClipRRect(
-        borderRadius: BorderRadius.vertical(
-          top: stay.pendingReportCount > 0 ? Radius.zero : const Radius.circular(16),
-        ),
-        child: photo != null
-            ? CachedNetworkImage(
-                imageUrl: photo,
-                height: 100,
-                width: double.infinity,
-                fit: BoxFit.cover,
-                placeholder: (_, _) => _placeholder(),
-                errorWidget: (_, _, _) => _placeholder(),
-              )
-            : _placeholder(),
-      ),
-      Positioned(
-        top: 10,
-        left: 10,
-        right: 10,
-        child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-          Flexible(child: _statusBadge()),
-          if (stay.minPricePerNight != null) ...[
-            const SizedBox(width: 8),
-            Flexible(child: _priceBadge()),
-          ],
-        ]),
-      ),
-    ]);
-  }
-
-  Widget _statusBadge() {
-    final (String label, List<Color> colors) = switch (stay.status) {
-      StayStatus.approved when stay.acceptingGuests => ('LIVE', const [AppColors.success, AppColors.successDark]),
-      StayStatus.approved => ('PAUSED', const [AppColors.textHint, AppColors.textLight]),
-      StayStatus.pendingReview => ('UNDER REVIEW', const [AppColors.warning, AppColors.warningText]),
-      StayStatus.rejected => ('REJECTED', const [AppColors.error, AppColors.errorDark]),
-      _ => ('DRAFT', const [AppColors.textHint, AppColors.textLight]),
-    };
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(colors: colors),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.15), blurRadius: 4, offset: const Offset(0, 2))],
-      ),
-      child: Row(mainAxisSize: MainAxisSize.min, children: [
-        Container(width: 6, height: 6, decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle)),
-        const SizedBox(width: 5),
-        Flexible(
-          child: Text(label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                  fontFamily: 'Poppins', fontSize: 10, fontWeight: FontWeight.w700, color: Colors.white, letterSpacing: 0.5)),
-        ),
-      ]),
-    );
-  }
-
-  Widget _priceBadge() => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.93),
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.12), blurRadius: 4, offset: const Offset(0, 2))],
-        ),
-        child: FittedBox(
-          fit: BoxFit.scaleDown,
-          child: Text('From ${BrowseItem.inr(stay.minPricePerNight!)}/night',
-              maxLines: 1,
-              softWrap: false,
-              style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w700, color: StayColors.accentDark)),
-        ),
-      );
-
-  Widget _content() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Expanded(
-            child: Text(stay.name ?? 'My Stay',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontFamily: 'Poppins', fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textDark)),
-          ),
-          const SizedBox(width: 8),
-          Text(_timeAgo(stay.createdAt),
-              style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textHint)),
-        ]),
-        const SizedBox(height: 8),
-        _fieldLabel('Locality'),
-        const SizedBox(height: 3),
-        Row(children: [
-          const Icon(Iconsax.location, size: 13, color: StayColors.accent),
-          const SizedBox(width: 4),
-          Expanded(
-            child: Text(stay.locality,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
-          ),
-        ]),
-        if (stay.isApproved) ...[
-          const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-            decoration: BoxDecoration(color: StayColors.surface, borderRadius: BorderRadius.circular(12)),
-            child: Row(children: [
-              const Expanded(
-                child: Text('Accepting guests',
-                    style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: StayColors.accentDark)),
-              ),
-              Switch(
-                value: stay.acceptingGuests,
-                onChanged: onAcceptingChanged,
-                activeThumbColor: AppColors.success,
-                activeTrackColor: AppColors.successTrack,
-                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              ),
+  Widget _strip({
+    required Color color,
+    required IconData icon,
+    required String text,
+    String? action,
+    VoidCallback? onTap,
+    bool chevron = false,
+  }) {
+    final style = TypeTokens.style(12, FontWeight.w600, color: color);
+    return PressScale(
+      enabled: onTap != null,
+      child: Material(
+        color: DesignColors.tint(color, Alpha.tint),
+        borderRadius: KitMetrics.tileSmall,
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Icon(icon, size: 16, color: color),
+                const SizedBox(width: 6),
+                Expanded(child: Text(text, maxLines: 3, overflow: TextOverflow.ellipsis, style: style)),
+                if (chevron) Icon(Icons.chevron_right_rounded, size: 18, color: color),
+              ]),
+              if (action != null)
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(action,
+                        style: TypeTokens.style(12, FontWeight.w700, color: color)
+                            .copyWith(decoration: TextDecoration.underline, decorationColor: color)),
+                  ),
+                ),
             ]),
           ),
-        ],
-        if (stay.rooms.isNotEmpty) ...[
-          const SizedBox(height: 6),
-          for (var i = 0; i < stay.rooms.length; i++) ...[
-            if (i > 0) const Divider(height: 1, color: AppColors.divider),
-            _roomRow(stay.rooms[i]),
-          ],
-        ],
-        if (onEnquiries != null && !stay.isDraft) ...[
-          const SizedBox(height: 12),
-          const Divider(height: 1, color: AppColors.divider),
-          _enquiriesRow(),
-        ],
-        if (onDelete != null || onPreview != null || onShare != null) ...[
-          const SizedBox(height: 12),
-          const Divider(height: 1, color: AppColors.divider),
-          const SizedBox(height: 10),
-          _actions(),
-        ],
-      ]),
+        ),
+      ),
     );
   }
 
@@ -316,18 +178,16 @@ class StayOwnerCard extends StatelessWidget {
         child: Row(children: [
           Expanded(
             child: Text('${r.label} · ${BrowseItem.inr(r.pricePerNight)} / night',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textMedium)),
+                maxLines: 1, overflow: TextOverflow.ellipsis, style: TypeTokens.style(12, FontWeight.w400, color: DesignColors.textSecondary)),
           ),
           if (onEditPrice != null && !stay.isPendingReview)
             GestureDetector(
               onTap: () => onEditPrice!(r),
               behavior: HitTestBehavior.opaque,
-              child: const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
                 child: Text('Edit price',
-                    style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: StayColors.accentDark)),
+                    style: TypeTokens.style(12, FontWeight.w600, color: DesignColors.primary)),
               ),
             ),
         ]),
@@ -341,18 +201,16 @@ class StayOwnerCard extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 8),
           child: Row(children: [
-            const Icon(Iconsax.message_question, size: 18, color: StayColors.accentDark),
+            Image.asset(SetupAssets.chat, width: 28, height: 28),
             const SizedBox(width: 10),
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                const Text(TripStrings.enquiries,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-                const Text(StayEnquiryStrings.rowSubtitle,
+                Text(TripStrings.enquiries,
+                    maxLines: 1, overflow: TextOverflow.ellipsis, style: TypeTokens.style(13, FontWeight.w600, color: DesignColors.textStrong)),
+                Text(StayEnquiryStrings.rowSubtitle,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight)),
+                    style: TypeTokens.caption),
               ]),
             ),
             if (enquiryNewCount != null)
@@ -362,14 +220,13 @@ class StayOwnerCard extends StatelessWidget {
                 return Container(
                   margin: const EdgeInsets.only(left: 8),
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(color: AppColors.error, borderRadius: BorderRadius.circular(12)),
+                  decoration: BoxDecoration(color: KitTone.danger.accentDark, borderRadius: CardRadius.chip),
                   child: Text(TripStrings.newCount(n),
-                      maxLines: 1,
-                      style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white)),
+                      maxLines: 1, style: TypeTokens.style(11, FontWeight.w700, color: DesignColors.onPrimary)),
                 );
               }),
             const SizedBox(width: 4),
-            const Icon(Iconsax.arrow_right_3, size: 14, color: AppColors.textHint),
+            const Icon(Icons.chevron_right_rounded, size: 18, color: DesignColors.textDisabled),
           ]),
         ),
       ),
@@ -378,14 +235,17 @@ class StayOwnerCard extends StatelessWidget {
 
   Widget _actions() {
     final cells = <Widget>[
-      if (onPreview != null) _actionCell(icon: Iconsax.eye, label: 'View', color: StayColors.accentDark, onTap: onPreview),
-      if (onShare != null) _actionCell(icon: Iconsax.export_1, label: 'Share', color: StayColors.accentDark, onTap: onShare),
-      if (onDelete != null) _actionCell(icon: Iconsax.trash, label: 'Delete', color: AppColors.error, onTap: onDelete),
+      if (onPreview != null)
+        _actionCell(icon: Icons.visibility_outlined, label: 'View', color: DesignColors.primary, onTap: onPreview),
+      if (onShare != null)
+        _actionCell(icon: Icons.ios_share_rounded, label: 'Share', color: DesignColors.primary, onTap: onShare),
+      if (onDelete != null)
+        _actionCell(icon: Icons.delete_outline_rounded, label: 'Delete', color: KitTone.danger.accentDark, onTap: onDelete),
     ];
     return IntrinsicHeight(
       child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         for (int i = 0; i < cells.length; i++) ...[
-          if (i > 0) Container(width: 1, margin: const EdgeInsets.symmetric(vertical: 2), color: AppColors.divider),
+          if (i > 0) Container(width: 1, margin: const EdgeInsets.symmetric(vertical: 2), color: DesignColors.divider),
           Expanded(child: cells[i]),
         ],
       ]),
@@ -393,31 +253,24 @@ class StayOwnerCard extends StatelessWidget {
   }
 
   Widget _actionCell({required IconData icon, required String label, required Color color, required VoidCallback? onTap}) {
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Container(
-        alignment: Alignment.center,
-        padding: const EdgeInsets.symmetric(vertical: 4),
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Icon(icon, size: 16, color: color),
-          const SizedBox(height: 3),
-          Text(label, style: TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w600, color: color)),
-        ]),
+    return PressScale(
+      child: InkWell(
+        onTap: onTap,
+        splashColor: DesignColors.splash,
+        highlightColor: Colors.transparent,
+        child: Container(
+          alignment: Alignment.center,
+          constraints: const BoxConstraints(minHeight: KitMetrics.touch),
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            Icon(icon, size: 18, color: color),
+            const SizedBox(height: 3),
+            Text(label, style: TypeTokens.style(11, FontWeight.w600, color: color)),
+          ]),
+        ),
       ),
     );
   }
-
-  Widget _placeholder() => Container(
-        height: 100,
-        width: double.infinity,
-        decoration: const BoxDecoration(gradient: StayColors.gradient),
-        child: const Center(child: Icon(Iconsax.building_4, size: 44, color: Colors.white38)),
-      );
-
-  Widget _fieldLabel(String text) => Text(text.toUpperCase(),
-      style: const TextStyle(
-          fontFamily: 'Poppins', fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 0.4, color: AppColors.textHint));
 
   static String _timeAgo(DateTime dt) {
     final diff = DateTime.now().toUtc().difference(dt.toUtc());

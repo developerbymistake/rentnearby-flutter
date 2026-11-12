@@ -1,13 +1,11 @@
+import 'package:flutter/cupertino.dart' show CupertinoSwitch;
+import 'package:bakhli/design/design.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:iconsax/iconsax.dart';
-import '../../../config/app_colors.dart';
 import '../../../models/browse_item.dart';
 import '../../../utils/app_toast.dart';
 import '../../../utils/input_formatters.dart';
-import '../../../widgets/gradient_button.dart';
-import '../../../widgets/selectable_chip.dart';
 import '../../trip/models/trip_enquiry_model.dart';
 import '../../trip/models/trip_offer_model.dart';
 import '../../trip/trip_constants.dart';
@@ -19,7 +17,6 @@ import '../../trip/utils/trip_format.dart';
 import '../../trip/widgets/trip_payment_line.dart';
 import '../../trip/widgets/trip_sheet_frame.dart';
 import '../models/stay_owner_model.dart';
-import '../setup/stay_option_sets.dart';
 import 'stay_enquiries_controller.dart';
 import 'stay_enquiry_format.dart';
 import 'stay_enquiry_strings.dart';
@@ -79,6 +76,8 @@ class _OfferBody extends StatefulWidget {
 }
 
 class _OfferBodyState extends State<_OfferBody> {
+  static const _tone = KitTone.stay;
+
   static const int _maxLines = 5;
 
   late DateTime _checkIn;
@@ -257,15 +256,13 @@ class _OfferBodyState extends State<_OfferBody> {
     final firstIn = _firstCheckIn;
     final lastDate = isCheckIn ? lastOut.subtract(const Duration(days: 1)) : lastOut;
     final firstDate = isCheckIn ? firstIn : _checkIn.add(const Duration(days: 1));
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: initial.isBefore(firstDate) ? firstDate : (initial.isAfter(lastDate) ? lastDate : initial),
-      firstDate: firstDate,
-      lastDate: lastDate,
-      builder: (ctx, child) => Theme(
-        data: Theme.of(ctx).copyWith(colorScheme: Theme.of(ctx).colorScheme.copyWith(primary: StayColors.accent)),
-        child: child ?? const SizedBox.shrink(),
-      ),
+    final picked = await TemplateCalendarPopup.pickDate(
+      context,
+      initial: initial.isBefore(firstDate) ? firstDate : (initial.isAfter(lastDate) ? lastDate : initial),
+      first: firstDate,
+      last: lastDate,
+      label: isCheckIn ? TripStrings.checkIn : TripStrings.checkOut,
+      tone: _tone,
     );
     if (picked == null || !mounted) return;
     setState(() {
@@ -357,15 +354,14 @@ class _OfferBodyState extends State<_OfferBody> {
       description: description,
       footer: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         if (_serverError != null) ...[
-          Text(_serverError!, style: const TextStyle(fontSize: 12, color: AppColors.errorText, height: 1.4)),
+          Text(_serverError!, style: TypeTokens.style(12, FontWeight.w500, color: DesignColors.error, height: 1.4)),
           const SizedBox(height: 8),
         ],
-        GradientButton(
+        PrimaryButton(
           onPressed: _saving ? null : _submit,
-          isLoading: _saving,
+          loading: _saving,
+          tone: _tone,
           label: revised ? TripStrings.sendRevisedOffer : TripStrings.sendOffer,
-          gradient: StayColors.gradient,
-          shadowColor: StayColors.accent,
         ),
         const SizedBox(height: 10),
         TripPaymentLine(text: revised ? TripStrings.revisedFooter : TripStrings.sendOfferFooter),
@@ -381,12 +377,12 @@ class _OfferBodyState extends State<_OfferBody> {
         ),
         if (_tripHint != null) ...[
           const SizedBox(height: 6),
-          Text(_tripHint!, style: const TextStyle(fontSize: 12, color: AppColors.textLight)),
+          Text(_tripHint!, style: TypeTokens.style(12, FontWeight.w400, color: TypeTokens.secondary)),
         ],
         if (_clamped) ...[
           const SizedBox(height: 4),
           const Text(TripStringsI5.datesMovedInside,
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.warningText)),
+              style: TextStyle(fontFamily: TypeTokens.family, fontSize: 12, fontWeight: FontWeight.w600, color: DesignColors.textStrong)),
         ],
         const SizedBox(height: 16),
         _heading(TripStrings.roomLines),
@@ -399,9 +395,9 @@ class _OfferBodyState extends State<_OfferBody> {
           Align(
             alignment: Alignment.centerLeft,
             child: TextButton.icon(
-              style: TextButton.styleFrom(minimumSize: const Size(44, 44), foregroundColor: StayColors.accentDark),
+              style: TextButton.styleFrom(minimumSize: const Size(44, 44), foregroundColor: DesignColors.primary),
               onPressed: () => setState(() => _lines.add(_newLine())),
-              icon: const Icon(Iconsax.add_circle, size: 18),
+              icon: const Icon(Icons.add_circle_outline_rounded, size: 18),
               label: const Text(TripStrings.addRoomLine),
             ),
           ),
@@ -427,10 +423,10 @@ class _OfferBodyState extends State<_OfferBody> {
           Row(children: [
             Expanded(
               child: Text(TripStrings.validForLabel,
-                  style: const TextStyle(fontSize: 12, color: AppColors.textLight)),
+                  style: const TextStyle(fontFamily: TypeTokens.family, fontSize: 12, color: DesignColors.textSecondary)),
             ),
             Text(StayEnquiryStrings.offerValid(e.isUrgent),
-                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                style: const TextStyle(fontFamily: TypeTokens.family, fontSize: 13, fontWeight: FontWeight.w600, color: DesignColors.textStrong)),
           ]),
         ],
         const SizedBox(height: 16),
@@ -445,23 +441,23 @@ class _OfferBodyState extends State<_OfferBody> {
     final listed = counter.listedPerNight;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(color: StayColors.surface, borderRadius: BorderRadius.circular(12)),
+      decoration: BoxDecoration(color: DesignColors.scaffold, borderRadius: BorderRadius.circular(12)),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text(TripStringsAD.perRoomPerNight(price),
-            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: StayColors.accentDark)),
+            style: const TextStyle(fontFamily: TypeTokens.family, fontSize: 14, fontWeight: FontWeight.w700, color: DesignColors.primary)),
         const SizedBox(height: 2),
         Text(TripStringsAD.roomsNightsTotal(rooms, nights, total),
-            style: const TextStyle(fontSize: 12, color: AppColors.textMedium)),
+            style: const TextStyle(fontFamily: TypeTokens.family, fontSize: 12, color: DesignColors.textGrey)),
         if (listed != null) ...[
           const SizedBox(height: 2),
-          Text(TripStringsAD.listedPerNight(listed), style: const TextStyle(fontSize: 12, color: AppColors.textLight)),
+          Text(TripStringsAD.listedPerNight(listed), style: const TextStyle(fontFamily: TypeTokens.family, fontSize: 12, color: DesignColors.textSecondary)),
         ],
       ]),
     );
   }
 
   Widget _heading(String text) => Text(text,
-      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark));
+      style: const TextStyle(fontFamily: TypeTokens.family, fontSize: 13, fontWeight: FontWeight.w600, color: DesignColors.textStrong));
 
   Widget _twoUp(Widget a, Widget b) => LayoutBuilder(
         builder: (context, c) {
@@ -482,11 +478,11 @@ class _OfferBodyState extends State<_OfferBody> {
         prefixText: prefix,
         counterText: '',
         filled: true,
-        fillColor: StayColors.surface,
+        fillColor: DesignColors.scaffold,
         floatingLabelBehavior: FloatingLabelBehavior.always,
         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.divider)),
-        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: StayColors.accent, width: 1.5)),
+        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: DesignColors.dividerSoft)),
+        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: DesignColors.primary, width: 1.5)),
       );
 
   Widget _field(
@@ -506,7 +502,7 @@ class _OfferBodyState extends State<_OfferBody> {
       maxLines: lines,
       keyboardType: digits ? TextInputType.number : TextInputType.text,
       inputFormatters: digits ? [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(maxLength)] : noEmojiInputFormatters,
-      style: const TextStyle(fontSize: 14),
+      style: const TextStyle(fontFamily: TypeTokens.family, fontSize: 14),
       decoration: _dec(label, prefix: prefix, hint: hint),
     );
   }
@@ -516,9 +512,9 @@ class _OfferBodyState extends State<_OfferBody> {
       onTap: _saving ? null : onTap,
       borderRadius: BorderRadius.circular(12),
       child: InputDecorator(
-        decoration: _dec(label).copyWith(suffixIcon: const Icon(Iconsax.calendar_1, size: 18, color: StayColors.accentDark)),
+        decoration: _dec(label).copyWith(suffixIcon: const Padding(padding: EdgeInsets.all(10), child: TravelIcon(TravelIcon.calendar, size: 22))),
         child: Text(TripFormat.shortDate(value),
-            maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 14, color: AppColors.textDark)),
+            maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontFamily: TypeTokens.family, fontSize: 14, color: DesignColors.textStrong)),
       ),
     );
   }
@@ -529,19 +525,19 @@ class _OfferBodyState extends State<_OfferBody> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: DesignColors.surface,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.divider),
+        border: Border.all(color: DesignColors.dividerSoft),
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         Row(children: [
           Expanded(
             child: Wrap(spacing: 8, runSpacing: 6, children: [
               for (final r in rooms)
-                SelectableChip(
+                PickChip(
                   label: r.label,
                   selected: !l.isOther && l.roomName == r.label,
-                  activeColor: StayColors.accent,
+                  activeColor: DesignColors.primary,
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                   onTap: () => setState(() {
                     l.isOther = false;
@@ -549,10 +545,10 @@ class _OfferBodyState extends State<_OfferBody> {
                     l.priceCtrl.text = '${r.pricePerNight}';
                   }),
                 ),
-              SelectableChip(
+              PickChip(
                 label: TripStrings.other,
                 selected: l.isOther,
-                activeColor: StayColors.accent,
+                activeColor: DesignColors.primary,
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                 onTap: () => setState(() => l.isOther = true),
               ),
@@ -565,7 +561,7 @@ class _OfferBodyState extends State<_OfferBody> {
               onPressed: () => setState(() {
                 _lines.removeAt(i).dispose();
               }),
-              icon: const Icon(Iconsax.trash, size: 18, color: AppColors.error),
+              icon: const Icon(Icons.delete_outline_rounded, size: 20, color: DesignColors.error),
             ),
         ]),
         if (l.isOther) ...[
@@ -585,12 +581,12 @@ class _OfferBodyState extends State<_OfferBody> {
 
   Widget _stepper(String label, int value, int min, int max, ValueChanged<int> onChanged) {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-      Text(label, style: const TextStyle(fontSize: 11, color: AppColors.textLight)),
+      Text(label, style: const TextStyle(fontFamily: TypeTokens.family, fontSize: 11, color: DesignColors.textSecondary)),
       Container(
         decoration: BoxDecoration(
-          color: StayColors.surface,
+          color: DesignColors.scaffold,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.divider),
+          border: Border.all(color: DesignColors.dividerSoft),
         ),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
           IconButton(
@@ -601,7 +597,7 @@ class _OfferBodyState extends State<_OfferBody> {
           SizedBox(
             width: 28,
             child: Text('$value',
-                textAlign: TextAlign.center, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                textAlign: TextAlign.center, style: const TextStyle(fontFamily: TypeTokens.family, fontSize: 14, fontWeight: FontWeight.w600)),
           ),
           IconButton(
             constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
@@ -616,13 +612,13 @@ class _OfferBodyState extends State<_OfferBody> {
   Widget _totalBox() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(color: StayColors.surface, borderRadius: BorderRadius.circular(12)),
+      decoration: BoxDecoration(color: DesignColors.scaffold, borderRadius: BorderRadius.circular(12)),
       child: Row(children: [
         Expanded(
           child: Text('${TripStrings.total} · ${TripStrings.nights(_nights < 0 ? 0 : _nights)}',
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: StayColors.accentDark)),
+              style: const TextStyle(fontFamily: TypeTokens.family, fontSize: 13, fontWeight: FontWeight.w600, color: DesignColors.primary)),
         ),
         const SizedBox(width: 8),
         Flexible(
@@ -630,7 +626,7 @@ class _OfferBodyState extends State<_OfferBody> {
             fit: BoxFit.scaleDown,
             child: Text(BrowseItem.inr(_total),
                 maxLines: 1,
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: StayColors.accentDark)),
+                style: const TextStyle(fontFamily: TypeTokens.family, fontSize: 18, fontWeight: FontWeight.w700, color: DesignColors.primary)),
           ),
         ),
       ]),
@@ -644,12 +640,11 @@ class _OfferBodyState extends State<_OfferBody> {
       child: ConstrainedBox(
         constraints: const BoxConstraints(minHeight: 48),
         child: Row(children: [
-          Expanded(child: Text(TripStrings.gstInvoice, style: const TextStyle(fontSize: 14, color: AppColors.textDark))),
-          Switch(
+          Expanded(child: Text(TripStrings.gstInvoice, style: const TextStyle(fontFamily: TypeTokens.family, fontSize: 14, color: DesignColors.textStrong))),
+          CupertinoSwitch(
             value: _gst,
             onChanged: _saving ? null : (v) => setState(() => _gst = v),
-            activeThumbColor: AppColors.success,
-            activeTrackColor: AppColors.successTrack,
+            activeTrackColor: DesignColors.primary,
           ),
         ]),
       ),

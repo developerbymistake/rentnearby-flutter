@@ -1,24 +1,24 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:iconsax/iconsax.dart';
-import '../../../config/app_colors.dart';
+import 'package:bakhli/design/design.dart';
+import 'package:bakhli/design/extra/kit_tone.dart';
+import 'package:bakhli/design/extra/module_header.dart';
+import 'package:bakhli/design/extra/trip_plan_look.dart';
 import '../../../config/app_insets.dart';
 import '../../../controllers/auth_controller.dart';
 import '../../../models/browse_item.dart';
 import '../../../utils/app_toast.dart';
 import '../../../utils/contact_launcher.dart';
-import '../../../widgets/empty_state_view.dart';
-import '../../../widgets/selectable_chip.dart';
 import '../../../widgets/trip_report_traveller_sheet.dart';
 import '../../trip/models/trip_enquiry_model.dart';
 import '../../trip/trip_strings.dart';
 import '../../trip/widgets/trip_payment_line.dart';
-import '../../trip/widgets/trip_shimmers.dart';
+import '../../../widgets/notification_off_banner.dart';
 import '../../trip/widgets/trip_status.dart';
 import '../../trip/widgets/trip_status_card.dart';
 import '../../stay/stay_strings_fin_c1.dart';
 import '../setup/taxi_setup_controller.dart';
-import '../taxi_option_sets.dart';
 import 'journey_leg_tag.dart';
 import 'trip_fare_sheet.dart';
 import 'trip_lead_format.dart';
@@ -31,7 +31,7 @@ class TripLeadsScreen extends StatefulWidget {
   State<TripLeadsScreen> createState() => _TripLeadsScreenState();
 }
 
-class _TripLeadsScreenState extends State<TripLeadsScreen> with WidgetsBindingObserver {
+class _TripLeadsScreenState extends State<TripLeadsScreen> with WidgetsBindingObserver, TickerProviderStateMixin {
   final _ctrl = TripLeadsController.ensure();
   final _taxi = TaxiSetupController.ensure();
   final _scroll = ScrollController();
@@ -39,11 +39,24 @@ class _TripLeadsScreenState extends State<TripLeadsScreen> with WidgetsBindingOb
   final _highlight = RxnString();
   String? _targetId;
   Worker? _focusWorker;
+  Worker? _bucketWorker;
+  static const int _count = 6;
+  late final AnimationController _anim = AnimationController(duration: const Duration(milliseconds: 600), vsync: this);
+
+  Widget _enter(int i, int count, Widget child) => TemplateEntrance(
+        animation: templateInterval(_anim, math.min(i, count - 1), count),
+        animationController: _anim,
+        child: child,
+      );
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _anim.forward();
+    _bucketWorker = ever<String>(_ctrl.bucket, (_) {
+      if (mounted) _anim.forward(from: 0);
+    });
     _scroll.addListener(_onScroll);
     final args = Get.arguments;
     _targetId = args is Map ? args['enquiryId']?.toString() : null;
@@ -60,6 +73,8 @@ class _TripLeadsScreenState extends State<TripLeadsScreen> with WidgetsBindingOb
   @override
   void dispose() {
     _focusWorker?.dispose();
+    _bucketWorker?.dispose();
+    _anim.dispose();
     WidgetsBinding.instance.removeObserver(this);
     _scroll.dispose();
     super.dispose();
@@ -101,10 +116,11 @@ class _TripLeadsScreenState extends State<TripLeadsScreen> with WidgetsBindingOb
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.scaffoldBg,
+      backgroundColor: DesignColors.scaffold,
       body: Column(children: [
-        _header(),
-        _chips(),
+        _enter(0, 3, _header(), ),
+        const NotificationOffBanner(),
+        _enter(1, 3, _chips()),
         Obx(() => Get.find<AuthController>().taxisEnabled ? const SizedBox.shrink() : _pausedNote()),
         Expanded(child: Obx(_body)),
         _footer(),
@@ -112,41 +128,21 @@ class _TripLeadsScreenState extends State<TripLeadsScreen> with WidgetsBindingOb
     );
   }
 
-  Widget _header() => Container(
-        decoration: const BoxDecoration(gradient: TaxiColors.gradient),
-        child: SafeArea(
-          bottom: false,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(4, 8, 20, 18),
-            child: Row(children: [
-              IconButton(
-                onPressed: () => Get.back(),
-                icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white),
-              ),
-              Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  const Text(TripStrings.tripLeads,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontFamily: 'Poppins', fontSize: 24, fontWeight: FontWeight.w700, color: Colors.white)),
-                  Obx(() {
-                    final name = Get.find<AuthController>().user.value?.name;
-                    final t = _taxi.taxi.value;
-                    final sub = name != null && name.isNotEmpty
-                        ? StayFinStrings.taxiSubtitle(name)
-                        : [t?.plateDisplay ?? '', t?.vehicleTypeName ?? ''].where((s) => s.isNotEmpty).join(' · ');
-                    if (sub.isEmpty) return const SizedBox.shrink();
-                    return Text(sub,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, color: Colors.white70));
-                  }),
-                ]),
-              ),
-            ]),
-          ),
-        ),
-      );
+  Widget _header() => Obx(() {
+        final name = Get.find<AuthController>().user.value?.name;
+        final t = _taxi.taxi.value;
+        final sub = name != null && name.isNotEmpty
+            ? StayFinStrings.taxiSubtitle(name)
+            : [t?.plateDisplay ?? '', t?.vehicleTypeName ?? ''].where((s) => s.isNotEmpty).join(' · ');
+        return ModuleHeader(
+          title: TripStrings.tripLeads,
+          subtitle: sub.isEmpty ? null : sub,
+          tone: KitTone.taxi,
+          onBack: () => Get.back(),
+          leadingAsset: TravelIcon.taxi,
+          autoHeight: true,
+        );
+      });
 
   Widget _chips() {
     return Obx(() {
@@ -164,10 +160,10 @@ class _TripLeadsScreenState extends State<TripLeadsScreen> with WidgetsBindingOb
           alignment: Alignment.centerLeft,
           child: Wrap(spacing: 8, runSpacing: 8, children: [
             for (final key in TripLeadBucket.all)
-              SelectableChip(
+              PickChip(
                 label: labels[key]!,
                 selected: selected == key,
-                activeColor: TaxiColors.accent,
+                activeColor: DesignColors.primary,
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 onTap: () => _ctrl.selectBucket(key),
               ),
@@ -181,10 +177,16 @@ class _TripLeadsScreenState extends State<TripLeadsScreen> with WidgetsBindingOb
         padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
         child: Container(
           width: double.infinity,
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(color: AppColors.warningSurface, borderRadius: BorderRadius.circular(12)),
-          child: const Text(TripStrings.pausedTaxiHere,
-              style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.warningText, fontWeight: FontWeight.w500)),
+          decoration: journeyBarCard(TripLook.warning),
+          child: ClipRRect(
+            borderRadius: TripLook.softRadius,
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: const BoxDecoration(border: Border(left: BorderSide(color: TripLook.warning, width: 4))),
+              child: Text(TripStrings.pausedTaxiHere,
+                  style: FitnessAppTheme.body2.copyWith(fontSize: 12, color: DesignColors.textPrimary)),
+            ),
+          ),
         ),
       );
 
@@ -219,40 +221,37 @@ class _TripLeadsScreenState extends State<TripLeadsScreen> with WidgetsBindingOb
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
         itemCount: 3,
         separatorBuilder: (_, _) => const SizedBox(height: 12),
-        itemBuilder: (_, _) => TripShimmers.rowBox(height: 170, radius: 18),
+        itemBuilder: (_, i) => _enter(i, 3, const JourneySkeletonCard(buttons: 3)),
       ));
     }
     if (items.isEmpty) {
       final empty = failed && _ctrl.executionDisabled.value
-          ? EmptyStateView(
-              icon: Iconsax.pause_circle,
+          ? const TripPlanEmpty(
+              image: TravelIcon.map,
               title: TripStrings.plannerOff,
               subtitle: TripStrings.plannerOffSubtitle,
-              palette: TaxiColors.palette,
             )
           : failed
-          ? EmptyStateView(
-              icon: Iconsax.cloud_cross,
+          ? TripPlanEmpty(
+              image: TravelIcon.note,
               title: TripStrings.couldNotLoad,
               subtitle: TripStrings.checkConnection,
               onRetry: _ctrl.load,
               retryLabel: TripStrings.retry,
-              palette: TaxiColors.palette,
             )
-          : EmptyStateView(
-              icon: Iconsax.message_question,
+          : TripPlanEmpty(
+              image: TravelIcon.chat,
               title: _emptyTitle(bucket),
               subtitle: TripStrings.noLeadsSub,
-              palette: TaxiColors.palette,
             );
       return RefreshIndicator(
-        color: TaxiColors.accent,
+        color: DesignColors.primary,
         onRefresh: _ctrl.refreshList,
-        child: _column(ListView(physics: const AlwaysScrollableScrollPhysics(), children: [empty])),
+        child: _column(ListView(physics: const AlwaysScrollableScrollPhysics(), children: [_enter(0, 1, empty)])),
       );
     }
     return RefreshIndicator(
-      color: TaxiColors.accent,
+      color: DesignColors.primary,
       onRefresh: _ctrl.refreshList,
       child: _column(ListView.builder(
         controller: _scroll,
@@ -264,9 +263,13 @@ class _TripLeadsScreenState extends State<TripLeadsScreen> with WidgetsBindingOb
           final e = items[i];
           return Padding(
             padding: const EdgeInsets.only(bottom: 12),
-            child: KeyedSubtree(
-              key: _keys.putIfAbsent(e.id, () => GlobalKey()),
-              child: _LeadCard(lead: e, highlighted: highlight == e.id, ctrl: _ctrl),
+            child: _enter(
+              i,
+              _count,
+              KeyedSubtree(
+                key: _keys.putIfAbsent(e.id, () => GlobalKey()),
+                child: _LeadCard(lead: e, highlighted: highlight == e.id, ctrl: _ctrl),
+              ),
             ),
           );
         },
@@ -280,9 +283,9 @@ class _TripLeadsScreenState extends State<TripLeadsScreen> with WidgetsBindingOb
         padding: const EdgeInsets.symmetric(vertical: 8),
         child: Center(
           child: TextButton(
-            style: TextButton.styleFrom(minimumSize: const Size(44, 44)),
+            style: TextButton.styleFrom(minimumSize: const Size(44, 44), foregroundColor: DesignColors.primary),
             onPressed: _ctrl.loadMore,
-            child: const Text(TripStrings.retry),
+            child: Text(TripStrings.retry, style: TripKit.text(13, weight: FontWeight.w600, color: DesignColors.primary)),
           ),
         ),
       );
@@ -290,7 +293,7 @@ class _TripLeadsScreenState extends State<TripLeadsScreen> with WidgetsBindingOb
     return const Padding(
       padding: EdgeInsets.symmetric(vertical: 16),
       child: Center(
-        child: SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2.5, color: TaxiColors.accent)),
+        child: SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2.5, color: DesignColors.primary)),
       ),
     );
   }
@@ -309,40 +312,20 @@ class _LeadButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final (Color bg, Color fg, Color border) = switch (kind) {
-      _LeadButtonKind.primary => (TaxiColors.accent, Colors.white, TaxiColors.accent),
-      _LeadButtonKind.positive => (AppColors.success, Colors.white, AppColors.success),
-      _LeadButtonKind.negative => (Colors.white, AppColors.error, AppColors.error),
-      _LeadButtonKind.plain => (Colors.white, TaxiColors.accentDark, AppColors.divider),
+    final (JourneyButtonKind k, Color fg) = switch (kind) {
+      _LeadButtonKind.primary => (JourneyButtonKind.filled, DesignColors.surface),
+      _LeadButtonKind.positive => (JourneyButtonKind.positive, DesignColors.surface),
+      _LeadButtonKind.negative => (JourneyButtonKind.dangerOutline, TripLook.error),
+      _LeadButtonKind.plain => (JourneyButtonKind.outline, DesignColors.primary),
     };
-    final enabled = onTap != null && !busy;
-    return Opacity(
-      opacity: onTap == null && !busy ? 0.5 : 1,
-      child: Material(
-        color: bg,
-        borderRadius: BorderRadius.circular(12),
-        child: InkWell(
-          onTap: enabled ? onTap : null,
-          borderRadius: BorderRadius.circular(12),
-          child: Container(
-            constraints: const BoxConstraints(minHeight: 44, minWidth: 44),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            decoration: BoxDecoration(borderRadius: BorderRadius.circular(12), border: Border.all(color: border)),
-            child: Row(mainAxisSize: MainAxisSize.min, mainAxisAlignment: MainAxisAlignment.center, children: [
-              if (busy)
-                SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: fg))
-              else ...[
-                if (icon != null) ...[Icon(icon, size: 16, color: fg), const SizedBox(width: 6)],
-                Flexible(
-                  child: Text(label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600, color: fg)),
-                ),
-              ],
-            ]),
-          ),
-        ),
+    return IntrinsicWidth(
+      child: JourneyButton(
+        label: label,
+        kind: k,
+        busy: busy,
+        onPressed: onTap,
+        icon: icon == null ? null : Icon(icon, size: 16, color: fg),
+        fontSize: 13,
       ),
     );
   }
@@ -363,10 +346,11 @@ class _LeadCard extends StatelessWidget {
     final legText = e.context.text.startsWith('Car ') ? e.context.text.trim() : '';
     return AnimatedContainer(
       duration: const Duration(milliseconds: 250),
+      curve: Curves.fastOutSlowIn,
       padding: EdgeInsets.all(highlighted ? 2 : 0),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        color: highlighted ? TaxiColors.accent : Colors.transparent,
+        borderRadius: TripLook.softRadius,
+        color: highlighted ? DesignColors.primary : Colors.transparent,
       ),
       child: TripStatusCard(
         status: e.display,
@@ -376,7 +360,7 @@ class _LeadCard extends StatelessWidget {
               child: Text(TripLeadFormat.guest(e),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textDark)),
+                  style: FitnessAppTheme.title.copyWith(fontSize: 15)),
             ),
             if ((e.traveller.id ?? '').isNotEmpty) _menu(context, e),
           ]),
@@ -394,19 +378,19 @@ class _LeadCard extends StatelessWidget {
             Text(legText,
                 maxLines: 4,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.textDark, height: 1.4)),
+                style: TripKit.text(12.5, weight: FontWeight.w600).copyWith(height: 1.4)),
           ],
           const SizedBox(height: 8),
           Text(TripLeadFormat.summary(e),
               maxLines: 3,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textMedium, height: 1.4)),
+              style: FitnessAppTheme.caption.copyWith(color: DesignColors.textGrey, height: 1.4)),
           if (spots.isNotEmpty) ...[
             const SizedBox(height: 4),
             Text(spots,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight, height: 1.4)),
+                style: FitnessAppTheme.caption.copyWith(height: 1.4)),
           ],
           ..._detail(e),
           ..._actions(context, e),
@@ -421,14 +405,15 @@ class _LeadCard extends StatelessWidget {
         child: PopupMenuButton<String>(
           padding: EdgeInsets.zero,
           tooltip: '',
-          icon: const Icon(Icons.more_vert_rounded, size: 20, color: AppColors.textMedium),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          icon: const Icon(Icons.more_vert_rounded, size: 20, color: DesignColors.textGrey),
+          color: DesignColors.surface,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           onSelected: (_) => TripReportTravellerSheet.show(context, enquiry: e),
           itemBuilder: (_) => const [
             PopupMenuItem<String>(
                 value: 'report',
                 height: 44,
-                child: Text(TripStrings.reportTraveller, style: TextStyle(fontFamily: 'Poppins', fontSize: 13))),
+                child: Text(TripStrings.reportTraveller, style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 13, color: DesignColors.textPrimary))),
           ],
         ),
       );
@@ -453,7 +438,7 @@ class _LeadCard extends StatelessWidget {
       Text(line,
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
-          style: const TextStyle(fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+          style: TripKit.text(12.5, weight: FontWeight.w600)),
     ];
   }
 
@@ -464,33 +449,14 @@ class _LeadCard extends StatelessWidget {
     required String action,
     required Color color,
   }) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(title, style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 16)),
-        content: Text(body,
-            style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textMedium, height: 1.4)),
-        actions: [
-          TextButton(
-            style: TextButton.styleFrom(minimumSize: const Size(64, 44)),
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text(TripStrings.cancelAction, style: TextStyle(fontFamily: 'Poppins', color: AppColors.textLight)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: color,
-              foregroundColor: Colors.white,
-              minimumSize: const Size(64, 44),
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-            ),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(action, style: const TextStyle(fontFamily: 'Poppins')),
-          ),
-        ],
-      ),
+    return showTaxiConfirmDialog(
+      context,
+      title: title,
+      body: body,
+      cancelLabel: TripStrings.cancelAction,
+      actionLabel: action,
+      actionColor: color,
     );
-    return ok == true;
   }
 
   Future<void> _notAvailable(BuildContext context) async {
@@ -498,7 +464,7 @@ class _LeadCard extends StatelessWidget {
         title: TripStrings.notAvailableLead,
         body: TripStrings.notAvailableLeadBody,
         action: TripStrings.notAvailableAction,
-        color: AppColors.error);
+        color: TripLook.error);
     if (ok) await ctrl.notAvailable(lead.id);
   }
 
@@ -510,7 +476,7 @@ class _LeadCard extends StatelessWidget {
         body: TripStrings.confirmBookingBody(
             TripLeadFormat.guest(e), fare == null ? '' : BrowseItem.inr(fare), TripLeadFormat.dates(e)),
         action: TripStrings.yesConfirm,
-        color: AppColors.success);
+        color: DesignColors.primaryLight);
     if (ok) await ctrl.confirm(e.id);
   }
 
@@ -519,7 +485,7 @@ class _LeadCard extends StatelessWidget {
         title: TripStrings.notYourBooking,
         body: TripStrings.notYourBookingBody(TripLeadFormat.guest(lead)),
         action: TripStrings.notMe,
-        color: AppColors.error);
+        color: TripLook.error);
     if (ok) await ctrl.deny(lead.id);
   }
 
@@ -535,7 +501,7 @@ class _LeadCard extends StatelessWidget {
           onTap: onTap,
         ));
     void call(_LeadButtonKind kind) {
-      if (canCall) buttons.add(btn(TripStrings.callTraveller, kind, () => ContactLauncher.call(phone), icon: Iconsax.call));
+      if (canCall) buttons.add(btn(TripStrings.callTraveller, kind, () => ContactLauncher.call(phone), icon: Icons.call_rounded));
     }
 
     switch (e.display) {

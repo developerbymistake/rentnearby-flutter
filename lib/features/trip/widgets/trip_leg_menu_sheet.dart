@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:bakhli/design/design.dart';
+import 'package:bakhli/design/extra/trip_plan_look.dart';
 import 'trip_update_ask_sheet.dart';
 import 'package:get/get.dart';
-import 'package:iconsax/iconsax.dart';
-import '../../../config/app_colors.dart';
 import '../../../utils/app_toast.dart';
 import '../controllers/trip_plan_controller.dart';
 import '../controllers/trip_spots_controller.dart';
 import '../models/trip_city_model.dart';
 import '../models/trip_plan_model.dart';
 import '../models/trip_spot_model.dart';
-import '../trip_colors.dart';
 import '../trip_constants.dart';
 import '../trip_navigation.dart';
 import '../trip_strings_fin_a1.dart';
@@ -276,21 +275,11 @@ class _LegMenuBodyState extends State<_LegMenuBody> {
         title: Text(TripStringsMcaA3.removeCityQ(leg.cityName),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 17)),
-        content: Text(body, style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textMedium)),
+            style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontWeight: FontWeight.w600, fontSize: 17)),
+        content: Text(body, style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 13, color: TripLook.textMedium)),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: TextButton.styleFrom(minimumSize: const Size(64, 44)),
-            child: const Text(TripStringsMcaA3.remove,
-                style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, color: AppColors.error)),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            style: TextButton.styleFrom(minimumSize: const Size(64, 44)),
-            child: const Text(TripStringsMcaA3.keep,
-                style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, color: AppColors.textLight)),
-          ),
+          TextLink(label: TripStringsMcaA3.remove, onTap: () => Navigator.pop(ctx, true), tone: KitTone.trip),
+          TextLink(label: TripStringsMcaA3.keep, onTap: () => Navigator.pop(ctx, false), tone: KitTone.trip),
         ],
       ),
     );
@@ -329,14 +318,14 @@ class _LegMenuBodyState extends State<_LegMenuBody> {
   }
 
   Widget _row({
-    required IconData icon,
+    required Object icon,
     required String label,
     String? trailing,
-    Color color = AppColors.textDark,
+    Color color = TripLook.textDark,
     VoidCallback? onTap,
   }) {
     final enabled = onTap != null;
-    final fg = enabled ? color : AppColors.textHint;
+    final fg = enabled ? color : TripLook.textHint;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
@@ -346,13 +335,13 @@ class _LegMenuBodyState extends State<_LegMenuBody> {
           padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
           child: Row(
             children: [
-              Icon(icon, size: 19, color: fg),
+              icon is String ? TravelIcon(icon, size: 21) : Icon(icon as IconData, size: 19, color: fg),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(label,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600, color: fg)),
+                    style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 14, fontWeight: FontWeight.w600, color: fg)),
               ),
               if (trailing != null) ...[
                 const SizedBox(width: 8),
@@ -361,7 +350,7 @@ class _LegMenuBodyState extends State<_LegMenuBody> {
                       maxLines: 2,
                       textAlign: TextAlign.end,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
+                      style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, color: TripLook.textLight)),
                 ),
               ],
             ],
@@ -376,9 +365,9 @@ class _LegMenuBodyState extends State<_LegMenuBody> {
         height: 44,
         child: IconButton(
           onPressed: onTap,
-          icon: Icon(icon, size: 20, color: onTap == null ? AppColors.textHint : TripColors.accentDark),
+          icon: Icon(icon, size: 20, color: onTap == null ? TripLook.textHint : TripLook.accentDark),
           style: IconButton.styleFrom(
-            side: BorderSide(color: onTap == null ? AppColors.divider : TripColors.accent.withValues(alpha: 0.6)),
+            side: BorderSide(color: onTap == null ? TripLook.divider : TripLook.accent.withValues(alpha: Alpha.strong)),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
         ),
@@ -394,7 +383,7 @@ class _LegMenuBodyState extends State<_LegMenuBody> {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-      decoration: BoxDecoration(color: TripColors.surface, borderRadius: BorderRadius.circular(14)),
+      decoration: BoxDecoration(color: TripLook.surface, borderRadius: BorderRadius.circular(14)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -407,7 +396,7 @@ class _LegMenuBodyState extends State<_LegMenuBody> {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                        fontFamily: 'Poppins', fontSize: 15, fontWeight: FontWeight.w700, color: TripColors.accentDark)),
+                        fontFamily: FitnessAppTheme.fontName, fontSize: 15, fontWeight: FontWeight.w700, color: TripLook.accentDark)),
               ),
               _stepButton(Icons.add_rounded, _days < max ? () => setState(() => _days++) : null),
             ],
@@ -420,21 +409,13 @@ class _LegMenuBodyState extends State<_LegMenuBody> {
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                  fontFamily: 'Poppins',
+                  fontFamily: FitnessAppTheme.fontName,
                   fontSize: 11.5,
-                  color: fewer || blocked ? AppColors.warningText : AppColors.textLight)),
+                  color: fewer || blocked ? TripLook.warningText : TripLook.textLight)),
           const SizedBox(height: 6),
           Align(
             alignment: Alignment.centerRight,
-            child: TextButton(
-              onPressed: _days == current || _busy ? null : _saveDays,
-              style: TextButton.styleFrom(minimumSize: const Size(64, 44)),
-              child: Text(TripStringsMcaA3.save,
-                  style: TextStyle(
-                      fontFamily: 'Poppins',
-                      fontWeight: FontWeight.w700,
-                      color: _days == current ? AppColors.textHint : TripColors.accentDark)),
-            ),
+            child: TextLink(label: TripStringsMcaA3.save, onTap: _days == current || _busy ? null : _saveDays, tone: KitTone.trip),
           ),
         ],
       ),
@@ -462,7 +443,7 @@ class _LegMenuBodyState extends State<_LegMenuBody> {
         description: TripStringsMcaA3.dayRangeWithDates(a, b, _c.dateOf(a), _c.dateOf(b)),
         children: [
           _row(
-            icon: Iconsax.add_circle,
+            icon: TravelIcon.place,
             label: TripStringsMcaA3.addPlaces,
             onTap: () {
               _close();
@@ -470,7 +451,7 @@ class _LegMenuBodyState extends State<_LegMenuBody> {
             },
           ),
           _row(
-            icon: Iconsax.calendar_edit,
+            icon: TravelIcon.calendar,
             label: TripStringsMcaA3.changeDays,
             trailing: _busy
                 ? TripStringsMccA2.cancelling
@@ -484,21 +465,21 @@ class _LegMenuBodyState extends State<_LegMenuBody> {
           ),
           if (_editDays && editable) _daysEditor(p),
           _row(
-            icon: Iconsax.arrow_up_3,
+            icon: Icons.keyboard_arrow_up,
             label: TripStringsMcaA3.moveUp,
             trailing: TripLegMenuSheet.blockText(upBlock, leg.cityName, up: true),
             onTap: upBlock == TripLegEditBlock.none && !_busy ? () => _move(true) : null,
           ),
           _row(
-            icon: Iconsax.arrow_down,
+            icon: Icons.keyboard_arrow_down,
             label: TripStringsMcaA3.moveDown,
             trailing: TripLegMenuSheet.blockText(downBlock, leg.cityName, up: false),
             onTap: downBlock == TripLegEditBlock.none && !_busy ? () => _move(false) : null,
           ),
           _row(
-            icon: Iconsax.trash,
+            icon: Icons.close_rounded,
             label: TripStringsMcaA3.removeCity,
-            color: AppColors.error,
+            color: TripLook.error,
             trailing: TripLegMenuSheet.blockText(removeBlock, leg.cityName),
             onTap: (removeBlock == TripLegEditBlock.none || removeBlock == TripLegEditBlock.bookings) && !_busy
                 ? _remove

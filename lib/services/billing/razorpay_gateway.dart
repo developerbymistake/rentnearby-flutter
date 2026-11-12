@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../controllers/auth_controller.dart';
+import '../../design/design.dart';
 import '../../models/plan_purchase_result.dart' show PlanOrder;
 import '../../models/store_product.dart';
 import '../../utils/app_toast.dart';
@@ -78,7 +79,7 @@ class RazorpayGateway implements BillingGateway {
         'name': 'Bakhli',
         'description': order.planName,
         'prefill': {'contact': _formatPhone(phone)},
-        'theme': {'color': '#1E3A8A'},
+        'theme': {'color': DesignHex.of(DesignColors.primary)},
       });
       return await completer.future;
     } catch (_) {

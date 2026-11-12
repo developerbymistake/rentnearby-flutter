@@ -1,5 +1,6 @@
+import 'package:bakhli/design/extra/trip_plan_look.dart';
+import 'package:bakhli/design/design.dart';
 import 'package:flutter/material.dart';
-import '../../../config/app_shadows.dart';
 import 'trip_status.dart';
 
 class TripStatusCard extends StatelessWidget {
@@ -13,17 +14,15 @@ class TripStatusCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final bar = TripStatusVisuals.bar(status);
     return DecoratedBox(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: AppShadows.premium(bar, alpha: 0.10),
-      ),
+      decoration: TripLook.card(),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: TripLook.softRadius,
         child: Material(
-          color: Colors.white,
+          color: DesignColors.surface,
           child: InkWell(
             onTap: onTap,
+            splashColor: Colors.transparent,
+            highlightColor: onTap == null ? Colors.transparent : DesignColors.primary.withValues(alpha: Alpha.v04),
             child: Container(
               width: double.infinity,
               decoration: BoxDecoration(border: Border(left: BorderSide(color: bar, width: 4))),

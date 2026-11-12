@@ -1,11 +1,9 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../../../config/app_colors.dart';
+import 'package:bakhli/design/design.dart';
+import 'package:bakhli/design/extra/trip_plan_look.dart';
 import '../../../config/app_insets.dart';
-import '../../../widgets/empty_state_view.dart';
-import '../../trip/widgets/trip_shimmers.dart';
-import '../taxi_option_sets.dart';
 import '../ways/taxi_ways_strings.dart';
 import 'journey_actions.dart';
 import 'journey_models.dart';
@@ -24,15 +22,18 @@ class MyJourneysScreen extends StatefulWidget {
   State<MyJourneysScreen> createState() => _MyJourneysScreenState();
 }
 
-class _MyJourneysScreenState extends State<MyJourneysScreen> with WidgetsBindingObserver {
+class _MyJourneysScreenState extends State<MyJourneysScreen> with WidgetsBindingObserver, TickerProviderStateMixin {
   static const double _maxWidth = 720;
+  static const int _count = 6;
 
   final _ctrl = JourneysController.ensure();
+  late final AnimationController _anim = AnimationController(duration: const Duration(milliseconds: 600), vsync: this);
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _anim.forward();
     _ctrl.load();
     final id = widget.journeyId ?? _argId();
     if (id != null) {
@@ -45,6 +46,7 @@ class _MyJourneysScreenState extends State<MyJourneysScreen> with WidgetsBinding
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _anim.dispose();
     super.dispose();
   }
 
@@ -64,12 +66,23 @@ class _MyJourneysScreenState extends State<MyJourneysScreen> with WidgetsBinding
     if (ok && mounted) JourneyActions.openSaved(j.id);
   }
 
+  Widget _enter(int i, Widget child) => TemplateEntrance(
+        animation: templateInterval(_anim, math.min(i, _count - 1), _count),
+        animationController: _anim,
+        child: child,
+      );
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.scaffoldBg,
+      backgroundColor: DesignColors.scaffold,
       body: Column(children: [
-        const JourneyHeader(title: TaxiWaysStrings.myJourneys),
+        TemplateEntrance(
+          animation: templateInterval(_anim, 0, 2),
+          animationController: _anim,
+          offset: 0,
+          child: const JourneyHeader(title: TaxiWaysStrings.myJourneys),
+        ),
         Obx(() => _ctrl.isOffline.value ? const JourneyOfflineBanner() : const SizedBox.shrink()),
         Expanded(child: Obx(_body)),
       ]),
@@ -79,13 +92,13 @@ class _MyJourneysScreenState extends State<MyJourneysScreen> with WidgetsBinding
   double _pad(double width) => math.max(14, (width - _maxWidth) / 2);
 
   Widget _scrollable(Widget child) => RefreshIndicator(
-        color: TaxiColors.accent,
+        color: DesignColors.primary,
         onRefresh: () => _ctrl.load(force: true),
         child: LayoutBuilder(
           builder: (context, c) => ListView(
             physics: const AlwaysScrollableScrollPhysics(),
             padding: EdgeInsets.fromLTRB(_pad(c.maxWidth), 14, _pad(c.maxWidth), 24 + AppInsets.bottomViewPadding(context)),
-            children: [child],
+            children: [_enter(0, child)],
           ),
         ),
       );
@@ -97,30 +110,28 @@ class _MyJourneysScreenState extends State<MyJourneysScreen> with WidgetsBinding
         return _scrollable(Column(children: [
           for (var i = 0; i < 3; i++) ...[
             if (i > 0) const SizedBox(height: 12),
-            TripShimmers.rowBox(height: 120, radius: 18),
+            const JourneySkeletonCard(),
           ],
         ]));
       }
       if (_ctrl.loadFailed.value) {
         final offline = _ctrl.isOffline.value;
-        return _scrollable(EmptyStateView(
-          icon: offline ? Icons.wifi_off_rounded : Icons.error_outline_rounded,
+        return _scrollable(TripPlanEmpty(
+          image: offline ? TravelIcon.map : TravelIcon.note,
           title: offline ? TaxiWaysStrings.offlineTitle : JourneyStrings.loadFailed,
           subtitle: TaxiWaysStrings.offlineBody,
-          palette: TaxiColors.palette,
           retryLabel: TaxiWaysStrings.retry,
           onRetry: () => _ctrl.load(force: true),
         ));
       }
-      return _scrollable(const EmptyStateView(
-        icon: Icons.alt_route_rounded,
+      return _scrollable(const TripPlanEmpty(
+        image: TravelIcon.route,
         title: TaxiWaysStrings.noJourneys,
         subtitle: TaxiWaysStrings.noJourneysBody,
-        palette: TaxiColors.palette,
       ));
     }
     return RefreshIndicator(
-      color: TaxiColors.accent,
+      color: DesignColors.primary,
       onRefresh: () => _ctrl.load(force: true),
       child: LayoutBuilder(
         builder: (context, c) => ListView.separated(
@@ -130,13 +141,16 @@ class _MyJourneysScreenState extends State<MyJourneysScreen> with WidgetsBinding
           separatorBuilder: (_, _) => const SizedBox(height: 12),
           itemBuilder: (_, i) {
             final j = list[i];
-            return Obx(() => JourneyListCard(
-                  journey: j,
-                  busy: _ctrl.busyIds.contains(j.id),
-                  onOpen: () => JourneyActions.openSaved(j.id),
-                  onAsk: () => _ask(j),
-                  onReplace: (leg, backup) => _ctrl.replaceDriver(j.id, leg.legIndex, backup.taxiId),
-                ));
+            return _enter(
+              i,
+              Obx(() => JourneyListCard(
+                    journey: j,
+                    busy: _ctrl.busyIds.contains(j.id),
+                    onOpen: () => JourneyActions.openSaved(j.id),
+                    onAsk: () => _ask(j),
+                    onReplace: (leg, backup) => _ctrl.replaceDriver(j.id, leg.legIndex, backup.taxiId),
+                  )),
+            );
           },
         ),
       ),

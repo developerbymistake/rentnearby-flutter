@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../config/app_colors.dart';
+import 'package:bakhli/design/design.dart';
+import 'package:bakhli/design/extra/chat_kit.dart';
+import 'package:bakhli/design/extra/replies_kit.dart';
 import '../config/module_palette.dart';
 import '../controllers/report_controller.dart';
 import '../utils/app_toast.dart';
 import '../utils/input_formatters.dart';
-import 'gradient_button.dart';
 
 class ReportListingSheet extends StatefulWidget {
   final String listingId;
@@ -17,7 +18,7 @@ class ReportListingSheet extends StatefulWidget {
     super.key,
     required this.listingId,
     required this.listingType,
-    this.palette = ModulePalette.rooms,
+    this.palette = templateModulePalette,
     this.tripEnquiryId,
   });
 
@@ -25,16 +26,13 @@ class ReportListingSheet extends StatefulWidget {
     BuildContext context, {
     required String listingId,
     required String listingType,
-    ModulePalette palette = ModulePalette.rooms,
+    ModulePalette palette = templateModulePalette,
     String? tripEnquiryId,
   }) {
     return showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
+      backgroundColor: Colors.transparent,
       builder: (_) => Padding(
         padding: EdgeInsets.only(
           bottom: MediaQuery.of(context).viewInsets.bottom,
@@ -62,27 +60,25 @@ class _ReportListingSheetState extends State<ReportListingSheet> {
   bool get _isValid =>
       _selectedReasonId != null && _detailsCtrl.text.trim().isNotEmpty;
 
+  ChatKindStyle get _kind => ChatKindStyle.of(widget.listingType);
+
   InputDecoration _inputDec({String? hintText}) => InputDecoration(
     hintText: hintText,
-    hintStyle: const TextStyle(
-      fontFamily: 'Poppins',
-      fontSize: 14,
-      color: AppColors.textHint,
-    ),
+    hintStyle: FitnessAppTheme.body2.copyWith(color: FitnessAppTheme.deactivatedText),
     filled: true,
-    fillColor: widget.palette.surface,
+    fillColor: FitnessAppTheme.background,
     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
     border: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(16),
       borderSide: BorderSide.none,
     ),
     enabledBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(12),
-      borderSide: const BorderSide(color: AppColors.divider),
+      borderRadius: BorderRadius.circular(16),
+      borderSide: const BorderSide(color: FitnessAppTheme.spacer),
     ),
     focusedBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(12),
-      borderSide: BorderSide(color: widget.palette.accent, width: 1.5),
+      borderRadius: BorderRadius.circular(16),
+      borderSide: BorderSide(color: _kind.dark, width: 1.5),
     ),
   );
 
@@ -101,57 +97,7 @@ class _ReportListingSheetState extends State<ReportListingSheet> {
   Future<void> _confirmAndSubmit() async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text(
-          'Report this listing?',
-          style: TextStyle(
-            fontFamily: 'Poppins',
-            fontWeight: FontWeight.w600,
-            color: AppColors.textDark,
-          ),
-        ),
-        content: const Text(
-          'Our team will review this listing based on the details you provide. Continue?',
-          style: TextStyle(
-            fontFamily: 'Poppins',
-            fontSize: 14,
-            color: AppColors.textMedium,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(
-              'Cancel',
-              style: TextStyle(
-                fontFamily: 'Poppins',
-                color: widget.palette.accent,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.error,
-              foregroundColor: Colors.white,
-              minimumSize: Size.zero,
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text(
-              'Report',
-              style: TextStyle(
-                fontFamily: 'Poppins',
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
-      ),
+      builder: (ctx) => const _ReportConfirmDialog(),
     );
     if (confirmed != true) return;
     if (!mounted) return;
@@ -177,12 +123,7 @@ class _ReportListingSheetState extends State<ReportListingSheet> {
   Widget _reasonPicker(BuildContext context) {
     return Obx(() {
       final reasons = _ctrl.reportReasons;
-      final fieldWidth =
-          MediaQuery.of(context).size.width - 48; // matches 24+24 outer padding
-      // DropdownMenu is the Material 3 widget built for exactly this — it's
-      // built on MenuAnchor, which clips/repositions itself to stay inside
-      // the viewport, so it doesn't overflow the sheet the way the old
-      // DropdownButton menu route did.
+      final fieldWidth = MediaQuery.of(context).size.width - 48;
       return DropdownMenu<String>(
         key: ValueKey(_selectedReasonId),
         initialSelection: _selectedReasonId,
@@ -191,42 +132,33 @@ class _ReportListingSheetState extends State<ReportListingSheet> {
         enableSearch: false,
         requestFocusOnTap: false,
         hintText: 'Select a reason',
-        textStyle: const TextStyle(
-          fontFamily: 'Poppins',
-          fontSize: 14,
-          color: AppColors.textDark,
-        ),
+        textStyle: FitnessAppTheme.body2.copyWith(color: FitnessAppTheme.darkerText),
         inputDecorationTheme: InputDecorationTheme(
-          hintStyle: const TextStyle(
-            fontFamily: 'Poppins',
-            fontSize: 14,
-            color: AppColors.textHint,
-          ),
+          hintStyle: FitnessAppTheme.body2.copyWith(color: FitnessAppTheme.deactivatedText),
           filled: true,
-          fillColor: widget.palette.surface,
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          fillColor: FitnessAppTheme.background,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(16),
             borderSide: BorderSide.none,
           ),
           enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: AppColors.divider),
+            borderRadius: BorderRadius.circular(16),
+            borderSide: const BorderSide(color: FitnessAppTheme.spacer),
           ),
           focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: widget.palette.accent, width: 1.5),
+            borderRadius: BorderRadius.circular(16),
+            borderSide: BorderSide(color: _kind.dark, width: 1.5),
           ),
         ),
         menuStyle: MenuStyle(
-          backgroundColor: const WidgetStatePropertyAll(AppColors.background),
+          backgroundColor: const WidgetStatePropertyAll(FitnessAppTheme.white),
           surfaceTintColor: const WidgetStatePropertyAll(Colors.transparent),
           elevation: const WidgetStatePropertyAll(4),
           shape: WidgetStatePropertyAll(
             RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(14),
-              side: const BorderSide(color: AppColors.divider),
+              borderRadius: BorderRadius.circular(16),
+              side: const BorderSide(color: FitnessAppTheme.spacer),
             ),
           ),
         ),
@@ -236,12 +168,8 @@ class _ReportListingSheetState extends State<ReportListingSheet> {
                 value: r.id,
                 label: r.name,
                 style: MenuItemButton.styleFrom(
-                  textStyle: const TextStyle(
-                    fontFamily: 'Poppins',
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                  ),
-                  foregroundColor: AppColors.textDark,
+                  textStyle: FitnessAppTheme.body2.copyWith(fontWeight: FontWeight.w500),
+                  foregroundColor: FitnessAppTheme.darkerText,
                 ),
               ),
             )
@@ -254,77 +182,66 @@ class _ReportListingSheetState extends State<ReportListingSheet> {
   @override
   Widget build(BuildContext context) {
     final minSheetHeight = MediaQuery.of(context).size.height * 0.62;
-    return ConstrainedBox(
-      constraints: BoxConstraints(
-        minHeight: minSheetHeight,
-        maxHeight: MediaQuery.of(context).size.height * 0.9,
-      ),
-      // Scrollable so the warning banner + keyboard (while typing the
-      // details field) can't push the buttons off-screen on short devices.
-      child: SingleChildScrollView(
-        child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Container(
-            padding: const EdgeInsets.fromLTRB(24, 14, 24, 22),
-            decoration: BoxDecoration(
-              gradient: widget.palette.gradient,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-            ),
-            child: Column(
-              children: [
-                Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.5),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
+    return ChatSheetFrame(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          minHeight: minSheetHeight,
+          maxHeight: MediaQuery.of(context).size.height * 0.9,
+        ),
+        child: SingleChildScrollView(
+          child: TemplateStagger(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Container(
+                padding: const EdgeInsets.fromLTRB(24, 14, 24, 22),
+                decoration: BoxDecoration(
+                  gradient: _kind.gradient,
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
                 ),
-                const SizedBox(height: 16),
-                const Text(
-                  'Report this listing',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontFamily: 'Poppins',
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
-                  ),
+                child: Column(
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: FitnessAppTheme.white.withValues(alpha: Alpha.half),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Report this listing',
+                      textAlign: TextAlign.center,
+                      style: FitnessAppTheme.headline.copyWith(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                        color: FitnessAppTheme.white,
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(24, 24, 24, 40),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                   decoration: BoxDecoration(
-                    color: AppColors.warning.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                        color: AppColors.warning.withValues(alpha: 0.35)),
+                    color: RepliesTone.warnSurface,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: DesignColors.warnDeep.withValues(alpha: Alpha.scrim)),
                   ),
-                  child: const Row(
+                  child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(Icons.info_outline_rounded,
-                          size: 18, color: AppColors.warning),
-                      SizedBox(width: 10),
+                      const Icon(Icons.info_outline_rounded, size: 18, color: DesignColors.warnDeep),
+                      const SizedBox(width: 10),
                       Expanded(
                         child: Text(
                           'Please report responsibly — misuse may lead to '
                           'action on your account.',
-                          style: TextStyle(
-                            fontFamily: 'Poppins',
+                          style: FitnessAppTheme.caption.copyWith(
                             fontSize: 12,
-                            color: AppColors.textMedium,
+                            color: FitnessAppTheme.darkText,
                             height: 1.4,
                           ),
                         ),
@@ -332,78 +249,120 @@ class _ReportListingSheetState extends State<ReportListingSheet> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 18),
-                _reasonPicker(context),
-                const SizedBox(height: 20),
-                TextField(
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 18, 24, 0),
+                child: Align(alignment: Alignment.centerLeft, child: _reasonPicker(context)),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+                child: TextField(
                   controller: _detailsCtrl,
                   maxLines: 5,
                   maxLength: 500,
                   inputFormatters: noEmojiInputFormatters,
                   onChanged: (_) => setState(() {}),
-                  style: const TextStyle(
-                    fontFamily: 'Poppins',
-                    fontSize: 14,
-                    color: AppColors.textDark,
+                  cursorColor: FitnessAppTheme.nearlyDarkBlue,
+                  style: FitnessAppTheme.body2.copyWith(color: FitnessAppTheme.darkerText),
+                  decoration: _inputDec(hintText: 'Please describe the issue (required)').copyWith(
+                    counterStyle: FitnessAppTheme.caption.copyWith(fontSize: 12, color: FitnessAppTheme.deactivatedText),
                   ),
-                  decoration:
-                      _inputDec(
-                        hintText: 'Please describe the issue (required)',
-                      ).copyWith(
-                        counterStyle: const TextStyle(
-                          fontFamily: 'Poppins',
-                          fontSize: 12,
-                          color: AppColors.textHint,
-                        ),
-                      ),
                 ),
-                const SizedBox(height: 28),
-                Row(
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 28, 24, 40),
+                child: Row(
                   children: [
                     Expanded(
-                      child: OutlinedButton(
-                        onPressed: _submitting
-                            ? null
-                            : () => Navigator.pop(context),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: AppColors.textMedium,
-                          side: const BorderSide(color: AppColors.divider),
-                          minimumSize: const Size(0, 52),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                        ),
-                        child: const Text(
-                          'Cancel',
-                          style: TextStyle(
-                            fontFamily: 'Poppins',
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                          ),
+                      child: AnimatedOpacity(
+                        duration: const Duration(milliseconds: 200),
+                        opacity: _submitting ? 0.5 : 1,
+                        child: SecondaryButton(
+                          label: 'Cancel',
+                          neutral: true,
+                          height: 52,
+                          onPressed: _submitting ? null : () => Navigator.pop(context),
                         ),
                       ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: GradientButton(
+                      child: PrimaryButton(
                         label: 'Submit',
-                        isLoading: _submitting,
-                        onPressed: _isValid && !_submitting
-                            ? _confirmAndSubmit
-                            : null,
-                        gradient: LinearGradient(
-                          colors: [AppColors.error, AppColors.error],
-                        ),
-                        shadowColor: AppColors.error,
+                        loading: _submitting,
+                        height: 52,
+                        tone: KitTone.danger,
+                        onPressed: _isValid && !_submitting ? _confirmAndSubmit : null,
                       ),
                     ),
                   ],
                 ),
-              ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ReportConfirmDialog extends StatelessWidget {
+  const _ReportConfirmDialog();
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 360),
+        child: DecoratedBox(
+          decoration: const BoxDecoration(
+            color: DesignColors.textInverse,
+            borderRadius: CardRadius.hero,
+            boxShadow: ShadowTokens.elev3,
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text('Report this listing?', style: TypeTokens.title),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Our team will review this listing based on the details you provide. Continue?',
+                    style: TypeTokens.body,
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: SecondaryButton(
+                          label: 'Cancel',
+                          neutral: true,
+                          compact: true,
+                          onPressed: () => Navigator.pop(context, false),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: PrimaryButton(
+                          label: 'Report',
+                          tone: KitTone.danger,
+                          compact: true,
+                          onPressed: () => Navigator.pop(context, true),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
-        ],
-      ),
+        ),
       ),
     );
   }

@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:iconsax/iconsax.dart';
-import '../../../../config/app_colors.dart';
+import 'package:bakhli/design/design.dart';
+import 'package:bakhli/design/extra/trip_plan_look.dart';
 import '../../../../models/browse_item.dart';
-import '../../taxi_option_sets.dart';
 import '../models/taxi_ways_models.dart';
 import '../taxi_ways_strings.dart';
 import 'way_plan_stack_card.dart';
@@ -80,7 +79,7 @@ class WayPlanRibbonCard extends StatelessWidget {
   }
 
   Widget _node(String name, {bool change = false, bool last = false}) {
-    final color = change ? AppColors.warning : TaxiColors.accentDark;
+    final color = change ? WaysTokens.changeAccent : DesignColors.primary;
     return SizedBox(
       width: _nodeWidth,
       child: Column(children: [
@@ -91,7 +90,7 @@ class WayPlanRibbonCard extends StatelessWidget {
               width: change ? 16 : 13,
               height: change ? 16 : 13,
               decoration: BoxDecoration(
-                color: change ? AppColors.warningSurface : (last ? color : Colors.white),
+                color: change ? TripLook.warningSurface : (last ? color : DesignColors.surface),
                 shape: BoxShape.circle,
                 border: Border.all(color: color, width: change ? 3 : 2.5),
               ),
@@ -104,15 +103,15 @@ class WayPlanRibbonCard extends StatelessWidget {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           textAlign: TextAlign.center,
-          style: const TextStyle(fontFamily: 'Poppins', fontSize: 11.5, fontWeight: FontWeight.w700, color: AppColors.textDark),
+          style: FitnessAppTheme.title.copyWith(fontSize: 11.5),
         ),
         if (change)
-          const Text(
+          Text(
             TaxiWaysStrings.changeCar,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.center,
-            style: TextStyle(fontFamily: 'Poppins', fontSize: 10, fontWeight: FontWeight.w700, color: AppColors.warningText),
+            style: FitnessAppTheme.caption.copyWith(fontSize: 11, fontWeight: FontWeight.w700, color: TripLook.warningText),
           ),
       ]),
     );
@@ -123,15 +122,15 @@ class WayPlanRibbonCard extends StatelessWidget {
       SizedBox(
         height: _band,
         child: Stack(alignment: Alignment.center, children: [
-          Container(height: 3, color: TaxiColors.accent.withValues(alpha: 0.5)),
+          Container(height: 3, decoration: BoxDecoration(color: PickKit.taxi, borderRadius: BorderRadius.circular(2))),
           Container(
-            padding: const EdgeInsets.all(4),
+            padding: const EdgeInsets.all(3),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: DesignColors.surface,
               shape: BoxShape.circle,
-              border: Border.all(color: TaxiColors.accent.withValues(alpha: 0.5)),
+              boxShadow: PickKit.greyShadow(),
             ),
-            child: const Icon(Iconsax.car, size: 13, color: TaxiColors.accentDark),
+            child: const TravelIcon(TravelIcon.taxi, size: 16),
           ),
         ]),
       ),
@@ -140,7 +139,7 @@ class WayPlanRibbonCard extends StatelessWidget {
         fit: BoxFit.scaleDown,
         child: Text(
           BrowseItem.inr(leg.listedFare),
-          style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w800, color: TaxiColors.accentDark),
+          style: FitnessAppTheme.title.copyWith(fontSize: 13, fontWeight: FontWeight.w800, color: DesignColors.primary),
         ),
       ),
       Text(
@@ -148,7 +147,7 @@ class WayPlanRibbonCard extends StatelessWidget {
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         textAlign: TextAlign.center,
-        style: const TextStyle(fontFamily: 'Poppins', fontSize: 10.5, color: AppColors.textLight),
+        style: FitnessAppTheme.caption.copyWith(fontSize: 11),
       ),
       if (leg.carsNeeded > 1)
         Text(
@@ -156,7 +155,7 @@ class WayPlanRibbonCard extends StatelessWidget {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           textAlign: TextAlign.center,
-          style: const TextStyle(fontFamily: 'Poppins', fontSize: 10.5, fontWeight: FontWeight.w700, color: AppColors.warningText),
+          style: FitnessAppTheme.caption.copyWith(fontSize: 11, fontWeight: FontWeight.w700, color: TripLook.warningText),
         ),
     ]);
   }

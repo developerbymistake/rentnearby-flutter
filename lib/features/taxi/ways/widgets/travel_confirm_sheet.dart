@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../../config/app_colors.dart';
+import 'package:bakhli/design/design.dart';
 import '../../../../config/app_insets.dart';
 import '../trip_strings_mcb_a2.dart';
 
@@ -8,8 +8,10 @@ class TravelConfirmSheet {
     final ok = await showModalBottomSheet<bool>(
       context: context,
       useRootNavigator: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      backgroundColor: DesignColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.only(topLeft: Radius.circular(32), topRight: Radius.circular(32)),
+      ),
       builder: (sheetCtx) => SafeArea(
         top: false,
         bottom: false,
@@ -28,52 +30,52 @@ class TravelConfirmSheet {
                       width: 40,
                       height: 4,
                       margin: const EdgeInsets.only(bottom: 16),
-                      decoration: BoxDecoration(color: AppColors.divider, borderRadius: BorderRadius.circular(2)),
+                      decoration: BoxDecoration(
+                          color: DesignColors.textMuted.withValues(alpha: Alpha.half), borderRadius: BorderRadius.circular(2)),
                     ),
                   ),
-                  Text(title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                          fontFamily: 'Poppins', fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textDark)),
-                  const SizedBox(height: 4),
-                  Text(body,
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontFamily: 'Poppins', fontSize: 12.5, color: AppColors.textLight, height: 1.35)),
-                  const SizedBox(height: 16),
-                  LayoutBuilder(builder: (context, box) {
-                    final keep = OutlinedButton(
-                      onPressed: () => Navigator.pop(sheetCtx, false),
-                      style: OutlinedButton.styleFrom(
-                        minimumSize: const Size(0, 48),
-                        side: const BorderSide(color: AppColors.divider),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  TemplateStagger(
+                    children: [
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Padding(
+                          padding: const EdgeInsets.only(bottom: 4),
+                          child: Text(title,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: FitnessAppTheme.title.copyWith(fontSize: 18, letterSpacing: 0.27)),
+                        ),
                       ),
-                      child: const Text(TripStringsMcbA2.keep,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, color: AppColors.textMedium)),
-                    );
-                    final go = ElevatedButton(
-                      onPressed: () => Navigator.pop(sheetCtx, true),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.error,
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        minimumSize: const Size(0, 48),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Padding(
+                          padding: const EdgeInsets.only(bottom: 16),
+                          child: Text(body,
+                              maxLines: 3,
+                              overflow: TextOverflow.ellipsis,
+                              style: FitnessAppTheme.subtitle.copyWith(fontSize: 13, color: DesignColors.textGrey, height: 1.4)),
+                        ),
                       ),
-                      child: Text(confirm,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700)),
-                    );
-                    if (box.maxWidth < 340) {
-                      return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [keep, const SizedBox(height: 8), go]);
-                    }
-                    return Row(children: [Expanded(child: keep), const SizedBox(width: 10), Expanded(child: go)]);
-                  }),
+                      LayoutBuilder(builder: (context, box) {
+                        final keep = SecondaryButton(
+                          label: TripStringsMcbA2.keep,
+                          tone: KitTone.taxi,
+                          height: 48,
+                          onPressed: () => Navigator.pop(sheetCtx, false),
+                        );
+                        final go = PrimaryButton(
+                          label: confirm,
+                          height: 48,
+                          tone: KitTone.taxi,
+                          onPressed: () => Navigator.pop(sheetCtx, true),
+                        );
+                        if (box.maxWidth < 340) {
+                          return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [keep, const SizedBox(height: 8), go]);
+                        }
+                        return Row(children: [Expanded(child: keep), const SizedBox(width: 10), Expanded(child: go)]);
+                      }),
+                    ],
+                  ),
                 ],
               ),
             ),

@@ -1,9 +1,8 @@
+import 'package:bakhli/design/design.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../../../config/app_colors.dart';
 import '../../../models/browse_item.dart';
 import '../../../utils/app_toast.dart';
-import '../../../widgets/gradient_button.dart';
 import '../../trip/models/trip_enquiry_model.dart';
 import '../../trip/trip_constants.dart';
 import '../../trip/trip_strings.dart';
@@ -11,7 +10,6 @@ import '../../trip/utils/trip_format.dart';
 import '../../trip/widgets/trip_payment_line.dart';
 import '../../trip/widgets/trip_sheet_frame.dart';
 import '../models/stay_owner_model.dart';
-import '../setup/stay_option_sets.dart';
 import 'stay_enquiries_controller.dart';
 import 'stay_enquiry_format.dart';
 import 'stay_enquiry_strings.dart';
@@ -34,6 +32,8 @@ class _AskBody extends StatefulWidget {
 }
 
 class _AskBodyState extends State<_AskBody> {
+  static const _tone = KitTone.stay;
+
   final _amount = TextEditingController();
   final _upi = TextEditingController();
   final _wa = TextEditingController();
@@ -101,18 +101,20 @@ class _AskBodyState extends State<_AskBody> {
   Future<void> _pickHold() async {
     final cap = _capHold;
     final now = DateTime.now();
-    final date = await showDatePicker(
-      context: context,
-      initialDate: DateTime(_hold.year, _hold.month, _hold.day),
-      firstDate: DateTime(now.year, now.month, now.day),
-      lastDate: DateTime(cap.year, cap.month, cap.day),
-      builder: _themed,
+    final date = await TemplateCalendarPopup.pickDate(
+      context,
+      initial: DateTime(_hold.year, _hold.month, _hold.day),
+      first: DateTime(now.year, now.month, now.day),
+      last: DateTime(cap.year, cap.month, cap.day),
+      label: TripStrings.holdRoomUntil,
+      tone: _tone,
     );
     if (date == null || !mounted) return;
-    final time = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay.fromDateTime(_hold),
-      builder: _themed,
+    final time = await TemplateTimePopup.pick(
+      context,
+      initial: TimeOfDay.fromDateTime(_hold),
+      label: TripStrings.holdRoomUntil,
+      tone: _tone,
     );
     if (time == null || !mounted) return;
     setState(() {
@@ -120,11 +122,6 @@ class _AskBodyState extends State<_AskBody> {
       _serverError = null;
     });
   }
-
-  Widget _themed(BuildContext ctx, Widget? child) => Theme(
-        data: Theme.of(ctx).copyWith(colorScheme: Theme.of(ctx).colorScheme.copyWith(primary: StayColors.accent)),
-        child: child ?? const SizedBox.shrink(),
-      );
 
   bool _validate() {
     final amount = int.tryParse(_amount.text.trim()) ?? 0;
@@ -182,19 +179,18 @@ class _AskBodyState extends State<_AskBody> {
       description: TripStrings.guestAccepted,
       footer: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         if (_serverError != null) ...[
-          Text(_serverError!, style: const TextStyle(fontSize: 12, color: AppColors.errorText, height: 1.4)),
+          Text(_serverError!, style: TypeTokens.style(12, FontWeight.w500, color: DesignColors.error, height: 1.4)),
           const SizedBox(height: 8),
         ],
-        GradientButton(
+        PrimaryButton(
           onPressed: _saving || _tooLate ? null : _submit,
-          isLoading: _saving,
+          loading: _saving,
+          tone: _tone,
           label: TripStrings.sendInChat,
-          gradient: StayColors.gradient,
-          shadowColor: StayColors.accent,
         ),
         const SizedBox(height: 10),
         Text(bothFromSetup ? TripStrings.askFooter : TripStrings.askFooterEmpty,
-            style: const TextStyle(fontSize: 12, color: AppColors.textLight, height: 1.4)),
+            style: TypeTokens.style(12, FontWeight.w400, color: TypeTokens.secondary, height: 1.4)),
         const SizedBox(height: 6),
         const TripPaymentLine(),
       ]),
@@ -202,9 +198,9 @@ class _AskBodyState extends State<_AskBody> {
         if (_tooLate) ...[
           Container(
             padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(color: AppColors.warningSurface, borderRadius: BorderRadius.circular(12)),
-            child: const Text(TripStrings.holdTooLate,
-                style: TextStyle(fontSize: 12, color: AppColors.warningText, fontWeight: FontWeight.w500)),
+            decoration: const BoxDecoration(color: DesignColors.attentionTint, borderRadius: KitMetrics.tileSmall),
+            child: Text(TripStrings.holdTooLate,
+                style: TypeTokens.style(12, FontWeight.w500, color: DesignColors.textStrong)),
           ),
           const SizedBox(height: 12),
         ],
@@ -257,17 +253,17 @@ class _AskBodyState extends State<_AskBody> {
         helperMaxLines: 2,
         counterText: '',
         filled: true,
-        fillColor: StayColors.surface,
+        fillColor: DesignColors.scaffold,
         floatingLabelBehavior: FloatingLabelBehavior.always,
         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
         enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.divider)),
+            borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: DesignColors.divider)),
         focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: StayColors.accent, width: 1.5)),
+            borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: DesignColors.primary, width: 1.5)),
         errorBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.error, width: 1.5)),
+            borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: DesignColors.error, width: 1.5)),
         focusedErrorBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.error, width: 1.5)),
+            borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: DesignColors.error, width: 1.5)),
       );
 
   Widget _field(
@@ -291,7 +287,7 @@ class _AskBodyState extends State<_AskBody> {
           _upiError = null;
           _waError = null;
         }),
-        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+        style: TypeTokens.style(14, FontWeight.w600),
         decoration: _dec(label, prefix: prefix, hint: hint, error: error),
       );
 
@@ -304,7 +300,7 @@ class _AskBodyState extends State<_AskBody> {
           _amountError = null;
           _serverError = null;
         }),
-        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+        style: TypeTokens.style(14, FontWeight.w600),
         decoration: _dec(
           TripStrings.amount,
           prefix: '₹ ',
@@ -322,7 +318,7 @@ class _AskBodyState extends State<_AskBody> {
             helper: TripStrings.holdRange(TripFormat.dayTime(_minHold), TripFormat.dayTime(_capHold)),
           ),
           child: Text(TripFormat.dayTime(_hold),
-              maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+              maxLines: 2, overflow: TextOverflow.ellipsis, style: TypeTokens.style(14, FontWeight.w600)),
         ),
       );
 
@@ -330,9 +326,9 @@ class _AskBodyState extends State<_AskBody> {
         padding: const EdgeInsets.fromLTRB(14, 6, 4, 6),
         constraints: const BoxConstraints(minHeight: 56),
         decoration: BoxDecoration(
-          color: StayColors.surface,
+          color: DesignColors.scaffold,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.divider),
+          border: Border.all(color: DesignColors.divider),
         ),
         child: Row(children: [
           Expanded(
@@ -340,17 +336,17 @@ class _AskBodyState extends State<_AskBody> {
               Text(label,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 11, color: AppColors.textLight)),
+                  style: TypeTokens.caption),
               Text(value,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                  style: TypeTokens.style(14, FontWeight.w600, color: DesignColors.textStrong)),
             ]),
           ),
           TextButton(
-            style: TextButton.styleFrom(minimumSize: const Size(64, 44), foregroundColor: StayColors.accentDark),
+            style: TextButton.styleFrom(minimumSize: const Size(64, 44), foregroundColor: DesignColors.primary),
             onPressed: _saving ? null : onChange,
-            child: const Text(TripStrings.change, style: TextStyle(fontWeight: FontWeight.w700)),
+            child: Text(TripStrings.change, style: TypeTokens.style(14, FontWeight.w700)),
           ),
         ]),
       );

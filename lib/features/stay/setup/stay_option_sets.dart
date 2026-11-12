@@ -1,16 +1,15 @@
 import 'package:flutter/material.dart';
-import '../../../config/app_colors.dart';
-import '../../../config/module_palette.dart';
+import '../../../design/design.dart';
 import '../../../models/browse_item.dart';
 import '../models/stay_owner_model.dart';
 
 class StayColors {
-  static const Color accent = AppColors.stay;
-  static const Color accentDark = AppColors.stayDark;
-  static const Color accentLight = AppColors.stayLight;
-  static const Color surface = AppColors.staySurface;
-  static const LinearGradient gradient = AppColors.stayGradient;
-  static const ModulePalette palette = ModulePalette.stays;
+  static const Color accent = DesignColors.hotelStart;
+  static const Color accentDark = DesignColors.hotelEnd;
+  static const Color accentLight = DesignColors.accentTeal;
+  static const Color surface = DesignColors.successSoft;
+  static const LinearGradient gradient = DesignGradients.hotel;
+  static const palette = templateStayPalette;
 }
 
 class StayOption {

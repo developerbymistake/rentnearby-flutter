@@ -1,18 +1,14 @@
+import 'stay_page_header.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:iconsax/iconsax.dart';
-import 'package:shimmer/shimmer.dart';
-import '../../../config/app_colors.dart';
-import '../../../config/app_insets.dart';
 import '../../../config/app_routes.dart';
+import '../../../design/design.dart';
 import '../../../models/browse_item.dart';
 import '../../../services/listing_share_service.dart';
 import '../../../utils/app_toast.dart';
-import '../../../widgets/app_loading_overlay.dart';
+import '../../../widgets/notification_off_banner.dart';
 import '../../../widgets/plan_cap_strip.dart';
-import '../../../widgets/empty_state_view.dart';
-import '../../../widgets/gradient_button.dart';
 import '../../trip/trip_strings.dart';
 import '../enquiries/stay_enquiries_controller.dart';
 import '../models/stay_owner_model.dart';
@@ -27,10 +23,12 @@ class MyStaysScreen extends StatefulWidget {
   State<MyStaysScreen> createState() => _MyStaysScreenState();
 }
 
-class _MyStaysScreenState extends State<MyStaysScreen> with WidgetsBindingObserver {
+class _MyStaysScreenState extends State<MyStaysScreen> with WidgetsBindingObserver, TickerProviderStateMixin {
   final _ctrl = StaySetupController.ensure();
   final _enquiries = StayEnquiriesController.ensure();
   final _isSharing = false.obs;
+  late final AnimationController _anim = SetupKit.controller(this);
+  bool _played = false;
 
   @override
   void initState() {
@@ -42,12 +40,21 @@ class _MyStaysScreenState extends State<MyStaysScreen> with WidgetsBindingObserv
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _anim.dispose();
     super.dispose();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) _load();
+  }
+
+  void _playOnce() {
+    if (_played) return;
+    _played = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) SetupKit.play(_anim, context);
+    });
   }
 
   Future<void> _load() async {
@@ -86,71 +93,62 @@ class _MyStaysScreenState extends State<MyStaysScreen> with WidgetsBindingObserv
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Obx(() => AppLoadingOverlay(
-            isLoading: _ctrl.isSaving.value || _isSharing.value,
-            message: _isSharing.value ? 'Sharing...' : 'Updating...',
-            indicatorColor: StayColors.accent,
-            child: Column(children: [
-              _header(),
-              PlanCapStrip(accent: StayColors.accent, icon: Icons.workspace_premium_rounded, showUsage: false),
-              Expanded(
-                child: Obx(() {
-                  final loading = _ctrl.isLoading.value;
-                  final loaded = _ctrl.hasLoaded.value;
-                  final stay = _ctrl.stay.value;
-                  final failed = _ctrl.loadFailed.value;
-                  if (!loaded && loading) return _shimmer();
-                  return RefreshIndicator(
-                    color: StayColors.accent,
-                    onRefresh: _load,
-                    child: ListView(
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + AppInsets.bottomViewPadding(context)),
-                      children: [
-                        if (failed && stay == null)
-                          EmptyStateView(
-                            icon: Iconsax.cloud_cross,
-                            title: TripStrings.couldNotLoad,
-                            subtitle: TripStrings.checkConnection,
-                            onRetry: _load,
-                            retryLabel: TripStrings.retry,
-                            palette: StayColors.palette,
-                          )
-                        else if (stay == null)
-                          _empty()
-                        else
-                          Builder(builder: (ctx) => _card(ctx, stay)),
-                      ],
+      backgroundColor: DesignColors.scaffold,
+      body: Stack(children: [
+        Column(children: [
+          StayPageHeader(
+            title: StayFinStrings.myStays,
+            subtitle: StayFinStrings.manageListings,
+            onBack: () => Get.back(),
+            asset: SetupAssets.hotel,
+            animation: templateInterval(_anim, 0, 2),
+          ),
+          PlanCapStrip(accent: PickKit.stay, icon: Icons.workspace_premium_rounded, showUsage: false),
+          const NotificationOffBanner(),
+          Expanded(
+            child: Obx(() {
+              final loading = _ctrl.isLoading.value;
+              final loaded = _ctrl.hasLoaded.value;
+              final stay = _ctrl.stay.value;
+              final failed = _ctrl.loadFailed.value;
+              if (!loaded && loading) return _skeleton();
+              _playOnce();
+              return RefreshIndicator(
+                color: DesignColors.primary,
+                backgroundColor: DesignColors.surface,
+                onRefresh: _load,
+                child: ListView(
+                  physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+                  padding: EdgeInsets.fromLTRB(KitMetrics.gutter, 16, KitMetrics.gutter, 16 + MediaQuery.viewPaddingOf(context).bottom),
+                  children: [
+                    SetupEntrance(
+                      controller: _anim,
+                      index: 0,
+                      count: 1,
+                      child: failed && stay == null
+                          ? StateCard.error(
+                              kit: KitTone.stay,
+                              title: TripStrings.couldNotLoad,
+                              message: TripStrings.checkConnection,
+                              actionLabel: TripStrings.retry,
+                              onAction: _load,
+                            )
+                          : stay == null
+                              ? _empty()
+                              : Builder(builder: (ctx) => _card(ctx, stay)),
                     ),
-                  );
-                }),
-              ),
-            ]),
-          )),
+                  ],
+                ),
+              );
+            }),
+          ),
+        ]),
+        Obx(() => _ctrl.isSaving.value || _isSharing.value
+            ? StayBusy(message: _isSharing.value ? 'Sharing...' : 'Updating...')
+            : const SizedBox.shrink()),
+      ]),
     );
   }
-
-  Widget _header() => Container(
-        decoration: const BoxDecoration(gradient: StayColors.gradient),
-        child: SafeArea(
-          bottom: false,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(4, 8, 20, 20),
-            child: Row(children: [
-              IconButton(
-                onPressed: () => Get.back(),
-                icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white),
-              ),
-              const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(StayFinStrings.myStays,
-                    style: TextStyle(fontFamily: 'Poppins', fontSize: 24, fontWeight: FontWeight.w700, color: Colors.white)),
-                Text(StayFinStrings.manageListings,
-                    style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: Colors.white70)),
-              ]),
-            ]),
-          ),
-        ),
-      );
 
   Widget _card(BuildContext ctx, StayOwnerModel s) => StayOwnerCard(
         stay: s,
@@ -169,44 +167,18 @@ class _MyStaysScreenState extends State<MyStaysScreen> with WidgetsBindingObserv
         enquiryNewCount: _enquiries.newCount,
       );
 
-  Widget _empty() => Padding(
-        padding: const EdgeInsets.only(top: 80),
-        child: Column(children: [
-          Container(
-            width: 90,
-            height: 90,
-            decoration: const BoxDecoration(color: StayColors.surface, shape: BoxShape.circle),
-            child: const Icon(Iconsax.building_4, size: 40, color: StayColors.accent),
-          ),
-          const SizedBox(height: 20),
-          const Text(StayFinStrings.noStayYet,
-              style: TextStyle(fontFamily: 'Poppins', fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-          const SizedBox(height: 8),
-          const Text(StayFinStrings.listStaySteps,
-              style: TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textLight)),
-          const SizedBox(height: 24),
-          SizedBox(
-            width: 220,
-            child: GradientButton(
-              onPressed: _openSetup,
-              label: StayFinStrings.setUpStay,
-              gradient: StayColors.gradient,
-              shadowColor: StayColors.accent,
-            ),
-          ),
-        ]),
+  Widget _empty() => StateCard(
+        kit: KitTone.stay,
+        asset: TravelIcon.stay,
+        title: StayFinStrings.noStayYet,
+        message: StayFinStrings.listStaySteps,
+        actionLabel: StayFinStrings.setUpStay,
+        onAction: _openSetup,
       );
 
-  Widget _shimmer() => Padding(
-        padding: const EdgeInsets.all(16),
-        child: Shimmer.fromColors(
-          baseColor: AppColors.shimmerBase,
-          highlightColor: AppColors.shimmerHighlight,
-          child: Container(
-            height: 240,
-            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
-          ),
-        ),
+  Widget _skeleton() => Padding(
+        padding: const EdgeInsets.symmetric(horizontal: KitMetrics.gutter, vertical: 16),
+        child: OwnerListingCard.skeleton(margin: EdgeInsets.zero),
       );
 
   Future<void> _setAccepting(bool accepting) async {
@@ -216,46 +188,25 @@ class _MyStaysScreenState extends State<MyStaysScreen> with WidgetsBindingObserv
 
   Future<void> _editPrice(StayRoomModel room) async {
     final priceCtrl = TextEditingController(text: '${room.pricePerNight}');
-    final price = await showModalBottomSheet<int>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (sheetCtx) => Padding(
-        padding: EdgeInsets.fromLTRB(20, 12, 20, MediaQuery.of(sheetCtx).viewInsets.bottom + AppInsets.bottomViewPadding(sheetCtx) + 16),
-        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Center(
-            child: Container(
-              width: 40,
-              height: 4,
-              margin: const EdgeInsets.only(bottom: 16),
-              decoration: BoxDecoration(color: AppColors.divider, borderRadius: BorderRadius.circular(2)),
-            ),
-          ),
-          Text('${room.label} price',
-              style: const TextStyle(fontFamily: 'Poppins', fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-          const SizedBox(height: 4),
-          const Text('Price per night',
-              style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
-          const SizedBox(height: 12),
+    final price = await SheetFrame.show<int>(
+      context,
+      builder: (sheetCtx) => SheetFrame(
+        title: '${room.label} price',
+        subtitle: 'Price per night',
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           TextField(
             controller: priceCtrl,
             autofocus: true,
             keyboardType: TextInputType.number,
             inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(7)],
-            style: const TextStyle(fontFamily: 'Poppins', fontSize: 14),
-            decoration: InputDecoration(
-              prefixText: '₹ ',
-              prefixStyle: const TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textDark, fontWeight: FontWeight.w500),
-              filled: true,
-              fillColor: StayColors.surface,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.divider)),
-              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: StayColors.accent, width: 1.5)),
-            ),
+            cursorColor: DesignColors.primary,
+            style: SetupKit.fieldText(),
+            decoration: SetupKit.input(prefix: '₹ '),
           ),
           const SizedBox(height: 16),
-          GradientButton(
+          PrimaryButton(
+            tone: KitTone.stay,
+            label: 'Save',
             onPressed: () {
               final text = priceCtrl.text.trim();
               if (text.isEmpty) {
@@ -263,15 +214,12 @@ class _MyStaysScreenState extends State<MyStaysScreen> with WidgetsBindingObserv
                 return;
               }
               final v = int.tryParse(text) ?? 0;
-              if (v <StayOptionSets.minPrice || v > StayOptionSets.maxPrice) {
+              if (v < StayOptionSets.minPrice || v > StayOptionSets.maxPrice) {
                 AppToast.error('Price per night must be between ₹100 and ₹99,00,000');
                 return;
               }
               Navigator.pop(sheetCtx, v);
             },
-            label: 'Save',
-            gradient: StayColors.gradient,
-            shadowColor: StayColors.accent,
           ),
         ]),
       ),
@@ -284,29 +232,17 @@ class _MyStaysScreenState extends State<MyStaysScreen> with WidgetsBindingObserv
   void _confirmDelete() {
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text(StayFinStrings.deleteStayTitle, style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
-        content: const Text(StayFinStrings.deleteStayBody, style: TextStyle(fontFamily: 'Poppins')),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text(StayFinStrings.cancel, style: TextStyle(fontFamily: 'Poppins', color: AppColors.textLight)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.error,
-              foregroundColor: Colors.white,
-              minimumSize: Size.zero,
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-            ),
-            onPressed: () {
-              Navigator.pop(ctx);
-              _ctrl.deleteStay();
-            },
-            child: const Text(StayFinStrings.delete, style: TextStyle(fontFamily: 'Poppins')),
-          ),
-        ],
+      builder: (ctx) => StayConfirmDialog(
+        title: StayFinStrings.deleteStayTitle,
+        body: StayFinStrings.deleteStayBody,
+        cancelLabel: StayFinStrings.cancel,
+        confirmLabel: StayFinStrings.delete,
+        destructive: true,
+        onCancel: () => Navigator.pop(ctx),
+        onConfirm: () {
+          Navigator.pop(ctx);
+          _ctrl.deleteStay();
+        },
       ),
     );
   }

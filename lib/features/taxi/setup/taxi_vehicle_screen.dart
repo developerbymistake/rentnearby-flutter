@@ -1,28 +1,27 @@
 import 'dart:io';
+import 'package:animations/animations.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:iconsax/iconsax.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:maplibre_gl/maplibre_gl.dart' show LatLng;
 import 'package:permission_handler/permission_handler.dart';
-import '../../../config/app_colors.dart';
-import '../../../config/app_insets.dart';
 import '../../../config/app_routes.dart';
 import '../../../controllers/auth_controller.dart';
+import '../../../design/design.dart';
+import '../../../design/extra/taxi_setup_kit.dart';
+import '../../../design/extra/trip_plan_look.dart';
 import '../../../models/city_model.dart';
 import '../../../screens/add_listing_location_mixin.dart';
 import '../../../utils/app_toast.dart';
-import '../../../widgets/app_loading_overlay.dart';
-import '../../../widgets/gradient_button.dart';
 import '../../../widgets/onboarding_closed_dialog.dart';
-import '../../stay/setup/stay_option_grid.dart';
 import '../taxi_option_sets.dart';
 import '../taxi_vehicle_types_controller.dart';
 import 'taxi_identity_validators.dart';
 import 'taxi_setup_controller.dart';
 import 'taxi_vehicle_type_picker_sheet.dart';
 
+import 'package:bakhli/design/tokens/shadow_tokens.dart';
 class TaxiVehicleScreen extends StatefulWidget {
   const TaxiVehicleScreen({super.key});
   @override
@@ -49,6 +48,7 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
   File? _localPhoto;
   bool _same = true;
   int _step = 0;
+  int _prevStep = 0;
   bool _isUploading = false;
   bool _isFinalizing = false;
   bool _busy = false;
@@ -69,11 +69,11 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
   LatLng? _initPin;
 
   static final _locationStyle = LocationStepStyle(
-    circleColorHex: AppColors.taxiHex,
-    userDotColorHex: AppColors.userDotHex,
-    accentColor: TaxiColors.accent,
-    addressSpinnerColor: TaxiColors.accent,
-    addressPrefixIcon: Iconsax.car,
+    circleColorHex: TaxiSetupKit.hexAccent,
+    userDotColorHex: TaxiSetupKit.hexUser,
+    accentColor: FitnessAppTheme.nearlyDarkBlue,
+    addressSpinnerColor: FitnessAppTheme.nearlyDarkBlue,
+    addressPrefixIcon: Icons.local_taxi_rounded,
     pinStepTitle: 'Pin Your Base *',
     pinHintNoun: 'taxi',
   );
@@ -234,92 +234,41 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
     }
   }
 
-  void _confirmDiscard() {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Discard changes?',
-            style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, color: AppColors.textDark)),
-        content: const Text('Unsaved changes will be lost.',
-            style: TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textMedium)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Keep Editing',
-                style: TextStyle(fontFamily: 'Poppins', color: TaxiColors.accentDark, fontWeight: FontWeight.w600)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.error,
-              foregroundColor: Colors.white,
-              minimumSize: Size.zero,
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            ),
-            onPressed: () {
-              Navigator.pop(context);
-              Get.back();
-            },
-            child: const Text('Discard', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
-          ),
-        ],
-      ),
+  Future<void> _confirmDiscard() async {
+    final ok = await showTaxiDialog(
+      context,
+      title: 'Discard changes?',
+      body: 'Unsaved changes will be lost.',
+      cancelLabel: 'Keep Editing',
+      confirmLabel: 'Discard',
+      destructive: true,
     );
+    if (ok == true) Get.back();
   }
 
-  void _showPermissionDeniedDialog(String type) {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text('$type Permission Required',
-            style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, color: AppColors.textDark)),
-        content: Text('Please enable $type access in your device Settings to add photos.',
-            style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textMedium)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel', style: TextStyle(fontFamily: 'Poppins', color: AppColors.textLight)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: TaxiColors.accent,
-              foregroundColor: Colors.white,
-              minimumSize: Size.zero,
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            ),
-            onPressed: () {
-              Navigator.pop(context);
-              openAppSettings();
-            },
-            child: const Text('Open Settings', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
-          ),
-        ],
-      ),
+  Future<void> _showPermissionDeniedDialog(String type) async {
+    final ok = await showTaxiDialog(
+      context,
+      title: '$type Permission Required',
+      body: 'Please enable $type access in your device Settings to add photos.',
+      cancelLabel: 'Cancel',
+      confirmLabel: 'Open Settings',
     );
+    if (ok == true) openAppSettings();
   }
 
   Future<void> _pickPhoto() async {
-    final source = await showModalBottomSheet<ImageSource>(
-      context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+    final source = await SetupKit.sheet<ImageSource>(
+      context,
       builder: (sheetCtx) => SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8),
+          padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Container(
-                width: 40,
-                height: 4,
-                margin: const EdgeInsets.only(bottom: 16),
-                decoration: BoxDecoration(color: AppColors.divider, borderRadius: BorderRadius.circular(2))),
-            const Text('Add Photo',
-                style: TextStyle(fontFamily: 'Poppins', fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+            SetupKit.grabber(),
+            Text('Add Photo', style: TripKit.text(18, weight: FontWeight.w700).copyWith(letterSpacing: 0.27)),
             const SizedBox(height: 8),
-            _sourceTile(sheetCtx, Iconsax.camera, 'Take Photo', 'Use camera to capture now', ImageSource.camera),
-            _sourceTile(sheetCtx, Iconsax.gallery, 'Choose from Gallery', 'Pick an existing photo',
+            _sourceTile(sheetCtx, TravelIcon.photo, null, 'Take Photo', 'Use camera to capture now', ImageSource.camera),
+            _sourceTile(sheetCtx, null, Icons.photo_library_outlined, 'Choose from Gallery', 'Pick an existing photo',
                 ImageSource.gallery),
             const SizedBox(height: 8),
           ]),
@@ -338,16 +287,20 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
     if (picked != null && mounted) setState(() => _localPhoto = File(picked.path));
   }
 
-  Widget _sourceTile(BuildContext sheetCtx, IconData icon, String title, String subtitle, ImageSource source) => ListTile(
+  Widget _sourceTile(
+          BuildContext sheetCtx, String? asset, IconData? icon, String title, String subtitle, ImageSource source) =>
+      ListTile(
         leading: Container(
           width: 44,
           height: 44,
-          decoration: BoxDecoration(color: TaxiColors.surface, borderRadius: BorderRadius.circular(12)),
-          child: Icon(icon, color: TaxiColors.accent, size: 22),
+          padding: const EdgeInsets.all(8),
+          decoration: const BoxDecoration(color: PickKit.taxiTint, shape: BoxShape.circle),
+          child: asset != null
+              ? Image.asset(asset)
+              : Icon(icon, color: FitnessAppTheme.nearlyDarkBlue, size: 22),
         ),
-        title: Text(title,
-            style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w500, color: AppColors.textDark)),
-        subtitle: Text(subtitle, style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
+        title: Text(title, style: TripKit.text(14)),
+        subtitle: Text(subtitle, style: TripKit.text(12, color: FitnessAppTheme.lightText)),
         onTap: () => Navigator.pop(sheetCtx, source),
       );
 
@@ -483,30 +436,13 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
         _uploadedStatus = res.status ?? _uploadedStatus;
         return true;
       }
-      final retry = await showDialog<bool>(
-        context: context,
+      final retry = await showTaxiDialog(
+        context,
+        title: 'Upload Failed',
+        body: 'The plate photo could not be uploaded. Retry?',
+        cancelLabel: 'Skip',
+        confirmLabel: 'Retry',
         barrierDismissible: false,
-        builder: (dCtx) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: const Text('Upload Failed', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
-          content: const Text('The plate photo could not be uploaded. Retry?',
-              style: TextStyle(fontFamily: 'Poppins', fontSize: 14)),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dCtx, false),
-              child: const Text('Skip', style: TextStyle(fontFamily: 'Poppins', color: AppColors.textLight)),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.pop(dCtx, true),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: TaxiColors.accent,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              ),
-              child: const Text('Retry', style: TextStyle(fontFamily: 'Poppins')),
-            ),
-          ],
-        ),
       );
       if (retry != true || !mounted) {
         if (mounted) _goTo(0);
@@ -605,6 +541,8 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
   @override
   Widget build(BuildContext context) {
     if (_step == 2) _scheduleBaseResolve();
+    final reverse = _step < _prevStep;
+    _prevStep = _step;
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
@@ -612,42 +550,40 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
       },
       child: Stack(children: [
         Scaffold(
-          backgroundColor: AppColors.scaffoldBg,
+          backgroundColor: FitnessAppTheme.background,
           body: Column(children: [
-            Container(
-              decoration: const BoxDecoration(gradient: TaxiColors.gradient),
-              child: SafeArea(
-                bottom: false,
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(4, 8, 20, 20),
-                  child: Row(children: [
-                    IconButton(
-                      onPressed: _onBack,
-                      icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white),
-                    ),
-                    Text(const ['Vehicle', 'Driver', 'Base'][_step],
-                        style: TextStyle(fontFamily: 'Poppins', fontSize: 18, fontWeight: FontWeight.w600, color: Colors.white)),
-                  ]),
-                ),
-              ),
+            ModuleHeader(
+              title: const ['Vehicle', 'Driver', 'Base'][_step],
+              tone: KitTone.taxi,
+              onBack: _onBack,
+              leadingAsset: TravelIcon.taxi,
             ),
             Container(
-              color: Colors.white,
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+              decoration: BoxDecoration(
+                color: FitnessAppTheme.white,
+                boxShadow: [
+                  ShadowTokens.tint(FitnessAppTheme.grey, ShadowSpec.restTight),
+                ],
+              ),
+              padding: const EdgeInsets.fromLTRB(20, 14, 20, 14),
               child: Row(children: [
-                _stepDot(0, 'Vehicle'),
-                Expanded(child: Container(height: 2, color: _step >= 1 ? TaxiColors.accent : AppColors.divider)),
-                _stepDot(1, 'Driver'),
-                Expanded(child: Container(height: 2, color: _step >= 2 ? TaxiColors.accent : AppColors.divider)),
-                _stepDot(2, 'Base'),
+                TaxiStepDot(index: 0, step: _step, label: 'Vehicle'),
+                _line(1),
+                TaxiStepDot(index: 1, step: _step, label: 'Driver'),
+                _line(2),
+                TaxiStepDot(index: 2, step: _step, label: 'Base'),
               ]),
             ),
             Expanded(
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 280),
-                transitionBuilder: (child, anim) => SlideTransition(
-                  position: Tween<Offset>(begin: const Offset(0.08, 0), end: Offset.zero).animate(anim),
-                  child: FadeTransition(opacity: anim, child: child),
+              child: PageTransitionSwitcher(
+                duration: templateTransitionDuration,
+                reverse: reverse,
+                transitionBuilder: (child, animation, secondaryAnimation) => SharedAxisTransition(
+                  fillColor: Colors.transparent,
+                  animation: animation,
+                  secondaryAnimation: secondaryAnimation,
+                  transitionType: SharedAxisTransitionType.horizontal,
+                  child: child,
                 ),
                 child: _step == 0
                     ? _vehicleStep()
@@ -659,31 +595,32 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
             _footer(),
           ]),
         ),
-        if (_isUploading) AppLoadingOverlay.stackChild(message: 'Uploading photo', indicatorColor: TaxiColors.accent),
-        Obx(() => _ctrl.isSaving.value
-            ? AppLoadingOverlay.stackChild(message: 'Saving your taxi...', indicatorColor: TaxiColors.accent)
-            : const SizedBox.shrink()),
-        if (_isFinalizing) AppLoadingOverlay.stackChild(message: 'Please wait...', indicatorColor: TaxiColors.accent),
+        if (_isUploading) const SetupBusy(message: 'Uploading photo'),
+        Obx(() => _ctrl.isSaving.value ? const SetupBusy(message: 'Saving your taxi...') : const SizedBox.shrink()),
+        if (_isFinalizing) const SetupBusy(message: 'Please wait...'),
       ]),
     );
   }
 
-  Widget _footer() => Container(
-        color: Colors.white,
-        padding: EdgeInsets.fromLTRB(20, 12, 20, AppInsets.bottomViewPadding(context) + 12),
+  Widget _line(int reachedAt) => Expanded(
+        child: Container(
+          height: 2,
+          alignment: Alignment.centerLeft,
+          color: FitnessAppTheme.spacer,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 250),
+            height: 2,
+            width: _step >= reachedAt ? 400 : 0,
+            color: FitnessAppTheme.nearlyDarkBlue,
+          ),
+        ),
+      );
+
+  Widget _footer() => SetupFooter(
         child: Row(children: [
           if (_step > 0) ...[
             Expanded(
-              child: OutlinedButton(
-                onPressed: _blocked ? null : () => _goTo(_step - 1),
-                style: OutlinedButton.styleFrom(
-                  minimumSize: const Size(0, 52),
-                  side: const BorderSide(color: TaxiColors.accent),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                ),
-                child: const Text('Back',
-                    style: TextStyle(fontFamily: 'Poppins', color: TaxiColors.accentDark, fontWeight: FontWeight.w600)),
-              ),
+              child: SetupOutlineButton(label: 'Back', onPressed: _blocked ? null : () => _goTo(_step - 1)),
             ),
             const SizedBox(width: 12),
           ],
@@ -692,7 +629,7 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
             child: Obx(() {
               final saving = _ctrl.isSaving.value;
               final disabled = saving || _isFinalizing || _isUploading || (_step == 2 && isResolvingDistrict);
-              return GradientButton(
+              return PickButton(
                 onPressed: disabled ? null : _handleNext,
                 isLoading: saving || _isFinalizing,
                 label: _step == 0
@@ -700,139 +637,99 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
                     : _step == 1
                         ? 'Next: Base'
                         : 'Save',
-                gradient: TaxiColors.gradient,
-                shadowColor: TaxiColors.accent,
+                gradient: PickKit.taxiGradient,
+                shadowColor: PickKit.taxiDark,
               );
             }),
           ),
         ]),
       );
 
-  Widget _stepDot(int index, String label) {
-    final active = _step == index;
-    final done = _step > index;
-    return Column(mainAxisSize: MainAxisSize.min, children: [
-      AnimatedContainer(
-        duration: const Duration(milliseconds: 250),
-        width: 32,
-        height: 32,
-        decoration: BoxDecoration(
-          color: (active || done) ? TaxiColors.accent : AppColors.divider,
-          shape: BoxShape.circle,
-        ),
-        child: Center(
-          child: done
-              ? const Icon(Icons.check_rounded, color: Colors.white, size: 16)
-              : Text('${index + 1}',
-                  style: TextStyle(
-                      fontFamily: 'Poppins',
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: active ? Colors.white : AppColors.textLight)),
-        ),
-      ),
-      const SizedBox(height: 4),
-      Text(label,
-          style: TextStyle(
-              fontFamily: 'Poppins',
-              fontSize: 11,
-              fontWeight: FontWeight.w500,
-              color: (active || done) ? TaxiColors.accentDark : AppColors.textLight)),
-    ]);
-  }
-
-  Widget _sectionCard({required String title, String? hint, required Widget child}) => Container(
-        margin: const EdgeInsets.only(bottom: 16),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 8, offset: const Offset(0, 2))],
-        ),
+  Widget _sectionCard({required String title, String? hint, required Widget child}) => SetupCard(
+        title: title,
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(title,
-              style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textDark)),
           if (hint != null) ...[
-            const SizedBox(height: 2),
-            Text(hint, style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: TaxiColors.accent)),
+            Text(hint, style: TripKit.text(12, weight: FontWeight.w600, color: TripLook.warning)),
+            const SizedBox(height: 10),
           ],
-          const SizedBox(height: 10),
           child,
         ]),
       );
 
-  InputDecoration _inputDec(String hint, {String? prefix}) => InputDecoration(
-        hintText: hint,
-        hintStyle: const TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textHint),
-        prefixText: prefix,
-        prefixStyle: const TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textDark, fontWeight: FontWeight.w500),
-        filled: true,
-        fillColor: TaxiColors.surface,
-        counterText: '',
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-        enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.divider)),
-        disabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.divider)),
-        focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: TaxiColors.accent, width: 1.5)),
+  InputDecoration _inputDec(String hint, {String? prefix}) => SetupKit.input(hint: hint, prefix: prefix);
+
+  Widget _note(String text, {bool accent = false}) =>
+      Text(text, style: TripKit.text(12, color: accent ? FitnessAppTheme.nearlyDarkBlue : FitnessAppTheme.lightText));
+
+  Widget _selectRow({
+    required String asset,
+    required String text,
+    required bool placeholder,
+    required VoidCallback onTap,
+    bool error = false,
+  }) =>
+      Material(
+        color: FitnessAppTheme.background,
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            constraints: const BoxConstraints(minHeight: 50),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              border: error ? Border.all(color: TripLook.error, width: 1.5) : null,
+            ),
+            child: Row(children: [
+              Image.asset(asset, width: 24, height: 24),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(text,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TripKit.text(14, color: placeholder ? FitnessAppTheme.deactivatedText : FitnessAppTheme.darkerText)),
+              ),
+              const SizedBox(width: 8),
+              const Icon(Icons.keyboard_arrow_down_rounded, size: 22, color: FitnessAppTheme.nearlyDarkBlue),
+            ]),
+          ),
+        ),
       );
 
   Widget _vehicleStep() => SingleChildScrollView(
         key: const ValueKey(0),
         padding: const EdgeInsets.all(16),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        child: TemplateStagger(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           _sectionCard(
             title: 'Vehicle Type *',
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Material(
-                color: TaxiColors.surface,
-                borderRadius: BorderRadius.circular(12),
-                child: InkWell(
-                  onTap: _pickType,
-                  borderRadius: BorderRadius.circular(12),
-                  child: Container(
-                    constraints: const BoxConstraints(minHeight: 50),
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppColors.divider),
-                    ),
-                    child: Row(children: [
-                      const Icon(Iconsax.car, size: 18, color: TaxiColors.accent),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(_vehicleTypeName ?? _types.nameOf(_vehicleTypeId) ?? 'Select',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                                fontFamily: 'Poppins',
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                                color: _vehicleTypeId == null ? AppColors.textHint : AppColors.textDark)),
-                      ),
-                      const SizedBox(width: 8),
-                      const Icon(Iconsax.arrow_down_1, size: 18, color: TaxiColors.accentDark),
-                    ]),
-                  ),
-                ),
+              _selectRow(
+                asset: TravelIcon.taxi,
+                text: _vehicleTypeName ?? _types.nameOf(_vehicleTypeId) ?? 'Select',
+                placeholder: _vehicleTypeId == null,
+                onTap: _pickType,
               ),
               const SizedBox(height: 6),
-              const Text('Pick from the list. Admin keeps the list updated.',
-                  style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
+              _note('Pick from the list. Admin keeps the list updated.'),
             ]),
           ),
           _sectionCard(
             title: 'Seats *',
-            child: StayOptionGrid(
-              crossAxisCount: 4,
-              childAspectRatio: 1.9,
-              labels: TaxiOptionSets.seats.map(TaxiOptionSets.seatsLabel).toList(),
-              isActive: (i) => _seats == TaxiOptionSets.seats[i],
-              onTap: (i) => setState(() => _seats = TaxiOptionSets.seats[i]),
-              accent: TaxiColors.accent,
-            ),
+            child: Row(children: [
+              for (var i = 0; i < TaxiOptionSets.seats.length; i++) ...[
+                if (i > 0) const SizedBox(width: 8),
+                Expanded(
+                  child: PickChip(
+                    label: TaxiOptionSets.seatsLabel(TaxiOptionSets.seats[i]),
+                    selected: _seats == TaxiOptionSets.seats[i],
+                    activeColor: PickKit.taxi,
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 12),
+                    onTap: () => setState(() => _seats = TaxiOptionSets.seats[i]),
+                  ),
+                ),
+              ],
+            ]),
           ),
           _sectionCard(
             title: 'Number Plate *',
@@ -840,17 +737,17 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
               TextFormField(
                 controller: _plateCtrl,
                 focusNode: _plateFocus,
+                cursorColor: FitnessAppTheme.nearlyDarkBlue,
                 inputFormatters: TaxiOptionSets.plateInputFormatters,
                 textCapitalization: TextCapitalization.characters,
                 autocorrect: false,
                 enableSuggestions: false,
-                style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, letterSpacing: 1),
+                style: SetupKit.fieldText().copyWith(letterSpacing: 1),
                 decoration: _inputDec('e.g. UK 07 TA 1234'),
               ),
               if (_isApproved) ...[
                 const SizedBox(height: 6),
-                const Text('Changing the plate or photo sends your taxi back to review.',
-                    style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: TaxiColors.accentDark)),
+                _note('Changing the plate or photo sends your taxi back to review.', accent: true),
               ],
             ]),
           ),
@@ -880,16 +777,17 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
     return Stack(children: [
       Positioned.fill(
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(16),
           child: local != null
               ? Image.file(local, fit: BoxFit.cover)
               : CachedNetworkImage(
                   imageUrl: _remotePhotoUrl!,
                   fit: BoxFit.cover,
-                  placeholder: (_, _) => Container(color: TaxiColors.surface),
+                  placeholder: (_, _) => Container(color: FitnessAppTheme.background),
                   errorWidget: (_, _, _) => Container(
-                    color: TaxiColors.surface,
-                    child: const Center(child: Icon(Iconsax.car, size: 28, color: TaxiColors.accent)),
+                    color: FitnessAppTheme.background,
+                    padding: const EdgeInsets.all(20),
+                    child: Image.asset(TravelIcon.taxi),
                   ),
                 ),
         ),
@@ -901,12 +799,12 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 4),
           decoration: BoxDecoration(
-            color: TaxiColors.accentDark.withValues(alpha: 0.85),
-            borderRadius: const BorderRadius.vertical(bottom: Radius.circular(12)),
+            color: PickKit.taxi.withValues(alpha: Alpha.high),
+            borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
           ),
-          child: const Text('Plate',
+          child: Text('Plate',
               textAlign: TextAlign.center,
-              style: TextStyle(fontFamily: 'Poppins', fontSize: 10, color: Colors.white, fontWeight: FontWeight.w600)),
+              style: TripKit.text(10, weight: FontWeight.w600, color: FitnessAppTheme.white)),
         ),
       ),
       Positioned(
@@ -918,8 +816,9 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
           child: Padding(
             padding: const EdgeInsets.all(4),
             child: Container(
-              decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-              child: const Icon(Iconsax.close_circle, color: AppColors.error, size: 20),
+              padding: const EdgeInsets.all(2),
+              decoration: const BoxDecoration(color: FitnessAppTheme.white, shape: BoxShape.circle),
+              child: const Icon(Icons.close_rounded, color: TripLook.error, size: 16),
             ),
           ),
         ),
@@ -928,23 +827,21 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
   }
 
   Widget _addPhotoTile() => Material(
-        color: TaxiColors.surface,
-        borderRadius: BorderRadius.circular(12),
+        color: PickKit.taxiTint,
+        borderRadius: BorderRadius.circular(16),
         child: InkWell(
           onTap: _blocked ? null : _pickPhoto,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(16),
           child: Container(
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: TaxiColors.accent.withValues(alpha: 0.4), width: 1.5),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: PickKit.taxi.withValues(alpha: Alpha.half), width: 1.5),
             ),
             child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-              const Icon(Iconsax.camera, color: TaxiColors.accent, size: 24),
+              Image.asset(TravelIcon.photo, width: 28, height: 28),
               const SizedBox(height: 4),
-              const Text('Add',
-                  maxLines: 1,
-                  style: TextStyle(
-                      fontFamily: 'Poppins', fontSize: 11, color: TaxiColors.accentDark, fontWeight: FontWeight.w600)),
+              Text('Add',
+                  maxLines: 1, style: TripKit.text(11, weight: FontWeight.w600, color: FitnessAppTheme.nearlyDarkBlue)),
             ]),
           ),
         ),
@@ -952,10 +849,7 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
 
   Widget _fieldLabel(String text) => Padding(
         padding: const EdgeInsets.only(bottom: 6),
-        child: Text(text,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.textLight)),
+        child: Text(text, maxLines: 1, overflow: TextOverflow.ellipsis, style: SetupKit.label()),
       );
 
   Future<void> _pickDob() async {
@@ -966,16 +860,13 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
     var initial = _dob ?? TaxiIdentityValidators.yearsBefore(today, 25);
     if (initial.isAfter(last)) initial = last;
     if (initial.isBefore(first)) initial = first;
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: initial,
-      firstDate: first,
-      lastDate: last,
-      initialEntryMode: DatePickerEntryMode.calendarOnly,
-      builder: (ctx, child) => Theme(
-        data: Theme.of(ctx).copyWith(colorScheme: Theme.of(ctx).colorScheme.copyWith(primary: TaxiColors.accent)),
-        child: child!,
-      ),
+    final picked = await TemplateCalendarPopup.pickDate(
+      context,
+      initial: initial,
+      first: first,
+      last: last,
+      label: 'Date of birth',
+      tone: KitTone.taxi,
     );
     if (picked != null && mounted) {
       setState(() {
@@ -989,7 +880,7 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
   Widget _contactStep() => SingleChildScrollView(
         key: const ValueKey(1),
         padding: const EdgeInsets.all(16),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        child: TemplateStagger(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           _sectionCard(
             title: 'Driving Licence *',
             hint: 'Only Bakhli admin sees this',
@@ -997,77 +888,52 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
               TextFormField(
                 controller: _dlCtrl,
                 focusNode: _dlFocus,
+                cursorColor: FitnessAppTheme.nearlyDarkBlue,
                 inputFormatters: TaxiIdentityValidators.dlInputFormatters,
                 textCapitalization: TextCapitalization.characters,
                 autocorrect: false,
                 enableSuggestions: false,
                 onChanged: (_) => setState(() => _serverDlError = null),
-                style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, letterSpacing: 1),
-                decoration: _inputDec('UK07 20150012345').copyWith(
-                  errorText: _dlError,
+                style: SetupKit.fieldText().copyWith(letterSpacing: 1),
+                decoration: SetupKit.input(
+                  hint: 'UK07 20150012345',
+                  error: _dlError,
                   errorMaxLines: 2,
-                  suffixText: _hasSavedDl && _dlCtrl.text.isEmpty ? 'Saved' : null,
-                  suffixStyle: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: TaxiColors.accentDark),
+                  suffix: _hasSavedDl && _dlCtrl.text.isEmpty
+                      ? Text('Saved', style: TripKit.text(12, color: FitnessAppTheme.nearlyDarkBlue))
+                      : null,
                 ),
               ),
               if (_hasSavedDl && _dlCtrl.text.isEmpty && _dlError == null) ...[
                 const SizedBox(height: 6),
-                const Text(TaxiIdentityValidators.savedHelp,
-                    style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: TaxiColors.accentDark)),
+                _note(TaxiIdentityValidators.savedHelp, accent: true),
               ],
               const SizedBox(height: 6),
-              const Text(TaxiIdentityValidators.dlHelp,
-                  style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
-              const Text(TaxiIdentityValidators.dlOldHelp,
-                  style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
+              _note(TaxiIdentityValidators.dlHelp),
+              _note(TaxiIdentityValidators.dlOldHelp),
               if (_isApproved) ...[
                 const SizedBox(height: 6),
-                const Text('Changing the licence or date of birth sends your taxi back to review.',
-                    style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: TaxiColors.accentDark)),
+                _note('Changing the licence or date of birth sends your taxi back to review.', accent: true),
               ],
             ]),
           ),
           _sectionCard(
             title: 'Date of Birth *',
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Material(
-                color: TaxiColors.surface,
-                borderRadius: BorderRadius.circular(12),
-                child: InkWell(
-                  onTap: _pickDob,
-                  borderRadius: BorderRadius.circular(12),
-                  child: Container(
-                    constraints: const BoxConstraints(minHeight: 50),
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: _dobError != null ? AppColors.error : AppColors.divider),
-                    ),
-                    child: Row(children: [
-                      const Icon(Iconsax.calendar_1, size: 18, color: TaxiColors.accent),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                            _dob != null
-                                ? TaxiIdentityValidators.displayDate(_dob!)
-                                : _hasSavedDob
-                                    ? 'Saved · Tap to change'
-                                    : 'Select date',
-                            style: TextStyle(
-                                fontFamily: 'Poppins',
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                                color: _dob == null && !_hasSavedDob ? AppColors.textHint : AppColors.textDark)),
-                      ),
-                      const Icon(Iconsax.arrow_down_1, size: 18, color: TaxiColors.accentDark),
-                    ]),
-                  ),
-                ),
+              _selectRow(
+                asset: TravelIcon.calendar,
+                text: _dob != null
+                    ? TaxiIdentityValidators.displayDate(_dob!)
+                    : _hasSavedDob
+                        ? 'Saved · Tap to change'
+                        : 'Select date',
+                placeholder: _dob == null && !_hasSavedDob,
+                error: _dobError != null,
+                onTap: _pickDob,
               ),
               if (_dobError != null) ...[
                 const SizedBox(height: 6),
-                Text(_dobError!,
-                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.error)),
+                Text(_dobError!, style: TripKit.text(12, color: TripLook.error)),
               ],
             ]),
           ),
@@ -1078,9 +944,10 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
               TextField(
                 controller: _phoneCtrl,
                 focusNode: _phoneFocus,
+                cursorColor: FitnessAppTheme.nearlyDarkBlue,
                 keyboardType: TextInputType.phone,
                 inputFormatters: TaxiOptionSets.phoneInputFormatters,
-                style: const TextStyle(fontFamily: 'Poppins', fontSize: 14),
+                style: SetupKit.fieldText(),
                 decoration: _inputDec('10-digit mobile', prefix: '+91 '),
               ),
               const SizedBox(height: 12),
@@ -1090,26 +957,22 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
                 controller: _same ? _phoneCtrl : _whatsAppCtrl,
                 focusNode: _same ? null : _whatsAppFocus,
                 enabled: !_same,
+                cursorColor: FitnessAppTheme.nearlyDarkBlue,
                 keyboardType: TextInputType.phone,
                 inputFormatters: TaxiOptionSets.phoneInputFormatters,
-                style: TextStyle(fontFamily: 'Poppins', fontSize: 14, color: _same ? AppColors.textMedium : AppColors.textDark),
+                style: SetupKit.fieldText().copyWith(color: _same ? FitnessAppTheme.grey : FitnessAppTheme.darkerText),
                 decoration: _inputDec('10-digit WhatsApp', prefix: '+91 '),
               ),
               const SizedBox(height: 12),
               Row(children: [
-                const Expanded(
-                  child: Text('Same as my login number',
-                      style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-                ),
+                Expanded(child: Text('Same as my login number', style: TripKit.text(13, weight: FontWeight.w600))),
                 const SizedBox(width: 8),
-                Switch(
+                SetupSwitch(
                   value: _same,
                   onChanged: (v) => setState(() {
                     _same = v;
                     if (!v && _whatsAppCtrl.text.isEmpty) _whatsAppCtrl.text = _phone;
                   }),
-                  activeThumbColor: TaxiColors.accentDark,
-                  activeTrackColor: TaxiColors.accent.withValues(alpha: 0.45),
                 ),
               ]),
             ]),
@@ -1117,16 +980,16 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 8, offset: const Offset(0, 2))],
+              color: FitnessAppTheme.white,
+              borderRadius: PickKit.cardRadius,
+              boxShadow: PickKit.greyShadow(),
             ),
-            child: const Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Icon(Iconsax.info_circle, size: 16, color: TaxiColors.accent),
-              SizedBox(width: 8),
+            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Image.asset(TravelIcon.note, width: 22, height: 22),
+              const SizedBox(width: 10),
               Expanded(
                 child: Text('Travellers call or message you on these numbers. Bakhli takes no booking and no payment.',
-                    style: TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight)),
+                    style: TripKit.text(11, color: FitnessAppTheme.lightText)),
               ),
             ]),
           ),
@@ -1149,40 +1012,35 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
         locationStepWidget(),
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
-          child: _sectionCard(
-            title: 'District and City',
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              constraints: const BoxConstraints(minHeight: 50),
-              decoration: BoxDecoration(
-                color: TaxiColors.surface,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.divider),
+          child: TemplateEntranceOnce(
+            child: _sectionCard(
+              title: 'District and City',
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                constraints: const BoxConstraints(minHeight: 50),
+                decoration: BoxDecoration(color: FitnessAppTheme.background, borderRadius: BorderRadius.circular(12)),
+                child: Row(children: [
+                  Image.asset(TravelIcon.place, width: 24, height: 24),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(value,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TripKit.text(14,
+                            color: district != null ? FitnessAppTheme.darkerText : FitnessAppTheme.deactivatedText)),
+                  ),
+                  const SizedBox(width: 8),
+                  if (resolving)
+                    const SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: FitnessAppTheme.nearlyDarkBlue),
+                    )
+                  else if (district != null)
+                    Image.asset(TravelIcon.pin, width: 20, height: 20),
+                ]),
               ),
-              child: Row(children: [
-                const Icon(Iconsax.location, color: TaxiColors.accent, size: 18),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(value,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                          fontFamily: 'Poppins',
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                          color: district != null ? AppColors.textDark : AppColors.textHint)),
-                ),
-                const SizedBox(width: 8),
-                if (resolving)
-                  const SizedBox(
-                    width: 14,
-                    height: 14,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: TaxiColors.accent),
-                  )
-                else if (district != null)
-                  const Icon(Iconsax.gps, color: TaxiColors.accentDark, size: 18),
-              ]),
             ),
           ),
         ),

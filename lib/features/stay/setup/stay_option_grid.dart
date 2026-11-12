@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../config/app_colors.dart';
+import '../../../design/design.dart';
 
 class StayOptionGrid extends StatelessWidget {
   final int crossAxisCount;
@@ -21,6 +21,7 @@ class StayOptionGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    const radius = BorderRadius.all(Radius.circular(24));
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -34,28 +35,32 @@ class StayOptionGrid extends StatelessWidget {
       itemCount: labels.length,
       itemBuilder: (_, i) {
         final active = isActive(i);
-        return GestureDetector(
-          onTap: () => onTap(i),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            decoration: BoxDecoration(
-              color: active ? accent : Colors.white,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: active ? accent : AppColors.divider, width: 1.5),
-            ),
-            child: Center(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 6),
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Text(labels[i],
-                      maxLines: 1,
-                      softWrap: false,
-                      style: TextStyle(
-                          fontFamily: 'Poppins',
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: active ? Colors.white : AppColors.textMedium)),
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          decoration: BoxDecoration(
+            color: active ? accent : DesignColors.surface,
+            borderRadius: radius,
+            border: Border.all(color: active ? accent : DesignColors.dividerSoft, width: 1.5),
+            boxShadow: active ? ShadowTokens.elev3 : ShadowTokens.elev1,
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: radius,
+              onTap: () => onTap(i),
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(labels[i],
+                        maxLines: 1,
+                        softWrap: false,
+                        style: TripKit.text(12,
+                                weight: FontWeight.w600,
+                                color: active ? DesignColors.surface : DesignColors.textStrong)
+                            .copyWith(letterSpacing: 0.2)),
+                  ),
                 ),
               ),
             ),

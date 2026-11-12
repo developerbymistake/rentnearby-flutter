@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:iconsax/iconsax.dart';
-import '../../../../config/app_colors.dart';
+import 'package:bakhli/design/design.dart';
+import 'package:bakhli/design/extra/trip_plan_look.dart';
 import '../taxi_ways_strings.dart';
 
 class ReachByTrainCard extends StatelessWidget {
@@ -13,26 +13,25 @@ class ReachByTrainCard extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.warningSurface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.warning.withValues(alpha: 0.4)),
+      decoration: TripLook.card(
+        color: TripLook.warningSurface,
+        radius: TripLook.cardRadius,
+        shadowColor: WaysTokens.changeAccent,
       ),
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Icon(Iconsax.routing_2, size: 20, color: AppColors.warningText),
+        const TravelIcon('assets/images/design/travel3d/train.png', size: 36),
         const SizedBox(width: 10),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(TaxiWaysStrings.reachBy(placeName),
                 maxLines: 3,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                    fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.warningText)),
+                style: FitnessAppTheme.title.copyWith(fontSize: 13)),
             const SizedBox(height: 2),
             Text(TaxiWaysStrings.reachBody,
                 maxLines: 3,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textMedium)),
+                style: FitnessAppTheme.caption.copyWith(fontSize: 12, color: DesignColors.textGrey)),
           ]),
         ),
       ]),

@@ -1,17 +1,15 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:bakhli/features/trip/widgets/trip_ui.dart';
+import 'package:bakhli/design/design.dart';
+import 'package:bakhli/design/extra/replies_kit.dart';
 import 'package:get/get.dart';
-import 'package:iconsax/iconsax.dart';
-import '../../../config/app_colors.dart';
 import '../../../models/browse_item.dart';
 import '../../../utils/contact_launcher.dart';
-import '../../../widgets/empty_state_view.dart';
 import '../../taxi/leads/trip_lead_format.dart';
-import '../../taxi/taxi_option_sets.dart';
 import '../controllers/trip_enquiry_controller.dart';
 import '../controllers/trip_plan_controller.dart';
 import '../models/trip_enquiry_model.dart';
-import '../trip_colors.dart';
 import '../trip_navigation.dart';
 import '../trip_strings.dart';
 import '../utils/trip_enquiry_rules.dart';
@@ -20,7 +18,6 @@ import '../utils/trip_report.dart';
 import '../widgets/trip_cancel_sheet.dart';
 import '../widgets/trip_driver_reply_sheet.dart';
 import '../widgets/trip_payment_line.dart';
-import '../widgets/trip_shimmers.dart';
 import '../widgets/trip_status.dart';
 import '../widgets/trip_status_card.dart';
 import '../widgets/trip_taxi_booking_sheet.dart';
@@ -36,7 +33,9 @@ class TripTaxiRepliesScreen extends StatefulWidget {
   State<TripTaxiRepliesScreen> createState() => _TripTaxiRepliesScreenState();
 }
 
-class _TripTaxiRepliesScreenState extends State<TripTaxiRepliesScreen> {
+class _TripTaxiRepliesScreenState extends State<TripTaxiRepliesScreen> with TickerProviderStateMixin {
+  late final AnimationController _anim = AnimationController(duration: const Duration(milliseconds: 600), vsync: this);
+  String _shown = '';
   late final TripPlanController _c;
   late int _day;
   String? _date;
@@ -66,7 +65,16 @@ class _TripTaxiRepliesScreenState extends State<TripTaxiRepliesScreen> {
       if (_c.openPages > 0) unawaited(_c.refreshEnquiries());
       _c.releaseIfIdle();
     }
+    _anim.dispose();
     super.dispose();
+  }
+
+  void _play(String kind) {
+    if (_shown == kind) return;
+    _shown = kind;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _anim.forward(from: 0);
+    });
   }
 
   Future<void> _load() async {
@@ -150,7 +158,7 @@ class _TripTaxiRepliesScreenState extends State<TripTaxiRepliesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.scaffoldBg,
+      backgroundColor: FitnessAppTheme.background,
       body: Column(
         children: [
           _buildHeader(context),
@@ -161,68 +169,41 @@ class _TripTaxiRepliesScreenState extends State<TripTaxiRepliesScreen> {
   }
 
   Widget _buildHeader(BuildContext context) {
-    final top = MediaQuery.paddingOf(context).top;
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: TaxiColors.gradient,
-        borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
-      ),
-      padding: EdgeInsets.fromLTRB(12, top + 8, 20, 18),
-      child: Row(
-        children: [
-          IconButton(
-            onPressed: () => Get.back(),
-            icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
-          ),
-          const SizedBox(width: 2),
-          Expanded(
-            child: Obx(() {
-              _c.plan.value;
-              final date = _c.dateOf(_day);
-              final sub = [TripStrings.dayN(_day), if (date != null) TripFormat.shortDate(date)].join(' · ');
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    TripStrings.taxiReplies,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontFamily: 'Poppins', fontSize: 20, fontWeight: FontWeight.w700, color: Colors.white),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    sub,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontFamily: 'Poppins',
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white.withValues(alpha: 0.85),
-                    ),
-                  ),
-                  if (TripRepliesLegParts.legLine(_c, _day) case final leg?) ...[
-                    const SizedBox(height: 2),
-                    TripRepliesLegParts.legLineText(leg),
-                  ],
-                ],
-              );
-            }),
-          ),
-        ],
-      ),
-    );
+    return Obx(() {
+      _c.plan.value;
+      final date = _c.dateOf(_day);
+      final sub = [TripStrings.dayN(_day), if (date != null) TripFormat.shortDate(date)].join(' · ');
+      final leg = TripRepliesLegParts.legLine(_c, _day);
+      return ModuleHeader(
+        title: TripStrings.taxiReplies,
+        subtitle: sub,
+        tone: KitTone.taxi,
+        leadingAsset: TravelIcon.taxi,
+        onBack: () => Get.back(),
+        bottom: leg == null ? null : TripRepliesLegParts.legLineText(leg),
+        bottomHeight: leg == null ? 0 : 20,
+      );
+    });
   }
 
-  Widget _scroll(List<Widget> children) => RefreshIndicator(
-        color: TripColors.accent,
+  Widget _scroll(List<Widget> children, String kind) {
+    _play(kind);
+    return _scrollView(children);
+  }
+
+  Widget _scrollView(List<Widget> children) => RefreshIndicator(
+        color: RepliesTone.accent,
         onRefresh: _c.refreshEnquiries,
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
+          padding: const EdgeInsets.fromLTRB(24, 14, 24, 24),
           children: [
-            for (final w in children)
-              Center(child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 640), child: w)),
+            for (var i = 0; i < children.length; i++)
+              TemplateEntrance(
+                animation: templateInterval(_anim, i, children.length),
+                animationController: _anim,
+                child: Center(child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 640), child: children[i])),
+              ),
           ],
         ),
       );
@@ -231,64 +212,61 @@ class _TripTaxiRepliesScreenState extends State<TripTaxiRepliesScreen> {
     return Obx(() {
       if (_c.tripGone.value) return const TripNotFoundView();
       if (_c.plannerOff.value) {
-        return _scroll(const [
-          EmptyStateView(
-            icon: Iconsax.routing_2,
+        return _scroll([
+          TripEmpty(
+            asset: TravelIcon.route,
             title: TripStrings.plannerOff,
             subtitle: TripStrings.plannerOffSubtitle,
-            palette: TripColors.palette,
           ),
-        ]);
+        ], 'plannerOff');
       }
       final plan = _c.plan.value;
       _c.enquiryList.length;
       TripEnquiryController.to.busyIds.length;
       if (plan == null && _c.openFailed.value) {
         return _scroll([
-          EmptyStateView(
-            icon: Iconsax.cloud_cross,
+          TripEmpty(
+            asset: TravelIcon.map,
             title: TripStrings.couldNotLoad,
             subtitle: TripStrings.checkConnection,
             onRetry: _load,
             retryLabel: TripStrings.retry,
-            palette: TripColors.palette,
           ),
-        ]);
+        ], 'openFailed');
       }
       final entries = plan == null ? const <TripEnquiryModel>[] : _entries();
       if (plan == null || (entries.isEmpty && (!_started || _c.enquiriesLoading.value))) {
+        _play('loading');
         return ListView.separated(
-          padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
+          padding: const EdgeInsets.fromLTRB(24, 14, 24, 24),
           itemCount: 3,
           separatorBuilder: (_, _) => const SizedBox(height: 12),
-          itemBuilder: (_, _) => TripShimmers.rowBox(height: 130, radius: 18),
+          itemBuilder: (_, _) => const TemplatePlaceholder(height: 130, radius: 8),
         );
       }
       if (entries.isEmpty && _c.enquiriesFailed.value) {
         return _scroll([
-          EmptyStateView(
-            icon: Iconsax.cloud_cross,
+          TripEmpty(
+            asset: TravelIcon.map,
             title: TripStrings.couldNotLoad,
             subtitle: TripStrings.checkConnection,
             onRetry: _c.refreshEnquiries,
             retryLabel: TripStrings.retry,
-            palette: TripColors.palette,
           ),
-        ]);
+        ], 'failed');
       }
       if (entries.isEmpty) {
         return _scroll([
-          const EmptyStateView(
-            icon: Iconsax.message_question,
+          TripEmpty(
+            asset: TravelIcon.place,
             title: TripStrings.noTaxiReplies,
             subtitle: TripStrings.driversReply,
-            palette: TripColors.palette,
           ),
           if (!_readOnly) ...[
             const SizedBox(height: 16),
             _findTaxiButton(),
           ],
-        ]);
+        ], 'empty');
       }
       return _scroll([
         for (final e in entries) ...[
@@ -299,16 +277,18 @@ class _TripTaxiRepliesScreenState extends State<TripTaxiRepliesScreen> {
           padding: EdgeInsets.only(top: 4),
           child: TripPaymentLine(text: TripStrings.taxiPayLine),
         ),
-      ]);
+      ], 'list');
     });
   }
 
   Widget _findTaxiButton() => Align(
-        child: TextButton(
-          style: TextButton.styleFrom(minimumSize: const Size(44, 44)),
-          onPressed: () => TripNavigation.openTaxi(),
-          child: const Text(TripStrings.findAnotherTaxi,
-              style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, color: TripColors.accentDark)),
+        child: SizedBox(
+          width: 220,
+          child: TripActionChip(
+            iconAsset: TravelIcon.taxi,
+            label: TripStrings.findAnotherTaxi,
+            onTap: () => TripNavigation.openTaxi(),
+          ),
         ),
       );
 
@@ -351,7 +331,7 @@ class _TripTaxiRepliesScreenState extends State<TripTaxiRepliesScreen> {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                      fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textDark),
+                      fontFamily: FitnessAppTheme.fontName, fontSize: 14, fontWeight: FontWeight.w700, color: FitnessAppTheme.darkerText),
                 ),
               ),
               if (e.isUrgent && status == TripDisplayStatus.asked) ...[
@@ -371,7 +351,7 @@ class _TripTaxiRepliesScreenState extends State<TripTaxiRepliesScreen> {
           Text(_statusLine(e),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontFamily: 'Poppins', fontSize: 12.5, color: AppColors.textMedium)),
+              style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12.5, color: FitnessAppTheme.lightText)),
           if (TripRepliesLegParts.wrongCityStrip(context, _c, e) case final w?) w,
           if (TripRepliesLegParts.oldDatesCard(_c, e) case final o?) o,
           if (status == TripDisplayStatus.fareSent && note.isNotEmpty) ...[
@@ -379,21 +359,21 @@ class _TripTaxiRepliesScreenState extends State<TripTaxiRepliesScreen> {
             Text(note,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
+                style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, color: FitnessAppTheme.deactivatedText)),
           ],
           if (closes != null) ...[
             const SizedBox(height: 2),
             Text(closes,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontFamily: 'Poppins', fontSize: 11.5, color: AppColors.textLight)),
+                style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 11.5, color: FitnessAppTheme.deactivatedText)),
           ],
           if (status.isRed && other != null) ...[
             const SizedBox(height: 4),
             Text(TripStrings.driverAlsoGot(other),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
+                style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, color: FitnessAppTheme.deactivatedText)),
           ],
           const SizedBox(height: 12),
           _actions(e),
@@ -404,10 +384,10 @@ class _TripTaxiRepliesScreenState extends State<TripTaxiRepliesScreen> {
 
   Widget _urgentPill() => Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-        decoration: BoxDecoration(color: TripStatusColors.failedSurface, borderRadius: BorderRadius.circular(999)),
+        decoration: BoxDecoration(color: RepliesTone.badSurface, borderRadius: BorderRadius.circular(999)),
         child: const Text(TripStrings.urgent,
             style: TextStyle(
-                fontFamily: 'Poppins', fontSize: 10.5, fontWeight: FontWeight.w700, color: AppColors.errorText)),
+                fontFamily: FitnessAppTheme.fontName, fontSize: 11, fontWeight: FontWeight.w700, color: RepliesTone.bad)),
       );
 
   Widget _overflow(TripEnquiryModel e) => SizedBox(
@@ -415,17 +395,17 @@ class _TripTaxiRepliesScreenState extends State<TripTaxiRepliesScreen> {
         height: 44,
         child: PopupMenuButton<int>(
           padding: EdgeInsets.zero,
-          icon: const Icon(Icons.more_vert_rounded, color: AppColors.textLight, size: 20),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          icon: const Icon(Icons.more_vert_rounded, color: FitnessAppTheme.deactivatedText, size: 20),
+          shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(16))),
           onSelected: (_) => _report(e),
           itemBuilder: (_) => const [
             PopupMenuItem(
               value: 0,
               child: Row(
                 children: [
-                  Icon(Iconsax.flag, size: 18, color: AppColors.error),
+                  TravelIcon(TravelIcon.note, size: 18),
                   SizedBox(width: 10),
-                  Text(TripStrings.report, style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.error)),
+                  Text(TripStrings.report, style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 13, color: RepliesTone.bad)),
                 ],
               ),
             ),
@@ -442,35 +422,40 @@ class _TripTaxiRepliesScreenState extends State<TripTaxiRepliesScreen> {
     final canChat = whatsApp != null && ContactLauncher.tenDigits(whatsApp).isNotEmpty;
     final day = _c.firstPlanDayOf(e) ?? _day;
     final buttons = <Widget>[];
-    void add(IconData icon, String label, VoidCallback? onTap, {Color color = TripColors.accentDark}) =>
-        buttons.add(_ActionButton(icon: icon, label: label, color: color, onTap: busy ? null : onTap));
+    void add(Object icon, String label, VoidCallback? onTap, {Color color = RepliesTone.accent}) =>
+        buttons.add(TripActionChip(
+            iconAsset: icon is String ? icon : null,
+            icon: icon is IconData ? icon : null,
+            label: label,
+            color: color,
+            onTap: busy ? null : onTap));
     final live = status == TripDisplayStatus.asked ||
         status == TripDisplayStatus.fareSent ||
         status == TripDisplayStatus.bookedByYou ||
         status == TripDisplayStatus.confirmedByBoth;
-    if (live && canCall) add(Iconsax.call, TripStrings.call, () => ContactLauncher.call(phone));
+    if (live && canCall) add(Icons.call_rounded, TripStrings.call, () => ContactLauncher.call(phone));
     if (live && canChat) {
-      add(Iconsax.message, TripStrings.whatsApp,
+      add(TravelIcon.chat, TripStrings.whatsApp,
           () => ContactLauncher.whatsApp(whatsApp, message: _c.whatsAppMessage(day, TripLeadFormat.driver(e))),
-          color: AppColors.whatsApp);
+          color: RepliesTone.good);
     }
     switch (status) {
       case _ when _readOnly:
         break;
       case TripDisplayStatus.asked:
-        add(Iconsax.receipt_edit, TripStrings.iBooked, () => _book(e));
-        add(Iconsax.undo, TripStrings.withdraw, () => TripWithdrawSheet.show(context, enquiry: e), color: AppColors.error);
+        add(TravelIcon.checkout, TripStrings.iBooked, () => _book(e));
+        add(Icons.undo_rounded, TripStrings.withdraw, () => TripWithdrawSheet.show(context, enquiry: e), color: RepliesTone.bad);
       case TripDisplayStatus.fareSent:
-        add(Iconsax.eye, TripStrings.viewLead, () => TripDriverReplySheet.show(context, enquiry: e));
-        add(Iconsax.receipt_edit, TripStrings.iBooked, () => _book(e));
-        add(Iconsax.undo, TripStrings.withdraw, () => TripWithdrawSheet.show(context, enquiry: e), color: AppColors.error);
+        add(TravelIcon.note, TripStrings.viewLead, () => TripDriverReplySheet.show(context, enquiry: e));
+        add(TravelIcon.checkout, TripStrings.iBooked, () => _book(e));
+        add(Icons.undo_rounded, TripStrings.withdraw, () => TripWithdrawSheet.show(context, enquiry: e), color: RepliesTone.bad);
       case TripDisplayStatus.bookedByYou || TripDisplayStatus.confirmedByBoth:
-        add(Iconsax.edit_2, TripStrings.editBooking, () => _book(e));
-        add(Iconsax.close_circle, TripStrings.cancelBooking,
+        add(TravelIcon.note, TripStrings.editBooking, () => _book(e));
+        add(Icons.close_rounded, TripStrings.cancelBooking,
             () => TripCancelSheet.show(context, enquiry: e, ownerSide: false),
-            color: AppColors.error);
+            color: RepliesTone.bad);
       default:
-        if (status.isRed) add(Iconsax.car, TripStrings.askAnother, () => TripNavigation.openTaxi());
+        if (status.isRed) add(TravelIcon.taxi, TripStrings.askAnother, () => TripNavigation.openTaxi());
     }
     if (buttons.isEmpty) return const SizedBox.shrink();
     return LayoutBuilder(builder: (context, box) {
@@ -482,41 +467,5 @@ class _TripTaxiRepliesScreenState extends State<TripTaxiRepliesScreen> {
         children: [for (final b in buttons) SizedBox(width: half, child: b)],
       );
     });
-  }
-}
-
-class _ActionButton extends StatelessWidget {
-  const _ActionButton({required this.icon, required this.label, required this.color, required this.onTap});
-
-  final IconData icon;
-  final String label;
-  final Color color;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = onTap == null ? AppColors.textHint : color;
-    return OutlinedButton(
-      onPressed: onTap,
-      style: OutlinedButton.styleFrom(
-        minimumSize: const Size(0, 44),
-        padding: const EdgeInsets.symmetric(horizontal: 10),
-        side: BorderSide(color: c.withValues(alpha: 0.4)),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, size: 16, color: c),
-          const SizedBox(width: 6),
-          Flexible(
-            child: Text(label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w600, color: c)),
-          ),
-        ],
-      ),
-    );
   }
 }

@@ -1,5 +1,4 @@
 import 'dart:math';
-import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
@@ -7,7 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
-import '../config/app_colors.dart';
+import '../design/design.dart';
 import '../config/app_constants.dart';
 import '../controllers/location_controller.dart';
 import '../models/city_model.dart';
@@ -233,11 +232,11 @@ mixin AddListingLocationMixin<T extends StatefulWidget> on State<T> {
     canvas.drawOval(
       Rect.fromCenter(center: Offset(cx, h - 2), width: 14, height: 5),
       Paint()
-        ..color = Colors.black.withValues(alpha: 0.22)
+        ..color = UtilTokens.pinShadow.withValues(alpha: UtilTokens.pinShadowAlpha)
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3),
     );
 
-    final body = Paint()..color = const Color(0xFFE53935);
+    final body = Paint()..color = UtilTokens.pinBody;
     final path = Path()
       ..addOval(Rect.fromCircle(center: const Offset(cx, cy), radius: r))
       ..moveTo(cx - 8, cy + r - 4)
@@ -246,7 +245,7 @@ mixin AddListingLocationMixin<T extends StatefulWidget> on State<T> {
       ..close();
     canvas.drawPath(path, body);
 
-    canvas.drawCircle(const Offset(cx, cy), 6.5, Paint()..color = Colors.white);
+    canvas.drawCircle(const Offset(cx, cy), 6.5, Paint()..color = UtilTokens.pinDot);
 
     final img = await recorder.endRecording().toImage(w.toInt(), h.toInt());
     final bytes = (await img.toByteData(format: ui.ImageByteFormat.png))!;
@@ -341,7 +340,7 @@ mixin AddListingLocationMixin<T extends StatefulWidget> on State<T> {
       circleRadius: 8.0,
       circleColor: _style.userDotColorHex,
       circleOpacity: 1.0,
-      circleStrokeColor: '#FFFFFF',
+      circleStrokeColor: DesignHex.of(FitnessAppTheme.white),
       circleStrokeWidth: 2.5,
     ));
   }
@@ -435,14 +434,14 @@ mixin AddListingLocationMixin<T extends StatefulWidget> on State<T> {
 
   InputDecoration _addressInputDecoration(String hint, {required Widget prefixIcon, Widget? suffixIcon}) => InputDecoration(
     hintText: hint,
-    hintStyle: const TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textHint),
+    hintStyle: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 14, color: DesignColors.inputHint),
     prefixIcon: prefixIcon,
     suffixIcon: suffixIcon,
     filled: true,
-    fillColor: AppColors.surface,
+    fillColor: DesignColors.surface,
     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.divider)),
+    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: UtilTokens.fieldBorder)),
     focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: _style.accentColor, width: 1.5)),
   );
 
@@ -450,12 +449,12 @@ mixin AddListingLocationMixin<T extends StatefulWidget> on State<T> {
     margin: const EdgeInsets.only(bottom: 16),
     padding: const EdgeInsets.all(16),
     decoration: BoxDecoration(
-      color: Colors.white,
+      color: DesignColors.card,
       borderRadius: BorderRadius.circular(16),
-      boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 8, offset: const Offset(0, 2))],
+      boxShadow: DesignShadows.card,
     ),
     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text(title, style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+      Text(title, style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 14, fontWeight: FontWeight.w600, color: DesignColors.textStrong)),
       const SizedBox(height: 10),
       child,
     ]),
@@ -465,16 +464,16 @@ mixin AddListingLocationMixin<T extends StatefulWidget> on State<T> {
     width: double.infinity,
     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
     decoration: BoxDecoration(
-      color: AppColors.surface,
+      color: DesignColors.surface,
       borderRadius: BorderRadius.circular(12),
-      border: Border.all(color: AppColors.divider),
+      border: Border.all(color: UtilTokens.fieldBorder),
     ),
     child: Row(children: [
-      Icon(icon, color: AppColors.primaryLight, size: 18),
+      Icon(icon, color: UtilTokens.fieldIcon, size: 18),
       const SizedBox(width: 10),
-      Text(value, style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textDark)),
+      Text(value, style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 14, color: DesignColors.textStrong)),
       const Spacer(),
-      const Icon(Icons.gps_fixed_rounded, color: AppColors.success, size: 14),
+      const Icon(Icons.gps_fixed_rounded, color: DesignColors.success, size: 14),
     ]),
   );
 
@@ -487,7 +486,7 @@ mixin AddListingLocationMixin<T extends StatefulWidget> on State<T> {
       title: _style.pinStepTitle,
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
-          const Icon(Icons.info_outline_rounded, color: AppColors.primaryLight, size: 15),
+          const Icon(Icons.info_outline_rounded, color: UtilTokens.fieldIcon, size: 15),
           const SizedBox(width: 6),
           Expanded(child: Text(
             _userLocation != null
@@ -495,7 +494,7 @@ mixin AddListingLocationMixin<T extends StatefulWidget> on State<T> {
                     ? 'Pinned — tap inside your district to adjust'
                     : 'Tap inside your district to pin your ${_style.pinHintNoun}')
                 : 'Waiting for your GPS location...',
-            style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight),
+            style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, color: DesignColors.textSecondary),
           )),
           if (_isFetchingBoundary) ...[
             const SizedBox(width: 6),
@@ -511,14 +510,14 @@ mixin AddListingLocationMixin<T extends StatefulWidget> on State<T> {
             borderRadius: BorderRadius.circular(14),
             child: Container(
               height: 340,
-              color: AppColors.surface,
+              color: DesignColors.surface,
               child: Center(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     CircularProgressIndicator(color: _style.accentColor, strokeWidth: 2),
                     const SizedBox(height: 14),
-                    const Text('Getting your location...', style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textLight)),
+                    const Text('Getting your location...', style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 13, color: DesignColors.textSecondary)),
                   ],
                 ),
               ),
@@ -585,8 +584,8 @@ mixin AddListingLocationMixin<T extends StatefulWidget> on State<T> {
                       child: Container(
                         width: 38, height: 38,
                         decoration: BoxDecoration(
-                          color: Colors.white, shape: BoxShape.circle,
-                          boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 8, offset: const Offset(0, 2))],
+                          color: UtilTokens.mapButtonSurface, shape: BoxShape.circle,
+                          boxShadow: DesignShadows.tile,
                         ),
                         child: Icon(Iconsax.location, color: _style.accentColor, size: 18),
                       ),
@@ -601,14 +600,14 @@ mixin AddListingLocationMixin<T extends StatefulWidget> on State<T> {
           Padding(
             padding: const EdgeInsets.only(top: 10),
             child: Row(children: [
-              const Icon(Icons.check_circle_rounded, color: AppColors.success, size: 16),
+              const Icon(Icons.check_circle_rounded, color: DesignColors.success, size: 16),
               const SizedBox(width: 6),
               Text(
                 '${_selectedLocation!.latitude.toStringAsFixed(5)}, ${_selectedLocation!.longitude.toStringAsFixed(5)}',
-                style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.success, fontWeight: FontWeight.w500),
+                style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, color: DesignColors.success, fontWeight: FontWeight.w500),
               ),
               const Spacer(),
-              const Text('© OpenStreetMap contributors', style: TextStyle(fontFamily: 'Poppins', fontSize: 9, color: AppColors.textLight)),
+              const Text('© OpenStreetMap contributors', style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 11, color: DesignColors.textSecondary)),
             ]),
           ),
       ]),
@@ -622,11 +621,11 @@ mixin AddListingLocationMixin<T extends StatefulWidget> on State<T> {
       _sectionCard(
         title: 'District & City',
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const Text('District *', style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.textMedium)),
+          const Text('District *', style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, fontWeight: FontWeight.w500, color: UtilTokens.fieldLabel)),
           const SizedBox(height: 6),
           _readOnlyField(Iconsax.location, _resolvedDistrict?.name ?? (_isResolvingDistrict ? 'Detecting…' : '—')),
           const SizedBox(height: 16),
-          const Text('City / Area (Optional)', style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.textMedium)),
+          const Text('City / Area (Optional)', style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, fontWeight: FontWeight.w500, color: UtilTokens.fieldLabel)),
           const SizedBox(height: 6),
           _readOnlyField(Iconsax.map, _resolvedCity?.name ?? (_isResolvingDistrict ? 'Detecting…' : '—')),
         ]),
@@ -637,10 +636,10 @@ mixin AddListingLocationMixin<T extends StatefulWidget> on State<T> {
           controller: _addressCtrl,
           focusNode: _addressFocusNode,
           inputFormatters: noEmojiInputFormatters,
-          style: const TextStyle(fontFamily: 'Poppins', fontSize: 14),
+          style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 14),
           decoration: _addressInputDecoration(
             'Street, landmark, nearby place...',
-            prefixIcon: Icon(_style.addressPrefixIcon, color: AppColors.primaryLight, size: 18),
+            prefixIcon: Icon(_style.addressPrefixIcon, color: UtilTokens.fieldIcon, size: 18),
             suffixIcon: _isResolvingDistrict
                 ? Padding(
                     padding: const EdgeInsets.all(14),

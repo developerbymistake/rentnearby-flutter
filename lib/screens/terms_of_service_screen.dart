@@ -1,23 +1,14 @@
 import 'package:flutter/material.dart';
-import '../config/app_colors.dart';
+import '../design/design.dart';
 
 class TermsOfServiceScreen extends StatelessWidget {
   const TermsOfServiceScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.scaffoldBg,
-      appBar: AppBar(
-        backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
-        title: const Text('Terms of Service',
-            style: TextStyle(fontFamily: 'Poppins', fontSize: 17, fontWeight: FontWeight.w600)),
-        elevation: 0,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+    return GateLegalPage(
+      title: 'Terms of Service',
+      children: [
           _heading('Terms of Service'),
           _updated('Last updated: November 6, 2026'),
           const SizedBox(height: 12),
@@ -49,8 +40,7 @@ class TermsOfServiceScreen extends StatelessWidget {
           _sectionBody('Enquiries, Bookings and Payments', 'Enquiries, offers, replies and booking details exchanged in Bakhli are communications between users. A booking or any other arrangement is made only between the traveller and the host or driver concerned.\n\nAny payment for a stay, a ride or a job, including any advance, is made directly between the users concerned, outside Bakhli. Bakhli is not a party to such payments and is not responsible for any payment, refund, cancellation or dispute between users.\n\nIf you enter another person\'s details, such as a host\'s phone number, you must have the right to share them.'),
           _sectionBody('Responsibility of Taxi Drivers and Stay Owners', 'If you register as a Taxi Driver or a Stay Owner, all responsibility for the truth, validity and legality of the identity, licence, registration, tax and any other details you give, and for the vehicle or stay itself, including its documents, permits, fitness, insurance and taxes, the security and well-being of passengers and guests, any payment you ask for or receive, and compliance with every applicable law, lies fully and only with you.\n\nBakhli, its owner, its developers and its administrators carry no responsibility for any of these details, the vehicle or the stay, and are not a party to any ride, stay or other arrangement between you and another user.\n\nYou agree to indemnify and hold harmless Bakhli, its owner, its developers and its administrators against every claim, fine, penalty, loss or expense arising from these details, the vehicle, the stay, or any ride or stay you provide.\n\nBakhli may reject, hide or remove your listing, and may suspend your account, where any of these details are missing, false or no longer valid. Plan fees already paid are not refunded in such cases.'),
           _sectionBody('Check Before You Pay or Travel', 'Bakhli strongly encourages every user to check things personally. Check the stay, the host, the driver, the vehicle and the fare before you pay any advance or travel. Check the employer and the job before accepting it. Do not make advance payments unless you are sure.\n\nAny decision to visit, meet, travel, pay, take a job or enter into an arrangement is made entirely at your own discretion and risk.'),
-          _sectionBody('Plans and Subscriptions', 'Stay Owners and Taxi Drivers may choose a paid plan with the features shown in the app.'),
-          _section('', [
+          _sectionBodyPoints('Plans and Subscriptions', 'Stay Owners and Taxi Drivers may choose a paid plan with the features shown in the app.', [
             'Paid plans are subscriptions bought through the app store. The price, the billing period and any offer are shown before you buy.',
             'A subscription renews automatically at the end of each billing period until you cancel it. You can cancel at any time in the subscription settings of the app store you used. Cancelling stops future renewals, and your plan stays active until the end of the period you have already paid for.',
             'A trial may be offered to eligible users, as shown at the time of purchase. If you do not cancel before the trial ends, the subscription starts at the listed price.',
@@ -74,80 +64,22 @@ class TermsOfServiceScreen extends StatelessWidget {
           _sectionBody('Changes to These Terms', 'These Terms of Service may be updated from time to time. The revised version will be available within the app and on our website along with an updated date. Continued use of Bakhli following any update shall be considered acceptance of the revised terms.'),
           _sectionBody('Contact Us', 'For any questions related to these Terms, please write to us:\n\nEmail: supportbakhli@gmail.com'),
           const SizedBox(height: 32),
-          Center(
-            child: Text('© 2026 Bakhli. All rights reserved.',
-                style: const TextStyle(
-                    fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
-          ),
+          const GateLegalCaption('© 2026 Bakhli. All rights reserved.', center: true),
           const SizedBox(height: 20),
-        ]),
-      ),
+      ],
     );
   }
 
-  Widget _heading(String text) => Text(text,
-      style: const TextStyle(
-          fontFamily: 'Poppins', fontSize: 20, fontWeight: FontWeight.w700, color: AppColors.textDark));
+  Widget _heading(String text) => GateLegalHeading(text);
 
-  Widget _updated(String text) => Padding(
-        padding: const EdgeInsets.only(top: 4, bottom: 8),
-        child: Text(text,
-            style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textLight)),
-      );
+  Widget _updated(String text) => GateLegalCaption(text);
 
-  Widget _body(String text) => Padding(
-        padding: const EdgeInsets.only(bottom: 16),
-        child: Text(text,
-            style: const TextStyle(
-                fontFamily: 'Poppins', fontSize: 14, color: AppColors.textMedium, height: 1.6)),
-      );
+  Widget _body(String text) => GateLegalBody(text);
 
-  Widget _sectionBody(String title, String body) => Padding(
-        padding: const EdgeInsets.only(bottom: 20),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(title,
-              style: const TextStyle(
-                  fontFamily: 'Poppins',
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textDark)),
-          const SizedBox(height: 6),
-          Text(body,
-              style: const TextStyle(
-                  fontFamily: 'Poppins', fontSize: 14, color: AppColors.textMedium, height: 1.6)),
-        ]),
-      );
+  Widget _sectionBody(String title, String body) => GateLegalSection(title: title, body: body);
 
-  Widget _section(String title, List<String> points) => Padding(
-        padding: const EdgeInsets.only(bottom: 20),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          if (title.isNotEmpty) ...[
-            Text(title,
-                style: const TextStyle(
-                    fontFamily: 'Poppins',
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textDark)),
-            const SizedBox(height: 8),
-          ],
-          ...points.map((p) => Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  const Padding(
-                    padding: EdgeInsets.only(top: 6),
-                    child: CircleAvatar(radius: 3, backgroundColor: AppColors.primaryLight),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(p,
-                        style: const TextStyle(
-                            fontFamily: 'Poppins',
-                            fontSize: 14,
-                            color: AppColors.textMedium,
-                            height: 1.6)),
-                  ),
-                ]),
-              )),
-        ]),
-      );
+  Widget _section(String title, List<String> points) => GateLegalSection(title: title, bullets: points);
+
+  Widget _sectionBodyPoints(String title, String body, List<String> points) =>
+      GateLegalSection(title: title, body: body, bullets: points);
 }

@@ -1,13 +1,10 @@
+import 'stay_page_header.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:iconsax/iconsax.dart';
-import '../../../config/app_colors.dart';
-import '../../../config/app_insets.dart';
 import '../../../models/browse_item.dart';
 import '../../../utils/app_toast.dart';
-import '../../../widgets/app_loading_overlay.dart';
-import '../../../widgets/gradient_button.dart';
+import '../../../design/design.dart';
 import 'dashed_add_row.dart';
 import 'stay_option_grid.dart';
 import 'stay_option_sets.dart';
@@ -28,8 +25,10 @@ class StayRoomsScreen extends StatefulWidget {
   State<StayRoomsScreen> createState() => _StayRoomsScreenState();
 }
 
-class _StayRoomsScreenState extends State<StayRoomsScreen> {
+class _StayRoomsScreenState extends State<StayRoomsScreen> with TickerProviderStateMixin {
   final _ctrl = StaySetupController.ensure();
+  late final AnimationController _anim = SetupKit.controller(this);
+  int _formSeq = 0;
   final _priceCtrl = TextEditingController();
   final _priceFocusNode = FocusNode();
   final List<_RoomDraft> _rooms = [];
@@ -50,10 +49,14 @@ class _StayRoomsScreenState extends State<StayRoomsScreen> {
       _rooms.add(_RoomDraft(id: r.id, name: r.roomName, price: r.pricePerNight, guests: r.maxGuests, meals: r.meals));
     }
     _formOpen = _rooms.length < _max;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) SetupKit.play(_anim, context);
+    });
   }
 
   @override
   void dispose() {
+    _anim.dispose();
     _priceCtrl.dispose();
     _priceFocusNode.dispose();
     super.dispose();
@@ -92,7 +95,7 @@ class _StayRoomsScreenState extends State<StayRoomsScreen> {
       return false;
     }
     final price = int.tryParse(priceText) ?? 0;
-    if (price <StayOptionSets.minPrice || price > StayOptionSets.maxPrice) {
+    if (price < StayOptionSets.minPrice || price > StayOptionSets.maxPrice) {
       AppToast.error('Price per night must be between ₹100 and ₹99,00,000');
       _priceFocusNode.requestFocus();
       return false;
@@ -128,7 +131,10 @@ class _StayRoomsScreenState extends State<StayRoomsScreen> {
       }
       if (!_commitForm()) return;
     }
-    setState(() => _formOpen = true);
+    setState(() {
+      _formOpen = true;
+      _formSeq++;
+    });
   }
 
   void _editRoom(int i) {
@@ -145,6 +151,7 @@ class _StayRoomsScreenState extends State<StayRoomsScreen> {
       _guests = r.guests;
       _meals = r.meals;
       _formOpen = true;
+      _formSeq++;
       _dirty = true;
     });
   }
@@ -154,7 +161,10 @@ class _StayRoomsScreenState extends State<StayRoomsScreen> {
       _rooms.removeAt(i);
       final at = _editingIndex;
       if (at != null && at > i) _editingIndex = at - 1;
-      if (!_formOpen && _rooms.isEmpty) _formOpen = true;
+      if (!_formOpen && _rooms.isEmpty) {
+        _formOpen = true;
+        _formSeq++;
+      }
       _dirty = true;
     });
   }
@@ -163,7 +173,10 @@ class _StayRoomsScreenState extends State<StayRoomsScreen> {
     if (!_commitForm()) return;
     if (_rooms.isEmpty) {
       AppToast.error('Add at least one room');
-      setState(() => _formOpen = true);
+      setState(() {
+        _formOpen = true;
+        _formSeq++;
+      });
       return;
     }
     final ok = await _ctrl.saveRooms([
@@ -178,33 +191,17 @@ class _StayRoomsScreenState extends State<StayRoomsScreen> {
   void _confirmDiscard() {
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Discard changes?',
-            style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, color: AppColors.textDark)),
-        content: const Text('Unsaved changes will be lost.',
-            style: TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textMedium)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Keep Editing',
-                style: TextStyle(fontFamily: 'Poppins', color: StayColors.accentDark, fontWeight: FontWeight.w600)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.error,
-              foregroundColor: Colors.white,
-              minimumSize: Size.zero,
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            ),
-            onPressed: () {
-              Navigator.pop(context);
-              Get.back();
-            },
-            child: const Text('Discard', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
-          ),
-        ],
+      builder: (_) => StayConfirmDialog(
+        title: 'Discard changes?',
+        body: 'Unsaved changes will be lost.',
+        cancelLabel: 'Keep Editing',
+        confirmLabel: 'Discard',
+        destructive: true,
+        onCancel: () => Navigator.pop(context),
+        onConfirm: () {
+          Navigator.pop(context);
+          Get.back();
+        },
       ),
     );
   }
@@ -225,155 +222,144 @@ class _StayRoomsScreenState extends State<StayRoomsScreen> {
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop) _onBack();
       },
-      child: Stack(children: [
-        Scaffold(
-          backgroundColor: AppColors.scaffoldBg,
-          body: Column(children: [
-            _header('Rooms', _onBack),
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.all(16),
-                children: [
-                  for (var i = 0; i < _rooms.length; i++) _summaryCard(i),
-                  if (_formOpen) _form(),
-                  _addRow(),
-                ],
-              ),
+      child: Stack(
+        children: [
+          Scaffold(
+            backgroundColor: DesignColors.scaffold,
+            body: Column(
+              children: [
+                StayPageHeader(
+                  title: 'Rooms',
+                  onBack: _onBack,
+                  asset: SetupAssets.bed,
+                  animation: templateInterval(_anim, 0, 2),
+                ),
+                Expanded(
+                  child: ListView(
+                    padding: const EdgeInsets.all(16),
+                    children: [
+                      for (var i = 0; i < _rooms.length; i++)
+                        TemplateEntranceOnce(key: ObjectKey(_rooms[i]), child: _summaryCard(i)),
+                      if (_formOpen) TemplateEntranceOnce(key: ValueKey('form-$_formSeq'), child: _form()),
+                      TemplateEntranceOnce(child: _addRow()),
+                    ],
+                  ),
+                ),
+                FadeTransition(opacity: templateInterval(_anim, 1, 2), child: _footer()),
+              ],
             ),
-            _footer(),
-          ]),
-        ),
-        Obx(() => _ctrl.isSaving.value
-            ? AppLoadingOverlay.stackChild(message: 'Saving rooms...', indicatorColor: StayColors.accent)
-            : const SizedBox.shrink()),
-      ]),
+          ),
+          Obx(() => _ctrl.isSaving.value ? const StayBusy(message: 'Saving rooms...') : const SizedBox.shrink()),
+        ],
+      ),
     );
   }
-
-  Widget _header(String title, VoidCallback onBack) => Container(
-        decoration: const BoxDecoration(gradient: StayColors.gradient),
-        child: SafeArea(
-          bottom: false,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(4, 8, 20, 20),
-            child: Row(children: [
-              IconButton(onPressed: onBack, icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white)),
-              Text(title,
-                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 18, fontWeight: FontWeight.w600, color: Colors.white)),
-            ]),
-          ),
-        ),
-      );
 
   Widget _summaryCard(int i) {
     final r = _rooms[i];
     final at = _editingIndex;
     final number = at != null && i >= at ? i + 2 : i + 1;
     final name = r.name.isNotEmpty ? r.name : 'Room $number';
-    final text = '$name · ${BrowseItem.inr(r.price)} / night · '
+    final text =
+        '$name · ${BrowseItem.inr(r.price)} / night · '
         '${StayOptionSets.guestsLabel(r.guests)} guests · ${StayOptionSets.labelOf(StayOptionSets.meals, r.meals)}';
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.fromLTRB(14, 2, 2, 2),
+      padding: const EdgeInsets.fromLTRB(12, 10, 6, 10),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.divider),
-        boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 8, offset: const Offset(0, 2))],
+        color: DesignColors.surface,
+        borderRadius: TripKit.cardRadiusSmall,
+        boxShadow: ShadowTokens.elev1,
       ),
-      child: Row(children: [
-        Expanded(
-          child: Text(text,
-              style: const TextStyle(fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w500, color: AppColors.textDark)),
-        ),
-        _squareAction(Iconsax.edit_2, StayColors.surface, StayColors.accent, () => _editRoom(i)),
-        _squareAction(Iconsax.close_circle, AppColors.errorSurface, AppColors.errorText, () => _removeRoom(i)),
-      ]),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: SetupKit.sky,
+              boxShadow: ShadowTokens.elev1,
+            ),
+            child: Image.asset(SetupAssets.bed),
+          ),
+          const SizedBox(width: 12),
+          Expanded(child: Text(text, style: TripKit.text(12.5).copyWith(letterSpacing: 0.2))),
+          _circleAction(Icons.edit_outlined, PickKit.stayTint, DesignColors.primary, () => _editRoom(i)),
+          _circleAction(Icons.close_rounded, PickKit.badTint, PickKit.bad, () => _removeRoom(i)),
+        ],
+      ),
     );
   }
 
-  Widget _squareAction(IconData icon, Color bg, Color fg, VoidCallback onTap) => InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(10),
-        child: Padding(
-          padding: const EdgeInsets.all(9),
-          child: Container(
-            width: 26,
-            height: 26,
-            decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(8)),
-            child: Icon(icon, size: 14, color: fg),
-          ),
-        ),
-      );
+  Widget _circleAction(IconData icon, Color bg, Color fg, VoidCallback onTap) => InkWell(
+    onTap: onTap,
+    borderRadius: BorderRadius.circular(24),
+    child: Padding(
+      padding: const EdgeInsets.all(8),
+      child: Container(
+        width: 32,
+        height: 32,
+        decoration: BoxDecoration(color: bg, shape: BoxShape.circle),
+        child: Icon(icon, size: 16, color: fg),
+      ),
+    ),
+  );
 
   Widget _label(String text, {bool first = false}) => Padding(
-        padding: EdgeInsets.only(top: first ? 0 : 14, bottom: 8),
-        child: Text(text,
-            style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.textMedium)),
-      );
+    padding: EdgeInsets.only(top: first ? 0 : 14, bottom: 8),
+    child: Text(text, style: SetupKit.label()),
+  );
 
   Widget _form() {
     final number = (_editingIndex ?? _rooms.length) + 1;
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 8, offset: const Offset(0, 2))],
-      ),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('Room $number',
-            style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-        const SizedBox(height: 10),
-        _label('Room Type *', first: true),
-        _roomTypeField(),
-        _label('Price per Night (₹) *'),
-        TextFormField(
-          controller: _priceCtrl,
-          focusNode: _priceFocusNode,
-          keyboardType: TextInputType.number,
-          inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(7)],
-          onChanged: (_) => _dirty = true,
-          style: const TextStyle(fontFamily: 'Poppins', fontSize: 14),
-          decoration: InputDecoration(
-            hintText: 'e.g. 1500',
-            hintStyle: const TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textHint),
-            prefixText: '₹ ',
-            prefixStyle: const TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textDark, fontWeight: FontWeight.w500),
-            filled: true,
-            fillColor: StayColors.surface,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.divider)),
-            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: StayColors.accent, width: 1.5)),
+    return SectionTile(
+ tone: KitTone.stay,
+ margin: const EdgeInsets.only(bottom: 16),
+      title: 'Room $number',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _label('Room Type *', first: true),
+          _roomTypeField(),
+          _label('Price per Night (₹) *'),
+          TextFormField(
+            controller: _priceCtrl,
+            focusNode: _priceFocusNode,
+            keyboardType: TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(7)],
+            onChanged: (_) => _dirty = true,
+            cursorColor: DesignColors.primary,
+            style: SetupKit.fieldText(),
+            decoration: SetupKit.input(hint: 'e.g. 1500', prefix: '₹ '),
           ),
-        ),
-        _label('Max Guests *'),
-        StayOptionGrid(
-          crossAxisCount: 4,
-          childAspectRatio: 1.9,
-          labels: StayOptionSets.maxGuests.map(StayOptionSets.guestsLabel).toList(),
-          accent: StayColors.accent,
-          isActive: (i) => _guests == StayOptionSets.maxGuests[i],
-          onTap: (i) => setState(() {
-            _guests = StayOptionSets.maxGuests[i];
-            _dirty = true;
-          }),
-        ),
-        _label('Meals *'),
-        StayOptionGrid(
-          crossAxisCount: 3,
-          childAspectRatio: 2.6,
-          labels: StayOptionSets.meals.map((o) => o.label).toList(),
-          accent: StayColors.accent,
-          isActive: (i) => _meals == StayOptionSets.meals[i].value,
-          onTap: (i) => setState(() {
-            _meals = StayOptionSets.meals[i].value;
-            _dirty = true;
-          }),
-        ),
-      ]),
+          _label('Max Guests *'),
+          StayOptionGrid(
+            crossAxisCount: 4,
+            childAspectRatio: 1.9,
+            labels: StayOptionSets.maxGuests.map(StayOptionSets.guestsLabel).toList(),
+            accent: PickKit.stay,
+            isActive: (i) => _guests == StayOptionSets.maxGuests[i],
+            onTap: (i) => setState(() {
+              _guests = StayOptionSets.maxGuests[i];
+              _dirty = true;
+            }),
+          ),
+          _label('Meals *'),
+          StayOptionGrid(
+            crossAxisCount: 3,
+            childAspectRatio: 2.6,
+            labels: StayOptionSets.meals.map((o) => o.label).toList(),
+            accent: PickKit.stay,
+            isActive: (i) => _meals == StayOptionSets.meals[i].value,
+            onTap: (i) => setState(() {
+              _meals = StayOptionSets.meals[i].value;
+              _dirty = true;
+            }),
+          ),
+        ],
+      ),
     );
   }
 
@@ -384,43 +370,40 @@ class _StayRoomsScreenState extends State<StayRoomsScreen> {
       counter: full ? '$_count of $_max · limit reached' : '$_count of $_max',
       enabled: !full,
       onTap: _addAnother,
-      accent: StayColors.accent,
+      accent: PickKit.stay,
     );
   }
 
   Widget _roomTypeField() {
     final value = _roomName == null ? null : StayOptionSets.labelOf(StayOptionSets.roomNames, _roomName);
+    const radius = BorderRadius.all(Radius.circular(12));
     return Material(
-      color: StayColors.surface,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: const BorderSide(color: AppColors.divider),
-      ),
-      clipBehavior: Clip.antiAlias,
+      color: DesignColors.scaffold,
+      borderRadius: radius,
       child: InkWell(
+        borderRadius: radius,
         onTap: _pickRoomType,
         child: Container(
           height: 50,
           padding: const EdgeInsets.symmetric(horizontal: 14),
-          child: Row(children: [
-            const Icon(Iconsax.lamp_on, size: 18, color: StayColors.accent),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                value ?? 'Select',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontFamily: 'Poppins',
-                  fontSize: 14,
-                  fontWeight: value == null ? FontWeight.w400 : FontWeight.w500,
-                  color: value == null ? AppColors.textHint : AppColors.textDark,
+          child: Row(
+            children: [
+              Image.asset(SetupAssets.bed, width: 22, height: 22),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  value ?? 'Select',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: value == null
+                      ? TripKit.text(14, weight: FontWeight.w400, color: DesignColors.textMuted)
+                      : SetupKit.fieldText(),
                 ),
               ),
-            ),
-            const SizedBox(width: 8),
-            const Icon(Iconsax.arrow_down_1, size: 18, color: StayColors.accentDark),
-          ]),
+              const SizedBox(width: 8),
+              const Icon(Icons.keyboard_arrow_down_rounded, size: 22, color: DesignColors.primary),
+            ],
+          ),
         ),
       ),
     );
@@ -432,61 +415,69 @@ class _StayRoomsScreenState extends State<StayRoomsScreen> {
       for (final o in StayOptionSets.roomNames)
         if (o.value == _roomName || !_rooms.any((r) => r.name == o.value)) o,
     ];
-    final picked = await showModalBottomSheet<String>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
+    final picked = await SetupKit.sheet<String>(
+      context,
       builder: (sheetCtx) => ConstrainedBox(
         constraints: BoxConstraints(maxHeight: MediaQuery.of(sheetCtx).size.height * 0.7),
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Container(
-            width: 40,
-            height: 4,
-            margin: const EdgeInsets.only(top: 12, bottom: 12),
-            decoration: BoxDecoration(color: AppColors.divider, borderRadius: BorderRadius.circular(2)),
-          ),
-          const Padding(
-            padding: EdgeInsets.fromLTRB(20, 0, 20, 8),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Text('Room Type',
-                  style: TextStyle(fontFamily: 'Poppins', fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textDark)),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SetupKit.grabber(),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text('Room Type', style: TripKit.text(18)),
+              ),
             ),
-          ),
-          Flexible(
-            child: ListView.separated(
-              shrinkWrap: true,
-              padding: EdgeInsets.only(bottom: AppInsets.bottomViewPadding(sheetCtx) + 12),
-              itemCount: options.length,
-              separatorBuilder: (_, _) => const Divider(height: 1, indent: 20, endIndent: 20, color: AppColors.divider),
-              itemBuilder: (_, i) {
-                final o = options[i];
-                final selected = o.value == _roomName;
-                return InkWell(
-                  onTap: () => Navigator.pop(sheetCtx, o.value),
-                  child: Container(
-                    height: 48,
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: Row(children: [
-                      Expanded(
-                        child: Text(o.label,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                                fontFamily: 'Poppins',
-                                fontSize: 14,
-                                fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
-                                color: selected ? StayColors.accent : AppColors.textDark)),
+            Flexible(
+              child: SingleChildScrollView(
+                padding: EdgeInsets.only(bottom: MediaQuery.viewPaddingOf(sheetCtx).bottom + 12),
+                child: TemplateStagger(
+                  children: [
+                    for (var i = 0; i < options.length; i++)
+                      SizedBox(
+                        width: double.infinity,
+                        child: Column(
+                          children: [
+                            InkWell(
+                              onTap: () => Navigator.pop(sheetCtx, options[i].value),
+                              child: Container(
+                                height: 48,
+                                padding: const EdgeInsets.symmetric(horizontal: 20),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        options[i].label,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TripKit.text(
+                                          14,
+                                          weight: options[i].value == _roomName ? FontWeight.w700 : FontWeight.w400,
+                                          color: options[i].value == _roomName
+                                              ? DesignColors.primary
+                                              : DesignColors.textStrong,
+                                        ),
+                                      ),
+                                    ),
+                                    if (options[i].value == _roomName)
+                                      const Icon(Icons.check_rounded, size: 20, color: DesignColors.primary),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            if (i < options.length - 1)
+                              const Divider(height: 1, indent: 20, endIndent: 20, color: DesignColors.dividerSoft),
+                          ],
+                        ),
                       ),
-                      if (selected) const Icon(Iconsax.tick_circle, size: 18, color: StayColors.accent),
-                    ]),
-                  ),
-                );
-              },
+                  ],
+                ),
+              ),
             ),
-          ),
-        ]),
+          ],
+        ),
       ),
     );
     if (picked == null || !mounted || picked == _roomName) return;
@@ -496,15 +487,14 @@ class _StayRoomsScreenState extends State<StayRoomsScreen> {
     });
   }
 
-  Widget _footer() => Container(
-        color: Colors.white,
-        padding: EdgeInsets.fromLTRB(20, 12, 20, AppInsets.bottomViewPadding(context) + 12),
-        child: Obx(() => GradientButton(
-              onPressed: _ctrl.isSaving.value ? null : _save,
-              isLoading: _ctrl.isSaving.value,
-              label: 'Save',
-              gradient: StayColors.gradient,
-              shadowColor: StayColors.accent,
-            )),
-      );
+  Widget _footer() => StayFooter(
+    child: Obx(
+      () => PrimaryButton(
+ tone: KitTone.stay,
+        onPressed: _ctrl.isSaving.value ? null : _save,
+        loading: _ctrl.isSaving.value,
+        label: 'Save',
+      ),
+    ),
+  );
 }

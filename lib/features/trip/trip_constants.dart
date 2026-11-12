@@ -8,7 +8,7 @@ class TripConstants {
   static const int spotsPageSize = 20;
   static const int travelWholeDayMinutes = 450;
   static const int maxSpots = 60;
-  static const int planVersion = 6;
+  static const int planVersion = 7;
   static const int maxDismissed = 100;
   static const int maxLegs = 4;
   static const int citiesPageSize = 200;
@@ -20,7 +20,8 @@ class TripConstants {
   static const int maxStartDaysAhead = 365;
   static const int noteMax = 300;
   static const int defaultAdults = 2;
-  static const int enquiryHours = 48;
+  static const int enquiryHours = 72;
+  static const int maxShortlist = 3;
   static const int replyBeforeHours = 12;
   static const int floorHours = 2;
   static const int offerHours = 24;

@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:iconsax/iconsax.dart';
-import '../../../config/app_colors.dart';
-import '../taxi_option_sets.dart';
+import '../../../design/design.dart';
 import '../ways/taxi_ways_strings.dart';
 
 class TaxiPopularRoutesNudge extends StatelessWidget {
@@ -11,38 +9,48 @@ class TaxiPopularRoutesNudge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: FitnessAppTheme.white,
+        borderRadius: PickKit.cardRadius,
+        boxShadow: PickKit.greyShadow(),
+      ),
       child: Material(
-        color: TaxiColors.surface,
-        borderRadius: BorderRadius.circular(12),
+        color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: PickKit.cardRadius,
           child: ConstrainedBox(
             constraints: const BoxConstraints(minHeight: 48),
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
+              padding: const EdgeInsets.fromLTRB(12, 12, 20, 12),
               child: Row(children: [
-                const Icon(Iconsax.routing_2, size: 18, color: TaxiColors.accentDark),
-                const SizedBox(width: 10),
+                Container(
+                  width: 48,
+                  height: 48,
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: PickKit.taxiGradient,
+                    boxShadow: PickKit.shadow(PickKit.taxiDark),
+                  ),
+                  child: Image.asset(TravelIcon.route),
+                ),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Text(TaxiWaysStrings.nudgeTitle,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                            fontFamily: 'Poppins',
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: TaxiColors.accentDark)),
+                        style: TripKit.text(14).copyWith(letterSpacing: 0.2)),
                     Text(TaxiWaysStrings.nudgeBody,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textMedium)),
+                        style: TripKit.text(12, color: FitnessAppTheme.grey)),
                   ]),
                 ),
-                const Icon(Iconsax.arrow_right_3, size: 16, color: TaxiColors.accentDark),
+                const Icon(Icons.chevron_right_rounded, size: 20, color: FitnessAppTheme.nearlyDarkBlue),
               ]),
             ),
           ),

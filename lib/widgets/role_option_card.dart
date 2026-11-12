@@ -1,22 +1,31 @@
 import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
-import '../config/app_colors.dart';
-import '../config/app_shadows.dart';
 import '../config/user_roles.dart';
+import '../design/design.dart';
 import '../models/role_model.dart';
 
 class RoleVisuals {
   const RoleVisuals._();
 
+  static const String _dir = 'assets/images/design/travel3d/';
+
   static const LinearGradient seekerGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [AppColors.accentLight, AppColors.accent],
+    colors: [TravelPalette.skyStart, TravelPalette.skyEnd],
   );
 
-  static const LinearGradient stayGradient = AppColors.stayGradient;
+  static const LinearGradient stayGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [TravelPalette.sunriseStart, TravelPalette.sunriseEnd],
+  );
 
-  static const LinearGradient taxiGradient = AppColors.taxiGradient;
+  static const LinearGradient taxiGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [TravelPalette.roseStart, TravelPalette.roseEnd],
+  );
 
   static IconData icon(String key) => switch (key) {
         UserRoleKeys.stayOwner => Iconsax.building_4,
@@ -24,16 +33,34 @@ class RoleVisuals {
         _ => Iconsax.search_normal,
       };
 
-  static LinearGradient gradient(String key) => switch (key) {
-        UserRoleKeys.stayOwner => stayGradient,
-        UserRoleKeys.taxiDriver => taxiGradient,
-        _ => seekerGradient,
+  static String iconAsset(String key) => switch (key) {
+        UserRoleKeys.stayOwner => '${_dir}hotel.png',
+        UserRoleKeys.taxiDriver => '${_dir}taxi.png',
+        _ => '${_dir}backpack.png',
       };
 
+  static Color start(String key) => switch (key) {
+        UserRoleKeys.stayOwner => TravelPalette.sunriseStart,
+        UserRoleKeys.taxiDriver => TravelPalette.roseStart,
+        _ => TravelPalette.skyStart,
+      };
+
+  static Color end(String key) => switch (key) {
+        UserRoleKeys.stayOwner => TravelPalette.sunriseEnd,
+        UserRoleKeys.taxiDriver => TravelPalette.roseEnd,
+        _ => TravelPalette.skyEnd,
+      };
+
+  static LinearGradient gradient(String key) => LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [start(key), end(key)],
+      );
+
   static Color accent(String key) => switch (key) {
-        UserRoleKeys.stayOwner => AppColors.stay,
-        UserRoleKeys.taxiDriver => AppColors.taxi,
-        _ => AppColors.accent,
+        UserRoleKeys.stayOwner => TravelPalette.sunriseStart,
+        UserRoleKeys.taxiDriver => TravelPalette.roseEnd,
+        _ => TravelPalette.skyEnd,
       };
 
   static String displayName(String key) => switch (key) {
@@ -57,86 +84,53 @@ class RoleOptionCard extends StatelessWidget {
     this.onTap,
   });
 
+  static KitTone toneOf(String key) => switch (key) {
+        UserRoleKeys.stayOwner => KitTone.stayOwner,
+        UserRoleKeys.taxiDriver => KitTone.taxiDriver,
+        _ => KitTone.seeker,
+      };
+
   @override
   Widget build(BuildContext context) {
-    final accent = RoleVisuals.accent(role.key);
-    final borderColor = selected ? accent : AppColors.divider;
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        width: double.infinity,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: borderColor, width: 2),
-          boxShadow: selected
-              ? AppShadows.premium(
-                  accent,
-                  alpha: 0.14,
-                  blur: 20,
-                  offset: const Offset(0, 8),
-                )
-              : null,
-        ),
-        child: Stack(
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  Container(
-                    width: 52,
-                    height: 52,
-                    decoration: BoxDecoration(
-                      gradient: RoleVisuals.gradient(role.key),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Icon(RoleVisuals.icon(role.key), color: Colors.white, size: 24),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(role.name,
-                            style: const TextStyle(
-                                fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textDark)),
-                        const SizedBox(height: 2),
-                        Text(role.description,
-                            style: const TextStyle(
-                                fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight, height: 1.4)),
-                      ],
-                    ),
-                  ),
-                ],
+    final tone = toneOf(role.key);
+    return SizedBox(
+      width: double.infinity,
+      child: Stack(
+        children: [
+          HeroBanner(
+            title: role.name,
+            subtitle: role.description,
+            subtitleLines: 3,
+            reserveSubtitle: true,
+            iconAsset: RoleVisuals.iconAsset(role.key),
+            tone: tone,
+            selected: selected,
+            badge: isCurrent && !selected ? 'CURRENT' : null,
+            onTap: onTap,
+          ),
+          Positioned(
+            top: 24,
+            right: 18,
+            child: IgnorePointer(
+              child: TweenAnimationBuilder<double>(
+                tween: Tween<double>(end: selected ? 1 : 0),
+                duration: KitMotion.reduce(context) ? Duration.zero : const Duration(milliseconds: 250),
+                curve: Curves.fastOutSlowIn,
+                builder: (context, v, _) => v == 0
+                    ? const SizedBox.shrink()
+                    : Transform.scale(
+                        scale: v,
+                        child: Container(
+                          width: 24,
+                          height: 24,
+                          decoration: const BoxDecoration(color: DesignColors.surface, shape: BoxShape.circle),
+                          child: Icon(Icons.check_rounded, size: 16, color: tone.accentDark),
+                        ),
+                      ),
               ),
             ),
-            if (selected)
-              Positioned(
-                top: 10,
-                right: 12,
-                child: Container(
-                  width: 22,
-                  height: 22,
-                  decoration: const BoxDecoration(color: AppColors.success, shape: BoxShape.circle),
-                  child: const Icon(Icons.check_rounded, size: 13, color: Colors.white),
-                ),
-              )
-            else if (isCurrent)
-              Positioned(
-                top: 10,
-                right: 12,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(color: AppColors.divider, borderRadius: BorderRadius.circular(999)),
-                  child: const Text('CURRENT',
-                      style: TextStyle(
-                          fontFamily: 'Poppins', fontSize: 9, fontWeight: FontWeight.w700, color: AppColors.textMedium)),
-                ),
-              ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -149,19 +143,10 @@ class RoleLoadError extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Text('Could not load roles.',
-              style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textMedium)),
-          TextButton(
-            onPressed: onRetry,
-            child: const Text('Retry',
-                style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.primary)),
-          ),
-        ],
-      ),
+    return StateCard.error(
+      title: 'Could not load roles.',
+      actionLabel: 'Retry',
+      onAction: onRetry,
     );
   }
 }

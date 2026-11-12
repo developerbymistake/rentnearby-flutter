@@ -1,5 +1,6 @@
 import 'package:get/get.dart';
 import '../../config/app_routes.dart';
+import '../../design/design.dart';
 import 'screens/job_detail_screen.dart';
 import 'screens/jobs_landing_screen.dart';
 import 'screens/my_jobs_screen.dart';
@@ -9,25 +10,25 @@ final List<GetPage> jobPages = [
   GetPage(
     name: AppRoutes.jobs,
     page: () => const JobsLandingScreen(),
-    transition: Transition.rightToLeft,
-    transitionDuration: const Duration(milliseconds: 300),
+    customTransition: TemplateTransition(),
+    transitionDuration: templateTransitionDuration,
   ),
   GetPage(
     name: AppRoutes.myJobs,
     page: () => const MyJobsScreen(),
-    transition: Transition.rightToLeft,
-    transitionDuration: const Duration(milliseconds: 300),
+    customTransition: TemplateTransition(),
+    transitionDuration: templateTransitionDuration,
   ),
   GetPage(
     name: AppRoutes.postJob,
     page: () => const PostJobScreen(),
-    transition: Transition.rightToLeft,
-    transitionDuration: const Duration(milliseconds: 300),
+    customTransition: TemplateTransition(),
+    transitionDuration: templateTransitionDuration,
   ),
   GetPage(
     name: AppRoutes.jobDetail,
     page: () => const JobDetailScreen(),
-    transition: Transition.downToUp,
-    transitionDuration: const Duration(milliseconds: 350),
+    customTransition: TemplateTransition(),
+    transitionDuration: templateTransitionDuration,
   ),
 ];

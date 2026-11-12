@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:bakhli/design/design.dart';
+import 'trip_ui.dart';
+import 'package:bakhli/design/extra/trip_plan_look.dart';
 import 'package:get/get.dart';
-import 'package:iconsax/iconsax.dart';
-import '../../../config/app_colors.dart';
 import '../controllers/trip_plan_controller.dart';
+import '../controllers/trip_plan_guide.dart';
 import '../models/trip_plan_model.dart';
-import '../trip_colors.dart';
 import '../trip_navigation.dart';
 import '../trip_strings_v2_easy.dart';
 import '../utils/trip_easy_rules.dart';
@@ -28,10 +29,10 @@ class TripEasyStatePill extends StatelessWidget {
       };
 
   static (Color, Color) colors(TripRowState s) => switch (s) {
-        TripRowState.todo || TripRowState.skipped => (AppColors.neutralChip, AppColors.neutralChipText),
-        TripRowState.asked || TripRowState.offer => (AppColors.warningSurface, AppColors.warningText),
-        TripRowState.confirmed || TripRowState.booked || TripRowState.own || TripRowState.saved => (AppColors.successSurface, AppColors.successText),
-        TripRowState.attention => (AppColors.errorSurface, AppColors.errorText),
+        TripRowState.todo || TripRowState.skipped => (TripLook.neutralChip, TripLook.neutralChipText),
+        TripRowState.asked || TripRowState.offer => (TripLook.warningSurface, TripLook.warningText),
+        TripRowState.confirmed || TripRowState.booked || TripRowState.own || TripRowState.saved => (TripLook.successSurface, TripLook.successText),
+        TripRowState.attention => (TripLook.errorSurface, TripLook.errorText),
       };
 
   @override
@@ -44,7 +45,7 @@ class TripEasyStatePill extends StatelessWidget {
         label(state),
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
-        style: TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w600, color: fg),
+        style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 11, fontWeight: FontWeight.w600, color: fg),
       ),
     );
   }
@@ -56,11 +57,11 @@ class TripEasyRow extends StatefulWidget {
   final TripEasyRowInfo info;
 
   static IconData iconOf(TripEasyRowKind k) => switch (k) {
-        TripEasyRowKind.gettingThere => Iconsax.routing_2,
-        TripEasyRowKind.comingBack => Iconsax.routing_2,
-        TripEasyRowKind.between => Iconsax.arrow_right_3,
-        TripEasyRowKind.stay => Iconsax.house_2,
-        TripEasyRowKind.taxi => Iconsax.car,
+        TripEasyRowKind.gettingThere => Icons.alt_route,
+        TripEasyRowKind.comingBack => Icons.alt_route,
+        TripEasyRowKind.between => Icons.chevron_right,
+        TripEasyRowKind.stay => Icons.home_outlined,
+        TripEasyRowKind.taxi => Icons.directions_car,
       };
 
   static String ownLine(TripEasyRowKey key) => switch (key.kind) {
@@ -107,19 +108,36 @@ class _TripEasyRowState extends State<TripEasyRow> {
     _c.skipRow(_i.key);
   }
 
+  Widget _titleTap(Widget title) {
+    if (!_c.guideState.overview.value || !_c.guideAvailable) return title;
+    return GestureDetector(
+      key: ValueKey('overview-title-${_i.key.id}'),
+      behavior: HitTestBehavior.opaque,
+      onTap: () => _c.guideJumpTo(_i.key.id, persist: true),
+      child: title,
+    );
+  }
+
+  Widget _kindIcon(TripEasyRowKind k) => switch (k) {
+        TripEasyRowKind.gettingThere || TripEasyRowKind.comingBack => const TravelIcon(TravelIcon.route, size: 22),
+        TripEasyRowKind.stay => const TravelIcon(TravelIcon.stay, size: 22),
+        TripEasyRowKind.taxi => const TravelIcon(TravelIcon.taxi, size: 22),
+        TripEasyRowKind.between => Icon(TripEasyRow.iconOf(k), size: 18, color: TripLook.accentDark),
+      };
+
   Widget _menu() => SizedBox(
-        width: 20,
-        height: 20,
+        width: 32,
+        height: 32,
         child: PopupMenuButton<int>(
           padding: EdgeInsets.zero,
           tooltip: TripStringsV2Easy.more,
-          icon: const Icon(Icons.more_vert, size: 18, color: AppColors.textMedium),
+          icon: const Icon(Icons.more_vert, size: 18, color: TripLook.textMedium),
           onSelected: (_) => _arrange(),
           itemBuilder: (_) => const [
             PopupMenuItem<int>(
               value: 0,
               child: Text(TripStringsV2Easy.arrangeMyself,
-                  style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w500)),
+                  style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 13, fontWeight: FontWeight.w500)),
             ),
           ],
         ),
@@ -158,23 +176,15 @@ class _TripEasyRowState extends State<TripEasyRow> {
         _ => TripStringsV2Easy.cancelConfirmedTravel,
       };
 
-  Widget _text(String t, {Color color = AppColors.textLight, double size = 12, FontWeight? w}) => Text(
+  Widget _text(String t, {Color color = TripLook.textLight, double size = 12, FontWeight? w}) => Text(
         t,
         maxLines: 2,
         overflow: TextOverflow.ellipsis,
-        style: TextStyle(fontFamily: 'Poppins', fontSize: size, color: color, fontWeight: w, height: 1.3),
+        style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: size, color: color, fontWeight: w, height: 1.3),
       );
 
-  Widget _link(String label, VoidCallback? onTap, {Color color = TripColors.accentDark}) => TextButton(
-        onPressed: _busy ? null : onTap,
-        style: TextButton.styleFrom(
-          foregroundColor: color,
-          minimumSize: const Size(0, 36),
-          padding: const EdgeInsets.symmetric(horizontal: 10),
-          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-        ),
-        child: Text(label, style: const TextStyle(fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w600)),
-      );
+  Widget _link(String label, VoidCallback? onTap, {Color color = DesignColors.lunchEnd}) =>
+      TextLink(label: label, onTap: _busy ? null : onTap, tone: TripUi.toneOf(color));
 
   Widget _actions() {
     if (_c.isReadOnly) return const SizedBox.shrink();
@@ -186,72 +196,31 @@ class _TripEasyRowState extends State<TripEasyRow> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             if (!noSupply) ...[
-              SizedBox(
-              height: 38,
-              child: ElevatedButton(
+              PrimaryButton(
+                label: TripStringsV2Easy.helpMeFind,
+                height: 44,
+                tone: KitTone.trip,
                 onPressed: _busy ? null : () => TripNavigation.helpMeFind(context, _i.key),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: TripColors.accent,
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                ),
-                child: const Text(TripStringsV2Easy.helpMeFind,
-                    style: TextStyle(fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w600)),
               ),
-            ),
               const SizedBox(height: 8),
             ],
             Row(children: [
-            Expanded(child: SizedBox(
-              height: 38,
-              child: noSupply
-                  ? ElevatedButton(
-                      onPressed: _busy ? null : _arrange,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: TripColors.accent,
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        padding: const EdgeInsets.symmetric(horizontal: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      ),
-                      child: const Text(TripStringsV2Easy.arrangeMyself,
-                          style: TextStyle(fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w600)),
-                    )
-                  : OutlinedButton(
-                      onPressed: _busy ? null : _arrange,
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: TripColors.accentDark,
-                        side: const BorderSide(color: AppColors.divider),
-                        padding: const EdgeInsets.symmetric(horizontal: 6),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      ),
-                      child: const Text(TripStringsV2Easy.arrangeMyself,
-                          style: TextStyle(fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w600)),
-                    ),
-            )),
-            const SizedBox(width: 8),
-            Expanded(child: SizedBox(
-              height: 38,
-              child: OutlinedButton(
-                onPressed: _busy ? null : _skip,
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.success,
-                  side: const BorderSide(color: AppColors.success),
-                  padding: const EdgeInsets.symmetric(horizontal: 6),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                ),
-                child: const Text(TripStringsV2Easy.skip,
-                    style: TextStyle(fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w600)),
+              Expanded(
+                child: noSupply
+                    ? PrimaryButton(
+                        label: TripStringsV2Easy.arrangeMyself, height: 44, tone: KitTone.trip, onPressed: _busy ? null : _arrange)
+                    : SecondaryButton(
+                        label: TripStringsV2Easy.arrangeMyself, height: 44, tone: KitTone.trip, onPressed: _busy ? null : _arrange),
               ),
-            )),
+              const SizedBox(width: 8),
+              Expanded(
+                child: SecondaryButton(
+                    label: TripStringsV2Easy.skip, height: 44, tone: KitTone.trip, neutral: true, onPressed: _busy ? null : _skip),
+              ),
             ]),
           ],
         );
-      case TripRowState.own:
-        return const SizedBox.shrink();
-      case TripRowState.skipped:
+      case TripRowState.own || TripRowState.skipped:
         return const SizedBox.shrink();
       case TripRowState.asked || TripRowState.offer || TripRowState.confirmed || TripRowState.booked || TripRowState.saved:
         return const SizedBox.shrink();
@@ -308,10 +277,10 @@ class _TripEasyRowState extends State<TripEasyRow> {
           child: Container(
             alignment: Alignment.center,
             padding: const EdgeInsets.symmetric(horizontal: 6),
-            decoration: BoxDecoration(color: AppColors.errorSurface, borderRadius: BorderRadius.circular(20)),
+            decoration: BoxDecoration(color: TripLook.errorSurface, borderRadius: BorderRadius.circular(20)),
             child: const Text(TripStringsV2Easy.retry,
                 style: TextStyle(
-                    fontFamily: 'Poppins', fontSize: 11.5, fontWeight: FontWeight.w700, color: AppColors.errorText)),
+                    fontFamily: FitnessAppTheme.fontName, fontSize: 11.5, fontWeight: FontWeight.w700, color: TripLook.errorText)),
           ),
         ),
       );
@@ -320,10 +289,10 @@ class _TripEasyRowState extends State<TripEasyRow> {
     if (_offlineTodo) {
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
-        decoration: BoxDecoration(color: AppColors.neutralChip, borderRadius: BorderRadius.circular(20)),
+        decoration: BoxDecoration(color: TripLook.neutralChip, borderRadius: BorderRadius.circular(20)),
         child: const Text(TripStringsV2Easy.pillOffline,
             style: TextStyle(
-                fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.neutralChipText)),
+                fontFamily: FitnessAppTheme.fontName, fontSize: 11, fontWeight: FontWeight.w600, color: TripLook.neutralChipText)),
       );
     }
     return TripEasyStatePill(_i.state);
@@ -334,8 +303,8 @@ class _TripEasyRowState extends State<TripEasyRow> {
       return Padding(
         padding: const EdgeInsets.only(top: 8),
         child: Row(children: [
-          Expanded(child: _text(_blockedText, color: AppColors.errorText, w: FontWeight.w600)),
-          _link(TripStringsV2Easy.cancel, _clearNotice, color: AppColors.textMedium),
+          Expanded(child: _text(_blockedText, color: TripLook.errorText, w: FontWeight.w600)),
+          _link(TripStringsV2Easy.cancel, _clearNotice, color: TripLook.textMedium),
         ]),
       );
     }
@@ -343,9 +312,9 @@ class _TripEasyRowState extends State<TripEasyRow> {
       return Padding(
         padding: const EdgeInsets.only(top: 8),
         child: Row(children: [
-          Expanded(child: _text(TripStringsV2Easy.withdrawLine(_withdraw.length), color: AppColors.textDark, w: FontWeight.w600)),
-          _link(TripStringsV2Easy.keepAsks, _clearNotice, color: AppColors.textMedium),
-          _link(TripStringsV2Easy.withdraw, () => _mark(true), color: AppColors.errorText),
+          Expanded(child: _text(TripStringsV2Easy.withdrawLine(_withdraw.length), color: TripLook.textDark, w: FontWeight.w600)),
+          _link(TripStringsV2Easy.keepAsks, _clearNotice, color: TripLook.textMedium),
+          _link(TripStringsV2Easy.withdraw, () => _mark(true), color: TripLook.errorText),
         ]),
       );
     }
@@ -355,7 +324,7 @@ class _TripEasyRowState extends State<TripEasyRow> {
   @override
   Widget build(BuildContext context) => Obx(() {
         _c.netOff;
-        return _card(context);
+        return EntranceOnce(child: _card(context));
       });
 
   Widget _card(BuildContext context) {
@@ -375,26 +344,24 @@ class _TripEasyRowState extends State<TripEasyRow> {
             ? (i.kind == TripEasyRowKind.taxi ? TripStringsV2Easy.noTaxiHere : TripStringsV2Easy.noStayHere)
             : _shownTitle);
     final muted = i.state == TripRowState.skipped;
-    final subtitleColor = red
-        ? AppColors.errorText
-        : (i.state == TripRowState.asked || i.state == TripRowState.offer ? AppColors.warningText : AppColors.textLight);
+    final subtitleColor = muted
+        ? DesignColors.textMuted
+        : red
+        ? TripLook.errorText
+        : (i.state == TripRowState.asked || i.state == TripRowState.offer ? TripLook.warningText : TripLook.textLight);
     return Semantics(
       container: true,
       label: '${i.title}. ${TripEasyStatePill.label(i.state)}. ${i.subtitle}',
-      child: GestureDetector(
+      child: TripSurface(
         onTap: _clickable ? () => TripNavigation.openRepliesForRow(i.key) : null,
-        behavior: HitTestBehavior.opaque,
-        child: Container(
-          margin: const EdgeInsets.only(bottom: 10),
-          padding: const EdgeInsets.fromLTRB(14, 12, 10, 8),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: red ? AppColors.error.withValues(alpha: 0.5) : AppColors.divider),
-          ),
-          child: Opacity(
-            opacity: muted ? 0.6 : 1,
-            child: Column(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.fromLTRB(14, 12, 10, 8),
+        borderColor: red ? DesignColors.tint(TripLook.error, Alpha.half) : null,
+        child: AnimatedSize(
+          duration: KitMotion.reduce(context) ? Duration.zero : const Duration(milliseconds: 250),
+          curve: Curves.fastOutSlowIn,
+          alignment: Alignment.topCenter,
+          child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
@@ -404,28 +371,30 @@ class _TripEasyRowState extends State<TripEasyRow> {
                       width: 34,
                       height: 34,
                       decoration: BoxDecoration(
-                          color: own ? AppColors.successSurface : TripColors.surface, borderRadius: BorderRadius.circular(10)),
+                          color: own ? TripLook.successSurface : TripLook.surface, borderRadius: BorderRadius.circular(10)),
                       child: own
-                          ? const Icon(Iconsax.tick_circle5, size: 18, color: AppColors.success)
-                          : Icon(TripEasyRow.iconOf(i.kind), size: 18, color: TripColors.accentDark),
+                          ? Icon(Icons.check_circle_rounded, size: 20, color: TripLook.success)
+                          : _kindIcon(i.kind)
                     ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(title,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                  fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                          _titleTap(
+                            Text(title,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                    fontFamily: FitnessAppTheme.fontName, fontSize: 14, fontWeight: FontWeight.w600, color: muted ? DesignColors.textMuted : TripLook.textDark)),
+                          ),
                           const SizedBox(height: 2),
                           Row(children: [
                             if (i.state == TripRowState.asked || i.state == TripRowState.offer) ...[
                               Container(
                                 width: 7,
                                 height: 7,
-                                decoration: const BoxDecoration(color: AppColors.warning, shape: BoxShape.circle),
+                                decoration: const BoxDecoration(color: TripLook.warning, shape: BoxShape.circle),
                               ),
                               const SizedBox(width: 6),
                             ],
@@ -471,7 +440,6 @@ class _TripEasyRowState extends State<TripEasyRow> {
                 const SizedBox(height: 4),
               ],
             ),
-          ),
         ),
       ),
     );

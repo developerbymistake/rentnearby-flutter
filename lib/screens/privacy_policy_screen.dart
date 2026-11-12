@@ -1,23 +1,14 @@
 import 'package:flutter/material.dart';
-import '../config/app_colors.dart';
+import '../design/design.dart';
 
 class PrivacyPolicyScreen extends StatelessWidget {
   const PrivacyPolicyScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.scaffoldBg,
-      appBar: AppBar(
-        backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
-        title: const Text('Privacy Policy',
-            style: TextStyle(fontFamily: 'Poppins', fontSize: 17, fontWeight: FontWeight.w600)),
-        elevation: 0,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+    return GateLegalPage(
+      title: 'Privacy Policy',
+      children: [
           _heading('Privacy Policy'),
           _updated('Last updated: November 6, 2026'),
           const SizedBox(height: 12),
@@ -58,80 +49,19 @@ class PrivacyPolicyScreen extends StatelessWidget {
           _sectionBody('Grievance Officer', 'In accordance with the Information Technology Act, 2000 and the rules made thereunder, the contact details of the Grievance Officer are provided below:\n\nGrievance Officer\nEmail: supportbakhli@gmail.com\n\nBakhli will acknowledge grievances within 24 hours of receipt and endeavour to resolve them within 15 days.'),
           _sectionBody('Contact Us', 'For any questions or concerns regarding this Privacy Policy, please write to us:\n\nEmail: supportbakhli@gmail.com'),
           const SizedBox(height: 32),
-          Center(
-            child: Text('© 2026 Bakhli. All rights reserved.',
-                style: const TextStyle(
-                    fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
-          ),
+          const GateLegalCaption('© 2026 Bakhli. All rights reserved.', center: true),
           const SizedBox(height: 20),
-        ]),
-      ),
+      ],
     );
   }
 
-  Widget _heading(String text) => Text(text,
-      style: const TextStyle(
-          fontFamily: 'Poppins', fontSize: 20, fontWeight: FontWeight.w700, color: AppColors.textDark));
+  Widget _heading(String text) => GateLegalHeading(text);
 
-  Widget _updated(String text) => Padding(
-        padding: const EdgeInsets.only(top: 4, bottom: 8),
-        child: Text(text,
-            style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textLight)),
-      );
+  Widget _updated(String text) => GateLegalCaption(text);
 
-  Widget _body(String text) => Padding(
-        padding: const EdgeInsets.only(bottom: 16),
-        child: Text(text,
-            style: const TextStyle(
-                fontFamily: 'Poppins', fontSize: 14, color: AppColors.textMedium, height: 1.6)),
-      );
+  Widget _body(String text) => GateLegalBody(text);
 
-  Widget _sectionBody(String title, String body) => Padding(
-        padding: const EdgeInsets.only(bottom: 20),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(title,
-              style: const TextStyle(
-                  fontFamily: 'Poppins',
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textDark)),
-          const SizedBox(height: 6),
-          Text(body,
-              style: const TextStyle(
-                  fontFamily: 'Poppins', fontSize: 14, color: AppColors.textMedium, height: 1.6)),
-        ]),
-      );
+  Widget _sectionBody(String title, String body) => GateLegalSection(title: title, body: body);
 
-  Widget _section(String title, List<String> points) => Padding(
-        padding: const EdgeInsets.only(bottom: 20),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          if (title.isNotEmpty) ...[
-            Text(title,
-                style: const TextStyle(
-                    fontFamily: 'Poppins',
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textDark)),
-            const SizedBox(height: 8),
-          ],
-          ...points.map((p) => Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  const Padding(
-                    padding: EdgeInsets.only(top: 6),
-                    child: CircleAvatar(radius: 3, backgroundColor: AppColors.primaryLight),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(p,
-                        style: const TextStyle(
-                            fontFamily: 'Poppins',
-                            fontSize: 14,
-                            color: AppColors.textMedium,
-                            height: 1.6)),
-                  ),
-                ]),
-              )),
-        ]),
-      );
+  Widget _section(String title, List<String> points) => GateLegalSection(title: title, bullets: points);
 }

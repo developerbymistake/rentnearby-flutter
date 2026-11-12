@@ -1,8 +1,10 @@
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:geolocator/geolocator.dart';
-import '../config/app_colors.dart';
+import '../design/design.dart';
 import '../config/app_routes.dart';
+import '../config/app_tabs.dart';
 import '../controllers/app_version_controller.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/location_controller.dart';
@@ -59,8 +61,15 @@ class GlobalLocationGates extends StatelessWidget {
   };
 
   // A trip is planned for another place, so district and GPS never block it.
-  static bool _locationExempt(String? top) =>
-      _tripRoutes.contains(top) || (_tripChildRoutes.contains(top) && TopRouteObserver.hasAny(_tripRoutes));
+  static bool _locationExempt(String? top) {
+    if (top == AppRoutes.main && Get.isRegistered<AuthController>() && Get.find<AuthController>().tabIndex.value == AppTabs.trips) {
+      return true;
+    }
+    return _tripRoutes.contains(top) || (_tripChildRoutes.contains(top) && TopRouteObserver.hasAny(_tripRoutes));
+  }
+
+  @visibleForTesting
+  static bool locationExempt(String? top) => _locationExempt(top);
 
   @override
   Widget build(BuildContext context) {
@@ -125,124 +134,39 @@ class GlobalLocationGates extends StatelessWidget {
     }
   }
 
-  Widget _buildOfflineGate() {
-    return Positioned.fill(
-      child: Material(
-        color: Colors.white,
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 32),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  width: 100, height: 100,
-                  decoration: const BoxDecoration(
-                    gradient: AppColors.primaryGradient,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.wifi_off_rounded, color: Colors.white, size: 46),
-                ),
-                const SizedBox(height: 32),
-                const Text(
-                  'No Internet',
-                  style: TextStyle(
-                    fontFamily: 'Poppins',
-                    fontSize: 22,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textDark,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                const Text(
-                  'Please check your internet connection. App will resume automatically when you\'re back online.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontFamily: 'Poppins',
-                    fontSize: 14,
-                    color: AppColors.textMedium,
-                    height: 1.6,
-                  ),
-                ),
-                if (Get.isRegistered<AuthController>() && Get.find<AuthController>().postLoginRoute == AppRoutes.main) ...[
-                const SizedBox(height: 32),
-                TextButton(
-                  onPressed: _openTrips,
-                  child: Text(
-                    TopRouteObserver.hasAny(_offlineRoutes) ? 'Back to my trip' : 'Open my trips (offline copy)',
-                    style: const TextStyle(
-                      fontFamily: 'Poppins',
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.primary,
-                    ),
-                  ),
-                ),
-                ],
-              ],
-            ),
-          ),
+  Widget _gateButton(String label, VoidCallback onTap) => TextButton(
+        onPressed: onTap,
+        child: Text(
+          label,
+          style: FitnessAppTheme.body2.copyWith(fontWeight: FontWeight.w600, color: FitnessAppTheme.nearlyDarkBlue),
         ),
+      );
+
+  Widget _buildOfflineGate() {
+    final showTrips =
+        Get.isRegistered<AuthController>() && Get.find<AuthController>().postLoginRoute == AppRoutes.main;
+    return Positioned.fill(
+      child: GateStatusPage(
+        asset: TravelIcon.map,
+        title: 'No Internet',
+        body: "Please check your internet connection. App will resume automatically when you're back online.",
+        secondary: showTrips
+            ? _gateButton(
+                TopRouteObserver.hasAny(_offlineRoutes) ? 'Back to my trip' : 'Open my trips (offline copy)',
+                _openTrips,
+              )
+            : null,
       ),
     );
   }
 
   Widget _buildDistrictGate(LocationController locationCtrl) {
     return Positioned.fill(
-      child: Material(
-        color: Colors.white,
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 32),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  width: 100, height: 100,
-                  decoration: const BoxDecoration(
-                    gradient: AppColors.primaryGradient,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.location_searching_rounded, color: Colors.white, size: 46),
-                ),
-                const SizedBox(height: 32),
-                const Text(
-                  'Area Not Supported Yet',
-                  style: TextStyle(
-                    fontFamily: 'Poppins',
-                    fontSize: 22,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textDark,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                const Text(
-                  'Bakhli hasn\'t reached your area yet. Contact admin to register your district.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontFamily: 'Poppins',
-                    fontSize: 14,
-                    color: AppColors.textMedium,
-                    height: 1.6,
-                  ),
-                ),
-                const SizedBox(height: 40),
-                TextButton(
-                  onPressed: () => locationCtrl.refreshOnResume(force: true),
-                  child: const Text(
-                    'Check Again',
-                    style: TextStyle(
-                      fontFamily: 'Poppins',
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.primary,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
+      child: GateStatusPage(
+        asset: TravelIcon.route,
+        title: 'Area Not Supported Yet',
+        body: "Bakhli hasn't reached your area yet. Contact admin to register your district.",
+        secondary: _gateButton('Check Again', () => locationCtrl.refreshOnResume(force: true)),
       ),
     );
   }
@@ -250,73 +174,19 @@ class GlobalLocationGates extends StatelessWidget {
   Widget _buildGpsGate(LocationController locationCtrl) {
     final permissionIssue = locationCtrl.gpsEnabled.value && !locationCtrl.locationPermissionGranted.value;
     return Positioned.fill(
-      child: Material(
-        color: Colors.white,
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 32),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  width: 100, height: 100,
-                  decoration: const BoxDecoration(
-                    gradient: AppColors.primaryGradient,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    permissionIssue ? Icons.location_disabled_rounded : Icons.location_off_rounded,
-                    color: Colors.white, size: 46,
-                  ),
-                ),
-                const SizedBox(height: 32),
-                Text(
-                  permissionIssue ? 'Location Permission Required' : 'Location Required',
-                  style: const TextStyle(
-                    fontFamily: 'Poppins',
-                    fontSize: 22,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textDark,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  permissionIssue
-                      ? 'Bakhli needs permission to access your location to show stays and taxis near you. Please allow location access in Settings.'
-                      : 'Bakhli uses your location to show stays and taxis near you. Please enable GPS to continue.',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontFamily: 'Poppins',
-                    fontSize: 14,
-                    color: AppColors.textMedium,
-                    height: 1.6,
-                  ),
-                ),
-                const SizedBox(height: 40),
-                GradientButton(
-                  label: permissionIssue ? 'Open Settings' : 'Enable Location',
-                  onPressed: () => permissionIssue
-                      ? Geolocator.openAppSettings()
-                      : Geolocator.openLocationSettings(),
-                ),
-                const SizedBox(height: 12),
-                TextButton(
-                  onPressed: () => permissionIssue
-                      ? locationCtrl.recheckLocationPermission()
-                      : locationCtrl.recheckGps(),
-                  child: const Text(
-                    'Check Again',
-                    style: TextStyle(
-                      fontFamily: 'Poppins',
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.primary,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
+      child: GateStatusPage(
+        asset: permissionIssue ? TravelIcon.checkout : TravelIcon.place,
+        title: permissionIssue ? 'Location Permission Required' : 'Location Required',
+        body: permissionIssue
+            ? 'Bakhli needs permission to access your location to show stays and taxis near you. Please allow location access in Settings.'
+            : 'Bakhli uses your location to show stays and taxis near you. Please enable GPS to continue.',
+        primary: GradientButton(
+          label: permissionIssue ? 'Open Settings' : 'Enable Location',
+          onPressed: () => permissionIssue ? Geolocator.openAppSettings() : Geolocator.openLocationSettings(),
+        ),
+        secondary: _gateButton(
+          'Check Again',
+          () => permissionIssue ? locationCtrl.recheckLocationPermission() : locationCtrl.recheckGps(),
         ),
       ),
     );

@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
-import '../config/app_colors.dart';
 import '../config/module_palette.dart';
+import '../design/design.dart';
 
-/// Prev/Next + dots + Cancel, meant to sit directly above the bottom preview
-/// card in nearest-carousel mode. [current]/[total] are display-only —
-/// [onPrev]/[onNext] are already index-clamped by the caller.
 class NearestControlBar extends StatelessWidget {
   final int current;
   final int total;
@@ -20,7 +17,7 @@ class NearestControlBar extends StatelessWidget {
     required this.onPrev,
     required this.onNext,
     required this.onCancel,
-    this.palette = ModulePalette.rooms,
+    this.palette = templateModulePalette,
   });
 
   @override
@@ -28,35 +25,25 @@ class NearestControlBar extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.12),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        color: FitnessAppTheme.white,
+        borderRadius: const BorderRadius.all(Radius.circular(16)),
+        boxShadow: GateKit.barShadow,
       ),
       child: Row(
         children: [
           _NavButton(
-            icon: Icons.chevron_left_rounded,
-            label: 'Prev',
-            iconLeading: true,
-            enabled: current > 0,
-            palette: palette,
-            onTap: onPrev,
-          ),
+              icon: Icons.chevron_left_rounded,
+              label: 'Prev',
+              iconLeading: true,
+              enabled: current > 0,
+              onTap: onPrev),
           const SizedBox(width: 6),
           _NavButton(
-            icon: Icons.chevron_right_rounded,
-            label: 'Next',
-            iconLeading: false,
-            enabled: current < total - 1,
-            palette: palette,
-            onTap: onNext,
-          ),
+              icon: Icons.chevron_right_rounded,
+              label: 'Next',
+              iconLeading: false,
+              enabled: current < total - 1,
+              onTap: onNext),
           Expanded(
             child: Center(
               child: Row(
@@ -64,14 +51,14 @@ class NearestControlBar extends StatelessWidget {
                 children: List.generate(total, (i) {
                   final active = i == current;
                   return AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
+                    duration: templateTransitionDuration,
                     margin: const EdgeInsets.symmetric(horizontal: 2),
                     width: active ? 16 : 6,
                     height: 6,
                     decoration: BoxDecoration(
-                      gradient: active ? palette.gradient : null,
-                      color: active ? null : AppColors.divider,
-                      borderRadius: BorderRadius.circular(3),
+                      gradient: active ? TripEntryStyle.gradient : null,
+                      color: active ? null : FitnessAppTheme.spacer,
+                      borderRadius: BorderRadius.circular(32),
                     ),
                   );
                 }),
@@ -85,25 +72,14 @@ class NearestControlBar extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 14),
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: AppColors.error,
-                borderRadius: BorderRadius.circular(11),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.error.withValues(alpha: 0.32),
-                    blurRadius: 8,
-                    offset: const Offset(0, 3),
-                  ),
-                ],
+                gradient: TripEntryStyle.rose,
+                borderRadius: BorderRadius.circular(16),
               ),
-              child: const Text(
-                'Cancel',
-                style: TextStyle(
-                  fontFamily: 'Poppins',
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white,
-                ),
-              ),
+              child: Text('Cancel',
+                  style: FitnessAppTheme.body2.copyWith(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: FitnessAppTheme.white)),
             ),
           ),
         ],
@@ -117,7 +93,6 @@ class _NavButton extends StatelessWidget {
   final String label;
   final bool iconLeading;
   final bool enabled;
-  final ModulePalette palette;
   final VoidCallback onTap;
 
   const _NavButton({
@@ -125,23 +100,17 @@ class _NavButton extends StatelessWidget {
     required this.label,
     required this.iconLeading,
     required this.enabled,
-    required this.palette,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    final color = enabled ? Colors.white : AppColors.textHint;
+    final color =
+        enabled ? FitnessAppTheme.white : FitnessAppTheme.deactivatedText;
     final iconWidget = Icon(icon, size: 18, color: color);
-    final textWidget = Text(
-      label,
-      style: TextStyle(
-        fontFamily: 'Poppins',
-        fontSize: 13,
-        fontWeight: FontWeight.w600,
-        color: color,
-      ),
-    );
+    final textWidget = Text(label,
+        style: FitnessAppTheme.body2
+            .copyWith(fontSize: 13, fontWeight: FontWeight.w600, color: color));
     return GestureDetector(
       onTap: enabled ? onTap : null,
       child: Container(
@@ -149,16 +118,12 @@ class _NavButton extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 10),
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          gradient: enabled ? palette.gradient : null,
-          color: enabled ? null : AppColors.surface,
-          borderRadius: BorderRadius.circular(11),
+          gradient: enabled ? TripEntryStyle.gradient : null,
+          color: enabled ? null : FitnessAppTheme.spacer,
+          borderRadius: BorderRadius.circular(16),
           boxShadow: enabled
               ? [
-                  BoxShadow(
-                    color: palette.accent.withValues(alpha: 0.32),
-                    blurRadius: 8,
-                    offset: const Offset(0, 3),
-                  ),
+                  ShadowTokens.tint(TravelPalette.skyEnd, ShadowSpec.glowSpec),
                 ]
               : null,
         ),

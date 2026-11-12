@@ -2,6 +2,7 @@ import 'package:get/get.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 import '../../../config/app_routes.dart';
 import '../../../models/place_result_model.dart';
+import '../../trip/models/trip_guide_args.dart';
 import 'models/taxi_ways_models.dart';
 
 class TaxiWaysNavigation {
@@ -15,8 +16,10 @@ class TaxiWaysNavigation {
     String? tripId,
     String? tripRole,
     int? tripLegIndex,
+    GuideArgs? guide,
   }) =>
       Get.toNamed(AppRoutes.taxiWays, arguments: {
+        if (guide != null) ...guide.toArgs(),
         'from': from,
         'to': to,
         'fromMyLocation': tripLegIndex == null && fromMyLocation,

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../config/app_colors.dart';
+import '../design/design.dart';
 
 class RoleCorrectionDialog {
   const RoleCorrectionDialog._();
@@ -10,23 +10,20 @@ class RoleCorrectionDialog {
         : '$kind draft, $percent% filled, will be deleted. You can do this only once.';
     final ok = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Delete draft and change role?',
-            style: TextStyle(fontFamily: 'Poppins', fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textDark)),
-        content: Text(body,
-            style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textMedium, height: 1.5)),
+      builder: (ctx) => GateDialog(
+        glyph: Icons.warning_amber_rounded,
+        gradient: TripEntryStyle.rose,
+        title: 'Delete draft and change role?',
+        body: body,
+        horizontalActions: true,
         actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Cancel',
-                style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, color: AppColors.textMedium)),
-          ),
-          TextButton(
+          GateOutlineButton(label: 'Cancel', height: 46, onPressed: () => Navigator.of(ctx).pop(false)),
+          GateButton(
+            label: 'Change role',
+            height: 46,
+            gradient: TripEntryStyle.rose,
+            shadowColor: PickKit.bad,
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Change role',
-                style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, color: AppColors.error)),
           ),
         ],
       ),

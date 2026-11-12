@@ -1,24 +1,23 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../../config/app_colors.dart';
-import '../../config/module_palette.dart';
+import '../../design/design.dart';
 import '../../models/browse_item.dart';
 import 'models/taxi_owner_model.dart';
 
 class TaxiColors {
-  static const Color accent = AppColors.taxi;
-  static const Color accentDark = AppColors.taxiDark;
-  static const Color accentLight = AppColors.taxiLight;
-  static const Color surface = AppColors.taxiSurface;
-  static const Color heroEnd = AppColors.taxiHeroEnd;
-  static const LinearGradient gradient = AppColors.taxiGradient;
+  static const Color accent = DesignColors.breakfastStart;
+  static const Color accentDark = DesignColors.snackEnd;
+  static const Color accentLight = DesignColors.breakfastEnd;
+  static const Color surface = DesignColors.statusAttentionSoft;
+  static const Color heroEnd = DesignColors.surface;
+  static const LinearGradient gradient = DesignGradients.breakfast;
   static const LinearGradient heroGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
     colors: [surface, heroEnd],
   );
-  static const ModulePalette palette = ModulePalette.taxi;
+  static const palette = templateTaxiPalette;
 }
 
 class TaxiStatus {

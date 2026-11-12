@@ -1,21 +1,17 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:bakhli/design/design.dart';
 import 'package:get/get.dart';
-import 'package:iconsax/iconsax.dart';
-import '../../../config/app_colors.dart';
 import '../../../config/app_insets.dart';
 import '../../../config/app_routes.dart';
 import '../../../utils/app_toast.dart';
-import '../../../widgets/empty_state_view.dart';
-import '../../../widgets/gradient_button.dart';
-import '../../../widgets/selectable_chip.dart';
 import '../controllers/trip_plan_controller.dart';
 import '../controllers/trip_spots_controller.dart';
 import '../models/trip_city_model.dart';
 import '../models/trip_plan_model.dart';
 import '../models/trip_spot_category.dart';
 import '../models/trip_spot_model.dart';
-import '../trip_colors.dart';
 import '../trip_constants.dart';
 import '../trip_strings.dart';
 import '../trip_strings_v2_create.dart';
@@ -24,9 +20,10 @@ import '../trip_strings_spots_x.dart';
 import '../utils/trip_spot_picks.dart';
 import '../utils/trip_days_rules.dart';
 import '../widgets/trip_city_sheet.dart';
-import '../widgets/trip_shimmers.dart';
 import '../widgets/trip_spot_row.dart';
 import '../widgets/trip_spots_extras.dart';
+
+const _accent = DesignColors.lunchEnd;
 
 class TripSpotsScreen extends StatefulWidget {
   const TripSpotsScreen({super.key});
@@ -35,7 +32,8 @@ class TripSpotsScreen extends StatefulWidget {
   State<TripSpotsScreen> createState() => _TripSpotsScreenState();
 }
 
-class _TripSpotsScreenState extends State<TripSpotsScreen> {
+class _TripSpotsScreenState extends State<TripSpotsScreen> with TickerProviderStateMixin {
+  late final AnimationController _enter = AnimationController(duration: const Duration(milliseconds: 600), vsync: this);
   late final TripCityModel _city;
   late final List<TripCityModel> _chain;
   late final int _index;
@@ -49,6 +47,7 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
   late final TripSpotsController _ctrl;
   late final TripPlanController _plan;
   final _scroll = ScrollController();
+  final _barOpacity = ValueNotifier<double>(0);
   bool _starting = false;
   Worker? _draftWorker;
 
@@ -96,6 +95,7 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
             TripSpotsController(_city.cityKey, existingIds: _existingIds, otherSpots: other < 0 ? 0 : other),
             tag: tag,
           );
+    _enter.forward();
     _plan.openPages++;
     _scroll.addListener(_onScroll);
     if (_creating) {
@@ -160,6 +160,8 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
     _draftWorker?.dispose();
     _scroll.removeListener(_onScroll);
     _scroll.dispose();
+    _barOpacity.dispose();
+    _enter.dispose();
     final tag = '${_city.cityKey}';
     if (Get.isRegistered<TripSpotsController>(tag: tag) && identical(Get.find<TripSpotsController>(tag: tag), _ctrl)) {
       Get.delete<TripSpotsController>(tag: tag);
@@ -173,6 +175,8 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
 
   void _onScroll() {
     final p = _scroll.position;
+    final o = (p.pixels / 24).clamp(0.0, 1.0);
+    if (o != _barOpacity.value) _barOpacity.value = o;
     if (p.maxScrollExtent > 0 && p.pixels >= p.maxScrollExtent - 300) _ctrl.loadMore();
   }
 
@@ -229,9 +233,6 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
     if (_existingIds.contains(s.id)) return null;
     return _pickDay != null ? () => _pickOne(s) : () => _toggle(s.id);
   }
-
-  bool _lockedFor(TripSpotModel s) =>
-      !_existingIds.contains(s.id) && !_ctrl.selected.contains(s.id) && (_pickDay != null ? _pickFull : _ctrl.atLimit);
 
   void _applyBundle(TripQuickStart b) {
     final added = _ctrl.addBundle(b);
@@ -322,20 +323,23 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.scaffoldBg,
+      backgroundColor: DesignColors.scaffold,
       body: Column(
         children: [
           _buildHeader(context),
-          _buildCityChips(),
-          _buildOffline(),
-          _buildChips(),
-          _buildLimitNotice(),
-          Expanded(child: _buildBody()),
+          _block(_buildCityChips(), 1, 6),
+          _block(_buildOffline(), 2, 6),
+          _block(_buildChips(), 3, 6),
+          _block(_buildLimitNotice(), 4, 6),
+          Expanded(child: _block(_buildBody(), 5, 6)),
         ],
       ),
       bottomNavigationBar: _buildBottomBar(context),
     );
   }
+
+  Widget _block(Widget child, int index, int count) =>
+      TemplateEntrance(animation: templateInterval(_enter, index, count), animationController: _enter, child: child);
 
   String _pickHeading(int day) {
     final p = _plan.plan.value;
@@ -347,84 +351,41 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
   }
 
   Widget _buildHeader(BuildContext context) {
-    final top = MediaQuery.paddingOf(context).top;
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: TripColors.gradient,
-        borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
-      ),
-      padding: EdgeInsets.fromLTRB(12, top + 8, 12, 16),
-      child: Row(
-        children: [
-          IconButton(
-            onPressed: () => Get.back(),
-            icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
-          ),
-          const SizedBox(width: 2),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _city.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 20, fontWeight: FontWeight.w700, color: Colors.white),
-                ),
-                const SizedBox(height: 2),
-                if (_pickDay case final day?)
-                  Text(
-                    _pickHeading(day),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontFamily: 'Poppins',
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white.withValues(alpha: 0.85),
-                    ),
-                  )
-                else if (_creating)
-                  Obx(() => Text(
-                        _chain.length > 1
-                            ? TripStringsV2Create.spotsHeader(_index + 1, _chain.length, _days)
-                            : TripStringsV2Create.spotsHeaderOne(_days),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontFamily: 'Poppins',
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white.withValues(alpha: 0.85),
-                        ),
-                      ))
-                else
-                  Obx(() {
-                    final total = _ctrl.total.value;
-                    final loaded = !_ctrl.isLoading.value &&
-                        !_ctrl.loadFailed.value &&
-                        !_ctrl.plannerOff.value &&
-                        !_ctrl.isNotReady &&
-                        total > 0;
-                    return Text(
-                      loaded ? TripStringsV2Create.placesLine(total) : 'Places to visit',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontFamily: 'Poppins',
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white.withValues(alpha: 0.85),
-                      ),
-                    );
-                  }),
-              ],
-            ),
-          ),
-        ],
+    final Widget sub;
+    if (_pickDay case final day?) {
+      sub = _subText(_pickHeading(day));
+    } else if (_creating) {
+      sub = Obx(() => _subText(_chain.length > 1
+          ? TripStringsV2Create.spotsHeader(_index + 1, _chain.length, _days)
+          : TripStringsV2Create.spotsHeaderOne(_days)));
+    } else {
+      sub = Obx(() {
+        final total = _ctrl.total.value;
+        final loaded = !_ctrl.isLoading.value &&
+            !_ctrl.loadFailed.value &&
+            !_ctrl.plannerOff.value &&
+            !_ctrl.isNotReady &&
+            total > 0;
+        return _subText(loaded ? TripStringsV2Create.placesLine(total) : 'Places to visit');
+      });
+    }
+    return ValueListenableBuilder<double>(
+      valueListenable: _barOpacity,
+      builder: (_, o, _) => TemplateTopBar(
+        title: _city.name,
+        subtitle: sub,
+        opacity: o,
+        onBack: () => Get.back(),
+        animation: Tween<double>(begin: 0.0, end: 1.0)
+            .animate(CurvedAnimation(parent: _enter, curve: const Interval(0, 0.5, curve: Curves.fastOutSlowIn))),
+        animationController: _enter,
       ),
     );
   }
+
+  Widget _subText(String text) =>
+      Text(text, maxLines: 1, overflow: TextOverflow.ellipsis,
+          style: TypeTokens.style(12, FontWeight.w600, color: TypeTokens.secondary));
 
   void _backTo(int index) {
     var left = _index - index;
@@ -441,62 +402,23 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
     return Obx(() {
       _ctrl.selected.length;
       return SizedBox(
-        height: 52,
+        height: MediaQuery.textScalerOf(context).scale(52),
         child: ListView.separated(
           scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+          padding: const EdgeInsets.fromLTRB(KitMetrics.gutter, 12, KitMetrics.gutter, 4),
           itemCount: _chain.length,
           separatorBuilder: (_, _) => const SizedBox(width: 8),
           itemBuilder: (_, i) {
             final c = _chain[i];
             final current = i == _index;
             final done = !current && _idsOf(c).isNotEmpty;
-            return InkWell(
+            return KitChainChip(
+              label: done ? TripStringsV2Create.doneCity(c.name, _idsOf(c).length) : c.name,
+              number: i + 1,
+              current: current,
+              done: done,
+              tone: KitTone.trip,
               onTap: i < _index ? () => _backTo(i) : null,
-              borderRadius: BorderRadius.circular(20),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-                decoration: BoxDecoration(
-                  color: current ? TripColors.accent : (done ? TripColors.surface : Colors.white),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: current || done ? TripColors.accent : AppColors.divider),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 18,
-                      height: 18,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: current ? Colors.white : (done ? TripColors.accent : AppColors.neutralChip),
-                        shape: BoxShape.circle,
-                      ),
-                      child: done
-                          ? const Icon(Icons.check_rounded, size: 12, color: Colors.white)
-                          : Text(
-                              '${i + 1}',
-                              style: TextStyle(
-                                fontFamily: 'Poppins',
-                                fontSize: 10,
-                                fontWeight: FontWeight.w700,
-                                color: current ? TripColors.accentDark : AppColors.textHint,
-                              ),
-                            ),
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      done ? TripStringsV2Create.doneCity(c.name, _idsOf(c).length) : c.name,
-                      style: TextStyle(
-                        fontFamily: 'Poppins',
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.w600,
-                        color: current ? Colors.white : (done ? TripColors.accentDark : AppColors.textHint),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
             );
           },
         ),
@@ -509,11 +431,11 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
       final cats = _ctrl.categories;
       if (_ctrl.isLoading.value || _ctrl.plannerOff.value || cats.length <= 1) return const SizedBox.shrink();
       final current = _ctrl.filter.value;
-      return SizedBox(
-        height: 52,
+      return FixedFilterBar(
+        height: MediaQuery.textScalerOf(context).scale(60),
         child: ListView(
           scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+          padding: const EdgeInsets.fromLTRB(KitMetrics.gutter, 8, KitMetrics.gutter, 8),
           children: [
             _chip(TripStrings.allCategories, current == null, () => _ctrl.setFilter(null)),
             for (final cat in cats) _chip(TripSpotCategory.label(cat), current == cat, () => _ctrl.setFilter(cat)),
@@ -525,49 +447,37 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
 
   Widget _chip(String label, bool selected, VoidCallback onTap) => Padding(
         padding: const EdgeInsets.only(right: 8),
-        child: SelectableChip(
-          label: label,
-          selected: selected,
-          onTap: onTap,
-          activeColor: TripColors.accent,
-          padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 14),
-        ),
+        child: KitChoiceChip(label: label, selected: selected, onTap: onTap, tone: KitTone.trip),
       );
 
   Widget _buildBody() {
     return Obx(() {
       if (_ctrl.plannerOff.value) {
-        return _message(const EmptyStateView(
-          icon: Iconsax.routing_2,
+        return _message(const StateCard(
           title: TripStrings.plannerOff,
-          subtitle: TripStrings.plannerOffSubtitle,
-          palette: TripColors.palette,
+          message: TripStrings.plannerOffSubtitle,
+          kit: KitTone.trip,
         ));
       }
       final items = _ctrl.items;
       if (items.isEmpty && _ctrl.isLoading.value) {
-        return ListView.separated(
-          padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
-          itemCount: 6,
-          separatorBuilder: (_, _) => const SizedBox(height: 10),
-          itemBuilder: (_, _) => const TripSpotRowSkeleton(),
-        );
+        return _skeleton();
       }
       if (_ctrl.loadFailed.value && items.isEmpty) {
-        return _message(EmptyStateView(
-          icon: Iconsax.cloud_cross,
+        return _message(StateCard.error(
           title: TripStrings.placesFailed,
-          subtitle: _ctrl.loadError.value.isEmpty ? TripStrings.checkConnection : _ctrl.loadError.value,
-          onRetry: _ctrl.load,
-          palette: TripColors.palette,
+          message: _ctrl.loadError.value.isEmpty ? TripStrings.checkConnection : _ctrl.loadError.value,
+          kit: KitTone.trip,
+          actionLabel: TripStrings.retry,
+          onAction: _ctrl.load,
         ));
       }
       if (_ctrl.isNotReady) {
-        return _message(EmptyStateView(
-          icon: Iconsax.map_1,
+        return _message(StateCard(
+          asset: TravelIcon.map,
           title: TripStrings.notReadyTitle,
-          subtitle: TripStrings.notReadySubtitle(_city.name),
-          palette: TripColors.palette,
+          message: TripStrings.notReadySubtitle(_city.name),
+          kit: KitTone.trip,
         ));
       }
       final visible = _ctrl.visible;
@@ -575,20 +485,18 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
       final filter = _ctrl.filter.value;
       if (visible.isEmpty && !loadingMore) {
         if (filter != null) {
-          return _message(EmptyStateView(
-            icon: Iconsax.location,
+          return _message(StateCard(
+            asset: TravelIcon.place,
             title: TripStringsSpotsX.noneIn(TripSpotCategory.label(filter)),
-            subtitle: '',
-            onRetry: () => _ctrl.setFilter(null),
-            retryLabel: TripStringsSpotsX.showAll,
-            palette: TripColors.palette,
+            kit: KitTone.trip,
+            actionLabel: TripStringsSpotsX.showAll,
+            onAction: () => _ctrl.setFilter(null),
           ));
         }
-        return _message(const EmptyStateView(
-          icon: Iconsax.location,
+        return _message(const StateCard(
+          asset: TravelIcon.place,
           title: TripStrings.noPlaces,
-          subtitle: '',
-          palette: TripColors.palette,
+          kit: KitTone.trip,
         ));
       }
       final selected = _ctrl.selected.toSet();
@@ -607,7 +515,7 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
             padding: const EdgeInsets.only(bottom: 10),
             child: Text(
               TripStringsSpotsX.fewPlaces(count),
-              style: const TextStyle(fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.textMedium),
+              style: TypeTokens.style(12, FontWeight.w600, color: TypeTokens.secondary),
             ),
           ),
         if (quick.isNotEmpty) TripQuickStartRail(bundles: quick, onTap: _applyBundle),
@@ -622,10 +530,10 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
       ];
       return ListView.builder(
         controller: _scroll,
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+        padding: const EdgeInsets.fromLTRB(KitMetrics.gutter, 12, KitMetrics.gutter, 16),
         itemCount: heads.length + visible.length + (loadingMore ? 1 : 0),
         itemBuilder: (_, k) {
-          if (k < heads.length) return heads[k];
+          if (k < heads.length) return _row(k, heads[k]);
           final i = k - heads.length;
           if (i == visible.length) {
             return Padding(
@@ -634,7 +542,7 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
                 child: SizedBox(
                   width: 24,
                   height: 24,
-                  child: CircularProgressIndicator(strokeWidth: 2, color: TripColors.accent),
+                  child: CircularProgressIndicator(strokeWidth: 2, color: _accent),
                 ),
               ),
             );
@@ -649,8 +557,8 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
             onToggle: existing ? null : (_pickDay != null ? () => _pickOne(s) : () => _toggle(s.id)),
           );
           if (sug != null && sug.forId == s.id && _pickDay == null) {
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 10),
+            return _row(heads.length + i, Padding(
+              padding: const EdgeInsets.only(bottom: 12),
               child: Column(
                 children: [
                   card,
@@ -665,15 +573,64 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
                   ),
                 ],
               ),
-            );
+            ));
           }
-          return Padding(padding: const EdgeInsets.only(bottom: 10), child: card);
+          return _row(heads.length + i, Padding(padding: const EdgeInsets.only(bottom: 12), child: card));
         },
       );
     });
   }
 
-  Widget _message(Widget child) => ListView(children: [child]);
+  Widget _message(Widget child) => ListView(children: [TemplateStagger(children: [child])]);
+
+  Widget _row(int k, Widget child) => TemplateEntrance(
+        animation: templateInterval(_enter, math.min(k, 7), 8),
+        animationController: _enter,
+        child: child,
+      );
+
+  Widget _skeleton() => ListView.builder(
+        physics: const NeverScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(KitMetrics.gutter, 14, KitMetrics.gutter, 16),
+        itemCount: 6,
+        itemBuilder: (_, _) => Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          decoration: const BoxDecoration(
+            color: DesignColors.surface,
+            borderRadius: CardRadius.tile,
+            boxShadow: ShadowTokens.elev2,
+          ),
+          child: ClipRRect(
+            borderRadius: CardRadius.tile,
+            child: Column(
+              children: [
+                const AspectRatio(aspectRatio: 2.2, child: TemplatePlaceholder(height: double.infinity, radius: 0)),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 12, 12),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: LayoutBuilder(
+                          builder: (_, c) => Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              TemplatePlaceholder(height: 16, width: c.maxWidth * 0.6),
+                              const SizedBox(height: 8),
+                              TemplatePlaceholder(height: 12, width: c.maxWidth * 0.4),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      const TemplatePlaceholder(height: 36, width: 92, radius: 18),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
 
   Widget _buildBottomBar(BuildContext context) {
     return Obx(() {
@@ -681,10 +638,10 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
       if (_ctrl.plannerOff.value) return const SizedBox.shrink();
       if (_pickDay != null) {
         if (!_pickFull) return const SizedBox.shrink();
-        return _barFrame(context, const [
+        return _barFrame(context, [
           Text(
             TripStringsV2Create.dayFullMove,
-            style: TextStyle(fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.warningText),
+            style: TypeTokens.style(12, FontWeight.w600, color: TypeTokens.secondary),
           ),
         ]);
       }
@@ -706,31 +663,30 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
           TextSpan(children: [
             TextSpan(
               text: TripStringsV2Create.barCities(parts),
-              style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.textDark),
+              style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontWeight: FontWeight.w700, color: DesignColors.textStrong),
             ),
             TextSpan(text: TripStringsV2Create.barTotal(total)),
           ]),
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
-          style: const TextStyle(fontFamily: 'Poppins', fontSize: 11.5, color: AppColors.textMedium),
+          style: TypeTokens.style(12, FontWeight.w400, color: TypeTokens.secondary),
         ));
       }
       if (_creating && n == 0 && !_canContinue(0)) {
         if (children.isNotEmpty) children.add(const SizedBox(height: 6));
-        children.add(const Text(
+        children.add(Text(
           TripStringsV2Create.pickOnePlace,
-          style: TextStyle(fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.textMedium),
+          style: TypeTokens.style(12, FontWeight.w600, color: TypeTokens.secondary),
         ));
       }
       if (_canContinue(n)) {
         if (children.isNotEmpty) children.add(const SizedBox(height: 10));
-        children.add(GradientButton(
+        children.add(PrimaryButton(
           label: _creating
               ? (nextName == null ? TripStringsV2Create.makeMyPlan : TripStringsV2Create.next(nextName))
               : TripStringsMcaA2.spotsAddToTrip(n),
-          height: 52,
-          gradient: TripColors.gradient,
-          shadowColor: TripColors.accent,
+          tone: KitTone.trip,
+          trailingArrow: true,
           onPressed: _planMyDays,
         ));
       }
@@ -740,22 +696,27 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
   }
 
   Widget _barFrame(BuildContext context, List<Widget> children) => Container(
-        padding: EdgeInsets.fromLTRB(16, 10, 16, AppInsets.bottomViewPadding(context) + 10),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 12, offset: const Offset(0, -4))],
+        padding: EdgeInsets.fromLTRB(KitMetrics.gutter, 12, KitMetrics.gutter, AppInsets.bottomViewPadding(context) + 12),
+        decoration: const BoxDecoration(
+          color: DesignColors.surface,
+          borderRadius: CardRadius.sheet,
+          boxShadow: DesignShadows.top,
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: children,
+        child: AnimatedSize(
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.fastOutSlowIn,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: children,
+          ),
         ),
       );
 
   Widget _buildLimitNotice() {
     return Obx(() {
       if (_pickDay != null || _ctrl.plannerOff.value || !_ctrl.atLimit) return const SizedBox.shrink();
-      return Padding(padding: const EdgeInsets.fromLTRB(16, 2, 16, 0), child: _limitNotice());
+      return Padding(padding: const EdgeInsets.fromLTRB(KitMetrics.gutter, 2, KitMetrics.gutter, 0), child: _limitNotice());
     });
   }
 
@@ -764,15 +725,14 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
     final atMax = _creating && !tripFull;
     return Container(
       margin: const EdgeInsets.only(top: 8),
-      padding: const EdgeInsets.fromLTRB(12, 8, 6, 8),
-      decoration: BoxDecoration(color: AppColors.warningSurface, borderRadius: BorderRadius.circular(12)),
+      padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
+      decoration: const BoxDecoration(color: DesignColors.surface, borderRadius: CardRadius.tile, boxShadow: ShadowTokens.elev1),
       child: Row(
         children: [
           Expanded(
             child: Text(
               tripFull ? TripStringsMcaA2.maxPlaces : atMax ? TripStringsV2Create.maxDaysReached : _limitText,
-              style: const TextStyle(
-                  fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.warningText),
+              style: TypeTokens.style(12, FontWeight.w600, color: DesignColors.textPrimary),
             ),
           ),
         ],

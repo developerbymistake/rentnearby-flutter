@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:geolocator/geolocator.dart';
-import '../config/app_colors.dart';
 import '../config/app_constants.dart';
 import '../config/app_routes.dart';
 import '../controllers/app_version_controller.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/tab_config_controller.dart';
+import '../design/design.dart';
 import '../services/storage_service.dart';
 import '../utils/update_decision.dart';
 import 'splash/splash_hero.dart';
@@ -127,35 +127,21 @@ class _SplashScreenState extends State<SplashScreen> with WidgetsBindingObserver
         barrierDismissible: false,
         builder: (_) => PopScope(
           canPop: false,
-          child: AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            icon: const Icon(Icons.location_on_rounded, color: AppColors.primary, size: 36),
-            title: const Text('Location Access Required',
-                style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 16)),
-            content: const Text(
-                'This app helps you discover stays, taxis and trips near you. '
+          child: GateDialog(
+            asset: TravelIcon.place,
+            title: 'Location Access Required',
+            body: 'This app helps you discover stays, taxis and trips near you. '
                 'Location access is essential for the app to function. '
                 'Please enable it to continue.',
-                style: TextStyle(fontFamily: 'Poppins', fontSize: 13, height: 1.5)),
             actions: [
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    _waitingForSettings = true;
-                    Geolocator.openAppSettings();
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    elevation: 0,
-                  ),
-                  child: const Text('Allow Location',
-                      style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 14)),
-                ),
+              GateButton(
+                label: 'Allow Location',
+                height: 48,
+                onPressed: () {
+                  Navigator.pop(context);
+                  _waitingForSettings = true;
+                  Geolocator.openAppSettings();
+                },
               ),
             ],
           ),
@@ -173,7 +159,7 @@ class _SplashScreenState extends State<SplashScreen> with WidgetsBindingObserver
   @override
   Widget build(BuildContext context) {
     return const Scaffold(
-      backgroundColor: AppColors.textDark,
+      backgroundColor: DesignColors.dinnerEnd,
       body: SplashHero(),
     );
   }

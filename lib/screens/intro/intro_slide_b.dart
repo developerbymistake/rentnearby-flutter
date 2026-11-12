@@ -1,12 +1,11 @@
 import 'dart:math' as math;
-import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:iconsax/iconsax.dart';
 
-import '../../config/app_colors.dart';
+import '../../design/design.dart';
 import 'intro_slide_a.dart' show introRoutePath;
 import 'intro_strings.dart';
 import 'intro_widgets.dart';
@@ -15,7 +14,7 @@ double _iv(double v, double a, double b, [Curve curve = Curves.linear]) =>
     curve.transform(((v - a) / (b - a)).clamp(0.0, 1.0));
 
 TextStyle _ts(double size, FontWeight weight, Color color) =>
-    TextStyle(fontFamily: 'Poppins', fontSize: size, fontWeight: weight, color: color, height: 1.25);
+    TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: size, fontWeight: weight, color: color, height: 1.25);
 
 abstract class _SlideState<T extends StatefulWidget> extends State<T> with TickerProviderStateMixin {
   late final AnimationController entrance;
@@ -268,7 +267,7 @@ class _AskState extends _SlideState<IntroSlideAsk> {
           gradient: const LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [AppColors.stayLight, AppColors.staySurface],
+            colors: [TravelPalette.roseStart, DesignColors.savedTint],
           ),
         ),
         child: _bob(
@@ -277,10 +276,10 @@ class _AskState extends _SlideState<IntroSlideAsk> {
             height: 34,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: Colors.white,
-              boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.12), blurRadius: 6, offset: const Offset(0, 2))],
+              color: DesignColors.textInverse,
+              boxShadow: ShadowTokens.elev2,
             ),
-            child: const Icon(Iconsax.house_2, size: 18, color: AppColors.stay),
+            child: const Icon(Iconsax.house_2, size: 18, color: DesignColors.roseDeep),
           ),
           1,
         ),
@@ -298,7 +297,7 @@ class _AskState extends _SlideState<IntroSlideAsk> {
             runSpacing: 4,
             children: [
               for (final s in IntroStrings.stayStyles)
-                _Chip(label: s, fill: AppColors.staySurface, color: AppColors.stayDark, size: 9, weight: FontWeight.w700),
+                _Chip(label: s, fill: DesignColors.savedTint, color: DesignColors.roseDeep, size: 9, weight: FontWeight.w700),
             ],
           ),
         );
@@ -308,9 +307,9 @@ class _AskState extends _SlideState<IntroSlideAsk> {
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: DesignColors.textInverse,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.22), blurRadius: 16, offset: const Offset(0, 6))],
+        boxShadow: ShadowTokens.elev2,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -325,9 +324,9 @@ class _AskState extends _SlideState<IntroSlideAsk> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(IntroStrings.stayTitle, maxLines: 1, overflow: TextOverflow.ellipsis, style: _ts(12, FontWeight.w800, AppColors.textDark)),
+                    Text(IntroStrings.stayTitle, maxLines: 1, overflow: TextOverflow.ellipsis, style: _ts(12, FontWeight.w800, DesignColors.dinnerEnd)),
                     const SizedBox(height: 2),
-                    Text(IntroStrings.stayTimes, maxLines: 1, overflow: TextOverflow.ellipsis, style: _ts(8.5, FontWeight.w500, AppColors.textLight)),
+                    Text(IntroStrings.stayTimes, maxLines: 1, overflow: TextOverflow.ellipsis, style: _ts(8.5, FontWeight.w500, DesignColors.textMuted)),
                   ],
                 ),
               ),
@@ -371,7 +370,7 @@ class _AskState extends _SlideState<IntroSlideAsk> {
     final bubble = Container(
       padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
       decoration: const BoxDecoration(
-        color: Colors.white,
+        color: DesignColors.textInverse,
         borderRadius: BorderRadius.only(
           topLeft: Radius.circular(4),
           topRight: Radius.circular(14),
@@ -384,9 +383,9 @@ class _AskState extends _SlideState<IntroSlideAsk> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Iconsax.tick_circle, size: 13, color: AppColors.successDark),
+            const Icon(Iconsax.tick_circle, size: 13, color: DesignColors.success),
             const SizedBox(width: 6),
-            Text(IntroStrings.stayConfirmed, maxLines: 1, softWrap: false, style: _ts(10.5, FontWeight.w700, AppColors.textDark)),
+            Text(IntroStrings.stayConfirmed, maxLines: 1, softWrap: false, style: _ts(10.5, FontWeight.w700, DesignColors.dinnerEnd)),
           ],
         ),
       ),
@@ -418,11 +417,11 @@ class _AskState extends _SlideState<IntroSlideAsk> {
             ? const _Chip(
                 key: ValueKey('reserved'),
                 label: IntroStrings.reserved,
-                fill: AppColors.successSurface,
-                color: AppColors.successText,
+                fill: DesignColors.successSoft,
+                color: DesignColors.success,
                 icon: Iconsax.tick_circle,
               )
-            : const _Chip(key: ValueKey('reserve'), label: IntroStrings.reserve, fill: AppColors.stay, color: Colors.white),
+            : const _Chip(key: ValueKey('reserve'), label: IntroStrings.reserve, fill: DesignColors.roseDeep, color: DesignColors.textInverse),
       ),
     );
     final tappable = GestureDetector(behavior: HitTestBehavior.opaque, onTap: _onAccept, child: chip);
@@ -447,7 +446,7 @@ class _AskState extends _SlideState<IntroSlideAsk> {
                       t: t,
                       count: 8,
                       radius: 28,
-                      colors: const [AppColors.stay, AppColors.stayLight, AppColors.success],
+                      colors: const [DesignColors.roseDeep, TravelPalette.roseStart, DesignColors.success],
                     ),
                   ),
               ],
@@ -561,15 +560,15 @@ class _LiveState extends _SlideState<IntroSlideLive> {
   Widget _card() {
     final sun = AnimatedBuilder(
       animation: loop,
-      child: const Icon(Iconsax.sun_1, size: 14, color: AppColors.gold),
+      child: const Icon(Iconsax.sun_1, size: 14, color: DesignColors.gold),
       builder: (context, c) => Transform.scale(scale: 1 + 0.08 * math.sin(math.pi * loop.value), child: c),
     );
     final card = Container(
       padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: DesignColors.textInverse,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.22), blurRadius: 16, offset: const Offset(0, 6))],
+        boxShadow: ShadowTokens.elev2,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -581,7 +580,7 @@ class _LiveState extends _SlideState<IntroSlideLive> {
               const SizedBox(width: 6),
               Flexible(
                 child: Text(IntroStrings.todayTitle,
-                    maxLines: 1, overflow: TextOverflow.ellipsis, style: _ts(12, FontWeight.w800, AppColors.textDark)),
+                    maxLines: 1, overflow: TextOverflow.ellipsis, style: _ts(12, FontWeight.w800, DesignColors.dinnerEnd)),
               ),
             ],
           ),
@@ -594,7 +593,7 @@ class _LiveState extends _SlideState<IntroSlideLive> {
                 done ? IntroStrings.todayDone : IntroStrings.todayProgress,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: _ts(9.5, FontWeight.w500, AppColors.textLight),
+                style: _ts(9.5, FontWeight.w500, DesignColors.textMuted),
               ),
             ),
           ),
@@ -635,7 +634,7 @@ class _LiveState extends _SlideState<IntroSlideLive> {
               child: FractionallySizedBox(
                 heightFactor: _iv(entrance.value, 0.25, 0.61, Curves.easeInOut),
                 widthFactor: 1,
-                child: const ColoredBox(color: AppColors.divider),
+                child: const ColoredBox(color: DesignColors.divider),
               ),
             ),
           ),
@@ -652,7 +651,7 @@ class _LiveState extends _SlideState<IntroSlideLive> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(IntroStrings.todayRows[i],
-                      maxLines: 1, overflow: TextOverflow.ellipsis, style: _ts(10, FontWeight.w600, AppColors.textDark)),
+                      maxLines: 1, overflow: TextOverflow.ellipsis, style: _ts(10, FontWeight.w600, DesignColors.dinnerEnd)),
                 ),
               ],
             ),
@@ -688,17 +687,17 @@ class _LiveState extends _SlideState<IntroSlideLive> {
             clipBehavior: Clip.none,
             children: [
               if (ping) ...[
-                _Overlay(extent: 32, child: IntroPingRing(phase: t, baseSize: 12, maxScale: 2.6, color: AppColors.taxi)),
+                _Overlay(extent: 32, child: IntroPingRing(phase: t, baseSize: 12, maxScale: 2.6, color: DesignColors.sunriseDeep)),
                 _Overlay(
                   extent: 32,
-                  child: IntroPingRing(phase: (t + 0.5) % 1.0, baseSize: 12, maxScale: 2.6, color: AppColors.taxi),
+                  child: IntroPingRing(phase: (t + 0.5) % 1.0, baseSize: 12, maxScale: 2.6, color: DesignColors.sunriseDeep),
                 ),
               ],
               _TimelineDot(tick: tick),
               if (animating && tap.value > 0 && tap.value < 1)
                 _Overlay(
                   extent: 48,
-                  child: IntroSparkBurst(t: tap.value, count: 6, radius: 18, colors: const [AppColors.taxi, AppColors.gold]),
+                  child: IntroSparkBurst(t: tap.value, count: 6, radius: 18, colors: const [DesignColors.sunriseDeep, DesignColors.gold]),
                 ),
             ],
           );
@@ -713,13 +712,13 @@ class _LiveState extends _SlideState<IntroSlideLive> {
       onTap: _onShare,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(20)),
+        decoration: BoxDecoration(color: DesignColors.textInverse.withValues(alpha: Alpha.soft), borderRadius: BorderRadius.circular(20)),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Iconsax.share, size: 12, color: Colors.white),
+            const Icon(Iconsax.share, size: 12, color: DesignColors.textInverse),
             const SizedBox(width: 6),
-            Text(IntroStrings.shareTrip, maxLines: 1, softWrap: false, style: _ts(10.5, FontWeight.w700, Colors.white)),
+            Text(IntroStrings.shareTrip, maxLines: 1, softWrap: false, style: _ts(10.5, FontWeight.w700, DesignColors.textInverse)),
           ],
         ),
       ),
@@ -750,7 +749,7 @@ class _LiveState extends _SlideState<IntroSlideLive> {
                         opacity: math.sin(math.pi * fly).clamp(0.0, 1.0),
                         child: Transform.translate(
                           offset: Offset(22 * fly, -22 * fly),
-                          child: const Icon(Iconsax.document_text, size: 14, color: Colors.white),
+                          child: const Icon(Iconsax.document_text, size: 14, color: DesignColors.textInverse),
                         ),
                       ),
                     ),
@@ -780,16 +779,16 @@ class _TimelineDot extends StatelessWidget {
           Container(
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: Colors.white,
-              border: Border.all(color: AppColors.taxi, width: 2),
+              color: DesignColors.textInverse,
+              border: Border.all(color: DesignColors.sunriseDeep, width: 2),
             ),
           ),
           if (tick > 0)
             Transform.scale(
               scale: tick.clamp(0.0, 1.3),
               child: Container(
-                decoration: const BoxDecoration(shape: BoxShape.circle, color: AppColors.taxi),
-                child: const Icon(Icons.check_rounded, size: 9, color: Colors.white),
+                decoration: const BoxDecoration(shape: BoxShape.circle, color: DesignColors.sunriseDeep),
+                child: const Icon(Icons.check_rounded, size: 9, color: DesignColors.textInverse),
               ),
             ),
         ],
@@ -836,7 +835,7 @@ class _WatermarkPainter extends CustomPainter {
         ..style = PaintingStyle.stroke
         ..strokeWidth = 2
         ..strokeCap = StrokeCap.round
-        ..color = Colors.white.withValues(alpha: 0.10),
+        ..color = DesignColors.textInverse.withValues(alpha: Alpha.v10),
     );
   }
 
@@ -863,7 +862,7 @@ class _StartState extends _SlideState<IntroSlideStart> {
   static const double _ring = 78;
   static const List<double> _restDeg = [-135, -45, 45, 135];
   static const List<IconData> _icons = [Iconsax.location, Iconsax.routing_2, Iconsax.house_2, Iconsax.car];
-  static const List<Color> _iconColors = [AppColors.primary, AppColors.trip, AppColors.stay, AppColors.taxi];
+  static const List<Color> _iconColors = [DesignColors.primary, DesignColors.sunriseDeep, DesignColors.roseDeep, DesignColors.sunriseDeep];
 
   @override
   Duration get entranceDuration => const Duration(milliseconds: 1500);
@@ -907,9 +906,9 @@ class _StartState extends _SlideState<IntroSlideStart> {
             Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(IntroStrings.ringValue, maxLines: 1, softWrap: false, style: _ts(22, FontWeight.w700, Colors.white)),
+                Text(IntroStrings.ringValue, maxLines: 1, softWrap: false, style: _ts(22, FontWeight.w700, DesignColors.textInverse)),
                 Text(IntroStrings.nextTrip,
-                    maxLines: 1, softWrap: false, style: _ts(8.5, FontWeight.w500, Colors.white.withValues(alpha: 0.85))),
+                    maxLines: 1, softWrap: false, style: _ts(8.5, FontWeight.w500, DesignColors.textInverse.withValues(alpha: Alpha.high))),
               ],
             ),
           ],
@@ -924,8 +923,8 @@ class _StartState extends _SlideState<IntroSlideStart> {
           height: 30,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: Colors.white,
-            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.12), blurRadius: 6, offset: const Offset(0, 2))],
+            color: DesignColors.textInverse,
+            boxShadow: ShadowTokens.elev2,
           ),
           child: Icon(_icons[k], size: 15, color: _iconColors[k]),
         ),
@@ -993,7 +992,7 @@ class _StartState extends _SlideState<IntroSlideStart> {
             height: 140,
             child: IgnorePointer(
               child: Center(
-                child: IntroSparkBurst(t: spark, count: 8, radius: 70, colors: const [Colors.white, AppColors.tripLight]),
+                child: IntroSparkBurst(t: spark, count: 8, radius: 70, colors: const [DesignColors.textInverse, TravelPalette.sunriseEnd]),
               ),
             ),
           ),
@@ -1031,7 +1030,7 @@ class _RingPainter extends CustomPainter {
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = 6
-        ..color = Colors.white.withValues(alpha: 0.25),
+        ..color = DesignColors.textInverse.withValues(alpha: Alpha.v22),
     );
     canvas.drawArc(
       rect,
@@ -1042,7 +1041,7 @@ class _RingPainter extends CustomPainter {
         ..style = PaintingStyle.stroke
         ..strokeWidth = 6
         ..strokeCap = StrokeCap.round
-        ..color = AppColors.warning,
+        ..color = DesignColors.warning,
     );
   }
 
@@ -1094,11 +1093,11 @@ class _RidgePainter extends CustomPainter {
       110,
       Paint()
         ..shader = RadialGradient(
-          colors: [AppColors.warning.withValues(alpha: 0.25 * r), AppColors.warning.withValues(alpha: 0)],
+          colors: [DesignColors.warning.withValues(alpha: Alpha.v25 * r), DesignColors.warning.withValues(alpha: Alpha.none)],
         ).createShader(Rect.fromCircle(center: glowC, radius: 110)),
     );
-    canvas.drawPath(_back!, Paint()..color = Colors.white.withValues(alpha: 0.10 * r));
-    canvas.drawPath(_front!, Paint()..color = Colors.white.withValues(alpha: 0.16 * r));
+    canvas.drawPath(_back!, Paint()..color = DesignColors.textInverse.withValues(alpha: Alpha.v10 * r));
+    canvas.drawPath(_front!, Paint()..color = DesignColors.textInverse.withValues(alpha: Alpha.v15 * r));
     canvas.restore();
   }
 

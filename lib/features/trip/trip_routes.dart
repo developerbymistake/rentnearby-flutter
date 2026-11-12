@@ -1,5 +1,6 @@
 import 'package:get/get.dart';
 import '../../config/app_routes.dart';
+import '../../design/design.dart';
 import 'screens/my_trips_screen.dart';
 import 'screens/trip_map_screen.dart';
 import 'screens/trip_plan_screen.dart';
@@ -14,55 +15,55 @@ final List<GetPage> tripPages = [
   GetPage(
     name: AppRoutes.tripSpots,
     page: () => const TripSpotsScreen(),
-    transition: Transition.rightToLeft,
-    transitionDuration: const Duration(milliseconds: 300),
+    customTransition: TemplateTransition(),
+    transitionDuration: templateTransitionDuration,
   ),
   GetPage(
     name: AppRoutes.tripPlan,
     page: () => const TripPlanScreen(),
-    transition: Transition.rightToLeft,
-    transitionDuration: const Duration(milliseconds: 300),
+    customTransition: TemplateTransition(),
+    transitionDuration: templateTransitionDuration,
   ),
   GetPage(
     name: AppRoutes.tripTaxi,
     page: () => const TripTaxiScreen(),
-    transition: Transition.rightToLeft,
-    transitionDuration: const Duration(milliseconds: 300),
+    customTransition: TemplateTransition(),
+    transitionDuration: templateTransitionDuration,
   ),
   GetPage(
     name: AppRoutes.tripStay,
     page: () => const TripStayScreen(),
-    transition: Transition.rightToLeft,
-    transitionDuration: const Duration(milliseconds: 300),
+    customTransition: TemplateTransition(),
+    transitionDuration: templateTransitionDuration,
   ),
   GetPage(
     name: AppRoutes.tripMap,
     page: () => const TripMapScreen(),
-    transition: Transition.downToUp,
-    transitionDuration: const Duration(milliseconds: 350),
+    customTransition: TemplateTransition(),
+    transitionDuration: templateTransitionDuration,
   ),
   GetPage(
     name: AppRoutes.myTrips,
     page: () => const MyTripsScreen(),
-    transition: Transition.rightToLeft,
-    transitionDuration: const Duration(milliseconds: 300),
+    customTransition: TemplateTransition(),
+    transitionDuration: templateTransitionDuration,
   ),
   GetPage(
     name: AppRoutes.tripReplies,
     page: () => const TripRepliesScreen(),
-    transition: Transition.rightToLeft,
-    transitionDuration: const Duration(milliseconds: 300),
+    customTransition: TemplateTransition(),
+    transitionDuration: templateTransitionDuration,
   ),
   GetPage(
     name: AppRoutes.tripTaxiReplies,
     page: () => const TripTaxiRepliesScreen(),
-    transition: Transition.rightToLeft,
-    transitionDuration: const Duration(milliseconds: 300),
+    customTransition: TemplateTransition(),
+    transitionDuration: templateTransitionDuration,
   ),
   GetPage(
     name: AppRoutes.tripSummary,
     page: () => const TripSummaryScreen(),
-    transition: Transition.rightToLeft,
-    transitionDuration: const Duration(milliseconds: 300),
+    customTransition: TemplateTransition(),
+    transitionDuration: templateTransitionDuration,
   ),
 ];

@@ -806,6 +806,80 @@ class LegCancelResult {
   bool get ok => failed == 0;
 }
 
+enum TripGuideChoice {
+  find,
+  own,
+  skip;
+
+  static TripGuideChoice? parse(Object? wire) {
+    for (final c in values) {
+      if (c.name == wire) return c;
+    }
+    return null;
+  }
+}
+
+class TripGuide {
+  static final RegExp stepPattern = RegExp(r'^(gettingThere|comingBack|taxi|stay:[1-9][0-9]?|between:[2-9][0-9]?)$');
+  static const int maxChoices = 30;
+
+  final String step;
+  final Map<String, TripGuideChoice> choices;
+  final bool overview;
+
+  const TripGuide({this.step = '', this.choices = const {}, this.overview = false});
+
+  bool get isDefault => step.isEmpty && choices.isEmpty && !overview;
+
+  TripGuide copyWith({String? step, Map<String, TripGuideChoice>? choices, bool? overview}) =>
+      TripGuide(step: step ?? this.step, choices: choices ?? this.choices, overview: overview ?? this.overview);
+
+  TripGuide withChoice(String step, TripGuideChoice? choice) {
+    final next = {...choices};
+    if (choice == null) {
+      next.remove(step);
+    } else {
+      if (!next.containsKey(step) && next.length >= maxChoices) return this;
+      next[step] = choice;
+    }
+    return copyWith(choices: next);
+  }
+
+  static TripGuide? tryParse(Object? raw) {
+    if (raw is! Map) return null;
+    final s = raw['step'];
+    final step = s is String && stepPattern.hasMatch(s) ? s : '';
+    final out = <String, TripGuideChoice>{};
+    final c = raw['choices'];
+    if (c is Map) {
+      for (final e in c.entries) {
+        final k = e.key;
+        final v = TripGuideChoice.parse(e.value);
+        if (k is String && v != null && stepPattern.hasMatch(k) && out.length < maxChoices) out[k] = v;
+      }
+    }
+    final g = TripGuide(step: step, choices: out, overview: raw['overview'] == true);
+    return g.isDefault ? null : g;
+  }
+
+  Map<String, dynamic> toJson() => {
+        if (step.isNotEmpty) 'step': step,
+        'choices': {for (final e in choices.entries) e.key: e.value.name},
+        if (overview) 'overview': true,
+      };
+
+  @override
+  bool operator ==(Object other) =>
+      other is TripGuide &&
+      other.step == step &&
+      other.overview == overview &&
+      other.choices.length == choices.length &&
+      choices.entries.every((e) => other.choices[e.key] == e.value);
+
+  @override
+  int get hashCode => Object.hash(step, overview, choices.length);
+}
+
 class TripPlan {
   final int version;
   final List<TripCityLeg> legs;
@@ -814,6 +888,7 @@ class TripPlan {
   final TripSteps steps;
   final TripRowMark? taxiMark;
   final List<String> dismissedEnquiryIds;
+  final TripGuide? guide;
 
   const TripPlan({
     this.version = TripConstants.planVersion,
@@ -823,6 +898,7 @@ class TripPlan {
     this.steps = const TripSteps(),
     this.taxiMark,
     this.dismissedEnquiryIds = const [],
+    this.guide,
   });
 
   factory TripPlan.singleCity({
@@ -1021,6 +1097,8 @@ class TripPlan {
     TripRowMark? taxiMark,
     bool clearTaxiMark = false,
     List<String>? dismissedEnquiryIds,
+    TripGuide? guide,
+    bool clearGuide = false,
     String? districtId,
     double? centreLatitude,
     double? centreLongitude,
@@ -1040,8 +1118,11 @@ class TripPlan {
       steps: steps ?? this.steps,
       taxiMark: clearTaxiMark ? null : (taxiMark ?? this.taxiMark),
       dismissedEnquiryIds: dismissedEnquiryIds ?? this.dismissedEnquiryIds,
+      guide: clearGuide ? null : (guide ?? this.guide),
     );
   }
+
+  TripPlan withGuide(TripGuide? g) => copyWith(guide: g, clearGuide: g == null || g.isDefault);
 
   TripPlan withDismissed(String enquiryId) {
     if (enquiryId.isEmpty || dismissedEnquiryIds.contains(enquiryId)) return this;
@@ -1098,6 +1179,7 @@ class TripPlan {
       steps: TripSteps.fromJson(json['steps'] is Map<String, dynamic> ? json['steps'] as Map<String, dynamic> : null),
       taxiMark: TripRowMark.tryParse(json['taxiMark']),
       dismissedEnquiryIds: _ids(json['dismissedEnquiryIds']),
+      guide: TripGuide.tryParse(json['guide']),
     );
   }
 
@@ -1114,5 +1196,6 @@ class TripPlan {
         'steps': steps.toJson(),
         'taxiMark': ?taxiMark?.toJson(),
         'dismissedEnquiryIds': dismissedEnquiryIds,
+        if (guide != null && !guide!.isDefault) 'guide': guide!.toJson(),
       };
 }

@@ -1,16 +1,12 @@
+import 'stay_page_header.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:iconsax/iconsax.dart';
-import '../../../config/app_colors.dart';
-import '../../../config/app_insets.dart';
+import '../../../design/design.dart';
 import '../../../utils/app_toast.dart';
-import '../../../widgets/gradient_button.dart';
 import '../../trip/trip_strings.dart';
-import '../../trip/widgets/trip_shimmers.dart';
 import '../enquiries/stay_enquiry_format.dart';
 import '../models/stay_owner_model.dart';
-import 'stay_option_sets.dart';
 import 'stay_setup_controller.dart';
 
 class StayAdvanceDetailsScreen extends StatefulWidget {
@@ -20,15 +16,17 @@ class StayAdvanceDetailsScreen extends StatefulWidget {
   State<StayAdvanceDetailsScreen> createState() => _StayAdvanceDetailsScreenState();
 }
 
-class _StayAdvanceDetailsScreenState extends State<StayAdvanceDetailsScreen> {
+class _StayAdvanceDetailsScreenState extends State<StayAdvanceDetailsScreen> with TickerProviderStateMixin {
   final _ctrl = StaySetupController.ensure();
   final _upi = TextEditingController();
   final _wa = TextEditingController();
   final _upiFocus = FocusNode();
   final _waFocus = FocusNode();
+  late final AnimationController _anim = SetupKit.controller(this);
   Worker? _worker;
   bool _seeded = false;
   bool _saving = false;
+  bool _played = false;
   String? _upiError;
   String? _waError;
 
@@ -49,6 +47,7 @@ class _StayAdvanceDetailsScreenState extends State<StayAdvanceDetailsScreen> {
   @override
   void dispose() {
     _worker?.dispose();
+    _anim.dispose();
     _upi.dispose();
     _wa.dispose();
     _upiFocus.dispose();
@@ -90,9 +89,14 @@ class _StayAdvanceDetailsScreenState extends State<StayAdvanceDetailsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.scaffoldBg,
+      backgroundColor: DesignColors.scaffold,
       body: Column(children: [
-        _header(),
+        StayPageHeader(
+          title: TripStrings.advanceDetails,
+          subtitle: TripStrings.staySetupOptional,
+          onBack: () => Get.back(),
+          asset: SetupAssets.moneyBag,
+        ),
         Expanded(
           child: Obx(() {
             final stay = _ctrl.stay.value;
@@ -106,140 +110,125 @@ class _StayAdvanceDetailsScreenState extends State<StayAdvanceDetailsScreen> {
     );
   }
 
-  Widget _header() => Container(
-        decoration: const BoxDecoration(gradient: StayColors.gradient),
-        child: SafeArea(
-          bottom: false,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(4, 8, 20, 18),
-            child: Row(children: [
-              IconButton(
-                onPressed: () => Get.back(),
-                icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white),
-              ),
-              Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(TripStrings.advanceDetails,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: Colors.white)),
-                  Text(TripStrings.staySetupOptional,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 13, color: Colors.white70)),
-                ]),
-              ),
-            ]),
-          ),
-        ),
-      );
-
   Widget _centered(Widget child) => Align(
         alignment: Alignment.topCenter,
         child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 560), child: child),
       );
 
-  Widget _loadingView() => _centered(Padding(
-        padding: const EdgeInsets.all(16),
+  Widget _loadingView() => _centered(const Padding(
+        padding: EdgeInsets.all(16),
         child: Column(children: [
-          TripShimmers.rowBox(height: 56, radius: 14),
-          const SizedBox(height: 12),
-          TripShimmers.rowBox(height: 56, radius: 14),
-          const SizedBox(height: 12),
-          TripShimmers.rowBox(height: 56, radius: 14),
+          TemplatePlaceholder(height: 56, radius: 8),
+          SizedBox(height: 12),
+          TemplatePlaceholder(height: 56, radius: 8),
+          SizedBox(height: 12),
+          TemplatePlaceholder(height: 56, radius: 8),
         ]),
       ));
 
-  Widget _errorView() => Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            const Text(TripStrings.couldNotLoad,
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-            const SizedBox(height: 4),
-            const Text(TripStrings.checkConnection,
-                textAlign: TextAlign.center, style: TextStyle(fontSize: 13, color: AppColors.textLight)),
-            const SizedBox(height: 8),
-            TextButton(
-              style: TextButton.styleFrom(minimumSize: const Size(88, 44)),
-              onPressed: _ctrl.load,
-              child: const Text(TripStrings.retry,
-                  style: TextStyle(fontWeight: FontWeight.w600, color: StayColors.accentDark)),
-            ),
-          ]),
+  Widget _errorView() => SingleChildScrollView(
+        child: SizedBox(
+          height: MediaQuery.sizeOf(context).height * 0.6,
+          child: StateCard.error(
+            kit: KitTone.stay,
+            title: TripStrings.couldNotLoad,
+            message: TripStrings.checkConnection,
+            actionLabel: TripStrings.retry,
+            onAction: _ctrl.load,
+          ),
         ),
       );
 
+  Widget _in(int i, Widget child) => SetupEntrance(controller: _anim, index: i, count: 5, child: child);
+
   Widget _form() {
-    final bottom = MediaQuery.viewInsetsOf(context).bottom + AppInsets.bottomViewPadding(context) + 24;
+    if (!_played) {
+      _played = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) SetupKit.play(_anim, context);
+      });
+    }
+    final bottom = MediaQuery.viewInsetsOf(context).bottom + MediaQuery.viewPaddingOf(context).bottom + 24;
     return _centered(SingleChildScrollView(
       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
       padding: EdgeInsets.fromLTRB(16, 16, 16, bottom),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(18),
-          boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 8, offset: const Offset(0, 2))],
-        ),
+      child: SectionTile(
+        tone: KitTone.stay,
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Row(children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(color: StayColors.surface, borderRadius: BorderRadius.circular(12)),
-              child: const Icon(Iconsax.wallet_3, size: 20, color: StayColors.accentDark),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                const Text(TripStrings.advanceDetails,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textDark)),
-                const Text(TripStrings.advanceDetailsSub,
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 12, color: AppColors.textLight, height: 1.4)),
-              ]),
-            ),
-          ]),
+          _in(
+            0,
+            Row(children: [
+              Container(
+                width: 56,
+                height: 56,
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: SetupKit.sky,
+                  boxShadow: ShadowTokens.elev1,
+                ),
+                child: Image.asset(SetupAssets.moneyBag),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(TripStrings.advanceDetails,
+                      maxLines: 2, overflow: TextOverflow.ellipsis, style: TripKit.text(16, weight: FontWeight.w600)),
+                  Text(TripStrings.advanceDetailsSub,
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                      style: TripKit.text(12, color: DesignColors.textGrey).copyWith(height: 1.4)),
+                ]),
+              ),
+            ]),
+          ),
           const SizedBox(height: 16),
-          _field(
-            controller: _upi,
-            focus: _upiFocus,
-            label: TripStrings.yourUpiId,
-            hint: TripStrings.upiHint,
-            error: _upiError,
-            formatters: StayEnquiryFormat.upiFormatters,
-            keyboard: TextInputType.emailAddress,
-            onChanged: (_) {
-              if (_upiError != null) setState(() => _upiError = null);
-            },
+          _in(
+            1,
+            _field(
+              controller: _upi,
+              focus: _upiFocus,
+              label: TripStrings.yourUpiId,
+              hint: TripStrings.upiHint,
+              error: _upiError,
+              formatters: StayEnquiryFormat.upiFormatters,
+              keyboard: TextInputType.emailAddress,
+              onChanged: (_) {
+                if (_upiError != null) setState(() => _upiError = null);
+              },
+            ),
           ),
           const SizedBox(height: 12),
-          _field(
-            controller: _wa,
-            focus: _waFocus,
-            label: TripStrings.whatsAppForProof,
-            error: _waError,
-            prefix: '+91 ',
-            formatters: StayEnquiryFormat.phoneFormatters,
-            keyboard: TextInputType.number,
-            onChanged: (_) {
-              if (_waError != null) setState(() => _waError = null);
-            },
+          _in(
+            2,
+            _field(
+              controller: _wa,
+              focus: _waFocus,
+              label: TripStrings.whatsAppForProof,
+              error: _waError,
+              prefix: '+91 ',
+              formatters: StayEnquiryFormat.phoneFormatters,
+              keyboard: TextInputType.number,
+              onChanged: (_) {
+                if (_waError != null) setState(() => _waError = null);
+              },
+            ),
           ),
           const SizedBox(height: 12),
-          const Text(TripStrings.advanceDetailsFooter,
-              style: TextStyle(fontSize: 12, color: AppColors.textLight, height: 1.4)),
+          _in(
+            3,
+            Text(TripStrings.advanceDetailsFooter,
+                style: TripKit.text(12, color: DesignColors.textSecondary).copyWith(height: 1.4)),
+          ),
           const SizedBox(height: 16),
-          GradientButton(
-            onPressed: _saving ? null : _save,
-            isLoading: _saving,
-            label: TripStrings.save,
-            gradient: StayColors.gradient,
-            shadowColor: StayColors.accent,
+          _in(
+            4,
+            PrimaryButton(
+ tone: KitTone.stay,
+              onPressed: _saving ? null : _save,
+              loading: _saving,
+              label: TripStrings.save,
+            ),
           ),
         ]),
       ),
@@ -266,27 +255,9 @@ class _StayAdvanceDetailsScreenState extends State<StayAdvanceDetailsScreen> {
       onChanged: onChanged,
       autocorrect: false,
       enableSuggestions: false,
-      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-      decoration: InputDecoration(
-        labelText: label,
-        hintText: hint,
-        prefixText: prefix,
-        errorText: error,
-        errorMaxLines: 2,
-        counterText: '',
-        filled: true,
-        fillColor: StayColors.surface,
-        floatingLabelBehavior: FloatingLabelBehavior.always,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-        enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: AppColors.divider)),
-        focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: StayColors.accent, width: 1.5)),
-        errorBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: AppColors.error, width: 1.5)),
-        focusedErrorBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: AppColors.error, width: 1.5)),
-      ),
+      cursorColor: DesignColors.primary,
+      style: TripKit.text(14, weight: FontWeight.w600),
+      decoration: SetupKit.input(label: label, hint: hint, prefix: prefix, error: error, errorMaxLines: 2),
     );
   }
 }

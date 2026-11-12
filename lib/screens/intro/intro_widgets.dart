@@ -5,7 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
 
-import '../../config/app_colors.dart';
+import '../../design/design.dart';
 import 'intro_strings.dart';
 
 double introOffset(ValueListenable<double> progress, int index) => progress.value - index;
@@ -19,6 +19,28 @@ class IntroSlideCanvas {
 
 class IntroInteractionNotification extends Notification {
   const IntroInteractionNotification();
+}
+
+class IntroPalette {
+  IntroPalette._();
+
+  static const List<Color> top = [
+    TravelPalette.skyStart,
+    TravelPalette.skyEnd,
+    TravelPalette.roseEnd,
+    DesignColors.accentTealDeep,
+    DesignColors.primaryLight,
+    TravelPalette.duskEnd,
+  ];
+
+  static const List<Color> bottom = [
+    DesignColors.primary,
+    TravelPalette.duskEnd,
+    TravelPalette.duskStart,
+    DesignColors.primary,
+    TravelPalette.duskEnd,
+    DesignColors.primary,
+  ];
 }
 
 class IntroPageChrome extends StatefulWidget {
@@ -123,11 +145,11 @@ class _IntroPageChromeState extends State<IntroPageChrome> with SingleTickerProv
           overflow: TextOverflow.ellipsis,
           textAlign: TextAlign.center,
           style: TextStyle(
-            fontFamily: 'Poppins',
+            fontFamily: FitnessAppTheme.fontName,
             fontSize: 12.5,
             fontWeight: FontWeight.w700,
             letterSpacing: 2.2,
-            color: Colors.white.withValues(alpha: 0.85),
+            color: DesignColors.textInverse.withValues(alpha: Alpha.high),
           ),
         );
         final headline = SizedBox(
@@ -142,12 +164,12 @@ class _IntroPageChromeState extends State<IntroPageChrome> with SingleTickerProv
                 overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.center,
                 style: const TextStyle(
-                  fontFamily: 'Poppins',
+                  fontFamily: FitnessAppTheme.fontName,
                   fontSize: 24,
                   fontWeight: FontWeight.w800,
                   height: 1.22,
                   letterSpacing: -0.3,
-                  color: Colors.white,
+                  color: DesignColors.textInverse,
                 ),
               ),
             ),
@@ -159,11 +181,11 @@ class _IntroPageChromeState extends State<IntroPageChrome> with SingleTickerProv
           overflow: TextOverflow.ellipsis,
           textAlign: TextAlign.center,
           style: TextStyle(
-            fontFamily: 'Poppins',
+            fontFamily: FitnessAppTheme.fontName,
             fontSize: 14,
             fontWeight: FontWeight.w500,
             height: 1.4,
-            color: Colors.white.withValues(alpha: 0.88),
+            color: DesignColors.textInverse.withValues(alpha: Alpha.high),
           ),
         );
 
@@ -235,7 +257,7 @@ class IntroPillButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.white.withValues(alpha: 0.22),
+      color: DesignColors.textInverse.withValues(alpha: Alpha.soft),
       borderRadius: BorderRadius.circular(999),
       child: InkWell(
         borderRadius: BorderRadius.circular(999),
@@ -246,10 +268,10 @@ class IntroPillButton extends StatelessWidget {
             label,
             maxLines: 1,
             style: const TextStyle(
-              fontFamily: 'Poppins',
+              fontFamily: FitnessAppTheme.fontName,
               fontSize: 13,
               fontWeight: FontWeight.w700,
-              color: Colors.white,
+              color: DesignColors.textInverse,
             ),
           ),
         ),
@@ -266,12 +288,12 @@ class IntroCtaButton extends StatefulWidget {
   final VoidCallback onTap;
 
   static const List<Color> accents = [
-    AppColors.primary,
-    AppColors.tripDark,
-    AppColors.stayDark,
-    AppColors.taxiDark,
-    AppColors.taxiDark,
-    AppColors.textDark,
+    DesignColors.primary,
+    DesignColors.warning,
+    DesignColors.roseDeep,
+    DesignColors.sunriseDeepEnd,
+    DesignColors.sunriseDeepEnd,
+    DesignColors.dinnerEnd,
   ];
 
   static const int _lastIndex = 5;
@@ -285,8 +307,8 @@ class _IntroCtaButtonState extends State<IntroCtaButton> with SingleTickerProvid
   bool _reduce = false;
   bool _pressed = false;
 
-  static const _plain = LinearGradient(colors: [Colors.white, Colors.white]);
-  static const _final = LinearGradient(colors: [AppColors.tripDark, AppColors.trip]);
+  static const _plain = LinearGradient(colors: [DesignColors.textInverse, DesignColors.textInverse]);
+  static const _final = LinearGradient(colors: [DesignColors.warning, DesignColors.sunriseDeep]);
 
   @override
   void initState() {
@@ -348,7 +370,7 @@ class _IntroCtaButtonState extends State<IntroCtaButton> with SingleTickerProvid
                 IntroStrings.next,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontFamily: 'Poppins', fontSize: 15.5, fontWeight: FontWeight.w800, color: color),
+                style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 15.5, fontWeight: FontWeight.w800, color: color),
               ),
             ),
             const SizedBox(width: 8),
@@ -364,20 +386,20 @@ class _IntroCtaButtonState extends State<IntroCtaButton> with SingleTickerProvid
       key: const ValueKey('cta_start'),
       mainAxisSize: MainAxisSize.min,
       children: [
-        const Icon(Iconsax.routing_2, size: 18, color: Colors.white),
+        const Icon(Iconsax.routing_2, size: 18, color: DesignColors.textInverse),
         const SizedBox(width: 8),
         const Flexible(
           child: Text(
             IntroStrings.getStarted,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(fontFamily: 'Poppins', fontSize: 16, fontWeight: FontWeight.w800, color: Colors.white),
+            style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 16, fontWeight: FontWeight.w800, color: DesignColors.textInverse),
           ),
         ),
         const SizedBox(width: 8),
         AnimatedBuilder(
           animation: _loop,
-          child: const Icon(Icons.arrow_forward_rounded, size: 18, color: Colors.white),
+          child: const Icon(Icons.arrow_forward_rounded, size: 18, color: DesignColors.textInverse),
           builder: (context, child) {
             final tri = 1 - (2 * _loop.value - 1).abs();
             final dx = 4 * Curves.easeInOutSine.transform(tri);
@@ -391,7 +413,7 @@ class _IntroCtaButtonState extends State<IntroCtaButton> with SingleTickerProvid
   @override
   Widget build(BuildContext context) {
     final isLast = widget.isLast;
-    final radius = BorderRadius.circular(14);
+    final radius = isLast ? CardRadius.hero : BorderRadius.circular(14);
 
     final body = AnimatedContainer(
       duration: const Duration(milliseconds: 350),
@@ -399,13 +421,7 @@ class _IntroCtaButtonState extends State<IntroCtaButton> with SingleTickerProvid
       decoration: BoxDecoration(
         gradient: isLast ? _final : _plain,
         borderRadius: radius,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: isLast ? 0.0 : 0.18),
-            blurRadius: 12,
-            offset: const Offset(0, 6),
-          ),
-        ],
+        boxShadow: isLast ? const <BoxShadow>[] : ShadowTokens.elev3,
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -436,7 +452,7 @@ class _IntroCtaButtonState extends State<IntroCtaButton> with SingleTickerProvid
             borderRadius: radius,
             boxShadow: [
               BoxShadow(
-                color: AppColors.trip.withValues(alpha: 0.25 + 0.20 * g),
+                color: DesignColors.sunriseDeep.withValues(alpha: Alpha.soft + Alpha.soft * g),
                 blurRadius: 8 + 10 * g,
                 offset: const Offset(0, 4),
               ),
@@ -523,7 +539,7 @@ class _ThreadPainter extends CustomPainter {
         ..style = PaintingStyle.stroke
         ..strokeWidth = 2
         ..strokeCap = StrokeCap.round
-        ..color = Colors.white.withValues(alpha: 0.35),
+        ..color = DesignColors.textInverse.withValues(alpha: Alpha.scrim),
     );
 
     final f = fill.value;
@@ -536,16 +552,16 @@ class _ThreadPainter extends CustomPainter {
           ..style = PaintingStyle.stroke
           ..strokeWidth = 2.5
           ..strokeCap = StrokeCap.round
-          ..color = Colors.white.withValues(alpha: 0.9),
+          ..color = DesignColors.textInverse.withValues(alpha: Alpha.high),
       );
     }
 
-    final halo = Paint()..color = Colors.white.withValues(alpha: 0.35);
-    final solid = Paint()..color = Colors.white;
+    final halo = Paint()..color = DesignColors.textInverse.withValues(alpha: Alpha.scrim);
+    final solid = Paint()..color = DesignColors.textInverse;
     final ring = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.5
-      ..color = Colors.white.withValues(alpha: 0.6);
+      ..color = DesignColors.textInverse.withValues(alpha: Alpha.v60);
     for (var k = 0; k < g.count; k++) {
       final c = g.stops[k];
       if (k <= currentPage) {
@@ -673,16 +689,16 @@ class _IntroJourneyThreadState extends State<IntroJourneyThread> with SingleTick
               Positioned(
                 left: geo.stops[last].dx + 12,
                 top: geo.stops[last].dy - 16,
-                child: const IgnorePointer(child: Icon(Iconsax.flag, size: 12, color: Colors.white)),
+                child: const IgnorePointer(child: Icon(Iconsax.flag, size: 12, color: DesignColors.textInverse)),
               ),
             AnimatedBuilder(
               animation: _taxiListenable,
               child: Container(
                 width: 22,
                 height: 22,
-                decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                decoration: const BoxDecoration(color: DesignColors.textInverse, shape: BoxShape.circle),
                 alignment: Alignment.center,
-                child: const Icon(Iconsax.car, size: 13, color: AppColors.trip),
+                child: const Icon(Iconsax.car, size: 13, color: DesignColors.sunriseDeep),
               ),
               builder: (context, child) {
                 final page = _reduce
@@ -718,7 +734,7 @@ class IntroPingRing extends StatelessWidget {
     required this.phase,
     this.baseSize = 18,
     this.maxScale = 3.0,
-    this.color = Colors.white,
+    this.color = DesignColors.textInverse,
   });
 
   final double phase;
@@ -771,7 +787,7 @@ class IntroSparkBurst extends StatelessWidget {
     required this.t,
     this.count = 6,
     this.radius = 30,
-    this.colors = const [Colors.white],
+    this.colors = const [DesignColors.textInverse],
   });
 
   final double t;
@@ -821,7 +837,7 @@ class _SparkPainter extends CustomPainter {
 }
 
 class IntroSlashPainter extends CustomPainter {
-  IntroSlashPainter({required this.t, this.color = AppColors.error});
+  IntroSlashPainter({required this.t, this.color = DesignColors.error});
 
   final double t;
   final Color color;
@@ -844,4 +860,86 @@ class IntroSlashPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant IntroSlashPainter old) => old.t != t || old.color != color;
+}
+
+
+class IntroStage extends StatefulWidget {
+  const IntroStage({super.key, required this.isActive, required this.builder});
+
+  final bool isActive;
+  final Widget Function(BuildContext context, AnimationController enter) builder;
+
+  @override
+  State<IntroStage> createState() => _IntroStageState();
+}
+
+class IntroStageScope extends InheritedWidget {
+  const IntroStageScope({super.key, required this.loop, required super.child});
+
+  final Animation<double> loop;
+
+  static Animation<double> loopOf(BuildContext context) {
+    final scope = context.dependOnInheritedWidgetOfExactType<IntroStageScope>();
+    return scope?.loop ?? const AlwaysStoppedAnimation<double>(0);
+  }
+
+  @override
+  bool updateShouldNotify(IntroStageScope oldWidget) => loop != oldWidget.loop;
+}
+
+class _IntroStageState extends State<IntroStage> with TickerProviderStateMixin {
+  late final AnimationController _enter = AnimationController(
+      vsync: this, duration: const Duration(milliseconds: 1400), value: widget.isActive ? 0 : 1);
+  late final AnimationController _loop =
+      AnimationController(vsync: this, duration: const Duration(milliseconds: 3600));
+  bool _reduce = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.isActive) _enter.forward();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _reduce = introReduceMotion(context);
+    if (_reduce) {
+      _enter.value = 1;
+      _loop.stop();
+      _loop.value = 0;
+    } else if (widget.isActive) {
+      if (_enter.value < 1 && !_enter.isAnimating) _enter.forward();
+      if (!_loop.isAnimating) _loop.repeat();
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant IntroStage old) {
+    super.didUpdateWidget(old);
+    if (!old.isActive && widget.isActive) {
+      if (_reduce) {
+        _enter.value = 1;
+      } else {
+        _enter.forward(from: 0);
+        _loop.repeat();
+      }
+    } else if (old.isActive && !widget.isActive) {
+      _enter.value = 1;
+      _loop.stop();
+    }
+  }
+
+  @override
+  void dispose() {
+    _loop.dispose();
+    _enter.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => IntroStageScope(
+        loop: _loop,
+        child: Builder(builder: (context) => widget.builder(context, _enter)),
+      );
 }

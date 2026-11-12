@@ -47,6 +47,7 @@ import '../utils/trip_easy_rules.dart';
 import '../utils/trip_days_rules.dart';
 import '../utils/trip_day_load.dart';
 import '../utils/trip_enquiry_rules.dart';
+import '../utils/trip_guide_rules.dart';
 import '../utils/trip_map_rules.dart';
 import '../utils/trip_stay_base.dart';
 import '../utils/trip_step_rules.dart';
@@ -55,6 +56,8 @@ import '../utils/trip_whatsapp_text.dart';
 import '../widgets/trip_status.dart';
 import 'my_trips_controller.dart';
 import 'trip_enquiry_controller.dart';
+import 'trip_plan_guide.dart';
+import 'trip_shortlist_controller.dart';
 import 'trip_supply_controller.dart';
 
 enum TripDayRemoveBlock { none, lastDay, placesDontFit, readOnly }
@@ -126,6 +129,11 @@ class TripPlanController extends GetxController {
   bool _settingsChangedWhilePlanning = false;
   String? _openingId;
   Future<TripModel?>? _creating;
+  final ownPending = <String>{};
+  bool _ownRetrying = false;
+
+  @visibleForTesting
+  Duration ownRetryDelay = const Duration(seconds: 8);
   Future<bool>? _saving;
   bool _dirtyDuringCreate = false;
   bool _lastPlanWasAuto = false;
@@ -955,6 +963,7 @@ class TripPlanController extends GetxController {
   }
 
   final planStep = 1.obs;
+  final guideState = TripGuideState();
 
   int get initialStep => pendingStep;
 
@@ -1005,7 +1014,7 @@ class TripPlanController extends GetxController {
 
   bool canMarkRow(TripEasyRowKey key) => !isReadOnly && plan.value != null;
 
-  Future<TripMarkResult> markOwn(TripEasyRowKey key, {bool withdrawOpen = false}) async {
+  Future<TripMarkResult> markOwn(TripEasyRowKey key, {bool withdrawOpen = false, bool serverClosed = false}) async {
     final p = plan.value;
     if (p == null || isReadOnly) return const TripMarked();
     final booked = confirmedRowOf(key);
@@ -1034,7 +1043,7 @@ class TripPlanController extends GetxController {
           if (q != null) _setSteps(q.steps.withStep(role, q.steps.of(role).copyWith(status: TripStepStatus.own)));
         }
     }
-    if (open.isNotEmpty) _withdrawInBackground(open);
+    if (open.isNotEmpty && !serverClosed) await _closeOpenOnServer(key.id);
     return const TripMarked();
   }
 
@@ -1064,6 +1073,7 @@ class TripPlanController extends GetxController {
   }
 
   void undoMark(TripEasyRowKey key) {
+    ownPending.remove(key.id);
     final p = plan.value;
     if (p == null || isReadOnly) return;
     final role = _roleOfRow(key);
@@ -1090,13 +1100,40 @@ class TripPlanController extends GetxController {
 
   void unskipRow(TripEasyRowKey key) => undoMark(key);
 
-  void _withdrawInBackground(List<TripEnquiryModel> rows) {
-    if (rows.isEmpty) return;
-    unawaited(() async {
-      for (final e in rows) {
-        await TripEnquiryController.to.withdraw(e.id);
+  Future<bool> _closeOpenOnServer(String step) async {
+    final res = await TripShortlistController.to.markBooked(step);
+    if (res != null) {
+      ownPending.remove(step);
+      unawaited(refreshEnquiries());
+      return true;
+    }
+    ownPending.add(step);
+    unawaited(_retryOwnPending());
+    return false;
+  }
+
+  Future<void> _retryOwnPending() async {
+    if (_ownRetrying) return;
+    _ownRetrying = true;
+    try {
+      var wait = ownRetryDelay;
+      while (ownPending.isNotEmpty && !isClosed) {
+        await Future<void>.delayed(wait);
+        if (isClosed) return;
+        for (final step in ownPending.toList()) {
+          final res = await TripShortlistController.to.markBooked(step);
+          if (res != null) ownPending.remove(step);
+        }
+        if (ownPending.isEmpty) {
+          unawaited(refreshEnquiries());
+          return;
+        }
+        final next = wait * 2;
+        wait = next > const Duration(minutes: 5) ? const Duration(minutes: 5) : next;
       }
-    }());
+    } finally {
+      _ownRetrying = false;
+    }
   }
 
   void setOwnCar(TripStepRole? role, int? legIndex, int car, bool own) {
@@ -1925,8 +1962,8 @@ class TripPlanController extends GetxController {
     isSaving.value = true;
     try {
       final created = await _repo.create(title: _title, status: TripStatuses.draft, plan: p, clientTripId: _clientTripId);
-      if (flow != _flow) return created;
       StorageService.clearTripNewDraft();
+      if (flow != _flow) return created;
       trip.value = created;
       _adoptDistrict(created);
       saveFailed.value = false;
@@ -2974,7 +3011,18 @@ class TripPlanController extends GetxController {
     return f;
   }
 
-  void _applyLegChange(TripPlan next) {
+  void _applyLegChange(TripPlan changed) {
+    var next = changed;
+    final before = plan.value;
+    if (before != null) {
+      final stale = TripGuideRules.staleKeys(before, next);
+      final g = before.guide;
+      if (g != null) {
+        final keep = {for (final e in g.choices.entries) if (!stale.contains(e.key)) e.key: e.value};
+        next = next.withGuide(TripGuide(step: stale.contains(g.step) ? '' : g.step, choices: keep, overview: g.overview));
+      }
+      guideDropStale(before, next);
+    }
     final oldFirst = plan.value?.cityKey;
     _remapTravelGaps(plan.value, next);
     _editSeq++;
@@ -2991,6 +3039,7 @@ class TripPlanController extends GetxController {
     _refreshLegSupply();
     recalculate();
     scheduleSave();
+    guideRefresh();
   }
 
   void _remapTravelGaps(TripPlan? old, TripPlan next) {
@@ -3067,7 +3116,9 @@ class TripPlanController extends GetxController {
       days: _renumber(days, keepEmptyDays: true, legCount: legs.length),
       settings: settings,
       steps: p.steps,
+      taxiMark: p.taxiMark,
       dismissedEnquiryIds: p.dismissedEnquiryIds,
+      guide: p.guide,
     );
   }
 
@@ -3125,7 +3176,9 @@ class TripPlanController extends GetxController {
       days: _renumber(days, keepEmptyDays: true, legCount: legs.length),
       settings: p.settings,
       steps: p.steps,
+      taxiMark: p.taxiMark,
       dismissedEnquiryIds: p.dismissedEnquiryIds,
+      guide: p.guide,
     );
   }
 

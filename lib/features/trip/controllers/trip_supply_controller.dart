@@ -25,6 +25,7 @@ class TripSupplyController extends GetxController {
   static const _hostel = 'Hostel';
   static const _suv = 'SUV';
   static const pricePresets = [2000, 4000, 8000];
+  static const double radiusKm = TripConstants.cityRadiusKm;
 
   final stayLeg = 1.obs;
   final taxiLeg = 1.obs;
@@ -106,7 +107,7 @@ class TripSupplyController extends GetxController {
       km: _plan.dayKm(d),
       lat: centre?.lat,
       lng: centre?.lng,
-      radiusKm: TripConstants.cityRadiusKm,
+      radiusKm: radiusKm,
     );
   }
 
@@ -293,7 +294,7 @@ class TripSupplyController extends GetxController {
     _staysWhere = _loadKey(k);
     if (centre == null) return;
     final night = TripStayNight(spots: [centre]);
-    const radius = TripConstants.cityRadiusKm;
+    const radius = radiusKm;
     stayLoading.value = true;
     try {
       final res = await withRetry(() => ApiService.get('/stays/nearby', params: {

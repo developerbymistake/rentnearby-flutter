@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:iconsax/iconsax.dart';
-import '../../../config/app_colors.dart';
+import '../../../design/design.dart';
 
 class DashedAddRow extends StatelessWidget {
   final String label;
@@ -20,27 +19,41 @@ class DashedAddRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Opacity(
-      opacity: enabled ? 1 : 0.5,
-      child: CustomPaint(
-        painter: _DashedBorderPainter(color: accent.withValues(alpha: 0.5)),
+    const radius = TripKit.cardRadiusSmall;
+    return PressScale(
+      enabled: enabled,
+      child: Container(
+        decoration: BoxDecoration(
+            color: enabled ? DesignColors.surface : DesignColors.surfaceMuted,
+            borderRadius: radius,
+            boxShadow: enabled ? ShadowTokens.elev1 : const []),
         child: Material(
           color: Colors.transparent,
           child: InkWell(
             onTap: enabled ? onTap : null,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: radius,
             child: ConstrainedBox(
               constraints: const BoxConstraints(minHeight: 48),
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                padding: const EdgeInsets.fromLTRB(12, 10, 16, 10),
                 child: Row(children: [
-                  Icon(Iconsax.add, size: 18, color: accent),
-                  const SizedBox(width: 8),
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: enabled ? PickKit.stayGradient : null,
+                      color: enabled ? null : DesignColors.textMuted,
+                      boxShadow: enabled ? ShadowTokens.elev1 : const [],
+                    ),
+                    child: const Icon(Icons.add_rounded, size: 20, color: DesignColors.onPrimary),
+                  ),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Text(label,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600, color: accent)),
+                        style: TripKit.text(14, color: enabled ? DesignColors.primary : DesignColors.textMuted).copyWith(letterSpacing: 0.2)),
                   ),
                   const SizedBox(width: 8),
                   Flexible(
@@ -48,7 +61,7 @@ class DashedAddRow extends StatelessWidget {
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         textAlign: TextAlign.end,
-                        style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight)),
+                        style: TripKit.text(11, color: TypeTokens.secondary)),
                   ),
                 ]),
               ),
@@ -58,35 +71,4 @@ class DashedAddRow extends StatelessWidget {
       ),
     );
   }
-}
-
-class _DashedBorderPainter extends CustomPainter {
-  final Color color;
-  const _DashedBorderPainter({required this.color});
-
-  static const double _stroke = 1.5;
-  static const double _dash = 6;
-  static const double _gap = 4;
-  static const double _radius = 12;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = _stroke;
-    final rect = (Offset.zero & size).deflate(_stroke / 2);
-    final path = Path()..addRRect(RRect.fromRectAndRadius(rect, const Radius.circular(_radius)));
-    for (final metric in path.computeMetrics()) {
-      var d = 0.0;
-      while (d < metric.length) {
-        final end = (d + _dash).clamp(0.0, metric.length);
-        canvas.drawPath(metric.extractPath(d, end), paint);
-        d += _dash + _gap;
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(_DashedBorderPainter old) => old.color != color;
 }

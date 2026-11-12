@@ -1,11 +1,9 @@
-import 'package:cached_network_image/cached_network_image.dart';
+import 'package:bakhli/design/design.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../../../config/app_colors.dart';
 import '../../../controllers/location_controller.dart';
 import '../data/trip_city_catalog.dart';
 import '../models/trip_city_model.dart';
-import '../trip_colors.dart';
 import '../trip_navigation.dart';
 import '../trip_strings.dart';
 
@@ -17,8 +15,8 @@ class TripPopularRail extends StatefulWidget {
 }
 
 class _TripPopularRailState extends State<TripPopularRail> {
-  static const double _cardWidth = 150;
-  static const double _cardHeight = 150;
+  static const double _cardWidth = 168;
+  static const double _cardHeight = 168;
 
   late final TripCityCatalog _catalog;
 
@@ -57,33 +55,30 @@ class _TripPopularRailState extends State<TripPopularRail> {
     final cities = _ordered(stateName);
     if (cities.isEmpty) return const SizedBox.shrink();
     return Padding(
-      padding: const EdgeInsets.only(bottom: 15),
+      padding: const EdgeInsets.only(bottom: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 20),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: KitMetrics.gutter),
             child: Text(
               TripStrings.popularDestinations,
-              style: TextStyle(
-                  fontFamily: 'Poppins', fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textDark),
+              style: TypeTokens.style(16, FontWeight.w700, color: DesignColors.textStrong, letterSpacing: 0.27),
             ),
           ),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 20),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: KitMetrics.gutter),
             child: Text(
               TripStrings.popularDestinationsSubtitle,
-              style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight),
+              style: TypeTokens.style(12, FontWeight.w400, color: TypeTokens.secondary),
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           SizedBox(
-            height: _cardHeight,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 20),
+            height: _cardHeight + 24,
+            child: RailReveal(
               itemCount: cities.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 10),
+              padding: const EdgeInsets.fromLTRB(KitMetrics.gutter, 4, KitMetrics.gutter, 20),
               itemBuilder: (_, i) => _card(cities[i]),
             ),
           ),
@@ -94,85 +89,84 @@ class _TripPopularRailState extends State<TripPopularRail> {
 
   Widget _card(TripCityModel city) {
     final ready = city.isReady;
-    final dpr = MediaQuery.of(context).devicePixelRatio;
-    return GestureDetector(
-      onTap: ready ? () => TripNavigation.startWithCities([city]) : null,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: SizedBox(
-          width: _cardWidth,
-          height: _cardHeight,
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              city.imageUrl != null
-                  ? CachedNetworkImage(
-                      imageUrl: city.imageUrl!,
-                      fit: BoxFit.cover,
-                      memCacheWidth: (_cardWidth * dpr).round(),
-                      placeholder: (_, __) => _placeholder(),
-                      errorWidget: (_, __, ___) => _placeholder(),
-                    )
-                  : _placeholder(),
-              DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [Colors.transparent, Colors.black.withValues(alpha: 0.65)],
-                    stops: const [0.4, 1],
+    return PressScale(
+      enabled: ready,
+      child: Container(
+        width: _cardWidth,
+        height: _cardHeight,
+        decoration: const BoxDecoration(borderRadius: CardRadius.tile, boxShadow: ShadowTokens.elev2),
+        child: Material(
+          color: DesignColors.surface,
+          borderRadius: CardRadius.tile,
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: ready ? () => TripNavigation.startWithCities([city]) : null,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                KitPhoto(
+                  url: city.cover,
+                  width: _cardWidth,
+                  height: _cardHeight,
+                  tone: KitTone.trip,
+                  asset: TravelIcon.map,
+                  iconSize: 56,
+                ),
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [Colors.transparent, DesignColors.overlayDark.withValues(alpha: Alpha.strong)],
+                      stops: const [0.4, 1],
+                    ),
                   ),
                 ),
-              ),
-              if (!ready)
+                if (!ready)
+                  Positioned(
+                    top: 8,
+                    left: 8,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: DesignColors.tint(DesignColors.overlayDark, Alpha.strong),
+                        borderRadius: CardRadius.chip,
+                      ),
+                      child: Text(
+                        TripStrings.comingSoon,
+                        style: TypeTokens.style(10, FontWeight.w600, color: DesignColors.surface, chip: true),
+                      ),
+                    ),
+                  ),
                 Positioned(
-                  top: 8,
-                  right: 8,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.55),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Text(
-                      TripStrings.comingSoon,
-                      style: TextStyle(
-                          fontFamily: 'Poppins', fontSize: 10, fontWeight: FontWeight.w600, color: Colors.white),
-                    ),
-                  ),
-                ),
-              Positioned(
-                left: 10,
-                right: 10,
-                bottom: 10,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      city.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                          fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white),
-                    ),
-                    if (city.stateName.isNotEmpty)
+                  left: 12,
+                  right: 12,
+                  bottom: 12,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
                       Text(
-                        city.stateName,
+                        city.name,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                            fontFamily: 'Poppins', fontSize: 11, color: Colors.white.withValues(alpha: 0.85)),
+                        style: TypeTokens.style(14, FontWeight.w700, color: DesignColors.surface),
                       ),
-                  ],
+                      if (city.stateName.isNotEmpty)
+                        Text(
+                          city.stateName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TypeTokens.style(11, FontWeight.w500, color: DesignColors.tint(DesignColors.surface, Alpha.high)),
+                        ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
     );
   }
-
-  Widget _placeholder() => const DecoratedBox(decoration: BoxDecoration(gradient: TripColors.gradient));
 }

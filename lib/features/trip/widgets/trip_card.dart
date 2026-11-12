@@ -1,8 +1,6 @@
+import 'package:bakhli/design/design.dart';
 import 'package:flutter/material.dart';
-import '../../../config/app_colors.dart';
-import '../../../config/app_shadows.dart';
 import '../models/trip_model.dart';
-import '../trip_colors.dart';
 import '../trip_strings.dart';
 import '../trip_strings_a5.dart';
 import '../trip_strings_v2_plan.dart';
@@ -18,21 +16,33 @@ class TripProgressRing extends StatelessWidget {
   final Color track;
   final Color textColor;
   final Color? fill;
+  final Animation<double>? animation;
 
   const TripProgressRing({
     super.key,
     required this.percent,
     this.size = 48,
-    this.stroke = 5,
-    this.color = TripColors.accent,
-    this.track = TripColors.surface,
-    this.textColor = AppColors.textDark,
+    this.stroke = 6,
+    this.color = TripEntryStyle.accent,
+    this.track = TripEntryStyle.surface,
+    this.textColor = FitnessAppTheme.darkerText,
     this.fill,
+    this.animation,
   });
+
+  Widget _ring(int p, double progress) => TemplateMiniRing(
+        percent: p,
+        size: size - 4,
+        stroke: stroke,
+        track: track,
+        progress: progress,
+        colors: [color, TravelPalette.ringLight, TravelPalette.ringLight],
+      );
 
   @override
   Widget build(BuildContext context) {
     final p = percent.clamp(0, 100).toInt();
+    final a = animation;
     return Container(
       width: size,
       height: size,
@@ -40,21 +50,14 @@ class TripProgressRing extends StatelessWidget {
       child: Stack(
         alignment: Alignment.center,
         children: [
-          SizedBox(
-            width: size - 4,
-            height: size - 4,
-            child: CircularProgressIndicator(
-              value: p / 100,
-              strokeWidth: stroke,
-              strokeCap: StrokeCap.round,
-              color: color,
-              backgroundColor: track,
-            ),
-          ),
+          a == null
+              ? _ring(p, 1)
+              : AnimatedBuilder(animation: a, builder: (_, __) => _ring(p, a.value)),
           Text(
             '$p%',
+            textScaler: MediaQuery.textScalerOf(context).clamp(maxScaleFactor: 1.15),
             style: TextStyle(
-                fontFamily: 'Poppins', fontSize: size * 0.24, fontWeight: FontWeight.w800, color: textColor),
+                fontFamily: FitnessAppTheme.fontName, fontSize: size * 0.21, fontWeight: FontWeight.w800, color: textColor),
           ),
         ],
       ),
@@ -70,6 +73,7 @@ class TripCard extends StatelessWidget {
   final VoidCallback? onShare;
   final VoidCallback onDelete;
   final VoidCallback? onMarkComplete;
+  final Animation<double>? animation;
 
   const TripCard({
     super.key,
@@ -80,6 +84,7 @@ class TripCard extends StatelessWidget {
     this.onShare,
     required this.onDelete,
     this.onMarkComplete,
+    this.animation,
   });
 
   static TripBookingState stateOf(TripSummaryModel t) {
@@ -89,13 +94,13 @@ class TripCard extends StatelessWidget {
   }
 
   Widget _badge(String label, Color color, Color surface) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        decoration: BoxDecoration(color: surface, borderRadius: BorderRadius.circular(999)),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        decoration: BoxDecoration(color: surface, borderRadius: CardRadius.pill),
         child: Text(
           label,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: TextStyle(fontFamily: 'Poppins', fontSize: 10.5, fontWeight: FontWeight.w700, color: color),
+          style: TypeTokens.style(11, FontWeight.w700, color: color),
         ),
       );
 
@@ -106,153 +111,129 @@ class TripCard extends StatelessWidget {
     final ready = !past && TripBarRules.isReady(t);
     final title = t.title.trim().isEmpty ? t.routeLine : t.title.trim();
     final showRoute = t.legCount > 1 && title != t.routeLine;
-    final ringColor = ready || past ? AppColors.success : TripColors.accent;
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onOpen,
+    final ringColor = ready || past ? TravelPalette.skyEnd : FitnessAppTheme.nearlyDarkBlue;
+    final needs = TripBarRules.needCount(t);
+    final showChips = !past && (p.inProgress > 0 || needs > 0);
+    final label = TripBarRules.actionLabel(t, past: past);
+    return PressScale(
       child: Container(
-        padding: const EdgeInsets.fromLTRB(14, 12, 6, 12),
-        decoration: BoxDecoration(
-          color: AppColors.cardBg,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.divider.withValues(alpha: 0.8)),
-          boxShadow: AppShadows.premium(TripColors.accent, alpha: 0.06, blur: 10, offset: const Offset(0, 3)),
+        decoration: const BoxDecoration(
+          color: DesignColors.surface,
+          borderRadius: CardRadius.tile,
+          boxShadow: ShadowTokens.elev2,
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                TripProgressRing(percent: p.percent, color: ringColor),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
+        child: Material(
+          color: Colors.transparent,
+          borderRadius: CardRadius.tile,
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: onOpen,
+            borderRadius: CardRadius.tile,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 4, 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                            fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textDark),
-                      ),
-                      if (showRoute)
-                        Text(
-                          t.routeLine,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textMedium),
+                      TripProgressRing(percent: p.percent, size: 52, color: ringColor, animation: animation),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TypeTokens.style(15, FontWeight.w700, color: DesignColors.textStrong),
+                            ),
+                            if (showRoute)
+                              Text(
+                                t.routeLine,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TypeTokens.style(12, FontWeight.w400, color: TypeTokens.secondary),
+                              ),
+                            Text(
+                              TripBarRules.datesLine(t, TripClock.today()),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TypeTokens.style(12, FontWeight.w400, color: TypeTokens.secondary),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              p.total == 0 ? TripStringsV2Plan.nothingToArrange : TripStringsV2Plan.myTripsArranged(p.done, p.total),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TypeTokens.style(12, FontWeight.w600, color: DesignColors.textGrey),
+                            ),
+                          ],
                         ),
-                      Text(
-                        TripBarRules.datesLine(t, TripClock.today()),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight),
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        p.total == 0 ? TripStringsV2Plan.nothingToArrange : TripStringsV2Plan.myTripsArranged(p.done, p.total),
-                        maxLines: 1,
-                        style: const TextStyle(
-                            fontFamily: 'Poppins', fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textMedium),
+                      PopupMenuButton<String>(
+                        constraints: const BoxConstraints(minWidth: 140),
+                        icon: const Icon(Icons.more_vert_rounded, size: 22, color: DesignColors.textGrey),
+                        color: DesignColors.surface,
+                        elevation: 8,
+                        shape: const RoundedRectangleBorder(borderRadius: CardRadius.tile),
+                        onSelected: (v) {
+                          if (v == 'share') onShare?.call();
+                          if (v == 'complete') onMarkComplete?.call();
+                          if (v == 'delete') onDelete();
+                        },
+                        itemBuilder: (_) => [
+                          if (onShare != null)
+                            PopupMenuItem(
+                              value: 'share',
+                              height: 44,
+                              child: Text(TripStringsA5.share, style: TypeTokens.style(14, FontWeight.w500)),
+                            ),
+                          if (onMarkComplete != null)
+                            PopupMenuItem(
+                              value: 'complete',
+                              height: 44,
+                              child: Text(TripStrings.markComplete, style: TypeTokens.style(14, FontWeight.w500)),
+                            ),
+                          PopupMenuItem(
+                            value: 'delete',
+                            height: 44,
+                            child: Text(TripStrings.delete, style: TypeTokens.style(14, FontWeight.w500, color: DesignColors.error)),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                ),
-                const SizedBox(width: 6),
-                ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 110),
-                  child: TripBookingStatePill(stateOf(t)),
-                ),
-                PopupMenuButton<String>(
-                  constraints: const BoxConstraints(minWidth: 140),
-                  icon: const Icon(Icons.more_vert_rounded, size: 20, color: AppColors.textLight),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  onSelected: (v) {
-                    if (v == 'share') onShare?.call();
-                    if (v == 'complete') onMarkComplete?.call();
-                    if (v == 'delete') onDelete();
-                  },
-                  itemBuilder: (_) => [
-                    if (onShare != null)
-                      const PopupMenuItem(
-                        value: 'share',
-                        height: 44,
-                        child: Text(TripStringsA5.share, style: TextStyle(fontFamily: 'Poppins')),
-                      ),
-                    if (onMarkComplete != null)
-                      const PopupMenuItem(
-                        value: 'complete',
-                        height: 44,
-                        child: Text(TripStrings.markComplete, style: TextStyle(fontFamily: 'Poppins')),
-                      ),
-                    const PopupMenuItem(
-                      value: 'delete',
-                      height: 44,
-                      child: Text(TripStrings.delete, style: TextStyle(fontFamily: 'Poppins', color: AppColors.error)),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            if (!past && (p.inProgress > 0 || TripBarRules.needCount(t) > 0)) ...[
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 6,
-                runSpacing: 6,
-                children: [
-                  if (TripBarRules.needCount(t) > 0)
-                    _badge(TripStringsV2Plan.needsYou(TripBarRules.needCount(t)), TripStatusColors.failed,
-                        TripStatusColors.failedSurface),
-                  if (p.inProgress > 0)
-                    _badge(TripStringsV2Plan.waitingForReply(p.inProgress), TripStatusColors.waiting,
-                        TripStatusColors.waitingSurface),
-                ],
-              ),
-            ],
-            const SizedBox(height: 10),
-            Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: _button(TripBarRules.actionLabel(t, past: past), ready || past),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _button(String label, bool quiet) => Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onAction,
-          borderRadius: BorderRadius.circular(12),
-          child: Ink(
-            decoration: BoxDecoration(
-              gradient: quiet ? null : TripColors.gradient,
-              color: quiet ? TripColors.surface : null,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(minHeight: 44),
-              child: Center(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  child: Text(
-                    label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontFamily: 'Poppins',
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: quiet ? TripColors.accentDark : Colors.white,
+                  const SizedBox(height: 12),
+                  Padding(
+                    padding: const EdgeInsets.only(right: 12),
+                    child: Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        TripBookingStatePill(stateOf(t)),
+                        if (showChips && needs > 0)
+                          _badge(TripStringsV2Plan.needsYou(needs), TravelPalette.roseEnd, TripEntryStyle.roseTint),
+                        if (showChips && p.inProgress > 0)
+                          _badge(TripStringsV2Plan.waitingForReply(p.inProgress), DesignColors.textGreyDark, TripEntryStyle.sunriseTint),
+                      ],
                     ),
                   ),
-                ),
+                  const SizedBox(height: 12),
+                  Padding(
+                    padding: const EdgeInsets.only(right: 12),
+                    child: ready || past
+                        ? SecondaryButton(label: label, onPressed: onAction, tone: KitTone.trip)
+                        : PrimaryButton(label: label, onPressed: onAction, tone: KitTone.trip),
+                  ),
+                ],
               ),
             ),
           ),
         ),
-      );
+      ),
+    );
+  }
 }

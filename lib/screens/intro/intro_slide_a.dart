@@ -6,10 +6,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:iconsax/iconsax.dart';
 
-import '../../config/app_colors.dart';
-import '../../features/trip/trip_colors.dart';
+import '../../design/design.dart';
 import 'intro_strings.dart';
 import 'intro_widgets.dart';
+
+Color introDayColor(int day) => const [
+      DesignColors.sunriseDeep,
+      DesignColors.primary,
+      DesignColors.roseDeep,
+      DesignColors.accentTealDeep,
+      TravelPalette.skyEnd,
+      TravelPalette.duskStart,
+    ][(day - 1) % 6];
 
 Path introRoutePath(Size canvas) {
   final base = IntroSlideCanvas.size;
@@ -18,7 +26,7 @@ Path introRoutePath(Size canvas) {
 }
 
 TextStyle _poppins(double size, FontWeight weight, Color color) =>
-    TextStyle(fontFamily: 'Poppins', fontSize: size, fontWeight: weight, color: color, height: 1.1);
+    TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: size, fontWeight: weight, color: color, height: 1.1);
 
 double _seg(double t, double begin, double end, [Curve curve = Curves.linear]) =>
     Interval(begin, math.min(end, 1.0), curve: curve).transform(t.clamp(0.0, 1.0));
@@ -183,16 +191,16 @@ class _PickScenePainter extends CustomPainter {
         final a = _seg(e, 0.0, 0.36, Curves.easeOutCubic);
         if (a <= 0) return;
         final c = Offset(196, 64 + 18 * (1 - a));
-        paint.color = AppColors.warning.withValues(alpha: 0.18 * a);
+        paint.color = DesignColors.warning.withValues(alpha: Alpha.soft * a);
         canvas.drawCircle(c, 34, paint);
-        paint.color = AppColors.warning.withValues(alpha: 0.9 * a);
+        paint.color = DesignColors.warning.withValues(alpha: Alpha.v90 * a);
         canvas.drawCircle(c, 22, paint);
       case _PickLayer.back:
         final a = _seg(e, 0.0, 0.32, Curves.easeOutCubic);
         if (a <= 0) return;
         canvas.save();
         canvas.translate(0, 24 * (1 - a));
-        paint.color = Colors.white.withValues(alpha: 0.14 * a);
+        paint.color = DesignColors.textInverse.withValues(alpha: Alpha.tint * a);
         canvas.drawPath(_PickGeo.back, paint);
         canvas.restore();
       case _PickLayer.mid:
@@ -200,7 +208,7 @@ class _PickScenePainter extends CustomPainter {
         if (a <= 0) return;
         canvas.save();
         canvas.translate(0, 24 * (1 - a));
-        paint.color = Colors.white.withValues(alpha: 0.22 * a);
+        paint.color = DesignColors.textInverse.withValues(alpha: Alpha.v22 * a);
         canvas.drawPath(_PickGeo.mid, paint);
         canvas.restore();
       case _PickLayer.front:
@@ -208,7 +216,7 @@ class _PickScenePainter extends CustomPainter {
         if (a <= 0) return;
         canvas.save();
         canvas.translate(0, 24 * (1 - a));
-        paint.color = Colors.white.withValues(alpha: 0.34 * a);
+        paint.color = DesignColors.textInverse.withValues(alpha: Alpha.scrim * a);
         canvas.drawPath(_PickGeo.front, paint);
         canvas.restore();
     }
@@ -290,13 +298,13 @@ class _IntroSlidePickState extends _IntroSlideState<IntroSlidePick> {
                 height: 20,
                 padding: const EdgeInsets.symmetric(horizontal: 9),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.2),
+                  color: DesignColors.textInverse.withValues(alpha: Alpha.soft),
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Iconsax.tick_circle, size: 12, color: Colors.white),
+                    const Icon(Iconsax.tick_circle, size: 12, color: DesignColors.textInverse),
                     const SizedBox(width: 4),
                     AnimatedSwitcher(
                       duration: const Duration(milliseconds: 220),
@@ -308,7 +316,7 @@ class _IntroSlidePickState extends _IntroSlideState<IntroSlidePick> {
                         IntroStrings.stylesPicked(n),
                         key: ValueKey<int>(n),
                         maxLines: 1,
-                        style: _poppins(10.5, FontWeight.w700, Colors.white),
+                        style: _poppins(10.5, FontWeight.w700, DesignColors.textInverse),
                       ),
                     ),
                   ],
@@ -341,11 +349,11 @@ class _IntroSlidePickState extends _IntroSlideState<IntroSlidePick> {
             height: 26,
             padding: const EdgeInsets.symmetric(horizontal: 8),
             decoration: BoxDecoration(
-              color: sel ? Colors.white : Colors.white.withValues(alpha: 0.2),
+              color: sel ? DesignColors.textInverse : DesignColors.textInverse.withValues(alpha: Alpha.soft),
               borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: Colors.white, width: 1.2),
+              border: Border.all(color: DesignColors.textInverse, width: 1.2),
               boxShadow: sel
-                  ? [BoxShadow(color: Colors.black.withValues(alpha: 0.12), blurRadius: 6, offset: const Offset(0, 2))]
+                  ? ShadowTokens.elev2
                   : null,
             ),
             child: FittedBox(
@@ -357,8 +365,8 @@ class _IntroSlidePickState extends _IntroSlideState<IntroSlidePick> {
                     Container(
                       width: 12,
                       height: 12,
-                      decoration: const BoxDecoration(color: AppColors.success, shape: BoxShape.circle),
-                      child: const Icon(Icons.check_rounded, size: 9, color: Colors.white),
+                      decoration: const BoxDecoration(color: DesignColors.success, shape: BoxShape.circle),
+                      child: const Icon(Icons.check_rounded, size: 9, color: DesignColors.textInverse),
                     ),
                     const SizedBox(width: 4),
                   ],
@@ -366,7 +374,7 @@ class _IntroSlidePickState extends _IntroSlideState<IntroSlidePick> {
                     label,
                     maxLines: 1,
                     softWrap: false,
-                    style: _poppins(10, FontWeight.w700, sel ? AppColors.textDark : Colors.white),
+                    style: _poppins(10, FontWeight.w700, sel ? DesignColors.dinnerEnd : DesignColors.textInverse),
                   ),
                 ],
               ),
@@ -512,8 +520,8 @@ class _RouteMapPainter extends CustomPainter {
   final ValueListenable<int> fadeDay;
   final double fadeFrac;
 
-  static final Color _day1 = TripColors.dayColor(1);
-  static final Color _day2 = TripColors.dayColor(2);
+  static final Color _day1 = introDayColor(1);
+  static final Color _day2 = introDayColor(2);
 
   Paint _stroke(Color c, double alpha) => Paint()
     ..style = PaintingStyle.stroke
@@ -524,7 +532,7 @@ class _RouteMapPainter extends CustomPainter {
 
   void _comet(Canvas canvas, Offset at, Color ring) {
     canvas.drawCircle(at, 4.5, Paint()..color = ring);
-    canvas.drawCircle(at, 2.5, Paint()..color = Colors.white);
+    canvas.drawCircle(at, 2.5, Paint()..color = DesignColors.textInverse);
   }
 
   @override
@@ -534,7 +542,7 @@ class _RouteMapPainter extends CustomPainter {
     final contour = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1
-      ..color = AppColors.divider;
+      ..color = DesignColors.divider;
     for (final c in _RouteGeo.contours) {
       canvas.drawPath(c, contour);
     }
@@ -564,20 +572,20 @@ class _RouteMapPainter extends CustomPainter {
 
     final nodesA = _seg(e, 0.10, 0.22);
     if (nodesA > 0) {
-      final spot = Paint()..color = AppColors.trip.withValues(alpha: nodesA);
+      final spot = Paint()..color = DesignColors.sunriseDeep.withValues(alpha: nodesA);
       final spotRing = Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1
-        ..color = Colors.white.withValues(alpha: nodesA);
+        ..color = DesignColors.textInverse.withValues(alpha: nodesA);
       for (final s in _RouteGeo.spots) {
         canvas.drawCircle(s, 3, spot);
         canvas.drawCircle(s, 3, spotRing);
       }
-      final fill = Paint()..color = Colors.white.withValues(alpha: nodesA);
+      final fill = Paint()..color = DesignColors.textInverse.withValues(alpha: nodesA);
       final ring = Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = 2
-        ..color = AppColors.textDark.withValues(alpha: 0.5 * nodesA);
+        ..color = DesignColors.dinnerEnd.withValues(alpha: Alpha.half * nodesA);
       for (final n in const [_RouteGeo.nodeA, _RouteGeo.nodeB, _RouteGeo.nodeC]) {
         canvas.drawCircle(n, 7, fill);
         canvas.drawCircle(n, 7, ring);
@@ -587,7 +595,7 @@ class _RouteMapPainter extends CustomPainter {
     final focus = focusDay.value;
     if (focus != 0 && tap.status == AnimationStatus.forward) {
       final u = Curves.easeInOut.transform(tap.value);
-      _comet(canvas, _RouteGeo.tangentAt(focus, u).position, TripColors.dayColor(focus));
+      _comet(canvas, _RouteGeo.tangentAt(focus, u).position, introDayColor(focus));
     }
   }
 
@@ -654,7 +662,7 @@ class _IntroSlidePlanState extends _IntroSlideState<IntroSlidePlan> {
   }
 
   ({Offset pos, double angle, double scale, double alpha}) _taxiPose(double t) {
-    if (reduce) return (pos: _RouteGeo.nodeB, angle: 0.0, scale: 1.0, alpha: 1.0);
+    if (reduce) return (pos: _RouteGeo.nodeB, angle: 0.0, scale: 1.0, alpha: Alpha.full);
     double angleOf(Tangent tg) => math.atan2(tg.vector.dy, tg.vector.dx).clamp(-0.35, 0.35).toDouble();
     final alpha = t < 0.04
         ? t / 0.04
@@ -686,7 +694,7 @@ class _IntroSlidePlanState extends _IntroSlideState<IntroSlidePlan> {
       width: 80,
       height: 13,
       child: Center(
-        child: Text(text, maxLines: 1, softWrap: false, style: _poppins(9, FontWeight.w700, AppColors.textMedium)),
+        child: Text(text, maxLines: 1, softWrap: false, style: _poppins(9, FontWeight.w700, DesignColors.textSecondary)),
       ),
     );
   }
@@ -714,16 +722,16 @@ class _IntroSlidePlanState extends _IntroSlideState<IntroSlidePlan> {
       height: 16,
       padding: const EdgeInsets.symmetric(horizontal: 6),
       decoration: BoxDecoration(
-        color: AppColors.taxiSurface,
+        color: DesignColors.askedTint,
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: AppColors.taxi.withValues(alpha: 0.35), width: 1),
+        border: Border.all(color: DesignColors.sunriseDeep.withValues(alpha: Alpha.scrim), width: 1),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Iconsax.car, size: 10, color: AppColors.taxi),
+          const Icon(Iconsax.car, size: 10, color: DesignColors.sunriseDeep),
           const SizedBox(width: 3),
-          Text(IntroStrings.yourRide, maxLines: 1, style: _poppins(8.5, FontWeight.w700, AppColors.taxiDark)),
+          Text(IntroStrings.yourRide, maxLines: 1, style: _poppins(8.5, FontWeight.w700, DesignColors.sunriseDeepEnd)),
         ],
       ),
     );
@@ -761,7 +769,7 @@ class _IntroSlidePlanState extends _IntroSlideState<IntroSlidePlan> {
           t: _seg(entrance.value, 0.68, 0.95),
           count: 6,
           radius: 26,
-          colors: [TripColors.dayColor(1), TripColors.dayColor(2)],
+          colors: [introDayColor(1), introDayColor(2)],
         ),
       ),
     );
@@ -773,11 +781,11 @@ class _IntroSlidePlanState extends _IntroSlideState<IntroSlidePlan> {
       height: 20,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: DesignColors.textInverse,
         shape: BoxShape.circle,
-        border: Border.all(color: AppColors.taxi, width: 1),
+        border: Border.all(color: DesignColors.sunriseDeep, width: 1),
       ),
-      child: const Icon(Iconsax.car, size: 12, color: AppColors.taxi),
+      child: const Icon(Iconsax.car, size: 12, color: DesignColors.sunriseDeep),
     );
     return Positioned(
       left: 0,
@@ -810,7 +818,7 @@ class _IntroSlidePlanState extends _IntroSlideState<IntroSlidePlan> {
 
   Widget _dayChip(int d) {
     final begin = d == 1 ? 0.70 : 0.75;
-    final color = TripColors.dayColor(d);
+    final color = introDayColor(d);
     return AnimatedBuilder(
       animation: Listenable.merge([entrance, _focusDay]),
       builder: (context, _) {
@@ -834,9 +842,9 @@ class _IntroSlidePlanState extends _IntroSlideState<IntroSlidePlan> {
                     height: 24,
                     padding: const EdgeInsets.symmetric(horizontal: 10),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: DesignColors.textInverse,
                       borderRadius: BorderRadius.circular(999),
-                      border: Border.all(color: focused ? color : Colors.white, width: 1.5),
+                      border: Border.all(color: focused ? color : DesignColors.textInverse, width: 1.5),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -847,12 +855,12 @@ class _IntroSlidePlanState extends _IntroSlideState<IntroSlidePlan> {
                           decoration: BoxDecoration(color: color, shape: BoxShape.circle),
                         ),
                         const SizedBox(width: 5),
-                        const Icon(Iconsax.calendar_1, size: 11, color: AppColors.textMedium),
+                        const Icon(Iconsax.calendar_1, size: 11, color: DesignColors.textSecondary),
                         const SizedBox(width: 4),
                         Text(
                           d == 1 ? IntroStrings.day1 : IntroStrings.day2,
                           maxLines: 1,
-                          style: _poppins(10, FontWeight.w700, AppColors.textDark),
+                          style: _poppins(10, FontWeight.w700, DesignColors.dinnerEnd),
                         ),
                       ],
                     ),
@@ -875,11 +883,9 @@ class _IntroSlidePlanState extends _IntroSlideState<IntroSlidePlan> {
           rect: _RouteGeo.card.outerRect,
           child: DecoratedBox(
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: DesignColors.textInverse,
               borderRadius: BorderRadius.circular(18),
-              boxShadow: [
-                BoxShadow(color: Colors.black.withValues(alpha: 0.18), blurRadius: 14, offset: const Offset(0, 6)),
-              ],
+              boxShadow: ShadowTokens.elev2,
             ),
           ),
         ),
@@ -1029,7 +1035,7 @@ class _IntroSlideTaxiState extends _IntroSlideState<IntroSlideTaxi> {
       child: _appear(
         0.06,
         0.22,
-        Text(IntroStrings.ridesTitle, maxLines: 1, style: _poppins(12, FontWeight.w700, AppColors.textDark)),
+        Text(IntroStrings.ridesTitle, maxLines: 1, style: _poppins(12, FontWeight.w700, DesignColors.dinnerEnd)),
         dy: 6,
       ),
     );
@@ -1041,8 +1047,8 @@ class _IntroSlideTaxiState extends _IntroSlideState<IntroSlideTaxi> {
       width: 24,
       height: 24,
       alignment: Alignment.center,
-      decoration: const BoxDecoration(color: AppColors.taxi, shape: BoxShape.circle),
-      child: const Icon(Iconsax.car, size: 14, color: Colors.white),
+      decoration: const BoxDecoration(color: DesignColors.sunriseDeep, shape: BoxShape.circle),
+      child: const Icon(Iconsax.car, size: 14, color: DesignColors.textInverse),
     );
     return Positioned(
       left: 20,
@@ -1068,7 +1074,7 @@ class _IntroSlideTaxiState extends _IntroSlideState<IntroSlideTaxi> {
                       IntroStrings.rideRows[i],
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: _poppins(11, FontWeight.w600, AppColors.textDark),
+                      style: _poppins(11, FontWeight.w600, DesignColors.dinnerEnd),
                     ),
                   ),
                   Transform.scale(
@@ -1076,8 +1082,8 @@ class _IntroSlideTaxiState extends _IntroSlideState<IntroSlideTaxi> {
                     child: Container(
                       width: 16,
                       height: 16,
-                      decoration: const BoxDecoration(color: AppColors.success, shape: BoxShape.circle),
-                      child: const Icon(Icons.check_rounded, size: 11, color: Colors.white),
+                      decoration: const BoxDecoration(color: DesignColors.success, shape: BoxShape.circle),
+                      child: const Icon(Icons.check_rounded, size: 11, color: DesignColors.textInverse),
                     ),
                   ),
                 ],
@@ -1108,7 +1114,7 @@ class _IntroSlideTaxiState extends _IntroSlideState<IntroSlideTaxi> {
               clipBehavior: Clip.none,
               children: [
                 Positioned.fill(
-                  child: ColoredBox(color: AppColors.taxi.withValues(alpha: 0.18 * _seg(entrance.value, 0.3, 0.6))),
+                  child: ColoredBox(color: DesignColors.sunriseDeep.withValues(alpha: Alpha.soft * _seg(entrance.value, 0.3, 0.6))),
                 ),
                 if (show > 0)
                   Positioned(
@@ -1119,7 +1125,7 @@ class _IntroSlideTaxiState extends _IntroSlideState<IntroSlideTaxi> {
                     child: Opacity(
                       opacity: (show * fade).clamp(0.0, 1.0),
                       child: const DecoratedBox(
-                        decoration: BoxDecoration(color: AppColors.taxiDark, shape: BoxShape.circle),
+                        decoration: BoxDecoration(color: DesignColors.sunriseDeepEnd, shape: BoxShape.circle),
                       ),
                     ),
                   ),
@@ -1133,10 +1139,11 @@ class _IntroSlideTaxiState extends _IntroSlideState<IntroSlideTaxi> {
 
   Widget _carChip(int i) {
     return AnimatedBuilder(
-      animation: Listenable.merge([_car, tap]),
+      animation: Listenable.merge([_car, tap, loop]),
       builder: (context, _) {
         final sel = _car.value == i;
-        final pop = _tapIndex == i ? _pop.transform(tap.value) : 1.0;
+        final breathe = sel && !reduce ? 1.0 + 0.03 * math.sin(loop.value * 2 * math.pi) : 1.0;
+        final pop = (_tapIndex == i ? _pop.transform(tap.value) : 1.0) * breathe;
         return Semantics(
           button: true,
           selected: sel,
@@ -1153,19 +1160,19 @@ class _IntroSlideTaxiState extends _IntroSlideState<IntroSlideTaxi> {
                   height: 28,
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   decoration: BoxDecoration(
-                    color: sel ? AppColors.taxi : AppColors.taxiSurface,
+                    color: sel ? DesignColors.sunriseDeep : DesignColors.askedTint,
                     borderRadius: BorderRadius.circular(999),
-                    border: Border.all(color: AppColors.taxi.withValues(alpha: sel ? 1 : 0.35), width: 1),
+                    border: Border.all(color: DesignColors.sunriseDeep.withValues(alpha: sel ? Alpha.full : Alpha.scrim), width: 1),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Iconsax.car, size: 13, color: sel ? Colors.white : AppColors.taxi),
+                      Icon(Iconsax.car, size: 13, color: sel ? DesignColors.textInverse : DesignColors.sunriseDeep),
                       const SizedBox(width: 5),
                       Text(
                         IntroStrings.carTypes[i],
                         maxLines: 1,
-                        style: _poppins(10.5, FontWeight.w700, sel ? Colors.white : AppColors.taxiDark),
+                        style: _poppins(10.5, FontWeight.w700, sel ? DesignColors.textInverse : DesignColors.sunriseDeepEnd),
                       ),
                     ],
                   ),
@@ -1183,9 +1190,9 @@ class _IntroSlideTaxiState extends _IntroSlideState<IntroSlideTaxi> {
       rect: rect,
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: DesignColors.textInverse,
           borderRadius: BorderRadius.circular(18),
-          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.18), blurRadius: 14, offset: const Offset(0, 6))],
+          boxShadow: ShadowTokens.elev2,
         ),
       ),
     );

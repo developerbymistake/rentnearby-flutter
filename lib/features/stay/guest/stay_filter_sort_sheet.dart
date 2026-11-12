@@ -1,12 +1,12 @@
+import 'package:bakhli/design/design.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../../../config/app_colors.dart';
-import '../../../widgets/gradient_button.dart';
-import '../../../widgets/selectable_chip.dart';
 import '../setup/stay_option_sets.dart';
 import '../stay_types_controller.dart';
 import 'stay_landing_controller.dart';
 
+const _kAccent = DesignColors.primary;
+const _tone = KitTone.stay;
 const _kSortChipPadding = EdgeInsets.symmetric(vertical: 13, horizontal: 10);
 
 class StayFilterSortSheet extends StatefulWidget {
@@ -15,15 +15,7 @@ class StayFilterSortSheet extends StatefulWidget {
   const StayFilterSortSheet({super.key, required this.controller});
 
   static Future<void> show(BuildContext context, {required StayLandingController controller}) {
-    return showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (_) => StayFilterSortSheet(controller: controller),
-    );
+    return SheetFrame.show(context, builder: (_) => StayFilterSortSheet(controller: controller));
   }
 
   @override
@@ -81,138 +73,112 @@ class _StayFilterSortSheetState extends State<StayFilterSortSheet> {
     final sheetHeight = (baseHeight * 0.55).clamp(0.0, maxHeight);
     return SizedBox(
       height: sheetHeight,
-      child: Column(
-        children: [
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.fromLTRB(24, 14, 24, 18),
-            decoration: const BoxDecoration(
-              gradient: StayColors.gradient,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-            ),
-            child: Column(
-              children: [
-                Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.5),
-                    borderRadius: BorderRadius.circular(2),
+      child: StaggerHost(
+        count: 4,
+        child: SheetFrame(
+          title: 'Filter & Sort · Stays',
+          footer: StaggerItem(index: 3, child: _footer()),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _group(0, [
+                Text('Stay type', style: _sectionLabelStyle),
+                const SizedBox(height: 8),
+                _stayTypeGrid(),
+              ]),
+              const SizedBox(height: 16),
+              _group(1, [
+                Text('Meals', style: _sectionLabelStyle),
+                const SizedBox(height: 8),
+                GridView.count(
+                  crossAxisCount: 3,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  mainAxisSpacing: 8,
+                  crossAxisSpacing: 8,
+                  childAspectRatio: 2.2,
+                  children: StayOptionSets.meals
+                      .map((o) => PickChip(
+                            label: o.label,
+                            selected: _meals == o.value,
+                            activeColor: _kAccent,
+                            onTap: () => setState(() => _meals = _meals == o.value ? null : o.value),
+                          ))
+                      .toList(),
+                ),
+              ]),
+              const SizedBox(height: 16),
+              _group(2, [
+                Text('Sort by', style: _sectionLabelStyle),
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  child: PickChip(
+                    label: _sortOptions[0].label,
+                    selected: _sort == _sortOptions[0].value,
+                    activeColor: _kAccent,
+                    padding: _kSortChipPadding,
+                    onTap: () => setState(() => _sort = _sortOptions[0].value),
                   ),
                 ),
-                const SizedBox(height: 14),
-                const Text(
-                  'Filter & Sort · Stays',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontFamily: 'Poppins', fontSize: 15, fontWeight: FontWeight.w600, color: Colors.white),
-                ),
-              ],
-            ),
-          ),
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(18, 14, 18, 0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Stay type', style: _sectionLabelStyle),
-                  const SizedBox(height: 8),
-                  _stayTypeGrid(),
-                  const SizedBox(height: 16),
-                  const Text('Meals', style: _sectionLabelStyle),
-                  const SizedBox(height: 8),
-                  GridView.count(
-                    crossAxisCount: 3,
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    mainAxisSpacing: 6,
-                    crossAxisSpacing: 6,
-                    childAspectRatio: 2.4,
-                    children: StayOptionSets.meals
-                        .map((o) => SelectableChip(
-                              label: o.label,
-                              selected: _meals == o.value,
-                              activeColor: StayColors.accent,
-                              onTap: () => setState(() => _meals = _meals == o.value ? null : o.value),
-                            ))
-                        .toList(),
-                  ),
-                  const SizedBox(height: 16),
-                  const Text('Sort by', style: _sectionLabelStyle),
-                  const SizedBox(height: 8),
-                  SizedBox(
-                    width: double.infinity,
-                    child: SelectableChip(
-                      label: _sortOptions[0].label,
-                      selected: _sort == _sortOptions[0].value,
-                      activeColor: StayColors.accent,
-                      padding: _kSortChipPadding,
-                      onTap: () => setState(() => _sort = _sortOptions[0].value),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: _sortOptions
-                        .skip(1)
-                        .map((o) => Expanded(
-                              child: Padding(
-                                padding: EdgeInsets.only(right: o != _sortOptions.last ? 6 : 0),
-                                child: SelectableChip(
-                                  label: o.label,
-                                  selected: _sort == o.value,
-                                  activeColor: StayColors.accent,
-                                  padding: _kSortChipPadding,
-                                  onTap: () => setState(() => _sort = o.value),
-                                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: _sortOptions
+                      .skip(1)
+                      .map((o) => Expanded(
+                            child: Padding(
+                              padding: EdgeInsets.only(right: o != _sortOptions.last ? 6 : 0),
+                              child: PickChip(
+                                label: o.label,
+                                selected: _sort == o.value,
+                                activeColor: _kAccent,
+                                padding: _kSortChipPadding,
+                                onTap: () => setState(() => _sort = o.value),
                               ),
-                            ))
-                        .toList(),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          Padding(
-            padding: EdgeInsets.fromLTRB(18, 10, 18, 18 + media.padding.bottom),
-            child: Row(
-              children: [
-                Expanded(
-                  flex: 1,
-                  child: OutlinedButton(
-                    onPressed: () => setState(() {
-                      _meals = null;
-                      _stayTypeId = null;
-                      _sort = 'newest';
-                    }),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 13),
-                      side: const BorderSide(color: AppColors.divider, width: 1.5),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                    ),
-                    child: const Text('Clear',
-                        style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textDark)),
-                  ),
+                            ),
+                          ))
+                      .toList(),
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  flex: 2,
-                  child: GradientButton(
-                    label: 'Apply',
-                    height: 46,
-                    gradient: StayColors.gradient,
-                    shadowColor: StayColors.accent,
-                    onPressed: () {
-                      _closing = true;
-                      Navigator.of(context).pop();
-                      widget.controller.applyFilters(meals: _meals, stayTypeId: _stayTypeId, sort: _sort);
-                    },
-                  ),
-                ),
-              ],
-            ),
+              ]),
+            ],
           ),
-        ],
+        ),
       ),
+    );
+  }
+
+  Widget _group(int i, List<Widget> children) =>
+      StaggerItem(index: i, child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: children));
+
+  Widget _footer() {
+    return Row(
+      children: [
+        Expanded(
+          child: SecondaryButton(
+            label: 'Clear',
+            tone: _tone,
+            neutral: true,
+            onPressed: () => setState(() {
+              _meals = null;
+              _stayTypeId = null;
+              _sort = 'newest';
+            }),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          flex: 2,
+          child: PrimaryButton(
+            label: 'Apply',
+            tone: _tone,
+            onPressed: () {
+              _closing = true;
+              Navigator.of(context).pop();
+              widget.controller.applyFilters(meals: _meals, stayTypeId: _stayTypeId, sort: _sort);
+            },
+          ),
+        ),
+      ],
     );
   }
 
@@ -226,14 +192,14 @@ class _StayFilterSortSheetState extends State<StayFilterSortSheet> {
         crossAxisCount: 3,
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
-        mainAxisSpacing: 6,
-        crossAxisSpacing: 6,
-        childAspectRatio: 2.4,
+        mainAxisSpacing: 8,
+        crossAxisSpacing: 8,
+        childAspectRatio: 2.2,
         children: options
-            .map((t) => SelectableChip(
+            .map((t) => PickChip(
                   label: t.name,
                   selected: _stayTypeId == t.id,
-                  activeColor: StayColors.accent,
+                  activeColor: _kAccent,
                   onTap: () => setState(() => _stayTypeId = t.id),
                 ))
             .toList(),
@@ -241,11 +207,5 @@ class _StayFilterSortSheetState extends State<StayFilterSortSheet> {
     });
   }
 
-  static const _sectionLabelStyle = TextStyle(
-    fontFamily: 'Poppins',
-    fontSize: 10,
-    fontWeight: FontWeight.w800,
-    color: AppColors.textLight,
-    letterSpacing: 0.4,
-  );
+  static final _sectionLabelStyle = TypeTokens.style(16, FontWeight.w600, color: DesignColors.textPrimary, letterSpacing: 0.18);
 }

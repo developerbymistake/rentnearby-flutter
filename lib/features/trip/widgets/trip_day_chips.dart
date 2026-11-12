@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import '../../../config/app_colors.dart';
-import '../../../widgets/selectable_chip.dart';
-import '../trip_colors.dart';
+import 'trip_ui.dart';
+import 'package:bakhli/design/extra/trip_plan_look.dart';
+import 'package:bakhli/design/template/fitness_app_theme.dart';
 
 class TripDayChips extends StatefulWidget {
   static const int all = 0;
@@ -73,7 +73,7 @@ class _TripDayChipsState extends State<TripDayChips> {
         ctx,
         alignment: 0.5,
         duration: const Duration(milliseconds: 250),
-        curve: Curves.easeOut,
+        curve: Curves.fastOutSlowIn,
       );
     });
   }
@@ -105,19 +105,19 @@ class _TripDayChipsState extends State<TripDayChips> {
         children: [
           for (var d = 1; d <= dayCount; d++) ...[
             if (d > 1) const SizedBox(width: 8),
-            SelectableChip(
+            TripChoiceChip(
               label: 'Day $d',
               selected: selected == d,
-              activeColor: TripColors.dayColor(d),
+              activeColor: TripLook.dayColor(d),
               onTap: () => widget.onChanged(d),
             ),
           ],
           if (widget.includeAll) ...[
             const SizedBox(width: 8),
-            SelectableChip(
+            TripChoiceChip(
               label: 'All',
               selected: selected == TripDayChips.all,
-              activeColor: TripColors.accentDark,
+              activeColor: TripLook.accentDark,
               onTap: () => widget.onChanged(TripDayChips.all),
             ),
           ],
@@ -158,10 +158,10 @@ class _TripDayChipsState extends State<TripDayChips> {
             final f = (_fade / w).clamp(0.0, 0.5);
             return LinearGradient(
               colors: [
-                _atStart ? Colors.white : Colors.transparent,
-                Colors.white,
-                Colors.white,
-                _atEnd ? Colors.white : Colors.transparent,
+                _atStart ? FitnessAppTheme.white : Colors.transparent,
+                FitnessAppTheme.white,
+                FitnessAppTheme.white,
+                _atEnd ? FitnessAppTheme.white : Colors.transparent,
               ],
               stops: [0, f, 1 - f, 1],
             ).createShader(rect);
@@ -189,10 +189,10 @@ class _TripDayChipsState extends State<TripDayChips> {
         padding: const EdgeInsets.symmetric(vertical: 6),
         child: ConstrainedBox(
           constraints: const BoxConstraints(minWidth: 44),
-          child: SelectableChip(
+          child: TripChoiceChip(
             label: label,
             selected: widget.selected == day,
-            activeColor: isAll ? TripColors.accentDark : TripColors.dayColor(day),
+            activeColor: isAll ? TripLook.accentDark : TripLook.dayColor(day),
             padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 12),
             onTap: tap,
           ),
@@ -237,7 +237,7 @@ class TripDayMultiChips extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
-                    fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.4, color: AppColors.textLight),
+                    fontFamily: FitnessAppTheme.fontName, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.4, color: TripLook.textLight),
               ),
             ),
           Wrap(
@@ -245,19 +245,17 @@ class TripDayMultiChips extends StatelessWidget {
             runSpacing: 8,
             children: [
               for (final d in e.value)
-                Opacity(
-                  opacity: (disabledDays?.contains(d) ?? false) ? 0.4 : 1,
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(minWidth: 44, minHeight: 36),
-                    child: SelectableChip(
-                      label: 'Day $d',
-                      selected: selected.contains(d),
-                      activeColor: TripColors.dayColor(d),
-                      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-                      onTap: () {
-                        if (!(disabledDays?.contains(d) ?? false)) onToggle(d);
-                      },
-                    ),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(minWidth: 44, minHeight: 36),
+                  child: TripChoiceChip(
+                    label: 'Day $d',
+                    selected: selected.contains(d),
+                    muted: disabledDays?.contains(d) ?? false,
+                    activeColor: TripLook.dayColor(d),
+                    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                    onTap: () {
+                      if (!(disabledDays?.contains(d) ?? false)) onToggle(d);
+                    },
                   ),
                 ),
             ],

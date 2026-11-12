@@ -1,5 +1,6 @@
 import 'package:get/get.dart';
 import '../../config/app_routes.dart';
+import '../../design/design.dart';
 import 'guest/taxi_detail_screen.dart';
 import 'guest/taxi_list_screen.dart';
 import 'leads/trip_leads_screen.dart';
@@ -13,49 +14,49 @@ final List<GetPage> taxiPages = [
   GetPage(
     name: AppRoutes.taxiSetup,
     page: () => const TaxiSetupHubScreen(),
-    transition: Transition.fadeIn,
-    transitionDuration: const Duration(milliseconds: 400),
+    customTransition: TemplateTransition(),
+    transitionDuration: templateTransitionDuration,
   ),
   GetPage(
     name: AppRoutes.taxiVehicle,
     page: () => const TaxiVehicleScreen(),
-    transition: Transition.rightToLeft,
-    transitionDuration: const Duration(milliseconds: 300),
+    customTransition: TemplateTransition(),
+    transitionDuration: templateTransitionDuration,
   ),
   GetPage(
     name: AppRoutes.taxiRoutes,
     page: () => const TaxiRoutesScreen(),
-    transition: Transition.rightToLeft,
-    transitionDuration: const Duration(milliseconds: 300),
+    customTransition: TemplateTransition(),
+    transitionDuration: templateTransitionDuration,
   ),
   GetPage(
     name: AppRoutes.taxiSubmit,
     page: () => const TaxiSubmitScreen(),
-    transition: Transition.rightToLeft,
-    transitionDuration: const Duration(milliseconds: 300),
+    customTransition: TemplateTransition(),
+    transitionDuration: templateTransitionDuration,
   ),
   GetPage(
     name: AppRoutes.myTaxi,
     page: () => const MyTaxiScreen(),
-    transition: Transition.rightToLeft,
-    transitionDuration: const Duration(milliseconds: 300),
+    customTransition: TemplateTransition(),
+    transitionDuration: templateTransitionDuration,
   ),
   GetPage(
     name: AppRoutes.taxiDetail,
     page: () => const TaxiDetailScreen(),
-    transition: Transition.downToUp,
-    transitionDuration: const Duration(milliseconds: 350),
+    customTransition: TemplateTransition(),
+    transitionDuration: templateTransitionDuration,
   ),
   GetPage(
     name: AppRoutes.taxiList,
     page: () => const TaxiListScreen(),
-    transition: Transition.rightToLeft,
-    transitionDuration: const Duration(milliseconds: 300),
+    customTransition: TemplateTransition(),
+    transitionDuration: templateTransitionDuration,
   ),
   GetPage(
     name: AppRoutes.tripLeads,
     page: () => const TripLeadsScreen(),
-    transition: Transition.rightToLeft,
-    transitionDuration: const Duration(milliseconds: 300),
+    customTransition: TemplateTransition(),
+    transitionDuration: templateTransitionDuration,
   ),
 ];

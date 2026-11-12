@@ -1,17 +1,18 @@
+import 'package:bakhli/design/design.dart';
 import 'package:flutter/material.dart';
+import 'package:bakhli/features/trip/widgets/trip_ui.dart';
 import 'package:get/get.dart';
-import 'package:iconsax/iconsax.dart';
-import '../../../config/app_colors.dart';
 import '../../../config/app_routes.dart';
 import '../../../models/browse_item.dart';
 import '../../../utils/app_toast.dart';
 import '../../../utils/contact_launcher.dart';
-import '../../../widgets/empty_state_view.dart';
 import '../../stay/models/stay_nearby_model.dart';
-import '../../stay/setup/stay_option_sets.dart';
 import '../controllers/trip_plan_controller.dart';
+import '../controllers/trip_shortlist_controller.dart';
 import '../controllers/trip_supply_controller.dart';
 import '../models/trip_enquiry_model.dart';
+import '../models/trip_guide_args.dart';
+import '../models/trip_shortlist_model.dart';
 import '../models/trip_plan_model.dart';
 import '../trip_navigation.dart';
 import '../trip_strings.dart';
@@ -24,6 +25,7 @@ import '../utils/trip_format.dart';
 import '../widgets/trip_arrange_confirm.dart';
 import '../widgets/trip_filter_chips.dart';
 import '../widgets/trip_page_header.dart';
+import '../widgets/trip_shortlist_bar.dart';
 import '../widgets/trip_sheet_frame.dart';
 import '../widgets/trip_status.dart';
 import '../widgets/trip_stay_row.dart';
@@ -36,21 +38,25 @@ class TripStayScreen extends StatefulWidget {
   State<TripStayScreen> createState() => _TripStayScreenState();
 }
 
-class _TripStayScreenState extends State<TripStayScreen> {
+class _TripStayScreenState extends State<TripStayScreen> with TickerProviderStateMixin {
   static const double _maxWidth = 640;
   static const int _nightPreview = 3;
 
   late final TripPlanController _plan;
   late final TripSupplyController _supply;
   late final int _leg;
+  GuideArgs? _guide;
+  final _noReply = <String>{}.obs;
   final _split = false.obs;
   final _expanded = <int>{}.obs;
   List<int> _only = const [];
   Worker? _planWorker;
+  late final AnimationController _anim = AnimationController(duration: const Duration(milliseconds: 600), vsync: this);
 
   @override
   void initState() {
     super.initState();
+    _anim.forward();
     _plan = TripPlanController.to;
     _plan.openPages++;
     _supply = TripSupplyController.to;
@@ -67,7 +73,14 @@ class _TripStayScreenState extends State<TripStayScreen> {
           if (d >= from && d < from + count && !_plan.isDayPast(d)) d,
       ]..sort();
     }
-    _split.value = _only.isNotEmpty || (map['split'] == true && count != 1);
+    _guide = GuideArgs.from(map);
+    _split.value = _guide == null && (_only.isNotEmpty || (map['split'] == true && count != 1));
+    if (_guide != null) {
+      final c = TripShortlistController.to;
+      c.load().then((_) {
+        if (mounted) _noReply.assignAll(c.noReplyIds(_guide!.stepKey));
+      });
+    }
     _supply.setNear((map['nearLat'] as num?)?.toDouble(), (map['nearLng'] as num?)?.toDouble());
     _supply.ensureStays(_leg);
     _planWorker = ever(_plan.plan, (_) => _supply.ensureStays(_leg));
@@ -76,6 +89,7 @@ class _TripStayScreenState extends State<TripStayScreen> {
   @override
   void dispose() {
     _planWorker?.dispose();
+    _anim.dispose();
     if (Get.isRegistered<TripPlanController>() && identical(Get.find<TripPlanController>(), _plan)) {
       _plan.openPages--;
       _plan.releaseIfIdle();
@@ -143,19 +157,19 @@ class _TripStayScreenState extends State<TripStayScreen> {
 
   List<TripFilterChip> _chips() {
     final max = _supply.maxPrice.value;
-    final canSplit = _only.isEmpty && _nights - _pastNights > 1 && !_plan.isReadOnly;
+    final canSplit = _guide == null && _only.isEmpty && _nights - _pastNights > 1 && !_plan.isReadOnly;
     return [
       if (canSplit)
         TripFilterChip(
           label: TripStringsV2Find.nightByNight,
           selected: _split.value,
-          icon: Iconsax.calendar_1,
+          iconAsset: TravelIcon.calendar,
           onTap: () => _split.value = !_split.value,
         ),
       TripFilterChip(
         label: max == null ? TripStringsA2.maxPrice : TripStringsA2.underPrice(BrowseItem.inr(max)),
         selected: max != null,
-        icon: Iconsax.wallet_2,
+        iconAsset: TravelIcon.money,
         onTap: _pickPrice,
       ),
       TripFilterChip(
@@ -173,11 +187,17 @@ class _TripStayScreenState extends State<TripStayScreen> {
         TripFilterChip(
           label: TripStringsA2.clearFilters,
           selected: false,
-          icon: Iconsax.filter_remove,
+          icon: Icons.filter_alt_off_rounded,
           onTap: _supply.clearStayFilters,
         ),
     ];
   }
+
+  Widget _enter(Widget child, int i, [int count = 7]) => TemplateEntrance(
+        animation: templateInterval(_anim, i.clamp(0, count - 1), count),
+        animationController: _anim,
+        child: child,
+      );
 
   Widget _box(Widget child) => SliverToBoxAdapter(
         child: Center(child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: _maxWidth), child: child)),
@@ -187,11 +207,15 @@ class _TripStayScreenState extends State<TripStayScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 16),
         sliver: SliverList.builder(
           itemCount: 4,
-          itemBuilder: (_, _) => Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: _maxWidth),
-              child: const TripStayRowSkeleton(),
+          itemBuilder: (_, i) => _enter(
+            Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: _maxWidth),
+                child: const TripStayRowSkeleton(),
+              ),
             ),
+            i,
+            4,
           ),
         ),
       );
@@ -199,48 +223,65 @@ class _TripStayScreenState extends State<TripStayScreen> {
   Widget _noSupplyView() {
     final paused = _plan.stayTabOff.value;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(32, 40, 32, 0),
-      child: Column(
-        children: [
-          const Icon(Iconsax.building_4, size: 40, color: AppColors.textHint),
-          const SizedBox(height: 10),
-          Text(paused ? TripStringsV2Find.staysPaused : TripStringsV2Find.noStaysTitle,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                  fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textMedium)),
-          const SizedBox(height: 4),
-          Text(TripStringsV2Find.noStaysBody(_city),
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
-          if (!_plan.isReadOnly) ...[
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton(
-                onPressed: _arrange,
-                style: OutlinedButton.styleFrom(
-                  minimumSize: const Size(0, 48),
-                  side: BorderSide(color: StayColors.accent.withValues(alpha: 0.6)),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                child: const Text(TripStringsV2Find.arrangeMyself,
-                    style: TextStyle(
-                        fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w700, color: StayColors.accentDark)),
+      padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
+      child: _enter(
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
+          decoration: BoxDecoration(color: FitnessAppTheme.white, borderRadius: CardRadius.tile, boxShadow: ShadowTokens.elev1),
+          child: Column(
+            children: [
+              Container(
+                width: 72,
+                height: 72,
+                decoration: BoxDecoration(shape: BoxShape.circle, gradient: KitTone.stay.gradient, boxShadow: ShadowTokens.glow(TripUi.stay)),
+                child: const Center(child: TravelIcon(TravelIcon.stay, size: 40)),
               ),
-            ),
-            OutlinedButton(
-                onPressed: _skip,
-                style: OutlinedButton.styleFrom(
-                  minimumSize: const Size(0, 48),
-                  foregroundColor: AppColors.success,
-                  side: const BorderSide(color: AppColors.success),
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              const SizedBox(height: 16),
+              Text(paused ? TripStringsV2Find.staysPaused : TripStringsV2Find.noStaysTitle,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                      fontFamily: FitnessAppTheme.fontName,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 0.2,
+                      color: FitnessAppTheme.darkerText)),
+              const SizedBox(height: 6),
+              Text(TripStringsV2Find.noStaysBody(_city),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                      fontFamily: FitnessAppTheme.fontName, fontSize: 14, fontWeight: FontWeight.w500, color: FitnessAppTheme.lightText)),
+              if (!_plan.isReadOnly) ...[
+                const SizedBox(height: 16),
+                TripButton(
+                  onPressed: _arrange,
+                  label: TripStringsV2Find.arrangeMyself,
+                  height: 48,
+                  gradient: KitTone.stay.gradient,
+                  shadowColor: TripUi.stay,
                 ),
-                child: const Text(TripStringsV2Find.skip, style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700)),
-              ),
-          ],
-        ],
+                const SizedBox(height: 12),
+                InkWell(
+                  onTap: _skip,
+                  borderRadius: BorderRadius.circular(24),
+                  child: Container(
+                    height: 48,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: FitnessAppTheme.white,
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(color: TripUi.good, width: 1.5),
+                    ),
+                    child: const Text(TripStringsV2Find.skip,
+                        style: TextStyle(
+                            fontFamily: FitnessAppTheme.fontName, fontSize: 14, fontWeight: FontWeight.w700, color: TripUi.good)),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+        2,
       ),
     );
   }
@@ -257,7 +298,7 @@ class _TripStayScreenState extends State<TripStayScreen> {
                 if (showChips)
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: TripFilterChips(items: _chips(), accent: StayColors.accent),
+                    child: _enter(TripFilterChips(items: _chips(), accent: TripUi.stay), 1),
                   ),
               ],
             ),
@@ -305,10 +346,8 @@ class _TripStayScreenState extends State<TripStayScreen> {
   Widget _row(StayNearbyModel s, int day, int nights, TripEnquiryModel? asked) {
     final rawPhone = s.ownerPhone;
     final phone = (rawPhone == null || ContactLauncher.tenDigits(rawPhone).isEmpty) ? null : rawPhone;
-    return Center(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: _maxWidth),
-        child: TripStayRow(
+    final guide = _guide;
+    TripStayRow build({bool shortlisted = false, bool busy = false, bool noReply = false}) => TripStayRow(
           key: ValueKey('${s.id}-$day'),
           stay: s,
           fit: _supply.stayFitOf(s.id),
@@ -319,10 +358,49 @@ class _TripStayScreenState extends State<TripStayScreen> {
           onOpen: () => Get.toNamed(AppRoutes.stayDetail, arguments: {'id': s.id, 'distanceKm': s.distanceKm}),
           onCall: phone == null ? null : () => ContactLauncher.call(phone),
           onAsk: () => TripStayEnquirySheet.show(context, stay: s, day: day, nights: nights),
-        ),
+          onShortlist: guide == null
+              ? null
+              : () => TripShortlistController.to.toggle(
+                    step: guide.stepKey,
+                    kind: ShortlistKinds.stay,
+                    listingId: s.id,
+                    name: s.title,
+                  ),
+          shortlisted: shortlisted,
+          shortlistBusy: busy,
+          noReply: noReply,
+        );
+    final c = TripShortlistController.to;
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: _maxWidth),
+        child: guide == null
+            ? build()
+            : Obx(() => build(
+                  shortlisted: c.has(guide.stepKey, s.id),
+                  busy: c.isBusy(guide.stepKey, s.id),
+                  noReply: _noReply.contains(s.id),
+                )),
       ),
     );
   }
+
+  List<StayNearbyModel> _ordered(List<StayNearbyModel> rows) {
+    final g = _guide;
+    if (g == null) return rows;
+    return ShortlistOrder.noReplyLast(rows, (s) => s.id, _noReply.toSet());
+  }
+
+  Future<void> _done() => TripShortlistFlow.done(
+        context,
+        step: _guide!.stepKey,
+        taxi: false,
+        send: () => TripShortlistController.to.sendStays(
+          step: _guide!.stepKey,
+          day: _firstDay + _pastNights,
+          nights: _nights - _pastNights,
+        ),
+      );
 
   Map<String, TripEnquiryModel> _askedOf(List<TripEnquiryModel> rows) => {
         for (final e in rows.reversed)
@@ -332,25 +410,26 @@ class _TripStayScreenState extends State<TripStayScreen> {
   Widget? _emptyView(List<StayNearbyModel> all, List<StayNearbyModel> items) {
     if (all.isEmpty) {
       if (_supply.stayFailed.value) {
-        return EmptyStateView(
-          icon: Iconsax.cloud_cross,
+        return TripEmpty(
+          asset: TravelIcon.stay,
+          tone: KitTone.stay,
+          error: true,
           title: TripStringsV2Find.staysFailed,
           subtitle: TripStringsV2Find.checkConnection,
           onRetry: () => _supply.loadStays(),
           retryLabel: TripStringsV2Find.retry,
-          palette: StayColors.palette,
         );
       }
       return _noSupplyView();
     }
     if (items.isEmpty) {
-      return EmptyStateView(
-        icon: Iconsax.filter_remove,
+      return TripEmpty(
+        asset: TravelIcon.stay,
+        tone: KitTone.stay,
         title: TripStringsV2Find.noMatch,
         subtitle: TripStringsA2.noMatchBody,
         onRetry: _supply.clearStayFilters,
         retryLabel: TripStringsV2Find.clearFilters,
-        palette: StayColors.palette,
       );
     }
     return null;
@@ -368,7 +447,7 @@ class _TripStayScreenState extends State<TripStayScreen> {
         final pinned = _pinned(items, asked);
         final empty = pinned.isEmpty ? _emptyView(all, items) : null;
         if (empty != null) return _box(empty);
-        final rows = [...pinned, ...items];
+        final rows = _ordered([...pinned, ...items]);
         final past = _pastNights;
         final day = _firstDay + past;
         final nights = _nights - past;
@@ -381,9 +460,9 @@ class _TripStayScreenState extends State<TripStayScreen> {
                     padding: EdgeInsets.symmetric(vertical: 16),
                     child: Text(TripStringsV2Find.askNote,
                         textAlign: TextAlign.center,
-                        style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
+                        style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, color: FitnessAppTheme.lightText)),
                   )
-                : _row(rows[i], day, nights, asked[rows[i].id]),
+                : _enter(_row(rows[i], day, nights, asked[rows[i].id]), i + 2),
           ),
         );
       });
@@ -411,7 +490,7 @@ class _TripStayScreenState extends State<TripStayScreen> {
                       padding: EdgeInsets.symmetric(vertical: 8),
                       child: Text(TripStringsV2Find.splitNote,
                           textAlign: TextAlign.center,
-                          style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
+                          style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, color: FitnessAppTheme.lightText)),
                     ),
                   ],
                 ),
@@ -425,7 +504,7 @@ class _TripStayScreenState extends State<TripStayScreen> {
           final rows = [...shown, ...items];
           final open = _expanded.contains(day);
           final visible = open ? rows : rows.take(_nightPreview).toList();
-          return Center(
+          return _enter(Center(
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: _maxWidth),
               child: Column(
@@ -435,21 +514,15 @@ class _TripStayScreenState extends State<TripStayScreen> {
                     padding: const EdgeInsets.only(top: 16),
                     child: Text(TripStringsV2Find.nightLabel(day - _firstDay + 1, date == null ? null : TripFormat.shortDate(date)),
                         style: const TextStyle(
-                            fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textDark)),
+                            fontFamily: FitnessAppTheme.fontName, fontSize: 18, fontWeight: FontWeight.w500, letterSpacing: -0.4, color: FitnessAppTheme.darkerText)),
                   ),
                   for (final s in visible) _row(s, day, 1, asked[s.id]),
                   if (rows.length > _nightPreview)
-                    TextButton(
-                      onPressed: () => open ? _expanded.remove(day) : _expanded.add(day),
-                      style: TextButton.styleFrom(minimumSize: const Size(44, 44)),
-                      child: Text(open ? TripStringsV2Find.showLess : TripStringsV2Find.showAll(rows.length),
-                          style: const TextStyle(
-                              fontFamily: 'Poppins', fontWeight: FontWeight.w700, color: StayColors.accentDark)),
-                    ),
+                    TextLink(label: open ? TripStringsV2Find.showLess : TripStringsV2Find.showAll(rows.length), onTap: () => open ? _expanded.remove(day) : _expanded.add(day), tone: KitTone.trip),
                 ],
               ),
             ),
-          );
+          ), i + 2);
         },
       ),
     );
@@ -463,32 +536,25 @@ class _TripStayScreenState extends State<TripStayScreen> {
         if (!didPop) TripNavigation.backToPlan();
       },
       child: Scaffold(
-        backgroundColor: AppColors.scaffoldBg,
+        backgroundColor: FitnessAppTheme.background,
+        bottomNavigationBar: _guide == null ? null : TripShortlistBar(step: _guide!.stepKey, onDone: _done),
         body: Column(
           children: [
-            Obx(() {
+            FadeTransition(
+              opacity: Tween<double>(begin: 0, end: 1)
+                  .animate(CurvedAnimation(parent: _anim, curve: const Interval(0, 0.5, curve: Curves.fastOutSlowIn))),
+              child: Obx(() {
               _plan.plan.value;
               return TripPageHeader(
                 title: TripStringsV2Find.stayIn(_city),
                 subtitle: _subtitle(),
                 onBack: TripNavigation.backToPlan,
-                gradient: StayColors.gradient,
-                trailing: _plan.isReadOnly || _only.isNotEmpty || _plan.openRowsOf(_key).isNotEmpty || _plan.confirmedRowOf(_key) != null
+                tone: KitTone.stay,
+                trailing: _guide != null || _plan.isReadOnly || _only.isNotEmpty || _plan.openRowsOf(_key).isNotEmpty || _plan.confirmedRowOf(_key) != null
                     ? null
-                    : OutlinedButton(
-                        onPressed: _skip,
-                        style: OutlinedButton.styleFrom(
-                          minimumSize: const Size(0, 36),
-                          foregroundColor: Colors.white,
-                          side: const BorderSide(color: Colors.white),
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                        ),
-                        child: const Text(TripStringsV2Find.skip,
-                            style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700)),
-                      ),
+                    : TripHeaderAction(label: TripStringsV2Find.skip, onTap: _skip),
               );
-            }),
+            })),
             Expanded(
               child: CustomScrollView(
                 slivers: [
@@ -519,16 +585,27 @@ class _PriceBody extends StatelessWidget {
         constraints: const BoxConstraints(minHeight: 48),
         child: Row(
           children: [
-            Icon(on ? Icons.radio_button_checked : Icons.radio_button_off,
-                size: 20, color: on ? StayColors.accent : AppColors.textHint),
+            Container(
+              width: 20,
+              height: 20,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(color: on ? TripUi.stay : FitnessAppTheme.deactivatedText, width: 2),
+              ),
+              child: on
+                  ? Center(
+                      child: Container(
+                          width: 10, height: 10, decoration: const BoxDecoration(shape: BoxShape.circle, color: TripUi.stay)))
+                  : null,
+            ),
             const SizedBox(width: 12),
             Expanded(
               child: Text(label,
                   style: TextStyle(
-                      fontFamily: 'Poppins',
+                      fontFamily: FitnessAppTheme.fontName,
                       fontSize: 14,
                       fontWeight: on ? FontWeight.w700 : FontWeight.w500,
-                      color: AppColors.textDark)),
+                      color: FitnessAppTheme.darkerText)),
             ),
           ],
         ),
@@ -541,9 +618,11 @@ class _PriceBody extends StatelessWidget {
     return TripSheetFrame(
       title: TripStringsA2.priceSheetTitle,
       children: [
-        _option(context, 0, TripStringsA2.anyPrice),
-        for (final p in TripSupplyController.pricePresets)
-          _option(context, p, TripStringsA2.underPrice(BrowseItem.inr(p))),
+        TemplateStagger(children: [
+          _option(context, 0, TripStringsA2.anyPrice),
+          for (final p in TripSupplyController.pricePresets)
+            _option(context, p, TripStringsA2.underPrice(BrowseItem.inr(p))),
+        ]),
       ],
     );
   }

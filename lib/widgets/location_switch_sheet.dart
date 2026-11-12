@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:iconsax/iconsax.dart';
-import '../config/app_colors.dart';
+import 'dart:math' as math;
 import '../config/module_palette.dart';
 import '../controllers/location_controller.dart';
+import '../design/design.dart';
 import '../models/city_model.dart';
 import '../utils/city_search_rank.dart';
 import '../utils/input_formatters.dart';
@@ -38,17 +38,17 @@ class LocationSwitchSheet extends StatefulWidget {
   final String? title;
   const LocationSwitchSheet({
     super.key,
-    this.palette = ModulePalette.rooms,
+    this.palette = templateModulePalette,
     this.pickOnly = false,
     this.title,
   });
 
   static Future<PickedPlace?> pick(BuildContext context,
-      {ModulePalette palette = ModulePalette.rooms, String? title}) {
+      {ModulePalette palette = templateModulePalette, String? title}) {
     return showModalBottomSheet<PickedPlace>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
+      backgroundColor: FitnessAppTheme.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -57,11 +57,11 @@ class LocationSwitchSheet extends StatefulWidget {
     );
   }
 
-  static Future<void> show(BuildContext context, {ModulePalette palette = ModulePalette.rooms}) {
+  static Future<void> show(BuildContext context, {ModulePalette palette = templateModulePalette}) {
     return showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
+      backgroundColor: FitnessAppTheme.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -80,9 +80,9 @@ class LocationSwitchSheet extends StatefulWidget {
 
 enum _Level { city, district, state }
 
-class _LocationSwitchSheetState extends State<LocationSwitchSheet> {
-  Color get _accent => widget.palette.accent;
-  Gradient get _gradient => widget.palette.gradient;
+class _LocationSwitchSheetState extends State<LocationSwitchSheet> with TickerProviderStateMixin {
+  late final AnimationController _enter = AnimationController(duration: const Duration(milliseconds: 600), vsync: this)..forward();
+  late final AnimationController _rows = AnimationController(duration: const Duration(milliseconds: 600), vsync: this)..forward();
   final _locationCtrl = Get.find<LocationController>();
   final _searchCtrl = TextEditingController();
 
@@ -151,6 +151,8 @@ class _LocationSwitchSheetState extends State<LocationSwitchSheet> {
   @override
   void dispose() {
     _searchCtrl.dispose();
+    _enter.dispose();
+    _rows.dispose();
     _externalResetWorker?.dispose();
     super.dispose();
   }
@@ -309,122 +311,68 @@ class _LocationSwitchSheetState extends State<LocationSwitchSheet> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _buildHeader(),
-          _buildSearchBox(),
-          Expanded(child: _buildBody()),
+          TemplateEntrance(
+            animation: templateInterval(_enter, 0, 3),
+            animationController: _enter,
+            child: _buildHeader(),
+          ),
+          TemplateEntrance(
+            animation: templateInterval(_enter, 1, 3),
+            animationController: _enter,
+            child: _buildSearchBox(),
+          ),
+          Expanded(
+            child: TemplateEntrance(
+              animation: templateInterval(_enter, 2, 3),
+              animationController: _enter,
+              child: _buildBody(),
+            ),
+          ),
           const SizedBox(height: 12),
         ],
       ),
     );
   }
 
+  Widget _linkButton(String label, VoidCallback onTap) => TextButton(
+        onPressed: onTap,
+        child: Text(label,
+            style: FitnessAppTheme.caption.copyWith(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
+                color: FitnessAppTheme.white.withValues(alpha: Alpha.high))),
+      );
+
   Widget _buildHeader() {
     String title;
     String? subtitle;
-    VoidCallback? onBack;
+    Widget? leading;
     Widget? trailing;
 
     switch (_level) {
       case _Level.city:
         title = widget.title ?? _viewingDistrict?.name ?? 'Choose city';
         if (widget.title != null) subtitle = _viewingDistrict?.name;
-        onBack = null;
-        trailing = TextButton(
-          onPressed: _goToDistrictLevel,
-          child: const Text('Change district ›',
-              style: TextStyle(
-                fontFamily: 'Poppins',
-                fontSize: 12.5,
-                fontWeight: FontWeight.w600,
-                color: Colors.white,
-              )),
-        );
+        trailing = _linkButton('Change district ›', _goToDistrictLevel);
         break;
       case _Level.district:
         title = _stateFilter ?? 'Districts';
-        onBack = _backToCityLevel;
-        trailing = TextButton(
-          onPressed: _goToStateLevel,
-          child: const Text('Change state ›',
-              style: TextStyle(
-                fontFamily: 'Poppins',
-                fontSize: 12.5,
-                fontWeight: FontWeight.w600,
-                color: Colors.white,
-              )),
-        );
+        leading = _backArrow(_backToCityLevel);
+        trailing = _linkButton('Change state ›', _goToStateLevel);
         break;
       case _Level.state:
         title = 'All states';
-        onBack = _backToDistrictLevel;
-        trailing = null;
+        leading = _backArrow(_backToDistrictLevel);
         break;
     }
 
-    return Container(
-      padding: const EdgeInsets.fromLTRB(20, 14, 20, 18),
-      decoration: BoxDecoration(
-        gradient: _gradient,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      child: Column(
-        children: [
-          Container(
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.5),
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              if (onBack != null)
-                GestureDetector(
-                  onTap: onBack,
-                  child: const Padding(
-                    padding: EdgeInsets.only(right: 8),
-                    child: Icon(Icons.arrow_back_ios_new_rounded,
-                        color: Colors.white, size: 16),
-                  ),
-                ),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontFamily: 'Poppins',
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
-                      ),
-                    ),
-                    if (subtitle != null)
-                      Text(
-                        subtitle,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontFamily: 'Poppins',
-                          fontSize: 12,
-                          color: Colors.white.withValues(alpha: 0.85),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-              ?trailing,
-            ],
-          ),
-        ],
-      ),
-    );
+    return GateSheetHeader(title: title, subtitle: subtitle, leading: leading, trailing: trailing);
   }
+
+  Widget _backArrow(VoidCallback onTap) => GestureDetector(
+        onTap: onTap,
+        child: const Icon(Icons.arrow_back_ios_new_rounded, color: FitnessAppTheme.white, size: 16),
+      );
 
   Widget _buildSearchBox() {
     final hint = switch (_level) {
@@ -434,31 +382,11 @@ class _LocationSwitchSheetState extends State<LocationSwitchSheet> {
     };
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 14, 20, 6),
-      child: TextField(
+      child: GateSearchBar(
         controller: _searchCtrl,
-        cursorColor: _accent,
+        hint: hint,
         inputFormatters: noEmojiInputFormatters,
         onChanged: (v) => setState(() => _query = v),
-        style: const TextStyle(fontFamily: 'Poppins', fontSize: 14),
-        decoration: InputDecoration(
-          hintText: hint,
-          hintStyle: const TextStyle(
-              fontFamily: 'Poppins', fontSize: 14, color: AppColors.textHint),
-          prefixIcon: const Icon(Icons.search_rounded,
-              size: 20, color: AppColors.textHint),
-          filled: true,
-          fillColor: widget.palette.surface,
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide.none,
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: _accent, width: 1.5),
-          ),
-        ),
       ),
     );
   }
@@ -476,20 +404,24 @@ class _LocationSwitchSheetState extends State<LocationSwitchSheet> {
         child = _buildStateList();
         break;
     }
-    final reduceMotion = MediaQuery.of(context).disableAnimations;
-    return AnimatedSwitcher(
-      duration: reduceMotion ? Duration.zero : const Duration(milliseconds: 220),
-      transitionBuilder: (child, animation) => FadeTransition(
-        opacity: animation,
-        child: SlideTransition(
-          position: Tween<Offset>(
-            begin: const Offset(0.06, 0),
-            end: Offset.zero,
-          ).animate(animation),
-          child: child,
-        ),
-      ),
+    return GateSwitcher(
+      horizontal: true,
+      reverse: _level == _Level.city,
       child: KeyedSubtree(key: ValueKey(_level), child: child),
+    );
+  }
+
+  Widget _list(List<Widget> items) {
+    _rows.forward(from: 0);
+    final count = math.min(items.length, 10);
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      itemCount: items.length,
+      itemBuilder: (context, i) => TemplateEntrance(
+        animation: templateInterval(_rows, math.min(i, count - 1), count),
+        animationController: _rows,
+        child: items[i],
+      ),
     );
   }
 
@@ -512,14 +444,14 @@ class _LocationSwitchSheetState extends State<LocationSwitchSheet> {
     final items = <Widget>[];
     if (isOwnDistrict && (q.isEmpty || 'current'.contains(q))) {
       items.add(_locationRow(
-        icon: Icons.my_location_rounded,
+        asset: TravelIcon.pin,
         label: 'Current',
         selected: activeCityId == null,
         onTap: _pickCurrent,
       ));
     }
     items.addAll(filtered.map((c) => _locationRow(
-          icon: Iconsax.location,
+          asset: TravelIcon.place,
           label: c.name,
           selected: c.id == activeCityId,
           onTap: pickOnly && (c.latitude == null || c.longitude == null)
@@ -528,10 +460,7 @@ class _LocationSwitchSheetState extends State<LocationSwitchSheet> {
         )));
 
     if (items.isEmpty) return _emptyState('No city matches "$_query"');
-    return ListView(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      children: items,
-    );
+    return _list(items);
   }
 
   Widget _buildDistrictList() {
@@ -551,25 +480,22 @@ class _LocationSwitchSheetState extends State<LocationSwitchSheet> {
         .toList();
 
     if (filtered.isEmpty) return _emptyState('No district matches "$_query"');
-    return ListView(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      children: filtered.map((d) {
+    return _list(filtered.map((d) {
         if (!d.isActive) {
           return _locationRow(
-            icon: Iconsax.location,
+            asset: TravelIcon.route,
             label: '${d.name} · coming soon',
             selected: false,
             onTap: null,
           );
         }
         return _locationRow(
-          icon: Iconsax.location,
+          asset: TravelIcon.route,
           label: d.name,
           selected: d.id == _viewingDistrict?.id,
           onTap: () => _pickDistrict(d),
         );
-      }).toList(),
-    );
+      }).toList());
   }
 
   Widget _buildStateList() {
@@ -584,101 +510,94 @@ class _LocationSwitchSheetState extends State<LocationSwitchSheet> {
         .toList();
 
     if (states.isEmpty) return _emptyState('No state matches "$_query"');
-    return ListView(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      children: states
-          .map((s) => _locationRow(
-                icon: Iconsax.map,
-                label: s,
-                selected: s == _stateFilter,
-                onTap: () => _pickState(s),
-              ))
-          .toList(),
-    );
+    return _list(states
+        .map((s) => _locationRow(
+              asset: TravelIcon.map,
+              label: s,
+              selected: s == _stateFilter,
+              onTap: () => _pickState(s),
+            ))
+        .toList());
   }
 
   Widget _locationRow({
-    required IconData icon,
+    required String asset,
     required String label,
     required bool selected,
     required VoidCallback? onTap,
   }) {
     final disabled = onTap == null;
     final color = disabled
-        ? AppColors.textHint
-        : (selected ? _accent : AppColors.textDark);
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(10),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 11),
-        child: Row(
-          children: [
-            Icon(icon, size: 17, color: disabled ? AppColors.textHint : color),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                label,
-                style: TextStyle(
-                  fontFamily: 'Poppins',
-                  fontSize: 14,
-                  fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
-                  color: color,
-                ),
+        ? FitnessAppTheme.deactivatedText
+        : (selected ? FitnessAppTheme.nearlyDarkBlue : FitnessAppTheme.darkerText);
+    return Column(
+      children: [
+        Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(8),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 11),
+              child: Row(
+                children: [
+                  Opacity(opacity: disabled ? Alpha.v40 : Alpha.full, child: TravelIcon(asset, size: 22)),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      label,
+                      style: TripKit.text(14, weight: selected ? FontWeight.w700 : FontWeight.w500, color: color),
+                    ),
+                  ),
+                  if (selected) const Icon(Icons.check_rounded, size: 18, color: FitnessAppTheme.nearlyDarkBlue),
+                ],
               ),
             ),
-            if (selected)
-              Icon(Icons.check_rounded, size: 18, color: _accent),
-          ],
+          ),
         ),
-      ),
+        const Divider(height: 1, color: FitnessAppTheme.spacer),
+      ],
     );
   }
 
-  Widget _loadingIndicator() => Padding(
-        padding: EdgeInsets.symmetric(vertical: 48),
-        child: Center(
-          child: SizedBox(
-            width: 26,
-            height: 26,
-            child: CircularProgressIndicator(
-                strokeWidth: 2.5, color: _accent),
-          ),
-        ),
+  Widget _loadingIndicator() => ListView(
+        physics: const NeverScrollableScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        children: [
+          for (var i = 0; i < 5; i++)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 10),
+              child: Row(
+                children: [
+                  TemplatePlaceholder(height: 40, width: 40, radius: 20),
+                  SizedBox(width: 12),
+                  TemplatePlaceholder(height: 14, width: 160),
+                ],
+              ),
+            ),
+        ],
       );
 
   Widget _emptyState(String message) => Padding(
         padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 24),
-        child: Center(
-          child: Text(
-            message,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-                fontFamily: 'Poppins', fontSize: 13, color: AppColors.textLight),
-          ),
+        child: Column(
+          children: [
+            const TravelIcon(TravelIcon.map, size: 44),
+            const SizedBox(height: 10),
+            Text(message, textAlign: TextAlign.center, style: FitnessAppTheme.caption),
+          ],
         ),
       );
 
   Widget _errorState(String message, VoidCallback onRetry) => Padding(
         padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 24),
         child: Column(
-          mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                  fontFamily: 'Poppins', fontSize: 13, color: AppColors.textLight),
-            ),
+            const TravelIcon(TravelIcon.map, size: 44),
             const SizedBox(height: 10),
-            TextButton(
-              onPressed: onRetry,
-              child: Text('Retry',
-                  style: TextStyle(
-                      fontFamily: 'Poppins',
-                      fontWeight: FontWeight.w600,
-                      color: _accent)),
-            ),
+            Text(message, textAlign: TextAlign.center, style: FitnessAppTheme.caption),
+            const SizedBox(height: 10),
+            GateTextButton(label: 'Retry', onPressed: onRetry),
           ],
         ),
       );

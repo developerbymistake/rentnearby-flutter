@@ -1,8 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:iconsax/iconsax.dart';
-import '../config/app_colors.dart';
-import '../config/app_shadows.dart';
+import '../design/design.dart';
 import '../models/card_fact.dart';
 import 'plan_badge_chip.dart';
 
@@ -22,6 +20,8 @@ class ListingGridCard extends StatelessWidget {
   final Color? accent;
   final Color? accentDark;
   final bool isFeatured;
+  final Animation<double>? animation;
+  final AnimationController? animationController;
 
   const ListingGridCard({
     super.key,
@@ -38,27 +38,25 @@ class ListingGridCard extends StatelessWidget {
     this.accent,
     this.accentDark,
     this.isFeatured = false,
+    this.animation,
+    this.animationController,
   });
 
-  Color get _accent => accent ?? (isPlot ? AppColors.plot : AppColors.primary);
-  Color get _accentDark => accentDark ?? (isPlot ? AppColors.plotDark : AppColors.primary);
+  Color get _accent => accent ?? FitnessAppTheme.nearlyDarkBlue;
+  Color get _accentDark => accentDark ?? FitnessAppTheme.nearlyDarkBlue;
 
   @override
   Widget build(BuildContext context) {
     final dpr = MediaQuery.of(context).devicePixelRatio;
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.divider.withValues(alpha: 0.8)),
-        boxShadow: AppShadows.premium(AppColors.primary, alpha: 0.05, blur: 8, offset: const Offset(0, 2)),
-      ),
+    final card = Container(
+      decoration: GateKit.cardSmall(),
       child: Material(
         color: Colors.transparent,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: TripKit.cardRadiusSmall,
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: onViewDetails,
+          highlightColor: Colors.transparent,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -74,24 +72,23 @@ class ListingGridCard extends StatelessWidget {
                             fit: BoxFit.cover,
                             memCacheWidth: (190 * dpr).round(),
                             memCacheHeight: (104 * dpr).round(),
-                            placeholder: (_, __) => _placeholder(),
-                            errorWidget: (_, __, ___) => _placeholder(),
+                            placeholder: (_, _) => const TemplatePlaceholder(height: 104, radius: 0),
+                            errorWidget: (_, _, _) => _placeholder(),
                           )
                         : _placeholder(),
                     Positioned(
                       top: 6,
                       left: 6,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
-                        decoration: BoxDecoration(color: _accent, borderRadius: BorderRadius.circular(999)),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(color: _accent, borderRadius: BorderRadius.circular(38)),
                         child: Text(
                           tagLabel,
-                          style: const TextStyle(
-                            fontFamily: 'Poppins',
-                            fontSize: 9,
+                          style: FitnessAppTheme.caption.copyWith(
+                            fontSize: 11,
                             fontWeight: FontWeight.w700,
                             letterSpacing: 0.5,
-                            color: Colors.white,
+                            color: FitnessAppTheme.white,
                           ),
                         ),
                       ),
@@ -111,19 +108,19 @@ class ListingGridCard extends StatelessWidget {
                         title,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textDark),
+                        style: TripKit.text(13, weight: FontWeight.w700),
                       ),
                       const SizedBox(height: 4),
                       Row(
                         children: [
-                          const Icon(Iconsax.location, size: 10, color: AppColors.textLight),
+                          const TravelIcon(TravelIcon.place, size: 12),
                           const SizedBox(width: 2),
                           Expanded(
                             child: Text(
                               locationLabel,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(fontFamily: 'Poppins', fontSize: 10, fontWeight: FontWeight.w500, color: AppColors.textLight),
+                              style: FitnessAppTheme.caption.copyWith(fontSize: 11),
                             ),
                           ),
                         ],
@@ -138,7 +135,7 @@ class ListingGridCard extends StatelessWidget {
                       ],
                       const Spacer(),
                       const SizedBox(height: 8),
-                      Container(height: 1, color: AppColors.divider.withValues(alpha: 0.6)),
+                      Container(height: 1, color: FitnessAppTheme.spacer),
                       const SizedBox(height: 8),
                       Row(
                         children: [
@@ -151,7 +148,8 @@ class ListingGridCard extends StatelessWidget {
                                 children: [
                                   Text(
                                     priceCaption,
-                                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 8, fontWeight: FontWeight.w700, letterSpacing: 0.6, color: AppColors.textLight),
+                                    style: FitnessAppTheme.caption
+                                        .copyWith(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.6),
                                   ),
                                   const SizedBox(height: 2),
                                   Text.rich(
@@ -159,11 +157,13 @@ class ListingGridCard extends StatelessWidget {
                                       children: [
                                         TextSpan(
                                           text: priceValue,
-                                          style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.gold),
+                                          style: FitnessAppTheme.title
+                                              .copyWith(fontSize: 13, fontWeight: FontWeight.w800, color: PickKit.gold),
                                         ),
                                         TextSpan(
                                           text: priceUnit,
-                                          style: const TextStyle(fontFamily: 'Poppins', fontSize: 8.5, fontWeight: FontWeight.w600, color: AppColors.textLight),
+                                          style: FitnessAppTheme.caption
+                                              .copyWith(fontSize: 11, fontWeight: FontWeight.w600),
                                         ),
                                       ],
                                     ),
@@ -174,7 +174,7 @@ class ListingGridCard extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(width: 6),
-                          Icon(Iconsax.arrow_right_3, size: 16, color: _accentDark),
+                          const Icon(Icons.arrow_forward, size: 16, color: FitnessAppTheme.darkText),
                         ],
                       ),
                     ],
@@ -186,30 +186,39 @@ class ListingGridCard extends StatelessWidget {
         ),
       ),
     );
+    if (animation == null || animationController == null) return card;
+    return TemplateEntrance(animation: animation!, animationController: animationController!, child: card);
   }
 
   Widget _factChip(CardFact f) {
     final (bg, fg) = switch (f.tone) {
-      FactTone.accent => (_accent.withValues(alpha: 0.08), _accentDark),
-      FactTone.cyan => (AppColors.accent.withValues(alpha: 0.12), AppColors.accent),
-      FactTone.slate => (AppColors.textLight.withValues(alpha: 0.12), AppColors.textMedium),
+      FactTone.accent => (PickKit.tripTint, FitnessAppTheme.nearlyDarkBlue),
+      FactTone.cyan => (PickKit.goodTint, FitnessAppTheme.nearlyBlue),
+      FactTone.slate => (FitnessAppTheme.spacer, FitnessAppTheme.lightText),
     };
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(6)),
+      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(8)),
       child: Text(
         f.label,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
-        style: TextStyle(fontFamily: 'Poppins', fontSize: 9, fontWeight: FontWeight.w600, color: fg),
+        style: FitnessAppTheme.caption.copyWith(fontSize: 11, fontWeight: FontWeight.w600, color: fg),
       ),
     );
   }
 
   Widget _placeholder() => Container(
-        color: _accent.withValues(alpha: 0.08),
-        child: Center(
-          child: Icon(isPlot ? Icons.landscape_rounded : Icons.home_rounded, size: 30, color: _accent),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              TravelPalette.skyStart.withValues(alpha: Alpha.v15),
+              TravelPalette.skyEnd.withValues(alpha: Alpha.v15),
+            ],
+          ),
         ),
+        child: const Center(child: TravelIcon(TravelIcon.stay, size: 40)),
       );
 }

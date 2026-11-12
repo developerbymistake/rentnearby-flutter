@@ -1,4 +1,4 @@
-import 'package:bakhli/config/app_colors.dart';
+import 'package:bakhli/design/design.dart';
 import 'package:bakhli/screens/splash/splash_hero.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -20,7 +20,7 @@ Widget _host({required double scale, required bool reduce}) {
           disableAnimations: reduce,
         ),
         child: const Scaffold(
-          backgroundColor: AppColors.textDark,
+          backgroundColor: DesignColors.dinnerEnd,
           body: SplashHero(),
         ),
       ),
@@ -56,11 +56,11 @@ void main() {
           final darkBase = find.descendant(
             of: find.byType(SplashHero),
             matching: find.byWidgetPredicate(
-              (w) => w is ColoredBox && w.color == AppColors.textDark,
+              (w) => w is ColoredBox && w.color == DesignColors.dinnerEnd,
             ),
           );
           expect(darkBase, findsOneWidget);
-          expect(AppColors.textDark.computeLuminance(), lessThan(0.1));
+          expect(DesignColors.dinnerEnd.computeLuminance(), lessThan(0.1));
           expect(
             find.descendant(
               of: find.byType(SplashHero),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../config/app_colors.dart';
+import '../../design/tokens/design_colors.dart';
 
 class IntroSlideCopy {
   const IntroSlideCopy({
@@ -44,7 +45,7 @@ class IntroStrings {
       headline: 'Stay somewhere special',
       sub: 'Homestays to luxury retreats, matched to your style.',
       top: AppColors.stayDark,
-      bottom: Color(0xFF7C2D5B),
+      bottom: DesignColors.introPlum,
       accent: AppColors.stayDark,
     ),
     IntroSlideCopy(
@@ -59,7 +60,7 @@ class IntroStrings {
       eyebrow: 'ON THE DAY',
       headline: 'Your day, always at hand',
       sub: "Today's plan, timings and bookings in one place.",
-      top: Color(0xFF0369A1),
+      top: DesignColors.introSky,
       bottom: AppColors.taxiDark,
       accent: AppColors.taxiDark,
     ),

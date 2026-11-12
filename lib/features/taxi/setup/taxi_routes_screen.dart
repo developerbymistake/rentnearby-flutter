@@ -1,16 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:iconsax/iconsax.dart';
-import '../../../config/app_colors.dart';
-import '../../../config/app_insets.dart';
+import '../../../design/design.dart';
+import '../../../design/extra/taxi_setup_kit.dart';
+import '../../../design/extra/trip_plan_look.dart';
 import '../../../models/browse_item.dart';
 import '../../../utils/app_toast.dart';
-import '../../../widgets/app_loading_overlay.dart';
-import '../../../widgets/gradient_button.dart';
 import '../../../widgets/location_switch_sheet.dart';
-import '../../stay/setup/dashed_add_row.dart';
-import '../../stay/setup/stay_option_grid.dart';
 import '../../trip/trip_strings_a3.dart';
 import '../taxi_option_sets.dart';
 import 'taxi_setup_controller.dart';
@@ -50,7 +46,8 @@ class TaxiRoutesScreen extends StatefulWidget {
   State<TaxiRoutesScreen> createState() => _TaxiRoutesScreenState();
 }
 
-class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> {
+class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> with TickerProviderStateMixin {
+  late final AnimationController _anim = SetupKit.controller(this);
   final _ctrl = TaxiSetupController.ensure();
   final _fareCtrl = TextEditingController();
   final _fareFocusNode = FocusNode();
@@ -84,10 +81,14 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> {
     _formOpen = _routes.length < _max;
     _from = _defaultFrom;
     _syncRateFields();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) SetupKit.play(_anim, context);
+    });
   }
 
   @override
   void dispose() {
+    _anim.dispose();
     _fareCtrl.dispose();
     _fareFocusNode.dispose();
     _rateCtrl.dispose();
@@ -106,33 +107,13 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> {
   }
 
   Future<bool> _confirmClearRate() async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Clear your day rate?',
-            style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, color: AppColors.textDark)),
-        content: const Text('You leave the trip planning list.',
-            style: TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textMedium)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Keep',
-                style: TextStyle(fontFamily: 'Poppins', color: TaxiColors.accentDark, fontWeight: FontWeight.w600)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.error,
-              foregroundColor: Colors.white,
-              minimumSize: const Size(0, 44),
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            ),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Clear', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
-          ),
-        ],
-      ),
+    final ok = await showTaxiDialog(
+      context,
+      title: 'Clear your day rate?',
+      body: 'You leave the trip planning list.',
+      cancelLabel: 'Keep',
+      confirmLabel: 'Clear',
+      destructive: true,
     );
     return ok == true;
   }
@@ -214,7 +195,7 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> {
     FocusScope.of(context).unfocus();
     try {
       final picked = await LocationSwitchSheet.pick(context,
-          palette: TaxiColors.palette, title: isFrom ? 'From city' : 'To city');
+          palette: templateModulePalette, title: isFrom ? 'From city' : 'To city');
       if (picked == null || !mounted) return;
       setState(() {
         if (isFrom) {
@@ -365,38 +346,16 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> {
     AppToast.success('Routes saved');
   }
 
-  void _confirmDiscard() {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Discard changes?',
-            style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, color: AppColors.textDark)),
-        content: const Text('Unsaved changes will be lost.',
-            style: TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textMedium)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Keep Editing',
-                style: TextStyle(fontFamily: 'Poppins', color: TaxiColors.accentDark, fontWeight: FontWeight.w600)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.error,
-              foregroundColor: Colors.white,
-              minimumSize: Size.zero,
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            ),
-            onPressed: () {
-              Navigator.pop(context);
-              Get.back();
-            },
-            child: const Text('Discard', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
-          ),
-        ],
-      ),
+  Future<void> _confirmDiscard() async {
+    final ok = await showTaxiDialog(
+      context,
+      title: 'Discard changes?',
+      body: 'Unsaved changes will be lost.',
+      cancelLabel: 'Keep Editing',
+      confirmLabel: 'Discard',
+      destructive: true,
     );
+    if (ok == true) Get.back();
   }
 
   void _onBack() {
@@ -417,17 +376,32 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> {
       },
       child: Stack(children: [
         Scaffold(
-          backgroundColor: AppColors.scaffoldBg,
+          backgroundColor: FitnessAppTheme.background,
           body: Column(children: [
-            _header(),
+            ModuleHeader(
+              title: 'Routes and fares',
+              tone: KitTone.taxi,
+              onBack: _onBack,
+              leadingAsset: TravelIcon.route,
+            ),
             Expanded(
               child: ListView(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(KitMetrics.gutter),
                 children: [
-                  _localRateCard(),
-                  for (var i = 0; i < _routes.length; i++) _summaryCard(i),
-                  if (_formOpen) _form(),
-                  _addRow(),
+                  SetupEntrance(controller: _anim, index: 0, count: 4, child: _localRateCard()),
+                  SetupEntrance(
+                    controller: _anim,
+                    index: 1,
+                    count: 4,
+                    child: Column(children: [for (var i = 0; i < _routes.length; i++) _summaryCard(i)]),
+                  ),
+                  SetupEntrance(
+                    controller: _anim,
+                    index: 2,
+                    count: 4,
+                    child: Column(children: [if (_formOpen) _form()]),
+                  ),
+                  SetupEntrance(controller: _anim, index: 3, count: 4, child: _addRow()),
                 ],
               ),
             ),
@@ -435,26 +409,11 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> {
           ]),
         ),
         Obx(() => _ctrl.isSaving.value
-            ? AppLoadingOverlay.stackChild(message: _savingRate ? 'Saving rate...' : 'Saving routes...', indicatorColor: TaxiColors.accent)
+            ? SetupBusy(message: _savingRate ? 'Saving rate...' : 'Saving routes...')
             : const SizedBox.shrink()),
       ]),
     );
   }
-
-  Widget _header() => Container(
-        decoration: const BoxDecoration(gradient: TaxiColors.gradient),
-        child: SafeArea(
-          bottom: false,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(4, 8, 20, 20),
-            child: Row(children: [
-              IconButton(onPressed: _onBack, icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white)),
-              const Text('Routes and fares',
-                  style: TextStyle(fontFamily: 'Poppins', fontSize: 18, fontWeight: FontWeight.w600, color: Colors.white)),
-            ]),
-          ),
-        ),
-      );
 
   Widget _summaryCard(int i) {
     final r = _routes[i];
@@ -463,26 +422,22 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.fromLTRB(14, 4, 4, 4),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.divider),
-        boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 8, offset: const Offset(0, 2))],
+        color: FitnessAppTheme.white,
+        borderRadius: TripKit.cardRadiusSmall,
+        boxShadow: PickKit.greyShadow(),
       ),
       child: Row(children: [
         Expanded(
-          child: Text(text,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w500, color: AppColors.textDark)),
+          child: Text(text, maxLines: 1, overflow: TextOverflow.ellipsis, style: TripKit.text(12.5)),
         ),
         const SizedBox(width: 6),
-        _squareAction(Iconsax.edit_2, TaxiColors.accentDark, () => _editRoute(i)),
-        _squareAction(Iconsax.close_circle, AppColors.error, () => _removeRoute(i)),
+        _squareAction(Icons.edit_outlined, FitnessAppTheme.nearlyDarkBlue, PickKit.taxiTint, () => _editRoute(i)),
+        _squareAction(Icons.close_rounded, TripLook.error, PickKit.badTint, () => _removeRoute(i)),
       ]),
     );
   }
 
-  Widget _squareAction(IconData icon, Color color, VoidCallback onTap) => InkWell(
+  Widget _squareAction(IconData icon, Color color, Color tint, VoidCallback onTap) => InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(10),
         child: SizedBox(
@@ -492,7 +447,7 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> {
             child: Container(
               width: 26,
               height: 26,
-              decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
+              decoration: BoxDecoration(color: tint, borderRadius: BorderRadius.circular(8)),
               child: Icon(icon, size: 14, color: color),
             ),
           ),
@@ -501,45 +456,36 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> {
 
   Widget _label(String text, {bool first = false}) => Padding(
         padding: EdgeInsets.only(top: first ? 0 : 14, bottom: 8),
-        child: Text(text,
-            style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.textMedium)),
+        child: Text(text, style: SetupKit.label()),
       );
 
-  Widget _placeRow({required IconData icon, required _Place? place, required String placeholder, required VoidCallback onTap}) =>
+  Widget _placeRow({required String asset, required _Place? place, required String placeholder, required VoidCallback onTap}) =>
       Material(
-        color: TaxiColors.surface,
+        color: FitnessAppTheme.background,
         borderRadius: BorderRadius.circular(12),
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(12),
           child: Container(
             constraints: const BoxConstraints(minHeight: 50),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.divider),
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
             child: Row(children: [
-              Icon(icon, size: 18, color: TaxiColors.accent),
+              Image.asset(asset, width: 24, height: 24),
               const SizedBox(width: 10),
               Expanded(
                 child: place == null
-                    ? Text(placeholder,
-                        style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textHint))
+                    ? Text(placeholder, style: TripKit.text(14, color: FitnessAppTheme.deactivatedText))
                     : Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Text(place.name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textDark)),
+                        Text(place.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: TripKit.text(14)),
                         if (place.label != null && place.label!.isNotEmpty)
                           Text(place.label!,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight)),
+                              style: TripKit.text(11, color: FitnessAppTheme.lightText)),
                       ]),
               ),
               const SizedBox(width: 8),
-              const Icon(Iconsax.gps, size: 18, color: TaxiColors.accentDark),
+              Image.asset(TravelIcon.pin, width: 20, height: 20),
             ]),
           ),
         ),
@@ -547,141 +493,141 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> {
 
   Widget _form() {
     final number = (_editingIndex ?? _routes.length) + 1;
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 8, offset: const Offset(0, 2))],
-      ),
+    return SetupCard(
+      title: 'Route $number',
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('Route $number',
-            style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-        const SizedBox(height: 10),
         _label('From *', first: true),
-        _placeRow(icon: Iconsax.location, place: _from, placeholder: 'Search a place', onTap: () => _pickPlace(true)),
+        _placeRow(asset: TravelIcon.place, place: _from, placeholder: 'Search a place', onTap: () => _pickPlace(true)),
         _label('To *'),
-        _placeRow(icon: Iconsax.search_normal, place: _to, placeholder: 'Search a place', onTap: () => _pickPlace(false)),
+        _placeRow(asset: TravelIcon.map, place: _to, placeholder: 'Search a place', onTap: () => _pickPlace(false)),
         _label('Fare (₹) *'),
         TextFormField(
           controller: _fareCtrl,
           focusNode: _fareFocusNode,
+          cursorColor: FitnessAppTheme.nearlyDarkBlue,
           keyboardType: TextInputType.number,
           inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(7)],
           onChanged: (_) => _dirty = true,
-          style: const TextStyle(fontFamily: 'Poppins', fontSize: 14),
-          decoration: InputDecoration(
-            hintText: 'e.g. 4500',
-            hintStyle: const TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textHint),
-            prefixText: '₹ ',
-            prefixStyle: const TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textDark, fontWeight: FontWeight.w500),
-            filled: true,
-            fillColor: TaxiColors.surface,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-            enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.divider)),
-            focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: TaxiColors.accent, width: 1.5)),
-          ),
+          style: SetupKit.fieldText(),
+          decoration: SetupKit.input(hint: 'e.g. 4500', prefix: '₹ '),
         ),
         _label('Trip *'),
-        StayOptionGrid(
-          crossAxisCount: 2,
-          childAspectRatio: 3.9,
-          labels: TaxiOptionSets.tripTypes.map((o) => o.label).toList(),
-          isActive: (i) => _tripType == TaxiOptionSets.tripTypes[i].value,
-          onTap: (i) => setState(() {
-            _tripType = TaxiOptionSets.tripTypes[i].value;
-            _dirty = true;
-          }),
-          accent: TaxiColors.accent,
-        ),
+        Row(children: [
+          for (var i = 0; i < TaxiOptionSets.tripTypes.length; i++) ...[
+            if (i > 0) const SizedBox(width: 10),
+            Expanded(
+              child: PickChip(
+                label: TaxiOptionSets.tripTypes[i].label,
+                selected: _tripType == TaxiOptionSets.tripTypes[i].value,
+                activeColor: PickKit.taxi,
+                onTap: () => setState(() {
+                  _tripType = TaxiOptionSets.tripTypes[i].value;
+                  _dirty = true;
+                }),
+              ),
+            ),
+          ],
+        ]),
       ]),
     );
   }
 
-  InputDecoration _numberDecoration({required String hint, String? prefix, String? suffix}) => InputDecoration(
-        hintText: hint,
-        hintStyle: const TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textHint),
-        prefixText: prefix,
-        prefixStyle: const TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textDark, fontWeight: FontWeight.w500),
-        suffixText: suffix,
-        suffixStyle: const TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textLight),
-        filled: true,
-        fillColor: TaxiColors.surface,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-        enabledBorder:
-            OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.divider)),
-        focusedBorder:
-            OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: TaxiColors.accent, width: 1.5)),
-      );
-
   Widget _localRateCard() {
     final editable = _rateEditable;
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 8, offset: const Offset(0, 2))],
-      ),
+    return SetupCard(
+      title: 'Local sightseeing',
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Text('Local sightseeing',
-            style: TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-        const SizedBox(height: 2),
-        const Text('Needed to appear in trip planning',
-            style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
+        Text('Needed to appear in trip planning', style: TripKit.text(12, color: FitnessAppTheme.lightText)),
         _label(TripStringsA3.driverRateLabel),
         TextFormField(
           controller: _rateCtrl,
           readOnly: !editable,
+          cursorColor: FitnessAppTheme.nearlyDarkBlue,
           keyboardType: TextInputType.number,
           inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(7)],
           onChanged: (_) => setState(() {}),
-          style: const TextStyle(fontFamily: 'Poppins', fontSize: 14),
-          decoration: _numberDecoration(hint: 'e.g. 2500', prefix: '₹ '),
+          style: SetupKit.fieldText(),
+          decoration: SetupKit.input(hint: 'e.g. 2500', prefix: '₹ '),
         ),
         _label('Km included per day (optional)'),
         TextFormField(
           controller: _kmCtrl,
           readOnly: !editable,
+          cursorColor: FitnessAppTheme.nearlyDarkBlue,
           keyboardType: TextInputType.number,
           inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(4)],
           onChanged: (_) => setState(() {}),
-          style: const TextStyle(fontFamily: 'Poppins', fontSize: 14),
-          decoration: _numberDecoration(hint: 'e.g. 120', suffix: 'km'),
+          style: SetupKit.fieldText(),
+          decoration: SetupKit.input(
+              hint: 'e.g. 120',
+              suffix: Text('km', style: TripKit.text(13, color: FitnessAppTheme.lightText))),
         ),
         const SizedBox(height: 12),
-        const Text('Travellers see this rate. You can quote a different fare for a trip after you read the itinerary.',
-            style: TextStyle(fontFamily: 'Poppins', fontSize: 12, height: 1.4, color: AppColors.textMedium)),
+        Text('Travellers see this rate. You can quote a different fare for a trip after you read the itinerary.',
+            style: TripKit.text(12, color: FitnessAppTheme.grey).copyWith(height: 1.4)),
       ]),
     );
   }
 
   Widget _addRow() {
     final n = _count;
-    return DashedAddRow(
-      label: 'Add another route',
-      counter: n < _max ? '$n of $_max' : 'Limit reached',
-      enabled: n < _max,
-      onTap: _addAnother,
-      accent: TaxiColors.accent,
+    final enabled = n < _max;
+    return PressScale(
+      child: Container(
+        decoration: BoxDecoration(
+            color: FitnessAppTheme.white, borderRadius: TripKit.cardRadiusSmall, boxShadow: PickKit.greyShadow()),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: _addAnother,
+            borderRadius: TripKit.cardRadiusSmall,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 48),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(12, 10, 16, 10),
+                child: Row(children: [
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: enabled ? PickKit.taxiGradient : null,
+                      color: enabled ? null : FitnessAppTheme.deactivatedText,
+                      boxShadow: enabled ? PickKit.shadow(PickKit.taxiDark) : const [],
+                    ),
+                    child: const Icon(Icons.add_rounded, size: 20, color: FitnessAppTheme.white),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text('Add another route',
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TripKit.text(14, color: enabled ? FitnessAppTheme.nearlyDarkBlue : DesignColors.textDisabled).copyWith(letterSpacing: 0.2)),
+                  ),
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Text(enabled ? '$n of $_max' : 'Limit reached',
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.end,
+                        style: TripKit.text(11, color: FitnessAppTheme.lightText)),
+                  ),
+                ]),
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 
-  Widget _footer() => Container(
-        color: Colors.white,
-        padding: EdgeInsets.fromLTRB(20, 12, 20, AppInsets.bottomViewPadding(context) + 12),
-        child: Obx(() => GradientButton(
+  Widget _footer() => SetupFooter(
+        child: Obx(() => PickButton(
               onPressed: _ctrl.isSaving.value ? null : _save,
               isLoading: _ctrl.isSaving.value,
               label: 'Save',
-              gradient: TaxiColors.gradient,
-              shadowColor: TaxiColors.accent,
+              gradient: PickKit.taxiGradient,
+              shadowColor: PickKit.taxiDark,
             )),
       );
 }

@@ -1,13 +1,12 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:iconsax/iconsax.dart';
-import '../../../../config/app_colors.dart';
+import 'package:bakhli/design/design.dart';
+import 'package:bakhli/design/extra/trip_plan_look.dart';
 import '../../../../config/app_routes.dart';
 import '../../../../utils/contact_launcher.dart';
 import '../../../stay/models/stay_nearby_model.dart';
 import '../../../trip/utils/trip_format.dart';
-import '../../taxi_option_sets.dart';
 import '../taxi_ways_strings.dart';
 
 class DestinationStayCard extends StatelessWidget {
@@ -51,94 +50,82 @@ class DestinationStayCard extends StatelessWidget {
     return SizedBox(
       width: width,
       height: heightFor(context),
-      child: Material(
-        color: Colors.white,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: const BorderSide(color: AppColors.divider),
+      child: Container(
+        decoration: TripLook.card(radius: TripLook.softRadius),
+        child: ClipRRect(
+          borderRadius: TripLook.softRadius,
+          child: Material(
+            color: DesignColors.surface,
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              InkWell(
+                onTap: _open,
+                child: SizedBox(
+                  height: 96,
+                  width: double.infinity,
+                  child: stay.thumbnailUrl == null
+                      ? _placeholder()
+                      : CachedNetworkImage(
+                          imageUrl: stay.thumbnailUrl!,
+                          fit: BoxFit.cover,
+                          errorWidget: (_, _, _) => _placeholder(),
+                          placeholder: (_, _) => _placeholder(),
+                        ),
+                ),
+              ),
+              Expanded(
+                child: InkWell(
+                  onTap: _open,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(10, 8, 10, 0),
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text(stay.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: FitnessAppTheme.title.copyWith(fontSize: 13)),
+                      Text(sub,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: FitnessAppTheme.caption.copyWith(fontSize: 11)),
+                      if (price != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 2),
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerLeft,
+                            child: Text(TaxiWaysStrings.perNight(price),
+                                maxLines: 1,
+                                style: FitnessAppTheme.title.copyWith(fontSize: 13, color: DesignColors.primary)),
+                          ),
+                        ),
+                    ]),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(10, 0, 10, 10),
+                child: SizedBox(
+                  width: double.infinity,
+                  height: 44,
+                  child: PrimaryButton(
+                    label: TaxiWaysStrings.askRoom,
+                    tone: KitTone.stay,
+                    compact: true,
+                    scaleLabel: true,
+                    onPressed: _ask,
+                  ),
+                ),
+              ),
+            ]),
+          ),
         ),
-        clipBehavior: Clip.antiAlias,
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          InkWell(
-            onTap: _open,
-            child: SizedBox(
-              height: 96,
-              width: double.infinity,
-              child: stay.thumbnailUrl == null
-                  ? _placeholder()
-                  : CachedNetworkImage(
-                      imageUrl: stay.thumbnailUrl!,
-                      fit: BoxFit.cover,
-                      errorWidget: (_, _, _) => _placeholder(),
-                      placeholder: (_, _) => _placeholder(),
-                    ),
-            ),
-          ),
-          Expanded(
-            child: InkWell(
-              onTap: _open,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(10, 8, 10, 0),
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(stay.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                          fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-                  Text(sub,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight)),
-                  if (price != null)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 2),
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        alignment: Alignment.centerLeft,
-                        child: Text(TaxiWaysStrings.perNight(price),
-                            maxLines: 1,
-                            style: const TextStyle(
-                                fontFamily: 'Poppins',
-                                fontSize: 13,
-                                fontWeight: FontWeight.w700,
-                                color: TaxiColors.accentDark)),
-                      ),
-                    ),
-                ]),
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(10, 0, 10, 10),
-            child: SizedBox(
-              width: double.infinity,
-              height: 44,
-              child: ElevatedButton(
-                onPressed: _ask,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: TaxiColors.accent,
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-                  minimumSize: const Size(0, 44),
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Text(TaxiWaysStrings.askRoom,
-                      style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w700)),
-                ),
-              ),
-            ),
-          ),
-        ]),
       ),
     );
   }
 
   Widget _placeholder() => Container(
-        color: TaxiColors.surface,
+        width: double.infinity,
+        color: PickKit.stayTint,
         alignment: Alignment.center,
-        child: const Icon(Iconsax.home_2, size: 28, color: TaxiColors.accent),
+        child: const TravelIcon(TravelIcon.stay, size: 28),
       );
 }

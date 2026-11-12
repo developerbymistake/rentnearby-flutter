@@ -7,7 +7,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
-import '../config/app_colors.dart';
 import '../config/app_constants.dart';
 import '../config/app_routes.dart';
 import '../config/app_tabs.dart';
@@ -17,6 +16,7 @@ import '../controllers/chat_controller.dart';
 import '../controllers/home_controller.dart';
 import '../controllers/plan_controller.dart';
 import '../controllers/tab_config_controller.dart';
+import '../design/design.dart';
 import '../features/stay/stay_status_sync.dart';
 import '../features/taxi/taxi_status_sync.dart';
 import '../features/trip/controllers/trip_plan_controller.dart';
@@ -56,7 +56,7 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 void _onBackgroundNotificationTap(NotificationResponse response) {}
 
 // Draws a circular initial-letter avatar matching chats_list_screen.dart's existing
-// per-conversation avatar exactly (solid navy AppColors.primary, white bold initial) — there
+// per-conversation avatar exactly (solid DesignColors.primary, white bold initial) — there
 // are no real profile photos in this app and no per-user color palette, so this is always
 // the same fixed navy circle, never derived from userId/name.
 Future<Uint8List> _buildInitialAvatarBytes(String senderName) async {
@@ -67,7 +67,7 @@ Future<Uint8List> _buildInitialAvatarBytes(String senderName) async {
   canvas.drawCircle(
     const Offset(size / 2, size / 2),
     size / 2,
-    Paint()..color = AppColors.primary,
+    Paint()..color = DesignColors.primary,
   );
 
   final initial = senderName.trim().isNotEmpty ? senderName.trim()[0].toUpperCase() : '?';
@@ -75,7 +75,8 @@ Future<Uint8List> _buildInitialAvatarBytes(String senderName) async {
     text: TextSpan(
       text: initial,
       style: const TextStyle(
-        color: Colors.white,
+        fontFamily: FitnessAppTheme.fontName,
+        color: DesignColors.onPrimary,
         fontSize: size * 0.45,
         fontWeight: FontWeight.w700,
       ),
@@ -567,7 +568,7 @@ class NotificationService extends GetxService {
       }
       return;
     }
-    if (route == AppRoutes.tripPlan) args = {...?args, 'fresh': true};
+    if (route == AppRoutes.tripPlan && args?['step'] == null) args = {...?args, 'fresh': true};
     Get.toNamed(route, arguments: args);
   }
 
@@ -587,7 +588,7 @@ class NotificationService extends GetxService {
 
   bool _isOpenScreen(String route, Map<String, dynamic>? args) {
     if (Get.currentRoute != route || !_refreshInPlaceRoutes.contains(route)) return false;
-    if (route == AppRoutes.tripPlan && args?['row'] != null) return false;
+    if (route == AppRoutes.tripPlan && (args?['row'] != null || args?['step'] != null)) return false;
     final current = Get.arguments;
     final open = current is Map ? current : const <String, dynamic>{};
     final taxiReplies = route == AppRoutes.tripTaxiReplies;
@@ -789,22 +790,29 @@ class NotificationService extends GetxService {
     } catch (_) {}
   }
 
-  /// Returns true if user should be prompted to re-enable notifications:
-  /// - Previously had notifications (stored token exists)
-  /// - Current permission is denied
-  /// - Has not dismissed the prompt in the last 24 hours
-  Future<bool> shouldShowPermissionPrompt() async {
-    if (StorageService.getFcmToken() == null) return false;
-
-    final lastDismissed = StorageService.getNotifPromptDismissedAt();
-    if (lastDismissed != null) {
-      final hoursSince = DateTime.now().difference(lastDismissed).inHours;
-      if (hoursSince < 24) return false;
+  /// True when the user turned notifications off in system settings.
+  Future<bool> isPermissionDenied() async {
+    try {
+      final settings = await FirebaseMessaging.instance.getNotificationSettings();
+      return settings.authorizationStatus == AuthorizationStatus.denied;
+    } catch (_) {
+      return false;
     }
-
-    final settings = await FirebaseMessaging.instance.getNotificationSettings();
-    return settings.authorizationStatus == AuthorizationStatus.denied;
   }
+
+  /// A stored token is not needed: a user who denied the permission before a token was ever
+  /// saved must still be told. The prompt waits 24 hours after a dismissal.
+  static bool promptDue({required bool denied, required DateTime? dismissedAt, required DateTime now}) {
+    if (!denied) return false;
+    if (dismissedAt != null && now.difference(dismissedAt).inHours < 24) return false;
+    return true;
+  }
+
+  Future<bool> shouldShowPermissionPrompt() async => promptDue(
+        denied: await isPermissionDenied(),
+        dismissedAt: StorageService.getNotifPromptDismissedAt(),
+        now: DateTime.now(),
+      );
 
   void onPermissionPromptDismissed() =>
       StorageService.saveNotifPromptDismissedAt();

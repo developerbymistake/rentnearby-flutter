@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-import '../config/app_colors.dart';
+import 'package:bakhli/design/design.dart';
+import 'package:bakhli/design/extra/chat_kit.dart';
 import '../models/question_template_model.dart';
 
-/// The "+" menu — confirmed pattern (Option A): tap opens a flat, tap-to-select
-/// list, composer itself stays a single clean row. No free text anywhere here.
 class ChatPlusMenuSheet extends StatelessWidget {
   final List<QuestionTemplateModel> questions;
   final void Function(QuestionTemplateModel) onAskQuestion;
@@ -17,7 +16,7 @@ class ChatPlusMenuSheet extends StatelessWidget {
     required this.onAskQuestion,
     required this.onRequestContact,
     required this.onScheduleVisit,
-    this.accent = AppColors.primary,
+    this.accent = FitnessAppTheme.nearlyDarkBlue,
   });
 
   static Future<void> show(
@@ -26,13 +25,12 @@ class ChatPlusMenuSheet extends StatelessWidget {
     required void Function(QuestionTemplateModel) onAskQuestion,
     required VoidCallback onRequestContact,
     required VoidCallback onScheduleVisit,
-    Color accent = AppColors.primary,
+    Color accent = FitnessAppTheme.nearlyDarkBlue,
   }) {
     return showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppColors.cardBg,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      backgroundColor: Colors.transparent,
       builder: (_) => ChatPlusMenuSheet(
         questions: questions,
         onAskQuestion: onAskQuestion,
@@ -45,74 +43,61 @@ class ChatPlusMenuSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // The question list is server/admin-driven (unbounded from this widget's
-    // point of view) — capped + scrollable so a listing with many questions
-    // degrades to a scroll, not a RenderFlex overflow.
     final maxHeight = MediaQuery.sizeOf(context).height * 0.75;
-    return SafeArea(
-      child: ConstrainedBox(
-        constraints: BoxConstraints(maxHeight: maxHeight),
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Container(width: 40, height: 4, decoration: BoxDecoration(color: AppColors.divider, borderRadius: BorderRadius.circular(2))),
-            const SizedBox(height: 14),
-            if (questions.isNotEmpty) ...[
-              _sectionLabel('About this listing'),
-              ...questions.map((q) => _item(
-                    context,
-                    icon: Icons.help_outline_rounded,
-                    label: q.questionText,
+    return ChatSheetFrame(
+      child: SafeArea(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxHeight: maxHeight),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+            child: TemplateStagger(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                ChatSheetFrame.grabber(),
+                if (questions.isNotEmpty)
+                  Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                    const ChatSheetLabel('About this listing'),
+                    ...questions.map((q) => ChatSheetRow(
+                          asset: TravelIcon.note,
+                          label: q.questionText,
+                          color: accent,
+                          onTap: () {
+                            Navigator.pop(context);
+                            onAskQuestion(q);
+                          },
+                        )),
+                    const Divider(color: FitnessAppTheme.spacer, height: 1),
+                  ]),
+                Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                  const ChatSheetLabel('Contact'),
+                  ChatSheetRow(
+                    asset: TravelIcon.chat,
+                    label: 'Request contact number',
+                    color: accent,
                     onTap: () {
                       Navigator.pop(context);
-                      onAskQuestion(q);
+                      onRequestContact();
                     },
-                  )),
-            ],
-            _sectionLabel('Contact'),
-            _item(context, icon: Icons.call_outlined, label: 'Request contact number', onTap: () {
-              Navigator.pop(context);
-              onRequestContact();
-            }),
-            _sectionLabel('Visit'),
-            _item(context, icon: Icons.calendar_month_rounded, label: 'Schedule a visit', onTap: () {
-              Navigator.pop(context);
-              onScheduleVisit();
-            }),
-          ]),
+                  ),
+                  const Divider(color: FitnessAppTheme.spacer, height: 1),
+                ]),
+                Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                  const ChatSheetLabel('Visit'),
+                  ChatSheetRow(
+                    asset: TravelIcon.calendar,
+                    label: 'Schedule a visit',
+                    color: accent,
+                    onTap: () {
+                      Navigator.pop(context);
+                      onScheduleVisit();
+                    },
+                  ),
+                ]),
+              ],
+            ),
+          ),
         ),
       ),
     );
   }
-
-  Widget _sectionLabel(String text) => Padding(
-        padding: const EdgeInsets.fromLTRB(8, 10, 8, 4),
-        child: Align(
-          alignment: Alignment.centerLeft,
-          child: Text(text.toUpperCase(),
-              style: const TextStyle(
-                  fontFamily: 'Poppins', fontSize: 10.5, fontWeight: FontWeight.w600,
-                  color: AppColors.textHint, letterSpacing: 0.4)),
-        ),
-      );
-
-  Widget _item(BuildContext context, {required IconData icon, required String label, required VoidCallback onTap}) => InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(10),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 11),
-          child: Row(children: [
-            Container(
-              width: 28, height: 28,
-              decoration: BoxDecoration(color: accent.withValues(alpha: 0.10), borderRadius: BorderRadius.circular(8)),
-              child: Icon(icon, size: 16, color: accent),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(label,
-                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.textDark)),
-            ),
-          ]),
-        ),
-      );
 }

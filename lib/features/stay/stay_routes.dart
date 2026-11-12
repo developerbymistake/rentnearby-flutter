@@ -1,5 +1,6 @@
 import 'package:get/get.dart';
 import '../../config/app_routes.dart';
+import '../../design/design.dart';
 import 'enquiries/stay_enquiries_screen.dart';
 import 'guest/stay_detail_screen.dart';
 import 'setup/my_stays_screen.dart';
@@ -14,55 +15,55 @@ final List<GetPage> stayPages = [
   GetPage(
     name: AppRoutes.staySetup,
     page: () => const StaySetupHubScreen(),
-    transition: Transition.fadeIn,
-    transitionDuration: const Duration(milliseconds: 400),
+    customTransition: TemplateTransition(),
+    transitionDuration: templateTransitionDuration,
   ),
   GetPage(
     name: AppRoutes.stayBasicDetails,
     page: () => const StayBasicDetailsScreen(),
-    transition: Transition.rightToLeft,
-    transitionDuration: const Duration(milliseconds: 300),
+    customTransition: TemplateTransition(),
+    transitionDuration: templateTransitionDuration,
   ),
   GetPage(
     name: AppRoutes.stayRooms,
     page: () => const StayRoomsScreen(),
-    transition: Transition.rightToLeft,
-    transitionDuration: const Duration(milliseconds: 300),
+    customTransition: TemplateTransition(),
+    transitionDuration: templateTransitionDuration,
   ),
   GetPage(
     name: AppRoutes.stayRules,
     page: () => const StayRulesScreen(),
-    transition: Transition.rightToLeft,
-    transitionDuration: const Duration(milliseconds: 300),
+    customTransition: TemplateTransition(),
+    transitionDuration: templateTransitionDuration,
   ),
   GetPage(
     name: AppRoutes.staySubmit,
     page: () => const StaySubmitScreen(),
-    transition: Transition.rightToLeft,
-    transitionDuration: const Duration(milliseconds: 300),
+    customTransition: TemplateTransition(),
+    transitionDuration: templateTransitionDuration,
   ),
   GetPage(
     name: AppRoutes.myStays,
     page: () => const MyStaysScreen(),
-    transition: Transition.rightToLeft,
-    transitionDuration: const Duration(milliseconds: 300),
+    customTransition: TemplateTransition(),
+    transitionDuration: templateTransitionDuration,
   ),
   GetPage(
     name: AppRoutes.stayDetail,
     page: () => const StayDetailScreen(),
-    transition: Transition.downToUp,
-    transitionDuration: const Duration(milliseconds: 350),
+    customTransition: TemplateTransition(),
+    transitionDuration: templateTransitionDuration,
   ),
   GetPage(
     name: AppRoutes.stayAdvanceDetails,
     page: () => const StayAdvanceDetailsScreen(),
-    transition: Transition.rightToLeft,
-    transitionDuration: const Duration(milliseconds: 300),
+    customTransition: TemplateTransition(),
+    transitionDuration: templateTransitionDuration,
   ),
   GetPage(
     name: AppRoutes.stayEnquiries,
     page: () => const StayEnquiriesScreen(),
-    transition: Transition.rightToLeft,
-    transitionDuration: const Duration(milliseconds: 300),
+    customTransition: TemplateTransition(),
+    transitionDuration: templateTransitionDuration,
   ),
 ];

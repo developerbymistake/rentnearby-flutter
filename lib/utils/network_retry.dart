@@ -1,6 +1,7 @@
 import 'dio_error_mapper.dart';
 
-Future<T> withRetry<T>(Future<T> Function() request) async {
+Future<T> withRetry<T>(Future<T> Function() request, {bool once = false}) async {
+  if (once) return request();
   const backoff = [Duration(seconds: 2), Duration(seconds: 5)];
   for (final delay in backoff) {
     try {

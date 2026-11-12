@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../config/app_colors.dart';
+import 'package:bakhli/design/design.dart';
+import 'package:bakhli/design/extra/replies_kit.dart';
 import '../config/app_routes.dart';
 import '../controllers/plan_controller.dart';
 import '../models/my_plan_model.dart';
@@ -107,70 +108,62 @@ class PlanSubscriptionCard extends StatelessWidget {
     final (title, body, action, viaManage) = view;
     final plans = Get.find<PlanController>();
     final warn = p.needsFix;
-    final tone = warn ? AppColors.warning : accent;
+    final toneColor = warn ? DesignColors.warnDeep : accent;
+    final tone = KitTone.solid(toneColor);
     final scheduled = p.scheduledPlanName != null && p.scheduledAt != null
         ? 'Changes to ${p.scheduledPlanName} on ${PlanStateCopy.date(p.scheduledAt!)}'
         : null;
     return Container(
-      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: warn ? AppColors.warningSurface : Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: tone.withValues(alpha: 0.35)),
+        color: warn ? Color.alphaBlend(RepliesTone.warnSurface, DesignColors.surface) : DesignColors.surface,
+        borderRadius: CardRadius.tile,
+        boxShadow: warn ? ShadowTokens.elev3 : ShadowTokens.elev2,
       ),
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
           Expanded(
             child: Text(p.ownsActivePlan ? me.planName : 'Subscription',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
+                style: TypeTokens.style(12, FontWeight.w600, color: TypeTokens.secondary)),
           ),
           if (p.inTrial) _pill('Trial', accent),
-          if (p.isTest) ...[const SizedBox(width: 6), _pill('Test', AppColors.textLight)],
+          if (p.isTest) ...[const SizedBox(width: 6), _pill('Test', DesignColors.textSecondary)],
         ]),
         const SizedBox(height: 2),
         Text(title,
-            style: TextStyle(
-                fontFamily: 'Poppins',
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-                color: warn ? AppColors.warningText : AppColors.textDark)),
+            style: TypeTokens.style(16, FontWeight.w700,
+                color: warn ? DesignColors.warnDeep : DesignColors.textStrong, letterSpacing: 0.2)),
         if (body != null)
           Text(body,
-              style: TextStyle(
-                  fontFamily: 'Poppins', fontSize: 12, color: warn ? AppColors.warningText : AppColors.textLight)),
+              style: TypeTokens.style(12, FontWeight.w500,
+                  color: warn ? DesignColors.warnDeep : DesignColors.textGrey)),
         if (scheduled != null) ...[
           const SizedBox(height: 8),
-          _note(Icons.swap_horiz_rounded, scheduled),
+          _note(TravelIcon.calendar, scheduled),
         ],
         if (me.carryOverDays > 0) ...[
           const SizedBox(height: 8),
-          _note(Icons.add_circle_outline_rounded, '+${me.carryOverDays} days after subscription'),
+          _note(TravelIcon.money, '+${me.carryOverDays} days after subscription'),
         ],
         const SizedBox(height: 12),
-        Row(children: [
+        Wrap(crossAxisAlignment: WrapCrossAlignment.center, spacing: 8, children: [
           if (action != null)
-            ElevatedButton(
-              onPressed: viaManage ? plans.openManageSubscription : onResubscribe,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: tone,
-                foregroundColor: Colors.white,
-                minimumSize: Size.zero,
-                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-              child: Text(action, style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 13)),
+            PillAction(
+              label: action,
+              filled: true,
+              tone: tone,
+              onTap: viaManage ? plans.openManageSubscription : onResubscribe,
             ),
-          if (action != null) const SizedBox(width: 8),
-          TextButton(
-            onPressed: plans.openManageSubscription,
-            child: Text('Manage in Google Play',
-                style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 12, color: tone)),
+          TextLink(
+            label: 'Manage in Google Play',
+            tone: tone,
+            onTap: plans.openManageSubscription,
           ),
         ]),
-        const Text('Use the Google account you subscribed with.',
-            style: TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textHint)),
+        Text('Use the Google account you subscribed with.',
+            style: TypeTokens.style(11, FontWeight.w500, color: DesignColors.textMuted)),
       ]),
     );
   }
@@ -204,13 +197,13 @@ class PlanSubscriptionCard extends StatelessWidget {
 
   Widget _pill(String text, Color color) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-        decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(999)),
-        child: Text(text, style: TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w600, color: color)),
+        decoration: BoxDecoration(color: DesignColors.tint(color, Alpha.tint), borderRadius: CardRadius.pill),
+        child: Text(text, style: TypeTokens.style(11, FontWeight.w600, color: color)),
       );
 
-  Widget _note(IconData icon, String text) => Row(children: [
-        Icon(icon, size: 15, color: accent),
+  Widget _note(String asset, String text) => Row(children: [
+        TravelIcon(asset, size: 16),
         const SizedBox(width: 6),
-        Expanded(child: Text(text, style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textMedium))),
+        Expanded(child: Text(text, style: TypeTokens.style(12, FontWeight.w500, color: DesignColors.textGrey))),
       ]);
 }

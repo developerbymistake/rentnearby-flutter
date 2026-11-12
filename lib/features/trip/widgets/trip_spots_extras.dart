@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
-import '../../../config/app_colors.dart';
-import '../../../config/app_shadows.dart';
+import 'package:bakhli/design/design.dart';
+import '../models/trip_spot_category.dart';
 import '../models/trip_spot_model.dart';
-import '../trip_colors.dart';
 import '../trip_strings_spots_x.dart';
 import '../utils/trip_spot_picks.dart';
 import 'trip_spot_detail_sheet.dart';
 import 'trip_spot_row.dart';
-
-const _poppins = 'Poppins';
+import 'trip_ui.dart';
 
 class TripSpotsSectionHead extends StatelessWidget {
   final String title;
@@ -18,22 +16,20 @@ class TripSpotsSectionHead extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.only(left: 4, right: 4, bottom: 8),
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.baseline,
-          textBaseline: TextBaseline.alphabetic,
           children: [
-            Flexible(
+            Expanded(
               child: Text(
                 title,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontFamily: _poppins, fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textDark),
+                style: TypeTokens.style(16, FontWeight.w700, color: DesignColors.textStrong, letterSpacing: 0.27),
               ),
             ),
             if (sub != null) ...[
               const SizedBox(width: 8),
-              Text(sub!, style: const TextStyle(fontFamily: _poppins, fontSize: 11.5, color: AppColors.textHint)),
+              Text(sub!, style: TypeTokens.style(12, FontWeight.w600, color: KitTone.trip.accentDark)),
             ],
           ],
         ),
@@ -62,70 +58,44 @@ class TripMustSeeRail extends StatelessWidget {
         children: [
           TripSpotsSectionHead(title: TripStringsSpotsX.mustSee(city), sub: TripStringsSpotsX.featuredFirst),
           SizedBox(
-            height: 176,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
+            height: RailCard.height + 24,
+            child: RailReveal(
               itemCount: spots.length,
-              separatorBuilder: (_, _) => const SizedBox(width: 10),
-              itemBuilder: (_, i) {
-                final s = spots[i];
-                final on = selected.contains(s.id);
-                final locked = lockedOf(s);
-                final toggle = toggleOf(s);
-                return GestureDetector(
-                  onTap: () => TripSpotDetailSheet.show(context, spot: s, selected: on, locked: locked, onToggle: toggle),
-                  child: Container(
-                    width: 138,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: on ? TripColors.accent : Colors.transparent, width: 1.6),
-                      boxShadow: AppShadows.premium(TripColors.accent, alpha: 0.08, blur: 8, offset: const Offset(0, 3)),
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: Stack(
-                        fit: StackFit.expand,
-                        children: [
-                          TripSpotMedia(spot: s),
-                          const DecoratedBox(
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                begin: Alignment.topCenter,
-                                end: Alignment.bottomCenter,
-                                colors: [Color(0x00000000), Color(0xCC000000)],
-                                stops: [0.45, 1],
-                              ),
-                            ),
-                          ),
-                          if (s.isFeatured) const Positioned(left: 8, top: 8, child: TripFeaturedChip()),
-                          Positioned(
-                            left: 10,
-                            right: 8,
-                            bottom: 48,
-                            child: Text(
-                              s.title,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                  fontFamily: _poppins, fontSize: 12.5, fontWeight: FontWeight.w700, color: Colors.white),
-                            ),
-                          ),
-                          Positioned(
-                            left: 10,
-                            bottom: 8,
-                            child: TripSpotAddButton(selected: on, locked: locked, onTap: toggle),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                );
-              },
+              padding: EdgeInsets.zero,
+              separator: 12,
+              itemBuilder: (_, i) => _card(context, spots[i]),
             ),
           ),
-          const SizedBox(height: 14),
         ],
       );
+
+  Widget _card(BuildContext context, TripSpotModel s) {
+    final on = selected.contains(s.id);
+    final locked = lockedOf(s);
+    final toggle = toggleOf(s);
+    return Padding(
+      padding: const EdgeInsets.only(top: 8, bottom: 16),
+      child: SizedBox(
+        width: RailCard.width,
+        child: RailCard(
+          title: s.title,
+          tone: KitTone.trip,
+          selected: on,
+          tagLabel: TripSpotCategory.label(s.category),
+          locationLabel: s.area,
+          media: Stack(
+            fit: StackFit.expand,
+            children: [
+              TripSpotMedia(spot: s),
+              if (s.isFeatured) const Positioned(left: 8, bottom: 8, child: TripFeaturedChip()),
+            ],
+          ),
+          trailing: TripSpotAddButton(selected: on, locked: locked, onTap: toggle),
+          onTap: () => TripSpotDetailSheet.show(context, spot: s, selected: on, locked: locked, onToggle: toggle),
+        ),
+      ),
+    );
+  }
 }
 
 class TripQuickStartRail extends StatelessWidget {
@@ -140,28 +110,18 @@ class TripQuickStartRail extends StatelessWidget {
         children: [
           const TripSpotsSectionHead(title: TripStringsSpotsX.quickStarts, sub: TripStringsSpotsX.quickSub),
           SizedBox(
-            height: 40,
+            height: 60,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(vertical: 8),
               itemCount: bundles.length,
               separatorBuilder: (_, _) => const SizedBox(width: 8),
-              itemBuilder: (_, i) => InkWell(
+              itemBuilder: (_, i) => KitChoiceChip(
+                label: '${bundles[i].title} · ${bundles[i].ids.length}',
+                selected: true,
+                tone: KitTone.trip,
+                icon: const TravelIcon(TravelIcon.route, size: 18),
                 onTap: () => onTap(bundles[i]),
-                borderRadius: BorderRadius.circular(20),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: TripColors.surface,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: TripColors.accent),
-                  ),
-                  child: Text(
-                    '${bundles[i].title} · ${bundles[i].ids.length}',
-                    style: const TextStyle(
-                        fontFamily: _poppins, fontSize: 12.5, fontWeight: FontWeight.w600, color: TripColors.accentDark),
-                  ),
-                ),
               ),
             ),
           ),
@@ -178,38 +138,30 @@ class TripSuggestionCard extends StatelessWidget {
   const TripSuggestionCard({super.key, required this.text, required this.onAdd, required this.onDismiss});
 
   @override
-  Widget build(BuildContext context) => Container(
-        margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.fromLTRB(12, 8, 4, 8),
-        decoration: BoxDecoration(
-          color: TripColors.surface,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: TripColors.accent.withValues(alpha: 0.4)),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(
-                text,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontFamily: _poppins, fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark),
+  Widget build(BuildContext context) => TemplateEntranceOnce(
+        child: TripSurface(
+          margin: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.fromLTRB(14, 4, 4, 4),
+          shadow: ShadowTokens.elev1,
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  text,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TypeTokens.style(12, FontWeight.w600, color: DesignColors.textStrong),
+                ),
               ),
-            ),
-            TextButton(
-              onPressed: onAdd,
-              style: TextButton.styleFrom(minimumSize: const Size(44, 40)),
-              child: const Text(
-                TripStringsSpotsX.add,
-                style: TextStyle(fontFamily: _poppins, fontWeight: FontWeight.w700, color: TripColors.accentDark),
+              TextLink(label: TripStringsSpotsX.add, onTap: onAdd, tone: KitTone.trip),
+              IconButton(
+                onPressed: onDismiss,
+                tooltip: TripStringsSpotsX.dismiss,
+                constraints: const BoxConstraints(minWidth: KitMetrics.touch, minHeight: KitMetrics.touch),
+                icon: const Icon(Icons.close_rounded, size: 18, color: DesignColors.textMuted),
               ),
-            ),
-            IconButton(
-              onPressed: onDismiss,
-              tooltip: TripStringsSpotsX.dismiss,
-              icon: const Icon(Icons.close_rounded, size: 18, color: AppColors.textHint),
-            ),
-          ],
+            ],
+          ),
         ),
       );
 }
@@ -222,14 +174,14 @@ class TripSpotsRouteStrip extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Row(
         children: [
-          const Icon(Icons.route_rounded, size: 16, color: TripColors.accentDark),
+          const TravelIcon(TravelIcon.route, size: 18),
           const SizedBox(width: 6),
           Expanded(
             child: Text(
               TripSpotPicks.routeText(route),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontFamily: _poppins, fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textMedium),
+              style: TypeTokens.style(12, FontWeight.w600, color: DesignColors.textGrey),
             ),
           ),
         ],
@@ -242,20 +194,20 @@ class TripOfflineBanner extends StatelessWidget {
   const TripOfflineBanner({super.key, required this.onTap});
 
   @override
-  Widget build(BuildContext context) => InkWell(
-        onTap: onTap,
-        child: Container(
-          width: double.infinity,
-          color: AppColors.warningSurface,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-          child: const Row(
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.symmetric(horizontal: KitMetrics.gutter, vertical: 6),
+        child: TripSurface(
+          onTap: onTap,
+          shadow: ShadowTokens.elev1,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          child: Row(
             children: [
-              Icon(Icons.cloud_off_rounded, size: 15, color: AppColors.warningText),
-              SizedBox(width: 8),
+              const TravelIcon(TravelIcon.map, size: 18),
+              const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   TripStringsSpotsX.offline,
-                  style: TextStyle(fontFamily: _poppins, fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.warningText),
+                  style: TypeTokens.style(12, FontWeight.w600, color: DesignColors.textStrong),
                 ),
               ),
             ],

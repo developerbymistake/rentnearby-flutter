@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:bakhli/design/extra/trip_plan_look.dart' show TripLook;
+import 'package:bakhli/design/extra/trip_plan_look.dart';
+import 'package:bakhli/design/template/fitness_app_theme.dart';
 import 'package:get/get.dart';
-import '../../../config/app_colors.dart';
 import '../controllers/trip_plan_controller.dart';
-import '../trip_colors.dart';
 import '../trip_strings_mca_a3.dart';
 import '../trip_strings_mca_n2.dart';
 import 'trip_leg_menu_sheet.dart';
@@ -35,14 +36,18 @@ class TripLegHeader extends StatelessWidget {
         child: Row(
           children: [
             Container(
-              width: 30,
-              height: 30,
+              width: 36,
+              height: 36,
               alignment: Alignment.center,
-              decoration: const BoxDecoration(gradient: TripColors.gradient, shape: BoxShape.circle),
+              decoration: BoxDecoration(
+                gradient: TripLook.gradient,
+                shape: BoxShape.circle,
+                boxShadow: TripLook.shadowFor(FitnessAppTheme.nearlyDarkBlue),
+              ),
               child: Text(
                 '$legIndex',
                 maxLines: 1,
-                style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700, color: Colors.white),
+                style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 14, fontWeight: FontWeight.w700, color: FitnessAppTheme.white),
               ),
             ),
             const SizedBox(width: 10),
@@ -56,14 +61,14 @@ class TripLegHeader extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                        fontFamily: 'Poppins', fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textDark),
+                        fontFamily: FitnessAppTheme.fontName, fontSize: 16, fontWeight: FontWeight.w700, letterSpacing: 0.27, color: TripLook.textDark),
                   ),
                   Text(
                     line,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                        fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textLight),
+                        fontFamily: FitnessAppTheme.fontName, fontSize: 12, fontWeight: FontWeight.w600, color: TripLook.textLight),
                   ),
                   if (unavailable) ...[
                     Text(
@@ -71,18 +76,24 @@ class TripLegHeader extends StatelessWidget {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                          fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.error),
+                          fontFamily: FitnessAppTheme.fontName, fontSize: 12, fontWeight: FontWeight.w600, color: TripLook.error),
                     ),
                     if (menu)
-                      TextButton(
-                        onPressed: () => TripLegMenuSheet.show(context, legIndex),
-                        style: TextButton.styleFrom(
-                            minimumSize: const Size(44, 44), padding: EdgeInsets.zero, alignment: Alignment.centerLeft),
-                        child: const Text(
-                          TripStringsMcaA3.removeCity,
-                          maxLines: 1,
-                          style: TextStyle(
-                              fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w700, color: AppColors.error),
+                      InkWell(
+                        onTap: () => TripLegMenuSheet.show(context, legIndex),
+                        splashColor: Colors.transparent,
+                        highlightColor: Colors.transparent,
+                        child: const SizedBox(
+                          height: 44,
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              TripStringsMcaA3.removeCity,
+                              maxLines: 1,
+                              style: TextStyle(
+                                  fontFamily: FitnessAppTheme.fontName, fontSize: 12.5, fontWeight: FontWeight.w700, color: TripLook.error),
+                            ),
+                          ),
                         ),
                       ),
                   ],
@@ -90,10 +101,16 @@ class TripLegHeader extends StatelessWidget {
               ),
             ),
             if (menu)
-              IconButton(
-                onPressed: () => TripLegMenuSheet.show(context, legIndex),
-                constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
-                icon: const Icon(Icons.more_vert_rounded, color: AppColors.textMedium),
+              InkWell(
+                onTap: () => TripLegMenuSheet.show(context, legIndex),
+                borderRadius: BorderRadius.circular(32),
+                splashColor: Colors.transparent,
+                highlightColor: Colors.transparent,
+                child: const SizedBox(
+                  width: 44,
+                  height: 44,
+                  child: Icon(Icons.more_vert_rounded, color: TripLook.textMedium),
+                ),
               ),
           ],
         ),

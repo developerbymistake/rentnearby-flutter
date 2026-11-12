@@ -71,11 +71,11 @@ Map<String, dynamic> _contractPlan() => {
     };
 
 void main() {
-  group('plan v6 round trip (contract 2.1)', () {
-    test('every field survives and the version is 6', () {
+  group('plan round trip (contract 2.1)', () {
+    test('every field survives and the version is 7', () {
       final p = TripPlan.fromJson(_contractPlan());
       final json = p.toJson();
-      expect(json['version'], 6);
+      expect(json['version'], 7);
       final back = TripPlan.fromJson(json);
       expect(back.legs.length, 2);
       expect(back.legs[0].stayMark?.isOwn, isTrue);
@@ -96,10 +96,10 @@ void main() {
       expect(back.cityName, 'Nainital');
     });
 
-    test('an old version in the document is written back as 6', () {
+    test('an old version in the document is written back as 7', () {
       final json = _contractPlan()..['version'] = 3;
       expect(TripPlan.fromJson(json).toJson()['version'], TripConstants.planVersion);
-      expect(TripConstants.planVersion, 6);
+      expect(TripConstants.planVersion, 7);
     });
 
     test('no dead v5 keys are written', () {
@@ -509,6 +509,56 @@ void main() {
       expect(seg.isSegment, isTrue);
       expect(local.isSegment, isFalse);
       expect(TripEnquiryModel.fromJson({'id': 'e3', 'kind': 'Taxi', 'isSegment': true}).isSegment, isTrue);
+    });
+  });
+
+  group('guide (plan v7)', () {
+    test('a v6 document parses with no guide and writes version 7', () {
+      final p = TripPlan.fromJson(_contractPlan());
+      expect(p.guide, isNull);
+      expect(p.toJson().containsKey('guide'), isFalse);
+      expect(p.toJson()['version'], 7);
+    });
+
+    test('guide round-trips step, choices and overview', () {
+      final json = _contractPlan()
+        ..['version'] = 7
+        ..['guide'] = {
+          'step': 'stay:2',
+          'choices': {'gettingThere': 'find', 'stay:1': 'skip', 'taxi': 'own'},
+          'overview': true,
+        };
+      final g = TripPlan.fromJson(json).guide!;
+      expect(g.step, 'stay:2');
+      expect(g.overview, isTrue);
+      expect(g.choices['stay:1'], TripGuideChoice.skip);
+      final back = TripPlan.fromJson(TripPlan.fromJson(json).toJson()).guide!;
+      expect(back, g);
+    });
+
+    test('unknown step and choice values are dropped on read', () {
+      final json = _contractPlan()
+        ..['guide'] = {
+          'step': 'finish',
+          'choices': {'gettingThere': 'maybe', 'bogus': 'find', 'taxi': 'skip'},
+        };
+      final g = TripPlan.fromJson(json).guide!;
+      expect(g.step, isEmpty);
+      expect(g.choices.keys, ['taxi']);
+    });
+
+    test('a default guide is not written', () {
+      final p = TripPlan.fromJson(_contractPlan()).withGuide(const TripGuide());
+      expect(p.guide, isNull);
+      expect(p.toJson().containsKey('guide'), isFalse);
+    });
+
+    test('at most 30 choices are kept', () {
+      var g = const TripGuide();
+      for (var i = 2; i < 40; i++) {
+        g = g.withChoice('stay:$i', TripGuideChoice.skip);
+      }
+      expect(g.choices.length, TripGuide.maxChoices);
     });
   });
 }

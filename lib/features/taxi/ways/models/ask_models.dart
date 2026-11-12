@@ -1,3 +1,4 @@
+import '../../../trip/models/trip_enquiry_model.dart';
 import 'taxi_ways_models.dart';
 
 class AskLimits {
@@ -58,6 +59,8 @@ class AskDriversRequest {
   final String fromName;
   final String toName;
   final List<AskLegRequest> legs;
+  final String? clientRequestId;
+  final String? stepKey;
 
   const AskDriversRequest({
     required this.date,
@@ -66,7 +69,34 @@ class AskDriversRequest {
     required this.fromName,
     required this.toName,
     required this.legs,
+    this.clientRequestId,
+    this.stepKey,
   });
+
+  AskDriversRequest guided({required String clientRequestId, required String stepKey, required List<String> taxiIds}) {
+    final first = legs.first;
+    return AskDriversRequest(
+      date: date,
+      people: people,
+      journeyId: journeyId,
+      fromName: fromName,
+      toName: toName,
+      clientRequestId: clientRequestId,
+      stepKey: stepKey,
+      legs: [
+        AskLegRequest(
+          legIndex: first.legIndex,
+          legKey: first.legKey,
+          fromName: first.fromName,
+          toName: first.toName,
+          listedFare: first.listedFare,
+          taxiIds: taxiIds,
+          carOf: first.carOf,
+          comesFrom: first.comesFrom,
+        ),
+      ],
+    );
+  }
 
   int get driverCount => legs.fold(0, (sum, l) => sum + l.taxiIds.length);
 
@@ -77,6 +107,8 @@ class AskDriversRequest {
         'fromName': fromName,
         'toName': toName,
         'legs': legs.map((l) => l.toJson()).toList(),
+        'clientRequestId': ?clientRequestId,
+        'stepKey': ?stepKey,
       };
 
   /// Chosen driver (or the seat cover's cars) first, then backups from the leg's top drivers; null when a leg has no driver.
@@ -153,8 +185,9 @@ class AskResult {
   final List<AskItem> items;
   final List<AskSkipped> skipped;
   final bool veryShortNotice;
+  final List<TripSendResult> results;
 
-  const AskResult({required this.items, required this.skipped, required this.veryShortNotice});
+  const AskResult({required this.items, required this.skipped, required this.veryShortNotice, this.results = const []});
 
   factory AskResult.fromJson(Map<String, dynamic> j) => AskResult(
         items: ((j['items'] as List?) ?? const [])
@@ -166,6 +199,7 @@ class AskResult {
             .map(AskSkipped.fromJson)
             .toList(),
         veryShortNotice: j['veryShortNotice'] == true,
+        results: TripSendResult.parseList(j['results']),
       );
 
   int get askedCount => items.map((i) => i.taxiId).toSet().length;

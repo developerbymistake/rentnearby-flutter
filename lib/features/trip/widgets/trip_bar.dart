@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:bakhli/design/design.dart';
 import 'package:get/get.dart';
-import '../../../config/app_colors.dart';
 import '../../../config/app_routes.dart';
 import '../controllers/my_trips_controller.dart';
-import '../trip_colors.dart';
 import '../trip_navigation.dart';
 import '../trip_strings_bar.dart';
 import '../utils/trip_bar_rules.dart';
@@ -54,9 +53,9 @@ class _TripBarState extends State<TripBar> {
       final pick = _trips.barPick;
       return AnimatedSize(
         duration: const Duration(milliseconds: 220),
-        curve: Curves.easeOut,
+        curve: Curves.fastOutSlowIn,
         alignment: Alignment.bottomCenter,
-        child: pick == null ? const SizedBox(width: double.infinity) : _bar(pick),
+        child: pick == null ? const SizedBox(width: double.infinity) : _BarEntrance(key: ValueKey(pick.trip.id), child: _bar(pick)),
       );
     });
   }
@@ -70,27 +69,25 @@ class _TripBarState extends State<TripBar> {
         color: Colors.transparent,
         child: InkWell(
           onTap: () => _continue(pick),
-          borderRadius: BorderRadius.circular(16),
+          splashColor: FitnessAppTheme.white.withValues(alpha: Alpha.soft),
+          highlightColor: Colors.transparent,
+          borderRadius: TripKit.cardRadiusSmall,
           child: Ink(
             padding: const EdgeInsets.fromLTRB(8, 8, 2, 8),
-            decoration: BoxDecoration(
-              gradient: TripColors.gradient,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(color: TripColors.accentDark.withValues(alpha: 0.3), blurRadius: 18, offset: const Offset(0, 6)),
-              ],
-            ),
+            decoration: TripKit.cardBox(gradient: TripKit.sky, radius: TripKit.cardRadiusSmall),
             child: Row(
               children: [
                 TripProgressRing(
                   percent: t.progress.percent,
                   size: 40,
                   stroke: 4.5,
-                  fill: Colors.white,
-                  color: TripBarRules.isReady(t) ? AppColors.success : TripColors.accent,
-                  textColor: AppColors.textDark,
+                  fill: FitnessAppTheme.white,
+                  color: TripBarRules.isReady(t) ? FitnessAppTheme.nearlyBlue : FitnessAppTheme.nearlyDarkBlue,
+                  textColor: FitnessAppTheme.darkerText,
                 ),
-                const SizedBox(width: 9),
+                const SizedBox(width: 6),
+                TripKit.travelBadge('assets/images/design/travel3d/luggage.png', size: 26, image: 18),
+                const SizedBox(width: 6),
                 Expanded(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
@@ -101,17 +98,17 @@ class _TripBarState extends State<TripBar> {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
-                            fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w800, color: Colors.white),
+                            fontFamily: FitnessAppTheme.fontName, fontSize: 12.5, fontWeight: FontWeight.w800, color: FitnessAppTheme.white),
                       ),
                       Text(
                         _line(pick),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                            fontFamily: 'Poppins',
-                            fontSize: 10.5,
+                            fontFamily: FitnessAppTheme.fontName,
+                            fontSize: 11,
                             fontWeight: FontWeight.w600,
-                            color: Colors.white.withValues(alpha: 0.92)),
+                            color: FitnessAppTheme.white.withValues(alpha: Alpha.high)),
                       ),
                     ],
                   ),
@@ -126,13 +123,13 @@ class _TripBarState extends State<TripBar> {
                       alignment: Alignment.center,
                       padding: const EdgeInsets.symmetric(horizontal: 8),
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(999),
+                        color: FitnessAppTheme.white.withValues(alpha: Alpha.soft),
+                        borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
                         TripStringsBar.more(pick.more),
                         style: const TextStyle(
-                            fontFamily: 'Poppins', fontSize: 10.5, fontWeight: FontWeight.w700, color: Colors.white),
+                            fontFamily: FitnessAppTheme.fontName, fontSize: 11, fontWeight: FontWeight.w700, color: FitnessAppTheme.white),
                       ),
                     ),
                   ),
@@ -142,11 +139,11 @@ class _TripBarState extends State<TripBar> {
                   constraints: const BoxConstraints(minHeight: 32),
                   alignment: Alignment.center,
                   padding: const EdgeInsets.symmetric(horizontal: 13),
-                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(999)),
+                  decoration: BoxDecoration(color: FitnessAppTheme.white, borderRadius: BorderRadius.circular(8)),
                   child: const Text(
                     TripStringsBar.continueAction,
                     style: TextStyle(
-                        fontFamily: 'Poppins', fontSize: 11.5, fontWeight: FontWeight.w800, color: TripColors.accentDark),
+                        fontFamily: FitnessAppTheme.fontName, fontSize: 11.5, fontWeight: FontWeight.w800, color: FitnessAppTheme.nearlyDarkBlue),
                   ),
                 ),
                 IconButton(
@@ -154,7 +151,7 @@ class _TripBarState extends State<TripBar> {
                   onPressed: () => _hide(pick),
                   visualDensity: VisualDensity.compact,
                   constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
-                  icon: const Icon(Icons.close_rounded, size: 18, color: Colors.white),
+                  icon: const Icon(Icons.close_rounded, size: 18, color: FitnessAppTheme.white),
                 ),
               ],
             ),
@@ -163,4 +160,27 @@ class _TripBarState extends State<TripBar> {
       ),
     );
   }
+}
+
+class _BarEntrance extends StatefulWidget {
+  final Widget child;
+
+  const _BarEntrance({super.key, required this.child});
+
+  @override
+  State<_BarEntrance> createState() => _BarEntranceState();
+}
+
+class _BarEntranceState extends State<_BarEntrance> with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(duration: const Duration(milliseconds: 600), vsync: this)..forward();
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) =>
+      TemplateEntrance(animation: templateInterval(_c, 0, 1), animationController: _c, child: widget.child);
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../../../config/app_colors.dart';
+import 'package:bakhli/design/design.dart';
+import 'package:bakhli/design/extra/trip_plan_look.dart';
 import '../../../config/app_routes.dart';
 import '../../trip/trip_strings_mcb_a3.dart';
 import '../../trip/trip_strings_steps_a3.dart';
@@ -44,30 +45,17 @@ class JourneyActions {
   }
 
   static Future<bool> confirmDelete(BuildContext context, SavedJourney j) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text(TaxiWaysStrings.deleteJourney),
-        content: Text(
-          j.tripId == null
-              ? JourneyStrings.deleteBody
-              : '${JourneyStrings.deleteBody} ${j.isSegment ? TripStringsMcbA3.alsoRemovedFromTravel(j.toName) : TripStringsStepsA3.alsoRemovedFromTrip}',
-        ),
-        actions: [
-          TextButton(
-            style: TextButton.styleFrom(minimumSize: const Size(64, 44)),
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text(JourneyStrings.cancel),
-          ),
-          TextButton(
-            style: TextButton.styleFrom(minimumSize: const Size(64, 44), foregroundColor: AppColors.error),
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text(TaxiWaysStrings.deleteJourney),
-          ),
-        ],
-      ),
+    final ok = await showTaxiConfirmDialog(
+      context,
+      title: TaxiWaysStrings.deleteJourney,
+      body: j.tripId == null
+          ? JourneyStrings.deleteBody
+          : '${JourneyStrings.deleteBody} ${j.isSegment ? TripStringsMcbA3.alsoRemovedFromTravel(j.toName) : TripStringsStepsA3.alsoRemovedFromTrip}',
+      cancelLabel: JourneyStrings.cancel,
+      actionLabel: TaxiWaysStrings.deleteJourney,
+      actionColor: TripLook.error,
     );
-    if (ok != true) return false;
+    if (!ok) return false;
     return JourneysController.ensure().remove(j.id);
   }
 

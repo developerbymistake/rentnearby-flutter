@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../config/app_colors.dart';
+import '../design/design.dart';
 import '../config/tour_registry.dart';
 import '../utils/tour_target_ready.dart';
 
@@ -24,7 +24,7 @@ class _SpotlightPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final fullScreen = Offset.zero & size;
     canvas.saveLayer(fullScreen, Paint());
-    canvas.drawRect(fullScreen, Paint()..color = const Color(0xCC0A0F1E));
+    canvas.drawRect(fullScreen, Paint()..color = GateKit.scrimDeep);
     final rrect = RRect.fromRectAndRadius(targetRect, Radius.circular(radius));
     canvas.drawRRect(rrect, Paint()..blendMode = BlendMode.clear);
     canvas.restore();
@@ -33,7 +33,7 @@ class _SpotlightPainter extends CustomPainter {
     // the mock's box-shadow stacking). t=0 is the ring's resting state, which
     // is also what's shown when reduced-motion is on and the controller
     // never starts (parked at its initial value 0.0).
-    final t = Curves.easeInOut.transform(pulse.value);
+    final t = Curves.fastOutSlowIn.transform(pulse.value);
     final ringWidth = 8.0 + (11.0 - 8.0) * t;
     final ringOpacity = 0.55 + (0.30 - 0.55) * t;
     final ringRRect = RRect.fromRectAndRadius(
@@ -45,7 +45,7 @@ class _SpotlightPainter extends CustomPainter {
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = ringWidth
-        ..color = AppColors.accent.withValues(alpha: ringOpacity),
+        ..color = FitnessAppTheme.nearlyBlue.withValues(alpha: ringOpacity),
     );
 
     canvas.drawRRect(
@@ -53,7 +53,7 @@ class _SpotlightPainter extends CustomPainter {
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = 2.5
-        ..color = Colors.white.withValues(alpha: 0.9),
+        ..color = FitnessAppTheme.white.withValues(alpha: Alpha.high),
     );
   }
 
@@ -114,7 +114,7 @@ class _TourOverlayState extends State<TourOverlay>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Mirrors pulse_once.dart's own reduced-motion convention. If disabled,
+    // Reduced-motion convention: if disabled,
     // the controller is simply never started — parked at its initial value
     // 0.0, which _SpotlightPainter reads as the ring's static base state.
     if (!_pulseDecided) {
@@ -189,6 +189,7 @@ class _TourOverlayState extends State<TourOverlay>
                   ? null
                   : (screenSize.height - targetRect.top + 16),
               child: _TourCard(
+                key: ValueKey('tour-card-${widget.index}'),
                 step: widget.step,
                 index: widget.index,
                 total: widget.total,
@@ -205,7 +206,7 @@ class _TourOverlayState extends State<TourOverlay>
   }
 }
 
-class _TourCard extends StatelessWidget {
+class _TourCard extends StatefulWidget {
   final TourStep step;
   final int index;
   final int total;
@@ -215,6 +216,7 @@ class _TourCard extends StatelessWidget {
   final VoidCallback onSkip;
 
   const _TourCard({
+    super.key,
     required this.step,
     required this.index,
     required this.total,
@@ -225,20 +227,40 @@ class _TourCard extends StatelessWidget {
   });
 
   @override
+  State<_TourCard> createState() => _TourCardState();
+}
+
+class _TourCardState extends State<_TourCard> with SingleTickerProviderStateMixin {
+  late final AnimationController _enter =
+      AnimationController(duration: const Duration(milliseconds: 600), vsync: this)..forward();
+
+  @override
+  void dispose() {
+    _enter.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final step = widget.step;
+    final index = widget.index;
+    final total = widget.total;
+    final tourLabel = widget.tourLabel;
+    final isLast = widget.isLast;
+    final onNext = widget.onNext;
+    final onSkip = widget.onSkip;
+    return TemplateEntrance(
+      animation: templateInterval(_enter, 0, 1),
+      animationController: _enter,
+      child: _card(step, index, total, tourLabel, isLast, onNext, onSkip),
+    );
+  }
+
+  Widget _card(TourStep step, int index, int total, String tourLabel, bool isLast, VoidCallback onNext,
+      VoidCallback onSkip) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(18, 18, 18, 14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.35),
-            blurRadius: 24,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
+      padding: const EdgeInsets.fromLTRB(18, 18, 26, 14),
+      decoration: GateKit.card(),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -246,58 +268,39 @@ class _TourCard extends StatelessWidget {
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(step.icon, size: 13, color: AppColors.accent),
+              Icon(step.icon, size: 13, color: FitnessAppTheme.nearlyBlue),
               const SizedBox(width: 5),
               Text(
                 '${tourLabel.toUpperCase()} · ${index + 1} OF $total',
-                style: const TextStyle(
-                  fontFamily: 'Poppins',
-                  fontSize: 10,
-                  fontWeight: FontWeight.w800,
+                style: FitnessAppTheme.caption.copyWith(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
                   letterSpacing: 0.6,
-                  color: AppColors.accent,
+                  color: FitnessAppTheme.nearlyBlue,
                 ),
               ),
             ],
           ),
           const SizedBox(height: 6),
-          Text(
-            step.title,
-            style: const TextStyle(
-              fontFamily: 'Poppins',
-              fontSize: 15,
-              fontWeight: FontWeight.w800,
-              color: AppColors.textDark,
-            ),
-          ),
+          Text(step.title, style: FitnessAppTheme.title.copyWith(fontSize: 15)),
           const SizedBox(height: 6),
           Text(
             step.body,
-            style: const TextStyle(
-              fontFamily: 'Poppins',
-              fontSize: 12.5,
-              fontWeight: FontWeight.w500,
-              color: AppColors.textMedium,
-              height: 1.5,
-            ),
+            style: FitnessAppTheme.body2.copyWith(fontSize: 12.5, height: 1.5, color: FitnessAppTheme.lightText),
           ),
           const SizedBox(height: 14),
-          // Dots and actions are deliberately on separate rows, not squeezed
-          // side by side — on a narrow device, 5 dots + "Skip" + a padded
-          // "Finish" pill together don't fit one line and the action button
-          // gets pushed past the screen edge (invisible, not just clipped).
           Row(
             children: List.generate(total, (i) {
               final active = i == index;
               return AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
+                duration: templateTransitionDuration,
                 margin: const EdgeInsets.only(right: 4),
                 width: active ? 14 : 5,
                 height: 5,
                 decoration: BoxDecoration(
-                  color: active ? null : AppColors.divider,
-                  gradient: active ? AppColors.primaryGradient : null,
-                  borderRadius: BorderRadius.circular(4),
+                  color: active ? null : FitnessAppTheme.spacer,
+                  gradient: active ? TripEntryStyle.gradient : null,
+                  borderRadius: BorderRadius.circular(32),
                 ),
               );
             }),
@@ -306,54 +309,21 @@ class _TourCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              TextButton(
+              GateTextButton(
+                label: 'Skip',
                 onPressed: onSkip,
-                child: const Text(
-                  'Skip',
-                  style: TextStyle(
-                    fontFamily: 'Poppins',
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textHint,
-                  ),
-                ),
+                color: FitnessAppTheme.deactivatedText,
+                fontSize: 12.5,
+                weight: FontWeight.w700,
               ),
               const SizedBox(width: 4),
-              // Container (not Ink) for the gradient — a Container's own
-              // decoration always paints in its own render pass, no
-              // dependency on any ancestor Material being found for ink
-              // features to draw into. A local, explicit
-              // Material(color: transparent) wraps just the InkWell so the
-              // ripple has its own guaranteed-adjacent host instead of
-              // relying on a distant ancestor. ElevatedButton itself was
-              // never an option here: its backgroundColor only accepts a
-              // solid Color, not a Gradient.
-              ClipRRect(
-                borderRadius: BorderRadius.circular(20),
-                child: Container(
-                  decoration: const BoxDecoration(
-                    gradient: AppColors.primaryGradient,
-                  ),
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: onNext,
-                      borderRadius: BorderRadius.circular(20),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 18, vertical: 10),
-                        child: Text(
-                          isLast ? 'Finish' : 'Next',
-                          style: const TextStyle(
-                            fontFamily: 'Poppins',
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
+              SizedBox(
+                width: 110,
+                child: GateButton(
+                  label: isLast ? 'Finish' : 'Next',
+                  height: 40,
+                  radius: const BorderRadius.all(Radius.circular(24)),
+                  onPressed: onNext,
                 ),
               ),
             ],

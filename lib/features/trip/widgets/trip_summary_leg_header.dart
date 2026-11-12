@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:iconsax/iconsax.dart';
-import '../../../config/app_colors.dart';
+import 'package:bakhli/design/extra/travel_icon.dart';
+import 'package:bakhli/design/extra/trip_plan_look.dart';
+import 'package:bakhli/design/template/fitness_app_theme.dart';
 import '../models/trip_summary_model.dart';
-import '../trip_colors.dart';
 import '../trip_strings.dart';
 import '../trip_strings_mca_a3.dart';
 
@@ -20,14 +20,19 @@ class TripSummaryLegHeader extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 8, top: 4),
       child: Row(
         children: [
-          const Icon(Iconsax.location, size: 15, color: TripColors.accentDark),
-          const SizedBox(width: 6),
+          Container(
+            width: 24,
+            height: 24,
+            decoration: const BoxDecoration(gradient: TripLook.gradient, shape: BoxShape.circle),
+            child: const Center(child: TravelIcon(TravelIcon.place, size: 14)),
+          ),
+          const SizedBox(width: 8),
           Expanded(
             child: Text(
               TripStrings.joinDots([leg.cityName, dates]),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textMedium),
+              style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 15, fontWeight: FontWeight.w500, letterSpacing: 0.5, color: TripLook.textMedium),
             ),
           ),
         ],

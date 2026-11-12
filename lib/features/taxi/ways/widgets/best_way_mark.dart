@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import '../../../../config/app_colors.dart';
-import '../../taxi_option_sets.dart';
+import 'package:bakhli/design/design.dart';
+import 'package:bakhli/design/extra/trip_plan_look.dart';
+import 'package:bakhli/design/extra/ways_kit.dart';
 import '../taxi_ways_strings.dart';
 
 class BestWayMark extends StatelessWidget {
@@ -17,25 +18,28 @@ class BestWayMark extends StatelessWidget {
       children: [
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-          decoration: BoxDecoration(gradient: TaxiColors.gradient, borderRadius: BorderRadius.circular(8)),
-          child: const Row(mainAxisSize: MainAxisSize.min, children: [
-            Icon(Icons.star_rounded, size: 13, color: Colors.white),
-            SizedBox(width: 3),
+          decoration: BoxDecoration(
+            gradient: PickKit.taxiGradient,
+            borderRadius: WaysKit.chipRadius,
+            boxShadow: TripLook.shadowFor(PickKit.taxi),
+          ),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            const TravelIcon(TravelIcon.star, size: 13),
+            const SizedBox(width: 3),
             Text(
               TaxiWaysStrings.bestWay,
-              style: TextStyle(
-                fontFamily: 'Poppins',
-                fontSize: 10.5,
+              style: FitnessAppTheme.caption.copyWith(
+                fontSize: 11,
                 fontWeight: FontWeight.w800,
                 letterSpacing: 0.6,
-                color: Colors.white,
+                color: DesignColors.surface,
               ),
             ),
           ]),
         ),
         Text(
           reason,
-          style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textMedium),
+          style: FitnessAppTheme.subtitle.copyWith(fontSize: 12, fontWeight: FontWeight.w600, color: DesignColors.textGrey),
         ),
       ],
     );

@@ -1,15 +1,10 @@
+import 'package:bakhli/design/design.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:iconsax/iconsax.dart';
-import '../../../config/app_colors.dart';
-import '../../../config/app_shadows.dart';
 import '../../../models/browse_item.dart';
 import '../../../utils/contact_launcher.dart';
-import '../../stay/setup/stay_option_sets.dart';
-import '../../taxi/taxi_option_sets.dart';
 import '../controllers/trip_plan_controller.dart';
 import '../models/trip_enquiry_model.dart';
-import '../trip_colors.dart';
 import '../trip_navigation.dart';
 import '../models/trip_journey_model.dart';
 import '../models/trip_plan_model.dart';
@@ -26,6 +21,8 @@ import '../utils/trip_format.dart';
 import '../utils/trip_clock.dart';
 import '../utils/trip_travel_rules.dart';
 import 'trip_problem_sheet.dart';
+
+const _accent = DesignColors.lunchEnd;
 
 class TripTodayCard extends StatelessWidget {
   const TripTodayCard({super.key});
@@ -61,21 +58,23 @@ class TripTodayCard extends StatelessWidget {
       return Padding(
         padding: const EdgeInsets.only(bottom: 14),
         child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(18),
-            boxShadow: AppShadows.premium(TripColors.accent, alpha: 0.10),
+          decoration: const BoxDecoration(
+            color: DesignColors.surface,
+            borderRadius: CardRadius.tile,
+            boxShadow: ShadowTokens.elev2,
           ),
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: CardRadius.tile,
             child: Container(
               width: double.infinity,
-              decoration: const BoxDecoration(border: Border(left: BorderSide(color: TripColors.accent, width: 4))),
-              padding: const EdgeInsets.all(14),
+              padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text(
+                  TemplateEntranceOnce(
+                    index: 0,
+                    count: 6,
+                    child: Text(
                     today == null
                         ? (journey == null ? TripStringsFinB1.checkOutDay : TripStringsStepsA3.travelDay(_todayDate))
                         : !c.isMultiCity
@@ -86,19 +85,20 @@ class TripTodayCard extends StatelessWidget {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                        fontFamily: 'Poppins', fontSize: 15, fontWeight: FontWeight.w700, color: TripColors.accentDark),
+                        fontFamily: FitnessAppTheme.fontName, fontSize: 15, fontWeight: FontWeight.w700, color: _accent),
+                  ),
                   ),
                   if (offline) ...[
                     const SizedBox(height: 8),
                     _offlineBanner(),
                   ],
-                  for (final r in rows) ...[
+                  for (var i = 0; i < rows.length; i++) ...[
                     const SizedBox(height: 8),
-                    r,
+                    TemplateEntranceOnce(index: i + 1, count: 6, child: rows[i]),
                   ],
                   if (today != null || _problemAllowed(c)) ...[
                     const SizedBox(height: 12),
-                    _problemButton(context, n),
+                    TemplateEntranceOnce(index: 5, count: 6, child: _problemButton(context, n)),
                   ],
                 ],
               ),
@@ -111,17 +111,17 @@ class TripTodayCard extends StatelessWidget {
 
   Widget _offlineBanner() => Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        decoration: BoxDecoration(color: AppColors.neutralChip, borderRadius: BorderRadius.circular(10)),
+        decoration: BoxDecoration(color: DesignColors.scaffold, borderRadius: CardRadius.chip),
         child: Row(
           children: [
-            const Icon(Iconsax.cloud_cross, size: 15, color: AppColors.textMedium),
+            const Icon(Icons.cloud_off_rounded, size: 15, color: DesignColors.textGrey),
             const SizedBox(width: 8),
             const Expanded(
               child: Text(
                 TripStrings.offlineSaved,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textMedium),
+                style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, fontWeight: FontWeight.w600, color: DesignColors.textGrey),
               ),
             ),
           ],
@@ -156,7 +156,7 @@ class TripTodayCard extends StatelessWidget {
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         style: const TextStyle(
-            fontFamily: 'Poppins', fontSize: 10.5, fontWeight: FontWeight.w700, letterSpacing: 0.6, color: AppColors.textLight),
+            fontFamily: FitnessAppTheme.fontName, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.6, color: DesignColors.textSecondary),
       ),
       _TravelRow(
         title: multi ? TripStringsStepsA3.changeCarAt(leg.changePlace) : TripStringsStepsA3.takesYou(leg.driverName, j.toName),
@@ -169,16 +169,16 @@ class TripTodayCard extends StatelessWidget {
       if (paused != null)
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-          decoration: BoxDecoration(color: AppColors.warningSurface, borderRadius: BorderRadius.circular(10)),
+          decoration: BoxDecoration(color: TripEntryStyle.sunriseTint, borderRadius: CardRadius.chip),
           child: Row(children: [
-            const Icon(Iconsax.warning_2, size: 15, color: AppColors.warningText),
+            const Icon(Icons.warning_amber_rounded, size: 15, color: DesignColors.textGreyDark),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
                 TripStringsStepsA3.pausedBackup(paused.driverName, paused.backupName),
                 maxLines: 3,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.warningText),
+                style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, fontWeight: FontWeight.w600, color: DesignColors.textGreyDark),
               ),
             ),
           ]),
@@ -210,21 +210,21 @@ class TripTodayCard extends StatelessWidget {
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         style: const TextStyle(
-            fontFamily: 'Poppins', fontSize: 10.5, fontWeight: FontWeight.w700, letterSpacing: 0.6, color: AppColors.textLight),
+            fontFamily: FitnessAppTheme.fontName, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.6, color: DesignColors.textSecondary),
       );
 
   static Widget _amberLine(String text) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        decoration: BoxDecoration(color: AppColors.warningSurface, borderRadius: BorderRadius.circular(10)),
+        decoration: BoxDecoration(color: TripEntryStyle.sunriseTint, borderRadius: CardRadius.chip),
         child: Row(children: [
-          const Icon(Iconsax.warning_2, size: 15, color: AppColors.warningText),
+          const Icon(Icons.warning_amber_rounded, size: 15, color: DesignColors.textGreyDark),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
               text,
               maxLines: 3,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.warningText),
+              style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, fontWeight: FontWeight.w600, color: DesignColors.textGreyDark),
             ),
           ),
         ]),
@@ -240,9 +240,9 @@ class TripTodayCard extends StatelessWidget {
     final fare = booking?.taxi?.agreedFare ?? cl.lastQuotedFare ?? cl.listedFare;
     final phone = _validPhone(booking?.owner.phone) ?? _validPhone(cl.phone) ?? _validPhone(cl.whatsApp);
     return _Row(
-      icon: Iconsax.car,
-      accent: TaxiColors.accent,
-      surface: TaxiColors.surface,
+      icon: TravelIcon.taxi,
+      accent: DesignColors.error,
+      surface: TripEntryStyle.roseTint,
       title: TripStringsMcdA3.carRow(cl.driverName.isEmpty ? TripStrings.driver : cl.driverName, i),
       subtitle: TripStrings.joinDots([
         i == 1 ? TripStringsMcdA3.toPlace(cl.toName) : TripStringsMcaA3.fromTo(cl.fromName, cl.toName),
@@ -275,23 +275,23 @@ class TripTodayCard extends StatelessWidget {
           TripStringsMcaA3.fromTo(from, to),
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
-          style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textDark),
+          style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 13, fontWeight: FontWeight.w700, color: DesignColors.textStrong),
         ),
     ];
     final j = a != null ? c.segmentJourney(k) : null;
     if (a == null) {
       out.add(_Row(
-        icon: Iconsax.routing_2,
-        accent: TaxiColors.accent,
-        surface: TaxiColors.surface,
+        icon: TravelIcon.route,
+        accent: DesignColors.error,
+        surface: TripEntryStyle.roseTint,
         title: TripStringsMcaA3.travelTo(to),
         subtitle: TripStringsMcaA3.notPlannedYet,
       ));
     } else if (j == null) {
       out.add(_Row(
-        icon: Iconsax.routing_2,
-        accent: TaxiColors.accent,
-        surface: TaxiColors.surface,
+        icon: TravelIcon.route,
+        accent: DesignColors.error,
+        surface: TripEntryStyle.roseTint,
         title: TripStringsMcaA3.travelTo(to),
         subtitle: TripStringsMcbA1.stateLabel(state),
       ));
@@ -319,9 +319,9 @@ class TripTodayCard extends StatelessWidget {
     }
     return [
       _Row(
-        icon: Iconsax.logout,
-        accent: StayColors.accent,
-        surface: StayColors.surface,
+        icon: TravelIcon.checkout,
+        accent: DesignColors.statusAttention,
+        surface: TripEntryStyle.sunriseTint,
         title: TripStringsMcdA3.checkOut(name),
         subtitle: '',
         actionLabel: phone == null ? null : TripStrings.call,
@@ -345,9 +345,9 @@ class TripTodayCard extends StatelessWidget {
       final stayName = e.listingName.isEmpty ? TripStrings.stay : e.listingName;
       return [
         _Row(
-          icon: Iconsax.building_4,
-          accent: StayColors.accent,
-          surface: StayColors.surface,
+          icon: TravelIcon.stay,
+          accent: DesignColors.statusAttention,
+          surface: TripEntryStyle.sunriseTint,
           title: travelDay ? TripStringsMcdA3.tonightTitle(stayName) : stayName,
           subtitle: '$sub\n${_checkOutLine(night.checkOut)}',
           actionLabel: stayPhone(e) == null ? null : TripStrings.call,
@@ -370,9 +370,9 @@ class TripTodayCard extends StatelessWidget {
       final phone = _validPhone(e.owner.phone);
       return [
         _Row(
-          icon: Iconsax.car,
-          accent: TaxiColors.accent,
-          surface: TaxiColors.surface,
+          icon: TravelIcon.taxi,
+          accent: DesignColors.error,
+          surface: TripEntryStyle.roseTint,
           title: pickup != null && pickup.isNotEmpty
               ? TripStrings.pickupAt(TripFormat.time12(pickup))
               : (e.listingName.isEmpty ? TripStrings.driver : e.listingName),
@@ -391,9 +391,9 @@ class TripTodayCard extends StatelessWidget {
       final minutes = c.plan.value?.legAt(c.legIndexOf(n))?.arrival?.roadMinutes;
       return [
         _Row(
-          icon: Iconsax.location,
-          accent: TripColors.accent,
-          surface: TripColors.surface,
+          icon: TravelIcon.place,
+          accent: _accent,
+          surface: TripEntryStyle.surface,
           title: TripStringsMcdA3.todaysRoad,
           subtitle: minutes == null ? TripStringsMcdA3.longRoad : TripStringsMcdA3.roadLine(minutes),
           actionLabel: TripStrings.map,
@@ -404,9 +404,9 @@ class TripTodayCard extends StatelessWidget {
     if (names.isEmpty) return const [];
     return [
       _Row(
-        icon: Iconsax.location,
-        accent: TripColors.accent,
-        surface: TripColors.surface,
+        icon: TravelIcon.place,
+        accent: _accent,
+        surface: TripEntryStyle.surface,
         title: offline ? TripStrings.lastSavedRoute : TripStrings.todaysRoute,
         subtitle: names.join(' · '),
         actionLabel: TripStrings.map,
@@ -415,21 +415,16 @@ class TripTodayCard extends StatelessWidget {
     ];
   }
 
-  Widget _problemButton(BuildContext context, int n) => ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 48),
-        child: OutlinedButton(
-          onPressed: () => TripProblemSheet.show(context, day: n),
-          style: OutlinedButton.styleFrom(
-            minimumSize: const Size(0, 48),
-            backgroundColor: AppColors.errorSurface,
-            side: const BorderSide(color: AppColors.error, width: 1.2),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          ),
+  Widget _problemButton(BuildContext context, int n) => _pill(
+          onTap: () => TripProblemSheet.show(context, day: n),
+          minHeight: 48,
+          fill: TripEntryStyle.roseTint,
+          border: const BorderSide(color: DesignColors.error, width: 1.2),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Iconsax.warning_2, size: 16, color: AppColors.error),
+              const Icon(Icons.warning_amber_rounded, size: 16, color: DesignColors.error),
               const SizedBox(width: 8),
               Flexible(
                 child: Text(
@@ -438,14 +433,35 @@ class TripTodayCard extends StatelessWidget {
                   textAlign: TextAlign.center,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                      fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.error),
+                      fontFamily: FitnessAppTheme.fontName, fontSize: 13, fontWeight: FontWeight.w700, color: DesignColors.error),
                 ),
               ),
             ],
           ),
-        ),
-      );
+        );
 }
+
+Widget _pill({
+  required VoidCallback onTap,
+  required Widget child,
+  required double minHeight,
+  required BorderSide border,
+  required EdgeInsets padding,
+  Color? fill,
+}) =>
+    Material(
+      color: fill ?? DesignColors.surface,
+      shape: RoundedRectangleBorder(borderRadius: CardRadius.chip, side: border),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        highlightColor: Colors.transparent,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: minHeight),
+          child: Padding(padding: padding, child: Center(child: child)),
+        ),
+      ),
+    );
 
 class _Row extends StatelessWidget {
   const _Row({
@@ -458,7 +474,7 @@ class _Row extends StatelessWidget {
     this.onAction,
   });
 
-  final IconData icon;
+  final String icon;
   final Color accent;
   final Color surface;
   final String title;
@@ -472,10 +488,14 @@ class _Row extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Container(
-          width: 36,
-          height: 36,
-          decoration: BoxDecoration(color: surface, borderRadius: BorderRadius.circular(10)),
-          child: Icon(icon, size: 18, color: accent),
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: surface,
+            shape: BoxShape.circle,
+            boxShadow: ShadowTokens.elev1,
+          ),
+          child: Center(child: TravelIcon(icon, size: 26)),
         ),
         const SizedBox(width: 10),
         Expanded(
@@ -488,14 +508,14 @@ class _Row extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
-                    fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textDark),
+                    fontFamily: FitnessAppTheme.fontName, fontSize: 13, fontWeight: FontWeight.w700, color: DesignColors.textStrong),
               ),
               if (subtitle.isNotEmpty)
                 Text(
                   subtitle,
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 11.5, color: AppColors.textLight),
+                  style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, color: DesignColors.textSecondary),
                 ),
             ],
           ),
@@ -512,7 +532,7 @@ class _Row extends StatelessWidget {
               actionLabel!,
               maxLines: 1,
               style: const TextStyle(
-                  fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w700, color: TripColors.accentDark),
+                  fontFamily: FitnessAppTheme.fontName, fontSize: 12, fontWeight: FontWeight.w700, color: _accent),
             ),
           ),
       ],
@@ -531,8 +551,8 @@ class _TravelRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final buttons = [
-      if (onCall != null) _button(TripStringsStepsA3.call, Iconsax.call, TaxiColors.accentDark, onCall!),
-      if (onWhatsApp != null) _button(TripStringsStepsA3.whatsApp, Iconsax.message, AppColors.successDark, onWhatsApp!),
+      if (onCall != null) _button(TripStringsStepsA3.call, const Icon(Icons.call_rounded, size: 16, color: _accent), _accent, onCall!),
+      if (onWhatsApp != null) _button(TripStringsStepsA3.whatsApp, const TravelIcon(TravelIcon.chat, size: 18), DesignColors.primary, onWhatsApp!),
     ];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -541,10 +561,14 @@ class _TravelRow extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(color: TaxiColors.surface, borderRadius: BorderRadius.circular(10)),
-              child: const Icon(Iconsax.routing_2, size: 18, color: TaxiColors.accent),
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: DesignColors.error,
+                shape: BoxShape.circle,
+                boxShadow: ShadowTokens.elev1,
+              ),
+              child: const TravelIcon(TravelIcon.route, size: 20),
             ),
             const SizedBox(width: 10),
             Expanded(
@@ -557,14 +581,14 @@ class _TravelRow extends StatelessWidget {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                        fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textDark),
+                        fontFamily: FitnessAppTheme.fontName, fontSize: 13, fontWeight: FontWeight.w700, color: DesignColors.textStrong),
                   ),
                   if (subtitle.isNotEmpty)
                     Text(
                       subtitle,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontFamily: 'Poppins', fontSize: 11.5, color: AppColors.textLight),
+                      style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, color: DesignColors.textSecondary),
                     ),
                 ],
               ),
@@ -588,20 +612,25 @@ class _TravelRow extends StatelessWidget {
     );
   }
 
-  static Widget _button(String label, IconData icon, Color color, VoidCallback onTap) => OutlinedButton.icon(
-        onPressed: onTap,
-        icon: Icon(icon, size: 16, color: color),
-        label: Text(
-          label,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w700, color: color),
-        ),
-        style: OutlinedButton.styleFrom(
-          minimumSize: const Size(0, 44),
-          padding: const EdgeInsets.symmetric(horizontal: 10),
-          side: const BorderSide(color: AppColors.divider, width: 1.3),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(11)),
+  static Widget _button(String label, Widget icon, Color color, VoidCallback onTap) => _pill(
+        onTap: onTap,
+        minHeight: 44,
+        border: const BorderSide(color: TripEntryStyle.border, width: 1.3),
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            icon,
+            const SizedBox(width: 8),
+            Flexible(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, fontWeight: FontWeight.w700, color: color),
+              ),
+            ),
+          ],
         ),
       );
 }

@@ -1,6 +1,7 @@
-import 'package:animate_do/animate_do.dart';
 import 'package:flutter/material.dart';
-import '../config/app_colors.dart';
+import 'package:bakhli/design/design.dart';
+import 'package:bakhli/design/extra/chat_kit.dart';
+import 'package:bakhli/design/extra/replies_kit.dart';
 import '../models/message_model.dart';
 import '../models/question_template_model.dart';
 import 'trip_chat_cards.dart';
@@ -12,14 +13,12 @@ class ChatMessageBubble extends StatelessWidget {
   final void Function(String answerKey, String answerText)? onAnswerQuestion;
   final VoidCallback? onApproveContact;
   final VoidCallback? onDeclineContact;
-  // Called with whichever specific offered time the recipient tapped — a
-  // proposal can offer more than one slot, so there's no single implicit
-  // "accept" action anymore.
   final void Function(DateTime)? onAcceptSlot;
   final VoidCallback? onDeclineSchedule;
   final VoidCallback? onCounterSchedule;
   final VoidCallback? onCall;
   final Color accent;
+  final Gradient? gradient;
   final bool isOwner;
   final TripChatCallbacks? trip;
 
@@ -34,7 +33,8 @@ class ChatMessageBubble extends StatelessWidget {
     this.onDeclineSchedule,
     this.onCounterSchedule,
     this.onCall,
-    this.accent = AppColors.primary,
+    this.accent = DesignColors.primary,
+    this.gradient,
     this.isOwner = false,
     this.trip,
   });
@@ -62,25 +62,14 @@ class ChatMessageBubble extends StatelessWidget {
       case TripOfferCards.changeType:
         return TripChatCards.build(context, message, isOwner: isOwner, accent: accent, callbacks: trip);
       default:
-        // Defensive fallback only — the backend never emits Type == "system" (or any other
-        // unrecognized type) today. Kept so an unrecognized future type renders as a plain
-        // status pill instead of crashing the switch (message.type is a raw wire string, not
-        // an enum, so exhaustiveness can't be checked at compile time).
         return _system(message.payload.safeString('text') ?? '');
     }
   }
-
-  // ── quick_reply ──────────────────────────────────────────────────────────
 
   Widget _quickReply(BuildContext context) {
     final text = message.payload.safeString('text') ?? '…';
     final key = message.payload.safeString('key');
 
-    // Prefer the snapshot embedded at send time (ChatHandlers.SendMessage) — self-contained
-    // and historically accurate regardless of later admin edits to the template. Only
-    // messages sent before this existed lack 'answerOptions'; those fall back to the live
-    // catalog lookup exactly as before (may render with no options if the template's since
-    // been deactivated — same as the old behavior for those old rows).
     var answerOptions = _parseAnswerOptions(message.payload['answerOptions']);
     if (answerOptions.isEmpty && key != null) {
       QuestionTemplateModel? template;
@@ -94,10 +83,6 @@ class ChatMessageBubble extends StatelessWidget {
 
     final bubble = _bubbleRow(text, mine: message.isMine);
 
-    // Show reply options under the other party's question, if we know its catalog entry.
-    // Rendered as a vertical, right-aligned stack of "ghost" bubbles — each one previews
-    // what the eventual sent message would look like, so it reads as picking a reply to
-    // send rather than filling in a form field.
     if (!message.isMine && answerOptions.isNotEmpty && onAnswerQuestion != null) {
       return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         bubble,
@@ -109,37 +94,41 @@ class ChatMessageBubble extends StatelessWidget {
               final i = entry.key;
               final opt = entry.value;
               final negative = opt.sentiment == 'negative';
-              final color = negative ? AppColors.error : accent;
-              return FadeInUp(
-                duration: const Duration(milliseconds: 260),
-                delay: Duration(milliseconds: 40 * i),
-                from: 12,
+              final color = negative ? RepliesTone.bad : accent;
+              return ChatReveal(
+                index: i,
+                count: answerOptions.length,
+                offset: 12,
                 child: Padding(
-                  padding: const EdgeInsets.only(bottom: 6),
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(14),
-                      onTap: () => onAnswerQuestion!(opt.key, opt.text),
-                      child: Container(
-                        constraints: const BoxConstraints(maxWidth: 260),
-                        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
-                        decoration: BoxDecoration(
-                          color: color.withValues(alpha: 0.07),
-                          borderRadius: BorderRadius.only(
-                            topLeft: const Radius.circular(14), topRight: const Radius.circular(14),
-                            bottomLeft: const Radius.circular(14), bottomRight: const Radius.circular(3),
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: PressScale(
+                    child: Container(
+                      constraints: const BoxConstraints(maxWidth: 260),
+                      decoration: BoxDecoration(
+                        color: DesignColors.surface,
+                        borderRadius: CardRadius.pill,
+                        border: Border.all(color: color, width: 1.5),
+                        boxShadow: ShadowTokens.elev1,
+                      ),
+                      child: Material(
+                        color: Colors.transparent,
+                        borderRadius: CardRadius.pill,
+                        clipBehavior: Clip.antiAlias,
+                        child: InkWell(
+                          splashColor: DesignColors.tint(color, Alpha.soft),
+                          highlightColor: Colors.transparent,
+                          onTap: () => onAnswerQuestion!(opt.key, opt.text),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                            child: Row(mainAxisSize: MainAxisSize.min, children: [
+                              Flexible(
+                                child: Text(opt.text, style: TypeTokens.style(14, FontWeight.w600, color: color)),
+                              ),
+                              const SizedBox(width: 6),
+                              Icon(Icons.chevron_right_rounded, size: 18, color: color),
+                            ]),
                           ),
-                          border: Border.all(color: color.withValues(alpha: 0.45), width: 1.4, style: BorderStyle.solid),
                         ),
-                        child: Row(mainAxisSize: MainAxisSize.min, children: [
-                          Flexible(
-                            child: Text(opt.text,
-                                style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600, color: color)),
-                          ),
-                          const SizedBox(width: 6),
-                          Icon(Icons.chevron_right_rounded, size: 16, color: color.withValues(alpha: 0.6)),
-                        ]),
                       ),
                     ),
                   ),
@@ -154,12 +143,9 @@ class ChatMessageBubble extends StatelessWidget {
     return bubble;
   }
 
-  // ── contact_request / contact_response ──────────────────────────────────
-
   Widget _contactRequest(BuildContext context) {
-    // The owner side answers via the card's own buttons; the requester just sees a pending card.
     return _card(
-      icon: Icons.call_outlined,
+      asset: TravelIcon.chat,
       title: message.isMine ? 'Contact number requested' : 'Wants your contact number',
       readAt: message.readAt,
       actions: (!message.isMine && onApproveContact != null)
@@ -181,30 +167,20 @@ class ChatMessageBubble extends StatelessWidget {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       _system('Contact shared'),
       if (phone != null)
-        FadeInUp(
-          duration: const Duration(milliseconds: 280),
-          from: 12,
+        ChatReveal(
+          offset: 12,
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 4),
-            child: SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: onCall,
-                icon: const Icon(Icons.call_rounded, size: 18),
-                label: const Text('Call', style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600)),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.warning, foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  elevation: 0,
-                ),
-              ),
+            child: PrimaryButton(
+              label: 'Call',
+              icon: const Icon(Icons.call_rounded, size: 18, color: DesignColors.onPrimary),
+              tone: _toneOf(DesignColors.primaryLight),
+              onPressed: onCall,
             ),
           ),
         ),
     ]);
   }
-
-  // ── schedule_proposal / schedule_response ───────────────────────────────
 
   Widget _scheduleProposal(BuildContext context) {
     final status = message.payload.safeString('status') ?? 'pending';
@@ -236,7 +212,8 @@ class ChatMessageBubble extends StatelessWidget {
     final confirmedAtRaw = message.payload.safeString('confirmedAt');
     final confirmedAt = confirmedAtRaw != null ? DateTime.tryParse(confirmedAtRaw) : null;
     return _card(
-      icon: Icons.check_circle_outline_rounded,
+      asset: TravelIcon.calendar,
+      badgeColor: DesignColors.goodDeep,
       title: 'Visit confirmed',
       subtitle: confirmedAt != null ? _formatDateTime(confirmedAt) : null,
       readAt: message.readAt,
@@ -245,32 +222,30 @@ class ChatMessageBubble extends StatelessWidget {
     );
   }
 
-  // ── shared building blocks ───────────────────────────────────────────────
-
   Widget _bubbleRow(String text, {required bool mine}) => Align(
         alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
         child: Container(
           margin: const EdgeInsets.symmetric(vertical: 3),
           constraints: const BoxConstraints(maxWidth: 280),
-          padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
           decoration: BoxDecoration(
-            color: mine ? accent : AppColors.cardBg,
-            border: mine ? null : Border.all(color: AppColors.divider),
+            color: mine && gradient == null ? accent : (mine ? null : DesignColors.surface),
+            gradient: mine ? gradient : null,
             borderRadius: BorderRadius.only(
-              topLeft: const Radius.circular(14), topRight: const Radius.circular(14),
-              bottomLeft: Radius.circular(mine ? 14 : 3),
-              bottomRight: Radius.circular(mine ? 3 : 14),
+              topLeft: const Radius.circular(16),
+              topRight: const Radius.circular(16),
+              bottomLeft: Radius.circular(mine ? 16 : 8),
+              bottomRight: Radius.circular(mine ? 8 : 16),
             ),
-            boxShadow: mine ? null : [BoxShadow(color: AppColors.shadow, blurRadius: 6, offset: const Offset(0, 2))],
+            boxShadow: ShadowTokens.elev1,
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(text,
-                  style: TextStyle(
-                      fontFamily: 'Poppins', fontSize: 13.5,
-                      color: mine ? Colors.white : AppColors.textDark)),
+                  style: TypeTokens.style(14, FontWeight.w400,
+                      color: mine ? DesignColors.surface : DesignColors.textPrimary, letterSpacing: 0.2)),
               if (mine) ...[
                 const SizedBox(height: 2),
                 _readTick(message.readAt != null),
@@ -284,22 +259,12 @@ class ChatMessageBubble extends StatelessWidget {
         child: Container(
           margin: const EdgeInsets.symmetric(vertical: 6),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-          decoration: BoxDecoration(color: AppColors.textDark.withValues(alpha: 0.06), borderRadius: BorderRadius.circular(20)),
-          child: Text(text, style: const TextStyle(fontFamily: 'Poppins', fontSize: 11.5, color: AppColors.textLight)),
+          decoration: BoxDecoration(color: DesignColors.tint(DesignColors.textGrey, Alpha.hairline), borderRadius: CardRadius.pill),
+          child: Text(text, style: TypeTokens.style(12, FontWeight.w500, color: TypeTokens.secondary)),
         ),
       );
 }
 
-// ── shared building blocks — top-level so both ChatMessageBubble and
-// _ScheduleProposalCard (below) can use them ──────────────────────────────
-
-// A message's payload is server-stored JSON — a backend bug (or a genuinely malformed
-// client send from a stale app version) can leave one specific field in an unexpected
-// shape for one specific message. An unguarded `as` cast on that field throws (Dart's `as`
-// only tolerates an actual null, not a wrong type), which takes down that whole bubble's
-// build() and renders as Flutter's release-mode grey ErrorWidget. These read helpers
-// degrade to a safe default instead — mirrors the precedent MessageModel.fromJson already
-// set for createdAt (DateTime.tryParse instead of DateTime.parse, for the same reason).
 extension _SafePayload on Map<String, dynamic> {
   String? safeString(String key) {
     final v = this[key];
@@ -312,19 +277,20 @@ extension _SafePayload on Map<String, dynamic> {
   }
 }
 
-// onDark: true for _bubbleRow's navy "mine" background, false for _card's always-white
-// background — the "sent" (not-yet-read) tick color needs to stay visible on either.
 Widget _readTick(bool read, {bool onDark = true}) => Padding(
       padding: const EdgeInsets.only(top: 1),
       child: Icon(
         read ? Icons.done_all_rounded : Icons.done_rounded,
         size: 14,
-        color: read ? AppColors.readTick : (onDark ? Colors.white70 : AppColors.textHint),
+        color: onDark
+            ? (read ? DesignColors.surface : DesignColors.tint(DesignColors.surface, Alpha.strong))
+            : (read ? DesignColors.primaryLight : DesignColors.textMuted),
       ),
     );
 
 Widget _card({
-  required IconData icon,
+  Key? key,
+  required String asset,
   required String title,
   String? subtitle,
   Widget? extra,
@@ -332,51 +298,55 @@ Widget _card({
   required DateTime? readAt,
   required bool mine,
   required Color accent,
+  Color? badgeColor,
+  bool dimmed = false,
 }) =>
     Align(
+      key: key,
       alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 4),
         constraints: const BoxConstraints(maxWidth: 300),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: AppColors.cardBg,
-          border: Border.all(color: AppColors.divider),
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 8, offset: const Offset(0, 3))],
+          color: dimmed ? DesignColors.surfaceMuted : DesignColors.surface,
+          borderRadius: CardRadius.tile,
+          boxShadow: dimmed ? const [] : ShadowTokens.elev1,
         ),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
           Row(children: [
             Container(
-              width: 26, height: 26,
-              decoration: BoxDecoration(color: accent.withValues(alpha: 0.10), borderRadius: BorderRadius.circular(8)),
-              child: Icon(icon, size: 15, color: accent),
+              width: 30,
+              height: 30,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(color: DesignColors.tint(badgeColor ?? accent, Alpha.tint), shape: BoxShape.circle),
+              child: TravelIcon(asset, size: 20),
             ),
             const SizedBox(width: 8),
             Expanded(
-              child: Text(title,
-                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-            ),
+                child: Text(title,
+                    style: TypeTokens.style(14, FontWeight.w700,
+                        color: dimmed ? DesignColors.textMuted : DesignColors.textStrong))),
           ]),
           if (subtitle != null) ...[
             const SizedBox(height: 6),
             Padding(
-              padding: const EdgeInsets.only(left: 34),
-              child: Text(subtitle, style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textMedium)),
+              padding: const EdgeInsets.only(left: 38),
+              child: Text(subtitle, style: TypeTokens.style(14, FontWeight.w400, color: TypeTokens.secondary)),
             ),
           ],
           if (extra != null) ...[
             const SizedBox(height: 8),
-            Padding(padding: const EdgeInsets.only(left: 34), child: extra),
+            Padding(padding: const EdgeInsets.only(left: 38), child: extra),
           ],
           if (actions != null) ...[
             const SizedBox(height: 10),
             Column(
               children: actions.asMap().entries.map((entry) {
-                return FadeInUp(
-                  duration: const Duration(milliseconds: 260),
-                  delay: Duration(milliseconds: 40 * entry.key),
-                  from: 12,
+                return ChatReveal(
+                  index: entry.key,
+                  count: actions.length,
+                  offset: 12,
                   child: Padding(padding: const EdgeInsets.only(bottom: 6), child: entry.value),
                 );
               }).toList(),
@@ -390,40 +360,20 @@ Widget _card({
       ),
     );
 
+KitTone _toneOf(Color color) => KitTone.solid(color);
+
 Widget _actionBtn(String label, {required bool primary, required Color accent, bool negative = false, VoidCallback? onTap}) {
-  final disabled = onTap == null;
-  return SizedBox(
-    width: double.infinity,
-    child: primary
-        ? ElevatedButton(
-            onPressed: onTap,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: disabled ? AppColors.divider : accent,
-              foregroundColor: disabled ? AppColors.textHint : Colors.white,
-              elevation: 0,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              padding: const EdgeInsets.symmetric(vertical: 9),
-            ),
-            child: Text(label, style: const TextStyle(fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w600)),
-          )
-        : OutlinedButton(
-            onPressed: onTap,
-            style: OutlinedButton.styleFrom(
-              foregroundColor: negative ? AppColors.error : AppColors.textMedium,
-              side: BorderSide(color: negative ? AppColors.error.withValues(alpha: 0.4) : AppColors.divider),
-              padding: const EdgeInsets.symmetric(vertical: 9),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            ),
-            child: Text(label, style: const TextStyle(fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w600)),
-          ),
+  if (primary) {
+    return PrimaryButton(label: label, tone: _toneOf(accent), onPressed: onTap);
+  }
+  return SecondaryButton(
+    label: label,
+    tone: _toneOf(negative ? RepliesTone.bad : accent),
+    neutral: !negative,
+    onPressed: onTap,
   );
 }
 
-// Reuses AnswerOption.fromJson (question_template_model.dart) — same parsing logic the
-// live catalog already uses for a template's answerOptionsJson, not duplicated here. Wrapped
-// in one try/catch around the whole list (not per-entry) — a partially-malformed snapshot is
-// treated as absent so _quickReply falls back to the live-template lookup, rather than
-// rendering a partial/inconsistent set of reply options.
 List<AnswerOption> _parseAnswerOptions(dynamic raw) {
   if (raw is! List) return const [];
   try {
@@ -433,11 +383,6 @@ List<AnswerOption> _parseAnswerOptions(dynamic raw) {
   }
 }
 
-// Converts to the viewer's own device timezone before formatting — proposedAts/acceptedAt
-// now always round-trip as genuine UTC instants (see chat_conversation_screen.dart /
-// chat_controller.dart, which call .toUtc() before sending), so this makes two users in
-// different timezones each see the same real instant expressed correctly in their own local
-// time, instead of identical (and wrong, for at least one of them) digits.
 String _formatDateTime(DateTime dt) {
   final local = dt.toLocal();
   const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -447,10 +392,6 @@ String _formatDateTime(DateTime dt) {
   return '${days[local.weekday - 1]} ${local.day}, $hour:$minute $ampm';
 }
 
-// ── schedule_proposal's slot picker — stateful because the recipient now picks a
-// slot first (highlighted, not fired immediately) and only "Confirm visit" commits
-// it. Replaces the old "tap any time to instantly accept it" interaction, which had
-// no visible affordance telling the recipient a tap would do anything at all.
 class _ScheduleProposalCard extends StatefulWidget {
   final bool mine;
   final DateTime? readAt;
@@ -486,9 +427,6 @@ class _ScheduleProposalCardState extends State<_ScheduleProposalCard> {
   @override
   void initState() {
     super.initState();
-    // A single-slot proposal has only one possible answer — pre-select it so
-    // "Confirm visit" is already a one-tap action instead of forcing an extra
-    // "select the only option" step first.
     if (widget.canRespond && widget.proposedAts.length == 1) {
       _selected = widget.proposedAts.first;
     }
@@ -497,10 +435,11 @@ class _ScheduleProposalCardState extends State<_ScheduleProposalCard> {
   @override
   Widget build(BuildContext context) {
     final multiSlot = widget.proposedAts.length > 1;
-    return Opacity(
-      opacity: widget.superseded ? 0.45 : 1,
+    return KitSwitcher(
       child: _card(
-        icon: Icons.calendar_month_rounded,
+        key: ValueKey(widget.superseded),
+        dimmed: widget.superseded,
+        asset: TravelIcon.calendar,
         title: widget.title,
         readAt: widget.readAt,
         mine: widget.mine,
@@ -514,29 +453,25 @@ class _ScheduleProposalCardState extends State<_ScheduleProposalCard> {
                 final dt = entry.value;
                 final isSelected = _selected == dt;
                 final chip = widget.canRespond
-                    ? OutlinedButton.icon(
-                        onPressed: () => setState(() => _selected = dt),
-                        style: OutlinedButton.styleFrom(
-                          backgroundColor: isSelected ? widget.accent : AppColors.cardBg,
-                          foregroundColor: isSelected ? Colors.white : widget.accent,
-                          side: BorderSide(color: isSelected ? widget.accent : widget.accent.withValues(alpha: 0.5)),
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                        ),
-                        icon: Icon(isSelected ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded, size: 15),
-                        label: Text(_formatDateTime(dt),
-                            style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w600)),
+                    ? PickChip(
+                        label: _formatDateTime(dt),
+                        selected: isSelected,
+                        activeColor: widget.accent,
+                        icon: isSelected ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        onTap: () => setState(() => _selected = dt),
                       )
                     : Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                        decoration: BoxDecoration(color: AppColors.surfaceWarm, borderRadius: BorderRadius.circular(16)),
+                        decoration: BoxDecoration(color: DesignColors.scaffold, borderRadius: CardRadius.pill),
                         child: Text(_formatDateTime(dt),
-                            style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textMedium)),
+                            style: TypeTokens.style(12, FontWeight.w600, color: TypeTokens.secondary)),
                       );
-                return FadeInUp(
-                  duration: const Duration(milliseconds: 260),
-                  delay: Duration(milliseconds: 40 * entry.key),
-                  from: 10,
+                return ChatReveal(
+                  key: ValueKey(entry.key),
+                  index: entry.key,
+                  count: widget.proposedAts.length,
+                  offset: 12,
                   child: chip,
                 );
               }).toList()),

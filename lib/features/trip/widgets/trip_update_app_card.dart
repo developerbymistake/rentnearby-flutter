@@ -1,11 +1,9 @@
+import 'package:bakhli/design/extra/trip_plan_look.dart';
+import 'package:bakhli/design/design.dart';
 import 'package:flutter/material.dart';
-import 'package:iconsax/iconsax.dart';
-import '../../../config/app_colors.dart';
+import 'package:bakhli/features/trip/widgets/trip_ui.dart';
 import '../../../config/app_insets.dart';
-import '../../../config/app_shadows.dart';
 import '../../../controllers/app_version_controller.dart';
-import '../../../widgets/gradient_button.dart';
-import '../trip_colors.dart';
 import '../trip_strings.dart';
 import '../trip_strings_a4.dart';
 
@@ -15,11 +13,11 @@ class TripUpdateAppCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.fromLTRB(16, 14, 16, AppInsets.bottomViewPadding(context) + 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        boxShadow: AppShadows.premium(TripColors.accent, alpha: 0.14, blur: 16, offset: const Offset(0, -4)),
+      padding: EdgeInsets.fromLTRB(KitMetrics.gutter, 14, KitMetrics.gutter, AppInsets.bottomViewPadding(context) + 12),
+      decoration: const BoxDecoration(
+        color: DesignColors.surface,
+        borderRadius: CardRadius.tile,
+        boxShadow: ShadowTokens.elev3,
       ),
       child: Center(
         heightFactor: 1,
@@ -33,10 +31,14 @@ class TripUpdateAppCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(color: TripColors.surface, borderRadius: BorderRadius.circular(10)),
-                    child: const Icon(Iconsax.refresh_circle, size: 20, color: TripColors.accentDark),
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      gradient: TripLook.gradient,
+                      shape: BoxShape.circle,
+                      boxShadow: ShadowTokens.glow(KitTone.trip.glow),
+                    ),
+                    child: const Center(child: TravelIcon(TravelIcon.airplane, size: 22)),
                   ),
                   const SizedBox(width: 10),
                   const Expanded(
@@ -46,12 +48,12 @@ class TripUpdateAppCard extends StatelessWidget {
                         Text(
                           TripStrings.updateAppTitle,
                           style: TextStyle(
-                              fontFamily: 'Poppins', fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textDark),
+                              fontFamily: FitnessAppTheme.fontName, fontSize: 15, fontWeight: FontWeight.w700, letterSpacing: 0.18, color: TripLook.textDark),
                         ),
                         SizedBox(height: 2),
                         Text(
                           TripStrings.updateAppBody,
-                          style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight),
+                          style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, color: TripLook.textLight),
                         ),
                       ],
                     ),
@@ -59,11 +61,9 @@ class TripUpdateAppCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 12),
-              GradientButton(
+              TripButton(
                 label: TripStringsA4.openPlayStore,
                 height: 48,
-                gradient: TripColors.gradient,
-                shadowColor: TripColors.accent,
                 onPressed: () => AppVersionController.to.openStore(),
               ),
             ],

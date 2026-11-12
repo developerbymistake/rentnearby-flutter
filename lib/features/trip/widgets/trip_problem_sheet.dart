@@ -1,17 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:bakhli/features/trip/widgets/trip_ui.dart';
+import 'package:bakhli/design/design.dart';
+import 'package:bakhli/design/extra/replies_kit.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:iconsax/iconsax.dart';
-import '../../../config/app_colors.dart';
 import '../../../controllers/location_controller.dart';
 import '../../../utils/app_toast.dart';
 import '../../../utils/contact_launcher.dart';
 import '../../../utils/input_formatters.dart';
-import '../../../widgets/gradient_button.dart';
 import '../controllers/trip_plan_controller.dart';
 import '../models/trip_enquiry_model.dart';
 import '../models/trip_journey_model.dart';
-import '../trip_colors.dart';
 import '../trip_constants.dart';
 import '../trip_navigation.dart';
 import '../trip_strings.dart';
@@ -215,21 +214,24 @@ class _ProblemBodyState extends State<_ProblemBody> {
         title: TripStrings.whatWentWrong,
         description: TripStrings.problemFooter,
         children: [
+          TemplateStagger(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
           if (offline) ...[
             _offlineBlock(contacts),
             const SizedBox(height: 12),
           ],
-          _row(Iconsax.car, TripStrings.driverDidNotCome, TripProblemKinds.driverNoShow),
+          _row(TravelIcon.taxi, TripStrings.driverDidNotCome, TripProblemKinds.driverNoShow),
           ..._extra(TripProblemKinds.driverNoShow),
           if (!c.problemOnTravelOnly) ...[
             const SizedBox(height: 8),
-            _row(Iconsax.building_4, TripStrings.hostNoRoom, TripProblemKinds.hostNoRoom),
+            _row(TravelIcon.stay, TripStrings.hostNoRoom, TripProblemKinds.hostNoRoom),
             ..._extra(TripProblemKinds.hostNoRoom),
           ],
           const SizedBox(height: 8),
-          _row(Iconsax.danger, TripStrings.roadClosed, TripProblemKinds.roadClosed),
+          _row(TravelIcon.pin, TripStrings.roadClosed, TripProblemKinds.roadClosed),
           const SizedBox(height: 8),
-          _row(Iconsax.edit_2, TripStrings.somethingElse, TripProblemKinds.other),
+          _row(TravelIcon.note, TripStrings.somethingElse, TripProblemKinds.other),
           if (_otherOpen) ...[
             const SizedBox(height: 12),
             TextField(
@@ -243,29 +245,29 @@ class _ProblemBodyState extends State<_ProblemBody> {
                 ...noEmojiInputFormatters,
                 LengthLimitingTextInputFormatter(TripConstants.problemNoteMax),
               ],
-              style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textDark),
+              style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 14, color: DesignColors.textStrong),
               decoration: InputDecoration(
                 hintText: TripStrings.whatHappened,
-                hintStyle: const TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textHint),
+                hintStyle: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 13, color: DesignColors.textMuted),
                 filled: true,
-                fillColor: AppColors.scaffoldBg,
+                fillColor: DesignColors.scaffold,
                 contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
                 enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.divider)),
+                    borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Colors.transparent)),
                 focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: TripColors.accent, width: 1.5)),
+                    borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: RepliesTone.accent, width: 1.5)),
               ),
             ),
             const SizedBox(height: 12),
-            GradientButton(
+            TripButton(
               label: TripStrings.done,
               height: 48,
-              isLoading: _busyKind == TripProblemKinds.other,
-              gradient: TripColors.gradient,
-              shadowColor: TripColors.accent,
+              loading: _busyKind == TripProblemKinds.other,
               onPressed: () => _pick(TripProblemKinds.other),
             ),
           ],
+            ],
+          ),
         ],
       );
     });
@@ -291,7 +293,7 @@ class _ProblemBodyState extends State<_ProblemBody> {
         padding: EdgeInsets.only(left: 4, bottom: 6),
         child: Text(
           TripStrings.whichBooking,
-          style: TextStyle(fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w700, color: AppColors.textMedium),
+          style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12.5, fontWeight: FontWeight.w700, color: DesignColors.textSecondary),
         ),
       ),
       for (final e in rows) ...[
@@ -305,41 +307,44 @@ class _ProblemBodyState extends State<_ProblemBody> {
     ];
   }
 
-  Widget _carCandidate(TripJourneyLeg car) => Material(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+  static const BorderRadius _r = BorderRadius.all(Radius.circular(16));
+
+  static List<BoxShadow> get _shadow =>
+      [ShadowTokens.tint(DesignColors.textGrey, ShadowSpec.soft)];
+
+  Widget _carCandidate(TripJourneyLeg car) => Container(
+        decoration: BoxDecoration(color: DesignColors.surface, borderRadius: _r, boxShadow: _shadow),
+        child: Material(
+        color: Colors.transparent,
         child: InkWell(
           onTap: _busyKind == null ? () => _pickCar(car) : null,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: _r,
           child: Container(
             width: double.infinity,
             constraints: const BoxConstraints(minHeight: 56),
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
             alignment: Alignment.centerLeft,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: TripColors.accent.withValues(alpha: 0.5)),
-            ),
             child: Text(
               _journeyCarLabel(car),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textDark),
+              style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 13, fontWeight: FontWeight.w700, color: DesignColors.textStrong),
             ),
           ),
+        ),
         ),
       );
 
   Widget _affectNote(String text) => Container(
         width: double.infinity,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(color: AppColors.warningSurface, borderRadius: BorderRadius.circular(10)),
+        decoration: BoxDecoration(color: RepliesTone.warnSurface, borderRadius: BorderRadius.circular(8)),
         child: Text(
           text,
           maxLines: 3,
           overflow: TextOverflow.ellipsis,
           style: const TextStyle(
-              fontFamily: 'Poppins', fontSize: 11.5, fontWeight: FontWeight.w500, color: AppColors.warningText, height: 1.35),
+              fontFamily: FitnessAppTheme.fontName, fontSize: 11.5, fontWeight: FontWeight.w500, color: RepliesTone.warn, height: 1.35),
         ),
       );
 
@@ -351,20 +356,17 @@ class _ProblemBodyState extends State<_ProblemBody> {
   Widget _candidate(TripEnquiryModel e, bool taxi) {
     final earlier = !e.isSegment && _spansEarlier(e);
     final kind = taxi ? TripProblemKinds.driverNoShow : TripProblemKinds.hostNoRoom;
-    return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(12),
+    return Container(
+      decoration: BoxDecoration(color: DesignColors.surface, borderRadius: _r, boxShadow: _shadow),
+      child: Material(
+      color: Colors.transparent,
       child: InkWell(
         onTap: _busyKind == null ? () => _pick(kind, enquiryId: e.id) : null,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: _r,
         child: Container(
           width: double.infinity,
           constraints: const BoxConstraints(minHeight: 56),
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: TripColors.accent.withValues(alpha: 0.5)),
-          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisAlignment: MainAxisAlignment.center,
@@ -378,14 +380,14 @@ class _ProblemBodyState extends State<_ProblemBody> {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
-                    fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textDark),
+                    fontFamily: FitnessAppTheme.fontName, fontSize: 13, fontWeight: FontWeight.w700, color: DesignColors.textStrong),
               ),
               if (e.datesLabel.isNotEmpty)
                 Text(
                   e.datesLabel,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight),
+                  style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, color: DesignColors.textMuted),
                 ),
               if (earlier)
                 Text(
@@ -393,11 +395,12 @@ class _ProblemBodyState extends State<_ProblemBody> {
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                      fontFamily: 'Poppins', fontSize: 11.5, color: AppColors.warningText, height: 1.35),
+                      fontFamily: FitnessAppTheme.fontName, fontSize: 11.5, color: RepliesTone.warn, height: 1.35),
                 ),
             ],
           ),
         ),
+      ),
       ),
     );
   }
@@ -405,40 +408,25 @@ class _ProblemBodyState extends State<_ProblemBody> {
   Widget _offlineBlock(List<({String name, String phone})> contacts) {
     return Container(
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: AppColors.warningSurface, borderRadius: BorderRadius.circular(12)),
+      decoration: BoxDecoration(color: RepliesTone.warnSurface, borderRadius: BorderRadius.circular(8)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const Text(
             TripStrings.noNetworkTitle,
-            style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.warningText),
+            style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 13, fontWeight: FontWeight.w700, color: RepliesTone.warn),
           ),
           const SizedBox(height: 2),
           const Text(
             TripStrings.callHostOrDriver,
-            style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.warningText),
+            style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, color: RepliesTone.warn),
           ),
           for (final x in contacts) ...[
             const SizedBox(height: 8),
-            SizedBox(
-              height: 44,
-              child: OutlinedButton.icon(
-                onPressed: () => ContactLauncher.call(x.phone),
-                icon: const Icon(Iconsax.call, size: 16, color: TripColors.accentDark),
-                label: Text(
-                  '${TripStrings.call} · ${x.name}',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                      fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w600, color: TripColors.accentDark),
-                ),
-                style: OutlinedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  minimumSize: const Size(0, 44),
-                  side: BorderSide(color: TripColors.accent.withValues(alpha: 0.5)),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-              ),
+            TripActionChip(
+              icon: Icons.call_rounded,
+              label: '${TripStrings.call} · ${x.name}',
+              onTap: () => ContactLauncher.call(x.phone),
             ),
           ],
         ],
@@ -446,26 +434,30 @@ class _ProblemBodyState extends State<_ProblemBody> {
     );
   }
 
-  Widget _row(IconData icon, String label, String kind) {
+  Widget _row(String icon, String label, String kind) {
     final busy = _busyKind == kind;
     final otherOpen = kind == TripProblemKinds.other && _otherOpen;
     final selected = otherOpen || _pickerKind == kind;
-    return Material(
-      color: selected ? TripColors.surface : Colors.white,
-      borderRadius: BorderRadius.circular(14),
+    return Container(
+      decoration: BoxDecoration(
+        color: selected ? RepliesTone.accentSurface : DesignColors.surface,
+        borderRadius: _r,
+        boxShadow: _shadow,
+      ),
+      child: Material(
+      color: Colors.transparent,
       child: InkWell(
         onTap: _busyKind == null && !otherOpen ? () => _pick(kind) : null,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: _r,
         child: Container(
           constraints: const BoxConstraints(minHeight: 56),
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: selected ? TripColors.accent : AppColors.divider),
-          ),
+          foregroundDecoration: selected
+              ? BoxDecoration(borderRadius: _r, border: Border.all(color: RepliesTone.accent, width: 1.5))
+              : null,
           child: Row(
             children: [
-              Icon(icon, size: 20, color: AppColors.error),
+              TravelIcon(icon, size: 24),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
@@ -473,20 +465,17 @@ class _ProblemBodyState extends State<_ProblemBody> {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                      fontFamily: 'Poppins', fontSize: 13.5, fontWeight: FontWeight.w600, color: AppColors.textDark),
+                      fontFamily: FitnessAppTheme.fontName, fontSize: 13.5, fontWeight: FontWeight.w600, color: DesignColors.textStrong),
                 ),
               ),
               if (busy && kind != TripProblemKinds.other)
-                const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2, color: TripColors.accent),
-                )
+                const KitDots(color: RepliesTone.accent)
               else
-                const Icon(Icons.chevron_right_rounded, size: 20, color: AppColors.textHint),
+                const Icon(Icons.chevron_right_rounded, size: 20, color: DesignColors.textMuted),
             ],
           ),
         ),
+      ),
       ),
     );
   }

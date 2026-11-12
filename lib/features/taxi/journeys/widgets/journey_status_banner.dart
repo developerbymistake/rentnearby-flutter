@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../../../config/app_colors.dart';
-import '../../taxi_option_sets.dart';
+import 'package:bakhli/design/design.dart';
+import 'package:bakhli/design/extra/trip_plan_look.dart';
 import '../../ways/taxi_ways_strings.dart';
 import '../journey_models.dart';
 
@@ -13,27 +13,16 @@ class JourneyStatusPill extends StatelessWidget {
 
   factory JourneyStatusPill.of(SavedJourney j) {
     final (fg, bg) = switch (j.status) {
-      JourneyStatus.ready => (AppColors.successText, AppColors.successSurface),
-      JourneyStatus.driverUnavailable => (AppColors.warningText, AppColors.warningSurface),
-      JourneyStatus.notAsked => (AppColors.neutralChipText, AppColors.neutralChip),
-      JourneyStatus.completed => (AppColors.neutralChipText, AppColors.neutralChip),
+      JourneyStatus.ready => (TripLook.successText, TripLook.successSurface),
+      JourneyStatus.driverUnavailable => (DesignColors.textPrimary, TripLook.warningSurface),
+      JourneyStatus.notAsked => (TripLook.neutralChipText, TripLook.neutralChip),
+      JourneyStatus.completed => (TripLook.neutralChipText, TripLook.neutralChip),
     };
     return JourneyStatusPill(text: JourneyFormat.statusText(j), color: fg, background: bg);
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(color: background, borderRadius: BorderRadius.circular(999)),
-      child: Text(
-        text,
-        maxLines: 2,
-        overflow: TextOverflow.ellipsis,
-        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: color),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => JourneyPill(text: text, fg: color, bg: background);
 }
 
 class JourneyOfflineBanner extends StatelessWidget {
@@ -44,16 +33,20 @@ class JourneyOfflineBanner extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-      color: AppColors.warningSurface,
-      child: const Row(children: [
-        Icon(Icons.wifi_off_rounded, size: 16, color: AppColors.warningText),
-        SizedBox(width: 8),
+      decoration: BoxDecoration(
+        color: DesignColors.surface,
+        borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(16)),
+        boxShadow: TripKit.shadow(),
+      ),
+      child: Row(children: [
+        const Icon(Icons.wifi_off_rounded, size: 16, color: TripLook.warning),
+        const SizedBox(width: 8),
         Expanded(
           child: Text(
             TaxiWaysStrings.offlineSaved,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.warningText),
+            style: TripKit.text(12, weight: FontWeight.w600, color: DesignColors.textPrimary),
           ),
         ),
       ]),
@@ -84,58 +77,43 @@ class JourneyStatusBanner extends StatelessWidget {
         ? TaxiWaysStrings.pausedNoBackup(leg.driver.driverName)
         : TaxiWaysStrings.pausedBody(leg.driver.driverName, backup.driverName);
     return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppColors.warningSurface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.warning),
-      ),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const Icon(Icons.warning_amber_rounded, size: 20, color: AppColors.warningText),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(
-                TaxiWaysStrings.statusUnavailable(journey.unavailableCount),
-                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.warningText),
+      decoration: journeyBarCard(TripLook.warning),
+      child: ClipRRect(
+        borderRadius: TripLook.softRadius,
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: const BoxDecoration(border: Border(left: BorderSide(color: TripLook.warning, width: 4))),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Icon(Icons.warning_amber_rounded, size: 20, color: TripLook.warning),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(TaxiWaysStrings.statusUnavailable(journey.unavailableCount),
+                      style: FitnessAppTheme.title.copyWith(fontSize: 14)),
+                  const SizedBox(height: 2),
+                  Text(body, style: FitnessAppTheme.caption.copyWith(height: 1.35)),
+                ]),
               ),
-              const SizedBox(height: 2),
-              Text(body, style: const TextStyle(fontSize: 12, height: 1.35, color: AppColors.warningText)),
             ]),
-          ),
-        ]),
-        const SizedBox(height: 10),
-        SizedBox(
-          width: double.infinity,
-          child: backup == null
-              ? OutlinedButton(
-                  style: OutlinedButton.styleFrom(
-                    minimumSize: const Size(0, 44),
-                    foregroundColor: AppColors.warningText,
-                    side: const BorderSide(color: AppColors.warning),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                  onPressed: busy ? null : () => onChange(leg),
-                  child: const Text(TaxiWaysStrings.changeDriver),
-                )
-              : FilledButton(
-                  style: FilledButton.styleFrom(
-                    minimumSize: const Size(0, 44),
-                    backgroundColor: TaxiColors.accentDark,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                  onPressed: busy ? null : () => onReplace(leg, backup),
-                  child: Text(
-                    TaxiWaysStrings.replaceWith(backup.driverName),
-                    maxLines: 2,
-                    textAlign: TextAlign.center,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: backup == null
+                  ? JourneyButton(
+                      label: TaxiWaysStrings.changeDriver,
+                      kind: JourneyButtonKind.outline,
+                      onPressed: busy ? null : () => onChange(leg),
+                    )
+                  : JourneyButton(
+                      label: TaxiWaysStrings.replaceWith(backup.driverName),
+                      maxLines: 2,
+                      onPressed: busy ? null : () => onReplace(leg, backup),
+                    ),
+            ),
+          ]),
         ),
-      ]),
+      ),
     );
   }
 }

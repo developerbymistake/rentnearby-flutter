@@ -1,7 +1,7 @@
 name: bakhli
 description: "Bakhli — Plan your trip."
 publish_to: 'none'
-version: 1.0.0+61
+version: 1.0.0+62
 
 environment:
   sdk: ^3.12.0
@@ -12,6 +12,7 @@ dependencies:
 
   # State management
   get: ^4.6.6
+  animations: ^2.1.1
   collection: ^1.18.0
 
   # HTTP
@@ -109,16 +110,29 @@ flutter:
   assets:
     - assets/images/
     - assets/images/owner_cta/
+    - assets/images/design/fitness_app/
+    - assets/images/design/hotel/
+    - assets/images/design/images/
+    - assets/images/design/design_course/
+    - assets/images/design/introduction_animation/
+    - assets/images/design/travel3d/
     - assets/sounds/
     - assets/map_style.json
     - assets/sprites/
   fonts:
-    - family: Poppins
+    - family: WorkSans
       fonts:
-        - asset: assets/fonts/Poppins-Regular.ttf
-        - asset: assets/fonts/Poppins-Medium.ttf
+        - asset: assets/fonts/WorkSans-Regular.ttf
+        - asset: assets/fonts/WorkSans-Medium.ttf
           weight: 500
-        - asset: assets/fonts/Poppins-SemiBold.ttf
+        - asset: assets/fonts/WorkSans-SemiBold.ttf
           weight: 600
-        - asset: assets/fonts/Poppins-Bold.ttf
+        - asset: assets/fonts/WorkSans-Bold.ttf
+          weight: 700
+    - family: Roboto
+      fonts:
+        - asset: assets/fonts/Roboto-Regular.ttf
+        - asset: assets/fonts/Roboto-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Roboto-Bold.ttf
           weight: 700

@@ -12,10 +12,10 @@ import 'tour_overlay.dart';
 /// until TourController decides to show a step.
 ///
 /// Deliberately reads only the bare top-level Rx vars in app_tour_state.dart
-/// — never Get.find<TourController>() at build time — so this widget is safe
+/// — never Get.find (TourController) at build time — so this widget is safe
 /// to mount before TourController is ever registered (splash/login/before
 /// MainScreen mounts, since TourController is only Get.put inside
-/// MainScreen.initState()). Get.find<TourController>() is only ever called
+/// MainScreen.initState()). Get.find (TourController) is only ever called
 /// lazily, inside the onNext/onSkip tap callbacks below, which can only fire
 /// while a step is actually showing — and a step can only be showing because
 /// TourController itself set it, i.e. it's already registered by then.
@@ -42,6 +42,7 @@ class TourHost extends StatelessWidget {
       final dialog = tourDialogContent.value;
       if (dialog != null) {
         return TourInfoDialog(
+          key: ValueKey('dialog-${dialog.phase}'),
           content: dialog,
           onPrimary: () => dialog.phase == TourDialogPhase.intro
               ? Get.find<TourController>().startTourFromIntro()
@@ -54,6 +55,7 @@ class TourHost extends StatelessWidget {
       final step = currentTourStep.value;
       if (step == null) return const SizedBox.shrink();
       return TourOverlay(
+        key: const ValueKey('tour-overlay'),
         step: step,
         index: tourStepIndex.value,
         total: tourTotalSteps.value,

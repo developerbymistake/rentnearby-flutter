@@ -1,21 +1,18 @@
+import 'package:bakhli/design/design.dart';
 import 'package:flutter/material.dart';
 import 'trip_update_ask_sheet.dart';
-import '../../../config/app_colors.dart';
 import '../../../utils/app_toast.dart';
-import '../../../widgets/gradient_button.dart';
 import '../controllers/trip_plan_controller.dart';
 import '../models/trip_plan_model.dart';
-import '../trip_colors.dart';
 import '../trip_constants.dart';
 import '../trip_strings_v2_plan.dart';
 import 'trip_leg_menu_sheet.dart';
-import 'trip_sheet_frame.dart';
 
 class TripDaysSheet extends StatefulWidget {
   const TripDaysSheet({super.key});
 
   static Future<bool> show(BuildContext context) async {
-    final r = await TripSheetFrame.show<bool>(context, const TripDaysSheet());
+    final r = await SheetFrame.show<bool>(context, builder: (_) => const TripDaysSheet());
     return r == true;
   }
 
@@ -114,17 +111,17 @@ class _TripDaysSheetState extends State<TripDaysSheet> {
   @override
   Widget build(BuildContext context) {
     final total = _total;
-    return TripSheetFrame(
+    return SheetFrame(
       title: TripStringsV2Plan.daysTitle,
-      description: TripStringsV2Plan.daysSub,
-      footer: GradientButton(
+      subtitle: TripStringsV2Plan.daysSub,
+      footer: PrimaryButton(
         label: TripStringsV2Plan.apply,
-        height: 52,
-        isLoading: _busy,
-        gradient: TripColors.gradient,
-        shadowColor: TripColors.accent,
+        tone: KitTone.trip,
+        loading: _busy,
         onPressed: _changed && !_busy ? _apply : null,
       ),
+      child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -135,8 +132,7 @@ class _TripDaysSheetState extends State<TripDaysSheet> {
               child: Text(
                 TripStringsV2Plan.days(total),
                 textAlign: TextAlign.center,
-                style: const TextStyle(
-                    fontFamily: 'Poppins', fontSize: 20, fontWeight: FontWeight.w700, color: TripColors.accentDark),
+                style: TypeTokens.style(24, FontWeight.w700, color: KitTone.trip.accentDark, letterSpacing: 0.2),
               ),
             ),
             _btn(Icons.add_rounded, total < TripConstants.maxDaysCap ? () => _step(1) : null),
@@ -146,7 +142,7 @@ class _TripDaysSheetState extends State<TripDaysSheet> {
         Text(
           TripStringsV2Plan.daysHint(total),
           textAlign: TextAlign.center,
-          style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight),
+          style: TypeTokens.style(12, FontWeight.w400, color: TypeTokens.secondary),
         ),
         if (_alloc.length > 1) ...[
           const SizedBox(height: 14),
@@ -159,17 +155,22 @@ class _TripDaysSheetState extends State<TripDaysSheet> {
         Text(
           total <= _minTotal ? TripStringsV2Plan.daysMinHint(_minTotal) : TripStringsV2Plan.daysLocked,
           textAlign: TextAlign.center,
-          style: const TextStyle(fontFamily: 'Poppins', fontSize: 11.5, color: AppColors.textHint),
+          style: TypeTokens.style(11, FontWeight.w400, color: TypeTokens.secondary),
         ),
       ],
+      ),
     );
   }
 
   Widget _cityRow(int i) {
     final name = _plan.legAt(i + 1)?.cityName ?? '';
     return Container(
-      padding: const EdgeInsets.fromLTRB(14, 6, 6, 6),
-      decoration: BoxDecoration(color: TripColors.surface, borderRadius: BorderRadius.circular(12)),
+      padding: const EdgeInsets.fromLTRB(16, 6, 6, 6),
+      decoration: const BoxDecoration(
+        color: DesignColors.surface,
+        borderRadius: CardRadius.tile,
+        boxShadow: ShadowTokens.elev2,
+      ),
       child: Row(
         children: [
           Expanded(
@@ -177,8 +178,7 @@ class _TripDaysSheetState extends State<TripDaysSheet> {
               name,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                  fontFamily: 'Poppins', fontSize: 13.5, fontWeight: FontWeight.w600, color: AppColors.textDark),
+              style: TypeTokens.style(14, FontWeight.w600, color: DesignColors.textStrong),
             ),
           ),
           _btn(Icons.remove_rounded, _alloc[i] > _min[i] ? () => _stepCity(i, -1) : null),
@@ -187,8 +187,7 @@ class _TripDaysSheetState extends State<TripDaysSheet> {
             child: Text(
               TripStringsV2Plan.days(_alloc[i]),
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                  fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700, color: TripColors.accentDark),
+              style: TypeTokens.style(14, FontWeight.w700, color: KitTone.trip.accentDark),
             ),
           ),
           _btn(Icons.add_rounded, _canGrow(i) ? () => _stepCity(i, 1) : null),
@@ -197,9 +196,5 @@ class _TripDaysSheetState extends State<TripDaysSheet> {
     );
   }
 
-  Widget _btn(IconData icon, VoidCallback? onTap) => IconButton(
-        onPressed: onTap,
-        constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
-        icon: Icon(icon, size: 22, color: onTap == null ? AppColors.textHint : TripColors.accentDark),
-      );
+  Widget _btn(IconData icon, VoidCallback? onTap) => TemplateRoundButton(icon: icon, size: 44, onTap: onTap);
 }

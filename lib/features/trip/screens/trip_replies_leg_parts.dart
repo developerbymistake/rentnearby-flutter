@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:iconsax/iconsax.dart';
-import '../../../config/app_colors.dart';
+import 'package:bakhli/design/design.dart';
+import 'package:bakhli/design/extra/replies_kit.dart';
 import '../../../models/browse_item.dart';
 import '../controllers/trip_plan_controller.dart';
 import '../models/trip_enquiry_model.dart';
@@ -55,17 +55,17 @@ class TripRepliesLegParts {
       padding: const EdgeInsets.only(top: 8),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(color: AppColors.warningSurface, borderRadius: BorderRadius.circular(12)),
+        decoration: BoxDecoration(color: RepliesTone.warnSurface, borderRadius: BorderRadius.circular(8)),
         child: Row(
           children: [
-            const Icon(Iconsax.calendar_remove, size: 16, color: AppColors.warningText),
+            const TravelIcon(TravelIcon.calendar, size: 18),
             const SizedBox(width: 8),
             Expanded(
               child: Text(text,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                      fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.warningText)),
+                      fontFamily: FitnessAppTheme.fontName, fontSize: 12.5, fontWeight: FontWeight.w600, color: RepliesTone.warn)),
             ),
           ],
         ),
@@ -77,5 +77,5 @@ class TripRepliesLegParts {
       maxLines: 1,
       overflow: TextOverflow.ellipsis,
       style: TextStyle(
-          fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white.withValues(alpha: 0.85)));
+          fontFamily: FitnessAppTheme.fontName, fontSize: 12, fontWeight: FontWeight.w600, color: DesignColors.whiteHigh));
 }

@@ -57,8 +57,11 @@ class TripEnquiryRepository {
     return TripEnquiryBatch.fromJson(_data(map), asksLeft: asksLeftOf(res));
   }
 
-  Future<TripEnquiryBatch> create(String tripId, {required int day, required List<String> stayIds, required int nights}) =>
+  Future<TripEnquiryBatch> create(String tripId,
+          {required int day, required List<String> stayIds, required int nights, String? clientRequestId, String? stepKey}) =>
       _batch('/trips/$tripId/enquiries', {
+        'clientRequestId': ?clientRequestId,
+        'stepKey': ?stepKey,
         'kind': TripEnquiryKinds.stay,
         'day': day,
         'listingIds': stayIds,
@@ -67,8 +70,15 @@ class TripEnquiryRepository {
       });
 
   Future<TripEnquiryBatch> createLead(String tripId,
-          {required List<int> days, required List<String> taxiIds, String? pickupTime, String? pickupPlace}) =>
+          {required List<int> days,
+          required List<String> taxiIds,
+          String? pickupTime,
+          String? pickupPlace,
+          String? clientRequestId,
+          String? stepKey}) =>
       _batch('/trips/$tripId/enquiries', {
+        'clientRequestId': ?clientRequestId,
+        'stepKey': ?stepKey,
         'kind': TripEnquiryKinds.taxi,
         'days': days,
         'listingIds': taxiIds,

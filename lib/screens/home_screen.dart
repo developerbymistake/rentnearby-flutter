@@ -1,46 +1,33 @@
-import 'package:animate_do/animate_do.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:iconsax/iconsax.dart';
-import 'package:shimmer/shimmer.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../config/app_colors.dart';
 import '../config/app_constants.dart';
 import '../config/app_insets.dart';
 import '../config/app_routes.dart';
-import '../config/app_shadows.dart';
-import '../config/module_palette.dart';
 import '../controllers/plan_controller.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/chat_controller.dart';
 import '../controllers/home_controller.dart';
 import '../controllers/notification_controller.dart';
 import '../controllers/tab_config_controller.dart';
+import '../design/design.dart';
 import '../config/app_tabs.dart';
 import '../navigation/tour_keys.dart';
 import '../features/jobs/controllers/my_jobs_controller.dart';
-import '../features/jobs/jobs_colors.dart';
 import '../features/stay/setup/stay_flow.dart';
-import '../features/stay/setup/stay_option_sets.dart';
 import '../features/taxi/models/taxi_browse_item.dart';
 import '../features/taxi/setup/taxi_flow.dart';
-import '../features/taxi/taxi_option_sets.dart';
 import '../features/trip/widgets/trip_home_card.dart';
 import '../features/trip/widgets/trip_popular_rail.dart';
 import '../utils/app_toast.dart';
 import '../widgets/home_owner_carousel.dart';
 import '../widgets/home_stay_rail_card.dart';
 import '../widgets/home_taxi_rail_card.dart';
-import '../widgets/icon_motion.dart';
-import '../widgets/listing_grid_card.dart';
 import '../widgets/nearby_item_row.dart';
 import '../widgets/plan_subscription_card.dart';
 
-const _kInstagramGradient = LinearGradient(
-  begin: Alignment.topLeft,
-  end: Alignment.bottomRight,
-  colors: [Color(0xFFF58529), Color(0xFFDD2A7B), Color(0xFF8134AF)],
-);
+const double _railHeight = HomeStayRailCard.railHeight;
+const double _tileHeight = 168;
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -50,154 +37,194 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  static const int _sections = 8;
+  final ScrollController _scroll = ScrollController();
+  final ValueNotifier<double> _barOpacity = ValueNotifier<double>(0);
+  final ValueNotifier<double> _barHeight = ValueNotifier<double>(0);
+  final ValueNotifier<int> _replay = ValueNotifier<int>(0);
+  final GlobalKey _barKey = GlobalKey();
+
   final _home = Get.find<HomeController>();
   final _auth = Get.find<AuthController>();
   final _tabs = Get.find<TabConfigController>();
 
-  // Same "try the app-scheme deep link, fall back to the web URL" idiom as
-  // ProfileScreen._rateApp — instagram:// opens the app directly to the profile if it's
-  // installed; a failed launchUrl (app not installed / scheme unhandled) falls back to the
-  // plain https:// profile page in a browser.
+  @override
+  void initState() {
+    super.initState();
+    _scroll.addListener(() {
+      final o = (_scroll.offset / 24).clamp(0.0, 1.0);
+      if (o != _barOpacity.value) _barOpacity.value = o;
+    });
+  }
+
+  @override
+  void dispose() {
+    _scroll.dispose();
+    _barOpacity.dispose();
+    _barHeight.dispose();
+    _replay.dispose();
+    super.dispose();
+  }
+
+  void _measureBar() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final box = _barKey.currentContext?.findRenderObject();
+      if (!mounted || box is! RenderBox || !box.hasSize) return;
+      if ((box.size.height - _barHeight.value).abs() > 0.5) _barHeight.value = box.size.height;
+    });
+  }
+
+  Future<void> _refresh() async {
+    await _home.reloadDistrict();
+    if (mounted) _replay.value++;
+  }
+
   Future<void> _openInstagram() async {
-    final appUri = Uri.parse('instagram://user?username=${AppConstants.instagramUsername}');
+    final appUri = Uri.parse(
+      'instagram://user?username=${AppConstants.instagramUsername}',
+    );
     if (!await launchUrl(appUri, mode: LaunchMode.externalApplication)) {
       await launchUrl(
-        Uri.parse('https://www.instagram.com/${AppConstants.instagramUsername}'),
+        Uri.parse(
+          'https://www.instagram.com/${AppConstants.instagramUsername}',
+        ),
         mode: LaunchMode.externalApplication,
       );
     }
   }
 
+  double _bottomClear(BuildContext context) {
+    return BarMetrics.bodyBottomOf(context);
+  }
+
+  Widget _gap(double h) => SizedBox(height: h);
+
   @override
   Widget build(BuildContext context) {
+    final inset = AppInsets.topViewPadding(context);
     return Scaffold(
-      backgroundColor: AppColors.scaffoldBg,
-      body: RefreshIndicator(
-        color: AppColors.primary,
-        onRefresh: _home.reloadDistrict,
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: EdgeInsets.only(
-            bottom: 24 + AppInsets.bottomViewPadding(context),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildHero(context),
-              const SizedBox(height: 16),
-              FadeInUp(
-                duration: const Duration(milliseconds: 260),
-                from: 14,
-                child: KeyedSubtree(
-                  key: TourKeys.homeManageListingsCard,
-                  child: const HomeOwnerCarousel(),
-                ),
-              ),
-              _buildPlanNudge(),
-              FadeInUp(
-                duration: const Duration(milliseconds: 260),
-                delay: const Duration(milliseconds: 120),
-                from: 14,
-                child: _buildOwnerQuickActions(),
-              ),
-              const SizedBox(height: 15),
-              FadeInUp(
-                duration: const Duration(milliseconds: 260),
-                delay: const Duration(milliseconds: 150),
-                from: 14,
-                child: _buildTripCard(),
-              ),
-              const SizedBox(height: 15),
-              FadeInUp(
-                duration: const Duration(milliseconds: 260),
-                delay: const Duration(milliseconds: 165),
-                from: 14,
-                child: const TripPopularRail(),
-              ),
-              FadeInUp(
-                duration: const Duration(milliseconds: 260),
-                delay: const Duration(milliseconds: 180),
-                from: 14,
-                child: _buildInstagramCard(),
-              ),
-              const SizedBox(height: 15),
-              FadeInUp(
-                duration: const Duration(milliseconds: 260),
-                delay: const Duration(milliseconds: 220),
-                from: 14,
-                child: _buildListingsSections(),
-              ),
-              FadeInUp(
-                duration: const Duration(milliseconds: 260),
-                delay: const Duration(milliseconds: 260),
-                from: 14,
-                child: _buildRecentlyAddedSection(),
-              ),
-              const SizedBox(height: 20),
-            ],
-          ),
+      backgroundColor: DesignColors.scaffold,
+      body: TabEntrance(
+        tab: AppTabs.home,
+        child: Stack(
+          children: [
+            ValueListenableBuilder<double>(
+              valueListenable: _barHeight,
+              builder: (context, barHeight, _) {
+                final top = (barHeight > 0 ? barHeight : inset + 84) + 8;
+                return RefreshIndicator(
+                  color: DesignColors.primary,
+                  edgeOffset: top - 8,
+                  onRefresh: _refresh,
+                  child: SingleChildScrollView(
+                    controller: _scroll,
+                    physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+                    padding: EdgeInsets.only(top: top, bottom: _bottomClear(context)),
+                    child: StaggerHost(
+                      count: _sections,
+                      replay: _replay,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          StaggerItem(
+                            index: 0,
+                            child: KeyedSubtree(
+                              key: TourKeys.homeManageListingsCard,
+                              child: const HomeOwnerCarousel(),
+                            ),
+                          ),
+                          StaggerItem(index: 1, child: _buildPlanNudge()),
+                          StaggerItem(index: 2, child: _buildOwnerQuickActions()),
+                          StaggerItem(index: 3, child: _buildTripCard()),
+                          _gap(16),
+                          StaggerItem(index: 4, child: const TripPopularRail()),
+                          _gap(8),
+                          StaggerItem(index: 5, child: _buildInstagramCard()),
+                          _gap(16),
+                          StaggerItem(index: 6, child: _buildListingsSections()),
+                          StaggerItem(index: 7, child: _buildRecentlyAddedSection()),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: EntranceOnce(child: _buildTopBar(context)),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  // ── Hero: greeting + notification bell + district-scoped stat cards ────────
-
-  Widget _buildHero(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      decoration: const BoxDecoration(
-        gradient: AppColors.primaryGradient,
-        borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(24),
-          bottomRight: Radius.circular(24),
-        ),
-      ),
-      padding: EdgeInsets.fromLTRB(
-        20,
-        AppInsets.topViewPadding(context) + 14,
-        20,
-        22,
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Obx(() {
-              final name = _auth.profileName.value;
-              final firstName = name.trim().isNotEmpty
-                  ? name.trim().split(' ').first
-                  : 'there';
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Hi, $firstName 👋',
-                    style: const TextStyle(
-                      fontFamily: 'Poppins',
-                      fontSize: 21,
-                      fontWeight: FontWeight.w800,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  const Text(
-                    'Where to next?',
-                    style: TextStyle(
-                      fontFamily: 'Poppins',
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white70,
-                    ),
-                  ),
-                ],
-              );
-            }),
+  Widget _buildTopBar(BuildContext context) {
+    return ValueListenableBuilder<double>(
+      valueListenable: _barOpacity,
+      builder: (BuildContext context, double opacity, Widget? _) {
+        if (opacity == 0) _measureBar();
+        return Container(
+          key: opacity == 0 ? _barKey : null,
+          decoration: BoxDecoration(
+            color: DesignColors.tint(DesignColors.surface, opacity),
+            borderRadius: CardRadius.header,
+            boxShadow: <BoxShadow>[
+              ShadowTokens.tint(DesignColors.shadowBase, ShadowSpec.strong.scaled(opacity)),
+            ],
           ),
-          const SizedBox(width: 12),
-          _buildHeaderIcons(),
-        ],
-      ),
+          child: Padding(
+            padding: EdgeInsets.only(
+              left: KitMetrics.gutter,
+              right: KitMetrics.gutter,
+              top: AppInsets.topViewPadding(context) + 16 - 8.0 * opacity,
+              bottom: 12 - 8.0 * opacity,
+            ),
+            child: _buildHero(context, opacity),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildHero(BuildContext context, double opacity) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Expanded(
+          child: Obx(() {
+            final name = _auth.profileName.value;
+            final firstName = name.trim().isNotEmpty ? name.trim().split(' ').first : 'there';
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Hi, $firstName 👋',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TypeTokens.style(
+                    22 + 6 - 6 * opacity,
+                    FontWeight.w700,
+                    color: DesignColors.textStrong,
+                    letterSpacing: 1.2,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Where to next?',
+                  style: TypeTokens.style(14, FontWeight.w500, color: TypeTokens.secondary, letterSpacing: 0.4),
+                ),
+              ],
+            );
+          }),
+        ),
+        const SizedBox(width: 12),
+        _buildHeaderIcons(),
+      ],
     );
   }
 
@@ -207,13 +234,13 @@ class _HomeScreenState extends State<HomeScreen> {
       mainAxisSize: MainAxisSize.min,
       children: [
         _headerIconButton(
-          icon: Iconsax.notification,
+          icon: 'fitness_app/bell.png',
           unreadCount: Get.find<NotificationController>().unreadCount,
           onTap: () => Get.toNamed(AppRoutes.notifications),
         ),
-        const SizedBox(width: 10),
+        const SizedBox(width: 8),
         _headerIconButton(
-          icon: Iconsax.message,
+          icon: 'travel3d/speech_balloon.png',
           unreadCount: Get.find<ChatController>().unreadCount,
           onTap: () => Get.toNamed(AppRoutes.chatsList),
         ),
@@ -221,71 +248,104 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // Solid white circle (was translucent-on-gradient) so the icon glyph reads
-  // as AppColors.primary instead of white — badge Positioned/Obx logic below
-  // is untouched, still the real unread count, not simplified to a dot.
   Widget _headerIconButton({
-    required IconData icon,
+    required String icon,
     required VoidCallback onTap,
     RxInt? unreadCount,
   }) {
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Container(
-            width: 38,
-            height: 38,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: Colors.white,
-              boxShadow: AppShadows.premium(
-                Colors.black,
-                alpha: 0.12,
-                blur: 8,
-                offset: const Offset(0, 3),
+    return PressScale(
+      child: SizedBox(
+        width: KitMetrics.touch,
+        height: KitMetrics.touch,
+        child: Stack(
+          clipBehavior: Clip.none,
+          alignment: Alignment.center,
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: DesignColors.surfaceAlt,
+                boxShadow: [
+                  ShadowTokens.tint(DesignColors.primary, const ShadowSpec(0.4, Offset(4, 4), 8)),
+                ],
+              ),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  customBorder: const CircleBorder(),
+                  splashColor: DesignColors.splash,
+                  highlightColor: Colors.transparent,
+                  onTap: onTap,
+                  child: Center(
+                    child: Image.asset('assets/images/design/$icon', width: 22, height: 22),
+                  ),
+                ),
               ),
             ),
-            child: Icon(icon, color: AppColors.primary, size: 17),
+            if (unreadCount != null)
+              Positioned(
+                top: 0,
+                right: 0,
+                child: IgnorePointer(
+                  child: Obx(() {
+                    final count = unreadCount.value;
+                    if (count <= 0) return const SizedBox.shrink();
+                    return Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                      constraints: const BoxConstraints(minWidth: 18),
+                      decoration: const BoxDecoration(
+                        color: DesignColors.error,
+                        borderRadius: CardRadius.pill,
+                      ),
+                      child: Text(
+                        count > 99 ? '99+' : '$count',
+                        textAlign: TextAlign.center,
+                        style: TypeTokens.style(11, FontWeight.w700, color: DesignColors.onPrimary),
+                      ),
+                    );
+                  }),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _sectionTitle(String title, {String action = '', VoidCallback? onTap}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: KitMetrics.gutter),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(title, style: TypeTokens.style(16, FontWeight.w700, color: DesignColors.textStrong)),
           ),
-          if (unreadCount != null)
-            Positioned(
-              top: -4,
-              right: -4,
-              child: Obx(() {
-                final count = unreadCount.value;
-                if (count <= 0) return const SizedBox.shrink();
-                return Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 5,
-                    vertical: 1,
+          if (action.isNotEmpty)
+            InkWell(
+              onTap: onTap,
+              borderRadius: CardRadius.chip,
+              splashColor: DesignColors.splash,
+              highlightColor: Colors.transparent,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: KitMetrics.touch),
+                child: Padding(
+                  padding: const EdgeInsets.only(left: 8),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(action, style: TypeTokens.style(14, FontWeight.w600, color: DesignColors.primary)),
+                      const Icon(Icons.chevron_right_rounded, size: 20, color: DesignColors.primary),
+                    ],
                   ),
-                  constraints: const BoxConstraints(minWidth: 16),
-                  decoration: BoxDecoration(
-                    color: AppColors.error,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    count > 99 ? '99+' : '$count',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontFamily: 'Poppins',
-                      fontSize: 9,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
-                    ),
-                  ),
-                );
-              }),
+                ),
+              ),
             ),
         ],
       ),
     );
   }
-
-  // ── Near-you rails: Stays, Taxis ───────────────────────────────────────────
 
   Widget _buildListingsSections() {
     return Obx(() {
@@ -295,9 +355,7 @@ class _HomeScreenState extends State<HomeScreen> {
             title: 'Stays near you',
             tab: AppTabs.stays,
             section: HomeSectionKeys.stays,
-            palette: ModulePalette.stays,
             loading: _home.staysLoading.value,
-            isEmpty: _home.stays.isEmpty,
             rail: () => _buildStaysRail(_home.stays),
           ),
         if (_tabs.isTaxiActive)
@@ -305,17 +363,14 @@ class _HomeScreenState extends State<HomeScreen> {
             title: 'Taxis near you',
             tab: AppTabs.taxi,
             section: HomeSectionKeys.taxis,
-            palette: ModulePalette.taxi,
             loading: _home.taxisLoading.value,
-            isEmpty: _home.taxis.isEmpty,
             rail: () => _buildTaxisRail(_home.taxis),
           ),
       ];
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          for (final rail in rails)
-            Padding(padding: const EdgeInsets.only(bottom: 15), child: rail),
+          for (final rail in rails) Padding(padding: const EdgeInsets.only(bottom: 4), child: rail),
         ],
       );
     });
@@ -323,27 +378,29 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildStaysRail(List<HomeStayModel> items) {
     if (items.isEmpty) {
-      return _emptyRailMessage('No stays listed here yet.', palette: ModulePalette.stays);
+      return _emptyRailMessage('No stays listed here yet.', asset: TravelIcon.stay);
     }
-    return ListView.separated(
-      scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      itemCount: items.length,
-      separatorBuilder: (_, __) => const SizedBox(width: 12),
-      itemBuilder: (_, i) => HomeStayRailCard(stay: items[i]),
+    return SizedBox(
+      height: _railHeight,
+      child: RailReveal(
+        itemCount: items.length,
+        itemBuilder: (_, i) => HomeStayRailCard(stay: items[i]),
+        physics: const BouncingScrollPhysics(),
+      ),
     );
   }
 
   Widget _buildTaxisRail(List<TaxiBrowseItem> items) {
     if (items.isEmpty) {
-      return _emptyRailMessage('No taxis listed here yet.', palette: ModulePalette.taxi, icon: Iconsax.car);
+      return _emptyRailMessage('No taxis listed here yet.', asset: TravelIcon.taxi, tone: KitTone.taxi);
     }
-    return ListView.separated(
-      scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      itemCount: items.length,
-      separatorBuilder: (_, __) => const SizedBox(width: 12),
-      itemBuilder: (_, i) => HomeTaxiRailCard(taxi: items[i]),
+    return SizedBox(
+      height: _railHeight,
+      child: RailReveal(
+        itemCount: items.length,
+        itemBuilder: (_, i) => HomeTaxiRailCard(taxi: items[i]),
+        physics: const BouncingScrollPhysics(),
+      ),
     );
   }
 
@@ -351,196 +408,71 @@ class _HomeScreenState extends State<HomeScreen> {
     required String title,
     required int tab,
     required String section,
-    required ModulePalette palette,
     required bool loading,
-    required bool isEmpty,
     required Widget Function() rail,
   }) {
     final failed = _home.failedSections.contains(section);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  fontFamily: 'Poppins',
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textDark,
-                ),
-              ),
-              GestureDetector(
-                onTap: () => _auth.switchToTab(tab),
-                child: const Text(
-                  'View all',
-                  style: TextStyle(
-                    fontFamily: 'Poppins',
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.accent,
-                  ),
-                ),
-              ),
-            ],
-          ),
+        _sectionTitle(title, action: 'View all', onTap: () => _auth.switchToTab(tab)),
+        const SizedBox(height: 4),
+        SkeletonSwitcher(
+          loading: loading,
+          skeleton: _buildRailSkeleton(),
+          child: failed
+              ? _railErrorMessage(() => _home.reloadSections({section}))
+              : rail(),
         ),
-        const SizedBox(height: 10),
-        if (loading)
-          SizedBox(height: ListingGridCard.height, child: _buildListingShimmerRail())
-        else if (failed)
-          _railErrorMessage(palette, () => _home.reloadSections({section}))
-        else if (isEmpty)
-          rail()
-        else
-          SizedBox(height: ListingGridCard.height, child: rail()),
       ],
     );
   }
 
-  Widget _buildListingShimmerRail() {
-    return ListView.separated(
-      scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      itemCount: 3,
-      separatorBuilder: (_, __) => const SizedBox(width: 12),
-      itemBuilder: (_, __) => Shimmer.fromColors(
-        baseColor: AppColors.shimmerBase,
-        highlightColor: AppColors.shimmerHighlight,
-        child: Container(
-          width: 160,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-          ),
+  Widget _buildRailSkeleton() {
+    return SizedBox(
+      height: _railHeight,
+      child: ListView.separated(
+        physics: const NeverScrollableScrollPhysics(),
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: KitMetrics.gutter),
+        itemCount: 3,
+        separatorBuilder: (_, _) => const SizedBox(width: KitMetrics.cardGap),
+        itemBuilder: (_, _) => Padding(
+          padding: HomeStayRailCard.cellPadding,
+          child: RailCard.skeleton(),
         ),
       ),
     );
   }
 
-  Widget _emptyRailMessage(
-    String text, {
-    ModulePalette palette = ModulePalette.rooms,
-    IconData icon = Icons.home_rounded,
-  }) =>
+  Widget _emptyRailMessage(String text, {String asset = TravelIcon.stay, KitTone tone = KitTone.stay}) =>
       _railMessage(
-        title: 'Nothing here yet',
-        text: text,
-        palette: palette,
-        icon: icon,
-        watermark: Icons.search_rounded,
-      );
-
-  Widget _railErrorMessage(ModulePalette palette, VoidCallback onRetry) => _railMessage(
-        title: "Couldn't load",
-        text: 'Tap to retry',
-        palette: palette,
-        icon: Icons.refresh_rounded,
-        watermark: Icons.cloud_off_rounded,
-        onTap: onRetry,
-      );
-
-  Widget _railMessage({
-    required String title,
-    required String text,
-    required ModulePalette palette,
-    required IconData icon,
-    required IconData watermark,
-    VoidCallback? onTap,
-  }) => Padding(
-    padding: const EdgeInsets.symmetric(horizontal: 20),
-    child: GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-      alignment: Alignment.center,
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.divider),
-        boxShadow: AppShadows.premium(
-          palette.accent,
-          alpha: 0.06,
-          blur: 16,
-          offset: const Offset(0, 6),
+        child: StateCard(
+          title: 'Nothing here yet',
+          message: text,
+          asset: asset,
+          kit: tone,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         ),
-      ),
-      child: Stack(
-        alignment: Alignment.center,
-        clipBehavior: Clip.none,
-        children: [
-          Positioned(
-            right: -8,
-            bottom: -12,
-            child: Icon(
-              watermark,
-              size: 60,
-              color: palette.accentLight.withValues(alpha: 0.08),
-            ),
-          ),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: palette.surface,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(
-                  icon,
-                  color: palette.accentLight,
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Flexible(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontFamily: 'Poppins',
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.textDark,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      text,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontFamily: 'Poppins',
-                        fontSize: 11,
-                        color: AppColors.textLight,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    ),
-    ),
-  );
+      );
 
-  // ── Owner quick actions ─────────────────────────────────────────────────
+  Widget _railErrorMessage(VoidCallback onRetry) => _railMessage(
+        onTap: onRetry,
+        child: const StateCard.error(
+          title: "Couldn't load",
+          message: 'Tap to retry',
+          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        ),
+      );
+
+  Widget _railMessage({required Widget child, VoidCallback? onTap}) => Padding(
+        padding: const EdgeInsets.fromLTRB(KitMetrics.gutter, 4, KitMetrics.gutter, 16),
+        child: SectionTile(
+          onTap: onTap,
+          padding: EdgeInsets.zero,
+          child: SizedBox(width: double.infinity, child: child),
+        ),
+      );
 
   Future<void> _postJob() async {
     if (_auth.user.value?.stayStatus != 'Approved') {
@@ -572,29 +504,19 @@ class _HomeScreenState extends State<HomeScreen> {
         message = days <= 0 ? 'Plan ends today' : 'Plan ends in $days day${days == 1 ? '' : 's'}';
       }
       if (!me.paymentEnabled || message == null) return const SizedBox.shrink();
-      return GestureDetector(
-        onTap: () => Get.toNamed(AppRoutes.plansBilling),
-        child: Container(
-          margin: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-          decoration: BoxDecoration(color: AppColors.warningSurface, borderRadius: BorderRadius.circular(12)),
-          child: Row(children: [
-            const Icon(Icons.schedule_rounded, size: 16, color: AppColors.warningText),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                message,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                    fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.warningText),
-              ),
-            ),
-            Text(action,
-                style: const TextStyle(
-                    fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.warningText)),
-          ]),
+      return SlimBar(
+        title: message,
+        tone: KitTone.taxi,
+        filled: true,
+        margin: const EdgeInsets.fromLTRB(KitMetrics.gutter, 0, KitMetrics.gutter, 12),
+        leading: Container(
+          width: 36,
+          height: 36,
+          decoration: const BoxDecoration(shape: BoxShape.circle, color: DesignColors.whiteSoft),
+          child: const Icon(Icons.schedule_rounded, size: 20, color: DesignColors.onPrimary),
         ),
+        trailing: Text(action, style: TypeTokens.style(12, FontWeight.w700, color: DesignColors.onPrimary)),
+        onTap: () => Get.toNamed(AppRoutes.plansBilling),
       );
     });
   }
@@ -609,11 +531,10 @@ class _HomeScreenState extends State<HomeScreen> {
           KeyedSubtree(
             key: TourKeys.homeQuickActionAddStay,
             child: _ownerQuickActionTile(
-              icon: Icons.add_rounded,
-              gradient: StayColors.gradient,
+              asset: TravelIcon.stay,
+              tone: KitTone.stay,
+              plus: true,
               label: 'Add Stay',
-              motion: IconMotionStyle.pulse,
-              compact: true,
               onTap: StayFlow.start,
             ),
           ),
@@ -621,10 +542,10 @@ class _HomeScreenState extends State<HomeScreen> {
           KeyedSubtree(
             key: TourKeys.homeQuickActionAddTaxi,
             child: _ownerQuickActionTile(
-              icon: Icons.add_rounded,
-              gradient: TaxiColors.gradient,
+              asset: TravelIcon.taxi,
+              tone: KitTone.taxi,
+              plus: true,
               label: 'Add Taxi',
-              motion: IconMotionStyle.pulse,
               onTap: () => TaxiFlow.start(),
             ),
           ),
@@ -632,151 +553,61 @@ class _HomeScreenState extends State<HomeScreen> {
           KeyedSubtree(
             key: TourKeys.homeQuickActionLeads,
             child: _ownerQuickActionTile(
-              icon: Icons.bar_chart_rounded,
-              gradient: AppColors.warningGradient,
+              asset: TravelIcon.checkout,
+              tone: KitTone.rose,
               label: stays ? 'My Stays' : 'My Taxi',
-              motion: IconMotionStyle.grow,
-              compact: stays,
               onTap: () => Get.toNamed(stays ? AppRoutes.myStays : AppRoutes.myTaxi),
             ),
           ),
         if (jobs) ...[
           _ownerQuickActionTile(
-            icon: Iconsax.briefcase,
-            gradient: JobColors.gradient,
+            asset: TravelIcon.pin,
+            tone: KitTone.jobs,
+            plus: true,
             label: 'Post Job',
-            compact: true,
             onTap: _postJob,
           ),
           _ownerQuickActionTile(
-            icon: Iconsax.task_square,
-            gradient: JobColors.gradient,
+            asset: TravelIcon.note,
+            tone: KitTone.jobs,
             label: 'My Jobs',
-            compact: true,
             onTap: () => Get.toNamed(AppRoutes.myJobs),
           ),
         ],
       ];
       if (tiles.isEmpty) return const SizedBox.shrink();
-      return Padding(
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            for (var i = 0; i < tiles.length; i++) ...[
-              if (i > 0) const SizedBox(width: 10),
-              Expanded(child: tiles[i]),
-            ],
-          ],
+      return SizedBox(
+        height: _tileHeight + 24,
+        child: RailReveal(
+          itemCount: tiles.length,
+          physics: const BouncingScrollPhysics(),
+          itemBuilder: (_, i) => Padding(
+            padding: const EdgeInsets.only(top: 4, bottom: 20),
+            child: tiles[i],
+          ),
         ),
       );
     });
   }
 
   Widget _ownerQuickActionTile({
-    required IconData icon,
-    required Gradient gradient,
+    required String asset,
+    required KitTone tone,
     required String label,
     required VoidCallback? onTap,
-    String? badge,
-    IconMotionStyle? motion,
-    bool isLoading = false,
-    bool compact = false,
+    bool plus = false,
   }) {
-    final iconBox = compact ? 46.0 : 52.0;
-    final iconGlyph = isLoading
-        ? const SizedBox(
-            width: 20,
-            height: 20,
-            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-          )
-        : Icon(icon, size: compact ? 23 : 26, color: Colors.white);
-    return GestureDetector(
+    return GradientIconCard(
+      title: label,
+      iconAsset: asset,
+      startColor: tone.gradient.colors.first,
+      endColor: tone.gradient.colors.last,
+      showPlus: plus,
       onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Container(
-        padding: EdgeInsets.symmetric(vertical: 14, horizontal: compact ? 4 : 8),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.divider.withValues(alpha: 0.7)),
-          boxShadow: AppShadows.premium(
-            AppColors.primary,
-            alpha: 0.05,
-            blur: 8,
-            offset: const Offset(0, 2),
-          ),
-        ),
-        child: Stack(
-          clipBehavior: Clip.none,
-          alignment: Alignment.topCenter,
-          children: [
-            Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: iconBox,
-                  height: iconBox,
-                  decoration: BoxDecoration(
-                    gradient: gradient,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.7),
-                      width: 1,
-                    ),
-                  ),
-                  child: Center(
-                    child: motion == null || isLoading
-                        ? iconGlyph
-                        : IconMotion(style: motion, child: iconGlyph),
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  label,
-                  textAlign: TextAlign.center,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontFamily: 'Poppins',
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textDark,
-                  ),
-                ),
-              ],
-            ),
-            if (badge != null)
-              Positioned(
-                top: -4,
-                right: 4,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 5,
-                    vertical: 1.5,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.warning,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    badge,
-                    style: const TextStyle(
-                      fontFamily: 'Poppins',
-                      fontSize: 7,
-                      fontWeight: FontWeight.w800,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-              ),
-          ],
-        ),
-      ),
+      width: 130,
+      height: _tileHeight,
     );
   }
-
-  // ── Recently added stays — newest first ──
 
   Widget _buildRecentlyAddedSection() {
     return Obx(() {
@@ -785,40 +616,28 @@ class _HomeScreenState extends State<HomeScreen> {
       final items = loading ? const <HomeRecentItem>[] : _home.recentMixed();
       final failed = {HomeSectionKeys.recentStays}.where(_home.failedSections.contains).toSet();
 
+      final Widget body;
+      if (items.isEmpty && failed.isNotEmpty) {
+        body = _railErrorMessage(() => _home.reloadSections(failed));
+      } else if (items.isEmpty) {
+        body = _emptyRailMessage('No stays added yet.');
+      } else {
+        body = Column(
+          children: [
+            for (var i = 0; i < items.length; i++) EntranceOnce(index: i, offset: 50, child: _recentRow(items[i])),
+          ],
+        );
+      }
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 20),
-            child: Text(
-              'Recently added stays',
-              style: TextStyle(
-                fontFamily: 'Poppins',
-                fontSize: 15,
-                fontWeight: FontWeight.w700,
-                color: AppColors.textDark,
-              ),
-            ),
+          _sectionTitle('Recently added stays'),
+          const SizedBox(height: 6),
+          SkeletonSwitcher(
+            loading: loading,
+            skeleton: Column(children: [for (var i = 0; i < 3; i++) ListRow.skeleton()]),
+            child: body,
           ),
-          const SizedBox(height: 10),
-          if (loading)
-            _buildRecentlyAddedShimmerList()
-          else if (items.isEmpty && failed.isNotEmpty)
-            _railErrorMessage(ModulePalette.stays, () => _home.reloadSections(failed))
-          else if (items.isEmpty)
-            _emptyRailMessage('No stays added yet.')
-          else
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Column(
-                children: [
-                  for (var i = 0; i < items.length; i++) ...[
-                    if (i > 0) const SizedBox(height: 10),
-                    _recentRow(items[i]),
-                  ],
-                ],
-              ),
-            ),
         ],
       );
     });
@@ -835,8 +654,8 @@ class _HomeScreenState extends State<HomeScreen> {
       caption: s.item.priceCaption,
       value: s.item.priceValue,
       unit: s.item.priceUnit,
-      palette: ModulePalette.stays,
       placeholderIcon: Icons.home_rounded,
+      isFeatured: s.item.isFeatured,
       onTap: () => Get.toNamed(AppRoutes.stayDetail, arguments: {'id': s.item.id}),
     );
   }
@@ -844,91 +663,19 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildTripCard() => const TripHomeCard();
 
   Widget _buildInstagramCard() {
-    return Padding(
+    return KeyedSubtree(
       key: TourKeys.homeInstagramCard,
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: GestureDetector(
+      child: SlimBar(
+        title: 'Follow us on Instagram',
+        tone: KitTone.jobs,
+        filled: true,
+        leadingAsset: TravelIcon.photo,
         onTap: _openInstagram,
-        behavior: HitTestBehavior.opaque,
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            gradient: _kInstagramGradient,
-            borderRadius: BorderRadius.circular(18),
-            boxShadow: AppShadows.premium(
-              const Color(0xFFDD2A7B),
-              alpha: 0.25,
-              blur: 16,
-              offset: const Offset(0, 6),
-            ),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: const Icon(Iconsax.camera, color: Colors.white, size: 22),
-              ),
-              const SizedBox(width: 14),
-              const Expanded(
-                child: Text(
-                  'Follow us on Instagram',
-                  style: TextStyle(
-                    fontFamily: 'Poppins',
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: const Text(
-                  'Follow',
-                  style: TextStyle(
-                    fontFamily: 'Poppins',
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFFDD2A7B),
-                  ),
-                ),
-              ),
-            ],
-          ),
+        trailing: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+          decoration: const BoxDecoration(color: DesignColors.surfaceAlt, borderRadius: CardRadius.pill),
+          child: Text('Follow', style: TypeTokens.style(12, FontWeight.w700, color: KitTone.jobs.accentDark)),
         ),
-      ),
-    );
-  }
-
-  Widget _buildRecentlyAddedShimmerList() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Column(
-        children: [
-          for (var i = 0; i < 3; i++) ...[
-            if (i > 0) const SizedBox(height: 10),
-            Shimmer.fromColors(
-              baseColor: AppColors.shimmerBase,
-              highlightColor: AppColors.shimmerHighlight,
-              child: Container(
-                height: 80,
-                decoration: BoxDecoration(
-                  color: AppColors.cardBg,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-              ),
-            ),
-          ],
-        ],
       ),
     );
   }

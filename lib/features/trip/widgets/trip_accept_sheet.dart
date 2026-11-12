@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:bakhli/features/trip/widgets/trip_ui.dart';
+import 'package:bakhli/design/design.dart';
+import 'package:bakhli/design/extra/replies_kit.dart';
 import 'package:get/get.dart';
-import '../../../config/app_colors.dart';
 import '../../../models/browse_item.dart';
 import '../../../utils/app_toast.dart';
-import '../../../widgets/gradient_button.dart';
 import '../controllers/trip_enquiry_controller.dart';
 import '../controllers/trip_plan_controller.dart';
 import '../models/trip_enquiry_model.dart';
 import '../models/trip_offer_model.dart';
-import '../trip_colors.dart';
 import '../trip_strings.dart';
 import '../utils/trip_format.dart';
 import 'trip_payment_line.dart';
@@ -150,23 +150,14 @@ class _TripAcceptSheetState extends State<TripAcceptSheet> {
     return showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(TripStrings.replaceNight(label, name),
-            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-        content: Text(TripStrings.replaceTold(name),
-            style: const TextStyle(fontSize: 13, color: AppColors.textMedium, height: 1.4)),
+        shape: const RoundedRectangleBorder(borderRadius: RepliesCard.radius),
+        backgroundColor: FitnessAppTheme.white,
+        title: Text(TripStrings.replaceNight(label, name), style: FitnessAppTheme.title),
+        content: Text(TripStrings.replaceTold(name), style: FitnessAppTheme.body2.copyWith(height: 1.4)),
         actionsOverflowButtonSpacing: 4,
         actions: [
-          TextButton(
-            style: TextButton.styleFrom(minimumSize: const Size(64, 48)),
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text(TripStrings.keep, style: TextStyle(color: AppColors.textMedium)),
-          ),
-          TextButton(
-            style: TextButton.styleFrom(minimumSize: const Size(64, 48)),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text(TripStrings.replace, style: TextStyle(color: AppColors.error, fontWeight: FontWeight.w600)),
-          ),
+          TextLink(label: TripStrings.keep, onTap: () => Navigator.pop(ctx, false), tone: KitTone.trip),
+          TextLink(label: TripStrings.replace, onTap: () => Navigator.pop(ctx, true), tone: KitTone.trip),
         ],
       ),
     );
@@ -188,26 +179,29 @@ class _TripAcceptSheetState extends State<TripAcceptSheet> {
         description: old == null ? null : TripStrings.acceptNewPriceBody(BrowseItem.inr(old), BrowseItem.inr(offer.total)),
         footer: const TripPaymentLine(),
         children: [
+          TemplateStagger(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
           _row(TripStrings.stay, enq.listingName),
           if (dates != null) _row(TripStrings.dates, nights > 0 ? '$dates · ${TripStrings.nights(nights)}' : dates),
           _row(TripStrings.total, BrowseItem.inr(offer.total), strong: true),
           if (advance != null && advance > 0) _row(TripStrings.advance, BrowseItem.inr(advance)),
           const SizedBox(height: 12),
-          GradientButton(
+          TripButton(
             onPressed: _busy ? null : _submit,
             label: TripStrings.acceptNewPrice,
-            isLoading: _busy,
+            loading: _busy,
             height: 52,
-            gradient: TripColors.gradient,
-            shadowColor: TripColors.accent,
           ),
           if (_error != null) ...[
             const SizedBox(height: 8),
             Text(_error!,
                 maxLines: 3,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.error)),
+                style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, fontWeight: FontWeight.w600, color: RepliesTone.bad)),
           ],
+            ],
+          ),
         ],
       );
     }
@@ -218,6 +212,9 @@ class _TripAcceptSheetState extends State<TripAcceptSheet> {
           : TripStrings.replaceFor(target.row.listingName, TripStrings.night(target.day)),
       description: target == null ? null : TripStrings.replaceTold(target.row.listingName),
       children: [
+        TemplateStagger(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
         _row(TripStrings.stay, enq.listingName),
         if (dates != null) _row(TripStrings.dates, nights > 0 ? '$dates · ${TripStrings.nights(nights)}' : dates),
         _row(TripStrings.total, BrowseItem.inr(offer.total), strong: true),
@@ -229,27 +226,26 @@ class _TripAcceptSheetState extends State<TripAcceptSheet> {
           child: ConstrainedBox(
             constraints: const BoxConstraints(minHeight: 48),
             child: Row(children: [
-              Checkbox(
-                value: _tell,
-                activeColor: TripColors.accent,
-                materialTapTargetSize: MaterialTapTargetSize.padded,
-                onChanged: _busy ? null : (v) => setState(() => _tell = v ?? false),
+              Padding(
+                padding: const EdgeInsets.all(12),
+                child: Icon(_tell ? Icons.check_box : Icons.check_box_outline_blank,
+                    color: _tell ? RepliesTone.accent : FitnessAppTheme.grey.withValues(alpha: Alpha.strong)),
               ),
               const Expanded(
                 child: Text(TripStrings.tellOtherStays,
-                    style: TextStyle(fontSize: 13, color: AppColors.textDark, height: 1.35)),
+                    style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 13, color: FitnessAppTheme.darkerText, height: 1.35)),
               ),
             ]),
           ),
         ),
         const SizedBox(height: 12),
-        GradientButton(
+        TripButton(
           onPressed: _busy ? null : _submit,
           label: TripStrings.acceptOffer,
-          isLoading: _busy,
+          loading: _busy,
           height: 52,
-          gradient: TripColors.gradient,
-          shadowColor: TripColors.accent,
+        ),
+          ],
         ),
       ],
       footer: const TripPaymentLine(),
@@ -259,7 +255,7 @@ class _TripAcceptSheetState extends State<TripAcceptSheet> {
   Widget _row(String k, String v, {bool strong = false}) => Padding(
         padding: const EdgeInsets.only(bottom: 10),
         child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(k, style: const TextStyle(fontSize: 12.5, color: AppColors.textLight)),
+          Text(k, style: FitnessAppTheme.caption.copyWith(fontSize: 12.5)),
           const SizedBox(width: 12),
           Expanded(
             child: strong
@@ -268,14 +264,14 @@ class _TripAcceptSheetState extends State<TripAcceptSheet> {
                     child: FittedBox(
                       fit: BoxFit.scaleDown,
                       child: Text(v,
-                          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: AppColors.textDark)),
+                          style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 20, fontWeight: FontWeight.w700, color: RepliesTone.accent)),
                     ),
                   )
                 : Text(v,
                     textAlign: TextAlign.end,
                     maxLines: 3,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                    style: FitnessAppTheme.body2.copyWith(fontWeight: FontWeight.w600, color: FitnessAppTheme.darkerText)),
           ),
         ]),
       );

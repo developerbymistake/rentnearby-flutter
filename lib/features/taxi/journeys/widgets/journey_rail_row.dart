@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../../../config/app_colors.dart';
+import 'package:bakhli/design/design.dart';
+import 'package:bakhli/design/extra/trip_plan_look.dart';
 
 class JourneyRailRow extends StatelessWidget {
   final Widget marker;
@@ -36,18 +37,7 @@ class JourneyDot extends StatelessWidget {
   const JourneyDot({super.key, required this.color});
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 22,
-      height: 22,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: color,
-        border: Border.all(color: Colors.white, width: 3),
-        boxShadow: [BoxShadow(color: color, spreadRadius: 2)],
-      ),
-    );
-  }
+  Widget build(BuildContext context) => JourneyDotMark(color: color);
 }
 
 class JourneyChangeDot extends StatelessWidget {
@@ -60,10 +50,11 @@ class JourneyChangeDot extends StatelessWidget {
       height: 28,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: AppColors.warningSurface,
-        border: Border.all(color: AppColors.warning, width: 2),
+        color: DesignColors.surface,
+        border: Border.all(color: TripLook.warning, width: 2),
+        boxShadow: ShadowTokens.elev1,
       ),
-      child: const Icon(Icons.swap_horiz_rounded, size: 16, color: AppColors.warningText),
+      child: const Icon(Icons.swap_horiz_rounded, size: 16, color: TripLook.warning),
     );
   }
 }
@@ -81,26 +72,15 @@ class JourneyStop extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Wrap(spacing: 6, runSpacing: 4, crossAxisAlignment: WrapCrossAlignment.center, children: [
-          Text(
-            title,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textDark),
-          ),
+          Text(title, maxLines: 2, overflow: TextOverflow.ellipsis, style: FitnessAppTheme.title.copyWith(fontSize: 15)),
           if (tag != null)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-              decoration: BoxDecoration(color: AppColors.warningSurface, borderRadius: BorderRadius.circular(999)),
-              child: Text(tag!, style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: AppColors.warningText)),
-            ),
+            JourneyPill(text: tag!, fg: DesignColors.textPrimary, bg: TripLook.warningSurface, fontSize: 11, maxLines: 1),
         ]),
         if (subtitle != null)
-          Text(
-            subtitle!,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textLight),
-          ),
+          Text(subtitle!,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: FitnessAppTheme.caption.copyWith(fontSize: 11.5, fontWeight: FontWeight.w600)),
       ]),
     );
   }

@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:iconsax/iconsax.dart';
-import '../../../config/app_colors.dart';
-import '../../stay/setup/stay_option_sets.dart';
-import '../../taxi/taxi_option_sets.dart';
+import 'package:bakhli/design/extra/trip_plan_look.dart';
+import 'package:bakhli/design/extra/travel_icon.dart';
+import 'package:bakhli/design/template/fitness_app_theme.dart';
 import '../models/trip_enquiry_model.dart';
-import '../trip_colors.dart';
 import '../trip_strings_mcc_a2.dart';
 import '../utils/trip_enquiry_rules.dart';
 
@@ -36,26 +34,39 @@ class TripWrongCityStrip extends StatelessWidget {
         : TripStringsMccA2.nightInCity(info.firstWrongDay, info.dayCity);
   }
 
-  Widget _action(String label, VoidCallback onTap) => TextButton(
-        onPressed: onTap,
-        style: TextButton.styleFrom(
-          minimumSize: const Size(44, 44),
-          padding: const EdgeInsets.symmetric(horizontal: 10),
-          tapTargetSize: MaterialTapTargetSize.padded,
-        ),
-        child: Text(
-          label,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(
-              fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w700, color: TripStatusColors.failed),
+  static const BorderRadius _denseRadius = BorderRadius.only(
+    topLeft: Radius.circular(8),
+    topRight: Radius.circular(16),
+    bottomLeft: Radius.circular(8),
+    bottomRight: Radius.circular(8),
+  );
+
+  Widget _action(String label, VoidCallback onTap) => InkWell(
+        onTap: onTap,
+        splashColor: Colors.transparent,
+        highlightColor: Colors.transparent,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            child: Center(
+              widthFactor: 1,
+              heightFactor: 1,
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                    fontFamily: FitnessAppTheme.fontName, fontSize: 12, fontWeight: FontWeight.w700, color: TripLook.error),
+              ),
+            ),
+          ),
         ),
       );
 
   @override
   Widget build(BuildContext context) {
     final taxi = enquiry.isTaxi;
-    final kindColor = taxi ? TaxiColors.accent : StayColors.accent;
     final name = enquiry.listingName;
     final line = lineOf(enquiry, info);
     final actions = [
@@ -64,18 +75,14 @@ class TripWrongCityStrip extends StatelessWidget {
     ];
     return Container(
       margin: EdgeInsets.only(top: dense ? 6 : 8),
-      decoration: BoxDecoration(
-        color: TripStatusColors.failedSurface,
-        borderRadius: BorderRadius.circular(dense ? 10 : 12),
-        border: Border.all(color: TripStatusColors.failed.withValues(alpha: 0.35)),
-      ),
+      decoration: TripLook.card(color: TripLook.errorSurface, radius: dense ? _denseRadius : TripLook.softRadius),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(dense ? 9 : 11),
+        borderRadius: dense ? _denseRadius : TripLook.softRadius,
         child: IntrinsicHeight(
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Container(width: 4, color: TripStatusColors.failed),
+              Container(width: 4, color: TripLook.error),
               Expanded(
                 child: Padding(
                   padding: EdgeInsets.fromLTRB(10, dense ? 6 : 8, 6, actions.isEmpty ? (dense ? 6 : 8) : 0),
@@ -85,20 +92,18 @@ class TripWrongCityStrip extends StatelessWidget {
                     children: [
                       Row(
                         children: [
-                          Icon(taxi ? Iconsax.car : Iconsax.building_4, size: 14, color: kindColor),
+                          TravelIcon(taxi ? TravelIcon.taxi : TravelIcon.stay, size: 16),
                           const SizedBox(width: 6),
-                          const Icon(Iconsax.warning_2, size: 14, color: TripStatusColors.failed),
-                          const SizedBox(width: 4),
                           const Expanded(
                             child: Text(
                               TripStringsMccA2.wrongCityNow,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
-                                  fontFamily: 'Poppins',
+                                  fontFamily: FitnessAppTheme.fontName,
                                   fontSize: 12,
                                   fontWeight: FontWeight.w700,
-                                  color: AppColors.errorText),
+                                  color: TripLook.errorText),
                             ),
                           ),
                         ],
@@ -108,7 +113,7 @@ class TripWrongCityStrip extends StatelessWidget {
                         name.isEmpty || dense ? line : '$name · $line',
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontFamily: 'Poppins', fontSize: 11.5, color: AppColors.errorText),
+                        style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 11.5, color: TripLook.errorText),
                       ),
                       if (actions.isNotEmpty)
                         Align(

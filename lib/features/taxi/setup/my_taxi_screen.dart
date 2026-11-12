@@ -1,17 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:iconsax/iconsax.dart';
-import 'package:shimmer/shimmer.dart';
-import '../../../config/app_colors.dart';
 import '../../../config/app_insets.dart';
 import '../../../config/app_routes.dart';
+import '../../../design/design.dart';
+import '../../../design/extra/taxi_setup_kit.dart';
 import '../../../models/browse_item.dart';
 import '../../../services/listing_share_service.dart';
 import '../../../utils/app_toast.dart';
-import '../../../widgets/app_loading_overlay.dart';
+import '../../../widgets/notification_off_banner.dart';
 import '../../../widgets/plan_cap_strip.dart';
-import '../../../widgets/gradient_button.dart';
 import '../../stay/stay_strings_fin_c1.dart';
 import '../leads/trip_leads_controller.dart';
 import '../models/taxi_owner_model.dart';
@@ -25,10 +23,20 @@ class MyTaxiScreen extends StatefulWidget {
   State<MyTaxiScreen> createState() => _MyTaxiScreenState();
 }
 
-class _MyTaxiScreenState extends State<MyTaxiScreen> with WidgetsBindingObserver {
+class _MyTaxiScreenState extends State<MyTaxiScreen> with WidgetsBindingObserver, TickerProviderStateMixin {
   final _ctrl = TaxiSetupController.ensure();
   final _isSharing = false.obs;
   final _leads = TripLeadsController.ensure();
+  late final AnimationController _anim = SetupKit.controller(this);
+  bool _played = false;
+
+  void _playOnce() {
+    if (_played) return;
+    _played = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) SetupKit.play(_anim, context);
+    });
+  }
 
   @override
   void initState() {
@@ -41,6 +49,7 @@ class _MyTaxiScreenState extends State<MyTaxiScreen> with WidgetsBindingObserver
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _anim.dispose();
     super.dispose();
   }
 
@@ -79,74 +88,65 @@ class _MyTaxiScreenState extends State<MyTaxiScreen> with WidgetsBindingObserver
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Obx(() => AppLoadingOverlay(
-            isLoading: _ctrl.isSaving.value || _isSharing.value,
-            message: _isSharing.value ? 'Sharing...' : 'Updating...',
-            indicatorColor: TaxiColors.accent,
-            child: Column(children: [
-              _header(),
-              PlanCapStrip(accent: TaxiColors.accent, icon: Icons.workspace_premium_rounded, showUsage: false),
-              Expanded(
-                child: Obx(() {
-                  final loading = _ctrl.isLoading.value;
-                  final loaded = _ctrl.hasLoaded.value;
-                  final failed = _ctrl.loadFailed.value;
-                  final taxi = _ctrl.taxi.value;
-                  if (!loaded && loading) return _shimmer();
-                  return RefreshIndicator(
-                    color: TaxiColors.accent,
-                    onRefresh: _ctrl.load,
-                    child: ListView(
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + AppInsets.bottomViewPadding(context)),
-                      children: [
-                        if (failed && taxi == null)
-                          _error()
-                        else if (taxi == null)
-                          _empty()
-                        else ...[
-                          Builder(builder: (ctx) => Obx(() => _card(ctx, taxi))),
-                          if (!taxi.isPendingReview)
-                            Center(
-                              child: TextButton.icon(
-                                onPressed: _openSetup,
-                                icon: const Icon(Iconsax.edit_2, size: 16, color: TaxiColors.accentDark),
-                                label: const Text(StayFinStrings.editSetup,
-                                    style: TextStyle(
-                                        fontFamily: 'Poppins', fontWeight: FontWeight.w600, color: TaxiColors.accentDark)),
-                              ),
-                            ),
-                        ],
-                      ],
+      backgroundColor: FitnessAppTheme.background,
+      body: Stack(children: [
+        Column(children: [
+          ModuleHeader(
+            title: StayFinStrings.myTaxi,
+            subtitle: StayFinStrings.manageListing,
+            tone: KitTone.taxi,
+            onBack: () => Get.back(),
+          ),
+          PlanCapStrip(accent: PickKit.taxi, icon: Icons.workspace_premium_rounded, showUsage: false),
+          const NotificationOffBanner(),
+          Expanded(
+            child: Obx(() {
+              final loading = _ctrl.isLoading.value;
+              final loaded = _ctrl.hasLoaded.value;
+              final failed = _ctrl.loadFailed.value;
+              final taxi = _ctrl.taxi.value;
+              if (!loaded && loading) return _skeleton();
+              _playOnce();
+              final items = <Widget>[
+                if (failed && taxi == null)
+                  _error()
+                else if (taxi == null)
+                  _empty()
+                else ...[
+                  Builder(builder: (ctx) => Obx(() => _card(ctx, taxi))),
+                  if (!taxi.isPendingReview)
+                    Center(
+                      child: TextButton.icon(
+                        onPressed: _openSetup,
+                        icon: const Icon(Icons.edit_outlined, size: 16, color: FitnessAppTheme.nearlyDarkBlue),
+                        label: Text(StayFinStrings.editSetup,
+                            style: TripKit.text(14, weight: FontWeight.w600, color: FitnessAppTheme.nearlyDarkBlue)),
+                      ),
                     ),
-                  );
-                }),
-              ),
-            ]),
-          )),
+                ],
+              ];
+              return RefreshIndicator(
+                color: FitnessAppTheme.nearlyDarkBlue,
+                backgroundColor: FitnessAppTheme.white,
+                onRefresh: _ctrl.load,
+                child: ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: EdgeInsets.fromLTRB(KitMetrics.gutter, 16, KitMetrics.gutter, 16 + AppInsets.bottomViewPadding(context)),
+                  children: [
+                    for (var i = 0; i < items.length; i++)
+                      SetupEntrance(controller: _anim, index: i, count: items.length, child: items[i]),
+                  ],
+                ),
+              );
+            }),
+          ),
+        ]),
+        Obx(() => _ctrl.isSaving.value || _isSharing.value
+            ? SetupBusy(message: _isSharing.value ? 'Sharing...' : 'Updating...')
+            : const SizedBox.shrink()),
+      ]),
     );
   }
-
-  Widget _header() => Container(
-        decoration: const BoxDecoration(gradient: TaxiColors.gradient),
-        child: SafeArea(
-          bottom: false,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(4, 8, 20, 20),
-            child: Row(children: [
-              IconButton(
-                onPressed: () => Get.back(),
-                icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white),
-              ),
-              const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(StayFinStrings.myTaxi,
-                    style: TextStyle(fontFamily: 'Poppins', fontSize: 24, fontWeight: FontWeight.w700, color: Colors.white)),
-                Text(StayFinStrings.manageListing, style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: Colors.white70)),
-              ]),
-            ]),
-          ),
-        ),
-      );
 
   Widget _card(BuildContext ctx, TaxiOwnerModel t) => TaxiOwnerCard(
         taxi: t,
@@ -171,57 +171,27 @@ class _MyTaxiScreenState extends State<MyTaxiScreen> with WidgetsBindingObserver
         onLocalRate: _openSetup,
       );
 
-  Widget _empty() => Padding(
-        padding: const EdgeInsets.only(top: 80),
-        child: Column(children: [
-          Container(
-            width: 90,
-            height: 90,
-            decoration: const BoxDecoration(color: TaxiColors.surface, shape: BoxShape.circle),
-            child: const Icon(Iconsax.car, size: 40, color: TaxiColors.accent),
-          ),
-          const SizedBox(height: 20),
-          const Text(StayFinStrings.noTaxiYet,
-              style: TextStyle(fontFamily: 'Poppins', fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-          const SizedBox(height: 8),
-          const Text(StayFinStrings.listTaxiSteps, style: TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textLight)),
-          const SizedBox(height: 24),
-          SizedBox(
-            width: 220,
-            child: GradientButton(
-              onPressed: _openSetup,
-              label: StayFinStrings.setUpTaxi,
-              gradient: TaxiColors.gradient,
-              shadowColor: TaxiColors.accent,
-            ),
-          ),
-        ]),
+  Widget _empty() => StateCard(
+        asset: TravelIcon.taxi,
+        title: StayFinStrings.noTaxiYet,
+        message: StayFinStrings.listTaxiSteps,
+        kit: KitTone.taxi,
+        actionLabel: StayFinStrings.setUpTaxi,
+        onAction: _openSetup,
+        padding: const EdgeInsets.fromLTRB(32, 48, 32, 24),
       );
 
-  Widget _error() => Padding(
-        padding: const EdgeInsets.only(top: 80),
-        child: Column(children: [
-          const Text(StayFinStrings.couldNotLoadTaxi,
-              style: TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textMedium)),
-          const SizedBox(height: 10),
-          TextButton(
-            onPressed: _ctrl.load,
-            child: const Text(StayFinStrings.tryAgain,
-                style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, color: TaxiColors.accentDark)),
-          ),
-        ]),
+  Widget _error() => StateCard.error(
+        title: StayFinStrings.couldNotLoadTaxi,
+        kit: KitTone.taxi,
+        actionLabel: StayFinStrings.tryAgain,
+        onAction: _ctrl.load,
+        padding: const EdgeInsets.fromLTRB(32, 48, 32, 24),
       );
 
-  Widget _shimmer() => Padding(
-        padding: const EdgeInsets.all(16),
-        child: Shimmer.fromColors(
-          baseColor: AppColors.shimmerBase,
-          highlightColor: AppColors.shimmerHighlight,
-          child: Container(
-            height: 260,
-            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
-          ),
-        ),
+  Widget _skeleton() => Padding(
+        padding: const EdgeInsets.all(KitMetrics.gutter),
+        child: OwnerListingCard.skeleton(margin: EdgeInsets.zero),
       );
 
   Future<void> _setAvailable(bool available) async {
@@ -236,52 +206,29 @@ class _MyTaxiScreenState extends State<MyTaxiScreen> with WidgetsBindingObserver
     }
     if (_ctrl.isSaving.value) return;
     final fareCtrl = TextEditingController(text: '${route.fare}');
-    final fare = await showModalBottomSheet<int>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+    final fare = await SetupKit.sheet<int>(
+      context,
       builder: (sheetCtx) => Padding(
         padding: EdgeInsets.fromLTRB(
-            20, 12, 20, MediaQuery.of(sheetCtx).viewInsets.bottom + AppInsets.bottomViewPadding(sheetCtx) + 16),
+            20, 0, 20, MediaQuery.of(sheetCtx).viewInsets.bottom + AppInsets.bottomViewPadding(sheetCtx) + 16),
         child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Center(
-            child: Container(
-              width: 40,
-              height: 4,
-              margin: const EdgeInsets.only(bottom: 16),
-              decoration: BoxDecoration(color: AppColors.divider, borderRadius: BorderRadius.circular(2)),
-            ),
-          ),
-          const Text('Edit fare',
-              style: TextStyle(fontFamily: 'Poppins', fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+          SetupKit.grabber(),
+          Text('Edit fare', style: TripKit.text(18, weight: FontWeight.w700).copyWith(letterSpacing: 0.27)),
           const SizedBox(height: 4),
           Text('${route.fromName} → ${route.toName} · ${TaxiOptionSets.tripLabel(route.tripType)}',
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
+              maxLines: 2, overflow: TextOverflow.ellipsis, style: TripKit.text(12, color: FitnessAppTheme.grey)),
           const SizedBox(height: 12),
           TextField(
             controller: fareCtrl,
             autofocus: true,
+            cursorColor: FitnessAppTheme.nearlyDarkBlue,
             keyboardType: TextInputType.number,
             inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(7)],
-            style: const TextStyle(fontFamily: 'Poppins', fontSize: 14),
-            decoration: InputDecoration(
-              prefixText: '₹ ',
-              prefixStyle:
-                  const TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textDark, fontWeight: FontWeight.w500),
-              filled: true,
-              fillColor: TaxiColors.surface,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-              enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.divider)),
-              focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: TaxiColors.accent, width: 1.5)),
-            ),
+            style: SetupKit.fieldText(),
+            decoration: SetupKit.input(prefix: '₹ '),
           ),
           const SizedBox(height: 16),
-          GradientButton(
+          PickButton(
             onPressed: () {
               final text = fareCtrl.text.trim();
               if (text.isEmpty) {
@@ -296,8 +243,8 @@ class _MyTaxiScreenState extends State<MyTaxiScreen> with WidgetsBindingObserver
               Navigator.pop(sheetCtx, v);
             },
             label: 'Save',
-            gradient: TaxiColors.gradient,
-            shadowColor: TaxiColors.accent,
+            gradient: PickKit.taxiGradient,
+            shadowColor: PickKit.taxiDark,
           ),
         ]),
       ),
@@ -307,34 +254,16 @@ class _MyTaxiScreenState extends State<MyTaxiScreen> with WidgetsBindingObserver
     if (ok) AppToast.success('Fare updated');
   }
 
-  void _confirmDelete() {
+  Future<void> _confirmDelete() async {
     if (_ctrl.isSaving.value) return;
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Delete taxi?', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
-        content: const Text('Your taxi, routes and plate photo will be deleted.', style: TextStyle(fontFamily: 'Poppins')),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel', style: TextStyle(fontFamily: 'Poppins', color: AppColors.textLight)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.error,
-              foregroundColor: Colors.white,
-              minimumSize: Size.zero,
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-            ),
-            onPressed: () {
-              Navigator.pop(ctx);
-              _ctrl.deleteTaxi();
-            },
-            child: const Text('Delete', style: TextStyle(fontFamily: 'Poppins')),
-          ),
-        ],
-      ),
+    final ok = await showTaxiDialog(
+      context,
+      title: 'Delete taxi?',
+      body: 'Your taxi, routes and plate photo will be deleted.',
+      cancelLabel: 'Cancel',
+      confirmLabel: 'Delete',
+      destructive: true,
     );
+    if (ok == true) _ctrl.deleteTaxi();
   }
 }

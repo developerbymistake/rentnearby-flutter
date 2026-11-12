@@ -1,8 +1,6 @@
-import 'package:cached_network_image/cached_network_image.dart';
+import 'trip_ui.dart';
+import 'package:bakhli/design/design.dart';
 import 'package:flutter/material.dart';
-import 'package:iconsax/iconsax.dart';
-import 'package:shimmer/shimmer.dart';
-import '../../../config/app_colors.dart';
 import '../../../models/browse_item.dart';
 import '../../stay/models/stay_nearby_model.dart';
 import '../../stay/setup/stay_option_sets.dart';
@@ -13,6 +11,8 @@ import '../trip_strings_fin_b1.dart';
 import '../trip_strings_v2_find.dart';
 import '../utils/trip_format.dart';
 import '../utils/trip_stay_rank.dart';
+import '../trip_strings_shortlist.dart';
+import 'trip_shortlist_toggle.dart';
 import 'trip_status.dart';
 
 class TripStayRow extends StatelessWidget {
@@ -27,6 +27,10 @@ class TripStayRow extends StatelessWidget {
     this.onCall,
     this.onAsk,
     this.fit,
+    this.onShortlist,
+    this.shortlisted = false,
+    this.shortlistBusy = false,
+    this.noReply = false,
   });
 
   final StayNearbyModel stay;
@@ -38,14 +42,24 @@ class TripStayRow extends StatelessWidget {
   final VoidCallback onOpen;
   final VoidCallback? onCall;
   final VoidCallback? onAsk;
+  final VoidCallback? onShortlist;
+  final bool shortlisted;
+  final bool shortlistBusy;
+  final bool noReply;
 
-  static const double thumb = 56;
+  static const double thumb = 88;
   static const double actionHeight = 56;
 
   static String? quoteLine(StayNearbyModel s, TripStayFit? f) {
-    final lines = f == null || f.fits != true ? const <TripStayQuoteLine>[] : f.quoteLines;
+    final lines = f == null || f.fits != true
+        ? const <TripStayQuoteLine>[]
+        : f.quoteLines;
     if (lines.isEmpty) return typeLine(s);
-    final rooms = [for (final l in lines) if (l.units > 0 && l.roomName.trim().isNotEmpty) TripStringsAlgoAa.quoteLine(l.roomName.trim(), l.units)];
+    final rooms = [
+      for (final l in lines)
+        if (l.units > 0 && l.roomName.trim().isNotEmpty)
+          TripStringsAlgoAa.quoteLine(l.roomName.trim(), l.units),
+    ];
     if (rooms.isEmpty) return typeLine(s);
     final type = s.stayTypeName?.trim() ?? '';
     return [if (type.isNotEmpty) type, rooms.join(' + ')].join(' · ');
@@ -54,10 +68,16 @@ class TripStayRow extends StatelessWidget {
   static String? typeLine(StayNearbyModel s) {
     final room = s.bestRoomName?.trim() ?? '';
     final guests = room.isNotEmpty ? s.bestRoomGuests : s.maxGuests;
-    final guestsText = guests != null && guests > 0 ? TripStringsA2.guests(guests) : null;
+    final guestsText = guests != null && guests > 0
+        ? TripStringsA2.guests(guests)
+        : null;
     final parts = [
-      if (s.stayTypeName != null && s.stayTypeName!.trim().isNotEmpty) s.stayTypeName!.trim(),
-      if (room.isNotEmpty) TripStringsFinB1.roomLine(room, guestsText) else ?guestsText,
+      if (s.stayTypeName != null && s.stayTypeName!.trim().isNotEmpty)
+        s.stayTypeName!.trim(),
+      if (room.isNotEmpty)
+        TripStringsFinB1.roomLine(room, guestsText)
+      else
+        ?guestsText,
     ];
     return parts.isEmpty ? null : parts.join(' · ');
   }
@@ -70,7 +90,8 @@ class TripStayRow extends StatelessWidget {
     return v;
   }
 
-  static String _checkIn(String hhmm) => TripFormat.time12(hhmm).replaceFirst(':00 ', ' ');
+  static String _checkIn(String hhmm) =>
+      TripFormat.time12(hhmm).replaceFirst(':00 ', ' ');
 
   static String? factsLine(StayNearbyModel s) {
     final meals = (s.meals ?? '')
@@ -83,7 +104,8 @@ class TripStayRow extends StatelessWidget {
     final time = s.checkInTime;
     final parts = [
       ...meals,
-      if (time != null && time.trim().isNotEmpty) TripStringsA2.checkIn(_checkIn(time.trim())),
+      if (time != null && time.trim().isNotEmpty)
+        TripStringsA2.checkIn(_checkIn(time.trim())),
     ];
     return parts.isEmpty ? null : parts.join(' · ');
   }
@@ -92,73 +114,48 @@ class TripStayRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Opacity(
-      opacity: _paused ? 0.6 : 1,
-      child: Container(
-        margin: const EdgeInsets.only(top: 12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.divider),
-          boxShadow: [
-            BoxShadow(
-              color: StayColors.accent.withValues(alpha: 0.05),
-              blurRadius: 8,
-              offset: const Offset(0, 4),
-            ),
-          ],
+    final actions = _actions(context);
+    return EntranceOnce(
+      child: Padding(
+      padding: const EdgeInsets.only(top: 12),
+      child: DecoratedBox(
+        decoration: const BoxDecoration(
+          color: DesignColors.surface,
+          borderRadius: CardRadius.tile,
+          boxShadow: ShadowTokens.elev2,
         ),
         child: Material(
           color: Colors.transparent,
-          borderRadius: BorderRadius.circular(15),
+          borderRadius: CardRadius.tile,
           clipBehavior: Clip.antiAlias,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               InkWell(
                 onTap: onOpen,
+                splashColor: DesignColors.splash,
+                highlightColor: Colors.transparent,
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(12, 12, 14, 12),
                   child: _body(),
                 ),
               ),
-              ?_actions(),
+              ?actions,
             ],
           ),
         ),
       ),
-    );
+    ));
   }
 
-  Widget _thumb() => ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: SizedBox(
-          width: thumb,
-          height: thumb,
-          child: (stay.thumbnailUrl == null || stay.thumbnailUrl!.isEmpty)
-              ? _placeholder()
-              : CachedNetworkImage(
-                  imageUrl: stay.thumbnailUrl!,
-                  fit: BoxFit.cover,
-                  placeholder: (_, _) => Container(color: AppColors.surfaceWarm),
-                  errorWidget: (_, _, _) => _placeholder(),
-                ),
-        ),
-      );
-
-  Widget _placeholder() => Container(
-        color: StayColors.surface,
-        alignment: Alignment.center,
-        child: const Icon(Iconsax.building_4, size: 22, color: StayColors.accent),
-      );
-
-  Widget _pill(String text, Color fg, Color bg) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
-        decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(999)),
-        child: Text(text,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(fontFamily: 'Poppins', fontSize: 10.5, fontWeight: FontWeight.w700, color: fg)),
+  Widget _thumb() => KitPhoto(
+        url: stay.thumbnailUrl,
+        width: thumb,
+        height: thumb,
+        tone: KitTone.stay,
+        asset: TravelIcon.stay,
+        radius: KitMetrics.tileSmall,
+        dimmed: _paused,
       );
 
   Widget _body() {
@@ -182,83 +179,81 @@ class TripStayRow extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(
-                    child: Text(stay.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                            fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textDark)),
+                    child: Text(
+                      stay.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TypeTokens.style(14, FontWeight.w700,
+                          color: _paused ? DesignColors.textMuted : DesignColors.textStrong, height: 1.2),
+                    ),
                   ),
                   if (nearKm > 0) ...[
                     const SizedBox(width: 8),
-                    _pill(TripFormat.km(nearKm), StayColors.accentDark, StayColors.surface),
+                    KitTagChip(TripFormat.km(nearKm), tone: KitTone.stay),
                   ],
                 ],
               ),
-              if (_paused || st != null || stay.isFeatured || noFit) ...[
+              if (_paused || st != null || stay.isFeatured || noFit || noReply) ...[
                 const SizedBox(height: 4),
                 Wrap(
                   spacing: 6,
                   runSpacing: 4,
                   children: [
-                    if (_paused) _pill(TripStrings.notAvailableNow, AppColors.error, AppColors.errorSurface),
+                    if (_paused) KitTagChip(TripStrings.notAvailableNow, color: TripUi.bad),
                     if (st != null)
-                      _pill(
+                      KitTagChip(
                         st == TripDisplayStatus.asked ? TripStringsA2.asked : TripStatusVisuals.label(st),
-                        TripStatusVisuals.text(st),
-                        TripStatusVisuals.surface(st),
+                        color: TripStatusVisuals.text(st),
                       ),
-                    if (stay.isFeatured && !_paused) _pill(TripStringsA2.featured, AppColors.gold, AppColors.surfaceWarm),
-                    if (noFit) _pill(TripStringsAlgoAa.doesNotFit, AppColors.warningText, AppColors.warningSurface),
+                    if (stay.isFeatured && !_paused) KitTagChip(TripStringsA2.featured, color: TripUi.gold),
+                    if (noFit) KitTagChip(TripStringsAlgoAa.doesNotFit, color: TripUi.warn),
+                    if (noReply) KitTagChip(TripStringsShortlist.noReply, color: TripUi.warn),
                   ],
                 ),
               ],
-              const SizedBox(height: 3),
-              Text(_paused ? TripStrings.stayPaused : (type ?? TripStringsA2.stay),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                      fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: StayColors.accentDark)),
+              const SizedBox(height: 4),
+              Text(
+                _paused ? TripStrings.stayPaused : (type ?? TripStringsA2.stay),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TypeTokens.style(12, FontWeight.w600, color: KitTone.stay.accentDark),
+              ),
               if (stay.locality.isNotEmpty) ...[
                 const SizedBox(height: 2),
-                Row(children: [
-                  const Icon(Iconsax.location, size: 12, color: AppColors.textLight),
-                  const SizedBox(width: 3),
-                  Expanded(
-                    child: Text(stay.locality,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight)),
-                  ),
-                ]),
+                Row(
+                  children: [
+                    const TravelIcon(TravelIcon.place, size: 12),
+                    const SizedBox(width: 3),
+                    Expanded(
+                      child: Text(stay.locality, maxLines: 1, overflow: TextOverflow.ellipsis, style: TypeTokens.caption),
+                    ),
+                  ],
+                ),
               ],
               if (facts != null && !_paused) ...[
                 const SizedBox(height: 2),
-                Text(facts,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight)),
+                Text(facts, maxLines: 1, overflow: TextOverflow.ellipsis, style: TypeTokens.caption),
               ],
               const SizedBox(height: 6),
               FittedBox(
                 fit: BoxFit.scaleDown,
                 alignment: Alignment.centerLeft,
                 child: price == null
-                    ? const Text(TripStringsA2.priceOnRequest,
-                        style: TextStyle(
-                            fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w700, color: AppColors.textMedium))
+                    ? Text(TripStringsA2.priceOnRequest, style: TypeTokens.style(13, FontWeight.w700))
                     : Text.rich(
-                        TextSpan(children: [
-                          TextSpan(
-                            text: BrowseItem.inr(price),
-                            style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800, color: AppColors.gold),
-                          ),
-                          TextSpan(
-                            text: ' ${quote != null ? TripStringsAlgoAa.perNightGroup : TripStringsA2.perNightListed}',
-                            style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: AppColors.textLight),
-                          ),
-                        ]),
+                        TextSpan(
+                          children: [
+                            TextSpan(
+                              text: BrowseItem.inr(price),
+                              style: TypeTokens.style(15, FontWeight.w800, color: KitTone.stay.accentDark),
+                            ),
+                            TextSpan(
+                              text: ' ${quote != null ? TripStringsAlgoAa.perNightGroup : TripStringsA2.perNightListed}',
+                              style: TypeTokens.caption,
+                            ),
+                          ],
+                        ),
                         maxLines: 1,
-                        style: const TextStyle(fontFamily: 'Poppins'),
                       ),
               ),
             ],
@@ -268,65 +263,50 @@ class TripStayRow extends StatelessWidget {
     );
   }
 
-  Widget? _actions() {
+  Widget? _actions(BuildContext context) {
     if (_paused || readOnly) return null;
     final st = status;
     final Widget ask;
     if (st != null && onOpenChat != null) {
-      ask = _pillButton(TripStrings.openChat, Iconsax.message, onOpenChat, filled: false);
+      ask = SecondaryButton(
+        label: TripStrings.openChat,
+        onPressed: onOpenChat,
+        tone: KitTone.stay,
+        height: 44,
+        icon: const TravelIcon(TravelIcon.chat, size: 18),
+      );
     } else if (st != null) {
-      ask = _pillButton(TripStringsV2Find.asked, Iconsax.tick_circle, null, filled: false);
+      ask = SecondaryButton(
+        label: TripStringsV2Find.asked,
+        onPressed: null,
+        tone: KitTone.stay,
+        height: 44,
+        icon: const TravelIcon(TravelIcon.note, size: 18),
+      );
+    } else if (onShortlist != null) {
+      ask = TripShortlistToggle(selected: shortlisted, busy: shortlistBusy, onTap: onShortlist, tone: KitTone.stay);
     } else {
-      ask = _pillButton(TripStringsV2Find.ask, Iconsax.send_2, onAsk, filled: true);
+      ask = PrimaryButton(
+        label: TripStringsV2Find.ask,
+        onPressed: onAsk,
+        tone: KitTone.stay,
+        height: 44,
+        icon: const TravelIcon(TravelIcon.chat, size: 18),
+      );
     }
+    final call = SecondaryButton(
+      label: TripStringsV2Find.call,
+      onPressed: onCall,
+      tone: KitTone.stay,
+      height: 44,
+      icon: Icon(Icons.call_rounded, size: 16, color: KitTone.stay.accentDark),
+    );
+    final stacked = MediaQuery.textScalerOf(context).scale(1) > 1.15;
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-      child: Row(
-        children: [
-          Expanded(
-            child: OutlinedButton.icon(
-              onPressed: onCall,
-              icon: const Icon(Iconsax.call, size: 16, color: StayColors.accentDark),
-              label: const Text(TripStringsV2Find.call,
-                  style: TextStyle(
-                      fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w700, color: StayColors.accentDark)),
-              style: OutlinedButton.styleFrom(
-                minimumSize: const Size(0, 44),
-                side: BorderSide(color: StayColors.accent.withValues(alpha: 0.6)),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(child: ask),
-        ],
-      ),
-    );
-  }
-
-  Widget _pillButton(String label, IconData icon, VoidCallback? onTap, {required bool filled}) {
-    final fg = filled ? Colors.white : StayColors.accentDark;
-    return SizedBox(
-      height: 44,
-      child: ElevatedButton.icon(
-        onPressed: onTap,
-        icon: Icon(icon, size: 16, color: onTap == null && !filled ? AppColors.textHint : fg),
-        label: Text(label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-                fontFamily: 'Poppins',
-                fontSize: 12.5,
-                fontWeight: FontWeight.w700,
-                color: onTap == null && !filled ? AppColors.textHint : fg)),
-        style: ElevatedButton.styleFrom(
-          elevation: 0,
-          minimumSize: const Size(0, 44),
-          backgroundColor: filled ? StayColors.accent : StayColors.surface,
-          disabledBackgroundColor: StayColors.surface,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-      ),
+      child: stacked
+          ? Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [call, const SizedBox(height: 8), ask])
+          : Row(children: [Expanded(child: call), const SizedBox(width: 8), Expanded(child: ask)]),
     );
   }
 }
@@ -334,26 +314,18 @@ class TripStayRow extends StatelessWidget {
 class TripStayRowSkeleton extends StatelessWidget {
   const TripStayRowSkeleton({super.key});
 
-  Widget _bar(double width, double height) => Container(
-        width: width,
-        height: height,
-        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(6)),
-      );
-
   @override
   Widget build(BuildContext context) {
     final scale = MediaQuery.textScalerOf(context);
     double line(double size) => scale.scale(size) * 1.5;
-    return Container(
-      margin: const EdgeInsets.only(top: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.divider),
-      ),
-      child: Shimmer.fromColors(
-        baseColor: AppColors.shimmerBase,
-        highlightColor: AppColors.shimmerHighlight,
+    return Padding(
+      padding: const EdgeInsets.only(top: 12),
+      child: DecoratedBox(
+        decoration: const BoxDecoration(
+          color: DesignColors.surface,
+          borderRadius: CardRadius.tile,
+          boxShadow: ShadowTokens.elev2,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -362,30 +334,38 @@ class TripStayRowSkeleton extends StatelessWidget {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    width: TripStayRow.thumb,
-                    height: TripStayRow.thumb,
-                    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
-                  ),
+                  const TemplatePlaceholder(width: TripStayRow.thumb, height: TripStayRow.thumb, radius: 12),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _bar(160, line(14)),
-                        const SizedBox(height: 3),
-                        _bar(130, line(12)),
+                        TemplatePlaceholder(width: 160, height: line(14), radius: 6),
+                        const SizedBox(height: 4),
+                        TemplatePlaceholder(width: 130, height: line(12), radius: 6),
                         const SizedBox(height: 2),
-                        _bar(110, line(11)),
+                        TemplatePlaceholder(width: 110, height: line(11), radius: 6),
                         const SizedBox(height: 6),
-                        _bar(120, line(13.5)),
+                        TemplatePlaceholder(width: 120, height: line(15), radius: 6),
                       ],
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: TripStayRow.actionHeight),
+            const SizedBox(
+              height: TripStayRow.actionHeight,
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(12, 0, 12, 12),
+                child: Row(
+                  children: [
+                    Expanded(child: TemplatePlaceholder(height: 44, radius: 24)),
+                    SizedBox(width: 12),
+                    Expanded(child: TemplatePlaceholder(height: 44, radius: 24)),
+                  ],
+                ),
+              ),
+            ),
           ],
         ),
       ),

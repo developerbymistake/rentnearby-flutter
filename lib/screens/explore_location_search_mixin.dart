@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
-import '../config/module_palette.dart';
+import '../design/design.dart';
 import '../controllers/location_controller.dart';
 import '../models/location_context.dart';
 import '../models/place_result_model.dart';
@@ -25,7 +25,7 @@ mixin ExploreLocationSearchMixin<T extends StatefulWidget> on State<T> {
   bool get isSearchActive => _locSearchCtrl.searchPinOverride.value != null;
   String? get searchOverrideLabel => _locSearchCtrl.searchPinLabel.value;
   bool get searchResolving => _locSearchCtrl.searchResolving.value;
-  ModulePalette get searchPalette => ModulePalette.rooms;
+  get searchPalette => templateModulePalette;
 
   /// Tap handler for the search toggle button.
   Future<void> onSearchToggleTap(BuildContext context) async {

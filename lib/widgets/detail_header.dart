@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:iconsax/iconsax.dart';
-import '../config/app_colors.dart';
+import '../design/design.dart';
 
 class DetailTitleRow extends StatelessWidget {
   final Color accent;
@@ -11,6 +10,7 @@ class DetailTitleRow extends StatelessWidget {
   final String value;
   final String unit;
   final String? secondTag;
+  final String? iconAsset;
 
   const DetailTitleRow({
     super.key,
@@ -22,73 +22,78 @@ class DetailTitleRow extends StatelessWidget {
     required this.value,
     this.unit = '',
     this.secondTag,
+    this.iconAsset,
   });
 
   @override
   Widget build(BuildContext context) {
     final filledTag = Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
-      decoration: BoxDecoration(color: accent, borderRadius: BorderRadius.circular(6)),
+      decoration: BoxDecoration(color: accent, borderRadius: BorderRadius.circular(8)),
       child: Text(tag,
-          style: const TextStyle(
-              fontFamily: 'Poppins', fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 0.6, color: Colors.white)),
+          style: FitnessAppTheme.caption.copyWith(
+              fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.6, color: FitnessAppTheme.white)),
     );
-    return LayoutBuilder(builder: (context, constraints) => Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Expanded(
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          if (secondTag == null)
-            filledTag
-          else
-            Wrap(spacing: 6, runSpacing: 6, children: [
-              filledTag,
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 2),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: accent),
-                ),
-                child: Text(secondTag!,
-                    style: TextStyle(
-                        fontFamily: 'Poppins', fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 0.4, color: accent)),
+    return LayoutBuilder(
+        builder: (context, constraints) => Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  if (secondTag == null)
+                    filledTag
+                  else
+                    Wrap(spacing: 6, runSpacing: 6, children: [
+                      filledTag,
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 2),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: accent),
+                        ),
+                        child: Text(secondTag!,
+                            style: FitnessAppTheme.caption.copyWith(
+                                fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.4, color: accent)),
+                      ),
+                    ]),
+                  const SizedBox(height: 6),
+                  Row(children: [
+                    if (iconAsset != null) TravelIcon(iconAsset!, size: 24) else Icon(icon, size: 22, color: accent),
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(title, style: FitnessAppTheme.headline.copyWith(fontSize: 22)),
+                    ),
+                  ]),
+                ]),
               ),
-            ]),
-          const SizedBox(height: 6),
-          Row(children: [
-            Icon(icon, size: 22, color: accent),
-            const SizedBox(width: 8),
-            Flexible(
-              child: Text(title,
-                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 22, fontWeight: FontWeight.w700, color: AppColors.textDark)),
-            ),
-          ]),
-        ]),
-      ),
-      const SizedBox(width: 12),
-      ConstrainedBox(
-        constraints: BoxConstraints(maxWidth: constraints.maxWidth * 0.45),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-          Text(caption,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                  fontFamily: 'Poppins', fontSize: 9, fontWeight: FontWeight.w700, letterSpacing: 0.6, color: AppColors.textLight)),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.centerRight,
-            child: Text.rich(
-              TextSpan(children: [
-                TextSpan(text: value),
-                if (unit.isNotEmpty) TextSpan(text: unit, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
-              ]),
-              maxLines: 1,
-              softWrap: false,
-              style: const TextStyle(
-                  fontFamily: 'Poppins', fontSize: 20, fontWeight: FontWeight.w800, color: AppColors.gold, height: 1.2),
-            ),
-          ),
-        ]),
-      ),
-    ]));
+              const SizedBox(width: 12),
+              ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: constraints.maxWidth * 0.45),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                  Text(caption,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: FitnessAppTheme.caption
+                          .copyWith(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.6)),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerRight,
+                    child: Text.rich(
+                      TextSpan(children: [
+                        TextSpan(text: value),
+                        if (unit.isNotEmpty)
+                          TextSpan(
+                              text: unit,
+                              style: const TextStyle(fontFamily: FitnessAppTheme.fontName,
+                                  fontSize: 11, fontWeight: FontWeight.w600, color: FitnessAppTheme.lightText)),
+                      ]),
+                      maxLines: 1,
+                      softWrap: false,
+                      style: FitnessAppTheme.title
+                          .copyWith(fontSize: 20, fontWeight: FontWeight.w800, color: PickKit.gold, height: 1.2),
+                    ),
+                  ),
+                ]),
+              ),
+            ]));
   }
 }
 
@@ -97,8 +102,10 @@ class DetailChipRow extends StatelessWidget {
   final IconData icon;
   final String label;
   final double? distanceKm;
+  final String? iconAsset;
 
-  const DetailChipRow({super.key, required this.accent, required this.icon, required this.label, this.distanceKm});
+  const DetailChipRow(
+      {super.key, required this.accent, required this.icon, required this.label, this.distanceKm, this.iconAsset});
 
   @override
   Widget build(BuildContext context) {
@@ -108,15 +115,15 @@ class DetailChipRow extends StatelessWidget {
           alignment: Alignment.centerLeft,
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(color: accent.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(20)),
+            decoration: BoxDecoration(color: accent.withValues(alpha: Alpha.v10), borderRadius: BorderRadius.circular(8)),
             child: Row(mainAxisSize: MainAxisSize.min, children: [
-              Icon(icon, size: 13, color: accent),
+              if (iconAsset != null) TravelIcon(iconAsset!, size: 16) else Icon(icon, size: 13, color: accent),
               const SizedBox(width: 5),
               Flexible(
                 child: Text(label,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w500, color: accent)),
+                    style: FitnessAppTheme.caption.copyWith(fontWeight: FontWeight.w500, color: accent)),
               ),
             ]),
           ),
@@ -124,10 +131,9 @@ class DetailChipRow extends StatelessWidget {
       ),
       if (distanceKm != null) ...[
         const SizedBox(width: 8),
-        const Icon(Iconsax.location, size: 13, color: AppColors.textHint),
+        const TravelIcon(TravelIcon.place, size: 14),
         const SizedBox(width: 4),
-        Text('${distanceKm!.toStringAsFixed(1)} km away',
-            style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
+        Text('${distanceKm!.toStringAsFixed(1)} km away', style: FitnessAppTheme.caption),
       ],
     ]);
   }

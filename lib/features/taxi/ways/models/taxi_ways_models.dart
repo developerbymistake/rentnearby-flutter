@@ -102,6 +102,7 @@ class WayDriver {
   final bool hasRoadLine;
   final String? phone;
   final String? whatsApp;
+  final String? meetAtName;
 
   const WayDriver({
     required this.taxiId,
@@ -128,6 +129,7 @@ class WayDriver {
     this.hasRoadLine = false,
     this.phone,
     this.whatsApp,
+    this.meetAtName,
   });
 
   factory WayDriver.fromJson(Map<String, dynamic> json) => WayDriver(
@@ -155,6 +157,7 @@ class WayDriver {
         hasRoadLine: json['hasRoadLine'] == true,
         phone: _sn(json['phone']),
         whatsApp: _sn(json['whatsApp']),
+        meetAtName: _sn(json['meetAtName']),
       );
 
   bool get repliesInApp => tripReplyLabel == 'app';

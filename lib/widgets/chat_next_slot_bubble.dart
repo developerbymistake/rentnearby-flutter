@@ -1,23 +1,19 @@
 import 'package:flutter/material.dart';
-import '../config/app_colors.dart';
+import 'package:bakhli/design/template/fitness_app_theme.dart';
+import '../design/tokens/alpha_tokens.dart';
 
-// The renter/owner's next action, rendered as the last item in the message
-// thread instead of a bar fixed to the bottom of the screen — so the "+" is
-// always exactly where the next message will appear. Tapping it opens the
-// same ChatPlusMenuSheet the fixed composer used to open; only the trigger's
-// position changed; the sheet-picking mechanism is untouched.
 class ChatNextSlotBubble extends StatelessWidget {
   final VoidCallback onTap;
   final bool sending;
   final Color accent;
 
-  const ChatNextSlotBubble({super.key, required this.onTap, required this.sending, this.accent = AppColors.primary});
+  const ChatNextSlotBubble({super.key, required this.onTap, required this.sending, this.accent = FitnessAppTheme.nearlyDarkBlue});
 
   static const _radius = BorderRadius.only(
-    topLeft: Radius.circular(14),
-    topRight: Radius.circular(14),
-    bottomLeft: Radius.circular(14),
-    bottomRight: Radius.circular(3),
+    topLeft: Radius.circular(16),
+    topRight: Radius.circular(16),
+    bottomLeft: Radius.circular(16),
+    bottomRight: Radius.circular(8),
   );
 
   @override
@@ -28,25 +24,27 @@ class ChatNextSlotBubble extends StatelessWidget {
         margin: const EdgeInsets.symmetric(vertical: 3),
         child: AnimatedOpacity(
           opacity: sending ? 0.55 : 1.0,
-          duration: const Duration(milliseconds: 150),
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.fastOutSlowIn,
           child: Material(
             color: Colors.transparent,
             child: InkWell(
               borderRadius: _radius,
+              highlightColor: Colors.transparent,
               onTap: sending ? null : onTap,
               child: CustomPaint(
-                painter: _DashedRRectPainter(color: accent.withValues(alpha: 0.55), radius: _radius),
+                painter: _DashedRRectPainter(color: accent.withValues(alpha: Alpha.strong), radius: _radius),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                   decoration: BoxDecoration(
-                    color: accent.withValues(alpha: 0.055),
+                    color: accent.withValues(alpha: Alpha.hairline),
                     borderRadius: _radius,
                   ),
                   child: Row(mainAxisSize: MainAxisSize.min, children: [
                     Icon(Icons.add_rounded, size: 16, color: accent),
                     const SizedBox(width: 5),
                     Text('Ask something',
-                        style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600, color: accent)),
+                        style: FitnessAppTheme.body2.copyWith(fontWeight: FontWeight.w600, color: accent)),
                   ]),
                 ),
               ),
@@ -72,7 +70,7 @@ class _DashedRRectPainter extends CustomPainter {
     final paint = Paint()
       ..color = color
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.6;
+      ..strokeWidth = 1.5;
     final path = Path()..addRRect(rrect);
     for (final metric in path.computeMetrics()) {
       var distance = 0.0;

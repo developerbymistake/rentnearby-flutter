@@ -1,15 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../../../config/app_colors.dart';
-import '../../../widgets/gradient_button.dart';
-import '../../stay/setup/stay_option_grid.dart';
+import 'package:bakhli/design/design.dart';
 import '../controllers/jobs_list_controller.dart';
-import '../jobs_colors.dart';
 import '../models/job_experience_bucket.dart';
 import '../models/job_lookups_model.dart';
-
-const _kGradient = JobColors.gradient;
-const _kActive = JobColors.accent;
+import '../widgets/jobs_ui.dart';
 
 class JobsFilterSheet extends StatefulWidget {
   final JobsListController controller;
@@ -25,15 +20,7 @@ class JobsFilterSheet extends StatefulWidget {
   ];
 
   static Future<void> show(BuildContext context, {required JobsListController controller}) {
-    return showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (_) => JobsFilterSheet(controller: controller),
-    );
+    return SheetFrame.show<void>(context, builder: (_) => JobsFilterSheet(controller: controller));
   }
 
   @override
@@ -64,145 +51,95 @@ class _JobsFilterSheetState extends State<JobsFilterSheet> {
     super.dispose();
   }
 
+  Widget _section(String label, Widget chips, {bool last = false}) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: _sectionLabelStyle),
+          const SizedBox(height: 8),
+          chips,
+          if (!last) ...[
+            const SizedBox(height: 12),
+            const Divider(height: 1, color: DesignColors.dividerSoft),
+            const SizedBox(height: 16),
+          ],
+        ],
+      );
+
   @override
   Widget build(BuildContext context) {
-    final media = MediaQuery.of(context);
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.fromLTRB(24, 14, 24, 18),
-          decoration: const BoxDecoration(
-            gradient: _kGradient,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          child: Column(
-            children: [
-              Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.5),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(height: 14),
-              const Text(
-                'Filter · Jobs',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontFamily: 'Poppins', fontSize: 15, fontWeight: FontWeight.w600, color: Colors.white),
-              ),
-            ],
-          ),
+    final departmentSection = Obx(() {
+      final departments = widget.controller.lookups.value?.departments ?? const <JobLookupItem>[];
+      if (departments.isEmpty) return const SizedBox(width: double.infinity);
+      return _section(
+        'DEPARTMENT',
+        JobsChoiceWrap(
+          labels: ['All', for (final d in departments) d.name],
+          isActive: (i) => _departmentId == (i == 0 ? null : departments[i - 1].id),
+          onTap: (i) => setState(() => _departmentId = i == 0 ? null : departments[i - 1].id),
         ),
-        Flexible(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(18, 14, 18, 0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Obx(() {
-                  final departments = widget.controller.lookups.value?.departments ?? const <JobLookupItem>[];
-                  if (departments.isEmpty) return const SizedBox.shrink();
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('DEPARTMENT', style: _sectionLabelStyle),
-                        const SizedBox(height: 8),
-                        StayOptionGrid(
-                          crossAxisCount: 3,
-                          childAspectRatio: 2.6,
-                          accent: _kActive,
-                          labels: ['All', for (final d in departments) d.name],
-                          isActive: (i) => _departmentId == (i == 0 ? null : departments[i - 1].id),
-                          onTap: (i) => setState(() => _departmentId = i == 0 ? null : departments[i - 1].id),
-                        ),
-                      ],
-                    ),
-                  );
-                }),
-                const Text('EXPERIENCE', style: _sectionLabelStyle),
-                const SizedBox(height: 8),
-                StayOptionGrid(
-                  crossAxisCount: 3,
-                  childAspectRatio: 2.6,
-                  accent: _kActive,
-                  labels: ['Any', for (final b in JobExperienceBucket.all) b.label],
-                  isActive: (i) => _experience == _experienceAt(i),
-                  onTap: (i) => setState(() => _experience = _experienceAt(i)),
-                ),
-                const SizedBox(height: 16),
-                const Text('MIN SALARY', style: _sectionLabelStyle),
-                const SizedBox(height: 8),
-                StayOptionGrid(
-                  crossAxisCount: 3,
-                  childAspectRatio: 2.6,
-                  accent: _kActive,
-                  labels: [for (final o in JobsFilterSheet.salaryOptions) o.label],
-                  isActive: (i) => _minSalary == JobsFilterSheet.salaryOptions[i].value,
-                  onTap: (i) => setState(() => _minSalary = JobsFilterSheet.salaryOptions[i].value),
-                ),
-                const SizedBox(height: 8),
-              ],
+      );
+    });
+    return SheetFrame(
+      title: 'Filter · Jobs',
+      footer: Row(
+        children: [
+          Expanded(
+            child: SecondaryButton(
+              label: 'Reset',
+              tone: JobsUi.tone,
+              onPressed: () => setState(() {
+                _departmentId = null;
+                _experience = null;
+                _minSalary = null;
+              }),
             ),
           ),
-        ),
-        Padding(
-          padding: EdgeInsets.fromLTRB(18, 10, 18, 18 + media.padding.bottom),
-          child: Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () => setState(() {
-                    _departmentId = null;
-                    _experience = null;
-                    _minSalary = null;
-                  }),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 13),
-                    side: const BorderSide(color: AppColors.divider, width: 1.5),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  ),
-                  child: const Text('Reset',
-                      style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textDark)),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                flex: 2,
-                child: GradientButton(
-                  label: 'Apply',
-                  height: 46,
-                  gradient: _kGradient,
-                  shadowColor: _kActive,
-                  onPressed: () {
-                    _closing = true;
-                    Navigator.of(context).pop();
-                    widget.controller.applyFilters(
-                      departmentId: _departmentId,
-                      experience: _experience,
-                      minSalary: _minSalary,
-                    );
-                  },
-                ),
-              ),
-            ],
+          const SizedBox(width: 12),
+          Expanded(
+            flex: 2,
+            child: PrimaryButton(
+              label: 'Apply',
+              tone: JobsUi.tone,
+              onPressed: () {
+                _closing = true;
+                Navigator.of(context).pop();
+                widget.controller.applyFilters(
+                  departmentId: _departmentId,
+                  experience: _experience,
+                  minSalary: _minSalary,
+                );
+              },
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
+      child: StaggerColumn(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          departmentSection,
+          _section(
+            'EXPERIENCE',
+            JobsChoiceWrap(
+              labels: ['Any', for (final b in JobExperienceBucket.all) b.label],
+              isActive: (i) => _experience == _experienceAt(i),
+              onTap: (i) => setState(() => _experience = _experienceAt(i)),
+            ),
+          ),
+          _section(
+            'MIN SALARY',
+            JobsChoiceWrap(
+              labels: [for (final o in JobsFilterSheet.salaryOptions) o.label],
+              isActive: (i) => _minSalary == JobsFilterSheet.salaryOptions[i].value,
+              onTap: (i) => setState(() => _minSalary = JobsFilterSheet.salaryOptions[i].value),
+            ),
+            last: true,
+          ),
+        ],
+      ),
     );
   }
 
   static JobExperienceBucket? _experienceAt(int i) => i == 0 ? null : JobExperienceBucket.all[i - 1];
 
-  static const _sectionLabelStyle = TextStyle(
-    fontFamily: 'Poppins',
-    fontSize: 10,
-    fontWeight: FontWeight.w800,
-    color: AppColors.textLight,
-    letterSpacing: 0.4,
-  );
+  static final _sectionLabelStyle = TypeTokens.style(11, FontWeight.w600, color: DesignColors.textSecondary, letterSpacing: 0.4);
 }

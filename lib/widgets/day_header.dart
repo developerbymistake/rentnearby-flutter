@@ -1,26 +1,27 @@
 import 'package:flutter/material.dart';
-import '../config/app_colors.dart';
+import '../design/design.dart';
 
-/// Shared date-group section header ("TODAY" / "YESTERDAY" / "22 JUL 2026") — used by
-/// NotificationsScreen above their [groupByDay]-bucketed rows.
 class DayHeader extends StatelessWidget {
   final String label;
-  const DayHeader(this.label, {super.key});
+  final Animation<double>? animation;
+  final AnimationController? animationController;
+  const DayHeader(this.label, {super.key, this.animation, this.animationController});
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
+    final text = Padding(
       padding: const EdgeInsets.fromLTRB(2, 4, 2, 8),
       child: Text(
         label.toUpperCase(),
-        style: const TextStyle(
-          fontFamily: 'Poppins',
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
+        style: FitnessAppTheme.body2.copyWith(
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
           letterSpacing: 0.5,
-          color: AppColors.textLight,
+          color: FitnessAppTheme.lightText,
         ),
       ),
     );
+    if (animation == null || animationController == null) return text;
+    return TemplateEntrance(animation: animation!, animationController: animationController!, child: text);
   }
 }

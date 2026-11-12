@@ -1,20 +1,15 @@
 import 'dart:math';
-import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:bakhli/features/trip/widgets/trip_ui.dart';
+import 'package:flutter/services.dart';
+import 'package:bakhli/design/design.dart';
 import 'package:get/get.dart';
-import 'package:iconsax/iconsax.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
-import 'package:shimmer/shimmer.dart';
-import '../../../config/app_colors.dart';
 import '../../../config/app_constants.dart';
-import '../../../widgets/empty_state_view.dart';
-import '../../stay/setup/stay_option_sets.dart';
-import '../../taxi/taxi_option_sets.dart';
 import '../controllers/trip_plan_controller.dart';
 import '../models/trip_plan_model.dart';
 import '../models/trip_plan_result_model.dart';
-import '../trip_colors.dart';
 import '../trip_strings.dart';
 import '../utils/trip_easy_rules.dart';
 import '../trip_strings_mca_a4.dart';
@@ -34,7 +29,8 @@ class TripMapScreen extends StatefulWidget {
   State<TripMapScreen> createState() => _TripMapScreenState();
 }
 
-class _TripMapScreenState extends State<TripMapScreen> {
+class _TripMapScreenState extends State<TripMapScreen> with TickerProviderStateMixin {
+  late final AnimationController _enter = AnimationController(duration: const Duration(milliseconds: 600), vsync: this);
   late final TripPlanController _plan;
   final _workers = <Worker>[];
   MapLibreMapController? _map;
@@ -74,12 +70,12 @@ class _TripMapScreenState extends State<TripMapScreen> {
 
   static const String _stayPinImage = 'trip_stay_pin';
   static const String _carPinImage = 'trip_car_badge';
-  static final String _white = AppColors.hexOf(AppColors.textWhite);
-  static final String _stayText = AppColors.hexOf(StayColors.accentDark);
-  static final String _cityText = AppColors.hexOf(AppColors.textDark);
-  static final String _travelText = AppColors.hexOf(TaxiColors.accentDark);
-  static final String _changeStroke = AppColors.hexOf(AppColors.warning);
-  static final String _changeText = AppColors.hexOf(AppColors.warningText);
+  static final String _white = TripKit.hexOf(FitnessAppTheme.white);
+  static final String _stayText = TripKit.hexOf(TravelPalette.sunriseStart);
+  static final String _cityText = TripKit.hexOf(FitnessAppTheme.darkerText);
+  static final String _travelText = TripKit.hexOf(TravelPalette.roseEnd);
+  static final String _changeStroke = TripKit.hexOf(TravelPalette.sunriseStart);
+  static final String _changeText = TripKit.hexOf(FitnessAppTheme.darkText);
   static const _multiCityZoom = MinMaxZoomPreference(4, 18);
 
   MinMaxZoomPreference _oneCityZoom(BuildContext context) {
@@ -93,6 +89,7 @@ class _TripMapScreenState extends State<TripMapScreen> {
   void initState() {
     super.initState();
     _plan = TripPlanController.to;
+    _enter.forward();
     _plan.openPages++;
     _wideZoom = _plan.isMultiCity;
     final args = Get.arguments;
@@ -132,6 +129,7 @@ class _TripMapScreenState extends State<TripMapScreen> {
 
   @override
   void dispose() {
+    _enter.dispose();
     _map?.onSymbolTapped.remove(_onSymbolTapped);
     _map?.onCircleTapped.remove(_onCircleTapped);
     for (final w in _workers) {
@@ -239,7 +237,9 @@ class _TripMapScreenState extends State<TripMapScreen> {
     final leg = _plan.selectedMapLeg.value;
     if (leg > 0 && p.isMultiCity && p.isSingleDayLeg(leg)) {
       _plan.selectMapDay(p.legStart(leg));
-    } else if (leg > 0 && (!p.isMultiCity || p.legAt(leg) == null || p.legStart(leg) < 1)) _plan.selectedMapLeg.value = 0;
+    } else if (leg > 0 && (!p.isMultiCity || p.legAt(leg) == null || p.legStart(leg) < 1)) {
+      _plan.selectedMapLeg.value = 0;
+    }
     if (_selected != TripDayChips.all && p.dayAt(_selected) == null) _plan.selectedMapDay.value = 1;
     if (_selected == TripDayChips.all && _plan.selectedMapLeg.value == 0 && p.days.length <= 1) {
       _plan.selectedMapDay.value = 1;
@@ -406,14 +406,14 @@ class _TripMapScreenState extends State<TripMapScreen> {
   }
 
   static Future<Uint8List> _buildStayPinImage() =>
-      _buildPinImage(StayColors.accent, Iconsax.building_4, size: 48, radius: 19, glyphSize: 20);
+      _buildPinImage(TravelPalette.sunriseStart, 'hotel', size: 48, radius: 19, glyphSize: 22);
 
   static Future<Uint8List> _buildCarPinImage() =>
-      _buildPinImage(TaxiColors.accent, Iconsax.car, size: 40, radius: 16, glyphSize: 17);
+      _buildPinImage(TravelPalette.roseEnd, 'taxi', size: 40, radius: 16, glyphSize: 19);
 
   static Future<Uint8List> _buildPinImage(
     Color fill,
-    IconData icon, {
+    String asset, {
     required double size,
     required double radius,
     required double glyphSize,
@@ -425,7 +425,7 @@ class _TripMapScreenState extends State<TripMapScreen> {
       Offset(c, c + 1.5),
       r + 1,
       Paint()
-        ..color = Colors.black.withValues(alpha: 0.25)
+        ..color = FitnessAppTheme.grey.withValues(alpha: Alpha.scrim)
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2),
     );
     canvas.drawCircle(Offset(c, c), r, Paint()..color = fill);
@@ -433,23 +433,19 @@ class _TripMapScreenState extends State<TripMapScreen> {
       Offset(c, c),
       r,
       Paint()
-        ..color = Colors.white
+        ..color = FitnessAppTheme.white
         ..style = PaintingStyle.stroke
         ..strokeWidth = 3,
     );
-    final glyph = TextPainter(
-      text: TextSpan(
-        text: String.fromCharCode(icon.codePoint),
-        style: TextStyle(
-          fontFamily: icon.fontFamily,
-          package: icon.fontPackage,
-          fontSize: glyphSize,
-          color: Colors.white,
-        ),
-      ),
-      textDirection: TextDirection.ltr,
-    )..layout();
-    glyph.paint(canvas, Offset(c - glyph.width / 2, c - glyph.height / 2));
+    final data = await rootBundle.load('assets/images/design/travel3d/$asset.png');
+    final codec = await ui.instantiateImageCodec(data.buffer.asUint8List());
+    final glyph = (await codec.getNextFrame()).image;
+    canvas.drawImageRect(
+      glyph,
+      Rect.fromLTWH(0, 0, glyph.width.toDouble(), glyph.height.toDouble()),
+      Rect.fromCenter(center: Offset(c, c), width: glyphSize, height: glyphSize),
+      Paint()..filterQuality = FilterQuality.high,
+    );
     final img = await recorder.endRecording().toImage(size.toInt(), size.toInt());
     final bytes = (await img.toByteData(format: ui.ImageByteFormat.png))!;
     return bytes.buffer.asUint8List();
@@ -479,7 +475,7 @@ class _TripMapScreenState extends State<TripMapScreen> {
   LineLayerProperties _lineProps(int day, {required bool glow}) {
     final selected = _isSelected(day);
     final hidden = !selected && _hidesOtherLegs;
-    final color = AppColors.hexOf(TripColors.dayColor(day));
+    final color = TripKit.hexOf(TripKit.dayColor(day));
     if (glow) {
       return LineLayerProperties(
           lineColor: color, lineWidth: 8, lineOpacity: hidden ? 0 : (selected ? 0.18 : 0.05), lineBlur: 3);
@@ -514,7 +510,7 @@ class _TripMapScreenState extends State<TripMapScreen> {
   LineLayerProperties _segProps(int legIndex, {required bool glow}) {
     final on = _plan.mapShowsSegment(legIndex);
     final hidden = !on && _hidesOtherLegs;
-    final color = AppColors.hexOf(TaxiColors.accent);
+    final color = TripKit.hexOf(TravelPalette.roseEnd);
     if (glow) {
       return LineLayerProperties(
           lineColor: color, lineWidth: 8, lineOpacity: hidden ? 0 : (on ? 0.18 : 0.05), lineBlur: 3);
@@ -597,7 +593,7 @@ class _TripMapScreenState extends State<TripMapScreen> {
       circleOpts.add(CircleOptions(
         geometry: at,
         circleRadius: 7,
-        circleColor: AppColors.hexOf(TripColors.accent),
+        circleColor: TripKit.hexOf(FitnessAppTheme.nearlyDarkBlue),
         circleOpacity: citiesOn ? 1 : 0.35,
         circleStrokeColor: _white,
         circleStrokeWidth: 2,
@@ -706,7 +702,7 @@ class _TripMapScreenState extends State<TripMapScreen> {
     for (final day in p.days) {
       final d = day.day;
       final opacity = _dayOpacity(d);
-      final color = AppColors.hexOf(TripColors.dayColor(d));
+      final color = TripKit.hexOf(TripKit.dayColor(d));
       final route = _plan.routeFor(d);
       _hasRoute[d] = route != null;
       _drawnRoutes[d] = route;
@@ -899,7 +895,14 @@ class _TripMapScreenState extends State<TripMapScreen> {
             child: Obx(() {
               _plan.trip.value;
               final opening = (_plan.isOpening.value && _plan.plan.value == null) || _waitingForTrip;
-              return !_styleLoaded || opening ? _buildMapShimmer() : const IgnorePointer(child: SizedBox.shrink());
+              return AnimatedSwitcher(
+                duration: const Duration(milliseconds: 400),
+                switchInCurve: Curves.fastOutSlowIn,
+                switchOutCurve: Curves.fastOutSlowIn,
+                child: !_styleLoaded || opening
+                    ? KeyedSubtree(key: const ValueKey('wait'), child: _buildMapPlaceholder())
+                    : const IgnorePointer(key: ValueKey('ready'), child: SizedBox.shrink()),
+              );
             }),
           ),
           Positioned.fill(child: _buildState()),
@@ -910,60 +913,28 @@ class _TripMapScreenState extends State<TripMapScreen> {
     );
   }
 
-  Widget _buildMapShimmer() {
-    return Shimmer.fromColors(
-      baseColor: AppColors.shimmerBase,
-      highlightColor: AppColors.shimmerHighlight,
-      child: Container(color: AppColors.shimmerBase),
-    );
-  }
+  Widget _buildMapPlaceholder() => const SizedBox.expand(child: TemplatePlaceholder(height: double.infinity, radius: 0));
 
   Widget _buildTop(BuildContext context) {
-    final top = MediaQuery.paddingOf(context).top;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Container(
-          decoration: const BoxDecoration(
-            gradient: TripColors.gradient,
-            borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
-          ),
-          padding: EdgeInsets.fromLTRB(12, top + 8, 20, 16),
-          child: Row(
-            children: [
-              IconButton(
-                onPressed: () => Get.back(),
-                icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
-              ),
-              const SizedBox(width: 2),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      TripStrings.tripMap,
-                      maxLines: 1,
-                      style: TextStyle(fontFamily: 'Poppins', fontSize: 20, fontWeight: FontWeight.w700, color: Colors.white),
-                    ),
-                    const SizedBox(height: 2),
-                    Obx(() => Text(
-                          _plan.isMultiCity
-                              ? TripStringsMcdA2.mapSubtitle(TripStringsMcaA4.routeOf(_plan.plan.value!.legCities))
-                              : TripStrings.tripMapSubtitle(_plan.cityName),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontFamily: 'Poppins',
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white.withValues(alpha: 0.85),
-                          ),
-                        )),
-                  ],
-                ),
-              ),
-            ],
-          ),
+        TemplateTopBar(
+          title: TripStrings.tripMap,
+          opacity: 1,
+          onBack: () => Get.back(),
+          animation: Tween<double>(begin: 0.0, end: 1.0)
+              .animate(CurvedAnimation(parent: _enter, curve: const Interval(0, 0.5, curve: Curves.fastOutSlowIn))),
+          animationController: _enter,
+          subtitle: Obx(() => Text(
+                _plan.isMultiCity
+                    ? TripStringsMcdA2.mapSubtitle(TripStringsMcaA4.routeOf(_plan.plan.value!.legCities))
+                    : TripStrings.tripMapSubtitle(_plan.cityName),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                    fontFamily: FitnessAppTheme.fontName, fontSize: 12, fontWeight: FontWeight.w600, color: FitnessAppTheme.lightText),
+              )),
         ),
         Obx(() {
           _plan.result.value;
@@ -977,7 +948,10 @@ class _TripMapScreenState extends State<TripMapScreen> {
               (selected != TripDayChips.all
                   ? _dayRouteMissing(selected)
                   : p.days.any((d) => (leg == 0 || p.legIndexOf(d.day) == leg) && _dayRouteMissing(d.day)));
-          return Padding(
+          return TemplateEntrance(
+            animation: templateInterval(_enter, 1, 3),
+            animationController: _enter,
+            child: Padding(
             padding: const EdgeInsets.only(top: 6),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1006,7 +980,7 @@ class _TripMapScreenState extends State<TripMapScreen> {
                   ),
               ],
             ),
-          );
+          ));
         }),
       ],
     );
@@ -1016,21 +990,21 @@ class _TripMapScreenState extends State<TripMapScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [BoxShadow(color: TripColors.accent.withValues(alpha: 0.22), blurRadius: 12, offset: const Offset(0, 3))],
+        color: DesignColors.surface,
+        borderRadius: CardRadius.chip,
+        boxShadow: ShadowTokens.elev1,
       ),
       child: const Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Iconsax.warning_2, size: 14, color: AppColors.warning),
+          Icon(Icons.warning_amber_rounded, size: 14, color: TravelPalette.sunriseStart),
           SizedBox(width: 6),
           Flexible(
             child: Text(
               TripStrings.routeMissing,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textMedium),
+              style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 11, fontWeight: FontWeight.w600, color: FitnessAppTheme.darkText),
             ),
           ),
         ],
@@ -1046,12 +1020,16 @@ class _TripMapScreenState extends State<TripMapScreen> {
         return const SizedBox.shrink();
       }
       if (_waitingForTrip) return const SizedBox.shrink();
-      return TripMapDayCard(
-        dayCount: p.days.length,
-        selected: _selected,
-        onDaySelected: _select,
-        selectedLeg: _plan.selectedMapLeg.value,
-        onLegSelected: _selectLeg,
+      return TemplateEntrance(
+        animation: templateInterval(_enter, 2, 3),
+        animationController: _enter,
+        child: TripMapDayCard(
+          dayCount: p.days.length,
+          selected: _selected,
+          onDaySelected: _select,
+          selectedLeg: _plan.selectedMapLeg.value,
+          onLegSelected: _selectLeg,
+        ),
       );
     });
   }
@@ -1063,23 +1041,23 @@ class _TripMapScreenState extends State<TripMapScreen> {
       final gone = _plan.tripGone.value;
       if (!off && !failed && !gone) return const IgnorePointer(child: SizedBox.shrink());
       return Container(
-        color: AppColors.scaffoldBg,
+        color: FitnessAppTheme.background,
         alignment: Alignment.topCenter,
         padding: EdgeInsets.only(top: MediaQuery.paddingOf(context).top + 80),
         child: gone
             ? const TripNotFoundView()
             : off
-            ? const EmptyStateView(
-                icon: Iconsax.routing_2,
+            ? const TripEmpty(
+                asset: TravelIcon.route,
                 title: TripStrings.plannerOff,
                 subtitle: TripStrings.plannerOffSubtitle,
               )
-            : EmptyStateView(
-                icon: Iconsax.cloud_cross,
+            : TripEmpty(
+                asset: TravelIcon.map,
+                error: true,
                 title: TripStrings.tripFailed,
                 subtitle: TripStrings.checkConnection,
                 onRetry: _plan.retryOpen,
-                palette: TripColors.palette,
               ),
       );
     });

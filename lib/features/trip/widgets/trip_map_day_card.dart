@@ -1,16 +1,11 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:bakhli/design/design.dart';
 import 'package:flutter/rendering.dart';
 import 'package:get/get.dart';
-import 'package:iconsax/iconsax.dart';
-import '../../../config/app_colors.dart';
 import '../../../config/app_insets.dart';
-import '../../../config/app_shadows.dart';
 import '../../../utils/contact_launcher.dart';
-import '../../stay/setup/stay_option_sets.dart';
-import '../../taxi/taxi_option_sets.dart';
 import '../controllers/trip_plan_controller.dart';
-import '../trip_colors.dart';
 import '../trip_strings.dart';
 import '../trip_strings_a4.dart';
 import '../trip_strings_mca_a3.dart';
@@ -146,7 +141,7 @@ class _TripMapDayCardState extends State<TripMapDayCard> {
       if ((at - target).abs() > 1) {
         _pages.jumpToPage(target);
       } else {
-        await _pages.animateToPage(target, duration: _anim, curve: Curves.easeOut);
+        await _pages.animateToPage(target, duration: _anim, curve: Curves.fastOutSlowIn);
       }
     } finally {
       _programmatic--;
@@ -193,11 +188,7 @@ class _TripMapDayCardState extends State<TripMapDayCard> {
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 640),
           child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(18),
-              boxShadow: AppShadows.premium(TripColors.accent, alpha: 0.16, blur: 18, offset: const Offset(0, 6)),
-            ),
+            decoration: const BoxDecoration(color: DesignColors.surface, borderRadius: CardRadius.tile, boxShadow: ShadowTokens.elev3),
             child: Padding(
               padding: const EdgeInsets.fromLTRB(0, 14, 0, 10),
               child: Column(
@@ -205,7 +196,7 @@ class _TripMapDayCardState extends State<TripMapDayCard> {
                 children: [
                   AnimatedContainer(
                     duration: _measured ? _anim : Duration.zero,
-                    curve: Curves.easeOut,
+                    curve: Curves.fastOutSlowIn,
                     height: height,
                     child: PageView.builder(
                       controller: _pages,
@@ -248,7 +239,7 @@ class _TripMapDayCardState extends State<TripMapDayCard> {
                   height: 6,
                   margin: const EdgeInsets.symmetric(horizontal: 2.5),
                   decoration: BoxDecoration(
-                    color: i == _current ? TripColors.accent : AppColors.divider,
+                    color: i == _current ? DesignColors.primary : FitnessAppTheme.spacer,
                     borderRadius: BorderRadius.circular(3),
                   ),
                 ),
@@ -271,7 +262,7 @@ class _TripMapDayCardState extends State<TripMapDayCard> {
         Text(
           title,
           maxLines: 1,
-          style: TextStyle(fontFamily: 'Poppins', fontSize: 15, fontWeight: FontWeight.w700, color: color),
+          style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 15, fontWeight: FontWeight.w700, color: color),
         ),
         const SizedBox(width: 8),
         Expanded(
@@ -279,7 +270,7 @@ class _TripMapDayCardState extends State<TripMapDayCard> {
             line,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight),
+            style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, color: DesignColors.textSecondary),
           ),
         ),
       ],
@@ -307,21 +298,21 @@ class _TripMapDayCardState extends State<TripMapDayCard> {
         children: [
           Row(
             children: [
-              const Icon(Iconsax.location, size: 15, color: TripColors.accentDark),
+              const TravelIcon(TravelIcon.place, size: 15),
               const SizedBox(width: 6),
               Flexible(
                 child: Text(
                   leg.cityName,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 15, fontWeight: FontWeight.w700, color: TripColors.accentDark),
+                  style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 15, fontWeight: FontWeight.w700, letterSpacing: 0.27, color: DesignColors.primary),
                 ),
               ),
               const SizedBox(width: 8),
               Text(
                 range,
                 maxLines: 1,
-                style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight),
+                style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, color: DesignColors.textSecondary),
               ),
             ],
           ),
@@ -330,20 +321,20 @@ class _TripMapDayCardState extends State<TripMapDayCard> {
             '${TripFormat.km(c.cityKm(k))} · ${TripFormat.duration(c.cityMinutes(k))}',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textMedium),
+            style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, fontWeight: FontWeight.w600, color: DesignColors.textPrimary),
           ),
           if (headline != null) ...[
             const SizedBox(height: 4),
             Row(
               children: [
-                const Icon(Iconsax.car, size: 13, color: TaxiColors.accentDark),
+                const TravelIcon(TravelIcon.taxi, size: 13),
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
                     headline,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textMedium),
+                    style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, fontWeight: FontWeight.w600, color: DesignColors.textPrimary),
                   ),
                 ),
               ],
@@ -354,7 +345,7 @@ class _TripMapDayCardState extends State<TripMapDayCard> {
             TripStringsMcdA2.tapCityHint,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight),
+            style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 11, color: DesignColors.textSecondary),
           ),
         ],
       );
@@ -383,14 +374,14 @@ class _TripMapDayCardState extends State<TripMapDayCard> {
         children: [
           _titleRow(
             'Day $day',
-            TripColors.dayColor(day),
+            TripKit.dayColor(day),
             freeTravel ? TripStringsMcaA3.travelDay : _dayLine(c, day, d.spots.length),
           ),
           if (line.isNotEmpty) ...[
             const SizedBox(height: 4),
             Row(
               children: [
-                Icon(city != null ? Iconsax.location : Iconsax.calendar_1, size: 13, color: AppColors.textLight),
+                Image.asset(city != null ? 'assets/images/design/travel3d/round_pushpin.png' : 'assets/images/design/travel3d/calendar.png', width: 14, height: 14),
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
@@ -398,7 +389,7 @@ class _TripMapDayCardState extends State<TripMapDayCard> {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                        fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textMedium),
+                        fontFamily: FitnessAppTheme.fontName, fontSize: 12, fontWeight: FontWeight.w600, color: DesignColors.textPrimary),
                   ),
                 ),
               ],
@@ -423,8 +414,8 @@ class _TripMapDayCardState extends State<TripMapDayCard> {
       final phone = TripTodayCard.stayPhone(stay);
       if (phone != null) {
         rows.add(_contactRow(
-          icon: Iconsax.building_4,
-          accent: StayColors.accent,
+          icon: 'hotel',
+          accent: DesignColors.statusAttention,
           text: stay.listingName.isEmpty ? TripStrings.stay : stay.listingName,
           action: TripStringsA4.callHost,
           phone: phone,
@@ -439,8 +430,8 @@ class _TripMapDayCardState extends State<TripMapDayCard> {
         taxi.isConfirmedByBoth ? TripStringsV2Plan.confirmedShort : TripStringsV2Plan.bookedByYouDriver,
       ].join(' · ');
       rows.add(_contactRow(
-        icon: Iconsax.car,
-        accent: TaxiColors.accent,
+        icon: 'taxi',
+        accent: DesignColors.error,
         text: text,
         action: TripStringsA4.callDriver,
         phone: _phone(taxi.owner.phone),
@@ -452,7 +443,7 @@ class _TripMapDayCardState extends State<TripMapDayCard> {
   }
 
   Widget _contactRow({
-    required IconData icon,
+    required String icon,
     required Color accent,
     required String text,
     required String action,
@@ -460,26 +451,22 @@ class _TripMapDayCardState extends State<TripMapDayCard> {
   }) {
     return Row(
       children: [
-        Icon(icon, size: 15, color: accent),
+        Image.asset('assets/images/design/travel3d/$icon.png', width: 18, height: 18),
         const SizedBox(width: 8),
         Expanded(
           child: Text(
             text,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textMedium),
+            style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, fontWeight: FontWeight.w600, color: DesignColors.textPrimary),
           ),
         ),
         if (phone != null)
-          TextButton.icon(
-            onPressed: () => ContactLauncher.call(phone),
-            style: TextButton.styleFrom(minimumSize: const Size(44, 44), padding: const EdgeInsets.symmetric(horizontal: 10)),
-            icon: Icon(Iconsax.call, size: 16, color: accent),
-            label: Text(
-              action,
-              maxLines: 1,
-              style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w700, color: accent),
-            ),
+          TripPillButton(
+            onTap: () => ContactLauncher.call(phone),
+            accent: accent,
+            icon: Icon(Icons.call_rounded, size: 16, color: accent),
+            label: action,
           ),
       ],
     );
@@ -502,7 +489,7 @@ class _TripMapDayCardState extends State<TripMapDayCard> {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          _titleRow('${p.days.length} days', AppColors.textDark, '${TripFormat.km(km)} · ${TripFormat.duration(minutes)}'),
+          _titleRow('${p.days.length} days', DesignColors.textStrong, '${TripFormat.km(km)} · ${TripFormat.duration(minutes)}'),
           const SizedBox(height: 10),
           Wrap(
             spacing: 12,
@@ -517,7 +504,7 @@ class _TripMapDayCardState extends State<TripMapDayCard> {
             TripStrings.tapDayChip,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight),
+            style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 11, color: DesignColors.textSecondary),
           ),
         ],
       );
@@ -539,21 +526,21 @@ class _TripMapDayCardState extends State<TripMapDayCard> {
           TripStringsMcdA2.daysCities(p.days.length, legs.length),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: const TextStyle(fontFamily: 'Poppins', fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textDark),
+          style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 15, fontWeight: FontWeight.w700, color: DesignColors.textStrong),
         ),
         const SizedBox(height: 2),
         Text(
           TripStringsMcdA2.inCitiesLine(TripFormat.km(km), c.travelDays),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight),
+          style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, color: DesignColors.textSecondary),
         ),
         const SizedBox(height: 10),
         Wrap(
           spacing: 12,
           runSpacing: 6,
           children: [
-            for (final l in legs) _legendDot(TripColors.dayColor(p.legStart(l.index)), l.cityName),
+            for (final l in legs) _legendDot(TripKit.dayColor(p.legStart(l.index)), l.cityName),
             _legendTravel(),
             if (hasStayPin) _legendStay(),
           ],
@@ -563,7 +550,7 @@ class _TripMapDayCardState extends State<TripMapDayCard> {
           TripStringsMcdA2.tapCityHint,
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
-          style: TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight),
+          style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 11, color: DesignColors.textSecondary),
         ),
       ],
     );
@@ -582,7 +569,7 @@ class _TripMapDayCardState extends State<TripMapDayCard> {
               label,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textMedium),
+              style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 11, fontWeight: FontWeight.w600, color: DesignColors.textPrimary),
             ),
           ),
         ],
@@ -599,14 +586,14 @@ class _TripMapDayCardState extends State<TripMapDayCard> {
           Container(
             width: 4,
             height: 3,
-            decoration: BoxDecoration(color: TaxiColors.accent, borderRadius: BorderRadius.circular(1)),
+            decoration: BoxDecoration(color: DesignColors.error, borderRadius: BorderRadius.circular(1)),
           ),
         ],
         const SizedBox(width: 5),
         const Text(
           TripStringsMcdA2.travelLegend,
           maxLines: 1,
-          style: TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textMedium),
+          style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 11, fontWeight: FontWeight.w600, color: DesignColors.textPrimary),
         ),
       ],
     );
@@ -619,14 +606,14 @@ class _TripMapDayCardState extends State<TripMapDayCard> {
         Container(
           width: 10,
           height: 10,
-          decoration: BoxDecoration(color: TripColors.dayColor(day), shape: BoxShape.circle),
+          decoration: BoxDecoration(color: TripKit.dayColor(day), shape: BoxShape.circle),
         ),
         const SizedBox(width: 5),
         Text(
           'Day $day',
           maxLines: 1,
           style: const TextStyle(
-              fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textMedium),
+              fontFamily: FitnessAppTheme.fontName, fontSize: 11, fontWeight: FontWeight.w600, color: DesignColors.textPrimary),
         ),
       ],
     );
@@ -639,14 +626,14 @@ class _TripMapDayCardState extends State<TripMapDayCard> {
         Container(
           width: 16,
           height: 16,
-          decoration: const BoxDecoration(color: StayColors.accent, shape: BoxShape.circle),
-          child: const Icon(Iconsax.building_4, size: 9, color: Colors.white),
+          decoration: const BoxDecoration(color: DesignColors.statusAttention, shape: BoxShape.circle),
+          child: const TravelIcon(TravelIcon.stay, size: 9),
         ),
         const SizedBox(width: 5),
         const Text(
           TripStrings.stay,
           maxLines: 1,
-          style: TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textMedium),
+          style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 11, fontWeight: FontWeight.w600, color: DesignColors.textPrimary),
         ),
       ],
     );

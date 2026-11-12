@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../config/app_colors.dart';
+import 'package:bakhli/design/design.dart';
 import '../../../utils/app_toast.dart';
 import '../../../models/browse_item.dart';
 import '../../../utils/contact_launcher.dart';
@@ -53,20 +53,22 @@ class StayEnquiryActions {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
+        backgroundColor: DesignColors.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text(TripStrings.acceptChange, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
+        title: const Text(TripStrings.acceptChange, style: TextStyle(fontFamily: TypeTokens.family, fontWeight: FontWeight.bold, fontSize: 16, letterSpacing: 0.18, color: DesignColors.textStrong)),
         content: Text(change == null ? StayEnquiryStrings.changeBodyFallback : TripStrings.acceptKeepsPrice(BrowseItem.inr(change.total)),
-            style: const TextStyle(fontSize: 13, color: AppColors.textMedium, height: 1.4)),
+            style: const TextStyle(fontFamily: TypeTokens.family, fontSize: 13, color: DesignColors.textGrey, height: 1.4)),
         actions: [
           TextButton(
             style: TextButton.styleFrom(minimumSize: const Size(64, 44)),
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text(StayEnquiryStrings.cancelAction, style: TextStyle(color: AppColors.textLight)),
+            child: const Text(StayEnquiryStrings.cancelAction, style: TextStyle(fontFamily: TypeTokens.family, fontWeight: FontWeight.w600, color: DesignColors.textSecondary)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.success,
-              foregroundColor: Colors.white,
+              backgroundColor: DesignColors.primaryLight,
+              foregroundColor: DesignColors.onPrimary,
+              shape: const RoundedRectangleBorder(borderRadius: CardRadius.tile),
               minimumSize: const Size(64, 44),
               padding: const EdgeInsets.symmetric(horizontal: 20),
             ),
@@ -103,20 +105,22 @@ class StayEnquiryActions {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
+        backgroundColor: DesignColors.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text(TripStrings.markAdvanceReceived, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
+        title: const Text(TripStrings.markAdvanceReceived, style: TextStyle(fontFamily: TypeTokens.family, fontWeight: FontWeight.bold, fontSize: 16, letterSpacing: 0.18, color: DesignColors.textStrong)),
         content: const Text(TripStrings.checkAmountFirst,
-            style: TextStyle(fontSize: 13, color: AppColors.textMedium, height: 1.4)),
+            style: TextStyle(fontFamily: TypeTokens.family, fontSize: 13, color: DesignColors.textGrey, height: 1.4)),
         actions: [
           TextButton(
             style: TextButton.styleFrom(minimumSize: const Size(64, 44)),
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text(StayEnquiryStrings.cancelAction, style: TextStyle(color: AppColors.textLight)),
+            child: const Text(StayEnquiryStrings.cancelAction, style: TextStyle(fontFamily: TypeTokens.family, fontWeight: FontWeight.w600, color: DesignColors.textSecondary)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.success,
-              foregroundColor: Colors.white,
+              backgroundColor: DesignColors.primaryLight,
+              foregroundColor: DesignColors.onPrimary,
+              shape: const RoundedRectangleBorder(borderRadius: CardRadius.tile),
               minimumSize: const Size(64, 44),
               padding: const EdgeInsets.symmetric(horizontal: 20),
             ),
@@ -146,20 +150,22 @@ class StayEnquiryActions {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
+        backgroundColor: DesignColors.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text(StayEnquiryStrings.notAvailableTitle, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
+        title: const Text(StayEnquiryStrings.notAvailableTitle, style: TextStyle(fontFamily: TypeTokens.family, fontWeight: FontWeight.bold, fontSize: 16, letterSpacing: 0.18, color: DesignColors.textStrong)),
         content: const Text(StayEnquiryStrings.notAvailableBody,
-            style: TextStyle(fontSize: 13, color: AppColors.textMedium, height: 1.4)),
+            style: TextStyle(fontFamily: TypeTokens.family, fontSize: 13, color: DesignColors.textGrey, height: 1.4)),
         actions: [
           TextButton(
             style: TextButton.styleFrom(minimumSize: const Size(64, 44)),
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text(StayEnquiryStrings.cancelAction, style: TextStyle(color: AppColors.textLight)),
+            child: const Text(StayEnquiryStrings.cancelAction, style: TextStyle(fontFamily: TypeTokens.family, fontWeight: FontWeight.w600, color: DesignColors.textSecondary)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.error,
-              foregroundColor: Colors.white,
+              backgroundColor: DesignColors.error,
+              foregroundColor: DesignColors.onPrimary,
+              shape: const RoundedRectangleBorder(borderRadius: CardRadius.tile),
               minimumSize: const Size(64, 44),
               padding: const EdgeInsets.symmetric(horizontal: 20),
             ),

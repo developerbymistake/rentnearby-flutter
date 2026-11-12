@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:iconsax/iconsax.dart';
-import '../../../config/app_colors.dart';
+import 'package:bakhli/design/design.dart';
+import 'trip_ui.dart';
 import '../../../models/browse_item.dart';
 import '../../../utils/contact_launcher.dart';
-import '../../taxi/taxi_option_sets.dart';
 import '../models/trip_journey_model.dart';
-import '../trip_colors.dart';
 import '../trip_strings_steps_a2.dart';
 
 class TripJourneyCompact extends StatelessWidget {
@@ -16,7 +14,7 @@ class TripJourneyCompact extends StatelessWidget {
 
   const TripJourneyCompact({super.key, required this.journey, this.showContacts = true, this.dense = false, this.tone});
 
-  static const List<Color> _legColors = [TripColors.accentDark, TaxiColors.accentDark];
+  static const List<Color> _legColors = [TripUi.tripDark, TripUi.taxiDark];
 
   static Color legColor(int i) => _legColors[i % _legColors.length];
 
@@ -53,7 +51,9 @@ class TripJourneyCompact extends StatelessWidget {
       children: [
         if (legs.length > 1) ...[
           LayoutBuilder(
-            builder: (context, box) => legs.length <= 2 && box.maxWidth >= 260 ? _railRow() : _railColumn(),
+            builder: (context, box) => legs.length <= 2 && box.maxWidth >= 260
+                ? KitRouteReveal(child: _railRow())
+                : KitRouteReveal(axis: Axis.vertical, child: _railColumn()),
           ),
           const SizedBox(height: 10),
         ],
@@ -78,7 +78,7 @@ class TripJourneyCompact extends StatelessWidget {
           _nodes.join(' → '),
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
-          style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textDark),
+          style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 13, fontWeight: FontWeight.w700, color: FitnessAppTheme.darkerText),
         ),
         if (fares.isNotEmpty) ...[
           const SizedBox(height: 2),
@@ -86,7 +86,7 @@ class TripJourneyCompact extends StatelessWidget {
             fares,
             maxLines: 3,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontFamily: 'Poppins', fontSize: 11.5, color: AppColors.textLight),
+            style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, color: FitnessAppTheme.lightText),
           ),
         ],
         if (showContacts)
@@ -112,13 +112,13 @@ class TripJourneyCompact extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 2),
             child: Column(
               children: [
-                Icon(Iconsax.car, size: 14, color: l.driverAvailable ? legColor(i) : TripStatusColors.waiting),
+                TravelIcon(TravelIcon.taxi, size: 14),
                 const SizedBox(height: 3),
                 Container(
                   height: 5,
                   decoration: BoxDecoration(
-                    color: l.driverAvailable ? legColor(i) : TripStatusColors.waiting,
-                    borderRadius: BorderRadius.circular(3),
+                    color: l.driverAvailable ? legColor(i) : TripUi.warn,
+                    borderRadius: CardRadius.pill,
                   ),
                 ),
                 const SizedBox(height: 3),
@@ -129,7 +129,7 @@ class TripJourneyCompact extends StatelessWidget {
                       fareOf(l.listedFare)!,
                       maxLines: 1,
                       style: const TextStyle(
-                          fontFamily: 'Poppins', fontSize: 10.5, fontWeight: FontWeight.w800, color: AppColors.warningText),
+                          fontFamily: FitnessAppTheme.fontName, fontSize: 11, fontWeight: FontWeight.w800, color: TripUi.warn),
                     ),
                   ),
               ],
@@ -150,8 +150,8 @@ class TripJourneyCompact extends StatelessWidget {
           height: 12,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: change ? Colors.white : TaxiColors.accentDark,
-            border: change ? Border.all(color: TripStatusColors.waiting, width: 3) : null,
+            color: change ? FitnessAppTheme.white : TripUi.taxiDark,
+            border: change ? Border.all(color: TripUi.warn, width: 3) : null,
           ),
         ),
         const SizedBox(height: 4),
@@ -160,7 +160,7 @@ class TripJourneyCompact extends StatelessWidget {
           textAlign: TextAlign.center,
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
-          style: const TextStyle(fontFamily: 'Poppins', fontSize: 10.5, fontWeight: FontWeight.w700, color: AppColors.textDark),
+          style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 11, fontWeight: FontWeight.w700, color: FitnessAppTheme.darkerText),
         ),
         if (change)
           const Text(
@@ -168,7 +168,7 @@ class TripJourneyCompact extends StatelessWidget {
             textAlign: TextAlign.center,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(fontFamily: 'Poppins', fontSize: 9.5, fontWeight: FontWeight.w700, color: AppColors.warningText),
+            style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 11, fontWeight: FontWeight.w700, color: TripUi.warn),
           ),
       ],
     );
@@ -190,8 +190,8 @@ class TripJourneyCompact extends StatelessWidget {
                 height: 12,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: change ? Colors.white : TaxiColors.accentDark,
-                  border: change ? Border.all(color: TripStatusColors.waiting, width: 3) : null,
+                  color: change ? FitnessAppTheme.white : TripUi.taxiDark,
+                  border: change ? Border.all(color: TripUi.warn, width: 3) : null,
                 ),
               ),
             ),
@@ -203,10 +203,10 @@ class TripJourneyCompact extends StatelessWidget {
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                fontFamily: 'Poppins',
+                fontFamily: FitnessAppTheme.fontName,
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
-                color: change ? AppColors.warningText : AppColors.textDark,
+                color: change ? TripUi.warn : FitnessAppTheme.darkerText,
               ),
             ),
           ),
@@ -214,7 +214,7 @@ class TripJourneyCompact extends StatelessWidget {
       ));
       if (i < legs.length) {
         final l = legs[i];
-        final color = l.driverAvailable ? legColor(i) : TripStatusColors.waiting;
+        final color = l.driverAvailable ? legColor(i) : TripUi.warn;
         rows.add(IntrinsicHeight(
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -222,7 +222,7 @@ class TripJourneyCompact extends StatelessWidget {
               SizedBox(
                 width: 20,
                 child: Center(
-                  child: Container(width: 4, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(2))),
+                  child: Container(width: 4, decoration: BoxDecoration(color: color, borderRadius: CardRadius.pill)),
                 ),
               ),
               const SizedBox(width: 8),
@@ -233,7 +233,7 @@ class TripJourneyCompact extends StatelessWidget {
                     [TripStringsStepsA2.carDriver(i + 1), ?fareOf(l.listedFare)].join(' · '),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight),
+                    style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 11, color: FitnessAppTheme.lightText),
                   ),
                 ),
               ),
@@ -249,43 +249,55 @@ class TripJourneyCompact extends StatelessWidget {
     final name = driverOf(l.driverName);
     final paused = !l.driverAvailable;
     final head = single
-        ? Container(
-            padding: const EdgeInsets.fromLTRB(10, 9, 10, 9),
-            decoration: BoxDecoration(
-              color: paused ? AppColors.warningSurface : (tone ?? TaxiColors.accentDark).withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(12),
-              border: Border(left: BorderSide(color: paused ? TripStatusColors.waiting : (tone ?? TaxiColors.accentDark), width: 5)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                      fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textDark),
+        ? ClipRRect(
+            borderRadius: CardRadius.chip,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: paused ? TripUi.warnTint : DesignColors.tint(tone ?? TripUi.taxiDark, Alpha.hairline),
+              ),
+              child: IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Container(width: 5, color: paused ? TripUi.warn : (tone ?? TripUi.taxiDark)),
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(10, 9, 10, 9),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TypeTokens.style(13, FontWeight.w700, color: DesignColors.textStrong),
+                            ),
+                            Text(
+                              TripStringsStepsA2.vehicleLine(l.fromName, l.toName, l.vehicleTypeName),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: TypeTokens.style(12, FontWeight.w400, color: TypeTokens.secondary),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                Text(
-                  TripStringsStepsA2.vehicleLine(l.fromName, l.toName, l.vehicleTypeName),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 11.5, color: AppColors.textLight),
-                ),
-              ],
+              ),
             ),
           )
         : Text.rich(
             TextSpan(children: [
               TextSpan(
                 text: '${TripStringsStepsA2.carDriver(i + 1)} ',
-                style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.textDark),
+                style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontWeight: FontWeight.w700, color: FitnessAppTheme.darkerText),
               ),
               TextSpan(text: name),
             ]),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight),
+            style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, color: FitnessAppTheme.lightText),
           );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -309,7 +321,7 @@ class TripJourneyCompact extends StatelessWidget {
         children: [
           const Padding(
             padding: EdgeInsets.only(top: 1),
-            child: Icon(Iconsax.warning_2, size: 14, color: AppColors.warningText),
+            child: TravelIcon(TravelIcon.calendar, size: 16),
           ),
           const SizedBox(width: 6),
           Expanded(
@@ -318,7 +330,7 @@ class TripJourneyCompact extends StatelessWidget {
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
-                  fontFamily: 'Poppins', fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.warningText),
+                  fontFamily: FitnessAppTheme.fontName, fontSize: 12, fontWeight: FontWeight.w600, color: TripUi.warn),
             ),
           ),
         ],
@@ -328,9 +340,9 @@ class TripJourneyCompact extends StatelessWidget {
     final call = phoneOf(l.phone, l.whatsApp);
     final chat = phoneOf(l.whatsApp, l.phone);
     if (call == null && chat == null) return const SizedBox.shrink();
-    final callBtn = _contactButton(TripStringsStepsA2.call, Iconsax.call, TaxiColors.accentDark,
+    final callBtn = _contactButton(TripStringsStepsA2.call, const SizedBox.shrink(), TripUi.taxiDark,
         call == null ? null : () => ContactLauncher.call(call));
-    final chatBtn = _contactButton(TripStringsStepsA2.whatsApp, Iconsax.message, AppColors.successDark,
+    final chatBtn = _contactButton(TripStringsStepsA2.whatsApp, const TravelIcon(TravelIcon.chat, size: 18), TripUi.goodDark,
         chat == null ? null : () => ContactLauncher.whatsApp(chat));
     return LayoutBuilder(builder: (context, box) {
       if (box.maxWidth < 220) {
@@ -343,25 +355,11 @@ class TripJourneyCompact extends StatelessWidget {
     });
   }
 
-  static Widget _contactButton(String label, IconData icon, Color color, VoidCallback? onTap) => OutlinedButton.icon(
+  static Widget _contactButton(String label, Widget icon, Color color, VoidCallback? onTap) => SecondaryButton(
+        label: label,
         onPressed: onTap,
-        icon: Icon(icon, size: 16, color: onTap == null ? AppColors.textHint : color),
-        label: Text(
-          label,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            fontFamily: 'Poppins',
-            fontSize: 12.5,
-            fontWeight: FontWeight.w700,
-            color: onTap == null ? AppColors.textHint : color,
-          ),
-        ),
-        style: OutlinedButton.styleFrom(
-          minimumSize: const Size(0, 44),
-          padding: const EdgeInsets.symmetric(horizontal: 10),
-          side: const BorderSide(color: AppColors.divider, width: 1.3),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(11)),
-        ),
+        tone: TripUi.toneOf(color),
+        height: 44,
+        icon: icon,
       );
 }

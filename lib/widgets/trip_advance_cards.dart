@@ -1,13 +1,13 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:bakhli/features/trip/widgets/trip_ui.dart';
+import 'package:bakhli/design/design.dart';
+import 'package:bakhli/design/extra/replies_kit.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:iconsax/iconsax.dart';
-import '../config/app_colors.dart';
 import '../config/app_routes.dart';
 import '../features/trip/controllers/trip_plan_controller.dart';
 import '../features/trip/models/trip_enquiry_model.dart';
-import '../features/trip/trip_colors.dart';
 import '../features/trip/trip_navigation.dart';
 import '../features/trip/trip_strings.dart';
 import '../features/trip/utils/trip_format.dart';
@@ -160,7 +160,7 @@ class TripAdvanceCards {
     return _frame(
       context,
       m,
-      icon: Iconsax.wallet_3,
+      icon: TravelIcon.money,
       tone: accent,
       title: TripStrings.payDirectlyToHost,
       subtitle: a.holdUntil == null ? null : TripStrings.advanceHoldTill(a.holdTime),
@@ -176,14 +176,14 @@ class TripAdvanceCards {
         _button(TripStrings.iSentProof,
             kind: _Btn.primary,
             accent: accent,
-            icon: Iconsax.tick_circle,
+            icon: Icons.check_rounded,
             onTap: id == null || cb.onProofSent == null ? null : () => cb.onProofSent!(id)),
         if (wa.isNotEmpty) ...[
           const SizedBox(height: 8),
           _button(TripStrings.openWhatsAppTo(wa),
               kind: _Btn.whatsApp,
               accent: accent,
-              icon: Iconsax.message,
+              icon: TravelIcon.chat,
               onTap: () => ContactLauncher.whatsApp(wa,
                   message: TripStrings.proofWhatsAppText(a.money, a.stayName, a.range))),
         ],
@@ -204,7 +204,7 @@ class TripAdvanceCards {
     return _frame(
       context,
       m,
-      icon: Iconsax.timer_1,
+      icon: TravelIcon.calendar,
       tone: TripStatusVisuals.advanceText(TripAdvanceStatuses.proofSent),
       title: TripStrings.waitingForHost,
       subtitle: sentAt == null ? null : TripStrings.youSaidProofSent(TripFormat.time12Of(sentAt)),
@@ -239,13 +239,13 @@ class TripAdvanceCards {
         const SizedBox(height: 12),
         if (host.isNotEmpty)
           _button(TripStrings.callHost,
-              kind: _Btn.plain, accent: accent, icon: Iconsax.call, onTap: () => ContactLauncher.call(host)),
+              kind: _Btn.plain, accent: accent, icon: Icons.call_rounded, onTap: () => ContactLauncher.call(host)),
         if (host.isNotEmpty && wa.isNotEmpty) const SizedBox(height: 8),
         if (wa.isNotEmpty)
           _button(TripStrings.openWhatsApp,
               kind: _Btn.whatsApp,
               accent: accent,
-              icon: Iconsax.message,
+              icon: TravelIcon.chat,
               onTap: () => ContactLauncher.whatsApp(wa,
                   message: TripStrings.proofWhatsAppText(a.money, a.stayName, a.range))),
         const SizedBox(height: 10),
@@ -264,7 +264,7 @@ class TripAdvanceCards {
     return _frame(
       context,
       m,
-      icon: Iconsax.tick_circle,
+      icon: TravelIcon.star,
       tone: tone,
       title: TripStrings.advanceReceived,
       subtitle: at == null
@@ -278,13 +278,13 @@ class TripAdvanceCards {
         const SizedBox(height: 12),
         if (host.isNotEmpty)
           _button(TripStrings.callHost,
-              kind: _Btn.plain, accent: accent, icon: Iconsax.call, onTap: () => ContactLauncher.call(host)),
+              kind: _Btn.plain, accent: accent, icon: Icons.call_rounded, onTap: () => ContactLauncher.call(host)),
         if (host.isNotEmpty && tripId != null) const SizedBox(height: 8),
         if (tripId != null)
           _button(TripStrings.viewInTrip,
               kind: _Btn.plain,
               accent: accent,
-              icon: Iconsax.routing_2,
+              icon: TravelIcon.route,
               onTap: () => Get.toNamed(AppRoutes.tripPlan, arguments: {'tripId': tripId})),
         const SizedBox(height: 10),
         const TripPaymentLine(),
@@ -298,8 +298,8 @@ class TripAdvanceCards {
     return _frame(
       context,
       m,
-      icon: Iconsax.warning_2,
-      tone: TripStatusColors.failed,
+      icon: TravelIcon.pin,
+      tone: DesignColors.statusSaved,
       title: TripStrings.hostDidNotConfirm,
       subtitle: TripStrings.roomMayBeReleased,
       trailing: const TripStatusPill(TripDisplayStatus.holdExpired),
@@ -309,11 +309,11 @@ class TripAdvanceCards {
               maxLines: 2, overflow: TextOverflow.ellipsis, style: _body),
         const SizedBox(height: 12),
         _button(TripStrings.askOtherStays,
-            kind: _Btn.primary, accent: accent, icon: Iconsax.building_4, onTap: () => _askOthers(cb)),
+            kind: _Btn.primary, accent: accent, icon: TravelIcon.stay, onTap: () => _askOthers(cb)),
         if (host.isNotEmpty) ...[
           const SizedBox(height: 8),
           _button(TripStrings.callHost,
-              kind: _Btn.plain, accent: accent, icon: Iconsax.call, onTap: () => ContactLauncher.call(host)),
+              kind: _Btn.plain, accent: accent, icon: Icons.call_rounded, onTap: () => ContactLauncher.call(host)),
         ],
         const SizedBox(height: 10),
         const Text(TripStrings.ifPaidFooter, style: _fine),
@@ -345,19 +345,17 @@ class TripAdvanceCards {
     }
   }
 
-  static Widget _replacedCard(BuildContext context, MessageModel m, _AdvanceCard a, Color accent) => Opacity(
-        opacity: 0.6,
-        child: _frame(
+  static Widget _replacedCard(BuildContext context, MessageModel m, _AdvanceCard a, Color accent) => _frame(
           context,
           m,
-          icon: Iconsax.wallet_3,
-          tone: AppColors.textLight,
+          muted: true,
+          icon: TravelIcon.money,
+          tone: DesignColors.textMuted,
           title: TripStrings.advancePending(a.money),
           subtitle: a.holdUntil == null ? null : TripStrings.holdTill(a.holdTime),
           trailing: TripStatusPill(TripDisplayStatus.closed,
               label: a.status == _cancelled ? TripStrings.advanceCancelled : TripStrings.replacedByNewer),
           children: const [],
-        ),
       );
 
   // host
@@ -376,7 +374,7 @@ class TripAdvanceCards {
     return _frame(
       context,
       m,
-      icon: Iconsax.wallet_3,
+      icon: TravelIcon.money,
       tone: TripStatusVisuals.advanceText(_liveStatus(a.status)),
       title: TripStrings.advancePending(a.money),
       subtitle: a.holdUntil == null ? null : TripStrings.holdTill(a.holdTime),
@@ -398,11 +396,11 @@ class TripAdvanceCards {
     return _frame(
       context,
       m,
-      icon: Iconsax.warning_2,
-      tone: TripStatusColors.failed,
+      icon: TravelIcon.pin,
+      tone: DesignColors.statusSaved,
       title: TripStrings.holdEnded,
       subtitle: TripStrings.advanceNotMarked,
-      trailing: a.amount == null ? null : _moneyPill(a.money, TripStatusColors.failed),
+      trailing: a.amount == null ? null : _moneyPill(a.money, DesignColors.statusSaved),
       children: [
         Text(
           cb.movedOn ? TripStrings.guestMovedOn : TripStrings.canStillMark(cb.guestName ?? ''),
@@ -413,12 +411,12 @@ class TripAdvanceCards {
         const SizedBox(height: 12),
         if (canMark) ...[
           _button(TripStrings.markAdvanceReceived,
-              kind: _Btn.positive, accent: accent, icon: Iconsax.tick_circle, onTap: () => cb.onMarkReceived!(id)),
+              kind: _Btn.positive, accent: accent, icon: Icons.check_rounded, onTap: () => cb.onMarkReceived!(id)),
           const SizedBox(height: 8),
         ],
         if (guest.isNotEmpty)
           _button(TripStrings.callGuest,
-              kind: _Btn.plain, accent: accent, icon: Iconsax.call, onTap: () => ContactLauncher.call(guest)),
+              kind: _Btn.plain, accent: accent, icon: Icons.call_rounded, onTap: () => ContactLauncher.call(guest)),
         const SizedBox(height: 10),
         const TripPaymentLine(),
       ],
@@ -427,18 +425,16 @@ class TripAdvanceCards {
 
   static Widget _hostProof(BuildContext context, MessageModel m, _AdvanceCard a, Color accent, TripChatCallbacks cb) {
     if (a.status == _replaced || a.status == _cancelled) {
-      return Opacity(
-        opacity: 0.6,
-        child: _frame(
+      return _frame(
           context,
           m,
-          icon: Iconsax.camera,
-          tone: AppColors.textLight,
+          muted: true,
+          icon: TravelIcon.photo,
+          tone: DesignColors.textMuted,
           title: TripStrings.saysProofSent(cb.guestName ?? ''),
           trailing: TripStatusPill(TripDisplayStatus.closed,
               label: a.status == _cancelled ? TripStrings.advanceCancelled : TripStrings.replacedByNewer),
           children: const [],
-        ),
       );
     }
     final phone = a.guestPhone == null ? '' : ContactLauncher.tenDigits(a.guestPhone!);
@@ -452,7 +448,7 @@ class TripAdvanceCards {
     return _frame(
       context,
       m,
-      icon: Iconsax.camera,
+      icon: TravelIcon.photo,
       tone: accent,
       title: TripStrings.saysProofSent(cb.guestName ?? ''),
       subtitle: phone.isEmpty ? null : TripStrings.checkWhatsApp(phone),
@@ -465,7 +461,7 @@ class TripAdvanceCards {
           _button(TripStrings.markAdvanceReceived,
               kind: _Btn.positive,
               accent: accent,
-              icon: Iconsax.tick_circle,
+              icon: Icons.check_rounded,
               onTap: id == null || cb.onMarkReceived == null ? null : () => cb.onMarkReceived!(id)),
           const SizedBox(height: 8),
           _button(TripStrings.notYet,
@@ -476,7 +472,7 @@ class TripAdvanceCards {
         if (open && phone.isNotEmpty) ...[
           const SizedBox(height: 8),
           _button(TripStrings.openWhatsApp,
-              kind: _Btn.whatsApp, accent: accent, icon: Iconsax.message, onTap: () => ContactLauncher.whatsApp(phone)),
+              kind: _Btn.whatsApp, accent: accent, icon: TravelIcon.chat, onTap: () => ContactLauncher.whatsApp(phone)),
         ],
       ],
     );
@@ -491,32 +487,36 @@ class TripAdvanceCards {
 
   // building blocks
 
-  static const _body = TextStyle(fontFamily: 'Poppins', fontSize: 12.5, color: AppColors.textMedium, height: 1.35);
-  static const _small = TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight, height: 1.35);
-  static const _fine = TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight, height: 1.35);
+  static const _body = TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12.5, color: DesignColors.textSecondary, height: 1.35);
+  static const _small = TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, color: DesignColors.textMuted, height: 1.35);
+  static const _fine = TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 11, color: DesignColors.textMuted, height: 1.35);
 
   static Widget _frame(
     BuildContext context,
     MessageModel m, {
-    required IconData icon,
+    required String icon,
     required Color tone,
     required String title,
     String? subtitle,
     Widget? trailing,
+    bool muted = false,
     required List<Widget> children,
   }) {
     final maxWidth = math.min(300.0, MediaQuery.sizeOf(context).width - 40);
-    return Align(
+    final recent = DateTime.now().difference(m.createdAt).inSeconds.abs() < 10;
+    final iconTone = muted ? DesignColors.textMuted : tone;
+    return RepliesEntrance(
+      animate: recent,
+      child: Align(
       alignment: m.isMine ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 4),
         constraints: BoxConstraints(maxWidth: maxWidth),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: AppColors.cardBg,
-          border: Border.all(color: AppColors.divider),
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: const [BoxShadow(color: AppColors.shadow, blurRadius: 8, offset: Offset(0, 3))],
+          color: muted ? DesignColors.scaffold : DesignColors.surface,
+          borderRadius: RepliesCard.radius,
+          boxShadow: muted ? null : DesignShadows.card,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -528,8 +528,13 @@ class TripAdvanceCards {
                 Container(
                   width: 30,
                   height: 30,
-                  decoration: BoxDecoration(color: tone.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(9)),
-                  child: Icon(icon, size: 16, color: tone),
+                  decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                          colors: [iconTone.withValues(alpha: Alpha.scrim), iconTone.withValues(alpha: Alpha.hairline)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight),
+                      shape: BoxShape.circle),
+                  child: Padding(padding: const EdgeInsets.all(5), child: TravelIcon(icon, size: 20)),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
@@ -539,8 +544,8 @@ class TripAdvanceCards {
                       Text(title,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                              fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textDark)),
+                          style: TextStyle(
+                              fontFamily: FitnessAppTheme.fontName, fontSize: 13, fontWeight: FontWeight.w700, color: muted ? DesignColors.textMuted : DesignColors.textStrong)),
                       if (subtitle != null)
                         Text(subtitle, maxLines: 2, overflow: TextOverflow.ellipsis, style: _small),
                     ],
@@ -561,20 +566,22 @@ class TripAdvanceCards {
           ],
         ),
       ),
+      ),
     );
   }
 
   static Widget _moneyPill(String text, Color color) => Container(
         constraints: const BoxConstraints(minHeight: 30),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-        decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(999)),
+        decoration: BoxDecoration(color: color.withValues(alpha: Alpha.tint), borderRadius: BorderRadius.circular(999)),
         child: Center(
           widthFactor: 1,
+          heightFactor: 1,
           child: FittedBox(
             fit: BoxFit.scaleDown,
             child: Text(text,
                 maxLines: 1,
-                style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700, color: color)),
+                style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 13, fontWeight: FontWeight.w700, color: color)),
           ),
         ),
       );
@@ -582,9 +589,8 @@ class TripAdvanceCards {
   static Widget _upiBox(String upi, Color accent) => Container(
         padding: const EdgeInsets.only(left: 12),
         decoration: BoxDecoration(
-          color: AppColors.neutralChip,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.divider),
+          color: DesignColors.scaffold,
+          borderRadius: BorderRadius.circular(16),
         ),
         child: Row(
           children: [
@@ -601,7 +607,7 @@ class TripAdvanceCards {
                       child: Text(upi,
                           maxLines: 1,
                           style: const TextStyle(
-                              fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textDark)),
+                              fontFamily: FitnessAppTheme.fontName, fontSize: 14, fontWeight: FontWeight.w700, color: DesignColors.textStrong)),
                     ),
                   ],
                 ),
@@ -617,7 +623,7 @@ class TripAdvanceCards {
                   await Clipboard.setData(ClipboardData(text: upi));
                   AppToast.success(TripStrings.upiCopied);
                 },
-                icon: Icon(Iconsax.copy, size: 18, color: accent),
+                icon: Icon(Icons.copy_rounded, size: 18, color: accent),
               ),
             ),
           ],
@@ -638,14 +644,14 @@ class TripAdvanceCards {
                     height: 20,
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
-                      color: steps[i].$2 ? AppColors.successSurface : accent.withValues(alpha: 0.12),
+                      color: steps[i].$2 ? DesignColors.infoSoft : accent.withValues(alpha: Alpha.tint),
                       shape: BoxShape.circle,
                     ),
                     child: steps[i].$2
-                        ? const Icon(Icons.check_rounded, size: 13, color: AppColors.successText)
+                        ? const Icon(Icons.check_rounded, size: 13, color: DesignColors.primaryLight)
                         : Text('${i + 1}',
                             style: TextStyle(
-                                fontFamily: 'Poppins', fontSize: 10.5, fontWeight: FontWeight.w700, color: accent)),
+                                fontFamily: FitnessAppTheme.fontName, fontSize: 11, fontWeight: FontWeight.w700, color: accent)),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
@@ -659,7 +665,7 @@ class TripAdvanceCards {
 
   static Widget _note(String title, String body) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        decoration: BoxDecoration(color: AppColors.warningSurface, borderRadius: BorderRadius.circular(10)),
+        decoration: BoxDecoration(color: DesignColors.statusAskedSoft, borderRadius: BorderRadius.circular(8)),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -667,11 +673,11 @@ class TripAdvanceCards {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
-                    fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.warningText)),
+                    fontFamily: FitnessAppTheme.fontName, fontSize: 12, fontWeight: FontWeight.w700, color: DesignColors.statusAttention)),
             Text(body,
                 maxLines: 3,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontFamily: 'Poppins', fontSize: 11.5, color: AppColors.warningText, height: 1.35)),
+                style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 11.5, color: DesignColors.statusAttention, height: 1.35)),
           ],
         ),
       );
@@ -687,62 +693,33 @@ class TripAdvanceCards {
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
-                    fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                    fontFamily: FitnessAppTheme.fontName, fontSize: 12.5, fontWeight: FontWeight.w600, color: DesignColors.textStrong)),
           ),
         ]),
       );
 
-  static Widget _button(String label, {required _Btn kind, required Color accent, IconData? icon, VoidCallback? onTap}) {
-    final disabled = onTap == null;
-    final fill = switch (kind) {
-      _Btn.primary => accent,
-      _Btn.positive => AppColors.successDark,
-      _ => Colors.transparent,
-    };
+  static Widget _button(String label, {required _Btn kind, required Color accent, Object? icon, VoidCallback? onTap}) {
     final filled = kind == _Btn.primary || kind == _Btn.positive;
-    final fg = filled
-        ? Colors.white
-        : (kind == _Btn.whatsApp ? AppColors.successText : AppColors.textMedium);
-    final edge = kind == _Btn.whatsApp ? AppColors.whatsApp.withValues(alpha: 0.6) : AppColors.divider;
-    final child = Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        if (icon != null) ...[Icon(icon, size: 16), const SizedBox(width: 6)],
-        Flexible(
-          child: Text(label,
-              maxLines: 2,
-              textAlign: TextAlign.center,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600)),
-        ),
-      ],
-    );
-    final shape = RoundedRectangleBorder(borderRadius: BorderRadius.circular(12));
+    final asset = icon is String ? icon : null;
+    final glyph = icon is IconData ? icon : null;
     return SizedBox(
       width: double.infinity,
       child: filled
-          ? ElevatedButton(
+          ? TripButton(
+              color: kind == _Btn.positive ? DesignColors.primaryLight : accent,
+              label: label,
+              iconAsset: asset,
+              icon: glyph,
               onPressed: onTap,
-              style: ElevatedButton.styleFrom(
-                minimumSize: const Size.fromHeight(48),
-                backgroundColor: disabled ? AppColors.divider : fill,
-                foregroundColor: disabled ? AppColors.textHint : fg,
-                disabledBackgroundColor: AppColors.divider,
-                disabledForegroundColor: AppColors.textHint,
-                elevation: 0,
-                shape: shape,
-              ),
-              child: child,
             )
-          : OutlinedButton(
-              onPressed: onTap,
-              style: OutlinedButton.styleFrom(
-                minimumSize: const Size.fromHeight(48),
-                foregroundColor: fg,
-                side: BorderSide(color: disabled ? AppColors.divider : edge),
-                shape: shape,
-              ),
-              child: child,
+          : TripActionChip(
+              height: 48,
+              fontSize: 13,
+              color: kind == _Btn.whatsApp ? DesignColors.primaryLight : DesignColors.textSecondary,
+              label: label,
+              iconAsset: asset,
+              icon: glyph,
+              onTap: onTap,
             ),
     );
   }
@@ -756,8 +733,8 @@ class TripAdvanceCards {
         constraints: const BoxConstraints(maxWidth: 280),
         padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
         decoration: BoxDecoration(
-          color: mine ? accent : AppColors.cardBg,
-          border: mine ? null : Border.all(color: AppColors.divider),
+          color: mine ? null : DesignColors.surface,
+          gradient: mine ? DesignGradients.brand : null,
           borderRadius: BorderRadius.only(
             topLeft: const Radius.circular(14),
             topRight: const Radius.circular(14),
@@ -767,7 +744,7 @@ class TripAdvanceCards {
         ),
         child: Column(crossAxisAlignment: CrossAxisAlignment.end, mainAxisSize: MainAxisSize.min, children: [
           Text(text,
-              style: TextStyle(fontFamily: 'Poppins', fontSize: 13.5, color: mine ? Colors.white : AppColors.textDark)),
+              style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 13.5, color: mine ? DesignColors.surface : DesignColors.textStrong)),
           if (mine) ...[const SizedBox(height: 2), _tick(m.readAt != null)],
         ]),
       ),
@@ -777,7 +754,7 @@ class TripAdvanceCards {
   static Widget _tick(bool read, {bool onDark = true}) => Icon(
         read ? Icons.done_all_rounded : Icons.done_rounded,
         size: 14,
-        color: read ? AppColors.readTick : (onDark ? Colors.white70 : AppColors.textHint),
+        color: read ? DesignColors.primaryLight : (onDark ? DesignColors.surface.withValues(alpha: Alpha.strong) : DesignColors.textMuted),
       );
 
   static String? _str(Map<String, dynamic> p, String k) {

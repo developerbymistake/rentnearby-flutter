@@ -1,4 +1,6 @@
 import '../../../utils/city_search_rank.dart';
+import '../../../utils/cloudinary_thumb.dart';
+import '../trip_strings_tab.dart';
 
 class TripCityStatus {
   static const String ready = 'Ready';
@@ -13,6 +15,7 @@ class TripCityModel {
   final double latitude;
   final double longitude;
   final String? imageUrl;
+  final String? coverUrl;
   final String status;
   final int spotCount;
   final bool isPopularDestination;
@@ -25,6 +28,7 @@ class TripCityModel {
     required this.latitude,
     required this.longitude,
     this.imageUrl,
+    this.coverUrl,
     this.status = TripCityStatus.ready,
     this.spotCount = 0,
     this.isPopularDestination = false,
@@ -32,7 +36,16 @@ class TripCityModel {
 
   bool get isReady => status == TripCityStatus.ready;
 
+  String? get cover {
+    final c = coverUrl;
+    if (c != null && c.isNotEmpty) return c;
+    final i = imageUrl;
+    return i == null || i.isEmpty ? null : CloudinaryThumb.of(i);
+  }
+
   String get placeLine => [districtName, stateName].where((s) => s.isNotEmpty).join(' · ');
+
+  String get tileLine => [districtName, if (spotCount > 0) TripStringsTab.cityMeta(spotCount)].where((s) => s.isNotEmpty).join(' · ');
 
   factory TripCityModel.fromJson(Map<String, dynamic> json) => TripCityModel(
         cityKey: (json['cityKey'] as num).toInt(),
@@ -42,6 +55,7 @@ class TripCityModel {
         latitude: (json['latitude'] as num).toDouble(),
         longitude: (json['longitude'] as num).toDouble(),
         imageUrl: json['imageUrl'] as String?,
+        coverUrl: json['coverUrl'] as String?,
         status: json['status'] as String? ?? TripCityStatus.ready,
         spotCount: (json['spotCount'] as num?)?.toInt() ?? 0,
         isPopularDestination: json['isPopularDestination'] == true,
@@ -55,6 +69,7 @@ class TripCityModel {
         'latitude': latitude,
         'longitude': longitude,
         'imageUrl': imageUrl,
+        'coverUrl': coverUrl,
         'status': status,
         'spotCount': spotCount,
         'isPopularDestination': isPopularDestination,

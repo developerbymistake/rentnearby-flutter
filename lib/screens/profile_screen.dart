@@ -1,11 +1,12 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:iconsax/iconsax.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../config/app_colors.dart';
-import '../config/app_insets.dart';
+import 'package:bakhli/design/design.dart';
+import 'package:bakhli/design/extra/replies_kit.dart';
 import '../config/app_routes.dart';
+import '../config/app_tabs.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/plan_controller.dart';
 import '../utils/app_date_format.dart';
@@ -23,6 +24,23 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   final _auth = Get.find<AuthController>();
+
+  static const String _d = 'assets/images/design/travel3d/';
+  static const int _count = 8;
+
+  static const _pairs = <(Color, Color)>[
+    (DesignColors.skyDeepStart, DesignColors.lunchEnd),
+    (DesignColors.sunriseDeep, DesignColors.sunriseDeepEnd),
+    (DesignColors.roseDeepStart, DesignColors.roseDeep),
+    (DesignColors.duskDeepStart, DesignColors.dinnerStart),
+  ];
+
+  static final TextStyle _rowTitle = TypeTokens.style(14, FontWeight.w600, color: DesignColors.textStrong, letterSpacing: 0.2);
+  static final TextStyle _sheetTitle = TypeTokens.style(18, FontWeight.w700, color: DesignColors.textStrong, letterSpacing: 0.2);
+  static final TextStyle _body = TypeTokens.style(14, FontWeight.w500, color: DesignColors.textGrey, height: 1.5);
+  static const BorderRadius _dialogShape = CardRadius.hero;
+  static const RoundedRectangleBorder _sheetShape = RoundedRectangleBorder(borderRadius: CardRadius.sheet);
+  static const KitTone _badTone = KitTone.danger;
 
   String _initials(String? name) {
     if (name == null || name.trim().isEmpty) return '';
@@ -64,248 +82,237 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    var i = 0;
+    Widget item(Widget w) => StaggerItem(index: i++, child: w);
     return Scaffold(
-      // Outer MainScreen Scaffold already handles keyboard avoidance.
-      // Setting this to false prevents the double-resize glitch.
+      backgroundColor: DesignColors.scaffold,
       resizeToAvoidBottomInset: false,
-      body: SingleChildScrollView(
-        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-        child: Column(
-          children: [
-            // Header
-            Container(
-              decoration: const BoxDecoration(gradient: AppColors.primaryGradient),
-              child: SafeArea(
-                bottom: false,
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 30, 20, 34),
-                  child: Obx(() {
-                    final name = _auth.profileName.value;
-                    return Row(
-                      children: [
-                        _avatarFallback(name),
-                        const SizedBox(width: 18),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Flexible(
-                                    child: Text(
-                                      name.trim().isNotEmpty ? name.trim() : 'Your Profile',
-                                      style: const TextStyle(
-                                          fontFamily: 'Poppins',
-                                          fontSize: 21,
-                                          fontWeight: FontWeight.w700,
-                                          color: Colors.white),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 7),
-                                  GestureDetector(
-                                    onTap: _openEditNameSheet,
-                                    child: Container(
-                                      width: 22,
-                                      height: 22,
-                                      decoration: BoxDecoration(
-                                        color: Colors.white.withValues(alpha: 0.18),
-                                        borderRadius: BorderRadius.circular(7),
-                                      ),
-                                      child: const Icon(Iconsax.edit_2, size: 11, color: Colors.white),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 4),
-                              Obx(() => Text(
-                                '+91 ${_auth.profilePhone.value}',
-                                style: const TextStyle(
-                                    fontFamily: 'Poppins',
-                                    fontSize: 14,
-                                    color: Colors.white70),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              )),
-                            ],
-                          ),
-                        ),
-                      ],
-                    );
-                  }),
-                ),
-              ),
-            ),
-
-            Obx(() => _auth.isOwner ? _buildPlansCard() : const SizedBox(height: 20)),
-
-            // Account — phone and contact-visibility, each its own independent action
-            // (separate confirm/edit sheets, separate API calls). Name is edited from the
-            // pencil in the header above instead of a row here.
-            _sectionGroup('ACCOUNT', [
-              _accountPhoneTile(),
-              Divider(height: 1, indent: 56, color: AppColors.divider),
-              _accountVisibilityTile(),
-              Divider(height: 1, indent: 56, color: AppColors.divider),
-              _accountRoleTile(),
-            ]),
-
-            // My Activity — every screen that shows "things the user has done/can act on"
-            // (reports), grouped together and separate from the pure app-meta
-            // Support section below.
-            _sectionGroup('ACTIVITY', [
-              Obx(() => _auth.jobsBrowseEnabled
-                  ? Column(children: [
-                      _legalTile(icon: Iconsax.briefcase, label: 'Jobs', onTap: () => Get.toNamed(AppRoutes.jobs)),
-                      Divider(height: 1, indent: 56, color: AppColors.divider),
-                    ])
-                  : const SizedBox.shrink()),
-              Obx(() => _auth.taxisEnabled
-                  ? Column(children: [
-                      _legalTile(icon: Iconsax.routing_2, label: 'My Journeys', onTap: () => Get.toNamed(AppRoutes.myJourneys)),
-                      Divider(height: 1, indent: 56, color: AppColors.divider),
-                    ])
-                  : const SizedBox.shrink()),
-              _legalTile(icon: Iconsax.flag, label: 'My Reports', onTap: () => Get.toNamed(AppRoutes.myFiledReports)),
-            ]),
-
-            // Support
-            _sectionGroup('SUPPORT', [
-              _legalTile(icon: Iconsax.message_question, label: 'Contact Support', onTap: _contactSupport),
-              Divider(height: 1, indent: 56, color: AppColors.divider),
-              _legalTile(icon: Iconsax.star, label: 'Rate App', onTap: _rateApp),
-              Divider(height: 1, indent: 56, color: AppColors.divider),
-              _legalTile(icon: Iconsax.share, label: 'Share App', onTap: _shareApp),
-            ]),
-
-            // Legal
-            _sectionGroup('LEGAL', [
-              _legalTile(
-                icon: Iconsax.shield_tick,
-                label: 'Privacy Policy',
-                onTap: () => Get.to(() => const PrivacyPolicyScreen(),
-                    transition: Transition.rightToLeft,
-                    duration: const Duration(milliseconds: 300)),
-              ),
-              Divider(height: 1, indent: 56, color: AppColors.divider),
-              _legalTile(
-                icon: Iconsax.document_text,
-                label: 'Terms of Service',
-                onTap: () => Get.to(() => const TermsOfServiceScreen(),
-                    transition: Transition.rightToLeft,
-                    duration: const Duration(milliseconds: 300)),
-              ),
-            ]),
-
-            // Logout
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-              child: OutlinedButton.icon(
-                onPressed: _confirmLogout,
-                icon: const Icon(Iconsax.logout, color: AppColors.error, size: 20),
-                label: const Text('Logout',
-                    style: TextStyle(fontFamily: 'Poppins', color: AppColors.error, fontWeight: FontWeight.w600)),
-                style: OutlinedButton.styleFrom(
-                  minimumSize: const Size(double.infinity, 52),
-                  side: const BorderSide(color: AppColors.error, width: 1.5),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                ),
-              ),
-            ),
-
-            // Delete Account — last item now that the footer is gone, so its own bottom padding
-            // carries the safe-area/gesture-nav inset the footer used to provide.
-            Padding(
-              padding: EdgeInsets.fromLTRB(20, 0, 20, 24 + AppInsets.bottomViewPadding(context)),
-              child: Obx(() => TextButton(
-                onPressed: _auth.isLoading.value ? null : _confirmDeleteAccount,
-                child: const Text(
-                  'Delete Account',
-                  style: TextStyle(
-                    fontFamily: 'Poppins',
-                    fontSize: 13,
-                    color: AppColors.textLight,
-                    decoration: TextDecoration.underline,
-                    decorationColor: AppColors.textLight,
+      body: TabEntrance(
+        tab: AppTabs.profile,
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+          child: StaggerHost(
+            count: _count,
+            child: Column(
+              children: [
+                item(_hero()),
+                item(Obx(() => _auth.isOwner ? _buildPlansCard() : const SizedBox(height: KitMetrics.sectionGap))),
+                item(_sectionGroup('ACCOUNT', [
+                  _accountPhoneTile(),
+                  _divider(),
+                  _accountVisibilityTile(),
+                  _divider(),
+                  _accountRoleTile(),
+                ])),
+                item(_sectionGroup('ACTIVITY', [
+                  Obx(() => _auth.jobsBrowseEnabled
+                      ? Column(children: [
+                          _legalTile(asset: '${_d}luggage.png', pair: 1, label: 'Jobs', onTap: () => Get.toNamed(AppRoutes.jobs)),
+                          _divider(),
+                        ])
+                      : const SizedBox.shrink()),
+                  Obx(() => _auth.taxisEnabled
+                      ? Column(children: [
+                          _legalTile(asset: '${_d}compass.png', pair: 0, label: 'My Journeys', onTap: () => Get.toNamed(AppRoutes.myJourneys)),
+                          _divider(),
+                        ])
+                      : const SizedBox.shrink()),
+                  _legalTile(asset: '${_d}pushpin.png', pair: 2, label: 'My Reports', onTap: () => Get.toNamed(AppRoutes.myFiledReports)),
+                ])),
+                item(_sectionGroup('SUPPORT', [
+                  _legalTile(asset: '${_d}speech_balloon.png', pair: 0, label: 'Contact Support', onTap: _contactSupport),
+                  _divider(),
+                  _legalTile(asset: '${_d}star.png', pair: 1, label: 'Rate App', onTap: _rateApp),
+                  _divider(),
+                  _legalTile(asset: '${_d}airplane.png', pair: 3, label: 'Share App', onTap: _shareApp),
+                ])),
+                item(_sectionGroup('LEGAL', [
+                  _legalTile(
+                    asset: '${_d}key.png',
+                    pair: 0,
+                    label: 'Privacy Policy',
+                    onTap: () => _openPage(const PrivacyPolicyScreen()),
                   ),
-                ),
-              )),
+                  _divider(),
+                  _legalTile(
+                    asset: '${_d}clipboard.png',
+                    pair: 1,
+                    label: 'Terms of Service',
+                    onTap: () => _openPage(const TermsOfServiceScreen()),
+                  ),
+                ])),
+                item(_logoutButton()),
+                item(Padding(
+                  padding: EdgeInsets.fromLTRB(KitMetrics.gutter, 0, KitMetrics.gutter,
+                      BarMetrics.bodyBottomOf(context)),
+                  child: Obx(() => TextLink(
+                        label: 'Delete Account',
+                        onTap: _auth.isLoading.value ? null : _confirmDeleteAccount,
+                      )),
+                )),
+              ],
             ),
-          ],
+          ),
         ),
       ),
+    );
+  }
+
+  void _openPage(Widget page) {
+    Get.key.currentState?.push(PageRouteBuilder<void>(
+      transitionDuration: templateTransitionDuration,
+      reverseTransitionDuration: templateTransitionDuration,
+      pageBuilder: (_, __, ___) => page,
+      transitionsBuilder: (ctx, a, s, child) => TemplateTransition().buildTransition(ctx, null, null, a, s, child),
+    ));
+  }
+
+  Widget _divider() => const Divider(height: 1, indent: 68, color: DesignColors.dividerSoft);
+
+  Widget _hero() {
+    return Container(
+      width: double.infinity,
+      constraints: const BoxConstraints(minHeight: 120),
+      margin: EdgeInsets.fromLTRB(KitMetrics.gutter, MediaQuery.of(context).padding.top + 16, KitMetrics.gutter, KitMetrics.sectionGap),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: <Color>[DesignColors.primary, DesignColors.statusOwn],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: CardRadius.hero,
+        boxShadow: ShadowTokens.glow(DesignColors.primary),
+      ),
+      child: Obx(() {
+        final name = _auth.profileName.value;
+        return Row(
+          children: [
+            _avatarFallback(name),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          name.trim().isNotEmpty ? name.trim() : 'Your Profile',
+                          style: TypeTokens.style(22, FontWeight.w700, color: DesignColors.surface),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      PressScale(
+                        child: InkWell(
+                          customBorder: const CircleBorder(),
+                          onTap: _openEditNameSheet,
+                          child: Container(
+                            width: 28,
+                            height: 28,
+                            decoration: const BoxDecoration(color: DesignColors.whiteSoft, shape: BoxShape.circle),
+                            child: const Icon(Icons.edit, size: 14, color: DesignColors.surface),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Obx(() => Text(
+                        '+91 ${_auth.profilePhone.value}',
+                        style: TypeTokens.onGradientBody.copyWith(fontSize: 14, fontWeight: FontWeight.w500),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      )),
+                ],
+              ),
+            ),
+          ],
+        );
+      }),
     );
   }
 
   Widget _avatarFallback(String name) {
     final initials = _initials(name);
     return Container(
-      width: 80, height: 80,
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.22),
-        shape: BoxShape.circle,
-        border: Border.all(color: Colors.white.withValues(alpha: 0.6), width: 2),
-      ),
+      width: 84,
+      height: 84,
+      decoration: const BoxDecoration(color: DesignColors.whiteSoft, shape: BoxShape.circle),
       child: Center(
         child: initials.isNotEmpty
-            ? Text(initials, style: const TextStyle(fontFamily: 'Poppins', fontSize: 30, fontWeight: FontWeight.w700, color: Colors.white))
-            : const Icon(Iconsax.user5, size: 38, color: Colors.white),
+            ? Text(initials, style: TypeTokens.style(30, FontWeight.w700, color: DesignColors.surface))
+            : ClipOval(
+                child: Image.asset('assets/images/design/images/userImage.png', width: 64, height: 64, fit: BoxFit.cover)),
       ),
     );
   }
 
+  Widget _tileIcon(String asset, int pair) {
+    final (start, end) = _pairs[pair % _pairs.length];
+    return Container(
+      width: 44,
+      height: 44,
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        borderRadius: KitMetrics.tileSmall,
+        gradient: LinearGradient(colors: [start, end], begin: Alignment.topLeft, end: Alignment.bottomRight),
+      ),
+      child: Image.asset(asset),
+    );
+  }
+
+  Widget _chevron() => const Icon(Icons.chevron_right_rounded, size: 22, color: DesignColors.textDisabled);
+
   Widget _buildPlansCard() {
     final plans = Get.find<PlanController>();
-    return GestureDetector(
-      onTap: () => Get.toNamed(AppRoutes.plansBilling),
-      child: Container(
-        margin: const EdgeInsets.fromLTRB(20, 18, 20, 12),
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 20, offset: const Offset(0, 6))],
-        ),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(KitMetrics.gutter, 0, KitMetrics.gutter, KitMetrics.sectionGap),
+      child: SectionTile(
+        padding: const EdgeInsets.fromLTRB(12, 12, 16, 12),
+        onTap: () => Get.toNamed(AppRoutes.plansBilling),
         child: Row(
           children: [
             Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(14)),
-              child: const Icon(Iconsax.crown_1, size: 22, color: AppColors.primary),
+              width: 56,
+              height: 56,
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                borderRadius: KitMetrics.tileSmall,
+                gradient: const LinearGradient(
+                    colors: [DesignColors.sunriseDeep, DesignColors.sunriseDeepEnd],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight),
+              ),
+              child: Image.asset(TravelIcon.money),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Plans & Billing',
-                      style: TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight)),
+                  Text('Plans & Billing',
+                      style: TypeTokens.style(11, FontWeight.w600, color: DesignColors.sunriseDeepEnd, letterSpacing: 0.2)),
                   const SizedBox(height: 2),
                   Obx(() => Text(plans.myPlan.value.planName,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                          fontFamily: 'Poppins', fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textDark))),
+                      style: _rowTitle)),
                 ],
               ),
             ),
             const SizedBox(width: 8),
             Obx(() {
               final me = plans.myPlan.value;
-              if (!me.paymentEnabled) {
-                return const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppColors.primary);
-              }
-              return Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(
-                  gradient: AppColors.primaryGradient,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(me.hasPaidPlan ? 'Manage' : 'Upgrade',
-                    style: const TextStyle(
-                        fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white)),
+              if (!me.paymentEnabled) return _chevron();
+              return PillAction(
+                label: me.hasPaidPlan ? 'Manage' : 'Upgrade',
+                filled: true,
+                height: 36,
+                onTap: () => Get.toNamed(AppRoutes.plansBilling),
               );
             }),
           ],
@@ -314,27 +321,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  // Shared wrapper for every card group on this screen (Account/Activity/Support/Legal) — an
-  // uppercase label above a white rounded card, so the six near-identical cards this screen used
-  // to be don't blend into one long shape.
   Widget _sectionGroup(String label, List<Widget> children) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+      padding: const EdgeInsets.fromLTRB(KitMetrics.gutter, 0, KitMetrics.gutter, KitMetrics.sectionGap),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.only(left: 4, bottom: 8),
+            padding: const EdgeInsets.only(bottom: 8),
             child: Text(label,
-                style: const TextStyle(
-                    fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.textLight, letterSpacing: 0.6)),
+                style: TypeTokens.style(12, FontWeight.w700, color: TypeTokens.secondary, letterSpacing: 0.8)),
           ),
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 12, offset: const Offset(0, 4))],
-            ),
+          SectionTile(
+            padding: EdgeInsets.zero,
             child: Column(children: children),
           ),
         ],
@@ -342,43 +341,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  Widget _pill(String text, IconData icon, Color color, Color surface) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        decoration: BoxDecoration(color: surface, borderRadius: CardRadius.pill),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          Icon(icon, color: color, size: 12),
+          const SizedBox(width: 4),
+          Text(text, style: TypeTokens.style(11, FontWeight.w600, color: color)),
+        ]),
+      );
+
   Widget _accountPhoneTile() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
       child: Row(
         children: [
-          Container(
-            width: 36, height: 36,
-            decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(10)),
-            child: const Icon(Iconsax.call, color: AppColors.primaryLight, size: 18),
-          ),
+          _tileIcon('${_d}round_pushpin.png', 0),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Obx(() => Text('+91 ${_auth.profilePhone.value}',
-                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.textDark))),
+                Obx(() => Text('+91 ${_auth.profilePhone.value}', style: _rowTitle)),
                 const SizedBox(height: 4),
                 Obx(() {
                   final verified = _auth.profilePhoneVerified.value;
                   return verified
-                      ? Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(color: AppColors.success.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(20)),
-                          child: const Row(mainAxisSize: MainAxisSize.min, children: [
-                            Icon(Icons.verified_rounded, color: AppColors.success, size: 12),
-                            SizedBox(width: 4),
-                            Text('Verified', style: TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.success)),
-                          ]))
-                      : Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(color: AppColors.warning.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(20)),
-                          child: const Row(mainAxisSize: MainAxisSize.min, children: [
-                            Icon(Icons.warning_amber_rounded, color: AppColors.warning, size: 12),
-                            SizedBox(width: 4),
-                            Text('Not verified', style: TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.warning)),
-                          ]));
+                      ? _pill('Verified', Icons.verified_rounded, DesignColors.goodDeep, RepliesTone.goodSurface)
+                      : _pill('Not verified', Icons.warning_amber_rounded, DesignColors.warnDeep, RepliesTone.warnSurface);
                 }),
               ],
             ),
@@ -386,15 +376,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           const SizedBox(width: 8),
           Obx(() {
             if (!_auth.profilePhoneChangeLocked.value) {
-              return TextButton(
-                onPressed: _openPhoneVerify,
-                style: TextButton.styleFrom(
-                  foregroundColor: AppColors.textLight,
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  minimumSize: Size.zero,
-                ),
-                child: const Text('Change', style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textLight)),
-              );
+              return TextLink(label: 'Change', onTap: _openPhoneVerify);
             }
             return const SizedBox.shrink();
           }),
@@ -405,31 +387,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _accountVisibilityTile() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
       child: Row(
         children: [
-          Container(
-            width: 36, height: 36,
-            decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(10)),
-            child: const Icon(Iconsax.eye, color: AppColors.primaryLight, size: 18),
-          ),
+          _tileIcon(TravelIcon.map, 1),
           const SizedBox(width: 12),
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              const Text('Contact visible to public',
-                  style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textMedium)),
+              Text('Contact visible to public', style: _rowTitle),
               const SizedBox(height: 2),
               Obx(() => Text(_auth.isOwner ? 'Always on for owners' : 'Show call & WhatsApp on your listings',
-                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight))),
+                  style: TypeTokens.caption)),
             ]),
           ),
-          Obx(() => Switch(
-            value: _auth.isOwner || (_auth.user.value?.isContactVisible ?? true),
-            onChanged: _auth.isOwner || _auth.isLoading.value ? null : _confirmVisibilityChange,
-            activeThumbColor: AppColors.primary,
-            activeTrackColor: AppColors.primaryLight,
-            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-          )),
+          Obx(() => CupertinoSwitch(
+                value: _auth.isOwner || (_auth.user.value?.isContactVisible ?? true),
+                onChanged: _auth.isOwner || _auth.isLoading.value ? null : _confirmVisibilityChange,
+                activeTrackColor: DesignColors.primary,
+              )),
         ],
       ),
     );
@@ -465,38 +440,40 @@ class _ProfileScreenState extends State<ProfileScreen> {
           sub = 'Now: ${RoleVisuals.displayName(roleKey)}';
         }
       }
-      return InkWell(
-        onTap: locked ? null : () => Get.toNamed(AppRoutes.roleChange),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
-          child: Row(
-            children: [
-              Container(
-                width: 36, height: 36,
-                decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(10)),
-                child: const Icon(Iconsax.user_edit, color: AppColors.primaryLight, size: 18),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(title,
-                        style: const TextStyle(
-                            fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textMedium)),
-                    const SizedBox(height: 2),
-                    Text(sub,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                            fontFamily: 'Poppins',
-                            fontSize: 11,
-                            color: amber ? AppColors.warningText : AppColors.textLight)),
-                  ],
+      final tone = RoleOptionCard.toneOf(roleKey);
+      return Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: locked ? null : () => Get.toNamed(AppRoutes.roleChange),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+            child: Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(borderRadius: KitMetrics.tileSmall, gradient: tone.gradient),
+                  child: Image.asset(RoleVisuals.iconAsset(roleKey)),
                 ),
-              ),
-              if (!locked) const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppColors.primary),
-            ],
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(title, style: _rowTitle),
+                      const SizedBox(height: 2),
+                      Text(sub,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TypeTokens.style(11, FontWeight.w500,
+                              color: amber ? DesignColors.warnDeep : TypeTokens.secondary)),
+                    ],
+                  ),
+                ),
+                if (!locked) _chevron(),
+              ],
+            ),
           ),
         ),
       );
@@ -513,177 +490,183 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  // Bottom sheet with its own text field + Save — replaces the old always-open "Update Profile"
-  // form. Local to this call (not screen state) since nothing else on the screen needs it.
+  Widget _grabber() => Center(
+        child: Container(
+          width: 36,
+          height: 4,
+          decoration: BoxDecoration(
+              color: DesignColors.tint(DesignColors.textGrey, Alpha.half), borderRadius: CardRadius.pill),
+        ),
+      );
+
+  Widget _ghostButton(String label, VoidCallback onTap) =>
+      SecondaryButton(label: label, onPressed: onTap, neutral: true);
+
+  Widget _fieldBox(Widget field) => Container(
+        decoration: BoxDecoration(
+          color: DesignColors.surface,
+          borderRadius: const BorderRadius.all(Radius.circular(38)),
+          boxShadow: ShadowTokens.elev1,
+        ),
+        child: field,
+      );
+
+  Widget _halo(String asset, Color tone, {double size = 60}) => Container(
+        width: size,
+        height: size,
+        padding: EdgeInsets.all(size * 0.2),
+        decoration: BoxDecoration(color: DesignColors.tint(tone, Alpha.tint), shape: BoxShape.circle),
+        child: Image.asset(asset),
+      );
+
   Future<void> _openEditNameSheet() async {
     final ctrl = TextEditingController(text: _auth.profileName.value.trim());
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      backgroundColor: DesignColors.surface,
+      shape: _sheetShape,
       builder: (sheetCtx) => Padding(
-        padding: EdgeInsets.fromLTRB(24, 20, 24, 24 + MediaQuery.of(sheetCtx).viewInsets.bottom),
+        padding: EdgeInsets.fromLTRB(KitMetrics.gutter, 20, KitMetrics.gutter, 24 + MediaQuery.of(sheetCtx).viewInsets.bottom),
         child: StatefulBuilder(builder: (sheetCtx, setSheetState) {
           final canSave = ctrl.text.trim().isNotEmpty;
-          return Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 36, height: 4,
-                  decoration: BoxDecoration(color: AppColors.divider, borderRadius: BorderRadius.circular(4)),
-                ),
-              ),
-              const SizedBox(height: 20),
-              const Text('Edit name',
-                  style: TextStyle(fontFamily: 'Poppins', fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textDark)),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: ctrl,
-                autofocus: true,
-                maxLength: 100,
-                inputFormatters: noEmojiInputFormatters,
-                style: const TextStyle(fontFamily: 'Poppins', fontSize: 15),
-                decoration: const InputDecoration(
-                  prefixIcon: Icon(Iconsax.user, color: AppColors.primaryLight, size: 20),
-                  hintText: 'Enter your full name',
-                  counterText: '',
-                ),
-                onChanged: (_) => setSheetState(() {}),
-              ),
-              const SizedBox(height: 20),
-              Row(children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => Navigator.pop(sheetCtx),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.textMedium,
-                      side: BorderSide(color: Colors.grey.shade300),
-                      padding: const EdgeInsets.symmetric(vertical: 13),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          return RepliesEntrance(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _grabber(),
+                const SizedBox(height: 20),
+                Text('Edit name', style: _sheetTitle),
+                const SizedBox(height: 16),
+                _fieldBox(TextFormField(
+                  controller: ctrl,
+                  autofocus: true,
+                  maxLength: 100,
+                  inputFormatters: noEmojiInputFormatters,
+                  style: TypeTokens.style(16, FontWeight.w400, color: DesignColors.textStrong),
+                  decoration: InputDecoration(
+                    prefixIcon: Padding(
+                      padding: const EdgeInsets.all(10),
+                      child: ClipOval(child: Image.asset('assets/images/design/images/userImage.png', width: 24, height: 24)),
                     ),
-                    child: const Text('Cancel', style: TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600)),
+                    hintText: 'Enter your full name',
+                    hintStyle: TypeTokens.style(16, FontWeight.w400, color: DesignColors.textMuted),
+                    counterText: '',
+                    border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
+                    filled: false,
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: canSave
-                        ? () async {
-                            final name = ctrl.text.trim();
-                            Navigator.pop(sheetCtx);
-                            final ok = await _auth.updateName(name);
-                            if (ok && mounted) AppToast.success('Profile updated');
-                          }
-                        : null,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      disabledBackgroundColor: AppColors.primary.withValues(alpha: 0.35),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 13),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      elevation: 0,
+                  onChanged: (_) => setSheetState(() {}),
+                )),
+                const SizedBox(height: 20),
+                Row(children: [
+                  Expanded(child: _ghostButton('Cancel', () => Navigator.pop(sheetCtx))),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: PrimaryButton(
+                      label: 'Save',
+                      onPressed: canSave
+                          ? () async {
+                              final name = ctrl.text.trim();
+                              Navigator.pop(sheetCtx);
+                              final ok = await _auth.updateName(name);
+                              if (ok && mounted) AppToast.success('Profile updated');
+                            }
+                          : null,
                     ),
-                    child: const Text('Save', style: TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600)),
                   ),
-                ),
-              ]),
-            ],
+                ]),
+              ],
+            ),
           );
         }),
       ),
     ).whenComplete(() => ctrl.dispose());
   }
 
-  // Confirm-before-commit sheet for the visibility toggle — the switch's bound value never
-  // changes on tap alone; it only follows the server-confirmed AuthController.user state once
-  // the call succeeds, so Cancel genuinely leaves it untouched rather than needing to "revert."
   Future<void> _confirmVisibilityChange(bool turningOn) async {
     await showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      backgroundColor: DesignColors.surface,
+      shape: _sheetShape,
       builder: (sheetCtx) => Padding(
-        padding: EdgeInsets.fromLTRB(24, 20, 24, 24 + MediaQuery.of(sheetCtx).viewInsets.bottom),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 36, height: 4,
-                decoration: BoxDecoration(color: AppColors.divider, borderRadius: BorderRadius.circular(4)),
+        padding: EdgeInsets.fromLTRB(KitMetrics.gutter, 20, KitMetrics.gutter, 24 + MediaQuery.of(sheetCtx).viewInsets.bottom),
+        child: RepliesEntrance(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _grabber(),
+              const SizedBox(height: 20),
+              _halo(TravelIcon.map, DesignColors.primary, size: 56),
+              const SizedBox(height: 14),
+              Text(turningOn ? 'Show your contact details?' : 'Hide your contact details?', style: _sheetTitle),
+              const SizedBox(height: 8),
+              Text(
+                turningOn
+                    ? 'Owners and renters will be able to see your call and WhatsApp number on your listings.'
+                    : "Owners and renters won't see your call or WhatsApp number on your listings anymore.",
+                style: _body,
               ),
-            ),
-            const SizedBox(height: 20),
-            Container(
-              width: 48, height: 48,
-              decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.1), shape: BoxShape.circle),
-              child: const Icon(Iconsax.eye, color: AppColors.primary, size: 22),
-            ),
-            const SizedBox(height: 14),
-            Text(turningOn ? 'Show your contact details?' : 'Hide your contact details?',
-                style: const TextStyle(fontFamily: 'Poppins', fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textDark)),
-            const SizedBox(height: 8),
-            Text(
-              turningOn
-                  ? 'Owners and renters will be able to see your call and WhatsApp number on your listings.'
-                  : "Owners and renters won't see your call or WhatsApp number on your listings anymore.",
-              style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textMedium, height: 1.5),
-            ),
-            const SizedBox(height: 20),
-            Row(children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () => Navigator.pop(sheetCtx),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.textMedium,
-                    side: BorderSide(color: Colors.grey.shade300),
-                    padding: const EdgeInsets.symmetric(vertical: 13),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              const SizedBox(height: 20),
+              Row(children: [
+                Expanded(child: _ghostButton('Cancel', () => Navigator.pop(sheetCtx))),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: PrimaryButton(
+                    label: turningOn ? 'Yes, show it' : 'Yes, hide it',
+                    onPressed: () async {
+                      Navigator.pop(sheetCtx);
+                      final ok = await _auth.updateContactVisibility(turningOn);
+                      if (ok && mounted) AppToast.success('Saved');
+                    },
                   ),
-                  child: const Text('Cancel', style: TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600)),
                 ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: () async {
-                    Navigator.pop(sheetCtx);
-                    final ok = await _auth.updateContactVisibility(turningOn);
-                    if (ok && mounted) AppToast.success('Saved');
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 13),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    elevation: 0,
-                  ),
-                  child: Text(turningOn ? 'Yes, show it' : 'Yes, hide it',
-                      style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600)),
-                ),
-              ),
-            ]),
-          ],
+              ]),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _legalTile({required IconData icon, required String label, required VoidCallback onTap}) {
-    return ListTile(
-      onTap: onTap,
-      leading: Container(
-        width: 36, height: 36,
-        decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(10)),
-        child: Icon(icon, color: AppColors.primaryLight, size: 18),
+  Widget _legalTile({required String asset, required int pair, required String label, required VoidCallback onTap}) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        splashColor: DesignColors.splash,
+        highlightColor: Colors.transparent,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Row(children: [
+            _tileIcon(asset, pair),
+            const SizedBox(width: 12),
+            Expanded(child: Text(label, style: _rowTitle)),
+            _chevron(),
+          ]),
+        ),
       ),
-      title: Text(label, style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.textDark)),
-      trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppColors.textLight),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+    );
+  }
+
+  Widget _logoutButton() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(KitMetrics.gutter, 0, KitMetrics.gutter, KitMetrics.cardGap),
+      child: SectionTile(
+        onTap: _confirmLogout,
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.logout_rounded, color: RepliesTone.bad, size: 18),
+            const SizedBox(width: 8),
+            Text('Logout', style: TypeTokens.style(16, FontWeight.w600, color: RepliesTone.bad)),
+          ],
+        ),
+      ),
     );
   }
 
@@ -691,55 +674,36 @@ class _ProfileScreenState extends State<ProfileScreen> {
     showDialog(
       context: context,
       builder: (ctx) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        backgroundColor: Colors.white,
+        shape: const RoundedRectangleBorder(borderRadius: _dialogShape),
+        backgroundColor: DesignColors.surface,
+        surfaceTintColor: Colors.transparent,
         insetPadding: const EdgeInsets.symmetric(horizontal: 36),
         child: Padding(
           padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Container(
-              width: 60, height: 60,
-              decoration: BoxDecoration(color: AppColors.error.withValues(alpha: 0.1), shape: BoxShape.circle),
-              child: const Icon(Iconsax.logout, size: 28, color: AppColors.error),
-            ),
-            const SizedBox(height: 16),
-            const Text('Logout?', style: TextStyle(fontFamily: 'Poppins', fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.textDark)),
-            const SizedBox(height: 8),
-            const Text('Are you sure you want to logout?',
-                style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textMedium, height: 1.5),
-                textAlign: TextAlign.center),
-            const SizedBox(height: 24),
-            Row(children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () => Navigator.pop(ctx),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.textMedium,
-                    side: BorderSide(color: Colors.grey.shade300),
-                    padding: const EdgeInsets.symmetric(vertical: 13),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          child: RepliesEntrance(
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              _halo('${_d}airplane.png', RepliesTone.bad),
+              const SizedBox(height: 16),
+              Text('Logout?', style: _sheetTitle),
+              const SizedBox(height: 8),
+              Text('Are you sure you want to logout?', style: _body, textAlign: TextAlign.center),
+              const SizedBox(height: 24),
+              Row(children: [
+                Expanded(child: _ghostButton('Cancel', () => Navigator.pop(ctx))),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: PrimaryButton(
+                    label: 'Logout',
+                    tone: _badTone,
+                    onPressed: () {
+                      Navigator.pop(ctx);
+                      _auth.logout();
+                    },
                   ),
-                  child: const Text('Cancel', style: TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600)),
                 ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.pop(ctx);
-                    _auth.logout();
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.error, foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 13),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    elevation: 0,
-                  ),
-                  child: const Text('Logout', style: TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600)),
-                ),
-              ),
+              ]),
             ]),
-          ]),
+          ),
         ),
       ),
     );
@@ -753,85 +717,75 @@ class _ProfileScreenState extends State<ProfileScreen> {
       builder: (_) => StatefulBuilder(builder: (ctx, setDialogState) {
         final canDelete = confirmCtrl.text.trim() == 'DELETE';
         return Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-          backgroundColor: Colors.white,
+          shape: const RoundedRectangleBorder(borderRadius: _dialogShape),
+          backgroundColor: DesignColors.surface,
+          surfaceTintColor: Colors.transparent,
           insetPadding: const EdgeInsets.symmetric(horizontal: 28),
           child: Padding(
             padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(child: Container(
-                  width: 60, height: 60,
-                  decoration: BoxDecoration(color: AppColors.error.withValues(alpha: 0.1), shape: BoxShape.circle),
-                  child: const Icon(Icons.delete_forever_rounded, size: 30, color: AppColors.error),
-                )),
-                const SizedBox(height: 16),
-                const Center(child: Text('Delete Account', style: TextStyle(fontFamily: 'Poppins', fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.textDark))),
-                const SizedBox(height: 10),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: AppColors.error.withValues(alpha: 0.06),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: AppColors.error.withValues(alpha: 0.2)),
-                  ),
-                  child: const Text(
-                    'This will permanently delete your account, listings, photos and plan. This cannot be undone.',
-                    style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.error, height: 1.55),
-                  ),
-                ),
-                const SizedBox(height: 20),
-                const Text('Type DELETE to confirm', style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textMedium)),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: confirmCtrl,
-                  autofocus: true,
-                  onChanged: (_) => setDialogState(() {}),
-                  textCapitalization: TextCapitalization.characters,
-                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 15, fontWeight: FontWeight.w600, letterSpacing: 2),
-                  decoration: InputDecoration(
-                    hintText: 'DELETE',
-                    hintStyle: TextStyle(fontFamily: 'Poppins', fontSize: 15, letterSpacing: 2, color: Colors.grey.shade400),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey.shade300)),
-                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.error, width: 1.5)),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                Row(children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Navigator.pop(ctx),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: AppColors.textMedium,
-                        side: BorderSide(color: Colors.grey.shade300),
-                        padding: const EdgeInsets.symmetric(vertical: 13),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      child: const Text('Cancel', style: TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600)),
+            child: RepliesEntrance(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(child: _halo('assets/images/design/fitness_app/burned.png', RepliesTone.bad)),
+                  const SizedBox(height: 16),
+                  Center(child: Text('Delete Account', style: _sheetTitle)),
+                  const SizedBox(height: 10),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: RepliesTone.badSurface,
+                      borderRadius: CardRadius.tile,
+                      border: Border.all(color: DesignColors.tint(RepliesTone.bad, Alpha.soft)),
+                    ),
+                    child: Text(
+                      'This will permanently delete your account, listings, photos and plan. This cannot be undone.',
+                      style: TypeTokens.style(12, FontWeight.w500, color: RepliesTone.bad, height: 1.55),
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: canDelete ? () { Navigator.pop(ctx); _doDeleteAccount(); } : null,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.error,
-                        disabledBackgroundColor: AppColors.error.withValues(alpha: 0.35),
-                        foregroundColor: Colors.white,
-                        disabledForegroundColor: Colors.white70,
-                        padding: const EdgeInsets.symmetric(vertical: 13),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        elevation: 0,
-                      ),
-                      child: const Text('Delete Account', style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 20),
+                  Text('Type DELETE to confirm',
+                      style: TypeTokens.style(12, FontWeight.w600, color: DesignColors.textGrey)),
+                  const SizedBox(height: 8),
+                  _fieldBox(TextField(
+                    controller: confirmCtrl,
+                    autofocus: true,
+                    onChanged: (_) => setDialogState(() {}),
+                    textCapitalization: TextCapitalization.characters,
+                    style: TypeTokens.style(15, FontWeight.w600, color: DesignColors.textStrong, letterSpacing: 2),
+                    decoration: InputDecoration(
+                      hintText: 'DELETE',
+                      hintStyle: TypeTokens.style(15, FontWeight.w400, color: DesignColors.textMuted, letterSpacing: 2),
+                      filled: false,
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(38),
+                          borderSide: const BorderSide(color: RepliesTone.bad, width: 1.5)),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
                     ),
-                  ),
-                ]),
-              ],
+                  )),
+                  const SizedBox(height: 24),
+                  Row(children: [
+                    Expanded(child: _ghostButton('Cancel', () => Navigator.pop(ctx))),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: PrimaryButton(
+                        label: 'Delete Account',
+                        tone: _badTone,
+                        onPressed: canDelete
+                            ? () {
+                                Navigator.pop(ctx);
+                                _doDeleteAccount();
+                              }
+                            : null,
+                      ),
+                    ),
+                  ]),
+                ],
+              ),
             ),
           ),
         );
@@ -843,19 +797,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      barrierColor: Colors.black.withValues(alpha: 0.65),
+      barrierColor: DesignColors.scrim,
       builder: (_) => PopScope(
         canPop: false,
         child: Center(
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 36, vertical: 32),
-            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
+            decoration: BoxDecoration(color: DesignColors.surface, borderRadius: _dialogShape),
             child: Column(mainAxisSize: MainAxisSize.min, children: [
-              SizedBox(width: 48, height: 48, child: CircularProgressIndicator(strokeWidth: 3, color: AppColors.error)),
+              const SizedBox(
+                  width: 48,
+                  height: 48,
+                  child: CircularProgressIndicator(strokeWidth: 3, color: RepliesTone.bad)),
               const SizedBox(height: 20),
-              const Text('Deleting your account...', style: TextStyle(fontFamily: 'Poppins', fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+              Text('Deleting your account...',
+                  style: TypeTokens.style(15, FontWeight.w600, color: DesignColors.textStrong)
+                      .copyWith(decoration: TextDecoration.none)),
               const SizedBox(height: 6),
-              const Text('Please do not close the app.', style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
+              Text('Please do not close the app.',
+                  style: TypeTokens.style(12, FontWeight.w500, color: DesignColors.textSecondary)
+                      .copyWith(decoration: TextDecoration.none)),
             ]),
           ),
         ),

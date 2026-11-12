@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import '../../../config/app_colors.dart';
+import 'package:bakhli/design/design.dart';
+import 'package:bakhli/design/extra/trip_plan_look.dart';
 import '../controllers/trip_plan_controller.dart';
 import '../models/trip_plan_model.dart';
-import '../trip_colors.dart';
 import '../trip_strings_v2_easy.dart';
 
 class TripArrangeConfirm {
@@ -18,27 +18,19 @@ class TripArrangeConfirm {
     final yes = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        backgroundColor: FitnessAppTheme.white,
+        shape: const RoundedRectangleBorder(borderRadius: TripLook.softRadius),
         title: const Text(
           TripStringsV2Easy.confirmTitle,
-          style: TextStyle(fontFamily: 'Poppins', fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textDark),
+          style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 16, fontWeight: FontWeight.w700, color: TripLook.textDark),
         ),
         content: Text(
           TripStringsV2Easy.confirmBody(whatOf(key)),
-          style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textMedium, height: 1.4),
+          style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 13, color: TripLook.textMedium, height: 1.4),
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text(TripStringsV2Easy.cancel,
-                style: TextStyle(fontFamily: 'Poppins', color: AppColors.textMedium)),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text(TripStringsV2Easy.yes,
-                style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, color: TripColors.accentDark)),
-          ),
+          TextLink(label: TripStringsV2Easy.cancel, onTap: () => Navigator.pop(ctx, false), tone: KitTone.trip),
+          TextLink(label: TripStringsV2Easy.yes, onTap: () => Navigator.pop(ctx, true), tone: KitTone.trip),
         ],
       ),
     );
@@ -52,23 +44,15 @@ class TripArrangeConfirm {
     final yes = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        backgroundColor: FitnessAppTheme.white,
+        shape: const RoundedRectangleBorder(borderRadius: TripLook.softRadius),
         content: Text(
           TripStringsV2Easy.withdrawLine(res.open.length),
-          style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textDark, height: 1.4),
+          style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 14, color: TripLook.textDark, height: 1.4),
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text(TripStringsV2Easy.cancel,
-                style: TextStyle(fontFamily: 'Poppins', color: AppColors.textMedium)),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text(TripStringsV2Easy.withdraw,
-                style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, color: TripColors.accentDark)),
-          ),
+          TextLink(label: TripStringsV2Easy.cancel, onTap: () => Navigator.pop(ctx, false), tone: KitTone.trip),
+          TextLink(label: TripStringsV2Easy.withdraw, onTap: () => Navigator.pop(ctx, true), tone: KitTone.trip),
         ],
       ),
     );

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../config/app_colors.dart';
 import '../config/app_insets.dart';
 import '../config/module_palette.dart';
+import '../design/design.dart';
 
 class DetailActionBar extends StatelessWidget {
   final double? latitude;
@@ -27,7 +27,7 @@ class DetailActionBar extends StatelessWidget {
     this.isOwner = false,
     this.onReport,
     this.onChat,
-    this.accent = AppColors.primary,
+    this.accent = FitnessAppTheme.nearlyBlue,
     this.palette,
     this.showDirections = true,
     this.whatsAppPhone,
@@ -67,67 +67,41 @@ class DetailActionBar extends StatelessWidget {
   }
 
   Widget _directionsButton() {
-    return ElevatedButton.icon(
+    return GateButton(
+      label: 'Directions',
+      iconAsset: TravelIcon.route,
       onPressed: _directions,
-      icon: const Icon(Icons.near_me_rounded, size: 20),
-      label: const Text(
-        'Directions',
-        style: TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600),
-      ),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: _accent,
-        foregroundColor: Colors.white,
-        minimumSize: const Size(0, 52),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        elevation: 0,
-      ),
+      gradient: LinearGradient(colors: [_accent, _accent]),
+      shadowColor: _accent,
+      radius: const BorderRadius.all(Radius.circular(16)),
     );
   }
 
-  // Always the white/outlined style — stays visually consistent whether Chat
-  // is the sole contact method (phone hidden) or paired alongside Call/WhatsApp.
   Widget _chatButton() {
-    return OutlinedButton.icon(
+    return GateOutlineButton(
+      label: 'Chat',
+      iconAsset: TravelIcon.chat,
+      color: _accent,
+      height: 52,
       onPressed: onChat,
-      icon: const Icon(Icons.chat_bubble_outline_rounded, size: 18),
-      label: const Text('Chat',
-          style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600)),
-      style: OutlinedButton.styleFrom(
-        foregroundColor: _accent,
-        side: BorderSide(color: _accent),
-        minimumSize: const Size(0, 46),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      ),
     );
   }
 
-  // Fixed, unconditional, non-dismissible — same copy and reasoning as the strip in
-  // chat_conversation_screen.dart. Contact isn't chat-only here: Call/WhatsApp let a user
-  // reach the owner directly from this screen without ever opening chat, so the warning has
-  // to live where the actual contact buttons are, not just inside the chat screen.
   Widget _safetyStrip() {
-    final strip = palette ?? ModulePalette.rooms;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
-      decoration: BoxDecoration(
-        color: strip.surface,
-        border: Border(bottom: BorderSide(color: strip.accentLight.withValues(alpha: 0.12))),
-      ),
+      decoration: BoxDecoration(color: palette?.surface ?? FitnessAppTheme.background),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.info_outline_rounded, size: 13, color: strip.accentLight),
+          Icon(Icons.info_outline_rounded, size: 13, color: palette?.accentLight ?? FitnessAppTheme.nearlyBlue),
           const SizedBox(width: 6),
           Flexible(
             child: Text(
               safetyText ?? 'Bakhli never collects rent or advance. Always meet and visit before paying.',
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontFamily: 'Poppins',
-                fontSize: 10.5,
-                color: AppColors.textMedium,
-              ),
+              style: FitnessAppTheme.caption.copyWith(fontSize: 11, color: FitnessAppTheme.darkText),
             ),
           ),
         ],
@@ -137,25 +111,13 @@ class DetailActionBar extends StatelessWidget {
 
   Widget _reportButton() {
     final reported = onReport == null;
-    return OutlinedButton.icon(
+    return GateOutlineButton(
+      label: reported ? 'Reported' : reportLabel,
+      icon: reported ? Icons.flag_rounded : Icons.flag_outlined,
+      color: reported ? FitnessAppTheme.lightText : PickKit.bad,
+      fill: reported ? FitnessAppTheme.nearlyWhite : PickKit.badTint,
       onPressed: onReport,
-      icon: Icon(reported ? Icons.flag_rounded : Icons.flag_outlined, size: 18),
-      label: Text(reported ? 'Reported' : reportLabel,
-          style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600)),
-      style: reported
-          ? OutlinedButton.styleFrom(
-              foregroundColor: AppColors.textMedium,
-              side: const BorderSide(color: AppColors.divider),
-              minimumSize: const Size(0, 50),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-            )
-          : OutlinedButton.styleFrom(
-              foregroundColor: AppColors.error,
-              backgroundColor: AppColors.error.withValues(alpha: 0.06),
-              side: BorderSide(color: AppColors.error.withValues(alpha: 0.35)),
-              minimumSize: const Size(0, 50),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-            ),
+      height: 50,
     );
   }
 
@@ -165,30 +127,22 @@ class DetailActionBar extends StatelessWidget {
     final showReport = !isOwner;
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(color: AppColors.shadow, blurRadius: 16, offset: const Offset(0, -4))
-        ],
+        color: FitnessAppTheme.white,
+        borderRadius: const BorderRadius.only(topLeft: Radius.circular(32)),
+        boxShadow: GateKit.barShadow,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Flush top band, outside the buttons' own padding below — reads as a label for
-          // the whole bar rather than an interruption between button rows. Scaffold always
-          // gives bottomNavigationBar its full intrinsic height (no extendBody here), so this
-          // can never get clipped — it just makes the bar a little taller and the scrollable
-          // body above it a little shorter, same as Call/WhatsApp/Report already do
-          // conditionally.
-          _safetyStrip(),
+          ClipRRect(
+            borderRadius: const BorderRadius.only(topLeft: Radius.circular(32)),
+            child: _safetyStrip(),
+          ),
           Padding(
             padding: EdgeInsets.fromLTRB(20, 12, 20, 12 + AppInsets.bottomViewPadding(context)),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Row 1: Chat + Directions — always paired when onChat is available,
-                // regardless of whether the owner's phone is visible (Chat is the sole
-                // contact method in that case, or sits alongside Call/WhatsApp below —
-                // either way, same layout, same outlined style).
                 if (showDirections && onChat != null)
                   Row(
                     children: [
@@ -203,40 +157,31 @@ class DetailActionBar extends StatelessWidget {
                   SizedBox(width: double.infinity, child: _chatButton()),
                 if (hasPhone) ...[
                   if (showDirections || onChat != null) const SizedBox(height: 10),
-                  // Row 3: Call Owner + WhatsApp side by side
                   Row(
                     children: [
                       Expanded(
-                        child: ElevatedButton.icon(
+                        child: GateButton(
+                          label: callLabel,
+                          icon: Icons.call_rounded,
+                          height: 48,
+                          gradient: palette == null
+                              ? TripEntryStyle.sunrise
+                              : LinearGradient(colors: [palette!.accent, palette!.accentDark]),
+                          shadowColor: palette?.accentDark ?? TravelPalette.sunriseStart,
+                          radius: const BorderRadius.all(Radius.circular(16)),
                           onPressed: _call,
-                          icon: const Icon(Icons.call_rounded, size: 20),
-                          label: Text(callLabel,
-                              style: const TextStyle(
-                                  fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600)),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: palette?.accentDark ?? AppColors.warning,
-                            foregroundColor: Colors.white,
-                            minimumSize: const Size(0, 48),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                            elevation: 0,
-                          ),
                         ),
                       ),
                       const SizedBox(width: 10),
                       Expanded(
-                        child: ElevatedButton.icon(
+                        child: GateButton(
+                          label: 'WhatsApp',
+                          icon: Icons.chat_rounded,
+                          height: 48,
+                          gradient: const LinearGradient(colors: [GateKit.whatsApp, GateKit.whatsApp]),
+                          shadowColor: GateKit.whatsApp,
+                          radius: const BorderRadius.all(Radius.circular(16)),
                           onPressed: _whatsapp,
-                          icon: const Icon(Icons.chat_rounded, size: 20),
-                          label: const Text('WhatsApp',
-                              style: TextStyle(
-                                  fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600)),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.whatsApp,
-                            foregroundColor: Colors.white,
-                            minimumSize: const Size(0, 48),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                            elevation: 0,
-                          ),
                         ),
                       ),
                     ],
@@ -244,7 +189,6 @@ class DetailActionBar extends StatelessWidget {
                 ],
                 if (showReport) ...[
                   if (showDirections || onChat != null || hasPhone) const SizedBox(height: 10),
-                  // Row 4: Report this listing — full width
                   SizedBox(width: double.infinity, child: _reportButton()),
                 ],
               ],

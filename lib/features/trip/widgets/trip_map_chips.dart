@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:bakhli/features/trip/widgets/trip_ui.dart';
+import 'package:bakhli/design/design.dart';
 import 'package:get/get.dart';
-import 'package:iconsax/iconsax.dart';
-import '../../../widgets/selectable_chip.dart';
 import '../controllers/trip_plan_controller.dart';
-import '../trip_colors.dart';
 import '../trip_strings_mca_a3.dart';
 import '../trip_strings_mcd_a2.dart';
 import '../utils/trip_map_rules.dart';
@@ -57,7 +56,7 @@ class _TripMapChipsState extends State<TripMapChips> {
       _updateEdges();
       final ctx = _keys[selected]?.currentContext;
       if (ctx == null) return;
-      Scrollable.ensureVisible(ctx, alignment: 0.5, duration: const Duration(milliseconds: 250), curve: Curves.easeOut);
+      Scrollable.ensureVisible(ctx, alignment: 0.5, duration: const Duration(milliseconds: 250), curve: Curves.fastOutSlowIn);
     });
   }
 
@@ -94,7 +93,7 @@ class _TripMapChipsState extends State<TripMapChips> {
           id: _allKey,
           label: TripStringsMcdA2.all,
           selected: focus == TripMapFocus.all,
-          color: TripColors.accentDark,
+          color: DesignColors.primary,
           onTap: widget.onAll,
         ),
       ];
@@ -108,7 +107,7 @@ class _TripMapChipsState extends State<TripMapChips> {
             id: 'd$start',
             label: TripStringsMcdA2.dayCity(start, TripMapChips.shortName(l.cityName)),
             selected: focus == TripMapFocus.day && day == start,
-            color: TripColors.dayColor(start),
+            color: TripKit.dayColor(start),
             onTap: () => widget.onDay(start),
           ));
           continue;
@@ -122,8 +121,8 @@ class _TripMapChipsState extends State<TripMapChips> {
             id: 'c$k',
             label: TripMapChips.shortName(l.cityName),
             selected: focus == TripMapFocus.city && leg == k,
-            color: TripColors.accentDark,
-            icon: Iconsax.location,
+            iconAsset: TravelIcon.pin,
+            color: DesignColors.primary,
             onTap: () => widget.onLeg(k),
           ),
         ));
@@ -133,7 +132,7 @@ class _TripMapChipsState extends State<TripMapChips> {
             id: 'd$d',
             label: TripStringsMcdA2.dayLabel(d),
             selected: focus == TripMapFocus.day && day == d,
-            color: TripColors.dayColor(d),
+            color: TripKit.dayColor(d),
             onTap: () => widget.onDay(d),
           ));
         }
@@ -155,10 +154,10 @@ class _TripMapChipsState extends State<TripMapChips> {
               final f = (_fade / w).clamp(0.0, 0.5);
               return LinearGradient(
                 colors: [
-                  _atStart ? Colors.white : Colors.transparent,
-                  Colors.white,
-                  Colors.white,
-                  _atEnd ? Colors.white : Colors.transparent,
+                  _atStart ? DesignColors.surface : Colors.transparent,
+                  DesignColors.surface,
+                  DesignColors.surface,
+                  _atEnd ? DesignColors.surface : Colors.transparent,
                 ],
                 stops: [0, f, 1 - f, 1],
               ).createShader(rect);
@@ -188,7 +187,7 @@ class _TripMapChipsState extends State<TripMapChips> {
     required bool selected,
     required Color color,
     required VoidCallback onTap,
-    IconData? icon,
+    String? iconAsset,
   }) {
     return GestureDetector(
       key: _keyOf(id),
@@ -198,11 +197,11 @@ class _TripMapChipsState extends State<TripMapChips> {
         padding: const EdgeInsets.symmetric(vertical: 6),
         child: ConstrainedBox(
           constraints: const BoxConstraints(minWidth: 44),
-          child: SelectableChip(
+          child: TripChoiceChip(
             label: label,
             selected: selected,
-            activeColor: color,
-            icon: icon,
+            color: color,
+            iconAsset: iconAsset,
             padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 12),
             onTap: onTap,
           ),

@@ -1,9 +1,10 @@
+import '../../../design/tokens/alpha_tokens.dart';
 import 'package:flutter/material.dart';
+import 'package:bakhli/design/extra/trip_plan_look.dart';
+import 'package:bakhli/design/template/fitness_app_theme.dart';
 import 'package:get/get.dart';
-import '../../../config/app_colors.dart';
 import '../controllers/trip_plan_controller.dart';
 import '../models/trip_plan_model.dart';
-import '../trip_colors.dart';
 import '../trip_navigation.dart';
 import '../trip_strings_v2_easy.dart';
 import '../utils/trip_easy_rules.dart';
@@ -20,12 +21,24 @@ class TripEasyCard extends StatelessWidget {
 
   Widget _heading(String text) => Padding(
         padding: const EdgeInsets.only(top: 6, bottom: 8),
-        child: Text(
-          text,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(
-              fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w700, color: AppColors.textMedium),
+        child: Row(
+          children: [
+            Container(
+              width: 2,
+              height: 16,
+              decoration: BoxDecoration(color: TripLook.accentLight.withValues(alpha: Alpha.half), borderRadius: BorderRadius.circular(4)),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                text,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                    fontFamily: FitnessAppTheme.fontName, fontSize: 14, fontWeight: FontWeight.w500, letterSpacing: 0.5, color: TripLook.textLight),
+              ),
+            ),
+          ],
         ),
       );
 
@@ -52,11 +65,7 @@ class TripEasyCard extends StatelessWidget {
       }
       return Container(
         padding: const EdgeInsets.fromLTRB(14, 14, 14, 4),
-        decoration: BoxDecoration(
-          color: TripColors.surface,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: TripColors.accent.withValues(alpha: 0.2)),
-        ),
+        decoration: TripLook.card(radius: TripLook.cardRadius),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -68,12 +77,12 @@ class TripEasyCard extends StatelessWidget {
                     children: [
                       const Text(TripStringsV2Easy.title,
                           style: TextStyle(
-                              fontFamily: 'Poppins', fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textDark)),
+                              fontFamily: FitnessAppTheme.fontName, fontSize: 16, fontWeight: FontWeight.w700, letterSpacing: 0.18, color: TripLook.textDark)),
                       Text(
                         TripEasyRules.allResolved(rows)
                             ? TripStringsV2Easy.optional
                             : (multi ? TripStringsV2Easy.groupedLine : TripStringsV2Easy.cardLine),
-                        style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight),
+                        style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, color: TripLook.textLight),
                       ),
                     ],
                   ),
@@ -83,11 +92,17 @@ class TripEasyCard extends StatelessWidget {
             const SizedBox(height: 10),
             ...children,
             if (c.trip.value?.id != null)
-              TextButton(
-                onPressed: () => TripNavigation.openSummary(c.trip.value!.id),
-                style: TextButton.styleFrom(minimumSize: const Size(double.infinity, 44)),
-                child: const Text(TripStringsV2Easy.viewSummary,
-                    style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, color: TripColors.accentDark)),
+              InkWell(
+                onTap: () => TripNavigation.openSummary(c.trip.value!.id),
+                splashColor: Colors.transparent,
+                highlightColor: Colors.transparent,
+                child: const SizedBox(
+                  height: 44,
+                  child: Center(
+                    child: Text(TripStringsV2Easy.viewSummary,
+                        style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontWeight: FontWeight.w700, color: FitnessAppTheme.nearlyDarkBlue)),
+                  ),
+                ),
               ),
           ],
         ),

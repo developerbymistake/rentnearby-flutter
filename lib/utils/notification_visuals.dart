@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
-import '../config/app_colors.dart';
+import '../design/design.dart';
 import '../config/app_routes.dart';
 
 enum NotificationKind { approved, rejected, takedown, other }
@@ -17,10 +17,10 @@ abstract final class NotificationVisuals {
   }
 
   static Color color(String type, String title) => switch (kind(type, title)) {
-        NotificationKind.approved => AppColors.success,
-        NotificationKind.rejected => AppColors.error,
-        NotificationKind.takedown => AppColors.reportAlert,
-        NotificationKind.other => AppColors.textLight,
+        NotificationKind.approved => UtilTokens.notifApproved,
+        NotificationKind.rejected => UtilTokens.notifRejected,
+        NotificationKind.takedown => UtilTokens.notifTakedown,
+        NotificationKind.other => UtilTokens.notifOther,
       };
 
   static IconData icon(String type, String title) => switch (kind(type, title)) {

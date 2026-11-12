@@ -2,7 +2,7 @@ import 'package:get/get.dart';
 import 'tour_registry.dart';
 
 /// True while any coach-mark tour overlay is showing. Widgets with an
-/// attention-grabbing animation (PulseOnce) pause while true so they don't
+/// attention-grabbing animation pause while true so they don't
 /// compete with the tour's own spotlight.
 final RxBool tourInProgress = false.obs;
 

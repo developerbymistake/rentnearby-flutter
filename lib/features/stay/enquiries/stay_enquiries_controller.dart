@@ -274,7 +274,7 @@ class StayEnquiriesController extends GetxController {
       } else if (!showInline) {
         _toastError(e, fallback);
       }
-      if (lastErrorType == TripEnquiryErrorTypes.concurrent) refreshOne(id);
+      if (lastErrorType == TripEnquiryErrorTypes.concurrent || lastErrorType == TripEnquiryErrorTypes.enquiryClosed) refreshOne(id);
       return null;
     } finally {
       busyIds.remove(id);

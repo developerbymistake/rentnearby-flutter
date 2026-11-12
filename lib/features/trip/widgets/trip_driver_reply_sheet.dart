@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:iconsax/iconsax.dart';
-import '../../../config/app_colors.dart';
+import 'package:bakhli/features/trip/widgets/trip_ui.dart';
+import 'package:bakhli/design/design.dart';
+import 'package:bakhli/design/extra/replies_kit.dart';
 import '../../../models/browse_item.dart';
 import '../../../utils/contact_launcher.dart';
 import '../../taxi/leads/trip_lead_format.dart';
 import '../controllers/trip_plan_controller.dart';
 import '../models/trip_enquiry_model.dart';
 import '../screens/trip_dates_sheet.dart';
-import '../trip_colors.dart';
 import '../trip_strings.dart';
 import 'trip_payment_line.dart';
 import 'trip_sheet_frame.dart';
@@ -60,48 +60,46 @@ class _ReplyBody extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(TripStrings.driverReplyFooter,
-              style: TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight, height: 1.35)),
+              style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 11, color: FitnessAppTheme.deactivatedText, height: 1.35)),
           SizedBox(height: 4),
           TripPaymentLine(text: TripStrings.taxiPayLine),
         ],
       ),
       children: [
+        TemplateStagger(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
         _fareBox(t?.driverFare, rate, total, e),
         if (note.isNotEmpty) ...[
           const SizedBox(height: 14),
           const Text(TripStrings.noteFromDriver,
-              style: TextStyle(fontFamily: 'Poppins', fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textLight)),
+              style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 11.5, fontWeight: FontWeight.w600, color: FitnessAppTheme.deactivatedText)),
           const SizedBox(height: 4),
-          Text(note, style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textDark, height: 1.4)),
+          Text(note, style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 13, color: FitnessAppTheme.darkerText, height: 1.4)),
         ],
         const SizedBox(height: 16),
         if (phone != null)
           LayoutBuilder(builder: (context, c) {
-            final callBtn = _outlined(Iconsax.call, TripStrings.call, TripColors.accentDark, () => ContactLauncher.call(phone));
-            final waBtn = _outlined(Iconsax.message, TripStrings.whatsApp, AppColors.whatsApp,
-                () => ContactLauncher.whatsApp(whatsApp!, message: _message(day, name)));
+            final callBtn = TripActionChip(height: 48, fontSize: 13, icon: Icons.call_rounded, label: TripStrings.call, onTap: () => ContactLauncher.call(phone));
+            final waBtn = TripActionChip(
+                height: 48,
+                fontSize: 13,
+                iconAsset: TravelIcon.chat,
+                color: RepliesTone.good,
+                label: TripStrings.whatsApp,
+                onTap: () => ContactLauncher.whatsApp(whatsApp!, message: _message(day, name)));
             if (c.maxWidth >= 340) {
               return Row(children: [Expanded(child: callBtn), const SizedBox(width: 10), Expanded(child: waBtn)]);
             }
             return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [callBtn, const SizedBox(height: 8), waBtn]);
           }),
         if (phone != null) const SizedBox(height: 12),
-        SizedBox(
+        TripButton(
           height: 52,
-          child: ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: TripColors.accent,
-              foregroundColor: Colors.white,
-              elevation: 0,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-            ),
-            child: const FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Text(TripStrings.iBooked,
-                  maxLines: 1, style: TextStyle(fontFamily: 'Poppins', fontSize: 15, fontWeight: FontWeight.w700)),
-            ),
-          ),
+          label: TripStrings.iBooked,
+          onPressed: () => Navigator.pop(context, true),
+        ),
+          ],
         ),
       ],
     );
@@ -122,7 +120,7 @@ class _ReplyBody extends StatelessWidget {
             Text(label,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight)),
+                style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 11, fontWeight: FontWeight.w600, color: DesignColors.whiteHigh)),
             const SizedBox(height: 2),
             value,
           ],
@@ -131,7 +129,11 @@ class _ReplyBody extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(color: TripColors.surface, borderRadius: BorderRadius.circular(14)),
+      decoration: BoxDecoration(
+        gradient: KitTone.trip.gradient,
+        borderRadius: CardRadius.tile,
+        boxShadow: ShadowTokens.glow(KitTone.trip.glow),
+      ),
       child: LayoutBuilder(builder: (context, c) {
         final fareCell = cell(
           TripStrings.driversFare,
@@ -140,7 +142,7 @@ class _ReplyBody extends StatelessWidget {
             alignment: Alignment.centerLeft,
             child: Text(fareText,
                 maxLines: 1,
-                style: const TextStyle(fontFamily: 'Poppins', fontSize: 26, fontWeight: FontWeight.w800, color: AppColors.textDark)),
+                style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 26, fontWeight: FontWeight.w800, color: FitnessAppTheme.white)),
           ),
           CrossAxisAlignment.start,
         );
@@ -152,7 +154,7 @@ class _ReplyBody extends StatelessWidget {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                        fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textMedium)),
+                        fontFamily: FitnessAppTheme.fontName, fontSize: 13, fontWeight: FontWeight.w600, color: FitnessAppTheme.white)),
                 CrossAxisAlignment.start,
               );
         if (listedCell == null) return fareCell;
@@ -167,23 +169,4 @@ class _ReplyBody extends StatelessWidget {
       }),
     );
   }
-
-  Widget _outlined(IconData icon, String label, Color color, VoidCallback onTap) => OutlinedButton(
-        onPressed: onTap,
-        style: OutlinedButton.styleFrom(
-          minimumSize: const Size(0, 48),
-          side: BorderSide(color: color.withValues(alpha: 0.45)),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-        child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-          Icon(icon, size: 16, color: color),
-          const SizedBox(width: 6),
-          Flexible(
-            child: Text(label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600, color: color)),
-          ),
-        ]),
-      );
 }

@@ -243,6 +243,8 @@ class TripEasyRowModel {
   }
 }
 
+String? _guideStep(Object? raw) => raw is String && TripGuide.stepPattern.hasMatch(raw) ? raw : null;
+
 class TripProgress {
   final int total;
   final int done;
@@ -251,6 +253,7 @@ class TripProgress {
   final int percent;
   final bool needsYou;
   final TripNextRow? next;
+  final String? guideStep;
   final DateTime? lastEventAt;
   final List<TripEasyRowModel> rows;
 
@@ -262,6 +265,7 @@ class TripProgress {
     this.percent = 0,
     this.needsYou = false,
     this.next,
+    this.guideStep,
     this.lastEventAt,
     this.rows = const [],
   });
@@ -287,6 +291,7 @@ class TripProgress {
       percent: pct > 100 ? 100 : pct,
       needsYou: raw['needsYou'] == true,
       next: TripNextRow.tryParse(raw['next']),
+      guideStep: _guideStep(raw['guideStep']),
       lastEventAt: _instant(raw['lastEventAt']),
       rows: rows,
     );

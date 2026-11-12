@@ -138,10 +138,19 @@ class TripEnquiryController extends GetxController {
     if (batch != null) lastAsksLeft = batch.asksLeft ?? lastAsksLeft;
   }
 
-  Future<TripEnquiryBatch?> sendEnquiry({required int day, required List<String> stayIds, required int nights}) async {
+  Future<TripEnquiryBatch?> sendEnquiry({
+    required int day,
+    required List<String> stayIds,
+    required int nights,
+    String? clientRequestId,
+    String? stepKey,
+  }) async {
     final tripId = await _tripId();
     if (tripId == null) return null;
-    final batch = await _guard(null, () => _repo.create(tripId, day: day, stayIds: stayIds, nights: nights),
+    final batch = await _guard(
+        null,
+        () => _repo.create(tripId,
+            day: day, stayIds: stayIds, nights: nights, clientRequestId: clientRequestId, stepKey: stepKey),
         silent: const {TripEnquiryErrorTypes.enquiryLimit});
     _readBatch(batch);
     if (batch != null) _applyToPlan(batch.items);
@@ -153,12 +162,20 @@ class TripEnquiryController extends GetxController {
     required List<String> taxiIds,
     String? pickupTime,
     String? pickupPlace,
+    String? clientRequestId,
+    String? stepKey,
   }) async {
     final tripId = await _tripId();
     if (tripId == null) return null;
     final batch = await _guard(
       null,
-      () => _repo.createLead(tripId, days: days, taxiIds: taxiIds, pickupTime: pickupTime, pickupPlace: pickupPlace),
+      () => _repo.createLead(tripId,
+          days: days,
+          taxiIds: taxiIds,
+          pickupTime: pickupTime,
+          pickupPlace: pickupPlace,
+          clientRequestId: clientRequestId,
+          stepKey: stepKey),
       silent: const {TripEnquiryErrorTypes.enquiryLimit, TripEnquiryErrorTypes.leadLimit},
     );
     _readBatch(batch);

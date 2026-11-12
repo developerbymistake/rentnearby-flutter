@@ -6,6 +6,7 @@ import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:toastification/toastification.dart';
 import 'config/app_theme.dart';
+import 'design/design.dart';
 import 'config/app_routes.dart';
 import 'controllers/app_version_controller.dart';
 import 'controllers/auth_controller.dart';
@@ -25,6 +26,9 @@ import 'widgets/tour_host.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  PaintingBinding.instance.imageCache
+    ..maximumSizeBytes = 100 << 20
+    ..maximumSize = 300;
   await GetStorage.init();
   await StorageService.init();
   ApiService.init();
@@ -33,7 +37,8 @@ Future<void> main() async {
 
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,
-    statusBarIconBrightness: Brightness.light,
+    statusBarIconBrightness: Brightness.dark,
+    statusBarBrightness: Brightness.light,
     systemNavigationBarColor: Colors.transparent,
     systemNavigationBarIconBrightness: Brightness.dark,
     systemNavigationBarContrastEnforced: false,
@@ -67,10 +72,12 @@ class BakhliApp extends StatelessWidget {
       title: 'Bakhli',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.theme,
+      scrollBehavior: const AppScrollBehavior(),
+      popGesture: true,
       initialRoute: AppRoutes.splash,
       getPages: AppRoutes.routes,
-      defaultTransition: Transition.fadeIn,
-      transitionDuration: const Duration(milliseconds: 300),
+      customTransition: TemplateTransition(),
+      transitionDuration: templateTransitionDuration,
       navigatorObservers: [MapPauseObserver(), TourDismissObserver(), TopRouteObserver()],
       builder: (context, child) => ToastificationWrapper(
         child: MediaQuery(

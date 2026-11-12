@@ -1,7 +1,8 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:shimmer/shimmer.dart';
-import '../config/app_colors.dart';
+import 'package:bakhli/design/design.dart';
+import 'package:bakhli/design/extra/replies_kit.dart';
 import '../config/app_insets.dart';
 import '../config/app_routes.dart';
 import '../controllers/plan_controller.dart';
@@ -92,7 +93,8 @@ class _PlansBillingScreenState extends State<PlansBillingScreen> {
       isDismissible: false,
       enableDrag: false,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      backgroundColor: DesignColors.surface,
+      shape: const RoundedRectangleBorder(borderRadius: CardRadius.sheet),
       builder: (_) => PurchaseStatusSheet(accent: _accent),
     ).whenComplete(() {
       _sheetOpen = false;
@@ -268,9 +270,18 @@ class _PlansBillingScreenState extends State<PlansBillingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.scaffoldBg,
+      backgroundColor: DesignColors.scaffold,
       body: Column(children: [
-        Obx(() => _header(_plans.myPlan.value.featureKey)),
+        Obx(() {
+          final key = _plans.myPlan.value.featureKey;
+          return ModuleHeader(
+            title: 'Plans & Billing',
+            subtitle: key == null ? null : _subtitleFor(key),
+            gradient: PlanAccent.gradientOf(key),
+            onBack: () => Get.back(),
+            trailing: key == null ? const [] : [_historyButton()],
+          );
+        }),
         Expanded(
           child: RefreshIndicator(
             color: _accent,
@@ -282,33 +293,46 @@ class _PlansBillingScreenState extends State<PlansBillingScreen> {
               final paidPlans = _plans.plans.where((p) => !p.isDefault && p.prices.isNotEmpty).toList();
               final accent = PlanAccent.of(me.featureKey);
               final barVisible = me.featureKey != null && me.paymentEnabled && paidPlans.isNotEmpty;
-              return ListView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: EdgeInsets.fromLTRB(16, 16, 16, 24 + (barVisible ? 0 : AppInsets.bottomViewPadding(context))),
-                children: [
-                  if (me.featureKey == null && !loading && _plans.planLoadFailed.value)
-                    _loadFailedState()
-                  else if (me.featureKey == null)
-                    _emptyState(loading)
-                  else ...[
-                    _currentPlanCard(me, accent),
-                    if (me.play != null) ...[
-                      const SizedBox(height: 12),
-                      PlanSubscriptionCard(me: me, accent: accent, onResubscribe: () => _resubscribe(me, paidPlans)),
-                    ],
-                    if (!me.paymentEnabled) ...[
-                      const SizedBox(height: 12),
-                      _comingSoon(me.featureKey),
-                    ] else ...[
-                      const SizedBox(height: 20),
-                      if (paidPlans.isEmpty)
-                        _plansPlaceholder(catalogLoading)
-                      else
-                        ..._purchaseSection(me, paidPlans, accent),
-                      if (_plans.isPlay) _restoreButton(accent),
-                    ],
+              final List<Widget> children;
+              var settled = true;
+              if (me.featureKey == null && !loading && _plans.planLoadFailed.value) {
+                children = [_loadFailedState()];
+              } else if (me.featureKey == null) {
+                settled = !loading;
+                children = loading ? _loadingBlocks() : [_emptyState()];
+              } else {
+                children = [
+                  _currentPlanCard(me, accent),
+                  if (me.play != null) ...[
+                    const SizedBox(height: KitMetrics.cardGap),
+                    PlanSubscriptionCard(me: me, accent: accent, onResubscribe: () => _resubscribe(me, paidPlans)),
                   ],
-                ],
+                  if (!me.paymentEnabled) ...[
+                    const SizedBox(height: KitMetrics.cardGap),
+                    _comingSoon(me.featureKey),
+                  ] else ...[
+                    const SizedBox(height: KitMetrics.sectionGap),
+                    if (paidPlans.isEmpty)
+                      _plansPlaceholder(catalogLoading)
+                    else
+                      ..._purchaseSection(me, paidPlans, accent),
+                    if (_plans.isPlay) _restoreButton(accent),
+                  ],
+                ];
+              }
+              var i = 0;
+              return StaggerHost(
+                key: ValueKey(settled),
+                count: 8,
+                child: ListView(
+                  physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+                  padding: EdgeInsets.fromLTRB(KitMetrics.gutter, KitMetrics.sectionGap, KitMetrics.gutter,
+                      KitMetrics.sectionGap + (barVisible ? 0 : AppInsets.bottomViewPadding(context))),
+                  children: [
+                    for (final w in children)
+                      if (w is SizedBox || !settled) w else StaggerItem(index: math.min(i++, 7), child: w),
+                  ],
+                ),
               );
             }),
           ),
@@ -317,6 +341,12 @@ class _PlansBillingScreenState extends State<PlansBillingScreen> {
       ]),
     );
   }
+
+  List<Widget> _loadingBlocks() => [
+        HeroBanner.skeleton(height: 140),
+        const SizedBox(height: KitMetrics.sectionGap),
+        for (var k = 0; k < 3; k++) ListRow.skeleton(margin: const EdgeInsets.only(bottom: KitMetrics.cardGap)),
+      ];
 
   List<Widget> _purchaseSection(MyPlanModel me, List<PlanModel> paidPlans, Color accent) {
     final isPlay = _plans.isPlay;
@@ -336,25 +366,25 @@ class _PlansBillingScreenState extends State<PlansBillingScreen> {
     }
     return [
       _sectionTitle('What you get', 'Free vs ${paidPlans.map((p) => p.name).join(' vs ')}'),
-      const SizedBox(height: 12),
+      const SizedBox(height: KitMetrics.cardGap),
       PlanCompareTable(
         rows: _featureRows(_plans.plans, paidPlans, me),
         paidNames: [for (final p in paidPlans) p.name],
         accent: accent,
       ),
-      const SizedBox(height: 20),
+      const SizedBox(height: KitMetrics.sectionGap),
       owns
           ? _sectionTitle('Change duration', 'Takes effect at your next renewal')
           : _sectionTitle('Pick how long', isPlay ? 'Auto-renews. Cancel anytime in Google Play.' : 'Prepaid. Pick how long.'),
-      const SizedBox(height: 12),
+      const SizedBox(height: KitMetrics.cardGap),
       for (final plan in paidPlans) ...[
         if (paidPlans.length > 1) _planChipRow(plan, accent),
         ..._cycleRows(plan, accent),
         const SizedBox(height: 10),
       ],
       if (otherAccount)
-        const Text('Subscribed on another Bakhli account',
-            style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
+        Text('Subscribed on another Bakhli account',
+            style: TypeTokens.style(12, FontWeight.w500, color: TypeTokens.secondary)),
       const SizedBox(height: 8),
       if (showCoupon) _couponLink(accent),
     ];
@@ -365,22 +395,30 @@ class _PlansBillingScreenState extends State<PlansBillingScreen> {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Wrap(children: [
-        GestureDetector(
-          onTap: () => _selectPlan(plan),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+        PressScale(
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 250),
             decoration: BoxDecoration(
-              color: active ? accent : accent.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(999),
+              color: active ? accent : DesignColors.tint(accent, Alpha.tint),
+              borderRadius: CardRadius.pill,
             ),
-            child: Text(plan.name,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                    fontFamily: 'Poppins',
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: active ? Colors.white : accent)),
+            child: Material(
+              color: Colors.transparent,
+              borderRadius: CardRadius.pill,
+              clipBehavior: Clip.antiAlias,
+              child: InkWell(
+                onTap: () => _selectPlan(plan),
+                splashColor: DesignColors.whiteSoft,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: Text(plan.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TypeTokens.style(12, FontWeight.w600,
+                          color: active ? DesignColors.textInverse : accent)),
+                ),
+              ),
+            ),
           ),
         ),
       ]),
@@ -398,7 +436,7 @@ class _PlansBillingScreenState extends State<PlansBillingScreen> {
     return [
       for (var i = 0; i < plan.prices.length; i++)
         Padding(
-          padding: EdgeInsets.only(top: i == 0 ? 0 : 12),
+          padding: EdgeInsets.only(top: i == 0 ? 0 : 14),
           child: Builder(builder: (_) {
             final price = plan.prices[i];
             final cycle = price.cycleMonths;
@@ -445,30 +483,32 @@ class _PlansBillingScreenState extends State<PlansBillingScreen> {
   Widget _couponLink(Color accent) {
     if (!_showCoupon.value && _appliedCoupon.value == null) {
       return Center(
-        child: TextButton(
-          onPressed: () => _showCoupon.value = true,
-          child: Text('Have a coupon?',
-              style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: accent)),
-        ),
+        child: TextLink(label: 'Have a coupon?', onTap: () => _showCoupon.value = true),
       );
     }
     return Padding(padding: const EdgeInsets.only(bottom: 4), child: _couponRow(accent));
   }
 
-  Widget _comingSoon(String? featureKey) => Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.divider),
-        ),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const Text('Paid plans are coming',
-              style: TextStyle(
-                  fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textDark)),
-          const SizedBox(height: 2),
-          Text(_comingLine(featureKey),
-              style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
+  Widget _comingSoon(String? featureKey) => SectionTile(
+        padding: const EdgeInsets.fromLTRB(16, 16, 20, 16),
+        child: Row(children: [
+          Container(
+            width: 56,
+            height: 56,
+            padding: const EdgeInsets.all(8),
+            decoration: const BoxDecoration(shape: BoxShape.circle, gradient: RepliesTone.gradient),
+            child: Image.asset(TravelIcon.money),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('Paid plans are coming',
+                  style: TypeTokens.style(16, FontWeight.w700, color: DesignColors.textStrong, letterSpacing: 0.2)),
+              const SizedBox(height: 2),
+              Text(_comingLine(featureKey),
+                  style: TypeTokens.style(12, FontWeight.w500, color: TypeTokens.secondary)),
+            ]),
+          ),
         ]),
       );
 
@@ -480,7 +520,6 @@ class _PlansBillingScreenState extends State<PlansBillingScreen> {
     if (me.featureKey == null || !me.paymentEnabled || paidPlans.isEmpty) return const SizedBox.shrink();
     final plan = paidPlans.firstWhereOrNull((p) => p.id == selectedId) ?? paidPlans.first;
     final selected = selectedId == plan.id;
-    final accent = PlanAccent.of(me.featureKey);
     final cycle = _cycles[plan.id] ?? plan.prices.first.cycleMonths;
     final price = plan.priceFor(cycle) ?? plan.prices.first;
     final quote = selected ? _quote.value : null;
@@ -510,29 +549,29 @@ class _PlansBillingScreenState extends State<PlansBillingScreen> {
     if (ownedCycle || notConfigured || quoteError != null) {
       right = const SizedBox.shrink();
     } else if (storeLoading || (quoteLoading && quote == null)) {
-      right = _shimmerBox(80, 18);
+      right = const TemplatePlaceholder(width: 80, height: 18, radius: 6);
     } else if (priceUnavailable) {
-      right = _barText('Price unavailable', AppColors.textLight, bold: false);
+      right = _barText('Price unavailable', DesignColors.textSecondary, bold: false);
     } else if (quote != null && quote.isTrial) {
-      right = _barText('Free for ${trialOffer?.trialDays ?? plan.trialDays} days', AppColors.successDark);
+      right = _barText('Free for ${trialOffer?.trialDays ?? plan.trialDays} days', DesignColors.goodDeep);
     } else if (quote != null && !quote.requiresPayment) {
-      right = _barText('₹0 today', AppColors.textDark);
+      right = _barText('₹0 today', DesignColors.textStrong);
     } else if (quote != null && quote.storePriceRequired) {
-      right = quoteSp != null ? _barText('${quoteSp.formatted} today', AppColors.textDark) : const SizedBox.shrink();
+      right = quoteSp != null ? _barText('${quoteSp.formatted} today', DesignColors.textStrong) : const SizedBox.shrink();
     } else if (quote != null) {
-      right = _barText('${BrowseItem.inr(quote.payableInr)} today', AppColors.textDark);
+      right = _barText('${BrowseItem.inr(quote.payableInr)} today', DesignColors.textStrong);
     } else {
-      right = fallbackPrice != null ? _barText(fallbackPrice, AppColors.textDark) : const SizedBox.shrink();
+      right = fallbackPrice != null ? _barText(fallbackPrice, DesignColors.textStrong) : const SizedBox.shrink();
     }
 
     String? note;
-    var noteColor = AppColors.textLight;
+    var noteColor = DesignColors.textSecondary;
     if (quoteError != null) {
       note = quoteError;
-      noteColor = AppColors.error;
+      noteColor = RepliesTone.bad;
     } else if (holdBlocked) {
       note = 'Fix the payment in Google Play first.';
-      noteColor = AppColors.warningText;
+      noteColor = DesignColors.warnDeep;
     } else if (quote != null && quote.storePriceRequired) {
       if (quote.isTrial && quoteSp != null) {
         note = 'Then ${quoteSp.formatted}/month.';
@@ -549,7 +588,7 @@ class _PlansBillingScreenState extends State<PlansBillingScreen> {
       ];
       if (parts.isNotEmpty) {
         note = parts.join(' · ');
-        noteColor = AppColors.successDark;
+        noteColor = DesignColors.goodDeep;
       }
     }
 
@@ -557,12 +596,14 @@ class _PlansBillingScreenState extends State<PlansBillingScreen> {
         ? 'Continue with ${plan.name}'
         : _ctaLabel(plan, me, selected, quote, ownedCycle: ownedCycle, notConfigured: notConfigured);
 
+    final planTone = PlanAccent.toneOf(me.featureKey);
+    final trialDays = isPlay ? (trialOffer?.trialDays ?? plan.trialDays) : plan.trialDays;
     return Container(
-      padding: EdgeInsets.fromLTRB(14, 10, 14, 12 + MediaQuery.paddingOf(context).bottom),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        border: Border(top: BorderSide(color: AppColors.divider)),
-        boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 14, offset: Offset(0, -4))],
+      padding: EdgeInsets.fromLTRB(KitMetrics.gutter, 14, KitMetrics.gutter, 12 + MediaQuery.paddingOf(context).bottom),
+      decoration: BoxDecoration(
+        color: DesignColors.surface,
+        borderRadius: CardRadius.sheet,
+        boxShadow: ShadowTokens.elev3Up,
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
         Row(children: [
@@ -570,7 +611,7 @@ class _PlansBillingScreenState extends State<PlansBillingScreen> {
             child: Text('${plan.name} · ${_cycleTitle(cycle)}',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight)),
+                style: TypeTokens.style(11, FontWeight.w500, color: TypeTokens.secondary)),
           ),
           const SizedBox(width: 8),
           Flexible(child: Align(alignment: Alignment.centerRight, child: right)),
@@ -578,58 +619,27 @@ class _PlansBillingScreenState extends State<PlansBillingScreen> {
         if (note != null)
           Padding(
             padding: const EdgeInsets.only(top: 2),
-            child: Text(note, style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: noteColor)),
+            child: Text(note, style: TypeTokens.style(12, FontWeight.w500, color: noteColor)),
           ),
-        const SizedBox(height: 7),
-        SizedBox(
-          height: 48,
-          child: ElevatedButton(
-            onPressed: ctaDisabled ? null : () => _onCta(plan, selected),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: accent,
-              foregroundColor: Colors.white,
-              minimumSize: Size.zero,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-            child: purchasing && selected
-                ? const SizedBox(
-                    width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                : FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text(label,
-                        maxLines: 1,
-                        style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 13.5)),
-                  ),
-          ),
+        const SizedBox(height: 8),
+        PrimaryButton(
+          label: label,
+          tone: planTone,
+          loading: purchasing && selected,
+          onPressed: ctaDisabled ? null : () => _onCta(plan, selected),
         ),
         if (canTrial) ...[
           const SizedBox(height: 8),
-          SizedBox(
-            height: 44,
-            child: OutlinedButton(
-              onPressed: purchasing ? null : () => _startTrial(plan),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: accent,
-                side: BorderSide(color: accent),
-                minimumSize: Size.zero,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Text(
-                    isPlay ? 'Try free for ${trialOffer?.trialDays ?? plan.trialDays} days' : 'Try free for ${plan.trialDays} days',
-                    maxLines: 1,
-                    style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 12.5)),
-              ),
-            ),
+          SecondaryButton(
+            label: 'Try free for $trialDays days',
+            tone: planTone,
+            onPressed: purchasing ? null : () => _startTrial(plan),
           ),
           if (isPlay && _plans.storePriceFor(plan, 1) != null) ...[
             const SizedBox(height: 4),
             Text('Then ${_plans.storePriceFor(plan, 1)!.formatted}/month. Cancel anytime in Google Play.',
                 textAlign: TextAlign.center,
-                style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight)),
+                style: TypeTokens.style(11, FontWeight.w500, color: TypeTokens.secondary)),
           ],
         ],
       ]),
@@ -639,26 +649,14 @@ class _PlansBillingScreenState extends State<PlansBillingScreen> {
   Widget _barText(String text, Color color, {bool bold = true}) => Text(text,
       maxLines: 1,
       overflow: TextOverflow.ellipsis,
-      style: TextStyle(
-          fontFamily: 'Poppins', fontSize: 12, fontWeight: bold ? FontWeight.w700 : FontWeight.w500, color: color));
-
-  Widget _shimmerBox(double width, double height) => Shimmer.fromColors(
-        baseColor: AppColors.divider,
-        highlightColor: Colors.white,
-        child: Container(
-          width: width,
-          height: height,
-          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(6)),
-        ),
-      );
+      style: TypeTokens.style(12, bold ? FontWeight.w700 : FontWeight.w500, color: color));
 
   Widget _restoreButton(Color accent) {
     final busy = _plans.isRestoring.value || _plans.isPurchasing.value;
     return Center(
-      child: TextButton(
-        onPressed: busy ? null : () => _plans.restorePurchases(force: true, userInitiated: true),
-        child: Text(_plans.isRestoring.value ? 'Restoring...' : 'Restore purchases',
-            style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600, color: busy ? AppColors.textLight : accent)),
+      child: TextLink(
+        label: _plans.isRestoring.value ? 'Restoring...' : 'Restore purchases',
+        onTap: busy ? null : () => _plans.restorePurchases(force: true, userInitiated: true),
       ),
     );
   }
@@ -674,112 +672,46 @@ class _PlansBillingScreenState extends State<PlansBillingScreen> {
     }
   }
 
-  Widget _header(String? featureKey) {
-    return Container(
-      decoration: BoxDecoration(gradient: PlanAccent.gradientOf(featureKey)),
-      child: SafeArea(
-        bottom: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(4, 8, 12, 20),
-          child: Row(children: [
-            IconButton(
-              onPressed: () => Get.back(),
-              icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white),
-            ),
-            Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                const Text('Plans & Billing',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontFamily: 'Poppins', fontSize: 24, fontWeight: FontWeight.w700, color: Colors.white)),
-                if (featureKey != null)
-                  Text(_subtitleFor(featureKey),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, color: Colors.white70)),
-              ]),
-            ),
-            if (featureKey != null) ...[
-              const SizedBox(width: 8),
-              _historyButton(),
-            ],
-          ]),
-        ),
-      ),
-    );
-  }
-
-  Widget _historyButton() => GestureDetector(
+  Widget _historyButton() => PillAction(
+        label: 'History',
+        icon: const TravelIcon(TravelIcon.calendar, size: 16),
         onTap: () => Get.toNamed(AppRoutes.planHistory),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.2),
-            borderRadius: BorderRadius.circular(999),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.45)),
-          ),
-          child: const Row(mainAxisSize: MainAxisSize.min, children: [
-            Icon(Icons.history_rounded, size: 14, color: Colors.white),
-            SizedBox(width: 4),
-            Text('History',
-                maxLines: 1,
-                style: TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white)),
-          ]),
-        ),
       );
 
-  Widget _emptyState(bool loading) => Padding(
-        padding: const EdgeInsets.only(top: 60),
-        child: Center(
-          child: loading
-              ? CircularProgressIndicator(strokeWidth: 2, color: _accent)
-              : const Column(children: [
-                  Text('No plans for you',
-                      style: TextStyle(
-                          fontFamily: 'Poppins', fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-                  SizedBox(height: 6),
-                  Text('Plans are for owners.',
-                      style: TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textLight)),
-                ]),
-        ),
+  Widget _emptyState() => const StateCard(
+        asset: TravelIcon.checkout,
+        title: 'No plans for you',
+        message: 'Plans are for owners.',
       );
 
-  Widget _loadFailedState() => Padding(
-        padding: const EdgeInsets.only(top: 60),
-        child: Center(
-          child: Column(children: [
-            const Text('Could not load plan',
-                style: TextStyle(
-                    fontFamily: 'Poppins', fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-            const SizedBox(height: 6),
-            const Text('Check your connection.',
-                style: TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textLight)),
-            const SizedBox(height: 8),
-            TextButton(
-              onPressed: () => _load(force: true),
-              child: Text('Retry', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, color: _accent)),
-            ),
-          ]),
-        ),
+  Widget _loadFailedState() => StateCard.error(
+        title: 'Could not load plan',
+        message: 'Check your connection.',
+        actionLabel: 'Retry',
+        onAction: () => _load(force: true),
       );
 
   Widget _plansPlaceholder(bool loading) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 24),
+        padding: const EdgeInsets.symmetric(vertical: KitMetrics.sectionGap),
         child: Center(
           child: loading
-              ? CircularProgressIndicator(strokeWidth: 2, color: _accent)
-              : const Text('No paid plans yet.',
-                  style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textLight)),
+              ? Column(children: [
+                  HeroBanner.skeleton(height: 140),
+                  const SizedBox(height: KitMetrics.sectionGap),
+                  ListRow.skeleton(margin: const EdgeInsets.only(bottom: KitMetrics.cardGap)),
+                  ListRow.skeleton(margin: EdgeInsets.zero),
+                ])
+              : Text('No paid plans yet.',
+                  style: TypeTokens.style(14, FontWeight.w500, color: TypeTokens.secondary)),
         ),
       );
 
   Widget _sectionTitle(String title, String sub) => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title,
-              style: const TextStyle(
-                  fontFamily: 'Poppins', fontSize: 17, fontWeight: FontWeight.w700, color: AppColors.textDark)),
-          Text(sub, style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
+          Text(title, style: TypeTokens.style(16, FontWeight.w700, color: DesignColors.textStrong, letterSpacing: 0.2)),
+          const SizedBox(height: 2),
+          Text(sub, style: TypeTokens.style(12, FontWeight.w500, color: TypeTokens.secondary)),
         ],
       );
 
@@ -787,68 +719,78 @@ class _PlansBillingScreenState extends State<PlansBillingScreen> {
 
   Widget _currentPlanCard(MyPlanModel me, Color accent) {
     final l = me.limits;
+    final key = me.featureKey;
+    final end = PlanAccent.endOf(key);
     final subtitle = me.play?.ownsActivePlan == true
         ? 'Billed by Google Play'
         : me.hasPaidPlan && me.endsAt != null
             ? 'Ends ${_date(me.endsAt!)}${me.daysLeft != null ? ' · ${me.daysLeft} days left' : ''}'
             : (me.paymentEnabled ? 'No end date' : 'Free for now');
-    final lines = _includedLines(l, me.featureKey);
+    final lines = _includedLines(l, key);
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: accent.withValues(alpha: 0.3)),
-        boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 16, offset: const Offset(0, 4))],
+        gradient: PlanAccent.gradientOf(key),
+        borderRadius: CardRadius.hero,
+        boxShadow: ShadowTokens.glow(end),
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
-          Expanded(
-            child: Text(me.planName,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                    fontFamily: 'Poppins', fontSize: 20, fontWeight: FontWeight.w700, color: AppColors.textDark)),
+          Container(
+            width: 64,
+            height: 64,
+            padding: const EdgeInsets.all(8),
+            decoration: const BoxDecoration(color: DesignColors.whiteSoft, shape: BoxShape.circle),
+            child: Image.asset(PlanAccent.iconAsset(key)),
           ),
-          if (me.isTrial || (me.play?.inTrial ?? false)) ...[
-            _pill('Trial', accent),
-            const SizedBox(width: 6),
-          ],
-          _pill(me.hasPaidPlan ? 'Active' : 'Your plan', me.hasPaidPlan ? AppColors.successDark : accent),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [
+                Expanded(
+                  child: Text(me.planName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TypeTokens.style(20, FontWeight.w700, color: DesignColors.surface, letterSpacing: 0.2)),
+                ),
+                if (me.isTrial || (me.play?.inTrial ?? false)) ...[
+                  _pill('Trial', DesignColors.surface),
+                  const SizedBox(width: 6),
+                ],
+                me.hasPaidPlan ? _pill('Active', end, filled: true) : _pill('Your plan', DesignColors.surface),
+              ]),
+              const SizedBox(height: 2),
+              Text(subtitle, style: TypeTokens.onGradientBody),
+            ]),
+          ),
         ]),
-        const SizedBox(height: 2),
-        Text(subtitle, style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
         if (lines.isNotEmpty) ...[
           const SizedBox(height: 10),
           for (final line in lines)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 3),
               child: Row(children: [
-                const Icon(Icons.check_rounded, size: 15, color: AppColors.successDark),
+                const Icon(Icons.check_rounded, size: 16, color: DesignColors.surface),
                 const SizedBox(width: 8),
-                Expanded(
-                  child: Text(line,
-                      style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textMedium)),
-                ),
+                Expanded(child: Text(line, style: TypeTokens.onGradientBody)),
               ]),
             ),
         ],
         if (me.pausedByPlanCount > 0) ...[
           const SizedBox(height: 8),
-          _pill('${me.pausedByPlanCount} paused by plan', AppColors.warning),
+          _pill('${me.pausedByPlanCount} paused by plan', DesignColors.surface),
         ],
       ]),
     );
   }
 
-  Widget _pill(String text, Color color) => Container(
+  Widget _pill(String text, Color color, {bool filled = false}) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(999),
+          color: filled ? DesignColors.surfaceAlt : DesignColors.whiteSoft,
+          borderRadius: CardRadius.pill,
         ),
-        child: Text(text,
-            style: TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w600, color: color)),
+        child: Text(text, style: TypeTokens.style(11, FontWeight.w600, color: color)),
       );
 
   void _onCta(PlanModel plan, bool selected) {
@@ -882,32 +824,31 @@ class _PlansBillingScreenState extends State<PlansBillingScreen> {
     final applied = _appliedCoupon.value;
     return Row(children: [
       Expanded(
-        child: SizedBox(
-          height: 42,
+        child: Container(
+          height: 48,
+          decoration: BoxDecoration(
+            color: DesignColors.surface,
+            borderRadius: const BorderRadius.all(Radius.circular(38)),
+            boxShadow: ShadowTokens.elev1,
+          ),
           child: TextField(
             controller: _couponCtrl,
             enabled: applied == null,
             textCapitalization: TextCapitalization.characters,
             inputFormatters: noEmojiInputFormatters,
-            style: const TextStyle(fontFamily: 'Poppins', fontSize: 13),
+            style: TypeTokens.style(14, FontWeight.w400, color: DesignColors.textStrong),
             decoration: InputDecoration(
               hintText: 'Coupon code',
-              hintStyle: const TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textHint),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12),
-              filled: true,
-              fillColor: AppColors.surface,
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+              hintStyle: TypeTokens.style(14, FontWeight.w400, color: DesignColors.textMuted),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 18),
+              border: InputBorder.none,
             ),
             onSubmitted: (_) => _applyCoupon(),
           ),
         ),
       ),
       const SizedBox(width: 8),
-      TextButton(
-        onPressed: applied == null ? _applyCoupon : _clearCoupon,
-        child: Text(applied == null ? 'Apply' : 'Remove',
-            style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, color: accent)),
-      ),
+      TextLink(label: applied == null ? 'Apply' : 'Remove', onTap: applied == null ? _applyCoupon : _clearCoupon),
     ]);
   }
 }

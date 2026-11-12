@@ -1,47 +1,26 @@
+import 'package:bakhli/design/design.dart';
+import 'package:bakhli/design/extra/stay_grid_card.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:iconsax/iconsax.dart';
-import 'package:shimmer/shimmer.dart';
-import '../../../config/app_colors.dart';
 import '../../../config/app_routes.dart';
-import '../../../config/app_shadows.dart';
 import '../../../config/app_tabs.dart';
-import '../../../config/module_palette.dart';
 import '../../../controllers/auth_controller.dart';
 import '../../../controllers/location_controller.dart';
 import '../../../controllers/tab_config_controller.dart';
 import '../../../models/browse_item.dart';
 import '../../../navigation/tour_keys.dart';
 import '../../../screens/explore_location_search_mixin.dart';
-import '../../../widgets/add_listing_shortcut_button.dart';
-import '../../../widgets/gradient_button.dart';
-import '../../../widgets/listing_grid_card.dart';
 import '../../../widgets/location_switch_sheet.dart';
-import '../../../widgets/selectable_chip.dart';
 import '../../jobs/controllers/my_jobs_controller.dart';
-import '../setup/stay_option_sets.dart';
 import '../setup/stay_flow.dart';
 import '../stay_types_controller.dart';
 import 'stay_filter_sort_sheet.dart';
 import 'stay_landing_controller.dart';
 import 'stay_navigation.dart';
 
-const _kGridDelegate = SliverGridDelegateWithMaxCrossAxisExtent(
-  maxCrossAxisExtent: 190,
-  mainAxisSpacing: 12,
-  crossAxisSpacing: 12,
-  mainAxisExtent: ListingGridCard.height,
-);
-
-const _kAccent = StayColors.accent;
-const _kAccentDark = StayColors.accentDark;
-const _kGradient = StayColors.gradient;
-const _kMapGradient = LinearGradient(
-  begin: Alignment.topLeft,
-  end: Alignment.bottomRight,
-  colors: [AppColors.accentLight, AppColors.accent],
-);
-const _kMineGradient = AppColors.warningGradient;
+const _kAccent = DesignColors.primary;
+const _kSections = 5;
+const _kTone = KitTone.stay;
 
 void _openMyStays() => Get.toNamed(AppRoutes.myStays);
 
@@ -52,7 +31,8 @@ class StayLandingScreen extends StatefulWidget {
   State<StayLandingScreen> createState() => _StayLandingScreenState();
 }
 
-class _StayLandingScreenState extends State<StayLandingScreen> with ExploreLocationSearchMixin<StayLandingScreen> {
+class _StayLandingScreenState extends State<StayLandingScreen>
+    with ExploreLocationSearchMixin<StayLandingScreen> {
   late final StayLandingController _ctrl;
   final _auth = Get.find<AuthController>();
   final _types = StayTypesController.ensure();
@@ -81,152 +61,113 @@ class _StayLandingScreenState extends State<StayLandingScreen> with ExploreLocat
   }
 
   @override
-  ModulePalette get searchPalette => StayColors.palette;
+  get searchPalette => templateModulePalette;
 
   void _viewDetails(BrowseItem item) => Get.toNamed(AppRoutes.stayDetail, arguments: {'id': item.id});
 
+  Widget _section(int i, Widget child) => StaggerItem(index: i, child: child);
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.scaffoldBg,
-      body: Stack(
-        children: [
-          RefreshIndicator(
-            color: _kAccent,
-            onRefresh: _ctrl.pullRefresh,
-            child: CustomScrollView(
-              controller: _scroll,
-              physics: const AlwaysScrollableScrollPhysics(),
-              slivers: [
-                SliverToBoxAdapter(child: _buildHeader(context)),
-                SliverToBoxAdapter(child: _buildReviewStrip()),
-                SliverToBoxAdapter(child: _buildTiles()),
-                SliverToBoxAdapter(child: _buildTypeChips()),
-                SliverToBoxAdapter(child: _buildListHeader()),
-                _buildBody(),
-                SliverToBoxAdapter(child: _buildFooter()),
-              ],
-            ),
-          ),
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 16,
-            child: Center(
-              child: AddListingShortcutButton(
-                key: TourKeys.staysLandingMapPill,
-                label: 'Map view',
-                icon: Icons.map_outlined,
-                gradient: _kGradient,
-                onTap: StayNavigation.openMap,
+    final bottom = BarMetrics.bodyBottomOf(context);
+    return TabEntrance(
+      tab: AppTabs.stays,
+      child: Scaffold(
+        backgroundColor: DesignColors.scaffold,
+        body: StaggerHost(
+          count: _kSections,
+          child: Stack(
+            children: [
+              RefreshIndicator(
+                color: _kAccent,
+                onRefresh: _ctrl.pullRefresh,
+                child: CustomScrollView(
+                  controller: _scroll,
+                  physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+                  slivers: [
+                    SliverToBoxAdapter(child: _section(0, _buildHeader(context))),
+                    SliverToBoxAdapter(child: _section(1, _buildReviewStrip())),
+                    SliverToBoxAdapter(child: _section(2, _buildTiles())),
+                    SliverToBoxAdapter(child: _section(3, _buildTypeChips())),
+                    SliverToBoxAdapter(child: _section(4, _buildListHeader())),
+                    _buildBody(),
+                    SliverToBoxAdapter(child: _buildFooter(bottom)),
+                  ],
+                ),
               ),
-            ),
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: bottom,
+                child: Center(
+                  child: EntranceOnce(
+                    index: 3,
+                    offset: 24,
+                    child: PressScale(
+                      child: StayFloatingPill(
+                        key: TourKeys.staysLandingMapPill,
+                        label: 'Map view',
+                        onTap: StayNavigation.openMap,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
 
   Widget _buildHeader(BuildContext context) {
-    final top = MediaQuery.paddingOf(context).top;
-    return Stack(
-      children: [
-        const Positioned(
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 22,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: _kGradient,
-              borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
-            ),
+    return Obx(() => ModuleHeader(
+          tone: _kTone,
+          tabRoot: true,
+          animate: false,
+          title: Get.find<TabConfigController>().displayNameForIndex(AppTabs.stays, 'Stays'),
+          subtitle: 'Find stays near you',
+          trailing: [KeyedSubtree(key: TourKeys.staysLandingSearch, child: _buildSearchButton())],
+          bottomHeight: 46 + 12,
+          bottom: Padding(
+            padding: const EdgeInsets.only(left: 12, top: 12),
+            child: KeyedSubtree(key: TourKeys.staysLandingLocation, child: _buildCityDropdown()),
           ),
-        ),
-        Padding(
-          padding: EdgeInsets.fromLTRB(20, top + 16, 20, 0),
-          child: Column(
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Obx(() => Text(
-                              Get.find<TabConfigController>().displayNameForIndex(AppTabs.stays, 'Stays'),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(fontFamily: 'Poppins', fontSize: 22, fontWeight: FontWeight.w700, color: Colors.white),
-                            )),
-                        const SizedBox(height: 2),
-                        Text(
-                          'Find stays near you',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontFamily: 'Poppins',
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white.withValues(alpha: 0.85),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  KeyedSubtree(key: TourKeys.staysLandingSearch, child: _buildSearchButton()),
-                ],
-              ),
-              const SizedBox(height: 18),
-              KeyedSubtree(key: TourKeys.staysLandingLocation, child: _buildCityDropdown()),
-            ],
-          ),
-        ),
-      ],
-    );
+        ));
   }
 
   Widget _buildSearchButton() {
     return Obx(() {
       final active = isSearchActive;
       final resolving = searchResolving;
-      return GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: resolving ? null : () => onSearchToggleTap(context),
-        child: Container(
-          height: 34,
-          padding: const EdgeInsets.symmetric(horizontal: 13),
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: active ? AppColors.error : Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(color: Colors.black.withValues(alpha: 0.12), blurRadius: 8, offset: const Offset(0, 2)),
-            ],
+      return PressScale(
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: resolving ? null : () => onSearchToggleTap(context),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            height: 36,
+            constraints: const BoxConstraints(minWidth: 44),
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: active ? DesignColors.error : DesignColors.surface,
+              borderRadius: CardRadius.pill,
+              boxShadow: ShadowTokens.elev1,
+            ),
+            child: resolving
+                ? const KitDots(color: _kAccent, size: 6)
+                : active
+                    ? Text('Cancel', style: TypeTokens.style(12, FontWeight.w700, color: DesignColors.onPrimary))
+                    : Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.search_rounded, size: 16, color: _kAccent),
+                          const SizedBox(width: 5),
+                          Text('Search', style: TypeTokens.style(12, FontWeight.w700, color: _kAccent)),
+                        ],
+                      ),
           ),
-          child: resolving
-              ? const SizedBox(
-                  width: 15,
-                  height: 15,
-                  child: CircularProgressIndicator(strokeWidth: 2, color: _kAccentDark),
-                )
-              : active
-                  ? const Text(
-                      'Cancel',
-                      style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white),
-                    )
-                  : const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.search_rounded, size: 15, color: _kAccentDark),
-                        SizedBox(width: 5),
-                        Text(
-                          'Search',
-                          style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w700, color: _kAccentDark),
-                        ),
-                      ],
-                    ),
         ),
       );
     });
@@ -244,46 +185,49 @@ class _StayLandingScreenState extends State<StayLandingScreen> with ExploreLocat
           ? [TextSpan(text: searchLabel)]
           : [
               TextSpan(text: district.name),
-              WidgetSpan(
+              const WidgetSpan(
                 alignment: PlaceholderAlignment.middle,
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  child: Icon(Icons.chevron_right_rounded, size: 14, color: _kAccentDark.withValues(alpha: 0.6)),
+                  padding: EdgeInsets.symmetric(horizontal: 4),
+                  child: Icon(Icons.chevron_right_rounded, size: 14, color: DesignColors.textSecondary),
                 ),
               ),
               TextSpan(text: cityName),
             ];
-      return GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: searching ? null : () => LocationSwitchSheet.show(context, palette: StayColors.palette),
-        child: Container(
-          height: 46,
-          padding: const EdgeInsets.symmetric(horizontal: 14),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(14),
-            boxShadow: AppShadows.premium(_kAccent, alpha: 0.16, blur: 16, offset: const Offset(0, 6)),
-          ),
-          child: Row(
-            children: [
-              const Icon(Icons.location_on_outlined, size: 17, color: _kAccentDark),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text.rich(
-                  TextSpan(children: spans),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700, color: _kAccentDark),
+      return PressScale(
+        enabled: !searching,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: searching ? null : () => LocationSwitchSheet.show(context, palette: templateModulePalette),
+          child: Container(
+            height: 46,
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            decoration: BoxDecoration(
+              color: DesignColors.surface,
+              borderRadius: CardRadius.pill,
+              boxShadow: ShadowTokens.elev1,
+            ),
+            child: Row(
+              children: [
+                const TravelIcon(TravelIcon.place, size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text.rich(
+                    TextSpan(children: spans),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TypeTokens.style(14, FontWeight.w500, color: _kAccent),
+                  ),
                 ),
-              ),
-              if (!searching)
-                Container(
-                  width: 26,
-                  height: 26,
-                  decoration: const BoxDecoration(color: AppColors.neutralChip, shape: BoxShape.circle),
-                  child: const Icon(Icons.keyboard_arrow_down_rounded, size: 16, color: _kAccentDark),
-                ),
-            ],
+                if (!searching)
+                  Container(
+                    width: 26,
+                    height: 26,
+                    decoration: const BoxDecoration(color: DesignColors.scaffold, shape: BoxShape.circle),
+                    child: const Icon(Icons.keyboard_arrow_down_rounded, size: 16, color: _kAccent),
+                  ),
+              ],
+            ),
           ),
         ),
       );
@@ -294,33 +238,12 @@ class _StayLandingScreenState extends State<StayLandingScreen> with ExploreLocat
     return Obx(() {
       final pending = _auth.staysEnabled && _auth.user.value?.stayStatus == 'PendingReview';
       if (!pending) return const SizedBox.shrink();
-      return Padding(
-        padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          decoration: BoxDecoration(
-            color: _kAccent.withValues(alpha: 0.10),
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: _kAccent.withValues(alpha: 0.35)),
-          ),
-          child: const Row(
-            children: [
-              Icon(Iconsax.clock, size: 20, color: _kAccentDark),
-              SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Under review',
-                        style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700, color: _kAccentDark)),
-                    Text('We will notify you',
-                        style: TextStyle(fontFamily: 'Poppins', fontSize: 11.5, color: AppColors.textMedium)),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
+      return const SlimBar(
+        tone: _kTone,
+        margin: EdgeInsets.fromLTRB(KitMetrics.gutter, 16, KitMetrics.gutter, 0),
+        leadingAsset: TravelIcon.note,
+        title: 'Under review',
+        subtitle: 'We will notify you',
       );
     });
   }
@@ -333,8 +256,9 @@ class _StayLandingScreenState extends State<StayLandingScreen> with ExploreLocat
   Widget _buildTiles() {
     const myStays = _OptionTile(
       label: 'My Stays',
-      icon: Iconsax.house_2,
-      gradient: _kMineGradient,
+      icon: TravelIcon.stay,
+      start: TravelPalette.sunriseStart,
+      end: TravelPalette.sunriseEnd,
       onTap: _openMyStays,
     );
     return Obx(() {
@@ -346,14 +270,16 @@ class _StayLandingScreenState extends State<StayLandingScreen> with ExploreLocat
           if (_auth.jobsEnabled) ...[
             _OptionTile(
               label: 'Post a Job',
-              icon: Iconsax.briefcase,
-              gradient: _kGradient,
+              icon: TravelIcon.money,
+              start: TravelPalette.roseStart,
+              end: TravelPalette.roseEnd,
               onTap: _postJob,
             ),
             _OptionTile(
               label: 'My Jobs',
-              icon: Iconsax.task_square,
-              gradient: _kMapGradient,
+              icon: TravelIcon.checkout,
+              start: TravelPalette.duskStart,
+              end: TravelPalette.duskEnd,
               onTap: () => Get.toNamed(AppRoutes.myJobs),
             ),
           ],
@@ -363,15 +289,16 @@ class _StayLandingScreenState extends State<StayLandingScreen> with ExploreLocat
         tiles = [
           _OptionTile(
             label: draft ? 'Continue setup' : 'Add Stay',
-            icon: draft ? Iconsax.edit_2 : Iconsax.add,
-            gradient: _kGradient,
+            icon: draft ? TravelIcon.note : TravelIcon.stay,
+            start: TravelPalette.skyStart,
+            end: TravelPalette.skyEnd,
             onTap: StayFlow.start,
           ),
           myStays,
         ];
       }
       return Padding(
-        padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+        padding: const EdgeInsets.fromLTRB(KitMetrics.gutter, 16, KitMetrics.gutter, 0),
         child: KeyedSubtree(key: TourKeys.staysLandingTiles, child: _tileRow(tiles)),
       );
     });
@@ -381,7 +308,7 @@ class _StayLandingScreenState extends State<StayLandingScreen> with ExploreLocat
     return Row(
       children: [
         for (var i = 0; i < tiles.length; i++) ...[
-          if (i > 0) const SizedBox(width: 10),
+          if (i > 0) const SizedBox(width: 12),
           Expanded(child: tiles[i]),
         ],
       ],
@@ -390,28 +317,31 @@ class _StayLandingScreenState extends State<StayLandingScreen> with ExploreLocat
 
   Widget _buildTypeChips() {
     return Padding(
-      padding: const EdgeInsets.only(top: 14),
+      padding: const EdgeInsets.only(top: 16),
       child: KeyedSubtree(
         key: TourKeys.staysLandingFilters,
         child: SizedBox(
-          height: 17 + MediaQuery.textScalerOf(context).scale(17),
+          height: 30 + MediaQuery.textScalerOf(context).scale(17),
           child: Obx(() {
             final types = _types.types;
             final selected = _ctrl.selectedStayTypeId.value;
             return ListView.separated(
               scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 20),
+              physics: const BouncingScrollPhysics(),
+              clipBehavior: Clip.none,
+              padding: const EdgeInsets.symmetric(horizontal: KitMetrics.gutter, vertical: 6),
               itemCount: types.length + 1,
-              separatorBuilder: (_, __) => const SizedBox(width: 6),
+              separatorBuilder: (_, _) => const SizedBox(width: 8),
               itemBuilder: (_, i) {
                 final String? id = i == 0 ? null : types[i - 1].id;
-                return SelectableChip(
+                final chip = PickChip(
                   label: i == 0 ? 'All' : types[i - 1].name,
                   selected: selected == id,
                   activeColor: _kAccent,
-                  padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 14),
+                  padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 14),
                   onTap: () => _ctrl.setStayType(id),
                 );
+                return i < 8 ? EntranceOnce(index: i, offset: 0, dx: 60, child: chip) : chip;
               },
             );
           }),
@@ -422,53 +352,53 @@ class _StayLandingScreenState extends State<StayLandingScreen> with ExploreLocat
 
   Widget _buildListHeader() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+      padding: const EdgeInsets.fromLTRB(KitMetrics.gutter, 16, KitMetrics.gutter, 4),
       child: Row(
         children: [
-          const Expanded(
+          Expanded(
             child: Text(
               'Stays near you',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontFamily: 'Poppins', fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textDark),
+              style: TypeTokens.title,
             ),
           ),
-          GestureDetector(
-            key: TourKeys.staysLandingSort,
-            onTap: () => StayFilterSortSheet.show(context, controller: _ctrl),
-            child: Obx(() {
-              final meals = _ctrl.selectedMeals.value;
-              final type = _ctrl.selectedStayTypeId.value;
-              final sort = _ctrl.sortBy.value;
-              final active = meals != null || type != null || sort != StayLandingController.defaultSort;
-              return Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: active ? _kAccent.withValues(alpha: 0.10) : Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: active ? _kAccent : AppColors.divider),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.tune_rounded, size: 14, color: _kAccentDark),
-                    const SizedBox(width: 5),
-                    const Text(
-                      'Filter & Sort',
-                      style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w700, color: _kAccentDark),
-                    ),
-                    if (active) ...[
-                      const SizedBox(width: 5),
-                      Container(
-                        width: 6,
-                        height: 6,
-                        decoration: const BoxDecoration(color: _kAccent, shape: BoxShape.circle),
-                      ),
+          PressScale(
+            child: GestureDetector(
+              key: TourKeys.staysLandingSort,
+              onTap: () => StayFilterSortSheet.show(context, controller: _ctrl),
+              child: Obx(() {
+                final meals = _ctrl.selectedMeals.value;
+                final type = _ctrl.selectedStayTypeId.value;
+                final sort = _ctrl.sortBy.value;
+                final active = meals != null || type != null || sort != StayLandingController.defaultSort;
+                return AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: active ? _kTone.tint : DesignColors.surface,
+                    borderRadius: CardRadius.pill,
+                    border: Border.all(color: active ? _kAccent : DesignColors.divider, width: 1.5),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text('Filter & Sort', style: TypeTokens.style(13, FontWeight.w600, color: _kAccent)),
+                      const SizedBox(width: 6),
+                      const Icon(Icons.sort_rounded, size: 16, color: _kAccent),
+                      if (active) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          width: 6,
+                          height: 6,
+                          decoration: const BoxDecoration(color: _kAccent, shape: BoxShape.circle),
+                        ),
+                      ],
                     ],
-                  ],
-                ),
-              );
-            }),
+                  ),
+                );
+              }),
+            ),
           ),
         ],
       ),
@@ -479,17 +409,17 @@ class _StayLandingScreenState extends State<StayLandingScreen> with ExploreLocat
     return Obx(() {
       final items = _ctrl.items;
       if (items.isEmpty) {
-        if (_ctrl.isLoading.value) return _buildShimmerGrid();
+        if (_ctrl.isLoading.value) return _buildSkeletonGrid();
         return SliverToBoxAdapter(child: _buildMessage(failed: _ctrl.loadFailed.value));
       }
       return SliverPadding(
-        padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+        padding: const EdgeInsets.fromLTRB(KitMetrics.gutter, 8, KitMetrics.gutter, 0),
         sliver: SliverGrid(
-          gridDelegate: _kGridDelegate,
+          gridDelegate: RailCard.gridDelegate(),
           delegate: SliverChildBuilderDelegate(
             (_, i) {
               final item = items[i];
-              final card = ListingGridCard(
+              Widget card = StayGridCard(
                 key: ValueKey(item.id),
                 thumbnailUrl: item.thumbnailUrl,
                 tagLabel: item.tagLabel,
@@ -499,12 +429,10 @@ class _StayLandingScreenState extends State<StayLandingScreen> with ExploreLocat
                 priceCaption: item.priceCaption,
                 priceValue: item.priceValue,
                 priceUnit: item.priceUnit,
-                isPlot: false,
-                accent: _kAccent,
-                accentDark: _kAccentDark,
                 isFeatured: item.isFeatured,
                 onViewDetails: () => _viewDetails(item),
               );
+              if (i < 10) card = KitCardEntrance(key: ValueKey(item.id), index: i, child: card);
               return i == 0 ? KeyedSubtree(key: TourKeys.staysLandingList, child: card) : card;
             },
             childCount: items.length,
@@ -515,20 +443,14 @@ class _StayLandingScreenState extends State<StayLandingScreen> with ExploreLocat
     });
   }
 
-  Widget _buildShimmerGrid() {
+  Widget _buildSkeletonGrid() {
     return SliverPadding(
-      padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+      padding: const EdgeInsets.fromLTRB(KitMetrics.gutter, 8, KitMetrics.gutter, 0),
       sliver: SliverGrid(
-        gridDelegate: _kGridDelegate,
+        gridDelegate: RailCard.gridDelegate(),
         delegate: SliverChildBuilderDelegate(
           (_, i) {
-            final cell = Shimmer.fromColors(
-              baseColor: AppColors.shimmerBase,
-              highlightColor: AppColors.shimmerHighlight,
-              child: Container(
-                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
-              ),
-            );
+            final cell = RailCard.skeleton();
             return i == 0 ? KeyedSubtree(key: TourKeys.staysLandingList, child: cell) : cell;
           },
           childCount: 6,
@@ -540,60 +462,36 @@ class _StayLandingScreenState extends State<StayLandingScreen> with ExploreLocat
   Widget _buildMessage({required bool failed}) {
     return KeyedSubtree(
       key: TourKeys.staysLandingList,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(32, 48, 32, 0),
-        child: Column(
-          children: [
-            Icon(failed ? Icons.cloud_off_rounded : Icons.search_off_rounded, size: 40, color: AppColors.textHint),
-            const SizedBox(height: 10),
-            Text(
-              failed ? "Couldn't load stays" : 'No stays found',
-              style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textMedium),
+      child: failed
+          ? StateCard.error(
+              kit: _kTone,
+              title: "Couldn't load stays",
+              message: 'Check your connection and try again',
+              actionLabel: 'Retry',
+              onAction: _ctrl.retry,
+            )
+          : const StateCard(
+              kit: _kTone,
+              asset: TravelIcon.stay,
+              title: 'No stays found',
+              message: 'Try other filters or a different location',
             ),
-            const SizedBox(height: 4),
-            Text(
-              failed ? 'Check your connection and try again' : 'Try other filters or a different location',
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight),
-            ),
-            if (failed) ...[
-              const SizedBox(height: 16),
-              SizedBox(
-                width: 160,
-                child: GradientButton(
-                  label: 'Retry',
-                  height: 42,
-                  gradient: _kGradient,
-                  shadowColor: _kAccent,
-                  onPressed: _ctrl.retry,
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
     );
   }
 
-  Widget _buildFooter() {
+  Widget _buildFooter(double bottom) {
     return Obx(() {
-      if (_ctrl.items.isEmpty) return const SizedBox(height: 96);
+      if (_ctrl.items.isEmpty) return SizedBox(height: bottom + 64);
       Widget child = const SizedBox.shrink();
       if (_ctrl.isLoadingMore.value) {
-        child = const Center(child: CircularProgressIndicator(strokeWidth: 2, color: _kAccent));
+        child = const Center(child: KitDots(color: _kAccent));
       } else if (_ctrl.loadMoreFailed.value) {
         child = Center(
-          child: TextButton(
-            onPressed: _ctrl.retryLoadMore,
-            child: const Text(
-              "Couldn't load more. Tap to retry",
-              style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: _kAccentDark),
-            ),
-          ),
+          child: TextLink(label: "Couldn't load more. Tap to retry", onTap: _ctrl.retryLoadMore, tone: _kTone),
         );
       }
       return Padding(
-        padding: const EdgeInsets.only(top: 12, bottom: 96),
+        padding: EdgeInsets.only(top: 12, bottom: bottom + 64),
         child: SizedBox(height: 36, child: child),
       );
     });
@@ -602,44 +500,39 @@ class _StayLandingScreenState extends State<StayLandingScreen> with ExploreLocat
 
 class _OptionTile extends StatelessWidget {
   final String label;
-  final IconData icon;
-  final Gradient gradient;
+  final String icon;
+  final Color start;
+  final Color end;
   final VoidCallback onTap;
 
   const _OptionTile({
     required this.label,
     required this.icon,
-    required this.gradient,
+    required this.start,
+    required this.end,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
+    return SectionTile(
       onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.divider.withValues(alpha: 0.7)),
-          boxShadow: AppShadows.premium(_kAccent, alpha: 0.05, blur: 8, offset: const Offset(0, 2)),
-        ),
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+      child: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
               width: 52,
               height: 52,
+              padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                gradient: gradient,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.7), width: 1),
+                gradient: LinearGradient(colors: [start, end], begin: Alignment.topLeft, end: Alignment.bottomRight),
+                shape: BoxShape.circle,
               ),
-              child: Icon(icon, size: 26, color: Colors.white),
+              child: TravelIcon(icon, size: 36),
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 8),
             FittedBox(
               fit: BoxFit.scaleDown,
               child: Text(
@@ -647,7 +540,7 @@ class _OptionTile extends StatelessWidget {
                 textAlign: TextAlign.center,
                 maxLines: 1,
                 softWrap: false,
-                style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.textDark),
+                style: TypeTokens.style(12, FontWeight.w700, color: DesignColors.textPrimary),
               ),
             ),
           ],

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:bakhli/design/design.dart';
+import 'package:bakhli/design/extra/replies_kit.dart';
 import 'package:flutter/services.dart';
-import '../../../config/app_colors.dart';
 import '../../../models/browse_item.dart';
 import '../../../utils/input_formatters.dart';
 import '../controllers/trip_enquiry_controller.dart';
@@ -10,6 +11,7 @@ import '../trip_strings.dart';
 import '../utils/trip_enquiry_rules.dart';
 import 'trip_payment_line.dart';
 import 'trip_sheet_frame.dart';
+import 'trip_withdraw_sheet.dart';
 
 class _Copy {
   static const String tellGuest = 'Check-in is today or past. Call the guest too.';
@@ -77,13 +79,16 @@ class _CancelBodyState extends State<_CancelBody> {
           : (e.isTaxi ? TripStrings.cancelDriverTold : TripStrings.cancelHostTold),
       footer: TripPaymentLine(text: owner ? _Copy.ownerPayLine : TripStrings.noPaymentLine),
       children: [
+        TemplateStagger(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
         _summary(e, owner),
         if (owner) ...[
           const SizedBox(height: 14),
           const Text(TripStrings.reasonOptional,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.textMedium)),
+              style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12.5, fontWeight: FontWeight.w600, color: FitnessAppTheme.lightText)),
           const SizedBox(height: 6),
           TextField(
             controller: _reason,
@@ -91,15 +96,15 @@ class _CancelBodyState extends State<_CancelBody> {
             maxLines: 3,
             textCapitalization: TextCapitalization.sentences,
             inputFormatters: [...noEmojiInputFormatters, LengthLimitingTextInputFormatter(TripConstants.cancelReasonMax)],
-            style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textDark),
+            style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 14, color: FitnessAppTheme.darkerText),
             decoration: InputDecoration(
               filled: true,
-              fillColor: AppColors.scaffoldBg,
+              fillColor: FitnessAppTheme.background,
               contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
               enabledBorder:
-                  OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.divider)),
+                  OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Colors.transparent)),
               focusedBorder:
-                  OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.stay, width: 1.5)),
+                  OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: RepliesTone.accent, width: 1.5)),
             ),
           ),
         ],
@@ -107,20 +112,21 @@ class _CancelBodyState extends State<_CancelBody> {
           const SizedBox(height: 12),
           Container(
             padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(color: AppColors.warningSurface, borderRadius: BorderRadius.circular(12)),
+            decoration: BoxDecoration(color: RepliesTone.warnSurface, borderRadius: BorderRadius.circular(8)),
             child: Text(owner ? _Copy.tellGuest : TripStrings.tellHostBeforeLeaving,
-                style: const TextStyle(fontFamily: 'Poppins', fontSize: 12.5, color: AppColors.warningText)),
+                style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12.5, color: RepliesTone.warn)),
           ),
         ],
         const SizedBox(height: 18),
-        LayoutBuilder(builder: (context, c) {
-          final keep = _button(TripStrings.keepBooking, outlined: true, onTap: _saving ? null : () => Navigator.pop(context, false));
-          final cancel = _button(TripStrings.cancelBooking, onTap: _saving ? null : _cancel, loading: _saving);
-          if (c.maxWidth >= 340) {
-            return Row(children: [Expanded(child: keep), const SizedBox(width: 12), Expanded(child: cancel)]);
-          }
-          return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [cancel, const SizedBox(height: 10), keep]);
-        }),
+        TripTwoButtons(
+          secondaryLabel: TripStrings.keepBooking,
+          primaryLabel: TripStrings.cancelBooking,
+          busy: _saving,
+          onSecondary: () => Navigator.pop(context, false),
+          onPrimary: _cancel,
+        ),
+          ],
+        ),
       ],
     );
   }
@@ -135,7 +141,7 @@ class _CancelBodyState extends State<_CancelBody> {
     ].join(' · ');
     return Container(
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: AppColors.scaffoldBg, borderRadius: BorderRadius.circular(12)),
+      decoration: BoxDecoration(color: FitnessAppTheme.background, borderRadius: BorderRadius.circular(16)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -143,51 +149,13 @@ class _CancelBodyState extends State<_CancelBody> {
             Text(who,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textDark)),
+                style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 14, fontWeight: FontWeight.w700, color: FitnessAppTheme.darkerText)),
           Text(line,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontFamily: 'Poppins', fontSize: 12.5, color: AppColors.textMedium)),
+              style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12.5, color: FitnessAppTheme.lightText)),
         ],
       ),
-    );
-  }
-
-  Widget _button(String label, {required VoidCallback? onTap, bool outlined = false, bool loading = false}) {
-    final child = loading
-        ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-        : Text(label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-                fontFamily: 'Poppins',
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: outlined ? AppColors.textMedium : Colors.white));
-    return SizedBox(
-      height: 48,
-      child: outlined
-          ? OutlinedButton(
-              onPressed: onTap,
-              style: OutlinedButton.styleFrom(
-                minimumSize: const Size(64, 48),
-                side: const BorderSide(color: AppColors.divider),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-              child: child,
-            )
-          : ElevatedButton(
-              onPressed: onTap,
-              style: ElevatedButton.styleFrom(
-                minimumSize: const Size(64, 48),
-                backgroundColor: AppColors.error,
-                foregroundColor: Colors.white,
-                disabledBackgroundColor: AppColors.error.withValues(alpha: 0.6),
-                elevation: 0,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-              child: child,
-            ),
     );
   }
 }

@@ -257,6 +257,13 @@ void main() {
     }
   });
 
+  test('a partial stay is not shown as done in the share text', () {
+    const partial = TripSummaryArrangement(key: const TripEasyRowKey(TripEasyRowKind.stay, 1), title: 'Stay', state: TripRowState.saved, partial: true);
+    const full = TripSummaryArrangement(key: const TripEasyRowKey(TripEasyRowKind.stay, 1), title: 'Stay', state: TripRowState.saved);
+    expect(TripSummaryText.arrangementLine(partial), startsWith(TripStringsV2Easy.shareWaiting));
+    expect(TripSummaryText.arrangementLine(full), startsWith(TripStringsV2Easy.shareDone));
+  });
+
   test('pill status has one look per state', () {
     expect(TripSummaryText.pillStatus(TripRowState.confirmed), TripDisplayStatus.confirmedByBoth);
     expect(TripSummaryText.pillStatus(TripRowState.booked), TripDisplayStatus.bookedByYou);

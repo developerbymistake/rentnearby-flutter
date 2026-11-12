@@ -1,6 +1,8 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import '../config/app_colors.dart';
+import 'package:bakhli/features/trip/widgets/trip_ui.dart';
+import 'package:bakhli/design/design.dart';
+import 'package:bakhli/design/extra/replies_kit.dart';
 import '../features/stay/enquiries/stay_enquiry_actions.dart';
 import '../features/trip/controllers/trip_enquiry_controller.dart';
 import '../features/trip/models/trip_enquiry_model.dart';
@@ -162,8 +164,9 @@ class TripChatCards {
       context,
       mine: m.isMine,
       readAt: m.readAt,
+      createdAt: m.createdAt,
       accent: accent,
-      icon: Icons.local_offer_outlined,
+      icon: TravelIcon.money,
       title: title,
       pill: _offerPill(status, isOwner, validUntil),
       children: [
@@ -191,7 +194,7 @@ class TripChatCards {
                   fit: BoxFit.scaleDown,
                   child: Text(BrowseItem.inr(total),
                       style: const TextStyle(
-                          fontFamily: 'Poppins', fontSize: 22, fontWeight: FontWeight.w700, color: AppColors.textDark)),
+                          fontFamily: FitnessAppTheme.fontName, fontSize: 22, fontWeight: FontWeight.w700, color: DesignColors.primary)),
                 ),
               ),
             ),
@@ -210,7 +213,7 @@ class TripChatCards {
         ],
         const SizedBox(height: 8),
         const Text(TripStrings.termsByHost,
-            style: TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textHint, height: 1.35)),
+            style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 11, color: DesignColors.textMuted, height: 1.35)),
         if (canAct) ...[
           const SizedBox(height: 12),
           _button(TripStrings.acceptOffer,
@@ -262,15 +265,15 @@ class TripChatCards {
       child: Text(
         '$name$priceText${guests == null ? '' : ' · ${TripStrings.guests} $guests'}',
         style: const TextStyle(
-            fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.textDark, height: 1.35),
+            fontFamily: FitnessAppTheme.fontName, fontSize: 12.5, fontWeight: FontWeight.w600, color: DesignColors.textStrong, height: 1.35),
       ),
     );
   }
 
   // ── building blocks ──────────────────────────────────────────────────────
 
-  static const _body = TextStyle(fontFamily: 'Poppins', fontSize: 12.5, color: AppColors.textMedium, height: 1.35);
-  static const _small = TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight, height: 1.35);
+  static const _body = TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12.5, color: DesignColors.textSecondary, height: 1.35);
+  static const _small = TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, color: DesignColors.textMuted, height: 1.35);
 
   static Widget _kv(String k, String v) => Padding(
         padding: const EdgeInsets.only(top: 2),
@@ -281,7 +284,7 @@ class TripChatCards {
             child: Text(v,
                 textAlign: TextAlign.end,
                 style: const TextStyle(
-                    fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                    fontFamily: FitnessAppTheme.fontName, fontSize: 12.5, fontWeight: FontWeight.w600, color: DesignColors.textStrong)),
           ),
         ]),
       );
@@ -289,44 +292,24 @@ class TripChatCards {
   static Widget _note(String text) => Container(
         width: double.infinity,
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        decoration: BoxDecoration(color: AppColors.warningSurface, borderRadius: BorderRadius.circular(10)),
+        decoration: BoxDecoration(color: DesignColors.statusAskedSoft, borderRadius: BorderRadius.circular(8)),
         child: Text(text,
             style: const TextStyle(
-                fontFamily: 'Poppins', fontSize: 11.5, fontWeight: FontWeight.w500, color: AppColors.warningText, height: 1.35)),
+                fontFamily: FitnessAppTheme.fontName, fontSize: 11.5, fontWeight: FontWeight.w500, color: DesignColors.statusAttention, height: 1.35)),
       );
 
   static Widget _button(String label,
       {required bool primary, required Color accent, bool negative = false, VoidCallback? onTap}) {
-    final disabled = onTap == null;
-    final text = Text(label,
-        maxLines: 2,
-        textAlign: TextAlign.center,
-        overflow: TextOverflow.ellipsis,
-        style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600));
-    final shape = RoundedRectangleBorder(borderRadius: BorderRadius.circular(12));
     return SizedBox(
       width: double.infinity,
       child: primary
-          ? ElevatedButton(
-              onPressed: onTap,
-              style: ElevatedButton.styleFrom(
-                minimumSize: const Size.fromHeight(48),
-                backgroundColor: disabled ? AppColors.divider : accent,
-                foregroundColor: disabled ? AppColors.textHint : Colors.white,
-                elevation: 0,
-                shape: shape,
-              ),
-              child: text,
-            )
-          : OutlinedButton(
-              onPressed: onTap,
-              style: OutlinedButton.styleFrom(
-                minimumSize: const Size.fromHeight(48),
-                foregroundColor: negative ? AppColors.error : AppColors.textMedium,
-                side: BorderSide(color: negative ? AppColors.error.withValues(alpha: 0.4) : AppColors.divider),
-                shape: shape,
-              ),
-              child: text,
+          ? TripButton(color: accent, label: label, onPressed: onTap)
+          : TripActionChip(
+              height: 48,
+              fontSize: 13,
+              color: negative ? DesignColors.statusSaved : DesignColors.textSecondary,
+              label: label,
+              onTap: onTap,
             ),
     );
   }
@@ -335,32 +318,40 @@ class TripChatCards {
     BuildContext context, {
     required bool mine,
     required DateTime? readAt,
+    DateTime? createdAt,
     required Color accent,
-    required IconData icon,
+    required String icon,
     required String title,
     required Widget pill,
     required List<Widget> children,
   }) {
     final maxWidth = math.min(300.0, MediaQuery.sizeOf(context).width - 40);
-    return Align(
+    final recent = createdAt != null && DateTime.now().difference(createdAt).inSeconds.abs() < 10;
+    return RepliesEntrance(
+      animate: recent,
+      child: Align(
       alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 4),
         constraints: BoxConstraints(maxWidth: maxWidth),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: AppColors.cardBg,
-          border: Border.all(color: AppColors.divider),
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: const [BoxShadow(color: AppColors.shadow, blurRadius: 8, offset: Offset(0, 3))],
+          color: DesignColors.surface,
+          borderRadius: RepliesCard.radius,
+          boxShadow: DesignShadows.card,
         ),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
           Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Container(
               width: 26,
               height: 26,
-              decoration: BoxDecoration(color: accent.withValues(alpha: 0.10), borderRadius: BorderRadius.circular(8)),
-              child: Icon(icon, size: 15, color: accent),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                    colors: [accent.withValues(alpha: Alpha.scrim), accent.withValues(alpha: Alpha.hairline)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight),
+                shape: BoxShape.circle),
+              child: Padding(padding: const EdgeInsets.all(5), child: TravelIcon(icon, size: 20)),
             ),
             const SizedBox(width: 8),
             Expanded(
@@ -370,7 +361,7 @@ class TripChatCards {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                        fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                        fontFamily: FitnessAppTheme.fontName, fontSize: 12.5, fontWeight: FontWeight.w600, color: DesignColors.textStrong)),
               ),
             ),
           ]),
@@ -384,6 +375,7 @@ class TripChatCards {
           ],
         ]),
       ),
+      ),
     );
   }
 
@@ -396,20 +388,20 @@ class TripChatCards {
         constraints: const BoxConstraints(maxWidth: 280),
         padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
         decoration: BoxDecoration(
-          color: mine ? accent : AppColors.cardBg,
-          border: mine ? null : Border.all(color: AppColors.divider),
+          color: mine ? null : DesignColors.surface,
+          gradient: mine ? DesignGradients.brand : null,
           borderRadius: BorderRadius.only(
             topLeft: const Radius.circular(14),
             topRight: const Radius.circular(14),
             bottomLeft: Radius.circular(mine ? 14 : 3),
             bottomRight: Radius.circular(mine ? 3 : 14),
           ),
-          boxShadow: mine ? null : const [BoxShadow(color: AppColors.shadow, blurRadius: 6, offset: Offset(0, 2))],
+          boxShadow: [ShadowTokens.tint(mine ? DesignColors.primary : DesignColors.shadowBase, mine ? ShadowSpec.chatMine : ShadowSpec.chatTheirs)],
         ),
         child: Column(crossAxisAlignment: CrossAxisAlignment.end, mainAxisSize: MainAxisSize.min, children: [
           Text(text,
               style: TextStyle(
-                  fontFamily: 'Poppins', fontSize: 13.5, color: mine ? Colors.white : AppColors.textDark)),
+                  fontFamily: FitnessAppTheme.fontName, fontSize: 13.5, color: mine ? DesignColors.surface : DesignColors.textStrong)),
           if (mine) ...[const SizedBox(height: 2), _tick(m.readAt != null)],
         ]),
       ),
@@ -421,7 +413,7 @@ class TripChatCards {
         child: Icon(
           read ? Icons.done_all_rounded : Icons.done_rounded,
           size: 14,
-          color: read ? AppColors.readTick : (onDark ? Colors.white70 : AppColors.textHint),
+          color: read ? DesignColors.primaryLight : (onDark ? DesignColors.surface.withValues(alpha: Alpha.strong) : DesignColors.textMuted),
         ),
       );
 
@@ -544,8 +536,9 @@ class _EnquiryCardState extends State<_EnquiryCard> {
       context,
       mine: widget.message.isMine,
       readAt: widget.message.readAt,
+      createdAt: widget.message.createdAt,
       accent: widget.accent,
-      icon: Icons.hotel_outlined,
+      icon: TravelIcon.stay,
       title: title,
       pill: TripStatusPill(display, ownerSide: widget.isOwner),
       children: [

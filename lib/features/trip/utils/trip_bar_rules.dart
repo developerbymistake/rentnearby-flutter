@@ -131,9 +131,8 @@ class TripBarRules {
   }
 
   static String? nextTitle(TripSummaryModel t) {
-    final next = t.progress.next;
-    if (next == null) return null;
-    final key = TripEasyRowKey.parse(next.key);
+    final p = t.progress;
+    final key = TripEasyRowKey.parse(p.guideStep) ?? TripEasyRowKey.parse(p.next?.key);
     if (key == null) return null;
     final cities = t.legCities;
     final leg = key.legIndex ?? 0;
@@ -153,10 +152,8 @@ class TripBarRules {
     }
   }
 
-  static Map<String, dynamic> continueArgs(TripSummaryModel t) {
-    final key = t.progress.next?.key;
-    return {'tripId': t.id, if (key != null && key.isNotEmpty) 'row': key};
-  }
+  // Continue opens the trip at its saved guide step; row and step go only with push deep links.
+  static Map<String, dynamic> continueArgs(TripSummaryModel t) => {'tripId': t.id};
 
   static String actionLabel(TripSummaryModel t, {bool past = false}) {
     if (past || isReady(t)) return TripStringsV2Plan.myTripsSummary;

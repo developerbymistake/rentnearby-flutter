@@ -1,15 +1,11 @@
+import 'package:bakhli/design/design.dart';
 import 'package:flutter/material.dart';
-import 'package:iconsax/iconsax.dart';
-import '../../../config/app_colors.dart';
-import '../../../widgets/gradient_button.dart';
 import '../controllers/trip_plan_controller.dart';
 import '../models/trip_plan_model.dart';
-import '../trip_colors.dart';
 import '../trip_strings_v2_find.dart';
 import '../utils/trip_clock.dart';
 import '../utils/trip_enquiry_rules.dart';
 import '../utils/trip_format.dart';
-import '../widgets/trip_sheet_frame.dart';
 import '../widgets/trip_update_ask_sheet.dart';
 
 class TripDatesSheet {
@@ -36,9 +32,9 @@ class TripDatesSheet {
   }
 
   static Future<bool> _show(BuildContext context, {required String heading, String? cta, bool clearStart = false}) async {
-    final saved = await TripSheetFrame.show<SettingsSaveResult>(
+    final saved = await SheetFrame.show<SettingsSaveResult>(
       context,
-      _DatesBody(heading: heading, cta: cta ?? TripStringsV2Find.saveDates, clearStart: clearStart),
+      builder: (_) => _DatesBody(heading: heading, cta: cta ?? TripStringsV2Find.saveDates, clearStart: clearStart),
     );
     if (saved == null || !saved.saved) return false;
     if (saved.hasAffected && context.mounted) await TripUpdateAskSheet.show(context, saved);
@@ -76,11 +72,13 @@ class _DatesBodyState extends State<_DatesBody> {
   Future<void> _pickDate() async {
     final today = TripClock.today();
     final initial = _start == null || _start!.isBefore(today) ? today : _start!;
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: initial,
-      firstDate: today,
-      lastDate: today.add(const Duration(days: TripDatesSheet._daysAhead)),
+    final picked = await TemplateCalendarPopup.pickDate(
+      context,
+      initial: initial,
+      first: today,
+      last: today.add(const Duration(days: TripDatesSheet._daysAhead)),
+      label: TripStringsV2Find.startDate,
+      tone: KitTone.trip,
     );
     if (picked != null && mounted) setState(() => _start = DateTime(picked.year, picked.month, picked.day));
   }
@@ -101,9 +99,7 @@ class _DatesBodyState extends State<_DatesBody> {
 
   Widget _label(String text) => Padding(
         padding: const EdgeInsets.only(bottom: 6),
-        child: Text(text,
-            style: const TextStyle(
-                fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.textMedium)),
+        child: Text(text, style: TypeTokens.style(12, FontWeight.w600, color: TypeTokens.secondary)),
       );
 
   Widget _dateField() {
@@ -116,25 +112,23 @@ class _DatesBodyState extends State<_DatesBody> {
         _label(TripStringsV2Find.startDate),
         InkWell(
           onTap: _saving ? null : _pickDate,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: CardRadius.tile,
           child: Container(
-            height: 50,
-            padding: const EdgeInsets.symmetric(horizontal: 14),
-            decoration: BoxDecoration(
-              color: AppColors.scaffoldBg,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.divider),
+            height: 48,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            decoration: const BoxDecoration(
+              color: DesignColors.surface,
+              borderRadius: CardRadius.tile,
+              border: Border.fromBorderSide(BorderSide(color: DesignColors.divider)),
             ),
             child: Row(
               children: [
-                const Icon(Iconsax.calendar_1, size: 16, color: TripColors.accent),
+                const TravelIcon(TravelIcon.calendar, size: 22),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(start == null ? TripStringsV2Find.startDate : _full(start),
-                      style: TextStyle(
-                          fontFamily: 'Poppins',
-                          fontSize: 14,
-                          color: start == null ? AppColors.textHint : AppColors.textDark)),
+                      style: TypeTokens.style(14, FontWeight.w400,
+                          color: start == null ? DesignColors.textMuted : DesignColors.textStrong)),
                 ),
               ],
             ),
@@ -143,40 +137,32 @@ class _DatesBodyState extends State<_DatesBody> {
         if (end != null && days > 0) ...[
           const SizedBox(height: 6),
           Text(TripStringsV2Find.daysBack(days, _short(end)),
-              style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
+              style: TypeTokens.style(12, FontWeight.w400, color: TypeTokens.secondary)),
         ],
       ],
     );
   }
 
   Widget _stepper(String label, int value, int min, int max, ValueChanged<int> onChanged) {
-    Widget btn(IconData icon, bool enabled, VoidCallback onTap) => SizedBox(
-          width: 40,
-          height: 44,
-          child: IconButton(
-            padding: EdgeInsets.zero,
-            onPressed: enabled && !_saving ? onTap : null,
-            icon: Icon(icon, size: 22, color: enabled ? TripColors.accentDark : AppColors.textHint),
-          ),
-        );
+    Widget btn(IconData icon, bool enabled, VoidCallback onTap) =>
+        TemplateRoundButton(icon: icon, size: 44, onTap: enabled && !_saving ? onTap : null);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _label(label),
         Container(
-          decoration: BoxDecoration(
-            color: AppColors.scaffoldBg,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppColors.divider),
+          decoration: const BoxDecoration(
+            color: DesignColors.surface,
+            borderRadius: CardRadius.tile,
+            border: Border.fromBorderSide(BorderSide(color: DesignColors.divider)),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              btn(Icons.remove_circle_outline, value > min, () => onChanged(value - 1)),
+              btn(Icons.remove_rounded, value > min, () => onChanged(value - 1)),
               Text('$value',
-                  style: const TextStyle(
-                      fontFamily: 'Poppins', fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textDark)),
-              btn(Icons.add_circle_outline, value < max, () => onChanged(value + 1)),
+                  style: TypeTokens.style(15, FontWeight.w700, color: DesignColors.textStrong)),
+              btn(Icons.add_rounded, value < max, () => onChanged(value + 1)),
             ],
           ),
         ),
@@ -186,9 +172,11 @@ class _DatesBodyState extends State<_DatesBody> {
 
   @override
   Widget build(BuildContext context) {
-    return TripSheetFrame(
+    return SheetFrame(
       title: widget.heading,
-      description: widget.clearStart ? TripStringsV2Find.datesPassedSub : TripStringsV2Find.datesSub,
+      subtitle: widget.clearStart ? TripStringsV2Find.datesPassedSub : TripStringsV2Find.datesSub,
+      child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _dateField(),
         const SizedBox(height: 12),
@@ -207,19 +195,19 @@ class _DatesBodyState extends State<_DatesBody> {
           ],
         ),
         const SizedBox(height: 12),
-        GradientButton(
+        const SizedBox(height: 16),
+        PrimaryButton(
           label: widget.cta,
-          height: 52,
-          isLoading: _saving,
-          gradient: TripColors.gradient,
-          shadowColor: TripColors.accent,
+          tone: KitTone.trip,
+          loading: _saving,
           onPressed: _start == null ? null : _save,
         ),
         const SizedBox(height: 8),
-        const Text(TripStringsV2Find.datesNote,
+        Text(TripStringsV2Find.datesNote,
             textAlign: TextAlign.center,
-            style: TextStyle(fontFamily: 'Poppins', fontSize: 11.5, color: AppColors.textLight)),
+            style: TypeTokens.style(11, FontWeight.w400, color: TypeTokens.secondary)),
       ],
+      ),
     );
   }
 }

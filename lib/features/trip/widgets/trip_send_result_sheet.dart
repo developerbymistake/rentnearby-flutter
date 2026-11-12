@@ -1,12 +1,11 @@
+import 'package:bakhli/design/design.dart';
 import 'package:flutter/material.dart';
-import 'package:iconsax/iconsax.dart';
-import '../../../config/app_colors.dart';
-import '../../../widgets/gradient_button.dart';
+import 'package:bakhli/features/trip/widgets/trip_ui.dart';
 import '../models/trip_enquiry_model.dart';
-import '../trip_colors.dart';
 import '../trip_strings.dart';
 import '../trip_navigation.dart';
 import '../trip_strings_a5.dart';
+import '../trip_strings_shortlist.dart';
 import '../trip_strings_v2_easy.dart';
 import '../trip_strings_v2_find.dart';
 import '../utils/trip_format.dart';
@@ -18,8 +17,9 @@ class TripSendResultSheet {
     required TripEnquiryBatch batch,
     required Map<String, String> names,
     bool taxi = false,
+    bool shortlist = false,
   }) =>
-      TripSheetFrame.show<void>(context, _ResultBody(batch: batch, names: names, taxi: taxi));
+      TripSheetFrame.show<void>(context, _ResultBody(batch: batch, names: names, taxi: taxi, shortlist: shortlist));
 
   static String reasonLabel(String reason) => switch (reason) {
         TripSkipReasons.alreadyOpen => TripStrings.alreadyAsked,
@@ -33,18 +33,18 @@ class TripSendResultSheet {
 }
 
 class _ResultBody extends StatelessWidget {
-  const _ResultBody({required this.batch, required this.names, required this.taxi});
+  const _ResultBody({required this.batch, required this.names, required this.taxi, this.shortlist = false});
 
   final TripEnquiryBatch batch;
   final Map<String, String> names;
   final bool taxi;
+  final bool shortlist;
 
   Widget _row(String name, String label, bool ok, {String? sub}) => Padding(
         padding: const EdgeInsets.symmetric(vertical: 6),
         child: Row(
           children: [
-            Icon(ok ? Iconsax.tick_circle : Iconsax.info_circle,
-                size: 18, color: ok ? AppColors.success : AppColors.textLight),
+            TravelIcon(ok ? TravelIcon.star : TravelIcon.note, size: 20),
             const SizedBox(width: 10),
             Expanded(
               child: Column(
@@ -54,12 +54,12 @@ class _ResultBody extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                          fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                          fontFamily: FitnessAppTheme.fontName, fontSize: 13, fontWeight: FontWeight.w600, color: DesignColors.textStrong)),
                   if (sub != null)
                     Text(sub,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontFamily: 'Poppins', fontSize: 11.5, color: AppColors.textLight)),
+                        style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 11.5, color: DesignColors.textSecondary)),
                 ],
               ),
             ),
@@ -70,17 +70,52 @@ class _ResultBody extends StatelessWidget {
                   textAlign: TextAlign.end,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                      fontFamily: 'Poppins',
+                      fontFamily: FitnessAppTheme.fontName,
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: ok ? AppColors.successText : AppColors.textLight)),
+                      color: ok ? TripUi.goodDark : DesignColors.textSecondary)),
             ),
           ],
         ),
       );
 
+  Widget _shortlistBody(BuildContext context) {
+    final results = batch.perRecipient;
+    final sentCount = results.where((r) => r.ok).length;
+    final nothing = sentCount == 0;
+    final byListing = {for (final e in batch.items) e.listingId: e};
+    return TripSheetFrame(
+      title: nothing ? TripStringsA5.couldNotSend : TripStringsShortlist.sentTitle(sentCount),
+      description: nothing ? TripStringsA5.couldNotSendSub : TripStringsShortlist.sentBody(sentCount, taxi: taxi),
+      children: [
+        TemplateStagger(children: [
+          Column(children: [
+            for (final r in results)
+              _row(
+                names[r.listingId] ?? byListing[r.listingId]?.listingName ?? (taxi ? TripStringsShortlist.taxiFallback : TripStrings.stay),
+                TripStringsShortlist.statusLabel(r.status),
+                r.ok,
+              ),
+          ]),
+          const SizedBox(height: 16),
+          TripButton(
+            label: TripStringsV2Easy.sentBack,
+            height: 52,
+            gradient: taxi ? KitTone.taxi.gradient : KitTone.stay.gradient,
+            shadowColor: taxi ? TripUi.taxi : TripUi.stay,
+            onPressed: () {
+              Navigator.pop(context);
+              TripNavigation.backToPlan();
+            },
+          ),
+        ]),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (shortlist) return _shortlistBody(context);
     return TripSheetFrame(
       title: batch.items.isEmpty
           ? TripStringsA5.couldNotSend
@@ -89,33 +124,32 @@ class _ResultBody extends StatelessWidget {
       footer: batch.items.isEmpty
           ? null
           : Text(taxi ? TripStringsV2Easy.driverNotify : TripStringsV2Easy.hostNotify,
-              style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight, height: 1.35)),
+              style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 11, color: DesignColors.textSecondary, height: 1.35)),
       children: [
+        TemplateStagger(children: [
+          Column(children: [
         for (final e in batch.items)
           _row(e.listingName, TripStrings.sent, true,
               sub: !taxi && e.checkIn != null && e.checkOut != null ? TripFormat.dayMonthRange(e.checkIn!, e.checkOut!) : null),
         for (final s in batch.skipped)
           _row(names[s.listingId] ?? TripStrings.stay, TripSendResultSheet.reasonLabel(s.reason), false),
-        const SizedBox(height: 16),
-        GradientButton(
+          ]),
+          const SizedBox(height: 16),
+          TripButton(
           label: TripStringsV2Easy.sentBack,
           height: 52,
-          gradient: TripColors.gradient,
-          shadowColor: TripColors.accent,
+          gradient: taxi ? KitTone.taxi.gradient : KitTone.stay.gradient,
+          shadowColor: taxi ? TripUi.taxi : TripUi.stay,
           onPressed: () {
             Navigator.pop(context);
             TripNavigation.backToPlan();
           },
         ),
-        if (batch.items.isNotEmpty)
+          if (batch.items.isNotEmpty)
           Center(
-            child: TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(taxi ? TripStringsV2Easy.askMoreDrivers : TripStringsV2Easy.askMoreStays,
-                  style: const TextStyle(
-                      fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600, color: TripColors.accentDark)),
-            ),
+            child: TextLink(label: taxi ? TripStringsV2Easy.askMoreDrivers : TripStringsV2Easy.askMoreStays, onTap: () => Navigator.pop(context), tone: KitTone.trip),
           ),
+        ]),
       ],
     );
   }

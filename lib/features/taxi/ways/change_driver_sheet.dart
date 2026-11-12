@@ -1,14 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:iconsax/iconsax.dart';
-import '../../../config/app_colors.dart';
+import 'package:bakhli/design/design.dart';
+import 'package:bakhli/design/extra/trip_plan_look.dart';
 import '../../../models/browse_item.dart';
-import '../../../widgets/empty_state_view.dart';
-import '../../../widgets/selectable_chip.dart';
-import '../../trip/trip_colors.dart';
-import '../../trip/widgets/trip_shimmers.dart';
 import '../../trip/widgets/trip_sheet_frame.dart';
-import '../taxi_option_sets.dart';
 import 'change_driver_controller.dart';
 import 'models/taxi_ways_models.dart';
 import 'taxi_ways_strings.dart';
@@ -35,9 +30,10 @@ class _ChangeDriverBody extends StatefulWidget {
   State<_ChangeDriverBody> createState() => _ChangeDriverBodyState();
 }
 
-class _ChangeDriverBodyState extends State<_ChangeDriverBody> {
+class _ChangeDriverBodyState extends State<_ChangeDriverBody> with TickerProviderStateMixin {
   late final String _tag = 'change-driver-${widget.leg.legKey}-${identityHashCode(this)}';
   late final ChangeDriverController _ctrl;
+  late final AnimationController _ac = AnimationController(duration: const Duration(milliseconds: 600), vsync: this)..forward();
 
   @override
   void initState() {
@@ -45,8 +41,15 @@ class _ChangeDriverBodyState extends State<_ChangeDriverBody> {
     _ctrl = Get.put(ChangeDriverController(leg: widget.leg, people: widget.people), tag: _tag);
   }
 
+  Widget _enter(int i, Widget child) => TemplateEntrance(
+        animation: templateInterval(_ac, i < 7 ? i : 7, 8),
+        animationController: _ac,
+        child: child,
+      );
+
   @override
   void dispose() {
+    _ac.dispose();
     Get.delete<ChangeDriverController>(tag: _tag);
     super.dispose();
   }
@@ -67,7 +70,7 @@ class _ChangeDriverBodyState extends State<_ChangeDriverBody> {
         title: TaxiWaysStrings.changeDriver,
         description: TaxiWaysStrings.driversOn(leg.from.name, leg.to.name, count),
         children: [
-          Wrap(
+          _enter(0, Wrap(
             spacing: 8,
             runSpacing: 8,
             children: [
@@ -80,7 +83,7 @@ class _ChangeDriverBodyState extends State<_ChangeDriverBody> {
                 _ctrl.toggleLowestPrice,
               ),
             ],
-          ),
+          )),
           const SizedBox(height: 12),
           ..._content(),
         ],
@@ -90,12 +93,16 @@ class _ChangeDriverBodyState extends State<_ChangeDriverBody> {
 
   Widget _chip(String label, bool selected, VoidCallback onTap) => ConstrainedBox(
         constraints: const BoxConstraints(minHeight: 44),
-        child: SelectableChip(
-          label: label,
-          selected: selected,
-          onTap: onTap,
-          activeColor: TaxiColors.accentDark,
-          padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 14),
+        child: Center(
+          widthFactor: 1,
+          heightFactor: 1,
+          child: PickChip(
+            label: label,
+            selected: selected,
+            onTap: onTap,
+            activeColor: DesignColors.primary,
+            padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 14),
+          ),
         ),
       );
 
@@ -103,7 +110,7 @@ class _ChangeDriverBodyState extends State<_ChangeDriverBody> {
     if (_ctrl.isLoading.value) {
       return [
         for (var i = 0; i < 3; i++) ...[
-          TripShimmers.rowBox(height: 68, radius: 14),
+          const TemplatePlaceholder(height: 68, radius: 14),
           const SizedBox(height: 8),
         ],
       ];
@@ -111,11 +118,10 @@ class _ChangeDriverBodyState extends State<_ChangeDriverBody> {
     if (_ctrl.loadFailed.value) {
       final offline = _ctrl.isOffline.value;
       return [
-        EmptyStateView(
-          icon: offline ? Iconsax.wifi_square : Iconsax.info_circle,
+        TripPlanEmpty(
+          image: offline ? TravelIcon.map : TravelIcon.route,
           title: offline ? TaxiWaysStrings.offlineTitle : TaxiWaysStrings.loadFailed,
           subtitle: offline ? TaxiWaysStrings.offlineBody : '',
-          palette: TaxiColors.palette,
           retryLabel: TaxiWaysStrings.retry,
           onRetry: _ctrl.retry,
         ),
@@ -123,31 +129,36 @@ class _ChangeDriverBodyState extends State<_ChangeDriverBody> {
     }
     if (_ctrl.items.isEmpty) {
       return [
-        EmptyStateView(
-          icon: Iconsax.car,
+        const TripPlanEmpty(
+          image: TravelIcon.taxi,
           title: TaxiWaysStrings.noDriversMatch,
           subtitle: TaxiWaysStrings.noDriversMatchBody,
-          palette: TaxiColors.palette,
         ),
       ];
     }
     final shown = _ctrl.items.length;
     final bestFit = _ctrl.sort.value == ChangeDriverSort.bestFit;
     return [
-      Text(
-        bestFit
-            ? TaxiWaysStrings.bestFitFirst(widget.people, shown, _ctrl.total.value)
-            : TaxiWaysStrings.showingCount(shown, _ctrl.total.value),
-        style: const TextStyle(fontSize: 11, color: AppColors.textLight, height: 1.35),
+      _enter(
+        1,
+        Text(
+          bestFit
+              ? TaxiWaysStrings.bestFitFirst(widget.people, shown, _ctrl.total.value)
+              : TaxiWaysStrings.showingCount(shown, _ctrl.total.value),
+          style: FitnessAppTheme.caption.copyWith(fontSize: 11, height: 1.35),
+        ),
       ),
       const SizedBox(height: 8),
-      for (final d in _ctrl.items) ...[
-        _DriverRow(
-          driver: d,
-          people: widget.people,
-          isCurrent: widget.current?.taxiId == d.taxiId,
-          isLowest: _ctrl.isLowest(d),
-          onTap: () => _pick(d),
+      for (var i = 0; i < _ctrl.items.length; i++) ...[
+        _enter(
+          i + 2,
+          _DriverRow(
+            driver: _ctrl.items[i],
+            people: widget.people,
+            isCurrent: widget.current?.taxiId == _ctrl.items[i].taxiId,
+            isLowest: _ctrl.isLowest(_ctrl.items[i]),
+            onTap: () => _pick(_ctrl.items[i]),
+          ),
         ),
         const SizedBox(height: 8),
       ],
@@ -163,18 +174,22 @@ class _ChangeDriverBodyState extends State<_ChangeDriverBody> {
           child: SizedBox(
             width: 22,
             height: 22,
-            child: CircularProgressIndicator(strokeWidth: 2.4, color: TaxiColors.accent),
+            child: CircularProgressIndicator(strokeWidth: 2.4, color: DesignColors.primary),
           ),
         ),
       );
     }
     final failed = _ctrl.moreFailed.value;
-    return TextButton(
-      style: TextButton.styleFrom(minimumSize: const Size(0, 48), foregroundColor: TaxiColors.accentDark),
-      onPressed: _ctrl.loadMore,
-      child: Text(
-        failed ? TaxiWaysStrings.retry : TaxiWaysStrings.showMore(_ctrl.remaining),
-        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+    return InkWell(
+      onTap: _ctrl.loadMore,
+      child: SizedBox(
+        height: 48,
+        child: Center(
+          child: Text(
+            failed ? TaxiWaysStrings.retry : TaxiWaysStrings.showMore(_ctrl.remaining),
+            style: FitnessAppTheme.title.copyWith(fontSize: 13, color: DesignColors.primary),
+          ),
+        ),
       ),
     );
   }
@@ -212,26 +227,32 @@ class _DriverRow extends StatelessWidget {
     final subtitle = _subtitle();
     return Semantics(
       button: true,
-      child: Material(
-        color: isCurrent ? TaxiColors.surface : Colors.white,
-        borderRadius: BorderRadius.circular(14),
+      child: Container(
+        decoration: TripLook.card(
+          color: isCurrent ? TripLook.surface : DesignColors.surface,
+          radius: TripLook.softRadius,
+          shadowColor: isCurrent ? DesignColors.primary : DesignColors.textGrey,
+        ),
+        child: Material(
+        color: Colors.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: TripLook.softRadius,
           onTap: onTap,
           child: Container(
             constraints: const BoxConstraints(minHeight: 60),
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: isCurrent ? TaxiColors.accent : AppColors.divider, width: 1.4),
-            ),
             child: Row(
               children: [
                 Container(
                   width: 36,
                   height: 36,
-                  decoration: const BoxDecoration(color: TaxiColors.accentLight, shape: BoxShape.circle),
-                  child: const Icon(Iconsax.car, size: 18, color: TaxiColors.accentDark),
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: isCurrent ? null : PickKit.taxiTint,
+                    gradient: isCurrent ? PickKit.taxiGradient : null,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const TravelIcon(TravelIcon.taxi, size: 22),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
@@ -247,11 +268,11 @@ class _DriverRow extends StatelessWidget {
                             driver.driverName,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textDark),
+                            style: FitnessAppTheme.title.copyWith(fontSize: 13),
                           ),
                           if (isCurrent)
-                            _tag(TaxiWaysStrings.current, TaxiColors.accentLight, TaxiColors.accentDark),
-                          if (isLowest) _tag(TaxiWaysStrings.lowestTag, TripStatusColors.bothSurface, TripStatusColors.both),
+                            _tag(TaxiWaysStrings.current, PickKit.tripTint, DesignColors.primary),
+                          if (isLowest) _tag(TaxiWaysStrings.lowestTag, PickKit.goodTint, PickKit.goodDark),
                         ],
                       ),
                       if (subtitle.isNotEmpty)
@@ -261,7 +282,7 @@ class _DriverRow extends StatelessWidget {
                             subtitle,
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontSize: 11.5, color: AppColors.textLight, height: 1.3),
+                            style: FitnessAppTheme.caption.copyWith(fontSize: 11.5, height: 1.3),
                           ),
                         ),
                     ],
@@ -275,7 +296,7 @@ class _DriverRow extends StatelessWidget {
                       fit: BoxFit.scaleDown,
                       child: Text(
                         BrowseItem.inr(fare),
-                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.warningText),
+                        style: FitnessAppTheme.title.copyWith(fontSize: 13, fontWeight: FontWeight.w800, color: DesignColors.primary),
                       ),
                     ),
                   ),
@@ -284,6 +305,7 @@ class _DriverRow extends StatelessWidget {
             ),
           ),
         ),
+        ),
       ),
     );
   }
@@ -291,6 +313,6 @@ class _DriverRow extends StatelessWidget {
   Widget _tag(String text, Color bg, Color fg) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
         decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(999)),
-        child: Text(text, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: fg)),
+        child: Text(text, style: FitnessAppTheme.caption.copyWith(fontSize: 11, fontWeight: FontWeight.w700, color: fg)),
       );
 }

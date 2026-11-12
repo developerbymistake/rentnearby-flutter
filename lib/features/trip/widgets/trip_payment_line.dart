@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../../config/app_colors.dart';
+import 'package:bakhli/design/extra/trip_plan_look.dart';
+import 'package:bakhli/design/template/fitness_app_theme.dart';
 import '../trip_strings.dart';
 
 class TripPaymentLine extends StatelessWidget {
@@ -13,7 +14,7 @@ class TripPaymentLine extends StatelessWidget {
       text,
       maxLines: 3,
       overflow: TextOverflow.ellipsis,
-      style: const TextStyle(fontSize: 11, color: AppColors.textLight, height: 1.35),
+      style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 11, letterSpacing: -0.2, color: TripLook.textLight, height: 1.35),
     );
   }
 }

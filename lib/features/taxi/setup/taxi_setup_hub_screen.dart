@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:iconsax/iconsax.dart';
-import '../../../config/app_colors.dart';
 import '../../../config/app_routes.dart';
 import '../../../controllers/auth_controller.dart';
 import '../../../controllers/location_controller.dart';
+import '../../../design/design.dart';
+import '../../../design/extra/trip_plan_look.dart';
 import '../../../utils/app_toast.dart';
 import '../../../widgets/global_location_gates.dart';
 import '../../stay/setup/stay_step_row.dart';
@@ -20,10 +20,13 @@ class TaxiSetupHubScreen extends StatefulWidget {
   State<TaxiSetupHubScreen> createState() => _TaxiSetupHubScreenState();
 }
 
-class _TaxiSetupHubScreenState extends State<TaxiSetupHubScreen> {
+class _TaxiSetupHubScreenState extends State<TaxiSetupHubScreen> with TickerProviderStateMixin {
+  static const int _count = 10;
   final _ctrl = TaxiSetupController.ensure();
   final _auth = Get.find<AuthController>();
   late final bool _fromMyTaxi;
+  late final AnimationController _anim = SetupKit.controller(this);
+  bool _played = false;
 
   @override
   void initState() {
@@ -37,6 +40,20 @@ class _TaxiSetupHubScreenState extends State<TaxiSetupHubScreen> {
       GlobalLocationGates.notifyReady();
     }
     _load();
+  }
+
+  @override
+  void dispose() {
+    _anim.dispose();
+    super.dispose();
+  }
+
+  void _playOnce() {
+    if (_played) return;
+    _played = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) SetupKit.play(_anim, context);
+    });
   }
 
   Future<void> _load() async {
@@ -89,23 +106,36 @@ class _TaxiSetupHubScreenState extends State<TaxiSetupHubScreen> {
       final loading = _ctrl.isLoading.value;
       final loaded = _ctrl.hasLoaded.value;
       final failed = _ctrl.loadFailed.value;
+      final showSkeleton = !loaded && loading;
+      if (!showSkeleton && !failed) _playOnce();
       return PopScope(
         canPop: !gated,
         child: Scaffold(
-          backgroundColor: AppColors.scaffoldBg,
+          backgroundColor: FitnessAppTheme.background,
           body: Column(children: [
-            _header(gated, canCorrect),
+            ModuleHeader(
+              title: 'Set up your taxi',
+              tone: KitTone.taxi,
+              onBack: gated ? null : () => Get.back(),
+              trailing: gated ? [_menu(canCorrect)] : const [],
+            ),
             Expanded(
-              child: !loaded && loading
-                  ? const Center(child: CircularProgressIndicator(color: TaxiColors.accent, strokeWidth: 2))
+              child: showSkeleton
+                  ? _skeleton()
                   : failed
-                      ? _errorView()
+                      ? StateCard.error(
+                          title: "Couldn't load your taxi",
+                          kit: KitTone.taxi,
+                          actionLabel: 'Try again',
+                          onAction: _ctrl.load,
+                        )
                       : RefreshIndicator(
-                          color: TaxiColors.accent,
+                          color: FitnessAppTheme.nearlyDarkBlue,
+                          backgroundColor: FitnessAppTheme.white,
                           onRefresh: _ctrl.load,
                           child: ListView(
                             physics: const AlwaysScrollableScrollPhysics(),
-                            padding: const EdgeInsets.all(16),
+                            padding: const EdgeInsets.only(bottom: 24),
                             children: _content(taxi, gated),
                           ),
                         ),
@@ -116,47 +146,39 @@ class _TaxiSetupHubScreenState extends State<TaxiSetupHubScreen> {
     });
   }
 
-  Widget _header(bool gated, bool canCorrect) => Container(
-        decoration: const BoxDecoration(gradient: TaxiColors.gradient),
-        child: SafeArea(
-          bottom: false,
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(gated ? 20 : 4, 8, 4, 20),
-            child: Row(children: [
-              if (!gated)
-                IconButton(
-                  onPressed: () => Get.back(),
-                  icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white),
-                ),
-              const Expanded(
-                child: Text('Set up your taxi',
-                    style: TextStyle(
-                        fontFamily: 'Poppins', fontSize: 18, fontWeight: FontWeight.w600, color: Colors.white)),
-              ),
-              if (gated)
-                PopupMenuButton<String>(
-                  icon: const Icon(Iconsax.more, color: Colors.white),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  onSelected: (v) {
-                    if (v == 'role') {
-                      Get.toNamed(AppRoutes.roleChange);
-                    } else {
-                      _auth.logout();
-                    }
-                  },
-                  itemBuilder: (_) => [
-                    if (!canCorrect)
-                      const PopupMenuItem(
-                          value: 'role',
-                          child: Text('Change role', style: TextStyle(fontFamily: 'Poppins', fontSize: 14))),
-                    const PopupMenuItem(
-                        value: 'logout',
-                        child: Text('Log out', style: TextStyle(fontFamily: 'Poppins', fontSize: 14))),
-                  ],
-                ),
-            ]),
-          ),
-        ),
+  Widget _menu(bool canCorrect) => PopupMenuButton<String>(
+        icon: const Icon(Icons.more_vert_rounded, color: FitnessAppTheme.white),
+        color: FitnessAppTheme.white,
+        shape: const RoundedRectangleBorder(borderRadius: TripKit.cardRadiusSmall),
+        onSelected: (v) {
+          if (v == 'role') {
+            Get.toNamed(AppRoutes.roleChange);
+          } else {
+            _auth.logout();
+          }
+        },
+        itemBuilder: (_) => [
+          if (!canCorrect) PopupMenuItem(value: 'role', child: Text('Change role', style: TripKit.text(14))),
+          PopupMenuItem(value: 'logout', child: Text('Log out', style: TripKit.text(14))),
+        ],
+      );
+
+  Widget _skeleton() => Padding(
+        padding: const EdgeInsets.fromLTRB(KitMetrics.gutter, 16, KitMetrics.gutter, 0),
+        child: Column(children: [
+          const TemplatePlaceholder(height: 160, radius: 8),
+          for (var i = 0; i < 3; i++) ...[
+            const SizedBox(height: 16),
+            const TemplatePlaceholder(height: 78, radius: 8),
+          ],
+        ]),
+      );
+
+  Widget _in(int i, Widget child, {bool pad = true}) => SetupEntrance(
+        controller: _anim,
+        index: i,
+        count: _count,
+        child: pad ? Padding(padding: const EdgeInsets.symmetric(horizontal: KitMetrics.gutter), child: child) : child,
       );
 
   List<Widget> _content(TaxiOwnerModel? t, bool gated) {
@@ -174,56 +196,74 @@ class _TaxiSetupHubScreenState extends State<TaxiSetupHubScreen> {
         !unlocked ? StayStepState.locked : (done ? StayStepState.done : StayStepState.current);
 
     return [
-      if (t != null && t.isRejected) _rejectedStrip(t),
-      if (t != null && t.isPendingReview) _pendingStrip(),
-      if (t != null && (t.isDraft || t.isRejected) && !t.identityDone) _identityStrip(),
+      if (t != null && t.isRejected) _in(0, _rejectedStrip(t)),
+      if (t != null && t.isPendingReview) _in(0, _pendingStrip()),
+      if (t != null && (t.isDraft || t.isRejected) && !t.identityDone) _in(0, _identityStrip()),
       if (rateMissing)
-        _strip(
-          color: AppColors.warning,
-          icon: Iconsax.info_circle,
-          title: TripStrings.notInTripPlanning,
-          body: TripStrings.addRateHint,
+        _in(
+          1,
+          _strip(
+            gradient: SetupKit.sunrise,
+            color: TripLook.warning,
+            icon: Image.asset(TravelIcon.money),
+            title: TripStrings.notInTripPlanning,
+            body: TripStrings.addRateHint,
+          ),
         ),
-      if (t != null && t.isApproved) TaxiPopularRoutesNudge(onTap: () => _open(AppRoutes.taxiRoutes)),
-      _scoreCard(percent),
-      if (canCorrect) _wrongRoleLink(percent),
-      const SizedBox(height: 16),
-      StayStepRow(
-        number: 1,
-        title: 'Vehicle and contact',
-        subtitle: d1
-            ? (stepDone ? TaxiOptionSets.step1Summary(t!) : 'Add licence and date of birth')
-            : 'Vehicle, plate, licence, phone, base',
-        state: state(true, d1 && stepDone),
-        onTap: () => _open(AppRoutes.taxiVehicle),
-        accent: TaxiColors.accent,
+      if (t != null && t.isApproved) _in(1, TaxiPopularRoutesNudge(onTap: () => _open(AppRoutes.taxiRoutes))),
+      _in(2, _scoreCard(percent), pad: false),
+      if (canCorrect) _in(3, _wrongRoleLink(percent)),
+      _in(
+        4,
+        StayStepRow(
+          number: 1,
+          title: 'Vehicle and contact',
+          subtitle: d1
+              ? (stepDone ? TaxiOptionSets.step1Summary(t!) : 'Add licence and date of birth')
+              : 'Vehicle, plate, licence, phone, base',
+          state: state(true, d1 && stepDone),
+          onTap: () => _open(AppRoutes.taxiVehicle),
+          accent: PickKit.taxi,
+          asset: TravelIcon.taxi,
+          gradient: SetupKit.sunrise,
+        ),
       ),
-      StayStepRow(
-        number: 2,
-        title: 'Routes and fares',
-        subtitle: !u2
-            ? 'Complete step 1 first'
-            : d2
-                ? '${TaxiOptionSets.routesSummary(t!)}${rateMissing ? ' · ${TripStrings.rateMissing}' : ''}'
-                : 'Routes, fares, local rate',
-        trailing: rateMissing ? TripStrings.addRate : null,
-        state: state(u2, d2),
-        onTap: () => _open(AppRoutes.taxiRoutes),
-        accent: TaxiColors.accent,
+      _in(
+        5,
+        StayStepRow(
+          number: 2,
+          title: 'Routes and fares',
+          subtitle: !u2
+              ? 'Complete step 1 first'
+              : d2
+                  ? '${TaxiOptionSets.routesSummary(t!)}${rateMissing ? ' · ${TripStrings.rateMissing}' : ''}'
+                  : 'Routes, fares, local rate',
+          trailing: rateMissing ? TripStrings.addRate : null,
+          state: state(u2, d2),
+          onTap: () => _open(AppRoutes.taxiRoutes),
+          accent: PickKit.taxi,
+          asset: TravelIcon.route,
+          gradient: SetupKit.rose,
+        ),
       ),
-      StayStepRow(
-        number: 3,
-        title: 'Final submit',
-        subtitle: !u3
-            ? (d2 ? 'Complete step 1 first' : 'Complete step 2 first')
-            : t!.isApproved
-                ? 'Your taxi is live'
-                : d3
-                    ? 'Submitted for review'
-                    : 'Review and submit',
-        state: state(u3, d3),
-        onTap: _openSubmit,
-        accent: TaxiColors.accent,
+      _in(
+        6,
+        StayStepRow(
+          number: 3,
+          title: 'Final submit',
+          subtitle: !u3
+              ? (d2 ? 'Complete step 1 first' : 'Complete step 2 first')
+              : t!.isApproved
+                  ? 'Your taxi is live'
+                  : d3
+                      ? 'Submitted for review'
+                      : 'Review and submit',
+          state: state(u3, d3),
+          onTap: _openSubmit,
+          accent: PickKit.taxi,
+          asset: SetupAssets.key,
+          gradient: SetupKit.dusk,
+        ),
       ),
     ];
   }
@@ -231,130 +271,84 @@ class _TaxiSetupHubScreenState extends State<TaxiSetupHubScreen> {
   Widget _wrongRoleLink(int percent) => Center(
         child: TextButton(
           onPressed: () => Get.toNamed(AppRoutes.roleSelect, arguments: {'correction': true, 'percent': percent}),
-          child: const Text('Wrong role? Change it',
-              style: TextStyle(
-                  fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600, color: TaxiColors.accentDark)),
+          child: Text('Wrong role? Change it',
+              style: TripKit.text(13, weight: FontWeight.w600, color: FitnessAppTheme.nearlyDarkBlue)),
         ),
       );
 
   Widget _scoreCard(int percent) {
-    final reduceMotion = MediaQuery.of(context).disableAnimations;
     final caption = switch (percent) {
       0 => 'Finish 3 steps to open your dashboard',
       90 => '100% after submit',
       _ => null,
     };
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 8, offset: const Offset(0, 2))],
-      ),
-      child: TweenAnimationBuilder<double>(
-        tween: Tween(begin: 0, end: percent / 100),
-        duration: reduceMotion ? Duration.zero : const Duration(milliseconds: 600),
-        curve: Curves.easeOut,
-        builder: (_, value, _) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Row(children: [
-            Expanded(
-              child: Text('Profile $percent% complete',
-                  style: const TextStyle(
-                      fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-            ),
-            Text('${(value * 100).round()}%',
-                style: const TextStyle(
-                    fontFamily: 'Poppins', fontSize: 16, fontWeight: FontWeight.w700, color: TaxiColors.accentDark)),
-          ]),
-          const SizedBox(height: 10),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(6),
-            child: Stack(children: [
-              Container(height: 8, color: AppColors.divider),
-              FractionallySizedBox(
-                widthFactor: value.clamp(0.0, 1.0),
-                child: Container(height: 8, decoration: const BoxDecoration(gradient: TaxiColors.gradient)),
-              ),
-            ]),
-          ),
-          if (caption != null) ...[
-            const SizedBox(height: 8),
-            Text(caption, style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
-          ],
-        ]),
-      ),
+    return AnimatedBuilder(
+      animation: _anim,
+      builder: (_, _) {
+        final f = templateInterval(_anim, 2, _count).value;
+        return RingProgressCard(
+          title: 'Profile $percent% complete',
+          value: '${(percent * f).round()}',
+          label: '%',
+          progress: percent / 100 * f,
+          subtitle: caption,
+        );
+      },
     );
   }
 
-  Widget _strip({required Color color, required IconData icon, required String title, String? body}) => Container(
+  Widget _strip({
+    required LinearGradient gradient,
+    required Color color,
+    required Widget icon,
+    required String title,
+    String? body,
+  }) =>
+      Container(
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withValues(alpha: 0.25)),
+          color: FitnessAppTheme.white,
+          borderRadius: TripKit.cardRadiusSmall,
+          boxShadow: PickKit.greyShadow(),
         ),
         child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Icon(icon, size: 16, color: color),
-          const SizedBox(width: 8),
+          Container(
+            width: 36,
+            height: 36,
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(shape: BoxShape.circle, gradient: gradient),
+            child: icon,
+          ),
+          const SizedBox(width: 10),
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(title,
-                  style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600, color: color)),
-              if (body != null && body.isNotEmpty)
-                Text(body, style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textMedium)),
+              Text(title, style: TripKit.text(13, weight: FontWeight.w600, color: color)),
+              if (body != null && body.isNotEmpty) Text(body, style: TripKit.text(12, color: FitnessAppTheme.grey)),
             ]),
           ),
         ]),
       );
 
-  Widget _rejectedStrip(TaxiOwnerModel t) =>
-      _strip(color: AppColors.error, icon: Iconsax.close_circle, title: 'Not approved', body: t.rejectedReason);
-
-  Widget _identityStrip() => Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(color: AppColors.warningSurface, borderRadius: BorderRadius.circular(999)),
-        child: const Row(children: [
-          Icon(Iconsax.info_circle, size: 16, color: AppColors.warningText),
-          SizedBox(width: 8),
-          Expanded(
-            child: Text('Licence details needed',
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                    fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.warningText)),
-          ),
-        ]),
+  Widget _rejectedStrip(TaxiOwnerModel t) => _strip(
+        gradient: SetupKit.rose,
+        color: TripLook.error,
+        icon: const Icon(Icons.close_rounded, size: 20, color: FitnessAppTheme.white),
+        title: 'Not approved',
+        body: t.rejectedReason,
       );
 
-  Widget _pendingStrip() => Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(color: AppColors.warningSurface, borderRadius: BorderRadius.circular(999)),
-        child: const Row(children: [
-          Icon(Iconsax.clock, size: 16, color: AppColors.warningText),
-          SizedBox(width: 8),
-          Expanded(
-            child: Text('Under review · We will notify you',
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                    fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.warningText)),
-          ),
-        ]),
+  Widget _identityStrip() => _strip(
+        gradient: SetupKit.sunrise,
+        color: TripLook.warning,
+        icon: Image.asset(TravelIcon.note),
+        title: 'Licence details needed',
       );
 
-  Widget _errorView() => Center(
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          const Text("Couldn't load your taxi",
-              style: TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textMedium)),
-          const SizedBox(height: 10),
-          TextButton(
-            onPressed: _ctrl.load,
-            child: const Text('Try again',
-                style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, color: TaxiColors.accentDark)),
-          ),
-        ]),
+  Widget _pendingStrip() => _strip(
+        gradient: SetupKit.sky,
+        color: PickKit.stayDark,
+        icon: Image.asset(TravelIcon.calendar),
+        title: 'Under review · We will notify you',
       );
 }

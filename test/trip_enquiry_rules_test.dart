@@ -11,9 +11,9 @@ void main() {
   }
 
   group('enquiryExpiry', () {
-    test('well before the trip: 48 h', () {
+    test('well before the trip: 72 h', () {
       final r = TripEnquiryRules.enquiryExpiry(start, start, DateTime.utc(2026, 10, 20, 6, 30));
-      expectInstant(r.expiresAt, DateTime.utc(2026, 10, 22, 6, 30));
+      expectInstant(r.expiresAt, DateTime.utc(2026, 10, 23, 6, 30));
       expect(r.veryShortNotice, isFalse);
     });
 

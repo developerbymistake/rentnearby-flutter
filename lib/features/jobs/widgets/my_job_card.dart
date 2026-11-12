@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:iconsax/iconsax.dart';
-import '../../../config/app_colors.dart';
-import '../jobs_colors.dart';
+import 'package:bakhli/design/design.dart';
 import '../models/my_job_model.dart';
 import 'job_list_card.dart';
+import 'jobs_ui.dart';
 
 class MyJobCard extends StatelessWidget {
   final MyJobModel job;
@@ -17,44 +16,18 @@ class MyJobCard extends StatelessWidget {
     required this.onClose,
   });
 
-  static Future<bool> confirmClose(BuildContext context) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Close this job?', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
-        content: const Text("It will stop showing. You can't reopen it.", style: TextStyle(fontFamily: 'Poppins')),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel', style: TextStyle(fontFamily: 'Poppins', color: AppColors.textLight)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.error,
-              foregroundColor: Colors.white,
-              minimumSize: Size.zero,
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-            ),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Close job', style: TextStyle(fontFamily: 'Poppins')),
-          ),
-        ],
-      ),
-    );
-    return ok == true;
-  }
-
-  Widget _pill(String label, Color bg, Color fg) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-        decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(999)),
-        child: Text(label,
-            style: TextStyle(fontFamily: 'Poppins', fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 0.4, color: fg)),
+  static Future<bool> confirmClose(BuildContext context) => showJobsConfirm(
+        context,
+        title: 'Close this job?',
+        content: "It will stop showing. You can't reopen it.",
+        cancelLabel: 'Cancel',
+        confirmLabel: 'Close job',
       );
 
   @override
   Widget build(BuildContext context) {
     final active = job.isActive;
+    const tone = JobsUi.tone;
     return JobListCard(
       title: job.title,
       roleLabel: job.roleName,
@@ -64,17 +37,17 @@ class MyJobCard extends StatelessWidget {
       salaryLabel: job.salaryLabel,
       salaryUnit: job.salaryUnit,
       topRightBadge: active
-          ? _pill('ACTIVE', AppColors.successSurface, AppColors.successText)
-          : _pill('CLOSED', AppColors.neutralChip, AppColors.textLight),
+          ? const KitTagChip('ACTIVE', color: DesignColors.primary)
+          : const KitTagChip('CLOSED', color: DesignColors.textGrey),
       dimmed: !active,
       onTap: onTap,
-      accent: JobColors.accent,
-      accentDark: JobColors.accentDark,
+      accent: tone.accent,
+      accentDark: tone.accentDark,
       actions: [
-        JobListCardAction(icon: Iconsax.eye, label: 'View', color: JobColors.accentDark, onTap: onTap),
+        JobListCardAction(icon: Icons.visibility_outlined, label: 'View', color: tone.accentDark, onTap: onTap),
         active
-            ? JobListCardAction(icon: Iconsax.close_circle, label: 'Close', color: AppColors.error, onTap: onClose)
-            : const JobListCardAction(icon: Iconsax.close_circle, label: 'Closed', color: AppColors.textHint),
+            ? JobListCardAction(icon: Icons.close_rounded, label: 'Close', color: DesignColors.error, onTap: onClose)
+            : const JobListCardAction(icon: Icons.close_rounded, label: 'Closed', color: DesignColors.textMuted),
       ],
     );
   }

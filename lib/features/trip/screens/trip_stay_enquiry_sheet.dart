@@ -1,10 +1,9 @@
+import 'package:bakhli/design/template/fitness_app_theme.dart';
+import 'package:bakhli/design/design.dart';
 import 'package:flutter/material.dart';
+import 'package:bakhli/features/trip/widgets/trip_ui.dart';
 import 'package:get/get.dart';
-import 'package:iconsax/iconsax.dart';
-import '../../../config/app_colors.dart';
-import '../../../widgets/gradient_button.dart';
 import '../../stay/models/stay_nearby_model.dart';
-import '../../stay/setup/stay_option_sets.dart';
 import '../controllers/trip_enquiry_controller.dart';
 import '../controllers/trip_plan_controller.dart';
 import '../controllers/trip_supply_controller.dart';
@@ -76,11 +75,11 @@ class _EnquiryBodyState extends State<_EnquiryBody> {
   Widget _limitCard(int minutes) => Container(
         margin: const EdgeInsets.only(top: 10),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        decoration: BoxDecoration(color: AppColors.warningSurface, borderRadius: BorderRadius.circular(12)),
+        decoration: BoxDecoration(color: TripUi.warnTint, borderRadius: BorderRadius.circular(12)),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Icon(Iconsax.timer_1, size: 16, color: AppColors.warningText),
+            const Icon(Icons.warning_amber_rounded, size: 18, color: TripUi.warn),
             const SizedBox(width: 8),
             Expanded(
               child: Column(
@@ -88,10 +87,10 @@ class _EnquiryBodyState extends State<_EnquiryBody> {
                 children: [
                   const Text(TripStrings.askLimitTitle,
                       style: TextStyle(
-                          fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w700, color: AppColors.warningText)),
+                          fontFamily: FitnessAppTheme.fontName, fontSize: 12.5, fontWeight: FontWeight.w700, color: TripUi.warn)),
                   const SizedBox(height: 2),
                   Text(TripStrings.askLimitBody(minutes),
-                      style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.warningText, height: 1.35)),
+                      style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, color: TripUi.warn, height: 1.35)),
                 ],
               ),
             ),
@@ -113,16 +112,16 @@ class _EnquiryBodyState extends State<_EnquiryBody> {
                   child: Text(label,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
+                      style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, color: FitnessAppTheme.lightText)),
                 ),
                 Expanded(
                   child: Text(value,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                          fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                          fontFamily: FitnessAppTheme.fontName, fontSize: 13, fontWeight: FontWeight.w600, color: FitnessAppTheme.darkerText)),
                 ),
-                if (onTap != null) const Icon(Icons.chevron_right_rounded, size: 18, color: AppColors.textHint),
+                if (onTap != null) const Icon(Icons.chevron_right_rounded, size: 18, color: FitnessAppTheme.deactivatedText),
               ],
             ),
           ),
@@ -140,13 +139,13 @@ class _EnquiryBodyState extends State<_EnquiryBody> {
           title: TripStrings.enquiryTitle,
           children: [
             const Text(TripStringsA2.addDatesToSend,
-                style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textMedium, height: 1.4)),
+                style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 13, color: FitnessAppTheme.darkText, height: 1.4)),
             const SizedBox(height: 16),
-            GradientButton(
+            TripButton(
               onPressed: () => TripDatesSheet.edit(context),
               label: TripStringsA2.addDates,
-              gradient: StayColors.gradient,
-              shadowColor: StayColors.accent,
+              gradient: KitTone.stay.gradient,
+              shadowColor: TripUi.stay,
             ),
           ],
         );
@@ -183,12 +182,12 @@ class _EnquiryBodyState extends State<_EnquiryBody> {
             const TripPaymentLine(text: TripStrings.noPaymentLine),
             const SizedBox(height: 4),
             Text(reply,
-                style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight, height: 1.35)),
+                style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 11, color: FitnessAppTheme.lightText, height: 1.35)),
             if (asksLeft != null) ...[
               const SizedBox(height: 4),
               Text(TripStrings.asksLeft(asksLeft),
                   style: const TextStyle(
-                      fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textMedium)),
+                      fontFamily: FitnessAppTheme.fontName, fontSize: 11, fontWeight: FontWeight.w600, color: FitnessAppTheme.darkText)),
             ],
           ],
         ),
@@ -200,16 +199,16 @@ class _EnquiryBodyState extends State<_EnquiryBody> {
           const SizedBox(height: 10),
           Container(
             padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(color: StayColors.surface, borderRadius: BorderRadius.circular(12)),
+            decoration: BoxDecoration(color: TripUi.stayTint, borderRadius: BorderRadius.circular(12)),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(TripStrings.sentToOwners,
                     style: TextStyle(
-                        fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textLight)),
+                        fontFamily: FitnessAppTheme.fontName, fontSize: 11, fontWeight: FontWeight.w600, color: FitnessAppTheme.lightText)),
                 const SizedBox(height: 4),
                 Text(preview,
-                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 12.5, color: AppColors.textDark, height: 1.4)),
+                    style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12.5, color: FitnessAppTheme.darkerText, height: 1.4)),
               ],
             ),
           ),
@@ -217,18 +216,18 @@ class _EnquiryBodyState extends State<_EnquiryBody> {
             const SizedBox(height: 10),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              decoration: BoxDecoration(color: AppColors.warningSurface, borderRadius: BorderRadius.circular(12)),
+              decoration: BoxDecoration(color: TripUi.warnTint, borderRadius: BorderRadius.circular(12)),
               child: const Row(
                 children: [
-                  Icon(Iconsax.warning_2, size: 16, color: AppColors.warningText),
+                  Icon(Icons.timer_outlined, size: 18, color: TripUi.warn),
                   SizedBox(width: 8),
                   Expanded(
                     child: Text(TripStrings.veryShortNotice,
                         style: TextStyle(
-                            fontFamily: 'Poppins',
+                            fontFamily: FitnessAppTheme.fontName,
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
-                            color: AppColors.warningText)),
+                            color: TripUi.warn)),
                   ),
                 ],
               ),
@@ -236,12 +235,12 @@ class _EnquiryBodyState extends State<_EnquiryBody> {
           ],
           if (limit != null) _limitCard(limit),
           const SizedBox(height: 16),
-          GradientButton(
+          TripButton(
             label: TripStrings.sendToStays(1),
             height: 52,
             isLoading: _sending,
-            gradient: StayColors.gradient,
-            shadowColor: StayColors.accent,
+            gradient: KitTone.stay.gradient,
+            shadowColor: TripUi.stay,
             onPressed: limit != null ? null : _send,
           ),
         ],

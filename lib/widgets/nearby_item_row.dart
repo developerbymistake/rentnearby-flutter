@@ -1,9 +1,6 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:iconsax/iconsax.dart';
-import '../config/app_colors.dart';
-import '../config/app_shadows.dart';
 import '../config/module_palette.dart';
+import '../design/design.dart';
 import 'plan_badge_chip.dart';
 
 class NearbyItemRow extends StatelessWidget {
@@ -16,11 +13,14 @@ class NearbyItemRow extends StatelessWidget {
   final String unit;
   final ModulePalette palette;
   final IconData placeholderIcon;
+  final String? placeholderAsset;
   final bool elevated;
   final bool isFeatured;
   final VoidCallback onTap;
   final Widget? trailing;
   final List<Widget>? actions;
+  final Animation<double>? animation;
+  final AnimationController? animationController;
 
   const NearbyItemRow({
     super.key,
@@ -31,130 +31,80 @@ class NearbyItemRow extends StatelessWidget {
     required this.caption,
     required this.value,
     this.unit = '',
-    this.palette = ModulePalette.rooms,
+    this.palette = templateModulePalette,
     required this.placeholderIcon,
     required this.onTap,
+    this.placeholderAsset,
     this.elevated = false,
     this.isFeatured = false,
     this.trailing,
     this.actions,
+    this.animation,
+    this.animationController,
   });
+
+  static const double tile = 72;
+
+  KitTone get _tone => KitTone(
+        accent: palette.accent,
+        accentDark: palette.accentDark,
+        tint: palette.surface,
+        gradient: palette.gradient,
+        glow: palette.accentDark,
+      );
 
   @override
   Widget build(BuildContext context) {
-    final accent = palette.accent;
-    final size = elevated ? 64.0 : 54.0;
+    final tone = _tone;
     final hasActions = actions != null && actions!.isNotEmpty;
-    final rowPadding = EdgeInsets.symmetric(horizontal: elevated ? 10 : 12, vertical: 10);
-    final content = _content(accent, size);
-    return GestureDetector(
+    final card = ListRow(
+      title: title,
+      subtitle: subtitle,
+      tag: tag,
+      solidTag: true,
+      tagBadge: isFeatured
+          ? FittedBox(fit: BoxFit.scaleDown, child: PlanBadgeChip(color: tone.accentDark, compact: false))
+          : null,
+      thumbnailUrl: thumbnailUrl,
+      iconAsset: placeholderAsset ?? TravelIcon.stay,
+      tone: tone,
+      elevated: elevated,
       onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Container(
-        margin: elevated ? EdgeInsets.zero : const EdgeInsets.symmetric(horizontal: 4, vertical: 5),
-        padding: hasActions ? null : rowPadding,
-        clipBehavior: hasActions ? Clip.antiAlias : Clip.none,
-        decoration: BoxDecoration(
-          color: AppColors.cardBg,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.divider.withValues(alpha: 0.8)),
-          boxShadow: elevated
-              ? AppShadows.premium(accent, alpha: 0.14, blur: 18, offset: const Offset(0, 6))
-              : AppShadows.premium(accent, alpha: 0.06, blur: 10, offset: const Offset(0, 3)),
-        ),
-        child: hasActions
-            ? Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Padding(padding: rowPadding, child: content),
-                  const Divider(height: 1, thickness: 1, color: AppColors.divider),
-                  Material(
-                    color: Colors.transparent,
-                    child: Row(children: [for (final a in actions!) Expanded(child: a)]),
-                  ),
-                ],
-              )
-            : content,
+      margin: elevated ? EdgeInsets.zero : const EdgeInsets.symmetric(horizontal: KitMetrics.gutter, vertical: 6),
+      trailing: _price(tone),
+      footer: hasActions ? Row(children: [for (final a in actions!) Expanded(child: a)]) : null,
+    );
+    if (animation == null || animationController == null) return card;
+    return TemplateEntrance(animation: animation!, animationController: animationController!, child: card);
+  }
+
+  Widget _price(KitTone tone) {
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 104),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          if (caption.isNotEmpty)
+            Text(caption, maxLines: 1, style: TypeTokens.style(11, FontWeight.w700, color: TypeTokens.secondary, letterSpacing: 0.6)),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerRight,
+            child: Text.rich(
+              TextSpan(children: [
+                TextSpan(text: value),
+                if (unit.isNotEmpty) TextSpan(text: unit, style: TypeTokens.style(11, FontWeight.w600, color: tone.accentDark)),
+              ]),
+              maxLines: 1,
+              style: TypeTokens.style(15, FontWeight.w800, color: tone.accentDark),
+            ),
+          ),
+          const SizedBox(height: 4),
+          trailing ?? Icon(Icons.arrow_forward, size: 18, color: tone.accentDark),
+        ],
       ),
     );
   }
-
-  Widget _content(Color accent, double size) {
-    return Row(
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: SizedBox(
-                width: size,
-                height: size,
-                child: (thumbnailUrl == null || thumbnailUrl!.isEmpty)
-                    ? _placeholder(accent)
-                    : CachedNetworkImage(
-                        imageUrl: thumbnailUrl!,
-                        fit: BoxFit.cover,
-                        placeholder: (_, __) => Container(color: AppColors.surfaceWarm),
-                        errorWidget: (_, __, ___) => _placeholder(accent),
-                      ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(children: [
-                    Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                    decoration: BoxDecoration(color: accent, borderRadius: BorderRadius.circular(5)),
-                    child: Text(tag,
-                        style: const TextStyle(
-                            fontFamily: 'Poppins', fontSize: 8.5, fontWeight: FontWeight.w800, letterSpacing: 0.6, color: Colors.white)),
-                  ),
-                    if (isFeatured) ...[
-                      const SizedBox(width: 6),
-                      PlanBadgeChip(color: palette.accentDark),
-                    ],
-                  ]),
-                  const SizedBox(height: 4),
-                  Text(title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textDark)),
-                  const SizedBox(height: 1),
-                  Text(subtitle,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight, fontWeight: FontWeight.w500)),
-                ],
-              ),
-            ),
-            const SizedBox(width: 8),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(caption,
-                    style: const TextStyle(
-                        fontFamily: 'Poppins', fontSize: 8, fontWeight: FontWeight.w700, letterSpacing: 0.6, color: AppColors.textLight)),
-                Text.rich(
-                  TextSpan(children: [
-                    TextSpan(text: value),
-                    if (unit.isNotEmpty) TextSpan(text: unit, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600)),
-                  ]),
-                  maxLines: 1,
-                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.gold),
-                ),
-              ],
-            ),
-            const SizedBox(width: 4),
-            trailing ?? Icon(Iconsax.arrow_right_3, size: 16, color: accent),
-          ],
-    );
-  }
-
-  Widget _placeholder(Color accent) => Container(
-        decoration: BoxDecoration(gradient: palette.gradient),
-        child: Center(child: Icon(placeholderIcon, size: 22, color: Colors.white70)),
-      );
 }
 
 class NearbyRowAction extends StatelessWidget {
@@ -168,8 +118,10 @@ class NearbyRowAction extends StatelessWidget {
   @override
   Widget build(BuildContext context) => InkWell(
         onTap: onTap,
+        splashColor: DesignColors.splash,
+        highlightColor: Colors.transparent,
         child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 44),
+          constraints: const BoxConstraints(minHeight: KitMetrics.touch),
           child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
             icon,
             const SizedBox(width: 6),
@@ -177,7 +129,7 @@ class NearbyRowAction extends StatelessWidget {
               child: Text(label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w600, color: color)),
+                  style: TypeTokens.style(12, FontWeight.w600, color: color)),
             ),
           ]),
         ),

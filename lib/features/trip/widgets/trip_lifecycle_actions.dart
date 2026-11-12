@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import '../../../config/app_colors.dart';
+import 'package:bakhli/features/trip/widgets/trip_ui.dart';
+import 'package:bakhli/design/design.dart';
+import 'package:bakhli/design/extra/replies_kit.dart';
 import '../../../utils/app_toast.dart';
 import '../../../utils/dio_error_mapper.dart';
 import '../controllers/my_trips_controller.dart';
@@ -7,7 +9,6 @@ import '../controllers/trip_plan_controller.dart';
 import '../data/trip_repository.dart';
 import '../data/trip_today_cache.dart';
 import '../models/trip_model.dart';
-import '../trip_colors.dart';
 import '../trip_navigation.dart';
 import '../trip_strings.dart';
 import '../trip_strings_a5.dart';
@@ -47,32 +48,19 @@ class TripLifecycleActions {
   static Future<bool?> _confirmComplete(BuildContext context, {required bool early}) => showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: const RoundedRectangleBorder(borderRadius: RepliesCard.radius),
+        backgroundColor: FitnessAppTheme.white,
         title: Text(
           early ? TripStringsA5.completeNowQ : TripStrings.markCompleteQ,
-          style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 17),
+          style: FitnessAppTheme.title,
         ),
         content: Text(
           early ? TripStringsA5.completeNowBody : TripStrings.markCompleteBody,
-          style: const TextStyle(fontFamily: 'Poppins', fontSize: 13),
+          style: FitnessAppTheme.body2,
         ),
         actions: [
-          TextButton(
-            style: TextButton.styleFrom(minimumSize: const Size(64, 44)),
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text(TripStrings.cancelAction,
-                style: TextStyle(fontFamily: 'Poppins', color: AppColors.textLight)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: TripColors.accent,
-              foregroundColor: Colors.white,
-              minimumSize: const Size(64, 44),
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-            ),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text(TripStrings.markComplete, style: TextStyle(fontFamily: 'Poppins')),
-          ),
+          TextLink(label: TripStrings.cancelAction, onTap: () => Navigator.pop(ctx, false), tone: KitTone.trip),
+          TripButton(label: TripStrings.markComplete, onPressed: () => Navigator.pop(ctx, true), color: RepliesTone.accent, height: 44, expand: false),
         ],
       ),
     );
@@ -118,9 +106,10 @@ class TripLifecycleActions {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: const RoundedRectangleBorder(borderRadius: RepliesCard.radius),
+        backgroundColor: FitnessAppTheme.white,
         title: const Text(TripStringsV2Plan.deleteTitle,
-            style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 17)),
+            style: FitnessAppTheme.title),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -128,28 +117,15 @@ class TripLifecycleActions {
             for (final l in lines)
               Padding(
                 padding: const EdgeInsets.only(bottom: 6),
-                child: Text(l, style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textDark)),
+                child: Text(l, style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 13, color: FitnessAppTheme.darkerText)),
               ),
             const Text(TripStringsV2Plan.deleteBody,
-                style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textMedium)),
+                style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 13, color: FitnessAppTheme.lightText)),
           ],
         ),
         actions: [
-          TextButton(
-            style: TextButton.styleFrom(minimumSize: const Size(64, 44)),
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text(TripStringsV2Plan.keepTrip, style: TextStyle(fontFamily: 'Poppins', color: AppColors.textLight)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.error,
-              foregroundColor: Colors.white,
-              minimumSize: const Size(64, 44),
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-            ),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text(TripStringsV2Plan.delete, style: TextStyle(fontFamily: 'Poppins')),
-          ),
+          TextLink(label: TripStringsV2Plan.keepTrip, onTap: () => Navigator.pop(ctx, false), tone: KitTone.trip),
+          TripButton(label: TripStringsV2Plan.delete, onPressed: () => Navigator.pop(ctx, true), color: RepliesTone.bad, height: 44, expand: false),
         ],
       ),
     );
@@ -187,26 +163,14 @@ class TripLifecycleActions {
     final leave = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: const RoundedRectangleBorder(borderRadius: RepliesCard.radius),
+        backgroundColor: FitnessAppTheme.white,
         title: const Text(TripStringsV2Plan.savedTitle,
-            style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 17)),
-        content: const Text(TripStringsV2Plan.savedBody, style: TextStyle(fontFamily: 'Poppins', fontSize: 13)),
+            style: FitnessAppTheme.title),
+        content: const Text(TripStringsV2Plan.savedBody, style: FitnessAppTheme.body2),
         actions: [
-          TextButton(
-            style: TextButton.styleFrom(minimumSize: const Size(64, 44)),
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text(TripStringsV2Plan.keepPlanning, style: TextStyle(fontFamily: 'Poppins', color: AppColors.textLight)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: TripColors.accent,
-              foregroundColor: Colors.white,
-              minimumSize: const Size(64, 44),
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-            ),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text(TripStringsV2Plan.goToMyTrips, style: TextStyle(fontFamily: 'Poppins')),
-          ),
+          TextLink(label: TripStringsV2Plan.keepPlanning, onTap: () => Navigator.pop(ctx, false), tone: KitTone.trip),
+          TripButton(label: TripStringsV2Plan.goToMyTrips, onPressed: () => Navigator.pop(ctx, true), color: RepliesTone.accent, height: 44, expand: false),
         ],
       ),
     );

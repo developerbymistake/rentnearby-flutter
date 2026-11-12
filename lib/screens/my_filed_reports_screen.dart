@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:shimmer/shimmer.dart';
-import '../config/app_colors.dart';
+import 'package:bakhli/design/design.dart';
+import '../config/app_insets.dart';
 import '../config/app_routes.dart';
 import '../controllers/report_controller.dart';
 import '../models/listing_report_model.dart';
@@ -29,68 +29,48 @@ class _MyFiledReportsScreenState extends State<MyFiledReportsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: DesignColors.scaffold,
       body: Column(children: [
-        Container(
-          decoration: const BoxDecoration(gradient: AppColors.primaryGradient),
-          child: SafeArea(
-            bottom: false,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(4, 8, 20, 24),
-              child: Row(children: [
-                IconButton(
-                  onPressed: () => Get.back(),
-                  icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white),
-                ),
-                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  const Text('My Reports',
-                      style: TextStyle(fontFamily: 'Poppins', fontSize: 20, fontWeight: FontWeight.w700, color: Colors.white)),
-                  const Text('Listings you have reported',
-                      style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: Colors.white70)),
-                ]),
-              ]),
-            ),
-          ),
+        ModuleHeader(
+          title: 'My Reports',
+          subtitle: 'Listings you have reported',
+          tone: KitTone.stay,
+          leadingAsset: TravelIcon.note,
+          onBack: () => Get.back(),
         ),
         Expanded(
-          child: _loading
-              ? _buildShimmer()
-              : _reports.isEmpty
-                  ? _buildEmpty()
-                  : ListView.builder(
-                      padding: const EdgeInsets.all(16),
-                      itemCount: _reports.length,
-                      itemBuilder: (_, i) => ReportRow(
+          child: SkeletonSwitcher(
+            loading: _loading,
+            skeleton: _buildShimmer(),
+            child: _reports.isEmpty
+                ? const Align(
+                    alignment: Alignment.topCenter,
+                    child: StateCard(asset: TravelIcon.note, title: "You haven't reported any listings"),
+                  )
+                : ListView.builder(
+                    physics: const BouncingScrollPhysics(),
+                    padding: EdgeInsets.only(
+                        top: KitMetrics.cardGap, bottom: KitMetrics.gutter + AppInsets.bottomViewPadding(context)),
+                    itemCount: _reports.length,
+                    itemBuilder: (_, i) => EntranceOnce(
+                      key: ValueKey(_reports[i].id),
+                      index: i,
+                      child: ReportRow(
                         report: _reports[i],
                         onTap: () => Get.toNamed(AppRoutes.reportDetail, arguments: _reports[i]),
                       ),
                     ),
+                  ),
+          ),
         ),
       ]),
     );
   }
 
-  Widget _buildEmpty() => Center(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            const Text("You haven't reported any listings",
-                textAlign: TextAlign.center,
-                style: TextStyle(fontFamily: 'Poppins', color: AppColors.textLight)),
-          ]),
-        ),
-      );
-
-  Widget _buildShimmer() => ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: 4,
-        itemBuilder: (context, idx) => Shimmer.fromColors(
-          baseColor: AppColors.shimmerBase,
-          highlightColor: AppColors.shimmerHighlight,
-          child: Container(
-            height: 70,
-            margin: const EdgeInsets.only(bottom: 10),
-            decoration: BoxDecoration(color: AppColors.cardBg, borderRadius: BorderRadius.circular(14)),
-          ),
-        ),
+  Widget _buildShimmer() => Column(
+        children: [
+          const SizedBox(height: KitMetrics.cardGap),
+          for (var i = 0; i < 4; i++) ListRow.skeleton(compact: true),
+        ],
       );
 }

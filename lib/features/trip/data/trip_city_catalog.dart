@@ -21,7 +21,7 @@ class TripCityCatalog {
     if (_mem != null) return;
     final raw = StorageService.getTripCitiesCache();
     if (raw == null) return;
-    if (raw.isNotEmpty && !raw.first.containsKey('isPopularDestination')) return;
+    if (raw.isNotEmpty && !(raw.first.containsKey('isPopularDestination') && raw.first.containsKey('coverUrl'))) return;
     try {
       _mem = raw.map(TripCityModel.fromJson).toList();
       _version = StorageService.getTripCitiesCacheVersion();
@@ -46,6 +46,42 @@ class TripCityCatalog {
     return q.trim().isEmpty ? TripCitySearch.popularFirst(found) : found;
   }
 
+  static const int searchCap = 60;
+
+  List<TripCityModel> ready(String q, {String? stateName}) {
+    final state = stateName?.trim().toLowerCase() ?? '';
+    final out = <TripCityModel>[];
+    for (final c in search(q)) {
+      if (!c.isReady) continue;
+      if (state.isNotEmpty && c.stateName.toLowerCase() != state) continue;
+      out.add(c);
+      if (out.length >= searchCap && q.trim().isNotEmpty) break;
+    }
+    return out;
+  }
+
+  List<TripCityModel> comingSoon(String q, {String? stateName}) {
+    if (q.trim().isEmpty) return const [];
+    final state = stateName?.trim().toLowerCase() ?? '';
+    return [
+      for (final c in search(q))
+        if (!c.isReady && (state.isEmpty || c.stateName.toLowerCase() == state)) c,
+    ].take(5).toList();
+  }
+
+  List<String> liveStates() {
+    final seen = <String>{};
+    final out = <String>[];
+    for (final c in _mem ?? const <TripCityModel>[]) {
+      final s = c.stateName.trim();
+      if (c.isReady && s.isNotEmpty && seen.add(s.toLowerCase())) out.add(s);
+    }
+    out.sort();
+    return out;
+  }
+
+  bool get hasData => _mem != null;
+
   List<TripCityModel> popular({String? stateName}) {
     final state = stateName?.trim().toLowerCase();
     return [
@@ -66,7 +102,7 @@ class TripCityCatalog {
     final fresh = mem != null && savedAt != null && now.difference(savedAt) < AppConstants.tripCitiesCacheTtl;
     if (fresh && !force) {
       try {
-        final v = await _repo.citiesVersion();
+        final v = await _repo.citiesVersion(once: true);
         if (v.version == _version) {
           _checkedAt = DateTime.now();
           await StorageService.touchTripCitiesCache();
@@ -82,13 +118,14 @@ class TripCityCatalog {
   }
 
   Future<List<TripCityModel>> _fetchAll() async {
+    final once = _mem == null;
     try {
       final items = <TripCityModel>[];
       var version = '';
       var page = 1;
       var restarted = false;
       while (true) {
-        final p = await _repo.cities(page: page, pageSize: TripConstants.citiesPageSize);
+        final p = await _repo.cities(page: page, pageSize: TripConstants.citiesPageSize, once: once);
         if (page > 1 && p.version != version && !restarted) {
           restarted = true;
           items.clear();

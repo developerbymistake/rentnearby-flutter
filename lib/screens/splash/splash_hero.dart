@@ -4,8 +4,7 @@ import 'dart:ui' show PathMetric;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../../config/app_colors.dart';
-import '../../features/trip/trip_colors.dart';
+import '../../design/design.dart';
 
 abstract final class _T {
   static const farRiseA = 0.0, farRiseB = 0.400;
@@ -144,13 +143,13 @@ class _SplashHeroState extends State<SplashHero> with TickerProviderStateMixin {
     return LayoutBuilder(
       builder: (context, constraints) {
         if (constraints.biggest.isEmpty || !constraints.biggest.isFinite) {
-          return const ColoredBox(color: AppColors.textDark);
+          return const ColoredBox(color: DesignColors.dinnerEnd);
         }
         final geo = _geoFor(constraints.biggest);
         return Stack(
           fit: StackFit.expand,
           children: [
-            const ColoredBox(color: AppColors.textDark),
+            const ColoredBox(color: DesignColors.dinnerEnd),
             RepaintBoundary(
               child: CustomPaint(painter: _ScenePainter(geo, _intro)),
             ),
@@ -189,7 +188,7 @@ class _SplashGeometry {
     nearShader = LinearGradient(
       begin: Alignment.topCenter,
       end: Alignment.bottomCenter,
-      colors: [Color.lerp(AppColors.textDark, AppColors.primary, 0.30)!, AppColors.textDark],
+      colors: [Color.lerp(DesignColors.dinnerEnd, DesignColors.primary, Alpha.scrim)!, DesignColors.dinnerEnd],
     ).createShader(Rect.fromLTRB(0, 0.66 * h, w, h));
 
     final tipY = tip.dy;
@@ -209,7 +208,11 @@ class _SplashGeometry {
       ..lineTo(leftTangent.dx, leftTangent.dy)
       ..arcTo(Rect.fromCircle(center: hc, radius: hr), math.pi - phi, math.pi + 2 * phi, false)
       ..close();
-    pinShader = TripColors.gradient.createShader(pinPath.getBounds());
+    pinShader = const LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [TravelPalette.sunriseStart, TravelPalette.sunriseEnd],
+    ).createShader(pinPath.getBounds());
 
     rr = 0.46 * hr;
   }
@@ -259,7 +262,7 @@ class _ScenePainter extends CustomPainter {
     ..strokeJoin = StrokeJoin.round;
 
   static final Color _farColor =
-      Color.lerp(AppColors.primary, AppColors.primaryLight, 0.35)!.withValues(alpha: 0.9);
+      Color.lerp(DesignColors.primary, DesignColors.primaryLight, 0.35)!.withValues(alpha: Alpha.high);
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -269,23 +272,23 @@ class _ScenePainter extends CustomPainter {
 
     final dawn = _iv(t, _T.dawnA, _T.dawnB, Curves.easeInOutSine);
     _fill
-      ..color = AppColors.textWhite
+      ..color = DesignColors.textInverse
       ..shader = LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
         stops: const [0.0, 0.40, 0.62],
         colors: [
-          AppColors.textDark,
-          Color.lerp(AppColors.primary, AppColors.tripDark, 0.70 * dawn)!,
-          Color.lerp(AppColors.primaryLight, AppColors.warning, 0.85 * dawn)!,
+          DesignColors.dinnerEnd,
+          Color.lerp(DesignColors.primary, TravelPalette.sunriseStart, 0.70 * dawn)!,
+          Color.lerp(DesignColors.primaryLight, DesignColors.warning, 0.85 * dawn)!,
         ],
       ).createShader(full);
     canvas.drawRect(full, _fill);
     _fill.shader = null;
 
-    final starAlpha = 0.7 * (1 - _iv(t, _T.starsA, _T.starsB, Curves.easeIn));
+    final starAlpha = Alpha.strong * (1 - _iv(t, _T.starsA, _T.starsB, Curves.easeIn));
     if (starAlpha > 0) {
-      _fill.color = AppColors.textWhite.withValues(alpha: starAlpha);
+      _fill.color = DesignColors.textInverse.withValues(alpha: starAlpha);
       for (var i = 0; i < _stars.length; i++) {
         canvas.drawCircle(Offset(_stars[i].dx * g.w, _stars[i].dy * g.h), _starRadii[i], _fill);
       }
@@ -296,13 +299,13 @@ class _ScenePainter extends CustomPainter {
       final c = Offset(g.cx, 0.47 * g.h - 18 * sunT);
       final r = _lerp(0.08 * g.u, 0.60 * g.u, sunT);
       _fill
-        ..color = AppColors.textWhite
+        ..color = DesignColors.textInverse
         ..shader = RadialGradient(
           stops: const [0.0, 0.45, 1.0],
           colors: [
-            AppColors.tripLight.withValues(alpha: 0.55),
-            AppColors.warning.withValues(alpha: 0.22),
-            AppColors.warning.withValues(alpha: 0),
+            TravelPalette.sunriseEnd.withValues(alpha: Alpha.half),
+            DesignColors.warning.withValues(alpha: Alpha.soft),
+            DesignColors.warning.withValues(alpha: Alpha.none),
           ],
         ).createShader(Rect.fromCircle(center: c, radius: r));
       canvas.drawCircle(c, r, _fill);
@@ -317,7 +320,7 @@ class _ScenePainter extends CustomPainter {
     if (dawn > 0) {
       _stroke
         ..strokeWidth = 1
-        ..color = AppColors.tripLight.withValues(alpha: 0.6 * dawn);
+        ..color = TravelPalette.sunriseEnd.withValues(alpha: Alpha.strong * dawn);
       canvas.drawPath(g.farTop, _stroke);
     }
     canvas.restore();
@@ -325,7 +328,7 @@ class _ScenePainter extends CustomPainter {
     final midT = _iv(t, _T.midRiseA, _T.midRiseB, Curves.easeOutCubic);
     canvas.save();
     canvas.translate(0, (1 - midT) * 70);
-    _fill.color = AppColors.primary;
+    _fill.color = DesignColors.primary;
     canvas.drawPath(g.midPath, _fill);
     canvas.restore();
 
@@ -333,7 +336,7 @@ class _ScenePainter extends CustomPainter {
     canvas.save();
     canvas.translate(0, (1 - nearT) * 110);
     _fill
-      ..color = AppColors.textWhite
+      ..color = DesignColors.textInverse
       ..shader = g.nearShader;
     canvas.drawPath(g.nearPath, _fill);
     _fill.shader = null;
@@ -345,11 +348,11 @@ class _ScenePainter extends CustomPainter {
       final sub = g.routeMetric.extractPath(0, g.routeLen * routeT);
       _stroke
         ..strokeWidth = 9
-        ..color = AppColors.trip.withValues(alpha: 0.28 * settle);
+        ..color = TravelPalette.sunriseStart.withValues(alpha: Alpha.scrim * settle);
       canvas.drawPath(sub, _stroke);
       _stroke
         ..strokeWidth = 3
-        ..color = AppColors.tripLight.withValues(alpha: settle);
+        ..color = TravelPalette.sunriseEnd.withValues(alpha: settle);
       canvas.drawPath(sub, _stroke);
     }
 
@@ -358,11 +361,11 @@ class _ScenePainter extends CustomPainter {
       canvas.save();
       canvas.translate(g.routeStart.dx, g.routeStart.dy);
       canvas.scale(stopT);
-      _fill.color = AppColors.accentLight;
+      _fill.color = DesignColors.primaryLight;
       canvas.drawCircle(Offset.zero, 5, _fill);
       _stroke
         ..strokeWidth = 2
-        ..color = AppColors.textWhite;
+        ..color = DesignColors.textInverse;
       canvas.drawCircle(Offset.zero, 6, _stroke);
       canvas.restore();
     }
@@ -378,13 +381,13 @@ class _ScenePainter extends CustomPainter {
           Rect.fromCenter(center: Offset.zero, width: 14, height: 9),
           const Radius.circular(2.5),
         );
-        _fill.color = AppColors.textWhite.withValues(alpha: taxiA);
+        _fill.color = DesignColors.textInverse.withValues(alpha: taxiA);
         canvas.drawRRect(body, _fill);
         _stroke
           ..strokeWidth = 1.5
-          ..color = AppColors.taxi.withValues(alpha: taxiA);
+          ..color = DesignColors.accentTealDeep.withValues(alpha: taxiA);
         canvas.drawRRect(body, _stroke);
-        _fill.color = AppColors.textDark.withValues(alpha: taxiA);
+        _fill.color = DesignColors.dinnerEnd.withValues(alpha: taxiA);
         canvas.drawCircle(const Offset(-4, 4.5), 1.6, _fill);
         canvas.drawCircle(const Offset(4, 4.5), 1.6, _fill);
         canvas.restore();
@@ -419,11 +422,11 @@ class _PinPainter extends CustomPainter {
       final r = g.hr * 1.6 * (1 + 0.25 * k);
       final a = haloIn * _lerp(0.22, 0.42, k);
       _fill
-        ..color = AppColors.textWhite
+        ..color = DesignColors.textInverse
         ..shader = RadialGradient(
           colors: [
-            AppColors.tripLight.withValues(alpha: a),
-            AppColors.tripLight.withValues(alpha: 0),
+            TravelPalette.sunriseEnd.withValues(alpha: a),
+            TravelPalette.sunriseEnd.withValues(alpha: Alpha.none),
           ],
         ).createShader(Rect.fromCircle(center: g.hc, radius: r));
       canvas.drawCircle(g.hc, r, _fill);
@@ -432,7 +435,7 @@ class _PinPainter extends CustomPainter {
 
     final dropT = _iv(t, _T.dropA, _T.dropB, Curves.easeInCubic);
     if (dropT > 0) {
-      _fill.color = AppColors.textDark.withValues(alpha: 0.35 * dropT);
+      _fill.color = DesignColors.dinnerEnd.withValues(alpha: Alpha.scrim * dropT);
       canvas.drawOval(
         Rect.fromCenter(center: g.tip, width: 0.6 * g.markW * dropT, height: 0.12 * g.markW),
         _fill,
@@ -457,16 +460,16 @@ class _PinPainter extends CustomPainter {
     canvas.translate(-g.tip.dx, -g.tip.dy);
 
     _fill
-      ..color = AppColors.textWhite.withValues(alpha: pinA)
+      ..color = DesignColors.textInverse.withValues(alpha: pinA)
       ..shader = g.pinShader;
     canvas.drawPath(g.pinPath, _fill);
     _fill.shader = null;
     _stroke
       ..strokeWidth = 1.5
-      ..color = TripColors.accentDark.withValues(alpha: pinA);
+      ..color = TravelPalette.sunriseStart.withValues(alpha: pinA);
     canvas.drawPath(g.pinPath, _stroke);
 
-    _fill.color = AppColors.textWhite.withValues(alpha: pinA);
+    _fill.color = DesignColors.textInverse.withValues(alpha: pinA);
     canvas.drawCircle(g.hc, g.rr * 0.6, _fill);
     canvas.restore();
   }
@@ -476,7 +479,7 @@ class _PinPainter extends CustomPainter {
     final width = _lerp(0.3, 2.6, r) * geo.markW;
     _stroke
       ..strokeWidth = 2
-      ..color = AppColors.tripLight.withValues(alpha: 0.5 * (1 - r));
+      ..color = TravelPalette.sunriseEnd.withValues(alpha: Alpha.half * (1 - r));
     canvas.drawOval(Rect.fromCenter(center: geo.tip, width: width, height: width * 0.35), _stroke);
   }
 

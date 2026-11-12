@@ -1,9 +1,6 @@
+import 'package:bakhli/design/design.dart';
 import 'package:flutter/material.dart';
-import 'package:iconsax/iconsax.dart';
-import '../../../config/app_colors.dart';
 import '../../../config/app_insets.dart';
-import '../../../config/app_shadows.dart';
-import '../trip_colors.dart';
 
 class TripPageBottomBar extends StatelessWidget {
   const TripPageBottomBar({
@@ -16,8 +13,8 @@ class TripPageBottomBar extends StatelessWidget {
     this.onPrimary,
     this.hint,
     this.showPrimary = true,
-    this.accent = TripColors.accent,
-    this.gradient = TripColors.gradient,
+    this.accent = TripEntryStyle.accent,
+    this.gradient = TripEntryStyle.gradient,
   });
 
   final String counterText;
@@ -38,40 +35,50 @@ class TripPageBottomBar extends StatelessWidget {
   Widget _counter() => Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: accent.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(999),
+          color: accent.withValues(alpha: Alpha.v10),
+          borderRadius: const BorderRadius.all(Radius.circular(16.0)),
         ),
         child: Text(
           counterText,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w700, color: accent),
+          style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, fontWeight: FontWeight.w700, color: accent),
         ),
       );
 
-  Widget _secondary() => SizedBox(
-        height: _buttonHeight,
-        child: OutlinedButton(
-          onPressed: onSecondary,
-          style: OutlinedButton.styleFrom(
-            foregroundColor: accent,
-            backgroundColor: Colors.white,
-            side: BorderSide(color: onSecondary == null ? AppColors.divider : accent, width: 1.5),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            minimumSize: const Size(0, 44),
+  Widget _secondary() => _TripPress(
+        enabled: onSecondary != null,
+        child: Material(
+          color: DesignColors.surface,
+          shape: RoundedRectangleBorder(
+            borderRadius: const BorderRadius.all(Radius.circular(16.0)),
+            side: BorderSide(color: onSecondary == null ? TripEntryStyle.border : accent, width: 1.5),
           ),
-          child: FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(secondaryIcon, size: 18),
-                const SizedBox(width: 6),
-                Text(secondaryLabel,
-                    maxLines: 1,
-                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700)),
-              ],
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: onSecondary,
+            highlightColor: Colors.transparent,
+            child: Container(
+              height: _buttonHeight,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              alignment: Alignment.center,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(secondaryIcon, size: 18, color: onSecondary == null ? DesignColors.textMuted : accent),
+                    const SizedBox(width: 6),
+                    Text(secondaryLabel,
+                        maxLines: 1,
+                        style: TextStyle(
+                            fontFamily: FitnessAppTheme.fontName,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: onSecondary == null ? DesignColors.textMuted : accent)),
+                  ],
+                ),
+              ),
             ),
           ),
         ),
@@ -82,19 +89,18 @@ class TripPageBottomBar extends StatelessWidget {
     return Semantics(
       button: true,
       enabled: enabled,
-      child: GestureDetector(
+      child: _TripPress(
+        enabled: enabled,
+        child: GestureDetector(
         onTap: onPrimary,
-        child: AnimatedOpacity(
-          opacity: enabled ? 1 : 0.6,
-          duration: const Duration(milliseconds: 200),
-          child: Container(
+        child: Container(
             height: _buttonHeight,
             padding: const EdgeInsets.symmetric(horizontal: 12),
             decoration: BoxDecoration(
               gradient: enabled ? gradient : null,
-              color: enabled ? null : AppColors.textHint,
-              borderRadius: BorderRadius.circular(14),
-              boxShadow: enabled ? AppShadows.premium(accent, alpha: 0.3, blur: 14, offset: const Offset(0, 5)) : null,
+              color: enabled ? null : DesignColors.textMuted,
+              borderRadius: const BorderRadius.all(Radius.circular(16.0)),
+              boxShadow: enabled ? TripEntryStyle.skyShadow : null,
             ),
             alignment: Alignment.center,
             child: FittedBox(
@@ -102,7 +108,7 @@ class TripPageBottomBar extends StatelessWidget {
               child: Text(primaryLabel,
                   maxLines: 1,
                   style: const TextStyle(
-                      fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white)),
+                      fontFamily: FitnessAppTheme.fontName, fontSize: 14, fontWeight: FontWeight.w700, color: DesignColors.surface)),
             ),
           ),
         ),
@@ -113,15 +119,15 @@ class TripPageBottomBar extends StatelessWidget {
   Widget _hint() => Container(
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(color: AppColors.warningSurface, borderRadius: BorderRadius.circular(12)),
+        decoration: BoxDecoration(color: TripEntryStyle.sunriseTint, borderRadius: BorderRadius.circular(16)),
         child: Row(
           children: [
-            const Icon(Iconsax.info_circle, size: 16, color: AppColors.warningText),
+            const Icon(Icons.info_outline_rounded, size: 16, color: DesignColors.textGreyDark),
             const SizedBox(width: 8),
             Expanded(
               child: Text(hint!,
                   style: const TextStyle(
-                      fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.warningText)),
+                      fontFamily: FitnessAppTheme.fontName, fontSize: 12, fontWeight: FontWeight.w600, color: DesignColors.textGreyDark)),
             ),
           ],
         ),
@@ -130,11 +136,12 @@ class TripPageBottomBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final hasCounter = counterText.isNotEmpty;
-    return Container(
+    return TemplateEntranceOnce(
+      child: Container(
       padding: EdgeInsets.fromLTRB(16, 10, 16, AppInsets.bottomViewPadding(context) + 10),
       decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: AppShadows.premium(accent, alpha: 0.12, blur: 16, offset: const Offset(0, -4)),
+        color: DesignColors.surface,
+        boxShadow: TripEntryStyle.topShadow,
       ),
       child: Center(
         heightFactor: 1,
@@ -168,6 +175,40 @@ class TripPageBottomBar extends StatelessWidget {
           }),
         ),
       ),
+    ),
+    );
+  }
+}
+
+class _TripPress extends StatefulWidget {
+  const _TripPress({required this.child, required this.enabled});
+
+  final Widget child;
+  final bool enabled;
+
+  @override
+  State<_TripPress> createState() => _TripPressState();
+}
+
+class _TripPressState extends State<_TripPress> with SingleTickerProviderStateMixin {
+  late final AnimationController _c =
+      AnimationController(duration: const Duration(milliseconds: 400), vsync: this, value: 1.0);
+  late final Animation<double> _scale = Tween<double>(begin: 0.88, end: 1.0)
+      .animate(CurvedAnimation(parent: _c, curve: Curves.fastOutSlowIn));
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Listener(
+      onPointerDown: (_) {
+        if (widget.enabled) _c.forward(from: 0);
+      },
+      child: ScaleTransition(scale: _scale, child: widget.child),
     );
   }
 }

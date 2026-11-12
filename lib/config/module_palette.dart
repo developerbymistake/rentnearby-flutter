@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'app_colors.dart';
+import '../design/tokens/design_colors.dart';
 
 class ModulePalette {
   final Color accent;
@@ -16,46 +16,49 @@ class ModulePalette {
     required this.gradient,
   });
 
-  String get hex => AppColors.hexOf(accent);
+  String get hex {
+    final rgb = accent.toARGB32() & 0xFFFFFF;
+    return '#${rgb.toRadixString(16).padLeft(6, '0')}';
+  }
 
   static const rooms = ModulePalette(
-    accent: AppColors.primary,
-    accentDark: AppColors.primary,
-    accentLight: AppColors.primaryLight,
-    surface: AppColors.surface,
-    gradient: AppColors.primaryGradient,
+    accent: DesignColors.primary,
+    accentDark: DesignColors.primary,
+    accentLight: DesignColors.primaryLight,
+    surface: DesignColors.scaffold,
+    gradient: DesignGradients.brand,
   );
 
   static const stays = ModulePalette(
-    accent: AppColors.stay,
-    accentDark: AppColors.stayDark,
-    accentLight: AppColors.stayLight,
-    surface: AppColors.staySurface,
-    gradient: AppColors.stayGradient,
+    accent: DesignColors.hotelStart,
+    accentDark: DesignColors.hotelEnd,
+    accentLight: DesignColors.accentTeal,
+    surface: DesignColors.successSoft,
+    gradient: DesignGradients.hotel,
   );
 
   static const jobs = ModulePalette(
-    accent: AppColors.job,
-    accentDark: AppColors.jobDark,
-    accentLight: AppColors.jobLight,
-    surface: AppColors.jobSurface,
-    gradient: AppColors.jobGradient,
+    accent: DesignColors.lunchStart,
+    accentDark: DesignColors.lunchEnd,
+    accentLight: DesignColors.ringLight,
+    surface: DesignColors.statusOfferSoft,
+    gradient: DesignGradients.lunch,
   );
 
   static const taxi = ModulePalette(
-    accent: AppColors.taxi,
-    accentDark: AppColors.taxiDark,
-    accentLight: AppColors.taxiLight,
-    surface: AppColors.taxiSurface,
-    gradient: AppColors.taxiGradient,
+    accent: DesignColors.breakfastStart,
+    accentDark: DesignColors.snackEnd,
+    accentLight: DesignColors.breakfastEnd,
+    surface: DesignColors.statusAttentionSoft,
+    gradient: DesignGradients.breakfast,
   );
 
   static const trip = ModulePalette(
-    accent: AppColors.trip,
-    accentDark: AppColors.tripDark,
-    accentLight: AppColors.tripLight,
-    surface: AppColors.tripSurface,
-    gradient: AppColors.tripGradient,
+    accent: DesignColors.primary,
+    accentDark: DesignColors.dinnerEnd,
+    accentLight: DesignColors.primaryLight,
+    surface: DesignColors.primarySoft,
+    gradient: DesignGradients.brand,
   );
 
   static ModulePalette forListingKind(String kind) => switch (kind) {

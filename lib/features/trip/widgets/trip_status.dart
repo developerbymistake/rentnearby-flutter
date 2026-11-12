@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
-import '../../../config/app_colors.dart';
+import 'package:bakhli/design/extra/trip_plan_look.dart';
+import 'package:bakhli/design/template/fitness_app_theme.dart';
 import '../models/trip_enquiry_model.dart';
 import '../trip_colors.dart';
 import '../trip_strings.dart';
 import '../utils/trip_format.dart';
 
+import 'package:bakhli/design/tokens/shadow_tokens.dart';
+import '../../../design/tokens/alpha_tokens.dart';
 enum TripDisplayStatus {
   none,
   shortlisted,
@@ -53,19 +56,19 @@ class TripStatusVisuals {
         TripDisplayStatus.confirmedByYou => TripStatusColors.confirmedByYouSurface,
         TripDisplayStatus.confirmedByBoth => TripStatusColors.bothSurface,
         TripDisplayStatus.own || TripDisplayStatus.bookedByYou => TripStatusColors.bookedSurface,
-        TripDisplayStatus.closed => AppColors.neutralChip,
+        TripDisplayStatus.closed => TripLook.neutralChip,
         _ when s.isRed => TripStatusColors.failedSurface,
-        _ => AppColors.cardBg,
+        _ => TripLook.cardBg,
       };
 
   static Color text(TripDisplayStatus s) => switch (s) {
-        TripDisplayStatus.asked || TripDisplayStatus.offered || TripDisplayStatus.fareSent => AppColors.warningText,
-        TripDisplayStatus.confirmedByYou => AppColors.tripDark,
-        TripDisplayStatus.confirmedByBoth => AppColors.successText,
-        TripDisplayStatus.own || TripDisplayStatus.bookedByYou => AppColors.tripBooked,
-        TripDisplayStatus.closed => AppColors.neutralChipText,
-        _ when s.isRed => AppColors.errorText,
-        _ => AppColors.textMedium,
+        TripDisplayStatus.asked || TripDisplayStatus.offered || TripDisplayStatus.fareSent => TripLook.warningText,
+        TripDisplayStatus.confirmedByYou => TripLook.accentDark,
+        TripDisplayStatus.confirmedByBoth => TripLook.successText,
+        TripDisplayStatus.own || TripDisplayStatus.bookedByYou => TripLook.booked,
+        TripDisplayStatus.closed => TripLook.neutralChipText,
+        _ when s.isRed => TripLook.errorText,
+        _ => TripLook.textMedium,
       };
 
   static String label(TripDisplayStatus s, {bool ownerSide = false, bool taxi = false}) => switch (s) {
@@ -102,10 +105,10 @@ class TripStatusVisuals {
       };
 
   static Color advanceText(String advanceStatus) => switch (advanceStatus) {
-        'Pending' || 'ProofSent' => AppColors.warningText,
-        'Received' => AppColors.tripAdvance,
-        'HoldExpired' => AppColors.errorText,
-        _ => AppColors.successText,
+        'Pending' || 'ProofSent' => TripLook.warningText,
+        'Received' => TripLook.advance,
+        'HoldExpired' => TripLook.errorText,
+        _ => TripLook.successText,
       };
 
   static String advanceLabel(TripAdvanceModel a) {
@@ -135,11 +138,17 @@ class TripStatusPill extends StatelessWidget {
     final color = TripStatusVisuals.text(status);
     return ConstrainedBox(
       constraints: const BoxConstraints(minHeight: 36),
-      child: DecoratedBox(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
         decoration: BoxDecoration(
           color: TripStatusVisuals.surface(status),
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: TripStatusVisuals.bar(status).withValues(alpha: 0.35)),
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(8),
+            topRight: Radius.circular(16),
+            bottomLeft: Radius.circular(8),
+            bottomRight: Radius.circular(8),
+          ),
+          boxShadow: [ShadowTokens.tint(TripStatusVisuals.bar(status), ShadowSpec.badge)],
         ),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -150,7 +159,7 @@ class TripStatusPill extends StatelessWidget {
               child: Text(
                 text,
                 maxLines: 1,
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: color),
+                style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, fontWeight: FontWeight.w600, color: color),
               ),
             ),
           ),
@@ -186,14 +195,14 @@ class TripBookingStateVisuals {
   static Color surface(TripBookingState s) => switch (s) {
         TripBookingState.confirming => TripStatusColors.confirmedByYouSurface,
         TripBookingState.ready => TripStatusColors.bothSurface,
-        _ => AppColors.neutralChip,
+        _ => TripLook.neutralChip,
       };
 
   static Color text(TripBookingState s) => switch (s) {
-        TripBookingState.draft || TripBookingState.planOnly => AppColors.textMedium,
-        TripBookingState.confirming => AppColors.tripDark,
-        TripBookingState.ready => AppColors.successText,
-        TripBookingState.completed => AppColors.neutralChipText,
+        TripBookingState.draft || TripBookingState.planOnly => TripLook.textMedium,
+        TripBookingState.confirming => TripLook.accentDark,
+        TripBookingState.ready => TripLook.successText,
+        TripBookingState.completed => TripLook.neutralChipText,
       };
 
   static String label(TripBookingState s) => switch (s) {
@@ -218,7 +227,7 @@ class TripBookingStatePill extends StatelessWidget {
         decoration: BoxDecoration(
           color: TripBookingStateVisuals.surface(state),
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: TripBookingStateVisuals.bar(state).withValues(alpha: 0.35)),
+          border: Border.all(color: TripBookingStateVisuals.bar(state).withValues(alpha: Alpha.scrim)),
         ),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -229,7 +238,7 @@ class TripBookingStatePill extends StatelessWidget {
               child: Text(
                 TripBookingStateVisuals.label(state),
                 maxLines: 1,
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: TripBookingStateVisuals.text(state)),
+                style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, fontWeight: FontWeight.w600, color: TripBookingStateVisuals.text(state)),
               ),
             ),
           ),

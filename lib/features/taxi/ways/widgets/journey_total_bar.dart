@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:iconsax/iconsax.dart';
-import '../../../../config/app_colors.dart';
+import 'package:bakhli/design/design.dart';
+import 'package:bakhli/design/extra/trip_plan_look.dart';
+import 'package:bakhli/design/extra/ways_kit.dart';
 import '../../../../config/app_insets.dart';
 import '../../../../models/browse_item.dart';
-import '../../taxi_option_sets.dart';
 import '../taxi_ways_strings.dart';
 
 class JourneyAskButton extends StatelessWidget {
@@ -21,25 +21,13 @@ class JourneyAskButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ElevatedButton(
+    return PickButton(
+      label: label,
+      isLoading: busy,
       onPressed: busy ? null : onPressed,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: TaxiColors.accentDark,
-        foregroundColor: Colors.white,
-        disabledBackgroundColor: TaxiColors.accent.withValues(alpha: 0.5),
-        disabledForegroundColor: Colors.white,
-        elevation: 0,
-        minimumSize: const Size(double.infinity, 48),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      ),
-      child: busy
-          ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white))
-          : Text(
-              label,
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w700),
-            ),
+      height: 48,
+      gradient: PickKit.taxiGradient,
+      shadowColor: PickKit.taxi,
     );
   }
 }
@@ -68,75 +56,64 @@ class JourneyTotalBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: EdgeInsets.fromLTRB(16, 12, 16, 10 + AppInsets.bottomViewPadding(context)),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        boxShadow: [BoxShadow(color: AppColors.textDark.withValues(alpha: 0.08), blurRadius: 16, offset: const Offset(0, -4))],
+      decoration: const BoxDecoration(
+        color: DesignColors.surface,
+        borderRadius: BorderRadius.only(topLeft: Radius.circular(32), topRight: Radius.circular(32)),
+        boxShadow: WaysKit.topShadow,
       ),
       child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         Row(children: [
-          const Expanded(
+          Expanded(
             child: Text(
               TaxiWaysStrings.listedFares,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontFamily: 'Poppins', fontSize: 11.5, color: AppColors.textLight),
+              style: FitnessAppTheme.caption.copyWith(fontSize: 11.5),
             ),
           ),
           const SizedBox(width: 8),
           Text(
             BrowseItem.inr(total),
-            style: const TextStyle(fontFamily: 'Poppins', fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.textDark),
+            style: FitnessAppTheme.headline.copyWith(fontSize: 20, color: DesignColors.primary),
           ),
         ]),
         const SizedBox(height: 10),
         if (onUse != null) ...[
           JourneyAskButton(label: useLabel ?? '', onPressed: onUse, busy: busy),
           const SizedBox(height: 8),
-          OutlinedButton(
-            onPressed: busy ? null : onAsk,
-            style: OutlinedButton.styleFrom(
-              foregroundColor: TaxiColors.accentDark,
-              minimumSize: const Size(double.infinity, 48),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              side: BorderSide(color: TaxiColors.accent.withValues(alpha: 0.5)),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-            ),
-            child: Text(
-              askLabel,
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w700),
-            ),
-          ),
+          SecondaryButton(label: askLabel, onPressed: busy ? null : onAsk, tone: KitTone.taxi, height: 48),
         ] else
           Row(children: [
-          if (onSave != null) ...[
-            SizedBox(
-              width: 48,
-              height: 48,
-              child: Tooltip(
+            if (onSave != null) ...[
+              Tooltip(
                 message: TaxiWaysStrings.saveJourney,
-                child: OutlinedButton(
-                  onPressed: busy ? null : onSave,
-                  style: OutlinedButton.styleFrom(
-                    padding: EdgeInsets.zero,
-                    foregroundColor: TaxiColors.accentDark,
-                    side: BorderSide(color: TaxiColors.accent.withValues(alpha: 0.5)),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                child: Container(
+                  width: 48,
+                  height: 48,
+                  decoration: TripLook.card(radius: BorderRadius.circular(24)),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(24),
+                      onTap: busy ? null : onSave,
+                      child: Center(
+                        child: Opacity(
+                            opacity: busy ? Alpha.half : Alpha.full,
+                            child: const TravelIcon(TravelIcon.note, size: 26)),
+                      ),
+                    ),
                   ),
-                  child: const Icon(Iconsax.bookmark, size: 20),
                 ),
               ),
-            ),
-            const SizedBox(width: 10),
-          ],
-          Expanded(child: JourneyAskButton(label: askLabel, onPressed: onAsk, busy: busy)),
-        ]),
+              const SizedBox(width: 10),
+            ],
+            Expanded(child: JourneyAskButton(label: askLabel, onPressed: onAsk, busy: busy)),
+          ]),
         const SizedBox(height: 8),
-        const Text(
+        Text(
           TaxiWaysStrings.payLine,
           textAlign: TextAlign.center,
-          style: TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight),
+          style: FitnessAppTheme.caption.copyWith(fontSize: 11),
         ),
       ]),
     );

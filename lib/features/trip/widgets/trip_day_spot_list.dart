@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:bakhli/design/design.dart';
+import 'package:bakhli/design/extra/trip_plan_look.dart';
 import 'trip_update_ask_sheet.dart';
 import 'package:get/get.dart';
-import 'package:iconsax/iconsax.dart';
-import '../../../config/app_colors.dart';
 import '../controllers/trip_plan_controller.dart';
 import '../models/trip_plan_model.dart';
 import '../models/trip_plan_result_model.dart';
 import '../models/trip_spot_category.dart';
 import '../screens/trip_edit_spot_sheet.dart';
-import '../trip_colors.dart';
 import '../trip_strings_v2_plan.dart';
 import '../trip_strings_wizard.dart';
 import '../utils/trip_day_load.dart';
@@ -31,7 +30,7 @@ class TripDaySpotList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = TripPlanController.to;
-    final color = TripColors.dayColor(day);
+    final color = TripLook.dayColor(day);
     return Obx(() {
       final plan = c.plan.value;
       c.result.value;
@@ -52,9 +51,9 @@ class TripDaySpotList extends StatelessWidget {
           margin: const EdgeInsets.only(bottom: 12),
           padding: const EdgeInsets.fromLTRB(14, 12, 10, 8),
           decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppColors.divider.withValues(alpha: 0.8)),
+            color: FitnessAppTheme.white,
+            borderRadius: TripLook.cardRadius,
+            boxShadow: <BoxShadow>[ShadowTokens.tint(FitnessAppTheme.grey, ShadowSpec.soft)],
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -67,7 +66,7 @@ class TripDaySpotList extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   child: Text(
                     d.restDay ? TripStringsV2Plan.restDay : TripStringsV2Plan.noPlacesThisDay,
-                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textLight),
+                    style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 13, color: TripLook.textLight),
                   ),
                 )
               else
@@ -77,11 +76,11 @@ class TripDaySpotList extends StatelessWidget {
                   padding: const EdgeInsets.only(top: 6),
                   child: Row(
                     children: [
-                      const Icon(Iconsax.warning_2, size: 14, color: AppColors.warning),
+                      Container(width: 6, height: 6, decoration: const BoxDecoration(color: TripLook.warning, shape: BoxShape.circle)),
                       const SizedBox(width: 6),
                       Expanded(
                         child: Text(text,
-                            style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.warningText)),
+                            style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 11, color: TripLook.warningText)),
                       ),
                     ],
                   ),
@@ -112,20 +111,20 @@ class TripDaySpotList extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
-                fontFamily: 'Poppins',
+                fontFamily: FitnessAppTheme.fontName,
                 fontSize: 13.5,
                 fontWeight: FontWeight.w700,
-                color: over ? AppColors.warningText : AppColors.textDark),
+                color: over ? TripLook.warningText : TripLook.textDark),
           ),
         ),
         if (over)
           Container(
             margin: const EdgeInsets.only(left: 8),
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-            decoration: BoxDecoration(color: AppColors.warningSurface, borderRadius: BorderRadius.circular(20)),
+            decoration: BoxDecoration(color: TripLook.warningSurface, borderRadius: BorderRadius.circular(20)),
             child: const Text(
               TripStringsV2Plan.longDay,
-              style: TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.warningText),
+              style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 11, fontWeight: FontWeight.w600, color: TripLook.warningText),
             ),
           ),
         if (editing && plan.legDayCount(d.leg) > 1)
@@ -140,11 +139,11 @@ class TripDaySpotList extends StatelessWidget {
                 margin: const EdgeInsets.only(left: 8),
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(color: AppColors.errorSurface, borderRadius: BorderRadius.circular(20)),
+                  decoration: BoxDecoration(color: TripLook.errorSurface, borderRadius: BorderRadius.circular(20)),
                   child: const Text(
                     TripStringsV2Plan.removeDay,
                     style: TextStyle(
-                        fontFamily: 'Poppins', fontSize: 11.5, fontWeight: FontWeight.w700, color: AppColors.errorText),
+                        fontFamily: FitnessAppTheme.fontName, fontSize: 11.5, fontWeight: FontWeight.w700, color: TripLook.errorText),
                   ),
                 ),
               ),
@@ -158,7 +157,7 @@ class TripDaySpotList extends StatelessWidget {
                 c.cityNameOf(day),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontFamily: 'Poppins', fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textLight),
+                style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 11.5, fontWeight: FontWeight.w600, color: TripLook.textLight),
               ),
             ),
           ),
@@ -212,14 +211,14 @@ class TripDaySpotList extends StatelessWidget {
             padding: const EdgeInsets.only(bottom: 4),
             child: Row(
               children: [
-                const Icon(Iconsax.car, size: 13, color: AppColors.textHint),
+                const TravelIcon(TravelIcon.taxi, size: 13),
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
                     TripStringsV2Plan.travelRow(prev, plan.legAt(k)?.cityName ?? '', TripFormat.duration(reserved)),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 11.5, color: AppColors.textLight),
+                    style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 11.5, color: TripLook.textLight),
                   ),
                 ),
               ],
@@ -247,7 +246,7 @@ class TripDaySpotList extends StatelessWidget {
     m?.hideCurrentSnackBar();
     m?.showSnackBar(
       SnackBar(
-        content: const Text(TripStringsV2Plan.placeRemoved, style: TextStyle(fontFamily: 'Poppins')),
+        content: const Text(TripStringsV2Plan.placeRemoved, style: TextStyle(fontFamily: FitnessAppTheme.fontName)),
         duration: const Duration(seconds: 5),
         action: SnackBarAction(label: TripStringsV2Plan.undo, onPressed: () => c.insertSpotAt(spot, day, index)),
       ),
@@ -265,13 +264,13 @@ class TripDaySpotList extends StatelessWidget {
           runSpacing: 0,
           children: [
             _action(
-              Iconsax.add_circle,
+              TravelIcon.place,
               TripStringsV2Plan.addPlace,
               full ? null : () => TripLegMenuSheet.addPlaces(d.leg, pickDay: day),
             ),
             if (d.spots.isEmpty)
               _action(
-                Iconsax.moon,
+                'assets/images/design/travel3d/bed.png',
                 d.restDay ? TripStringsV2Plan.undoRestDay : TripStringsV2Plan.makeRestDay,
                 () => c.setRestDay(day, !d.restDay),
               ),
@@ -285,22 +284,15 @@ class TripDaySpotList extends StatelessWidget {
                 const Expanded(
                   child: Text(
                     TripStringsV2Plan.dayFull,
-                    style: TextStyle(fontFamily: 'Poppins', fontSize: 11.5, color: AppColors.warningText),
+                    style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 11.5, color: TripLook.warningText),
                   ),
                 ),
-                TextButton(
-                  onPressed: c.canAddDay
+                TextLink(label: TripStringsV2Plan.addDay, onTap: c.canAddDay
                       ? () {
                           c.addDay(afterDay: day);
                           TripUpdateAskSheet.afterDaysEdit();
                         }
-                      : null,
-                  style: TextButton.styleFrom(minimumSize: const Size(44, 44)),
-                  child: const Text(
-                    TripStringsV2Plan.addDay,
-                    style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w700, color: TripColors.accentDark),
-                  ),
-                ),
+                      : null, tone: KitTone.trip),
               ],
             ),
           ),
@@ -326,16 +318,16 @@ class TripDaySpotList extends StatelessWidget {
   void _toast(String text) {
     final m = Get.context == null ? null : ScaffoldMessenger.maybeOf(Get.context!);
     m?.hideCurrentSnackBar();
-    m?.showSnackBar(SnackBar(content: Text(text, style: const TextStyle(fontFamily: 'Poppins'))));
+    m?.showSnackBar(SnackBar(content: Text(text, style: const TextStyle(fontFamily: FitnessAppTheme.fontName))));
   }
 
-  Widget _action(IconData icon, String label, VoidCallback? onTap, {Color color = TripColors.accentDark}) {
-    final fg = onTap == null ? AppColors.textHint : color;
+  Widget _action(Object icon, String label, VoidCallback? onTap, {Color color = TripLook.accentDark}) {
+    final fg = onTap == null ? TripLook.textHint : color;
     return TextButton.icon(
       onPressed: onTap,
       style: TextButton.styleFrom(minimumSize: const Size(44, 44), padding: const EdgeInsets.symmetric(horizontal: 8)),
-      icon: Icon(icon, size: 17, color: fg),
-      label: Text(label, style: TextStyle(fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w700, color: fg)),
+      icon: icon is String ? TravelIcon(icon, size: 19) : Icon(icon as IconData, size: 17, color: fg),
+      label: Text(label, style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12.5, fontWeight: FontWeight.w700, color: fg)),
     );
   }
 
@@ -346,9 +338,9 @@ class TripDaySpotList extends StatelessWidget {
         builder: (sheetCtx) => TripSheetFrame(
           title: s.name,
           children: [
-            _menuRow(sheetCtx, Iconsax.refresh, TripStringsWizard.replacePlace, 'replace'),
-            _menuRow(sheetCtx, Iconsax.calendar_edit, TripStringsWizard.moveToDay, 'move'),
-            _menuRow(sheetCtx, Iconsax.trash, TripStringsWizard.removePlace, 'remove', color: AppColors.error),
+            _menuRow(sheetCtx, TravelIcon.pin, TripStringsWizard.replacePlace, 'replace'),
+            _menuRow(sheetCtx, TravelIcon.calendar, TripStringsWizard.moveToDay, 'move'),
+            _menuRow(sheetCtx, Icons.close_rounded, TripStringsWizard.removePlace, 'remove', color: TripLook.error),
           ],
         ),
       ),
@@ -365,7 +357,7 @@ class TripDaySpotList extends StatelessWidget {
     }
   }
 
-  Widget _menuRow(BuildContext ctx, IconData icon, String label, String value, {Color color = AppColors.textDark}) =>
+  Widget _menuRow(BuildContext ctx, Object icon, String label, String value, {Color color = TripLook.textDark}) =>
       InkWell(
         onTap: () => Navigator.pop(ctx, value),
         borderRadius: BorderRadius.circular(12),
@@ -373,13 +365,13 @@ class TripDaySpotList extends StatelessWidget {
           constraints: const BoxConstraints(minHeight: 52),
           child: Row(
             children: [
-              Icon(icon, size: 19, color: color),
+              icon is String ? TravelIcon(icon, size: 21) : Icon(icon as IconData, size: 19, color: color),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(label,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600, color: color)),
+                    style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 14, fontWeight: FontWeight.w600, color: color)),
               ),
             ],
           ),
@@ -421,7 +413,7 @@ class _StopItem extends StatelessWidget {
   Widget build(BuildContext context) {
     final drive = driveMinutes;
     return Material(
-      color: Colors.white,
+      color: FitnessAppTheme.white,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -439,7 +431,7 @@ class _StopItem extends StatelessWidget {
                         index: index,
                         child: const Padding(
                           padding: EdgeInsets.only(right: 6),
-                          child: Icon(Icons.drag_indicator_rounded, size: 22, color: AppColors.textHint),
+                          child: Icon(Icons.drag_indicator_rounded, size: 22, color: TripLook.textHint),
                         ),
                       ),
                     SizedBox(
@@ -447,7 +439,7 @@ class _StopItem extends StatelessWidget {
                       child: Text(
                         time,
                         maxLines: 1,
-                        style: const TextStyle(fontFamily: 'Poppins', fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textMedium),
+                        style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 11.5, fontWeight: FontWeight.w600, color: TripLook.textMedium),
                       ),
                     ),
                     Container(
@@ -457,7 +449,7 @@ class _StopItem extends StatelessWidget {
                       decoration: BoxDecoration(color: color, shape: BoxShape.circle),
                       child: Text(
                         '${index + 1}',
-                        style: const TextStyle(fontFamily: 'Poppins', fontSize: 10.5, fontWeight: FontWeight.w700, color: Colors.white),
+                        style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 11, fontWeight: FontWeight.w700, color: FitnessAppTheme.white),
                       ),
                     ),
                     const SizedBox(width: 10),
@@ -470,13 +462,13 @@ class _StopItem extends StatelessWidget {
                             spot.name,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark),
+                            style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 13, fontWeight: FontWeight.w600, color: TripLook.textDark),
                           ),
                           Text(
                             '${TripSpotCategory.label(spot.category)} · ${TripFormat.visit(spot.visitMinutes)}',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight),
+                            style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 11, color: TripLook.textLight),
                           ),
                         ],
                       ),
@@ -486,7 +478,7 @@ class _StopItem extends StatelessWidget {
                         onPressed: onRemove,
                         tooltip: TripStringsV2Plan.removePlace,
                         constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
-                        icon: const Icon(Icons.close_rounded, size: 20, color: AppColors.error),
+                        icon: const Icon(Icons.close_rounded, size: 20, color: TripLook.error),
                       ),
                   ],
                 ),
@@ -499,17 +491,17 @@ class _StopItem extends StatelessWidget {
               child: Container(
                 padding: const EdgeInsets.only(left: 19, top: 2, bottom: 2),
                 decoration: BoxDecoration(
-                  border: Border(left: BorderSide(color: color.withValues(alpha: 0.35), width: 2)),
+                  border: Border(left: BorderSide(color: color.withValues(alpha: Alpha.scrim), width: 2)),
                 ),
                 child: drive == null
                     ? const SizedBox(height: 14)
                     : Row(
                         children: [
-                          const Icon(Iconsax.car, size: 12, color: AppColors.textHint),
+                          const TravelIcon(TravelIcon.taxi, size: 12),
                           const SizedBox(width: 4),
                           Text(
                             TripFormat.duration(drive),
-                            style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight),
+                            style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 11, color: TripLook.textLight),
                           ),
                         ],
                       ),

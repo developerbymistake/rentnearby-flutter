@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../../../config/app_colors.dart';
+import 'package:bakhli/design/design.dart';
+import 'package:bakhli/design/extra/trip_plan_look.dart';
 import '../../../models/browse_item.dart';
 import '../../../utils/app_toast.dart';
 import '../../../utils/input_formatters.dart';
-import '../../../widgets/gradient_button.dart';
 import '../../trip/models/trip_enquiry_model.dart';
 import '../../trip/trip_constants.dart';
 import '../../trip/trip_strings.dart';
@@ -31,7 +31,16 @@ class _FareBody extends StatefulWidget {
   State<_FareBody> createState() => _FareBodyState();
 }
 
-class _FareBodyState extends State<_FareBody> {
+class _FareBodyState extends State<_FareBody> with SingleTickerProviderStateMixin {
+  static const int _blocks = 6;
+  late final AnimationController _anim = AnimationController(duration: const Duration(milliseconds: 600), vsync: this);
+
+  Widget _enter(int i, Widget child) => TemplateEntrance(
+        animation: templateInterval(_anim, i, _blocks),
+        animationController: _anim,
+        child: child,
+      );
+
   late final TextEditingController _fare;
   late final TextEditingController _note;
   bool _sending = false;
@@ -41,6 +50,7 @@ class _FareBodyState extends State<_FareBody> {
   @override
   void initState() {
     super.initState();
+    _anim.forward();
     final t = _lead.taxi;
     final start = t?.driverFare ?? TripLeadFormat.listedTotal(_lead);
     _fare = TextEditingController(text: start == null || start <= 0 ? '' : '$start');
@@ -49,6 +59,7 @@ class _FareBodyState extends State<_FareBody> {
 
   @override
   void dispose() {
+    _anim.dispose();
     _fare.dispose();
     _note.dispose();
     super.dispose();
@@ -73,18 +84,18 @@ class _FareBodyState extends State<_FareBody> {
     }
   }
 
-  static const _inputStyle = TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textDark);
+  static const _inputStyle = TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 14, color: DesignColors.textStrong);
 
   InputDecoration _decoration({String? prefix}) => InputDecoration(
         prefixText: prefix,
         filled: true,
-        fillColor: AppColors.scaffoldBg,
+        fillColor: DesignColors.scaffold,
         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
         enabledBorder:
-            OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.divider)),
+            OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: FitnessAppTheme.spacer)),
         focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: TaxiColors.accent, width: 1.5)),
+            borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: DesignColors.primary, width: 1.5)),
       );
 
   Widget _label(String text) => Padding(
@@ -92,8 +103,7 @@ class _FareBodyState extends State<_FareBody> {
         child: Text(text,
             maxLines: 3,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-                fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.textMedium)),
+            style: TripKit.text(12.5, weight: FontWeight.w600, color: DesignColors.textGrey)),
       );
 
   Widget _itinerary() {
@@ -102,7 +112,7 @@ class _FareBodyState extends State<_FareBody> {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: TaxiColors.surface, borderRadius: BorderRadius.circular(12)),
+      decoration: BoxDecoration(color: TripLook.surface, borderRadius: BorderRadius.circular(16)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -112,7 +122,7 @@ class _FareBodyState extends State<_FareBody> {
               child: Text(TripStrings.dayLine(d.day, TripFormat.duration(d.minutes), d.spots.join(' → ')),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 12.5, color: AppColors.textDark, height: 1.35)),
+                  style: TripKit.text(12.5).copyWith(height: 1.35)),
             ),
         ],
       ),
@@ -129,14 +139,13 @@ class _FareBodyState extends State<_FareBody> {
             Text(top,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight)),
+                style: FitnessAppTheme.caption.copyWith(fontSize: 11)),
             FittedBox(
               fit: BoxFit.scaleDown,
               alignment: align == CrossAxisAlignment.end ? Alignment.centerRight : Alignment.centerLeft,
               child: Text(bottom,
                   maxLines: 1,
-                  style: const TextStyle(
-                      fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textDark)),
+                  style: FitnessAppTheme.title.copyWith(fontSize: 14)),
             ),
           ],
         );
@@ -164,26 +173,26 @@ class _FareBodyState extends State<_FareBody> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(TripStrings.fareFooter,
-              style: TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight, height: 1.35)),
+              style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 11, color: DesignColors.textSecondary, height: 1.35)),
           const SizedBox(height: 4),
           const TripPaymentLine(text: TripStrings.taxiPayLine),
         ],
       ),
       children: [
-        _itinerary(),
-        _rateRow(),
+        _enter(0, _itinerary()),
+        _enter(1, _rateRow()),
         const SizedBox(height: 16),
-        _label(TripStrings.yourFare),
-        TextField(
+        _enter(2, _label(TripStrings.yourFare)),
+        _enter(2, TextField(
           controller: _fare,
           keyboardType: TextInputType.number,
           inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(7)],
           style: _inputStyle,
           decoration: _decoration(prefix: '₹ '),
-        ),
+        )),
         const SizedBox(height: 14),
-        _label(TripStrings.note),
-        TextField(
+        _enter(3, _label(TripStrings.note)),
+        _enter(3, TextField(
           controller: _note,
           minLines: 2,
           maxLines: 3,
@@ -191,20 +200,20 @@ class _FareBodyState extends State<_FareBody> {
           inputFormatters: [...noEmojiInputFormatters, LengthLimitingTextInputFormatter(TripConstants.driverNoteMax)],
           style: _inputStyle,
           decoration: _decoration(),
-        ),
+        )),
         if (replied) ...[
           const SizedBox(height: 8),
-          Text(TripStrings.changesLeft(left),
-              style: const TextStyle(fontFamily: 'Poppins', fontSize: 11.5, color: AppColors.textLight)),
+          _enter(4, Text(TripStrings.changesLeft(left), style: FitnessAppTheme.caption.copyWith(fontSize: 11.5))),
         ],
         const SizedBox(height: 18),
-        GradientButton(
-          label: TripStrings.sendReply,
-          height: 52,
-          isLoading: _sending,
-          gradient: TaxiColors.gradient,
-          shadowColor: TaxiColors.accent,
-          onPressed: _sending ? null : _send,
+        _enter(
+          5,
+          TripPlanButton(
+            label: TripStrings.sendReply,
+            height: 52,
+            isLoading: _sending,
+            onPressed: _sending ? null : _send,
+          ),
         ),
       ],
     );

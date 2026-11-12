@@ -91,6 +91,16 @@ class MyTripsController extends GetxController {
     return null;
   }
 
+  TripSummaryModel? get continueTrip {
+    if (plannerOff.value) return null;
+    return TripBarRules.pick(_openTrips, _today)?.trip;
+  }
+
+  int get openTripCount {
+    final n = counts.value.upcoming;
+    return n > 0 ? n : _openTrips.length;
+  }
+
   TripBarHide? hideOf(String tripId) {
     final h = StorageService.getTripBarHidden(tripId);
     return h == null ? null : TripBarHide(h.at, needYou: h.needYou);

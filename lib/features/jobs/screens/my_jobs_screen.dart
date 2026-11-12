@@ -1,16 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:iconsax/iconsax.dart';
-import 'package:shimmer/shimmer.dart';
-import '../../../config/app_colors.dart';
+import 'package:bakhli/design/design.dart';
 import '../../../config/app_insets.dart';
 import '../../../config/app_routes.dart';
 import '../../../controllers/plan_controller.dart';
 import '../../../widgets/app_loading_overlay.dart';
-import '../../../widgets/gradient_button.dart';
 import '../controllers/my_jobs_controller.dart';
-import '../jobs_colors.dart';
 import '../models/my_job_model.dart';
+import '../widgets/jobs_ui.dart';
 import '../widgets/my_job_card.dart';
 
 class MyJobsScreen extends StatefulWidget {
@@ -20,6 +17,7 @@ class MyJobsScreen extends StatefulWidget {
 }
 
 class _MyJobsScreenState extends State<MyJobsScreen> {
+  static const KitTone _tone = JobsUi.tone;
   final _ctrl = Get.put(MyJobsController());
 
   @override
@@ -44,39 +42,21 @@ class _MyJobsScreenState extends State<MyJobsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.scaffoldBg,
+      backgroundColor: DesignColors.scaffold,
       body: Obx(() => AppLoadingOverlay(
             isLoading: _ctrl.isSaving.value,
             message: 'Updating...',
-            indicatorColor: JobColors.accent,
+            indicatorColor: _tone.accentDark,
             child: Column(children: [
               _header(),
               Expanded(
                 child: Obx(() {
                   final page = _ctrl.page.value;
-                  if (!_ctrl.hasLoaded.value && _ctrl.isLoading.value) return _shimmer();
-                  return RefreshIndicator(
-                    color: JobColors.accent,
-                    onRefresh: _ctrl.load,
-                    child: ListView(
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      padding: EdgeInsets.fromLTRB(0, 14, 0, 16 + AppInsets.bottomViewPadding(context)),
-                      children: [
-                        if (page != null) ...[
-                          if (page.items.isEmpty)
-                            _empty(page)
-                          else
-                            for (final job in page.items)
-                              MyJobCard(
-                                key: ValueKey(job.id),
-                                job: job,
-                                onTap: () => Get.toNamed(AppRoutes.jobDetail, arguments: {'id': job.id}),
-                                onClose: () => _close(job),
-                              ),
-                        ] else if (_ctrl.loadFailed.value)
-                          _failed(),
-                      ],
-                    ),
+                  final loading = !_ctrl.hasLoaded.value && _ctrl.isLoading.value;
+                  return KitSwitcher(
+                    child: loading
+                        ? KeyedSubtree(key: const ValueKey('jobs_skeleton'), child: _placeholders())
+                        : KeyedSubtree(key: const ValueKey('jobs_content'), child: _content(page)),
                   );
                 }),
               ),
@@ -85,113 +65,88 @@ class _MyJobsScreenState extends State<MyJobsScreen> {
     );
   }
 
-  Widget _header() {
-    final page = _ctrl.page.value;
-    return Container(
-      decoration: const BoxDecoration(gradient: JobColors.gradient),
-      child: SafeArea(
-        bottom: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(4, 8, 20, 20),
-          child: Row(children: [
-            IconButton(
-              onPressed: () => Get.back(),
-              icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white),
-            ),
-            Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                const Text('My Jobs',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontFamily: 'Poppins', fontSize: 24, fontWeight: FontWeight.w700, color: Colors.white)),
-                Text(page == null ? 'Hire for your stay' : '${page.activeCount} of ${page.maxActive} active',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white70)),
-              ]),
-            ),
-          ]),
-        ),
+  Widget _content(MyJobsPage? page) {
+    return RefreshIndicator(
+      color: _tone.accentDark,
+      onRefresh: _ctrl.load,
+      child: ListView(
+        physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+        padding: EdgeInsets.fromLTRB(0, 12, 0, 16 + AppInsets.bottomViewPadding(context)),
+        children: [
+          if (page != null) ...[
+            if (page.items.isEmpty)
+              _empty(page)
+            else
+              for (var i = 0; i < page.items.length; i++)
+                KitCardEntrance(
+                  key: ValueKey(page.items[i].id),
+                  index: i,
+                  child: MyJobCard(
+                    job: page.items[i],
+                    onTap: () => Get.toNamed(AppRoutes.jobDetail, arguments: {'id': page.items[i].id}),
+                    onClose: () => _close(page.items[i]),
+                  ),
+                ),
+          ] else if (_ctrl.loadFailed.value)
+            _failed(),
+        ],
       ),
     );
   }
 
+  Widget _header() => Obx(() {
+        final page = _ctrl.page.value;
+        return ModuleHeader(
+          tone: _tone,
+          title: 'My Jobs',
+          subtitle: page == null ? 'Hire for your stay' : '${page.activeCount} of ${page.maxActive} active',
+          onBack: () => Get.back(),
+        );
+      });
+
   Widget _empty(MyJobsPage page) {
     final hint = page.blockMessage;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(32, 40, 32, 0),
-      child: Column(children: [
-        Container(
-          width: 90,
-          height: 90,
-          decoration: const BoxDecoration(color: JobColors.surface, shape: BoxShape.circle),
-          child: const Icon(Iconsax.briefcase, size: 40, color: JobColors.accent),
+    return Column(
+      children: [
+        const StateCard(
+          kit: _tone,
+          asset: TravelIcon.note,
+          title: 'No jobs yet',
+          message: 'Post your first job',
         ),
-        const SizedBox(height: 20),
-        const Text('No jobs yet',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontFamily: 'Poppins', fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-        const SizedBox(height: 8),
-        const Text('Post your first job',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textLight)),
-        const SizedBox(height: 20),
-        GradientButton(
-          onPressed: page.canPost ? _openForm : null,
-          label: 'Post a Job',
-          gradient: JobColors.gradient,
-          shadowColor: JobColors.accent,
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: KitMetrics.gutter),
+          child: PrimaryButton(
+            label: 'Post a Job',
+            tone: _tone,
+            onPressed: page.canPost ? _openForm : null,
+          ),
         ),
         if (hint != null) ...[
           const SizedBox(height: 8),
-          Text(hint,
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: KitMetrics.gutter),
+            child: Text(hint,
+                textAlign: TextAlign.center,
+                style: TypeTokens.style(12, FontWeight.w500, color: DesignColors.textGrey)),
+          ),
           if (page.limitReached && Get.find<PlanController>().paymentEnabled)
-            TextButton(
-              onPressed: () => Get.toNamed(AppRoutes.plansBilling),
-              child: const Text('Upgrade',
-                  style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700, color: JobColors.accentDark)),
-            ),
+            TextLink(label: 'Upgrade', tone: _tone, onTap: () => Get.toNamed(AppRoutes.plansBilling)),
         ],
-      ]),
+      ],
     );
   }
 
-  Widget _failed() => Padding(
-        padding: const EdgeInsets.only(top: 80),
-        child: Column(children: [
-          const Icon(Icons.cloud_off_rounded, size: 40, color: AppColors.textHint),
-          const SizedBox(height: 10),
-          const Text("Couldn't load jobs",
-              style: TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textMedium)),
-          const SizedBox(height: 16),
-          SizedBox(
-            width: 160,
-            child: GradientButton(
-              label: 'Retry',
-              height: 42,
-              gradient: JobColors.gradient,
-              shadowColor: JobColors.accent,
-              onPressed: _ctrl.load,
-            ),
-          ),
-        ]),
+  Widget _failed() => StateCard.error(
+        kit: _tone,
+        title: "Couldn't load jobs",
+        actionLabel: 'Retry',
+        onAction: _ctrl.load,
       );
 
-  Widget _shimmer() => Padding(
-        padding: const EdgeInsets.all(16),
-        child: Shimmer.fromColors(
-          baseColor: AppColors.shimmerBase,
-          highlightColor: AppColors.shimmerHighlight,
-          child: Column(children: [
-            for (var i = 0; i < 3; i++)
-              Container(
-                height: 130,
-                margin: const EdgeInsets.only(bottom: 12),
-                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
-              ),
-          ]),
-        ),
+  Widget _placeholders() => ListView(
+        physics: const NeverScrollableScrollPhysics(),
+        padding: const EdgeInsets.only(top: 12),
+        children: [for (var i = 0; i < 3; i++) ListRow.skeleton()],
       );
 }

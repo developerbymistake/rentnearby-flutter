@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../../config/app_colors.dart';
+import 'package:bakhli/design/extra/trip_plan_look.dart';
+import 'package:bakhli/design/template/fitness_app_theme.dart';
 import '../../../models/browse_item.dart';
 import '../models/trip_summary_model.dart';
 import '../trip_strings.dart';
@@ -58,19 +59,19 @@ class TripSummaryTravelCard extends StatelessWidget {
                       maxLines: 3,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                          fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textDark),
+                          fontFamily: FitnessAppTheme.fontName, fontSize: 14, fontWeight: FontWeight.w700, color: TripLook.textDark),
                     ),
                     Text(
                       date.isEmpty ? TripStringsMcdA3.travelHeadFallback : TripStringsMcdA3.travelLine(date),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textMedium),
+                      style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, color: TripLook.textMedium),
                     ),
                     Text(
                       route,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textMedium),
+                      style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, color: TripLook.textMedium),
                     ),
                   ],
                 ),
@@ -115,13 +116,13 @@ class TripSummaryTravelCard extends StatelessWidget {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                      fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.textDark),
+                      fontFamily: FitnessAppTheme.fontName, fontSize: 12.5, fontWeight: FontWeight.w600, color: TripLook.textDark),
                 ),
                 Text(
                   TripStrings.joinDots([TripStringsMcaA3.fromTo(c.fromName, c.toName), pickup]),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 11.5, color: AppColors.textLight),
+                  style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 11.5, color: TripLook.textLight),
                 ),
               ],
             ),
@@ -134,7 +135,7 @@ class TripSummaryTravelCard extends StatelessWidget {
               textAlign: TextAlign.end,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
-                  fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textMedium),
+                  fontFamily: FitnessAppTheme.fontName, fontSize: 12, fontWeight: FontWeight.w600, color: TripLook.textMedium),
             ),
           ),
         ],

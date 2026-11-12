@@ -1,7 +1,5 @@
 import 'package:bakhli/features/taxi/journeys/journeys_controller.dart';
 import 'package:bakhli/features/taxi/ways/models/taxi_ways_models.dart';
-import 'package:bakhli/features/trip/data/trip_popular_routes.dart';
-import 'package:bakhli/features/trip/models/trip_city_model.dart';
 import 'package:bakhli/features/trip/models/trip_plan_model.dart';
 import 'package:bakhli/features/trip/models/trip_summary_model.dart';
 import 'package:bakhli/features/trip/utils/trip_summary_text.dart';
@@ -25,9 +23,6 @@ WayLeg _leg(int i, WayPlace from, WayPlace to, List<WayDriver> drivers) => WayLe
       listedFare: 0,
       drivers: drivers,
     );
-
-TripCityModel _c(int key, String name, {String status = TripCityStatus.ready, bool popular = false}) =>
-    TripCityModel(cityKey: key, name: name, latitude: 29, longitude: 79, status: status, isPopularDestination: popular);
 
 void main() {
   group('journey save body', () {
@@ -83,31 +78,6 @@ void main() {
     test('no driver on a leg gives no body', () {
       final plan = WayPlan(planKey: 'p', cars: 1, total: 0, legs: [_leg(1, from, to, const [])]);
       expect(body(plan, fromName: 'a', toName: 'b'), isNull);
-    });
-  });
-
-  group('TripPopularRoutes.resolve', () {
-    test('empty catalog gives nothing', () {
-      expect(TripPopularRoutes.resolve(const []), isEmpty);
-    });
-
-    test('route needs both cities ready and distinct', () {
-      final cat = [
-        _c(1, 'Nainital'),
-        _c(2, 'Almora'),
-        _c(3, 'Shimla'),
-        _c(4, 'Manali', status: TripCityStatus.notReady),
-        _c(5, 'Dehradun'),
-      ];
-      final r = TripPopularRoutes.resolve(cat);
-      expect(r.map((e) => '${e.from.name}>${e.to.name}'), ['Nainital>Almora']);
-    });
-
-    test('prefers the popular duplicate', () {
-      final cat = [_c(1, 'Nainital'), _c(9, 'Nainital', popular: true), _c(2, 'Almora')];
-      final r = TripPopularRoutes.resolve(cat);
-      expect(r.single.from.cityKey, 9);
-      expect(r.length, lessThanOrEqualTo(TripPopularRoutes.maxShown));
     });
   });
 

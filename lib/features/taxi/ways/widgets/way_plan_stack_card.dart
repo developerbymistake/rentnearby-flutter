@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:iconsax/iconsax.dart';
-import '../../../../config/app_colors.dart';
-import '../../../../config/app_shadows.dart';
+import 'package:bakhli/design/design.dart';
+import 'package:bakhli/design/extra/trip_plan_look.dart';
 import '../../../../models/browse_item.dart';
 import '../../../trip/trip_strings_final_aa.dart';
 import '../../../trip/trip_strings_steps_a3.dart';
-import '../../taxi_option_sets.dart';
 import '../models/taxi_ways_models.dart';
 import '../taxi_ways_strings.dart';
 import '../trip_strings_a6.dart';
@@ -39,21 +37,14 @@ class WayPlanCardFrame extends StatelessWidget {
     if (drivers.isEmpty) return const SizedBox.shrink();
     return Padding(
       padding: const EdgeInsets.only(top: 8),
-      child: Wrap(spacing: 8, runSpacing: 8, children: [
+      child: Wrap(spacing: 8, children: [
         for (final d in drivers)
-          OutlinedButton.icon(
-            onPressed: () => JourneyDriverCard.call(d),
-            icon: const Icon(Iconsax.call, size: 16, color: TaxiColors.accentDark),
-            label: Text(drivers.length > 1 ? TaxiWaysStrings.callName(d.firstName) : TaxiWaysStrings.call,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                    fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w700, color: TaxiColors.accentDark)),
-            style: OutlinedButton.styleFrom(
-              minimumSize: const Size(0, 44),
-              side: BorderSide(color: TaxiColors.accent.withValues(alpha: 0.5)),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
+          PillAction(
+            onTap: () => JourneyDriverCard.call(d),
+            icon: const Icon(Icons.call_rounded, size: 16, color: DesignColors.primary),
+            label: drivers.length > 1 ? TaxiWaysStrings.callName(d.firstName) : TaxiWaysStrings.call,
+            tone: KitTone.taxi,
+            maxWidth: 200,
           ),
       ]),
     );
@@ -65,28 +56,16 @@ class WayPlanCardFrame extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(top: 10),
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        ElevatedButton(
+        PrimaryButton(
+          label: TripStringsStepsA3.useForMyTrip,
           onPressed: useBusy ? null : use,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: TaxiColors.accentDark,
-            foregroundColor: Colors.white,
-            disabledBackgroundColor: TaxiColors.accent.withValues(alpha: 0.5),
-            disabledForegroundColor: Colors.white,
-            elevation: 0,
-            minimumSize: const Size(double.infinity, 48),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-          ),
-          child: useBusy
-              ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white))
-              : const Text(TripStringsStepsA3.useForMyTrip,
-                  style: TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w700)),
+          loading: useBusy,
+          tone: KitTone.taxi,
         ),
         if (useNote)
-          const Padding(
-            padding: EdgeInsets.only(top: 6),
-            child: Text(TaxiWaysStrings.useNote,
-                textAlign: TextAlign.center,
-                style: TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight)),
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Text(TaxiWaysStrings.useNote, textAlign: TextAlign.center, style: TypeTokens.caption),
           ),
       ]),
     );
@@ -95,62 +74,39 @@ class WayPlanCardFrame extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final best = bestReason != null;
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onOpen,
-        borderRadius: BorderRadius.circular(18),
-        child: Ink(
-          padding: const EdgeInsets.fromLTRB(14, 12, 14, 6),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: best ? TaxiColors.accent.withValues(alpha: 0.55) : AppColors.divider, width: best ? 1.4 : 1),
-            boxShadow: AppShadows.premium(TaxiColors.accent, alpha: 0.07, blur: 12, offset: const Offset(0, 4)),
+    return SectionTile(
+      onTap: onOpen,
+      selected: best,
+      tone: KitTone.taxi,
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 6),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        if (best) ...[
+          BestWayMark(reason: bestReason!),
+          const SizedBox(height: 10),
+        ],
+        Wrap(spacing: 8, runSpacing: 2, crossAxisAlignment: WrapCrossAlignment.center, children: [
+          Text(TaxiWaysStrings.planName(planIndex), style: TypeTokens.style(14, FontWeight.w700, color: DesignColors.textStrong)),
+          Text(
+            plan.isDirectCover
+                ? TripStringsFinalAa.coverCarsAbout(plan.carHires, plan.total)
+                : TaxiWaysStrings.carsAbout(plan.carHires, plan.total),
+            style: TypeTokens.style(12, FontWeight.w600, color: DesignColors.textSecondary),
           ),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            if (best) ...[
-              BestWayMark(reason: bestReason!),
-              const SizedBox(height: 10),
-            ],
-            Wrap(spacing: 8, runSpacing: 2, crossAxisAlignment: WrapCrossAlignment.center, children: [
-              Text(
-                TaxiWaysStrings.planName(planIndex),
-                style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textDark),
-              ),
-              Text(
-                plan.isDirectCover
-                    ? TripStringsFinalAa.coverCarsAbout(plan.carHires, plan.total)
-                    : TaxiWaysStrings.carsAbout(plan.carHires, plan.total),
-                style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textLight),
-              ),
-            ]),
-            const SizedBox(height: 12),
-            child,
-            _calls(),
-            _use(),
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton(
-                onPressed: onOpen,
-                style: TextButton.styleFrom(
-                  minimumSize: const Size(0, 44),
-                  foregroundColor: TaxiColors.accentDark,
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
-                ),
-                child: const Row(mainAxisSize: MainAxisSize.min, children: [
-                  Text(
-                    TaxiWaysStrings.openJourney,
-                    style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700),
-                  ),
-                  SizedBox(width: 4),
-                  Icon(Icons.arrow_forward_rounded, size: 16),
-                ]),
-              ),
-            ),
-          ]),
+        ]),
+        const SizedBox(height: 12),
+        child,
+        _calls(),
+        _use(),
+        Align(
+          alignment: Alignment.centerRight,
+          child: PillAction(
+            label: TaxiWaysStrings.openJourney,
+            tone: KitTone.taxi,
+            onTap: onOpen,
+            icon: const Icon(Icons.arrow_forward_rounded, size: 16, color: DesignColors.primary),
+          ),
         ),
-      ),
+      ]),
     );
   }
 }
@@ -204,7 +160,7 @@ class WayPlanStackCard extends StatelessWidget {
   }
 
   Widget _place(String name, {bool change = false, bool last = false}) {
-    final color = change ? AppColors.warning : TaxiColors.accentDark;
+    final color = change ? WaysTokens.changeAccent : DesignColors.primary;
     return Row(children: [
       SizedBox(
         width: 22,
@@ -213,7 +169,7 @@ class WayPlanStackCard extends StatelessWidget {
             width: 12,
             height: 12,
             decoration: BoxDecoration(
-              color: change ? AppColors.warningSurface : (last ? color : Colors.white),
+              color: change ? TripLook.warningSurface : (last ? color : DesignColors.surface),
               shape: BoxShape.circle,
               border: Border.all(color: color, width: 2.5),
             ),
@@ -226,19 +182,12 @@ class WayPlanStackCard extends StatelessWidget {
           name,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textDark),
+          style: FitnessAppTheme.title.copyWith(fontSize: 13),
         ),
       ),
       if (change) ...[
         const SizedBox(width: 8),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-          decoration: BoxDecoration(color: AppColors.warningSurface, borderRadius: BorderRadius.circular(6)),
-          child: const Text(
-            TaxiWaysStrings.changeCar,
-            style: TextStyle(fontFamily: 'Poppins', fontSize: 10.5, fontWeight: FontWeight.w700, color: AppColors.warningText),
-          ),
-        ),
+        KitTagChip(TaxiWaysStrings.changeCar, color: DesignColors.warnDeep),
       ],
     ]);
   }
@@ -248,7 +197,7 @@ class WayPlanStackCard extends StatelessWidget {
       child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         SizedBox(
           width: 22,
-          child: Center(child: Container(width: 2.5, color: TaxiColors.accent.withValues(alpha: 0.45))),
+          child: Center(child: Container(width: 2.5, decoration: BoxDecoration(color: PickKit.taxi, borderRadius: BorderRadius.circular(2)))),
         ),
         const SizedBox(width: 8),
         Expanded(
@@ -256,30 +205,30 @@ class WayPlanStackCard extends StatelessWidget {
             padding: const EdgeInsets.symmetric(vertical: 8),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Row(children: [
-                const Icon(Iconsax.car, size: 15, color: TaxiColors.accentDark),
+                const TravelIcon(TravelIcon.taxi, size: 16),
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
                     driverLabel(leg),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textMedium),
+                    style: FitnessAppTheme.caption.copyWith(fontSize: 12, color: DesignColors.textGrey),
                   ),
                 ),
                 const SizedBox(width: 6),
                 Text(
                   BrowseItem.inr(leg.listedFare),
-                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700, color: TaxiColors.accentDark),
+                  style: FitnessAppTheme.title.copyWith(fontSize: 13, color: DesignColors.primary),
                 ),
               ]),
               if (TripStringsA6.legSeats(leg) != null)
                 Padding(
-                  padding: const EdgeInsets.only(top: 3, left: 21),
+                  padding: const EdgeInsets.only(top: 3, left: 22),
                   child: Text(
                     TripStringsA6.legSeats(leg)!,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.warningText),
+                    style: FitnessAppTheme.caption.copyWith(fontSize: 11, fontWeight: FontWeight.w600, color: TripLook.warningText),
                   ),
                 ),
             ]),

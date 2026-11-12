@@ -1,21 +1,17 @@
+import 'package:bakhli/design/design.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:iconsax/iconsax.dart';
-import '../../../config/app_colors.dart';
 import '../../../config/app_insets.dart';
 import '../../../config/app_routes.dart';
 import '../../../controllers/auth_controller.dart';
 import '../../../models/browse_item.dart';
-import '../../../widgets/empty_state_view.dart';
-import '../../../widgets/selectable_chip.dart';
 import '../../trip/models/trip_enquiry_model.dart';
 import '../../trip/trip_strings.dart';
 import '../../trip/trip_strings_h4.dart';
 import '../../trip/utils/trip_format.dart';
-import '../../trip/widgets/trip_shimmers.dart';
+import '../../../widgets/notification_off_banner.dart';
 import '../../trip/widgets/trip_status.dart';
 import '../../trip/widgets/trip_status_card.dart';
-import '../setup/stay_option_sets.dart';
 import 'stay_enquiries_controller.dart';
 import 'stay_enquiry_actions.dart';
 import 'stay_enquiry_button.dart';
@@ -98,46 +94,34 @@ class _StayEnquiriesScreenState extends State<StayEnquiriesScreen> with WidgetsB
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.scaffoldBg,
+      backgroundColor: DesignColors.scaffold,
       body: Column(children: [
         _header(),
-        _chips(),
+        const NotificationOffBanner(),
+        EntranceOnce(index: 1, offset: 20, child: _chips()),
         Obx(() => Get.find<AuthController>().staysEnabled ? const SizedBox.shrink() : _pausedNote()),
         Expanded(child: Obx(_body)),
       ]),
     );
   }
 
-  Widget _header() => Container(
-        decoration: const BoxDecoration(gradient: StayColors.gradient),
-        child: SafeArea(
-          bottom: false,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(4, 8, 20, 18),
-            child: Row(children: [
-              IconButton(
-                onPressed: () => Get.back(),
-                icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white),
-              ),
-              Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(TripStrings.enquiries,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700, color: Colors.white)),
-                  Obx(() {
-                    final name = _ctrl.stay.value?.name;
-                    return Text(name == null || name.isEmpty ? TripStrings.tripEnquiry : name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontSize: 13, color: Colors.white70));
-                  }),
-                ]),
-              ),
-            ]),
-          ),
-        ),
-      );
+  Widget _header() => Obx(() {
+        final name = _ctrl.stay.value?.name;
+        return ModuleHeader(
+          tone: KitTone.stay,
+          title: TripStrings.enquiries,
+          subtitle: name == null || name.isEmpty ? TripStrings.tripEnquiry : name,
+          onBack: () => Get.back(),
+          trailing: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: const BoxDecoration(color: DesignColors.surface, shape: BoxShape.circle),
+              child: const Center(child: TravelIcon(TravelIcon.chat, size: 30)),
+            ),
+          ],
+        );
+      });
 
   Widget _chips() {
     return Obx(() {
@@ -150,15 +134,15 @@ class _StayEnquiriesScreenState extends State<StayEnquiriesScreen> with WidgetsB
         StayEnquiryBucket.closed: TripStrings.closedChip,
       };
       return Padding(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+        padding: const EdgeInsets.fromLTRB(KitMetrics.gutter, 12, KitMetrics.gutter, 4),
         child: Align(
           alignment: Alignment.centerLeft,
           child: Wrap(spacing: 8, runSpacing: 8, children: [
             for (final key in StayEnquiryBucket.all)
-              SelectableChip(
+              PickChip(
                 label: labels[key]!,
                 selected: selected == key,
-                activeColor: StayColors.accent,
+                activeColor: DesignColors.primary,
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 onTap: () => _ctrl.selectBucket(key),
               ),
@@ -169,13 +153,13 @@ class _StayEnquiriesScreenState extends State<StayEnquiriesScreen> with WidgetsB
   }
 
   Widget _pausedNote() => Padding(
-        padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+        padding: const EdgeInsets.fromLTRB(KitMetrics.gutter, 4, KitMetrics.gutter, 0),
         child: Container(
           width: double.infinity,
           padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(color: AppColors.warningSurface, borderRadius: BorderRadius.circular(12)),
-          child: const Text(TripStrings.pausedHere,
-              style: TextStyle(fontSize: 12, color: AppColors.warningText, fontWeight: FontWeight.w500)),
+          decoration: const BoxDecoration(color: DesignColors.attentionTint, borderRadius: CardRadius.tile),
+          child: Text(TripStrings.pausedHere,
+              style: TypeTokens.style(12, FontWeight.w600, color: DesignColors.textStrong)),
         ),
       );
 
@@ -190,49 +174,48 @@ class _StayEnquiriesScreenState extends State<StayEnquiriesScreen> with WidgetsB
     if (loading && items.isEmpty) {
       return _column(ListView.separated(
         physics: const NeverScrollableScrollPhysics(),
-        padding: EdgeInsets.fromLTRB(16, 12, 16, bottom),
+        padding: EdgeInsets.fromLTRB(KitMetrics.gutter, 12, KitMetrics.gutter, bottom),
         itemCount: 3,
         separatorBuilder: (_, _) => const SizedBox(height: 12),
-        itemBuilder: (_, _) => TripShimmers.rowBox(height: 150, radius: 18),
+        itemBuilder: (_, _) => SectionTile.skeleton(lines: 4),
       ));
     }
     if (items.isEmpty) {
       final empty = failed && _ctrl.executionDisabled.value
-          ? EmptyStateView(
-              icon: Iconsax.pause_circle,
+          ? const StateCard(
+              kit: KitTone.stay,
+              asset: TravelIcon.note,
               title: TripStrings.plannerOff,
-              subtitle: TripStrings.plannerOffSubtitle,
-              palette: StayColors.palette,
+              message: TripStrings.plannerOffSubtitle,
             )
           : failed
-          ? EmptyStateView(
-              icon: Iconsax.wifi_square,
+          ? StateCard.error(
+              kit: KitTone.stay,
               title: TripStrings.couldNotLoad,
-              subtitle: TripStrings.checkConnection,
-              onRetry: _ctrl.load,
-              retryLabel: TripStrings.retry,
-              palette: StayColors.palette,
+              message: TripStrings.checkConnection,
+              actionLabel: TripStrings.retry,
+              onAction: _ctrl.load,
             )
-          : EmptyStateView(
-              icon: Iconsax.message_question,
+          : StateCard(
+              kit: KitTone.stay,
+              asset: TravelIcon.chat,
               title: _emptyTitle(bucket),
-              subtitle: TripStrings.noEnquiriesSub,
-              palette: StayColors.palette,
+              message: TripStrings.noEnquiriesSub,
             );
       return RefreshIndicator(
-        color: StayColors.accent,
+        color: DesignColors.primary,
         onRefresh: _ctrl.refreshList,
-        child: _column(ListView(physics: const AlwaysScrollableScrollPhysics(), children: [empty])),
+        child: _column(ListView(physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()), children: [empty])),
       );
     }
     final footer = _ctrl.loadingMore.value || _ctrl.loadMoreFailed.value ? 1 : 0;
     return RefreshIndicator(
-      color: StayColors.accent,
+      color: DesignColors.primary,
       onRefresh: _ctrl.refreshList,
       child: _column(ListView.builder(
         controller: _scroll,
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: EdgeInsets.fromLTRB(16, 12, 16, bottom),
+        physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+        padding: EdgeInsets.fromLTRB(KitMetrics.gutter, 12, KitMetrics.gutter, bottom),
         itemCount: items.length + footer,
         itemBuilder: (_, i) {
           if (i >= items.length) return _footer();
@@ -241,7 +224,11 @@ class _StayEnquiriesScreenState extends State<StayEnquiriesScreen> with WidgetsB
             padding: const EdgeInsets.only(bottom: 12),
             child: KeyedSubtree(
               key: _keys.putIfAbsent(e.id, () => GlobalKey()),
-              child: _EnquiryCard(enquiry: e, highlighted: highlight == e.id, ctrl: _ctrl),
+              child: KitCardEntrance(
+                key: ValueKey('${bucket}_${e.id}'),
+                index: i,
+                child: _EnquiryCard(enquiry: e, highlighted: highlight == e.id, ctrl: _ctrl),
+              ),
             ),
           );
         },
@@ -262,16 +249,19 @@ class _StayEnquiriesScreenState extends State<StayEnquiriesScreen> with WidgetsB
           child: TextButton(
             style: TextButton.styleFrom(minimumSize: const Size(44, 44)),
             onPressed: _ctrl.loadMore,
-            child: const Text('${StayEnquiryStrings.retryMore} · ${TripStrings.retry}'),
+            child: const Text('${StayEnquiryStrings.retryMore} · ${TripStrings.retry}',
+                style: TextStyle(
+                    fontFamily: TypeTokens.family,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: DesignColors.primary)),
           ),
         ),
       );
     }
     return const Padding(
       padding: EdgeInsets.symmetric(vertical: 16),
-      child: Center(
-        child: SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2.5, color: StayColors.accent)),
-      ),
+      child: Center(child: KitDots(color: DesignColors.primary)),
     );
   }
 
@@ -299,8 +289,8 @@ class _EnquiryCard extends StatelessWidget {
       duration: const Duration(milliseconds: 250),
       padding: EdgeInsets.all(highlighted ? 2 : 0),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        color: highlighted ? StayColors.accent : Colors.transparent,
+        borderRadius: CardRadius.tile,
+        color: highlighted ? DesignColors.primary : Colors.transparent,
       ),
       child: TripStatusCard(
         status: e.display,
@@ -310,7 +300,7 @@ class _EnquiryCard extends StatelessWidget {
               child: Text(StayEnquiryFormat.guest(e),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textDark)),
+                  style: const TextStyle(fontFamily: TypeTokens.family, fontSize: 15, fontWeight: FontWeight.w700, color: DesignColors.textStrong)),
             ),
             if ((e.traveller.id ?? '').isNotEmpty) _menu(context, e),
           ]),
@@ -323,7 +313,7 @@ class _EnquiryCard extends StatelessWidget {
           Text(StayEnquiryFormat.summary(e),
               maxLines: 3,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 12, color: AppColors.textLight, height: 1.4)),
+              style: const TextStyle(fontFamily: TypeTokens.family, fontSize: 12, color: DesignColors.textSecondary, height: 1.4)),
           ..._chipsRow(e),
           ..._detail(e),
           ..._advanceLine(e),
@@ -339,12 +329,13 @@ class _EnquiryCard extends StatelessWidget {
         child: PopupMenuButton<String>(
           padding: EdgeInsets.zero,
           tooltip: '',
-          icon: const Icon(Icons.more_vert_rounded, size: 20, color: AppColors.textMedium),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          icon: const Icon(Icons.more_vert_rounded, size: 20, color: DesignColors.textGrey),
+          color: DesignColors.surface,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           onSelected: (_) => StayEnquiryActions.reportTraveller(context, e),
           itemBuilder: (_) => const [
             PopupMenuItem<String>(
-                value: 'report', height: 44, child: Text(TripStrings.reportTraveller, style: TextStyle(fontSize: 13))),
+                value: 'report', height: 44, child: Text(TripStrings.reportTraveller, style: TextStyle(fontFamily: TypeTokens.family, fontSize: 13, color: DesignColors.textStrong))),
           ],
         ),
       );
@@ -366,11 +357,11 @@ class _EnquiryCard extends StatelessWidget {
   Widget _chip(String text) => Container(
         constraints: const BoxConstraints(maxWidth: 220),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-        decoration: BoxDecoration(color: AppColors.neutralChip, borderRadius: BorderRadius.circular(10)),
+        decoration: const BoxDecoration(color: DesignColors.scaffold, borderRadius: CardRadius.chip),
         child: Text(text,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 11, color: AppColors.neutralChipText)),
+            style: const TextStyle(fontFamily: TypeTokens.family, fontSize: 11, color: DesignColors.textGrey)),
       );
 
   List<Widget> _detail(TripEnquiryModel e) {
@@ -403,7 +394,7 @@ class _EnquiryCard extends StatelessWidget {
         Text(l,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.textMedium)),
+            style: const TextStyle(fontFamily: TypeTokens.family, fontSize: 12, fontWeight: FontWeight.w500, color: DesignColors.textGrey)),
     ];
   }
 
@@ -424,7 +415,10 @@ class _EnquiryCard extends StatelessWidget {
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
           style: TextStyle(
-              fontSize: 12, fontWeight: FontWeight.w600, color: TripStatusVisuals.advanceText(e.advance.status))),
+              fontFamily: TypeTokens.family,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: TripStatusVisuals.advanceText(e.advance.status))),
     ];
   }
 
@@ -441,7 +435,7 @@ class _EnquiryCard extends StatelessWidget {
     }
 
     final chat = e.conversationId != null
-        ? StayEnquiryButton(label: TripStrings.chat, icon: Iconsax.message, onTap: () => _openChat(e))
+        ? StayEnquiryButton(label: TripStrings.chat, iconAsset: TravelIcon.chat, onTap: () => _openChat(e))
         : null;
 
     switch (e.display) {

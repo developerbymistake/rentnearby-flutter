@@ -12,7 +12,9 @@ import '../../trip/utils/trip_travel_rules.dart';
 import '../journeys/journey_models.dart';
 import '../journeys/journeys_controller.dart';
 import 'ask_drivers_sheet.dart';
+import 'models/ask_models.dart';
 import 'models/taxi_ways_models.dart';
+import 'taxi_ways_ask_repository.dart';
 import 'taxi_ways_navigation.dart';
 import 'widgets/travel_confirm_sheet.dart';
 
@@ -297,6 +299,67 @@ class WayActions {
         back();
       } else {
         TaxiWaysNavigation.openSavedJourney(journey.id);
+      }
+    } finally {
+      busy.remove(plan.planKey);
+    }
+  }
+
+  Future<AskResult?> askShortlisted(
+    BuildContext context,
+    WayPlan plan, {
+    required String step,
+    required String requestId,
+    required List<String> taxiIds,
+  }) async {
+    if (busy.contains(plan.planKey)) return null;
+    busy.add(plan.planKey);
+    try {
+      var replaceBooked = false;
+      var closeOld = false;
+      if (forSegment) {
+        final gate = await segmentGate(context, plan);
+        if (!gate.go) return null;
+        replaceBooked = gate.replaceBooked;
+      } else if (forTrip) {
+        final gate = await stepGate(context, plan);
+        if (!gate.go) return null;
+        closeOld = gate.close;
+      }
+      final journey = await saveIfNeeded(plan, quiet: forTrip || forSegment);
+      if (journey == null) {
+        if (forSegment) await releaseUnsaved(plan);
+        return null;
+      }
+      if (forSegment) {
+        if (!context.mounted) {
+          await trip?.releaseJourneyLink(journey.id);
+          return null;
+        }
+        if (await linkSegment(context, journey, plan, replaceBooked: replaceBooked) == WaySegmentLink.failed) return null;
+      } else if (forTrip) {
+        if (await _linkStep(journey, closeOld) == WaySegmentLink.failed) return null;
+      }
+      final request = AskDriversRequest.fromPlan(
+        plan: plan,
+        chosen: chosenOf(plan.planKey),
+        date: date(),
+        people: people(),
+        journeyId: journey.id,
+        fromName: plan.from.name,
+        toName: plan.to.name,
+      );
+      if (request == null) return null;
+      try {
+        final res = await const TaxiWaysAskRepository()
+            .ask(request.guided(clientRequestId: requestId, stepKey: step, taxiIds: taxiIds));
+        JourneysController.ensure().recordAsk(journey.id, res);
+        final t = trip;
+        if (t != null) unawaited(t.refreshEnquiries());
+        return res;
+      } catch (e) {
+        AppToast.warning(TaxiWaysAskRepository.errorMessage(e));
+        return null;
       }
     } finally {
       busy.remove(plan.planKey);

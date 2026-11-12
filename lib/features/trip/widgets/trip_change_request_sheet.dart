@@ -1,16 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:bakhli/features/trip/widgets/trip_ui.dart';
+import 'package:bakhli/design/design.dart';
+import 'package:bakhli/design/extra/replies_kit.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:iconsax/iconsax.dart';
-import '../../../config/app_colors.dart';
 import '../../../utils/app_toast.dart';
 import '../../../utils/input_formatters.dart';
-import '../../../widgets/gradient_button.dart';
 import '../controllers/trip_enquiry_controller.dart';
 import '../controllers/trip_plan_controller.dart';
 import '../models/trip_enquiry_model.dart';
 import '../models/trip_plan_model.dart';
-import '../trip_colors.dart';
 import '../trip_constants.dart';
 import '../trip_strings.dart';
 import '../utils/trip_format.dart';
@@ -124,17 +123,7 @@ class _ChangeBodyState extends State<_ChangeBody> {
     var init = initial;
     if (init.isBefore(first)) init = first;
     if (init.isAfter(last)) init = last;
-    return showDatePicker(
-      context: context,
-      initialDate: init,
-      firstDate: first,
-      lastDate: last,
-      initialEntryMode: DatePickerEntryMode.calendarOnly,
-      builder: (ctx, child) => Theme(
-        data: Theme.of(ctx).copyWith(colorScheme: Theme.of(ctx).colorScheme.copyWith(primary: TripColors.accent)),
-        child: child!,
-      ),
-    );
+    return TemplateCalendarPopup.pickDate(context, initial: init, first: first, last: last, tone: KitTone.trip);
   }
 
   Future<void> _pickCheckIn() async {
@@ -215,13 +204,16 @@ class _ChangeBodyState extends State<_ChangeBody> {
       description: widget.enquiry.listingName.isEmpty ? null : widget.enquiry.listingName,
       footer: const TripPaymentLine(),
       children: [
+        TemplateStagger(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
         _datesRow(),
         const SizedBox(height: 14),
         _card(children: [
           _stepperRow(TripStrings.adults, _adults, 1, TripConstants.maxAdults, (v) => setState(() => _adults = v)),
-          const Divider(height: 1, color: AppColors.divider),
+          const Divider(height: 1, color: FitnessAppTheme.spacer),
           _stepperRow(TripStrings.kids, _kids, 0, TripConstants.maxKids, (v) => setState(() => _kids = v)),
-          const Divider(height: 1, color: AppColors.divider),
+          const Divider(height: 1, color: FitnessAppTheme.spacer),
           _stepperRow(TripStrings.rooms, _rooms, 1, _maxRooms, (v) => setState(() => _rooms = v)),
         ]),
         const SizedBox(height: 14),
@@ -233,28 +225,26 @@ class _ChangeBodyState extends State<_ChangeBody> {
           maxLines: 3,
           textCapitalization: TextCapitalization.sentences,
           inputFormatters: [...noEmojiInputFormatters, LengthLimitingTextInputFormatter(TripConstants.noteMax)],
-          style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textDark),
+          style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 14, color: FitnessAppTheme.darkerText),
           decoration: InputDecoration(
             filled: true,
-            fillColor: AppColors.scaffoldBg,
+            fillColor: FitnessAppTheme.background,
             contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
             enabledBorder:
-                OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.divider)),
+                OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Colors.transparent)),
             focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: TripColors.accent, width: 1.5)),
+                borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: RepliesTone.accent, width: 1.5)),
           ),
         ),
         const SizedBox(height: 14),
         _info(TripStrings.bookingStaysUntilHost),
         const SizedBox(height: 16),
-        GradientButton(
+        TripButton(
           onPressed: _canSend ? _send : null,
           label: TripStrings.sendChangeRequest,
-          isLoading: _busy,
+          loading: _busy,
           height: 52,
-          gradient: TripColors.gradient,
-          shadowColor: TripColors.accent,
         ),
         if (_serverError != null || !_changed) ...[
           const SizedBox(height: 8),
@@ -263,13 +253,15 @@ class _ChangeBodyState extends State<_ChangeBody> {
             maxLines: 3,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
-              fontFamily: 'Poppins',
+              fontFamily: FitnessAppTheme.fontName,
               fontSize: 12,
               fontWeight: _serverError != null ? FontWeight.w600 : FontWeight.w400,
-              color: _serverError != null ? AppColors.error : AppColors.textLight,
+              color: _serverError != null ? RepliesTone.bad : FitnessAppTheme.deactivatedText,
             ),
           ),
         ],
+          ],
+        ),
       ],
     );
   }
@@ -281,14 +273,14 @@ class _ChangeBodyState extends State<_ChangeBody> {
       label: TripStrings.checkIn,
       value: cin == null ? TripStrings.pickDate : TripFormat.shortDate(cin),
       changed: cin != _origIn,
-      icon: Iconsax.calendar_1,
+      icon: TravelIcon.calendar,
       onTap: _busy ? null : _pickCheckIn,
     );
     final outTile = _dateTile(
       label: TripStrings.checkOut,
       value: cout == null ? TripStrings.pickDate : TripFormat.shortDate(cout),
       changed: cout != _origOut,
-      icon: Iconsax.calendar_tick,
+      icon: TravelIcon.calendar,
       onTap: _busy || cin == null ? null : _pickCheckOut,
     );
     return LayoutBuilder(
@@ -310,23 +302,30 @@ class _ChangeBodyState extends State<_ChangeBody> {
     required String label,
     required String value,
     required bool changed,
-    required IconData icon,
+    required String icon,
     VoidCallback? onTap,
   }) {
     final active = onTap != null;
-    return Material(
-      color: active ? TripColors.surface : AppColors.neutralChip,
-      borderRadius: BorderRadius.circular(14),
-      child: InkWell(
+    return Container(
+      decoration: BoxDecoration(
+        color: active ? FitnessAppTheme.white : FitnessAppTheme.background,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: active
+            ? <BoxShadow>[ShadowTokens.tint(FitnessAppTheme.grey, ShadowSpec.soft)]
+            : null,
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         child: ConstrainedBox(
           constraints: const BoxConstraints(minHeight: 64),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             child: Row(
               children: [
-                Icon(icon, size: 20, color: active ? TripColors.accentDark : AppColors.textHint),
+                TravelIcon(icon, size: 24),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Column(
@@ -336,15 +335,15 @@ class _ChangeBodyState extends State<_ChangeBody> {
                       Text(label,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight)),
+                          style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 11, color: FitnessAppTheme.deactivatedText)),
                       Text(value,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            fontFamily: 'Poppins',
+                            fontFamily: FitnessAppTheme.fontName,
                             fontSize: 13,
                             fontWeight: changed ? FontWeight.w700 : FontWeight.w600,
-                            color: AppColors.textDark,
+                            color: FitnessAppTheme.darkerText,
                           )),
                     ],
                   ),
@@ -353,15 +352,16 @@ class _ChangeBodyState extends State<_ChangeBody> {
             ),
           ),
         ),
+        ),
       ),
     );
   }
 
   Widget _card({required List<Widget> children}) => Container(
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AppColors.divider),
+          color: FitnessAppTheme.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: <BoxShadow>[ShadowTokens.tint(FitnessAppTheme.grey, ShadowSpec.soft)],
         ),
         child: Column(children: children),
       );
@@ -375,7 +375,7 @@ class _ChangeBodyState extends State<_ChangeBody> {
             child: Text(label,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 14, fontWeight: FontWeight.w600, color: FitnessAppTheme.darkerText)),
           ),
           _stepButton(Icons.remove_rounded, !_busy && value > min ? () => onChanged(value - 1) : null),
           SizedBox(
@@ -383,7 +383,7 @@ class _ChangeBodyState extends State<_ChangeBody> {
             child: FittedBox(
               fit: BoxFit.scaleDown,
               child: Text('$value',
-                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textDark)),
+                  style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 16, fontWeight: FontWeight.w700, color: FitnessAppTheme.darkerText)),
             ),
           ),
           _stepButton(Icons.add_rounded, !_busy && value < max ? () => onChanged(value + 1) : null),
@@ -406,30 +406,20 @@ class _ChangeBodyState extends State<_ChangeBody> {
             height: 32,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: enabled ? TripColors.surface : AppColors.neutralChip,
-              border: Border.all(color: enabled ? TripColors.accent.withValues(alpha: 0.5) : AppColors.divider),
+              color: enabled ? RepliesTone.accentSurface : RepliesTone.chip,
             ),
-            child: Icon(icon, size: 18, color: enabled ? TripColors.accentDark : AppColors.textHint),
+            child: Icon(icon, size: 18, color: enabled ? RepliesTone.accent : FitnessAppTheme.deactivatedText),
           ),
         ),
       ),
     );
   }
 
-  Widget _info(String text) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        decoration: BoxDecoration(color: TripColors.surface, borderRadius: BorderRadius.circular(12)),
-        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const Padding(
-            padding: EdgeInsets.only(top: 1),
-            child: Icon(Iconsax.info_circle, size: 16, color: TripColors.accentDark),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(text,
-                style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textMedium, height: 1.4)),
-          ),
-        ]),
+  Widget _info(String text) => TripNote(
+        iconAsset: TravelIcon.note,
+        iconSize: 18,
+        child: Text(text,
+            style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, color: FitnessAppTheme.lightText, height: 1.4)),
       );
 
   Widget _label(String text) => Padding(
@@ -437,6 +427,6 @@ class _ChangeBodyState extends State<_ChangeBody> {
         child: Text(text,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.textMedium)),
+            style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12.5, fontWeight: FontWeight.w600, color: FitnessAppTheme.lightText)),
       );
 }

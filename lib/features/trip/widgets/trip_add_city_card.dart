@@ -1,11 +1,9 @@
-import 'dart:math' as math;
+import 'package:bakhli/design/design.dart';
 import 'package:flutter/material.dart';
+import 'package:bakhli/features/trip/widgets/trip_ui.dart';
 import 'package:get/get.dart';
-import 'package:iconsax/iconsax.dart';
-import '../../../config/app_colors.dart';
 import '../controllers/trip_plan_controller.dart';
 import '../models/trip_plan_model.dart';
-import '../trip_colors.dart';
 import '../trip_navigation.dart';
 import '../trip_strings_mca_a3.dart';
 
@@ -31,29 +29,27 @@ class TripAddCityCard extends StatelessWidget {
       if (block == TripLegEditBlock.readOnly) return const SizedBox.shrink();
       final disabled = _disabledText(block);
       final enabled = block == TripLegEditBlock.none;
-      final tone = enabled ? TripColors.accentDark : AppColors.textHint;
-      return Semantics(
+      final tone = enabled ? TripEntryStyle.accent : FitnessAppTheme.deactivatedText;
+      return TemplateEntranceOnce(
+        child: Semantics(
         button: true,
         enabled: enabled,
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
+        child: TripSurface(
           onTap: enabled ? () => TripNavigation.addCity(context) : null,
-          child: CustomPaint(
-            painter: _DashedBorder(color: enabled ? TripColors.accent.withValues(alpha: 0.7) : AppColors.divider),
-            child: Container(
-              constraints: const BoxConstraints(minHeight: 64),
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              decoration: BoxDecoration(
-                color: enabled ? TripColors.surface.withValues(alpha: 0.5) : Colors.white,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Row(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 40),
+            child: Row(
                 children: [
                   Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(color: tone.withValues(alpha: 0.12), shape: BoxShape.circle),
-                    child: Icon(Iconsax.add, size: 20, color: tone),
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      gradient: enabled ? TripEntryStyle.gradient : null,
+                      color: enabled ? null : TripEntryStyle.surface,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(Icons.add_rounded, size: 22, color: enabled ? FitnessAppTheme.white : tone),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -66,52 +62,26 @@ class TripAddCityCard extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                              fontFamily: 'Poppins',
+                              fontFamily: FitnessAppTheme.fontName,
                               fontSize: 14,
                               fontWeight: FontWeight.w700,
-                              color: enabled ? AppColors.textDark : AppColors.textHint),
+                              color: enabled ? FitnessAppTheme.darkerText : FitnessAppTheme.deactivatedText),
                         ),
                         Text(
                           disabled ?? TripStringsMcaA3.upToFourCities,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight),
+                          style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, color: FitnessAppTheme.lightText),
                         ),
                       ],
                     ),
                   ),
                 ],
               ),
-            ),
           ),
         ),
+      ),
       );
     });
   }
-}
-
-class _DashedBorder extends CustomPainter {
-  const _DashedBorder({required this.color});
-
-  final Color color;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5;
-    final path = Path()
-      ..addRRect(RRect.fromRectAndRadius(Offset.zero & size, const Radius.circular(16)).deflate(0.75));
-    for (final metric in path.computeMetrics()) {
-      var d = 0.0;
-      while (d < metric.length) {
-        canvas.drawPath(metric.extractPath(d, math.min(d + 6, metric.length)), paint);
-        d += 11;
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(_DashedBorder old) => old.color != color;
 }

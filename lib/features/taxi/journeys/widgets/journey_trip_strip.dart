@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:bakhli/design/design.dart';
+import 'package:bakhli/design/extra/trip_plan_look.dart';
 import 'package:get/get.dart';
-import '../../../../config/app_colors.dart';
 import '../../../trip/controllers/trip_plan_controller.dart';
 import '../../../trip/models/trip_journey_model.dart';
 import '../../../trip/models/trip_plan_model.dart';
-import '../../../trip/trip_colors.dart';
 import '../../../trip/trip_navigation.dart';
 import '../../../trip/trip_strings_mcb_a3.dart';
 import '../../../trip/utils/trip_travel_rules.dart';
@@ -33,35 +33,37 @@ class JourneyTripStrip extends StatelessWidget {
         : TripStringsMcbA3.partOf(title.isEmpty ? TripStringsMcbA3.partOfTrip : title, day);
     final registered = tripControllerFor(j) != null;
     return Container(
-      padding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
-      decoration: BoxDecoration(
-        color: TripColors.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: TripColors.accent.withValues(alpha: 0.25)),
+      decoration: TripLook.card(),
+      child: ClipRRect(
+        borderRadius: TripLook.softRadius,
+        child: Container(
+          color: TripLook.surface,
+          padding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
+          child: Row(children: [
+            const TravelIcon(TravelIcon.route, size: 20),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                text,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: FitnessAppTheme.title.copyWith(fontSize: 13.5, color: DesignColors.primary),
+              ),
+            ),
+            const SizedBox(width: 8),
+            TextButton(
+              style: TextButton.styleFrom(minimumSize: const Size(64, 44), foregroundColor: DesignColors.primary),
+              onPressed: () => TripNavigation.openPlan(tripId: j.tripId),
+              child: Text(
+                registered ? TripStringsMcbA3.open : TripStringsMcbA3.openTrip,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TripKit.text(13, weight: FontWeight.w700, color: DesignColors.primary),
+              ),
+            ),
+          ]),
+        ),
       ),
-      child: Row(children: [
-        const Icon(Icons.route_rounded, size: 18, color: TripColors.accentDark),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Text(
-            text,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: TripColors.accentDark),
-          ),
-        ),
-        const SizedBox(width: 8),
-        TextButton(
-          style: TextButton.styleFrom(minimumSize: const Size(64, 44), foregroundColor: TripColors.accentDark),
-          onPressed: () => TripNavigation.openPlan(tripId: j.tripId),
-          child: Text(
-            registered ? TripStringsMcbA3.open : TripStringsMcbA3.openTrip,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
-          ),
-        ),
-      ]),
     );
   }
 }
@@ -100,28 +102,23 @@ class JourneyCarBookRow extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 12),
               alignment: Alignment.centerLeft,
               child: Row(mainAxisSize: MainAxisSize.min, children: [
-                const Icon(Icons.check_circle_rounded, size: 16, color: TripStatusColors.booked),
+                const Icon(Icons.check_circle_rounded, size: 16, color: TripLook.booked),
                 const SizedBox(width: 6),
                 Flexible(
                   child: Text(
                     TripStringsMcbA3.booked,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: TripStatusColors.booked),
+                    style: TripKit.text(12.5, weight: FontWeight.w700, color: TripLook.booked),
                   ),
                 ),
               ]),
             )
           : SizedBox(
               width: double.infinity,
-              child: OutlinedButton(
-                style: OutlinedButton.styleFrom(
-                  minimumSize: const Size(0, 44),
-                  foregroundColor: TripColors.accentDark,
-                  side: const BorderSide(color: AppColors.divider),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
-                ),
+              child: JourneyButton(
+                label: TripStringsMcbA3.iBooked,
+                kind: JourneyButtonKind.outline,
                 onPressed: () => TripTaxiBookingSheet.showForJourneyCar(
                   context,
                   role: role,
@@ -130,7 +127,6 @@ class JourneyCarBookRow extends StatelessWidget {
                   carIndex: leg.legIndex,
                   car: TripJourneyLeg.fromSaved(leg),
                 ),
-                child: const Text(TripStringsMcbA3.iBooked, maxLines: 1, overflow: TextOverflow.ellipsis),
               ),
             ),
     );

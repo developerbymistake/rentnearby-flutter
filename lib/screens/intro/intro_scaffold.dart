@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 
-import '../../config/app_colors.dart';
+import '../../design/design.dart';
 import '../../config/app_constants.dart';
 import '../../config/app_routes.dart';
 import '../../services/storage_service.dart';
@@ -24,7 +24,7 @@ class IntroScaffold extends StatefulWidget {
 
   static const int pageCount = 6;
   static const Duration autoplayInterval = Duration(milliseconds: 5600);
-  static const Duration pageAnim = Duration(milliseconds: 600);
+  static const Duration pageAnim = templateTransitionDuration;
 
   @override
   State<IntroScaffold> createState() => _IntroScaffoldState();
@@ -107,7 +107,7 @@ class _IntroScaffoldState extends State<IntroScaffold> with TickerProviderStateM
     _pageController.animateToPage(
       currentPage + 1,
       duration: IntroScaffold.pageAnim,
-      curve: Curves.easeInOutCubic,
+      curve: Curves.fastOutSlowIn,
     );
   }
 
@@ -156,7 +156,7 @@ class _IntroScaffoldState extends State<IntroScaffold> with TickerProviderStateM
     if (_reduce) {
       _pageController.jumpToPage(target);
     } else {
-      _pageController.animateToPage(target, duration: IntroScaffold.pageAnim, curve: Curves.easeInOutCubic);
+      _pageController.animateToPage(target, duration: IntroScaffold.pageAnim, curve: Curves.fastOutSlowIn);
     }
   }
 
@@ -191,14 +191,15 @@ class _IntroScaffoldState extends State<IntroScaffold> with TickerProviderStateM
           final i = p.floor();
           final j = math.min(i + 1, _last);
           final t = p - i;
-          final a = IntroStrings.slides[i];
-          final b = IntroStrings.slides[j];
           return DecoratedBox(
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: [Color.lerp(a.top, b.top, t)!, Color.lerp(a.bottom, b.bottom, t)!],
+                colors: [
+                  Color.lerp(IntroPalette.top[i], IntroPalette.top[j], t)!,
+                  Color.lerp(IntroPalette.bottom[i], IntroPalette.bottom[j], t)!,
+                ],
               ),
             ),
             child: const SizedBox.expand(),
@@ -219,13 +220,13 @@ class _IntroScaffoldState extends State<IntroScaffold> with TickerProviderStateM
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light.copyWith(
         statusBarColor: Colors.transparent,
-        systemNavigationBarColor: AppColors.primary,
+        systemNavigationBarColor: DesignColors.primary,
         systemNavigationBarIconBrightness: Brightness.light,
       ),
       child: MediaQuery.withClampedTextScaling(
         maxScaleFactor: 1.3,
         child: Scaffold(
-          backgroundColor: AppColors.primary,
+          backgroundColor: DesignColors.primary,
           body: Stack(
             children: [
               Positioned.fill(child: _background()),
@@ -236,7 +237,7 @@ class _IntroScaffoldState extends State<IntroScaffold> with TickerProviderStateM
                     onNotification: _onInteraction,
                     child: PageView(
                       controller: _pageController,
-                      physics: const ClampingScrollPhysics(),
+                      physics: const BouncingScrollPhysics(),
                       onPageChanged: _onPageChanged,
                       children: [
                         for (var i = 0; i < IntroScaffold.pageCount; i++)

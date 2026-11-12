@@ -1,11 +1,15 @@
 import 'package:bakhli/features/taxi/journeys/journey_models.dart';
 import 'package:bakhli/features/taxi/ways/models/taxi_ways_models.dart';
 import 'package:bakhli/features/trip/controllers/trip_plan_controller.dart';
+import 'package:bakhli/features/trip/controllers/trip_plan_guide.dart';
+import 'package:bakhli/features/trip/controllers/trip_shortlist_controller.dart';
+import 'package:bakhli/features/trip/data/trip_shortlist_repository.dart';
 import 'package:bakhli/features/trip/data/trip_segment_geometry_cache.dart';
 import 'package:bakhli/features/trip/models/trip_enquiry_model.dart';
 import 'package:bakhli/features/trip/models/trip_journey_model.dart';
 import 'package:bakhli/features/trip/models/trip_model.dart';
 import 'package:bakhli/features/trip/models/trip_plan_model.dart';
+import 'package:bakhli/features/trip/models/trip_shortlist_model.dart';
 import 'package:bakhli/features/trip/models/trip_plan_result_model.dart';
 import 'package:bakhli/features/trip/models/trip_spot_model.dart';
 import 'package:bakhli/features/trip/trip_strings.dart';
@@ -1602,4 +1606,121 @@ void main() {
       expect(c.cityHasTaxis.value, isNull);
     });
   });
+
+  group('guided flow state', () {
+    TripPlan planG({TripGuide? guide, TripRowMark? taxi, int legs = 1}) => TripPlan(
+          legs: [
+            for (var k = 1; k <= legs; k++)
+              TripCityLeg(index: k, cityKey: k, cityName: 'City$k', latitude: 29.4 + k / 10, longitude: 79.4),
+          ],
+          days: [for (var k = 1; k <= legs; k++) TripDay(day: k, leg: k, spots: [_spot('s$k')])],
+          settings: TripSettings(startDate: DateTime(2030, 11, 1)),
+          taxiMark: taxi,
+          guide: guide,
+        );
+
+    TripPlanController ctl(TripPlan p) {
+      final c = TripPlanController();
+      addTearDown(c.onClose);
+      c.plan.value = p;
+      c.trip.value = _trip(p);
+      return c;
+    }
+
+    tearDown(Get.reset);
+
+    test('an old plan with a done row resolves that step and starts at the first open one', () {
+      final c = ctl(planG(taxi: const TripRowMark.own()));
+      c.guideRefresh();
+      expect(c.guideState.choices['taxi'], TripGuideChoice.own);
+      expect(c.guideState.index.value, 0);
+      expect(c.guideState.total.value, 4);
+      expect(c.guideState.percent.value, 25);
+    });
+
+    test('the stored cursor wins and answers are unchanged', () {
+      final c = ctl(planG(guide: const TripGuide(step: 'taxi', choices: {'gettingThere': TripGuideChoice.find})));
+      c.guideRefresh();
+      expect(c.guideState.index.value, 2);
+      expect(c.guideState.choices['gettingThere'], TripGuideChoice.find);
+    });
+
+    test('moving writes the cursor into the plan and survives a reload of the plan json', () {
+      final c = ctl(planG(guide: const TripGuide(choices: {'gettingThere': TripGuideChoice.skip})));
+      c.guideRefresh();
+      expect(c.guideState.index.value, 1);
+      c.guideNext();
+      final json = c.plan.value!.toJson();
+      expect(json['version'], 7);
+      final back = TripPlan.fromJson(json).guide!;
+      expect(back.step, 'taxi');
+      expect(back.choices['gettingThere'], TripGuideChoice.skip);
+      final c2 = ctl(TripPlan.fromJson(json));
+      c2.guideRefresh();
+      expect(c2.guideState.index.value, 2);
+    });
+
+    test('previous on the first step goes back to the places page', () {
+      final c = ctl(planG());
+      c.guideRefresh();
+      c.planStep.value = 2;
+      c.guidePrevious();
+      expect(c.planStep.value, 1);
+    });
+
+    test('the guide shows only on step 2, not in overview, edit or read only', () {
+      final c = ctl(planG());
+      c.planStep.value = 1;
+      c.guideRefresh();
+      expect(c.guideState.on.value, isFalse);
+      c.planStep.value = 2;
+      c.guideRefresh();
+      expect(c.guideState.on.value, isTrue);
+      c.guideSetOverview(true);
+      expect(c.guideState.on.value, isFalse);
+      expect(c.plan.value!.guide!.overview, isTrue);
+      c.guideSetOverview(false);
+      expect(c.guideState.on.value, isTrue);
+      c.editMode.value = true;
+      c.guideRefresh();
+      expect(c.guideState.on.value, isFalse);
+    });
+
+    test('a push step opens the guide at that step with the nudge flag', () {
+      Get.put<TripShortlistController>(TripShortlistController(
+        repo: const _NoShortlist(),
+        tripId: () async => 't1',
+        offline: () => false,
+        warn: (_) {},
+      ));
+      final c = ctl(planG(legs: 2));
+      c.guideJumpTo('between:2', nudge: true, name: 'Hill View');
+      expect(c.planStep.value, 2);
+      expect(c.guideState.keyNow, 'between:2');
+      expect(c.guideState.nudgeStep.value, 'between:2');
+      expect(c.guideState.nudgeName.value, 'Hill View');
+      c.guideJumpTo('bogus');
+      expect(c.guideState.keyNow, 'between:2');
+    });
+  });
+}
+
+class _NoShortlist implements TripShortlistRepository {
+  const _NoShortlist();
+
+  @override
+  Future<TripShortlist> list(String tripId) async => const TripShortlist();
+
+  @override
+  Future<List<ShortlistItem>> add(String tripId, String stepKey, String listingId, ShortlistItem item) async => [item];
+
+  @override
+  Future<void> remove(String tripId, String stepKey, String listingId) async {}
+
+  @override
+  Future<void> close(String tripId, String stepKey, {required String reason}) async {}
+
+  @override
+  Future<MarkBookedResult> markBooked(String tripId, String stepKey, {String? listingId}) async =>
+      const MarkBookedResult();
 }

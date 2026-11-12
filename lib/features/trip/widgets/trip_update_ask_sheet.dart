@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:bakhli/features/trip/widgets/trip_ui.dart';
+import 'package:bakhli/design/design.dart';
+import 'package:bakhli/design/extra/replies_kit.dart';
 import 'package:get/get.dart';
-import '../../../config/app_colors.dart';
 import '../../../utils/app_toast.dart';
-import '../../../widgets/gradient_button.dart';
 import '../controllers/trip_enquiry_controller.dart';
 import '../controllers/trip_plan_controller.dart';
 import '../models/trip_enquiry_model.dart';
 import '../models/trip_plan_model.dart';
-import '../trip_colors.dart';
 import '../trip_constants.dart';
 import '../trip_strings.dart';
 import '../trip_strings_v2_easy.dart';
@@ -212,7 +212,7 @@ class _UpdateBodyState extends State<_UpdateBody> {
         padding: const EdgeInsets.only(top: 8),
         child: Row(
           children: [
-            const Icon(Icons.circle, size: 6, color: TripColors.accent),
+            Container(width: 6, height: 6, decoration: const BoxDecoration(color: RepliesTone.accent, shape: BoxShape.circle)),
             const SizedBox(width: 8),
             Expanded(
               child: Column(
@@ -222,11 +222,11 @@ class _UpdateBodyState extends State<_UpdateBody> {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                          fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                          fontFamily: FitnessAppTheme.fontName, fontSize: 13, fontWeight: FontWeight.w600, color: DesignColors.textStrong)),
                   Text(r.sub,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontFamily: 'Poppins', fontSize: 11.5, color: AppColors.textLight)),
+                      style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 11.5, color: DesignColors.textMuted)),
                 ],
               ),
             ),
@@ -243,31 +243,29 @@ class _UpdateBodyState extends State<_UpdateBody> {
       title: TripStringsV2Find.updateAskTitle,
       description: _body(first),
       children: [
+        TemplateStagger(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
         for (final r in rows) _line(r),
         if (widget.confirmed.isNotEmpty || widget.confirmedTaxis.isNotEmpty) ...[
           const SizedBox(height: 10),
           Text(TripStringsV2Find.confirmedRow((widget.confirmedTaxis.isNotEmpty ? widget.confirmedTaxis : widget.confirmed).first.listingName),
-              style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight, height: 1.35)),
+              style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, color: DesignColors.textMuted, height: 1.35)),
         ],
         const SizedBox(height: 16),
-        GradientButton(
+        TripButton(
           label: TripStringsV2Find.updateAsk,
           height: 52,
-          isLoading: _busy,
-          gradient: TripColors.gradient,
-          shadowColor: TripColors.accent,
+          loading: _busy,
           onPressed: _busy ? null : _update,
         ),
         const SizedBox(height: 8),
         Text(widget.peopleOnly ? TripStringsV2Find.updatePeopleNote : TripStringsV2Find.updateNote,
             textAlign: TextAlign.center,
-            style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
+            style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, color: DesignColors.textMuted)),
         const SizedBox(height: 4),
-        TextButton(
-          onPressed: _busy ? null : () => Navigator.pop(context, false),
-          style: TextButton.styleFrom(minimumSize: const Size(64, 48)),
-          child: const Text(TripStringsV2Find.keepAsIs,
-              style: TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textMedium)),
+        TextLink(label: TripStringsV2Find.keepAsIs, onTap: _busy ? null : () => Navigator.pop(context, false), tone: KitTone.trip),
+          ],
         ),
       ],
     );

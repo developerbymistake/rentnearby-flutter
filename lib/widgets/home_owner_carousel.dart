@@ -1,26 +1,29 @@
 import 'dart:async';
-import 'dart:ui' as ui;
-
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:iconsax/iconsax.dart';
-import '../config/app_colors.dart';
 import '../config/app_routes.dart';
-import '../config/app_shadows.dart';
 import '../config/app_tabs.dart';
 import '../config/app_tour_state.dart';
 import '../config/user_roles.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/tab_config_controller.dart';
-import 'floating_loop.dart';
-import 'pulse_once.dart';
+import '../design/design.dart';
 import 'role_option_card.dart';
-import 'sweep_highlight.dart';
 
 enum _Slide { stay, taxi }
 
 class HomeOwnerCarousel extends StatefulWidget {
   const HomeOwnerCarousel({super.key});
+
+  static const double bannerHeight = 140;
+  static double heightOf(BuildContext context) =>
+      MediaQuery.sizeOf(context).width < 340 ? bannerHeight + 24 : bannerHeight;
+  static const EdgeInsets pagePadding = EdgeInsets.fromLTRB(
+    KitMetrics.gutter,
+    4,
+    KitMetrics.gutter,
+    24,
+  );
 
   @override
   State<HomeOwnerCarousel> createState() => _HomeOwnerCarouselState();
@@ -28,7 +31,7 @@ class HomeOwnerCarousel extends StatefulWidget {
 
 class _HomeOwnerCarouselState extends State<HomeOwnerCarousel>
     with WidgetsBindingObserver {
-  static const _interval = Duration(seconds: 2);
+  static const _interval = Duration(seconds: 4);
   static const _base = 6000;
 
   final _auth = Get.find<AuthController>();
@@ -83,8 +86,10 @@ class _HomeOwnerCarouselState extends State<HomeOwnerCarousel>
       if (Get.currentRoute != AppRoutes.main) return;
       _controller.animateToPage(
         _page + 1,
-        duration: const Duration(milliseconds: 500),
-        curve: Curves.easeInOutCubic,
+        duration: KitMotion.reduce(context)
+            ? Duration.zero
+            : templateTransitionDuration,
+        curve: Curves.fastOutSlowIn,
       );
     });
   }
@@ -121,23 +126,25 @@ class _HomeOwnerCarouselState extends State<HomeOwnerCarousel>
       if (slides.length != _count) _onCountChanged(slides.length);
       if (slides.isEmpty) return const SizedBox.shrink();
       final page = _page % slides.length;
+      final height = HomeOwnerCarousel.heightOf(context) + 28;
       return Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           SizedBox(
-            height: 160,
+            height: height,
             child: slides.length == 1
                 ? Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    padding: HomeOwnerCarousel.pagePadding,
                     child: _OwnerBanner(slide: slides.first, isOwner: owner),
                   )
                 : NotificationListener<ScrollNotification>(
                     onNotification: _onScroll,
                     child: PageView.builder(
                       controller: _controller,
+                      physics: const BouncingScrollPhysics(),
                       onPageChanged: (i) => setState(() => _page = i),
                       itemBuilder: (_, i) => Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        padding: HomeOwnerCarousel.pagePadding,
                         child: _OwnerBanner(
                           slide: slides[i % slides.length],
                           isOwner: owner,
@@ -146,27 +153,28 @@ class _HomeOwnerCarouselState extends State<HomeOwnerCarousel>
                     ),
                   ),
           ),
-          if (slides.length > 1) ...[
-            const SizedBox(height: 10),
+          if (slides.length > 1)
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 for (var i = 0; i < slides.length; i++)
                   AnimatedContainer(
-                    duration: const Duration(milliseconds: 300),
-                    margin: EdgeInsets.only(left: i == 0 ? 0 : 6),
-                    height: 6,
-                    width: i == page ? 18 : 6,
+                    duration: KitMotion.reduce(context)
+                        ? Duration.zero
+                        : templateTransitionDuration,
+                    curve: Curves.fastOutSlowIn,
+                    margin: const EdgeInsets.symmetric(horizontal: 4),
+                    height: 8,
+                    width: i == page ? 20 : 8,
                     decoration: BoxDecoration(
                       color: i == page
-                          ? _OwnerBanner.accentOf(slides[page])
-                          : AppColors.divider,
-                      borderRadius: BorderRadius.circular(3),
+                          ? _OwnerBanner.toneOf(slides[page]).accentDark
+                          : DesignColors.idleDot,
+                      borderRadius: CardRadius.pill,
                     ),
                   ),
               ],
             ),
-          ],
         ],
       );
     });
@@ -179,209 +187,70 @@ class _OwnerBanner extends StatelessWidget {
 
   const _OwnerBanner({required this.slide, required this.isOwner});
 
-  static Color accentOf(_Slide slide) => switch (slide) {
-        _Slide.stay => RoleVisuals.accent(UserRoleKeys.stayOwner),
-        _Slide.taxi => RoleVisuals.accent(UserRoleKeys.taxiDriver),
-      };
+  static KitTone toneOf(_Slide slide) => switch (slide) {
+    _Slide.stay => KitTone.stay,
+    _Slide.taxi => KitTone.taxi,
+  };
 
   static String roleKeyOf(_Slide slide) => switch (slide) {
-        _Slide.stay => UserRoleKeys.stayOwner,
-        _Slide.taxi => UserRoleKeys.taxiDriver,
-      };
+    _Slide.stay => UserRoleKeys.stayOwner,
+    _Slide.taxi => UserRoleKeys.taxiDriver,
+  };
 
-  static (String, String, String, String) seekerCopyOf(_Slide slide) => switch (slide) {
-        _Slide.stay => ('Looking for a stay?', 'Find your stay', 'Browse stays near you', 'Browse Stays'),
-        _Slide.taxi => ('Need a taxi?', 'Find a taxi', 'Local taxis near you', 'Browse Taxis'),
+  static (String, String, String, String) seekerCopyOf(_Slide slide) =>
+      switch (slide) {
+        _Slide.stay => (
+          'Looking for a stay?',
+          'Find your stay',
+          'Browse stays near you',
+          'Browse Stays',
+        ),
+        _Slide.taxi => (
+          'Need a taxi?',
+          'Find a taxi',
+          'Local taxis near you',
+          'Browse Taxis',
+        ),
       };
 
   static String ownerTitleOf(_Slide slide) => switch (slide) {
-        _Slide.stay => 'List your stay',
-        _Slide.taxi => 'List your taxi',
-      };
+    _Slide.stay => 'List your stay',
+    _Slide.taxi => 'List your taxi',
+  };
 
   static String ownerRouteOf(_Slide slide) => switch (slide) {
-        _Slide.stay => AppRoutes.myStays,
-        _Slide.taxi => AppRoutes.myTaxi,
-      };
+    _Slide.stay => AppRoutes.myStays,
+    _Slide.taxi => AppRoutes.myTaxi,
+  };
 
   static int tabOf(_Slide slide) => switch (slide) {
-        _Slide.stay => AppTabs.stays,
-        _Slide.taxi => AppTabs.taxi,
-      };
+    _Slide.stay => AppTabs.stays,
+    _Slide.taxi => AppTabs.taxi,
+  };
 
   @override
   Widget build(BuildContext context) {
-    final isTaxi = slide == _Slide.taxi;
-    final (seekerBadge, seekerTitle, seekerSubtitle, seekerCta) = seekerCopyOf(slide);
-    final accent = accentOf(slide);
-    return Container(
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Colors.white, Color(0xFFFAFBFF)],
-        ),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: accent.withValues(alpha: 0.14), width: 1),
-        boxShadow: AppShadows.premium(
-          AppColors.primary,
-          alpha: 0.05,
-          blur: 8,
-          offset: const Offset(0, 2),
-        ),
+    final (seekerBadge, seekerTitle, seekerSubtitle, seekerCta) = seekerCopyOf(
+      slide,
+    );
+    final key = roleKeyOf(slide);
+    return MediaQuery(
+      data: MediaQuery.of(context).copyWith(
+        textScaler: MediaQuery.textScalerOf(
+          context,
+        ).clamp(maxScaleFactor: 1.15),
       ),
-      clipBehavior: Clip.antiAlias,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          Positioned(
-            right: 0,
-            top: 0,
-            bottom: 0,
-            width: 185,
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                Positioned(
-                  bottom: 14,
-                  left: 0,
-                  right: 0,
-                  child: Align(
-                    alignment: Alignment.bottomCenter,
-                    child: ImageFiltered(
-                      imageFilter: ui.ImageFilter.blur(sigmaX: 14, sigmaY: 8),
-                      child: Container(
-                        width: 84,
-                        height: 16,
-                        decoration: BoxDecoration(
-                          color: accent.withValues(alpha: 0.22),
-                          borderRadius: BorderRadius.circular(50),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                FloatingLoop(
-                  child: SizedBox.expand(
-                    child: isTaxi
-                        ? Align(
-                            alignment: const Alignment(0.6, 0),
-                            child: Container(
-                              width: 96,
-                              height: 96,
-                              decoration: const BoxDecoration(
-                                gradient: AppColors.taxiGradient,
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(Iconsax.car, size: 48, color: Colors.white),
-                            ),
-                          )
-                        : Image.asset(
-                            'assets/images/owner_cta/house.png',
-                            fit: BoxFit.contain,
-                            alignment: Alignment.centerRight,
-                          ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 70, 14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: accent.withValues(alpha: 0.14),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    isOwner ? RoleVisuals.displayName(roleKeyOf(slide)) : seekerBadge,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontFamily: 'Poppins',
-                      fontSize: 9.5,
-                      fontWeight: FontWeight.w700,
-                      color: accent,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  isOwner ? ownerTitleOf(slide) : seekerTitle,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontFamily: 'Poppins',
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.textDark,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  isOwner ? 'Grow your reach' : seekerSubtitle,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontFamily: 'Poppins',
-                    fontSize: 10.5,
-                    fontWeight: FontWeight.w500,
-                    color: AppColors.textLight,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                GestureDetector(
-                  onTap: isOwner
-                      ? () => Get.toNamed(ownerRouteOf(slide))
-                      : () => Get.find<AuthController>().switchToTab(tabOf(slide)),
-                  child: PulseOnce(
-                    child: SweepHighlight(
-                      borderRadius: BorderRadius.circular(12),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 8,
-                        ),
-                        decoration: BoxDecoration(
-                          color: accent,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              isOwner ? 'List Yours' : seekerCta,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontFamily: 'Poppins',
-                                fontSize: 11,
-                                fontWeight: FontWeight.w700,
-                                color: Colors.white,
-                              ),
-                            ),
-                            const SizedBox(width: 4),
-                            const Icon(
-                              Icons.arrow_forward_rounded,
-                              size: 12,
-                              color: Colors.white,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
+      child: HeroBanner(
+        tone: toneOf(slide),
+        height: HomeOwnerCarousel.heightOf(context),
+        iconAsset: RoleVisuals.iconAsset(key),
+        badge: isOwner ? RoleVisuals.displayName(key) : seekerBadge,
+        title: isOwner ? ownerTitleOf(slide) : seekerTitle,
+        subtitle: isOwner ? 'Grow your reach' : seekerSubtitle,
+        cta: isOwner ? 'List Yours' : seekerCta,
+        onTap: isOwner
+            ? () => Get.toNamed(ownerRouteOf(slide))
+            : () => Get.find<AuthController>().switchToTab(tabOf(slide)),
       ),
     );
   }

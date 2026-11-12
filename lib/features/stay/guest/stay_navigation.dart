@@ -1,3 +1,5 @@
+import 'package:animations/animations.dart';
+import 'package:bakhli/design/design.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../config/app_tabs.dart';
@@ -18,9 +20,18 @@ class StayNavigation {
       return route.settings.name == _mapRouteName || route.isFirst;
     });
     if (top?.settings.name == _mapRouteName) return;
-    await nav.push(MaterialPageRoute<void>(
+    await nav.push(PageRouteBuilder<void>(
       settings: const RouteSettings(name: _mapRouteName),
-      builder: (_) => const StayMapScreen(),
+      transitionDuration: templateTransitionDuration,
+      reverseTransitionDuration: templateTransitionDuration,
+      pageBuilder: (_, __, ___) => const StayMapScreen(),
+      transitionsBuilder: (_, animation, secondary, child) => SharedAxisTransition(
+        fillColor: DesignColors.scaffold,
+        animation: animation,
+        secondaryAnimation: secondary,
+        transitionType: SharedAxisTransitionType.horizontal,
+        child: child,
+      ),
     ));
   }
 }

@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:bakhli/design/design.dart';
 import 'package:get/get.dart';
-import 'package:iconsax/iconsax.dart';
-import '../../../config/app_colors.dart';
 import '../controllers/trip_plan_controller.dart';
-import '../trip_colors.dart';
 import '../trip_strings_a2.dart';
 import '../utils/trip_format.dart';
 import 'trip_filter_chips.dart';
@@ -23,7 +21,7 @@ class TripRouteStrip extends StatelessWidget {
     this.text,
     this.showRoute = true,
     this.nights = false,
-    this.accent = TripColors.accent,
+    this.accent = DesignColors.primary,
   });
 
   static String routeLine(TripPlanController c, int day) {
@@ -60,7 +58,7 @@ class TripRouteStrip extends StatelessWidget {
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 itemCount: count,
-                separatorBuilder: (_, _) => const SizedBox(width: 6),
+                separatorBuilder: (_, _) => const SizedBox(width: 8),
                 itemBuilder: (_, i) {
                   final d = i + 1;
                   return TripChipView(
@@ -80,7 +78,7 @@ class TripRouteStrip extends StatelessWidget {
             if (count > 1) const SizedBox(height: 2),
             Row(
               children: [
-                Icon(Iconsax.routing_2, size: 14, color: accent),
+                const TravelIcon(TravelIcon.route, size: 14),
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
@@ -88,7 +86,7 @@ class TripRouteStrip extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                        fontFamily: 'Poppins', fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textLight),
+                        fontFamily: FitnessAppTheme.fontName, fontSize: 12, fontWeight: FontWeight.w600, letterSpacing: 0.2, color: DesignColors.textSecondary),
                   ),
                 ),
               ],

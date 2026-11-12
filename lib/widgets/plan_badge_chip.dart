@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:bakhli/design/design.dart';
 
 class PlanBadgeChip extends StatelessWidget {
   final Color color;
@@ -11,20 +12,16 @@ class PlanBadgeChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: compact ? 6 : 9, vertical: compact ? 1 : 3),
-      decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(999)),
+      decoration: BoxDecoration(color: color, borderRadius: CardRadius.pill),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.star_rounded, size: compact ? 10 : 13, color: Colors.white),
+          TravelIcon(TravelIcon.star, size: compact ? 10 : 13),
           const SizedBox(width: 2),
           Text(
             label,
-            style: TextStyle(
-              fontFamily: 'Poppins',
-              fontSize: compact ? 9 : 11,
-              fontWeight: FontWeight.w700,
-              color: Colors.white,
-            ),
+            style: TypeTokens.style(compact ? 10 : 11, FontWeight.w700,
+                color: DesignColors.surface, letterSpacing: 0.2, chip: compact),
           ),
         ],
       ),

@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:shimmer/shimmer.dart';
-import '../config/app_colors.dart';
-import '../config/app_shadows.dart';
+import 'package:bakhli/design/design.dart';
+import 'package:bakhli/design/extra/chat_kit.dart';
 import '../config/app_insets.dart';
 import '../config/app_routes.dart';
 import '../controllers/chat_controller.dart';
@@ -17,16 +16,16 @@ class ChatsListScreen extends StatefulWidget {
 }
 
 class _ChatsListScreenState extends State<ChatsListScreen>
-    with WidgetsBindingObserver {
+    with WidgetsBindingObserver, SingleTickerProviderStateMixin {
   final _ctrl = Get.find<ChatController>();
   final _searchCtrl = TextEditingController();
   final _scrollCtrl = ScrollController();
+  late final AnimationController _searchAnim =
+      AnimationController(duration: const Duration(milliseconds: 400), vsync: this);
+  late final Animation<double> _searchSize = CurvedAnimation(parent: _searchAnim, curve: Curves.fastOutSlowIn);
   String _query = '';
   bool _searchOpen = false;
   Worker? _searchAutoFetchWorker;
-  // Bounded auto-fetch counter for the search-stalls-on-few-results gap below — reset
-  // whenever the query changes or search closes, so a fresh search always gets its own
-  // budget of pages to look through.
   int _autoFetchCount = 0;
   static const _minFilteredForNoAutoFetch = 8;
   static const _maxAutoFetchPages = 5;
@@ -36,21 +35,12 @@ class _ChatsListScreenState extends State<ChatsListScreen>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _ctrl.loadConversations();
-    // Fires near the bottom of whatever's currently loaded — searches over the
-    // already-loaded list too, so scrolling to load more naturally widens what a
-    // search can match (there's no server-side text search endpoint to query directly).
     _scrollCtrl.addListener(() {
       if (_scrollCtrl.position.pixels >=
           _scrollCtrl.position.maxScrollExtent - 200) {
         _ctrl.loadMoreConversations();
       }
     });
-    // A narrow search query can filter the currently-loaded list down to a handful of rows
-    // that don't even fill the viewport — the scroll listener above then structurally never
-    // fires (there's nothing to scroll), so loadMoreConversations() would never run even
-    // though more matching conversations may exist in unfetched pages. This re-checks every
-    // time a new page actually lands (not just on each keystroke), continuing the fetch
-    // chain started by _maybeFetchMoreForSearch below.
     _searchAutoFetchWorker = ever<List<ConversationModel>>(_ctrl.conversations, (_) => _maybeFetchMoreForSearch());
   }
 
@@ -76,8 +66,7 @@ class _ChatsListScreenState extends State<ChatsListScreen>
     _searchAutoFetchWorker?.dispose();
     _searchCtrl.dispose();
     _scrollCtrl.dispose();
-    // No ChatHubService.disconnect() here anymore — MainScreen owns this connection's
-    // lifecycle for the whole session now (see main_screen.dart), not this screen.
+    _searchAnim.dispose();
     super.dispose();
   }
 
@@ -117,62 +106,35 @@ class _ChatsListScreenState extends State<ChatsListScreen>
 
   @override
   Widget build(BuildContext context) {
-    // SafeArea lives INSIDE the gradient Container (not wrapping it) — same pattern
-    // chat_conversation_screen.dart's and explore_screen.dart's headers already use — so the
-    // gradient's own paint area starts at the very top of the screen, genuinely extending
-    // behind the status bar, and only the title text gets padded down to clear it. This
-    // screen then inherits the app-wide light-icon default, same as every other
-    // gradient-headed screen, instead of needing its own AnnotatedRegion override.
     return Scaffold(
-      backgroundColor: AppColors.scaffoldBg,
+      backgroundColor: DesignColors.scaffold,
       body: Column(
         children: [
-          Container(
-            width: double.infinity,
-            decoration: const BoxDecoration(
-              gradient: AppColors.primaryGradient,
-            ),
-            child: SafeArea(
-              bottom: false,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(4, 8, 12, 20),
-                child: Row(
-                  children: [
-                    IconButton(
-                      onPressed: () => Get.back(),
-                      icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white),
-                    ),
-                    const Expanded(
-                      child: Text(
-                        'Messages',
-                        style: TextStyle(
-                          fontFamily: 'Poppins',
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                    IconButton(
-                      onPressed: () {
-                        final opening = !_searchOpen;
-                        setState(() {
-                          _searchOpen = opening;
-                          if (!opening) _query = '';
-                        });
-                        if (!opening) _searchCtrl.clear();
-                      },
-                      icon: Icon(
-                        _searchOpen
-                            ? Icons.close_rounded
-                            : Icons.search_rounded,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ],
+          ModuleHeader(
+            title: 'Messages',
+            tone: KitTone.stay,
+            onBack: () => Get.back(),
+            trailing: [
+              IconButton(
+                onPressed: () {
+                  final opening = !_searchOpen;
+                  setState(() {
+                    _searchOpen = opening;
+                    if (!opening) _query = '';
+                  });
+                  if (opening) {
+                    _searchAnim.forward();
+                  } else {
+                    _searchAnim.reverse();
+                    _searchCtrl.clear();
+                  }
+                },
+                icon: Icon(
+                  _searchOpen ? Icons.close_rounded : Icons.search_rounded,
+                  color: DesignColors.textInverse,
                 ),
               ),
-            ),
+            ],
           ),
           Expanded(
             child: SafeArea(
@@ -180,17 +142,15 @@ class _ChatsListScreenState extends State<ChatsListScreen>
               bottom: false,
               child: Column(
                 children: [
-                  AnimatedSize(
-                    duration: const Duration(milliseconds: 320),
-                    curve: Curves.easeOutCubic,
+                  SizeTransition(
+                    sizeFactor: _searchSize,
                     alignment: Alignment.topCenter,
-                    child: _searchOpen
-                        ? AnimatedOpacity(
-                            duration: const Duration(milliseconds: 220),
-                            opacity: _searchOpen ? 1 : 0,
-                            child: _buildSearchBox(),
-                          )
-                        : const SizedBox(width: double.infinity),
+                    child: FadeTransition(
+                      opacity: _searchAnim,
+                      child: (!_searchAnim.isDismissed || _searchOpen)
+                          ? _buildSearchBox()
+                          : const SizedBox(width: double.infinity),
+                    ),
                   ),
                   Expanded(
                     child: Obx(() {
@@ -205,24 +165,26 @@ class _ChatsListScreenState extends State<ChatsListScreen>
 
                       final loadingMore = _ctrl.loadingMoreConversations.value;
                       return RefreshIndicator(
-                        color: AppColors.primary,
+                        color: DesignColors.primary,
+                        backgroundColor: DesignColors.surface,
                         onRefresh: _refresh,
                         child: ListView.builder(
                           controller: _scrollCtrl,
-                          physics: const AlwaysScrollableScrollPhysics(),
+                          physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
                           padding: EdgeInsets.fromLTRB(
-                            14,
-                            8,
-                            14,
-                            14 + AppInsets.bottomViewPadding(context),
+                            0,
+                            KitMetrics.cardGap,
+                            0,
+                            KitMetrics.gutter + AppInsets.bottomViewPadding(context),
                           ),
                           itemCount: filtered.length + (loadingMore ? 1 : 0),
                           itemBuilder: (_, i) {
                             if (i >= filtered.length) {
                               return _buildLoadMoreSpinner();
                             }
-                            return Padding(
-                              padding: const EdgeInsets.only(bottom: 10),
+                            return EntranceOnce(
+                              key: ValueKey(filtered[i].id),
+                              index: i < 6 ? i : 6,
                               child: _conversationCard(filtered[i]),
                             );
                           },
@@ -239,49 +201,31 @@ class _ChatsListScreenState extends State<ChatsListScreen>
     );
   }
 
-  // Same field/style as the location picker's search box (location_switch_sheet.dart) —
-  // reusing the app's one established search-field pattern rather than inventing another.
   Widget _buildSearchBox() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
-      child: TextField(
-        controller: _searchCtrl,
-        inputFormatters: noEmojiInputFormatters,
-        onChanged: (v) {
-          setState(() => _query = v);
-          _autoFetchCount = 0;
-          _maybeFetchMoreForSearch();
-        },
-        style: const TextStyle(fontFamily: 'Poppins', fontSize: 13.5),
-        decoration: InputDecoration(
-          hintText: 'Search by name or address',
-          hintStyle: const TextStyle(
-            fontFamily: 'Poppins',
-            fontSize: 13.5,
-            color: AppColors.textHint,
-          ),
-          prefixIcon: const Icon(
-            Icons.search_rounded,
-            size: 20,
-            color: AppColors.textHint,
-          ),
-          filled: true,
-          fillColor: AppColors.cardBg,
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 14,
-            vertical: 12,
-          ),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: AppColors.divider),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: AppColors.divider),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+      padding: const EdgeInsets.fromLTRB(KitMetrics.gutter, 14, KitMetrics.gutter, 6),
+      child: Container(
+        decoration: BoxDecoration(
+          color: DesignColors.surface,
+          borderRadius: const BorderRadius.all(Radius.circular(38)),
+          boxShadow: ShadowTokens.elev1,
+        ),
+        child: TextField(
+          controller: _searchCtrl,
+          inputFormatters: noEmojiInputFormatters,
+          onChanged: (v) {
+            setState(() => _query = v);
+            _autoFetchCount = 0;
+            _maybeFetchMoreForSearch();
+          },
+          cursorColor: DesignColors.primary,
+          style: TypeTokens.style(16, FontWeight.w400, color: DesignColors.textPrimary),
+          decoration: InputDecoration(
+            hintText: 'Search by name or address',
+            hintStyle: TypeTokens.style(16, FontWeight.w400, color: DesignColors.textMuted),
+            prefixIcon: const Icon(Icons.search_rounded, size: 20, color: DesignColors.textMuted),
+            border: InputBorder.none,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           ),
         ),
       ),
@@ -290,7 +234,14 @@ class _ChatsListScreenState extends State<ChatsListScreen>
 
   Widget _conversationCard(ConversationModel c) {
     final unread = c.unreadCount > 0;
-    final accent = ListingKindVisuals.accentOf(c.listingType);
+    final kind = ChatKindStyle.of(c.listingType);
+    final tone = KitTone(
+      accent: kind.accent,
+      accentDark: kind.dark,
+      tint: kind.tint,
+      gradient: kind.gradient,
+      glow: kind.dark,
+    );
     final statusLabel = c.isActive
         ? null
         : switch (c.status) {
@@ -299,134 +250,60 @@ class _ChatsListScreenState extends State<ChatsListScreen>
             'Blocked' => 'Blocked',
             _ => 'Unavailable',
           };
-    return Material(
-      color: AppColors.cardBg,
-      borderRadius: BorderRadius.circular(16),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: () => _openConversation(c),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppColors.divider.withValues(alpha: 0.8)),
-            boxShadow: AppShadows.premium(AppColors.primary, alpha: 0.05, blur: 8, offset: const Offset(0, 2)),
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              CircleAvatar(
-                radius: 23,
-                backgroundColor: accent,
-                child: Opacity(
-                  opacity: c.isActive ? 1 : 0.6,
-                  child: Text(
-                    c.otherPartyName.isNotEmpty ? c.otherPartyName[0].toUpperCase() : '?',
-                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 17, fontWeight: FontWeight.w700, color: Colors.white),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            c.otherPartyName,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontFamily: 'Poppins',
-                              fontSize: 14.5,
-                              fontWeight: unread ? FontWeight.w700 : FontWeight.w600,
-                              color: AppColors.textDark,
-                            ),
-                          ),
-                        ),
-                        Text(
-                          _timeAgo(c.lastMessageAt),
-                          style: TextStyle(
-                            fontFamily: 'Poppins',
-                            fontSize: 11,
-                            color: unread ? accent : AppColors.textLight,
-                            fontWeight: unread ? FontWeight.w600 : FontWeight.w400,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
-                          decoration: BoxDecoration(color: accent.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(6)),
-                          child: Text(
-                            ListingKindVisuals.labelOf(c.listingType),
-                            style: TextStyle(fontFamily: 'Poppins', fontSize: 9, fontWeight: FontWeight.w700, letterSpacing: 0.4, color: accent),
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Text(
-                            '${c.listingTitle}${c.area != null && c.area!.isNotEmpty ? ' · ${c.area}' : ''}',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontFamily: 'Poppins', fontSize: 11.5, color: AppColors.textLight),
-                          ),
-                        ),
-                        if (statusLabel != null) ...[
-                          const SizedBox(width: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
-                            decoration: BoxDecoration(color: AppColors.divider.withValues(alpha: 0.6), borderRadius: BorderRadius.circular(6)),
-                            child: Text(
-                              statusLabel,
-                              style: const TextStyle(fontFamily: 'Poppins', fontSize: 9, fontWeight: FontWeight.w600, color: AppColors.textLight),
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                    const SizedBox(height: 5),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            c.lastMessagePreview ?? 'Say hi',
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontFamily: 'Poppins',
-                              fontSize: 13,
-                              fontWeight: unread ? FontWeight.w600 : FontWeight.w400,
-                              color: unread ? AppColors.textDark : AppColors.textMedium,
-                            ),
-                          ),
-                        ),
-                        if (unread) ...[
-                          const SizedBox(width: 8),
-                          Container(
-                            constraints: const BoxConstraints(minWidth: 20),
-                            height: 20,
-                            padding: const EdgeInsets.symmetric(horizontal: 6),
-                            alignment: Alignment.center,
-                            decoration: BoxDecoration(color: accent, borderRadius: BorderRadius.circular(20)),
-                            child: Text(
-                              c.unreadCount > 99 ? '99+' : '${c.unreadCount}',
-                              style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white),
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
+    final place = '${c.listingTitle}${c.area != null && c.area!.isNotEmpty ? ' · ${c.area}' : ''}';
+    return ListRow(
+      title: c.otherPartyName,
+      subtitle: place,
+      tag: ListingKindVisuals.labelOf(c.listingType),
+      notice: statusLabel,
+      tone: tone,
+      showChevron: false,
+      dimmed: !c.isActive,
+      onTap: () => _openConversation(c),
+      leading: Container(
+        width: ListRow.tileSizeCompact,
+        height: ListRow.tileSizeCompact,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          gradient: kind.gradient,
+          borderRadius: KitMetrics.tileSmall,
         ),
+        child: Text(
+          c.otherPartyName.isNotEmpty ? c.otherPartyName[0].toUpperCase() : '?',
+          style: TypeTokens.style(20, FontWeight.w700, color: DesignColors.surface),
+        ),
+      ),
+      trailing: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Text(
+            _timeAgo(c.lastMessageAt),
+            style: TypeTokens.style(12, unread ? FontWeight.w600 : FontWeight.w400,
+                color: unread ? kind.dark : TypeTokens.secondary),
+          ),
+          if (unread) ...[
+            const SizedBox(height: 6),
+            Container(
+              constraints: const BoxConstraints(minWidth: 22),
+              height: 22,
+              padding: const EdgeInsets.symmetric(horizontal: 6),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(color: kind.dark, borderRadius: CardRadius.pill),
+              child: Text(
+                c.unreadCount > 99 ? '99+' : '${c.unreadCount}',
+                style: TypeTokens.style(11, FontWeight.w700, color: DesignColors.surface),
+              ),
+            ),
+          ],
+        ],
+      ),
+      footer: Text(
+        c.lastMessagePreview ?? 'Say hi',
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: TypeTokens.style(14, unread ? FontWeight.w600 : FontWeight.w400,
+            color: unread ? DesignColors.textPrimary : TypeTokens.secondary),
       ),
     );
   }
@@ -437,110 +314,30 @@ class _ChatsListScreenState extends State<ChatsListScreen>
       child: SizedBox(
         width: 20,
         height: 20,
-        child: CircularProgressIndicator(
-          strokeWidth: 2,
-          color: AppColors.primary,
-        ),
+        child: CircularProgressIndicator(strokeWidth: 2, color: DesignColors.primary),
       ),
     ),
   );
 
-  Widget _buildEmpty() => Center(
-    child: Padding(
-      padding: const EdgeInsets.all(32),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(
-            Icons.chat_bubble_outline_rounded,
-            size: 56,
-            color: AppColors.textHint,
-          ),
-          const SizedBox(height: 16),
-          const Text(
-            'No conversations yet',
-            style: TextStyle(
-              fontFamily: 'Poppins',
-              fontSize: 15,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textDark,
-            ),
-          ),
-          const SizedBox(height: 6),
-          const Text(
-            'Start a chat from any stay.',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontFamily: 'Poppins',
-              fontSize: 13,
-              color: AppColors.textLight,
-            ),
-          ),
-        ],
-      ),
+  Widget _buildEmpty() => const Align(
+    alignment: Alignment.topCenter,
+    child: StateCard(
+      asset: TravelIcon.chat,
+      title: 'No conversations yet',
+      message: 'Start a chat from any stay.',
     ),
   );
 
-  Widget _buildNoMatches() => Center(
-    child: Padding(
-      padding: const EdgeInsets.all(32),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(
-            Icons.search_off_rounded,
-            size: 48,
-            color: AppColors.textHint,
-          ),
-          const SizedBox(height: 14),
-          Text(
-            'No matches for "$_query"',
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontFamily: 'Poppins',
-              fontSize: 13.5,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textDark,
-            ),
-          ),
-        ],
-      ),
-    ),
+  Widget _buildNoMatches() => Align(
+    alignment: Alignment.topCenter,
+    child: StateCard(asset: TravelIcon.route, title: 'No matches for "$_query"'),
   );
 
-  Widget _buildShimmer() => Shimmer.fromColors(
-    baseColor: AppColors.shimmerBase,
-    highlightColor: AppColors.shimmerHighlight,
-    child: ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-      itemCount: 6,
-      itemBuilder: (_, _) => Padding(
-        padding: const EdgeInsets.only(bottom: 10),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          decoration: BoxDecoration(
-            color: AppColors.cardBg,
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Row(
-            children: [
-              const CircleAvatar(radius: 23, backgroundColor: AppColors.cardBg),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(height: 12, width: 120, color: AppColors.cardBg),
-                    const SizedBox(height: 8),
-                    Container(height: 10, width: 180, color: AppColors.cardBg),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    ),
+  Widget _buildShimmer() => ListView.builder(
+    physics: const NeverScrollableScrollPhysics(),
+    padding: const EdgeInsets.only(top: KitMetrics.cardGap),
+    itemCount: 6,
+    itemBuilder: (_, i) => ListRow.skeleton(compact: true),
   );
 
   static String _timeAgo(DateTime dt) {

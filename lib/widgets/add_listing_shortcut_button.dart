@@ -1,15 +1,10 @@
 import 'package:flutter/material.dart';
-import '../config/app_colors.dart';
+import '../design/design.dart';
 
-/// Floating pill shortcut ("Find Nearest", "Map view") — shared by Stay and Taxi screens so
-/// the CTA's color/border/shape stays identical (only label/icon/destination/gradient differ
-/// per caller). A standalone full pill, icon-then-label always — the caller's Positioned
-/// decides where it sits.
 class AddListingShortcutButton extends StatelessWidget {
   final String label;
   final IconData icon;
   final VoidCallback onTap;
-  // Defaults to the primary gradient; callers pass their module gradient.
   final Gradient gradient;
 
   const AddListingShortcutButton({
@@ -17,50 +12,53 @@ class AddListingShortcutButton extends StatelessWidget {
     required this.label,
     required this.icon,
     required this.onTap,
-    this.gradient = AppColors.primaryGradient,
+    this.gradient = TripEntryStyle.gradient,
   });
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(11, 9, 15, 9),
-        decoration: BoxDecoration(
-          gradient: gradient,
-          borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.9), width: 2.4),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.2),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
+    const radius = BorderRadius.all(Radius.circular(38));
+    return Container(
+      decoration: BoxDecoration(
+        gradient: gradient,
+        borderRadius: radius,
+        boxShadow: [
+          ShadowTokens.tint(FitnessAppTheme.grey, ShadowSpec.elev3Spec),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: radius,
+          splashColor: FitnessAppTheme.white.withValues(alpha: Alpha.soft),
+          highlightColor: Colors.transparent,
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(11, 9, 15, 9),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 22,
+                  height: 22,
+                  decoration: BoxDecoration(
+                    color: FitnessAppTheme.nearlyWhite.withValues(alpha: Alpha.soft),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(icon, size: 13, color: FitnessAppTheme.white),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  label,
+                  style: FitnessAppTheme.body2.copyWith(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: FitnessAppTheme.white,
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 19,
-              height: 19,
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.25),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(icon, size: 12, color: Colors.white),
-            ),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: const TextStyle(
-                fontFamily: 'Poppins',
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-                color: Colors.white,
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
