@@ -10,8 +10,18 @@ class JobFeedItem {
 
   String get id => job.id;
 
-  factory JobFeedItem.fromJson(Map<String, dynamic> json) =>
-      JobFeedItem(JobSummaryModel.fromJson(json), NearbyDistance.fromJson(json));
+  // No Atlas city: the label names the district, never a village.
+  factory JobFeedItem.fromJson(Map<String, dynamic> json) {
+    final d = NearbyDistance.fromJson(json);
+    final district = json['districtName'];
+    final hasCity = d?.city != null;
+    return JobFeedItem(
+      JobSummaryModel.fromJson(json),
+      d == null || hasCity || district is! String || district.trim().isEmpty
+          ? d
+          : NearbyDistance(km: d.km, label: d.label, city: district.trim(), state: d.state),
+    );
+  }
 }
 
 class JobsFeedRepository extends NearbyRepositoryBase<JobFeedItem> {

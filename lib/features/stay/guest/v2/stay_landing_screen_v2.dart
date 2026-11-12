@@ -124,8 +124,9 @@ class _StayLandingScreenV2State extends State<StayLandingScreenV2> {
           tone: _kTone,
           tabRoot: true,
           animate: false,
+          autoHeight: true,
           title: Get.find<TabConfigController>().displayNameForIndex(AppTabs.stays, 'Stays'),
-          subtitle: 'Find stays near you',
+          subtitle: (_ctrl.header.value?.farAway ?? false) ? 'Find the nearest stays' : 'Find stays near you',
         ));
   }
 
@@ -135,7 +136,7 @@ class _StayLandingScreenV2State extends State<StayLandingScreenV2> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          KeyedSubtree(key: TourKeys.staysLandingLocation, child: const NearbyCentreBar()),
+          KeyedSubtree(key: TourKeys.staysLandingLocation, child: Obx(() => NearbyCentreBar(far: _ctrl.header.value?.farAway ?? false))),
           Obx(() {
             final centre = NearbyCentreController.to;
             centre.centreVersion.value;
@@ -300,19 +301,17 @@ class _StayLandingScreenV2State extends State<StayLandingScreenV2> {
           SizedBox(height: RailCard.height, child: _card(s)),
           Expanded(
             child: ClipRect(
-              child: Align(
-                alignment: Alignment.topLeft,
-                child: Padding(
-                  padding: const EdgeInsets.only(top: 6, left: 2),
-                  child: NearbyLabelText(distance: s.distance),
-                ),
+              child: SingleChildScrollView(
+                physics: const NeverScrollableScrollPhysics(),
+                padding: const EdgeInsets.only(top: 6, left: 2),
+                child: NearbyLabelText(distance: s.distance),
               ),
             ),
           ),
         ],
       );
 
-  double _labelHeight(BuildContext context) => 12 + MediaQuery.textScalerOf(context).scale(16) * 4;
+  double _labelHeight(BuildContext context) => 12 + MediaQuery.textScalerOf(context).scale(14) * 6;
 
   Widget _buildFeatured() {
     return Obx(() {

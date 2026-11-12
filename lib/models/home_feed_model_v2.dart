@@ -6,6 +6,7 @@ import 'home_feed_model.dart';
 
 abstract final class HomeFeedModelV2 {
   static HomeFeedModel fromJson(Map<String, dynamic> json) => HomeFeedModel(
+        header: NearbyHeader.fromJson(json['header'] is Map ? Map<String, dynamic>.from(json['header'] as Map) : null),
         tabs: {
           for (final e in (json['tabs'] as Map? ?? const {}).entries)
             if (e.value is bool) e.key.toString(): e.value as bool,

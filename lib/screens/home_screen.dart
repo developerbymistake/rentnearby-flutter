@@ -14,6 +14,7 @@ import '../design/design.dart';
 import '../config/app_tabs.dart';
 import '../navigation/tour_keys.dart';
 import '../features/jobs/controllers/my_jobs_controller.dart';
+import '../features/nearby/nearby_strings.dart';
 import '../features/stay/setup/stay_flow.dart';
 import '../features/taxi/models/taxi_browse_item.dart';
 import '../features/taxi/setup/taxi_flow.dart';
@@ -349,10 +350,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildListingsSections() {
     return Obx(() {
+      final far = _home.farAway.value;
       final rails = <Widget>[
         if (_tabs.isStaysActive)
           _buildRail(
-            title: 'Stays near you',
+            title: far ? NearbyStrings.staysNearest : NearbyStrings.staysNear,
             tab: AppTabs.stays,
             section: HomeSectionKeys.stays,
             loading: _home.staysLoading.value,
@@ -360,7 +362,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         if (_tabs.isTaxiActive)
           _buildRail(
-            title: 'Taxis near you',
+            title: far ? NearbyStrings.taxisNearest : NearbyStrings.taxisNear,
             tab: AppTabs.taxi,
             section: HomeSectionKeys.taxis,
             loading: _home.taxisLoading.value,

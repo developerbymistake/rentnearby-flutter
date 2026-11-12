@@ -15,6 +15,8 @@ class HomeController extends GetxController {
 
   final recentlyAddedStays = <HomeStayModel>[].obs;
 
+  final farAway = false.obs;
+
   final staysLoading = true.obs;
   final taxisLoading = true.obs;
   final recentlyAddedStaysLoading = true.obs;
@@ -140,6 +142,7 @@ class HomeController extends GetxController {
     bool current(String k) => _gen[k] == tickets[k];
     try {
       final feed = await _repo.fetchFeed(districtId: districtId, sections: keys);
+      farAway.value = feed.header.farAway;
       for (final k in keys) {
         if (current(k)) _apply(k, feed);
       }

@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../../config/app_routes.dart';
@@ -116,32 +117,39 @@ class _TaxiListScreenV2State extends State<TaxiListScreenV2> {
   static const double _headerBottom = 44;
   static const double _selectorOverlap = _headerBottom + ModuleHeader.paddingBottom;
 
+  double _cardHeight(BuildContext context) =>
+      math.max(_selectorCard, 2 * (MediaQuery.textScalerOf(context).scale(36) + 8) + 1);
+
   Widget _buildHeader(BuildContext context) {
-    final headerH = ModuleHeader.heightOf(context, hasSubtitle: true, bottomHeight: _headerBottom);
+    final card = _cardHeight(context);
     return Obx(() {
       final title = widget.root ? Get.find<TabConfigController>().displayNameForIndex(AppTabs.taxi, 'Taxi') : 'Taxi';
-      return SizedBox(
-        height: headerH + (_selectorCard - _selectorOverlap) + 12,
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            ModuleHeader(
-              title: title,
-              subtitle: _ctrl.to.value != null ? 'Taxis for your route' : 'Taxis near you',
-              tone: KitTone.taxi,
-              tabRoot: widget.root,
-              onBack: widget.root ? null : () => Get.back(),
-              bottomHeight: _headerBottom,
-              bottom: const SizedBox.shrink(),
-            ),
-            Positioned(
-              left: KitMetrics.gutter,
-              right: KitMetrics.gutter,
-              top: headerH - _selectorOverlap,
-              child: _buildSelectors(),
-            ),
-          ],
-        ),
+      final far = _ctrl.header.value?.farAway ?? false;
+      final subtitle = _ctrl.to.value != null ? 'Taxis for your route' : (far ? 'Find the nearest taxis' : 'Taxis near you');
+      return Column(
+        children: [
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              ModuleHeader(
+                title: title,
+                subtitle: subtitle,
+                tone: KitTone.taxi,
+                tabRoot: widget.root,
+                onBack: widget.root ? null : () => Get.back(),
+                autoHeight: true,
+                bottom: const SizedBox(height: _headerBottom),
+              ),
+              Positioned(
+                left: KitMetrics.gutter,
+                right: KitMetrics.gutter,
+                bottom: -(card - _selectorOverlap),
+                child: _buildSelectors(card),
+              ),
+            ],
+          ),
+          SizedBox(height: card - _selectorOverlap + 12),
+        ],
       );
     });
   }
@@ -154,7 +162,7 @@ class _TaxiListScreenV2State extends State<TaxiListScreenV2> {
     return c.hasPin && label != null ? label : 'Near you';
   }
 
-  Widget _buildSelectors() {
+  Widget _buildSelectors(double card) {
     return Obx(() {
       final f = _ctrl.from.value;
       final t = _ctrl.to.value;
@@ -166,7 +174,7 @@ class _TaxiListScreenV2State extends State<TaxiListScreenV2> {
           boxShadow: ShadowTokens.elev3,
         ),
         child: SizedBox(
-          height: _selectorCard,
+          height: card,
           child: Column(children: [
             Expanded(
               child: _selector(
@@ -263,7 +271,7 @@ class _TaxiListScreenV2State extends State<TaxiListScreenV2> {
 
   Widget _buildTiles() {
     return Obx(() {
-      if (!widget.root || !_auth.taxisEnabled) return const SizedBox.shrink();
+      if (!_auth.taxisEnabled || !widget.root) return const SizedBox.shrink();
       return ListRow(
         title: 'My Taxi',
         iconAsset: TravelIcon.taxi,
@@ -276,7 +284,7 @@ class _TaxiListScreenV2State extends State<TaxiListScreenV2> {
 
   // The shared centre pill is only for the local list; a picked From replaces it.
   Widget _buildCentreBar() {
-    return Obx(() => _ctrl.from.value == null && !_ctrl.isRoute ? const NearbyCentreBar() : const SizedBox.shrink());
+    return Obx(() => _ctrl.from.value == null && !_ctrl.isRoute ? NearbyCentreBar(far: _ctrl.header.value?.farAway ?? false) : const SizedBox.shrink());
   }
 
   Widget _buildHeaderStrip() {

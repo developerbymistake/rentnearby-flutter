@@ -102,4 +102,10 @@ void main() {
     await t.tap(find.text(NearbyStrings.tryAgain));
     expect(n, 1);
   });
+
+  testWidgets('centre bar far with GPS avoids near you wording', (t) async {
+    await _pump(t, 360, 1, NearbyCentreBarView(text: NearbyStrings.usingGps, hasPin: false, far: true, onSearch: () {}, onClear: () {}, onUseMyLocation: () {}));
+    expect(find.text('Showing near you'), findsNothing);
+    expect(find.text(NearbyStrings.usingMyLocation), findsOneWidget);
+  });
 }

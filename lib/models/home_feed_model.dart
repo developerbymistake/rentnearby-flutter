@@ -1,3 +1,4 @@
+import '../features/nearby/models/nearby_models.dart';
 import '../features/stay/models/stay_browse_item.dart';
 import '../features/taxi/models/taxi_browse_item.dart';
 import 'browse_item.dart';
@@ -29,9 +30,11 @@ class HomeFeedModel {
   final List<TaxiBrowseItem>? taxis;
   final List<HomeStayModel>? recentStays;
   final Map<String, bool> tabs;
+  final NearbyHeader header;
 
   const HomeFeedModel({
     this.tabs = const {},
+    this.header = NearbyHeader.empty,
     this.stays,
     this.taxis,
     this.recentStays,

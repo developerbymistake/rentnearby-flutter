@@ -188,7 +188,7 @@ void main() {
           home: MediaQuery(
             data: MediaQueryData(size: Size(w, 900), textScaler: const TextScaler.linear(1.3)),
             child: Builder(builder: (context) {
-              final labelH = 12 + MediaQuery.textScalerOf(context).scale(16) * 4;
+              final labelH = 12 + MediaQuery.textScalerOf(context).scale(14) * 6;
               return Scaffold(
                 body: GridView.builder(
                   padding: const EdgeInsets.all(KitMetrics.gutter),
@@ -218,7 +218,11 @@ void main() {
                       ),
                       const Expanded(
                         child: ClipRect(
-                          child: Align(alignment: Alignment.topLeft, child: NearbyLabelText(distance: far)),
+                          child: SingleChildScrollView(
+                            physics: NeverScrollableScrollPhysics(),
+                            padding: EdgeInsets.only(top: 6, left: 2),
+                            child: NearbyLabelText(distance: far),
+                          ),
                         ),
                       ),
                     ],

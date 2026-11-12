@@ -6,7 +6,8 @@ import '../nearby_strings.dart';
 
 class NearbyCentreBar extends StatelessWidget {
   final NearbyCentreController? controller;
-  const NearbyCentreBar({super.key, this.controller});
+  final bool far;
+  const NearbyCentreBar({super.key, this.controller, this.far = false});
 
   @override
   Widget build(BuildContext context) {
@@ -18,6 +19,7 @@ class NearbyCentreBar extends StatelessWidget {
       return NearbyCentreBarView(
         text: text,
         hasPin: c.hasPin,
+        far: far,
         onSearch: () => c.pickPlace(context),
         onClear: c.clearPin,
         onUseMyLocation: c.useMyLocation,
@@ -29,6 +31,7 @@ class NearbyCentreBar extends StatelessWidget {
 class NearbyCentreBarView extends StatelessWidget {
   final String text;
   final bool hasPin;
+  final bool far;
   final VoidCallback onSearch;
   final VoidCallback onClear;
   final VoidCallback onUseMyLocation;
@@ -36,6 +39,7 @@ class NearbyCentreBarView extends StatelessWidget {
     super.key,
     required this.text,
     required this.hasPin,
+    this.far = false,
     required this.onSearch,
     required this.onClear,
     required this.onUseMyLocation,
@@ -58,7 +62,7 @@ class NearbyCentreBarView extends StatelessWidget {
               child: Row(mainAxisSize: MainAxisSize.min, children: [
                 const Icon(Icons.place_outlined, size: 16, color: DesignColors.primary),
                 const SizedBox(width: 6),
-                Flexible(child: Text(text, maxLines: 2, overflow: TextOverflow.ellipsis, style: TypeTokens.label.copyWith(color: DesignColors.primary))),
+                Flexible(child: Text(!hasPin && far ? NearbyStrings.usingMyLocation : text, maxLines: 2, overflow: TextOverflow.ellipsis, style: TypeTokens.label.copyWith(color: DesignColors.primary))),
                 if (hasPin)
                   InkWell(
                     onTap: onClear,

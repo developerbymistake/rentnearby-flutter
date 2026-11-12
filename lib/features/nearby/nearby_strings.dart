@@ -48,6 +48,7 @@ class NearbyStrings {
 
   static String usingPin(String label) => 'Showing near $label';
   static const String usingGps = 'Showing near you';
+  static const String usingMyLocation = 'Using my location';
   static const String searchAnyPlace = 'Search any place';
   static const String useMyLocation = 'Use my location';
   static String nearestTown(String c, double km) => 'Nearest town: $c, about ${kmText(km)} km';
