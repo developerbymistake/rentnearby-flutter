@@ -4,17 +4,17 @@ import '../config/app_tabs.dart';
 import '../controllers/tab_config_controller.dart';
 import '../screens/home_screen.dart';
 import '../screens/profile_screen.dart';
-import '../features/stay/guest/stay_landing_screen.dart';
+import '../features/stay/guest/v2/stay_landing_screen_v2.dart';
 import '../features/trip/screens/trips_discovery_screen.dart';
-import '../features/taxi/guest/taxi_list_screen.dart';
+import '../features/taxi/guest/v2/taxi_list_screen_v2.dart';
 import 'tab_keys.dart';
 
 Widget _rootScreen(int tabId) {
   switch (tabId) {
     case AppTabs.home: return const HomeScreen();
-    case AppTabs.stays: return const StayLandingScreen();
+    case AppTabs.stays: return const StayLandingScreenV2();
     case AppTabs.trips: return const TripsDiscoveryScreen();
-    case AppTabs.taxi: return const TaxiListScreen(root: true);
+    case AppTabs.taxi: return const TaxiListScreenV2(root: true);
     case AppTabs.profile: return const ProfileScreen();
     default: return const SizedBox.shrink();
   }

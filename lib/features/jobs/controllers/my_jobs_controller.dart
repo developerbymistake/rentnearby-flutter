@@ -1,3 +1,4 @@
+import '../v2/jobs_feed_controller.dart';
 import 'package:dio/dio.dart';
 import 'package:get/get.dart';
 import '../../../utils/app_toast.dart';
@@ -51,6 +52,7 @@ class MyJobsController extends GetxController {
   }
 
   static void invalidateList() {
+    JobsFeedController.invalidate();
     if (Get.isRegistered<JobsListController>(tag: JobsListController.tag)) {
       Get.find<JobsListController>(tag: JobsListController.tag).invalidate();
     }

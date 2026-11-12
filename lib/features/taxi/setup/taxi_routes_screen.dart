@@ -8,7 +8,9 @@ import '../../../models/browse_item.dart';
 import '../../../utils/app_toast.dart';
 import '../../../widgets/location_switch_sheet.dart';
 import '../../trip/trip_strings_a3.dart';
+import '../guest/v2/taxi_rate_strings.dart';
 import '../taxi_option_sets.dart';
+import 'taxi_rate_rules.dart';
 import 'taxi_setup_controller.dart';
 
 class _Place {
@@ -106,48 +108,17 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> with TickerProvider
     _kmCtrl.text = _storedKm;
   }
 
-  Future<bool> _confirmClearRate() async {
-    final ok = await showTaxiDialog(
-      context,
-      title: 'Clear your day rate?',
-      body: 'You leave the trip planning list.',
-      cancelLabel: 'Keep',
-      confirmLabel: 'Clear',
-      destructive: true,
-    );
-    return ok == true;
-  }
-
   Future<bool> _persistRate({required bool quiet}) async {
     if (_savingRate || _ctrl.isSaving.value) return false;
     final rateText = _rateCtrl.text.trim();
     final kmText = _kmCtrl.text.trim();
-    int? rate;
-    int? km;
-    if (rateText.isEmpty) {
-      if (kmText.isNotEmpty) {
-        AppToast.error('Add a day rate first');
-        return false;
-      }
-      if (_ctrl.taxi.value?.hasLocalRate != true) {
-        AppToast.error('Enter a day rate');
-        return false;
-      }
-      if (!await _confirmClearRate() || !mounted) return false;
-    } else {
-      rate = int.tryParse(rateText) ?? 0;
-      if (rate < TaxiOptionSets.minFare || rate > TaxiOptionSets.maxFare) {
-        AppToast.error('Fare must be between ₹100 and ₹99,00,000');
-        return false;
-      }
-      if (kmText.isNotEmpty) {
-        km = int.tryParse(kmText) ?? 0;
-        if (km > TaxiOptionSets.localDayKmMax) {
-          AppToast.error('Km per day must be 0 to ${TaxiOptionSets.localDayKmMax}');
-          return false;
-        }
-      }
+    final error = TaxiRateRules.validate(rateText, kmText);
+    if (error != null) {
+      AppToast.error(error);
+      return false;
     }
+    final rate = int.parse(rateText);
+    final km = int.parse(kmText);
     setState(() => _savingRate = true);
     final ok = await _ctrl.saveLocalRate(dayRate: rate, kmPerDay: km);
     if (!mounted) return ok;
@@ -155,7 +126,7 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> with TickerProvider
       _savingRate = false;
       if (ok) _syncRateFields();
     });
-    if (ok && !quiet) AppToast.success(rate == null ? 'Rate cleared' : 'Rate saved');
+    if (ok && !quiet) AppToast.success('Rate saved');
     return ok;
   }
 
@@ -317,6 +288,11 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> with TickerProvider
     if (_routes.isEmpty && !rateDirty) {
       AppToast.error('Add at least one route');
       setState(() => _formOpen = true);
+      return;
+    }
+    final rateError = _rateEditable ? TaxiRateRules.validate(_rateCtrl.text, _kmCtrl.text) : null;
+    if (rateError != null) {
+      AppToast.error(rateError);
       return;
     }
     if (rateDirty && !await _persistRate(quiet: _routes.isNotEmpty)) return;
@@ -537,7 +513,7 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> with TickerProvider
     return SetupCard(
       title: 'Local sightseeing',
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('Needed to appear in trip planning', style: TripKit.text(12, color: FitnessAppTheme.lightText)),
+        Text(TaxiRateStrings.neededToList, style: TripKit.text(12, color: FitnessAppTheme.lightText)),
         _label(TripStringsA3.driverRateLabel),
         TextFormField(
           controller: _rateCtrl,
@@ -549,7 +525,7 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> with TickerProvider
           style: SetupKit.fieldText(),
           decoration: SetupKit.input(hint: 'e.g. 2500', prefix: '₹ '),
         ),
-        _label('Km included per day (optional)'),
+        _label(TaxiRateStrings.kmLabel),
         TextFormField(
           controller: _kmCtrl,
           readOnly: !editable,

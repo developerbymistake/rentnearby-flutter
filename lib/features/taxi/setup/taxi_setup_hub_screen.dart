@@ -185,7 +185,7 @@ class _TaxiSetupHubScreenState extends State<TaxiSetupHubScreen> with TickerProv
     final d1 = t?.step1Done ?? false;
     final u2 = d1;
     final stepDone = (t?.identityDone ?? false) || (t?.isPendingReview ?? false);
-    final d2 = u2 && (t?.routesDone ?? false);
+    final d2 = u2 && (t?.routesDone ?? false) && (t?.hasLocalRate ?? false) && t?.localDayKm != null;
     final u3 = d2 && stepDone;
     final d3 = u3 && (t != null && (t.isPendingReview || t.isApproved));
     final percent = t?.percent ?? 0;

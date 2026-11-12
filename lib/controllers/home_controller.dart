@@ -1,7 +1,8 @@
 import 'package:get/get.dart';
 import '../features/taxi/models/taxi_browse_item.dart';
 import '../models/home_feed_model.dart';
-import '../repositories/home_repository.dart';
+import '../features/nearby/controllers/nearby_centre_controller.dart';
+import '../repositories/home_repository_v2.dart';
 import 'location_controller.dart';
 import 'tab_config_controller.dart';
 
@@ -25,7 +26,7 @@ class HomeController extends GetxController {
     HomeSectionKeys.recentStays,
   };
 
-  final _repo = const HomeRepository();
+  final _repo = const HomeRepositoryV2();
   final _gen = <String, int>{};
   final _workers = <Worker>[];
   late final LocationController _loc;
@@ -46,6 +47,7 @@ class HomeController extends GetxController {
     }));
 
     _workers.add(ever(_tabs.version, (_) => _onTabsChanged()));
+    _workers.add(ever(NearbyCentreController.to.centreVersion, (_) => reloadDistrict()));
 
     final current = _loc.effectiveDistrict;
     if (current != null) loadHomeData(current.id);

@@ -5,6 +5,7 @@ import '../../../utils/app_toast.dart';
 import '../../../utils/dio_error_mapper.dart';
 import '../../trip/trip_strings.dart';
 import '../guest/stay_landing_controller.dart';
+import '../guest/v2/stay_landing_controller_v2.dart';
 import '../models/stay_owner_model.dart';
 import 'stay_repository.dart';
 
@@ -132,6 +133,7 @@ class StaySetupController extends GetxController {
   Future<void> _afterChange({required bool awaitProfile}) async {
     final refresh = Get.find<AuthController>().refreshProfile();
     if (awaitProfile) await refresh;
+    if (Get.isRegistered<StayLandingControllerV2>(tag: StayLandingControllerV2.tag)) Get.find<StayLandingControllerV2>(tag: StayLandingControllerV2.tag).stayPostedTrigger.value++;
     if (Get.isRegistered<StayLandingController>(tag: 'stays')) {
       Get.find<StayLandingController>(tag: 'stays').stayPostedTrigger.value++;
     }
