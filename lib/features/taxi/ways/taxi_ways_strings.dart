@@ -4,7 +4,7 @@ import '../taxi_option_sets.dart';
 
 class TaxiWaysStrings {
   static const String title = 'Ways to go';
-  static String subtitle(String from, String to) => '$from → $to';
+  static String subtitle(String from, String to) => '$from to $to';
   static String dateChip(DateTime d) => TripFormat.shortDate(d);
   static String peopleChip(int n) => '$n people';
   static String people(int n) => n == 1 ? '1 person' : '$n people';
@@ -69,7 +69,7 @@ class TaxiWaysStrings {
   static const String saved = 'Journey saved';
 
   static const String changeDriver = 'Change driver';
-  static String driversOn(String from, String to, int n) => '$from → $to · $n drivers';
+  static String driversOn(String from, String to, int n) => '$from to $to · $n drivers';
   static const String seats6 = '6+ seats';
   static const String suv = 'SUV';
   static String bestFitFirst(int people, int shown, int total) =>

@@ -25,6 +25,7 @@ class WayDriverRow extends StatelessWidget {
   final bool shortlisted;
   final bool shortlistBusy;
   final bool noReply;
+  final String? startName;
 
   const WayDriverRow({
     super.key,
@@ -39,12 +40,13 @@ class WayDriverRow extends StatelessWidget {
     this.shortlisted = false,
     this.shortlistBusy = false,
     this.noReply = false,
+    this.startName,
   });
 
   @override
   Widget build(BuildContext context) {
     final d = driver;
-    final from = d.reversed ? d.toName : d.fromName;
+    final from = (startName != null && startName!.isNotEmpty) ? startName! : (d.reversed ? d.toName : d.fromName);
     final to = d.reversed ? d.fromName : d.toName;
     final vehicle = d.vehicleCategory != null ? TaxiOptionSets.categoryLabel(d.vehicleCategory) : d.vehicleTypeName;
     final best = bestReason != null;
@@ -57,6 +59,7 @@ class WayDriverRow extends StatelessWidget {
       subtitle: [
         vehicle,
         if (d.repliesInApp) TaxiWaysStrings.repliesInApp,
+        if (startName != null && startName!.isNotEmpty && !d.basedHere) TripStringsShortlist.basedIn(d.reversed ? d.toName : d.fromName),
         if (d.meetAtName != null && d.meetAtName!.isNotEmpty) TripStringsShortlist.startsAt(d.meetAtName!),
       ].join(' · '),
       facts: [
@@ -72,6 +75,22 @@ class WayDriverRow extends StatelessWidget {
       onTap: onTap,
       margin: EdgeInsets.zero,
       actions: [
+        if (onShortlist != null)
+          Row(
+            children: [
+              if (onCall != null) ...[
+                PillAction(
+                  label: TaxiWaysStrings.call,
+                  tone: KitTone.taxi,
+                  icon: const Icon(Icons.call_rounded, size: 16, color: DesignColors.primary),
+                  onTap: onCall,
+                ),
+                const SizedBox(width: 8),
+              ],
+              Expanded(child: TripShortlistToggle(selected: shortlisted, busy: shortlistBusy, onTap: onShortlist, tone: KitTone.taxi)),
+            ],
+          )
+        else ...[
         if (onCall != null)
           PillAction(
             label: TaxiWaysStrings.call,
@@ -79,9 +98,7 @@ class WayDriverRow extends StatelessWidget {
             icon: const Icon(Icons.call_rounded, size: 16, color: DesignColors.primary),
             onTap: onCall,
           ),
-        if (onShortlist != null)
-          TripShortlistToggle(selected: shortlisted, busy: shortlistBusy, onTap: onShortlist, tone: KitTone.taxi)
-        else if (onUse != null)
+        if (onUse != null)
           PrimaryButton(
             label: TripStringsStepsA3.useForMyTrip,
             onPressed: useBusy ? null : onUse,
@@ -90,6 +107,7 @@ class WayDriverRow extends StatelessWidget {
             expand: false,
             height: 44,
           ),
+        ],
       ],
     );
     if (!best) return card;

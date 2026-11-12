@@ -11,7 +11,13 @@ import 'trip_send_result_sheet.dart';
 import 'trip_sheet_frame.dart';
 
 class TripShortlistBar extends StatelessWidget {
-  const TripShortlistBar({super.key, required this.step, required this.onDone, this.tone = KitTone.stay, this.maxWidth = 640});
+  const TripShortlistBar({
+    super.key,
+    required this.step,
+    required this.onDone,
+    this.tone = KitTone.stay,
+    this.maxWidth = 640,
+  });
 
   final String step;
   final VoidCallback onDone;
@@ -22,7 +28,10 @@ class TripShortlistBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = TripShortlistController.to;
     return DecoratedBox(
-      decoration: const BoxDecoration(color: DesignColors.surface, boxShadow: ShadowTokens.elev2),
+      decoration: const BoxDecoration(
+        color: DesignColors.surface,
+        boxShadow: ShadowTokens.elev2,
+      ),
       child: SafeArea(
         top: false,
         child: Center(
@@ -33,29 +42,73 @@ class TripShortlistBar extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
               child: Obx(() {
                 final n = c.countOf(step);
-                return Row(
+                final note = n >= c.max
+                    ? TripStringsShortlist.full
+                    : (n == 0 && c.doneHint.contains(step)
+                          ? TripStringsShortlist.pickFirst
+                          : null);
+                final label = Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Expanded(
-                      child: Text(
-                        TripStringsShortlist.barCount(n, c.max),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: TypeTokens.style(14, FontWeight.w700, color: DesignColors.textStrong),
+                    Text(
+                      TripStringsShortlist.barCount(n, c.max),
+                      style: TypeTokens.style(
+                        14,
+                        FontWeight.w700,
+                        color: DesignColors.textStrong,
                       ),
                     ),
-                    const SizedBox(width: 12),
-                    ConstrainedBox(
-                      constraints: const BoxConstraints(minWidth: 112),
-                      child: PrimaryButton(
-                        label: TripStringsShortlist.done,
-                        loading: c.isSending(step),
-                        onPressed: c.isSending(step) ? null : onDone,
-                        tone: tone,
-                        expand: false,
-                        height: 48,
+                    if (note != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Text(
+                          note,
+                          key: const ValueKey('shortlist-bar-note'),
+                          style: TypeTokens.style(
+                            12,
+                            FontWeight.w500,
+                            color: TypeTokens.secondary,
+                          ),
+                        ),
                       ),
-                    ),
                   ],
+                );
+                Widget done(bool wide) => ConstrainedBox(
+                  constraints: const BoxConstraints(minWidth: 112),
+                  child: PrimaryButton(
+                    label: TripStringsShortlist.done,
+                    loading: c.isSending(step),
+                    onPressed: c.isSending(step) ? null : onDone,
+                    tone: tone,
+                    expand: wide,
+                    height: 48,
+                  ),
+                );
+                return LayoutBuilder(
+                  builder: (context, box) {
+                    final stack =
+                        box.maxWidth < 300 ||
+                        MediaQuery.textScalerOf(context).scale(14) > 20;
+                    if (stack) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          label,
+                          const SizedBox(height: 8),
+                          done(true),
+                        ],
+                      );
+                    }
+                    return Row(
+                      children: [
+                        Expanded(child: label),
+                        const SizedBox(width: 12),
+                        done(false),
+                      ],
+                    );
+                  },
                 );
               }),
             ),
@@ -76,7 +129,7 @@ class TripShortlistFlow {
     final c = TripShortlistController.to;
     final n = c.countOf(step);
     if (n == 0) {
-      TripNavigation.backToPlan();
+      c.doneHint.add(step);
       return;
     }
     if (!c.beginSend(step)) return;
@@ -109,14 +162,29 @@ class TripShortlistFlow {
     }
     final names = c.namesOf(step);
     final batch = await send();
-    if (batch == null || !context.mounted) return;
-    await TripSendResultSheet.show(context, batch: batch, names: names, taxi: taxi, shortlist: true);
+    if (batch == null) return;
+    if (Get.isRegistered<TripPlanController>()) TripPlanController.to.guideRecordSend(step, batch, taxi: taxi);
+    if (!context.mounted) return;
+    await TripSendResultSheet.show(
+      context,
+      batch: batch,
+      names: names,
+      taxi: taxi,
+      shortlist: true,
+    );
   }
 }
 
 class TripShortlistReview {
-  static Future<bool> show(BuildContext context, {required bool taxi, required int count}) async {
-    final yes = await TripSheetFrame.show<bool>(context, _ReviewBody(taxi: taxi, count: count));
+  static Future<bool> show(
+    BuildContext context, {
+    required bool taxi,
+    required int count,
+  }) async {
+    final yes = await TripSheetFrame.show<bool>(
+      context,
+      _ReviewBody(taxi: taxi, count: count),
+    );
     return yes == true;
   }
 }
@@ -134,10 +202,18 @@ class _ReviewBody extends StatelessWidget {
       title: TripStringsShortlist.reviewTitle,
       description: TripStringsShortlist.reviewBody(count, taxi: taxi),
       children: [
-        PrimaryButton(label: TripStringsShortlist.yesSendAll, onPressed: () => Navigator.pop(context, true), tone: tone),
+        PrimaryButton(
+          label: TripStringsShortlist.yesSendAll,
+          onPressed: () => Navigator.pop(context, true),
+          tone: tone,
+        ),
         const SizedBox(height: 8),
         Center(
-          child: TextLink(label: TripStringsShortlist.notNow, onTap: () => Navigator.pop(context, false), tone: KitTone.trip),
+          child: TextLink(
+            label: TripStringsShortlist.notNow,
+            onTap: () => Navigator.pop(context, false),
+            tone: KitTone.trip,
+          ),
         ),
       ],
     );

@@ -132,6 +132,27 @@ class TripGuideRules {
 
   static int percent(int resolved, int total) => total <= 0 ? 0 : (resolved * 100 / total).round().clamp(0, 100);
 
+  static bool hasSendEvidence(TripRowState s) => s.inProgress || s == TripRowState.confirmed || s == TripRowState.booked;
+
+  static bool answered({
+    required TripGuideChoice? choice,
+    required int shortlisted,
+    required bool sentOk,
+    required bool notNow,
+    required bool rowEvidence,
+  }) {
+    switch (choice) {
+      case null:
+        return false;
+      case TripGuideChoice.skip || TripGuideChoice.own:
+        return true;
+      case TripGuideChoice.find:
+        return sentOk || rowEvidence || (notNow && shortlisted > 0);
+    }
+  }
+
+  static int firstUnanswered(List<String> keys, Set<String> answered) => keys.indexWhere((k) => !answered.contains(k));
+
   static int resolvedCount(List<String> keys, Map<String, TripGuideChoice> choices, {Set<String>? engaged}) =>
       keys.where((k) {
         final c = choices[k];
@@ -158,14 +179,14 @@ class TripGuideRules {
     return out;
   }
 
-  static int cursor(List<String> keys, String? stored, Map<String, TripGuideChoice> choices) {
+  static int cursor(List<String> keys, String? stored, Map<String, TripGuideChoice> choices, {Set<String>? answered}) {
     if (keys.isEmpty) return 0;
     if (stored != null && stored.isNotEmpty) {
       final i = keys.indexOf(stored);
       if (i >= 0) return i;
     }
     for (var i = 0; i < keys.length; i++) {
-      if (!choices.containsKey(keys[i])) return i;
+      if (answered == null ? !choices.containsKey(keys[i]) : !answered.contains(keys[i])) return i;
     }
     return keys.length;
   }
@@ -182,13 +203,16 @@ class TripGuideRules {
     if (finish) return TripGuideCard.finish;
     if (reopen) return TripGuideCard.reopened;
     if (nudge) return TripGuideCard.nudge;
-    if (choice == TripGuideChoice.find) {
+    if (choice == null || choice == TripGuideChoice.find) {
       if (shortlisted > 0) return TripGuideCard.review;
-      if (noReply && rowOpen) return TripGuideCard.reopened;
+      if (choice != null && noReply && rowOpen) return TripGuideCard.reopened;
     }
     return TripGuideCard.question;
   }
 
   static bool canNext(TripGuideCard card, TripGuideChoice? choice) =>
-      card == TripGuideCard.question && choice != null;
+      card == TripGuideCard.question && (choice == TripGuideChoice.own || choice == TripGuideChoice.skip);
+
+  static bool canAdvance(TripGuideCard card, {required bool answered}) =>
+      answered && (card == TripGuideCard.question || card == TripGuideCard.review);
 }

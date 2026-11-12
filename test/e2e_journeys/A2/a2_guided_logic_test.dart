@@ -433,6 +433,9 @@ void main() {
       expect(r.c.guideState.percent.value, 25);
       r.sl.items.add(_item('stay:1', 'a', kind: ShortlistKinds.stay));
       r.c.guideSync();
+      expect(r.c.guideState.percent.value, 25);
+      r.c.guideState.notNow.add('stay:1');
+      r.c.guideSync();
       expect(r.c.guideState.percent.value, 50);
       r.close();
     });
@@ -543,6 +546,8 @@ void main() {
         'comingBack': TripGuideChoice.skip,
       };
       final r = await _rig(_multi([2], guide: const TripGuide(step: 'finish', choices: choices)));
+      r.sl.items.add(_item('gettingThere', 'a'));
+      r.c.guideState.notNow.add('gettingThere');
       r.c.guideRefresh();
       r.c.guideGoTo(4);
       await _pump(t, r, 360);

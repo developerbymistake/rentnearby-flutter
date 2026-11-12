@@ -1646,18 +1646,18 @@ void main() {
     });
 
     test('moving writes the cursor into the plan and survives a reload of the plan json', () {
-      final c = ctl(planG(guide: const TripGuide(choices: {'gettingThere': TripGuideChoice.skip})));
+      final c = ctl(planG(guide: const TripGuide(choices: {'gettingThere': TripGuideChoice.skip, 'stay:1': TripGuideChoice.skip})));
       c.guideRefresh();
-      expect(c.guideState.index.value, 1);
-      c.guideNext();
+      expect(c.guideState.index.value, 2);
+      c.guidePrevious();
       final json = c.plan.value!.toJson();
       expect(json['version'], 7);
       final back = TripPlan.fromJson(json).guide!;
-      expect(back.step, 'taxi');
+      expect(back.step, 'stay:1');
       expect(back.choices['gettingThere'], TripGuideChoice.skip);
       final c2 = ctl(TripPlan.fromJson(json));
       c2.guideRefresh();
-      expect(c2.guideState.index.value, 2);
+      expect(c2.guideState.index.value, 1);
     });
 
     test('previous on the first step goes back to the places page', () {

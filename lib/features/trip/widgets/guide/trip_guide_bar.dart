@@ -11,7 +11,12 @@ class TripGuideBar extends StatelessWidget {
     required this.onPrevious,
     required this.onNext,
     required this.onOverview,
+    this.reason,
+    this.onOpenList,
   });
+
+  final String? reason;
+  final VoidCallback? onOpenList;
 
   final bool canNext;
   final VoidCallback onPrevious;
@@ -32,10 +37,15 @@ class TripGuideBar extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                if (!canNext)
+                if (!canNext && reason != null)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 8),
-                    child: Text(TripStringsGuide.chooseHint, textAlign: TextAlign.center, style: TypeTokens.caption),
+                    child: Text(reason!, key: const ValueKey('guide-next-reason'), textAlign: TextAlign.center, style: TypeTokens.caption),
+                  ),
+                if (!canNext && onOpenList != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: TripButton(label: TripStringsGuide.openList, height: 36, outlined: true, onPressed: onOpenList),
                   ),
                 Row(
                   children: [

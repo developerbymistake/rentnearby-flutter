@@ -173,7 +173,7 @@ void main() {
     }
     await _shot(t, 'trips_plan_header_scroll_end');
     final title = t.getRect(find.text(c.title).first);
-    final map = t.getRect(find.text('Map').first);
+    final map = t.getRect(find.byTooltip('Map'));
     expect(title.right, lessThanOrEqualTo(map.left + 0.5));
   });
 
@@ -184,7 +184,7 @@ void main() {
     c.planStep.value = 2;
     await _settle(t);
 
-    await t.tap(find.text('Map').first);
+    await t.tap(find.byTooltip('Map'));
     await _settle(t);
     expect(find.text('map-stub'), findsOneWidget);
     Get.back();

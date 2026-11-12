@@ -16,6 +16,9 @@ class TripStringsGuide {
   static const String statusSkipped = 'Skipped';
   static const String statusDone = 'Arranged';
   static const String chooseHint = 'Choose an option to continue';
+  static const String findHint = 'Pick up to 3 from the list, or choose another option';
+  static const String reviewHint = 'Send your enquiry, or tap Not now to continue';
+  static const String openList = 'Open the list';
   static const String noTaxiNote = 'We will not show taxis for this trip.';
   static const String skipBlocked = 'You already sent an enquiry here. Withdraw it first.';
   static const String ownBlocked = 'This one is already booked.';
@@ -83,4 +86,5 @@ class TripStringsGuide {
   static const String finishName = 'All done';
   static const String finishBody = 'Review everything in your summary.';
   static const String openSummary = 'Open summary';
+  static const String summaryLocked = 'Answer every step to see the summary';
 }

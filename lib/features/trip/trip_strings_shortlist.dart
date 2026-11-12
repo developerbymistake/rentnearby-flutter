@@ -9,6 +9,12 @@ class TripStringsShortlist {
   static const notNow = 'Not now';
   static const sending = 'Sending';
   static const taxiFallback = 'Taxi';
+  static const pickFirst = 'Pick up to 3 from the list, or go back and choose another option.';
+  static const emptyTitle = 'No taxis found for this route yet.';
+  static const emptyBody = 'You can arrange it yourself or skip.';
+  static const emptyFull = '$emptyTitle $emptyBody';
+  static const searchAgain = 'Search again';
+  static const loadingTaxis = 'Looking for taxis on this route';
 
   static String barCount(int n, int max) => '$n of $max shortlisted';
 
@@ -43,6 +49,7 @@ class TripStringsShortlist {
   }
 
   static String startsAt(String place) => 'Starts at $place';
+  static String basedIn(String place) => 'Based in $place';
 
   static const sent = 'Sent';
   static const alreadyOpen = 'Already sent earlier';

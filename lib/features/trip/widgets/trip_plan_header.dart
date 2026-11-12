@@ -12,7 +12,18 @@ import 'trip_card.dart';
 import 'trip_pace_sheet.dart';
 import 'trip_status.dart';
 
-enum TripPlanMenu { saveExit, editDays, editDates, rename, summary, map, mute, complete, delete, easy }
+enum TripPlanMenu {
+  saveExit,
+  editDays,
+  editDates,
+  rename,
+  summary,
+  map,
+  mute,
+  complete,
+  delete,
+  easy,
+}
 
 class TripPlanHeader extends StatelessWidget {
   final ValueChanged<TripPlanMenu> onMenu;
@@ -26,14 +37,22 @@ class TripPlanHeader extends StatelessWidget {
     final today = c.todayDay;
     final todayDate = today == null ? null : c.dateOf(today);
     if (today != null && todayDate != null) {
-      return TripStringsV2Plan.headerRunning(today, c.dayCount, TripFormat.shortDate(todayDate));
+      return TripStringsV2Plan.headerRunning(
+        today,
+        c.dayCount,
+        TripFormat.shortDate(todayDate),
+      );
     }
     final start = s.startDate;
     final end = s.endDate(c.dayCount);
     if (start == null || end == null) {
       return TripStringsV2Plan.headerSub(c.dayCount, c.spotCount, p.legCount);
     }
-    return TripStringsV2Plan.headerDated(c.dayCount, TripFormat.dayMonthRange(start, end), s.peopleSummary);
+    return TripStringsV2Plan.headerDated(
+      c.dayCount,
+      TripFormat.dayMonthRange(start, end),
+      s.peopleSummary,
+    );
   }
 
   static TripBookingState stateOf(TripPlanController c) {
@@ -45,11 +64,15 @@ class TripPlanHeader extends StatelessWidget {
   }
 
   static String? hintOf(TripPlanController c, List<TripEasyRowInfo> rows) {
-    if (c.offline.value || c.saveFailed.value) return TripStringsV2Plan.hintSavedOnPhone;
+    if (c.offline.value || c.saveFailed.value)
+      return TripStringsV2Plan.hintSavedOnPhone;
     final changed = c.settingsChangedAt.value;
-    if (changed != null && DateTime.now().difference(changed).inMinutes < 10) return TripStringsV2Plan.hintDatesChanged;
+    if (changed != null && DateTime.now().difference(changed).inMinutes < 10)
+      return TripStringsV2Plan.hintDatesChanged;
     if (rows.isEmpty) return null;
-    final bad = rows.where((r) => r.state == TripRowState.attention).firstOrNull;
+    final bad = rows
+        .where((r) => r.state == TripRowState.attention)
+        .firstOrNull;
     if (bad != null) return TripStringsV2Plan.hintAttention;
     final offer = rows.where((r) => r.state == TripRowState.offer).firstOrNull;
     if (offer != null) return TripStringsV2Plan.hintOffer;
@@ -62,7 +85,8 @@ class TripPlanHeader extends StatelessWidget {
       };
     }
     final progress = c.easyProgress;
-    if (progress.total > 0 && progress.done >= progress.total) return TripStringsV2Plan.hintAllSet;
+    if (progress.total > 0 && progress.done >= progress.total)
+      return TripStringsV2Plan.hintAllSet;
     return TripStringsV2Plan.hintMakeItEasy;
   }
 
@@ -81,22 +105,28 @@ class TripPlanHeader extends StatelessWidget {
       c.isOpening.value;
       final off = c.plannerOff.value;
       final ready = plan != null && !off;
-      return ModuleHeader(
-        title: plan == null ? TripStringsV2Plan.trip : c.title,
-        subtitle: ready ? subtitleOf(c) : null,
-        tone: KitTone.trip,
-        onBack: () => Get.back(),
-        trailing: [
-          if (ready) ...[
-            if (c.editMode.value)
-              TripHeaderAction(label: TripStringsV2Plan.done, onTap: () => c.editMode.value = false)
-            else
-              TripHeaderAction(label: TripStringsV2Plan.map, icon: TravelIcon.map, onTap: () => onMenu(TripPlanMenu.map)),
-            _menu(c),
+      return MediaQuery.withClampedTextScaling(
+        maxScaleFactor: 1.3,
+        child: ModuleHeader(
+          title: plan == null ? TripStringsV2Plan.trip : c.title,
+          subtitle: ready ? subtitleOf(c) : null,
+          tone: KitTone.trip,
+          onBack: () => Get.back(),
+          trailing: [
+            if (ready) ...[
+              if (c.editMode.value)
+                TripHeaderAction(
+                  label: TripStringsV2Plan.done,
+                  onTap: () => c.editMode.value = false,
+                )
+              else
+                Padding(padding: const EdgeInsets.only(left: 8), child: _MapAction(onTap: () => onMenu(TripPlanMenu.map))),
+              _menu(c),
+            ],
           ],
-        ],
-        bottom: ready ? _statusRow(context, c) : null,
-        autoHeight: true,
+          bottom: ready ? _statusRow(context, c) : null,
+          autoHeight: true,
+        ),
       );
     });
   }
@@ -118,8 +148,13 @@ class TripPlanHeader extends StatelessWidget {
           child: Row(
             children: [
               TweenAnimationBuilder<double>(
-                tween: Tween<double>(begin: 0, end: progress.percent.clamp(0, 100).toDouble()),
-                duration: KitMotion.reduce(context) ? Duration.zero : const Duration(milliseconds: 600),
+                tween: Tween<double>(
+                  begin: 0,
+                  end: progress.percent.clamp(0, 100).toDouble(),
+                ),
+                duration: KitMotion.reduce(context)
+                    ? Duration.zero
+                    : const Duration(milliseconds: 600),
                 curve: Curves.fastOutSlowIn,
                 builder: (_, v, _) => TripProgressRing(
                   percent: v.round(),
@@ -142,14 +177,22 @@ class TripPlanHeader extends StatelessWidget {
                           : '${TripStringsV2Plan.stepLabel(2)} · ${progress.total == 0 ? TripStringsV2Plan.nothingToArrange : TripStringsV2Plan.arranged(progress.done, progress.total)}',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TypeTokens.style(13, FontWeight.w700, color: DesignColors.textInverse),
+                      style: TypeTokens.style(
+                        13,
+                        FontWeight.w700,
+                        color: DesignColors.textInverse,
+                      ),
                     ),
                     if (hint != null && step == 2)
                       Text(
                         hint,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TypeTokens.style(11, FontWeight.w500, color: DesignColors.whiteHigh),
+                        style: TypeTokens.style(
+                          11,
+                          FontWeight.w500,
+                          color: DesignColors.whiteHigh,
+                        ),
                       ),
                     const SizedBox(height: 6),
                     ClipRRect(
@@ -158,14 +201,20 @@ class TripPlanHeader extends StatelessWidget {
                         value: progress.percent.clamp(0, 100) / 100,
                         minHeight: 4,
                         color: DesignColors.surface,
-                        backgroundColor: DesignColors.tint(DesignColors.surface, Alpha.scrim),
+                        backgroundColor: DesignColors.tint(
+                          DesignColors.surface,
+                          Alpha.scrim,
+                        ),
                       ),
                     ),
                   ],
                 ),
               ),
               const SizedBox(width: 8),
-              ConstrainedBox(constraints: const BoxConstraints(maxWidth: 120), child: _paceChip(context, c, editable)),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 120),
+                child: _paceChip(context, c, editable),
+              ),
             ],
           ),
         ),
@@ -173,23 +222,42 @@ class TripPlanHeader extends StatelessWidget {
     );
   }
 
-  Widget _guidedRow(BuildContext context, TripPlanController c, String? hint, bool editable) => Padding(
-        padding: const EdgeInsets.fromLTRB(12, 8, 0, 0),
-        child: Row(
-          children: [
-            Expanded(
-              child: hint == null
-                  ? const SizedBox.shrink()
-                  : Text(hint, maxLines: 1, overflow: TextOverflow.ellipsis, style: TypeTokens.style(12, FontWeight.w500, color: DesignColors.whiteHigh)),
-            ),
-            const SizedBox(width: 8),
-            ConstrainedBox(constraints: const BoxConstraints(maxWidth: 120), child: _paceChip(context, c, editable)),
-          ],
+  Widget _guidedRow(
+    BuildContext context,
+    TripPlanController c,
+    String? hint,
+    bool editable,
+  ) => Padding(
+    padding: const EdgeInsets.fromLTRB(12, 8, 0, 0),
+    child: Row(
+      children: [
+        Expanded(
+          child: hint == null
+              ? const SizedBox.shrink()
+              : Text(
+                  hint,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TypeTokens.style(
+                    12,
+                    FontWeight.w500,
+                    color: DesignColors.whiteHigh,
+                  ),
+                ),
         ),
-      );
+        const SizedBox(width: 8),
+        ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 120),
+          child: _paceChip(context, c, editable),
+        ),
+      ],
+    ),
+  );
 
   Widget _paceChip(BuildContext context, TripPlanController c, bool editable) {
-    final label = c.settings.isRelaxed ? TripStringsV2Plan.paceRelaxed : TripStringsV2Plan.paceNormal;
+    final label = c.settings.isRelaxed
+        ? TripStringsV2Plan.paceRelaxed
+        : TripStringsV2Plan.paceNormal;
     return PressScale(
       enabled: editable,
       child: GestureDetector(
@@ -208,13 +276,31 @@ class TripPlanHeader extends StatelessWidget {
             decoration: BoxDecoration(
               color: DesignColors.whiteSoft,
               borderRadius: CardRadius.pill,
-              border: Border.all(color: DesignColors.tint(DesignColors.surface, Alpha.half)),
+              border: Border.all(
+                color: DesignColors.tint(DesignColors.surface, Alpha.half),
+              ),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Flexible(child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TypeTokens.style(12, FontWeight.w700, color: DesignColors.textInverse))),
-                if (editable) const Icon(Icons.keyboard_arrow_down_rounded, size: 16, color: DesignColors.surface),
+                Flexible(
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TypeTokens.style(
+                      12,
+                      FontWeight.w700,
+                      color: DesignColors.textInverse,
+                    ),
+                  ),
+                ),
+                if (editable)
+                  const Icon(
+                    Icons.keyboard_arrow_down_rounded,
+                    size: 16,
+                    color: DesignColors.surface,
+                  ),
               ],
             ),
           ),
@@ -227,7 +313,7 @@ class TripPlanHeader extends StatelessWidget {
     return PopupMenuButton<TripPlanMenu>(
       icon: const Icon(Icons.more_vert_rounded, color: DesignColors.surface),
       iconSize: 24,
-      padding: const EdgeInsets.all(10),
+      padding: const EdgeInsets.all(8),
       color: DesignColors.surface,
       elevation: 12,
       shadowColor: DesignColors.tint(DesignColors.shadowBase, Alpha.soft),
@@ -237,32 +323,74 @@ class TripPlanHeader extends StatelessWidget {
         final saved = c.trip.value != null;
         final editable = !c.isReadOnly && !c.needsUpdate.value;
         return [
-          if (editable) _item(TripPlanMenu.saveExit, TravelIcon.luggage, TripStringsV2Plan.menuSaveExit),
-          if (editable) _item(TripPlanMenu.editDays, TravelIcon.calendar, TripStringsV2Plan.menuEditDays),
-          if (editable) _item(TripPlanMenu.editDates, TravelIcon.calendar, TripStringsV2Plan.menuEditDates),
-          if (editable) _item(TripPlanMenu.rename, TravelIcon.pin, TripStringsV2Plan.menuRename),
-          if (saved) _item(TripPlanMenu.summary, TravelIcon.note, TripStringsV2Plan.menuSummary),
+          if (editable)
+            _item(
+              TripPlanMenu.saveExit,
+              TravelIcon.luggage,
+              TripStringsV2Plan.menuSaveExit,
+            ),
+          if (editable)
+            _item(
+              TripPlanMenu.editDays,
+              TravelIcon.calendar,
+              TripStringsV2Plan.menuEditDays,
+            ),
+          if (editable)
+            _item(
+              TripPlanMenu.editDates,
+              TravelIcon.calendar,
+              TripStringsV2Plan.menuEditDates,
+            ),
+          if (editable)
+            _item(
+              TripPlanMenu.rename,
+              TravelIcon.pin,
+              TripStringsV2Plan.menuRename,
+            ),
+          if (saved)
+            _item(
+              TripPlanMenu.summary,
+              TravelIcon.note,
+              TripStringsV2Plan.menuSummary,
+            ),
           _item(TripPlanMenu.map, TravelIcon.map, TripStringsV2Plan.menuMap),
           if (saved) _muteItem(c),
-          if (saved && c.canComplete) _item(TripPlanMenu.complete, TravelIcon.star, TripStringsV2Plan.menuComplete),
-          if (saved) _item(TripPlanMenu.delete, Icons.close_rounded, TripStringsV2Plan.menuDelete, color: DesignColors.error),
+          if (saved && c.canComplete)
+            _item(
+              TripPlanMenu.complete,
+              TravelIcon.star,
+              TripStringsV2Plan.menuComplete,
+            ),
+          if (saved)
+            _item(
+              TripPlanMenu.delete,
+              Icons.close_rounded,
+              TripStringsV2Plan.menuDelete,
+              color: DesignColors.error,
+            ),
         ];
       },
     );
   }
 
-  PopupMenuItem<TripPlanMenu> _item(TripPlanMenu value, Object icon, String label, {Color color = DesignColors.textPrimary}) =>
-      PopupMenuItem(
-        value: value,
-        height: KitMetrics.touch,
-        child: Row(
-          children: [
-            icon is String ? TravelIcon(icon, size: 22) : Icon(icon as IconData, size: 20, color: color),
-            const SizedBox(width: 12),
-            Text(label, style: TypeTokens.style(14, FontWeight.w500, color: color)),
-          ],
-        ),
-      );
+  PopupMenuItem<TripPlanMenu> _item(
+    TripPlanMenu value,
+    Object icon,
+    String label, {
+    Color color = DesignColors.textPrimary,
+  }) => PopupMenuItem(
+    value: value,
+    height: KitMetrics.touch,
+    child: Row(
+      children: [
+        icon is String
+            ? TravelIcon(icon, size: 22)
+            : Icon(icon as IconData, size: 20, color: color),
+        const SizedBox(width: 12),
+        Text(label, style: TypeTokens.style(14, FontWeight.w500, color: color)),
+      ],
+    ),
+  );
 
   PopupMenuItem<TripPlanMenu> _muteItem(TripPlanController c) {
     final muted = c.trip.value?.isMuted ?? false;
@@ -271,16 +399,33 @@ class TripPlanHeader extends StatelessWidget {
       height: 56,
       child: Row(
         children: [
-          Image.asset('assets/images/design/fitness_app/bell.png', width: 22, height: 22),
+          Image.asset(
+            'assets/images/design/fitness_app/bell.png',
+            width: 22,
+            height: 22,
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(TripStringsV2Plan.menuMute,
-                    maxLines: 1, overflow: TextOverflow.ellipsis, style: TypeTokens.style(14, FontWeight.w500, color: DesignColors.textPrimary)),
-                Text(TripStringsV2Plan.menuMuteSub, maxLines: 2, overflow: TextOverflow.ellipsis, style: TypeTokens.caption),
+                Text(
+                  TripStringsV2Plan.menuMute,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TypeTokens.style(
+                    14,
+                    FontWeight.w500,
+                    color: DesignColors.textPrimary,
+                  ),
+                ),
+                Text(
+                  TripStringsV2Plan.menuMuteSub,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TypeTokens.caption,
+                ),
               ],
             ),
           ),
@@ -292,6 +437,41 @@ class TripPlanHeader extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _MapAction extends StatelessWidget {
+  const _MapAction({required this.onTap});
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: TripStringsV2Plan.map,
+      child: PressScale(
+        child: Tooltip(
+          message: TripStringsV2Plan.map,
+          child: Material(
+            color: DesignColors.whiteSoft,
+            shape: CircleBorder(
+              side: BorderSide(
+                color: DesignColors.tint(DesignColors.surface, Alpha.half),
+              ),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+              onTap: onTap,
+              child: const SizedBox(
+                width: KitMetrics.touch,
+                height: KitMetrics.touch,
+                child: Center(child: TravelIcon(TravelIcon.map, size: 22)),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

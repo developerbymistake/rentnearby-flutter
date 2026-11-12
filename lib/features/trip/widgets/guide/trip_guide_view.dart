@@ -10,7 +10,6 @@ import '../../trip_navigation.dart';
 import '../../trip_strings_guide.dart';
 import '../../utils/trip_easy_rules.dart';
 import '../../utils/trip_guide_rules.dart';
-import '../trip_ui.dart';
 import 'trip_guide_bar.dart';
 import 'trip_guide_card.dart';
 import 'trip_guide_finish.dart';
@@ -119,22 +118,11 @@ class _TripGuideViewState extends State<TripGuideView> {
         title: TripStringsGuide.sentTitle,
         body: TripStringsGuide.sentBody(_g.sent[key] ?? 0, taxi: !step.isStay),
         asset: asset,
-        child: TripButton(
-          label: TripStringsGuide.next,
-          onPressed: () {
-            _c.guideDismissSent(key);
-            _c.guideNext();
-          },
-        ),
+        child: const SizedBox.shrink(),
       );
     }
     switch (k.card) {
       case TripGuideCard.review:
-        void notNow() {
-          _c.guideDismissSent(key);
-          _c.guideNext();
-        }
-
         final note = _g.notes[key];
         final review = TripGuideShortlistReview(
           asset: asset,
@@ -146,7 +134,7 @@ class _TripGuideViewState extends State<TripGuideView> {
           failed: _g.failed[key] ?? (note == null ? 0 : 1),
           onSend: () => _send(step),
           onChange: _isCar(step) ? () => _c.guideFind(context, key) : null,
-          onNotNow: notNow,
+          onNotNow: () => _c.guideNotNow(key),
         );
         if (note == null) return review;
         return Column(
@@ -253,14 +241,32 @@ class _TripGuideViewState extends State<TripGuideView> {
           final idx = _g.index.value;
           final total = _g.total.value;
           var canNext = false;
+          String? reason = TripStringsGuide.chooseHint;
+          var openList = false;
           if (total > 0 && idx < total) {
-            final k = _kind(_g.steps[idx]);
-            canNext = !k.sent && TripGuideRules.canNext(k.card, _g.current.value);
+            final step = _g.steps[idx];
+            final k = _kind(step);
+            canNext = TripGuideRules.canAdvance(k.card, answered: _g.answered.contains(step.key));
+            if (k.sent) {
+              reason = null;
+            } else if (k.card == TripGuideCard.review) {
+              reason = TripStringsGuide.reviewHint;
+            } else if (_g.current.value == TripGuideChoice.find) {
+              reason = TripStringsGuide.findHint;
+              openList = true;
+            }
           }
+          final key = idx < total ? _g.steps[idx].key : null;
+          final sentNow = idx < total && _kind(_g.steps[idx]).sent;
           return TripGuideBar(
             canNext: canNext,
+            reason: reason,
+            onOpenList: openList && key != null ? () => _c.guideFind(context, key) : null,
             onPrevious: _c.guidePrevious,
-            onNext: _c.guideNext,
+            onNext: () {
+              if (sentNow && key != null) _c.guideDismissSent(key);
+              _c.guideNext();
+            },
             onOverview: _openOverview,
           );
         }),

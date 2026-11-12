@@ -276,7 +276,7 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
           ),
           _buildOffline(),
           _buildNotSaved(),
-          _buildLegChips(),
+          MediaQuery.withClampedTextScaling(maxScaleFactor: 1.3, child: _buildLegChips()),
           Expanded(
             child: Center(
               child: ConstrainedBox(
@@ -303,7 +303,7 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
           constraints: const BoxConstraints(maxWidth: 640),
           child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.fromLTRB(KitMetrics.gutter, 6, KitMetrics.gutter, 0),
+            padding: const EdgeInsets.fromLTRB(KitMetrics.gutter, 12, KitMetrics.gutter, 0),
             child: Row(
               children: [
                 TripChoiceChip(label: TripStringsV2Plan.allCities, selected: filter == null, onTap: () => pick(null), color: FitnessAppTheme.nearlyDarkBlue),

@@ -47,6 +47,7 @@ class TripGuideProgress extends StatelessWidget {
                       alignment: Alignment.centerLeft,
                       child: FractionallySizedBox(
                         widthFactor: v.clamp(0.0, 1.0),
+                        heightFactor: 1,
                         child: const DecoratedBox(decoration: BoxDecoration(gradient: DesignGradients.lunch)),
                       ),
                     ),

@@ -42,6 +42,7 @@ class TripShortlistController extends GetxController {
   final sending = <String>{}.obs;
   final notes = <String, String>{}.obs;
   final reasons = <String, String>{}.obs;
+  final doneHint = <String>{}.obs;
   int max = 3;
 
   String? _loadedTrip;
@@ -128,6 +129,7 @@ class TripShortlistController extends GetxController {
     sending.clear();
     notes.clear();
     reasons.clear();
+    doneHint.clear();
   }
 
   void _adopt(String tripId) {
