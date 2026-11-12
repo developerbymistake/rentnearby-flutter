@@ -1668,7 +1668,7 @@ void main() {
       expect(c.planStep.value, 1);
     });
 
-    test('the guide shows only on step 2, not in overview, edit or read only', () {
+    test('the guide shows only on step 2, not in edit or read only', () {
       final c = ctl(planG());
       c.planStep.value = 1;
       c.guideRefresh();
@@ -1676,10 +1676,7 @@ void main() {
       c.planStep.value = 2;
       c.guideRefresh();
       expect(c.guideState.on.value, isTrue);
-      c.guideSetOverview(true);
-      expect(c.guideState.on.value, isFalse);
-      expect(c.plan.value!.guide!.overview, isTrue);
-      c.guideSetOverview(false);
+      c.guideRefresh();
       expect(c.guideState.on.value, isTrue);
       c.editMode.value = true;
       c.guideRefresh();

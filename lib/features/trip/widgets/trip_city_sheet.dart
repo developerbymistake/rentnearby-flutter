@@ -5,6 +5,8 @@ import '../../../services/storage_service.dart';
 import '../../../utils/dio_error_mapper.dart';
 import '../../../utils/input_formatters.dart';
 import '../data/trip_city_catalog.dart';
+import '../data/trip_popular_routes.dart';
+import '../../../utils/search_fold.dart';
 import '../data/trip_repository.dart';
 import '../models/trip_city_model.dart';
 import '../../../utils/app_toast.dart';
@@ -150,6 +152,8 @@ class _TripCitySheetState extends State<TripCitySheet> {
   late final TripCityCatalog _catalog;
 
   List<TripCityModel> _items = const [];
+  List<({TripCityModel from, TripCityModel to})> _routes = const [];
+  List<TripCityModel> _nextStops = const [];
   String _query = '';
   bool _loading = false;
   _LoadError _error = _LoadError.none;
@@ -188,12 +192,49 @@ class _TripCitySheetState extends State<TripCitySheet> {
     Navigator.pop(context, TripCityPick(_picked.first, cities: List.of(_picked)));
   }
 
+  bool _routeOn(({TripCityModel from, TripCityModel to}) r) =>
+      _picked.length == 2 && _picked[0].cityKey == r.from.cityKey && _picked[1].cityKey == r.to.cityKey;
+
+  void _toggleRoute(({TripCityModel from, TripCityModel to}) r) {
+    setState(() {
+      final on = _routeOn(r);
+      _picked.clear();
+      if (!on) _picked.addAll([r.from, r.to]);
+      _expanded = null;
+    });
+  }
+
+  void _refreshSuggestions() {
+    final all = _catalog.search('');
+    if (!_add) {
+      _routes = TripPopularRoutes.resolve(all);
+      _nextStops = const [];
+      return;
+    }
+    _routes = const [];
+    final key = _afterKey(all);
+    _nextStops = key == null ? const [] : TripPopularRoutes.nextStops(all, key);
+  }
+
+  int? _afterKey(List<TripCityModel> all) {
+    final name = SearchFold.fold(widget.afterCity);
+    if (name.isEmpty) return null;
+    int? fallback;
+    for (final c in all) {
+      if (SearchFold.fold(c.name) != name) continue;
+      if (widget.inTrip.contains(c.cityKey)) return c.cityKey;
+      fallback ??= c.cityKey;
+    }
+    return fallback;
+  }
+
   @override
   void initState() {
     super.initState();
     _catalog = TripCityCatalog.to;
     _catalog.warmFromDisk();
     _items = _catalog.search('');
+    _refreshSuggestions();
     _loading = _items.isEmpty;
     _load();
   }
@@ -227,12 +268,14 @@ class _TripCitySheetState extends State<TripCitySheet> {
       setState(() {
         _loading = false;
         _items = _catalog.search(_query);
+        _refreshSuggestions();
       });
     } catch (e) {
       if (!mounted) return;
       setState(() {
         _loading = false;
         _items = _catalog.search(_query);
+        _refreshSuggestions();
         if (_items.isEmpty) {
           _error = DioErrorMapper.errorType(e) == TripErrorTypes.plannerDisabled
               ? _LoadError.plannerOff
@@ -448,9 +491,19 @@ class _TripCitySheetState extends State<TripCitySheet> {
         children: _stag(_items.map((c) => _cityRow(c)).toList()),
       );
     }
+    final nextKeys = {for (final c in _nextStops) c.cityKey};
+    final rest = nextKeys.isEmpty ? _items : _items.where((c) => !nextKeys.contains(c.cityKey)).toList();
+    final from = widget.afterCity?.trim() ?? '';
     return ListView(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      children: _stag([..._sectionedRows(_items)]),
+      children: _stag([
+        if (_routes.isNotEmpty) ...[_sectionHeader(TripStringsMcaA2.popularRoutes), ..._routes.map(_routeRow)],
+        if (_nextStops.isNotEmpty) ...[
+          _sectionHeader(TripStringsMcaA2.popularNextStops),
+          ..._nextStops.map((c) => _cityRow(c, subtitle: from.isEmpty ? null : TripStringsMcaA2.taxisGoFrom(from))),
+        ],
+        ..._sectionedRows(rest),
+      ]),
     );
   }
 
@@ -462,6 +515,7 @@ class _TripCitySheetState extends State<TripCitySheet> {
   List<Widget> _sectionedRows(List<TripCityModel> items) {
     if (!items.any((c) => c.isPopularDestination)) {
       return [
+        if (_routes.isNotEmpty || _nextStops.isNotEmpty) _sectionHeader(TripStrings.allCities),
         ...items.map((c) => _cityRow(c)),
       ];
     }
@@ -522,6 +576,64 @@ class _TripCitySheetState extends State<TripCitySheet> {
         .catchError((Object _) {
           if (mounted) setState(() => _supplyFailed.add(key));
         });
+  }
+
+  Widget _routeRow(({TripCityModel from, TripCityModel to}) r) {
+    final on = _routeOn(r);
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 2),
+      decoration: BoxDecoration(
+        color: on ? TripEntryStyle.surface : Colors.transparent,
+        borderRadius: CardRadius.tile,
+      ),
+      child: InkWell(
+        onTap: () => _toggleRoute(r),
+        borderRadius: CardRadius.tile,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 52),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 9),
+            child: Row(
+              children: [
+                Container(
+                  width: 34,
+                  height: 34,
+                  decoration: BoxDecoration(color: TripEntryStyle.surface, borderRadius: CardRadius.tile),
+                  child: const Icon(Icons.alt_route_rounded, size: 18, color: TripEntryStyle.accent),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        TripStringsMcaA2.routeTitle(r.from.name, r.to.name),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontFamily: FitnessAppTheme.fontName,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: FitnessAppTheme.darkerText,
+                        ),
+                      ),
+                      const Text(
+                        TripStringsMcaA2.routeMeta,
+                        style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, color: FitnessAppTheme.lightText),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                on
+                    ? const Icon(Icons.check_circle_rounded, size: 22, color: TripEntryStyle.accent)
+                    : const Icon(Icons.chevron_right_rounded, size: 20, color: FitnessAppTheme.deactivatedText),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _cityRow(TripCityModel city, {String? subtitle}) {

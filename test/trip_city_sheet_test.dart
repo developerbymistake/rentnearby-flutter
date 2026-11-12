@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:bakhli/features/trip/data/trip_city_catalog.dart';
 import 'package:bakhli/features/trip/models/trip_city_model.dart';
 import 'package:bakhli/features/trip/widgets/trip_city_sheet.dart';
@@ -33,11 +31,29 @@ void main() {
   });
   tearDown(Get.reset);
 
-  test('hardcoded popular routes are gone from source', () {
-    expect(File('lib/features/trip/data/trip_popular_routes.dart').existsSync(), isFalse);
-    final sheet = File('lib/features/trip/widgets/trip_city_sheet.dart').readAsStringSync();
-    expect(sheet.contains('TripPopularRoutes'), isFalse);
-    expect(sheet.toLowerCase().contains('nextstop'), isFalse);
+  testWidgets('create mode shows Popular routes', (t) async {
+    final cats = _Catalog();
+    cats.list.addAll([_city(4, 'Haridwar', popular: true), _city(5, 'Badrinath', popular: true)]);
+    Get.put<TripCityCatalog>(cats, permanent: true);
+    setGoldenView(t, const Size(412, 900));
+    await t.pumpWidget(const MaterialApp(home: Scaffold(body: TripCitySheet())));
+    await t.pumpAndSettle();
+    expect(find.text('Popular routes'), findsOneWidget);
+    expect(find.text('Haridwar then Badrinath'), findsOneWidget);
+    expect(find.text('2 cities'), findsWidgets);
+  });
+
+  testWidgets('add mode shows Popular next stops', (t) async {
+    final cats = _Catalog();
+    cats.list.addAll([_city(4, 'Haridwar', popular: true), _city(5, 'Badrinath', popular: true)]);
+    Get.put<TripCityCatalog>(cats, permanent: true);
+    setGoldenView(t, const Size(412, 900));
+    await t.pumpWidget(const MaterialApp(
+      home: Scaffold(body: TripCitySheet(mode: TripCitySheetMode.add, afterCity: 'Haridwar', inTrip: {4})),
+    ));
+    await t.pumpAndSettle();
+    expect(find.text('Popular next stops'), findsOneWidget);
+    expect(find.text('Taxis go from Haridwar'), findsWidgets);
   });
 
   for (final w in [300.0, 360.0, 412.0, 560.0]) {

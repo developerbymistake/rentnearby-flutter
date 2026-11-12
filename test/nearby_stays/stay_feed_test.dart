@@ -50,6 +50,23 @@ void main() {
   setUp(() => Get.testMode = true);
 
   group('parse', () {
+    test('photo url is read, relative paths get the server host, absolute ones stay', () {
+      final rel = StayFeedItem.fromJson({..._stay('a'), 'thumbnailUrl': '/uploads/stays/a.jpg'});
+      expect(rel.item.thumbnailUrl, endsWith('/uploads/stays/a.jpg'));
+      expect(rel.item.thumbnailUrl, startsWith('https://'));
+      final abs = StayFeedItem.fromJson({..._stay('b'), 'thumbnailUrl': 'https://picsum.photos/seed/x/900/600'});
+      expect(abs.item.thumbnailUrl, 'https://picsum.photos/seed/x/900/600');
+      expect(StayFeedItem.fromJson(_stay('c')).item.thumbnailUrl, isNull);
+    });
+
+    test('card facts keep type, meals and room name; price keeps FROM and unit', () {
+      final s = StayFeedItem.fromJson({..._stay('a'), 'stayTypeName': 'Homestay', 'mealsChip': 'Breakfast', 'roomNameChip': 'Deluxe'});
+      expect(s.item.facts.map((f) => f.label), ['Homestay', 'Breakfast', 'Deluxe']);
+      expect(s.item.priceCaption, 'FROM');
+      expect(s.item.priceUnit, '/night');
+      expect(s.minPrice, 1200);
+    });
+
     test('stay item keeps browse fields and distance', () {
       final s = StayFeedItem.fromJson(_stay('a', km: 420, label: 'far'));
       expect(s.id, 'a');
@@ -95,7 +112,7 @@ void main() {
 
     test('no distance keeps the old label and district name', () {
       final m = HomeFeedModelV2.stay(_stay('a', km: null));
-      expect(m.item.locationLabel, 'Nainital, Nainital');
+      expect(m.item.locationLabel, 'Nainital');
       expect(m.districtName, 'Nainital');
     });
 
@@ -194,7 +211,7 @@ void main() {
                   padding: const EdgeInsets.all(KitMetrics.gutter),
                   gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
                     maxCrossAxisExtent: RailCard.gridMaxExtent,
-                    mainAxisExtent: RailCard.height + labelH,
+                    mainAxisExtent: StayGridCard.height + labelH,
                     mainAxisSpacing: RailCard.gridSpacing,
                     crossAxisSpacing: RailCard.gridSpacing,
                   ),
@@ -203,7 +220,7 @@ void main() {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       SizedBox(
-                        height: RailCard.height,
+                        height: StayGridCard.height,
                         child: StayGridCard(
                           thumbnailUrl: null,
                           tagLabel: 'FOR STAY',

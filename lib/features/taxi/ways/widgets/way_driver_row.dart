@@ -52,6 +52,7 @@ class WayDriverRow extends StatelessWidget {
     final price = BrowseItem.inr(d.groupFare(people));
     final card = DriverOptionCard(
       name: d.driverName,
+      nameMaxLines: 2,
       vehicle: TaxiWaysStrings.subtitle(from, to),
       subtitle: [
         vehicle,

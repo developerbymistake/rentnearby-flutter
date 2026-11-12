@@ -3033,7 +3033,7 @@ class TripPlanController extends GetxController {
       final g = before.guide;
       if (g != null) {
         final keep = {for (final e in g.choices.entries) if (!stale.contains(e.key)) e.key: e.value};
-        next = next.withGuide(TripGuide(step: stale.contains(g.step) ? '' : g.step, choices: keep, overview: g.overview));
+        next = next.withGuide(TripGuide(step: stale.contains(g.step) ? '' : g.step, choices: keep));
       }
       guideDropStale(before, next);
     }

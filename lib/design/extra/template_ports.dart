@@ -109,7 +109,7 @@ class _ScrollFadeTopBarState extends State<ScrollFadeTopBar>
             SizedBox(height: MediaQuery.paddingOf(context).top),
             Padding(
               padding: EdgeInsets.only(
-                  left: 16, right: 16, top: 16 - 8.0 * op, bottom: 12 - 8.0 * op),
+                  left: 16, right: 16, top: 16, bottom: 12),
               child: Row(
                 children: [
                   if (widget.onBack != null)
@@ -134,7 +134,7 @@ class _ScrollFadeTopBarState extends State<ScrollFadeTopBar>
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TypeTokens.style(
-                                22 + 6 - 6 * op, FontWeight.w700,
+                                24, FontWeight.w700,
                                 color: DesignColors.textStrong,
                                 letterSpacing: 1.2)),
                         if (widget.subtitle != null)
@@ -145,7 +145,11 @@ class _ScrollFadeTopBarState extends State<ScrollFadeTopBar>
                       ],
                     ),
                   ),
-                  for (final t in widget.trailing) t,
+                  if (widget.trailing.isNotEmpty)
+                    ConstrainedBox(
+                      constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width * 0.42),
+                      child: Row(mainAxisSize: MainAxisSize.min, children: [for (final t in widget.trailing) Flexible(child: t)]),
+                    ),
                 ],
               ),
             ),

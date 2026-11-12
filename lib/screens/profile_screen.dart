@@ -201,7 +201,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         child: Text(
                           name.trim().isNotEmpty ? name.trim() : 'Your Profile',
                           style: TypeTokens.style(22, FontWeight.w700, color: DesignColors.surface),
-                          maxLines: 1,
+                          maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),

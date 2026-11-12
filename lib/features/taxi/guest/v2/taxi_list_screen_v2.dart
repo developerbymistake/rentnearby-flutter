@@ -11,7 +11,6 @@ import '../../../../utils/app_toast.dart';
 import '../../../../widgets/location_search_sheet.dart';
 import '../../../nearby/controllers/nearby_centre_controller.dart';
 import '../../../nearby/nearby_strings.dart';
-import '../../../nearby/widgets/nearby_centre_bar.dart';
 import '../../../nearby/widgets/nearby_featured_slot.dart';
 import '../../../nearby/widgets/nearby_header_strip.dart';
 import '../../../nearby/widgets/nearby_label_text.dart';
@@ -102,7 +101,6 @@ class _TaxiListScreenV2State extends State<TaxiListScreenV2> {
             SliverToBoxAdapter(child: _buildHeader(context)),
             SliverToBoxAdapter(child: _in(0, _buildReviewStrip())),
             SliverToBoxAdapter(child: _in(1, _buildTiles())),
-            SliverToBoxAdapter(child: _buildCentreBar()),
             SliverToBoxAdapter(child: _buildHeaderStrip()),
             _buildBody(),
             SliverToBoxAdapter(child: _buildFooter(bottom)),
@@ -280,11 +278,6 @@ class _TaxiListScreenV2State extends State<TaxiListScreenV2> {
         onTap: () => Get.toNamed(AppRoutes.myTaxi),
       );
     });
-  }
-
-  // The shared centre pill is only for the local list; a picked From replaces it.
-  Widget _buildCentreBar() {
-    return Obx(() => _ctrl.from.value == null && !_ctrl.isRoute ? NearbyCentreBar(far: _ctrl.header.value?.farAway ?? false) : const SizedBox.shrink());
   }
 
   Widget _buildHeaderStrip() {

@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../config/app_routes.dart';
-import '../design/design.dart';
 import '../models/home_feed_model.dart';
+import 'home_card_surface.dart';
 
 class HomeStayRailCard extends StatelessWidget {
-  static const double cellWidth = RailCard.width;
+  static const double cellWidth = HomeRailTile.width;
   static const EdgeInsets cellPadding = EdgeInsets.only(top: 4, bottom: 20);
-  static const double railHeight = RailCard.height + 24;
+  static const double railHeight = HomeRailTile.height + 24;
 
   final HomeStayModel stay;
   final VoidCallback? onOpen;
@@ -21,7 +21,7 @@ class HomeStayRailCard extends StatelessWidget {
       padding: cellPadding,
       child: SizedBox(
         width: cellWidth,
-        child: RailCard(
+        child: HomeRailTile(
           thumbnailUrl: item.thumbnailUrl,
           tagLabel: item.tagLabel,
           title: item.title,
@@ -31,7 +31,10 @@ class HomeStayRailCard extends StatelessWidget {
           priceValue: item.priceValue,
           priceUnit: item.priceUnit,
           isFeatured: item.isFeatured,
-          onTap: onOpen ?? () => Get.toNamed(AppRoutes.stayDetail, arguments: {'id': item.id}),
+          onTap:
+              onOpen ??
+              () =>
+                  Get.toNamed(AppRoutes.stayDetail, arguments: {'id': item.id}),
         ),
       ),
     );

@@ -9,6 +9,12 @@ class TripStringsGuide {
   static const String previous = 'Previous';
   static const String next = 'Next';
   static const String overview = 'Overview';
+  static const String overviewTitle = 'Your trip so far';
+  static const String statusToDo = 'To do';
+  static const String statusLooking = 'In progress';
+  static const String statusOwn = 'You arrange';
+  static const String statusSkipped = 'Skipped';
+  static const String statusDone = 'Arranged';
   static const String chooseHint = 'Choose an option to continue';
   static const String noTaxiNote = 'We will not show taxis for this trip.';
   static const String skipBlocked = 'You already sent an enquiry here. Withdraw it first.';

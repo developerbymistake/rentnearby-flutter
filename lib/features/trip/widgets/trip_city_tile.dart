@@ -1,6 +1,7 @@
 import 'package:bakhli/design/design.dart';
 import 'package:flutter/material.dart';
 import '../models/trip_city_model.dart';
+import 'trip_city_art.dart';
 
 class TripCityTile extends StatelessWidget {
   const TripCityTile({super.key, required this.city, required this.onTap});
@@ -30,14 +31,16 @@ class TripCityTile extends StatelessWidget {
                   builder: (context, box) => Stack(
                     fit: StackFit.expand,
                     children: [
-                      KitPhoto(
-                        url: city.cover,
-                        width: box.maxWidth,
-                        height: box.maxHeight,
-                        tone: KitTone.trip,
-                        asset: TravelIcon.map,
-                        iconSize: 48,
-                      ),
+                      TripCityArt(seed: city.cityKey, name: city.name),
+                      if (city.cover != null)
+                        KitPhoto(
+                          url: city.cover,
+                          width: box.maxWidth,
+                          height: box.maxHeight,
+                          tone: TripCityArt.toneOf(city.cityKey),
+                          asset: TravelIcon.map,
+                          iconSize: 48,
+                        ),
                       DecoratedBox(
                         decoration: BoxDecoration(
                           gradient: LinearGradient(

@@ -197,7 +197,7 @@ class TaxiOwnerCard extends StatelessWidget {
               label: 'Edit fare',
               tone: KitTone.taxi,
               maxWidth: 120,
-              onTap: taxi.isPendingReview ? null : () => onEditFare!(r),
+              onTap: () => onEditFare!(r),
             ),
         ]),
       ]),

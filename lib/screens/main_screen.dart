@@ -27,6 +27,7 @@ import '../services/notification_service.dart';
 import '../widgets/app_loading_overlay.dart';
 import '../widgets/district_banner_overlay.dart';
 import '../widgets/global_location_gates.dart';
+import '../navigation/bar_overlap.dart';
 import '../navigation/tab_router.dart';
 import '../navigation/tab_keys.dart';
 import '../navigation/tour_keys.dart';
@@ -309,7 +310,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
               children: [
                 Obx(() => _locationCtrl.hasActiveGate || _auth.isLoggingOut.value
                     ? const SizedBox.shrink()
-                    : Transform.translate(offset: const Offset(0, 38), child: const TripBar())),
+                    : const BarOverlap(overlap: BarMetrics.centreOverflow, child: TripBar())),
                 Obx(() => _buildBottomNav()),
               ],
             ),

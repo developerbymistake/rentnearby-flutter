@@ -1,8 +1,11 @@
+import '../../../config/app_constants.dart';
 import '../../../models/browse_item.dart';
 import '../../../models/card_fact.dart';
 import '../setup/stay_option_sets.dart';
 
 abstract final class StayBrowseItem {
+  static String? _url(String? u) => u == null || u.isEmpty || u.startsWith('http') ? u : '${AppConstants.serverUrl}$u';
+
   static BrowseItem fromJson(Map<String, dynamic> j) {
     final name = j['name'] as String?;
     final type = j['stayTypeName'] as String?;
@@ -12,12 +15,13 @@ abstract final class StayBrowseItem {
     return BrowseItem(
       id: j['id'] as String,
       userId: j['userId'] as String? ?? '',
-      thumbnailUrl: j['thumbnailUrl'] as String?,
+      thumbnailUrl: _url(j['thumbnailUrl'] as String?),
       tagLabel: 'FOR STAY',
       title: (name == null || name.isEmpty) ? 'Stay' : name,
-      locationLabel: [j['cityName'] as String?, j['districtName'] as String?]
-          .where((s) => s != null && s.isNotEmpty)
-          .join(', '),
+      locationLabel: {
+        for (final s in [j['cityName'] as String?, j['districtName'] as String?])
+          if (s != null && s.isNotEmpty) s,
+      }.join(', '),
       facts: [
         if (type != null && type.isNotEmpty) CardFact(type),
         if (meals != null && meals.isNotEmpty) CardFact(StayOptionSets.labelOf(StayOptionSets.meals, meals)),

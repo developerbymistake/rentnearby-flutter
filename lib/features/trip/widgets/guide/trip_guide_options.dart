@@ -77,7 +77,7 @@ class TripGuideOptions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Widget opt(TripGuideChoice c, String label, IconData icon) => Padding(
-          padding: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.only(bottom: 8),
           child: TripGuideOption(label: label, icon: icon, selected: choice == c, onTap: () => onPick(c)),
         );
     return Column(

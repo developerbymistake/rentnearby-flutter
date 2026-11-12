@@ -130,7 +130,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     return ModuleHeader(
       title: 'Notifications',
       tone: KitTone.stay,
-      leadingAsset: NotificationLook.bell,
       onBack: () => Get.back(),
       trailing: [
         Obx(() => _ctrl.notifications.any((n) => !n.isRead)

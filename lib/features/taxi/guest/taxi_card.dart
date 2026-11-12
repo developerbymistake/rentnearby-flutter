@@ -36,24 +36,22 @@ class TaxiCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = item;
-    final vehicleLine = [
-      t.vehicleTypeName,
-      if (t.seats != null) '${TaxiOptionSets.seatsLabel(t.seats!)} seats',
-    ].join(' · ');
     final metaLine = [
       t.locality,
       if (_tripMode) TripStrings.listed(TripFormat.monthYear(t.createdAt)),
     ].where((e) => e.isNotEmpty).join(' · ');
-    final facts = <CardFact>[
-      if (t.isMatch && t.matchedTripType == 'RoundTrip') const CardFact('Round trip'),
-      if (t.isMatch && t.matchReversed) const CardFact('reverse', tone: FactTone.slate),
-      if (_tripMode)
-        ?_replyFact(t.tripReplyLabel),
-    ];
     final (fareValue, fareUnit) = _fare();
+    final facts = <CardFact>[
+      if (t.seats != null) CardFact('${TaxiOptionSets.seatsLabel(t.seats!)} seats'),
+      if (fareValue == null) const CardFact('Local taxi', tone: FactTone.accent),
+      if (t.isMatch && t.matchedTripType == 'RoundTrip') const CardFact('Round trip'),
+      if (_tripMode) ?_replyFact(t.tripReplyLabel),
+      if (t.isMatch && t.matchReversed) const CardFact('reverse', tone: FactTone.slate),
+    ];
     final card = DriverOptionCard(
       name: t.driverName,
-      vehicle: vehicleLine,
+      vehicle: t.vehicleTypeName,
+      nameMaxLines: 2,
       subtitle: metaLine.isEmpty ? null : metaLine,
       facts: facts,
       fareValue: fareValue,
@@ -109,7 +107,7 @@ class TaxiCard extends StatelessWidget {
         t.localDayKm != null ? '${t.localDayKm} km/day' : null,
       );
     }
-    return ('Local taxi', null);
+    return (null, null);
   }
 
   List<Widget> _actions() {

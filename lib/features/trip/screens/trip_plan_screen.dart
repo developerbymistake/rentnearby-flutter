@@ -13,7 +13,6 @@ import '../controllers/trip_plan_guide.dart';
 import '../models/trip_plan_model.dart';
 import '../utils/trip_guide_rules.dart';
 import '../trip_navigation.dart';
-import '../trip_strings_guide.dart';
 import '../trip_strings.dart';
 import '../trip_strings_v2_plan.dart';
 import '../widgets/trip_add_city_card.dart';
@@ -97,7 +96,7 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
     _rowWorker = ever<TripPlan?>(_c.plan, (_) => _tryOpenRow());
     _openWorker = ever<bool>(_c.isOpening, (_) => _tryOpenRow());
     _guideWorker = everAll(
-      [_c.plan, _c.planStep, _c.editMode, _c.needsUpdate, _c.tripGone, _c.plannerOff, _c.trip, _c.guideState.overview],
+      [_c.plan, _c.planStep, _c.editMode, _c.needsUpdate, _c.tripGone, _c.plannerOff, _c.trip],
       (_) => _c.guideRefresh(),
     );
     _stepWorker = ever<int>(_c.planStep, (_) {
@@ -228,7 +227,6 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
       case TripPlanMenu.delete:
         await TripLifecycleActions.deleteFromPlan(context);
       case TripPlanMenu.easy:
-        _c.guideSetOverview(false);
         _c.planStep.value = _c.pendingStep;
     }
   }
@@ -404,15 +402,6 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
           ],
           w(const TripTodayCard()),
           if (editing) _editBanner(),
-          if (step2 && _c.guideState.overview.value && _c.guideAvailable)
-            w(Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: _OutlineAction(
-                label: TripStringsGuide.backToSteps,
-                height: 48,
-                onTap: () => _c.guideSetOverview(false),
-              ),
-            )),
           if (step2) w(const TripEasyCard()),
           if (!step2) ...[
           for (final d in plan.days)
@@ -451,7 +440,6 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
             onPressed: spots == 0
                 ? null
                 : () {
-                    _c.guideSetOverview(false);
                     _c.planStep.value = 2;
                   },
           ),

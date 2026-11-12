@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:bakhli/design/design.dart';
 import '../../../config/app_routes.dart';
+import 'package:maplibre_gl/maplibre_gl.dart';
+import '../../../controllers/location_controller.dart';
 import '../../../controllers/tab_config_controller.dart';
+import '../../../widgets/location_search_sheet.dart';
 import '../../nearby/nearby_strings.dart';
 import '../../nearby/widgets/nearby_header_strip.dart';
 import '../../nearby/widgets/nearby_label_text.dart';
@@ -88,7 +91,9 @@ class _JobsLandingScreenV2State extends State<JobsLandingScreenV2> {
         tone: _tone,
         title: Get.find<TabConfigController>().displayName(AppTabKeys.jobs, 'Jobs'),
         subtitle: 'Work at stays, nearest first',
+        subtitleLines: 2,
         onBack: () => Get.back(),
+        trailing: [_buildSearchButton()],
         bottom: Padding(padding: const EdgeInsets.fromLTRB(12, 8, 4, 0), child: _buildDistrictPill()),
         autoHeight: true,
       ),
@@ -98,7 +103,12 @@ class _JobsLandingScreenV2State extends State<JobsLandingScreenV2> {
   Widget _buildDistrictPill() {
     return Obx(() {
       final c = _ctrl.city.value;
-      final label = c == null ? 'My location' : [c.name, if (c.stateName.isNotEmpty) c.stateName].join(', ');
+      final pin = _ctrl.searchPin.value;
+      final label = pin != null
+          ? pin.label
+          : c == null
+              ? 'My location'
+              : [c.name, if (c.stateName.isNotEmpty) c.stateName].join(', ');
       return PressScale(
         child: DecoratedBox(
           decoration: const BoxDecoration(color: DesignColors.surface, borderRadius: CardRadius.pill, boxShadow: ShadowTokens.elev1),
@@ -126,7 +136,7 @@ class _JobsLandingScreenV2State extends State<JobsLandingScreenV2> {
                           style: TypeTokens.style(14, FontWeight.w600, color: DesignColors.textStrong),
                         ),
                       ),
-                      if (c != null)
+                      if (c != null || pin != null)
                         InkWell(
                           onTap: _ctrl.useMyLocation,
                           customBorder: const CircleBorder(),
@@ -152,6 +162,30 @@ class _JobsLandingScreenV2State extends State<JobsLandingScreenV2> {
         ),
       );
     });
+  }
+
+  Widget _buildSearchButton() {
+    return Obx(() {
+      final active = _ctrl.searchPin.value != null;
+      return PillAction(
+        label: active ? 'Cancel' : 'Search',
+        tone: _tone,
+        filled: !active,
+        icon: Icon(active ? Icons.close_rounded : Icons.search_rounded,
+            size: 16, color: active ? _tone.accentDark : DesignColors.onPrimary),
+        onTap: active ? _ctrl.useMyLocation : _searchPlace,
+      );
+    });
+  }
+
+  Future<void> _searchPlace() async {
+    final c = _ctrl.city.value;
+    final bias = c != null
+        ? LatLng(c.latitude, c.longitude)
+        : (Get.isRegistered<LocationController>() ? Get.find<LocationController>().effectiveSearchCenter : null);
+    final picked = await LocationSearchSheet.show(context, bias: bias);
+    if (picked == null || !mounted) return;
+    _ctrl.pickPin(picked.latLng.latitude, picked.latLng.longitude, picked.name);
   }
 
   Future<void> _pickCity() async {

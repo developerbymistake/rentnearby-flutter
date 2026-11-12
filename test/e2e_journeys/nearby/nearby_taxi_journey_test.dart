@@ -171,7 +171,9 @@ void main() {
     NearbyCentreController.to.setPin(const LatLng(31.1, 77.17), 'Shimla');
     await _settle(t);
     expect(_repo.centres.last, 31.1);
-    expect(find.text('Showing near Shimla'), findsOneWidget);
+    expect(find.text('Shimla'), findsOneWidget);
+    expect(find.textContaining('Showing near'), findsNothing);
+    expect(find.text('Search any place'), findsNothing);
   });
 
   testWidgets('whole system empty is the only empty state', (t) async {

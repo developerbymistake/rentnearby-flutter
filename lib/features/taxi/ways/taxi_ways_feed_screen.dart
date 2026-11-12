@@ -151,7 +151,9 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen> with TickerProv
       backgroundColor: DesignColors.scaffold,
       bottomNavigationBar: _guide != null
           ? Obx(
-              () => c.result.value != null && c.result.value!.allTheWay.isEmpty && (c.forTrip || c.forSegment)
+              () => c.result.value == null
+                  ? const SizedBox.shrink()
+                  : c.result.value!.allTheWay.isEmpty && (c.forTrip || c.forSegment)
                   ? _arrangeBar(context, c)
                   : TripShortlistBar(
                       step: _guide!.stepKey,

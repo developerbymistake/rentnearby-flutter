@@ -482,7 +482,7 @@ class _TaxiDetailScreenState extends State<TaxiDetailScreen> with TickerProvider
         safetyText: TaxiOptionSets.safetyLine,
         onReport: (t.hasReported || reportedLocally)
             ? null
-            : () => ReportListingSheet.show(context, listingId: t.id, listingType: 'Taxi', palette: templateModulePalette),
+            : () => ReportListingSheet.show(context, listingId: t.id, listingType: 'Taxi', palette: templateTaxiPalette),
         palette: templateTaxiPalette,
       );
     });

@@ -16,18 +16,18 @@ class TripGuideFrame extends StatelessWidget {
   Widget build(BuildContext context) {
     builds++;
     return TripSurface(
-      padding: const EdgeInsets.fromLTRB(18, 20, 18, 18),
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
       shadow: ShadowTokens.elev3,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Center(child: TravelIcon(asset, size: 64)),
+          Center(child: TravelIcon(asset, size: 44)),
           const SizedBox(height: 12),
-          Text(title, textAlign: TextAlign.center, style: TypeTokens.style(20, FontWeight.w800, height: 1.2)),
+          Text(title, textAlign: TextAlign.center, style: TypeTokens.style(18, FontWeight.w800, height: 1.2)),
           const SizedBox(height: 6),
           Text(body, textAlign: TextAlign.center, style: TypeTokens.style(14, FontWeight.w500, color: TypeTokens.secondary, height: 1.35)),
-          const SizedBox(height: 18),
+          const SizedBox(height: 12),
           child,
         ],
       ),

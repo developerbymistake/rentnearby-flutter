@@ -318,7 +318,7 @@ void main() {
       await t.pump(const Duration(seconds: 1));
       final scroll = t.widget<SingleChildScrollView>(find.byType(SingleChildScrollView));
       final bottom = (scroll.padding as EdgeInsets).bottom;
-      expect(bottom, BarMetrics.boxHeight + 40 - BarMetrics.centreOverflow + BarMetrics.bodyGap);
+      expect(bottom, BarMetrics.boxHeight + 40 + BarMetrics.bodyGap);
       await t.pumpWidget(const SizedBox());
     });
   });

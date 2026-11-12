@@ -14,7 +14,6 @@ import 'package:bakhli/features/trip/utils/trip_clock.dart';
 import 'package:bakhli/features/trip/utils/trip_guide_rules.dart';
 import 'package:bakhli/features/trip/widgets/guide/trip_guide_view.dart';
 import 'package:bakhli/features/trip/screens/trip_plan_screen.dart';
-import 'package:bakhli/features/trip/widgets/trip_easy_card.dart';
 import 'package:bakhli/features/trip/widgets/trip_plan_header.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -465,26 +464,15 @@ void main() {
     });
   });
 
-  group('RM-7 overview jumps back to the card', () {
-    testWidgets('tapping a row title in Overview opens that guided card', (t) async {
+  group('RM-7 saved overview flag never shows the old rows', () {
+    testWidgets('a trip saved with overview true opens at its saved question in the guide', (t) async {
       final r = await _rig(_multi([2], guide: const TripGuide(overview: true, choices: {'gettingThere': TripGuideChoice.skip})));
       r.c.planStep.value = 2;
       r.c.guideHydrate();
       r.c.guideRefresh();
-      expect(r.c.guideState.overview.value, isTrue);
+      expect(r.c.guideState.on.value, isTrue);
       expect(r.c.guideAvailable, isTrue);
-      t.view.physicalSize = const Size(412, 900);
-      t.view.devicePixelRatio = 1;
-      addTearDown(t.view.reset);
-      await t.pumpWidget(const GetMaterialApp(home: Scaffold(body: SingleChildScrollView(child: TripEasyCard()))));
-      await t.pump();
-      final key = ValueKey('overview-title-${TripEasyRowKey(TripEasyRowKind.stay, 1).id}');
-      expect(find.byKey(key), findsOneWidget);
-      await t.tap(find.byKey(key));
-      await t.pump();
-      expect(r.c.guideState.overview.value, isFalse);
       expect(r.c.guideState.keyNow, 'stay:1');
-      expect(r.c.plan.value!.guide!.step, 'stay:1');
       r.close();
     });
   });
@@ -500,13 +488,12 @@ void main() {
       await t.pump();
       await t.pump(const Duration(milliseconds: 700));
       r.c.planStep.value = 2;
-      r.c.guideSetOverview(true);
       await t.pump(const Duration(milliseconds: 700));
-      expect(find.text(TripStringsGuide.backToSteps), findsOneWidget);
-      await t.tap(find.text(TripStringsGuide.backToSteps));
-      await t.pump(const Duration(milliseconds: 700));
-      expect(r.c.guideState.overview.value, isFalse);
       expect(find.text(TripStringsGuide.backToSteps), findsNothing);
+      expect(r.c.guideState.on.value, isTrue);
+      await t.tap(find.text(TripStringsGuide.overview));
+      await t.pump(const Duration(milliseconds: 700));
+      expect(find.text(TripStringsGuide.overviewTitle), findsOneWidget);
       await t.pump(const Duration(seconds: 5));
       r.close();
     });

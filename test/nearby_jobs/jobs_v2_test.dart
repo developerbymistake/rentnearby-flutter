@@ -322,6 +322,51 @@ void main() {
     });
   });
 
+  group('search pin', () {
+    test('pickPin fetches around the pin and cancel returns to gps', () async {
+      final f = _Fake();
+      final c = _ctrl(f);
+      Get.put(c, tag: JobsFeedController.tag);
+      await Future<void>.delayed(Duration.zero);
+      c.pickPin(30.1, 78.2, 'Rishikesh');
+      await Future<void>.delayed(Duration.zero);
+      expect(f.calls.last.cityKey, isNull);
+      expect(f.calls.last.lat, 30.1);
+      expect(f.calls.last.lng, 78.2);
+      c.useMyLocation();
+      await Future<void>.delayed(Duration.zero);
+      expect(c.searchPin.value, isNull);
+      expect(f.calls.last.lat, 29.4);
+    });
+
+    testWidgets('header has the old Search button, no extra search chip', (t) async {
+      Get.put<TabConfigController>(_Tabs());
+      final f = _Fake();
+      final c = _ctrl(f);
+      Get.put(c, tag: JobsFeedController.tag);
+      setGoldenView(t, const Size(360, 760));
+      await t.pumpWidget(MaterialApp(
+        theme: ThemeData(fontFamily: 'WorkSans'),
+        home: MediaQuery(
+          data: const MediaQueryData(size: Size(360, 760), textScaler: TextScaler.linear(1.3)),
+          child: const JobsLandingScreenV2(),
+        ),
+      ));
+      await t.pump(const Duration(milliseconds: 600));
+      expect(find.text('Search'), findsOneWidget);
+      expect(find.textContaining('Search any place'), findsNothing);
+      expect(find.textContaining('Showing near you'), findsNothing);
+      c.pickPin(30.1, 78.2, 'Rishikesh');
+      await t.pump(const Duration(milliseconds: 600));
+      expect(find.text('Cancel'), findsOneWidget);
+      expect(find.text('Rishikesh'), findsOneWidget);
+      await t.tap(find.text('Cancel'));
+      await t.pump(const Duration(milliseconds: 600));
+      expect(c.searchPin.value, isNull);
+      expect(t.takeException(), isNull);
+    });
+  });
+
   group('screen', () {
     for (final w in [300.0, 560.0]) {
       for (final scale in [1.0, 1.3]) {

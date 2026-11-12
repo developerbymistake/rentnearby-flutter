@@ -57,12 +57,21 @@ class ModuleHeader extends StatelessWidget {
     statusBarBrightness: Brightness.dark,
   );
 
+  static double _scale(BuildContext context) =>
+      MediaQuery.textScalerOf(context).scale(1).clamp(1.0, 2.5).toDouble();
+
+  static double toolbarOf(BuildContext context) =>
+      toolbarHeight + 26 * (_scale(context) - 1);
+
+  static double subtitleOf(BuildContext context, int lines) =>
+      subtitleHeight * lines * _scale(context);
+
   static double heightOf(BuildContext context,
           {bool hasSubtitle = false, double bottomHeight = 0, int subtitleLines = 1}) =>
       MediaQuery.paddingOf(context).top +
       paddingTop +
-      toolbarHeight +
-      (hasSubtitle ? subtitleHeight * subtitleLines : 0) +
+      toolbarOf(context) +
+      (hasSubtitle ? subtitleOf(context, subtitleLines) : 0) +
       bottomHeight +
       paddingBottom;
 
@@ -92,8 +101,8 @@ class ModuleHeader extends StatelessWidget {
           mainAxisSize: autoHeight ? MainAxisSize.min : MainAxisSize.max,
           children: [
             _Slot(
-              height: autoHeight ? null : toolbarHeight + (hasSub ? subtitleHeight * subtitleLines : 0),
-              minHeight: toolbarHeight,
+              height: autoHeight ? null : toolbarOf(context) + (hasSub ? subtitleOf(context, subtitleLines) : 0),
+              minHeight: toolbarOf(context),
               child: Row(
                 children: [
                   if (onBack != null)
@@ -139,7 +148,7 @@ class ModuleHeader extends StatelessWidget {
                                 color: DesignColors.textInverse, letterSpacing: 1.2)),
                         if (hasSub)
                           _Slot(
-                            height: autoHeight ? null : subtitleHeight * subtitleLines,
+                            height: autoHeight ? null : subtitleOf(context, subtitleLines),
                             child: subtitleWidget ??
                                 Text(subtitle!,
                                     maxLines: subtitleLines,
@@ -149,7 +158,11 @@ class ModuleHeader extends StatelessWidget {
                       ],
                     ),
                   ),
-                  for (final t in trailing) Flexible(child: t),
+                  if (trailing.isNotEmpty)
+                    ConstrainedBox(
+                      constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width * 0.42),
+                      child: Row(mainAxisSize: MainAxisSize.min, children: [for (final t in trailing) Flexible(child: t)]),
+                    ),
                 ],
               ),
             ),

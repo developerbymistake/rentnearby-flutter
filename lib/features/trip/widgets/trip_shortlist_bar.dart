@@ -26,6 +26,7 @@ class TripShortlistBar extends StatelessWidget {
       child: SafeArea(
         top: false,
         child: Center(
+          heightFactor: 1,
           child: ConstrainedBox(
             constraints: BoxConstraints(maxWidth: maxWidth),
             child: Padding(

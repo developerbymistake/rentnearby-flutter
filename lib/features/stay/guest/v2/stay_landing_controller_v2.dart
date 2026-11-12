@@ -10,8 +10,12 @@ import 'stay_feed_repository.dart';
 
 class StayLandingControllerV2 extends NearbyFeedController<StayFeedItem> {
   static const tag = 'stays-v2';
+  static const defaultSort = 'nearest';
 
   final selectedStayTypeId = Rxn<String>();
+  final selectedMeals = Rxn<String>();
+  final sortBy = defaultSort.obs;
+  final resetGeneration = 0.obs;
   final stayPostedTrigger = 0.obs;
   final _repo = StayFeedRepository();
   final _workers = <Worker>[];
@@ -26,6 +30,7 @@ class StayLandingControllerV2 extends NearbyFeedController<StayFeedItem> {
   Future<NearbyPage<StayFeedItem>> fetchPage(String? token) => _repo.fetch(
         centre: NearbyCentreController.to.centre,
         stayTypeId: selectedStayTypeId.value,
+        meals: selectedMeals.value,
         token: token,
       );
 
@@ -47,6 +52,23 @@ class StayLandingControllerV2 extends NearbyFeedController<StayFeedItem> {
     if (selectedStayTypeId.value == id) return;
     selectedStayTypeId.value = id;
     unawaited(reload());
+  }
+
+  void applyFilters({String? meals, String? stayTypeId, required String sort}) {
+    final changed = selectedMeals.value != meals || selectedStayTypeId.value != stayTypeId;
+    selectedMeals.value = meals;
+    selectedStayTypeId.value = stayTypeId;
+    sortBy.value = sort;
+    if (changed) unawaited(reload());
+  }
+
+  List<StayFeedItem> sorted(List<StayFeedItem> list) {
+    final s = sortBy.value;
+    if (s == defaultSort) return list;
+    final out = [...list];
+    num price(StayFeedItem x) => x.minPrice ?? double.infinity;
+    out.sort((a, b) => s == 'price_asc' ? price(a).compareTo(price(b)) : (b.minPrice ?? -1).compareTo(a.minPrice ?? -1));
+    return out;
   }
 
   void refreshOwnerStatus() {

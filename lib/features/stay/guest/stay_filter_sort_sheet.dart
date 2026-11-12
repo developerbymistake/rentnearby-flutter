@@ -3,18 +3,17 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../setup/stay_option_sets.dart';
 import '../stay_types_controller.dart';
-import 'stay_landing_controller.dart';
+import 'v2/stay_landing_controller_v2.dart';
 
 const _kAccent = DesignColors.primary;
 const _tone = KitTone.stay;
-const _kSortChipPadding = EdgeInsets.symmetric(vertical: 13, horizontal: 10);
 
 class StayFilterSortSheet extends StatefulWidget {
-  final StayLandingController controller;
+  final StayLandingControllerV2 controller;
 
   const StayFilterSortSheet({super.key, required this.controller});
 
-  static Future<void> show(BuildContext context, {required StayLandingController controller}) {
+  static Future<void> show(BuildContext context, {required StayLandingControllerV2 controller}) {
     return SheetFrame.show(context, builder: (_) => StayFilterSortSheet(controller: controller));
   }
 
@@ -34,7 +33,7 @@ class _StayFilterSortSheetState extends State<StayFilterSortSheet> {
   double? _baseTopPadding;
 
   static const _sortOptions = [
-    (value: 'newest', label: 'Newest'),
+    (value: 'nearest', label: 'Nearest'),
     (value: 'price_asc', label: 'Price: low to high'),
     (value: 'price_desc', label: 'Price: high to low'),
   ];
@@ -70,7 +69,7 @@ class _StayFilterSortSheetState extends State<StayFilterSortSheet> {
     final baseHeight = _baseHeight ?? media.size.height;
     final baseTopPadding = _baseTopPadding ?? media.padding.top;
     final maxHeight = (baseHeight - baseTopPadding) * 0.94;
-    final sheetHeight = (baseHeight * 0.55).clamp(0.0, maxHeight);
+    final sheetHeight = (baseHeight * 0.78).clamp(0.0, maxHeight);
     return SizedBox(
       height: sheetHeight,
       child: StaggerHost(
@@ -90,13 +89,9 @@ class _StayFilterSortSheetState extends State<StayFilterSortSheet> {
               _group(1, [
                 Text('Meals', style: _sectionLabelStyle),
                 const SizedBox(height: 8),
-                GridView.count(
-                  crossAxisCount: 3,
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  mainAxisSpacing: 8,
-                  crossAxisSpacing: 8,
-                  childAspectRatio: 2.2,
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
                   children: StayOptionSets.meals
                       .map((o) => PickChip(
                             label: o.label,
@@ -111,31 +106,15 @@ class _StayFilterSortSheetState extends State<StayFilterSortSheet> {
               _group(2, [
                 Text('Sort by', style: _sectionLabelStyle),
                 const SizedBox(height: 8),
-                SizedBox(
-                  width: double.infinity,
-                  child: PickChip(
-                    label: _sortOptions[0].label,
-                    selected: _sort == _sortOptions[0].value,
-                    activeColor: _kAccent,
-                    padding: _kSortChipPadding,
-                    onTap: () => setState(() => _sort = _sortOptions[0].value),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Row(
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
                   children: _sortOptions
-                      .skip(1)
-                      .map((o) => Expanded(
-                            child: Padding(
-                              padding: EdgeInsets.only(right: o != _sortOptions.last ? 6 : 0),
-                              child: PickChip(
-                                label: o.label,
-                                selected: _sort == o.value,
-                                activeColor: _kAccent,
-                                padding: _kSortChipPadding,
-                                onTap: () => setState(() => _sort = o.value),
-                              ),
-                            ),
+                      .map((o) => PickChip(
+                            label: o.label,
+                            selected: _sort == o.value,
+                            activeColor: _kAccent,
+                            onTap: () => setState(() => _sort = o.value),
                           ))
                       .toList(),
                 ),
@@ -161,7 +140,7 @@ class _StayFilterSortSheetState extends State<StayFilterSortSheet> {
             onPressed: () => setState(() {
               _meals = null;
               _stayTypeId = null;
-              _sort = 'newest';
+              _sort = StayLandingControllerV2.defaultSort;
             }),
           ),
         ),
@@ -188,13 +167,9 @@ class _StayFilterSortSheetState extends State<StayFilterSortSheet> {
         (id: null, name: 'All'),
         ..._types.types.map((t) => (id: t.id, name: t.name)),
       ];
-      return GridView.count(
-        crossAxisCount: 3,
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        mainAxisSpacing: 8,
-        crossAxisSpacing: 8,
-        childAspectRatio: 2.2,
+      return Wrap(
+        spacing: 8,
+        runSpacing: 8,
         children: options
             .map((t) => PickChip(
                   label: t.name,

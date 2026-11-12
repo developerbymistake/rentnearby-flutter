@@ -16,6 +16,7 @@ import 'trip_guide_card.dart';
 import 'trip_guide_finish.dart';
 import 'trip_guide_nudge.dart';
 import 'trip_guide_options.dart';
+import 'trip_guide_overview_sheet.dart';
 import 'trip_guide_progress.dart';
 import 'trip_guide_reopened.dart';
 import 'trip_guide_shortlist_review.dart';
@@ -82,6 +83,8 @@ class _TripGuideViewState extends State<TripGuideView> {
     );
     return TripGuideCardKind(card, sent: sent && card == TripGuideCard.question, names: [for (final i in active) i.name]);
   }
+
+  void _openOverview() => TripGuideOverviewSheet.show(context, _c);
 
   bool _isCar(TripGuideStep s) => s.row.kind != TripEasyRowKind.stay && s.row.kind != TripEasyRowKind.taxi;
 
@@ -205,7 +208,7 @@ class _TripGuideViewState extends State<TripGuideView> {
             final tripId = _c.trip.value?.id;
             if (tripId != null) TripNavigation.openSummary(tripId);
           },
-          onOverview: () => _c.guideSetOverview(true),
+          onOverview: _openOverview,
         );
       } else {
         final step = _g.steps[idx];
@@ -236,9 +239,9 @@ class _TripGuideViewState extends State<TripGuideView> {
         Expanded(
           child: LayoutBuilder(
             builder: (context, box) => SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: KitMetrics.gutter, vertical: 16),
+              padding: const EdgeInsets.symmetric(horizontal: KitMetrics.gutter, vertical: 8),
               child: ConstrainedBox(
-                constraints: BoxConstraints(minHeight: box.maxHeight - 32),
+                constraints: BoxConstraints(minHeight: box.maxHeight - 16),
                 child: Center(
                   child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 520), child: _card()),
                 ),
@@ -258,7 +261,7 @@ class _TripGuideViewState extends State<TripGuideView> {
             canNext: canNext,
             onPrevious: _c.guidePrevious,
             onNext: _c.guideNext,
-            onOverview: () => _c.guideSetOverview(true),
+            onOverview: _openOverview,
           );
         }),
       ],

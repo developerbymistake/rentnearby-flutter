@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../design/design.dart';
+import '../models/card_fact.dart';
+import 'plan_badge_chip.dart';
 
 class HomeCardSurface extends StatelessWidget {
   const HomeCardSurface({
@@ -20,7 +22,11 @@ class HomeCardSurface extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final card = DecoratedBox(
-      decoration: BoxDecoration(color: color, borderRadius: radius, boxShadow: shadow),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: radius,
+        boxShadow: shadow,
+      ),
       child: Material(
         color: Colors.transparent,
         borderRadius: radius,
@@ -34,5 +40,227 @@ class HomeCardSurface extends StatelessWidget {
       ),
     );
     return onTap == null ? card : PressScale(child: card);
+  }
+}
+
+class HomeRailTile extends StatelessWidget {
+  const HomeRailTile({
+    super.key,
+    required this.title,
+    required this.onTap,
+    this.thumbnailUrl,
+    this.tagLabel,
+    this.locationLabel,
+    this.facts = const [],
+    this.priceCaption = '',
+    this.priceValue = '',
+    this.priceUnit = '',
+    this.noPriceLabel,
+    this.stackedCaption = false,
+    this.isFeatured = false,
+    this.tone = KitTone.stay,
+    this.fallbackAsset = TravelIcon.stay,
+  });
+
+  static const double width = RailCard.width;
+  static const double height = 302;
+  static const double photoHeight = 112;
+  static const double maxTextScale = 1.3;
+
+  final String title;
+  final VoidCallback onTap;
+  final String? thumbnailUrl;
+  final String? tagLabel;
+  final String? locationLabel;
+  final List<CardFact> facts;
+  final String priceCaption;
+  final String priceValue;
+  final String priceUnit;
+  final String? noPriceLabel;
+  final bool stackedCaption;
+  final bool isFeatured;
+  final KitTone tone;
+  final String fallbackAsset;
+
+  Widget _price() {
+    if (priceValue.isEmpty) {
+      return Text(
+        noPriceLabel ?? '',
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: TypeTokens.style(
+          12,
+          FontWeight.w800,
+          color: tone.accentDark,
+          letterSpacing: 0.8,
+        ),
+      );
+    }
+    final amount = Text.rich(
+      TextSpan(
+        children: [
+          if (!stackedCaption && priceCaption.isNotEmpty)
+            TextSpan(text: '$priceCaption ', style: TypeTokens.caption),
+          TextSpan(
+            text: priceValue,
+            style: TypeTokens.style(
+              15,
+              FontWeight.w800,
+              color: tone.accentDark,
+            ),
+          ),
+          if (priceUnit.isNotEmpty)
+            TextSpan(text: priceUnit, style: TypeTokens.caption),
+        ],
+      ),
+      maxLines: 1,
+    );
+    return FittedBox(
+      fit: BoxFit.scaleDown,
+      alignment: Alignment.centerLeft,
+      child: stackedCaption && priceCaption.isNotEmpty
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(priceCaption, maxLines: 1, style: TypeTokens.caption),
+                amount,
+              ],
+            )
+          : amount,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scaler = MediaQuery.textScalerOf(
+      context,
+    ).clamp(maxScaleFactor: maxTextScale);
+    return MediaQuery(
+      data: MediaQuery.of(context).copyWith(textScaler: scaler),
+      child: SizedBox(
+        width: width,
+        height: height,
+        child: HomeCardSurface(
+          onTap: onTap,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(
+                height: photoHeight,
+                width: double.infinity,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    LayoutBuilder(
+                      builder: (context, c) => KitPhoto(
+                        url: thumbnailUrl,
+                        width: c.maxWidth,
+                        height: photoHeight,
+                        tone: tone,
+                        asset: fallbackAsset,
+                        iconSize: 40,
+                      ),
+                    ),
+                    if (tagLabel != null && tagLabel!.isNotEmpty)
+                      Positioned(
+                        top: 8,
+                        left: 8,
+                        child: KitTagChip(tagLabel!, tone: tone, solid: true),
+                      ),
+                    if (isFeatured)
+                      Positioned(
+                        left: 8,
+                        bottom: 8,
+                        child: PlanBadgeChip(
+                          color: tone.accentDark,
+                          compact: false,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TypeTokens.style(
+                          14,
+                          FontWeight.w700,
+                          color: DesignColors.textStrong,
+                          height: 1.2,
+                        ),
+                      ),
+                      if (locationLabel != null &&
+                          locationLabel!.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            const TravelIcon(TravelIcon.place, size: 12),
+                            const SizedBox(width: 3),
+                            Expanded(
+                              child: Text(
+                                locationLabel!,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TypeTokens.caption,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                      if (facts.isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        Expanded(
+                          child: ClipRect(
+                            child: Align(
+                              alignment: Alignment.topLeft,
+                              child: Wrap(
+                                spacing: 4,
+                                runSpacing: 4,
+                                children: [
+                                  for (final f in facts.take(3))
+                                    KitFactChip(f, tone: tone),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ] else
+                        const Spacer(),
+                      Row(
+                        children: [
+                          Expanded(child: _price()),
+                          const SizedBox(width: 6),
+                          Container(
+                            width: 28,
+                            height: 28,
+                            decoration: BoxDecoration(
+                              gradient: tone.gradient,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.chevron_right_rounded,
+                              size: 20,
+                              color: DesignColors.onPrimary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }

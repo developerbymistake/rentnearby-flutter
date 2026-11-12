@@ -5,24 +5,27 @@ import 'package:get/get.dart';
 import '../../../../config/app_routes.dart';
 import '../../../../config/app_tabs.dart';
 import '../../../../controllers/auth_controller.dart';
+import '../../../../controllers/location_controller.dart';
 import '../../../../controllers/tab_config_controller.dart';
 import '../../../../navigation/tour_keys.dart';
 import '../../../jobs/controllers/my_jobs_controller.dart';
 import '../../../nearby/controllers/nearby_centre_controller.dart';
 import '../../../nearby/nearby_strings.dart';
-import '../../../nearby/widgets/nearby_centre_bar.dart';
 import '../../../nearby/widgets/nearby_featured_slot.dart';
 import '../../../nearby/widgets/nearby_header_strip.dart';
 import '../../../nearby/widgets/nearby_label_text.dart';
 import '../../../nearby/widgets/nearby_state_views.dart';
+import '../../../../screens/explore_location_search_mixin.dart';
+import '../../../../widgets/location_switch_sheet.dart';
 import '../../setup/stay_flow.dart';
 import '../../stay_types_controller.dart';
+import '../stay_filter_sort_sheet.dart';
 import '../stay_navigation.dart';
 import 'stay_feed_item.dart';
 import 'stay_landing_controller_v2.dart';
 
 const _kAccent = DesignColors.primary;
-const _kSections = 5;
+const _kSections = 4;
 const _kTone = KitTone.stay;
 
 void _openMyStays() => Get.toNamed(AppRoutes.myStays);
@@ -34,7 +37,7 @@ class StayLandingScreenV2 extends StatefulWidget {
   State<StayLandingScreenV2> createState() => _StayLandingScreenV2State();
 }
 
-class _StayLandingScreenV2State extends State<StayLandingScreenV2> {
+class _StayLandingScreenV2State extends State<StayLandingScreenV2> with ExploreLocationSearchMixin<StayLandingScreenV2> {
   late final StayLandingControllerV2 _ctrl;
   final _auth = Get.find<AuthController>();
   final _types = StayTypesController.ensure();
@@ -54,6 +57,9 @@ class _StayLandingScreenV2State extends State<StayLandingScreenV2> {
     Get.delete<StayLandingControllerV2>(tag: StayLandingControllerV2.tag);
     super.dispose();
   }
+
+  @override
+  get searchPalette => templateModulePalette;
 
   void _viewDetails(StayFeedItem s) => Get.toNamed(AppRoutes.stayDetail, arguments: {'id': s.id});
 
@@ -85,7 +91,6 @@ class _StayLandingScreenV2State extends State<StayLandingScreenV2> {
                       SliverToBoxAdapter(child: _section(1, _buildReviewStrip())),
                       SliverToBoxAdapter(child: _section(2, _buildTiles())),
                       SliverToBoxAdapter(child: _section(3, _buildTypeChips())),
-                      SliverToBoxAdapter(child: _section(4, _buildStrip())),
                       SliverToBoxAdapter(child: _buildListHeader()),
                       SliverToBoxAdapter(child: _buildFeatured()),
                       _buildBody(),
@@ -124,27 +129,113 @@ class _StayLandingScreenV2State extends State<StayLandingScreenV2> {
           tone: _kTone,
           tabRoot: true,
           animate: false,
-          autoHeight: true,
           title: Get.find<TabConfigController>().displayNameForIndex(AppTabs.stays, 'Stays'),
           subtitle: (_ctrl.header.value?.farAway ?? false) ? 'Find the nearest stays' : 'Find stays near you',
+          trailing: [KeyedSubtree(key: TourKeys.staysLandingSearch, child: _buildSearchButton())],
+          bottomHeight: 46 + 12,
+          bottom: Padding(
+            padding: const EdgeInsets.only(left: 12, top: 12),
+            child: KeyedSubtree(key: TourKeys.staysLandingLocation, child: _buildCityDropdown()),
+          ),
         ));
   }
 
-  Widget _buildStrip() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(KitMetrics.gutter, 12, KitMetrics.gutter, 0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          KeyedSubtree(key: TourKeys.staysLandingLocation, child: Obx(() => NearbyCentreBar(far: _ctrl.header.value?.farAway ?? false))),
-          Obx(() {
-            final centre = NearbyCentreController.to;
-            centre.centreVersion.value;
-            return NearbyHeaderStrip(header: _ctrl.header.value, hasPin: centre.hasPin);
-          }),
-        ],
-      ),
-    );
+  Widget _buildSearchButton() {
+    return Obx(() {
+      final active = isSearchActive;
+      final resolving = searchResolving;
+      return PressScale(
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: resolving ? null : () => onSearchToggleTap(context),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            height: 36,
+            constraints: const BoxConstraints(minWidth: 44),
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: active ? DesignColors.error : DesignColors.surface,
+              borderRadius: CardRadius.pill,
+              boxShadow: ShadowTokens.elev1,
+            ),
+            child: resolving
+                ? const KitDots(color: _kAccent, size: 6)
+                : active
+                    ? Text('Cancel', style: TypeTokens.style(12, FontWeight.w700, color: DesignColors.onPrimary))
+                    : Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.search_rounded, size: 16, color: _kAccent),
+                          const SizedBox(width: 5),
+                          Text('Search', style: TypeTokens.style(12, FontWeight.w700, color: _kAccent)),
+                        ],
+                      ),
+          ),
+        ),
+      );
+    });
+  }
+
+  Widget _buildCityDropdown() {
+    final loc = Get.find<LocationController>();
+    return Obx(() {
+      final district = loc.effectiveDistrict;
+      if (district == null) return const SizedBox(height: 46);
+      final cityName = loc.browsingCity.value?.name ?? loc.autoCity.value?.name ?? 'Current';
+      final searchLabel = loc.searchPinLabel.value;
+      final searching = searchLabel != null;
+      final List<InlineSpan> spans = searching
+          ? [TextSpan(text: searchLabel)]
+          : [
+              TextSpan(text: district.name),
+              const WidgetSpan(
+                alignment: PlaceholderAlignment.middle,
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 4),
+                  child: Icon(Icons.chevron_right_rounded, size: 14, color: DesignColors.textSecondary),
+                ),
+              ),
+              TextSpan(text: cityName),
+            ];
+      return PressScale(
+        enabled: !searching,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: searching ? null : () => LocationSwitchSheet.show(context, palette: templateModulePalette),
+          child: Container(
+            height: 46,
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            decoration: BoxDecoration(
+              color: DesignColors.surface,
+              borderRadius: CardRadius.pill,
+              boxShadow: ShadowTokens.elev1,
+            ),
+            child: Row(
+              children: [
+                const TravelIcon(TravelIcon.place, size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text.rich(
+                    TextSpan(children: spans),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TypeTokens.style(14, FontWeight.w500, color: _kAccent),
+                  ),
+                ),
+                if (!searching)
+                  Container(
+                    width: 26,
+                    height: 26,
+                    decoration: const BoxDecoration(color: DesignColors.scaffold, shape: BoxShape.circle),
+                    child: const Icon(Icons.keyboard_arrow_down_rounded, size: 16, color: _kAccent),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      );
+    });
   }
 
   Widget _buildReviewStrip() {
@@ -264,17 +355,70 @@ class _StayLandingScreenV2State extends State<StayLandingScreenV2> {
 
   Widget _buildListHeader() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(KitMetrics.gutter, 16, KitMetrics.gutter, 8),
-      child: Obx(() {
-        final centre = NearbyCentreController.to;
-        centre.centreVersion.value;
-        final pin = centre.hasPin ? centre.pinLabel : null;
-        final far = _ctrl.header.value?.farAway ?? false;
-        final title = pin == null
-            ? (far ? NearbyStrings.staysNearest : NearbyStrings.staysNear)
-            : (far ? NearbyStrings.staysNearestToPlace(pin) : NearbyStrings.staysNearPlace(pin));
-        return Text(title, maxLines: 2, overflow: TextOverflow.ellipsis, style: TypeTokens.title);
-      }),
+      padding: const EdgeInsets.fromLTRB(KitMetrics.gutter, 16, KitMetrics.gutter, 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Obx(() {
+                  final centre = NearbyCentreController.to;
+                  centre.centreVersion.value;
+                  final pin = centre.hasPin ? centre.pinLabel : null;
+                  final far = _ctrl.header.value?.farAway ?? false;
+                  final title = pin == null
+                      ? (far ? NearbyStrings.staysNearest : NearbyStrings.staysNear)
+                      : (far ? NearbyStrings.staysNearestToPlace(pin) : NearbyStrings.staysNearPlace(pin));
+                  return Text(title, maxLines: 2, overflow: TextOverflow.ellipsis, style: TypeTokens.title);
+                }),
+              ),
+              const SizedBox(width: 8),
+              _buildFilterButton(),
+            ],
+          ),
+          Obx(() {
+            final centre = NearbyCentreController.to;
+            centre.centreVersion.value;
+            return NearbyHeaderStrip(header: _ctrl.header.value, hasPin: centre.hasPin);
+          }),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFilterButton() {
+    return PressScale(
+      child: GestureDetector(
+        key: TourKeys.staysLandingSort,
+        onTap: () => StayFilterSortSheet.show(context, controller: _ctrl),
+        child: Obx(() {
+          final active = _ctrl.selectedMeals.value != null ||
+              _ctrl.selectedStayTypeId.value != null ||
+              _ctrl.sortBy.value != StayLandingControllerV2.defaultSort;
+          return AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            decoration: BoxDecoration(
+              color: active ? _kTone.tint : DesignColors.surface,
+              borderRadius: CardRadius.pill,
+              border: Border.all(color: active ? _kAccent : DesignColors.divider, width: 1.5),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('Filter & Sort', style: TypeTokens.style(13, FontWeight.w600, color: _kAccent)),
+                const SizedBox(width: 6),
+                const Icon(Icons.sort_rounded, size: 16, color: _kAccent),
+                if (active) ...[
+                  const SizedBox(width: 6),
+                  Container(width: 6, height: 6, decoration: const BoxDecoration(color: _kAccent, shape: BoxShape.circle)),
+                ],
+              ],
+            ),
+          );
+        }),
+      ),
     );
   }
 
@@ -298,7 +442,7 @@ class _StayLandingScreenV2State extends State<StayLandingScreenV2> {
   Widget _tile(StayFeedItem s) => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(height: RailCard.height, child: _card(s)),
+          SizedBox(height: StayGridCard.heightOf(context), child: _card(s)),
           Expanded(
             child: ClipRect(
               child: SingleChildScrollView(
@@ -324,7 +468,7 @@ class _StayLandingScreenV2State extends State<StayLandingScreenV2> {
             alignment: Alignment.centerLeft,
             child: SizedBox(
               width: RailCard.width,
-              height: RailCard.height + _labelHeight(context),
+              height: StayGridCard.heightOf(context) + _labelHeight(context),
               child: _tile(s),
             ),
           ),
@@ -333,9 +477,11 @@ class _StayLandingScreenV2State extends State<StayLandingScreenV2> {
     });
   }
 
+  bool get _filtered => _ctrl.selectedMeals.value != null || _ctrl.selectedStayTypeId.value != null;
+
   Widget _buildBody() {
     return Obx(() {
-      final items = _ctrl.items.toList();
+      final items = _ctrl.sorted(_ctrl.items.toList());
       if (items.isEmpty) {
         if (_ctrl.isLoading.value) return _buildSkeletonGrid();
         if (_ctrl.loadFailed.value) {
@@ -347,7 +493,9 @@ class _StayLandingScreenV2State extends State<StayLandingScreenV2> {
           return SliverToBoxAdapter(
             child: KeyedSubtree(
               key: TourKeys.staysLandingList,
-              child: const NearbyEmpty(title: NearbyStrings.staysEmptyTitle, body: NearbyStrings.staysEmptyBody),
+              child: _filtered
+                  ? const NearbyEmpty(title: 'No stays found', body: 'Try other filters or a different location')
+                  : const NearbyEmpty(title: NearbyStrings.staysEmptyTitle, body: NearbyStrings.staysEmptyBody),
             ),
           );
         }
@@ -358,7 +506,7 @@ class _StayLandingScreenV2State extends State<StayLandingScreenV2> {
         sliver: SliverGrid(
           gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
             maxCrossAxisExtent: RailCard.gridMaxExtent,
-            mainAxisExtent: RailCard.height + _labelHeight(context),
+            mainAxisExtent: StayGridCard.heightOf(context) + _labelHeight(context),
             mainAxisSpacing: RailCard.gridSpacing,
             crossAxisSpacing: RailCard.gridSpacing,
           ),

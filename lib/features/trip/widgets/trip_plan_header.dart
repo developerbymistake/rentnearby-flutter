@@ -165,7 +165,7 @@ class TripPlanHeader extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              _paceChip(context, c, editable),
+              ConstrainedBox(constraints: const BoxConstraints(maxWidth: 120), child: _paceChip(context, c, editable)),
             ],
           ),
         ),
@@ -183,7 +183,7 @@ class TripPlanHeader extends StatelessWidget {
                   : Text(hint, maxLines: 1, overflow: TextOverflow.ellipsis, style: TypeTokens.style(12, FontWeight.w500, color: DesignColors.whiteHigh)),
             ),
             const SizedBox(width: 8),
-            _paceChip(context, c, editable),
+            ConstrainedBox(constraints: const BoxConstraints(maxWidth: 120), child: _paceChip(context, c, editable)),
           ],
         ),
       );
@@ -213,7 +213,7 @@ class TripPlanHeader extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(label, maxLines: 1, style: TypeTokens.style(12, FontWeight.w700, color: DesignColors.textInverse)),
+                Flexible(child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TypeTokens.style(12, FontWeight.w700, color: DesignColors.textInverse))),
                 if (editable) const Icon(Icons.keyboard_arrow_down_rounded, size: 16, color: DesignColors.surface),
               ],
             ),

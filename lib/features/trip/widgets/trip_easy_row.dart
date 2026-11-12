@@ -4,7 +4,6 @@ import 'trip_ui.dart';
 import 'package:bakhli/design/extra/trip_plan_look.dart';
 import 'package:get/get.dart';
 import '../controllers/trip_plan_controller.dart';
-import '../controllers/trip_plan_guide.dart';
 import '../models/trip_plan_model.dart';
 import '../trip_navigation.dart';
 import '../trip_strings_city.dart';
@@ -109,16 +108,6 @@ class _TripEasyRowState extends State<TripEasyRow> {
     _c.skipRow(_i.key);
   }
 
-  Widget _titleTap(Widget title) {
-    if (!_c.guideState.overview.value || !_c.guideAvailable) return title;
-    return GestureDetector(
-      key: ValueKey('overview-title-${_i.key.id}'),
-      behavior: HitTestBehavior.opaque,
-      onTap: () => _c.guideJumpTo(_i.key.id, persist: true),
-      child: title,
-    );
-  }
-
   Widget _kindIcon(TripEasyRowKind k) => switch (k) {
         TripEasyRowKind.gettingThere || TripEasyRowKind.comingBack => const TravelIcon(TravelIcon.route, size: 22),
         TripEasyRowKind.stay => const TravelIcon(TravelIcon.stay, size: 22),
@@ -205,20 +194,14 @@ class _TripEasyRowState extends State<TripEasyRow> {
               ),
               const SizedBox(height: 8),
             ],
-            Row(children: [
-              Expanded(
-                child: noSupply
-                    ? PrimaryButton(
-                        label: TripStringsV2Easy.arrangeMyself, height: 44, tone: KitTone.trip, onPressed: _busy ? null : _arrange)
-                    : SecondaryButton(
-                        label: TripStringsV2Easy.arrangeMyself, height: 44, tone: KitTone.trip, onPressed: _busy ? null : _arrange),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: SecondaryButton(
-                    label: TripStringsV2Easy.skip, height: 44, tone: KitTone.trip, neutral: true, onPressed: _busy ? null : _skip),
-              ),
-            ]),
+            noSupply
+                ? PrimaryButton(
+                    label: TripStringsV2Easy.arrangeMyself, height: 44, tone: KitTone.trip, onPressed: _busy ? null : _arrange)
+                : SecondaryButton(
+                    label: TripStringsV2Easy.arrangeMyself, height: 44, tone: KitTone.trip, onPressed: _busy ? null : _arrange),
+            const SizedBox(height: 8),
+            SecondaryButton(
+                label: TripStringsV2Easy.skip, height: 44, tone: KitTone.trip, neutral: true, onPressed: _busy ? null : _skip),
           ],
         );
       case TripRowState.own || TripRowState.skipped:
@@ -384,13 +367,11 @@ class _TripEasyRowState extends State<TripEasyRow> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _titleTap(
-                            Text(title,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                    fontFamily: FitnessAppTheme.fontName, fontSize: 14, fontWeight: FontWeight.w600, color: muted ? DesignColors.textMuted : TripLook.textDark)),
-                          ),
+                          Text(title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                  fontFamily: FitnessAppTheme.fontName, fontSize: 14, fontWeight: FontWeight.w600, color: muted ? DesignColors.textMuted : TripLook.textDark)),
                           const SizedBox(height: 2),
                           Row(children: [
                             if (i.state == TripRowState.asked || i.state == TripRowState.offer) ...[

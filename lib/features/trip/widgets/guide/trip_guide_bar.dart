@@ -23,7 +23,7 @@ class TripGuideBar extends StatelessWidget {
     return DecoratedBox(
       decoration: const BoxDecoration(color: DesignColors.surface, borderRadius: CardRadius.tile, boxShadow: ShadowTokens.elev3),
       child: Padding(
-        padding: EdgeInsets.fromLTRB(16, 10, 16, AppInsets.bottomViewPadding(context) + 10),
+        padding: EdgeInsets.fromLTRB(16, 8, 16, AppInsets.bottomViewPadding(context) + 8),
         child: Center(
           heightFactor: 1,
           child: ConstrainedBox(
@@ -40,16 +40,24 @@ class TripGuideBar extends StatelessWidget {
                 Row(
                   children: [
                     Expanded(
-                      child: TripButton(label: TripStringsGuide.previous, height: 52, outlined: true, onPressed: onPrevious),
+                      flex: 3,
+                      child: TripButton(label: TripStringsGuide.previous, height: 44, outlined: true, onPressed: onPrevious),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 8),
                     Expanded(
-                      child: TripButton(label: TripStringsGuide.next, height: 52, onPressed: canNext ? onNext : null),
+                      flex: 4,
+                      child: TripButton(label: TripStringsGuide.next, height: 44, onPressed: canNext ? onNext : null),
+                    ),
+                    const SizedBox(width: 4),
+                    Flexible(
+                      flex: 3,
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: TextLink(label: TripStringsGuide.overview, onTap: onOverview, tone: KitTone.trip),
+                      ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 4),
-                Center(child: TextLink(label: TripStringsGuide.overview, onTap: onOverview, tone: KitTone.trip)),
               ],
             ),
           ),

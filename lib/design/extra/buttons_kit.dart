@@ -77,7 +77,7 @@ class PrimaryButton extends StatelessWidget {
     this.trailingArrow = false,
     this.compact = false,
     this.heroCorner = false,
-    this.scaleLabel = false,
+    this.scaleLabel = true,
   });
 
   final bool compact;
@@ -166,7 +166,7 @@ class SecondaryButton extends StatelessWidget {
     this.height = KitMetrics.buttonHeight,
     this.neutral = false,
     this.compact = false,
-    this.scaleLabel = false,
+    this.scaleLabel = true,
   });
 
   final bool compact;
@@ -297,11 +297,14 @@ class PillAction extends StatelessWidget {
                     children: [
                       if (icon != null) ...[icon!, const SizedBox(width: 6)],
                       Flexible(
-                        child: Text(label,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TypeTokens.style(12, FontWeight.w700,
-                                color: fg, letterSpacing: 0.27)),
+                        child: _label(
+                          Text(label,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TypeTokens.style(12, FontWeight.w700,
+                                  color: fg, letterSpacing: 0.27)),
+                          true,
+                        ),
                       ),
                     ],
                   ),

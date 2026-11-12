@@ -106,7 +106,8 @@ void main() {
     NearbyCentreController.to.setPin(const LatLng(29.45, 79.55), 'Satkhol village');
     await flush(t);
     await t.pump(const Duration(milliseconds: 300));
-    expect(find.text('Showing near Satkhol village'), findsOneWidget);
+    expect(find.text('Showing near Satkhol village'), findsNothing);
+    expect(find.text('Search any place'), findsNothing);
     expect(find.text('Nearest town: Nainital, about 12 km'), findsOneWidget);
     expect(find.text('Stays near Satkhol village'), findsOneWidget);
     expect(find.text('Bhimtal. About 9 km away'), findsOneWidget);
@@ -124,7 +125,7 @@ void main() {
     expect(find.text('Haridwar, Uttarakhand. About 210 km away'), findsOneWidget);
     expect(find.text('Haldwani, Uttarakhand. About 420 km away'), findsOneWidget);
     expect(find.text('By road it can take longer.'), findsNWidgets(2));
-    expect(find.text('Using my location'), findsOneWidget);
+    expect(find.text('Using my location'), findsNothing);
     expect(find.text('Stays near you'), findsNothing);
     expect(find.text('Showing near you'), findsNothing);
   });
@@ -178,12 +179,63 @@ void main() {
     await t.pump(const Duration(milliseconds: 300));
     expect(_ctrl.centres.last.latitude, 31.1);
     expect(_ctrl.centres.last.longitude, closeTo(77.17, 0.001));
-    expect(find.text('Showing near Shimla'), findsOneWidget);
+    expect(find.text('Stays near Shimla'), findsOneWidget);
+    expect(find.text('Showing near Shimla'), findsNothing);
     NearbyCentreController.to.clearPin();
     await flush(t);
     await t.pump(const Duration(milliseconds: 300));
     expect(_ctrl.centres.last.latitude, 29.2);
-    expect(find.text('Showing near you'), findsOneWidget);
+    expect(find.text('Stays near you'), findsOneWidget);
+    expect(find.text('Showing near you'), findsNothing);
+  });
+
+  testWidgets('top area has only the old controls: Search, location pill, Filter & Sort', (t) async {
+    _setUpApp();
+    _ctrl.answer = (_, _) => NearbyPage(items: [_item('a'), _item('b')]);
+    await _open(t);
+    expect(find.text('Search'), findsOneWidget);
+    expect(find.text('Filter & Sort'), findsOneWidget);
+    for (final gone in ['Showing near you', 'Search any place', 'Use my location', 'Using my location']) {
+      expect(find.text(gone), findsNothing);
+    }
+    expect(find.byType(TextField), findsNothing);
+    expect(t.takeException(), isNull);
+  });
+
+  testWidgets('Filter & Sort opens, meals filter reloads the feed, price sort reorders', (t) async {
+    _setUpApp();
+    _ctrl.answer = (_, _) => NearbyPage(items: [_item('a'), _item('b')]);
+    await _open(t, h: 760);
+    final before = _ctrl.centres.length;
+    await t.tap(find.text('Filter & Sort'));
+    await t.pump(const Duration(milliseconds: 800));
+    await t.pump(const Duration(milliseconds: 800));
+    expect(find.text('Filter & Sort · Stays'), findsOneWidget);
+    await t.tap(find.text('All meals'));
+    await t.pump(const Duration(milliseconds: 200));
+    await t.tap(find.text('Apply'));
+    await t.pump(const Duration(milliseconds: 800));
+    await t.pump(const Duration(milliseconds: 800));
+    expect(find.text('Apply'), findsNothing);
+    await flush(t);
+    expect(_ctrl.selectedMeals.value, 'AllMeals');
+    expect(_ctrl.centres.length, greaterThan(before));
+    expect(_ctrl.sorted([StayFeedItem.fromJson(_stay('x'))]).length, 1);
+    _ctrl.sortBy.value = 'price_desc';
+    final cheap = StayFeedItem.fromJson({..._stay('c'), 'minPricePerNight': 500});
+    final dear = StayFeedItem.fromJson({..._stay('d'), 'minPricePerNight': 3000});
+    expect(_ctrl.sorted([cheap, dear]).first.id, 'd');
+    _ctrl.sortBy.value = 'price_asc';
+    expect(_ctrl.sorted([dear, cheap]).first.id, 'c');
+  });
+
+  testWidgets('Search opens the existing location search', (t) async {
+    _setUpApp();
+    _ctrl.answer = (_, _) => NearbyPage(items: [_item('a')]);
+    await _open(t);
+    await t.tap(find.text('Search'));
+    await t.pump(const Duration(milliseconds: 600));
+    expect(find.byType(TextField), findsOneWidget);
   });
 
   testWidgets('load failure offers retry', (t) async {

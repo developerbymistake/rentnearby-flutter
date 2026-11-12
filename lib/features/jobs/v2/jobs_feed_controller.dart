@@ -40,6 +40,7 @@ class JobsFeedController extends GetxController {
   final items = <JobFeedItem>[].obs;
   final header = Rxn<NearbyHeader>();
   final city = Rxn<TripCityModel>();
+  final searchPin = Rxn<({double lat, double lng, String label})>();
   final isLoading = true.obs;
   final isLoadingMore = false.obs;
   final hasMore = false.obs;
@@ -95,7 +96,7 @@ class JobsFeedController extends GetxController {
   }
 
   void _onGpsMoved() {
-    if (usingCity) return;
+    if (usingCity || searchPin.value != null) return;
     final now = _gps();
     final was = _loadedGps;
     if (now == null || was == null) return;
@@ -109,14 +110,22 @@ class JobsFeedController extends GetxController {
   }
 
   void pickCity(TripCityModel c) {
-    if (city.value?.cityKey == c.cityKey) return;
+    if (city.value?.cityKey == c.cityKey && searchPin.value == null) return;
+    searchPin.value = null;
     city.value = c;
     _reloadFresh();
   }
 
   void useMyLocation() {
-    if (city.value == null) return;
+    if (city.value == null && searchPin.value == null) return;
     city.value = null;
+    searchPin.value = null;
+    _reloadFresh();
+  }
+
+  void pickPin(double lat, double lng, String label) {
+    city.value = null;
+    searchPin.value = (lat: lat, lng: lng, label: label);
     _reloadFresh();
   }
 
@@ -201,7 +210,8 @@ class JobsFeedController extends GetxController {
   Future<void> _fetch({required bool reset, bool silent = false}) async {
     final myGen = ++_gen;
     final c = city.value;
-    final gps = c == null ? _gps() : null;
+    final pin = searchPin.value;
+    final gps = c != null ? null : (pin != null ? (lat: pin.lat, lng: pin.lng) : _gps());
     if (reset) {
       _dirty = false;
       loadFailed.value = false;

@@ -29,7 +29,6 @@ class TripGuideState {
   bool _hydrated = false;
 
   final on = false.obs;
-  final overview = false.obs;
   final index = 0.obs;
   final total = 0.obs;
   final percent = 0.obs;
@@ -75,7 +74,7 @@ extension TripPlanGuide on TripPlanController {
     final p = plan.value;
     if (p != null) guideHydrate();
     guideSync();
-    final next = _guideAvailable && planStep.value == 2 && !_g.overview.value;
+    final next = _guideAvailable && planStep.value == 2;
     if (_g.on.value != next) _g.on.value = next;
   }
 
@@ -92,7 +91,6 @@ extension TripPlanGuide on TripPlanController {
     final keys = TripGuideRules.keys(p);
     final at = TripGuideRules.cursor(keys, p.guide?.step, _g.choices);
     _g.step = at >= keys.length ? TripGuideState.finishKey : keys[at];
-    _g.overview.value = p.guide?.overview ?? false;
   }
 
   Set<String> _engagedKeys(List<String> keys) {
@@ -142,7 +140,7 @@ extension TripPlanGuide on TripPlanController {
     final p = plan.value;
     if (p == null || isReadOnly) return;
     final step = TripGuide.stepPattern.hasMatch(_g.step) ? _g.step : '';
-    final next = TripGuide(step: step, choices: Map.of(_g.choices), overview: _g.overview.value);
+    final next = TripGuide(step: step, choices: Map.of(_g.choices));
     final old = p.guide ?? const TripGuide();
     if (old == next) return;
     plan.value = p.withGuide(next);
@@ -152,12 +150,6 @@ extension TripPlanGuide on TripPlanController {
   void _guideCommit() {
     _guidePersist();
     guideRefresh();
-  }
-
-  void guideSetOverview(bool v) {
-    if (_g.overview.value == v) return;
-    _g.overview.value = v;
-    _guideCommit();
   }
 
   void guideGoTo(int i) {
@@ -183,7 +175,6 @@ extension TripPlanGuide on TripPlanController {
     if (!TripGuideRules.isStepKey(step)) return;
     guideHydrate();
     guideSync();
-    _g.overview.value = false;
     _g.step = step;
     _g.clearFlags();
     if (nudge) {

@@ -9,6 +9,7 @@ class StayFeedRepository extends NearbyRepositoryBase<StayFeedItem> {
   Future<NearbyPage<StayFeedItem>> fetch({
     required LatLng centre,
     String? stayTypeId,
+    String? meals,
     String? token,
   }) =>
       getPage(
@@ -19,6 +20,7 @@ class StayFeedRepository extends NearbyRepositoryBase<StayFeedItem> {
           'pageSize': pageSize,
           if (token != null) 'pageToken': token,
           if (stayTypeId != null) 'stayTypeId': stayTypeId,
+          if (meals != null) 'meals': meals,
         },
         StayFeedItem.fromJson,
       );

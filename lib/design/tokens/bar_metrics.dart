@@ -9,12 +9,12 @@ abstract final class BarMetrics {
   static const double bodyGap = 16;
 
   static double bodyBottom(double bottomInset) =>
-      barHeight + bottomInset + bodyGap;
+      boxHeight + bottomInset + bodyGap;
 
   static double bodyBottomOf(BuildContext context) {
     final media = MediaQuery.of(context);
     final floor = bodyBottom(media.viewPadding.bottom);
-    final fromScaffold = media.padding.bottom - centreOverflow + bodyGap;
+    final fromScaffold = media.padding.bottom + bodyGap;
     return math.max(floor, fromScaffold);
   }
 
