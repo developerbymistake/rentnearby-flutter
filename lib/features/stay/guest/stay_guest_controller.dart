@@ -1,3 +1,5 @@
+import '../../taxi/guest/traveller_city.dart';
+import '../../trip/trip_strings_city.dart';
 import 'package:dio/dio.dart';
 import 'package:get/get.dart';
 import '../../../config/app_constants.dart';
@@ -8,6 +10,10 @@ import '../../../utils/network_retry.dart';
 import '../models/stay_detail_model.dart';
 import '../models/stay_nearby_model.dart';
 import '../setup/stay_option_sets.dart';
+
+class _CitiesUnavailable implements Exception {
+  const _CitiesUnavailable();
+}
 
 class StayGuestController extends GetxController {
   static StayGuestController get to =>
@@ -26,38 +32,59 @@ class StayGuestController extends GetxController {
     nearestFocusIndex.value = 0;
   }
 
-  Future<void> loadNearby(double lat, double lng, double radius, String districtId) async {
+  // null = the pin belongs to no city; a failed city call throws so the caller shows the retry text.
+  Future<Map<String, dynamic>?> _area(double lat, double lng) async {
+    final city = await nearestCityOf(lat, lng);
+    if (city == null) throw const _CitiesUnavailable();
+    return city.available ? {'cityKey': city.cityKey} : null;
+  }
+
+  static String _failText(Object e, String fallback) =>
+      e is _CitiesUnavailable || DioErrorMapper.errorType(e) == 'TripCitiesUnavailable' ? TripStringsCity.citiesLoadingBody : DioErrorMapper.toMessage(e, fallback);
+
+  Future<void> loadNearby(double lat, double lng, double radius) async {
     try {
       isLoading.value = true;
+      final area = await _area(lat, lng);
+      if (area == null) {
+        nearbyStays.value = [];
+        return;
+      }
       final res = await withRetry(() => ApiService.get('/stays/nearby', params: {
             'latitude': lat,
             'longitude': lng,
-            'radius': radius,
-            'districtId': districtId,
+            ...area,
           }));
       nearbyStays.value = (res['data']['items'] as List).map((e) => StayNearbyModel.fromJson(e)).toList();
     } catch (e) {
       if (e is DioException && e.response?.statusCode == 401) return;
-      AppToast.error(DioErrorMapper.toMessage(e, 'Could not load nearby stays.'));
+      AppToast.error(_failText(e, 'Could not load nearby stays.'));
     } finally {
       isLoading.value = false;
     }
   }
 
-  Future<void> loadNearest(double lat, double lng, String districtId) async {
+  Future<void> loadNearest(double lat, double lng) async {
     final seq = ++_nearestRequestSeq;
     try {
       isLoadingNearest.value = true;
+      final area = await _area(lat, lng);
+      if (area == null) {
+        if (seq == _nearestRequestSeq) {
+          AppToast.noData(TripStringsCity.noStaysTitle(''), TripStringsCity.noSupplyBody, accent: StayColors.accent);
+        }
+        return;
+      }
       final res = await withRetry(() => ApiService.get('/stays/nearest', params: {
             'latitude': lat,
             'longitude': lng,
             'count': AppConstants.nearestFallbackCount,
-            'districtId': districtId,
+            ...area,
           }));
       final items = (res['data']['items'] as List).map((e) => StayNearbyModel.fromJson(e)).toList();
       if (seq != _nearestRequestSeq) return;
       if (items.isEmpty) {
-        AppToast.noData('No stays in this district yet', 'Try another city from the header', accent: StayColors.accent);
+        AppToast.noData(TripStringsCity.noStaysTitle(''), TripStringsCity.noSupplyBody, accent: StayColors.accent);
         return;
       }
       nearestStays.value = items;
@@ -65,7 +92,7 @@ class StayGuestController extends GetxController {
       nearestFocusIndex.value = 0;
     } catch (e) {
       if (e is DioException && e.response?.statusCode == 401) return;
-      AppToast.error(DioErrorMapper.toMessage(e, 'Could not load nearest stays.'));
+      AppToast.error(_failText(e, 'Could not load nearest stays.'));
     } finally {
       isLoadingNearest.value = false;
     }

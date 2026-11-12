@@ -9,6 +9,7 @@ import '../models/trip_model.dart';
 import '../trip_strings.dart';
 import '../utils/trip_bar_rules.dart';
 import '../utils/trip_clock.dart';
+import '../utils/trip_continue_pick.dart';
 
 class MyTripsController extends GetxController {
   static MyTripsController get to => Get.isRegistered<MyTripsController>()
@@ -93,7 +94,7 @@ class MyTripsController extends GetxController {
 
   TripSummaryModel? get continueTrip {
     if (plannerOff.value) return null;
-    return TripBarRules.pick(_openTrips, _today)?.trip;
+    return TripContinuePick.pick(_openTrips, _today);
   }
 
   int get openTripCount {

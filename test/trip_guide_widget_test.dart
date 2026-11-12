@@ -3,6 +3,11 @@ import 'package:bakhli/features/trip/controllers/trip_plan_controller.dart';
 import 'package:bakhli/features/trip/controllers/trip_plan_guide.dart';
 import 'package:bakhli/features/trip/controllers/trip_shortlist_controller.dart';
 import 'package:bakhli/features/trip/data/trip_shortlist_repository.dart';
+import 'package:bakhli/features/taxi/ways/models/ask_models.dart';
+import 'package:bakhli/features/taxi/ways/taxi_ways_controller.dart';
+import 'package:bakhli/models/place_result_model.dart';
+import 'package:maplibre_gl/maplibre_gl.dart';
+import 'package:bakhli/features/trip/models/trip_enquiry_model.dart';
 import 'package:bakhli/features/trip/models/trip_plan_model.dart';
 import 'package:bakhli/features/trip/models/trip_shortlist_model.dart';
 import 'package:bakhli/features/trip/widgets/guide/trip_guide_bar.dart';
@@ -60,6 +65,19 @@ ShortlistItem _item(String step, String name, {String state = ShortlistStates.ac
       state: state,
       closedReason: reason,
     );
+
+class _FailingWays extends TaxiWaysController {
+  _FailingWays()
+      : super(
+          from: PlaceResult(name: 'A', subtitle: '', latLng: const LatLng(29.2, 79.5)),
+          to: PlaceResult(name: 'B', subtitle: '', latLng: const LatLng(29.4, 79.4)),
+        );
+
+  @override
+  Future<void> load() async {
+    loadFailed.value = true;
+  }
+}
 
 class _Tabs extends TabConfigController {
   @override
@@ -231,7 +249,7 @@ void main() {
     r.close();
   });
 
-  testWidgets('car step with a shortlist shows the review card with Choose and send', (t) async {
+  testWidgets('car step review offers Yes, send to all and Change my picks', (t) async {
     final r = _rig(
       _plan(1, guide: const TripGuide(step: 'gettingThere', choices: {'gettingThere': TripGuideChoice.find})),
       items: [
@@ -239,10 +257,84 @@ void main() {
       ],
     );
     await _pump(t, r, 360);
-    expect(find.text('Yes, send to all'), findsNothing);
     expect(find.text('Great picks'), findsOneWidget);
-    expect(find.text('Choose and send'), findsOneWidget);
+    expect(find.text('Yes, send to all'), findsOneWidget);
+    expect(find.text('Change my picks'), findsOneWidget);
     expect(_nextEnabled(t), isFalse);
+    r.close();
+  });
+
+  List<ShortlistItem> cars(int n) => [
+        for (var i = 1; i <= n; i++)
+          ShortlistItem(stepKey: 'gettingThere', kind: ShortlistKinds.car, listingId: 'c$i', name: 'Driver $i', state: ShortlistStates.active),
+      ];
+
+  testWidgets('Yes, send to all on a car step sends up to 3 drivers through carSender', (t) async {
+    final r = _rig(
+      _plan(1, guide: const TripGuide(step: 'gettingThere', choices: {'gettingThere': TripGuideChoice.find})),
+      items: cars(4),
+    );
+    final calls = <List<String>>[];
+    final requestIds = <String>[];
+    r.c.carSender = (step, ids, requestId) async {
+      calls.add(ids);
+      requestIds.add(requestId);
+      return AskResult(items: const [], skipped: const [], veryShortNotice: false, results: [
+        for (final id in ids) TripSendResult(listingId: id, status: 'Sent', enquiryId: 'e-$id'),
+      ]);
+    };
+    await _pump(t, r, 360, h: 900);
+    await t.ensureVisible(find.text('Yes, send to all'));
+    await _tap(t, 'Yes, send to all');
+    expect(calls, hasLength(1));
+    expect(calls.single, ['c1', 'c2', 'c3']);
+    expect(r.c.guideState.sent['gettingThere'], 3);
+    expect(r.c.guideState.failed['gettingThere'], isNull);
+    r.close();
+  });
+
+  testWidgets('a failed car send keeps a note and Try again reuses the same request id', (t) async {
+    final r = _rig(
+      _plan(1, guide: const TripGuide(step: 'gettingThere', choices: {'gettingThere': TripGuideChoice.find})),
+      items: cars(2),
+    );
+    final requestIds = <String>[];
+    var fail = true;
+    r.c.carSender = (step, ids, requestId) async {
+      requestIds.add(requestId);
+      if (fail) return null;
+      return AskResult(items: const [], skipped: const [], veryShortNotice: false, results: [
+        for (final id in ids) TripSendResult(listingId: id, status: 'Sent'),
+      ]);
+    };
+    await _pump(t, r, 360, h: 900);
+    await t.ensureVisible(find.text('Yes, send to all'));
+    await _tap(t, 'Yes, send to all');
+    expect(r.c.guideState.sent['gettingThere'], isNull);
+    expect(r.c.guideState.notes['gettingThere'], isNotNull);
+    expect(find.text('Great picks'), findsOneWidget);
+    fail = false;
+    await t.ensureVisible(find.text('Try again'));
+    await _tap(t, 'Try again');
+    expect(requestIds, hasLength(2));
+    expect(requestIds[0], requestIds[1]);
+    expect(r.c.guideState.sent['gettingThere'], 2);
+    r.close();
+  });
+
+  testWidgets('a car send with a failed ways load keeps the picks and a retry note', (t) async {
+    final r = _rig(
+      _plan(1, guide: const TripGuide(step: 'gettingThere', choices: {'gettingThere': TripGuideChoice.find})),
+      items: cars(2),
+    );
+    r.c.carWays = (_) async => _FailingWays();
+    await _pump(t, r, 360, h: 900);
+    await t.ensureVisible(find.text('Yes, send to all'));
+    await _tap(t, 'Yes, send to all');
+    expect(r.c.guideState.sent['gettingThere'], isNull);
+    expect(r.c.guideState.notes['gettingThere'], isNotNull);
+    expect(r.sl.countOf('gettingThere'), 2);
+    expect(find.text('Try again'), findsOneWidget);
     r.close();
   });
 

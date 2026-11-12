@@ -15,6 +15,7 @@ import '../trip_navigation.dart';
 import '../trip_strings.dart';
 import '../trip_strings_tab.dart';
 import '../utils/trip_bar_rules.dart';
+import '../utils/trip_clock.dart';
 import '../widgets/trip_city_tile.dart';
 
 enum _Load { loading, ready, failed, plannerOff }
@@ -265,7 +266,9 @@ class _TripsDiscoveryScreenState extends State<TripsDiscoveryScreen> {
 
   Widget _continueCard(TripSummaryModel t) {
     final name = t.title.trim().isEmpty ? t.routeLine : t.title.trim();
-    final sub = TripBarRules.nextTitle(t) ?? TripStringsTab.continueHeading;
+    final dates = TripBarRules.datesLine(t, TripClock.today());
+    final next = TripBarRules.nextTitle(t);
+    final sub = next == null ? dates : '$dates · $next';
     const tone = KitTone.trip;
     return Padding(
       padding: const EdgeInsets.only(top: 16),
@@ -293,6 +296,12 @@ class _TripsDiscoveryScreenState extends State<TripsDiscoveryScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          Text(
+                            TripStringsTab.continueHeading,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TypeTokens.style(12, FontWeight.w600, color: tone.accentDark),
+                          ),
                           Text(
                             name,
                             maxLines: 2,

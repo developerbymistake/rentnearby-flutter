@@ -86,7 +86,7 @@ class _TripGuideViewState extends State<TripGuideView> {
   bool _isCar(TripGuideStep s) => s.row.kind != TripEasyRowKind.stay && s.row.kind != TripEasyRowKind.taxi;
 
   Future<void> _send(TripGuideStep step) async {
-    await _c.guideSendAll(step.key);
+    await _c.guideSendAll(step.key, context: context);
   }
 
   Future<void> _booked(String key) async {
@@ -114,7 +114,7 @@ class _TripGuideViewState extends State<TripGuideView> {
     if (k.sent) {
       return TripGuideFrame(
         title: TripStringsGuide.sentTitle,
-        body: TripStringsGuide.sentBody(_g.sent[key] ?? 0, taxi: step.isTaxi),
+        body: TripStringsGuide.sentBody(_g.sent[key] ?? 0, taxi: !step.isStay),
         asset: asset,
         child: TripButton(
           label: TripStringsGuide.next,
@@ -132,9 +132,6 @@ class _TripGuideViewState extends State<TripGuideView> {
           _c.guideNext();
         }
 
-        if (_isCar(step)) {
-          return _CarReview(asset: asset, names: k.names, onChoose: () => _c.guideFind(context, key), onNotNow: notNow);
-        }
         final note = _g.notes[key];
         final review = TripGuideShortlistReview(
           asset: asset,
@@ -145,6 +142,7 @@ class _TripGuideViewState extends State<TripGuideView> {
           sending: _g.sending.contains(key),
           failed: _g.failed[key] ?? (note == null ? 0 : 1),
           onSend: () => _send(step),
+          onChange: _isCar(step) ? () => _c.guideFind(context, key) : null,
           onNotNow: notNow,
         );
         if (note == null) return review;
@@ -266,33 +264,6 @@ class _TripGuideViewState extends State<TripGuideView> {
       ],
     );
   }
-}
-
-class _CarReview extends StatelessWidget {
-  const _CarReview({required this.asset, required this.names, required this.onChoose, required this.onNotNow});
-
-  final String asset;
-  final List<String> names;
-  final VoidCallback onChoose;
-  final VoidCallback onNotNow;
-
-  @override
-  Widget build(BuildContext context) => TripGuideFrame(
-        title: TripStringsGuide.reviewTitle,
-        body: TripStringsGuide.carReviewBody,
-        asset: asset,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(TripStringsGuide.shortlisted(names.length), textAlign: TextAlign.center, style: TypeTokens.caption),
-            const SizedBox(height: 16),
-            TripButton(label: TripStringsGuide.chooseAndSend, onPressed: onChoose),
-            const SizedBox(height: 10),
-            TripButton(label: TripStringsGuide.notNow, outlined: true, onPressed: onNotNow),
-          ],
-        ),
-      );
 }
 
 class TripGuideCardKind {

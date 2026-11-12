@@ -6,6 +6,7 @@ import '../../../utils/dio_error_mapper.dart';
 import '../../../utils/network_retry.dart';
 import '../../stay/models/stay_nearby_model.dart';
 import '../../taxi/models/taxi_browse_item.dart';
+import '../data/trip_repository.dart';
 import '../trip_constants.dart';
 import '../trip_strings_a2.dart';
 import '../utils/trip_geo.dart';
@@ -25,7 +26,6 @@ class TripSupplyController extends GetxController {
   static const _hostel = 'Hostel';
   static const _suv = 'SUV';
   static const pricePresets = [2000, 4000, 8000];
-  static const double radiusKm = TripConstants.cityRadiusKm;
 
   final stayLeg = 1.obs;
   final taxiLeg = 1.obs;
@@ -38,7 +38,7 @@ class TripSupplyController extends GetxController {
   final taxiHasMore = false.obs;
   int _taxiPage = 1;
   int _taxiSeq = 0;
-  String? _taxisDistrict;
+  int? _taxisCity;
   String? _taxisKey;
   final Map<String, TripTaxiFit> _taxiFits = {};
 
@@ -47,7 +47,8 @@ class TripSupplyController extends GetxController {
   final stayFailed = false.obs;
   int _staySeq = 0;
   int? _staysLeg;
-  String? _staysDistrict;
+  int? _staysCity;
+  final citiesUnavailable = false.obs;
   String? _staysWhere;
   final Map<String, TripStayFit> _stayFits = {};
 
@@ -107,11 +108,10 @@ class TripSupplyController extends GetxController {
       km: _plan.dayKm(d),
       lat: centre?.lat,
       lng: centre?.lng,
-      radiusKm: radiusKm,
     );
   }
 
-  String _taxiKeyFor(String districtId, int d) => '$districtId#${_taxiNeed(d).key}';
+  String _taxiKeyFor(int cityKey, int d) => '$cityKey#${_taxiNeed(d).key}';
 
   List<TaxiBrowseItem> get filteredTaxis {
     final seats = minSeats.value;
@@ -129,43 +129,50 @@ class TripSupplyController extends GetxController {
     return start > 0 ? start : 1;
   }
 
-  String? _districtOf(int legIndex) => _plan.plan.value?.legAt(legIndex)?.districtId;
+  int? _cityOf(int legIndex) {
+    final leg = _plan.plan.value?.legAt(legIndex);
+    return TripSupplyArea.hasCity(leg) ? leg!.cityKey : null;
+  }
 
-  String? get stayDistrictId => _districtOf(stayLeg.value);
+  int? get stayCityKey => _cityOf(stayLeg.value);
 
-  String? get taxiDistrictId => _districtOf(taxiLeg.value);
+  int? get taxiCityKey => _cityOf(taxiLeg.value);
+
+  String? get taxiDistrictId => taxiCityKey?.toString();
+
+  bool _isCitiesUnavailable(Object e) => DioErrorMapper.errorType(e) == TripErrorTypes.citiesUnavailable;
 
   bool get stayDistrictPending => _plan.supplyPendingFor(_anchor(stayLeg.value));
 
   bool get taxiDistrictPending => _plan.supplyPendingFor(_anchor(taxiLeg.value));
 
-  bool get staysOutOfDate => stayDistrictId != null && (_staysLeg != stayLeg.value || _staysDistrict != stayDistrictId);
+  bool get staysOutOfDate => stayCityKey != null && (_staysLeg != stayLeg.value || _staysCity != stayCityKey);
 
   bool get taxisOutOfDate =>
-      taxiDistrictId != null && !_plan.taxiTabOff.value && _taxisKey != _taxiKeyFor(taxiDistrictId!, _taxiDay);
+      taxiCityKey != null && !_plan.taxiTabOff.value && _taxisKey != _taxiKeyFor(taxiCityKey!, _taxiDay);
 
   Future<void> ensureTaxis(int legIndex, {int? day}) async {
     taxiLeg.value = legIndex;
     _taxiDay = day ?? _anchor(legIndex);
-    final districtId = taxiDistrictId;
-    if (districtId == null || _plan.taxiTabOff.value) {
+    final cityKey = taxiCityKey;
+    if (cityKey == null || _plan.taxiTabOff.value) {
       _clearTaxis();
       return;
     }
-    if (_taxisKey == _taxiKeyFor(districtId, _taxiDay)) return;
+    if (_taxisKey == _taxiKeyFor(cityKey, _taxiDay)) return;
     await loadTaxis();
   }
 
   Future<void> ensureStays(int legIndex) async {
     stayLeg.value = legIndex;
-    if (_staysLeg != legIndex || _staysDistrict != stayDistrictId || _staysWhere != _loadKey(legIndex)) {
+    if (_staysLeg != legIndex || _staysCity != stayCityKey || _staysWhere != _loadKey(legIndex)) {
       await loadStays();
     }
   }
 
   void _clearTaxis() {
     _taxiSeq++;
-    _taxisDistrict = null;
+    _taxisCity = null;
     _taxisKey = null;
     _taxiFits.clear();
     taxis.clear();
@@ -177,14 +184,14 @@ class TripSupplyController extends GetxController {
 
   Future<void> loadTaxis({bool reset = true}) async {
     final p = _plan.plan.value;
-    final districtId = taxiDistrictId;
-    if (p == null || districtId == null) return;
+    final cityKey = taxiCityKey;
+    if (p == null || cityKey == null) return;
     if (_plan.taxiTabOff.value) {
       _clearTaxis();
       return;
     }
     if (!reset && (!taxiHasMore.value || taxiLoadingMore.value || taxiLoading.value)) return;
-    if (!reset && districtId != _taxisDistrict) return;
+    if (!reset && cityKey != _taxisCity) return;
     final seq = ++_taxiSeq;
     final page = reset ? 1 : _taxiPage + 1;
     final need = _taxiNeed(_taxiDay);
@@ -199,11 +206,11 @@ class TripSupplyController extends GetxController {
     } else {
       taxiLoadingMore.value = true;
     }
-    _taxisDistrict = districtId;
-    _taxisKey = '$districtId#${need.key}';
+    _taxisCity = cityKey;
+    _taxisKey = _taxiKeyFor(cityKey, _taxiDay);
     try {
       final res = await ApiService.get('/taxis/browse', params: {
-        'districtId': districtId,
+        'cityKey': cityKey,
         'localRate': 'true',
         'page': page,
         'pageSize': _taxiPageSize,
@@ -223,8 +230,10 @@ class TripSupplyController extends GetxController {
       }
       _taxiPage = page;
       taxiHasMore.value = data is Map<String, dynamic> && data['hasMore'] == true;
+      citiesUnavailable.value = false;
     } catch (e) {
       if (seq != _taxiSeq) return;
+      if (_isCitiesUnavailable(e)) citiesUnavailable.value = true;
       if (_isTabInactive(e)) {
         _plan.taxiTabOff.value = true;
         taxis.clear();
@@ -271,11 +280,11 @@ class TripSupplyController extends GetxController {
   Future<void> loadStays() async {
     final k = stayLeg.value;
     final p = _plan.plan.value;
-    final districtId = stayDistrictId;
-    if (p == null || districtId == null || _plan.stayTabOff.value) {
+    final cityKey = stayCityKey;
+    if (p == null || cityKey == null || _plan.stayTabOff.value) {
       _staySeq++;
       _staysLeg = k;
-      _staysDistrict = null;
+      _staysCity = null;
       _staysWhere = null;
       _stayFits.clear();
       stays.clear();
@@ -285,7 +294,7 @@ class TripSupplyController extends GetxController {
     }
     final seq = ++_staySeq;
     _staysLeg = k;
-    _staysDistrict = districtId;
+    _staysCity = cityKey;
     stays.clear();
     _stayFits.clear();
     hostelAvailable.value = false;
@@ -294,14 +303,12 @@ class TripSupplyController extends GetxController {
     _staysWhere = _loadKey(k);
     if (centre == null) return;
     final night = TripStayNight(spots: [centre]);
-    const radius = radiusKm;
     stayLoading.value = true;
     try {
       final res = await withRetry(() => ApiService.get('/stays/nearby', params: {
             'latitude': centre.lat,
             'longitude': centre.lng,
-            'radius': radius,
-            'districtId': districtId,
+            'cityKey': cityKey,
             ..._partyParams(k),
           }));
       if (seq != _staySeq) return;
@@ -317,15 +324,17 @@ class TripSupplyController extends GetxController {
           good.add(r);
         } catch (_) {}
       }
-      final ranked = TripStayRank.rank(good, night, radius);
+      final ranked = TripStayRank.rank(good, night, double.infinity);
       _stayFits
         ..clear()
         ..addEntries(ranked.map((f) => MapEntry(f.id, f)));
       final items = [for (final f in ranked) ?byId[f.id]];
       stays.assignAll(items);
       hostelAvailable.value = items.any((s) => s.stayTypeName == _hostel);
+      citiesUnavailable.value = false;
     } catch (e) {
       if (seq != _staySeq) return;
+      if (_isCitiesUnavailable(e)) citiesUnavailable.value = true;
       if (_isTabInactive(e)) {
         _plan.stayTabOff.value = true;
         stays.clear();

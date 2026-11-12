@@ -302,15 +302,15 @@ void main() {
   });
 
   group('SB7 car steps', () {
-    testWidgets('a shortlisted car step shows the review card with Choose and send, not a send button', (t) async {
+    testWidgets('a shortlisted car step shows the review card with Yes, send to all and Change my picks', (t) async {
       final r = await _rig(
         _multi([2], guide: const TripGuide(step: 'gettingThere', choices: {'gettingThere': TripGuideChoice.find})),
         items: [_item('gettingThere', 'c1', kind: ShortlistKinds.car)],
       );
       await _pump(t, r, 360);
       expect(find.text('Great picks'), findsOneWidget);
-      expect(find.text('Choose and send'), findsOneWidget);
-      expect(find.text('Yes, send to all'), findsNothing);
+      expect(find.text('Change my picks'), findsOneWidget);
+      expect(find.text('Yes, send to all'), findsOneWidget);
       r.close();
     });
   });

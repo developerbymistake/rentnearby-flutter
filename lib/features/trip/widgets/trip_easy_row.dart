@@ -7,6 +7,7 @@ import '../controllers/trip_plan_controller.dart';
 import '../controllers/trip_plan_guide.dart';
 import '../models/trip_plan_model.dart';
 import '../trip_navigation.dart';
+import '../trip_strings_city.dart';
 import '../trip_strings_v2_easy.dart';
 import '../utils/trip_easy_rules.dart';
 import 'trip_arrange_confirm.dart';
@@ -332,7 +333,9 @@ class _TripEasyRowState extends State<TripEasyRow> {
     final noSupply = _noSupply;
     final failed = _loadFailed && !_c.isReadOnly;
     final subtitle = failed
-        ? TripStringsV2Easy.couldNotLoad
+        ? (_c.citiesUnavailable.value
+            ? '${TripStringsCity.citiesLoadingTitle}. ${TripStringsCity.citiesLoadingBody}'
+            : TripStringsV2Easy.couldNotLoad)
         : (noSupply
             ? (i.kind == TripEasyRowKind.taxi ? TripStringsV2Easy.ownTravelHint : TripStringsV2Easy.ownStayHint)
             : (_offlineTodo ? _offlineLine : i.subtitle));

@@ -180,7 +180,7 @@ class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateM
       _workers.add(
         ever(landing.exploreRefreshTrigger, (_) {
         _stale = true;
-        if (_locationCtrl.effectiveDistrict != null && _onStaysTab && !mapShouldPause.value) _loadNearby();
+        if (_onStaysTab && !mapShouldPause.value) _loadNearby();
         }),
       );
       _workers.add(
@@ -267,7 +267,7 @@ class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateM
       _preSearchRadius = _radius;
       _radius = AppConstants.radiusOptions.last;
     }
-    if (_locationCtrl.effectiveDistrict != null && !mapShouldPause.value) {
+    if (!mapShouldPause.value) {
       _precomputeCircleCache();
       _loadNearby(keepNearest: true);
     } else {
@@ -335,14 +335,12 @@ class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateM
   }
 
   void _openNearestConfirm() {
-    final district = _locationCtrl.effectiveDistrict;
-    if (district == null) return;
     final center = _searchCenter;
     NearestConfirmSheet.show(
       context,
       itemLabel: 'stays',
       palette: templateModulePalette,
-      onConfirm: () => _guest.loadNearest(center.latitude, center.longitude, district.id),
+      onConfirm: () => _guest.loadNearest(center.latitude, center.longitude),
     );
   }
 
@@ -442,11 +440,6 @@ class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateM
 
   Future<void> _executeLoadNearby() async {
     if (_loadingNearby) return;
-    final district = _locationCtrl.effectiveDistrict;
-    if (district == null) {
-      _reloadPending = false;
-      return;
-    }
     if (mapShouldPause.value) {
       _stale = true;
       _reloadPending = false;
@@ -462,7 +455,7 @@ class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateM
       _revealedCount = _markerData.length;
       setState(() {});
       final center = _searchCenter;
-      await _guest.loadNearby(center.latitude, center.longitude, _radius, district.id);
+      await _guest.loadNearby(center.latitude, center.longitude, _radius);
       if (!mounted) return;
       _radarController.stop();
       _radarController.reset();

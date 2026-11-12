@@ -630,6 +630,7 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen> with TickerProv
           stays: r.stays,
           reachFirstPlace: r.reachFirstPlace,
           hasWays: r.hasWays,
+          citiesUnavailable: r.citiesUnavailable,
         ),
       );
     }

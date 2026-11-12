@@ -19,7 +19,7 @@ class TripHomeCard extends StatelessWidget {
         cta: TripStrings.start,
         iconAsset: TravelIcon.plane,
         tone: KitTone.trip,
-        onTap: () => TripNavigation.start(context),
+        onTap: () => TripNavigation.openTripsTab(),
       ),
     );
     final a = animation;

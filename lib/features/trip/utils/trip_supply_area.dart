@@ -1,8 +1,7 @@
 import '../models/trip_plan_model.dart';
-import '../trip_constants.dart';
 import 'trip_geo.dart';
 
-// Where stays and taxis are looked up for a leg: the city's own centre and one fixed radius.
+// Stays and taxis of a leg are the ones of its single Atlas city, so the key is the city key.
 class TripSupplyArea {
   TripSupplyArea._();
 
@@ -12,10 +11,7 @@ class TripSupplyArea {
     return TripGeo.valid(c) ? c : null;
   }
 
-  static String keyOf(String districtId, TripCityLeg? leg) {
-    final c = centreOf(leg);
-    return c == null ? districtId : '$districtId#${c.lat.toStringAsFixed(5)},${c.lng.toStringAsFixed(5)}';
-  }
+  static String keyOf(TripCityLeg? leg) => 'c${leg?.cityKey ?? 0}';
 
-  static bool within(TripPoint centre, TripPoint at) => TripGeo.km(centre, at) <= TripConstants.cityRadiusKm;
+  static bool hasCity(TripCityLeg? leg) => leg != null && leg.cityKey > 0;
 }

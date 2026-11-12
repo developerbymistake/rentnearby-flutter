@@ -52,7 +52,7 @@ class TripCitySupply {
 
   int get drivers => _tabOn(AppTabs.taxi) ? listedDrivers : 0;
 
-  bool get isEmpty => districtId == null || (stays == 0 && drivers == 0);
+  bool get isEmpty => stays == 0 && drivers == 0;
 
   factory TripCitySupply.fromJson(Map<String, dynamic> json) => TripCitySupply(
         districtId: json['districtId'] as String?,

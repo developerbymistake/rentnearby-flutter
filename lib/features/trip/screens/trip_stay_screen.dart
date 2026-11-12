@@ -16,6 +16,7 @@ import '../models/trip_shortlist_model.dart';
 import '../models/trip_plan_model.dart';
 import '../trip_navigation.dart';
 import '../trip_strings.dart';
+import '../trip_strings_city.dart';
 import '../trip_strings_a2.dart';
 import '../trip_strings_fin_b1.dart';
 import '../trip_strings_v2_easy.dart';
@@ -409,6 +410,17 @@ class _TripStayScreenState extends State<TripStayScreen> with TickerProviderStat
 
   Widget? _emptyView(List<StayNearbyModel> all, List<StayNearbyModel> items) {
     if (all.isEmpty) {
+      if (_supply.citiesUnavailable.value) {
+        return TripEmpty(
+          asset: TravelIcon.stay,
+          tone: KitTone.stay,
+          error: true,
+          title: TripStringsCity.citiesLoadingTitle,
+          subtitle: TripStringsCity.citiesLoadingBody,
+          onRetry: () => _supply.loadStays(),
+          retryLabel: TripStringsCity.tryAgain,
+        );
+      }
       if (_supply.stayFailed.value) {
         return TripEmpty(
           asset: TravelIcon.stay,

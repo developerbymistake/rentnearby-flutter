@@ -8,6 +8,7 @@ class TripSegmentGeometryCache {
 
   static final Map<String, List<LatLng>> _byPlan = {};
   static final Map<String, List<TripChangePlace>> _changes = {};
+  static final Map<String, List<TripChangePlace>> _via = {};
 
   static void put(String planKey, List<LatLngPair> points) {
     if (planKey.isEmpty || points.length < 2) return;
@@ -17,6 +18,10 @@ class TripSegmentGeometryCache {
   static void putPlan(WayPlan plan) {
     if (plan.planKey.isEmpty || plan.legs.isEmpty) return;
     final legs = [...plan.legs]..sort((a, b) => a.index.compareTo(b.index));
+    _via[plan.planKey] = List.unmodifiable([
+      for (final leg in legs)
+        for (final v in leg.passStops) (at: LatLng(v.lat, v.lng), name: v.name),
+    ]);
     final points = <LatLngPair>[];
     for (final leg in legs) {
       final g = leg.geometry;
@@ -35,8 +40,12 @@ class TripSegmentGeometryCache {
   static List<TripChangePlace> changePlacesFor(String? planKey) =>
       planKey == null ? const [] : (_changes[planKey] ?? const []);
 
+  // The cities the road runs through between the two ends, in order (never the ends themselves).
+  static List<TripChangePlace> viaFor(String? planKey) => planKey == null ? const [] : (_via[planKey] ?? const []);
+
   static void clear() {
     _byPlan.clear();
     _changes.clear();
+    _via.clear();
   }
 }

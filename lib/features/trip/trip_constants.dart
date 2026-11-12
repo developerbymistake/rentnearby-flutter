@@ -3,7 +3,6 @@ class TripConstants {
   static const int maxSpotsPerDay = 6;
   static const int driveHopMinutes = 20;
   static const int defaultVisitMinutes = 60;
-  static const double cityRadiusKm = 10;
   static const int stayGuestsMax = 100;
   static const int spotsPageSize = 20;
   static const int travelWholeDayMinutes = 450;

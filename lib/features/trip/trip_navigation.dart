@@ -2,8 +2,11 @@ import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 import '../../config/app_routes.dart';
+import '../../config/app_tabs.dart';
+import '../../controllers/auth_controller.dart';
 import '../../services/storage_service.dart';
 import '../../utils/app_toast.dart';
+import '../taxi/ways/taxi_ways_controller.dart';
 import '../taxi/ways/taxi_ways_navigation.dart';
 import 'controllers/trip_plan_controller.dart';
 import 'models/trip_city_model.dart';
@@ -41,11 +44,9 @@ class TripNavigation {
     return openCreate(cities);
   }
 
-  static Future<void> start(BuildContext context) async {
-    _clearDraftState();
-    final pick = await TripCitySheet.pick(context);
-    if (pick == null) return;
-    await openCreate(pick.cities, draftLegs: pick.draftLegs);
+  static void openTripsTab() {
+    Get.until((r) => r.settings.name == AppRoutes.main || r.isFirst);
+    Get.find<AuthController>().switchToTab(AppTabs.trips);
   }
 
   static Future<void>? openSpots(
@@ -331,6 +332,45 @@ class TripNavigation {
       tripId: c.trip.value?.id,
       tripLegIndex: legIndex,
       guide: guide,
+    );
+  }
+
+  // The same ways search the feed runs for a car row, built without a screen so the guide can send from it.
+  static Future<TaxiWaysController?> carWaysFor(TripEasyRowKey key) async {
+    final c = TripPlanController.to;
+    if (c.isReadOnly || !c.hasDates) return null;
+    final today = DateTime.now();
+    final floor = DateTime(today.year, today.month, today.day);
+    if (key.kind == TripEasyRowKind.between) {
+      final k = key.legIndex ?? 2;
+      if (c.findWayBlock(k) != TravelFindBlock.none || await c.prepareSegmentLink(k) != null) return null;
+      final from = c.prevCityPlace(k);
+      final to = c.cityPlaceOf(k);
+      if (from == null || to == null) return null;
+      return TaxiWaysController(
+        from: from,
+        to: to,
+        date: c.travelSearchDateOf(k),
+        people: c.travelPeople,
+        tripId: c.trip.value?.id,
+        tripLegIndex: k,
+      );
+    }
+    final role = key.kind == TripEasyRowKind.gettingThere ? TripStepRole.gettingThere : TripStepRole.comingBack;
+    final start = c.steps.endOf(role);
+    final city = role == TripStepRole.gettingThere ? c.cityPlace : c.lastCityPlace;
+    if (start == null || city == null) return null;
+    final going = role == TripStepRole.gettingThere;
+    final raw = c.stepDate(role);
+    final people = c.settings.peopleCount;
+    return TaxiWaysController(
+      from: going ? start.place : city,
+      to: going ? city : start.place,
+      date: raw != null && raw.isBefore(floor) ? floor : raw,
+      people: people > 0 ? people.clamp(1, TripConstants.maxTravelPeople).toInt() : null,
+      fromTrip: true,
+      tripId: c.trip.value?.id,
+      tripRole: role.name,
     );
   }
 

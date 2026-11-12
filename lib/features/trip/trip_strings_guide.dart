@@ -68,6 +68,7 @@ class TripStringsGuide {
   static const String backToSteps = 'Back to steps';
   static const String carReviewBody = 'Pick your car and send your enquiry.';
   static const String chooseAndSend = 'Choose and send';
+  static const String changePicks = 'Change my picks';
   static const String finishSavedTitle = 'Your plan is saved';
   static const String finishSavedBody = 'See what is still to do.';
   static const String seeStillToDo = 'See what is still to do';

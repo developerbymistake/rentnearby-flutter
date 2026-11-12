@@ -2,9 +2,7 @@ import 'package:bakhli/features/taxi/ways/models/taxi_ways_models.dart';
 import 'package:bakhli/features/taxi/ways/taxi_ways_feed_screen.dart';
 import 'package:bakhli/features/taxi/ways/trip_strings_mcb_a2.dart';
 import 'package:bakhli/features/taxi/ways/widgets/way_driver_row.dart';
-import 'package:bakhli/features/trip/controllers/trip_supply_controller.dart';
 import 'package:bakhli/features/trip/models/trip_guide_args.dart';
-import 'package:bakhli/features/trip/trip_constants.dart';
 import 'package:bakhli/features/trip/trip_strings_guide.dart';
 import 'package:bakhli/models/place_result_model.dart';
 import 'package:flutter/material.dart';
@@ -115,8 +113,4 @@ void main() {
     expect(find.text(WayDriverRow.finalFareNote), findsOneWidget);
   });
 
-  test('supply radius comes from the one constant', () {
-    expect(TripSupplyController.radiusKm, TripConstants.cityRadiusKm);
-    expect(TripConstants.cityRadiusKm, 10);
-  });
 }

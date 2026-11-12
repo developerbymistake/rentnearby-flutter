@@ -2,6 +2,8 @@ import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 import '../../../utils/app_toast.dart';
+import '../../taxi/ways/models/ask_models.dart';
+import '../../taxi/ways/models/taxi_ways_models.dart';
 import '../data/trip_enquiry_repository.dart';
 import '../models/trip_enquiry_model.dart';
 import '../models/trip_guide_args.dart';
@@ -376,7 +378,38 @@ extension TripPlanGuide on TripPlanController {
     return (batch: batch, unsent: active.length - processed);
   }
 
-  Future<TripEnquiryBatch?> guideSendAll(String key) async {
+  Future<AskResult?> _askCars(BuildContext? context, TripEasyRowKey row, String key, List<String> ids, String requestId) async {
+    final custom = carSender;
+    if (custom != null) return custom(key, ids, requestId);
+    if (context == null || !context.mounted) return null;
+    final ways = await (carWays ?? TripNavigation.carWaysFor)(row);
+    if (ways == null) return null;
+    try {
+      await ways.load();
+      final loaded = ways.result.value;
+      if (ways.loadFailed.value || loaded == null) return null;
+      final byId = <String, WayDriver>{
+        for (final plan in loaded.plans)
+          for (final leg in plan.legs)
+            for (final d in leg.allDrivers) d.taxiId: d,
+        for (final d in loaded.allTheWay) d.taxiId: d,
+      };
+      final drivers = [for (final id in ids) ?byId[id]];
+      if (drivers.isEmpty) return const AskResult(items: [], skipped: [], veryShortNotice: false);
+      if (!context.mounted) return null;
+      return await ways.actions.askShortlisted(
+        context,
+        ways.singlePlan(drivers),
+        step: key,
+        requestId: requestId,
+        taxiIds: [for (final d in drivers) d.taxiId],
+      );
+    } finally {
+      ways.onClose();
+    }
+  }
+
+  Future<TripEnquiryBatch?> guideSendAll(String key, {BuildContext? context}) async {
     final p = plan.value;
     final row = TripGuideRules.rowKeyOf(key);
     if (p == null || row == null || _g.sending.contains(key)) return null;
@@ -388,7 +421,7 @@ extension TripPlanGuide on TripPlanController {
     en.lastRetryAfterMinutes = null;
     try {
       final sl = TripShortlistController.to;
-      final taxi = row.kind == TripEasyRowKind.taxi;
+      final taxi = row.kind != TripEasyRowKind.stay;
       TripEnquiryBatch? batch;
       var unsent = 0;
       switch (row.kind) {
@@ -405,10 +438,10 @@ extension TripPlanGuide on TripPlanController {
           batch = r.batch;
           unsent = r.unsent;
         case TripEasyRowKind.gettingThere || TripEasyRowKind.comingBack || TripEasyRowKind.between:
-          batch = null;
+          batch = await sl.sendCars(step: key, ask: (ids, requestId) => _askCars(context, row, key, ids, requestId));
       }
       if (batch == null) {
-        if (sl.countOf(key) > 0 && (row.kind == TripEasyRowKind.stay || taxi)) _g.notes[key] = _failNote(en);
+        if (sl.countOf(key) > 0) _g.notes[key] = _failNote(en);
         return null;
       }
       final results = batch.perRecipient;

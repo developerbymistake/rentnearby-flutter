@@ -300,7 +300,7 @@ class _MyTripsScreenState extends State<MyTripsScreen> with TickerProviderStateM
                 title: TripStringsBar.noActiveTrips,
                 message: TripStrings.noTripsSubtitle,
                 kit: KitTone.trip,
-                onAction: () => TripNavigation.start(context),
+                onAction: () => TripNavigation.openTripsTab(),
                 actionLabel: TripStrings.planATrip,
               )));
       }

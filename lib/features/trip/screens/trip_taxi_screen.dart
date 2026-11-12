@@ -16,6 +16,7 @@ import '../models/trip_shortlist_model.dart';
 import '../models/trip_plan_model.dart';
 import '../trip_navigation.dart';
 import '../trip_strings.dart';
+import '../trip_strings_city.dart';
 import '../trip_strings_a3.dart';
 import '../trip_strings_v2_find.dart';
 import '../utils/trip_format.dart';
@@ -437,6 +438,19 @@ class _TripTaxiScreenState extends State<TripTaxiScreen> with TickerProviderStat
           );
         }
         final items = _supply.taxis;
+        if (items.isEmpty && _supply.citiesUnavailable.value && !_plan.taxiTabOff.value) {
+          return SliverToBoxAdapter(
+            child: TripEmpty(
+              asset: TravelIcon.taxi,
+              tone: KitTone.taxi,
+              error: true,
+              title: TripStringsCity.citiesLoadingTitle,
+              subtitle: TripStringsCity.citiesLoadingBody,
+              onRetry: () => _supply.loadTaxis(),
+              retryLabel: TripStringsCity.tryAgain,
+            ),
+          );
+        }
         if (items.isEmpty && _supply.taxiDistrictId == null && !_plan.taxiTabOff.value) {
           if (_plan.trip.value == null) return _shimmerList();
           return _stateBox(

@@ -22,7 +22,8 @@ class TaxiBrowseRepository {
   }
 
   Future<TaxiBrowsePage> browseLocal({
-    required String districtId,
+    String? districtId,
+    int? cityKey,
     String? cityId,
     String? category,
     bool cityOnly = false,
@@ -30,11 +31,11 @@ class TaxiBrowseRepository {
     int page = 1,
     int pageSize = 20,
     ({double lat, double lng})? centre,
-    double? radiusKm,
   }) async =>
       _page(await ApiService.get('/taxis/browse', params: {
-        'districtId': districtId,
-        'cityId': ?cityId,
+        'cityKey': ?cityKey,
+        'districtId': ?(cityKey == null ? districtId : null),
+        'cityId': ?(cityKey == null ? cityId : null),
         'category': ?category,
         'cityOnly': ?(cityOnly ? 'true' : null),
         'localRate': ?(localRate ? 'true' : null),
@@ -42,7 +43,6 @@ class TaxiBrowseRepository {
         'pageSize': pageSize,
         if (centre != null) 'lat': centre.lat,
         if (centre != null) 'lng': centre.lng,
-        if (centre != null && radiusKm != null) 'radiusKm': radiusKm,
       }));
 
   Future<TaxiBrowsePage> search({

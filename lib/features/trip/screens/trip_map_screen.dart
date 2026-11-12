@@ -14,6 +14,7 @@ import '../trip_strings.dart';
 import '../utils/trip_easy_rules.dart';
 import '../trip_strings_mca_a4.dart';
 import '../trip_strings_mcd_a2.dart';
+import '../trip_strings_city.dart';
 import '../trip_strings_steps_a3.dart';
 import '../utils/trip_map_geo.dart';
 import '../utils/trip_map_rules.dart';
@@ -516,13 +517,21 @@ class _TripMapScreenState extends State<TripMapScreen> with TickerProviderStateM
           lineColor: color, lineWidth: 8, lineOpacity: hidden ? 0 : (on ? 0.18 : 0.05), lineBlur: 3);
     }
     return LineLayerProperties(
-        lineColor: color, lineWidth: 4, lineOpacity: hidden ? 0 : (on ? 0.9 : 0.25), lineDasharray: [2, 2]);
+        lineColor: color,
+        lineWidth: 4,
+        lineOpacity: hidden ? 0 : (on ? 0.9 : 0.25),
+        lineDasharray: _plan.segmentHasRoad(legIndex) ? null : [2, 2]);
   }
 
   String _badgeText(TripCityLeg leg) {
     final a = leg.arrival!;
     final cars = a.cars ?? _plan.segmentJourney(leg.index)?.legs.length ?? 1;
-    return TripStringsStepsA3.carsLine(cars < 1 ? 1 : cars);
+    final via = [for (final v in _plan.segmentViaCities(leg.index)) v.name];
+    return [
+      TripStringsStepsA3.carsLine(cars < 1 ? 1 : cars),
+      if (via.isNotEmpty) TripStringsCity.viaLine(via),
+      if (!_plan.segmentHasRoad(leg.index)) TripStringsCity.roadLineMissing,
+    ].join('\n');
   }
 
   Future<void> _drawLegs(MapLibreMapController map, TripPlan p, String? below) async {
@@ -558,6 +567,32 @@ class _TripMapScreenState extends State<TripMapScreen> with TickerProviderStateM
             textHaloWidth: 1,
             textOpacity: opacity,
             zIndex: 9,
+          ));
+        }
+        for (final v in _plan.segmentViaCities(k)) {
+          circleSlots.add((x) => _changeDots.putIfAbsent(k, () => <Circle>[]).add(x));
+          circleOpts.add(CircleOptions(
+            geometry: v.at,
+            circleRadius: 4,
+            circleColor: _white,
+            circleOpacity: opacity,
+            circleStrokeColor: _changeStroke,
+            circleStrokeWidth: 2,
+            circleStrokeOpacity: opacity,
+          ));
+          symbolSlots.add((x) => _changeLabels.putIfAbsent(k, () => <Symbol>[]).add(x));
+          symbolOpts.add(SymbolOptions(
+            geometry: v.at,
+            textField: v.name,
+            fontNames: const ['Noto Sans Medium'],
+            textSize: 9,
+            textAnchor: 'left',
+            textOffset: const Offset(0.9, 0),
+            textColor: _changeText,
+            textHaloColor: _white,
+            textHaloWidth: 1.5,
+            textOpacity: opacity,
+            zIndex: 7,
           ));
         }
         for (final c in _plan.segmentChangePlaces(k)) {

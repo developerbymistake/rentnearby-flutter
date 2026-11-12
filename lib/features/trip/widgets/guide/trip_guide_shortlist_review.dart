@@ -19,7 +19,10 @@ class TripGuideShortlistReview extends StatelessWidget {
     required this.onNotNow,
     this.step,
     this.hidePillNote = false,
+    this.onChange,
   });
+
+  final VoidCallback? onChange;
 
   final String? step;
   final bool hidePillNote;
@@ -76,6 +79,10 @@ class TripGuideShortlistReview extends StatelessWidget {
             onPressed: sending ? null : onSend,
           ),
           const SizedBox(height: 10),
+          if (onChange != null) ...[
+            TripButton(label: TripStringsGuide.changePicks, outlined: true, onPressed: sending ? null : onChange),
+            const SizedBox(height: 10),
+          ],
           TripButton(label: TripStringsGuide.notNow, outlined: true, onPressed: sending ? null : onNotNow),
         ],
       ),

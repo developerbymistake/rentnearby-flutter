@@ -9,6 +9,7 @@ import '../../../utils/dio_error_mapper.dart';
 import '../../trip/controllers/trip_plan_controller.dart';
 import '../../trip/models/trip_plan_model.dart';
 import '../../trip/trip_strings_steps_a3.dart';
+import '../../trip/trip_strings_city.dart';
 import '../models/taxi_browse_item.dart';
 import '../taxi_option_sets.dart';
 import '../ways/models/taxi_ways_models.dart';
@@ -19,7 +20,7 @@ import 'taxi_card.dart';
 import 'taxi_navigation.dart';
 import 'traveller_city.dart';
 
-enum _Phase { hidden, locating, loading, list, empty, unavailable, error, offline, summary, noWays }
+enum _Phase { hidden, locating, loading, list, empty, unavailable, error, offline, summary, noWays, citiesLoading, noCity }
 
 class StayTaxisSection extends StatefulWidget {
   final String? stayCityId;
@@ -152,7 +153,16 @@ class _StayTaxisSectionState extends State<StayTaxisSection> with SingleTickerPr
         });
         return;
       }
-      final page = await _repo.browseLocal(districtId: from.districtId, cityId: from.cityId, pageSize: _previewCount);
+      final city = await nearestCityOf(widget.toLat, widget.toLng);
+      if (city == null) {
+        if (mounted && myGen == _gen) setState(() => _phase = _Phase.citiesLoading);
+        return;
+      }
+      if (!city.available) {
+        if (mounted && myGen == _gen) setState(() => _phase = _Phase.noCity);
+        return;
+      }
+      final page = await _repo.browseLocal(cityKey: city.cityKey, pageSize: _previewCount);
       if (!mounted || myGen != _gen) return;
       setState(() {
         _items = page.items.take(_previewCount).toList();
@@ -160,7 +170,11 @@ class _StayTaxisSectionState extends State<StayTaxisSection> with SingleTickerPr
       });
     } catch (e) {
       if (!mounted || myGen != _gen) return;
-      setState(() => _phase = DioErrorMapper.isNetworkError(e) ? _Phase.offline : _Phase.error);
+      setState(() => _phase = DioErrorMapper.errorType(e) == 'TripCitiesUnavailable'
+          ? _Phase.citiesLoading
+          : DioErrorMapper.isNetworkError(e)
+              ? _Phase.offline
+              : _Phase.error);
     }
   }
 
@@ -284,6 +298,11 @@ class _StayTaxisSectionState extends State<StayTaxisSection> with SingleTickerPr
           _note(local ? "Couldn't load taxis" : TripStringsStepsA3.waysFailed,
               action: TripStringsStepsA3.retry, onTap: _load),
         ],
+      _Phase.citiesLoading => [
+          _note('${TripStringsCity.citiesLoadingTitle}. ${TripStringsCity.citiesLoadingBody}',
+              action: TripStringsStepsA3.retry, onTap: _load),
+        ],
+      _Phase.noCity => [_note('${TripStringsCity.noTaxisTitle('')}. ${TripStringsCity.noSupplyBody}')],
       _Phase.offline => [_note(TripStringsStepsA3.waysOffline, action: TripStringsStepsA3.retry, onTap: _load)],
       _Phase.summary => [_note(_summary, action: TripStringsStepsA3.seeWays, onTap: _openFeed)],
       _Phase.noWays => [_note(TripStringsStepsA3.noWaysYet, action: TripStringsStepsA3.seeWays, onTap: _openFeed)],

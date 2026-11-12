@@ -3,7 +3,6 @@ import 'package:maplibre_gl/maplibre_gl.dart';
 import '../../../config/app_tabs.dart';
 import '../../../controllers/auth_controller.dart';
 import '../../../controllers/location_controller.dart';
-import '../../../models/location_context.dart';
 import '../../../models/place_result_model.dart';
 import '../../../widgets/location_switch_sheet.dart';
 import '../models/taxi_browse_item.dart';
@@ -72,8 +71,6 @@ class TaxiListController extends GetxController {
   int _gen = 0;
   bool _resetInFlight = false;
   DateTime? _loadedAt;
-  String? _fromDistrictId;
-  String? _fromCityId;
 
   LocationController get _loc => Get.find<LocationController>();
   AuthController get _auth => Get.find<AuthController>();
@@ -124,15 +121,11 @@ class TaxiListController extends GetxController {
     final f = p.from;
     if (f == null) {
       if (!fromIsCurrent.value) {
-        _fromDistrictId = null;
-        _fromCityId = null;
         from.value = null;
       }
       _applyDefaultFrom();
     } else {
       fromIsCurrent.value = false;
-      _fromDistrictId = p.fromDistrictId;
-      _fromCityId = p.fromDistrictId != null ? p.fromCityId : null;
       from.value = f;
     }
     if (_loadedAt != null || _resetInFlight) _reloadFresh();
@@ -146,8 +139,6 @@ class TaxiListController extends GetxController {
       return false;
     }
     fromIsCurrent.value = true;
-    _fromDistrictId = c.districtId;
-    _fromCityId = c.cityId;
     from.value = c.place;
     return true;
   }
@@ -170,8 +161,6 @@ class TaxiListController extends GetxController {
 
   void setFromCity(PickedPlace p) {
     fromIsCurrent.value = false;
-    _fromDistrictId = p.districtId;
-    _fromCityId = p.cityId;
     from.value = placeOf(p);
     _reloadFresh();
   }
@@ -199,8 +188,6 @@ class TaxiListController extends GetxController {
     to.value = null;
     from.value = null;
     fromIsCurrent.value = false;
-    _fromDistrictId = null;
-    _fromCityId = null;
     _applyDefaultFrom();
     _reloadFresh();
   }
@@ -241,16 +228,6 @@ class TaxiListController extends GetxController {
     if (_tabActive) _fetch(reset: true);
   }
 
-  Future<({String districtId, String? cityId})?> _localArea(PlaceResult f) async {
-    final known = _fromDistrictId;
-    if (known != null) return (districtId: known, cityId: _fromCityId);
-    final ctx = await _loc.resolveDistrictAt(f.latLng.latitude, f.latLng.longitude);
-    if (from.value != f) return null;
-    _fromDistrictId = ctx.district.id;
-    _fromCityId = ctx.nearestCity?.id;
-    return (districtId: ctx.district.id, cityId: ctx.nearestCity?.id);
-  }
-
   Future<void> _fetch({required bool reset, bool silent = false}) async {
     final f = from.value;
     if (f == null) {
@@ -289,14 +266,19 @@ class TaxiListController extends GetxController {
           pageSize: _pageSize,
         );
       } else {
-        final area = await _localArea(f);
-        if (area == null || myGen != _gen) return;
-        res = await _repo.browseLocal(
-          districtId: area.districtId,
-          cityId: area.cityId,
-          page: page,
-          pageSize: _pageSize,
-        );
+        final city = await nearestCityOf(f.latLng.latitude, f.latLng.longitude);
+        if (myGen != _gen) return;
+        if (city == null) throw StateError('cities unavailable');
+        if (!city.available) {
+          res = (items: const <TaxiBrowseItem>[], hasMore: false);
+        } else {
+          res = await _repo.browseLocal(
+            cityKey: city.cityKey,
+            page: page,
+            pageSize: _pageSize,
+            centre: (lat: f.latLng.latitude, lng: f.latLng.longitude),
+          );
+        }
       }
       if (myGen != _gen) return;
 
@@ -310,13 +292,6 @@ class TaxiListController extends GetxController {
         _page++;
       }
       hasMore.value = res.hasMore;
-    } on DistrictNotFoundException {
-      if (myGen != _gen) return;
-      if (reset) {
-        items.clear();
-        hasMore.value = false;
-        _loadedAt = DateTime.now();
-      }
     } catch (_) {
       if (myGen != _gen) return;
       if (reset) {

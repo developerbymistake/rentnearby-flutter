@@ -24,6 +24,48 @@ String wayNameOr(String? name, String key, {required bool start, required bool e
   return start ? 'Pickup point' : (end ? 'Drop point' : 'Stop');
 }
 
+// A place key from the server: a<cityKey>, a<cityKey>:p<lat>:<lng> (a pin inside that city), or v:/m: for a typed or own point.
+class WayKey {
+  const WayKey._();
+
+  static final _city = RegExp(r'^a(\d+)(?::p(-?\d+(?:\.\d+)?):(-?\d+(?:\.\d+)?))?$');
+
+  static int? cityOf(String key) {
+    final m = _city.firstMatch(key);
+    return m == null ? null : int.tryParse(m.group(1)!);
+  }
+
+  static LatLngPair? pinOf(String key) {
+    final m = _city.firstMatch(key);
+    if (m == null || m.group(2) == null) return null;
+    final lat = double.tryParse(m.group(2)!);
+    final lng = double.tryParse(m.group(3)!);
+    return lat == null || lng == null ? null : (lat: lat, lng: lng);
+  }
+
+  static bool isPinned(String key) => pinOf(key) != null;
+
+  static bool isVirtual(String key) => key.startsWith('v:') || key.startsWith('m:');
+}
+
+class WayStop {
+  final String key;
+  final String name;
+  final double lat;
+  final double lng;
+
+  const WayStop({required this.key, required this.name, required this.lat, required this.lng});
+
+  static WayStop? tryParse(Object? v) {
+    if (v is! Map<String, dynamic>) return null;
+    final name = _s(v['name']).trim();
+    final lat = _d(v['lat']);
+    final lng = _d(v['lng']);
+    if (name.isEmpty || (lat == 0 && lng == 0)) return null;
+    return WayStop(key: _s(v['key']), name: name, lat: lat, lng: lng);
+  }
+}
+
 class WayPlace {
   final String key;
   final String name;
@@ -52,7 +94,9 @@ class WayPlace {
 
   static WayPlace? tryParse(Object? v) => v is Map<String, dynamic> ? WayPlace.fromJson(v) : null;
 
-  bool get isVirtual => key.startsWith('v:') || key.startsWith('m:');
+  bool get isVirtual => WayKey.isVirtual(key);
+
+  int? get cityKey => WayKey.cityOf(key);
 
   WayPlace withName(String next) =>
       WayPlace(key: key, name: next, lat: lat, lng: lng, resolved: resolved, districtId: districtId);
@@ -192,6 +236,7 @@ class WayLeg {
   final bool partial;
   final double? distanceKm;
   final List<String> passes;
+  final List<WayStop> passStops;
   final List<WayDriver> topDrivers;
   final int driverCount;
   final bool hasRoadLine;
@@ -212,6 +257,7 @@ class WayLeg {
     this.partial = false,
     this.distanceKm,
     this.passes = const [],
+    this.passStops = const [],
     this.topDrivers = const [],
     this.driverCount = 0,
     this.hasRoadLine = false,
@@ -233,6 +279,7 @@ class WayLeg {
         partial: partial,
         distanceKm: distanceKm,
         passes: passes,
+        passStops: passStops,
         topDrivers: topDrivers,
         driverCount: driverCount,
         hasRoadLine: hasRoadLine,
@@ -254,6 +301,7 @@ class WayLeg {
         partial: json['partial'] == true,
         distanceKm: _dn(json['distanceKm']),
         passes: json['passes'] is List ? (json['passes'] as List).whereType<String>().toList() : const [],
+        passStops: json['passStops'] is List ? [for (final v in json['passStops'] as List) ?WayStop.tryParse(v)] : const [],
         topDrivers: _list(json['topDrivers'], WayDriver.fromJson),
         driverCount: _i(json['driverCount']),
         hasRoadLine: json['hasRoadLine'] == true,
@@ -566,6 +614,7 @@ class TaxiWaysResult {
   final List<StayNearbyModel> stays;
   final WayPlace? reachFirstPlace;
   final bool roadLines;
+  final bool citiesUnavailable;
 
   const TaxiWaysResult({
     required this.version,
@@ -580,6 +629,7 @@ class TaxiWaysResult {
     this.stays = const [],
     this.reachFirstPlace,
     this.roadLines = false,
+    this.citiesUnavailable = false,
   });
 
   factory TaxiWaysResult.fromJson(Map<String, dynamic> json) => TaxiWaysResult(
@@ -595,6 +645,7 @@ class TaxiWaysResult {
         stays: _list(json['stays'], StayNearbyModel.fromJson),
         reachFirstPlace: WayPlace.tryParse(json['reachFirstPlace']),
         roadLines: json['roadLines'] == true,
+        citiesUnavailable: json['citiesUnavailable'] == true,
       );
 
   bool get hasWays => allTheWay.isNotEmpty || plans.isNotEmpty;

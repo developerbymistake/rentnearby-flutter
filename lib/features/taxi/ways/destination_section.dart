@@ -3,6 +3,7 @@ import 'package:bakhli/design/design.dart';
 import '../../stay/models/stay_nearby_model.dart';
 import '../models/taxi_browse_item.dart';
 import 'models/taxi_ways_models.dart';
+import '../../trip/trip_strings_city.dart';
 import 'taxi_ways_strings.dart';
 import 'widgets/destination_stay_card.dart';
 import 'widgets/local_taxi_rail_card.dart';
@@ -16,6 +17,7 @@ class AtDestinationSection extends StatefulWidget {
   final List<StayNearbyModel> stays;
   final WayPlace? reachFirstPlace;
   final bool hasWays;
+  final bool citiesUnavailable;
 
   const AtDestinationSection({
     super.key,
@@ -26,6 +28,7 @@ class AtDestinationSection extends StatefulWidget {
     required this.stays,
     required this.reachFirstPlace,
     required this.hasWays,
+    this.citiesUnavailable = false,
   });
 
   @override
@@ -58,7 +61,18 @@ class _AtDestinationSectionState extends State<AtDestinationSection> with Ticker
   @override
   Widget build(BuildContext context) {
     final reach = widget.hasWays ? null : widget.reachFirstPlace;
-    if (widget.localTaxis.isEmpty && widget.stays.isEmpty && reach == null) return const SizedBox.shrink();
+    if (widget.localTaxis.isEmpty && widget.stays.isEmpty && reach == null) {
+      if (widget.cityName.trim().isEmpty && !widget.citiesUnavailable) return const SizedBox.shrink();
+      return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        _title(),
+        const SizedBox(height: 8),
+        Text(widget.citiesUnavailable ? TripStringsCity.citiesLoadingTitle : TripStringsCity.noTaxisTitle(widget.cityName),
+            style: FitnessAppTheme.title.copyWith(fontSize: 14)),
+        const SizedBox(height: 2),
+        Text(widget.citiesUnavailable ? TripStringsCity.citiesLoadingBody : TripStringsCity.noSupplyBody,
+            style: FitnessAppTheme.caption.copyWith(fontSize: 12)),
+      ]);
+    }
     final blocks = <Widget>[
       _title(),
       if (reach != null)

@@ -208,17 +208,17 @@ void main() {
   });
 
   group('Continue card and keyboard', () {
-    testWidgets('card shows the trip name and the saved step, not the generic heading', (t) async {
+    testWidgets('card shows the heading, the trip name and the saved step', (t) async {
       await _pump(t, [_city(1, 'Nainital')], 360, trip: _trip(title: 'Hills with family'));
       expect(find.text('Hills with family'), findsOneWidget);
-      expect(find.text('Local taxi'), findsOneWidget);
-      expect(find.text('Continue your trip'), findsNothing);
+      expect(find.textContaining('Local taxi'), findsOneWidget);
+      expect(find.text('Continue your trip'), findsOneWidget);
     });
 
     testWidgets('no title falls back to the route', (t) async {
       await _pump(t, [_city(1, 'Nainital')], 360, trip: _trip());
       expect(find.text('Nainital'), findsWidgets);
-      expect(find.text('Local taxi'), findsOneWidget);
+      expect(find.textContaining('Local taxi'), findsOneWidget);
     });
 
     for (final w in [300.0, 360.0]) {
