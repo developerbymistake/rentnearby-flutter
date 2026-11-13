@@ -31,7 +31,7 @@ void main() {
   test('parses four tiers in order with the collapsed flag', () {
     final res = {
       'data': {
-        'header': {'centreCityName': 'Haldwani', 'livesIn': 'We are live in Uttarakhand', 'farAway': false},
+        'header': {'centreCityName': 'Haldwani', 'farAway': false},
         'tiers': [
           tier('onRoute', [item('a', route: true)], more: true),
           tier('passing', [item('b'), item('c')]),

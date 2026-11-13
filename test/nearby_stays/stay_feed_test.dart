@@ -87,7 +87,7 @@ void main() {
     test('page response parses header, featured and items', () {
       final page = NearbyRepositoryBase.pageFromResponse<StayFeedItem>({
         'data': {
-          'header': {'livesIn': 'We are live in Uttarakhand', 'farAway': true, 'nearestKm': 420.0},
+          'header': {'farAway': true, 'nearestKm': 420.0},
           'featured': [_stay('f', featured: true)],
           'items': [_stay('a'), _stay('b')],
           'hasMore': true,

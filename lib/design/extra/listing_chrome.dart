@@ -321,7 +321,7 @@ class RoundIconButton3D extends StatelessWidget {
             Positioned.fill(
               child: DecoratedBox(
                 decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle, boxShadow: Ink3D.softShadow),
-                child: Center(child: Image.asset(asset, width: size * 28 / 46, height: size * 28 / 46, fit: BoxFit.contain)),
+                child: Center(child: Image.asset(asset, width: size * 28 / 46, height: size * 28 / 46, fit: BoxFit.contain, filterQuality: FilterQuality.high)),
               ),
             ),
             if (badge != null) Positioned(top: -3, right: -3, child: badge!),

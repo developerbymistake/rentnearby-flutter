@@ -5,7 +5,6 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   test('header parses with missing fields', () {
     final h = NearbyHeader.fromJson({});
-    expect(h.livesIn, '');
     expect(h.farAway, false);
     expect(h.nearestKm, isNull);
     expect(NearbyHeader.fromJson(null).citiesUnavailable, false);
@@ -16,7 +15,6 @@ void main() {
       'centreCityName': 'Haldwani',
       'centreStateName': 'Uttarakhand',
       'centreCityKm': 3,
-      'livesIn': 'We are live in A and B',
       'farAway': true,
       'nearestKm': 420.5,
       'citiesUnavailable': true,
@@ -51,7 +49,7 @@ void main() {
   test('page parses, skips bad items and empty token', () {
     final p = NearbyRepositoryBase.pageFromResponse<String>({
       'data': {
-        'header': {'livesIn': 'x'},
+        'header': {'farAway': false},
         'featured': [
           {'id': 'f'}
         ],

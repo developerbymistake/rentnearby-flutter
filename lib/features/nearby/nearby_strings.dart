@@ -38,11 +38,10 @@ class NearbyStrings {
   static const String byRoad = 'By road it can take longer.';
   static String basedIn(String? c, double km) =>
       _has(c) ? 'Based near $c. About ${kmText(km)} km away' : 'About ${kmText(km)} km away';
-  static const String notListedForRoute = 'Based nearby. Not listed for this route.';
 
   static const String driversOnRoute = 'Drivers on this route';
   static const String driversPassing = 'Drivers passing your area';
-  static String basedNearFrom(String c) => 'Based near $c. Not listed for this route';
+  static const String driversBasedNearby = 'More drivers nearby';
   static String taxisInTo(String c) => 'Taxis in $c';
   static const String showMore = 'Show more';
 

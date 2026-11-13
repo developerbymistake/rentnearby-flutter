@@ -348,7 +348,6 @@ class _TaxiListScreenV2State extends State<TaxiListScreenV2> {
   }
 
   Widget _tierTitle(TaxiTier t, TaxiRouteFeed r) {
-    final from = _ctrl.from.value?.name;
     final to = _ctrl.to.value?.name ?? '';
     switch (t.key) {
       case TaxiTierKey.onRoute:
@@ -356,7 +355,7 @@ class _TaxiListScreenV2State extends State<TaxiListScreenV2> {
       case TaxiTierKey.passing:
         return _title(NearbyStrings.driversPassing);
       case TaxiTierKey.basedNearFrom:
-        return _title(NearbyStrings.basedNearFrom(t.header?.centreCityName ?? r.header.centreCityName ?? from ?? 'your start'));
+        return _title(NearbyStrings.driversBasedNearby);
       default:
         return _title(NearbyStrings.taxisInTo(t.header?.centreCityName ?? to));
     }

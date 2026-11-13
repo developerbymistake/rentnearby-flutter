@@ -105,12 +105,11 @@ void main() {
   testWidgets('a far user sees nearest taxis, never near you', (t) async {
     _setUpApp(gps: const LatLng(28.6, 77.2));
     _repo.page = NearbyPage(
-      header: const NearbyHeader(farAway: true, livesIn: 'We are live in Uttarakhand and Himachal Pradesh'),
+      header: const NearbyHeader(farAway: true),
       items: [_fi('a', km: 210, label: 'far', city: 'Haridwar')],
     );
     await _open(t);
     expect(find.text('Nearest taxis'), findsOneWidget);
-    expect(find.text('We are live in Uttarakhand and Himachal Pradesh'), findsOneWidget);
     expect(find.textContaining('Haridwar, Uttarakhand. About 210 km away'), findsOneWidget);
     expect(find.textContaining('near you'), findsNothing);
   });
@@ -129,7 +128,7 @@ void main() {
     await _settle(t);
     expect(find.text('Drivers on this route'), findsOneWidget);
     expect(find.text('Drivers passing your area'), findsOneWidget);
-    expect(find.text('Based near Haldwani. Not listed for this route'), findsOneWidget);
+    expect(find.text('More drivers nearby'), findsOneWidget);
     expect(find.text('Taxis in Nainital'), findsOneWidget);
     expect(find.text('Driver r'), findsOneWidget);
     expect(find.text('Driver f'), findsOneWidget);
@@ -147,7 +146,7 @@ void main() {
     _ctrl.setTo(_place('Mussoorie', 30.45, 78.07));
     await _settle(t);
     expect(find.text('Drivers on this route'), findsNothing);
-    expect(find.text('Based near Haldwani. Not listed for this route'), findsOneWidget);
+    expect(find.text('More drivers nearby'), findsOneWidget);
     expect(find.text('Driver f'), findsOneWidget);
   });
 

@@ -30,7 +30,6 @@ void main() {
       testWidgets('all pieces fit at ${w.toInt()} dp scale $s', (t) async {
         const far = NearbyDistance(km: 420, label: NearbyLabel.far, city: 'Haldwani', state: 'Uttarakhand');
         const header = NearbyHeader(
-          livesIn: 'We are live in Uttarakhand and Himachal Pradesh',
           farAway: true,
           centreCityName: 'Haldwani',
           centreCityKm: 12,
@@ -75,11 +74,9 @@ void main() {
     expect(find.text(NearbyStrings.byRoad), findsNothing);
   });
 
-  testWidgets('header strip shows live-in line only when far away', (t) async {
-    await _pump(t, 360, 1, const NearbyHeaderStrip(header: NearbyHeader(livesIn: 'We are live in A', farAway: false)));
-    expect(find.text('We are live in A'), findsNothing);
-    await _pump(t, 360, 1, const NearbyHeaderStrip(header: NearbyHeader(livesIn: 'We are live in A', farAway: true)));
-    expect(find.text('We are live in A'), findsOneWidget);
+  testWidgets('header strip never shows a live-in line', (t) async {
+    await _pump(t, 360, 1, const NearbyHeaderStrip(header: NearbyHeader(farAway: true)));
+    expect(find.textContaining('We are live in'), findsNothing);
     await _pump(t, 360, 1, const NearbyHeaderStrip(header: NearbyHeader(citiesUnavailable: true)));
     expect(find.textContaining('Cities are loading'), findsOneWidget);
   });

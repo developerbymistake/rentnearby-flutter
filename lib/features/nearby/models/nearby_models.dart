@@ -27,7 +27,6 @@ class NearbyHeader {
   final String? centreCityName;
   final String? centreStateName;
   final double? centreCityKm;
-  final String livesIn;
   final bool farAway;
   final double? nearestKm;
   final bool citiesUnavailable;
@@ -36,7 +35,6 @@ class NearbyHeader {
     this.centreCityName,
     this.centreStateName,
     this.centreCityKm,
-    this.livesIn = '',
     this.farAway = false,
     this.nearestKm,
     this.citiesUnavailable = false,
@@ -50,7 +48,6 @@ class NearbyHeader {
       centreCityName: _s(j['centreCityName']),
       centreStateName: _s(j['centreStateName']),
       centreCityKm: _d(j['centreCityKm']),
-      livesIn: _s(j['livesIn']) ?? '',
       farAway: j['farAway'] == true,
       nearestKm: _d(j['nearestKm']),
       citiesUnavailable: j['citiesUnavailable'] == true,

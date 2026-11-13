@@ -12,7 +12,6 @@ const _header = {
   'centreCityName': 'Haldwani',
   'centreStateName': 'Uttarakhand',
   'centreCityKm': 3.2,
-  'livesIn': 'We are live in Uttarakhand and Himachal Pradesh',
   'farAway': true,
   'nearestKm': 420.1,
   'citiesUnavailable': false,
@@ -108,7 +107,6 @@ Map<String, dynamic> _page(List<Map<String, dynamic>> items, {List<Map<String, d
 void main() {
   test('stays feed page parses header, items, featured and token', () {
     final p = NearbyRepositoryBase.pageFromResponse(_page([_stay()], featured: [_stay()]), StayFeedItem.fromJson);
-    expect(p.header.livesIn, startsWith('We are live in'));
     expect(p.header.farAway, isTrue);
     expect(p.header.nearestKm, 420.1);
     expect(p.header.centreCityKm, 3.2);
@@ -210,7 +208,6 @@ void main() {
     final p = NearbyRepositoryBase.pageFromResponse({
       'data': {'header': {}, 'items': []}
     }, StayFeedItem.fromJson);
-    expect(p.header.livesIn, '');
     expect(p.items, isEmpty);
     expect(p.hasMore, isFalse);
     expect(p.nextToken, isNull);

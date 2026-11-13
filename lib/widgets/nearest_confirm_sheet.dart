@@ -22,6 +22,7 @@ class NearestConfirmSheet extends StatelessWidget {
   }) {
     return Sheet3D.show<void>(
       context,
+      useRootNavigator: true,
       builder: (_) => NearestConfirmSheet(
           itemLabel: itemLabel, onConfirm: onConfirm, palette: palette),
     );

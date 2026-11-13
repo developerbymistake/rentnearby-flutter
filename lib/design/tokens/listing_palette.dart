@@ -131,7 +131,7 @@ abstract final class ListingArt {
   static const String calendar = '${_dir}calendar.png';
   static const String camera = '${_dir}camera.png';
   static const String sunrise = '${_dir}sunrise.png';
-  static const String bell = 'assets/images/design/fitness_app/bell.png';
+  static const String bell = '${_dir}bell.png';
 
   static String forVehicle(String? name) {
     final v = (name ?? '').toLowerCase();

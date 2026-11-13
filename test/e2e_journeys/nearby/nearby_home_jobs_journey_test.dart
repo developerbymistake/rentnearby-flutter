@@ -193,7 +193,7 @@ void main() {
   group('home rails', () {
     test('the home feed header is parsed', () {
       final f = HomeFeedModelV2.fromJson({
-        'header': {'farAway': true, 'livesIn': 'We are live in Uttarakhand and Himachal Pradesh'},
+        'header': {'farAway': true},
         'stays': [_stay('a', 210, 'far', 'Haridwar')],
       });
       expect(f.header.farAway, true);
@@ -214,7 +214,7 @@ void main() {
 
     testWidgets('far user: rails are honest, no near you, far label on cards', (t) async {
       await _openHome(t, {
-        'header': {'farAway': true, 'livesIn': 'We are live in Uttarakhand and Himachal Pradesh'},
+        'header': {'farAway': true},
         'stays': [_stay('a', 210, 'far', 'Haridwar')],
         'taxis': [_taxi('t', 420, 'far', 'Haldwani')],
       }, w: 360);

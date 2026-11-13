@@ -13,7 +13,6 @@ class NearbyHeaderStrip extends StatelessWidget {
     final h = header;
     if (h == null) return const SizedBox.shrink();
     final lines = <String>[];
-    if (h.farAway && h.livesIn.isNotEmpty) lines.add(h.livesIn);
     final city = h.centreCityName;
     final km = h.centreCityKm;
     if (hasPin && city != null && km != null && km > 2) lines.add(NearbyStrings.nearestTown(city, km));

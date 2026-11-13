@@ -149,7 +149,7 @@ void main() {
           'featured': [],
           'hasMore': true,
           'nextToken': 't1',
-          'header': {'farAway': true, 'livesIn': 'We are live in Uttarakhand and Himachal Pradesh'},
+          'header': {'farAway': true},
         },
       }, JobFeedItem.fromJson);
       expect(p.items.length, 2);
@@ -378,7 +378,7 @@ void main() {
                   JobFeedItem.fromJson(_json('a', km: 420, label: 'far', city: 'Haldwani')),
                   JobFeedItem.fromJson(_json('b', km: 3, label: 'near', city: 'Nainital')),
                 ],
-                header: const NearbyHeader(farAway: true, livesIn: 'We are live in Uttarakhand and Himachal Pradesh'),
+                header: const NearbyHeader(farAway: true),
               );
           Get.put(_ctrl(f), tag: JobsFeedController.tag);
           setGoldenView(t, Size(w, 900));
@@ -392,7 +392,6 @@ void main() {
           await t.pump(const Duration(milliseconds: 600));
           expect(find.text('Nearest jobs'), findsOneWidget);
           expect(find.text('Haldwani, Uttarakhand. About 420 km away'), findsOneWidget);
-          expect(find.text('We are live in Uttarakhand and Himachal Pradesh'), findsOneWidget);
           expect(find.textContaining('near you'), findsNothing);
           expect(t.takeException(), isNull);
         });

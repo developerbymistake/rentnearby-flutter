@@ -116,12 +116,11 @@ void main() {
   testWidgets('Delhi: far label, live-in line, never near you', (t) async {
     _setUpApp(gps: const LatLng(28.6, 77.2));
     _ctrl.answer = (_, _) => NearbyPage(
-          header: const NearbyHeader(farAway: true, livesIn: 'We are live in Uttarakhand and Himachal Pradesh', nearestKm: 210),
+          header: const NearbyHeader(farAway: true, nearestKm: 210),
           items: [_item('a', km: 210, label: 'far', city: 'Haridwar'), _item('b', km: 420, label: 'near', city: 'Haldwani')],
         );
     await _open(t);
     expect(find.text('Nearest stays'), findsOneWidget);
-    expect(find.text('We are live in Uttarakhand and Himachal Pradesh'), findsOneWidget);
     expect(find.textContaining('Haridwar, Uttarakhand. About 210 km away'), findsOneWidget);
     expect(find.textContaining('Haldwani, Uttarakhand. About 420 km away'), findsOneWidget);
     expect(find.textContaining('By road it can take longer.'), findsNWidgets(2));
@@ -261,7 +260,6 @@ void main() {
         _ctrl.answer = (_, _) => NearbyPage(
               header: const NearbyHeader(
                 farAway: true,
-                livesIn: 'We are live in Uttarakhand and Himachal Pradesh',
                 centreCityName: 'A very long town name in the hills',
                 centreCityKm: 14,
               ),
