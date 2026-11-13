@@ -6,7 +6,7 @@ import 'package:bakhli/controllers/tab_config_controller.dart';
 import 'package:bakhli/design/design.dart';
 import 'package:bakhli/screens/login_screen.dart';
 import 'package:bakhli/screens/phone_verify_screen.dart';
-import 'package:bakhli/widgets/home_owner_carousel.dart';
+import 'package:bakhli/widgets/home_hero_carousel.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -101,8 +101,8 @@ void main() {
     expect(Pinput, isNotNull);
   });
 
-  testWidgets('HomeOwnerCarousel at text scale 1.3 does not overflow', (t) async {
-    await _host(t, const Scaffold(body: SafeArea(child: HomeOwnerCarousel())), scale: 1.3);
+  testWidgets('HomeHeroCarousel at text scale 1.3 does not overflow', (t) async {
+    await _host(t, const Scaffold(body: SafeArea(child: HomeHeroCarousel())), scale: 1.3);
     await t.pump(const Duration(seconds: 5));
     expect(t.takeException(), isNull);
     await t.pumpWidget(const SizedBox());

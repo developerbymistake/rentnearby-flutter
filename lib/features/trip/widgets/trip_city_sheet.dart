@@ -120,9 +120,8 @@ class TripCitySheet extends StatefulWidget {
     String? afterCity,
     Set<int> inTrip = const {},
   }) {
-    return showModalBottomSheet<TripCityPick>(
-      context: context,
-      isScrollControlled: true,
+    return showDockSheet<TripCityPick>(
+      context,
       backgroundColor: DesignColors.scaffold,
       barrierColor: DesignColors.scrim,
       elevation: 0,
@@ -376,7 +375,7 @@ class _TripCitySheetState extends State<TripCitySheet> {
       tone: _tone,
       controller: _searchCtrl,
       hint: _add ? TripStrings.searchCity : TripStringsV2Create.searchCity,
-      trailingArt: ListingArt.compass,
+      trailingArt: ListingArt.search,
       inputFormatters: noEmojiInputFormatters,
       onChanged: _onSearch,
       margin: const EdgeInsets.fromLTRB(18, 16, 18, 8),

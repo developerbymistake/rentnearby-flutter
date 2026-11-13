@@ -196,7 +196,7 @@ class _TripsDiscoveryScreenState extends State<TripsDiscoveryScreen> {
         tone: _page,
         inline: true,
         value: TripStringsTab.searchHint,
-        buttonArt: ListingArt.compass,
+        buttonArt: ListingArt.search,
         field: TextField(
           controller: _search,
           focusNode: _focus,
@@ -335,7 +335,7 @@ class _TripsDiscoveryScreenState extends State<TripsDiscoveryScreen> {
             onAction: _state != null ? () => _pickState(null) : null,
           );
       }
-      return [SliverToBoxAdapter(child: _stateBox(card)), ..._soon()];
+      return [SliverToBoxAdapter(child: _stateBox(card))];
     }
     final cities = _cities;
     Widget tile(int i) => TripCityTile(
@@ -361,37 +361,6 @@ class _TripsDiscoveryScreenState extends State<TripsDiscoveryScreen> {
           },
         ),
       ),
-      ..._soon(),
     ];
-  }
-
-  List<Widget> _soon() {
-    final soon = _catalog.comingSoon(_query, stateName: _state);
-    if (soon.isEmpty) return const [];
-    return [
-      SliverPadding(
-        padding: const EdgeInsets.only(top: 8),
-        sliver: SliverList.list(children: [for (final c in soon) _center(_SoonCard(city: c))]),
-      ),
-    ];
-  }
-}
-
-class _SoonCard extends StatelessWidget {
-  const _SoonCard({required this.city});
-
-  final TripCityModel city;
-
-  @override
-  Widget build(BuildContext context) {
-    final place = city.stateName.isNotEmpty ? city.stateName : city.districtName;
-    return WideCard(
-      tone: ListingTone.cD,
-      kind: WideKind.slim,
-      art: ListingArt.calendar,
-      title: city.name,
-      subtitle: place.isEmpty ? TripStringsTab.comingSoon : '$place\n${TripStringsTab.comingSoon}',
-      semanticsLabel: '${city.name}, ${TripStringsTab.comingSoon}',
-    );
   }
 }

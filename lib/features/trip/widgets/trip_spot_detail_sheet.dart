@@ -27,19 +27,20 @@ class TripSpotDetailSheet extends StatefulWidget {
     required bool locked,
     VoidCallback? onToggle,
   }) {
-    return showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
+    return showDockSheet<void>(
+      context,
       backgroundColor: DesignColors.surface,
       barrierColor: DesignColors.scrim,
       elevation: 0,
       shape: const RoundedRectangleBorder(borderRadius: CardRadius.sheet),
-      builder: (_) => TripSpotDetailSheet(
-        spot: spot,
-        selected: selected,
-        locked: locked,
-        onToggle: onToggle,
+      builder: (_) => SafeArea(
+        bottom: false,
+        child: TripSpotDetailSheet(
+          spot: spot,
+          selected: selected,
+          locked: locked,
+          onToggle: onToggle,
+        ),
       ),
     );
   }

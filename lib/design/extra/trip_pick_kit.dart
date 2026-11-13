@@ -47,7 +47,7 @@ class PickKit {
     'assets/images/design/hotel/hotel_4.png',
     'assets/images/design/hotel/hotel_5.png',
   ];
-  static const String userImage = 'assets/images/design/images/userImage.png';
+  static const String userImage = 'assets/images/design/images/userImage.webp';
 
   static String hotelImage(Object? key) => hotelImages[(key.hashCode & 0x7fffffff) % hotelImages.length];
 }

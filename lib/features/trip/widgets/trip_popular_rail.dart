@@ -90,27 +90,24 @@ class _TripPopularRailState extends State<TripPopularRail> {
   }
 
   Widget _card(TripCityModel city, int index, double width) {
-    final ready = city.isReady;
     final place = city.stateName.isNotEmpty ? city.stateName : city.districtName;
     final spots = city.spotCount;
     final art = _arts[city.cityKey.abs() % _arts.length];
     final cover = city.cover;
-    final hasNumber = ready && spots > 0;
-    final second = !ready ? TripStrings.comingSoon : '';
+    final hasNumber = spots > 0;
     return MealsCardV(
       key: ValueKey('popular-${city.cityKey}'),
       tone: ListingTone.at(index),
       title: city.name,
       titleLines: 2,
       width: width,
-      description: second.isEmpty ? place : '$place\n$second',
+      description: place,
       art: cover == null ? art : null,
       photo: cover == null ? null : KitPhoto(url: cover, width: 100, height: 100, asset: TravelIcon.map, iconSize: 40),
-      sticker: cover == null ? null : art,
       number: hasNumber ? '$spots' : null,
       unit: TripStringsTab.cityUnit(spots),
-      onTap: ready ? () => TripNavigation.startWithCities([city]) : null,
-      semanticsLabel: ready ? city.name : '${city.name}, ${TripStrings.comingSoon}',
+      onTap: () => TripNavigation.startWithCities([city]),
+      semanticsLabel: city.name,
     );
   }
 }

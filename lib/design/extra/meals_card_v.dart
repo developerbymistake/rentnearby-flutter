@@ -157,7 +157,7 @@ class MealsCardV extends StatelessWidget {
     super.key,
     required this.tone,
     required this.title,
-    required this.description,
+    this.description,
     this.art,
     this.photo,
     this.sticker,
@@ -178,7 +178,7 @@ class MealsCardV extends StatelessWidget {
 
   final ListingTone tone;
   final String title;
-  final String description;
+  final String? description;
   final String? art;
   final Widget? photo;
   final String? sticker;
@@ -246,7 +246,8 @@ class MealsCardV extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: titleStyle,
                   ),
-                  const SizedBox(height: 6),
+                  if (description != null) const SizedBox(height: 6),
+                  if (description != null)
                   ConstrainedBox(
                     constraints: BoxConstraints(minHeight: descMin),
                     child: wholeWords
@@ -254,7 +255,7 @@ class MealsCardV extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               for (final l
-                                  in description
+                                  in description!
                                       .split('\n')
                                       .where((e) => e.isNotEmpty)
                                       .take(2))
@@ -270,7 +271,7 @@ class MealsCardV extends StatelessWidget {
                             ],
                           )
                         : Text(
-                            description,
+                            description!,
                             maxLines: descriptionLines,
                             overflow: TextOverflow.ellipsis,
                             style: Ink3D.text(

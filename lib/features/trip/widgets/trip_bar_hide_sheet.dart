@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:bakhli/design/design.dart';
+import 'package:get/get.dart';
+import '../../../controllers/auth_controller.dart';
+import '../../../navigation/tab_keys.dart';
 import '../trip_strings_bar.dart';
 
 class TripBarHideSheet {
   static Future<bool> show(BuildContext context) async {
+    final tabs = Get.isRegistered<AuthController>() ? tabKeys[Get.find<AuthController>().tabIndex.value].currentState : null;
+    final host = tabs?.overlay?.context ?? context;
     final hide = await SheetFrame.show<bool>(
-      context,
-      useRootNavigator: true,
+      host,
       builder: (ctx) => SheetFrame(
         title: TripStringsBar.hideTitle,
         subtitle: TripStringsBar.hideBody,

@@ -290,7 +290,7 @@ class _StaySetupHubScreenState extends State<StaySetupHubScreen> {
 
   Widget _rejectedStrip(StayOwnerModel s) => Banner3D(
         kind: BannerKind.bad,
-        art: ListingArt.pushpin,
+        art: ListingArt.warning,
         title: 'Not approved',
         subtitle: (s.rejectedReason?.isNotEmpty ?? false) ? s.rejectedReason : null,
         tone: _tone,

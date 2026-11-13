@@ -20,7 +20,7 @@ class _AreaListViewState extends State<AreaListView>
   List<String> areaListData = <String>[
     'assets/images/design/fitness_app/area1.png',
     'assets/images/design/fitness_app/area2.png',
-    'assets/images/design/fitness_app/area3.png',
+    'assets/images/design/fitness_app/area3.webp',
     'assets/images/design/fitness_app/area1.png',
   ];
 

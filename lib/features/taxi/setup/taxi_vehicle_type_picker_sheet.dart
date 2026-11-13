@@ -61,7 +61,7 @@ class _TaxiVehicleTypePickerSheetState extends State<TaxiVehicleTypePickerSheet>
               flat: true,
               controller: _searchCtrl,
               hint: 'Search e.g. Innova',
-              leadingArt: ListingArt.compass,
+              leadingArt: ListingArt.search,
               inputFormatters: noEmojiInputFormatters,
               onChanged: (v) => setState(() => _query = v),
             ),

@@ -236,7 +236,7 @@ class _SavedJourneyScreenState extends State<SavedJourneyScreen> with WidgetsBin
           ));
         }
       }
-      rows.add(JourneyStop3D(top: 0, art: ListingArt.pushpin, title: legs.last.toName, subtitle: TaxiWaysStrings.youArrive));
+      rows.add(JourneyStop3D(top: 0, art: ListingArt.flag, title: legs.last.toName, subtitle: TaxiWaysStrings.youArrive));
     }
 
     return RefreshIndicator(

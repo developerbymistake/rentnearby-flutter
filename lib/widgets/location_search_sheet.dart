@@ -158,7 +158,7 @@ class _LocationSearchSheetState extends State<LocationSearchSheet>
       controller: _searchCtrl,
       autofocus: true,
       hint: 'Search area, locality, landmark...',
-      leadingArt: ListingArt.roundPushpin,
+      leadingArt: ListingArt.search,
       inputFormatters: noEmojiInputFormatters,
       onChanged: _onChanged,
     );

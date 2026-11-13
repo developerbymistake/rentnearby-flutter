@@ -126,7 +126,7 @@ void main() {
     _base();
     await _open(t, _normal, h: 1180);
     await shot(t, 'stays_360_top');
-    expect(find.bySemanticsLabel('Search'), findsOneWidget);
+    expect(find.bySemanticsLabel('Search a place or area'), findsOneWidget);
     expect(find.text('Call'), findsWidgets);
     expect(find.text('Enquiry'), findsWidgets);
     expect(find.text('Map view'), findsOneWidget);

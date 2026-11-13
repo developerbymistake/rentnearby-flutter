@@ -22,7 +22,7 @@ class AppToast {
       alignment: Alignment.bottomCenter,
       autoCloseDuration: _duration,
       builder: (context, holder) => Padding(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 96),
+        padding: EdgeInsets.fromLTRB(16, 0, 16, DockInset.lastHeight + 12),
         child: NoDataToast3D(title: title, subtitle: subtitle, accent: accent, art: ListingArt.hotel),
       ),
     );

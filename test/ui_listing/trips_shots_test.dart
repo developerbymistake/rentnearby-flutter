@@ -48,11 +48,6 @@ class _Catalog extends TripCityCatalog {
           if (c.isReady && (stateName == null || c.stateName == stateName)) c,
       ];
   @override
-  List<TripCityModel> comingSoon(String q, {String? stateName}) => [
-        for (final c in list)
-          if (!c.isReady && (stateName == null || c.stateName == stateName)) c,
-      ];
-  @override
   List<String> liveStates() => ({for (final c in list.where((c) => c.isReady)) c.stateName}.toList())..sort();
 }
 

@@ -4,7 +4,6 @@ import 'package:get/get.dart';
 import '../../../../config/app_routes.dart';
 import '../../../../config/app_tabs.dart';
 import '../../../../controllers/auth_controller.dart';
-import '../../../../controllers/location_controller.dart';
 import '../../../../controllers/tab_config_controller.dart';
 import '../../../../navigation/tour_keys.dart';
 import '../../../jobs/controllers/my_jobs_controller.dart';
@@ -14,8 +13,7 @@ import '../../../nearby/widgets/nearby_featured_slot.dart';
 import '../../../nearby/widgets/nearby_header_strip.dart';
 import '../../../nearby/widgets/nearby_label_text.dart';
 import '../../../nearby/widgets/nearby_state_views.dart';
-import '../../../../screens/explore_location_search_mixin.dart';
-import '../../../../widgets/location_switch_sheet.dart';
+import '../../../nearby/widgets/place_search_bar.dart';
 import '../../setup/stay_flow.dart';
 import '../../stay_types_controller.dart';
 import '../stay_filter_sort_sheet.dart';
@@ -43,7 +41,7 @@ class StayLandingScreenV2 extends StatefulWidget {
   State<StayLandingScreenV2> createState() => _StayLandingScreenV2State();
 }
 
-class _StayLandingScreenV2State extends State<StayLandingScreenV2> with ExploreLocationSearchMixin<StayLandingScreenV2> {
+class _StayLandingScreenV2State extends State<StayLandingScreenV2> {
   late final StayLandingControllerV2 _ctrl;
   final _auth = Get.find<AuthController>();
   final _types = StayTypesController.ensure();
@@ -63,9 +61,6 @@ class _StayLandingScreenV2State extends State<StayLandingScreenV2> with ExploreL
     Get.delete<StayLandingControllerV2>(tag: StayLandingControllerV2.tag);
     super.dispose();
   }
-
-  @override
-  get searchPalette => templateModulePalette;
 
   void _viewDetails(StayFeedItem s) => Get.toNamed(AppRoutes.stayDetail, arguments: {'id': s.id});
 
@@ -156,43 +151,10 @@ class _StayLandingScreenV2State extends State<StayLandingScreenV2> with ExploreL
   }
 
   Widget _buildSearchPill() {
-    final loc = Get.find<LocationController>();
-    return Obx(() {
-      final active = isSearchActive;
-      final resolving = searchResolving;
-      final district = loc.effectiveDistrict;
-      final searchLabel = loc.searchPinLabel.value;
-      final searching = searchLabel != null;
-      final String value;
-      if (district == null) {
-        value = '';
-      } else if (searching) {
-        value = searchLabel;
-      } else {
-        final cityName = loc.browsingCity.value?.name ?? loc.autoCity.value?.name ?? 'Current';
-        value = '${district.name} › $cityName';
-      }
-      final Widget? buttonChild = resolving
-          ? const KitDots(color: DesignColors.onPrimary, size: 6)
-          : active
-          ? const Icon(Icons.close_rounded, color: DesignColors.onPrimary, size: 26)
-          : null;
-      return KeyedSubtree(
-        key: TourKeys.staysLandingLocation,
-        child: SearchPill(
-          tone: _page,
-          label: district == null ? null : 'City',
-          value: value,
-          leadingArt: district == null ? null : ListingArt.roundPushpin,
-          buttonArt: ListingArt.compass,
-          buttonKey: TourKeys.staysLandingSearch,
-          buttonChild: buttonChild,
-          buttonSemantics: active ? 'Cancel' : 'Search',
-          onTap: district == null || searching ? null : () => LocationSwitchSheet.show(context, palette: templateModulePalette),
-          onButtonTap: resolving ? () {} : () => onSearchToggleTap(context),
-        ),
-      );
-    });
+    return KeyedSubtree(
+      key: TourKeys.staysLandingLocation,
+      child: PlaceSearchBar(key: TourKeys.staysLandingSearch, margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10)),
+    );
   }
 
   Widget _buildReviewStrip() {

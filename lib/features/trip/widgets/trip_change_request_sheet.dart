@@ -252,7 +252,7 @@ class _ChangeBodyState extends State<_ChangeBody> {
               : Column(children: [dates[0], const SizedBox(height: 10), dates[1]]),
         ),
         const SizedBox(height: 12),
-        StepperField(tone: _tone, filled: true, leadingArt: ListingArt.backpack, label: TripStrings.adults, value: _adults, min: 1, max: TripConstants.maxAdults, onChanged: _busy ? null : (v) => setState(() => _adults = v)),
+        StepperField(tone: _tone, filled: true, leadingArt: ListingArt.guests, label: TripStrings.adults, value: _adults, min: 1, max: TripConstants.maxAdults, onChanged: _busy ? null : (v) => setState(() => _adults = v)),
         const SizedBox(height: 12),
         StepperField(tone: _tone, filled: true, leadingArt: ListingArt.star, label: TripStrings.kids, value: _kids, min: 0, max: TripConstants.maxKids, onChanged: _busy ? null : (v) => setState(() => _kids = v)),
         const SizedBox(height: 12),

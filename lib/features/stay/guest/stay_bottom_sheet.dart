@@ -11,6 +11,9 @@ class StayBottomSheet extends StatelessWidget {
 
   static const _tone = KitTone.stay;
 
+  static Future<void> show(BuildContext context, StayNearbyModel stay) =>
+      SheetFrame.show<void>(context, builder: (_) => StayBottomSheet(stay: stay));
+
   @override
   Widget build(BuildContext context) {
     return StaggerHost(

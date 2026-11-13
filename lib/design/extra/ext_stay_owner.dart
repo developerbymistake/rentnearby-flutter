@@ -5,16 +5,17 @@ import '../design.dart';
 abstract final class StayOwnerArt {
   static const String automobile = 'assets/images/design/travel3d/automobile.png';
 
-  static const List<String> _typeCycle = [ListingArt.bed, ListingArt.hotel, ListingArt.beach, ListingArt.tent, ListingArt.mountain, ListingArt.backpack];
+  static const List<String> _typeCycle = [ListingArt.bed, ListingArt.stay, ListingArt.beach, ListingArt.tent, ListingArt.mountain, ListingArt.hotelBuilding];
 
   static String stayType(String name, int index) {
     final n = name.toLowerCase();
     if (n.contains('home')) return ListingArt.bed;
-    if (n.contains('hotel') || n.contains('villa')) return ListingArt.hotel;
+    if (n.contains('hotel')) return ListingArt.hotelBuilding;
+    if (n.contains('villa')) return ListingArt.stay;
     if (n.contains('resort')) return ListingArt.beach;
     if (n.contains('camp') || n.contains('tent')) return ListingArt.tent;
     if (n.contains('cottage') || n.contains('farm')) return ListingArt.mountain;
-    if (n.contains('hostel') || n.contains('dorm')) return ListingArt.backpack;
+    if (n.contains('hostel') || n.contains('dorm')) return ListingArt.guests;
     return _typeCycle[index % _typeCycle.length];
   }
 

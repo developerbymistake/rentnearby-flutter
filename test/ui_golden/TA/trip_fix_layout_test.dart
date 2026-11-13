@@ -1,4 +1,3 @@
-import 'package:bakhli/features/trip/utils/trip_spot_picks.dart';
 import 'package:bakhli/design/design.dart';
 import 'package:bakhli/features/trip/data/trip_city_catalog.dart';
 import 'package:bakhli/features/trip/models/trip_city_model.dart';
@@ -6,7 +5,6 @@ import 'package:bakhli/features/trip/models/trip_journey_model.dart';
 import 'package:bakhli/features/trip/models/trip_plan_model.dart';
 import 'package:bakhli/features/trip/widgets/trip_journey_compact.dart';
 import 'package:bakhli/features/trip/widgets/trip_popular_rail.dart';
-import 'package:bakhli/features/trip/widgets/trip_spots_extras.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
@@ -144,22 +142,6 @@ void main() {
         for (final c in find.byType(KitChainChip).evaluate()) {
           expect((c.renderObject as RenderBox).size.height, lessThanOrEqualTo(_scaled(scale, 52) - 16));
         }
-      });
-
-      testWidgets('TripQuickStartRail $tag', (t) async {
-        setGoldenView(t, Size(w, 900));
-        await t.pumpWidget(_host(
-            TripQuickStartRail(
-              bundles: const [
-                TripQuickStart('l', 'Lakes and waterfalls', ['a', 'b']),
-                TripQuickStart('t', 'Temples', ['a', 'b', 'c']),
-              ],
-              onTap: (_) {},
-            ),
-            width: w,
-            scale: scale));
-        await t.pumpAndSettle();
-        expect(t.takeException(), isNull);
       });
 
       for (final legs in [

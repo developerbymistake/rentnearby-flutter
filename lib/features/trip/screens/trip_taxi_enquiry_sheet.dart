@@ -202,7 +202,7 @@ class _EnquiryBodyState extends State<_EnquiryBody> {
             ],
           ),
           const SizedBox(height: 12),
-          PillPickerField(tone: _tone, sublabel: TripStrings.people, value: s.peopleSummary, hint: TripStrings.addPeople, leadingArt: ListingArt.backpack, onTap: () => TripDatesSheet.edit(context)),
+          PillPickerField(tone: _tone, sublabel: TripStrings.people, value: s.peopleSummary, hint: TripStrings.addPeople, leadingArt: ListingArt.guests, onTap: () => TripDatesSheet.edit(context)),
           if (short) RepliesBanner(art: ListingArt.calendar, text: TripStringsV2Find.veryShortNoticeDriver, margin: const EdgeInsets.only(top: 12)),
           LayoutBuilder(builder: (context, c) {
             final time = PillPickerField(

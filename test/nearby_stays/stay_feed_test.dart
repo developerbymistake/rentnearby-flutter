@@ -1,3 +1,4 @@
+import 'package:bakhli/config/app_tabs.dart';
 import 'package:bakhli/design/design.dart';
 import 'package:bakhli/design/extra/stay_grid_card.dart';
 import 'package:bakhli/features/nearby/data/nearby_repository_base.dart';
@@ -42,6 +43,14 @@ class _Ctrl extends StayLandingControllerV2 {
     types.add(selectedStayTypeId.value);
     return handler == null ? const NearbyPage() : handler!(token);
   }
+}
+
+class _TabCtrl extends _Ctrl {
+  final tab = AppTabs.stays.obs;
+  @override
+  RxInt? get tabRx => tab;
+  @override
+  int? get tabIndex => AppTabs.stays;
 }
 
 Future<void> _flush() => Future<void>.delayed(Duration.zero);
@@ -253,5 +262,42 @@ void main() {
         expect(t.takeException(), isNull);
       });
     }
+  });
+
+  group('filters reset when the Stays tab is left', () {
+    test('type, meals and sort go back to All and nearest, list reloads on return', () async {
+      final c = _TabCtrl();
+      c.onInit();
+      await _flush();
+      c.applyFilters(meals: 'Breakfast', stayTypeId: 'villa', sort: 'price_asc');
+      await _flush();
+      final before = c.calls.length;
+      c.tab.value = AppTabs.taxi;
+      await _flush();
+      expect(c.selectedMeals.value, isNull);
+      expect(c.selectedStayTypeId.value, isNull);
+      expect(c.sortBy.value, StayLandingControllerV2.defaultSort);
+      expect(c.calls.length, before);
+      c.tab.value = AppTabs.stays;
+      await _flush();
+      expect(c.calls.length, before + 1);
+      expect(c.types.last, isNull);
+      c.onClose();
+    });
+
+    test('nothing to reset when no filter is set, and entering Stays keeps filters', () async {
+      final c = _TabCtrl();
+      c.onInit();
+      await _flush();
+      final gen = c.resetGeneration.value;
+      c.tab.value = AppTabs.home;
+      await _flush();
+      expect(c.resetGeneration.value, gen);
+      c.tab.value = AppTabs.stays;
+      c.applyFilters(meals: 'AllMeals', stayTypeId: null, sort: 'nearest');
+      await _flush();
+      expect(c.selectedMeals.value, 'AllMeals');
+      c.onClose();
+    });
   });
 }

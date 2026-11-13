@@ -13,12 +13,13 @@ import '../utils/dio_error_mapper.dart';
 
 enum ListingKind { stay, taxi }
 
-enum ContactOutcome { dialed, chatOpened, openedDetail, ignored, failed }
+enum ContactOutcome { dialed, chatOpened, openedDetail, ignored, failed, whatsAppOpened }
 
 class ListingContact {
-  const ListingContact({required this.ownerId, this.phone});
+  const ListingContact({required this.ownerId, this.phone, this.whatsApp});
   final String ownerId;
   final String? phone;
+  final String? whatsApp;
 }
 
 class ListingContactDeps {
@@ -29,6 +30,7 @@ class ListingContactDeps {
     required this.createConversation,
     required this.openRoute,
     required this.info,
+    this.openWhatsApp = ContactLauncher.whatsApp,
   });
 
   final Future<ListingContact?> Function(ListingKind kind, String id) fetchContact;
@@ -37,6 +39,7 @@ class ListingContactDeps {
   final Future<ConversationModel?> Function(String listingType, String id) createConversation;
   final void Function(String route, Object? arguments) openRoute;
   final void Function(String message) info;
+  final Future<void> Function(String phone) openWhatsApp;
 }
 
 class ListingContactActions {
@@ -49,7 +52,12 @@ class ListingContactActions {
 
   static String keyOf(ListingKind kind, String id) => '${kind.name}:$id';
 
-  static bool isBusy(ListingKind kind, String id) => busy.contains(keyOf(kind, id));
+  static const String actionCall = 'call';
+  static const String actionWhatsApp = 'whatsapp';
+  static const String actionChat = 'chat';
+
+  static bool isBusy(ListingKind kind, String id, {String? action}) =>
+      busy.contains(action == null ? keyOf(kind, id) : '${keyOf(kind, id)}|$action');
 
   static bool supportsChat(ListingKind kind) => kind == ListingKind.stay;
 
@@ -65,7 +73,7 @@ class ListingContactActions {
     required String id,
     Map<String, dynamic>? detailArguments,
   }) =>
-      _guard(kind, id, () async {
+      _guard(kind, id, actionCall, () async {
         final deps = _deps;
         final contact = await deps.fetchContact(kind, id);
         if (!context.mounted) return ContactOutcome.ignored;
@@ -86,13 +94,40 @@ class ListingContactActions {
         return ContactOutcome.dialed;
       });
 
+  static Future<ContactOutcome> whatsApp(
+    BuildContext context, {
+    required ListingKind kind,
+    required String id,
+    Map<String, dynamic>? detailArguments,
+  }) =>
+      _guard(kind, id, actionWhatsApp, () async {
+        final deps = _deps;
+        final contact = await deps.fetchContact(kind, id);
+        if (!context.mounted) return ContactOutcome.ignored;
+        if (contact == null) {
+          _openDetail(deps, kind, id, detailArguments);
+          return ContactOutcome.failed;
+        }
+        final me = deps.currentUserId();
+        final isOwner = me != null && me == contact.ownerId;
+        final raw = contact.whatsApp ?? contact.phone;
+        final phone = isOwner || raw == null || ContactLauncher.tenDigits(raw).isEmpty ? null : raw;
+        if (phone == null) {
+          if (!isOwner) deps.info(phoneHiddenMessage);
+          _openDetail(deps, kind, id, detailArguments);
+          return ContactOutcome.openedDetail;
+        }
+        await deps.openWhatsApp(phone);
+        return ContactOutcome.whatsAppOpened;
+      });
+
   static Future<ContactOutcome> chat(
     BuildContext context, {
     required ListingKind kind,
     required String id,
     Map<String, dynamic>? detailArguments,
   }) =>
-      _guard(kind, id, () async {
+      _guard(kind, id, actionChat, () async {
         final deps = _deps;
         if (!supportsChat(kind)) {
           _openDetail(deps, kind, id, detailArguments);
@@ -118,14 +153,15 @@ class ListingContactActions {
         'isBlockedByMe': conv.isBlockedByMe,
       };
 
-  static Future<ContactOutcome> _guard(ListingKind kind, String id, Future<ContactOutcome> Function() run) async {
+  static Future<ContactOutcome> _guard(ListingKind kind, String id, String action, Future<ContactOutcome> Function() run) async {
     final key = keyOf(kind, id);
+    final actionKey = '$key|$action';
     if (busy.contains(key)) return ContactOutcome.ignored;
-    busy.add(key);
+    busy.addAll([key, actionKey]);
     try {
       return await run();
     } finally {
-      busy.remove(key);
+      busy.removeAll([key, actionKey]);
     }
   }
 
@@ -149,7 +185,11 @@ class ListingContactActions {
     }
     try {
       final t = await const TaxiBrowseRepository().getById(id);
-      return ListingContact(ownerId: t.userId, phone: t.hasContact ? t.contactPhone : null);
+      return ListingContact(
+        ownerId: t.userId,
+        phone: t.hasContact ? t.contactPhone : null,
+        whatsApp: t.hasContact ? (t.whatsAppNumber ?? t.contactPhone) : null,
+      );
     } catch (e) {
       final status = e is DioException ? e.response?.statusCode : null;
       if (status != 401 && status != 404) AppToast.error(DioErrorMapper.toMessage(e, 'Could not load the taxi.'));

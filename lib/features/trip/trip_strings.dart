@@ -1,6 +1,6 @@
 class TripStrings {
   static const String notReadyTitle = 'Not ready yet';
-  static String notReadySubtitle(String city) => 'Trips for $city are coming soon';
+  static String notReadySubtitle(String city) => '$city has no places to show yet';
   static const String noPlaces = 'No places found';
   static const String placesFailed = "Couldn't load places";
   static const String checkConnection = 'Check your connection and try again';
@@ -16,7 +16,6 @@ class TripStrings {
   static const String allCategories = 'All';
   static const String plannerOff = 'Not available right now';
   static const String plannerOffSubtitle = 'Please try again later';
-  static const String comingSoon = 'Coming soon';
   static const String retry = 'Retry';
   static const String planATrip = 'Plan a trip';
   static const String homeCardTitle = 'Plan a trip';
@@ -28,7 +27,7 @@ class TripStrings {
   static String noCityMatch(String q) => 'No city matches "$q"';
   static const String citiesFailed = "Couldn't load cities";
   static const String noCitiesYet = 'No cities yet';
-  static const String noCitiesYetSubtitle = 'Trips are coming soon';
+  static const String noCitiesYetSubtitle = 'No cities are listed right now';
   static const String cityUnavailable = 'City not available';
   static const String popular = 'Popular';
   static const String allCities = 'All cities';

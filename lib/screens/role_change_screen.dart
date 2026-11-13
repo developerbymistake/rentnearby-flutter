@@ -162,7 +162,7 @@ class _RoleChangeScreenState extends State<RoleChangeScreen> with SingleTickerPr
                 } else if (targetKey == null) {
                   body = Padding(
                     padding: const EdgeInsets.only(bottom: 16),
-                    child: AuthStateCard(tone: tone, art: ListingArt.backpack, title: 'No other role available'),
+                    child: AuthStateCard(tone: tone, art: ListingArt.profile, title: 'No other role available'),
                   );
                 } else {
                   body = AuthRoleDescLines(

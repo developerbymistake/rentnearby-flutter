@@ -247,7 +247,7 @@ class _PostJobScreenState extends State<PostJobScreen> {
       ),
       _sectionCard(
         title: 'Description',
-        art: ListingArt.pushpin,
+        art: ListingArt.clipboard,
         child: PillField(
           tone: _look,
           controller: _ctrl.descCtrl,
@@ -277,10 +277,10 @@ class _PostJobScreenState extends State<PostJobScreen> {
       ),
       _sectionCard(
         title: 'Job Role',
-        art: ListingArt.backpack,
+        art: ListingArt.briefcase,
         child: PillPickerField(
           tone: _look,
-          leadingArt: ListingArt.backpack,
+          leadingArt: ListingArt.briefcase,
           value: _ctrl.roleName,
           hint: deptId == null ? 'Pick a department first' : 'Select',
           enabled: deptId != null,
@@ -288,7 +288,7 @@ class _PostJobScreenState extends State<PostJobScreen> {
               ? null
               : () => _pick(
                     title: 'Job Role',
-                    art: ListingArt.backpack,
+                    art: ListingArt.briefcase,
                     items: _ctrl.roles,
                     selectedId: _ctrl.roleId.value,
                     onPicked: _ctrl.setRole,

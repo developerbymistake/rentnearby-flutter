@@ -209,7 +209,7 @@ void main() {
       expect(find.text('Stays near you'), findsOneWidget);
       expect(find.text('Taxis near you'), findsOneWidget);
       expect(find.textContaining('Nainital. About 3 km away'), findsOneWidget);
-      expect(find.textContaining('Based near Haldwani. About 5 km away'), findsOneWidget);
+      expect(find.textContaining('Based near'), findsNothing);
     });
 
     testWidgets('far user: rails are honest, no near you, far label on cards', (t) async {
@@ -223,7 +223,7 @@ void main() {
       expect(find.text('Stays near you'), findsNothing);
       expect(find.text('Taxis near you'), findsNothing);
       expect(find.textContaining('Haridwar, Uttarakhand. About 210 km away'), findsOneWidget);
-      expect(find.textContaining('Haldwani, Uttarakhand. About 420 km away'), findsOneWidget);
+      expect(find.textContaining('Haldwani, Uttarakhand'), findsNothing);
     });
 
     for (final w in journeyWidths) {

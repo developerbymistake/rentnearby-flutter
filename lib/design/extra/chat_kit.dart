@@ -388,7 +388,7 @@ class NotificationLook {
   static NotificationLook of(String kind) => switch (kind) {
         'approved' => const NotificationLook._(TravelIcon.star, DesignColors.goodDeep),
         'rejected' => const NotificationLook._(TravelIcon.note, DesignColors.roseDeep),
-        'takedown' => const NotificationLook._(TravelIcon.pin, DesignColors.warnDeep),
+        'takedown' => const NotificationLook._(TravelIcon.warning, DesignColors.warnDeep),
         _ => const NotificationLook._(bell, DesignColors.primary),
       };
 }

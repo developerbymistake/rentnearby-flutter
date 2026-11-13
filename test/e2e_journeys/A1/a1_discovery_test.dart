@@ -186,27 +186,24 @@ void main() {
       expect(find.text('Show all states'), findsNothing);
     });
 
-    testWidgets('a not ready match shows a Coming soon row that cannot be tapped', (t) async {
+    testWidgets('a city with no places is never listed', (t) async {
       final cities = [_city(1, 'Nainital'), _city(2, 'Nainpur', ready: false)];
       await _pump(t, cities, 360);
-      expect(find.textContaining('Coming soon'), findsNothing);
+      expect(find.text('Nainpur'), findsNothing);
       await t.enterText(find.byType(TextField), 'Nain');
       await t.pump();
       expect(find.byType(TripCityTile), findsOneWidget);
-      expect(find.text('Nainpur'), findsOneWidget);
-      expect(find.textContaining('Coming soon'), findsOneWidget);
-      expect(find.ancestor(of: find.text('Nainpur'), matching: find.byType(InkWell)), findsNothing);
-      await t.tap(find.text('Nainpur'));
-      await t.pump();
-      expect(Get.currentRoute, isNot(AppRoutes.tripSpots));
+      expect(find.text('Nainital'), findsOneWidget);
+      expect(find.text('Nainpur'), findsNothing);
+      expect(find.textContaining('No places yet'), findsNothing);
     });
 
-    testWidgets('only a not ready match: empty card and the Coming soon row together', (t) async {
+    testWidgets('only a no-places match: just the empty card', (t) async {
       await _pump(t, [_city(1, 'Nainital'), _city(2, 'Zebra Falls', ready: false)], 360);
       await t.enterText(find.byType(TextField), 'Zebra');
       await t.pump();
       expect(find.text('No city found'), findsOneWidget);
-      expect(find.textContaining('Coming soon'), findsOneWidget);
+      expect(find.text('Zebra Falls'), findsNothing);
     });
   });
 

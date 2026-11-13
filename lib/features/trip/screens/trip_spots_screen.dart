@@ -233,20 +233,6 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> with TickerProviderSt
     return _pickDay != null ? () => _pickOne(s) : () => _toggle(s.id);
   }
 
-  void _applyBundle(TripQuickStart b) {
-    final added = _ctrl.addBundle(b);
-    if (added.isEmpty) {
-      AppToast.warning(_limitText);
-      return;
-    }
-    final m = ScaffoldMessenger.of(context);
-    m.hideCurrentSnackBar();
-    m.showSnackBar(SnackBar(
-      content: Text(TripStringsSpotsX.bundleAdded(added.length)),
-      action: SnackBarAction(label: TripStringsSpotsX.undo, onPressed: () => _ctrl.removeAdded(added)),
-    ));
-  }
-
   Widget _buildOffline() => Obx(() => _ctrl.offline.value && !_ctrl.isLoading.value
       ? TripOfflineBanner(onTap: _ctrl.load)
       : const SizedBox.shrink());
@@ -492,9 +478,6 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> with TickerProviderSt
       final count = _ctrl.items.length;
       final few = !_ctrl.hasMore.value && count <= 3;
       final mustSee = filter == null && !few ? _ctrl.mustSee : const <TripSpotModel>[];
-      final quick = filter == null && !few && _pickDay == null && selected.length < 3
-          ? _ctrl.quickStarts.where((b) => TripSpotPicks.bundleAdds(b, selected, 3).isNotEmpty).toList()
-          : const <TripQuickStart>[];
       final heads = <Widget>[
         if (few && filter == null)
           Padding(
@@ -504,7 +487,6 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> with TickerProviderSt
               style: Ink3D.text(13, FontWeight.w600, Ink3D.grey),
             ),
           ),
-        if (quick.isNotEmpty) TripQuickStartRail(bundles: quick, onTap: _applyBundle, nameOf: _nameOf),
         if (mustSee.isNotEmpty)
           TripMustSeeRail(
             city: _city.name,
@@ -581,7 +563,6 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> with TickerProviderSt
         itemBuilder: (_, _) => const WideCardSkeleton(kind: WideKind.photo),
       );
 
-  String _nameOf(String id) => _ctrl.items.firstWhereOrNull((s) => s.id == id)?.title ?? '';
 
   Widget _buildBottomBar(BuildContext context) {
     return Obx(() {

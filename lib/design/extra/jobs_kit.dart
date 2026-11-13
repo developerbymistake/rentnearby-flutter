@@ -29,7 +29,7 @@ class JobsKit {
   );
 
   static const String _dir = 'assets/images/design/travel3d/';
-  static const String backpack = '${_dir}backpack.png';
+  static const String backpack = '${_dir}briefcase.png';
 
   static const SystemUiOverlayStyle darkIcons = SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,

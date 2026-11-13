@@ -298,7 +298,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
             child: Text(j.title, style: KitText.wholeWords(j.title, titleStyle, box.maxWidth - 2, scaler)),
           ),
         );
-        const art = ExcludeSemantics(child: Art3D(asset: ListingArt.backpack, size: 52, shadowBlur: 3, shadowOffset: Offset(2, 4), shadowAlpha: 0.25));
+        const art = ExcludeSemantics(child: Art3D(asset: ListingArt.briefcase, size: 52, shadowBlur: 3, shadowOffset: Offset(2, 4), shadowAlpha: 0.25));
         if (stacked) {
           return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(children: [art, const SizedBox(width: 8), Expanded(child: title)]),
@@ -351,7 +351,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
   Widget _infoCard(JobDetailModel j) {
     final jobTypeShift = [j.jobTypeName, j.shiftTypeName].where((e) => e.isNotEmpty).join(' · ');
     return JobsInfoCard(children: [
-      JobsInfoRow(tone: _look, art: ListingArt.backpack, label: 'Job role', value: j.roleName, divider: false),
+      JobsInfoRow(tone: _look, art: ListingArt.briefcase, label: 'Job role', value: j.roleName, divider: false),
       JobsInfoRow(
         tone: _look,
         art: ListingArt.hotel,

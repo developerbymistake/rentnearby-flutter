@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../tokens/design_colors.dart';
 import 'art_3d.dart';
+import 'dock_inset.dart';
 import 'sheet_3d.dart';
 
 class SheetFrame extends StatelessWidget {
@@ -33,21 +34,20 @@ class SheetFrame extends StatelessWidget {
     BuildContext context, {
     required WidgetBuilder builder,
     bool isScrollControlled = true,
-    bool useRootNavigator = false,
     bool isDismissible = true,
     BoxConstraints? constraints = const BoxConstraints(maxWidth: 560),
   }) =>
       showModalBottomSheet<T>(
         context: context,
         isScrollControlled: isScrollControlled,
-        useRootNavigator: useRootNavigator,
+        useRootNavigator: false,
         isDismissible: isDismissible,
         backgroundColor: Colors.transparent,
         barrierColor: DesignColors.scrim,
         elevation: 0,
         clipBehavior: Clip.none,
         constraints: constraints,
-        builder: builder,
+        builder: (c) => DockLift(child: builder(c)),
       );
 
   @override

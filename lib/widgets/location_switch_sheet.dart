@@ -398,7 +398,7 @@ class _LocationSwitchSheetState extends State<LocationSwitchSheet>
       tone: _tone,
       controller: _searchCtrl,
       hint: hint,
-      leadingArt: ListingArt.roundPushpin,
+      leadingArt: ListingArt.search,
       inputFormatters: noEmojiInputFormatters,
       onChanged: (v) => setState(() => _query = v),
     );

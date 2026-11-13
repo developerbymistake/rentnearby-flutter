@@ -22,7 +22,6 @@ class NearestConfirmSheet extends StatelessWidget {
   }) {
     return Sheet3D.show<void>(
       context,
-      useRootNavigator: true,
       builder: (_) => NearestConfirmSheet(
           itemLabel: itemLabel, onConfirm: onConfirm, palette: palette),
     );
@@ -38,7 +37,7 @@ class NearestConfirmSheet extends StatelessWidget {
       tone: tone,
       art: ListingArt.worldMap,
       title: 'No ${_cap(itemLabel)} Nearby',
-      subtitle: 'Search the nearest $itemLabel in your district instead?',
+      subtitle: 'Show the nearest $itemLabel within 100 km?',
       footer: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,

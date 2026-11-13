@@ -109,7 +109,7 @@ class StayOwnerCard extends StatelessWidget {
     if (stay.isRejected) {
       final reason = stay.rejectedReason;
       return OwnerStatusRow(
-        art: ListingArt.pushpin,
+        art: ListingArt.warning,
         text: reason != null && reason.isNotEmpty ? 'Rejected: $reason' : 'Rejected',
         trailing: OnCardPill(label: 'Fix and resubmit', onTap: onOpenSetup, color: _tone.button),
         wideTrailing: true,
@@ -130,7 +130,7 @@ class StayOwnerCard extends StatelessWidget {
     final count = stay.pendingReportCount;
     return OwnerStatusRow(
       light: true,
-      art: ListingArt.pushpin,
+      art: ListingArt.warning,
       text: '$count report${count == 1 ? '' : 's'} on this stay',
       trailing: const OnCardChevron3D(color: StayOwnerInk.newBadge),
       onTap: onReportsTap,

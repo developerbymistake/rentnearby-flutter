@@ -60,15 +60,6 @@ class TripCityCatalog {
     return out;
   }
 
-  List<TripCityModel> comingSoon(String q, {String? stateName}) {
-    if (q.trim().isEmpty) return const [];
-    final state = stateName?.trim().toLowerCase() ?? '';
-    return [
-      for (final c in search(q))
-        if (!c.isReady && (state.isEmpty || c.stateName.toLowerCase() == state)) c,
-    ].take(5).toList();
-  }
-
   List<String> liveStates() {
     final seen = <String>{};
     final out = <String>[];
@@ -86,7 +77,7 @@ class TripCityCatalog {
     final state = stateName?.trim().toLowerCase();
     return [
       for (final c in _mem ?? const <TripCityModel>[])
-        if (c.isPopularDestination && (state == null || state.isEmpty || c.stateName.toLowerCase() == state)) c,
+        if (c.isReady && c.isPopularDestination && (state == null || state.isEmpty || c.stateName.toLowerCase() == state)) c,
     ];
   }
 

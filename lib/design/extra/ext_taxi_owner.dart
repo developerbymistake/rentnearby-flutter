@@ -1023,7 +1023,7 @@ class TaxiOwnerCard3D extends StatelessWidget {
         ? null
         : Padding(
             padding: const EdgeInsets.fromLTRB(14, 10, 14, 0),
-            child: OnCardRow(title: rep, art: ListingArt.pushpin, light: true, onTap: onReport, trailing: Icon(Icons.chevron_right_rounded, color: Form3D.errorText)),
+            child: OnCardRow(title: rep, art: ListingArt.warning, light: true, onTap: onReport, trailing: Icon(Icons.chevron_right_rounded, color: Form3D.errorText)),
           );
 
     final price = Padding(

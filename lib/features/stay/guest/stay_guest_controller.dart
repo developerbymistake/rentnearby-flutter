@@ -1,5 +1,4 @@
-import '../../taxi/guest/traveller_city.dart';
-import '../../trip/trip_strings_city.dart';
+import '../../nearby/nearby_strings.dart';
 import 'package:dio/dio.dart';
 import 'package:get/get.dart';
 import '../../../config/app_constants.dart';
@@ -10,10 +9,6 @@ import '../../../utils/network_retry.dart';
 import '../models/stay_detail_model.dart';
 import '../models/stay_nearby_model.dart';
 import '../setup/stay_option_sets.dart';
-
-class _CitiesUnavailable implements Exception {
-  const _CitiesUnavailable();
-}
 
 class StayGuestController extends GetxController {
   static StayGuestController get to =>
@@ -26,41 +21,52 @@ class StayGuestController extends GetxController {
   final nearestActive = false.obs;
   final nearestFocusIndex = 0.obs;
   int _nearestRequestSeq = 0;
+  int _nearbyRequestSeq = 0;
+  static const _nearbyCacheTtl = Duration(seconds: 60);
+  final Map<String, ({List<StayNearbyModel> items, DateTime at})> _nearbyCache = {};
 
   void clearNearest() {
     nearestStays.value = [];
     nearestFocusIndex.value = 0;
   }
 
-  // null = the pin belongs to no city; a failed city call throws so the caller shows the retry text.
-  Future<Map<String, dynamic>?> _area(double lat, double lng) async {
-    final city = await nearestCityOf(lat, lng);
-    if (city == null) throw const _CitiesUnavailable();
-    return city.available ? {'cityKey': city.cityKey} : null;
-  }
+  void clearNearbyCache() => _nearbyCache.clear();
 
-  static String _failText(Object e, String fallback) =>
-      e is _CitiesUnavailable || DioErrorMapper.errorType(e) == 'TripCitiesUnavailable' ? TripStringsCity.citiesLoadingBody : DioErrorMapper.toMessage(e, fallback);
+  static String _failText(Object e, String fallback) => DioErrorMapper.toMessage(e, fallback);
 
-  Future<void> loadNearby(double lat, double lng, double radius) async {
-    try {
-      isLoading.value = true;
-      final area = await _area(lat, lng);
-      if (area == null) {
-        nearbyStays.value = [];
+  static String _cacheKey(double lat, double lng, double radius) =>
+      '${lat.toStringAsFixed(3)}|${lng.toStringAsFixed(3)}|$radius';
+
+  Future<void> loadNearby(double lat, double lng, double radius, {bool refresh = false}) async {
+    final seq = ++_nearbyRequestSeq;
+    final key = _cacheKey(lat, lng, radius);
+    if (refresh) {
+      _nearbyCache.clear();
+    } else {
+      final hit = _nearbyCache[key];
+      if (hit != null && DateTime.now().difference(hit.at) < _nearbyCacheTtl) {
+        nearbyStays.value = hit.items;
+        isLoading.value = false;
         return;
       }
+    }
+    try {
+      isLoading.value = true;
       final res = await withRetry(() => ApiService.get('/stays/nearby', params: {
             'latitude': lat,
             'longitude': lng,
-            ...area,
+            'radius': radius,
           }));
-      nearbyStays.value = (res['data']['items'] as List).map((e) => StayNearbyModel.fromJson(e)).toList();
+      final items = (res['data']['items'] as List).map((e) => StayNearbyModel.fromJson(e)).toList();
+      _nearbyCache[key] = (items: items, at: DateTime.now());
+      if (seq != _nearbyRequestSeq) return;
+      nearbyStays.value = items;
     } catch (e) {
+      if (seq != _nearbyRequestSeq) return;
       if (e is DioException && e.response?.statusCode == 401) return;
       AppToast.error(_failText(e, 'Could not load nearby stays.'));
     } finally {
-      isLoading.value = false;
+      if (seq == _nearbyRequestSeq) isLoading.value = false;
     }
   }
 
@@ -68,23 +74,15 @@ class StayGuestController extends GetxController {
     final seq = ++_nearestRequestSeq;
     try {
       isLoadingNearest.value = true;
-      final area = await _area(lat, lng);
-      if (area == null) {
-        if (seq == _nearestRequestSeq) {
-          AppToast.noData(TripStringsCity.noStaysTitle(''), TripStringsCity.noSupplyBody, accent: StayColors.accent);
-        }
-        return;
-      }
       final res = await withRetry(() => ApiService.get('/stays/nearest', params: {
             'latitude': lat,
             'longitude': lng,
             'count': AppConstants.nearestFallbackCount,
-            ...area,
           }));
       final items = (res['data']['items'] as List).map((e) => StayNearbyModel.fromJson(e)).toList();
       if (seq != _nearestRequestSeq) return;
       if (items.isEmpty) {
-        AppToast.noData(TripStringsCity.noStaysTitle(''), TripStringsCity.noSupplyBody, accent: StayColors.accent);
+        AppToast.noData(NearbyStrings.staysNearestEmptyTitle, NearbyStrings.staysNearestEmptyBody, accent: StayColors.accent);
         return;
       }
       nearestStays.value = items;

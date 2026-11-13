@@ -302,7 +302,7 @@ class _TripStayScreenState extends State<TripStayScreen> with TickerProviderStat
         label: TripStringsShortlist.staysNear,
         value: value,
         leadingArt: ListingArt.roundPushpin,
-        buttonArt: ListingArt.compass,
+        buttonArt: ListingArt.search,
         margin: const EdgeInsets.fromLTRB(16, 4, 16, 12),
       ),
     );

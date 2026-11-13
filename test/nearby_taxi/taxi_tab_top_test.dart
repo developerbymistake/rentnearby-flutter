@@ -66,8 +66,8 @@ void main() {
       expect(find.bySemanticsLabel('Search To'), findsOneWidget);
       expect(find.text('Ramesh Kumar'), findsOneWidget);
       expect(find.text('Call'), findsOneWidget);
-      expect(find.text('Enquiry'), findsOneWidget);
-      expect(find.text('WhatsApp'), findsNothing);
+      expect(find.text('WhatsApp'), findsOneWidget);
+      expect(find.text('Enquiry'), findsNothing);
       expect(t.takeException(), isNull);
       final ro = t.renderObject<RenderRepaintBoundary>(find.byType(RepaintBoundary).first);
       await t.runAsync(() async {

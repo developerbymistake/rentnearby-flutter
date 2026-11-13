@@ -10,15 +10,14 @@ import '../../../config/app_insets.dart';
 import '../../../config/app_map_state.dart';
 import '../../../config/app_routes.dart';
 import '../../../config/app_tabs.dart';
-import '../../../config/module_palette.dart';
 import '../../../controllers/auth_controller.dart';
 import '../../../controllers/location_controller.dart';
 import '../../../models/browse_item.dart';
-import '../../../screens/explore_location_search_mixin.dart';
+import '../../nearby/controllers/nearby_centre_controller.dart';
+import '../../nearby/widgets/place_search_bar.dart';
 import '../../../utils/map_clustering.dart';
 import '../../../utils/money_format.dart';
 import '../../../widgets/empty_radius_hint.dart';
-import '../../../widgets/location_pill.dart';
 import '../../../widgets/nearest_confirm_sheet.dart';
 import '../../../widgets/nearest_control_bar.dart';
 import '../models/stay_nearby_model.dart';
@@ -32,7 +31,7 @@ class StayMapScreen extends StatefulWidget {
   State<StayMapScreen> createState() => _StayMapScreenState();
 }
 
-class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateMixin, WidgetsBindingObserver, ExploreLocationSearchMixin<StayMapScreen> {
+class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateMixin, WidgetsBindingObserver {
   MapLibreMapController? _mapController;
   double _currentZoom = 13.0;
   Size _screenSize = Size.zero;
@@ -49,6 +48,7 @@ class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateM
   final _guest = StayGuestController.to;
   final _locationCtrl = Get.find<LocationController>();
   final _auth = Get.find<AuthController>();
+  final _centre = NearbyCentreController.to;
   final _workers = <Worker>[];
   bool _stale = false;
 
@@ -71,9 +71,6 @@ class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateM
   LatLng? _nearestCircleCenter;
 
   bool get _onStaysTab => _auth.tabIndex.value == AppTabs.stays;
-
-  @override
-  ModulePalette get searchPalette => templateModulePalette;
 
   @override
   void initState() {
@@ -108,11 +105,12 @@ class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateM
     );
 
     _workers.add(
-      ever(_locationCtrl.locationSelectionChanged, (_) {
-      if (isSearchActive && _preSearchRadius == null) {
+      ever(_centre.centreVersion, (_) {
+      if (!mounted) return;
+      if (_hasPin && _preSearchRadius == null) {
         _preSearchRadius = _radius;
-        setState(() => _radius = AppConstants.radiusOptions.last);
-      } else if (!isSearchActive && _preSearchRadius != null) {
+        if (_radius < AppConstants.defaultRadiusKm) setState(() => _radius = AppConstants.defaultRadiusKm);
+      } else if (!_hasPin && _preSearchRadius != null) {
         setState(() => _radius = _preSearchRadius!);
         _preSearchRadius = null;
       }
@@ -263,9 +261,9 @@ class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateM
     );
 
     _mapActive = !mapShouldPause.value;
-    if (isSearchActive) {
+    if (_hasPin) {
       _preSearchRadius = _radius;
-      _radius = AppConstants.radiusOptions.last;
+      if (_radius < AppConstants.defaultRadiusKm) _radius = AppConstants.defaultRadiusKm;
     }
     if (!mapShouldPause.value) {
       _precomputeCircleCache();
@@ -303,7 +301,9 @@ class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateM
     }
   }
 
-  LatLng get _searchCenter => searchCenter;
+  bool get _hasPin => _centre.hasPin;
+
+  LatLng get _searchCenter => _centre.centre;
 
   void _fitToRadius() {
     if (!_mapReady || !mounted) return;
@@ -510,17 +510,17 @@ class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateM
                 decoration: BoxDecoration(
                     color: DesignColors.surface,
                   borderRadius: BorderRadius.circular(17),
-                    border: Border.all(color: DesignColors.primary, width: 2),
+                    border: Border.all(color: KitTone.stay.accentDark, width: 2),
                     boxShadow: ShadowTokens.elev2,
                 ),
                 child: Center(
                   child: Text(
                     priceText,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontFamily: TypeTokens.family,
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
-                        color: DesignColors.primary,
+                        color: KitTone.stay.accentDark,
                       ),
                     ),
                   ),
@@ -813,21 +813,13 @@ class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateM
                               children: [
                                 Row(
                                   children: [
-                              _buildBackButton(),
-                              const SizedBox(width: 10),
-                              const Expanded(
-                                      child: SizedBox(height: 40, child: LocationPill(palette: templateModulePalette)),
-                                ),
-                                  ],
-                              ),
-                            const SizedBox(height: 10),
-                                Row(
-                                  children: [
-                              Expanded(child: _buildRadiusChips()),
-                              const SizedBox(width: 10),
-                              _buildSearchToggleButton(),
+                                    _buildBackButton(),
+                                    const SizedBox(width: 10),
+                                    Expanded(child: PlaceSearchBar(controller: _centre, compact: true)),
                                   ],
                                 ),
+                                const SizedBox(height: 10),
+                                _buildRadiusChips(),
                               ],
                             ),
                           ),
@@ -915,52 +907,11 @@ class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateM
         Navigator.of(context).maybePop();
       },
       child: Container(
-        width: 40,
-        height: 40,
+        width: KitMetrics.touch,
+        height: KitMetrics.touch,
           decoration: BoxDecoration(color: DesignColors.surface, shape: BoxShape.circle, boxShadow: ShadowTokens.elev2),
-          child: const Icon(Icons.chevron_left_rounded, color: DesignColors.primary, size: 24),
+          child: Icon(Icons.chevron_left_rounded, color: KitTone.stay.accentDark, size: 26),
         ),
-      ),
-    );
-  }
-
-  Widget _buildSearchToggleButton() {
-    return Obx(
-      () => GestureDetector(
-          onTap: searchResolving ? null : () => onSearchToggleTap(context),
-          child: Container(
-            height: 34,
-            padding: const EdgeInsets.symmetric(horizontal: 13),
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-            color: isSearchActive ? DesignColors.error : DesignColors.surface,
-            borderRadius: BorderRadius.circular(38),
-            boxShadow: ShadowTokens.elev1,
-            ),
-            child: searchResolving
-              ? const KitDots(color: DesignColors.primary, size: 6)
-                : (isSearchActive
-                    ? const Text(
-                        'Cancel',
-                        style: TextStyle(fontFamily: TypeTokens.family, fontSize: 12, fontWeight: FontWeight.w700, color: DesignColors.onPrimary),
-                      )
-                    : const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.search_rounded, color: DesignColors.primary, size: 16),
-                          SizedBox(width: 5),
-                          Text(
-                            'Search',
-                            style: TextStyle(
-                              fontFamily: TypeTokens.family,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                              color: DesignColors.primary,
-                            ),
-                          ),
-                        ],
-                      )),
-          ),
       ),
     );
   }
@@ -977,20 +928,21 @@ class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateM
           final active = _radius == r;
           return Expanded(
             child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
               onTap: () {
                 _guest.nearbyStays.clear();
                 setState(() => _radius = r);
-                if (isSearchActive) _preSearchRadius = r;
+                if (_hasPin) _preSearchRadius = r;
                 _loadNearby();
                 if (_mapReady) _fitToRadius();
               },
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 250),
-                height: 28,
+                height: 38,
                 margin: EdgeInsets.only(right: i < radii.length - 1 ? 4 : 0),
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: active ? DesignColors.primary : Colors.transparent,
+                  gradient: active ? KitTone.stay.gradient : null,
                   borderRadius: BorderRadius.circular(24),
                   boxShadow: active ? ShadowTokens.elev1 : null,
                 ),
@@ -1001,7 +953,7 @@ class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateM
                     fontFamily: TypeTokens.family,
                     fontSize: 12,
                       fontWeight: FontWeight.w600,
-                    color: active ? DesignColors.surface : DesignColors.textSecondary,
+                    color: active ? DesignColors.onPrimary : DesignColors.textSecondary,
                   ),
                 ),
               ),
@@ -1017,15 +969,16 @@ class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateM
       child: GestureDetector(
       onTap: () {
         _locationCtrl.resetBrowsing();
+        if (_hasPin) PlaceSearchBar.clear(_centre);
         _precomputeCircleCache();
         _loadNearby();
         if (_mapReady) _fitToRadius();
       },
       child: Container(
-        width: 46,
-        height: 46,
+        width: KitMetrics.touch + 2,
+        height: KitMetrics.touch + 2,
           decoration: BoxDecoration(color: DesignColors.surface, shape: BoxShape.circle, boxShadow: ShadowTokens.elev2),
-          child: const Icon(Icons.my_location_rounded, color: DesignColors.primary, size: 22),
+          child: Icon(Icons.my_location_rounded, color: KitTone.stay.accentDark, size: 22),
         ),
       ),
     );
@@ -1060,26 +1013,27 @@ class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateM
       child: GestureDetector(
       onTap: _showListSheet,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        constraints: const BoxConstraints(minHeight: KitMetrics.touch),
+        padding: const EdgeInsets.symmetric(horizontal: 14),
         decoration: BoxDecoration(
             color: DesignColors.surface,
             borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: DesignColors.primary, width: 1.5),
+            border: Border.all(color: KitTone.stay.accentDark, width: 1.5),
             boxShadow: ShadowTokens.elev2,
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-              const Icon(Icons.format_list_bulleted_rounded, color: DesignColors.primary, size: 16),
+              Icon(Icons.format_list_bulleted_rounded, color: KitTone.stay.accentDark, size: 18),
             const SizedBox(width: 6),
-              const Text(
+              Text(
                 'View List',
-                style: TextStyle(fontFamily: TypeTokens.family, fontSize: 12, fontWeight: FontWeight.w700, color: DesignColors.primary),
+                style: TextStyle(fontFamily: TypeTokens.family, fontSize: 13, fontWeight: FontWeight.w700, color: KitTone.stay.accentDark),
               ),
             const SizedBox(width: 6),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(color: DesignColors.primary, borderRadius: BorderRadius.circular(10)),
+                decoration: BoxDecoration(gradient: KitTone.stay.gradient, borderRadius: BorderRadius.circular(10)),
                 child: Text(
                   '$count',
                   style: TypeTokens.style(11, FontWeight.w800, color: DesignColors.onPrimary),

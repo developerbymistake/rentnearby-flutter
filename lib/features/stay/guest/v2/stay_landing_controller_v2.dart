@@ -38,6 +38,24 @@ class StayLandingControllerV2 extends NearbyFeedController<StayFeedItem> {
   void onInit() {
     super.onInit();
     _workers.add(ever(stayPostedTrigger, (_) => markDirty()));
+    final rx = tabRx;
+    if (rx != null) {
+      var previous = rx.value;
+      _workers.add(ever<int>(rx, (i) {
+        if (previous == AppTabs.stays && i != AppTabs.stays) resetFilters();
+        previous = i;
+      }));
+    }
+  }
+
+  void resetFilters() {
+    final changed = selectedStayTypeId.value != null || selectedMeals.value != null || sortBy.value != defaultSort;
+    if (!changed) return;
+    selectedStayTypeId.value = null;
+    selectedMeals.value = null;
+    sortBy.value = defaultSort;
+    resetGeneration.value++;
+    markDirty();
   }
 
   @override

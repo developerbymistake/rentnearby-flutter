@@ -68,7 +68,6 @@ class TripCityTile extends StatelessWidget {
                 asset: TravelIcon.map,
                 iconSize: 40,
               ),
-        sticker: cover == null ? null : art,
         number: spots > 0 ? '$spots' : null,
         unit: TripStringsTab.cityUnit(spots),
         onTap: onTap,

@@ -71,7 +71,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
         hero: TemplateEntrance(
           animation: templateInterval(_enter, 0, 2),
           animationController: _enter,
-          child: AuthHero(tone: _tone, art: ListingArt.backpack, title: 'Complete your profile', subtitle: 'Just one more step', smallTitle: true),
+          child: AuthHero(tone: _tone, art: ListingArt.profile, title: 'Complete your profile', subtitle: 'Just one more step', smallTitle: true),
         ),
         card: TemplateEntrance(
           animation: templateInterval(_enter, 1, 2),
@@ -85,7 +85,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
                 tone: _tone,
                 focusNode: _nameFocus,
                 bad: _nameBad,
-                leadingArt: ListingArt.backpack,
+                leadingArt: ListingArt.profile,
                 child: TextFormField(
                   controller: _nameCtrl,
                   focusNode: _nameFocus,

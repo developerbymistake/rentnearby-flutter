@@ -442,7 +442,7 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen>
   }
 
   static const String _peopleIcon =
-      'assets/images/design/travel3d/backpack.png';
+      'assets/images/design/travel3d/busts_in_silhouette.png';
 
   Widget _peopleStepper(TaxiWaysController c) {
     final n = c.people.value;

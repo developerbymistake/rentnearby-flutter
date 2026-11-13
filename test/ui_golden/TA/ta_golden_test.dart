@@ -1,6 +1,5 @@
 import 'package:bakhli/features/trip/models/trip_model.dart';
 import 'package:bakhli/features/trip/models/trip_spot_model.dart';
-import 'package:bakhli/features/trip/utils/trip_spot_picks.dart';
 import 'package:bakhli/features/trip/widgets/trip_card.dart';
 import 'package:bakhli/features/trip/widgets/trip_home_card.dart';
 import 'package:bakhli/features/trip/widgets/trip_spot_row.dart';
@@ -69,13 +68,6 @@ void main() {
       ]));
   _golden('trip_home_card', () => const TripHomeCard());
   _golden('trip_spots_extras', () => Column(children: [
-        TripQuickStartRail(
-          bundles: const [
-            TripQuickStart('l', 'Lakes', ['a', 'b']),
-            TripQuickStart('t', 'Temples', ['a', 'b', 'c']),
-          ],
-          onTap: (_) {},
-        ),
         TripSuggestionCard(text: 'Mall Road is close by', onAdd: () {}, onDismiss: () {}),
         TripOfflineBanner(onTap: () {}),
       ]));

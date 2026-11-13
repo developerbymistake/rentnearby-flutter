@@ -1,5 +1,4 @@
 import '../models/trip_spot_model.dart';
-import '../trip_constants.dart';
 import 'trip_format.dart';
 import 'trip_geo.dart';
 
@@ -54,18 +53,8 @@ class TripRouteEstimate {
   const TripRouteEstimate(this.places, this.minutes, this.km);
 }
 
-class TripQuickStart {
-  final String id;
-  final String title;
-  final List<String> ids;
-
-  const TripQuickStart(this.id, this.title, this.ids);
-}
-
 class TripSpotPicks {
   static const int mustSeeMax = 8;
-  static const int quickMax = 3;
-  static const int quickSize = 3;
   static const int minutesMax = 25;
 
   static int _rank(TripSpotModel s) => s.rank <= 0 ? 1 << 30 : s.rank;
@@ -158,33 +147,5 @@ class TripSpotPicks {
     final m = n.minutes;
     final far = m != null ? '${TripFormat.duration(m)} from' : 'about ${n.km < 1 ? '1' : TripFormat.number(n.km)} km from';
     return '${n.spot.title} is $far ${added.title}. Add it?';
-  }
-
-  static const _bundleDefs = <(String, String, List<String>)>[
-    ('views', 'Lakes and views', ['lake', 'viewpoint', 'waterfall', 'beach']),
-    ('temples', 'Temples', ['temple', 'ghat', 'cave']),
-    ('heritage', 'Forts and heritage', ['fort', 'palace', 'museum', 'historic', 'bridge']),
-    ('nature', 'Parks and wildlife', ['park', 'garden', 'zoo', 'wildlife']),
-  ];
-
-  static List<TripQuickStart> quickStarts(List<TripSpotModel> items) {
-    final out = <TripQuickStart>[];
-    for (final def in _bundleDefs) {
-      final ids = byRank(items.where((s) => def.$3.contains(s.category))).take(quickSize).map((s) => s.id).toList();
-      if (ids.length >= 2) out.add(TripQuickStart(def.$1, def.$2, ids));
-    }
-    final town = byRank(items).take(quickSize).map((s) => s.id).toList();
-    if (town.length >= 2 && out.length < quickMax) out.add(TripQuickStart('town', 'Half day in town', town));
-    return out.take(quickMax).toList();
-  }
-
-  // Ids this bundle may add: not yet picked, within the room left; picked ones are untouched.
-  static List<String> bundleAdds(TripQuickStart b, Set<String> selected, int room) =>
-      b.ids.where((id) => !selected.contains(id)).take(room < 0 ? 0 : room).toList();
-
-  static int roomFor({required int limit, required int selected, required int existing, required int other}) {
-    final byLimit = limit < 0 ? TripConstants.maxSpots : limit - selected;
-    final byTrip = TripConstants.maxSpots - selected - existing - other;
-    return byLimit < byTrip ? byLimit : byTrip;
   }
 }

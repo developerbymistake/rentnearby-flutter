@@ -241,8 +241,8 @@ void main() {
     expect(t.takeException(), isNull);
     await shot(t, 'K_taxi_cards');
     expect(find.text('Call'), findsNWidgets(2));
-    expect(find.text('Enquiry'), findsNWidgets(2));
-    expect(find.text('WhatsApp'), findsNothing);
+    expect(find.text('Enquiry'), findsOneWidget);
+    expect(find.text('WhatsApp'), findsOneWidget);
     expect(find.text('Select'), findsOneWidget);
     expect(find.text('Ramesh Negi'), findsNWidgets(2));
     expect(find.textContaining('to Nainital'), findsOneWidget);

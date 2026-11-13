@@ -24,11 +24,11 @@ final _kPage = ListingPalette.forest.page;
 const _kSections = 7;
 
 const _kFacilityLook = <String, (int, String)>{
-  'HotWater': (4, ListingArt.sunrise),
-  'Heater': (0, ListingArt.camping),
-  'WiFi': (1, ListingArt.compass),
+  'HotWater': (4, ListingArt.hotSprings),
+  'Heater': (0, ListingArt.hotSprings),
+  'WiFi': (1, ListingArt.antenna),
   'Parking': (2, DetailArt.automobile),
-  'HomeFood': (5, ListingArt.backpack),
+  'HomeFood': (5, ListingArt.potOfFood),
   'MountainView': (3, ListingArt.mountain),
 };
 
@@ -289,7 +289,7 @@ class _StayDetailScreenState extends State<StayDetailScreen> {
                 DetailChipGrid(rules: true, items: [
                   DetailChipItem(tone: ListingTone.cE, art: ListingArt.key, label: 'Check-in', value: StayOptionSets.time12(rules.checkInTime)),
                   DetailChipItem(tone: ListingTone.cB, art: ListingArt.luggage, label: 'Check-out', value: StayOptionSets.time12(rules.checkOutTime)),
-                  DetailChipItem(tone: ListingTone.cA, art: ListingArt.star, label: 'Pets', value: _yesNo(rules.petsAllowed)),
+                  DetailChipItem(tone: ListingTone.cA, art: ListingArt.paw, label: 'Pets', value: _yesNo(rules.petsAllowed)),
                   DetailChipItem(
                     tone: ListingTone.cF,
                     art: ListingArt.clipboard,

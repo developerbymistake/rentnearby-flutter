@@ -20,16 +20,11 @@ class HomeStayRailCard extends StatelessWidget {
     final url = item.thumbnailUrl;
     final hasPhoto = url != null && url.isNotEmpty;
     final sticker = stickers[index % stickers.length];
-    final chips = [
-      if (item.isFeatured) 'Featured',
-      for (final f in item.facts.take(3)) f.label,
-    ];
     return MealsCardV(
       tone: ListingTone.list(ListingTone.forest, index),
       tag: item.tagLabel,
       title: item.title,
       description: item.locationLabel,
-      chips: chips,
       photo: hasPhoto ? KitPhoto(url: url, width: 100, height: 100, asset: TravelIcon.stay, iconSize: 40) : null,
       sticker: hasPhoto ? sticker : null,
       art: hasPhoto ? null : ListingArt.hotel,

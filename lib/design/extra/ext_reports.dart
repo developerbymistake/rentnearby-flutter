@@ -369,7 +369,7 @@ class ReportReasonCard extends StatelessWidget {
           Positioned(
             left: 6,
             top: narrow ? -40 : -52,
-            child: ExcludeSemantics(child: Art3D(asset: ListingArt.pushpin, size: artSize, halo: artSize + 4, haloColor: const Color(0x3DFAFAFA), haloDy: 3)),
+            child: ExcludeSemantics(child: Art3D(asset: ListingArt.warning, size: artSize, halo: artSize + 4, haloColor: const Color(0x3DFAFAFA), haloDy: 3)),
           ),
         ],
       ),
@@ -440,7 +440,7 @@ class ReportSheetArt extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const ExcludeSemantics(
-      child: Art3D(asset: ListingArt.pushpin, size: 136, halo: 140, haloColor: Color(0x4DFFFFFF), haloDy: 3, shadowBlur: 7, shadowOffset: Offset(5, 9), shadowAlpha: 0.3),
+      child: Art3D(asset: ListingArt.warning, size: 136, halo: 140, haloColor: Color(0x4DFFFFFF), haloDy: 3, shadowBlur: 7, shadowOffset: Offset(5, 9), shadowAlpha: 0.3),
     );
   }
 }

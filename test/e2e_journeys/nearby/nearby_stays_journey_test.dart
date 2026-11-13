@@ -188,11 +188,11 @@ void main() {
     expect(find.text('Showing near you'), findsNothing);
   });
 
-  testWidgets('top area has only the old controls: Search, location pill, Filter & Sort', (t) async {
+  testWidgets('top area has the place search input and Filter & Sort', (t) async {
     _setUpApp();
     _ctrl.answer = (_, _) => NearbyPage(items: [_item('a'), _item('b')]);
     await _open(t);
-    expect(find.bySemanticsLabel('Search'), findsOneWidget);
+    expect(find.bySemanticsLabel('Search a place or area'), findsOneWidget);
     expect(find.text('Filter & Sort'), findsOneWidget);
     for (final gone in ['Showing near you', 'Search any place', 'Use my location', 'Using my location']) {
       expect(find.text(gone), findsNothing);
@@ -232,7 +232,7 @@ void main() {
     _setUpApp();
     _ctrl.answer = (_, _) => NearbyPage(items: [_item('a')]);
     await _open(t);
-    await t.tap(find.bySemanticsLabel('Search'));
+    await t.tap(find.bySemanticsLabel('Search a place or area'));
     await t.pump(const Duration(milliseconds: 600));
     expect(find.byType(TextField), findsOneWidget);
   });

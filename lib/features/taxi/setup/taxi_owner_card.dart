@@ -53,7 +53,7 @@ class TaxiOwnerCard extends StatelessWidget {
 
     final (String? stripArt, String? strip, String? stripAction) = taxi.isRejected
         ? (
-            ListingArt.pushpin,
+            ListingArt.warning,
             taxi.rejectedReason != null && taxi.rejectedReason!.isNotEmpty ? 'Rejected: ${taxi.rejectedReason}' : 'Rejected',
             'Fix and resubmit',
           )

@@ -30,21 +30,15 @@ class ReportListingSheet extends StatefulWidget {
     ModulePalette palette = templateModulePalette,
     String? tripEnquiryId,
   }) {
-    return showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
+    return showDockSheet(
+      context,
       backgroundColor: Colors.transparent,
       elevation: 0,
-      builder: (_) => Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom,
-        ),
-        child: ReportListingSheet(
-          listingId: listingId,
-          listingType: listingType,
-          palette: palette,
-          tripEnquiryId: tripEnquiryId,
-        ),
+      builder: (_) => ReportListingSheet(
+        listingId: listingId,
+        listingType: listingType,
+        palette: palette,
+        tripEnquiryId: tripEnquiryId,
       ),
     );
   }
@@ -154,7 +148,7 @@ class _ReportListingSheetState extends State<ReportListingSheet> {
   Widget build(BuildContext context) {
     final tone = _tone;
     final mq = MediaQuery.of(context);
-    final avail = mq.size.height - mq.padding.top - 60 - mq.viewInsets.bottom;
+    final avail = mq.size.height - mq.padding.top - 60 - SheetInsets.lift(context);
     final height = math.max(320.0, math.min(744.0 + mq.padding.bottom, avail));
     const room = ReportSheetBand.artRoom;
     return SizedBox(

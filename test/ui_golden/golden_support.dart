@@ -1,3 +1,5 @@
+import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:bakhli/design/tokens/design_colors.dart';
 import 'package:flutter/services.dart';
@@ -12,7 +14,8 @@ Future<void> loadGoldenFonts() async {
   for (final e in families.entries) {
     final loader = FontLoader(e.key);
     for (final w in e.value) {
-      loader.addFont(rootBundle.load('assets/fonts/${e.key}-$w.ttf'));
+      final path = 'assets/fonts/${e.key}-$w.ttf';
+      loader.addFont(e.key == 'Roboto' ? Future<ByteData>.value(ByteData.sublistView(File(path).readAsBytesSync())) : rootBundle.load(path));
     }
     await loader.load();
   }

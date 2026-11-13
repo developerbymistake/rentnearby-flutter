@@ -15,6 +15,7 @@ class _Fake {
   Completer<void>? gate;
   final fetched = <(ListingKind, String)>[];
   final dialed = <String>[];
+  final whatsApped = <String>[];
   final routes = <(String, Object?)>[];
   final created = <(String, String)>[];
   final infos = <String>[];
@@ -27,6 +28,7 @@ class _Fake {
         },
         currentUserId: () => 'me',
         dial: (p) async => dialed.add(p),
+        openWhatsApp: (p) async => whatsApped.add(p),
         createConversation: (type, id) async {
           created.add((type, id));
           return null;
@@ -114,13 +116,40 @@ void main() {
     expect(fake.dialed, ['9876543210']);
   });
 
-  testWidgets('browse Enquiry goes through the chat helper, not onOpen', (t) async {
+  testWidgets('browse WhatsApp opens WhatsApp with the driver number, not onOpen', (t) async {
+    fake.contact = const ListingContact(ownerId: 'driver', phone: '9876543210', whatsApp: '9811122233');
     await _pump(t, TaxiCard(item: _taxi(match: false), onOpen: () => opened++));
-    await _tap(t, TaxiCard.enquiryKey);
-    expect(opened, 0);
+    await _tap(t, TaxiCard.whatsAppKey);
+    expect(fake.fetched, [(ListingKind.taxi, 't1')]);
+    expect(fake.whatsApped, ['9811122233']);
+    expect(fake.dialed, isEmpty);
     expect(fake.created, isEmpty);
+    expect(fake.routes, isEmpty);
+    expect(opened, 0);
+  });
+
+  testWidgets('browse WhatsApp falls back to the call number', (t) async {
+    fake.contact = const ListingContact(ownerId: 'driver', phone: '9876543210');
+    await _pump(t, TaxiCard(item: _taxi(match: false), onOpen: () => opened++));
+    await _tap(t, TaxiCard.whatsAppKey);
+    expect(fake.whatsApped, ['9876543210']);
+  });
+
+  testWidgets('browse WhatsApp with a hidden number opens the detail with the fare', (t) async {
+    fake.contact = const ListingContact(ownerId: 'driver');
+    await _pump(t, TaxiCard(item: _taxi(), onOpen: () => opened++));
+    await _tap(t, TaxiCard.whatsAppKey);
+    expect(fake.whatsApped, isEmpty);
+    expect(fake.infos, [ListingContactActions.phoneHiddenMessage]);
     expect(fake.routes.single.$1, AppRoutes.taxiDetail);
-    expect(fake.routes.single.$2, {'id': 't1'});
+    expect(fake.routes.single.$2, {'matchedFare': 5200, 'matchedToName': 'Nainital', 'id': 't1'});
+  });
+
+  testWidgets('browse card has Call and WhatsApp, no Enquiry', (t) async {
+    await _pump(t, TaxiCard(item: _taxi(match: false), onOpen: () => opened++));
+    expect(find.text('Call'), findsOneWidget);
+    expect(find.text('WhatsApp'), findsOneWidget);
+    expect(find.text('Enquiry'), findsNothing);
   });
 
   testWidgets('card tap opens the detail', (t) async {
@@ -137,7 +166,7 @@ void main() {
       t,
       TaxiCard(item: _taxi(), onOpen: () => opened++, onSelect: () {}, onEnquire: () => enquired++),
     );
-    expect(find.byKey(TaxiCard.enquiryKey), findsNothing);
+    expect(find.byKey(TaxiCard.whatsAppKey), findsNothing);
     await t.ensureVisible(find.text('Enquiry'));
     await t.tap(find.text('Enquiry'));
     await t.pump();

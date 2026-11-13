@@ -108,12 +108,10 @@ List<TourStep> _buildHomeSteps() {
     TourStep(
       key: TourKeys.homeManageListingsCard,
       icon: Iconsax.building,
-      title: owner ? 'List your own place' : 'Find your next place',
+      title: owner ? 'Plan and manage' : 'Plan your trip',
       body: owner
-          ? (canStays ? 'Tap this card to manage your stay.' : 'Tap this card to manage your taxi.')
-          : browseNames.length > 1
-              ? 'This card slides between ${_joinNames(browseNames)} — tap it to start browsing.'
-              : 'Tap this card to start browsing.',
+          ? 'This card slides between trips and your ${canStays ? 'stay' : 'taxi'}. Tap it to open one.'
+          : 'This card slides between ${_joinNames(['trips', ...browseNames])}. Tap it to open one.',
     ),
     if (canStays)
       TourStep(

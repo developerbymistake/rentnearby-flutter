@@ -552,7 +552,7 @@ class _TripRepliesScreenState extends State<TripRepliesScreen> with TickerProvid
           danger: true,
           onTap: live(() => TripCancelSheet.show(context, enquiry: e!, ownerSide: false)),
         ),
-      MenuItem3D(label: TripStrings.report, art: ListingArt.roundPushpin, danger: true, onTap: () => TripReport.stay(context, x.stayId, tripEnquiryId: e?.id)),
+      MenuItem3D(label: TripStrings.report, art: ListingArt.warning, danger: true, onTap: () => TripReport.stay(context, x.stayId, tripEnquiryId: e?.id)),
     ];
 
     return ReplyCard3D(

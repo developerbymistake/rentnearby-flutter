@@ -8,6 +8,7 @@ import '../tokens/type_tokens.dart';
 import '../tokens/util_tokens.dart';
 import 'buttons_kit.dart';
 import 'card_kit.dart';
+import 'dock_inset.dart';
 import 'kit_tone.dart';
 import 'module_header.dart';
 import 'state_card.dart';
@@ -18,7 +19,7 @@ import '../tokens/listing_palette.dart';
 
 class SetupAssets {
   static const String _dir = 'assets/images/design/travel3d/';
-  static const String hotel = '${_dir}hotel.png';
+  static const String hotel = '${_dir}house_with_garden.png';
   static const String bed = '${_dir}bed.png';
   static const String clipboard = '${_dir}clipboard.png';
   static const String key = '${_dir}key.png';
@@ -105,8 +106,8 @@ class SetupKit {
   }
 
   static Future<T?> sheet<T>(BuildContext context, {required WidgetBuilder builder}) {
-    return showModalBottomSheet<T>(
-      context: context,
+    return showDockSheet<T>(
+      context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       barrierColor: DesignColors.scrim,

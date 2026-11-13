@@ -41,7 +41,7 @@ void main() {
       await tester.pumpWidget(_host(HomeTaxiRailCard(taxi: _taxi(), onOpen: () => taps++), scale: scale));
       expect(find.textContaining('Featured'), findsOneWidget);
       expect(find.text('Innova Crysta'), findsOneWidget);
-      expect(find.text('7 seats'), findsOneWidget);
+      expect(find.text('7 seats'), findsNothing);
       expect(find.textContaining('1,800'), findsOneWidget);
       expect(find.text('FARE FROM'), findsOneWidget);
       expect(tester.takeException(), isNull);

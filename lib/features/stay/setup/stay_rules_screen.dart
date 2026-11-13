@@ -149,7 +149,7 @@ class _StayRulesScreenState extends State<StayRulesScreen> {
                     title: 'House Rules',
                     tag: 'Required',
                     child: Column(children: [
-                      _switchRow('Pets allowed', ListingArt.backpack, _pets, (v) => _pets = v),
+                      _switchRow('Pets allowed', ListingArt.paw, _pets, (v) => _pets = v),
                       _switchRow('Smoking allowed', ListingArt.camping, _smoking, (v) => _smoking = v),
                       _switchRow('Alcohol allowed', ListingArt.star, _alcohol, (v) => _alcohol = v),
                       _switchRow('Unmarried couples allowed', ListingArt.key, _couples, (v) => _couples = v),

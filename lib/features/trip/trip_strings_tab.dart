@@ -12,9 +12,8 @@ class TripStringsTab {
   static const String errorSub = 'Check your connection and try again';
   static const String retry = 'Try again';
   static const String noCitiesTitle = 'No cities yet';
-  static const String noCitiesSub = 'Trips are coming soon';
+  static const String noCitiesSub = 'No cities are listed right now';
   static const String showAllStates = 'Show all states';
-  static const String comingSoon = 'Coming soon';
   static const String clearSearch = 'Clear search';
   static String myTripsCount(int n) => n > 0 ? '$myTrips ($n)' : myTrips;
   static String cityUnit(int spots) => spots == 1 ? 'place' : 'places';

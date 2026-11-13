@@ -88,47 +88,6 @@ class TripMustSeeRail extends StatelessWidget {
   }
 }
 
-class TripQuickStartRail extends StatelessWidget {
-  final List<TripQuickStart> bundles;
-  final void Function(TripQuickStart) onTap;
-  final String Function(String id)? nameOf;
-
-  const TripQuickStartRail({super.key, required this.bundles, required this.onTap, this.nameOf});
-
-  static const List<String> _arts = [ListingArt.beach, ListingArt.star, ListingArt.mountain];
-
-  @override
-  Widget build(BuildContext context) => Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          TripSpotsSectionHead(title: TripStringsSpotsX.quickStarts, sub: TripStringsSpotsX.quickSub),
-          MealsRail(
-            children: [
-              for (var i = 0; i < bundles.length; i++)
-                MealsCardV(
-                  tone: _tone,
-                  width: 176,
-                  titleLines: 2,
-                  art: _arts[i % _arts.length],
-                  title: bundles[i].title,
-                  description: _names(bundles[i]),
-                  number: '${bundles[i].ids.length}',
-                  unit: 'places',
-                  semanticsLabel: '${bundles[i].title}, ${bundles[i].ids.length} places',
-                  onTap: () => onTap(bundles[i]),
-                ),
-            ],
-          ),
-        ],
-      );
-
-  String _names(TripQuickStart b) {
-    final f = nameOf;
-    if (f == null) return '';
-    return b.ids.map(f).where((e) => e.isNotEmpty).take(2).join('\n');
-  }
-}
-
 class TripSuggestionCard extends StatelessWidget {
   final String text;
   final VoidCallback onAdd;

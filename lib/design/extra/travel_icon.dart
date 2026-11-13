@@ -8,7 +8,11 @@ class TravelIcon extends StatelessWidget {
 
   static const String _dir = 'assets/images/design/travel3d/';
   static const String taxi = '${_dir}taxi.png';
-  static const String stay = '${_dir}hotel.png';
+  static const String stay = '${_dir}house_with_garden.png';
+  static const String search = '${_dir}magnifying_glass_tilted_left.png';
+  static const String profile = '${_dir}bust_in_silhouette.png';
+  static const String flag = '${_dir}chequered_flag.png';
+  static const String warning = '${_dir}warning.png';
   static const String route = '${_dir}compass.png';
   static const String chat = '${_dir}speech_balloon.png';
   static const String place = '${_dir}round_pushpin.png';

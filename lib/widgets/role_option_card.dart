@@ -35,9 +35,9 @@ class RoleVisuals {
       };
 
   static String iconAsset(String key) => switch (key) {
-        UserRoleKeys.stayOwner => '${_dir}hotel.png',
+        UserRoleKeys.stayOwner => '${_dir}house_with_garden.png',
         UserRoleKeys.taxiDriver => '${_dir}taxi.png',
-        _ => '${_dir}backpack.png',
+        _ => '${_dir}luggage.png',
       };
 
   static Color start(String key) => switch (key) {

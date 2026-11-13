@@ -217,7 +217,7 @@ class _UpdateBodyState extends State<_UpdateBody> {
     ];
     return TripSheetFrame(
       tone: tone,
-      art: widget.peopleOnly ? ListingArt.backpack : ListingArt.calendar,
+      art: widget.peopleOnly ? ListingArt.guests : ListingArt.calendar,
       size: strips.length > 2 ? SheetSize.list : SheetSize.confirm,
       title: TripStringsV2Find.updateAskTitle,
       description: _body(first),

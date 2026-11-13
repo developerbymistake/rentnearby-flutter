@@ -295,6 +295,18 @@ void main() {
       }
     }
 
+    testWidgets('state chips are one horizontal row', (t) async {
+      Get.put<TripCityCatalog>(_Catalog(), permanent: true);
+      setGoldenView(t, const Size(300, 900));
+      await t.pumpWidget(const MaterialApp(home: Scaffold(body: JobsCitySheetV2())));
+      await t.pumpAndSettle();
+      expect(find.descendant(of: find.byType(JobsCitySheetV2), matching: find.byType(Wrap)), findsNothing);
+      final scroll = find.byWidgetPredicate((w) => w is SingleChildScrollView && w.scrollDirection == Axis.horizontal);
+      expect(scroll, findsOneWidget);
+      expect(find.descendant(of: scroll, matching: find.text('All')), findsOneWidget);
+      expect(t.takeException(), isNull);
+    });
+
     testWidgets('tapping a city returns it', (t) async {
       Get.put<TripCityCatalog>(_Catalog(), permanent: true);
       setGoldenView(t, const Size(360, 900));

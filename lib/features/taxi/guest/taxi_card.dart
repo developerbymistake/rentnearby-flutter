@@ -73,8 +73,7 @@ class TaxiCard extends StatelessWidget {
     ];
     final d = distance;
     if (inLabel == null && !_tripMode) {
-      return Obx(() => _card(context, t, vehicle, chips, fareValue, fareUnit, d,
-          _browseRow(context, ListingContactActions.isBusy(ListingKind.taxi, t.id))));
+      return Obx(() => _card(context, t, vehicle, chips, fareValue, fareUnit, d, _browseRow(context)));
     }
     return _card(context, t, vehicle, chips, fareValue, fareUnit, d,
         inLabel != null ? const [] : _enquiryRow());
@@ -105,26 +104,27 @@ class TaxiCard extends StatelessWidget {
       d.isFar ? NearbyStrings.far(d.city, d.state, d.km) : NearbyLabelText.textFor(d, taxi: true);
 
   static const callKey = ValueKey('taxi-card-call');
-  static const enquiryKey = ValueKey('taxi-card-enquiry');
+  static const whatsAppKey = ValueKey('taxi-card-whatsapp');
 
   Map<String, dynamic>? get _detailArguments => item.isMatch
       ? {'matchedFare': ?item.matchedFare, 'matchedToName': ?item.matchedToName}
       : null;
 
-  List<WideAction> _browseRow(BuildContext context, bool busy) => [
+  List<WideAction> _browseRow(BuildContext context) => [
         WideAction(
           icon: Icons.call_rounded,
           label: 'Call',
-          busy: busy,
+          busy: ListingContactActions.isBusy(ListingKind.taxi, item.id, action: ListingContactActions.actionCall),
           itemKey: callKey,
           onTap: () => ListingContactActions.call(context,
               kind: ListingKind.taxi, id: item.id, detailArguments: _detailArguments),
         ),
         WideAction(
-          icon: Icons.mail_rounded,
-          label: TripStrings.enquiry,
-          itemKey: enquiryKey,
-          onTap: () => ListingContactActions.chat(context,
+          icon: Icons.chat_rounded,
+          label: 'WhatsApp',
+          busy: ListingContactActions.isBusy(ListingKind.taxi, item.id, action: ListingContactActions.actionWhatsApp),
+          itemKey: whatsAppKey,
+          onTap: () => ListingContactActions.whatsApp(context,
               kind: ListingKind.taxi, id: item.id, detailArguments: _detailArguments),
         ),
       ];

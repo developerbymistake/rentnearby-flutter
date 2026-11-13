@@ -129,8 +129,8 @@ Business onboarding (Stay/Taxi only): `DistrictModel.businessOnboardingEnabled` 
 
 **Pin/radius mechanics** (client-side only; shared by Stay/Taxi/Jobs setup): pin placement is capped to 500m from the
 user's live GPS fix (`add_listing_location_mixin.dart`, kept as the shared pin mixin) against a client-computed
-distance. Radius is a fixed 3-value chip selector, `AppConstants.radiusOptions = [1.0, 6.0, 12.0]`
-(km), not a slider. `explore_location_search_mixin.dart` and `LocationSearchSheet` are shared by Stay, Taxi and Jobs search.
+distance. Radius is a fixed chip selector, `AppConstants.radiusOptions = [1.0, 6.0, 12.0, 20.0]`
+(km), not a slider; the default is `AppConstants.defaultRadiusKm = 12` (never `.last`). The Stay map is distance based: `/stays/nearby?latitude&longitude&radius[&stayTypeId]` and `/stays/nearest` (100 km cap), no district, cityKey or Atlas. `PlaceSearchBar` (Photon, `ExploreLocationSearchMixin` + `NearbyCentreController`) replaces the city pill on the Stay map and Stay listing; `LocationSwitchSheet`/`LocationPill` are kept but unused there. Sheets lift above the dock via `DockLift` (`Sheet3D`, `SheetFrame`, `showDockSheet`). New icon constants in `ListingArt`: `stay` (house), `antenna`, `hotSprings`, `potOfFood`, `paw`, `pushpin` (travel3d Fluent 3D). `explore_location_search_mixin.dart` and `LocationSearchSheet` are shared by Stay, Taxi and Jobs search.
 
 **Maps**: `maplibre_gl` (not Google Maps) using a custom style at `assets/map_style.json`. Map-related
 tuning constants (clustering radius, max markers, last-resort fallback centre) live in

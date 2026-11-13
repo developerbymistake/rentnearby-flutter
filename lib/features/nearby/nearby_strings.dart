@@ -11,6 +11,11 @@ class NearbyStrings {
   static String staysNearPlace(String p) => 'Stays near $p';
   static String staysNearestToPlace(String p) => 'Nearest stays to $p';
 
+  static const String backToMyLocation = 'Back to my location';
+  static const String searchPlaceHint = 'Search a place or area';
+  static const String staysNearestEmptyTitle = 'No stays near you';
+  static const String staysNearestEmptyBody = 'Nothing within 100 km. Try another place.';
+
   static const String taxisNear = 'Taxis near you';
   static const String taxisNearest = 'Nearest taxis';
   static String taxisNearPlace(String p) => 'Taxis near $p';

@@ -65,7 +65,7 @@ class WelcomeView extends StatelessWidget {
                 child: Container(
                   constraints: BoxConstraints(maxWidth: 350, maxHeight: 350),
                   child: Image.asset(
-                    'assets/images/design/introduction_animation/welcome.png',
+                    'assets/images/design/introduction_animation/welcome.webp',
                     fit: BoxFit.contain,
                   ),
                 ),

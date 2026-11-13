@@ -110,7 +110,20 @@ abstract final class ListingArt {
 
   static const String taxi = '${_dir}taxi.png';
   static const String bus = '${_dir}bus.png';
-  static const String hotel = '${_dir}hotel.png';
+  static const String stay = '${_dir}house_with_garden.png';
+  static const String hotel = stay;
+  static const String hotelBuilding = '${_dir}hotel.png';
+  static const String search = '${_dir}magnifying_glass_tilted_left.png';
+  static const String profile = '${_dir}bust_in_silhouette.png';
+  static const String guests = '${_dir}busts_in_silhouette.png';
+  static const String briefcase = '${_dir}briefcase.png';
+  static const String flag = '${_dir}chequered_flag.png';
+  static const String warning = '${_dir}warning.png';
+  static const String bulb = '${_dir}light_bulb.png';
+  static const String antenna = '${_dir}antenna_bars.png';
+  static const String paw = '${_dir}paw_prints.png';
+  static const String hotSprings = '${_dir}hot_springs.png';
+  static const String potOfFood = '${_dir}pot_of_food.png';
   static const String bed = '${_dir}bed.png';
   static const String key = '${_dir}key.png';
   static const String luggage = '${_dir}luggage.png';

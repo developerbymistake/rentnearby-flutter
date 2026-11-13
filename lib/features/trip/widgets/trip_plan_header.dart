@@ -341,7 +341,7 @@ class TripPlanHeader extends StatelessWidget {
           if (editable)
             _item(
               TripPlanMenu.editDates,
-              ListingArt.backpack,
+              ListingArt.calendar,
               TripStringsV2Plan.menuEditDates,
             ),
           if (editable)

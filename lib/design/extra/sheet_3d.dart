@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 
 import '../tokens/design_colors.dart';
 import 'art_3d.dart';
+import 'dock_inset.dart';
 import 'pill_buttons_3d.dart';
 
 enum SheetSize { hug, short, confirm, list, form }
@@ -55,11 +56,10 @@ class Sheet3D extends StatelessWidget {
     required WidgetBuilder builder,
     bool isDismissible = true,
     bool enableDrag = true,
-    bool useRootNavigator = false,
   }) => showModalBottomSheet<T>(
     context: context,
     isScrollControlled: true,
-    useRootNavigator: useRootNavigator,
+    useRootNavigator: false,
     isDismissible: isDismissible,
     enableDrag: enableDrag,
     backgroundColor: Colors.transparent,
@@ -67,13 +67,13 @@ class Sheet3D extends StatelessWidget {
     elevation: 0,
     clipBehavior: Clip.none,
     constraints: const BoxConstraints(maxWidth: 560),
-    builder: builder,
+    builder: (c) => DockLift(child: builder(c)),
   );
 
   // Height of the white panel (the art room above it is extra).
   static double heightFor(SheetSize size, BuildContext context) {
     final mq = MediaQuery.of(context);
-    final cap = math.max(240.0, mq.size.height - mq.viewPadding.top - 60 - mq.viewInsets.bottom);
+    final cap = math.max(240.0, mq.size.height - mq.viewPadding.top - 60 - SheetInsets.lift(context));
     final base = switch (size) {
       SheetSize.hug => cap,
       SheetSize.short => 350.0,
@@ -181,7 +181,9 @@ class Sheet3D extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => DockLift(child: Builder(builder: _panel));
+
+  Widget _panel(BuildContext context) {
     final mq = MediaQuery.of(context);
     final a = art;
     final hug = size == SheetSize.hug;
@@ -219,9 +221,7 @@ class Sheet3D extends StatelessWidget {
         ],
       ),
     );
-    return Padding(
-      padding: EdgeInsets.only(bottom: mq.viewInsets.bottom),
-      child: Material(
+    return Material(
         type: MaterialType.transparency,
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -253,7 +253,6 @@ class Sheet3D extends StatelessWidget {
             ),
           ],
         ),
-      ),
     );
   }
 }

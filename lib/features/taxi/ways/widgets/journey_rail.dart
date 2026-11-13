@@ -70,7 +70,7 @@ class JourneyRail extends StatelessWidget {
         ));
       }
     }
-    items.add(JourneyStop3D(top: 0, art: ListingArt.pushpin, title: legs.last.to.name, subtitle: TaxiWaysStrings.youArrive));
+    items.add(JourneyStop3D(top: 0, art: ListingArt.flag, title: legs.last.to.name, subtitle: TaxiWaysStrings.youArrive));
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: items);
   }
 }

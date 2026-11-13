@@ -322,7 +322,7 @@ class _TaxiSetupHubScreenState extends State<TaxiSetupHubScreen> with TickerProv
 
   Widget _rejectedStrip(TaxiOwnerModel t) => FormNoteCard(
         tone: ListingTone.cC,
-        art: ListingArt.pushpin,
+        art: ListingArt.warning,
         title: 'Not approved',
         body: t.rejectedReason,
         titleColor: Form3D.errorText,

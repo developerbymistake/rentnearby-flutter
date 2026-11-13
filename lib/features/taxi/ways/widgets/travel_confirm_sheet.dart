@@ -7,7 +7,6 @@ class TravelConfirmSheet {
     final tone = ListingTone.coral;
     final ok = await Sheet3D.show<bool>(
       context,
-      useRootNavigator: true,
       builder: (sheetCtx) => Sheet3D(
         tone: tone,
         art: ListingArt.taxi,

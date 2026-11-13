@@ -44,6 +44,7 @@ export 'extra/motion_kit.dart';
 export 'extra/card_kit.dart';
 export 'extra/buttons_kit.dart';
 export 'extra/state_card.dart';
+export 'extra/dock_inset.dart';
 export 'extra/sheet_frame.dart';
 export 'extra/module_header.dart';
 export 'extra/template_ports.dart';

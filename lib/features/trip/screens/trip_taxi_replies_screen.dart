@@ -347,7 +347,7 @@ class _TripTaxiRepliesScreenState extends State<TripTaxiRepliesScreen> with Tick
           danger: true,
           onTap: act(true, () => TripCancelSheet.show(context, enquiry: e, ownerSide: false)),
         ),
-      MenuItem3D(label: TripStrings.report, art: ListingArt.roundPushpin, danger: true, onTap: () => _report(e)),
+      MenuItem3D(label: TripStrings.report, art: ListingArt.warning, danger: true, onTap: () => _report(e)),
     ];
     return ReplyCard3D(
       key: ValueKey('taxi-reply-${e.id}'),

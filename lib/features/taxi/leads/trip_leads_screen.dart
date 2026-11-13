@@ -398,7 +398,7 @@ class _LeadCard extends StatelessWidget {
     if (box == null) return;
     final rect = box.localToGlobal(Offset.zero) & box.size;
     showMenu3D(context, anchor: rect, width: 236, coverAnchor: true, items: [
-      MenuItem3D(label: TripStrings.reportTraveller, art: ListingArt.pushpin, onTap: () => TripReportTravellerSheet.show(context, enquiry: e)),
+      MenuItem3D(label: TripStrings.reportTraveller, art: ListingArt.warning, onTap: () => TripReportTravellerSheet.show(context, enquiry: e)),
     ]);
   }
 

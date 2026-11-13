@@ -211,7 +211,7 @@ void main() {
     await t.pumpWidget(const SizedBox());
   });
 
-  testWidgets('HM shows every old stay and taxi field on the rails', (t) async {
+  testWidgets('HM rails keep the main stay and taxi fields and drop seats, stay tags and the taxi description', (t) async {
     setGoldenView(t, const Size(360, 1700));
     await t.pumpWidget(_host(1.0));
     await _settle(t);
@@ -224,8 +224,6 @@ void main() {
       'FOR STAY',
       'Ramesh Kumar Negi',
       'Innova Crysta',
-      '7 seats',
-      'Deluxe room',
       'Innova',
       'FROM',
       'Local taxi',
@@ -234,6 +232,7 @@ void main() {
     ]) {
       expect(find.textContaining(s), findsWidgets, reason: s);
     }
+    expect(find.textContaining('7 seats'), findsNothing);
     await t.pumpWidget(const SizedBox());
   });
 
@@ -241,7 +240,7 @@ void main() {
     setGoldenView(t, const Size(360, 1700));
     await t.pumpWidget(_host(1.0));
     await _settle(t);
-    for (final img in ['fitness_app/bell.png', 'travel3d/speech_balloon.png']) {
+    for (final img in ['travel3d/bell.png', 'travel3d/speech_balloon.png']) {
       await t.tap(find.byWidgetPredicate(
         (w) => w is Image && w.image is AssetImage && (w.image as AssetImage).assetName.endsWith(img),
       ));

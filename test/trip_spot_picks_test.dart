@@ -32,42 +32,6 @@ void main() {
     });
   });
 
-  group('quickStarts', () {
-    test('only categories the city has, at least 2 places, max 3', () {
-      final items = [
-        _s('l1', 'lake', 1),
-        _s('v1', 'viewpoint', 2),
-        _s('t1', 'temple', 3),
-        _s('f1', 'fort', 4),
-        _s('x1', 'attraction', 5),
-      ];
-      final out = TripSpotPicks.quickStarts(items);
-      expect(out.length, lessThanOrEqualTo(3));
-      expect(out.first.id, 'views');
-      expect(out.first.ids, ['l1', 'v1']);
-      expect(out.any((b) => b.id == 'temples'), isFalse);
-      expect(out.every((b) => b.ids.length >= 2 && b.ids.length <= 3), isTrue);
-    });
-
-    test('empty for a city with one place', () {
-      expect(TripSpotPicks.quickStarts([_s('a', 'lake', 1)]), isEmpty);
-    });
-
-    test('bundleAdds skips picked places and respects room', () {
-      const b = TripQuickStart('x', 'X', ['a', 'b', 'c']);
-      expect(TripSpotPicks.bundleAdds(b, {'a'}, 5), ['b', 'c']);
-      expect(TripSpotPicks.bundleAdds(b, {}, 2), ['a', 'b']);
-      expect(TripSpotPicks.bundleAdds(b, {}, 0), isEmpty);
-      expect(TripSpotPicks.bundleAdds(b, {}, -3), isEmpty);
-    });
-
-    test('roomFor takes the tighter of day limit and trip cap', () {
-      expect(TripSpotPicks.roomFor(limit: 6, selected: 2, existing: 0, other: 0), 4);
-      expect(TripSpotPicks.roomFor(limit: -1, selected: 2, existing: 0, other: 0), 58);
-      expect(TripSpotPicks.roomFor(limit: 30, selected: 2, existing: 0, other: 50), 8);
-    });
-  });
-
   group('nearest', () {
     final from = _s('a', 'lake', 1);
     final near = _s('b', 'lake', 2, lat: 29.01);

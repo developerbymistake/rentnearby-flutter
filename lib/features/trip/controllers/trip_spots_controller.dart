@@ -59,15 +59,11 @@ class TripSpotsController extends GetxController {
 
   List<TripSpotModel> get mustSee => TripSpotPicks.mustSee(items);
 
-  List<TripQuickStart> get quickStarts => TripSpotPicks.quickStarts(items);
 
   TripRouteEstimate? get route {
     minutesTick.value;
     return TripSpotPicks.route(chosen, book);
   }
-
-  int get room => TripSpotPicks.roomFor(
-      limit: limit.value, selected: selected.length, existing: existingIds.length, other: otherSpots);
 
   Future<void> _fetchMinutes(List<String> ids) async {
     final list = ids.toSet().take(TripSpotPicks.minutesMax).toList();
@@ -107,14 +103,6 @@ class TripSpotsController extends GetxController {
   }
 
   void dismissSuggestion() => suggestion.value = null;
-
-  List<String> addBundle(TripQuickStart b) {
-    final add = TripSpotPicks.bundleAdds(b, selected, room);
-    selected.addAll(add);
-    return add;
-  }
-
-  void removeAdded(List<String> ids) => selected.removeAll(ids);
 
   bool get isNotReady => status.value == TripSpotStatus.notReady;
 

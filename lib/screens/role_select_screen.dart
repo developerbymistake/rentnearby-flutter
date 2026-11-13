@@ -106,7 +106,11 @@ class _RoleSelectScreenState extends State<RoleSelectScreen> {
                     tone: tone,
                     art: ListingArt.luggage,
                     title: 'Select your role',
-                    subtitle: _correction ? 'One-time change.' : 'You can change it later.',
+                    subtitle: _correction
+                        ? 'One-time change.'
+                        : _selectedKey == UserRoleKeys.seeker
+                            ? 'A later change needs approval.'
+                            : 'You can change this once, before you submit.',
                     onBack: _correction ? () => Get.back() : null,
                   ),
                 ),

@@ -12,7 +12,7 @@ import 'package:bakhli/design/design.dart';
 import 'package:bakhli/features/stay/models/stay_browse_item.dart';
 import 'package:bakhli/features/taxi/models/taxi_browse_item.dart';
 import 'package:bakhli/screens/home_screen.dart';
-import 'package:bakhli/widgets/home_owner_carousel.dart';
+import 'package:bakhli/widgets/home_hero_carousel.dart';
 import 'package:bakhli/widgets/home_stay_rail_card.dart';
 import 'package:bakhli/widgets/home_taxi_rail_card.dart';
 import 'package:bakhli/widgets/nearby_item_row.dart';
@@ -235,7 +235,7 @@ void main() {
               child: Container(color: goldenBg, alignment: Alignment.topCenter, child: child),
             ),
           ),
-          home: const Scaffold(backgroundColor: goldenBg, body: SafeArea(child: HomeOwnerCarousel())),
+          home: const Scaffold(backgroundColor: goldenBg, body: SafeArea(child: HomeHeroCarousel())),
         ));
         await t.pump();
         await t.pump(const Duration(seconds: 2));
@@ -250,8 +250,7 @@ void main() {
       testWidgets('SH golden home_loading @${_s(scale)}', (t) async {
         setGoldenView(t, const Size(360, 1500));
         await t.pumpWidget(_homeHost(scale));
-        await t.pump();
-        await t.pump(const Duration(seconds: 3));
+        await settleGolden(t);
         expect(t.takeException(), isNull);
         await expectLater(
           find.byKey(const ValueKey('golden_root')),
@@ -270,8 +269,7 @@ void main() {
         home.taxisLoading.value = false;
         home.recentlyAddedStaysLoading.value = false;
         await t.pumpWidget(_homeHost(scale));
-        await t.pump();
-        await t.pump(const Duration(seconds: 3));
+        await settleGolden(t);
         expect(t.takeException(), isNull);
         await expectLater(
           find.byKey(const ValueKey('golden_root')),

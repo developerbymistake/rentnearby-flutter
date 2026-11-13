@@ -556,7 +556,7 @@ class JobsDetailHero extends StatelessWidget {
                     child: Align(
                       alignment: const Alignment(0, 0.04),
                       child: ExcludeSemantics(
-                        child: Art3D(asset: ListingArt.backpack, size: 132, halo: 150, haloColor: Colors.white.withValues(alpha: 0.22), shadowBlur: 8, shadowOffset: const Offset(6, 10), shadowAlpha: 0.3),
+                        child: Art3D(asset: ListingArt.briefcase, size: 132, halo: 150, haloColor: Colors.white.withValues(alpha: 0.22), shadowBlur: 8, shadowOffset: const Offset(6, 10), shadowAlpha: 0.3),
                       ),
                     ),
                   ),

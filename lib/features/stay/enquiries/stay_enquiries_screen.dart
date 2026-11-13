@@ -434,7 +434,7 @@ class _EnquiryCard extends StatelessWidget {
           primary = off(TripStrings.sendOffer);
       }
       if ((e.traveller.id ?? '').isNotEmpty) {
-        menu.add(MenuItem3D(label: TripStrings.reportTraveller, art: ListingArt.roundPushpin, danger: true, onTap: () => StayEnquiryActions.reportTraveller(context, e)));
+        menu.add(MenuItem3D(label: TripStrings.reportTraveller, art: ListingArt.warning, danger: true, onTap: () => StayEnquiryActions.reportTraveller(context, e)));
       }
       final ended = e.display != TripDisplayStatus.confirmedByBoth && !e.display.isOpen && e.display != TripDisplayStatus.holdExpired;
       return Stack(
@@ -448,7 +448,7 @@ class _EnquiryCard extends StatelessWidget {
           ),
           ReplyCard3D(
             status: StatusTone3D.of(e.display.name),
-            art: ListingArt.backpack,
+            art: ListingArt.profile,
             pill: TripStatusVisuals.label(e.display, ownerSide: true),
             urgent: e.isUrgent && e.isUnconfirmed,
             title: StayEnquiryFormat.guest(e),

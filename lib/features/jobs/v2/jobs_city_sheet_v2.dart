@@ -88,18 +88,22 @@ class _JobsCitySheetV2State extends State<JobsCitySheetV2> {
           ),
           if (states.length > 1)
             Padding(
-              padding: const EdgeInsets.fromLTRB(18, 14, 18, 4),
-              child: Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  for (var i = 0; i <= states.length; i++)
-                    JobsChoiceChip(
-                      label: i == 0 ? JobsCityStrings.allStates : states[i - 1],
-                      selected: i == 0 ? _state == null : _state == states[i - 1],
-                      onTap: () => setState(() => _state = i == 0 ? null : states[i - 1]),
-                    ),
-                ],
+              padding: const EdgeInsets.only(top: 14, bottom: 4),
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 18),
+                child: Row(
+                  children: [
+                    for (var i = 0; i <= states.length; i++) ...[
+                      if (i > 0) const SizedBox(width: 8),
+                      JobsChoiceChip(
+                        label: i == 0 ? JobsCityStrings.allStates : states[i - 1],
+                        selected: i == 0 ? _state == null : _state == states[i - 1],
+                        onTap: () => setState(() => _state = i == 0 ? null : states[i - 1]),
+                      ),
+                    ],
+                  ],
+                ),
               ),
             ),
           const SizedBox(height: 8),
@@ -170,7 +174,7 @@ class _JobsCitySheetV2State extends State<JobsCitySheetV2> {
                     if (line.isNotEmpty)
                       Padding(
                         padding: const EdgeInsets.only(top: 2),
-                        child: Text(line, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(12.5, FontWeight.w400, Ink3D.grey)),
+                        child: Text(line, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(12.5, FontWeight.w400, Ink3D.grey)),
                       ),
                   ],
                 ),

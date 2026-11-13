@@ -18,10 +18,9 @@ import '../features/nearby/nearby_strings.dart';
 import '../features/stay/setup/stay_flow.dart';
 import '../features/taxi/models/taxi_browse_item.dart';
 import '../features/taxi/setup/taxi_flow.dart';
-import '../features/trip/widgets/trip_home_card.dart';
 import '../features/trip/widgets/trip_popular_rail.dart';
 import '../utils/app_toast.dart';
-import '../widgets/home_owner_carousel.dart';
+import '../widgets/home_hero_carousel.dart';
 import '../widgets/home_stay_rail_card.dart';
 import '../widgets/home_taxi_rail_card.dart';
 import '../widgets/plan_subscription_card.dart';
@@ -36,7 +35,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  static const int _sections = 8;
+  static const int _sections = 7;
   final ScrollController _scroll = ScrollController();
   final ValueNotifier<int> _replay = ValueNotifier<int>(0);
   final ValueNotifier<double> _headerHeight = ValueNotifier<double>(0);
@@ -117,16 +116,15 @@ class _HomeScreenState extends State<HomeScreen> {
                             index: 0,
                             child: KeyedSubtree(
                               key: TourKeys.homeManageListingsCard,
-                              child: const HomeOwnerCarousel(),
+                              child: const HomeHeroCarousel(),
                             ),
                           ),
                           StaggerItem(index: 1, child: _buildPlanNudge()),
                           StaggerItem(index: 2, child: _buildOwnerQuickActions()),
-                          StaggerItem(index: 3, child: _buildTripCard()),
-                          StaggerItem(index: 4, child: const TripPopularRail()),
-                          StaggerItem(index: 5, child: _buildListingsSections()),
-                          StaggerItem(index: 6, child: _buildRecentlyAddedSection()),
-                          StaggerItem(index: 7, child: _buildInstagramCard()),
+                          StaggerItem(index: 3, child: const TripPopularRail()),
+                          StaggerItem(index: 4, child: _buildListingsSections()),
+                          StaggerItem(index: 5, child: _buildRecentlyAddedSection()),
+                          StaggerItem(index: 6, child: _buildInstagramCard()),
                         ],
                       ),
                     ),
@@ -498,8 +496,6 @@ class _HomeScreenState extends State<HomeScreen> {
       onTap: open,
     );
   }
-
-  Widget _buildTripCard() => const TripHomeCard();
 
   Widget _buildInstagramCard() {
     return Padding(

@@ -92,7 +92,8 @@ class AppConstants {
   static const double clusterRadius = 500.0;
   static const int maxMapMarkers = 50;
   static const double clusterCellPx = 48.0;
-  static const List<double> radiusOptions = [1.0, 6.0, 12.0];
+  static const List<double> radiusOptions = [1.0, 6.0, 12.0, 20.0];
+  static const double defaultRadiusKm = 12.0;
   static const int nearestFallbackCount = 5;
   static const double nearestFocusRadiusKm = 1.0;
 }

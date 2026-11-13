@@ -89,8 +89,8 @@ class _PlansBillingScreenState extends State<PlansBillingScreen> {
   void _maybeShowStatusSheet() {
     if (!mounted || _sheetOpen || _plans.activePurchase.value == null) return;
     _sheetOpen = true;
-    showModalBottomSheet<void>(
-      context: context,
+    showDockSheet<void>(
+      context,
       isDismissible: false,
       enableDrag: false,
       isScrollControlled: true,

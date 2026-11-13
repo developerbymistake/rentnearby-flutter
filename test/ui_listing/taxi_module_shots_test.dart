@@ -133,7 +133,8 @@ void main() {
       await pumpPhone(t, const TaxiListScreenV2(root: true), size: Size(cfg.$2, 2600), textScale: cfg.$1);
       await _settle(t);
       await shot(t, 'tab_$tag');
-      expect(find.text('WhatsApp'), findsNothing);
+      expect(find.text('WhatsApp'), findsWidgets);
+      expect(find.text('Enquiry'), findsNothing);
       expect(t.takeException(), isNull);
       debugDisableShadows = true;
     });
@@ -174,7 +175,7 @@ void main() {
     debugDisableShadows = true;
   });
 
-  testWidgets('browse Call and Enquiry use the contact helper, trip cells keep their callbacks', (t) async {
+  testWidgets('browse Call and WhatsApp use the contact helper, trip cells keep their callbacks', (t) async {
     var open = 0, enq = 0, sel = 0, book = 0;
     final fetched = <String>[], routes = <String>[];
     ListingContactActions.busy.clear();
@@ -202,12 +203,12 @@ void main() {
     );
     await t.tap(find.text('Call').first);
     await t.pump();
-    await t.tap(find.text('Enquiry').first);
+    await t.tap(find.text('WhatsApp').first);
     await t.pump();
     expect(open, 0);
-    expect(fetched, hasLength(1));
+    expect(fetched, hasLength(2));
     expect(routes, hasLength(2));
-    await t.tap(find.text('Enquiry').last);
+    await t.tap(find.text('Enquiry'));
     await t.tap(find.text('Select'));
     await t.tap(find.text('I booked'));
     expect((enq, sel, book), (1, 1, 1));

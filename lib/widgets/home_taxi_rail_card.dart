@@ -20,14 +20,12 @@ class HomeTaxiRailCard extends StatelessWidget {
     final chips = [
       if (t.isFeatured) 'Featured',
       if (t.vehicleTypeName.isNotEmpty) t.vehicleTypeName,
-      if (t.seats != null) '${TaxiOptionSets.seatsLabel(t.seats!)} seats',
     ];
     return MealsCardV(
       tone: ListingTone.list(ListingTone.coral, index),
       art: ListingArt.forVehicle(t.vehicleTypeName),
       tag: 'TAXI',
       title: t.driverName,
-      description: t.locality,
       chips: chips,
       caption: hasFare ? 'FARE FROM' : '',
       number: hasFare ? BrowseItem.inr(t.minFare!) : 'Local taxi',

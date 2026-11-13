@@ -103,7 +103,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           final journeys = _auth.taxisEnabled;
                           return _sectionGroup('ACTIVITY', [
                             if (jobs)
-                              IconRow3D(art: ListingArt.luggage, title: 'Jobs', onTap: () => Get.toNamed(AppRoutes.jobs)),
+                              IconRow3D(art: ListingArt.briefcase, title: 'Jobs', onTap: () => Get.toNamed(AppRoutes.jobs)),
                             if (journeys)
                               IconRow3D(
                                 art: ListingArt.compass,
@@ -112,7 +112,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 onTap: () => Get.toNamed(AppRoutes.myJourneys),
                               ),
                             IconRow3D(
-                              art: ListingArt.pushpin,
+                              art: ListingArt.warning,
                               title: 'My Reports',
                               divider: jobs || journeys,
                               onTap: () => Get.toNamed(AppRoutes.myFiledReports),
@@ -254,7 +254,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         Positioned(
           right: 14,
           bottom: -30,
-          child: IgnorePointer(child: ExcludeSemantics(child: Art3D(asset: ListingArt.backpack, size: art, shadowAlpha: 0.3))),
+          child: IgnorePointer(child: ExcludeSemantics(child: Art3D(asset: ListingArt.profile, size: art, shadowAlpha: 0.3))),
         ),
       ],
     );
@@ -274,7 +274,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         child: initials.isNotEmpty
             ? Text(initials, maxLines: 1, style: Ink3D.text(28, FontWeight.w700, DesignColors.onPrimary, letterSpacing: 0))
             : ClipOval(
-                child: Image.asset('assets/images/design/images/userImage.png', width: 54, height: 54, fit: BoxFit.cover)),
+                child: Image.asset('assets/images/design/images/userImage.webp', width: 54, height: 54, fit: BoxFit.cover)),
       ),
     );
   }
@@ -532,30 +532,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
       );
 
   Future<void> _openEditNameSheet() async {
-    await showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
+    await showDockSheet(
+      context,
       backgroundColor: Colors.transparent,
       elevation: 0,
-      builder: (sheetCtx) => Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(sheetCtx).viewInsets.bottom),
-        child: _EditNameSheet(
-          tone: _tone,
-          initialName: _auth.profileName.value.trim(),
-          onSave: (name) async {
-            Navigator.pop(sheetCtx);
-            final ok = await _auth.updateName(name);
-            if (ok && mounted) AppToast.success('Profile updated');
-          },
-          onCancel: () => Navigator.pop(sheetCtx),
-        ),
+      builder: (sheetCtx) => _EditNameSheet(
+        tone: _tone,
+        initialName: _auth.profileName.value.trim(),
+        onSave: (name) async {
+          Navigator.pop(sheetCtx);
+          final ok = await _auth.updateName(name);
+          if (ok && mounted) AppToast.success('Profile updated');
+        },
+        onCancel: () => Navigator.pop(sheetCtx),
       ),
     );
   }
 
   Future<void> _confirmVisibilityChange(bool turningOn) async {
-    await showModalBottomSheet(
-      context: context,
+    await showDockSheet(
+      context,
+      isScrollControlled: false,
       backgroundColor: Colors.transparent,
       elevation: 0,
       builder: (sheetCtx) => RepliesEntrance(
@@ -714,7 +711,7 @@ class _EditNameSheetState extends State<_EditNameSheet> {
     return RepliesEntrance(
       child: _ProfileSheet(
         tone: widget.tone,
-        art: ListingArt.backpack,
+        art: ListingArt.profile,
         title: 'Edit name',
         primaryLabel: 'Save',
         onPrimary: canSave ? () => widget.onSave(_ctrl.text.trim()) : null,

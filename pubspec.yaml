@@ -1,7 +1,7 @@
 name: bakhli
 description: "Bakhli — Plan your trip."
 publish_to: 'none'
-version: 1.0.0+62
+version: 1.0.0+63
 
 environment:
   sdk: ^3.12.0
@@ -108,15 +108,12 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
-    - assets/images/
-    - assets/images/owner_cta/
     - assets/images/design/fitness_app/
     - assets/images/design/hotel/
     - assets/images/design/images/
     - assets/images/design/design_course/
     - assets/images/design/introduction_animation/
     - assets/images/design/travel3d/
-    - assets/sounds/
     - assets/map_style.json
     - assets/sprites/
   fonts:
@@ -137,11 +134,4 @@ flutter:
         - asset: assets/fonts/WorkSans-SemiBold.ttf
           weight: 600
         - asset: assets/fonts/WorkSans-Bold.ttf
-          weight: 700
-    - family: Roboto
-      fonts:
-        - asset: assets/fonts/Roboto-Regular.ttf
-        - asset: assets/fonts/Roboto-Medium.ttf
-          weight: 500
-        - asset: assets/fonts/Roboto-Bold.ttf
           weight: 700
