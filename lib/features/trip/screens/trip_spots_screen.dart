@@ -23,7 +23,6 @@ import '../widgets/trip_city_sheet.dart';
 import '../widgets/trip_spot_row.dart';
 import '../widgets/trip_spots_extras.dart';
 
-const _accent = DesignColors.lunchEnd;
 
 class TripSpotsScreen extends StatefulWidget {
   const TripSpotsScreen({super.key});
@@ -351,41 +350,35 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> with TickerProviderSt
   }
 
   Widget _buildHeader(BuildContext context) {
-    final Widget sub;
+    Widget head(String sub) => PageHeader3D(
+          tone: ListingTone.indigo,
+          title: _city.name,
+          subtitle: sub,
+          art: ListingArt.roundPushpin,
+          artSize: 64,
+          inlineTitle: true,
+          onBack: () => Get.back(),
+        );
+    final Widget body;
     if (_pickDay case final day?) {
-      sub = _subText(_pickHeading(day));
+      body = head(_pickHeading(day));
     } else if (_creating) {
-      sub = Obx(() => _subText(_chain.length > 1
+      body = Obx(() => head(_chain.length > 1
           ? TripStringsV2Create.spotsHeader(_index + 1, _chain.length, _days)
           : TripStringsV2Create.spotsHeaderOne(_days)));
     } else {
-      sub = Obx(() {
+      body = Obx(() {
         final total = _ctrl.total.value;
         final loaded = !_ctrl.isLoading.value &&
             !_ctrl.loadFailed.value &&
             !_ctrl.plannerOff.value &&
             !_ctrl.isNotReady &&
             total > 0;
-        return _subText(loaded ? TripStringsV2Create.placesLine(total) : 'Places to visit');
+        return head(loaded ? TripStringsV2Create.placesLine(total) : 'Places to visit');
       });
     }
-    return ValueListenableBuilder<double>(
-      valueListenable: _barOpacity,
-      builder: (_, o, _) => TemplateTopBar(
-        title: _city.name,
-        subtitle: sub,
-        opacity: o,
-        onBack: () => Get.back(),
-        animation: Tween<double>(begin: 0.0, end: 1.0)
-            .animate(CurvedAnimation(parent: _enter, curve: const Interval(0, 0.5, curve: Curves.fastOutSlowIn))),
-        animationController: _enter,
-      ),
-    );
+    return SafeArea(bottom: false, child: Padding(padding: const EdgeInsets.only(top: 6), child: body));
   }
-
-  Widget _subText(String text) =>
-      Text(text, maxLines: 1, overflow: TextOverflow.ellipsis,
-          style: TypeTokens.style(12, FontWeight.w600, color: TypeTokens.secondary));
 
   void _backTo(int index) {
     var left = _index - index;
@@ -401,27 +394,20 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> with TickerProviderSt
     if (!_creating || _chain.length < 2) return const SizedBox.shrink();
     return Obx(() {
       _ctrl.selected.length;
-      return SizedBox(
-        height: MediaQuery.textScalerOf(context).scale(52),
-        child: ListView.separated(
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.fromLTRB(KitMetrics.gutter, 12, KitMetrics.gutter, 4),
-          itemCount: _chain.length,
-          separatorBuilder: (_, _) => const SizedBox(width: 8),
-          itemBuilder: (_, i) {
-            final c = _chain[i];
-            final current = i == _index;
-            final done = !current && _idsOf(c).isNotEmpty;
-            return KitChainChip(
-              label: done ? TripStringsV2Create.doneCity(c.name, _idsOf(c).length) : c.name,
-              number: i + 1,
-              current: current,
-              done: done,
-              tone: KitTone.trip,
+      return ChipCPRow(
+        padding: const EdgeInsets.fromLTRB(18, 6, 18, 0),
+        children: [
+          for (var i = 0; i < _chain.length; i++)
+            ChipCP(
+              tone: ListingTone.indigo,
+              art: i == _index ? ListingArt.roundPushpin : ListingArt.mountain,
+              label: i != _index && _idsOf(_chain[i]).isNotEmpty
+                  ? TripStringsV2Create.doneCity(_chain[i].name, _idsOf(_chain[i]).length)
+                  : _chain[i].name,
+              off: i != _index,
               onTap: i < _index ? () => _backTo(i) : null,
-            );
-          },
-        ),
+            ),
+        ],
       );
     });
   }
@@ -431,24 +417,19 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> with TickerProviderSt
       final cats = _ctrl.categories;
       if (_ctrl.isLoading.value || _ctrl.plannerOff.value || cats.length <= 1) return const SizedBox.shrink();
       final current = _ctrl.filter.value;
-      return FixedFilterBar(
-        height: MediaQuery.textScalerOf(context).scale(60),
-        child: ListView(
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.fromLTRB(KitMetrics.gutter, 8, KitMetrics.gutter, 8),
-          children: [
-            _chip(TripStrings.allCategories, current == null, () => _ctrl.setFilter(null)),
-            for (final cat in cats) _chip(TripSpotCategory.label(cat), current == cat, () => _ctrl.setFilter(cat)),
-          ],
-        ),
+      return ChipCPRow(
+        padding: const EdgeInsets.fromLTRB(18, 4, 18, 4),
+        children: [
+          _chip(ListingArt.worldMap, TripStrings.allCategories, current == null, () => _ctrl.setFilter(null)),
+          for (final cat in cats)
+            _chip(TripSpotLook.assetOf(cat), TripSpotCategory.label(cat), current == cat, () => _ctrl.setFilter(cat)),
+        ],
       );
     });
   }
 
-  Widget _chip(String label, bool selected, VoidCallback onTap) => Padding(
-        padding: const EdgeInsets.only(right: 8),
-        child: KitChoiceChip(label: label, selected: selected, onTap: onTap, tone: KitTone.trip),
-      );
+  Widget _chip(String art, String label, bool selected, VoidCallback onTap) =>
+      ChipCP(tone: ListingTone.indigo, art: art, label: label, off: !selected, onTap: onTap);
 
   Widget _buildBody() {
     return Obx(() {
@@ -456,7 +437,8 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> with TickerProviderSt
         return _message(const StateCard(
           title: TripStrings.plannerOff,
           message: TripStrings.plannerOffSubtitle,
-          kit: KitTone.trip,
+          kit: KitTone.brand,
+          layout: StateLayout.plain,
         ));
       }
       final items = _ctrl.items;
@@ -467,7 +449,8 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> with TickerProviderSt
         return _message(StateCard.error(
           title: TripStrings.placesFailed,
           message: _ctrl.loadError.value.isEmpty ? TripStrings.checkConnection : _ctrl.loadError.value,
-          kit: KitTone.trip,
+          kit: KitTone.brand,
+          layout: StateLayout.plain,
           actionLabel: TripStrings.retry,
           onAction: _ctrl.load,
         ));
@@ -477,7 +460,8 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> with TickerProviderSt
           asset: TravelIcon.map,
           title: TripStrings.notReadyTitle,
           message: TripStrings.notReadySubtitle(_city.name),
-          kit: KitTone.trip,
+          kit: KitTone.brand,
+          layout: StateLayout.plain,
         ));
       }
       final visible = _ctrl.visible;
@@ -488,7 +472,8 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> with TickerProviderSt
           return _message(StateCard(
             asset: TravelIcon.place,
             title: TripStringsSpotsX.noneIn(TripSpotCategory.label(filter)),
-            kit: KitTone.trip,
+            kit: KitTone.brand,
+          layout: StateLayout.plain,
             actionLabel: TripStringsSpotsX.showAll,
             onAction: () => _ctrl.setFilter(null),
           ));
@@ -496,7 +481,8 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> with TickerProviderSt
         return _message(const StateCard(
           asset: TravelIcon.place,
           title: TripStrings.noPlaces,
-          kit: KitTone.trip,
+          kit: KitTone.brand,
+          layout: StateLayout.plain,
         ));
       }
       final selected = _ctrl.selected.toSet();
@@ -512,13 +498,13 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> with TickerProviderSt
       final heads = <Widget>[
         if (few && filter == null)
           Padding(
-            padding: const EdgeInsets.only(bottom: 10),
+            padding: const EdgeInsets.fromLTRB(18, 10, 18, 0),
             child: Text(
               TripStringsSpotsX.fewPlaces(count),
-              style: TypeTokens.style(12, FontWeight.w600, color: TypeTokens.secondary),
+              style: Ink3D.text(13, FontWeight.w600, Ink3D.grey),
             ),
           ),
-        if (quick.isNotEmpty) TripQuickStartRail(bundles: quick, onTap: _applyBundle),
+        if (quick.isNotEmpty) TripQuickStartRail(bundles: quick, onTap: _applyBundle, nameOf: _nameOf),
         if (mustSee.isNotEmpty)
           TripMustSeeRail(
             city: _city.name,
@@ -530,7 +516,7 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> with TickerProviderSt
       ];
       return ListView.builder(
         controller: _scroll,
-        padding: const EdgeInsets.fromLTRB(KitMetrics.gutter, 12, KitMetrics.gutter, 16),
+        padding: const EdgeInsets.only(bottom: 16),
         itemCount: heads.length + visible.length + (loadingMore ? 1 : 0),
         itemBuilder: (_, k) {
           if (k < heads.length) return _row(k, heads[k]);
@@ -542,7 +528,7 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> with TickerProviderSt
                 child: SizedBox(
                   width: 24,
                   height: 24,
-                  child: CircularProgressIndicator(strokeWidth: 2, color: _accent),
+                  child: CircularProgressIndicator(strokeWidth: 2, color: ListingTone.indigo.g2),
                 ),
               ),
             );
@@ -557,31 +543,30 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> with TickerProviderSt
             onToggle: existing ? null : (_pickDay != null ? () => _pickOne(s) : () => _toggle(s.id)),
           );
           if (sug != null && sug.forId == s.id && _pickDay == null) {
-            return _row(heads.length + i, Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Column(
-                children: [
-                  card,
-                  const SizedBox(height: 6),
-                  TripSuggestionCard(
-                    text: TripSpotPicks.nearbyText(s, sug.nearby),
-                    onAdd: () {
-                      _ctrl.dismissSuggestion();
-                      _toggle(sug.nearby.spot.id);
-                    },
-                    onDismiss: _ctrl.dismissSuggestion,
-                  ),
-                ],
-              ),
+            return _row(heads.length + i, Column(
+              children: [
+                card,
+                TripSuggestionCard(
+                  text: TripSpotPicks.nearbyText(s, sug.nearby),
+                  onAdd: () {
+                    _ctrl.dismissSuggestion();
+                    _toggle(sug.nearby.spot.id);
+                  },
+                  onDismiss: _ctrl.dismissSuggestion,
+                ),
+              ],
             ));
           }
-          return _row(heads.length + i, Padding(padding: const EdgeInsets.only(bottom: 12), child: card));
+          return _row(heads.length + i, card);
         },
       );
     });
   }
 
-  Widget _message(Widget child) => ListView(children: [TemplateStagger(children: [child])]);
+  Widget _message(Widget child) => ListView(
+        padding: const EdgeInsets.only(top: 40),
+        children: [TemplateStagger(children: [child])],
+      );
 
   Widget _row(int k, Widget child) => TemplateEntrance(
         animation: templateInterval(_enter, math.min(k, 7), 8),
@@ -591,46 +576,12 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> with TickerProviderSt
 
   Widget _skeleton() => ListView.builder(
         physics: const NeverScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(KitMetrics.gutter, 14, KitMetrics.gutter, 16),
-        itemCount: 6,
-        itemBuilder: (_, _) => Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          decoration: const BoxDecoration(
-            color: DesignColors.surface,
-            borderRadius: CardRadius.tile,
-            boxShadow: ShadowTokens.elev2,
-          ),
-          child: ClipRRect(
-            borderRadius: CardRadius.tile,
-            child: Column(
-              children: [
-                const AspectRatio(aspectRatio: 2.2, child: TemplatePlaceholder(height: double.infinity, radius: 0)),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 12, 12),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: LayoutBuilder(
-                          builder: (_, c) => Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              TemplatePlaceholder(height: 16, width: c.maxWidth * 0.6),
-                              const SizedBox(height: 8),
-                              TemplatePlaceholder(height: 12, width: c.maxWidth * 0.4),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      const TemplatePlaceholder(height: 36, width: 92, radius: 18),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
+        padding: const EdgeInsets.only(bottom: 16),
+        itemCount: 4,
+        itemBuilder: (_, _) => const WideCardSkeleton(kind: WideKind.photo),
       );
+
+  String _nameOf(String id) => _ctrl.items.firstWhereOrNull((s) => s.id == id)?.title ?? '';
 
   Widget _buildBottomBar(BuildContext context) {
     return Obx(() {
@@ -639,10 +590,7 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> with TickerProviderSt
       if (_pickDay != null) {
         if (!_pickFull) return const SizedBox.shrink();
         return _barFrame(context, [
-          Text(
-            TripStringsV2Create.dayFullMove,
-            style: TypeTokens.style(12, FontWeight.w600, color: TypeTokens.secondary),
-          ),
+          Text(TripStringsV2Create.dayFullMove, style: Ink3D.text(13, FontWeight.w600, Ink3D.grey)),
         ]);
       }
       final nextName = _next?.name;
@@ -663,31 +611,27 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> with TickerProviderSt
           TextSpan(children: [
             TextSpan(
               text: TripStringsV2Create.barCities(parts),
-              style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontWeight: FontWeight.w700, color: DesignColors.textStrong),
+              style: const TextStyle(fontWeight: FontWeight.w700, color: Ink3D.title),
             ),
             TextSpan(text: TripStringsV2Create.barTotal(total)),
           ]),
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
-          style: TypeTokens.style(12, FontWeight.w400, color: TypeTokens.secondary),
+          style: Ink3D.text(12.5, FontWeight.w400, Ink3D.grey),
         ));
       }
       if (_creating && n == 0 && !_canContinue(0)) {
         if (children.isNotEmpty) children.add(const SizedBox(height: 6));
-        children.add(Text(
-          TripStringsV2Create.pickOnePlace,
-          style: TypeTokens.style(12, FontWeight.w600, color: TypeTokens.secondary),
-        ));
+        children.add(Text(TripStringsV2Create.pickOnePlace, style: Ink3D.text(13, FontWeight.w600, Ink3D.grey)));
       }
       if (_canContinue(n)) {
-        if (children.isNotEmpty) children.add(const SizedBox(height: 10));
-        children.add(PrimaryButton(
+        if (children.isNotEmpty) children.add(const SizedBox(height: 12));
+        children.add(GradientPillButton(
+          tone: ListingTone.indigo,
           label: _creating
               ? (nextName == null ? TripStringsV2Create.makeMyPlan : TripStringsV2Create.next(nextName))
               : TripStringsMcaA2.spotsAddToTrip(n),
-          tone: KitTone.trip,
-          trailingArrow: true,
-          onPressed: _planMyDays,
+          onTap: _planMyDays,
         ));
       }
       if (children.isEmpty) return const SizedBox.shrink();
@@ -696,11 +640,11 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> with TickerProviderSt
   }
 
   Widget _barFrame(BuildContext context, List<Widget> children) => Container(
-        padding: EdgeInsets.fromLTRB(KitMetrics.gutter, 12, KitMetrics.gutter, AppInsets.bottomViewPadding(context) + 12),
+        padding: EdgeInsets.fromLTRB(18, 14, 18, AppInsets.bottomViewPadding(context) + 16),
         decoration: const BoxDecoration(
           color: DesignColors.surface,
-          borderRadius: CardRadius.sheet,
-          boxShadow: DesignShadows.top,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          boxShadow: Ink3D.topEdge,
         ),
         child: AnimatedSize(
           duration: const Duration(milliseconds: 220),
@@ -716,27 +660,18 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> with TickerProviderSt
   Widget _buildLimitNotice() {
     return Obx(() {
       if (_pickDay != null || _ctrl.plannerOff.value || !_ctrl.atLimit) return const SizedBox.shrink();
-      return Padding(padding: const EdgeInsets.fromLTRB(KitMetrics.gutter, 2, KitMetrics.gutter, 0), child: _limitNotice());
+      return _limitNotice();
     });
   }
 
   Widget _limitNotice() {
     final tripFull = _counts().fold<int>(0, (a, b) => a + b) >= TripConstants.maxSpots;
     final atMax = _creating && !tripFull;
-    return Container(
-      margin: const EdgeInsets.only(top: 8),
-      padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
-      decoration: const BoxDecoration(color: DesignColors.surface, borderRadius: CardRadius.tile, boxShadow: ShadowTokens.elev1),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              tripFull ? TripStringsMcaA2.maxPlaces : atMax ? TripStringsV2Create.maxDaysReached : _limitText,
-              style: TypeTokens.style(12, FontWeight.w600, color: DesignColors.textPrimary),
-            ),
-          ),
-        ],
-      ),
+    return Banner3D(
+      kind: BannerKind.warn,
+      art: ListingArt.clipboard,
+      title: tripFull ? TripStringsMcaA2.maxPlaces : atMax ? TripStringsV2Create.maxDaysReached : _limitText,
+      margin: const EdgeInsets.fromLTRB(18, 10, 18, 2),
     );
   }
 }

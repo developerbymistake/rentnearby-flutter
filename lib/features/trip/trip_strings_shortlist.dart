@@ -5,8 +5,11 @@ class TripStringsShortlist {
   static const full = 'Your shortlist is full. Remove one to add another.';
   static const noReply = 'No reply';
   static const reviewTitle = 'Great picks';
-  static const yesSendAll = 'Yes, send to all';
+  static const sendAll = 'Send to all';
   static const notNow = 'Not now';
+  static const staysNear = 'Stays near';
+  static const yourLocation = 'Your location';
+  static String centreOf(String city) => '$city centre';
   static const sending = 'Sending';
   static const taxiFallback = 'Taxi';
   static const pickFirst = 'Pick up to 3 from the list, or go back and choose another option.';
@@ -15,6 +18,9 @@ class TripStringsShortlist {
   static const emptyFull = '$emptyTitle $emptyBody';
   static const searchAgain = 'Search again';
   static const loadingTaxis = 'Looking for taxis on this route';
+
+  static const tapDone = 'Tap Done to send your enquiry';
+  static String pickDrivers(int max) => 'Pick up to $max drivers';
 
   static String barCount(int n, int max) => '$n of $max shortlisted';
 

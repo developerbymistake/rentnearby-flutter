@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:bakhli/features/trip/widgets/trip_ui.dart';
 import 'package:bakhli/design/design.dart';
-import 'package:bakhli/design/extra/replies_kit.dart';
+import 'package:bakhli/design/extra/ext_trip_replies.dart';
 import 'package:flutter/services.dart';
 import '../../../models/browse_item.dart';
 import '../../../utils/app_toast.dart';
@@ -14,7 +13,6 @@ import '../trip_strings.dart';
 import '../trip_strings_a5.dart';
 import '../utils/trip_format.dart';
 import '../utils/trip_money.dart';
-import 'trip_payment_line.dart';
 import 'trip_sheet_frame.dart';
 
 class TripCounterSheet {
@@ -34,8 +32,6 @@ class _CounterBody extends StatefulWidget {
 }
 
 class _CounterBodyState extends State<_CounterBody> {
-  static const _inputStyle = TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 14, color: FitnessAppTheme.darkerText);
-
   final _price = TextEditingController();
   final _note = TextEditingController();
   bool _busy = false;
@@ -73,7 +69,7 @@ class _CounterBodyState extends State<_CounterBody> {
   String? get _basisDates {
     final a = _basis?.checkIn;
     final b = _basis?.checkOut;
-    return a == null || b == null ? null : TripFormat.dateRange(a, b);
+    return a == null || b == null ? null : TripFormat.dayMonthRange(a, b);
   }
 
   @override
@@ -114,142 +110,58 @@ class _CounterBodyState extends State<_CounterBody> {
   @override
   Widget build(BuildContext context) {
     final listed = _listed;
+    final tone = ListingTone.forest;
+    final total = _totalLine();
+    final cut = total?.lastIndexOf(' = ') ?? -1;
+    final sub = [widget.enquiry.listingName, ?_basisDates].where((t) => t.isNotEmpty).join(' · ');
     return TripSheetFrame(
+      tone: tone,
+      art: ListingArt.moneyBag,
       title: TripStrings.proposePrice,
-      description: widget.enquiry.listingName.isEmpty ? null : widget.enquiry.listingName,
-      footer: const TripPaymentLine(text: TripStrings.noPaymentLine),
+      description: sub.isEmpty ? null : sub,
+      footnote: TripStrings.noPaymentLine,
+      footer: GradientPillButton(tone: tone, label: TripStrings.sendMyPrice, loading: _busy, onTap: _busy ? null : _send),
       children: [
-        TemplateStagger(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-        if (listed != null && listed > 0) ...[
-          _listedRow(listed),
-          const SizedBox(height: 14),
-        ],
-        _label(TripStringsA5.perRoomPerNight),
-        TextField(
+        if (listed != null && listed > 0) KeyValueRow(label: TripStrings.listedLabel, value: '${BrowseItem.inr(listed)} ${TripStringsA5.perRoomNightShort}'),
+        PillField(
+          tone: tone,
           controller: _price,
           enabled: !_busy,
+          label: TripStringsA5.perRoomPerNight,
+          firstLabel: listed == null || listed <= 0,
+          leadingArt: ListingArt.moneyBag,
+          prefixText: '₹ ',
           keyboardType: TextInputType.number,
           inputFormatters: [
             FilteringTextInputFormatter.digitsOnly,
             LengthLimitingTextInputFormatter(TripConstants.counterMax.toString().length),
           ],
-          style: _inputStyle,
+          errorText: _fieldError,
           onChanged: (_) => setState(() => _fieldError = null),
-          decoration: _decoration(prefix: '₹ ', error: _fieldError),
         ),
-        if (_totalLine() != null)
-          Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const SizedBox(height: 6),
-          Text(_totalLine()!,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                  fontFamily: FitnessAppTheme.fontName, fontSize: 12.5, fontWeight: FontWeight.w600, color: RepliesTone.accent)),
-          if (_basisDates != null)
-            Text(_basisDates!,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, color: FitnessAppTheme.deactivatedText)),
-        ])
-        else
-          const SizedBox.shrink(),
-        const SizedBox(height: 14),
-        _label(TripStrings.note),
-        TextField(
+        if (total != null)
+          cut > 0
+              ? SummaryBar3D(tone: tone, label: total.substring(0, cut), value: total.substring(cut + 3))
+              : SummaryBar3D(tone: tone, label: total, value: ''),
+        PillField(
+          tone: tone,
           controller: _note,
           enabled: !_busy,
-          minLines: 2,
+          label: TripStrings.note,
+          firstLabel: false,
+          leadingArt: ListingArt.speechBalloon,
+          minLines: 1,
           maxLines: 3,
           textCapitalization: TextCapitalization.sentences,
           inputFormatters: [...noEmojiInputFormatters, LengthLimitingTextInputFormatter(TripConstants.noteMax)],
-          style: _inputStyle,
-          decoration: _decoration(),
         ),
-        const SizedBox(height: 14),
-        _info(TripStrings.counterInfo),
-        const SizedBox(height: 16),
-        TripButton(
-          onPressed: _busy ? null : _send,
-          label: TripStrings.sendMyPrice,
-          loading: _busy,
-          height: 52,
-        ),
-        if (_serverError != null) ...[
-          const SizedBox(height: 8),
-          Text(_serverError!,
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, fontWeight: FontWeight.w600, color: RepliesTone.bad)),
-        ],
-          ],
-        ),
+        Padding(padding: const EdgeInsets.only(top: 12), child: Text(TripStrings.counterInfo, style: RepliesLook.foot)),
+        if (_serverError != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Text(_serverError!, maxLines: 3, overflow: TextOverflow.ellipsis, style: FieldMessage.errorStyle),
+          ),
       ],
     );
   }
-
-  Widget _listedRow(int listed) => Container(
-        constraints: const BoxConstraints(minHeight: 48),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        decoration: BoxDecoration(
-          color: FitnessAppTheme.background,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Row(children: [
-          const Text(TripStrings.listedLabel,
-              maxLines: 1, style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, color: FitnessAppTheme.deactivatedText)),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Wrap(
-              alignment: WrapAlignment.end,
-              spacing: 6,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-                Text(BrowseItem.inr(listed),
-                    style: const TextStyle(
-                      fontFamily: FitnessAppTheme.fontName,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: FitnessAppTheme.deactivatedText,
-                      decoration: TextDecoration.lineThrough,
-                    )),
-                const Text(TripStringsA5.perRoomNightShort,
-                    style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, color: FitnessAppTheme.deactivatedText)),
-              ],
-            ),
-          ),
-        ]),
-      );
-
-  Widget _info(String text) => TripNote(
-        iconAsset: TravelIcon.money,
-        iconSize: 18,
-        child: Text(text,
-            style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, color: FitnessAppTheme.lightText, height: 1.4)),
-      );
-
-  Widget _label(String text) => Padding(
-        padding: const EdgeInsets.only(bottom: 6),
-        child: Text(text,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12.5, fontWeight: FontWeight.w600, color: FitnessAppTheme.lightText)),
-      );
-
-  InputDecoration _decoration({String? prefix, String? error}) => InputDecoration(
-        prefixText: prefix,
-        errorText: error,
-        errorMaxLines: 2,
-        filled: true,
-        fillColor: FitnessAppTheme.background,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Colors.transparent)),
-        focusedBorder:
-            OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: RepliesTone.accent, width: 1.5)),
-        errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: RepliesTone.bad)),
-        focusedErrorBorder:
-            OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: RepliesTone.bad, width: 1.5)),
-      );
 }

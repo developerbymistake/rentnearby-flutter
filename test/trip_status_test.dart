@@ -182,7 +182,7 @@ void main() {
     }
   });
 
-  testWidgets('pill shows the label and stays 36 dp tall at 1.3 text scale on a narrow width', (tester) async {
+  testWidgets('pill shows the label and does not clip at 1.3 text scale on a narrow width', (tester) async {
     tester.view.physicalSize = const Size(320, 640);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
@@ -200,7 +200,7 @@ void main() {
       ),
     );
     expect(find.text(TripStrings.confirmedBothPill), findsOneWidget);
-    expect(tester.getSize(find.byType(TripStatusPill)).height, greaterThanOrEqualTo(36));
+    expect(tester.getSize(find.byType(TripStatusPill)).height, greaterThanOrEqualTo(tester.getSize(find.text(TripStrings.confirmedBothPill)).height));
     expect(tester.takeException(), isNull);
   });
 

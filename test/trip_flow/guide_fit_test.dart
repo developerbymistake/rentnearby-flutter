@@ -36,7 +36,7 @@ void main() {
   });
   tearDown(Get.reset);
 
-  testWidgets('360dp x1.3: all three options sit above the bar without scrolling', (t) async {
+  testWidgets('360dp x1.3: every option scrolls clear of the pinned buttons', (t) async {
     final sl = TripShortlistController(repo: _Repo(), tripId: () async => 't1', offline: () => false, warn: (_) {});
     Get.put<TripShortlistController>(sl);
     final c = TripPlanController();
@@ -58,6 +58,8 @@ void main() {
     final barTop = t.getTopLeft(find.byType(TripGuideBar)).dy;
     for (final label in [TripStringsGuide.optFind, TripStringsGuide.optOwn, TripStringsGuide.optSkip]) {
       expect(find.text(label), findsOneWidget);
+      await t.ensureVisible(find.text(label));
+      await t.pump();
       expect(t.getRect(find.text(label)).bottom, lessThanOrEqualTo(barTop), reason: label);
     }
     expect(t.takeException(), isNull);

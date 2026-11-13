@@ -22,15 +22,15 @@ class SoftUpdateDialog extends StatelessWidget {
           (versionName.isNotEmpty
               ? 'Bakhli $versionName is available with improvements and fixes.'
               : 'A new version of Bakhli is available with improvements and fixes.');
-      return GateDialog(
-        asset: TravelIcon.airplane,
+      return Dialog3D(
+        tone: ListingTone.indigo,
+        art: ListingArt.airplane,
         title: 'Update Available',
         body: body,
-        horizontalActions: true,
-        actions: [
-          GateOutlineButton(label: 'Later', height: 48, onPressed: () => _choose(context, SoftUpdateChoice.later)),
-          GateButton(label: 'Update', height: 48, onPressed: () => _choose(context, SoftUpdateChoice.update)),
-        ],
+        secondaryLabel: 'Later',
+        onSecondary: () => _choose(context, SoftUpdateChoice.later),
+        primaryLabel: 'Update',
+        onPrimary: () => _choose(context, SoftUpdateChoice.update),
       );
     });
   }

@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import '../../../config/app_insets.dart';
 import '../../../config/app_routes.dart';
 import '../../../design/design.dart';
-import '../../../design/extra/taxi_setup_kit.dart';
+import '../../../design/extra/ext_taxi_owner.dart';
 import '../../../models/browse_item.dart';
 import '../../../services/listing_share_service.dart';
 import '../../../utils/app_toast.dart';
@@ -24,6 +23,7 @@ class MyTaxiScreen extends StatefulWidget {
 }
 
 class _MyTaxiScreenState extends State<MyTaxiScreen> with WidgetsBindingObserver, TickerProviderStateMixin {
+  static final ListingTone _tone = ListingTone.coral;
   final _ctrl = TaxiSetupController.ensure();
   final _isSharing = false.obs;
   final _leads = TripLeadsController.ensure();
@@ -42,6 +42,7 @@ class _MyTaxiScreenState extends State<MyTaxiScreen> with WidgetsBindingObserver
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _anim.value = 0;
     _ctrl.load();
     _leads.loadBadge(force: true);
   }
@@ -88,61 +89,75 @@ class _MyTaxiScreenState extends State<MyTaxiScreen> with WidgetsBindingObserver
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: FitnessAppTheme.background,
+      backgroundColor: ListingPalette.coral.page,
       body: Stack(children: [
-        Column(children: [
-          ModuleHeader(
-            title: StayFinStrings.myTaxi,
-            subtitle: StayFinStrings.manageListing,
-            tone: KitTone.taxi,
-            onBack: () => Get.back(),
-          ),
-          PlanCapStrip(accent: PickKit.taxi, icon: Icons.workspace_premium_rounded, showUsage: false),
-          const NotificationOffBanner(),
-          Expanded(
-            child: Obx(() {
-              final loading = _ctrl.isLoading.value;
-              final loaded = _ctrl.hasLoaded.value;
-              final failed = _ctrl.loadFailed.value;
-              final taxi = _ctrl.taxi.value;
-              if (!loaded && loading) return _skeleton();
-              _playOnce();
-              final items = <Widget>[
-                if (failed && taxi == null)
-                  _error()
-                else if (taxi == null)
-                  _empty()
-                else ...[
-                  Builder(builder: (ctx) => Obx(() => _card(ctx, taxi))),
-                  if (!taxi.isPendingReview)
-                    Center(
-                      child: TextButton.icon(
-                        onPressed: _openSetup,
-                        icon: const Icon(Icons.edit_outlined, size: 16, color: FitnessAppTheme.nearlyDarkBlue),
-                        label: Text(StayFinStrings.editSetup,
-                            style: TripKit.text(14, weight: FontWeight.w600, color: FitnessAppTheme.nearlyDarkBlue)),
-                      ),
+        KitStatusBar(
+          lightIcons: false,
+          child: SafeArea(
+            bottom: false,
+            child: Column(children: [
+              PageHeader3D(
+                tone: _tone,
+                title: StayFinStrings.myTaxi,
+                subtitle: StayFinStrings.manageListing,
+                art: ListingArt.taxi,
+                inlineTitle: true,
+                onBack: () => Get.back(),
+              ),
+              PlanCapStrip(accent: PickKit.taxi, icon: Icons.workspace_premium_rounded, iconAsset: ListingArt.moneyBag, showUsage: false),
+              const NotificationOffBanner(),
+              Expanded(
+                child: Obx(() {
+                  final loading = _ctrl.isLoading.value;
+                  final loaded = _ctrl.hasLoaded.value;
+                  final failed = _ctrl.loadFailed.value;
+                  final taxi = _ctrl.taxi.value;
+                  if (!loaded && loading) return _skeleton();
+                  _playOnce();
+                  final items = <Widget>[
+                    if (failed && taxi == null)
+                      _error()
+                    else if (taxi == null)
+                      _empty()
+                    else ...[
+                      Builder(builder: (ctx) => Obx(() => _card(ctx, taxi))),
+                      if (!taxi.isPendingReview)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 22),
+                          child: Center(
+                            child: WhitePillButton(
+                              tone: _tone,
+                              label: StayFinStrings.editSetup,
+                              icon: Icons.edit_rounded,
+                              expand: false,
+                              height: 48,
+                              fontSize: 14.5,
+                              onTap: _openSetup,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ];
+                  return RefreshIndicator(
+                    color: _tone.button,
+                    backgroundColor: FitnessAppTheme.white,
+                    onRefresh: _ctrl.load,
+                    child: ListView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: EdgeInsets.fromLTRB(0, 0, 0, 24 + MediaQuery.paddingOf(context).bottom),
+                      children: [
+                        for (var i = 0; i < items.length; i++)
+                          SetupEntrance(controller: _anim, index: i, count: items.length, child: items[i]),
+                      ],
                     ),
-                ],
-              ];
-              return RefreshIndicator(
-                color: FitnessAppTheme.nearlyDarkBlue,
-                backgroundColor: FitnessAppTheme.white,
-                onRefresh: _ctrl.load,
-                child: ListView(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  padding: EdgeInsets.fromLTRB(KitMetrics.gutter, 16, KitMetrics.gutter, 16 + AppInsets.bottomViewPadding(context)),
-                  children: [
-                    for (var i = 0; i < items.length; i++)
-                      SetupEntrance(controller: _anim, index: i, count: items.length, child: items[i]),
-                  ],
-                ),
-              );
-            }),
+                  );
+                }),
+              ),
+            ]),
           ),
-        ]),
+        ),
         Obx(() => _ctrl.isSaving.value || _isSharing.value
-            ? SetupBusy(message: _isSharing.value ? 'Sharing...' : 'Updating...')
+            ? SetupBusy(message: _isSharing.value ? 'Sharing...' : 'Updating...', tone: KitTone.taxi, art: ListingArt.taxi)
             : const SizedBox.shrink()),
       ]),
     );
@@ -171,27 +186,30 @@ class _MyTaxiScreenState extends State<MyTaxiScreen> with WidgetsBindingObserver
         onLocalRate: _openSetup,
       );
 
-  Widget _empty() => StateCard(
-        asset: TravelIcon.taxi,
+  Widget _empty() => TaxiEmptyCard3D(
+        tone: _tone,
+        art: ListingArt.taxi,
         title: StayFinStrings.noTaxiYet,
         message: StayFinStrings.listTaxiSteps,
-        kit: KitTone.taxi,
         actionLabel: StayFinStrings.setUpTaxi,
         onAction: _openSetup,
-        padding: const EdgeInsets.fromLTRB(32, 48, 32, 24),
       );
 
-  Widget _error() => StateCard.error(
-        title: StayFinStrings.couldNotLoadTaxi,
-        kit: KitTone.taxi,
-        actionLabel: StayFinStrings.tryAgain,
-        onAction: _ctrl.load,
-        padding: const EdgeInsets.fromLTRB(32, 48, 32, 24),
+  Widget _error() => Padding(
+        padding: const EdgeInsets.only(top: 60),
+        child: StateCard3D(
+          tone: _tone,
+          art: ListingArt.clipboard,
+          title: StayFinStrings.couldNotLoadTaxi,
+          actionLabel: StayFinStrings.tryAgain,
+          onAction: _ctrl.load,
+          layout: StateLayout.tall,
+        ),
       );
 
-  Widget _skeleton() => Padding(
-        padding: const EdgeInsets.all(KitMetrics.gutter),
-        child: OwnerListingCard.skeleton(margin: EdgeInsets.zero),
+  Widget _skeleton() => const Padding(
+        padding: EdgeInsets.fromLTRB(18, 24, 18, 0),
+        child: SkeletonFormCard(height: 420),
       );
 
   Future<void> _setAvailable(bool available) async {
@@ -206,47 +224,57 @@ class _MyTaxiScreenState extends State<MyTaxiScreen> with WidgetsBindingObserver
     }
     if (_ctrl.isSaving.value) return;
     final fareCtrl = TextEditingController(text: '${route.fare}');
-    final fare = await SetupKit.sheet<int>(
+    var ring = false;
+    final fare = await Sheet3D.show<int>(
       context,
-      builder: (sheetCtx) => Padding(
-        padding: EdgeInsets.fromLTRB(
-            20, 0, 20, MediaQuery.of(sheetCtx).viewInsets.bottom + AppInsets.bottomViewPadding(sheetCtx) + 16),
-        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-          SetupKit.grabber(),
-          Text('Edit fare', style: TripKit.text(18, weight: FontWeight.w700).copyWith(letterSpacing: 0.27)),
-          const SizedBox(height: 4),
-          Text('${route.fromName} → ${route.toName} · ${TaxiOptionSets.tripLabel(route.tripType)}',
-              maxLines: 2, overflow: TextOverflow.ellipsis, style: TripKit.text(12, color: FitnessAppTheme.grey)),
-          const SizedBox(height: 12),
-          TextField(
-            controller: fareCtrl,
-            autofocus: true,
-            cursorColor: FitnessAppTheme.nearlyDarkBlue,
-            keyboardType: TextInputType.number,
-            inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(7)],
-            style: SetupKit.fieldText(),
-            decoration: SetupKit.input(prefix: '₹ '),
-          ),
-          const SizedBox(height: 16),
-          PickButton(
-            onPressed: () {
+      builder: (sheetCtx) => StatefulBuilder(
+        builder: (sheetCtx, setSheet) => Sheet3D(
+          tone: _tone,
+          art: ListingArt.moneyBag,
+          title: 'Edit fare',
+          subtitle: '${route.fromName} → ${route.toName} · ${TaxiOptionSets.tripLabel(route.tripType)}',
+          centerTitle: false,
+          artRight: true,
+          footer: GradientPillButton(
+            tone: _tone,
+            label: 'Save',
+            onTap: () {
               final text = fareCtrl.text.trim();
               if (text.isEmpty) {
                 AppToast.error('Enter the fare');
+                setSheet(() => ring = true);
                 return;
               }
               final v = int.tryParse(text) ?? 0;
               if (v < TaxiOptionSets.minFare || v > TaxiOptionSets.maxFare) {
                 AppToast.error('Fare must be between ₹100 and ₹99,00,000');
+                setSheet(() => ring = true);
                 return;
               }
               Navigator.pop(sheetCtx, v);
             },
-            label: 'Save',
-            gradient: PickKit.taxiGradient,
-            shadowColor: PickKit.taxiDark,
           ),
-        ]),
+          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            const SizedBox(height: 8),
+            PillField(
+              tone: _tone,
+              controller: fareCtrl,
+              autofocus: true,
+              keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(7)],
+              prefixText: '₹',
+              hint: 'e.g. 4500',
+              errorRing: ring,
+              onChanged: (_) {
+                if (ring) setSheet(() => ring = false);
+              },
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(4, 8, 4, 12),
+              child: Text('Change it if the plan needs more.\nTravellers see this fare on your taxi.', style: FieldMessage.helperStyle.copyWith(fontSize: 12)),
+            ),
+          ]),
+        ),
       ),
     ).whenComplete(() => fareCtrl.dispose());
     if (fare == null || fare == route.fare) return;
@@ -256,8 +284,9 @@ class _MyTaxiScreenState extends State<MyTaxiScreen> with WidgetsBindingObserver
 
   Future<void> _confirmDelete() async {
     if (_ctrl.isSaving.value) return;
-    final ok = await showTaxiDialog(
+    final ok = await showTaxiOwnerDialog(
       context,
+      art: ListingArt.taxi,
       title: 'Delete taxi?',
       body: 'Your taxi, routes and plate photo will be deleted.',
       cancelLabel: 'Cancel',

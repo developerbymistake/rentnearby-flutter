@@ -11,6 +11,10 @@ import 'package:pinput/pinput.dart';
 import '../template/fitness_app_theme.dart';
 import 'template_motion.dart';
 import 'travel_icon.dart';
+import 'art_3d.dart';
+import 'dialog_3d.dart';
+import 'pill_buttons_3d.dart';
+import '../tokens/listing_palette.dart';
 import 'trip_entry_style.dart';
 import 'trip_kit.dart';
 
@@ -327,6 +331,7 @@ class GateDialog extends StatelessWidget {
     this.content,
     this.actions = const <Widget>[],
     this.horizontalActions = false,
+    this.tone,
   });
 
   final String title;
@@ -337,76 +342,58 @@ class GateDialog extends StatelessWidget {
   final Widget? content;
   final List<Widget> actions;
   final bool horizontalActions;
+  final ListingTone? tone;
+
+  static Widget _pill(Widget a, ListingTone tone) {
+    if (a is GateButton) {
+      return GradientPillButton(
+        key: a.key,
+        tone: tone,
+        label: a.label,
+        onTap: a.onPressed,
+        loading: a.isLoading,
+        icon: a.icon,
+        danger: identical(a.gradient, TripEntryStyle.rose),
+        height: 50,
+        fontSize: 15,
+      );
+    }
+    if (a is GateOutlineButton) {
+      return WhitePillButton(
+        key: a.key,
+        tone: tone,
+        label: a.label,
+        onTap: a.onPressed,
+        icon: a.icon,
+        height: 50,
+        fontSize: 15,
+      );
+    }
+    if (a is GateTextButton) {
+      return WhitePillButton(
+        key: a.key,
+        tone: tone,
+        label: a.label,
+        onTap: a.onPressed,
+        danger: a.color != FitnessAppTheme.nearlyDarkBlue,
+        height: 50,
+        fontSize: 15,
+      );
+    }
+    return a;
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Dialog(
-      backgroundColor: Colors.transparent,
-      elevation: 0,
-      insetPadding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
-      child: Stack(
-        clipBehavior: Clip.none,
-        alignment: Alignment.topCenter,
-        children: <Widget>[
-          Container(
-            margin: const EdgeInsets.only(top: 42),
-            padding: const EdgeInsets.fromLTRB(24, 54, 24, 22),
-            decoration: GateKit.heroCard(),
-            child: SingleChildScrollView(
-              child: TemplateStagger(
-                children: <Widget>[
-                  Text(
-                    title,
-                    textAlign: TextAlign.center,
-                    style: FitnessAppTheme.title.copyWith(fontSize: 18),
-                  ),
-                  if (body != null) ...<Widget>[
-                    const SizedBox(height: 8),
-                    Text(
-                      body!,
-                      textAlign: TextAlign.center,
-                      style: GateKit.bodyText.copyWith(height: 1.5),
-                    ),
-                  ],
-                  if (content != null) ...<Widget>[
-                    const SizedBox(height: 12),
-                    content!,
-                  ],
-                  if (actions.isNotEmpty) ...<Widget>[
-                    const SizedBox(height: 20),
-                    horizontalActions
-                        ? Row(
-                            children: <Widget>[
-                              for (
-                                var i = 0;
-                                i < actions.length;
-                                i++
-                              ) ...<Widget>[
-                                if (i > 0) const SizedBox(width: 12),
-                                Expanded(child: actions[i]),
-                              ],
-                            ],
-                          )
-                        : Column(
-                            children: <Widget>[
-                              for (
-                                var i = 0;
-                                i < actions.length;
-                                i++
-                              ) ...<Widget>[
-                                if (i > 0) const SizedBox(height: 8),
-                                actions[i],
-                              ],
-                            ],
-                          ),
-                  ],
-                ],
-              ),
-            ),
-          ),
-          GateBadge(asset: asset, glyph: glyph, gradient: gradient),
-        ],
-      ),
+    final t = tone ?? ListingTone.indigo;
+    return Dialog3D(
+      tone: t,
+      art: asset ?? ListingArt.clipboard,
+      title: title,
+      body: body,
+      content: content,
+      actions: <Widget>[for (final a in actions) _pill(a, t)],
+      actionsHorizontal: horizontalActions,
     );
   }
 }
@@ -558,6 +545,7 @@ class GateStatusPage extends StatelessWidget {
     this.secondary,
     this.footer,
     this.extra,
+    this.tone,
   });
 
   final String asset;
@@ -567,59 +555,123 @@ class GateStatusPage extends StatelessWidget {
   final Widget? secondary;
   final Widget? footer;
   final Widget? extra;
+  final ListingTone? tone;
+
+  static const double panelHeight = 376;
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: FitnessAppTheme.background,
-      child: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) => SingleChildScrollView(
-            child: ConstrainedBox(
-              constraints: BoxConstraints(minHeight: constraints.maxHeight),
-              child: Center(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 32,
-                    vertical: 24,
-                  ),
-                  child: TemplateStagger(
-                    children: <Widget>[
-                      GateBadge(asset: asset, size: 116),
-                      const SizedBox(height: 28),
-                      Text(
-                        title,
-                        textAlign: TextAlign.center,
-                        style: FitnessAppTheme.headline,
+    final t = tone ?? ListingTone.indigo;
+    final mq = MediaQuery.of(context);
+    final scale = mq.textScaler.scale(1);
+    final panel = Container(
+      width: double.infinity,
+      constraints: BoxConstraints(
+        minHeight: panelHeight + mq.viewPadding.bottom,
+      ),
+      padding: EdgeInsets.fromLTRB(24, 30, 24, 34 + mq.viewPadding.bottom),
+      decoration: const BoxDecoration(
+        color: FitnessAppTheme.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+        boxShadow: Ink3D.topEdge,
+      ),
+      child: Align(
+        heightFactor: 1,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              ConstrainedBox(
+                constraints: BoxConstraints(minHeight: 2 * 25 * 1.25 * scale),
+                child: Align(
+                  alignment: Alignment.bottomCenter,
+                  child: Semantics(
+                    header: true,
+                    child: Text(
+                      title,
+                      textAlign: TextAlign.center,
+                      style: Ink3D.text(
+                        25,
+                        FontWeight.w700,
+                        Ink3D.title,
+                        height: 1.25,
                       ),
-                      const SizedBox(height: 10),
-                      Text(
-                        body,
-                        textAlign: TextAlign.center,
-                        style: GateKit.bodyText,
-                      ),
-                      if (extra != null) ...<Widget>[
-                        const SizedBox(height: 10),
-                        extra!,
-                      ],
-                      if (primary != null) ...<Widget>[
-                        const SizedBox(height: 28),
-                        primary!,
-                      ],
-                      if (secondary != null) ...<Widget>[
-                        const SizedBox(height: 8),
-                        secondary!,
-                      ],
-                      if (footer != null) ...<Widget>[
-                        const SizedBox(height: 12),
-                        footer!,
-                      ],
-                    ],
+                    ),
                   ),
                 ),
               ),
-            ),
+              const SizedBox(height: 10),
+              Text(
+                body,
+                textAlign: TextAlign.center,
+                style: Ink3D.text(15, FontWeight.w400, Ink3D.copy, height: 1.5),
+              ),
+              if (extra != null) ...<Widget>[
+                const SizedBox(height: 12),
+                DefaultTextStyle.merge(
+                  textAlign: TextAlign.center,
+                  style: Ink3D.text(13, FontWeight.w400, Ink3D.grey),
+                  child: Center(child: extra!),
+                ),
+              ],
+              if (primary != null) ...<Widget>[
+                const SizedBox(height: 24),
+                primary!,
+              ],
+              if (secondary != null) ...<Widget>[
+                SizedBox(height: primary == null ? 24 : 12),
+                secondary!,
+              ],
+              if (footer != null) ...<Widget>[
+                const SizedBox(height: 12),
+                footer!,
+              ],
+            ],
           ),
+        ),
+      ),
+    );
+    return Material(
+      color: FitnessAppTheme.background,
+      child: LayoutBuilder(
+        builder: (context, box) => Column(
+          children: <Widget>[
+            Expanded(
+              child: Padding(
+                padding: EdgeInsets.only(top: mq.viewPadding.top),
+                child: LayoutBuilder(
+                  builder: (context, top) {
+                    final size = (top.maxHeight - 40)
+                        .clamp(0.0, 206.0)
+                        .toDouble();
+                    if (size < 72) return const SizedBox.shrink();
+                    return Center(
+                      child: ExcludeSemantics(
+                        child: Art3D(
+                          asset: asset,
+                          size: size,
+                          halo: size * 236 / 206,
+                          haloColor: t.haloBase.withValues(alpha: Alpha.v14),
+                          shadowBlur: 10,
+                          shadowOffset: const Offset(8, 12),
+                          shadowAlpha: Alpha.v25,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+            ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight: (box.maxHeight - mq.viewPadding.top - 20)
+                    .clamp(panelHeight, double.infinity)
+                    .toDouble(),
+              ),
+              child: panel,
+            ),
+          ],
         ),
       ),
     );

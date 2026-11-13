@@ -1,4 +1,4 @@
-import 'package:bakhli/design/design.dart';
+import 'package:bakhli/design/extra/ext_notifications.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
@@ -48,14 +48,14 @@ void main() {
     await t.pump(const Duration(milliseconds: 80));
     final card = find.text('Title 0');
     expect(card, findsOneWidget);
-    final before = t.getSize(find.ancestor(of: card, matching: find.byType(ListRow)).first);
+    final before = t.getSize(find.ancestor(of: card, matching: find.byType(NotificationCard3D)).first);
     final rowFinder = find.ancestor(of: card, matching: find.byType(InkWell)).first;
     final rb = t.getSize(rowFinder);
     await t.tap(card);
     await t.pump();
     await t.pump(const Duration(seconds: 1));
     final ra = t.getSize(rowFinder);
-    expect(t.getSize(find.ancestor(of: card, matching: find.byType(ListRow)).first), before);
+    expect(t.getSize(find.ancestor(of: card, matching: find.byType(NotificationCard3D)).first), before);
     await t.drag(find.byType(ListView), const Offset(0, -300));
     await t.pump();
     expect(ra, rb);

@@ -16,6 +16,7 @@ class ShadowSpec {
   static const ShadowSpec elev2Spec = ShadowSpec(0.14, Offset(0.0, 4.0), 14.0);
   static const ShadowSpec elev3Spec = ShadowSpec(0.20, Offset(0.0, 8.0), 20.0);
   static const ShadowSpec glowSpec = ShadowSpec(0.35, Offset(0.0, 6.0), 16.0);
+  static const ShadowSpec tightSpec = ShadowSpec(0.40, Offset(1.1, 4.0), 8.0);
 
   static const ShadowSpec navLift = ShadowSpec(0.4, Offset(8.0, 16.0), 16.0);
   static const ShadowSpec navIdle = ShadowSpec(0.25, Offset(8.0, 16.0), 16.0);
@@ -56,6 +57,8 @@ class ShadowTokens {
   static const List<BoxShadow> elev3Up = [
     BoxShadow(color: Color(0x333A5160), offset: Offset(0, -8), blurRadius: 20),
   ];
+
+  static List<BoxShadow> tight(Color color) => [tint(color, ShadowSpec.tightSpec)];
 
   static List<BoxShadow> glow(Color color) => [tint(color, ShadowSpec.glowSpec)];
 

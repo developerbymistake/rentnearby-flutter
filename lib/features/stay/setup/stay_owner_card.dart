@@ -1,8 +1,10 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../design/design.dart';
+import '../../../design/extra/ext_details.dart';
+import '../../../design/extra/ext_stay_owner.dart';
 import '../../../models/browse_item.dart';
-import '../../../models/card_fact.dart';
 import '../../trip/trip_strings.dart';
 import '../enquiries/stay_enquiry_strings.dart';
 import '../models/stay_owner_model.dart';
@@ -33,241 +35,171 @@ class StayOwnerCard extends StatelessWidget {
     this.enquiryNewCount,
   });
 
+  static final _tone = ListingTone.forest;
+
   @override
   Widget build(BuildContext context) {
-    final photo = stay.photos.isNotEmpty ? stay.photos.first.url : null;
+    final photo = stay.photos.isNotEmpty && stay.photos.first.url.isNotEmpty ? stay.photos.first.url : null;
     final (String label, Color color) = _status();
-    return OwnerListingCard(
+    return OwnerStayCard3D(
+      tone: _tone,
       title: stay.name ?? 'My Stay',
       subtitle: _timeAgo(stay.createdAt),
-      thumbnailUrl: photo,
-      iconAsset: TravelIcon.stay,
-      tone: KitTone.stay,
-      status: label,
+      statusLabel: label,
       statusColor: color,
-      facts: [if (stay.minPricePerNight != null) CardFact('From ${BrowseItem.inr(stay.minPricePerNight!)}/night')],
-      margin: EdgeInsets.zero,
-      body: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-        Text('LOCALITY',
-            style: TypeTokens.style(11, FontWeight.w700, color: DesignColors.textMuted, letterSpacing: 0.6)),
-        const SizedBox(height: 3),
-        Row(children: [
-          const TravelIcon(TravelIcon.place, size: 14),
-          const SizedBox(width: 4),
-          Expanded(child: Text(stay.locality, maxLines: 1, overflow: TextOverflow.ellipsis, style: TypeTokens.caption)),
-        ]),
-      ]),
-      toggle: stay.isApproved ? _toggle() : null,
-      rows: [
-        if (stay.rooms.isNotEmpty) _rooms(),
-        if (onEnquiries != null && !stay.isDraft) ...[_divider, _enquiriesRow()],
-        if (onDelete != null || onPreview != null || onShare != null) ...[_divider, _actions()],
+      photo: photo == null
+          ? _noPhoto()
+          : CachedNetworkImage(imageUrl: photo, fit: BoxFit.cover, placeholder: (_, _) => _noPhoto(), errorWidget: (_, _, _) => _noPhoto()),
+      sticker: ListingArt.hotel,
+      chips: [if (stay.minPricePerNight != null) 'From ${BrowseItem.inr(stay.minPricePerNight!)}/night'],
+      localityLabel: 'LOCALITY',
+      locality: stay.locality,
+      actions: [
+        if (onPreview != null) OwnerAction(icon: Icons.visibility_outlined, label: 'View', onTap: onPreview),
+        if (onShare != null) OwnerAction(icon: Icons.ios_share_rounded, label: 'Share', onTap: onShare),
+        if (onDelete != null) OwnerAction(icon: Icons.close_rounded, label: 'Delete', onTap: onDelete, danger: true),
       ],
-      strips: [
+      children: [
+        if (stay.rooms.isNotEmpty) OwnerRoomsBox(rows: [for (final r in stay.rooms) _roomRow(r)]),
         if (stay.pendingReportCount > 0) _reportStrip(),
-        if (stay.isRejected) _rejectStrip(),
-        if (stay.isDraft)
-          _strip(
-            color: KitTone.stay.accentDark,
-            icon: Icons.edit_calendar_rounded,
-            text: 'Setup not finished',
-            action: 'Continue setup',
-            onTap: onOpenSetup,
-          ),
-        if (stay.isPendingReview)
-          _strip(color: DesignColors.warnDeep, icon: Icons.hourglass_top_rounded, text: 'Under review · We will notify you'),
+        ?_statusRow(),
+        if (onEnquiries != null && !stay.isDraft) _enquiriesRow(),
       ],
     );
   }
 
-  static const Widget _divider = Divider(height: 1, color: DesignColors.dividerSoft);
+  static Widget _noPhoto() => Align(
+    alignment: const Alignment(0.62, 0.15),
+    child: ExcludeSemantics(
+      child: Art3D(
+        asset: ListingArt.sunrise,
+        size: 104,
+        halo: 124,
+        haloColor: DetailLook.cardHalo,
+        shadowBlur: 6,
+        shadowOffset: const Offset(5, 8),
+        shadowAlpha: 0.3,
+      ),
+    ),
+  );
 
   (String, Color) _status() => switch (stay.status) {
-        StayStatus.approved when stay.acceptingGuests => ('LIVE', DesignColors.goodDeep),
-        StayStatus.approved => ('PAUSED', DesignColors.textMuted),
-        StayStatus.pendingReview => ('UNDER REVIEW', DesignColors.warnDeep),
-        StayStatus.rejected => ('REJECTED', KitTone.danger.accentDark),
-        _ => ('DRAFT', DesignColors.textMuted),
-      };
+    StayStatus.approved when stay.acceptingGuests => ('LIVE', StayOwnerInk.live),
+    StayStatus.approved => ('PAUSED', StayOwnerInk.paused),
+    StayStatus.pendingReview => ('UNDER REVIEW', StayOwnerInk.review),
+    StayStatus.rejected => ('REJECTED', StayOwnerInk.rejected),
+    _ => ('DRAFT', StayOwnerInk.paused),
+  };
 
-  Widget _toggle() => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(color: KitTone.stay.tint, borderRadius: CardRadius.chip),
-        child: Row(children: [
-          Expanded(
-            child: Text('Accepting guests', style: TypeTokens.style(12, FontWeight.w600, color: KitTone.stay.accentDark)),
-          ),
-          SetupSwitch(value: stay.acceptingGuests, onChanged: onAcceptingChanged),
-        ]),
+  Widget? _statusRow() {
+    if (stay.isApproved) {
+      return OwnerStatusRow(
+        art: ListingArt.key,
+        text: 'Accepting guests',
+        trailing: Switch3D(
+          tone: _tone,
+          value: stay.acceptingGuests,
+          onChanged: onAcceptingChanged,
+          onGradient: true,
+          semanticsLabel: 'Accepting guests',
+        ),
       );
-
-  Widget _rooms() => Column(children: [
-        for (var i = 0; i < stay.rooms.length; i++) ...[
-          if (i > 0) _divider,
-          _roomRow(stay.rooms[i]),
-        ],
-      ]);
+    }
+    if (stay.isPendingReview) return const OwnerStatusRow(art: ListingArt.calendar, text: 'Under review · We will notify you');
+    if (stay.isRejected) {
+      final reason = stay.rejectedReason;
+      return OwnerStatusRow(
+        art: ListingArt.pushpin,
+        text: reason != null && reason.isNotEmpty ? 'Rejected: $reason' : 'Rejected',
+        trailing: OnCardPill(label: 'Fix and resubmit', onTap: onOpenSetup, color: _tone.button),
+        wideTrailing: true,
+      );
+    }
+    if (stay.isDraft) {
+      return OwnerStatusRow(
+        art: ListingArt.clipboard,
+        text: 'Setup not finished',
+        trailing: OnCardPill(label: 'Continue setup', onTap: onOpenSetup, color: _tone.button),
+        wideTrailing: true,
+      );
+    }
+    return null;
+  }
 
   Widget _reportStrip() {
     final count = stay.pendingReportCount;
-    return _strip(
-      color: KitTone.danger.accentDark,
-      icon: Icons.warning_amber_rounded,
+    return OwnerStatusRow(
+      light: true,
+      art: ListingArt.pushpin,
       text: '$count report${count == 1 ? '' : 's'} on this stay',
+      trailing: const OnCardChevron3D(color: StayOwnerInk.newBadge),
       onTap: onReportsTap,
-      chevron: true,
     );
   }
 
-  Widget _rejectStrip() {
-    final reason = stay.rejectedReason;
-    return _strip(
-      color: KitTone.danger.accentDark,
-      icon: Icons.close_rounded,
-      text: reason != null && reason.isNotEmpty ? 'Rejected: $reason' : 'Rejected',
-      action: 'Fix and resubmit',
-      onTap: onOpenSetup,
-    );
-  }
-
-  Widget _strip({
-    required Color color,
-    required IconData icon,
-    required String text,
-    String? action,
-    VoidCallback? onTap,
-    bool chevron = false,
-  }) {
-    final style = TypeTokens.style(12, FontWeight.w600, color: color);
-    return PressScale(
-      enabled: onTap != null,
-      child: Material(
-        color: DesignColors.tint(color, Alpha.tint),
-        borderRadius: KitMetrics.tileSmall,
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Icon(icon, size: 16, color: color),
-                const SizedBox(width: 6),
-                Expanded(child: Text(text, maxLines: 3, overflow: TextOverflow.ellipsis, style: style)),
-                if (chevron) Icon(Icons.chevron_right_rounded, size: 18, color: color),
-              ]),
-              if (action != null)
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: Padding(
-                    padding: const EdgeInsets.only(top: 4),
-                    child: Text(action,
-                        style: TypeTokens.style(12, FontWeight.w700, color: color)
-                            .copyWith(decoration: TextDecoration.underline, decorationColor: color)),
-                  ),
-                ),
-            ]),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _roomRow(StayRoomModel r) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
-        child: Row(children: [
-          Expanded(
-            child: Text('${r.label} · ${BrowseItem.inr(r.pricePerNight)} / night',
-                maxLines: 1, overflow: TextOverflow.ellipsis, style: TypeTokens.style(12, FontWeight.w400, color: DesignColors.textSecondary)),
-          ),
-          if (onEditPrice != null && !stay.isPendingReview)
-            GestureDetector(
-              onTap: () => onEditPrice!(r),
-              behavior: HitTestBehavior.opaque,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-                child: Text('Edit price',
-                    style: TypeTokens.style(12, FontWeight.w600, color: DesignColors.primary)),
+  Widget _roomRow(StayRoomModel r) {
+    final canEdit = onEditPrice != null && !stay.isPendingReview;
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: 44),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                '${r.label} · ${BrowseItem.inr(r.pricePerNight)} / night',
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: Ink3D.text(13, FontWeight.w600, DesignColors.onPrimary, height: 1.3),
               ),
             ),
-        ]),
-      );
-
-  Widget _enquiriesRow() {
-    return InkWell(
-      onTap: onEnquiries,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 52),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          child: Row(children: [
-            Image.asset(SetupAssets.chat, width: 28, height: 28),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(TripStrings.enquiries,
-                    maxLines: 1, overflow: TextOverflow.ellipsis, style: TypeTokens.style(13, FontWeight.w600, color: DesignColors.textStrong)),
-                Text(StayEnquiryStrings.rowSubtitle,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: TypeTokens.caption),
-              ]),
-            ),
-            if (enquiryNewCount != null)
-              Obx(() {
-                final n = enquiryNewCount!.value;
-                if (n <= 0) return const SizedBox.shrink();
-                return Container(
-                  margin: const EdgeInsets.only(left: 8),
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(color: KitTone.danger.accentDark, borderRadius: CardRadius.chip),
-                  child: Text(TripStrings.newCount(n),
-                      maxLines: 1, style: TypeTokens.style(11, FontWeight.w700, color: DesignColors.onPrimary)),
-                );
-              }),
-            const SizedBox(width: 4),
-            const Icon(Icons.chevron_right_rounded, size: 18, color: DesignColors.textDisabled),
-          ]),
+            if (canEdit) ...[const SizedBox(width: 8), OnCardPill(label: 'Edit price', width: 84, color: _tone.button, onTap: () => onEditPrice!(r))],
+          ],
         ),
       ),
     );
   }
 
-  Widget _actions() {
-    final cells = <Widget>[
-      if (onPreview != null)
-        _actionCell(icon: Icons.visibility_outlined, label: 'View', color: DesignColors.primary, onTap: onPreview),
-      if (onShare != null)
-        _actionCell(icon: Icons.ios_share_rounded, label: 'Share', color: DesignColors.primary, onTap: onShare),
-      if (onDelete != null)
-        _actionCell(icon: Icons.delete_outline_rounded, label: 'Delete', color: KitTone.danger.accentDark, onTap: onDelete),
-    ];
-    return IntrinsicHeight(
-      child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        for (int i = 0; i < cells.length; i++) ...[
-          if (i > 0) Container(width: 1, margin: const EdgeInsets.symmetric(vertical: 2), color: DesignColors.divider),
-          Expanded(child: cells[i]),
+  Widget _enquiriesRow() {
+    const ink = DesignColors.onPrimary;
+    final row = Container(
+      constraints: const BoxConstraints(minHeight: 58),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(color: ink.withValues(alpha: Alpha.v18), borderRadius: BorderRadius.circular(12)),
+      child: Row(
+        children: [
+          Art3D(asset: ListingArt.speechBalloon, size: 34, shadowBlur: 3, shadowOffset: const Offset(2, 3), shadowAlpha: 0.25),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(TripStrings.enquiries, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(13, FontWeight.w600, ink)),
+                Text(
+                  StayEnquiryStrings.rowSubtitle,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  style: Ink3D.text(11.5, FontWeight.w400, ink.withValues(alpha: Alpha.v92)),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          if (enquiryNewCount != null)
+            Obx(() {
+              final n = enquiryNewCount!.value;
+              return n > 0 ? OnCardBadge3D(TripStrings.newCount(n)) : const SizedBox.shrink();
+            }),
+          const OnCardChevron3D(),
         ],
-      ]),
+      ),
     );
-  }
-
-  Widget _actionCell({required IconData icon, required String label, required Color color, required VoidCallback? onTap}) {
-    return PressScale(
-      child: InkWell(
-        onTap: onTap,
-        splashColor: DesignColors.splash,
-        highlightColor: Colors.transparent,
-        child: Container(
-          alignment: Alignment.center,
-          constraints: const BoxConstraints(minHeight: KitMetrics.touch),
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Icon(icon, size: 18, color: color),
-            const SizedBox(height: 3),
-            Text(label, style: TypeTokens.style(11, FontWeight.w600, color: color)),
-          ]),
-        ),
+    return Semantics(
+      button: true,
+      label: TripStrings.enquiries,
+      child: PressScale(
+        child: GestureDetector(behavior: HitTestBehavior.opaque, onTap: onEnquiries, child: row),
       ),
     );
   }

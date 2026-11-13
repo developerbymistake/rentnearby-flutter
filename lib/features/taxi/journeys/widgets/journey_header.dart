@@ -1,31 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:bakhli/design/design.dart';
+import 'package:bakhli/design/extra/ext_journeys.dart';
 
 class JourneyHeader extends StatelessWidget {
   final String title;
   final String? subtitle;
   final List<Widget> chips;
+  final Widget? bottom;
 
-  const JourneyHeader({super.key, required this.title, this.subtitle, this.chips = const []});
+  const JourneyHeader({super.key, required this.title, this.subtitle, this.chips = const [], this.bottom});
 
   @override
   Widget build(BuildContext context) {
-    return ModuleHeader(
+    return JourneyHeader3D(
       title: title,
       subtitle: subtitle,
-      tone: KitTone.taxi,
-      onBack: () => Navigator.of(context).maybePop(),
-      leadingAsset: TravelIcon.taxi,
-      autoHeight: true,
-      bottom: chips.isEmpty
-          ? null
-          : Padding(
-              padding: const EdgeInsets.only(top: 8, left: 4),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Wrap(spacing: 8, runSpacing: 8, crossAxisAlignment: WrapCrossAlignment.center, children: chips),
-              ),
-            ),
+      art: ListingArt.clipboard,
+      bottom: bottom ??
+          (chips.isEmpty
+              ? null
+              : Wrap(spacing: 10, runSpacing: 10, crossAxisAlignment: WrapCrossAlignment.center, children: chips)),
     );
   }
 }

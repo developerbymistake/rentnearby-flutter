@@ -36,15 +36,43 @@ class WaysSortChips extends StatelessWidget {
         child: Center(
           widthFactor: 1,
           heightFactor: 1,
-          child: PickChip(
-            label: label,
-            selected: on,
-            icon: on ? Icons.check_rounded : null,
-            activeColor: DesignColors.primary,
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            onTap: () {
-              if (!on) onChanged(s);
-            },
+          child: _SortPill(label: label, on: on, onTap: () {
+            if (!on) onChanged(s);
+          }),
+        ),
+      ),
+    );
+  }
+}
+
+class _SortPill extends StatelessWidget {
+  const _SortPill({required this.label, required this.on, required this.onTap});
+
+  final String label;
+  final bool on;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = ListingPalette.coral;
+    return PressScale(
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            gradient: on ? p.gradient : null,
+            color: on ? null : DesignColors.chipBackground,
+            borderRadius: CardRadius.pill,
+            boxShadow: on ? ShadowTokens.glow(p.g2) : const [],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (on) const Padding(padding: EdgeInsets.only(right: 6), child: Icon(Icons.check_rounded, size: 18, color: DesignColors.textInverse)),
+              Flexible(child: Text(label, style: Ink3D.text(14, FontWeight.w600, on ? DesignColors.textInverse : DesignColors.textPrimary, letterSpacing: 0))),
+            ],
           ),
         ),
       ),

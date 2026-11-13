@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:bakhli/features/trip/widgets/trip_ui.dart';
 import 'package:bakhli/design/design.dart';
-import 'package:bakhli/design/extra/replies_kit.dart';
+import 'package:bakhli/design/extra/ext_trip_replies.dart';
 import 'package:get/get.dart';
 import '../../../models/browse_item.dart';
 import '../../../utils/app_toast.dart';
@@ -10,8 +9,8 @@ import '../controllers/trip_plan_controller.dart';
 import '../models/trip_enquiry_model.dart';
 import '../models/trip_offer_model.dart';
 import '../trip_strings.dart';
+import '../trip_strings_v2_easy.dart';
 import '../utils/trip_format.dart';
-import 'trip_payment_line.dart';
 import 'trip_sheet_frame.dart';
 
 class TripReplaceTarget {
@@ -147,21 +146,30 @@ class _TripAcceptSheetState extends State<TripAcceptSheet> {
   Future<bool?> _askReplace(String name) {
     final d = widget.enquiry.day;
     final label = d == null ? TripStrings.dates : TripStrings.night(d);
-    return showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: const RoundedRectangleBorder(borderRadius: RepliesCard.radius),
-        backgroundColor: FitnessAppTheme.white,
-        title: Text(TripStrings.replaceNight(label, name), style: FitnessAppTheme.title),
-        content: Text(TripStrings.replaceTold(name), style: FitnessAppTheme.body2.copyWith(height: 1.4)),
-        actionsOverflowButtonSpacing: 4,
-        actions: [
-          TextLink(label: TripStrings.keep, onTap: () => Navigator.pop(ctx, false), tone: KitTone.trip),
-          TextLink(label: TripStrings.replace, onTap: () => Navigator.pop(ctx, true), tone: KitTone.trip),
-        ],
+    final offer = widget.offer;
+    return Dialog3D.show<bool>(
+      context,
+      builder: (ctx) => Dialog3D(
+        tone: _tone,
+        art: ListingArt.bed,
+        title: TripStrings.replaceNight(label, name),
+        body: TripStrings.replaceTold(name),
+        content: ReplySummaryStrip(
+          tone: _tone,
+          title: widget.enquiry.listingName,
+          subtitle: label,
+          value: BrowseItem.inr(offer.total),
+          margin: EdgeInsets.zero,
+        ),
+        secondaryLabel: TripStrings.keep,
+        onSecondary: () => Navigator.pop(ctx, false),
+        primaryLabel: TripStrings.replace,
+        onPrimary: () => Navigator.pop(ctx, true),
       ),
     );
   }
+
+  static final ListingTone _tone = ListingTone.forest;
 
   @override
   Widget build(BuildContext context) {
@@ -169,110 +177,51 @@ class _TripAcceptSheetState extends State<TripAcceptSheet> {
     final enq = widget.enquiry;
     final cin = offer.checkIn ?? enq.checkIn;
     final cout = offer.checkOut ?? enq.checkOut;
-    final dates = cin == null || cout == null ? null : TripFormat.dateRange(cin, cout);
+    final dates = cin == null || cout == null ? null : TripFormat.dayMonthRange(cin, cout);
     final nights = offer.nights;
     final advance = offer.advanceAmount;
+    final left = advance == null ? 0 : offer.total - advance;
+    final rows = <Widget>[
+      KeyValueRow(label: TripStrings.stay, value: enq.listingName),
+      if (dates != null) KeyValueRow(label: TripStrings.dates, value: nights > 0 ? '$dates · ${TripStrings.nights(nights)}' : dates),
+      KeyValueRow(label: TripStrings.total, value: BrowseItem.inr(offer.total), big: true),
+      if (advance != null && advance > 0) KeyValueRow(label: TripStrings.advance, value: BrowseItem.inr(advance)),
+      if (!_revised && advance != null && advance > 0 && left > 0) KeyValueRow(label: TripStringsV2Easy.balanceAtCheckIn, value: BrowseItem.inr(left)),
+    ];
     if (_revised) {
       final old = offer.oldTotal ?? enq.agreedTotalLocked;
       return TripSheetFrame(
+        tone: _tone,
+        art: ListingArt.moneyBag,
+        size: SheetSize.confirm,
         title: TripStrings.acceptNewPriceQ,
         description: old == null ? null : TripStrings.acceptNewPriceBody(BrowseItem.inr(old), BrowseItem.inr(offer.total)),
-        footer: const TripPaymentLine(),
+        footnote: TripStrings.stayPayLine,
+        footer: GradientPillButton(tone: _tone, label: TripStrings.acceptNewPrice, loading: _busy, onTap: _busy ? null : _submit),
         children: [
-          TemplateStagger(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-          _row(TripStrings.stay, enq.listingName),
-          if (dates != null) _row(TripStrings.dates, nights > 0 ? '$dates · ${TripStrings.nights(nights)}' : dates),
-          _row(TripStrings.total, BrowseItem.inr(offer.total), strong: true),
-          if (advance != null && advance > 0) _row(TripStrings.advance, BrowseItem.inr(advance)),
-          const SizedBox(height: 12),
-          TripButton(
-            onPressed: _busy ? null : _submit,
-            label: TripStrings.acceptNewPrice,
-            loading: _busy,
-            height: 52,
-          ),
-          if (_error != null) ...[
-            const SizedBox(height: 8),
-            Text(_error!,
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, fontWeight: FontWeight.w600, color: RepliesTone.bad)),
-          ],
-            ],
-          ),
+          ...rows,
+          if (_error != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 10),
+              child: Text(_error!, maxLines: 3, overflow: TextOverflow.ellipsis, style: FieldMessage.errorStyle),
+            ),
         ],
       );
     }
     final target = _target;
     return TripSheetFrame(
-      title: target == null
-          ? TripStrings.acceptQuestion
-          : TripStrings.replaceFor(target.row.listingName, TripStrings.night(target.day)),
+      tone: _tone,
+      art: ListingArt.key,
+      size: SheetSize.confirm,
+      title: target == null ? TripStrings.acceptQuestion : TripStrings.replaceFor(target.row.listingName, TripStrings.night(target.day)),
       description: target == null ? null : TripStrings.replaceTold(target.row.listingName),
+      footnote: TripStrings.stayPayLine,
+      footer: GradientPillButton(tone: _tone, label: TripStrings.acceptOffer, loading: _busy, onTap: _busy ? null : _submit),
       children: [
-        TemplateStagger(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-        _row(TripStrings.stay, enq.listingName),
-        if (dates != null) _row(TripStrings.dates, nights > 0 ? '$dates · ${TripStrings.nights(nights)}' : dates),
-        _row(TripStrings.total, BrowseItem.inr(offer.total), strong: true),
-        if (advance != null && advance > 0) _row(TripStrings.advance, BrowseItem.inr(advance)),
-        const SizedBox(height: 8),
-        InkWell(
-          borderRadius: BorderRadius.circular(12),
-          onTap: _busy ? null : () => setState(() => _tell = !_tell),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 48),
-            child: Row(children: [
-              Padding(
-                padding: const EdgeInsets.all(12),
-                child: Icon(_tell ? Icons.check_box : Icons.check_box_outline_blank,
-                    color: _tell ? RepliesTone.accent : FitnessAppTheme.grey.withValues(alpha: Alpha.strong)),
-              ),
-              const Expanded(
-                child: Text(TripStrings.tellOtherStays,
-                    style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 13, color: FitnessAppTheme.darkerText, height: 1.35)),
-              ),
-            ]),
-          ),
-        ),
-        const SizedBox(height: 12),
-        TripButton(
-          onPressed: _busy ? null : _submit,
-          label: TripStrings.acceptOffer,
-          loading: _busy,
-          height: 52,
-        ),
-          ],
-        ),
+        ...rows,
+        const SizedBox(height: 6),
+        CheckRow(tone: _tone, value: _tell, label: TripStrings.tellOtherStays, onChanged: _busy ? null : (v) => setState(() => _tell = v)),
       ],
-      footer: const TripPaymentLine(),
     );
   }
-
-  Widget _row(String k, String v, {bool strong = false}) => Padding(
-        padding: const EdgeInsets.only(bottom: 10),
-        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(k, style: FitnessAppTheme.caption.copyWith(fontSize: 12.5)),
-          const SizedBox(width: 12),
-          Expanded(
-            child: strong
-                ? Align(
-                    alignment: Alignment.centerRight,
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(v,
-                          style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 20, fontWeight: FontWeight.w700, color: RepliesTone.accent)),
-                    ),
-                  )
-                : Text(v,
-                    textAlign: TextAlign.end,
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                    style: FitnessAppTheme.body2.copyWith(fontWeight: FontWeight.w600, color: FitnessAppTheme.darkerText)),
-          ),
-        ]),
-      );
 }

@@ -1,13 +1,34 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'dart:math' as math;
+import '../config/app_tabs.dart';
 import '../config/module_palette.dart';
+import '../controllers/auth_controller.dart';
 import '../controllers/location_controller.dart';
 import '../design/design.dart';
 import '../models/city_model.dart';
+import '../services/top_route_observer.dart';
 import '../utils/city_search_rank.dart';
 import '../utils/input_formatters.dart';
 import '../utils/search_fold.dart';
+
+// Module colour for shared overlays: Stay forest, Taxi coral, others indigo.
+ListingTone moduleToneFor([ModulePalette? palette]) {
+  if (identical(palette, ModulePalette.stays) ||
+      identical(palette, ModulePalette.jobs))
+    return ListingTone.forest;
+  if (identical(palette, ModulePalette.taxi)) return ListingTone.coral;
+  final top = TopRouteObserver.top.value ?? '';
+  if (top.startsWith('/trip')) return ListingTone.indigo;
+  if (top.contains('taxi')) return ListingTone.coral;
+  if (top.contains('stay') || top.contains('job')) return ListingTone.forest;
+  if (Get.isRegistered<AuthController>()) {
+    final tab = Get.find<AuthController>().tabIndex.value;
+    if (tab == AppTabs.stays) return ListingTone.forest;
+    if (tab == AppTabs.taxi) return ListingTone.coral;
+  }
+  return ListingTone.indigo;
+}
 
 class PickedPlace {
   final String name;
@@ -43,33 +64,28 @@ class LocationSwitchSheet extends StatefulWidget {
     this.title,
   });
 
-  static Future<PickedPlace?> pick(BuildContext context,
-      {ModulePalette palette = templateModulePalette, String? title}) {
-    return showModalBottomSheet<PickedPlace>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: FitnessAppTheme.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
+  static Future<PickedPlace?> pick(
+    BuildContext context, {
+    ModulePalette palette = templateModulePalette,
+    String? title,
+  }) {
+    return Sheet3D.show<PickedPlace>(
+      context,
       builder: (_) => LocationSwitchSheet(
-          palette: palette, pickOnly: true, title: title ?? 'Pick a city'),
+        palette: palette,
+        pickOnly: true,
+        title: title ?? 'Pick a city',
+      ),
     );
   }
 
-  static Future<void> show(BuildContext context, {ModulePalette palette = templateModulePalette}) {
-    return showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: FitnessAppTheme.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      // No manual keyboard padding here — this sheet has its own fixed
-      // height (see build() below), so padding the whole subtree up by the
-      // keyboard height on top of that fixed height fights it and pushes
-      // list content down away from the search box. The sheet computes its
-      // own height around the keyboard instead (see _sheetHeight()).
+  // The sheet keeps its own fixed height, so no keyboard padding is added here.
+  static Future<void> show(
+    BuildContext context, {
+    ModulePalette palette = templateModulePalette,
+  }) {
+    return Sheet3D.show<void>(
+      context,
       builder: (_) => LocationSwitchSheet(palette: palette),
     );
   }
@@ -80,11 +96,19 @@ class LocationSwitchSheet extends StatefulWidget {
 
 enum _Level { city, district, state }
 
-class _LocationSwitchSheetState extends State<LocationSwitchSheet> with TickerProviderStateMixin {
-  late final AnimationController _enter = AnimationController(duration: const Duration(milliseconds: 600), vsync: this)..forward();
-  late final AnimationController _rows = AnimationController(duration: const Duration(milliseconds: 600), vsync: this)..forward();
+class _LocationSwitchSheetState extends State<LocationSwitchSheet>
+    with TickerProviderStateMixin {
+  late final AnimationController _enter = AnimationController(
+    duration: const Duration(milliseconds: 600),
+    vsync: this,
+  )..forward();
+  late final AnimationController _rows = AnimationController(
+    duration: const Duration(milliseconds: 600),
+    vsync: this,
+  )..forward();
   final _locationCtrl = Get.find<LocationController>();
   final _searchCtrl = TextEditingController();
+  late final ListingTone _tone = moduleToneFor(widget.palette);
 
   _Level _level = _Level.city;
   String _query = '';
@@ -121,7 +145,8 @@ class _LocationSwitchSheetState extends State<LocationSwitchSheet> with TickerPr
   void initState() {
     super.initState();
     _viewingDistrict = widget.pickOnly
-        ? (_locationCtrl.selectedDistrict.value ?? _locationCtrl.effectiveDistrict)
+        ? (_locationCtrl.selectedDistrict.value ??
+              _locationCtrl.effectiveDistrict)
         : _locationCtrl.effectiveDistrict;
     _loadCitiesFor(_viewingDistrict);
     if (widget.pickOnly) return;
@@ -284,95 +309,84 @@ class _LocationSwitchSheetState extends State<LocationSwitchSheet> with TickerPr
 
   @override
   Widget build(BuildContext context) {
-    // Fixed height regardless of content — loading/empty/error states must
-    // not shrink the sheet, that reads as broken and jumps around as data
-    // arrives. Built from the frozen _baseHeight/_baseTopPadding (captured
-    // in didChangeDependencies, before the keyboard could open) rather than
-    // live MediaQuery, so it never changes when the keyboard opens —
-    // android:windowSoftInputMode="adjustResize" shrinks MediaQuery.size
-    // itself while the keyboard is up, which previously fed straight into
-    // this formula and shrank the whole sheet.
-    //
-    // No manual keyboard padding/shifting here. An earlier version wrapped
-    // this in AnimatedPadding(bottom: media.viewInsets.bottom) to "shift the
-    // sheet above the keyboard" — but viewInsets.bottom is in fact nonzero
-    // on-device (not the ~0 this was assumed to be under adjustResize), so
-    // that padding painted a growing blank white gap between the list and
-    // the keyboard every time it opened. The modal route already positions
-    // this fixed-height sheet correctly against the live (keyboard-aware)
-    // window on its own — no extra padding is needed.
+    // Fixed height from the frozen baseline: loading/empty states and the
+    // keyboard (adjustResize) never resize the sheet, and no keyboard padding
+    // is added (the modal route already places it against the live window).
     final media = MediaQuery.of(context);
     final baseHeight = _baseHeight ?? media.size.height;
     final baseTopPadding = _baseTopPadding ?? media.padding.top;
     final maxHeight = (baseHeight - baseTopPadding) * 0.94;
-    final sheetHeight = (baseHeight * 0.75).clamp(0.0, maxHeight);
+    final fiveRows = 615.0 + (widget.title != null ? 19 : 0);
+    final sheetHeight = math.max(baseHeight * 0.75, fiveRows).clamp(0.0, maxHeight);
+    final (title, subtitle, onBack, action, onAction) = _header();
     return SizedBox(
-      height: sheetHeight,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          TemplateEntrance(
-            animation: templateInterval(_enter, 0, 3),
-            animationController: _enter,
-            child: _buildHeader(),
+      height: sheetHeight + Sheet3D.artRoom,
+      child: MediaQuery.removeViewInsets(
+        context: context,
+        removeBottom: true,
+        child: Sheet3D(
+          tone: _tone,
+          art: _art,
+          centerTitle: false,
+          scrollable: false,
+          padding: EdgeInsets.zero,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              SheetListHeader(
+                tone: _tone,
+                title: title,
+                subtitle: subtitle,
+                onBack: onBack,
+                action: action,
+                onAction: onAction,
+              ),
+              TemplateEntrance(
+                animation: templateInterval(_enter, 0, 2),
+                animationController: _enter,
+                child: _buildSearchBox(),
+              ),
+              Expanded(
+                child: TemplateEntrance(
+                  animation: templateInterval(_enter, 1, 2),
+                  animationController: _enter,
+                  child: _buildBody(),
+                ),
+              ),
+            ],
           ),
-          TemplateEntrance(
-            animation: templateInterval(_enter, 1, 3),
-            animationController: _enter,
-            child: _buildSearchBox(),
-          ),
-          Expanded(
-            child: TemplateEntrance(
-              animation: templateInterval(_enter, 2, 3),
-              animationController: _enter,
-              child: _buildBody(),
-            ),
-          ),
-          const SizedBox(height: 12),
-        ],
+        ),
       ),
     );
   }
 
-  Widget _linkButton(String label, VoidCallback onTap) => TextButton(
-        onPressed: onTap,
-        child: Text(label,
-            style: FitnessAppTheme.caption.copyWith(
-                fontSize: 12.5,
-                fontWeight: FontWeight.w600,
-                color: FitnessAppTheme.white.withValues(alpha: Alpha.high))),
-      );
+  String get _art => switch (_level) {
+    _Level.city =>
+      widget.pickOnly && identical(_tone, ListingTone.coral)
+          ? ListingArt.taxi
+          : ListingArt.roundPushpin,
+    _Level.district => ListingArt.compass,
+    _Level.state => ListingArt.worldMap,
+  };
 
-  Widget _buildHeader() {
-    String title;
-    String? subtitle;
-    Widget? leading;
-    Widget? trailing;
-
-    switch (_level) {
-      case _Level.city:
-        title = widget.title ?? _viewingDistrict?.name ?? 'Choose city';
-        if (widget.title != null) subtitle = _viewingDistrict?.name;
-        trailing = _linkButton('Change district ›', _goToDistrictLevel);
-        break;
-      case _Level.district:
-        title = _stateFilter ?? 'Districts';
-        leading = _backArrow(_backToCityLevel);
-        trailing = _linkButton('Change state ›', _goToStateLevel);
-        break;
-      case _Level.state:
-        title = 'All states';
-        leading = _backArrow(_backToDistrictLevel);
-        break;
-    }
-
-    return GateSheetHeader(title: title, subtitle: subtitle, leading: leading, trailing: trailing);
-  }
-
-  Widget _backArrow(VoidCallback onTap) => GestureDetector(
-        onTap: onTap,
-        child: const Icon(Icons.arrow_back_ios_new_rounded, color: FitnessAppTheme.white, size: 16),
-      );
+  (String, String?, VoidCallback?, String?, VoidCallback?) _header() =>
+      switch (_level) {
+        _Level.city => (
+          widget.title ?? _viewingDistrict?.name ?? 'Choose city',
+          widget.title != null ? _viewingDistrict?.name : null,
+          null,
+          'Change district ›',
+          _goToDistrictLevel,
+        ),
+        _Level.district => (
+          _stateFilter ?? 'Districts',
+          null,
+          _backToCityLevel,
+          'Change state ›',
+          _goToStateLevel,
+        ),
+        _Level.state => ('All states', null, _backToDistrictLevel, null, null),
+      };
 
   Widget _buildSearchBox() {
     final hint = switch (_level) {
@@ -380,14 +394,13 @@ class _LocationSwitchSheetState extends State<LocationSwitchSheet> with TickerPr
       _Level.district => 'Search district',
       _Level.state => 'Search state',
     };
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 14, 20, 6),
-      child: GateSearchBar(
-        controller: _searchCtrl,
-        hint: hint,
-        inputFormatters: noEmojiInputFormatters,
-        onChanged: (v) => setState(() => _query = v),
-      ),
+    return SheetSearchField(
+      tone: _tone,
+      controller: _searchCtrl,
+      hint: hint,
+      leadingArt: ListingArt.roundPushpin,
+      inputFormatters: noEmojiInputFormatters,
+      onChanged: (v) => setState(() => _query = v),
     );
   }
 
@@ -411,17 +424,28 @@ class _LocationSwitchSheetState extends State<LocationSwitchSheet> with TickerPr
     );
   }
 
-  Widget _list(List<Widget> items) {
+  Widget _list(List<_Row> rows) {
     _rows.forward(from: 0);
-    final count = math.min(items.length, 10);
+    final count = math.min(rows.length, 10);
     return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      itemCount: items.length,
-      itemBuilder: (context, i) => TemplateEntrance(
-        animation: templateInterval(_rows, math.min(i, count - 1), count),
-        animationController: _rows,
-        child: items[i],
-      ),
+      padding: const EdgeInsets.only(top: 4, bottom: 8),
+      itemCount: rows.length,
+      itemBuilder: (context, i) {
+        final r = rows[i];
+        return TemplateEntrance(
+          animation: templateInterval(_rows, math.min(i, count - 1), count),
+          animationController: _rows,
+          child: SheetListRow(
+            tone: _tone,
+            title: r.label,
+            art: r.asset,
+            selected: r.selected,
+            enabled: r.onTap != null,
+            onTap: r.onTap,
+            divider: i > 0,
+          ),
+        );
+      },
     );
   }
 
@@ -432,32 +456,38 @@ class _LocationSwitchSheetState extends State<LocationSwitchSheet> with TickerPr
     }
 
     final pickOnly = widget.pickOnly;
-    final isOwnDistrict = !pickOnly &&
+    final isOwnDistrict =
+        !pickOnly &&
         _viewingDistrict != null &&
         _locationCtrl.selectedDistrict.value != null &&
         _viewingDistrict!.id == _locationCtrl.selectedDistrict.value!.id;
     final activeCityId = pickOnly ? null : _locationCtrl.browsingCity.value?.id;
 
     final q = SearchFold.fold(_query);
-    final filtered = CitySearchRank.rank<CityModel>(_cities, q, name: (c) => c.name);
+    final filtered = CitySearchRank.rank<CityModel>(
+      _cities,
+      q,
+      name: (c) => c.name,
+    );
 
-    final items = <Widget>[];
+    final items = <_Row>[];
     if (isOwnDistrict && (q.isEmpty || 'current'.contains(q))) {
-      items.add(_locationRow(
-        asset: TravelIcon.pin,
-        label: 'Current',
-        selected: activeCityId == null,
-        onTap: _pickCurrent,
-      ));
+      items.add(
+        _Row(ListingArt.pushpin, 'Current', activeCityId == null, _pickCurrent),
+      );
     }
-    items.addAll(filtered.map((c) => _locationRow(
-          asset: TravelIcon.place,
-          label: c.name,
-          selected: c.id == activeCityId,
-          onTap: pickOnly && (c.latitude == null || c.longitude == null)
+    items.addAll(
+      filtered.map(
+        (c) => _Row(
+          ListingArt.roundPushpin,
+          c.name,
+          c.id == activeCityId,
+          pickOnly && (c.latitude == null || c.longitude == null)
               ? null
               : () => _pickCity(c),
-        )));
+        ),
+      ),
+    );
 
     if (items.isEmpty) return _emptyState('No city matches "$_query"');
     return _list(items);
@@ -471,31 +501,34 @@ class _LocationSwitchSheetState extends State<LocationSwitchSheet> with TickerPr
 
     final q = SearchFold.fold(_query);
     final filtered = _allDistricts
-        .where((d) =>
-            // Defensive: if we somehow have no state to filter by (e.g. a
-            // district missing stateName), show all districts rather than
-            // silently rendering an unexplained empty list.
-            (_stateFilter == null || d.stateName == _stateFilter) &&
-            (q.isEmpty || SearchFold.contains(d.name, q)))
+        .where(
+          (d) =>
+              // Defensive: if we somehow have no state to filter by (e.g. a
+              // district missing stateName), show all districts rather than
+              // silently rendering an unexplained empty list.
+              (_stateFilter == null || d.stateName == _stateFilter) &&
+              (q.isEmpty || SearchFold.contains(d.name, q)),
+        )
         .toList();
 
     if (filtered.isEmpty) return _emptyState('No district matches "$_query"');
-    return _list(filtered.map((d) {
-        if (!d.isActive) {
-          return _locationRow(
-            asset: TravelIcon.route,
-            label: '${d.name} · coming soon',
-            selected: false,
-            onTap: null,
+    return _list(
+      filtered.map((d) {
+        if (!d.isActive)
+          return _Row(
+            ListingArt.compass,
+            '${d.name} · coming soon',
+            false,
+            null,
           );
-        }
-        return _locationRow(
-          asset: TravelIcon.route,
-          label: d.name,
-          selected: d.id == _viewingDistrict?.id,
-          onTap: () => _pickDistrict(d),
+        return _Row(
+          ListingArt.compass,
+          d.name,
+          d.id == _viewingDistrict?.id,
+          () => _pickDistrict(d),
         );
-      }).toList());
+      }).toList(),
+    );
   }
 
   Widget _buildStateList() {
@@ -510,95 +543,201 @@ class _LocationSwitchSheetState extends State<LocationSwitchSheet> with TickerPr
         .toList();
 
     if (states.isEmpty) return _emptyState('No state matches "$_query"');
-    return _list(states
-        .map((s) => _locationRow(
-              asset: TravelIcon.map,
-              label: s,
-              selected: s == _stateFilter,
-              onTap: () => _pickState(s),
-            ))
-        .toList());
-  }
-
-  Widget _locationRow({
-    required String asset,
-    required String label,
-    required bool selected,
-    required VoidCallback? onTap,
-  }) {
-    final disabled = onTap == null;
-    final color = disabled
-        ? FitnessAppTheme.deactivatedText
-        : (selected ? FitnessAppTheme.nearlyDarkBlue : FitnessAppTheme.darkerText);
-    return Column(
-      children: [
-        Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: onTap,
-            borderRadius: BorderRadius.circular(8),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 11),
-              child: Row(
-                children: [
-                  Opacity(opacity: disabled ? Alpha.v40 : Alpha.full, child: TravelIcon(asset, size: 22)),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      label,
-                      style: TripKit.text(14, weight: selected ? FontWeight.w700 : FontWeight.w500, color: color),
-                    ),
-                  ),
-                  if (selected) const Icon(Icons.check_rounded, size: 18, color: FitnessAppTheme.nearlyDarkBlue),
-                ],
-              ),
+    return _list(
+      states
+          .map(
+            (s) => _Row(
+              ListingArt.worldMap,
+              s,
+              s == _stateFilter,
+              () => _pickState(s),
             ),
-          ),
-        ),
-        const Divider(height: 1, color: FitnessAppTheme.spacer),
-      ],
+          )
+          .toList(),
     );
   }
 
-  Widget _loadingIndicator() => ListView(
-        physics: const NeverScrollableScrollPhysics(),
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+  Widget _loadingIndicator() => sheetSkeleton(twoLines: false);
+
+  Widget _emptyState(String message) => sheetStateView(_tone, message);
+
+  Widget _errorState(String message, VoidCallback onRetry) =>
+      sheetStateView(_tone, message, onRetry: onRetry);
+}
+
+class _Row {
+  const _Row(this.asset, this.label, this.selected, this.onTap);
+
+  final String asset;
+  final String label;
+  final bool selected;
+  final VoidCallback? onTap;
+}
+
+// Five skeleton rows with the list dividers (location sheets).
+Widget sheetSkeleton({required bool twoLines}) => ListView(
+  physics: const NeverScrollableScrollPhysics(),
+  padding: const EdgeInsets.only(top: 4),
+  children: [
+    for (var i = 0; i < 5; i++)
+      DecoratedBox(
+        decoration: BoxDecoration(
+          border: i == 0
+              ? null
+              : const Border(top: BorderSide(color: Ink3D.line)),
+        ),
+        child: SkeletonListRow(twoLines: twoLines),
+      ),
+  ],
+);
+
+// Empty / error message inside a list sheet, centred in the list area.
+Widget sheetStateView(
+  ListingTone tone,
+  String message, {
+  VoidCallback? onRetry,
+}) => Center(
+  child: SingleChildScrollView(
+    child: StateCard3D(
+      tone: tone,
+      art: ListingArt.worldMap,
+      title: message,
+      layout: StateLayout.plain,
+      actionLabel: onRetry == null ? null : 'Retry',
+      onAction: onRetry,
+    ),
+  ),
+);
+
+// List sheet header: back slot, one-line title that shrinks to fit, gradient link pill.
+class SheetListHeader extends StatelessWidget {
+  const SheetListHeader({
+    super.key,
+    required this.tone,
+    required this.title,
+    this.subtitle,
+    this.onBack,
+    this.action,
+    this.onAction,
+  });
+
+  final ListingTone tone;
+  final String title;
+  final String? subtitle;
+  final VoidCallback? onBack;
+  final String? action;
+  final VoidCallback? onAction;
+
+  @override
+  Widget build(BuildContext context) {
+    final a = action;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(18, 0, 18, 0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          for (var i = 0; i < 5; i++)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 10),
-              child: Row(
-                children: [
-                  TemplatePlaceholder(height: 40, width: 40, radius: 20),
-                  SizedBox(width: 12),
-                  TemplatePlaceholder(height: 14, width: 160),
-                ],
+          if (onBack != null) ...[
+            Tooltip(
+              message: 'Back',
+              child: Tap3D(
+                onTap: onBack,
+                label: 'Back',
+                child: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: const BoxDecoration(
+                    color: DesignColors.surface,
+                    shape: BoxShape.circle,
+                    boxShadow: Ink3D.softShadow,
+                  ),
+                  child: Icon(
+                    Icons.chevron_left_rounded,
+                    size: 26,
+                    color: tone.text,
+                  ),
+                ),
               ),
             ),
+            const SizedBox(width: 12),
+          ],
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ConstrainedBox(
+                  constraints: const BoxConstraints(minHeight: 40),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Semantics(
+                        header: true,
+                        child: Text(
+                          title,
+                          maxLines: 1,
+                          style: Ink3D.text(
+                            21,
+                            FontWeight.w700,
+                            Ink3D.title,
+                            height: 1.2,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                if (subtitle != null)
+                  Text(
+                    subtitle!,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Ink3D.text(13, FontWeight.w400, Ink3D.sub),
+                  ),
+              ],
+            ),
+          ),
+          if (a != null) ...[
+            const SizedBox(width: 10),
+            SizedBox(
+              height: 40,
+              child: Center(
+                child: Tap3D(
+                  onTap: onAction,
+                  child: Container(
+                    constraints: const BoxConstraints(minHeight: 34),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      gradient: tone.gradient,
+                      borderRadius: BorderRadius.circular(18),
+                      boxShadow: tone.glow(blur: 8, dy: 3),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          a,
+                          maxLines: 1,
+                          style: Ink3D.text(
+                            12.5,
+                            FontWeight.w700,
+                            DesignColors.textInverse,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ],
-      );
-
-  Widget _emptyState(String message) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 24),
-        child: Column(
-          children: [
-            const TravelIcon(TravelIcon.map, size: 44),
-            const SizedBox(height: 10),
-            Text(message, textAlign: TextAlign.center, style: FitnessAppTheme.caption),
-          ],
-        ),
-      );
-
-  Widget _errorState(String message, VoidCallback onRetry) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 24),
-        child: Column(
-          children: [
-            const TravelIcon(TravelIcon.map, size: 44),
-            const SizedBox(height: 10),
-            Text(message, textAlign: TextAlign.center, style: FitnessAppTheme.caption),
-            const SizedBox(height: 10),
-            GateTextButton(label: 'Retry', onPressed: onRetry),
-          ],
-        ),
-      );
+      ),
+    );
+  }
 }

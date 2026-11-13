@@ -5,7 +5,7 @@ import 'package:get/get.dart';
 import '../../../config/app_routes.dart';
 import '../../../models/browse_item.dart';
 import '../../../utils/app_toast.dart';
-import '../../../utils/contact_launcher.dart';
+import '../../../widgets/listing_contact_actions.dart';
 import '../../stay/models/stay_nearby_model.dart';
 import '../controllers/trip_plan_controller.dart';
 import '../controllers/trip_shortlist_controller.dart';
@@ -18,6 +18,7 @@ import '../trip_navigation.dart';
 import '../trip_strings.dart';
 import '../trip_strings_city.dart';
 import '../trip_strings_a2.dart';
+import '../trip_strings_shortlist.dart';
 import '../trip_strings_fin_b1.dart';
 import '../trip_strings_v2_easy.dart';
 import '../trip_strings_v2_find.dart';
@@ -25,7 +26,7 @@ import '../utils/trip_clock.dart';
 import '../utils/trip_format.dart';
 import '../widgets/trip_arrange_confirm.dart';
 import '../widgets/trip_filter_chips.dart';
-import '../widgets/trip_page_header.dart';
+import '../widgets/trip_list_look.dart';
 import '../widgets/trip_shortlist_bar.dart';
 import '../widgets/trip_sheet_frame.dart';
 import '../widgets/trip_status.dart';
@@ -82,6 +83,7 @@ class _TripStayScreenState extends State<TripStayScreen> with TickerProviderStat
         if (mounted) _noReply.assignAll(c.noReplyIds(_guide!.stepKey));
       });
     }
+    _nearYou = map['nearLat'] is num && map['nearLng'] is num;
     _supply.setNear((map['nearLat'] as num?)?.toDouble(), (map['nearLng'] as num?)?.toDouble());
     _supply.ensureStays(_leg);
     _planWorker = ever(_plan.plan, (_) => _supply.ensureStays(_leg));
@@ -97,6 +99,8 @@ class _TripStayScreenState extends State<TripStayScreen> with TickerProviderStat
     }
     super.dispose();
   }
+
+  bool _nearYou = false;
 
   TripEasyRowKey get _key => TripEasyRowKey(TripEasyRowKind.stay, _leg);
 
@@ -205,7 +209,7 @@ class _TripStayScreenState extends State<TripStayScreen> with TickerProviderStat
       );
 
   Widget _skeletons() => SliverPadding(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
+        padding: EdgeInsets.zero,
         sliver: SliverList.builder(
           itemCount: 4,
           itemBuilder: (_, i) => _enter(
@@ -287,6 +291,23 @@ class _TripStayScreenState extends State<TripStayScreen> with TickerProviderStat
     );
   }
 
+  Widget _nearPill() {
+    final value = _nearYou ? TripStringsShortlist.yourLocation : TripStringsShortlist.centreOf(_city);
+    return Semantics(
+      container: true,
+      label: '${TripStringsShortlist.staysNear} $value',
+      excludeSemantics: true,
+      child: SearchPill(
+        tone: ListingTone.forest,
+        label: TripStringsShortlist.staysNear,
+        value: value,
+        leadingArt: ListingArt.roundPushpin,
+        buttonArt: ListingArt.compass,
+        margin: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+      ),
+    );
+  }
+
   Widget _top() => Obx(() {
         _plan.plan.value;
         final showChips = !_noSupply && (_supply.stays.isNotEmpty || _supply.hasStayFilters);
@@ -296,6 +317,8 @@ class _TripStayScreenState extends State<TripStayScreen> with TickerProviderStat
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                if (!_noSupply)
+                  _enter(_nearPill(), 0),
                 if (showChips)
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -344,20 +367,21 @@ class _TripStayScreenState extends State<TripStayScreen> with TickerProviderStat
     };
   }
 
-  Widget _row(StayNearbyModel s, int day, int nights, TripEnquiryModel? asked) {
-    final rawPhone = s.ownerPhone;
-    final phone = (rawPhone == null || ContactLauncher.tenDigits(rawPhone).isEmpty) ? null : rawPhone;
+  Widget _row(StayNearbyModel s, int day, int nights, TripEnquiryModel? asked, int index) {
     final guide = _guide;
+    final detailArgs = <String, dynamic>{'distanceKm': s.distanceKm};
     TripStayRow build({bool shortlisted = false, bool busy = false, bool noReply = false}) => TripStayRow(
           key: ValueKey('${s.id}-$day'),
           stay: s,
+          index: index,
           fit: _supply.stayFitOf(s.id),
           status: asked?.display,
           statusLine: _askedLine(asked),
           onOpenChat: asked?.conversationId == null ? null : () => TripNavigation.openChatForEnquiry(asked!),
           readOnly: _plan.isReadOnly,
-          onOpen: () => Get.toNamed(AppRoutes.stayDetail, arguments: {'id': s.id, 'distanceKm': s.distanceKm}),
-          onCall: phone == null ? null : () => ContactLauncher.call(phone),
+          onOpen: () => Get.toNamed(AppRoutes.stayDetail, arguments: {'id': s.id, ...detailArgs}),
+          onCall: () => TripStayRow.call(context, s, detailArguments: detailArgs),
+          callBusy: ListingContactActions.isBusy(ListingKind.stay, s.id),
           onAsk: () => TripStayEnquirySheet.show(context, stay: s, day: day, nights: nights),
           onShortlist: guide == null
               ? null
@@ -376,7 +400,7 @@ class _TripStayScreenState extends State<TripStayScreen> with TickerProviderStat
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: _maxWidth),
         child: guide == null
-            ? build()
+            ? Obx(build)
             : Obx(() => build(
                   shortlisted: c.has(guide.stepKey, s.id),
                   busy: c.isBusy(guide.stepKey, s.id),
@@ -464,17 +488,17 @@ class _TripStayScreenState extends State<TripStayScreen> with TickerProviderStat
         final day = _firstDay + past;
         final nights = _nights - past;
         return SliverPadding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+          padding: EdgeInsets.zero,
           sliver: SliverList.builder(
             itemCount: rows.length + 1,
             itemBuilder: (_, i) => i == rows.length
                 ? const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 16),
+                    padding: EdgeInsets.fromLTRB(16, 16, 16, 16),
                     child: Text(TripStringsV2Find.askNote,
                         textAlign: TextAlign.center,
                         style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, color: FitnessAppTheme.lightText)),
                   )
-                : _enter(_row(rows[i], day, nights, asked[rows[i].id]), i + 2),
+                : _enter(_row(rows[i], day, nights, asked[rows[i].id], i), i + 2),
           ),
         );
       });
@@ -487,7 +511,7 @@ class _TripStayScreenState extends State<TripStayScreen> with TickerProviderStat
     final nightDays = _only.isNotEmpty ? _only : [for (var i = 0; i < _nights - past; i++) first + i];
     final n = nightDays.length;
     return SliverPadding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: EdgeInsets.zero,
       sliver: SliverList.builder(
         itemCount: n + 1,
         itemBuilder: (_, i) {
@@ -499,7 +523,7 @@ class _TripStayScreenState extends State<TripStayScreen> with TickerProviderStat
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 8),
+                      padding: EdgeInsets.fromLTRB(16, 8, 16, 8),
                       child: Text(TripStringsV2Find.splitNote,
                           textAlign: TextAlign.center,
                           style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, color: FitnessAppTheme.lightText)),
@@ -523,14 +547,17 @@ class _TripStayScreenState extends State<TripStayScreen> with TickerProviderStat
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Padding(
-                    padding: const EdgeInsets.only(top: 16),
+                    padding: const EdgeInsets.fromLTRB(18, 16, 18, 0),
                     child: Text(TripStringsV2Find.nightLabel(day - _firstDay + 1, date == null ? null : TripFormat.shortDate(date)),
                         style: const TextStyle(
                             fontFamily: FitnessAppTheme.fontName, fontSize: 18, fontWeight: FontWeight.w500, letterSpacing: -0.4, color: FitnessAppTheme.darkerText)),
                   ),
-                  for (final s in visible) _row(s, day, 1, asked[s.id]),
+                  for (final (j, s) in visible.indexed) _row(s, day, 1, asked[s.id], j),
                   if (rows.length > _nightPreview)
-                    TextLink(label: open ? TripStringsV2Find.showLess : TripStringsV2Find.showAll(rows.length), onTap: () => open ? _expanded.remove(day) : _expanded.add(day), tone: KitTone.trip),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: TextLink(label: open ? TripStringsV2Find.showLess : TripStringsV2Find.showAll(rows.length), onTap: () => open ? _expanded.remove(day) : _expanded.add(day), tone: KitTone.trip),
+                    ),
                 ],
               ),
             ),
@@ -548,7 +575,7 @@ class _TripStayScreenState extends State<TripStayScreen> with TickerProviderStat
         if (!didPop) TripNavigation.backToPlan();
       },
       child: Scaffold(
-        backgroundColor: FitnessAppTheme.background,
+        backgroundColor: ListingPalette.forest.page,
         bottomNavigationBar: _guide == null ? null : TripShortlistBar(step: _guide!.stepKey, onDone: _done),
         body: Column(
           children: [
@@ -557,14 +584,15 @@ class _TripStayScreenState extends State<TripStayScreen> with TickerProviderStat
                   .animate(CurvedAnimation(parent: _anim, curve: const Interval(0, 0.5, curve: Curves.fastOutSlowIn))),
               child: Obx(() {
               _plan.plan.value;
-              return TripPageHeader(
+              final noSkip = _guide != null || _plan.isReadOnly || _only.isNotEmpty || _plan.openRowsOf(_key).isNotEmpty || _plan.confirmedRowOf(_key) != null;
+              return TripListTopBar(
+                tone: ListingTone.forest,
                 title: TripStringsV2Find.stayIn(_city),
                 subtitle: _subtitle(),
                 onBack: TripNavigation.backToPlan,
-                tone: KitTone.stay,
-                trailing: _guide != null || _plan.isReadOnly || _only.isNotEmpty || _plan.openRowsOf(_key).isNotEmpty || _plan.confirmedRowOf(_key) != null
-                    ? null
-                    : TripHeaderAction(label: TripStringsV2Find.skip, onTap: _skip),
+                guide: _guide,
+                skipLabel: noSkip ? null : TripStringsV2Find.skip,
+                onSkip: _skip,
               );
             })),
             Expanded(

@@ -246,8 +246,10 @@ class PillAction extends StatelessWidget {
     this.filled = false,
     this.height = 40,
     this.maxWidth,
+    this.compact = false,
   });
 
+  final bool compact;
   final double? maxWidth;
 
   final String label;
@@ -269,12 +271,12 @@ class PillAction extends StatelessWidget {
     return PressScale(
       enabled: enabled,
       child: ConstrainedBox(
-        constraints: BoxConstraints(minHeight: KitMetrics.touch, maxWidth: maxWidth ?? double.infinity),
+        constraints: BoxConstraints(minHeight: compact ? 34 : KitMetrics.touch, maxWidth: maxWidth ?? double.infinity),
         child: Center(
           widthFactor: 1,
           heightFactor: 1,
           child: Container(
-            height: height,
+            height: compact ? 34 : height,
             decoration: BoxDecoration(
               gradient: filled && enabled ? tone.gradient : null,
               color: filled && enabled ? null : DesignColors.surface,
@@ -291,11 +293,11 @@ class PillAction extends StatelessWidget {
                 highlightColor: Colors.transparent,
                 onTap: onTap,
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  padding: EdgeInsets.symmetric(horizontal: compact ? 8 : 16),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      if (icon != null) ...[icon!, const SizedBox(width: 6)],
+                      if (icon != null) ...[icon!, SizedBox(width: compact ? 4 : 6)],
                       Flexible(
                         child: _label(
                           Text(label,
@@ -347,9 +349,14 @@ class TextLink extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(label,
-                  style: TypeTokens.style(14, FontWeight.w600,
-                      color: color, letterSpacing: 0.2)),
+              Flexible(
+                child: Text(label,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: TypeTokens.style(14, FontWeight.w600,
+                        color: color, letterSpacing: 0.2)),
+              ),
               if (trailingArrow) ...[
                 const SizedBox(width: 4),
                 Icon(Icons.arrow_forward_rounded, size: 16, color: color),

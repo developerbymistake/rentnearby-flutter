@@ -9,7 +9,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 
-const String shotsDir = r'F:\Dhasu\UI_Template_resume\Slice1\shots';
+String shotsDir = r'F:\Dhasu\UI_Template_resume\Slice1\shots';
 const Size phoneSize = Size(360, 800);
 const double phoneTopInset = 28;
 const double phoneBottomInset = 24;

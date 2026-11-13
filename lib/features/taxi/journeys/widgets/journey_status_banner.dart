@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:bakhli/design/design.dart';
+import 'package:bakhli/design/extra/ext_journeys.dart';
 import 'package:bakhli/design/extra/trip_plan_look.dart';
 import '../../ways/taxi_ways_strings.dart';
 import '../journey_models.dart';
@@ -29,29 +30,7 @@ class JourneyOfflineBanner extends StatelessWidget {
   const JourneyOfflineBanner({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-      decoration: BoxDecoration(
-        color: DesignColors.surface,
-        borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(16)),
-        boxShadow: TripKit.shadow(),
-      ),
-      child: Row(children: [
-        const Icon(Icons.wifi_off_rounded, size: 16, color: TripLook.warning),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Text(
-            TaxiWaysStrings.offlineSaved,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: TripKit.text(12, weight: FontWeight.w600, color: DesignColors.textPrimary),
-          ),
-        ),
-      ]),
-    );
-  }
+  Widget build(BuildContext context) => const JourneyBanner3D(text: TaxiWaysStrings.offlineSaved, art: ListingArt.worldMap);
 }
 
 class JourneyStatusBanner extends StatelessWidget {
@@ -76,43 +55,18 @@ class JourneyStatusBanner extends StatelessWidget {
     final body = backup == null
         ? TaxiWaysStrings.pausedNoBackup(leg.driver.driverName)
         : TaxiWaysStrings.pausedBody(leg.driver.driverName, backup.driverName);
-    return Container(
-      decoration: journeyBarCard(TripLook.warning),
-      child: ClipRRect(
-        borderRadius: TripLook.softRadius,
-        child: Container(
-          padding: const EdgeInsets.all(12),
-          decoration: const BoxDecoration(border: Border(left: BorderSide(color: TripLook.warning, width: 4))),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              const Icon(Icons.warning_amber_rounded, size: 20, color: TripLook.warning),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(TaxiWaysStrings.statusUnavailable(journey.unavailableCount),
-                      style: FitnessAppTheme.title.copyWith(fontSize: 14)),
-                  const SizedBox(height: 2),
-                  Text(body, style: FitnessAppTheme.caption.copyWith(height: 1.35)),
-                ]),
-              ),
-            ]),
-            const SizedBox(height: 10),
-            SizedBox(
-              width: double.infinity,
-              child: backup == null
-                  ? JourneyButton(
-                      label: TaxiWaysStrings.changeDriver,
-                      kind: JourneyButtonKind.outline,
-                      onPressed: busy ? null : () => onChange(leg),
-                    )
-                  : JourneyButton(
-                      label: TaxiWaysStrings.replaceWith(backup.driverName),
-                      maxLines: 2,
-                      onPressed: busy ? null : () => onReplace(leg, backup),
-                    ),
-            ),
-          ]),
-        ),
+    return JourneyBanner3D(
+      error: true,
+      art: ListingArt.taxi,
+      title: TaxiWaysStrings.statusUnavailable(journey.unavailableCount),
+      text: body,
+      button: GradientPillButton(
+        tone: ListingTone.coral,
+        height: 52,
+        fontSize: 15,
+        label: backup == null ? TaxiWaysStrings.changeDriver : TaxiWaysStrings.replaceWith(backup.driverName),
+        loading: busy,
+        onTap: busy ? null : (backup == null ? () => onChange(leg) : () => onReplace(leg, backup)),
       ),
     );
   }

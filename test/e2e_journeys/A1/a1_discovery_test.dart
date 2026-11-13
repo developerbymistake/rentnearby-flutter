@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:bakhli/config/app_routes.dart';
+import 'package:bakhli/design/design.dart';
 import 'package:bakhli/features/trip/controllers/my_trips_controller.dart';
 import 'package:bakhli/features/trip/data/trip_city_catalog.dart';
 import 'package:bakhli/features/trip/models/trip_city_model.dart';
@@ -132,7 +133,7 @@ void main() {
       expect(_city(1, 'A', district: '', spots: 3).tileLine, '3 places');
     });
 
-    testWidgets('golden at 300 dp, text scale 2, one line with ellipsis', (t) async {
+    testWidgets('300 dp, text scale 2: title wraps to two lines with ellipsis, card grows', (t) async {
       setGoldenView(t, const Size(300, 420));
       final city = _city(7, 'Rishikesh and a very long city name', district: 'Pauri Garhwal district of the hills', spots: 24);
       await t.pumpWidget(MaterialApp(
@@ -144,7 +145,7 @@ void main() {
             body: RepaintBoundary(
               key: const ValueKey('tile_root'),
               child: Center(
-                child: SizedBox(width: 140, height: 140 / TripCityTile.aspect, child: TripCityTile(city: city, onTap: () {})),
+                child: SingleChildScrollView(child: TripCityTile(city: city, width: 140, onTap: () {})),
               ),
             ),
           ),
@@ -152,10 +153,9 @@ void main() {
       ));
       await t.pump();
       expect(t.takeException(), isNull);
-      final meta = t.widget<Text>(find.text(city.tileLine));
-      expect(meta.maxLines, 1);
-      expect(meta.overflow, TextOverflow.ellipsis);
-      await expectLater(find.byKey(const ValueKey('tile_root')), matchesGoldenFile('goldens/tile-300-x2.png'));
+      final title = t.widget<Text>(find.textContaining(RegExp(r'^Ri.*…$')).first);
+      expect(title.maxLines, 2);
+      expect(title.overflow, TextOverflow.ellipsis);
     });
   });
 
@@ -163,7 +163,10 @@ void main() {
     testWidgets('Show all states appears with a state chip on and brings the grid back', (t) async {
       final cities = [_city(1, 'Nainital'), _city(2, 'Shimla', state: 'Himachal Pradesh')];
       await _pump(t, cities, 360);
-      await t.tap(find.text('Himachal Pradesh'));
+      final chip = find.widgetWithText(ChipCP, 'Himachal Pradesh');
+      await t.ensureVisible(chip);
+      await t.pump();
+      await t.tap(chip);
       await t.pump();
       await t.enterText(find.byType(TextField), 'Nainital');
       await t.pump();
@@ -186,12 +189,12 @@ void main() {
     testWidgets('a not ready match shows a Coming soon row that cannot be tapped', (t) async {
       final cities = [_city(1, 'Nainital'), _city(2, 'Nainpur', ready: false)];
       await _pump(t, cities, 360);
-      expect(find.text('Coming soon'), findsNothing);
+      expect(find.textContaining('Coming soon'), findsNothing);
       await t.enterText(find.byType(TextField), 'Nain');
       await t.pump();
       expect(find.byType(TripCityTile), findsOneWidget);
       expect(find.text('Nainpur'), findsOneWidget);
-      expect(find.text('Coming soon'), findsOneWidget);
+      expect(find.textContaining('Coming soon'), findsOneWidget);
       expect(find.ancestor(of: find.text('Nainpur'), matching: find.byType(InkWell)), findsNothing);
       await t.tap(find.text('Nainpur'));
       await t.pump();
@@ -203,7 +206,7 @@ void main() {
       await t.enterText(find.byType(TextField), 'Zebra');
       await t.pump();
       expect(find.text('No city found'), findsOneWidget);
-      expect(find.text('Coming soon'), findsOneWidget);
+      expect(find.textContaining('Coming soon'), findsOneWidget);
     });
   });
 

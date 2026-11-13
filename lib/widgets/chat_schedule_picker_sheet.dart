@@ -1,18 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:bakhli/design/design.dart';
-import 'package:bakhli/design/extra/chat_kit.dart';
+import 'package:bakhli/design/extra/ext_chat.dart';
 import '../utils/app_toast.dart';
 
 class ChatSchedulePickerSheet extends StatefulWidget {
   final String title;
-  const ChatSchedulePickerSheet({super.key, this.title = 'When would you like to visit?'});
+  final ListingTone? tone;
+  const ChatSchedulePickerSheet({super.key, this.title = 'When would you like to visit?', this.tone});
 
-  static Future<List<DateTime>?> show(BuildContext context, {String? title}) {
-    return showModalBottomSheet<List<DateTime>>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => ChatSchedulePickerSheet(title: title ?? 'When would you like to visit?'),
+  static Future<List<DateTime>?> show(BuildContext context, {String? title, ListingTone? tone}) {
+    return Sheet3D.show<List<DateTime>>(
+      context,
+      builder: (_) => ChatSchedulePickerSheet(title: title ?? 'When would you like to visit?', tone: tone),
     );
   }
 
@@ -59,97 +58,72 @@ class _ChatSchedulePickerSheetState extends State<ChatSchedulePickerSheet> {
   @override
   Widget build(BuildContext context) {
     final selectedDate = _dates[_selectedDateIndex];
-    return ChatSheetFrame(
-      child: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-          child: TemplateStagger(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              ChatSheetFrame.grabber(),
-              Padding(
-                padding: const EdgeInsets.only(top: 8, bottom: 14),
-                child: Text(widget.title, style: FitnessAppTheme.title),
-              ),
-              SizedBox(
-                height: 76,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-                  itemCount: _dates.length,
-                  separatorBuilder: (_, _) => const SizedBox(width: 8),
-                  itemBuilder: (_, i) {
-                    final d = _dates[i];
-                    final sel = i == _selectedDateIndex;
-                    return ChatReveal(
-                      index: i,
-                      count: _dates.length,
-                      horizontal: true,
-                      offset: 100,
-                      child: GestureDetector(
-                        onTap: () => setState(() {
-                          _selectedDateIndex = i;
-                          _selectedSlots.clear();
-                        }),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          width: 50,
-                          decoration: BoxDecoration(
-                            color: sel ? FitnessAppTheme.nearlyDarkBlue : FitnessAppTheme.white,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: sel ? FitnessAppTheme.nearlyDarkBlue : FitnessAppTheme.spacer, width: 1.5),
-                            boxShadow: sel ? ShadowTokens.elev3 : PickKit.greyShadow(),
-                          ),
-                          child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                            Text(i == 0 ? 'Today' : _dayLabels[d.weekday % 7],
-                                style: TripKit.text(11, color: sel ? FitnessAppTheme.white : FitnessAppTheme.nearlyDarkBlue)),
-                            const SizedBox(height: 2),
-                            Text('${d.day}',
-                                style: TripKit.text(16, weight: FontWeight.w700, color: sel ? FitnessAppTheme.white : FitnessAppTheme.darkerText)),
-                          ]),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.only(top: 12, bottom: 8),
-                child: Text('Tap one or more times to offer a choice',
-                    style: FitnessAppTheme.caption.copyWith(fontSize: 12, color: FitnessAppTheme.lightText)),
-              ),
-              Padding(
-                padding: const EdgeInsets.only(bottom: 20, left: 4, right: 4),
-                child: Wrap(
-                  spacing: 8,
-                  runSpacing: 10,
-                  children: _slots.map((slot) {
-                    final disabled = _isPast(selectedDate, slot);
-                    final sel = _selectedSlots.contains(slot);
-                    return IgnorePointer(
-                      ignoring: disabled,
-                      child: Opacity(
-                        opacity: disabled ? Alpha.v40 : Alpha.full,
-                        child: PickChip(
-                          label: slot.format(context),
-                          selected: sel,
-                          activeColor: FitnessAppTheme.nearlyDarkBlue,
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                          onTap: () => setState(() => sel ? _selectedSlots.remove(slot) : _selectedSlots.add(slot)),
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                ),
-              ),
-              PickButton(
-                label: _selectedSlots.length > 1 ? 'Send these times →' : 'Send this time →',
-                onPressed: _selectedSlots.isEmpty ? null : () => _onSend(selectedDate),
-              ),
-            ],
-          ),
-        ),
+    final tone = widget.tone ?? ListingTone.forest;
+    return Sheet3D(
+      tone: tone,
+      art: ListingArt.calendar,
+      title: widget.title,
+      fitTitle: true,
+      footer: GradientPillButton(
+        tone: tone,
+        label: _selectedSlots.length > 1 ? 'Send these times \u2192' : 'Send this time \u2192',
+        fontSize: 17,
+        onTap: _selectedSlots.isEmpty ? null : () => _onSend(selectedDate),
       ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Row(
+              children: [
+                for (var i = 0; i < _dates.length; i++) ...[
+                  if (i > 0) const SizedBox(width: 6),
+                  Expanded(
+                    child: ChatDayPill3D(
+                      tone: tone,
+                      top: i == 0 ? 'Today' : _dayLabels[_dates[i].weekday % 7],
+                      day: '${_dates[i].day}',
+                      selected: i == _selectedDateIndex,
+                      onTap: () => setState(() {
+                        _selectedDateIndex = i;
+                        _selectedSlots.clear();
+                      }),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(top: 18, bottom: 10),
+            child: Text('Tap one or more times to offer a choice', style: Ink3D.text(12, FontWeight.w400, Ink3D.grey)),
+          ),
+          for (var r = 0; r < _slots.length; r += 3) ...[
+            if (r > 0) const SizedBox(height: 10),
+            Row(
+              children: [
+                for (var c = r; c < r + 3 && c < _slots.length; c++) ...[
+                  if (c > r) const SizedBox(width: 10),
+                  Expanded(child: _slot(selectedDate, _slots[c])),
+                ],
+              ],
+            ),
+          ],
+          const SizedBox(height: 14),
+        ],
+      ),
+    );
+  }
+
+  Widget _slot(DateTime selectedDate, TimeOfDay slot) {
+    final sel = _selectedSlots.contains(slot);
+    return ChatSlotPill3D(
+      tone: widget.tone ?? ListingTone.forest,
+      label: slot.format(context),
+      selected: sel,
+      off: _isPast(selectedDate, slot),
+      onTap: () => setState(() => sel ? _selectedSlots.remove(slot) : _selectedSlots.add(slot)),
     );
   }
 }

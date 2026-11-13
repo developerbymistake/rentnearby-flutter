@@ -1,4 +1,3 @@
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../../config/app_routes.dart';
@@ -6,18 +5,19 @@ import '../../../../config/app_tabs.dart';
 import '../../../../controllers/auth_controller.dart';
 import '../../../../controllers/tab_config_controller.dart';
 import '../../../../design/design.dart';
+import '../../../../models/browse_item.dart';
 import '../../../../models/place_result_model.dart';
 import '../../../../utils/app_toast.dart';
 import '../../../../widgets/location_search_sheet.dart';
 import '../../../nearby/controllers/nearby_centre_controller.dart';
 import '../../../nearby/nearby_strings.dart';
-import '../../../nearby/widgets/nearby_featured_slot.dart';
 import '../../../nearby/widgets/nearby_header_strip.dart';
-import '../../../nearby/widgets/nearby_label_text.dart';
 import '../../../nearby/widgets/nearby_state_views.dart';
 import '../../ways/widgets/taxi_ways_entry_card.dart';
+import '../../models/taxi_browse_item.dart';
 import '../taxi_card.dart';
 import '../taxi_navigation.dart';
+import '../../taxi_option_sets.dart';
 import 'route_cities_strip.dart';
 import 'taxi_feed_repository.dart';
 import 'taxi_list_controller_v2.dart';
@@ -85,68 +85,53 @@ class _TaxiListScreenV2State extends State<TaxiListScreenV2> {
 
   Widget _in(int i, Widget child) => EntranceOnce(index: i, child: child);
 
+  static final _tone = ListingTone.coral;
+
   @override
   Widget build(BuildContext context) {
-    final bottom = widget.root ? BarMetrics.bodyBottomOf(context) : 32 + MediaQuery.paddingOf(context).bottom;
+    final bottom = widget.root ? OverlayInsets.list(context) : 32 + MediaQuery.paddingOf(context).bottom;
     final body = Scaffold(
-      backgroundColor: DesignColors.scaffold,
-      body: RefreshIndicator(
-        color: DesignColors.primary,
-        backgroundColor: DesignColors.surface,
-        onRefresh: _ctrl.pullRefresh,
-        child: CustomScrollView(
-          controller: _scroll,
-          physics: const AlwaysScrollableScrollPhysics(),
-          slivers: [
-            SliverToBoxAdapter(child: _buildHeader(context)),
-            SliverToBoxAdapter(child: _in(0, _buildReviewStrip())),
-            SliverToBoxAdapter(child: _in(1, _buildTiles())),
-            SliverToBoxAdapter(child: _buildHeaderStrip()),
-            _buildBody(),
-            SliverToBoxAdapter(child: _buildFooter(bottom)),
-          ],
+      backgroundColor: ListingPalette.coral.page,
+      body: KitStatusBar(
+        lightIcons: false,
+        child: SafeArea(
+          bottom: false,
+          child: RefreshIndicator(
+            color: _tone.g2,
+            backgroundColor: DesignColors.surface,
+            onRefresh: _ctrl.pullRefresh,
+            child: CustomScrollView(
+              controller: _scroll,
+              physics: const AlwaysScrollableScrollPhysics(),
+              slivers: [
+                SliverToBoxAdapter(child: _buildHeader(context)),
+                SliverToBoxAdapter(child: _in(0, _buildReviewStrip())),
+                SliverToBoxAdapter(child: _in(1, _buildTiles())),
+                SliverToBoxAdapter(child: _buildHeaderStrip()),
+                _buildBody(),
+                SliverToBoxAdapter(child: _buildFooter(bottom)),
+              ],
+            ),
+          ),
         ),
       ),
     );
     return widget.root ? TabEntrance(tab: AppTabs.taxi, child: body) : body;
   }
 
-  static const double _selectorCard = 88;
-  static const double _headerBottom = 44;
-  static const double _selectorOverlap = _headerBottom + ModuleHeader.paddingBottom;
-
-  double _cardHeight(BuildContext context) =>
-      math.max(_selectorCard, 2 * (MediaQuery.textScalerOf(context).scale(36) + 8) + 1);
-
   Widget _buildHeader(BuildContext context) {
-    final card = _cardHeight(context);
     return Obx(() {
       final title = widget.root ? Get.find<TabConfigController>().displayNameForIndex(AppTabs.taxi, 'Taxi') : 'Taxi';
       final far = _ctrl.header.value?.farAway ?? false;
       final subtitle = _ctrl.to.value != null ? 'Taxis for your route' : (far ? 'Find the nearest taxis' : 'Taxis near you');
       return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Stack(
-            clipBehavior: Clip.none,
-            children: [
-              ModuleHeader(
-                title: title,
-                subtitle: subtitle,
-                tone: KitTone.taxi,
-                tabRoot: widget.root,
-                onBack: widget.root ? null : () => Get.back(),
-                autoHeight: true,
-                bottom: const SizedBox(height: _headerBottom),
-              ),
-              Positioned(
-                left: KitMetrics.gutter,
-                right: KitMetrics.gutter,
-                bottom: -(card - _selectorOverlap),
-                child: _buildSelectors(card),
-              ),
-            ],
-          ),
-          SizedBox(height: card - _selectorOverlap + 12),
+          if (widget.root)
+            ModuleTitleBar(tone: _tone, art: ListingArt.taxi, title: title, subtitle: subtitle)
+          else
+            TopBar3D(tone: _tone, title: title, subtitle: subtitle, onBack: () => Get.back()),
+          _buildSelectors(),
         ],
       );
     });
@@ -160,109 +145,53 @@ class _TaxiListScreenV2State extends State<TaxiListScreenV2> {
     return c.hasPin && label != null ? label : 'Near you';
   }
 
-  Widget _buildSelectors(double card) {
+  Widget _buildSelectors() {
     return Obx(() {
       final f = _ctrl.from.value;
       final t = _ctrl.to.value;
       NearbyCentreController.to.centreVersion.value;
-      return DecoratedBox(
-        decoration: BoxDecoration(
-          color: DesignColors.surface,
-          borderRadius: CardRadius.tile,
-          boxShadow: ShadowTokens.elev3,
-        ),
-        child: SizedBox(
-          height: card,
-          child: Column(children: [
-            Expanded(
-              child: _selector(
-                label: 'From',
-                asset: TravelIcon.place,
-                value: _fromText(),
-                isSet: f != null,
-                onTap: () => _pick(isFrom: true),
-                trailing: f == null
-                    ? null
-                    : _trailingButton(Image.asset(TravelIcon.pin, width: 22, height: 22), _ctrl.useCentreAsFrom),
-              ),
-            ),
-            const Divider(height: 1, indent: 16, endIndent: 16, color: DesignColors.dividerSoft),
-            Expanded(
-              child: _selector(
-                label: 'To',
-                asset: TravelIcon.map,
-                value: t?.name ?? 'Anywhere / search a place',
-                isSet: t != null,
-                onTap: () => _pick(isFrom: false),
-                trailing: t != null
-                    ? _trailingButton(const Icon(Icons.close_rounded, size: 18, color: DesignColors.primary), _ctrl.clearTo)
-                    : null,
-              ),
-            ),
-          ]),
-        ),
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SearchPill(
+            tone: _tone,
+            label: 'From',
+            value: _fromText(),
+            leadingArt: ListingArt.roundPushpin,
+            buttonArt: f == null ? ListingArt.compass : ListingArt.roundPushpin,
+            buttonSemantics: f == null ? 'Search From' : 'Use my centre',
+            onTap: () => _pick(isFrom: true),
+            onButtonTap: f == null ? () => _pick(isFrom: true) : _ctrl.useCentreAsFrom,
+            margin: const EdgeInsets.fromLTRB(16, 24, 16, 0),
+          ),
+          SearchPill(
+            tone: _tone,
+            label: 'To',
+            value: t?.name ?? 'Anywhere / search a place',
+            hint: t == null,
+            leadingArt: ListingArt.worldMap,
+            buttonArt: ListingArt.compass,
+            buttonSemantics: t == null ? 'Search To' : 'Clear To',
+            buttonChild: t == null ? null : const Icon(Icons.close_rounded, color: DesignColors.onPrimary, size: 26),
+            onTap: () => _pick(isFrom: false),
+            onButtonTap: t == null ? () => _pick(isFrom: false) : _ctrl.clearTo,
+            margin: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+          ),
+        ],
       );
     });
-  }
-
-  Widget _trailingButton(Widget icon, VoidCallback onTap) {
-    return InkResponse(
-      onTap: onTap,
-      radius: 22,
-      child: SizedBox(width: 44, height: 44, child: Center(child: icon)),
-    );
-  }
-
-  Widget _selector({
-    required String label,
-    required String asset,
-    required String value,
-    required bool isSet,
-    required VoidCallback onTap,
-    Widget? trailing,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      splashColor: DesignColors.splash,
-      child: Padding(
-        padding: EdgeInsets.only(left: 16, right: trailing != null ? 4 : 12),
-        child: Row(
-          children: [
-            Image.asset(asset, width: 24, height: 24),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(label, maxLines: 1, style: TypeTokens.caption),
-                  Text(
-                    value,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TypeTokens.style(14, isSet ? FontWeight.w700 : FontWeight.w500,
-                        color: isSet ? DesignColors.textStrong : DesignColors.textMuted),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 6),
-            trailing ?? const Icon(Icons.search_rounded, size: 22, color: DesignColors.primary),
-          ],
-        ),
-      ),
-    );
   }
 
   Widget _buildReviewStrip() {
     return Obx(() {
       final pending = _auth.taxisEnabled && _auth.user.value?.taxiStatus == 'PendingReview';
       if (!pending) return const SizedBox.shrink();
-      return const SlimBar(
+      return WideCard(
+        kind: WideKind.slim,
+        tone: ListingTone.cF,
+        art: ListingArt.calendar,
         title: 'Under review',
         subtitle: 'Your taxi is being checked',
-        leadingAsset: TravelIcon.note,
-        tone: KitTone.taxi,
       );
     });
   }
@@ -270,12 +199,11 @@ class _TaxiListScreenV2State extends State<TaxiListScreenV2> {
   Widget _buildTiles() {
     return Obx(() {
       if (!_auth.taxisEnabled || !widget.root) return const SizedBox.shrink();
-      return ListRow(
-        title: 'My Taxi',
-        iconAsset: TravelIcon.taxi,
-        tone: KitTone.taxi,
-        compact: true,
-        onTap: () => Get.toNamed(AppRoutes.myTaxi),
+      return Padding(
+        padding: const EdgeInsets.only(top: 18),
+        child: WhiteCard3D(
+          child: IconRow3D(art: ListingArt.taxi, title: 'My Taxi', tone: _tone, onTap: () => Get.toNamed(AppRoutes.myTaxi)),
+        ),
       );
     });
   }
@@ -296,29 +224,106 @@ class _TaxiListScreenV2State extends State<TaxiListScreenV2> {
     return far ? NearbyStrings.taxisNearest : NearbyStrings.taxisNear;
   }
 
-  Widget _title(String text) => Padding(
-        padding: const EdgeInsets.fromLTRB(KitMetrics.gutter, 12, KitMetrics.gutter, 4),
-        child: Text(text, style: TypeTokens.style(16, FontWeight.w700, color: DesignColors.textStrong)),
-      );
+  Widget _title(String text) => TitleRow3D(title: text, tone: _tone);
 
   Widget _card(TaxiFeedItem f, {int index = 0}) => EntranceOnce(
         key: ValueKey('${f.id}-$index'),
         index: index,
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          TaxiCard(item: f.item, onOpen: () => _open(f)),
-          if (f.distance != null)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(KitMetrics.gutter + 4, 0, KitMetrics.gutter, 4),
-              child: NearbyLabelText(distance: f.distance!, taxi: true),
-            ),
-        ]),
+        child: TaxiCard(
+          item: f.item,
+          onOpen: () => _open(f),
+          tone: ListingTone.list(_tone, index),
+          distance: f.distance,
+        ),
       );
 
+  String _heroSub(TaxiFeedItem f) {
+    final t = f.item;
+    final fare = t.isMatch
+        ? [BrowseItem.inr(t.matchedFare!), if ((t.matchedToName ?? '').isNotEmpty) 'to ${t.matchedToName}'].join(' ')
+        : t.localDayRate != null
+            ? TaxiOptionSets.localRateLabel(t.localDayRate!)
+            : '';
+    final d = f.distance;
+    final head = [t.locality, fare].where((e) => e.isNotEmpty).join(' · ');
+    final dist = d == null ? '' : TaxiCard.labelFor(d);
+    final road = d != null && d.isFar ? NearbyStrings.byRoad : '';
+    String join(List<String> parts, String sep) => parts.where((e) => e.isNotEmpty).join(sep);
+    final tail = join([dist, road], '. ');
+    final options = [
+      join([head, dist, road], '\n'),
+      join([head, tail], '\n'),
+      join([head, tail], ' · '),
+    ];
+    for (final s in options) {
+      if (_heroSubLines(s) <= _heroSubMaxLines) return s;
+    }
+    return options.last;
+  }
+
+  static const int _heroSubMaxLines = 8;
+
+  // Same width and style as the WorkoutCard subtitle beside its arrow.
+  int _heroSubLines(String s) {
+    final w = MediaQuery.sizeOf(context).width;
+    final art = w < 340 ? 88.0 : 104.0;
+    final width = w - 36 - 44 - (art - 8 > 80 ? art - 8 : 80);
+    if (width <= 0) return 0;
+    final tp = TextPainter(
+      text: TextSpan(text: s, style: Ink3D.text(13, FontWeight.w400, Ink3D.title, height: 1.35)),
+      textDirection: TextDirection.ltr,
+      textScaler: MediaQuery.textScalerOf(context),
+    )..layout(maxWidth: width);
+    final n = tp.computeLineMetrics().length;
+    tp.dispose();
+    return n;
+  }
+
+  static String _keep(String s) => s.trim().replaceAll(' ', ' ');
+
+  String _heroEyebrow(TaxiBrowseItem t) => [
+        '${KitText.star} Featured',
+        t.vehicleTypeName,
+        if (t.seats != null) '${TaxiOptionSets.seatsLabel(t.seats!)} seats',
+      ].where((e) => e.trim().isNotEmpty).map(_keep).join(' · ');
+
+  List<String> _heroChips(TaxiFeedItem f) {
+    final t = f.item;
+    return [
+      if (!t.isMatch) 'Local taxi',
+      if (t.isMatch && t.matchedTripType == 'RoundTrip') 'Round trip',
+      if (t.isMatch && t.matchReversed) 'Reverse',
+      if (!t.isMatch && t.localDayRate != null && t.localDayKm != null) '${t.localDayKm} km/day',
+    ];
+  }
+
+  Widget _hero(TaxiFeedItem f) {
+    final t = f.item;
+    return EntranceOnce(
+      key: ValueKey('${f.id}-hero'),
+      index: 0,
+      child: Padding(
+        padding: const EdgeInsets.only(top: 24, bottom: 4),
+        child: WorkoutCard(
+          tone: _tone,
+          art: TaxiVehicleIcon.assetFor(t.vehicleTypeName),
+          eyebrow: _heroEyebrow(t),
+          title: t.driverName,
+          subtitle: _heroSub(f),
+          chips: _heroChips(f),
+          trailing: WorkoutTrailing.arrow,
+          onTap: () => _open(f),
+        ),
+      ),
+    );
+  }
+
   Widget _stateBox({required bool error}) => error
-      ? NearbyError(onRetry: _ctrl.retry)
+      ? NearbyError(onRetry: _ctrl.retry, tone: ListingTone.coral)
       : NearbyEmpty(
           title: _ctrl.isRoute ? NearbyStrings.routeEmptyTitle : NearbyStrings.taxisEmptyTitle,
           body: _ctrl.isRoute ? NearbyStrings.routeEmptyBody : NearbyStrings.taxisEmptyBody,
+          tone: ListingTone.coral,
         );
 
   Widget _buildBody() {
@@ -329,12 +334,13 @@ class _TaxiListScreenV2State extends State<TaxiListScreenV2> {
       final items = _ctrl.items;
       final featured = _ctrl.featured;
       if (items.isEmpty && featured.isEmpty) {
-        return SliverToBoxAdapter(child: _stateBox(error: _ctrl.loadFailed.value));
+        return SliverList.list(children: [_title(_localTitle()), _stateBox(error: _ctrl.loadFailed.value)]);
       }
       final thin = items.length + featured.length < 3 && !_ctrl.hasMore.value;
       return SliverList.list(children: [
-        NearbyFeaturedSlot<TaxiFeedItem>(items: featured.toList(), builder: (_, f) => _card(f)),
+        if (featured.isNotEmpty) _hero(featured.first),
         _title(_localTitle()),
+        if (featured.length > 1) _card(featured[1], index: 1),
         for (var i = 0; i < items.length; i++) _card(items[i], index: i),
         if (thin) const NearbyThin(),
       ]);
@@ -362,8 +368,8 @@ class _TaxiListScreenV2State extends State<TaxiListScreenV2> {
       return Padding(
         padding: const EdgeInsets.fromLTRB(KitMetrics.gutter, 4, KitMetrics.gutter, 8),
         child: loading
-            ? const Center(child: SizedBox(height: 24, width: 24, child: CircularProgressIndicator(strokeWidth: 2, color: DesignColors.primary)))
-            : TextLink(label: NearbyStrings.showMore, onTap: () => _ctrl.showMoreOf(t.key)),
+            ? Center(child: SizedBox(height: 24, width: 24, child: CircularProgressIndicator(strokeWidth: 2, color: _tone.g2)))
+            : Center(child: ListingFilterChip(tone: _tone, label: NearbyStrings.showMore, selected: false, onTap: () => _ctrl.showMoreOf(t.key))),
       );
     });
   }
@@ -372,7 +378,7 @@ class _TaxiListScreenV2State extends State<TaxiListScreenV2> {
     final r = _ctrl.route.value;
     final f = _ctrl.from.value ?? PlaceResult(name: 'Near you', subtitle: '', latLng: _ctrl.origin);
     final to = _ctrl.to.value;
-    if (r == null) return SliverToBoxAdapter(child: _stateBox(error: _ctrl.loadFailed.value));
+    if (r == null) return SliverList.list(children: [_title(_localTitle()), _stateBox(error: _ctrl.loadFailed.value)]);
     final children = <Widget>[];
     final shown = [for (final t in r.tiers) if (t.items.isNotEmpty) t];
     if (shown.isEmpty) {
@@ -419,7 +425,7 @@ class _TaxiListScreenV2State extends State<TaxiListScreenV2> {
     return Obx(() {
       Widget child = const SizedBox.shrink();
       if (_ctrl.isLoadingMore.value) {
-        child = const Center(child: CircularProgressIndicator(strokeWidth: 2, color: DesignColors.primary));
+        child = Center(child: CircularProgressIndicator(strokeWidth: 2, color: _tone.g2));
       } else if (_ctrl.loadMoreFailed.value) {
         child = Center(child: TextLink(label: "Couldn't load more. Tap to retry", onTap: _ctrl.retryLoadMore));
       }

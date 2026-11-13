@@ -201,6 +201,8 @@ void main() {
         opener: (id, row) async => opened = row,
       );
       expect(loads, 1);
+      await t.ensureVisible(find.byKey(const ValueKey('todo-stay:1')));
+      await t.pump(const Duration(milliseconds: 300));
       await t.tap(find.byKey(const ValueKey('todo-stay:1')));
       await t.pump();
       await t.pump(const Duration(milliseconds: 900));

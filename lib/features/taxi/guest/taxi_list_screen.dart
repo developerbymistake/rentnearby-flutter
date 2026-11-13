@@ -351,7 +351,7 @@ class _TaxiListScreenState extends State<TaxiListScreen> {
           return EntranceOnce(
             key: ValueKey(t.id),
             index: i,
-            child: TaxiCard(item: t, onOpen: () => _open(t)),
+            child: TaxiCard(item: t, onOpen: () => _open(t), tone: ListingTone.list(ListingTone.coral, i)),
           );
         },
       );

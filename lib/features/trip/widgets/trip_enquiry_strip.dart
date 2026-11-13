@@ -1,5 +1,5 @@
-import 'trip_ui.dart';
-import 'package:bakhli/design/template/fitness_app_theme.dart';
+import 'package:bakhli/design/design.dart';
+import 'package:bakhli/design/extra/ext_chat.dart';
 import 'package:flutter/material.dart';
 import '../../../models/browse_item.dart';
 import '../models/trip_enquiry_model.dart';
@@ -67,7 +67,7 @@ class TripEnquiryStrip extends StatelessWidget {
     final city = enquiry.context.city;
     if (city.isNotEmpty) parts.add(city);
     final cin = enquiry.checkIn;
-    if (cin != null) parts.add(TripFormat.shortDate(cin));
+    if (cin != null) parts.add(TripFormat.dayMonth(cin));
     return parts.join(' · ');
   }
 
@@ -120,88 +120,36 @@ class TripEnquiryStrip extends StatelessWidget {
     final status = enquiry.display;
     final advance = _advanceLine();
     final menu = actions.isNotEmpty && onAction != null;
-    return Material(
-      color: FitnessAppTheme.white,
-      child: DecoratedBox(
-        decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: FitnessAppTheme.spacer))),
-        child: IntrinsicHeight(
-          child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            Container(width: 4, color: advance != null && status == TripDisplayStatus.confirmedByBoth ? TripStatusVisuals.advanceBar(enquiry.advance.status) : TripStatusVisuals.bar(status)),
-            Expanded(
-              child: InkWell(
-                onTap: onTap,
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(minHeight: 56),
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(12, 8, 4, 8),
-                    child: Row(children: [
-                      Expanded(
-                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-                          Text(_title(),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                  fontFamily: FitnessAppTheme.fontName, fontSize: 12.5, fontWeight: FontWeight.w600, color: FitnessAppTheme.darkerText)),
-                          Text(_detail(),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 11.5, color: FitnessAppTheme.darkText)),
-                          Text.rich(
-                              TextSpan(text: _statusLine(), children: [
-                                if (status == TripDisplayStatus.confirmedByBoth && enquiry.hasPendingRevised)
-                                  TextSpan(
-                                    text: ' · ${TripStrings.notAcceptedYet}',
-                                    style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontWeight: FontWeight.w500, color: FitnessAppTheme.lightText),
-                                  ),
-                              ]),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                  fontFamily: FitnessAppTheme.fontName,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600,
-                                  color: TripStatusVisuals.text(status))),
-                          if (advance != null)
-                            Text(advance.$1,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                    fontFamily: FitnessAppTheme.fontName, fontSize: 11, fontWeight: FontWeight.w600, color: advance.$2)),
-                        ]),
-                      ),
-                      const Icon(Icons.chevron_right_rounded, size: 20, color: FitnessAppTheme.deactivatedText),
-                    ]),
-                  ),
-                ),
-              ),
-            ),
-            if (menu)
-              SizedBox(
-                width: 44,
-                child: PopupMenuButton<String>(
-                  padding: EdgeInsets.zero,
-                  tooltip: '',
-                  icon: const Icon(Icons.more_vert_rounded, size: 20, color: FitnessAppTheme.darkText),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-                  onSelected: onAction,
-                  itemBuilder: (_) => [
-                    for (final a in actions)
-                      PopupMenuItem<String>(
-                        value: a.id,
-                        enabled: a.enabled,
-                        height: 44,
-                        child: Text(a.label,
-                            style: TextStyle(
-                                fontFamily: FitnessAppTheme.fontName,
-                                fontSize: 13,
-                                color: a.destructive ? TripUi.bad : FitnessAppTheme.darkerText)),
-                      ),
-                  ],
-                ),
-              ),
-          ]),
-        ),
+    final revisedNote = status == TripDisplayStatus.confirmedByBoth && enquiry.hasPendingRevised;
+    return ChatStripCard3D(
+      barColor: advance != null && status == TripDisplayStatus.confirmedByBoth
+          ? TripStatusVisuals.advanceBar(enquiry.advance.status)
+          : TripStatusVisuals.bar(status),
+      title: _title(),
+      detail: _detail(),
+      onTap: onTap,
+      pill: StatusPill3D(
+        label: revisedNote ? '${_statusLine()} · ${TripStrings.notAcceptedYet}' : _statusLine(),
+        status: StatusTone3D.of(status.name),
+        color: status == TripDisplayStatus.asked ? ChatLook3D.askedPill : null,
+        onGradient: false,
       ),
+      extra: advance == null
+          ? null
+          : Padding(
+              padding: const EdgeInsets.only(top: 3),
+              child: Text(advance.$1, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(11.5, FontWeight.w600, advance.$2)),
+            ),
+      onMenu: menu
+          ? (rect) => showMenu3D(
+                context,
+                anchor: rect,
+                items: [
+                  for (final a in actions)
+                    MenuItem3D(label: a.label, danger: a.destructive, onTap: a.enabled ? () => onAction!(a.id) : null),
+                ],
+              )
+          : null,
     );
   }
 }

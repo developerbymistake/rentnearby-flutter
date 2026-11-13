@@ -16,6 +16,9 @@ class TripStringsTab {
   static const String showAllStates = 'Show all states';
   static const String comingSoon = 'Coming soon';
   static const String clearSearch = 'Clear search';
-  static String myTripsCount(int n) => n > 0 ? '$myTrips · $n' : myTrips;
-  static String cityMeta(int spots) => '$spots ${spots == 1 ? 'place' : 'places'}';
+  static String myTripsCount(int n) => n > 0 ? '$myTrips ($n)' : myTrips;
+  static String cityUnit(int spots) => spots == 1 ? 'place' : 'places';
+  static String cityMeta(int spots) => '$spots ${cityUnit(spots)}';
+  static String doneShort(int done, int total) => '$done of $total done';
+  static String waitingShort(int n) => '$n waiting';
 }

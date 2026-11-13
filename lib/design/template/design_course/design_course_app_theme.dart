@@ -31,7 +31,7 @@ class DesignCourseAppTheme {
 
   static const TextStyle display1 = TextStyle(
     // h4 -> display1
-    fontFamily: 'WorkSans',
+    fontFamily: 'Poppins',
     fontWeight: FontWeight.bold,
     fontSize: 36,
     letterSpacing: 0.4,
@@ -41,7 +41,7 @@ class DesignCourseAppTheme {
 
   static const TextStyle headline = TextStyle(
     // h5 -> headline
-    fontFamily: 'WorkSans',
+    fontFamily: 'Poppins',
     fontWeight: FontWeight.bold,
     fontSize: 24,
     letterSpacing: 0.27,
@@ -50,7 +50,7 @@ class DesignCourseAppTheme {
 
   static const TextStyle title = TextStyle(
     // h6 -> title
-    fontFamily: 'WorkSans',
+    fontFamily: 'Poppins',
     fontWeight: FontWeight.bold,
     fontSize: 16,
     letterSpacing: 0.18,
@@ -59,7 +59,7 @@ class DesignCourseAppTheme {
 
   static const TextStyle subtitle = TextStyle(
     // subtitle2 -> subtitle
-    fontFamily: 'WorkSans',
+    fontFamily: 'Poppins',
     fontWeight: FontWeight.w400,
     fontSize: 14,
     letterSpacing: -0.04,
@@ -68,7 +68,7 @@ class DesignCourseAppTheme {
 
   static const TextStyle body2 = TextStyle(
     // body1 -> body2
-    fontFamily: 'WorkSans',
+    fontFamily: 'Poppins',
     fontWeight: FontWeight.w400,
     fontSize: 14,
     letterSpacing: 0.2,
@@ -77,7 +77,7 @@ class DesignCourseAppTheme {
 
   static const TextStyle body1 = TextStyle(
     // body2 -> body1
-    fontFamily: 'WorkSans',
+    fontFamily: 'Poppins',
     fontWeight: FontWeight.w400,
     fontSize: 16,
     letterSpacing: -0.05,
@@ -86,7 +86,7 @@ class DesignCourseAppTheme {
 
   static const TextStyle caption = TextStyle(
     // Caption -> caption
-    fontFamily: 'WorkSans',
+    fontFamily: 'Poppins',
     fontWeight: FontWeight.w400,
     fontSize: 12,
     letterSpacing: 0.2,

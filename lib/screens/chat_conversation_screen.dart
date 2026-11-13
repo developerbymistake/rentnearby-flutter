@@ -4,7 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:uuid/uuid.dart';
 import 'package:bakhli/design/design.dart';
 import 'package:bakhli/design/extra/chat_kit.dart';
-import 'package:bakhli/design/extra/replies_kit.dart';
+import 'package:bakhli/design/extra/ext_chat.dart';
 import '../config/app_routes.dart';
 import '../controllers/chat_controller.dart';
 import '../features/stay/enquiries/stay_enquiries_controller.dart';
@@ -44,15 +44,14 @@ class ChatConversationScreen extends StatefulWidget {
   State<ChatConversationScreen> createState() => _ChatConversationScreenState();
 }
 
-class _ChatConversationScreenState extends State<ChatConversationScreen>
-    with WidgetsBindingObserver {
+class _ChatConversationScreenState extends State<ChatConversationScreen> with WidgetsBindingObserver {
   final _chatCtrl = Get.find<ChatController>();
-  static const KitTone _badTone = KitTone.danger;
 
   late final String _conversationId;
   late final String _listingType;
   ChatKindStyle get _kind => ChatKindStyle.of(_listingType);
   Color get _accent => _kind.dark;
+  ListingTone get _tone => ChatLook3D.toneFor(_listingType);
   late final String? _stayTypeId;
   late final String _otherPartyId;
   late final String _otherPartyName;
@@ -118,10 +117,12 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
       final v = args[key];
       return v == null || v.toString().isEmpty ? null : v.toString();
     }
+
     bool? flag(String key) {
       final v = args[key];
       return v is bool ? v : (v is String ? v.toLowerCase() == 'true' : null);
     }
+
     final id = text('conversationId');
     final known = id == null ? null : _chatCtrl.conversations.firstWhereOrNull((c) => c.id == id);
     _conversationId = id ?? '';
@@ -185,9 +186,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
       if (data['readByUserId'] != _otherPartyId) return;
       final now = DateTime.now();
       _messages.value = _messages
-          .map(
-            (m) => (m.isMine && m.readAt == null) ? m.copyWith(readAt: now) : m,
-          )
+          .map((m) => (m.isMine && m.readAt == null) ? m.copyWith(readAt: now) : m)
           .toList();
     });
 
@@ -342,7 +341,8 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
     }
   }
 
-  Future<void> _hostAcceptPrice(String messageId, String enquiryId, String offerId) => _guardAction(messageId, () async {
+  Future<void> _hostAcceptPrice(String messageId, String enquiryId, String offerId) =>
+      _guardAction(messageId, () async {
         final enq = await _freshEnquiry(enquiryId);
         if (enq == null || !mounted) return;
         final counter = enq.pendingCounter;
@@ -353,12 +353,15 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
         if (await StayEnquiryActions.sendOffer(context, enq, counter: counter)) _refreshEnquiry();
       });
 
-  Future<void> _hostDifferentOffer(String messageId, String enquiryId, String offerId) => _guardAction(messageId, () async {
+  Future<void> _hostDifferentOffer(String messageId, String enquiryId, String offerId) =>
+      _guardAction(messageId, () async {
         final enq = await _freshEnquiry(enquiryId);
         if (enq == null || !mounted) return;
         final change = enq.pendingChange;
         if (change != null && change.id == offerId) {
-          if (await StayEnquiryActions.revisedOffer(context, enq, changeRequest: change)) _refreshEnquiry();
+          if (await StayEnquiryActions.revisedOffer(context, enq, changeRequest: change)) {
+            _refreshEnquiry();
+          }
           return;
         }
         final counter = enq.pendingCounter;
@@ -369,7 +372,8 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
         if (await StayEnquiryActions.sendOffer(context, enq)) _refreshEnquiry();
       });
 
-  Future<void> _hostAcceptChange(String messageId, String enquiryId, String offerId) => _guardAction(messageId, () async {
+  Future<void> _hostAcceptChange(String messageId, String enquiryId, String offerId) =>
+      _guardAction(messageId, () async {
         final enq = await _freshEnquiry(enquiryId);
         if (enq == null || !mounted) return;
         final change = enq.pendingChange;
@@ -380,7 +384,8 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
         if (await StayEnquiryActions.acceptChange(context, enq, offerId)) _refreshEnquiry();
       });
 
-  Future<void> _acceptNewPrice(String messageId, String enquiryId, String offerId) => _guardAction(messageId, () async {
+  Future<void> _acceptNewPrice(String messageId, String enquiryId, String offerId) =>
+      _guardAction(messageId, () async {
         final enq = await _freshEnquiry(enquiryId);
         if (enq == null || !mounted) return;
         final revised = enq.pendingRevised;
@@ -391,31 +396,23 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
         if (await TripAcceptSheet.show(context, enquiry: enq, offer: revised)) _refreshEnquiry();
       });
 
-  Future<void> _keepPrice(String messageId, String enquiryId, String offerId) => _guardAction(messageId, () async {
+  Future<void> _keepPrice(String messageId, String enquiryId, String offerId) =>
+      _guardAction(messageId, () async {
         final cached = _enquiry.value;
         final enq = cached != null && cached.id == enquiryId ? cached : await _freshEnquiry(enquiryId);
         if (enq == null || !mounted) return;
         final money = BrowseItem.inr(enq.agreedTotalLocked ?? 0);
-        final ok = await showDialog<bool>(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: Text(TripStrings.keepPriceQ(money), style: FitnessAppTheme.title),
-            content: Text(TripStrings.keepPriceBody,
-                style: FitnessAppTheme.body2.copyWith(color: FitnessAppTheme.lightText, height: 1.4)),
-            actions: [
-              TextButton(
-                style: TextButton.styleFrom(minimumSize: const Size(64, 48)),
-                onPressed: () => Navigator.pop(ctx, false),
-                child: Text(TripStrings.cancelAction,
-                    style: FitnessAppTheme.body2.copyWith(color: FitnessAppTheme.lightText, fontWeight: FontWeight.w500)),
-              ),
-              TextButton(
-                style: TextButton.styleFrom(minimumSize: const Size(64, 48)),
-                onPressed: () => Navigator.pop(ctx, true),
-                child: Text(TripStrings.keepPrice(money),
-                    style: FitnessAppTheme.body2.copyWith(color: FitnessAppTheme.darkerText, fontWeight: FontWeight.w700)),
-              ),
-            ],
+        final ok = await Dialog3D.show<bool>(
+          context,
+          builder: (ctx) => Dialog3D(
+            tone: _tone,
+            art: ListingArt.moneyBag,
+            title: TripStrings.keepPriceQ(money),
+            body: TripStrings.keepPriceBody,
+            secondaryLabel: TripStrings.cancelAction,
+            onSecondary: () => Navigator.pop(ctx, false),
+            primaryLabel: TripStrings.keepPrice(money),
+            onPrimary: () => Navigator.pop(ctx, true),
           ),
         );
         if (ok != true || !mounted) return;
@@ -423,11 +420,11 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
       });
 
   Future<void> _cancelStay(String messageId, String enquiryId) => _guardAction(messageId, () async {
-        final cached = _enquiry.value;
-        final enq = cached != null && cached.id == enquiryId ? cached : await _freshEnquiry(enquiryId);
-        if (enq == null || !mounted) return;
-        if (await TripCancelSheet.show(context, enquiry: enq, ownerSide: false)) _refreshEnquiry();
-      });
+    final cached = _enquiry.value;
+    final enq = cached != null && cached.id == enquiryId ? cached : await _freshEnquiry(enquiryId);
+    if (enq == null || !mounted) return;
+    if (await TripCancelSheet.show(context, enquiry: enq, ownerSide: false)) _refreshEnquiry();
+  });
 
   Future<void> _acceptOffer(String messageId, String enquiryId, String offerId) async {
     if (!_pendingActionMessageIds.add(messageId)) return;
@@ -449,26 +446,18 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
   Future<void> _declineOffer(String messageId, String enquiryId, String offerId) async {
     if (!_pendingActionMessageIds.add(messageId)) return;
     try {
-      final ok = await showDialog<bool>(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: Text(TripStrings.declineQuestion, style: FitnessAppTheme.title),
-          content: Text(TripStrings.declineNote,
-              style: FitnessAppTheme.body2.copyWith(color: FitnessAppTheme.lightText, height: 1.4)),
-          actions: [
-            TextButton(
-              style: TextButton.styleFrom(minimumSize: const Size(64, 48)),
-              onPressed: () => Navigator.pop(ctx, false),
-              child: Text(TripStrings.keep,
-                  style: FitnessAppTheme.body2.copyWith(color: FitnessAppTheme.lightText, fontWeight: FontWeight.w500)),
-            ),
-            TextButton(
-              style: TextButton.styleFrom(minimumSize: const Size(64, 48)),
-              onPressed: () => Navigator.pop(ctx, true),
-              child: Text(TripStrings.decline,
-                  style: FitnessAppTheme.body2.copyWith(color: RepliesTone.bad, fontWeight: FontWeight.w700)),
-            ),
-          ],
+      final ok = await Dialog3D.show<bool>(
+        context,
+        builder: (ctx) => Dialog3D(
+          tone: _tone,
+          art: ListingArt.speechBalloon,
+          title: TripStrings.declineQuestion,
+          body: TripStrings.declineNote,
+          secondaryLabel: TripStrings.keep,
+          onSecondary: () => Navigator.pop(ctx, false),
+          primaryLabel: TripStrings.decline,
+          primaryDanger: true,
+          onPrimary: () => Navigator.pop(ctx, true),
         ),
       );
       if (ok != true || !mounted) return;
@@ -731,21 +720,16 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
       final questions = _isOwner
           ? const <QuestionTemplateModel>[]
           : _chatCtrl.questionTemplates
-                .where(
-                  (t) => t.appliesTo(
-                    _listingType,
-                    targetStayTypeId: _stayTypeId,
-                  ),
-                )
+                .where((t) => t.appliesTo(_listingType, targetStayTypeId: _stayTypeId))
                 .toList();
       ChatPlusMenuSheet.show(
         context,
         questions: questions,
-        onAskQuestion: (q) =>
-            _send('quick_reply', {'key': q.key, 'text': q.questionText}),
+        onAskQuestion: (q) => _send('quick_reply', {'key': q.key, 'text': q.questionText}),
         onRequestContact: () => _send('contact_request', {}),
         onScheduleVisit: _pickAndProposeSchedule,
         accent: _accent,
+        tone: _tone,
       );
     } finally {
       _openingPlusMenu = false;
@@ -767,7 +751,12 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
       // that retries the exact same _send() invocation reuses it — this is the "one attempt"
       // boundary the server-side idempotency key is meant to dedup against.
       final clientMessageId = const Uuid().v4();
-      final msg = await _chatCtrl.sendMessage(_conversationId, type, payload, clientMessageId: clientMessageId);
+      final msg = await _chatCtrl.sendMessage(
+        _conversationId,
+        type,
+        payload,
+        clientMessageId: clientMessageId,
+      );
       if (msg != null && mounted) _insertIfNew(msg);
     } finally {
       if (mounted) _sending.value = false;
@@ -775,7 +764,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
   }
 
   Future<void> _pickAndProposeSchedule() async {
-    final picked = await ChatSchedulePickerSheet.show(context);
+    final picked = await ChatSchedulePickerSheet.show(context, tone: _tone);
     if (picked == null || picked.isEmpty) return;
     await _send('schedule_proposal', {
       'proposedAts': picked.map((d) => d.toUtc().toIso8601String()).toList(),
@@ -783,11 +772,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
     });
   }
 
-  Future<void> _answerQuestion(
-    String questionMessageId,
-    String answerKey,
-    String answerText,
-  ) async {
+  Future<void> _answerQuestion(String questionMessageId, String answerKey, String answerText) async {
     if (!_pendingActionMessageIds.add(questionMessageId)) return;
     try {
       final msg = await _chatCtrl.sendMessage(_conversationId, 'quick_reply', {
@@ -813,11 +798,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
   Future<void> _acceptScheduleSlot(String messageId, DateTime chosen) async {
     if (!_pendingActionMessageIds.add(messageId)) return;
     try {
-      final msg = await _chatCtrl.respondSchedule(
-        messageId,
-        'accept',
-        acceptedAt: chosen,
-      );
+      final msg = await _chatCtrl.respondSchedule(messageId, 'accept', acceptedAt: chosen);
       if (msg != null && mounted) _insertIfNew(msg);
     } finally {
       _pendingActionMessageIds.remove(messageId);
@@ -843,13 +824,10 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
       final picked = await ChatSchedulePickerSheet.show(
         context,
         title: 'Propose a different time',
+        tone: _tone,
       );
       if (picked == null || picked.isEmpty) return;
-      final msg = await _chatCtrl.respondSchedule(
-        messageId,
-        'counter',
-        proposedAts: picked,
-      );
+      final msg = await _chatCtrl.respondSchedule(messageId, 'counter', proposedAts: picked);
       if (msg != null && mounted) _insertIfNew(msg);
     } finally {
       _pendingActionMessageIds.remove(messageId);
@@ -876,87 +854,63 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
         body: Center(child: CircularProgressIndicator(color: DesignColors.primary)),
       );
     }
-    return Scaffold(
-      backgroundColor: DesignColors.scaffold,
-      body: StaggerHost(
-        count: 3,
-        child: Column(
-        children: [
-          StaggerItem(index: 0, offset: 30, child: _buildHeader(context)),
-          if (_isStay) StaggerItem(index: 1, child: _buildTripStrip()),
-          StaggerItem(index: 2, child: _buildSafetyStrip()),
-          Expanded(
-            child: SafeArea(
-              top: false,
-              child: Column(
-                children: [
-                  Expanded(
-                    child: Obx(() {
-                      if (_loading.value) {
-                        return _buildSkeleton();
-                      }
-                      // Built *after* the loading check so a brand-new, empty conversation still gets
-                      // the inline "next slot" bubble as its only item — that's the only way to open
-                      // the "+" menu now that there's no bar fixed to the bottom.
-                      final renderList = _buildRenderList();
-                      if (renderList.isEmpty) return _buildEmpty();
-                      // ListView(children:) rather than .builder — every item already carries a
-                      // stable ValueKey, and a new message appended at the end shifts nothing
-                      // for existing items, but a keyed delegate reconciling by key (not index)
-                      // is still what lets existing bubbles keep their State/AnimationController
-                      // so the fade-in only ever plays once.
-                      // Non-reversed: a normal top-to-bottom list packs short content at the
-                      // TOP (matching chat-live-demo-v4.html's plain flex-column thread) instead
-                      // of bottom-pinning it the way ListView(reverse:true) always does
-                      // regardless of content length — _scrollToBottom() (called on load and on
-                      // every new message near the bottom) does the "stick to latest" job
-                      // manually instead, same as the demo's own scrollTop=scrollHeight.
-                      // AlwaysScrollableScrollPhysics so a short conversation (fewer messages
-                      // than fill the viewport) still feels draggable and lets RefreshIndicator
-                      // trigger — default physics refuse to scroll at all once content is
-                      // shorter than the viewport.
-                      return RefreshIndicator(
-                        color: _accent,
-                        backgroundColor: DesignColors.surface,
-                        onRefresh: _loadHistory,
-                        child: ListView(
-                          controller: _scrollCtrl,
-                          physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: KitMetrics.gutter,
-                            vertical: 10,
-                          ),
-                          children: renderList,
-                        ),
-                      );
-                    }),
-                  ),
-                  Obx(
-                    () => _status.value != 'Active'
-                        ? _buildInactiveNotice()
-                        : const SizedBox.shrink(),
-                  ),
-                ],
+    return KitStatusBar(
+      child: Scaffold(
+        backgroundColor: _listingType == 'Taxi'
+            ? ListingPalette.coral.page
+            : ListingPalette.forest.page,
+        body: StaggerHost(
+          count: 3,
+          child: Column(
+            children: [
+              StaggerItem(index: 0, offset: 30, child: _buildHeader(context)),
+              const ToastSlot(),
+              if (_isStay) StaggerItem(index: 1, child: _buildTripStrip()),
+              StaggerItem(index: 2, child: _buildSafetyStrip()),
+              Expanded(
+                child: Obx(() {
+                  if (_loading.value) {
+                    return _buildSkeleton();
+                  }
+                  final renderList = _buildRenderList();
+                  if (renderList.isEmpty) return _buildEmpty();
+                  final bottom = _status.value != 'Active'
+                      ? ChatNoticePanel3D.overhang + 8
+                      : 20 + MediaQuery.paddingOf(context).bottom;
+                  return ChatThreadFade(
+                    child: RefreshIndicator(
+                      color: _tone.g2,
+                      backgroundColor: DesignColors.surface,
+                      onRefresh: _loadHistory,
+                      child: ListView(
+                        controller: _scrollCtrl,
+                        physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+                        padding: EdgeInsets.fromLTRB(18, 8, 18, bottom),
+                        children: renderList,
+                      ),
+                    ),
+                  );
+                }),
               ),
-            ),
+              Obx(() => _status.value != 'Active' ? _buildInactiveNotice() : const SizedBox.shrink()),
+            ],
           ),
-        ],
         ),
       ),
     );
   }
 
   Widget _buildTripStrip() => Obx(() {
-        final e = _enquiry.value;
-        if (e == null) return const SizedBox.shrink();
-        return TripEnquiryStrip(
-          enquiry: e,
-          ownerSide: _isOwner,
-          onTap: () => _openStrip(e),
-          actions: _isOwner ? const [] : TripStripAction.forTraveller(e),
-          onAction: _isOwner ? null : (id) => _onStripAction(id, e),
-        );
-      });
+    final e = _enquiry.value;
+    if (e == null) return const SizedBox.shrink();
+    return TripEnquiryStrip(
+      enquiry: e,
+      ownerSide: _isOwner,
+      onTap: () => _openStrip(e),
+      actions: _isOwner ? const [] : TripStripAction.forTraveller(e),
+      onAction: _isOwner ? null : (id) => _onStripAction(id, e),
+    );
+  });
 
   // Groups every answered quick_reply question together with its own answer, positioned
   // at the question's own slot — regardless of when the answer actually arrived relative
@@ -970,9 +924,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
       // Only fold into a group if the question it answers is actually loaded — an older
       // question outside the currently-loaded history page must not cause its answer to
       // be silently dropped; render it as its own standalone bubble instead.
-      if (m.type == 'quick_reply' &&
-          respondsTo != null &&
-          loadedIds.contains(respondsTo)) {
+      if (m.type == 'quick_reply' && respondsTo != null && loadedIds.contains(respondsTo)) {
         answerByQuestionId[respondsTo] = m;
       }
     }
@@ -989,12 +941,16 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
     if (_loadingOlder.value) {
       items.add(
         Padding(
-          padding: EdgeInsets.symmetric(vertical: 12),
+          padding: const EdgeInsets.only(top: 4, bottom: 12),
           child: Center(
             child: SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(strokeWidth: 2, color: _accent),
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(
+                strokeWidth: 3,
+                color: _tone.g2,
+                backgroundColor: _tone.haloBase.withValues(alpha: Alpha.soft),
+              ),
             ),
           ),
         ),
@@ -1005,9 +961,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
         continue; // rendered attached to its question below
       }
       final answer = m.type == 'quick_reply' ? answerByQuestionId[m.id] : null;
-      items.add(
-        _animatedBubble(m.id, _buildBubble(m, answered: answer != null)),
-      );
+      items.add(_animatedBubble(m.id, _buildBubble(m, answered: answer != null)));
       if (answer != null) {
         items.add(_animatedBubble(answer.id, _buildBubble(answer)));
       }
@@ -1035,6 +989,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
               onTap: _openPlusMenu,
               sending: _sending.value,
               accent: _accent,
+              tone: _tone,
             ),
           ),
         ),
@@ -1056,132 +1011,54 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
     const widths = [180.0, 140.0, 220.0, 120.0, 190.0];
     return ListView.builder(
       physics: const NeverScrollableScrollPhysics(),
-      padding: const EdgeInsets.symmetric(horizontal: KitMetrics.gutter, vertical: 10),
+      padding: const EdgeInsets.fromLTRB(18, 8, 18, 10),
       itemCount: widths.length,
-      itemBuilder: (_, i) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
-        child: Align(
-          alignment: i.isOdd ? Alignment.centerRight : Alignment.centerLeft,
-          child: EntranceOnce(
-            index: i,
-            child: TemplatePlaceholder(height: 40, width: widths[i], radius: 16),
-          ),
-        ),
+      itemBuilder: (_, i) => EntranceOnce(
+        index: i,
+        child: ChatSkeletonBubble3D(width: widths[i], mine: i.isOdd),
       ),
     );
   }
 
-  // Fixed, non-dismissible, unconditional (both owner and renter) — always visible for the
-  // whole life of the screen, not gated on any state or event. Sits outside the scrollable
-  // list so it never scrolls away. This is a UI-only safety nudge; the platform takes no
-  // responsibility for off-app transactions (see terms_of_service_screen.dart) and doesn't
-  // police them — this strip just makes sure that's actually seen, not just legally on record.
+  // Always visible for both sides; the platform takes no part in off-app payments.
   Widget _buildSafetyStrip() {
-    return Container(
-      width: double.infinity,
-      decoration: const BoxDecoration(
-        color: DesignColors.surface,
-        boxShadow: ShadowTokens.elev1,
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: KitMetrics.gutter, vertical: 8),
-      child: Row(
-        children: [
-          const Icon(Icons.info_outline_rounded, size: 16, color: DesignColors.primaryLight),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              'Bakhli never collects rent or advance. Always meet and visit before paying.',
-              style: TypeTokens.style(12, FontWeight.w500, color: TypeTokens.secondary),
-            ),
-          ),
-        ],
-      ),
+    return const ChatSafetyNote3D(
+      text: 'Bakhli never collects rent or advance. Always meet and visit before paying.',
     );
   }
 
   Widget _buildHeader(BuildContext context) {
-    final subtitleStyle = TypeTokens.onGradientBody;
-    return ModuleHeader(
+    return ChatHeader3D(
+      tone: _tone,
+      initial: ChatLook3D.initialOf(_otherPartyName),
+      name: _otherPartyName,
+      subtitle: '$_listingTitle${_area != null && _area.isNotEmpty ? ' · $_area' : ''}',
+      sticker: ChatLook3D.artFor(_listingType),
+      art: ChatLook3D.artFor(_listingType),
       onBack: () => Get.back(),
-      gradient: _kind.gradient,
-      tone: KitTone.solid(_kind.dark),
-      autoHeight: true,
-      animate: false,
-      title: _otherPartyName,
-      leading: Container(
-        width: 40,
-        height: 40,
-        alignment: Alignment.center,
-        decoration: const BoxDecoration(color: DesignColors.whiteSoft, shape: BoxShape.circle),
-        child: Text(
-          _otherPartyName.isNotEmpty ? _otherPartyName[0].toUpperCase() : '?',
-          style: TypeTokens.style(17, FontWeight.w700, color: DesignColors.surface),
+      onMore: _openMoreMenu,
+    );
+  }
+
+  void _openMoreMenu(Rect anchor) {
+    final isBlocked = _isBlockedByMe.value;
+    showMenu3D(
+      context,
+      anchor: anchor,
+      items: [
+        if (_isStay && (!_isOwner || _enquiry.value != null))
+          MenuItem3D(
+            label: TripStrings.report,
+            art: ListingArt.pushpin,
+            onTap: () => _isOwner ? _reportTraveller() : _reportHost(_listingId),
+          ),
+        MenuItem3D(
+          label: isBlocked ? 'Unblock the user' : 'Block this user',
+          icon: isBlocked ? Icons.check_circle_outline_rounded : Icons.block_rounded,
+          danger: !isBlocked,
+          positive: isBlocked,
+          onTap: () => isBlocked ? _confirmUnblockUser() : _confirmBlockUser(),
         ),
-      ),
-      subtitleWidget: Text.rich(
-        TextSpan(children: [
-          WidgetSpan(
-            alignment: PlaceholderAlignment.middle,
-            child: TravelIcon(_listingType == 'Stay' ? TravelIcon.stay : TravelIcon.place, size: 14),
-          ),
-          TextSpan(
-            text: ' $_listingTitle'
-                '${_area != null && _area.isNotEmpty ? ' · $_area' : ''}',
-          ),
-        ]),
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: subtitleStyle,
-      ),
-      trailing: [
-        Obx(() {
-          final isBlocked = _isBlockedByMe.value;
-          return PopupMenuButton<String>(
-            icon: const Icon(Icons.more_vert_rounded, color: DesignColors.surface),
-            color: DesignColors.surface,
-            elevation: 4,
-            shadowColor: DesignColors.shadowBase,
-            shape: const RoundedRectangleBorder(borderRadius: CardRadius.tile),
-            onSelected: (v) {
-              if (v == 'report') {
-                _isOwner ? _reportTraveller() : _reportHost(_listingId);
-              } else {
-                isBlocked ? _confirmUnblockUser() : _confirmBlockUser();
-              }
-            },
-            itemBuilder: (_) => [
-              if (_isStay && (!_isOwner || _enquiry.value != null))
-                PopupMenuItem(
-                  value: 'report',
-                  height: 48,
-                  child: Row(
-                    children: [
-                      const Icon(Icons.flag_outlined, size: 18, color: FitnessAppTheme.lightText),
-                      const SizedBox(width: 10),
-                      Text(TripStrings.report, style: FitnessAppTheme.body2.copyWith(color: FitnessAppTheme.darkerText)),
-                    ],
-                  ),
-                ),
-              PopupMenuItem(
-                value: isBlocked ? 'unblock' : 'block',
-                child: Row(
-                  children: [
-                    Icon(
-                      isBlocked ? Icons.check_circle_outline_rounded : Icons.block_rounded,
-                      size: 18,
-                      color: isBlocked ? DesignColors.goodDeep : RepliesTone.bad,
-                    ),
-                    const SizedBox(width: 10),
-                    Text(
-                      isBlocked ? 'Unblock the user' : 'Block this user',
-                      style: FitnessAppTheme.body2.copyWith(color: isBlocked ? DesignColors.goodDeep : RepliesTone.bad),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          );
-        }),
       ],
     );
   }
@@ -1189,36 +1066,30 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
   Future<void> _confirmBlockUser() async {
     if (_otherPartyId.isEmpty) return;
     bool blocking = false;
-    final confirmed = await showDialog<bool>(
-      context: context,
+    final confirmed = await Dialog3D.show<bool>(
+      context,
       barrierDismissible: false,
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
-          title: Text('Block this user?', style: FitnessAppTheme.title),
-          content: Text(
-            '$_otherPartyName will no longer be able to message you in any conversation.',
-            style: FitnessAppTheme.body2.copyWith(color: FitnessAppTheme.lightText),
-          ),
-          actions: [
-            TextButton(
-              onPressed: blocking ? null : () => Navigator.pop(ctx, false),
-              child: Text('Cancel',
-                  style: FitnessAppTheme.body2.copyWith(color: FitnessAppTheme.lightText, fontWeight: FontWeight.w500)),
-            ),
-            PrimaryButton(
-              label: 'Block',
-              tone: _badTone,
-              expand: false,
-              loading: blocking,
-              onPressed: blocking
-                  ? null
-                  : () async {
-                      setDialogState(() => blocking = true);
-                      final ok = await _chatCtrl.blockUser(_otherPartyId);
-                      if (ctx.mounted) Navigator.pop(ctx, ok);
-                    },
-            ),
-          ],
+        builder: (ctx, setDialogState) => Dialog3D(
+          tone: _tone,
+          art: ListingArt.speechBalloon,
+          title: 'Block this user?',
+          body: '$_otherPartyName will no longer be able to message you in any conversation.',
+          familyCorner: true,
+          tight: true,
+          secondaryNeutral: true,
+          secondaryLabel: 'Cancel',
+          onSecondary: blocking ? null : () => Navigator.pop(ctx, false),
+          primaryLabel: 'Block',
+          primaryDanger: true,
+          primaryLoading: blocking,
+          onPrimary: blocking
+              ? null
+              : () async {
+                  setDialogState(() => blocking = true);
+                  final ok = await _chatCtrl.blockUser(_otherPartyId);
+                  if (ctx.mounted) Navigator.pop(ctx, ok);
+                },
         ),
       ),
     );
@@ -1231,35 +1102,29 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
   Future<void> _confirmUnblockUser() async {
     if (_otherPartyId.isEmpty) return;
     bool unblocking = false;
-    final confirmed = await showDialog<bool>(
-      context: context,
+    final confirmed = await Dialog3D.show<bool>(
+      context,
       barrierDismissible: false,
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
-          title: Text('Unblock this user?', style: FitnessAppTheme.title),
-          content: Text(
-            '$_otherPartyName will be able to message you again.',
-            style: FitnessAppTheme.body2.copyWith(color: FitnessAppTheme.lightText),
-          ),
-          actions: [
-            TextButton(
-              onPressed: unblocking ? null : () => Navigator.pop(ctx, false),
-              child: Text('Cancel',
-                  style: FitnessAppTheme.body2.copyWith(color: FitnessAppTheme.lightText, fontWeight: FontWeight.w500)),
-            ),
-            PrimaryButton(
-              label: 'Unblock',
-              expand: false,
-              loading: unblocking,
-              onPressed: unblocking
-                  ? null
-                  : () async {
-                      setDialogState(() => unblocking = true);
-                      final ok = await _chatCtrl.unblockUser(_otherPartyId);
-                      if (ctx.mounted) Navigator.pop(ctx, ok);
-                    },
-            ),
-          ],
+        builder: (ctx, setDialogState) => Dialog3D(
+          tone: _tone,
+          art: ListingArt.speechBalloon,
+          title: 'Unblock this user?',
+          body: '$_otherPartyName will be able to message you again.',
+          familyCorner: true,
+          tight: true,
+          secondaryNeutral: true,
+          secondaryLabel: 'Cancel',
+          onSecondary: unblocking ? null : () => Navigator.pop(ctx, false),
+          primaryLabel: 'Unblock',
+          primaryLoading: unblocking,
+          onPrimary: unblocking
+              ? null
+              : () async {
+                  setDialogState(() => unblocking = true);
+                  final ok = await _chatCtrl.unblockUser(_otherPartyId);
+                  if (ctx.mounted) Navigator.pop(ctx, ok);
+                },
         ),
       ),
     );
@@ -1269,9 +1134,16 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
     }
   }
 
-  Widget _buildEmpty() => const StateCard(
-    asset: TravelIcon.chat,
-    title: 'No messages in this conversation',
+  Widget _buildEmpty() => ListView(
+    physics: const NeverScrollableScrollPhysics(),
+    children: [
+      ChatStateCard3D(
+        tone: _tone,
+        art: ListingArt.speechBalloon,
+        title: 'No messages in this conversation',
+        margin: const EdgeInsets.fromLTRB(36, 90, 36, 0),
+      ),
+    ],
   );
 
   Widget _buildBubble(MessageModel m, {bool answered = false}) {
@@ -1299,41 +1171,50 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
       );
     }
     final canAnswer =
-        !answered && !pending && conversationActive && m.type == 'quick_reply' && (_isOwner || !m.isMine);
+        !answered &&
+        !pending &&
+        conversationActive &&
+        m.type == 'quick_reply' &&
+        (_isOwner || !m.isMine);
     // A schedule_proposal or contact_request that's already been answered must never
     // show its action buttons again. The backend links every response back to the
     // original message via respondsToMessageId (same FK column quick_reply answers
     // already use), so its presence anywhere in the loaded thread means this request is
     // done — checked here instead of trusting the original message's own payload, which
     // the backend never updates in place for either type's plain approve/decline path.
-    final scheduleAlreadyResponded = isScheduleProposal &&
-        _messages.any((x) => x.respondsToMessageId == m.id);
-    final contactAlreadyResponded = isContactRequest &&
-        _messages.any((x) => x.respondsToMessageId == m.id);
+    final scheduleAlreadyResponded =
+        isScheduleProposal && _messages.any((x) => x.respondsToMessageId == m.id);
+    final contactAlreadyResponded =
+        isContactRequest && _messages.any((x) => x.respondsToMessageId == m.id);
     return ChatMessageBubble(
       message: m,
+      tone: _tone,
       accent: _accent,
       gradient: _kind.gradient,
       templates: _chatCtrl.questionTemplates,
       onAnswerQuestion: canAnswer
-          ? (answerKey, answerText) =>
-                _answerQuestion(m.id, answerKey, answerText)
+          ? (answerKey, answerText) => _answerQuestion(m.id, answerKey, answerText)
           : null,
       // No owner/renter restriction — either side can send a contact request and whoever
       // receives it can respond, same shape as the schedule gating below.
-      onApproveContact: (isContactRequest && !m.isMine && !contactAlreadyResponded && !pending && conversationActive)
+      onApproveContact:
+          (isContactRequest && !m.isMine && !contactAlreadyResponded && !pending && conversationActive)
           ? () => _respondContact(m.id, true)
           : null,
-      onDeclineContact: (isContactRequest && !m.isMine && !contactAlreadyResponded && !pending && conversationActive)
+      onDeclineContact:
+          (isContactRequest && !m.isMine && !contactAlreadyResponded && !pending && conversationActive)
           ? () => _respondContact(m.id, false)
           : null,
-      onAcceptSlot: isScheduleProposal && !m.isMine && !scheduleAlreadyResponded && !pending && conversationActive
+      onAcceptSlot:
+          isScheduleProposal && !m.isMine && !scheduleAlreadyResponded && !pending && conversationActive
           ? (dt) => _acceptScheduleSlot(m.id, dt)
           : null,
-      onDeclineSchedule: isScheduleProposal && !m.isMine && !scheduleAlreadyResponded && !pending && conversationActive
+      onDeclineSchedule:
+          isScheduleProposal && !m.isMine && !scheduleAlreadyResponded && !pending && conversationActive
           ? () => _declineSchedule(m.id)
           : null,
-      onCounterSchedule: isScheduleProposal && !m.isMine && !scheduleAlreadyResponded && !pending && conversationActive
+      onCounterSchedule:
+          isScheduleProposal && !m.isMine && !scheduleAlreadyResponded && !pending && conversationActive
           ? () => _counterSchedule(m.id)
           : null,
       onCall: () {
@@ -1341,7 +1222,9 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
         if (phone != null) _call(phone);
       },
       isOwner: _isOwner,
-      trip: TripChatCards.handles(m.type) ? _tripCallbacks(m, pending: pending, active: conversationActive) : null,
+      trip: TripChatCards.handles(m.type)
+          ? _tripCallbacks(m, pending: pending, active: conversationActive)
+          : null,
     );
   }
 
@@ -1375,43 +1258,19 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
   Widget _buildInactiveNotice() {
     final isBlockedByMe = _isBlockedByMe.value;
     final text = switch (_status.value) {
-      'ListingRemoved' =>
-        'This listing has been removed — you can no longer send messages here.',
-      'ListingInactive' =>
-        'This listing is currently inactive — you can no longer send messages here.',
+      'ListingRemoved' => 'This listing has been removed — you can no longer send messages here.',
+      'ListingInactive' => 'This listing is currently inactive — you can no longer send messages here.',
       'Blocked' =>
         isBlockedByMe
             ? "You've blocked this user — they can no longer message you."
             : 'You can no longer message in this conversation.',
       _ => 'This conversation is no longer active.',
     };
-    return Container(
-      padding: const EdgeInsets.fromLTRB(KitMetrics.gutter, 12, KitMetrics.gutter, 12),
-      decoration: const BoxDecoration(
-        color: DesignColors.surface,
-        borderRadius: CardRadius.sheet,
-        boxShadow: TripEntryStyle.topShadow,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            text,
-            textAlign: TextAlign.center,
-            style: TypeTokens.style(12, FontWeight.w500, color: TypeTokens.secondary),
-          ),
-          if (isBlockedByMe) ...[
-            const SizedBox(height: 6),
-            TextButton(
-              onPressed: _confirmUnblockUser,
-              child: Text(
-                'Unblock',
-                style: FitnessAppTheme.body2.copyWith(fontWeight: FontWeight.w600, color: FitnessAppTheme.nearlyDarkBlue),
-              ),
-            ),
-          ],
-        ],
-      ),
+    return ChatNoticePanel3D(
+      tone: _tone,
+      text: text,
+      actionLabel: isBlockedByMe ? 'Unblock' : null,
+      onAction: _confirmUnblockUser,
     );
   }
 }

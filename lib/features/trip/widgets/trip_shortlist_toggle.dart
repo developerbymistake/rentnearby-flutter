@@ -1,6 +1,7 @@
 import 'package:bakhli/design/design.dart';
 import 'package:flutter/material.dart';
 import '../trip_strings_shortlist.dart';
+import 'trip_list_look.dart';
 
 class TripShortlistToggle extends StatelessWidget {
   const TripShortlistToggle({
@@ -20,22 +21,47 @@ class TripShortlistToggle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = tripListTone(tone);
     final action = busy ? null : onTap;
-    if (selected) {
-      return SecondaryButton(
-        label: TripStringsShortlist.shortlisted,
-        onPressed: action,
-        tone: tone,
-        height: height,
-        icon: Icon(Icons.check_circle_rounded, size: 18, color: tone.accentDark),
-      );
-    }
-    return PrimaryButton(
-      label: TripStringsShortlist.shortlist,
-      onPressed: action,
-      tone: tone,
-      height: height,
-      icon: const Icon(Icons.bookmark_add_outlined, size: 18, color: DesignColors.onPrimary),
+    final ink = selected ? t.g2 : DesignColors.textInverse;
+    final label = selected ? TripStringsShortlist.shortlisted : TripStringsShortlist.shortlist;
+    return Semantics(
+      button: true,
+      selected: selected,
+      enabled: action != null,
+      label: label,
+      excludeSemantics: true,
+      child: PressScale(
+        enabled: action != null,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: action,
+          child: Opacity(
+            opacity: onTap == null ? 0.5 : 1,
+            child: Container(
+              constraints: BoxConstraints(minHeight: height),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(22),
+                color: selected ? DesignColors.surface : null,
+                gradient: selected ? null : t.gradient,
+                boxShadow: selected ? Ink3D.softShadow : t.glow(blur: 8),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  if (busy)
+                    SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: ink))
+                  else
+                    Icon(selected ? Icons.check_circle_rounded : Icons.add_circle_outline_rounded, size: 18, color: ink),
+                  const SizedBox(width: 8),
+                  Flexible(child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(14, FontWeight.w700, ink, letterSpacing: 0))),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

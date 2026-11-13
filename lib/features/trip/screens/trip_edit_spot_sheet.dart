@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:bakhli/design/design.dart';
-import '../widgets/trip_ui.dart';
+import '../widgets/trip_pace_sheet.dart';
 import '../controllers/trip_plan_controller.dart';
 import '../trip_constants.dart';
 import '../trip_strings_v2_plan.dart';
@@ -41,31 +41,21 @@ class TripEditSpotSheet extends StatelessWidget {
             c.moveSpot(spotId, d.day, keepEmptyDays: true);
           },
         ),
-      PressScale(
-        child: InkWell(
-          borderRadius: CardRadius.chip,
-          onTap: () {
-            Navigator.pop(context);
-            c.removeSpot(spotId, keepEmptyDays: true);
-          },
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: KitMetrics.touch),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: Row(
-                children: [
-                  const Icon(Icons.delete_outline_rounded, size: 18, color: TripUi.bad),
-                  const SizedBox(width: 8),
-                  Text(TripStringsV2Plan.removeFromTrip, style: TypeTokens.style(14, FontWeight.w600, color: TripUi.bad)),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
     ];
     return SheetFrame(
+      tone: ListingTone.indigo,
+      art: ListingArt.calendar,
+      size: SheetSize.confirm,
       title: TripStringsV2Plan.moveTitle(spot.name),
+      footer: GradientPillButton(
+        tone: ListingTone.indigo,
+        label: TripStringsV2Plan.removeFromTrip,
+        danger: true,
+        onTap: () {
+          Navigator.pop(context);
+          c.removeSpot(spotId, keepEmptyDays: true);
+        },
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -83,41 +73,22 @@ class TripEditSpotSheet extends StatelessWidget {
     required VoidCallback onTap,
   }) {
     final full = !current && count >= TripConstants.maxSpotsPerDay;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: TripSurface(
-        onTap: full ? null : onTap,
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        borderColor: current ? DesignColors.primary : null,
-        shadow: current ? ShadowTokens.elev3 : ShadowTokens.elev1,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 24),
-          child: Row(
-            children: [
-              Container(
-                width: 10,
-                height: 10,
-                decoration: BoxDecoration(color: TripKit.dayColor(day), shape: BoxShape.circle),
-              ),
-              const SizedBox(width: 10),
-              Text(
-                'Day $day',
-                style: TextStyle(
-                  fontFamily: FitnessAppTheme.fontName,
-                  fontSize: 13,
-                  fontWeight: current ? FontWeight.w700 : FontWeight.w600,
-                  color: full ? DesignColors.textMuted : (current ? FitnessAppTheme.nearlyDarkBlue : FitnessAppTheme.darkerText),
-                ),
-              ),
-              const Spacer(),
-              Text(
-                full ? TripStringsV2Plan.dayIsFull : TripStringsV2Plan.placesCount(count),
-                style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, color: full ? DesignColors.textMuted : FitnessAppTheme.lightText),
-              ),
-            ],
-          ),
-        ),
-      ),
+    return TripChoiceCard(
+      art: ListingArt.calendar,
+      label: 'Day $day',
+      hint: full ? TripStringsV2Plan.dayIsFull : TripStringsV2Plan.placesCount(count),
+      selected: current,
+      onTap: full ? null : onTap,
+      labelDot: TripKit.dayColor(day),
+      trailing: current
+          ? Container(
+              width: 28,
+              height: 28,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(color: DesignColors.surface, borderRadius: BorderRadius.circular(9)),
+              child: Icon(Icons.check_rounded, size: 18, color: ListingTone.indigo.text),
+            )
+          : const SizedBox.shrink(),
     );
   }
 }

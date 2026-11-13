@@ -92,11 +92,11 @@ class ModuleHeader extends StatelessWidget {
       width: double.infinity,
       decoration: BoxDecoration(
         gradient: gradient ?? tone.gradient,
-        borderRadius: tabRoot ? CardRadius.hero : CardRadius.header,
+        borderRadius: CardRadius.header,
         boxShadow: ShadowTokens.glow(tone.glow),
       ),
       child: Padding(
-        padding: EdgeInsets.only(top: top + paddingTop, left: 8, right: 16, bottom: paddingBottom),
+        padding: EdgeInsets.only(top: top + paddingTop, left: onBack != null ? 14 : 8, right: 16, bottom: paddingBottom),
         child: Column(
           mainAxisSize: autoHeight ? MainAxisSize.min : MainAxisSize.max,
           children: [
@@ -115,13 +115,22 @@ class ModuleHeader extends StatelessWidget {
                           splashColor: DesignColors.whiteSoft,
                           highlightColor: Colors.transparent,
                           onTap: onBack,
-                          child: const Icon(Icons.arrow_back_ios_new_rounded,
-                              size: 20, color: DesignColors.textInverse),
+                          child: Center(
+                            child: Container(
+                              width: 44,
+                              height: 44,
+                              decoration: const BoxDecoration(
+                                  color: DesignColors.whiteSoft, shape: BoxShape.circle),
+                              child: const Icon(Icons.arrow_back_ios_new_rounded,
+                                  size: 20, color: DesignColors.textInverse),
+                            ),
+                          ),
                         ),
                       ),
                     )
                   else
                     const SizedBox(width: 12),
+                  if (onBack != null) const SizedBox(width: 10),
                   if (leading != null) ...[leading!, const SizedBox(width: 10)],
                   if (leadingAsset != null) ...[
                     Container(
@@ -246,4 +255,56 @@ class KitStatusBar extends StatelessWidget {
         value: lightIcons ? ModuleHeader.lightIcons : darkIcons,
         child: child,
       );
+}
+
+class ModuleScrollFrame extends StatefulWidget {
+  const ModuleScrollFrame({super.key, required this.gradient, required this.child});
+
+  final Gradient gradient;
+  final Widget child;
+
+  @override
+  State<ModuleScrollFrame> createState() => _ModuleScrollFrameState();
+}
+
+class _ModuleScrollFrameState extends State<ModuleScrollFrame> {
+  final ValueNotifier<double> _show = ValueNotifier<double>(0);
+
+  @override
+  void dispose() {
+    _show.dispose();
+    super.dispose();
+  }
+
+  bool _onScroll(ScrollNotification n) {
+    if (n.depth != 0 || n.metrics.axis != Axis.vertical) return false;
+    final v = ((n.metrics.pixels - 8) / 24).clamp(0.0, 1.0);
+    if (v != _show.value) _show.value = v;
+    return false;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final top = MediaQuery.paddingOf(context).top;
+    return KitStatusBar(
+      child: Stack(
+        children: [
+          NotificationListener<ScrollNotification>(onNotification: _onScroll, child: widget.child),
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            height: top,
+            child: IgnorePointer(
+              child: ValueListenableBuilder<double>(
+                valueListenable: _show,
+                builder: (_, v, child) => Opacity(opacity: v, child: child),
+                child: DecoratedBox(decoration: BoxDecoration(gradient: widget.gradient)),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }

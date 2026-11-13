@@ -4,9 +4,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:iconsax/iconsax.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 import '../design/design.dart';
+import '../design/extra/ext_stay_owner.dart';
 import '../config/app_constants.dart';
 import '../controllers/location_controller.dart';
 import '../models/city_model.dart';
@@ -28,6 +28,7 @@ class LocationStepStyle {
   final IconData addressPrefixIcon;
   final String pinStepTitle;
   final String pinHintNoun;
+  final ListingTone? tone;
 
   const LocationStepStyle({
     required this.circleColorHex,
@@ -37,6 +38,7 @@ class LocationStepStyle {
     required this.addressPrefixIcon,
     required this.pinStepTitle,
     required this.pinHintNoun,
+    this.tone,
   });
 }
 
@@ -432,224 +434,146 @@ mixin AddListingLocationMixin<T extends StatefulWidget> on State<T> {
     }
   }
 
-  InputDecoration _addressInputDecoration(String hint, {required Widget prefixIcon, Widget? suffixIcon}) => InputDecoration(
-    hintText: hint,
-    hintStyle: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 14, color: DesignColors.inputHint),
-    prefixIcon: prefixIcon,
-    suffixIcon: suffixIcon,
-    filled: true,
-    fillColor: DesignColors.surface,
-    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: UtilTokens.fieldBorder)),
-    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: _style.accentColor, width: 1.5)),
-  );
-
-  Widget _sectionCard({required String title, required Widget child}) => Container(
-    margin: const EdgeInsets.only(bottom: 16),
-    padding: const EdgeInsets.all(16),
-    decoration: BoxDecoration(
-      color: DesignColors.card,
-      borderRadius: BorderRadius.circular(16),
-      boxShadow: DesignShadows.card,
-    ),
-    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text(title, style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 14, fontWeight: FontWeight.w600, color: DesignColors.textStrong)),
-      const SizedBox(height: 10),
-      child,
-    ]),
-  );
-
-  Widget _readOnlyField(IconData icon, String value) => Container(
-    width: double.infinity,
-    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-    decoration: BoxDecoration(
-      color: DesignColors.surface,
-      borderRadius: BorderRadius.circular(12),
-      border: Border.all(color: UtilTokens.fieldBorder),
-    ),
-    child: Row(children: [
-      Icon(icon, color: UtilTokens.fieldIcon, size: 18),
-      const SizedBox(width: 10),
-      Text(value, style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 14, color: DesignColors.textStrong)),
-      const Spacer(),
-      const Icon(Icons.gps_fixed_rounded, color: DesignColors.success, size: 14),
-    ]),
-  );
-
   // ── Step widgets ─────────────────────────────────────────────────────────
 
-  Widget locationStepWidget() => Padding(
-    key: const ValueKey(1),
-    padding: const EdgeInsets.all(16),
-    child: _sectionCard(
-      title: _style.pinStepTitle,
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          const Icon(Icons.info_outline_rounded, color: UtilTokens.fieldIcon, size: 15),
-          const SizedBox(width: 6),
-          Expanded(child: Text(
-            _userLocation != null
-                ? (_selectedLocation != null
+  ListingTone get _tone => _style.tone ?? (_style.pinHintNoun == 'taxi' ? ListingTone.coral : ListingTone.forest);
+
+  bool get _coral => identical(_tone, ListingTone.coral);
+
+  String get _pinTitle {
+    final t = _style.pinStepTitle.trim();
+    return t.endsWith('*') ? t.substring(0, t.length - 1).trim() : t;
+  }
+
+  Widget _card({required String art, required String title, required Widget child}) => FormSectionCard(
+        tone: _tone,
+        art: art,
+        title: title,
+        tag: _coral ? null : 'Required',
+        requiredMark: _coral,
+        artSide: _coral ? FormArtSide.right : FormArtSide.left,
+        child: child,
+      );
+
+  Widget locationStepWidget() {
+    final pinned = _selectedLocation;
+    return KeyedSubtree(
+      key: const ValueKey(1),
+      child: _card(
+        art: ListingArt.roundPushpin,
+        title: _pinTitle,
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          HintLine3D(
+            tone: _tone,
+            busy: _isFetchingBoundary,
+            text: _userLocation != null
+                ? (pinned != null
                     ? 'Pinned — tap inside your district to adjust'
                     : 'Tap inside your district to pin your ${_style.pinHintNoun}')
                 : 'Waiting for your GPS location...',
-            style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, color: DesignColors.textSecondary),
-          )),
-          if (_isFetchingBoundary) ...[
-            const SizedBox(width: 6),
-            SizedBox(
-              width: 12, height: 12,
-              child: CircularProgressIndicator(strokeWidth: 2, color: _style.accentColor),
-            ),
-          ],
-        ]),
-        const SizedBox(height: 12),
-        if (_userLocation == null) ...[
-          ClipRRect(
-            borderRadius: BorderRadius.circular(14),
-            child: Container(
-              height: 340,
-              color: DesignColors.surface,
-              child: Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    CircularProgressIndicator(color: _style.accentColor, strokeWidth: 2),
-                    const SizedBox(height: 14),
-                    const Text('Getting your location...', style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 13, color: DesignColors.textSecondary)),
-                  ],
+          ),
+          if (_userLocation == null)
+            MapWait3D(tone: _tone, text: 'Getting your location...')
+          else
+            MapFrame3D(
+              onMyLocation: () { if (_userLocation != null) _animateTo(_userLocation!, 15.0); },
+              child: MapLibreMap(
+                styleString: 'assets/map_style.json',
+                initialCameraPosition: CameraPosition(
+                  target: _userLocation ?? const LatLng(AppConstants.fallbackLat, AppConstants.fallbackLng),
+                  zoom: 14.0,
                 ),
+                compassEnabled: false,
+                rotateGesturesEnabled: false,
+                tiltGesturesEnabled: false,
+                myLocationEnabled: false,
+                trackCameraPosition: true,
+                gestureRecognizers: {Factory<OneSequenceGestureRecognizer>(() => EagerGestureRecognizer())},
+                attributionButtonMargins: const Point(-200.0, 0.0),
+                // Panning/zooming is capped to the current district's own padded bounds once its boundary loads.
+                cameraTargetBounds: _districtCameraBounds != null
+                    ? CameraTargetBounds(_districtCameraBounds!)
+                    : CameraTargetBounds.unbounded,
+                onMapCreated: (ctrl) {
+                  _mapController = ctrl;
+                  _nativePin = null;
+                  _boundarySourceAdded = false;
+                  _userDot = null;
+                },
+                onStyleLoadedCallback: _onStyleLoaded,
+                onCameraMove: (pos) { _currentZoom = pos.zoom; },
+                onCameraIdle: () {
+                  if (_currentZoom < _minZoom && _mapController != null && mounted) {
+                    _mapController!.animateCamera(CameraUpdate.zoomTo(_minZoom));
+                  }
+                },
+                onMapClick: (_, latLng) {
+                  final geojson = _districtBoundaryGeoJson;
+                  if (geojson != null && !isPointInGeoJsonFeatureCollection(latLng.latitude, latLng.longitude, geojson)) {
+                    final name = _locationCtrl.effectiveDistrict?.name;
+                    AppToast.warning(name != null ? 'You can only pin within $name district' : 'You can only pin within your current district');
+                    return;
+                  }
+                  _pinManuallyPlaced = true;
+                  setState(() => _selectedLocation = latLng);
+                  _setNativePin(latLng);
+                },
               ),
             ),
+          Visibility(
+            visible: pinned != null,
+            maintainSize: true,
+            maintainAnimation: true,
+            maintainState: true,
+            child: CoordsLine3D(
+              tone: _tone,
+              text: pinned == null ? '' : '${pinned.latitude.toStringAsFixed(5)}, ${pinned.longitude.toStringAsFixed(5)}',
+              credit: '© OpenStreetMap contributors',
+            ),
           ),
-        ] else
-        ClipRRect(
-          borderRadius: BorderRadius.circular(14),
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              return SizedBox(
-                height: 340,
-                child: Stack(children: [
-                  MapLibreMap(
-                    styleString: 'assets/map_style.json',
-                    initialCameraPosition: CameraPosition(
-                      target: _userLocation ?? const LatLng(AppConstants.fallbackLat, AppConstants.fallbackLng),
-                      zoom: 14.0,
-                    ),
-                    compassEnabled: false,
-                    rotateGesturesEnabled: false,
-                    tiltGesturesEnabled: false,
-                    myLocationEnabled: false,
-                    trackCameraPosition: true,
-                    gestureRecognizers: {Factory<OneSequenceGestureRecognizer>(() => EagerGestureRecognizer())},
-                    attributionButtonMargins: const Point(-200.0, 0.0),
-                    // Panning/zooming is capped to the current district's own
-                    // padded bounds (set once its boundary loads) instead of a
-                    // fixed minimum zoom — lets the user zoom out enough to see
-                    // their whole district and look around for their exact
-                    // property, without wandering into a neighbouring one.
-                    cameraTargetBounds: _districtCameraBounds != null
-                        ? CameraTargetBounds(_districtCameraBounds!)
-                        : CameraTargetBounds.unbounded,
-                    onMapCreated: (ctrl) {
-                      _mapController = ctrl;
-                      _nativePin = null;
-                      _boundarySourceAdded = false;
-                      _userDot = null;
-                    },
-                    onStyleLoadedCallback: _onStyleLoaded,
-                    onCameraMove: (pos) { _currentZoom = pos.zoom; },
-                    onCameraIdle: () {
-                      if (_currentZoom < _minZoom && _mapController != null && mounted) {
-                        _mapController!.animateCamera(CameraUpdate.zoomTo(_minZoom));
-                      }
-                    },
-                    onMapClick: (_, latLng) {
-                      final geojson = _districtBoundaryGeoJson;
-                      if (geojson != null && !isPointInGeoJsonFeatureCollection(latLng.latitude, latLng.longitude, geojson)) {
-                        final name = _locationCtrl.effectiveDistrict?.name;
-                        AppToast.warning(name != null ? 'You can only pin within $name district' : 'You can only pin within your current district');
-                        return;
-                      }
-                      _pinManuallyPlaced = true;
-                      setState(() => _selectedLocation = latLng);
-                      _setNativePin(latLng);
-                    },
-                  ),
-                  Positioned(
-                    bottom: 10, right: 10,
-                    child: GestureDetector(
-                      onTap: () { if (_userLocation != null) _animateTo(_userLocation!, 15.0); },
-                      child: Container(
-                        width: 38, height: 38,
-                        decoration: BoxDecoration(
-                          color: UtilTokens.mapButtonSurface, shape: BoxShape.circle,
-                          boxShadow: DesignShadows.tile,
-                        ),
-                        child: Icon(Iconsax.location, color: _style.accentColor, size: 18),
-                      ),
-                    ),
-                  ),
-                ]),
-              );
-            },
-          ),
-        ),
-        if (_selectedLocation != null)
-          Padding(
-            padding: const EdgeInsets.only(top: 10),
-            child: Row(children: [
-              const Icon(Icons.check_circle_rounded, color: DesignColors.success, size: 16),
-              const SizedBox(width: 6),
-              Text(
-                '${_selectedLocation!.latitude.toStringAsFixed(5)}, ${_selectedLocation!.longitude.toStringAsFixed(5)}',
-                style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, color: DesignColors.success, fontWeight: FontWeight.w500),
-              ),
-              const Spacer(),
-              const Text('© OpenStreetMap contributors', style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 11, color: DesignColors.textSecondary)),
-            ]),
-          ),
-      ]),
-    ),
-  );
+        ]),
+      ),
+    );
+  }
+
+  Widget _placeField(String label, String art, String? value, {bool first = true}) {
+    final detecting = value == null && _isResolvingDistrict;
+    return PillPickerField(
+      tone: _tone,
+      label: label,
+      firstLabel: first,
+      leadingArt: art,
+      value: value ?? (detecting ? 'Detecting…' : '—'),
+      trailing: value != null ? GpsDot3D(tone: _tone) : const SizedBox.shrink(),
+      onTap: null,
+    );
+  }
 
   Widget addressStepWidget() => SingleChildScrollView(
     key: const ValueKey(2),
-    padding: const EdgeInsets.all(16),
-    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      _sectionCard(
+    padding: const EdgeInsets.only(bottom: 24),
+    child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      _card(
+        art: ListingArt.worldMap,
         title: 'District & City',
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const Text('District *', style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, fontWeight: FontWeight.w500, color: UtilTokens.fieldLabel)),
-          const SizedBox(height: 6),
-          _readOnlyField(Iconsax.location, _resolvedDistrict?.name ?? (_isResolvingDistrict ? 'Detecting…' : '—')),
-          const SizedBox(height: 16),
-          const Text('City / Area (Optional)', style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, fontWeight: FontWeight.w500, color: UtilTokens.fieldLabel)),
-          const SizedBox(height: 6),
-          _readOnlyField(Iconsax.map, _resolvedCity?.name ?? (_isResolvingDistrict ? 'Detecting…' : '—')),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          _placeField('District', ListingArt.roundPushpin, _resolvedDistrict?.name),
+          _placeField('City / Area (optional)', ListingArt.worldMap, _resolvedCity?.name, first: false),
         ]),
       ),
-      _sectionCard(
-        title: 'Address *',
-        child: TextFormField(
+      _card(
+        art: _coral ? ListingArt.taxi : ListingArt.hotel,
+        title: 'Address',
+        child: PillField(
+          tone: _tone,
           controller: _addressCtrl,
           focusNode: _addressFocusNode,
           inputFormatters: noEmojiInputFormatters,
-          style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 14),
-          decoration: _addressInputDecoration(
-            'Street, landmark, nearby place...',
-            prefixIcon: Icon(_style.addressPrefixIcon, color: UtilTokens.fieldIcon, size: 18),
-            suffixIcon: _isResolvingDistrict
-                ? Padding(
-                    padding: const EdgeInsets.all(14),
-                    child: SizedBox(
-                      width: 16, height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: _style.addressSpinnerColor),
-                    ),
-                  )
-                : null,
-          ),
+          hint: 'Street, landmark, nearby place...',
+          leadingArt: _coral ? ListingArt.taxi : ListingArt.hotel,
+          suffix: _isResolvingDistrict
+              ? SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: _tone.g2))
+              : null,
         ),
       ),
     ]),

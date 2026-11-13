@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:pinput/pinput.dart';
 import '../controllers/auth_controller.dart';
 import '../design/design.dart';
+import '../design/extra/ext_auth.dart';
 import '../utils/app_toast.dart';
 
 class PhoneVerifyScreen extends StatefulWidget {
@@ -16,6 +17,9 @@ class _PhoneVerifyScreenState extends State<PhoneVerifyScreen> with TickerProvid
   final _phoneCtrl = TextEditingController();
   final _otpCtrl = TextEditingController();
   final _otpFocus = FocusNode();
+  final _phoneFocus = FocusNode();
+  static final ListingTone _tone = ListingTone.indigo;
+  bool _phoneBad = false;
   final _auth = Get.find<AuthController>();
   late final AnimationController _enter =
       AnimationController(duration: const Duration(milliseconds: 600), vsync: this);
@@ -50,10 +54,10 @@ class _PhoneVerifyScreenState extends State<PhoneVerifyScreen> with TickerProvid
     } else if (!_enter.isAnimating && _enter.value == 0) {
       _enter.forward();
     }
-    final boxSize = ((MediaQuery.of(context).size.width - 56 - 36) / 4).clamp(56.0, 72.0);
-    _defaultTheme = GatePinThemes.base(boxSize);
-    _focusedTheme = GatePinThemes.focused(boxSize);
-    _submittedTheme = GatePinThemes.submitted(boxSize);
+    final boxSize = AuthPins.boxSize(context);
+    _defaultTheme = AuthPins.base(boxSize);
+    _focusedTheme = AuthPins.focused(_tone, boxSize);
+    _submittedTheme = AuthPins.submitted(_tone, boxSize);
   }
 
   @override
@@ -62,12 +66,14 @@ class _PhoneVerifyScreenState extends State<PhoneVerifyScreen> with TickerProvid
     _phoneCtrl.dispose();
     _otpCtrl.dispose();
     _otpFocus.dispose();
+    _phoneFocus.dispose();
     super.dispose();
   }
 
   Future<void> _sendOtp() async {
     final phone = _phoneCtrl.text.trim();
     if (phone.length != 10) {
+      setState(() => _phoneBad = true);
       AppToast.error('Enter a valid 10-digit number');
       return;
     }
@@ -131,112 +137,86 @@ class _PhoneVerifyScreenState extends State<PhoneVerifyScreen> with TickerProvid
   }
 
   Future<void> _showSuccessDialog() {
-    return showDialog<void>(
-      context: context,
+    return Dialog3D.show<void>(
+      context,
       barrierDismissible: false,
-      barrierColor: GateKit.scrim,
-      builder: (dialogContext) => GateDialog(
-        asset: TravelIcon.star,
+      builder: (dialogContext) => Dialog3D(
+        tone: ListingTone.forest,
+        art: ListingArt.star,
         title: _isChange ? 'Number Changed!' : 'Phone Verified!',
         body: _isChange
             ? 'Your mobile number has been updated to +91 ${_phoneCtrl.text}. All future OTPs will be sent to this number.'
             : 'Your mobile number +91 ${_phoneCtrl.text} is now verified. You can post listings on RentNearby.',
-        actions: [
-          GateButton(label: 'Continue', onPressed: () => Navigator.pop(dialogContext)),
-        ],
+        primaryLabel: 'Continue',
+        onPrimary: () => Navigator.pop(dialogContext),
       ),
     );
   }
 
   Future<bool?> _showConfirmDialog(String phone) {
-    return showDialog<bool>(
-      context: context,
-      barrierColor: GateKit.scrim,
-      builder: (dialogContext) => GateDialog(
-        asset: TravelIcon.chat,
+    return Dialog3D.show<bool>(
+      context,
+      builder: (dialogContext) => Dialog3D(
+        tone: _tone,
+        art: ListingArt.speechBalloon,
         title: 'Confirm your number',
         body: 'We will send an OTP on WhatsApp to',
-        content: Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-              decoration: const BoxDecoration(color: FitnessAppTheme.background, borderRadius: CardRadius.chip),
-              child: Text(
-                '+91 $phone',
-                style: FitnessAppTheme.title.copyWith(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  color: FitnessAppTheme.nearlyDarkBlue,
-                  letterSpacing: 1.5,
-                ),
-              ),
-            ),
-            const SizedBox(height: 10),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const TravelIcon(TravelIcon.chat, size: 16),
-                const SizedBox(width: 6),
-                Text('via WhatsApp',
-                    style: FitnessAppTheme.caption
-                        .copyWith(color: GateKit.whatsApp, fontWeight: FontWeight.w600)),
-              ],
-            ),
-          ],
-        ),
-        horizontalActions: true,
-        actions: [
-          GateOutlineButton(label: 'Edit', height: 48, onPressed: () => Navigator.pop(dialogContext, false)),
-          GateButton(label: 'Confirm', height: 48, onPressed: () => Navigator.pop(dialogContext, true)),
-        ],
+        content: AuthDialogNumber(tone: _tone, text: '+91 $phone', viaArt: ListingArt.speechBalloon, viaText: 'via WhatsApp'),
+        secondaryLabel: 'Edit',
+        onSecondary: () => Navigator.pop(dialogContext, false),
+        primaryLabel: 'Confirm',
+        onPrimary: () => Navigator.pop(dialogContext, true),
       ),
     );
   }
 
   void _showPhoneClaimedDialog(String phone) {
-    showDialog(
-      context: context,
-      builder: (dialogContext) => GateDialog(
-        glyph: Icons.warning_amber_rounded,
-        gradient: TripEntryStyle.rose,
+    Dialog3D.show<void>(
+      context,
+      builder: (dialogContext) => Dialog3D(
+        tone: ListingTone.coral,
+        art: ListingArt.pushpin,
         title: 'Number Not Available',
         body: 'This number is already registered in our system.\n\nPlease use a different number.',
-        actions: [
-          GateButton(
-            label: 'Use Different Number',
-            height: 48,
-            onPressed: () {
-              Navigator.pop(dialogContext);
-              _phoneCtrl.clear();
-              setState(() => _otpSent = false);
-            },
-          ),
-        ],
+        primaryLabel: 'Use Different Number',
+        onPrimary: () {
+          Navigator.pop(dialogContext);
+          _phoneCtrl.clear();
+          setState(() => _otpSent = false);
+        },
       ),
     );
   }
 
   void _showMaxAttemptsDialog() {
-    showDialog(
-      context: context,
+    Dialog3D.show<void>(
+      context,
       barrierDismissible: false,
-      builder: (dialogContext) => GateDialog(
-        glyph: Icons.lock_outline_rounded,
-        gradient: TripEntryStyle.rose,
+      builder: (dialogContext) => Dialog3D(
+        tone: ListingTone.coral,
+        art: ListingArt.key,
         title: 'Too many attempts',
         body: 'Please go back and try again later.',
-        actions: [
-          GateButton(
-            label: 'Go Back',
-            height: 48,
-            onPressed: () {
-              Navigator.pop(dialogContext);
-              Get.back();
-            },
-          ),
-        ],
+        primaryLabel: 'Go Back',
+        onPrimary: () {
+          Navigator.pop(dialogContext);
+          Get.back();
+        },
       ),
     );
+  }
+
+  void _back() {
+    FocusScope.of(context).unfocus();
+    if (_otpSent) {
+      _otpCtrl.clear();
+      setState(() {
+        _otpSent = false;
+        _attempts = 0;
+      });
+    } else {
+      Get.back();
+    }
   }
 
   @override
@@ -252,156 +232,89 @@ class _PhoneVerifyScreenState extends State<PhoneVerifyScreen> with TickerProvid
           });
         }
       },
-      child: Scaffold(
-        backgroundColor: FitnessAppTheme.background,
-        body: MediaQuery.withClampedTextScaling(
-          maxScaleFactor: 1.3,
-          child: SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
-            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-            child: GateHeroLayout(
-              heroHeight: 304,
-              overlap: 48,
-              hero: TemplateEntrance(
-                animation: templateInterval(_enter, 0, 2),
-                animationController: _enter,
-                child: GateHeroHeader(
-                  asset: TravelIcon.checkout,
-                  title: _isChange ? 'Change Number' : 'Verify Mobile',
-                  titleSize: 24,
-                  subtitle: _isChange ? 'Enter your new mobile number' : 'Required to post listings',
-                  top: Align(
-                    alignment: Alignment.centerLeft,
-                    child: SizedBox(
-                      width: KitMetrics.touch,
-                      height: KitMetrics.touch,
-                      child: IconButton(
-                        padding: EdgeInsets.zero,
-                        alignment: Alignment.centerLeft,
-                        onPressed: () {
-                          FocusScope.of(context).unfocus();
-                          if (_otpSent) {
-                            _otpCtrl.clear();
-                            setState(() {
-                              _otpSent = false;
-                              _attempts = 0;
-                            });
-                          } else {
-                            Get.back();
-                          }
-                        },
-                        icon: const Icon(Icons.arrow_back_ios_new_rounded, color: FitnessAppTheme.white, size: 18),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              child: Padding(
-                padding: EdgeInsets.only(bottom: 24 + MediaQuery.paddingOf(context).bottom),
-                child: TemplateEntrance(
-                  animation: templateInterval(_enter, 1, 2),
-                  animationController: _enter,
-                  child: Container(
-                    width: double.infinity,
-                    margin: const EdgeInsets.symmetric(horizontal: KitMetrics.gutter),
-                    padding: const EdgeInsets.all(24),
-                    decoration: GateKit.heroCard(),
-                    child: GateSwitcher(
-                      reverse: !_otpSent,
-                      child: _otpSent ? _otpSection() : _phoneSection(),
-                    ),
-                  ),
-                ),
-              ),
-            ),
+      child: AuthHeroScaffold(
+        hero: TemplateEntrance(
+          animation: templateInterval(_enter, 0, 2),
+          animationController: _enter,
+          child: AuthHero(
+            tone: _tone,
+            art: ListingArt.key,
+            title: _isChange ? 'Change Number' : 'Verify Mobile',
+            subtitle: _isChange ? 'Enter your new mobile number' : 'Required to post listings',
+            smallTitle: true,
+            onBack: _back,
+          ),
+        ),
+        card: TemplateEntrance(
+          animation: templateInterval(_enter, 1, 2),
+          animationController: _enter,
+          child: GateSwitcher(
+            reverse: !_otpSent,
+            child: _otpSent ? _otpSection() : _phoneSection(),
           ),
         ),
       ),
     );
   }
 
-  Widget _phoneSection() => TemplateStagger(
+  Widget _phoneSection() => AuthCard(
         key: const ValueKey('phone'),
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            _isChange ? 'Enter your new number' : 'Enter your mobile number',
-            style: FitnessAppTheme.headline.copyWith(fontSize: 18),
-          ),
-          const SizedBox(height: 6),
-          Text(
+          AuthHeading(_isChange ? 'Enter your new number' : 'Enter your mobile number', tone: _tone),
+          AuthCaption(
             _isChange ? 'Your old number will be replaced after verification' : 'You\'ll receive an OTP on WhatsApp',
-            style: FitnessAppTheme.caption,
+            lines: 2,
           ),
           const SizedBox(height: 28),
-          TextFormField(
-            controller: _phoneCtrl,
-            keyboardType: TextInputType.phone,
-            inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(10)],
-            style: FitnessAppTheme.title.copyWith(fontWeight: FontWeight.w500),
-            decoration: InputDecoration(
-              prefixIcon: Container(
-                margin: const EdgeInsets.all(12),
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: const BoxDecoration(color: FitnessAppTheme.spacer, borderRadius: CardRadius.chip),
-                child: Text('+91',
-                    style: FitnessAppTheme.body2
-                        .copyWith(fontWeight: FontWeight.w700, color: FitnessAppTheme.nearlyDarkBlue)),
-              ),
-              hintText: 'Enter mobile number',
+          AuthPillInput(
+            tone: _tone,
+            focusNode: _phoneFocus,
+            bad: _phoneBad,
+            prefix: AuthCountryCode(tone: _tone),
+            child: TextFormField(
+              controller: _phoneCtrl,
+              focusNode: _phoneFocus,
+              keyboardType: TextInputType.phone,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(10)],
+              style: AuthPillInput.textStyle,
+              cursorColor: _tone.g2,
+              decoration: AuthPillInput.decoration('Enter mobile number'),
+              onChanged: (_) {
+                if (_phoneBad) setState(() => _phoneBad = false);
+              },
             ),
           ),
           const SizedBox(height: 24),
-          Obx(() => GateButton(
-                onPressed: _auth.isLoading.value ? null : _sendOtp,
-                isLoading: _auth.isLoading.value,
+          Obx(() => GradientPillButton(
+                tone: _tone,
                 label: 'Send OTP',
+                onTap: _auth.isLoading.value ? null : _sendOtp,
+                loading: _auth.isLoading.value,
               )),
         ],
       );
 
   Widget _otpSection() {
-    return TemplateStagger(
+    final left = _maxAttempts - _attempts;
+    return AuthCard(
       key: const ValueKey('otp'),
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(children: [
-          InkResponse(
-            radius: 22,
-            onTap: () {
-              FocusScope.of(context).unfocus();
-              _otpCtrl.clear();
-              setState(() {
-                _otpSent = false;
-                _attempts = 0;
-              });
-            },
-            child: const SizedBox(
-              width: KitMetrics.touch,
-              height: KitMetrics.touch,
-              child: Icon(Icons.arrow_back_ios_new_rounded, size: 18, color: FitnessAppTheme.nearlyDarkBlue),
-            ),
-          ),
-          const SizedBox(width: 4),
-          Text('Enter OTP', style: FitnessAppTheme.headline.copyWith(fontSize: 18)),
-        ]),
-        const SizedBox(height: 6),
-        Text('Sent to +91 ${_phoneCtrl.text}', style: FitnessAppTheme.caption),
-        const SizedBox(height: 4),
-        Row(
-          children: [
-            const TravelIcon(TravelIcon.chat, size: 16),
-            const SizedBox(width: 6),
-            Text('Check your WhatsApp for the OTP',
-                style: FitnessAppTheme.caption.copyWith(color: GateKit.whatsApp, fontWeight: FontWeight.w600)),
-          ],
+        AuthHeading(
+          'Enter OTP',
+          tone: _tone,
+          onBack: () {
+            FocusScope.of(context).unfocus();
+            _otpCtrl.clear();
+            setState(() {
+              _otpSent = false;
+              _attempts = 0;
+            });
+          },
         ),
-        if (_attempts > 0) ...[
-          const SizedBox(height: 6),
-          Text('${_maxAttempts - _attempts} attempt${_maxAttempts - _attempts == 1 ? '' : 's'} remaining',
-              style: FitnessAppTheme.caption.copyWith(color: PickKit.warn)),
-        ],
-        const SizedBox(height: 28),
+        AuthCaption('Sent to +91 ${_phoneCtrl.text}'),
+        const AuthArtLine(art: ListingArt.speechBalloon, text: 'Check your WhatsApp for the OTP'),
+        AuthWarnLine(_attempts > 0 ? '$left attempt${left == 1 ? '' : 's'} remaining' : null),
+        const SizedBox(height: 20),
         Center(
           child: Pinput(
             length: 4,
@@ -411,33 +324,26 @@ class _PhoneVerifyScreenState extends State<PhoneVerifyScreen> with TickerProvid
             keyboardType: TextInputType.number,
             autofillHints: const [],
             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            separatorBuilder: (_) => const SizedBox(width: 12),
             defaultPinTheme: _defaultTheme,
             focusedPinTheme: _focusedTheme,
             submittedPinTheme: _submittedTheme,
-            cursor: Column(mainAxisAlignment: MainAxisAlignment.end, children: [
-              Container(
-                  margin: const EdgeInsets.only(bottom: 9),
-                  width: 22,
-                  height: 2,
-                  decoration: BoxDecoration(
-                      color: FitnessAppTheme.nearlyDarkBlue, borderRadius: BorderRadius.circular(2))),
-            ]),
+            cursor: AuthPins.cursor(_tone),
             onCompleted: (pin) => _verifyOtp(pin),
           ),
         ),
-        const SizedBox(height: 28),
-        Obx(() => GateButton(
-              onPressed: _auth.isLoading.value ? null : () => _verifyOtp(),
-              isLoading: _auth.isLoading.value,
+        const SizedBox(height: 24),
+        Obx(() => GradientPillButton(
+              tone: _tone,
               label: 'Verify Number',
+              onTap: _auth.isLoading.value ? null : () => _verifyOtp(),
+              loading: _auth.isLoading.value,
             )),
-        const SizedBox(height: 16),
-        Center(
-          child: Obx(() => GateTextButton(
-                label: _resends >= _maxResends ? 'No more resends' : 'Resend OTP (${_maxResends - _resends} left)',
-                onPressed: (_auth.isLoading.value || _resends >= _maxResends) ? null : _resendOtp,
-              )),
-        ),
+        Obx(() => AuthTextLink(
+              tone: _tone,
+              label: _resends >= _maxResends ? 'No more resends' : 'Resend OTP (${_maxResends - _resends} left)',
+              onTap: (_auth.isLoading.value || _resends >= _maxResends) ? null : _resendOtp,
+            )),
       ],
     );
   }

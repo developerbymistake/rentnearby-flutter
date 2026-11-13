@@ -15,15 +15,7 @@ enum _Slide { stay, taxi }
 class HomeOwnerCarousel extends StatefulWidget {
   const HomeOwnerCarousel({super.key});
 
-  static const double bannerHeight = 140;
-  static double heightOf(BuildContext context) =>
-      MediaQuery.sizeOf(context).width < 340 ? bannerHeight + 24 : bannerHeight;
-  static const EdgeInsets pagePadding = EdgeInsets.fromLTRB(
-    KitMetrics.gutter,
-    4,
-    KitMetrics.gutter,
-    24,
-  );
+  static const EdgeInsets pagePadding = EdgeInsets.only(bottom: 12);
 
   @override
   State<HomeOwnerCarousel> createState() => _HomeOwnerCarouselState();
@@ -125,57 +117,42 @@ class _HomeOwnerCarouselState extends State<HomeOwnerCarousel>
       ];
       if (slides.length != _count) _onCountChanged(slides.length);
       if (slides.isEmpty) return const SizedBox.shrink();
-      final page = _page % slides.length;
-      final height = HomeOwnerCarousel.heightOf(context) + 28;
-      return Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          SizedBox(
-            height: height,
-            child: slides.length == 1
-                ? Padding(
-                    padding: HomeOwnerCarousel.pagePadding,
-                    child: _OwnerBanner(slide: slides.first, isOwner: owner),
-                  )
-                : NotificationListener<ScrollNotification>(
-                    onNotification: _onScroll,
-                    child: PageView.builder(
-                      controller: _controller,
-                      physics: const BouncingScrollPhysics(),
-                      onPageChanged: (i) => setState(() => _page = i),
-                      itemBuilder: (_, i) => Padding(
-                        padding: HomeOwnerCarousel.pagePadding,
-                        child: _OwnerBanner(
-                          slide: slides[i % slides.length],
-                          isOwner: owner,
-                        ),
+      final n = slides.length;
+      Widget page(int i) => Padding(
+            padding: HomeOwnerCarousel.pagePadding,
+            child: _OwnerBanner(slide: slides[i % n], isOwner: owner, count: n, index: i % n),
+          );
+      final scaler = MediaQuery.textScalerOf(context).clamp(maxScaleFactor: 1.15);
+      return MediaQuery(
+        data: MediaQuery.of(context).copyWith(textScaler: scaler),
+        child: n == 1
+            ? page(0)
+            : Stack(
+                children: [
+                  for (var i = 0; i < n; i++)
+                    ExcludeSemantics(
+                      child: Visibility(
+                        visible: false,
+                        maintainSize: true,
+                        maintainAnimation: true,
+                        maintainState: true,
+                        child: page(i),
+                      ),
+                    ),
+                  Positioned.fill(
+                    child: NotificationListener<ScrollNotification>(
+                      onNotification: _onScroll,
+                      child: PageView.builder(
+                        controller: _controller,
+                        clipBehavior: Clip.none,
+                        physics: const BouncingScrollPhysics(),
+                        onPageChanged: (i) => setState(() => _page = i),
+                        itemBuilder: (_, i) => page(i),
                       ),
                     ),
                   ),
-          ),
-          if (slides.length > 1)
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                for (var i = 0; i < slides.length; i++)
-                  AnimatedContainer(
-                    duration: KitMotion.reduce(context)
-                        ? Duration.zero
-                        : templateTransitionDuration,
-                    curve: Curves.fastOutSlowIn,
-                    margin: const EdgeInsets.symmetric(horizontal: 4),
-                    height: 8,
-                    width: i == page ? 20 : 8,
-                    decoration: BoxDecoration(
-                      color: i == page
-                          ? _OwnerBanner.toneOf(slides[page]).accentDark
-                          : DesignColors.idleDot,
-                      borderRadius: CardRadius.pill,
-                    ),
-                  ),
-              ],
-            ),
-        ],
+                ],
+              ),
       );
     });
   }
@@ -184,12 +161,19 @@ class _HomeOwnerCarouselState extends State<HomeOwnerCarousel>
 class _OwnerBanner extends StatelessWidget {
   final _Slide slide;
   final bool isOwner;
+  final int count;
+  final int index;
 
-  const _OwnerBanner({required this.slide, required this.isOwner});
+  const _OwnerBanner({required this.slide, required this.isOwner, required this.count, required this.index});
 
-  static KitTone toneOf(_Slide slide) => switch (slide) {
-    _Slide.stay => KitTone.stay,
-    _Slide.taxi => KitTone.taxi,
+  static ListingTone toneOf(_Slide slide) => switch (slide) {
+    _Slide.stay => ListingTone.forest,
+    _Slide.taxi => ListingTone.coral,
+  };
+
+  static String artOf(_Slide slide) => switch (slide) {
+    _Slide.stay => ListingArt.hotel,
+    _Slide.taxi => ListingArt.taxi,
   };
 
   static String roleKeyOf(_Slide slide) => switch (slide) {
@@ -234,24 +218,19 @@ class _OwnerBanner extends StatelessWidget {
       slide,
     );
     final key = roleKeyOf(slide);
-    return MediaQuery(
-      data: MediaQuery.of(context).copyWith(
-        textScaler: MediaQuery.textScalerOf(
-          context,
-        ).clamp(maxScaleFactor: 1.15),
-      ),
-      child: HeroBanner(
-        tone: toneOf(slide),
-        height: HomeOwnerCarousel.heightOf(context),
-        iconAsset: RoleVisuals.iconAsset(key),
-        badge: isOwner ? RoleVisuals.displayName(key) : seekerBadge,
-        title: isOwner ? ownerTitleOf(slide) : seekerTitle,
-        subtitle: isOwner ? 'Grow your reach' : seekerSubtitle,
-        cta: isOwner ? 'List Yours' : seekerCta,
-        onTap: isOwner
-            ? () => Get.toNamed(ownerRouteOf(slide))
-            : () => Get.find<AuthController>().switchToTab(tabOf(slide)),
-      ),
+    return WorkoutCard(
+      tone: toneOf(slide),
+      art: artOf(slide),
+      eyebrow: isOwner ? RoleVisuals.displayName(key) : seekerBadge,
+      title: isOwner ? ownerTitleOf(slide) : seekerTitle,
+      subtitle: isOwner ? 'Grow your reach' : seekerSubtitle,
+      ctaLabel: isOwner ? 'List Yours' : seekerCta,
+      trailing: count > 1 ? WorkoutTrailing.dots : WorkoutTrailing.none,
+      dotCount: count,
+      dotIndex: index,
+      onTap: isOwner
+          ? () => Get.toNamed(ownerRouteOf(slide))
+          : () => Get.find<AuthController>().switchToTab(tabOf(slide)),
     );
   }
 }

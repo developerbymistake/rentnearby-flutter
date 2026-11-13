@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../tokens/alpha_tokens.dart';
 import '../tokens/design_colors.dart';
-import '../tokens/shadow_tokens.dart';
-import '../tokens/type_tokens.dart';
-import 'buttons_kit.dart';
+import '../tokens/listing_palette.dart';
+import 'art_3d.dart';
+import 'dialog_3d.dart';
 import 'kit_tone.dart';
 import 'motion_kit.dart';
+import 'pill_buttons_3d.dart';
+import 'state_card.dart';
 
 class TemplateTimePopup extends StatefulWidget {
   const TemplateTimePopup({
@@ -16,6 +17,7 @@ class TemplateTimePopup extends StatefulWidget {
     this.applyLabel = 'Apply',
     this.tone = KitTone.brand,
     this.onApply,
+    this.art,
   });
 
   final TimeOfDay initial;
@@ -23,6 +25,7 @@ class TemplateTimePopup extends StatefulWidget {
   final String applyLabel;
   final KitTone tone;
   final ValueChanged<TimeOfDay>? onApply;
+  final String? art;
 
   static Future<TimeOfDay?> pick(
     BuildContext context, {
@@ -30,6 +33,7 @@ class TemplateTimePopup extends StatefulWidget {
     String label = 'Time',
     KitTone tone = KitTone.brand,
     bool useRootNavigator = true,
+    String? art,
   }) {
     TimeOfDay? result;
     return showDialog<TimeOfDay>(
@@ -40,6 +44,7 @@ class TemplateTimePopup extends StatefulWidget {
         initial: initial,
         label: label,
         tone: tone,
+        art: art,
         onApply: (t) => result = t,
       ),
     ).then((_) => result);
@@ -104,196 +109,116 @@ class _TemplateTimePopupState extends State<TemplateTimePopup>
 
   @override
   Widget build(BuildContext context) {
-    final accent = widget.tone.accentDark;
+    final tone = listingToneOf(widget.tone);
     return FadeTransition(
       opacity: _fade,
       child: ScaleTransition(
         scale: Tween<double>(begin: 0.94, end: 1).animate(_fade),
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 400),
-              child: Material(
-                color: Colors.transparent,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: DesignColors.surface,
-                    borderRadius: const BorderRadius.all(Radius.circular(24)),
-                    boxShadow: [
-                      ShadowTokens.tint(
-                        DesignColors.textGrey,
-                        const ShadowSpec(0.2, Offset(4, 4), 8),
+        child: Dialog3D(
+          tone: tone,
+          art: widget.art ?? (identical(tone, ListingTone.coral) ? ListingArt.taxi : (identical(tone, ListingTone.forest) ? ListingArt.hotel : ListingArt.calendar)),
+          label: widget.label,
+          title: '${_two(_hour12)}:${_two(_minute)} ${_pm ? 'PM' : 'AM'}',
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              DecoratedBox(
+                decoration: BoxDecoration(color: const Color(0xFFF5F6FA), borderRadius: BorderRadius.circular(22)),
+                child: MediaQuery.withNoTextScaling(
+                  child: SizedBox(
+                    height: 148,
+                    child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      _column(_hc, 12, (i) => _two(i + 1), _hour12 - 1, (i) => setState(() => _hour12 = i + 1), 'Hour'),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        child: Text(':', style: Ink3D.text(26, FontWeight.w700, Ink3D.title, height: 1)),
                       ),
+                      _column(_mc, 60, _two, _minute, (i) => setState(() => _minute = i), 'Minute'),
                     ],
                   ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
-                        child: Column(
-                          children: [
-                            Text(
-                              widget.label,
-                              style: TypeTokens.style(
-                                16,
-                                FontWeight.w400,
-                                color: DesignColors.tint(
-                                  DesignColors.textGrey,
-                                  Alpha.high,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              '${_two(_hour12)}:${_two(_minute)} ${_pm ? 'PM' : 'AM'}',
-                              style: TypeTokens.style(
-                                22,
-                                FontWeight.w700,
-                                color: DesignColors.textStrong,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const Divider(height: 1),
-                      SizedBox(
-                        height: 180,
-                        child: Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            IgnorePointer(
-                              child: Container(
-                                height: 44,
-                                margin: const EdgeInsets.symmetric(
-                                  horizontal: 24,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: DesignColors.tint(accent, Alpha.tint),
-                                  borderRadius: const BorderRadius.all(
-                                    Radius.circular(12),
-                                  ),
-                                ),
-                              ),
-                            ),
-                            Row(
-                              children: [
-                                const SizedBox(width: 24),
-                                Expanded(
-                                  child: _wheel(
-                                    _hc,
-                                    12,
-                                    (i) => _two(i + 1),
-                                    (i) => setState(() => _hour12 = i + 1),
-                                  ),
-                                ),
-                                Text(
-                                  ':',
-                                  style: TypeTokens.style(
-                                    22,
-                                    FontWeight.w700,
-                                    color: DesignColors.textStrong,
-                                  ),
-                                ),
-                                Expanded(
-                                  child: _wheel(
-                                    _mc,
-                                    60,
-                                    _two,
-                                    (i) => setState(() => _minute = i),
-                                  ),
-                                ),
-                                Expanded(child: _periodToggle(accent)),
-                                const SizedBox(width: 24),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                        child: PrimaryButton(
-                          label: widget.applyLabel,
-                          tone: widget.tone,
-                          onPressed: _apply,
-                        ),
-                      ),
-                    ],
+                  ),
                   ),
                 ),
               ),
-            ),
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  Expanded(child: _periodChip('AM', !_pm, tone, () => setState(() => _pm = false))),
+                  const SizedBox(width: 10),
+                  Expanded(child: _periodChip('PM', _pm, tone, () => setState(() => _pm = true))),
+                ],
+              ),
+            ],
           ),
+          primaryLabel: widget.applyLabel,
+          onPrimary: _apply,
         ),
       ),
     );
   }
 
-  Widget _wheel(
-    FixedExtentScrollController c,
-    int count,
-    String Function(int) label,
-    ValueChanged<int> onChanged,
-  ) => ListWheelScrollView.useDelegate(
-    controller: c,
-    itemExtent: 44,
-    perspective: 0.003,
-    diameterRatio: 1.8,
-    physics: const FixedExtentScrollPhysics(),
-    onSelectedItemChanged: (i) {
-      HapticFeedback.selectionClick();
-      onChanged(i % count);
-    },
-    childDelegate: ListWheelChildLoopingListDelegate(
-      children: [
-        for (var i = 0; i < count; i++)
-          Center(
-            child: Text(
-              label(i),
-              style: TypeTokens.style(
-                20,
-                FontWeight.w600,
-                color: DesignColors.textStrong,
-              ),
+  Widget _column(FixedExtentScrollController c, int count, String Function(int) label, int current, ValueChanged<int> onChanged, String name) => Semantics(
+    label: name,
+    value: label(current),
+    child: SizedBox(
+      width: 76,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          DecoratedBox(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              boxShadow: const [BoxShadow(color: Color(0x4D9E9E9E), offset: Offset(2, 4), blurRadius: 8)],
+            ),
+            child: const SizedBox(height: 44, width: 76),
+          ),
+          ListWheelScrollView.useDelegate(
+            controller: c,
+            itemExtent: 44,
+            perspective: 0.0001,
+            diameterRatio: 100,
+            physics: const FixedExtentScrollPhysics(),
+            onSelectedItemChanged: (i) {
+              HapticFeedback.selectionClick();
+              onChanged(i % count);
+            },
+            childDelegate: ListWheelChildLoopingListDelegate(
+              children: [
+                for (var i = 0; i < count; i++)
+                  Center(
+                    child: Text(
+                      label(i),
+                      style: i == current ? Ink3D.text(26, FontWeight.w700, Ink3D.title, height: 1, letterSpacing: 0) : Ink3D.text(18, FontWeight.w500, const Color(0xFFB4B8C2), height: 1, letterSpacing: 0),
+                    ),
+                  ),
+              ],
             ),
           ),
-      ],
+        ],
+      ),
     ),
   );
 
-  Widget _periodToggle(Color accent) => Column(
-    mainAxisAlignment: MainAxisAlignment.center,
-    children: [
-      _periodChip('AM', !_pm, accent, () => setState(() => _pm = false)),
-      const SizedBox(height: 8),
-      _periodChip('PM', _pm, accent, () => setState(() => _pm = true)),
-    ],
+  Widget _periodChip(String t, bool on, ListingTone tone, VoidCallback tap) => Tap3D(
+    onTap: tap,
+    selected: on,
+    child: AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      height: 42,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: on ? null : const Color(0xFFEEF0F4),
+        gradient: on ? tone.gradient : null,
+        borderRadius: BorderRadius.circular(21),
+        boxShadow: on ? [BoxShadow(color: tone.shadow.withValues(alpha: 0.45), offset: const Offset(2, 5), blurRadius: 8)] : null,
+      ),
+      child: Text(t, textScaler: TextScaler.noScaling, style: Ink3D.text(15, FontWeight.w700, on ? Colors.white : Ink3D.grey)),
+    ),
   );
-
-  Widget _periodChip(String t, bool on, Color accent, VoidCallback tap) =>
-      GestureDetector(
-        onTap: tap,
-        child: PressScale(
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            height: 44,
-            width: 56,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: on ? accent : Colors.transparent,
-              borderRadius: const BorderRadius.all(Radius.circular(22)),
-              border: Border.all(color: on ? accent : DesignColors.divider),
-            ),
-            child: Text(
-              t,
-              style: TypeTokens.style(
-                14,
-                FontWeight.w700,
-                color: on ? DesignColors.onPrimary : DesignColors.textGrey,
-              ),
-            ),
-          ),
-        ),
-      );
 }

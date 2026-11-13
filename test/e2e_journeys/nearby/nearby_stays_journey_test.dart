@@ -122,9 +122,9 @@ void main() {
     await _open(t);
     expect(find.text('Nearest stays'), findsOneWidget);
     expect(find.text('We are live in Uttarakhand and Himachal Pradesh'), findsOneWidget);
-    expect(find.text('Haridwar, Uttarakhand. About 210 km away'), findsOneWidget);
-    expect(find.text('Haldwani, Uttarakhand. About 420 km away'), findsOneWidget);
-    expect(find.text('By road it can take longer.'), findsNWidgets(2));
+    expect(find.textContaining('Haridwar, Uttarakhand. About 210 km away'), findsOneWidget);
+    expect(find.textContaining('Haldwani, Uttarakhand. About 420 km away'), findsOneWidget);
+    expect(find.textContaining('By road it can take longer.'), findsNWidgets(2));
     expect(find.text('Using my location'), findsNothing);
     expect(find.text('Stays near you'), findsNothing);
     expect(find.text('Showing near you'), findsNothing);
@@ -193,7 +193,7 @@ void main() {
     _setUpApp();
     _ctrl.answer = (_, _) => NearbyPage(items: [_item('a'), _item('b')]);
     await _open(t);
-    expect(find.text('Search'), findsOneWidget);
+    expect(find.bySemanticsLabel('Search'), findsOneWidget);
     expect(find.text('Filter & Sort'), findsOneWidget);
     for (final gone in ['Showing near you', 'Search any place', 'Use my location', 'Using my location']) {
       expect(find.text(gone), findsNothing);
@@ -233,7 +233,7 @@ void main() {
     _setUpApp();
     _ctrl.answer = (_, _) => NearbyPage(items: [_item('a')]);
     await _open(t);
-    await t.tap(find.text('Search'));
+    await t.tap(find.bySemanticsLabel('Search'));
     await t.pump(const Duration(milliseconds: 600));
     expect(find.byType(TextField), findsOneWidget);
   });

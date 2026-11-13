@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 
 class HotelAppTheme {
   static TextTheme _buildTextTheme(TextTheme base) {
-    const String fontName = 'WorkSans';
+    const String fontName = 'Poppins';
     return base.copyWith(
       displayLarge: base.displayLarge?.copyWith(fontFamily: fontName),
       displayMedium: base.displayMedium?.copyWith(fontFamily: fontName),

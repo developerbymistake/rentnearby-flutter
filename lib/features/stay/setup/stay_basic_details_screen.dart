@@ -16,12 +16,12 @@ import '../../../utils/app_toast.dart';
 import '../../../utils/concurrency.dart';
 import '../../../utils/input_formatters.dart';
 import '../../../design/design.dart';
+import '../../../design/extra/ext_stay_owner.dart';
 import '../../../widgets/onboarding_closed_dialog.dart';
 import '../models/stay_owner_model.dart';
 import '../models/stay_registration_type_model.dart';
 import '../stay_registration_types_controller.dart';
 import '../stay_types_controller.dart';
-import 'stay_option_grid.dart';
 import 'stay_option_sets.dart';
 import 'stay_registration_validators.dart';
 import 'stay_setup_controller.dart';
@@ -71,11 +71,13 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
   final _picker = ImagePicker();
   bool _dirty = false;
   bool _isUploading = false;
+  bool _askingRetry = false;
   bool _isFinalizing = false;
   Set<int> _uploadDone = {};
   int _uploadTotal = 0;
   double _uploadProgress = 0.0;
   int _step = 0;
+  static final _tone = ListingTone.forest;
 
   static final _locationStyle = LocationStepStyle(
     circleColorHex: SetupKit.stayHex,
@@ -280,6 +282,7 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
         cancelLabel: 'Keep Editing',
         confirmLabel: 'Discard',
         destructive: true,
+        art: ListingArt.clipboard,
         onCancel: () => Navigator.pop(context),
         onConfirm: () {
           Navigator.pop(context);
@@ -297,6 +300,7 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
         body: 'Please enable $type access in your device Settings to add photos.',
         cancelLabel: 'Cancel',
         confirmLabel: 'Open Settings',
+        art: ListingArt.camera,
         onCancel: () => Navigator.pop(context),
         onConfirm: () {
           Navigator.pop(context);
@@ -308,25 +312,20 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
 
   Future<void> _pickPhoto() async {
     if (_photos.length >= AppConstants.maxPhotos) return;
-    final source = await SetupKit.sheet<ImageSource>(
+    final source = await Sheet3D.show<ImageSource>(
       context,
-      builder: (_) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.only(bottom: 8),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              SetupKit.grabber(),
-              Text('Add Photo', style: TripKit.text(18)),
-              const SizedBox(height: 8),
-              TemplateStagger(
-                children: [
-                  _sourceRow(SetupAssets.camera, 'Take Photo', 'Use camera to capture now', ImageSource.camera),
-                  _sourceRow(SetupAssets.luggage, 'Choose from Gallery', 'Pick existing photos', ImageSource.gallery),
-                ],
-              ),
-            ],
-          ),
+      builder: (sheetCtx) => Sheet3D(
+        tone: _tone,
+        art: ListingArt.camera,
+        title: 'Add Photo',
+        subtitle: 'Camera or Gallery',
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            SheetOptionCard(tone: _tone, art: ListingArt.camera, title: 'Take Photo', subtitle: 'Use camera to capture now', onTap: () => Navigator.pop(sheetCtx, ImageSource.camera)),
+            SheetOptionCard(tone: _tone, art: ListingArt.sunrise, title: 'Choose from Gallery', subtitle: 'Pick existing photos', onTap: () => Navigator.pop(sheetCtx, ImageSource.gallery)),
+            const SizedBox(height: 8),
+          ],
         ),
       ),
     );
@@ -535,6 +534,7 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
     var failed = [for (var i = 0; i < results.length; i++) if (!results[i]) i];
 
     if (failed.isNotEmpty && mounted) {
+      setState(() => _askingRetry = true);
       final retry = await showDialog<bool>(
         context: context,
         barrierDismissible: false,
@@ -543,10 +543,12 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
           body: '${failed.length} photo${failed.length > 1 ? 's' : ''} could not be uploaded. Retry?',
           cancelLabel: 'Skip',
           confirmLabel: 'Retry',
+          art: ListingArt.camera,
           onCancel: () => Navigator.pop(context, false),
           onConfirm: () => Navigator.pop(context, true),
         ),
       );
+      if (mounted) setState(() => _askingRetry = false);
       if (retry == true && mounted) {
         final retryList = failed;
         await runIndexedWithLimit(retryList.length, (j) => uploadOne(retryList[j]));
@@ -561,110 +563,6 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
     return [for (final i in failed) files[i]];
   }
 
-  Widget _sourceRow(String asset, String title, String subtitle, ImageSource source) => SizedBox(
-        width: double.infinity,
-        child: InkWell(
-          onTap: () => Navigator.pop(context, source),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-            child: Row(children: [
-              Container(
-                width: 44,
-                height: 44,
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(color: PickKit.stayTint, borderRadius: BorderRadius.circular(12)),
-                child: Image.asset(asset),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(title, style: TripKit.text(14)),
-                  Text(subtitle, style: TripKit.text(12, color: DesignColors.textSecondary)),
-                ]),
-              ),
-            ]),
-          ),
-        ),
-      );
-
-  InputDecoration _inputDec(String hint) => SetupKit.input(hint: hint);
-
-  Widget _buildUploadOverlay() {
-    final overall = _uploadProgress.clamp(0.0, 1.0);
-    final percent = (overall * 100).toInt();
-    final statusText = percent >= 95 ? 'Almost done!' : '${_uploadDone.length} of $_uploadTotal uploaded';
-    return Positioned.fill(
-      child: Material(
-        color: DesignColors.textInk.withValues(alpha: Alpha.strong),
-        child: Center(
-          child: Container(
-            width: 300,
-            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 28),
-            decoration: BoxDecoration(
-              color: DesignColors.surface,
-              borderRadius: TripKit.cardRadiusSmall,
-              boxShadow: ShadowTokens.elev1,
-            ),
-            child: Column(mainAxisSize: MainAxisSize.min, children: [
-              Container(
-                width: 68,
-                height: 68,
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  gradient: PickKit.stayGradient,
-                  shape: BoxShape.circle,
-                  boxShadow: ShadowTokens.elev2,
-                ),
-                child: Image.asset(SetupAssets.airplane),
-              ),
-              const SizedBox(height: 16),
-              Text('Uploading Photos',
-                  style: TripKit.text(16, weight: FontWeight.w700).copyWith(decoration: TextDecoration.none)),
-              const SizedBox(height: 16),
-              TweenAnimationBuilder<double>(
-                tween: Tween(begin: 0.0, end: overall),
-                duration: const Duration(milliseconds: 350),
-                curve: Curves.fastOutSlowIn,
-                builder: (context, value, _) => Column(children: [
-                  Stack(alignment: Alignment.center, children: [
-                    Container(
-                      width: 100,
-                      height: 100,
-                      decoration: BoxDecoration(
-                        color: DesignColors.surface,
-                        shape: BoxShape.circle,
-                        border: Border.all(width: 4, color: DesignColors.primary.withValues(alpha: Alpha.soft)),
-                      ),
-                      alignment: Alignment.center,
-                      child: Text('${(value * 100).toInt()}%',
-                          style: TripKit.text(24, weight: FontWeight.normal, color: DesignColors.primary)
-                              .copyWith(decoration: TextDecoration.none)),
-                    ),
-                    CustomPaint(
-                      painter: CurvePainter(
-                        colors: const <Color>[
-                          DesignColors.primary,
-                          TravelPalette.ringLight,
-                          TravelPalette.ringLight,
-                        ],
-                        angle: 5 + 360 * value.clamp(0.0, 1.0),
-                      ),
-                      child: const SizedBox(width: 108, height: 108),
-                    ),
-                  ]),
-                  const SizedBox(height: 12),
-                  Text(statusText,
-                      style: TripKit.text(12, color: DesignColors.textMuted)
-                          .copyWith(decoration: TextDecoration.none)),
-                ]),
-              ),
-            ]),
-          ),
-        ),
-      ),
-    );
-  }
-
   void _handleBack() {
     if (_hasChanges) {
       _confirmDiscard();
@@ -677,6 +575,8 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
   Widget build(BuildContext context) {
     final reverse = _step < _prevStep;
     _prevStep = _step;
+    final overall = _uploadProgress.clamp(0.0, 1.0);
+    final percent = (overall * 100).toInt();
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
@@ -685,33 +585,19 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
       },
       child: Stack(children: [
         Scaffold(
-          backgroundColor: DesignColors.scaffold,
+          backgroundColor: ListingPalette.forest.page,
           body: Column(children: [
             StayPageHeader(
               title: 'Basic Details',
               onBack: _isUploading ? null : _handleBack,
               asset: SetupAssets.hotel,
             ),
-            Container(
-              decoration: BoxDecoration(
-                color: DesignColors.surface,
-                boxShadow: ShadowTokens.elev3Up,
-              ),
-              padding: const EdgeInsets.fromLTRB(20, 14, 20, 14),
-              child: Row(children: [
-                _StepDot(index: 0, step: _step, label: 'Details'),
-                _line(1),
-                _StepDot(index: 1, step: _step, label: 'Location'),
-                _line(2),
-                _StepDot(index: 2, step: _step, label: 'Address'),
-                _line(3),
-                _StepDot(index: 3, step: _step, label: 'Photos'),
-              ]),
-            ),
+            StepProgressHeader(tone: _tone, labels: const ['Details', 'Location', 'Address', 'Photos'], current: _step),
             Expanded(
               child: PageTransitionSwitcher(
                 duration: templateTransitionDuration,
                 reverse: reverse,
+                layoutBuilder: (entries) => Stack(alignment: Alignment.topCenter, children: entries),
                 transitionBuilder: (child, animation, secondaryAnimation) => SharedAxisTransition(
                   fillColor: Colors.transparent,
                   animation: animation,
@@ -722,107 +608,92 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
                 child: _step == 0
                     ? _detailsStep()
                     : _step == 1
-                        ? locationStepWidget()
+                        ? SingleChildScrollView(key: const ValueKey(1), padding: const EdgeInsets.only(bottom: 24), child: locationStepWidget())
                         : _step == 2
                             ? addressStepWidget()
                             : _photosStep(),
               ),
             ),
-            StayFooter(
-              child: Row(children: [
-                if (_step > 0) ...[
-                  Expanded(
-                    child: SecondaryButton(
-                      tone: KitTone.stay,
-                      label: 'Back',
-                      onPressed: () {
-                        if (_step == 1) setLocationStepActive(false);
-                        setState(() => _step--);
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                ],
-                Expanded(
-                  flex: 2,
-                  child: Obx(() {
-                    final saving = _ctrl.isSaving.value;
-                    final disabled = saving ||
-                        _isFinalizing ||
-                        (_step == 2 && (isResolvingDistrict || selectedDistrictId == null || !hasAddressText));
-                    return PrimaryButton(
- tone: KitTone.stay,
-                      onPressed: disabled ? null : _handleNext,
-                      loading: saving || _isFinalizing,
-                      label: _step == 0
-                          ? 'Next: Location'
-                          : _step == 1
-                              ? 'Next: Address'
-                              : _step == 2
-                                  ? 'Next: Photos'
-                                  : 'Save',
-                    );
-                  }),
-                ),
-              ]),
-            ),
           ]),
+          bottomNavigationBar: Obx(() {
+            final saving = _ctrl.isSaving.value;
+            final disabled = saving ||
+                _isFinalizing ||
+                (_step == 2 && (isResolvingDistrict || selectedDistrictId == null || !hasAddressText));
+            return FormFooter(
+              tone: _tone,
+              primaryLabel: _step == 0
+                  ? 'Next: Location'
+                  : _step == 1
+                      ? 'Next: Address'
+                      : _step == 2
+                          ? 'Next: Photos'
+                          : 'Save',
+              onPrimary: disabled ? null : _handleNext,
+              primaryLoading: saving || _isFinalizing || (_isUploading && !_askingRetry),
+              secondaryLabel: _step > 0 ? 'Back' : null,
+              onSecondary: _step > 0
+                  ? () {
+                      if (_step == 1) setLocationStepActive(false);
+                      setState(() => _step--);
+                    }
+                  : null,
+            );
+          }),
         ),
-        if (_isUploading) _buildUploadOverlay(),
+        if (_isUploading && !_askingRetry)
+          StayBusy(
+            message: 'Uploading Photos',
+            art: SetupAssets.airplane,
+            progress: overall,
+            caption: percent >= 95 ? 'Almost done!' : '${_uploadDone.length} of $_uploadTotal uploaded',
+          ),
         Obx(() => _ctrl.isSaving.value ? const StayBusy(message: 'Saving your stay...') : const SizedBox.shrink()),
         if (_isFinalizing) const StayBusy(message: 'Please wait...'),
-        if (_step == 2 && showAddressResolveOverlay) const StayBusy(message: 'Please wait...'),
+        if (_step == 2 && showAddressResolveOverlay) const StayBusy(message: 'Please wait...', art: ListingArt.compass),
       ]),
     );
   }
 
-  Widget _line(int reachedAt) => Expanded(
-        child: Container(
-          height: 2,
-          alignment: Alignment.centerLeft,
-          color: DesignColors.dividerSoft,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 250),
-            height: 2,
-            width: _step >= reachedAt ? 400 : 0,
-            color: DesignColors.primary,
-          ),
-        ),
+  Widget _card({required String art, required String title, required Widget child, bool optional = false}) => FormSectionCard(
+        tone: _tone,
+        art: art,
+        title: title,
+        tag: optional ? 'Optional' : 'Required',
+        tagMuted: optional,
+        child: child,
       );
-
-  Widget _sectionCard({required String title, required Widget child}) => SectionTile(tone: KitTone.stay, title: title, margin: const EdgeInsets.only(bottom: 16), child: child);
 
   Widget _detailsStep() => SingleChildScrollView(
         key: const ValueKey(0),
-        padding: const EdgeInsets.all(16),
-        child: TemplateStagger(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          _sectionCard(
-            title: 'Stay Name *',
-            child: TextFormField(
+        padding: const EdgeInsets.only(bottom: 24),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          _card(
+            art: ListingArt.hotel,
+            title: 'Stay Name',
+            child: PillField(
+              tone: _tone,
               controller: _nameCtrl,
               focusNode: _nameFocusNode,
               maxLength: 80,
               inputFormatters: noEmojiInputFormatters,
               textCapitalization: TextCapitalization.words,
-              cursorColor: DesignColors.primary,
-              style: SetupKit.fieldText(),
-              decoration: _inputDec('e.g. Himalayan Home'),
+              hint: 'e.g. Himalayan Home',
             ),
           ),
-          _sectionCard(
-            title: 'Stay Type *',
+          _card(
+            art: ListingArt.bed,
+            title: 'Stay Type',
             child: Obx(() {
               final types = _types.types;
               if (types.isEmpty) {
-                if (_types.isLoading.value) return _spinner();
-                return _retry("Couldn't load stay types. Tap to retry.", _types.load);
+                if (_types.isLoading.value) return PillStatusBox.loading(tone: _tone);
+                return PillStatusBox.retry(tone: _tone, text: "Couldn't load stay types. Tap to retry.", onTap: _types.load);
               }
-              return StayOptionGrid(
-                crossAxisCount: 3,
-                childAspectRatio: 2.6,
-                labels: types.map((t) => t.name).toList(),
-                accent: PickKit.stay,
-                isActive: (i) => _stayTypeId == types[i].id,
+              return OptionTileGrid(
+                tone: _tone,
+                items: [for (var i = 0; i < types.length; i++) OptionTileItem(label: types[i].name, art: StayOwnerArt.stayType(types[i].name, i))],
+                isSelected: (i) => _stayTypeId == types[i].id,
                 onTap: (i) => setState(() {
                   _stayTypeId = types[i].id;
                   _dirty = true;
@@ -832,46 +703,49 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
           ),
           _registrationCard(),
           _gstinCard(),
-          _sectionCard(
-            title: 'Vehicle Access *',
-            child: StayOptionGrid(
-              crossAxisCount: 3,
-              childAspectRatio: 2.6,
-              labels: StayOptionSets.vehicleAccess.map((o) => o.label).toList(),
-              accent: PickKit.stay,
-              isActive: (i) => _vehicleAccess == StayOptionSets.vehicleAccess[i].value,
+          _card(
+            art: StayOwnerArt.automobile,
+            title: 'Vehicle Access',
+            child: OptionTileGrid(
+              tone: _tone,
+              items: [
+                for (final o in StayOptionSets.vehicleAccess) OptionTileItem(label: o.label, art: StayOwnerArt.vehicle[o.value] ?? ListingArt.taxi),
+              ],
+              isSelected: (i) => _vehicleAccess == StayOptionSets.vehicleAccess[i].value,
               onTap: (i) => setState(() {
                 _vehicleAccess = StayOptionSets.vehicleAccess[i].value;
                 _dirty = true;
               }),
             ),
           ),
-          _sectionCard(
-            title: 'Host Lives Here *',
-            child: StayOptionGrid(
-              crossAxisCount: 2,
-              childAspectRatio: 3.9,
-              labels: const ['Yes', 'No'],
-              accent: PickKit.stay,
-              isActive: (i) => _hostLivesHere == (i == 0),
+          _card(
+            art: ListingArt.key,
+            title: 'Host Lives Here',
+            child: OptionTileGrid(
+              tone: _tone,
+              columns: 2,
+              items: const [OptionTileItem(label: 'Yes', art: ListingArt.key), OptionTileItem(label: 'No', art: ListingArt.luggage)],
+              isSelected: (i) => _hostLivesHere == (i == 0),
               onTap: (i) => setState(() {
                 _hostLivesHere = i == 0;
                 _dirty = true;
               }),
             ),
           ),
-          _sectionCard(
-            title: 'Facilities (Optional)',
+          _card(
+            art: ListingArt.sunrise,
+            title: 'Facilities',
+            optional: true,
             child: Wrap(
               spacing: 8,
               runSpacing: 8,
               children: [
                 for (final o in StayOptionSets.facilities)
-                  PickChip(
+                  ChoicePill(
+                    tone: _tone,
                     label: o.label,
+                    check: true,
                     selected: _facilities.contains(o.value),
-                    activeColor: PickKit.stay,
-                    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
                     onTap: () => setState(() {
                       if (!_facilities.remove(o.value)) _facilities.add(o.value);
                       _dirty = true;
@@ -880,108 +754,114 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
               ],
             ),
           ),
-          _sectionCard(
-            title: 'Description (Optional)',
-            child: TextFormField(
+          _card(
+            art: ListingArt.speechBalloon,
+            title: 'Description',
+            optional: true,
+            child: PillField(
+              tone: _tone,
               controller: _descCtrl,
               maxLines: 3,
               maxLength: 300,
               inputFormatters: noEmojiInputFormatters,
-              cursorColor: DesignColors.primary,
-              style: SetupKit.fieldText(),
-              decoration: _inputDec('Describe amenities, nearby facilities, rules...'),
+              hint: 'Describe amenities, nearby facilities, rules...',
             ),
           ),
         ]),
       );
 
-  Widget _spinner() => const Padding(
-        padding: EdgeInsets.symmetric(vertical: 12),
-        child: Center(child: KitDots(color: DesignColors.primary)),
-      );
+  void _selectRegType(String? v) => setState(() {
+        _regTypeId = v;
+        _serverTypeError = null;
+        _serverOtherError = null;
+        _serverNumberError = null;
+        _dirty = true;
+      });
 
-  Widget _retry(String text, VoidCallback onTap) => InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          child: Center(
-            child: Text(text, style: TripKit.text(12, weight: FontWeight.w600, color: DesignColors.primary)),
-          ),
+  Future<void> _pickRegType(List<StayRegistrationTypeModel> types) async {
+    FocusScope.of(context).unfocus();
+    final picked = await Sheet3D.show<String>(
+      context,
+      builder: (sheetCtx) => Sheet3D(
+        tone: _tone,
+        art: ListingArt.clipboard,
+        title: 'Registration type',
+        padding: EdgeInsets.zero,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (var i = 0; i < types.length; i++)
+              SheetListRow(
+                tone: _tone,
+                compact: true,
+                title: types[i].name,
+                selected: types[i].id == _regTypeId,
+                divider: i > 0,
+                onTap: () => Navigator.pop(sheetCtx, types[i].id),
+              ),
+          ],
         ),
-      );
+      ),
+    );
+    if (picked == null || !mounted) return;
+    _selectRegType(picked);
+  }
 
-  InputDecoration _fieldDec(String hint, {String? errorText, String? helperText, String? suffixText}) =>
-      SetupKit.input(hint: hint, error: errorText, helper: helperText, errorMaxLines: 2).copyWith(
-        helperMaxLines: 2,
-        suffixText: suffixText,
-        suffixStyle: TripKit.text(12, color: DesignColors.primary),
-      );
-
-  Widget _registrationCard() => _sectionCard(
-        title: 'Registration *',
+  Widget _registrationCard() => _card(
+        art: ListingArt.clipboard,
+        title: 'Registration',
         child: Obx(() {
           final types = _regTypes.types;
           if (types.isEmpty) {
-            if (_regTypes.isLoading.value) return _spinner();
-            return _retry("Couldn't load registration types. Tap to retry.", _regTypes.load);
+            return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              const FieldLabel('Registration type', first: true),
+              if (_regTypes.isLoading.value)
+                PillStatusBox.loading(tone: _tone)
+              else
+                PillStatusBox.retry(tone: _tone, text: "Couldn't load registration types. Tap to retry.", onTap: _regTypes.load),
+            ]);
           }
           final type = _selectedRegType;
           final isUdyam = type?.code == StayRegistrationValidators.udyamCode;
           final numberHint = isUdyam ? 'UDYAM-UK-05-0001234' : 'Registration number';
-          return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            DropdownButtonFormField<String>(
+          final keep = _hasStoredNumber && _regNumCtrl.text.isEmpty;
+          return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            PillPickerField(
               key: ValueKey(type?.id),
-              initialValue: type?.id,
-              isExpanded: true,
-              icon: const Icon(Icons.keyboard_arrow_down_rounded),
-              dropdownColor: DesignColors.surface,
-              borderRadius: const BorderRadius.all(Radius.circular(8)),
-              decoration: _fieldDec('Select type', errorText: _typeFieldError),
-              style: SetupKit.fieldText(),
-              items: [
-                for (final t in types)
-                  DropdownMenuItem<String>(value: t.id, child: Text(t.name, overflow: TextOverflow.ellipsis)),
-              ],
-              onChanged: (v) => setState(() {
-                _regTypeId = v;
-                _serverTypeError = null;
-                _serverOtherError = null;
-                _serverNumberError = null;
-                _dirty = true;
-              }),
+              tone: _tone,
+              label: 'Registration type',
+              value: type?.name,
+              hint: 'Select type',
+              errorText: _typeFieldError,
+              onTap: () => _pickRegType(types),
             ),
             if (type != null) ...[
-              if (type.requiresOtherName) ...[
-                const SizedBox(height: 14),
-                TextFormField(
+              if (type.requiresOtherName)
+                PillField(
+                  tone: _tone,
+                  label: 'Document name',
+                  firstLabel: false,
                   controller: _regOtherCtrl,
                   focusNode: _regOtherFocus,
                   inputFormatters: StayRegistrationValidators.otherNameInputFormatters,
                   textCapitalization: TextCapitalization.words,
                   onChanged: (_) => setState(() => _serverOtherError = null),
-                  cursorColor: DesignColors.primary,
-                  style: SetupKit.fieldText(),
-                  decoration: _fieldDec('e.g. Gram Panchayat NOC', errorText: _otherNameFieldError)
-                      .copyWith(labelText: 'Document name'),
+                  hint: 'e.g. Gram Panchayat NOC',
+                  errorText: _otherNameFieldError,
                 ),
-              ],
-              const SizedBox(height: 14),
-              TextFormField(
+              PillField(
+                tone: _tone,
+                label: 'Registration number',
+                firstLabel: false,
                 controller: _regNumCtrl,
                 focusNode: _regNumFocus,
                 inputFormatters: StayRegistrationValidators.registrationInputFormatters,
                 textCapitalization: TextCapitalization.characters,
                 onChanged: (_) => setState(() => _serverNumberError = null),
-                cursorColor: DesignColors.primary,
-                style: SetupKit.fieldText(),
-                decoration: _fieldDec(
-                  numberHint,
-                  errorText: _numberFieldError,
-                  helperText: _hasStoredNumber && _regNumCtrl.text.isEmpty
-                      ? StayRegistrationValidators.savedHelp
-                      : type.helpText ?? StayRegistrationValidators.registrationHelp,
-                  suffixText: _hasStoredNumber && _regNumCtrl.text.isEmpty ? 'Saved' : null,
-                ).copyWith(labelText: 'Registration number'),
+                hint: numberHint,
+                errorText: _numberFieldError,
+                helperText: keep ? StayRegistrationValidators.savedHelp : type.helpText ?? StayRegistrationValidators.registrationHelp,
+                suffixText: keep ? 'Saved' : null,
               ),
             ],
           ]);
@@ -990,36 +870,32 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
 
   Widget _gstinCard() {
     final hasSaved = (_ctrl.stay.value?.hasGstin ?? false) && _gstinCtrl.text.isEmpty;
-    return _sectionCard(
-      title: 'GSTIN (Optional)',
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        TextFormField(
+    return _card(
+      art: ListingArt.moneyBag,
+      title: 'GSTIN',
+      optional: true,
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        PillField(
+          tone: _tone,
           controller: _gstinCtrl,
           focusNode: _gstinFocus,
           inputFormatters: StayRegistrationValidators.gstinInputFormatters,
           textCapitalization: TextCapitalization.characters,
           onChanged: (_) => setState(() => _serverGstinError = null),
-          cursorColor: DesignColors.primary,
-          style: SetupKit.fieldText(),
-          decoration: _fieldDec(
-            '05ABCDE1234F1Z6',
-            errorText: _gstinFieldError,
-            helperText: StayRegistrationValidators.gstinHelp,
-            suffixText: hasSaved && !_clearGstin ? 'Saved' : null,
-          ),
+          hint: '05ABCDE1234F1Z6',
+          errorText: _gstinFieldError,
+          helperText: StayRegistrationValidators.gstinHelp,
+          suffixText: hasSaved && !_clearGstin ? 'Saved' : null,
         ),
         if (hasSaved)
-          Align(
-            alignment: Alignment.centerLeft,
-            child: TextButton(
-              onPressed: () => setState(() {
-                _clearGstin = !_clearGstin;
-                _serverGstinError = null;
-                _dirty = true;
-              }),
-              child: Text(_clearGstin ? 'Will be removed · Undo' : 'Saved · Remove',
-                  style: TripKit.text(12, weight: FontWeight.w600, color: DesignColors.primary)),
-            ),
+          LinkLine3D(
+            text: _clearGstin ? 'Will be removed · Undo' : 'Saved · Remove',
+            color: _clearGstin ? Form3D.errorText : _tone.text,
+            onTap: () => setState(() {
+              _clearGstin = !_clearGstin;
+              _serverGstinError = null;
+              _dirty = true;
+            }),
           ),
       ]),
     );
@@ -1027,12 +903,6 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
 
   Widget _photoTile(int i) {
     final p = _photos[i];
-    const tileRadius = BorderRadius.only(
-      topLeft: Radius.circular(8),
-      topRight: Radius.circular(24),
-      bottomLeft: Radius.circular(8),
-      bottomRight: Radius.circular(8),
-    );
     final image = p.local != null
         ? Image.file(p.local!, fit: BoxFit.cover, width: double.infinity, height: double.infinity)
         : CachedNetworkImage(
@@ -1043,41 +913,7 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
             placeholder: (_, _) => const TemplatePlaceholder(radius: 0, height: double.infinity),
             errorWidget: (_, _, _) => const TemplatePlaceholder(radius: 0, height: double.infinity),
           );
-    return TemplateEntranceOnce(
-      key: ObjectKey(p),
-      child: Stack(children: [
-        Positioned.fill(child: ClipRRect(borderRadius: tileRadius, child: image)),
-        if (i == 0)
-          Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            child: Container(
-              padding: const EdgeInsets.fromLTRB(0, 14, 0, 4),
-              decoration: const BoxDecoration(
-                gradient: TripKit.scrimShort,
-                borderRadius: BorderRadius.only(bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8)),
-              ),
-              child: Text('Cover',
-                  textAlign: TextAlign.center,
-                  style: TripKit.text(10, weight: FontWeight.w600, color: DesignColors.onPrimary)),
-            ),
-          ),
-        Positioned(
-          top: 4,
-          right: 4,
-          child: GestureDetector(
-            onTap: () => _removePhoto(i),
-            child: Container(
-              width: 22,
-              height: 22,
-              decoration: const BoxDecoration(gradient: SetupKit.rose, shape: BoxShape.circle),
-              child: const Icon(Icons.close_rounded, color: DesignColors.onPrimary, size: 12),
-            ),
-          ),
-        ),
-      ]),
-    );
+    return PhotoTile3D(key: ObjectKey(p), image: image, coverLabel: i == 0 ? 'Cover' : null, onRemove: () => _removePhoto(i));
   }
 
   Widget _photosStep() {
@@ -1085,159 +921,39 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
     final left = max - _photos.length;
     return SingleChildScrollView(
       key: const ValueKey(3),
-      padding: const EdgeInsets.all(16),
-      child: TemplateStagger(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        _sectionCard(
-          title: 'Stay Photos *',
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Row(children: [
-              Text('${_photos.length}/$max photos added', style: TripKit.text(13, color: DesignColors.textSecondary)),
-              const Spacer(),
-              Text('Required', style: TripKit.text(11, color: DesignColors.textMuted)),
-            ]),
+      padding: const EdgeInsets.only(bottom: 24),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        _card(
+          art: ListingArt.camera,
+          title: 'Stay Photos',
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            Text('${_photos.length}/$max photos added', style: Ink3D.text(13, FontWeight.w400, Ink3D.sub)),
             const SizedBox(height: 4),
-            Text('Good photos get 3x more responses', style: TripKit.text(12, color: DesignColors.primary)),
-            const SizedBox(height: 16),
+            Text('Good photos get 3x more responses', style: Ink3D.text(12.5, FontWeight.w600, _tone.text)),
+            const SizedBox(height: 14),
             if (_photos.isEmpty)
-              Material(
-                color: DesignColors.scaffold,
-                shape: RoundedRectangleBorder(
-                  borderRadius: TripKit.cardRadiusSmall,
-                  side: BorderSide(color: DesignColors.primary.withValues(alpha: Alpha.scrim), width: 1.5),
-                ),
-                child: InkWell(
-                  borderRadius: TripKit.cardRadiusSmall,
-                  onTap: _pickPhoto,
-                  child: SizedBox(
-                    width: double.infinity,
-                    height: 150,
-                    child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                      Container(
-                        width: 72,
-                        height: 72,
-                        padding: const EdgeInsets.all(12),
-                        decoration: const BoxDecoration(color: PickKit.stayTint, shape: BoxShape.circle),
-                        child: Image.asset(SetupAssets.camera),
-                      ),
-                      const SizedBox(height: 8),
-                      Text('Add Stay Photos',
-                          style: TripKit.text(14, weight: FontWeight.w600, color: DesignColors.primary)),
-                      const SizedBox(height: 2),
-                      Text('Camera or Gallery', style: TripKit.text(12, color: DesignColors.textSecondary)),
-                    ]),
-                  ),
-                ),
-              )
+              PhotoDropZone3D(tone: _tone, title: 'Add Stay Photos', subtitle: 'Camera or Gallery', onTap: _pickPhoto)
             else
               GridView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 padding: EdgeInsets.zero,
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 3, crossAxisSpacing: 10, mainAxisSpacing: 10),
+                clipBehavior: Clip.none,
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 3, crossAxisSpacing: 10, mainAxisSpacing: 10),
                 itemCount: _photos.length + (left > 0 ? 1 : 0),
-                itemBuilder: (_, i) {
-                  if (i == _photos.length) {
-                    return Material(
-                      color: PickKit.stayTint,
-                      borderRadius: const BorderRadius.all(Radius.circular(8)),
-                      child: InkWell(
-                        borderRadius: const BorderRadius.all(Radius.circular(8)),
-                        onTap: _pickPhoto,
-                        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                          const Icon(Icons.add_rounded, color: DesignColors.primary, size: 28),
-                          const SizedBox(height: 4),
-                          Text('Add', style: TripKit.text(11, color: DesignColors.primary)),
-                        ]),
-                      ),
-                    );
-                  }
-                  return _photoTile(i);
-                },
+                itemBuilder: (_, i) => i == _photos.length ? PhotoAddTile3D(tone: _tone, label: 'Add', onTap: _pickPhoto) : _photoTile(i),
               ),
-            if (_photos.isNotEmpty && left > 0) ...[
-              const SizedBox(height: 14),
-              InkWell(
+            if (_photos.isNotEmpty && left > 0)
+              LinkLine3D(
+                center: true,
+                color: _tone.text,
+                padding: const EdgeInsets.only(top: 8),
+                text: '+ Add $left more photo${left == 1 ? '' : 's'}',
                 onTap: _pickPhoto,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 6),
-                  child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                    Image.asset(SetupAssets.camera, width: 20, height: 20),
-                    const SizedBox(width: 6),
-                    Text('Add $left more photo${left == 1 ? '' : 's'}',
-                        style: TripKit.text(13, color: DesignColors.primary)),
-                  ]),
-                ),
               ),
-            ],
           ]),
         ),
       ]),
     );
-  }
-}
-
-class _StepDot extends StatefulWidget {
-  const _StepDot({required this.index, required this.step, required this.label});
-  final int index;
-  final int step;
-  final String label;
-
-  @override
-  State<_StepDot> createState() => _StepDotState();
-}
-
-class _StepDotState extends State<_StepDot> with SingleTickerProviderStateMixin {
-  late final AnimationController _c = AnimationController(duration: const Duration(milliseconds: 400), vsync: this)
-    ..value = 1;
-  late final Animation<double> _scale =
-      Tween<double>(begin: 0.8, end: 1.0).animate(CurvedAnimation(parent: _c, curve: Curves.fastOutSlowIn));
-
-  @override
-  void didUpdateWidget(_StepDot old) {
-    super.didUpdateWidget(old);
-    final was = old.step >= widget.index;
-    final now = widget.step >= widget.index;
-    if (now && !was && !MediaQuery.of(context).disableAnimations) _c.forward(from: 0);
-  }
-
-  @override
-  void dispose() {
-    _c.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final active = widget.step == widget.index;
-    final done = widget.step > widget.index;
-    return Column(mainAxisSize: MainAxisSize.min, children: [
-      ScaleTransition(
-        scale: _scale,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 250),
-          width: 32,
-          height: 32,
-          decoration: BoxDecoration(
-            gradient: (active || done) ? PickKit.stayGradient : null,
-            color: (active || done) ? null : DesignColors.dividerSoft,
-            shape: BoxShape.circle,
-            boxShadow: (active || done) ? ShadowTokens.elev2 : const [],
-          ),
-          child: Center(
-            child: done
-                ? const Icon(Icons.check_rounded, color: DesignColors.onPrimary, size: 16)
-                : Text('${widget.index + 1}',
-                    style: TripKit.text(13,
-                        weight: FontWeight.w700,
-                        color: active ? DesignColors.surface : DesignColors.textSecondary)),
-          ),
-        ),
-      ),
-      const SizedBox(height: 4),
-      Text(widget.label,
-          style: TripKit.text(11,
-              color: (active || done) ? DesignColors.primary : DesignColors.textSecondary)),
-    ]);
   }
 }

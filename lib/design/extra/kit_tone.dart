@@ -17,6 +17,8 @@ class KitTone {
   final LinearGradient gradient;
   final Color glow;
 
+  Color get wash => Color.lerp(DesignColors.surface, accent, 0.14)!;
+
   factory KitTone.fromColor(Color c) => KitTone(
         accent: c,
         accentDark: c,

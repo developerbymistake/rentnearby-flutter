@@ -11,16 +11,15 @@ class TripHomeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final card = Padding(
-      padding: const EdgeInsets.fromLTRB(KitMetrics.gutter, 14, KitMetrics.gutter, 0),
-      child: HeroBanner(
-        title: TripStrings.homeCardTitle,
-        subtitle: TripStrings.homeCardSubtitle,
-        cta: TripStrings.start,
-        iconAsset: TravelIcon.plane,
-        tone: KitTone.trip,
-        onTap: () => TripNavigation.openTripsTab(),
-      ),
+    final card = WorkoutCard(
+      tone: ListingTone.indigo,
+      art: ListingArt.luggage,
+      eyebrow: 'Travel Planner',
+      title: TripStrings.homeCardTitle,
+      subtitle: TripStrings.homeCardSubtitle,
+      trailing: WorkoutTrailing.arrow,
+      semanticsLabel: '${TripStrings.homeCardTitle}. ${TripStrings.homeCardSubtitle}',
+      onTap: () => TripNavigation.openTripsTab(),
     );
     final a = animation;
     final c = animationController;

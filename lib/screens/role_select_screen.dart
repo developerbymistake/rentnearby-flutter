@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import '../config/user_roles.dart';
 import '../controllers/auth_controller.dart';
 import '../design/design.dart';
+import '../design/extra/ext_auth.dart';
 import '../controllers/location_controller.dart';
 import '../models/role_model.dart';
 import '../widgets/global_location_gates.dart';
@@ -82,123 +83,69 @@ class _RoleSelectScreenState extends State<RoleSelectScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final count = _roles.length + 4;
+    final count = _roles.length + 2;
     Widget item(int i, Widget child) => StaggerItem(index: i, child: child);
+    final tone = ListingTone.indigo;
+    final pad = MediaQuery.paddingOf(context);
     return PopScope(
       canPop: _correction,
       child: Scaffold(
-        backgroundColor: DesignColors.scaffold,
-        body: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(KitMetrics.gutter, 24, KitMetrics.gutter, 16),
-            child: StaggerHost(
-              key: ValueKey(_loading),
-              count: count,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  item(
-                    0,
-                    Column(
-                      children: [
-                        if (_correction)
-                          Align(
-                            alignment: Alignment.centerLeft,
-                            child: PressScale(
-                              child: IconButton(
-                                onPressed: () => Get.back(),
-                                icon: const Icon(
-                                  Icons.arrow_back_ios_rounded,
-                                  color: DesignColors.textStrong,
-                                ),
-                              ),
-                            ),
-                          )
-                        else
-                          const SizedBox(height: 6),
-                        Container(
-                          width: 84,
-                          height: 84,
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: DesignColors.surface,
-                            shape: BoxShape.circle,
-                            boxShadow: ShadowTokens.elev2,
-                          ),
-                          child: const TravelIcon(TravelIcon.luggage, size: 60),
-                        ),
-                      ],
-                    ),
+        backgroundColor: AuthInk.page,
+        body: MediaQuery.withClampedTextScaling(
+          maxScaleFactor: 1.3,
+          child: StaggerHost(
+            key: ValueKey(_loading),
+            count: count,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                SizedBox(height: pad.top + (MediaQuery.sizeOf(context).height < 820 ? 40 : 64)),
+                item(
+                  0,
+                  AuthRoleHeader(
+                    tone: tone,
+                    art: ListingArt.luggage,
+                    title: 'Select your role',
+                    subtitle: _correction ? 'One-time change.' : 'You can change it later.',
+                    onBack: _correction ? () => Get.back() : null,
                   ),
-                  const SizedBox(height: 16),
-                  item(
-                    1,
-                    Text(
-                      'Select your role',
-                      textAlign: TextAlign.center,
-                      style: TypeTokens.style(24, FontWeight.w700, color: DesignColors.textStrong, letterSpacing: 0.27),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  item(
-                    2,
-                    Text(
-                      _correction ? 'One-time change.' : 'You can change it later.',
-                      textAlign: TextAlign.center,
-                      style: TypeTokens.style(14, FontWeight.w400, color: TypeTokens.secondary),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  Expanded(
-                    child: SkeletonSwitcher(
-                      loading: _loading,
-                      skeleton: Column(
-                        children: [
-                          for (var i = 0; i < 3; i++) ...[
-                            HeroBanner.skeleton(),
-                            const SizedBox(height: KitMetrics.cardGap),
-                          ],
-                        ],
-                      ),
-                      child: _roles.isEmpty
-                          ? RoleLoadError(onRetry: _retry)
-                          : SingleChildScrollView(
-                              physics: const BouncingScrollPhysics(),
-                              padding: const EdgeInsets.only(bottom: 8),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  for (var i = 0; i < _roles.length; i++) ...[
-                                    item(
-                                      3 + i,
-                                      RoleOptionCard(
-                                        role: _roles[i],
-                                        selected: _roles[i].key == _selectedKey,
-                                        onTap: () => setState(() => _selectedKey = _roles[i].key),
-                                      ),
+                ),
+                Expanded(
+                  child: _loading
+                      ? const AuthEvenList(children: [AuthRoleSkeleton(), AuthRoleSkeleton(), AuthRoleSkeleton()])
+                      : _roles.isEmpty
+                          ? Padding(padding: const EdgeInsets.only(bottom: 16), child: RoleLoadError(onRetry: _retry))
+                          : AuthEvenList(
+                              children: [
+                                for (var i = 0; i < _roles.length; i++)
+                                  item(
+                                    1 + i,
+                                    RoleOptionCard(
+                                      role: _roles[i],
+                                      selected: _roles[i].key == _selectedKey,
+                                      onTap: () => setState(() => _selectedKey = _roles[i].key),
                                     ),
-                                    const SizedBox(height: KitMetrics.cardGap),
-                                  ],
-                                ],
-                              ),
+                                  ),
+                              ],
                             ),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  item(
-                    count - 1,
-                    Obx(() {
+                ),
+                item(
+                  count - 1,
+                  Padding(
+                    padding: EdgeInsets.fromLTRB(18, 0, 18, 22 + pad.bottom),
+                    child: Obx(() {
                       final busy = _auth.isLoading.value;
                       final disabled = _loading || _roles.isEmpty || busy;
-                      return PrimaryButton(
+                      return GradientPillButton(
+                        tone: tone,
                         label: 'Continue',
                         loading: busy,
-                        onPressed: disabled ? null : _choose,
+                        onTap: disabled ? null : _choose,
                       );
                     }),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ),

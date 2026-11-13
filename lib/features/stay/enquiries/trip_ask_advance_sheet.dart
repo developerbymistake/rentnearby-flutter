@@ -1,4 +1,5 @@
 import 'package:bakhli/design/design.dart';
+import 'package:bakhli/design/extra/ext_trip_replies.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../models/browse_item.dart';
@@ -7,7 +8,6 @@ import '../../trip/models/trip_enquiry_model.dart';
 import '../../trip/trip_constants.dart';
 import '../../trip/trip_strings.dart';
 import '../../trip/utils/trip_format.dart';
-import '../../trip/widgets/trip_payment_line.dart';
 import '../../trip/widgets/trip_sheet_frame.dart';
 import '../models/stay_owner_model.dart';
 import 'stay_enquiries_controller.dart';
@@ -171,113 +171,85 @@ class _AskBodyState extends State<_AskBody> {
     }
   }
 
+  static final ListingTone _look = ListingTone.forest;
+
   @override
   Widget build(BuildContext context) {
     final bothFromSetup = _upiFromSetup && _waFromSetup;
     return TripSheetFrame(
+      tone: _look,
+      art: ListingArt.moneyBag,
       title: TripStrings.askForAdvance,
       description: TripStrings.guestAccepted,
-      footer: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        if (_serverError != null) ...[
-          Text(_serverError!, style: TypeTokens.style(12, FontWeight.w500, color: DesignColors.error, height: 1.4)),
-          const SizedBox(height: 8),
+      footnote: bothFromSetup ? TripStrings.askFooter : TripStrings.askFooterEmpty,
+      footer: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (_serverError != null) Padding(padding: const EdgeInsets.only(bottom: 8), child: Text(_serverError!, style: FieldMessage.errorStyle)),
+          GradientPillButton(tone: _look, label: TripStrings.sendInChat, loading: _saving, enabled: !_tooLate, onTap: _saving || _tooLate ? null : _submit),
         ],
-        PrimaryButton(
-          onPressed: _saving || _tooLate ? null : _submit,
-          loading: _saving,
-          tone: _tone,
-          label: TripStrings.sendInChat,
-        ),
-        const SizedBox(height: 10),
-        Text(bothFromSetup ? TripStrings.askFooter : TripStrings.askFooterEmpty,
-            style: TypeTokens.style(12, FontWeight.w400, color: TypeTokens.secondary, height: 1.4)),
-        const SizedBox(height: 6),
-        const TripPaymentLine(),
-      ]),
+      ),
       children: [
-        if (_tooLate) ...[
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: const BoxDecoration(color: DesignColors.attentionTint, borderRadius: KitMetrics.tileSmall),
-            child: Text(TripStrings.holdTooLate,
-                style: TypeTokens.style(12, FontWeight.w500, color: DesignColors.textStrong)),
-          ),
-          const SizedBox(height: 12),
-        ],
-        LayoutBuilder(builder: (context, c) {
-          final amount = _amountField();
-          final hold = _holdField();
-          if (c.maxWidth >= 340) {
-            return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Expanded(child: amount),
-              const SizedBox(width: 10),
-              Expanded(child: hold),
-            ]);
-          }
-          return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [amount, const SizedBox(height: 12), hold]);
-        }),
-        const SizedBox(height: 12),
+        PillField(
+          tone: _look,
+          controller: _amount,
+          enabled: !_saving,
+          label: TripStrings.amount,
+          leadingArt: ListingArt.moneyBag,
+          prefixText: '₹ ',
+          keyboardType: TextInputType.number,
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(7)],
+          errorText: _amountError,
+          helperText: TripStrings.amountMax(BrowseItem.inr(_maxAmount)),
+          onChanged: (_) => setState(() {
+            _amountError = null;
+            _serverError = null;
+          }),
+        ),
+        PillPickerField(
+          tone: _look,
+          label: TripStrings.holdRoomUntil,
+          firstLabel: false,
+          value: TripFormat.dayTime(_hold),
+          leadingArt: ListingArt.calendar,
+          trailing: const SizedBox.shrink(),
+          errorText: _tooLate ? TripStrings.holdTooLate : null,
+          helperText: TripStrings.holdRange(TripFormat.dayTime(_minHold), TripFormat.dayTime(_capHold)),
+          enabled: !_saving && !_tooLate,
+          onTap: _saving || _tooLate ? null : _pickHold,
+        ),
         _editUpi
-            ? _field(
-                _upi,
-                TripStrings.yourUpiId,
-                hint: TripStrings.upiHint,
-                error: _upiError,
-                formatters: StayEnquiryFormat.upiFormatters,
-                keyboard: TextInputType.emailAddress,
-              )
-            : _fromSetupRow(TripStrings.upiFromSetup, _upi.text.trim(), () => setState(() => _editUpi = true)),
-        const SizedBox(height: 12),
+            ? _field(_upi, TripStrings.yourUpiId, art: ListingArt.key, hint: TripStrings.upiHint, error: _upiError, formatters: StayEnquiryFormat.upiFormatters, keyboard: TextInputType.emailAddress)
+            : _fromSetupRow(TripStrings.yourUpiId, TripStrings.upiFromSetup, ListingArt.key, _upi.text.trim(), () => setState(() => _editUpi = true)),
         _editWa
-            ? _field(
-                _wa,
-                TripStrings.whatsAppForProof,
-                prefix: '+91 ',
-                error: _waError,
-                formatters: StayEnquiryFormat.phoneFormatters,
-                keyboard: TextInputType.number,
-              )
-            : _fromSetupRow(TripStrings.whatsAppFromSetup, '+91 ${_wa.text.trim()}', () => setState(() => _editWa = true)),
-        const SizedBox(height: 8),
+            ? _field(_wa, TripStrings.whatsAppForProof, art: ListingArt.speechBalloon, prefix: '+91 ', error: _waError, formatters: StayEnquiryFormat.phoneFormatters, keyboard: TextInputType.number)
+            : _fromSetupRow(TripStrings.whatsAppForProof, TripStrings.whatsAppFromSetup, ListingArt.speechBalloon, '+91 ${_wa.text.trim()}', () => setState(() => _editWa = true)),
+        Padding(padding: const EdgeInsets.only(top: 12), child: Text(TripStrings.stayPayLine, style: RepliesLook.foot)),
       ],
     );
   }
 
-  InputDecoration _dec(String label, {String? prefix, String? hint, String? error, String? helper}) => InputDecoration(
-        labelText: label,
-        hintText: hint,
-        prefixText: prefix,
-        errorText: error,
-        errorMaxLines: 2,
-        helperText: helper,
-        helperMaxLines: 2,
-        counterText: '',
-        filled: true,
-        fillColor: DesignColors.scaffold,
-        floatingLabelBehavior: FloatingLabelBehavior.always,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-        enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: DesignColors.divider)),
-        focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: DesignColors.primary, width: 1.5)),
-        errorBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: DesignColors.error, width: 1.5)),
-        focusedErrorBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: DesignColors.error, width: 1.5)),
-      );
-
   Widget _field(
     TextEditingController ctrl,
     String label, {
+    required String art,
     required List<TextInputFormatter> formatters,
     required TextInputType keyboard,
     String? prefix,
     String? hint,
     String? error,
   }) =>
-      TextField(
+      PillField(
+        tone: _look,
         controller: ctrl,
         enabled: !_saving,
+        label: label,
+        firstLabel: false,
+        leadingArt: art,
+        prefixText: prefix,
+        hint: hint,
+        errorText: error,
         keyboardType: keyboard,
         inputFormatters: formatters,
         autocorrect: false,
@@ -287,67 +259,21 @@ class _AskBodyState extends State<_AskBody> {
           _upiError = null;
           _waError = null;
         }),
-        style: TypeTokens.style(14, FontWeight.w600),
-        decoration: _dec(label, prefix: prefix, hint: hint, error: error),
       );
 
-  Widget _amountField() => TextField(
-        controller: _amount,
+  Widget _fromSetupRow(String label, String helper, String art, String value, VoidCallback onChange) => PillPickerField(
+        tone: _look,
+        label: label,
+        firstLabel: false,
+        value: value,
+        leadingArt: art,
+        helperText: helper,
         enabled: !_saving,
-        keyboardType: TextInputType.number,
-        inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(7)],
-        onChanged: (_) => setState(() {
-          _amountError = null;
-          _serverError = null;
-        }),
-        style: TypeTokens.style(14, FontWeight.w600),
-        decoration: _dec(
-          TripStrings.amount,
-          prefix: '₹ ',
-          error: _amountError,
-          helper: TripStrings.amountMax(BrowseItem.inr(_maxAmount)),
+        onTap: _saving ? null : onChange,
+        trailing: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+          decoration: BoxDecoration(gradient: _look.gradient, borderRadius: BorderRadius.circular(14)),
+          child: Text(TripStrings.change, style: Ink3D.text(12, FontWeight.w700, DesignColors.textInverse, letterSpacing: 0)),
         ),
-      );
-
-  Widget _holdField() => InkWell(
-        onTap: _saving || _tooLate ? null : _pickHold,
-        borderRadius: BorderRadius.circular(12),
-        child: InputDecorator(
-          decoration: _dec(
-            TripStrings.holdRoomUntil,
-            helper: TripStrings.holdRange(TripFormat.dayTime(_minHold), TripFormat.dayTime(_capHold)),
-          ),
-          child: Text(TripFormat.dayTime(_hold),
-              maxLines: 2, overflow: TextOverflow.ellipsis, style: TypeTokens.style(14, FontWeight.w600)),
-        ),
-      );
-
-  Widget _fromSetupRow(String label, String value, VoidCallback onChange) => Container(
-        padding: const EdgeInsets.fromLTRB(14, 6, 4, 6),
-        constraints: const BoxConstraints(minHeight: 56),
-        decoration: BoxDecoration(
-          color: DesignColors.scaffold,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: DesignColors.divider),
-        ),
-        child: Row(children: [
-          Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(label,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TypeTokens.caption),
-              Text(value,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TypeTokens.style(14, FontWeight.w600, color: DesignColors.textStrong)),
-            ]),
-          ),
-          TextButton(
-            style: TextButton.styleFrom(minimumSize: const Size(64, 44), foregroundColor: DesignColors.primary),
-            onPressed: _saving ? null : onChange,
-            child: Text(TripStrings.change, style: TypeTokens.style(14, FontWeight.w700)),
-          ),
-        ]),
       );
 }

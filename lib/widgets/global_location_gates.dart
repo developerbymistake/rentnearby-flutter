@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:geolocator/geolocator.dart';
@@ -134,13 +133,8 @@ class GlobalLocationGates extends StatelessWidget {
     }
   }
 
-  Widget _gateButton(String label, VoidCallback onTap) => TextButton(
-        onPressed: onTap,
-        child: Text(
-          label,
-          style: FitnessAppTheme.body2.copyWith(fontWeight: FontWeight.w600, color: FitnessAppTheme.nearlyDarkBlue),
-        ),
-      );
+  Widget _gateButton(String label, VoidCallback onTap) =>
+      WhitePillButton(tone: ListingTone.indigo, label: label, height: 52, onTap: onTap);
 
   Widget _buildOfflineGate() {
     final showTrips =

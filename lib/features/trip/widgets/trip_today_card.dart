@@ -22,8 +22,6 @@ import '../utils/trip_clock.dart';
 import '../utils/trip_travel_rules.dart';
 import 'trip_problem_sheet.dart';
 
-const _accent = DesignColors.lunchEnd;
-
 class TripTodayCard extends StatelessWidget {
   const TripTodayCard({super.key});
 
@@ -55,45 +53,46 @@ class TripTodayCard extends StatelessWidget {
         if (today != null) ..._taxiRow(c, n),
         if (today != null) ..._routeRow(c, n, offline, travelDay: travelDay),
       ];
-      return Padding(
-        padding: const EdgeInsets.only(bottom: 14),
-        child: DecoratedBox(
-          decoration: const BoxDecoration(
-            color: DesignColors.surface,
-            borderRadius: CardRadius.tile,
-            boxShadow: ShadowTokens.elev2,
-          ),
-          child: ClipRRect(
-            borderRadius: CardRadius.tile,
+      final title = today == null
+          ? (journey == null ? TripStringsFinB1.checkOutDay : TripStringsStepsA3.travelDay(_todayDate))
+          : !c.isMultiCity
+              ? TripStrings.todayDay(n, c.dayCount)
+              : travelDay
+                  ? TripStringsMcdA3.todayTravelDay(n, c.dayCount)
+                  : TripStringsMcdA3.todayDayCity(n, c.dayCount, c.cityNameOf(n));
+      final narrow = MediaQuery.sizeOf(context).width < 340;
+      final art = narrow ? 76.0 : 92.0;
+      final tone = ListingTone.indigo;
+      return Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(18, 26, 18, 14),
             child: Container(
               width: double.infinity,
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.fromLTRB(14, 18, 14, 16),
+              decoration: BoxDecoration(
+                gradient: tone.gradient,
+                borderRadius: kMealsRadius,
+                boxShadow: [BoxShadow(color: tone.shadow, offset: const Offset(1.1, 6), blurRadius: 14)],
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   TemplateEntranceOnce(
                     index: 0,
                     count: 6,
-                    child: Text(
-                    today == null
-                        ? (journey == null ? TripStringsFinB1.checkOutDay : TripStringsStepsA3.travelDay(_todayDate))
-                        : !c.isMultiCity
-                            ? TripStrings.todayDay(n, c.dayCount)
-                            : travelDay
-                                ? TripStringsMcdA3.todayTravelDay(n, c.dayCount)
-                                : TripStringsMcdA3.todayDayCity(n, c.dayCount, c.cityNameOf(n)),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                        fontFamily: FitnessAppTheme.fontName, fontSize: 15, fontWeight: FontWeight.w700, color: _accent),
-                  ),
+                    child: Padding(
+                      padding: EdgeInsets.fromLTRB(4, 0, art - 6, 0),
+                      child: Text(title, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(19, FontWeight.w700, DesignColors.textInverse, height: 1.25)),
+                    ),
                   ),
                   if (offline) ...[
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 10),
                     _offlineBanner(),
                   ],
                   for (var i = 0; i < rows.length; i++) ...[
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 10),
                     TemplateEntranceOnce(index: i + 1, count: 6, child: rows[i]),
                   ],
                   if (today != null || _problemAllowed(c)) ...[
@@ -104,28 +103,26 @@ class TripTodayCard extends StatelessWidget {
               ),
             ),
           ),
-        ),
+          Positioned(
+            right: 26,
+            top: 0,
+            child: IgnorePointer(child: Art3D(asset: ListingArt.sunrise, size: art, halo: art + 6, haloColor: DesignColors.tint(DesignColors.surface, Alpha.v22))),
+          ),
+        ],
       );
     });
   }
 
-  Widget _offlineBanner() => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        decoration: BoxDecoration(color: DesignColors.scaffold, borderRadius: CardRadius.chip),
-        child: Row(
-          children: [
-            const Icon(Icons.cloud_off_rounded, size: 15, color: DesignColors.textGrey),
-            const SizedBox(width: 8),
-            const Expanded(
-              child: Text(
-                TripStrings.offlineSaved,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, fontWeight: FontWeight.w600, color: DesignColors.textGrey),
-              ),
-            ),
-          ],
-        ),
+  Widget _offlineBanner() => _onCardLine(Icons.cloud_off_rounded, TripStrings.offlineSaved);
+
+  static Widget _onCardLine(IconData icon, String text) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+        decoration: BoxDecoration(color: DesignColors.tint(DesignColors.surface, Alpha.soft), borderRadius: BorderRadius.circular(14)),
+        child: Row(children: [
+          Icon(icon, size: 16, color: DesignColors.surface),
+          const SizedBox(width: 8),
+          Expanded(child: Text(text, maxLines: 3, overflow: TextOverflow.ellipsis, style: Ink3D.text(12, FontWeight.w600, DesignColors.textInverse))),
+        ]),
       );
 
   static bool _problemAllowed(TripPlanController c) {
@@ -147,42 +144,18 @@ class TripTodayCard extends StatelessWidget {
     final multi = legs.length > 1;
     final leg = multi ? legs[1] : legs.first;
     final phone = _validPhone(leg.phone);
-    final wa = _validPhone(leg.whatsApp);
     final head = j.role == TripStepRole.comingBack ? TripStringsStepsA3.todayComingBack : TripStringsStepsA3.todayGettingThere;
     final paused = legs.where((l) => !l.driverAvailable).firstOrNull;
     return [
-      Text(
-        head,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: const TextStyle(
-            fontFamily: FitnessAppTheme.fontName, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.6, color: DesignColors.textSecondary),
-      ),
+      _caps(head),
       _TravelRow(
         title: multi ? TripStringsStepsA3.changeCarAt(leg.changePlace) : TripStringsStepsA3.takesYou(leg.driverName, j.toName),
         subtitle: multi
             ? TripStringsStepsA3.nextDriver(leg.driverName)
             : [leg.vehicleTypeName, leg.plateDisplay].where((e) => e != null && e.isNotEmpty).join(' · '),
         onCall: phone == null ? null : () => ContactLauncher.call(phone),
-        onWhatsApp: wa == null ? null : () => ContactLauncher.whatsApp(wa),
       ),
-      if (paused != null)
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-          decoration: BoxDecoration(color: TripEntryStyle.sunriseTint, borderRadius: CardRadius.chip),
-          child: Row(children: [
-            const Icon(Icons.warning_amber_rounded, size: 15, color: DesignColors.textGreyDark),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                TripStringsStepsA3.pausedBackup(paused.driverName, paused.backupName),
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, fontWeight: FontWeight.w600, color: DesignColors.textGreyDark),
-              ),
-            ),
-          ]),
-        ),
+      if (paused != null) _amberLine(TripStringsStepsA3.pausedBackup(paused.driverName, paused.backupName)),
     ];
   }
 
@@ -205,30 +178,13 @@ class TripTodayCard extends StatelessWidget {
     return (k: k, total: total, checkOut: out);
   }
 
-  static Widget _caps(String text) => Text(
-        text,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: const TextStyle(
-            fontFamily: FitnessAppTheme.fontName, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.6, color: DesignColors.textSecondary),
+  static Widget _caps(String text) => Padding(
+        padding: const EdgeInsets.only(left: 4),
+        child: Text(text.toUpperCase(),
+            maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(11, FontWeight.w700, DesignColors.whiteHigh, letterSpacing: 0.6)),
       );
 
-  static Widget _amberLine(String text) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        decoration: BoxDecoration(color: TripEntryStyle.sunriseTint, borderRadius: CardRadius.chip),
-        child: Row(children: [
-          const Icon(Icons.warning_amber_rounded, size: 15, color: DesignColors.textGreyDark),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              text,
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, fontWeight: FontWeight.w600, color: DesignColors.textGreyDark),
-            ),
-          ),
-        ]),
-      );
+  static Widget _amberLine(String text) => _onCardLine(Icons.warning_amber_rounded, text);
 
   static String _carState(TripJourneyLeg leg) {
     if (leg.lastKnownStatus == TripTravelRules.freeStatus) return TripStringsMcbA2.free;
@@ -275,7 +231,7 @@ class TripTodayCard extends StatelessWidget {
           TripStringsMcaA3.fromTo(from, to),
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
-          style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 13, fontWeight: FontWeight.w700, color: DesignColors.textStrong),
+          style: Ink3D.text(13.5, FontWeight.w700, DesignColors.textInverse),
         ),
     ];
     final j = a != null ? c.segmentJourney(k) : null;
@@ -392,7 +348,7 @@ class TripTodayCard extends StatelessWidget {
       return [
         _Row(
           icon: TravelIcon.place,
-          accent: _accent,
+          accent: DesignColors.primary,
           surface: TripEntryStyle.surface,
           title: TripStringsMcdA3.todaysRoad,
           subtitle: minutes == null ? TripStringsMcdA3.longRoad : TripStringsMcdA3.roadLine(minutes),
@@ -405,7 +361,7 @@ class TripTodayCard extends StatelessWidget {
     return [
       _Row(
         icon: TravelIcon.place,
-        accent: _accent,
+        accent: DesignColors.primary,
         surface: TripEntryStyle.surface,
         title: offline ? TripStrings.lastSavedRoute : TripStrings.todaysRoute,
         subtitle: names.join(' · '),
@@ -415,53 +371,86 @@ class TripTodayCard extends StatelessWidget {
     ];
   }
 
-  Widget _problemButton(BuildContext context, int n) => _pill(
-          onTap: () => TripProblemSheet.show(context, day: n),
-          minHeight: 48,
-          fill: TripEntryStyle.roseTint,
-          border: const BorderSide(color: DesignColors.error, width: 1.2),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+  Widget _problemButton(BuildContext context, int n) => Tap3D(
+        onTap: () => TripProblemSheet.show(context, day: n),
+        label: TripStrings.problemOnTrip,
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 48),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          decoration: const BoxDecoration(color: DesignColors.surface, borderRadius: CardRadius.pill, boxShadow: Ink3D.whiteBtn),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.warning_amber_rounded, size: 16, color: DesignColors.error),
-              const SizedBox(width: 8),
+              const Icon(Icons.warning_amber_rounded, size: 17, color: DesignColors.error),
+              const SizedBox(width: 6),
               Flexible(
-                child: Text(
-                  TripStrings.problemOnTrip,
-                  maxLines: 2,
-                  textAlign: TextAlign.center,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                      fontFamily: FitnessAppTheme.fontName, fontSize: 13, fontWeight: FontWeight.w700, color: DesignColors.error),
-                ),
+                child: Text(TripStrings.problemOnTrip,
+                    maxLines: 2, textAlign: TextAlign.center, overflow: TextOverflow.ellipsis, style: Ink3D.text(13.5, FontWeight.w700, DesignColors.error)),
               ),
             ],
           ),
-        );
+        ),
+      );
 }
 
-Widget _pill({
-  required VoidCallback onTap,
-  required Widget child,
-  required double minHeight,
-  required BorderSide border,
-  required EdgeInsets padding,
-  Color? fill,
-}) =>
-    Material(
-      color: fill ?? DesignColors.surface,
-      shape: RoundedRectangleBorder(borderRadius: CardRadius.chip, side: border),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        highlightColor: Colors.transparent,
-        child: ConstrainedBox(
-          constraints: BoxConstraints(minHeight: minHeight),
-          child: Padding(padding: padding, child: Center(child: child)),
-        ),
+String _artOf(String icon) {
+  if (icon == TravelIcon.stay) return ListingArt.hotel;
+  if (icon == TravelIcon.taxi) return ListingArt.taxi;
+  if (icon == TravelIcon.place) return ListingArt.roundPushpin;
+  if (icon == TravelIcon.checkout) return ListingArt.key;
+  return ListingArt.compass;
+}
+
+ListingTone _toneOf(String icon) {
+  if (icon == TravelIcon.stay || icon == TravelIcon.checkout) return ListingTone.forest;
+  if (icon == TravelIcon.taxi || icon == TravelIcon.route) return ListingTone.coral;
+  return ListingTone.indigo;
+}
+
+class _TodayTile extends StatelessWidget {
+  const _TodayTile({required this.art, required this.title, required this.subtitle, this.trailing});
+
+  final String art;
+  final String title;
+  final String subtitle;
+  final Widget? trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(10, 10, 12, 10),
+      decoration: BoxDecoration(color: DesignColors.surface, borderRadius: BorderRadius.circular(16)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(color: ListingTone.indigo.tint, borderRadius: BorderRadius.circular(14)),
+                child: Center(child: Art3D(asset: art, size: 42, shadowBlur: 3, shadowOffset: const Offset(2, 3))),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(title, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(13.5, FontWeight.w700, Ink3D.title)),
+                    if (subtitle.isNotEmpty)
+                      Text(subtitle, maxLines: 3, overflow: TextOverflow.ellipsis, style: Ink3D.text(11.5, FontWeight.w400, Ink3D.grey)),
+                  ],
+                ),
+              ),
+              if (trailing != null) ...[const SizedBox(width: 8), trailing!],
+            ],
+          ),
+        ],
       ),
     );
+  }
+}
 
 class _Row extends StatelessWidget {
   const _Row({
@@ -484,153 +473,34 @@ class _Row extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color: surface,
-            shape: BoxShape.circle,
-            boxShadow: ShadowTokens.elev1,
-          ),
-          child: Center(child: TravelIcon(icon, size: 26)),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                    fontFamily: FitnessAppTheme.fontName, fontSize: 13, fontWeight: FontWeight.w700, color: DesignColors.textStrong),
-              ),
-              if (subtitle.isNotEmpty)
-                Text(
-                  subtitle,
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, color: DesignColors.textSecondary),
-                ),
-            ],
-          ),
-        ),
-        if (actionLabel != null && onAction != null)
-          TextButton(
-            onPressed: onAction,
-            style: TextButton.styleFrom(
-              minimumSize: const Size(44, 44),
-              padding: const EdgeInsets.symmetric(horizontal: 10),
-              tapTargetSize: MaterialTapTargetSize.padded,
-            ),
-            child: Text(
-              actionLabel!,
-              maxLines: 1,
-              style: const TextStyle(
-                  fontFamily: FitnessAppTheme.fontName, fontSize: 12, fontWeight: FontWeight.w700, color: _accent),
-            ),
-          ),
-      ],
+    final tone = _toneOf(icon);
+    return _TodayTile(
+      art: _artOf(icon),
+      title: title,
+      subtitle: subtitle,
+      trailing: actionLabel != null && onAction != null
+          ? GradientPillButton(tone: tone, label: actionLabel!, onTap: onAction, height: 38, fontSize: 13.5, expand: false)
+          : null,
     );
   }
 }
 
 class _TravelRow extends StatelessWidget {
-  const _TravelRow({required this.title, required this.subtitle, this.onCall, this.onWhatsApp});
+  const _TravelRow({required this.title, required this.subtitle, this.onCall});
 
   final String title;
   final String subtitle;
   final VoidCallback? onCall;
-  final VoidCallback? onWhatsApp;
 
   @override
   Widget build(BuildContext context) {
-    final buttons = [
-      if (onCall != null) _button(TripStringsStepsA3.call, const Icon(Icons.call_rounded, size: 16, color: _accent), _accent, onCall!),
-      if (onWhatsApp != null) _button(TripStringsStepsA3.whatsApp, const TravelIcon(TravelIcon.chat, size: 18), DesignColors.primary, onWhatsApp!),
-    ];
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: DesignColors.error,
-                shape: BoxShape.circle,
-                boxShadow: ShadowTokens.elev1,
-              ),
-              child: const TravelIcon(TravelIcon.route, size: 20),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    title,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                        fontFamily: FitnessAppTheme.fontName, fontSize: 13, fontWeight: FontWeight.w700, color: DesignColors.textStrong),
-                  ),
-                  if (subtitle.isNotEmpty)
-                    Text(
-                      subtitle,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, color: DesignColors.textSecondary),
-                    ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        if (buttons.isNotEmpty) ...[
-          const SizedBox(height: 8),
-          LayoutBuilder(builder: (context, box) {
-            if (buttons.length == 1) return buttons.first;
-            if (box.maxWidth < 220) {
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [buttons[0], const SizedBox(height: 8), buttons[1]],
-              );
-            }
-            return Row(children: [Expanded(child: buttons[0]), const SizedBox(width: 8), Expanded(child: buttons[1])]);
-          }),
-        ],
-      ],
+    return _TodayTile(
+      art: ListingArt.taxi,
+      title: title,
+      subtitle: subtitle,
+      trailing: onCall == null
+          ? null
+          : GradientPillButton(tone: ListingTone.coral, label: TripStringsStepsA3.call, onTap: onCall, height: 38, fontSize: 13.5, expand: false),
     );
   }
-
-  static Widget _button(String label, Widget icon, Color color, VoidCallback onTap) => _pill(
-        onTap: onTap,
-        minHeight: 44,
-        border: const BorderSide(color: TripEntryStyle.border, width: 1.3),
-        padding: const EdgeInsets.symmetric(horizontal: 10),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            icon,
-            const SizedBox(width: 8),
-            Flexible(
-              child: Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, fontWeight: FontWeight.w700, color: color),
-              ),
-            ),
-          ],
-        ),
-      );
 }

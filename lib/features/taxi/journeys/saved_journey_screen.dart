@@ -2,12 +2,11 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:bakhli/design/design.dart';
-import 'package:bakhli/design/extra/trip_plan_look.dart';
+import 'package:bakhli/design/extra/ext_journeys.dart';
 import '../../../config/app_insets.dart';
 import '../../trip/trip_strings_mcb_a3.dart';
 import '../../trip/trip_strings_steps_a3.dart';
 import '../../trip/utils/trip_format.dart';
-import '../../trip/widgets/trip_payment_line.dart';
 import '../ways/taxi_ways_strings.dart';
 import 'journey_actions.dart';
 import 'journey_models.dart';
@@ -15,7 +14,6 @@ import 'journey_strings.dart';
 import 'journeys_controller.dart';
 import 'widgets/journey_header.dart';
 import 'widgets/journey_leg_card.dart';
-import 'widgets/journey_rail_row.dart';
 import 'widgets/journey_status_banner.dart';
 import 'widgets/journey_trip_strip.dart';
 
@@ -97,12 +95,12 @@ class _SavedJourneyScreenState extends State<SavedJourneyScreen> with WidgetsBin
         child: child,
       );
 
-  double _pad(double width) => math.max(14, (width - _maxWidth) / 2);
+  double _pad(double width) => math.max(0, (width - _maxWidth) / 2);
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: DesignColors.scaffold,
+      backgroundColor: ListingPalette.coral.page,
       body: Obx(() {
         final id = _id;
         final j = id == null ? null : _ctrl.byId(id);
@@ -118,14 +116,14 @@ class _SavedJourneyScreenState extends State<SavedJourneyScreen> with WidgetsBin
           });
         }
         return Column(children: [
-          TemplateEntrance(
-            animation: templateInterval(_anim, 0, 2),
-            animationController: _anim,
-            offset: 0,
-            child: _header(j, id, busy),
-          ),
-          if (offline) const JourneyOfflineBanner(),
-          Expanded(child: j == null ? _missing(loading) : _content(j, busy)),
+          if (j == null)
+            TemplateEntrance(
+              animation: templateInterval(_anim, 0, 2),
+              animationController: _anim,
+              offset: 0,
+              child: _header(j, id, busy),
+            ),
+          Expanded(child: j == null ? _missing(loading, offline) : _content(j, busy, offline)),
           if (j != null && !j.isCompleted) _enter(_count - 2, _askBar(j, busy)),
         ]);
       }),
@@ -136,62 +134,32 @@ class _SavedJourneyScreenState extends State<SavedJourneyScreen> with WidgetsBin
     return JourneyHeader(
       title: TaxiWaysStrings.savedJourney,
       subtitle: j == null ? null : '${JourneyFormat.route(j)} · ${TripFormat.shortDate(j.date)}',
-      chips: [
-        Container(
-          constraints: const BoxConstraints(minHeight: 32),
-          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
-          decoration: BoxDecoration(color: DesignColors.surfaceAlt.withValues(alpha: Alpha.soft), borderRadius: BorderRadius.circular(999)),
-          child: const Row(mainAxisSize: MainAxisSize.min, children: [
-            Icon(Icons.phone_android_rounded, size: 14, color: DesignColors.surface),
-            SizedBox(width: 6),
-            Flexible(
-              child: Text(
-                TaxiWaysStrings.savedOnPhone,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 11, fontWeight: FontWeight.w700, color: DesignColors.surface),
-              ),
-            ),
-          ]),
-        ),
-        if (j?.tripId != null)
-          Container(
-            constraints: const BoxConstraints(minHeight: 32),
-            padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
-            decoration: BoxDecoration(color: DesignColors.surfaceAlt.withValues(alpha: Alpha.soft), borderRadius: BorderRadius.circular(999)),
-            child: Text(
-              _tripChip(j!),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 11, fontWeight: FontWeight.w700, color: DesignColors.surface),
-            ),
-          ),
-        if (j != null && id != null)
-          InkWell(
-            borderRadius: BorderRadius.circular(999),
-            onTap: busy ? null : () => _ctrl.refreshOne(id),
-            child: Container(
-              constraints: const BoxConstraints(minHeight: 44),
-              padding: const EdgeInsets.symmetric(horizontal: 14),
-              alignment: Alignment.center,
-              decoration: BoxDecoration(color: DesignColors.surface, borderRadius: BorderRadius.circular(999), boxShadow: TripKit.shadow()),
-              child: Row(mainAxisSize: MainAxisSize.min, children: [
-                busy
-                    ? const SizedBox(
-                        width: 14,
-                        height: 14,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: DesignColors.primary),
-                      )
-                    : const Icon(Icons.refresh_rounded, size: 16, color: DesignColors.primary),
-                const SizedBox(width: 6),
-                const Text(
-                  TaxiWaysStrings.refresh,
-                  style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, fontWeight: FontWeight.w700, color: DesignColors.primary),
+      bottom: j == null || id == null
+          ? null
+          : Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              if (j.tripId != null) ...[
+                JourneyChip3D(label: _tripChip(j)),
+                const SizedBox(height: 10),
+              ],
+              Row(children: [
+                Expanded(
+                  child: Text(
+                    TaxiWaysStrings.savedOnPhone,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: Ink3D.text(12.5, FontWeight.w500, Ink3D.sub),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                JourneyChip3D(
+                  label: TaxiWaysStrings.refresh,
+                  filled: true,
+                  icon: Icons.refresh_rounded,
+                  busy: busy,
+                  onTap: () => _ctrl.refreshOne(id),
                 ),
               ]),
-            ),
-          ),
-      ],
+            ]),
     );
   }
 
@@ -200,113 +168,103 @@ class _SavedJourneyScreenState extends State<SavedJourneyScreen> with WidgetsBin
     return j.isSegment && day != null ? TripStringsMcbA3.inYourTrip(day) : TripStringsStepsA3.inYourTrip;
   }
 
-  Widget _missing(bool loading) {
+  Widget _missing(bool loading, bool offline) {
     if (loading) {
-      return Padding(
-        padding: const EdgeInsets.all(14),
-        child: _enter(0, Column(children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: TripLook.card(),
-            child: const TemplatePlaceholder(height: 56, radius: 16),
-          ),
-          const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: TripLook.card(),
-            child: const TemplatePlaceholder(height: 150, radius: 16),
-          ),
-        ])),
-      );
+      return ListView(padding: EdgeInsets.zero, children: [
+        if (offline) const JourneyOfflineBanner(),
+        const JourneyPillSkeleton(),
+        const JourneyCardSkeleton(),
+        const JourneyCardSkeleton(),
+      ]);
     }
-    return SingleChildScrollView(
-      child: _enter(
-        0,
-        TripPlanEmpty(
-          image: TravelIcon.route,
-          title: JourneyStrings.notFoundTitle,
-          subtitle: JourneyStrings.notFoundBody,
-          onRetry: _id == null ? null : () => _ctrl.load(force: true).then((_) => _autoRefresh()),
+    return ListView(
+      padding: EdgeInsets.zero,
+      children: [
+        if (offline) const JourneyOfflineBanner(),
+        _enter(
+          0,
+          JourneyEmpty3D(
+            art: ListingArt.compass,
+            title: JourneyStrings.notFoundTitle,
+            body: JourneyStrings.notFoundBody,
+            actionLabel: _id == null ? null : TaxiWaysStrings.retry,
+            onAction: _id == null ? null : () => _ctrl.load(force: true).then((_) => _autoRefresh()),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _content(SavedJourney j, bool busy, bool offline) {
+    final legs = j.legs;
+    final total = j.listedTotal ?? legs.fold<int>(0, (sum, l) => sum + (l.listedFare ?? 0));
+    final checked = JourneyFormat.checked(j, DateTime.now());
+    final footer = [?checked, TaxiWaysStrings.worksOffline].join(' · ');
+    final canChange = !j.isCompleted;
+    final rows = <Widget>[];
+    Color line(SavedJourneyLeg l) => JourneyInk.lineFor(JourneyLegCard.toneOf(l));
+    if (legs.isNotEmpty) {
+      rows.add(JourneyStop3D(
+        title: legs.first.fromName,
+        subtitle: '${TaxiWaysStrings.youStart} · ${TripFormat.shortDate(j.date)}',
+      ));
+      for (var i = 0; i < legs.length; i++) {
+        final leg = legs[i];
+        rows.add(JourneyLink3D(color: line(leg)));
+        rows.add(Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          JourneyLegCard(
+            leg: leg,
+            people: j.people,
+            color: _color(leg.legIndex),
+            legCount: legs.length,
+            busy: busy,
+            canChange: canChange,
+            onChangeDriver: () => JourneyActions.changeDriver(context, j, leg),
+            onReplace: (backup) => _ctrl.replaceDriver(j.id, leg.legIndex, backup.taxiId),
+          ),
+          if (j.tripId != null) JourneyCarBookRow(journey: j, leg: leg),
+        ]));
+        rows.add(Padding(padding: const EdgeInsets.only(top: 10), child: JourneyLink3D(color: line(leg))));
+        if (i < legs.length - 1) {
+          final next = legs[i + 1];
+          rows.add(JourneyStop3D(
+            top: 0,
+            change: true,
+            title: next.meetingPlace ?? leg.toName,
+            tag: TaxiWaysStrings.changeCarHere,
+            subtitle: TaxiWaysStrings.meetNext,
+          ));
+        }
+      }
+      rows.add(JourneyStop3D(top: 0, art: ListingArt.pushpin, title: legs.last.toName, subtitle: TaxiWaysStrings.youArrive));
+    }
+
+    return RefreshIndicator(
+      color: ListingPalette.coral.g2,
+      onRefresh: () => _ctrl.refreshOne(j.id),
+      child: LayoutBuilder(
+        builder: (context, c) => ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: EdgeInsets.only(bottom: 24 + (j.isCompleted ? AppInsets.bottomViewPadding(context) : 0)),
+          children: [
+            TemplateEntrance(
+              animation: templateInterval(_anim, 0, 2),
+              animationController: _anim,
+              offset: 0,
+              child: _header(j, _id, busy),
+            ),
+            for (final w in _body(j, busy, offline, rows, total, footer, legs))
+              Padding(padding: EdgeInsets.symmetric(horizontal: _pad(c.maxWidth)), child: w),
+          ],
         ),
       ),
     );
   }
 
-  Widget _content(SavedJourney j, bool busy) {
-    final legs = j.legs;
-    final total = j.listedTotal ?? legs.fold<int>(0, (sum, l) => sum + (l.listedFare ?? 0));
-    final checked = JourneyFormat.checked(j, DateTime.now());
-    final footer = [if (checked != null) checked, TaxiWaysStrings.worksOffline].join(' · ');
-    final canChange = !j.isCompleted;
-    final rows = <Widget>[];
-    if (legs.isNotEmpty) {
-      final first = _color(legs.first.legIndex);
-      rows.add(JourneyRailRow(
-        marker: JourneyDot(color: first),
-        bottomColor: first,
-        child: JourneyStop(
-          title: legs.first.fromName,
-          subtitle: '${TaxiWaysStrings.youStart} · ${TripFormat.shortDate(j.date)}',
-        ),
-      ));
-      for (var i = 0; i < legs.length; i++) {
-        final leg = legs[i];
-        final c = _color(leg.legIndex);
-        rows.add(JourneyRailRow(
-          marker: const SizedBox.shrink(),
-          topColor: c,
-          bottomColor: c,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 6),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-              JourneyLegCard(
-                leg: leg,
-                people: j.people,
-                color: c,
-                busy: busy,
-                canChange: canChange,
-                onChangeDriver: () => JourneyActions.changeDriver(context, j, leg),
-                onReplace: (backup) => _ctrl.replaceDriver(j.id, leg.legIndex, backup.taxiId),
-              ),
-              if (j.tripId != null) JourneyCarBookRow(journey: j, leg: leg),
-            ]),
-          ),
-        ));
-        if (i < legs.length - 1) {
-          final next = legs[i + 1];
-          rows.add(JourneyRailRow(
-            marker: const JourneyChangeDot(),
-            topColor: c,
-            bottomColor: _color(next.legIndex),
-            child: JourneyStop(
-              title: next.meetingPlace ?? leg.toName,
-              subtitle: TaxiWaysStrings.meetNext,
-              tag: TaxiWaysStrings.changeCarHere,
-            ),
-          ));
-        }
-      }
-      final last = _color(legs.last.legIndex);
-      rows.add(JourneyRailRow(
-        marker: JourneyDot(color: last),
-        topColor: last,
-        child: JourneyStop(title: legs.last.toName, subtitle: TaxiWaysStrings.youArrive),
-      ));
-    }
-
-    return RefreshIndicator(
-      color: DesignColors.primary,
-      onRefresh: () => _ctrl.refreshOne(j.id),
-      child: LayoutBuilder(
-        builder: (context, c) => ListView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: EdgeInsets.fromLTRB(_pad(c.maxWidth), 12, _pad(c.maxWidth), 24 + AppInsets.bottomViewPadding(context)),
-          children: [
-            if (j.isSegment) ...[
-              _enter(0, JourneyTripStrip(journey: j)),
-              const SizedBox(height: 12),
-            ],
-            if (j.hasUnavailable && !j.isCompleted) ...[
+  List<Widget> _body(SavedJourney j, bool busy, bool offline, List<Widget> rows, int total, String footer, List<SavedJourneyLeg> legs) => [
+            if (offline) const JourneyOfflineBanner(),
+            if (j.isSegment) _enter(0, JourneyTripStrip(journey: j)),
+            if (j.hasUnavailable && !j.isCompleted)
               _enter(
                 1,
                 JourneyStatusBanner(
@@ -316,59 +274,45 @@ class _SavedJourneyScreenState extends State<SavedJourneyScreen> with WidgetsBin
                   onChange: (leg) => JourneyActions.changeDriver(context, j, leg),
                 ),
               ),
-              const SizedBox(height: 12),
-            ],
             for (var k = 0; k < rows.length; k++) _enter(k + 2, rows[k]),
-            if (total > 0) ...[
-              const SizedBox(height: 12),
+            if (total > 0)
               _enter(
                 _count - 3,
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(14),
-                  decoration: TripLook.card(),
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text(
-                      TaxiWaysStrings.carsAbout(legs.fold(0, (sum, l) => sum + l.carsOf(j.people)), total),
-                      style: FitnessAppTheme.title.copyWith(fontSize: 15),
-                    ),
-                    const SizedBox(height: 2),
-                    const Text(TaxiWaysStrings.listedFares, style: FitnessAppTheme.caption),
-                  ]),
+                JourneyTotalCard3D(
+                  title: TaxiWaysStrings.carsAbout(legs.fold(0, (sum, l) => sum + l.carsOf(j.people)), total),
+                  caption: TaxiWaysStrings.listedFares,
                 ),
               ),
-            ],
-            const SizedBox(height: 12),
-            _enter(_count - 2, Text(footer, style: FitnessAppTheme.caption.copyWith(height: 1.4))),
-            const SizedBox(height: 16),
-            _enter(_count - 1, _manage(j, busy)),
-          ],
-        ),
-      ),
-    );
-  }
+            _enter(
+              _count - 2,
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+                child: Text(footer, style: Ink3D.text(12, FontWeight.w400, Ink3D.grey, height: 1.45)),
+              ),
+            ),
+            _enter(_count - 1, Padding(padding: const EdgeInsets.fromLTRB(16, 16, 16, 0), child: _manage(j, busy))),
+          ];
 
   Widget _manage(SavedJourney j, bool busy) {
-    return Row(children: [
-      if (!j.isCompleted) ...[
-        Expanded(
-          child: JourneyButton(
-            label: TaxiWaysStrings.markDone,
-            kind: JourneyButtonKind.outline,
-            maxLines: 2,
-            onPressed: busy ? null : () => _ctrl.complete(j.id),
-          ),
-        ),
-        const SizedBox(width: 8),
-      ],
-      Expanded(
-        child: JourneyButton(
-          label: TaxiWaysStrings.deleteJourney,
-          kind: JourneyButtonKind.dangerOutline,
-          maxLines: 2,
-          onPressed: busy ? null : () => _delete(j),
-        ),
+    final tone = ListingTone.coral;
+    final delete = WhitePillButton(
+      tone: tone,
+      label: TaxiWaysStrings.deleteJourney,
+      danger: true,
+      height: 52,
+      fontSize: 15,
+      onTap: busy ? null : () => _delete(j),
+    );
+    if (j.isCompleted) return delete;
+    return PillButtonRow(children: [
+      WhitePillButton(
+        tone: tone,
+        label: TaxiWaysStrings.markDone,
+        height: 52,
+        fontSize: 15,
+        onTap: busy ? null : () => _ctrl.complete(j.id),
       ),
+      delete,
     ]);
   }
 
@@ -379,29 +323,18 @@ class _SavedJourneyScreenState extends State<SavedJourneyScreen> with WidgetsBin
 
   Widget _askBar(SavedJourney j, bool busy) {
     final enabled = !j.hasUnavailable && !busy && j.legs.isNotEmpty;
-    return Container(
-      decoration: BoxDecoration(
-        color: DesignColors.surface,
-        borderRadius: const BorderRadius.only(topLeft: Radius.circular(16), topRight: Radius.circular(16)),
-        boxShadow: TripKit.shadow(),
-      ),
-      padding: EdgeInsets.fromLTRB(16, 10, 16, 10 + AppInsets.bottomViewPadding(context)),
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: _maxWidth),
-          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            PickButton(
-              label: JourneyFormat.askLabel(j),
-              height: 48,
-              gradient: TripLook.gradient,
-              shadowColor: DesignColors.primary,
-              onPressed: enabled ? () => JourneyActions.ask(context, j) : null,
-            ),
-            const SizedBox(height: 6),
-            const TripPaymentLine(text: TaxiWaysStrings.payLine),
-          ]),
+    return JourneyDock3D(
+      maxWidth: _maxWidth,
+      children: [
+        GradientPillButton(
+          tone: ListingTone.coral,
+          label: JourneyFormat.askLabel(j),
+          height: 52,
+          fontSize: 15,
+          onTap: enabled ? () => JourneyActions.ask(context, j) : null,
         ),
-      ),
+        const JourneyPayLine(TaxiWaysStrings.payLine),
+      ],
     );
   }
 }

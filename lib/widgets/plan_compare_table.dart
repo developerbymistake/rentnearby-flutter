@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:bakhli/design/design.dart';
+import 'package:bakhli/design/extra/ext_plans.dart';
 
 class PlanAccent {
   const PlanAccent._();
@@ -67,88 +68,40 @@ class PlanCompareTable extends StatelessWidget {
   final List<CompareRow> rows;
   final List<String> paidNames;
   final Color accent;
+  final String? featureKey;
 
-  const PlanCompareTable({super.key, required this.rows, required this.paidNames, required this.accent});
+  const PlanCompareTable({super.key, required this.rows, required this.paidNames, required this.accent, this.featureKey});
 
   bool get _showBest => paidNames.length == 1;
 
-  static final TextStyle _head = TypeTokens.style(12, FontWeight.w600, letterSpacing: 0.2);
+  String? get _key {
+    if (featureKey != null) return featureKey;
+    if (accent == PlanAccent.of('Stay')) return 'Stay';
+    if (accent == PlanAccent.of('Taxi')) return 'Taxi';
+    return null;
+  }
+
+  static String artFor(String label) => switch (label) {
+        'Shown first' => ListingArt.compass,
+        'Featured badge' => ListingArt.star,
+        _ => ListingArt.clipboard,
+      };
+
+  static PlanCellData _cell(CompareCell c) => PlanCellData(c.text, switch (c.kind) {
+        CompareCellKind.number => PlanCellKind.number,
+        CompareCellKind.yes => PlanCellKind.yes,
+        CompareCellKind.no => PlanCellKind.no,
+      });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        color: DesignColors.surface,
-        borderRadius: CardRadius.tile,
-        boxShadow: ShadowTokens.elev2,
-      ),
-      child: Column(children: [
-        Container(
-          color: DesignColors.scaffold,
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          child: Row(children: [
-            const Expanded(flex: 5, child: SizedBox()),
-            Expanded(
-              flex: 3,
-              child: Center(
-                child: Text('Free',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: _head.copyWith(color: DesignColors.textGrey)),
-              ),
-            ),
-            for (final name in paidNames)
-              Expanded(
-                flex: 4,
-                child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  Text(name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      textAlign: TextAlign.center,
-                      style: _head.copyWith(fontWeight: FontWeight.w700, color: accent)),
-                  if (_showBest)
-                    Container(
-                      margin: const EdgeInsets.only(top: 2),
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                      decoration: BoxDecoration(color: accent, borderRadius: CardRadius.pill),
-                      child: Text('BEST',
-                          style: TypeTokens.style(10, FontWeight.w700, color: DesignColors.surface, chip: true)),
-                    ),
-                ]),
-              ),
-          ]),
-        ),
-        for (final row in rows) ...[
-          const Divider(height: 1, thickness: 1, color: DesignColors.dividerSoft),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-            child: Row(children: [
-              Expanded(
-                flex: 5,
-                child: Text(row.label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TypeTokens.style(14, FontWeight.w500,
-                        color: DesignColors.textStrong, letterSpacing: 0.2)),
-              ),
-              for (var i = 0; i < row.cells.length; i++)
-                Expanded(flex: i == 0 ? 3 : 4, child: Center(child: _cell(row.cells[i], paid: i > 0))),
-            ]),
-          ),
-        ],
-      ]),
+    return PlanCompareCard3D(
+      tone: PlanLook.toneOf(_key),
+      paidNames: paidNames,
+      showBest: _showBest,
+      rows: [
+        for (final r in rows) PlanRowData(label: r.label, art: artFor(r.label), cells: [for (final c in r.cells) _cell(c)]),
+      ],
     );
   }
-
-  Widget _cell(CompareCell c, {required bool paid}) => switch (c.kind) {
-        CompareCellKind.yes => const Icon(Icons.check_rounded, size: 16, color: DesignColors.goodDeep),
-        CompareCellKind.no => Text('−',
-            style: TypeTokens.style(14, FontWeight.w700, color: DesignColors.textMuted)),
-        CompareCellKind.number => Text(c.text,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TypeTokens.style(14, FontWeight.w700,
-                color: paid ? accent : DesignColors.textGrey)),
-      };
 }

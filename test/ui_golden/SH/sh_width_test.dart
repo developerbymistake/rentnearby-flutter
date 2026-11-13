@@ -49,11 +49,11 @@ void main() {
 
   for (final w in widths) {
     for (final s in scales) {
-      testWidgets('HomeTaxiRailCard fixed height w$w s$s', (t) async {
+      testWidgets('HomeTaxiRailCard intrinsic height w$w s$s', (t) async {
         setGoldenView(t, Size(w, 760));
         for (final fare in [1800, null]) {
           await t.pumpWidget(_host(
-            Align(alignment: Alignment.topLeft, child: SizedBox(height: RailCard.height + 24, child: HomeTaxiRailCard(taxi: _taxi(fare)))),
+            Align(alignment: Alignment.topLeft, child: MealsRail(children: [HomeTaxiRailCard(taxi: _taxi(fare))])),
             w,
             s,
           ));

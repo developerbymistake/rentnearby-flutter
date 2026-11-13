@@ -63,99 +63,79 @@ class _AtDestinationSectionState extends State<AtDestinationSection> with Ticker
     final reach = widget.hasWays ? null : widget.reachFirstPlace;
     if (widget.localTaxis.isEmpty && widget.stays.isEmpty && reach == null) {
       if (widget.cityName.trim().isEmpty && !widget.citiesUnavailable) return const SizedBox.shrink();
-      return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         _title(),
-        const SizedBox(height: 8),
-        Text(widget.citiesUnavailable ? TripStringsCity.citiesLoadingTitle : TripStringsCity.noTaxisTitle(widget.cityName),
-            style: FitnessAppTheme.title.copyWith(fontSize: 14)),
-        const SizedBox(height: 2),
-        Text(widget.citiesUnavailable ? TripStringsCity.citiesLoadingBody : TripStringsCity.noSupplyBody,
-            style: FitnessAppTheme.caption.copyWith(fontSize: 12)),
+        WideCard(
+          kind: WideKind.slim,
+          tone: ListingTone.cA,
+          art: ListingArt.taxi,
+          title: widget.citiesUnavailable ? TripStringsCity.citiesLoadingTitle : TripStringsCity.noTaxisTitle(widget.cityName),
+          subtitle: widget.citiesUnavailable ? TripStringsCity.citiesLoadingBody : TripStringsCity.noSupplyBody,
+        ),
       ]);
     }
     final blocks = <Widget>[
       _title(),
-      if (reach != null)
-        Padding(padding: const EdgeInsets.only(top: 12), child: ReachByTrainCard(placeName: reach.name)),
       if (widget.localTaxis.isNotEmpty)
-        Padding(
-          padding: const EdgeInsets.only(top: 16),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            _subHeading(TaxiWaysStrings.localTaxis(widget.localTaxis.length)),
-            const SizedBox(height: 8),
-            _taxiRail(context),
-          ]),
-        ),
+        Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          _subHeading(TaxiWaysStrings.localTaxis(widget.localTaxis.length)),
+          _taxiRail(context),
+        ]),
       if (widget.stays.isNotEmpty)
-        Padding(
-          padding: const EdgeInsets.only(top: 16),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            _subHeading(TaxiWaysStrings.stayIn(widget.cityName),
-                caption: TaxiWaysStrings.staysCount(widget.stays.length, widget.date)),
-            const SizedBox(height: 8),
-            _stays(),
-          ]),
-        ),
+        Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          _subHeading(TaxiWaysStrings.stayIn(widget.cityName),
+              caption: TaxiWaysStrings.staysCount(widget.stays.length, widget.date)),
+          _stays(),
+        ]),
+      if (reach != null) ReachByTrainCard(placeName: reach.name),
     ];
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       for (var i = 0; i < blocks.length; i++) _enter(i, blocks.length, blocks[i]),
     ]);
   }
 
-  Widget _title() => Row(children: [
-        Container(
-          width: 4,
-          height: 18,
-          decoration: BoxDecoration(color: PickKit.taxi, borderRadius: BorderRadius.circular(2)),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Text(TaxiWaysStrings.atPlace(widget.cityName),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: FitnessAppTheme.title.copyWith(
-                  fontSize: 18, fontWeight: FontWeight.w500, letterSpacing: 0.5, color: DesignColors.textSecondary)),
-        ),
-        if (widget.hasWays) ...[
-          const SizedBox(width: 8),
-          Flexible(
-            child: Text(TaxiWaysStrings.waysAbove,
-                maxLines: 2,
-                textAlign: TextAlign.end,
-                overflow: TextOverflow.ellipsis,
-                style: FitnessAppTheme.caption.copyWith(fontSize: 11)),
-          ),
-        ],
-      ]);
+  Widget _title() => TitleRow3D(
+        title: TaxiWaysStrings.atPlace(widget.cityName),
+        subtitle: widget.hasWays ? TaxiWaysStrings.waysAbove : null,
+        tone: ListingTone.coral,
+      );
 
-  Widget _subHeading(String text, {String? caption}) => Wrap(
-        crossAxisAlignment: WrapCrossAlignment.end,
-        spacing: 8,
-        children: [
-          Text(text, style: FitnessAppTheme.title.copyWith(fontSize: 14)),
-          if (caption != null) Text(caption, style: FitnessAppTheme.caption.copyWith(fontSize: 11)),
-        ],
+  Widget _subHeading(String text, {String? caption}) => Padding(
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+        child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+          Expanded(
+            child: Text(text, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(15, FontWeight.w700, Ink3D.body)),
+          ),
+          if (caption != null)
+            Padding(
+              padding: const EdgeInsets.only(left: 8),
+              child: Text(caption, maxLines: 1, style: Ink3D.text(12, FontWeight.w500, Ink3D.grey)),
+            ),
+        ]),
       );
 
   Widget _taxiRail(BuildContext context) => SizedBox(
         height: LocalTaxiRailCard.heightFor(context),
         child: _HRail(
           count: widget.localTaxis.length,
-          builder: (i) => LocalTaxiRailCard(key: ValueKey(widget.localTaxis[i].id), item: widget.localTaxis[i]),
+          builder: (i) => LocalTaxiRailCard(key: ValueKey(widget.localTaxis[i].id), item: widget.localTaxis[i], index: i),
         ),
       );
 
   Widget _stays() {
-    DestinationStayCard card(StayNearbyModel s, double w) => DestinationStayCard(
-        key: ValueKey(s.id), stay: s, cityName: widget.cityName, date: widget.date, people: widget.people, width: w);
+    DestinationStayCard card(StayNearbyModel s, int i, double w) => DestinationStayCard(
+        key: ValueKey(s.id), stay: s, cityName: widget.cityName, date: widget.date, people: widget.people, width: w, index: i);
     return LayoutBuilder(builder: (context, c) {
       if (c.maxWidth >= _tablet) {
-        final w = (c.maxWidth - 24) / 3;
-        return Wrap(spacing: 12, runSpacing: 12, children: [for (final s in widget.stays) card(s, w)]);
+        final w = (c.maxWidth - 40) / 3;
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          child: Wrap(children: [for (var i = 0; i < widget.stays.length; i++) card(widget.stays[i], i, w)]),
+        );
       }
       return SizedBox(
         height: DestinationStayCard.heightFor(context),
-        child: _HRail(count: widget.stays.length, builder: (i) => card(widget.stays[i], 190)),
+        child: _HRail(count: widget.stays.length, builder: (i) => card(widget.stays[i], i, 160)),
       );
     });
   }
@@ -190,9 +170,9 @@ class _HRailState extends State<_HRail> with TickerProviderStateMixin {
   Widget build(BuildContext context) {
     return ListView.separated(
       scrollDirection: Axis.horizontal,
-      padding: EdgeInsets.zero,
+      padding: const EdgeInsets.symmetric(horizontal: 10),
       itemCount: widget.count,
-      separatorBuilder: (_, _) => const SizedBox(width: 10),
+      separatorBuilder: (_, _) => const SizedBox.shrink(),
       itemBuilder: (_, i) {
         final animation = templateInterval(_c, i < 5 ? i : 5, widget.count < 6 ? widget.count : 6);
         return AnimatedBuilder(

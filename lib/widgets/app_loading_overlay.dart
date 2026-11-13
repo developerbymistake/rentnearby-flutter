@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../design/design.dart';
+import 'location_switch_sheet.dart';
 
 class AppLoadingOverlay extends StatelessWidget {
   final Widget child;
@@ -19,7 +20,7 @@ class AppLoadingOverlay extends StatelessWidget {
     String message = 'Loading...',
     Color indicatorColor = FitnessAppTheme.nearlyDarkBlue,
   }) {
-    return Positioned.fill(child: _LoadingBody(message: message, indicatorColor: indicatorColor));
+    return Positioned.fill(child: _LoadingBody(message: message));
   }
 
   @override
@@ -27,63 +28,25 @@ class AppLoadingOverlay extends StatelessWidget {
     return Stack(
       children: [
         child,
-        if (isLoading)
-          Positioned.fill(child: _LoadingBody(message: message, indicatorColor: indicatorColor)),
+        if (isLoading) Positioned.fill(child: _LoadingBody(message: message)),
       ],
     );
   }
 }
 
-class _LoadingBody extends StatefulWidget {
+class _LoadingBody extends StatelessWidget {
   final String message;
-  final Color indicatorColor;
-  const _LoadingBody({required this.message, required this.indicatorColor});
+  const _LoadingBody({required this.message});
 
-  @override
-  State<_LoadingBody> createState() => _LoadingBodyState();
-}
-
-class _LoadingBodyState extends State<_LoadingBody> with SingleTickerProviderStateMixin {
-  late final AnimationController _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 600))
-    ..forward();
-
-  @override
-  void dispose() {
-    _c.dispose();
-    super.dispose();
+  static String _artFor(ListingTone tone) {
+    if (identical(tone, ListingTone.forest)) return ListingArt.hotel;
+    if (identical(tone, ListingTone.coral)) return ListingArt.taxi;
+    return ListingArt.airplane;
   }
 
   @override
   Widget build(BuildContext context) {
-    return TemplateEntrance(
-      animation: templateInterval(_c, 0, 2),
-      animationController: _c,
-      offset: 0,
-      child: Container(
-        color: GateKit.scrim,
-        child: Center(
-          child: TemplateEntrance(
-            animation: templateInterval(_c, 1, 2),
-            animationController: _c,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 28),
-              decoration: GateKit.cardSmall(),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  CircularProgressIndicator(strokeWidth: 2.5, color: widget.indicatorColor),
-                  const SizedBox(height: 16),
-                  Text(
-                    widget.message,
-                    style: FitnessAppTheme.body1.copyWith(fontWeight: FontWeight.w500),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
+    final tone = moduleToneFor();
+    return BusyOverlay3D(tone: tone, art: _artFor(tone), message: message);
   }
 }

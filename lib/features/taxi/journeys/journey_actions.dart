@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:bakhli/design/design.dart';
-import 'package:bakhli/design/extra/trip_plan_look.dart';
 import '../../../config/app_routes.dart';
 import '../../trip/trip_strings_mcb_a3.dart';
 import '../../trip/trip_strings_steps_a3.dart';
@@ -45,16 +44,24 @@ class JourneyActions {
   }
 
   static Future<bool> confirmDelete(BuildContext context, SavedJourney j) async {
-    final ok = await showTaxiConfirmDialog(
-      context,
-      title: TaxiWaysStrings.deleteJourney,
-      body: j.tripId == null
-          ? JourneyStrings.deleteBody
-          : '${JourneyStrings.deleteBody} ${j.isSegment ? TripStringsMcbA3.alsoRemovedFromTravel(j.toName) : TripStringsStepsA3.alsoRemovedFromTrip}',
-      cancelLabel: JourneyStrings.cancel,
-      actionLabel: TaxiWaysStrings.deleteJourney,
-      actionColor: TripLook.error,
-    );
+    final body = j.tripId == null
+        ? JourneyStrings.deleteBody
+        : '${JourneyStrings.deleteBody} ${j.isSegment ? TripStringsMcbA3.alsoRemovedFromTravel(j.toName) : TripStringsStepsA3.alsoRemovedFromTrip}';
+    final ok = await Dialog3D.show<bool>(
+          context,
+          builder: (c) => Dialog3D(
+            tone: ListingTone.coral,
+            art: ListingArt.clipboard,
+            title: TaxiWaysStrings.deleteJourney,
+            body: body,
+            secondaryLabel: JourneyStrings.cancel,
+            onSecondary: () => Navigator.of(c).pop(false),
+            primaryLabel: TaxiWaysStrings.deleteJourney,
+            primaryDanger: true,
+            onPrimary: () => Navigator.of(c).pop(true),
+          ),
+        ) ??
+        false;
     if (!ok) return false;
     return JourneysController.ensure().remove(j.id);
   }

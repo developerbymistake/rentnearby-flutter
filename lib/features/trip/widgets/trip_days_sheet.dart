@@ -7,6 +7,7 @@ import '../models/trip_plan_model.dart';
 import '../trip_constants.dart';
 import '../trip_strings_v2_plan.dart';
 import 'trip_leg_menu_sheet.dart';
+import 'trip_pace_sheet.dart';
 
 class TripDaysSheet extends StatefulWidget {
   const TripDaysSheet({super.key});
@@ -111,83 +112,100 @@ class _TripDaysSheetState extends State<TripDaysSheet> {
   @override
   Widget build(BuildContext context) {
     final total = _total;
+    final tone = ListingTone.indigo;
     return SheetFrame(
+      tone: tone,
+      art: ListingArt.calendar,
+      size: SheetSize.confirm,
       title: TripStringsV2Plan.daysTitle,
       subtitle: TripStringsV2Plan.daysSub,
-      footer: PrimaryButton(
+      footer: GradientPillButton(
+        tone: tone,
         label: TripStringsV2Plan.apply,
-        tone: KitTone.trip,
         loading: _busy,
-        onPressed: _changed && !_busy ? _apply : null,
+        onTap: _changed && !_busy ? _apply : null,
       ),
-      child: Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            _btn(Icons.remove_rounded, total > _minTotal ? () => _step(-1) : null),
-            SizedBox(
-              width: 120,
-              child: Text(
-                TripStringsV2Plan.days(total),
-                textAlign: TextAlign.center,
-                style: TypeTokens.style(24, FontWeight.w700, color: KitTone.trip.accentDark, letterSpacing: 0.2),
+      scrollable: false,
+      padding: const EdgeInsets.only(bottom: 20),
+      child: TripSheetFill(
+        gap: 4,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _pill(
+                height: 64,
+                child: Row(
+                  children: [
+                    _btn(Icons.remove_rounded, total > _minTotal ? () => _step(-1) : null, size: 50),
+                    Expanded(
+                      child: Text(
+                        TripStringsV2Plan.days(total),
+                        textAlign: TextAlign.center,
+                        maxLines: 1,
+                        style: Ink3D.text(24, FontWeight.w700, tone.text),
+                      ),
+                    ),
+                    _btn(Icons.add_rounded, total < TripConstants.maxDaysCap ? () => _step(1) : null, size: 50),
+                  ],
+                ),
               ),
+              const SizedBox(height: 6),
+              Text(
+                TripStringsV2Plan.daysHint(total),
+                textAlign: TextAlign.center,
+                style: Ink3D.text(12.5, FontWeight.w400, Ink3D.grey),
+              ),
+            ],
+          ),
+          if (_alloc.length > 1)
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                for (var i = 0; i < _alloc.length; i++) ...[
+                  if (i > 0) const SizedBox(height: 10),
+                  _cityRow(i),
+                ],
+              ],
             ),
-            _btn(Icons.add_rounded, total < TripConstants.maxDaysCap ? () => _step(1) : null),
-          ],
-        ),
-        const SizedBox(height: 6),
-        Text(
-          TripStringsV2Plan.daysHint(total),
-          textAlign: TextAlign.center,
-          style: TypeTokens.style(12, FontWeight.w400, color: TypeTokens.secondary),
-        ),
-        if (_alloc.length > 1) ...[
-          const SizedBox(height: 14),
-          for (var i = 0; i < _alloc.length; i++) ...[
-            _cityRow(i),
-            const SizedBox(height: 8),
-          ],
+          Text(
+            total <= _minTotal ? TripStringsV2Plan.daysMinHint(_minTotal) : TripStringsV2Plan.daysLocked,
+            textAlign: TextAlign.center,
+            style: Ink3D.text(12, FontWeight.w400, Ink3D.grey),
+          ),
         ],
-        const SizedBox(height: 4),
-        Text(
-          total <= _minTotal ? TripStringsV2Plan.daysMinHint(_minTotal) : TripStringsV2Plan.daysLocked,
-          textAlign: TextAlign.center,
-          style: TypeTokens.style(11, FontWeight.w400, color: TypeTokens.secondary),
-        ),
-      ],
       ),
     );
   }
 
+  Widget _pill({required Widget child, double height = 56}) => Container(
+        constraints: BoxConstraints(minHeight: height),
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+        decoration: BoxDecoration(
+          color: DesignColors.surface,
+          borderRadius: BorderRadius.circular(height / 2),
+          boxShadow: Ink3D.softShadow,
+        ),
+        child: child,
+      );
+
   Widget _cityRow(int i) {
     final name = _plan.legAt(i + 1)?.cityName ?? '';
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 6, 6, 6),
-      decoration: const BoxDecoration(
-        color: DesignColors.surface,
-        borderRadius: CardRadius.tile,
-        boxShadow: ShadowTokens.elev2,
-      ),
+    return _pill(
       child: Row(
         children: [
+          const SizedBox(width: 12),
           Expanded(
-            child: Text(
-              name,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TypeTokens.style(14, FontWeight.w600, color: DesignColors.textStrong),
-            ),
+            child: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(15, FontWeight.w600, Ink3D.title)),
           ),
           _btn(Icons.remove_rounded, _alloc[i] > _min[i] ? () => _stepCity(i, -1) : null),
-          SizedBox(
-            width: 64,
+          ConstrainedBox(
+            constraints: const BoxConstraints(minWidth: 72),
             child: Text(
               TripStringsV2Plan.days(_alloc[i]),
               textAlign: TextAlign.center,
-              style: TypeTokens.style(14, FontWeight.w700, color: KitTone.trip.accentDark),
+              maxLines: 1,
+              style: Ink3D.text(14.5, FontWeight.w700, ListingTone.indigo.text),
             ),
           ),
           _btn(Icons.add_rounded, _canGrow(i) ? () => _stepCity(i, 1) : null),
@@ -196,5 +214,29 @@ class _TripDaysSheetState extends State<TripDaysSheet> {
     );
   }
 
-  Widget _btn(IconData icon, VoidCallback? onTap) => TemplateRoundButton(icon: icon, size: 44, onTap: onTap);
+  Widget _btn(IconData icon, VoidCallback? onTap, {double size = 44}) {
+    final tone = ListingTone.indigo;
+    final tip = icon == Icons.add_rounded ? 'Increase' : 'Decrease';
+    return Tooltip(
+      message: tip,
+      excludeFromSemantics: true,
+      child: Tap3D(
+        onTap: onTap,
+        label: tip,
+        child: Opacity(
+          opacity: onTap == null ? Alpha.v45 : 1,
+          child: Container(
+            width: size,
+            height: size,
+            decoration: BoxDecoration(
+              gradient: tone.gradient,
+              shape: BoxShape.circle,
+              boxShadow: onTap == null ? null : [BoxShadow(color: tone.shadow, offset: const Offset(1, 4), blurRadius: 8)],
+            ),
+            child: Icon(icon, color: DesignColors.surface, size: 24),
+          ),
+        ),
+      ),
+    );
+  }
 }

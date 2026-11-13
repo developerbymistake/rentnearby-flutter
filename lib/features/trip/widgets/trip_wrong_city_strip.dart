@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:bakhli/design/extra/trip_plan_look.dart';
-import 'package:bakhli/design/extra/travel_icon.dart';
-import 'package:bakhli/design/template/fitness_app_theme.dart';
+import 'package:bakhli/design/design.dart';
+import 'package:bakhli/design/extra/ext_trip_replies.dart';
 import '../models/trip_enquiry_model.dart';
 import '../trip_strings_mcc_a2.dart';
 import '../utils/trip_enquiry_rules.dart';
@@ -34,99 +33,53 @@ class TripWrongCityStrip extends StatelessWidget {
         : TripStringsMccA2.nightInCity(info.firstWrongDay, info.dayCity);
   }
 
-  static const BorderRadius _denseRadius = BorderRadius.only(
-    topLeft: Radius.circular(8),
-    topRight: Radius.circular(16),
-    bottomLeft: Radius.circular(8),
-    bottomRight: Radius.circular(8),
-  );
-
-  Widget _action(String label, VoidCallback onTap) => InkWell(
-        onTap: onTap,
-        splashColor: Colors.transparent,
-        highlightColor: Colors.transparent,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            child: Center(
-              widthFactor: 1,
-              heightFactor: 1,
-              child: Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                    fontFamily: FitnessAppTheme.fontName, fontSize: 12, fontWeight: FontWeight.w700, color: TripLook.error),
-              ),
-            ),
-          ),
-        ),
-      );
-
   @override
   Widget build(BuildContext context) {
-    final taxi = enquiry.isTaxi;
     final name = enquiry.listingName;
     final line = lineOf(enquiry, info);
-    final actions = [
-      if (onCancel != null) _action(TripStringsMccA2.cancel, onCancel!),
-      if (onChangeDays != null) _action(TripStringsMccA2.changeDays, onChangeDays!),
-    ];
+    Widget action(String label, VoidCallback onTap) => Tap3D(
+          onTap: onTap,
+          label: label,
+          exclude: true,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              child: Center(widthFactor: 1, child: Text(label, maxLines: 1, style: Ink3D.text(13, FontWeight.w700, RepliesLook.badInk, letterSpacing: 0))),
+            ),
+          ),
+        );
     return Container(
       margin: EdgeInsets.only(top: dense ? 6 : 8),
-      decoration: TripLook.card(color: TripLook.errorSurface, radius: dense ? _denseRadius : TripLook.softRadius),
-      child: ClipRRect(
-        borderRadius: dense ? _denseRadius : TripLook.softRadius,
-        child: IntrinsicHeight(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+      padding: const EdgeInsets.fromLTRB(14, 10, 6, 4),
+      decoration: BoxDecoration(color: RepliesLook.badSurface, borderRadius: BorderRadius.circular(dense ? 18 : 22)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
             children: [
-              Container(width: 4, color: TripLook.error),
-              Expanded(
-                child: Padding(
-                  padding: EdgeInsets.fromLTRB(10, dense ? 6 : 8, 6, actions.isEmpty ? (dense ? 6 : 8) : 0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Row(
-                        children: [
-                          TravelIcon(taxi ? TravelIcon.taxi : TravelIcon.stay, size: 16),
-                          const SizedBox(width: 6),
-                          const Expanded(
-                            child: Text(
-                              TripStringsMccA2.wrongCityNow,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                  fontFamily: FitnessAppTheme.fontName,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700,
-                                  color: TripLook.errorText),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        name.isEmpty || dense ? line : '$name · $line',
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 11.5, color: TripLook.errorText),
-                      ),
-                      if (actions.isNotEmpty)
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: Wrap(alignment: WrapAlignment.end, children: actions),
-                        ),
-                    ],
-                  ),
-                ),
-              ),
+              Image.asset(enquiry.isTaxi ? ListingArt.taxi : ListingArt.hotel, width: 22, height: 22, fit: BoxFit.contain),
+              const SizedBox(width: 8),
+              Expanded(child: Text(TripStringsMccA2.wrongCityNow, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(13, FontWeight.w700, RepliesLook.badInk, letterSpacing: 0))),
             ],
           ),
-        ),
+          const SizedBox(height: 2),
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: Text(name.isEmpty || dense ? line : '$name · $line', maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(12.5, FontWeight.w500, RepliesLook.badInk, letterSpacing: 0)),
+          ),
+          if (onCancel != null || onChangeDays != null)
+            Align(
+              alignment: Alignment.centerRight,
+              child: Wrap(children: [
+                if (onCancel != null) action(TripStringsMccA2.cancel, onCancel!),
+                if (onChangeDays != null) action(TripStringsMccA2.changeDays, onChangeDays!),
+              ]),
+            )
+          else
+            const SizedBox(height: 6),
+        ],
       ),
     );
   }

@@ -15,6 +15,7 @@ class TravelIcon extends StatelessWidget {
   static const String calendar = '${_dir}calendar.png';
   static const String money = '${_dir}money_bag.png';
   static const String map = '${_dir}world_map.png';
+  static const String bell = '${_dir}bell.png';
   static const String star = '${_dir}star.png';
   static const String pin = '${_dir}pushpin.png';
   static const String photo = '${_dir}camera.png';

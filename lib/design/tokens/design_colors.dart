@@ -57,6 +57,7 @@ class DesignColors {
   static const Color dinnerStart = Color(0xFF6F72CA);
   static const Color dinnerEnd = Color(0xFF1E1466);
   static const Color gold = Color(0xFFB8862E);
+  static const Color amber = Color(0xFFF1B440);
   static const Color hotelStart = Color(0xFF54D3C2);
   static const Color hotelEnd = Color(0xFF2FB5A4);
   static const Color ringLight = Color(0xFF8A98E8);

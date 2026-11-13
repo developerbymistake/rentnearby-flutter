@@ -19,7 +19,6 @@ import '../utils/trip_summary_source.dart';
 import '../utils/trip_summary_text.dart';
 import '../widgets/trip_card.dart';
 import '../widgets/trip_lifecycle_actions.dart';
-import '../widgets/trip_shimmers.dart';
 
 class MyTripsScreen extends StatefulWidget {
   final bool root;
@@ -137,39 +136,49 @@ class _MyTripsScreenState extends State<MyTripsScreen> with TickerProviderStateM
     if (ok) await _ctrl.delete(t.id);
   }
 
+  static final ListingTone _tone = ListingTone.indigo;
+
   @override
   Widget build(BuildContext context) {
+    final top = MediaQuery.paddingOf(context).top;
     final page = Scaffold(
-      backgroundColor: DesignColors.scaffold,
-      body: Column(
-        children: [
-          _buildHeader(context),
-          Expanded(
-            child: RefreshIndicator(
-              color: KitTone.trip.accentDark,
-              onRefresh: _ctrl.load,
-              child: CustomScrollView(
-                controller: _scroll,
-                physics: const AlwaysScrollableScrollPhysics(),
-                slivers: [
-                  _buildOfflineStrip(context),
-                  _buildBody(context),
-                  SliverToBoxAdapter(child: _buildFooter()),
-                ],
+      backgroundColor: ListingPalette.indigo.page,
+      body: KitStatusBar(
+        lightIcons: false,
+        child: Column(
+          children: [
+            SizedBox(height: top),
+            _buildHeader(context),
+            Expanded(
+              child: RefreshIndicator(
+                color: _tone.g2,
+                onRefresh: _ctrl.load,
+                child: CustomScrollView(
+                  controller: _scroll,
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  slivers: [
+                    _buildOfflineStrip(context),
+                    _buildBody(context),
+                    SliverToBoxAdapter(child: _buildFooter()),
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
     return widget.root ? TabEntrance(tab: AppTabs.trips, child: page) : page;
   }
 
-  Widget _buildHeader(BuildContext context) => ModuleHeader(
-        title: TripStrings.myTrips,
-        tone: KitTone.trip,
-        tabRoot: widget.root,
-        onBack: widget.root ? null : () => Get.back(),
+  Widget _buildHeader(BuildContext context) => MediaQuery.withClampedTextScaling(
+        maxScaleFactor: 1.3,
+        child: widget.root
+            ? ModuleTitleBar(tone: _tone, art: ListingArt.luggage, title: TripStrings.myTrips)
+            : Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: TopBar3D(tone: _tone, title: TripStrings.myTrips, onBack: () => Get.back()),
+              ),
       );
 
   Widget _enter(int i, Widget child, [int total = _cap]) {
@@ -193,39 +202,33 @@ class _MyTripsScreenState extends State<MyTripsScreen> with TickerProviderStateM
         onMarkComplete: past && !t.isCompleted ? () => TripLifecycleActions.markCompleteFromList(context, t) : null,
       );
 
-  Widget _groupLabel(String text) => Padding(
-        padding: const EdgeInsets.fromLTRB(0, 16, 0, 8),
-        child: Text(
-          text,
-          style: TypeTokens.style(14, FontWeight.w700, color: TypeTokens.secondary, letterSpacing: 0.3),
-        ),
-      );
+  Widget _groupLabel(String text) => TitleRow3D(title: text, tone: _tone);
 
-  Widget _pastToggle(int n) => InkWell(
+  Widget _pad(Widget child, [double top = 0]) =>
+      Padding(padding: EdgeInsets.fromLTRB(18, top, 18, 0), child: child);
+
+  Widget _pastToggle(int n) => _pad(InkWell(
         onTap: _ctrl.togglePast,
         borderRadius: CardRadius.chip,
         child: ConstrainedBox(
           constraints: const BoxConstraints(minHeight: 48),
-          child: Padding(
-            padding: EdgeInsets.zero,
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    TripStringsBar.pastTrips(n),
-                    style: TypeTokens.style(14, FontWeight.w700, color: KitTone.trip.accentDark, letterSpacing: 0.3),
-                  ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  TripStringsBar.pastTrips(n),
+                  style: Ink3D.text(16, FontWeight.w600, _tone.text, letterSpacing: 0.4),
                 ),
-                AnimatedRotation(
-                  turns: _ctrl.pastOpen.value ? 0.25 : 0,
-                  duration: const Duration(milliseconds: 200),
-                  child: Icon(Icons.chevron_right_rounded, color: KitTone.trip.accentDark),
-                ),
-              ],
-            ),
+              ),
+              AnimatedRotation(
+                turns: _ctrl.pastOpen.value ? 0.25 : 0,
+                duration: const Duration(milliseconds: 200),
+                child: Icon(Icons.chevron_right_rounded, color: _tone.text),
+              ),
+            ],
           ),
         ),
-      );
+      ));
 
   List<Widget> _pastSection() {
     final known = _ctrl.counts.value.completed;
@@ -235,12 +238,12 @@ class _MyTripsScreenState extends State<MyTripsScreen> with TickerProviderStateM
     if (!_ctrl.pastOpen.value) return out;
     if (_ctrl.past.isEmpty) {
       if (_ctrl.pastLoading.value) {
-        out.add(const TripCardSkeleton());
+        out.add(const WideCardSkeleton());
       } else if (_ctrl.pastFailed.value) {
         out.add(StateCard.error(
           title: TripStrings.tripsFailed,
           message: TripStrings.checkConnection,
-          kit: KitTone.trip,
+          kit: KitTone.brand,
           actionLabel: TripStrings.retry,
           onAction: _ctrl.loadPast,
         ));
@@ -248,16 +251,14 @@ class _MyTripsScreenState extends State<MyTripsScreen> with TickerProviderStateM
         out.add(const StateCard(
           title: TripStringsBar.noPastTrips,
           message: TripStringsBar.noPastSub,
-          kit: KitTone.trip,
+          kit: KitTone.brand,
+          asset: ListingArt.luggage,
         ));
       }
       return out;
     }
     for (final t in _ctrl.past) {
-      out
-        ..add(const SizedBox(height: 4))
-        ..add(_card(t, past: true))
-        ..add(const SizedBox(height: 8));
+      out.add(_card(t, past: true));
     }
     return out;
   }
@@ -265,22 +266,22 @@ class _MyTripsScreenState extends State<MyTripsScreen> with TickerProviderStateM
   Widget _buildBody(BuildContext context) {
     return Obx(() {
       if (_ctrl.plannerOff.value) {
-        return const SliverToBoxAdapter(
-          child: StateCard(
+        return SliverToBoxAdapter(
+          child: const StateCard(
             title: TripStrings.plannerOff,
             message: TripStrings.plannerOffSubtitle,
-            kit: KitTone.trip,
+            kit: KitTone.brand,
+            asset: ListingArt.calendar,
           ),
         );
       }
       final side = _sidePad(context);
       if (_ctrl.active.isEmpty && _ctrl.isLoading.value) {
         return SliverPadding(
-          padding: EdgeInsets.fromLTRB(side, ModuleHeader.contentGap, side, 0),
-          sliver: SliverList.separated(
+          padding: EdgeInsets.fromLTRB(side, 4, side, 0),
+          sliver: SliverList.builder(
             itemCount: 3,
-            separatorBuilder: (_, _) => const SizedBox(height: 12),
-            itemBuilder: (_, _) => const TripCardSkeleton(),
+            itemBuilder: (_, _) => const WideCardSkeleton(),
           ),
         );
       }
@@ -288,18 +289,20 @@ class _MyTripsScreenState extends State<MyTripsScreen> with TickerProviderStateM
       final children = <Widget>[];
       var idx = 0;
       if (groups.inProgress.isEmpty && groups.ready.isEmpty) {
+        children.add(_enter(idx++, _groupLabel(TripStringsBar.inProgress)));
         children.add(_enter(idx++, _ctrl.loadFailed.value
             ? StateCard.error(
                 title: TripStrings.tripsFailed,
                 message: TripStrings.checkConnection,
-                kit: KitTone.trip,
+                kit: KitTone.brand,
                 actionLabel: TripStrings.retry,
                 onAction: _ctrl.load,
               )
             : StateCard(
                 title: TripStringsBar.noActiveTrips,
                 message: TripStrings.noTripsSubtitle,
-                kit: KitTone.trip,
+                kit: KitTone.brand,
+                asset: ListingArt.luggage,
                 onAction: () => TripNavigation.openTripsTab(),
                 actionLabel: TripStrings.planATrip,
               )));
@@ -313,9 +316,7 @@ class _MyTripsScreenState extends State<MyTripsScreen> with TickerProviderStateM
         for (final t in list) {
           final a = templateInterval(_anim, idx < _cap ? idx : _cap - 1, _cap);
           idx++;
-          children
-            ..add(TemplateEntrance(animation: a, animationController: _anim, child: _card(t, animation: a)))
-            ..add(const SizedBox(height: 12));
+          children.add(TemplateEntrance(animation: a, animationController: _anim, child: _card(t, animation: a)));
         }
       }
       children.addAll(_pastSection());
@@ -329,29 +330,8 @@ class _MyTripsScreenState extends State<MyTripsScreen> with TickerProviderStateM
       if (at == null || _ctrl.active.isEmpty) return const SliverToBoxAdapter(child: SizedBox.shrink());
       return SliverToBoxAdapter(
         child: Padding(
-          padding: EdgeInsets.fromLTRB(_sidePad(context), 12, _sidePad(context), 0),
-          child: _enter(0, Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: const BoxDecoration(
-              color: DesignColors.surface,
-              borderRadius: CardRadius.tile,
-              boxShadow: ShadowTokens.elev1,
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.cloud_off_rounded, size: 18, color: DesignColors.textGrey),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    TripStringsA5.offlineCopy(TripFormat.time12Of(at)),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: TypeTokens.style(12, FontWeight.w600, color: DesignColors.textGrey),
-                  ),
-                ),
-              ],
-            ),
-          )),
+          padding: EdgeInsets.symmetric(horizontal: _sidePad(context)),
+          child: _enter(0, DisclaimerBanner(text: TripStringsA5.offlineCopy(TripFormat.time12Of(at)))),
         ),
       );
     });
@@ -359,7 +339,7 @@ class _MyTripsScreenState extends State<MyTripsScreen> with TickerProviderStateM
 
   static double _sidePad(BuildContext context) {
     final w = MediaQuery.sizeOf(context).width;
-    return w > 640 ? (w - 640) / 2 : KitMetrics.gutter;
+    return w > 640 ? (w - 640) / 2 : 0;
   }
 
   Widget _buildFooter() {

@@ -20,11 +20,11 @@ class NearbyHeaderStrip extends StatelessWidget {
     if (h.citiesUnavailable) lines.add('${NearbyStrings.citiesLoadingTitle}. ${NearbyStrings.citiesLoadingBody}');
     if (lines.isEmpty) return const SizedBox.shrink();
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+      padding: const EdgeInsets.fromLTRB(18, 6, 18, 4),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          for (final l in lines) Text(l, style: TypeTokens.caption.copyWith(color: DesignColors.textSecondary)),
+          for (final l in lines) Text(l, style: Ink3D.text(12.5, FontWeight.w500, Ink3D.sub, height: 1.45)),
         ],
       ),
     );

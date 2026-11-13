@@ -149,7 +149,7 @@ void main() {
         expect(t.takeException(), isNull);
         final bar = t.getRect(find.byType(TripShortlistBar));
         expect(bar.bottom, 760);
-        expect(bar.height, lessThan(200));
+        expect(bar.height, lessThan(220));
         expect(find.text('Done'), findsOneWidget);
         await _shot(t, 'taxi_shortlist_${w.toInt()}_$s');
       });

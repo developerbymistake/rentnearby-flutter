@@ -16,23 +16,9 @@ class StaySubmitScreen extends StatefulWidget {
   State<StaySubmitScreen> createState() => _StaySubmitScreenState();
 }
 
-class _StaySubmitScreenState extends State<StaySubmitScreen> with TickerProviderStateMixin {
+class _StaySubmitScreenState extends State<StaySubmitScreen> {
   final _ctrl = StaySetupController.ensure();
-  late final AnimationController _anim = SetupKit.controller(this);
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) SetupKit.play(_anim, context);
-    });
-  }
-
-  @override
-  void dispose() {
-    _anim.dispose();
-    super.dispose();
-  }
+  static final _tone = ListingTone.forest;
 
   Future<void> _edit(String route) async {
     await Get.toNamed(route);
@@ -75,110 +61,58 @@ class _StaySubmitScreenState extends State<StaySubmitScreen> with TickerProvider
   Widget build(BuildContext context) {
     final body = Stack(children: [
       Scaffold(
-        backgroundColor: DesignColors.scaffold,
+        backgroundColor: ListingPalette.forest.page,
         body: Column(children: [
-          StayPageHeader(
-            title: 'Final Submit',
-            onBack: () => Get.back(),
-            asset: SetupAssets.key,
-            animation: templateInterval(_anim, 0, 2),
-          ),
+          StayPageHeader(title: 'Final Submit', subtitle: 'Review and submit', onBack: () => Get.back(), asset: SetupAssets.key),
           Expanded(
             child: Obx(() {
               final s = _ctrl.stay.value;
               return ListView(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.only(bottom: 24),
                 children: [
-                  SetupEntrance(
-                    controller: _anim,
-                    index: 0,
-                    count: 4,
-                    child: SectionTile(
- tone: KitTone.stay,
- margin: const EdgeInsets.only(bottom: 16),
-                      title: 'Check your stay',
-                      child: Column(children: [
-                        if (s != null) ...[
-                          SetupEntrance(
-                            controller: _anim,
-                            index: 1,
-                            count: 4,
-                            child: _summaryRow(
-                                'Basic details',
-                                s.registrationDone ? StayOptionSets.basicSummary(s) : 'Add registration details',
-                                AppRoutes.stayBasicDetails,
-                                SetupAssets.hotel,
-                                SetupKit.sky),
-                          ),
-                          const Divider(height: 1, color: DesignColors.dividerSoft),
-                          SetupEntrance(
-                            controller: _anim,
-                            index: 2,
-                            count: 4,
-                            child: _summaryRow('Rooms', StayOptionSets.roomsSummary(s), AppRoutes.stayRooms,
-                                SetupAssets.bed, SetupKit.rose),
-                          ),
-                          const Divider(height: 1, color: DesignColors.dividerSoft),
-                          SetupEntrance(
-                            controller: _anim,
-                            index: 3,
-                            count: 4,
-                            child: _summaryRow('Rules', StayOptionSets.rulesSummary(s), AppRoutes.stayRules,
-                                SetupAssets.clipboard, SetupKit.sunrise),
-                          ),
-                        ],
-                      ]),
-                    ),
+                  FormSectionCard(
+                    tone: _tone,
+                    art: ListingArt.key,
+                    title: 'Check your stay',
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                      if (s != null) ...[
+                        _summaryRow('Basic details', s.registrationDone ? StayOptionSets.basicSummary(s) : 'Add registration details',
+                            AppRoutes.stayBasicDetails, SetupAssets.hotel,
+                            bad: !s.registrationDone),
+                        _summaryRow('Rooms', StayOptionSets.roomsSummary(s), AppRoutes.stayRooms, SetupAssets.bed),
+                        _summaryRow('Rules', StayOptionSets.rulesSummary(s), AppRoutes.stayRules, SetupAssets.clipboard),
+                      ],
+                    ]),
                   ),
                 ],
               );
             }),
           ),
-          StayFooter(
-            child: Column(mainAxisSize: MainAxisSize.min, children: [
-              Obx(() => PrimaryButton(
- tone: KitTone.stay,
-                    onPressed: _ctrl.isSaving.value || _ctrl.stay.value == null ? null : _submit,
-                    loading: _ctrl.isSaving.value,
-                    label: 'Submit',
-                  )),
-              const SizedBox(height: 8),
-              Text('Dashboard opens after submit', style: TripKit.text(12, color: DesignColors.textSecondary)),
-            ]),
-          ),
         ]),
+        bottomNavigationBar: Obx(() => FormFooter(
+              tone: _tone,
+              primaryLabel: 'Submit',
+              onPrimary: _ctrl.isSaving.value || _ctrl.stay.value == null ? null : _submit,
+              primaryLoading: _ctrl.isSaving.value,
+              note: 'Dashboard opens after submit',
+            )),
       ),
-      Obx(() => _ctrl.isSaving.value ? const StayBusy(message: 'Submitting...') : const SizedBox.shrink()),
+      Obx(() => _ctrl.isSaving.value ? const StayBusy(message: 'Submitting...', art: SetupAssets.key) : const SizedBox.shrink()),
     ]);
     return Obx(() => PopScope(canPop: !_ctrl.isSaving.value, child: body));
   }
 
-  Widget _summaryRow(String title, String summary, String route, String asset, LinearGradient g) => InkWell(
+  Widget _summaryRow(String title, String summary, String route, String asset, {bool bad = false}) => Tap3D(
         onTap: () => _edit(route),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          child: Row(children: [
-            Container(
-              width: 40,
-              height: 40,
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(shape: BoxShape.circle, gradient: g),
-              child: Image.asset(asset),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(title, style: TripKit.text(14)),
-                const SizedBox(height: 2),
-                Text(summary,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: TripKit.text(12, color: DesignColors.textGrey)),
-              ]),
-            ),
-            const SizedBox(width: 8),
-            Text('Edit', style: TripKit.text(13, weight: FontWeight.w600, color: DesignColors.primary)),
-          ]),
+        child: SummaryRow3D(
+          tone: _tone,
+          art: asset,
+          title: title,
+          detail: summary,
+          detailBad: bad,
+          actionLabel: 'Edit',
+          onAction: () => _edit(route),
+          divider: true,
         ),
       );
 }

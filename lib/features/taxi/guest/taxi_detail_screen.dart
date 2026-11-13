@@ -1,12 +1,10 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import '../../../controllers/auth_controller.dart';
 import '../../../controllers/report_controller.dart';
 import '../../../design/design.dart';
-import '../../../design/extra/taxi_setup_kit.dart';
-import '../../../design/extra/trip_plan_look.dart';
+import '../../../design/extra/ext_details.dart';
 import '../../../models/browse_item.dart';
 import '../../../services/listing_share_service.dart';
 import '../../../utils/app_toast.dart';
@@ -18,10 +16,9 @@ import '../models/taxi_owner_model.dart';
 import '../taxi_option_sets.dart';
 import 'taxi_browse_repository.dart';
 
-const _kDivider = Padding(
-  padding: EdgeInsets.symmetric(vertical: 10),
-  child: Divider(height: 1, color: DesignColors.dividerSoft),
-);
+final _kTone = ListingTone.coral;
+final _kPage = ListingPalette.coral.page;
+final _kRouteTones = [ListingTone.cB, ListingTone.cD, ListingTone.cC];
 
 class TaxiDetailScreen extends StatefulWidget {
   const TaxiDetailScreen({super.key});
@@ -32,7 +29,7 @@ class TaxiDetailScreen extends StatefulWidget {
 class _TaxiDetailScreenState extends State<TaxiDetailScreen> with TickerProviderStateMixin {
   final _auth = Get.find<AuthController>();
   final _isSharing = false.obs;
-  late final AnimationController _anim = SetupKit.controller(this);
+  late final AnimationController _anim;
   late final String _id;
   int? _matchedFare;
   String? _matchedToName;
@@ -40,12 +37,23 @@ class _TaxiDetailScreenState extends State<TaxiDetailScreen> with TickerProvider
   TaxiDetailModel? _taxi;
   bool _loading = true;
   bool _notFound = false;
+  final _scroll = ScrollController();
+  final _barOn = ValueNotifier<bool>(false);
 
   bool get _isOwner => _taxi != null && _auth.user.value?.id == _taxi!.userId;
+
+  double _heroHeight(BuildContext context) => 242 + MediaQuery.paddingOf(context).top;
+
+  void _onScroll() {
+    if (!_scroll.hasClients) return;
+    final on = _scroll.offset > _heroHeight(context) - DetailTopBar.heightOf(context) - 26;
+    if (on != _barOn.value) _barOn.value = on;
+  }
 
   @override
   void initState() {
     super.initState();
+    _anim = SetupKit.controller(this);
     final args = Get.arguments;
     if (args is Map) {
       _id = args['id'] as String;
@@ -57,12 +65,16 @@ class _TaxiDetailScreenState extends State<TaxiDetailScreen> with TickerProvider
     } else {
       _id = args as String;
     }
+    _scroll.addListener(_onScroll);
     _load();
   }
 
   @override
   void dispose() {
     _anim.dispose();
+    _scroll.removeListener(_onScroll);
+    _scroll.dispose();
+    _barOn.dispose();
     super.dispose();
   }
 
@@ -90,7 +102,10 @@ class _TaxiDetailScreenState extends State<TaxiDetailScreen> with TickerProvider
       }
     } catch (e) {
       final status = e is DioException ? e.response?.statusCode : null;
-      if (status != 401 && status != 404) AppToast.error(DioErrorMapper.toMessage(e, 'Could not load the taxi.'));
+      if (status != 401 && status != 404) {
+        final message = DioErrorMapper.toMessage(e, 'Could not load the taxi.');
+        if (!ToastLane.showInHost(ToastKind.error, message)) AppToast.error(message);
+      }
       if (mounted) {
         setState(() {
           _notFound = status == 404;
@@ -121,261 +136,151 @@ class _TaxiDetailScreenState extends State<TaxiDetailScreen> with TickerProvider
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: DesignColors.scaffold,
+    return Stack(children: [
+      Scaffold(
+      backgroundColor: _kPage,
       body: Stack(children: [
-        _loading ? _buildLoader() : _buildContent(),
-        Obx(() => _isSharing.value ? const SetupBusy(message: 'Sharing...') : const SizedBox.shrink()),
+        Column(children: [
+          ToastSlot(
+            margin: EdgeInsets.fromLTRB(
+                18, !_loading && _taxi != null ? DetailTopBar.heightOf(context) + 14 : MediaQuery.paddingOf(context).top + 64, 18, 0),
+          ),
+          Expanded(child: _loading ? _buildLoader() : _buildContent()),
+        ]),
+        if (!_loading && _taxi != null) _topBar(_taxi!) else _backAt(context, strong: _taxi == null && !_loading),
       ]),
       bottomNavigationBar: _loading || _taxi == null ? null : _buildActionBar(),
-    );
+      ),
+      Obx(() => _isSharing.value ? Positioned.fill(child: DetailSharingOverlay(tone: _kTone)) : const SizedBox.shrink()),
+    ]);
   }
 
-  Widget _backButton({EdgeInsets margin = EdgeInsets.zero}) => GestureDetector(
-        onTap: () => Get.back(),
-        child: Container(
-          margin: margin,
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(color: FitnessAppTheme.nearlyBlack.withValues(alpha: Alpha.soft), shape: BoxShape.circle),
-          child: const Icon(Icons.arrow_back_ios_new_rounded, color: FitnessAppTheme.white, size: 18),
-        ),
+  Widget _backAt(BuildContext context, {bool strong = false}) => Positioned(
+        top: MediaQuery.paddingOf(context).top + 10,
+        left: 14,
+        child: DetailGlassButton(onTap: () => Get.back(), dark: true, strong: strong),
       );
 
-  Widget _buildLoader() => AnnotatedRegion<SystemUiOverlayStyle>(
-        value: const SystemUiOverlayStyle(
-          statusBarColor: Colors.transparent,
-          statusBarIconBrightness: Brightness.dark,
-          statusBarBrightness: Brightness.light,
-        ),
-        child: Stack(
-          children: [
-            SingleChildScrollView(
-              physics: const NeverScrollableScrollPhysics(),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  TemplatePlaceholder(height: 220 + MediaQuery.of(context).padding.top, radius: 0),
-                  const Padding(
-                    padding: EdgeInsets.all(20),
-                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      TemplatePlaceholder(height: 28, radius: 8),
-                      SizedBox(height: 16),
-                      TemplatePlaceholder(height: 140, radius: 8),
-                      SizedBox(height: 16),
-                      TemplatePlaceholder(height: 120, radius: 8),
-                    ]),
-                  ),
-                ],
-              ),
-            ),
-            Positioned(top: MediaQuery.of(context).padding.top + 8, left: 8, child: _backButton()),
-          ],
-        ),
+  Widget _buildLoader() => KitStatusBar(
+        lightIcons: false,
+        child: Stack(children: [
+          DetailSkeleton(heroHeight: _heroHeight(context), taxi: true),
+        ]),
       );
 
   Widget _buildContent() {
     if (_taxi == null) {
-      return SafeArea(
+      return KitStatusBar(
+        lightIcons: false,
         child: Stack(children: [
-          TemplateEntrance(
-            animation: templateInterval(_anim, 0, 1),
-            animationController: _anim,
-            child: _notFound
-                ? const StateCard(
-                    title: 'Taxi not found',
-                    message: 'It may be offline now',
-                    kit: KitTone.taxi,
-                    asset: TravelIcon.taxi,
-                  )
-                : StateCard.error(
-                    title: "Couldn't load the taxi",
-                    message: 'Please try again',
-                    kit: KitTone.taxi,
-                    actionLabel: 'Retry',
-                    onAction: _retry,
-                  ),
+          Positioned.fill(
+            child: TemplateEntrance(
+              animation: templateInterval(_anim, 0, 1),
+              animationController: _anim,
+              child: _notFound
+                  ? DetailStateView(
+                      tone: _kTone,
+                      art: ListingArt.taxi,
+                      title: 'Taxi not found',
+                      message: 'It may be offline now',
+                    )
+                  : DetailStateView(
+                      tone: _kTone,
+                      art: ListingArt.taxi,
+                      title: "Couldn't load the taxi",
+                      message: 'Please try again',
+                      actionLabel: 'Retry',
+                      onAction: _retry,
+                    ),
+            ),
           ),
-          Positioned(top: 8, left: 8, child: _backButton()),
         ]),
       );
     }
     final t = _taxi!;
     final matched = _matchedFare != null && _matchedToName != null;
     final category = TaxiOptionSets.categoryLabel(t.vehicleCategory);
+    final kind = (category.isNotEmpty ? category : t.vehicleTypeName).replaceAll(' ', ' ');
     final sections = <Widget>[
-      if (_isOwner && !t.isAvailable) _banner('Hidden from search'),
-      _titleBlock(
-        title: '${t.driverName} · ${category.isNotEmpty ? category : t.vehicleTypeName}',
+      if (_isOwner && !t.isAvailable) const DetailHiddenBanner(text: 'Hidden from search'),
+      DetailTitleCard(
+        tone: _kTone,
+        eyebrow: 'TAXI',
+        title: '${t.driverName} · $kind',
         caption: matched ? 'TO ${_matchedToName!.toUpperCase()}' : 'FROM',
         value: matched ? BrowseItem.inr(_matchedFare!) : (t.minFare != null ? BrowseItem.inr(t.minFare!) : 'On request'),
+        compact: true,
       ),
       _vehicleCard(t),
       if (t.routes.isNotEmpty)
-        Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          _sectionTitle('Routes and fares'),
-          const SizedBox(height: 8),
-          _routesCard(t),
+        Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          const TitleRow3D(title: 'Routes and fares'),
+          ..._routeCards(t),
         ]),
-      Row(children: [
-        const Icon(Icons.schedule_rounded, size: 16, color: FitnessAppTheme.deactivatedText),
-        const SizedBox(width: 6),
-        Expanded(
-          child: Text('Posted ${_timeAgo(t.createdAt)}',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TripKit.text(12, color: FitnessAppTheme.deactivatedText)),
-        ),
-      ]),
+      DetailPosted(text: 'Posted ${_timeAgo(t.createdAt)}'),
     ];
-    return CustomScrollView(
-      slivers: [
-        SliverAppBar(
-          expandedHeight: 220,
-          pinned: true,
-          backgroundColor: KitTone.taxi.accent,
-          bottom: const PreferredSize(
-            preferredSize: Size.fromHeight(24),
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: DesignColors.scaffold,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-              ),
-              child: SizedBox(height: 24, width: double.infinity),
-            ),
-          ),
-          leading: _backButton(margin: const EdgeInsets.all(8)),
-          actions: [
-            if (!_isOwner && t.slug != null)
-              GestureDetector(
-                onTap: () => _share(t),
-                child: Container(
-                  margin: const EdgeInsets.all(8),
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(
-                      color: FitnessAppTheme.nearlyBlack.withValues(alpha: Alpha.soft), borderRadius: BorderRadius.circular(24)),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.ios_share_rounded, color: FitnessAppTheme.white, size: 18),
-                      const SizedBox(width: 6),
-                      Text('Share', style: TripKit.text(13, weight: FontWeight.w600, color: FitnessAppTheme.white)),
-                    ],
-                  ),
-                ),
-              ),
-          ],
-          flexibleSpace: FlexibleSpaceBar(
-            background: Container(
-              decoration: BoxDecoration(gradient: KitTone.taxi.gradient),
-              child: FadeTransition(
-                opacity: templateInterval(_anim, 0, 2),
-                child: Center(
-                  child: Container(
-                    width: 150,
-                    height: 150,
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                        color: FitnessAppTheme.nearlyWhite.withValues(alpha: Alpha.soft), shape: BoxShape.circle),
-                    child: Image.asset(TaxiVehicleIcon.assetFor(t.vehicleTypeName)),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              for (var i = 0; i < sections.length; i++) ...[
-                if (i > 0) const SizedBox(height: 16),
+    return KitStatusBar(
+      child: CustomScrollView(
+        controller: _scroll,
+        physics: const BouncingScrollPhysics(),
+        slivers: [
+          SliverToBoxAdapter(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              _hero(t),
+              for (var i = 0; i < sections.length; i++)
                 TemplateEntrance(
                   animation: templateInterval(_anim, i, sections.length),
                   animationController: _anim,
                   child: sections[i],
                 ),
-              ],
-              const SizedBox(height: 20),
+              const SizedBox(height: 28),
             ]),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
-  Widget _titleBlock({required String title, required String caption, required String value}) =>
-      Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Row(mainAxisSize: MainAxisSize.min, children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                decoration: BoxDecoration(color: KitTone.taxi.accentDark, borderRadius: BorderRadius.circular(8)),
-                child: Text('TAXI',
-                    style: TripKit.text(10, weight: FontWeight.w800, color: FitnessAppTheme.white)
-                        .copyWith(letterSpacing: 0.6)),
-              ),
-              const SizedBox(width: 8),
-              TravelIcon(TaxiVehicleIcon.assetFor(_taxi?.vehicleTypeName), size: 22),
-            ]),
-            const SizedBox(height: 8),
-            Text(title,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: TripKit.text(22, weight: FontWeight.w700).copyWith(letterSpacing: 0.27)),
-          ]),
-        ),
-        const SizedBox(width: 12),
-        Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 130),
-            child: Text(caption,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TripKit.text(11, weight: FontWeight.w600, color: FitnessAppTheme.lightText)),
+  Widget _topBar(TaxiDetailModel t) => Positioned(
+        top: 0,
+        left: 0,
+        right: 0,
+        child: ValueListenableBuilder<bool>(
+          valueListenable: _barOn,
+          builder: (context, on, _) => DetailTopBar(
+            tone: _kTone,
+            coloured: true,
+            showBackground: on,
+            onBack: () => Get.back(),
+            onShare: !_isOwner && t.slug != null ? () => _share(t) : null,
           ),
-          Text(value, style: TripKit.text(24, color: PickKit.gold)),
-        ]),
-      ]);
-
-  Widget _banner(String text) => Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        decoration: BoxDecoration(color: TripLook.neutralChip, borderRadius: BorderRadius.circular(24)),
-        child: Text(text, style: TripKit.text(13, weight: FontWeight.w600, color: FitnessAppTheme.grey)),
+        ),
       );
 
-  BoxDecoration get _cardDecoration => BoxDecoration(
-        color: FitnessAppTheme.white,
-        borderRadius: CardRadius.tile,
-        boxShadow: ShadowTokens.elev2,
+  Widget _hero(TaxiDetailModel t) => SizedBox(
+        height: _heroHeight(context),
+        child: Stack(clipBehavior: Clip.none, children: [
+          Positioned.fill(child: DetailHeroArt(tone: _kTone, art: TaxiVehicleIcon.assetFor(t.vehicleTypeName))),
+          Positioned(left: 0, right: 0, bottom: -1, child: DetailEdge(page: _kPage)),
+        ]),
       );
 
   String _baseCity(TaxiDetailModel t) =>
       t.cityName?.isNotEmpty == true ? t.cityName! : (t.districtName?.isNotEmpty == true ? t.districtName! : '');
 
   Widget _vehicleCard(TaxiDetailModel t) {
-    final rows = <Widget>[
-      if (t.plateDisplay.isNotEmpty) _infoRow(TravelIcon.note, 'Number plate', t.plateDisplay),
-      if (t.seats != null) _infoRow(TaxiSetupKit.car, 'Seats', '${TaxiOptionSets.seatsLabel(t.seats!)} seats'),
-      _infoRow(TravelIcon.place, 'Base', _baseCity(t)),
+    final rows = <DetailInfo>[
+      if (t.plateDisplay.isNotEmpty) DetailInfo(ListingArt.clipboard, 'Number plate', t.plateDisplay),
+      if (t.seats != null) DetailInfo(DetailArt.automobile, 'Seats', '${TaxiOptionSets.seatsLabel(t.seats!)} seats'),
+      DetailInfo(ListingArt.roundPushpin, 'Base', _baseCity(t)),
       if (t.localDayRate != null)
-        _infoRow(TravelIcon.route, 'Local sightseeing',
+        DetailInfo(ListingArt.worldMap, 'Local sightseeing',
             '${TaxiOptionSets.localRateLabel(t.localDayRate!)}${t.localDayKm != null ? ' · ${t.localDayKm} km/day' : ''}'),
     ];
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: _cardDecoration,
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        _sectionTitle('Vehicle'),
-        const SizedBox(height: 12),
-        for (var i = 0; i < rows.length; i++) ...[
-          if (i > 0) _kDivider,
-          rows[i],
-        ],
-      ]),
-    );
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      const TitleRow3D(title: 'Vehicle'),
+      DetailInfoCard(tone: _kTone, rows: rows, top: 0),
+    ]);
   }
 
   bool _isMatchedRoute(TaxiRouteModel r) {
@@ -385,73 +290,19 @@ class _TaxiDetailScreenState extends State<TaxiDetailScreen> with TickerProvider
     return r.toName.trim().toLowerCase() == key || r.fromName.trim().toLowerCase() == key;
   }
 
-  Widget _routesCard(TaxiDetailModel t) {
+  List<Widget> _routeCards(TaxiDetailModel t) {
     final matchIndex = t.routes.indexWhere(_isMatchedRoute);
-    return Container(
-      width: double.infinity,
-      clipBehavior: Clip.antiAlias,
-      decoration: _cardDecoration,
-      child: Column(children: [
-        for (var i = 0; i < t.routes.length; i++) ...[
-          if (i > 0) const Divider(height: 1, color: DesignColors.dividerSoft),
-          _routeRow(t.routes[i], highlight: i == matchIndex),
-        ],
-      ]),
-    );
+    return [
+      for (var i = 0; i < t.routes.length; i++)
+        DetailSlimCard(
+          tone: i == matchIndex ? ListingTone.cA : _kRouteTones[i % _kRouteTones.length],
+          art: ListingArt.roundPushpin,
+          title: '${t.routes[i].fromName} to ${t.routes[i].toName}',
+          subtitle: TaxiOptionSets.tripLabel(t.routes[i].tripType),
+          price: BrowseItem.inr(t.routes[i].fare),
+        ),
+    ];
   }
-
-  Widget _routeRow(TaxiRouteModel r, {required bool highlight}) {
-    return Container(
-      color: highlight ? KitTone.taxi.tint : null,
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('${r.fromName} to ${r.toName}',
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TripKit.text(14, weight: FontWeight.w600)),
-              const SizedBox(height: 2),
-              Text(TaxiOptionSets.tripLabel(r.tripType),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TripKit.text(11, color: FitnessAppTheme.lightText)),
-            ]),
-          ),
-          const SizedBox(width: 12),
-          Text(BrowseItem.inr(r.fare), style: TripKit.text(15, weight: FontWeight.w800, color: PickKit.gold)),
-        ],
-      ),
-    );
-  }
-
-  Widget _sectionTitle(String text) =>
-      Text(text, style: TypeTokens.style(16, FontWeight.w700, color: DesignColors.textStrong));
-
-  Widget _infoRow(String asset, String label, String value) => Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            padding: const EdgeInsets.all(6),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: KitTone.taxi.gradient,
-              boxShadow: ShadowTokens.elev1,
-            ),
-            child: Image.asset(asset),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(label, style: TripKit.text(11, color: FitnessAppTheme.lightText)),
-              const SizedBox(height: 2),
-              Text(value.isEmpty ? '-' : value, style: TripKit.text(14)),
-            ]),
-          ),
-        ],
-      );
 
   static String _timeAgo(DateTime dt) {
     final diff = DateTime.now().toUtc().difference(dt.toUtc());
@@ -486,5 +337,53 @@ class _TaxiDetailScreenState extends State<TaxiDetailScreen> with TickerProvider
         palette: templateTaxiPalette,
       );
     });
+  }
+}
+
+class DetailSharingOverlay extends StatelessWidget {
+  const DetailSharingOverlay({super.key, required this.tone, this.message = 'Sharing...'});
+
+  final ListingTone tone;
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () {},
+      onVerticalDragStart: (_) {},
+      child: Semantics(
+        liveRegion: true,
+        container: true,
+        label: message,
+        child: ColoredBox(
+          color: DesignColors.scrim,
+          child: Center(
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(34, 24, 34, 24),
+              decoration: const BoxDecoration(
+                color: DesignColors.surface,
+                borderRadius: BorderRadius.all(Radius.circular(24)),
+                boxShadow: ShadowTokens.elev3,
+              ),
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                SizedBox(
+                  width: 42,
+                  height: 42,
+                  child: CircularProgressIndicator(strokeWidth: 4, color: tone.g2, backgroundColor: DesignColors.tint(tone.haloBase, Alpha.soft)),
+                ),
+                const SizedBox(height: 14),
+                ExcludeSemantics(
+                  child: Material(
+                    type: MaterialType.transparency,
+                    child: Text(message, maxLines: 1, style: Ink3D.text(15, FontWeight.w600, Ink3D.title, letterSpacing: 0)),
+                  ),
+                ),
+              ]),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }

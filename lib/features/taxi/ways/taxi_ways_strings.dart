@@ -3,7 +3,7 @@ import '../../trip/utils/trip_format.dart';
 import '../taxi_option_sets.dart';
 
 class TaxiWaysStrings {
-  static const String title = 'Ways to go';
+  static const String title = 'Taxi ways';
   static String subtitle(String from, String to) => '$from to $to';
   static String dateChip(DateTime d) => TripFormat.shortDate(d);
   static String peopleChip(int n) => '$n people';
@@ -25,19 +25,22 @@ class TaxiWaysStrings {
   static String orPlaces(List<String> places) => places.join(' or ');
   static String bestPlanReason(int changes, int total) =>
       '$changes ${changes == 1 ? 'change' : 'changes'}, about ${BrowseItem.inr(total)}';
+  static const String askEachCar = 'Open an option and ask for each car.';
   static const String noDirect2 = 'No driver goes all the way. The best way is 2 cars.';
   static const String noDirect3 = 'No driver goes all the way, and no 2-car plan exists. This needs 3 cars.';
   static String orInCars(int n) => 'Or in $n cars';
   static String cheaperOneChange(String place) => 'cheaper, one change at $place';
   static String planName(int index) => 'Plan ${String.fromCharCode(65 + index.clamp(0, 25))}';
   static String carsAbout(int n, int total) => '$n cars · about ${BrowseItem.inr(total)}';
+  static String carsChangesAbout(int n, int changes, int total) =>
+      '$n cars · $changes ${changes == 1 ? 'change' : 'changes'} · about ${BrowseItem.inr(total)}';
   static const String oneCar = '1 car';
   static String carsCount(int n) => n <= 1 ? oneCar : '$n cars';
   static String oneCarTotal(int total) => '$oneCar · ${BrowseItem.inr(total)}';
   static const String changeCar = 'change car';
   static const String openJourney = 'Open journey';
   static String moreDrivers(int n) => '+$n more';
-  static String otherDrivers(int n) => '$n other drivers';
+  static String otherDrivers(int n) => n == 1 ? '1 other driver' : '$n other drivers';
   static const String basedHere = 'based here';
   static const String repliesInApp = 'replies in app';
 
@@ -62,6 +65,9 @@ class TaxiWaysStrings {
   static const String payLine = 'Pay each driver directly. Bakhli does not take or hold payment.';
   static const String call = 'Call';
   static String callName(String name) => 'Call $name';
+  static String toPlace(String to) => to.isEmpty ? '' : 'to $to';
+  static const String savePlan = 'Save plan';
+  static String askPlan(int drivers) => drivers <= 1 ? 'Ask this driver' : (drivers == 2 ? 'Ask both drivers' : 'Ask all $drivers drivers');
   static const String useNote = 'Saves the way in your trip. Nobody is contacted.';
   static const String faresNote = 'Fares are listed by drivers. Nobody is booked from this screen.';
   static const String whatsApp = 'WhatsApp';
@@ -93,7 +99,7 @@ class TaxiWaysStrings {
   static const String myJourneys = 'My journeys';
   static const String myJourneysTile = 'My journeys';
   static const String noJourneys = 'No journeys yet';
-  static const String noJourneysBody = 'Save a journey from Ways to go';
+  static const String noJourneysBody = 'Save a journey from Taxi ways';
   static String journeyLine(DateTime date, int cars, int people) =>
       '${TripFormat.shortDate(date)} · $cars ${cars == 1 ? 'car' : 'cars'} · ${TaxiWaysStrings.people(people)}';
   static const String statusReady = 'Ready';

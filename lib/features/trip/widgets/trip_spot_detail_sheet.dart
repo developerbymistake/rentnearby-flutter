@@ -182,23 +182,36 @@ class _TripSpotDetailSheetState extends State<TripSpotDetailSheet>
                   children: [
                     wrap(
                       1,
-                      Column(
+                      Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            spot.title,
-                            style: TypeTokens.style(22, FontWeight.w700,
-                                color: DesignColors.textStrong, letterSpacing: 0.27),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(spot.title, style: Ink3D.text(24, FontWeight.w700, Ink3D.title, height: 1.25)),
+                                const SizedBox(height: 10),
+                                Wrap(
+                                  spacing: 8,
+                                  runSpacing: 8,
+                                  children: [
+                                    _meta(TripSpotCategory.label(spot.category)),
+                                    if (area != null && area.isNotEmpty) _meta(area),
+                                    _meta('~${TripFormat.visit(spot.visitMinutes)}'),
+                                  ],
+                                ),
+                              ],
+                            ),
                           ),
-                          const SizedBox(height: 8),
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: [
-                              _meta(TripSpotCategory.label(spot.category)),
-                              if (area != null && area.isNotEmpty) _meta(area),
-                              _meta('~${TripFormat.visit(spot.visitMinutes)}'),
-                            ],
+                          const SizedBox(width: 10),
+                          Transform.translate(
+                            offset: const Offset(0, -10),
+                            child: Art3D(
+                              asset: TripSpotLook.assetOf(spot.category),
+                              size: 92,
+                              halo: 96,
+                              haloColor: ListingTone.indigo.tint,
+                            ),
                           ),
                         ],
                       ),
@@ -238,20 +251,15 @@ class _TripSpotDetailSheetState extends State<TripSpotDetailSheet>
             widget.onToggle!();
           }
         : null;
+    final tone = ListingTone.indigo;
     return outlined
-        ? SecondaryButton(label: label, onPressed: onTap, tone: KitTone.trip)
-        : PrimaryButton(label: label, onPressed: onTap, tone: KitTone.trip);
+        ? WhitePillButton(tone: tone, label: label, onTap: onTap)
+        : GradientPillButton(tone: tone, label: label, onTap: onTap);
   }
 
   Widget _meta(String label) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-    decoration: const BoxDecoration(
-      color: DesignColors.scaffold,
-      borderRadius: CardRadius.chip,
-    ),
-    child: Text(
-      label,
-      style: TypeTokens.style(12, FontWeight.w600, color: DesignColors.textGrey),
-    ),
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+    decoration: BoxDecoration(color: ListingTone.indigo.tint, borderRadius: CardRadius.pill),
+    child: Text(label, style: Ink3D.text(12.5, FontWeight.w600, ListingTone.indigo.text)),
   );
 }

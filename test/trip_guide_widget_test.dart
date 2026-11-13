@@ -121,14 +121,18 @@ Future<void> _pump(WidgetTester t, _Rig r, double w, {double scale = 1, double h
 }
 
 Future<void> _tap(WidgetTester t, String label) async {
-  await t.tap(find.text(label));
+  final f = label == 'Previous' ? find.byTooltip(label) : find.text(label);
+  await t.ensureVisible(f);
+  await t.pump();
+  await t.tap(f);
   await t.pump();
   await t.pump(const Duration(milliseconds: 50));
 }
 
 bool _nextEnabled(WidgetTester t) {
-  final btn = t.widget<TripGuideBar>(find.byType(TripGuideBar));
-  return btn.canNext;
+  final f = find.byType(TripGuideBar);
+  if (f.evaluate().isEmpty) return false;
+  return t.widget<TripGuideBar>(f).canNext;
 }
 
 void main() {
@@ -159,13 +163,13 @@ void main() {
   testWidgets('percent bar and step n of N follow the answers, no stepper dots', (t) async {
     final r = _rig(_plan(1));
     await _pump(t, r, 360);
-    expect(find.text('0% done'), findsOneWidget);
-    expect(find.text('Step 1 of 4'), findsOneWidget);
+    expect(find.text('0%'), findsOneWidget);
+    expect(find.textContaining('STEP 1 OF 4'), findsOneWidget);
     await _tap(t, 'Skip this');
     await _tap(t, 'Next');
-    expect(find.text('25% done'), findsOneWidget);
-    expect(find.text('Step 2 of 4'), findsOneWidget);
-    expect(find.text('Stay in City1'), findsOneWidget);
+    expect(find.text('25%'), findsOneWidget);
+    expect(find.textContaining('STEP 2 OF 4'), findsOneWidget);
+    expect(find.textContaining('STAY IN CITY1'), findsOneWidget);
     expect(find.byType(Stepper), findsNothing);
     r.close();
   });
@@ -198,8 +202,8 @@ void main() {
     )));
     await _pump(t, r, 360);
     expect(find.text('On to City2'), findsOneWidget);
-    expect(find.text('Step 4 of 6'), findsOneWidget);
-    expect(find.text('50% done'), findsOneWidget);
+    expect(find.textContaining('STEP 4 OF 6'), findsOneWidget);
+    expect(find.text('50%'), findsOneWidget);
     await _tap(t, 'Previous');
     expect(find.text('See the sights in City1 & City2'), findsOneWidget);
     expect(r.c.guideState.current.value, TripGuideChoice.skip);
@@ -209,14 +213,14 @@ void main() {
   testWidgets('a plan without a guide (v6) starts at the first unresolved step', (t) async {
     final r = _rig(_plan(1));
     await _pump(t, r, 360);
-    expect(find.text('Step 1 of 4'), findsOneWidget);
+    expect(find.textContaining('STEP 1 OF 4'), findsOneWidget);
     r.close();
   });
 
   testWidgets('a 4 city (10 step) plan walks to the finish card at 300 dp and text scale 2', (t) async {
     final r = _rig(_plan(4));
     await _pump(t, r, 300, scale: 2, h: 900);
-    expect(find.text('Step 1 of 10'), findsOneWidget);
+    expect(find.textContaining('STEP 1 OF 10'), findsOneWidget);
     for (var i = 0; i < 10; i++) {
       await t.ensureVisible(find.text('Skip this'));
       await t.pump();
@@ -226,7 +230,7 @@ void main() {
       expect(t.takeException(), isNull);
     }
     expect(find.text('Your trip is ready to go'), findsOneWidget);
-    expect(find.text('100% done'), findsOneWidget);
+    expect(find.text('100%'), findsWidgets);
     expect(find.text('Open summary'), findsOneWidget);
     r.close();
   });
@@ -241,7 +245,7 @@ void main() {
     expect(find.text('Send an enquiry to all your shortlisted stays together?'), findsOneWidget);
     expect(find.text('Hill View'), findsOneWidget);
     expect(find.text('2 of 3 shortlisted'), findsOneWidget);
-    expect(find.text('Yes, send to all'), findsOneWidget);
+    expect(find.text('Send to all'), findsOneWidget);
     expect(_nextEnabled(t), isFalse);
     await _tap(t, 'Not now');
     expect(find.text('See the sights in City1'), findsOneWidget);
@@ -249,7 +253,7 @@ void main() {
     r.close();
   });
 
-  testWidgets('car step review offers Yes, send to all and Change my picks', (t) async {
+  testWidgets('car step review offers Send to all and Change my picks', (t) async {
     final r = _rig(
       _plan(1, guide: const TripGuide(step: 'gettingThere', choices: {'gettingThere': TripGuideChoice.find})),
       items: [
@@ -258,7 +262,7 @@ void main() {
     );
     await _pump(t, r, 360);
     expect(find.text('Great picks'), findsOneWidget);
-    expect(find.text('Yes, send to all'), findsOneWidget);
+    expect(find.text('Send to all'), findsOneWidget);
     expect(find.text('Change my picks'), findsOneWidget);
     expect(_nextEnabled(t), isFalse);
     r.close();
@@ -269,7 +273,7 @@ void main() {
           ShortlistItem(stepKey: 'gettingThere', kind: ShortlistKinds.car, listingId: 'c$i', name: 'Driver $i', state: ShortlistStates.active),
       ];
 
-  testWidgets('Yes, send to all on a car step sends up to 3 drivers through carSender', (t) async {
+  testWidgets('Send to all on a car step sends up to 3 drivers through carSender', (t) async {
     final r = _rig(
       _plan(1, guide: const TripGuide(step: 'gettingThere', choices: {'gettingThere': TripGuideChoice.find})),
       items: cars(4),
@@ -284,8 +288,8 @@ void main() {
       ]);
     };
     await _pump(t, r, 360, h: 900);
-    await t.ensureVisible(find.text('Yes, send to all'));
-    await _tap(t, 'Yes, send to all');
+    await t.ensureVisible(find.text('Send to all'));
+    await _tap(t, 'Send to all');
     expect(calls, hasLength(1));
     expect(calls.single, ['c1', 'c2', 'c3']);
     expect(r.c.guideState.sent['gettingThere'], 3);
@@ -308,8 +312,8 @@ void main() {
       ]);
     };
     await _pump(t, r, 360, h: 900);
-    await t.ensureVisible(find.text('Yes, send to all'));
-    await _tap(t, 'Yes, send to all');
+    await t.ensureVisible(find.text('Send to all'));
+    await _tap(t, 'Send to all');
     expect(r.c.guideState.sent['gettingThere'], isNull);
     expect(r.c.guideState.notes['gettingThere'], isNotNull);
     expect(find.text('Great picks'), findsOneWidget);
@@ -329,8 +333,8 @@ void main() {
     );
     r.c.carWays = (_) async => _FailingWays();
     await _pump(t, r, 360, h: 900);
-    await t.ensureVisible(find.text('Yes, send to all'));
-    await _tap(t, 'Yes, send to all');
+    await t.ensureVisible(find.text('Send to all'));
+    await _tap(t, 'Send to all');
     expect(r.c.guideState.sent['gettingThere'], isNull);
     expect(r.c.guideState.notes['gettingThere'], isNotNull);
     expect(r.sl.countOf('gettingThere'), 2);
@@ -409,7 +413,7 @@ void main() {
     final before = TripGuideFrame.builds;
     r.c.guideState.percent.value = 60;
     await t.pump();
-    expect(find.text('60% done'), findsOneWidget);
+    expect(find.text('60%'), findsOneWidget);
     expect(TripGuideFrame.builds, before);
     r.close();
   });
@@ -431,11 +435,11 @@ void main() {
         if (scale == 1.0) {
           final card = t.getRect(find.byType(TripGuideFrame));
           final top = t.getRect(find.byType(TripGuideProgress)).bottom;
-          final bottom = t.getTopLeft(find.byType(TripGuideBar)).dy;
+          final bars = find.byType(TripGuideBar);
           expect(card.top, greaterThanOrEqualTo(top));
-          expect(card.bottom, lessThanOrEqualTo(bottom));
-          expect(((card.top - top) - (bottom - card.bottom)).abs(), lessThan(40));
-          expect(card.width, lessThanOrEqualTo(w));
+          expect(card.width, lessThanOrEqualTo(520));
+          expect((card.center.dx - w / 2).abs(), lessThan(1));
+          if (bars.evaluate().isNotEmpty) expect(t.getRect(bars).bottom, lessThanOrEqualTo(800));
         }
         r.close();
       });

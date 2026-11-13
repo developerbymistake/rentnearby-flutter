@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:bakhli/design/design.dart';
+import 'package:bakhli/design/extra/ext_journeys.dart';
 import 'package:bakhli/design/extra/trip_plan_look.dart';
 import 'package:bakhli/design/extra/ways_kit.dart';
 import '../../../models/place_result_model.dart';
+import '../../../widgets/listing_contact_actions.dart';
 import '../../trip/controllers/trip_plan_controller.dart';
 import '../../trip/controllers/trip_shortlist_controller.dart';
 import '../../trip/models/trip_guide_args.dart';
@@ -14,11 +16,11 @@ import '../../trip/widgets/trip_shortlist_bar.dart';
 import '../../trip/trip_strings_final_aa.dart';
 import '../../trip/trip_strings_guide.dart';
 import '../../trip/widgets/trip_journey_card.dart';
+import '../../trip/widgets/trip_list_look.dart';
 import '../journeys/journey_models.dart';
 import '../journeys/journeys_controller.dart';
 import 'destination_section.dart';
 import 'widgets/journey_driver_card.dart';
-import 'journey_plan_screen.dart';
 import 'models/ask_models.dart';
 import 'models/taxi_ways_models.dart';
 import 'taxi_ways_controller.dart';
@@ -40,8 +42,8 @@ class TaxiWaysFeedScreen extends StatefulWidget {
   @visibleForTesting
   final GuideArgs? debugGuide;
 
-  static const String planOnlyNote =
-      'This journey needs more than one car. Open an option and ask for each car.';
+  static String planOnlyText(int cars) =>
+      '${cars >= 3 ? TaxiWaysStrings.noDirect3 : TaxiWaysStrings.noDirect2} ${TaxiWaysStrings.askEachCar}';
 
   @override
   State<TaxiWaysFeedScreen> createState() => _TaxiWaysFeedScreenState();
@@ -50,6 +52,7 @@ class TaxiWaysFeedScreen extends StatefulWidget {
 class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen>
     with TickerProviderStateMixin {
   static const double _maxWidth = 720;
+  static final Color _page = ListingPalette.coral.page;
 
   final _scroll = ScrollController();
   final _scrolled = ValueNotifier<bool>(false);
@@ -156,25 +159,25 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen>
     final c = _c;
     if (c == null) {
       return Scaffold(
-        backgroundColor: DesignColors.scaffold,
+        backgroundColor: _page,
         body: Column(
           children: [
             WaysTopBar(
               animation: WaysKit.topBar(_ac),
-              child: JourneyPlanScreen.header(
-                context,
-                title: TaxiWaysStrings.title,
+              child: Padding(
+                padding: EdgeInsets.only(top: MediaQuery.paddingOf(context).top),
+                child: TopBar3D(tone: ListingTone.coral, title: TaxiWaysStrings.title, onBack: () => Get.back()),
               ),
             ),
             Expanded(
               child: ListView(
                 children: [
-                  TripPlanEmpty(
-                    image: TravelIcon.route,
+                  JourneyEmpty3D(
+                    art: ListingArt.compass,
                     title: TaxiWaysStrings.noWays,
-                    subtitle: TripStringsA6.waysGoneBody,
-                    onRetry: () => Get.back(),
-                    retryLabel: TripStringsA6.goBack,
+                    body: TripStringsA6.waysGoneBody,
+                    actionLabel: TripStringsA6.goBack,
+                    onAction: () => Get.back(),
                   ),
                 ],
               ),
@@ -184,7 +187,7 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen>
       );
     }
     return Scaffold(
-      backgroundColor: DesignColors.scaffold,
+      backgroundColor: _page,
       bottomNavigationBar: _guide != null
           ? Obx(
               () => c.result.value == null
@@ -205,7 +208,7 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen>
       body: Stack(
         children: [
           RefreshIndicator(
-            color: DesignColors.primary,
+            color: ListingPalette.coral.text,
             onRefresh: c.pullRefresh,
             child: CustomScrollView(
               controller: _scroll,
@@ -248,7 +251,7 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen>
     builder: (_, scrolled, _) => IgnorePointer(
       child: Container(
         height: scrolled ? MediaQuery.paddingOf(context).top : 0,
-        color: KitTone.taxi.gradient.colors.first,
+        color: _page,
       ),
     ),
   );
@@ -274,21 +277,6 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen>
       await c.actions.arrangedMyself();
   }
 
-  Widget _skipButton(VoidCallback onTap) => TextButton(
-    onPressed: onTap,
-    style: TextButton.styleFrom(
-      foregroundColor: DesignColors.primary,
-      minimumSize: const Size(64, 48),
-    ),
-    child: Text(
-      TripStringsGuide.optSkip,
-      style: FitnessAppTheme.title.copyWith(
-        fontSize: 14,
-        color: DesignColors.primary,
-      ),
-    ),
-  );
-
   Widget _arrangeBar(BuildContext context, TaxiWaysController c) =>
       WaysArrangeBar(
         arrangeLabel: TripStringsGuide.optOwn,
@@ -299,85 +287,33 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen>
       );
 
   Widget _header(BuildContext context, TaxiWaysController c) {
-    final top = MediaQuery.paddingOf(context).top;
+    final step = TripGuideStepInfo.of(_guide);
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: ModuleHeader.lightIcons,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 4),
-        decoration: BoxDecoration(
-          gradient: KitTone.taxi.gradient,
-          borderRadius: CardRadius.header,
-          boxShadow: ShadowTokens.glow(KitTone.taxi.glow),
-        ),
-        padding: EdgeInsets.fromLTRB(8, top + 6, 8, 16),
+      value: SystemUiOverlayStyle.dark,
+      child: Padding(
+        padding: EdgeInsets.only(top: MediaQuery.paddingOf(context).top, bottom: 4),
         child: _centred(
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  SizedBox(
-                    width: 44,
-                    height: 44,
-                    child: IconButton(
-                      onPressed: () => Get.back(),
-                      icon: const Icon(
-                        Icons.arrow_back_ios_new_rounded,
-                        color: DesignColors.surface,
-                        size: 20,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 2),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          TaxiWaysStrings.title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: FitnessAppTheme.headline.copyWith(
-                            fontSize: 20,
-                            color: DesignColors.surface,
-                            letterSpacing: 0.27,
-                          ),
-                        ),
-                        if (c.inTrip)
-                          Obx(
-                            () => Text(
-                              TripStringsA6.feedSubtitle(
-                                c.date.value,
-                                c.people.value,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: FitnessAppTheme.caption.copyWith(
-                                fontSize: 12,
-                                color: DesignColors.surface.withValues(
-                                  alpha: Alpha.high,
-                                ),
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                  _journeysButton(),
-                ],
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(10, 6, 10, 0),
+          Obx(() {
+            final r = c.result.value;
+            final from = c.from.value.name.isNotEmpty ? c.from.value.name : (r?.from.name ?? '');
+            final to = r != null && r.to.name.isNotEmpty ? r.to.name : c.to.value.name;
+            return TopBar3D(
+              tone: ListingTone.coral,
+              title: TaxiWaysStrings.title,
+              subtitle: from.isEmpty || to.isEmpty ? '' : TaxiWaysStrings.subtitle(from, to),
+              stepChip: step?.chip,
+              onBack: () => Get.back(),
+              trailing: _guide != null ? null : _journeysButton(),
+              bottom: Padding(
+                padding: const EdgeInsets.fromLTRB(18, 14, 18, 0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Obx(
-                      () => Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        children: [_dateChip(context, c), _peopleStepper(c)],
-                      ),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [_dateChip(context, c), _peopleStepper(c)],
                     ),
                     if (c.lockedDate)
                       Padding(
@@ -386,21 +322,16 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen>
                           TripStringsMcbA2.travelDayOfTrip,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: FitnessAppTheme.caption.copyWith(
-                            fontSize: 11,
-                            color: DesignColors.surface.withValues(
-                              alpha: Alpha.high,
-                            ),
-                          ),
+                          style: Ink3D.text(11, FontWeight.w400, Ink3D.sub, letterSpacing: 0),
                         ),
                       ),
                     const SizedBox(height: 12),
-                    Obx(() => _routeCard(c)),
+                    _routeCard(c),
                   ],
                 ),
               ),
-            ],
-          ),
+            );
+          }),
         ),
       ),
     );
@@ -414,64 +345,46 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen>
       );
       return Tooltip(
         message: TaxiWaysStrings.myJourneys,
-        child: InkResponse(
+        child: RoundIconButton3D(
+          asset: TravelIcon.note,
           onTap: () => TaxiWaysNavigation.openMyJourneys(),
-          radius: 28,
-          child: Container(
-            width: 56,
-            height: 56,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: DesignColors.surfaceAlt.withValues(alpha: Alpha.soft),
-              shape: BoxShape.circle,
-            ),
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                const TravelIcon(TravelIcon.note, size: 28),
-                if (alert)
-                  Positioned(
-                    right: -2,
-                    top: -2,
-                    child: Container(
-                      width: 10,
-                      height: 10,
-                      decoration: BoxDecoration(
-                        color: WaysTokens.confirmEnd,
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: DesignColors.surface,
-                          width: 1.5,
-                        ),
-                      ),
-                    ),
+          semanticsLabel: TaxiWaysStrings.myJourneys,
+          badge: alert
+              ? Container(
+                  width: 12,
+                  height: 12,
+                  decoration: BoxDecoration(
+                    color: WaysTokens.confirmEnd,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: DesignColors.surface, width: 1.5),
                   ),
-              ],
-            ),
-          ),
+                )
+              : null,
         ),
       );
     });
   }
 
-  Widget _pill({required Widget child, VoidCallback? onTap}) => Material(
-    color: DesignColors.surface.withValues(alpha: Alpha.soft),
-    borderRadius: WaysKit.pillRadius,
-    child: InkWell(
-      onTap: onTap,
+  Widget _pill({required Widget child, VoidCallback? onTap}) => DecoratedBox(
+    decoration: const BoxDecoration(
+      color: DesignColors.surface,
       borderRadius: WaysKit.pillRadius,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 44),
-        child: child,
+      boxShadow: Ink3D.softShadow,
+    ),
+    child: Material(
+      type: MaterialType.transparency,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: WaysKit.pillRadius,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 44),
+          child: child,
+        ),
       ),
     ),
   );
 
-  TextStyle get _pillText => FitnessAppTheme.subtitle.copyWith(
-    fontSize: 12.5,
-    fontWeight: FontWeight.w600,
-    color: DesignColors.surface,
-  );
+  TextStyle get _pillText => Ink3D.text(13, FontWeight.w600, Ink3D.body, letterSpacing: 0);
 
   Widget _dateChip(BuildContext context, TaxiWaysController c) {
     final locked = c.lockedDate;
@@ -483,10 +396,10 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen>
           mainAxisSize: MainAxisSize.min,
           children: [
             locked
-                ? const Icon(
+                ? Icon(
                     Icons.lock_rounded,
                     size: 14,
-                    color: DesignColors.surface,
+                    color: ListingTone.coral.text,
                   )
                 : const TravelIcon(TravelIcon.calendar, size: 18),
             const SizedBox(width: 6),
@@ -557,8 +470,8 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen>
           icon,
           size: 18,
           color: enabled
-              ? DesignColors.surface
-              : DesignColors.surface.withValues(alpha: Alpha.half),
+              ? ListingTone.coral.text
+              : Ink3D.hint,
         ),
       ),
     );
@@ -624,7 +537,7 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen>
           overflow: TextOverflow.ellipsis,
           style: FitnessAppTheme.title.copyWith(
             fontSize: 14,
-            color: DesignColors.primary,
+            color: ListingPalette.coral.text,
           ),
         ),
       ],
@@ -686,7 +599,7 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen>
                       style: FitnessAppTheme.caption.copyWith(
                         fontSize: 11.5,
                         fontWeight: FontWeight.w600,
-                        color: DesignColors.primary,
+                        color: ListingPalette.coral.text,
                       ),
                     ),
                   ),
@@ -704,18 +617,24 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen>
     final r = c.result.value;
     if (r == null) {
       if (c.isLoading.value) return _skeleton();
-      return TripPlanEmpty(
-        image: c.isOffline.value ? TravelIcon.map : TravelIcon.route,
+      final empty = JourneyEmpty3D(
+        artSize: MediaQuery.sizeOf(context).height < 700 ? 56 : null,
+        compact: MediaQuery.sizeOf(context).height < 700,
+        art: c.isOffline.value ? ListingArt.worldMap : ListingArt.taxi,
         title: c.isOffline.value
             ? TaxiWaysStrings.offlineTitle
             : (c.tabOff.value
                   ? TaxiWaysStrings.taxisOff
                   : TaxiWaysStrings.loadFailed),
-        subtitle: c.isOffline.value || c.errorText.value.isEmpty
+        body: c.isOffline.value || c.errorText.value.isEmpty
             ? TaxiWaysStrings.offlineBody
             : c.errorText.value,
-        onRetry: c.tabOff.value ? null : c.retry,
-        retryLabel: TaxiWaysStrings.retry,
+        actionLabel: c.tabOff.value ? null : TaxiWaysStrings.retry,
+        onAction: c.tabOff.value ? null : c.retry,
+      );
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [empty, _foot(TaxiWaysStrings.faresNote, center: true)],
       );
     }
     final rows = _ordered(c.rows);
@@ -723,19 +642,22 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen>
     final children = <Widget>[];
     if (c.isLoading.value) {
       children.add(
-        const LinearProgressIndicator(
+        LinearProgressIndicator(
           minHeight: 2,
-          color: DesignColors.primary,
+          color: ListingPalette.coral.text,
           backgroundColor: Colors.transparent,
         ),
       );
     }
     if (c.isOffline.value) children.add(_offlineBanner());
+    final planOnly = r.hasWays && r.allTheWay.isEmpty && r.plans.isNotEmpty;
+    final fares = DisclaimerBanner(text: '${TaxiWaysStrings.faresNote} ${TaxiWaysStrings.payLine}', margin: _bannerMargin);
+    if (r.hasWays && !planOnly) children.add(_enter(fares));
     if (rows.length > 1) {
       children.add(
         _enter(
           Padding(
-            padding: const EdgeInsets.only(top: 12),
+            padding: const EdgeInsets.fromLTRB(_side, 12, _side, 0),
             child: WaysSortChips(value: sort, onChanged: c.setSort),
           ),
         ),
@@ -758,7 +680,7 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen>
       children.add(
         _enter(
           Padding(
-            padding: const EdgeInsets.only(top: 16),
+            padding: EdgeInsets.zero,
             child: _gapCard(context, c, r),
           ),
         ),
@@ -766,21 +688,24 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen>
     } else if (!r.hasWays) {
       children.add(
         _enter(
-          TripPlanEmpty(
-            image: TravelIcon.route,
+          JourneyEmpty3D(
+            art: ListingArt.compass,
+            compact: true,
             title: TaxiWaysStrings.noWays,
-            subtitle: TaxiWaysStrings.noWaysBody(
+            body: TaxiWaysStrings.noWaysBody(
               r.to.name.isNotEmpty ? r.to.name : c.to.value.name,
             ),
           ),
         ),
       );
     } else {
-      if (r.allTheWay.isEmpty && r.plans.isNotEmpty) {
+      if (_guide == null && r.allTheWay.isEmpty && r.plans.isNotEmpty) {
         children.add(
           _enter(
-            _note(
-              r.plans.first.legs.length >= 3
+            DisclaimerBanner(
+              art: ListingArt.taxi,
+              margin: _bannerMargin,
+              text: r.plans.first.legs.length >= 3
                   ? TaxiWaysStrings.noDirect3
                   : TaxiWaysStrings.noDirect2,
             ),
@@ -790,13 +715,11 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen>
       if (_guide != null && r.allTheWay.isEmpty) {
         children.add(
           _enter(
-            Padding(
-              padding: const EdgeInsets.only(top: 12),
-              child: const WaysBanner(
-                icon: Icons.info_outline_rounded,
-                text: TaxiWaysFeedScreen.planOnlyNote,
-                key: ValueKey('plan-only-note'),
-              ),
+            DisclaimerBanner(
+              key: const ValueKey('plan-only-note'),
+              art: ListingArt.taxi,
+              margin: _bannerMargin,
+              text: TaxiWaysFeedScreen.planOnlyText(r.plans.isEmpty ? 2 : r.plans.first.legs.length),
             ),
           ),
         );
@@ -804,9 +727,10 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen>
       children.addAll(_rows(context, c, r, rows, sort));
       final ask = _guide != null ? null : _askTheseButton(context, c, r);
       if (ask != null) children.add(_enter(ask));
+      if (planOnly) children.add(_enter(fares));
     }
     if (!c.inTrip) {
-      children.add(const SizedBox(height: 24));
+      children.add(const SizedBox(height: 8));
       children.add(
         AtDestinationSection(
           cityName: r.to.name.isNotEmpty ? r.to.name : c.to.value.name,
@@ -820,41 +744,29 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen>
         ),
       );
     }
-    children.add(
-      _enter(
-        Padding(
-          padding: const EdgeInsets.fromLTRB(8, 20, 8, 0),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Icon(
-                Icons.info_outline_rounded,
-                size: 15,
-                color: DesignColors.textMuted,
-              ),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text(
-                  '${TaxiWaysStrings.faresNote} ${TaxiWaysStrings.payLine}',
-                  style: FitnessAppTheme.caption.copyWith(fontSize: 11),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
+    if (!r.hasWays) children.add(_foot('${TaxiWaysStrings.faresNote} ${TaxiWaysStrings.payLine}'));
     children.add(
       SizedBox(height: 32 + MediaQuery.viewPaddingOf(context).bottom),
     );
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: children,
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: children,
     );
   }
+
+  Widget _foot(String text, {bool center = false}) => Padding(
+    padding: const EdgeInsets.fromLTRB(22, 22, 22, 0),
+    child: Row(
+      mainAxisAlignment: center ? MainAxisAlignment.center : MainAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Flexible(child: Text(text, textAlign: center ? TextAlign.center : TextAlign.start, style: Ink3D.text(11.5, FontWeight.w400, Ink3D.grey, height: 1.45))),
+      ],
+    ),
+  );
+
+  static const double _side = 16;
+  static const EdgeInsets _bannerMargin = EdgeInsets.fromLTRB(18, 12, 18, 0);
 
   Widget _gapCard(
     BuildContext context,
@@ -863,153 +775,40 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen>
   ) {
     final from = c.from.value.name.isNotEmpty ? c.from.value.name : r.from.name;
     final to = r.to.name.isNotEmpty ? r.to.name : c.to.value.name;
-    final hub = c.gapHub;
-    final busy = c.isLoading.value;
-    final mine = PickButton(
-      label: TripStringsGuide.optOwn,
-      onPressed: busy ? null : () => _arrangeMyself(context, c),
-      height: 48,
-      gradient: PickKit.taxiGradient,
-      shadowColor: PickKit.taxi,
-    );
-    final again = SecondaryButton(
-      label: TripStringsMcbA2.searchAgain,
-      onPressed: busy ? null : c.retry,
-      tone: KitTone.taxi,
-      height: 48,
-    );
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: TripLook.card(radius: TripLook.cardRadius),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  gradient: PickKit.taxiGradient,
-                  shape: BoxShape.circle,
-                  boxShadow: PickKit.shadow(PickKit.taxi),
-                ),
-                child: const TravelIcon(TravelIcon.taxi, size: 26),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      TripStringsMcbA2.noDriverGoes(from, to),
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
-                      style: FitnessAppTheme.title.copyWith(fontSize: 14),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      TripStringsMcbA2.nobodyListed,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: FitnessAppTheme.caption.copyWith(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: DesignColors.primary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Text(
-            TripStringsMcbA2.reachHubThen(hub, to),
-            maxLines: 3,
-            overflow: TextOverflow.ellipsis,
-            style: FitnessAppTheme.body2.copyWith(
-              fontSize: 12.5,
-              color: DesignColors.textGrey,
-              height: 1.35,
-            ),
-          ),
-          const SizedBox(height: 14),
-          LayoutBuilder(
-            builder: (context, box) {
-              if (box.maxWidth < 340) {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [again, const SizedBox(height: 8), mine],
-                );
-              }
-              return Row(
-                children: [
-                  Expanded(child: mine),
-                  const SizedBox(width: 10),
-                  Expanded(child: again),
-                ],
-              );
-            },
-          ),
-          Align(
-            alignment: Alignment.center,
-            child: _skipButton(() => _skipTravel(c)),
-          ),
-        ],
-      ),
+    return JourneyGapCard3D(
+      title: TripStringsMcbA2.noDriverGoes(from, to),
+      tag: TripStringsMcbA2.nobodyListed,
+      body: TripStringsMcbA2.reachHubThen(c.gapHub, to),
+      actionLabel: TripStringsMcbA2.searchAgain,
+      onAction: c.isLoading.value ? null : c.retry,
     );
   }
 
   Widget _skeleton() => Padding(
     key: const ValueKey('list-loading'),
-    padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+    padding: const EdgeInsets.only(top: 12),
     child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (_guide != null)
           Padding(
-            padding: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 22),
             child: Text(
               TripStringsShortlist.loadingTaxis,
-              style: FitnessAppTheme.body2.copyWith(fontSize: 13, color: DesignColors.textGrey),
+              style: Ink3D.text(13, FontWeight.w500, Ink3D.sub, letterSpacing: 0),
             ),
           ),
-        const TemplatePlaceholder(height: 44, radius: 22),
-        const SizedBox(height: 12),
-        _skelCard(72),
-        const SizedBox(height: 12),
-        _skelCard(72),
-        const SizedBox(height: 12),
-        _skelCard(150),
+        const WideCardSkeleton(),
+        const WideCardSkeleton(),
+        const WideCardSkeleton(),
       ],
     ),
   );
 
-  Widget _skelCard(double h) => Container(
-    decoration: TripLook.card(),
-    padding: const EdgeInsets.all(12),
-    child: TemplatePlaceholder(height: h - 24, radius: 14),
-  );
-
   Widget _offlineBanner() => Padding(
-    padding: const EdgeInsets.only(top: 12),
-    child: WaysBanner(
-      icon: Icons.wifi_off_rounded,
+    padding: const EdgeInsets.fromLTRB(_side, 12, _side, 0),
+    child: JourneyBanner3D(
       text: '${TaxiWaysStrings.offlineTitle} · ${TaxiWaysStrings.offlineBody}',
-    ),
-  );
-
-  Widget _note(String text) => Padding(
-    padding: const EdgeInsets.only(top: 14),
-    child: Text(
-      text,
-      style: FitnessAppTheme.body2.copyWith(
-        fontSize: 13,
-        fontWeight: FontWeight.w600,
-        color: DesignColors.textGrey,
-      ),
     ),
   );
 
@@ -1044,6 +843,7 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen>
     final guide = _guide;
     final shortlist = TripShortlistController.to;
     final people = c.people.value;
+    var driverIndex = 0;
     for (final row in rows) {
       final cars = rowCars(row, people);
       if (sort == WaysSort.fewestCars && lastCars != 0 && cars != lastCars) {
@@ -1055,15 +855,19 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen>
         reason = _bestReason(r, row);
         if (reason != null) bestShown = true;
       }
-      out.add(const SizedBox(height: 12));
       if (row is WayDriver) {
+        final tone = ListingTone.list(ListingTone.coral, driverIndex++);
         WayDriverRow build() => WayDriverRow(
+          tone: tone,
           key: ValueKey('d-${row.taxiId}'),
           driver: row,
           people: people,
           bestReason: reason,
           onTap: () => _openDriver(c, r, row),
-          onCall: () => JourneyDriverCard.call(row),
+          onCall: row.hasContact
+              ? () => JourneyDriverCard.call(row)
+              : () => ListingContactActions.call(context, kind: ListingKind.taxi, id: row.taxiId),
+          callBusy: ListingContactActions.isBusy(ListingKind.taxi, row.taxiId),
           onUse: canUse && guide == null
               ? () => _useDriver(context, c, r, row)
               : null,
@@ -1076,7 +880,7 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen>
           noReply: guide != null && _noReply.contains(row.taxiId),
           startName: guide != null ? c.from.value.name : null,
         );
-        out.add(_enter(guide == null ? build() : Obx(build)));
+        out.add(_enter(Obx(build)));
       } else if (row is WayPlan) {
         out.add(
           _enter(
@@ -1091,6 +895,8 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen>
                   : null,
               useBusy: c.busyPlans.contains(row.planKey),
               useNote: canUse && !noteShown && (noteShown = true),
+              onAsk: () => c.actions.askDrivers(context, row),
+              askBusy: c.busyPlans.contains(row.planKey),
             ),
           ),
         );
@@ -1123,20 +929,7 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen>
           );
       }
     }
-    return Padding(
-      padding: const EdgeInsets.only(top: 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            TaxiWaysStrings.orInCars(cars),
-            style: FitnessAppTheme.title.copyWith(fontSize: 16),
-          ),
-          if (sub != null)
-            Text(sub, style: FitnessAppTheme.caption.copyWith(fontSize: 12)),
-        ],
-      ),
-    );
+    return TitleRow3D(title: TaxiWaysStrings.orInCars(cars), subtitle: sub, tone: ListingTone.coral);
   }
 
   List<WayDriver> _companions(TaxiWaysResult r, WayDriver first) {
@@ -1220,7 +1013,7 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen>
     final drivers = _basedHereFirst(r.allTheWay).take(3).toList();
     final busy = c.busyPlans.isNotEmpty;
     return Padding(
-      padding: const EdgeInsets.only(top: 14),
+      padding: const EdgeInsets.fromLTRB(_side, 14, _side, 0),
       child: JourneyAskButton(
         label: JourneyAskButton.labelFor(drivers.length, these: true),
         busy: busy,

@@ -97,7 +97,7 @@ void main() {
     await _open(t);
     expect(find.text('Taxis near you'), findsNWidgets(2));
     expect(find.text('Based near Haldwani. About 5 km away'), findsOneWidget);
-    expect(find.text('Nainital, Uttarakhand. About 25 km away'), findsOneWidget);
+    expect(find.textContaining('Nainital, Uttarakhand. About 25 km away'), findsOneWidget);
     expect(find.textContaining('Ask for a price'), findsNothing);
     expect(t.takeException(), isNull);
   });
@@ -111,7 +111,7 @@ void main() {
     await _open(t);
     expect(find.text('Nearest taxis'), findsOneWidget);
     expect(find.text('We are live in Uttarakhand and Himachal Pradesh'), findsOneWidget);
-    expect(find.text('Haridwar, Uttarakhand. About 210 km away'), findsOneWidget);
+    expect(find.textContaining('Haridwar, Uttarakhand. About 210 km away'), findsOneWidget);
     expect(find.textContaining('near you'), findsNothing);
   });
 

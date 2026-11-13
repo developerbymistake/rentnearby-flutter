@@ -5,8 +5,6 @@ import '../../../services/storage_service.dart';
 import '../../../utils/dio_error_mapper.dart';
 import '../../../utils/input_formatters.dart';
 import '../data/trip_city_catalog.dart';
-import '../data/trip_popular_routes.dart';
-import '../../../utils/search_fold.dart';
 import '../data/trip_repository.dart';
 import '../models/trip_city_model.dart';
 import '../../../utils/app_toast.dart';
@@ -125,11 +123,12 @@ class TripCitySheet extends StatefulWidget {
     return showModalBottomSheet<TripCityPick>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: DesignColors.surface,
+      backgroundColor: DesignColors.scaffold,
       barrierColor: DesignColors.scrim,
       elevation: 0,
+      clipBehavior: Clip.antiAlias,
       constraints: const BoxConstraints(maxWidth: 640),
-      shape: const RoundedRectangleBorder(borderRadius: CardRadius.sheet),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(32))),
       builder: (_) => TripCitySheet(mode: mode, afterCity: afterCity, inTrip: inTrip),
     );
   }
@@ -152,8 +151,6 @@ class _TripCitySheetState extends State<TripCitySheet> {
   late final TripCityCatalog _catalog;
 
   List<TripCityModel> _items = const [];
-  List<({TripCityModel from, TripCityModel to})> _routes = const [];
-  List<TripCityModel> _nextStops = const [];
   String _query = '';
   bool _loading = false;
   _LoadError _error = _LoadError.none;
@@ -192,49 +189,12 @@ class _TripCitySheetState extends State<TripCitySheet> {
     Navigator.pop(context, TripCityPick(_picked.first, cities: List.of(_picked)));
   }
 
-  bool _routeOn(({TripCityModel from, TripCityModel to}) r) =>
-      _picked.length == 2 && _picked[0].cityKey == r.from.cityKey && _picked[1].cityKey == r.to.cityKey;
-
-  void _toggleRoute(({TripCityModel from, TripCityModel to}) r) {
-    setState(() {
-      final on = _routeOn(r);
-      _picked.clear();
-      if (!on) _picked.addAll([r.from, r.to]);
-      _expanded = null;
-    });
-  }
-
-  void _refreshSuggestions() {
-    final all = _catalog.search('');
-    if (!_add) {
-      _routes = TripPopularRoutes.resolve(all);
-      _nextStops = const [];
-      return;
-    }
-    _routes = const [];
-    final key = _afterKey(all);
-    _nextStops = key == null ? const [] : TripPopularRoutes.nextStops(all, key);
-  }
-
-  int? _afterKey(List<TripCityModel> all) {
-    final name = SearchFold.fold(widget.afterCity);
-    if (name.isEmpty) return null;
-    int? fallback;
-    for (final c in all) {
-      if (SearchFold.fold(c.name) != name) continue;
-      if (widget.inTrip.contains(c.cityKey)) return c.cityKey;
-      fallback ??= c.cityKey;
-    }
-    return fallback;
-  }
-
   @override
   void initState() {
     super.initState();
     _catalog = TripCityCatalog.to;
     _catalog.warmFromDisk();
     _items = _catalog.search('');
-    _refreshSuggestions();
     _loading = _items.isEmpty;
     _load();
   }
@@ -268,14 +228,12 @@ class _TripCitySheetState extends State<TripCitySheet> {
       setState(() {
         _loading = false;
         _items = _catalog.search(_query);
-        _refreshSuggestions();
       });
     } catch (e) {
       if (!mounted) return;
       setState(() {
         _loading = false;
         _items = _catalog.search(_query);
-        _refreshSuggestions();
         if (_items.isEmpty) {
           _error = DioErrorMapper.errorType(e) == TripErrorTypes.plannerDisabled
               ? _LoadError.plannerOff
@@ -298,7 +256,7 @@ class _TripCitySheetState extends State<TripCitySheet> {
     final baseHeight = _baseHeight ?? media.size.height;
     final baseTopPadding = _baseTopPadding ?? media.padding.top;
     final maxHeight = (baseHeight - baseTopPadding) * 0.94;
-    final sheetHeight = (baseHeight * 0.75).clamp(0.0, maxHeight);
+    final sheetHeight = (baseHeight * 0.94).clamp(0.0, maxHeight);
     return SizedBox(
       height: sheetHeight,
       child: Column(
@@ -309,7 +267,10 @@ class _TripCitySheetState extends State<TripCitySheet> {
           if (!_add && _picked.isNotEmpty) _pickedRow(),
           Expanded(child: _buildBody()),
           if (!_add && _picked.isNotEmpty) _continueBar(),
-          SizedBox(height: 12 + AppInsets.bottomViewPadding(context)),
+          ColoredBox(
+            color: !_add && _picked.isNotEmpty ? DesignColors.surface : DesignColors.scaffold,
+            child: SizedBox(height: 14 + AppInsets.bottomViewPadding(context)),
+          ),
         ],
       ),
     );
@@ -322,56 +283,37 @@ class _TripCitySheetState extends State<TripCitySheet> {
         : TripStringsV2Create.citiesHint;
   }
 
+  static final ListingTone _tone = ListingTone.indigo;
+
   Widget _buildHeader() {
+    final narrow = MediaQuery.sizeOf(context).width < 340;
+    final art = narrow ? 84.0 : 104.0;
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 14, 20, 18),
-      decoration: const BoxDecoration(
-        gradient: TripEntryStyle.gradient,
-        borderRadius: CardRadius.sheet,
-      ),
-      child: Column(
+      constraints: const BoxConstraints(minHeight: 112),
+      padding: EdgeInsets.fromLTRB(22, 22, art + 26, 18),
+      decoration: BoxDecoration(gradient: _tone.gradient),
+      child: Stack(
+        clipBehavior: Clip.none,
         children: [
-          Container(
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: DesignColors.onPrimary.withValues(alpha: Alpha.half),
-              borderRadius: CardRadius.pill,
-            ),
-          ),
-          const SizedBox(height: 14),
-          Row(
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      _add ? TripStringsMcaA2.addACity : TripStrings.planATrip,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontFamily: FitnessAppTheme.fontName,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0.27,
-                        color: DesignColors.onPrimary,
-                      ),
-                    ),
-                    Text(
-                      _subtitle,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontFamily: FitnessAppTheme.fontName,
-                        fontSize: 12,
-                        color: DesignColors.onPrimary.withValues(alpha: Alpha.high),
-                      ),
-                    ),
-                  ],
-                ),
+              Text(
+                _add ? TripStringsMcaA2.addACity : TripStrings.planATrip,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Ink3D.text(22, FontWeight.w700, DesignColors.textInverse),
               ),
+              const SizedBox(height: 2),
+              Text(_subtitle, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(12.5, FontWeight.w500, DesignColors.whiteHigh)),
             ],
+          ),
+          Positioned(
+            right: -art - 14,
+            top: -12,
+            child: IgnorePointer(
+              child: Art3D(asset: ListingArt.luggage, size: art, halo: art + 10, haloColor: DesignColors.tint(DesignColors.surface, Alpha.v22)),
+            ),
           ),
         ],
       ),
@@ -380,50 +322,38 @@ class _TripCitySheetState extends State<TripCitySheet> {
 
   Widget _pickedRow() {
     return SizedBox(
-      height: 46,
+      height: 50,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.fromLTRB(20, 4, 20, 6),
+        padding: const EdgeInsets.fromLTRB(18, 4, 18, 8),
         itemCount: _picked.length,
         separatorBuilder: (_, _) => const SizedBox(width: 8),
         itemBuilder: (_, i) {
           final c = _picked[i];
-          return InkWell(
+          return Tap3D(
             onTap: () => _togglePicked(c),
-            borderRadius: CardRadius.tile,
+            label: '${c.name}, ${_SheetText.remove}',
             child: Container(
-              padding: const EdgeInsets.fromLTRB(8, 0, 6, 0),
-              decoration: BoxDecoration(color: TripEntryStyle.accent, borderRadius: CardRadius.tile),
+              padding: const EdgeInsets.fromLTRB(6, 0, 10, 0),
+              decoration: BoxDecoration(
+                gradient: _tone.gradient,
+                borderRadius: CardRadius.pill,
+                boxShadow: [BoxShadow(color: _tone.shadow, offset: const Offset(1, 3), blurRadius: 6)],
+              ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Container(
-                    width: 18,
-                    height: 18,
+                    width: 24,
+                    height: 24,
                     alignment: Alignment.center,
-                    decoration: const BoxDecoration(color: DesignColors.onPrimary, shape: BoxShape.circle),
-                    child: Text(
-                      '${i + 1}',
-                      style: const TextStyle(
-                        fontFamily: FitnessAppTheme.fontName,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        color: TripEntryStyle.accent,
-                      ),
-                    ),
+                    decoration: const BoxDecoration(color: DesignColors.surface, shape: BoxShape.circle),
+                    child: Text('${i + 1}', style: Ink3D.text(12, FontWeight.w700, _tone.text)),
                   ),
-                  const SizedBox(width: 6),
-                  Text(
-                    c.name,
-                    style: const TextStyle(
-                      fontFamily: FitnessAppTheme.fontName,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: DesignColors.onPrimary,
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  const Icon(Icons.close_rounded, size: 14, color: DesignColors.onPrimary),
+                  const SizedBox(width: 8),
+                  Text(c.name, style: Ink3D.text(13, FontWeight.w700, DesignColors.textInverse)),
+                  const SizedBox(width: 4),
+                  const Icon(Icons.close_rounded, size: 16, color: DesignColors.surface),
                 ],
               ),
             ),
@@ -434,41 +364,40 @@ class _TripCitySheetState extends State<TripCitySheet> {
   }
 
   Widget _continueBar() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
-      child: TripGradientButton(
-        label: _SheetText.continueCities(_picked.length),
-        height: 48,
-        onPressed: _continue,
-      ),
+    return Container(
+      padding: const EdgeInsets.fromLTRB(18, 12, 18, 0),
+      decoration: const BoxDecoration(color: DesignColors.surface, boxShadow: Ink3D.topEdge),
+      child: GradientPillButton(tone: _tone, label: _SheetText.continueCities(_picked.length), onTap: _continue),
     );
   }
 
   Widget _buildSearchBox() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 14, 20, 6),
-      child: TextField(
-        controller: _searchCtrl,
-        cursorColor: TripEntryStyle.accent,
-        inputFormatters: noEmojiInputFormatters,
-        onChanged: _onSearch,
-        style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 14),
-        decoration: InputDecoration(
-          hintText: _add ? TripStrings.searchCity : TripStringsV2Create.searchCity,
-          hintStyle: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 14, color: FitnessAppTheme.deactivatedText),
-          prefixIcon: const Icon(Icons.search_rounded, size: 20, color: FitnessAppTheme.deactivatedText),
-          filled: true,
-          fillColor: TripEntryStyle.surface,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          border: const OutlineInputBorder(borderRadius: CardRadius.tile, borderSide: BorderSide.none),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: CardRadius.tile,
-            borderSide: const BorderSide(color: TripEntryStyle.accent, width: 1.5),
-          ),
-        ),
-      ),
+    return SheetSearchField(
+      tone: _tone,
+      controller: _searchCtrl,
+      hint: _add ? TripStrings.searchCity : TripStringsV2Create.searchCity,
+      trailingArt: ListingArt.compass,
+      inputFormatters: noEmojiInputFormatters,
+      onChanged: _onSearch,
+      margin: const EdgeInsets.fromLTRB(18, 16, 18, 8),
     );
   }
+
+  Widget _group(List<Widget> rows) => Container(
+        margin: const EdgeInsets.fromLTRB(18, 0, 18, 6),
+        decoration: BoxDecoration(
+          color: DesignColors.surface,
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(8),
+            bottomLeft: Radius.circular(8),
+            bottomRight: Radius.circular(8),
+            topRight: Radius.circular(28),
+          ),
+          boxShadow: Ink3D.softShadow,
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: rows),
+      );
 
   Widget _buildBody() {
     if (_items.isEmpty) {
@@ -487,23 +416,13 @@ class _TripCitySheetState extends State<TripCitySheet> {
     final browsing = _query.trim().isEmpty;
     if (!browsing) {
       return ListView(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-        children: _stag(_items.map((c) => _cityRow(c)).toList()),
+        padding: const EdgeInsets.only(top: 8, bottom: 8),
+        children: [_group([for (var i = 0; i < _items.length; i++) _cityRow(_items[i], divider: i > 0)])],
       );
     }
-    final nextKeys = {for (final c in _nextStops) c.cityKey};
-    final rest = nextKeys.isEmpty ? _items : _items.where((c) => !nextKeys.contains(c.cityKey)).toList();
-    final from = widget.afterCity?.trim() ?? '';
     return ListView(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      children: _stag([
-        if (_routes.isNotEmpty) ...[_sectionHeader(TripStringsMcaA2.popularRoutes), ..._routes.map(_routeRow)],
-        if (_nextStops.isNotEmpty) ...[
-          _sectionHeader(TripStringsMcaA2.popularNextStops),
-          ..._nextStops.map((c) => _cityRow(c, subtitle: from.isEmpty ? null : TripStringsMcaA2.taxisGoFrom(from))),
-        ],
-        ..._sectionedRows(rest),
-      ]),
+      padding: const EdgeInsets.only(bottom: 8),
+      children: _stag(_sectionedRows(_items)),
     );
   }
 
@@ -512,44 +431,36 @@ class _TripCitySheetState extends State<TripCitySheet> {
           i < 6 ? TemplateEntranceOnce(index: i, count: 6, child: rows[i]) : rows[i],
       ];
 
+  Widget _list(List<TripCityModel> items) => _group([for (var i = 0; i < items.length; i++) _cityRow(items[i], divider: i > 0)]);
+
   List<Widget> _sectionedRows(List<TripCityModel> items) {
     if (!items.any((c) => c.isPopularDestination)) {
-      return [
-        if (_routes.isNotEmpty || _nextStops.isNotEmpty) _sectionHeader(TripStrings.allCities),
-        ...items.map((c) => _cityRow(c)),
-      ];
+      return [if (items.isNotEmpty) _list(items)];
     }
     final popular = items.where((c) => c.isPopularDestination).toList();
     final rest = items.where((c) => !c.isPopularDestination).toList();
     return [
       _sectionHeader(_add ? TripStrings.popular : TripStringsV2Create.popularCities),
-      ...popular.map((c) => _cityRow(c)),
-      if (rest.isNotEmpty) ...[_sectionHeader(TripStrings.allCities), ...rest.map((c) => _cityRow(c))],
+      _list(popular),
+      if (rest.isNotEmpty) ...[_sectionHeader(TripStrings.allCities), _list(rest)],
     ];
   }
 
   Widget _sectionHeader(String text) => Padding(
-    padding: const EdgeInsets.fromLTRB(8, 10, 8, 4),
-    child: Text(
-      text,
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
-      style: const TextStyle(
-        fontFamily: FitnessAppTheme.fontName,
-        fontSize: 14,
-        fontWeight: FontWeight.w500,
-        letterSpacing: 0.5,
-        color: FitnessAppTheme.lightText,
-      ),
-    ),
-  );
+        padding: const EdgeInsets.fromLTRB(22, 12, 22, 8),
+        child: Text(
+          text.toUpperCase(),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: Ink3D.text(11.5, FontWeight.w700, Ink3D.grey, letterSpacing: 0.8),
+        ),
+      );
 
-  Widget _tick() => Container(
-    width: 22,
-    height: 22,
-    decoration: const BoxDecoration(color: TripEntryStyle.accent, shape: BoxShape.circle),
-    child: const Icon(Icons.check_rounded, size: 15, color: DesignColors.onPrimary),
-  );
+  Widget _ring() => Container(
+        width: 28,
+        height: 28,
+        decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: Ink3D.hint, width: 1.5)),
+      );
 
   void _toggle(TripCityModel city) {
     final key = city.cityKey;
@@ -578,175 +489,58 @@ class _TripCitySheetState extends State<TripCitySheet> {
         });
   }
 
-  Widget _routeRow(({TripCityModel from, TripCityModel to}) r) {
-    final on = _routeOn(r);
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 2),
-      decoration: BoxDecoration(
-        color: on ? TripEntryStyle.surface : Colors.transparent,
-        borderRadius: CardRadius.tile,
-      ),
-      child: InkWell(
-        onTap: () => _toggleRoute(r),
-        borderRadius: CardRadius.tile,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 52),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 9),
-            child: Row(
-              children: [
-                Container(
-                  width: 34,
-                  height: 34,
-                  decoration: BoxDecoration(color: TripEntryStyle.surface, borderRadius: CardRadius.tile),
-                  child: const Icon(Icons.alt_route_rounded, size: 18, color: TripEntryStyle.accent),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        TripStringsMcaA2.routeTitle(r.from.name, r.to.name),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontFamily: FitnessAppTheme.fontName,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: FitnessAppTheme.darkerText,
-                        ),
-                      ),
-                      const Text(
-                        TripStringsMcaA2.routeMeta,
-                        style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, color: FitnessAppTheme.lightText),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 8),
-                on
-                    ? const Icon(Icons.check_circle_rounded, size: 22, color: TripEntryStyle.accent)
-                    : const Icon(Icons.chevron_right_rounded, size: 20, color: FitnessAppTheme.deactivatedText),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
+  static String _artOf(TripCityModel c, bool ready) {
+    if (!ready) return ListingArt.tent;
+    const arts = [ListingArt.mountain, ListingArt.camping, ListingArt.beach, ListingArt.sunrise];
+    return arts[c.cityKey.abs() % arts.length];
   }
 
-  Widget _cityRow(TripCityModel city, {String? subtitle}) {
+  Widget _cityRow(TripCityModel city, {bool divider = false}) {
     final ready = city.isReady;
     final inTrip = _add && widget.inTrip.contains(city.cityKey);
     final enabled = !inTrip;
-    final color = enabled ? FitnessAppTheme.darkerText : FitnessAppTheme.deactivatedText;
     final place = inTrip
         ? TripStringsMcaA2.alreadyAdded
         : !ready
         ? TripStringsMcaA2.noPlacesYet
-        : subtitle ?? (!_add && city.spotCount > 0 ? TripStringsV2Create.cityMeta(city.spotCount) : city.placeLine);
+        : (!_add && city.spotCount > 0 ? TripStringsV2Create.cityMeta(city.spotCount) : city.placeLine);
     final picked = !_add && _isPicked(city);
     final open = _add && enabled && _expanded == city.cityKey;
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 2),
-      decoration: BoxDecoration(
-        color: open || picked ? TripEntryStyle.surface : Colors.transparent,
-        borderRadius: CardRadius.tile,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+    final Widget? trailing;
+    if (inTrip) {
+      trailing = Text(TripStringsMcaA2.inThisTrip, style: Ink3D.text(11.5, FontWeight.w600, Ink3D.hint));
+    } else if (!_add) {
+      trailing = picked ? null : _ring();
+    } else {
+      trailing = Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          InkWell(
-            onTap: enabled ? () => _add ? _toggle(city) : _togglePicked(city) : null,
-            borderRadius: CardRadius.tile,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(minHeight: 48),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 11),
-                child: Row(
-                  children: [
-                    TravelIcon(TravelIcon.place, size: 17),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            city.name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontFamily: FitnessAppTheme.fontName,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                              color: color,
-                            ),
-                          ),
-                          if (place.isNotEmpty)
-                            Text(
-                              place,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, color: FitnessAppTheme.lightText),
-                            ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    if (inTrip)
-                      const Text(
-                        TripStringsMcaA2.inThisTrip,
-                        style: TextStyle(
-                          fontFamily: FitnessAppTheme.fontName,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: FitnessAppTheme.deactivatedText,
-                        ),
-                      )
-                    else if (enabled && !_add)
-                      (picked
-                          ? _tick()
-                          : Container(
-                              width: 22,
-                              height: 22,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                border: Border.all(color: FitnessAppTheme.grey.withValues(alpha: Alpha.strong), width: 1.5),
-                              ),
-                            ))
-                    else if (enabled) ...[
-                      if (ready)
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                          decoration: const BoxDecoration(
-                            color: TripEntryStyle.skyTint,
-                            borderRadius: BorderRadius.all(Radius.circular(16.0)),
-                          ),
-                          child: const Text(
-                            TripStringsA4.ready,
-                            style: TextStyle(
-                              fontFamily: FitnessAppTheme.fontName,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: TravelPalette.skyEnd,
-                            ),
-                          ),
-                        ),
-                      Icon(
-                        open ? Icons.expand_less_rounded : Icons.expand_more_rounded,
-                        size: 20,
-                        color: FitnessAppTheme.deactivatedText,
-                      ),
-                    ],
-                  ],
-                ),
-              ),
+          if (ready)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(color: _tone.tint, borderRadius: CardRadius.pill),
+              child: Text(TripStringsA4.ready, style: Ink3D.text(11, FontWeight.w700, _tone.text)),
             ),
-          ),
-          if (open) _supplyPanel(city),
+          Icon(open ? Icons.expand_less_rounded : Icons.expand_more_rounded, size: 22, color: _tone.text),
         ],
-      ),
+      );
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SheetListRow(
+          tone: _tone,
+          art: _artOf(city, ready),
+          title: city.name,
+          subtitle: place.isEmpty ? null : place,
+          selected: picked,
+          enabled: enabled,
+          divider: divider,
+          onTap: enabled ? () => _add ? _toggle(city) : _togglePicked(city) : null,
+          trailing: trailing,
+        ),
+        if (open) _supplyPanel(city),
+      ],
     );
   }
 
@@ -758,46 +552,41 @@ class _TripCitySheetState extends State<TripCitySheet> {
     final String icon;
     if (s != null) {
       line = s.isEmpty ? TripStringsA4.noSupplyLine : TripStringsA4.supplyLine(s.stays, s.drivers);
-      icon = s.isEmpty ? TravelIcon.route : TravelIcon.stay;
+      icon = s.isEmpty ? ListingArt.compass : ListingArt.hotel;
     } else if (failed) {
       line = TripStringsA4.supplyFailed;
-      icon = TravelIcon.map;
+      icon = ListingArt.worldMap;
     } else {
       line = TripStringsA4.supplyChecking;
-      icon = TravelIcon.calendar;
+      icon = ListingArt.calendar;
     }
     return Padding(
-      padding: const EdgeInsets.fromLTRB(37, 0, 8, 10),
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
             children: [
-              TravelIcon(icon, size: 18),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text(
-                  line,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, color: FitnessAppTheme.grey),
-                ),
-              ),
+              Art3D(asset: icon, size: 26, shadowBlur: 2, shadowOffset: const Offset(1, 2)),
+              const SizedBox(width: 8),
+              Expanded(child: Text(line, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(12.5, FontWeight.w500, Ink3D.grey))),
               if (failed)
-                TextButton(
-                  onPressed: () => setState(() => _loadSupply(key)),
-                  style: TextButton.styleFrom(minimumSize: const Size(44, 44)),
-                  child: const Text(
-                    TripStrings.retry,
-                    style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontWeight: FontWeight.w600, color: TripEntryStyle.accent),
+                Tap3D(
+                  onTap: () => setState(() => _loadSupply(key)),
+                  label: TripStrings.retry,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+                    child: Center(child: Text(TripStrings.retry, style: Ink3D.text(13, FontWeight.w700, _tone.text))),
                   ),
                 ),
             ],
           ),
-          const SizedBox(height: 8),
-          TripGradientButton(
-            height: 44,
-            onPressed: () => _add ? Navigator.pop(context, TripCityPick(city)) : _togglePicked(city),
+          const SizedBox(height: 10),
+          GradientPillButton(
+            tone: _tone,
+            height: 46,
+            fontSize: 15,
+            onTap: () => _add ? Navigator.pop(context, TripCityPick(city)) : _togglePicked(city),
             label: _add
                 ? TripStringsMcaA2.addToTrip
                 : _isPicked(city)
@@ -809,77 +598,29 @@ class _TripCitySheetState extends State<TripCitySheet> {
     );
   }
 
-  Widget _loadingIndicator() => Padding(
-    padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-    child: Column(
-      children: [
-        for (var i = 0; i < 6; i++)
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 8),
-            child: Row(
-              children: [
-                TemplatePlaceholder(height: 24, width: 24, radius: 12),
-                SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      FractionallySizedBox(widthFactor: 0.6, child: TemplatePlaceholder(height: 14)),
-                      SizedBox(height: 6),
-                      FractionallySizedBox(widthFactor: 0.35, child: TemplatePlaceholder(height: 10)),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-      ],
-    ),
-  );
+  Widget _loadingIndicator() => ListView(
+        padding: const EdgeInsets.only(top: 14),
+        physics: const NeverScrollableScrollPhysics(),
+        children: [_group([for (var i = 0; i < 5; i++) const SkeletonListRow()])],
+      );
 
-  Widget _emptyState(String message) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 24),
-    child: Center(
-      child: Text(
-        message,
-        textAlign: TextAlign.center,
-        style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 13, color: FitnessAppTheme.lightText),
-      ),
-    ),
-  );
+  Widget _emptyState(String message) => ListView(
+        padding: const EdgeInsets.fromLTRB(0, 20, 0, 20),
+        children: [StateCard3D(tone: _tone, art: ListingArt.compass, layout: StateLayout.plain, title: message)],
+      );
 
-  Widget _messageState(String title, String subtitle, {VoidCallback? onRetry}) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 24),
-    child: Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          title,
-          textAlign: TextAlign.center,
-          style: const TextStyle(
-            fontFamily: FitnessAppTheme.fontName,
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: FitnessAppTheme.darkerText,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          subtitle,
-          textAlign: TextAlign.center,
-          style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 13, color: FitnessAppTheme.lightText),
-        ),
-        if (onRetry != null) ...[
-          const SizedBox(height: 10),
-          TextButton(
-            onPressed: onRetry,
-            child: const Text(
-              TripStrings.retry,
-              style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontWeight: FontWeight.w600, color: TripEntryStyle.accent),
-            ),
+  Widget _messageState(String title, String subtitle, {VoidCallback? onRetry}) => ListView(
+        padding: const EdgeInsets.fromLTRB(0, 20, 0, 20),
+        children: [
+          StateCard3D(
+            tone: _tone,
+            art: onRetry != null ? ListingArt.worldMap : ListingArt.luggage,
+            layout: StateLayout.plain,
+            title: title,
+            message: subtitle,
+            actionLabel: onRetry == null ? null : TripStrings.retry,
+            onAction: onRetry,
           ),
         ],
-      ],
-    ),
-  );
+      );
 }

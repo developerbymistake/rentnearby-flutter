@@ -25,9 +25,8 @@ Widget _cards() => Column(children: [
         roleLabel: 'Kitchen',
         experienceTag: 'Fresher',
         metaLine: 'Stay name · 3d ago',
-        metaIcon: null,
         salaryLabel: '₹12,000',
-        topRightBadge: const KitTagChip('ACTIVE', color: DesignColors.primary),
+        badgeLabel: 'ACTIVE',
         accent: JobsUi.tone.accent,
         accentDark: JobsUi.tone.accentDark,
         onTap: () {},
@@ -41,16 +40,15 @@ Widget _cards() => Column(children: [
         roleLabel: 'Transport',
         experienceTag: '3+ yrs',
         metaLine: 'Closed job',
-        metaIcon: null,
         salaryLabel: '₹20,000',
         salaryUnit: '/month',
-        topRightBadge: const KitTagChip('CLOSED', color: DesignColors.textGrey),
+        badgeLabel: 'CLOSED',
         dimmed: true,
         accent: JobsUi.tone.accent,
         accentDark: JobsUi.tone.accentDark,
         onTap: () {},
       ),
-      ListRow.skeleton(),
+      const WideCardSkeleton(),
     ]);
 
 Widget _chips() => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -92,7 +90,10 @@ void main() {
       for (final entry in {'job_cards': _cards, 'job_chips': _chips}.entries) {
         testWidgets('${entry.key} fits ${w.toInt()}dp at $scale', (t) async {
           setGoldenView(t, Size(w, 1400));
-          await t.pumpWidget(goldenHost(entry.value(), scale: scale));
+          await t.pumpWidget(goldenHost(
+            Builder(builder: (c) => MediaQuery(data: MediaQuery.of(c).copyWith(size: Size(w, 1400)), child: entry.value())),
+            scale: scale,
+          ));
           await settleGolden(t);
           expect(t.takeException(), isNull);
         });

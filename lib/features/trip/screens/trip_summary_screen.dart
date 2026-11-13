@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:bakhli/features/trip/widgets/trip_ui.dart';
 import 'package:bakhli/design/design.dart';
 import 'package:bakhli/design/extra/trip_plan_look.dart';
 import 'package:get/get.dart';
@@ -19,9 +18,7 @@ import '../utils/trip_summary_source.dart';
 import '../utils/trip_summary_text.dart';
 import '../widgets/trip_journey_compact.dart';
 import '../widgets/trip_not_found_view.dart';
-import '../widgets/trip_payment_line.dart';
-import '../widgets/trip_status.dart';
-import '../widgets/trip_status_card.dart';
+import '../widgets/trip_summary_booking_card.dart';
 import '../widgets/trip_summary_day_card.dart';
 import '../widgets/trip_summary_hero.dart';
 import '../widgets/trip_summary_leg_header.dart';
@@ -129,7 +126,7 @@ class _TripSummaryScreenState extends State<TripSummaryScreen> with TickerProvid
     final r = _record;
     final canShare = r != null && !_gone && TripSummaryText.canShare(r);
     return Container(
-      color: FitnessAppTheme.background,
+      color: DesignColors.scaffold,
       child: Scaffold(
         backgroundColor: Colors.transparent,
         body: Column(
@@ -143,52 +140,64 @@ class _TripSummaryScreenState extends State<TripSummaryScreen> with TickerProvid
     );
   }
 
-  Widget _header(BuildContext context, TripSummaryRecord? r) => ModuleHeader(
-        title: TripStrings.summary,
-        subtitle: r != null && !_gone ? TripSummaryText.headerLine(r) : null,
-        subtitleLines: 2,
-        autoHeight: true,
-        tone: KitTone.trip,
-        onBack: () => Get.back(),
+  Widget _header(BuildContext context, TripSummaryRecord? r) => MediaQuery.withClampedTextScaling(
+        maxScaleFactor: 1.3,
+        child: ModuleHeader(
+          title: TripStrings.summary,
+          subtitle: r != null && !_gone ? TripSummaryText.headerLine(r) : null,
+          subtitleLines: 2,
+          autoHeight: true,
+          tone: KitTone.brand,
+          gradient: ListingTone.indigo.gradient,
+          onBack: () => Get.back(),
+        ),
       );
 
-  Widget _column(List<Widget> children, {EdgeInsets padding = const EdgeInsets.fromLTRB(16, 16, 16, 24)}) {
+  Widget _column(List<Widget> children) {
     return Center(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: _maxWidth),
-        child: ListView(padding: padding, children: children),
+        child: ListView(padding: const EdgeInsets.fromLTRB(0, 8, 0, 24), children: children),
       ),
     );
   }
 
   Widget _body(TripSummaryRecord? r) {
+    final tone = ListingTone.indigo;
     if (_gone) return const TripNotFoundView();
     if (_loading && r == null) {
-      return _column([for (var i = 0; i < 3; i++) const TripSkeletonCard()]);
+      return _column([for (var i = 0; i < 3; i++) const WideCardSkeleton()]);
     }
     if (r == null) {
       return _column([
-        TripEmpty(
-          asset: TravelIcon.map,
+        const SizedBox(height: 40),
+        StateCard3D(
+          tone: tone,
+          art: ListingArt.worldMap,
+          layout: StateLayout.plain,
           title: _offline ? TripStrings.noNetworkTitle : TripStrings.couldNotLoad,
-          subtitle: TripStrings.checkConnection,
-          onRetry: _load,
+          message: TripStrings.checkConnection,
+          actionLabel: TripStrings.retry,
+          onAction: _load,
         ),
       ]);
     }
     if (!TripSummaryText.hasContent(r)) {
       return _column([
-        const TripEmpty(
-          asset: TravelIcon.note,
+        const SizedBox(height: 40),
+        StateCard3D(
+          tone: tone,
+          art: ListingArt.clipboard,
+          layout: StateLayout.plain,
           title: TripStringsA5.nothingHere,
-          subtitle: TripStringsA5.nothingHereSub,
+          message: TripStringsA5.nothingHereSub,
         ),
       ]);
     }
     final days = r.days.where((d) => d.spots.isNotEmpty).toList();
     return RefreshIndicator(
-      color: FitnessAppTheme.nearlyDarkBlue,
-      backgroundColor: FitnessAppTheme.white,
+      color: tone.g2,
+      backgroundColor: DesignColors.surface,
       onRefresh: _load,
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
@@ -198,25 +207,17 @@ class _TripSummaryScreenState extends State<TripSummaryScreen> with TickerProvid
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: _maxWidth),
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+                padding: const EdgeInsets.fromLTRB(0, 4, 0, 24),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: _stagger([
-                    if (_cachedAt != null) ...[_offlineStrip(_cachedAt!), const SizedBox(height: 12)],
+                    if (_cachedAt != null) _offlineStrip(_cachedAt!),
                     TripSummaryHero(record: r),
-                    const SizedBox(height: 12),
                     TripSummaryStats(record: r),
-                    const SizedBox(height: 12),
-                    if (r.shownRows.isNotEmpty && !r.isCompleted) ...[
-                      TripSummaryTodo(record: r, onOpen: _openRow),
-                      const SizedBox(height: 12),
-                    ],
+                    if (r.shownRows.isNotEmpty && !r.isCompleted) TripSummaryTodo(record: r, onOpen: _openRow),
                     if (days.isNotEmpty) ...[
                       _section(TripStringsA5.itinerary),
-                      for (final d in days) ...[
-                        TripSummaryDayCard(day: d, stay: TripDayChips.stay(r, d), taxi: TripDayChips.taxi(r, d)),
-                        const SizedBox(height: 12),
-                      ],
+                      for (final d in days) TripSummaryDayCard(day: d, stay: TripDayChips.stay(r, d), taxi: TripDayChips.taxi(r, d)),
                     ],
                     ..._arrangementSection(r),
                     ..._journeySection(r, TripStepRole.gettingThere),
@@ -225,18 +226,18 @@ class _TripSummaryScreenState extends State<TripSummaryScreen> with TickerProvid
                     else ...[
                       if (r.nights.isNotEmpty) ...[
                         _section(TripStringsA5.staysSection),
-                        for (final n in r.nights) ...[_nightCard(n), const SizedBox(height: 12)],
+                        for (final n in r.nights) _nightCard(n),
                       ],
                       if (r.taxis.isNotEmpty) ...[
                         _section(TripStringsA5.taxisSection),
-                        for (final t in r.taxis) ...[_taxiCard(t), const SizedBox(height: 12)],
+                        for (final t in r.taxis) _taxiCard(t),
                       ],
                     ],
                     ..._journeySection(r, TripStepRole.comingBack),
                     const SizedBox(height: 12),
-                    Text(
-                      TripSummaryText.footer(r),
-                      style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 11, color: TripLook.textLight, height: 1.35),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 22),
+                      child: Text(TripSummaryText.footer(r), style: Ink3D.text(11.5, FontWeight.w400, Ink3D.grey, height: 1.4)),
                     ),
                   ]),
                 ),
@@ -251,13 +252,10 @@ class _TripSummaryScreenState extends State<TripSummaryScreen> with TickerProvid
   List<Widget> _legSection(TripSummaryLeg leg) {
     final travel = leg.travel;
     return [
-      if (travel != null) ...[TripSummaryTravelCard(travel), const SizedBox(height: 12)],
+      if (travel != null) TripSummaryTravelCard(travel),
       TripSummaryLegHeader(leg),
-      for (final g in TripSummaryText.nightGroups(leg.nights)) ...[
-        g.isRange ? _nightGroupCard(g) : _nightCard(g.first),
-        const SizedBox(height: 12),
-      ],
-      for (final t in leg.taxis) ...[_taxiCard(t), const SizedBox(height: 12)],
+      for (final g in TripSummaryText.nightGroups(leg.nights)) g.isRange ? _nightGroupCard(g) : _nightCard(g.first),
+      for (final t in leg.taxis) _taxiCard(t),
     ];
   }
 
@@ -265,54 +263,33 @@ class _TripSummaryScreenState extends State<TripSummaryScreen> with TickerProvid
     final rows = TripSummaryText.shownArrangements(r);
     if (rows.isEmpty) return const [];
     return [
-      _section(TripStringsV2Easy.arrangementsHeading),
-      TripStatusCard(
-        status: TripDisplayStatus.none,
-        child: Column(children: [for (final a in rows) _arrangementRow(a)]),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(22, 24, 22, 10),
+        child: Text(TripStringsV2Easy.arrangementsHeading,
+            maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(11.5, FontWeight.w700, Ink3D.grey, letterSpacing: 1)),
       ),
-      const SizedBox(height: 12),
+      WhiteCard3D(
+        child: Column(children: [for (var i = 0; i < rows.length; i++) _arrangementRow(rows[i], i > 0)]),
+      ),
     ];
   }
 
-  Widget _arrangementRow(TripSummaryArrangement a) {
+  Widget _arrangementRow(TripSummaryArrangement a, bool divider) {
     final done = a.isDone;
     final detail = a.detailLine ?? '';
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          TravelIcon(done ? TravelIcon.star : TravelIcon.calendar, size: 18),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(a.title,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                        fontFamily: FitnessAppTheme.fontName, fontSize: 13.5, fontWeight: FontWeight.w600, color: TripLook.textDark)),
-                if (detail.isNotEmpty)
-                  Text(detail,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, color: TripLook.textMedium)),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          Flexible(
-            child: Text(TripSummaryText.stateWord(a.state),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                    fontFamily: FitnessAppTheme.fontName,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: done ? TripLook.successText : TripLook.warningText)),
-          ),
-        ],
+    return IconRow3D(
+      art: TripSummaryTodo.artOf(a.key.kind),
+      title: a.title,
+      subtitle: detail.isEmpty ? null : detail,
+      divider: divider,
+      tone: ListingTone.indigo,
+      trailing: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 110),
+        child: Text(TripSummaryText.stateWord(a.state),
+            maxLines: 2,
+            textAlign: TextAlign.end,
+            overflow: TextOverflow.ellipsis,
+            style: Ink3D.text(12, FontWeight.w700, done ? TripLook.successText : TripLook.warningText)),
       ),
     );
   }
@@ -321,116 +298,32 @@ class _TripSummaryScreenState extends State<TripSummaryScreen> with TickerProvid
     final j = TripSummaryText.journeyOf(r, role);
     final status = r.steps.of(role).status;
     if (j == null || status == TripStepStatus.own || status == TripStepStatus.skipped) return const [];
+    final going = role == TripStepRole.gettingThere;
     return [
-      _section(role == TripStepRole.gettingThere ? TripStringsStepsA3.gettingThereCaps : TripStringsStepsA3.comingBackCaps),
-      TripStatusCard(
-        status: TripDisplayStatus.none,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _titleRow(
-              TripStringsStepsA3.routeLine(j.places),
-              TripStrings.joinDots([TripFormat.shortDate(j.date), TripStringsStepsA3.carsLine(j.cars)]),
-              const SizedBox.shrink(),
-            ),
-            const SizedBox(height: 8),
-            TripJourneyCompact(journey: j),
-            const SizedBox(height: 10),
-            const TripPaymentLine(text: TripStrings.taxiPayLine),
-          ],
+      _section(going ? TripStringsStepsA3.gettingThereCaps : TripStringsStepsA3.comingBackCaps),
+      TripSummaryBookingCard(
+        tone: ListingTone.coral,
+        art: going ? ListingArt.taxi : ListingArt.airplane,
+        eyebrow: TripStrings.joinDots([TripFormat.shortDate(j.date), TripStringsStepsA3.carsLine(j.cars)]),
+        title: TripStringsStepsA3.routeLine(j.places),
+        body: Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(color: DesignColors.surface, borderRadius: BorderRadius.circular(14)),
+          child: TripJourneyCompact(journey: j),
         ),
+        payLine: TripStrings.taxiPayLine,
       ),
-      const SizedBox(height: 12),
     ];
   }
 
-  Widget _section(String text) => Padding(
-        padding: const EdgeInsets.only(bottom: 8, top: 2),
-        child: Text(
-          text,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 16, fontWeight: FontWeight.w500, letterSpacing: 0.5, color: TripLook.textLight),
-        ),
+  Widget _section(String text) => TitleRow3D(title: text, tone: ListingTone.indigo);
+
+  Widget _offlineStrip(DateTime at) => Banner3D(
+        kind: BannerKind.info,
+        tone: ListingTone.indigo,
+        art: ListingArt.worldMap,
+        title: TripStringsA5.offlineCopy(TripFormat.time12Of(at)),
       );
-
-  Widget _offlineStrip(DateTime at) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        decoration: const BoxDecoration(color: TripLook.neutralChip, borderRadius: TripLook.softRadius),
-        child: Row(
-          children: [
-            Container(width: 8, height: 8, decoration: const BoxDecoration(color: TripLook.textMedium, shape: BoxShape.circle)),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                TripStringsA5.offlineCopy(TripFormat.time12Of(at)),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                    fontFamily: FitnessAppTheme.fontName, fontSize: 12, fontWeight: FontWeight.w600, color: TripLook.textMedium),
-              ),
-            ),
-          ],
-        ),
-      );
-
-  Widget _kv(String label, String value, {Color? color}) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 6),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 96,
-            child: Text(
-              label,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, color: TripLook.textLight),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: TextStyle(
-                  fontFamily: FitnessAppTheme.fontName, fontSize: 12.5, fontWeight: FontWeight.w600, color: color ?? TripLook.textDark),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _titleRow(String title, String subtitle, Widget pill) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                    fontFamily: FitnessAppTheme.fontName, fontSize: 14, fontWeight: FontWeight.w700, color: TripLook.textDark),
-              ),
-              if (subtitle.isNotEmpty)
-                Text(
-                  subtitle,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, color: TripLook.textMedium),
-                ),
-            ],
-          ),
-        ),
-        const SizedBox(width: 8),
-        Flexible(child: pill),
-      ],
-    );
-  }
 
   Widget _nightGroupCard(TripSummaryNightGroup g) => _nightCard(
         g.first,
@@ -445,20 +338,21 @@ class _TripSummaryScreenState extends State<TripSummaryScreen> with TickerProvid
     final agreed = agreedTotal ?? n.agreedTotal;
     final status = n.display;
     final label = n.isCancelled ? TripSummaryText.statusLabel(n.display, n.cancelledBy ?? 'owner') : null;
-    return TripStatusCard(
-      status: status,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _titleRow(heading, subtitle ?? n.listingName, TripStatusPill(status, label: label)),
-          for (final room in n.roomLines) _kv(TripStrings.room, TripSummaryText.roomLine(room)),
-          if (agreed != null) _kv(TripStrings.agreed, BrowseItem.inr(agreed)),
-          _kv(TripStrings.advance, TripSummaryText.advanceLine(n)),
-          if ((n.cancellationText ?? '').isNotEmpty) _kv(TripStrings.cancellationTerms, n.cancellationText!),
-          if (n.gstInvoice != null) _kv(TripStrings.gstInvoice, n.gstInvoice! ? TripStrings.yes : TripStrings.no),
-          _kv(TripStrings.confirmedLabel, n.confirmedLine()),
-        ],
-      ),
+    return TripSummaryBookingCard(
+      tone: ListingTone.forest,
+      art: ListingArt.hotel,
+      eyebrow: heading,
+      title: subtitle ?? n.listingName,
+      pill: TripSummaryBookingCard.statusPill(status, label: label),
+      rows: [
+        for (final room in n.roomLines) (TripStrings.room, TripSummaryText.roomLine(room)),
+        if (agreed != null) (TripStrings.agreed, BrowseItem.inr(agreed)),
+        (TripStrings.advance, TripSummaryText.advanceLine(n)),
+        if ((n.cancellationText ?? '').isNotEmpty) (TripStrings.cancellationTerms, n.cancellationText!),
+        if (n.gstInvoice != null) (TripStrings.gstInvoice, n.gstInvoice! ? TripStrings.yes : TripStrings.no),
+        (TripStrings.confirmedLabel, n.confirmedLine()),
+      ],
+      payLine: TripStrings.stayPayLine,
     );
   }
 
@@ -472,23 +366,18 @@ class _TripSummaryScreenState extends State<TripSummaryScreen> with TickerProvid
       if ((t.pickupTime ?? '').isNotEmpty) TripFormat.time12(t.pickupTime!),
       if ((t.pickupPlace ?? '').isNotEmpty) t.pickupPlace!,
     ].join(', ');
-    return TripStatusCard(
-      status: status,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _titleRow(
-            TripStrings.taxiCardTitle(TripSummaryText.taxiDays(t)),
-            vehicle,
-            TripStatusPill(status, taxi: true, label: label),
-          ),
-          if (fare.isNotEmpty) _kv(TripStrings.fare, fare),
-          if (pickup.isNotEmpty) _kv(TripStrings.pickup, pickup),
-          _kv(TripStrings.confirmedLabel, t.confirmedLine()),
-          const SizedBox(height: 10),
-          const TripPaymentLine(text: TripStrings.taxiPayLine),
-        ],
-      ),
+    return TripSummaryBookingCard(
+      tone: ListingTone.coral,
+      art: ListingArt.taxi,
+      eyebrow: TripStrings.taxiCardTitle(TripSummaryText.taxiDays(t)),
+      title: vehicle,
+      pill: TripSummaryBookingCard.statusPill(status, taxi: true, label: label),
+      rows: [
+        if (fare.isNotEmpty) (TripStrings.fare, fare),
+        if (pickup.isNotEmpty) (TripStrings.pickup, pickup),
+        (TripStrings.confirmedLabel, t.confirmedLine()),
+      ],
+      payLine: TripStrings.taxiPayLine,
     );
   }
 
@@ -496,22 +385,18 @@ class _TripSummaryScreenState extends State<TripSummaryScreen> with TickerProvid
     return Container(
       decoration: const BoxDecoration(
         color: DesignColors.surface,
-        borderRadius: CardRadius.tile,
-        boxShadow: ShadowTokens.elev3,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        boxShadow: Ink3D.topEdge,
       ),
-      padding: EdgeInsets.fromLTRB(KitMetrics.gutter, 12, KitMetrics.gutter, 12 + MediaQuery.paddingOf(context).bottom),
+      padding: EdgeInsets.fromLTRB(18, 14, 18, 8 + MediaQuery.paddingOf(context).bottom),
       child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: _maxWidth),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              TripButton(
-                onPressed: _share,
-                label: TripStringsA5.shareTrip,
-                height: 48,
-              ),
-              Center(child: TextLink(label: TripStringsV2Easy.done, onTap: () => Get.back(), tone: KitTone.trip)),
+              GradientPillButton(tone: ListingTone.indigo, label: TripStringsA5.shareTrip, onTap: _share),
+              Center(child: TextLink(label: TripStringsV2Easy.done, onTap: () => Get.back(), tone: KitTone.brand)),
             ],
           ),
         ),

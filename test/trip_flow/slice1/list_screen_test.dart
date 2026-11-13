@@ -120,6 +120,7 @@ void main() {
   const sizes = [Size(360, 800), Size(300, 640)];
   Future<void> shortlistTap(WidgetTester t, int i) async {
     await t.ensureVisible(find.text('Shortlist').at(i));
+    await t.pump();
     await t.tap(find.text('Shortlist').at(i));
     await t.pump();
     await t.pump(const Duration(milliseconds: 100));
@@ -171,15 +172,14 @@ void main() {
       final sc = TripShortlistController.to;
       expect(sc.countOf('gettingThere'), 3);
       await t.ensureVisible(find.text('Shortlist').first);
+      await t.pump();
       await t.tap(find.text('Shortlist').first);
       await t.pump();
       expect(warnings, contains(TripStringsShortlist.full));
       expect(find.text('3 of 3 shortlisted'), findsOneWidget);
-      t.state<ScrollableState>(find.byType(Scrollable).first).position.jumpTo(0);
+      await t.ensureVisible(find.text('Shortlisted').first);
       await t.pump();
-      await t.drag(find.byType(CustomScrollView), const Offset(0, -240));
-      await t.pump();
-      await t.tap(find.text('Shortlisted').hitTestable().first);
+      await t.tap(find.text('Shortlisted').first);
       await t.pump();
       await t.pump();
       await t.pump(const Duration(milliseconds: 100));
@@ -192,7 +192,7 @@ void main() {
       await t.tap(find.text('Done'));
       await t.pump();
       expect(find.text(TripStringsShortlist.pickFirst), findsOneWidget);
-      expect(find.text('Yes, send to all'), findsNothing);
+      expect(find.text('Send to all'), findsNothing);
       expect(find.byType(TaxiWaysFeedScreen), findsOneWidget);
       await shot(t, 'B_done_none_$z');
     });

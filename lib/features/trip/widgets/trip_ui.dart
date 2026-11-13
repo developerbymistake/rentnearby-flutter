@@ -224,11 +224,12 @@ class TripNote extends StatelessWidget {
 }
 
 class TripHeaderAction extends StatelessWidget {
-  const TripHeaderAction({super.key, required this.label, required this.onTap, this.icon});
+  const TripHeaderAction({super.key, required this.label, required this.onTap, this.icon, this.solid = false});
 
   final String label;
   final VoidCallback? onTap;
   final String? icon;
+  final bool solid;
 
   @override
   Widget build(BuildContext context) {
@@ -240,10 +241,10 @@ class TripHeaderAction extends StatelessWidget {
         child: Center(
           widthFactor: 1,
           child: Material(
-            color: DesignColors.whiteSoft,
+            color: solid ? DesignColors.surface : DesignColors.whiteSoft,
             shape: RoundedRectangleBorder(
               borderRadius: radius,
-              side: BorderSide(color: DesignColors.tint(DesignColors.surface, Alpha.half)),
+              side: solid ? BorderSide.none : BorderSide(color: DesignColors.tint(DesignColors.surface, Alpha.half)),
             ),
             clipBehavior: Clip.antiAlias,
             child: InkWell(
@@ -256,7 +257,7 @@ class TripHeaderAction extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     if (icon != null) ...[TravelIcon(icon!, size: 18), const SizedBox(width: 6)],
-                    Flexible(child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TypeTokens.style(13, FontWeight.w700, color: DesignColors.textInverse, letterSpacing: 0.27))),
+                    Flexible(child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TypeTokens.style(13, FontWeight.w700, color: solid ? ListingTone.indigo.text : DesignColors.textInverse, letterSpacing: 0.27))),
                   ],
                 ),
               ),

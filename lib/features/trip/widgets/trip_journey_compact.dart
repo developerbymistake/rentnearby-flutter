@@ -338,21 +338,11 @@ class TripJourneyCompact extends StatelessWidget {
 
   Widget _contacts(TripJourneyLeg l) {
     final call = phoneOf(l.phone, l.whatsApp);
-    final chat = phoneOf(l.whatsApp, l.phone);
-    if (call == null && chat == null) return const SizedBox.shrink();
-    final callBtn = _contactButton(TripStringsStepsA2.call, const SizedBox.shrink(), TripUi.taxiDark,
-        call == null ? null : () => ContactLauncher.call(call));
-    final chatBtn = _contactButton(TripStringsStepsA2.whatsApp, const TravelIcon(TravelIcon.chat, size: 18), TripUi.goodDark,
-        chat == null ? null : () => ContactLauncher.whatsApp(chat));
-    return LayoutBuilder(builder: (context, box) {
-      if (box.maxWidth < 220) {
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [callBtn, const SizedBox(height: 8), chatBtn],
-        );
-      }
-      return Row(children: [Expanded(child: callBtn), const SizedBox(width: 8), Expanded(child: chatBtn)]);
-    });
+    if (call == null) return const SizedBox.shrink();
+    return SizedBox(
+      width: double.infinity,
+      child: _contactButton(TripStringsStepsA2.call, const SizedBox.shrink(), TripUi.taxiDark, () => ContactLauncher.call(call)),
+    );
   }
 
   static Widget _contactButton(String label, Widget icon, Color color, VoidCallback? onTap) => SecondaryButton(

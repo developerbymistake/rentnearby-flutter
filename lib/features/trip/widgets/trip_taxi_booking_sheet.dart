@@ -1,6 +1,6 @@
 import 'package:bakhli/design/design.dart';
 import 'package:flutter/material.dart';
-import 'package:bakhli/features/trip/widgets/trip_ui.dart';
+import 'package:bakhli/design/extra/ext_trip_replies.dart';
 import 'package:flutter/services.dart';
 import '../../../utils/app_toast.dart';
 import '../../../utils/contact_launcher.dart';
@@ -99,7 +99,6 @@ class _BookingBodyState extends State<_BookingBody> {
   String? _fareError;
   bool _phoneLoading = true;
   String? _phone;
-  String? _whatsApp;
 
   TripPlan get _tripPlan => _plan.plan.value!;
 
@@ -172,7 +171,6 @@ class _BookingBodyState extends State<_BookingBody> {
     final phone = enq?.owner.phone;
     if (phone != null && ContactLauncher.tenDigits(phone).isNotEmpty) {
       _phone = phone;
-      _whatsApp = enq!.owner.whatsApp ?? phone;
       _phoneLoading = false;
     } else {
       _loadPhone();
@@ -222,7 +220,6 @@ class _BookingBodyState extends State<_BookingBody> {
       if (!mounted) return;
       setState(() {
         _phone = d.contactPhone;
-        _whatsApp = d.whatsAppNumber ?? d.contactPhone;
         _phoneLoading = false;
       });
     } catch (_) {
@@ -259,49 +256,13 @@ class _BookingBodyState extends State<_BookingBody> {
       context,
       initial: _time,
       label: TripStrings.pickupTime,
-      tone: KitTone.trip,
+      tone: KitTone.taxi,
     );
     if (t != null && mounted) setState(() => _time = t);
   }
 
   Future<bool> _confirmReplace(int day, String other) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: DesignColors.surface,
-        shape: RoundedRectangleBorder(borderRadius: CardRadius.tile),
-        title: Text(
-          TripStrings.replaceDriver(TripStrings.dayN(day), other),
-          style: const TextStyle(
-            fontFamily: FitnessAppTheme.fontName,
-            fontSize: 15,
-            fontWeight: FontWeight.w600,
-            color: DesignColors.textStrong,
-          ),
-        ),
-        content: Text(
-          TripStrings.replaceDriverTold(other),
-          style: const TextStyle(
-            fontFamily: FitnessAppTheme.fontName,
-            fontSize: 13,
-            color: DesignColors.textSecondary,
-          ),
-        ),
-        actions: [
-          TextLink(
-            label: TripStrings.keep,
-            onTap: () => Navigator.pop(ctx, false),
-            tone: KitTone.trip,
-          ),
-          TextLink(
-            label: TripStrings.replace,
-            onTap: () => Navigator.pop(ctx, true),
-            tone: KitTone.trip,
-          ),
-        ],
-      ),
-    );
-    return ok == true;
+    return _replaceDialog(context, TripStrings.replaceDriver(TripStrings.dayN(day), other), TripStrings.replaceDriverTold(other));
   }
 
   int _conflictDay(TripNightConflict c, List<int> days) {
@@ -378,380 +339,181 @@ class _BookingBodyState extends State<_BookingBody> {
 
   @override
   Widget build(BuildContext context) {
-    if (_days.isEmpty) {
-      return TripSheetFrame(
-        title: TripStringsA3.daysPassedTitle,
-        description: TripStringsA3.daysPassedBody,
-        children: [
-          SecondaryButton(
-            label: TripStringsA3.close,
-            tone: KitTone.trip,
-            onPressed: () => Navigator.pop(context),
-          ),
-        ],
-      );
-    }
-    return SheetFrame(
-      title: TripStrings.iBookedTitle,
-      subtitle: TripStrings.iBookedSubtitle,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _driverCard(),
-          const SizedBox(height: 18),
-          _label(TripStrings.days),
-          _daysWrap(),
-          const SizedBox(height: 18),
-          _pickupRow(),
-          const SizedBox(height: 18),
-          _label(TripStrings.agreedFare),
-          TextField(
-            controller: _fare,
-            keyboardType: TextInputType.number,
-            inputFormatters: [
-              FilteringTextInputFormatter.digitsOnly,
-              LengthLimitingTextInputFormatter(_maxFareDigits),
-            ],
-            style: _inputStyle,
-            onChanged: (_) {
-              if (_fareError != null) setState(() => _fareError = null);
-            },
-            decoration: _decoration(
-              prefix: '₹ ',
-              helper: TripStrings.agreedFareHelp,
-            ).copyWith(errorText: _fareError),
-          ),
-          const SizedBox(height: 6),
-          _tollRow(),
-          const SizedBox(height: 12),
-          const SizedBox(height: 20),
-          TripButton(
-            onPressed: _saving ? null : _save,
-            label: TripStrings.saveBooking,
-            isLoading: _saving,
-            gradient: KitTone.trip.gradient,
-            shadowColor: TripUi.trip,
-          ),
-          const SizedBox(height: 12),
-          const Text(
-            TripStrings.taxiPayLine,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontFamily: FitnessAppTheme.fontName,
-              fontSize: 11.5,
-              color: DesignColors.textSecondary,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  static const _inputStyle = TextStyle(
-    fontFamily: FitnessAppTheme.fontName,
-    fontSize: 14,
-    color: DesignColors.textStrong,
-  );
-
-  InputDecoration _decoration({String? prefix, String? helper}) =>
-      InputDecoration(
-        prefixText: prefix,
-        helperText: helper,
-        helperMaxLines: 2,
-        helperStyle: const TextStyle(
-          fontFamily: FitnessAppTheme.fontName,
-          fontSize: 11,
-          color: DesignColors.textSecondary,
-        ),
-        filled: true,
-        fillColor: DesignColors.scaffold,
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 14,
-          vertical: 14,
-        ),
-        border: OutlineInputBorder(
-          borderRadius: CardRadius.chip,
-          borderSide: BorderSide.none,
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: CardRadius.chip,
-          borderSide: const BorderSide(color: FitnessAppTheme.spacer),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: CardRadius.chip,
-          borderSide: const BorderSide(color: TripUi.trip, width: 1.5),
-        ),
-      );
-
-  Widget _label(String text) => Padding(
-    padding: const EdgeInsets.only(bottom: 6),
-    child: Text(
-      text,
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
-      style: const TextStyle(
-        fontFamily: FitnessAppTheme.fontName,
-        fontSize: 12.5,
-        fontWeight: FontWeight.w600,
-        color: DesignColors.textPrimary,
-      ),
-    ),
-  );
-
-  Widget _driverCard() {
+    if (_days.isEmpty) return _passedSheet(context);
+    final multi = _tripPlan.isMultiCity;
     final t = _item;
     final vehicle = [
       t.vehicleTypeName,
       if (t.seats != null) '${TaxiOptionSets.seatsLabel(t.seats!)} seats',
     ].join(' · ');
-    final phone = _phone;
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: TripUi.taxiTint,
-        borderRadius: CardRadius.tile,
-        border: Border.all(color: TripUi.taxi.withValues(alpha: Alpha.soft)),
-      ),
+    return TripSheetFrame(
+      tone: _bookTone,
+      art: ListingArt.taxi,
+      size: SheetSize.form,
+      title: TripStrings.iBookedTitle,
+      description: TripStrings.iBookedSubtitle,
+      footnote: TripStrings.taxiPayLine,
+      footer: GradientPillButton(tone: _bookTone, label: TripStrings.saveBooking, loading: _saving, onTap: _saving ? null : _save),
+      children: [
+        _BookDriverRow(name: t.driverName, line: vehicle, phone: _phone, loading: _phoneLoading),
+        Padding(padding: const EdgeInsets.only(top: 16, bottom: 10), child: Text(TripStrings.days.toUpperCase(), style: RepliesLook.section)),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (final d in _tripPlan.days.map((d) => d.day))
+              ChoicePill(
+                tone: _bookTone,
+                label: _dayLabel(d),
+                selected: _days.contains(d) || _pastDays.contains(d),
+                outlined: _plan.isDayPast(d) || _tripPlan.legIndexOf(d) != _leg,
+                height: 40,
+                onTap: () => _toggleDay(d),
+              ),
+          ],
+        ),
+        if (multi) Padding(padding: const EdgeInsets.only(top: 6), child: Text(TripStringsMccK2.pickInOneCity, style: RepliesLook.foot)),
+        const SizedBox(height: 4),
+        _BookPickup(
+          time: TripFormat.time12(TripFormat.hhmm(_time)),
+          onTime: _pickTime,
+          place: _place,
+        ),
+        PillField(
+          tone: _bookTone,
+          controller: _fare,
+          label: TripStrings.agreedFare,
+          firstLabel: false,
+          leadingArt: ListingArt.moneyBag,
+          prefixText: '₹ ',
+          keyboardType: TextInputType.number,
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(_maxFareDigits)],
+          helperText: TripStrings.agreedFareHelp,
+          errorText: _fareError,
+          onChanged: (_) {
+            if (_fareError != null) setState(() => _fareError = null);
+          },
+        ),
+        const SizedBox(height: 6),
+        CheckRow(tone: _bookTone, value: _toll, label: TripStrings.tollExtra, onChanged: (v) => setState(() => _toll = v)),
+      ],
+    );
+  }
+}
+
+final ListingTone _bookTone = ListingTone.coral;
+
+Widget _passedSheet(BuildContext context) => TripSheetFrame(
+  tone: _bookTone,
+  art: ListingArt.calendar,
+  title: TripStringsA3.daysPassedTitle,
+  description: TripStringsA3.daysPassedBody,
+  footer: WhitePillButton(tone: _bookTone, label: TripStringsA3.close, onTap: () => Navigator.pop(context)),
+  children: const [],
+);
+
+Future<bool> _replaceDialog(BuildContext context, String title, String body) async {
+  final ok = await Dialog3D.show<bool>(
+    context,
+    builder: (ctx) => Dialog3D(
+      tone: _bookTone,
+      art: ListingArt.taxi,
+      title: title,
+      body: body,
+      secondaryLabel: TripStrings.keep,
+      onSecondary: () => Navigator.pop(ctx, false),
+      primaryLabel: TripStrings.replace,
+      onPrimary: () => Navigator.pop(ctx, true),
+    ),
+  );
+  return ok == true;
+}
+
+class _BookDriverRow extends StatelessWidget {
+  const _BookDriverRow({required this.name, required this.line, required this.phone, this.loading = false});
+
+  final String name;
+  final String line;
+  final String? phone;
+  final bool loading;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = phone;
+    return GreyPillBox(
+      margin: const EdgeInsets.only(top: 4),
+      padding: const EdgeInsets.fromLTRB(10, 8, 8, 8),
       child: Row(
         children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: TripUi.taxi.withValues(alpha: Alpha.tint),
-              borderRadius: CardRadius.chip,
-            ),
-            child: const TravelIcon(TravelIcon.taxi, size: 20),
-          ),
-          const SizedBox(width: 10),
+          Image.asset(ListingArt.taxi, width: 40, height: 40, fit: BoxFit.contain),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                  t.driverName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontFamily: FitnessAppTheme.fontName,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: DesignColors.textStrong,
-                  ),
-                ),
-                Text(
-                  vehicle,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontFamily: FitnessAppTheme.fontName,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: TripUi.taxi,
-                  ),
-                ),
-                if (phone != null)
-                  Text(
-                    phone,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontFamily: FitnessAppTheme.fontName,
-                      fontSize: 11.5,
-                      color: DesignColors.textSecondary,
-                    ),
-                  ),
+                Text(name, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(15, FontWeight.w600, Ink3D.body, letterSpacing: 0)),
+                if (line.isNotEmpty) Text(line, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(12, FontWeight.w600, _bookTone.text, letterSpacing: 0)),
+                if (p != null) Text(p, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(11.5, FontWeight.w400, Ink3D.grey, letterSpacing: 0)),
               ],
             ),
           ),
-          if (_phoneLoading)
-            const Padding(
-              padding: EdgeInsets.all(8),
-              child: KitDots(color: TripUi.taxi),
-            )
-          else if (phone != null) ...[
-            _iconButton(
-              icon: const Icon(
-                Icons.call_rounded,
-                size: 18,
-                color: TripUi.taxiDark,
-              ),
-              tooltip: TripStrings.call,
-              onTap: () => ContactLauncher.call(phone),
-            ),
-            _iconButton(
-              icon: const WhatsAppGlyph(size: 20),
-              tooltip: TripStrings.whatsApp,
-              onTap: () => ContactLauncher.whatsApp(
-                _whatsApp ?? phone,
-                message: _plan.whatsAppMessage(widget.day, _item.driverName),
+          if (loading)
+            Padding(padding: const EdgeInsets.all(8), child: KitDots(color: _bookTone.g2))
+          else if (p != null)
+            Tooltip(
+              message: TripStrings.call,
+              child: Tap3D(
+                onTap: () => ContactLauncher.call(p),
+                label: TripStrings.call,
+                exclude: true,
+                child: Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(gradient: _bookTone.gradient, shape: BoxShape.circle, boxShadow: _bookTone.glow(blur: 6, dy: 3)),
+                  child: const Icon(Icons.call_rounded, size: 20, color: DesignColors.textInverse),
+                ),
               ),
             ),
-          ],
         ],
       ),
     );
   }
+}
 
-  Widget _iconButton({
-    required Widget icon,
-    required String tooltip,
-    required VoidCallback onTap,
-  }) => Tooltip(
-    message: tooltip,
-    child: InkWell(
-      onTap: onTap,
-      borderRadius: CardRadius.pill,
-      child: SizedBox(width: 44, height: 44, child: Center(child: icon)),
-    ),
-  );
+class _BookPickup extends StatelessWidget {
+  const _BookPickup({required this.time, required this.onTime, required this.place});
 
-  Widget _daysWrap() {
-    final dayNumbers = _tripPlan.days.map((d) => d.day).toList();
-    final multi = _tripPlan.isMultiCity;
-    final chips = Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: [
-        for (final d in dayNumbers)
-          ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 44),
-            child: TripChoiceChip(
-              label: _dayLabel(d),
-              selected: _days.contains(d) || _pastDays.contains(d),
-              muted: _plan.isDayPast(d) || _tripPlan.legIndexOf(d) != _leg,
-              onTap: () => _toggleDay(d),
-              activeColor: TripUi.trip,
-              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
-            ),
-          ),
-      ],
+  final String time;
+  final VoidCallback onTime;
+  final TextEditingController place;
+
+  @override
+  Widget build(BuildContext context) {
+    final timeField = PillPickerField(
+      tone: _bookTone,
+      label: TripStrings.pickupTime,
+      firstLabel: false,
+      value: time,
+      leadingArt: ListingArt.calendar,
+      trailing: const SizedBox.shrink(),
+      onTap: onTime,
     );
-    if (!multi) return chips;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        chips,
-        const SizedBox(height: 6),
-        const Text(
-          TripStringsMccK2.pickInOneCity,
-          style: TextStyle(
-            fontFamily: FitnessAppTheme.fontName,
-            fontSize: 11,
-            color: DesignColors.textSecondary,
-          ),
-        ),
-      ],
+    final placeField = PillField(
+      tone: _bookTone,
+      controller: place,
+      label: TripStrings.pickupPlace,
+      firstLabel: false,
+      leadingArt: ListingArt.roundPushpin,
+      textCapitalization: TextCapitalization.words,
+      inputFormatters: [...noEmojiInputFormatters, LengthLimitingTextInputFormatter(TripTaxiEnquirySheet.placeMax)],
     );
-  }
-
-  Widget _pickupRow() {
     return LayoutBuilder(
-      builder: (context, c) {
-        final time = Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _label(TripStrings.pickupTime),
-            InkWell(
-              onTap: _pickTime,
-              borderRadius: CardRadius.chip,
-              child: Container(
-                height: 50,
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-                decoration: BoxDecoration(
-                  color: DesignColors.scaffold,
-                  borderRadius: CardRadius.chip,
-                  border: Border.all(color: FitnessAppTheme.spacer),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(
-                      Icons.schedule_rounded,
-                      size: 18,
-                      color: TripUi.taxiDark,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        TripFormat.time12(TripFormat.hhmm(_time)),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: _inputStyle,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        );
-        final place = Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _label(TripStrings.pickupPlace),
-            TextField(
-              controller: _place,
-              textCapitalization: TextCapitalization.words,
-              inputFormatters: [
-                ...noEmojiInputFormatters,
-                LengthLimitingTextInputFormatter(TripTaxiEnquirySheet.placeMax),
-              ],
-              style: _inputStyle,
-              decoration: _decoration(),
-            ),
-          ],
-        );
-        if (c.maxWidth >= 340) {
-          return Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(flex: 2, child: time),
-              const SizedBox(width: 12),
-              Expanded(flex: 3, child: place),
-            ],
-          );
-        }
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [time, const SizedBox(height: 12), place],
-        );
-      },
+      builder: (context, c) => c.maxWidth >= 320
+          ? Row(crossAxisAlignment: CrossAxisAlignment.start, children: [Expanded(child: timeField), const SizedBox(width: 10), Expanded(child: placeField)])
+          : Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [timeField, placeField]),
     );
   }
-
-  Widget _tollRow() => InkWell(
-    onTap: () => setState(() => _toll = !_toll),
-    borderRadius: CardRadius.chip,
-    child: ConstrainedBox(
-      constraints: const BoxConstraints(minHeight: 48),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 44,
-            height: 44,
-            child: Checkbox(
-              value: _toll,
-              activeColor: TripUi.trip,
-              onChanged: (v) => setState(() => _toll = v ?? false),
-            ),
-          ),
-          const SizedBox(width: 4),
-          const Expanded(
-            child: Text(
-              TripStrings.tollExtra,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontFamily: FitnessAppTheme.fontName,
-                fontSize: 13,
-                color: DesignColors.textStrong,
-              ),
-            ),
-          ),
-        ],
-      ),
-    ),
-  );
 }
 
 class _JourneyCarBody extends StatefulWidget {
@@ -777,11 +539,6 @@ class _JourneyCarBody extends StatefulWidget {
 
 class _JourneyCarBodyState extends State<_JourneyCarBody> {
   static const _maxFareDigits = 7;
-  static const _inputStyle = TextStyle(
-    fontFamily: FitnessAppTheme.fontName,
-    fontSize: 14,
-    color: DesignColors.textStrong,
-  );
 
   late final TripPlanController _plan;
   late final DateTime? _date;
@@ -862,49 +619,13 @@ class _JourneyCarBodyState extends State<_JourneyCarBody> {
       context,
       initial: _time,
       label: TripStrings.pickupTime,
-      tone: KitTone.trip,
+      tone: KitTone.taxi,
     );
     if (t != null && mounted) setState(() => _time = t);
   }
 
   Future<bool> _confirmReplace(String other) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: DesignColors.surface,
-        shape: RoundedRectangleBorder(borderRadius: CardRadius.tile),
-        title: Text(
-          TripStrings.replaceDriver(_when, other),
-          style: const TextStyle(
-            fontFamily: FitnessAppTheme.fontName,
-            fontSize: 15,
-            fontWeight: FontWeight.w600,
-            color: DesignColors.textStrong,
-          ),
-        ),
-        content: Text(
-          TripStrings.replaceDriverTold(other),
-          style: const TextStyle(
-            fontFamily: FitnessAppTheme.fontName,
-            fontSize: 13,
-            color: DesignColors.textSecondary,
-          ),
-        ),
-        actions: [
-          TextLink(
-            label: TripStrings.keep,
-            onTap: () => Navigator.pop(ctx, false),
-            tone: KitTone.trip,
-          ),
-          TextLink(
-            label: TripStrings.replace,
-            onTap: () => Navigator.pop(ctx, true),
-            tone: KitTone.trip,
-          ),
-        ],
-      ),
-    );
-    return ok == true;
+    return _replaceDialog(context, TripStrings.replaceDriver(_when, other), TripStrings.replaceDriverTold(other));
   }
 
   Future<void> _save() async {
@@ -981,369 +702,69 @@ class _JourneyCarBodyState extends State<_JourneyCarBody> {
 
   @override
   Widget build(BuildContext context) {
-    if (_past || _car.taxiId == null) {
-      return TripSheetFrame(
-        title: TripStringsA3.daysPassedTitle,
-        description: TripStringsA3.daysPassedBody,
-        children: [
-          SecondaryButton(
-            label: TripStringsA3.close,
-            tone: KitTone.trip,
-            onPressed: () => Navigator.pop(context),
-          ),
-        ],
-      );
-    }
-    return SheetFrame(
-      title: TripStrings.iBookedTitle,
-      subtitle: TripStrings.iBookedSubtitle,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _carCard(),
-          const SizedBox(height: 18),
-          _dayChip(),
-          const SizedBox(height: 18),
-          _pickupRow(),
-          const SizedBox(height: 18),
-          _label(TripStringsMcbA3.fareForCar),
-          TextField(
-            controller: _fare,
-            keyboardType: TextInputType.number,
-            inputFormatters: [
-              FilteringTextInputFormatter.digitsOnly,
-              LengthLimitingTextInputFormatter(_maxFareDigits),
-            ],
-            style: _inputStyle,
-            onChanged: (_) {
-              if (_fareError != null) setState(() => _fareError = null);
-            },
-            decoration: _decoration(
-              prefix: '₹ ',
-              helper: TripStrings.agreedFareHelp,
-            ).copyWith(errorText: _fareError),
-          ),
-          const SizedBox(height: 6),
-          _tollRow(),
-          const SizedBox(height: 12),
-          _label(TripStrings.note),
-          TextField(
-            controller: _note,
-            minLines: 2,
-            maxLines: 3,
-            textCapitalization: TextCapitalization.sentences,
-            inputFormatters: [
-              ...noEmojiInputFormatters,
-              LengthLimitingTextInputFormatter(TripConstants.noteMax),
-            ],
-            style: _inputStyle,
-            decoration: _decoration(),
-          ),
-          const SizedBox(height: 20),
-          TripButton(
-            onPressed: _saving ? null : _save,
-            label: TripStrings.saveBooking,
-            isLoading: _saving,
-            gradient: KitTone.trip.gradient,
-            shadowColor: TripUi.trip,
-          ),
-          const SizedBox(height: 12),
-          const Text(
-            TripStrings.taxiPayLine,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontFamily: FitnessAppTheme.fontName,
-              fontSize: 11.5,
-              color: DesignColors.textSecondary,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  InputDecoration _decoration({String? prefix, String? helper}) =>
-      InputDecoration(
-        prefixText: prefix,
-        helperText: helper,
-        helperMaxLines: 2,
-        helperStyle: const TextStyle(
-          fontFamily: FitnessAppTheme.fontName,
-          fontSize: 11,
-          color: DesignColors.textSecondary,
-        ),
-        filled: true,
-        fillColor: DesignColors.scaffold,
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 14,
-          vertical: 14,
-        ),
-        border: OutlineInputBorder(
-          borderRadius: CardRadius.chip,
-          borderSide: BorderSide.none,
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: CardRadius.chip,
-          borderSide: const BorderSide(color: FitnessAppTheme.spacer),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: CardRadius.chip,
-          borderSide: const BorderSide(color: TripUi.trip, width: 1.5),
-        ),
-      );
-
-  Widget _label(String text) => Padding(
-    padding: const EdgeInsets.only(bottom: 6),
-    child: Text(
-      text,
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
-      style: const TextStyle(
-        fontFamily: FitnessAppTheme.fontName,
-        fontSize: 12.5,
-        fontWeight: FontWeight.w600,
-        color: DesignColors.textPrimary,
-      ),
-    ),
-  );
-
-  Widget _carCard() {
+    if (_past || _car.taxiId == null) return _passedSheet(context);
     final vehicle = [
       if ((_car.vehicleTypeName ?? '').isNotEmpty) _car.vehicleTypeName!,
       if (_car.seats != null) '${TaxiOptionSets.seatsLabel(_car.seats!)} seats',
     ].join(' · ');
-    final phone = _car.phone;
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: TripUi.taxiTint,
-        borderRadius: CardRadius.tile,
-        border: Border.all(color: TripUi.taxi.withValues(alpha: Alpha.soft)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: TripUi.taxi.withValues(alpha: Alpha.tint),
-              borderRadius: CardRadius.chip,
-            ),
-            child: const TravelIcon(TravelIcon.taxi, size: 20),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  TripStringsMcbA3.carHeader(
-                    widget.carIndex,
-                    _car.driverName,
-                    vehicle,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontFamily: FitnessAppTheme.fontName,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: DesignColors.textStrong,
-                  ),
-                ),
-                Text(
-                  '${_car.fromName} → ${_car.toName}',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontFamily: FitnessAppTheme.fontName,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: TripUi.taxi,
-                  ),
-                ),
-                if (phone != null)
-                  Text(
-                    phone,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontFamily: FitnessAppTheme.fontName,
-                      fontSize: 11.5,
-                      color: DesignColors.textSecondary,
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          if (phone != null)
-            Tooltip(
-              message: TripStrings.call,
-              child: InkWell(
-                onTap: () => ContactLauncher.call(phone),
-                borderRadius: CardRadius.pill,
-                child: const SizedBox(
-                  width: 44,
-                  height: 44,
-                  child: Center(
-                    child: Icon(
-                      Icons.call_rounded,
-                      size: 18,
-                      color: TripUi.taxiDark,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _dayChip() {
     final date = _date;
-    final label = date == null
-        ? _when
-        : TripStringsMcbA3.travelDay(TripFormat.shortDate(date));
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: Container(
-        constraints: const BoxConstraints(minHeight: 44),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        decoration: BoxDecoration(
-          color: TripUi.tripTint,
-          borderRadius: CardRadius.chip,
-          border: Border.all(color: TripUi.trip.withValues(alpha: Alpha.half)),
+    return TripSheetFrame(
+      tone: _bookTone,
+      art: ListingArt.taxi,
+      size: SheetSize.form,
+      title: TripStrings.iBookedTitle,
+      description: TripStrings.iBookedSubtitle,
+      footnote: TripStrings.taxiPayLine,
+      footer: GradientPillButton(tone: _bookTone, label: TripStrings.saveBooking, loading: _saving, onTap: _saving ? null : _save),
+      children: [
+        _BookDriverRow(
+          name: TripStringsMcbA3.carHeader(widget.carIndex, _car.driverName, vehicle),
+          line: '${_car.fromName} → ${_car.toName}',
+          phone: _car.phone,
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const TravelIcon(TravelIcon.calendar, size: 16),
-            const SizedBox(width: 8),
-            Flexible(
-              child: Text(
-                label,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontFamily: FitnessAppTheme.fontName,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: TripUi.tripDark,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _pickupRow() {
-    return LayoutBuilder(
-      builder: (context, c) {
-        final time = Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _label(TripStrings.pickupTime),
-            InkWell(
-              onTap: _pickTime,
-              borderRadius: CardRadius.chip,
-              child: Container(
-                height: 50,
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-                decoration: BoxDecoration(
-                  color: DesignColors.scaffold,
-                  borderRadius: CardRadius.chip,
-                  border: Border.all(color: FitnessAppTheme.spacer),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(
-                      Icons.schedule_rounded,
-                      size: 18,
-                      color: TripUi.taxiDark,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        TripFormat.time12(TripFormat.hhmm(_time)),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: _inputStyle,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        );
-        final place = Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _label(TripStrings.pickupPlace),
-            TextField(
-              controller: _place,
-              textCapitalization: TextCapitalization.words,
-              inputFormatters: [
-                ...noEmojiInputFormatters,
-                LengthLimitingTextInputFormatter(TripTaxiEnquirySheet.placeMax),
-              ],
-              style: _inputStyle,
-              decoration: _decoration(),
-            ),
-          ],
-        );
-        if (c.maxWidth >= 340) {
-          return Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(flex: 2, child: time),
-              const SizedBox(width: 12),
-              Expanded(flex: 3, child: place),
-            ],
-          );
-        }
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [time, const SizedBox(height: 12), place],
-        );
-      },
-    );
-  }
-
-  Widget _tollRow() => InkWell(
-    onTap: () => setState(() => _toll = !_toll),
-    borderRadius: CardRadius.chip,
-    child: ConstrainedBox(
-      constraints: const BoxConstraints(minHeight: 48),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 44,
-            height: 44,
-            child: Checkbox(
-              value: _toll,
-              activeColor: TripUi.trip,
-              onChanged: (v) => setState(() => _toll = v ?? false),
+        Padding(
+          padding: const EdgeInsets.only(top: 14),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: ChoicePill(
+              tone: _bookTone,
+              label: date == null ? _when : TripStringsMcbA3.travelDay(TripFormat.shortDate(date)),
+              selected: true,
+              height: 40,
+              onTap: () {},
             ),
           ),
-          const SizedBox(width: 4),
-          const Expanded(
-            child: Text(
-              TripStrings.tollExtra,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontFamily: FitnessAppTheme.fontName,
-                fontSize: 13,
-                color: DesignColors.textStrong,
-              ),
-            ),
-          ),
-        ],
-      ),
-    ),
-  );
+        ),
+        _BookPickup(time: TripFormat.time12(TripFormat.hhmm(_time)), onTime: _pickTime, place: _place),
+        PillField(
+          tone: _bookTone,
+          controller: _fare,
+          label: TripStringsMcbA3.fareForCar,
+          firstLabel: false,
+          leadingArt: ListingArt.moneyBag,
+          prefixText: '₹ ',
+          keyboardType: TextInputType.number,
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(_maxFareDigits)],
+          helperText: TripStrings.agreedFareHelp,
+          errorText: _fareError,
+          onChanged: (_) {
+            if (_fareError != null) setState(() => _fareError = null);
+          },
+        ),
+        const SizedBox(height: 6),
+        CheckRow(tone: _bookTone, value: _toll, label: TripStrings.tollExtra, onChanged: (v) => setState(() => _toll = v)),
+        PillField(
+          tone: _bookTone,
+          controller: _note,
+          label: TripStrings.note,
+          firstLabel: false,
+          leadingArt: ListingArt.speechBalloon,
+          minLines: 1,
+          maxLines: 3,
+          textCapitalization: TextCapitalization.sentences,
+          inputFormatters: [...noEmojiInputFormatters, LengthLimitingTextInputFormatter(TripConstants.noteMax)],
+        ),
+      ],
+    );
+  }
 }

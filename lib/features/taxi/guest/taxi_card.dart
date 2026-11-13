@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import '../../../design/design.dart';
-import '../../../design/extra/trip_plan_look.dart';
+import '../../../widgets/listing_contact_actions.dart';
 import '../../../models/browse_item.dart';
-import '../../../models/card_fact.dart';
+import '../../nearby/models/nearby_models.dart';
+import '../../nearby/nearby_strings.dart';
+import '../../nearby/widgets/nearby_label_text.dart';
 import '../../trip/trip_strings.dart';
 import '../../trip/utils/trip_format.dart';
 import '../../trip/widgets/trip_status.dart';
@@ -18,6 +21,9 @@ class TaxiCard extends StatelessWidget {
   final bool booked;
   final VoidCallback? onEnquire;
   final TripDisplayStatus? enquiryStatus;
+  final ListingTone? tone;
+  final NearbyDistance? distance;
+  final String? inLabel;
 
   const TaxiCard({
     super.key,
@@ -29,71 +35,138 @@ class TaxiCard extends StatelessWidget {
     this.booked = false,
     this.onEnquire,
     this.enquiryStatus,
+    this.tone,
+    this.distance,
+    this.inLabel,
   });
 
   bool get _tripMode => onSelect != null;
 
+  static String vehicleLine(TaxiBrowseItem t) => [
+        t.vehicleTypeName,
+        if (t.seats != null) '${TaxiOptionSets.seatsLabel(t.seats!)} seats',
+      ].where((e) => e.isNotEmpty).join(' · ');
+
+  static const _maxVehicleChars = 22;
+
+  static (String, String?) _vehicleParts(TaxiBrowseItem t) {
+    final seats = t.seats == null ? null : '${TaxiOptionSets.seatsLabel(t.seats!)} seats';
+    final full = vehicleLine(t);
+    if (seats != null && full.length > _maxVehicleChars) return (t.vehicleTypeName, seats);
+    return (full, null);
+  }
+
   @override
   Widget build(BuildContext context) {
     final t = item;
-    final metaLine = [
-      t.locality,
-      if (_tripMode) TripStrings.listed(TripFormat.monthYear(t.createdAt)),
-    ].where((e) => e.isNotEmpty).join(' · ');
+    final (vehicle, seatsChip) = _vehicleParts(t);
     final (fareValue, fareUnit) = _fare();
-    final facts = <CardFact>[
-      if (t.seats != null) CardFact('${TaxiOptionSets.seatsLabel(t.seats!)} seats'),
-      if (fareValue == null) const CardFact('Local taxi', tone: FactTone.accent),
-      if (t.isMatch && t.matchedTripType == 'RoundTrip') const CardFact('Round trip'),
-      if (_tripMode) ?_replyFact(t.tripReplyLabel),
-      if (t.isMatch && t.matchReversed) const CardFact('reverse', tone: FactTone.slate),
+    final reply = _tripMode ? TaxiOptionSets.tripReplyLabelText(t.tripReplyLabel) : '';
+    final chips = <String>[
+      if (!t.isMatch) 'Local taxi',
+      if (t.isMatch && t.matchedTripType == 'RoundTrip') 'Round trip',
+      ?seatsChip,
+      if (reply.isNotEmpty) reply,
+      if (t.isMatch && t.matchReversed) 'Reverse',
+      if (!t.isMatch && t.localDayRate != null && t.localDayKm != null) '${t.localDayKm} km/day',
+      if (_tripMode) TripStrings.listed(TripFormat.monthYear(t.createdAt)),
     ];
-    final card = DriverOptionCard(
-      name: t.driverName,
-      vehicle: t.vehicleTypeName,
-      nameMaxLines: 2,
-      subtitle: metaLine.isEmpty ? null : metaLine,
-      facts: facts,
-      fareValue: fareValue,
-      fareUnit: fareUnit,
-      isFeatured: t.isFeatured,
-      avatarAsset: TaxiVehicleIcon.assetFor(t.vehicleTypeName),
+    final d = distance;
+    if (inLabel == null && !_tripMode) {
+      return Obx(() => _card(context, t, vehicle, chips, fareValue, fareUnit, d,
+          _browseRow(context, ListingContactActions.isBusy(ListingKind.taxi, t.id))));
+    }
+    return _card(context, t, vehicle, chips, fareValue, fareUnit, d,
+        inLabel != null ? const [] : _enquiryRow());
+  }
+
+  Widget _card(BuildContext context, TaxiBrowseItem t, String vehicle, List<String> chips, String? fareValue,
+      String? fareUnit, NearbyDistance? d, List<WideAction> actions) {
+    return WideCard(
+      tone: tone ?? ListingTone.cA,
+      art: TaxiVehicleIcon.assetFor(t.vehicleTypeName),
+      tag: t.isFeatured ? 'Taxi · ${KitText.star} Featured' : 'Taxi',
+      title: t.driverName,
+      subtitle: [vehicle, t.locality].where((e) => e.isNotEmpty).join('\n'),
+      chips: chips,
+      number: fareValue ?? 'Ask for fare',
+      unit: fareUnit ?? '',
+      label: d == null ? inLabel : labelFor(d),
+      labelNote: d != null && d.isFar ? NearbyStrings.byRoad : null,
+      actions: actions,
+      onGo: inLabel != null ? onOpen : null,
+      actionRows: _tripMode ? [_pickRow()] : null,
+      picked: selected || booked,
       onTap: onOpen,
-      margin: EdgeInsets.zero,
-      actions: _actions(),
-    );
-    final ring = booked
-        ? TripLook.booked
-        : selected
-            ? KitTone.taxi.accent
-            : null;
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: KitMetrics.gutter, vertical: 6),
-      child: ring == null
-          ? card
-          : Stack(
-              children: [
-                card,
-                Positioned.fill(
-                  child: IgnorePointer(
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        borderRadius: CardRadius.tile,
-                        border: Border.all(color: ring, width: 2),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
     );
   }
 
-  CardFact? _replyFact(String label) {
-    final text = TaxiOptionSets.tripReplyLabelText(label);
-    if (text.isEmpty) return null;
-    return CardFact(text, tone: label == 'app' ? FactTone.cyan : FactTone.slate);
+  static String labelFor(NearbyDistance d) =>
+      d.isFar ? NearbyStrings.far(d.city, d.state, d.km) : NearbyLabelText.textFor(d, taxi: true);
+
+  static const callKey = ValueKey('taxi-card-call');
+  static const enquiryKey = ValueKey('taxi-card-enquiry');
+
+  Map<String, dynamic>? get _detailArguments => item.isMatch
+      ? {'matchedFare': ?item.matchedFare, 'matchedToName': ?item.matchedToName}
+      : null;
+
+  List<WideAction> _browseRow(BuildContext context, bool busy) => [
+        WideAction(
+          icon: Icons.call_rounded,
+          label: 'Call',
+          busy: busy,
+          itemKey: callKey,
+          onTap: () => ListingContactActions.call(context,
+              kind: ListingKind.taxi, id: item.id, detailArguments: _detailArguments),
+        ),
+        WideAction(
+          icon: Icons.mail_rounded,
+          label: TripStrings.enquiry,
+          itemKey: enquiryKey,
+          onTap: () => ListingContactActions.chat(context,
+              kind: ListingKind.taxi, id: item.id, detailArguments: _detailArguments),
+        ),
+      ];
+
+  List<WideAction> _enquiryRow() {
+    final status = enquiryStatus;
+    return [
+      WideAction(icon: Icons.call_rounded, label: 'Call', onTap: onOpen),
+      if (onEnquire != null)
+        WideAction(
+          icon: Icons.mail_rounded,
+          label: TripStrings.enquiry,
+          onTap: onEnquire,
+          child: status == null ? null : _statusText(status),
+        ),
+    ];
   }
+
+  Widget _statusText(TripDisplayStatus status) => FittedBox(
+        fit: BoxFit.scaleDown,
+        alignment: Alignment.centerLeft,
+        child: Text(
+          TripStatusVisuals.label(status, taxi: true),
+          maxLines: 1,
+          style: Ink3D.text(14, FontWeight.w700, DesignColors.onPrimary),
+        ),
+      );
+
+  List<WideAction> _pickRow() => [
+        if (onSelect != null)
+          WideAction(
+            icon: selected ? Icons.check_rounded : Icons.add_rounded,
+            label: selected ? TripStrings.selected : TripStrings.select,
+            onTap: onSelect,
+          ),
+        if (onBook != null)
+          WideAction(
+            icon: booked ? Icons.check_rounded : Icons.event_available_rounded,
+            label: booked ? TripStrings.booked : TripStrings.iBooked,
+            onTap: onBook,
+          ),
+      ];
 
   (String?, String?) _fare() {
     final t = item;
@@ -101,63 +174,64 @@ class TaxiCard extends StatelessWidget {
       final to = t.matchedToName;
       return (BrowseItem.inr(t.matchedFare!), to != null && to.isNotEmpty ? 'to $to' : null);
     }
-    if (t.localDayRate != null) {
-      return (
-        TaxiOptionSets.localRateLabel(t.localDayRate!),
-        t.localDayKm != null ? '${t.localDayKm} km/day' : null,
-      );
-    }
+    if (t.localDayRate != null) return (BrowseItem.inr(t.localDayRate!), '/day local');
     return (null, null);
-  }
-
-  List<Widget> _actions() {
-    const tone = KitTone.taxi;
-    return [
-      PillAction(
-        label: 'Call',
-        tone: tone,
-        icon: const Icon(Icons.call_outlined, size: 16, color: DesignColors.primary),
-        onTap: onOpen,
-      ),
-      PillAction(
-        label: 'WhatsApp',
-        tone: tone,
-        icon: const TravelIcon(TravelIcon.chat, size: 18),
-        onTap: onOpen,
-      ),
-      if (onEnquire != null) _enquire(),
-      if (onSelect != null)
-        PillAction(
-          label: selected ? TripStrings.selected : TripStrings.select,
-          tone: tone,
-          filled: selected,
-          onTap: onSelect,
-        ),
-      if (onBook != null)
-        PillAction(
-          label: booked ? TripStrings.booked : TripStrings.iBooked,
-          tone: tone,
-          filled: booked,
-          onTap: onBook,
-        ),
-    ];
-  }
-
-  Widget _enquire() {
-    final status = enquiryStatus;
-    if (status == null) {
-      return PillAction(label: TripStrings.enquiry, tone: KitTone.taxi, onTap: onEnquire);
-    }
-    return InkWell(
-      onTap: onEnquire,
-      child: SizedBox(height: 44, child: Center(child: TripStatusPill(status, taxi: true))),
-    );
   }
 }
 
 class TaxiCardSkeleton extends StatelessWidget {
-  const TaxiCardSkeleton({super.key});
+  const TaxiCardSkeleton({super.key, this.tone});
+
+  final ListingTone? tone;
 
   @override
-  Widget build(BuildContext context) => DriverOptionCard.skeleton();
+  Widget build(BuildContext context) {
+    final t = tone ?? ListingTone.cA;
+    const white = DesignColors.onPrimary;
+    Widget bar(double h, [double? w]) => Container(
+          height: h,
+          width: w,
+          decoration: BoxDecoration(color: white.withValues(alpha: Alpha.v28), borderRadius: BorderRadius.circular(8)),
+        );
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, 60, 14, 8),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Container(
+            decoration: BoxDecoration(borderRadius: kMealsRadius, gradient: t.gradient, boxShadow: t.glow()),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(160, 20, 20, 0),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [bar(10, 60), const SizedBox(height: 8), bar(18, 120), const SizedBox(height: 8), bar(12, 90)]),
+                ),
+                const SizedBox(height: 28),
+                Padding(padding: const EdgeInsets.symmetric(horizontal: 20), child: Align(alignment: Alignment.centerLeft, child: bar(26, 110))),
+                const SizedBox(height: 14),
+                Container(height: 46, color: white.withValues(alpha: Alpha.soft)),
+              ],
+            ),
+          ),
+          Positioned(
+            left: 4,
+            top: -46,
+            child: DecoratedBox(
+              decoration: BoxDecoration(shape: BoxShape.circle, color: white.withValues(alpha: Alpha.v24)),
+              child: const SizedBox(width: 132, height: 132),
+            ),
+          ),
+          Positioned(
+            left: 18,
+            top: -34,
+            child: DecoratedBox(
+              decoration: BoxDecoration(shape: BoxShape.circle, color: white.withValues(alpha: Alpha.v40)),
+              child: const SizedBox(width: 100, height: 100),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }

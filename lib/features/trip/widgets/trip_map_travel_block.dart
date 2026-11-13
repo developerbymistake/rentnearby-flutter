@@ -64,11 +64,18 @@ class TripMapTravelBlock extends StatelessWidget {
           }
           open = Align(
             alignment: Alignment.centerLeft,
-            child: TripPillButton(
-              onTap: () => TripNavigation.openJourney(j.id),
-              accent: DesignColors.error,
-              icon: const TravelIcon(TravelIcon.route, size: 16),
-              label: TripStringsMcbA2.openJourney,
+            child: Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: WhitePillButton(
+                tone: ListingTone.coral,
+                onGradient: true,
+                onTap: () => TripNavigation.openJourney(j.id),
+                icon: Icons.route_rounded,
+                label: TripStringsMcbA2.openJourney,
+                height: 38,
+                fontSize: 13,
+                expand: false,
+              ),
             ),
           );
         } else {
@@ -94,7 +101,7 @@ class TripMapTravelBlock extends StatelessWidget {
                   route,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12.5, fontWeight: FontWeight.w700, color: DesignColors.textStrong),
+                  style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12.5, fontWeight: FontWeight.w700, color: DesignColors.textInverse),
                 ),
               ),
             ],
@@ -141,7 +148,7 @@ class TripMapTravelBlock extends StatelessWidget {
           width: 30,
           height: 30,
           alignment: Alignment.center,
-          decoration: const BoxDecoration(color: DesignColors.scaffold, shape: BoxShape.circle),
+          decoration: const BoxDecoration(color: DesignColors.surface, shape: BoxShape.circle),
           child: initial != null
               ? Text(
                   initial,
@@ -160,24 +167,28 @@ class TripMapTravelBlock extends StatelessWidget {
                 title,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12.5, fontWeight: FontWeight.w700, color: DesignColors.textStrong),
+                style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12.5, fontWeight: FontWeight.w700, color: DesignColors.textInverse),
               ),
               if (subtitle != null && subtitle.isNotEmpty)
                 Text(
                   subtitle,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 11.5, color: DesignColors.textSecondary),
+                  style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 11.5, color: DesignColors.whiteHigh),
                 ),
             ],
           ),
         ),
         if (phone != null)
-          TripPillButton(
+          WhitePillButton(
+            tone: ListingTone.coral,
+            onGradient: true,
             onTap: () => ContactLauncher.call(phone),
-            accent: DesignColors.error,
-            icon: const Icon(Icons.call_rounded, size: 16, color: DesignColors.error),
+            icon: Icons.call_rounded,
             label: TripStringsMcbA2.call,
+            height: 38,
+            fontSize: 13,
+            expand: false,
           ),
       ],
     );

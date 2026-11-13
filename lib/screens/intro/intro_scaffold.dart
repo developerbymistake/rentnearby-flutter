@@ -1,11 +1,10 @@
-import 'dart:math' as math;
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 
 import '../../design/design.dart';
+import '../../design/extra/ext_auth.dart';
 import '../../config/app_constants.dart';
 import '../../config/app_routes.dart';
 import '../../services/storage_service.dart';
@@ -186,25 +185,7 @@ class _IntroScaffoldState extends State<IntroScaffold> with TickerProviderStateM
     return RepaintBoundary(
       child: AnimatedBuilder(
         animation: _pageController,
-        builder: (context, _) {
-          final p = _pageValue().clamp(0.0, _last.toDouble());
-          final i = p.floor();
-          final j = math.min(i + 1, _last);
-          final t = p - i;
-          return DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Color.lerp(IntroPalette.top[i], IntroPalette.top[j], t)!,
-                  Color.lerp(IntroPalette.bottom[i], IntroPalette.bottom[j], t)!,
-                ],
-              ),
-            ),
-            child: const SizedBox.expand(),
-          );
-        },
+        builder: (context, _) => ColoredBox(color: IntroTones.background(_pageValue()), child: const SizedBox.expand()),
       ),
     );
   }
@@ -214,19 +195,19 @@ class _IntroScaffoldState extends State<IntroScaffold> with TickerProviderStateM
     final viewPadding = MediaQuery.viewPaddingOf(context);
     final width = MediaQuery.sizeOf(context).width;
     final isLast = currentPage >= _last;
-    final bottomReserve = 124 + viewPadding.bottom;
-    final topReserve = viewPadding.top + 56;
+    final bottomReserve = 170 + viewPadding.bottom;
+    final topReserve = viewPadding.top + 48;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.light.copyWith(
+      value: SystemUiOverlayStyle.dark.copyWith(
         statusBarColor: Colors.transparent,
-        systemNavigationBarColor: DesignColors.primary,
-        systemNavigationBarIconBrightness: Brightness.light,
+        systemNavigationBarColor: AuthInk.page,
+        systemNavigationBarIconBrightness: Brightness.dark,
       ),
       child: MediaQuery.withClampedTextScaling(
         maxScaleFactor: 1.3,
         child: Scaffold(
-          backgroundColor: DesignColors.primary,
+          backgroundColor: AuthInk.page,
           body: Stack(
             children: [
               Positioned.fill(child: _background()),
@@ -259,19 +240,25 @@ class _IntroScaffoldState extends State<IntroScaffold> with TickerProviderStateM
                 ),
               ),
               Positioned(
-                top: viewPadding.top + 8,
+                top: viewPadding.top + 10,
                 right: 16,
                 child: IgnorePointer(
                   ignoring: isLast,
                   child: ExcludeSemantics(
                     excluding: isLast,
-                    child: AnimatedOpacity(
-                      opacity: isLast ? 0 : 1,
-                      duration: const Duration(milliseconds: 200),
-                      child: IntroPillButton(
-                        key: const Key('intro_skip'),
-                        label: IntroStrings.skip,
-                        onTap: _finish,
+                    child: AnimatedSlide(
+                      offset: isLast ? const Offset(2, 0) : Offset.zero,
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.fastOutSlowIn,
+                      child: AnimatedOpacity(
+                        opacity: isLast ? 0 : 1,
+                        duration: const Duration(milliseconds: 200),
+                        child: IntroPillButton(
+                          key: const Key('intro_skip'),
+                          label: IntroStrings.skip,
+                          color: IntroTones.page[currentPage].text,
+                          onTap: _finish,
+                        ),
                       ),
                     ),
                   ),
@@ -280,7 +267,7 @@ class _IntroScaffoldState extends State<IntroScaffold> with TickerProviderStateM
               Positioned(
                 left: width * 0.12,
                 right: width * 0.12,
-                bottom: 24 + 52 + 14 + viewPadding.bottom,
+                bottom: 24 + 54 + 18 + viewPadding.bottom,
                 height: 34,
                 child: RepaintBoundary(
                   child: IntroJourneyThread(
@@ -300,7 +287,7 @@ class _IntroScaffoldState extends State<IntroScaffold> with TickerProviderStateM
                 left: 20,
                 right: 20,
                 bottom: 24 + viewPadding.bottom,
-                height: 52,
+                height: 54,
                 child: IntroCtaButton(
                   key: const Key('intro_cta'),
                   progress: _progress,

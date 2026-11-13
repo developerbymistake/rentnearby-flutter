@@ -2,68 +2,42 @@ import 'package:bakhli/design/design.dart';
 import 'package:flutter/material.dart';
 import '../../models/trip_plan_model.dart';
 import '../../trip_strings_guide.dart';
-import '../trip_ui.dart';
 
 class TripGuideOption extends StatelessWidget {
-  const TripGuideOption({super.key, required this.label, required this.icon, required this.selected, required this.onTap});
+  const TripGuideOption({
+    super.key,
+    required this.label,
+    required this.art,
+    required this.tone,
+    required this.selected,
+    required this.onTap,
+    this.anyChosen = false,
+  });
 
   final String label;
-  final IconData icon;
+  final String art;
+  final ListingTone tone;
   final bool selected;
+  final bool anyChosen;
   final VoidCallback? onTap;
 
   @override
-  Widget build(BuildContext context) {
-    const tone = KitTone.trip;
-    return Semantics(
-      button: true,
-      selected: selected,
-      label: label,
-      excludeSemantics: true,
-      child: TripSurface(
-        onTap: onTap,
-        color: selected ? tone.tint : DesignColors.surface,
-        borderColor: selected ? tone.accentDark : DesignColors.borderSoft,
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: KitMetrics.touch),
-          child: Row(
-            children: [
-              Icon(icon, size: 22, color: tone.accentDark),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(label, style: TypeTokens.style(14, selected ? FontWeight.w700 : FontWeight.w600)),
-              ),
-              const SizedBox(width: 8),
-              _Radio(on: selected),
-            ],
-          ),
+  Widget build(BuildContext context) => Semantics(
+        button: true,
+        selected: selected,
+        label: label,
+        excludeSemantics: true,
+        child: OptionCard(
+          tone: tone,
+          art: art,
+          label: label,
+          state: selected
+              ? OptionState.on
+              : anyChosen
+                  ? OptionState.off
+                  : OptionState.idle,
+          onTap: onTap,
         ),
-      ),
-    );
-  }
-}
-
-class _Radio extends StatelessWidget {
-  const _Radio({required this.on});
-  final bool on;
-
-  @override
-  Widget build(BuildContext context) => Container(
-        width: 22,
-        height: 22,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          border: Border.all(color: on ? KitTone.trip.accentDark : DesignColors.borderStrong, width: 2),
-        ),
-        child: on
-            ? const Center(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(shape: BoxShape.circle, color: DesignColors.lunchEnd),
-                  child: SizedBox(width: 10, height: 10),
-                ),
-              )
-            : null,
       );
 }
 
@@ -76,22 +50,21 @@ class TripGuideOptions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Widget opt(TripGuideChoice c, String label, IconData icon) => Padding(
-          padding: const EdgeInsets.only(bottom: 8),
-          child: TripGuideOption(label: label, icon: icon, selected: choice == c, onTap: () => onPick(c)),
+    Widget opt(TripGuideChoice c, String label, String art, ListingTone tone) => TripGuideOption(
+          label: label,
+          art: art,
+          tone: tone,
+          selected: choice == c,
+          anyChosen: choice != null,
+          onTap: () => onPick(c),
         );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: [
-        opt(TripGuideChoice.find, TripStringsGuide.optFind, Icons.search_rounded),
-        opt(TripGuideChoice.own, TripStringsGuide.optOwn, Icons.person_outline_rounded),
-        opt(TripGuideChoice.skip, TripStringsGuide.optSkip, Icons.skip_next_rounded),
-        if (skipNote && choice == TripGuideChoice.skip)
-          Padding(
-            padding: const EdgeInsets.only(top: 2),
-            child: Text(TripStringsGuide.noTaxiNote, textAlign: TextAlign.center, style: TypeTokens.caption),
-          ),
+        opt(TripGuideChoice.find, TripStringsGuide.optFind, ListingArt.compass, ListingTone.cB),
+        opt(TripGuideChoice.own, TripStringsGuide.optOwn, ListingArt.backpack, ListingTone.cA),
+        opt(TripGuideChoice.skip, TripStringsGuide.optSkip, ListingArt.airplane, ListingTone.cC),
       ],
     );
   }

@@ -6,6 +6,7 @@ import '../data/trip_city_catalog.dart';
 import '../models/trip_city_model.dart';
 import '../trip_navigation.dart';
 import '../trip_strings.dart';
+import '../trip_strings_tab.dart';
 
 class TripPopularRail extends StatefulWidget {
   const TripPopularRail({super.key});
@@ -15,8 +16,7 @@ class TripPopularRail extends StatefulWidget {
 }
 
 class _TripPopularRailState extends State<TripPopularRail> {
-  static const double _cardWidth = 168;
-  static const double _cardHeight = 168;
+  static const List<String> _arts = [ListingArt.mountain, ListingArt.camping, ListingArt.tent, ListingArt.beach, ListingArt.sunrise];
 
   late final TripCityCatalog _catalog;
 
@@ -54,119 +54,63 @@ class _TripPopularRailState extends State<TripPopularRail> {
   Widget _rail(String? stateName) {
     final cities = _ordered(stateName);
     if (cities.isEmpty) return const SizedBox.shrink();
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: KitMetrics.gutter),
-            child: Text(
-              TripStrings.popularDestinations,
-              style: TypeTokens.style(16, FontWeight.w700, color: DesignColors.textStrong, letterSpacing: 0.27),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: KitMetrics.gutter),
-            child: Text(
-              TripStrings.popularDestinationsSubtitle,
-              style: TypeTokens.style(12, FontWeight.w400, color: TypeTokens.secondary),
-            ),
-          ),
-          const SizedBox(height: 12),
-          SizedBox(
-            height: _cardHeight + 24,
-            child: RailReveal(
-              itemCount: cities.length,
-              padding: const EdgeInsets.fromLTRB(KitMetrics.gutter, 4, KitMetrics.gutter, 20),
-              itemBuilder: (_, i) => _card(cities[i]),
-            ),
-          ),
-        ],
-      ),
+    final width = _cardWidth(cities);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const TitleRow3D(
+          title: TripStrings.popularDestinations,
+          subtitle: TripStrings.popularDestinationsSubtitle,
+          action: 'See all',
+          onAction: TripNavigation.openTripsTab,
+        ),
+        MealsRail(
+          physics: const BouncingScrollPhysics(),
+          children: [for (var i = 0; i < cities.length; i++) _card(cities[i], i, width)],
+        ),
+      ],
     );
   }
 
-  Widget _card(TripCityModel city) {
+  static const double _minWidth = 160;
+  static const double _maxWidth = 210;
+
+  double _cardWidth(List<TripCityModel> cities) {
+    final scaler = MediaQuery.textScalerOf(context);
+    final style = Ink3D.text(17, FontWeight.w700, DesignColors.onPrimary, height: 1.3);
+    var longest = 0.0;
+    for (final c in cities) {
+      for (final w in c.name.split(RegExp(r'\s+'))) {
+        final x = KitText.widthOf(w, style, scaler);
+        if (x > longest) longest = x;
+      }
+    }
+    final need = (longest + MealsCardV.cellPadding.horizontal + 32).ceilToDouble();
+    return need.clamp(_minWidth, _maxWidth);
+  }
+
+  Widget _card(TripCityModel city, int index, double width) {
     final ready = city.isReady;
-    return PressScale(
-      enabled: ready,
-      child: Container(
-        width: _cardWidth,
-        height: _cardHeight,
-        decoration: const BoxDecoration(borderRadius: CardRadius.tile, boxShadow: ShadowTokens.elev2),
-        child: Material(
-          color: DesignColors.surface,
-          borderRadius: CardRadius.tile,
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
-            onTap: ready ? () => TripNavigation.startWithCities([city]) : null,
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                KitPhoto(
-                  url: city.cover,
-                  width: _cardWidth,
-                  height: _cardHeight,
-                  tone: KitTone.trip,
-                  asset: TravelIcon.map,
-                  iconSize: 56,
-                ),
-                DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [Colors.transparent, DesignColors.overlayDark.withValues(alpha: Alpha.strong)],
-                      stops: const [0.4, 1],
-                    ),
-                  ),
-                ),
-                if (!ready)
-                  Positioned(
-                    top: 8,
-                    left: 8,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: DesignColors.tint(DesignColors.overlayDark, Alpha.strong),
-                        borderRadius: CardRadius.chip,
-                      ),
-                      child: Text(
-                        TripStrings.comingSoon,
-                        style: TypeTokens.style(10, FontWeight.w600, color: DesignColors.surface, chip: true),
-                      ),
-                    ),
-                  ),
-                Positioned(
-                  left: 12,
-                  right: 12,
-                  bottom: 12,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        city.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TypeTokens.style(14, FontWeight.w700, color: DesignColors.surface),
-                      ),
-                      if (city.stateName.isNotEmpty)
-                        Text(
-                          city.stateName,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TypeTokens.style(11, FontWeight.w500, color: DesignColors.tint(DesignColors.surface, Alpha.high)),
-                        ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
+    final place = city.stateName.isNotEmpty ? city.stateName : city.districtName;
+    final spots = city.spotCount;
+    final art = _arts[city.cityKey.abs() % _arts.length];
+    final cover = city.cover;
+    final hasNumber = ready && spots > 0;
+    final second = !ready ? TripStrings.comingSoon : '';
+    return MealsCardV(
+      key: ValueKey('popular-${city.cityKey}'),
+      tone: ListingTone.at(index),
+      title: city.name,
+      titleLines: 2,
+      width: width,
+      description: second.isEmpty ? place : '$place\n$second',
+      art: cover == null ? art : null,
+      photo: cover == null ? null : KitPhoto(url: cover, width: 100, height: 100, asset: TravelIcon.map, iconSize: 40),
+      sticker: cover == null ? null : art,
+      number: hasNumber ? '$spots' : null,
+      unit: TripStringsTab.cityUnit(spots),
+      onTap: ready ? () => TripNavigation.startWithCities([city]) : null,
+      semanticsLabel: ready ? city.name : '${city.name}, ${TripStrings.comingSoon}',
     );
   }
 }

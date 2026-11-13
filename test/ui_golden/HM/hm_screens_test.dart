@@ -218,7 +218,7 @@ void main() {
     for (final s in [
       'Hi, there',
       'Where to next?',
-      'View all',
+      'See all',
       'Deodar Valley Homestay',
       'Homestay',
       'FOR STAY',
@@ -226,11 +226,11 @@ void main() {
       'Innova Crysta',
       '7 seats',
       'Deluxe room',
-      'TAXI',
-      'FARE FROM',
-      'LOCAL TAXI',
+      'Innova',
+      'FROM',
+      'Local taxi',
       'Recently added stays',
-      'Follow us on Instagram',
+      'Follow us',
     ]) {
       expect(find.textContaining(s), findsWidgets, reason: s);
     }

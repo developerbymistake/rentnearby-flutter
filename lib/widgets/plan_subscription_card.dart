@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:bakhli/design/design.dart';
-import 'package:bakhli/design/extra/replies_kit.dart';
+import 'package:bakhli/design/extra/ext_plans.dart';
 import '../config/app_routes.dart';
 import '../controllers/plan_controller.dart';
 import '../models/my_plan_model.dart';
@@ -108,64 +108,37 @@ class PlanSubscriptionCard extends StatelessWidget {
     final (title, body, action, viaManage) = view;
     final plans = Get.find<PlanController>();
     final warn = p.needsFix;
-    final toneColor = warn ? DesignColors.warnDeep : accent;
-    final tone = KitTone.solid(toneColor);
     final scheduled = p.scheduledPlanName != null && p.scheduledAt != null
         ? 'Changes to ${p.scheduledPlanName} on ${PlanStateCopy.date(p.scheduledAt!)}'
         : null;
-    return Container(
-      decoration: BoxDecoration(
-        color: warn ? Color.alphaBlend(RepliesTone.warnSurface, DesignColors.surface) : DesignColors.surface,
-        borderRadius: CardRadius.tile,
-        boxShadow: warn ? ShadowTokens.elev3 : ShadowTokens.elev2,
-      ),
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          Expanded(
-            child: Text(p.ownsActivePlan ? me.planName : 'Subscription',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TypeTokens.style(12, FontWeight.w600, color: TypeTokens.secondary)),
-          ),
-          if (p.inTrial) _pill('Trial', accent),
-          if (p.isTest) ...[const SizedBox(width: 6), _pill('Test', DesignColors.textSecondary)],
-        ]),
-        const SizedBox(height: 2),
-        Text(title,
-            style: TypeTokens.style(16, FontWeight.w700,
-                color: warn ? DesignColors.warnDeep : DesignColors.textStrong, letterSpacing: 0.2)),
-        if (body != null)
-          Text(body,
-              style: TypeTokens.style(12, FontWeight.w500,
-                  color: warn ? DesignColors.warnDeep : DesignColors.textGrey)),
-        if (scheduled != null) ...[
-          const SizedBox(height: 8),
-          _note(TravelIcon.calendar, scheduled),
-        ],
-        if (me.carryOverDays > 0) ...[
-          const SizedBox(height: 8),
-          _note(TravelIcon.money, '+${me.carryOverDays} days after subscription'),
-        ],
-        const SizedBox(height: 12),
-        Wrap(crossAxisAlignment: WrapCrossAlignment.center, spacing: 8, children: [
-          if (action != null)
-            PillAction(
-              label: action,
-              filled: true,
-              tone: tone,
-              onTap: viaManage ? plans.openManageSubscription : onResubscribe,
-            ),
-          TextLink(
-            label: 'Manage in Google Play',
-            tone: tone,
-            onTap: plans.openManageSubscription,
-          ),
-        ]),
-        Text('Use the Google account you subscribed with.',
-            style: TypeTokens.style(11, FontWeight.w500, color: DesignColors.textMuted)),
-      ]),
+    return PlanSubscriptionCard3D(
+      tone: warn ? PlanLook.warmTone : PlanLook.toneOf(me.featureKey),
+      art: _art(p),
+      eyebrow: p.ownsActivePlan ? me.planName : 'Subscription',
+      pills: [if (p.inTrial) 'Trial'],
+      testPill: p.isTest ? 'Test' : null,
+      title: title,
+      body: body,
+      notes: [
+        if (scheduled != null) (ListingArt.calendar, scheduled),
+        if (me.carryOverDays > 0) (ListingArt.moneyBag, '+${me.carryOverDays} days after subscription'),
+      ],
+      action: action == null ? null : PlanSubAction(action, viaManage ? plans.openManageSubscription : onResubscribe),
+      manage: PlanSubAction('Manage in Google Play', plans.openManageSubscription),
+      footer: 'Use the Google account you subscribed with.',
+      footerArt: ListingArt.key,
     );
+  }
+
+  static String _art(PlaySubInfo p) {
+    if (p.inGrace || p.onHold) return ListingArt.clipboard;
+    if (p.paused) return ListingArt.calendar;
+    if (p.ownsActivePlan) {
+      if (!p.renewsAutomatically) return ListingArt.pushpin;
+      if (p.inTrial) return ListingArt.star;
+      return ListingArt.calendar;
+    }
+    return ListingArt.calendar;
   }
 
   (String, String?, String?, bool)? _view(PlaySubInfo p) {
@@ -194,16 +167,4 @@ class PlanSubscriptionCard extends StatelessWidget {
     }
     return null;
   }
-
-  Widget _pill(String text, Color color) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-        decoration: BoxDecoration(color: DesignColors.tint(color, Alpha.tint), borderRadius: CardRadius.pill),
-        child: Text(text, style: TypeTokens.style(11, FontWeight.w600, color: color)),
-      );
-
-  Widget _note(String asset, String text) => Row(children: [
-        TravelIcon(asset, size: 16),
-        const SizedBox(width: 6),
-        Expanded(child: Text(text, style: TypeTokens.style(12, FontWeight.w500, color: DesignColors.textGrey))),
-      ]);
 }

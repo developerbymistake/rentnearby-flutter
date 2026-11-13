@@ -1,42 +1,44 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../config/app_routes.dart';
+import '../design/design.dart';
 import '../models/home_feed_model.dart';
-import 'home_card_surface.dart';
 
 class HomeStayRailCard extends StatelessWidget {
-  static const double cellWidth = HomeRailTile.width;
-  static const EdgeInsets cellPadding = EdgeInsets.only(top: 4, bottom: 20);
-  static const double railHeight = HomeRailTile.height + 24;
+  static const double cellWidth = 160;
+  static const List<String> stickers = [ListingArt.key, ListingArt.bed, ListingArt.hotel];
 
   final HomeStayModel stay;
   final VoidCallback? onOpen;
+  final int index;
 
-  const HomeStayRailCard({super.key, required this.stay, this.onOpen});
+  const HomeStayRailCard({super.key, required this.stay, this.onOpen, this.index = 0});
 
   @override
   Widget build(BuildContext context) {
     final item = stay.item;
-    return Padding(
-      padding: cellPadding,
-      child: SizedBox(
-        width: cellWidth,
-        child: HomeRailTile(
-          thumbnailUrl: item.thumbnailUrl,
-          tagLabel: item.tagLabel,
-          title: item.title,
-          locationLabel: item.locationLabel,
-          facts: item.facts,
-          priceCaption: item.priceCaption,
-          priceValue: item.priceValue,
-          priceUnit: item.priceUnit,
-          isFeatured: item.isFeatured,
-          onTap:
-              onOpen ??
-              () =>
-                  Get.toNamed(AppRoutes.stayDetail, arguments: {'id': item.id}),
-        ),
-      ),
+    final url = item.thumbnailUrl;
+    final hasPhoto = url != null && url.isNotEmpty;
+    final sticker = stickers[index % stickers.length];
+    final chips = [
+      if (item.isFeatured) 'Featured',
+      for (final f in item.facts.take(3)) f.label,
+    ];
+    return MealsCardV(
+      tone: ListingTone.list(ListingTone.forest, index),
+      tag: item.tagLabel,
+      title: item.title,
+      description: item.locationLabel,
+      chips: chips,
+      photo: hasPhoto ? KitPhoto(url: url, width: 100, height: 100, asset: TravelIcon.stay, iconSize: 40) : null,
+      sticker: hasPhoto ? sticker : null,
+      art: hasPhoto ? null : ListingArt.hotel,
+      caption: item.priceCaption,
+      number: item.priceValue.isEmpty ? null : item.priceValue,
+      unit: item.priceUnit,
+      width: cellWidth,
+      titleLines: 2,
+      onTap: onOpen ?? () => Get.toNamed(AppRoutes.stayDetail, arguments: {'id': item.id}),
     );
   }
 }

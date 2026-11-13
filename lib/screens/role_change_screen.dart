@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:bakhli/design/design.dart';
-import 'package:bakhli/design/extra/replies_kit.dart';
+import 'package:bakhli/design/extra/ext_auth.dart';
 import '../config/user_roles.dart';
 import '../controllers/auth_controller.dart';
 import '../models/role_model.dart';
@@ -100,201 +100,148 @@ class _RoleChangeScreenState extends State<RoleChangeScreen> with SingleTickerPr
 
   @override
   Widget build(BuildContext context) {
+    final tone = ListingTone.indigo;
+    final pad = MediaQuery.paddingOf(context);
     return Scaffold(
-      backgroundColor: DesignColors.scaffold,
-      body: Column(
-        children: [
-          TemplateTopBar(
-            title: 'Change role',
-            opacity: 1,
-            onBack: () => Get.back(),
-            animation: _barAnim,
-            animationController: _bar,
-          ),
-          Expanded(
-            child: SafeArea(
-              top: false,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(KitMetrics.gutter, KitMetrics.sectionGap, KitMetrics.gutter, 16),
-                child: Obx(() {
-                  final currentKey = _auth.roleKey.value;
-                  final u = _auth.user.value;
-                  final isLoading = _auth.isLoading.value;
-                  final pending = u?.hasPendingRoleRequest ?? false;
-                  final rejected = u?.hasRejectedRoleRequest ?? false;
-                  final blockedUntil = u?.roleRequestBlockedUntil;
-                  final targets = _roles
-                      .where((r) => r.key != currentKey)
-                      .map((r) => r.key)
-                      .toList();
-                  final targetKey = targets.contains(_targetKey)
-                      ? _targetKey
-                      : targets.firstOrNull;
-                  final deletionLine = RoleCapabilities.of(currentKey).deletionLine;
-                  final cards = _roles.any((r) => r.key == currentKey)
-                      ? _roles
-                      : [
-                          RoleModel(
-                            key: currentKey,
-                            name: RoleVisuals.displayName(currentKey),
-                            description: 'Paused',
-                            sortOrder: -1,
-                          ),
-                          ..._roles,
-                        ];
-                  final count = cards.length + 4;
-                  var i = 0;
-                  Widget item(Widget child) => StaggerItem(index: i++, child: child);
+      backgroundColor: AuthInk.page,
+      body: MediaQuery.withClampedTextScaling(
+        maxScaleFactor: 1.3,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            SizedBox(height: pad.top + (MediaQuery.sizeOf(context).height < 820 ? 40 : 64)),
+            FadeTransition(
+              opacity: _barAnim,
+              child: TopBar3D(tone: tone, title: 'Change role', onBack: () => Get.back()),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 8, 18, 0),
+              child: Text(
+                'Needs admin approval.',
+                textAlign: TextAlign.center,
+                style: Ink3D.text(13, FontWeight.w600, Ink3D.sub, height: 1.5),
+              ),
+            ),
+            Expanded(
+              child: Obx(() {
+                final currentKey = _auth.roleKey.value;
+                final u = _auth.user.value;
+                final isLoading = _auth.isLoading.value;
+                final pending = u?.hasPendingRoleRequest ?? false;
+                final rejected = u?.hasRejectedRoleRequest ?? false;
+                final blockedUntil = u?.roleRequestBlockedUntil;
+                final targets = _roles
+                    .where((r) => r.key != currentKey)
+                    .map((r) => r.key)
+                    .toList();
+                final targetKey = targets.contains(_targetKey)
+                    ? _targetKey
+                    : targets.firstOrNull;
+                final deletionLine = RoleCapabilities.of(currentKey).deletionLine;
+                final cards = _roles.any((r) => r.key == currentKey)
+                    ? _roles
+                    : [
+                        RoleModel(
+                          key: currentKey,
+                          name: RoleVisuals.displayName(currentKey),
+                          description: 'Paused',
+                          sortOrder: -1,
+                        ),
+                        ..._roles,
+                      ];
+                final count = cards.length + 4;
+                var i = 0;
+                Widget item(Widget child) => StaggerItem(index: i++, child: child);
 
-                  return StaggerHost(
-                    key: ValueKey(_loading),
-                    count: count,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                final Widget body;
+                var strips = <Widget>[];
+                if (_loading) {
+                  body = const AuthEvenList(children: [AuthRoleSkeleton(), AuthRoleSkeleton(), AuthRoleSkeleton()]);
+                } else if (_roles.isEmpty) {
+                  body = Padding(padding: const EdgeInsets.only(bottom: 16), child: RoleLoadError(onRetry: _retry));
+                } else if (targetKey == null) {
+                  body = Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: AuthStateCard(tone: tone, art: ListingArt.backpack, title: 'No other role available'),
+                  );
+                } else {
+                  body = AuthRoleDescLines(
+                    descriptions: [for (final role in cards) role.description],
+                    child: AuthEvenList(
                       children: [
-                        item(Text(
-                          'Needs admin approval.',
-                          textAlign: TextAlign.center,
-                          style: TypeTokens.style(12, FontWeight.w500,
-                              color: TypeTokens.secondary, height: 1.5, letterSpacing: 0.2),
-                        )),
-                        const SizedBox(height: 20),
-                        Expanded(
-                          child: SkeletonSwitcher(
-                            loading: _loading,
-                            skeleton: Column(
-                              children: [
-                                for (var k = 0; k < 3; k++) ...[
-                                  HeroBanner.skeleton(),
-                                  const SizedBox(height: KitMetrics.cardGap),
-                                ],
-                              ],
-                            ),
-                            child: _roles.isEmpty
-                                ? RoleLoadError(onRetry: _retry)
-                                : targetKey == null
-                                    ? const StateCard(title: 'No other role available')
-                                    : SingleChildScrollView(
-                                        physics: const BouncingScrollPhysics(),
-                                        padding: const EdgeInsets.only(bottom: 12),
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                                          children: [
-                                            for (final role in cards) ...[
-                                              item(RoleOptionCard(
-                                                role: role,
-                                                selected: role.key == targetKey,
-                                                isCurrent: role.key == currentKey,
-                                                onTap: role.key == currentKey
-                                                    ? null
-                                                    : () => setState(() => _targetKey = role.key),
-                                              )),
-                                              const SizedBox(height: KitMetrics.cardGap),
-                                            ],
-                                            if (deletionLine != null) ...[
-                                              item(_StatusBox(
-                                                title: deletionLine,
-                                                message: '',
-                                                titleColor: RepliesTone.bad,
-                                                messageColor: DesignColors.textGrey,
-                                                background: RepliesTone.badSurface,
-                                                border: DesignColors.tint(RepliesTone.bad, Alpha.soft),
-                                                titleSize: 12,
-                                                titleWeight: FontWeight.w600,
-                                              )),
-                                              const SizedBox(height: KitMetrics.cardGap),
-                                            ],
-                                            if (pending)
-                                              item(const _StatusBox(
-                                                title: 'Request pending',
-                                                message: 'Waiting for admin approval.',
-                                                titleColor: DesignColors.primary,
-                                                messageColor: DesignColors.textGrey,
-                                                background: RepliesTone.accentSurface,
-                                              ))
-                                            else if (rejected)
-                                              item(_StatusBox(
-                                                title: 'Request rejected',
-                                                message: u!.roleRequestReason ?? '',
-                                                titleColor: RepliesTone.bad,
-                                                messageColor: DesignColors.textGrey,
-                                                background: RepliesTone.badSurface,
-                                              )),
-                                            if (!pending && blockedUntil != null) ...[
-                                              if (rejected) const SizedBox(height: KitMetrics.cardGap),
-                                              item(_StatusBox(
-                                                title: 'Try again later',
-                                                message: 'Next request after ${AppDateFormat.dateTime(blockedUntil)}',
-                                                titleColor: DesignColors.warnDeep,
-                                                messageColor: DesignColors.textGrey,
-                                                background: RepliesTone.warnSurface,
-                                              )),
-                                            ],
-                                          ],
-                                        ),
-                                      ),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        PrimaryButton(
-                          label: 'Send request',
-                          loading: isLoading,
-                          onPressed: _loading || targetKey == null || pending || blockedUntil != null
-                              ? null
-                              : () => _send(targetKey),
-                        ),
+                        for (final role in cards)
+                          item(RoleOptionCard(
+                            role: role,
+                            selected: role.key == targetKey,
+                            isCurrent: role.key == currentKey,
+                            onTap: role.key == currentKey
+                                ? null
+                                : () => setState(() => _targetKey = role.key),
+                          )),
                       ],
                     ),
                   );
-                }),
-              ),
+                  strips = [
+                    if (deletionLine != null)
+                      item(AuthStatusStrip(kind: AuthStripKind.bad, art: ListingArt.clipboard, title: deletionLine)),
+                    if (pending)
+                      item(const AuthStatusStrip(
+                        kind: AuthStripKind.pending,
+                        art: ListingArt.calendar,
+                        title: 'Request pending',
+                        message: 'Waiting for admin approval.',
+                      ))
+                    else if (rejected)
+                      item(AuthStatusStrip(
+                        kind: AuthStripKind.bad,
+                        art: ListingArt.clipboard,
+                        title: 'Request rejected',
+                        message: u!.roleRequestReason ?? '',
+                      )),
+                    if (!pending && blockedUntil != null)
+                      item(AuthStatusStrip(
+                        kind: AuthStripKind.later,
+                        art: ListingArt.calendar,
+                        title: 'Try again later',
+                        message: 'Next request after ${AppDateFormat.dateTime(blockedUntil)}',
+                      )),
+                  ];
+                }
+
+                return StaggerHost(
+                  key: ValueKey(_loading),
+                  count: count,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Expanded(child: body),
+                      if (strips.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(18, 0, 18, 14),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            spacing: 8,
+                            children: strips,
+                          ),
+                        ),
+                      Padding(
+                        padding: EdgeInsets.fromLTRB(18, 0, 18, 22 + pad.bottom),
+                        child: GradientPillButton(
+                          tone: tone,
+                          label: 'Send request',
+                          loading: isLoading,
+                          onTap: _loading || targetKey == null || pending || blockedUntil != null
+                              ? null
+                              : () => _send(targetKey),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _StatusBox extends StatelessWidget {
-  final String title;
-  final String message;
-  final Color titleColor;
-  final Color messageColor;
-  final Color background;
-  final Color? border;
-  final double titleSize;
-  final FontWeight titleWeight;
-
-  const _StatusBox({
-    required this.title,
-    required this.message,
-    required this.titleColor,
-    required this.messageColor,
-    required this.background,
-    this.border,
-    this.titleSize = 14,
-    this.titleWeight = FontWeight.w700,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: background,
-        borderRadius: CardRadius.tile,
-        border: border == null ? null : Border.all(color: border!),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(title, style: TypeTokens.style(titleSize, titleWeight, color: titleColor, letterSpacing: 0.2)),
-          if (message.isNotEmpty) ...[
-            const SizedBox(height: 2),
-            Text(message, style: TypeTokens.style(12, FontWeight.w500, color: messageColor, height: 1.5)),
           ],
-        ],
+        ),
       ),
     );
   }

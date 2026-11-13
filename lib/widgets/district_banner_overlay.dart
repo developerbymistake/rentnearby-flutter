@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../design/design.dart';
+import '../design/extra/ext_shared.dart';
 import '../models/banner_model.dart';
 
 class DistrictBannerOverlay extends StatefulWidget {
@@ -36,7 +37,7 @@ class _DistrictBannerOverlayState extends State<DistrictBannerOverlay>
   Widget build(BuildContext context) {
     return Positioned.fill(
       child: Material(
-        color: FitnessAppTheme.darkerText.withValues(alpha: Alpha.strong),
+        color: DesignColors.scrim,
         child: SafeArea(
           child: Center(
             child: TemplateEntrance(
@@ -56,80 +57,34 @@ class _DistrictBannerOverlayState extends State<DistrictBannerOverlay>
   Widget _buildCard() {
     final hasContact = banner.contactNumber != null;
     final hasUrl = banner.redirectUrl != null;
-    const imageRadius = CardRadius.heroTop;
-    final radius = hasContact || hasUrl
-        ? imageRadius
-        : TripKit.cardRadius;
-
-    return Container(
-      decoration: GateKit.card(),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Stack(
-            children: [
-              ClipRRect(
-                borderRadius: radius,
-                child: CachedNetworkImage(
-                  imageUrl: banner.imageUrl,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  placeholder: (context, url) =>
-                      const TemplatePlaceholder(height: 200, radius: 0),
-                  errorWidget: (context, url, error) => Container(
-                    height: 200,
-                    color: FitnessAppTheme.background,
-                    alignment: Alignment.center,
-                    child: const TravelIcon(TravelIcon.photo, size: 44),
-                  ),
-                ),
-              ),
-              Positioned(
-                top: 10,
-                right: 10,
-                child: GestureDetector(
-                  onTap: widget.onDismiss,
-                  child: Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: FitnessAppTheme.nearlyBlack.withValues(alpha: Alpha.strong),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.close_rounded,
-                      color: FitnessAppTheme.white,
-                      size: 22,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          if (hasContact || hasUrl)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
-              child: Row(
-                children: [
-                  if (hasContact) ...[
-                    Expanded(child: _callButton()),
-                    if (hasUrl) const SizedBox(width: 12),
-                  ],
-                  if (hasUrl) Expanded(child: _urlButton()),
-                ],
-              ),
-            ),
-        ],
+    return BannerCard3D(
+      onClose: widget.onDismiss,
+      image: CachedNetworkImage(
+        imageUrl: banner.imageUrl,
+        width: double.infinity,
+        fit: BoxFit.cover,
+        placeholder: (context, url) => const SkeletonBox(height: 200, radius: 0),
+        errorWidget: (context, url, error) => Container(
+          height: 200,
+          color: ListingTone.indigo.tint,
+          alignment: Alignment.center,
+          child: const Art3D(asset: ListingArt.camera, size: 72),
+        ),
       ),
+      buttons: [
+        if (hasContact) _callButton(),
+        if (hasUrl) _urlButton(),
+      ],
     );
   }
 
   Widget _callButton() {
-    return GateOutlineButton(
+    return WhitePillButton(
+      tone: ListingTone.indigo,
       label: 'Call',
-      height: 44,
+      height: 46,
       icon: Icons.phone_rounded,
-      onPressed: () async {
+      onTap: () async {
         final uri = Uri.parse('tel:${banner.contactNumber}');
         if (await canLaunchUrl(uri)) await launchUrl(uri);
       },
@@ -137,11 +92,12 @@ class _DistrictBannerOverlayState extends State<DistrictBannerOverlay>
   }
 
   Widget _urlButton() {
-    return GateButton(
+    return GradientPillButton(
+      tone: ListingTone.indigo,
       label: 'Visit',
-      height: 44,
+      height: 46,
       icon: Icons.open_in_new_rounded,
-      onPressed: () async {
+      onTap: () async {
         final uri = Uri.parse(banner.redirectUrl!);
         if (await canLaunchUrl(uri)) {
           await launchUrl(uri, mode: LaunchMode.externalApplication);

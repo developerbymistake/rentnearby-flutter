@@ -62,6 +62,7 @@ class NearbyItemRow extends StatelessWidget {
       subtitle: subtitle,
       tag: tag,
       solidTag: true,
+      rich: true,
       tagBadge: isFeatured
           ? FittedBox(fit: BoxFit.scaleDown, child: PlanBadgeChip(color: tone.accentDark, compact: false))
           : null,
@@ -96,7 +97,7 @@ class NearbyItemRow extends StatelessWidget {
                 if (unit.isNotEmpty) TextSpan(text: unit, style: TypeTokens.style(11, FontWeight.w600, color: tone.accentDark)),
               ]),
               maxLines: 1,
-              style: TypeTokens.style(15, FontWeight.w800, color: tone.accentDark),
+              style: TypeTokens.style(18, FontWeight.w800, color: tone.accentDark),
             ),
           ),
           const SizedBox(height: 4),

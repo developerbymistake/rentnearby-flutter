@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:bakhli/design/extra/trip_plan_look.dart';
-import 'package:bakhli/design/template/fitness_app_theme.dart';
+import 'package:bakhli/design/design.dart';
 import '../../../models/browse_item.dart';
 import '../models/trip_summary_model.dart';
 import '../trip_strings.dart';
@@ -11,9 +10,8 @@ import '../trip_strings_steps_a3.dart';
 import '../utils/trip_format.dart';
 import '../utils/trip_summary_text.dart';
 import '../utils/trip_travel_rules.dart';
-import 'trip_payment_line.dart';
 import 'trip_status.dart';
-import 'trip_status_card.dart';
+import 'trip_summary_booking_card.dart';
 
 class TripSummaryTravelCard extends StatelessWidget {
   const TripSummaryTravelCard(this.travel, {super.key});
@@ -42,104 +40,28 @@ class TripSummaryTravelCard extends StatelessWidget {
     final head = t.isOwn ? TripStringsMcdA3.travelHeadOwn(t.toName) : TripStringsMcdA3.travelHead(t.toName, t.shownCars);
     final date = t.date == null ? '' : TripFormat.shortDate(t.date!);
     final route = t.isOwn ? TripStringsMcaA3.fromTo(t.fromName, t.toName) : TripStringsStepsA3.routeLine(t.places);
-    return TripStatusCard(
-      status: status,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      head,
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                          fontFamily: FitnessAppTheme.fontName, fontSize: 14, fontWeight: FontWeight.w700, color: TripLook.textDark),
-                    ),
-                    Text(
-                      date.isEmpty ? TripStringsMcdA3.travelHeadFallback : TripStringsMcdA3.travelLine(date),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, color: TripLook.textMedium),
-                    ),
-                    Text(
-                      route,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, color: TripLook.textMedium),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              Flexible(child: TripStatusPill(status, taxi: true, label: pillLabel)),
-            ],
-          ),
-          if (!t.isOwn) ..._cars(t),
-        ],
-      ),
+    final cars = !t.isOwn && t.cars.isNotEmpty;
+    return TripSummaryBookingCard(
+      tone: ListingTone.coral,
+      art: ListingArt.taxi,
+      eyebrow: date.isEmpty ? TripStringsMcdA3.travelHeadFallback : TripStringsMcdA3.travelLine(date),
+      title: head,
+      subtitle: route,
+      pill: TripSummaryBookingCard.statusPill(status, taxi: true, label: pillLabel),
+      rows: cars ? [for (final c in t.cars) _carRow(c)] : const [],
+      payLine: cars ? TripStrings.taxiPayLine : null,
     );
   }
 
-  List<Widget> _cars(TripSummaryTravel t) {
-    if (t.cars.isEmpty) return const [];
-    return [
-      const SizedBox(height: 8),
-      for (final c in t.cars) _carRow(c),
-      const SizedBox(height: 10),
-      const TripPaymentLine(text: TripStrings.taxiPayLine),
-    ];
-  }
-
-  Widget _carRow(TripSummaryTravelCar c) {
+  (String, String) _carRow(TripSummaryTravelCar c) {
     final fare = c.fare;
     final word = TripSummaryText.carStatus(c);
     final name = c.driverName.isEmpty ? TripStrings.driver : c.driverName;
     final vehicle = (c.vehicleTypeName ?? '').isEmpty ? name : '$name · ${c.vehicleTypeName}';
     final pickup = (c.pickupTime ?? '').isEmpty ? null : TripStrings.pickupAt(TripFormat.time12(c.pickupTime!));
-    return Padding(
-      padding: const EdgeInsets.only(top: 6),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  vehicle,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                      fontFamily: FitnessAppTheme.fontName, fontSize: 12.5, fontWeight: FontWeight.w600, color: TripLook.textDark),
-                ),
-                Text(
-                  TripStrings.joinDots([TripStringsMcaA3.fromTo(c.fromName, c.toName), pickup]),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 11.5, color: TripLook.textLight),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          Flexible(
-            child: Text(
-              TripStrings.joinDots([if (fare != null && fare > 0) BrowseItem.inr(fare), word]),
-              maxLines: 2,
-              textAlign: TextAlign.end,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                  fontFamily: FitnessAppTheme.fontName, fontSize: 12, fontWeight: FontWeight.w600, color: TripLook.textMedium),
-            ),
-          ),
-        ],
-      ),
+    return (
+      TripStringsMcaA3.fromTo(c.fromName, c.toName),
+      TripStrings.joinDots([vehicle, pickup, if (fare != null && fare > 0) BrowseItem.inr(fare), word]),
     );
   }
 }

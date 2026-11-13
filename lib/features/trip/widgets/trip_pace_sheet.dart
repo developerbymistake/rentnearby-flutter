@@ -10,62 +10,158 @@ class TripPaceSheet {
     return SheetFrame.show<int>(
       context,
       builder: (ctx) => SheetFrame(
+        tone: ListingTone.indigo,
+        art: ListingArt.sunrise,
+        size: SheetSize.confirm,
+        scrollable: false,
+        padding: const EdgeInsets.only(bottom: 20),
         title: TripStringsV2Plan.paceTitle,
         subtitle: TripStringsV2Plan.paceSub,
         footer: Text(
           TripStringsV2Plan.paceFooter,
           textAlign: TextAlign.center,
-          style: TypeTokens.style(12, FontWeight.w400, color: TypeTokens.secondary),
+          style: Ink3D.text(12, FontWeight.w400, Ink3D.grey),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+        child: TripSheetFill(
           children: [
-            _row(ctx, TripStringsV2Plan.paceRelaxed, TripStringsV2Plan.paceRelaxedHint, TripPace.relaxed,
-                current <= TripPace.relaxed),
-            const SizedBox(height: 12),
-            _row(ctx, TripStringsV2Plan.paceNormal, TripStringsV2Plan.paceNormalHint, TripPace.normal,
-                current > TripPace.relaxed),
+            TripChoiceCard(
+              art: ListingArt.tent,
+              label: TripStringsV2Plan.paceRelaxed,
+              hint: TripStringsV2Plan.paceRelaxedHint,
+              selected: current <= TripPace.relaxed,
+              onTap: () => Navigator.pop(ctx, current <= TripPace.relaxed ? null : TripPace.relaxed),
+            ),
+            TripChoiceCard(
+              art: ListingArt.backpack,
+              label: TripStringsV2Plan.paceNormal,
+              hint: TripStringsV2Plan.paceNormalHint,
+              selected: current > TripPace.relaxed,
+              onTap: () => Navigator.pop(ctx, current > TripPace.relaxed ? null : TripPace.normal),
+            ),
           ],
         ),
       ),
     );
   }
+}
 
-  static Widget _row(BuildContext ctx, String label, String hint, int minutes, bool selected) {
-    return PressScale(
-      child: InkWell(
-      onTap: () => Navigator.pop(ctx, selected ? null : minutes),
-      borderRadius: CardRadius.tile,
-      child: Container(
-        constraints: const BoxConstraints(minHeight: 64),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          color: selected ? null : DesignColors.surface,
-          gradient: selected ? KitTone.trip.gradient : null,
-          borderRadius: CardRadius.tile,
-          boxShadow: selected ? ShadowTokens.glow(KitTone.trip.glow) : ShadowTokens.elev2,
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(label,
-                      style: TypeTokens.style(14, FontWeight.w700,
-                          color: selected ? DesignColors.onPrimary : DesignColors.textStrong)),
-                  Text(hint,
-                      style: TypeTokens.style(12, FontWeight.w600,
-                          color: selected ? DesignColors.onPrimary : TypeTokens.secondary)),
+class TripSheetFill extends StatelessWidget {
+  const TripSheetFill({super.key, required this.children, this.gap = 12});
+
+  final List<Widget> children;
+  final double gap;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+        builder: (context, box) => SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: box.maxHeight),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                for (var i = 0; i < children.length; i++) ...[
+                  if (i > 0) SizedBox(height: gap),
+                  children[i],
                 ],
-              ),
+              ],
             ),
-            Icon(selected ? Icons.radio_button_checked_rounded : Icons.radio_button_off_rounded,
-                color: selected ? DesignColors.onPrimary : DesignColors.textMuted),
-          ],
+          ),
         ),
-      ),
+      );
+}
+
+class TripChoiceCard extends StatelessWidget {
+  const TripChoiceCard({super.key, required this.art, required this.label, this.hint, required this.selected, required this.onTap, this.trailing, this.labelDot});
+
+  final String art;
+  final String label;
+  final String? hint;
+  final bool selected;
+  final VoidCallback? onTap;
+  final Widget? trailing;
+  final Color? labelDot;
+
+  static const double topRoom = 26;
+
+  @override
+  Widget build(BuildContext context) {
+    final tone = ListingTone.indigo;
+    const white = DesignColors.surface;
+    final narrow = MediaQuery.sizeOf(context).width < 340;
+    final artSize = narrow ? 70.0 : 84.0;
+    final h = hint;
+    return Tap3D(
+      onTap: onTap,
+      label: label,
+      selected: selected,
+      child: Opacity(
+        opacity: onTap == null ? Alpha.v45 : (selected ? 1 : Alpha.v80),
+        child: Padding(
+          padding: const EdgeInsets.only(top: topRoom, bottom: 8),
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Container(
+                constraints: const BoxConstraints(minHeight: 78),
+                padding: EdgeInsets.fromLTRB(artSize + 22, 12, 14, 12),
+                decoration: BoxDecoration(
+                  gradient: tone.gradient,
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(8),
+                    topRight: Radius.circular(32),
+                    bottomLeft: Radius.circular(8),
+                    bottomRight: Radius.circular(8),
+                  ),
+                  boxShadow: selected ? [BoxShadow(color: tone.shadow, offset: const Offset(1.1, 6), blurRadius: 12)] : null,
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Row(
+                            children: [
+                              if (labelDot != null) ...[
+                                Container(
+                                  width: 11,
+                                  height: 11,
+                                  decoration: BoxDecoration(color: labelDot, shape: BoxShape.circle, border: Border.all(color: white, width: 1.5)),
+                                ),
+                                const SizedBox(width: 8),
+                              ],
+                              Flexible(child: Text(label, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(16, FontWeight.w700, white))),
+                            ],
+                          ),
+                          if (h != null)
+                            Text(h, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(12.5, FontWeight.w500, DesignColors.tint(white, Alpha.v92))),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    trailing ??
+                        Container(
+                          width: 30,
+                          height: 30,
+                          decoration: BoxDecoration(color: DesignColors.tint(white, selected ? Alpha.full : Alpha.v30), shape: BoxShape.circle),
+                          child: selected ? Icon(Icons.check_rounded, size: 20, color: tone.text) : null,
+                        ),
+                  ],
+                ),
+              ),
+              Positioned(
+                left: 10,
+                top: -topRoom,
+                child: IgnorePointer(
+                  child: Art3D(asset: art, size: artSize, halo: artSize - 6, haloColor: DesignColors.tint(white, Alpha.v22)),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

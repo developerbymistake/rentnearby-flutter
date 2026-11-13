@@ -2,7 +2,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:bakhli/design/design.dart';
-import 'package:bakhli/design/extra/trip_plan_look.dart';
+import 'package:bakhli/design/extra/ext_journeys.dart';
 import '../../../config/app_insets.dart';
 import '../ways/taxi_ways_strings.dart';
 import 'journey_actions.dart';
@@ -75,7 +75,7 @@ class _MyJourneysScreenState extends State<MyJourneysScreen> with WidgetsBinding
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: DesignColors.scaffold,
+      backgroundColor: ListingPalette.coral.page,
       body: Column(children: [
         TemplateEntrance(
           animation: templateInterval(_anim, 0, 2),
@@ -83,22 +83,24 @@ class _MyJourneysScreenState extends State<MyJourneysScreen> with WidgetsBinding
           offset: 0,
           child: const JourneyHeader(title: TaxiWaysStrings.myJourneys),
         ),
-        Obx(() => _ctrl.isOffline.value ? const JourneyOfflineBanner() : const SizedBox.shrink()),
         Expanded(child: Obx(_body)),
       ]),
     );
   }
 
-  double _pad(double width) => math.max(14, (width - _maxWidth) / 2);
+  double _pad(double width) => math.max(0, (width - _maxWidth) / 2);
 
-  Widget _scrollable(Widget child) => RefreshIndicator(
-        color: DesignColors.primary,
+  Widget _scrollable(List<Widget> children) => RefreshIndicator(
+        color: ListingPalette.coral.g2,
         onRefresh: () => _ctrl.load(force: true),
         child: LayoutBuilder(
           builder: (context, c) => ListView(
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: EdgeInsets.fromLTRB(_pad(c.maxWidth), 14, _pad(c.maxWidth), 24 + AppInsets.bottomViewPadding(context)),
-            children: [_enter(0, child)],
+            padding: EdgeInsets.fromLTRB(_pad(c.maxWidth), 0, _pad(c.maxWidth), 24 + AppInsets.bottomViewPadding(context)),
+            children: [
+              if (_ctrl.isOffline.value && !(_ctrl.journeys.isEmpty && _ctrl.loadFailed.value)) const JourneyOfflineBanner(),
+              for (var i = 0; i < children.length; i++) _enter(i, children[i]),
+            ],
           ),
         ),
       );
@@ -107,53 +109,33 @@ class _MyJourneysScreenState extends State<MyJourneysScreen> with WidgetsBinding
     final list = _ctrl.journeys.toList();
     if (list.isEmpty) {
       if (_ctrl.isLoading.value) {
-        return _scrollable(Column(children: [
-          for (var i = 0; i < 3; i++) ...[
-            if (i > 0) const SizedBox(height: 12),
-            const JourneySkeletonCard(),
-          ],
-        ]));
+        return _scrollable([for (var i = 0; i < 3; i++) const JourneyCardSkeleton()]);
       }
       if (_ctrl.loadFailed.value) {
         final offline = _ctrl.isOffline.value;
-        return _scrollable(TripPlanEmpty(
-          image: offline ? TravelIcon.map : TravelIcon.note,
-          title: offline ? TaxiWaysStrings.offlineTitle : JourneyStrings.loadFailed,
-          subtitle: TaxiWaysStrings.offlineBody,
-          retryLabel: TaxiWaysStrings.retry,
-          onRetry: () => _ctrl.load(force: true),
-        ));
+        return _scrollable([
+          JourneyEmpty3D(
+            art: offline ? ListingArt.worldMap : ListingArt.clipboard,
+            title: offline ? TaxiWaysStrings.offlineTitle : JourneyStrings.loadFailed,
+            body: TaxiWaysStrings.offlineBody,
+            actionLabel: TaxiWaysStrings.retry,
+            onAction: () => _ctrl.load(force: true),
+          ),
+        ]);
       }
-      return _scrollable(const TripPlanEmpty(
-        image: TravelIcon.route,
-        title: TaxiWaysStrings.noJourneys,
-        subtitle: TaxiWaysStrings.noJourneysBody,
-      ));
+      return _scrollable(const [
+        JourneyEmpty3D(art: ListingArt.compass, title: TaxiWaysStrings.noJourneys, body: TaxiWaysStrings.noJourneysBody),
+      ]);
     }
-    return RefreshIndicator(
-      color: DesignColors.primary,
-      onRefresh: () => _ctrl.load(force: true),
-      child: LayoutBuilder(
-        builder: (context, c) => ListView.separated(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: EdgeInsets.fromLTRB(_pad(c.maxWidth), 14, _pad(c.maxWidth), 24 + AppInsets.bottomViewPadding(context)),
-          itemCount: list.length,
-          separatorBuilder: (_, _) => const SizedBox(height: 12),
-          itemBuilder: (_, i) {
-            final j = list[i];
-            return _enter(
-              i,
-              Obx(() => JourneyListCard(
-                    journey: j,
-                    busy: _ctrl.busyIds.contains(j.id),
-                    onOpen: () => JourneyActions.openSaved(j.id),
-                    onAsk: () => _ask(j),
-                    onReplace: (leg, backup) => _ctrl.replaceDriver(j.id, leg.legIndex, backup.taxiId),
-                  )),
-            );
-          },
-        ),
-      ),
-    );
+    return _scrollable([
+      for (final j in list)
+        Obx(() => JourneyListCard(
+              journey: j,
+              busy: _ctrl.busyIds.contains(j.id),
+              onOpen: () => JourneyActions.openSaved(j.id),
+              onAsk: () => _ask(j),
+              onReplace: (leg, backup) => _ctrl.replaceDriver(j.id, leg.legIndex, backup.taxiId),
+            )),
+    ]);
   }
 }

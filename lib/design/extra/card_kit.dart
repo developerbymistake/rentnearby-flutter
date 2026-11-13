@@ -33,8 +33,10 @@ class _Surface extends StatelessWidget {
     this.color = DesignColors.surface,
     this.press = true,
     this.foreground,
+    this.gradient,
   });
 
+  final Gradient? gradient;
   final Widget child;
   final VoidCallback? onTap;
   final List<BoxShadow> shadow;
@@ -46,18 +48,21 @@ class _Surface extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final card = DecoratedBox(
-      decoration: BoxDecoration(color: color, borderRadius: radius, boxShadow: shadow),
+      decoration: BoxDecoration(color: gradient == null ? color : null, borderRadius: radius, boxShadow: shadow),
       child: Material(
         color: Colors.transparent,
         borderRadius: radius,
         clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: onTap,
-          splashColor: DesignColors.splash,
-          highlightColor: Colors.transparent,
-          child: foreground == null
-              ? child
-              : DecoratedBox(decoration: foreground!, position: DecorationPosition.foreground, child: child),
+        child: Ink(
+          decoration: gradient == null ? null : BoxDecoration(gradient: gradient, borderRadius: radius),
+          child: InkWell(
+            onTap: onTap,
+            splashColor: DesignColors.splash,
+            highlightColor: Colors.transparent,
+            child: foreground == null
+                ? child
+                : DecoratedBox(decoration: foreground!, position: DecorationPosition.foreground, child: child),
+          ),
         ),
       ),
     );
@@ -153,8 +158,10 @@ class PlaceholderTile extends StatelessWidget {
     this.width,
     this.height,
     this.gradient,
+    this.rich = false,
   });
 
+  final bool rich;
   final LinearGradient? gradient;
   final KitTone tone;
   final String asset;
@@ -174,10 +181,12 @@ class PlaceholderTile extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: radius,
         gradient: LinearGradient(
-          colors: [
-            DesignColors.tint(gradient?.colors.first ?? tone.accent, Alpha.soft),
-            DesignColors.tint(gradient?.colors.last ?? tone.accentDark, Alpha.tint),
-          ],
+          colors: rich
+              ? [gradient?.colors.first ?? tone.accent, gradient?.colors.last ?? tone.accentDark]
+              : [
+                  DesignColors.tint(gradient?.colors.first ?? tone.accent, Alpha.soft),
+                  DesignColors.tint(gradient?.colors.last ?? tone.accentDark, Alpha.tint),
+                ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -188,7 +197,8 @@ class PlaceholderTile extends StatelessWidget {
           height: iconSize + 24,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: DesignColors.tint(DesignColors.surfaceAlt, Alpha.soft),
+            color: DesignColors.tint(DesignColors.surfaceAlt, rich ? Alpha.half : Alpha.soft),
+            boxShadow: rich ? ShadowTokens.tight(tone.accentDark) : null,
           ),
           child: Center(child: TravelIcon(asset, size: iconSize)),
         ),
@@ -208,8 +218,10 @@ class KitPhoto extends StatelessWidget {
     this.radius = BorderRadius.zero,
     this.iconSize = 36,
     this.dimmed = false,
+    this.rich = false,
   });
 
+  final bool rich;
   final String? url;
   final double width;
   final double height;
@@ -224,7 +236,7 @@ class KitPhoto extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dpr = MediaQuery.devicePixelRatioOf(context);
-    final fallback = PlaceholderTile(tone: tone, asset: asset, iconSize: iconSize, radius: radius, width: width, height: height);
+    final fallback = PlaceholderTile(tone: tone, asset: asset, iconSize: iconSize, radius: radius, width: width, height: height, rich: rich);
     final longest = math.max(width.isFinite ? width : 0.0, height.isFinite ? height : 0.0) * dpr;
     final shrink = longest > maxDecodePx ? maxDecodePx / longest : 1.0;
     int? px(double v) => v.isFinite ? math.max(1, (v * dpr * shrink).round()) : null;
@@ -535,8 +547,10 @@ class ListRow extends StatelessWidget {
     this.rows = const [],
     this.tagBadge,
     this.solidTag = false,
+    this.rich = false,
   });
 
+  final bool rich;
   final String title;
   final VoidCallback? onTap;
   final String? subtitle;
@@ -621,6 +635,7 @@ class ListRow extends StatelessWidget {
               radius: KitMetrics.tileSmall,
               iconSize: compact ? 28 : 36,
               dimmed: dimmed,
+              rich: rich,
             ),
             if (isFeatured)
               Positioned(
@@ -660,7 +675,10 @@ class ListRow extends StatelessWidget {
       padding: margin,
       child: _Surface(
         onTap: onTap,
-        shadow: elevated ? ShadowTokens.elev3 : ShadowTokens.elev1,
+        shadow: rich ? ShadowTokens.tight(tone.accentDark) : (elevated ? ShadowTokens.elev3 : ShadowTokens.elev1),
+        gradient: rich
+            ? LinearGradient(colors: [DesignColors.surface, tone.wash], begin: Alignment.topCenter, end: Alignment.bottomCenter)
+            : null,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -700,7 +718,7 @@ class ListRow extends StatelessWidget {
                           Text(title,
                               maxLines: titleMaxLines ?? (compact ? 1 : 2),
                               overflow: TextOverflow.ellipsis,
-                              style: TypeTokens.style(14, FontWeight.w700, color: titleColor, height: 1.2)),
+                              style: TypeTokens.style(rich ? 16 : 14, FontWeight.w700, color: titleColor, height: 1.2)),
                           if (subtitle != null && subtitle!.isNotEmpty) ...[
                             const SizedBox(height: 2),
                             Text(subtitle!,

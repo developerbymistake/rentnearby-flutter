@@ -1,7 +1,7 @@
 import 'package:bakhli/design/design.dart';
+import 'package:bakhli/design/extra/ext_details.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import '../../../config/app_routes.dart';
 import '../../../controllers/auth_controller.dart';
@@ -10,25 +10,27 @@ import '../../../controllers/report_controller.dart';
 import '../../../controllers/tab_config_controller.dart';
 import '../../../models/browse_item.dart';
 import '../../../services/listing_share_service.dart';
-import '../../../widgets/app_loading_overlay.dart';
 import '../../../widgets/detail_action_bar.dart';
 import '../../../widgets/report_listing_sheet.dart';
 import '../models/stay_detail_model.dart';
 import '../models/stay_owner_model.dart';
 import '../../taxi/guest/stay_taxis_section.dart';
+import '../../taxi/guest/taxi_detail_screen.dart' show DetailSharingOverlay;
 import '../setup/stay_option_sets.dart';
 import 'stay_guest_controller.dart';
 
-const _kAccent = DesignColors.primary;
-const _kTone = KitTone.stay;
-const _kDivider = Padding(
-  padding: EdgeInsets.symmetric(vertical: 10),
-  child: Divider(height: 1, color: DesignColors.dividerSoft),
-);
+final _kTone = ListingTone.forest;
+final _kPage = ListingPalette.forest.page;
 const _kSections = 7;
 
-TextStyle _t(double size, FontWeight w, Color c, {double? height, double? spacing}) =>
-    TypeTokens.style(size, w, color: c, height: height, letterSpacing: spacing);
+const _kFacilityLook = <String, (int, String)>{
+  'HotWater': (4, ListingArt.sunrise),
+  'Heater': (0, ListingArt.camping),
+  'WiFi': (1, ListingArt.compass),
+  'Parking': (2, DetailArt.automobile),
+  'HomeFood': (5, ListingArt.backpack),
+  'MountainView': (3, ListingArt.mountain),
+};
 
 class StayDetailScreen extends StatefulWidget {
   const StayDetailScreen({super.key});
@@ -39,39 +41,19 @@ class StayDetailScreen extends StatefulWidget {
 class _StayDetailScreenState extends State<StayDetailScreen> {
   Widget _sec(int i, Widget child) => StaggerItem(index: i, child: child);
 
-  Widget _glass({required Widget child, EdgeInsetsGeometry? margin, VoidCallback? onTap, EdgeInsetsGeometry? padding, bool pill = false}) {
-    return Padding(
-      padding: margin ?? EdgeInsets.zero,
-      child: PressScale(
-        child: GestureDetector(
-          onTap: onTap,
-          child: Container(
-            padding: padding ?? const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: StayBrowseTokens.glass,
-              shape: pill ? BoxShape.rectangle : BoxShape.circle,
-              borderRadius: pill ? CardRadius.pill : null,
-              boxShadow: ShadowTokens.elev2,
-            ),
-            child: child,
-          ),
-        ),
-      ),
-    );
-  }
+  double _heroHeight(BuildContext context) => 252 + MediaQuery.paddingOf(context).top;
 
   final _auth = Get.find<AuthController>();
   final _isSharing = false.obs;
   StayDetailModel? _stay;
   bool _loading = true;
   int _currentPhoto = 0;
-  static const double _heroHeight = 380;
   final _scroll = ScrollController();
   final _barOn = ValueNotifier<bool>(false);
 
   void _onScroll() {
     if (!_scroll.hasClients) return;
-    final on = _scroll.offset > _heroHeight - ScrollFadeTopBar.heightOf(context);
+    final on = _scroll.offset > _heroHeight(context) - DetailTopBar.heightOf(context);
     if (on != _barOn.value) _barOn.value = on;
   }
 
@@ -128,444 +110,227 @@ class _StayDetailScreenState extends State<StayDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: DesignColors.scaffold,
-      body: Obx(() => AppLoadingOverlay(
-            isLoading: _isSharing.value,
-            message: 'Sharing...',
-            indicatorColor: _kAccent,
-            child: _loading ? _buildLoader() : _buildContent(),
-          )),
+    return Stack(children: [
+      Scaffold(
+      backgroundColor: _kPage,
+      body: Stack(children: [
+        Column(children: [
+          ValueListenableBuilder<bool>(
+            valueListenable: _barOn,
+            builder: (context, on, _) => ToastSlot(
+              margin: EdgeInsets.fromLTRB(
+                  18, !_loading && _stay != null && on ? DetailTopBar.heightOf(context) + 14 : MediaQuery.paddingOf(context).top + 64, 18, 0),
+            ),
+          ),
+          Expanded(child: _loading ? _buildLoader() : _buildContent()),
+        ]),
+        if (!_loading && _stay != null) _topBar(_stay!) else _backAt(context, solid: _stay == null && !_loading),
+      ]),
       bottomNavigationBar: _loading || _stay == null ? null : _buildActionBar(),
-    );
+      ),
+      Obx(() => _isSharing.value ? Positioned.fill(child: DetailSharingOverlay(tone: _kTone)) : const SizedBox.shrink()),
+    ]);
   }
 
-  Widget _buildLoader() => AnnotatedRegion<SystemUiOverlayStyle>(
-        value: const SystemUiOverlayStyle(
-          statusBarColor: Colors.transparent,
-          statusBarIconBrightness: Brightness.dark,
-          statusBarBrightness: Brightness.light,
-        ),
-        child: Stack(
-          children: [
-            SingleChildScrollView(
-              physics: const NeverScrollableScrollPhysics(),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  TemplatePlaceholder(height: 380 + MediaQuery.of(context).padding.top, radius: 0),
-                  const Padding(
-                    padding: EdgeInsets.all(20),
-                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Row(children: [
-                        Expanded(child: TemplatePlaceholder(height: 28, radius: 8)),
-                        SizedBox(width: 12),
-                        TemplatePlaceholder(width: 90, height: 36, radius: 8),
-                      ]),
-                      SizedBox(height: 16),
-                      TemplatePlaceholder(height: 120, radius: 12),
-                      SizedBox(height: 24),
-                      TemplatePlaceholder(height: 14, radius: 4),
-                      SizedBox(height: 8),
-                      TemplatePlaceholder(height: 14, width: 200, radius: 4),
-                    ]),
-                  ),
-                ],
-              ),
-            ),
-            Positioned(
-              top: MediaQuery.of(context).padding.top + 8,
-              left: 8,
-              child: _glass(
-                onTap: () => Get.back(),
-                child: const Icon(Icons.arrow_back_ios_new_rounded, color: DesignColors.textStrong, size: 16),
-              ),
-            ),
-          ],
-        ),
+  Widget _backAt(BuildContext context, {bool solid = false}) => Positioned(
+        top: MediaQuery.paddingOf(context).top + 10,
+        left: 14,
+        child: DetailGlassButton(onTap: () => Get.back(), solid: solid),
+      );
+
+  Widget _buildLoader() => KitStatusBar(
+        lightIcons: false,
+        child: Stack(children: [
+          DetailSkeleton(heroHeight: _heroHeight(context)),
+        ]),
       );
 
   Widget _buildContent() {
     if (_stay == null) {
-      return SafeArea(
-        child: Column(
-          children: [
-            Align(
-              alignment: Alignment.centerLeft,
-              child: IconButton(
-                onPressed: () => Get.back(),
-                icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20, color: DesignColors.textStrong),
-              ),
+      return KitStatusBar(
+        lightIcons: false,
+        child: Stack(children: [
+          Positioned.fill(
+            child: DetailStateView(
+              tone: _kTone,
+              art: ListingArt.hotel,
+              title: 'Stay not found',
+              actionLabel: 'Try again',
+              onAction: _fetch,
             ),
-            Expanded(
-              child: Center(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  child: StateCard.error(
-                    kit: _kTone,
-                    title: 'Stay not found',
-                    actionLabel: 'Try again',
-                    onAction: _fetch,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ]),
       );
     }
     final s = _stay!;
     return ValueListenableBuilder<bool>(
       valueListenable: _barOn,
       builder: (context, barOn, content) => KitStatusBar(lightIcons: !barOn, child: content!),
-      child: Stack(
-        children: [
-          StaggerHost(
-            count: _kSections,
-            child: _scrollView(s),
-          ),
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: ValueListenableBuilder<bool>(
-              valueListenable: _barOn,
-              builder: (context, on, bar) => IgnorePointer(
-                ignoring: !on,
-                child: AnimatedOpacity(
-                  opacity: on ? 1 : 0,
-                  duration: KitMotion.reduce(context) ? Duration.zero : templateTransitionReverseDuration,
-                  child: bar,
-                ),
-              ),
-              child: ScrollFadeTopBar(
-                title: s.title,
-                scrollController: _scroll,
-                onBack: () => Get.back(),
-                trailing: [
-                  if (!_isOwner && s.slug != null)
-                    PressScale(
-                      child: InkWell(
-                        borderRadius: CardRadius.pill,
-                        onTap: () => _share(s),
-                        child: const SizedBox(
-                          width: KitMetrics.touch,
-                          height: KitMetrics.touch,
-                          child: Icon(Icons.ios_share_rounded, color: _kAccent, size: 20),
-                        ),
-                      ),
-                    ),
-                ],
-              ),
+      child: StaggerHost(
+        count: _kSections,
+        child: _scrollView(s),
+      ),
+    );
+  }
+
+  Widget _topBar(StayDetailModel s) => Positioned(
+        top: 0,
+        left: 0,
+        right: 0,
+        child: ValueListenableBuilder<bool>(
+          valueListenable: _barOn,
+          builder: (context, on, bar) => IgnorePointer(
+            ignoring: !on,
+            child: AnimatedOpacity(
+              opacity: on ? 1 : 0,
+              duration: KitMotion.reduce(context) ? Duration.zero : templateTransitionReverseDuration,
+              child: bar,
             ),
           ),
+          child: DetailTopBar(
+            tone: _kTone,
+            title: s.title,
+            onBack: () => Get.back(),
+            onShare: !_isOwner && s.slug != null ? () => _share(s) : null,
+          ),
+        ),
+      );
+
+  Widget _hero(StayDetailModel s) {
+    final top = MediaQuery.paddingOf(context).top;
+    return SizedBox(
+      height: _heroHeight(context),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Positioned.fill(
+            child: s.photos.isEmpty
+                ? DetailHeroArt(tone: _kTone, art: ListingArt.hotel)
+                : PageView.builder(
+                    itemCount: s.photos.length,
+                    onPageChanged: (i) => setState(() => _currentPhoto = i),
+                    itemBuilder: (_, i) => CachedNetworkImage(
+                      imageUrl: s.photos[i],
+                      fit: BoxFit.cover,
+                      placeholder: (ctx, url) => const TemplatePlaceholder(height: double.infinity, radius: 0),
+                      errorWidget: (ctx, url, err) => DetailHeroArt(tone: _kTone, art: ListingArt.hotel),
+                    ),
+                  ),
+          ),
+          if (s.photos.isNotEmpty) const Positioned(top: 0, left: 0, right: 0, child: DetailTopScrim()),
+          if (s.photos.length > 1)
+            Positioned(
+              bottom: 42,
+              left: 0,
+              right: 0,
+              child: IgnorePointer(child: DetailPhotoDots(count: s.photos.length, index: _currentPhoto)),
+            ),
+          Positioned(top: top + 10, left: 14, child: DetailGlassButton(onTap: () => Get.back())),
+          if (!_isOwner && s.slug != null)
+            Positioned(top: top + 10, right: 14, child: DetailSharePill(tone: _kTone, onTap: () => _share(s))),
+          Positioned(left: 0, right: 0, bottom: -1, child: DetailEdge(page: _kPage)),
         ],
       ),
     );
   }
 
   Widget _scrollView(StayDetailModel s) {
+    final rules = s.rules;
     return CustomScrollView(
       controller: _scroll,
       physics: const BouncingScrollPhysics(),
       slivers: [
-        SliverAppBar(
-          expandedHeight: _heroHeight,
-          pinned: false,
-          backgroundColor: _kAccent,
-          leading: _glass(
-            onTap: () => Get.back(),
-            margin: const EdgeInsets.all(8),
-            child: const Icon(Icons.arrow_back_ios_new_rounded, color: DesignColors.textStrong, size: 16),
-          ),
-          actions: [
-            if (!_isOwner && s.slug != null)
-              _glass(
-                onTap: () => _share(s),
-                margin: const EdgeInsets.all(8),
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                pill: true,
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.ios_share_rounded, color: _kAccent, size: 16),
-                    const SizedBox(width: 6),
-                    Text('Share', style: _t(13, FontWeight.w600, _kAccent)),
-                  ],
-                ),
-              ),
-          ],
-          flexibleSpace: FlexibleSpaceBar(
-            background: Stack(
-              fit: StackFit.expand,
-              children: [
-                s.photos.isEmpty
-                    ? const PlaceholderTile(tone: _kTone, iconSize: 80)
-                    : Stack(
-                        children: [
-                          PageView.builder(
-                            itemCount: s.photos.length,
-                            onPageChanged: (i) => setState(() => _currentPhoto = i),
-                            itemBuilder: (_, i) => CachedNetworkImage(
-                              imageUrl: s.photos[i],
-                              fit: BoxFit.cover,
-                              placeholder: (ctx, url) => const TemplatePlaceholder(height: double.infinity, radius: 0),
-                              errorWidget: (ctx, url, err) =>
-                                  const PlaceholderTile(tone: _kTone, asset: TravelIcon.photo, iconSize: 48),
-                            ),
-                          ),
-                          if (s.photos.length > 1)
-                            Positioned(
-                              bottom: 36,
-                              left: 0,
-                              right: 0,
-                              child: IgnorePointer(
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: List.generate(
-                                      s.photos.length,
-                                      (i) => AnimatedContainer(
-                                            duration: const Duration(milliseconds: 250),
-                                            margin: const EdgeInsets.symmetric(horizontal: 3),
-                                            width: _currentPhoto == i ? 20 : 6,
-                                            height: 6,
-                                            decoration: BoxDecoration(
-                                              color: _currentPhoto == i
-                                                  ? DesignColors.onPrimary
-                                                  : StayBrowseTokens.dotInactive,
-                                              borderRadius: BorderRadius.circular(3),
-                                            ),
-                                          )),
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
-                const Positioned(
-                  left: 0,
-                  right: 0,
-                  top: 0,
-                  height: 120,
-                  child: IgnorePointer(child: DecoratedBox(decoration: BoxDecoration(gradient: DesignGradients.scrimTop))),
-                ),
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  bottom: -1,
-                  child: IgnorePointer(
-                    child: Container(
-                      height: 24,
-                      decoration: const BoxDecoration(
-                        color: DesignColors.scaffold,
-                        borderRadius: CardRadius.sheet,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
         SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              _sec(0, _titleRow(s)),
-              const SizedBox(height: 16),
-              _sec(1, SectionTile(
-                tone: _kTone,
-                child: Column(children: [
-                  if (s.rooms.isNotEmpty) ...[
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text('Rooms', style: _t(16, FontWeight.w700, DesignColors.textStrong)),
-                    ),
-                    const SizedBox(height: 8),
-                    for (var i = 0; i < s.rooms.length; i++) ...[
-                      if (i > 0) _kDivider,
-                      _roomRow(s.rooms[i]),
-                    ],
-                    _kDivider,
-                  ],
-                  if (s.stayTypeName != null && s.stayTypeName!.isNotEmpty) ...[
-                    _infoRow(TravelIcon.stay, TravelPalette.skyStart, TravelPalette.skyEnd, 'Stay type', s.stayTypeName!),
-                    _kDivider,
-                  ],
-                  if (s.vehicleAccess != null && s.vehicleAccess!.isNotEmpty) ...[
-                    _infoRow(TravelIcon.taxi, TravelPalette.sunriseStart, TravelPalette.sunriseEnd, 'Vehicle access', StayOptionSets.labelOf(StayOptionSets.vehicleAccess, s.vehicleAccess)),
-                    _kDivider,
-                  ],
-                  _infoRow(TravelIcon.place, TravelPalette.roseStart, TravelPalette.roseEnd, 'Location', s.locality.isEmpty ? '-' : s.locality),
-                ]),
-              )),
-              if (s.taxiTarget case final to?)
-                Obx(() => TabConfigController.to.isTaxiActive
-                    ? _sec(2, Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const SizedBox(height: 24),
-                          _sectionTitle('Getting there'),
-                          const SizedBox(height: 8),
-                          StayTaxisSection(
-                            stayCityId: s.cityId,
-                            stayCityName: s.placeName,
-                            toLat: to.lat,
-                            toLng: to.lng,
-                          ),
-                        ],
-                      ))
-                    : const SizedBox.shrink()),
-              if (s.facilities.isNotEmpty)
-                _sec(3, Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  const SizedBox(height: 24),
-                  _sectionTitle('Facilities'),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: s.facilities.map(_facilityChip).toList(),
-                  ),
-                ])),
-              if (s.rules != null)
-                _sec(4, Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  const SizedBox(height: 24),
-                  _sectionTitle('House rules'),
-                  const SizedBox(height: 8),
-                  _rulesCard(s.rules!),
-                ])),
-              if (s.description != null && s.description!.isNotEmpty)
-                _sec(5, Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  const SizedBox(height: 24),
-                  _sectionTitle('About this stay'),
-                  const SizedBox(height: 8),
-                  Text(s.description!, style: _t(14, FontWeight.w400, TypeTokens.secondary, height: 1.6)),
-                ])),
-              const SizedBox(height: 16),
-              _sec(6, Row(children: [
-                const TravelIcon(TravelIcon.calendar, size: 16),
-                const SizedBox(width: 4),
-                Text('Posted ${_timeAgo(s.createdAt)}', style: _t(12, FontWeight.w400, TypeTokens.secondary)),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            _hero(s),
+            _sec(0, DetailTitleCard(
+              tone: _kTone,
+              eyebrow: 'FOR STAY',
+              title: s.title,
+              caption: 'FROM',
+              value: _price,
+              unit: s.minPricePerNight != null ? '/night' : null,
+            )),
+            _sec(1, Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              if (s.rooms.isNotEmpty) ...[
+                const TitleRow3D(title: 'Rooms'),
+                for (var i = 0; i < s.rooms.length; i++) _roomCard(s.rooms[i], i),
+              ],
+              DetailInfoCard(tone: _kTone, rows: [
+                if (s.stayTypeName != null && s.stayTypeName!.isNotEmpty) DetailInfo(ListingArt.hotel, 'Stay type', s.stayTypeName!),
+                if (s.vehicleAccess != null && s.vehicleAccess!.isNotEmpty)
+                  DetailInfo(DetailArt.automobile, 'Vehicle access', StayOptionSets.labelOf(StayOptionSets.vehicleAccess, s.vehicleAccess)),
+                DetailInfo(ListingArt.roundPushpin, 'Location', s.locality.isEmpty ? '-' : s.locality),
+              ]),
+            ])),
+            if (s.taxiTarget case final to?)
+              Obx(() => TabConfigController.to.isTaxiActive
+                  ? _sec(2, Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const TitleRow3D(title: 'Getting there'),
+                        StayTaxisSection(
+                          stayCityId: s.cityId,
+                          stayCityName: s.placeName,
+                          toLat: to.lat,
+                          toLng: to.lng,
+                        ),
+                      ],
+                    ))
+                  : const SizedBox.shrink()),
+            if (s.facilities.isNotEmpty)
+              _sec(3, Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                const TitleRow3D(title: 'Facilities'),
+                DetailChipGrid(items: [for (var i = 0; i < s.facilities.length; i++) _facility(s.facilities[i], i)]),
               ])),
-              const SizedBox(height: 20),
-            ]),
-          ),
+            if (rules != null)
+              _sec(4, Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                const TitleRow3D(title: 'House rules'),
+                DetailChipGrid(rules: true, items: [
+                  DetailChipItem(tone: ListingTone.cE, art: ListingArt.key, label: 'Check-in', value: StayOptionSets.time12(rules.checkInTime)),
+                  DetailChipItem(tone: ListingTone.cB, art: ListingArt.luggage, label: 'Check-out', value: StayOptionSets.time12(rules.checkOutTime)),
+                  DetailChipItem(tone: ListingTone.cA, art: ListingArt.star, label: 'Pets', value: _yesNo(rules.petsAllowed)),
+                  DetailChipItem(
+                    tone: ListingTone.cF,
+                    art: ListingArt.clipboard,
+                    label: 'Cancellation',
+                    value: StayOptionSets.labelOf(StayOptionSets.cancellation, rules.cancellationPolicy),
+                  ),
+                ]),
+              ])),
+            if (s.description != null && s.description!.isNotEmpty)
+              _sec(5, Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                const TitleRow3D(title: 'About this stay'),
+                DetailAboutCard(text: s.description!),
+              ])),
+            _sec(6, DetailPosted(text: 'Posted ${_timeAgo(s.createdAt)}')),
+            const SizedBox(height: 28),
+          ]),
         ),
       ],
     );
   }
 
-  Widget _sectionTitle(String text) => Text(text, style: _t(16, FontWeight.w700, DesignColors.textStrong, spacing: 0.18));
-
-  Widget _titleRow(StayDetailModel s) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Row(children: [
-              const TravelIcon(TravelIcon.stay, size: 14),
-              const SizedBox(width: 4),
-              Text('FOR STAY', style: _t(10, FontWeight.w500, _kTone.accentDark, spacing: 0.2)),
-            ]),
-            const SizedBox(height: 4),
-            Text(s.title, maxLines: 2, overflow: TextOverflow.ellipsis, style: _t(22, FontWeight.w600, DesignColors.textStrong, spacing: 0.27)),
-          ]),
-        ),
-        const SizedBox(width: 12),
-        Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-          Text('FROM', style: _t(10, FontWeight.w500, TypeTokens.secondary, spacing: 0.2)),
-          Text(_price, style: _t(22, FontWeight.w500, _kAccent)),
-          if (s.minPricePerNight != null) Text('/night', style: _t(12, FontWeight.w400, TypeTokens.secondary)),
-        ]),
-      ],
+  DetailChipItem _facility(String f, int i) {
+    final look = _kFacilityLook[f];
+    return DetailChipItem(
+      tone: f == 'HotWater' ? ListingTone.teal : ListingTone.at(look?.$1 ?? i),
+      art: look?.$2 ?? ListingArt.star,
+      label: StayOptionSets.labelOf(StayOptionSets.facilities, f),
     );
   }
 
-  Widget _roomRow(StayRoomModel r) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(r.label,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: _t(14, FontWeight.w500, DesignColors.textStrong)),
-            const SizedBox(height: 2),
-            Text(
-              [
-                '${StayOptionSets.guestsLabel(r.maxGuests)} guest${r.maxGuests == 1 ? '' : 's'}',
-                StayOptionSets.labelOf(StayOptionSets.meals, r.meals),
-              ]
-                  .where((e) => e.isNotEmpty)
-                  .join(' · '),
-              style: _t(12, FontWeight.w400, TypeTokens.secondary),
-            ),
-          ]),
-        ),
-        const SizedBox(width: 8),
-        Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-          Text(BrowseItem.inr(r.pricePerNight),
-              style: _t(16, FontWeight.w600, PickKit.gold)),
-          Text('/night', style: _t(12, FontWeight.w400, TypeTokens.secondary)),
-        ]),
-      ],
-    );
-  }
-
-  Widget _facilityChip(String f) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(color: _kTone.tint, borderRadius: CardRadius.pill),
-      child: Text(StayOptionSets.labelOf(StayOptionSets.facilities, f), style: _t(12, FontWeight.w500, _kAccent)),
-    );
-  }
-
-  Widget _rulesCard(StayRulesModel r) {
-    return SectionTile(
-      tone: _kTone,
-      child: Column(children: [
-        IntrinsicHeight(
-          child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            Expanded(child: _ruleTile(const Icon(Icons.login_rounded, size: 20, color: _kAccent), 'Check-in', StayOptionSets.time12(r.checkInTime))),
-            const SizedBox(width: 8),
-            Expanded(child: _ruleTile(const Icon(Icons.logout_rounded, size: 20, color: _kAccent), 'Check-out', StayOptionSets.time12(r.checkOutTime))),
-          ]),
-        ),
-        const SizedBox(height: 8),
-        IntrinsicHeight(
-          child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            Expanded(child: _ruleTile(const Icon(Icons.pets_rounded, size: 18, color: _kAccent), 'Pets', _yesNo(r.petsAllowed))),
-            const SizedBox(width: 8),
-            Expanded(
-              child: _ruleTile(const TravelIcon(TravelIcon.note, size: 20), 'Cancellation',
-                  StayOptionSets.labelOf(StayOptionSets.cancellation, r.cancellationPolicy)),
-            ),
-          ]),
-        ),
-      ]),
-    );
-  }
-
-  Widget _ruleTile(Widget icon, String label, String value) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      decoration: BoxDecoration(
-        color: DesignColors.scaffold,
-        borderRadius: KitMetrics.tileSmall,
-      ),
-      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        icon,
-        const SizedBox(width: 8),
-        Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(label, style: _t(11, FontWeight.w400, TypeTokens.secondary)),
-            Text(value.isEmpty ? '-' : value, style: _t(13, FontWeight.w600, DesignColors.textStrong)),
-          ]),
-        ),
-      ]),
-    );
-  }
+  Widget _roomCard(StayRoomModel r, int i) => DetailSlimCard(
+        tone: ListingTone.list(_kTone, i),
+        art: ListingArt.bed,
+        title: r.label,
+        subtitle: [
+          '${StayOptionSets.guestsLabel(r.maxGuests)} guest${r.maxGuests == 1 ? '' : 's'}',
+          StayOptionSets.labelOf(StayOptionSets.meals, r.meals),
+        ].where((e) => e.isNotEmpty).join(' · '),
+        price: BrowseItem.inr(r.pricePerNight),
+        unit: '/night',
+      );
 
   static String _yesNo(bool v) => v ? 'Yes' : 'No';
 
@@ -613,28 +378,4 @@ class _StayDetailScreenState extends State<StayDetailScreen> {
       'isBlockedByMe': conv.isBlockedByMe,
     });
   }
-
-  Widget _infoRow(String icon, Color start, Color end, String label, String value) => Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 36,
-            height: 36,
-            padding: const EdgeInsets.all(6),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(colors: [start, end], begin: Alignment.topLeft, end: Alignment.bottomRight),
-              shape: BoxShape.circle,
-            ),
-            child: TravelIcon(icon, size: 24),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(label, style: _t(11, FontWeight.w500, TypeTokens.secondary)),
-              const SizedBox(height: 2),
-              Text(value, style: _t(14, FontWeight.w500, DesignColors.textStrong)),
-            ]),
-          ),
-        ],
-      );
 }

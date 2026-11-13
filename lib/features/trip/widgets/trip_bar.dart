@@ -60,104 +60,133 @@ class _TripBarState extends State<TripBar> {
     });
   }
 
+  static const _titleStyle =
+      TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12.5, fontWeight: FontWeight.w800, color: FitnessAppTheme.white);
+  static final _lineStyle = TextStyle(
+      fontFamily: FitnessAppTheme.fontName,
+      fontSize: 11,
+      fontWeight: FontWeight.w600,
+      color: FitnessAppTheme.white.withValues(alpha: Alpha.high));
+  static const _moreStyle =
+      TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 11, fontWeight: FontWeight.w700, color: FitnessAppTheme.white);
+  static const _continueStyle =
+      TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 11.5, fontWeight: FontWeight.w800, color: FitnessAppTheme.nearlyDarkBlue);
+
+  static double _textWidth(TextScaler scaler, String text, TextStyle style) {
+    final tp = TextPainter(text: TextSpan(text: text, style: style), textDirection: TextDirection.ltr, textScaler: scaler, maxLines: 1)
+      ..layout();
+    final w = tp.width;
+    tp.dispose();
+    return w;
+  }
+
   Widget _bar(TripBarPick pick) {
     final t = pick.trip;
     final title = t.title.trim().isEmpty ? t.routeLine : t.title.trim();
+    final line = _line(pick);
     return Padding(
       padding: const EdgeInsets.fromLTRB(10, 0, 10, 8),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () => _continue(pick),
-          splashColor: FitnessAppTheme.white.withValues(alpha: Alpha.soft),
-          highlightColor: Colors.transparent,
-          borderRadius: TripKit.cardRadiusSmall,
-          child: Ink(
-            padding: const EdgeInsets.fromLTRB(8, 8, 2, 8),
-            decoration: TripKit.cardBox(gradient: TripKit.sky, radius: TripKit.cardRadiusSmall),
-            child: Row(
-              children: [
-                TripProgressRing(
-                  percent: t.progress.percent,
-                  size: 40,
-                  stroke: 4.5,
-                  fill: FitnessAppTheme.white,
-                  color: TripBarRules.isReady(t) ? FitnessAppTheme.nearlyBlue : FitnessAppTheme.nearlyDarkBlue,
-                  textColor: FitnessAppTheme.darkerText,
+      child: LayoutBuilder(builder: (context, box) {
+        final scaler = MediaQuery.textScalerOf(context);
+        final more = pick.more > 0 ? TripStringsBar.more(pick.more) : null;
+        final actionsWidth = (more == null ? 0 : 6 + 16 + _textWidth(scaler, more, _moreStyle)) +
+            6 +
+            26 +
+            _textWidth(scaler, TripStringsBar.continueAction, _continueStyle);
+        final textRoom = box.maxWidth - 10 - 40 - 6 - 26 - 6 - actionsWidth - 40;
+        final textNeed = [
+          _textWidth(scaler, title, _titleStyle),
+          _textWidth(scaler, line, _lineStyle),
+          scaler.scale(120),
+        ].reduce((a, b) => a < b ? a : b);
+        final stacked = textRoom < textNeed;
+        final actions = <Widget>[
+          if (more != null) ...[
+            if (!stacked) const SizedBox(width: 6),
+            GestureDetector(
+              onTap: TripNavigation.openMyTrips,
+              behavior: HitTestBehavior.opaque,
+              child: Container(
+                constraints: const BoxConstraints(minHeight: 32),
+                alignment: Alignment.center,
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                decoration: BoxDecoration(
+                  color: FitnessAppTheme.white.withValues(alpha: Alpha.soft),
+                  borderRadius: BorderRadius.circular(8),
                 ),
-                const SizedBox(width: 6),
-                TripKit.travelBadge('assets/images/design/travel3d/luggage.png', size: 26, image: 18),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                            fontFamily: FitnessAppTheme.fontName, fontSize: 12.5, fontWeight: FontWeight.w800, color: FitnessAppTheme.white),
-                      ),
-                      Text(
-                        _line(pick),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                            fontFamily: FitnessAppTheme.fontName,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: FitnessAppTheme.white.withValues(alpha: Alpha.high)),
-                      ),
-                    ],
-                  ),
-                ),
-                if (pick.more > 0) ...[
-                  const SizedBox(width: 6),
-                  GestureDetector(
-                    onTap: TripNavigation.openMyTrips,
-                    behavior: HitTestBehavior.opaque,
-                    child: Container(
-                      constraints: const BoxConstraints(minHeight: 32),
-                      alignment: Alignment.center,
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                      decoration: BoxDecoration(
-                        color: FitnessAppTheme.white.withValues(alpha: Alpha.soft),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        TripStringsBar.more(pick.more),
-                        style: const TextStyle(
-                            fontFamily: FitnessAppTheme.fontName, fontSize: 11, fontWeight: FontWeight.w700, color: FitnessAppTheme.white),
-                      ),
-                    ),
-                  ),
+                child: Text(more, maxLines: 1, softWrap: false, style: _moreStyle),
+              ),
+            ),
+          ],
+          if (more != null || !stacked) const SizedBox(width: 6),
+          Container(
+            constraints: const BoxConstraints(minHeight: 32),
+            alignment: Alignment.center,
+            padding: const EdgeInsets.symmetric(horizontal: 13),
+            decoration: BoxDecoration(color: FitnessAppTheme.white, borderRadius: BorderRadius.circular(8)),
+            child: const Text(TripStringsBar.continueAction, maxLines: 1, softWrap: false, style: _continueStyle),
+          ),
+        ];
+        final close = IconButton(
+          tooltip: TripStringsBar.hideTooltip,
+          onPressed: () => _hide(pick),
+          visualDensity: VisualDensity.compact,
+          constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+          icon: const Icon(Icons.close_rounded, size: 18, color: FitnessAppTheme.white),
+        );
+        final top = Row(
+          children: [
+            TripProgressRing(
+              percent: t.progress.percent,
+              size: 40,
+              stroke: 4.5,
+              fill: FitnessAppTheme.white,
+              color: TripBarRules.isReady(t) ? FitnessAppTheme.nearlyBlue : FitnessAppTheme.nearlyDarkBlue,
+              textColor: FitnessAppTheme.darkerText,
+            ),
+            const SizedBox(width: 6),
+            TripKit.travelBadge('assets/images/design/travel3d/luggage.png', size: 26, image: 18),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: _titleStyle),
+                  Text(line, maxLines: 1, overflow: TextOverflow.ellipsis, style: _lineStyle),
                 ],
-                const SizedBox(width: 6),
-                Container(
-                  constraints: const BoxConstraints(minHeight: 32),
-                  alignment: Alignment.center,
-                  padding: const EdgeInsets.symmetric(horizontal: 13),
-                  decoration: BoxDecoration(color: FitnessAppTheme.white, borderRadius: BorderRadius.circular(8)),
-                  child: const Text(
-                    TripStringsBar.continueAction,
-                    style: TextStyle(
-                        fontFamily: FitnessAppTheme.fontName, fontSize: 11.5, fontWeight: FontWeight.w800, color: FitnessAppTheme.nearlyDarkBlue),
-                  ),
-                ),
-                IconButton(
-                  tooltip: TripStringsBar.hideTooltip,
-                  onPressed: () => _hide(pick),
-                  visualDensity: VisualDensity.compact,
-                  constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
-                  icon: const Icon(Icons.close_rounded, size: 18, color: FitnessAppTheme.white),
-                ),
-              ],
+              ),
+            ),
+            if (!stacked) ...actions,
+            close,
+          ],
+        );
+        return Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () => _continue(pick),
+            splashColor: FitnessAppTheme.white.withValues(alpha: Alpha.soft),
+            highlightColor: Colors.transparent,
+            borderRadius: TripKit.cardRadiusSmall,
+            child: Ink(
+              padding: const EdgeInsets.fromLTRB(8, 8, 2, 8),
+              decoration: TripKit.cardBox(gradient: TripKit.sky, radius: TripKit.cardRadiusSmall),
+              child: stacked
+                  ? Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        top,
+                        Padding(
+                          padding: const EdgeInsets.only(top: 6, right: 6),
+                          child: Row(mainAxisAlignment: MainAxisAlignment.end, children: actions),
+                        ),
+                      ],
+                    )
+                  : top,
             ),
           ),
-        ),
-      ),
+        );
+      }),
     );
   }
 }

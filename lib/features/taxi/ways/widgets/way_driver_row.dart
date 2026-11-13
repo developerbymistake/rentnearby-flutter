@@ -1,15 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:bakhli/design/design.dart';
 import '../../../../models/browse_item.dart';
-import '../../../../models/card_fact.dart';
 import '../../taxi_option_sets.dart';
 import '../models/taxi_ways_models.dart';
 import '../taxi_ways_strings.dart';
 import '../../../trip/trip_strings_algo_aa.dart';
 import '../../../trip/trip_strings_steps_a3.dart';
 import '../../../trip/trip_strings_shortlist.dart';
-import '../../../trip/widgets/trip_shortlist_toggle.dart';
-import 'best_way_mark.dart';
 
 class WayDriverRow extends StatelessWidget {
   static const String finalFareNote = 'Driver confirms the final fare';
@@ -19,6 +16,7 @@ class WayDriverRow extends StatelessWidget {
   final String? bestReason;
   final VoidCallback onTap;
   final VoidCallback? onCall;
+  final bool callBusy;
   final VoidCallback? onUse;
   final bool useBusy;
   final VoidCallback? onShortlist;
@@ -26,6 +24,7 @@ class WayDriverRow extends StatelessWidget {
   final bool shortlistBusy;
   final bool noReply;
   final String? startName;
+  final ListingTone? tone;
 
   const WayDriverRow({
     super.key,
@@ -34,6 +33,7 @@ class WayDriverRow extends StatelessWidget {
     this.people = 1,
     this.bestReason,
     this.onCall,
+    this.callBusy = false,
     this.onUse,
     this.useBusy = false,
     this.onShortlist,
@@ -41,6 +41,7 @@ class WayDriverRow extends StatelessWidget {
     this.shortlistBusy = false,
     this.noReply = false,
     this.startName,
+    this.tone,
   });
 
   @override
@@ -52,80 +53,48 @@ class WayDriverRow extends StatelessWidget {
     final best = bestReason != null;
     final cars = d.carsFor(people);
     final price = BrowseItem.inr(d.groupFare(people));
-    final card = DriverOptionCard(
-      name: d.driverName,
-      nameMaxLines: 2,
-      vehicle: TaxiWaysStrings.subtitle(from, to),
+    final start = startName;
+    return WideCard(
+      tone: tone ?? ListingTone.cA,
+      art: ListingArt.forVehicle(vehicle),
+      tag: [_tag, if (best) TaxiWaysStrings.bestWay, if (d.isFeatured) _featured].map((e) => e.replaceAll(' ', ' ')).join(' · '),
+      title: d.driverName,
       subtitle: [
-        vehicle,
-        if (d.repliesInApp) TaxiWaysStrings.repliesInApp,
-        if (startName != null && startName!.isNotEmpty && !d.basedHere) TripStringsShortlist.basedIn(d.reversed ? d.toName : d.fromName),
-        if (d.meetAtName != null && d.meetAtName!.isNotEmpty) TripStringsShortlist.startsAt(d.meetAtName!),
-      ].join(' · '),
-      facts: [
-        if (noReply) CardFact(TripStringsShortlist.noReply, tone: FactTone.accent),
-        CardFact(
-          cars > 1 ? TripStringsAlgoAa.cars(cars) : (d.basedHere ? TaxiWaysStrings.basedHere : TaxiWaysStrings.oneCar),
-          tone: FactTone.slate,
-        ),
-        if (d.basedHere || (d.meetAtName != null && d.meetAtName!.isNotEmpty))
-          const CardFact(finalFareNote, tone: FactTone.slate),
+        TaxiWaysStrings.subtitle(from, to),
+        [
+          vehicle,
+          if (d.repliesInApp) TaxiWaysStrings.repliesInApp,
+          if (start != null && start.isNotEmpty && !d.basedHere) TripStringsShortlist.basedIn(d.reversed ? d.toName : d.fromName),
+          if (d.meetAtName != null && d.meetAtName!.isNotEmpty) TripStringsShortlist.startsAt(d.meetAtName!),
+        ].where((e) => e.isNotEmpty).join(' · '),
+      ].join('\n'),
+      chips: [
+        if (noReply) TripStringsShortlist.noReply,
+        cars > 1 ? TripStringsAlgoAa.cars(cars) : (d.basedHere ? _basedHere : TaxiWaysStrings.oneCar),
+        if (d.basedHere || (d.meetAtName != null && d.meetAtName!.isNotEmpty)) finalFareNote,
       ],
-      fareValue: d.isEstimate ? TripStringsAlgoAa.about(price) : price,
-      onTap: onTap,
-      margin: EdgeInsets.zero,
+      number: d.isEstimate ? TripStringsAlgoAa.about(price) : price,
+      unit: TaxiWaysStrings.toPlace(to),
+      label: bestReason,
       actions: [
+        if (onCall != null) WideAction(icon: Icons.call_rounded, label: TaxiWaysStrings.call, onTap: onCall, busy: callBusy),
         if (onShortlist != null)
-          Row(
-            children: [
-              if (onCall != null) ...[
-                PillAction(
-                  label: TaxiWaysStrings.call,
-                  tone: KitTone.taxi,
-                  icon: const Icon(Icons.call_rounded, size: 16, color: DesignColors.primary),
-                  onTap: onCall,
-                ),
-                const SizedBox(width: 8),
-              ],
-              Expanded(child: TripShortlistToggle(selected: shortlisted, busy: shortlistBusy, onTap: onShortlist, tone: KitTone.taxi)),
-            ],
+          WideAction(
+            icon: shortlisted ? Icons.check_rounded : Icons.add_rounded,
+            label: shortlisted ? TripStringsShortlist.shortlisted : TripStringsShortlist.shortlist,
+            onTap: onShortlist,
+            selected: shortlisted,
+            busy: shortlistBusy,
           )
-        else ...[
-        if (onCall != null)
-          PillAction(
-            label: TaxiWaysStrings.call,
-            tone: KitTone.taxi,
-            icon: const Icon(Icons.call_rounded, size: 16, color: DesignColors.primary),
-            onTap: onCall,
-          ),
-        if (onUse != null)
-          PrimaryButton(
-            label: TripStringsStepsA3.useForMyTrip,
-            onPressed: useBusy ? null : onUse,
-            loading: useBusy,
-            tone: KitTone.taxi,
-            expand: false,
-            height: 44,
-          ),
-        ],
+        else if (onUse != null)
+          WideAction(icon: Icons.bookmark_add_outlined, label: TripStringsStepsA3.useForMyTrip, onTap: onUse, busy: useBusy),
       ],
+      picked: shortlisted,
+      onTap: onTap,
     );
-    if (!best) return card;
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Padding(padding: const EdgeInsets.only(bottom: 8, left: 4), child: BestWayMark(reason: bestReason!)),
-      Stack(children: [
-        card,
-        Positioned.fill(
-          child: IgnorePointer(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                borderRadius: CardRadius.tile,
-                border: Border.all(color: KitTone.taxi.accent, width: 2),
-              ),
-            ),
-          ),
-        ),
-      ]),
-    ]);
   }
+
+  static const String _tag = 'Taxi';
+  static const String _basedHere = 'Based here';
+  static const String _featured = 'Featured';
 }

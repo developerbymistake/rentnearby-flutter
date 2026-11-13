@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:bakhli/design/design.dart';
+import 'package:bakhli/design/extra/ext_jobs.dart';
 import 'package:bakhli/design/extra/jobs_kit.dart' show JobsKit;
 
 abstract final class JobsUi {
   static const KitTone tone = KitTone.jobs;
+
+  static ListingTone get look => JobsLook.page;
 
   static const KitTone danger = KitTone.danger;
 
@@ -113,12 +116,9 @@ class JobsChoiceChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SelectionPop(
-      selected: selected,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 260),
-        child: KitChoiceChip(label: label, selected: selected, onTap: onTap, tone: JobsUi.tone),
-      ),
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 260),
+      child: ChoicePill(tone: JobsUi.look, label: label, selected: selected, outlined: true, height: 36, onTap: onTap),
     );
   }
 }
@@ -134,7 +134,7 @@ class JobsChoiceWrap extends StatelessWidget {
   Widget build(BuildContext context) {
     return Wrap(
       spacing: 8,
-      runSpacing: 4,
+      runSpacing: 8,
       children: [
         for (var i = 0; i < labels.length; i++)
           JobsChoiceChip(label: labels[i], selected: isActive(i), onTap: () => onTap(i)),
@@ -196,63 +196,24 @@ Future<int?> showJobsOptionSheet(
   required String title,
   required List<String> labels,
   required int selectedIndex,
+  String art = ListingArt.clipboard,
 }) {
-  return SheetFrame.show<int>(
+  return Sheet3D.show<int>(
     context,
-    builder: (ctx) => SheetFrame(
+    builder: (ctx) => Sheet3D(
+      tone: JobsUi.look,
+      art: art,
       title: title,
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+      size: SheetSize.list,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           for (var i = 0; i < labels.length; i++)
-            i < 8
-                ? KitCardEntrance(index: i, offset: 30, child: _OptionRow(label: labels[i], on: i == selectedIndex, last: i == labels.length - 1, onTap: () => Navigator.pop(ctx, i)))
-                : _OptionRow(label: labels[i], on: i == selectedIndex, last: i == labels.length - 1, onTap: () => Navigator.pop(ctx, i)),
+            JobsOptionRow(tone: JobsUi.look, label: labels[i], selected: i == selectedIndex, divider: i > 0, onTap: () => Navigator.pop(ctx, i)),
         ],
       ),
     ),
   );
-}
-
-class _OptionRow extends StatelessWidget {
-  const _OptionRow({required this.label, required this.on, required this.last, required this.onTap});
-
-  final String label;
-  final bool on;
-  final bool last;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(mainAxisSize: MainAxisSize.min, children: [
-      InkWell(
-        onTap: onTap,
-        splashColor: DesignColors.tint(JobsUi.tone.accentDark, Alpha.soft),
-        highlightColor: Colors.transparent,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 52),
-          child: Row(children: [
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                child: Text(label,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: TypeTokens.style(16, on ? FontWeight.w700 : FontWeight.w400,
-                        color: on ? JobsUi.tone.accentDark : DesignColors.textPrimary)),
-              ),
-            ),
-            if (on) ...[
-              const SizedBox(width: 8),
-              Icon(Icons.check_circle_rounded, size: 22, color: JobsUi.tone.accentDark),
-            ],
-          ]),
-        ),
-      ),
-      if (!last) const Divider(height: 1, color: DesignColors.dividerSoft),
-    ]);
-  }
 }
 
 Future<bool> showJobsConfirm(
@@ -261,54 +222,21 @@ Future<bool> showJobsConfirm(
   required String content,
   required String cancelLabel,
   required String confirmLabel,
+  String art = ListingArt.luggage,
 }) async {
-  final ok = await showDialog<bool>(
-    context: context,
-    barrierColor: DesignColors.scrim,
-    builder: (ctx) => Dialog(
-      backgroundColor: Colors.transparent,
-      elevation: 0,
-      insetPadding: const EdgeInsets.symmetric(horizontal: KitMetrics.gutter, vertical: 24),
-      child: EntranceOnce(
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: DesignColors.surface,
-            borderRadius: CardRadius.hero,
-            boxShadow: ShadowTokens.elev3,
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: TypeTokens.style(18, FontWeight.w700, color: DesignColors.textStrong, letterSpacing: 0.27)),
-                const SizedBox(height: 8),
-                Text(content, style: TypeTokens.style(14, FontWeight.w400, color: TypeTokens.secondary)),
-                const SizedBox(height: 24),
-                Row(children: [
-                  Expanded(
-                    child: SecondaryButton(
-                      label: cancelLabel,
-                      neutral: true,
-                      tone: JobsUi.tone,
-                      onPressed: () => Navigator.pop(ctx, false),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: PrimaryButton(
-                      label: confirmLabel,
-                      tone: JobsUi.danger,
-                      onPressed: () => Navigator.pop(ctx, true),
-                    ),
-                  ),
-                ]),
-              ],
-            ),
-          ),
-        ),
-      ),
+  final ok = await Dialog3D.show<bool>(
+    context,
+    builder: (ctx) => Dialog3D(
+      tone: JobsUi.look,
+      art: art,
+      title: title,
+      body: content,
+      tight: true,
+      secondaryLabel: cancelLabel,
+      onSecondary: () => Navigator.pop(ctx, false),
+      primaryLabel: confirmLabel,
+      primaryDanger: true,
+      onPrimary: () => Navigator.pop(ctx, true),
     ),
   );
   return ok == true;

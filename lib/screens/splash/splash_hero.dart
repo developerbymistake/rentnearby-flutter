@@ -177,7 +177,7 @@ class _SplashGeometry {
     markH = markW * 1.3;
     markRect = Rect.fromCenter(center: Offset(cx, 0.42 * h), width: markW, height: markH);
     hc = Offset(cx, markRect.top + 0.38 * markH);
-    hr = 0.36 * markW;
+    hr = 0.5 * markW;
     tip = Offset(cx, markRect.top + 0.96 * markH);
 
     farTop = _smooth(_points(_farTop));
@@ -188,7 +188,7 @@ class _SplashGeometry {
     nearShader = LinearGradient(
       begin: Alignment.topCenter,
       end: Alignment.bottomCenter,
-      colors: [Color.lerp(DesignColors.dinnerEnd, DesignColors.primary, Alpha.scrim)!, DesignColors.dinnerEnd],
+      colors: [Color.lerp(DesignColors.dinnerEnd, ListingPalette.indigo.g2, Alpha.v45)!, DesignColors.dinnerEnd],
     ).createShader(Rect.fromLTRB(0, 0.66 * h, w, h));
 
     final tipY = tip.dy;
@@ -262,7 +262,7 @@ class _ScenePainter extends CustomPainter {
     ..strokeJoin = StrokeJoin.round;
 
   static final Color _farColor =
-      Color.lerp(DesignColors.primary, DesignColors.primaryLight, 0.35)!.withValues(alpha: Alpha.high);
+      Color.lerp(ListingPalette.indigo.g1, ListingPalette.indigo.g2, Alpha.half)!.withValues(alpha: Alpha.v90);
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -328,7 +328,7 @@ class _ScenePainter extends CustomPainter {
     final midT = _iv(t, _T.midRiseA, _T.midRiseB, Curves.easeOutCubic);
     canvas.save();
     canvas.translate(0, (1 - midT) * 70);
-    _fill.color = DesignColors.primary;
+    _fill.color = ListingPalette.indigo.g2;
     canvas.drawPath(g.midPath, _fill);
     canvas.restore();
 
@@ -361,7 +361,7 @@ class _ScenePainter extends CustomPainter {
       canvas.save();
       canvas.translate(g.routeStart.dx, g.routeStart.dy);
       canvas.scale(stopT);
-      _fill.color = DesignColors.primaryLight;
+      _fill.color = ListingPalette.indigo.g1;
       canvas.drawCircle(Offset.zero, 5, _fill);
       _stroke
         ..strokeWidth = 2
@@ -419,7 +419,7 @@ class _PinPainter extends CustomPainter {
     final haloIn = _iv(t, _T.haloA, _T.haloB, Curves.easeOut);
     if (haloIn > 0) {
       final k = reduceMotion ? 0.5 : hold.value;
-      final r = g.hr * 1.6 * (1 + 0.25 * k);
+      final r = g.hr * 1.15 * (1 + 0.25 * k);
       final a = haloIn * _lerp(0.22, 0.42, k);
       _fill
         ..color = DesignColors.textInverse
@@ -442,8 +442,8 @@ class _PinPainter extends CustomPainter {
       );
     }
 
-    _ripple(canvas, _iv(t, _T.ripple1A, _T.ripple1B, Curves.easeOutCubic));
-    _ripple(canvas, _iv(t, _T.ripple2A, _T.ripple2B, Curves.easeOutCubic));
+    _ripple(canvas, _iv(t, _T.ripple1A, _T.ripple1B, Curves.easeOutCubic), 0.3);
+    _ripple(canvas, _iv(t, _T.ripple2A, _T.ripple2B, Curves.easeOutCubic), 0.55);
 
     final pinA = _iv(t, _T.pinAlphaA, _T.pinAlphaB);
     if (pinA <= 0) return;
@@ -470,16 +470,18 @@ class _PinPainter extends CustomPainter {
     canvas.drawPath(g.pinPath, _stroke);
 
     _fill.color = DesignColors.textInverse.withValues(alpha: pinA);
-    canvas.drawCircle(g.hc, g.rr * 0.6, _fill);
+    canvas.drawCircle(g.hc, g.rr, _fill);
     canvas.restore();
   }
 
-  void _ripple(Canvas canvas, double r) {
-    if (r <= 0 || r >= 1) return;
-    final width = _lerp(0.3, 2.6, r) * geo.markW;
+  void _ripple(Canvas canvas, double r, double rest) {
+    if (r <= 0) return;
+    final done = r >= 1;
+    final k = done ? rest : r;
+    final width = _lerp(0.3, 2.6, k) * geo.markW;
     _stroke
       ..strokeWidth = 2
-      ..color = TravelPalette.sunriseEnd.withValues(alpha: Alpha.half * (1 - r));
+      ..color = TravelPalette.sunriseEnd.withValues(alpha: done ? Alpha.half * 0.5 : Alpha.half * (1 - r));
     canvas.drawOval(Rect.fromCenter(center: geo.tip, width: width, height: width * 0.35), _stroke);
   }
 

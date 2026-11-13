@@ -1,9 +1,12 @@
+import 'dart:math' as math;
+
 import 'stay_page_header.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import '../../../config/app_routes.dart';
 import '../../../design/design.dart';
+import '../../../design/extra/ext_stay_owner.dart';
 import '../../../models/browse_item.dart';
 import '../../../services/listing_share_service.dart';
 import '../../../utils/app_toast.dart';
@@ -23,12 +26,10 @@ class MyStaysScreen extends StatefulWidget {
   State<MyStaysScreen> createState() => _MyStaysScreenState();
 }
 
-class _MyStaysScreenState extends State<MyStaysScreen> with WidgetsBindingObserver, TickerProviderStateMixin {
+class _MyStaysScreenState extends State<MyStaysScreen> with WidgetsBindingObserver {
   final _ctrl = StaySetupController.ensure();
   final _enquiries = StayEnquiriesController.ensure();
   final _isSharing = false.obs;
-  late final AnimationController _anim = SetupKit.controller(this);
-  bool _played = false;
 
   @override
   void initState() {
@@ -40,21 +41,12 @@ class _MyStaysScreenState extends State<MyStaysScreen> with WidgetsBindingObserv
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _anim.dispose();
     super.dispose();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) _load();
-  }
-
-  void _playOnce() {
-    if (_played) return;
-    _played = true;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) SetupKit.play(_anim, context);
-    });
   }
 
   Future<void> _load() async {
@@ -90,10 +82,12 @@ class _MyStaysScreenState extends State<MyStaysScreen> with WidgetsBindingObserv
     }
   }
 
+  static final _tone = ListingTone.forest;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: DesignColors.scaffold,
+      backgroundColor: ListingPalette.forest.page,
       body: Stack(children: [
         Column(children: [
           StayPageHeader(
@@ -101,10 +95,7 @@ class _MyStaysScreenState extends State<MyStaysScreen> with WidgetsBindingObserv
             subtitle: StayFinStrings.manageListings,
             onBack: () => Get.back(),
             asset: SetupAssets.hotel,
-            animation: templateInterval(_anim, 0, 2),
           ),
-          PlanCapStrip(accent: PickKit.stay, icon: Icons.workspace_premium_rounded, showUsage: false),
-          const NotificationOffBanner(),
           Expanded(
             child: Obx(() {
               final loading = _ctrl.isLoading.value;
@@ -112,32 +103,38 @@ class _MyStaysScreenState extends State<MyStaysScreen> with WidgetsBindingObserv
               final stay = _ctrl.stay.value;
               final failed = _ctrl.loadFailed.value;
               if (!loaded && loading) return _skeleton();
-              _playOnce();
               return RefreshIndicator(
-                color: DesignColors.primary,
+                color: _tone.g2,
                 backgroundColor: DesignColors.surface,
                 onRefresh: _load,
-                child: ListView(
-                  physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
-                  padding: EdgeInsets.fromLTRB(KitMetrics.gutter, 16, KitMetrics.gutter, 16 + MediaQuery.viewPaddingOf(context).bottom),
-                  children: [
-                    SetupEntrance(
-                      controller: _anim,
-                      index: 0,
-                      count: 1,
-                      child: failed && stay == null
-                          ? StateCard.error(
-                              kit: KitTone.stay,
+                child: LayoutBuilder(
+                  builder: (context, box) => ListView(
+                    physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+                    padding: EdgeInsets.only(bottom: 16 + MediaQuery.viewPaddingOf(context).bottom),
+                    children: [
+                      PlanCapStrip(accent: PickKit.stay, icon: Icons.workspace_premium_rounded, showUsage: false),
+                      const NotificationOffBanner(),
+                      failed && stay == null
+                          ? _stateCard(
+                              box,
+                              art: ListingArt.compass,
                               title: TripStrings.couldNotLoad,
                               message: TripStrings.checkConnection,
-                              actionLabel: TripStrings.retry,
+                              action: TripStrings.retry,
                               onAction: _load,
                             )
                           : stay == null
-                              ? _empty()
+                              ? _stateCard(
+                                  box,
+                                  art: ListingArt.hotel,
+                                  title: StayFinStrings.noStayYet,
+                                  message: StayFinStrings.listStaySteps,
+                                  action: StayFinStrings.setUpStay,
+                                  onAction: _openSetup,
+                                )
                               : Builder(builder: (ctx) => _card(ctx, stay)),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               );
             }),
@@ -149,6 +146,18 @@ class _MyStaysScreenState extends State<MyStaysScreen> with WidgetsBindingObserv
       ]),
     );
   }
+
+  Widget _stateCard(BoxConstraints box, {required String art, required String title, required String message, required String action, required VoidCallback onAction}) =>
+      StateCard3D(
+        tone: _tone,
+        layout: StateLayout.tall,
+        art: art,
+        title: title,
+        message: message,
+        actionLabel: action,
+        onAction: onAction,
+        minHeight: math.max(300, box.maxHeight - 330),
+      );
 
   Widget _card(BuildContext ctx, StayOwnerModel s) => StayOwnerCard(
         stay: s,
@@ -167,18 +176,18 @@ class _MyStaysScreenState extends State<MyStaysScreen> with WidgetsBindingObserv
         enquiryNewCount: _enquiries.newCount,
       );
 
-  Widget _empty() => StateCard(
-        kit: KitTone.stay,
-        asset: TravelIcon.stay,
-        title: StayFinStrings.noStayYet,
-        message: StayFinStrings.listStaySteps,
-        actionLabel: StayFinStrings.setUpStay,
-        onAction: _openSetup,
-      );
-
-  Widget _skeleton() => Padding(
-        padding: const EdgeInsets.symmetric(horizontal: KitMetrics.gutter, vertical: 16),
-        child: OwnerListingCard.skeleton(margin: EdgeInsets.zero),
+  Widget _skeleton() => ListView(
+        physics: const NeverScrollableScrollPhysics(),
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(18, 26, 18, 0),
+            child: ClipRRect(borderRadius: StayOwnerShapes.card68, child: const SkeletonBox(height: 98, radius: 0)),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 30, 14, 0),
+            child: ClipRRect(borderRadius: StayOwnerShapes.card54, child: const SkeletonBox(height: 560, radius: 0)),
+          ),
+        ],
       );
 
   Future<void> _setAccepting(bool accepting) async {
@@ -188,26 +197,29 @@ class _MyStaysScreenState extends State<MyStaysScreen> with WidgetsBindingObserv
 
   Future<void> _editPrice(StayRoomModel room) async {
     final priceCtrl = TextEditingController(text: '${room.pricePerNight}');
-    final price = await SheetFrame.show<int>(
+    final price = await Sheet3D.show<int>(
       context,
-      builder: (sheetCtx) => SheetFrame(
+      builder: (sheetCtx) => Sheet3D(
+        tone: _tone,
+        art: ListingArt.moneyBag,
         title: '${room.label} price',
         subtitle: 'Price per night',
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          TextField(
+          const SizedBox(height: 6),
+          PillField(
+            tone: _tone,
             controller: priceCtrl,
             autofocus: true,
             keyboardType: TextInputType.number,
             inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(7)],
-            cursorColor: DesignColors.primary,
-            style: SetupKit.fieldText(),
-            decoration: SetupKit.input(prefix: '₹ '),
+            prefixText: '₹',
+            hint: 'e.g. 1500',
           ),
           const SizedBox(height: 16),
-          PrimaryButton(
-            tone: KitTone.stay,
+          GradientPillButton(
+            tone: _tone,
             label: 'Save',
-            onPressed: () {
+            onTap: () {
               final text = priceCtrl.text.trim();
               if (text.isEmpty) {
                 AppToast.error('Please enter the price per night');
@@ -238,6 +250,7 @@ class _MyStaysScreenState extends State<MyStaysScreen> with WidgetsBindingObserv
         cancelLabel: StayFinStrings.cancel,
         confirmLabel: StayFinStrings.delete,
         destructive: true,
+        art: ListingArt.hotel,
         onCancel: () => Navigator.pop(ctx),
         onConfirm: () {
           Navigator.pop(ctx);

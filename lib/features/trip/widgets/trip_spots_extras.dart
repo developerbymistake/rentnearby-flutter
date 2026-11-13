@@ -3,10 +3,12 @@ import 'package:bakhli/design/design.dart';
 import '../models/trip_spot_category.dart';
 import '../models/trip_spot_model.dart';
 import '../trip_strings_spots_x.dart';
+import '../utils/trip_format.dart';
 import '../utils/trip_spot_picks.dart';
 import 'trip_spot_detail_sheet.dart';
 import 'trip_spot_row.dart';
-import 'trip_ui.dart';
+
+final _tone = ListingTone.indigo;
 
 class TripSpotsSectionHead extends StatelessWidget {
   final String title;
@@ -15,25 +17,7 @@ class TripSpotsSectionHead extends StatelessWidget {
   const TripSpotsSectionHead({super.key, required this.title, this.sub});
 
   @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(left: 4, right: 4, bottom: 8),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(
-                title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TypeTokens.style(16, FontWeight.w700, color: DesignColors.textStrong, letterSpacing: 0.27),
-              ),
-            ),
-            if (sub != null) ...[
-              const SizedBox(width: 8),
-              Text(sub!, style: TypeTokens.style(12, FontWeight.w600, color: KitTone.trip.accentDark)),
-            ],
-          ],
-        ),
-      );
+  Widget build(BuildContext context) => TitleRow3D(title: title, subtitle: sub, tone: _tone);
 }
 
 class TripMustSeeRail extends StatelessWidget {
@@ -54,18 +38,10 @@ class TripMustSeeRail extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           TripSpotsSectionHead(title: TripStringsSpotsX.mustSee(city), sub: TripStringsSpotsX.featuredFirst),
-          SizedBox(
-            height: RailCard.height + 24,
-            child: RailReveal(
-              itemCount: spots.length,
-              padding: EdgeInsets.zero,
-              separator: 12,
-              itemBuilder: (_, i) => _card(context, spots[i]),
-            ),
-          ),
+          MealsRail(children: [for (final s in spots) _card(context, s)]),
         ],
       );
 
@@ -73,26 +49,40 @@ class TripMustSeeRail extends StatelessWidget {
     final on = selected.contains(s.id);
     final locked = lockedOf(s);
     final toggle = toggleOf(s);
-    return Padding(
-      padding: const EdgeInsets.only(top: 8, bottom: 16),
-      child: SizedBox(
-        width: RailCard.width,
-        child: RailCard(
-          title: s.title,
-          tone: KitTone.trip,
-          selected: on,
-          tagLabel: TripSpotCategory.label(s.category),
-          locationLabel: s.area,
-          media: Stack(
-            fit: StackFit.expand,
-            children: [
-              TripSpotMedia(spot: s),
-              if (s.isFeatured) const Positioned(left: 8, bottom: 8, child: TripFeaturedChip()),
-            ],
+    final art = TripSpotLook.assetOf(s.category);
+    final off = locked && !on;
+    final label = on ? TripStringsSpotsX.addedWishlist : TripStringsSpotsX.addWishlist;
+    return Opacity(
+      opacity: off ? Alpha.v60 : 1,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          MealsCardV(
+            tone: _tone,
+            width: 168,
+            title: s.title,
+            description: '${TripSpotCategory.label(s.category)}\n~${TripFormat.visit(s.visitMinutes)}',
+            photo: s.hasPhoto ? TripSpotMedia(spot: s) : null,
+            sticker: s.hasPhoto ? art : null,
+            art: s.hasPhoto ? null : art,
+            goIcon: on ? Icons.check_rounded : Icons.add_rounded,
+            onTap: () => TripSpotDetailSheet.show(context, spot: s, selected: on, locked: locked, onToggle: toggle),
           ),
-          trailing: TripSpotAddButton(selected: on, locked: locked, onTap: toggle),
-          onTap: () => TripSpotDetailSheet.show(context, spot: s, selected: on, locked: locked, onToggle: toggle),
-        ),
+          Positioned(
+            left: 18,
+            bottom: 26,
+            child: Tooltip(
+              message: label,
+              excludeFromSemantics: true,
+              child: Tap3D(
+                onTap: toggle,
+                label: label,
+                selected: on,
+                child: const SizedBox(width: 48, height: 48),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -101,33 +91,42 @@ class TripMustSeeRail extends StatelessWidget {
 class TripQuickStartRail extends StatelessWidget {
   final List<TripQuickStart> bundles;
   final void Function(TripQuickStart) onTap;
+  final String Function(String id)? nameOf;
 
-  const TripQuickStartRail({super.key, required this.bundles, required this.onTap});
+  const TripQuickStartRail({super.key, required this.bundles, required this.onTap, this.nameOf});
+
+  static const List<String> _arts = [ListingArt.beach, ListingArt.star, ListingArt.mountain];
 
   @override
   Widget build(BuildContext context) => Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const TripSpotsSectionHead(title: TripStringsSpotsX.quickStarts, sub: TripStringsSpotsX.quickSub),
-          SizedBox(
-            height: 60,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              itemCount: bundles.length,
-              separatorBuilder: (_, _) => const SizedBox(width: 8),
-              itemBuilder: (_, i) => KitChoiceChip(
-                label: '${bundles[i].title} · ${bundles[i].ids.length}',
-                selected: true,
-                tone: KitTone.trip,
-                icon: const TravelIcon(TravelIcon.route, size: 18),
-                onTap: () => onTap(bundles[i]),
-              ),
-            ),
+          TripSpotsSectionHead(title: TripStringsSpotsX.quickStarts, sub: TripStringsSpotsX.quickSub),
+          MealsRail(
+            children: [
+              for (var i = 0; i < bundles.length; i++)
+                MealsCardV(
+                  tone: _tone,
+                  width: 176,
+                  titleLines: 2,
+                  art: _arts[i % _arts.length],
+                  title: bundles[i].title,
+                  description: _names(bundles[i]),
+                  number: '${bundles[i].ids.length}',
+                  unit: 'places',
+                  semanticsLabel: '${bundles[i].title}, ${bundles[i].ids.length} places',
+                  onTap: () => onTap(bundles[i]),
+                ),
+            ],
           ),
-          const SizedBox(height: 14),
         ],
       );
+
+  String _names(TripQuickStart b) {
+    final f = nameOf;
+    if (f == null) return '';
+    return b.ids.map(f).where((e) => e.isNotEmpty).take(2).join('\n');
+  }
 }
 
 class TripSuggestionCard extends StatelessWidget {
@@ -139,26 +138,35 @@ class TripSuggestionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => TemplateEntranceOnce(
-        child: TripSurface(
-          margin: const EdgeInsets.only(bottom: 10),
-          padding: const EdgeInsets.fromLTRB(14, 4, 4, 4),
-          shadow: ShadowTokens.elev1,
+        child: Container(
+          margin: const EdgeInsets.fromLTRB(18, 0, 18, 14),
+          constraints: const BoxConstraints(minHeight: 68),
+          padding: const EdgeInsets.fromLTRB(12, 10, 4, 10),
+          decoration: BoxDecoration(color: DesignColors.surface, borderRadius: Banner3D.radius, boxShadow: Ink3D.softShadow),
           child: Row(
             children: [
+              Container(
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(color: _tone.tint, borderRadius: BorderRadius.circular(14)),
+                child: const Center(child: Art3D(asset: ListingArt.compass, size: 40, shadowBlur: 3, shadowOffset: Offset(2, 3))),
+              ),
+              const SizedBox(width: 12),
               Expanded(
                 child: Text(
                   text,
-                  maxLines: 2,
+                  maxLines: 3,
                   overflow: TextOverflow.ellipsis,
-                  style: TypeTokens.style(12, FontWeight.w600, color: DesignColors.textStrong),
+                  style: Ink3D.text(13, FontWeight.w600, Ink3D.title),
                 ),
               ),
-              TextLink(label: TripStringsSpotsX.add, onTap: onAdd, tone: KitTone.trip),
+              const SizedBox(width: 8),
+              GradientPillButton(tone: _tone, label: TripStringsSpotsX.add, onTap: onAdd, height: 34, fontSize: 13, expand: false),
               IconButton(
                 onPressed: onDismiss,
                 tooltip: TripStringsSpotsX.dismiss,
                 constraints: const BoxConstraints(minWidth: KitMetrics.touch, minHeight: KitMetrics.touch),
-                icon: const Icon(Icons.close_rounded, size: 18, color: DesignColors.textMuted),
+                icon: Icon(Icons.close_rounded, size: 20, color: Ink3D.grey),
               ),
             ],
           ),
@@ -174,14 +182,14 @@ class TripSpotsRouteStrip extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Row(
         children: [
-          const TravelIcon(TravelIcon.route, size: 18),
+          const Art3D(asset: ListingArt.compass, size: 22, shadowBlur: 2, shadowOffset: Offset(1, 2)),
           const SizedBox(width: 6),
           Expanded(
             child: Text(
               TripSpotPicks.routeText(route),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TypeTokens.style(12, FontWeight.w600, color: DesignColors.textGrey),
+              style: Ink3D.text(12, FontWeight.w600, Ink3D.grey),
             ),
           ),
         ],
@@ -194,24 +202,12 @@ class TripOfflineBanner extends StatelessWidget {
   const TripOfflineBanner({super.key, required this.onTap});
 
   @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.symmetric(horizontal: KitMetrics.gutter, vertical: 6),
-        child: TripSurface(
-          onTap: onTap,
-          shadow: ShadowTokens.elev1,
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-          child: Row(
-            children: [
-              const TravelIcon(TravelIcon.map, size: 18),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  TripStringsSpotsX.offline,
-                  style: TypeTokens.style(12, FontWeight.w600, color: DesignColors.textStrong),
-                ),
-              ),
-            ],
-          ),
-        ),
+  Widget build(BuildContext context) => Banner3D(
+        kind: BannerKind.info,
+        tone: _tone,
+        art: ListingArt.worldMap,
+        title: TripStringsSpotsX.offline,
+        onTap: onTap,
+        margin: const EdgeInsets.fromLTRB(18, 8, 18, 4),
       );
 }

@@ -12,6 +12,9 @@ import 'kit_tone.dart';
 import 'module_header.dart';
 import 'state_card.dart';
 import 'template_motion.dart';
+import 'art_3d.dart';
+import 'dialog_3d.dart';
+import '../tokens/listing_palette.dart';
 
 class SetupAssets {
   static const String _dir = 'assets/images/design/travel3d/';
@@ -142,6 +145,7 @@ class KitDialogFrame extends StatelessWidget {
     required this.onConfirm,
     this.tone = KitTone.stay,
     this.destructive = false,
+    this.art,
   });
 
   final String title;
@@ -152,59 +156,20 @@ class KitDialogFrame extends StatelessWidget {
   final VoidCallback onConfirm;
   final KitTone tone;
   final bool destructive;
+  final String? art;
 
   @override
   Widget build(BuildContext context) {
-    return Dialog(
-      backgroundColor: Colors.transparent,
-      elevation: 0,
-      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 400),
-        child: Container(
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
-          decoration: const BoxDecoration(
-            color: DesignColors.dialog,
-            borderRadius: CardRadius.tile,
-            boxShadow: ShadowTokens.elev3,
-          ),
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: TypeTokens.style(18, FontWeight.w700, color: DesignColors.textStrong)),
-                const SizedBox(height: 8),
-                Text(body, style: TypeTokens.style(14, FontWeight.w400, color: TypeTokens.secondary)),
-                const SizedBox(height: 12),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: Wrap(
-                    alignment: WrapAlignment.end,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    spacing: 8,
-                    runSpacing: 4,
-                    children: [
-                      TextLink(label: cancelLabel, onTap: onCancel, tone: tone),
-                      ConstrainedBox(
-                        constraints: const BoxConstraints(minWidth: 88),
-                        child: PrimaryButton(
-                          label: confirmLabel,
-                          onPressed: onConfirm,
-                          tone: destructive ? KitTone.danger : tone,
-                          expand: false,
-                          compact: true,
-                          height: KitMetrics.touch,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
+    return Dialog3D(
+      tone: listingToneOf(tone),
+      art: art ?? SetupAssets.clipboard,
+      title: title,
+      body: body,
+      secondaryLabel: cancelLabel,
+      onSecondary: onCancel,
+      primaryLabel: confirmLabel,
+      onPrimary: onConfirm,
+      primaryDanger: destructive,
     );
   }
 }
@@ -332,6 +297,8 @@ class SetupDialog extends StatelessWidget {
     required this.onCancel,
     required this.onConfirm,
     this.destructive = false,
+    this.tone = KitTone.stay,
+    this.art,
   });
 
   final String title;
@@ -341,6 +308,8 @@ class SetupDialog extends StatelessWidget {
   final VoidCallback onCancel;
   final VoidCallback onConfirm;
   final bool destructive;
+  final KitTone tone;
+  final String? art;
 
   @override
   Widget build(BuildContext context) => KitDialogFrame(
@@ -351,41 +320,29 @@ class SetupDialog extends StatelessWidget {
         onCancel: onCancel,
         onConfirm: onConfirm,
         destructive: destructive,
+        tone: tone,
+        art: art,
       );
 }
 
 class SetupBusy extends StatelessWidget {
-  const SetupBusy({super.key, required this.message});
+  const SetupBusy({super.key, required this.message, this.tone = KitTone.stay, this.art, this.progress, this.caption});
   final String message;
+  final KitTone tone;
+  final String? art;
+  final double? progress;
+  final String? caption;
 
   @override
   Widget build(BuildContext context) {
+    final t = listingToneOf(tone);
     return Positioned.fill(
-      child: AbsorbPointer(
-        child: Container(
-          color: DesignColors.scrim,
-          alignment: Alignment.center,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-            decoration: const BoxDecoration(
-              color: DesignColors.surface,
-              borderRadius: CardRadius.tile,
-              boxShadow: ShadowTokens.elev3,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const SizedBox(
-                  width: 28,
-                  height: 28,
-                  child: CircularProgressIndicator(color: DesignColors.primary, strokeWidth: 3),
-                ),
-                const SizedBox(height: 12),
-                Text(message, style: TypeTokens.style(14, FontWeight.w500)),
-              ],
-            ),
-          ),
-        ),
+      child: BusyOverlay3D(
+        tone: t,
+        message: message,
+        art: art ?? (identical(t, ListingTone.coral) ? ListingArt.taxi : SetupAssets.hotel),
+        progress: progress,
+        caption: caption,
       ),
     );
   }

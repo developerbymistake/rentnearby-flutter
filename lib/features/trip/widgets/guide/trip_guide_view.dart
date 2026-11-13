@@ -9,13 +9,13 @@ import '../../models/trip_plan_model.dart';
 import '../../trip_navigation.dart';
 import '../../trip_strings_guide.dart';
 import '../../utils/trip_easy_rules.dart';
+import '../../utils/trip_format.dart';
 import '../../utils/trip_guide_rules.dart';
 import 'trip_guide_bar.dart';
 import 'trip_guide_card.dart';
 import 'trip_guide_finish.dart';
 import 'trip_guide_nudge.dart';
 import 'trip_guide_options.dart';
-import 'trip_guide_overview_sheet.dart';
 import 'trip_guide_progress.dart';
 import 'trip_guide_reopened.dart';
 import 'trip_guide_shortlist_review.dart';
@@ -34,6 +34,7 @@ class _TripGuideViewState extends State<TripGuideView> {
   late final TripPlanController _c = widget.controller ?? TripPlanController.to;
   late final TripShortlistController _sl = widget.shortlist ?? TripShortlistController.to;
   final _busy = false.obs;
+  final _sentNames = <String, List<String>>{};
   Worker? _planWorker;
   Worker? _listWorker;
 
@@ -55,10 +56,17 @@ class _TripGuideViewState extends State<TripGuideView> {
     super.dispose();
   }
 
+  ListingTone _tone(TripGuideStep s) => s.isStay
+      ? ListingTone.forest
+      : s.row.kind == TripEasyRowKind.gettingThere
+          ? ListingTone.indigo
+          : ListingTone.coral;
+
   String _asset(TripGuideStep s) => switch (s.row.kind) {
-        TripEasyRowKind.stay => TravelIcon.stay,
-        TripEasyRowKind.taxi => TravelIcon.route,
-        _ => TravelIcon.taxi,
+        TripEasyRowKind.stay => ListingArt.hotel,
+        TripEasyRowKind.between => ListingArt.bus,
+        TripEasyRowKind.comingBack => ListingArt.airplane,
+        _ => ListingArt.taxi,
       };
 
   TripGuideCardKind _kind(TripGuideStep step) {
@@ -83,11 +91,11 @@ class _TripGuideViewState extends State<TripGuideView> {
     return TripGuideCardKind(card, sent: sent && card == TripGuideCard.question, names: [for (final i in active) i.name]);
   }
 
-  void _openOverview() => TripGuideOverviewSheet.show(context, _c);
-
   bool _isCar(TripGuideStep s) => s.row.kind != TripEasyRowKind.stay && s.row.kind != TripEasyRowKind.taxi;
 
   Future<void> _send(TripGuideStep step) async {
+    final names = [for (final i in _sl.activeOf(step.key)) i.name];
+    if (names.isNotEmpty) _sentNames[step.key] = names;
     await _c.guideSendAll(step.key, context: context);
   }
 
@@ -109,68 +117,80 @@ class _TripGuideViewState extends State<TripGuideView> {
     }
   }
 
-  Widget _cardFor(TripGuideStep step) {
+  TripGuideFrame _cardFor(TripGuideStep step) {
     final key = step.key;
     final k = _kind(step);
     final asset = _asset(step);
+    final tone = _tone(step);
     if (k.sent) {
       return TripGuideFrame(
         title: TripStringsGuide.sentTitle,
         body: TripStringsGuide.sentBody(_g.sent[key] ?? 0, taxi: !step.isStay),
-        asset: asset,
-        child: const SizedBox.shrink(),
+        asset: ListingArt.speechBalloon,
+        tone: tone,
+        child: TripGuideSentRows(names: _sentNames[key] ?? _sl.namesOf(key).values.toList(), art: asset),
       );
     }
     switch (k.card) {
       case TripGuideCard.review:
         final note = _g.notes[key];
-        final review = TripGuideShortlistReview(
+        return TripGuideFrame(
+          title: TripStringsGuide.reviewTitle,
+          body: TripStringsGuide.reviewBody(step.isStay),
           asset: asset,
-          names: k.names,
-          stays: step.isStay,
-          step: key,
-          hidePillNote: note != null,
-          sending: _g.sending.contains(key),
-          failed: _g.failed[key] ?? (note == null ? 0 : 1),
-          onSend: () => _send(step),
-          onChange: _isCar(step) ? () => _c.guideFind(context, key) : null,
-          onNotNow: () => _c.guideNotNow(key),
-        );
-        if (note == null) return review;
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            review,
-            const SizedBox(height: 10),
-            Text(note,
-                key: const ValueKey('guide-send-note'),
-                textAlign: TextAlign.center,
-                style: TypeTokens.style(12, FontWeight.w600, color: DesignColors.warning)),
-          ],
+          tone: tone,
+          child: TripGuideShortlistReview(
+            asset: asset,
+            tone: tone,
+            names: k.names,
+            stays: step.isStay,
+            step: key,
+            hidePillNote: note != null,
+            note: note,
+            sending: _g.sending.contains(key),
+            failed: _g.failed[key] ?? (note == null ? 0 : 1),
+            onSend: () => _send(step),
+            onChange: _isCar(step) ? () => _c.guideFind(context, key) : null,
+            onNotNow: () => _c.guideNotNow(key),
+          ),
         );
       case TripGuideCard.nudge:
         final name = _g.nudgeName.value.isNotEmpty ? _g.nudgeName.value : (k.names.isEmpty ? '' : k.names.first);
-        return Obx(() => TripGuideNudge(
-              asset: asset,
-              name: name,
-              busy: _busy.value,
-              onBooked: () => _booked(key),
-              onNew: () => _newOptions(key),
-            ));
+        return TripGuideFrame(
+          title: TripGuideNudge.titleFor(name),
+          body: TripStringsGuide.nudgeBody,
+          asset: asset,
+          tone: tone,
+          child: Obx(() => TripGuideNudge(
+                asset: asset,
+                tone: tone,
+                name: name,
+                busy: _busy.value,
+                onBooked: () => _booked(key),
+                onNew: () => _newOptions(key),
+              )),
+        );
       case TripGuideCard.reopened:
-        return Obx(() => TripGuideReopened(
-              asset: asset,
-              busy: _busy.value,
-              onBooked: () => _booked(key),
-              onNew: () => _newOptions(key),
-            ));
+        return TripGuideFrame(
+          title: TripStringsGuide.reopenTitle,
+          body: TripStringsGuide.reopenBody,
+          asset: asset,
+          tone: tone,
+          child: Obx(() => TripGuideReopened(
+                asset: asset,
+                tone: tone,
+                busy: _busy.value,
+                onBooked: () => _booked(key),
+                onNew: () => _newOptions(key),
+              )),
+        );
       case TripGuideCard.finish:
       case TripGuideCard.question:
         return TripGuideFrame(
           title: step.title,
           body: step.body,
           asset: asset,
+          tone: tone,
           child: TripGuideOptions(
             choice: _g.current.value,
             skipNote: step.row.kind == TripEasyRowKind.taxi,
@@ -180,97 +200,137 @@ class _TripGuideViewState extends State<TripGuideView> {
     }
   }
 
-  Widget _card() {
+  Widget _progress(ListingTone tone) => Obx(() {
+        final idx = _g.index.value;
+        final total = _g.total.value;
+        final name = idx >= total ? TripStringsGuide.finishName : _g.steps[idx].name;
+        return TripGuideProgress(percent: _g.percent.value, name: name, index: idx, total: total, tone: tone);
+      });
+
+  Widget _bar(ListingTone tone) => Obx(() {
+        final idx = _g.index.value;
+        final total = _g.total.value;
+        var canNext = false;
+        String? label = TripStringsGuide.next;
+        VoidCallback? action;
+        var loading = false;
+        var why = '';
+        if (total > 0 && idx >= total) {
+          label = null;
+        } else if (total > 0) {
+          final step = _g.steps[idx];
+          final key = step.key;
+          final k = _kind(step);
+          final choice = _g.current.value;
+          canNext = TripGuideRules.canAdvance(k.card, answered: _g.answered.contains(key));
+          if (k.sent) {
+            if (idx + 1 < total) why = TripStringsGuide.nextStep(_g.steps[idx + 1].name);
+            action = () {
+              _c.guideDismissSent(key);
+              _c.guideNext();
+            };
+          } else if (k.card == TripGuideCard.review) {
+            label = null;
+          } else if (choice == TripGuideChoice.find && !canNext && k.card == TripGuideCard.question) {
+            label = step.isStay
+                ? TripStringsGuide.findStays
+                : step.isTaxi
+                    ? TripStringsGuide.findATaxi
+                    : TripStringsGuide.findTaxis;
+            action = () => _c.guideFind(context, key);
+            why = TripStringsGuide.guideWhyPick;
+          } else if (canNext) {
+            action = _c.guideNext;
+          }
+          if (k.card == TripGuideCard.nudge || k.card == TripGuideCard.reopened) label = null;
+          if (!k.sent && k.card == TripGuideCard.question && choice == null && action == null) why = TripStringsGuide.guideWhyChoose;
+          if (!k.sent && k.card == TripGuideCard.question && choice == TripGuideChoice.skip && step.row.kind == TripEasyRowKind.taxi) {
+            why = TripStringsGuide.noTaxiNote;
+          }
+        }
+        return TripGuideBar(
+          canNext: canNext,
+          primaryLabel: label,
+          onPrimary: action,
+          loading: loading,
+          onPrevious: _c.guidePrevious,
+          why: why,
+          tone: tone,
+        );
+      });
+
+  Widget _finish(int total) {
+    final rows = _c.easyRows;
+    final arranged = rows.isNotEmpty && TripEasyRules.allResolved(rows);
+    final start = _c.plan.value?.settings.startDate;
+    final days = _c.plan.value?.days.length ?? 0;
+    final dates = [
+      if (start != null) TripFormat.dayMonth(start),
+      if (days > 0) TripStringsGuide.days(days),
+    ].join(' · ');
+    return TripGuideFinish(
+      key: const ValueKey('finish'),
+      arranged: arranged,
+      percent: TripEasyRules.progress(rows).percent,
+      title: _c.title,
+      subtitle: dates,
+      stepText: '$total of $total',
+      onBack: _c.guidePrevious,
+      onSummary: () {
+        final tripId = _c.trip.value?.id;
+        if (tripId != null) TripNavigation.openSummary(tripId);
+      },
+    );
+  }
+
+  Widget _sheet() {
     return Obx(() {
       final idx = _g.index.value;
       final total = _g.total.value;
       if (total == 0) return const SizedBox.shrink();
-      final Widget child;
-      final String id;
-      if (idx >= total) {
-        id = 'finish';
-        final rows = _c.easyRows;
-        child = TripGuideFinish(
-          arranged: rows.isNotEmpty && TripEasyRules.allResolved(rows),
-          onSummary: () {
-            final tripId = _c.trip.value?.id;
-            if (tripId != null) TripNavigation.openSummary(tripId);
-          },
-          onOverview: _openOverview,
-        );
-      } else {
-        final step = _g.steps[idx];
-        child = _cardFor(step);
-        id = '${step.key}-${child.runtimeType}';
-      }
+      if (idx >= total) return _finish(total);
+      final step = _g.steps[idx];
+      final frame = _cardFor(step);
+      final kind = _kind(step);
+      final id = '${step.key}-${frame.child.runtimeType}';
+      final tone = frame.tone ?? ListingTone.indigo;
       final reduce = KitMotion.reduce(context);
-      return AnimatedSwitcher(
+      final sheetKey = ValueKey(step.key);
+      final header = _progress(tone);
+      final noBar = !kind.sent && (kind.card == TripGuideCard.review || kind.card == TripGuideCard.nudge || kind.card == TripGuideCard.reopened);
+      final bottom = noBar ? null : _bar(tone);
+      final content = AnimatedSwitcher(
         duration: reduce ? Duration.zero : const Duration(milliseconds: 260),
-        child: KeyedSubtree(key: ValueKey(id), child: child),
+        child: KeyedSubtree(key: ValueKey(id), child: frame),
       );
+      return Obx(() {
+        final p = _g.percent.value.clamp(0, 100);
+        return GuideSheetScaffold(
+          key: sheetKey,
+          tone: tone,
+          art: frame.asset,
+          title: frame.title,
+          body: frame.body,
+          progress: p / 100,
+          ringLabel: '$p%',
+          scrollKey: '$id-${kind.card.name}-${kind.sent}',
+          centerText: !kind.sent && kind.card == TripGuideCard.review,
+          header: header,
+          bottom: bottom,
+          children: [content],
+        );
+      });
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(KitMetrics.gutter, 12, KitMetrics.gutter, 0),
-          child: Obx(() {
-            final idx = _g.index.value;
-            final total = _g.total.value;
-            final name = idx >= total ? TripStringsGuide.finishName : _g.steps[idx].name;
-            return TripGuideProgress(percent: _g.percent.value, name: name, index: idx, total: total);
-          }),
-        ),
-        Expanded(
-          child: LayoutBuilder(
-            builder: (context, box) => SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: KitMetrics.gutter, vertical: 8),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(minHeight: box.maxHeight - 16),
-                child: Center(
-                  child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 520), child: _card()),
-                ),
-              ),
-            ),
-          ),
-        ),
-        Obx(() {
-          final idx = _g.index.value;
-          final total = _g.total.value;
-          var canNext = false;
-          String? reason = TripStringsGuide.chooseHint;
-          var openList = false;
-          if (total > 0 && idx < total) {
-            final step = _g.steps[idx];
-            final k = _kind(step);
-            canNext = TripGuideRules.canAdvance(k.card, answered: _g.answered.contains(step.key));
-            if (k.sent) {
-              reason = null;
-            } else if (k.card == TripGuideCard.review) {
-              reason = TripStringsGuide.reviewHint;
-            } else if (_g.current.value == TripGuideChoice.find) {
-              reason = TripStringsGuide.findHint;
-              openList = true;
-            }
-          }
-          final key = idx < total ? _g.steps[idx].key : null;
-          final sentNow = idx < total && _kind(_g.steps[idx]).sent;
-          return TripGuideBar(
-            canNext: canNext,
-            reason: reason,
-            onOpenList: openList && key != null ? () => _c.guideFind(context, key) : null,
-            onPrevious: _c.guidePrevious,
-            onNext: () {
-              if (sentNow && key != null) _c.guideDismissSent(key);
-              _c.guideNext();
-            },
-            onOverview: _openOverview,
-          );
-        }),
-      ],
+    final mq = MediaQuery.of(context);
+    // The plan Scaffold strips the inset from its body because it always has a bottom bar slot.
+    final bottom = mq.viewPadding.bottom > 0 ? mq.viewPadding.bottom : MediaQueryData.fromView(View.of(context)).viewPadding.bottom;
+    return MediaQuery(
+      data: mq.copyWith(padding: EdgeInsets.only(bottom: bottom)),
+      child: _sheet(),
     );
   }
 }

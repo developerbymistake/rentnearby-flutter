@@ -62,10 +62,12 @@ void main() {
       expect(find.textContaining('Showing near'), findsNothing);
       expect(find.text('Search any place'), findsNothing);
       expect(find.byType(TextField), findsNothing);
-      expect(find.byIcon(Icons.search_rounded), findsNWidgets(2));
+      expect(find.bySemanticsLabel('Search From'), findsOneWidget);
+      expect(find.bySemanticsLabel('Search To'), findsOneWidget);
       expect(find.text('Ramesh Kumar'), findsOneWidget);
       expect(find.text('Call'), findsOneWidget);
-      expect(find.text('WhatsApp'), findsOneWidget);
+      expect(find.text('Enquiry'), findsOneWidget);
+      expect(find.text('WhatsApp'), findsNothing);
       expect(t.takeException(), isNull);
       final ro = t.renderObject<RenderRepaintBoundary>(find.byType(RepaintBoundary).first);
       await t.runAsync(() async {

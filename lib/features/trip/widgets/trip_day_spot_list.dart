@@ -15,7 +15,8 @@ import '../utils/trip_day_timeline.dart';
 import '../utils/trip_days_rules.dart';
 import '../utils/trip_format.dart';
 import 'trip_leg_menu_sheet.dart';
-import 'trip_sheet_frame.dart';
+
+const List<String> _dayArts = [ListingArt.sunrise, ListingArt.mountain, ListingArt.tent, ListingArt.beach, ListingArt.camping];
 
 class TripDaySpotList extends StatelessWidget {
   final int day;
@@ -27,10 +28,13 @@ class TripDaySpotList extends StatelessWidget {
     await TripLegMenuSheet.addPlaces(legIndex, pickDay: day, replaceSpotId: spotId);
   }
 
+  static const BorderRadius _radius = kMealsRadius;
+
   @override
   Widget build(BuildContext context) {
     final c = TripPlanController.to;
     final color = TripLook.dayColor(day);
+    final tone = ListingTone.indigo;
     return Obx(() {
       final plan = c.plan.value;
       c.result.value;
@@ -44,126 +48,160 @@ class TripDaySpotList extends StatelessWidget {
           if (w.code == TripWarningCodes.closedDay) _closedText(plan, w),
       ];
       final full = !TripDaysRules.canAddOnDay(plan, day);
+      final narrow = MediaQuery.sizeOf(context).width < 340;
+      final artSize = narrow ? 88.0 : 104.0;
       return GestureDetector(
         behavior: HitTestBehavior.opaque,
         onLongPress: locked || c.editMode.value ? null : () => c.editMode.value = true,
-        child: Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          padding: const EdgeInsets.fromLTRB(14, 12, 10, 8),
-          decoration: BoxDecoration(
-            color: FitnessAppTheme.white,
-            borderRadius: TripLook.cardRadius,
-            boxShadow: <BoxShadow>[ShadowTokens.tint(FitnessAppTheme.grey, ShadowSpec.soft)],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _header(c, plan, d, color, editing),
-              const SizedBox(height: 4),
-              if (d.spots.isEmpty)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  child: Text(
-                    d.restDay ? TripStringsV2Plan.restDay : TripStringsV2Plan.noPlacesThisDay,
-                    style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 13, color: TripLook.textLight),
-                  ),
-                )
-              else
-                _spots(context, c, plan, d, color, locked, editing),
-              for (final text in closed)
-                Padding(
-                  padding: const EdgeInsets.only(top: 6),
-                  child: Row(
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 40, 18, 16),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: DesignColors.surface,
+                  borderRadius: _radius,
+                  boxShadow: [BoxShadow(color: tone.shadow, offset: const Offset(1.1, 6), blurRadius: 14)],
+                ),
+                child: ClipRRect(
+                  borderRadius: _radius,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Container(width: 6, height: 6, decoration: const BoxDecoration(color: TripLook.warning, shape: BoxShape.circle)),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Text(text,
-                            style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 11, color: TripLook.warningText)),
+                      _header(c, plan, d, color, editing, narrow ? 104.0 : 120.0),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (d.spots.isEmpty)
+                              _emptyBody(d)
+                            else
+                              _spots(context, c, plan, d, color, locked, editing),
+                            for (final text in closed)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 8),
+                                child: Row(
+                                  children: [
+                                    const Art3D(asset: ListingArt.clipboard, size: 20, shadowBlur: 2, shadowOffset: Offset(1, 2)),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(text, style: Ink3D.text(12, FontWeight.w600, TripLook.warningText)),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            if (editing) _editFooter(context, c, plan, d, full),
+                          ],
+                        ),
                       ),
                     ],
                   ),
                 ),
-              if (editing) _editFooter(context, c, plan, d, full),
-            ],
-          ),
+              ),
+            ),
+            Positioned(
+              left: 22,
+              top: 0,
+              child: IgnorePointer(
+                child: Art3D(asset: _dayArts[(day - 1) % _dayArts.length], size: artSize, halo: artSize + 4, haloColor: DesignColors.tint(DesignColors.surface, Alpha.v22)),
+              ),
+            ),
+          ],
         ),
       );
     });
   }
 
-  Widget _header(TripPlanController c, TripPlan plan, TripDay d, Color color, bool editing) {
+  Widget _emptyBody(TripDay d) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        child: Column(
+          children: [
+            Art3D(asset: d.restDay ? ListingArt.bed : ListingArt.compass, size: 72),
+            const SizedBox(height: 6),
+            Text(
+              d.restDay ? TripStringsV2Plan.restDay : TripStringsV2Plan.noPlacesThisDay,
+              textAlign: TextAlign.center,
+              style: Ink3D.text(13.5, FontWeight.w600, Ink3D.grey),
+            ),
+          ],
+        ),
+      );
+
+  Widget _header(TripPlanController c, TripPlan plan, TripDay d, Color color, bool editing, double artRoom) {
     final date = c.dateOf(day);
     final dateText = date == null ? null : TripFormat.shortDate(date);
     final load = c.dayLoadMinutes(day);
     final over = d.spots.isNotEmpty && TripDayLoad.isOver(load, c.settings.dayLimitMinutes);
-    final title = d.spots.isEmpty
-        ? TripStringsV2Plan.dayHeaderEmpty(day, dateText)
-        : TripStringsV2Plan.dayHeader(day, dateText, TripFormat.duration(load));
-    return Row(
-      children: [
-        Container(width: 10, height: 10, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Text(
-            title,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-                fontFamily: FitnessAppTheme.fontName,
-                fontSize: 13.5,
-                fontWeight: FontWeight.w700,
-                color: over ? TripLook.warningText : TripLook.textDark),
-          ),
-        ),
-        if (over)
-          Container(
-            margin: const EdgeInsets.only(left: 8),
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-            decoration: BoxDecoration(color: TripLook.warningSurface, borderRadius: BorderRadius.circular(20)),
-            child: const Text(
-              TripStringsV2Plan.longDay,
-              style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 11, fontWeight: FontWeight.w600, color: TripLook.warningText),
-            ),
-          ),
-        if (editing && plan.legDayCount(d.leg) > 1)
-          GestureDetector(
-            onTap: () => _removeDay(c),
-            behavior: HitTestBehavior.opaque,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(minHeight: 44),
-              child: Container(
-                alignment: Alignment.center,
-                padding: const EdgeInsets.symmetric(horizontal: 10),
-                margin: const EdgeInsets.only(left: 8),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(color: TripLook.errorSurface, borderRadius: BorderRadius.circular(20)),
-                  child: const Text(
-                    TripStringsV2Plan.removeDay,
-                    style: TextStyle(
-                        fontFamily: FitnessAppTheme.fontName, fontSize: 11.5, fontWeight: FontWeight.w700, color: TripLook.errorText),
-                  ),
+    final title = TripStringsV2Plan.dayHeaderEmpty(day, dateText);
+    const white = DesignColors.surface;
+    return Container(
+      constraints: const BoxConstraints(minHeight: 96),
+      padding: EdgeInsets.fromLTRB(artRoom, 14, 12, 12),
+      decoration: BoxDecoration(gradient: ListingTone.indigo.gradient),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 14,
+                height: 14,
+                decoration: BoxDecoration(color: color, shape: BoxShape.circle, border: Border.all(color: white, width: 2.5)),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: Ink3D.text(17, FontWeight.w700, white, height: 1.25),
                 ),
               ),
-            ),
+            ],
           ),
-        if (plan.isMultiCity)
-          Flexible(
-            child: Padding(
-              padding: const EdgeInsets.only(left: 8),
-              child: Text(
-                c.cityNameOf(day),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 11.5, fontWeight: FontWeight.w600, color: TripLook.textLight),
+          if (d.spots.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Wrap(
+                spacing: 6,
+                runSpacing: 4,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  Text(TripFormat.duration(load), style: Ink3D.text(12.5, FontWeight.w600, white)),
+                  if (over) _pill(TripStringsV2Plan.longDay, fill: TripLook.warningSurface, ink: TripLook.warningText),
+                ],
               ),
             ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              _pill(TripStringsV2Plan.placesCount(d.spots.length)),
+              if (plan.isMultiCity) _pill(c.cityNameOf(day)),
+              if (editing && plan.legDayCount(d.leg) > 1)
+                Tap3D(
+                  onTap: () => _removeDay(c),
+                  label: TripStringsV2Plan.removeDay,
+                  child: _pill(TripStringsV2Plan.removeDay, fill: white, ink: TripLook.errorText),
+                ),
+            ],
           ),
-      ],
+        ],
+      ),
     );
   }
+
+  Widget _pill(String text, {Color? fill, Color? ink}) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+        decoration: BoxDecoration(color: fill ?? DesignColors.tint(DesignColors.surface, Alpha.v26), borderRadius: BorderRadius.circular(10)),
+        child: Text(text, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(11, FontWeight.w700, ink ?? DesignColors.surface)),
+      );
 
   Widget _spots(
     BuildContext context,
@@ -207,18 +245,20 @@ class TripDaySpotList extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         if (travel && prev != null)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 4),
+          Container(
+            margin: const EdgeInsets.only(bottom: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            decoration: BoxDecoration(color: ListingTone.indigo.tint, borderRadius: BorderRadius.circular(12)),
             child: Row(
               children: [
-                const TravelIcon(TravelIcon.taxi, size: 13),
-                const SizedBox(width: 6),
+                const Art3D(asset: ListingArt.taxi, size: 22, shadowBlur: 2, shadowOffset: Offset(1, 2)),
+                const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     TripStringsV2Plan.travelRow(prev, plan.legAt(k)?.cityName ?? '', TripFormat.duration(reserved)),
-                    maxLines: 1,
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 11.5, color: TripLook.textLight),
+                    style: Ink3D.text(12, FontWeight.w600, Ink3D.title),
                   ),
                 ),
               ],
@@ -258,43 +298,39 @@ class TripDaySpotList extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: [
-        const Divider(height: 12),
-        Wrap(
-          spacing: 4,
-          runSpacing: 0,
+        const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Divider(height: 1, color: Ink3D.line)),
+        Row(
           children: [
-            _action(
-              TravelIcon.place,
-              TripStringsV2Plan.addPlace,
-              full ? null : () => TripLegMenuSheet.addPlaces(d.leg, pickDay: day),
-            ),
-            if (d.spots.isEmpty)
-              _action(
-                'assets/images/design/travel3d/bed.png',
-                d.restDay ? TripStringsV2Plan.undoRestDay : TripStringsV2Plan.makeRestDay,
-                () => c.setRestDay(day, !d.restDay),
+            Expanded(
+              child: _action(
+                ListingArt.roundPushpin,
+                TripStringsV2Plan.addPlace,
+                full ? null : () => TripLegMenuSheet.addPlaces(d.leg, pickDay: day),
               ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: _action(
+                ListingArt.bed,
+                d.restDay ? TripStringsV2Plan.undoRestDay : TripStringsV2Plan.makeRestDay,
+                d.spots.isEmpty ? () => c.setRestDay(day, !d.restDay) : null,
+              ),
+            ),
           ],
         ),
         if (full)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(4, 2, 4, 6),
-            child: Row(
-              children: [
-                const Expanded(
-                  child: Text(
-                    TripStringsV2Plan.dayFull,
-                    style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 11.5, color: TripLook.warningText),
-                  ),
-                ),
-                TextLink(label: TripStringsV2Plan.addDay, onTap: c.canAddDay
-                      ? () {
-                          c.addDay(afterDay: day);
-                          TripUpdateAskSheet.afterDaysEdit();
-                        }
-                      : null, tone: KitTone.trip),
-              ],
-            ),
+          Banner3D(
+            kind: BannerKind.warn,
+            art: ListingArt.calendar,
+            title: TripStringsV2Plan.dayFull,
+            actionLabel: TripStringsV2Plan.addDay,
+            onAction: c.canAddDay
+                ? () {
+                    c.addDay(afterDay: day);
+                    TripUpdateAskSheet.afterDaysEdit();
+                  }
+                : null,
+            margin: const EdgeInsets.only(top: 10),
           ),
       ],
     );
@@ -321,26 +357,45 @@ class TripDaySpotList extends StatelessWidget {
     m?.showSnackBar(SnackBar(content: Text(text, style: const TextStyle(fontFamily: FitnessAppTheme.fontName))));
   }
 
-  Widget _action(Object icon, String label, VoidCallback? onTap, {Color color = TripLook.accentDark}) {
-    final fg = onTap == null ? TripLook.textHint : color;
-    return TextButton.icon(
-      onPressed: onTap,
-      style: TextButton.styleFrom(minimumSize: const Size(44, 44), padding: const EdgeInsets.symmetric(horizontal: 8)),
-      icon: icon is String ? TravelIcon(icon, size: 19) : Icon(icon as IconData, size: 17, color: fg),
-      label: Text(label, style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12.5, fontWeight: FontWeight.w700, color: fg)),
+  Widget _action(String art, String label, VoidCallback? onTap) {
+    final tone = ListingTone.indigo;
+    return Opacity(
+      opacity: onTap == null ? Alpha.v45 : 1,
+      child: Tap3D(
+        onTap: onTap,
+        label: label,
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 44),
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+          decoration: BoxDecoration(color: tone.tint, borderRadius: BorderRadius.circular(24)),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Art3D(asset: art, size: 20, shadowBlur: 2, shadowOffset: const Offset(1, 2)),
+              const SizedBox(width: 5),
+              Flexible(
+                child: Text(label, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(11.5, FontWeight.w600, tone.text)),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
   Future<void> _spotMenu(BuildContext context, TripPlanController c, TripSpotRef s) async {
-    final choice = await TripSheetFrame.show<String>(
+    final tone = ListingTone.indigo;
+    final choice = await SheetFrame.show<String>(
       context,
-      Builder(
-        builder: (sheetCtx) => TripSheetFrame(
-          title: s.name,
+      builder: (sheetCtx) => SheetFrame(
+        title: s.name,
+        tone: tone,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _menuRow(sheetCtx, TravelIcon.pin, TripStringsWizard.replacePlace, 'replace'),
-            _menuRow(sheetCtx, TravelIcon.calendar, TripStringsWizard.moveToDay, 'move'),
-            _menuRow(sheetCtx, Icons.close_rounded, TripStringsWizard.removePlace, 'remove', color: TripLook.error),
+            SheetOptionCard(tone: tone, art: ListingArt.roundPushpin, title: TripStringsWizard.replacePlace, onTap: () => Navigator.pop(sheetCtx, 'replace')),
+            SheetOptionCard(tone: tone, art: ListingArt.calendar, title: TripStringsWizard.moveToDay, onTap: () => Navigator.pop(sheetCtx, 'move')),
+            SheetOptionCard(tone: tone, art: ListingArt.clipboard, title: TripStringsWizard.removePlace, onTap: () => Navigator.pop(sheetCtx, 'remove')),
           ],
         ),
       ),
@@ -356,27 +411,6 @@ class TripDaySpotList extends StatelessWidget {
         if (i >= 0) _remove(context, c, c.plan.value!.dayAt(day)!, i);
     }
   }
-
-  Widget _menuRow(BuildContext ctx, Object icon, String label, String value, {Color color = TripLook.textDark}) =>
-      InkWell(
-        onTap: () => Navigator.pop(ctx, value),
-        borderRadius: BorderRadius.circular(12),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 52),
-          child: Row(
-            children: [
-              icon is String ? TravelIcon(icon, size: 21) : Icon(icon as IconData, size: 19, color: color),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 14, fontWeight: FontWeight.w600, color: color)),
-              ),
-            ],
-          ),
-        ),
-      );
 
   String _closedText(TripPlan plan, TripWarning w) {
     final id = w.spotId;
@@ -412,8 +446,10 @@ class _StopItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final drive = driveMinutes;
+    final narrow = MediaQuery.sizeOf(context).width < 340;
+    final timeW = MediaQuery.textScalerOf(context).scale(narrow ? 52 : 60);
     return Material(
-      color: FitnessAppTheme.white,
+      color: DesignColors.surface,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -421,36 +457,29 @@ class _StopItem extends StatelessWidget {
             onTap: onTap,
             borderRadius: BorderRadius.circular(10),
             child: ConstrainedBox(
-              constraints: const BoxConstraints(minHeight: 48),
+              constraints: const BoxConstraints(minHeight: 50),
               child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 6),
+                padding: const EdgeInsets.symmetric(vertical: 4),
                 child: Row(
                   children: [
                     if (editing)
                       ReorderableDelayedDragStartListener(
                         index: index,
                         child: const Padding(
-                          padding: EdgeInsets.only(right: 6),
-                          child: Icon(Icons.drag_indicator_rounded, size: 22, color: TripLook.textHint),
+                          padding: EdgeInsets.only(right: 4),
+                          child: Icon(Icons.drag_indicator_rounded, size: 20, color: TripLook.textHint),
                         ),
                       ),
                     SizedBox(
-                      width: 62,
-                      child: Text(
-                        time,
-                        maxLines: 1,
-                        style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 11.5, fontWeight: FontWeight.w600, color: TripLook.textMedium),
-                      ),
+                      width: timeW,
+                      child: Text(time, maxLines: 1, style: Ink3D.text(11.5, FontWeight.w600, Ink3D.sub)),
                     ),
                     Container(
-                      width: 22,
-                      height: 22,
+                      width: 26,
+                      height: 26,
                       alignment: Alignment.center,
                       decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-                      child: Text(
-                        '${index + 1}',
-                        style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 11, fontWeight: FontWeight.w700, color: FitnessAppTheme.white),
-                      ),
+                      child: Text('${index + 1}', style: Ink3D.text(11.5, FontWeight.w700, DesignColors.surface)),
                     ),
                     const SizedBox(width: 10),
                     Expanded(
@@ -458,17 +487,12 @@ class _StopItem extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text(
-                            spot.name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 13, fontWeight: FontWeight.w600, color: TripLook.textDark),
-                          ),
+                          Text(spot.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(14, FontWeight.w600, Ink3D.title)),
                           Text(
                             '${TripSpotCategory.label(spot.category)} · ${TripFormat.visit(spot.visitMinutes)}',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 11, color: TripLook.textLight),
+                            style: Ink3D.text(11.5, FontWeight.w400, Ink3D.grey),
                           ),
                         ],
                       ),
@@ -478,7 +502,17 @@ class _StopItem extends StatelessWidget {
                         onPressed: onRemove,
                         tooltip: TripStringsV2Plan.removePlace,
                         constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
-                        icon: const Icon(Icons.close_rounded, size: 20, color: TripLook.error),
+                        icon: Container(
+                          width: 32,
+                          height: 32,
+                          decoration: BoxDecoration(color: TripLook.errorSurface, shape: BoxShape.circle),
+                          child: const Icon(Icons.close_rounded, size: 18, color: TripLook.error),
+                        ),
+                      )
+                    else
+                      Padding(
+                        padding: const EdgeInsets.only(left: 6),
+                        child: Art3D(asset: TripSpotLook.assetOf(spot.category), size: 34, shadowBlur: 2, shadowOffset: const Offset(1, 3)),
                       ),
                   ],
                 ),
@@ -487,7 +521,7 @@ class _StopItem extends StatelessWidget {
           ),
           if (showDrive)
             Padding(
-              padding: const EdgeInsets.only(left: 73),
+              padding: EdgeInsets.only(left: (editing ? 24 : 0) + timeW + 12),
               child: Container(
                 padding: const EdgeInsets.only(left: 19, top: 2, bottom: 2),
                 decoration: BoxDecoration(
@@ -497,12 +531,9 @@ class _StopItem extends StatelessWidget {
                     ? const SizedBox(height: 14)
                     : Row(
                         children: [
-                          const TravelIcon(TravelIcon.taxi, size: 12),
-                          const SizedBox(width: 4),
-                          Text(
-                            TripFormat.duration(drive),
-                            style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 11, color: TripLook.textLight),
-                          ),
+                          const Art3D(asset: ListingArt.taxi, size: 16, shadowBlur: 0),
+                          const SizedBox(width: 6),
+                          Text(TripFormat.duration(drive), style: Ink3D.text(11.5, FontWeight.w500, Ink3D.grey)),
                         ],
                       ),
               ),

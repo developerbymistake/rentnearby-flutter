@@ -185,11 +185,14 @@ class MealsView extends StatelessWidget {
                                           color: FitnessAppTheme.white,
                                         ),
                                       ),
-                                      Padding(
+                                      Flexible(
+                                        child: Padding(
                                         padding: const EdgeInsets.only(
                                             left: 4, bottom: 3),
                                         child: Text(
-                                          'kcal',
+                                          mealsListData!.unit,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
                                           style: TextStyle(
                                             fontFamily:
                                                 FitnessAppTheme.fontName,
@@ -199,6 +202,7 @@ class MealsView extends StatelessWidget {
                                             color: FitnessAppTheme.white,
                                           ),
                                         ),
+                                      ),
                                       ),
                                     ],
                                   )

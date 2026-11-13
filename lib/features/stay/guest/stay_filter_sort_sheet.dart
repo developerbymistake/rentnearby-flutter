@@ -5,8 +5,7 @@ import '../setup/stay_option_sets.dart';
 import '../stay_types_controller.dart';
 import 'v2/stay_landing_controller_v2.dart';
 
-const _kAccent = DesignColors.primary;
-const _tone = KitTone.stay;
+final _tone = ListingTone.forest;
 
 class StayFilterSortSheet extends StatefulWidget {
   final StayLandingControllerV2 controller;
@@ -14,7 +13,7 @@ class StayFilterSortSheet extends StatefulWidget {
   const StayFilterSortSheet({super.key, required this.controller});
 
   static Future<void> show(BuildContext context, {required StayLandingControllerV2 controller}) {
-    return SheetFrame.show(context, builder: (_) => StayFilterSortSheet(controller: controller));
+    return Sheet3D.show<void>(context, builder: (_) => StayFilterSortSheet(controller: controller));
   }
 
   @override
@@ -36,6 +35,25 @@ class _StayFilterSortSheetState extends State<StayFilterSortSheet> {
     (value: 'nearest', label: 'Nearest'),
     (value: 'price_asc', label: 'Price: low to high'),
     (value: 'price_desc', label: 'Price: high to low'),
+  ];
+
+  static final _typeLook = [
+    (ListingTone.cE, ListingArt.sunrise),
+    (ListingTone.cA, ListingArt.bed),
+    (ListingTone.cB, ListingArt.hotel),
+    (ListingTone.cC, ListingArt.beach),
+    (ListingTone.cF, ListingArt.tent),
+    (ListingTone.cD, ListingArt.mountain),
+  ];
+  static final _mealLook = [
+    (ListingTone.cA, ListingArt.key),
+    (ListingTone.cF, ListingArt.sunrise),
+    (ListingTone.cE, ListingArt.backpack),
+  ];
+  static final _sortLook = [
+    (ListingTone.cB, ListingArt.roundPushpin),
+    (ListingTone.cE, ListingArt.moneyBag),
+    (ListingTone.cD, ListingArt.moneyBag),
   ];
 
   @override
@@ -71,91 +89,86 @@ class _StayFilterSortSheetState extends State<StayFilterSortSheet> {
     final maxHeight = (baseHeight - baseTopPadding) * 0.94;
     final sheetHeight = (baseHeight * 0.78).clamp(0.0, maxHeight);
     return SizedBox(
-      height: sheetHeight,
-      child: StaggerHost(
-        count: 4,
-        child: SheetFrame(
-          title: 'Filter & Sort · Stays',
-          footer: StaggerItem(index: 3, child: _footer()),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _group(0, [
-                Text('Stay type', style: _sectionLabelStyle),
-                const SizedBox(height: 8),
-                _stayTypeGrid(),
-              ]),
-              const SizedBox(height: 16),
-              _group(1, [
-                Text('Meals', style: _sectionLabelStyle),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: StayOptionSets.meals
-                      .map((o) => PickChip(
-                            label: o.label,
-                            selected: _meals == o.value,
-                            activeColor: _kAccent,
-                            onTap: () => setState(() => _meals = _meals == o.value ? null : o.value),
-                          ))
-                      .toList(),
-                ),
-              ]),
-              const SizedBox(height: 16),
-              _group(2, [
-                Text('Sort by', style: _sectionLabelStyle),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: _sortOptions
-                      .map((o) => PickChip(
-                            label: o.label,
-                            selected: _sort == o.value,
-                            activeColor: _kAccent,
-                            onTap: () => setState(() => _sort = o.value),
-                          ))
-                      .toList(),
-                ),
-              ]),
-            ],
-          ),
+      height: sheetHeight + Sheet3D.artRoom,
+      child: Align(
+        alignment: Alignment.bottomCenter,
+        child: Sheet3D(
+        tone: _tone,
+        art: ListingArt.hotel,
+        title: 'Filter & Sort · Stays',
+        centerTitle: false,
+        padding: const EdgeInsets.fromLTRB(18, 0, 18, 8),
+        footer: _footer(),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _label('Stay type', first: true),
+            _stayTypeGrid(),
+            _label('Meals'),
+            _grid([
+              for (var i = 0; i < StayOptionSets.meals.length; i++)
+                _card(_mealLook[i % _mealLook.length], StayOptionSets.meals[i].label, _meals == StayOptionSets.meals[i].value,
+                    () => setState(() => _meals = _meals == StayOptionSets.meals[i].value ? null : StayOptionSets.meals[i].value)),
+            ]),
+            _label('Sort by'),
+            _grid([
+              for (var i = 0; i < _sortOptions.length; i++)
+                _card(_sortLook[i % _sortLook.length], _sortOptions[i].label, _sort == _sortOptions[i].value,
+                    () => setState(() => _sort = _sortOptions[i].value)),
+            ]),
+          ],
+        ),
         ),
       ),
     );
   }
 
-  Widget _group(int i, List<Widget> children) =>
-      StaggerItem(index: i, child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: children));
+  Widget _label(String text, {bool first = false}) => Padding(
+        padding: EdgeInsets.fromLTRB(2, first ? 4 : 18, 2, 0),
+        child: Semantics(header: true, child: Text(text, style: Ink3D.text(15, FontWeight.w600, Ink3D.title, height: 1.45))),
+      );
+
+  Widget _card((ListingTone, String) look, String label, bool selected, VoidCallback onTap) =>
+      GradientOptionCard(tone: look.$1, art: look.$2, label: label, selected: selected, onTap: onTap);
+
+  Widget _grid(List<Widget> cards) {
+    final rows = <Widget>[];
+    for (var i = 0; i < cards.length; i += 3) {
+      rows.add(Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          for (var j = i; j < i + 3; j++) ...[
+            if (j > i) const SizedBox(width: 10),
+            Expanded(child: j < cards.length ? cards[j] : const SizedBox.shrink()),
+          ],
+        ],
+      ));
+    }
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: rows);
+  }
 
   Widget _footer() {
-    return Row(
+    return PillButtonRow(
       children: [
-        Expanded(
-          child: SecondaryButton(
-            label: 'Clear',
-            tone: _tone,
-            neutral: true,
-            onPressed: () => setState(() {
-              _meals = null;
-              _stayTypeId = null;
-              _sort = StayLandingControllerV2.defaultSort;
-            }),
-          ),
+        WhitePillButton(
+          tone: _tone,
+          label: 'Clear',
+          height: 52,
+          onTap: () => setState(() {
+            _meals = null;
+            _stayTypeId = null;
+            _sort = StayLandingControllerV2.defaultSort;
+          }),
         ),
-        const SizedBox(width: 12),
-        Expanded(
-          flex: 2,
-          child: PrimaryButton(
-            label: 'Apply',
-            tone: _tone,
-            onPressed: () {
-              _closing = true;
-              Navigator.of(context).pop();
-              widget.controller.applyFilters(meals: _meals, stayTypeId: _stayTypeId, sort: _sort);
-            },
-          ),
+        GradientPillButton(
+          tone: _tone,
+          label: 'Apply',
+          height: 52,
+          onTap: () {
+            _closing = true;
+            Navigator.of(context).pop();
+            widget.controller.applyFilters(meals: _meals, stayTypeId: _stayTypeId, sort: _sort);
+          },
         ),
       ],
     );
@@ -167,20 +180,11 @@ class _StayFilterSortSheetState extends State<StayFilterSortSheet> {
         (id: null, name: 'All'),
         ..._types.types.map((t) => (id: t.id, name: t.name)),
       ];
-      return Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        children: options
-            .map((t) => PickChip(
-                  label: t.name,
-                  selected: _stayTypeId == t.id,
-                  activeColor: _kAccent,
-                  onTap: () => setState(() => _stayTypeId = t.id),
-                ))
-            .toList(),
-      );
+      return _grid([
+        for (var i = 0; i < options.length; i++)
+          _card(_typeLook[i % _typeLook.length], options[i].name, _stayTypeId == options[i].id,
+              () => setState(() => _stayTypeId = options[i].id)),
+      ]);
     });
   }
-
-  static final _sectionLabelStyle = TypeTokens.style(16, FontWeight.w600, color: DesignColors.textPrimary, letterSpacing: 0.18);
 }

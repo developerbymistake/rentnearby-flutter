@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:bakhli/features/trip/widgets/trip_ui.dart';
 import 'package:bakhli/design/design.dart';
-import 'package:bakhli/design/extra/replies_kit.dart';
+import 'package:bakhli/design/extra/ext_trip_replies.dart';
 import '../controllers/trip_enquiry_controller.dart';
 import '../models/trip_enquiry_model.dart';
 import '../trip_strings.dart';
@@ -14,47 +13,28 @@ class TripTwoButtons extends StatelessWidget {
     required this.primaryLabel,
     required this.onSecondary,
     required this.onPrimary,
-    this.primaryColor = RepliesTone.bad,
+    this.danger = true,
     this.busy = false,
+    this.tone,
   });
 
   final String secondaryLabel;
   final String primaryLabel;
   final VoidCallback? onSecondary;
   final VoidCallback? onPrimary;
-  final Color primaryColor;
+  final bool danger;
   final bool busy;
+  final ListingTone? tone;
 
   @override
   Widget build(BuildContext context) {
-    final secondary = TripActionChip(
-      height: 48,
-      fontSize: 14,
-      color: DesignColors.textSecondary,
-      label: secondaryLabel,
-      onTap: busy ? null : onSecondary,
+    final t = tone ?? ListingTone.indigo;
+    return PillButtonRow(
+      children: [
+        WhitePillButton(tone: t, label: secondaryLabel, onTap: busy ? null : onSecondary),
+        GradientPillButton(tone: t, label: primaryLabel, danger: danger, loading: busy, onTap: busy ? null : onPrimary),
+      ],
     );
-    final primary = TripButton(
-      color: primaryColor,
-      label: primaryLabel,
-      loading: busy,
-      onPressed: busy ? null : onPrimary,
-    );
-    return LayoutBuilder(builder: (context, c) {
-      if (c.maxWidth < 340) {
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [primary, const SizedBox(height: 8), secondary],
-        );
-      }
-      return Row(
-        children: [
-          Expanded(child: secondary),
-          const SizedBox(width: 10),
-          Expanded(child: primary),
-        ],
-      );
-    });
   }
 }
 
@@ -68,16 +48,18 @@ class TripWithdrawSheet {
   }
 
   static Future<bool> confirmInline(BuildContext context) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: const RoundedRectangleBorder(borderRadius: RepliesCard.radius),
-        backgroundColor: DesignColors.surface,
-        content: const Text(TripStrings.withdrawToo, style: FitnessAppTheme.body2),
-        actions: [
-          TextLink(label: TripStrings.keepAsking, onTap: () => Navigator.pop(ctx, false), tone: KitTone.trip),
-          TextLink(label: TripStrings.withdraw, onTap: () => Navigator.pop(ctx, true), tone: KitTone.trip),
-        ],
+    final ok = await Dialog3D.show<bool>(
+      context,
+      builder: (ctx) => Dialog3D(
+        tone: ListingTone.indigo,
+        art: ListingArt.clipboard,
+        title: TripStrings.withdrawToo,
+        body: TripStrings.hostSeesWithdraw,
+        secondaryLabel: TripStrings.keepAsking,
+        onSecondary: () => Navigator.pop(ctx, false),
+        primaryLabel: TripStrings.withdraw,
+        primaryDanger: true,
+        onPrimary: () => Navigator.pop(ctx, true),
       ),
     );
     return ok == true;
@@ -121,31 +103,27 @@ class _WithdrawBodyState extends State<_WithdrawBody> {
 
   @override
   Widget build(BuildContext context) {
-    final names = widget.enquiries.map((e) => e.listingName).where((n) => n.isNotEmpty).join(', ');
+    final named = widget.enquiries.where((e) => e.listingName.isNotEmpty).toList();
+    final taxi = widget.enquiries.isNotEmpty && widget.enquiries.every((e) => e.isTaxi);
+    final tone = taxi ? ListingTone.coral : ListingTone.forest;
     return TripSheetFrame(
+      tone: tone,
+      art: ListingArt.clipboard,
+      size: SheetSize.short,
       title: widget.title,
       description: TripStrings.hostSeesWithdraw,
+      footer: TripTwoButtons(
+        tone: tone,
+        secondaryLabel: widget.keepLabel,
+        primaryLabel: TripStrings.withdraw,
+        busy: _busy,
+        onSecondary: () => Navigator.pop(context, false),
+        onPrimary: _withdraw,
+      ),
       children: [
-        TemplateStagger(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-        if (names.isNotEmpty) ...[
-          Text(names,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                  fontFamily: FitnessAppTheme.fontName, fontSize: 13, fontWeight: FontWeight.w600, color: DesignColors.textStrong)),
-          const SizedBox(height: 16),
-        ],
-        TripTwoButtons(
-          secondaryLabel: widget.keepLabel,
-          primaryLabel: TripStrings.withdraw,
-          busy: _busy,
-          onSecondary: () => Navigator.pop(context, false),
-          onPrimary: _withdraw,
-        ),
-          ],
-        ),
+        if (named.isNotEmpty)
+          NameChips3D(tone: tone, items: [for (final e in named) (e.isTaxi ? ListingArt.taxi : ListingArt.bed, e.listingName)]),
+        const SizedBox(height: 16),
       ],
     );
   }

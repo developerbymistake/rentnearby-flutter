@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
-import '../tokens/alpha_tokens.dart';
 import '../tokens/design_colors.dart';
-import '../tokens/shadow_tokens.dart';
-import '../tokens/template_tokens.dart';
+import '../tokens/listing_palette.dart';
 import '../tokens/type_tokens.dart';
-import 'buttons_kit.dart';
+import 'art_3d.dart';
+import 'dialog_3d.dart';
 import 'kit_tone.dart';
 import 'motion_kit.dart';
+import 'pill_buttons_3d.dart';
+import 'state_card.dart';
 
 const List<String> _months = [
   'January',
@@ -63,6 +64,7 @@ class TemplateCalendarPopup extends StatefulWidget {
     this.applyLabel = 'Apply',
     this.barrierDismissible = true,
     this.onApply,
+    this.art,
   });
 
   final DateTime? initialStartDate;
@@ -76,6 +78,7 @@ class TemplateCalendarPopup extends StatefulWidget {
   final String applyLabel;
   final bool barrierDismissible;
   final void Function(DateTime start, DateTime end)? onApply;
+  final String? art;
 
   static Future<DateTime?> pickDate(
     BuildContext context, {
@@ -85,6 +88,7 @@ class TemplateCalendarPopup extends StatefulWidget {
     String label = 'Date',
     KitTone tone = KitTone.brand,
     bool useRootNavigator = true,
+    String? art,
   }) {
     DateTime? result;
     return showDialog<DateTime>(
@@ -98,6 +102,7 @@ class TemplateCalendarPopup extends StatefulWidget {
         maximumDate: last,
         fromLabel: label,
         tone: tone,
+        art: art,
         onApply: (s, _) => result = s,
       ),
     ).then((_) => result);
@@ -182,105 +187,37 @@ class _TemplateCalendarPopupState extends State<TemplateCalendarPopup>
   @override
   Widget build(BuildContext context) {
     final fade = CurvedAnimation(parent: _c, curve: Curves.fastOutSlowIn);
+    final tone = listingToneOf(widget.tone);
+    final single = widget.singleDate;
+    String d(DateTime? v) => v == null ? '--/--' : kitDayLabel(v);
     return FadeTransition(
       opacity: fade,
       child: ScaleTransition(
         scale: Tween<double>(begin: 0.94, end: 1).animate(fade),
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 400),
-              child: Material(
-                color: Colors.transparent,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: DesignColors.surface,
-                    borderRadius: const BorderRadius.all(Radius.circular(24)),
-                    boxShadow: [
-                      ShadowTokens.tint(
-                        DesignColors.textGrey,
-                        const ShadowSpec(0.2, Offset(4, 4), 8),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _headerCell(widget.fromLabel, _start),
-                          ),
-                          if (!widget.singleDate) ...[
-                            Container(
-                              height: 74,
-                              width: 1,
-                              color: DesignColors.divider,
-                            ),
-                            Expanded(child: _headerCell(widget.toLabel, _end)),
-                          ],
-                        ],
-                      ),
-                      const Divider(height: 1),
-                      _CalendarGrid(
-                        start: _start,
-                        end: _end,
-                        min: widget.minimumDate == null
-                            ? null
-                            : _day(widget.minimumDate!),
-                        max: widget.maximumDate == null
-                            ? null
-                            : _day(widget.maximumDate!),
-                        single: widget.singleDate,
-                        tone: widget.tone,
-                        onChange: (s, e) => setState(() {
-                          _start = s;
-                          _end = e;
-                        }),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                        child: PrimaryButton(
-                          label: widget.applyLabel,
-                          tone: widget.tone,
-                          onPressed: _ready ? _apply : null,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
+        child: Dialog3D(
+          tone: tone,
+          art: widget.art ?? ListingArt.calendar,
+          label: single ? widget.fromLabel : '${widget.fromLabel} - ${widget.toLabel}',
+          title: single ? d(_start) : '${d(_start)} - ${d(_end)}',
+          content: _CalendarGrid(
+            start: _start,
+            end: _end,
+            min: widget.minimumDate == null ? null : _day(widget.minimumDate!),
+            max: widget.maximumDate == null ? null : _day(widget.maximumDate!),
+            single: single,
+            tone: tone,
+            onChange: (s, e) => setState(() {
+              _start = s;
+              _end = e;
+            }),
           ),
+          primaryLabel: widget.applyLabel,
+          primaryEnabled: _ready,
+          onPrimary: _ready ? _apply : null,
         ),
       ),
     );
   }
-
-  Widget _headerCell(String label, DateTime? d) => Column(
-    mainAxisAlignment: MainAxisAlignment.center,
-    children: [
-      Text(
-        label,
-        style: TypeTokens.style(
-          16,
-          FontWeight.w400,
-          color: DesignColors.tint(DesignColors.textGrey, Alpha.high),
-        ),
-      ),
-      const SizedBox(height: 4),
-      Text(
-        d == null ? '--/--' : kitDayLabel(d),
-        style: TypeTokens.style(
-          16,
-          FontWeight.w700,
-          color: DesignColors.textStrong,
-        ),
-      ),
-    ],
-  );
 }
 
 class _CalendarGrid extends StatefulWidget {
@@ -299,7 +236,7 @@ class _CalendarGrid extends StatefulWidget {
   final DateTime? min;
   final DateTime? max;
   final bool single;
-  final KitTone tone;
+  final ListingTone tone;
   final void Function(DateTime? start, DateTime? end) onChange;
 
   @override
@@ -372,7 +309,7 @@ class _CalendarGridState extends State<_CalendarGrid> {
               duration: const Duration(milliseconds: 200),
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: on ? accent : DesignColors.tint(accent, Alpha.faint),
+                color: on ? accent : widget.tone.tint,
                 borderRadius: const BorderRadius.all(Radius.circular(16)),
               ),
               child: Text(
@@ -452,237 +389,165 @@ class _CalendarGridState extends State<_CalendarGrid> {
   @override
   Widget build(BuildContext context) {
     final cells = _cells();
-    final accent = widget.tone.accentDark;
+    final tone = widget.tone;
+    final accent = tone.g2;
     final today = _day(DateTime.now());
-    final big = MediaQuery.sizeOf(context).width > 360;
     return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
-          child: Row(
-            children: [
-              _navButton(
-                Icons.keyboard_arrow_left,
-                _canGoPrev(),
-                () => setState(
-                  () => _month = DateTime(_month.year, _month.month - 1),
-                ),
-              ),
-              Expanded(
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () => setState(() {
-                    _pickYear = null;
-                    _pickStage = _pickStage == 0 ? 1 : 0;
-                  }),
-                  child: SizedBox(
-                    height: 44,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Flexible(
+        Row(
+          children: [
+            _navButton(Icons.chevron_left_rounded, 'Previous month', _canGoPrev(), () => setState(() => _month = DateTime(_month.year, _month.month - 1))),
+            Expanded(
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => setState(() {
+                  _pickYear = null;
+                  _pickStage = _pickStage == 0 ? 1 : 0;
+                }),
+                child: SizedBox(
+                  height: 44,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Flexible(
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
                           child: Text(
-                            _pickStage == 2
-                                ? '${_pickYear ?? _month.year}'
-                                : '${_months[_month.month - 1]}, ${_month.year}',
-                            overflow: TextOverflow.ellipsis,
-                            style: TypeTokens.style(
-                              20,
-                              FontWeight.w500,
-                              color: DesignColors.textStrong,
-                            ),
+                            _pickStage == 2 ? '${_pickYear ?? _month.year}' : '${_months[_month.month - 1]}, ${_month.year}',
+                            maxLines: 1,
+                            softWrap: false,
+                            style: Ink3D.text(16, FontWeight.w700, Ink3D.title),
                           ),
                         ),
-                        Icon(
-                          _pickStage == 0
-                              ? Icons.arrow_drop_down
-                              : Icons.arrow_drop_up,
-                          color: accent,
-                        ),
-                      ],
-                    ),
+                      ),
+                      Icon(_pickStage == 0 ? Icons.arrow_drop_down : Icons.arrow_drop_up, color: accent),
+                    ],
                   ),
                 ),
               ),
-              _navButton(
-                Icons.keyboard_arrow_right,
-                _canGoNext(),
-                () => setState(
-                  () => _month = DateTime(_month.year, _month.month + 1),
-                ),
-              ),
-            ],
-          ),
+            ),
+            _navButton(Icons.chevron_right_rounded, 'Next month', _canGoNext(), () => setState(() => _month = DateTime(_month.year, _month.month + 1))),
+          ],
         ),
         if (_pickStage != 0)
           _jumpGrid(accent)
         else ...[
           Padding(
-            padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+            padding: const EdgeInsets.only(top: 8, bottom: 2),
             child: Row(
               children: [
                 for (final d in _days)
                   Expanded(
-                    child: Center(
-                      child: Text(
-                        d,
-                        style: TypeTokens.style(
-                          14,
-                          FontWeight.w500,
-                          color: accent,
-                        ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 2),
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(d, maxLines: 1, softWrap: false, textScaler: TextScaler.noScaling, style: Ink3D.text(12, FontWeight.w700, Ink3D.hint, letterSpacing: 0)),
                       ),
                     ),
                   ),
               ],
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            child: Column(
-              children: [
-                for (var r = 0; r < 6; r++)
-                  Row(
-                    children: [
-                      for (var k = 0; k < 7; k++)
-                        Expanded(
-                          child: _cell(cells[r * 7 + k], accent, today, big),
-                        ),
-                    ],
-                  ),
-              ],
+          for (var r = 0; r < 6; r++)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Row(
+                children: [
+                  for (var k = 0; k < 7; k++) Expanded(child: _cell(cells[r * 7 + k], today)),
+                ],
+              ),
             ),
-          ),
         ],
       ],
     );
   }
 
-  Widget _navButton(IconData icon, bool enabled, VoidCallback onTap) => Padding(
-    padding: const EdgeInsets.all(3),
-    child: SizedBox(
-      width: 44,
-      height: 44,
-      child: Center(
-        child: Container(
-          height: 38,
-          width: 38,
-          decoration: BoxDecoration(
-            borderRadius: const BorderRadius.all(Radius.circular(24)),
-            border: Border.all(color: DesignColors.divider),
-          ),
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              borderRadius: const BorderRadius.all(Radius.circular(24)),
-              onTap: enabled ? onTap : null,
-              child: Icon(
-                icon,
-                color: enabled
-                    ? DesignColors.textGrey
-                    : DesignColors.textDisabled,
-              ),
+  Widget _navButton(IconData icon, String tip, bool enabled, VoidCallback onTap) => Tooltip(
+    message: tip,
+    child: Tap3D(
+      onTap: enabled ? onTap : null,
+      label: tip,
+      child: SizedBox(
+        width: 44,
+        height: 44,
+        child: Center(
+          child: Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+              boxShadow: enabled ? const [BoxShadow(color: Color(0x669E9E9E), offset: Offset(2, 4), blurRadius: 8)] : null,
+              border: enabled ? null : Border.all(color: Ink3D.line),
             ),
+            child: Icon(icon, size: 22, color: enabled ? widget.tone.text : const Color(0xFFC6C9D1)),
           ),
         ),
       ),
     ),
   );
 
-  Widget _cell(DateTime d, Color accent, DateTime today, bool big) {
+  Widget _cell(DateTime d, DateTime today) {
+    final tone = widget.tone;
     final inMonth = d.month == _month.month;
-    final edge = inMonth && _isEdge(d);
-    final range =
-        inMonth &&
-        (edge || _inRange(d)) &&
-        !widget.single &&
-        widget.start != null &&
-        widget.end != null;
+    if (!inMonth) return const SizedBox(height: 38);
+    final edge = _isEdge(d);
+    final range = (edge || _inRange(d)) && !widget.single && widget.start != null && widget.end != null;
     final isStart = _same(widget.start, d) || d.weekday == 1;
     final isEnd = _same(widget.end, d) || d.weekday == 7;
-    final allowed = inMonth && _allowed(d);
+    final allowed = _allowed(d);
+    final isToday = _same(today, d);
     final textColor = edge
-        ? DesignColors.onPrimary
-        : !inMonth
-        ? DesignColors.tint(DesignColors.textGrey, Alpha.soft)
-        : allowed
-        ? DesignColors.textStrong
-        : DesignColors.textDisabled;
-    return AspectRatio(
-      aspectRatio: 1,
-      child: Stack(
-        children: [
-          Padding(
-            padding: EdgeInsets.fromLTRB(isStart ? 4 : 0, 5, isEnd ? 4 : 0, 5),
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: range
-                    ? DesignColors.tint(accent, Alpha.soft)
-                    : Colors.transparent,
-                borderRadius: BorderRadius.horizontal(
-                  left: Radius.circular(isStart ? 24 : 0),
-                  right: Radius.circular(isEnd ? 24 : 0),
-                ),
-              ),
-              child: const SizedBox.expand(),
-            ),
-          ),
-          Material(
-            color: Colors.transparent,
-            child: InkWell(
-              borderRadius: const BorderRadius.all(Radius.circular(32)),
-              onTap: allowed ? () => _tap(d) : null,
-              child: Padding(
-                padding: const EdgeInsets.all(2),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  decoration: BoxDecoration(
-                    color: edge ? accent : Colors.transparent,
-                    borderRadius: const BorderRadius.all(Radius.circular(32)),
-                    border: Border.all(
-                      color: edge ? TemplateTokens.white : Colors.transparent,
-                      width: 2,
-                    ),
-                    boxShadow: edge
-                        ? [
-                            ShadowTokens.tint(
-                              DesignColors.textGrey,
-                              const ShadowSpec(0.6, Offset.zero, 4),
-                            ),
-                          ]
-                        : null,
-                  ),
-                  child: Center(
-                    child: Text(
-                      '${d.day}',
-                      style: TypeTokens.style(
-                        big ? 18 : 16,
-                        edge ? FontWeight.w700 : FontWeight.w400,
-                        color: textColor,
-                      ),
+        ? Colors.white
+        : !allowed
+        ? const Color(0xFFC6C9D1)
+        : isToday
+        ? tone.text
+        : Ink3D.body;
+    return Semantics(
+      button: allowed,
+      selected: edge,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: allowed ? () => _tap(d) : null,
+        child: SizedBox(
+          height: 38,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              if (range)
+                Positioned.fill(
+                  top: 3,
+                  bottom: 3,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: tone.tint,
+                      borderRadius: BorderRadius.horizontal(left: Radius.circular(isStart ? 19 : 0), right: Radius.circular(isEnd ? 19 : 0)),
                     ),
                   ),
                 ),
-              ),
-            ),
-          ),
-          if (_same(today, d) && inMonth)
-            Positioned(
-              bottom: 9,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: Container(
-                  height: 6,
-                  width: 6,
-                  decoration: BoxDecoration(
-                    color: edge || range ? DesignColors.onPrimary : accent,
-                    shape: BoxShape.circle,
-                  ),
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                width: 36,
+                height: 36,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: edge ? tone.gradient : null,
+                  border: isToday && !edge ? Border.all(color: tone.g1, width: 2) : null,
+                  boxShadow: edge ? [BoxShadow(color: tone.shadow.withValues(alpha: 0.5), offset: const Offset(2, 5), blurRadius: 8)] : null,
+                ),
+                child: Text(
+                  '${d.day}',
+                  textScaler: TextScaler.noScaling,
+                  style: Ink3D.text(14, edge || isToday ? FontWeight.w700 : FontWeight.w500, textColor, letterSpacing: 0),
                 ),
               ),
-            ),
-        ],
+            ],
+          ),
+        ),
       ),
     );
   }

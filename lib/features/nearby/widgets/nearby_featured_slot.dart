@@ -15,12 +15,8 @@ class NearbyFeaturedSlot<T> extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-          child: Text(NearbyStrings.featuredTitle, style: TypeTokens.title.copyWith(color: DesignColors.textStrong)),
-        ),
-        for (final x in shown)
-          Padding(padding: const EdgeInsets.only(bottom: 8), child: builder(context, x)),
+        const TitleRow3D(title: NearbyStrings.featuredTitle),
+        for (final x in shown) builder(context, x),
       ],
     );
   }

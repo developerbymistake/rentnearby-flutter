@@ -134,6 +134,12 @@ Future<void> _guide(WidgetTester t, double w, String name, TripPlan plan, List<S
   await t.pumpWidget(_host(w, 760, TripGuideView(controller: c, shortlist: sl)));
   await t.pump();
   await t.pump(const Duration(milliseconds: 100));
+  await t.runAsync(() async {
+    for (final e in find.byType(Image).evaluate()) {
+      await precacheImage((e.widget as Image).image, e);
+    }
+  });
+  await t.pump(const Duration(milliseconds: 100));
   await expectLater(find.byKey(const ValueKey('golden_root')), matchesGoldenFile('goldens/$name-${w.toInt()}.png'));
   c.onClose();
 }

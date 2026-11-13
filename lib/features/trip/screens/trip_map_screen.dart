@@ -1,7 +1,6 @@
 import 'dart:math';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
-import 'package:bakhli/features/trip/widgets/trip_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:bakhli/design/design.dart';
 import 'package:get/get.dart';
@@ -951,71 +950,78 @@ class _TripMapScreenState extends State<TripMapScreen> with TickerProviderStateM
   Widget _buildMapPlaceholder() => const SizedBox.expand(child: TemplatePlaceholder(height: double.infinity, radius: 0));
 
   Widget _buildTop(BuildContext context) {
+    final chips = Obx(() {
+      _plan.result.value;
+      final p = _plan.plan.value;
+      final count = _plan.dayCount;
+      final selected = _selected;
+      final leg = _plan.selectedMapLeg.value;
+      final multi = p != null && p.isMultiCity;
+      final missing = p != null &&
+          !_plan.plannerOff.value &&
+          (selected != TripDayChips.all
+              ? _dayRouteMissing(selected)
+              : p.days.any((d) => (leg == 0 || p.legIndexOf(d.day) == leg) && _dayRouteMissing(d.day)));
+      return TemplateEntrance(
+        animation: templateInterval(_enter, 1, 3),
+        animationController: _enter,
+        child: Padding(
+          padding: const EdgeInsets.only(top: 2, bottom: 2),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (multi)
+                TripMapChips(
+                  onAll: () => _select(TripDayChips.all),
+                  onLeg: _selectLeg,
+                  onDay: _select,
+                  padding: const EdgeInsets.symmetric(horizontal: 18),
+                )
+              else if (count > 1)
+                TripDayChips(
+                  dayCount: count,
+                  selected: selected,
+                  onChanged: _select,
+                  includeAll: true,
+                  compact: true,
+                  allFirst: true,
+                  padding: const EdgeInsets.symmetric(horizontal: 18),
+                ),
+              if (missing)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(18, 6, 18, 0),
+                  child: _routeMissingChip(),
+                ),
+            ],
+          ),
+        ),
+      );
+    });
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        TemplateTopBar(
-          title: TripStrings.tripMap,
-          opacity: 1,
-          onBack: () => Get.back(),
-          animation: Tween<double>(begin: 0.0, end: 1.0)
-              .animate(CurvedAnimation(parent: _enter, curve: const Interval(0, 0.5, curve: Curves.fastOutSlowIn))),
-          animationController: _enter,
-          subtitle: Obx(() => Text(
-                _plan.isMultiCity
-                    ? TripStringsMcdA2.mapSubtitle(TripStringsMcaA4.routeOf(_plan.plan.value!.legCities))
-                    : TripStrings.tripMapSubtitle(_plan.cityName),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                    fontFamily: FitnessAppTheme.fontName, fontSize: 12, fontWeight: FontWeight.w600, color: FitnessAppTheme.lightText),
-              )),
-        ),
+        ColoredBox(color: DesignColors.surface, child: SizedBox(height: MediaQuery.paddingOf(context).top)),
         Obx(() {
-          _plan.result.value;
           final p = _plan.plan.value;
-          final count = _plan.dayCount;
-          final selected = _selected;
-          final leg = _plan.selectedMapLeg.value;
-          final multi = p != null && p.isMultiCity;
-          final missing = p != null &&
-              !_plan.plannerOff.value &&
-              (selected != TripDayChips.all
-                  ? _dayRouteMissing(selected)
-                  : p.days.any((d) => (leg == 0 || p.legIndexOf(d.day) == leg) && _dayRouteMissing(d.day)));
-          return TemplateEntrance(
-            animation: templateInterval(_enter, 1, 3),
-            animationController: _enter,
-            child: Padding(
-            padding: const EdgeInsets.only(top: 6),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (multi)
-                  TripMapChips(
-                    onAll: () => _select(TripDayChips.all),
-                    onLeg: _selectLeg,
-                    onDay: _select,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                  )
-                else if (count > 1)
-                  TripDayChips(
-                    dayCount: count,
-                    selected: selected,
-                    onChanged: _select,
-                    includeAll: true,
-                    compact: true,
-                    allFirst: true,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                  ),
-                if (missing)
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
-                    child: _routeMissingChip(),
-                  ),
-              ],
+          final sub = p == null
+              ? null
+              : _plan.isMultiCity
+                  ? TripStringsMcdA2.mapSubtitle(TripStringsMcaA4.routeOf(p.legCities))
+                  : TripStrings.tripMapSubtitle(_plan.cityName);
+          return MediaQuery.withClampedTextScaling(
+            maxScaleFactor: 1.3,
+            child: PageHeader3D(
+              tone: ListingTone.indigo,
+              title: TripStrings.tripMap,
+              subtitle: sub,
+              art: ListingArt.worldMap,
+              artSize: 76,
+              inlineTitle: true,
+              surface: true,
+              onBack: () => Get.back(),
+              bottom: chips,
             ),
-          ));
+          );
         }),
       ],
     );
@@ -1025,14 +1031,13 @@ class _TripMapScreenState extends State<TripMapScreen> with TickerProviderStateM
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
       decoration: BoxDecoration(
-        color: DesignColors.surface,
-        borderRadius: CardRadius.chip,
-        boxShadow: ShadowTokens.elev1,
+        color: ListingTone.indigo.tint,
+        borderRadius: CardRadius.pill,
       ),
       child: const Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.warning_amber_rounded, size: 14, color: TravelPalette.sunriseStart),
+          Icon(Icons.warning_amber_rounded, size: 14, color: DesignColors.amber),
           SizedBox(width: 6),
           Flexible(
             child: Text(
@@ -1076,23 +1081,27 @@ class _TripMapScreenState extends State<TripMapScreen> with TickerProviderStateM
       final gone = _plan.tripGone.value;
       if (!off && !failed && !gone) return const IgnorePointer(child: SizedBox.shrink());
       return Container(
-        color: FitnessAppTheme.background,
+        color: DesignColors.scaffold,
         alignment: Alignment.topCenter,
-        padding: EdgeInsets.only(top: MediaQuery.paddingOf(context).top + 80),
+        padding: EdgeInsets.only(top: MediaQuery.paddingOf(context).top + 150),
         child: gone
             ? const TripNotFoundView()
             : off
-            ? const TripEmpty(
-                asset: TravelIcon.route,
+            ? StateCard3D(
+                tone: ListingTone.indigo,
+                art: ListingArt.compass,
+                layout: StateLayout.plain,
                 title: TripStrings.plannerOff,
-                subtitle: TripStrings.plannerOffSubtitle,
+                message: TripStrings.plannerOffSubtitle,
               )
-            : TripEmpty(
-                asset: TravelIcon.map,
-                error: true,
+            : StateCard3D(
+                tone: ListingTone.indigo,
+                art: ListingArt.worldMap,
+                layout: StateLayout.plain,
                 title: TripStrings.tripFailed,
-                subtitle: TripStrings.checkConnection,
-                onRetry: _plan.retryOpen,
+                message: TripStrings.checkConnection,
+                actionLabel: TripStrings.retry,
+                onAction: _plan.retryOpen,
               ),
       );
     });

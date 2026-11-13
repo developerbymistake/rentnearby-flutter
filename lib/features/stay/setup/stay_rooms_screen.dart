@@ -5,8 +5,7 @@ import 'package:get/get.dart';
 import '../../../models/browse_item.dart';
 import '../../../utils/app_toast.dart';
 import '../../../design/design.dart';
-import 'dashed_add_row.dart';
-import 'stay_option_grid.dart';
+import '../../../design/extra/ext_stay_owner.dart';
 import 'stay_option_sets.dart';
 import 'stay_setup_controller.dart';
 
@@ -25,9 +24,9 @@ class StayRoomsScreen extends StatefulWidget {
   State<StayRoomsScreen> createState() => _StayRoomsScreenState();
 }
 
-class _StayRoomsScreenState extends State<StayRoomsScreen> with TickerProviderStateMixin {
+class _StayRoomsScreenState extends State<StayRoomsScreen> {
   final _ctrl = StaySetupController.ensure();
-  late final AnimationController _anim = SetupKit.controller(this);
+  static final _tone = ListingTone.forest;
   int _formSeq = 0;
   final _priceCtrl = TextEditingController();
   final _priceFocusNode = FocusNode();
@@ -49,14 +48,10 @@ class _StayRoomsScreenState extends State<StayRoomsScreen> with TickerProviderSt
       _rooms.add(_RoomDraft(id: r.id, name: r.roomName, price: r.pricePerNight, guests: r.maxGuests, meals: r.meals));
     }
     _formOpen = _rooms.length < _max;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) SetupKit.play(_anim, context);
-    });
   }
 
   @override
   void dispose() {
-    _anim.dispose();
     _priceCtrl.dispose();
     _priceFocusNode.dispose();
     super.dispose();
@@ -197,6 +192,7 @@ class _StayRoomsScreenState extends State<StayRoomsScreen> with TickerProviderSt
         cancelLabel: 'Keep Editing',
         confirmLabel: 'Discard',
         destructive: true,
+        art: ListingArt.clipboard,
         onCancel: () => Navigator.pop(context),
         onConfirm: () {
           Navigator.pop(context);
@@ -225,31 +221,25 @@ class _StayRoomsScreenState extends State<StayRoomsScreen> with TickerProviderSt
       child: Stack(
         children: [
           Scaffold(
-            backgroundColor: DesignColors.scaffold,
+            backgroundColor: ListingPalette.forest.page,
             body: Column(
               children: [
-                StayPageHeader(
-                  title: 'Rooms',
-                  onBack: _onBack,
-                  asset: SetupAssets.bed,
-                  animation: templateInterval(_anim, 0, 2),
-                ),
+                StayPageHeader(title: 'Rooms', subtitle: 'Add rooms, up to 2', onBack: _onBack, asset: SetupAssets.bed),
                 Expanded(
                   child: ListView(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.only(bottom: 24),
                     children: [
-                      for (var i = 0; i < _rooms.length; i++)
-                        TemplateEntranceOnce(key: ObjectKey(_rooms[i]), child: _summaryCard(i)),
-                      if (_formOpen) TemplateEntranceOnce(key: ValueKey('form-$_formSeq'), child: _form()),
-                      TemplateEntranceOnce(child: _addRow()),
+                      for (var i = 0; i < _rooms.length; i++) KeyedSubtree(key: ObjectKey(_rooms[i]), child: _summaryCard(i)),
+                      if (_formOpen) KeyedSubtree(key: ValueKey('form-$_formSeq'), child: _form()),
+                      _addRow(),
                     ],
                   ),
                 ),
-                FadeTransition(opacity: templateInterval(_anim, 1, 2), child: _footer()),
               ],
             ),
+            bottomNavigationBar: _footer(),
           ),
-          Obx(() => _ctrl.isSaving.value ? const StayBusy(message: 'Saving rooms...') : const SizedBox.shrink()),
+          Obx(() => _ctrl.isSaving.value ? const StayBusy(message: 'Saving rooms...', art: SetupAssets.bed) : const SizedBox.shrink()),
         ],
       ),
     );
@@ -260,99 +250,61 @@ class _StayRoomsScreenState extends State<StayRoomsScreen> with TickerProviderSt
     final at = _editingIndex;
     final number = at != null && i >= at ? i + 2 : i + 1;
     final name = r.name.isNotEmpty ? r.name : 'Room $number';
-    final text =
-        '$name · ${BrowseItem.inr(r.price)} / night · '
-        '${StayOptionSets.guestsLabel(r.guests)} guests · ${StayOptionSets.labelOf(StayOptionSets.meals, r.meals)}';
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.fromLTRB(12, 10, 6, 10),
-      decoration: BoxDecoration(
-        color: DesignColors.surface,
-        borderRadius: TripKit.cardRadiusSmall,
-        boxShadow: ShadowTokens.elev1,
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            padding: const EdgeInsets.all(6),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: SetupKit.sky,
-              boxShadow: ShadowTokens.elev1,
-            ),
-            child: Image.asset(SetupAssets.bed),
-          ),
-          const SizedBox(width: 12),
-          Expanded(child: Text(text, style: TripKit.text(12.5).copyWith(letterSpacing: 0.2))),
-          _circleAction(Icons.edit_outlined, PickKit.stayTint, DesignColors.primary, () => _editRoom(i)),
-          _circleAction(Icons.close_rounded, PickKit.badTint, PickKit.bad, () => _removeRoom(i)),
-        ],
-      ),
+    return RoomCard3D(
+      tone: _tone,
+      eyebrow: 'Room $number',
+      title: name,
+      line1: '${BrowseItem.inr(r.price)} / night',
+      line2: '${StayOptionSets.guestsLabel(r.guests)} guests · ${StayOptionSets.labelOf(StayOptionSets.meals, r.meals)}',
+      onEdit: () => _editRoom(i),
+      onRemove: () => _removeRoom(i),
     );
   }
 
-  Widget _circleAction(IconData icon, Color bg, Color fg, VoidCallback onTap) => InkWell(
-    onTap: onTap,
-    borderRadius: BorderRadius.circular(24),
-    child: Padding(
-      padding: const EdgeInsets.all(8),
-      child: Container(
-        width: 32,
-        height: 32,
-        decoration: BoxDecoration(color: bg, shape: BoxShape.circle),
-        child: Icon(icon, size: 16, color: fg),
-      ),
-    ),
-  );
-
-  Widget _label(String text, {bool first = false}) => Padding(
-    padding: EdgeInsets.only(top: first ? 0 : 14, bottom: 8),
-    child: Text(text, style: SetupKit.label()),
-  );
-
   Widget _form() {
     final number = (_editingIndex ?? _rooms.length) + 1;
-    return SectionTile(
- tone: KitTone.stay,
- margin: const EdgeInsets.only(bottom: 16),
+    final value = _roomName == null ? null : StayOptionSets.labelOf(StayOptionSets.roomNames, _roomName);
+    return FormSectionCard(
+      tone: _tone,
+      art: ListingArt.bed,
       title: 'Room $number',
+      tag: 'Required',
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _label('Room Type *', first: true),
-          _roomTypeField(),
-          _label('Price per Night (₹) *'),
-          TextFormField(
+          PillPickerField(tone: _tone, label: 'Room Type', value: value, hint: 'Select', leadingArt: ListingArt.bed, onTap: _pickRoomType),
+          PillField(
+            tone: _tone,
+            label: 'Price per Night (₹)',
+            firstLabel: false,
             controller: _priceCtrl,
             focusNode: _priceFocusNode,
             keyboardType: TextInputType.number,
             inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(7)],
             onChanged: (_) => _dirty = true,
-            cursorColor: DesignColors.primary,
-            style: SetupKit.fieldText(),
-            decoration: SetupKit.input(hint: 'e.g. 1500', prefix: '₹ '),
+            prefixText: '₹',
+            hint: 'e.g. 1500',
           ),
-          _label('Max Guests *'),
-          StayOptionGrid(
-            crossAxisCount: 4,
-            childAspectRatio: 1.9,
-            labels: StayOptionSets.maxGuests.map(StayOptionSets.guestsLabel).toList(),
-            accent: PickKit.stay,
-            isActive: (i) => _guests == StayOptionSets.maxGuests[i],
+          const FieldLabel('Max Guests'),
+          OptionTileGrid(
+            tone: _tone,
+            columns: 4,
+            items: [
+              for (final g in StayOptionSets.maxGuests) OptionTileItem(label: 'guests', art: ListingArt.backpack, big: StayOptionSets.guestsLabel(g)),
+            ],
+            isSelected: (i) => _guests == StayOptionSets.maxGuests[i],
             onTap: (i) => setState(() {
               _guests = StayOptionSets.maxGuests[i];
               _dirty = true;
             }),
           ),
-          _label('Meals *'),
-          StayOptionGrid(
-            crossAxisCount: 3,
-            childAspectRatio: 2.6,
-            labels: StayOptionSets.meals.map((o) => o.label).toList(),
-            accent: PickKit.stay,
-            isActive: (i) => _meals == StayOptionSets.meals[i].value,
+          const FieldLabel('Meals'),
+          OptionTileGrid(
+            tone: _tone,
+            items: [
+              for (final o in StayOptionSets.meals) OptionTileItem(label: o.label, art: StayOwnerArt.meals[o.value] ?? ListingArt.star),
+            ],
+            isSelected: (i) => _meals == StayOptionSets.meals[i].value,
             onTap: (i) => setState(() {
               _meals = StayOptionSets.meals[i].value;
               _dirty = true;
@@ -365,47 +317,12 @@ class _StayRoomsScreenState extends State<StayRoomsScreen> with TickerProviderSt
 
   Widget _addRow() {
     final full = _count >= _max;
-    return DashedAddRow(
+    return DashedAddRow3D(
+      tone: _tone,
       label: 'Add another room',
-      counter: full ? '$_count of $_max · limit reached' : '$_count of $_max',
+      trailing: full ? '$_count of $_max · limit reached' : '$_count of $_max',
       enabled: !full,
       onTap: _addAnother,
-      accent: PickKit.stay,
-    );
-  }
-
-  Widget _roomTypeField() {
-    final value = _roomName == null ? null : StayOptionSets.labelOf(StayOptionSets.roomNames, _roomName);
-    const radius = BorderRadius.all(Radius.circular(12));
-    return Material(
-      color: DesignColors.scaffold,
-      borderRadius: radius,
-      child: InkWell(
-        borderRadius: radius,
-        onTap: _pickRoomType,
-        child: Container(
-          height: 50,
-          padding: const EdgeInsets.symmetric(horizontal: 14),
-          child: Row(
-            children: [
-              Image.asset(SetupAssets.bed, width: 22, height: 22),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  value ?? 'Select',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: value == null
-                      ? TripKit.text(14, weight: FontWeight.w400, color: DesignColors.textMuted)
-                      : SetupKit.fieldText(),
-                ),
-              ),
-              const SizedBox(width: 8),
-              const Icon(Icons.keyboard_arrow_down_rounded, size: 22, color: DesignColors.primary),
-            ],
-          ),
-        ),
-      ),
     );
   }
 
@@ -415,67 +332,25 @@ class _StayRoomsScreenState extends State<StayRoomsScreen> with TickerProviderSt
       for (final o in StayOptionSets.roomNames)
         if (o.value == _roomName || !_rooms.any((r) => r.name == o.value)) o,
     ];
-    final picked = await SetupKit.sheet<String>(
+    final picked = await Sheet3D.show<String>(
       context,
-      builder: (sheetCtx) => ConstrainedBox(
-        constraints: BoxConstraints(maxHeight: MediaQuery.of(sheetCtx).size.height * 0.7),
+      builder: (sheetCtx) => Sheet3D(
+        tone: _tone,
+        art: ListingArt.bed,
+        title: 'Room Type',
+        padding: EdgeInsets.zero,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            SetupKit.grabber(),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text('Room Type', style: TripKit.text(18)),
+            for (var i = 0; i < options.length; i++)
+              SheetListRow(
+                tone: _tone,
+                compact: true,
+                title: options[i].label,
+                selected: options[i].value == _roomName,
+                divider: i > 0,
+                onTap: () => Navigator.pop(sheetCtx, options[i].value),
               ),
-            ),
-            Flexible(
-              child: SingleChildScrollView(
-                padding: EdgeInsets.only(bottom: MediaQuery.viewPaddingOf(sheetCtx).bottom + 12),
-                child: TemplateStagger(
-                  children: [
-                    for (var i = 0; i < options.length; i++)
-                      SizedBox(
-                        width: double.infinity,
-                        child: Column(
-                          children: [
-                            InkWell(
-                              onTap: () => Navigator.pop(sheetCtx, options[i].value),
-                              child: Container(
-                                height: 48,
-                                padding: const EdgeInsets.symmetric(horizontal: 20),
-                                child: Row(
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        options[i].label,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: TripKit.text(
-                                          14,
-                                          weight: options[i].value == _roomName ? FontWeight.w700 : FontWeight.w400,
-                                          color: options[i].value == _roomName
-                                              ? DesignColors.primary
-                                              : DesignColors.textStrong,
-                                        ),
-                                      ),
-                                    ),
-                                    if (options[i].value == _roomName)
-                                      const Icon(Icons.check_rounded, size: 20, color: DesignColors.primary),
-                                  ],
-                                ),
-                              ),
-                            ),
-                            if (i < options.length - 1)
-                              const Divider(height: 1, indent: 20, endIndent: 20, color: DesignColors.dividerSoft),
-                          ],
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            ),
           ],
         ),
       ),
@@ -487,14 +362,12 @@ class _StayRoomsScreenState extends State<StayRoomsScreen> with TickerProviderSt
     });
   }
 
-  Widget _footer() => StayFooter(
-    child: Obx(
-      () => PrimaryButton(
- tone: KitTone.stay,
-        onPressed: _ctrl.isSaving.value ? null : _save,
-        loading: _ctrl.isSaving.value,
-        label: 'Save',
-      ),
-    ),
-  );
+  Widget _footer() => Obx(
+        () => FormFooter(
+          tone: _tone,
+          primaryLabel: 'Save',
+          onPrimary: _ctrl.isSaving.value ? null : _save,
+          primaryLoading: _ctrl.isSaving.value,
+        ),
+      );
 }

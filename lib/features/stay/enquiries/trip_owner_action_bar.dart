@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:bakhli/design/design.dart';
+import 'package:bakhli/design/extra/ext_chat.dart';
 import '../../trip/models/trip_enquiry_model.dart';
 import '../../trip/trip_strings.dart';
 import '../../trip/widgets/trip_status.dart';
@@ -14,34 +15,36 @@ class TripOwnerActionBar extends StatelessWidget {
   final TripEnquiryModel enquiry;
   final VoidCallback onChanged;
 
+  static final ListingTone _tone = ListingTone.forest;
+
+  static ChatBarKind _kind(StayEnquiryButtonKind k) => switch (k) {
+        StayEnquiryButtonKind.primary || StayEnquiryButtonKind.positive => ChatBarKind.primary,
+        StayEnquiryButtonKind.negative => ChatBarKind.negative,
+        StayEnquiryButtonKind.plain => ChatBarKind.plain,
+      };
+
+  static List<List<Widget>> _pairs(List<Widget> items) {
+    final cells = items.where((w) => w is! ChatBarMenu3D).toList();
+    final menu = items.whereType<ChatBarMenu3D>().toList();
+    final rows = <List<Widget>>[];
+    for (var i = 0; i < cells.length; i += 2) {
+      rows.add(cells.sublist(i, i + 2 > cells.length ? cells.length : i + 2));
+    }
+    if (menu.isNotEmpty) {
+      if (rows.isEmpty) rows.add([]);
+      rows.last.add(menu.first);
+    }
+    return rows;
+  }
+
   @override
   Widget build(BuildContext context) {
     final buttons = _buttons(context);
     if (buttons.isEmpty) return const SizedBox.shrink();
     final advanceRow = _advanceRowWithChange(context);
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-      decoration: BoxDecoration(
-        color: DesignColors.surface,
-        border: const Border(top: BorderSide(color: DesignColors.dividerSoft)),
-        boxShadow: StayBrowseTokens.topBarShadow,
-      ),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-        if (_revisedWaiting)
-          const Padding(
-            padding: EdgeInsets.only(bottom: 8),
-            child: Text('${TripStrings.revisedOffer} · ${TripStrings.notAcceptedYet}',
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontFamily: TypeTokens.family, fontSize: 12, fontWeight: FontWeight.w600, color: DesignColors.textStrong)),
-          ),
-        Wrap(spacing: 8, runSpacing: 8, children: buttons),
-        if (advanceRow.isNotEmpty) ...[
-          const SizedBox(height: 8),
-          Wrap(spacing: 8, runSpacing: 8, crossAxisAlignment: WrapCrossAlignment.center, children: advanceRow),
-        ],
-      ]),
+    return ChatActionBar3D(
+      note: _revisedWaiting ? '${TripStrings.revisedOffer} · ${TripStrings.notAcceptedYet}' : null,
+      rows: [..._pairs(buttons), if (advanceRow.isNotEmpty) ..._pairs(advanceRow)],
     );
   }
 
@@ -65,9 +68,10 @@ class TripOwnerActionBar extends StatelessWidget {
   List<Widget> _advanceRowWithChange(BuildContext context) {
     if (!_changeWithAdvance) return const [];
     final ctrl = StayEnquiriesController.ensure();
-    Widget button(String label, StayEnquiryButtonKind kind, Future<bool> Function() run) => Obx(() => StayEnquiryButton(
+    Widget button(String label, StayEnquiryButtonKind kind, Future<bool> Function() run) => Obx(() => ChatBarButton3D(
+          tone: _tone,
           label: label,
-          kind: kind,
+          kind: _kind(kind),
           busy: ctrl.busyIds.contains(enquiry.id),
           onTap: () async {
             if (await run()) onChanged();
@@ -82,30 +86,21 @@ class TripOwnerActionBar extends StatelessWidget {
 
   Widget _overflow(BuildContext context, {bool cancelOnly = false}) {
     final ctrl = StayEnquiriesController.ensure();
-    return SizedBox(
-      width: 44,
-      height: 44,
-      child: PopupMenuButton<String>(
-        padding: EdgeInsets.zero,
-        tooltip: '',
-        icon: const Icon(Icons.more_vert_rounded, size: 20, color: DesignColors.textGrey),
-        color: DesignColors.surface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        onSelected: (v) async {
-          if (ctrl.busyIds.contains(enquiry.id)) return;
-          final done = v == 'ask'
-              ? await StayEnquiryActions.askAdvance(context, enquiry)
-              : await StayEnquiryActions.cancel(context, enquiry);
-          if (done) onChanged();
-        },
-        itemBuilder: (_) => [
-          if (!cancelOnly)
-            const PopupMenuItem<String>(
-                value: 'ask', height: 44, child: Text(TripStrings.askAgain, style: TextStyle(fontFamily: TypeTokens.family, fontSize: 13, color: DesignColors.textStrong))),
-          const PopupMenuItem<String>(
-              value: 'cancel',
-              height: 44,
-              child: Text(TripStrings.cancelBooking, style: TextStyle(fontFamily: TypeTokens.family, fontSize: 13, color: DesignColors.error))),
+    Future<void> pick(String v) async {
+      if (ctrl.busyIds.contains(enquiry.id)) return;
+      final done = v == 'ask'
+          ? await StayEnquiryActions.askAdvance(context, enquiry)
+          : await StayEnquiryActions.cancel(context, enquiry);
+      if (done) onChanged();
+    }
+
+    return ChatBarMenu3D(
+      onTap: (rect) => showMenu3D(
+        context,
+        anchor: rect,
+        items: [
+          if (!cancelOnly) MenuItem3D(label: TripStrings.askAgain, onTap: () => pick('ask')),
+          MenuItem3D(label: TripStrings.cancelBooking, danger: true, onTap: () => pick('cancel')),
         ],
       ),
     );
@@ -114,9 +109,10 @@ class TripOwnerActionBar extends StatelessWidget {
   List<Widget> _buttons(BuildContext context) {
     final ctrl = StayEnquiriesController.ensure();
     Widget button(String label, StayEnquiryButtonKind kind, Future<bool> Function() run) {
-      return Obx(() => StayEnquiryButton(
+      return Obx(() => ChatBarButton3D(
+            tone: _tone,
             label: label,
-            kind: kind,
+            kind: _kind(kind),
             busy: ctrl.busyIds.contains(enquiry.id),
             onTap: () async {
               if (await run()) onChanged();
@@ -180,7 +176,7 @@ class TripOwnerActionBar extends StatelessWidget {
         return [
           button(TripStrings.markAdvanceReceived, StayEnquiryButtonKind.positive, () => StayEnquiryActions.markReceived(context, enquiry)),
           if ((enquiry.traveller.phone ?? '').isNotEmpty)
-            StayEnquiryButton(label: TripStrings.callGuest, onTap: () => StayEnquiryActions.callGuest(enquiry)),
+            ChatBarButton3D(tone: _tone, label: TripStrings.callGuest, onTap: () => StayEnquiryActions.callGuest(enquiry)),
         ];
       default:
         return const [];

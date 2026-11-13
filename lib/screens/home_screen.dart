@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:get/get.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../config/app_constants.dart';
-import '../config/app_insets.dart';
 import '../config/app_routes.dart';
 import '../controllers/plan_controller.dart';
 import '../controllers/auth_controller.dart';
@@ -24,11 +24,9 @@ import '../utils/app_toast.dart';
 import '../widgets/home_owner_carousel.dart';
 import '../widgets/home_stay_rail_card.dart';
 import '../widgets/home_taxi_rail_card.dart';
-import '../widgets/nearby_item_row.dart';
 import '../widgets/plan_subscription_card.dart';
 
-const double _railHeight = HomeStayRailCard.railHeight;
-const double _tileHeight = 168;
+const double _headerGap = 0;
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -40,39 +38,19 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   static const int _sections = 8;
   final ScrollController _scroll = ScrollController();
-  final ValueNotifier<double> _barOpacity = ValueNotifier<double>(0);
-  final ValueNotifier<double> _barHeight = ValueNotifier<double>(0);
   final ValueNotifier<int> _replay = ValueNotifier<int>(0);
-  final GlobalKey _barKey = GlobalKey();
+  final ValueNotifier<double> _headerHeight = ValueNotifier<double>(0);
 
   final _home = Get.find<HomeController>();
   final _auth = Get.find<AuthController>();
   final _tabs = Get.find<TabConfigController>();
 
   @override
-  void initState() {
-    super.initState();
-    _scroll.addListener(() {
-      final o = (_scroll.offset / 24).clamp(0.0, 1.0);
-      if (o != _barOpacity.value) _barOpacity.value = o;
-    });
-  }
-
-  @override
   void dispose() {
     _scroll.dispose();
-    _barOpacity.dispose();
-    _barHeight.dispose();
     _replay.dispose();
+    _headerHeight.dispose();
     super.dispose();
-  }
-
-  void _measureBar() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final box = _barKey.currentContext?.findRenderObject();
-      if (!mounted || box is! RenderBox || !box.hasSize) return;
-      if ((box.size.height - _barHeight.value).abs() > 0.5) _barHeight.value = box.size.height;
-    });
   }
 
   Future<void> _refresh() async {
@@ -98,24 +76,32 @@ class _HomeScreenState extends State<HomeScreen> {
     return BarMetrics.bodyBottomOf(context);
   }
 
-  Widget _gap(double h) => SizedBox(height: h);
+  double _headerEstimate(BuildContext context) {
+    final scaler = MediaQuery.textScalerOf(context);
+    final text = 10 + scaler.scale(28) * 1.25 + 3 + scaler.scale(14) * 1.5 + 14;
+    return MediaQuery.paddingOf(context).top + text;
+  }
+
+  void _onHeaderHeight(double h) {
+    if ((h - _headerHeight.value).abs() > 0.5) _headerHeight.value = h;
+  }
 
   @override
   Widget build(BuildContext context) {
-    final inset = AppInsets.topViewPadding(context);
+    final estimate = _headerEstimate(context);
     return Scaffold(
-      backgroundColor: DesignColors.scaffold,
+      backgroundColor: ListingPalette.indigo.page,
       body: TabEntrance(
         tab: AppTabs.home,
-        child: Stack(
-          children: [
-            ValueListenableBuilder<double>(
-              valueListenable: _barHeight,
-              builder: (context, barHeight, _) {
-                final top = (barHeight > 0 ? barHeight : inset + 84) + 8;
-                return RefreshIndicator(
-                  color: DesignColors.primary,
-                  edgeOffset: top - 8,
+        child: ValueListenableBuilder<double>(
+          valueListenable: _headerHeight,
+          builder: (context, measured, _) {
+            final top = (measured > 0 ? measured : estimate) + _headerGap;
+            return Stack(
+              children: [
+                RefreshIndicator(
+                  color: ListingPalette.indigo.g2,
+                  edgeOffset: top - _headerGap,
                   onRefresh: _refresh,
                   child: SingleChildScrollView(
                     controller: _scroll,
@@ -137,213 +123,87 @@ class _HomeScreenState extends State<HomeScreen> {
                           StaggerItem(index: 1, child: _buildPlanNudge()),
                           StaggerItem(index: 2, child: _buildOwnerQuickActions()),
                           StaggerItem(index: 3, child: _buildTripCard()),
-                          _gap(16),
                           StaggerItem(index: 4, child: const TripPopularRail()),
-                          _gap(8),
-                          StaggerItem(index: 5, child: _buildInstagramCard()),
-                          _gap(16),
-                          StaggerItem(index: 6, child: _buildListingsSections()),
-                          StaggerItem(index: 7, child: _buildRecentlyAddedSection()),
+                          StaggerItem(index: 5, child: _buildListingsSections()),
+                          StaggerItem(index: 6, child: _buildRecentlyAddedSection()),
+                          StaggerItem(index: 7, child: _buildInstagramCard()),
                         ],
                       ),
                     ),
                   ),
-                );
-              },
-            ),
-            Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              child: EntranceOnce(child: _buildTopBar(context)),
-            ),
-          ],
+                ),
+                Positioned(
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  child: _SizeReport(
+                    onHeight: _onHeaderHeight,
+                    child: EntranceOnce(child: _buildTopBar(context)),
+                  ),
+                ),
+              ],
+            );
+          },
         ),
       ),
     );
   }
 
   Widget _buildTopBar(BuildContext context) {
-    return ValueListenableBuilder<double>(
-      valueListenable: _barOpacity,
-      builder: (BuildContext context, double opacity, Widget? _) {
-        if (opacity == 0) _measureBar();
-        return Container(
-          key: opacity == 0 ? _barKey : null,
-          decoration: BoxDecoration(
-            color: DesignColors.tint(DesignColors.surface, opacity),
-            borderRadius: CardRadius.header,
-            boxShadow: <BoxShadow>[
-              ShadowTokens.tint(DesignColors.shadowBase, ShadowSpec.strong.scaled(opacity)),
-            ],
-          ),
-          child: Padding(
-            padding: EdgeInsets.only(
-              left: KitMetrics.gutter,
-              right: KitMetrics.gutter,
-              top: AppInsets.topViewPadding(context) + 16 - 8.0 * opacity,
-              bottom: 12 - 8.0 * opacity,
-            ),
-            child: _buildHero(context, opacity),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildHero(BuildContext context, double opacity) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Expanded(
-          child: Obx(() {
-            final name = _auth.profileName.value;
-            final firstName = name.trim().isNotEmpty ? name.trim().split(' ').first : 'there';
-            return Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Hi, $firstName 👋',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TypeTokens.style(
-                    22 + 6 - 6 * opacity,
-                    FontWeight.w700,
-                    color: DesignColors.textStrong,
-                    letterSpacing: 1.2,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  'Where to next?',
-                  style: TypeTokens.style(14, FontWeight.w500, color: TypeTokens.secondary, letterSpacing: 0.4),
-                ),
-              ],
-            );
-          }),
-        ),
-        const SizedBox(width: 12),
-        _buildHeaderIcons(),
-      ],
-    );
-  }
-
-  Widget _buildHeaderIcons() {
-    return Row(
-      key: TourKeys.homeActionMenu,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        _headerIconButton(
-          icon: 'fitness_app/bell.png',
-          unreadCount: Get.find<NotificationController>().unreadCount,
-          onTap: () => Get.toNamed(AppRoutes.notifications),
-        ),
-        const SizedBox(width: 8),
-        _headerIconButton(
-          icon: 'travel3d/speech_balloon.png',
-          unreadCount: Get.find<ChatController>().unreadCount,
-          onTap: () => Get.toNamed(AppRoutes.chatsList),
-        ),
-      ],
-    );
-  }
-
-  Widget _headerIconButton({
-    required String icon,
-    required VoidCallback onTap,
-    RxInt? unreadCount,
-  }) {
-    return PressScale(
-      child: SizedBox(
-        width: KitMetrics.touch,
-        height: KitMetrics.touch,
-        child: Stack(
-          clipBehavior: Clip.none,
-          alignment: Alignment.center,
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: DesignColors.surfaceAlt,
-                boxShadow: [
-                  ShadowTokens.tint(DesignColors.primary, const ShadowSpec(0.4, Offset(4, 4), 8)),
-                ],
-              ),
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  customBorder: const CircleBorder(),
-                  splashColor: DesignColors.splash,
-                  highlightColor: Colors.transparent,
-                  onTap: onTap,
-                  child: Center(
-                    child: Image.asset('assets/images/design/$icon', width: 22, height: 22),
-                  ),
-                ),
-              ),
-            ),
-            if (unreadCount != null)
-              Positioned(
-                top: 0,
-                right: 0,
-                child: IgnorePointer(
-                  child: Obx(() {
-                    final count = unreadCount.value;
-                    if (count <= 0) return const SizedBox.shrink();
-                    return Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                      constraints: const BoxConstraints(minWidth: 18),
-                      decoration: const BoxDecoration(
-                        color: DesignColors.error,
-                        borderRadius: CardRadius.pill,
-                      ),
-                      child: Text(
-                        count > 99 ? '99+' : '$count',
-                        textAlign: TextAlign.center,
-                        style: TypeTokens.style(11, FontWeight.w700, color: DesignColors.onPrimary),
-                      ),
-                    );
-                  }),
-                ),
-              ),
-          ],
-        ),
+    return ColoredBox(
+      color: ListingPalette.indigo.page,
+      child: Padding(
+        padding: EdgeInsets.only(top: MediaQuery.paddingOf(context).top),
+        child: Obx(() {
+          final name = _auth.profileName.value;
+          final firstName = name.trim().isNotEmpty ? name.trim().split(' ').first : 'there';
+          return _HomeHeader(title: 'Hi, $firstName', subtitle: 'Where to next?', trailing: _buildHeaderIcons());
+        }),
       ),
     );
   }
 
-  Widget _sectionTitle(String title, {String action = '', VoidCallback? onTap}) {
+  Widget _buildHeaderIcons() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: KitMetrics.gutter),
+      padding: const EdgeInsets.only(bottom: 2),
       child: Row(
+        key: TourKeys.homeActionMenu,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Expanded(
-            child: Text(title, style: TypeTokens.style(16, FontWeight.w700, color: DesignColors.textStrong)),
+          _headerIconButton(
+            asset: ListingArt.bell,
+            label: 'Notifications',
+            unreadCount: Get.find<NotificationController>().unreadCount,
+            onTap: () => Get.toNamed(AppRoutes.notifications),
           ),
-          if (action.isNotEmpty)
-            InkWell(
-              onTap: onTap,
-              borderRadius: CardRadius.chip,
-              splashColor: DesignColors.splash,
-              highlightColor: Colors.transparent,
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(minHeight: KitMetrics.touch),
-                child: Padding(
-                  padding: const EdgeInsets.only(left: 8),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(action, style: TypeTokens.style(14, FontWeight.w600, color: DesignColors.primary)),
-                      const Icon(Icons.chevron_right_rounded, size: 20, color: DesignColors.primary),
-                    ],
-                  ),
-                ),
-              ),
-            ),
+          const SizedBox(width: 10),
+          _headerIconButton(
+            asset: ListingArt.speechBalloon,
+            label: 'Chats',
+            unreadCount: Get.find<ChatController>().unreadCount,
+            onTap: () => Get.toNamed(AppRoutes.chatsList),
+          ),
         ],
+      ),
+    );
+  }
+
+  Widget _headerIconButton({
+    required String asset,
+    required String label,
+    required VoidCallback onTap,
+    required RxInt unreadCount,
+  }) {
+    return RoundIconButton3D(
+      asset: asset,
+      semanticsLabel: label,
+      onTap: onTap,
+      badge: IgnorePointer(
+        child: Obx(() {
+          final count = unreadCount.value;
+          if (count <= 0) return const SizedBox.shrink();
+          return RoundIconButton3D.count(count > 99 ? '99+' : '$count');
+        }),
       ),
     );
   }
@@ -371,9 +231,7 @@ class _HomeScreenState extends State<HomeScreen> {
       ];
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          for (final rail in rails) Padding(padding: const EdgeInsets.only(bottom: 4), child: rail),
-        ],
+        children: rails,
       );
     });
   }
@@ -382,13 +240,9 @@ class _HomeScreenState extends State<HomeScreen> {
     if (items.isEmpty) {
       return _emptyRailMessage('No stays listed here yet.', asset: TravelIcon.stay);
     }
-    return SizedBox(
-      height: _railHeight,
-      child: RailReveal(
-        itemCount: items.length,
-        itemBuilder: (_, i) => HomeStayRailCard(stay: items[i]),
-        physics: const BouncingScrollPhysics(),
-      ),
+    return MealsRail(
+      physics: const BouncingScrollPhysics(),
+      children: [for (var i = 0; i < items.length; i++) HomeStayRailCard(stay: items[i], index: i)],
     );
   }
 
@@ -396,13 +250,9 @@ class _HomeScreenState extends State<HomeScreen> {
     if (items.isEmpty) {
       return _emptyRailMessage('No taxis listed here yet.', asset: TravelIcon.taxi, tone: KitTone.taxi);
     }
-    return SizedBox(
-      height: _railHeight,
-      child: RailReveal(
-        itemCount: items.length,
-        itemBuilder: (_, i) => HomeTaxiRailCard(taxi: items[i]),
-        physics: const BouncingScrollPhysics(),
-      ),
+    return MealsRail(
+      physics: const BouncingScrollPhysics(),
+      children: [for (var i = 0; i < items.length; i++) HomeTaxiRailCard(taxi: items[i], index: i)],
     );
   }
 
@@ -417,8 +267,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _sectionTitle(title, action: 'View all', onTap: () => _auth.switchToTab(tab)),
-        const SizedBox(height: 4),
+        TitleRow3D(title: title, action: 'See all', onAction: () => _auth.switchToTab(tab)),
         SkeletonSwitcher(
           loading: loading,
           skeleton: _buildRailSkeleton(),
@@ -431,19 +280,9 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildRailSkeleton() {
-    return SizedBox(
-      height: _railHeight,
-      child: ListView.separated(
-        physics: const NeverScrollableScrollPhysics(),
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: KitMetrics.gutter),
-        itemCount: 3,
-        separatorBuilder: (_, _) => const SizedBox(width: KitMetrics.cardGap),
-        itemBuilder: (_, _) => Padding(
-          padding: HomeStayRailCard.cellPadding,
-          child: RailCard.skeleton(),
-        ),
-      ),
+    return const MealsRail(
+      physics: NeverScrollableScrollPhysics(),
+      children: [MealsCardSkeleton(), MealsCardSkeleton(), MealsCardSkeleton()],
     );
   }
 
@@ -468,7 +307,7 @@ class _HomeScreenState extends State<HomeScreen> {
       );
 
   Widget _railMessage({required Widget child, VoidCallback? onTap}) => Padding(
-        padding: const EdgeInsets.fromLTRB(KitMetrics.gutter, 4, KitMetrics.gutter, 16),
+        padding: const EdgeInsets.fromLTRB(18, 4, 18, 16),
         child: SectionTile(
           onTap: onTap,
           padding: EdgeInsets.zero,
@@ -506,18 +345,13 @@ class _HomeScreenState extends State<HomeScreen> {
         message = days <= 0 ? 'Plan ends today' : 'Plan ends in $days day${days == 1 ? '' : 's'}';
       }
       if (!me.paymentEnabled || message == null) return const SizedBox.shrink();
-      return SlimBar(
+      final tone = ListingTone.cF;
+      return WideCard(
+        kind: WideKind.slim,
+        tone: tone,
+        art: ListingArt.calendar,
         title: message,
-        tone: KitTone.taxi,
-        filled: true,
-        margin: const EdgeInsets.fromLTRB(KitMetrics.gutter, 0, KitMetrics.gutter, 12),
-        leading: Container(
-          width: 36,
-          height: 36,
-          decoration: const BoxDecoration(shape: BoxShape.circle, color: DesignColors.whiteSoft),
-          child: const Icon(Icons.schedule_rounded, size: 20, color: DesignColors.onPrimary),
-        ),
-        trailing: Text(action, style: TypeTokens.style(12, FontWeight.w700, color: DesignColors.onPrimary)),
+        trailing: _WhitePill(label: action, color: tone.button),
         onTap: () => Get.toNamed(AppRoutes.plansBilling),
       );
     });
@@ -533,10 +367,11 @@ class _HomeScreenState extends State<HomeScreen> {
           KeyedSubtree(
             key: TourKeys.homeQuickActionAddStay,
             child: _ownerQuickActionTile(
-              asset: TravelIcon.stay,
-              tone: KitTone.stay,
+              art: ListingArt.hotel,
+              tone: ListingTone.forest,
               plus: true,
               label: 'Add Stay',
+              description: 'List a new stay',
               onTap: StayFlow.start,
             ),
           ),
@@ -544,10 +379,11 @@ class _HomeScreenState extends State<HomeScreen> {
           KeyedSubtree(
             key: TourKeys.homeQuickActionAddTaxi,
             child: _ownerQuickActionTile(
-              asset: TravelIcon.taxi,
-              tone: KitTone.taxi,
+              art: ListingArt.taxi,
+              tone: ListingTone.coral,
               plus: true,
               label: 'Add Taxi',
+              description: 'List your taxi',
               onTap: () => TaxiFlow.start(),
             ),
           ),
@@ -555,59 +391,52 @@ class _HomeScreenState extends State<HomeScreen> {
           KeyedSubtree(
             key: TourKeys.homeQuickActionLeads,
             child: _ownerQuickActionTile(
-              asset: TravelIcon.checkout,
-              tone: KitTone.rose,
+              art: ListingArt.clipboard,
+              tone: ListingTone.cC,
               label: stays ? 'My Stays' : 'My Taxi',
+              description: stays ? 'Manage your stays' : 'Manage your taxi',
               onTap: () => Get.toNamed(stays ? AppRoutes.myStays : AppRoutes.myTaxi),
             ),
           ),
         if (jobs) ...[
           _ownerQuickActionTile(
-            asset: TravelIcon.pin,
-            tone: KitTone.jobs,
+            art: ListingArt.pushpin,
+            tone: ListingTone.cD,
             plus: true,
             label: 'Post Job',
+            description: 'Hire for your stay',
             onTap: _postJob,
           ),
           _ownerQuickActionTile(
-            asset: TravelIcon.note,
-            tone: KitTone.jobs,
+            art: ListingArt.clipboard,
+            tone: ListingTone.cD,
             label: 'My Jobs',
+            description: 'Your job posts',
             onTap: () => Get.toNamed(AppRoutes.myJobs),
           ),
         ],
       ];
       if (tiles.isEmpty) return const SizedBox.shrink();
-      return SizedBox(
-        height: _tileHeight + 24,
-        child: RailReveal(
-          itemCount: tiles.length,
-          physics: const BouncingScrollPhysics(),
-          itemBuilder: (_, i) => Padding(
-            padding: const EdgeInsets.only(top: 4, bottom: 20),
-            child: tiles[i],
-          ),
-        ),
-      );
+      return MealsRail(physics: const BouncingScrollPhysics(), children: tiles);
     });
   }
 
   Widget _ownerQuickActionTile({
-    required String asset,
-    required KitTone tone,
+    required String art,
+    required ListingTone tone,
     required String label,
+    required String description,
     required VoidCallback? onTap,
     bool plus = false,
   }) {
-    return GradientIconCard(
+    return MealsCardV(
+      tone: tone,
+      art: art,
       title: label,
-      iconAsset: asset,
-      startColor: tone.gradient.colors.first,
-      endColor: tone.gradient.colors.last,
-      showPlus: plus,
+      description: description,
+      goIcon: plus ? Icons.add : Icons.arrow_forward,
       onTap: onTap,
-      width: 130,
-      height: _tileHeight,
+      semanticsLabel: label,
     );
   }
 
@@ -626,18 +455,17 @@ class _HomeScreenState extends State<HomeScreen> {
       } else {
         body = Column(
           children: [
-            for (var i = 0; i < items.length; i++) EntranceOnce(index: i, offset: 50, child: _recentRow(items[i])),
+            for (var i = 0; i < items.length; i++) EntranceOnce(index: i, offset: 50, child: _recentRow(items[i], i)),
           ],
         );
       }
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _sectionTitle('Recently added stays'),
-          const SizedBox(height: 6),
+          const TitleRow3D(title: 'Recently added stays'),
           SkeletonSwitcher(
             loading: loading,
-            skeleton: Column(children: [for (var i = 0; i < 3; i++) ListRow.skeleton()]),
+            skeleton: const Column(children: [WideCardSkeleton(kind: WideKind.photo), WideCardSkeleton(kind: WideKind.photo), WideCardSkeleton(kind: WideKind.photo)]),
             child: body,
           ),
         ],
@@ -645,40 +473,135 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  Widget _recentRow(HomeRecentItem item) {
+  static final List<ListingTone> _recentTones = [ListingTone.cE, ListingTone.cF, ListingTone.cB];
+  static const List<String> _recentStickers = [ListingArt.hotel, ListingArt.bed, ListingArt.key];
+
+  Widget _recentRow(HomeRecentItem item, int index) {
     final s = item.stay;
     if (s == null) return const SizedBox.shrink();
-    return NearbyItemRow(
-      thumbnailUrl: s.item.thumbnailUrl,
+    final url = s.item.thumbnailUrl;
+    void open() => Get.toNamed(AppRoutes.stayDetail, arguments: {'id': s.item.id});
+    return WideCard(
+      kind: WideKind.photo,
+      tone: _recentTones[index % _recentTones.length],
+      photo: url == null || url.isEmpty ? null : SizedBox.expand(child: KitPhoto(url: url, width: double.infinity, height: double.infinity)),
+      sticker: _recentStickers[index % _recentStickers.length],
+      badge: s.item.isFeatured ? 'Featured' : null,
       tag: s.item.tagLabel,
       title: s.item.title,
       subtitle: s.districtName.isNotEmpty ? s.districtName : s.item.locationLabel,
-      caption: s.item.priceCaption,
-      value: s.item.priceValue,
+      reserveChips: false,
+      priceCaption: s.item.priceCaption,
+      number: s.item.priceValue,
       unit: s.item.priceUnit,
-      placeholderIcon: Icons.home_rounded,
-      isFeatured: s.item.isFeatured,
-      onTap: () => Get.toNamed(AppRoutes.stayDetail, arguments: {'id': s.item.id}),
+      onGo: open,
+      onTap: open,
     );
   }
 
   Widget _buildTripCard() => const TripHomeCard();
 
   Widget _buildInstagramCard() {
-    return KeyedSubtree(
-      key: TourKeys.homeInstagramCard,
-      child: SlimBar(
-        title: 'Follow us on Instagram',
-        tone: KitTone.jobs,
-        filled: true,
-        leadingAsset: TravelIcon.photo,
-        onTap: _openInstagram,
-        trailing: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-          decoration: const BoxDecoration(color: DesignColors.surfaceAlt, borderRadius: CardRadius.pill),
-          child: Text('Follow', style: TypeTokens.style(12, FontWeight.w700, color: KitTone.jobs.accentDark)),
+    return Padding(
+      padding: const EdgeInsets.only(top: 14),
+      child: KeyedSubtree(
+        key: TourKeys.homeInstagramCard,
+        child: WorkoutCard(
+          tone: ListingTone.cD,
+          art: ListingArt.camera,
+          eyebrow: 'Instagram',
+          title: 'Follow us',
+          ctaLabel: 'Follow',
+          minHeight: 112,
+          semanticsLabel: 'Follow us on Instagram',
+          onTap: _openInstagram,
         ),
       ),
     );
+  }
+}
+
+class _HomeHeader extends StatelessWidget {
+  const _HomeHeader({required this.title, required this.subtitle, required this.trailing});
+
+  final String title;
+  final String subtitle;
+  final Widget trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(18, 10, 18, 14),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(title, maxLines: 1, style: Ink3D.text(28, FontWeight.w700, Ink3D.title, height: 1.25)),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(top: 3),
+                  child: Text(subtitle, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(14, FontWeight.w400, Ink3D.sub, letterSpacing: 0)),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 10),
+          trailing,
+        ],
+      ),
+    );
+  }
+}
+
+class _WhitePill extends StatelessWidget {
+  const _WhitePill({required this.label, required this.color});
+
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(color: DesignColors.onPrimary, borderRadius: BorderRadius.circular(22), boxShadow: Ink3D.whiteBtn),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(13, FontWeight.w700, color)),
+      ),
+    );
+  }
+}
+
+class _SizeReport extends SingleChildRenderObjectWidget {
+  const _SizeReport({required this.onHeight, super.child});
+
+  final ValueChanged<double> onHeight;
+
+  @override
+  RenderObject createRenderObject(BuildContext context) => _RenderSizeReport(onHeight);
+
+  @override
+  void updateRenderObject(BuildContext context, _RenderSizeReport renderObject) => renderObject.onHeight = onHeight;
+}
+
+class _RenderSizeReport extends RenderProxyBox {
+  _RenderSizeReport(this.onHeight);
+
+  ValueChanged<double> onHeight;
+  double? _last;
+
+  @override
+  void performLayout() {
+    super.performLayout();
+    final h = size.height;
+    if (h == _last) return;
+    _last = h;
+    WidgetsBinding.instance.addPostFrameCallback((_) => onHeight(h));
   }
 }

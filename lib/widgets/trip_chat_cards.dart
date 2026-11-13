@@ -1,7 +1,6 @@
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'package:bakhli/features/trip/widgets/trip_ui.dart';
 import 'package:bakhli/design/design.dart';
+import 'package:bakhli/design/extra/ext_trip_replies.dart';
 import 'package:bakhli/design/extra/replies_kit.dart';
 import '../features/stay/enquiries/stay_enquiry_actions.dart';
 import '../features/trip/controllers/trip_enquiry_controller.dart';
@@ -11,7 +10,6 @@ import '../features/trip/trip_strings_a5.dart';
 import '../features/trip/trip_strings_f2.dart';
 import '../features/trip/utils/trip_format.dart';
 import '../utils/app_toast.dart';
-import '../features/trip/widgets/trip_payment_line.dart';
 import '../features/trip/widgets/trip_status.dart';
 import '../models/browse_item.dart';
 import '../models/message_model.dart';
@@ -98,7 +96,7 @@ class TripChatCards {
     switch (message.type) {
       case 'trip_enquiry':
         final enquiryId = _str(p, 'enquiryId');
-        if (enquiryId == null || _range(p) == null) return _bubble(message, _str(p, 'text') ?? '', accent);
+        if (enquiryId == null || _range(p) == null) return bubble(message, _str(p, 'text') ?? '');
         return _EnquiryCard(
           key: ValueKey('trip-enquiry-${message.id}'),
           message: message,
@@ -110,7 +108,7 @@ class TripChatCards {
       case 'trip_offer':
         return _offer(context, message, p, isOwner, accent, cb);
       case 'trip_offer_response':
-        return _bubble(message, _offerResponseText(p), accent);
+        return bubble(message, _offerResponseText(p));
       case TripAdvanceCards.requestType:
         return TripAdvanceCards.request(context, message, isOwner: isOwner, accent: accent, callbacks: cb);
       case TripAdvanceCards.proofType:
@@ -132,6 +130,24 @@ class TripChatCards {
     final range = _range(p);
     return TripStrings.offerAccepted(total == null ? '' : BrowseItem.inr(total), range ?? '');
   }
+
+  static Widget wrap(MessageModel m, Widget card) {
+    final recent = DateTime.now().difference(m.createdAt).inSeconds.abs() < 10;
+    return RepliesEntrance(
+      animate: recent,
+      child: Padding(padding: const EdgeInsets.symmetric(vertical: 2), child: card),
+    );
+  }
+
+  static Widget bubble(MessageModel m, String text) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 3),
+        child: ChatBubble3D(
+          tone: ListingTone.forest,
+          text: text,
+          mine: m.isMine,
+          ticks: m.isMine ? (m.readAt != null ? ChatTicks.read : ChatTicks.sent) : ChatTicks.none,
+        ),
+      );
 
   // ── offer ────────────────────────────────────────────────────────────────
 
@@ -159,263 +175,76 @@ class TripChatCards {
     final canAskNew = !isOwner && status == 'expired' && cb.onAskNewOffer != null;
 
     final title = cb.listingTitle.isEmpty ? TripStrings.offer : '${TripStrings.offer} · ${cb.listingTitle}';
+    final pill = _offerPill(status, isOwner, validUntil);
 
-    return _card(
-      context,
-      mine: m.isMine,
-      readAt: m.readAt,
-      createdAt: m.createdAt,
-      accent: accent,
-      icon: TravelIcon.money,
-      title: title,
-      pill: _offerPill(status, isOwner, validUntil),
-      children: [
-        if (differs && range != null) ...[
-          _note(TripStrings.datesDiffer(range)),
-          const SizedBox(height: 8),
+    final ReplyAction primary;
+    final ReplyAction secondary;
+    if (canAskNew) {
+      primary = ReplyAction(label: TripStrings.askNewOffer, onTap: cb.onAskNewOffer);
+      secondary = const ReplyAction(label: TripStrings.decline);
+    } else {
+      primary = ReplyAction(
+          label: TripStrings.acceptOffer, onTap: canAct && cb.onAccept != null ? () => cb.onAccept!(enquiryId, offerId) : null);
+      secondary = ReplyAction(
+          label: TripStrings.decline, onTap: canAct && cb.onDecline != null ? () => cb.onDecline!(enquiryId, offerId) : null);
+    }
+
+    return wrap(
+      m,
+      ChatTripCard3D(
+        status: pill.$1,
+        art: ListingArt.hotel,
+        pill: pill.$2,
+        title: title,
+        line: [if (nights != null) TripStrings.nights(nights), ?range].join(' · '),
+        rows: [
+          if (total != null) ReplyRow(TripStrings.total, BrowseItem.inr(total)),
+          if (advance != null && advance > 0) ReplyRow(TripStrings.advance, BrowseItem.inr(advance)),
+          if (balanceNote != null && balanceNote.isNotEmpty) ReplyRow(TripStrings.balance, balanceNote),
+          if (cancelText != null && cancelText.isNotEmpty) ReplyRow(TripStrings.cancellationTerms, cancelText),
+          if (gst) const ReplyRow(TripStrings.gstInvoice, TripStrings.yes),
         ],
-        for (final l in lines) _offerLine(l),
-        if (nights != null || range != null) ...[
-          const SizedBox(height: 4),
-          Text(
-            [if (nights != null) TripStrings.nights(nights), if (range != null) range].join(' · '),
-            style: _small,
-          ),
+        extra: [
+          if (differs && range != null) TripStrings.datesDiffer(range),
+          for (final l in lines) _offerLine(l),
+          if (inclusions != null && inclusions.isNotEmpty) inclusions,
+          TripStrings.stayPayLine,
         ],
-        if (total != null) ...[
-          const SizedBox(height: 8),
-          Row(children: [
-            Text(TripStrings.total, style: _small),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Align(
-                alignment: Alignment.centerRight,
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Text(BrowseItem.inr(total),
-                      style: const TextStyle(
-                          fontFamily: FitnessAppTheme.fontName, fontSize: 22, fontWeight: FontWeight.w700, color: DesignColors.primary)),
-                ),
-              ),
-            ),
-          ]),
-        ],
-        if (advance != null && advance > 0) ...[
-          const SizedBox(height: 8),
-          _kv(TripStrings.advance, BrowseItem.inr(advance)),
-        ],
-        if (balanceNote != null && balanceNote.isNotEmpty) _kv(TripStrings.balance, balanceNote),
-        if (cancelText != null && cancelText.isNotEmpty) _kv(TripStrings.cancellationTerms, cancelText),
-        if (gst) _kv(TripStrings.gstInvoice, TripStrings.yes),
-        if (inclusions != null && inclusions.isNotEmpty) ...[
-          const SizedBox(height: 6),
-          Text(inclusions, style: _body),
-        ],
-        const SizedBox(height: 8),
-        const Text(TripStrings.termsByHost,
-            style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 11, color: DesignColors.textMuted, height: 1.35)),
-        if (canAct) ...[
-          const SizedBox(height: 12),
-          _button(TripStrings.acceptOffer,
-              primary: true,
-              accent: accent,
-              onTap: cb.onAccept == null ? null : () => cb.onAccept!(enquiryId, offerId)),
-          const SizedBox(height: 8),
-          _button(TripStrings.decline,
-              primary: false,
-              accent: accent,
-              negative: true,
-              onTap: cb.onDecline == null ? null : () => cb.onDecline!(enquiryId, offerId)),
-        ],
-        if (canAskNew) ...[
-          const SizedBox(height: 12),
-          _button(TripStrings.askNewOffer, primary: false, accent: accent, onTap: cb.onAskNewOffer),
-        ],
-        const SizedBox(height: 10),
-        const TripPaymentLine(),
-      ],
+        note: TripStrings.termsByHost,
+        primary: primary,
+        secondary: secondary,
+        showActions: !isOwner,
+        mine: m.isMine,
+        read: m.readAt != null,
+      ),
     );
   }
 
-  static Widget _offerPill(String status, bool isOwner, DateTime? validUntil) {
+  static (StatusTone3D, String) _offerPill(String status, bool isOwner, DateTime? validUntil) {
     switch (status) {
       case 'accepted':
-        return TripStatusPill(TripDisplayStatus.confirmedByBoth, label: TripStrings.accepted);
+        return (StatusTone3D.both, TripStrings.accepted);
       case 'declined':
-        return TripStatusPill(TripDisplayStatus.declined, ownerSide: isOwner, label: TripStrings.declined);
+        return (StatusTone3D.red, TripStrings.declined);
       case 'expired':
-        return const TripStatusPill(TripDisplayStatus.expired, label: TripStrings.expired);
+        return (StatusTone3D.red, TripStrings.expired);
       case 'superseded':
-        return const TripStatusPill(TripDisplayStatus.closed, label: TripStrings.replaced);
+        return (StatusTone3D.closed, TripStrings.replaced);
       default:
         final t = validUntil == null ? null : _remaining(validUntil);
-        return TripStatusPill(TripDisplayStatus.offered, label: t == null ? TripStrings.offer : TripStrings.validFor(t));
+        return (StatusTone3D.waiting, t == null ? TripStrings.offer : TripStrings.validFor(t));
     }
   }
 
-  static Widget _offerLine(Map line) {
+  static String _offerLine(Map line) {
     final room = (line['roomName'] as String?)?.trim();
     final units = (line['units'] as num?)?.toInt() ?? 1;
     final guests = (line['guests'] as num?)?.toInt();
     final price = line['pricePerNight'] as num?;
     final name = (room == null || room.isEmpty) ? TripStrings.room : room;
     final priceText = price == null ? '' : ' · ${TripStringsA5.unitsAtPrice(units, BrowseItem.inr(price))}';
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
-      child: Text(
-        '$name$priceText${guests == null ? '' : ' · ${TripStrings.guests} $guests'}',
-        style: const TextStyle(
-            fontFamily: FitnessAppTheme.fontName, fontSize: 12.5, fontWeight: FontWeight.w600, color: DesignColors.textStrong, height: 1.35),
-      ),
-    );
+    return '$name$priceText${guests == null ? '' : ' · ${TripStrings.guests} $guests'}';
   }
-
-  // ── building blocks ──────────────────────────────────────────────────────
-
-  static const _body = TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12.5, color: DesignColors.textSecondary, height: 1.35);
-  static const _small = TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, color: DesignColors.textMuted, height: 1.35);
-
-  static Widget _kv(String k, String v) => Padding(
-        padding: const EdgeInsets.only(top: 2),
-        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(k, style: _small),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(v,
-                textAlign: TextAlign.end,
-                style: const TextStyle(
-                    fontFamily: FitnessAppTheme.fontName, fontSize: 12.5, fontWeight: FontWeight.w600, color: DesignColors.textStrong)),
-          ),
-        ]),
-      );
-
-  static Widget _note(String text) => Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        decoration: BoxDecoration(color: DesignColors.statusAskedSoft, borderRadius: BorderRadius.circular(8)),
-        child: Text(text,
-            style: const TextStyle(
-                fontFamily: FitnessAppTheme.fontName, fontSize: 11.5, fontWeight: FontWeight.w500, color: DesignColors.statusAttention, height: 1.35)),
-      );
-
-  static Widget _button(String label,
-      {required bool primary, required Color accent, bool negative = false, VoidCallback? onTap}) {
-    return SizedBox(
-      width: double.infinity,
-      child: primary
-          ? TripButton(color: accent, label: label, onPressed: onTap)
-          : TripActionChip(
-              height: 48,
-              fontSize: 13,
-              color: negative ? DesignColors.statusSaved : DesignColors.textSecondary,
-              label: label,
-              onTap: onTap,
-            ),
-    );
-  }
-
-  static Widget _card(
-    BuildContext context, {
-    required bool mine,
-    required DateTime? readAt,
-    DateTime? createdAt,
-    required Color accent,
-    required String icon,
-    required String title,
-    required Widget pill,
-    required List<Widget> children,
-  }) {
-    final maxWidth = math.min(300.0, MediaQuery.sizeOf(context).width - 40);
-    final recent = createdAt != null && DateTime.now().difference(createdAt).inSeconds.abs() < 10;
-    return RepliesEntrance(
-      animate: recent,
-      child: Align(
-      alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 4),
-        constraints: BoxConstraints(maxWidth: maxWidth),
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: DesignColors.surface,
-          borderRadius: RepliesCard.radius,
-          boxShadow: DesignShadows.card,
-        ),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-          Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Container(
-              width: 26,
-              height: 26,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                    colors: [accent.withValues(alpha: Alpha.scrim), accent.withValues(alpha: Alpha.hairline)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight),
-                shape: BoxShape.circle),
-              child: Padding(padding: const EdgeInsets.all(5), child: TravelIcon(icon, size: 20)),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.only(top: 3),
-                child: Text(title,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                        fontFamily: FitnessAppTheme.fontName, fontSize: 12.5, fontWeight: FontWeight.w600, color: DesignColors.textStrong)),
-              ),
-            ),
-          ]),
-          const SizedBox(height: 8),
-          Align(alignment: Alignment.centerLeft, child: pill),
-          const SizedBox(height: 10),
-          ...children,
-          if (mine) ...[
-            const SizedBox(height: 6),
-            Align(alignment: Alignment.centerRight, child: _tick(readAt != null, onDark: false)),
-          ],
-        ]),
-      ),
-      ),
-    );
-  }
-
-  static Widget _bubble(MessageModel m, String text, Color accent) {
-    final mine = m.isMine;
-    return Align(
-      alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 3),
-        constraints: const BoxConstraints(maxWidth: 280),
-        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
-        decoration: BoxDecoration(
-          color: mine ? null : DesignColors.surface,
-          gradient: mine ? DesignGradients.brand : null,
-          borderRadius: BorderRadius.only(
-            topLeft: const Radius.circular(14),
-            topRight: const Radius.circular(14),
-            bottomLeft: Radius.circular(mine ? 14 : 3),
-            bottomRight: Radius.circular(mine ? 3 : 14),
-          ),
-          boxShadow: [ShadowTokens.tint(mine ? DesignColors.primary : DesignColors.shadowBase, mine ? ShadowSpec.chatMine : ShadowSpec.chatTheirs)],
-        ),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.end, mainAxisSize: MainAxisSize.min, children: [
-          Text(text,
-              style: TextStyle(
-                  fontFamily: FitnessAppTheme.fontName, fontSize: 13.5, color: mine ? DesignColors.surface : DesignColors.textStrong)),
-          if (mine) ...[const SizedBox(height: 2), _tick(m.readAt != null)],
-        ]),
-      ),
-    );
-  }
-
-  static Widget _tick(bool read, {bool onDark = true}) => Padding(
-        padding: const EdgeInsets.only(top: 1),
-        child: Icon(
-          read ? Icons.done_all_rounded : Icons.done_rounded,
-          size: 14,
-          color: read ? DesignColors.primaryLight : (onDark ? DesignColors.surface.withValues(alpha: Alpha.strong) : DesignColors.textMuted),
-        ),
-      );
 
   static String? _str(Map<String, dynamic> p, String k) {
     final v = p[k];
@@ -532,47 +361,38 @@ class _EnquiryCardState extends State<_EnquiryCard> {
         cb.listingTitle.isEmpty ? TripStringsF2.stayEnquiry : '${TripStringsF2.stayEnquiry} · ${cb.listingTitle}';
     final display = e?.display ?? TripDisplayStatus.asked;
     final canAct = widget.isOwner && cb.ownerActionsEnabled && e != null && !e.isTaxi && e.isUnconfirmed;
-    return TripChatCards._card(
-      context,
-      mine: widget.message.isMine,
-      readAt: widget.message.readAt,
-      createdAt: widget.message.createdAt,
-      accent: widget.accent,
-      icon: TravelIcon.stay,
-      title: title,
-      pill: TripStatusPill(display, ownerSide: widget.isOwner),
-      children: [
-        if (checkIn != null) TripChatCards._kv(TripStrings.checkIn, TripFormat.shortDate(checkIn)),
-        if (checkOut != null)
-          TripChatCards._kv(
-              TripStrings.checkOut,
-              nights != null && nights > 0
-                  ? '${TripFormat.shortDate(checkOut)} · ${TripStrings.nights(nights)}'
-                  : TripFormat.shortDate(checkOut)),
-        if (adults != null) TripChatCards._kv(TripStrings.people, TripStrings.peopleCount(adults + kids)),
-        if (rooms != null) TripChatCards._kv(TripStrings.rooms, TripStringsF2.roomsCount(rooms)),
-        if (text != null && text.isNotEmpty) ...[
-          const SizedBox(height: 8),
-          Text(text, maxLines: 6, overflow: TextOverflow.ellipsis, style: TripChatCards._small),
+    final live = canAct && !_busy;
+    return TripChatCards.wrap(
+      widget.message,
+      ChatTripCard3D(
+        status: StatusTone3D.of(display.name),
+        art: ListingArt.luggage,
+        pill: TripStatusVisuals.label(display, ownerSide: widget.isOwner),
+        title: title,
+        line: [
+          if (nights != null && nights > 0) TripStrings.nights(nights),
+          if (rooms != null) TripStringsF2.roomsCount(rooms),
+        ].join(' · '),
+        rows: [
+          if (checkIn != null) ReplyRow(TripStrings.checkIn, TripFormat.shortDate(checkIn)),
+          if (checkOut != null) ReplyRow(TripStrings.checkOut, TripFormat.shortDate(checkOut)),
+          if (adults != null) ReplyRow(TripStrings.people, TripStrings.peopleCount(adults + kids)),
         ],
-        if (canAct) ...[
-          const SizedBox(height: 12),
-          TripChatCards._button(
-            display == TripDisplayStatus.offered ? TripStrings.sendNewOffer : TripStrings.sendOffer,
-            primary: true,
-            accent: widget.accent,
-            onTap: _busy ? null : () => _run((x) => StayEnquiryActions.sendOffer(context, x)),
-          ),
-          const SizedBox(height: 8),
-          TripChatCards._button(
-            TripStrings.notAvailableAction,
-            primary: false,
-            accent: widget.accent,
-            negative: true,
-            onTap: _busy ? null : () => _run((x) => StayEnquiryActions.notAvailable(context, x)),
-          ),
-        ],
-      ],
+        note: text != null && text.isNotEmpty ? text : null,
+        noteArt: ListingArt.roundPushpin,
+        primary: ReplyAction(
+          label: display == TripDisplayStatus.offered ? TripStrings.sendNewOffer : TripStrings.sendOffer,
+          busy: canAct && _busy,
+          onTap: live ? () => _run((x) => StayEnquiryActions.sendOffer(context, x)) : null,
+        ),
+        secondary: ReplyAction(
+          label: TripStrings.notAvailableAction,
+          onTap: live ? () => _run((x) => StayEnquiryActions.notAvailable(context, x)) : null,
+        ),
+        showActions: widget.isOwner,
+        mine: widget.message.isMine,
+        read: widget.message.readAt != null,
+      ),
     );
   }
 }

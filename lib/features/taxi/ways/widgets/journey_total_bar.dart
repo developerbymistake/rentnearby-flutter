@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:bakhli/design/design.dart';
-import 'package:bakhli/design/extra/trip_plan_look.dart';
-import 'package:bakhli/design/extra/ways_kit.dart';
-import '../../../../config/app_insets.dart';
+import 'package:bakhli/design/extra/ext_journeys.dart';
 import '../../../../models/browse_item.dart';
 import '../taxi_ways_strings.dart';
 
@@ -21,13 +19,13 @@ class JourneyAskButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return PickButton(
+    return GradientPillButton(
+      tone: ListingTone.coral,
       label: label,
-      isLoading: busy,
-      onPressed: busy ? null : onPressed,
-      height: 48,
-      gradient: PickKit.taxiGradient,
-      shadowColor: PickKit.taxi,
+      loading: busy,
+      height: 52,
+      fontSize: 15,
+      onTap: busy ? null : onPressed,
     );
   }
 }
@@ -54,68 +52,36 @@ class JourneyTotalBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.fromLTRB(16, 12, 16, 10 + AppInsets.bottomViewPadding(context)),
-      decoration: const BoxDecoration(
-        color: DesignColors.surface,
-        borderRadius: BorderRadius.only(topLeft: Radius.circular(32), topRight: Radius.circular(32)),
-        boxShadow: WaysKit.topShadow,
-      ),
-      child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+    final tone = ListingTone.coral;
+    return JourneyDock3D(
+      children: [
         Row(children: [
           Expanded(
             child: Text(
               TaxiWaysStrings.listedFares,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: FitnessAppTheme.caption.copyWith(fontSize: 11.5),
+              style: Ink3D.text(12, FontWeight.w400, Ink3D.grey, height: 1.35),
             ),
           ),
-          const SizedBox(width: 8),
-          Text(
-            BrowseItem.inr(total),
-            style: FitnessAppTheme.headline.copyWith(fontSize: 20, color: DesignColors.primary),
-          ),
+          const SizedBox(width: 12),
+          Text(BrowseItem.inr(total), style: Ink3D.text(26, FontWeight.w700, tone.text)),
         ]),
-        const SizedBox(height: 10),
+        const SizedBox(height: 12),
         if (onUse != null) ...[
           JourneyAskButton(label: useLabel ?? '', onPressed: onUse, busy: busy),
-          const SizedBox(height: 8),
-          SecondaryButton(label: askLabel, onPressed: busy ? null : onAsk, tone: KitTone.taxi, height: 48),
+          const SizedBox(height: 10),
+          WhitePillButton(tone: tone, label: askLabel, height: 52, fontSize: 15, onTap: busy ? null : onAsk),
         ] else
           Row(children: [
             if (onSave != null) ...[
-              Tooltip(
-                message: TaxiWaysStrings.saveJourney,
-                child: Container(
-                  width: 48,
-                  height: 48,
-                  decoration: TripLook.card(radius: BorderRadius.circular(24)),
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(24),
-                      onTap: busy ? null : onSave,
-                      child: Center(
-                        child: Opacity(
-                            opacity: busy ? Alpha.half : Alpha.full,
-                            child: const TravelIcon(TravelIcon.note, size: 26)),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
+              JourneyRoundButton3D(art: ListingArt.clipboard, tooltip: TaxiWaysStrings.saveJourney, onTap: busy ? null : onSave),
+              const SizedBox(width: 12),
             ],
             Expanded(child: JourneyAskButton(label: askLabel, onPressed: onAsk, busy: busy)),
           ]),
-        const SizedBox(height: 8),
-        Text(
-          TaxiWaysStrings.payLine,
-          textAlign: TextAlign.center,
-          style: FitnessAppTheme.caption.copyWith(fontSize: 11),
-        ),
-      ]),
+        const JourneyPayLine(TaxiWaysStrings.payLine),
+      ],
     );
   }
 }

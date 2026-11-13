@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:bakhli/features/trip/widgets/trip_ui.dart';
+import 'package:flutter/rendering.dart';
 import 'package:bakhli/design/design.dart';
 import 'package:get/get.dart';
 import '../controllers/trip_plan_controller.dart';
@@ -36,6 +36,7 @@ class _TripMapChipsState extends State<TripMapChips> {
 
   final _scroll = ScrollController();
   final _keys = <String, GlobalKey>{};
+  final _order = <String>[];
   bool _atStart = true;
   bool _atEnd = true;
   String? _lastSelected;
@@ -54,10 +55,30 @@ class _TripMapChipsState extends State<TripMapChips> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       _updateEdges();
-      final ctx = _keys[selected]?.currentContext;
-      if (ctx == null) return;
-      Scrollable.ensureVisible(ctx, alignment: 0.5, duration: const Duration(milliseconds: 250), curve: Curves.fastOutSlowIn);
+      final target = _snapOffset(selected);
+      if (target == null) return;
+      _scroll.animateTo(target, duration: const Duration(milliseconds: 250), curve: Curves.fastOutSlowIn);
     });
+  }
+
+  double? _snapOffset(String selected) {
+    if (!_scroll.hasClients || !_scroll.position.hasContentDimensions) return null;
+    final ids = _order;
+    final at = ids.indexOf(selected);
+    final box = _keys[selected]?.currentContext?.findRenderObject();
+    if (at < 0 || box is! RenderBox) return null;
+    final viewport = RenderAbstractViewport.of(box);
+    final lead = widget.padding.resolve(Directionality.of(context)).left;
+    final selStart = viewport.getOffsetToReveal(box, 0).offset - lead;
+    final selEnd = viewport.getOffsetToReveal(box, 1).offset + lead;
+    var target = selStart;
+    final prev = at > 0 ? _keys[ids[at - 1]]?.currentContext?.findRenderObject() : null;
+    if (prev is RenderBox) {
+      final prevStart = viewport.getOffsetToReveal(prev, 0).offset - lead;
+      if (prevStart >= selEnd) target = prevStart;
+    }
+    final pos = _scroll.position;
+    return target.clamp(pos.minScrollExtent, pos.maxScrollExtent);
   }
 
   void _updateEdges() {
@@ -88,6 +109,7 @@ class _TripMapChipsState extends State<TripMapChips> {
         TripMapFocus.day => 'd$day',
       };
       _afterFrame(selected);
+      _order.clear();
       final chips = <Widget>[
         _chip(
           id: _allKey,
@@ -169,7 +191,7 @@ class _TripMapChipsState extends State<TripMapChips> {
               child: Row(
                 children: [
                   for (var i = 0; i < chips.length; i++) ...[
-                    if (i > 0) const SizedBox(width: 8),
+                    if (i > 0) const SizedBox(width: 10),
                     chips[i],
                   ],
                 ],
@@ -189,24 +211,15 @@ class _TripMapChipsState extends State<TripMapChips> {
     required VoidCallback onTap,
     String? iconAsset,
   }) {
-    return GestureDetector(
+    final art = id == _allKey
+        ? ListingArt.worldMap
+        : iconAsset != null
+            ? ListingArt.pushpin
+            : ListingArt.calendar;
+    _order.add(id);
+    return KeyedSubtree(
       key: _keyOf(id),
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 6),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minWidth: 44),
-          child: TripChoiceChip(
-            label: label,
-            selected: selected,
-            color: color,
-            iconAsset: iconAsset,
-            padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 12),
-            onTap: onTap,
-          ),
-        ),
-      ),
+      child: ChipCP(tone: ListingTone.indigo, art: art, label: label, off: !selected, onTap: onTap),
     );
   }
 }

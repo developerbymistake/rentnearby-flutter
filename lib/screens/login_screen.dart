@@ -5,6 +5,7 @@ import 'package:pinput/pinput.dart';
 import '../config/app_routes.dart';
 import '../controllers/auth_controller.dart';
 import '../design/design.dart';
+import '../design/extra/ext_auth.dart';
 import '../utils/app_toast.dart';
 import 'privacy_policy_screen.dart';
 import 'terms_of_service_screen.dart';
@@ -19,6 +20,10 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
   final _phoneCtrl = TextEditingController();
   final _otpCtrl = TextEditingController();
   final _otpFocus = FocusNode();
+  final _phoneFocus = FocusNode();
+  static final ListingTone _tone = ListingTone.indigo;
+  static const double _cardHeight = 364;
+  bool _phoneBad = false;
   final _auth = Get.find<AuthController>();
   late final AnimationController _enter =
       AnimationController(duration: const Duration(milliseconds: 600), vsync: this);
@@ -48,10 +53,10 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
     } else if (!_enter.isAnimating && _enter.value == 0) {
       _enter.forward();
     }
-    final boxSize = ((MediaQuery.of(context).size.width - 56 - 36) / 4).clamp(56.0, 72.0);
-    _defaultTheme = GatePinThemes.base(boxSize);
-    _focusedTheme = GatePinThemes.focused(boxSize);
-    _submittedTheme = GatePinThemes.submitted(boxSize);
+    final boxSize = AuthPins.boxSize(context);
+    _defaultTheme = AuthPins.base(boxSize);
+    _focusedTheme = AuthPins.focused(_tone, boxSize);
+    _submittedTheme = AuthPins.submitted(_tone, boxSize);
   }
 
   @override
@@ -60,12 +65,14 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
     _phoneCtrl.dispose();
     _otpCtrl.dispose();
     _otpFocus.dispose();
+    _phoneFocus.dispose();
     super.dispose();
   }
 
   Future<void> _sendOtp() async {
     final phone = _phoneCtrl.text.trim();
     if (phone.length != 10) {
+      setState(() => _phoneBad = true);
       AppToast.error('Enter a valid 10-digit number');
       return;
     }
@@ -131,65 +138,43 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
   }
 
   void _showMaxAttemptsDialog() {
-    showDialog(
-      context: context,
+    Dialog3D.show<void>(
+      context,
       barrierDismissible: false,
-      builder: (_) => GateDialog(
-        glyph: Icons.lock_outline_rounded,
-        gradient: TripEntryStyle.rose,
+      builder: (_) => Dialog3D(
+        tone: ListingTone.coral,
+        art: ListingArt.key,
         title: 'Too Many Attempts',
         body: 'Please try again with your phone number.',
-        actions: [
-          GateButton(
-            label: 'Go Back',
-            height: 48,
-            onPressed: () {
-              Navigator.pop(context);
-              setState(() {
-                _otpSent = false;
-                _otpCtrl.clear();
-                _attempts = 0;
-              });
-            },
-          ),
-        ],
+        primaryLabel: 'Go Back',
+        onPrimary: () {
+          Navigator.pop(context);
+          setState(() {
+            _otpSent = false;
+            _otpCtrl.clear();
+            _attempts = 0;
+          });
+        },
       ),
     );
   }
 
-  Future<bool?> _showConfirmDialog(String phone) => showDialog<bool>(
-        context: context,
-        barrierColor: GateKit.scrim,
-        builder: (dialogContext) => GateDialog(
-          asset: TravelIcon.chat,
+  Future<bool?> _showConfirmDialog(String phone) => Dialog3D.show<bool>(
+        context,
+        builder: (dialogContext) => Dialog3D(
+          tone: _tone,
+          art: ListingArt.speechBalloon,
           title: 'Confirm your number',
           body: 'We will send an OTP via WhatsApp to',
-          content: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-            decoration: const BoxDecoration(color: FitnessAppTheme.background, borderRadius: CardRadius.chip),
-            child: Text(
-              '+91 $phone',
-              style: FitnessAppTheme.title.copyWith(
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-                color: FitnessAppTheme.nearlyDarkBlue,
-                letterSpacing: 1.5,
-              ),
-            ),
-          ),
-          horizontalActions: true,
-          actions: [
-            GateOutlineButton(label: 'Edit', height: 48, onPressed: () => Navigator.pop(dialogContext, false)),
-            GateButton(
-              label: 'Confirm',
-              height: 48,
-              onPressed: () {
-                FocusScope.of(dialogContext).unfocus();
-                _auth.isLoading.value = true;
-                Navigator.pop(dialogContext, true);
-              },
-            ),
-          ],
+          content: AuthDialogNumber(tone: _tone, text: '+91 $phone'),
+          secondaryLabel: 'Edit',
+          onSecondary: () => Navigator.pop(dialogContext, false),
+          primaryLabel: 'Confirm',
+          onPrimary: () {
+            FocusScope.of(dialogContext).unfocus();
+            _auth.isLoading.value = true;
+            Navigator.pop(dialogContext, true);
+          },
         ),
       );
 
@@ -201,223 +186,131 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: FitnessAppTheme.background,
-      body: MediaQuery.withClampedTextScaling(
-        maxScaleFactor: 1.3,
-        child: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
-          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-          child: GateHeroLayout(
-            heroHeight: 256,
-            overlap: 48,
-            hero: TemplateEntrance(
-              animation: templateInterval(_enter, 0, 3),
-              animationController: _enter,
-              child: const GateHeroHeader(
-                asset: TravelIcon.place,
-                title: 'Bakhli',
-                titleSize: 34,
-                subtitle: 'Plan your next trip',
-              ),
-            ),
-            child: Padding(
-              padding: EdgeInsets.only(bottom: 32 + MediaQuery.paddingOf(context).bottom),
-              child: TemplateEntrance(
-                animation: templateInterval(_enter, 2, 3),
-                animationController: _enter,
-                child: GateSwitcher(
-                  reverse: !_otpSent,
-                  child: _otpSent ? _buildOtpCard() : _buildPhoneCard(),
-                ),
-              ),
-            ),
-          ),
+    return AuthHeroScaffold(
+      hero: TemplateEntrance(
+        animation: templateInterval(_enter, 0, 3),
+        animationController: _enter,
+        child: AuthHero(tone: _tone, art: ListingArt.roundPushpin, title: 'Bakhli', subtitle: 'Plan your next trip'),
+      ),
+      card: TemplateEntrance(
+        animation: templateInterval(_enter, 2, 3),
+        animationController: _enter,
+        child: GateSwitcher(
+          reverse: !_otpSent,
+          child: _otpSent ? _buildOtpCard() : _buildPhoneCard(),
         ),
       ),
-    );
-  }
-
-  Widget _card(Key key, List<Widget> children) {
-    return Container(
-      key: key,
-      width: double.infinity,
-      margin: const EdgeInsets.symmetric(horizontal: KitMetrics.gutter),
-      padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
-      decoration: GateKit.heroCard(),
-      child: TemplateStagger(crossAxisAlignment: CrossAxisAlignment.start, children: children),
     );
   }
 
   Widget _buildPhoneCard() {
-    final linkStyle = FitnessAppTheme.caption.copyWith(
-      color: FitnessAppTheme.nearlyDarkBlue,
-      fontWeight: FontWeight.w600,
-      decoration: TextDecoration.underline,
-      decorationColor: FitnessAppTheme.nearlyDarkBlue,
-    );
-    return _card(const ValueKey('phone'), [
-      Text('Welcome to Bakhli', style: FitnessAppTheme.headline.copyWith(fontSize: 18)),
-      const SizedBox(height: 4),
-      Text('Enter your mobile number to continue', style: FitnessAppTheme.caption),
-      const SizedBox(height: 24),
-      TextFormField(
-        controller: _phoneCtrl,
-        keyboardType: TextInputType.phone,
-        maxLength: 10,
-        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-        style: FitnessAppTheme.title.copyWith(fontWeight: FontWeight.w600),
-        decoration: InputDecoration(
-          counterText: '',
-          hintText: 'Mobile number',
-          prefixIcon: Padding(
-            padding: const EdgeInsets.all(8),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10),
-              decoration: const BoxDecoration(color: FitnessAppTheme.spacer, borderRadius: CardRadius.chip),
-              child: Text(
-                '+91',
-                style: FitnessAppTheme.body2.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: FitnessAppTheme.nearlyDarkBlue,
-                ),
-              ),
-            ),
-          ),
-          prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
+    return AuthCard(
+      key: const ValueKey('phone'),
+      fixedHeight: _cardHeight,
+      children: [
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            AuthHeading('Welcome to Bakhli', tone: _tone),
+            const AuthCaption('Enter your mobile number to continue'),
+          ],
         ),
-        onChanged: (v) {
-          if (v.length == 10) FocusManager.instance.primaryFocus?.unfocus();
-        },
-        onFieldSubmitted: (_) => _sendOtp(),
-      ),
-      const SizedBox(height: 16),
-      Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 24,
-            height: 24,
-            child: Checkbox(
-              value: _agreed,
-              onChanged: (v) => setState(() => _agreed = v ?? false),
-              activeColor: FitnessAppTheme.nearlyDarkBlue,
-              side: BorderSide(color: FitnessAppTheme.grey.withValues(alpha: Alpha.half)),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            ),
+        const SizedBox(height: 16),
+        AuthPillInput(
+          tone: _tone,
+          focusNode: _phoneFocus,
+          bad: _phoneBad,
+          prefix: AuthCountryCode(tone: _tone),
+          child: TextFormField(
+            controller: _phoneCtrl,
+            focusNode: _phoneFocus,
+            keyboardType: TextInputType.phone,
+            maxLength: 10,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            style: AuthPillInput.textStyle,
+            cursorColor: _tone.g2,
+            decoration: AuthPillInput.decoration('Mobile number'),
+            onChanged: (v) {
+              if (_phoneBad) setState(() => _phoneBad = false);
+              if (v.length == 10) FocusManager.instance.primaryFocus?.unfocus();
+            },
+            onFieldSubmitted: (_) => _sendOtp(),
           ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: GestureDetector(
-              onTap: () => setState(() => _agreed = !_agreed),
-              child: RichText(
-                text: TextSpan(
-                  style: FitnessAppTheme.caption.copyWith(height: 1.5),
-                  children: [
-                    const TextSpan(text: 'I agree to the '),
-                    WidgetSpan(
-                      alignment: PlaceholderAlignment.middle,
-                      child: GestureDetector(
-                        onTap: () => _openLegal(const TermsOfServiceScreen()),
-                        child: Text('Terms of Service', style: linkStyle),
-                      ),
-                    ),
-                    const TextSpan(text: ' and '),
-                    WidgetSpan(
-                      alignment: PlaceholderAlignment.middle,
-                      child: GestureDetector(
-                        onTap: () => _openLegal(const PrivacyPolicyScreen()),
-                        child: Text('Privacy Policy', style: linkStyle),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-      const SizedBox(height: 20),
-      Obx(() => GateButton(
-            label: 'Send OTP',
-            onPressed: (_auth.isLoading.value || !_agreed) ? null : _sendOtp,
-            isLoading: _auth.isLoading.value,
-          )),
-    ]);
+        ),
+        const SizedBox(height: 16),
+        AuthAgreeRow(
+          tone: _tone,
+          value: _agreed,
+          onChanged: (v) => setState(() => _agreed = v),
+          onTerms: () => _openLegal(const TermsOfServiceScreen()),
+          onPrivacy: () => _openLegal(const PrivacyPolicyScreen()),
+        ),
+        const SizedBox(height: 16),
+        Obx(() => GradientPillButton(
+              tone: _tone,
+              label: 'Send OTP',
+              onTap: (_auth.isLoading.value || !_agreed) ? null : _sendOtp,
+              loading: _auth.isLoading.value,
+            )),
+      ],
+    );
   }
 
   Widget _buildOtpCard() {
-    return _card(const ValueKey('otp'), [
-      Row(
-        children: [
-          InkResponse(
-            radius: 22,
-            onTap: () => setState(() {
-              _otpSent = false;
-              _otpCtrl.clear();
-              _attempts = 0;
-            }),
-            child: const SizedBox(
-              width: KitMetrics.touch,
-              height: KitMetrics.touch,
-              child: Icon(Icons.arrow_back_ios_new_rounded, color: FitnessAppTheme.nearlyDarkBlue, size: 18),
-            ),
-          ),
-          const SizedBox(width: 4),
-          Text('Verify OTP', style: FitnessAppTheme.headline.copyWith(fontSize: 18)),
-        ],
-      ),
-      const SizedBox(height: 6),
-      Text('OTP sent via WhatsApp to', style: FitnessAppTheme.caption),
-      const SizedBox(height: 8),
-      Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        decoration: const BoxDecoration(color: FitnessAppTheme.spacer, borderRadius: CardRadius.chip),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
+    return AuthCard(
+      key: const ValueKey('otp'),
+      fixedHeight: _cardHeight,
+      children: [
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Icon(Icons.phone_android_rounded, size: 14, color: FitnessAppTheme.nearlyDarkBlue),
-            const SizedBox(width: 6),
-            Text(
-              '+91 $_phone',
-              style: FitnessAppTheme.body2.copyWith(
-                fontWeight: FontWeight.w600,
-                color: FitnessAppTheme.nearlyDarkBlue,
-              ),
+            AuthHeading(
+              'Verify OTP',
+              tone: _tone,
+              onBack: () => setState(() {
+                _otpSent = false;
+                _otpCtrl.clear();
+                _attempts = 0;
+              }),
             ),
+            const AuthCaption('OTP sent via WhatsApp to'),
+            AuthNumberChip(tone: _tone, art: ListingArt.speechBalloon, text: '+91 $_phone'),
           ],
         ),
-      ),
-      const SizedBox(height: 24),
-      Center(
-        child: Pinput(
-          controller: _otpCtrl,
-          focusNode: _otpFocus,
-          length: 4,
-          defaultPinTheme: _defaultTheme,
-          focusedPinTheme: _focusedTheme,
-          submittedPinTheme: _submittedTheme,
-          hapticFeedbackType: HapticFeedbackType.lightImpact,
-          autofillHints: const [AutofillHints.oneTimeCode],
-          onCompleted: _verifyOtp,
+        const SizedBox(height: 16),
+        Center(
+          child: Pinput(
+            controller: _otpCtrl,
+            focusNode: _otpFocus,
+            length: 4,
+            separatorBuilder: (_) => const SizedBox(width: 12),
+            defaultPinTheme: _defaultTheme,
+            focusedPinTheme: _focusedTheme,
+            submittedPinTheme: _submittedTheme,
+            cursor: AuthPins.cursor(_tone),
+            hapticFeedbackType: HapticFeedbackType.lightImpact,
+            autofillHints: const [AutofillHints.oneTimeCode],
+            onCompleted: _verifyOtp,
+          ),
         ),
-      ),
-      const SizedBox(height: 24),
-      Obx(() => GateButton(
-            label: 'Verify',
-            onPressed: _auth.isLoading.value ? null : () => _verifyOtp(_otpCtrl.text),
-            isLoading: _auth.isLoading.value,
-          )),
-      const SizedBox(height: 12),
-      Center(
-        child: Obx(() => GateTextButton(
-              label: _resends >= _maxResends ? 'No more resends' : 'Resend OTP (${_maxResends - _resends} left)',
-              fontSize: 13,
-              weight: FontWeight.w500,
-              onPressed: _auth.isLoading.value || _resends >= _maxResends ? null : _resendOtp,
-            )),
-      ),
-    ]);
+        const SizedBox(height: 16),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Obx(() => GradientPillButton(
+                  tone: _tone,
+                  label: 'Verify',
+                  onTap: _auth.isLoading.value ? null : () => _verifyOtp(_otpCtrl.text),
+                  loading: _auth.isLoading.value,
+                )),
+            Obx(() => AuthTextLink(
+                  tone: _tone,
+                  label: _resends >= _maxResends ? 'No more resends' : 'Resend OTP (${_maxResends - _resends} left)',
+                  onTap: _auth.isLoading.value || _resends >= _maxResends ? null : _resendOtp,
+                )),
+          ],
+        ),
+      ],
+    );
   }
 }

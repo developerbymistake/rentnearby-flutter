@@ -150,33 +150,40 @@ class RouteCitiesStripView extends StatelessWidget {
   Widget build(BuildContext context) {
     if (rows.isEmpty) return const SizedBox.shrink();
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Cities on the way', style: TypeTokens.style(14, FontWeight.w700, color: DesignColors.textStrong)),
-          const SizedBox(height: 6),
-          for (final r in rows)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 3),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Padding(
-                    padding: EdgeInsets.only(top: 3),
-                    child: Icon(Icons.circle, size: 8, color: DesignColors.primary),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      r.supplyText.isEmpty ? r.name : '${r.name}. ${r.supplyText}',
-                      style: TypeTokens.style(13, FontWeight.w500, color: DesignColors.textSecondary),
+      padding: const EdgeInsets.only(top: 18, bottom: 4),
+      child: WhiteCard3D(
+        padding: const EdgeInsets.fromLTRB(20, 14, 18, 14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Cities on the way', maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(16, FontWeight.w600, Ink3D.title)),
+            const SizedBox(height: 8),
+            for (final r in rows)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Art3D(asset: ListingArt.roundPushpin, size: 20, shadowBlur: 2, shadowOffset: Offset(1, 2), shadowAlpha: 0.3),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text.rich(
+                        TextSpan(
+                          text: r.name,
+                          style: Ink3D.text(14, FontWeight.w600, Ink3D.body),
+                          children: [
+                            if (r.supplyText.isNotEmpty) TextSpan(text: '. ${r.supplyText}', style: Ink3D.text(13, FontWeight.w400, Ink3D.grey)),
+                          ],
+                        ),
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }

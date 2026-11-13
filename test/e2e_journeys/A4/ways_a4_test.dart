@@ -97,7 +97,7 @@ void main() {
   testWidgets('guided plan-only result shows the one enquiry per car note and the arrange bar', (t) async {
     await _open(t, _waysJson(plan: true), {'tripRole': 'gettingThere', ...GuideArgs('gettingThere').toArgs()});
     expect(find.byKey(const ValueKey('plan-only-note')), findsOneWidget);
-    expect(find.text(TaxiWaysFeedScreen.planOnlyNote), findsOneWidget);
+    expect(find.text(TaxiWaysFeedScreen.planOnlyText(2)), findsOneWidget);
     expect(find.text(TripStringsGuide.optOwn), findsOneWidget);
     expect(find.text(TripStringsGuide.optSkip), findsOneWidget);
   });

@@ -8,17 +8,6 @@ class TripStringsGuide {
   static const String optSkip = 'Skip this';
   static const String previous = 'Previous';
   static const String next = 'Next';
-  static const String overview = 'Overview';
-  static const String overviewTitle = 'Your trip so far';
-  static const String statusToDo = 'To do';
-  static const String statusLooking = 'In progress';
-  static const String statusOwn = 'You arrange';
-  static const String statusSkipped = 'Skipped';
-  static const String statusDone = 'Arranged';
-  static const String chooseHint = 'Choose an option to continue';
-  static const String findHint = 'Pick up to 3 from the list, or choose another option';
-  static const String reviewHint = 'Send your enquiry, or tap Not now to continue';
-  static const String openList = 'Open the list';
   static const String noTaxiNote = 'We will not show taxis for this trip.';
   static const String skipBlocked = 'You already sent an enquiry here. Withdraw it first.';
   static const String ownBlocked = 'This one is already booked.';
@@ -26,6 +15,13 @@ class TripStringsGuide {
 
   static String percent(int n) => '$n% done';
   static String stepOf(int i, int n) => 'Step $i of $n';
+  static String stepCount(int i, int n) => '$i of $n';
+  static String stepLabel(String name, int i, int n) => '$name · ${stepOf(i, n)}';
+  static const String guideWhyChoose = 'Pick an option to continue';
+  static const String guideWhyPick = 'Pick at least one and send your enquiry to continue';
+  static const String findTaxis = 'Find taxis';
+  static const String findATaxi = 'Find a taxi';
+  static const String findStays = 'Find stays';
 
   static const String nameGettingThere = 'Getting there';
   static const String nameTaxi = 'Sightseeing taxi';
@@ -48,9 +44,12 @@ class TripStringsGuide {
   static String reviewBody(bool stays) =>
       'Send an enquiry to all your shortlisted ${stays ? 'stays' : 'taxis'} together?';
   static String shortlisted(int n) => '$n of 3 shortlisted';
-  static const String sendAll = 'Yes, send to all';
+  static const String sendAll = 'Send to all';
   static const String notNow = 'Not now';
   static const String sentTitle = 'Enquiry sent';
+  static String days(int n) => '$n ${n == 1 ? 'day' : 'days'}';
+  static String sentRow(String name) => '$name · Sent';
+  static String nextStep(String name) => 'Next step: $name';
   static String sentBody(int n, {bool taxi = false}) {
     final who = taxi ? 'driver' : 'host';
     return 'We told $n ${n == 1 ? who : '${who}s'}. You will see replies here.';
@@ -74,7 +73,6 @@ class TripStringsGuide {
   static const String findNew = 'Find new options';
 
   static const String skipArranged = 'This is already arranged. Remove it first.';
-  static const String backToSteps = 'Back to steps';
   static const String carReviewBody = 'Pick your car and send your enquiry.';
   static const String chooseAndSend = 'Choose and send';
   static const String changePicks = 'Change my picks';
@@ -86,5 +84,5 @@ class TripStringsGuide {
   static const String finishName = 'All done';
   static const String finishBody = 'Review everything in your summary.';
   static const String openSummary = 'Open summary';
-  static const String summaryLocked = 'Answer every step to see the summary';
+  static const String finishSheetTitle = 'That was the last step';
 }

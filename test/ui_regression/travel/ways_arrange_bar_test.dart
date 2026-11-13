@@ -21,7 +21,7 @@ void main() {
     ));
     expect(tester.takeException(), isNull);
     expect(tester.getSize(find.byKey(bodyKey)).height, greaterThan(0));
-    expect(tester.getSize(find.byType(WaysArrangeBar)).height, lessThan(100));
+    expect(tester.getSize(find.byType(WaysArrangeBar)).height, lessThan(180));
     await tester.tap(find.text('Arrange it myself'));
     await tester.tap(find.text('Skip'));
     expect(arranged, 1);

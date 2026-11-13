@@ -32,7 +32,7 @@ class TripDatesSheet {
   }
 
   static Future<bool> _show(BuildContext context, {required String heading, String? cta, bool clearStart = false}) async {
-    final saved = await SheetFrame.show<SettingsSaveResult>(
+    final saved = await Sheet3D.show<SettingsSaveResult>(
       context,
       builder: (_) => _DatesBody(heading: heading, cta: cta ?? TripStringsV2Find.saveDates, clearStart: clearStart),
     );
@@ -54,6 +54,7 @@ class _DatesBody extends StatefulWidget {
 }
 
 class _DatesBodyState extends State<_DatesBody> {
+  static final ListingTone _tone = ListingTone.indigo;
   final _c = TripPlanController.to;
   late DateTime? _start;
   late int _adults;
@@ -78,7 +79,7 @@ class _DatesBodyState extends State<_DatesBody> {
       first: today,
       last: today.add(const Duration(days: TripDatesSheet._daysAhead)),
       label: TripStringsV2Find.startDate,
-      tone: KitTone.trip,
+      tone: KitTone.brand,
     );
     if (picked != null && mounted) setState(() => _start = DateTime(picked.year, picked.month, picked.day));
   }
@@ -97,116 +98,84 @@ class _DatesBodyState extends State<_DatesBody> {
 
   static String _full(DateTime d) => '${_short(d)} ${d.year}';
 
-  Widget _label(String text) => Padding(
-        padding: const EdgeInsets.only(bottom: 6),
-        child: Text(text, style: TypeTokens.style(12, FontWeight.w600, color: TypeTokens.secondary)),
-      );
 
   Widget _dateField() {
     final start = _start;
     final days = _c.dayCount;
     final end = start == null || days < 1 ? null : DateTime(start.year, start.month, start.day + days - 1);
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _label(TripStringsV2Find.startDate),
-        InkWell(
+        PillPickerField(
+          tone: _tone,
+          label: TripStringsV2Find.startDate,
+          raised: true,
+          leadingArt: ListingArt.calendar,
+          value: start == null ? null : _full(start),
+          hint: TripStringsV2Find.startDate,
+          trailing: const SizedBox.shrink(),
           onTap: _saving ? null : _pickDate,
-          borderRadius: CardRadius.tile,
-          child: Container(
-            height: 48,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            decoration: const BoxDecoration(
-              color: DesignColors.surface,
-              borderRadius: CardRadius.tile,
-              border: Border.fromBorderSide(BorderSide(color: DesignColors.divider)),
-            ),
-            child: Row(
-              children: [
-                const TravelIcon(TravelIcon.calendar, size: 22),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(start == null ? TripStringsV2Find.startDate : _full(start),
-                      style: TypeTokens.style(14, FontWeight.w400,
-                          color: start == null ? DesignColors.textMuted : DesignColors.textStrong)),
-                ),
-              ],
-            ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(4, 8, 4, 0),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 18),
+            child: end != null && days > 0
+                ? Text(TripStringsV2Find.daysBack(days, _short(end)), style: Ink3D.text(12.5, FontWeight.w400, Ink3D.sub))
+                : const SizedBox.shrink(),
           ),
         ),
-        if (end != null && days > 0) ...[
-          const SizedBox(height: 6),
-          Text(TripStringsV2Find.daysBack(days, _short(end)),
-              style: TypeTokens.style(12, FontWeight.w400, color: TypeTokens.secondary)),
-        ],
       ],
     );
   }
 
-  Widget _stepper(String label, int value, int min, int max, ValueChanged<int> onChanged) {
-    Widget btn(IconData icon, bool enabled, VoidCallback onTap) =>
-        TemplateRoundButton(icon: icon, size: 44, onTap: enabled && !_saving ? onTap : null);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _label(label),
-        Container(
-          decoration: const BoxDecoration(
-            color: DesignColors.surface,
-            borderRadius: CardRadius.tile,
-            border: Border.fromBorderSide(BorderSide(color: DesignColors.divider)),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              btn(Icons.remove_rounded, value > min, () => onChanged(value - 1)),
-              Text('$value',
-                  style: TypeTokens.style(15, FontWeight.w700, color: DesignColors.textStrong)),
-              btn(Icons.add_rounded, value < max, () => onChanged(value + 1)),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
+  Widget _stepper(String label, int value, int min, int max, ValueChanged<int> onChanged) => StepperField(
+        tone: _tone,
+        label: label,
+        value: value,
+        min: min,
+        max: max,
+        onChanged: _saving ? null : onChanged,
+      );
 
   @override
   Widget build(BuildContext context) {
-    return SheetFrame(
+    return Sheet3D(
+      tone: _tone,
+      art: ListingArt.calendar,
       title: widget.heading,
       subtitle: widget.clearStart ? TripStringsV2Find.datesPassedSub : TripStringsV2Find.datesSub,
+      centerTitle: false,
+      padding: const EdgeInsets.fromLTRB(18, 0, 18, 0),
+      footer: GradientPillButton(
+        tone: _tone,
+        label: widget.cta,
+        loading: _saving,
+        height: 52,
+        onTap: _start == null ? null : _save,
+      ),
+      footnote: TripStringsV2Find.datesNote,
       child: Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        _dateField(),
-        const SizedBox(height: 12),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: _stepper(
-                  TripStringsV2Find.adults, _adults, 1, TripDatesSheet._maxAdults, (v) => setState(() => _adults = v)),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _stepper(
-                  TripStringsV2Find.children, _kids, 0, TripDatesSheet._maxKids, (v) => setState(() => _kids = v)),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        const SizedBox(height: 16),
-        PrimaryButton(
-          label: widget.cta,
-          tone: KitTone.trip,
-          loading: _saving,
-          onPressed: _start == null ? null : _save,
-        ),
-        const SizedBox(height: 8),
-        Text(TripStringsV2Find.datesNote,
-            textAlign: TextAlign.center,
-            style: TypeTokens.style(11, FontWeight.w400, color: TypeTokens.secondary)),
-      ],
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _dateField(),
+          const SizedBox(height: 4),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: _stepper(
+                    TripStringsV2Find.adults, _adults, 1, TripDatesSheet._maxAdults, (v) => setState(() => _adults = v)),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _stepper(
+                    TripStringsV2Find.children, _kids, 0, TripDatesSheet._maxKids, (v) => setState(() => _kids = v)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+        ],
       ),
     );
   }

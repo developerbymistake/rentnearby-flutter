@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:bakhli/design/design.dart';
-import 'package:bakhli/design/extra/trip_plan_look.dart';
 import '../models/trip_plan_model.dart';
 import '../models/trip_summary_model.dart';
 import '../trip_strings_a5.dart';
@@ -10,7 +9,6 @@ import '../utils/trip_day_timeline.dart';
 import '../utils/trip_format.dart';
 import '../utils/trip_summary_text.dart';
 import 'trip_status.dart';
-import 'trip_status_card.dart';
 
 class TripDayChip {
   const TripDayChip(this.status, this.label, {this.taxi = false});
@@ -88,58 +86,23 @@ class TripSummaryDayCard extends StatelessWidget {
     final d = day;
     final date = d.date == null ? null : TripFormat.shortDate(d.date!);
     final chips = [?stay, ?taxi];
-    return TripStatusCard(
-      status: TripDisplayStatus.none,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            d.city == null ? TripStringsA5.dayHeading(d.day, date) : TripStringsV2Easy.dayInCity(d.day, d.city!),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 14, fontWeight: FontWeight.w700, color: TripLook.textDark),
-          ),
-          if (d.city != null && date != null) _sub(date),
-          if (d.minutes > 0) _sub(TripStringsA5.aboutDuration(TripFormat.duration(d.minutes))),
-          const SizedBox(height: 6),
-          for (var i = 0; i < d.spots.length; i++)
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SizedBox(
-                    width: 22,
-                    child: Text('${i + 1}',
-                        style: const TextStyle(
-                            fontFamily: FitnessAppTheme.fontName, fontSize: 12, fontWeight: FontWeight.w700, color: TripLook.accentDark)),
-                  ),
-                  if (d.hasTimes)
-                    Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: Text(TripDayTimeline.clock(d.starts[i]),
-                          style: const TextStyle(
-                              fontFamily: FitnessAppTheme.fontName, fontSize: 12, fontWeight: FontWeight.w600, color: TripLook.textMedium)),
-                    ),
-                  Expanded(
-                    child: Text(d.spots[i],
-                        style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12.5, color: TripLook.textDark)),
-                  ),
-                ],
-              ),
-            ),
-          if (chips.isNotEmpty) ...[
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [for (final c in chips) TripStatusPill(c.status, taxi: c.taxi, label: c.label)],
-            ),
-          ],
-        ],
-      ),
+    final title = d.city == null ? TripStringsA5.dayHeading(d.day, date) : TripStringsV2Easy.dayInCity(d.day, d.city!);
+    final spots = [
+      for (var i = 0; i < d.spots.length; i++) d.hasTimes ? '${TripDayTimeline.clock(d.starts[i])} ${d.spots[i]}' : d.spots[i],
+    ];
+    final lines = [
+      if (d.city != null && date != null) date,
+      if (spots.isNotEmpty) spots.join(' › '),
+      if (d.minutes > 0) TripStringsA5.aboutDuration(TripFormat.duration(d.minutes)),
+    ];
+    return WideCard(
+      tone: ListingTone.indigo,
+      art: d.day.isOdd ? ListingArt.sunrise : ListingArt.mountain,
+      title: title,
+      subtitle: lines.join('\n'),
+      chips: [for (final c in chips) c.label],
+      reserveChips: false,
+      showPrice: false,
     );
   }
-
-  Widget _sub(String t) => Text(t, style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, color: TripLook.textMedium));
 }

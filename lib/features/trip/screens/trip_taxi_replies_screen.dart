@@ -1,8 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:bakhli/features/trip/widgets/trip_ui.dart';
 import 'package:bakhli/design/design.dart';
-import 'package:bakhli/design/extra/replies_kit.dart';
+import 'package:bakhli/design/extra/ext_trip_replies.dart';
 import 'package:get/get.dart';
 import '../../../models/browse_item.dart';
 import '../../../utils/contact_launcher.dart';
@@ -12,14 +11,13 @@ import '../controllers/trip_plan_controller.dart';
 import '../models/trip_enquiry_model.dart';
 import '../trip_navigation.dart';
 import '../trip_strings.dart';
+import '../trip_strings_rc.dart';
 import '../utils/trip_enquiry_rules.dart';
 import '../utils/trip_format.dart';
 import '../utils/trip_report.dart';
 import '../widgets/trip_cancel_sheet.dart';
 import '../widgets/trip_driver_reply_sheet.dart';
-import '../widgets/trip_payment_line.dart';
 import '../widgets/trip_status.dart';
-import '../widgets/trip_status_card.dart';
 import '../widgets/trip_taxi_booking_sheet.dart';
 import '../widgets/trip_not_found_view.dart';
 import '../widgets/trip_withdraw_sheet.dart';
@@ -34,7 +32,7 @@ class TripTaxiRepliesScreen extends StatefulWidget {
 }
 
 class _TripTaxiRepliesScreenState extends State<TripTaxiRepliesScreen> with TickerProviderStateMixin {
-  late final AnimationController _anim = AnimationController(duration: const Duration(milliseconds: 600), vsync: this);
+  late final AnimationController _anim;
   String _shown = '';
   late final TripPlanController _c;
   late int _day;
@@ -46,6 +44,7 @@ class _TripTaxiRepliesScreenState extends State<TripTaxiRepliesScreen> with Tick
   @override
   void initState() {
     super.initState();
+    _anim = AnimationController(duration: const Duration(milliseconds: 600), vsync: this);
     _c = TripPlanController.to;
     _c.openPages++;
     final args = Get.arguments;
@@ -155,57 +154,53 @@ class _TripTaxiRepliesScreenState extends State<TripTaxiRepliesScreen> with Tick
 
   bool get _readOnly => _c.isReadOnly || _c.isDayPast(_day);
 
+  static final ListingTone _tone = ListingTone.coral;
+  final _menuKeys = <String, GlobalKey>{};
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: FitnessAppTheme.background,
-      body: Column(
-        children: [
-          _buildHeader(context),
-          Expanded(child: _buildBody()),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildHeader(BuildContext context) {
     return Obx(() {
       _c.plan.value;
       final date = _c.dateOf(_day);
-      final sub = [TripStrings.dayN(_day), if (date != null) TripFormat.shortDate(date)].join(' · ');
-      final leg = TripRepliesLegParts.legLine(_c, _day);
-      return ModuleHeader(
+      return RepliesScaffold(
+        tone: _tone,
         title: TripStrings.taxiReplies,
-        subtitle: sub,
-        tone: KitTone.taxi,
-        leadingAsset: TravelIcon.taxi,
+        subtitle: [TripStrings.dayN(_day), if (date != null) TripFormat.shortDate(date)].join(' · '),
+        art: ListingArt.taxi,
+        leg: TripRepliesLegParts.legLine(_c, _day),
         onBack: () => Get.back(),
-        bottom: leg == null ? null : TripRepliesLegParts.legLineText(leg),
-        bottomHeight: leg == null ? 0 : 20,
+        body: _buildBody(),
       );
     });
   }
 
   Widget _scroll(List<Widget> children, String kind) {
     _play(kind);
-    return _scrollView(children);
+    return RefreshIndicator(
+      color: _tone.g2,
+      onRefresh: _c.refreshEnquiries,
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: EdgeInsets.only(bottom: 24 + MediaQuery.paddingOf(context).bottom),
+        children: [
+          for (var i = 0; i < children.length; i++)
+            TemplateEntrance(
+              animation: templateInterval(_anim, i, children.length),
+              animationController: _anim,
+              child: Center(child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 640), child: children[i])),
+            ),
+        ],
+      ),
+    );
   }
 
-  Widget _scrollView(List<Widget> children) => RefreshIndicator(
-        color: RepliesTone.accent,
-        onRefresh: _c.refreshEnquiries,
-        child: ListView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(24, 14, 24, 24),
-          children: [
-            for (var i = 0; i < children.length; i++)
-              TemplateEntrance(
-                animation: templateInterval(_anim, i, children.length),
-                animationController: _anim,
-                child: Center(child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 640), child: children[i])),
-              ),
-          ],
-        ),
+  Widget _error(VoidCallback onRetry) => RepliesEmpty(
+        tone: _tone,
+        art: ListingArt.worldMap,
+        title: TripStrings.couldNotLoad,
+        message: TripStrings.checkConnection,
+        actionLabel: TripStrings.retry,
+        onAction: onRetry,
       );
 
   Widget _buildBody() {
@@ -213,259 +208,171 @@ class _TripTaxiRepliesScreenState extends State<TripTaxiRepliesScreen> with Tick
       if (_c.tripGone.value) return const TripNotFoundView();
       if (_c.plannerOff.value) {
         return _scroll([
-          TripEmpty(
-            asset: TravelIcon.route,
-            title: TripStrings.plannerOff,
-            subtitle: TripStrings.plannerOffSubtitle,
-          ),
+          RepliesEmpty(tone: _tone, art: ListingArt.compass, title: TripStrings.plannerOff, message: TripStrings.plannerOffSubtitle),
         ], 'plannerOff');
       }
       final plan = _c.plan.value;
       _c.enquiryList.length;
       TripEnquiryController.to.busyIds.length;
-      if (plan == null && _c.openFailed.value) {
-        return _scroll([
-          TripEmpty(
-            asset: TravelIcon.map,
-            title: TripStrings.couldNotLoad,
-            subtitle: TripStrings.checkConnection,
-            onRetry: _load,
-            retryLabel: TripStrings.retry,
-          ),
-        ], 'openFailed');
-      }
+      if (plan == null && _c.openFailed.value) return _scroll([_error(_load)], 'openFailed');
       final entries = plan == null ? const <TripEnquiryModel>[] : _entries();
       if (plan == null || (entries.isEmpty && (!_started || _c.enquiriesLoading.value))) {
         _play('loading');
-        return ListView.separated(
-          padding: const EdgeInsets.fromLTRB(24, 14, 24, 24),
-          itemCount: 3,
-          separatorBuilder: (_, _) => const SizedBox(height: 12),
-          itemBuilder: (_, _) => const TemplatePlaceholder(height: 130, radius: 8),
+        return ListView(
+          physics: const NeverScrollableScrollPhysics(),
+          children: const [ReplyCardSkeleton(), ReplyCardSkeleton(), ReplyCardSkeleton()],
         );
       }
-      if (entries.isEmpty && _c.enquiriesFailed.value) {
-        return _scroll([
-          TripEmpty(
-            asset: TravelIcon.map,
-            title: TripStrings.couldNotLoad,
-            subtitle: TripStrings.checkConnection,
-            onRetry: _c.refreshEnquiries,
-            retryLabel: TripStrings.retry,
-          ),
-        ], 'failed');
-      }
+      if (entries.isEmpty && _c.enquiriesFailed.value) return _scroll([_error(_c.refreshEnquiries)], 'failed');
       if (entries.isEmpty) {
         return _scroll([
-          TripEmpty(
-            asset: TravelIcon.place,
+          RepliesEmpty(
+            tone: _tone,
+            art: ListingArt.roundPushpin,
             title: TripStrings.noTaxiReplies,
-            subtitle: TripStrings.driversReply,
+            message: TripStrings.driversReply,
+            actionLabel: _readOnly ? null : TripStrings.findAnotherTaxi,
+            actionArt: ListingArt.taxi,
+            onAction: () => TripNavigation.openTaxi(),
           ),
-          if (!_readOnly) ...[
-            const SizedBox(height: 16),
-            _findTaxiButton(),
-          ],
         ], 'empty');
       }
       return _scroll([
-        for (final e in entries) ...[
-          _card(e),
-          const SizedBox(height: 12),
-        ],
-        const Padding(
-          padding: EdgeInsets.only(top: 4),
-          child: TripPaymentLine(text: TripStrings.taxiPayLine),
-        ),
+        for (var i = 0; i < entries.length; i++) _card(entries[i]),
+        const PayLine3D(TripStrings.taxiPayLine, art: ListingArt.moneyBag),
       ], 'list');
     });
   }
-
-  Widget _findTaxiButton() => Align(
-        child: SizedBox(
-          width: 220,
-          child: TripActionChip(
-            iconAsset: TravelIcon.taxi,
-            label: TripStrings.findAnotherTaxi,
-            onTap: () => TripNavigation.openTaxi(),
-          ),
-        ),
-      );
 
   String _statusLine(TripEnquiryModel e) {
     final t = e.taxi;
     return switch (e.display) {
       TripDisplayStatus.asked => TripStrings.askedAgo(_ago(e.createdAt)),
       TripDisplayStatus.fareSent => TripStrings.repliedFare(_inr(t?.driverFare), _inr(TripLeadFormat.listedTotal(e))),
-      TripDisplayStatus.bookedByYou =>
-        [TripStrings.bookedByYou, _inr(t?.agreedFare)].where((s) => s.isNotEmpty).join(' · '),
-      TripDisplayStatus.confirmedByBoth =>
-        _inr(t?.agreedFare).isEmpty ? TripStrings.bookedByYou : TripStrings.bothFare(_inr(t?.agreedFare)),
+      TripDisplayStatus.bookedByYou => [TripStrings.bookedByYou, _inr(t?.agreedFare)].where((s) => s.isNotEmpty).join(' · '),
+      TripDisplayStatus.confirmedByBoth => _inr(t?.agreedFare).isEmpty ? TripStrings.bookedByYou : TripStrings.bothFare(_inr(t?.agreedFare)),
       _ => TripLeadFormat.dates(e),
     };
   }
 
-  Widget _card(TripEnquiryModel e) {
-    final status = e.display;
-    final now = DateTime.now();
-    final note = (e.taxi?.driverNote ?? '').trim();
-    final closes = status == TripDisplayStatus.asked && e.expiresAt != null
-        ? TripStrings.closesIn(TripEnquiryRules.closesInLabel(e.expiresAt!, now))
-        : null;
-    final other = _c
-        .taxiEnquiriesForDay(_day)
-        .where((x) => x.id != e.id && x.listingId != e.listingId && x.display.isOpen && x.listingName.isNotEmpty)
-        .map((x) => x.listingName)
-        .firstOrNull;
-    return TripStatusCard(
-      key: ValueKey('taxi-reply-${e.id}'),
-      status: status,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  TripLeadFormat.driver(e),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                      fontFamily: FitnessAppTheme.fontName, fontSize: 14, fontWeight: FontWeight.w700, color: FitnessAppTheme.darkerText),
-                ),
-              ),
-              if (e.isUrgent && status == TripDisplayStatus.asked) ...[
-                const SizedBox(width: 6),
-                _urgentPill(),
-              ],
-              _overflow(e),
-            ],
-          ),
-          Wrap(
-            spacing: 8,
-            runSpacing: 6,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [TripStatusPill(status, taxi: true)],
-          ),
-          const SizedBox(height: 6),
-          Text(_statusLine(e),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12.5, color: FitnessAppTheme.lightText)),
-          if (TripRepliesLegParts.wrongCityStrip(context, _c, e) case final w?) w,
-          if (TripRepliesLegParts.oldDatesCard(_c, e) case final o?) o,
-          if (status == TripDisplayStatus.fareSent && note.isNotEmpty) ...[
-            const SizedBox(height: 2),
-            Text(note,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, color: FitnessAppTheme.deactivatedText)),
-          ],
-          if (closes != null) ...[
-            const SizedBox(height: 2),
-            Text(closes,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 11.5, color: FitnessAppTheme.deactivatedText)),
-          ],
-          if (status.isRed && other != null) ...[
-            const SizedBox(height: 4),
-            Text(TripStrings.driverAlsoGot(other),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, color: FitnessAppTheme.deactivatedText)),
-          ],
-          const SizedBox(height: 12),
-          _actions(e),
-        ],
-      ),
-    );
+  ({String? cap, String number, String? unit}) _price(TripEnquiryModel e) {
+    final t = e.taxi;
+    final days = TripLeadFormat.dayCount(e);
+    final unit = days == 1 ? TripStringsRc.oneDay : '$days ${TripStringsRc.days}';
+    final agreed = t?.agreedFare;
+    if ((e.display == TripDisplayStatus.bookedByYou || e.display == TripDisplayStatus.confirmedByBoth) && agreed != null && agreed > 0) {
+      return (cap: TripStrings.agreed, number: _inr(agreed), unit: unit);
+    }
+    final fare = t?.driverFare;
+    if (fare != null && fare > 0) return (cap: TripStrings.fare, number: _inr(fare), unit: unit);
+    final rate = t?.listedRate;
+    if (rate != null && rate > 0) return (cap: TripStrings.listedLabel, number: _inr(rate), unit: TripStringsRc.perDay);
+    return (cap: TripStrings.dates, number: '$days', unit: unit);
   }
 
-  Widget _urgentPill() => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-        decoration: BoxDecoration(color: RepliesTone.badSurface, borderRadius: BorderRadius.circular(999)),
-        child: const Text(TripStrings.urgent,
-            style: TextStyle(
-                fontFamily: FitnessAppTheme.fontName, fontSize: 11, fontWeight: FontWeight.w700, color: RepliesTone.bad)),
-      );
+  (String?, String) _note(TripEnquiryModel e) {
+    final status = e.display;
+    final now = DateTime.now();
+    final lines = <String>[];
+    String art = ListingArt.taxi;
+    void add(String t, String a) {
+      if (lines.isEmpty) art = a;
+      lines.add(t);
+    }
 
-  Widget _overflow(TripEnquiryModel e) => SizedBox(
-        width: 44,
-        height: 44,
-        child: PopupMenuButton<int>(
-          padding: EdgeInsets.zero,
-          icon: const Icon(Icons.more_vert_rounded, color: FitnessAppTheme.deactivatedText, size: 20),
-          shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(16))),
-          onSelected: (_) => _report(e),
-          itemBuilder: (_) => const [
-            PopupMenuItem(
-              value: 0,
-              child: Row(
-                children: [
-                  TravelIcon(TravelIcon.note, size: 18),
-                  SizedBox(width: 10),
-                  Text(TripStrings.report, style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 13, color: RepliesTone.bad)),
-                ],
-              ),
-            ),
-          ],
-        ),
-      );
+    if (TripRepliesLegParts.wrongCityNote(context, _c, e) case final w?) add(w.text, ListingArt.roundPushpin);
+    if (TripRepliesLegParts.oldDatesNote(_c, e) case final o?) add(o.text, ListingArt.calendar);
+    final note = (e.taxi?.driverNote ?? '').trim();
+    if (status == TripDisplayStatus.fareSent && note.isNotEmpty) add('"$note"', ListingArt.speechBalloon);
+    if (status == TripDisplayStatus.asked && e.expiresAt != null) add(TripStrings.closesIn(TripEnquiryRules.closesInLabel(e.expiresAt!, now)), ListingArt.calendar);
+    if (lines.isNotEmpty) return (lines.join('\n'), art);
+    if (status.isRed) {
+      final other = _c
+          .taxiEnquiriesForDay(_day)
+          .where((x) => x.id != e.id && x.listingId != e.listingId && x.display.isOpen && x.listingName.isNotEmpty)
+          .map((x) => x.listingName)
+          .firstOrNull;
+      if (other != null) return (TripStrings.driverAlsoGot(other), ListingArt.taxi);
+      return (null, ListingArt.taxi);
+    }
+    return (TripStrings.taxiPayLine, ListingArt.moneyBag);
+  }
 
-  Widget _actions(TripEnquiryModel e) {
+  List<ReplyRow> _rows(TripEnquiryModel e, ({String? cap, String number, String? unit}) price) {
+    final pickup = TripLeadFormat.pickup(e);
+    final people = TripLeadFormat.people(e);
+    final listed = TripLeadFormat.listedTotal(e) ?? 0;
+    final rows = <ReplyRow>[
+      ReplyRow(TripStrings.dates, TripLeadFormat.dates(e)),
+      if (pickup.isNotEmpty) ReplyRow(TripStrings.pickup, pickup),
+      if (people != null) ReplyRow(TripStrings.people, people),
+      ReplyRow(TripStrings.days, price.unit ?? ''),
+      if (listed > 0) ReplyRow(TripStrings.listedLabel, _inr(listed)),
+    ];
+    return rows.take(3).toList();
+  }
+
+  Widget _card(TripEnquiryModel e) {
     final status = e.display;
     final busy = TripEnquiryController.to.busyIds.contains(e.id);
     final phone = e.owner.phone;
     final canCall = phone != null && ContactLauncher.tenDigits(phone).isNotEmpty;
-    final whatsApp = e.owner.whatsApp ?? phone;
-    final canChat = whatsApp != null && ContactLauncher.tenDigits(whatsApp).isNotEmpty;
-    final day = _c.firstPlanDayOf(e) ?? _day;
-    final buttons = <Widget>[];
-    void add(Object icon, String label, VoidCallback? onTap, {Color color = RepliesTone.accent}) =>
-        buttons.add(TripActionChip(
-            iconAsset: icon is String ? icon : null,
-            icon: icon is IconData ? icon : null,
-            label: label,
-            color: color,
-            onTap: busy ? null : onTap));
     final live = status == TripDisplayStatus.asked ||
         status == TripDisplayStatus.fareSent ||
         status == TripDisplayStatus.bookedByYou ||
         status == TripDisplayStatus.confirmedByBoth;
-    if (live && canCall) add(Icons.call_rounded, TripStrings.call, () => ContactLauncher.call(phone));
-    if (live && canChat) {
-      add(TravelIcon.chat, TripStrings.whatsApp,
-          () => ContactLauncher.whatsApp(whatsApp, message: _c.whatsAppMessage(day, TripLeadFormat.driver(e))),
-          color: RepliesTone.good);
+    final booked = status == TripDisplayStatus.bookedByYou || status == TripDisplayStatus.confirmedByBoth;
+    final open = status == TripDisplayStatus.asked || status == TripDisplayStatus.fareSent;
+    VoidCallback? act(bool on, VoidCallback f) => busy || !on ? null : f;
+    final price = _price(e);
+    final (noteText, noteArt) = _note(e);
+    final menuKey = _menuKeys.putIfAbsent(e.id, () => GlobalKey());
+    final noteData = TripRepliesLegParts.wrongCityNote(context, _c, e);
+
+    final ReplyAction primary;
+    if (booked) {
+      primary = ReplyAction(label: TripStrings.editBooking, onTap: act(!_readOnly, () => _book(e)));
+    } else if (open) {
+      primary = ReplyAction(label: TripStrings.iBooked, onTap: act(!_readOnly, () => _book(e)));
+    } else {
+      primary = ReplyAction(label: TripStrings.askAnother, onTap: act(!_readOnly && status.isRed, () => TripNavigation.openTaxi()));
     }
-    switch (status) {
-      case _ when _readOnly:
-        break;
-      case TripDisplayStatus.asked:
-        add(TravelIcon.checkout, TripStrings.iBooked, () => _book(e));
-        add(Icons.undo_rounded, TripStrings.withdraw, () => TripWithdrawSheet.show(context, enquiry: e), color: RepliesTone.bad);
-      case TripDisplayStatus.fareSent:
-        add(TravelIcon.note, TripStrings.viewLead, () => TripDriverReplySheet.show(context, enquiry: e));
-        add(TravelIcon.checkout, TripStrings.iBooked, () => _book(e));
-        add(Icons.undo_rounded, TripStrings.withdraw, () => TripWithdrawSheet.show(context, enquiry: e), color: RepliesTone.bad);
-      case TripDisplayStatus.bookedByYou || TripDisplayStatus.confirmedByBoth:
-        add(TravelIcon.note, TripStrings.editBooking, () => _book(e));
-        add(Icons.close_rounded, TripStrings.cancelBooking,
-            () => TripCancelSheet.show(context, enquiry: e, ownerSide: false),
-            color: RepliesTone.bad);
-      default:
-        if (status.isRed) add(TravelIcon.taxi, TripStrings.askAnother, () => TripNavigation.openTaxi());
-    }
-    if (buttons.isEmpty) return const SizedBox.shrink();
-    return LayoutBuilder(builder: (context, box) {
-      final w = box.maxWidth;
-      final half = w >= 340 ? (w - 8) / 2 : w;
-      return Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        children: [for (final b in buttons) SizedBox(width: half, child: b)],
-      );
-    });
+    final menu = <MenuItem3D>[
+      if (open && !_readOnly)
+        MenuItem3D(label: TripStrings.withdraw, art: ListingArt.clipboard, danger: true, onTap: act(true, () => TripWithdrawSheet.show(context, enquiry: e))),
+      if (booked && !_readOnly)
+        MenuItem3D(
+          label: TripStrings.cancelBooking,
+          art: ListingArt.calendar,
+          danger: true,
+          onTap: act(true, () => TripCancelSheet.show(context, enquiry: e, ownerSide: false)),
+        ),
+      MenuItem3D(label: TripStrings.report, art: ListingArt.roundPushpin, danger: true, onTap: () => _report(e)),
+    ];
+    return ReplyCard3D(
+      key: ValueKey('taxi-reply-${e.id}'),
+      status: StatusTone3D.of(status.name),
+      art: ListingArt.taxi,
+      pill: TripStatusVisuals.label(status, taxi: true),
+      urgent: e.isUrgent && status == TripDisplayStatus.asked,
+      title: TripLeadFormat.driver(e),
+      statusLine: _statusLine(e),
+      cap: price.cap,
+      number: price.number,
+      unit: price.unit,
+      menuKey: menuKey,
+      onMenu: () => showReplyMenu(menuKey, menu),
+      rows: _rows(e, price),
+      note: noteText,
+      noteArt: noteArt,
+      noteAction: noteData?.actionLabel,
+      onNoteAction: noteData?.onAction,
+      primary: busy ? ReplyAction(label: primary.label, busy: true) : primary,
+      secondary: [
+        ReplyAction(label: TripStrings.call, onTap: act(live && canCall, () => ContactLauncher.call(phone!))),
+        ReplyAction(label: TripStrings.viewLead, onTap: act(!_readOnly && status == TripDisplayStatus.fareSent, () => TripDriverReplySheet.show(context, enquiry: e))),
+      ],
+    );
   }
 }
+

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../config/module_palette.dart';
 import '../design/design.dart';
+import 'location_switch_sheet.dart';
 
 class EmptyRadiusHint extends StatefulWidget {
   final String label;
@@ -21,6 +22,7 @@ class _EmptyRadiusHintState extends State<EmptyRadiusHint> with TickerProviderSt
   late final AnimationController _controller;
   late final AnimationController _entrance;
   late final Animation<double> _scale;
+  late final ListingTone _tone = moduleToneFor(widget.palette);
 
   @override
   void initState() {
@@ -62,21 +64,18 @@ class _EmptyRadiusHintState extends State<EmptyRadiusHint> with TickerProviderSt
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              padding: EdgeInsets.symmetric(horizontal: 12 * scale, vertical: 7 * scale),
-              decoration: GateKit.pill(),
+              padding: EdgeInsets.fromLTRB(8 * scale, 6 * scale, 14 * scale, 6 * scale),
+              decoration: BoxDecoration(
+                color: DesignColors.surface,
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [BoxShadow(color: _tone.shadow, offset: const Offset(1.1, 4), blurRadius: 10)],
+              ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.search_off_rounded, size: 14 * scale, color: PickKit.warn),
-                  SizedBox(width: 6 * scale),
-                  Text(
-                    widget.label,
-                    style: FitnessAppTheme.caption.copyWith(
-                      fontSize: 11 * scale,
-                      fontWeight: FontWeight.w600,
-                      color: FitnessAppTheme.darkText,
-                    ),
-                  ),
+                  ExcludeSemantics(child: Art3D(asset: ListingArt.worldMap, size: 26 * scale, shadowBlur: 2, shadowOffset: const Offset(2, 3), shadowAlpha: 0.25)),
+                  SizedBox(width: 8 * scale),
+                  Text(widget.label, style: Ink3D.text(12 * scale, FontWeight.w600, Ink3D.title)),
                 ],
               ),
             ),
@@ -84,7 +83,7 @@ class _EmptyRadiusHintState extends State<EmptyRadiusHint> with TickerProviderSt
               offset: Offset(0, -5 * scale),
               child: Transform.rotate(
                 angle: 0.7854,
-                child: Container(width: 9 * scale, height: 9 * scale, color: FitnessAppTheme.white),
+                child: Container(width: 9 * scale, height: 9 * scale, color: DesignColors.surface),
               ),
             ),
           ],

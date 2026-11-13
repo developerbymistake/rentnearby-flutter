@@ -237,11 +237,11 @@ void main() {
       await tester.tap(find.text('Done'));
       await tester.pump();
       await tester.pump(const Duration(seconds: 1));
-      expect(find.text('Yes, send to all'), findsOneWidget);
+      expect(find.text('Send to all'), findsOneWidget);
       await TripShortlistFlow.done(ctx, step: 'stay:1', taxi: false, send: () async => null);
       await tester.pump();
-      expect(find.text('Yes, send to all'), findsOneWidget);
-      await tester.tap(find.text('Yes, send to all'));
+      expect(find.text('Send to all'), findsOneWidget);
+      await tester.tap(find.text('Send to all'));
       await tester.pump();
       expect(c.isSending('stay:1'), isTrue);
       await TripShortlistFlow.done(ctx, step: 'stay:1', taxi: false, send: () async => null);

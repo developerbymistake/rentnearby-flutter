@@ -1,6 +1,6 @@
 import 'package:bakhli/design/design.dart';
 import 'package:flutter/material.dart';
-import 'package:bakhli/features/trip/widgets/trip_ui.dart';
+import 'package:bakhli/design/extra/ext_trip_replies.dart';
 import '../models/trip_enquiry_model.dart';
 import '../trip_strings.dart';
 import '../trip_navigation.dart';
@@ -40,43 +40,15 @@ class _ResultBody extends StatelessWidget {
   final bool taxi;
   final bool shortlist;
 
-  Widget _row(String name, String label, bool ok, {String? sub}) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 6),
-        child: Row(
-          children: [
-            TravelIcon(ok ? TravelIcon.star : TravelIcon.note, size: 20),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                          fontFamily: FitnessAppTheme.fontName, fontSize: 13, fontWeight: FontWeight.w600, color: DesignColors.textStrong)),
-                  if (sub != null)
-                    Text(sub,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 11.5, color: DesignColors.textSecondary)),
-                ],
-              ),
-            ),
-            const SizedBox(width: 8),
-            Flexible(
-              child: Text(label,
-                  maxLines: 2,
-                  textAlign: TextAlign.end,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                      fontFamily: FitnessAppTheme.fontName,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: ok ? TripUi.goodDark : DesignColors.textSecondary)),
-            ),
-          ],
-        ),
+  ListingTone get _tone => taxi ? ListingTone.coral : ListingTone.forest;
+
+  Widget _back(BuildContext context) => GradientPillButton(
+        tone: _tone,
+        label: TripStringsV2Easy.sentBack,
+        onTap: () {
+          Navigator.pop(context);
+          TripNavigation.backToPlan();
+        },
       );
 
   Widget _shortlistBody(BuildContext context) {
@@ -85,30 +57,21 @@ class _ResultBody extends StatelessWidget {
     final nothing = sentCount == 0;
     final byListing = {for (final e in batch.items) e.listingId: e};
     return TripSheetFrame(
+      tone: _tone,
+      art: nothing ? ListingArt.clipboard : ListingArt.star,
+      size: SheetSize.confirm,
       title: nothing ? TripStringsA5.couldNotSend : TripStringsShortlist.sentTitle(sentCount),
       description: nothing ? TripStringsA5.couldNotSendSub : TripStringsShortlist.sentBody(sentCount, taxi: taxi),
+      footer: _back(context),
       children: [
-        TemplateStagger(children: [
-          Column(children: [
-            for (final r in results)
-              _row(
-                names[r.listingId] ?? byListing[r.listingId]?.listingName ?? (taxi ? TripStringsShortlist.taxiFallback : TripStrings.stay),
-                TripStringsShortlist.statusLabel(r.status),
-                r.ok,
-              ),
-          ]),
-          const SizedBox(height: 16),
-          TripButton(
-            label: TripStringsV2Easy.sentBack,
-            height: 52,
-            gradient: taxi ? KitTone.taxi.gradient : KitTone.stay.gradient,
-            shadowColor: taxi ? TripUi.taxi : TripUi.stay,
-            onPressed: () {
-              Navigator.pop(context);
-              TripNavigation.backToPlan();
-            },
+        for (var i = 0; i < results.length; i++)
+          ResultRow3D(
+            art: results[i].ok ? ListingArt.star : ListingArt.clipboard,
+            title: names[results[i].listingId] ?? byListing[results[i].listingId]?.listingName ?? (taxi ? TripStringsShortlist.taxiFallback : TripStrings.stay),
+            label: TripStringsShortlist.statusLabel(results[i].status),
+            ok: results[i].ok,
+            divider: i < results.length - 1,
           ),
-        ]),
       ],
     );
   }
@@ -116,40 +79,39 @@ class _ResultBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (shortlist) return _shortlistBody(context);
-    return TripSheetFrame(
-      title: batch.items.isEmpty
-          ? TripStringsA5.couldNotSend
-          : (taxi ? TripStringsV2Easy.sentToDrivers(batch.items.length) : TripStringsV2Easy.sentTo(batch.items.length)),
-      description: batch.items.isEmpty ? TripStringsA5.couldNotSendSub : TripStringsV2Easy.replyWillShow,
-      footer: batch.items.isEmpty
-          ? null
-          : Text(taxi ? TripStringsV2Easy.driverNotify : TripStringsV2Easy.hostNotify,
-              style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 11, color: DesignColors.textSecondary, height: 1.35)),
-      children: [
-        TemplateStagger(children: [
-          Column(children: [
-        for (final e in batch.items)
-          _row(e.listingName, TripStrings.sent, true,
-              sub: !taxi && e.checkIn != null && e.checkOut != null ? TripFormat.dayMonthRange(e.checkIn!, e.checkOut!) : null),
-        for (final s in batch.skipped)
-          _row(names[s.listingId] ?? TripStrings.stay, TripSendResultSheet.reasonLabel(s.reason), false),
-          ]),
-          const SizedBox(height: 16),
-          TripButton(
-          label: TripStringsV2Easy.sentBack,
-          height: 52,
-          gradient: taxi ? KitTone.taxi.gradient : KitTone.stay.gradient,
-          shadowColor: taxi ? TripUi.taxi : TripUi.stay,
-          onPressed: () {
-            Navigator.pop(context);
-            TripNavigation.backToPlan();
-          },
+    final empty = batch.items.isEmpty;
+    final rows = <Widget>[
+      for (final e in batch.items)
+        ResultRow3D(
+          art: ListingArt.star,
+          title: e.listingName,
+          subtitle: !taxi && e.checkIn != null && e.checkOut != null ? TripFormat.dayMonthRange(e.checkIn!, e.checkOut!) : null,
+          label: TripStrings.sent,
         ),
-          if (batch.items.isNotEmpty)
-          Center(
-            child: TextLink(label: taxi ? TripStringsV2Easy.askMoreDrivers : TripStringsV2Easy.askMoreStays, onTap: () => Navigator.pop(context), tone: KitTone.trip),
-          ),
-        ]),
+      for (final s in batch.skipped)
+        ResultRow3D(art: ListingArt.clipboard, title: names[s.listingId] ?? TripStrings.stay, label: TripSendResultSheet.reasonLabel(s.reason), ok: false),
+    ];
+    return TripSheetFrame(
+      tone: _tone,
+      art: empty ? ListingArt.clipboard : ListingArt.star,
+      size: SheetSize.confirm,
+      title: empty ? TripStringsA5.couldNotSend : (taxi ? TripStringsV2Easy.sentToDrivers(batch.items.length) : TripStringsV2Easy.sentTo(batch.items.length)),
+      description: empty ? TripStringsA5.couldNotSendSub : TripStringsV2Easy.replyWillShow,
+      footnote: empty ? null : (taxi ? TripStringsV2Easy.driverNotify : TripStringsV2Easy.hostNotify),
+      footer: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _back(context),
+          if (!empty) ...[
+            const SizedBox(height: 10),
+            WhitePillButton(tone: _tone, label: taxi ? TripStringsV2Easy.askMoreDrivers : TripStringsV2Easy.askMoreStays, onTap: () => Navigator.pop(context)),
+          ],
+        ],
+      ),
+      children: [
+        const SizedBox(height: 4),
+        ...rows,
       ],
     );
   }

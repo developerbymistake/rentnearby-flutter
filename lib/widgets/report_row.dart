@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:bakhli/design/design.dart';
 import 'package:bakhli/design/extra/chat_kit.dart';
-import 'package:bakhli/design/extra/replies_kit.dart';
+import 'package:bakhli/design/extra/ext_reports.dart';
 import '../models/listing_report_model.dart';
 import '../utils/app_date_format.dart';
 import '../utils/listing_kind_visuals.dart';
@@ -24,31 +24,19 @@ class ReportRow extends StatelessWidget {
     );
   }
 
-  static String iconOf(String listingType) => switch (listingType) {
-        'Stay' => TravelIcon.stay,
-        'Taxi' => TravelIcon.taxi,
-        'Job' => TravelIcon.luggage,
-        _ => TravelIcon.note,
-      };
+  static String iconOf(String listingType) => Report3D.art(listingType);
 
   @override
   Widget build(BuildContext context) {
     final r = report;
-    final isPending = r.status == 'Pending';
-    return ListRow(
+    return ReportCard3D(
+      tone: Report3D.tone(r.listingType),
+      art: iconOf(r.listingType),
+      eyebrow: showKind ? '${ListingKindVisuals.labelOf(r.listingType)} REPORT' : null,
       title: r.reasonName,
       subtitle: 'Filed ${AppDateFormat.date(r.createdAt)}',
-      tag: showKind ? ListingKindVisuals.labelOf(r.listingType) : null,
-      tone: toneOf(r.listingType),
-      iconAsset: iconOf(r.listingType),
-      showChevron: false,
+      status: r.status,
       onTap: onTap,
-      trailing: ChatPill(
-        label: r.status,
-        fill: isPending ? RepliesTone.warnSurface : RepliesTone.goodSurface,
-        color: isPending ? DesignColors.warnDeep : DesignColors.goodDeep,
-        size: 11,
-      ),
     );
   }
 }

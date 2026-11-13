@@ -2,10 +2,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:bakhli/design/design.dart';
-import 'package:bakhli/design/extra/kit_tone.dart';
-import 'package:bakhli/design/extra/module_header.dart';
-import 'package:bakhli/design/extra/trip_plan_look.dart';
-import '../../../config/app_insets.dart';
+import 'package:bakhli/design/extra/ext_taxi_owner.dart';
 import '../../../controllers/auth_controller.dart';
 import '../../../models/browse_item.dart';
 import '../../../utils/app_toast.dart';
@@ -13,10 +10,8 @@ import '../../../utils/contact_launcher.dart';
 import '../../../widgets/trip_report_traveller_sheet.dart';
 import '../../trip/models/trip_enquiry_model.dart';
 import '../../trip/trip_strings.dart';
-import '../../trip/widgets/trip_payment_line.dart';
 import '../../../widgets/notification_off_banner.dart';
 import '../../trip/widgets/trip_status.dart';
-import '../../trip/widgets/trip_status_card.dart';
 import '../../stay/stay_strings_fin_c1.dart';
 import '../setup/taxi_setup_controller.dart';
 import 'journey_leg_tag.dart';
@@ -113,18 +108,33 @@ class _TripLeadsScreenState extends State<TripLeadsScreen> with WidgetsBindingOb
     if (_scroll.position.pixels >= _scroll.position.maxScrollExtent - 300) _ctrl.loadMore();
   }
 
+
+  static final ListingTone _tone = ListingTone.coral;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: DesignColors.scaffold,
-      body: Column(children: [
-        _enter(0, 3, _header(), ),
-        const NotificationOffBanner(),
-        _enter(1, 3, _chips()),
-        Obx(() => Get.find<AuthController>().taxisEnabled ? const SizedBox.shrink() : _pausedNote()),
-        Expanded(child: Obx(_body)),
-        _footer(),
-      ]),
+      backgroundColor: ListingPalette.coral.page,
+      body: KitStatusBar(
+        lightIcons: false,
+        child: SafeArea(
+          bottom: false,
+          child: Column(children: [
+            _enter(0, 3, _header()),
+            const NotificationOffBanner(),
+            Expanded(
+              child: LayoutBuilder(
+                builder: (context, box) => Column(children: [
+                  _enter(1, 3, _chips(compact: box.maxHeight < _compactBelow)),
+                  Obx(() => Get.find<AuthController>().taxisEnabled ? const SizedBox.shrink() : _pausedNote()),
+                  Expanded(child: Obx(_body)),
+                ]),
+              ),
+            ),
+          ]),
+        ),
+      ),
+      bottomNavigationBar: const TaxiPayBar(text: TripStrings.taxiPayLine),
     );
   }
 
@@ -134,17 +144,33 @@ class _TripLeadsScreenState extends State<TripLeadsScreen> with WidgetsBindingOb
         final sub = name != null && name.isNotEmpty
             ? StayFinStrings.taxiSubtitle(name)
             : [t?.plateDisplay ?? '', t?.vehicleTypeName ?? ''].where((s) => s.isNotEmpty).join(' · ');
-        return ModuleHeader(
+        return PageHeader3D(
+          tone: _tone,
           title: TripStrings.tripLeads,
           subtitle: sub.isEmpty ? null : sub,
-          tone: KitTone.taxi,
+          art: ListingArt.taxi,
+          inlineTitle: true,
           onBack: () => Get.back(),
-          leadingAsset: TravelIcon.taxi,
-          autoHeight: true,
         );
       });
 
-  Widget _chips() {
+  static const _bucketLook = {
+    TripLeadBucket.newOnes: ListingArt.speechBalloon,
+    TripLeadBucket.replied: ListingArt.clipboard,
+    TripLeadBucket.booked: ListingArt.calendar,
+    TripLeadBucket.closed: ListingArt.key,
+  };
+
+  static ListingTone _bucketTone(String key) => switch (key) {
+        TripLeadBucket.replied => ListingTone.cB,
+        TripLeadBucket.booked => ListingTone.teal,
+        TripLeadBucket.closed => ListingTone.cD,
+        _ => ListingTone.cA,
+      };
+
+  static const double _compactBelow = 480;
+
+  Widget _chips({required bool compact}) {
     return Obx(() {
       final selected = _ctrl.bucket.value;
       final n = _ctrl.newCount.value;
@@ -154,46 +180,47 @@ class _TripLeadsScreenState extends State<TripLeadsScreen> with WidgetsBindingOb
         TripLeadBucket.booked: TripStrings.bookedChip,
         TripLeadBucket.closed: TripStrings.closedChip,
       };
+      Widget chip(String key) => TaxiBucketChip(
+            tone: _bucketTone(key),
+            art: _bucketLook[key]!,
+            label: labels[key]!,
+            selected: selected == key,
+            onTap: () => _ctrl.selectBucket(key),
+            compact: compact,
+          );
+      const all = TripLeadBucket.all;
+      if (compact) {
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(18, 10, 18, 6),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                for (var i = 0; i < all.length; i++) ...[if (i > 0) const SizedBox(width: 8), chip(all[i])],
+              ]),
+            ),
+          ),
+        );
+      }
       return Padding(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-        child: Align(
-          alignment: Alignment.centerLeft,
-          child: Wrap(spacing: 8, runSpacing: 8, children: [
-            for (final key in TripLeadBucket.all)
-              PickChip(
-                label: labels[key]!,
-                selected: selected == key,
-                activeColor: DesignColors.primary,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                onTap: () => _ctrl.selectBucket(key),
-              ),
-          ]),
-        ),
+        padding: const EdgeInsets.fromLTRB(18, 8, 18, 4),
+        child: Column(children: [
+          for (var r = 0; r < all.length; r += 2) ...[
+            if (r > 0) const SizedBox(height: 8),
+            Row(children: [
+              Expanded(child: chip(all[r])),
+              const SizedBox(width: 12),
+              Expanded(child: r + 1 < all.length ? chip(all[r + 1]) : const SizedBox.shrink()),
+            ]),
+          ],
+        ]),
       );
     });
   }
 
-  Widget _pausedNote() => Padding(
-        padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
-        child: Container(
-          width: double.infinity,
-          decoration: journeyBarCard(TripLook.warning),
-          child: ClipRRect(
-            borderRadius: TripLook.softRadius,
-            child: Container(
-              padding: const EdgeInsets.all(12),
-              decoration: const BoxDecoration(border: Border(left: BorderSide(color: TripLook.warning, width: 4))),
-              child: Text(TripStrings.pausedTaxiHere,
-                  style: FitnessAppTheme.body2.copyWith(fontSize: 12, color: DesignColors.textPrimary)),
-            ),
-          ),
-        ),
-      );
-
-  Widget _footer() => Padding(
-        padding: EdgeInsets.fromLTRB(16, 8, 16, AppInsets.bottomViewPadding(context) + 10),
-        child: const TripPaymentLine(text: TripStrings.taxiPayLine),
-      );
+  Widget _pausedNote() => Banner3D(kind: BannerKind.warn, art: ListingArt.calendar, title: TripStrings.pausedTaxiHere);
 
   Widget _column(Widget child) => Align(
         alignment: Alignment.topCenter,
@@ -207,6 +234,14 @@ class _TripLeadsScreenState extends State<TripLeadsScreen> with WidgetsBindingOb
         _ => TripStrings.noLeads,
       };
 
+  static double _tallNeed(BuildContext context, bool action) {
+    final w = MediaQuery.sizeOf(context).width;
+    final s = MediaQuery.textScalerOf(context);
+    final art = w < 340 ? 150.0 : 186.0;
+    final lines = w < 340 || s.scale(1) > 1.15 ? 3 : 2;
+    return 100 + art - 66 + s.scale(30) + 6 + s.scale(21) * lines + 34 + (action ? 78 : 0) + 24;
+  }
+
   Widget _body() {
     final items = _ctrl.items;
     final loading = _ctrl.loading.value;
@@ -216,60 +251,69 @@ class _TripLeadsScreenState extends State<TripLeadsScreen> with WidgetsBindingOb
     final moreFooter = _ctrl.loadingMore.value || _ctrl.loadMoreFailed.value ? 1 : 0;
 
     if (loading && items.isEmpty) {
-      return _column(ListView.separated(
+      return _column(ListView.builder(
         physics: const NeverScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-        itemCount: 3,
-        separatorBuilder: (_, _) => const SizedBox(height: 12),
-        itemBuilder: (_, i) => _enter(i, 3, const JourneySkeletonCard(buttons: 3)),
+        padding: const EdgeInsets.only(top: 4, bottom: 16),
+        itemCount: 2,
+        itemBuilder: (_, i) => _enter(i, 2, const ReplyCardSkeleton()),
       ));
     }
     if (items.isEmpty) {
-      final empty = failed && _ctrl.executionDisabled.value
-          ? const TripPlanEmpty(
-              image: TravelIcon.map,
+      final off = failed && _ctrl.executionDisabled.value;
+      StateCard3D empty(StateLayout layout) => off
+          ? StateCard3D(
+              tone: _tone,
+              art: ListingArt.worldMap,
               title: TripStrings.plannerOff,
-              subtitle: TripStrings.plannerOffSubtitle,
+              message: TripStrings.plannerOffSubtitle,
+              layout: layout,
             )
           : failed
-          ? TripPlanEmpty(
-              image: TravelIcon.note,
-              title: TripStrings.couldNotLoad,
-              subtitle: TripStrings.checkConnection,
-              onRetry: _ctrl.load,
-              retryLabel: TripStrings.retry,
-            )
-          : TripPlanEmpty(
-              image: TravelIcon.chat,
-              title: _emptyTitle(bucket),
-              subtitle: TripStrings.noLeadsSub,
-            );
+              ? StateCard3D(
+                  tone: _tone,
+                  art: ListingArt.clipboard,
+                  title: TripStrings.couldNotLoad,
+                  message: TripStrings.checkConnection,
+                  actionLabel: TripStrings.retry,
+                  onAction: _ctrl.load,
+                  layout: layout,
+                )
+              : StateCard3D(
+                  tone: _tone,
+                  art: ListingArt.speechBalloon,
+                  title: _emptyTitle(bucket),
+                  message: TripStrings.noLeadsSub,
+                  layout: layout,
+                );
       return RefreshIndicator(
-        color: DesignColors.primary,
+        color: _tone.button,
         onRefresh: _ctrl.refreshList,
-        child: _column(ListView(physics: const AlwaysScrollableScrollPhysics(), children: [_enter(0, 1, empty)])),
+        child: LayoutBuilder(
+          builder: (context, box) => _column(ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.only(bottom: 24),
+            children: [_enter(0, 1, empty(box.maxHeight >= _tallNeed(context, failed && !off) ? StateLayout.tall : StateLayout.wide))],
+          )),
+        ),
       );
     }
     return RefreshIndicator(
-      color: DesignColors.primary,
+      color: _tone.button,
       onRefresh: _ctrl.refreshList,
       child: _column(ListView.builder(
         controller: _scroll,
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+        padding: const EdgeInsets.only(bottom: 16),
         itemCount: items.length + moreFooter,
         itemBuilder: (_, i) {
           if (i >= items.length) return _moreFooter();
           final e = items[i];
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: _enter(
-              i,
-              _count,
-              KeyedSubtree(
-                key: _keys.putIfAbsent(e.id, () => GlobalKey()),
-                child: _LeadCard(lead: e, highlighted: highlight == e.id, ctrl: _ctrl),
-              ),
+          return _enter(
+            i,
+            _count,
+            KeyedSubtree(
+              key: _keys.putIfAbsent(e.id, () => GlobalKey()),
+              child: _LeadCard(lead: e, highlighted: highlight == e.id, ctrl: _ctrl),
             ),
           );
         },
@@ -282,50 +326,14 @@ class _TripLeadsScreenState extends State<TripLeadsScreen> with WidgetsBindingOb
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 8),
         child: Center(
-          child: TextButton(
-            style: TextButton.styleFrom(minimumSize: const Size(44, 44), foregroundColor: DesignColors.primary),
-            onPressed: _ctrl.loadMore,
-            child: Text(TripStrings.retry, style: TripKit.text(13, weight: FontWeight.w600, color: DesignColors.primary)),
-          ),
+          child: WhitePillButton(tone: _tone, label: TripStrings.retry, expand: false, height: 44, fontSize: 14, onTap: _ctrl.loadMore),
         ),
       );
     }
-    return const Padding(
-      padding: EdgeInsets.symmetric(vertical: 16),
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 16),
       child: Center(
-        child: SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2.5, color: DesignColors.primary)),
-      ),
-    );
-  }
-}
-
-enum _LeadButtonKind { primary, positive, negative, plain }
-
-class _LeadButton extends StatelessWidget {
-  const _LeadButton({required this.label, required this.onTap, this.kind = _LeadButtonKind.plain, this.icon, this.busy = false});
-
-  final String label;
-  final VoidCallback? onTap;
-  final _LeadButtonKind kind;
-  final IconData? icon;
-  final bool busy;
-
-  @override
-  Widget build(BuildContext context) {
-    final (JourneyButtonKind k, Color fg) = switch (kind) {
-      _LeadButtonKind.primary => (JourneyButtonKind.filled, DesignColors.surface),
-      _LeadButtonKind.positive => (JourneyButtonKind.positive, DesignColors.surface),
-      _LeadButtonKind.negative => (JourneyButtonKind.dangerOutline, TripLook.error),
-      _LeadButtonKind.plain => (JourneyButtonKind.outline, DesignColors.primary),
-    };
-    return IntrinsicWidth(
-      child: JourneyButton(
-        label: label,
-        kind: k,
-        busy: busy,
-        onPressed: onTap,
-        icon: icon == null ? null : Icon(icon, size: 16, color: fg),
-        fontSize: 13,
+        child: SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2.5, color: _tone.button)),
       ),
     );
   }
@@ -338,133 +346,105 @@ class _LeadCard extends StatelessWidget {
   final bool highlighted;
   final TripLeadsController ctrl;
 
+  static ListingTone _toneOf(TripDisplayStatus s) => switch (s) {
+        TripDisplayStatus.asked => ListingTone.cA,
+        TripDisplayStatus.fareSent => ListingTone.cB,
+        TripDisplayStatus.bookedByYou => ListingTone.cF,
+        TripDisplayStatus.confirmedByBoth => ListingTone.cE,
+        _ => ListingTone.cD,
+      };
+
+  static bool _closed(TripDisplayStatus s) => _toneOf(s) == ListingTone.cD;
+
   @override
   Widget build(BuildContext context) {
     final e = lead;
-    final spots = TripLeadFormat.spots(e);
-    final leg = TripLeadFormat.journeyLine(e) ?? JourneyLegTag.fromLead(e);
-    final legText = e.context.text.startsWith('Car ') ? e.context.text.trim() : '';
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 250),
-      curve: Curves.fastOutSlowIn,
-      padding: EdgeInsets.all(highlighted ? 2 : 0),
-      decoration: BoxDecoration(
-        borderRadius: TripLook.softRadius,
-        color: highlighted ? DesignColors.primary : Colors.transparent,
-      ),
-      child: TripStatusCard(
-        status: e.display,
-        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Row(children: [
-            Expanded(
-              child: Text(TripLeadFormat.guest(e),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: FitnessAppTheme.title.copyWith(fontSize: 15)),
-            ),
-            if ((e.traveller.id ?? '').isNotEmpty) _menu(context, e),
-          ]),
-          const SizedBox(height: 8),
-          Wrap(spacing: 8, runSpacing: 6, children: [
-            if (e.isUrgent && e.isUnconfirmed) const TripStatusPill(TripDisplayStatus.asked, label: TripStrings.urgent),
-            TripStatusPill(e.display, ownerSide: true, taxi: true),
-          ]),
-          if (leg != null) ...[
-            const SizedBox(height: 6),
-            Row(children: [Flexible(child: JourneyLegTag(text: leg))]),
-          ],
-          if (legText.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Text(legText,
-                maxLines: 4,
-                overflow: TextOverflow.ellipsis,
-                style: TripKit.text(12.5, weight: FontWeight.w600).copyWith(height: 1.4)),
-          ],
-          const SizedBox(height: 8),
-          Text(TripLeadFormat.summary(e),
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-              style: FitnessAppTheme.caption.copyWith(color: DesignColors.textGrey, height: 1.4)),
-          if (spots.isNotEmpty) ...[
-            const SizedBox(height: 4),
-            Text(spots,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: FitnessAppTheme.caption.copyWith(height: 1.4)),
-          ],
-          ..._detail(e),
-          ..._actions(context, e),
-        ]),
-      ),
-    );
+    final city = TripStrings.tripMapSubtitle(e.context.city);
+    var summary = TripLeadFormat.summary(e);
+    if (e.context.city.isNotEmpty && summary.startsWith(city)) {
+      summary = summary.substring(city.length).replaceFirst(RegExp(r'^ · '), '');
+    }
+    final status = TripStatusVisuals.label(e.display, ownerSide: true, taxi: true);
+    final menuKey = GlobalKey();
+    final journeyLine = TripLeadFormat.journeyLine(e);
+    final rawLeg = e.context.text.startsWith('Car ') ? e.context.text.trim() : '';
+    final rawExtra = TripLeadFormat.journeyExtra(e) ?? (journeyLine == null && rawLeg.isNotEmpty ? rawLeg : null);
+    final tail = rawExtra?.trim().replaceFirst(RegExp(r'\.$'), '').toLowerCase() ?? '';
+    final extra = tail.isEmpty || summary.toLowerCase().contains(tail) ? null : rawExtra;
+    return Obx(() {
+      final busy = ctrl.busyIds.contains(e.id);
+      return TaxiLeadCard3D(
+        tone: _toneOf(e.display),
+        guest: TripLeadFormat.guest(e),
+        city: e.context.city.isNotEmpty ? city : '',
+        urgent: e.isUrgent && e.isUnconfirmed ? TripStrings.urgent : null,
+        pills: [if (status.isNotEmpty) status],
+        summary: summary,
+        journey: journeyLine ?? JourneyLegTag.fromLead(e),
+        places: TripLeadFormat.spots(e),
+        detail: _detail(e),
+        extra: extra,
+        pillColor: _closed(e.display) ? TaxiOwnerLook.rejected : null,
+        highlighted: highlighted,
+        menuKey: menuKey,
+        onMenu: (e.traveller.id ?? '').isNotEmpty ? () => _menu(context, menuKey, e) : null,
+        buttons: _buttons(context, e, busy),
+      );
+    });
   }
 
-  Widget _menu(BuildContext context, TripEnquiryModel e) => SizedBox(
-        width: 44,
-        height: 44,
-        child: PopupMenuButton<String>(
-          padding: EdgeInsets.zero,
-          tooltip: '',
-          icon: const Icon(Icons.more_vert_rounded, size: 20, color: DesignColors.textGrey),
-          color: DesignColors.surface,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          onSelected: (_) => TripReportTravellerSheet.show(context, enquiry: e),
-          itemBuilder: (_) => const [
-            PopupMenuItem<String>(
-                value: 'report',
-                height: 44,
-                child: Text(TripStrings.reportTraveller, style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 13, color: DesignColors.textPrimary))),
-          ],
-        ),
-      );
+  void _menu(BuildContext context, GlobalKey key, TripEnquiryModel e) {
+    final box = key.currentContext?.findRenderObject() as RenderBox?;
+    if (box == null) return;
+    final rect = box.localToGlobal(Offset.zero) & box.size;
+    showMenu3D(context, anchor: rect, width: 236, coverAnchor: true, items: [
+      MenuItem3D(label: TripStrings.reportTraveller, art: ListingArt.pushpin, onTap: () => TripReportTravellerSheet.show(context, enquiry: e)),
+    ]);
+  }
 
-  List<Widget> _detail(TripEnquiryModel e) {
+  String? _detail(TripEnquiryModel e) {
     final t = e.taxi;
-    String? line;
     switch (e.display) {
       case TripDisplayStatus.fareSent:
         if (t?.driverFare != null) {
           final listed = TripLeadFormat.listedTotal(e);
-          line = TripStrings.youReplied(
+          return TripStrings.youReplied(
               BrowseItem.inr(t!.driverFare!), listed == null ? '' : BrowseItem.inr(listed), TripLeadFormat.dayCount(e));
         }
       case TripDisplayStatus.bookedByYou:
-        if (t?.agreedFare != null) line = TripStrings.saysAgreedFare(BrowseItem.inr(t!.agreedFare!), TripLeadFormat.dates(e));
+        if (t?.agreedFare != null) return TripStrings.saysAgreedFare(BrowseItem.inr(t!.agreedFare!), TripLeadFormat.dates(e));
       default:
     }
-    if (line == null) return const [];
-    return [
-      const SizedBox(height: 8),
-      Text(line,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          style: TripKit.text(12.5, weight: FontWeight.w600)),
-    ];
+    return null;
   }
 
   Future<bool> _confirm(
     BuildContext context, {
+    required String art,
     required String title,
     required String body,
     required String action,
-    required Color color,
+    bool danger = false,
   }) async {
-    return showTaxiConfirmDialog(
+    final ok = await showTaxiOwnerDialog(
       context,
+      art: art,
       title: title,
       body: body,
       cancelLabel: TripStrings.cancelAction,
-      actionLabel: action,
-      actionColor: color,
+      confirmLabel: action,
+      destructive: danger,
     );
+    return ok == true;
   }
 
   Future<void> _notAvailable(BuildContext context) async {
     final ok = await _confirm(context,
+        art: ListingArt.calendar,
         title: TripStrings.notAvailableLead,
         body: TripStrings.notAvailableLeadBody,
         action: TripStrings.notAvailableAction,
-        color: TripLook.error);
+        danger: true);
     if (ok) await ctrl.notAvailable(lead.id);
   }
 
@@ -472,64 +452,60 @@ class _LeadCard extends StatelessWidget {
     final e = lead;
     final fare = e.taxi?.agreedFare;
     final ok = await _confirm(context,
+        art: ListingArt.key,
         title: TripStrings.confirmBookingQ,
         body: TripStrings.confirmBookingBody(
             TripLeadFormat.guest(e), fare == null ? '' : BrowseItem.inr(fare), TripLeadFormat.dates(e)),
-        action: TripStrings.yesConfirm,
-        color: DesignColors.primaryLight);
+        action: TripStrings.yesConfirm);
     if (ok) await ctrl.confirm(e.id);
   }
 
   Future<void> _notMe(BuildContext context) async {
     final ok = await _confirm(context,
+        art: ListingArt.speechBalloon,
         title: TripStrings.notYourBooking,
         body: TripStrings.notYourBookingBody(TripLeadFormat.guest(lead)),
         action: TripStrings.notMe,
-        color: TripLook.error);
+        danger: true);
     if (ok) await ctrl.deny(lead.id);
   }
 
-  List<Widget> _actions(BuildContext context, TripEnquiryModel e) {
+  List<TaxiLeadButton?> _buttons(BuildContext context, TripEnquiryModel e, bool busy) {
     final phone = e.traveller.phone;
     final canCall = phone != null && ContactLauncher.tenDigits(phone).isNotEmpty;
-    final buttons = <Widget>[];
-    Widget btn(String label, _LeadButtonKind kind, VoidCallback? onTap, {IconData? icon}) => Obx(() => _LeadButton(
-          label: label,
-          kind: kind,
-          icon: icon,
-          busy: ctrl.busyIds.contains(e.id),
-          onTap: onTap,
-        ));
-    void call(_LeadButtonKind kind) {
-      if (canCall) buttons.add(btn(TripStrings.callTraveller, kind, () => ContactLauncher.call(phone), icon: Icons.call_rounded));
-    }
+    TaxiLeadButton btn(String label, VoidCallback onTap, {bool solid = false}) =>
+        TaxiLeadButton(label: label, onTap: onTap, busy: busy, kind: solid ? TaxiLeadButtonKind.solid : TaxiLeadButtonKind.glass);
+    TaxiLeadButton? call({bool solid = false}) => canCall ? btn(TripStrings.callTraveller, () => ContactLauncher.call(phone), solid: solid) : null;
 
     switch (e.display) {
       case TripDisplayStatus.asked:
-        call(_LeadButtonKind.primary);
-        buttons.add(btn(TripStrings.confirmFare, _LeadButtonKind.positive, () => TripFareSheet.show(context, lead: e)));
-        buttons.add(btn(TripStrings.notAvailableAction, _LeadButtonKind.negative, () => _notAvailable(context)));
+        return [
+          call(solid: true),
+          btn(TripStrings.confirmFare, () => TripFareSheet.show(context, lead: e), solid: true),
+          btn(TripStrings.notAvailableAction, () => _notAvailable(context)),
+        ];
       case TripDisplayStatus.fareSent:
-        call(_LeadButtonKind.primary);
         final left = e.taxi?.fareEditsLeft ?? 0;
-        buttons.add(btn(TripStrings.changeFare, _LeadButtonKind.plain,
-            left > 0 ? () => TripFareSheet.show(context, lead: e) : () => AppToast.warning(TripStrings.fareLimit)));
-        buttons.add(btn(TripStrings.notAvailableAction, _LeadButtonKind.negative, () => _notAvailable(context)));
+        return [
+          call(solid: true),
+          btn(TripStrings.changeFare,
+              left > 0 ? () => TripFareSheet.show(context, lead: e) : () => AppToast.warning(TripStrings.fareLimit)),
+          btn(TripStrings.notAvailableAction, () => _notAvailable(context)),
+        ];
       case TripDisplayStatus.bookedByYou:
-        call(_LeadButtonKind.plain);
-        buttons.add(btn(TripStrings.yesConfirm, _LeadButtonKind.positive, () => _yes(context)));
-        buttons.add(btn(TripStrings.notMe, _LeadButtonKind.negative, () => _notMe(context)));
+        return [
+          call(),
+          btn(TripStrings.yesConfirm, () => _yes(context), solid: true),
+          btn(TripStrings.notMe, () => _notMe(context)),
+        ];
       case TripDisplayStatus.confirmedByBoth:
-        call(_LeadButtonKind.plain);
-        if (!TripLeadBucket.hasEnded(e)) {
-          buttons.add(btn(TripStrings.cancelBooking, _LeadButtonKind.negative, () => ctrl.cancel(context, e)));
-        }
+        return [
+          call(),
+          if (!TripLeadBucket.hasEnded(e)) btn(TripStrings.cancelBooking, () => ctrl.cancel(context, e)) else null,
+          null,
+        ];
       default:
+        return const [null, null, null];
     }
-    if (buttons.isEmpty) return const [];
-    return [
-      const SizedBox(height: 12),
-      Wrap(spacing: 8, runSpacing: 8, children: buttons),
-    ];
   }
 }

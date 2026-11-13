@@ -212,7 +212,7 @@ void main() {
       r.close();
     });
 
-    testWidgets('tapping Yes, send to all with a 429 shows the message on the card', (t) async {
+    testWidgets('tapping Send to all with a 429 shows the message on the card', (t) async {
       final r = await _rig(
         _multi([2], guide: const TripGuide(step: 'stay:1', choices: {'gettingThere': TripGuideChoice.skip, 'stay:1': TripGuideChoice.find})),
         items: [_item('stay:1', 'a', kind: ShortlistKinds.stay), _item('stay:1', 'b', kind: ShortlistKinds.stay)],
@@ -221,7 +221,7 @@ void main() {
         ..failType = TripEnquiryErrorTypes.enquiryLimit
         ..failMinutes = 12;
       await _pump(t, r, 360);
-      await _tap(t, 'Yes, send to all');
+      await _tap(t, 'Send to all');
       await t.pump(const Duration(milliseconds: 100));
       expect(find.byKey(const ValueKey('guide-send-note')), findsOneWidget);
       expect(find.textContaining('Ask limit reached'), findsOneWidget);
@@ -301,7 +301,7 @@ void main() {
   });
 
   group('SB7 car steps', () {
-    testWidgets('a shortlisted car step shows the review card with Yes, send to all and Change my picks', (t) async {
+    testWidgets('a shortlisted car step shows the review card with Send to all and Change my picks', (t) async {
       final r = await _rig(
         _multi([2], guide: const TripGuide(step: 'gettingThere', choices: {'gettingThere': TripGuideChoice.find})),
         items: [_item('gettingThere', 'c1', kind: ShortlistKinds.car)],
@@ -309,7 +309,7 @@ void main() {
       await _pump(t, r, 360);
       expect(find.text('Great picks'), findsOneWidget);
       expect(find.text('Change my picks'), findsOneWidget);
-      expect(find.text('Yes, send to all'), findsOneWidget);
+      expect(find.text('Send to all'), findsOneWidget);
       r.close();
     });
   });
@@ -358,7 +358,7 @@ void main() {
       expect(r.c.guideState.on.value, isTrue);
       await _pump(t, r, 412, h: 900, top: const TripPlanHeader(onMenu: _noop));
       expect(find.textContaining('%'), findsOneWidget);
-      expect(find.text('25% done'), findsOneWidget);
+      expect(find.text('25%'), findsOneWidget);
       expect(find.textContaining('arranged'), findsNothing);
       r.close();
     });
@@ -480,8 +480,8 @@ void main() {
     });
   });
 
-  group('RM-7 Back to steps button', () {
-    testWidgets('Overview shows a visible Back to steps button that returns to the cards', (t) async {
+  group('RM-7 no Overview in the guide', () {
+    testWidgets('the guide has no Overview link and no Back to steps button', (t) async {
       final r = await _rig(_multi([2], guide: const TripGuide(overview: true, choices: {'gettingThere': TripGuideChoice.skip})));
       r.c.planStep.value = 2;
       t.view.physicalSize = const Size(412, 900);
@@ -492,11 +492,10 @@ void main() {
       await t.pump(const Duration(milliseconds: 700));
       r.c.planStep.value = 2;
       await t.pump(const Duration(milliseconds: 700));
-      expect(find.text(TripStringsGuide.backToSteps), findsNothing);
+      expect(find.text('Back to steps'), findsNothing);
       expect(r.c.guideState.on.value, isTrue);
-      await t.tap(find.text(TripStringsGuide.overview));
-      await t.pump(const Duration(milliseconds: 700));
-      expect(find.text(TripStringsGuide.overviewTitle), findsOneWidget);
+      expect(find.text('Overview'), findsNothing);
+      expect(find.text('Your trip so far'), findsNothing);
       await t.pump(const Duration(seconds: 5));
       r.close();
     });

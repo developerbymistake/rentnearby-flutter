@@ -383,7 +383,7 @@ class NotificationLook {
   final String asset;
   final Color color;
 
-  static const String bell = 'assets/images/design/fitness_app/bell.png';
+  static const String bell = TravelIcon.bell;
 
   static NotificationLook of(String kind) => switch (kind) {
         'approved' => const NotificationLook._(TravelIcon.star, DesignColors.goodDeep),

@@ -8,7 +8,6 @@ import 'package:bakhli/features/trip/models/trip_enquiry_model.dart';
 import 'package:bakhli/features/trip/models/trip_plan_model.dart';
 import 'package:bakhli/features/trip/models/trip_shortlist_model.dart';
 import 'package:bakhli/features/trip/widgets/guide/trip_guide_bar.dart';
-import 'package:bakhli/features/trip/widgets/guide/trip_guide_overview_sheet.dart';
 import 'package:bakhli/features/trip/widgets/guide/trip_guide_progress.dart';
 import 'package:bakhli/features/trip/widgets/guide/trip_guide_view.dart';
 import 'package:flutter/material.dart';
@@ -18,7 +17,6 @@ import 'package:get/get.dart';
 import '../../support/real_phone.dart';
 
 const _step = 'gettingThere';
-const _findHint = 'Pick up to 3 from the list, or choose another option';
 
 class _Repo implements TripShortlistRepository {
   final items = <ShortlistItem>[];
@@ -119,7 +117,7 @@ Future<void> _pump(WidgetTester t, _Rig r, {Size size = phoneSize, double scale 
 }
 
 Future<void> _tap(WidgetTester t, String label) async {
-  final f = find.text(label);
+  final f = label == 'Previous' ? find.byTooltip(label) : find.text(label);
   await t.ensureVisible(f);
   await t.pump();
   await t.tap(f);
@@ -130,10 +128,10 @@ Future<void> _tap(WidgetTester t, String label) async {
 TripGuideBar _bar(WidgetTester t) => t.widget<TripGuideBar>(find.byType(TripGuideBar));
 
 void _agree(WidgetTester t, _Rig r, {required int percent, required bool next}) {
-  expect(find.text('$percent% done'), findsOneWidget);
+  expect(find.text('$percent%'), findsOneWidget);
   expect(t.widget<TripGuideProgress>(find.byType(TripGuideProgress)).percent, percent);
   expect(r.c.guideState.percent.value, percent);
-  expect(_bar(t).canNext, next);
+  expect(find.byType(TripGuideBar).evaluate().isEmpty ? false : _bar(t).canNext, next);
   final fill = t.widget<FractionallySizedBox>(find.descendant(of: find.byType(TripGuideProgress), matching: find.byType(FractionallySizedBox)));
   expect(fill.widthFactor, closeTo(percent / 100, 0.001));
   final box = t.getSize(find.descendant(of: find.byType(TripGuideProgress), matching: find.byType(DecoratedBox)).last);
@@ -152,12 +150,11 @@ void main() {
     await _tap(t, 'Help me find');
     expect(r.opened, 1);
     _agree(t, r, percent: 0, next: false);
-    expect(find.text(_findHint), findsOneWidget);
-    expect(find.text('Open the list'), findsOneWidget);
+    expect(find.text('Find taxis'), findsOneWidget);
     r.c.guideNext();
     await t.pump();
     expect(r.c.guideState.index.value, 0);
-    await _tap(t, 'Open the list');
+    await _tap(t, 'Find taxis');
     expect(r.opened, 2);
     expect(find.text("Let's get you there"), findsOneWidget);
     r.close();
@@ -175,8 +172,9 @@ void main() {
     expect(find.text('Where will you stay in Nainital?'), findsOneWidget);
     expect(r.sl.countOf(_step), 1);
     await _tap(t, 'Previous');
-    _agree(t, r, percent: 25, next: true);
-    await _tap(t, 'Next');
+    _agree(t, r, percent: 25, next: false);
+    expect(find.byType(TripGuideBar), findsNothing);
+    await _tap(t, 'Not now');
     expect(find.text('Where will you stay in Nainital?'), findsOneWidget);
     r.close();
   });
@@ -191,11 +189,12 @@ void main() {
     await _tap(t, 'Help me find');
     await r.shortlist(2);
     await t.pump();
-    await _tap(t, 'Yes, send to all');
+    await _tap(t, 'Send to all');
     expect(r.c.guideState.sent[_step], 1);
     expect(r.c.guideState.failed[_step], 1);
     expect(r.c.guideAnswered(_step), isTrue);
-    _agree(t, r, percent: 25, next: true);
+    _agree(t, r, percent: 25, next: false);
+    expect(find.text('Not now'), findsOneWidget);
     r.close();
   });
 
@@ -207,29 +206,13 @@ void main() {
     await _tap(t, 'Help me find');
     await r.shortlist(2);
     await t.pump();
-    await _tap(t, 'Yes, send to all');
+    await _tap(t, 'Send to all');
     expect(r.c.guideAnswered(_step), isFalse);
     expect(r.c.guideState.notes[_step], isNotNull);
     expect(find.byKey(const ValueKey('guide-send-note')), findsOneWidget);
     _agree(t, r, percent: 0, next: false);
     r.c.guideNext();
     expect(r.c.guideState.index.value, 0);
-    r.close();
-  });
-
-  testWidgets('overview: find chosen with empty shortlist shows To do and no summary', (t) async {
-    final r = _Rig(_plan());
-    await _pump(t, r);
-    await _tap(t, 'Help me find');
-    r.c.guideState.on.value = true;
-    await t.pumpWidget(MaterialApp(
-      home: Scaffold(body: SingleChildScrollView(child: TripGuideOverviewSheet(controller: r.c))),
-    ));
-    await t.pump();
-    expect(find.text('To do'), findsWidgets);
-    expect(find.text('Looking'), findsNothing);
-    expect(find.text('Open summary'), findsNothing);
-    expect(find.byKey(const ValueKey('overview-summary-locked')), findsOneWidget);
     r.close();
   });
 
@@ -251,7 +234,7 @@ void main() {
     await _tap(t, 'Help me find');
     await r.shortlist(2);
     await t.pump();
-    await _tap(t, 'Yes, send to all');
+    await _tap(t, 'Send to all');
     expect(find.text('Enquiry sent'), findsOneWidget);
     expect(_bar(t).canNext, isTrue);
     expect(find.text('Next'), findsOneWidget);
@@ -299,7 +282,7 @@ void main() {
     await _pump(t, r);
     expect(find.text("Let's get you there"), findsOneWidget);
     _agree(t, r, percent: 0, next: false);
-    expect(find.text('Open the list'), findsOneWidget);
+    expect(find.text('Find taxis'), findsOneWidget);
     r.close();
   });
 
@@ -353,7 +336,7 @@ void main() {
         await t.pump();
         await settlePhone(t);
         await shot(t, 'A_review_${cfg.$1}');
-        await _tap(t, 'Yes, send to all');
+        await _tap(t, 'Send to all');
         await settlePhone(t);
         expect(find.text('Enquiry sent'), findsOneWidget);
         await shot(t, 'A_sent_${cfg.$1}');

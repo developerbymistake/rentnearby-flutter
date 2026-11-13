@@ -19,7 +19,8 @@ class FitnessAppTheme {
   static const Color deactivatedText = TemplateTokens.deactivatedText;
   static const Color dismissibleBackground = TemplateTokens.dismissibleBackground;
   static const Color spacer = TemplateTokens.spacer;
-  static const String fontName = 'Roboto';
+  static const String fontName = 'Poppins';
+  static const List<String> fontFallback = ['WorkSans'];
 
   static const TextTheme textTheme = TextTheme(
     headlineMedium: display1,
@@ -33,6 +34,7 @@ class FitnessAppTheme {
 
   static const TextStyle display1 = TextStyle(
     fontFamily: fontName,
+    fontFamilyFallback: fontFallback,
     fontWeight: FontWeight.bold,
     fontSize: 36,
     letterSpacing: 0.4,
@@ -42,6 +44,7 @@ class FitnessAppTheme {
 
   static const TextStyle headline = TextStyle(
     fontFamily: fontName,
+    fontFamilyFallback: fontFallback,
     fontWeight: FontWeight.bold,
     fontSize: 24,
     letterSpacing: 0.27,
@@ -50,6 +53,7 @@ class FitnessAppTheme {
 
   static const TextStyle title = TextStyle(
     fontFamily: fontName,
+    fontFamilyFallback: fontFallback,
     fontWeight: FontWeight.bold,
     fontSize: 16,
     letterSpacing: 0.18,
@@ -58,6 +62,7 @@ class FitnessAppTheme {
 
   static const TextStyle subtitle = TextStyle(
     fontFamily: fontName,
+    fontFamilyFallback: fontFallback,
     fontWeight: FontWeight.w400,
     fontSize: 14,
     letterSpacing: -0.04,
@@ -66,6 +71,7 @@ class FitnessAppTheme {
 
   static const TextStyle body2 = TextStyle(
     fontFamily: fontName,
+    fontFamilyFallback: fontFallback,
     fontWeight: FontWeight.w400,
     fontSize: 14,
     letterSpacing: 0.2,
@@ -74,6 +80,7 @@ class FitnessAppTheme {
 
   static const TextStyle body1 = TextStyle(
     fontFamily: fontName,
+    fontFamilyFallback: fontFallback,
     fontWeight: FontWeight.w400,
     fontSize: 16,
     letterSpacing: -0.05,
@@ -82,6 +89,7 @@ class FitnessAppTheme {
 
   static const TextStyle caption = TextStyle(
     fontFamily: fontName,
+    fontFamilyFallback: fontFallback,
     fontWeight: FontWeight.w400,
     fontSize: 12,
     letterSpacing: 0.2,

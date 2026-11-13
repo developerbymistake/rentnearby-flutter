@@ -122,28 +122,24 @@ class _SplashScreenState extends State<SplashScreen> with WidgetsBindingObserver
 
     if (permission == LocationPermission.deniedForever) {
       if (!mounted) return false;
-      await showDialog(
-        context: context,
+      await Dialog3D.show<void>(
+        context,
         barrierDismissible: false,
         builder: (_) => PopScope(
           canPop: false,
-          child: GateDialog(
-            asset: TravelIcon.place,
+          child: Dialog3D(
+            tone: ListingTone.indigo,
+            art: ListingArt.roundPushpin,
             title: 'Location Access Required',
             body: 'This app helps you discover stays, taxis and trips near you. '
                 'Location access is essential for the app to function. '
                 'Please enable it to continue.',
-            actions: [
-              GateButton(
-                label: 'Allow Location',
-                height: 48,
-                onPressed: () {
-                  Navigator.pop(context);
-                  _waitingForSettings = true;
-                  Geolocator.openAppSettings();
-                },
-              ),
-            ],
+            primaryLabel: 'Allow Location',
+            onPrimary: () {
+              Navigator.pop(context);
+              _waitingForSettings = true;
+              Geolocator.openAppSettings();
+            },
           ),
         ),
       );

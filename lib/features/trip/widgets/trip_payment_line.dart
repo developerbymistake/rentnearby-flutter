@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:bakhli/design/extra/trip_plan_look.dart';
-import 'package:bakhli/design/template/fitness_app_theme.dart';
+import 'package:bakhli/design/design.dart';
+import 'package:bakhli/design/extra/ext_trip_replies.dart';
 import '../trip_strings.dart';
 
 class TripPaymentLine extends StatelessWidget {
@@ -10,11 +10,13 @@ class TripPaymentLine extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text(
-      text,
-      maxLines: 3,
-      overflow: TextOverflow.ellipsis,
-      style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 11, letterSpacing: -0.2, color: TripLook.textLight, height: 1.35),
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Image.asset(ListingArt.moneyBag, width: 22, height: 22, fit: BoxFit.contain),
+        const SizedBox(width: 8),
+        Expanded(child: Text(text, maxLines: 3, overflow: TextOverflow.ellipsis, style: RepliesLook.foot)),
+      ],
     );
   }
 }

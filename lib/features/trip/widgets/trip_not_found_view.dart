@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:bakhli/features/trip/widgets/trip_ui.dart';
-import 'package:bakhli/design/extra/travel_icon.dart';
+import 'package:bakhli/design/design.dart';
 import '../trip_navigation.dart';
 import '../trip_strings.dart';
 
@@ -11,12 +10,16 @@ class TripNotFoundView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return TripEmpty(
-      asset: TravelIcon.route,
-      title: TripStrings.tripNotFoundTitle,
-      subtitle: TripStrings.tripNotFoundBody,
-      retryLabel: TripStrings.myTripsAction,
-      onRetry: onMyTrips ?? () => TripNavigation.replaceWithMyTrips(),
+    return Padding(
+      padding: const EdgeInsets.only(top: 40),
+      child: StateCard(
+        asset: ListingArt.luggage,
+        title: TripStrings.tripNotFoundTitle,
+        message: TripStrings.tripNotFoundBody,
+        actionLabel: TripStrings.myTripsAction,
+        onAction: onMyTrips ?? () => TripNavigation.replaceWithMyTrips(),
+        layout: StateLayout.plain,
+      ),
     );
   }
 }

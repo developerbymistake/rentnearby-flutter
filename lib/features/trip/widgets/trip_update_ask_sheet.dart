@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:bakhli/features/trip/widgets/trip_ui.dart';
 import 'package:bakhli/design/design.dart';
-import 'package:bakhli/design/extra/replies_kit.dart';
+import 'package:bakhli/design/extra/ext_trip_replies.dart';
 import 'package:get/get.dart';
 import '../../../utils/app_toast.dart';
 import '../controllers/trip_enquiry_controller.dart';
@@ -208,65 +207,42 @@ class _UpdateBodyState extends State<_UpdateBody> {
     Navigator.pop(context, true);
   }
 
-  Widget _line(_Row r) => Padding(
-        padding: const EdgeInsets.only(top: 8),
-        child: Row(
-          children: [
-            Container(width: 6, height: 6, decoration: const BoxDecoration(color: RepliesTone.accent, shape: BoxShape.circle)),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(r.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                          fontFamily: FitnessAppTheme.fontName, fontSize: 13, fontWeight: FontWeight.w600, color: DesignColors.textStrong)),
-                  Text(r.sub,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 11.5, color: DesignColors.textMuted)),
-                ],
-              ),
-            ),
-          ],
-        ),
-      );
-
   @override
   Widget build(BuildContext context) {
     final all = [...widget.open, ...widget.confirmedTaxis, ...widget.confirmed];
     final first = all.firstWhere((e) => !e.isTaxi, orElse: () => all.first);
-    final rows = [..._rows(widget.open), ..._rows(widget.confirmedTaxis), ..._rows(widget.confirmed)];
+    final tone = ListingTone.indigo;
+    final strips = [
+      for (final e in [...widget.open, ...widget.confirmedTaxis, ...widget.confirmed]) (e.isTaxi, _rows([e]).first),
+    ];
     return TripSheetFrame(
+      tone: tone,
+      art: widget.peopleOnly ? ListingArt.backpack : ListingArt.calendar,
+      size: strips.length > 2 ? SheetSize.list : SheetSize.confirm,
       title: TripStringsV2Find.updateAskTitle,
       description: _body(first),
-      children: [
-        TemplateStagger(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-        for (final r in rows) _line(r),
-        if (widget.confirmed.isNotEmpty || widget.confirmedTaxis.isNotEmpty) ...[
+      footnote: widget.peopleOnly ? TripStringsV2Find.updatePeopleNote : TripStringsV2Find.updateNote,
+      footer: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          GradientPillButton(tone: tone, label: TripStringsV2Find.updateAsk, loading: _busy, onTap: _busy ? null : _update),
           const SizedBox(height: 10),
-          Text(TripStringsV2Find.confirmedRow((widget.confirmedTaxis.isNotEmpty ? widget.confirmedTaxis : widget.confirmed).first.listingName),
-              style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, color: DesignColors.textMuted, height: 1.35)),
+          WhitePillButton(tone: tone, label: TripStringsV2Find.keepAsIs, onTap: _busy ? null : () => Navigator.pop(context, false)),
         ],
-        const SizedBox(height: 16),
-        TripButton(
-          label: TripStringsV2Find.updateAsk,
-          height: 52,
-          loading: _busy,
-          onPressed: _busy ? null : _update,
-        ),
-        const SizedBox(height: 8),
-        Text(widget.peopleOnly ? TripStringsV2Find.updatePeopleNote : TripStringsV2Find.updateNote,
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, color: DesignColors.textMuted)),
-        const SizedBox(height: 4),
-        TextLink(label: TripStringsV2Find.keepAsIs, onTap: _busy ? null : () => Navigator.pop(context, false), tone: KitTone.trip),
-          ],
-        ),
+      ),
+      children: [
+        for (final (taxi, r) in strips)
+          ReplySummaryStrip(tone: taxi ? ListingTone.coral : tone, title: r.title, subtitle: r.sub, trailing: const Icon(Icons.refresh_rounded, size: 26, color: DesignColors.textInverse), margin: const EdgeInsets.only(top: 12)),
+        if (widget.confirmed.isNotEmpty || widget.confirmedTaxis.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 12),
+            child: Text(
+              TripStringsV2Find.confirmedRow((widget.confirmedTaxis.isNotEmpty ? widget.confirmedTaxis : widget.confirmed).first.listingName),
+              textAlign: TextAlign.center,
+              style: RepliesLook.foot,
+            ),
+          ),
       ],
     );
   }

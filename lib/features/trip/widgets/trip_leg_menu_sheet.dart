@@ -16,7 +16,6 @@ import '../trip_strings_mca_a3.dart';
 import '../trip_strings_mcc_a1.dart';
 import '../trip_strings_mcc_a2.dart';
 import 'trip_leg_impact_dialog.dart';
-import 'trip_sheet_frame.dart';
 
 class TripLegMenuSheet {
   static Future<void> show(BuildContext context, int legIndex) => _open(context, legIndex, false);
@@ -26,7 +25,7 @@ class TripLegMenuSheet {
   static Future<void> _open(BuildContext context, int legIndex, bool editDays) async {
     final c = TripPlanController.to;
     if (c.isReadOnly || c.needsUpdate.value || c.plan.value?.legAt(legIndex) == null) return;
-    await TripSheetFrame.show<void>(context, _LegMenuBody(legIndex: legIndex, editDays: editDays));
+    await SheetFrame.show<void>(context, builder: (_) => _LegMenuBody(legIndex: legIndex, editDays: editDays));
   }
 
   static void toastCancelled(LegImpact impact, LegCancelResult r) {
@@ -268,19 +267,18 @@ class _LegMenuBodyState extends State<_LegMenuBody> {
       await _removeWithImpact(impact, leg.cityName, mode == TripLegRemoveMode.shift || carsOnly ? null : body);
       return;
     }
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(TripStringsMcaA3.removeCityQ(leg.cityName),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontWeight: FontWeight.w600, fontSize: 17)),
-        content: Text(body, style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 13, color: TripLook.textMedium)),
-        actions: [
-          TextLink(label: TripStringsMcaA3.remove, onTap: () => Navigator.pop(ctx, true), tone: KitTone.trip),
-          TextLink(label: TripStringsMcaA3.keep, onTap: () => Navigator.pop(ctx, false), tone: KitTone.trip),
-        ],
+    final ok = await Dialog3D.show<bool>(
+      context,
+      builder: (ctx) => Dialog3D(
+        tone: ListingTone.indigo,
+        art: ListingArt.mountain,
+        title: TripStringsMcaA3.removeCityQ(leg.cityName),
+        body: body,
+        secondaryLabel: TripStringsMcaA3.keep,
+        onSecondary: () => Navigator.pop(ctx, false),
+        primaryLabel: TripStringsMcaA3.remove,
+        primaryDanger: true,
+        onPrimary: () => Navigator.pop(ctx, true),
       ),
     );
     if (ok != true || !mounted) return;
@@ -321,38 +319,49 @@ class _LegMenuBodyState extends State<_LegMenuBody> {
     required Object icon,
     required String label,
     String? trailing,
-    Color color = TripLook.textDark,
+    bool danger = false,
+    bool divider = true,
     VoidCallback? onTap,
   }) {
     final enabled = onTap != null;
-    final fg = enabled ? color : TripLook.textHint;
-    return InkWell(
+    final tone = ListingTone.indigo;
+    final fg = danger ? TripLook.error : Ink3D.title;
+    return Tap3D(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 52),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+      label: label,
+      child: Opacity(
+        opacity: enabled ? 1 : Alpha.v45,
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 70),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(border: divider ? const Border(top: BorderSide(color: Ink3D.line)) : null),
           child: Row(
             children: [
-              icon is String ? TravelIcon(icon, size: 21) : Icon(icon as IconData, size: 19, color: fg),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 14, fontWeight: FontWeight.w600, color: fg)),
+              Container(
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(color: danger ? TripLook.errorSurface : tone.tint, borderRadius: BorderRadius.circular(14)),
+                child: Center(
+                  child: icon is String
+                      ? Art3D(asset: icon, size: 44, shadowBlur: 3, shadowOffset: const Offset(2, 3))
+                      : Icon(icon as IconData, size: 26, color: danger ? TripLook.error : tone.text),
+                ),
               ),
-              if (trailing != null) ...[
-                const SizedBox(width: 8),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Text(label, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(15, FontWeight.w600, fg)),
+              ),
+              const SizedBox(width: 8),
+              if (trailing != null)
                 Flexible(
                   child: Text(trailing,
                       maxLines: 2,
                       textAlign: TextAlign.end,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, color: TripLook.textLight)),
-                ),
-              ],
+                      style: Ink3D.text(12, FontWeight.w600, Ink3D.grey)),
+                )
+              else
+                Icon(Icons.chevron_right_rounded, size: 20, color: danger ? TripLook.error : Ink3D.grey),
             ],
           ),
         ),
@@ -360,18 +369,27 @@ class _LegMenuBodyState extends State<_LegMenuBody> {
     );
   }
 
-  Widget _stepButton(IconData icon, VoidCallback? onTap) => SizedBox(
-        width: 44,
-        height: 44,
-        child: IconButton(
-          onPressed: onTap,
-          icon: Icon(icon, size: 20, color: onTap == null ? TripLook.textHint : TripLook.accentDark),
-          style: IconButton.styleFrom(
-            side: BorderSide(color: onTap == null ? TripLook.divider : TripLook.accent.withValues(alpha: Alpha.strong)),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+  Widget _stepButton(IconData icon, VoidCallback? onTap) {
+    final tone = ListingTone.indigo;
+    final tip = icon == Icons.add_rounded ? 'Increase' : 'Decrease';
+    return Tooltip(
+      message: tip,
+      excludeFromSemantics: true,
+      child: Tap3D(
+        onTap: onTap,
+        label: tip,
+        child: Opacity(
+          opacity: onTap == null ? Alpha.v45 : 1,
+          child: Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(gradient: tone.gradient, shape: BoxShape.circle),
+            child: Icon(icon, size: 22, color: DesignColors.surface),
           ),
         ),
-      );
+      ),
+    );
+  }
 
   Widget _daysEditor(TripPlan p) {
     final max = _c.maxDaysForLeg(_leg);
@@ -381,9 +399,9 @@ class _LegMenuBodyState extends State<_LegMenuBody> {
     final fewer = _days < current && p.legSpotCount(_leg) > 0;
     final blocked = !fewer && _days >= current && _c.growthBlockedByBookings(_leg);
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-      decoration: BoxDecoration(color: TripLook.surface, borderRadius: BorderRadius.circular(14)),
+      margin: const EdgeInsets.fromLTRB(12, 0, 12, 10),
+      padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
+      decoration: BoxDecoration(color: ListingTone.indigo.tint, borderRadius: BorderRadius.circular(22)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -395,8 +413,7 @@ class _LegMenuBodyState extends State<_LegMenuBody> {
                     textAlign: TextAlign.center,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                        fontFamily: FitnessAppTheme.fontName, fontSize: 15, fontWeight: FontWeight.w700, color: TripLook.accentDark)),
+                    style: Ink3D.text(17, FontWeight.w700, ListingTone.indigo.text)),
               ),
               _stepButton(Icons.add_rounded, _days < max ? () => setState(() => _days++) : null),
             ],
@@ -408,14 +425,14 @@ class _LegMenuBodyState extends State<_LegMenuBody> {
                   : (blocked ? TripStringsFinA1.growBlocked : TripStringsMcaA3.daysLeftNote(max)),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                  fontFamily: FitnessAppTheme.fontName,
-                  fontSize: 11.5,
-                  color: fewer || blocked ? TripLook.warningText : TripLook.textLight)),
-          const SizedBox(height: 6),
-          Align(
-            alignment: Alignment.centerRight,
-            child: TextLink(label: TripStringsMcaA3.save, onTap: _days == current || _busy ? null : _saveDays, tone: KitTone.trip),
+              textAlign: TextAlign.center,
+              style: Ink3D.text(12, FontWeight.w500, fewer || blocked ? TripLook.warningText : Ink3D.grey)),
+          const SizedBox(height: 8),
+          GradientPillButton(
+            tone: ListingTone.indigo,
+            label: TripStringsMcaA3.save,
+            height: 44,
+            onTap: _days == current || _busy ? null : _saveDays,
           ),
         ],
       ),
@@ -429,7 +446,7 @@ class _LegMenuBodyState extends State<_LegMenuBody> {
       _c.enquiryList.length;
       final leg = p?.legAt(_leg);
       if (p == null || leg == null) {
-        return const TripSheetFrame(title: TripStringsMcaA3.removeCity, children: [SizedBox(height: 24)]);
+        return SheetFrame(tone: ListingTone.indigo, title: TripStringsMcaA3.removeCity, child: const SizedBox(height: 24));
       }
       final a = p.legStart(_leg);
       final b = p.legEnd(_leg);
@@ -438,12 +455,20 @@ class _LegMenuBodyState extends State<_LegMenuBody> {
       final upBlock = _c.canMoveLeg(_leg, true);
       final downBlock = _c.canMoveLeg(_leg, false);
       final removeBlock = _c.canRemoveLeg(_leg);
-      return TripSheetFrame(
+      return SheetFrame(
+        tone: ListingTone.indigo,
+        art: ListingArt.mountain,
+        size: SheetSize.confirm,
         title: leg.cityName,
-        description: TripStringsMcaA3.dayRangeWithDates(a, b, _c.dateOf(a), _c.dateOf(b)),
-        children: [
+        subtitle: TripStringsMcaA3.dayRangeWithDates(a, b, _c.dateOf(a), _c.dateOf(b)),
+        child: Container(
+          decoration: BoxDecoration(color: DesignColors.surface, borderRadius: BorderRadius.circular(20), boxShadow: Ink3D.softShadow),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
           _row(
-            icon: TravelIcon.place,
+            icon: ListingArt.roundPushpin,
+            divider: false,
             label: TripStringsMcaA3.addPlaces,
             onTap: () {
               _close();
@@ -451,7 +476,7 @@ class _LegMenuBodyState extends State<_LegMenuBody> {
             },
           ),
           _row(
-            icon: TravelIcon.calendar,
+            icon: ListingArt.calendar,
             label: TripStringsMcaA3.changeDays,
             trailing: _busy
                 ? TripStringsMccA2.cancelling
@@ -465,13 +490,13 @@ class _LegMenuBodyState extends State<_LegMenuBody> {
           ),
           if (_editDays && editable) _daysEditor(p),
           _row(
-            icon: Icons.keyboard_arrow_up,
+            icon: Icons.arrow_upward_rounded,
             label: TripStringsMcaA3.moveUp,
             trailing: TripLegMenuSheet.blockText(upBlock, leg.cityName, up: true),
             onTap: upBlock == TripLegEditBlock.none && !_busy ? () => _move(true) : null,
           ),
           _row(
-            icon: Icons.keyboard_arrow_down,
+            icon: Icons.arrow_downward_rounded,
             label: TripStringsMcaA3.moveDown,
             trailing: TripLegMenuSheet.blockText(downBlock, leg.cityName, up: false),
             onTap: downBlock == TripLegEditBlock.none && !_busy ? () => _move(false) : null,
@@ -479,13 +504,15 @@ class _LegMenuBodyState extends State<_LegMenuBody> {
           _row(
             icon: Icons.close_rounded,
             label: TripStringsMcaA3.removeCity,
-            color: TripLook.error,
+            danger: true,
             trailing: TripLegMenuSheet.blockText(removeBlock, leg.cityName),
             onTap: (removeBlock == TripLegEditBlock.none || removeBlock == TripLegEditBlock.bookings) && !_busy
                 ? _remove
                 : null,
           ),
-        ],
+            ],
+          ),
+        ),
       );
     });
   }

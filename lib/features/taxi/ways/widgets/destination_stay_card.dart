@@ -1,22 +1,23 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:bakhli/design/design.dart';
-import 'package:bakhli/design/extra/trip_plan_look.dart';
+import 'package:bakhli/design/extra/ext_journeys.dart';
 import '../../../../config/app_routes.dart';
+import '../../../../models/browse_item.dart';
 import '../../../../utils/contact_launcher.dart';
 import '../../../stay/models/stay_nearby_model.dart';
 import '../../../trip/utils/trip_format.dart';
 import '../taxi_ways_strings.dart';
 
 class DestinationStayCard extends StatelessWidget {
-  static const double baseHeight = 232;
+  static const List<String> _stickers = [ListingArt.key, ListingArt.bed, ListingArt.hotel];
 
   final StayNearbyModel stay;
   final String cityName;
   final DateTime date;
   final int people;
   final double width;
+  final int index;
 
   const DestinationStayCard({
     super.key,
@@ -24,13 +25,11 @@ class DestinationStayCard extends StatelessWidget {
     required this.cityName,
     required this.date,
     required this.people,
-    this.width = 190,
+    this.width = 160,
+    this.index = 0,
   });
 
-  static double heightFor(BuildContext context) {
-    final s = MediaQuery.textScalerOf(context).scale(1).clamp(1.0, 1.4);
-    return baseHeight + (s - 1) * 90;
-  }
+  static double heightFor(BuildContext context) => JourneyRailCard3D.heightFor(context);
 
   void _open() => Get.toNamed(AppRoutes.stayDetail, arguments: {'id': stay.id});
 
@@ -46,86 +45,24 @@ class DestinationStayCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final price = stay.minPricePerNight;
-    final sub = [if (stay.stayTypeName != null) stay.stayTypeName!, TripFormat.km(stay.distanceKm)].join(' · ');
-    return SizedBox(
+    final url = stay.thumbnailUrl;
+    final hasPhoto = url != null && url.isNotEmpty;
+    final place = (stay.cityName ?? '').isNotEmpty ? stay.cityName! : cityName;
+    return JourneyRailCard3D(
+      tone: ListingTone.forest,
+      title: stay.title,
+      lines: [
+        [place, TripFormat.km(stay.distanceKm)].where((e) => e.isNotEmpty).join(' · '),
+        if (stay.stayTypeName != null) stay.stayTypeName!,
+      ],
+      photo: hasPhoto ? KitPhoto(url: url, width: 100, height: 100, asset: TravelIcon.stay, iconSize: 40) : null,
+      sticker: hasPhoto ? _stickers[index % _stickers.length] : null,
+      art: hasPhoto ? null : ListingArt.hotel,
+      number: price == null ? null : BrowseItem.inr(price),
+      unit: price == null ? '' : ' /night',
+      buttonLabel: TaxiWaysStrings.askRoom,
       width: width,
-      height: heightFor(context),
-      child: Container(
-        decoration: TripLook.card(radius: TripLook.softRadius),
-        child: ClipRRect(
-          borderRadius: TripLook.softRadius,
-          child: Material(
-            color: DesignColors.surface,
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              InkWell(
-                onTap: _open,
-                child: SizedBox(
-                  height: 96,
-                  width: double.infinity,
-                  child: stay.thumbnailUrl == null
-                      ? _placeholder()
-                      : CachedNetworkImage(
-                          imageUrl: stay.thumbnailUrl!,
-                          fit: BoxFit.cover,
-                          errorWidget: (_, _, _) => _placeholder(),
-                          placeholder: (_, _) => _placeholder(),
-                        ),
-                ),
-              ),
-              Expanded(
-                child: InkWell(
-                  onTap: _open,
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(10, 8, 10, 0),
-                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text(stay.title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: FitnessAppTheme.title.copyWith(fontSize: 13)),
-                      Text(sub,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: FitnessAppTheme.caption.copyWith(fontSize: 11)),
-                      if (price != null)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 2),
-                          child: FittedBox(
-                            fit: BoxFit.scaleDown,
-                            alignment: Alignment.centerLeft,
-                            child: Text(TaxiWaysStrings.perNight(price),
-                                maxLines: 1,
-                                style: FitnessAppTheme.title.copyWith(fontSize: 13, color: DesignColors.primary)),
-                          ),
-                        ),
-                    ]),
-                  ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(10, 0, 10, 10),
-                child: SizedBox(
-                  width: double.infinity,
-                  height: 44,
-                  child: PrimaryButton(
-                    label: TaxiWaysStrings.askRoom,
-                    tone: KitTone.stay,
-                    compact: true,
-                    scaleLabel: true,
-                    onPressed: _ask,
-                  ),
-                ),
-              ),
-            ]),
-          ),
-        ),
-      ),
+      onTap: _ask,
     );
   }
-
-  Widget _placeholder() => Container(
-        width: double.infinity,
-        color: PickKit.stayTint,
-        alignment: Alignment.center,
-        child: const TravelIcon(TravelIcon.stay, size: 28),
-      );
 }

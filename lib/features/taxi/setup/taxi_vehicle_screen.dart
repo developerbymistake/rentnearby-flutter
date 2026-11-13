@@ -9,8 +9,8 @@ import 'package:permission_handler/permission_handler.dart';
 import '../../../config/app_routes.dart';
 import '../../../controllers/auth_controller.dart';
 import '../../../design/design.dart';
+import '../../../design/extra/ext_taxi_owner.dart';
 import '../../../design/extra/taxi_setup_kit.dart';
-import '../../../design/extra/trip_plan_look.dart';
 import '../../../models/city_model.dart';
 import '../../../screens/add_listing_location_mixin.dart';
 import '../../../utils/app_toast.dart';
@@ -21,14 +21,16 @@ import 'taxi_identity_validators.dart';
 import 'taxi_setup_controller.dart';
 import 'taxi_vehicle_type_picker_sheet.dart';
 
-import 'package:bakhli/design/tokens/shadow_tokens.dart';
 class TaxiVehicleScreen extends StatefulWidget {
   const TaxiVehicleScreen({super.key});
   @override
   State<TaxiVehicleScreen> createState() => _TaxiVehicleScreenState();
 }
 
+enum _Ring { type, seats, plate, photo, phone, whatsApp, base }
+
 class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLocationMixin<TaxiVehicleScreen> {
+  static final ListingTone _tone = ListingTone.coral;
   final _ctrl = TaxiSetupController.ensure();
   final _types = TaxiVehicleTypesController.ensure();
   final _plateCtrl = TextEditingController();
@@ -40,6 +42,8 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
   final _dlCtrl = TextEditingController();
   final _dlFocus = FocusNode();
   final _picker = ImagePicker();
+  final _cardKeys = {for (final r in _Ring.values) r: GlobalKey()};
+  final _dlKey = GlobalKey();
 
   String? _vehicleTypeId;
   String? _vehicleTypeName;
@@ -59,6 +63,7 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
   bool _showRequired = false;
   String? _serverDlError;
   String? _serverDobError;
+  _Ring? _ring;
 
   String? _initTypeId;
   int? _initSeats;
@@ -71,8 +76,8 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
   static final _locationStyle = LocationStepStyle(
     circleColorHex: TaxiSetupKit.hexAccent,
     userDotColorHex: TaxiSetupKit.hexUser,
-    accentColor: FitnessAppTheme.nearlyDarkBlue,
-    addressSpinnerColor: FitnessAppTheme.nearlyDarkBlue,
+    accentColor: ListingPalette.coral.text,
+    addressSpinnerColor: ListingPalette.coral.text,
     addressPrefixIcon: Icons.local_taxi_rounded,
     pinStepTitle: 'Pin Your Base *',
     pinHintNoun: 'taxi',
@@ -180,6 +185,22 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
 
   bool get _blocked => _isUploading || _isFinalizing || _busy || _ctrl.isSaving.value;
 
+  void _mark(_Ring r) {
+    setState(() => _ring = r);
+    _reveal(_cardKeys[r]!);
+  }
+
+  void _reveal(GlobalKey key) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final ctx = key.currentContext;
+      if (ctx != null && mounted) Scrollable.ensureVisible(ctx, alignment: 0.1, duration: const Duration(milliseconds: 250));
+    });
+  }
+
+  void _unmark(_Ring r) {
+    if (_ring == r) _ring = null;
+  }
+
   void _handleLocationStale() {
     if (!mounted || _step != 2) return;
     _resolvedPin = null;
@@ -235,8 +256,9 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
   }
 
   Future<void> _confirmDiscard() async {
-    final ok = await showTaxiDialog(
+    final ok = await showTaxiOwnerDialog(
       context,
+      art: ListingArt.clipboard,
       title: 'Discard changes?',
       body: 'Unsaved changes will be lost.',
       cancelLabel: 'Keep Editing',
@@ -247,8 +269,9 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
   }
 
   Future<void> _showPermissionDeniedDialog(String type) async {
-    final ok = await showTaxiDialog(
+    final ok = await showTaxiOwnerDialog(
       context,
+      art: ListingArt.camera,
       title: '$type Permission Required',
       body: 'Please enable $type access in your device Settings to add photos.',
       cancelLabel: 'Cancel',
@@ -258,21 +281,29 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
   }
 
   Future<void> _pickPhoto() async {
-    final source = await SetupKit.sheet<ImageSource>(
+    final source = await Sheet3D.show<ImageSource>(
       context,
-      builder: (sheetCtx) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            SetupKit.grabber(),
-            Text('Add Photo', style: TripKit.text(18, weight: FontWeight.w700).copyWith(letterSpacing: 0.27)),
-            const SizedBox(height: 8),
-            _sourceTile(sheetCtx, TravelIcon.photo, null, 'Take Photo', 'Use camera to capture now', ImageSource.camera),
-            _sourceTile(sheetCtx, null, Icons.photo_library_outlined, 'Choose from Gallery', 'Pick an existing photo',
-                ImageSource.gallery),
-            const SizedBox(height: 8),
-          ]),
-        ),
+      builder: (sheetCtx) => Sheet3D(
+        tone: _tone,
+        art: ListingArt.camera,
+        title: 'Add Photo',
+        centerTitle: false,
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          SheetOptionCard(
+            tone: _tone,
+            art: ListingArt.camera,
+            title: 'Take Photo',
+            subtitle: 'Use camera to capture now',
+            onTap: () => Navigator.pop(sheetCtx, ImageSource.camera),
+          ),
+          SheetOptionCard(
+            tone: ListingTone.indigo,
+            art: ListingArt.sunrise,
+            title: 'Choose from Gallery',
+            subtitle: 'Pick an existing photo',
+            onTap: () => Navigator.pop(sheetCtx, ImageSource.gallery),
+          ),
+        ]),
       ),
     );
     if (source == null) return;
@@ -284,25 +315,13 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
       }
     }
     final picked = await _picker.pickImage(source: source, imageQuality: 85, maxWidth: 1600);
-    if (picked != null && mounted) setState(() => _localPhoto = File(picked.path));
+    if (picked != null && mounted) {
+      setState(() {
+        _localPhoto = File(picked.path);
+        _unmark(_Ring.photo);
+      });
+    }
   }
-
-  Widget _sourceTile(
-          BuildContext sheetCtx, String? asset, IconData? icon, String title, String subtitle, ImageSource source) =>
-      ListTile(
-        leading: Container(
-          width: 44,
-          height: 44,
-          padding: const EdgeInsets.all(8),
-          decoration: const BoxDecoration(color: PickKit.taxiTint, shape: BoxShape.circle),
-          child: asset != null
-              ? Image.asset(asset)
-              : Icon(icon, color: FitnessAppTheme.nearlyDarkBlue, size: 22),
-        ),
-        title: Text(title, style: TripKit.text(14)),
-        subtitle: Text(subtitle, style: TripKit.text(12, color: FitnessAppTheme.lightText)),
-        onTap: () => Navigator.pop(sheetCtx, source),
-      );
 
   void _removePhoto() => setState(() {
         if (_localPhoto != null) {
@@ -321,31 +340,38 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
       _vehicleTypeName = picked.name;
       final d = picked.defaultSeats;
       if (_seats == null && d != null && TaxiOptionSets.seats.contains(d)) _seats = d;
+      _unmark(_Ring.type);
+      if (_seats != null) _unmark(_Ring.seats);
     });
   }
 
   bool _validateVehicle() {
     if (_vehicleTypeId == null) {
       AppToast.error('Pick a vehicle type');
+      _mark(_Ring.type);
       return false;
     }
     if (_seats == null) {
       AppToast.error('Pick the number of seats');
+      _mark(_Ring.seats);
       return false;
     }
     final plate = TaxiOptionSets.normalizePlate(_plateCtrl.text);
     if (plate.isEmpty) {
       AppToast.error('Enter your number plate');
+      _mark(_Ring.plate);
       _plateFocus.requestFocus();
       return false;
     }
     if (!TaxiOptionSets.isValidPlate(plate)) {
       AppToast.error(TaxiOptionSets.plateHelp);
+      _mark(_Ring.plate);
       _plateFocus.requestFocus();
       return false;
     }
     if (!_hasPhoto) {
       AppToast.error('Add a photo that shows the plate');
+      _mark(_Ring.photo);
       return false;
     }
     return true;
@@ -358,6 +384,7 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
     final dlError = _dlError;
     if (dlError != null) {
       AppToast.error(dlError);
+      _reveal(_dlKey);
       _dlFocus.requestFocus();
       return false;
     }
@@ -368,12 +395,14 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
     }
     if (!TaxiOptionSets.isValidMobile(_phone)) {
       AppToast.error('Enter a valid 10-digit mobile number');
+      _mark(_Ring.phone);
       _phoneFocus.requestFocus();
       return false;
     }
     if (!TaxiOptionSets.isValidMobile(_effectiveWhatsApp)) {
       if (_same) setState(() => _same = false);
       AppToast.error('Enter a valid 10-digit WhatsApp number');
+      _mark(_Ring.whatsApp);
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _whatsAppFocus.requestFocus();
       });
@@ -395,7 +424,7 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
       }
       AppToast.error('Pin your base inside a served district');
       _resolvedPin = null;
-      setState(() {});
+      _mark(_Ring.base);
       return false;
     }
     return true;
@@ -436,8 +465,9 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
         _uploadedStatus = res.status ?? _uploadedStatus;
         return true;
       }
-      final retry = await showTaxiDialog(
+      final retry = await showTaxiOwnerDialog(
         context,
+        art: ListingArt.camera,
         title: 'Upload Failed',
         body: 'The plate photo could not be uploaded. Retry?',
         cancelLabel: 'Skip',
@@ -550,307 +580,187 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
       },
       child: Stack(children: [
         Scaffold(
-          backgroundColor: FitnessAppTheme.background,
-          body: Column(children: [
-            ModuleHeader(
-              title: const ['Vehicle', 'Driver', 'Base'][_step],
-              tone: KitTone.taxi,
-              onBack: _onBack,
-              leadingAsset: TravelIcon.taxi,
-            ),
-            Container(
-              decoration: BoxDecoration(
-                color: FitnessAppTheme.white,
-                boxShadow: [
-                  ShadowTokens.tint(FitnessAppTheme.grey, ShadowSpec.restTight),
-                ],
-              ),
-              padding: const EdgeInsets.fromLTRB(20, 14, 20, 14),
-              child: Row(children: [
-                TaxiStepDot(index: 0, step: _step, label: 'Vehicle'),
-                _line(1),
-                TaxiStepDot(index: 1, step: _step, label: 'Driver'),
-                _line(2),
-                TaxiStepDot(index: 2, step: _step, label: 'Base'),
+          backgroundColor: ListingPalette.coral.page,
+          body: KitStatusBar(
+            lightIcons: false,
+            child: SafeArea(
+              bottom: false,
+              child: Column(children: [
+                PageHeader3D(
+                  tone: _tone,
+                  title: const ['Vehicle', 'Driver', 'Base'][_step],
+                  art: ListingArt.taxi,
+                  inlineTitle: true,
+                  onBack: _onBack,
+                ),
+                StepProgressHeader(tone: _tone, labels: const ['Vehicle', 'Driver', 'Base'], current: _step),
+                Expanded(
+                  child: PageTransitionSwitcher(
+                    duration: templateTransitionDuration,
+                    reverse: reverse,
+                    transitionBuilder: (child, animation, secondaryAnimation) => SharedAxisTransition(
+                      fillColor: Colors.transparent,
+                      animation: animation,
+                      secondaryAnimation: secondaryAnimation,
+                      transitionType: SharedAxisTransitionType.horizontal,
+                      child: child,
+                    ),
+                    child: _step == 0
+                        ? _vehicleStep()
+                        : _step == 1
+                            ? _contactStep()
+                            : _baseStep(),
+                  ),
+                ),
               ]),
             ),
-            Expanded(
-              child: PageTransitionSwitcher(
-                duration: templateTransitionDuration,
-                reverse: reverse,
-                transitionBuilder: (child, animation, secondaryAnimation) => SharedAxisTransition(
-                  fillColor: Colors.transparent,
-                  animation: animation,
-                  secondaryAnimation: secondaryAnimation,
-                  transitionType: SharedAxisTransitionType.horizontal,
-                  child: child,
-                ),
-                child: _step == 0
-                    ? _vehicleStep()
-                    : _step == 1
-                        ? _contactStep()
-                        : _baseStep(),
-              ),
-            ),
-            _footer(),
-          ]),
+          ),
+          bottomNavigationBar: _footer(),
         ),
-        if (_isUploading) const SetupBusy(message: 'Uploading photo'),
-        Obx(() => _ctrl.isSaving.value ? const SetupBusy(message: 'Saving your taxi...') : const SizedBox.shrink()),
-        if (_isFinalizing) const SetupBusy(message: 'Please wait...'),
+        if (_isUploading) const SetupBusy(message: 'Uploading photo', tone: KitTone.taxi, art: ListingArt.camera),
+        Obx(() => _ctrl.isSaving.value
+            ? const SetupBusy(message: 'Saving your taxi...', tone: KitTone.taxi, art: ListingArt.taxi)
+            : const SizedBox.shrink()),
+        if (_isFinalizing) const SetupBusy(message: 'Please wait...', tone: KitTone.taxi, art: ListingArt.taxi),
       ]),
     );
   }
 
-  Widget _line(int reachedAt) => Expanded(
-        child: Container(
-          height: 2,
-          alignment: Alignment.centerLeft,
-          color: FitnessAppTheme.spacer,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 250),
-            height: 2,
-            width: _step >= reachedAt ? 400 : 0,
-            color: FitnessAppTheme.nearlyDarkBlue,
-          ),
-        ),
+  Widget _footer() => Obx(() {
+        final saving = _ctrl.isSaving.value;
+        final disabled = saving || _isFinalizing || _isUploading || (_step == 2 && isResolvingDistrict);
+        return FormFooter(
+          tone: _tone,
+          top: const ToastDock(),
+          primaryLabel: _step == 0
+              ? 'Next: Driver'
+              : _step == 1
+                  ? 'Next: Base'
+                  : 'Save',
+          onPrimary: disabled ? null : _handleNext,
+          primaryLoading: saving || _isFinalizing,
+          secondaryLabel: _step > 0 ? 'Back' : null,
+          onSecondary: _blocked ? null : () => _goTo(_step - 1),
+        );
+      });
+
+  Widget _section({required _Ring? ring, required String art, required String title, String? hint, required Widget child}) => FormSectionCard(
+        key: ring == null ? null : _cardKeys[ring],
+        tone: _tone,
+        art: art,
+        artSide: FormArtSide.right,
+        title: title,
+        requiredMark: true,
+        hint: hint,
+        child: child,
       );
 
-  Widget _footer() => SetupFooter(
-        child: Row(children: [
-          if (_step > 0) ...[
-            Expanded(
-              child: SetupOutlineButton(label: 'Back', onPressed: _blocked ? null : () => _goTo(_step - 1)),
-            ),
-            const SizedBox(width: 12),
-          ],
-          Expanded(
-            flex: 2,
-            child: Obx(() {
-              final saving = _ctrl.isSaving.value;
-              final disabled = saving || _isFinalizing || _isUploading || (_step == 2 && isResolvingDistrict);
-              return PickButton(
-                onPressed: disabled ? null : _handleNext,
-                isLoading: saving || _isFinalizing,
-                label: _step == 0
-                    ? 'Next: Driver'
-                    : _step == 1
-                        ? 'Next: Base'
-                        : 'Save',
-                gradient: PickKit.taxiGradient,
-                shadowColor: PickKit.taxiDark,
-              );
+  Widget _note(String text, {bool accent = false, double top = 6}) => Padding(
+        padding: EdgeInsets.only(top: top, left: 4),
+        child: Text(text, style: accent ? Ink3D.text(11.5, FontWeight.w600, _tone.text, height: 1.4, letterSpacing: 0) : FieldMessage.helperStyle),
+      );
+
+  Widget _scroll(int key, List<Widget> children) => SingleChildScrollView(
+        key: ValueKey(key),
+        padding: const EdgeInsets.only(bottom: 24),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: children),
+      );
+
+  Widget _vehicleStep() => _scroll(0, [
+        _section(
+          ring: _Ring.type,
+          art: TaxiOwnerArt.car,
+          title: 'Vehicle Type',
+          child: PillPickerField(
+            tone: _tone,
+            value: _vehicleTypeId == null ? null : (_vehicleTypeName ?? _types.nameOf(_vehicleTypeId)),
+            hint: 'Select',
+            leadingArt: ListingArt.taxi,
+            errorRing: _ring == _Ring.type,
+            helperText: 'Pick from the list. Admin keeps the list updated.',
+            onTap: _pickType,
+          ),
+        ),
+        _section(
+          ring: _Ring.seats,
+          art: ListingArt.bus,
+          title: 'Seats',
+          child: SegmentPills(
+            tone: _tone,
+            labels: [for (final s in TaxiOptionSets.seats) TaxiOptionSets.seatsLabel(s)],
+            selected: _seats == null ? null : TaxiOptionSets.seats.indexOf(_seats!),
+            errorRing: _ring == _Ring.seats,
+            onTap: (i) => setState(() {
+              _seats = TaxiOptionSets.seats[i];
+              _unmark(_Ring.seats);
             }),
           ),
-        ]),
-      );
-
-  Widget _sectionCard({required String title, String? hint, required Widget child}) => SetupCard(
-        title: title,
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          if (hint != null) ...[
-            Text(hint, style: TripKit.text(12, weight: FontWeight.w600, color: TripLook.warning)),
-            const SizedBox(height: 10),
-          ],
-          child,
-        ]),
-      );
-
-  InputDecoration _inputDec(String hint, {String? prefix}) => SetupKit.input(hint: hint, prefix: prefix);
-
-  Widget _note(String text, {bool accent = false}) =>
-      Text(text, style: TripKit.text(12, color: accent ? FitnessAppTheme.nearlyDarkBlue : FitnessAppTheme.lightText));
-
-  Widget _selectRow({
-    required String asset,
-    required String text,
-    required bool placeholder,
-    required VoidCallback onTap,
-    bool error = false,
-  }) =>
-      Material(
-        color: FitnessAppTheme.background,
-        borderRadius: BorderRadius.circular(12),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(12),
-          child: Container(
-            constraints: const BoxConstraints(minHeight: 50),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              border: error ? Border.all(color: TripLook.error, width: 1.5) : null,
-            ),
-            child: Row(children: [
-              Image.asset(asset, width: 24, height: 24),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(text,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TripKit.text(14, color: placeholder ? FitnessAppTheme.deactivatedText : FitnessAppTheme.darkerText)),
-              ),
-              const SizedBox(width: 8),
-              const Icon(Icons.keyboard_arrow_down_rounded, size: 22, color: FitnessAppTheme.nearlyDarkBlue),
-            ]),
-          ),
         ),
-      );
-
-  Widget _vehicleStep() => SingleChildScrollView(
-        key: const ValueKey(0),
-        padding: const EdgeInsets.all(16),
-        child: TemplateStagger(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          _sectionCard(
-            title: 'Vehicle Type *',
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              _selectRow(
-                asset: TravelIcon.taxi,
-                text: _vehicleTypeName ?? _types.nameOf(_vehicleTypeId) ?? 'Select',
-                placeholder: _vehicleTypeId == null,
-                onTap: _pickType,
-              ),
-              const SizedBox(height: 6),
-              _note('Pick from the list. Admin keeps the list updated.'),
-            ]),
-          ),
-          _sectionCard(
-            title: 'Seats *',
-            child: Row(children: [
-              for (var i = 0; i < TaxiOptionSets.seats.length; i++) ...[
-                if (i > 0) const SizedBox(width: 8),
-                Expanded(
-                  child: PickChip(
-                    label: TaxiOptionSets.seatsLabel(TaxiOptionSets.seats[i]),
-                    selected: _seats == TaxiOptionSets.seats[i],
-                    activeColor: PickKit.taxi,
-                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 12),
-                    onTap: () => setState(() => _seats = TaxiOptionSets.seats[i]),
-                  ),
-                ),
-              ],
-            ]),
-          ),
-          _sectionCard(
-            title: 'Number Plate *',
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              TextFormField(
-                controller: _plateCtrl,
-                focusNode: _plateFocus,
-                cursorColor: FitnessAppTheme.nearlyDarkBlue,
-                inputFormatters: TaxiOptionSets.plateInputFormatters,
-                textCapitalization: TextCapitalization.characters,
-                autocorrect: false,
-                enableSuggestions: false,
-                style: SetupKit.fieldText().copyWith(letterSpacing: 1),
-                decoration: _inputDec('e.g. UK 07 TA 1234'),
-              ),
-              if (_isApproved) ...[
-                const SizedBox(height: 6),
-                _note('Changing the plate or photo sends your taxi back to review.', accent: true),
-              ],
-            ]),
-          ),
-          _sectionCard(
-            title: 'Vehicle Photo *',
-            hint: 'Number plate must be clearly visible in the photo',
-            child: _photoBlock(),
-          ),
-        ]),
-      );
+        _section(
+          ring: _Ring.plate,
+          art: ListingArt.key,
+          title: 'Number Plate',
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            TextFormField(
+              controller: _plateCtrl,
+              focusNode: _plateFocus,
+              cursorColor: _tone.g2,
+              inputFormatters: TaxiOptionSets.plateInputFormatters,
+              textCapitalization: TextCapitalization.characters,
+              autocorrect: false,
+              enableSuggestions: false,
+              onChanged: (_) {
+                if (_ring == _Ring.plate) setState(() => _ring = null);
+              },
+              style: PillField.textStyle.copyWith(letterSpacing: 1.5, fontWeight: FontWeight.w600),
+              decoration: _ring == _Ring.plate
+                  ? PillField.decoration(tone: _tone, hint: 'e.g. UK 07 TA 1234').copyWith(error: const SizedBox.shrink())
+                  : PillField.decoration(tone: _tone, hint: 'e.g. UK 07 TA 1234'),
+            ),
+            if (_isApproved) _note('Changing the plate or photo sends your taxi back to review.', accent: true),
+          ]),
+        ),
+        _section(
+          ring: _Ring.photo,
+          art: ListingArt.camera,
+          title: 'Vehicle Photo',
+          hint: 'Number plate must be clearly visible in the photo',
+          child: _photoBlock(),
+        ),
+      ]);
 
   Widget _photoBlock() => GridView.count(
         crossAxisCount: 3,
-        crossAxisSpacing: 8,
-        mainAxisSpacing: 8,
+        crossAxisSpacing: 10,
+        mainAxisSpacing: 10,
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
         padding: EdgeInsets.zero,
         children: [
           if (_hasPhoto) _plateTile(),
-          _addPhotoTile(),
+          TaxiAddPhotoTile(tone: _tone, error: _ring == _Ring.photo, onTap: _blocked ? null : _pickPhoto),
         ],
       );
 
   Widget _plateTile() {
     final local = _localPhoto;
-    return Stack(children: [
-      Positioned.fill(
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(16),
-          child: local != null
-              ? Image.file(local, fit: BoxFit.cover)
-              : CachedNetworkImage(
-                  imageUrl: _remotePhotoUrl!,
-                  fit: BoxFit.cover,
-                  placeholder: (_, _) => Container(color: FitnessAppTheme.background),
-                  errorWidget: (_, _, _) => Container(
-                    color: FitnessAppTheme.background,
-                    padding: const EdgeInsets.all(20),
-                    child: Image.asset(TravelIcon.taxi),
-                  ),
-                ),
-        ),
-      ),
-      Positioned(
-        bottom: 0,
-        left: 0,
-        right: 0,
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 4),
-          decoration: BoxDecoration(
-            color: PickKit.taxi.withValues(alpha: Alpha.high),
-            borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
-          ),
-          child: Text('Plate',
-              textAlign: TextAlign.center,
-              style: TripKit.text(10, weight: FontWeight.w600, color: FitnessAppTheme.white)),
-        ),
-      ),
-      Positioned(
-        top: 0,
-        right: 0,
-        child: GestureDetector(
-          onTap: _blocked ? null : _removePhoto,
-          behavior: HitTestBehavior.opaque,
-          child: Padding(
-            padding: const EdgeInsets.all(4),
-            child: Container(
-              padding: const EdgeInsets.all(2),
-              decoration: const BoxDecoration(color: FitnessAppTheme.white, shape: BoxShape.circle),
-              child: const Icon(Icons.close_rounded, color: TripLook.error, size: 16),
+    return TaxiPlateTile(
+      tone: _tone,
+      onRemove: _blocked ? null : _removePhoto,
+      photo: local != null
+          ? Image.file(local, fit: BoxFit.cover)
+          : CachedNetworkImage(
+              imageUrl: _remotePhotoUrl!,
+              fit: BoxFit.cover,
+              placeholder: (_, _) => ColoredBox(color: _tone.tint),
+              errorWidget: (_, _, _) => Container(
+                color: _tone.tint,
+                padding: const EdgeInsets.all(16),
+                child: Image.asset(ListingArt.taxi),
+              ),
             ),
-          ),
-        ),
-      ),
-    ]);
+    );
   }
-
-  Widget _addPhotoTile() => Material(
-        color: PickKit.taxiTint,
-        borderRadius: BorderRadius.circular(16),
-        child: InkWell(
-          onTap: _blocked ? null : _pickPhoto,
-          borderRadius: BorderRadius.circular(16),
-          child: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: PickKit.taxi.withValues(alpha: Alpha.half), width: 1.5),
-            ),
-            child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-              Image.asset(TravelIcon.photo, width: 28, height: 28),
-              const SizedBox(height: 4),
-              Text('Add',
-                  maxLines: 1, style: TripKit.text(11, weight: FontWeight.w600, color: FitnessAppTheme.nearlyDarkBlue)),
-            ]),
-          ),
-        ),
-      );
-
-  Widget _fieldLabel(String text) => Padding(
-        padding: const EdgeInsets.only(bottom: 6),
-        child: Text(text, maxLines: 1, overflow: TextOverflow.ellipsis, style: SetupKit.label()),
-      );
 
   Future<void> _pickDob() async {
     FocusScope.of(context).unfocus();
@@ -877,124 +787,117 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
     }
   }
 
-  Widget _contactStep() => SingleChildScrollView(
-        key: const ValueKey(1),
-        padding: const EdgeInsets.all(16),
-        child: TemplateStagger(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          _sectionCard(
-            title: 'Driving Licence *',
-            hint: 'Only Bakhli admin sees this',
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              TextFormField(
-                controller: _dlCtrl,
-                focusNode: _dlFocus,
-                cursorColor: FitnessAppTheme.nearlyDarkBlue,
-                inputFormatters: TaxiIdentityValidators.dlInputFormatters,
-                textCapitalization: TextCapitalization.characters,
-                autocorrect: false,
-                enableSuggestions: false,
-                onChanged: (_) => setState(() => _serverDlError = null),
-                style: SetupKit.fieldText().copyWith(letterSpacing: 1),
-                decoration: SetupKit.input(
-                  hint: 'UK07 20150012345',
-                  error: _dlError,
-                  errorMaxLines: 2,
-                  suffix: _hasSavedDl && _dlCtrl.text.isEmpty
-                      ? Text('Saved', style: TripKit.text(12, color: FitnessAppTheme.nearlyDarkBlue))
-                      : null,
-                ),
-              ),
-              if (_hasSavedDl && _dlCtrl.text.isEmpty && _dlError == null) ...[
-                const SizedBox(height: 6),
-                _note(TaxiIdentityValidators.savedHelp, accent: true),
-              ],
-              const SizedBox(height: 6),
-              _note(TaxiIdentityValidators.dlHelp),
-              _note(TaxiIdentityValidators.dlOldHelp),
-              if (_isApproved) ...[
-                const SizedBox(height: 6),
-                _note('Changing the licence or date of birth sends your taxi back to review.', accent: true),
-              ],
-            ]),
-          ),
-          _sectionCard(
-            title: 'Date of Birth *',
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              _selectRow(
-                asset: TravelIcon.calendar,
-                text: _dob != null
-                    ? TaxiIdentityValidators.displayDate(_dob!)
-                    : _hasSavedDob
-                        ? 'Saved · Tap to change'
-                        : 'Select date',
-                placeholder: _dob == null && !_hasSavedDob,
-                error: _dobError != null,
-                onTap: _pickDob,
-              ),
-              if (_dobError != null) ...[
-                const SizedBox(height: 6),
-                Text(_dobError!, style: TripKit.text(12, color: TripLook.error)),
-              ],
-            ]),
-          ),
-          _sectionCard(
-            title: 'Contact *',
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              _fieldLabel('Phone Number'),
-              TextField(
-                controller: _phoneCtrl,
-                focusNode: _phoneFocus,
-                cursorColor: FitnessAppTheme.nearlyDarkBlue,
-                keyboardType: TextInputType.phone,
-                inputFormatters: TaxiOptionSets.phoneInputFormatters,
-                style: SetupKit.fieldText(),
-                decoration: _inputDec('10-digit mobile', prefix: '+91 '),
-              ),
-              const SizedBox(height: 12),
-              _fieldLabel('WhatsApp Number'),
-              TextField(
-                key: ValueKey(_same),
-                controller: _same ? _phoneCtrl : _whatsAppCtrl,
-                focusNode: _same ? null : _whatsAppFocus,
-                enabled: !_same,
-                cursorColor: FitnessAppTheme.nearlyDarkBlue,
-                keyboardType: TextInputType.phone,
-                inputFormatters: TaxiOptionSets.phoneInputFormatters,
-                style: SetupKit.fieldText().copyWith(color: _same ? FitnessAppTheme.grey : FitnessAppTheme.darkerText),
-                decoration: _inputDec('10-digit WhatsApp', prefix: '+91 '),
-              ),
-              const SizedBox(height: 12),
-              Row(children: [
-                Expanded(child: Text('Same as my login number', style: TripKit.text(13, weight: FontWeight.w600))),
-                const SizedBox(width: 8),
-                SetupSwitch(
-                  value: _same,
-                  onChanged: (v) => setState(() {
-                    _same = v;
-                    if (!v && _whatsAppCtrl.text.isEmpty) _whatsAppCtrl.text = _phone;
-                  }),
-                ),
-              ]),
-            ]),
-          ),
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: FitnessAppTheme.white,
-              borderRadius: PickKit.cardRadius,
-              boxShadow: PickKit.greyShadow(),
+  Widget _contactStep() {
+    final savedDl = _hasSavedDl && _dlCtrl.text.isEmpty;
+    final dlError = _dlError;
+    return _scroll(1, [
+      FormSectionCard(
+        key: _dlKey,
+        tone: _tone,
+        art: ListingArt.clipboard,
+        artSide: FormArtSide.right,
+        title: 'Driving Licence',
+        requiredMark: true,
+        hint: 'Only Bakhli admin sees this',
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          TextFormField(
+            controller: _dlCtrl,
+            focusNode: _dlFocus,
+            cursorColor: _tone.g2,
+            inputFormatters: TaxiIdentityValidators.dlInputFormatters,
+            textCapitalization: TextCapitalization.characters,
+            autocorrect: false,
+            enableSuggestions: false,
+            onChanged: (_) => setState(() => _serverDlError = null),
+            style: PillField.textStyle.copyWith(letterSpacing: 1.5, fontWeight: FontWeight.w600),
+            decoration: PillField.decoration(
+              tone: _tone,
+              hint: 'UK07 20150012345',
+              errorText: dlError,
+              suffix: savedDl ? Text('Saved', style: Ink3D.text(12, FontWeight.w700, _tone.text, letterSpacing: 0)) : null,
             ),
-            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Image.asset(TravelIcon.note, width: 22, height: 22),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text('Travellers call or message you on these numbers. Bakhli takes no booking and no payment.',
-                    style: TripKit.text(11, color: FitnessAppTheme.lightText)),
-              ),
-            ]),
+          ),
+          if (savedDl && dlError == null) _note(TaxiIdentityValidators.savedHelp, accent: true),
+          _note(TaxiIdentityValidators.dlHelp),
+          _note(TaxiIdentityValidators.dlOldHelp, top: 0),
+          if (_isApproved) _note('Changing the licence or date of birth sends your taxi back to review.', accent: true),
+        ]),
+      ),
+      FormSectionCard(
+        tone: _tone,
+        art: ListingArt.calendar,
+        artSide: FormArtSide.right,
+        title: 'Date of Birth',
+        requiredMark: true,
+        child: PillPickerField(
+          tone: _tone,
+          value: _dob != null
+              ? TaxiIdentityValidators.displayDate(_dob!)
+              : _hasSavedDob
+                  ? 'Saved · Tap to change'
+                  : null,
+          hint: 'Select date',
+          leadingArt: ListingArt.calendar,
+          errorText: _dobError,
+          onTap: _pickDob,
+        ),
+      ),
+      _section(
+        ring: _Ring.phone,
+        art: ListingArt.speechBalloon,
+        title: 'Contact',
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          PillField(
+            tone: _tone,
+            label: 'Phone Number',
+            controller: _phoneCtrl,
+            focusNode: _phoneFocus,
+            keyboardType: TextInputType.phone,
+            inputFormatters: TaxiOptionSets.phoneInputFormatters,
+            prefixText: '+91',
+            hint: '10-digit mobile',
+            errorRing: _ring == _Ring.phone,
+            onChanged: (_) {
+              if (_ring == _Ring.phone) setState(() => _ring = null);
+            },
+          ),
+          PillField(
+            key: _cardKeys[_Ring.whatsApp],
+            tone: _tone,
+            label: 'WhatsApp Number',
+            firstLabel: false,
+            fieldKey: ValueKey(_same),
+            controller: _same ? _phoneCtrl : _whatsAppCtrl,
+            focusNode: _same ? null : _whatsAppFocus,
+            enabled: !_same,
+            keyboardType: TextInputType.phone,
+            inputFormatters: TaxiOptionSets.phoneInputFormatters,
+            prefixText: '+91',
+            hint: '10-digit WhatsApp',
+            errorRing: _ring == _Ring.whatsApp,
+            onChanged: (_) {
+              if (_ring == _Ring.whatsApp) setState(() => _ring = null);
+            },
+          ),
+          const SizedBox(height: 8),
+          ToggleRow(
+            tone: _tone,
+            label: 'Same as my login number',
+            value: _same,
+            onChanged: (v) => setState(() {
+              _same = v;
+              if (!v && _whatsAppCtrl.text.isEmpty) _whatsAppCtrl.text = _phone;
+            }),
           ),
         ]),
-      );
+      ),
+      FormNoteCard(
+        tone: _tone,
+        art: ListingArt.clipboard,
+        body: 'Travellers call or message you on these numbers. Bakhli takes no booking and no payment.',
+      ),
+    ]);
+  }
 
   Widget _baseStep() {
     final resolving = isResolvingDistrict;
@@ -1005,43 +908,41 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
         : resolving
             ? 'Detecting…'
             : 'Pin inside a served district';
+    final ring = _ring == _Ring.base && district == null && !resolving;
     // Scrolls only when the content is taller than the screen, so on most phones map drags still reach the map.
     return SingleChildScrollView(
       key: const ValueKey(2),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      padding: const EdgeInsets.only(bottom: 24),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         locationStepWidget(),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
-          child: TemplateEntranceOnce(
-            child: _sectionCard(
-              title: 'District and City',
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                constraints: const BoxConstraints(minHeight: 50),
-                decoration: BoxDecoration(color: FitnessAppTheme.background, borderRadius: BorderRadius.circular(12)),
-                child: Row(children: [
-                  Image.asset(TravelIcon.place, width: 24, height: 24),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(value,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: TripKit.text(14,
-                            color: district != null ? FitnessAppTheme.darkerText : FitnessAppTheme.deactivatedText)),
-                  ),
-                  const SizedBox(width: 8),
-                  if (resolving)
-                    const SizedBox(
-                      width: 14,
-                      height: 14,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: FitnessAppTheme.nearlyDarkBlue),
-                    )
-                  else if (district != null)
-                    Image.asset(TravelIcon.pin, width: 20, height: 20),
-                ]),
-              ),
+        FormSectionCard(
+          key: _cardKeys[_Ring.base],
+          tone: _tone,
+          art: ListingArt.roundPushpin,
+          artSide: FormArtSide.right,
+          title: 'District and City',
+          child: Container(
+            constraints: const BoxConstraints(minHeight: 52),
+            padding: const EdgeInsets.fromLTRB(4, 8, 18, 8),
+            decoration: BoxDecoration(
+              color: ring ? Form3D.fillError : Form3D.fill,
+              borderRadius: BorderRadius.circular(26),
+              border: Border.all(color: ring ? Form3D.error : Colors.transparent, width: 1.5),
             ),
+            child: Row(children: [
+              PillField.art(ListingArt.roundPushpin),
+              Expanded(
+                child: Text(value,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: Ink3D.text(15, FontWeight.w400, district != null ? Ink3D.body : Form3D.hint, letterSpacing: 0)),
+              ),
+              const SizedBox(width: 8),
+              if (resolving)
+                SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2.5, color: _tone.g2))
+              else if (district != null)
+                Image.asset(ListingArt.pushpin, width: 26, height: 26),
+            ]),
           ),
         ),
       ]),

@@ -9,6 +9,7 @@ class MealsListData {
     this.endColor = Colors.transparent,
     this.meals,
     this.kacl = 0,
+    this.unit = 'kcal',
   });
 
   String imagePath;
@@ -17,6 +18,7 @@ class MealsListData {
   Color endColor;
   List<String>? meals;
   int kacl;
+  String unit;
 
   static List<MealsListData> tabIconsList = <MealsListData>[
     MealsListData(

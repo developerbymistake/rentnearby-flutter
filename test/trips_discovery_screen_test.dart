@@ -147,14 +147,17 @@ void main() {
   testWidgets('state chips filter the grid when two states are live', (t) async {
     await _pump(t, _Catalog([_city(1), _city(2, state: 'Himachal Pradesh')]), 360, 1);
     expect(find.text('All'), findsOneWidget);
-    await t.tap(find.text('Himachal Pradesh'));
+    final chip = find.widgetWithText(ChipCP, 'Himachal Pradesh');
+    await t.ensureVisible(chip);
+    await t.pump();
+    await t.tap(chip);
     await t.pump();
     expect(find.byType(TripCityTile), findsOneWidget);
   });
 
   testWidgets('My trips pill shows the count', (t) async {
     await _pump(t, _Catalog([_city(1)]), 360, 1, trips: _Trips(openCount: 3));
-    expect(find.text('My trips · 3'), findsOneWidget);
+    expect(find.text('My trips (3)'), findsOneWidget);
   });
 
   testWidgets('error state offers Try again', (t) async {

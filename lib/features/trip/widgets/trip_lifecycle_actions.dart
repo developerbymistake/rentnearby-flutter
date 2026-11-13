@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:bakhli/features/trip/widgets/trip_ui.dart';
 import 'package:bakhli/design/design.dart';
-import 'package:bakhli/design/extra/replies_kit.dart';
 import '../../../utils/app_toast.dart';
 import '../../../utils/dio_error_mapper.dart';
 import '../controllers/my_trips_controller.dart';
@@ -45,25 +43,19 @@ class TripLifecycleActions {
     }
   }
 
-  static Future<bool?> _confirmComplete(BuildContext context, {required bool early}) => showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: const RoundedRectangleBorder(borderRadius: RepliesCard.radius),
-        backgroundColor: FitnessAppTheme.white,
-        title: Text(
-          early ? TripStringsA5.completeNowQ : TripStrings.markCompleteQ,
-          style: FitnessAppTheme.title,
+  static Future<bool?> _confirmComplete(BuildContext context, {required bool early}) => Dialog3D.show<bool>(
+        context,
+        builder: (ctx) => Dialog3D(
+          tone: ListingTone.indigo,
+          art: ListingArt.star,
+          title: early ? TripStringsA5.completeNowQ : TripStrings.markCompleteQ,
+          body: early ? TripStringsA5.completeNowBody : TripStrings.markCompleteBody,
+          secondaryLabel: TripStrings.cancelAction,
+          onSecondary: () => Navigator.pop(ctx, false),
+          primaryLabel: TripStrings.markComplete,
+          onPrimary: () => Navigator.pop(ctx, true),
         ),
-        content: Text(
-          early ? TripStringsA5.completeNowBody : TripStrings.markCompleteBody,
-          style: FitnessAppTheme.body2,
-        ),
-        actions: [
-          TextLink(label: TripStrings.cancelAction, onTap: () => Navigator.pop(ctx, false), tone: KitTone.trip),
-          TripButton(label: TripStrings.markComplete, onPressed: () => Navigator.pop(ctx, true), color: RepliesTone.accent, height: 44, expand: false),
-        ],
-      ),
-    );
+      );
 
   static Future<bool> markCompleteFromList(BuildContext context, TripSummaryModel trip) async {
     final ok = await _confirmComplete(context, early: false);
@@ -103,30 +95,18 @@ class TripLifecycleActions {
       if (confirmed > 0) TripStringsV2Plan.confirmedStays(confirmed),
       if (confirmedTaxis > 0) TripStringsV2Plan.confirmedTaxis(confirmedTaxis),
     ];
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: const RoundedRectangleBorder(borderRadius: RepliesCard.radius),
-        backgroundColor: FitnessAppTheme.white,
-        title: const Text(TripStringsV2Plan.deleteTitle,
-            style: FitnessAppTheme.title),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            for (final l in lines)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 6),
-                child: Text(l, style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 13, color: FitnessAppTheme.darkerText)),
-              ),
-            const Text(TripStringsV2Plan.deleteBody,
-                style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 13, color: FitnessAppTheme.lightText)),
-          ],
-        ),
-        actions: [
-          TextLink(label: TripStringsV2Plan.keepTrip, onTap: () => Navigator.pop(ctx, false), tone: KitTone.trip),
-          TripButton(label: TripStringsV2Plan.delete, onPressed: () => Navigator.pop(ctx, true), color: RepliesTone.bad, height: 44, expand: false),
-        ],
+    final ok = await Dialog3D.show<bool>(
+      context,
+      builder: (ctx) => Dialog3D(
+        tone: ListingTone.indigo,
+        art: ListingArt.luggage,
+        title: TripStringsV2Plan.deleteTitle,
+        body: [TripStringsV2Plan.deleteBody, ...lines].join('\n'),
+        secondaryLabel: TripStringsV2Plan.keepTrip,
+        onSecondary: () => Navigator.pop(ctx, false),
+        primaryLabel: TripStringsV2Plan.delete,
+        primaryDanger: true,
+        onPrimary: () => Navigator.pop(ctx, true),
       ),
     );
     return ok == true;
@@ -160,18 +140,17 @@ class TripLifecycleActions {
       return false;
     }
     if (!context.mounted) return false;
-    final leave = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: const RoundedRectangleBorder(borderRadius: RepliesCard.radius),
-        backgroundColor: FitnessAppTheme.white,
-        title: const Text(TripStringsV2Plan.savedTitle,
-            style: FitnessAppTheme.title),
-        content: const Text(TripStringsV2Plan.savedBody, style: FitnessAppTheme.body2),
-        actions: [
-          TextLink(label: TripStringsV2Plan.keepPlanning, onTap: () => Navigator.pop(ctx, false), tone: KitTone.trip),
-          TripButton(label: TripStringsV2Plan.goToMyTrips, onPressed: () => Navigator.pop(ctx, true), color: RepliesTone.accent, height: 44, expand: false),
-        ],
+    final leave = await Dialog3D.show<bool>(
+      context,
+      builder: (ctx) => Dialog3D(
+        tone: ListingTone.indigo,
+        art: ListingArt.luggage,
+        title: TripStringsV2Plan.savedTitle,
+        body: TripStringsV2Plan.savedBody,
+        secondaryLabel: TripStringsV2Plan.keepPlanning,
+        onSecondary: () => Navigator.pop(ctx, false),
+        primaryLabel: TripStringsV2Plan.goToMyTrips,
+        onPrimary: () => Navigator.pop(ctx, true),
       ),
     );
     if (leave == true) TripNavigation.replaceWithMyTrips();

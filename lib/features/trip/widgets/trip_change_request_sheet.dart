@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:bakhli/features/trip/widgets/trip_ui.dart';
 import 'package:bakhli/design/design.dart';
-import 'package:bakhli/design/extra/replies_kit.dart';
+import 'package:bakhli/design/extra/ext_trip_replies.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import '../../../models/browse_item.dart';
 import '../../../utils/app_toast.dart';
 import '../../../utils/input_formatters.dart';
 import '../controllers/trip_enquiry_controller.dart';
@@ -14,7 +14,6 @@ import '../trip_constants.dart';
 import '../trip_strings.dart';
 import '../utils/trip_format.dart';
 import '../utils/trip_clock.dart';
-import 'trip_payment_line.dart';
 import 'trip_sheet_frame.dart';
 
 class TripChangeRequestSheet {
@@ -197,236 +196,87 @@ class _ChangeBodyState extends State<_ChangeBody> {
     });
   }
 
+  static final ListingTone _tone = ListingTone.forest;
+
   @override
   Widget build(BuildContext context) {
+    final e = widget.enquiry;
+    final cin = _checkIn;
+    final cout = _checkOut;
+    final oi = _origIn;
+    final oo = _origOut;
+    final now = oi == null || oo == null ? e.datesLabel : TripFormat.dayMonthRange(oi, oo);
+    final total = e.agreedTotal;
+    final sub = e.listingName;
+    final message = _serverError ?? (_changed ? null : TripStrings.nothingChanged);
+    final dates = [
+      PillPickerField(
+        tone: _tone,
+        sublabel: TripStrings.checkIn,
+        value: cin == null ? null : TripFormat.shortDate(cin),
+        hint: TripStrings.pickDate,
+        leadingArt: ListingArt.calendar,
+        trailing: const SizedBox.shrink(),
+        onTap: _busy ? null : _pickCheckIn,
+      ),
+      PillPickerField(
+        tone: _tone,
+        sublabel: TripStrings.checkOut,
+        value: cout == null ? null : TripFormat.shortDate(cout),
+        hint: TripStrings.pickDate,
+        leadingArt: ListingArt.calendar,
+        trailing: const SizedBox.shrink(),
+        enabled: cin != null,
+        onTap: _busy || cin == null ? null : _pickCheckOut,
+      ),
+    ];
     return TripSheetFrame(
-      title: widget.title ?? TripStrings.changeRequest,
-      description: widget.enquiry.listingName.isEmpty ? null : widget.enquiry.listingName,
-      footer: const TripPaymentLine(),
+      tone: _tone,
+      art: ListingArt.calendar,
+      size: SheetSize.form,
+      title: widget.title ?? TripStrings.sendChangeRequest,
+      description: sub.isEmpty ? null : sub,
+      footnote: TripStrings.bookingStaysUntilHost,
+      footer: GradientPillButton(tone: _tone, label: TripStrings.sendChangeRequest, loading: _busy, enabled: _canSend || _busy, onTap: _canSend ? _send : null),
       children: [
-        TemplateStagger(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-        _datesRow(),
-        const SizedBox(height: 14),
-        _card(children: [
-          _stepperRow(TripStrings.adults, _adults, 1, TripConstants.maxAdults, (v) => setState(() => _adults = v)),
-          const Divider(height: 1, color: FitnessAppTheme.spacer),
-          _stepperRow(TripStrings.kids, _kids, 0, TripConstants.maxKids, (v) => setState(() => _kids = v)),
-          const Divider(height: 1, color: FitnessAppTheme.spacer),
-          _stepperRow(TripStrings.rooms, _rooms, 1, _maxRooms, (v) => setState(() => _rooms = v)),
-        ]),
-        const SizedBox(height: 14),
-        _label(TripStrings.note),
-        TextField(
+        ReplySummaryStrip(
+          tone: _tone,
+          title: '$_kNow: $now',
+          subtitle: [TripStrings.peopleCount(_origAdults + _origKids), _origRooms == 1 ? '1 room' : '$_origRooms rooms'].join(' · '),
+          value: total != null && total > 0 ? BrowseItem.inr(total) : '',
+          margin: const EdgeInsets.only(top: 6, bottom: 12),
+        ),
+        LayoutBuilder(
+          builder: (context, box) => box.maxWidth >= 300
+              ? Row(children: [Expanded(child: dates[0]), const SizedBox(width: 10), Expanded(child: dates[1])])
+              : Column(children: [dates[0], const SizedBox(height: 10), dates[1]]),
+        ),
+        const SizedBox(height: 12),
+        StepperField(tone: _tone, filled: true, leadingArt: ListingArt.backpack, label: TripStrings.adults, value: _adults, min: 1, max: TripConstants.maxAdults, onChanged: _busy ? null : (v) => setState(() => _adults = v)),
+        const SizedBox(height: 12),
+        StepperField(tone: _tone, filled: true, leadingArt: ListingArt.star, label: TripStrings.kids, value: _kids, min: 0, max: TripConstants.maxKids, onChanged: _busy ? null : (v) => setState(() => _kids = v)),
+        const SizedBox(height: 12),
+        StepperField(tone: _tone, filled: true, leadingArt: ListingArt.bed, label: TripStrings.rooms, value: _rooms, min: 1, max: _maxRooms, onChanged: _busy ? null : (v) => setState(() => _rooms = v)),
+        PillField(
+          tone: _tone,
           controller: _note,
           enabled: !_busy,
-          minLines: 2,
+          label: TripStrings.note,
+          firstLabel: false,
+          leadingArt: ListingArt.speechBalloon,
+          minLines: 1,
           maxLines: 3,
           textCapitalization: TextCapitalization.sentences,
           inputFormatters: [...noEmojiInputFormatters, LengthLimitingTextInputFormatter(TripConstants.noteMax)],
-          style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 14, color: FitnessAppTheme.darkerText),
-          decoration: InputDecoration(
-            filled: true,
-            fillColor: FitnessAppTheme.background,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-            enabledBorder:
-                OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Colors.transparent)),
-            focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: RepliesTone.accent, width: 1.5)),
+        ),
+        if (message != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 10),
+            child: Text(message, maxLines: 3, overflow: TextOverflow.ellipsis, style: _serverError != null ? FieldMessage.errorStyle : RepliesLook.foot),
           ),
-        ),
-        const SizedBox(height: 14),
-        _info(TripStrings.bookingStaysUntilHost),
-        const SizedBox(height: 16),
-        TripButton(
-          onPressed: _canSend ? _send : null,
-          label: TripStrings.sendChangeRequest,
-          loading: _busy,
-          height: 52,
-        ),
-        if (_serverError != null || !_changed) ...[
-          const SizedBox(height: 8),
-          Text(
-            _serverError ?? TripStrings.nothingChanged,
-            maxLines: 3,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontFamily: FitnessAppTheme.fontName,
-              fontSize: 12,
-              fontWeight: _serverError != null ? FontWeight.w600 : FontWeight.w400,
-              color: _serverError != null ? RepliesTone.bad : FitnessAppTheme.deactivatedText,
-            ),
-          ),
-        ],
-          ],
-        ),
       ],
     );
   }
-
-  Widget _datesRow() {
-    final cin = _checkIn;
-    final cout = _checkOut;
-    final inTile = _dateTile(
-      label: TripStrings.checkIn,
-      value: cin == null ? TripStrings.pickDate : TripFormat.shortDate(cin),
-      changed: cin != _origIn,
-      icon: TravelIcon.calendar,
-      onTap: _busy ? null : _pickCheckIn,
-    );
-    final outTile = _dateTile(
-      label: TripStrings.checkOut,
-      value: cout == null ? TripStrings.pickDate : TripFormat.shortDate(cout),
-      changed: cout != _origOut,
-      icon: TravelIcon.calendar,
-      onTap: _busy || cin == null ? null : _pickCheckOut,
-    );
-    return LayoutBuilder(
-      builder: (context, box) {
-        if (box.maxWidth >= 340) {
-          return IntrinsicHeight(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [Expanded(child: inTile), const SizedBox(width: 12), Expanded(child: outTile)],
-            ),
-          );
-        }
-        return Column(children: [inTile, const SizedBox(height: 10), outTile]);
-      },
-    );
-  }
-
-  Widget _dateTile({
-    required String label,
-    required String value,
-    required bool changed,
-    required String icon,
-    VoidCallback? onTap,
-  }) {
-    final active = onTap != null;
-    return Container(
-      decoration: BoxDecoration(
-        color: active ? FitnessAppTheme.white : FitnessAppTheme.background,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: active
-            ? <BoxShadow>[ShadowTokens.tint(FitnessAppTheme.grey, ShadowSpec.soft)]
-            : null,
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 64),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            child: Row(
-              children: [
-                TravelIcon(icon, size: 24),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(label,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 11, color: FitnessAppTheme.deactivatedText)),
-                      Text(value,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontFamily: FitnessAppTheme.fontName,
-                            fontSize: 13,
-                            fontWeight: changed ? FontWeight.w700 : FontWeight.w600,
-                            color: FitnessAppTheme.darkerText,
-                          )),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        ),
-      ),
-    );
-  }
-
-  Widget _card({required List<Widget> children}) => Container(
-        decoration: BoxDecoration(
-          color: FitnessAppTheme.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: <BoxShadow>[ShadowTokens.tint(FitnessAppTheme.grey, ShadowSpec.soft)],
-        ),
-        child: Column(children: children),
-      );
-
-  Widget _stepperRow(String label, int value, int min, int max, ValueChanged<int> onChanged) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(label,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 14, fontWeight: FontWeight.w600, color: FitnessAppTheme.darkerText)),
-          ),
-          _stepButton(Icons.remove_rounded, !_busy && value > min ? () => onChanged(value - 1) : null),
-          SizedBox(
-            width: 44,
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Text('$value',
-                  style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 16, fontWeight: FontWeight.w700, color: FitnessAppTheme.darkerText)),
-            ),
-          ),
-          _stepButton(Icons.add_rounded, !_busy && value < max ? () => onChanged(value + 1) : null),
-        ],
-      ),
-    );
-  }
-
-  Widget _stepButton(IconData icon, VoidCallback? onTap) {
-    final enabled = onTap != null;
-    return SizedBox(
-      width: 44,
-      height: 44,
-      child: InkWell(
-        onTap: onTap,
-        customBorder: const CircleBorder(),
-        child: Center(
-          child: Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: enabled ? RepliesTone.accentSurface : RepliesTone.chip,
-            ),
-            child: Icon(icon, size: 18, color: enabled ? RepliesTone.accent : FitnessAppTheme.deactivatedText),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _info(String text) => TripNote(
-        iconAsset: TravelIcon.note,
-        iconSize: 18,
-        child: Text(text,
-            style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, color: FitnessAppTheme.lightText, height: 1.4)),
-      );
-
-  Widget _label(String text) => Padding(
-        padding: const EdgeInsets.only(bottom: 6),
-        child: Text(text,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12.5, fontWeight: FontWeight.w600, color: FitnessAppTheme.lightText)),
-      );
 }
+
+const String _kNow = 'Now';

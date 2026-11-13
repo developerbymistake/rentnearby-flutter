@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:bakhli/design/design.dart';
-import 'package:bakhli/design/extra/trip_plan_look.dart';
-import 'package:bakhli/design/extra/ways_kit.dart';
+import 'package:bakhli/design/extra/ext_journeys.dart';
 import '../../../config/app_insets.dart';
 import 'journey_plan_controller.dart';
 import 'journey_plan_screen.dart';
@@ -24,7 +23,7 @@ class JourneyRoadScreen extends StatefulWidget {
 class _JourneyRoadScreenState extends State<JourneyRoadScreen> with TickerProviderStateMixin {
   static const double _maxWidth = 720;
   static const double _sheetMin = 0.22;
-  static const double _sheetStart = 0.4;
+  static const double _sheetStart = 0.34;
 
   JourneyPlanController? _c;
   String? _tag;
@@ -69,12 +68,9 @@ class _JourneyRoadScreenState extends State<JourneyRoadScreen> with TickerProvid
     final c = _c;
     if (c == null) {
       return Scaffold(
-        backgroundColor: DesignColors.scaffold,
+        backgroundColor: ListingPalette.coral.page,
         body: Column(children: [
-          WaysTopBar(
-            animation: WaysKit.topBar(_ac),
-            child: JourneyPlanScreen.header(context, title: TaxiWaysStrings.onTheRoad),
-          ),
+          TemplateEntrance(animation: templateInterval(_ac, 0, 2), animationController: _ac, offset: 0, child: JourneyPlanScreen.header(context, title: TaxiWaysStrings.onTheRoad, art: ListingArt.worldMap)),
           Expanded(child: JourneyPlanScreen.invalidBody(_raw)),
         ]),
       );
@@ -85,15 +81,18 @@ class _JourneyRoadScreenState extends State<JourneyRoadScreen> with TickerProvid
         if (!didPop) _close();
       },
       child: Scaffold(
-        backgroundColor: DesignColors.scaffold,
+        backgroundColor: ListingPalette.coral.page,
         body: Obx(() {
           final plan = c.plan.value;
           return Column(children: [
-            WaysTopBar(
-              animation: WaysKit.topBar(_ac),
+            TemplateEntrance(
+              animation: templateInterval(_ac, 0, 2),
+              animationController: _ac,
+              offset: 0,
               child: JourneyPlanScreen.header(
                 context,
                 title: TaxiWaysStrings.onTheRoad,
+                art: ListingArt.worldMap,
                 subtitle: plan.legs.isEmpty
                     ? TaxiWaysStrings.subtitle(c.args.from.name, c.args.to.name)
                     : '${TaxiWaysStrings.subtitle(plan.from.name, plan.to.name)} · ${TaxiWaysStrings.carsCount(plan.carHires)}',
@@ -109,21 +108,15 @@ class _JourneyRoadScreenState extends State<JourneyRoadScreen> with TickerProvid
   Widget _body(BuildContext context, JourneyPlanController c, WayPlan plan) {
     if (plan.legs.isEmpty) {
       if (c.loading.value) {
-        return ListView(padding: const EdgeInsets.all(16), children: [
-          _skel(60),
-          const SizedBox(height: 12),
-          _skel(120),
-          const SizedBox(height: 12),
-          _skel(120),
-        ]);
+        return ListView(padding: EdgeInsets.zero, children: const [JourneyPillSkeleton(), JourneyCardSkeleton(), JourneyCardSkeleton()]);
       }
-      return ListView(children: [
-        TripPlanEmpty(
-          image: c.offline.value ? TravelIcon.map : TravelIcon.route,
+      return ListView(padding: EdgeInsets.zero, children: [
+        JourneyEmpty3D(
+          art: ListingArt.worldMap,
           title: c.offline.value ? TaxiWaysStrings.offlineTitle : TaxiWaysStrings.loadFailed,
-          subtitle: TaxiWaysStrings.offlineBody,
-          onRetry: c.load,
-          retryLabel: TaxiWaysStrings.retry,
+          body: TaxiWaysStrings.offlineBody,
+          onAction: c.load,
+          actionLabel: TaxiWaysStrings.retry,
         ),
       ]);
     }
@@ -132,7 +125,7 @@ class _JourneyRoadScreenState extends State<JourneyRoadScreen> with TickerProvid
       return Stack(children: [
         Positioned.fill(
           child: ListView(
-            padding: EdgeInsets.fromLTRB(16, 16, 16, reserve),
+            padding: EdgeInsets.only(bottom: reserve),
             children: [
               Center(
                 child: ConstrainedBox(
@@ -165,57 +158,41 @@ class _JourneyRoadScreenState extends State<JourneyRoadScreen> with TickerProvid
   Widget _sheet(BuildContext context, JourneyPlanController c, WayPlan plan, ScrollController scroll) {
     return Container(
       decoration: const BoxDecoration(
-        color: DesignColors.surface,
+        color: DesignColors.sheet,
         borderRadius: BorderRadius.only(topLeft: Radius.circular(32), topRight: Radius.circular(32)),
-        boxShadow: WaysKit.topShadow,
+        boxShadow: JourneyInk.sheetShadow,
       ),
       child: Obx(() {
         final chosen = c.chosen;
         final busy = c.isBusy;
+        final legs = plan.legs;
         return ListView(
           controller: scroll,
-          padding: EdgeInsets.fromLTRB(16, 8, 16, 16 + AppInsets.bottomViewPadding(context)),
+          padding: EdgeInsets.fromLTRB(0, 8, 0, 16 + AppInsets.bottomViewPadding(context)),
           children: [
             Center(
               child: Container(
                 width: 40,
                 height: 4,
-                margin: const EdgeInsets.only(bottom: 12),
-                decoration: BoxDecoration(color: DesignColors.textMuted.withValues(alpha: Alpha.half), borderRadius: BorderRadius.circular(2)),
+                margin: const EdgeInsets.only(bottom: 4),
+                decoration: BoxDecoration(color: Ink3D.line, borderRadius: BorderRadius.circular(2)),
               ),
             ),
             Center(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: _maxWidth),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                  for (final leg in plan.legs)
-                    if ((chosen[leg.index] ?? leg.firstDriver) != null)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 10),
-                        child: JourneyDriverCard(
-                          driver: (chosen[leg.index] ?? leg.firstDriver)!,
-                          color: JourneyRail.colorFor(leg.index),
-                          caption: '${TaxiWaysStrings.subtitle(leg.from.name, leg.to.name)} · '
-                              '${JourneyDriverCard.vehicleLine((chosen[leg.index] ?? leg.firstDriver)!)}',
-                          selected: _selected == leg.index,
-                          onTap: () => _select(leg.index),
-                          otherCount: leg.otherCount,
-                          seatsNote: TripStringsA6.legSeats(leg),
-                          onChange: () => c.changeDriver(context, leg),
-                        ),
-                      ),
-                  const SizedBox(height: 4),
-                  JourneyAskButton(
-                    label: JourneyAskButton.labelFor(plan.legs.length),
-                    busy: busy,
-                    onPressed: () => c.askDrivers(context),
+                  for (final (i, leg) in legs.indexed)
+                    if ((chosen[leg.index] ?? leg.firstDriver) != null) ..._legCard(context, c, leg, (chosen[leg.index] ?? leg.firstDriver)!, i, legs.length),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
+                    child: JourneyAskButton(
+                      label: JourneyAskButton.labelFor(legs.length),
+                      busy: busy,
+                      onPressed: () => c.askDrivers(context),
+                    ),
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    TaxiWaysStrings.payLine,
-                    textAlign: TextAlign.center,
-                    style: FitnessAppTheme.caption.copyWith(fontSize: 11),
-                  ),
+                  const Padding(padding: EdgeInsets.symmetric(horizontal: 16), child: JourneyPayLine(TaxiWaysStrings.payLine)),
                 ]),
               ),
             ),
@@ -225,9 +202,33 @@ class _JourneyRoadScreenState extends State<JourneyRoadScreen> with TickerProvid
     );
   }
 
-  Widget _skel(double h) => Container(
-        decoration: TripLook.card(),
-        padding: const EdgeInsets.all(12),
-        child: TemplatePlaceholder(height: h - 24, radius: 14),
-      );
+  List<Widget> _legCard(BuildContext context, JourneyPlanController c, WayLeg leg, WayDriver d, int i, int count) {
+    final seats = TripStringsA6.legSeats(leg);
+    return [
+      JourneySlimCard3D(
+        tone: JourneyRail.toneFor(leg.index),
+        art: JourneyArt.forVehicle(d.vehicleTypeName, d.seats),
+        tag: count > 1 ? TaxiWaysStrings.carOf(i + 1, count) : null,
+        title: d.driverName,
+        subtitle: [
+          JourneyDriverCard.vehicleLine(d),
+          [JourneyDriverCard.fareText(d), TaxiWaysStrings.toPlace(leg.to.name)].where((e) => e.isNotEmpty).join(' · '),
+          ?seats,
+        ],
+        picked: _selected == leg.index,
+        onTap: () => _select(leg.index),
+        callTooltip: TaxiWaysStrings.callName(d.driverName),
+        onCall: () => JourneyDriverCard.call(d),
+        semanticsLabel: '${d.driverName}, ${TaxiWaysStrings.subtitle(leg.from.name, leg.to.name)}',
+      ),
+      if (leg.otherCount > 0)
+        Align(
+          alignment: Alignment.centerRight,
+          child: Padding(
+            padding: const EdgeInsets.only(right: 16),
+            child: JourneyChip3D(label: '${TaxiWaysStrings.otherDrivers(leg.otherCount)} ›', onTap: () => c.changeDriver(context, leg)),
+          ),
+        ),
+    ];
+  }
 }

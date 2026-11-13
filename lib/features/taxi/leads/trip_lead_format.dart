@@ -84,6 +84,15 @@ class TripLeadFormat {
         TripStringsMcbA3.journeyCarOf(i, n), m.group(3)!.trim(), m.group(4)!.trim(), m.group(5)!);
   }
 
+  static final RegExp _journeyTail =
+      RegExp(r'^Car \d of \d: .+? to .+?, \d{2} [A-Za-z]{3},\s*(.*)$', dotAll: true);
+
+  static String? journeyExtra(TripEnquiryModel e) {
+    final m = _journeyTail.firstMatch(e.context.text.trim());
+    final t = m?.group(1)?.trim() ?? '';
+    return t.isEmpty ? null : t;
+  }
+
   static String? journeyLine(TripEnquiryModel e) =>
       journeyLineOfText(e.context.text, segment: e.isSegment, car: e.context.journeyLegIndex);
 

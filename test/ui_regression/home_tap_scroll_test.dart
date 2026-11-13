@@ -75,18 +75,18 @@ void main() {
     await t.pumpWidget(GetMaterialApp(theme: AppTheme.theme, home: const HomeScreen()));
     await t.pump(const Duration(seconds: 1));
 
-    final scrollable = find.byType(SingleChildScrollView);
+    final scrollable = find.byType(SingleChildScrollView).first;
     expect(scrollable, findsOneWidget);
 
     final bar = find.ancestor(
       of: find.text('Where to next?'),
-      matching: find.byType(DecoratedBox),
+      matching: find.byType(ColoredBox),
     );
     expect(t.getSize(bar.first).height, lessThan(140));
 
     final result = HitTestResult();
     t.binding.hitTestInView(result, const Offset(400, 600), t.view.viewId);
-    final hitBar = result.path.any((e) => e.target is RenderBox && bar.evaluate().any((x) => x.renderObject == e.target));
+    final hitBar = result.path.any((e) => e.target is RenderBox && bar.evaluate().first.renderObject == e.target);
     expect(hitBar, isFalse);
 
     final state = t.state<ScrollableState>(find.descendant(of: scrollable, matching: find.byType(Scrollable)).first);

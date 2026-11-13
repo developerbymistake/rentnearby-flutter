@@ -1,11 +1,11 @@
 import 'dart:math' as math;
-import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:iconsax/iconsax.dart';
+import 'package:flutter/services.dart';
 
 import '../../design/design.dart';
+import '../../design/extra/ext_auth.dart';
 import 'intro_strings.dart';
 
 double introOffset(ValueListenable<double> progress, int index) => progress.value - index;
@@ -14,35 +14,61 @@ bool introReduceMotion(BuildContext context) => MediaQuery.disableAnimationsOf(c
 
 class IntroSlideCanvas {
   IntroSlideCanvas._();
-  static const Size size = Size(280, 240);
+  static const Size size = Size(324, IntroCard3D.height);
 }
 
 class IntroInteractionNotification extends Notification {
   const IntroInteractionNotification();
 }
 
-class IntroPalette {
-  IntroPalette._();
+class IntroTones {
+  IntroTones._();
 
-  static const List<Color> top = [
-    TravelPalette.skyStart,
-    TravelPalette.skyEnd,
-    TravelPalette.roseEnd,
-    DesignColors.accentTealDeep,
-    DesignColors.primaryLight,
-    TravelPalette.duskEnd,
+  static final List<ListingTone> page = [
+    ListingTone.indigo,
+    ListingTone.indigo,
+    ListingTone.forest,
+    ListingTone.coral,
+    ListingTone.indigo,
+    ListingTone.indigo,
   ];
 
-  static const List<Color> bottom = [
-    DesignColors.primary,
-    TravelPalette.duskEnd,
-    TravelPalette.duskStart,
-    DesignColors.primary,
-    TravelPalette.duskEnd,
-    DesignColors.primary,
+  static final List<ListingTone> card = [
+    ListingTone.indigo,
+    ListingTone.indigo,
+    ListingTone.forest,
+    ListingTone.coral,
+    ListingTone.indigo,
+    ListingTone.cD,
   ];
+
+  static const List<String> art = [
+    ListingArt.airplane,
+    ListingArt.compass,
+    ListingArt.bed,
+    AuthInk.automobile,
+    ListingArt.sunrise,
+    ListingArt.backpack,
+  ];
+
+  static ListingTone at(double p) {
+    final c = p.clamp(0.0, page.length - 1.0);
+    final i = c.floor();
+    final j = math.min(i + 1, page.length - 1);
+    if (i == j || c == i) return page[i];
+    return AuthInk.lerp(page[i], page[j], c - i);
+  }
+
+  static Color background(double p) {
+    final c = p.clamp(0.0, page.length - 1.0);
+    final i = c.floor();
+    final j = math.min(i + 1, page.length - 1);
+    return Color.lerp(AuthInk.pageOf(page[i]), AuthInk.pageOf(page[j]), c - i)!;
+  }
 }
 
+/// One intro page: big 3D art over a halo, eyebrow, headline, sub, then the slide card.
+/// Layers move at different speeds while paging, like the template introduction animation.
 class IntroPageChrome extends StatefulWidget {
   const IntroPageChrome({
     super.key,
@@ -72,8 +98,9 @@ class _IntroPageChromeState extends State<IntroPageChrome> with SingleTickerProv
   bool _reduce = false;
   bool _initialised = false;
 
-  static const _eyebrowIn = Interval(0.0, 0.5, curve: Curves.easeOutCubic);
-  static const _headlineIn = Interval(0.15, 0.75, curve: Curves.easeOutCubic);
+  static const _artIn = Interval(0.0, 0.6, curve: Curves.fastOutSlowIn);
+  static const _eyebrowIn = Interval(0.1, 0.6, curve: Curves.easeOutCubic);
+  static const _headlineIn = Interval(0.2, 0.75, curve: Curves.easeOutCubic);
   static const _subIn = Interval(0.3, 0.9, curve: Curves.easeOutCubic);
 
   @override
@@ -94,6 +121,8 @@ class _IntroPageChromeState extends State<IntroPageChrome> with SingleTickerProv
       _entrance.value = 1;
     } else if (first && widget.isActive) {
       _entrance.forward(from: 0);
+    } else if (first) {
+      _entrance.value = 1;
     }
   }
 
@@ -104,10 +133,11 @@ class _IntroPageChromeState extends State<IntroPageChrome> with SingleTickerProv
       if (_reduce) {
         _entrance.value = 1;
       } else if (_entrance.value < 1) {
-        _entrance.forward(from: 0);
+        _entrance.forward();
       }
     } else if (old.isActive && !widget.isActive) {
       _entrance.stop();
+      _entrance.value = 1;
     }
   }
 
@@ -121,126 +151,111 @@ class _IntroPageChromeState extends State<IntroPageChrome> with SingleTickerProv
     final v = interval.transform(_entrance.value);
     return Opacity(
       opacity: v.clamp(0.0, 1.0),
-      child: Transform.translate(offset: Offset(0, 10 * (1 - v)), child: child),
+      child: Transform.translate(offset: Offset(0, 12 * (1 - v)), child: child),
+    );
+  }
+
+  double _textHeight(BuildContext context, IntroSlideCopy copy, double width) {
+    final scaler = MediaQuery.textScalerOf(context);
+    double h(String t, TextStyle st, int lines) {
+      final tp = TextPainter(
+        text: TextSpan(text: t, style: st),
+        textDirection: TextDirection.ltr,
+        textScaler: scaler,
+        maxLines: lines,
+      )..layout(maxWidth: width);
+      final r = tp.height;
+      tp.dispose();
+      return r;
+    }
+
+    return h(copy.eyebrow, Ink3D.text(12, FontWeight.w700, DesignColors.onPrimary, letterSpacing: 1.4), 1) +
+        6 +
+        h(copy.headline, Ink3D.text(26, FontWeight.w700, Ink3D.title, height: 1.2, letterSpacing: 0), 2) +
+        6 +
+        h(copy.sub, Ink3D.text(14.5, FontWeight.w400, Ink3D.sub, height: 1.45, letterSpacing: 0), 3);
+  }
+
+  Widget _layer(double factor, double width, Widget child, {bool fade = false}) {
+    return ValueListenableBuilder<double>(
+      valueListenable: widget.progress,
+      child: child,
+      builder: (context, value, child) {
+        final offset = (value - widget.index).clamp(-1.5, 1.5);
+        final dx = _reduce ? 0.0 : -offset * width * factor;
+        final moved = Transform.translate(offset: Offset(dx, 0), child: child);
+        if (!fade) return moved;
+        return Opacity(opacity: (1 - offset.abs() * 1.2).clamp(0.0, 1.0), child: moved);
+      },
     );
   }
 
   @override
   Widget build(BuildContext context) {
     final copy = widget.copy;
-    final textScale = (MediaQuery.textScalerOf(context).scale(14) / 14).clamp(1.0, 1.3);
-
+    final tone = IntroTones.page[widget.index];
+    
     return LayoutBuilder(
       builder: (context, constraints) {
-        final maxW = math.max(0.0, constraints.maxWidth - 48);
-        final maxH = math.max(0.0, constraints.maxHeight - widget.topReserve - widget.bottomReserve);
-        var graphicH = (maxH * 0.52).clamp(140.0, 260.0);
-        graphicH = math.min(graphicH, maxH - 150 * textScale);
-        graphicH = math.max(graphicH, 80.0);
-        final graphicW = math.min(maxW, 320.0);
+        final w = constraints.maxWidth;
+        final avail = math.max(0.0, constraints.maxHeight - widget.topReserve - widget.bottomReserve);
+        final textH = _textHeight(context, copy, w - 52);
+        final artH = (avail - textH - IntroSlideCanvas.size.height).clamp(96.0, 190.0);
 
-        final eyebrow = Text(
-          copy.eyebrow,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            fontFamily: FitnessAppTheme.fontName,
-            fontSize: 12.5,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 2.2,
-            color: DesignColors.textInverse.withValues(alpha: Alpha.high),
-          ),
-        );
-        final headline = SizedBox(
-          width: maxW,
+        final art = AnimatedBuilder(
+          animation: _entrance,
+          builder: (context, child) {
+            final v = _artIn.transform(_entrance.value);
+            return Opacity(opacity: v.clamp(0.0, 1.0), child: Transform.scale(scale: 0.85 + 0.15 * v, child: child));
+          },
           child: FittedBox(
             fit: BoxFit.scaleDown,
-            child: SizedBox(
-              width: maxW,
-              child: Text(
-                copy.headline,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontFamily: FitnessAppTheme.fontName,
-                  fontSize: 24,
-                  fontWeight: FontWeight.w800,
-                  height: 1.22,
-                  letterSpacing: -0.3,
-                  color: DesignColors.textInverse,
-                ),
-              ),
+            child: ExcludeSemantics(
+              child: Art3D(asset: IntroTones.art[widget.index], size: 180, halo: 200, haloColor: tone.halo, shadowBlur: 8, shadowOffset: const Offset(8, 12), shadowAlpha: 0.25),
             ),
           ),
         );
-        final sub = Text(
-          copy.sub,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            fontFamily: FitnessAppTheme.fontName,
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-            height: 1.4,
-            color: DesignColors.textInverse.withValues(alpha: Alpha.high),
-          ),
-        );
 
-        final textBlock = AnimatedBuilder(
+        final text = AnimatedBuilder(
           animation: _entrance,
           builder: (context, _) => Column(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _rise(_eyebrowIn, eyebrow),
-              const SizedBox(height: 10),
-              _rise(_headlineIn, headline),
-              const SizedBox(height: 8),
-              _rise(_subIn, sub),
+              _rise(_eyebrowIn, Text(copy.eyebrow, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(12, FontWeight.w700, tone.g2, letterSpacing: 1.4))),
+              const SizedBox(height: 6),
+              _rise(
+                _headlineIn,
+                Semantics(
+                  header: true,
+                  child: Text(copy.headline, maxLines: 3, overflow: TextOverflow.ellipsis, style: Ink3D.text(26, FontWeight.w700, Ink3D.title, height: 1.2, letterSpacing: 0)),
+                ),
+              ),
+              const SizedBox(height: 6),
+              _rise(_subIn, Text(copy.sub, maxLines: 3, overflow: TextOverflow.ellipsis, style: Ink3D.text(14.5, FontWeight.w400, Ink3D.sub, height: 1.45, letterSpacing: 0))),
             ],
           ),
         );
 
-        final parallaxText = ValueListenableBuilder<double>(
-          valueListenable: widget.progress,
-          child: textBlock,
-          builder: (context, value, child) {
-            final offset = value - widget.index;
-            final opacity = (1 - offset.abs() * 1.4).clamp(0.0, 1.0);
-            final dx = _reduce ? 0.0 : -offset * constraints.maxWidth * 0.12;
-            return Opacity(
-              opacity: opacity,
-              child: Transform.translate(offset: Offset(dx, 0), child: child),
-            );
-          },
-        );
-
         return SingleChildScrollView(
           physics: const ClampingScrollPhysics(),
-          padding: EdgeInsets.fromLTRB(24, widget.topReserve, 24, widget.bottomReserve),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: maxH),
-            child: Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  SizedBox(
-                    width: graphicW,
-                    height: graphicH,
-                    child: RepaintBoundary(
-                      child: FittedBox(
-                        fit: BoxFit.contain,
-                        child: SizedBox.fromSize(size: IntroSlideCanvas.size, child: widget.graphic),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 18),
-                  parallaxText,
-                ],
+          padding: EdgeInsets.only(top: widget.topReserve, bottom: widget.bottomReserve),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              SizedBox(height: artH, child: _layer(0.6, w, Center(child: art))),
+              ConstrainedBox(
+                constraints: BoxConstraints(minHeight: textH),
+                child: Align(
+                  alignment: Alignment.bottomLeft,
+                  child: Padding(padding: const EdgeInsets.fromLTRB(26, 0, 26, 0), child: _layer(0.25, w, text, fade: true)),
+                ),
               ),
-            ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 18),
+                child: SizedBox(height: IntroSlideCanvas.size.height, child: RepaintBoundary(child: widget.graphic)),
+              ),
+            ],
           ),
         );
       },
@@ -249,333 +264,74 @@ class _IntroPageChromeState extends State<IntroPageChrome> with SingleTickerProv
 }
 
 class IntroPillButton extends StatelessWidget {
-  const IntroPillButton({super.key, required this.label, required this.onTap});
+  const IntroPillButton({super.key, required this.label, required this.onTap, this.color});
 
   final String label;
   final VoidCallback onTap;
+  final Color? color;
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: DesignColors.textInverse.withValues(alpha: Alpha.soft),
-      borderRadius: BorderRadius.circular(999),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(999),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
-          child: Text(
-            label,
-            maxLines: 1,
-            style: const TextStyle(
-              fontFamily: FitnessAppTheme.fontName,
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-              color: DesignColors.textInverse,
-            ),
-          ),
-        ),
+    return Tap3D(
+      onTap: onTap,
+      label: label,
+      exclude: true,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 8),
+        decoration: BoxDecoration(color: DesignColors.onPrimary, borderRadius: BorderRadius.circular(20), boxShadow: Ink3D.softShadow),
+        child: Text(label, maxLines: 1, style: Ink3D.text(14, FontWeight.w700, color ?? ListingTone.indigo.text)),
       ),
     );
   }
 }
 
-class IntroCtaButton extends StatefulWidget {
+class IntroCtaButton extends StatelessWidget {
   const IntroCtaButton({super.key, required this.progress, required this.isLast, required this.onTap});
 
   final ValueListenable<double> progress;
   final bool isLast;
   final VoidCallback onTap;
 
-  static const List<Color> accents = [
-    DesignColors.primary,
-    DesignColors.warning,
-    DesignColors.roseDeep,
-    DesignColors.sunriseDeepEnd,
-    DesignColors.sunriseDeepEnd,
-    DesignColors.dinnerEnd,
-  ];
-
-  static const int _lastIndex = 5;
-
-  @override
-  State<IntroCtaButton> createState() => _IntroCtaButtonState();
-}
-
-class _IntroCtaButtonState extends State<IntroCtaButton> with SingleTickerProviderStateMixin {
-  late final AnimationController _loop;
-  bool _reduce = false;
-  bool _pressed = false;
-
-  static const _plain = LinearGradient(colors: [DesignColors.textInverse, DesignColors.textInverse]);
-  static const _final = LinearGradient(colors: [DesignColors.warning, DesignColors.sunriseDeep]);
-
-  @override
-  void initState() {
-    super.initState();
-    _loop = AnimationController(vsync: this, duration: const Duration(milliseconds: 1800));
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _reduce = introReduceMotion(context);
-    _syncLoop();
-  }
-
-  @override
-  void didUpdateWidget(covariant IntroCtaButton old) {
-    super.didUpdateWidget(old);
-    if (old.isLast != widget.isLast) _syncLoop();
-  }
-
-  void _syncLoop() {
-    if (widget.isLast && !_reduce) {
-      if (!_loop.isAnimating) _loop.repeat(reverse: true);
-    } else {
-      _loop.stop();
-      _loop.value = 0;
-    }
-  }
-
-  @override
-  void dispose() {
-    _loop.dispose();
-    super.dispose();
-  }
-
-  void _setPressed(bool v) {
-    if (_pressed == v) return;
-    setState(() => _pressed = v);
-  }
-
-  static Color _accentAt(double p) {
-    final c = p.clamp(0.0, IntroCtaButton._lastIndex.toDouble());
-    final i = c.floor();
-    final j = math.min(i + 1, IntroCtaButton._lastIndex);
-    return Color.lerp(IntroCtaButton.accents[i], IntroCtaButton.accents[j], c - i)!;
-  }
-
-  Widget _plainLabel() {
-    return ValueListenableBuilder<double>(
-      key: const ValueKey('cta_next'),
-      valueListenable: widget.progress,
-      builder: (context, value, _) {
-        final color = _accentAt(value);
-        return Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Flexible(
-              child: Text(
-                IntroStrings.next,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 15.5, fontWeight: FontWeight.w800, color: color),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Icon(Icons.arrow_forward_rounded, size: 18, color: color),
-          ],
-        );
-      },
-    );
-  }
-
-  Widget _finalLabel() {
-    return Row(
-      key: const ValueKey('cta_start'),
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        const Icon(Iconsax.routing_2, size: 18, color: DesignColors.textInverse),
-        const SizedBox(width: 8),
-        const Flexible(
-          child: Text(
-            IntroStrings.getStarted,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 16, fontWeight: FontWeight.w800, color: DesignColors.textInverse),
-          ),
-        ),
-        const SizedBox(width: 8),
-        AnimatedBuilder(
-          animation: _loop,
-          child: const Icon(Icons.arrow_forward_rounded, size: 18, color: DesignColors.textInverse),
-          builder: (context, child) {
-            final tri = 1 - (2 * _loop.value - 1).abs();
-            final dx = 4 * Curves.easeInOutSine.transform(tri);
-            return Transform.translate(offset: Offset(dx, 0), child: child);
-          },
-        ),
-      ],
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    final isLast = widget.isLast;
-    final radius = isLast ? CardRadius.hero : BorderRadius.circular(14);
-
-    final body = AnimatedContainer(
-      duration: const Duration(milliseconds: 350),
-      curve: Curves.easeOutCubic,
-      decoration: BoxDecoration(
-        gradient: isLast ? _final : _plain,
-        borderRadius: radius,
-        boxShadow: isLast ? const <BoxShadow>[] : ShadowTokens.elev3,
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: Center(
-          child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 250),
-            transitionBuilder: (child, animation) => FadeTransition(
-              opacity: animation,
-              child: SlideTransition(
-                position: Tween<Offset>(begin: const Offset(0, 0.35), end: Offset.zero).animate(animation),
-                child: child,
-              ),
-            ),
-            child: isLast ? _finalLabel() : _plainLabel(),
-          ),
-        ),
-      ),
-    );
-
-    final glowing = AnimatedBuilder(
-      animation: _loop,
-      child: body,
-      builder: (context, child) {
-        if (!isLast) return child!;
-        final g = _reduce ? 0.5 : Curves.easeInOutSine.transform(_loop.value);
-        return DecoratedBox(
-          decoration: BoxDecoration(
-            borderRadius: radius,
-            boxShadow: [
-              BoxShadow(
-                color: DesignColors.sunriseDeep.withValues(alpha: Alpha.soft + Alpha.soft * g),
-                blurRadius: 8 + 10 * g,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: child,
-        );
-      },
-    );
-
+    final label = isLast ? IntroStrings.getStarted : IntroStrings.next;
     return Semantics(
       button: true,
-      label: isLast ? IntroStrings.getStarted : IntroStrings.next,
+      label: label,
       excludeSemantics: true,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTapDown: (_) => _setPressed(true),
-        onTapUp: (_) => _setPressed(false),
-        onTapCancel: () => _setPressed(false),
-        onTap: widget.onTap,
-        child: AnimatedScale(
-          scale: _pressed ? 0.96 : 1.0,
-          duration: Duration(milliseconds: _pressed ? 100 : 220),
-          curve: _pressed ? Curves.easeOut : Curves.easeOutBack,
-          child: SizedBox.expand(child: glowing),
+      child: PressScale(
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: onTap,
+          child: ValueListenableBuilder<double>(
+            valueListenable: progress,
+            builder: (context, p, _) {
+              final tone = IntroTones.at(p);
+              return DecoratedBox(
+                decoration: BoxDecoration(gradient: tone.gradient, borderRadius: BorderRadius.circular(27), boxShadow: Form3D.glow(tone)),
+                child: SizedBox.expand(
+                  child: Center(
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 220),
+                      transitionBuilder: (child, a) => FadeTransition(
+                        opacity: a,
+                        child: SlideTransition(position: Tween<Offset>(begin: const Offset(0, 0.35), end: Offset.zero).animate(a), child: child),
+                      ),
+                      child: Padding(
+                        key: ValueKey(isLast ? 'cta_start' : 'cta_next'),
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(17, FontWeight.w700, DesignColors.onPrimary)),
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
         ),
       ),
     );
   }
-}
-
-class _ThreadGeometry {
-  _ThreadGeometry(this.size, this.count) {
-    final y = size.height / 2 - 3;
-    const x0 = 11.0;
-    final x1 = math.max(x0 + 1, size.width - 30);
-    path = Path()
-      ..moveTo(x0, y)
-      ..quadraticBezierTo((x0 + x1) / 2, y + 12, x1, y);
-    metric = path.computeMetrics().first;
-    length = metric.length;
-    stops = [
-      for (var k = 0; k < count; k++) metric.getTangentForOffset(length * k / (count - 1))!.position,
-    ];
-    dashed = Path();
-    for (var d = 0.0; d < length; d += 11) {
-      dashed.addPath(metric.extractPath(d, math.min(d + 6, length)), Offset.zero);
-    }
-  }
-
-  final Size size;
-  final int count;
-  late final Path path;
-  late final ui.PathMetric metric;
-  late final double length;
-  late final List<Offset> stops;
-  late final Path dashed;
-
-  ui.Tangent tangentAt(double page) {
-    final t = (page / (count - 1)).clamp(0.0, 1.0);
-    return metric.getTangentForOffset(length * t)!;
-  }
-}
-
-class _ThreadPainter extends CustomPainter {
-  _ThreadPainter({
-    required this.geometry,
-    required this.fill,
-    required this.currentPage,
-    required this.showFill,
-  }) : super(repaint: fill);
-
-  final _ThreadGeometry geometry;
-  final Animation<double> fill;
-  final int currentPage;
-  final bool showFill;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final g = geometry;
-    canvas.drawPath(
-      g.dashed,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2
-        ..strokeCap = StrokeCap.round
-        ..color = DesignColors.textInverse.withValues(alpha: Alpha.scrim),
-    );
-
-    final f = fill.value;
-    if (showFill && f > 0 && currentPage < g.count - 1) {
-      final seg = g.length / (g.count - 1);
-      final from = seg * currentPage;
-      canvas.drawPath(
-        g.metric.extractPath(from, from + seg * f.clamp(0.0, 1.0)),
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 2.5
-          ..strokeCap = StrokeCap.round
-          ..color = DesignColors.textInverse.withValues(alpha: Alpha.high),
-      );
-    }
-
-    final halo = Paint()..color = DesignColors.textInverse.withValues(alpha: Alpha.scrim);
-    final solid = Paint()..color = DesignColors.textInverse;
-    final ring = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5
-      ..color = DesignColors.textInverse.withValues(alpha: Alpha.v60);
-    for (var k = 0; k < g.count; k++) {
-      final c = g.stops[k];
-      if (k <= currentPage) {
-        canvas.drawCircle(c, 6.5, halo);
-        canvas.drawCircle(c, 4.5, solid);
-      } else {
-        canvas.drawCircle(c, 4.5, ring);
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _ThreadPainter old) =>
-      old.geometry != geometry || old.currentPage != currentPage || old.showFill != showFill || old.fill != fill;
 }
 
 class IntroJourneyThread extends StatefulWidget {
@@ -601,31 +357,13 @@ class IntroJourneyThread extends StatefulWidget {
 }
 
 class _IntroJourneyThreadState extends State<IntroJourneyThread> with SingleTickerProviderStateMixin {
-  late final AnimationController _wiggle;
-  late Listenable _taxiListenable;
-  _ThreadGeometry? _geo;
+  late final AnimationController _wiggle = AnimationController(vsync: this, duration: const Duration(milliseconds: 360));
   bool _reduce = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _wiggle = AnimationController(vsync: this, duration: const Duration(milliseconds: 360));
-    _taxiListenable = Listenable.merge([widget.progress, _wiggle]);
-  }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     _reduce = introReduceMotion(context);
-  }
-
-  @override
-  void didUpdateWidget(covariant IntroJourneyThread old) {
-    super.didUpdateWidget(old);
-    if (old.progress != widget.progress) {
-      _taxiListenable = Listenable.merge([widget.progress, _wiggle]);
-    }
-    if (old.pageCount != widget.pageCount) _geo = null;
   }
 
   @override
@@ -639,87 +377,55 @@ class _IntroJourneyThreadState extends State<IntroJourneyThread> with SingleTick
     widget.onTaxiTap();
   }
 
-  _ThreadGeometry _geometryFor(Size size) {
-    final g = _geo;
-    if (g != null && g.size == size && g.count == widget.pageCount) return g;
-    return _geo = _ThreadGeometry(size, widget.pageCount);
-  }
-
   @override
   Widget build(BuildContext context) {
+    final last = widget.pageCount - 1;
     return LayoutBuilder(
       builder: (context, constraints) {
         final size = Size(constraints.maxWidth, constraints.maxHeight);
-        final geo = _geometryFor(size);
-        final last = widget.pageCount - 1;
-        final isLast = widget.currentPage >= last;
-
         return Stack(
           clipBehavior: Clip.none,
           children: [
             Positioned.fill(
-              child: RepaintBoundary(
-                child: CustomPaint(
-                  painter: _ThreadPainter(
-                    geometry: geo,
-                    fill: widget.autoplayFill,
-                    currentPage: widget.currentPage,
-                    showFill: !_reduce && !isLast,
-                  ),
-                ),
+              child: ValueListenableBuilder<double>(
+                valueListenable: widget.progress,
+                builder: (context, p, _) {
+                  final page = _reduce ? widget.currentPage.toDouble() : p.clamp(0.0, last.toDouble());
+                  return CustomPaint(painter: IntroThreadPainter(tone: IntroTones.at(page), page: page, count: widget.pageCount, current: widget.currentPage));
+                },
               ),
             ),
             for (var k = 0; k < widget.pageCount; k++)
               Positioned(
-                left: geo.stops[k].dx - 22,
+                left: IntroThreadPainter.xOf(size, widget.pageCount, k.toDouble()) - 22,
                 top: 0,
                 width: 44,
                 height: size.height,
                 child: Semantics(
                   button: true,
                   label: 'Chapter ${k + 1}',
-                  child: GestureDetector(
-                    key: Key('intro_stop_$k'),
-                    behavior: HitTestBehavior.opaque,
-                    onTap: () => widget.onStopTap(k),
-                  ),
+                  child: GestureDetector(key: Key('intro_stop_$k'), behavior: HitTestBehavior.opaque, onTap: () => widget.onStopTap(k)),
                 ),
               ),
-            if (isLast)
-              Positioned(
-                left: geo.stops[last].dx + 12,
-                top: geo.stops[last].dy - 16,
-                child: const IgnorePointer(child: Icon(Iconsax.flag, size: 12, color: DesignColors.textInverse)),
-              ),
             AnimatedBuilder(
-              animation: _taxiListenable,
-              child: Container(
-                width: 22,
-                height: 22,
-                decoration: const BoxDecoration(color: DesignColors.textInverse, shape: BoxShape.circle),
-                alignment: Alignment.center,
-                child: const Icon(Iconsax.car, size: 13, color: DesignColors.sunriseDeep),
-              ),
+              animation: Listenable.merge([widget.progress, _wiggle]),
               builder: (context, child) {
-                final page = _reduce
-                    ? widget.currentPage.toDouble()
-                    : widget.progress.value.clamp(0.0, last.toDouble());
-                final tangent = geo.tangentAt(page);
-                final pos = tangent.position;
-                final base = math.atan2(tangent.vector.dy, tangent.vector.dx).clamp(-0.3, 0.3);
+                final page = _reduce ? widget.currentPage.toDouble() : widget.progress.value.clamp(0.0, last.toDouble());
+                final x = IntroThreadPainter.xOf(size, widget.pageCount, page);
                 final wiggle = 0.12 * math.sin(4 * math.pi * _wiggle.value);
                 return Positioned(
-                  left: pos.dx - 17,
-                  top: pos.dy - 17,
-                  width: 34,
-                  height: 34,
+                  left: x - 22,
+                  top: -16,
+                  width: 44,
+                  height: 44,
                   child: GestureDetector(
                     behavior: HitTestBehavior.opaque,
                     onTap: _onTaxiTap,
-                    child: Center(child: Transform.rotate(angle: base + wiggle, child: child)),
+                    child: Transform.rotate(angle: wiggle, child: child),
                   ),
                 );
               },
+              child: const ExcludeSemantics(child: Art3D(asset: ListingArt.taxi, size: 44, shadowBlur: 3, shadowOffset: Offset(2, 4), shadowAlpha: 0.3)),
             ),
           ],
         );
@@ -728,140 +434,106 @@ class _IntroJourneyThreadState extends State<IntroJourneyThread> with SingleTick
   }
 }
 
-class IntroPingRing extends StatelessWidget {
-  const IntroPingRing({
-    super.key,
-    required this.phase,
-    this.baseSize = 18,
-    this.maxScale = 3.0,
-    this.color = DesignColors.textInverse,
-  });
+/// Shared life cycle of the six slide cards: entrance on activation, reset of taps when the page is left.
+abstract class IntroSlideState<T extends StatefulWidget> extends State<T> with SingleTickerProviderStateMixin {
+  late final AnimationController entrance = AnimationController(vsync: this, duration: const Duration(milliseconds: 900));
+  bool reduce = false;
+  bool _booted = false;
 
-  final double phase;
-  final double baseSize;
-  final double maxScale;
-  final Color color;
+  bool activeOf(T w);
+  void resetTaps();
 
   @override
-  Widget build(BuildContext context) {
-    return IgnorePointer(
-      child: SizedBox.square(
-        dimension: baseSize,
-        child: CustomPaint(painter: _PingPainter(phase: phase, maxScale: maxScale, color: color)),
-      ),
-    );
-  }
-}
-
-class _PingPainter extends CustomPainter {
-  _PingPainter({required this.phase, required this.maxScale, required this.color});
-
-  final double phase;
-  final double maxScale;
-  final Color color;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final p = phase.clamp(0.0, 1.0);
-    final alpha = 0.55 * (1 - p);
-    if (alpha <= 0) return;
-    final scale = 0.4 + (maxScale - 0.4) * p;
-    canvas.drawCircle(
-      size.center(Offset.zero),
-      size.width / 2 * scale,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.5
-        ..color = color.withValues(alpha: alpha * color.a),
-    );
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    reduce = introReduceMotion(context);
+    if (reduce) {
+      entrance.stop();
+      entrance.value = 1;
+    } else if (!_booted) {
+      if (activeOf(widget)) {
+        entrance.forward(from: 0);
+      } else {
+        entrance.value = 1;
+      }
+    }
+    _booted = true;
   }
 
   @override
-  bool shouldRepaint(covariant _PingPainter old) =>
-      old.phase != phase || old.maxScale != maxScale || old.color != color;
-}
-
-class IntroSparkBurst extends StatelessWidget {
-  const IntroSparkBurst({
-    super.key,
-    required this.t,
-    this.count = 6,
-    this.radius = 30,
-    this.colors = const [DesignColors.textInverse],
-  });
-
-  final double t;
-  final int count;
-  final double radius;
-  final List<Color> colors;
-
-  @override
-  Widget build(BuildContext context) {
-    return IgnorePointer(
-      child: SizedBox.square(
-        dimension: radius * 2,
-        child: CustomPaint(painter: _SparkPainter(t: t, count: count, radius: radius, colors: colors)),
-      ),
-    );
-  }
-}
-
-class _SparkPainter extends CustomPainter {
-  _SparkPainter({required this.t, required this.count, required this.radius, required this.colors});
-
-  final double t;
-  final int count;
-  final double radius;
-  final List<Color> colors;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    if (t <= 0 || t >= 1 || count <= 0 || colors.isEmpty) return;
-    final center = size.center(Offset.zero);
-    final travel = Curves.easeOutCubic.transform(t);
-    final alpha = 1 - t;
-    final dot = 2.4 * (1 - 0.5 * t);
-    final paint = Paint();
-    for (var k = 0; k < count; k++) {
-      final angle = 2 * math.pi * k / count - math.pi / 2;
-      final reach = radius * (k.isEven ? 1.0 : 0.78) * travel;
-      final c = colors[k % colors.length];
-      paint.color = c.withValues(alpha: c.a * alpha);
-      canvas.drawCircle(center + Offset(math.cos(angle), math.sin(angle)) * reach, dot, paint);
+  void didUpdateWidget(covariant T oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final was = activeOf(oldWidget);
+    final now = activeOf(widget);
+    if (!was && now && !reduce) entrance.forward(from: 0.3);
+    if (was && !now) {
+      entrance.stop();
+      entrance.value = 1;
+      resetTaps();
     }
   }
 
-  @override
-  bool shouldRepaint(covariant _SparkPainter old) =>
-      old.t != t || old.count != count || old.radius != radius || !listEquals(old.colors, colors);
-}
+  void interacted() {
+    HapticFeedback.selectionClick();
+    const IntroInteractionNotification().dispatch(context);
+  }
 
-class IntroSlashPainter extends CustomPainter {
-  IntroSlashPainter({required this.t, this.color = DesignColors.error});
-
-  final double t;
-  final Color color;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final p = t.clamp(0.0, 1.0);
-    if (p <= 0) return;
-    final start = Offset(size.width * 0.08, size.height * 0.85);
-    final end = Offset(size.width * 0.92, size.height * 0.15);
-    canvas.drawLine(
-      start,
-      Offset.lerp(start, end, p)!,
-      Paint()
-        ..color = color
-        ..strokeWidth = 3
-        ..strokeCap = StrokeCap.round,
+  /// Fades and lifts [child] in during the entrance, staggered by [step] (0..3).
+  Widget reveal(int step, Widget child) {
+    return AnimatedBuilder(
+      animation: entrance,
+      child: child,
+      builder: (context, child) {
+        final b = (0.15 + 0.15 * step).clamp(0.0, 0.7);
+        final v = Interval(b, math.min(1.0, b + 0.45), curve: Curves.easeOutCubic).transform(entrance.value);
+        return Opacity(opacity: v, child: Transform.translate(offset: Offset(0, 10 * (1 - v)), child: child));
+      },
     );
   }
 
   @override
-  bool shouldRepaint(covariant IntroSlashPainter old) => old.t != t || old.color != color;
+  void dispose() {
+    entrance.dispose();
+    super.dispose();
+  }
 }
 
+/// Fits the slide card into any box (pages, tests and goldens give different sizes).
+class IntroSlideFrame extends StatelessWidget {
+  const IntroSlideFrame({super.key, required this.index, required this.title, required this.child, this.entrance});
+
+  final int index;
+  final String title;
+  final Widget child;
+  final Animation<double>? entrance;
+
+  @override
+  Widget build(BuildContext context) {
+    final tone = IntroTones.card[index];
+    const art = [ListingArt.mountain, ListingArt.worldMap, ListingArt.hotel, ListingArt.taxi, ListingArt.calendar, ListingArt.luggage];
+    return LayoutBuilder(builder: (context, c) {
+      final w = c.hasBoundedWidth ? c.maxWidth : IntroSlideCanvas.size.width;
+      final h = IntroSlideCanvas.size.height;
+      Widget card = IntroCard3D(tone: tone, art: art[index], title: title, child: child);
+      final e = entrance;
+      if (e != null) {
+        card = AnimatedBuilder(
+          animation: e,
+          child: card,
+          builder: (context, child) {
+            final v = const Interval(0, 0.5, curve: Curves.fastOutSlowIn).transform(e.value);
+            return Opacity(opacity: v, child: Transform.translate(offset: Offset(0, 16 * (1 - v)), child: child));
+          },
+        );
+      }
+      return FittedBox(
+        fit: BoxFit.scaleDown,
+        alignment: Alignment.topCenter,
+        child: SizedBox(width: w, height: h, child: MediaQuery.withNoTextScaling(child: card)),
+      );
+    });
+  }
+}
 
 class IntroStage extends StatefulWidget {
   const IntroStage({super.key, required this.isActive, required this.builder});

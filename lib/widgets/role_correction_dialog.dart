@@ -8,24 +8,17 @@ class RoleCorrectionDialog {
     final body = percent <= 0
         ? 'Nothing filled yet. You can do this only once.'
         : '$kind draft, $percent% filled, will be deleted. You can do this only once.';
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => GateDialog(
-        glyph: Icons.warning_amber_rounded,
-        gradient: TripEntryStyle.rose,
+    final ok = await Dialog3D.show<bool>(
+      context,
+      builder: (ctx) => Dialog3D(
+        tone: ListingTone.coral,
+        art: ListingArt.pushpin,
         title: 'Delete draft and change role?',
         body: body,
-        horizontalActions: true,
-        actions: [
-          GateOutlineButton(label: 'Cancel', height: 46, onPressed: () => Navigator.of(ctx).pop(false)),
-          GateButton(
-            label: 'Change role',
-            height: 46,
-            gradient: TripEntryStyle.rose,
-            shadowColor: PickKit.bad,
-            onPressed: () => Navigator.of(ctx).pop(true),
-          ),
-        ],
+        secondaryLabel: 'Cancel',
+        onSecondary: () => Navigator.of(ctx).pop(false),
+        primaryLabel: 'Change role',
+        onPrimary: () => Navigator.of(ctx).pop(true),
       ),
     );
     return ok ?? false;

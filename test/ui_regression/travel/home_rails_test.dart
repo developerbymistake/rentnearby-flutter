@@ -1,3 +1,4 @@
+import 'package:bakhli/design/design.dart';
 import 'package:bakhli/design/extra/stay_grid_card.dart';
 import 'package:bakhli/features/taxi/models/taxi_browse_item.dart';
 import 'package:bakhli/models/card_fact.dart';
@@ -20,13 +21,14 @@ TaxiBrowseItem _taxi({bool featured = true, int? fare = 1800}) => TaxiBrowseItem
       isFeatured: featured,
     );
 
-Widget _host(Widget child, {double scale = 1}) => MaterialApp(
+Widget _host(Widget child, {double scale = 1, double? height}) => MaterialApp(
       home: MediaQuery(
         data: MediaQueryData(textScaler: TextScaler.linear(scale)),
         child: Scaffold(
-          body: SizedBox(
-            height: HomeStayRailCard.railHeight,
-            child: ListView(scrollDirection: Axis.horizontal, children: [child]),
+          body: SingleChildScrollView(
+            child: height == null
+                ? MealsRail(children: [child])
+                : SizedBox(height: height, child: ListView(scrollDirection: Axis.horizontal, children: [child])),
           ),
         ),
       ),
@@ -37,29 +39,28 @@ void main() {
     testWidgets('taxi rail card shows all details at scale $scale', (tester) async {
       var taps = 0;
       await tester.pumpWidget(_host(HomeTaxiRailCard(taxi: _taxi(), onOpen: () => taps++), scale: scale));
-      expect(find.text('TAXI'), findsOneWidget);
-      expect(find.text('Featured'), findsOneWidget);
-      expect(find.text('Dehradun'), findsOneWidget);
+      expect(find.textContaining('Featured'), findsOneWidget);
       expect(find.text('Innova Crysta'), findsOneWidget);
-      expect(find.textContaining('seats'), findsOneWidget);
+      expect(find.text('7 seats'), findsOneWidget);
+      expect(find.textContaining('1,800'), findsOneWidget);
       expect(find.text('FARE FROM'), findsOneWidget);
-      expect(find.byIcon(Icons.chevron_right_rounded), findsOneWidget);
       expect(tester.takeException(), isNull);
-      await tester.tap(find.text('Ramesh Kumar Negi'));
+      await tester.tap(find.byType(HomeTaxiRailCard));
       expect(taps, 1);
     });
   }
 
   testWidgets('taxi rail card without fare shows local taxi', (tester) async {
     await tester.pumpWidget(_host(HomeTaxiRailCard(taxi: _taxi(featured: false, fare: null))));
-    expect(find.text('LOCAL TAXI'), findsOneWidget);
-    expect(find.text('Featured'), findsNothing);
+    expect(find.textContaining('Local taxi'), findsOneWidget);
+    expect(find.textContaining('Featured'), findsNothing);
+    expect(find.text('FARE FROM'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 
   testWidgets('stay grid card in the rail cell shows facts and price', (tester) async {
     await tester.pumpWidget(_host(Padding(
-      padding: HomeStayRailCard.cellPadding,
+      padding: const EdgeInsets.only(top: 4, bottom: 20),
       child: SizedBox(
         width: HomeStayRailCard.cellWidth,
         child: StayGridCard(
@@ -79,7 +80,7 @@ void main() {
           onViewDetails: () {},
         ),
       ),
-    )));
+    ), height: StayGridCard.height + 24));
     expect(find.text('Breakfast'), findsOneWidget);
     expect(find.text('Parking'), findsOneWidget);
     expect(tester.takeException(), isNull);

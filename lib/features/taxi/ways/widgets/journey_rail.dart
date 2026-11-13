@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:bakhli/design/design.dart';
+import 'package:bakhli/design/extra/ext_journeys.dart';
 import 'package:bakhli/design/extra/trip_plan_look.dart';
 import '../../../trip/utils/trip_format.dart';
 import '../models/taxi_ways_models.dart';
 import '../taxi_ways_strings.dart';
 import '../trip_strings_a6.dart';
-import 'journey_change_stop.dart';
 import 'journey_driver_card.dart';
 
 enum RailMarker { start, end, change, none }
@@ -28,67 +28,51 @@ class JourneyRail extends StatelessWidget {
     this.onChangeDriver,
   });
 
+  static ListingTone toneFor(int legIndex) => JourneyInk.legTone(legIndex);
+
   @override
   Widget build(BuildContext context) {
     final items = <Widget>[];
     final legs = plan.legs;
     if (legs.isEmpty) return const SizedBox.shrink();
-    items.add(RailRow(
-      marker: RailMarker.start,
-      below: colorFor(legs.first.index),
-      child: _placeText(legs.first.from.name, '${TaxiWaysStrings.youStart} · ${TripFormat.shortDate(date)}'),
+    items.add(JourneyStop3D(
+      top: 16,
+      title: legs.first.from.name,
+      subtitle: '${TaxiWaysStrings.youStart} · ${TripFormat.shortDate(date)}',
     ));
     for (var i = 0; i < legs.length; i++) {
       final leg = legs[i];
-      final c = colorFor(leg.index);
+      final t = toneFor(leg.index);
       final d = chosen[leg.index] ?? leg.firstDriver;
+      items.add(JourneyLink3D(color: t.g1));
       if (d != null) {
-        items.add(RailRow(
-          above: c,
-          below: c,
-          child: JourneyDriverCard(
-            driver: d,
-            color: c,
-            otherCount: leg.otherCount,
-            seatsNote: TripStringsA6.legSeats(leg),
-            onChange: onChangeDriver == null ? null : () => onChangeDriver!(leg),
-          ),
+        items.add(JourneyDriverCard(
+          driver: d,
+          tone: t,
+          tag: legs.length > 1 ? TaxiWaysStrings.carOf(i + 1, legs.length) : null,
+          route: TaxiWaysStrings.subtitle(leg.from.name, leg.to.name),
+          otherCount: leg.otherCount,
+          seatsNote: TripStringsA6.legSeats(leg),
+          onChange: onChangeDriver == null ? null : () => onChangeDriver!(leg),
+          linkAbove: t.g1,
         ));
+        items.add(Padding(padding: const EdgeInsets.only(top: 2), child: JourneyLink3D(color: t.g1)));
       }
       if (i < legs.length - 1) {
-        items.add(RailRow(
-          marker: RailMarker.change,
-          above: c,
-          below: colorFor(legs[i + 1].index),
-          child: JourneyChangeStop(placeName: leg.to.name, meetingPlace: legs[i + 1].meetingPlace),
+        final next = legs[i + 1];
+        final meet = next.meetingPlace;
+        items.add(JourneyStop3D(
+          top: 0,
+          change: true,
+          title: leg.to.name,
+          tag: TaxiWaysStrings.changeCarHere,
+          subtitle: meet != null && meet != leg.to.name ? '${TaxiWaysStrings.meetNext} · $meet' : TaxiWaysStrings.meetNext,
         ));
       }
     }
-    items.add(RailRow(
-      marker: RailMarker.end,
-      above: colorFor(legs.last.index),
-      child: _placeText(legs.last.to.name, TaxiWaysStrings.youArrive),
-    ));
-    return TemplateStagger(children: items);
+    items.add(JourneyStop3D(top: 0, art: ListingArt.pushpin, title: legs.last.to.name, subtitle: TaxiWaysStrings.youArrive));
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: items);
   }
-
-  Widget _placeText(String name, String caption) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(
-            name,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: FitnessAppTheme.title.copyWith(fontSize: 15),
-          ),
-          Text(
-            caption,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: FitnessAppTheme.caption.copyWith(fontSize: 11.5),
-          ),
-        ]),
-      );
 }
 
 class RailRow extends StatelessWidget {

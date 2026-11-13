@@ -1,6 +1,6 @@
 import 'package:bakhli/design/design.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/cupertino.dart' show CupertinoSwitch;
+import 'package:bakhli/design/extra/trip_plan_look.dart';
 import 'trip_ui.dart';
 import 'package:get/get.dart';
 import '../controllers/trip_plan_controller.dart';
@@ -110,13 +110,15 @@ class TripPlanHeader extends StatelessWidget {
         child: ModuleHeader(
           title: plan == null ? TripStringsV2Plan.trip : c.title,
           subtitle: ready ? subtitleOf(c) : null,
-          tone: KitTone.trip,
+          tone: KitTone.brand,
+          gradient: ListingTone.indigo.gradient,
           onBack: () => Get.back(),
           trailing: [
             if (ready) ...[
               if (c.editMode.value)
                 TripHeaderAction(
                   label: TripStringsV2Plan.done,
+                  solid: true,
                   onTap: () => c.editMode.value = false,
                 )
               else
@@ -124,7 +126,7 @@ class TripPlanHeader extends StatelessWidget {
               _menu(c),
             ],
           ],
-          bottom: ready ? _statusRow(context, c) : null,
+          bottom: ready && (c.guideState.on.value || c.editMode.value) ? _statusRow(context, c) : null,
           autoHeight: true,
         ),
       );
@@ -317,7 +319,8 @@ class TripPlanHeader extends StatelessWidget {
       color: DesignColors.surface,
       elevation: 12,
       shadowColor: DesignColors.tint(DesignColors.shadowBase, Alpha.soft),
-      shape: const RoundedRectangleBorder(borderRadius: CardRadius.tile),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(20))),
+      offset: const Offset(0, 56),
       onSelected: onMenu,
       itemBuilder: (_) {
         final saved = c.trip.value != null;
@@ -338,7 +341,7 @@ class TripPlanHeader extends StatelessWidget {
           if (editable)
             _item(
               TripPlanMenu.editDates,
-              TravelIcon.calendar,
+              ListingArt.backpack,
               TripStringsV2Plan.menuEditDates,
             ),
           if (editable)
@@ -373,21 +376,33 @@ class TripPlanHeader extends StatelessWidget {
     );
   }
 
+  static Widget _tile(Object icon, {bool danger = false}) => Container(
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(
+          color: danger ? TripLook.errorSurface : ListingTone.indigo.tint,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Center(
+          child: icon is String
+              ? Art3D(asset: icon, size: 40, shadowBlur: 3, shadowOffset: const Offset(2, 3))
+              : Icon(icon as IconData, size: 24, color: TripLook.error),
+        ),
+      );
+
   PopupMenuItem<TripPlanMenu> _item(
     TripPlanMenu value,
     Object icon,
     String label, {
-    Color color = DesignColors.textPrimary,
+    Color color = Ink3D.title,
   }) => PopupMenuItem(
     value: value,
-    height: KitMetrics.touch,
+    height: 62,
     child: Row(
       children: [
-        icon is String
-            ? TravelIcon(icon, size: 22)
-            : Icon(icon as IconData, size: 20, color: color),
-        const SizedBox(width: 12),
-        Text(label, style: TypeTokens.style(14, FontWeight.w500, color: color)),
+        _tile(icon, danger: icon is! String),
+        const SizedBox(width: 14),
+        Expanded(child: Text(label, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(15, icon is String ? FontWeight.w500 : FontWeight.w600, color))),
       ],
     ),
   );
@@ -396,46 +411,22 @@ class TripPlanHeader extends StatelessWidget {
     final muted = c.trip.value?.isMuted ?? false;
     return PopupMenuItem(
       value: TripPlanMenu.mute,
-      height: 56,
+      height: 62,
       child: Row(
         children: [
-          Image.asset(
-            'assets/images/design/fitness_app/bell.png',
-            width: 22,
-            height: 22,
-          ),
-          const SizedBox(width: 12),
+          _tile(ListingArt.speechBalloon),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                  TripStringsV2Plan.menuMute,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TypeTokens.style(
-                    14,
-                    FontWeight.w500,
-                    color: DesignColors.textPrimary,
-                  ),
-                ),
-                Text(
-                  TripStringsV2Plan.menuMuteSub,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TypeTokens.caption,
-                ),
+                Text(TripStringsV2Plan.menuMute, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(15, FontWeight.w500, Ink3D.title)),
+                Text(TripStringsV2Plan.menuMuteSub, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(11.5, FontWeight.w400, Ink3D.grey)),
               ],
             ),
           ),
-          IgnorePointer(
-            child: CupertinoSwitch(
-              value: muted,
-              activeTrackColor: DesignColors.primary,
-              onChanged: (_) {},
-            ),
-          ),
+          IgnorePointer(child: Switch3D(tone: ListingTone.indigo, value: muted, onChanged: (_) {})),
         ],
       ),
     );
@@ -451,26 +442,156 @@ class _MapAction extends StatelessWidget {
     return Semantics(
       button: true,
       label: TripStringsV2Plan.map,
-      child: PressScale(
-        child: Tooltip(
-          message: TripStringsV2Plan.map,
-          child: Material(
-            color: DesignColors.whiteSoft,
-            shape: CircleBorder(
-              side: BorderSide(
-                color: DesignColors.tint(DesignColors.surface, Alpha.half),
-              ),
-            ),
-            clipBehavior: Clip.antiAlias,
-            child: InkWell(
-              onTap: onTap,
-              child: const SizedBox(
-                width: KitMetrics.touch,
-                height: KitMetrics.touch,
-                child: Center(child: TravelIcon(TravelIcon.map, size: 22)),
-              ),
+      child: Tooltip(
+        message: TripStringsV2Plan.map,
+        excludeFromSemantics: true,
+        child: PressScale(
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: onTap,
+            child: Container(
+              width: 46,
+              height: 46,
+              decoration: const BoxDecoration(color: DesignColors.surface, shape: BoxShape.circle, boxShadow: Ink3D.whiteBtn),
+              child: const Center(child: Art3D(asset: ListingArt.worldMap, size: 30, shadowBlur: 2, shadowOffset: Offset(1, 2))),
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class TripPlanStepCard extends StatelessWidget {
+  final ValueChanged<TripPlanMenu> onMenu;
+
+  const TripPlanStepCard({super.key, required this.onMenu});
+
+  @override
+  Widget build(BuildContext context) {
+    final c = TripPlanController.to;
+    return Obx(() {
+      final plan = c.plan.value;
+      c.trip.value;
+      c.result.value;
+      c.enquiryList.length;
+      c.offline.value;
+      c.saveFailed.value;
+      c.settingsChangedAt.value;
+      if (plan == null || c.plannerOff.value || c.guideState.on.value) return const SizedBox.shrink();
+      final tone = ListingTone.indigo;
+      const white = DesignColors.surface;
+      final rows = c.easyRows;
+      final progress = c.stepProgress;
+      final step = c.isCompleted ? 2 : c.planStep.value;
+      final hint = TripPlanHeader.hintOf(c, rows);
+      final editable = !c.isReadOnly && !c.needsUpdate.value;
+      final pct = progress.percent.clamp(0, 100).toDouble();
+      final title = step == 1
+          ? TripStringsV2Plan.stepAddPlaces().split(' · ').last
+          : (progress.total == 0 ? TripStringsV2Plan.nothingToArrange : TripStringsV2Plan.arranged(progress.done, progress.total));
+      final narrow = MediaQuery.sizeOf(context).width < 340;
+      final art = narrow ? 92.0 : 112.0;
+      return Tap3D(
+        onTap: () => onMenu(TripPlanMenu.easy),
+        label: '${TripStringsV2Plan.stepLabel(step)}, $title',
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 36, 18, 6),
+              child: Container(
+                padding: EdgeInsets.fromLTRB(20, 22, 16, 16),
+                decoration: BoxDecoration(
+                  gradient: tone.gradient,
+                  borderRadius: kMealsRadius,
+                  boxShadow: [BoxShadow(color: tone.shadow, offset: const Offset(1.1, 6), blurRadius: 14)],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: EdgeInsets.only(right: art - 10),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(TripStringsV2Plan.stepLabel(step), maxLines: 1, style: Ink3D.text(12.5, FontWeight.w600, DesignColors.tint(white, Alpha.v90))),
+                          Text(title, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(21, FontWeight.w700, white, height: 1.25)),
+                          if (hint != null && step == 2)
+                            Text(hint, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(12, FontWeight.w500, DesignColors.tint(white, Alpha.v90))),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(4),
+                                child: LinearProgressIndicator(
+                                  value: pct / 100,
+                                  minHeight: 4,
+                                  color: white,
+                                  backgroundColor: DesignColors.tint(white, Alpha.scrim),
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              _pace(context, c, editable, tone),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        TweenAnimationBuilder<double>(
+                          tween: Tween<double>(begin: 0, end: pct),
+                          duration: KitMotion.reduce(context) ? Duration.zero : const Duration(milliseconds: 600),
+                          curve: Curves.fastOutSlowIn,
+                          builder: (_, v, _) => RingBadge(progress: v / 100, fill: tone.g2, size: 58),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            Positioned(
+              right: 26,
+              top: 0,
+              child: IgnorePointer(
+                child: Art3D(asset: ListingArt.luggage, size: art, halo: art + 8, haloColor: DesignColors.tint(white, Alpha.v22)),
+              ),
+            ),
+          ],
+        ),
+      );
+    });
+  }
+
+  Widget _pace(BuildContext context, TripPlanController c, bool editable, ListingTone tone) {
+    final label = c.settings.isRelaxed ? TripStringsV2Plan.paceRelaxed : TripStringsV2Plan.paceNormal;
+    return Tap3D(
+      onTap: editable
+          ? () async {
+              final picked = await TripPaceSheet.show(context);
+              if (picked != null) await c.setPace(picked);
+            }
+          : null,
+      label: label,
+      child: Container(
+        constraints: const BoxConstraints(minHeight: 36),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+        decoration: const BoxDecoration(color: DesignColors.surface, borderRadius: CardRadius.pill, boxShadow: Ink3D.whiteBtn),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Flexible(child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(13, FontWeight.w700, tone.text))),
+            if (editable) Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: tone.text),
+            const SizedBox(width: 2),
+            Text(TripStringsV2Plan.paceTitle.toLowerCase(), maxLines: 1, style: Ink3D.text(10.5, FontWeight.w500, Ink3D.grey)),
+          ],
         ),
       ),
     );

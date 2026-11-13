@@ -2,8 +2,8 @@ import 'stay_page_header.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../design/design.dart';
+import '../../../design/extra/ext_stay_owner.dart';
 import '../../../utils/app_toast.dart';
-import 'stay_option_grid.dart';
 import 'stay_option_sets.dart';
 import 'stay_setup_controller.dart';
 
@@ -13,9 +13,8 @@ class StayRulesScreen extends StatefulWidget {
   State<StayRulesScreen> createState() => _StayRulesScreenState();
 }
 
-class _StayRulesScreenState extends State<StayRulesScreen> with TickerProviderStateMixin {
+class _StayRulesScreenState extends State<StayRulesScreen> {
   final _ctrl = StaySetupController.ensure();
-  late final AnimationController _anim = SetupKit.controller(this);
   TimeOfDay _checkIn = const TimeOfDay(hour: 12, minute: 0);
   TimeOfDay _checkOut = const TimeOfDay(hour: 11, minute: 0);
   bool _pets = false;
@@ -29,9 +28,6 @@ class _StayRulesScreenState extends State<StayRulesScreen> with TickerProviderSt
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) SetupKit.play(_anim, context);
-    });
     final r = _ctrl.stay.value?.rules;
     if (r != null) {
       _checkIn = _parse(r.checkInTime, _checkIn);
@@ -43,12 +39,6 @@ class _StayRulesScreenState extends State<StayRulesScreen> with TickerProviderSt
       _idProof = r.idProofRequired;
       _cancellation = r.cancellationPolicy;
     }
-  }
-
-  @override
-  void dispose() {
-    _anim.dispose();
-    super.dispose();
   }
 
   static TimeOfDay _parse(String hhmm, TimeOfDay fallback) {
@@ -67,6 +57,7 @@ class _StayRulesScreenState extends State<StayRulesScreen> with TickerProviderSt
       initial: checkIn ? _checkIn : _checkOut,
       label: checkIn ? 'Check-in time' : 'Check-out time',
       tone: KitTone.stay,
+      art: ListingArt.key,
     );
     if (picked == null || !mounted) return;
     setState(() {
@@ -113,6 +104,7 @@ class _StayRulesScreenState extends State<StayRulesScreen> with TickerProviderSt
         cancelLabel: 'Keep Editing',
         confirmLabel: 'Discard',
         destructive: true,
+        art: ListingArt.clipboard,
         onCancel: () => Navigator.pop(context),
         onConfirm: () {
           Navigator.pop(context);
@@ -122,7 +114,7 @@ class _StayRulesScreenState extends State<StayRulesScreen> with TickerProviderSt
     );
   }
 
-  Widget _in(int i, Widget child) => SetupEntrance(controller: _anim, index: i, count: 4, child: child);
+  static final _tone = ListingTone.forest;
 
   @override
   Widget build(BuildContext context) {
@@ -133,132 +125,88 @@ class _StayRulesScreenState extends State<StayRulesScreen> with TickerProviderSt
       },
       child: Stack(children: [
         Scaffold(
-          backgroundColor: DesignColors.scaffold,
+          backgroundColor: ListingPalette.forest.page,
           body: Column(children: [
-            StayPageHeader(
-              title: 'Rules',
-              onBack: _onBack,
-              asset: SetupAssets.clipboard,
-              animation: templateInterval(_anim, 0, 2),
-            ),
+            StayPageHeader(title: 'Rules', onBack: _onBack, asset: SetupAssets.clipboard),
             Expanded(
               child: ListView(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.only(bottom: 24),
                 children: [
-                  _in(
-                    0,
-                    SectionTile(
- tone: KitTone.stay,
- margin: const EdgeInsets.only(bottom: 16),
-                      title: 'Check-in and Check-out',
-                      child: Row(children: [
-                        Expanded(child: _timeField('Check-in', _checkIn, () => _pickTime(true))),
-                        const SizedBox(width: 10),
-                        Expanded(child: _timeField('Check-out', _checkOut, () => _pickTime(false))),
-                      ]),
-                    ),
+                  FormSectionCard(
+                    tone: _tone,
+                    art: ListingArt.key,
+                    title: 'Check-in and Check-out',
+                    tag: 'Required',
+                    child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Expanded(child: _timeField('Check-in', _checkIn, () => _pickTime(true))),
+                      const SizedBox(width: 12),
+                      Expanded(child: _timeField('Check-out', _checkOut, () => _pickTime(false))),
+                    ]),
                   ),
-                  _in(
-                    1,
-                    SectionTile(
- tone: KitTone.stay,
- margin: const EdgeInsets.only(bottom: 16),
-                      title: 'House Rules',
-                      child: Column(children: [
-                        _switchRow('Pets allowed', _pets, (v) => _pets = v),
-                        _switchRow('Smoking allowed', _smoking, (v) => _smoking = v),
-                        _switchRow('Alcohol allowed', _alcohol, (v) => _alcohol = v),
-                        _switchRow('Unmarried couples allowed', _couples, (v) => _couples = v),
-                        _switchRow('ID proof required', _idProof, (v) => _idProof = v, last: true),
-                      ]),
-                    ),
+                  FormSectionCard(
+                    tone: _tone,
+                    art: ListingArt.clipboard,
+                    title: 'House Rules',
+                    tag: 'Required',
+                    child: Column(children: [
+                      _switchRow('Pets allowed', ListingArt.backpack, _pets, (v) => _pets = v),
+                      _switchRow('Smoking allowed', ListingArt.camping, _smoking, (v) => _smoking = v),
+                      _switchRow('Alcohol allowed', ListingArt.star, _alcohol, (v) => _alcohol = v),
+                      _switchRow('Unmarried couples allowed', ListingArt.key, _couples, (v) => _couples = v),
+                      _switchRow('ID proof required', ListingArt.clipboard, _idProof, (v) => _idProof = v),
+                    ]),
                   ),
-                  _in(
-                    2,
-                    SectionTile(
- tone: KitTone.stay,
- margin: const EdgeInsets.only(bottom: 16),
-                      title: 'Cancellation *',
-                      child: StayOptionGrid(
-                        crossAxisCount: 3,
-                        childAspectRatio: 2.6,
-                        labels: StayOptionSets.cancellation.map((o) => o.label).toList(),
-                        accent: PickKit.stay,
-                        isActive: (i) => _cancellation == StayOptionSets.cancellation[i].value,
-                        onTap: (i) => setState(() {
-                          _cancellation = StayOptionSets.cancellation[i].value;
-                          _dirty = true;
-                        }),
-                      ),
+                  FormSectionCard(
+                    tone: _tone,
+                    art: ListingArt.calendar,
+                    title: 'Cancellation',
+                    tag: 'Required',
+                    child: OptionTileGrid(
+                      tone: _tone,
+                      items: [
+                        for (final o in StayOptionSets.cancellation) OptionTileItem(label: o.label, art: StayOwnerArt.cancellation[o.value] ?? ListingArt.star),
+                      ],
+                      isSelected: (i) => _cancellation == StayOptionSets.cancellation[i].value,
+                      onTap: (i) => setState(() {
+                        _cancellation = StayOptionSets.cancellation[i].value;
+                        _dirty = true;
+                      }),
                     ),
                   ),
                 ],
               ),
             ),
-            _in(
-              3,
-              StayFooter(
-                child: Obx(() => PrimaryButton(
- tone: KitTone.stay,
-                      onPressed: _ctrl.isSaving.value ? null : _save,
-                      loading: _ctrl.isSaving.value,
-                      label: 'Save',
-                    )),
-              ),
-            ),
           ]),
+          bottomNavigationBar: Obx(() => FormFooter(
+                tone: _tone,
+                primaryLabel: 'Save',
+                onPrimary: _ctrl.isSaving.value ? null : _save,
+                primaryLoading: _ctrl.isSaving.value,
+              )),
         ),
-        Obx(() => _ctrl.isSaving.value ? const StayBusy(message: 'Saving rules...') : const SizedBox.shrink()),
+        Obx(() => _ctrl.isSaving.value ? const StayBusy(message: 'Saving rules...', art: SetupAssets.clipboard) : const SizedBox.shrink()),
       ]),
     );
   }
 
-  Widget _timeField(String label, TimeOfDay value, VoidCallback onTap) => Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label, style: SetupKit.label()),
-          const SizedBox(height: 6),
-          Material(
-            color: DesignColors.scaffold,
-            borderRadius: const BorderRadius.all(Radius.circular(12)),
-            child: InkWell(
-              borderRadius: const BorderRadius.all(Radius.circular(12)),
-              onTap: onTap,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
-                child: Row(children: [
-                  Image.asset(SetupAssets.key, width: 20, height: 20),
-                  const SizedBox(width: 8),
-                  Flexible(
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      alignment: Alignment.centerLeft,
-                      child: Text(StayOptionSets.time12(_hhmm(value)), maxLines: 1, style: SetupKit.fieldText()),
-                    ),
-                  ),
-                ]),
-              ),
-            ),
-          ),
-        ],
+  Widget _timeField(String label, TimeOfDay value, VoidCallback onTap) => PillPickerField(
+        tone: _tone,
+        label: label,
+        value: StayOptionSets.time12(_hhmm(value)),
+        leadingArt: ListingArt.key,
+        trailing: const SizedBox.shrink(),
+        onTap: onTap,
       );
 
-  Widget _switchRow(String label, bool value, void Function(bool) apply, {bool last = false}) => Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Row(children: [
-              Expanded(child: Text(label, style: TripKit.text(14))),
-              SetupSwitch(
-                value: value,
-                onChanged: (v) => setState(() {
-                  apply(v);
-                  _dirty = true;
-                }),
-              ),
-            ]),
-          ),
-          if (!last) const Divider(height: 1, color: DesignColors.dividerSoft),
-        ],
+  Widget _switchRow(String label, String art, bool value, void Function(bool) apply) => ToggleRow(
+        tone: _tone,
+        label: label,
+        art: art,
+        value: value,
+        divider: true,
+        onChanged: (v) => setState(() {
+          apply(v);
+          _dirty = true;
+        }),
       );
 }

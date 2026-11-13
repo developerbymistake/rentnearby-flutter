@@ -11,7 +11,10 @@ class HomeCardSurface extends StatelessWidget {
     this.shadow = ShadowTokens.elev2,
     this.radius = CardRadius.tile,
     this.color = DesignColors.surface,
+    this.gradient,
   });
+
+  final Gradient? gradient;
 
   final Widget child;
   final VoidCallback? onTap;
@@ -23,7 +26,7 @@ class HomeCardSurface extends StatelessWidget {
   Widget build(BuildContext context) {
     final card = DecoratedBox(
       decoration: BoxDecoration(
-        color: color,
+        color: gradient == null ? color : null,
         borderRadius: radius,
         boxShadow: shadow,
       ),
@@ -31,11 +34,14 @@ class HomeCardSurface extends StatelessWidget {
         color: Colors.transparent,
         borderRadius: radius,
         clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: onTap,
-          splashColor: DesignColors.splash,
-          highlightColor: Colors.transparent,
-          child: child,
+        child: Ink(
+          decoration: gradient == null ? null : BoxDecoration(gradient: gradient, borderRadius: radius),
+          child: InkWell(
+            onTap: onTap,
+            splashColor: DesignColors.splash,
+            highlightColor: Colors.transparent,
+            child: child,
+          ),
         ),
       ),
     );
@@ -62,9 +68,9 @@ class HomeRailTile extends StatelessWidget {
     this.fallbackAsset = TravelIcon.stay,
   });
 
-  static const double width = RailCard.width;
-  static const double height = 302;
-  static const double photoHeight = 112;
+  static const double width = 148;
+  static const double height = 224;
+  static const double photoHeight = 92;
   static const double maxTextScale = 1.3;
 
   final String title;
@@ -99,12 +105,10 @@ class HomeRailTile extends StatelessWidget {
     final amount = Text.rich(
       TextSpan(
         children: [
-          if (!stackedCaption && priceCaption.isNotEmpty)
-            TextSpan(text: '$priceCaption ', style: TypeTokens.caption),
           TextSpan(
             text: priceValue,
             style: TypeTokens.style(
-              15,
+              18,
               FontWeight.w800,
               color: tone.accentDark,
             ),
@@ -118,7 +122,7 @@ class HomeRailTile extends StatelessWidget {
     return FittedBox(
       fit: BoxFit.scaleDown,
       alignment: Alignment.centerLeft,
-      child: stackedCaption && priceCaption.isNotEmpty
+      child: priceCaption.isNotEmpty
           ? Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
@@ -143,6 +147,13 @@ class HomeRailTile extends StatelessWidget {
         height: height,
         child: HomeCardSurface(
           onTap: onTap,
+          radius: CardRadius.hero,
+          shadow: ShadowTokens.tight(tone.accentDark),
+          gradient: LinearGradient(
+            colors: [DesignColors.surface, tone.wash],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -159,7 +170,8 @@ class HomeRailTile extends StatelessWidget {
                         height: photoHeight,
                         tone: tone,
                         asset: fallbackAsset,
-                        iconSize: 40,
+                        iconSize: 36,
+                        rich: true,
                       ),
                     ),
                     if (tagLabel != null && tagLabel!.isNotEmpty)
@@ -182,7 +194,7 @@ class HomeRailTile extends StatelessWidget {
               ),
               Expanded(
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+                  padding: const EdgeInsets.fromLTRB(10, 6, 10, 10),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -191,7 +203,7 @@ class HomeRailTile extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TypeTokens.style(
-                          14,
+                          16,
                           FontWeight.w700,
                           color: DesignColors.textStrong,
                           height: 1.2,
@@ -209,7 +221,7 @@ class HomeRailTile extends StatelessWidget {
                                 locationLabel!,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: TypeTokens.caption,
+                                style: TypeTokens.style(12, FontWeight.w500, color: TypeTokens.secondary),
                               ),
                             ),
                           ],

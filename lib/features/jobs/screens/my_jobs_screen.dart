@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:bakhli/design/design.dart';
+import 'package:bakhli/design/extra/ext_jobs.dart';
 import '../../../config/app_insets.dart';
 import '../../../config/app_routes.dart';
 import '../../../controllers/plan_controller.dart';
@@ -17,7 +18,7 @@ class MyJobsScreen extends StatefulWidget {
 }
 
 class _MyJobsScreenState extends State<MyJobsScreen> {
-  static const KitTone _tone = JobsUi.tone;
+  ListingTone get _look => JobsUi.look;
   final _ctrl = Get.put(MyJobsController());
 
   @override
@@ -42,62 +43,76 @@ class _MyJobsScreenState extends State<MyJobsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: DesignColors.scaffold,
+      backgroundColor: JobsLook.pageColor,
       body: Obx(() => AppLoadingOverlay(
             isLoading: _ctrl.isSaving.value,
             message: 'Updating...',
-            indicatorColor: _tone.accentDark,
-            child: Column(children: [
-              _header(),
-              Expanded(
-                child: Obx(() {
-                  final page = _ctrl.page.value;
-                  final loading = !_ctrl.hasLoaded.value && _ctrl.isLoading.value;
-                  return KitSwitcher(
-                    child: loading
-                        ? KeyedSubtree(key: const ValueKey('jobs_skeleton'), child: _placeholders())
-                        : KeyedSubtree(key: const ValueKey('jobs_content'), child: _content(page)),
-                  );
-                }),
+            indicatorColor: _look.g2,
+            child: KitStatusBar(
+              lightIcons: false,
+              child: SafeArea(
+                bottom: false,
+                child: Column(children: [
+                  _header(),
+                  const ToastSlot(),
+                  Expanded(
+                    child: Obx(() {
+                      final page = _ctrl.page.value;
+                      final loading = !_ctrl.hasLoaded.value && _ctrl.isLoading.value;
+                      return KitSwitcher(
+                        child: loading
+                            ? KeyedSubtree(key: const ValueKey('jobs_skeleton'), child: _placeholders())
+                            : KeyedSubtree(key: const ValueKey('jobs_content'), child: _content(page)),
+                      );
+                    }),
+                  ),
+                ]),
               ),
-            ]),
+            ),
           )),
     );
   }
 
   Widget _content(MyJobsPage? page) {
-    return RefreshIndicator(
-      color: _tone.accentDark,
-      onRefresh: _ctrl.load,
-      child: ListView(
-        physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
-        padding: EdgeInsets.fromLTRB(0, 12, 0, 16 + AppInsets.bottomViewPadding(context)),
-        children: [
-          if (page != null) ...[
-            if (page.items.isEmpty)
-              _empty(page)
-            else
-              for (var i = 0; i < page.items.length; i++)
-                KitCardEntrance(
-                  key: ValueKey(page.items[i].id),
-                  index: i,
-                  child: MyJobCard(
-                    job: page.items[i],
-                    onTap: () => Get.toNamed(AppRoutes.jobDetail, arguments: {'id': page.items[i].id}),
-                    onClose: () => _close(page.items[i]),
-                  ),
-                ),
-          ] else if (_ctrl.loadFailed.value)
-            _failed(),
-        ],
-      ),
+    return LayoutBuilder(
+      builder: (context, box) {
+        final fill = BoxConstraints(minHeight: (box.maxHeight - 40).clamp(0, double.infinity));
+        return RefreshIndicator(
+          color: _look.g2,
+          onRefresh: _ctrl.load,
+          child: ListView(
+            physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+            padding: EdgeInsets.fromLTRB(0, 0, 0, 24 + AppInsets.bottomViewPadding(context)),
+            children: [
+              if (page != null) ...[
+                if (page.items.isEmpty)
+                  ConstrainedBox(constraints: fill, child: Center(child: _empty(page)))
+                else
+                  for (var i = 0; i < page.items.length; i++)
+                    KitCardEntrance(
+                      key: ValueKey(page.items[i].id),
+                      index: i,
+                      child: MyJobCard(
+                        index: i,
+                        job: page.items[i],
+                        onTap: () => Get.toNamed(AppRoutes.jobDetail, arguments: {'id': page.items[i].id}),
+                        onClose: () => _close(page.items[i]),
+                      ),
+                    ),
+              ] else if (_ctrl.loadFailed.value)
+                ConstrainedBox(constraints: fill, child: Center(child: _failed())),
+            ],
+          ),
+        );
+      },
     );
   }
 
   Widget _header() => Obx(() {
         final page = _ctrl.page.value;
-        return ModuleHeader(
-          tone: _tone,
+        return JobsHeader(
+          tone: _look,
+          art: ListingArt.clipboard,
           title: 'My Jobs',
           subtitle: page == null ? 'Hire for your stay' : '${page.activeCount} of ${page.maxActive} active',
           onBack: () => Get.back(),
@@ -106,39 +121,24 @@ class _MyJobsScreenState extends State<MyJobsScreen> {
 
   Widget _empty(MyJobsPage page) {
     final hint = page.blockMessage;
-    return Column(
-      children: [
-        const StateCard(
-          kit: _tone,
-          asset: TravelIcon.note,
-          title: 'No jobs yet',
-          message: 'Post your first job',
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: KitMetrics.gutter),
-          child: PrimaryButton(
-            label: 'Post a Job',
-            tone: _tone,
-            onPressed: page.canPost ? _openForm : null,
-          ),
-        ),
-        if (hint != null) ...[
-          const SizedBox(height: 8),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: KitMetrics.gutter),
-            child: Text(hint,
-                textAlign: TextAlign.center,
-                style: TypeTokens.style(12, FontWeight.w500, color: DesignColors.textGrey)),
-          ),
-          if (page.limitReached && Get.find<PlanController>().paymentEnabled)
-            TextLink(label: 'Upgrade', tone: _tone, onTap: () => Get.toNamed(AppRoutes.plansBilling)),
-        ],
-      ],
+    final upgrade = hint != null && page.limitReached && Get.find<PlanController>().paymentEnabled;
+    return JobsStateBlock(
+      tone: _look,
+      art: ListingArt.clipboard,
+      title: 'No jobs yet',
+      message: 'Post your first job',
+      actionLabel: 'Post a Job',
+      onAction: _openForm,
+      actionEnabled: page.canPost,
+      hint: hint,
+      linkLabel: upgrade ? 'Upgrade' : null,
+      onLink: upgrade ? () => Get.toNamed(AppRoutes.plansBilling) : null,
     );
   }
 
-  Widget _failed() => StateCard.error(
-        kit: _tone,
+  Widget _failed() => JobsStateBlock(
+        tone: _look,
+        art: ListingArt.compass,
         title: "Couldn't load jobs",
         actionLabel: 'Retry',
         onAction: _ctrl.load,
@@ -146,7 +146,6 @@ class _MyJobsScreenState extends State<MyJobsScreen> {
 
   Widget _placeholders() => ListView(
         physics: const NeverScrollableScrollPhysics(),
-        padding: const EdgeInsets.only(top: 12),
-        children: [for (var i = 0; i < 3; i++) ListRow.skeleton()],
+        children: [for (var i = 0; i < 3; i++) const WideCardSkeleton()],
       );
 }

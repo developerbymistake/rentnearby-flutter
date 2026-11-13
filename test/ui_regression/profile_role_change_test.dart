@@ -4,7 +4,7 @@ import 'package:get/get.dart';
 import 'package:bakhli/controllers/auth_controller.dart';
 import 'package:bakhli/models/role_model.dart';
 import 'package:bakhli/screens/role_change_screen.dart';
-import 'package:bakhli/design/extra/template_top_bar.dart';
+import 'package:bakhli/design/design.dart';
 
 class _FakeAuth extends AuthController {
   @override
@@ -32,7 +32,7 @@ void main() {
       await t.pump(const Duration(milliseconds: 300));
     }
     expect(t.takeException(), isNull);
-    expect(t.getSize(find.byType(TemplateTopBar)).height, lessThan(120));
+    expect(t.getSize(find.byType(TopBar3D)).height, lessThan(120));
     expect(find.text('Stay Owner').hitTestable(), findsWidgets);
     expect(find.text('Send request').hitTestable(), findsOneWidget);
   });

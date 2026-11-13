@@ -22,7 +22,6 @@ import 'package:bakhli/features/trip/widgets/trip_status_card.dart';
 import 'package:bakhli/models/card_fact.dart';
 import 'package:bakhli/models/role_model.dart';
 import 'package:bakhli/screens/home_screen.dart';
-import 'package:bakhli/widgets/home_stay_rail_card.dart';
 import 'package:bakhli/widgets/home_taxi_rail_card.dart';
 import 'package:bakhli/widgets/nearby_item_row.dart';
 import 'package:bakhli/widgets/role_option_card.dart';
@@ -176,13 +175,7 @@ void main() {
 
   _golden(
     'home_taxi_rail_card',
-    () => SizedBox(
-      height: HomeStayRailCard.railHeight,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [HomeTaxiRailCard(taxi: _taxi(), onOpen: () {})],
-      ),
-    ),
+    () => MealsRail(children: [HomeTaxiRailCard(taxi: _taxi(), onOpen: () {})]),
   );
 
   _golden(

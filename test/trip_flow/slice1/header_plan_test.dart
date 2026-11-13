@@ -87,7 +87,7 @@ Future<void> _checkAt(WidgetTester t, Size size, double scale) async {
   final bar = t.getRect(find.byType(TripGuideBar));
   final skip = t.getRect(find.text('Skip this'));
   expect(skip.bottom, lessThanOrEqualTo(bar.top), reason: 'last option behind bar at $z');
-  expect(bar.bottom, closeTo(size.height, 0.5));
+  expect(bar.bottom, closeTo(size.height - 22 - phoneBottomInset, 0.5));
   await shot(t, 'C_plan_guide_${z}_end');
   scrollable.position.jumpTo(0);
   await settlePhone(t);

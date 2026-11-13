@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:permission_handler/permission_handler.dart' as ph;
-import '../design/design.dart';
+import '../design/extra/chat_kit.dart';
+import '../design/extra/ext_notifications.dart';
 import '../services/notification_service.dart';
 
 class NotificationOffBanner extends StatefulWidget {
@@ -62,36 +63,12 @@ class _NotificationOffBannerState extends State<NotificationOffBanner> with Widg
   @override
   Widget build(BuildContext context) {
     if (!_denied) return const SizedBox.shrink();
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(KitMetrics.gutter, 12, KitMetrics.gutter, 0),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(color: DesignColors.tint(DesignColors.warning, Alpha.tint), borderRadius: KitMetrics.tileSmall),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(children: [
-              const Icon(Icons.notifications_off_outlined, size: 18, color: DesignColors.warning),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(NotificationOffBanner.title,
-                    maxLines: 2, overflow: TextOverflow.ellipsis, style: TypeTokens.style(14, FontWeight.w700, color: DesignColors.textPrimary)),
-              ),
-            ]),
-            const SizedBox(height: 4),
-            Text(NotificationOffBanner.body,
-                maxLines: 3, overflow: TextOverflow.ellipsis, style: TypeTokens.style(12, FontWeight.w500, color: DesignColors.textSecondary)),
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton(
-                onPressed: _open,
-                child: Text(NotificationOffBanner.action, style: TypeTokens.style(13, FontWeight.w700, color: DesignColors.primary)),
-              ),
-            ),
-          ],
-        ),
-      ),
+    return NotificationBannerCard3D(
+      art: NotificationLook.bell,
+      title: NotificationOffBanner.title,
+      body: NotificationOffBanner.body,
+      actionLabel: NotificationOffBanner.action,
+      onAction: _open,
     );
   }
 }

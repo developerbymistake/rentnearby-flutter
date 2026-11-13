@@ -1,7 +1,5 @@
-import 'package:bakhli/design/extra/trip_plan_look.dart';
 import 'package:bakhli/design/design.dart';
 import 'package:flutter/material.dart';
-import 'package:bakhli/features/trip/widgets/trip_ui.dart';
 import '../../../config/app_insets.dart';
 import '../../../controllers/app_version_controller.dart';
 import '../trip_strings.dart';
@@ -13,11 +11,11 @@ class TripUpdateAppCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.fromLTRB(KitMetrics.gutter, 14, KitMetrics.gutter, AppInsets.bottomViewPadding(context) + 12),
+      padding: EdgeInsets.fromLTRB(18, 18, 18, AppInsets.bottomViewPadding(context) + 14),
       decoration: const BoxDecoration(
         color: DesignColors.surface,
-        borderRadius: CardRadius.tile,
-        boxShadow: ShadowTokens.elev3,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        boxShadow: Ink3D.topEdge,
       ),
       child: Center(
         heightFactor: 1,
@@ -27,44 +25,14 @@ class TripUpdateAppCard extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      gradient: TripLook.gradient,
-                      shape: BoxShape.circle,
-                      boxShadow: ShadowTokens.glow(KitTone.trip.glow),
-                    ),
-                    child: const Center(child: TravelIcon(TravelIcon.airplane, size: 22)),
-                  ),
-                  const SizedBox(width: 10),
-                  const Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          TripStrings.updateAppTitle,
-                          style: TextStyle(
-                              fontFamily: FitnessAppTheme.fontName, fontSize: 15, fontWeight: FontWeight.w700, letterSpacing: 0.18, color: TripLook.textDark),
-                        ),
-                        SizedBox(height: 2),
-                        Text(
-                          TripStrings.updateAppBody,
-                          style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, color: TripLook.textLight),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              TripButton(
+              Text(TripStrings.updateAppTitle, style: Ink3D.text(17, FontWeight.w700, Ink3D.title)),
+              const SizedBox(height: 2),
+              Text(TripStrings.updateAppBody, style: Ink3D.text(12.5, FontWeight.w400, Ink3D.grey)),
+              const SizedBox(height: 14),
+              GradientPillButton(
+                tone: ListingTone.indigo,
                 label: TripStringsA4.openPlayStore,
-                height: 48,
-                onPressed: () => AppVersionController.to.openStore(),
+                onTap: () => AppVersionController.to.openStore(),
               ),
             ],
           ),

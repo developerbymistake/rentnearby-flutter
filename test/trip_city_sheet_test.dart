@@ -31,19 +31,22 @@ void main() {
   });
   tearDown(Get.reset);
 
-  testWidgets('create mode shows Popular routes', (t) async {
+  testWidgets('create mode shows Atlas Popular cities and no hardcoded routes', (t) async {
     final cats = _Catalog();
     cats.list.addAll([_city(4, 'Haridwar', popular: true), _city(5, 'Badrinath', popular: true)]);
     Get.put<TripCityCatalog>(cats, permanent: true);
     setGoldenView(t, const Size(412, 900));
     await t.pumpWidget(const MaterialApp(home: Scaffold(body: TripCitySheet())));
     await t.pumpAndSettle();
-    expect(find.text('Popular routes'), findsOneWidget);
-    expect(find.text('Haridwar then Badrinath'), findsOneWidget);
-    expect(find.text('2 cities'), findsWidgets);
+    expect(find.text('POPULAR ROUTES'), findsNothing);
+    expect(find.text('Haridwar then Badrinath'), findsNothing);
+    expect(find.text('POPULAR CITIES'), findsOneWidget);
+    expect(find.text('ALL CITIES'), findsOneWidget);
+    expect(find.text('Haridwar'), findsOneWidget);
+    expect(find.text('Almora'), findsOneWidget);
   });
 
-  testWidgets('add mode shows Popular next stops', (t) async {
+  testWidgets('add mode shows no Popular next stops', (t) async {
     final cats = _Catalog();
     cats.list.addAll([_city(4, 'Haridwar', popular: true), _city(5, 'Badrinath', popular: true)]);
     Get.put<TripCityCatalog>(cats, permanent: true);
@@ -52,8 +55,33 @@ void main() {
       home: Scaffold(body: TripCitySheet(mode: TripCitySheetMode.add, afterCity: 'Haridwar', inTrip: {4})),
     ));
     await t.pumpAndSettle();
-    expect(find.text('Popular next stops'), findsOneWidget);
-    expect(find.text('Taxis go from Haridwar'), findsWidgets);
+    expect(find.text('POPULAR NEXT STOPS'), findsNothing);
+    expect(find.text('Taxis go from Haridwar'), findsNothing);
+    expect(find.text('POPULAR'), findsOneWidget);
+    expect(find.text('Badrinath'), findsOneWidget);
+  });
+
+  testWidgets('no popular cities shows one plain list without headers', (t) async {
+    final cats = _Catalog();
+    cats.list[0] = _city(1, 'Nainital');
+    Get.put<TripCityCatalog>(cats, permanent: true);
+    setGoldenView(t, const Size(412, 900));
+    await t.pumpWidget(const MaterialApp(home: Scaffold(body: TripCitySheet())));
+    await t.pumpAndSettle();
+    expect(find.text('ALL CITIES'), findsNothing);
+    expect(find.text('Nainital'), findsOneWidget);
+    expect(find.text('Almora'), findsOneWidget);
+  });
+
+  testWidgets('search with no match shows the no-match state', (t) async {
+    Get.put<TripCityCatalog>(_Catalog(), permanent: true);
+    setGoldenView(t, const Size(412, 900));
+    await t.pumpWidget(const MaterialApp(home: Scaffold(body: TripCitySheet())));
+    await t.pumpAndSettle();
+    await t.enterText(find.byType(TextField).first, 'Goa');
+    await t.pumpAndSettle();
+    expect(find.textContaining('Goa'), findsWidgets);
+    expect(find.text('Nainital'), findsNothing);
   });
 
   for (final w in [300.0, 360.0, 412.0, 560.0]) {

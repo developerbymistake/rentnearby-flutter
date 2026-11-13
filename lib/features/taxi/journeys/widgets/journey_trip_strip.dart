@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:bakhli/design/design.dart';
-import 'package:bakhli/design/extra/trip_plan_look.dart';
+import 'package:bakhli/design/extra/ext_journeys.dart';
 import 'package:get/get.dart';
 import '../../../trip/controllers/trip_plan_controller.dart';
 import '../../../trip/models/trip_journey_model.dart';
@@ -32,38 +31,10 @@ class JourneyTripStrip extends StatelessWidget {
         ? TripStringsMcbA3.partOfTrip
         : TripStringsMcbA3.partOf(title.isEmpty ? TripStringsMcbA3.partOfTrip : title, day);
     final registered = tripControllerFor(j) != null;
-    return Container(
-      decoration: TripLook.card(),
-      child: ClipRRect(
-        borderRadius: TripLook.softRadius,
-        child: Container(
-          color: TripLook.surface,
-          padding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
-          child: Row(children: [
-            const TravelIcon(TravelIcon.route, size: 20),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                text,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: FitnessAppTheme.title.copyWith(fontSize: 13.5, color: DesignColors.primary),
-              ),
-            ),
-            const SizedBox(width: 8),
-            TextButton(
-              style: TextButton.styleFrom(minimumSize: const Size(64, 44), foregroundColor: DesignColors.primary),
-              onPressed: () => TripNavigation.openPlan(tripId: j.tripId),
-              child: Text(
-                registered ? TripStringsMcbA3.open : TripStringsMcbA3.openTrip,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TripKit.text(13, weight: FontWeight.w700, color: DesignColors.primary),
-              ),
-            ),
-          ]),
-        ),
-      ),
+    return JourneyTripCard3D(
+      text: text.replaceAll('Day ', 'Day\u00A0'),
+      actionLabel: registered ? TripStringsMcbA3.open : TripStringsMcbA3.openTrip,
+      onAction: () => TripNavigation.openPlan(tripId: j.tripId),
     );
   }
 }
@@ -94,41 +65,17 @@ class JourneyCarBookRow extends StatelessWidget {
   }
 
   Widget _row(BuildContext context, bool booked, TripStepRole? role, int? cityLeg) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 6),
-      child: booked
-          ? Container(
-              constraints: const BoxConstraints(minHeight: 36),
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              alignment: Alignment.centerLeft,
-              child: Row(mainAxisSize: MainAxisSize.min, children: [
-                const Icon(Icons.check_circle_rounded, size: 16, color: TripLook.booked),
-                const SizedBox(width: 6),
-                Flexible(
-                  child: Text(
-                    TripStringsMcbA3.booked,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TripKit.text(12.5, weight: FontWeight.w700, color: TripLook.booked),
-                  ),
-                ),
-              ]),
-            )
-          : SizedBox(
-              width: double.infinity,
-              child: JourneyButton(
-                label: TripStringsMcbA3.iBooked,
-                kind: JourneyButtonKind.outline,
-                onPressed: () => TripTaxiBookingSheet.showForJourneyCar(
-                  context,
-                  role: role,
-                  legIndex: cityLeg,
-                  journeyId: journey.id,
-                  carIndex: leg.legIndex,
-                  car: TripJourneyLeg.fromSaved(leg),
-                ),
-              ),
-            ),
+    if (booked) return const JourneyBookRow3D(label: TripStringsMcbA3.booked, booked: true);
+    return JourneyBookRow3D(
+      label: TripStringsMcbA3.iBooked,
+      onTap: () => TripTaxiBookingSheet.showForJourneyCar(
+        context,
+        role: role,
+        legIndex: cityLeg,
+        journeyId: journey.id,
+        carIndex: leg.legIndex,
+        car: TripJourneyLeg.fromSaved(leg),
+      ),
     );
   }
 }

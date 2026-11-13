@@ -1,7 +1,7 @@
+import 'package:bakhli/design/design.dart';
 import 'package:flutter/material.dart';
 import 'trip_ui.dart';
 import 'package:bakhli/design/extra/trip_plan_look.dart';
-import 'package:bakhli/design/template/fitness_app_theme.dart';
 
 class TripDayChips extends StatefulWidget {
   static const int all = 0;
@@ -104,7 +104,7 @@ class _TripDayChipsState extends State<TripDayChips> {
       child: Row(
         children: [
           for (var d = 1; d <= dayCount; d++) ...[
-            if (d > 1) const SizedBox(width: 8),
+            if (d > 1) const SizedBox(width: 10),
             TripChoiceChip(
               label: 'Day $d',
               selected: selected == d,
@@ -136,7 +136,7 @@ class _TripDayChipsState extends State<TripDayChips> {
     final row = Row(
       children: [
         for (var i = 0; i < order.length; i++) ...[
-          if (i > 0) const SizedBox(width: 8),
+          if (i > 0) const SizedBox(width: 10),
           _compactChip(order[i], numeric),
         ],
       ],
@@ -180,23 +180,14 @@ class _TripDayChipsState extends State<TripDayChips> {
   Widget _compactChip(int day, bool numeric) {
     final isAll = day == TripDayChips.all;
     final label = isAll ? 'All' : (numeric ? '$day' : 'Day $day');
-    void tap() => widget.onChanged(day);
-    return GestureDetector(
+    return KeyedSubtree(
       key: _keyOf(day),
-      behavior: HitTestBehavior.opaque,
-      onTap: tap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 6),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minWidth: 44),
-          child: TripChoiceChip(
-            label: label,
-            selected: widget.selected == day,
-            activeColor: isAll ? TripLook.accentDark : TripLook.dayColor(day),
-            padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 12),
-            onTap: tap,
-          ),
-        ),
+      child: ChipCP(
+        tone: ListingTone.indigo,
+        art: isAll ? ListingArt.worldMap : ListingArt.calendar,
+        label: label,
+        off: widget.selected != day,
+        onTap: () => widget.onChanged(day),
       ),
     );
   }

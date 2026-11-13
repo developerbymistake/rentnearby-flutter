@@ -1,6 +1,5 @@
 import 'package:bakhli/design/design.dart';
 import 'package:flutter/material.dart';
-import 'package:bakhli/features/trip/widgets/trip_ui.dart';
 import 'package:get/get.dart';
 import '../controllers/trip_plan_controller.dart';
 import '../models/trip_plan_model.dart';
@@ -29,58 +28,25 @@ class TripAddCityCard extends StatelessWidget {
       if (block == TripLegEditBlock.readOnly) return const SizedBox.shrink();
       final disabled = _disabledText(block);
       final enabled = block == TripLegEditBlock.none;
-      final tone = enabled ? TripEntryStyle.accent : FitnessAppTheme.deactivatedText;
+      final tone = ListingTone.indigo;
       return TemplateEntranceOnce(
         child: Semantics(
-        button: true,
-        enabled: enabled,
-        child: TripSurface(
-          onTap: enabled ? () => TripNavigation.addCity(context) : null,
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 40),
-            child: Row(
-                children: [
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      gradient: enabled ? TripEntryStyle.gradient : null,
-                      color: enabled ? null : TripEntryStyle.surface,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(Icons.add_rounded, size: 22, color: enabled ? FitnessAppTheme.white : tone),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          TripStringsMcaA3.addAnotherCity,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                              fontFamily: FitnessAppTheme.fontName,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w700,
-                              color: enabled ? FitnessAppTheme.darkerText : FitnessAppTheme.deactivatedText),
-                        ),
-                        Text(
-                          disabled ?? TripStringsMcaA3.upToFourCities,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, color: FitnessAppTheme.lightText),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+          button: true,
+          enabled: enabled,
+          child: WideCard(
+            kind: WideKind.slim,
+            tone: tone,
+            art: ListingArt.worldMap,
+            title: TripStringsMcaA3.addAnotherCity,
+            subtitle: disabled ?? TripStringsMcaA3.upToFourCities,
+            trailing: RoundGoButton(color: tone.button, icon: Icons.add_rounded),
+            trailingWidth: 50,
+            dimmed: !enabled,
+            reserveChips: false,
+            showPrice: false,
+            onTap: enabled ? () => TripNavigation.addCity(context) : null,
           ),
         ),
-      ),
       );
     });
   }

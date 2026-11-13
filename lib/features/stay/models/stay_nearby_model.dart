@@ -58,6 +58,9 @@ class StayNearbyModel {
 
   String get title => (name == null || name!.isEmpty) ? 'Stay' : name!;
 
+  static String? _url(String? u) =>
+      u == null || u.isEmpty ? null : (u.startsWith('http') ? u : '${AppConstants.serverUrl}$u');
+
   factory StayNearbyModel.fromJson(Map<String, dynamic> json) => StayNearbyModel(
         id: json['id'] as String,
         name: json['name'] as String?,
@@ -65,11 +68,7 @@ class StayNearbyModel {
         latitude: (json['latitude'] as num).toDouble(),
         longitude: (json['longitude'] as num).toDouble(),
         minPricePerNight: (json['minPricePerNight'] as num?)?.toInt(),
-        thumbnailUrl: json['thumbnailUrl'] == null
-            ? null
-            : json['thumbnailUrl'].toString().startsWith('http')
-                ? json['thumbnailUrl'] as String
-                : '${AppConstants.serverUrl}${json['thumbnailUrl']}',
+        thumbnailUrl: _url(json['thumbnailUrl']?.toString().trim()),
         distanceKm: (json['distanceKm'] as num).toDouble(),
         ownerName: json['ownerName'] as String?,
         ownerPhone: json['ownerPhone'] as String?,

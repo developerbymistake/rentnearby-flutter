@@ -149,28 +149,18 @@ void main() {
 
   _golden(
     'rail_cards',
-    () => SizedBox(
-      height: HomeStayRailCard.railHeight,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        children: [
-          HomeStayRailCard(stay: _stay('s1', 'Deodar Valley Homestay', featured: true), onOpen: () {}),
-          const SizedBox(width: 12),
-          HomeTaxiRailCard(taxi: _taxi(), onOpen: () {}),
-        ],
-      ),
+    () => MealsRail(
+      children: [
+        HomeStayRailCard(stay: _stay('s1', 'Deodar Valley Homestay', featured: true), onOpen: () {}),
+        const SizedBox(width: 12),
+        HomeTaxiRailCard(taxi: _taxi(), onOpen: () {}),
+      ],
     ),
   );
 
   _golden(
     'taxi_rail_no_fare',
-    () => SizedBox(
-      height: HomeStayRailCard.railHeight,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [HomeTaxiRailCard(taxi: _taxi(featured: false, fare: null), onOpen: () {})],
-      ),
-    ),
+    () => MealsRail(children: [HomeTaxiRailCard(taxi: _taxi(featured: false, fare: null), onOpen: () {})]),
   );
 
   _golden(
@@ -299,7 +289,7 @@ void main() {
       final hi = t.getTopLeft(find.textContaining('Hi,')).dy;
       final next = t.getTopLeft(find.text('Where to next?')).dy;
       expect(hi, lessThan(next));
-      final scroll = t.widget<SingleChildScrollView>(find.byType(SingleChildScrollView));
+      final scroll = t.widget<SingleChildScrollView>(find.byType(SingleChildScrollView).first);
       expect((scroll.padding as EdgeInsets).bottom, greaterThanOrEqualTo(BarMetrics.bodyBottom(0)));
       await t.pumpWidget(const SizedBox());
     });
@@ -316,7 +306,7 @@ void main() {
       ));
       await t.pump();
       await t.pump(const Duration(seconds: 1));
-      final scroll = t.widget<SingleChildScrollView>(find.byType(SingleChildScrollView));
+      final scroll = t.widget<SingleChildScrollView>(find.byType(SingleChildScrollView).first);
       final bottom = (scroll.padding as EdgeInsets).bottom;
       expect(bottom, BarMetrics.boxHeight + 40 + BarMetrics.bodyGap);
       await t.pumpWidget(const SizedBox());

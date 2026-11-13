@@ -1,18 +1,19 @@
-import 'trip_ui.dart';
 import 'package:bakhli/design/design.dart';
 import 'package:flutter/material.dart';
 import '../../../models/browse_item.dart';
+import '../../../utils/contact_launcher.dart';
+import '../../../widgets/listing_contact_actions.dart';
 import '../../stay/models/stay_nearby_model.dart';
 import '../../stay/setup/stay_option_sets.dart';
 import '../trip_strings.dart';
 import '../trip_strings_a2.dart';
 import '../trip_strings_algo_aa.dart';
 import '../trip_strings_fin_b1.dart';
+import '../trip_strings_final_aa.dart';
 import '../trip_strings_v2_find.dart';
 import '../utils/trip_format.dart';
 import '../utils/trip_stay_rank.dart';
 import '../trip_strings_shortlist.dart';
-import 'trip_shortlist_toggle.dart';
 import 'trip_status.dart';
 
 class TripStayRow extends StatelessWidget {
@@ -25,15 +26,20 @@ class TripStayRow extends StatelessWidget {
     this.onOpenChat,
     this.readOnly = false,
     this.onCall,
+    this.callBusy = false,
     this.onAsk,
     this.fit,
     this.onShortlist,
     this.shortlisted = false,
     this.shortlistBusy = false,
     this.noReply = false,
+    this.tone,
+    this.index = 0,
   });
 
   final StayNearbyModel stay;
+  final ListingTone? tone;
+  final int index;
   final TripStayFit? fit;
   final TripDisplayStatus? status;
   final String? statusLine;
@@ -41,6 +47,7 @@ class TripStayRow extends StatelessWidget {
   final bool readOnly;
   final VoidCallback onOpen;
   final VoidCallback? onCall;
+  final bool callBusy;
   final VoidCallback? onAsk;
   final VoidCallback? onShortlist;
   final bool shortlisted;
@@ -110,204 +117,96 @@ class TripStayRow extends StatelessWidget {
     return parts.isEmpty ? null : parts.join(' · ');
   }
 
+  @visibleForTesting
+  static Future<void> Function(String phone) dial = ContactLauncher.call;
+
+  static Future<void> call(BuildContext context, StayNearbyModel s, {Map<String, dynamic>? detailArguments}) async {
+    final raw = s.ownerPhone;
+    if (raw != null && ContactLauncher.tenDigits(raw).isNotEmpty) return dial(raw);
+    await ListingContactActions.call(context, kind: ListingKind.stay, id: s.id, detailArguments: detailArguments);
+  }
+
   bool get _paused => !stay.isActive;
+
+  static const String _tag = 'For stay';
+  static const String _from = 'FROM';
+  static const String _group = 'YOUR GROUP';
+  static const String _perNight = '/night';
+  static const List<String> _stickers = [ListingArt.key, ListingArt.bed, ListingArt.hotel];
 
   @override
   Widget build(BuildContext context) {
-    final actions = _actions(context);
-    return EntranceOnce(
-      child: Padding(
-      padding: const EdgeInsets.only(top: 12),
-      child: DecoratedBox(
-        decoration: const BoxDecoration(
-          color: DesignColors.surface,
-          borderRadius: CardRadius.tile,
-          boxShadow: ShadowTokens.elev2,
-        ),
-        child: Material(
-          color: Colors.transparent,
-          borderRadius: CardRadius.tile,
-          clipBehavior: Clip.antiAlias,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              InkWell(
-                onTap: onOpen,
-                splashColor: DesignColors.splash,
-                highlightColor: Colors.transparent,
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 12, 14, 12),
-                  child: _body(),
-                ),
-              ),
-              ?actions,
-            ],
-          ),
-        ),
-      ),
-    ));
-  }
-
-  Widget _thumb() => KitPhoto(
-        url: stay.thumbnailUrl,
-        width: thumb,
-        height: thumb,
-        tone: KitTone.stay,
-        asset: TravelIcon.stay,
-        radius: KitMetrics.tileSmall,
-        dimmed: _paused,
-      );
-
-  Widget _body() {
     final type = quoteLine(stay, fit);
-    final facts = statusLine ?? factsLine(stay);
+    final facts = factsLine(stay);
     final quote = fit?.fits == true ? fit?.quotePerNight : null;
     final price = quote ?? stay.minPricePerNight;
     final nearKm = fit != null && fit!.nearestKm.isFinite ? fit!.nearestKm : stay.distanceKm;
     final noFit = fit?.fits == false && !_paused;
     final st = status;
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _thumb(),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Text(
-                      stay.title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: TypeTokens.style(14, FontWeight.w700,
-                          color: _paused ? DesignColors.textMuted : DesignColors.textStrong, height: 1.2),
-                    ),
-                  ),
-                  if (nearKm > 0) ...[
-                    const SizedBox(width: 8),
-                    KitTagChip(TripFormat.km(nearKm), tone: KitTone.stay),
-                  ],
-                ],
+    final url = stay.thumbnailUrl;
+    final hasPhoto = url != null && url.isNotEmpty;
+    final sticker = _stickers[index % _stickers.length];
+    final line = _paused ? null : statusLine;
+    final km = nearKm > 0 ? TripStringsFinalAa.kmAway(nearKm) : null;
+    return EntranceOnce(
+      child: WideCard(
+        kind: hasPhoto ? WideKind.photo : WideKind.halo,
+        tone: tone ?? ListingTone.list(ListingTone.forest, index),
+        tag: stay.isFeatured && !_paused ? '$_tag · ${TripStringsA2.featured}' : _tag,
+        title: stay.title,
+        subtitle: [
+          if (_paused) TripStrings.stayPaused,
+          if (stay.locality.isNotEmpty) stay.locality,
+        ].join('\n'),
+        photo: !hasPhoto
+            ? null
+            : SizedBox.expand(
+                child: KitPhoto(url: url, width: double.infinity, height: double.infinity),
               ),
-              if (_paused || st != null || stay.isFeatured || noFit || noReply) ...[
-                const SizedBox(height: 4),
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 4,
-                  children: [
-                    if (_paused) KitTagChip(TripStrings.notAvailableNow, color: TripUi.bad),
-                    if (st != null)
-                      KitTagChip(
-                        st == TripDisplayStatus.asked ? TripStringsA2.asked : TripStatusVisuals.label(st),
-                        color: TripStatusVisuals.text(st),
-                      ),
-                    if (stay.isFeatured && !_paused) KitTagChip(TripStringsA2.featured, color: TripUi.gold),
-                    if (noFit) KitTagChip(TripStringsAlgoAa.doesNotFit, color: TripUi.warn),
-                    if (noReply) KitTagChip(TripStringsShortlist.noReply, color: TripUi.warn),
-                  ],
-                ),
-              ],
-              const SizedBox(height: 4),
-              Text(
-                _paused ? TripStrings.stayPaused : (type ?? TripStringsA2.stay),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TypeTokens.style(12, FontWeight.w600, color: KitTone.stay.accentDark),
-              ),
-              if (stay.locality.isNotEmpty) ...[
-                const SizedBox(height: 2),
-                Row(
-                  children: [
-                    const TravelIcon(TravelIcon.place, size: 12),
-                    const SizedBox(width: 3),
-                    Expanded(
-                      child: Text(stay.locality, maxLines: 1, overflow: TextOverflow.ellipsis, style: TypeTokens.caption),
-                    ),
-                  ],
-                ),
-              ],
-              if (facts != null && !_paused) ...[
-                const SizedBox(height: 2),
-                Text(facts, maxLines: 1, overflow: TextOverflow.ellipsis, style: TypeTokens.caption),
-              ],
-              const SizedBox(height: 6),
-              FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.centerLeft,
-                child: price == null
-                    ? Text(TripStringsA2.priceOnRequest, style: TypeTokens.style(13, FontWeight.w700))
-                    : Text.rich(
-                        TextSpan(
-                          children: [
-                            TextSpan(
-                              text: BrowseItem.inr(price),
-                              style: TypeTokens.style(15, FontWeight.w800, color: KitTone.stay.accentDark),
-                            ),
-                            TextSpan(
-                              text: ' ${quote != null ? TripStringsAlgoAa.perNightGroup : TripStringsA2.perNightListed}',
-                              style: TypeTokens.caption,
-                            ),
-                          ],
-                        ),
-                        maxLines: 1,
-                      ),
-              ),
-            ],
-          ),
-        ),
-      ],
+        sticker: hasPhoto ? sticker : null,
+        art: hasPhoto ? null : sticker,
+        chips: [
+          if (_paused) TripStrings.notAvailableNow,
+          if (st != null) st == TripDisplayStatus.asked ? TripStringsA2.asked : TripStatusVisuals.label(st),
+          if (noFit) TripStringsAlgoAa.doesNotFit,
+          if (noReply) TripStringsShortlist.noReply,
+          if (!_paused && type != null) ...type.split(' · '),
+          if (facts != null && !_paused && line == null) ...facts.split(' · '),
+        ],
+        priceCaption: price == null ? null : (quote != null ? _group : _from),
+        number: price == null ? TripStringsA2.priceOnRequest : BrowseItem.inr(price),
+        unit: price == null ? '' : _perNight,
+        label: km ?? line ?? (stay.locality.isEmpty ? null : 'In ${stay.locality}'),
+        labelNote: km != null ? line : null,
+        actions: _actions(),
+        picked: shortlisted,
+        dimmed: _paused,
+        onTap: onOpen,
+      ),
     );
   }
 
-  Widget? _actions(BuildContext context) {
-    if (_paused || readOnly) return null;
+  List<WideAction> _actions() {
+    if (_paused || readOnly) return const [];
     final st = status;
-    final Widget ask;
+    final call = WideAction(icon: Icons.call_rounded, label: TripStringsV2Find.call, onTap: onCall, busy: callBusy);
+    final WideAction second;
     if (st != null && onOpenChat != null) {
-      ask = SecondaryButton(
-        label: TripStrings.openChat,
-        onPressed: onOpenChat,
-        tone: KitTone.stay,
-        height: 44,
-        icon: const TravelIcon(TravelIcon.chat, size: 18),
-      );
+      second = WideAction(icon: Icons.chat_bubble_outline_rounded, label: TripStrings.openChat, onTap: onOpenChat);
     } else if (st != null) {
-      ask = SecondaryButton(
-        label: TripStringsV2Find.asked,
-        onPressed: null,
-        tone: KitTone.stay,
-        height: 44,
-        icon: const TravelIcon(TravelIcon.note, size: 18),
-      );
+      second = const WideAction(icon: Icons.mark_email_read_outlined, label: TripStringsV2Find.asked);
     } else if (onShortlist != null) {
-      ask = TripShortlistToggle(selected: shortlisted, busy: shortlistBusy, onTap: onShortlist, tone: KitTone.stay);
-    } else {
-      ask = PrimaryButton(
-        label: TripStringsV2Find.ask,
-        onPressed: onAsk,
-        tone: KitTone.stay,
-        height: 44,
-        icon: const TravelIcon(TravelIcon.chat, size: 18),
+      second = WideAction(
+        icon: shortlisted ? Icons.check_rounded : Icons.add_rounded,
+        label: shortlisted ? TripStringsShortlist.shortlisted : TripStringsShortlist.shortlist,
+        onTap: onShortlist,
+        selected: shortlisted,
+        busy: shortlistBusy,
       );
+    } else {
+      second = WideAction(icon: Icons.send_rounded, label: TripStringsV2Find.ask, onTap: onAsk);
     }
-    final call = SecondaryButton(
-      label: TripStringsV2Find.call,
-      onPressed: onCall,
-      tone: KitTone.stay,
-      height: 44,
-      icon: Icon(Icons.call_rounded, size: 16, color: KitTone.stay.accentDark),
-    );
-    final stacked = MediaQuery.textScalerOf(context).scale(1) > 1.15;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-      child: stacked
-          ? Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [call, const SizedBox(height: 8), ask])
-          : Row(children: [Expanded(child: call), const SizedBox(width: 8), Expanded(child: ask)]),
-    );
+    return [call, second];
   }
 }
 
@@ -315,60 +214,5 @@ class TripStayRowSkeleton extends StatelessWidget {
   const TripStayRowSkeleton({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final scale = MediaQuery.textScalerOf(context);
-    double line(double size) => scale.scale(size) * 1.5;
-    return Padding(
-      padding: const EdgeInsets.only(top: 12),
-      child: DecoratedBox(
-        decoration: const BoxDecoration(
-          color: DesignColors.surface,
-          borderRadius: CardRadius.tile,
-          boxShadow: ShadowTokens.elev2,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 12, 14, 12),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const TemplatePlaceholder(width: TripStayRow.thumb, height: TripStayRow.thumb, radius: 12),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        TemplatePlaceholder(width: 160, height: line(14), radius: 6),
-                        const SizedBox(height: 4),
-                        TemplatePlaceholder(width: 130, height: line(12), radius: 6),
-                        const SizedBox(height: 2),
-                        TemplatePlaceholder(width: 110, height: line(11), radius: 6),
-                        const SizedBox(height: 6),
-                        TemplatePlaceholder(width: 120, height: line(15), radius: 6),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(
-              height: TripStayRow.actionHeight,
-              child: Padding(
-                padding: EdgeInsets.fromLTRB(12, 0, 12, 12),
-                child: Row(
-                  children: [
-                    Expanded(child: TemplatePlaceholder(height: 44, radius: 24)),
-                    SizedBox(width: 12),
-                    Expanded(child: TemplatePlaceholder(height: 44, radius: 24)),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => const WideCardSkeleton(kind: WideKind.photo);
 }

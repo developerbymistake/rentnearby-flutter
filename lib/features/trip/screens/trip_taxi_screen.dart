@@ -3,8 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:bakhli/features/trip/widgets/trip_ui.dart';
 import 'package:get/get.dart';
 import '../../../utils/app_toast.dart';
-import '../../../utils/contact_launcher.dart';
-import '../../taxi/guest/taxi_browse_repository.dart';
+import '../../../widgets/listing_contact_actions.dart';
 import '../../taxi/guest/taxi_navigation.dart';
 import '../../taxi/models/taxi_browse_item.dart';
 import '../controllers/trip_plan_controller.dart';
@@ -23,7 +22,7 @@ import '../utils/trip_format.dart';
 import '../widgets/trip_arrange_confirm.dart';
 import '../widgets/trip_driver_row.dart';
 import '../widgets/trip_filter_chips.dart';
-import '../widgets/trip_page_header.dart';
+import '../widgets/trip_list_look.dart';
 import '../widgets/trip_shortlist_bar.dart';
 import '../widgets/trip_taxi_booking_sheet.dart';
 import 'trip_taxi_enquiry_sheet.dart';
@@ -50,8 +49,6 @@ class _TripTaxiScreenState extends State<TripTaxiScreen> with TickerProviderStat
   late final TripSupplyController _supply;
   final _scroll = ScrollController();
   final _days = <int>{}.obs;
-  final _contactBusy = <String>{}.obs;
-  final _contacts = <String, ({String phone, String whatsApp})>{};
   Worker? _planWorker;
   Worker? _daysWorker;
   GuideArgs? _guide;
@@ -166,32 +163,12 @@ class _TripTaxiScreenState extends State<TripTaxiScreen> with TickerProviderStat
         whatsAppMessage: _plan.whatsAppMessage(_firstDay, t.driverName),
       );
 
-  Future<({String phone, String whatsApp})?> _loadContact(TaxiBrowseItem t) async {
-    if (_contactBusy.contains(t.id)) return null;
-    _contactBusy.add(t.id);
-    try {
-      final d = await const TaxiBrowseRepository().getById(t.id);
-      final phone = d.contactPhone;
-      if (phone == null || ContactLauncher.tenDigits(phone).isEmpty) {
-        _open(t);
-        return null;
-      }
-      final c = (phone: phone, whatsApp: d.whatsAppNumber ?? phone);
-      _contacts[t.id] = c;
-      return c;
-    } catch (_) {
-      AppToast.error(TripStringsA3.contactFailed);
-      return null;
-    } finally {
-      _contactBusy.remove(t.id);
-    }
-  }
-
-  Future<void> _call(TaxiBrowseItem t) async {
-    final c = _contacts[t.id] ?? await _loadContact(t);
-    if (c == null) return;
-    await ContactLauncher.call(c.phone);
-  }
+  Future<void> _call(TaxiBrowseItem t) => ListingContactActions.call(
+        context,
+        kind: ListingKind.taxi,
+        id: t.id,
+        detailArguments: {'whatsAppMessage': _plan.whatsAppMessage(_firstDay, t.driverName)},
+      );
 
   TripEnquiryModel? _askedOf(String taxiId) {
     final p = _plan.plan.value;
@@ -413,10 +390,10 @@ class _TripTaxiScreenState extends State<TripTaxiScreen> with TickerProviderStat
       );
 
   Widget _shimmerList() => SliverPadding(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+        padding: EdgeInsets.zero,
         sliver: SliverList.separated(
           itemCount: 4,
-          separatorBuilder: (_, _) => const SizedBox(height: 12),
+          separatorBuilder: (_, _) => const SizedBox.shrink(),
           itemBuilder: (_, i) => _enter(_narrow(const TripDriverRowSkeleton()), i, 4),
         ),
       );
@@ -503,20 +480,21 @@ class _TripTaxiScreenState extends State<TripTaxiScreen> with TickerProviderStat
         }
         final n = _days.length;
         return SliverPadding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+          padding: EdgeInsets.zero,
           sliver: SliverList.separated(
             itemCount: list.length,
-            separatorBuilder: (_, _) => const SizedBox(height: 12),
+            separatorBuilder: (_, _) => const SizedBox.shrink(),
             itemBuilder: (_, i) {
               final t = list[i];
               final asked = _askedOf(t.id);
               return _enter(_narrow(Obx(() => TripDriverRow(
                     key: ValueKey('${t.id}-$n'),
                     item: t,
+                    tone: ListingTone.list(ListingTone.coral, i),
                     fit: _supply.taxiFitOf(t.id),
                     status: asked?.display,
                     days: n,
-                    contactBusy: _contactBusy.contains(t.id),
+                    contactBusy: ListingContactActions.isBusy(ListingKind.taxi, t.id),
                     onOpen: () => _open(t),
                     onCall: () => _call(t),
                     onAsk: () => _ask(t),
@@ -578,7 +556,7 @@ class _TripTaxiScreenState extends State<TripTaxiScreen> with TickerProviderStat
         if (!didPop) TripNavigation.backToPlan();
       },
       child: Scaffold(
-        backgroundColor: FitnessAppTheme.background,
+        backgroundColor: ListingPalette.coral.page,
         bottomNavigationBar: _guide == null || _plan.isReadOnly ? null : TripShortlistBar(step: _guide!.stepKey, onDone: _done, tone: KitTone.taxi),
         body: Column(
           children: [
@@ -588,14 +566,14 @@ class _TripTaxiScreenState extends State<TripTaxiScreen> with TickerProviderStat
               child: Obx(() {
               _plan.plan.value;
               _days.length;
-              return TripPageHeader(
+              return TripListTopBar(
+                tone: ListingTone.coral,
                 title: TripStringsV2Find.taxiTitle,
                 subtitle: TripStringsV2Find.taxiSubtitle(_cities),
                 onBack: TripNavigation.backToPlan,
-                tone: KitTone.taxi,
-                trailing: _plan.isReadOnly || _guide != null
-                    ? null
-                    : TripHeaderAction(label: TripStringsV2Find.skip, onTap: _skip),
+                guide: _guide,
+                skipLabel: _plan.isReadOnly || _guide != null ? null : TripStringsV2Find.skip,
+                onSkip: _skip,
               );
             })),
             Expanded(

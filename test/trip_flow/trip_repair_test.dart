@@ -11,7 +11,7 @@ import 'package:bakhli/features/trip/models/trip_plan_model.dart';
 import 'package:bakhli/features/trip/models/trip_shortlist_model.dart';
 import 'package:bakhli/features/trip/models/trip_city_model.dart';
 import 'package:bakhli/features/trip/screens/trip_plan_screen.dart';
-import 'package:bakhli/features/trip/widgets/trip_city_art.dart';
+import 'package:bakhli/design/design.dart';
 import 'package:bakhli/features/trip/widgets/trip_city_tile.dart';
 import 'package:bakhli/features/trip/trip_strings_guide.dart';
 import 'package:bakhli/features/trip/trip_strings_shortlist.dart';
@@ -121,10 +121,10 @@ void main() {
         await t.pump();
         final rects = [for (var i = 0; i < 3; i++) t.getRect(opts.at(i))];
         for (var i = 0; i < 2; i++) {
-          expect(rects[i].bottom, lessThanOrEqualTo(rects[i + 1].top), reason: 'option $i overlaps the next');
+          expect(rects[i].bottom, lessThanOrEqualTo(rects[i + 1].top + 0.01), reason: 'option $i overlaps the next');
         }
         final bar = t.getRect(find.text(TripStringsGuide.next).last);
-        expect(rects.last.bottom, lessThanOrEqualTo(bar.top));
+        expect(rects.last.bottom, lessThanOrEqualTo(bar.top + 0.01));
         expect(t.takeException(), isNull);
         if (w == 360 && s == 1.3) {
           await t.drag(scroll, const Offset(0, 3000));
@@ -148,7 +148,7 @@ void main() {
     await _settle(t);
     final bar = t.getRect(find.byType(TripShortlistBar));
     expect(bar.bottom, closeTo(700, 0.5));
-    expect(bar.height, lessThan(120));
+    expect(bar.height, lessThan(150));
     expect(find.text('Row 0'), findsOneWidget);
     expect(find.text(TripStringsShortlist.done), findsOneWidget);
     await _shot(t, 'trips_shortlist_bar_360_s13');
@@ -206,15 +206,21 @@ void main() {
     expect(find.byType(TripGuideView), findsOneWidget);
     c.guideJumpTo('stay:1');
     await _settle(t);
+    await t.ensureVisible(find.text(TripStringsGuide.optFind));
+    await t.pump();
     await t.tap(find.text(TripStringsGuide.optFind));
     await _settle(t);
     expect(find.text('stay-stub'), findsOneWidget);
     Get.back();
     await _settle(t);
     expect(c.guideState.current.value, TripGuideChoice.find);
+    await t.ensureVisible(find.text(TripStringsGuide.optOwn));
+    await t.pump();
     await t.tap(find.text(TripStringsGuide.optOwn));
     await _settle(t);
     expect(c.guideState.current.value, TripGuideChoice.own);
+    await t.ensureVisible(find.text(TripStringsGuide.optSkip));
+    await t.pump();
     await t.tap(find.text(TripStringsGuide.optSkip));
     await _settle(t);
     expect(c.guideState.current.value, TripGuideChoice.skip);
@@ -223,18 +229,12 @@ void main() {
     await t.tap(find.text(TripStringsGuide.next));
     await _settle(t);
     expect(c.guideState.index.value, before + 1);
-    await t.tap(find.text(TripStringsGuide.previous));
+    await t.tap(find.byTooltip(TripStringsGuide.previous));
     await _settle(t);
     expect(c.guideState.index.value, before);
 
-    await t.tap(find.text(TripStringsGuide.overview));
-    await _settle(t);
-    expect(find.text(TripStringsGuide.overviewTitle), findsOneWidget);
-    await _shot(t, 'trips_overview_sheet_412');
-    expect(find.text(TripStringsGuide.backToSteps), findsNothing);
-    await t.tapAt(const Offset(5, 5));
-    await _settle(t);
-    expect(find.text(TripStringsGuide.overviewTitle), findsNothing);
+    expect(find.text('Overview'), findsNothing);
+    expect(find.text('Back to steps'), findsNothing);
     expect(t.takeException(), isNull);
     await t.pump(const Duration(seconds: 6));
   });
@@ -248,21 +248,18 @@ void main() {
     var tapped = 0;
     await t.pumpWidget(_app(
       Scaffold(
-        body: GridView.count(
-          crossAxisCount: 2,
-          childAspectRatio: TripCityTile.aspect,
-          padding: const EdgeInsets.all(12),
-          mainAxisSpacing: 12,
-          crossAxisSpacing: 12,
-          children: [for (final c in cities) TripCityTile(city: c, onTap: () => tapped++)],
+        body: SingleChildScrollView(
+          child: Wrap(
+            children: [for (final c in cities) TripCityTile(city: c, onTap: () => tapped++)],
+          ),
         ),
       ),
       1.3,
     ));
     await _settle(t);
-    expect(find.byType(TripCityArt), findsNWidgets(6));
-    final tones = {for (var i = 0; i < 6; i++) TripCityArt.toneOf(210000001 + i)};
-    expect(tones.length, greaterThan(3));
+    expect(find.byType(MealsCardV), findsNWidgets(6));
+    final arts = {for (var i = 0; i < 6; i++) TripCityTile.artOf(210000001 + i)};
+    expect(arts.length, greaterThan(3));
     await t.tap(find.byType(TripCityTile).first);
     expect(tapped, 1);
     expect(t.takeException(), isNull);

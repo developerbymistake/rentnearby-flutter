@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
-import '../tokens/alpha_tokens.dart';
-import '../tokens/design_colors.dart';
-import '../tokens/type_tokens.dart';
-import 'buttons_kit.dart';
+import '../tokens/listing_palette.dart';
+import 'art_3d.dart';
 import 'kit_tone.dart';
-import 'motion_kit.dart';
+import 'state_card_3d.dart';
 import 'travel_icon.dart';
 
 enum StateTone { empty, error }
+
+ListingTone listingToneOf(KitTone kit) {
+  if (identical(kit, KitTone.stay) || identical(kit, KitTone.stayOwner)) return ListingTone.forest;
+  if (identical(kit, KitTone.taxi) || identical(kit, KitTone.taxiDriver)) return ListingTone.coral;
+  return ListingTone.indigo;
+}
 
 class StateCard extends StatelessWidget {
   const StateCard({
@@ -20,6 +24,7 @@ class StateCard extends StatelessWidget {
     this.actionLabel,
     this.onAction,
     this.padding = const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+    this.layout = StateLayout.wide,
   });
 
   const StateCard.error({
@@ -30,8 +35,9 @@ class StateCard extends StatelessWidget {
     this.actionLabel,
     this.onAction,
     this.padding = const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+    this.layout = StateLayout.wide,
   })  : tone = StateTone.error,
-        asset = TravelIcon.route;
+        asset = ListingArt.worldMap;
 
   final String title;
   final String? message;
@@ -41,57 +47,19 @@ class StateCard extends StatelessWidget {
   final String? actionLabel;
   final VoidCallback? onAction;
   final EdgeInsets padding;
+  final StateLayout layout;
 
   @override
   Widget build(BuildContext context) {
-    final isError = tone == StateTone.error;
-    final base = isError ? DesignColors.error : kit.accentDark;
     return Center(
-      child: EntranceOnce(
-        child: Padding(
-          padding: padding,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 72,
-                height: 72,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: LinearGradient(
-                    colors: [
-                      DesignColors.tint(base, Alpha.soft),
-                      DesignColors.tint(base, Alpha.faint),
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                ),
-                child: Center(
-                  child: isError
-                      ? const Icon(Icons.cloud_off_rounded, size: 34, color: DesignColors.error)
-                      : TravelIcon(asset, size: 40),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Text(title,
-                  textAlign: TextAlign.center,
-                  style: TypeTokens.style(16, FontWeight.w700, color: DesignColors.textStrong, letterSpacing: 0.2)),
-              if (message != null && message!.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                Text(message!,
-                    textAlign: TextAlign.center,
-                    style: TypeTokens.style(14, FontWeight.w400, color: TypeTokens.secondary)),
-              ],
-              if (actionLabel != null && onAction != null) ...[
-                const SizedBox(height: 16),
-                isError
-                    ? SecondaryButton(label: actionLabel!, onPressed: onAction, tone: kit, expand: false)
-                    : PrimaryButton(label: actionLabel!, onPressed: onAction, tone: kit, expand: false),
-              ],
-            ],
-          ),
-        ),
+      child: StateCard3D(
+        tone: listingToneOf(kit),
+        art: asset,
+        title: title,
+        message: message,
+        actionLabel: actionLabel,
+        onAction: onAction,
+        layout: layout,
       ),
     );
   }

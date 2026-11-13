@@ -15,7 +15,7 @@ StayNearbyModel _stay() => StayNearbyModel(
     );
 
 void main() {
-  testWidgets('stay row without photo shows neutral stay icon and call icon', (t) async {
+  testWidgets('stay row without photo shows the sticker art and call icon', (t) async {
     var called = 0;
     await t.pumpWidget(MaterialApp(
       home: Scaffold(
@@ -24,11 +24,7 @@ void main() {
         ),
       ),
     ));
-    final stayIcons = t.widgetList<Image>(find.byType(Image)).where((i) {
-      final p = i.image;
-      return p is AssetImage && p.assetName == TravelIcon.stay;
-    });
-    expect(stayIcons.length, 1);
+    expect(t.widgetList<Art3D>(find.byType(Art3D)).where((a) => a.asset == ListingArt.key), isNotEmpty);
     expect(find.byIcon(Icons.call_rounded), findsOneWidget);
     await t.tap(find.byIcon(Icons.call_rounded));
     expect(called, 1);

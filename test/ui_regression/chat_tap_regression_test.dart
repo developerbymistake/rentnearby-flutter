@@ -1,3 +1,4 @@
+import 'package:bakhli/design/extra/ext_notifications.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
@@ -36,14 +37,14 @@ void main() {
     ));
     await t.pumpAndSettle();
     final f = find.text('Body text 1');
-    final before = t.getSize(find.ancestor(of: f, matching: find.byType(ListRow)).first);
+    final before = t.getSize(find.ancestor(of: f, matching: find.byType(NotificationCard3D)).first);
     final tf = find.text('Title 1');
     final bodyBefore = t.getSize(f);
     await t.tap(tf);
     for (var i = 0; i < 6; i++) {
       await t.pump(const Duration(milliseconds: 100));
       expect(t.getSize(f), bodyBefore);
-      expect(t.getSize(find.ancestor(of: f, matching: find.byType(ListRow)).first), before);
+      expect(t.getSize(find.ancestor(of: f, matching: find.byType(NotificationCard3D)).first), before);
     }
     await t.pumpAndSettle();
     expect(t.takeException(), isNull);

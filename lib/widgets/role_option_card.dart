@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
 import '../config/user_roles.dart';
 import '../design/design.dart';
+import '../design/extra/ext_auth.dart';
 import '../models/role_model.dart';
 
 class RoleVisuals {
@@ -90,48 +91,23 @@ class RoleOptionCard extends StatelessWidget {
         _ => KitTone.seeker,
       };
 
+  static ListingTone listingToneOf(String key) => switch (key) {
+        UserRoleKeys.stayOwner => ListingTone.forest,
+        UserRoleKeys.taxiDriver => ListingTone.coral,
+        _ => ListingTone.indigo,
+      };
+
   @override
   Widget build(BuildContext context) {
-    final tone = toneOf(role.key);
-    return SizedBox(
-      width: double.infinity,
-      child: Stack(
-        children: [
-          HeroBanner(
-            title: role.name,
-            subtitle: role.description,
-            subtitleLines: 3,
-            reserveSubtitle: true,
-            iconAsset: RoleVisuals.iconAsset(role.key),
-            tone: tone,
-            selected: selected,
-            badge: isCurrent && !selected ? 'CURRENT' : null,
-            onTap: onTap,
-          ),
-          Positioned(
-            top: 24,
-            right: 18,
-            child: IgnorePointer(
-              child: TweenAnimationBuilder<double>(
-                tween: Tween<double>(end: selected ? 1 : 0),
-                duration: KitMotion.reduce(context) ? Duration.zero : const Duration(milliseconds: 250),
-                curve: Curves.fastOutSlowIn,
-                builder: (context, v, _) => v == 0
-                    ? const SizedBox.shrink()
-                    : Transform.scale(
-                        scale: v,
-                        child: Container(
-                          width: 24,
-                          height: 24,
-                          decoration: const BoxDecoration(color: DesignColors.surface, shape: BoxShape.circle),
-                          child: Icon(Icons.check_rounded, size: 16, color: tone.accentDark),
-                        ),
-                      ),
-              ),
-            ),
-          ),
-        ],
-      ),
+    return AuthRoleCard(
+      tone: listingToneOf(role.key),
+      art: RoleVisuals.iconAsset(role.key),
+      title: role.name,
+      description: role.description,
+      selected: selected,
+      badge: isCurrent && !selected ? 'CURRENT' : null,
+      dimmed: isCurrent && !selected,
+      onTap: onTap,
     );
   }
 }
@@ -143,7 +119,9 @@ class RoleLoadError extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return StateCard.error(
+    return AuthStateCard(
+      tone: ListingTone.coral,
+      art: ListingArt.compass,
       title: 'Could not load roles.',
       actionLabel: 'Retry',
       onAction: onRetry,

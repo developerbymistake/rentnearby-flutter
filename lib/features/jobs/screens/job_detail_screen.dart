@@ -4,12 +4,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:bakhli/design/design.dart';
+import 'package:bakhli/design/extra/ext_jobs.dart';
 import '../jobs_colors.dart';
 import '../../../config/app_routes.dart';
 import '../../../controllers/auth_controller.dart';
 import '../../../controllers/report_controller.dart';
 import '../../../utils/app_toast.dart';
 import '../../../utils/dio_error_mapper.dart';
+import '../../../utils/money_format.dart';
 import '../../../widgets/detail_action_bar.dart';
 import '../../../widgets/report_listing_sheet.dart';
 import '../data/jobs_repository.dart';
@@ -18,14 +20,16 @@ import '../widgets/jobs_ui.dart';
 
 class JobDetailScreen extends StatefulWidget {
   const JobDetailScreen({super.key});
+
+  @visibleForTesting
+  static Widget Function(String url)? photoOverride;
   @override
   State<JobDetailScreen> createState() => _JobDetailScreenState();
 }
 
 class _JobDetailScreenState extends State<JobDetailScreen> {
-  static const KitTone _tone = JobsUi.tone;
+  ListingTone get _look => JobsUi.look;
   static const double _heroHeight = 260;
-  static const double _seam = 24;
   static const double _fadeStart = 120;
   static const double _fadeSpan = 60;
   static const SystemUiOverlayStyle _darkIcons = SystemUiOverlayStyle(
@@ -84,49 +88,13 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: DesignColors.scaffold,
+      backgroundColor: JobsLook.pageColor,
       body: _loading ? _buildLoader() : _buildContent(),
       bottomNavigationBar: _loading || _job == null ? null : _buildActionBar(),
     );
   }
 
-  Widget _backButton() => PressScale(
-        child: SizedBox(
-          width: KitMetrics.touch,
-          height: KitMetrics.touch,
-          child: DecoratedBox(
-            decoration: const BoxDecoration(
-              color: DesignColors.surface,
-              shape: BoxShape.circle,
-              boxShadow: ShadowTokens.elev1,
-            ),
-            child: Material(
-              color: Colors.transparent,
-              shape: const CircleBorder(),
-              clipBehavior: Clip.antiAlias,
-              child: InkWell(
-                onTap: () => Get.back(),
-                splashColor: DesignColors.splash,
-                highlightColor: Colors.transparent,
-                child: const Icon(Icons.arrow_back_ios_new_rounded, size: 18, color: DesignColors.textStrong),
-              ),
-            ),
-          ),
-        ),
-      );
-
-  Widget _seamStrip() => const Positioned(
-        left: 0,
-        right: 0,
-        bottom: 0,
-        height: _seam,
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: DesignColors.scaffold,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(CardRadius.headerValue)),
-          ),
-        ),
-      );
+  Widget _backButton() => JobsBackButton(tone: _look, onTap: () => Get.back());
 
   Widget _buildLoader() {
     final top = MediaQuery.paddingOf(context).top;
@@ -137,7 +105,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
           SingleChildScrollView(
             physics: const NeverScrollableScrollPhysics(),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 SizedBox(
                   height: _heroHeight + top,
@@ -146,50 +114,68 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                     _seamStrip(),
                   ]),
                 ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(KitMetrics.gutter, 0, KitMetrics.gutter, 0),
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(18, 6, 18, 0),
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    const TemplatePlaceholder(height: 14, width: 120),
-                    const SizedBox(height: 12),
-                    const TemplatePlaceholder(height: 28),
-                    const SizedBox(height: 16),
-                    SectionTile.skeleton(lines: 5),
-                    const SizedBox(height: 24),
-                    SectionTile.skeleton(lines: 3),
+                    SkeletonBox(height: 14, width: 120),
+                    SizedBox(height: 12),
+                    SkeletonBox(height: 28),
+                    SizedBox(height: 18),
+                    SkeletonBox(height: 330, radius: 24),
+                    SizedBox(height: 24),
+                    SkeletonBox(height: 110, radius: 24),
                   ]),
                 ),
               ],
             ),
           ),
-          Positioned(top: top + 6, left: 16, child: _backButton()),
+          Positioned(top: top + 10, left: 16, child: _backButton()),
         ],
       ),
     );
   }
+
+  Widget _seamStrip() => Positioned(
+        left: 0,
+        right: 0,
+        bottom: 0,
+        height: JobsDetailHero.seam,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: JobsLook.pageColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(JobsDetailHero.seam)),
+          ),
+        ),
+      );
 
   Widget _buildContent() {
     if (_job == null) {
       return AnnotatedRegion<SystemUiOverlayStyle>(
         value: _darkIcons,
         child: SafeArea(
-          child: Stack(children: [
-            Center(
-              child: _notFound
-                  ? const StateCard(
-                      kit: _tone,
-                      asset: TravelIcon.map,
-                      title: 'Job not found',
-                      message: 'It may be closed',
-                    )
-                  : StateCard.error(
-                      kit: _tone,
-                      title: "Couldn't load the job",
-                      message: 'Please try again',
-                      actionLabel: 'Retry',
-                      onAction: _retry,
-                    ),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Padding(padding: const EdgeInsets.fromLTRB(18, 10, 18, 0), child: _backButton()),
+            Expanded(
+              child: Center(
+                child: SingleChildScrollView(
+                  child: _notFound
+                      ? JobsStateBlock(
+                          tone: _look,
+                          art: ListingArt.worldMap,
+                          title: 'Job not found',
+                          message: 'It may be closed',
+                        )
+                      : JobsStateBlock(
+                          tone: _look,
+                          art: ListingArt.compass,
+                          title: "Couldn't load the job",
+                          message: 'Please try again',
+                          actionLabel: 'Retry',
+                          onAction: _retry,
+                        ),
+                ),
+              ),
             ),
-            Positioned(top: 6, left: 16, child: _backButton()),
           ]),
         ),
       );
@@ -198,33 +184,22 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     final top = MediaQuery.paddingOf(context).top;
     final children = <Widget>[
       if (!j.isActive)
-        Padding(
-          padding: const EdgeInsets.only(bottom: 12),
-          child: SlimBar(
-            margin: EdgeInsets.zero,
-            tone: _tone,
-            leading: const Icon(Icons.lock_outline_rounded, size: 22, color: DesignColors.textGrey),
-            title: 'This job is closed',
-          ),
+        const Padding(
+          padding: EdgeInsets.only(top: 14),
+          child: JobsNoteCard(art: ListingArt.key, text: 'This job is closed'),
         ),
-      Padding(padding: const EdgeInsets.only(bottom: 16), child: _titleRow(j)),
-      Padding(padding: const EdgeInsets.only(bottom: 24), child: _infoCard(j)),
+      Padding(padding: const EdgeInsets.only(top: 18), child: _titleRow(j)),
+      Padding(padding: const EdgeInsets.only(top: 18), child: _infoCard(j)),
       if (j.description.isNotEmpty)
         Padding(
-          padding: const EdgeInsets.only(bottom: 16),
+          padding: const EdgeInsets.only(top: 24),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('About this job', style: TypeTokens.style(16, FontWeight.w700, color: DesignColors.textStrong, letterSpacing: 0.2)),
+            Semantics(header: true, child: Text('About this job', style: Ink3D.text(16, FontWeight.w700, Ink3D.title))),
             const SizedBox(height: 8),
-            Text(j.description, style: TypeTokens.style(14, FontWeight.w400, color: DesignColors.textPrimary, height: 1.6)),
+            Text(j.description, style: Ink3D.text(14, FontWeight.w400, JobsLook.about, letterSpacing: 0, height: 1.6)),
           ]),
         ),
-      Row(children: [
-        const Icon(Icons.schedule_rounded, size: 16, color: DesignColors.textMuted),
-        const SizedBox(width: 6),
-        Expanded(
-          child: Text(j.postedAgoLong, maxLines: 1, overflow: TextOverflow.ellipsis, style: TypeTokens.caption),
-        ),
-      ]),
+      Padding(padding: const EdgeInsets.only(top: 14), child: JobsArtLine(art: ListingArt.calendar, text: j.postedAgoLong)),
     ];
     return Stack(children: [
       CustomScrollView(
@@ -234,7 +209,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
           SliverToBoxAdapter(child: _buildHero(j, top)),
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(KitMetrics.gutter, 0, KitMetrics.gutter, 24),
+              padding: const EdgeInsets.fromLTRB(18, 0, 18, 28),
               child: StaggerColumn(crossAxisAlignment: CrossAxisAlignment.stretch, children: children),
             ),
           ),
@@ -250,29 +225,26 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       builder: (_, t, _) => AnnotatedRegion<SystemUiOverlayStyle>(
         value: t < 0.5 ? ModuleHeader.lightIcons : _darkIcons,
         child: SizedBox(
-          height: top + 56,
+          height: top + 64,
           child: Stack(children: [
             Positioned.fill(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: DesignColors.tint(DesignColors.surface, t),
-                  boxShadow: [ShadowTokens.tint(DesignColors.textGrey, const ShadowSpec(0.4, Offset(1.1, 1.1), 10).scaled(t))],
-                ),
+              child: Opacity(
+                opacity: t,
+                child: const DecoratedBox(decoration: BoxDecoration(color: DesignColors.surface, boxShadow: JobsLook.card3)),
               ),
             ),
-            Positioned(top: top + 6, left: 16, child: _backButton()),
+            Positioned(top: top + 9, left: 18, child: _backButton()),
             Positioned(
               top: top,
-              left: 72,
-              right: KitMetrics.gutter,
-              height: 56,
+              left: 78,
+              right: 18,
+              height: 64,
               child: Align(
                 alignment: Alignment.centerLeft,
-                child: Text(j.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TypeTokens.style(16, FontWeight.w700,
-                        color: DesignColors.tint(DesignColors.textStrong, t))),
+                child: Opacity(
+                  opacity: t,
+                  child: Text(j.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(16, FontWeight.w700, Ink3D.title)),
+                ),
               ),
             ),
           ]),
@@ -282,168 +254,116 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
   }
 
   Widget _titleRow(JobDetailModel j) {
-    return LayoutBuilder(
-      builder: (context, constraints) => Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Wrap(spacing: 6, runSpacing: 6, children: [
-              const KitTagChip('JOB', tone: _tone, solid: true),
-              KitTagChip(j.experienceLabel, tone: _tone),
-            ]),
-            const SizedBox(height: 8),
-            Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              TravelIcon(JobsUi.roleIcon, size: 28),
-              const SizedBox(width: 8),
-              Flexible(
-                child: Text(j.title,
-                    style: TypeTokens.style(22, FontWeight.w700, color: DesignColors.textStrong, letterSpacing: 0.27)),
-              ),
-            ]),
-          ]),
-        ),
-        const SizedBox(width: 12),
-        ConstrainedBox(
-          constraints: BoxConstraints(maxWidth: constraints.maxWidth * 0.45),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-            Text('SALARY', maxLines: 1, style: TypeTokens.caption),
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              alignment: Alignment.centerRight,
-              child: Text.rich(
-                TextSpan(children: [
-                  TextSpan(text: j.salaryCompact),
-                  if (j.salaryUnit.isNotEmpty) TextSpan(text: j.salaryUnit, style: TypeTokens.caption),
-                ]),
-                maxLines: 1,
-                softWrap: false,
-                style: TypeTokens.style(20, FontWeight.w800, color: _tone.accentDark),
-              ),
-            ),
-          ]),
-        ),
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Wrap(spacing: 8, runSpacing: 8, children: [
+        JobsTagPill(tone: _look, label: 'JOB', solid: true),
+        JobsTagPill(tone: _look, label: j.experienceLabel),
       ]),
-    );
+      const SizedBox(height: 12),
+      LayoutBuilder(builder: (context, constraints) {
+        final scaler = MediaQuery.textScalerOf(context);
+        final titleStyle = Ink3D.text(18, FontWeight.w700, Ink3D.title, height: 1.25);
+        final salaryMax = constraints.maxWidth * 0.45;
+        final salaryText = _salaryText(j);
+        final salaryW = (KitText.widthOf(salaryText, Ink3D.text(19, FontWeight.w700, _look.text, letterSpacing: 0), scaler) +
+                KitText.widthOf(j.salaryUnit, Ink3D.text(12, FontWeight.w500, Ink3D.grey, letterSpacing: 0), scaler))
+            .clamp(0.0, salaryMax);
+        var longest = 0.0;
+        for (final w in j.title.split(RegExp(r'\s+'))) {
+          final x = KitText.widthOf(w, titleStyle, scaler);
+          if (x > longest) longest = x;
+        }
+        final titleMax = constraints.maxWidth - 60 - 18;
+        final salaryBox = (titleMax - longest * 0.9).clamp(salaryW * 0.85, salaryW).toDouble();
+        final stacked = longest * 0.8 > titleMax - salaryBox;
+        final salary = Column(crossAxisAlignment: stacked ? CrossAxisAlignment.start : CrossAxisAlignment.end, children: [
+          Text('SALARY', maxLines: 1, style: Ink3D.text(11, FontWeight.w600, Ink3D.grey, letterSpacing: 0.6)),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: stacked ? Alignment.centerLeft : Alignment.centerRight,
+            child: Text.rich(
+              TextSpan(children: [
+                TextSpan(text: salaryText),
+                if (j.salaryUnit.isNotEmpty) TextSpan(text: j.salaryUnit, style: Ink3D.text(12, FontWeight.w500, Ink3D.grey, letterSpacing: 0)),
+              ]),
+              maxLines: 1,
+              softWrap: false,
+              style: Ink3D.text(19, FontWeight.w700, _look.text, letterSpacing: 0),
+            ),
+          ),
+        ]);
+        final title = LayoutBuilder(
+          builder: (context, box) => Semantics(
+            header: true,
+            child: Text(j.title, style: KitText.wholeWords(j.title, titleStyle, box.maxWidth - 2, scaler)),
+          ),
+        );
+        const art = ExcludeSemantics(child: Art3D(asset: ListingArt.backpack, size: 52, shadowBlur: 3, shadowOffset: Offset(2, 4), shadowAlpha: 0.25));
+        if (stacked) {
+          return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [art, const SizedBox(width: 8), Expanded(child: title)]),
+            Padding(padding: const EdgeInsets.only(top: 10, left: 60), child: salary),
+          ]);
+        }
+        return Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+          Expanded(child: Row(children: [art, const SizedBox(width: 8), Expanded(child: title)])),
+          const SizedBox(width: 18),
+          ConstrainedBox(constraints: BoxConstraints(maxWidth: salaryBox), child: salary),
+        ]);
+      }),
+    ]);
+  }
+
+  static String _unitUpper(int n) {
+    final b = Money.body(n);
+    return b.endsWith('k') ? '${b.substring(0, b.length - 1)}K' : b;
+  }
+
+  static String _salaryText(JobDetailModel j) {
+    final min = j.minSalary, max = j.maxSalary;
+    if (min <= 0 && max <= 0) return j.salaryCompact;
+    if (min == max || min <= 0 || max <= 0) return '${Money.symbol}${_unitUpper(max > 0 ? max : min)}';
+    return '${Money.symbol}${_unitUpper(min)} - ${_unitUpper(max)}';
   }
 
   void _openStay(JobDetailModel j) => Get.toNamed(AppRoutes.stayDetail, arguments: {'id': j.stayListingId});
 
-  Widget _heroFallback() => DecoratedBox(
-        decoration: BoxDecoration(gradient: _tone.gradient),
-        child: Center(
-          child: Container(
-            width: 120,
-            height: 120,
-            decoration: BoxDecoration(shape: BoxShape.circle, color: DesignColors.tint(DesignColors.surfaceAlt, Alpha.soft)),
-            child: Center(child: TravelIcon(JobsUi.roleIcon, size: 72)),
-          ),
-        ),
-      );
-
   Widget _buildHero(JobDetailModel j, double top) {
     final url = j.coverPhotoUrl;
     final h = _heroHeight + top;
-    return SizedBox(
+    final hasPhoto = url != null && url.isNotEmpty;
+    return JobsDetailHero(
+      tone: _look,
       height: h,
-      child: Stack(children: [
-        Positioned.fill(
-          child: GestureDetector(
-            onTap: j.stayListingId.isEmpty ? null : () => _openStay(j),
-            child: (url != null && url.isNotEmpty)
-                ? CachedNetworkImage(
-                    imageUrl: url,
-                    fit: BoxFit.cover,
-                    placeholder: (_, _) => TemplatePlaceholder(height: h, radius: 0),
-                    errorWidget: (_, _, _) => _heroFallback(),
-                  )
-                : _heroFallback(),
-          ),
-        ),
-        const Positioned(
-          left: 0,
-          right: 0,
-          top: 0,
-          height: 120,
-          child: IgnorePointer(child: DecoratedBox(decoration: BoxDecoration(gradient: DesignGradients.scrimTop))),
-        ),
-        _seamStrip(),
-      ]),
+      onTap: j.stayListingId.isEmpty ? null : () => _openStay(j),
+      photo: !hasPhoto
+          ? null
+          : JobDetailScreen.photoOverride?.call(url) ??
+            CachedNetworkImage(
+              imageUrl: url,
+              fit: BoxFit.cover,
+              placeholder: (_, _) => TemplatePlaceholder(height: h, radius: 0),
+              errorWidget: (_, _, _) => DecoratedBox(decoration: BoxDecoration(gradient: _look.gradient)),
+            ),
     );
   }
 
   Widget _infoCard(JobDetailModel j) {
     final jobTypeShift = [j.jobTypeName, j.shiftTypeName].where((e) => e.isNotEmpty).join(' · ');
-    final rows = <Widget>[
-      _infoRow(JobsUi.roleIcon, 'Job role', j.roleName),
-      _infoRow(
-        TravelIcon.stay,
-        'Stay',
-        j.stayName,
+    return JobsInfoCard(children: [
+      JobsInfoRow(tone: _look, art: ListingArt.backpack, label: 'Job role', value: j.roleName, divider: false),
+      JobsInfoRow(
+        tone: _look,
+        art: ListingArt.hotel,
+        label: 'Stay',
+        value: j.stayName,
         onTap: j.stayListingId.isEmpty ? null : () => _openStay(j),
       ),
-      _infoRow(TravelIcon.place, 'Location', j.placeLabel),
-      _infoRow(JobsUi.experienceIcon, 'Experience', j.experienceDetail),
-      _infoRow(JobsUi.shiftIcon, 'Job type · Shift', jobTypeShift),
-      _infoRow(TravelIcon.money, 'Salary type', j.salaryTypeName),
-    ];
-    return SectionTile(
-      tone: _tone,
-      child: Column(children: [
-        for (var i = 0; i < rows.length; i++) ...[
-          if (i > 0)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 10),
-              child: Divider(height: 1, color: DesignColors.dividerSoft),
-            ),
-          rows[i],
-        ],
-      ]),
-    );
-  }
-
-  Widget _infoRow(String iconAsset, String label, String value, {VoidCallback? onTap}) {
-    final row = ConstrainedBox(
-      constraints: const BoxConstraints(minHeight: KitMetrics.touch),
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              borderRadius: KitMetrics.tileSmall,
-              gradient: LinearGradient(
-                colors: [DesignColors.tint(_tone.accent, Alpha.soft), DesignColors.tint(_tone.accentDark, Alpha.tint)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-            ),
-            child: Center(child: TravelIcon(iconAsset, size: 24)),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(label, style: TypeTokens.caption),
-              const SizedBox(height: 2),
-              Text(value.isEmpty ? '-' : value,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TypeTokens.style(14, FontWeight.w600, color: DesignColors.textStrong)),
-            ]),
-          ),
-          if (onTap != null) ...[
-            const SizedBox(width: 8),
-            Icon(Icons.chevron_right_rounded, size: 22, color: _tone.accentDark),
-          ],
-        ],
-      ),
-    );
-    if (onTap == null) return row;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: KitMetrics.tileSmall,
-      splashColor: DesignColors.splash,
-      highlightColor: Colors.transparent,
-      child: row,
-    );
+      JobsInfoRow(tone: _look, art: ListingArt.roundPushpin, label: 'Location', value: j.placeLabel),
+      JobsInfoRow(tone: _look, art: ListingArt.mountain, label: 'Experience', value: j.experienceDetail),
+      JobsInfoRow(tone: _look, art: ListingArt.sunrise, label: 'Job type · Shift', value: jobTypeShift),
+      JobsInfoRow(tone: _look, art: ListingArt.moneyBag, label: 'Salary type', value: j.salaryTypeName),
+    ]);
   }
 
   Widget? _buildActionBar() {
@@ -460,6 +380,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
         showDirections: false,
         callLabel: 'Call',
         reportLabel: 'Report this stay',
+        safetyArt: ListingArt.clipboard,
         safetyText: 'Never pay to get a job. Visit the stay before joining.',
         onReport: reported
             ? null

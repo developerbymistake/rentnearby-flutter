@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:bakhli/design/design.dart';
+import 'package:bakhli/design/extra/ext_trip_replies.dart';
 import '../../../utils/app_toast.dart';
 import '../../../models/browse_item.dart';
 import '../../../utils/contact_launcher.dart';
@@ -7,6 +8,8 @@ import '../../../widgets/trip_report_traveller_sheet.dart';
 import '../../trip/models/trip_enquiry_model.dart';
 import '../../trip/models/trip_offer_model.dart';
 import '../../trip/trip_strings.dart';
+import '../../trip/utils/trip_format.dart';
+import 'stay_enquiry_format.dart';
 import '../../trip/widgets/trip_cancel_sheet.dart';
 import 'stay_enquiries_controller.dart';
 import 'stay_enquiry_strings.dart';
@@ -15,6 +18,23 @@ import 'trip_send_offer_sheet.dart';
 
 class StayEnquiryActions {
   static bool _opening = false;
+
+  static Widget _summary(TripEnquiryModel e, String? sub, String? value) => ReplySummaryStrip(
+        tone: ListingTone.forest,
+        title: StayEnquiryFormat.guest(e),
+        subtitle: sub,
+        value: value ?? '',
+        margin: EdgeInsets.zero,
+      );
+
+  static String _dates(TripEnquiryModel e) {
+    final a = e.checkIn;
+    final b = e.checkOut;
+    return a != null && b != null ? TripFormat.dayMonthRange(a, b) : e.datesLabel;
+  }
+
+  static String? _range(DateTime? a, DateTime? b, int nights) =>
+      a == null || b == null ? null : '${TripFormat.dayMonthRange(a, b)} · ${TripStrings.nights(nights)}';
 
   static Future<bool> sendOffer(BuildContext context, TripEnquiryModel e, {TripOfferModel? counter}) async {
     if (_opening) return false;
@@ -50,32 +70,19 @@ class StayEnquiryActions {
 
   static Future<bool> acceptChange(BuildContext context, TripEnquiryModel e, String offerId) async {
     final change = e.pendingChange;
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: DesignColors.surface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text(TripStrings.acceptChange, style: TextStyle(fontFamily: TypeTokens.family, fontWeight: FontWeight.bold, fontSize: 16, letterSpacing: 0.18, color: DesignColors.textStrong)),
-        content: Text(change == null ? StayEnquiryStrings.changeBodyFallback : TripStrings.acceptKeepsPrice(BrowseItem.inr(change.total)),
-            style: const TextStyle(fontFamily: TypeTokens.family, fontSize: 13, color: DesignColors.textGrey, height: 1.4)),
-        actions: [
-          TextButton(
-            style: TextButton.styleFrom(minimumSize: const Size(64, 44)),
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text(StayEnquiryStrings.cancelAction, style: TextStyle(fontFamily: TypeTokens.family, fontWeight: FontWeight.w600, color: DesignColors.textSecondary)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: DesignColors.primaryLight,
-              foregroundColor: DesignColors.onPrimary,
-              shape: const RoundedRectangleBorder(borderRadius: CardRadius.tile),
-              minimumSize: const Size(64, 44),
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-            ),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text(TripStrings.acceptChange),
-          ),
-        ],
+    final ok = await Dialog3D.show<bool>(
+      context,
+      builder: (ctx) => Dialog3D(
+        tone: ListingTone.forest,
+        art: ListingArt.calendar,
+        title: TripStrings.acceptChange,
+        body: change == null ? StayEnquiryStrings.changeBodyFallback : TripStrings.acceptKeepsPrice(BrowseItem.inr(change.total)),
+        content: _summary(e, change == null ? null : _range(change.checkIn, change.checkOut, change.nights), change == null ? null : BrowseItem.inr(change.total)),
+        secondaryLabel: StayEnquiryStrings.cancelAction,
+        onSecondary: () => Navigator.pop(ctx, false),
+        primaryLabel: TripStrings.acceptChange,
+        primaryDanger: false,
+        onPrimary: () => Navigator.pop(ctx, true),
       ),
     );
     if (ok != true) return false;
@@ -102,32 +109,19 @@ class StayEnquiryActions {
   }
 
   static Future<bool> markReceived(BuildContext context, TripEnquiryModel e) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: DesignColors.surface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text(TripStrings.markAdvanceReceived, style: TextStyle(fontFamily: TypeTokens.family, fontWeight: FontWeight.bold, fontSize: 16, letterSpacing: 0.18, color: DesignColors.textStrong)),
-        content: const Text(TripStrings.checkAmountFirst,
-            style: TextStyle(fontFamily: TypeTokens.family, fontSize: 13, color: DesignColors.textGrey, height: 1.4)),
-        actions: [
-          TextButton(
-            style: TextButton.styleFrom(minimumSize: const Size(64, 44)),
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text(StayEnquiryStrings.cancelAction, style: TextStyle(fontFamily: TypeTokens.family, fontWeight: FontWeight.w600, color: DesignColors.textSecondary)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: DesignColors.primaryLight,
-              foregroundColor: DesignColors.onPrimary,
-              shape: const RoundedRectangleBorder(borderRadius: CardRadius.tile),
-              minimumSize: const Size(64, 44),
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-            ),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text(TripStrings.markAdvanceReceived),
-          ),
-        ],
+    final ok = await Dialog3D.show<bool>(
+      context,
+      builder: (ctx) => Dialog3D(
+        tone: ListingTone.forest,
+        art: ListingArt.moneyBag,
+        title: TripStrings.markAdvanceReceived,
+        body: TripStrings.checkAmountFirst,
+        content: _summary(e, e.advance.holdUntil == null ? null : TripStrings.holdTill(TripFormat.time12Of(e.advance.holdUntil!.toLocal())), (e.advance.amount ?? 0) > 0 ? BrowseItem.inr(e.advance.amount!) : null),
+        secondaryLabel: StayEnquiryStrings.cancelAction,
+        onSecondary: () => Navigator.pop(ctx, false),
+        primaryLabel: TripStrings.markAdvanceReceived,
+        primaryDanger: false,
+        onPrimary: () => Navigator.pop(ctx, true),
       ),
     );
     if (ok != true) return false;
@@ -147,32 +141,19 @@ class StayEnquiryActions {
   }
 
   static Future<bool> notAvailable(BuildContext context, TripEnquiryModel e) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: DesignColors.surface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text(StayEnquiryStrings.notAvailableTitle, style: TextStyle(fontFamily: TypeTokens.family, fontWeight: FontWeight.bold, fontSize: 16, letterSpacing: 0.18, color: DesignColors.textStrong)),
-        content: const Text(StayEnquiryStrings.notAvailableBody,
-            style: TextStyle(fontFamily: TypeTokens.family, fontSize: 13, color: DesignColors.textGrey, height: 1.4)),
-        actions: [
-          TextButton(
-            style: TextButton.styleFrom(minimumSize: const Size(64, 44)),
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text(StayEnquiryStrings.cancelAction, style: TextStyle(fontFamily: TypeTokens.family, fontWeight: FontWeight.w600, color: DesignColors.textSecondary)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: DesignColors.error,
-              foregroundColor: DesignColors.onPrimary,
-              shape: const RoundedRectangleBorder(borderRadius: CardRadius.tile),
-              minimumSize: const Size(64, 44),
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-            ),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text(TripStrings.notAvailableAction),
-          ),
-        ],
+    final ok = await Dialog3D.show<bool>(
+      context,
+      builder: (ctx) => Dialog3D(
+        tone: ListingTone.forest,
+        art: ListingArt.clipboard,
+        title: StayEnquiryStrings.notAvailableTitle,
+        body: StayEnquiryStrings.notAvailableBody,
+        content: _summary(e, [_dates(e), e.context.peopleLabel].whereType<String>().where((t) => t.isNotEmpty).join(' · '), TripStrings.nights(e.nights)),
+        secondaryLabel: StayEnquiryStrings.cancelAction,
+        onSecondary: () => Navigator.pop(ctx, false),
+        primaryLabel: TripStrings.notAvailableAction,
+        primaryDanger: true,
+        onPrimary: () => Navigator.pop(ctx, true),
       ),
     );
     if (ok != true) return false;

@@ -7,6 +7,7 @@ Future<void> loadGoldenFonts() async {
   const families = <String, List<String>>{
     'Roboto': ['Regular', 'Medium', 'Bold'],
     'WorkSans': ['Regular', 'Medium', 'SemiBold', 'Bold'],
+    'Poppins': ['Regular', 'Medium', 'SemiBold', 'Bold'],
   };
   for (final e in families.entries) {
     final loader = FontLoader(e.key);

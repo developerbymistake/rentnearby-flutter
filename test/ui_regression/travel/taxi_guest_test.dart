@@ -22,8 +22,8 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(tester.getSize(find.byKey(const Key('body'))).height, greaterThan(200));
     expect(find.text('Call Driver'), findsOneWidget);
-    expect(find.text('WhatsApp'), findsOneWidget);
-    expect(find.byIcon(Icons.chat_rounded), findsOneWidget);
+    expect(find.text('WhatsApp'), findsNothing);
+    expect(find.byIcon(Icons.call_rounded), findsOneWidget);
     await tester.tap(find.text('Report this listing'));
     expect(reported, 1);
   });

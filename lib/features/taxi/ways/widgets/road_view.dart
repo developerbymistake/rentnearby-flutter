@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:bakhli/design/design.dart';
-import 'package:bakhli/design/extra/trip_plan_look.dart';
+import 'package:bakhli/design/extra/ext_journeys.dart';
 import '../../../../models/browse_item.dart';
 import '../models/taxi_ways_models.dart';
 import '../taxi_ways_strings.dart';
@@ -23,179 +23,86 @@ class RoadView extends StatelessWidget {
     this.selectedLeg,
   });
 
-  Color _color(int legIndex) {
-    final c = JourneyRail.colorFor(legIndex);
-    final sel = selectedLeg;
-    return sel == null || sel == legIndex ? c : c.withValues(alpha: Alpha.scrim);
-  }
+  Color _line(int legIndex) => JourneyRail.toneFor(legIndex).g1;
+
+  bool _faded(int legIndex) => selectedLeg != null && selectedLeg != legIndex;
 
   @override
   Widget build(BuildContext context) {
     final legs = plan.legs;
     if (legs.isEmpty) return const SizedBox.shrink();
     final rows = <Widget>[
-      RailRow(
-        marker: RailMarker.start,
-        below: _color(legs.first.index),
-        dashed: !legs.first.hasRoadLine,
-        child: _place(legs.first.from.name, TaxiWaysStrings.youStart),
+      JourneyRoadRow(
+        mark: RoadMark.start,
+        below: _line(legs.first.index),
+        dashedBelow: !legs.first.hasRoadLine,
+        child: JourneyRoadPlace(title: legs.first.from.name, caption: TaxiWaysStrings.youStart),
       ),
     ];
     for (var i = 0; i < legs.length; i++) {
       final leg = legs[i];
-      final c = _color(leg.index);
-      rows.add(RailRow(
+      final c = _line(leg.index);
+      rows.add(JourneyRoadRow(
         above: c,
         below: c,
-        dashed: !leg.hasRoadLine,
-        child: _stretch(leg, c),
+        dashedAbove: !leg.hasRoadLine,
+        dashedBelow: !leg.hasRoadLine,
+        faded: _faded(leg.index),
+        child: _stretch(leg),
       ));
       if (i < legs.length - 1) {
         final next = legs[i + 1];
-        rows.add(RailRow(
-          marker: RailMarker.change,
+        rows.add(JourneyRoadRow(
+          mark: RoadMark.change,
           above: c,
-          below: _color(next.index),
-          dashed: !next.hasRoadLine,
-          child: _place(
-            leg.to.name,
-            TaxiWaysStrings.changeCar,
+          below: _line(next.index),
+          dashedAbove: !leg.hasRoadLine,
+          dashedBelow: !next.hasRoadLine,
+          child: JourneyRoadPlace(
+            title: leg.to.name,
+            tag: TaxiWaysStrings.changeCar,
             note: next.meetingPlace != null && next.meetingPlace != leg.to.name
                 ? '${TaxiWaysStrings.meetNext} · ${next.meetingPlace}'
                 : TaxiWaysStrings.meetNext,
-            change: true,
           ),
         ));
       }
     }
-    rows.add(RailRow(
-      marker: RailMarker.end,
-      above: _color(legs.last.index),
-      dashed: !legs.last.hasRoadLine,
-      child: _place(legs.last.to.name, TaxiWaysStrings.youArrive),
+    rows.add(JourneyRoadRow(
+      mark: RoadMark.end,
+      above: _line(legs.last.index),
+      dashedAbove: !legs.last.hasRoadLine,
+      child: JourneyRoadPlace(title: legs.last.to.name, caption: TaxiWaysStrings.youArrive),
     ));
-    return TemplateStagger(children: rows);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, 18, 14, 0),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: rows),
+    );
   }
 
-  Widget _place(String name, String caption, {String? note, bool change = false}) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(
-            name,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: FitnessAppTheme.title.copyWith(fontSize: 15),
-          ),
-          Text(
-            caption,
-            style: FitnessAppTheme.caption.copyWith(
-              fontSize: 11.5,
-              fontWeight: change ? FontWeight.w700 : FontWeight.w400,
-              color: change ? TripLook.warningText : DesignColors.textSecondary,
-            ),
-          ),
-          if (note != null)
-            Text(
-              note,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: FitnessAppTheme.caption.copyWith(fontSize: 11, color: DesignColors.textGrey),
-            ),
-        ]),
-      );
-
-  Widget _stretch(WayLeg leg, Color color) {
+  Widget _stretch(WayLeg leg) {
     final d = chosen[leg.index] ?? leg.firstDriver;
     final km = leg.distanceKm ?? d?.distanceKm;
-    final line = [
-      TaxiWaysStrings.subtitle(leg.from.name, leg.to.name),
+    final first = [
       if (km != null && km > 0) TaxiWaysStrings.aboutKm(km),
+      ?d?.driverName,
     ].join(' · ');
-    final selected = selectedLeg == leg.index;
     final geometry = leg.geometry;
-    return Semantics(
-      button: true,
-      selected: selected,
-      child: InkWell(
-        onTap: () => onSelectLeg(leg.index),
-        borderRadius: TripLook.softRadius,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-          decoration: BoxDecoration(
-            color: selected ? color.withValues(alpha: Alpha.hairline) : DesignColors.surface,
-            borderRadius: TripLook.softRadius,
-            boxShadow: selected ? TripLook.shadowFor(color) : TripLook.card().boxShadow,
-          ),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              if (d != null) ...[
-                Container(
-                  width: 32,
-                  height: 32,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: LinearGradient(
-                      colors: [color.withValues(alpha: Alpha.full), color.withValues(alpha: Alpha.strong)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                  ),
-                  child: Text(d.initial, style: FitnessAppTheme.title.copyWith(fontSize: 13, color: DesignColors.surface)),
-                ),
-                const SizedBox(width: 10),
-              ],
-              Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  if (d != null)
-                    Text(
-                      d.driverName,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: FitnessAppTheme.title.copyWith(fontSize: 13.5),
-                    ),
-                  Text(
-                    line,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: FitnessAppTheme.caption.copyWith(fontSize: 11.5),
-                  ),
-                ]),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                BrowseItem.inr(chosen[leg.index]?.groupFare(people) ?? leg.listedFare),
-                style: FitnessAppTheme.title.copyWith(fontSize: 14, fontWeight: FontWeight.w800),
-              ),
-            ]),
-            if (geometry != null) ...[
-              const SizedBox(height: 8),
-              SizedBox(
-                height: 44,
-                width: double.infinity,
-                child: CustomPaint(painter: _LineSketchPainter(points: geometry, color: color.withValues(alpha: Alpha.full))),
-              ),
-            ],
-            if (leg.passes.isNotEmpty) ...[
-              const SizedBox(height: 6),
-              Text(
-                TaxiWaysStrings.passes(leg.passes),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: FitnessAppTheme.caption.copyWith(fontSize: 11.5, fontWeight: FontWeight.w600, color: DesignColors.textGrey),
-              ),
-            ],
-            if (!leg.hasRoadLine) ...[
-              const SizedBox(height: 6),
-              Text(
-                TaxiWaysStrings.noRoadLine,
-                style: FitnessAppTheme.caption.copyWith(fontSize: 11, fontStyle: FontStyle.italic, color: DesignColors.textMuted),
-              ),
-            ],
-          ]),
-        ),
-      ),
+    return JourneyRoadStretch(
+      tone: JourneyRail.toneFor(leg.index),
+      art: JourneyArt.forVehicle(d?.vehicleTypeName, d?.seats),
+      title: TaxiWaysStrings.subtitle(leg.from.name, leg.to.name),
+      lines: [
+        if (first.isNotEmpty) first,
+        if (leg.passes.isNotEmpty) TaxiWaysStrings.passes(leg.passes),
+        BrowseItem.inr(d?.groupFare(people) ?? leg.listedFare),
+        if (!leg.hasRoadLine) TaxiWaysStrings.noRoadLine,
+      ],
+      sketch: geometry == null
+          ? null
+          : SizedBox(height: 40, width: double.infinity, child: CustomPaint(painter: _LineSketchPainter(points: geometry, color: DesignColors.textInverse))),
+      selected: selectedLeg == leg.index,
+      onTap: () => onSelectLeg(leg.index),
     );
   }
 }

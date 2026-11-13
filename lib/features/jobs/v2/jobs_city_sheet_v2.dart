@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:bakhli/design/design.dart';
+import 'package:bakhli/design/extra/ext_jobs.dart';
 import '../../../utils/input_formatters.dart';
 import '../../trip/data/trip_city_catalog.dart';
 import '../../trip/models/trip_city_model.dart';
@@ -18,17 +19,7 @@ class JobsCitySheetV2 extends StatefulWidget {
   const JobsCitySheetV2({super.key});
 
   static Future<TripCityModel?> show(BuildContext context) {
-    return showModalBottomSheet<TripCityModel>(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      backgroundColor: DesignColors.surface,
-      barrierColor: DesignColors.scrim,
-      elevation: 0,
-      constraints: const BoxConstraints(maxWidth: 640),
-      shape: const RoundedRectangleBorder(borderRadius: CardRadius.sheet),
-      builder: (_) => const JobsCitySheetV2(),
-    );
+    return Sheet3D.show<TripCityModel>(context, builder: (_) => const JobsCitySheetV2());
   }
 
   @override
@@ -72,131 +63,120 @@ class _JobsCitySheetV2State extends State<JobsCitySheetV2> {
 
   @override
   Widget build(BuildContext context) {
-    final media = MediaQuery.of(context);
     final cities = _catalog.hasData ? _catalog.ready(_query, stateName: _state) : const <TripCityModel>[];
     final states = _catalog.hasData ? _catalog.liveStates() : const <String>[];
-    return Padding(
-      padding: EdgeInsets.only(bottom: media.viewInsets.bottom),
-      child: SizedBox(
-        height: media.size.height * 0.85,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const SizedBox(height: 12),
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(color: DesignColors.borderSoft, borderRadius: CardRadius.pill),
-              ),
-            ),
+    final tone = JobsUi.look;
+    return Sheet3D(
+      tone: tone,
+      art: ListingArt.worldMap,
+      title: JobsCityStrings.title,
+      size: SheetSize.list,
+      scrollable: false,
+      padding: EdgeInsets.zero,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SheetSearchField(
+            tone: tone,
+            controller: _search,
+            hint: JobsCityStrings.hint,
+            leadingArt: ListingArt.compass,
+            inputFormatters: noEmojiInputFormatters,
+            margin: const EdgeInsets.fromLTRB(18, 2, 18, 0),
+            flat: true,
+            onChanged: (v) => setState(() => _query = v),
+          ),
+          if (states.length > 1)
             Padding(
-              padding: const EdgeInsets.fromLTRB(KitMetrics.gutter, 16, KitMetrics.gutter, 12),
-              child: Text(JobsCityStrings.title, style: TypeTokens.style(18, FontWeight.w700, color: DesignColors.textStrong)),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: KitMetrics.gutter),
-              child: TextField(
-                controller: _search,
-                inputFormatters: noEmojiInputFormatters,
-                textInputAction: TextInputAction.search,
-                style: TypeTokens.body,
-                decoration: JobsUi.input(JobsCityStrings.hint).copyWith(
-                  prefixIcon: const Icon(Icons.search_rounded, color: DesignColors.textGrey),
-                ),
-                onChanged: (v) => setState(() => _query = v),
+              padding: const EdgeInsets.fromLTRB(18, 14, 18, 4),
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (var i = 0; i <= states.length; i++)
+                    JobsChoiceChip(
+                      label: i == 0 ? JobsCityStrings.allStates : states[i - 1],
+                      selected: i == 0 ? _state == null : _state == states[i - 1],
+                      onTap: () => setState(() => _state = i == 0 ? null : states[i - 1]),
+                    ),
+                ],
               ),
             ),
-            if (states.length > 1)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(KitMetrics.gutter, 12, KitMetrics.gutter, 0),
-                child: JobsChoiceWrap(
-                  labels: [JobsCityStrings.allStates, ...states],
-                  isActive: (i) => i == 0 ? _state == null : _state == states[i - 1],
-                  onTap: (i) => setState(() => _state = i == 0 ? null : states[i - 1]),
-                ),
-              ),
-            const SizedBox(height: 8),
-            Expanded(child: _body(cities)),
-          ],
-        ),
+          const SizedBox(height: 8),
+          Expanded(child: _body(cities)),
+        ],
       ),
     );
   }
 
   Widget _body(List<TripCityModel> cities) {
+    final tone = JobsUi.look;
     if (_loading && !_catalog.hasData) {
-      return const Center(child: CircularProgressIndicator(strokeWidth: 2));
+      return JobsSheetMessage(tone: tone, art: ListingArt.worldMap, loading: true);
     }
     if (!_catalog.hasData) {
-      return _message(
-        TripStringsCity.citiesLoadingTitle,
-        TripStringsCity.citiesLoadingBody,
-        retry: _failed ? _load : null,
+      return JobsSheetMessage(
+        tone: tone,
+        art: ListingArt.calendar,
+        title: TripStringsCity.citiesLoadingTitle,
+        body: TripStringsCity.citiesLoadingBody,
+        actionLabel: TripStringsCity.tryAgain,
+        onAction: _failed ? _load : null,
       );
     }
-    if (cities.isEmpty) return _message(JobsCityStrings.none, JobsCityStrings.noneBody);
+    if (cities.isEmpty) {
+      return JobsSheetMessage(tone: tone, art: ListingArt.compass, title: JobsCityStrings.none, body: JobsCityStrings.noneBody);
+    }
     return ListView.builder(
       padding: EdgeInsets.fromLTRB(0, 0, 0, 16 + MediaQuery.paddingOf(context).bottom),
       itemCount: cities.length,
-      itemBuilder: (_, i) => _row(cities[i]),
+      itemBuilder: (_, i) => _row(cities[i], i),
     );
   }
 
-  Widget _row(TripCityModel c) {
+  Widget _row(TripCityModel c, int i) {
     final line = c.placeLine;
-    return InkWell(
+    final tone = JobsUi.look;
+    return Tap3D(
       onTap: () => Navigator.of(context).pop(c),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: KitMetrics.touch),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: KitMetrics.gutter, vertical: 10),
+      label: c.name,
+      exclude: true,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 76),
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(border: i > 0 ? const Border(top: BorderSide(color: Ink3D.line)) : null),
           child: Row(
             children: [
-              const Icon(Icons.place_outlined, size: 22, color: DesignColors.textGrey),
-              const SizedBox(width: 12),
+              SizedBox(
+                width: 52,
+                height: 52,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Positioned.fill(child: DecoratedBox(decoration: BoxDecoration(color: tone.tint, borderRadius: BorderRadius.circular(16)))),
+                    const Positioned(left: -4, top: -10, child: Art3D(asset: ListingArt.roundPushpin, size: 60, shadowBlur: 4, shadowOffset: Offset(3, 5), shadowAlpha: 0.28)),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
-                      c.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TypeTokens.style(15, FontWeight.w600, color: DesignColors.textStrong),
-                    ),
+                    Text(c.name, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(16, FontWeight.w600, Ink3D.title)),
                     if (line.isNotEmpty)
-                      Text(
-                        line,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TypeTokens.style(12, FontWeight.w400, color: DesignColors.textGrey),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Text(line, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(12.5, FontWeight.w400, Ink3D.grey)),
                       ),
                   ],
                 ),
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _message(String title, String body, {VoidCallback? retry}) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(title, textAlign: TextAlign.center, style: TypeTokens.style(15, FontWeight.w600, color: DesignColors.textStrong)),
-            const SizedBox(height: 4),
-            Text(body, textAlign: TextAlign.center, style: TypeTokens.style(13, FontWeight.w400, color: DesignColors.textGrey)),
-            if (retry != null) ...[
-              const SizedBox(height: 8),
-              TextButton(onPressed: retry, child: const Text(TripStringsCity.tryAgain)),
-            ],
-          ],
         ),
       ),
     );

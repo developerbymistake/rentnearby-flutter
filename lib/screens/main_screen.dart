@@ -27,7 +27,7 @@ import '../services/notification_service.dart';
 import '../widgets/app_loading_overlay.dart';
 import '../widgets/district_banner_overlay.dart';
 import '../widgets/global_location_gates.dart';
-import '../navigation/bar_overlap.dart';
+import '../navigation/app_bottom_dock.dart';
 import '../navigation/tab_router.dart';
 import '../navigation/tab_keys.dart';
 import '../navigation/tour_keys.dart';
@@ -305,14 +305,11 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
               index: _auth.tabIndex.value,
               children: _screens,
             )),
-            bottomNavigationBar: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Obx(() => _locationCtrl.hasActiveGate || _auth.isLoggingOut.value
-                    ? const SizedBox.shrink()
-                    : const BarOverlap(overlap: BarMetrics.centreOverflow, child: TripBar())),
-                Obx(() => _buildBottomNav()),
-              ],
+            bottomNavigationBar: AppBottomDock(
+              banner: Obx(() => _locationCtrl.hasActiveGate || _auth.isLoggingOut.value
+                  ? const SizedBox.shrink()
+                  : const TripBar()),
+              nav: Obx(() => _buildBottomNav()),
             ),
           ),
           Obx(() {
@@ -357,38 +354,17 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
 
   Widget _buildLocationLoadingOverlay() {
     return Positioned.fill(
-      child: Container(
-        color: DesignColors.scrim,
-        child: Center(
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
-            decoration: const BoxDecoration(
-              color: DesignColors.surface,
-              borderRadius: CardRadius.hero,
-              boxShadow: ShadowTokens.elev3,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const KitDots(color: DesignColors.primary, size: 9),
-                const SizedBox(height: 16),
-                Text(
-                  'Getting your location...',
-                  style: TypeTokens.style(16, FontWeight.w600, color: DesignColors.textStrong),
-                ),
-                const SizedBox(height: 4),
-                Text('Please wait a moment', style: TypeTokens.style(12, FontWeight.w500, color: TypeTokens.secondary)),
-              ],
-            ),
-          ),
-        ),
+      child: BusyOverlay3D(
+        tone: ListingTone.indigo,
+        art: ListingArt.roundPushpin,
+        message: 'Getting your location...',
+        caption: 'Please wait a moment',
       ),
     );
   }
 
   Widget _buildBottomNav() {
     final bottomInset = MediaQuery.of(context).viewPadding.bottom;
-    const fit = 'assets/images/design/fitness_app/';
     const t3d = 'assets/images/design/travel3d/';
     return TemplateBottomBar(
       bottomInset: bottomInset,
@@ -397,30 +373,30 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       items: [
         TemplateNavItem(
             index: AppTabs.home,
-            image: '${fit}tab_1.png',
-            selectedImage: '${fit}tab_1s.png',
+            image: '${t3d}compass.png',
             label: _tabConfigCtrl.displayNameForIndex(AppTabs.home, 'Home')),
         if (_tabConfigCtrl.isActive(AppTabKeys.stays))
           TemplateNavItem(
               index: AppTabs.stays,
               image: '${t3d}hotel.png',
+              activeColor: ListingPalette.forest.text,
               itemKey: TourKeys.homeStaysNavIcon,
               label: _tabConfigCtrl.displayNameForIndex(AppTabs.stays, 'Stays')),
         TemplateNavItem(
             index: AppTabs.trips,
-            image: '${t3d}compass.png',
+            image: '${t3d}luggage.png',
             center: true,
             label: _tabConfigCtrl.displayNameForIndex(AppTabs.trips, 'Trips')),
         if (_tabConfigCtrl.isActive(AppTabKeys.taxi))
           TemplateNavItem(
               index: AppTabs.taxi,
               image: '${t3d}taxi.png',
+              activeColor: ListingPalette.coral.text,
               itemKey: TourKeys.homeTaxiNavIcon,
               label: _tabConfigCtrl.displayNameForIndex(AppTabs.taxi, 'Taxi')),
         TemplateNavItem(
             index: AppTabs.profile,
-            image: '${fit}tab_4.png',
-            selectedImage: '${fit}tab_4s.png',
+            image: '${t3d}backpack.png',
             itemKey: TourKeys.homeProfileNavIcon,
             label: _tabConfigCtrl.displayNameForIndex(AppTabs.profile, 'Profile')),
       ],

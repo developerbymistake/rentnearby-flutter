@@ -1,8 +1,6 @@
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'package:bakhli/features/trip/widgets/trip_ui.dart';
 import 'package:bakhli/design/design.dart';
-import 'package:bakhli/design/extra/replies_kit.dart';
+import 'package:bakhli/design/extra/ext_trip_replies.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import '../config/app_routes.dart';
@@ -10,16 +8,14 @@ import '../features/trip/controllers/trip_plan_controller.dart';
 import '../features/trip/models/trip_enquiry_model.dart';
 import '../features/trip/trip_navigation.dart';
 import '../features/trip/trip_strings.dart';
+import '../features/trip/trip_strings_v2_easy.dart';
 import '../features/trip/utils/trip_format.dart';
-import '../features/trip/widgets/trip_payment_line.dart';
 import '../features/trip/widgets/trip_status.dart';
 import '../models/browse_item.dart';
 import '../models/message_model.dart';
 import '../utils/app_toast.dart';
 import '../utils/contact_launcher.dart';
 import 'trip_chat_cards.dart';
-
-enum _Btn { primary, positive, whatsApp, plain }
 
 class _AdvanceCard {
   final String status;
@@ -126,13 +122,13 @@ class TripAdvanceCards {
     required TripChatCallbacks callbacks,
   }) {
     final a = _read(m.payload, callbacks.advance);
-    if (isOwner) return _hostRequest(context, m, a, accent, callbacks);
+    if (isOwner) return _hostRequest(m, a, callbacks);
     return switch (a.status) {
-      _proofSent => _waiting(context, m, a, accent, callbacks),
-      _received => _receivedCard(context, m, a, accent, callbacks),
-      _replaced || _cancelled => _replacedCard(context, m, a, accent),
-      _holdExpired => _expiredGuest(context, m, a, accent, callbacks),
-      _ => _payCard(context, m, a, accent, callbacks),
+      _proofSent => _waiting(m, a, callbacks),
+      _received => _receivedCard(m, a, callbacks),
+      _replaced || _cancelled => _replacedCard(m, a),
+      _holdExpired => _expiredGuest(m, a, callbacks),
+      _ => _payCard(m, a, callbacks),
     };
   }
 
@@ -146,178 +142,178 @@ class TripAdvanceCards {
     final a = _read(m.payload, callbacks.advance);
     if (!isOwner) {
       final at = a.proofSentAt ?? callbacks.advance?.proofSentAt ?? m.createdAt;
-      return _bubble(m, '${TripStrings.iSentProof} · ${TripFormat.time12Of(at)}', accent);
+      return TripChatCards.bubble(m, '${TripStrings.iSentProof} · ${TripFormat.time12Of(at)}');
     }
-    return _hostProof(context, m, a, accent, callbacks);
+    return _hostProof(m, a, callbacks);
+  }
+
+  static Widget _card(
+    MessageModel m, {
+    required StatusTone3D status,
+    required String art,
+    required String pill,
+    required String title,
+    String? line,
+    List<ReplyRow> rows = const [],
+    List<String> extra = const [],
+    String? note,
+    String? noteArt,
+    String? noteAction,
+    VoidCallback? onNoteAction,
+    ReplyAction? primary,
+    ReplyAction? secondary,
+    bool showActions = true,
+    bool dimmed = false,
+  }) =>
+      TripChatCards.wrap(
+        m,
+        ChatTripCard3D(
+          status: status,
+          art: art,
+          pill: pill,
+          title: title,
+          line: line,
+          rows: rows,
+          extra: extra,
+          note: note,
+          noteArt: noteArt,
+          noteAction: noteAction,
+          onNoteAction: onNoteAction,
+          primary: primary,
+          secondary: secondary,
+          showActions: showActions,
+          dimmed: dimmed,
+          mine: m.isMine,
+          read: m.readAt != null,
+        ),
+      );
+
+  static String _tenDigits(String? phone) => phone == null ? '' : ContactLauncher.tenDigits(phone);
+
+  static VoidCallback? _call(String phone) => phone.isEmpty ? null : () => ContactLauncher.call(phone);
+
+  static VoidCallback? _viewTrip(TripChatCallbacks cb) {
+    final tripId = cb.tripId;
+    if (tripId == null) return null;
+    return () => Get.toNamed(AppRoutes.tripPlan, arguments: {'tripId': tripId});
   }
 
   // guest
 
-  static Widget _payCard(BuildContext context, MessageModel m, _AdvanceCard a, Color accent, TripChatCallbacks cb) {
+  static Widget _payCard(MessageModel m, _AdvanceCard a, TripChatCallbacks cb) {
     final upi = a.upiId;
-    final wa = a.whatsApp == null ? '' : ContactLauncher.tenDigits(a.whatsApp!);
+    final hasUpi = upi != null && upi.isNotEmpty;
     final id = a.enquiryId;
-    return _frame(
-      context,
+    return _card(
       m,
-      icon: TravelIcon.money,
-      tone: accent,
+      status: StatusTone3D.waiting,
+      art: ListingArt.moneyBag,
+      pill: a.amount == null ? TripStrings.advance : a.money,
       title: TripStrings.payDirectlyToHost,
-      subtitle: a.holdUntil == null ? null : TripStrings.advanceHoldTill(a.holdTime),
-      trailing: a.amount == null ? null : _moneyPill(a.money, accent),
-      children: [
-        if (upi != null && upi.isNotEmpty) ...[_upiBox(upi, accent), const SizedBox(height: 12)],
-        _steps([
-          (TripStrings.step1Pay(a.money), false),
-          (TripStrings.step2Screenshot, false),
-          (TripStrings.step3Host, false),
-        ], accent),
-        const SizedBox(height: 12),
-        _button(TripStrings.iSentProof,
-            kind: _Btn.primary,
-            accent: accent,
-            icon: Icons.check_rounded,
-            onTap: id == null || cb.onProofSent == null ? null : () => cb.onProofSent!(id)),
-        if (wa.isNotEmpty) ...[
-          const SizedBox(height: 8),
-          _button(TripStrings.openWhatsAppTo(wa),
-              kind: _Btn.whatsApp,
-              accent: accent,
-              icon: TravelIcon.chat,
-              onTap: () => ContactLauncher.whatsApp(wa,
-                  message: TripStrings.proofWhatsAppText(a.money, a.stayName, a.range))),
-        ],
-        const SizedBox(height: 10),
-        const TripPaymentLine(),
+      line: a.holdUntil == null ? null : TripStrings.advanceHoldTill(a.holdTime),
+      rows: [
+        ReplyRow(TripStrings.step1Pay(a.money), '', done: false),
+        const ReplyRow(TripStrings.step2Screenshot, '', done: false),
+        const ReplyRow(TripStrings.step3Host, '', done: false),
       ],
+      extra: [if (hasUpi) TripStrings.stayPayLine],
+      note: hasUpi ? '${TripStrings.upiId} $upi' : TripStrings.stayPayLine,
+      noteArt: hasUpi ? ListingArt.key : ListingArt.moneyBag,
+      noteAction: hasUpi ? TripStrings.copy : null,
+      onNoteAction: hasUpi
+          ? () async {
+              await Clipboard.setData(ClipboardData(text: upi));
+              AppToast.success(TripStrings.upiCopied);
+            }
+          : null,
+      primary: ReplyAction(
+          label: TripStrings.iSentProof, onTap: id == null || cb.onProofSent == null ? null : () => cb.onProofSent!(id)),
+      secondary: ReplyAction(label: TripStrings.callHost, onTap: _call(_tenDigits(cb.hostPhone))),
     );
   }
 
-  static Widget _waiting(BuildContext context, MessageModel m, _AdvanceCard a, Color accent, TripChatCallbacks cb) {
+  static Widget _waiting(MessageModel m, _AdvanceCard a, TripChatCallbacks cb) {
     final live = cb.advance;
     final sentAt = live?.proofSentAt ?? a.proofSentAt;
     final last = live?.lastHostReminderAt;
     final next = live?.nextHostReminderAt;
     final notYetAt = live?.notYetAt;
-    final wa = a.whatsApp == null ? '' : ContactLauncher.tenDigits(a.whatsApp!);
-    final host = cb.hostPhone == null ? '' : ContactLauncher.tenDigits(cb.hostPhone!);
-    return _frame(
-      context,
+    final reminder = last == null
+        ? null
+        : (next == null
+            ? TripStrings.hostRemindedOnly(TripFormat.time12Of(last))
+            : TripStrings.hostReminded(TripFormat.time12Of(last), TripFormat.time12Of(next)));
+    return _card(
       m,
-      icon: TravelIcon.calendar,
-      tone: TripStatusVisuals.advanceText(TripAdvanceStatuses.proofSent),
+      status: StatusTone3D.waiting,
+      art: ListingArt.calendar,
+      pill: a.amount == null ? TripStrings.advance : a.money,
       title: TripStrings.waitingForHost,
-      subtitle: sentAt == null ? null : TripStrings.youSaidProofSent(TripFormat.time12Of(sentAt)),
-      trailing: a.amount == null ? null : _moneyPill(a.money, TripStatusVisuals.advanceBar(TripAdvanceStatuses.proofSent)),
-      children: [
-        _steps([
-          (TripStrings.stepPaymentSent, true),
-          (TripStrings.stepScreenshotSent, true),
-          (TripStrings.stepHostChecks, false),
-        ], accent),
-        if (last != null) ...[
-          const SizedBox(height: 8),
-          Text(
-            next == null
-                ? TripStrings.hostRemindedOnly(TripFormat.time12Of(last))
-                : TripStrings.hostReminded(TripFormat.time12Of(last), TripFormat.time12Of(next)),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: _small,
-          ),
-        ],
-        if (notYetAt != null) ...[
-          const SizedBox(height: 8),
-          _note(
-            TripStrings.hostNotSeenYet,
-            [
-              TripStrings.hostChecked(TripFormat.time12Of(notYetAt)),
-              if (a.holdUntil != null) TripStrings.checkBefore(a.holdTime),
-            ].join(' '),
-          ),
-        ],
-        const SizedBox(height: 12),
-        if (host.isNotEmpty)
-          _button(TripStrings.callHost,
-              kind: _Btn.plain, accent: accent, icon: Icons.call_rounded, onTap: () => ContactLauncher.call(host)),
-        if (host.isNotEmpty && wa.isNotEmpty) const SizedBox(height: 8),
-        if (wa.isNotEmpty)
-          _button(TripStrings.openWhatsApp,
-              kind: _Btn.whatsApp,
-              accent: accent,
-              icon: TravelIcon.chat,
-              onTap: () => ContactLauncher.whatsApp(wa,
-                  message: TripStrings.proofWhatsAppText(a.money, a.stayName, a.range))),
-        const SizedBox(height: 10),
-        const Text(TripStrings.waitingFooter, style: _fine),
+      line: sentAt == null ? null : TripStrings.youSaidProofSent(TripFormat.time12Of(sentAt)),
+      rows: const [
+        ReplyRow(TripStrings.stepPaymentSent, '', done: true),
+        ReplyRow(TripStrings.stepScreenshotSent, '', done: true),
+        ReplyRow(TripStrings.stepHostChecks, '', done: false),
       ],
+      extra: [
+        if (notYetAt != null)
+          [
+            TripStrings.hostNotSeenYet,
+            TripStrings.hostChecked(TripFormat.time12Of(notYetAt)),
+            if (a.holdUntil != null) TripStrings.checkBefore(a.holdTime),
+          ].join('. '),
+        if (reminder != null) TripStrings.waitingFooter,
+      ],
+      note: reminder ?? TripStrings.waitingFooter,
+      noteArt: ListingArt.calendar,
+      primary: ReplyAction(label: TripStrings.callHost, onTap: _call(_tenDigits(cb.hostPhone))),
+      secondary: ReplyAction(label: TripStrings.viewInTrip, onTap: _viewTrip(cb)),
     );
   }
 
-  static Widget _receivedCard(BuildContext context, MessageModel m, _AdvanceCard a, Color accent, TripChatCallbacks cb) {
+  static Widget _receivedCard(MessageModel m, _AdvanceCard a, TripChatCallbacks cb) {
     final at = cb.advance?.receivedAt;
-    final host = cb.hostPhone == null ? '' : ContactLauncher.tenDigits(cb.hostPhone!);
     final total = a.agreedTotal;
     final amount = a.amount;
-    final tripId = cb.tripId;
-    final tone = TripStatusVisuals.advanceText(TripAdvanceStatuses.received);
-    return _frame(
-      context,
+    return _card(
       m,
-      icon: TravelIcon.star,
-      tone: tone,
+      status: StatusTone3D.booked,
+      art: ListingArt.star,
+      pill: amount == null ? TripStrings.advance : a.money,
       title: TripStrings.advanceReceived,
-      subtitle: at == null
-          ? TripStrings.advanceReceivedHostSays
-          : TripStrings.saysReceived(a.stayName, a.money, TripFormat.time12Of(at)),
-      trailing: amount == null ? null : _moneyPill(a.money, TripStatusVisuals.advanceBar(TripAdvanceStatuses.received)),
-      children: [
+      line: at == null ? TripStrings.advanceReceivedHostSays : TripStrings.saysReceived(a.stayName, a.money, TripFormat.time12Of(at)),
+      rows: [
+        if (amount != null) ReplyRow(TripStrings.advance, a.money),
+        if (total != null) ReplyRow(TripStrings.total, BrowseItem.inr(total)),
         if (total != null && amount != null && total > amount)
-          Text(TripStrings.balanceAtCheckIn(BrowseItem.inr(total - amount)),
-              maxLines: 2, overflow: TextOverflow.ellipsis, style: _body),
-        const SizedBox(height: 12),
-        if (host.isNotEmpty)
-          _button(TripStrings.callHost,
-              kind: _Btn.plain, accent: accent, icon: Icons.call_rounded, onTap: () => ContactLauncher.call(host)),
-        if (host.isNotEmpty && tripId != null) const SizedBox(height: 8),
-        if (tripId != null)
-          _button(TripStrings.viewInTrip,
-              kind: _Btn.plain,
-              accent: accent,
-              icon: TravelIcon.route,
-              onTap: () => Get.toNamed(AppRoutes.tripPlan, arguments: {'tripId': tripId})),
-        const SizedBox(height: 10),
-        const TripPaymentLine(),
+          ReplyRow(TripStringsV2Easy.balanceAtCheckIn, BrowseItem.inr(total - amount)),
       ],
+      note: TripStrings.stayPayLine,
+      noteArt: ListingArt.moneyBag,
+      primary: ReplyAction(label: TripStrings.callHost, onTap: _call(_tenDigits(cb.hostPhone))),
+      secondary: ReplyAction(label: TripStrings.viewInTrip, onTap: _viewTrip(cb)),
     );
   }
 
-  static Widget _expiredGuest(BuildContext context, MessageModel m, _AdvanceCard a, Color accent, TripChatCallbacks cb) {
-    final host = cb.hostPhone == null ? '' : ContactLauncher.tenDigits(cb.hostPhone!);
+  static Widget _expiredGuest(MessageModel m, _AdvanceCard a, TripChatCallbacks cb) {
     final others = _otherReplies(cb);
-    return _frame(
-      context,
+    return _card(
       m,
-      icon: TravelIcon.pin,
-      tone: DesignColors.statusSaved,
+      status: StatusTone3D.red,
+      art: ListingArt.roundPushpin,
+      pill: TripStatusVisuals.label(TripDisplayStatus.holdExpired),
       title: TripStrings.hostDidNotConfirm,
-      subtitle: TripStrings.roomMayBeReleased,
-      trailing: const TripStatusPill(TripDisplayStatus.holdExpired),
-      children: [
-        if (others.isNotEmpty)
-          Text(TripStrings.otherStaysReplied(others.length, others.join(', ')),
-              maxLines: 2, overflow: TextOverflow.ellipsis, style: _body),
-        const SizedBox(height: 12),
-        _button(TripStrings.askOtherStays,
-            kind: _Btn.primary, accent: accent, icon: TravelIcon.stay, onTap: () => _askOthers(cb)),
-        if (host.isNotEmpty) ...[
-          const SizedBox(height: 8),
-          _button(TripStrings.callHost,
-              kind: _Btn.plain, accent: accent, icon: Icons.call_rounded, onTap: () => ContactLauncher.call(host)),
-        ],
-        const SizedBox(height: 10),
-        const Text(TripStrings.ifPaidFooter, style: _fine),
+      line: TripStrings.roomMayBeReleased,
+      rows: [
+        if (a.amount != null) ReplyRow(TripStrings.advance, a.money),
+        if (a.holdUntil != null) ReplyRow(TripStrings.holdEnded, a.holdTime),
+        if (a.range.isNotEmpty) ReplyRow(TripStrings.dates, a.range),
       ],
+      extra: [if (others.isNotEmpty) TripStrings.ifPaidFooter],
+      note: others.isNotEmpty ? TripStrings.otherStaysReplied(others.length, others.join(', ')) : TripStrings.ifPaidFooter,
+      noteArt: others.isNotEmpty ? ListingArt.hotel : ListingArt.moneyBag,
+      primary: ReplyAction(label: TripStrings.askOtherStays, onTap: () => _askOthers(cb)),
+      secondary: ReplyAction(label: TripStrings.callHost, onTap: _call(_tenDigits(cb.hostPhone))),
     );
   }
 
@@ -345,417 +341,114 @@ class TripAdvanceCards {
     }
   }
 
-  static Widget _replacedCard(BuildContext context, MessageModel m, _AdvanceCard a, Color accent) => _frame(
-          context,
-          m,
-          muted: true,
-          icon: TravelIcon.money,
-          tone: DesignColors.textMuted,
-          title: TripStrings.advancePending(a.money),
-          subtitle: a.holdUntil == null ? null : TripStrings.holdTill(a.holdTime),
-          trailing: TripStatusPill(TripDisplayStatus.closed,
-              label: a.status == _cancelled ? TripStrings.advanceCancelled : TripStrings.replacedByNewer),
-          children: const [],
+  static Widget _replacedCard(MessageModel m, _AdvanceCard a) => _card(
+        m,
+        status: StatusTone3D.closed,
+        art: ListingArt.moneyBag,
+        pill: a.status == _cancelled ? TripStrings.advanceCancelled : TripStrings.replacedByNewer,
+        title: TripStrings.advancePending(a.money),
+        line: a.holdUntil == null ? null : TripStrings.holdTill(a.holdTime),
+        rows: [if (a.amount != null) ReplyRow(TripStrings.advance, a.money)],
+        showActions: false,
+        dimmed: true,
       );
 
   // host
 
-  static Widget _hostRequest(BuildContext context, MessageModel m, _AdvanceCard a, Color accent, TripChatCallbacks cb) {
-    if (a.status == _replaced || a.status == _cancelled) return _replacedCard(context, m, a, accent);
-    if (a.status == _holdExpired) return _lateMark(context, m, a, accent, cb);
+  static Widget _hostRequest(MessageModel m, _AdvanceCard a, TripChatCallbacks cb) {
+    if (a.status == _replaced || a.status == _cancelled) return _replacedCard(m, a);
+    if (a.status == _holdExpired) return _lateMark(m, a, cb);
     final upi = a.upiId;
-    final wa = a.whatsApp == null ? '' : ContactLauncher.tenDigits(a.whatsApp!);
-    final pill = switch (a.status) {
-      _received => TripStatusPill(TripDisplayStatus.confirmedByBoth, label: TripStrings.advanceReceivedHostSays),
-      _proofSent => TripStatusPill(TripDisplayStatus.offered,
-          label: cb.guestName == null ? TripStrings.waitingForHostHourly : TripStrings.saysProofSent(cb.guestName!)),
-      _ => TripStatusPill(TripDisplayStatus.asked, label: TripStrings.holdTill(a.holdTime)),
+    final wa = _tenDigits(a.whatsApp);
+    final (StatusTone3D tone, String pill) = switch (a.status) {
+      _received => (StatusTone3D.both, TripStrings.advanceReceivedHostSays),
+      _proofSent => (
+          StatusTone3D.waiting,
+          cb.guestName == null ? TripStrings.waitingForHostHourly : TripStrings.saysProofSent(cb.guestName!)
+        ),
+      _ => (StatusTone3D.waiting, TripStrings.holdTill(a.holdTime)),
     };
-    return _frame(
-      context,
+    return _card(
       m,
-      icon: TravelIcon.money,
-      tone: TripStatusVisuals.advanceText(_liveStatus(a.status)),
+      status: tone,
+      art: ListingArt.moneyBag,
+      pill: pill,
       title: TripStrings.advancePending(a.money),
-      subtitle: a.holdUntil == null ? null : TripStrings.holdTill(a.holdTime),
-      children: [
-        Align(alignment: Alignment.centerLeft, child: pill),
-        const SizedBox(height: 8),
-        if (upi != null && upi.isNotEmpty) _kv(TripStrings.upiId, upi),
-        if (wa.isNotEmpty) _kv(TripStrings.whatsApp, '+91 $wa'),
-        const SizedBox(height: 10),
-        const TripPaymentLine(),
+      line: a.holdUntil == null ? null : TripStrings.holdTill(a.holdTime),
+      rows: [
+        if (upi != null && upi.isNotEmpty) ReplyRow(TripStrings.upiId, upi),
+        if (wa.isNotEmpty) ReplyRow(TripStrings.whatsApp, '+91 $wa'),
+        if (a.range.isNotEmpty) ReplyRow(TripStrings.dates, a.range),
       ],
+      note: TripStrings.stayPayLine,
+      noteArt: ListingArt.moneyBag,
+      showActions: false,
     );
   }
 
-  static Widget _lateMark(BuildContext context, MessageModel m, _AdvanceCard a, Color accent, TripChatCallbacks cb) {
-    final guest = cb.guestPhone == null ? '' : ContactLauncher.tenDigits(cb.guestPhone!);
+  static Widget _lateMark(MessageModel m, _AdvanceCard a, TripChatCallbacks cb) {
     final id = a.enquiryId;
     final canMark = !cb.movedOn && a.canStillMark && id != null && cb.onMarkReceived != null;
-    return _frame(
-      context,
+    return _card(
       m,
-      icon: TravelIcon.pin,
-      tone: DesignColors.statusSaved,
+      status: StatusTone3D.red,
+      art: ListingArt.roundPushpin,
+      pill: a.amount == null ? TripStrings.holdEnded : a.money,
       title: TripStrings.holdEnded,
-      subtitle: TripStrings.advanceNotMarked,
-      trailing: a.amount == null ? null : _moneyPill(a.money, DesignColors.statusSaved),
-      children: [
-        Text(
-          cb.movedOn ? TripStrings.guestMovedOn : TripStrings.canStillMark(cb.guestName ?? ''),
-          maxLines: 3,
-          overflow: TextOverflow.ellipsis,
-          style: _body,
-        ),
-        const SizedBox(height: 12),
-        if (canMark) ...[
-          _button(TripStrings.markAdvanceReceived,
-              kind: _Btn.positive, accent: accent, icon: Icons.check_rounded, onTap: () => cb.onMarkReceived!(id)),
-          const SizedBox(height: 8),
-        ],
-        if (guest.isNotEmpty)
-          _button(TripStrings.callGuest,
-              kind: _Btn.plain, accent: accent, icon: Icons.call_rounded, onTap: () => ContactLauncher.call(guest)),
-        const SizedBox(height: 10),
-        const TripPaymentLine(),
+      line: TripStrings.advanceNotMarked,
+      rows: [
+        if (a.amount != null) ReplyRow(TripStrings.advance, a.money),
+        if (a.holdUntil != null) ReplyRow(TripStrings.holdEnded, a.holdTime),
+        if (a.range.isNotEmpty) ReplyRow(TripStrings.dates, a.range),
       ],
+      extra: const [TripStrings.stayPayLine],
+      note: cb.movedOn ? TripStrings.guestMovedOn : TripStrings.canStillMark(cb.guestName ?? ''),
+      primary: ReplyAction(label: TripStrings.markAdvanceReceived, onTap: canMark ? () => cb.onMarkReceived!(id) : null),
+      secondary: ReplyAction(label: TripStrings.callGuest, onTap: _call(_tenDigits(cb.guestPhone))),
     );
   }
 
-  static Widget _hostProof(BuildContext context, MessageModel m, _AdvanceCard a, Color accent, TripChatCallbacks cb) {
+  static Widget _hostProof(MessageModel m, _AdvanceCard a, TripChatCallbacks cb) {
     if (a.status == _replaced || a.status == _cancelled) {
-      return _frame(
-          context,
-          m,
-          muted: true,
-          icon: TravelIcon.photo,
-          tone: DesignColors.textMuted,
-          title: TripStrings.saysProofSent(cb.guestName ?? ''),
-          trailing: TripStatusPill(TripDisplayStatus.closed,
-              label: a.status == _cancelled ? TripStrings.advanceCancelled : TripStrings.replacedByNewer),
-          children: const [],
+      return _card(
+        m,
+        status: StatusTone3D.closed,
+        art: ListingArt.moneyBag,
+        pill: a.status == _cancelled ? TripStrings.advanceCancelled : TripStrings.replacedByNewer,
+        title: TripStrings.saysProofSent(cb.guestName ?? ''),
+        rows: [if (a.amount != null) ReplyRow(TripStrings.advance, a.money)],
+        showActions: false,
+        dimmed: true,
       );
     }
-    final phone = a.guestPhone == null ? '' : ContactLauncher.tenDigits(a.guestPhone!);
+    final phone = _tenDigits(a.guestPhone);
     final id = a.enquiryId;
     final open = a.status == _pending || a.status == _proofSent;
-    final Widget? pill = switch (a.status) {
-      _received => const TripStatusPill(TripDisplayStatus.confirmedByBoth, label: TripStrings.advanceReceivedHostSays),
-      _holdExpired => const TripStatusPill(TripDisplayStatus.holdExpired),
-      _ => null,
+    final (StatusTone3D tone, String pill) = switch (a.status) {
+      _received => (StatusTone3D.both, TripStrings.advanceReceivedHostSays),
+      _holdExpired => (StatusTone3D.red, TripStatusVisuals.label(TripDisplayStatus.holdExpired)),
+      _ => (StatusTone3D.waiting, a.holdUntil == null ? TripStrings.advance : TripStrings.holdTill(a.holdTime)),
     };
-    return _frame(
-      context,
+    return _card(
       m,
-      icon: TravelIcon.photo,
-      tone: accent,
+      status: tone,
+      art: ListingArt.moneyBag,
+      pill: pill,
       title: TripStrings.saysProofSent(cb.guestName ?? ''),
-      subtitle: phone.isEmpty ? null : TripStrings.checkWhatsApp(phone),
-      trailing: a.amount == null ? null : _moneyPill(a.money, accent),
-      children: [
-        if (pill != null) ...[Align(alignment: Alignment.centerLeft, child: pill), const SizedBox(height: 8)],
-        if (open) ...[
-          const Text(TripStrings.checkAmountFirst, style: _body),
-          const SizedBox(height: 12),
-          _button(TripStrings.markAdvanceReceived,
-              kind: _Btn.positive,
-              accent: accent,
-              icon: Icons.check_rounded,
-              onTap: id == null || cb.onMarkReceived == null ? null : () => cb.onMarkReceived!(id)),
-          const SizedBox(height: 8),
-          _button(TripStrings.notYet,
-              kind: _Btn.plain,
-              accent: accent,
-              onTap: id == null || cb.onNotYet == null ? null : () => cb.onNotYet!(id)),
-        ],
-        if (open && phone.isNotEmpty) ...[
-          const SizedBox(height: 8),
-          _button(TripStrings.openWhatsApp,
-              kind: _Btn.whatsApp, accent: accent, icon: TravelIcon.chat, onTap: () => ContactLauncher.whatsApp(phone)),
-        ],
+      line: phone.isEmpty ? null : TripStrings.checkWhatsApp(phone),
+      rows: [
+        if (a.amount != null) ReplyRow(TripStrings.advance, a.money),
+        if (a.holdUntil != null) ReplyRow(TripStrings.holdTill(a.holdTime), ''),
+        if (a.range.isNotEmpty) ReplyRow(TripStrings.dates, a.range),
       ],
+      note: open ? TripStrings.checkAmountFirst : null,
+      primary: ReplyAction(
+          label: TripStrings.markAdvanceReceived,
+          onTap: !open || id == null || cb.onMarkReceived == null ? null : () => cb.onMarkReceived!(id)),
+      secondary: ReplyAction(
+          label: TripStrings.notYet, onTap: !open || id == null || cb.onNotYet == null ? null : () => cb.onNotYet!(id)),
     );
   }
-
-  static String _liveStatus(String cardStatus) => switch (cardStatus) {
-        _proofSent => TripAdvanceStatuses.proofSent,
-        _received => TripAdvanceStatuses.received,
-        _holdExpired => TripAdvanceStatuses.holdExpired,
-        _ => TripAdvanceStatuses.pending,
-      };
-
-  // building blocks
-
-  static const _body = TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12.5, color: DesignColors.textSecondary, height: 1.35);
-  static const _small = TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, color: DesignColors.textMuted, height: 1.35);
-  static const _fine = TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 11, color: DesignColors.textMuted, height: 1.35);
-
-  static Widget _frame(
-    BuildContext context,
-    MessageModel m, {
-    required String icon,
-    required Color tone,
-    required String title,
-    String? subtitle,
-    Widget? trailing,
-    bool muted = false,
-    required List<Widget> children,
-  }) {
-    final maxWidth = math.min(300.0, MediaQuery.sizeOf(context).width - 40);
-    final recent = DateTime.now().difference(m.createdAt).inSeconds.abs() < 10;
-    final iconTone = muted ? DesignColors.textMuted : tone;
-    return RepliesEntrance(
-      animate: recent,
-      child: Align(
-      alignment: m.isMine ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 4),
-        constraints: BoxConstraints(maxWidth: maxWidth),
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: muted ? DesignColors.scaffold : DesignColors.surface,
-          borderRadius: RepliesCard.radius,
-          boxShadow: muted ? null : DesignShadows.card,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: 30,
-                  height: 30,
-                  decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                          colors: [iconTone.withValues(alpha: Alpha.scrim), iconTone.withValues(alpha: Alpha.hairline)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight),
-                      shape: BoxShape.circle),
-                  child: Padding(padding: const EdgeInsets.all(5), child: TravelIcon(icon, size: 20)),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(title,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                              fontFamily: FitnessAppTheme.fontName, fontSize: 13, fontWeight: FontWeight.w700, color: muted ? DesignColors.textMuted : DesignColors.textStrong)),
-                      if (subtitle != null)
-                        Text(subtitle, maxLines: 2, overflow: TextOverflow.ellipsis, style: _small),
-                    ],
-                  ),
-                ),
-                if (trailing != null) ...[
-                  const SizedBox(width: 6),
-                  ConstrainedBox(constraints: const BoxConstraints(maxWidth: 110), child: trailing),
-                ],
-              ],
-            ),
-            if (children.isNotEmpty) const SizedBox(height: 10),
-            ...children,
-            if (m.isMine) ...[
-              const SizedBox(height: 6),
-              Align(alignment: Alignment.centerRight, child: _tick(m.readAt != null, onDark: false)),
-            ],
-          ],
-        ),
-      ),
-      ),
-    );
-  }
-
-  static Widget _moneyPill(String text, Color color) => Container(
-        constraints: const BoxConstraints(minHeight: 30),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-        decoration: BoxDecoration(color: color.withValues(alpha: Alpha.tint), borderRadius: BorderRadius.circular(999)),
-        child: Center(
-          widthFactor: 1,
-          heightFactor: 1,
-          child: FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Text(text,
-                maxLines: 1,
-                style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 13, fontWeight: FontWeight.w700, color: color)),
-          ),
-        ),
-      );
-
-  static Widget _upiBox(String upi, Color accent) => Container(
-        padding: const EdgeInsets.only(left: 12),
-        decoration: BoxDecoration(
-          color: DesignColors.scaffold,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(TripStrings.upiId, maxLines: 1, style: _fine),
-                    FittedBox(
-                      fit: BoxFit.scaleDown,
-                      alignment: Alignment.centerLeft,
-                      child: Text(upi,
-                          maxLines: 1,
-                          style: const TextStyle(
-                              fontFamily: FitnessAppTheme.fontName, fontSize: 14, fontWeight: FontWeight.w700, color: DesignColors.textStrong)),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            SizedBox(
-              width: 44,
-              height: 44,
-              child: IconButton(
-                tooltip: TripStrings.copy,
-                padding: EdgeInsets.zero,
-                onPressed: () async {
-                  await Clipboard.setData(ClipboardData(text: upi));
-                  AppToast.success(TripStrings.upiCopied);
-                },
-                icon: Icon(Icons.copy_rounded, size: 18, color: accent),
-              ),
-            ),
-          ],
-        ),
-      );
-
-  static Widget _steps(List<(String, bool)> steps, Color accent) => Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          for (var i = 0; i < steps.length; i++)
-            Padding(
-              padding: EdgeInsets.only(top: i == 0 ? 0 : 6),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    width: 20,
-                    height: 20,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: steps[i].$2 ? DesignColors.infoSoft : accent.withValues(alpha: Alpha.tint),
-                      shape: BoxShape.circle,
-                    ),
-                    child: steps[i].$2
-                        ? const Icon(Icons.check_rounded, size: 13, color: DesignColors.primaryLight)
-                        : Text('${i + 1}',
-                            style: TextStyle(
-                                fontFamily: FitnessAppTheme.fontName, fontSize: 11, fontWeight: FontWeight.w700, color: accent)),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(steps[i].$1, maxLines: 2, overflow: TextOverflow.ellipsis, style: _body),
-                  ),
-                ],
-              ),
-            ),
-        ],
-      );
-
-  static Widget _note(String title, String body) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        decoration: BoxDecoration(color: DesignColors.statusAskedSoft, borderRadius: BorderRadius.circular(8)),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                    fontFamily: FitnessAppTheme.fontName, fontSize: 12, fontWeight: FontWeight.w700, color: DesignColors.statusAttention)),
-            Text(body,
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 11.5, color: DesignColors.statusAttention, height: 1.35)),
-          ],
-        ),
-      );
-
-  static Widget _kv(String k, String v) => Padding(
-        padding: const EdgeInsets.only(top: 2),
-        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(k, style: _small),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(v,
-                textAlign: TextAlign.end,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                    fontFamily: FitnessAppTheme.fontName, fontSize: 12.5, fontWeight: FontWeight.w600, color: DesignColors.textStrong)),
-          ),
-        ]),
-      );
-
-  static Widget _button(String label, {required _Btn kind, required Color accent, Object? icon, VoidCallback? onTap}) {
-    final filled = kind == _Btn.primary || kind == _Btn.positive;
-    final asset = icon is String ? icon : null;
-    final glyph = icon is IconData ? icon : null;
-    return SizedBox(
-      width: double.infinity,
-      child: filled
-          ? TripButton(
-              color: kind == _Btn.positive ? DesignColors.primaryLight : accent,
-              label: label,
-              iconAsset: asset,
-              icon: glyph,
-              onPressed: onTap,
-            )
-          : TripActionChip(
-              height: 48,
-              fontSize: 13,
-              color: kind == _Btn.whatsApp ? DesignColors.primaryLight : DesignColors.textSecondary,
-              label: label,
-              iconAsset: asset,
-              icon: glyph,
-              onTap: onTap,
-            ),
-    );
-  }
-
-  static Widget _bubble(MessageModel m, String text, Color accent) {
-    final mine = m.isMine;
-    return Align(
-      alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 3),
-        constraints: const BoxConstraints(maxWidth: 280),
-        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
-        decoration: BoxDecoration(
-          color: mine ? null : DesignColors.surface,
-          gradient: mine ? DesignGradients.brand : null,
-          borderRadius: BorderRadius.only(
-            topLeft: const Radius.circular(14),
-            topRight: const Radius.circular(14),
-            bottomLeft: Radius.circular(mine ? 14 : 3),
-            bottomRight: Radius.circular(mine ? 3 : 14),
-          ),
-        ),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.end, mainAxisSize: MainAxisSize.min, children: [
-          Text(text,
-              style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 13.5, color: mine ? DesignColors.surface : DesignColors.textStrong)),
-          if (mine) ...[const SizedBox(height: 2), _tick(m.readAt != null)],
-        ]),
-      ),
-    );
-  }
-
-  static Widget _tick(bool read, {bool onDark = true}) => Icon(
-        read ? Icons.done_all_rounded : Icons.done_rounded,
-        size: 14,
-        color: read ? DesignColors.primaryLight : (onDark ? DesignColors.surface.withValues(alpha: Alpha.strong) : DesignColors.textMuted),
-      );
 
   static String? _str(Map<String, dynamic> p, String k) {
     final v = p[k];

@@ -1,5 +1,5 @@
-import 'package:flutter/cupertino.dart' show CupertinoSwitch;
 import 'package:bakhli/design/design.dart';
+import 'package:bakhli/design/extra/ext_trip_replies.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -14,7 +14,6 @@ import '../../trip/trip_strings_g3.dart';
 import '../../trip/trip_strings_h4.dart';
 import '../../trip/trip_strings_i5.dart';
 import '../../trip/utils/trip_format.dart';
-import '../../trip/widgets/trip_payment_line.dart';
 import '../../trip/widgets/trip_sheet_frame.dart';
 import '../models/stay_owner_model.dart';
 import 'stay_enquiries_controller.dart';
@@ -92,6 +91,7 @@ class _OfferBodyState extends State<_OfferBody> {
   bool _saving = false;
   String? _serverError;
   bool _clamped = false;
+  bool _tried = false;
 
   @override
   void initState() {
@@ -294,6 +294,7 @@ class _OfferBodyState extends State<_OfferBody> {
     if (_saving) return;
     final error = _validate();
     if (error != null) {
+      setState(() => _tried = true);
       AppToast.error(error);
       return;
     }
@@ -349,305 +350,197 @@ class _OfferBodyState extends State<_OfferBody> {
         : counterPrice != null
             ? TripStringsH4.proposesPerRoom(guest, BrowseItem.inr(counterPrice))
             : StayEnquiryStrings.offerTo(guest);
+    final t = _look;
     return TripSheetFrame(
+      tone: t,
+      art: ListingArt.moneyBag,
+      size: SheetSize.form,
       title: revised ? TripStrings.revisedOffer : TripStrings.sendOffer,
       description: description,
-      footer: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        if (_serverError != null) ...[
-          Text(_serverError!, style: TypeTokens.style(12, FontWeight.w500, color: DesignColors.error, height: 1.4)),
+      footnote: revised ? TripStrings.revisedFooter : TripStrings.sendOfferFooter,
+      footer: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SummaryBar3D(tone: t, label: '${TripStrings.total} · ${TripStrings.nights(_nights < 0 ? 0 : _nights)}', value: BrowseItem.inr(_total)),
+          if (_serverError != null) Padding(padding: const EdgeInsets.only(top: 8), child: Text(_serverError!, style: FieldMessage.errorStyle)),
           const SizedBox(height: 8),
+          GradientPillButton(
+            tone: t,
+            label: revised ? TripStrings.sendRevisedOffer : TripStrings.sendOffer,
+            loading: _saving,
+            onTap: _saving ? null : _submit,
+          ),
         ],
-        PrimaryButton(
-          onPressed: _saving ? null : _submit,
-          loading: _saving,
-          tone: _tone,
-          label: revised ? TripStrings.sendRevisedOffer : TripStrings.sendOffer,
-        ),
-        const SizedBox(height: 10),
-        TripPaymentLine(text: revised ? TripStrings.revisedFooter : TripStrings.sendOfferFooter),
-      ]),
+      ),
       children: [
-        if (counter != null && counterPrice != null) ...[
-          _counterSummary(counter, counterPrice),
-          const SizedBox(height: 12),
-        ],
+        if (counter != null && counterPrice != null) _counterSummary(counter, counterPrice),
+        const SizedBox(height: 4),
         _twoUp(
           _dateField(TripStrings.checkIn, _checkIn, () => _pickDate(isCheckIn: true)),
           _dateField(TripStrings.checkOut, _checkOut, () => _pickDate(isCheckIn: false)),
         ),
-        if (_tripHint != null) ...[
-          const SizedBox(height: 6),
-          Text(_tripHint!, style: TypeTokens.style(12, FontWeight.w400, color: TypeTokens.secondary)),
-        ],
-        if (_clamped) ...[
-          const SizedBox(height: 4),
-          const Text(TripStringsI5.datesMovedInside,
-              style: TextStyle(fontFamily: TypeTokens.family, fontSize: 12, fontWeight: FontWeight.w600, color: DesignColors.textStrong)),
-        ],
-        const SizedBox(height: 16),
-        _heading(TripStrings.roomLines),
-        const SizedBox(height: 8),
-        for (var i = 0; i < _lines.length; i++) ...[
-          _lineCard(i),
-          const SizedBox(height: 10),
-        ],
-        if (_lines.length < _maxLines)
-          Align(
-            alignment: Alignment.centerLeft,
-            child: TextButton.icon(
-              style: TextButton.styleFrom(minimumSize: const Size(44, 44), foregroundColor: DesignColors.primary),
-              onPressed: () => setState(() => _lines.add(_newLine())),
-              icon: const Icon(Icons.add_circle_outline_rounded, size: 18),
-              label: const Text(TripStrings.addRoomLine),
-            ),
+        if (_tripHint != null) Padding(padding: const EdgeInsets.fromLTRB(6, 6, 6, 0), child: Text(_tripHint!, style: RepliesLook.foot)),
+        if (_clamped)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(6, 4, 6, 0),
+            child: Text(TripStringsI5.datesMovedInside, style: Ink3D.text(12, FontWeight.w600, Ink3D.body, letterSpacing: 0)),
           ),
-        const SizedBox(height: 8),
-        _totalBox(),
-        if (revised) ...[
-          const SizedBox(height: 16),
-          _field(_reason, TripStrings.reasonLabel, maxLength: TripConstants.noteMax, lines: 2, hint: TripStrings.reasonHint),
-        ],
-        const SizedBox(height: 16),
-        _twoUp(
-          _field(_advance, TripStrings.advance, digits: true, maxLength: 7, prefix: '₹ ', hint: StayEnquiryStrings.optional),
-          _field(_balance, TripStrings.balanceNote, maxLength: 120),
+        Padding(
+          padding: const EdgeInsets.only(top: 16),
+          child: Row(
+            children: [
+              Expanded(child: Text(TripStrings.roomLines.toUpperCase(), style: RepliesLook.section)),
+              if (_lines.length < _maxLines)
+                Tap3D(
+                  onTap: _saving ? null : () => setState(() => _lines.add(_newLine())),
+                  label: TripStrings.addRoomLine,
+                  exclude: true,
+                  child: Container(
+                    constraints: const BoxConstraints(minHeight: 34),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(color: t.tint, borderRadius: BorderRadius.circular(16)),
+                    child: Text('+ ${TripStrings.addRoomLine}', style: Ink3D.text(13, FontWeight.w700, t.text, letterSpacing: 0)),
+                  ),
+                ),
+            ],
+          ),
         ),
+        for (var i = 0; i < _lines.length; i++) _lineCard(i),
+        if (revised)
+          _field(_reason, TripStrings.reasonLabel, art: ListingArt.clipboard, maxLength: TripConstants.noteMax, lines: 2, hint: TripStrings.reasonHint, error: _tried && _reason.text.trim().isEmpty ? StayEnquiryStrings.reasonRequired : null),
+        _twoUp(
+          _field(_advance, TripStrings.advance, art: ListingArt.moneyBag, digits: true, maxLength: 7, prefix: '₹ ', hint: StayEnquiryStrings.optional),
+          _field(_balance, TripStrings.balanceNote, art: ListingArt.clipboard, maxLength: 120),
+        ),
+        _field(_cancel, TripStrings.cancellationTerms, art: ListingArt.clipboard, maxLength: 300, lines: 2),
+        _field(_inclusions, StayEnquiryStrings.inclusions, art: ListingArt.star, maxLength: 200, hint: StayEnquiryStrings.optional),
         const SizedBox(height: 12),
-        _field(_cancel, TripStrings.cancellationTerms, maxLength: 300, lines: 2),
-        const SizedBox(height: 12),
-        _field(_inclusions, StayEnquiryStrings.inclusions, maxLength: 200, hint: StayEnquiryStrings.optional),
+        ToggleRow(tone: t, label: TripStrings.gstInvoice, value: _gst, filled: true, onChanged: _saving ? null : (v) => setState(() => _gst = v)),
+        if (!revised) KeyValueRow(label: TripStrings.validForLabel, value: StayEnquiryStrings.offerValid(e.isUrgent), divider: false),
         const SizedBox(height: 8),
-        _gstRow(),
-        if (!revised) ...[
-          const SizedBox(height: 12),
-          Row(children: [
-            Expanded(
-              child: Text(TripStrings.validForLabel,
-                  style: const TextStyle(fontFamily: TypeTokens.family, fontSize: 12, color: DesignColors.textSecondary)),
-            ),
-            Text(StayEnquiryStrings.offerValid(e.isUrgent),
-                style: const TextStyle(fontFamily: TypeTokens.family, fontSize: 13, fontWeight: FontWeight.w600, color: DesignColors.textStrong)),
-          ]),
-        ],
-        const SizedBox(height: 16),
       ],
     );
   }
+
+  static final ListingTone _look = ListingTone.forest;
 
   Widget _counterSummary(TripOfferModel counter, int price) {
     final nights = counter.nights > 0 ? counter.nights : _nights;
     final rooms = counter.rooms > 0 ? counter.rooms : 1;
     final total = counter.total > 0 ? counter.total : price * rooms * nights;
     final listed = counter.listedPerNight;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(color: DesignColors.scaffold, borderRadius: BorderRadius.circular(12)),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(TripStringsAD.perRoomPerNight(price),
-            style: const TextStyle(fontFamily: TypeTokens.family, fontSize: 14, fontWeight: FontWeight.w700, color: DesignColors.primary)),
-        const SizedBox(height: 2),
-        Text(TripStringsAD.roomsNightsTotal(rooms, nights, total),
-            style: const TextStyle(fontFamily: TypeTokens.family, fontSize: 12, color: DesignColors.textGrey)),
-        if (listed != null) ...[
-          const SizedBox(height: 2),
-          Text(TripStringsAD.listedPerNight(listed), style: const TextStyle(fontFamily: TypeTokens.family, fontSize: 12, color: DesignColors.textSecondary)),
-        ],
-      ]),
+    return ReplySummaryStrip(
+      tone: _look,
+      title: TripStringsAD.perRoomPerNight(price),
+      subtitle: [TripStringsAD.roomsNightsTotal(rooms, nights, total), if (listed != null) TripStringsAD.listedPerNight(listed)].join('\n'),
+      value: BrowseItem.inr(total),
+      margin: const EdgeInsets.only(bottom: 8),
     );
   }
 
-  Widget _heading(String text) => Text(text,
-      style: const TextStyle(fontFamily: TypeTokens.family, fontSize: 13, fontWeight: FontWeight.w600, color: DesignColors.textStrong));
-
   Widget _twoUp(Widget a, Widget b) => LayoutBuilder(
         builder: (context, c) {
-          if (c.maxWidth >= 340) {
+          if (c.maxWidth >= 300) {
             return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Expanded(child: a),
               const SizedBox(width: 10),
               Expanded(child: b),
             ]);
           }
-          return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [a, const SizedBox(height: 12), b]);
+          return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [a, b]);
         },
-      );
-
-  InputDecoration _dec(String label, {String? prefix, String? hint}) => InputDecoration(
-        labelText: label,
-        hintText: hint,
-        prefixText: prefix,
-        counterText: '',
-        filled: true,
-        fillColor: DesignColors.scaffold,
-        floatingLabelBehavior: FloatingLabelBehavior.always,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: DesignColors.dividerSoft)),
-        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: DesignColors.primary, width: 1.5)),
       );
 
   Widget _field(
     TextEditingController ctrl,
     String label, {
+    required String art,
     bool digits = false,
     int maxLength = 100,
     int lines = 1,
     String? prefix,
     String? hint,
+    String? error,
+    bool ring = false,
   }) {
-    return TextField(
+    return PillField(
+      tone: _look,
       controller: ctrl,
       enabled: !_saving,
+      label: label,
+      firstLabel: false,
+      leadingArt: art,
+      hint: hint,
+      prefixText: prefix,
       maxLength: maxLength,
+      counterText: '',
       minLines: 1,
       maxLines: lines,
+      errorText: error,
+      errorRing: ring,
       keyboardType: digits ? TextInputType.number : TextInputType.text,
       inputFormatters: digits ? [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(maxLength)] : noEmojiInputFormatters,
-      style: const TextStyle(fontFamily: TypeTokens.family, fontSize: 14),
-      decoration: _dec(label, prefix: prefix, hint: hint),
     );
   }
 
-  Widget _dateField(String label, DateTime value, VoidCallback onTap) {
-    return InkWell(
-      onTap: _saving ? null : onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: InputDecorator(
-        decoration: _dec(label).copyWith(suffixIcon: const Padding(padding: EdgeInsets.all(10), child: TravelIcon(TravelIcon.calendar, size: 22))),
-        child: Text(TripFormat.shortDate(value),
-            maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontFamily: TypeTokens.family, fontSize: 14, color: DesignColors.textStrong)),
-      ),
-    );
-  }
+  Widget _dateField(String label, DateTime value, VoidCallback onTap) => PillPickerField(
+        tone: _look,
+        sublabel: label,
+        value: TripFormat.shortDate(value),
+        leadingArt: ListingArt.calendar,
+        trailing: const SizedBox.shrink(),
+        enabled: !_saving,
+        onTap: _saving ? null : onTap,
+      );
 
   Widget _lineCard(int i) {
     final l = _lines[i];
     final rooms = widget.stay.rooms;
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: DesignColors.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: DesignColors.dividerSoft),
-      ),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Row(children: [
-          Expanded(
-            child: Wrap(spacing: 8, runSpacing: 6, children: [
-              for (final r in rooms)
-                PickChip(
-                  label: r.label,
-                  selected: !l.isOther && l.roomName == r.label,
-                  activeColor: DesignColors.primary,
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                  onTap: () => setState(() {
-                    l.isOther = false;
-                    l.roomName = r.label;
-                    l.priceCtrl.text = '${r.pricePerNight}';
-                  }),
-                ),
-              PickChip(
-                label: TripStrings.other,
-                selected: l.isOther,
-                activeColor: DesignColors.primary,
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                onTap: () => setState(() => l.isOther = true),
-              ),
-            ]),
-          ),
-          if (_lines.length > 1)
-            IconButton(
-              tooltip: StayEnquiryStrings.removeRoom,
-              constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
-              onPressed: () => setState(() {
-                _lines.removeAt(i).dispose();
-              }),
-              icon: const Icon(Icons.delete_outline_rounded, size: 20, color: DesignColors.error),
+    final t = _look;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (i > 0) const Padding(padding: EdgeInsets.only(top: 14), child: Divider(height: 1, color: RepliesLook.rule)),
+        const SizedBox(height: 12),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Wrap(spacing: 8, runSpacing: 8, children: [
+                for (final r in rooms)
+                  ChoicePill(
+                    tone: t,
+                    label: r.label,
+                    selected: !l.isOther && l.roomName == r.label,
+                    onTap: () => setState(() {
+                      l.isOther = false;
+                      l.roomName = r.label;
+                      l.priceCtrl.text = '${r.pricePerNight}';
+                    }),
+                  ),
+                ChoicePill(tone: t, label: TripStrings.other, selected: l.isOther, onTap: () => setState(() => l.isOther = true)),
+              ]),
             ),
-        ]),
-        if (l.isOther) ...[
-          const SizedBox(height: 10),
-          _field(l.otherCtrl, StayEnquiryStrings.roomName, maxLength: TripConstants.roomNameMax),
-        ],
-        const SizedBox(height: 10),
-        Wrap(spacing: 10, runSpacing: 8, children: [
-          _stepper(TripStrings.units, l.units, 1, 10, (v) => setState(() => l.units = v)),
-          _stepper(TripStrings.guests, l.guests, 1, 40, (v) => setState(() => l.guests = v)),
-        ]),
-        const SizedBox(height: 10),
-        _field(l.priceCtrl, TripStrings.pricePerNight, digits: true, maxLength: 7, prefix: '₹ '),
-      ]),
-    );
-  }
-
-  Widget _stepper(String label, int value, int min, int max, ValueChanged<int> onChanged) {
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-      Text(label, style: const TextStyle(fontFamily: TypeTokens.family, fontSize: 11, color: DesignColors.textSecondary)),
-      Container(
-        decoration: BoxDecoration(
-          color: DesignColors.scaffold,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: DesignColors.dividerSoft),
+            if (_lines.length > 1)
+              IconButton(
+                tooltip: StayEnquiryStrings.removeRoom,
+                constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+                onPressed: () => setState(() {
+                  _lines.removeAt(i).dispose();
+                }),
+                icon: const Icon(Icons.delete_outline_rounded, size: 22, color: Form3D.error),
+              ),
+          ],
         ),
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
-          IconButton(
-            constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
-            onPressed: value > min ? () => onChanged(value - 1) : null,
-            icon: const Icon(Icons.remove_rounded, size: 18),
-          ),
-          SizedBox(
-            width: 28,
-            child: Text('$value',
-                textAlign: TextAlign.center, style: const TextStyle(fontFamily: TypeTokens.family, fontSize: 14, fontWeight: FontWeight.w600)),
-          ),
-          IconButton(
-            constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
-            onPressed: value < max ? () => onChanged(value + 1) : null,
-            icon: const Icon(Icons.add_rounded, size: 18),
-          ),
-        ]),
-      ),
-    ]);
-  }
-
-  Widget _totalBox() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(color: DesignColors.scaffold, borderRadius: BorderRadius.circular(12)),
-      child: Row(children: [
-        Expanded(
-          child: Text('${TripStrings.total} · ${TripStrings.nights(_nights < 0 ? 0 : _nights)}',
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontFamily: TypeTokens.family, fontSize: 13, fontWeight: FontWeight.w600, color: DesignColors.primary)),
-        ),
-        const SizedBox(width: 8),
-        Flexible(
-          child: FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Text(BrowseItem.inr(_total),
-                maxLines: 1,
-                style: const TextStyle(fontFamily: TypeTokens.family, fontSize: 18, fontWeight: FontWeight.w700, color: DesignColors.primary)),
-          ),
-        ),
-      ]),
-    );
-  }
-
-  Widget _gstRow() {
-    return InkWell(
-      onTap: _saving ? null : () => setState(() => _gst = !_gst),
-      borderRadius: BorderRadius.circular(12),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 48),
-        child: Row(children: [
-          Expanded(child: Text(TripStrings.gstInvoice, style: const TextStyle(fontFamily: TypeTokens.family, fontSize: 14, color: DesignColors.textStrong))),
-          CupertinoSwitch(
-            value: _gst,
-            onChanged: _saving ? null : (v) => setState(() => _gst = v),
-            activeTrackColor: DesignColors.primary,
-          ),
-        ]),
-      ),
+        if (l.isOther) _field(l.otherCtrl, StayEnquiryStrings.roomName, art: ListingArt.bed, maxLength: TripConstants.roomNameMax),
+        const SizedBox(height: 12),
+        StepperField(tone: t, filled: true, leadingArt: ListingArt.bed, label: TripStrings.units, value: l.units, min: 1, max: 10, onChanged: (v) => setState(() => l.units = v)),
+        const SizedBox(height: 12),
+        StepperField(tone: t, filled: true, leadingArt: ListingArt.backpack, label: TripStrings.guests, value: l.guests, min: 1, max: 40, onChanged: (v) => setState(() => l.guests = v)),
+        _field(l.priceCtrl, TripStrings.pricePerNight, art: ListingArt.moneyBag, digits: true, maxLength: 7, prefix: '₹ ', ring: _tried && l.price < 1),
+      ],
     );
   }
 }

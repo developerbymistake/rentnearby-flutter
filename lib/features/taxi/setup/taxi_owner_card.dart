@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../design/design.dart';
+import '../../../design/extra/ext_taxi_owner.dart';
 import '../../../models/browse_item.dart';
-import '../../../models/card_fact.dart';
 import '../../trip/trip_strings.dart';
 import '../models/taxi_owner_model.dart';
 import '../taxi_option_sets.dart';
@@ -36,255 +36,86 @@ class TaxiOwnerCard extends StatelessWidget {
     this.onLocalRate,
   });
 
-  static final Color _danger = KitTone.danger.accentDark;
-
   @override
   Widget build(BuildContext context) {
-    final (String label, Color color) = switch (taxi.status) {
-      TaxiStatus.approved when taxi.isAvailable => ('LIVE', DesignColors.goodDeep),
-      TaxiStatus.approved => ('OFFLINE', DesignColors.textMuted),
-      TaxiStatus.pendingReview => ('UNDER REVIEW', DesignColors.warnDeep),
-      TaxiStatus.rejected => ('REJECTED', _danger),
-      _ => ('DRAFT', DesignColors.textMuted),
+    final status = switch (taxi.status) {
+      TaxiStatus.approved when taxi.isAvailable => TaxiOwnerStatus.live,
+      TaxiStatus.approved => TaxiOwnerStatus.offline,
+      TaxiStatus.pendingReview => TaxiOwnerStatus.review,
+      TaxiStatus.rejected => TaxiOwnerStatus.rejected,
+      _ => TaxiOwnerStatus.draft,
     };
     final approved = taxi.isApproved;
-    return OwnerListingCard(
-      tone: KitTone.taxi,
-      iconAsset: TravelIcon.taxi,
-      margin: EdgeInsets.zero,
-      title: taxi.plateDisplay ?? 'My Taxi',
-      subtitle: _timeAgo(taxi.createdAt),
-      status: label,
-      statusColor: color,
-      facts: [if (taxi.minFare != null) CardFact('From ${BrowseItem.inr(taxi.minFare!)}')],
-      header: taxi.pendingReportCount > 0 ? _reportStrip() : null,
-      body: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-        Text('VEHICLE',
-            style: TypeTokens.style(11, FontWeight.w700, color: DesignColors.textMuted, letterSpacing: 0.6)),
-        const SizedBox(height: 3),
-        Text(TaxiOptionSets.vehicleSummary(taxi),
-            maxLines: 2, overflow: TextOverflow.ellipsis, style: TypeTokens.caption),
-      ]),
-      toggle: GestureDetector(
-        onTap: approved ? null : onAvailableLocked,
-        behavior: HitTestBehavior.opaque,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-          decoration: BoxDecoration(color: KitTone.taxi.tint, borderRadius: KitMetrics.tileSmall),
-          child: Row(children: [
-            Expanded(
-              child: Text('Available now',
-                  style: TypeTokens.style(12, FontWeight.w600,
-                      color: approved ? DesignColors.textStrong : DesignColors.textSecondary)),
-            ),
-            SetupSwitch(value: approved && taxi.isAvailable, onChanged: approved ? onAvailableChanged : null),
-          ]),
-        ),
-      ),
-      rows: [
-        if (taxi.routes.isNotEmpty)
-          Column(children: [
-            for (var i = 0; i < taxi.routes.length; i++) ...[
-              if (i > 0) const Divider(height: 1, thickness: 1, color: DesignColors.dividerSoft),
-              _routeRow(taxi.routes[i]),
-            ],
-          ]),
-        if (!taxi.isDraft && (onTripLeads != null || onLocalRate != null))
-          Column(children: [
-            const Divider(height: 1, color: DesignColors.dividerSoft),
-            if (onTripLeads != null)
-              _linkRow(
-                asset: TravelIcon.route,
-                title: TripStrings.tripLeadsRow,
-                trailing: newLeads > 0 ? KitTagChip(TripStrings.newCount(newLeads), color: _danger, solid: true) : null,
-                onTap: onTripLeads,
-              ),
-            if (onLocalRate != null)
-              _linkRow(
-                asset: TravelIcon.taxi,
-                title: TripStrings.localSightseeing,
-                value: taxi.localDayRate == null ? null : TaxiOptionSets.localRateLabel(taxi.localDayRate!),
-                action: taxi.localDayRate == null ? TripStrings.addLocalRate : TripStrings.edit,
-                onTap: onLocalRate,
-              ),
-          ]),
-        if (onDelete != null || onPreview != null || onShare != null) _actions(),
-      ],
-      strips: [
-        if (taxi.isRejected)
-          _strip(
-            color: _danger,
-            icon: Icons.cancel_outlined,
-            text: taxi.rejectedReason != null && taxi.rejectedReason!.isNotEmpty
-                ? 'Rejected: ${taxi.rejectedReason}'
-                : 'Rejected',
-            action: 'Fix and resubmit',
-            onTap: onOpenSetup,
-          ),
-        if (taxi.isDraft)
-          _strip(
-            color: DesignColors.primary,
-            icon: Icons.schedule_rounded,
-            text: 'Setup not finished',
-            action: 'Continue setup',
-            onTap: onOpenSetup,
-          ),
-        if (taxi.isPendingReview)
-          _strip(color: DesignColors.warnDeep, icon: Icons.schedule_rounded, text: 'Under review · We will notify you'),
-      ],
-    );
-  }
-
-  Widget _reportStrip() {
     final count = taxi.pendingReportCount;
-    return GestureDetector(
-      onTap: onReportsTap,
-      behavior: HitTestBehavior.opaque,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: KitMetrics.touch),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
-          child: KitStatusStrip(
-            label: '$count report${count == 1 ? '' : 's'} on this taxi',
-            color: _danger,
-            icon: Icons.warning_amber_rounded,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _strip({
-    required Color color,
-    required IconData icon,
-    required String text,
-    String? action,
-    VoidCallback? onTap,
-  }) {
-    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      KitStatusStrip(label: text, color: color, icon: icon),
-      if (action != null)
-        Align(
-          alignment: Alignment.centerRight,
-          child: PillAction(label: action, tone: KitTone.solid(color), onTap: onTap, maxWidth: 220),
-        ),
-    ]);
-  }
-
-  Widget _routeRow(TaxiRouteModel r) {
+    final leadsParts = TripStrings.tripLeadsRow.split(' · ');
+    final leadsSub = leadsParts.length > 1 ? leadsParts[1][0].toUpperCase() + leadsParts[1].substring(1) : '';
     final base = taxi.locality.trim().toLowerCase();
-    final fromDiffers = r.fromName.trim().toLowerCase() != base;
-    final title = fromDiffers ? '${r.fromName} → ${r.toName}' : r.toName;
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(children: [
-        Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(title,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: TypeTokens.style(13, FontWeight.w700, color: DesignColors.textStrong)),
-            Text(TaxiOptionSets.tripLabel(r.tripType),
-                maxLines: 1, overflow: TextOverflow.ellipsis, style: TypeTokens.caption),
-          ]),
-        ),
-        const SizedBox(width: 8),
-        Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-          Text(BrowseItem.inr(r.fare),
-              maxLines: 1, style: TypeTokens.style(13, FontWeight.w800, color: KitTone.taxi.accentDark)),
-          if (onEditFare != null)
-            PillAction(
-              label: 'Edit fare',
-              tone: KitTone.taxi,
-              maxWidth: 120,
-              onTap: () => onEditFare!(r),
-            ),
-        ]),
-      ]),
-    );
-  }
 
-  Widget _linkRow({
-    required String asset,
-    required String title,
-    String? value,
-    String? action,
-    Widget? trailing,
-    VoidCallback? onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: KitMetrics.tileSmall,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 48),
-        child: Row(children: [
-          Container(
-            width: 30,
-            height: 30,
-            padding: const EdgeInsets.all(4),
-            decoration: BoxDecoration(shape: BoxShape.circle, gradient: KitTone.taxi.gradient),
-            child: Image.asset(asset),
+    final (String? stripArt, String? strip, String? stripAction) = taxi.isRejected
+        ? (
+            ListingArt.pushpin,
+            taxi.rejectedReason != null && taxi.rejectedReason!.isNotEmpty ? 'Rejected: ${taxi.rejectedReason}' : 'Rejected',
+            'Fix and resubmit',
+          )
+        : taxi.isDraft
+            ? (ListingArt.clipboard, 'Setup not finished', 'Continue setup')
+            : taxi.isPendingReview
+                ? (ListingArt.calendar, 'Under review · We will notify you', null)
+                : (null, null, null);
+
+    return TaxiOwnerCard3D(
+      tone: ListingTone.coral,
+      status: status,
+      title: taxi.plateDisplay ?? 'My Taxi',
+      ago: _timeAgo(taxi.createdAt),
+      vehicleLabel: 'VEHICLE',
+      vehicle: TaxiOptionSets.vehicleSummary(taxi),
+      fromLabel: 'FROM',
+      from: taxi.minFare != null ? BrowseItem.inr(taxi.minFare!) : '—',
+      available: approved && taxi.isAvailable,
+      onAvailable: approved ? onAvailableChanged : null,
+      onAvailableLocked: approved ? null : onAvailableLocked,
+      report: count > 0 ? '$count report${count == 1 ? '' : 's'} on this taxi' : null,
+      onReport: onReportsTap,
+      routes: [
+        for (final r in taxi.routes)
+          TaxiOwnerRoute(
+            title: r.fromName.trim().toLowerCase() != base ? '${r.fromName} → ${r.toName}' : r.toName,
+            trip: TaxiOptionSets.tripLabel(r.tripType),
+            fare: BrowseItem.inr(r.fare),
+            onEdit: onEditFare == null ? null : () => onEditFare!(r),
           ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(title,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TypeTokens.style(13, FontWeight.w600, color: DesignColors.textStrong)),
-              if (value != null) Text(value, maxLines: 1, overflow: TextOverflow.ellipsis, style: TypeTokens.caption),
-            ]),
+      ],
+      links: [
+        if (!taxi.isDraft && onTripLeads != null)
+          TaxiOwnerLink(
+            art: ListingArt.compass,
+            title: leadsParts.first,
+            subtitle: leadsSub,
+            pill: newLeads > 0 ? TripStrings.newCount(newLeads) : 'Open',
+            red: newLeads > 0,
+            onTap: onTripLeads,
           ),
-          const SizedBox(width: 8),
-          if (trailing != null) trailing,
-          if (action != null)
-            Flexible(
-              child: Text(action,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TypeTokens.style(12, FontWeight.w700, color: KitTone.taxi.accentDark)),
-            ),
-          if (trailing != null || action == null)
-            const Icon(Icons.chevron_right_rounded, size: 18, color: DesignColors.textDisabled),
-        ]),
-      ),
-    );
-  }
-
-  Widget _actions() {
-    final cells = <Widget>[
-      if (onPreview != null)
-        _actionCell(icon: Icons.visibility_outlined, label: 'View', color: DesignColors.primary, onTap: onPreview),
-      if (onShare != null)
-        _actionCell(icon: Icons.ios_share_rounded, label: 'Share', color: DesignColors.primary, onTap: onShare),
-      if (onDelete != null)
-        _actionCell(icon: Icons.delete_outline_rounded, label: 'Delete', color: _danger, onTap: onDelete),
-    ];
-    return IntrinsicHeight(
-      child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        for (int i = 0; i < cells.length; i++) ...[
-          if (i > 0)
-            Container(width: 1, margin: const EdgeInsets.symmetric(vertical: 2), color: DesignColors.dividerSoft),
-          Expanded(child: cells[i]),
-        ],
-      ]),
-    );
-  }
-
-  Widget _actionCell({required IconData icon, required String label, required Color color, required VoidCallback? onTap}) {
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Container(
-        alignment: Alignment.center,
-        constraints: const BoxConstraints(minHeight: KitMetrics.touch),
-        padding: const EdgeInsets.symmetric(vertical: 4),
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Icon(icon, size: 18, color: color),
-          const SizedBox(height: 3),
-          Text(label, style: TypeTokens.style(11, FontWeight.w600, color: color)),
-        ]),
-      ),
+        if (!taxi.isDraft && onLocalRate != null)
+          TaxiOwnerLink(
+            art: ListingArt.taxi,
+            title: TripStrings.localSightseeing,
+            subtitle: taxi.localDayRate == null ? '' : TaxiOptionSets.localRateLabel(taxi.localDayRate!),
+            pill: taxi.localDayRate == null ? TripStrings.addLocalRate : TripStrings.edit,
+            onTap: onLocalRate,
+          ),
+      ],
+      stripArt: stripArt,
+      strip: strip,
+      stripAction: stripAction,
+      onStrip: stripAction == null ? null : onOpenSetup,
+      actions: onDelete != null || onPreview != null || onShare != null
+          ? [
+              TaxiOwnerAction(icon: Icons.visibility_rounded, label: 'View', onTap: onPreview),
+              TaxiOwnerAction(icon: Icons.north_east_rounded, label: 'Share', onTap: onShare),
+              TaxiOwnerAction(icon: Icons.close_rounded, label: 'Delete', onTap: onDelete),
+            ]
+          : const [],
     );
   }
 

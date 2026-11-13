@@ -6,7 +6,8 @@ import '../trip_colors.dart';
 import '../trip_strings.dart';
 import '../utils/trip_format.dart';
 
-import 'package:bakhli/design/tokens/shadow_tokens.dart';
+import 'package:bakhli/design/extra/art_3d.dart';
+import 'package:bakhli/design/extra/status_pill.dart';
 import '../../../design/tokens/alpha_tokens.dart';
 enum TripDisplayStatus {
   none,
@@ -42,6 +43,8 @@ enum TripDisplayStatus {
 }
 
 class TripStatusVisuals {
+  static ListingTone tone3d(TripDisplayStatus s) => StatusTone3D.of(s.name).tone;
+
   static Color bar(TripDisplayStatus s) => switch (s) {
         TripDisplayStatus.asked || TripDisplayStatus.offered || TripDisplayStatus.fareSent => TripStatusColors.waiting,
         TripDisplayStatus.confirmedByYou => TripStatusColors.confirmedByYou,
@@ -135,37 +138,7 @@ class TripStatusPill extends StatelessWidget {
   Widget build(BuildContext context) {
     final text = label ?? TripStatusVisuals.label(status, ownerSide: ownerSide, taxi: taxi);
     if (text.isEmpty) return const SizedBox.shrink();
-    final color = TripStatusVisuals.text(status);
-    return ConstrainedBox(
-      constraints: const BoxConstraints(minHeight: 36),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        decoration: BoxDecoration(
-          color: TripStatusVisuals.surface(status),
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(8),
-            topRight: Radius.circular(16),
-            bottomLeft: Radius.circular(8),
-            bottomRight: Radius.circular(8),
-          ),
-          boxShadow: [ShadowTokens.tint(TripStatusVisuals.bar(status), ShadowSpec.badge)],
-        ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          child: Center(
-            widthFactor: 1,
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Text(
-                text,
-                maxLines: 1,
-                style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, fontWeight: FontWeight.w600, color: color),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
+    return StatusPill3D(label: text, status: StatusTone3D.of(status.name), onGradient: false);
   }
 }
 

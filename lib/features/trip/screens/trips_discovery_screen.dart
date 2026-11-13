@@ -14,8 +14,10 @@ import '../data/trip_repository.dart' show TripErrorTypes;
 import '../trip_navigation.dart';
 import '../trip_strings.dart';
 import '../trip_strings_tab.dart';
+import '../trip_strings_v2_plan.dart';
 import '../utils/trip_bar_rules.dart';
 import '../utils/trip_clock.dart';
+import '../widgets/trip_card.dart';
 import '../widgets/trip_city_tile.dart';
 
 enum _Load { loading, ready, failed, plannerOff }
@@ -29,17 +31,13 @@ class TripsDiscoveryScreen extends StatefulWidget {
 
 class _TripsDiscoveryScreenState extends State<TripsDiscoveryScreen> {
   static const double _maxWidth = 640;
-  static const double _tileExtent = 180;
-  static const double _gap = 12;
-
-  static const _gridDelegate = SliverGridDelegateWithMaxCrossAxisExtent(
-    maxCrossAxisExtent: _tileExtent,
-    mainAxisSpacing: _gap,
-    crossAxisSpacing: _gap,
-    childAspectRatio: TripCityTile.aspect,
-  );
+  static const String _lead = 'Choose your';
+  static final ListingTone _page = ListingTone.indigo;
+  static const List<String> _stateArts = [ListingArt.mountain, ListingArt.camping, ListingArt.tent, ListingArt.beach];
+  static final List<ListingTone> _stateTones = [ListingTone.cA, ListingTone.cC, ListingTone.cF, ListingTone.cD];
 
   final _search = TextEditingController();
+  final _focus = FocusNode();
   late final TripCityCatalog _catalog;
   late final MyTripsController _trips;
   Worker? _tabWorker;
@@ -73,6 +71,7 @@ class _TripsDiscoveryScreenState extends State<TripsDiscoveryScreen> {
   void dispose() {
     _tabWorker?.dispose();
     _search.dispose();
+    _focus.dispose();
     super.dispose();
   }
 
@@ -125,22 +124,24 @@ class _TripsDiscoveryScreenState extends State<TripsDiscoveryScreen> {
     });
   }
 
+  Widget _center(Widget child) => Center(
+        child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: _maxWidth), child: child),
+      );
+
   @override
   Widget build(BuildContext context) {
-    final w = MediaQuery.sizeOf(context).width;
-    final side = w > _maxWidth ? (w - _maxWidth) / 2 : KitMetrics.gutter;
+    final media = MediaQuery.of(context);
+    final top = media.padding.top;
     final page = Scaffold(
-      backgroundColor: DesignColors.scaffold,
+      backgroundColor: ListingPalette.indigo.page,
       resizeToAvoidBottomInset: false,
-      body: Column(
-        children: [
-          MediaQuery.withClampedTextScaling(
-            maxScaleFactor: 1.3,
-            child: const ModuleHeader(title: TripStringsTab.title, tone: KitTone.trip, tabRoot: true),
-          ),
-          Expanded(
-            child: RefreshIndicator(
-              color: KitTone.trip.accentDark,
+      body: KitStatusBar(
+        lightIcons: false,
+        child: Stack(
+          children: [
+            RefreshIndicator(
+              color: _page.g2,
+              edgeOffset: top,
               onRefresh: () async {
                 _trips.load();
                 await _refresh(force: true);
@@ -149,17 +150,16 @@ class _TripsDiscoveryScreenState extends State<TripsDiscoveryScreen> {
                 keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
                 physics: const AlwaysScrollableScrollPhysics(),
                 slivers: [
-                  SliverPadding(
-                    padding: EdgeInsets.fromLTRB(side, ModuleHeader.contentGap, side, 0),
-                    sliver: SliverToBoxAdapter(child: _top()),
-                  ),
-                  ..._body(side),
+                  SliverToBoxAdapter(child: SizedBox(height: top)),
+                  SliverToBoxAdapter(child: _center(_top())),
+                  ..._body(media.size.width),
                   SliverToBoxAdapter(child: SizedBox(height: BarMetrics.bodyBottomOf(context))),
                 ],
               ),
             ),
-          ),
-        ],
+            Positioned(left: 0, right: 0, top: 0, height: top, child: ColoredBox(color: ListingPalette.indigo.page)),
+          ],
+        ),
       ),
     );
     return TabEntrance(tab: AppTabs.trips, child: page);
@@ -167,177 +167,147 @@ class _TripsDiscoveryScreenState extends State<TripsDiscoveryScreen> {
 
   Widget _top() => Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
         children: [
+          MediaQuery.withClampedTextScaling(
+            maxScaleFactor: 1.3,
+            child: ModuleTitleBar(
+              tone: _page,
+              art: ListingArt.luggage,
+              title: TripStringsTab.title,
+              subtitle: _lead,
+              subtitleFirst: true,
+            ),
+          ),
           _searchBox(),
-          const SizedBox(height: 12),
           _filterRow(),
           if (!_typing) ...[
             Obx(() {
               final t = _trips.continueTrip;
               return t == null ? const SizedBox.shrink() : _continueCard(t);
             }),
-            const SizedBox(height: 20),
-            Text(TripStringsTab.sectionTitle, style: TypeTokens.style(18, FontWeight.w700, letterSpacing: 0.2)),
-            const SizedBox(height: 2),
-            Text(TripStringsTab.sectionSub, style: TypeTokens.style(13, FontWeight.w400, color: TypeTokens.secondary)),
-          ],
-          const SizedBox(height: 12),
+            TitleRow3D(title: TripStringsTab.sectionTitle, subtitle: TripStringsTab.sectionSub, tone: _page),
+          ] else
+            const SizedBox(height: 8),
         ],
       );
 
-  Widget _searchBox() => TextField(
-        controller: _search,
-        onChanged: _onSearch,
-        inputFormatters: noEmojiInputFormatters,
-        textInputAction: TextInputAction.search,
-        cursorColor: KitTone.trip.accentDark,
-        style: TypeTokens.style(14, FontWeight.w500),
-        decoration: InputDecoration(
-          hintText: TripStringsTab.searchHint,
-          hintStyle: TypeTokens.style(14, FontWeight.w400, color: TypeTokens.secondary),
-          prefixIcon: const Icon(Icons.search_rounded, size: 20, color: DesignColors.textGrey),
-          suffixIcon: _query.isEmpty
-              ? null
-              : IconButton(
-                  tooltip: TripStringsTab.clearSearch,
-                  onPressed: _clearSearch,
-                  icon: const Icon(Icons.close_rounded, size: 18, color: DesignColors.textGrey),
-                ),
-          filled: true,
-          fillColor: DesignColors.surface,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-          border: const OutlineInputBorder(borderRadius: KitMetrics.buttonRadius, borderSide: BorderSide.none),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: KitMetrics.buttonRadius,
-            borderSide: BorderSide(color: KitTone.trip.accentDark, width: 1.5),
+  Widget _searchBox() => SearchPill(
+        tone: _page,
+        inline: true,
+        value: TripStringsTab.searchHint,
+        buttonArt: ListingArt.compass,
+        field: TextField(
+          controller: _search,
+          focusNode: _focus,
+          onChanged: _onSearch,
+          inputFormatters: noEmojiInputFormatters,
+          textInputAction: TextInputAction.search,
+          cursorColor: _page.g2,
+          maxLines: 1,
+          style: Ink3D.text(16, FontWeight.w400, Ink3D.body, letterSpacing: 0),
+          decoration: InputDecoration(
+            isCollapsed: true,
+            isDense: true,
+            filled: false,
+            contentPadding: const EdgeInsets.symmetric(vertical: 8),
+            hintText: TripStringsTab.searchHint,
+            hintStyle: Ink3D.text(16, FontWeight.w400, Ink3D.hint, letterSpacing: 0),
+            border: InputBorder.none,
+            enabledBorder: InputBorder.none,
+            focusedBorder: InputBorder.none,
+            disabledBorder: InputBorder.none,
           ),
         ),
-      );
-
-  Widget _filterRow() => SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          children: [
-            Obx(() => _chip(
-                  TripStringsTab.myTripsCount(_trips.openTripCount),
-                  selected: false,
-                  icon: Icons.luggage_rounded,
-                  onTap: TripNavigation.openMyTrips,
-                )),
-            if (_states.length >= 2) ...[
-              const SizedBox(width: 8),
-              _chip(TripStringsTab.all, selected: _state == null, onTap: () => _pickState(null)),
-              for (final s in _states) ...[
-                const SizedBox(width: 8),
-                _chip(s, selected: _state == s, onTap: () => _pickState(s)),
-              ],
-            ],
-          ],
-        ),
-      );
-
-  Widget _chip(String label, {required bool selected, required VoidCallback onTap, IconData? icon}) {
-    const tone = KitTone.trip;
-    final fg = selected ? DesignColors.onPrimary : tone.accentDark;
-    return PressScale(
-      child: Material(
-        color: selected ? tone.accentDark : DesignColors.surface,
-        borderRadius: CardRadius.pill,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: CardRadius.pill,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: KitMetrics.touch),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 14),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (icon != null) ...[Icon(icon, size: 18, color: fg), const SizedBox(width: 6)],
-                  Text(label, maxLines: 1, style: TypeTokens.style(13, FontWeight.w700, color: fg)),
-                ],
+        buttonSemantics: _query.isEmpty ? TripStringsTab.searchHint : TripStringsTab.clearSearch,
+        onButtonTap: _query.isEmpty ? _focus.requestFocus : _clearSearch,
+        buttonChild: _query.isEmpty
+            ? null
+            : const Tooltip(
+                message: TripStringsTab.clearSearch,
+                child: Icon(Icons.close_rounded, color: DesignColors.onPrimary, size: 26),
               ),
+      );
+
+  Widget _filterRow() => ChipCPRow(
+        children: [
+          Obx(() => ChipCP(
+                tone: ListingTone.cB,
+                art: ListingArt.luggage,
+                label: TripStringsTab.myTripsCount(_trips.openTripCount),
+                onTap: TripNavigation.openMyTrips,
+              )),
+          if (_states.length >= 2) ...[
+            ChipCP(
+              tone: ListingTone.teal,
+              art: ListingArt.worldMap,
+              label: TripStringsTab.all,
+              off: _state != null,
+              onTap: () => _pickState(null),
             ),
-          ),
-        ),
-      ),
-    );
-  }
+            for (var i = 0; i < _states.length; i++)
+              ChipCP(
+                tone: _stateTones[i % _stateTones.length],
+                art: _stateArts[i % _stateArts.length],
+                label: _states[i],
+                off: _state != _states[i],
+                onTap: () => _pickState(_states[i]),
+              ),
+          ],
+        ],
+      );
 
   Widget _continueCard(TripSummaryModel t) {
-    final name = t.title.trim().isEmpty ? t.routeLine : t.title.trim();
-    final dates = TripBarRules.datesLine(t, TripClock.today());
+    final name = t.title.trim().isEmpty ? TripCard.routeTitle(t) : t.title.trim();
+    final dates = TripCard.lineBreakDates(TripBarRules.datesLine(t, TripClock.today()));
     final next = TripBarRules.nextTitle(t);
-    final sub = next == null ? dates : '$dates · $next';
-    const tone = KitTone.trip;
-    return Padding(
-      padding: const EdgeInsets.only(top: 16),
-      child: PressScale(
-        child: DecoratedBox(
-          decoration: const BoxDecoration(borderRadius: KitMetrics.photo, boxShadow: ShadowTokens.elev1),
-          child: Material(
-            color: DesignColors.surface,
-            borderRadius: KitMetrics.photo,
-            child: InkWell(
-              onTap: () => _continue(t),
-              borderRadius: KitMetrics.photo,
-              child: Padding(
-                padding: const EdgeInsets.all(14),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(color: tone.tint, shape: BoxShape.circle),
-                      child: Icon(Icons.arrow_forward_rounded, color: tone.accentDark),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            TripStringsTab.continueHeading,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TypeTokens.style(12, FontWeight.w600, color: tone.accentDark),
-                          ),
-                          Text(
-                            name,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: TypeTokens.style(15, FontWeight.w700),
-                          ),
-                          Text(
-                            sub,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: TypeTokens.style(13, FontWeight.w400, color: TypeTokens.secondary),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Icon(Icons.chevron_right_rounded, color: tone.accentDark),
-                  ],
-                ),
-              ),
-            ),
-          ),
+    final p = t.progress;
+    final needs = TripBarRules.needCount(t);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        TitleRow3D(title: TripStringsTab.continueHeading, tone: _page),
+        WideCard(
+          tone: ListingTone.cB,
+          art: ListingArt.luggage,
+          title: name,
+          subtitle: next == null ? dates : '$dates\n$next',
+          chips: [
+            if (p.total > 0) TripStringsTab.doneShort(p.done, p.total),
+            if (needs > 0) TripStringsV2Plan.needsYou(needs) else if (p.inProgress > 0) TripStringsTab.waitingShort(p.inProgress),
+          ],
+          showPrice: false,
+          progress: p.percent / 100,
+          onTap: () => _continue(t),
         ),
-      ),
+      ],
     );
   }
 
-  List<Widget> _body(double side) {
-    final pad = EdgeInsets.symmetric(horizontal: side);
+  double _cell(double screenW) => ((screenW > _maxWidth ? _maxWidth : screenW) - 16) / 2;
+
+  Widget _pair(double cell, Widget a, Widget? b) => _center(
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          child: IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [a, b ?? SizedBox(width: cell)],
+            ),
+          ),
+        ),
+      );
+
+  Widget _stateBox(Widget card) => _center(Padding(padding: const EdgeInsets.fromLTRB(18, 8, 18, 0), child: card));
+
+  List<Widget> _body(double screenW) {
+    final cell = _cell(screenW);
     if (_load == _Load.loading && _cities.isEmpty) {
       return [
-        SliverPadding(
-          padding: pad,
-          sliver: SliverGrid(
-            gridDelegate: _gridDelegate,
-            delegate: SliverChildBuilderDelegate((_, _) => const _TileSkeleton(), childCount: 6),
-          ),
+        SliverList.builder(
+          itemCount: 3,
+          itemBuilder: (_, _) => _pair(cell, MealsCardSkeleton(width: cell), MealsCardSkeleton(width: cell)),
         ),
       ];
     }
@@ -365,95 +335,63 @@ class _TripsDiscoveryScreenState extends State<TripsDiscoveryScreen> {
             onAction: _state != null ? () => _pickState(null) : null,
           );
       }
-      return [SliverToBoxAdapter(child: card), ..._soon(side)];
+      return [SliverToBoxAdapter(child: _stateBox(card)), ..._soon()];
     }
     final cities = _cities;
+    Widget tile(int i) => TripCityTile(
+          key: ValueKey(cities[i].cityKey),
+          city: cities[i],
+          index: i,
+          width: cell,
+          onTap: () => TripNavigation.startWithCities([cities[i]]),
+        );
     return [
-      SliverPadding(
-        padding: pad,
-        sliver: SliverGrid(
-          gridDelegate: _gridDelegate,
-          delegate: SliverChildBuilderDelegate(
-            (_, i) => TripCityTile(
-              key: ValueKey(cities[i].cityKey),
-              city: cities[i],
-              onTap: () => TripNavigation.startWithCities([cities[i]]),
-            ),
-            childCount: cities.length,
-            addRepaintBoundaries: false,
-            findChildIndexCallback: (k) {
-              final id = (k as ValueKey<int>).value;
-              final i = cities.indexWhere((c) => c.cityKey == id);
-              return i < 0 ? null : i;
-            },
+      SliverList(
+        delegate: SliverChildBuilderDelegate(
+          (_, r) => KeyedSubtree(
+            key: ValueKey(cities[r * 2].cityKey),
+            child: _pair(cell, tile(r * 2), r * 2 + 1 < cities.length ? tile(r * 2 + 1) : null),
           ),
+          childCount: (cities.length + 1) ~/ 2,
+          addRepaintBoundaries: false,
+          findChildIndexCallback: (k) {
+            final id = (k as ValueKey<int>).value;
+            final i = cities.indexWhere((c) => c.cityKey == id);
+            return i < 0 || i.isOdd ? null : i ~/ 2;
+          },
         ),
       ),
-      ..._soon(side),
+      ..._soon(),
     ];
   }
 
-  List<Widget> _soon(double side) {
+  List<Widget> _soon() {
     final soon = _catalog.comingSoon(_query, stateName: _state);
     if (soon.isEmpty) return const [];
     return [
       SliverPadding(
-        padding: EdgeInsets.fromLTRB(side, 16, side, 0),
-        sliver: SliverList.list(children: [for (final c in soon) _SoonRow(city: c)]),
+        padding: const EdgeInsets.only(top: 8),
+        sliver: SliverList.list(children: [for (final c in soon) _center(_SoonCard(city: c))]),
       ),
     ];
   }
 }
 
-class _SoonRow extends StatelessWidget {
-  const _SoonRow({required this.city});
+class _SoonCard extends StatelessWidget {
+  const _SoonCard({required this.city});
 
   final TripCityModel city;
 
   @override
-  Widget build(BuildContext context) => Semantics(
-        label: '${city.name}, ${TripStringsTab.comingSoon}',
-        excludeSemantics: true,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 6),
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  city.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TypeTokens.style(14, FontWeight.w600, color: TypeTokens.secondary),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                TripStringsTab.comingSoon,
-                style: TypeTokens.style(12, FontWeight.w600, color: TypeTokens.secondary),
-              ),
-            ],
-          ),
-        ),
-      );
-}
-
-class _TileSkeleton extends StatelessWidget {
-  const _TileSkeleton();
-
-  @override
-  Widget build(BuildContext context) => const DecoratedBox(
-        decoration: BoxDecoration(borderRadius: KitMetrics.photo, color: DesignColors.surface),
-        child: Padding(
-          padding: EdgeInsets.all(10),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.end,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              FractionallySizedBox(widthFactor: 0.7, child: TemplatePlaceholder(height: 14)),
-              SizedBox(height: 6),
-              FractionallySizedBox(widthFactor: 0.4, child: TemplatePlaceholder(height: 10)),
-            ],
-          ),
-        ),
-      );
+  Widget build(BuildContext context) {
+    final place = city.stateName.isNotEmpty ? city.stateName : city.districtName;
+    return WideCard(
+      tone: ListingTone.cD,
+      kind: WideKind.slim,
+      art: ListingArt.calendar,
+      title: city.name,
+      subtitle: place.isEmpty ? TripStringsTab.comingSoon : '$place\n${TripStringsTab.comingSoon}',
+      semanticsLabel: '${city.name}, ${TripStringsTab.comingSoon}',
+    );
+  }
 }

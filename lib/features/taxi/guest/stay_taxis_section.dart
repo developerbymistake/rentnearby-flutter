@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 import '../../../design/design.dart';
+import '../../../design/extra/ext_details.dart';
 import '../../../controllers/location_controller.dart';
 import '../../../controllers/tab_config_controller.dart';
 import '../../../models/place_result_model.dart';
@@ -45,7 +46,7 @@ class StayTaxisSection extends StatefulWidget {
 }
 
 class _StayTaxisSectionState extends State<StayTaxisSection> with SingleTickerProviderStateMixin {
-  late final AnimationController _anim = AnimationController(duration: const Duration(milliseconds: 600), vsync: this);
+  late final AnimationController _anim;
   _Phase? _playedPhase;
   static const _sameCityMeters = 5000.0;
   static const _previewCount = 3;
@@ -59,6 +60,7 @@ class _StayTaxisSectionState extends State<StayTaxisSection> with SingleTickerPr
   _Phase _phase = _Phase.locating;
   int _gen = 0;
   String _summary = '';
+  String _summaryArt = ListingArt.bus;
   String? _tripId;
   DateTime? _tripDate;
   int? _tripPeople;
@@ -66,6 +68,7 @@ class _StayTaxisSectionState extends State<StayTaxisSection> with SingleTickerPr
   @override
   void initState() {
     super.initState();
+    _anim = AnimationController(duration: const Duration(milliseconds: 600), vsync: this);
     _resolveFrom();
     if (_from == null) {
       _locWorker = everAll(
@@ -149,6 +152,7 @@ class _StayTaxisSectionState extends State<StayTaxisSection> with SingleTickerPr
         if (!mounted || myGen != _gen) return;
         setState(() {
           _summary = _summaryOf(r);
+          _summaryArt = r.allTheWay.isNotEmpty && !r.plans.any((p) => p.cars > 1) ? ListingArt.taxi : ListingArt.bus;
           _phase = r.hasWays ? _Phase.summary : _Phase.noWays;
         });
         return;
@@ -267,45 +271,48 @@ class _StayTaxisSectionState extends State<StayTaxisSection> with SingleTickerPr
     }
     final body = switch (_phase) {
       _Phase.hidden => const <Widget>[],
-      _Phase.locating => [_note('Finding your city...')],
+      _Phase.locating => [_note(ListingArt.compass, 'Finding your city...')],
       _Phase.loading => [
-          for (var i = 0; i < _previewCount; i++)
-            const Padding(padding: EdgeInsets.only(top: 10), child: TaxiCardSkeleton()),
+          for (var i = 0; i < _previewCount; i++) const TaxiCardSkeleton(),
         ],
       _Phase.list => [
           for (final t in _items)
-            Padding(
-              padding: const EdgeInsets.only(top: 10),
-              child: TaxiCard(
-                key: ValueKey(t.id),
-                item: t,
-                onOpen: () =>
-                    TaxiNavigation.openDetail(t.id, matchedFare: t.matchedFare, matchedToName: t.matchedToName),
-              ),
+            TaxiCard(
+              key: ValueKey(t.id),
+              item: t,
+              tone: DetailLook.chipCoral,
+              inLabel: 'In $fromName',
+              onOpen: () =>
+                  TaxiNavigation.openDetail(t.id, matchedFare: t.matchedFare, matchedToName: t.matchedToName),
             ),
         ],
       _Phase.empty => [
           _note(
+            ListingArt.taxi,
             local ? 'No local taxis in $fromName yet' : 'No taxis from $fromName to ${widget.stayCityName} yet',
             action: 'Search taxis',
             onTap: _seeAll,
           ),
         ],
       _Phase.unavailable => [
-          _note('Turn on location to see taxis from your city', action: 'Open Taxi', onTap: _seeAll),
+          _note(ListingArt.roundPushpin, 'Turn on location to see taxis from your city', action: 'Open Taxi', onTap: _seeAll),
         ],
       _Phase.error => [
-          _note(local ? "Couldn't load taxis" : TripStringsStepsA3.waysFailed,
+          _note(ListingArt.taxi, local ? "Couldn't load taxis" : TripStringsStepsA3.waysFailed,
               action: TripStringsStepsA3.retry, onTap: _load),
         ],
       _Phase.citiesLoading => [
-          _note('${TripStringsCity.citiesLoadingTitle}. ${TripStringsCity.citiesLoadingBody}',
+          _note(ListingArt.worldMap, '${TripStringsCity.citiesLoadingTitle}. ${TripStringsCity.citiesLoadingBody}',
               action: TripStringsStepsA3.retry, onTap: _load),
         ],
-      _Phase.noCity => [_note('${TripStringsCity.noTaxisTitle('')}. ${TripStringsCity.noSupplyBody}')],
-      _Phase.offline => [_note(TripStringsStepsA3.waysOffline, action: TripStringsStepsA3.retry, onTap: _load)],
-      _Phase.summary => [_note(_summary, action: TripStringsStepsA3.seeWays, onTap: _openFeed)],
-      _Phase.noWays => [_note(TripStringsStepsA3.noWaysYet, action: TripStringsStepsA3.seeWays, onTap: _openFeed)],
+      _Phase.noCity => [_note(ListingArt.mountain, '${TripStringsCity.noTaxisTitle('')}. ${TripStringsCity.noSupplyBody}')],
+      _Phase.offline => [
+          _note(ListingArt.worldMap, TripStringsStepsA3.waysOffline, action: TripStringsStepsA3.retry, onTap: _load),
+        ],
+      _Phase.summary => [_note(_summaryArt, _summary, action: TripStringsStepsA3.seeWays, onTap: _openFeed)],
+      _Phase.noWays => [
+          _note(ListingArt.bus, TripStringsStepsA3.noWaysYet, action: TripStringsStepsA3.seeWays, onTap: _openFeed),
+        ],
     };
     final animate = _phase != _Phase.loading && _phase != _Phase.locating;
     final count = (1 + body.length).clamp(1, 4);
@@ -322,86 +329,9 @@ class _StayTaxisSectionState extends State<StayTaxisSection> with SingleTickerPr
     ]);
   }
 
-  Widget _note(String text, {String? action, VoidCallback? onTap}) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 10),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
-        decoration: BoxDecoration(
-          color: FitnessAppTheme.white,
-          borderRadius: PickKit.cardRadius,
-          boxShadow: PickKit.greyShadow(),
-        ),
-        child: Row(children: [
-          Expanded(
-            child: Text(text,
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-                style: TripKit.text(12, color: FitnessAppTheme.grey).copyWith(height: 1.4)),
-          ),
-          if (action != null && onTap != null) ...[
-            const SizedBox(width: 4),
-            TextButton(
-              onPressed: onTap,
-              style: TextButton.styleFrom(
-                foregroundColor: FitnessAppTheme.nearlyDarkBlue,
-                minimumSize: const Size(0, 40),
-                padding: const EdgeInsets.symmetric(horizontal: 10),
-              ),
-              child: Text(action, style: TripKit.text(12, weight: FontWeight.w700, color: FitnessAppTheme.nearlyDarkBlue)),
-            ),
-          ],
-        ]),
-      ),
-    );
-  }
+  Widget _note(String art, String text, {String? action, VoidCallback? onTap}) =>
+      GettingThereNote(tone: ListingTone.forest, art: art, text: text, actionLabel: action, onAction: onTap);
 
-  Widget _header({required String label, required bool seeAll}) {
-    return Container(
-      decoration: BoxDecoration(
-        color: FitnessAppTheme.white,
-        borderRadius: PickKit.cardRadius,
-        boxShadow: PickKit.greyShadow(),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(12, 10, 20, 10),
-        child: Row(children: [
-          Container(
-            width: 40,
-            height: 40,
-            padding: const EdgeInsets.all(6),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: PickKit.taxiGradient,
-              boxShadow: PickKit.shadow(PickKit.taxiDark),
-            ),
-            child: Image.asset(TravelIcon.taxi),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(label,
-                maxLines: 2, overflow: TextOverflow.ellipsis, style: TripKit.text(14).copyWith(letterSpacing: 0.2)),
-          ),
-          if (seeAll) const SizedBox(width: 4),
-          if (seeAll)
-            InkWell(
-              onTap: _seeAll,
-              borderRadius: BorderRadius.circular(12),
-              child: SizedBox(
-                height: 44,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  child: Row(mainAxisSize: MainAxisSize.min, children: [
-                    Text('See all', style: TripKit.text(12, weight: FontWeight.w700, color: FitnessAppTheme.nearlyDarkBlue)),
-                    const SizedBox(width: 2),
-                    const Icon(Icons.chevron_right_rounded, size: 16, color: FitnessAppTheme.nearlyDarkBlue),
-                  ]),
-                ),
-              ),
-            ),
-        ]),
-      ),
-    );
-  }
+  Widget _header({required String label, required bool seeAll}) =>
+      GettingThereHeader(tone: ListingTone.forest, label: label, onSeeAll: seeAll ? _seeAll : null);
 }

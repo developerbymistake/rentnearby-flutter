@@ -21,13 +21,13 @@ class GradientButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GateButton(
+    return GradientPillButton(
+      tone: ListingTone.indigo,
       label: label,
-      onPressed: onPressed,
-      isLoading: isLoading,
+      onTap: onPressed,
+      loading: isLoading,
+      danger: identical(gradient, TripEntryStyle.rose),
       height: height,
-      gradient: gradient,
-      shadowColor: shadowColor,
     );
   }
 }

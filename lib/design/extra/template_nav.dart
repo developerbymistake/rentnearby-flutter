@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import '../template/bottom_navigation_view/bottom_bar_view.dart';
 import '../template/fitness_app_theme.dart';
 import '../tokens/design_colors.dart';
 import '../tokens/bar_metrics.dart';
+import '../tokens/listing_palette.dart';
+import 'art_3d.dart';
 import 'motion_kit.dart';
 
-import 'package:bakhli/design/tokens/shadow_tokens.dart';
 class TemplateRail extends StatelessWidget {
   const TemplateRail({
     super.key,
@@ -101,6 +101,9 @@ class TemplateTitleRow extends StatelessWidget {
   }
 }
 
+const double _fabSize = 76;
+const BorderRadius _barRadius = BorderRadius.vertical(top: Radius.circular(16));
+
 class TemplateNavItem {
   const TemplateNavItem({
     required this.index,
@@ -109,6 +112,7 @@ class TemplateNavItem {
     String? selectedImage,
     this.itemKey,
     this.center = false,
+    this.activeColor,
   }) : selectedImage = selectedImage ?? image;
 
   final int index;
@@ -117,6 +121,7 @@ class TemplateNavItem {
   final String selectedImage;
   final Key? itemKey;
   final bool center;
+  final Color? activeColor;
 }
 
 class TemplateBottomBar extends StatefulWidget {
@@ -178,26 +183,28 @@ class _TemplateBottomBarState extends State<TemplateBottomBar>
         AnimatedBuilder(
           animation: _controller,
           builder: (BuildContext context, Widget? child) {
-            return PhysicalShape(
+            return DecoratedBox(
+              decoration: const BoxDecoration(borderRadius: _barRadius, boxShadow: Ink3D.topEdge),
+              child: PhysicalShape(
               color: FitnessAppTheme.white,
-              elevation: 16.0,
-              clipper: TabClipper(radius: curved.value * 38.0),
+              elevation: 0,
+              clipper: const ShapeBorderClipper(shape: RoundedRectangleBorder(borderRadius: _barRadius)),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: <Widget>[
                   SizedBox(
                     height: BarMetrics.barHeight,
                     child: Padding(
-                      padding:
-                          const EdgeInsets.only(left: 8, right: 8, top: 4),
+                      padding: const EdgeInsets.symmetric(horizontal: 6),
                       child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: <Widget>[
                           Expanded(
-                            child: Row(children: [for (final i in left) _tab(i)]),
+                            child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [for (final i in left) _tab(i)]),
                           ),
-                          SizedBox(width: curved.value * 64.0),
+                          SizedBox(width: curved.value * 84.0),
                           Expanded(
-                            child: Row(children: [for (final i in right) _tab(i)]),
+                            child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [for (final i in right) _tab(i)]),
                           ),
                         ],
                       ),
@@ -206,21 +213,22 @@ class _TemplateBottomBarState extends State<TemplateBottomBar>
                   SizedBox(height: widget.bottomInset),
                 ],
               ),
+              ),
             );
           },
         ),
         Padding(
           padding: EdgeInsets.only(bottom: widget.bottomInset),
           child: SizedBox(
-            width: BarMetrics.centreOverflow * 2.0,
+            width: _fabSize,
             height: BarMetrics.boxHeight,
             child: Align(
               alignment: Alignment.topCenter,
               child: SizedBox(
-                width: 38 * 2.0,
-                height: 38 * 2.0,
+                width: _fabSize,
+                height: _fabSize,
                 child: Padding(
-                  padding: const EdgeInsets.all(8.0),
+                  padding: EdgeInsets.zero,
                   child: ScaleTransition(
                     alignment: Alignment.center,
                     scale: Tween<double>(begin: 0.0, end: 1.0).animate(curved),
@@ -241,14 +249,15 @@ class _TemplateBottomBarState extends State<TemplateBottomBar>
         Positioned(
           left: 0,
           right: 0,
-          bottom: widget.bottomInset + 6,
+          bottom: widget.bottomInset + 5,
           child: IgnorePointer(
             child: Center(
               child: ScaleTransition(
                 scale: Tween<double>(begin: 0.0, end: 1.0).animate(curved),
                 child: _NavLabel(
                     label: center.label,
-                    selected: widget.selectedIndex == center.index),
+                    selected: widget.selectedIndex == center.index,
+                    activeColor: center.activeColor),
               ),
             ),
           ),
@@ -259,10 +268,11 @@ class _TemplateBottomBarState extends State<TemplateBottomBar>
 }
 
 class _NavLabel extends StatelessWidget {
-  const _NavLabel({required this.label, required this.selected});
+  const _NavLabel({required this.label, required this.selected, this.activeColor});
 
   final String label;
   final bool selected;
+  final Color? activeColor;
 
   @override
   Widget build(BuildContext context) {
@@ -271,9 +281,10 @@ class _NavLabel extends StatelessWidget {
       curve: Curves.fastOutSlowIn,
       style: TextStyle(
         fontFamily: FitnessAppTheme.fontName,
-        fontSize: 11,
-        fontWeight: selected ? FontWeight.bold : FontWeight.w500,
-        color: selected ? FitnessAppTheme.nearlyDarkBlue : FitnessAppTheme.grey,
+        fontSize: 10,
+        height: 1.5,
+        fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
+        color: selected ? (activeColor ?? ListingPalette.indigo.text) : Ink3D.grey,
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 2),
@@ -357,13 +368,14 @@ class _NavTabState extends State<_NavTab>
       hoverColor: Colors.transparent,
       onTap: widget.onTap,
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.start,
         children: [
+          const SizedBox(height: 10),
           SizedBox(
             width: 44,
-            height: 44,
+            height: 38,
             child: Stack(
+              clipBehavior: Clip.none,
               alignment: AlignmentDirectional.center,
               children: <Widget>[
                 ScaleTransition(
@@ -375,11 +387,13 @@ class _NavTabState extends State<_NavTab>
                   child: AnimatedOpacity(
                     duration: const Duration(milliseconds: 400),
                     curve: Curves.fastOutSlowIn,
-                    opacity: selected || widget.item.image != widget.item.selectedImage ? 1 : 0.6,
-                    child: Image.asset(
-                        selected ? widget.item.selectedImage : widget.item.image,
-                        width: 28,
-                        height: 28),
+                    opacity: selected || widget.item.image != widget.item.selectedImage ? 1 : 0.55,
+                    child: Art3D(
+                        asset: selected ? widget.item.selectedImage : widget.item.image,
+                        size: 38,
+                        shadowBlur: 3,
+                        shadowOffset: const Offset(2, 3),
+                        shadowAlpha: selected ? 0.25 : 0),
                   ),
                 ),
                 Positioned(top: 2, left: 8, child: _dot(8, 0.2, 1.0)),
@@ -388,7 +402,8 @@ class _NavTabState extends State<_NavTab>
               ],
             ),
           ),
-          _NavLabel(label: widget.item.label, selected: selected),
+          const SizedBox(height: 3),
+          _NavLabel(label: widget.item.label, selected: selected, activeColor: widget.item.activeColor),
         ],
       ),
     );
@@ -433,15 +448,12 @@ class _CenterButtonState extends State<_CenterButton>
       child: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
-              colors: [
-                FitnessAppTheme.nearlyDarkBlue,
-                DesignColors.navAccentEnd,
-              ],
+              colors: [DesignColors.navAccentEnd, ListingPalette.indigo.g2],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight),
           shape: BoxShape.circle,
           boxShadow: <BoxShadow>[
-            ShadowTokens.tint(FitnessAppTheme.nearlyDarkBlue, widget.selected ? ShadowSpec.navLift : ShadowSpec.navIdle),
+            BoxShadow(color: ListingPalette.indigo.g2.withValues(alpha: 0.4), offset: const Offset(8, 16), blurRadius: 16),
           ],
         ),
         child: Material(
@@ -453,7 +465,7 @@ class _CenterButtonState extends State<_CenterButton>
             focusColor: Colors.transparent,
             onTap: widget.onTap,
             child: Center(
-              child: Image.asset(widget.item.image, width: 34, height: 34),
+              child: Art3D(asset: widget.item.image, size: 46, shadowBlur: 3, shadowOffset: const Offset(2, 4), shadowAlpha: 0.3),
             ),
           ),
         ),

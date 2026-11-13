@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:bakhli/design/design.dart';
+import 'package:bakhli/design/extra/ext_jobs.dart';
 import 'jobs_feed_controller.dart';
 import '../models/job_experience_bucket.dart';
 import '../models/job_lookups_model.dart';
@@ -20,7 +21,7 @@ class JobsFilterSheetV2 extends StatefulWidget {
   ];
 
   static Future<void> show(BuildContext context, {required JobsFeedController controller}) {
-    return SheetFrame.show<void>(context, builder: (_) => JobsFilterSheetV2(controller: controller));
+    return Sheet3D.show<void>(context, builder: (_) => JobsFilterSheetV2(controller: controller));
   }
 
   @override
@@ -51,17 +52,12 @@ class _JobsFilterSheetV2State extends State<JobsFilterSheetV2> {
     super.dispose();
   }
 
-  Widget _section(String label, Widget chips, {bool last = false}) => Column(
+  Widget _section(String label, Widget chips, {bool first = false}) => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: _sectionLabelStyle),
-          const SizedBox(height: 8),
+          if (!first) Container(height: 1, margin: const EdgeInsets.only(top: 12), color: Ink3D.line),
+          JobsSheetLabel(label, first: first),
           chips,
-          if (!last) ...[
-            const SizedBox(height: 12),
-            const Divider(height: 1, color: DesignColors.dividerSoft),
-            const SizedBox(height: 16),
-          ],
         ],
       );
 
@@ -77,39 +73,38 @@ class _JobsFilterSheetV2State extends State<JobsFilterSheetV2> {
           isActive: (i) => _departmentId == (i == 0 ? null : departments[i - 1].id),
           onTap: (i) => setState(() => _departmentId = i == 0 ? null : departments[i - 1].id),
         ),
+        first: true,
       );
     });
-    return SheetFrame(
+    final tone = JobsUi.look;
+    return Sheet3D(
+      tone: tone,
+      art: ListingArt.luggage,
       title: 'Filter · Jobs',
-      footer: Row(
+      size: SheetSize.list,
+      footer: PillButtonRow(
         children: [
-          Expanded(
-            child: SecondaryButton(
-              label: 'Reset',
-              tone: JobsUi.tone,
-              onPressed: () => setState(() {
-                _departmentId = null;
-                _experience = null;
-                _minSalary = null;
-              }),
-            ),
+          WhitePillButton(
+            tone: tone,
+            label: 'Reset',
+            onTap: () => setState(() {
+              _departmentId = null;
+              _experience = null;
+              _minSalary = null;
+            }),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            flex: 2,
-            child: PrimaryButton(
-              label: 'Apply',
-              tone: JobsUi.tone,
-              onPressed: () {
-                _closing = true;
-                Navigator.of(context).pop();
-                widget.controller.applyFilters(
-                  departmentId: _departmentId,
-                  experience: _experience,
-                  minSalary: _minSalary,
-                );
-              },
-            ),
+          GradientPillButton(
+            tone: tone,
+            label: 'Apply',
+            onTap: () {
+              _closing = true;
+              Navigator.of(context).pop();
+              widget.controller.applyFilters(
+                departmentId: _departmentId,
+                experience: _experience,
+                minSalary: _minSalary,
+              );
+            },
           ),
         ],
       ),
@@ -132,7 +127,6 @@ class _JobsFilterSheetV2State extends State<JobsFilterSheetV2> {
               isActive: (i) => _minSalary == JobsFilterSheetV2.salaryOptions[i].value,
               onTap: (i) => setState(() => _minSalary = JobsFilterSheetV2.salaryOptions[i].value),
             ),
-            last: true,
           ),
         ],
       ),
@@ -141,5 +135,4 @@ class _JobsFilterSheetV2State extends State<JobsFilterSheetV2> {
 
   static JobExperienceBucket? _experienceAt(int i) => i == 0 ? null : JobExperienceBucket.all[i - 1];
 
-  static final _sectionLabelStyle = TypeTokens.style(11, FontWeight.w600, color: DesignColors.textSecondary, letterSpacing: 0.4);
 }

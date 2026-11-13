@@ -12,7 +12,7 @@ class TripStringsA6 {
   static String? legSeats(WayLeg leg) => leg.carsNeeded <= 1 ? null : (leg.seatsNote ?? carsPerLeg(leg.carsNeeded));
   static String seatsNote(int? seats, int cars, int people) {
     final s = seats == null ? '' : 'Seats ${TaxiOptionSets.seatsLabel(seats)} · ';
-    return '$s$cars cars for $people';
+    return '$s$cars ${cars == 1 ? 'car' : 'cars'} for $people';
   }
 
   static const String journeyGoneTitle = "Couldn't open this journey";

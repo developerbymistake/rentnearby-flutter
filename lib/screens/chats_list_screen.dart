@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:bakhli/design/design.dart';
-import 'package:bakhli/design/extra/chat_kit.dart';
+import 'package:bakhli/design/extra/ext_chat.dart';
 import '../config/app_insets.dart';
 import '../config/app_routes.dart';
 import '../controllers/chat_controller.dart';
@@ -104,129 +104,132 @@ class _ChatsListScreenState extends State<ChatsListScreen>
         .toList();
   }
 
+  static final ListingTone _tone = ListingTone.forest;
+
+  void _toggleSearch() {
+    final opening = !_searchOpen;
+    setState(() {
+      _searchOpen = opening;
+      if (!opening) _query = '';
+    });
+    if (opening) {
+      _searchAnim.forward();
+    } else {
+      _searchAnim.reverse();
+      _searchCtrl.clear();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: DesignColors.scaffold,
-      body: Column(
-        children: [
-          ModuleHeader(
-            title: 'Messages',
-            tone: KitTone.stay,
-            onBack: () => Get.back(),
-            trailing: [
-              IconButton(
-                onPressed: () {
-                  final opening = !_searchOpen;
-                  setState(() {
-                    _searchOpen = opening;
-                    if (!opening) _query = '';
-                  });
-                  if (opening) {
-                    _searchAnim.forward();
-                  } else {
-                    _searchAnim.reverse();
-                    _searchCtrl.clear();
-                  }
-                },
-                icon: Icon(
-                  _searchOpen ? Icons.close_rounded : Icons.search_rounded,
-                  color: DesignColors.textInverse,
+    return KitStatusBar(
+      lightIcons: false,
+      child: Scaffold(
+        backgroundColor: ListingPalette.forest.page,
+        body: SafeArea(
+          bottom: false,
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(18, 10, 18, 0),
+                child: Row(
+                  children: [
+                    ChatRoundButton3D(icon: Icons.chevron_left_rounded, onTap: () => Get.back(), tooltip: 'Back', tone: _tone),
+                    const Spacer(),
+                    ChatRoundButton3D(
+                      icon: _searchOpen ? Icons.close_rounded : Icons.search_rounded,
+                      onTap: _toggleSearch,
+                      tooltip: _searchOpen ? 'Close search' : 'Search',
+                      tone: _tone,
+                      gradient: true,
+                      size: 46,
+                    ),
+                  ],
                 ),
+              ),
+              Padding(
+                padding: const EdgeInsets.only(top: 18),
+                child: ModuleTitleBar(tone: _tone, art: ListingArt.speechBalloon, title: 'Messages'),
+              ),
+              SizeTransition(
+                sizeFactor: _searchSize,
+                alignment: Alignment.topCenter,
+                child: FadeTransition(
+                  opacity: _searchAnim,
+                  child: (!_searchAnim.isDismissed || _searchOpen)
+                      ? _buildSearchBox()
+                      : const SizedBox(width: double.infinity),
+                ),
+              ),
+              Expanded(
+                child: Obx(() {
+                  final loading = _ctrl.conversationsLoading.value;
+                  final items = _ctrl.conversations;
+
+                  if (loading && items.isEmpty) return _buildShimmer();
+                  if (items.isEmpty) return _buildEmpty();
+
+                  final filtered = _filtered(items);
+                  if (filtered.isEmpty) return _buildNoMatches();
+
+                  final loadingMore = _ctrl.loadingMoreConversations.value;
+                  return RefreshIndicator(
+                    color: _tone.g2,
+                    backgroundColor: DesignColors.surface,
+                    onRefresh: _refresh,
+                    child: ListView.builder(
+                      controller: _scrollCtrl,
+                      physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+                      padding: EdgeInsets.only(bottom: KitMetrics.gutter + AppInsets.bottomViewPadding(context)),
+                      itemCount: filtered.length + (loadingMore ? 1 : 0),
+                      itemBuilder: (_, i) {
+                        if (i >= filtered.length) {
+                          return _buildLoadMoreSpinner();
+                        }
+                        return EntranceOnce(
+                          key: ValueKey(filtered[i].id),
+                          index: i < 6 ? i : 6,
+                          child: _conversationCard(filtered[i]),
+                        );
+                      },
+                    ),
+                  );
+                }),
               ),
             ],
           ),
-          Expanded(
-            child: SafeArea(
-              top: false,
-              bottom: false,
-              child: Column(
-                children: [
-                  SizeTransition(
-                    sizeFactor: _searchSize,
-                    alignment: Alignment.topCenter,
-                    child: FadeTransition(
-                      opacity: _searchAnim,
-                      child: (!_searchAnim.isDismissed || _searchOpen)
-                          ? _buildSearchBox()
-                          : const SizedBox(width: double.infinity),
-                    ),
-                  ),
-                  Expanded(
-                    child: Obx(() {
-                      final loading = _ctrl.conversationsLoading.value;
-                      final items = _ctrl.conversations;
-
-                      if (loading && items.isEmpty) return _buildShimmer();
-                      if (items.isEmpty) return _buildEmpty();
-
-                      final filtered = _filtered(items);
-                      if (filtered.isEmpty) return _buildNoMatches();
-
-                      final loadingMore = _ctrl.loadingMoreConversations.value;
-                      return RefreshIndicator(
-                        color: DesignColors.primary,
-                        backgroundColor: DesignColors.surface,
-                        onRefresh: _refresh,
-                        child: ListView.builder(
-                          controller: _scrollCtrl,
-                          physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
-                          padding: EdgeInsets.fromLTRB(
-                            0,
-                            KitMetrics.cardGap,
-                            0,
-                            KitMetrics.gutter + AppInsets.bottomViewPadding(context),
-                          ),
-                          itemCount: filtered.length + (loadingMore ? 1 : 0),
-                          itemBuilder: (_, i) {
-                            if (i >= filtered.length) {
-                              return _buildLoadMoreSpinner();
-                            }
-                            return EntranceOnce(
-                              key: ValueKey(filtered[i].id),
-                              index: i < 6 ? i : 6,
-                              child: _conversationCard(filtered[i]),
-                            );
-                          },
-                        ),
-                      );
-                    }),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
 
   Widget _buildSearchBox() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(KitMetrics.gutter, 14, KitMetrics.gutter, 6),
-      child: Container(
-        decoration: BoxDecoration(
-          color: DesignColors.surface,
-          borderRadius: const BorderRadius.all(Radius.circular(38)),
-          boxShadow: ShadowTokens.elev1,
-        ),
-        child: TextField(
-          controller: _searchCtrl,
-          inputFormatters: noEmojiInputFormatters,
-          onChanged: (v) {
-            setState(() => _query = v);
-            _autoFetchCount = 0;
-            _maybeFetchMoreForSearch();
-          },
-          cursorColor: DesignColors.primary,
-          style: TypeTokens.style(16, FontWeight.w400, color: DesignColors.textPrimary),
-          decoration: InputDecoration(
-            hintText: 'Search by name or address',
-            hintStyle: TypeTokens.style(16, FontWeight.w400, color: DesignColors.textMuted),
-            prefixIcon: const Icon(Icons.search_rounded, size: 20, color: DesignColors.textMuted),
-            border: InputBorder.none,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          ),
+    return SearchPill(
+      tone: _tone,
+      value: '',
+      buttonArt: '',
+      inline: true,
+      margin: const EdgeInsets.fromLTRB(18, 18, 18, 0),
+      buttonChild: const Icon(Icons.search_rounded, size: 24, color: DesignColors.onPrimary),
+      field: TextField(
+        controller: _searchCtrl,
+        inputFormatters: noEmojiInputFormatters,
+        onChanged: (v) {
+          setState(() => _query = v);
+          _autoFetchCount = 0;
+          _maybeFetchMoreForSearch();
+        },
+        cursorColor: _tone.g2,
+        style: Ink3D.text(16, FontWeight.w400, Ink3D.body, letterSpacing: 0),
+        decoration: InputDecoration(
+          isCollapsed: true,
+          filled: false,
+          contentPadding: const EdgeInsets.symmetric(vertical: 10),
+          hintText: 'Search by name or address',
+          hintStyle: Ink3D.text(16, FontWeight.w400, Ink3D.hint, letterSpacing: 0),
+          border: InputBorder.none,
+          enabledBorder: InputBorder.none,
+          focusedBorder: InputBorder.none,
         ),
       ),
     );
@@ -234,14 +237,6 @@ class _ChatsListScreenState extends State<ChatsListScreen>
 
   Widget _conversationCard(ConversationModel c) {
     final unread = c.unreadCount > 0;
-    final kind = ChatKindStyle.of(c.listingType);
-    final tone = KitTone(
-      accent: kind.accent,
-      accentDark: kind.dark,
-      tint: kind.tint,
-      gradient: kind.gradient,
-      glow: kind.dark,
-    );
     final statusLabel = c.isActive
         ? null
         : switch (c.status) {
@@ -250,94 +245,57 @@ class _ChatsListScreenState extends State<ChatsListScreen>
             'Blocked' => 'Blocked',
             _ => 'Unavailable',
           };
+    final kindLabel = ListingKindVisuals.labelOf(c.listingType);
     final place = '${c.listingTitle}${c.area != null && c.area!.isNotEmpty ? ' · ${c.area}' : ''}';
-    return ListRow(
+    return ChatThreadCard(
+      tone: ChatLook3D.toneFor(c.listingType),
+      initial: ChatLook3D.initialOf(c.otherPartyName),
+      sticker: ChatLook3D.artFor(c.listingType),
+      tag: statusLabel == null ? kindLabel : '$kindLabel · ${statusLabel.toUpperCase()}',
       title: c.otherPartyName,
       subtitle: place,
-      tag: ListingKindVisuals.labelOf(c.listingType),
-      notice: statusLabel,
-      tone: tone,
-      showChevron: false,
+      time: _timeAgo(c.lastMessageAt),
+      unread: unread ? (c.unreadCount > 99 ? '99+' : '${c.unreadCount}') : '',
+      preview: c.lastMessagePreview ?? 'Say hi',
       dimmed: !c.isActive,
       onTap: () => _openConversation(c),
-      leading: Container(
-        width: ListRow.tileSizeCompact,
-        height: ListRow.tileSizeCompact,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          gradient: kind.gradient,
-          borderRadius: KitMetrics.tileSmall,
-        ),
-        child: Text(
-          c.otherPartyName.isNotEmpty ? c.otherPartyName[0].toUpperCase() : '?',
-          style: TypeTokens.style(20, FontWeight.w700, color: DesignColors.surface),
-        ),
-      ),
-      trailing: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          Text(
-            _timeAgo(c.lastMessageAt),
-            style: TypeTokens.style(12, unread ? FontWeight.w600 : FontWeight.w400,
-                color: unread ? kind.dark : TypeTokens.secondary),
-          ),
-          if (unread) ...[
-            const SizedBox(height: 6),
-            Container(
-              constraints: const BoxConstraints(minWidth: 22),
-              height: 22,
-              padding: const EdgeInsets.symmetric(horizontal: 6),
-              alignment: Alignment.center,
-              decoration: BoxDecoration(color: kind.dark, borderRadius: CardRadius.pill),
-              child: Text(
-                c.unreadCount > 99 ? '99+' : '${c.unreadCount}',
-                style: TypeTokens.style(11, FontWeight.w700, color: DesignColors.surface),
-              ),
-            ),
-          ],
-        ],
-      ),
-      footer: Text(
-        c.lastMessagePreview ?? 'Say hi',
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: TypeTokens.style(14, unread ? FontWeight.w600 : FontWeight.w400,
-            color: unread ? DesignColors.textPrimary : TypeTokens.secondary),
-      ),
     );
   }
 
-  Widget _buildLoadMoreSpinner() => const Padding(
-    padding: EdgeInsets.symmetric(vertical: 16),
+  Widget _buildLoadMoreSpinner() => Padding(
+    padding: const EdgeInsets.only(top: 26, bottom: 16),
     child: Center(
       child: SizedBox(
-        width: 20,
-        height: 20,
-        child: CircularProgressIndicator(strokeWidth: 2, color: DesignColors.primary),
+        width: 24,
+        height: 24,
+        child: CircularProgressIndicator(strokeWidth: 3, color: _tone.g2, backgroundColor: _tone.haloBase.withValues(alpha: Alpha.soft)),
       ),
     ),
   );
 
-  Widget _buildEmpty() => const Align(
-    alignment: Alignment.topCenter,
-    child: StateCard(
-      asset: TravelIcon.chat,
-      title: 'No conversations yet',
-      message: 'Start a chat from any stay.',
-    ),
+  Widget _buildEmpty() => ListView(
+    physics: const NeverScrollableScrollPhysics(),
+    children: [
+      ChatStateCard3D(
+        tone: _tone,
+        art: ListingArt.speechBalloon,
+        title: 'No conversations yet',
+        message: 'Start a chat from any stay.',
+      ),
+    ],
   );
 
-  Widget _buildNoMatches() => Align(
-    alignment: Alignment.topCenter,
-    child: StateCard(asset: TravelIcon.route, title: 'No matches for "$_query"'),
+  Widget _buildNoMatches() => ListView(
+    physics: const NeverScrollableScrollPhysics(),
+    children: [
+      ChatStateCard3D(tone: _tone, art: ListingArt.compass, title: 'No matches for "$_query"'),
+    ],
   );
 
   Widget _buildShimmer() => ListView.builder(
     physics: const NeverScrollableScrollPhysics(),
-    padding: const EdgeInsets.only(top: KitMetrics.cardGap),
     itemCount: 6,
-    itemBuilder: (_, i) => ListRow.skeleton(compact: true),
+    itemBuilder: (_, i) => const ChatThreadCard.skeleton(),
   );
 
   static String _timeAgo(DateTime dt) {

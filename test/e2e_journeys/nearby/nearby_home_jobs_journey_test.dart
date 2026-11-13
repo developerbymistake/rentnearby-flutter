@@ -208,8 +208,8 @@ void main() {
       }, w: 360);
       expect(find.text('Stays near you'), findsOneWidget);
       expect(find.text('Taxis near you'), findsOneWidget);
-      expect(find.text('Nainital. About 3 km away'), findsOneWidget);
-      expect(find.text('Based near Haldwani. About 5 km away'), findsOneWidget);
+      expect(find.textContaining('Nainital. About 3 km away'), findsOneWidget);
+      expect(find.textContaining('Based near Haldwani. About 5 km away'), findsOneWidget);
     });
 
     testWidgets('far user: rails are honest, no near you, far label on cards', (t) async {
@@ -222,8 +222,8 @@ void main() {
       expect(find.text('Nearest taxis'), findsOneWidget);
       expect(find.text('Stays near you'), findsNothing);
       expect(find.text('Taxis near you'), findsNothing);
-      expect(find.text('Haridwar, Uttarakhand. About 210 km away'), findsOneWidget);
-      expect(find.text('Haldwani, Uttarakhand. About 420 km away'), findsOneWidget);
+      expect(find.textContaining('Haridwar, Uttarakhand. About 210 km away'), findsOneWidget);
+      expect(find.textContaining('Haldwani, Uttarakhand. About 420 km away'), findsOneWidget);
     });
 
     for (final w in journeyWidths) {

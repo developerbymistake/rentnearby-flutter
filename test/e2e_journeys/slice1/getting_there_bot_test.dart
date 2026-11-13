@@ -26,7 +26,7 @@ import 'package:maplibre_gl/maplibre_gl.dart';
 import '../../support/real_phone.dart';
 
 const _step = 'gettingThere';
-const _hint = 'Pick up to 3 from the list, or choose another option';
+const _hint = 'Pick at least one and send your enquiry to continue';
 
 // Fake server: shortlist storage.
 class _Repo implements TripShortlistRepository {
@@ -238,7 +238,7 @@ void main() {
 
     // Question card, nothing answered yet.
     expect(find.text("Let's get you there"), findsOneWidget);
-    expect(find.text('0% done'), findsOneWidget);
+    expect(find.text('0%'), findsOneWidget);
     expect(_bar(t).canNext, isFalse);
     await shot(t, 'FINAL_01_question');
 
@@ -278,7 +278,7 @@ void main() {
     await _tapText(t, 'Done');
     await _settle(t);
     expect(find.text('Great picks'), findsOneWidget);
-    expect(find.text('Yes, send to all'), findsOneWidget);
+    expect(find.text('Send to all'), findsOneWidget);
     expect(find.text('Not now'), findsOneWidget);
     expect(r.bulkCalls, isEmpty, reason: 'nothing is sent before the user says yes');
     await shot(t, 'FINAL_05_review_sheet');
@@ -286,7 +286,7 @@ void main() {
     // Yes: the bulk call carries exactly the 3 shortlisted ids.
     final picked = r.sl.items.where((i) => i.stepKey == _step).map((i) => i.listingId).toSet();
     expect(picked.length, 3);
-    await _tapText(t, 'Yes, send to all');
+    await _tapText(t, 'Send to all');
     await _settle(t);
     expect(r.bulkCalls.length, 1);
     expect(r.bulkCalls.single.toSet(), picked);
@@ -295,7 +295,10 @@ void main() {
 
     // Close any result sheet and the list; the guide card must show the sent state and Next.
     while (find.byType(TaxiWaysFeedScreen).evaluate().isNotEmpty) {
-      if (find.text('Done').evaluate().isNotEmpty && find.byType(BottomSheet).evaluate().isNotEmpty) {
+      if (find.text('Back to plan').evaluate().isNotEmpty && find.byType(BottomSheet).evaluate().isNotEmpty) {
+        await _tapText(t, 'Back to plan');
+        await _settle(t);
+      } else if (find.text('Done').evaluate().isNotEmpty && find.byType(BottomSheet).evaluate().isNotEmpty) {
         await _tapText(t, 'Done');
       } else if (find.byType(BottomSheet).evaluate().isNotEmpty) {
         await t.tapAt(const Offset(180, 20));
@@ -307,7 +310,7 @@ void main() {
     await _settle(t);
     expect(find.byType(TaxiWaysFeedScreen), findsNothing);
     expect(r.c.guideAnswered(_step), isTrue, reason: 'a send where at least one recipient succeeded answers the step');
-    expect(find.text('25% done'), findsOneWidget);
+    expect(find.text('25%'), findsOneWidget);
     expect(r.c.guideState.percent.value, 25);
     expect(_bar(t).canNext, isTrue);
     await shot(t, 'FINAL_07_sent_card');
@@ -322,7 +325,7 @@ void main() {
     r.close();
   });
 
-  testWidgets('BOT guide-card path: back from the list with 3 picks, review card lists them, Yes send to all', (t) async {
+  testWidgets('BOT guide-card path: back from the list with 3 picks, review card lists them, Send to all', (t) async {
     final r = _Rig();
     await _pump(t, r);
     await _tapText(t, 'Help me find');
@@ -336,10 +339,11 @@ void main() {
     // Back with 3 picks and nothing sent: review card, still unanswered, Next disabled.
     expect(find.text('Great picks'), findsOneWidget);
     expect(r.c.guideAnswered(_step), isFalse);
-    expect(_bar(t).canNext, isFalse);
-    expect(find.text('0% done'), findsOneWidget);
+    expect(find.byType(TripGuideBar), findsNothing, reason: 'the review card has no Next bar');
+    expect(find.text('0%'), findsOneWidget);
     for (final n in _names.take(3)) {
-      expect(find.textContaining(n), findsWidgets, reason: '$n is listed on the review card');
+      expect(find.byWidgetPredicate((w) => w is Semantics && w.properties.label == n), findsOneWidget, reason: '$n is listed on the review card');
+      expect(find.text(n.split(' ').first), findsOneWidget);
     }
     await shot(t, 'FINAL_09_review_card_on_plan');
 
@@ -356,13 +360,13 @@ void main() {
       );
     };
     final shortlisted = r.repo.items.map((i) => i.listingId).toSet();
-    await _tapText(t, 'Yes, send to all');
+    await _tapText(t, 'Send to all');
     await _settle(t);
     expect(ids.toSet(), shortlisted);
     expect(ids.length, 3);
     expect(find.text('Enquiry sent'), findsOneWidget);
     expect(_bar(t).canNext, isTrue);
-    expect(find.text('25% done'), findsOneWidget);
+    expect(find.text('25%'), findsOneWidget);
     await shot(t, 'FINAL_10_sent_card_from_review_card');
     await _tapText(t, 'Next');
     await _settle(t);
@@ -405,17 +409,17 @@ void main() {
 
     await _back(t);
     expect(r.c.guideAnswered(_step), isFalse);
-    expect(find.text('0% done'), findsOneWidget);
+    expect(find.text('0%'), findsOneWidget);
     expect(_bar(t).canNext, isFalse);
     expect(find.text(_hint), findsOneWidget);
-    expect(find.text('Open the list'), findsOneWidget);
+    expect(find.text('Find taxis'), findsOneWidget);
     r.c.guideNext();
     await t.pump();
     expect(r.c.guideState.index.value, 0, reason: 'a direct forward call is refused too');
     expect(r.bulkCalls, isEmpty);
     await shot(t, 'FINAL_12_next_disabled_reason');
 
-    await _tapText(t, 'Open the list');
+    await _tapText(t, 'Find taxis');
     await _settle(t);
     expect(r.listOpens, 2);
     expect(find.byType(TaxiWaysFeedScreen), findsOneWidget);
@@ -434,7 +438,7 @@ void main() {
     await _back(t);
     expect(r.sl.countOf(_step), 1);
     expect(r.c.guideAnswered(_step), isFalse);
-    expect(_bar(t).canNext, isFalse);
+    expect(find.byType(TripGuideBar), findsNothing, reason: 'the review card has no Next bar');
     r.c.guideNext();
     expect(r.c.guideState.index.value, 0);
     await t.pump(const Duration(seconds: 6));
@@ -454,11 +458,11 @@ void main() {
           veryShortNotice: false,
           results: [for (final id in sent) TripSendResult(listingId: id, status: 'Failed')],
         );
-    await _tapText(t, 'Yes, send to all');
+    await _tapText(t, 'Send to all');
     await _settle(t);
     expect(r.c.guideAnswered(_step), isFalse);
-    expect(_bar(t).canNext, isFalse);
-    expect(find.text('0% done'), findsOneWidget);
+    expect(find.byType(TripGuideBar), findsNothing, reason: 'the review card has no Next bar');
+    expect(find.text('0%'), findsOneWidget);
     await t.pump(const Duration(seconds: 6));
     r.close();
   });
@@ -468,7 +472,7 @@ void main() {
     await _pump(t, r);
     await _tapText(t, 'Skip this');
     expect(r.c.guideAnswered(_step), isTrue);
-    expect(find.text('25% done'), findsOneWidget);
+    expect(find.text('25%'), findsOneWidget);
     expect(_bar(t).canNext, isTrue);
     await _tapText(t, 'Next');
     await _settle(t);
@@ -482,7 +486,7 @@ void main() {
     await t.pump(const Duration(milliseconds: 300));
     await _settle(t);
     expect(r.c.guideAnswered(_step), isTrue);
-    expect(find.text('25% done'), findsOneWidget);
+    expect(find.text('25%'), findsOneWidget);
     expect(_bar(t).canNext, isTrue);
     expect(r.listOpens, 0);
     await shot(t, 'FINAL_13_own_answered');
@@ -497,7 +501,7 @@ void main() {
     expect(find.text("Let's get you there"), findsOneWidget);
     expect(r.c.guideAnswered(_step), isFalse);
     expect(_bar(t).canNext, isFalse);
-    expect(find.text('0% done'), findsOneWidget);
+    expect(find.text('0%'), findsOneWidget);
     expect(find.text(_hint), findsOneWidget);
     await shot(t, 'FINAL_14_resume_unanswered');
     r.close();
@@ -529,7 +533,7 @@ void main() {
     await _pump(t, r);
     expect(find.text('Great picks'), findsOneWidget);
     expect(r.c.guideAnswered(_step), isFalse);
-    expect(_bar(t).canNext, isFalse);
+    expect(find.byType(TripGuideBar), findsNothing, reason: 'the review card has no Next bar');
     await shot(t, 'FINAL_15_resume_review');
     await t.pump(const Duration(seconds: 6));
     r.close();

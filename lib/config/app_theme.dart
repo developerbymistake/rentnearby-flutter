@@ -54,6 +54,7 @@ class AppTheme {
   static ThemeData get theme => ThemeData(
         useMaterial3: true,
         fontFamily: _font,
+        fontFamilyFallback: FitnessAppTheme.fontFallback,
         colorScheme: _scheme,
         textTheme: FitnessAppTheme.textTheme,
         scaffoldBackgroundColor: DesignColors.scaffold,

@@ -1,4 +1,5 @@
 import 'package:bakhli/design/design.dart';
+import 'package:bakhli/design/extra/ext_trip_replies.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../config/app_insets.dart';
@@ -8,13 +9,13 @@ import '../../../models/browse_item.dart';
 import '../../trip/models/trip_enquiry_model.dart';
 import '../../trip/trip_strings.dart';
 import '../../trip/trip_strings_h4.dart';
+import '../../trip/trip_strings_rc.dart';
 import '../../trip/utils/trip_format.dart';
 import '../../../widgets/notification_off_banner.dart';
 import '../../trip/widgets/trip_status.dart';
-import '../../trip/widgets/trip_status_card.dart';
+import '../../trip/utils/trip_enquiry_rules.dart';
 import 'stay_enquiries_controller.dart';
 import 'stay_enquiry_actions.dart';
-import 'stay_enquiry_button.dart';
 import 'stay_enquiry_format.dart';
 import 'stay_enquiry_strings.dart';
 
@@ -91,77 +92,69 @@ class _StayEnquiriesScreenState extends State<StayEnquiriesScreen> with WidgetsB
     if (_scroll.position.pixels >= _scroll.position.maxScrollExtent - 300) _ctrl.loadMore();
   }
 
+  static final ListingTone _tone = ListingTone.forest;
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: DesignColors.scaffold,
-      body: Column(children: [
-        _header(),
-        const NotificationOffBanner(),
-        EntranceOnce(index: 1, offset: 20, child: _chips()),
-        Obx(() => Get.find<AuthController>().staysEnabled ? const SizedBox.shrink() : _pausedNote()),
-        Expanded(child: Obx(_body)),
-      ]),
-    );
-  }
-
-  Widget _header() => Obx(() {
-        final name = _ctrl.stay.value?.name;
-        return ModuleHeader(
-          tone: KitTone.stay,
-          title: TripStrings.enquiries,
-          subtitle: name == null || name.isEmpty ? TripStrings.tripEnquiry : name,
-          onBack: () => Get.back(),
-          trailing: [
-            Container(
-              width: 48,
-              height: 48,
-              decoration: const BoxDecoration(color: DesignColors.surface, shape: BoxShape.circle),
-              child: const Center(child: TravelIcon(TravelIcon.chat, size: 30)),
-            ),
+    return Obx(() {
+      final name = _ctrl.stay.value?.name;
+      return RepliesScaffold(
+        tone: _tone,
+        title: TripStrings.enquiries,
+        subtitle: name == null || name.isEmpty ? TripStrings.tripEnquiry : name,
+        art: ListingArt.speechBalloon,
+        onBack: () => Get.back(),
+        top: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const NotificationOffBanner(),
+            EntranceOnce(index: 1, offset: 20, child: _chips()),
+            Obx(() => Get.find<AuthController>().staysEnabled
+                ? const SizedBox.shrink()
+                : const RepliesBanner(art: ListingArt.calendar, text: TripStrings.pausedHere)),
           ],
-        );
-      });
+        ),
+        body: Obx(_body),
+      );
+    });
+  }
 
   Widget _chips() {
     return Obx(() {
       final c = _ctrl.counts.value;
       final selected = _ctrl.bucket.value;
-      final labels = {
-        StayEnquiryBucket.newOnes: c.newCount > 0 ? TripStrings.newChip(c.newCount) : TripStrings.newPill,
-        StayEnquiryBucket.offered: TripStrings.offeredChip,
-        StayEnquiryBucket.confirmed: TripStrings.confirmedChip,
-        StayEnquiryBucket.closed: TripStrings.closedChip,
+      final looks = {
+        StayEnquiryBucket.newOnes: (ListingTone.cE, ListingArt.speechBalloon, c.newCount > 0 ? TripStrings.newChip(c.newCount) : TripStrings.newPill),
+        StayEnquiryBucket.offered: (ListingTone.cF, ListingArt.moneyBag, TripStrings.offeredChip),
+        StayEnquiryBucket.confirmed: (ListingTone.cB, ListingArt.key, TripStrings.confirmedChip),
+        StayEnquiryBucket.closed: (ListingTone.cD, ListingArt.clipboard, TripStrings.closedChip),
       };
+      Widget chip(String key) {
+        final (tone, art, label) = looks[key]!;
+        return BucketChip3D(tone: tone, art: art, label: label, off: selected != key, onTap: () => _ctrl.selectBucket(key));
+      }
+
+      final keys = StayEnquiryBucket.all;
       return Padding(
-        padding: const EdgeInsets.fromLTRB(KitMetrics.gutter, 12, KitMetrics.gutter, 4),
-        child: Align(
-          alignment: Alignment.centerLeft,
-          child: Wrap(spacing: 8, runSpacing: 8, children: [
-            for (final key in StayEnquiryBucket.all)
-              PickChip(
-                label: labels[key]!,
-                selected: selected == key,
-                activeColor: DesignColors.primary,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                onTap: () => _ctrl.selectBucket(key),
+        padding: const EdgeInsets.fromLTRB(18, 6, 18, 4),
+        child: Column(
+          children: [
+            for (var r = 0; r < keys.length; r += 2) ...[
+              if (r > 0) const SizedBox(height: 2),
+              Row(
+                children: [
+                  Expanded(child: chip(keys[r])),
+                  const SizedBox(width: 12),
+                  Expanded(child: r + 1 < keys.length ? chip(keys[r + 1]) : const SizedBox.shrink()),
+                ],
               ),
-          ]),
+            ],
+          ],
         ),
       );
     });
   }
-
-  Widget _pausedNote() => Padding(
-        padding: const EdgeInsets.fromLTRB(KitMetrics.gutter, 4, KitMetrics.gutter, 0),
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(12),
-          decoration: const BoxDecoration(color: DesignColors.attentionTint, borderRadius: CardRadius.tile),
-          child: Text(TripStrings.pausedHere,
-              style: TypeTokens.style(12, FontWeight.w600, color: DesignColors.textStrong)),
-        ),
-      );
 
   Widget _body() {
     final items = _ctrl.items;
@@ -172,63 +165,49 @@ class _StayEnquiriesScreenState extends State<StayEnquiriesScreen> with WidgetsB
     final bottom = AppInsets.bottomViewPadding(context) + 16;
 
     if (loading && items.isEmpty) {
-      return _column(ListView.separated(
+      return _column(ListView(
         physics: const NeverScrollableScrollPhysics(),
-        padding: EdgeInsets.fromLTRB(KitMetrics.gutter, 12, KitMetrics.gutter, bottom),
-        itemCount: 3,
-        separatorBuilder: (_, _) => const SizedBox(height: 12),
-        itemBuilder: (_, _) => SectionTile.skeleton(lines: 4),
+        padding: EdgeInsets.only(bottom: bottom),
+        children: const [ReplyCardSkeleton(), ReplyCardSkeleton(), ReplyCardSkeleton()],
       ));
     }
     if (items.isEmpty) {
       final empty = failed && _ctrl.executionDisabled.value
-          ? const StateCard(
-              kit: KitTone.stay,
-              asset: TravelIcon.note,
-              title: TripStrings.plannerOff,
-              message: TripStrings.plannerOffSubtitle,
-            )
+          ? RepliesEmpty(tone: _tone, art: ListingArt.clipboard, title: TripStrings.plannerOff, message: TripStrings.plannerOffSubtitle)
           : failed
-          ? StateCard.error(
-              kit: KitTone.stay,
+          ? RepliesEmpty(
+              tone: _tone,
+              art: ListingArt.worldMap,
               title: TripStrings.couldNotLoad,
               message: TripStrings.checkConnection,
               actionLabel: TripStrings.retry,
               onAction: _ctrl.load,
             )
-          : StateCard(
-              kit: KitTone.stay,
-              asset: TravelIcon.chat,
-              title: _emptyTitle(bucket),
-              message: TripStrings.noEnquiriesSub,
-            );
+          : RepliesEmpty(tone: _tone, art: _emptyArt(bucket), title: _emptyTitle(bucket), message: TripStrings.noEnquiriesSub, topPad: 30);
       return RefreshIndicator(
-        color: DesignColors.primary,
+        color: _tone.g2,
         onRefresh: _ctrl.refreshList,
         child: _column(ListView(physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()), children: [empty])),
       );
     }
     final footer = _ctrl.loadingMore.value || _ctrl.loadMoreFailed.value ? 1 : 0;
     return RefreshIndicator(
-      color: DesignColors.primary,
+      color: _tone.g2,
       onRefresh: _ctrl.refreshList,
       child: _column(ListView.builder(
         controller: _scroll,
         physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
-        padding: EdgeInsets.fromLTRB(KitMetrics.gutter, 12, KitMetrics.gutter, bottom),
+        padding: EdgeInsets.only(bottom: bottom),
         itemCount: items.length + footer,
         itemBuilder: (_, i) {
           if (i >= items.length) return _footer();
           final e = items[i];
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: KeyedSubtree(
-              key: _keys.putIfAbsent(e.id, () => GlobalKey()),
-              child: KitCardEntrance(
-                key: ValueKey('${bucket}_${e.id}'),
-                index: i,
-                child: _EnquiryCard(enquiry: e, highlighted: highlight == e.id, ctrl: _ctrl),
-              ),
+          return KeyedSubtree(
+            key: _keys.putIfAbsent(e.id, () => GlobalKey()),
+            child: KitCardEntrance(
+              key: ValueKey('${bucket}_${e.id}'),
+              index: i,
+              child: _EnquiryCard(enquiry: e, highlighted: highlight == e.id, ctrl: _ctrl),
             ),
           );
         },
@@ -244,24 +223,26 @@ class _StayEnquiriesScreenState extends State<StayEnquiriesScreen> with WidgetsB
   Widget _footer() {
     if (_ctrl.loadMoreFailed.value) {
       return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
+        padding: const EdgeInsets.fromLTRB(22, 14, 22, 0),
         child: Center(
-          child: TextButton(
-            style: TextButton.styleFrom(minimumSize: const Size(44, 44)),
-            onPressed: _ctrl.loadMore,
-            child: const Text('${StayEnquiryStrings.retryMore} · ${TripStrings.retry}',
-                style: TextStyle(
-                    fontFamily: TypeTokens.family,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: DesignColors.primary)),
+          child: Tap3D(
+            onTap: _ctrl.loadMore,
+            label: '${StayEnquiryStrings.retryMore} · ${TripStrings.retry}',
+            exclude: true,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 44),
+              child: Center(
+                widthFactor: 1,
+                child: Text('${StayEnquiryStrings.retryMore} · ${TripStrings.retry}', style: Ink3D.text(13, FontWeight.w700, _tone.text)),
+              ),
+            ),
           ),
         ),
       );
     }
-    return const Padding(
-      padding: EdgeInsets.symmetric(vertical: 16),
-      child: Center(child: KitDots(color: DesignColors.primary)),
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 16),
+      child: Center(child: KitDots(color: _tone.g2)),
     );
   }
 
@@ -271,132 +252,36 @@ class _StayEnquiriesScreenState extends State<StayEnquiriesScreen> with WidgetsB
         StayEnquiryBucket.closed => TripStrings.nothingClosed,
         _ => TripStrings.noEnquiries,
       };
+
+  String _emptyArt(String bucket) => switch (bucket) {
+        StayEnquiryBucket.offered => ListingArt.moneyBag,
+        StayEnquiryBucket.confirmed => ListingArt.key,
+        StayEnquiryBucket.closed => ListingArt.clipboard,
+        _ => ListingArt.speechBalloon,
+      };
 }
 
 class _EnquiryCard extends StatelessWidget {
-  const _EnquiryCard({required this.enquiry, required this.highlighted, required this.ctrl});
+  _EnquiryCard({required this.enquiry, required this.highlighted, required this.ctrl});
 
   final TripEnquiryModel enquiry;
   final bool highlighted;
   final StayEnquiriesController ctrl;
+  final GlobalKey _menuKey = GlobalKey();
 
-  static const int _maxChips = 6;
-
-  @override
-  Widget build(BuildContext context) {
-    final e = enquiry;
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 250),
-      padding: EdgeInsets.all(highlighted ? 2 : 0),
-      decoration: BoxDecoration(
-        borderRadius: CardRadius.tile,
-        color: highlighted ? DesignColors.primary : Colors.transparent,
-      ),
-      child: TripStatusCard(
-        status: e.display,
-        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Row(children: [
-            Expanded(
-              child: Text(StayEnquiryFormat.guest(e),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontFamily: TypeTokens.family, fontSize: 15, fontWeight: FontWeight.w700, color: DesignColors.textStrong)),
-            ),
-            if ((e.traveller.id ?? '').isNotEmpty) _menu(context, e),
-          ]),
-          const SizedBox(height: 8),
-          Wrap(spacing: 8, runSpacing: 6, children: [
-            if (e.isUrgent && e.isUnconfirmed) const TripStatusPill(TripDisplayStatus.asked, label: TripStrings.urgent),
-            TripStatusPill(e.display, ownerSide: true),
-          ]),
-          const SizedBox(height: 8),
-          Text(StayEnquiryFormat.summary(e),
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontFamily: TypeTokens.family, fontSize: 12, color: DesignColors.textSecondary, height: 1.4)),
-          ..._chipsRow(e),
-          ..._detail(e),
-          ..._advanceLine(e),
-          ..._actions(context, e),
-        ]),
-      ),
-    );
+  static String _dates(TripEnquiryModel e) {
+    final a = e.checkIn;
+    final b = e.checkOut;
+    return a != null && b != null ? TripFormat.dayMonthRange(a, b) : e.datesLabel;
   }
 
-  Widget _menu(BuildContext context, TripEnquiryModel e) => SizedBox(
-        width: 44,
-        height: 44,
-        child: PopupMenuButton<String>(
-          padding: EdgeInsets.zero,
-          tooltip: '',
-          icon: const Icon(Icons.more_vert_rounded, size: 20, color: DesignColors.textGrey),
-          color: DesignColors.surface,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          onSelected: (_) => StayEnquiryActions.reportTraveller(context, e),
-          itemBuilder: (_) => const [
-            PopupMenuItem<String>(
-                value: 'report', height: 44, child: Text(TripStrings.reportTraveller, style: TextStyle(fontFamily: TypeTokens.family, fontSize: 13, color: DesignColors.textStrong))),
-          ],
-        ),
-      );
-
-  List<Widget> _chipsRow(TripEnquiryModel e) {
-    final all = StayEnquiryFormat.chips(e);
-    if (all.isEmpty) return const [];
-    final shown = all.take(_maxChips).toList();
-    final extra = all.length - shown.length;
-    return [
-      const SizedBox(height: 8),
-      Wrap(spacing: 6, runSpacing: 6, children: [
-        for (final s in shown) _chip(s),
-        if (extra > 0) _chip(StayEnquiryStrings.moreChips(extra)),
-      ]),
-    ];
+  static String _summary(TripEnquiryModel e) {
+    final line = StayEnquiryFormat.summary(e);
+    final label = e.datesLabel;
+    return label.isEmpty ? line : line.replaceFirst(label, _dates(e));
   }
 
-  Widget _chip(String text) => Container(
-        constraints: const BoxConstraints(maxWidth: 220),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-        decoration: const BoxDecoration(color: DesignColors.scaffold, borderRadius: CardRadius.chip),
-        child: Text(text,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontFamily: TypeTokens.family, fontSize: 11, color: DesignColors.textGrey)),
-      );
-
-  List<Widget> _detail(TripEnquiryModel e) {
-    final lines = <String>[];
-    switch (e.display) {
-      case TripDisplayStatus.offered:
-        final o = e.openOffer;
-        if (o != null) lines.add(StayEnquiryStrings.offerPrice(BrowseItem.inr(o.total)));
-      case TripDisplayStatus.confirmedByBoth:
-        final t = e.agreedTotal;
-        if (t != null) lines.add('${TripStrings.total} ${BrowseItem.inr(t)}');
-      default:
-    }
-    final counterPrice = e.pendingCounter?.pricePerNight;
-    if (counterPrice != null) {
-      lines.add(TripStringsH4.proposesPerRoom(StayEnquiryFormat.guest(e), BrowseItem.inr(counterPrice)));
-    }
-    final change = e.pendingChange;
-    if (change != null) {
-      final a = change.checkIn;
-      final b = change.checkOut;
-      lines.add('${TripStrings.changeRequest} · ${a != null && b != null ? TripFormat.dayMonthRange(a, b) : TripStrings.notAcceptedYet}');
-    } else if (e.pendingRevised != null && e.display == TripDisplayStatus.confirmedByBoth) {
-      lines.add('${TripStrings.revisedOffer} · ${TripStrings.notAcceptedYet}');
-    }
-    if (lines.isEmpty) return const [];
-    return [
-      const SizedBox(height: 8),
-      for (final l in lines)
-        Text(l,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontFamily: TypeTokens.family, fontSize: 12, fontWeight: FontWeight.w500, color: DesignColors.textGrey)),
-    ];
-  }
+  static String _inr(int? v) => v == null || v <= 0 ? '' : BrowseItem.inr(v);
 
   static bool _checkInOpen(TripEnquiryModel e) {
     final cin = e.checkIn;
@@ -405,95 +290,183 @@ class _EnquiryCard extends StatelessWidget {
     return !DateTime(cin.year, cin.month, cin.day).isBefore(DateTime(now.year, now.month, now.day));
   }
 
-  List<Widget> _advanceLine(TripEnquiryModel e) {
-    if (e.display != TripDisplayStatus.confirmedByBoth || !e.advance.hasRequest) return const [];
-    final label = TripStatusVisuals.advanceLabel(e.advance);
-    if (label.isEmpty) return const [];
+  ({String? cap, String number, String? unit}) _price(TripEnquiryModel e) {
+    final nights = TripStrings.nights(e.nights);
+    final counter = e.pendingCounter?.pricePerNight;
+    if (counter != null && e.display.isOpen) return (cap: TripStringsRc.proposes, number: _inr(counter), unit: TripStringsRc.perRoomNight);
+    final offer = e.openOffer;
+    if (e.display == TripDisplayStatus.offered && offer != null) return (cap: TripStringsRc.offer, number: _inr(offer.total), unit: nights);
+    final agreed = e.agreedTotal;
+    if (agreed != null && agreed > 0) return (cap: TripStrings.total, number: _inr(agreed), unit: nights);
+    return (cap: TripStringsRc.nights, number: '${e.nights}', unit: _dates(e));
+  }
+
+  List<ReplyRow> _rows(TripEnquiryModel e) {
+    final adv = e.advance;
+    if (e.display == TripDisplayStatus.confirmedByBoth || e.display == TripDisplayStatus.holdExpired) {
+      final change = e.pendingChange;
+      if (change != null) {
+        final a = change.checkIn;
+        final b = change.checkOut;
+        return [
+          ReplyRow(TripStrings.changeRequest, a != null && b != null ? TripFormat.dayMonthRange(a, b) : TripStrings.notAcceptedYet),
+          ReplyRow(TripStrings.total, _inr(change.total)),
+          if (adv.hasRequest) ReplyRow(TripStrings.advance, TripStatusVisuals.advanceLabel(adv)),
+        ];
+      }
+      if (adv.hasRequest) {
+        final hold = adv.holdUntil;
+        return [
+          ReplyRow(TripStringsRc.advanceAsked, _inr(adv.amount)),
+          if (hold != null)
+            hold.isAfter(DateTime.now())
+                ? ReplyRow(TripStrings.holdTill(TripFormat.time12Of(hold.toLocal())), '')
+                : ReplyRow(TripStrings.holdEnded, TripFormat.time12Of(hold.toLocal())),
+          ReplyRow(TripStrings.dates, _dates(e)),
+        ];
+      }
+      return [
+        ReplyRow(TripStrings.dates, _dates(e)),
+        if (e.context.roomsLabel case final r?) ReplyRow(TripStrings.rooms, r),
+        if (e.context.peopleLabel case final p?) ReplyRow(TripStrings.people, p),
+      ];
+    }
+    final days = e.context.days.where((d) => d.spots.isNotEmpty).take(3).toList();
+    if (days.isNotEmpty) {
+      return [
+        for (final d in days) ReplyRow(TripStrings.dayN(d.day), d.spots.length > 2 ? '${d.spots.take(2).join(' · ')} ${StayEnquiryStrings.moreChips(d.spots.length - 2)}' : d.spots.join(' · ')),
+        if (days.length < 3) ReplyRow(TripStrings.dates, _dates(e)),
+        if (days.length < 2 && e.context.peopleLabel != null) ReplyRow(TripStrings.people, e.context.peopleLabel!),
+      ];
+    }
     return [
-      const SizedBox(height: 6),
-      Text(label,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-              fontFamily: TypeTokens.family,
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: TripStatusVisuals.advanceText(e.advance.status))),
+      ReplyRow(TripStrings.dates, _dates(e)),
+      if (e.context.peopleLabel case final p?) ReplyRow(TripStrings.people, p),
+      if (e.context.roomsLabel case final r?) ReplyRow(TripStrings.rooms, r),
     ];
   }
 
-  List<Widget> _actions(BuildContext context, TripEnquiryModel e) {
-    final buttons = <Widget>[];
-    Widget btn(String label, StayEnquiryButtonKind kind, Future<bool> Function() run, {IconData? icon}) {
-      return Obx(() => StayEnquiryButton(
-            label: label,
-            kind: kind,
-            icon: icon,
-            busy: ctrl.busyIds.contains(e.id),
-            onTap: () => run(),
-          ));
+  (String?, String) _note(TripEnquiryModel e) {
+    final counterPrice = e.pendingCounter?.pricePerNight;
+    if (counterPrice != null) return (TripStringsH4.proposesPerRoom(StayEnquiryFormat.guest(e), BrowseItem.inr(counterPrice)), ListingArt.moneyBag);
+    final change = e.pendingChange;
+    if (change != null) {
+      final a = change.checkIn;
+      final b = change.checkOut;
+      return ('${TripStrings.changeRequest} · ${a != null && b != null ? TripFormat.dayMonthRange(a, b) : TripStrings.notAcceptedYet}', ListingArt.calendar);
     }
-
-    final chat = e.conversationId != null
-        ? StayEnquiryButton(label: TripStrings.chat, iconAsset: TravelIcon.chat, onTap: () => _openChat(e))
-        : null;
-
-    switch (e.display) {
-      case TripDisplayStatus.asked:
-      case TripDisplayStatus.offered:
-        if (chat != null) buttons.add(chat);
-        final counter = e.pendingCounter;
-        if (counter != null) {
-          buttons.add(btn(TripStrings.acceptPrice, StayEnquiryButtonKind.positive,
-              () => StayEnquiryActions.sendOffer(context, e, counter: counter)));
-          buttons.add(btn(TripStrings.sendDifferentOffer, StayEnquiryButtonKind.plain, () => StayEnquiryActions.sendOffer(context, e)));
-        } else {
-          final label = e.display == TripDisplayStatus.asked ? TripStrings.sendOffer : TripStrings.sendNewOffer;
-          buttons.add(btn(label, StayEnquiryButtonKind.primary, () => StayEnquiryActions.sendOffer(context, e)));
-        }
-        buttons.add(btn(TripStrings.notAvailableAction, StayEnquiryButtonKind.negative, () => StayEnquiryActions.notAvailable(context, e)));
-      case TripDisplayStatus.confirmedByBoth:
-        if (chat != null) buttons.add(chat);
-        final adv = e.advance;
-        final change = e.pendingChange;
-        final canRevise = e.pendingRevised == null && change == null && _checkInOpen(e);
-        if (change != null) {
-          buttons.add(btn(TripStrings.acceptChange, StayEnquiryButtonKind.positive,
-              () => StayEnquiryActions.acceptChange(context, e, change.id)));
-          buttons.add(btn(TripStrings.sendDifferentOffer, StayEnquiryButtonKind.plain,
-              () => StayEnquiryActions.revisedOffer(context, e, changeRequest: change)));
-          if (adv.isPending || adv.isProofSent) {
-            buttons.add(btn(TripStrings.markAdvanceReceived, StayEnquiryButtonKind.positive, () => StayEnquiryActions.markReceived(context, e)));
-            buttons.add(btn(TripStrings.notYet, StayEnquiryButtonKind.plain, () => StayEnquiryActions.notYet(context, e)));
-          }
-        } else if (adv.isPending || adv.isProofSent) {
-          buttons.add(btn(TripStrings.markAdvanceReceived, StayEnquiryButtonKind.positive, () => StayEnquiryActions.markReceived(context, e)));
-          buttons.add(btn(TripStrings.notYet, StayEnquiryButtonKind.plain, () => StayEnquiryActions.notYet(context, e)));
-          buttons.add(btn(TripStrings.askAgain, StayEnquiryButtonKind.plain, () => StayEnquiryActions.askAdvance(context, e)));
-        } else if (!adv.hasRequest) {
-          buttons.add(btn(TripStrings.askForAdvance, StayEnquiryButtonKind.primary, () => StayEnquiryActions.askAdvance(context, e)));
-        }
-        if (canRevise && !(adv.isPending || adv.isProofSent)) {
-          buttons.add(btn(TripStrings.revisedOffer, StayEnquiryButtonKind.plain, () => StayEnquiryActions.revisedOffer(context, e)));
-        }
-        if (!StayEnquiryBucket.hasEnded(e)) {
-          buttons.add(btn(TripStrings.cancelBooking, StayEnquiryButtonKind.negative, () => StayEnquiryActions.cancel(context, e)));
-        }
-      case TripDisplayStatus.holdExpired:
-        if (_checkInOpen(e)) {
-          if (chat != null) buttons.add(chat);
-          buttons.add(btn(TripStrings.markAdvanceReceived, StayEnquiryButtonKind.positive, () => StayEnquiryActions.markReceived(context, e)));
-          if ((e.traveller.phone ?? '').isNotEmpty) {
-            buttons.add(StayEnquiryButton(label: TripStrings.callGuest, onTap: () => StayEnquiryActions.callGuest(e)));
-          }
-        }
-      default:
+    if (e.pendingRevised != null && e.display == TripDisplayStatus.confirmedByBoth) {
+      return ('${TripStrings.revisedOffer} · ${TripStrings.notAcceptedYet}', ListingArt.clipboard);
     }
-    if (buttons.isEmpty) return const [];
-    return [
-      const SizedBox(height: 12),
-      Wrap(spacing: 8, runSpacing: 8, children: buttons),
-    ];
+    if (e.display == TripDisplayStatus.confirmedByBoth && e.advance.hasRequest) {
+      final label = TripStatusVisuals.advanceLabel(e.advance);
+      if (label.isNotEmpty) return (label, ListingArt.moneyBag);
+    }
+    if (e.display == TripDisplayStatus.confirmedByBoth && !e.advance.hasRequest) return (TripStringsRc.askAdvanceNote, ListingArt.moneyBag);
+    final offer = e.openOffer;
+    if (e.display == TripDisplayStatus.offered && offer != null) return (StayEnquiryStrings.offerPrice(BrowseItem.inr(offer.total)), ListingArt.calendar);
+    if (e.display.isOpen && e.expiresAt != null) {
+      return (TripStrings.closesIn(TripEnquiryRules.closesInLabel(e.expiresAt!, DateTime.now())), ListingArt.calendar);
+    }
+    return (null, ListingArt.clipboard);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final e = enquiry;
+    final price = _price(e);
+    final (noteText, noteArt) = _note(e);
+    return Obx(() {
+      final busy = ctrl.busyIds.contains(e.id);
+      ReplyAction a(String label, Future<bool> Function() run) => ReplyAction(label: label, onTap: busy ? null : () => run());
+      ReplyAction off(String label) => ReplyAction(label: label);
+      final chatOk = e.conversationId != null &&
+          (e.display == TripDisplayStatus.asked ||
+              e.display == TripDisplayStatus.offered ||
+              e.display == TripDisplayStatus.confirmedByBoth ||
+              (e.display == TripDisplayStatus.holdExpired && _checkInOpen(e)));
+      final chat = ReplyAction(label: TripStrings.chat, onTap: chatOk ? () => _openChat(e) : null);
+      final adv = e.advance;
+      final advOpen = adv.isPending || adv.isProofSent;
+      final menu = <MenuItem3D>[];
+      ReplyAction? primary;
+      ReplyAction second = off(TripStrings.notAvailableAction);
+
+      switch (e.display) {
+        case TripDisplayStatus.asked:
+        case TripDisplayStatus.offered:
+          final counter = e.pendingCounter;
+          if (counter != null) {
+            primary = a(TripStrings.acceptPrice, () => StayEnquiryActions.sendOffer(context, e, counter: counter));
+            second = a(TripStrings.sendDifferentOffer, () => StayEnquiryActions.sendOffer(context, e));
+            menu.add(MenuItem3D(label: TripStrings.notAvailableAction, art: ListingArt.clipboard, danger: true, onTap: busy ? null : () => StayEnquiryActions.notAvailable(context, e)));
+          } else {
+            primary = a(e.display == TripDisplayStatus.asked ? TripStrings.sendOffer : TripStrings.sendNewOffer, () => StayEnquiryActions.sendOffer(context, e));
+            second = a(TripStrings.notAvailableAction, () => StayEnquiryActions.notAvailable(context, e));
+          }
+        case TripDisplayStatus.confirmedByBoth:
+          final change = e.pendingChange;
+          final canRevise = e.pendingRevised == null && change == null && _checkInOpen(e);
+          if (change != null) {
+            primary = a(TripStrings.acceptChange, () => StayEnquiryActions.acceptChange(context, e, change.id));
+            second = a(TripStrings.revisedOffer, () => StayEnquiryActions.revisedOffer(context, e, changeRequest: change));
+            if (advOpen) {
+              menu.add(MenuItem3D(label: TripStrings.markAdvanceReceived, art: ListingArt.moneyBag, positive: true, onTap: busy ? null : () => StayEnquiryActions.markReceived(context, e)));
+              menu.add(MenuItem3D(label: TripStrings.notYet, art: ListingArt.calendar, onTap: busy ? null : () => StayEnquiryActions.notYet(context, e)));
+            }
+          } else if (advOpen) {
+            primary = a(TripStrings.markAdvanceReceived, () => StayEnquiryActions.markReceived(context, e));
+            second = a(TripStrings.askAgain, () => StayEnquiryActions.askAdvance(context, e));
+            menu.add(MenuItem3D(label: TripStrings.notYet, art: ListingArt.calendar, onTap: busy ? null : () => StayEnquiryActions.notYet(context, e)));
+          } else {
+            if (!adv.hasRequest) primary = a(TripStrings.askForAdvance, () => StayEnquiryActions.askAdvance(context, e));
+            second = canRevise ? a(TripStrings.revisedOffer, () => StayEnquiryActions.revisedOffer(context, e)) : off(TripStrings.revisedOffer);
+          }
+          if (!StayEnquiryBucket.hasEnded(e)) {
+            menu.add(MenuItem3D(label: TripStrings.cancelBooking, art: ListingArt.calendar, danger: true, onTap: busy ? null : () => StayEnquiryActions.cancel(context, e)));
+          }
+        case TripDisplayStatus.holdExpired:
+          final open = _checkInOpen(e);
+          primary = open ? a(TripStrings.markAdvanceReceived, () => StayEnquiryActions.markReceived(context, e)) : off(TripStrings.markAdvanceReceived);
+          final phone = (e.traveller.phone ?? '').isNotEmpty;
+          second = ReplyAction(label: TripStrings.callGuest, onTap: open && phone ? () => StayEnquiryActions.callGuest(e) : null);
+        default:
+          primary = off(TripStrings.sendOffer);
+      }
+      if ((e.traveller.id ?? '').isNotEmpty) {
+        menu.add(MenuItem3D(label: TripStrings.reportTraveller, art: ListingArt.roundPushpin, danger: true, onTap: () => StayEnquiryActions.reportTraveller(context, e)));
+      }
+      final ended = e.display != TripDisplayStatus.confirmedByBoth && !e.display.isOpen && e.display != TripDisplayStatus.holdExpired;
+      return Stack(
+        children: [
+          Positioned.fill(
+            top: 44,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 250),
+              decoration: BoxDecoration(color: highlighted ? ListingTone.forest.tint : Colors.transparent, borderRadius: BorderRadius.circular(28)),
+            ),
+          ),
+          ReplyCard3D(
+            status: StatusTone3D.of(e.display.name),
+            art: ListingArt.backpack,
+            pill: TripStatusVisuals.label(e.display, ownerSide: true),
+            urgent: e.isUrgent && e.isUnconfirmed,
+            title: StayEnquiryFormat.guest(e),
+            statusLine: _summary(e),
+            cap: price.cap,
+            number: price.number,
+            unit: price.unit,
+            menuKey: _menuKey,
+            onMenu: menu.isEmpty ? null : () => showReplyMenu(_menuKey, menu),
+            rows: _rows(e),
+            note: noteText ?? (ended ? TripStringsRc.enquiryClosed : null),
+            noteArt: noteArt,
+            primary: busy && primary != null ? ReplyAction(label: primary.label, busy: true) : primary,
+            secondary: [chat, second],
+          ),
+        ],
+      );
+    });
   }
 
   void _openChat(TripEnquiryModel e) {

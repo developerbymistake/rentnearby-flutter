@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import '../tokens/alpha_tokens.dart';
-import '../tokens/card_tokens.dart';
 import '../tokens/design_colors.dart';
-import '../tokens/type_tokens.dart';
+import 'art_3d.dart';
+import 'sheet_3d.dart';
 
 class SheetFrame extends StatelessWidget {
   const SheetFrame({
@@ -14,6 +13,9 @@ class SheetFrame extends StatelessWidget {
     this.padding = const EdgeInsets.fromLTRB(20, 0, 20, 20),
     this.handle = true,
     this.scrollable = true,
+    this.tone,
+    this.art,
+    this.size = SheetSize.hug,
   });
 
   final Widget child;
@@ -23,6 +25,9 @@ class SheetFrame extends StatelessWidget {
   final EdgeInsets padding;
   final bool handle;
   final bool scrollable;
+  final ListingTone? tone;
+  final String? art;
+  final SheetSize size;
 
   static Future<T?> show<T>(
     BuildContext context, {
@@ -40,69 +45,24 @@ class SheetFrame extends StatelessWidget {
         backgroundColor: Colors.transparent,
         barrierColor: DesignColors.scrim,
         elevation: 0,
+        clipBehavior: Clip.none,
         constraints: constraints,
         builder: builder,
       );
 
   @override
   Widget build(BuildContext context) {
-    final mq = MediaQuery.of(context);
-    final body = Padding(
-      padding: padding,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (title != null) ...[
-            Text(title!,
-                style: TypeTokens.style(22, FontWeight.w700, color: DesignColors.textStrong, letterSpacing: 0.27)),
-            if (subtitle != null) ...[
-              const SizedBox(height: 4),
-              Text(subtitle!, style: TypeTokens.style(14, FontWeight.w400, color: TypeTokens.secondary)),
-            ],
-            const SizedBox(height: 16),
-          ],
-          child,
-        ],
-      ),
-    );
-    return Container(
-      constraints: BoxConstraints(maxHeight: mq.size.height * 0.92),
-      padding: EdgeInsets.only(bottom: mq.viewInsets.bottom),
-      decoration: const BoxDecoration(
-        color: DesignColors.sheet,
-        borderRadius: CardRadius.sheet,
-        boxShadow: DesignShadows.top,
-      ),
-      child: SafeArea(
-        top: false,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (handle)
-              Padding(
-                padding: const EdgeInsets.only(top: 10, bottom: 14),
-                child: Container(
-                  width: 36,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: DesignColors.tint(DesignColors.textGrey, Alpha.half),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              )
-            else
-              const SizedBox(height: 16),
-            Flexible(
-              child: scrollable
-                  ? SingleChildScrollView(keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag, child: body)
-                  : body,
-            ),
-            if (footer != null)
-              Padding(padding: const EdgeInsets.fromLTRB(20, 0, 20, 16), child: footer),
-          ],
-        ),
-      ),
+    return Sheet3D(
+      tone: tone ?? ListingTone.indigo,
+      art: art,
+      title: title,
+      subtitle: subtitle,
+      centerTitle: art != null,
+      size: size,
+      footer: footer,
+      scrollable: scrollable,
+      padding: footer == null ? padding.copyWith(bottom: 0) : padding,
+      child: child,
     );
   }
 }

@@ -1,8 +1,11 @@
+import 'dart:math' as math;
+
 import 'stay_page_header.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import '../../../design/design.dart';
+import '../../../design/extra/ext_stay_owner.dart';
 import '../../../utils/app_toast.dart';
 import '../../trip/trip_strings.dart';
 import '../enquiries/stay_enquiry_format.dart';
@@ -16,17 +19,15 @@ class StayAdvanceDetailsScreen extends StatefulWidget {
   State<StayAdvanceDetailsScreen> createState() => _StayAdvanceDetailsScreenState();
 }
 
-class _StayAdvanceDetailsScreenState extends State<StayAdvanceDetailsScreen> with TickerProviderStateMixin {
+class _StayAdvanceDetailsScreenState extends State<StayAdvanceDetailsScreen> {
   final _ctrl = StaySetupController.ensure();
   final _upi = TextEditingController();
   final _wa = TextEditingController();
   final _upiFocus = FocusNode();
   final _waFocus = FocusNode();
-  late final AnimationController _anim = SetupKit.controller(this);
   Worker? _worker;
   bool _seeded = false;
   bool _saving = false;
-  bool _played = false;
   String? _upiError;
   String? _waError;
 
@@ -47,7 +48,6 @@ class _StayAdvanceDetailsScreenState extends State<StayAdvanceDetailsScreen> wit
   @override
   void dispose() {
     _worker?.dispose();
-    _anim.dispose();
     _upi.dispose();
     _wa.dispose();
     _upiFocus.dispose();
@@ -89,7 +89,7 @@ class _StayAdvanceDetailsScreenState extends State<StayAdvanceDetailsScreen> wit
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: DesignColors.scaffold,
+      backgroundColor: ListingPalette.forest.page,
       body: Column(children: [
         StayPageHeader(
           title: TripStrings.advanceDetails,
@@ -107,138 +107,119 @@ class _StayAdvanceDetailsScreenState extends State<StayAdvanceDetailsScreen> wit
           }),
         ),
       ]),
+      bottomNavigationBar: Obx(() {
+        final stay = _ctrl.stay.value;
+        if (stay == null && (_ctrl.loadFailed.value || _ctrl.hasLoaded.value)) return const SizedBox.shrink();
+        return FormFooter(
+          tone: _tone,
+          primaryLabel: TripStrings.save,
+          onPrimary: stay == null || _saving ? null : _save,
+          primaryLoading: _saving,
+        );
+      }),
     );
   }
+
+  static final _tone = ListingTone.forest;
 
   Widget _centered(Widget child) => Align(
         alignment: Alignment.topCenter,
         child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 560), child: child),
       );
 
-  Widget _loadingView() => _centered(const Padding(
-        padding: EdgeInsets.all(16),
-        child: Column(children: [
-          TemplatePlaceholder(height: 56, radius: 8),
-          SizedBox(height: 12),
-          TemplatePlaceholder(height: 56, radius: 8),
-          SizedBox(height: 12),
-          TemplatePlaceholder(height: 56, radius: 8),
-        ]),
+  Widget _bone(double top, double height) => Padding(
+        padding: EdgeInsets.fromLTRB(18, top, 18, 0),
+        child: ClipRRect(borderRadius: StayOwnerShapes.card68, child: SkeletonBox(height: height, radius: 0)),
+      );
+
+  Widget _loadingView() => _centered(ListView(
+        physics: const NeverScrollableScrollPhysics(),
+        children: [_bone(40, 132), _bone(46, 136), _bone(46, 166)],
       ));
 
-  Widget _errorView() => SingleChildScrollView(
-        child: SizedBox(
-          height: MediaQuery.sizeOf(context).height * 0.6,
-          child: StateCard.error(
-            kit: KitTone.stay,
+  Widget _errorView() => LayoutBuilder(
+        builder: (context, box) => SingleChildScrollView(
+          child: StateCard3D(
+            tone: _tone,
+            layout: StateLayout.tall,
+            art: ListingArt.compass,
             title: TripStrings.couldNotLoad,
             message: TripStrings.checkConnection,
             actionLabel: TripStrings.retry,
             onAction: _ctrl.load,
+            minHeight: math.max(300, box.maxHeight - 160),
           ),
         ),
       );
 
-  Widget _in(int i, Widget child) => SetupEntrance(controller: _anim, index: i, count: 5, child: child);
-
   Widget _form() {
-    if (!_played) {
-      _played = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) SetupKit.play(_anim, context);
-      });
-    }
-    final bottom = MediaQuery.viewInsetsOf(context).bottom + MediaQuery.viewPaddingOf(context).bottom + 24;
+    final bottom = MediaQuery.viewInsetsOf(context).bottom + 24;
     return _centered(SingleChildScrollView(
       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-      padding: EdgeInsets.fromLTRB(16, 16, 16, bottom),
-      child: SectionTile(
-        tone: KitTone.stay,
-        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          _in(
-            0,
-            Row(children: [
-              Container(
-                width: 56,
-                height: 56,
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: SetupKit.sky,
-                  boxShadow: ShadowTokens.elev1,
-                ),
-                child: Image.asset(SetupAssets.moneyBag),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(TripStrings.advanceDetails,
-                      maxLines: 2, overflow: TextOverflow.ellipsis, style: TripKit.text(16, weight: FontWeight.w600)),
-                  Text(TripStrings.advanceDetailsSub,
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
-                      style: TripKit.text(12, color: DesignColors.textGrey).copyWith(height: 1.4)),
-                ]),
-              ),
-            ]),
+      padding: EdgeInsets.only(bottom: bottom),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Padding(
+          padding: const EdgeInsets.only(top: 10),
+          child: WorkoutCard(
+            tone: _tone,
+            art: ListingArt.moneyBag,
+            title: TripStrings.advanceDetails,
+            subtitle: TripStrings.advanceDetailsSub,
+            minHeight: 132,
           ),
-          const SizedBox(height: 16),
-          _in(
-            1,
-            _field(
-              controller: _upi,
-              focus: _upiFocus,
-              label: TripStrings.yourUpiId,
-              hint: TripStrings.upiHint,
-              error: _upiError,
-              formatters: StayEnquiryFormat.upiFormatters,
-              keyboard: TextInputType.emailAddress,
-              onChanged: (_) {
-                if (_upiError != null) setState(() => _upiError = null);
-              },
-            ),
+        ),
+        FormSectionCard(
+          tone: _tone,
+          art: ListingArt.moneyBag,
+          title: TripStrings.yourUpiId,
+          tag: 'Optional',
+          tagMuted: true,
+          child: _field(
+            controller: _upi,
+            focus: _upiFocus,
+            art: ListingArt.moneyBag,
+            hint: TripStrings.upiHint,
+            error: _upiError,
+            formatters: StayEnquiryFormat.upiFormatters,
+            keyboard: TextInputType.emailAddress,
+            onChanged: (_) {
+              if (_upiError != null) setState(() => _upiError = null);
+            },
           ),
-          const SizedBox(height: 12),
-          _in(
-            2,
+        ),
+        FormSectionCard(
+          tone: _tone,
+          art: ListingArt.speechBalloon,
+          title: TripStrings.whatsAppForProof,
+          tag: 'Optional',
+          tagMuted: true,
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             _field(
               controller: _wa,
               focus: _waFocus,
-              label: TripStrings.whatsAppForProof,
+              art: ListingArt.speechBalloon,
               error: _waError,
-              prefix: '+91 ',
+              prefix: '+91',
               formatters: StayEnquiryFormat.phoneFormatters,
               keyboard: TextInputType.number,
               onChanged: (_) {
                 if (_waError != null) setState(() => _waError = null);
               },
             ),
-          ),
-          const SizedBox(height: 12),
-          _in(
-            3,
-            Text(TripStrings.advanceDetailsFooter,
-                style: TripKit.text(12, color: DesignColors.textSecondary).copyWith(height: 1.4)),
-          ),
-          const SizedBox(height: 16),
-          _in(
-            4,
-            PrimaryButton(
- tone: KitTone.stay,
-              onPressed: _saving ? null : _save,
-              loading: _saving,
-              label: TripStrings.save,
+            Padding(
+              padding: const EdgeInsets.only(top: 12),
+              child: Text(TripStrings.advanceDetailsFooter, style: Ink3D.text(12, FontWeight.w400, Ink3D.grey, height: 1.4)),
             ),
-          ),
-        ]),
-      ),
+          ]),
+        ),
+      ]),
     ));
   }
 
   Widget _field({
     required TextEditingController controller,
     required FocusNode focus,
-    required String label,
+    required String art,
     required List<TextInputFormatter> formatters,
     required TextInputType keyboard,
     required ValueChanged<String> onChanged,
@@ -246,18 +227,20 @@ class _StayAdvanceDetailsScreenState extends State<StayAdvanceDetailsScreen> wit
     String? error,
     String? prefix,
   }) {
-    return TextField(
+    return PillField(
+      tone: _tone,
       controller: controller,
       focusNode: focus,
       enabled: !_saving,
       keyboardType: keyboard,
-      inputFormatters: formatters,
-      onChanged: onChanged,
       autocorrect: false,
       enableSuggestions: false,
-      cursorColor: DesignColors.primary,
-      style: TripKit.text(14, weight: FontWeight.w600),
-      decoration: SetupKit.input(label: label, hint: hint, prefix: prefix, error: error, errorMaxLines: 2),
+      inputFormatters: formatters,
+      onChanged: onChanged,
+      leadingArt: art,
+      prefixText: prefix,
+      hint: hint,
+      errorText: error,
     );
   }
 }

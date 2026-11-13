@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:bakhli/design/design.dart';
+import 'package:bakhli/design/extra/ext_journeys.dart';
 import '../../../../models/browse_item.dart';
 import '../../../../utils/contact_launcher.dart';
 import '../../guest/taxi_navigation.dart';
@@ -17,6 +18,10 @@ class JourneyDriverCard extends StatelessWidget {
   final bool selected;
   final VoidCallback? onTap;
   final String? seatsNote;
+  final ListingTone? tone;
+  final String? tag;
+  final String? route;
+  final Color? linkAbove;
 
   const JourneyDriverCard({
     super.key,
@@ -28,6 +33,10 @@ class JourneyDriverCard extends StatelessWidget {
     this.selected = false,
     this.onTap,
     this.seatsNote,
+    this.tone,
+    this.tag,
+    this.route,
+    this.linkAbove,
   });
 
   static String vehicleLine(WayDriver d) {
@@ -38,6 +47,8 @@ class JourneyDriverCard extends StatelessWidget {
     ].join(' · ');
   }
 
+  static String fareText(WayDriver d) => d.isEstimate ? TripStringsAlgoAa.about(BrowseItem.inr(d.fare)) : BrowseItem.inr(d.fare);
+
   static void call(WayDriver d) {
     final phone = d.phone ?? d.whatsApp;
     if (phone == null) {
@@ -47,56 +58,28 @@ class JourneyDriverCard extends StatelessWidget {
     ContactLauncher.call(phone);
   }
 
-  static void whatsApp(WayDriver d) {
-    final phone = d.whatsApp ?? d.phone;
-    if (phone == null) {
-      TaxiNavigation.openDetail(d.taxiId);
-      return;
-    }
-    ContactLauncher.whatsApp(phone);
-  }
-
   @override
   Widget build(BuildContext context) {
     final d = driver;
-    return DriverOptionCard(
-      name: d.driverName,
-      nameMaxLines: 2,
-      vehicle: caption ?? vehicleLine(d),
-      badge: d.repliesInApp ? TaxiWaysStrings.repliesInApp : null,
-      fareValue: d.isEstimate ? TripStringsAlgoAa.about(BrowseItem.inr(d.fare)) : BrowseItem.inr(d.fare),
-      tone: KitTone.taxi,
-      legColor: color,
-      avatarInitial: d.initial,
-      selected: selected,
+    return JourneyCard3D(
+      tone: tone ?? ListingTone.cA,
+      art: JourneyArt.forVehicle(d.vehicleTypeName, d.seats),
+      tag: tag,
+      title: d.driverName,
+      subtitle: [caption ?? vehicleLine(d), ?route],
+      pill: d.repliesInApp ? const JourneyPill3D(label: TaxiWaysStrings.repliesInApp) : null,
+      fare: fareText(d),
+      note: [?seatsNote],
+      noteLines: 0,
+      picked: selected,
       onTap: onTap,
-      margin: const EdgeInsets.symmetric(vertical: 4),
-      header: seatsNote == null
-          ? null
-          : KitStatusStrip(label: seatsNote!, color: DesignColors.warnDeep, icon: Icons.info_outline_rounded),
-      actions: [
-        PillAction(
-          label: TaxiWaysStrings.call,
-          filled: true,
-          tone: KitTone.taxi,
-          icon: const Icon(Icons.call_rounded, size: 16, color: DesignColors.onPrimary),
-          maxWidth: 150,
-          onTap: () => call(d),
-        ),
-        PillAction(
-          label: TaxiWaysStrings.whatsApp,
-          tone: KitTone.taxi,
-          icon: const WhatsAppGlyph(size: 18),
-          maxWidth: 150,
-          onTap: () => whatsApp(d),
-        ),
+      linkAbove: linkAbove,
+      cells: [
+        JourneyCell(label: TaxiWaysStrings.call, icon: Icons.call_rounded, onTap: () => call(d)),
         if (onChange != null && otherCount > 0)
-          PillAction(
-            label: TaxiWaysStrings.otherDrivers(otherCount),
-            tone: KitTone.taxi,
-            maxWidth: 220,
-            onTap: onChange,
-          ),
+          JourneyCell(label: TaxiWaysStrings.otherDrivers(otherCount), icon: Icons.swap_horiz_rounded, onTap: onChange)
+        else
+          null,
       ],
     );
   }
