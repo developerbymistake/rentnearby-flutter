@@ -19,7 +19,7 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> with WidgetsBindingObserver {
-  static const _minSplash = Duration(milliseconds: 1500);
+  static const _minSplash = Duration(milliseconds: 2800);
   static const _minSplashReduced = Duration(milliseconds: 1000);
   bool _waitingForSettings = false;
   Worker? _updateGateWorker;

@@ -72,6 +72,7 @@ export 'tokens/listing_palette.dart';
 export 'tokens/trip_tokens.dart';
 export 'tokens/util_tokens.dart';
 export 'tokens/template_tokens.dart';
+export 'tokens/splash_tokens.dart';
 export 'extra/whatsapp_glyph.dart';
 export 'extra/art_3d.dart';
 export 'extra/meals_card_v.dart';
