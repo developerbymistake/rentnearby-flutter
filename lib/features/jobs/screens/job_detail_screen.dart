@@ -186,7 +186,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       if (!j.isActive)
         const Padding(
           padding: EdgeInsets.only(top: 14),
-          child: JobsNoteCard(art: ListingArt.key, text: 'This job is closed'),
+          child: JobsNoteCard(art: ListingArt.locked, text: 'This job is closed'),
         ),
       Padding(padding: const EdgeInsets.only(top: 18), child: _titleRow(j)),
       Padding(padding: const EdgeInsets.only(top: 18), child: _infoCard(j)),
@@ -360,8 +360,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
         onTap: j.stayListingId.isEmpty ? null : () => _openStay(j),
       ),
       JobsInfoRow(tone: _look, art: ListingArt.roundPushpin, label: 'Location', value: j.placeLabel),
-      JobsInfoRow(tone: _look, art: ListingArt.mountain, label: 'Experience', value: j.experienceDetail),
-      JobsInfoRow(tone: _look, art: ListingArt.sunrise, label: 'Job type · Shift', value: jobTypeShift),
+      JobsInfoRow(tone: _look, art: ListingArt.seedling, label: 'Experience', value: j.experienceDetail),
+      JobsInfoRow(tone: _look, art: ListingArt.alarmClock, label: 'Job type · Shift', value: jobTypeShift),
       JobsInfoRow(tone: _look, art: ListingArt.moneyBag, label: 'Salary type', value: j.salaryTypeName),
     ]);
   }
@@ -380,7 +380,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
         showDirections: false,
         callLabel: 'Call',
         reportLabel: 'Report this stay',
-        safetyArt: ListingArt.clipboard,
+        safetyArt: ListingArt.shield,
         safetyText: 'Never pay to get a job. Visit the stay before joining.',
         onReport: reported
             ? null

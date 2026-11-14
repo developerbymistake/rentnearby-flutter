@@ -1,12 +1,15 @@
 import 'dart:async';
 import 'dart:math';
+import 'package:audioplayers/audioplayers.dart';
 import 'package:bakhli/design/design.dart';
+import 'package:bakhli/design/extra/sheet_close_button.dart';
 import 'package:bakhli/design/extra/stay_grid_card.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 import '../../../config/app_constants.dart';
 import '../../../config/app_insets.dart';
+import '../../../config/module_palette.dart';
 import '../../../config/app_map_state.dart';
 import '../../../config/app_routes.dart';
 import '../../../config/app_tabs.dart';
@@ -24,6 +27,23 @@ import '../models/stay_nearby_model.dart';
 import 'stay_bottom_sheet.dart';
 import 'stay_guest_controller.dart';
 import 'stay_landing_controller.dart';
+import 'stay_map_load_logic.dart';
+
+final KitTone _forest = KitTone(
+  accent: ListingPalette.forest.g1,
+  accentDark: ListingPalette.forest.g2,
+  tint: ListingPalette.forest.tint,
+  gradient: ListingPalette.forest.gradient,
+  glow: ListingPalette.forest.g2,
+);
+final ModulePalette _forestPalette = ModulePalette(
+  accent: ListingPalette.forest.g1,
+  accentDark: ListingPalette.forest.g2,
+  accentLight: ListingPalette.forest.button,
+  surface: ListingPalette.forest.tint,
+  gradient: ListingPalette.forest.gradient,
+);
+final String _forestHex = DesignHex.of(ListingPalette.forest.g2);
 
 class StayMapScreen extends StatefulWidget {
   const StayMapScreen({super.key});
@@ -50,17 +70,28 @@ class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateM
   final _auth = Get.find<AuthController>();
   final _centre = NearbyCentreController.to;
   final _workers = <Worker>[];
-  bool _stale = false;
+  bool get _stale => _loader.stale;
+  set _stale(bool v) => _loader.stale = v;
+  late final StayNearbyLoader _loader = StayNearbyLoader(
+    centre: () => (_searchCenter.latitude, _searchCenter.longitude),
+    radius: () => _radius,
+    isPaused: () => mapShouldPause.value,
+    isMounted: () => mounted,
+    fetch: _guest.loadNearby,
+    nearestActive: () => _guest.nearestActive.value,
+    hasStays: () => _guest.nearbyStays.isNotEmpty,
+    onStart: _onLoadStart,
+    onSettled: _onLoadSettled,
+  );
 
   List<_MapMarkerData> _markerData = [];
-  double _radius = 1.0;
+  double _radius = AppConstants.defaultRadiusKm;
   double? _preSearchRadius;
   double _lastClusterZoom = 0;
+  bool _markersDirty = false;
   bool _mapReady = false;
   Timer? _loadNearbyDebounceTimer;
-  bool _loadingNearby = false;
-  bool _reloadPending = false;
-  bool _hasLoadedOnce = false;
+  final _audioPlayer = AudioPlayer();
   int _revealedCount = 0;
   Timer? _revealTimer;
   late AnimationController _radarController;
@@ -89,20 +120,6 @@ class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateM
       });
 
     WidgetsBinding.instance.addObserver(this);
-
-    _workers.add(
-      ever(_locationCtrl.selectedDistrict, (_) {
-      if (_locationCtrl.selectedDistrict.value != null) {
-        if (_onStaysTab && !mapShouldPause.value) {
-          _precomputeCircleCache();
-          _loadNearby();
-          if (_mapReady && !_isCameraMoving) _fitToRadius();
-        } else {
-          _stale = true;
-        }
-      }
-      }),
-    );
 
     _workers.add(
       ever(_centre.centreVersion, (_) {
@@ -163,7 +180,11 @@ class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateM
           }
         }
       }
-      if (_pinsVisible && !_isCameraMoving) setState(() {});
+      if (_pinsVisible && !_isCameraMoving) {
+        setState(() {});
+      } else {
+        _markersDirty = true;
+      }
       }),
     );
 
@@ -228,8 +249,8 @@ class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateM
           _radarController.stop();
           _radarController.reset();
         }
-        if (_radius != AppConstants.radiusOptions.first) {
-          setState(() => _radius = AppConstants.radiusOptions.first);
+        if (_radius != AppConstants.defaultRadiusKm) {
+          setState(() => _radius = AppConstants.defaultRadiusKm);
           _stale = true;
         }
       }
@@ -241,6 +262,7 @@ class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateM
       if (!mounted) return;
       if (active) {
         _updateNearestFocus();
+        _playTing();
       } else {
         _nearestCircleAnim = null;
         _nearestCircleController.stop();
@@ -282,6 +304,7 @@ class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateM
     _mapPauseWorker?.dispose();
     if (_guest.nearestActive.value) _guest.nearestActive.value = false;
     _guest.clearNearest();
+    _audioPlayer.dispose();
     _radarController.dispose();
     _chromeController.dispose();
     _nearestCircleController.dispose();
@@ -339,7 +362,7 @@ class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateM
     NearestConfirmSheet.show(
       context,
       itemLabel: 'stays',
-      palette: templateModulePalette,
+      palette: _forestPalette,
       onConfirm: () => _guest.loadNearest(center.latitude, center.longitude),
     );
   }
@@ -349,9 +372,9 @@ class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateM
     if (ctrl == null || !mounted) return;
     _precomputeCircleCache();
     await ctrl.addGeoJsonSource('radius-source', _circleCache[_radius]!);
-    await ctrl.addFillLayer('radius-source', 'radius-fill', FillLayerProperties(fillColor: SetupKit.stayHex, fillOpacity: 0.06));
-    await ctrl.addLineLayer('radius-source', 'radius-glow', LineLayerProperties(lineColor: SetupKit.stayHex, lineWidth: 6.0, lineOpacity: 0.15, lineBlur: 3.0));
-    await ctrl.addLineLayer('radius-source', 'radius-border', LineLayerProperties(lineColor: SetupKit.stayHex, lineWidth: 1.8, lineOpacity: 0.65));
+    await ctrl.addFillLayer('radius-source', 'radius-fill', FillLayerProperties(fillColor: _forestHex, fillOpacity: 0.06));
+    await ctrl.addLineLayer('radius-source', 'radius-glow', LineLayerProperties(lineColor: _forestHex, lineWidth: 6.0, lineOpacity: 0.15, lineBlur: 3.0));
+    await ctrl.addLineLayer('radius-source', 'radius-border', LineLayerProperties(lineColor: _forestHex, lineWidth: 1.8, lineOpacity: 0.65));
   }
 
   void _updateNativeRadiusCircle() {
@@ -384,15 +407,7 @@ class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateM
     ctrl.updateCircle(dot, CircleOptions(geometry: loc));
   }
 
-  double _zoomForRadius(double radiusKm, double lat) {
-    const earthCircumference = 2 * pi * 6378137.0;
-    const tileSize = 512.0;
-    final usablePx = _screenSize.width > 0 ? _screenSize.width : 480.0;
-    final metersPerPxAtZ0 = earthCircumference * cos(lat * pi / 180) / tileSize;
-    final targetMetersPerPx = (radiusKm * 1000 * 2) / (usablePx * 0.93);
-    final zoom = log(metersPerPxAtZ0 / targetMetersPerPx) / log(2);
-    return zoom.clamp(9.0, 17.0);
-  }
+  double _zoomForRadius(double radiusKm, double lat) => StayMapRules.zoomForRadius(radiusKm, lat, _screenSize.width);
 
   void _animateTo(LatLng target, double zoom) {
     if (!_mapReady || _mapController == null || !mounted) return;
@@ -421,8 +436,7 @@ class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateM
     _cameraIdleDebounce = Timer(const Duration(milliseconds: 150), () {
       if (!mounted) return;
       _isCameraMoving = false;
-      if ((_currentZoom - _lastClusterZoom).abs() >= 0.4) {
-        _lastClusterZoom = _currentZoom;
+      if (StayMapRules.shouldRebuildMarkers(markersDirty: _markersDirty, lastBuildZoom: _lastClusterZoom, idleZoom: _currentZoom)) {
         _buildMarkers(animate: false);
       }
       if (!_pinsVisible) setState(() => _pinsVisible = true);
@@ -431,40 +445,36 @@ class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateM
 
   void _loadNearby({bool keepNearest = false}) {
     if (!keepNearest && _guest.nearestActive.value) _guest.nearestActive.value = false;
-    _reloadPending = true;
+    _loader.reloadPending = true;
     _loadNearbyDebounceTimer?.cancel();
     _loadNearbyDebounceTimer = Timer(const Duration(milliseconds: 300), () async {
-      await _executeLoadNearby();
+      await _loader.run();
     });
   }
 
-  Future<void> _executeLoadNearby() async {
-    if (_loadingNearby) return;
-    if (mapShouldPause.value) {
-      _stale = true;
-      _reloadPending = false;
-      return;
-    }
-    _stale = false;
-    _loadingNearby = true;
-    try {
-      _revealTimer?.cancel();
-      _radarController.repeat();
+  void _onLoadStart() {
+    _revealTimer?.cancel();
+    _radarController.repeat();
+    if (_guest.nearbyStays.isEmpty) {
       final userMarker = _buildUserMarkerData();
       _markerData = userMarker != null ? [userMarker] : [];
       _revealedCount = _markerData.length;
-      setState(() {});
-      final center = _searchCenter;
-      await _guest.loadNearby(center.latitude, center.longitude, _radius);
-      if (!mounted) return;
-      _radarController.stop();
-      _radarController.reset();
-      _buildMarkers();
-    } finally {
-      _loadingNearby = false;
-      _reloadPending = false;
-      _hasLoadedOnce = true;
     }
+    setState(() {});
+  }
+
+  void _onLoadSettled(NearbySettled result) {
+    _radarController.stop();
+    _radarController.reset();
+    setState(() {});
+    if (result.rebuildMarkers) _buildMarkers();
+    if (result.playSound) _playTing();
+  }
+
+  Future<void> _playTing() async {
+    try {
+      await _audioPlayer.play(AssetSource('sounds/tone.mp3'));
+    } catch (_) {}
   }
 
   _MapMarkerData? _buildUserMarkerData() {
@@ -485,6 +495,8 @@ class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateM
   }
 
   void _buildMarkers({bool animate = true}) {
+    _lastClusterZoom = _currentZoom;
+    _markersDirty = false;
     final data = <_MapMarkerData>[];
 
     final userMarker = _buildUserMarkerData();
@@ -510,7 +522,7 @@ class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateM
                 decoration: BoxDecoration(
                     color: DesignColors.surface,
                   borderRadius: BorderRadius.circular(17),
-                    border: Border.all(color: KitTone.stay.accentDark, width: 2),
+                    border: Border.all(color: _forest.accentDark, width: 2),
                     boxShadow: ShadowTokens.elev2,
                 ),
                 child: Center(
@@ -520,7 +532,7 @@ class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateM
                         fontFamily: TypeTokens.family,
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
-                        color: KitTone.stay.accentDark,
+                        color: _forest.accentDark,
                       ),
                     ),
                   ),
@@ -539,7 +551,7 @@ class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateM
             onTap: () => _zoomToCluster(cluster),
             child: _AnimatedPin(
               child: Container(
-                  decoration: BoxDecoration(gradient: KitTone.stay.gradient, shape: BoxShape.circle, boxShadow: ShadowTokens.elev3),
+                  decoration: BoxDecoration(gradient: _forest.gradient, shape: BoxShape.circle, boxShadow: ShadowTokens.elev3),
                 child: Center(
                   child: Text(
                     '$count',
@@ -570,7 +582,7 @@ class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateM
             child: _AnimatedPin(
               child: Container(
                 decoration: BoxDecoration(
-                    gradient: KitTone.stay.gradient,
+                    gradient: _forest.gradient,
                   borderRadius: BorderRadius.circular(19),
                     border: Border.all(color: DesignColors.surface, width: 2.5),
                     boxShadow: ShadowTokens.elev3,
@@ -756,7 +768,7 @@ class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateM
                     onCameraIdle: _onCameraIdle,
                   ),
                 ),
-              if (!_mapActive || !_mapReady || _locationCtrl.userLocation.value == null) _buildMapSkeleton(),
+              Obx(() => !_mapActive || !_mapReady || _locationCtrl.userLocation.value == null ? _buildMapSkeleton() : const SizedBox.shrink()),
               if (_mapReady)
                 IgnorePointer(
                   ignoring: !_pinsVisible,
@@ -770,7 +782,29 @@ class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateM
                           final sp = _projectToScreen(d.position, _cameraCenter ?? _searchCenter, _currentZoom, constraints.biggest);
                           return Positioned(left: sp.dx - d.width / 2, top: sp.dy - d.height / 2, width: d.width, height: d.height, child: d.widget);
                         }),
-                        if (_guest.nearbyStays.isEmpty && !_loadingNearby && !_reloadPending && _hasLoadedOnce)
+                        if (_loader.loadFailed && !_loader.loading && !_loader.reloadPending)
+                          Obx(() {
+                            if (_guest.nearestActive.value) return const SizedBox.shrink();
+                            final radiusPx = _radiusPixelRadius(constraints.biggest);
+                            final sp = _projectToScreen(_searchCenter, _cameraCenter ?? _searchCenter, _currentZoom, constraints.biggest);
+                            final anchor = _radiusTopAnchor(sp, radiusPx, constraints.biggest);
+                            return Positioned(
+                              left: anchor.dx,
+                              top: anchor.dy,
+                              child: FractionalTranslation(
+                                translation: const Offset(-0.5, -1.0),
+                                child: GestureDetector(
+                                  onTap: _loadNearby,
+                                  child: EmptyRadiusHint(
+                                    label: 'Could not load stays. Tap to retry.',
+                                    circleRadiusPx: radiusPx,
+                                    palette: _forestPalette,
+                                  ),
+                                ),
+                              ),
+                            );
+                          })
+                        else if (_guest.nearbyStays.isEmpty && !_loader.loading && !_loader.reloadPending && _loader.hasLoadedOnce)
                           Obx(() {
                             if (_guest.nearestActive.value) return const SizedBox.shrink();
                             final radiusPx = _radiusPixelRadius(constraints.biggest);
@@ -784,7 +818,7 @@ class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateM
                                 child: EmptyRadiusHint(
                                   label: 'No stays in this radius — try Nearest',
                                   circleRadiusPx: radiusPx,
-                                  palette: templateModulePalette,
+                                  palette: _forestPalette,
                                 ),
                               ),
                             );
@@ -804,7 +838,7 @@ class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateM
                       animationController: _chromeController,
                       offset: -30,
                       child: Container(
-                        decoration: BoxDecoration(gradient: KitTone.stay.gradient, borderRadius: CardRadius.header, boxShadow: ShadowTokens.elev3),
+                        decoration: BoxDecoration(gradient: _forest.gradient, borderRadius: CardRadius.header, boxShadow: ShadowTokens.elev3),
                       child: SafeArea(
                         bottom: false,
                         child: Padding(
@@ -854,7 +888,7 @@ class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateM
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         if (_guest.nearbyStays.isNotEmpty) _buildViewListButton() else const SizedBox.shrink(),
-                          PressScale(child: StayFloatingPill(label: 'Find Nearest', iconAsset: TravelIcon.route, onTap: _openNearestConfirm)),
+                          PressScale(child: StayFloatingPill(label: 'Find Nearest', iconAsset: TravelIcon.route, gradient: _forest.gradient, shadowColor: ListingPalette.forest.g1, onTap: _openNearestConfirm)),
                       ],
                     ),
                     ),
@@ -880,7 +914,7 @@ class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateM
                       if (idx < total - 1) _guest.nearestFocusIndex.value = idx + 1;
                     },
                     onCancel: () => _guest.nearestActive.value = false,
-                    palette: templateModulePalette,
+                    palette: _forestPalette,
                   ),
                 );
               }),
@@ -910,7 +944,7 @@ class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateM
         width: KitMetrics.touch,
         height: KitMetrics.touch,
           decoration: BoxDecoration(color: DesignColors.surface, shape: BoxShape.circle, boxShadow: ShadowTokens.elev2),
-          child: Icon(Icons.chevron_left_rounded, color: KitTone.stay.accentDark, size: 26),
+          child: Icon(Icons.chevron_left_rounded, color: _forest.accentDark, size: 26),
         ),
       ),
     );
@@ -930,9 +964,7 @@ class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateM
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
               onTap: () {
-                _guest.nearbyStays.clear();
                 setState(() => _radius = r);
-                if (_hasPin) _preSearchRadius = r;
                 _loadNearby();
                 if (_mapReady) _fitToRadius();
               },
@@ -942,7 +974,7 @@ class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateM
                 margin: EdgeInsets.only(right: i < radii.length - 1 ? 4 : 0),
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  gradient: active ? KitTone.stay.gradient : null,
+                  gradient: active ? _forest.gradient : null,
                   borderRadius: BorderRadius.circular(24),
                   boxShadow: active ? ShadowTokens.elev1 : null,
                 ),
@@ -978,7 +1010,7 @@ class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateM
         width: KitMetrics.touch + 2,
         height: KitMetrics.touch + 2,
           decoration: BoxDecoration(color: DesignColors.surface, shape: BoxShape.circle, boxShadow: ShadowTokens.elev2),
-          child: Icon(Icons.my_location_rounded, color: KitTone.stay.accentDark, size: 22),
+          child: Icon(Icons.my_location_rounded, color: _forest.accentDark, size: 22),
         ),
       ),
     );
@@ -1018,22 +1050,22 @@ class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateM
         decoration: BoxDecoration(
             color: DesignColors.surface,
             borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: KitTone.stay.accentDark, width: 1.5),
+            border: Border.all(color: _forest.accentDark, width: 1.5),
             boxShadow: ShadowTokens.elev2,
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-              Icon(Icons.format_list_bulleted_rounded, color: KitTone.stay.accentDark, size: 18),
+              Icon(Icons.format_list_bulleted_rounded, color: _forest.accentDark, size: 18),
             const SizedBox(width: 6),
               Text(
                 'View List',
-                style: TextStyle(fontFamily: TypeTokens.family, fontSize: 13, fontWeight: FontWeight.w700, color: KitTone.stay.accentDark),
+                style: TextStyle(fontFamily: TypeTokens.family, fontSize: 13, fontWeight: FontWeight.w700, color: _forest.accentDark),
               ),
             const SizedBox(width: 6),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(gradient: KitTone.stay.gradient, borderRadius: BorderRadius.circular(10)),
+                decoration: BoxDecoration(gradient: _forest.gradient, borderRadius: BorderRadius.circular(10)),
                 child: Text(
                   '$count',
                   style: TypeTokens.style(11, FontWeight.w800, color: DesignColors.onPrimary),
@@ -1103,26 +1135,7 @@ class _ListSheetBodyState extends State<_ListSheetBody> {
                     style: TypeTokens.style(18, FontWeight.w700, color: DesignColors.textStrong, letterSpacing: 0.27),
                   );
                             }),
-                PressScale(
-                  child: SizedBox(
-                    width: KitMetrics.touch,
-                    height: KitMetrics.touch,
-                    child: InkWell(
-                      customBorder: const CircleBorder(),
-                      splashColor: DesignColors.splash,
-                      highlightColor: Colors.transparent,
-                      onTap: () => Navigator.pop(widget.sheetContext),
-                      child: Center(
-                              child: Container(
-                                width: 28,
-                                height: 28,
-                          decoration: const BoxDecoration(color: DesignColors.scaffold, shape: BoxShape.circle),
-                          child: const Icon(Icons.close_rounded, size: 16, color: DesignColors.textStrong),
-                        ),
-                              ),
-                            ),
-                        ),
-                      ),
+                SheetCloseButton(onTap: () => Navigator.pop(widget.sheetContext)),
                     ],
                   ),
                 ),

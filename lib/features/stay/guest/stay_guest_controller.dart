@@ -37,7 +37,7 @@ class StayGuestController extends GetxController {
   static String _cacheKey(double lat, double lng, double radius) =>
       '${lat.toStringAsFixed(3)}|${lng.toStringAsFixed(3)}|$radius';
 
-  Future<void> loadNearby(double lat, double lng, double radius, {bool refresh = false}) async {
+  Future<bool> loadNearby(double lat, double lng, double radius, {bool refresh = false}) async {
     final seq = ++_nearbyRequestSeq;
     final key = _cacheKey(lat, lng, radius);
     if (refresh) {
@@ -47,7 +47,7 @@ class StayGuestController extends GetxController {
       if (hit != null && DateTime.now().difference(hit.at) < _nearbyCacheTtl) {
         nearbyStays.value = hit.items;
         isLoading.value = false;
-        return;
+        return true;
       }
     }
     try {
@@ -59,12 +59,13 @@ class StayGuestController extends GetxController {
           }));
       final items = (res['data']['items'] as List).map((e) => StayNearbyModel.fromJson(e)).toList();
       _nearbyCache[key] = (items: items, at: DateTime.now());
-      if (seq != _nearbyRequestSeq) return;
-      nearbyStays.value = items;
+      if (seq == _nearbyRequestSeq) nearbyStays.value = items;
+      return true;
     } catch (e) {
-      if (seq != _nearbyRequestSeq) return;
-      if (e is DioException && e.response?.statusCode == 401) return;
+      if (seq != _nearbyRequestSeq) return false;
+      if (e is DioException && e.response?.statusCode == 401) return false;
       AppToast.error(_failText(e, 'Could not load nearby stays.'));
+      return false;
     } finally {
       if (seq == _nearbyRequestSeq) isLoading.value = false;
     }

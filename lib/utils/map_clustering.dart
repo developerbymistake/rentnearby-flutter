@@ -29,6 +29,9 @@ class MapClustering {
   static const double tileSize = 512;
   static const double _maxLat = 85.05112878;
 
+  static bool needsRebuild({required double lastBuildZoom, required double idleZoom}) =>
+      (idleZoom - lastBuildZoom).abs() >= 0.4;
+
   static (double, double) project(double lat, double lon, double zoom) {
     final scale = tileSize * pow(2.0, zoom);
     final s = sin(lat.clamp(-_maxLat, _maxLat) * pi / 180);

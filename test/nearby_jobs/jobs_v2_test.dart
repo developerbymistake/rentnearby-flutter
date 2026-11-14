@@ -3,14 +3,11 @@ import 'dart:io';
 
 import 'package:bakhli/controllers/tab_config_controller.dart';
 import 'package:bakhli/features/jobs/models/job_lookups_model.dart';
-import 'package:bakhli/features/jobs/v2/jobs_city_sheet_v2.dart';
 import 'package:bakhli/features/jobs/v2/jobs_feed_controller.dart';
 import 'package:bakhli/features/jobs/v2/jobs_feed_repository.dart';
 import 'package:bakhli/features/jobs/v2/jobs_landing_screen_v2.dart';
 import 'package:bakhli/features/nearby/data/nearby_repository_base.dart';
 import 'package:bakhli/features/nearby/models/nearby_models.dart';
-import 'package:bakhli/features/trip/data/trip_city_catalog.dart';
-import 'package:bakhli/features/trip/models/trip_city_model.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
@@ -34,39 +31,6 @@ Map<String, dynamic> _json(String id, {double? km = 3, String label = 'near', St
     };
 
 JobFeedItem _item(String id, {double km = 3, String label = 'near'}) => JobFeedItem.fromJson(_json(id, km: km, label: label));
-
-TripCityModel _city(int k, String n, String state, {bool popular = false, bool ready = true}) => TripCityModel(
-      cityKey: k,
-      name: n,
-      districtName: 'D$k',
-      stateName: state,
-      latitude: 29,
-      longitude: 79,
-      isPopularDestination: popular,
-      status: ready ? TripCityStatus.ready : TripCityStatus.notReady,
-    );
-
-class _Catalog extends TripCityCatalog {
-  final list = [
-    _city(1, 'Nainital', 'Uttarakhand', popular: true),
-    _city(2, 'Almora', 'Uttarakhand'),
-    _city(3, 'Manali', 'Himachal Pradesh', popular: true),
-    _city(4, 'Hidden', 'Uttarakhand', ready: false),
-  ];
-  @override
-  void warmFromDisk() {}
-  @override
-  bool get hasData => true;
-  @override
-  List<String> liveStates() => ['Himachal Pradesh', 'Uttarakhand'];
-  @override
-  Future<List<TripCityModel>> load({bool force = false}) async => list;
-  @override
-  List<TripCityModel> search(String q) {
-    final found = TripCitySearch.filter(list, q);
-    return q.trim().isEmpty ? TripCitySearch.popularFirst(found) : found;
-  }
-}
 
 class _Tabs extends TabConfigController {
   @override
@@ -169,31 +133,6 @@ void main() {
       expect(c.items.length, 1);
     });
 
-    test('city pick reloads with cityKey and no lat or lng', () async {
-      final f = _Fake();
-      final c = Get.put(_ctrl(f), tag: JobsFeedController.tag);
-      await Future<void>.delayed(Duration.zero);
-      c.pickCity(_city(3, 'Manali', 'Himachal Pradesh'));
-      await Future<void>.delayed(Duration.zero);
-      expect(f.calls.length, 2);
-      expect(f.calls.last.cityKey, 3);
-      expect(f.calls.last.lat, isNull);
-      c.useMyLocation();
-      await Future<void>.delayed(Duration.zero);
-      expect(f.calls.last.cityKey, isNull);
-      expect(f.calls.last.lat, 29.4);
-    });
-
-    test('same city again does not reload', () async {
-      final f = _Fake();
-      final c = Get.put(_ctrl(f), tag: JobsFeedController.tag);
-      await Future<void>.delayed(Duration.zero);
-      c.pickCity(_city(3, 'Manali', 'Himachal Pradesh'));
-      c.pickCity(_city(3, 'Manali', 'Himachal Pradesh'));
-      await Future<void>.delayed(Duration.zero);
-      expect(f.calls.length, 2);
-    });
-
     test('stale response is dropped', () async {
       final f = _Fake();
       f.hold = Completer();
@@ -202,7 +141,7 @@ void main() {
       final first = f.hold!;
       f.hold = null;
       f.answer = (_) => NearbyPage(items: [_item('new')]);
-      c.pickCity(_city(2, 'Almora', 'Uttarakhand'));
+      c.pickPin(30.1, 78.2, 'Almora');
       await Future<void>.delayed(Duration.zero);
       first.complete(NearbyPage(items: [_item('old')]));
       await Future<void>.delayed(Duration.zero);
@@ -264,76 +203,6 @@ void main() {
     });
   });
 
-  group('city sheet', () {
-    for (final w in [300.0, 560.0]) {
-      for (final scale in [1.0, 1.3]) {
-        testWidgets('search and state filter @${w.toInt()} x$scale', (t) async {
-          Get.put<TripCityCatalog>(_Catalog(), permanent: true);
-          setGoldenView(t, Size(w, 900));
-          await t.pumpWidget(MaterialApp(
-            theme: ThemeData(fontFamily: 'WorkSans'),
-            home: MediaQuery(
-              data: MediaQueryData(size: Size(w, 900), textScaler: TextScaler.linear(scale)),
-              child: const Scaffold(body: JobsCitySheetV2()),
-            ),
-          ));
-          await t.pumpAndSettle();
-          expect(find.text('Nainital'), findsOneWidget);
-          expect(find.text('Hidden'), findsNothing);
-          await t.tap(find.text('Himachal Pradesh').first);
-          await t.pumpAndSettle();
-          expect(find.text('Manali'), findsOneWidget);
-          expect(find.text('Nainital'), findsNothing);
-          await t.tap(find.text('All'));
-          await t.pumpAndSettle();
-          await t.enterText(find.byType(TextField), 'alm');
-          await t.pumpAndSettle();
-          expect(find.text('Almora'), findsOneWidget);
-          expect(find.text('Manali'), findsNothing);
-          expect(t.takeException(), isNull);
-        });
-      }
-    }
-
-    testWidgets('state chips are one horizontal row', (t) async {
-      Get.put<TripCityCatalog>(_Catalog(), permanent: true);
-      setGoldenView(t, const Size(300, 900));
-      await t.pumpWidget(const MaterialApp(home: Scaffold(body: JobsCitySheetV2())));
-      await t.pumpAndSettle();
-      expect(find.descendant(of: find.byType(JobsCitySheetV2), matching: find.byType(Wrap)), findsNothing);
-      final scroll = find.byWidgetPredicate((w) => w is SingleChildScrollView && w.scrollDirection == Axis.horizontal);
-      expect(scroll, findsOneWidget);
-      expect(find.descendant(of: scroll, matching: find.text('All')), findsOneWidget);
-      expect(t.takeException(), isNull);
-    });
-
-    testWidgets('tapping a city returns it', (t) async {
-      Get.put<TripCityCatalog>(_Catalog(), permanent: true);
-      setGoldenView(t, const Size(360, 900));
-      TripCityModel? got;
-      await t.pumpWidget(MaterialApp(
-        home: Builder(
-          builder: (c) => TextButton(
-            onPressed: () async => got = await JobsCitySheetV2.show(c),
-            child: const Text('open'),
-          ),
-        ),
-      ));
-      await t.tap(find.text('open'));
-      await t.pumpAndSettle();
-      await t.tap(find.text('Almora'));
-      await t.pumpAndSettle();
-      expect(got?.cityKey, 2);
-    });
-
-    test('sheet source has no Photon and no hardcoded colour', () {
-      final src = File('lib/features/jobs/v2/jobs_city_sheet_v2.dart').readAsStringSync();
-      expect(src.contains('Photon'), isFalse);
-      expect(src.contains('Color(0x'), isFalse);
-      expect(src.contains('noEmojiInputFormatters'), isTrue);
-    });
-  });
-
   group('search pin', () {
     test('pickPin fetches around the pin and cancel returns to gps', () async {
       final f = _Fake();
@@ -351,7 +220,7 @@ void main() {
       expect(f.calls.last.lat, 29.4);
     });
 
-    testWidgets('header has the old Search button, no extra search chip', (t) async {
+    testWidgets('header is one Stays-style place pill with a clear X, no Search or Cancel button', (t) async {
       Get.put<TabConfigController>(_Tabs());
       final f = _Fake();
       final c = _ctrl(f);
@@ -365,14 +234,16 @@ void main() {
         ),
       ));
       await t.pump(const Duration(milliseconds: 600));
-      expect(find.text('Search'), findsOneWidget);
+      expect(find.text('Search a place'), findsOneWidget);
+      expect(find.text('Search'), findsNothing);
+      expect(find.bySemanticsLabel('Back to my location'), findsNothing);
       expect(find.textContaining('Search any place'), findsNothing);
       expect(find.textContaining('Showing near you'), findsNothing);
       c.pickPin(30.1, 78.2, 'Rishikesh');
       await t.pump(const Duration(milliseconds: 600));
-      expect(find.text('Cancel'), findsOneWidget);
+      expect(find.text('Cancel'), findsNothing);
       expect(find.text('Rishikesh'), findsOneWidget);
-      await t.tap(find.text('Cancel'));
+      await t.tap(find.bySemanticsLabel('Back to my location'));
       await t.pump(const Duration(milliseconds: 600));
       expect(c.searchPin.value, isNull);
       expect(t.takeException(), isNull);
@@ -450,7 +321,7 @@ void main() {
     });
 
     test('v2 files carry no Ask for a price and no hardcoded colour', () {
-      for (final n in ['jobs_feed_repository', 'jobs_feed_controller', 'jobs_city_sheet_v2', 'jobs_filter_sheet_v2', 'jobs_landing_screen_v2']) {
+      for (final n in ['jobs_feed_repository', 'jobs_feed_controller', 'jobs_filter_sheet_v2', 'jobs_landing_screen_v2']) {
         final src = File('lib/features/jobs/v2/$n.dart').readAsStringSync();
         expect(src.contains('Ask for a price'), isFalse, reason: n);
         expect(src.contains('Color(0x'), isFalse, reason: n);

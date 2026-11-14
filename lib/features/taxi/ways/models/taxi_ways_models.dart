@@ -140,7 +140,9 @@ class WayDriver {
   final int? estimatedFare;
   final String tripType;
   final bool partial;
-  final bool reversed;
+  final String section;
+  final String? routeFromName;
+  final String? routeToName;
   final double? distanceKm;
   final int? minutes;
   final bool hasRoadLine;
@@ -167,7 +169,9 @@ class WayDriver {
     this.estimatedFare,
     this.tripType = 'OneWay',
     this.partial = false,
-    this.reversed = false,
+    this.section = WayDriver.sectionDirect,
+    this.routeFromName,
+    this.routeToName,
     this.distanceKm,
     this.minutes,
     this.hasRoadLine = false,
@@ -195,7 +199,9 @@ class WayDriver {
         estimatedFare: _in(json['estimatedFare']),
         tripType: _s(json['tripType'], 'OneWay'),
         partial: json['partial'] == true,
-        reversed: json['reversed'] == true,
+        section: json['section'] == sectionOnTheWay ? sectionOnTheWay : sectionDirect,
+        routeFromName: _sn(json['routeFromName']),
+        routeToName: _sn(json['routeToName']),
         distanceKm: _dn(json['distanceKm']),
         minutes: _in(json['minutes']),
         hasRoadLine: json['hasRoadLine'] == true,
@@ -204,12 +210,17 @@ class WayDriver {
         meetAtName: _sn(json['meetAtName']),
       );
 
+  static const String sectionDirect = 'direct';
+  static const String sectionOnTheWay = 'onTheWay';
+
+  bool get isOnTheWay => section == sectionOnTheWay;
+
   bool get repliesInApp => tripReplyLabel == 'app';
 
   // Per car for this stretch: the road-share estimate of a partial route, else the driver's quote.
   int get fare => estimatedFare ?? listedFare;
 
-  bool get isEstimate => estimatedFare != null;
+  bool get isEstimate => estimatedFare != null || isOnTheWay;
 
   int carsFor(int people) => WayCars.needed(people, seats);
 
@@ -658,7 +669,16 @@ int rowPrice(Object o, int people) => o is WayDriver ? o.groupFare(people) : (o 
 
 // Fewest cars: by cars, plans by total inside a car count, drivers keep the server order. Lowest price: by group
 // price, then cars. Both stable.
-List<Object> sortedRows(TaxiWaysResult r, WaysSort s, {int people = 1}) {
+List<Object> sortedRows(TaxiWaysResult r, WaysSort s, {int people = 1}) =>
+    onTheWayLast(_sortedAll(r, s, people));
+
+// Drivers who only pass through the stretch form their own section after the ways that serve it directly.
+List<Object> onTheWayLast(List<Object> rows) => [
+      ...rows.where((e) => !(e is WayDriver && e.isOnTheWay)),
+      ...rows.where((e) => e is WayDriver && e.isOnTheWay),
+    ];
+
+List<Object> _sortedAll(TaxiWaysResult r, WaysSort s, int people) {
   final rows = <Object>[...r.allTheWay, ...r.plans];
   if (s == WaysSort.fewestCars) {
     _stableSort(rows, (a, b) {

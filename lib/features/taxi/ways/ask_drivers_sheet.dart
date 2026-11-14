@@ -114,6 +114,7 @@ class _AskBodyState extends State<_AskBody> {
       canPop: !_sending,
       child: TripSheetFrame(
         tone: tone,
+        closeEnabled: !_sending,
         art: ListingArt.speechBalloon,
         title: TaxiWaysStrings.askDrivers,
         description: '${TripFormat.shortDate(req.date)} · ${TaxiWaysStrings.peopleChip(req.people)}',

@@ -106,7 +106,7 @@ class _PostJobScreenState extends State<PostJobScreen> {
         children: [
           JobsHeader(
             tone: _look,
-            art: ListingArt.luggage,
+            art: ListingArt.briefcase,
             title: 'Post a Job',
             onBack: _ctrl.isSubmitting.value ? null : _close,
           ),
@@ -247,7 +247,7 @@ class _PostJobScreenState extends State<PostJobScreen> {
       ),
       _sectionCard(
         title: 'Description',
-        art: ListingArt.clipboard,
+        art: ListingArt.memo,
         child: PillField(
           tone: _look,
           controller: _ctrl.descCtrl,
@@ -345,17 +345,17 @@ class _PostJobScreenState extends State<PostJobScreen> {
       ),
       _sectionCard(
         title: 'Min Experience',
-        art: ListingArt.mountain,
+        art: ListingArt.seedling,
         child: PillPickerField(
           tone: _look,
-          leadingArt: ListingArt.mountain,
+          leadingArt: ListingArt.seedling,
           value: minYears == null ? null : PostJobController.experienceOptionLabel(minYears),
           hint: 'Select',
           helperText: 'Fresher means no experience needed',
           onTap: () async {
             final i = await _pickIndex(
               title: 'Min Experience',
-              art: ListingArt.mountain,
+              art: ListingArt.seedling,
               labels: [for (final y in years) PostJobController.experienceOptionLabel(y)],
               selectedIndex: minYears == null ? -1 : years.indexOf(minYears),
             );
@@ -381,7 +381,7 @@ class _PostJobScreenState extends State<PostJobScreen> {
     return _stepBody(2, [
       _sectionCard(
         title: 'Job Type',
-        art: ListingArt.hotel,
+        art: ListingArt.alarmClock,
         child: JobsChoiceWrap(
           labels: l.jobTypes.map((e) => e.name).toList(),
           isActive: (i) => jobTypeId == l.jobTypes[i].id,
@@ -390,7 +390,7 @@ class _PostJobScreenState extends State<PostJobScreen> {
       ),
       _sectionCard(
         title: 'Shift',
-        art: ListingArt.sunrise,
+        art: ListingArt.alarmClock,
         child: JobsChoiceWrap(
           labels: l.shiftTypes.map((e) => _shiftLabel(e.name)).toList(),
           isActive: (i) => shiftId == l.shiftTypes[i].id,
@@ -399,7 +399,7 @@ class _PostJobScreenState extends State<PostJobScreen> {
       ),
       _sectionCard(
         title: 'Contact',
-        art: ListingArt.speechBalloon,
+        art: ListingArt.mobilePhone,
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           PillField(
             tone: _look,

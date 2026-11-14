@@ -5,6 +5,11 @@ import '../taxi_option_sets.dart';
 class TaxiWaysStrings {
   static const String title = 'Taxi ways';
   static String subtitle(String from, String to) => '$from to $to';
+  static const String directHeader = 'Taxis for this ride';
+  static const String estimateShort = 'estimate';
+  static const String onTheWayHeader = 'On the way';
+  static const String onTheWayBody = 'Estimated. Driver confirms the fare.';
+  static String going(String from, String to) => 'Going $from to $to, passes through your stretch';
   static String dateChip(DateTime d) => TripFormat.shortDate(d);
   static String peopleChip(int n) => '$n people';
   static String people(int n) => n == 1 ? '1 person' : '$n people';

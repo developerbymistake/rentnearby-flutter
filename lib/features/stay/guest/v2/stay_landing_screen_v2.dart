@@ -27,7 +27,7 @@ const _kSections = 4;
 const _kCardMaxScale = 1.6;
 const _kTone = KitTone.stay;
 const _kStickers = [ListingArt.key, ListingArt.bed, ListingArt.hotel];
-const _kTypeArt = [ListingArt.bed, ListingArt.hotel, ListingArt.beach, ListingArt.tent, ListingArt.camping, ListingArt.key];
+const _kTypeArt = [ListingArt.bed, ListingArt.hotel, ListingArt.beach, ListingArt.tent, ListingArt.hotelBuilding, ListingArt.key];
 
 ListingTone get _page => ListingTone.forest;
 List<ListingTone> get _typeTones => [ListingTone.cA, ListingTone.cB, ListingTone.cC, ListingTone.cF, ListingTone.cD];

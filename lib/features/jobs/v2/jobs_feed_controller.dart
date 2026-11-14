@@ -109,13 +109,6 @@ class JobsFeedController extends GetxController {
     refreshIfNeeded();
   }
 
-  void pickCity(TripCityModel c) {
-    if (city.value?.cityKey == c.cityKey && searchPin.value == null) return;
-    searchPin.value = null;
-    city.value = c;
-    _reloadFresh();
-  }
-
   void useMyLocation() {
     if (city.value == null && searchPin.value == null) return;
     city.value = null;

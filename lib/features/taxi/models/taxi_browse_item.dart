@@ -7,6 +7,7 @@ class TaxiBrowseItem {
   final String plateDisplay;
   final String? cityId;
   final String? cityName;
+  final String? baseCityName;
   final String? districtName;
   final int? minFare;
   final int routeCount;
@@ -30,6 +31,7 @@ class TaxiBrowseItem {
     required this.plateDisplay,
     this.cityId,
     this.cityName,
+    this.baseCityName,
     this.districtName,
     this.minFare,
     required this.routeCount,
@@ -54,6 +56,7 @@ class TaxiBrowseItem {
         plateDisplay: json['plateDisplay'] as String? ?? '',
         cityId: json['cityId'] as String?,
         cityName: json['cityName'] as String?,
+        baseCityName: json['baseCityName'] as String?,
         districtName: json['districtName'] as String?,
         minFare: (json['minFare'] as num?)?.toInt(),
         routeCount: (json['routeCount'] as num?)?.toInt() ?? 0,

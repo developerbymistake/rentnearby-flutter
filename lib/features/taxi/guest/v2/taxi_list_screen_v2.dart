@@ -13,6 +13,7 @@ import '../../../nearby/controllers/nearby_centre_controller.dart';
 import '../../../nearby/nearby_strings.dart';
 import '../../../nearby/widgets/nearby_header_strip.dart';
 import '../../../nearby/widgets/nearby_state_views.dart';
+import '../../../nearby/widgets/place_search_bar.dart';
 import '../../ways/widgets/taxi_ways_entry_card.dart';
 import '../../models/taxi_browse_item.dart';
 import '../taxi_card.dart';
@@ -153,28 +154,23 @@ class _TaxiListScreenV2State extends State<TaxiListScreenV2> {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          SearchPill(
-            tone: _tone,
-            label: 'From',
-            value: _fromText(),
-            leadingArt: ListingArt.roundPushpin,
-            buttonArt: f == null ? ListingArt.search : ListingArt.roundPushpin,
-            buttonSemantics: f == null ? 'Search From' : 'Use my centre',
+          PlaceSearchBarView(
+            caption: 'From',
+            label: _fromText(),
+            art: ListingArt.roundPushpin,
             onTap: () => _pick(isFrom: true),
-            onButtonTap: f == null ? () => _pick(isFrom: true) : _ctrl.useCentreAsFrom,
+            onClear: f == null ? null : _ctrl.useCentreAsFrom,
+            clearLabel: 'Use my centre',
             margin: const EdgeInsets.fromLTRB(16, 24, 16, 0),
           ),
-          SearchPill(
-            tone: _tone,
-            label: 'To',
-            value: t?.name ?? 'Anywhere / search a place',
-            hint: t == null,
-            leadingArt: ListingArt.worldMap,
-            buttonArt: ListingArt.search,
-            buttonSemantics: t == null ? 'Search To' : 'Clear To',
-            buttonChild: t == null ? null : const Icon(Icons.close_rounded, color: DesignColors.onPrimary, size: 26),
+          PlaceSearchBarView(
+            caption: 'To',
+            label: t?.name,
+            hint: 'Search a place',
+            art: ListingArt.search,
             onTap: () => _pick(isFrom: false),
-            onButtonTap: t == null ? () => _pick(isFrom: false) : _ctrl.clearTo,
+            onClear: t == null ? null : _ctrl.clearTo,
+            clearLabel: 'Clear To',
             margin: const EdgeInsets.fromLTRB(16, 12, 16, 4),
           ),
         ],

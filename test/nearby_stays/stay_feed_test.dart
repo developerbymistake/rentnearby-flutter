@@ -119,6 +119,32 @@ void main() {
       expect(HomeFeedModelV2.stay(_stay('a', km: 2, label: 'inCity')).item.locationLabel, 'In Nainital');
     });
 
+    test('stay place name and distance are split for the home card', () {
+      final m = HomeFeedModelV2.stay(_stay('a', km: 3.2));
+      expect(m.item.placeName, 'Nainital');
+      expect(m.item.distanceLabel, '3.2 km away');
+      final far = HomeFeedModelV2.stay(_stay('a', km: 420, label: 'far', city: 'Haldwani'));
+      expect(far.item.placeName, 'Haldwani');
+      expect(far.item.distanceLabel, '420 km away');
+      expect(HomeFeedModelV2.stay(_stay('a', km: null)).item.distanceLabel, isNull);
+    });
+
+    test('taxi keeps the base city beside the label line', () {
+      final t = HomeFeedModelV2.taxi({
+        'id': 't',
+        'driverName': 'Ravi',
+        'vehicleTypeName': 'Sedan',
+        'plateDisplay': 'UK04',
+        'routeCount': 2,
+        'createdAt': '2026-01-01T00:00:00Z',
+        'cityName': 'Haldwani',
+        'distanceKm': 25,
+        'labelKey': 'far',
+      });
+      expect(t.baseCityName, 'Haldwani');
+      expect(t.cityName, contains('About'));
+    });
+
     test('no distance keeps the old label and district name', () {
       final m = HomeFeedModelV2.stay(_stay('a', km: null));
       expect(m.item.locationLabel, 'Nainital');

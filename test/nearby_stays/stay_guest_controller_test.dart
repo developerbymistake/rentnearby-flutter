@@ -8,6 +8,7 @@ import '../journeys/fake_api.dart';
 Map<String, Object?> _item(String id) => {'id': id, 'latitude': 30.0, 'longitude': 79.0, 'distanceKm': 1.0};
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
   late FakeTripAdapter api;
   late StayGuestController c;
 
@@ -61,6 +62,24 @@ void main() {
     final second = c.loadNearby(30.0, 79.0, 20);
     await Future.wait([first, second]);
     expect(c.nearbyStays.single.id, 'r20.0');
+    expect(c.isLoading.value, false);
+  });
+
+  test('overlapping 12 then 20 ends with the 20 km list and only 20 applies', () async {
+    final first = c.loadNearby(30.0, 79.0, 12);
+    final second = c.loadNearby(30.0, 79.0, 20);
+    final ok = await Future.wait([first, second]);
+    expect(c.nearbyStays.single.id, 'r20.0');
+    expect(ok[1], true);
+  });
+
+  test('failed load returns false and keeps the old list', () async {
+    await c.loadNearby(30.0, 79.0, 12);
+    api.routes.insert(0, FakeRoute.value('GET', '/stays/nearby', null, code: 500, errorType: 'Boom'));
+    c.clearNearbyCache();
+    final ok = await c.loadNearby(30.0, 79.0, 20);
+    expect(ok, false);
+    expect(c.nearbyStays.single.id, 'r12.0');
     expect(c.isLoading.value, false);
   });
 }

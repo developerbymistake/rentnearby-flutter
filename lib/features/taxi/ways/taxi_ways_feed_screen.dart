@@ -844,7 +844,17 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen>
     final shortlist = TripShortlistController.to;
     final people = c.people.value;
     var driverIndex = 0;
+    final hasOnTheWay = rows.any((e) => e is WayDriver && e.isOnTheWay);
+    var onTheWayShown = false;
+    if (hasOnTheWay && rows.first is WayDriver) {
+      out.add(_enter(TitleRow3D(title: TaxiWaysStrings.directHeader, tone: ListingTone.coral)));
+    }
     for (final row in rows) {
+      if (row is WayDriver && row.isOnTheWay && !onTheWayShown) {
+        onTheWayShown = true;
+        lastCars = 0;
+        out.add(_enter(TitleRow3D(title: TaxiWaysStrings.onTheWayHeader, subtitle: TaxiWaysStrings.onTheWayBody, tone: ListingTone.coral)));
+      }
       final cars = rowCars(row, people);
       if (sort == WaysSort.fewestCars && lastCars != 0 && cars != lastCars) {
         out.add(_enter(_groupHeader(r, cars, people)));
@@ -958,11 +968,13 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen>
 
   List<Object> _ordered(List<Object> rows) {
     final g = _guide;
-    if (g == null) return rows;
-    return ShortlistOrder.noReplyLast(
-      rows,
-      (r) => r is WayDriver ? r.taxiId : '',
-      _noReply.toSet(),
+    if (g == null) return onTheWayLast(rows);
+    return onTheWayLast(
+      ShortlistOrder.noReplyLast(
+        rows,
+        (r) => r is WayDriver ? r.taxiId : '',
+        _noReply.toSet(),
+      ),
     );
   }
 

@@ -62,8 +62,8 @@ void main() {
       expect(find.textContaining('Showing near'), findsNothing);
       expect(find.text('Search any place'), findsNothing);
       expect(find.byType(TextField), findsNothing);
-      expect(find.bySemanticsLabel('Search From'), findsOneWidget);
-      expect(find.bySemanticsLabel('Search To'), findsOneWidget);
+      expect(find.bySemanticsLabel('From, Near you'), findsOneWidget);
+      expect(find.bySemanticsLabel('To, Search a place'), findsOneWidget);
       expect(find.text('Ramesh Kumar'), findsOneWidget);
       expect(find.text('Call'), findsOneWidget);
       expect(find.text('WhatsApp'), findsOneWidget);

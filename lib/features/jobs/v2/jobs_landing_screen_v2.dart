@@ -16,7 +16,7 @@ import '../models/job_lookups_model.dart';
 import '../models/job_summary_model.dart';
 import '../widgets/job_list_card.dart';
 import '../widgets/jobs_ui.dart';
-import 'jobs_city_sheet_v2.dart';
+import '../../nearby/widgets/place_search_bar.dart';
 import 'jobs_feed_controller.dart';
 import 'jobs_feed_repository.dart';
 import 'jobs_filter_sheet_v2.dart';
@@ -99,7 +99,7 @@ class _JobsLandingScreenV2State extends State<JobsLandingScreenV2> {
         Obx(
           () => JobsHeader(
             tone: _look,
-            art: ListingArt.luggage,
+            art: ListingArt.briefcase,
             title: Get.find<TabConfigController>().displayName(AppTabKeys.jobs, 'Jobs'),
             subtitle: 'Work at stays, nearest first',
             onBack: () => Get.back(),
@@ -117,17 +117,14 @@ class _JobsLandingScreenV2State extends State<JobsLandingScreenV2> {
       final label = pin != null
           ? pin.label
           : c == null
-              ? 'My location'
+              ? null
               : [c.name, if (c.stateName.isNotEmpty) c.stateName].join(', ');
-      final active = pin != null;
-      return JobsPlaceBar(
-        tone: _look,
+      return PlaceSearchBarView(
         label: label,
-        onPlaceTap: _pickCity,
-        onClear: c != null || pin != null ? _ctrl.useMyLocation : null,
-        actionLabel: active ? 'Cancel' : 'Search',
-        cancel: active,
-        onAction: active ? _ctrl.useMyLocation : _searchPlace,
+        hint: 'Search a place',
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        onTap: _searchPlace,
+        onClear: label == null ? null : _ctrl.useMyLocation,
       );
     });
   }
@@ -140,12 +137,6 @@ class _JobsLandingScreenV2State extends State<JobsLandingScreenV2> {
     final picked = await LocationSearchSheet.show(context, bias: bias);
     if (picked == null || !mounted) return;
     _ctrl.pickPin(picked.latLng.latitude, picked.latLng.longitude, picked.name);
-  }
-
-  Future<void> _pickCity() async {
-    final picked = await JobsCitySheetV2.show(context);
-    if (picked == null || !mounted) return;
-    _ctrl.pickCity(picked);
   }
 
   Widget _buildFilterChips() {
@@ -161,7 +152,7 @@ class _JobsLandingScreenV2State extends State<JobsLandingScreenV2> {
         children: [
           _dropdownChip(
             tone: ListingTone.cB,
-            art: ListingArt.clipboard,
+            art: ListingArt.cardIndex,
             label: JobLookups.nameOf(departments, deptId) ?? 'Department',
             selected: deptId != null,
             title: 'Department',
@@ -171,7 +162,7 @@ class _JobsLandingScreenV2State extends State<JobsLandingScreenV2> {
           ),
           _dropdownChip(
             tone: ListingTone.cD,
-            art: ListingArt.mountain,
+            art: ListingArt.seedling,
             label: experience?.label ?? 'Experience',
             selected: experience != null,
             title: 'Experience',

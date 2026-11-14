@@ -31,6 +31,7 @@ class NearbyStrings {
     return t == t.roundToDouble() ? t.round().toString() : t.toStringAsFixed(1);
   }
 
+  static String kmAway(double km) => '${kmText(km)} km away';
   static String inCity(String c) => 'In $c';
   static String near(String? c, double km) =>
       _has(c) ? '$c. About ${kmText(km)} km away' : 'About ${kmText(km)} km away';
