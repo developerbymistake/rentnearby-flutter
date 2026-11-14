@@ -10,7 +10,7 @@ class HubHeader extends StatelessWidget {
     this.lead,
     this.back = false,
     this.onBack,
-    this.minHeight = 104,
+    this.minHeight = 84,
     this.titleTop = 0,
   });
 
@@ -27,24 +27,24 @@ class HubHeader extends StatelessWidget {
     return MediaQuery.withClampedTextScaling(
       maxScaleFactor: 1.3,
       child: Padding(
-        padding: EdgeInsets.only(top: safeTop, bottom: 8),
+        padding: EdgeInsets.only(top: safeTop + 12, bottom: 8),
         child: Stack(
           clipBehavior: Clip.none,
           children: [
             Positioned(
-              top: -22,
+              top: -10,
               right: 12,
               child: Container(
-                width: 124,
-                height: 124,
+                width: 74,
+                height: 74,
                 decoration: BoxDecoration(shape: BoxShape.circle, color: HubTokens.accent.withValues(alpha: Alpha.v16)),
               ),
             ),
-            const Positioned(top: -30, right: 16, child: Art3D(asset: ListingArt.luggage, size: 118)),
+            const Positioned(top: -8, right: 16, child: Art3D(asset: ListingArt.luggage, size: 71)),
             ConstrainedBox(
               constraints: BoxConstraints(minHeight: minHeight),
               child: Padding(
-                padding: EdgeInsets.only(left: back ? 74 : 18, right: 150, top: titleTop),
+                padding: EdgeInsets.only(left: back ? 74 : 18, right: 98, top: titleTop),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,

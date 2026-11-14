@@ -165,8 +165,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _hero() {
     final narrow = MediaQuery.sizeOf(context).width < 340;
-    final art = narrow ? 76.0 : 128.0;
-    final halo = narrow ? 84.0 : 136.0;
+    final art = narrow ? 46.0 : 77.0;
+    final halo = narrow ? 50.0 : 82.0;
     final reserve = halo + 16;
     return Stack(
       clipBehavior: Clip.none,

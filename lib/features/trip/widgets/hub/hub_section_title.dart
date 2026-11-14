@@ -26,10 +26,10 @@ class HubSectionTitle extends StatelessWidget {
       children: [
         Semantics(
           header: true,
-          child: Text(title, style: Ink3D.text(18, FontWeight.w600, HubTokens.heading, letterSpacing: 0.3)),
+          child: Text(title, style: Ink3D.text(22, FontWeight.w600, HubTokens.heading, letterSpacing: 0.3)),
         ),
         if (sub != null)
-          Text(sub!, style: Ink3D.text(12.5, FontWeight.w400, HubTokens.headingSub, letterSpacing: 0)),
+          Text(sub!, style: Ink3D.text(15, FontWeight.w400, HubTokens.headingSub, letterSpacing: 0)),
       ],
     );
     return Padding(

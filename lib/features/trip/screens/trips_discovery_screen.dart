@@ -37,7 +37,9 @@ class _TripsDiscoveryScreenState extends State<TripsDiscoveryScreen> {
   void initState() {
     super.initState();
     _trips = MyTripsController.to;
-    _scroll.addListener(() => _scrolled.value = _scroll.hasClients && _scroll.offset > 0);
+    _scroll.addListener(
+      () => _scrolled.value = _scroll.hasClients && _scroll.offset > 0,
+    );
     _warmCatalog();
     _trips.ensureLoaded();
     if (Get.isRegistered<AuthController>()) {
@@ -66,7 +68,10 @@ class _TripsDiscoveryScreenState extends State<TripsDiscoveryScreen> {
   }
 
   void _continue(TripSummaryModel t) {
-    Get.toNamed(AppRoutes.tripPlan, arguments: TripBarRules.continueArgs(t))?.then((_) {
+    Get.toNamed(
+      AppRoutes.tripPlan,
+      arguments: TripBarRules.continueArgs(t),
+    )?.then((_) {
       if (mounted) _trips.load();
     });
   }
@@ -76,9 +81,12 @@ class _TripsDiscoveryScreenState extends State<TripsDiscoveryScreen> {
   }
 
   Widget _center(Widget child) => Align(
-        alignment: Alignment.topCenter,
-        child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: _maxWidth), child: child),
-      );
+    alignment: Alignment.topCenter,
+    child: ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: _maxWidth),
+      child: child,
+    ),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -116,7 +124,9 @@ class _TripsDiscoveryScreenState extends State<TripsDiscoveryScreen> {
               height: top,
               child: ValueListenableBuilder<bool>(
                 valueListenable: _scrolled,
-                builder: (_, on, _) => on ? const ColoredBox(color: HubTokens.statusStrip) : const SizedBox.shrink(),
+                builder: (_, on, _) => on
+                    ? const ColoredBox(color: HubTokens.statusStrip)
+                    : const SizedBox.shrink(),
               ),
             ),
           ],
@@ -133,18 +143,29 @@ class _TripsDiscoveryScreenState extends State<TripsDiscoveryScreen> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: [
-          const HubHeader(title: TripStringsHub.title, lead: TripStringsHub.lead),
+          const HubHeader(
+            title: TripStringsHub.title,
+            lead: TripStringsHub.lead,
+          ),
           Obx(() {
             final trips = _trips.continueTrips;
             return trips.isEmpty
                 ? const SizedBox.shrink()
                 : HubContinueBar(trips: trips.toList(), onContinue: _continue);
           }),
-          const HubSectionTitle(title: TripStringsHub.needTitle, sub: TripStringsHub.needSub, top: 22),
-          for (final t in tiles)
+          const HubSectionTitle(
+            title: TripStringsHub.needTitle,
+            sub: TripStringsHub.needSub,
+            top: 22,
+          ),
+          for (final (i, t) in tiles.indexed)
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 40, 16, 0),
-              child: HubTile(key: ValueKey('hub-tile-${t.id}'), config: t, onTap: () => _open(t)),
+              padding: EdgeInsets.fromLTRB(16, i == 0 ? 20 : 34, 16, 0),
+              child: HubTile(
+                key: ValueKey('hub-tile-${t.id}'),
+                config: t,
+                onTap: () => _open(t),
+              ),
             ),
           SizedBox(height: BarMetrics.bodyBottomOf(context)),
         ],
