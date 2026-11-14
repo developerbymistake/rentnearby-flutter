@@ -204,7 +204,8 @@ class _TripGuideViewState extends State<TripGuideView> {
         final idx = _g.index.value;
         final total = _g.total.value;
         final name = idx >= total ? TripStringsGuide.finishName : _g.steps[idx].name;
-        return TripGuideProgress(percent: _g.percent.value, name: name, index: idx, total: total, tone: tone);
+        final pendingNames = [for (final st in _g.steps) if (_g.pending.contains(st.key)) st.name];
+        return TripGuideProgress(percent: _g.percent.value, name: name, index: idx, total: total, tone: tone, pendingNames: pendingNames);
       });
 
   Widget _bar(ListingTone tone) => Obx(() {
@@ -271,6 +272,7 @@ class _TripGuideViewState extends State<TripGuideView> {
     return TripGuideFinish(
       key: const ValueKey('finish'),
       arranged: arranged,
+      pendingNames: [for (final st in _g.steps) if (_g.pending.contains(st.key)) st.name],
       percent: TripEasyRules.progress(rows).percent,
       title: _c.title,
       subtitle: dates,
@@ -308,7 +310,7 @@ class _TripGuideViewState extends State<TripGuideView> {
         return GuideSheetScaffold(
           key: sheetKey,
           tone: tone,
-          art: frame.asset,
+          art: _asset(step),
           title: frame.title,
           body: frame.body,
           progress: p / 100,

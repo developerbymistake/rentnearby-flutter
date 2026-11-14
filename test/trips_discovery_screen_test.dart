@@ -1,3 +1,4 @@
+import 'package:bakhli/config/app_routes.dart';
 import 'package:bakhli/design/design.dart';
 import 'package:bakhli/features/trip/controllers/my_trips_controller.dart';
 import 'package:bakhli/features/trip/data/trip_city_catalog.dart';
@@ -53,24 +54,32 @@ class _Catalog extends TripCityCatalog {
 }
 
 class _Trips extends MyTripsController {
-  _Trips({this.openCount = 0});
-  final int openCount;
+  _Trips([List<TripSummaryModel> trips = const []]) {
+    active.assignAll(trips);
+  }
   @override
   Future<void> ensureLoaded() async {}
   @override
   Future<void> load({bool refresh = false}) async {}
   @override
-  TripSummaryModel? get continueTrip {
-    active.length;
-    return null;
-  }
+  List<TripSummaryModel> get continueTrips => active.isEmpty ? const [] : super.continueTrips;
+}
 
-  @override
-  int get openTripCount {
-    active.length;
-    return openCount;
-  }
-
+TripSummaryModel _trip(int n, {bool done = false, int day = 0}) {
+  final d = day == 0 ? n : day;
+  return TripSummaryModel.fromJson({
+    'id': 'trip-$n',
+    'title': 'Trip number $n',
+    'status': done ? 'Completed' : 'Planned',
+    'cityName': 'Nainital',
+    'dayCount': 2,
+    'spotCount': 4,
+    'category': 'attraction',
+    'startDate': '2030-01-${(10 + d).toString().padLeft(2, '0')}',
+    'endDate': '2030-01-${(12 + d).toString().padLeft(2, '0')}',
+    'updatedAt': '2026-11-01T10:00:00Z',
+    'progress': {'total': 4, 'done': 1, 'percent': 25},
+  });
 }
 
 Future<void> _pump(WidgetTester t, TripCityCatalog catalog, double w, double scale, {MyTripsController? trips}) async {
@@ -79,6 +88,7 @@ Future<void> _pump(WidgetTester t, TripCityCatalog catalog, double w, double sca
   setGoldenView(t, Size(w, 800));
   await t.pumpWidget(GetMaterialApp(
     theme: ThemeData(fontFamily: 'WorkSans'),
+    getPages: [GetPage(name: AppRoutes.myTrips, page: () => const Scaffold(body: Text('my trips page')))],
     home: MediaQuery(
       data: MediaQueryData(size: Size(w, 800), textScaler: TextScaler.linear(scale)),
       child: const TripsDiscoveryScreen(),
@@ -155,9 +165,66 @@ void main() {
     expect(find.byType(TripCityTile), findsOneWidget);
   });
 
-  testWidgets('My trips pill shows the count', (t) async {
-    await _pump(t, _Catalog([_city(1)]), 360, 1, trips: _Trips(openCount: 3));
-    expect(find.text('My trips (3)'), findsOneWidget);
+  Finder dots() => find.byKey(const ValueKey('continue-dots'));
+  Finder dotBoxes() => find.descendant(of: dots(), matching: find.byType(AnimatedContainer));
+
+  for (final n in [1, 2, 3, 5]) {
+    testWidgets('continue shows $n incomplete trips as ${n == 1 ? 'one card' : 'a rail'}', (t) async {
+      final trips = _Trips([for (var i = 1; i <= n; i++) _trip(i)]);
+      await _pump(t, _Catalog([_city(1)]), 360, 1, trips: trips);
+      final shown = n > 3 ? 3 : n;
+      expect(find.byType(WideCard, skipOffstage: false), findsNWidgets(shown));
+      expect(dots(), n == 1 ? findsNothing : findsOneWidget);
+      if (n > 1) expect(dotBoxes(), findsNWidgets(shown));
+      expect(find.text('Continue your trip'), findsOneWidget);
+      expect(t.takeException(), isNull);
+    });
+  }
+
+  testWidgets('continue rail takes the soonest three and never completed ones', (t) async {
+    final trips = _Trips([
+      _trip(1, done: true, day: 1),
+      _trip(2, day: 20),
+      _trip(3, day: 5),
+      _trip(4, day: 25),
+      _trip(5, day: 8),
+    ]);
+    await _pump(t, _Catalog([_city(1)]), 360, 1, trips: trips);
+    expect([for (final c in trips.continueTrips) c.id], ['trip-3', 'trip-5', 'trip-2']);
+    expect(find.text('Trip number 1', skipOffstage: false), findsNothing);
+    expect(find.text('Trip number 4', skipOffstage: false), findsNothing);
+  });
+
+  testWidgets('only completed trips show no continue section', (t) async {
+    await _pump(t, _Catalog([_city(1)]), 360, 1, trips: _Trips([_trip(1, done: true)]));
+    expect(find.text('Continue your trip'), findsNothing);
+    expect(find.byType(WideCard), findsNothing);
+  });
+
+  testWidgets('View all has no count and opens My trips', (t) async {
+    await _pump(t, _Catalog([_city(1)]), 360, 1, trips: _Trips([for (var i = 1; i <= 5; i++) _trip(i)]));
+    expect(find.text('View all'), findsOneWidget);
+    expect(find.textContaining('('), findsNothing);
+    expect(find.textContaining('My trips'), findsNothing);
+    await t.tap(find.text('View all'));
+    await t.pumpAndSettle();
+    expect(Get.currentRoute, AppRoutes.myTrips);
+  });
+
+  testWidgets('swiping the rail moves the active dot', (t) async {
+    await _pump(t, _Catalog([_city(1)]), 360, 1, trips: _Trips([for (var i = 1; i <= 3; i++) _trip(i)]));
+    double w(int i) => t.getSize(dotBoxes().at(i)).width;
+    expect(w(0), greaterThan(w(1)));
+    await t.drag(find.byType(WideCard).first, const Offset(-250, 0));
+    await t.pumpAndSettle();
+    expect(w(1), greaterThan(w(0)));
+    expect(w(1), greaterThan(w(2)));
+  });
+
+  testWidgets('the My trips chip is gone from the filter row', (t) async {
+    await _pump(t, _Catalog([_city(1), _city(2, state: 'Himachal Pradesh')]), 360, 1, trips: _Trips([_trip(1)]));
+    expect(find.text('All'), findsOneWidget);
+    expect(find.textContaining('My trips'), findsNothing);
   });
 
   testWidgets('error state offers Try again', (t) async {

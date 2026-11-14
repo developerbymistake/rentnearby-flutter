@@ -7,6 +7,7 @@ import '../controllers/trip_plan_controller.dart';
 import '../models/trip_plan_model.dart';
 import '../trip_navigation.dart';
 import '../trip_strings_city.dart';
+import '../trip_strings_guide.dart';
 import '../trip_strings_v2_easy.dart';
 import '../utils/trip_easy_rules.dart';
 import 'trip_arrange_confirm.dart';
@@ -277,6 +278,17 @@ class _TripEasyRowState extends State<TripEasyRow> {
         child: const Text(TripStringsV2Easy.pillOffline,
             style: TextStyle(
                 fontFamily: FitnessAppTheme.fontName, fontSize: 11, fontWeight: FontWeight.w600, color: TripLook.neutralChipText)),
+      );
+    }
+    if (_i.state == TripRowState.todo && !_c.isReadOnly && _c.guideState.notNow.contains(_i.key.id)) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+        decoration: BoxDecoration(color: TripLook.warningSurface, borderRadius: BorderRadius.circular(20)),
+        child: const Text(TripStringsGuide.pendingTag,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+                fontFamily: FitnessAppTheme.fontName, fontSize: 11, fontWeight: FontWeight.w600, color: TripLook.warningText)),
       );
     }
     return TripEasyStatePill(_i.state);

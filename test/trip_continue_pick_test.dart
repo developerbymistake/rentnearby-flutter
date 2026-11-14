@@ -24,7 +24,12 @@ TripSummaryModel _t(String id, {int? startIn, int days = 3, String updated = '20
     });
 
 void main() {
-  String? pick(List<TripSummaryModel> l) => TripContinuePick.pick(l, _today)?.id;
+  test('pickMany returns at most the rail max, soonest first', () {
+    final l = [_t('d', startIn: 40), _t('a', startIn: 2), _t('c', startIn: 20), _t('b', startIn: 9)];
+    expect(TripContinuePick.pickMany(l, _today).map((e) => e.id), ['a', 'b', 'c']);
+  });
+
+  String? pick(List<TripSummaryModel> l) => TripContinuePick.pickMany(l, _today, 1).firstOrNull?.id;
 
   test('empty list gives null', () => expect(pick([]), isNull));
 

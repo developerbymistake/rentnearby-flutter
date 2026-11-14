@@ -14,6 +14,8 @@ class TripSheetFrame extends StatelessWidget {
     this.size = SheetSize.hug,
     this.footnote,
     this.endNote,
+    this.showClose = true,
+    this.closeEnabled = true,
   });
 
   final String title;
@@ -25,6 +27,8 @@ class TripSheetFrame extends StatelessWidget {
   final SheetSize size;
   final String? footnote;
   final String? endNote;
+  final bool showClose;
+  final bool closeEnabled;
 
   static Future<T?> show<T>(BuildContext context, Widget child) =>
       SheetFrame.show<T>(context, builder: (_) => child);
@@ -39,6 +43,8 @@ class TripSheetFrame extends StatelessWidget {
       subtitle: description,
       centerTitle: art != null,
       size: size,
+      showClose: showClose,
+      closeEnabled: closeEnabled,
       footer: footer,
       footnote: footnote,
       padding: EdgeInsets.fromLTRB(22, 0, 22, footer == null ? 20 : 4),

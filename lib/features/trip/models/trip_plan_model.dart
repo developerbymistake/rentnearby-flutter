@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:maplibre_gl/maplibre_gl.dart';
 import '../../../models/place_result_model.dart';
 import '../trip_constants.dart';
@@ -822,17 +823,23 @@ enum TripGuideChoice {
 class TripGuide {
   static final RegExp stepPattern = RegExp(r'^(gettingThere|comingBack|taxi|stay:[1-9][0-9]?|between:[2-9][0-9]?)$');
   static const int maxChoices = 30;
+  static const int maxNotNow = 8;
 
   final String step;
   final Map<String, TripGuideChoice> choices;
   final bool overview;
+  final List<String> notNow;
 
-  const TripGuide({this.step = '', this.choices = const {}, this.overview = false});
+  const TripGuide({this.step = '', this.choices = const {}, this.overview = false, this.notNow = const []});
 
-  bool get isDefault => step.isEmpty && choices.isEmpty && !overview;
+  bool get isDefault => step.isEmpty && choices.isEmpty && !overview && notNow.isEmpty;
 
-  TripGuide copyWith({String? step, Map<String, TripGuideChoice>? choices, bool? overview}) =>
-      TripGuide(step: step ?? this.step, choices: choices ?? this.choices, overview: overview ?? this.overview);
+  TripGuide copyWith({String? step, Map<String, TripGuideChoice>? choices, bool? overview, List<String>? notNow}) => TripGuide(
+        step: step ?? this.step,
+        choices: choices ?? this.choices,
+        overview: overview ?? this.overview,
+        notNow: notNow ?? this.notNow,
+      );
 
   TripGuide withChoice(String step, TripGuideChoice? choice) {
     final next = {...choices};
@@ -843,6 +850,16 @@ class TripGuide {
       next[step] = choice;
     }
     return copyWith(choices: next);
+  }
+
+  static List<String> cleanNotNow(Object? raw) {
+    final out = <String>[];
+    if (raw is List) {
+      for (final k in raw) {
+        if (k is String && stepPattern.hasMatch(k) && !out.contains(k) && out.length < maxNotNow) out.add(k);
+      }
+    }
+    return out;
   }
 
   static TripGuide? tryParse(Object? raw) {
@@ -858,13 +875,14 @@ class TripGuide {
         if (k is String && v != null && stepPattern.hasMatch(k) && out.length < maxChoices) out[k] = v;
       }
     }
-    final g = TripGuide(step: step, choices: out, overview: raw['overview'] == true);
+    final g = TripGuide(step: step, choices: out, overview: raw['overview'] == true, notNow: cleanNotNow(raw['notNow']));
     return g.isDefault ? null : g;
   }
 
   Map<String, dynamic> toJson() => {
         if (step.isNotEmpty) 'step': step,
         'choices': {for (final e in choices.entries) e.key: e.value.name},
+        'notNow': notNow,
         if (overview) 'overview': true,
       };
 
@@ -873,11 +891,12 @@ class TripGuide {
       other is TripGuide &&
       other.step == step &&
       other.overview == overview &&
+      listEquals(other.notNow, notNow) &&
       other.choices.length == choices.length &&
       choices.entries.every((e) => other.choices[e.key] == e.value);
 
   @override
-  int get hashCode => Object.hash(step, overview, choices.length);
+  int get hashCode => Object.hash(step, overview, choices.length, notNow.length);
 }
 
 class TripPlan {

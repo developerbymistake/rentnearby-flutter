@@ -5,9 +5,11 @@ import 'trip_ui.dart';
 import 'package:get/get.dart';
 import '../controllers/trip_plan_controller.dart';
 import '../models/trip_plan_model.dart';
+import '../utils/trip_guide_rules.dart';
 import '../trip_strings_v2_plan.dart';
 import '../utils/trip_easy_rules.dart';
 import '../utils/trip_format.dart';
+import 'guide/trip_guide_header_text.dart';
 import 'trip_card.dart';
 import 'trip_pace_sheet.dart';
 import 'trip_status.dart';
@@ -26,6 +28,10 @@ enum TripPlanMenu {
 }
 
 class TripPlanHeader extends StatelessWidget {
+  static const double _guideSide = 16;
+  // Left room kept free for the question circle, less the header side padding.
+  static const double _circleRoom = GuideSheetScaffold.circleLeft + GuideSheetScaffold.circleSize - _guideSide;
+
   final ValueChanged<TripPlanMenu> onMenu;
 
   const TripPlanHeader({super.key, required this.onMenu});
@@ -103,8 +109,18 @@ class TripPlanHeader extends StatelessWidget {
       c.saveFailed.value;
       c.settingsChangedAt.value;
       c.isOpening.value;
+      c.guideState.on.value;
+      c.guideState.index.value;
+      c.guideState.total.value;
       final off = c.plannerOff.value;
       final ready = plan != null && !off;
+      final question = ready && c.guideState.on.value ? c.guideState.stepNow : null;
+      if (question != null && plan != null) {
+        return MediaQuery.withClampedTextScaling(
+          maxScaleFactor: 1.3,
+          child: _guideHeader(context, c, plan, question),
+        );
+      }
       return MediaQuery.withClampedTextScaling(
         maxScaleFactor: 1.3,
         child: ModuleHeader(
@@ -224,37 +240,94 @@ class TripPlanHeader extends StatelessWidget {
     );
   }
 
+  Widget _guideHeader(BuildContext context, TripPlanController c, TripPlan plan, TripGuideStep step) {
+    final text = TripGuideHeaderText.of(plan, step.row);
+    final shown = _shownHint(hintOf(c, c.easyRows));
+    final editable = !c.isReadOnly && !c.needsUpdate.value;
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        gradient: ListingTone.indigo.gradient,
+        borderRadius: CardRadius.header,
+        boxShadow: ShadowTokens.glow(KitTone.brand.glow),
+      ),
+      padding: EdgeInsets.fromLTRB(_guideSide, MediaQuery.paddingOf(context).top + 8, _guideSide, 10),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              _BackCircle(onTap: () => Get.back()),
+              const SizedBox(width: 10),
+              Expanded(child: _GuideTitle(title: text.title, subtitle: text.subtitle)),
+              const SizedBox(width: 8),
+              _MapAction(onTap: () => onMenu(TripPlanMenu.map)),
+              _menu(c),
+            ],
+          ),
+          Padding(
+            padding: const EdgeInsets.only(top: 6, left: _circleRoom),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                if (shown != null) Flexible(child: _statusPill(shown)),
+                if (shown != null) const SizedBox(width: 8),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 120),
+                  child: _paceChip(context, c, editable),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  static String? _shownHint(String? hint) => hint == TripStringsV2Plan.hintMakeItEasy ? null : hint;
+
+  Widget _statusPill(String text) => Container(
+        key: const ValueKey('guide_status_pill'),
+        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
+        decoration: const BoxDecoration(color: DesignColors.whiteSoft, borderRadius: BorderRadius.all(Radius.circular(16))),
+        child: Text(
+          text,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: TypeTokens.style(12, FontWeight.w600, color: DesignColors.textInverse),
+        ),
+      );
+
   Widget _guidedRow(
     BuildContext context,
     TripPlanController c,
     String? hint,
     bool editable,
-  ) => Padding(
-    padding: const EdgeInsets.fromLTRB(12, 8, 0, 0),
-    child: Row(
-      children: [
-        Expanded(
-          child: hint == null
-              ? const SizedBox.shrink()
-              : Text(
-                  hint,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TypeTokens.style(
-                    12,
-                    FontWeight.w500,
-                    color: DesignColors.whiteHigh,
+  ) {
+    final shown = _shownHint(hint);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 8, 0, 0),
+      child: Row(
+        children: [
+          Expanded(
+            child: shown == null
+                ? const SizedBox.shrink()
+                : Text(
+                    shown,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TypeTokens.style(12, FontWeight.w500, color: DesignColors.whiteHigh),
                   ),
-                ),
-        ),
-        const SizedBox(width: 8),
-        ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 120),
-          child: _paceChip(context, c, editable),
-        ),
-      ],
-    ),
-  );
+          ),
+          const SizedBox(width: 8),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 120),
+            child: _paceChip(context, c, editable),
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _paceChip(BuildContext context, TripPlanController c, bool editable) {
     final label = c.settings.isRelaxed
@@ -428,6 +501,92 @@ class TripPlanHeader extends StatelessWidget {
           ),
           IgnorePointer(child: Switch3D(tone: ListingTone.indigo, value: muted, onChanged: (_) {})),
         ],
+      ),
+    );
+  }
+}
+
+class _BackCircle extends StatelessWidget {
+  const _BackCircle({required this.onTap});
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return PressScale(
+      child: SizedBox(
+        width: KitMetrics.touch,
+        height: KitMetrics.touch,
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          splashColor: DesignColors.whiteSoft,
+          highlightColor: Colors.transparent,
+          onTap: onTap,
+          child: Center(
+            child: Container(
+              width: 44,
+              height: 44,
+              decoration: const BoxDecoration(color: DesignColors.whiteSoft, shape: BoxShape.circle),
+              child: const Icon(Icons.arrow_back_ios_new_rounded, size: 20, color: DesignColors.textInverse),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// One line at 17, else two lines, else smaller; never an ellipsis.
+class _GuideTitle extends StatelessWidget {
+  const _GuideTitle({required this.title, required this.subtitle});
+
+  final String title;
+  final String subtitle;
+
+  static const List<double> _sizes = [17, 16, 15, 14, 13, 12, 11];
+
+  @override
+  Widget build(BuildContext context) {
+    final scaler = MediaQuery.textScalerOf(context);
+    final dir = Directionality.of(context);
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: 48),
+      child: LayoutBuilder(
+        builder: (context, box) {
+          TextStyle styleOf(double size) => TypeTokens.style(size, FontWeight.w700, color: DesignColors.textInverse, letterSpacing: 0.3);
+          bool fits(double size, int lines) {
+            final tp = TextPainter(text: TextSpan(text: title, style: styleOf(size).copyWith(height: 1.15)), textDirection: dir, textScaler: scaler, maxLines: lines)
+              ..layout(maxWidth: box.maxWidth);
+            return !tp.didExceedMaxLines;
+          }
+
+          var size = _sizes.last;
+          var lines = 2;
+          for (final s in _sizes) {
+            if (fits(s, 1)) {
+              size = s;
+              lines = 1;
+              break;
+            }
+            if (s <= 15 && fits(s, 2)) {
+              size = s;
+              break;
+            }
+          }
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title, key: const ValueKey('guide_title'), maxLines: lines, overflow: TextOverflow.clip, style: styleOf(size).copyWith(height: 1.15)),
+              if (subtitle.isNotEmpty)
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(subtitle, key: const ValueKey('guide_subtitle'), maxLines: 1, style: TypeTokens.style(11.5, FontWeight.w500, color: DesignColors.whiteHigh)),
+                ),
+            ],
+          );
+        },
       ),
     );
   }

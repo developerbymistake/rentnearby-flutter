@@ -1,3 +1,4 @@
+import 'package:bakhli/design/design.dart';
 import 'package:bakhli/features/trip/controllers/my_trips_controller.dart';
 import 'package:bakhli/features/trip/controllers/trip_plan_controller.dart';
 import 'package:bakhli/features/trip/controllers/trip_shortlist_controller.dart';
@@ -57,9 +58,9 @@ class _Trips extends MyTripsController {
   @override
   Future<void> load({bool refresh = false}) async {}
   @override
-  TripSummaryModel? get continueTrip {
+  List<TripSummaryModel> get continueTrips {
     active.length;
-    return TripSummaryModel(
+    return [TripSummaryModel(
       id: 't1',
       title: 'Nainital and Almora',
       status: 'draft',
@@ -69,14 +70,9 @@ class _Trips extends MyTripsController {
       category: 'trip',
       updatedAt: DateTime(2030, 1, 1),
       progress: const TripProgress(total: 5, done: 3, percent: 60),
-    );
+    )];
   }
 
-  @override
-  int get openTripCount {
-    active.length;
-    return 2;
-  }
 }
 
 class _Repo implements TripShortlistRepository {
@@ -131,7 +127,14 @@ Future<void> _guide(WidgetTester t, double w, String name, TripPlan plan, List<S
   final c = TripPlanController();
   c.plan.value = plan;
   setGoldenView(t, Size(w, 760));
-  await t.pumpWidget(_host(w, 760, TripGuideView(controller: c, shortlist: sl)));
+  await t.pumpWidget(_host(
+    w,
+    760,
+    Column(children: [
+      Container(height: 96, color: ListingTone.indigo.g2),
+      Expanded(child: TripGuideView(controller: c, shortlist: sl)),
+    ]),
+  ));
   await t.pump();
   await t.pump(const Duration(milliseconds: 100));
   await t.runAsync(() async {

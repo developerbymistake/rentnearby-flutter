@@ -14,10 +14,8 @@ import '../data/trip_repository.dart' show TripErrorTypes;
 import '../trip_navigation.dart';
 import '../trip_strings.dart';
 import '../trip_strings_tab.dart';
-import '../trip_strings_v2_plan.dart';
 import '../utils/trip_bar_rules.dart';
-import '../utils/trip_clock.dart';
-import '../widgets/trip_card.dart';
+import '../widgets/trip_continue_rail.dart';
 import '../widgets/trip_city_tile.dart';
 
 enum _Load { loading, ready, failed, plannerOff }
@@ -183,8 +181,8 @@ class _TripsDiscoveryScreenState extends State<TripsDiscoveryScreen> {
           _filterRow(),
           if (!_typing) ...[
             Obx(() {
-              final t = _trips.continueTrip;
-              return t == null ? const SizedBox.shrink() : _continueCard(t);
+              final trips = _trips.continueTrips;
+              return trips.isEmpty ? const SizedBox.shrink() : _continueSection(trips);
             }),
             TitleRow3D(title: TripStringsTab.sectionTitle, subtitle: TripStringsTab.sectionSub, tone: _page),
           ] else
@@ -229,61 +227,42 @@ class _TripsDiscoveryScreenState extends State<TripsDiscoveryScreen> {
               ),
       );
 
-  Widget _filterRow() => ChipCPRow(
-        children: [
-          Obx(() => ChipCP(
-                tone: ListingTone.cB,
-                art: ListingArt.luggage,
-                label: TripStringsTab.myTripsCount(_trips.openTripCount),
-                onTap: TripNavigation.openMyTrips,
-              )),
-          if (_states.length >= 2) ...[
-            ChipCP(
-              tone: ListingTone.teal,
-              art: ListingArt.worldMap,
-              label: TripStringsTab.all,
-              off: _state != null,
-              onTap: () => _pickState(null),
-            ),
-            for (var i = 0; i < _states.length; i++)
-              ChipCP(
-                tone: _stateTones[i % _stateTones.length],
-                art: _stateArts[i % _stateArts.length],
-                label: _states[i],
-                off: _state != _states[i],
-                onTap: () => _pickState(_states[i]),
-              ),
-          ],
-        ],
-      );
-
-  Widget _continueCard(TripSummaryModel t) {
-    final name = t.title.trim().isEmpty ? TripCard.routeTitle(t) : t.title.trim();
-    final dates = TripCard.lineBreakDates(TripBarRules.datesLine(t, TripClock.today()));
-    final next = TripBarRules.nextTitle(t);
-    final p = t.progress;
-    final needs = TripBarRules.needCount(t);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      mainAxisSize: MainAxisSize.min,
+  Widget _filterRow() {
+    if (_states.length < 2) return const SizedBox.shrink();
+    return ChipCPRow(
       children: [
-        TitleRow3D(title: TripStringsTab.continueHeading, tone: _page),
-        WideCard(
-          tone: ListingTone.cB,
-          art: ListingArt.luggage,
-          title: name,
-          subtitle: next == null ? dates : '$dates\n$next',
-          chips: [
-            if (p.total > 0) TripStringsTab.doneShort(p.done, p.total),
-            if (needs > 0) TripStringsV2Plan.needsYou(needs) else if (p.inProgress > 0) TripStringsTab.waitingShort(p.inProgress),
-          ],
-          showPrice: false,
-          progress: p.percent / 100,
-          onTap: () => _continue(t),
+        ChipCP(
+          tone: ListingTone.teal,
+          art: ListingArt.worldMap,
+          label: TripStringsTab.all,
+          off: _state != null,
+          onTap: () => _pickState(null),
         ),
+        for (var i = 0; i < _states.length; i++)
+          ChipCP(
+            tone: _stateTones[i % _stateTones.length],
+            art: _stateArts[i % _stateArts.length],
+            label: _states[i],
+            off: _state != _states[i],
+            onTap: () => _pickState(_states[i]),
+          ),
       ],
     );
   }
+
+  Widget _continueSection(List<TripSummaryModel> trips) => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TitleRow3D(
+            title: TripStringsTab.continueHeading,
+            action: TripStringsTab.viewAll,
+            onAction: TripNavigation.openMyTrips,
+            tone: _page,
+          ),
+          TripContinueRail(trips: trips, tone: _page, onOpen: _continue),
+        ],
+      );
 
   double _cell(double screenW) => ((screenW > _maxWidth ? _maxWidth : screenW) - 16) / 2;
 

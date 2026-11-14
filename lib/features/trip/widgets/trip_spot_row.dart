@@ -4,7 +4,6 @@ import 'package:bakhli/design/design.dart';
 import '../models/trip_spot_category.dart';
 import '../models/trip_spot_model.dart';
 import '../trip_strings_spots_x.dart';
-import '../utils/trip_format.dart';
 import 'trip_spot_detail_sheet.dart';
 
 class TripSpotRow extends StatelessWidget {
@@ -19,7 +18,6 @@ class TripSpotRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final area = spot.area;
     final extra = spot.gallery.length - 1;
     final cat = TripSpotCategory.label(spot.category);
     final off = locked && !selected;
@@ -41,7 +39,6 @@ class TripSpotRow extends StatelessWidget {
       tag: cat,
       title: spot.title,
       subtitle: spot.description ?? '',
-      chips: ['~${TripFormat.visit(spot.visitMinutes)}', if (area != null && area.isNotEmpty) area],
       showPrice: false,
       picked: selected,
       dimmed: off,

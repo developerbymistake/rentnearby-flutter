@@ -41,6 +41,7 @@ class TripGuideState {
   final notes = <String, String>{}.obs;
   final sending = <String>{}.obs;
   final answered = <String>{}.obs;
+  final pending = <String>{}.obs;
   final notNow = <String>{};
   final sentOk = <String>{};
   Future<bool> Function(BuildContext context, TripEasyRowKey row, GuideArgs guide)? opener;
@@ -93,8 +94,21 @@ extension TripPlanGuide on TripPlanController {
       ..clear()
       ..addAll(TripGuideRules.effective(p, easyRows));
     final keys = TripGuideRules.keys(p);
+    _g.notNow
+      ..clear()
+      ..addAll((p.guide?.notNow ?? const <String>[]).where(keys.contains));
     final at = TripGuideRules.cursor(keys, p.guide?.step, _g.choices, answered: _answeredKeys(keys));
     _g.step = at >= keys.length ? TripGuideState.finishKey : keys[at];
+  }
+
+  bool _guideResolved(String key) {
+    final row = TripGuideRules.rowKeyOf(key);
+    final info = row == null ? null : easyRowOf(row);
+    return TripGuideRules.resolved(
+      choice: _g.choices[key],
+      sentOk: _g.sentOk.contains(key),
+      rowEvidence: info != null && TripGuideRules.hasSendEvidence(info.state),
+    );
   }
 
   bool guideAnswered(String key) {
@@ -134,7 +148,10 @@ extension TripPlanGuide on TripPlanController {
     final idx = _g.step == TripGuideState.finishKey && keys.isNotEmpty
         ? keys.length
         : TripGuideRules.cursor(keys, _g.step, _g.choices, answered: answered);
-    final pct = TripGuideRules.percent(answered.length, keys.length);
+    final resolved = [for (final k in keys) if (_guideResolved(k)) k];
+    final pending = {for (final k in keys) if (_g.notNow.contains(k) && !resolved.contains(k)) k};
+    final pct = TripGuideRules.percent(resolved.length, keys.length);
+    if (!(_g.pending.length == pending.length && _g.pending.containsAll(pending))) _g.pending.assignAll(pending);
     if (!(_g.answered.length == answered.length && _g.answered.containsAll(answered))) _g.answered.assignAll(answered);
     if (_g.total.value != keys.length) _g.total.value = keys.length;
     if (_g.index.value != idx) _g.index.value = idx;
@@ -147,10 +164,18 @@ extension TripPlanGuide on TripPlanController {
     final p = plan.value;
     if (p == null || isReadOnly) return;
     final step = TripGuide.stepPattern.hasMatch(_g.step) ? _g.step : '';
-    final next = TripGuide(step: step, choices: {
-      for (final e in _g.choices.entries)
-        if (e.value != TripGuideChoice.find) e.key: e.value,
-    });
+    final keys = TripGuideRules.keys(p);
+    final next = TripGuide(
+      step: step,
+      choices: {
+        for (final e in _g.choices.entries)
+          if (e.value != TripGuideChoice.find) e.key: e.value,
+      },
+      notNow: [
+        for (final k in keys)
+          if (_g.notNow.contains(k) && !_guideResolved(k)) k,
+      ].take(TripGuide.maxNotNow).toList(),
+    );
     final old = p.guide ?? const TripGuide();
     if (old == next) return;
     plan.value = p.withGuide(next);
@@ -480,8 +505,10 @@ extension TripPlanGuide on TripPlanController {
     _g.sent[key] = ok;
     if (ok > 0) {
       _g.sentOk.add(key);
+      _g.notNow.remove(key);
       _g.choices.putIfAbsent(key, () => TripGuideChoice.find);
       guideSync();
+      _guidePersist();
     }
     if (bad > 0) {
       _g.failed[key] = bad;

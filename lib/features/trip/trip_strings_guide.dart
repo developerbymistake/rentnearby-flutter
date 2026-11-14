@@ -46,6 +46,7 @@ class TripStringsGuide {
   static String shortlisted(int n) => '$n of 3 shortlisted';
   static const String sendAll = 'Send to all';
   static const String notNow = 'Not now';
+  static const String pendingTag = 'Shortlisted, not sent yet';
   static const String sentTitle = 'Enquiry sent';
   static String days(int n) => '$n ${n == 1 ? 'day' : 'days'}';
   static String sentRow(String name) => '$name · Sent';

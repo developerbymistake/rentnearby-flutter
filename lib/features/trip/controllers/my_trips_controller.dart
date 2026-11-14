@@ -92,14 +92,9 @@ class MyTripsController extends GetxController {
     return null;
   }
 
-  TripSummaryModel? get continueTrip {
-    if (plannerOff.value) return null;
-    return TripContinuePick.pick(_openTrips, _today);
-  }
-
-  int get openTripCount {
-    final n = counts.value.upcoming;
-    return n > 0 ? n : _openTrips.length;
+  List<TripSummaryModel> get continueTrips {
+    if (plannerOff.value) return const [];
+    return TripContinuePick.pickMany(_openTrips, _today);
   }
 
   TripBarHide? hideOf(String tripId) {

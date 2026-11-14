@@ -160,7 +160,7 @@ void main() {
     r.close();
   });
 
-  testWidgets('shortlist 1 then Not now answers the step and Next moves on', (t) async {
+  testWidgets('shortlist 1 then Not now lets Next move on and keeps the step pending', (t) async {
     final r = _Rig(_plan());
     await _pump(t, r);
     await _tap(t, 'Help me find');
@@ -172,7 +172,7 @@ void main() {
     expect(find.text('Where will you stay in Nainital?'), findsOneWidget);
     expect(r.sl.countOf(_step), 1);
     await _tap(t, 'Previous');
-    _agree(t, r, percent: 25, next: false);
+    _agree(t, r, percent: 0, next: false);
     expect(find.byType(TripGuideBar), findsNothing);
     await _tap(t, 'Not now');
     expect(find.text('Where will you stay in Nainital?'), findsOneWidget);

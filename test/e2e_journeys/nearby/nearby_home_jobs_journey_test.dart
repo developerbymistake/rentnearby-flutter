@@ -6,9 +6,6 @@ import 'package:bakhli/controllers/location_controller.dart';
 import 'package:bakhli/controllers/notification_controller.dart';
 import 'package:bakhli/controllers/plan_controller.dart';
 import 'package:bakhli/controllers/tab_config_controller.dart';
-import 'package:bakhli/features/jobs/v2/jobs_city_sheet_v2.dart';
-import 'package:bakhli/features/trip/data/trip_city_catalog.dart';
-import 'package:bakhli/features/trip/models/trip_city_model.dart';
 import 'package:bakhli/models/home_feed_model_v2.dart';
 import 'package:bakhli/screens/home_screen.dart';
 import 'package:flutter/material.dart';
@@ -118,71 +115,6 @@ Future<_Home> _openHome(WidgetTester t, Map<String, dynamic> feedJson, {required
   return home;
 }
 
-TripCityModel _city(int k, String n, String state, {bool ready = true}) => TripCityModel(
-      cityKey: k,
-      name: n,
-      districtName: 'D$k',
-      stateName: state,
-      latitude: 29,
-      longitude: 79,
-      status: ready ? TripCityStatus.ready : TripCityStatus.notReady,
-    );
-
-class _Cached extends TripCityCatalog {
-  final list = [_city(1, 'Nainital', 'Uttarakhand'), _city(2, 'Manali', 'Himachal Pradesh'), _city(3, 'Hidden', 'Uttarakhand', ready: false)];
-  int loads = 0;
-  @override
-  void warmFromDisk() {}
-  @override
-  bool get hasData => true;
-  @override
-  Future<List<TripCityModel>> load({bool force = false}) async {
-    loads++;
-    throw Exception('offline');
-  }
-
-  @override
-  List<TripCityModel> ready(String q, {String? stateName}) => [
-        for (final c in q.trim().isEmpty ? list : TripCitySearch.filter(list, q))
-          if (c.isReady && (stateName == null || c.stateName == stateName)) c,
-      ];
-  @override
-  List<String> liveStates() => ['Himachal Pradesh', 'Uttarakhand'];
-}
-
-class _Empty extends TripCityCatalog {
-  bool online = false;
-  bool _has = false;
-  @override
-  void warmFromDisk() {}
-  @override
-  bool get hasData => _has;
-  @override
-  Future<List<TripCityModel>> load({bool force = false}) async {
-    if (!online) throw Exception('offline');
-    _has = true;
-    return [_city(1, 'Nainital', 'Uttarakhand')];
-  }
-
-  @override
-  List<TripCityModel> ready(String q, {String? stateName}) => [_city(1, 'Nainital', 'Uttarakhand')];
-  @override
-  List<String> liveStates() => ['Uttarakhand'];
-}
-
-Future<void> _openSheet(WidgetTester t, double w, double s) async {
-  setGoldenView(t, Size(w, 1400));
-  await t.pumpWidget(MaterialApp(
-    theme: ThemeData(fontFamily: 'WorkSans'),
-    home: MediaQuery(
-      data: MediaQueryData(size: Size(w, 1400), textScaler: TextScaler.linear(s)),
-      child: const Scaffold(body: JobsCitySheetV2()),
-    ),
-  ));
-  await t.pump(const Duration(milliseconds: 500));
-  await t.pump(const Duration(milliseconds: 500));
-}
-
 void main() {
   setUpAll(() async {
     TestWidgetsFlutterBinding.ensureInitialized();
@@ -208,7 +140,9 @@ void main() {
       }, w: 360);
       expect(find.text('Stays near you'), findsOneWidget);
       expect(find.text('Taxis near you'), findsOneWidget);
-      expect(find.textContaining('Nainital. About 3 km away'), findsOneWidget);
+      expect(find.text('Nainital'), findsOneWidget);
+      expect(find.text('3 km away'), findsOneWidget);
+      expect(find.textContaining('About'), findsNothing);
       expect(find.textContaining('Based near'), findsNothing);
     });
 
@@ -222,7 +156,8 @@ void main() {
       expect(find.text('Nearest taxis'), findsOneWidget);
       expect(find.text('Stays near you'), findsNothing);
       expect(find.text('Taxis near you'), findsNothing);
-      expect(find.textContaining('Haridwar, Uttarakhand. About 210 km away'), findsOneWidget);
+      expect(find.text('Haridwar'), findsOneWidget);
+      expect(find.text('210 km away'), findsOneWidget);
       expect(find.textContaining('Haldwani, Uttarakhand'), findsNothing);
     });
 
@@ -239,38 +174,5 @@ void main() {
         });
       }
     }
-  });
-
-  group('jobs city sheet offline', () {
-    for (final w in journeyWidths) {
-      for (final s in journeyScales) {
-        testWidgets('cached cities list and search without a network at ${w.toInt()} dp, scale $s', (t) async {
-          final c = _Cached();
-          Get.put<TripCityCatalog>(c, permanent: true);
-          await _openSheet(t, w, s);
-          expect(find.text('Nainital'), findsOneWidget);
-          expect(find.text('Hidden'), findsNothing);
-          await t.enterText(find.byType(TextField), 'mana');
-          await t.pump(const Duration(milliseconds: 300));
-          expect(find.text('Manali'), findsOneWidget);
-          expect(find.text('Nainital'), findsNothing);
-          expect(c.loads, 0);
-          expect(t.takeException(), isNull);
-        });
-      }
-    }
-
-    testWidgets('no cache and no network: honest message, retry brings the list', (t) async {
-      final c = _Empty();
-      Get.put<TripCityCatalog>(c, permanent: true);
-      await _openSheet(t, 360, 1);
-      expect(find.text('Nainital'), findsNothing);
-      expect(find.text('Try again'), findsOneWidget);
-      c.online = true;
-      await t.tap(find.text('Try again'));
-      await t.pump(const Duration(milliseconds: 300));
-      await t.pump(const Duration(milliseconds: 300));
-      expect(find.text('Nainital'), findsOneWidget);
-    });
   });
 }

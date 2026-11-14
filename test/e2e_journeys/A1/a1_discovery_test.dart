@@ -61,16 +61,11 @@ class _Trips extends MyTripsController {
   @override
   Future<void> load({bool refresh = false}) async {}
   @override
-  TripSummaryModel? get continueTrip {
+  List<TripSummaryModel> get continueTrips {
     active.length;
-    return trip;
+    return [?trip];
   }
 
-  @override
-  int get openTripCount {
-    active.length;
-    return 0;
-  }
 }
 
 TripSummaryModel _trip({String title = '', String guideStep = 'taxi'}) => TripSummaryModel.fromJson({

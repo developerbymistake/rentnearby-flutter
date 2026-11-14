@@ -4,16 +4,17 @@ import '../trip_navigation.dart';
 import '../trip_strings.dart';
 
 class TripHomeCard extends StatelessWidget {
-  const TripHomeCard({super.key, this.animation, this.animationController, this.entrance = true});
+  const TripHomeCard({super.key, this.animation, this.animationController, this.entrance = true, this.tone});
 
   final Animation<double>? animation;
   final AnimationController? animationController;
   final bool entrance;
+  final ListingTone? tone;
 
   @override
   Widget build(BuildContext context) {
     final card = WorkoutCard(
-      tone: ListingTone.indigo,
+      tone: tone ?? ListingTone.indigo,
       art: ListingArt.luggage,
       eyebrow: 'Travel Planner',
       title: TripStrings.homeCardTitle,

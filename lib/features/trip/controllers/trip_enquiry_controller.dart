@@ -119,7 +119,7 @@ class TripEnquiryController extends GetxController {
     final ok = await plan.flushPendingSave();
     final id = plan.trip.value?.id;
     if (!ok || id == null) {
-      AppToast.warning(TripStrings.notSavedCheckConnection);
+      plan.toastNotSaved();
       return null;
     }
     return id;
@@ -425,7 +425,7 @@ class TripEnquiryController extends GetxController {
   }) async {
     final p = _plan;
     if (p != null && !await p.flushPendingSave()) {
-      AppToast.warning(TripStrings.notSavedCheckConnection);
+      p.toastNotSaved();
       return null;
     }
     final trimmed = note?.trim();

@@ -1,7 +1,7 @@
 class TripStringsTab {
   static const String title = 'Trips';
   static const String searchHint = 'Search a city';
-  static const String myTrips = 'My trips';
+  static const String viewAll = 'View all';
   static const String continueHeading = 'Continue your trip';
   static const String sectionTitle = 'Where to next?';
   static const String sectionSub = 'Pick a city to start planning';
@@ -15,7 +15,6 @@ class TripStringsTab {
   static const String noCitiesSub = 'No cities are listed right now';
   static const String showAllStates = 'Show all states';
   static const String clearSearch = 'Clear search';
-  static String myTripsCount(int n) => n > 0 ? '$myTrips ($n)' : myTrips;
   static String cityUnit(int spots) => spots == 1 ? 'place' : 'places';
   static String cityMeta(int spots) => '$spots ${cityUnit(spots)}';
   static String doneShort(int done, int total) => '$done of $total done';

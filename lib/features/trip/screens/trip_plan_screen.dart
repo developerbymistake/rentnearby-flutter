@@ -316,14 +316,26 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
     });
   }
 
+  // While a guide question is open its circle hangs below the header, so banners start to the right of it.
+  EdgeInsets _bannerMargin() {
+    final g = _c.guideState;
+    final onQuestion = g.on.value && g.index.value < g.total.value;
+    if (!onQuestion) return const EdgeInsets.fromLTRB(18, 10, 18, 0);
+    final left = GuideSheetScaffold.circleLeft + GuideSheetScaffold.circleSize + 8;
+    final mq = MediaQuery.of(context);
+    final room = mq.size.width - left - 18;
+    if (room < 190 * mq.textScaler.scale(1).clamp(1.0, 2.0)) return EdgeInsets.fromLTRB(18, 10 + GuideSheetScaffold.circleSize / 2, 18, 0);
+    return EdgeInsets.fromLTRB(left, 10, 18, 0);
+  }
+
   Widget _buildOffline() {
     return Obx(() {
       if (!_c.offline.value || _c.plannerOff.value || _c.plan.value == null) return const SizedBox.shrink();
-      return const Banner3D(
+      return Banner3D(
         kind: BannerKind.info,
         art: ListingArt.worldMap,
         title: TripStringsV2Plan.offlineBanner,
-        margin: EdgeInsets.fromLTRB(18, 10, 18, 0),
+        margin: _bannerMargin(),
       );
     });
   }
@@ -341,7 +353,7 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
             title: TripStrings.notSavedYet,
             actionLabel: saving ? null : TripStringsV2Plan.retry,
             onAction: saving ? null : _c.retrySave,
-            margin: const EdgeInsets.fromLTRB(18, 10, 18, 0),
+            margin: _bannerMargin(),
           ),
           if (saving) const Padding(padding: EdgeInsets.only(right: 34, top: 10), child: KitDots(color: DesignColors.warning)),
         ],

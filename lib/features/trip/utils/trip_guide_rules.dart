@@ -134,22 +134,26 @@ class TripGuideRules {
 
   static bool hasSendEvidence(TripRowState s) => s.inProgress || s == TripRowState.confirmed || s == TripRowState.booked;
 
-  static bool answered({
-    required TripGuideChoice? choice,
-    required int shortlisted,
-    required bool sentOk,
-    required bool notNow,
-    required bool rowEvidence,
-  }) {
+  static bool resolved({required TripGuideChoice? choice, required bool sentOk, required bool rowEvidence}) {
     switch (choice) {
       case null:
         return false;
       case TripGuideChoice.skip || TripGuideChoice.own:
         return true;
       case TripGuideChoice.find:
-        return sentOk || rowEvidence || (notNow && shortlisted > 0);
+        return sentOk || rowEvidence;
     }
   }
+
+  static bool answered({
+    required TripGuideChoice? choice,
+    required int shortlisted,
+    required bool sentOk,
+    required bool notNow,
+    required bool rowEvidence,
+  }) =>
+      resolved(choice: choice, sentOk: sentOk, rowEvidence: rowEvidence) ||
+      (choice == TripGuideChoice.find && notNow && shortlisted > 0);
 
   static int firstUnanswered(List<String> keys, Set<String> answered) => keys.indexWhere((k) => !answered.contains(k));
 

@@ -1,4 +1,5 @@
 import 'package:bakhli/design/design.dart';
+import 'package:bakhli/design/extra/sheet_close_button.dart';
 import 'package:flutter/material.dart';
 import '../../../config/app_insets.dart';
 import '../../../services/storage_service.dart';
@@ -287,9 +288,9 @@ class _TripCitySheetState extends State<TripCitySheet> {
   Widget _buildHeader() {
     final narrow = MediaQuery.sizeOf(context).width < 340;
     final art = narrow ? 84.0 : 104.0;
-    return Container(
+    final header = Container(
       constraints: const BoxConstraints(minHeight: 112),
-      padding: EdgeInsets.fromLTRB(22, 22, art + 26, 18),
+      padding: EdgeInsets.fromLTRB(22, 22, art + 66, 18),
       decoration: BoxDecoration(gradient: _tone.gradient),
       child: Stack(
         clipBehavior: Clip.none,
@@ -308,7 +309,7 @@ class _TripCitySheetState extends State<TripCitySheet> {
             ],
           ),
           Positioned(
-            right: -art - 14,
+            right: -art - 10,
             top: -12,
             child: IgnorePointer(
               child: Art3D(asset: ListingArt.luggage, size: art, halo: art + 10, haloColor: DesignColors.tint(DesignColors.surface, Alpha.v22)),
@@ -317,6 +318,7 @@ class _TripCitySheetState extends State<TripCitySheet> {
         ],
       ),
     );
+    return Stack(children: [header, const Positioned(top: 4, right: 4, child: SheetCloseButton())]);
   }
 
   Widget _pickedRow() {

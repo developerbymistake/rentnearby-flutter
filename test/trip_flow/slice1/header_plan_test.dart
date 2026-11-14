@@ -70,7 +70,7 @@ Future<void> _checkAt(WidgetTester t, Size size, double scale) async {
   final z = '${_sz(size)}_x${scale.toString().replaceAll('.', '')}';
   final header = t.getRect(find.byType(TripPlanHeader));
   final map = t.getRect(find.byTooltip('Map'));
-  final title = t.getRect(find.text('Almora, Nainital trip'));
+  final title = t.getRect(find.byKey(const ValueKey('guide_title')));
   expect(title.right, lessThanOrEqualTo(map.left + 0.5), reason: 'title runs under Map at $z');
   expect(map.right, lessThanOrEqualTo(size.width));
   expect(header.top, 0);

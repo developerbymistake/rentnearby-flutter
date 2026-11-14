@@ -436,7 +436,8 @@ void main() {
       expect(r.c.guideState.percent.value, 25);
       r.c.guideState.notNow.add('stay:1');
       r.c.guideSync();
-      expect(r.c.guideState.percent.value, 50);
+      expect(r.c.guideState.percent.value, 25);
+      expect(r.c.guideState.pending.contains('stay:1'), isTrue);
       r.close();
     });
 
@@ -544,9 +545,8 @@ void main() {
         'taxi': TripGuideChoice.skip,
         'comingBack': TripGuideChoice.skip,
       };
-      final r = await _rig(_multi([2], guide: const TripGuide(step: 'finish', choices: choices)));
+      final r = await _rig(_multi([2], guide: const TripGuide(step: 'finish', choices: choices, notNow: ['gettingThere'])));
       r.sl.items.add(_item('gettingThere', 'a'));
-      r.c.guideState.notNow.add('gettingThere');
       r.c.guideRefresh();
       r.c.guideGoTo(4);
       await _pump(t, r, 360);

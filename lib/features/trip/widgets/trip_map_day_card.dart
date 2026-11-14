@@ -404,7 +404,7 @@ class _TripMapDayCardState extends State<TripMapDayCard> {
       parts.add(stay.listingName.isEmpty ? TripStrings.stay : stay.listingName);
       final phone = TripTodayCard.stayPhone(stay);
       if (phone != null) {
-        pills.add(_Pill(lead: _icon('house_with_garden'), label: TripStringsA4.callHost, onTap: () => ContactLauncher.call(phone)));
+        pills.add(_Pill(lead: _icon('camping'), label: TripStringsA4.callHost, onTap: () => ContactLauncher.call(phone)));
       }
     }
     final taxi = c.primaryTaxiEnquiry(day);

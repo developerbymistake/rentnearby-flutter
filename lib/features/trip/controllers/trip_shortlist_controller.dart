@@ -53,7 +53,7 @@ class TripShortlistController extends GetxController {
     final ok = await plan.flushPendingSave();
     final id = plan.trip.value?.id;
     if (!ok || id == null) {
-      AppToast.warning(TripStrings.notSavedCheckConnection);
+      plan.toastNotSaved();
       return null;
     }
     return id;

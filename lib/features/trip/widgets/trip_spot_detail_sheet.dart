@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:bakhli/design/design.dart';
+import 'package:bakhli/design/extra/sheet_close_button.dart';
 import '../models/trip_spot_category.dart';
 import '../models/trip_spot_model.dart';
 import '../trip_strings_spots_x.dart';
@@ -234,6 +235,7 @@ class _TripSpotDetailSheetState extends State<TripSpotDetailSheet>
                 ),
               ),
             ),
+            const Positioned(top: 12, right: 12, child: SheetCloseButton()),
           ],
         ),
       ),

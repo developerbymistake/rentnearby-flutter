@@ -12,6 +12,7 @@ class TripGuideFinish extends StatelessWidget {
     this.stepText = '',
     this.arranged = true,
     this.percent,
+    this.pendingNames = const [],
   });
 
   final bool arranged;
@@ -21,11 +22,13 @@ class TripGuideFinish extends StatelessWidget {
   final String subtitle;
   final String stepText;
   final int? percent;
+  final List<String> pendingNames;
 
   @override
   Widget build(BuildContext context) {
-    final tone = arranged ? ListingTone.forest : ListingTone.cF;
-    final card = arranged
+    final done = arranged && pendingNames.isEmpty;
+    final tone = done ? ListingTone.forest : ListingTone.cF;
+    final card = done
         ? WorkoutCard(
             tone: ListingTone.forest,
             art: ListingArt.luggage,
@@ -109,6 +112,14 @@ class TripGuideFinish extends StatelessWidget {
             ),
           ),
           SizedBox(height: 14 + 6 * scale),
+          if (pendingNames.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 0, 18, 12),
+              child: Text(
+                '${TripStringsGuide.pendingTag}: ${pendingNames.join(', ')}',
+                style: Ink3D.text(13, FontWeight.w600, Ink3D.grey, letterSpacing: 0),
+              ),
+            ),
           card,
         ],
       ),

@@ -1802,7 +1802,7 @@ class TripPlanController extends GetxController {
     if (_dirtyDuringCreate || (_saveTimer?.isActive ?? false)) return saveNow();
     final saving = _saving;
     if (saving != null && !await saving) return false;
-    if (trip.value == null || saveFailed.value) return saveNow();
+    if (trip.value == null || saveFailed.value) return _payloadRejected ? false : saveNow();
     return true;
   }
 
@@ -1852,7 +1852,32 @@ class TripPlanController extends GetxController {
     return left.isNegative ? null : left;
   }
 
+  bool _lastSaveNetworkError = false;
+  String? _lastSaveMessage;
+  String? _lastToast;
+  DateTime? _lastToastAt;
+
+  bool get _payloadRejected => identical(plan.value, _rejectedPlan) && _title == _rejectedTitle;
+
+  String get notSavedMessage {
+    final m = _lastSaveMessage;
+    if (!saveFailed.value || _lastSaveNetworkError || m == null) return TripStrings.notSavedCheckConnection;
+    return m;
+  }
+
+  void _toastSave(String message, {bool error = false}) {
+    final at = _lastToastAt;
+    if (message == _lastToast && at != null && DateTime.now().difference(at) < const Duration(seconds: 3)) return;
+    _lastToast = message;
+    _lastToastAt = DateTime.now();
+    error ? AppToast.error(message) : AppToast.warning(message);
+  }
+
+  void toastNotSaved() => _toastSave(notSavedMessage);
+
   void _onSaveError(Object e, TripPlan p) {
+    _lastSaveNetworkError = DioErrorMapper.isNetworkError(e);
+    _lastSaveMessage = DioErrorMapper.toMessage(e, TripStrings.saveFailed, showRawMessageForStatusCodes: const {400, 409});
     final type = DioErrorMapper.errorType(e);
     if (type == TripErrorTypes.cityNotFound) {
       final leg = p.isMultiCity ? p.legAt(_errorLegIndex(e) ?? 0) : null;
@@ -1867,12 +1892,12 @@ class TripPlanController extends GetxController {
       }
     } else if (type == TripErrorTypes.citiesUnavailable) {
       AppToast.error(TripStrings.citiesFailed);
-    } else if (_status(e) == 400) {
-      _rejectedPlan = p;
-      _rejectedTitle = _title;
-      AppToast.error(DioErrorMapper.toMessage(e, TripStrings.saveFailed));
     } else {
-      AppToast.error(DioErrorMapper.toMessage(e, TripStrings.saveFailed));
+      if (_status(e) == 400 || _status(e) == 409) {
+        _rejectedPlan = p;
+        _rejectedTitle = _title;
+      }
+      _toastSave(_lastSaveMessage!, error: true);
     }
     saveFailed.value = true;
   }
@@ -3640,7 +3665,7 @@ class TripPlanController extends GetxController {
     final ok = await flushPendingSave();
     final tripId = trip.value?.id;
     if (!ok || tripId == null) {
-      AppToast.warning(TripStrings.notSavedCheckConnection);
+      toastNotSaved();
       return null;
     }
     if (journeyIdOf(role: role, legIndex: legIndex) != journeyId) {
@@ -4166,7 +4191,7 @@ class TripPlanController extends GetxController {
 
   void scheduleSave() {
     if (_saveBlocked || plan.value == null) return;
-    if (identical(plan.value, _rejectedPlan) && _title == _rejectedTitle) return;
+    if (_payloadRejected) return;
     if (_hasUnavailableLeg) {
       _saveTimer?.cancel();
       return;

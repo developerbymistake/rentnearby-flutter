@@ -57,7 +57,7 @@ class OverlayShell extends StatelessWidget {
           onTap: (_) {},
           items: const [
             TemplateNavItem(index: 0, label: 'Home', image: 'assets/images/design/fitness_app/tab_1.png'),
-            TemplateNavItem(index: 1, label: 'Stays', image: 'assets/images/design/travel3d/hotel.png'),
+            TemplateNavItem(index: 1, label: 'Stays', image: 'assets/images/design/travel3d/camping.png'),
             TemplateNavItem(index: 2, label: 'Trips', image: 'assets/images/design/travel3d/compass.png', center: true),
             TemplateNavItem(index: 3, label: 'Taxi', image: 'assets/images/design/travel3d/taxi.png'),
             TemplateNavItem(index: 4, label: 'Profile', image: 'assets/images/design/fitness_app/tab_4.png'),

@@ -19,6 +19,12 @@ class TripCityTile extends StatelessWidget {
 
   static String artOf(int index) => _arts[index % _arts.length];
 
+  static List<String> placeLines(TripCityModel city) {
+    final state = city.stateName;
+    final district = city.districtName == city.name || city.districtName == state ? '' : city.districtName;
+    return [district, state].where((e) => e.isNotEmpty).toList();
+  }
+
   static String _fit(String text, double room, TextScaler scaler) {
     final style = Ink3D.text(12, FontWeight.w500, DesignColors.onPrimary, height: 1.55);
     bool fits(String t) {
@@ -44,11 +50,9 @@ class TripCityTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final spots = city.spotCount;
-    final state = city.stateName;
-    final district = city.districtName == city.name || city.districtName == state ? '' : city.districtName;
     final scaler = MediaQuery.textScalerOf(context);
     final room = width - MealsCardV.cellPadding.horizontal - 32;
-    final lines = [state, district].where((e) => e.isNotEmpty).map((e) => _fit(e, room, scaler)).toList();
+    final lines = placeLines(city).map((e) => _fit(e, room, scaler)).toList();
     final place = lines.join('\n');
     final art = artOf(index);
     final cover = city.cover;

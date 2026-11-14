@@ -406,7 +406,7 @@ class _TripMapScreenState extends State<TripMapScreen> with TickerProviderStateM
   }
 
   static Future<Uint8List> _buildStayPinImage() =>
-      _buildPinImage(TravelPalette.sunriseStart, 'house_with_garden', size: 48, radius: 19, glyphSize: 22);
+      _buildPinImage(TravelPalette.sunriseStart, 'camping', size: 48, radius: 19, glyphSize: 22);
 
   static Future<Uint8List> _buildCarPinImage() =>
       _buildPinImage(TravelPalette.roseEnd, 'taxi', size: 40, radius: 16, glyphSize: 19);
