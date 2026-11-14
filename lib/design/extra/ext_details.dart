@@ -1092,56 +1092,28 @@ class DetailBarShell extends StatelessWidget {
   }
 }
 
-class DetailBarPair extends StatelessWidget {
-  const DetailBarPair({super.key, required this.left, required this.right, required this.leftLabel, required this.rightLabel});
+class DetailBarRow extends StatelessWidget {
+  const DetailBarRow({super.key, required this.children});
 
-  final Widget left;
-  final Widget right;
-  final String leftLabel;
-  final String rightLabel;
+  final List<Widget> children;
 
   @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, box) {
-        final half = (box.maxWidth - 8) / 2;
-        final need = [leftLabel, rightLabel].map((l) => 30 + 8 + 24 + _width(context, l)).reduce((a, b) => a > b ? a : b);
-        if (need * 0.8 > half) {
-          return Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [left, const SizedBox(height: 8), right]);
-        }
-        return Row(
-          children: [
-            Expanded(child: left),
-            const SizedBox(width: 8),
-            Expanded(child: right),
-          ],
-        );
-      },
-    );
-  }
-
-  static double _width(BuildContext context, String text) {
-    final p = TextPainter(
-      text: TextSpan(text: text, style: Ink3D.text(15, FontWeight.w700, Colors.white)),
-      maxLines: 1,
-      textDirection: TextDirection.ltr,
-      textScaler: MediaQuery.textScalerOf(context),
-    )..layout();
-    final w = p.width;
-    p.dispose();
-    return w;
-  }
+  Widget build(BuildContext context) => Row(
+        children: [
+          for (var i = 0; i < children.length; i++) ...[if (i > 0) const SizedBox(width: 8), Expanded(child: children[i])],
+        ],
+      );
 }
 
 enum _BarKind { primary, outline, report, reported }
 
 class DetailBarButton extends StatelessWidget {
-  const DetailBarButton._(this._kind, {required this.tone, required this.label, required this.onTap, this.art, this.icon});
+  const DetailBarButton._(this._kind, {required this.tone, required this.label, required this.onTap, this.art, this.icon, this.stacked = false});
 
-  const DetailBarButton.primary({required ListingTone tone, required String label, required VoidCallback? onTap, String? art, IconData? icon})
-    : this._(_BarKind.primary, tone: tone, label: label, onTap: onTap, art: art, icon: icon);
-  const DetailBarButton.outline({required ListingTone tone, required String label, required VoidCallback? onTap, String? art})
-    : this._(_BarKind.outline, tone: tone, label: label, onTap: onTap, art: art);
+  const DetailBarButton.primary({required ListingTone tone, required String label, required VoidCallback? onTap, String? art, IconData? icon, bool stacked = false})
+    : this._(_BarKind.primary, tone: tone, label: label, onTap: onTap, art: art, icon: icon, stacked: stacked);
+  const DetailBarButton.outline({required ListingTone tone, required String label, required VoidCallback? onTap, String? art, IconData? icon, bool stacked = false})
+    : this._(_BarKind.outline, tone: tone, label: label, onTap: onTap, art: art, icon: icon, stacked: stacked);
   const DetailBarButton.report({required ListingTone tone, required String label, required VoidCallback? onTap})
     : this._(_BarKind.report, tone: tone, label: label, onTap: onTap, icon: Icons.flag_rounded);
   const DetailBarButton.reported({required ListingTone tone, required String label})
@@ -1153,15 +1125,16 @@ class DetailBarButton extends StatelessWidget {
   final VoidCallback? onTap;
   final String? art;
   final IconData? icon;
+  final bool stacked;
 
   @override
-  Widget build(BuildContext context) => _BarButton(kind: _kind, tone: tone, label: label, onTap: onTap, art: art, icon: icon);
+  Widget build(BuildContext context) => _BarButton(kind: _kind, tone: tone, label: label, onTap: onTap, art: art, icon: icon, stacked: stacked);
 }
 
 class _BarButton extends StatelessWidget {
-  const _BarButton({required this.kind, required this.tone, required this.label, required this.onTap, this.art, this.icon}) : height = 48;
+  const _BarButton({required this.kind, required this.tone, required this.label, required this.onTap, this.art, this.icon, this.stacked = false}) : height = null;
 
-  const _BarButton.primary({required this.tone, required this.label, required this.onTap, this.height = 48}) : kind = _BarKind.primary, art = null, icon = null;
+  const _BarButton.primary({required this.tone, required this.label, required this.onTap, this.height}) : kind = _BarKind.primary, art = null, icon = null, stacked = false;
 
   final _BarKind kind;
   final ListingTone tone;
@@ -1169,7 +1142,8 @@ class _BarButton extends StatelessWidget {
   final VoidCallback? onTap;
   final String? art;
   final IconData? icon;
-  final double height;
+  final bool stacked;
+  final double? height;
 
   @override
   Widget build(BuildContext context) {
@@ -1208,35 +1182,46 @@ class _BarButton extends StatelessWidget {
     }
     Widget? lead;
     if (art != null) {
-      lead = Art3D(asset: art!, size: 30, shadowBlur: 2, shadowOffset: const Offset(2, 3), shadowAlpha: 0.25);
+      lead = Art3D(asset: art!, size: stacked ? 24 : 30, shadowBlur: 2, shadowOffset: const Offset(2, 3), shadowAlpha: 0.25);
     } else if (icon != null) {
       final dotFill = switch (kind) {
         _BarKind.report => DetailLook.reportText,
         _BarKind.reported => DetailLook.reportedDot,
+        _BarKind.outline => tone.g2,
         _ => Colors.white,
       };
       final dotInk = kind == _BarKind.primary ? tone.g2 : Colors.white;
+      final dot = stacked ? 24.0 : 28.0;
       lead = Container(
-        width: 28,
-        height: 28,
+        width: dot,
+        height: dot,
         decoration: BoxDecoration(shape: BoxShape.circle, color: dotFill, boxShadow: kind == _BarKind.reported ? null : DetailLook.callDot),
-        child: Icon(icon, size: 15, color: dotInk),
+        child: Icon(icon, size: stacked ? 13 : 15, color: dotInk),
       );
     }
+    final text = Text(label, maxLines: 1, style: Ink3D.text(stacked ? 12.5 : 15, FontWeight.w700, ink, letterSpacing: 0));
     final body = Container(
-      height: height,
+      height: height ?? (stacked ? 58 : 48),
       decoration: deco,
-      padding: const EdgeInsets.symmetric(horizontal: 12),
+      padding: EdgeInsets.symmetric(horizontal: stacked ? 6 : 12),
       alignment: Alignment.center,
       child: FittedBox(
         fit: BoxFit.scaleDown,
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (lead != null) ...[ExcludeSemantics(child: lead), const SizedBox(width: 8)],
-            Text(label, maxLines: 1, style: Ink3D.text(15, FontWeight.w700, ink, letterSpacing: 0)),
-          ],
-        ),
+        child: stacked
+            ? Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (lead != null) ...[ExcludeSemantics(child: lead), const SizedBox(height: 3)],
+                  text,
+                ],
+              )
+            : Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (lead != null) ...[ExcludeSemantics(child: lead), const SizedBox(width: 8)],
+                  text,
+                ],
+              ),
       ),
     );
     if (kind == _BarKind.reported) {

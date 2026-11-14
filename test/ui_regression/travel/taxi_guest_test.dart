@@ -12,7 +12,6 @@ void main() {
         bottomNavigationBar: DetailActionBar(
           ownerPhone: '9999999999',
           showDirections: false,
-          callLabel: 'Call Driver',
           palette: templateTaxiPalette,
           onReport: () => reported++,
         ),
@@ -21,7 +20,7 @@ void main() {
     await tester.pump();
     expect(tester.takeException(), isNull);
     expect(tester.getSize(find.byKey(const Key('body'))).height, greaterThan(200));
-    expect(find.text('Call Driver'), findsOneWidget);
+    expect(find.text('Call'), findsOneWidget);
     expect(find.text('WhatsApp'), findsNothing);
     expect(find.byIcon(Icons.call_rounded), findsOneWidget);
     await tester.tap(find.text('Report this listing'));

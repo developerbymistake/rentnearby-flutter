@@ -146,6 +146,7 @@ class _Reports extends ReportController {
 const _reportText = 'The owner asked me to pay the full amount on UPI before the visit and would not show the room.';
 
 Future<void> _openReport(WidgetTester t) async {
+  await _toEnd(t);
   await t.tap(find.text('Report this listing'));
   await t.pump();
   await t.pump(const Duration(milliseconds: 600));
@@ -259,6 +260,13 @@ Future<void> _scrollTo(WidgetTester t, Finder f, {double gap = 100}) async {
   await settlePhone(t);
 }
 
+Future<void> _toEnd(WidgetTester t) async {
+  final pos = _pos(t);
+  pos.jumpTo(pos.maxScrollExtent);
+  await t.pump(const Duration(milliseconds: 500));
+  await settlePhone(t);
+}
+
 Future<void> _gt(WidgetTester t, String name) async {
   await _stay(t);
   await _scrollTo(t, find.text('Getting there').first);
@@ -289,8 +297,13 @@ void main() {
       await _stay(t);
       expect(t.takeException(), isNull);
       expect(find.text('Share'), findsOneWidget);
-      expect(find.text('Call Owner'), findsOneWidget);
+      expect(find.text('Call'), findsNothing);
+      await _toEnd(t);
+      expect(find.text('Directions'), findsOneWidget);
+      expect(find.text('Call'), findsOneWidget);
+      expect(find.text('Chat'), findsOneWidget);
       expect(find.text('WhatsApp'), findsNothing);
+      expect(find.text('Call Owner'), findsNothing);
       await shot(t, 's_main');
       await scrollShots(t, find.byType(StayDetailScreen), 's_main_scroll', [700, 1400, 2200]);
     });
@@ -322,6 +335,7 @@ void main() {
     _tw('s_owner', (t) async {
       _setup(me: 'o1');
       await _stay(t);
+      await _toEnd(t);
       expect(find.text('Share'), findsNothing);
       expect(find.text('Directions'), findsOneWidget);
       expect(find.text('Chat'), findsNothing);
@@ -340,7 +354,9 @@ void main() {
     _tw('s_nophone', (t) async {
       _setup();
       await _stay(t, answer: () async => StayDetailModel.fromJson(_stayJson(phone: false)));
-      expect(find.text('Call Owner'), findsNothing);
+      await _toEnd(t);
+      expect(find.text('Call'), findsNothing);
+      expect(find.text('Chat'), findsOneWidget);
       await _scrollTo(t, find.text('Facilities'));
       await shot(t, 's_nophone');
     });
@@ -348,6 +364,7 @@ void main() {
     _tw('s_reported + s_rep_done toast', (t) async {
       _setup();
       await _stay(t, answer: () async => StayDetailModel.fromJson(_stayJson(reported: true)));
+      await _toEnd(t);
       expect(find.text('Reported'), findsOneWidget);
       await _scrollTo(t, find.text('Facilities'));
       await shot(t, 's_reported');
@@ -434,6 +451,10 @@ void main() {
       _tw(name, (t) async {
         _setup(api: c.api, located: c.located, localCity: c.local, locating: c.locating);
         await _gt(t, name);
+        if (name == 's_gt_local') {
+          expect(find.byIcon(Icons.call_rounded), findsNWidgets(2));
+          expect(find.text('Ask driver'), findsNothing);
+        }
       });
     });
 
@@ -459,8 +480,13 @@ void main() {
       _setup(api: api(_taxiJson()));
       await _taxi(t);
       expect(t.takeException(), isNull);
-      expect(find.text('Call Driver'), findsOneWidget);
-      expect(find.text('WhatsApp'), findsNothing);
+      expect(find.text('Call'), findsNothing);
+      await _toEnd(t);
+      expect(find.text('Call'), findsOneWidget);
+      expect(find.text('WhatsApp'), findsOneWidget);
+      expect(find.text('Chat'), findsNothing);
+      expect(find.text('Directions'), findsNothing);
+      expect(find.text('Call Driver'), findsNothing);
       expect(find.textContaining(TaxiOptionSets.safetyLine, findRichText: true), findsOneWidget);
       await shot(t, 't_main');
     });
@@ -492,13 +518,16 @@ void main() {
     _tw('t_nocontact', (t) async {
       _setup(api: api(_taxiJson(contact: false)));
       await _taxi(t);
-      expect(find.text('Call Driver'), findsNothing);
+      await _toEnd(t);
+      expect(find.text('Call'), findsNothing);
+      expect(find.text('WhatsApp'), findsNothing);
       await shot(t, 't_nocontact');
     });
 
     _tw('t_reported + t_rep_done', (t) async {
       _setup(api: api(_taxiJson(reported: true)));
       await _taxi(t);
+      await _toEnd(t);
       expect(find.text('Reported'), findsOneWidget);
       await shot(t, 't_reported');
       ToastLane.showInHost(ToastKind.success, 'Report submitted. Thank you for letting us know.');
@@ -582,7 +611,8 @@ void main() {
     await t.tap(find.text('Report this listing'));
     expect((chat, report), (1, 1));
     expect(find.text('Directions'), findsOneWidget);
-    expect(find.text('Call Owner'), findsOneWidget);
+    expect(find.text('Call'), findsOneWidget);
+    expect(find.text('Call Owner'), findsNothing);
     expect(find.text('WhatsApp'), findsNothing);
   });
 }

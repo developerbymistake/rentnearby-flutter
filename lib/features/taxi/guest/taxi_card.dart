@@ -94,7 +94,11 @@ class TaxiCard extends StatelessWidget {
       label: d == null ? inLabel : labelFor(d),
       labelNote: d != null && d.isFar ? NearbyStrings.byRoad : null,
       actions: actions,
-      onGo: inLabel != null ? onOpen : null,
+      onGo: inLabel != null
+          ? () => ListingContactActions.call(context,
+              kind: ListingKind.taxi, id: item.id, detailArguments: _detailArguments)
+          : null,
+      goIcon: Icons.call_rounded,
       actionRows: _tripMode ? [_pickRow()] : null,
       picked: selected || booked,
       onTap: onOpen,

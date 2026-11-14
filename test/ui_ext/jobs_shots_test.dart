@@ -419,8 +419,12 @@ void main() {
         debugDisableShadows = false;
         await open(t, _detailJson(), size: size, scale: scale);
         await _snap(t, 'detail_$tag');
+        t.state<ScrollableState>(find.byType(Scrollable).first).position.jumpTo(100000);
+        await t.pump(const Duration(milliseconds: 500));
         expect(find.text('Call'), findsOneWidget);
-        expect(find.text('Report this stay'), findsOneWidget);
+        expect(find.text('WhatsApp'), findsOneWidget);
+        expect(find.text('Chat'), findsNothing);
+        expect(find.text('Report this listing'), findsOneWidget);
         expect(find.text('Fresher. No experience needed'), findsNothing);
         debugDisableShadows = true;
       });
@@ -436,6 +440,8 @@ void main() {
         await _snap(t, 'detail_photo_screen_$tag');
         expect(find.byKey(const ValueKey('job-photo')), findsOneWidget);
         expect(find.textContaining('₹12K - 15K', findRichText: true), findsOneWidget);
+        t.state<ScrollableState>(find.byType(Scrollable).first).position.jumpTo(100000);
+        await t.pump(const Duration(milliseconds: 500));
         expect(find.text('Call'), findsOneWidget);
         expect(t.takeException(), isNull);
         debugDisableShadows = true;
@@ -469,7 +475,7 @@ void main() {
       debugDisableShadows = false;
       await open(t, _detailJson(owner: true));
       await _snap(t, 'detail_owner');
-      expect(find.text('Report this stay'), findsNothing);
+      expect(find.text('Report this listing'), findsNothing);
       debugDisableShadows = true;
     });
 

@@ -13,6 +13,7 @@ import '../../../utils/app_toast.dart';
 import '../../../utils/dio_error_mapper.dart';
 import '../../../utils/money_format.dart';
 import '../../../widgets/detail_action_bar.dart';
+import '../../../widgets/scroll_reveal_bar.dart';
 import '../../../widgets/report_listing_sheet.dart';
 import '../data/jobs_repository.dart';
 import '../models/job_detail_model.dart';
@@ -41,6 +42,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
   final _auth = Get.find<AuthController>();
   final _scroll = ScrollController();
   final _fade = ValueNotifier<double>(0);
+  final _reveal = RevealBarController();
   late final String _id;
   JobDetailModel? _job;
   bool _loading = true;
@@ -54,6 +56,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     final args = Get.arguments;
     _id = args is Map ? args['id'] as String : args as String;
     _scroll.addListener(_onScroll);
+    _reveal.attach(_scroll);
     _load();
   }
 
@@ -62,6 +65,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     _scroll.removeListener(_onScroll);
     _scroll.dispose();
     _fade.dispose();
+    _reveal.dispose();
     super.dispose();
   }
 
@@ -90,7 +94,6 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     return Scaffold(
       backgroundColor: JobsLook.pageColor,
       body: _loading ? _buildLoader() : _buildContent(),
-      bottomNavigationBar: _loading || _job == null ? null : _buildActionBar(),
     );
   }
 
@@ -202,7 +205,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       Padding(padding: const EdgeInsets.only(top: 14), child: JobsArtLine(art: ListingArt.calendar, text: j.postedAgoLong)),
     ];
     return Stack(children: [
-      CustomScrollView(
+      _reveal.wrap(CustomScrollView(
         controller: _scroll,
         physics: const BouncingScrollPhysics(),
         slivers: [
@@ -213,9 +216,11 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
               child: StaggerColumn(crossAxisAlignment: CrossAxisAlignment.stretch, children: children),
             ),
           ),
+          RevealBarPad(_reveal),
         ],
-      ),
+      )),
       Positioned(top: 0, left: 0, right: 0, child: _topBar(j, top)),
+      if (!_isOwner) Positioned(left: 0, right: 0, bottom: 0, child: ScrollRevealBar(controller: _reveal, child: _buildActionBar()!)),
     ]);
   }
 
@@ -378,8 +383,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
         whatsAppPhone: canContact ? j.whatsAppOrPhone : null,
         isOwner: false,
         showDirections: false,
-        callLabel: 'Call',
-        reportLabel: 'Report this stay',
+        reportLabel: 'Report this listing',
         safetyArt: ListingArt.shield,
         safetyText: 'Never pay to get a job. Visit the stay before joining.',
         onReport: reported

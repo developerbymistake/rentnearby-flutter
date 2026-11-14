@@ -332,8 +332,6 @@ void main() {
       expect(find.textContaining(RegExp(r'^1 of \d+$')), findsOneWidget);
       expect(find.text('Save plan', skipOffstage: false), findsNWidgets(2));
       expect(find.text('Open journey', skipOffstage: false), findsNWidgets(2));
-      expect(find.text('Ask both drivers', skipOffstage: false), findsOneWidget);
-      expect(find.text('Ask all 3 drivers', skipOffstage: false), findsOneWidget);
       expect(find.byKey(const ValueKey('plan-only-note')), findsOneWidget);
       expect(find.text('I will arrange it myself'), findsWidgets);
       final scroll = t.state<ScrollableState>(find.byType(Scrollable).first);
@@ -360,7 +358,6 @@ void main() {
       await shot(t, 'ways_trip_y${y.toInt()}');
     }
     expect(find.text('Save plan', skipOffstage: false), findsWidgets);
-    expect(find.text('Ask both drivers', skipOffstage: false), findsOneWidget);
     expect(find.text('Open journey', skipOffstage: false), findsNWidgets(2));
     expect(t.takeException(), isNull);
     debugDisableShadows = true;

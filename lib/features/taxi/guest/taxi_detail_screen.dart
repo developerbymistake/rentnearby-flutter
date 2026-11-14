@@ -10,6 +10,7 @@ import '../../../services/listing_share_service.dart';
 import '../../../utils/app_toast.dart';
 import '../../../utils/dio_error_mapper.dart';
 import '../../../widgets/detail_action_bar.dart';
+import '../../../widgets/scroll_reveal_bar.dart';
 import '../../../widgets/report_listing_sheet.dart';
 import '../models/taxi_detail_model.dart';
 import '../models/taxi_owner_model.dart';
@@ -39,6 +40,7 @@ class _TaxiDetailScreenState extends State<TaxiDetailScreen> with TickerProvider
   bool _notFound = false;
   final _scroll = ScrollController();
   final _barOn = ValueNotifier<bool>(false);
+  final _reveal = RevealBarController();
 
   bool get _isOwner => _taxi != null && _auth.user.value?.id == _taxi!.userId;
 
@@ -66,6 +68,7 @@ class _TaxiDetailScreenState extends State<TaxiDetailScreen> with TickerProvider
       _id = args as String;
     }
     _scroll.addListener(_onScroll);
+    _reveal.attach(_scroll);
     _load();
   }
 
@@ -75,6 +78,7 @@ class _TaxiDetailScreenState extends State<TaxiDetailScreen> with TickerProvider
     _scroll.removeListener(_onScroll);
     _scroll.dispose();
     _barOn.dispose();
+    _reveal.dispose();
     super.dispose();
   }
 
@@ -148,8 +152,8 @@ class _TaxiDetailScreenState extends State<TaxiDetailScreen> with TickerProvider
           Expanded(child: _loading ? _buildLoader() : _buildContent()),
         ]),
         if (!_loading && _taxi != null) _topBar(_taxi!) else _backAt(context, strong: _taxi == null && !_loading),
+        if (!_loading && _taxi != null && !_isOwner) Positioned(left: 0, right: 0, bottom: 0, child: ScrollRevealBar(controller: _reveal, child: _buildActionBar()!)),
       ]),
-      bottomNavigationBar: _loading || _taxi == null ? null : _buildActionBar(),
       ),
       Obx(() => _isSharing.value ? Positioned.fill(child: DetailSharingOverlay(tone: _kTone)) : const SizedBox.shrink()),
     ]);
@@ -220,7 +224,7 @@ class _TaxiDetailScreenState extends State<TaxiDetailScreen> with TickerProvider
       DetailPosted(text: 'Posted ${_timeAgo(t.createdAt)}'),
     ];
     return KitStatusBar(
-      child: CustomScrollView(
+      child: _reveal.wrap(CustomScrollView(
         controller: _scroll,
         physics: const BouncingScrollPhysics(),
         slivers: [
@@ -236,8 +240,9 @@ class _TaxiDetailScreenState extends State<TaxiDetailScreen> with TickerProvider
               const SizedBox(height: 28),
             ]),
           ),
+          RevealBarPad(_reveal),
         ],
-      ),
+      )),
     );
   }
 
@@ -328,7 +333,6 @@ class _TaxiDetailScreenState extends State<TaxiDetailScreen> with TickerProvider
         whatsAppMessage: _whatsAppMessage,
         isOwner: false,
         showDirections: false,
-        callLabel: 'Call Driver',
         reportLabel: 'Report this listing',
         safetyText: TaxiOptionSets.safetyLine,
         onReport: (t.hasReported || reportedLocally)

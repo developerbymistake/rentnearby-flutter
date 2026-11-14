@@ -3,6 +3,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../config/app_insets.dart';
 import '../config/module_palette.dart';
 import '../design/design.dart';
+import '../utils/contact_launcher.dart';
 import '../design/extra/ext_details.dart';
 
 class DetailActionBar extends StatelessWidget {
@@ -12,12 +13,10 @@ class DetailActionBar extends StatelessWidget {
   final bool isOwner;
   final VoidCallback? onReport;
   final VoidCallback? onChat;
-  final Color accent;
   final ModulePalette? palette;
   final bool showDirections;
   final String? whatsAppPhone;
   final String? whatsAppMessage;
-  final String callLabel;
   final String reportLabel;
   final String? safetyText;
   final String? safetyArt;
@@ -29,12 +28,10 @@ class DetailActionBar extends StatelessWidget {
     this.isOwner = false,
     this.onReport,
     this.onChat,
-    this.accent = FitnessAppTheme.nearlyBlue,
     this.palette,
     this.showDirections = true,
     this.whatsAppPhone,
     this.whatsAppMessage,
-    this.callLabel = 'Call Owner',
     this.reportLabel = 'Report this listing',
     this.safetyText,
     this.safetyArt,
@@ -54,12 +51,6 @@ class DetailActionBar extends StatelessWidget {
     launchUrl(mapsUrl, mode: LaunchMode.externalApplication);
   }
 
-  void _call() async {
-    if (ownerPhone == null) return;
-    final url = Uri.parse('tel:+91$ownerPhone');
-    if (await canLaunchUrl(url)) launchUrl(url, mode: LaunchMode.externalApplication);
-  }
-
   ListingTone get _tone {
     if (identical(palette, templateTaxiPalette)) return ListingTone.coral;
     if (identical(palette, templateModulePalette)) return ListingTone.forest;
@@ -71,21 +62,28 @@ class DetailActionBar extends StatelessWidget {
     final tone = _tone;
     final hasPhone = ownerPhone != null;
     final showReport = !isOwner;
-    final chat = DetailBarButton.outline(tone: tone, label: 'Chat', art: ListingArt.speechBalloon, onTap: onChat);
-    final directions = DetailBarButton.primary(tone: tone, label: 'Directions', art: ListingArt.worldMap, onTap: _directions);
+    final stacked = showDirections && onChat != null;
+    final buttons = <Widget>[
+      if (showDirections) DetailBarButton.primary(tone: tone, label: 'Directions', art: ListingArt.worldMap, onTap: _directions, stacked: stacked),
+      if (hasPhone)
+        DetailBarButton.primary(tone: tone, label: 'Call', icon: Icons.call_rounded, onTap: () => ContactLauncher.call(ownerPhone!), stacked: stacked),
+      if (onChat != null)
+        DetailBarButton.outline(tone: tone, label: 'Chat', art: ListingArt.speechBalloon, onTap: onChat, stacked: stacked),
+      if (whatsAppPhone != null)
+        DetailBarButton.outline(
+          tone: tone,
+          label: 'WhatsApp',
+          icon: Icons.chat_rounded,
+          onTap: () => ContactLauncher.whatsApp(whatsAppPhone!, message: whatsAppMessage),
+        ),
+    ];
     return DetailBarShell(
       tone: tone,
       safetyArt: safetyArt,
       safety: safetyText ?? 'Bakhli never collects rent or advance. Always meet and visit before paying.',
       bottomInset: AppInsets.bottomViewPadding(context),
       children: [
-        if (showDirections && onChat != null)
-          DetailBarPair(left: chat, right: directions, leftLabel: 'Chat', rightLabel: 'Directions')
-        else if (showDirections)
-          directions
-        else if (onChat != null)
-          chat,
-        if (hasPhone) DetailBarButton.primary(tone: tone, label: callLabel, icon: Icons.call_rounded, onTap: _call),
+        if (buttons.isNotEmpty) DetailBarRow(children: buttons),
         if (showReport)
           onReport == null
               ? DetailBarButton.reported(tone: tone, label: 'Reported')

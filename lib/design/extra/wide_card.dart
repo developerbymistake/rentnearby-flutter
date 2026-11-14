@@ -291,6 +291,7 @@ class WideCard extends StatelessWidget {
     this.actions = const [],
     this.actionRows,
     this.onGo,
+    this.goIcon = Icons.arrow_forward,
     this.progress,
     this.trailing,
     this.trailingWidth,
@@ -325,6 +326,7 @@ class WideCard extends StatelessWidget {
   final List<WideAction> actions;
   final List<List<WideAction>>? actionRows;
   final VoidCallback? onGo;
+  final IconData goIcon;
   final double? progress;
   final Widget? trailing;
   final double? trailingWidth;
@@ -520,7 +522,7 @@ class WideCard extends StatelessWidget {
                         ? _WidePrice(number: number!, unit: unit, caption: priceCaption, room: width - _WideMetrics.side * 2 - 40 - (showGo ? 52 : 0))
                         : const SizedBox.shrink(),
                   ),
-                  if (showGo) Padding(padding: const EdgeInsets.only(left: 10), child: RoundGoButton(color: tone.button, size: 42, onTap: onGo)),
+                  if (showGo) Padding(padding: const EdgeInsets.only(left: 10), child: RoundGoButton(color: tone.button, size: 42, icon: goIcon, onTap: onGo)),
                 ],
               ),
             ),

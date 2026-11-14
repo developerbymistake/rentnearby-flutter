@@ -11,6 +11,7 @@ import '../../../controllers/tab_config_controller.dart';
 import '../../../models/browse_item.dart';
 import '../../../services/listing_share_service.dart';
 import '../../../widgets/detail_action_bar.dart';
+import '../../../widgets/scroll_reveal_bar.dart';
 import '../../../widgets/report_listing_sheet.dart';
 import '../models/stay_detail_model.dart';
 import '../models/stay_owner_model.dart';
@@ -50,6 +51,7 @@ class _StayDetailScreenState extends State<StayDetailScreen> {
   int _currentPhoto = 0;
   final _scroll = ScrollController();
   final _barOn = ValueNotifier<bool>(false);
+  final _reveal = RevealBarController();
 
   void _onScroll() {
     if (!_scroll.hasClients) return;
@@ -62,6 +64,7 @@ class _StayDetailScreenState extends State<StayDetailScreen> {
     _scroll.removeListener(_onScroll);
     _scroll.dispose();
     _barOn.dispose();
+    _reveal.dispose();
     super.dispose();
   }
 
@@ -73,6 +76,7 @@ class _StayDetailScreenState extends State<StayDetailScreen> {
     final args = Get.arguments;
     _id = args is Map ? args['id'] as String : args as String;
     _scroll.addListener(_onScroll);
+    _reveal.attach(_scroll);
     _fetch();
   }
 
@@ -125,8 +129,8 @@ class _StayDetailScreenState extends State<StayDetailScreen> {
           Expanded(child: _loading ? _buildLoader() : _buildContent()),
         ]),
         if (!_loading && _stay != null) _topBar(_stay!) else _backAt(context, solid: _stay == null && !_loading),
+        if (!_loading && _stay != null) Positioned(left: 0, right: 0, bottom: 0, child: ScrollRevealBar(controller: _reveal, child: _buildActionBar())),
       ]),
-      bottomNavigationBar: _loading || _stay == null ? null : _buildActionBar(),
       ),
       Obx(() => _isSharing.value ? Positioned.fill(child: DetailSharingOverlay(tone: _kTone)) : const SizedBox.shrink()),
     ]);
@@ -236,7 +240,7 @@ class _StayDetailScreenState extends State<StayDetailScreen> {
 
   Widget _scrollView(StayDetailModel s) {
     final rules = s.rules;
-    return CustomScrollView(
+    return _reveal.wrap(CustomScrollView(
       controller: _scroll,
       physics: const BouncingScrollPhysics(),
       slivers: [
@@ -307,8 +311,9 @@ class _StayDetailScreenState extends State<StayDetailScreen> {
             const SizedBox(height: 28),
           ]),
         ),
+        RevealBarPad(_reveal),
       ],
-    );
+    ));
   }
 
   DetailChipItem _facility(String f, int i) {
