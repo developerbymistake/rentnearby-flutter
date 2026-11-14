@@ -46,3 +46,6 @@ app.*.map.json
 
 # Release APK/AAB copies kept outside build/ for handoff
 /release-outputs/
+
+# golden test failure images (generated, never commit)
+**/failures/
