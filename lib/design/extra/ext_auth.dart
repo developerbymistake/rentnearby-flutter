@@ -76,7 +76,7 @@ class AuthHeroScaffold extends StatelessWidget {
               final compact = AuthHero.isCompact(context);
               final duration = KitMotion.reduce(context) ? Duration.zero : _anim;
               final heroH = AuthHero.height(context);
-              final overlap = compact ? (AuthHero.isTight(context) ? AuthHero.bandOverlap - 8 : AuthHero.bandOverlap) : AuthHero.fullOverlap;
+              final overlap = compact ? AuthHero.bandOverlapOf(context) : AuthHero.fullOverlap;
               final inset = MediaQuery.viewInsetsOf(context).bottom;
               const shadowRoom = 12.0;
               return Stack(
@@ -125,7 +125,7 @@ class AuthHero extends StatelessWidget {
   final VoidCallback? onBack;
 
   static const double fullOverlap = 40;
-  static const double bandOverlap = 20;
+  static const double bandGap = 4;
   static const double _artSize = 124;
   static const double _halo = 136;
   static const double _bandArt = 54;
@@ -144,6 +144,17 @@ class AuthHero extends StatelessWidget {
   static double _full(BuildContext context) {
     final s = MediaQuery.textScalerOf(context);
     return MediaQuery.paddingOf(context).top + 20 + _halo + 6 + s.scale(30) * 1.15 + 6 + s.scale(14) * 1.35 + 34 + fullOverlap;
+  }
+
+  static double _bandTextH(BuildContext context) {
+    final s = MediaQuery.textScalerOf(context);
+    return math.min(s.scale(26) * 1.15 + 2 + s.scale(14) * 1.35, _body(context));
+  }
+
+  static double bandOverlapOf(BuildContext context) {
+    final body = _body(context);
+    final art = isTight(context) ? 44.0 : _bandArt;
+    return body - ((body + math.max(_bandTextH(context), art)) / 2 + bandGap);
   }
 
   static double _band(BuildContext context) => MediaQuery.paddingOf(context).top + _body(context);
@@ -171,7 +182,7 @@ class AuthHero extends StatelessWidget {
                 maxHeight: fullH,
                 child: AnimatedSwitcher(
                   duration: KitMotion.reduce(context) ? Duration.zero : const Duration(milliseconds: 160),
-                  child: compact ? _bandContent(top, _body(context), isTight(context)) : _fullContent(top, fullH),
+                  child: compact ? _bandContent(top, _body(context), isTight(context), _bandTextH(context)) : _fullContent(top, fullH),
                 ),
               ),
             ),
@@ -238,7 +249,7 @@ class AuthHero extends StatelessWidget {
         ),
       );
 
-  Widget _bandContent(double top, double body, bool tight) => SizedBox(
+  Widget _bandContent(double top, double body, bool tight, double textH) => SizedBox(
         key: const ValueKey('band'),
         height: top + body,
         child: Padding(
@@ -248,9 +259,11 @@ class AuthHero extends StatelessWidget {
               ExcludeSemantics(child: Art3D(asset: art, size: tight ? 44 : _bandArt, shadowBlur: 4, shadowOffset: const Offset(2, 4), shadowAlpha: 0.3)),
               const SizedBox(width: 14),
               Expanded(
-                child: FittedBox(
+                child: SizedBox(
+                  height: textH,
+                  child: FittedBox(
                   fit: BoxFit.scaleDown,
-                  alignment: Alignment.centerLeft,
+                  alignment: Alignment.bottomLeft,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
@@ -262,6 +275,7 @@ class AuthHero extends StatelessWidget {
                       const SizedBox(height: 2),
                       Text(subtitle, maxLines: 1, style: Ink3D.text(14, FontWeight.w400, AuthInk.white(0.92), height: 1.35)),
                     ],
+                  ),
                   ),
                 ),
               ),
@@ -294,7 +308,7 @@ class AuthCard extends StatelessWidget {
       width: double.infinity,
       margin: const EdgeInsets.symmetric(horizontal: 18),
       constraints: BoxConstraints(minHeight: fixed ?? 0),
-      padding: tight ? const EdgeInsets.fromLTRB(20, 16, 20, 14) : (fixed != null ? const EdgeInsets.fromLTRB(24, 26, 24, 22) : const EdgeInsets.fromLTRB(24, 28, 24, 24)),
+      padding: tight ? const EdgeInsets.fromLTRB(20, 12, 20, 8) : (fixed != null ? const EdgeInsets.fromLTRB(24, 26, 24, 22) : const EdgeInsets.fromLTRB(24, 28, 24, 24)),
       decoration: const BoxDecoration(color: Colors.white, borderRadius: AuthInk.cardRadius, boxShadow: AuthInk.cardShadow),
       child: Column(
         mainAxisAlignment: fixed != null ? MainAxisAlignment.spaceBetween : MainAxisAlignment.start,
