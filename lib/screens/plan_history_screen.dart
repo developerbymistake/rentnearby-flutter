@@ -40,7 +40,7 @@ class _PlanHistoryScreenState extends State<PlanHistoryScreen> {
                 title: 'History',
                 subtitle: 'Your plan payments',
                 art: ListingArt.calendar,
-                artSize: 128,
+                artSize: 83,
                 onBack: () => Get.back(),
               ),
               Expanded(child: _body(tone)),

@@ -68,7 +68,7 @@ class JobsHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final narrow = MediaQuery.sizeOf(context).width < 340;
-    final size = narrow ? 96.0 : 124.0;
+    final size = narrow ? 62.0 : 81.0;
     final clear = size + 16;
     final sub = subtitle;
     return Stack(

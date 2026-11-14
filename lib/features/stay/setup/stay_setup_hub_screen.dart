@@ -111,7 +111,7 @@ class _StaySetupHubScreenState extends State<StaySetupHubScreen> {
                 tone: _tone,
                 title: 'Set up your stay',
                 art: SetupAssets.hotel,
-                artSize: 100,
+                artSize: 65,
                 onBack: gated ? null : () => Get.back(),
                 leadingIcon: gated ? Icons.more_vert_rounded : null,
                 onLeading: gated ? () => _openMenu(canCorrect) : null,

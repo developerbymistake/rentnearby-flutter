@@ -16,7 +16,7 @@ class PageHeader3D extends StatelessWidget {
     this.leadingSemantics,
     this.trailing,
     this.inlineTitle = false,
-    this.artSize = 122,
+    this.artSize = 80,
     this.bottom,
     this.surface = false,
   });
@@ -62,7 +62,7 @@ class PageHeader3D extends StatelessWidget {
   Widget build(BuildContext context) {
     final narrow = MediaQuery.sizeOf(context).width < Form3D.narrow;
     final hasArt = art != null && art!.isNotEmpty;
-    final size = narrow ? artSize * 96 / 122 : artSize;
+    final size = narrow ? artSize * 62 / 80 : artSize;
     final shift = trailing == null ? 0.0 : buttonSize + 12;
     final clear = (hasArt ? size + (inlineTitle ? 0 : (narrow ? 8 : 10)) : 0.0) + shift;
     final sub = subtitle;
@@ -119,7 +119,7 @@ class PageHeader3D extends StatelessWidget {
           if (hasArt)
             Positioned(
               right: -4 + shift,
-              top: -8,
+              top: 0,
               child: ExcludeSemantics(child: Art3D(asset: art!, size: size, halo: size - 2, haloColor: tone.halo, haloDy: 4)),
             ),
           text,

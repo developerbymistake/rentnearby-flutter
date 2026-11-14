@@ -10,7 +10,7 @@ class HubHeader extends StatelessWidget {
     this.lead,
     this.back = false,
     this.onBack,
-    this.minHeight = 84,
+    this.minHeight = 66,
     this.titleTop = 0,
   });
 

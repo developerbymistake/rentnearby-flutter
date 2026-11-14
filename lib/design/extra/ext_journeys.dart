@@ -54,7 +54,7 @@ class JourneyHeader3D extends StatelessWidget {
     final t = tone ?? ListingTone.coral;
     final w = MediaQuery.sizeOf(context).width;
     final narrow = w < 340;
-    final size = narrow ? 88.0 : (w < 380 ? 104.0 : 118.0);
+    final size = narrow ? 57.0 : (w < 380 ? 68.0 : 77.0);
     final sub = subtitle;
     final back = Tooltip(
       message: MaterialLocalizations.of(context).backButtonTooltip,
@@ -76,7 +76,7 @@ class JourneyHeader3D extends StatelessWidget {
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          Positioned(right: 0, top: -2, child: ExcludeSemantics(child: Art3D(asset: art, size: size, halo: size - 6, haloColor: t.halo, haloDy: 4))),
+          Positioned(right: 0, top: 0, child: ExcludeSemantics(child: Art3D(asset: art, size: size, halo: size - 6, haloColor: t.halo, haloDy: 4))),
           ConstrainedBox(
             constraints: BoxConstraints(minHeight: size - 6),
             child: Padding(

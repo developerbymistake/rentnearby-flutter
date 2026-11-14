@@ -74,7 +74,7 @@ class _LegalPage3DState extends State<LegalPage3D> {
               physics: const BouncingScrollPhysics(),
               padding: EdgeInsets.only(bottom: 40 + MediaQuery.paddingOf(context).bottom),
               children: [
-                PageHeader3D(tone: tone, title: w.title, subtitle: w.updated, art: w.art, artSize: 128, onBack: _back),
+                PageHeader3D(tone: tone, title: w.title, subtitle: w.updated, art: w.art, artSize: 83, onBack: _back),
                 LegalCard3D(children: [
                   LegalIntro3D(w.intro),
                   for (var i = 0; i < w.sections.length; i++)

@@ -153,11 +153,11 @@ class _TripsDiscoveryScreenState extends State<TripsDiscoveryScreen> {
                 ? const SizedBox.shrink()
                 : HubContinueBar(trips: trips.toList(), onContinue: _continue);
           }),
-          const HubSectionTitle(
-            title: TripStringsHub.needTitle,
-            sub: TripStringsHub.needSub,
-            top: 22,
-          ),
+          Obx(() => HubSectionTitle(
+                title: TripStringsHub.needTitle,
+                sub: TripStringsHub.needSub,
+                top: _trips.continueTrips.isEmpty ? 2 : 22,
+              )),
           for (final (i, t) in tiles.indexed)
             Padding(
               padding: EdgeInsets.fromLTRB(16, i == 0 ? 20 : 34, 16, 0),

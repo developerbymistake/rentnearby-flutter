@@ -63,10 +63,10 @@ class ReportHeader3D extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final narrow = MediaQuery.sizeOf(context).width < 340;
-    final art = narrow ? 80.0 : 104.0;
+    final art = narrow ? 52.0 : 68.0;
     final tip = MaterialLocalizations.of(context).backButtonTooltip;
     return ConstrainedBox(
-      constraints: BoxConstraints(minHeight: narrow ? 118 : 140),
+      constraints: BoxConstraints(minHeight: narrow ? 90 : 100),
       child: Stack(
         clipBehavior: Clip.none,
         children: [

@@ -30,7 +30,7 @@ class StayPageHeader extends StatelessWidget {
         title: title,
         subtitle: subtitle,
         art: asset,
-        artSize: 100,
+        artSize: 65,
         onBack: showBack ? (onBack ?? () => Navigator.maybePop(context)) : null,
         trailing: trailing,
       ),
