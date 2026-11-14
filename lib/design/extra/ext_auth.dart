@@ -60,8 +60,6 @@ class AuthHeroScaffold extends StatelessWidget {
   final Widget hero;
   final Widget card;
 
-  static const Duration _anim = Duration(milliseconds: 220);
-
   @override
   Widget build(BuildContext context) {
     return AnnotatedRegion<SystemUiOverlayStyle>(
@@ -73,33 +71,27 @@ class AuthHeroScaffold extends StatelessWidget {
           maxScaleFactor: 1.3,
           child: Builder(
             builder: (context) {
-              final compact = AuthHero.isCompact(context);
-              final duration = KitMotion.reduce(context) ? Duration.zero : _anim;
               final heroH = AuthHero.height(context);
-              final overlap = compact ? AuthHero.bandOverlapOf(context) : AuthHero.fullOverlap;
+              const overlap = AuthHero.fullOverlap;
               final inset = MediaQuery.viewInsetsOf(context).bottom;
               const shadowRoom = 12.0;
               return Stack(
                 children: [
-                  AnimatedPositioned(
-                    duration: duration,
-                    curve: Curves.easeOutCubic,
+                  Positioned(
                     left: 0,
                     right: 0,
                     top: 0,
                     height: heroH,
                     child: hero,
                   ),
-                  AnimatedPositioned(
-                    duration: duration,
-                    curve: Curves.easeOutCubic,
+                  Positioned(
                     left: 0,
                     right: 0,
                     top: heroH - overlap - shadowRoom,
-                    bottom: 0,
+                    bottom: inset,
                     child: SingleChildScrollView(
                       physics: const BouncingScrollPhysics(),
-                      padding: EdgeInsets.only(top: shadowRoom, bottom: inset + 24 + MediaQuery.paddingOf(context).bottom),
+                      padding: EdgeInsets.only(top: shadowRoom, bottom: 24 + (inset > 0 ? 0 : MediaQuery.paddingOf(context).bottom)),
                       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
                       child: card,
                     ),
@@ -125,45 +117,18 @@ class AuthHero extends StatelessWidget {
   final VoidCallback? onBack;
 
   static const double fullOverlap = 40;
-  static const double bandGap = 4;
   static const double _artSize = 124;
   static const double _halo = 136;
-  static const double _bandArt = 54;
-  static const double _bandBody = 92;
-  static const double _tightBody = 64;
-
-  static bool isCompact(BuildContext context) => MediaQuery.viewInsetsOf(context).bottom > 0;
-
-  static bool isTight(BuildContext context) {
-    final m = MediaQuery.of(context);
-    return m.viewInsets.bottom > 0 && m.size.height - m.viewInsets.bottom < 560;
-  }
-
-  static double _body(BuildContext context) => isTight(context) ? _tightBody : _bandBody;
 
   static double _full(BuildContext context) {
     final s = MediaQuery.textScalerOf(context);
     return MediaQuery.paddingOf(context).top + 20 + _halo + 6 + s.scale(30) * 1.15 + 6 + s.scale(14) * 1.35 + 34 + fullOverlap;
   }
 
-  static double _bandTextH(BuildContext context) {
-    final s = MediaQuery.textScalerOf(context);
-    return math.min(s.scale(26) * 1.15 + 2 + s.scale(14) * 1.35, _body(context));
-  }
-
-  static double bandOverlapOf(BuildContext context) {
-    final body = _body(context);
-    final art = isTight(context) ? 44.0 : _bandArt;
-    return body - ((body + math.max(_bandTextH(context), art)) / 2 + bandGap);
-  }
-
-  static double _band(BuildContext context) => MediaQuery.paddingOf(context).top + _body(context);
-
-  static double height(BuildContext context) => isCompact(context) ? _band(context) : _full(context);
+  static double height(BuildContext context) => _full(context);
 
   @override
   Widget build(BuildContext context) {
-    final compact = isCompact(context);
     final top = MediaQuery.paddingOf(context).top;
     final fullH = _full(context);
     return DecoratedBox(
@@ -182,7 +147,7 @@ class AuthHero extends StatelessWidget {
                 maxHeight: fullH,
                 child: AnimatedSwitcher(
                   duration: KitMotion.reduce(context) ? Duration.zero : const Duration(milliseconds: 160),
-                  child: compact ? _bandContent(top, _body(context), isTight(context), _bandTextH(context)) : _fullContent(top, fullH),
+                  child: _fullContent(top, fullH),
                 ),
               ),
             ),
@@ -190,7 +155,7 @@ class AuthHero extends StatelessWidget {
           if (onBack != null)
             Positioned(
               left: 18,
-              top: compact ? top + (_body(context) - 46) / 2 : top + 12,
+              top: top + 12,
               child: Tooltip(
                 message: 'Back',
                 child: Tap3D(
@@ -248,41 +213,6 @@ class AuthHero extends StatelessWidget {
           ),
         ),
       );
-
-  Widget _bandContent(double top, double body, bool tight, double textH) => SizedBox(
-        key: const ValueKey('band'),
-        height: top + body,
-        child: Padding(
-          padding: EdgeInsets.fromLTRB(onBack != null ? 74 : 24, top, 16, 0),
-          child: Row(
-            children: [
-              ExcludeSemantics(child: Art3D(asset: art, size: tight ? 44 : _bandArt, shadowBlur: 4, shadowOffset: const Offset(2, 4), shadowAlpha: 0.3)),
-              const SizedBox(width: 14),
-              Expanded(
-                child: SizedBox(
-                  height: textH,
-                  child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.bottomLeft,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Semantics(
-                        header: true,
-                        child: Text(title, maxLines: 1, style: Ink3D.text(smallTitle ? 22 : 26, FontWeight.w700, Colors.white, height: 1.15)),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(subtitle, maxLines: 1, style: Ink3D.text(14, FontWeight.w400, AuthInk.white(0.92), height: 1.35)),
-                    ],
-                  ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
 }
 
 class AuthGap extends StatelessWidget {
@@ -291,7 +221,7 @@ class AuthGap extends StatelessWidget {
   final double height;
 
   @override
-  Widget build(BuildContext context) => SizedBox(height: AuthHero.isTight(context) ? height / 2 : height);
+  Widget build(BuildContext context) => SizedBox(height: height);
 }
 
 class AuthCard extends StatelessWidget {
@@ -302,13 +232,12 @@ class AuthCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fixed = MediaQuery.viewInsetsOf(context).bottom > 0 ? null : fixedHeight;
-    final tight = AuthHero.isTight(context);
+    final fixed = fixedHeight;
     return Container(
       width: double.infinity,
       margin: const EdgeInsets.symmetric(horizontal: 18),
       constraints: BoxConstraints(minHeight: fixed ?? 0),
-      padding: tight ? const EdgeInsets.fromLTRB(20, 12, 20, 8) : (fixed != null ? const EdgeInsets.fromLTRB(24, 26, 24, 22) : const EdgeInsets.fromLTRB(24, 28, 24, 24)),
+      padding: fixed != null ? const EdgeInsets.fromLTRB(24, 26, 24, 22) : const EdgeInsets.fromLTRB(24, 28, 24, 24),
       decoration: const BoxDecoration(color: Colors.white, borderRadius: AuthInk.cardRadius, boxShadow: AuthInk.cardShadow),
       child: Column(
         mainAxisAlignment: fixed != null ? MainAxisAlignment.spaceBetween : MainAxisAlignment.start,

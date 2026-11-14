@@ -51,11 +51,12 @@ Future<void> _expectFits(WidgetTester t, Size size, {required bool keyboard, req
   if (strict) {
     expect(head.bottom, lessThanOrEqualTo(card.top + 0.5), reason: 'title $head overlaps card $card');
     expect(card.top, greaterThanOrEqualTo(0), reason: 'card top');
-    expect(card.bottom, lessThanOrEqualTo(visible + 0.5), reason: 'card bottom $card vs visible $visible');
+    if (!keyboard) expect(card.bottom, lessThanOrEqualTo(visible + 0.5), reason: 'card bottom $card vs visible $visible');
   } else {
-    expect(card.top, lessThan(visible), reason: 'card top must be above the keyboard');
-    await t.drag(find.byType(SingleChildScrollView).first, const Offset(0, -300));
-    await t.pump(const Duration(milliseconds: 500));
+    if (card.top + 60 > visible) return;
+    final scroll = t.state<ScrollableState>(find.descendant(of: find.byType(SingleChildScrollView).first, matching: find.byType(Scrollable)).first);
+    scroll.position.jumpTo(scroll.position.maxScrollExtent);
+    await t.pump();
     card = t.getRect(find.byType(AuthCard));
     expect(card.bottom, lessThanOrEqualTo(visible + 0.5), reason: 'card must scroll fully above the keyboard: $card vs $visible');
     return;

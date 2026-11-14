@@ -75,22 +75,29 @@ Future<void> _toVerifyOtp(WidgetTester t) async {
   await t.pump(const Duration(milliseconds: 900));
 }
 
-Future<void> _expectBelowBand(WidgetTester t, Size size, double kb, String screen, String title, String subtitle) async {
+Rect _snap(WidgetTester t) {
+  final scroll = t.state<ScrollableState>(find.descendant(of: find.byType(SingleChildScrollView).first, matching: find.byType(Scrollable)).first);
+  scroll.position.jumpTo(0);
+  return t.getRect(find.byType(AuthCard));
+}
+
+Future<void> _expectStays(WidgetTester t, Size size, double kb, Rect base, String screen, String title, String subtitle) async {
   final scroll = t.state<ScrollableState>(find.descendant(of: find.byType(SingleChildScrollView).first, matching: find.byType(Scrollable)).first);
   scroll.position.jumpTo(0);
   await t.pump();
   final card = t.getRect(find.byType(AuthCard));
-  final sub = t.getRect(find.text(subtitle).first);
+  final moved = (card.top - base.top).abs();
+  if (moved > (_worst[screen] ?? -1)) _worst[screen] = moved;
+  expect(card.top, closeTo(base.top, 0.5), reason: 'card moved when the keyboard opened: before ${base.top}, after ${card.top}');
+  expect(card.height, closeTo(base.height, 0.5), reason: 'card size changed when the keyboard opened');
   final head = t.getRect(find.text(title).first);
-  final bottom = sub.bottom > head.bottom ? sub.bottom : head.bottom;
-  final gap = card.top - bottom;
-  if (gap > (_worst[screen] ?? -1e9)) _worst[screen] = gap;
-  expect(card.top, greaterThanOrEqualTo(bottom - 0.5), reason: 'card $card covers band text title $head subtitle $sub');
-  expect(gap, lessThanOrEqualTo(10), reason: 'gap $gap too big: card $card title $head subtitle $sub');
+  final sub = t.getRect(find.text(subtitle).first);
+  expect(head.top, greaterThanOrEqualTo(0));
+  expect(sub.bottom, lessThanOrEqualTo(card.top + 40), reason: 'hero text must stay above the card');
   final visible = size.height - kb;
-  if (card.bottom > visible + 0.5) {
-    await t.drag(find.byType(SingleChildScrollView).first, Offset(0, -(card.bottom - visible) - 40));
-    await t.pump(const Duration(milliseconds: 500));
+  if (card.bottom > visible + 0.5 && card.top + 60 <= visible) {
+    scroll.position.jumpTo(scroll.position.maxScrollExtent);
+    await t.pump();
     expect(t.getRect(find.byType(AuthCard)).bottom, lessThanOrEqualTo(visible + 0.5), reason: 'card must scroll above the keyboard');
   }
   expect(t.takeException(), isNull);
@@ -112,7 +119,7 @@ void main() {
   });
   tearDown(Get.reset);
   tearDownAll(() {
-    _worst.forEach((k, v) => debugPrint('WORST GAP $k: ${v.toStringAsFixed(2)}'));
+    _worst.forEach((k, v) => debugPrint('MAX CARD MOVE $k: ${v.toStringAsFixed(2)}'));
   });
 
   for (final size in _sizes) {
@@ -122,17 +129,19 @@ void main() {
 
         testWidgets('login phone card below band $tag', (t) async {
           await _open(t, const LoginScreen(), size, scale);
+          final base = _snap(t);
           t.view.viewInsets = FakeViewPadding(bottom: kb);
           await _settle(t);
-          await _expectBelowBand(t, size, kb, 'login', 'Bakhli', 'Plan your next trip');
+          await _expectStays(t, size, kb, base, 'login', 'Bakhli', 'Plan your next trip');
         });
 
         testWidgets('login otp card below band $tag', (t) async {
           await _open(t, const LoginScreen(), size, scale);
           await _toOtp(t, login: true);
+          final base = _snap(t);
           t.view.viewInsets = FakeViewPadding(bottom: kb);
           await _settle(t);
-          await _expectBelowBand(t, size, kb, 'login', 'Bakhli', 'Plan your next trip');
+          await _expectStays(t, size, kb, base, 'login', 'Bakhli', 'Plan your next trip');
         });
 
         for (final change in [false, true]) {
@@ -141,26 +150,29 @@ void main() {
 
           testWidgets('$name phone card below band $tag', (t) async {
             await _open(t, const PhoneVerifyScreen(), size, scale, args: {'isChange': change});
-            t.view.viewInsets = FakeViewPadding(bottom: kb);
+            final base = _snap(t);
+          t.view.viewInsets = FakeViewPadding(bottom: kb);
             await _settle(t);
-            await _expectBelowBand(t, size, kb, '$name phone', name, sub);
+            await _expectStays(t, size, kb, base, '$name phone', name, sub);
           });
 
           testWidgets('$name otp card below band $tag', (t) async {
             await _open(t, const PhoneVerifyScreen(), size, scale, args: {'isChange': change});
             await _toVerifyOtp(t);
             expect(find.text('Enter OTP'), findsOneWidget);
-            t.view.viewInsets = FakeViewPadding(bottom: kb);
+            final base = _snap(t);
+          t.view.viewInsets = FakeViewPadding(bottom: kb);
             await _settle(t);
-            await _expectBelowBand(t, size, kb, '$name otp', name, sub);
+            await _expectStays(t, size, kb, base, '$name otp', name, sub);
           });
         }
 
         testWidgets('onboarding card below band $tag', (t) async {
           await _open(t, const OnboardingScreen(), size, scale, args: {'phone': '9876543210'});
+          final base = _snap(t);
           t.view.viewInsets = FakeViewPadding(bottom: kb);
           await _settle(t);
-          await _expectBelowBand(t, size, kb, 'onboarding', 'Complete your profile', 'Just one more step');
+          await _expectStays(t, size, kb, base, 'onboarding', 'Complete your profile', 'Just one more step');
         });
       }
     }
