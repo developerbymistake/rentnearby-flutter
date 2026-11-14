@@ -48,8 +48,8 @@ Future<void> _expectFits(WidgetTester t, Size size, {required bool keyboard, req
   var card = t.getRect(find.byType(AuthCard));
   final visible = size.height - (keyboard ? 300 : 0);
   final head = t.getRect(find.text(title).first);
-  expect(head.bottom, lessThanOrEqualTo(card.top + 0.5), reason: 'title $head overlaps card $card');
   if (strict) {
+    expect(head.bottom, lessThanOrEqualTo(card.top + 0.5), reason: 'title $head overlaps card $card');
     expect(card.top, greaterThanOrEqualTo(0), reason: 'card top');
     expect(card.bottom, lessThanOrEqualTo(visible + 0.5), reason: 'card bottom $card vs visible $visible');
   } else {

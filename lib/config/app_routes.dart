@@ -72,6 +72,7 @@ class AppRoutes {
   static const String myJourneys = '/my-journeys';
   static const String savedJourney = '/saved-journey';
 
+  static const String tripWhere = '/trip-where';
   static const String tripSpots = '/trip-spots';
   static const String tripPlan = '/trip-plan';
   static const String tripTaxi = '/trip-taxi';

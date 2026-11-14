@@ -177,6 +177,8 @@ class MealsCardV extends StatelessWidget {
     this.descriptionLines = 2,
     this.uniformSlots = false,
     this.starBadge = false,
+    this.cellBottom = 18,
+    this.compact = false,
   });
 
   final ListingTone tone;
@@ -200,6 +202,8 @@ class MealsCardV extends StatelessWidget {
   final int descriptionLines;
   final bool uniformSlots;
   final bool starBadge;
+  final double cellBottom;
+  final bool compact;
 
   static const double slotGap = 16;
 
@@ -209,7 +213,7 @@ class MealsCardV extends StatelessWidget {
   Widget build(BuildContext context) {
     final scaler = MediaQuery.textScalerOf(context);
     const white = Colors.white;
-    final descMin = scaler.scale(12) * 1.55 * 2;
+    final descMin = scaler.scale(12) * 1.55 * (compact ? 1 : 2);
     final hasNumber = number != null && number!.isNotEmpty;
     final titleStyle = Ink3D.text(17, FontWeight.w700, white, height: 1.3);
     final titleRoom = width - cellPadding.horizontal - 30;
@@ -217,7 +221,7 @@ class MealsCardV extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: kMealsRadius,
         gradient: tone.gradient,
-        boxShadow: tone.glow(blur: 8),
+        boxShadow: compact ? const [BoxShadow(color: Color(0x2E000000), offset: Offset(0, 6), blurRadius: 12)] : tone.glow(blur: 8),
       ),
       child: ConstrainedBox(
         constraints: BoxConstraints(minHeight: minCardHeight),
@@ -299,7 +303,7 @@ class MealsCardV extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                             style: Ink3D.text(
                               12,
-                              FontWeight.w500,
+                              compact ? FontWeight.w400 : FontWeight.w500,
                               white,
                               height: 1.55,
                             ),
@@ -313,7 +317,7 @@ class MealsCardV extends StatelessWidget {
                       maxChipWidth: width - 30,
                     ),
                   ],
-                  SizedBox(height: uniformSlots ? slotGap : 8),
+                  SizedBox(height: uniformSlots ? slotGap : (compact ? 0 : 8)),
                 ],
               ),
               Column(
@@ -343,10 +347,13 @@ class MealsCardV extends StatelessWidget {
                       constraints: BoxConstraints(minHeight: scaler.scale(30)),
                       child: Align(
                         alignment: Alignment.bottomLeft,
-                        child: PriceLine(
+                        child: Padding(
+                          padding: EdgeInsets.only(bottom: compact ? 5 : 0),
+                          child: PriceLine(
                           number: number!,
                           unit: unit,
                           numberSize: RegExp(r'\d').hasMatch(number!) ? 26 : 17,
+                          ),
                         ),
                       ),
                     )
@@ -372,7 +379,7 @@ class MealsCardV extends StatelessWidget {
         clipBehavior: Clip.none,
         fit: StackFit.passthrough,
         children: [
-          Padding(padding: cellPadding, child: card),
+          Padding(padding: cellPadding.copyWith(bottom: cellBottom), child: card),
           if (photo != null) ...[
             Positioned(left: 6, top: 0, child: halo),
             Positioned(

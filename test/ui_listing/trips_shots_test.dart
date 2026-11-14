@@ -5,6 +5,7 @@ import 'package:bakhli/features/trip/data/trip_city_catalog.dart';
 import 'package:bakhli/features/trip/models/trip_city_model.dart';
 import 'package:bakhli/features/trip/models/trip_model.dart';
 import 'package:bakhli/features/trip/screens/my_trips_screen.dart';
+import 'package:bakhli/features/trip/screens/trip_where_screen.dart';
 import 'package:bakhli/features/trip/screens/trips_discovery_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -134,30 +135,42 @@ void main() {
   testWidgets('trips 300', (t) => _discovery(t, 'trips_1.0_300', trip: cont, w: 300));
   testWidgets('trips long', (t) => _discovery(t, 'trips_long_1.3_300', w: 300, scale: 1.3, cities: _long, h: 1700,
       trip: _trip('b', 'A very long trip name from Dehradun all the way to Pithoragarh', pct: 100, done: 6, total: 6, wait: 0)));
-  testWidgets('trips loading', (t) async {
+  testWidgets('where loading', (t) async {
     Get.reset();
     Get.put<TripCityCatalog>(_Pending(), permanent: true);
-    Get.put<MyTripsController>(_Trips(null), permanent: true);
     debugDisableShadows = false;
-    await pumpPhone(t, const TripsDiscoveryScreen(), size: const Size(360, 1000));
+    await pumpPhone(t, const TripWhereScreen(), size: const Size(360, 1000));
     await t.pump(const Duration(milliseconds: 300));
-    await shot(t, 'trips_loading');
+    await shot(t, 'where_loading');
     debugDisableShadows = true;
   });
-  testWidgets('trips error', (t) => _discovery(t, 'trips_error', cities: const [], fail: true, h: 900));
-  testWidgets('trips search', (t) async {
+  testWidgets('where error', (t) async {
+    Get.reset();
+    Get.put<TripCityCatalog>(_Catalog(const [], fail: true), permanent: true);
+    debugDisableShadows = false;
+    await pumpPhone(t, const TripWhereScreen(), size: const Size(360, 900));
+    await settlePhone(t);
+    await t.pump(const Duration(seconds: 1));
+    await shot(t, 'where_error');
+    expect(find.text('Try again'), findsOneWidget);
+    expect(t.takeException(), isNull);
+    debugDisableShadows = true;
+  });
+  testWidgets('where search', (t) async {
     Get.reset();
     Get.put<TripCityCatalog>(_Catalog(_cities), permanent: true);
-    Get.put<MyTripsController>(_Trips(cont), permanent: true);
     debugDisableShadows = false;
-    await pumpPhone(t, const TripsDiscoveryScreen(), size: const Size(360, 1000));
+    await pumpPhone(t, const TripWhereScreen(), size: const Size(360, 1000));
     await settlePhone(t);
+    expect(find.text('Where to next?'), findsOneWidget);
     await t.enterText(find.byType(TextField), 'zzz');
     await t.pump();
-    await shot(t, 'trips_search_empty');
+    await shot(t, 'where_search_empty');
+    expect(find.text('No city found'), findsOneWidget);
     await t.tap(find.byTooltip('Clear search'));
     await t.pump();
     expect(find.text('Where to next?'), findsOneWidget);
+    expect(find.text('No city found'), findsNothing);
     debugDisableShadows = true;
   });
 

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:get/get.dart';
 import '../../../config/app_constants.dart';
 import '../../../services/storage_service.dart';
@@ -16,6 +17,13 @@ class TripCityCatalog {
   String? _version;
   DateTime? _checkedAt;
   Future<List<TripCityModel>>? _loading;
+
+  @visibleForTesting
+  void seedForTest(List<TripCityModel> cities) {
+    _mem = cities;
+    _version = 'test';
+    _checkedAt = DateTime.now();
+  }
 
   void warmFromDisk() {
     if (_mem != null) return;

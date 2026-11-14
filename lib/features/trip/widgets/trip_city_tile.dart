@@ -5,17 +5,20 @@ import '../trip_strings_tab.dart';
 import 'trip_city_art.dart';
 
 class TripCityTile extends StatelessWidget {
-  const TripCityTile({super.key, required this.city, required this.onTap, this.index = 0, this.width = 160});
+  const TripCityTile({super.key, required this.city, required this.onTap, this.index = 0, this.width = 160, this.hub = false});
 
   final TripCityModel city;
   final VoidCallback onTap;
   final int index;
   final double width;
+  final bool hub;
 
   static const double aspect = 0.86;
 
   static const List<String> _arts = [ListingArt.mountain, ListingArt.camping, ListingArt.tent, ListingArt.beach];
   static final List<ListingTone> _tones = [ListingTone.cA, ListingTone.cB, ListingTone.cC, ListingTone.cE];
+
+  static const List<String> _hubArts = [ListingArt.mountain, ListingArt.camping, ListingArt.beach, ListingArt.sunrise];
 
   static String artOf(int index) => _arts[index % _arts.length];
 
@@ -52,9 +55,10 @@ class TripCityTile extends StatelessWidget {
     final spots = city.spotCount;
     final scaler = MediaQuery.textScalerOf(context);
     final room = width - MealsCardV.cellPadding.horizontal - 32;
-    final lines = placeLines(city).map((e) => _fit(e, room, scaler)).toList();
+    final placed = placeLines(city);
+    final lines = (hub && placed.isNotEmpty ? [placed.last] : placed).map((e) => _fit(e, room, scaler)).toList();
     final place = lines.join('\n');
-    final art = artOf(index);
+    final art = hub ? _hubArts[index % _hubArts.length] : artOf(index);
     final cover = city.cover;
     return RepaintBoundary(
       child: MealsCardV(
@@ -78,7 +82,10 @@ class TripCityTile extends StatelessWidget {
         width: width,
         semanticsLabel: city.name,
         titleLines: 2,
-        descriptionLines: lines.length < 2 ? 2 : lines.length,
+        minCardHeight: hub ? 170 : 194,
+        cellBottom: hub ? 8 : 18,
+        compact: hub,
+        descriptionLines: hub ? 1 : (lines.length < 2 ? 2 : lines.length),
       ),
     );
   }

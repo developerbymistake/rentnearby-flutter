@@ -77,29 +77,34 @@ class AuthHeroScaffold extends StatelessWidget {
               final duration = KitMotion.reduce(context) ? Duration.zero : _anim;
               final heroH = AuthHero.height(context);
               final overlap = compact ? (AuthHero.isTight(context) ? AuthHero.bandOverlap - 8 : AuthHero.bandOverlap) : AuthHero.fullOverlap;
-              return SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
-                padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
-                keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-                child: Stack(
-                  children: [
-                    AnimatedPositioned(
-                      duration: duration,
-                      curve: Curves.easeOutCubic,
-                      left: 0,
-                      right: 0,
-                      top: 0,
-                      height: heroH,
-                      child: hero,
-                    ),
-                    AnimatedPadding(
-                      duration: duration,
-                      curve: Curves.easeOutCubic,
-                      padding: EdgeInsets.only(top: heroH - overlap, bottom: 24 + MediaQuery.paddingOf(context).bottom),
+              final inset = MediaQuery.viewInsetsOf(context).bottom;
+              const shadowRoom = 12.0;
+              return Stack(
+                children: [
+                  AnimatedPositioned(
+                    duration: duration,
+                    curve: Curves.easeOutCubic,
+                    left: 0,
+                    right: 0,
+                    top: 0,
+                    height: heroH,
+                    child: hero,
+                  ),
+                  AnimatedPositioned(
+                    duration: duration,
+                    curve: Curves.easeOutCubic,
+                    left: 0,
+                    right: 0,
+                    top: heroH - overlap - shadowRoom,
+                    bottom: 0,
+                    child: SingleChildScrollView(
+                      physics: const BouncingScrollPhysics(),
+                      padding: EdgeInsets.only(top: shadowRoom, bottom: inset + 24 + MediaQuery.paddingOf(context).bottom),
+                      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
                       child: card,
                     ),
-                  ],
-                ),
+                  ),
+                ],
               );
             },
           ),

@@ -192,7 +192,10 @@ void main() {
       setGoldenView(t, Size(w, 760));
       await t.pumpWidget(_host(w, 760, const TripsDiscoveryScreen()));
       await t.pump();
-      await t.pump(const Duration(milliseconds: 500));
+      for (var i = 0; i < 3; i++) {
+        await t.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 300)));
+        await t.pump(const Duration(milliseconds: 300));
+      }
       await expectLater(find.byKey(const ValueKey('golden_root')), matchesGoldenFile('goldens/trips_tab-${w.toInt()}.png'));
     });
 

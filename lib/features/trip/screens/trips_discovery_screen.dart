@@ -4,21 +4,19 @@ import 'package:get/get.dart';
 import '../../../config/app_routes.dart';
 import '../../../config/app_tabs.dart';
 import '../../../controllers/auth_controller.dart';
-import '../../../utils/dio_error_mapper.dart';
-import '../../../utils/input_formatters.dart';
 import '../controllers/my_trips_controller.dart';
 import '../data/trip_city_catalog.dart';
-import '../models/trip_city_model.dart';
 import '../models/trip_model.dart';
-import '../data/trip_repository.dart' show TripErrorTypes;
 import '../trip_navigation.dart';
-import '../trip_strings.dart';
-import '../trip_strings_tab.dart';
+import '../trip_strings_hub.dart';
 import '../utils/trip_bar_rules.dart';
-import '../widgets/trip_continue_rail.dart';
-import '../widgets/trip_city_tile.dart';
-
-enum _Load { loading, ready, failed, plannerOff }
+import '../widgets/hub/hub_continue_bar.dart';
+import '../widgets/hub/hub_header.dart';
+import '../widgets/hub/hub_page_background.dart';
+import '../widgets/hub/hub_section_title.dart';
+import '../widgets/hub/hub_tile.dart';
+import '../widgets/hub/hub_tile_config.dart';
+import '../widgets/hub/hub_tokens.dart';
 
 class TripsDiscoveryScreen extends StatefulWidget {
   const TripsDiscoveryScreen({super.key});
@@ -29,38 +27,24 @@ class TripsDiscoveryScreen extends StatefulWidget {
 
 class _TripsDiscoveryScreenState extends State<TripsDiscoveryScreen> {
   static const double _maxWidth = 640;
-  static const String _lead = 'Choose your';
-  static final ListingTone _page = ListingTone.indigo;
-  static const List<String> _stateArts = [ListingArt.mountain, ListingArt.camping, ListingArt.tent, ListingArt.beach];
-  static final List<ListingTone> _stateTones = [ListingTone.cA, ListingTone.cC, ListingTone.cF, ListingTone.cD];
 
-  final _search = TextEditingController();
-  final _focus = FocusNode();
-  late final TripCityCatalog _catalog;
   late final MyTripsController _trips;
   Worker? _tabWorker;
-  List<TripCityModel> _cities = const [];
-  List<String> _states = const [];
-  String? _state;
-  String _query = '';
-  _Load _load = _Load.loading;
-
-  bool get _typing => _query.trim().isNotEmpty;
+  final _scroll = ScrollController();
+  final _scrolled = ValueNotifier<bool>(false);
 
   @override
   void initState() {
     super.initState();
-    _catalog = TripCityCatalog.to;
     _trips = MyTripsController.to;
-    _catalog.warmFromDisk();
-    _apply();
+    _scroll.addListener(() => _scrolled.value = _scroll.hasClients && _scroll.offset > 0);
+    _warmCatalog();
     _trips.ensureLoaded();
-    _refresh();
     if (Get.isRegistered<AuthController>()) {
       _tabWorker = ever<int>(Get.find<AuthController>().tabIndex, (i) {
         if (i != AppTabs.trips || !mounted) return;
         _trips.refreshIfStale();
-        _refresh();
+        _warmCatalog();
       });
     }
   }
@@ -68,53 +52,18 @@ class _TripsDiscoveryScreenState extends State<TripsDiscoveryScreen> {
   @override
   void dispose() {
     _tabWorker?.dispose();
-    _search.dispose();
-    _focus.dispose();
+    _scroll.dispose();
+    _scrolled.dispose();
     super.dispose();
   }
 
-  void _apply() {
-    _states = _catalog.liveStates();
-    if (_state != null && !_states.contains(_state)) _state = null;
-    _cities = _catalog.ready(_query, stateName: _state);
-    if (_catalog.hasData) _load = _Load.ready;
-  }
-
-  Future<void> _refresh({bool force = false}) async {
+  Future<void> _warmCatalog({bool force = false}) async {
+    final catalog = TripCityCatalog.to;
+    catalog.warmFromDisk();
     try {
-      await _catalog.load(force: force);
-      if (!mounted) return;
-      setState(_apply);
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _apply();
-        if (!_catalog.hasData) {
-          _load = DioErrorMapper.errorType(e) == TripErrorTypes.plannerDisabled ? _Load.plannerOff : _Load.failed;
-        }
-      });
-    }
+      await catalog.load(force: force);
+    } catch (_) {}
   }
-
-  void _retry() {
-    setState(() => _load = _Load.loading);
-    _refresh(force: true);
-  }
-
-  void _onSearch(String v) => setState(() {
-        _query = v;
-        _apply();
-      });
-
-  void _clearSearch() {
-    _search.clear();
-    _onSearch('');
-  }
-
-  void _pickState(String? s) => setState(() {
-        _state = s;
-        _apply();
-      });
 
   void _continue(TripSummaryModel t) {
     Get.toNamed(AppRoutes.tripPlan, arguments: TripBarRules.continueArgs(t))?.then((_) {
@@ -122,7 +71,12 @@ class _TripsDiscoveryScreenState extends State<TripsDiscoveryScreen> {
     });
   }
 
-  Widget _center(Widget child) => Center(
+  void _open(HubTileConfig c) {
+    if (c.route == AppRoutes.tripWhere) TripNavigation.openWhereToNext();
+  }
+
+  Widget _center(Widget child) => Align(
+        alignment: Alignment.topCenter,
         child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: _maxWidth), child: child),
       );
 
@@ -131,31 +85,40 @@ class _TripsDiscoveryScreenState extends State<TripsDiscoveryScreen> {
     final media = MediaQuery.of(context);
     final top = media.padding.top;
     final page = Scaffold(
-      backgroundColor: ListingPalette.indigo.page,
+      backgroundColor: HubTokens.statusStrip,
       resizeToAvoidBottomInset: false,
       body: KitStatusBar(
         lightIcons: false,
         child: Stack(
           children: [
             RefreshIndicator(
-              color: _page.g2,
+              color: HubTokens.accent,
               edgeOffset: top,
               onRefresh: () async {
                 _trips.load();
-                await _refresh(force: true);
+                await _warmCatalog(force: true);
               },
-              child: CustomScrollView(
-                keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-                physics: const AlwaysScrollableScrollPhysics(),
-                slivers: [
-                  SliverToBoxAdapter(child: SizedBox(height: top)),
-                  SliverToBoxAdapter(child: _center(_top())),
-                  ..._body(media.size.width),
-                  SliverToBoxAdapter(child: SizedBox(height: BarMetrics.bodyBottomOf(context))),
-                ],
+              child: LayoutBuilder(
+                builder: (context, box) => SingleChildScrollView(
+                  controller: _scroll,
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  child: HubPageBackground(
+                    minHeight: box.maxHeight,
+                    child: _content(context),
+                  ),
+                ),
               ),
             ),
-            Positioned(left: 0, right: 0, top: 0, height: top, child: ColoredBox(color: ListingPalette.indigo.page)),
+            Positioned(
+              left: 0,
+              right: 0,
+              top: 0,
+              height: top,
+              child: ValueListenableBuilder<bool>(
+                valueListenable: _scrolled,
+                builder: (_, on, _) => on ? const ColoredBox(color: HubTokens.statusStrip) : const SizedBox.shrink(),
+              ),
+            ),
           ],
         ),
       ),
@@ -163,183 +126,29 @@ class _TripsDiscoveryScreenState extends State<TripsDiscoveryScreen> {
     return TabEntrance(tab: AppTabs.trips, child: page);
   }
 
-  Widget _top() => Column(
+  Widget _content(BuildContext context) {
+    final tiles = HubTiles.visible();
+    return _center(
+      Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: [
-          MediaQuery.withClampedTextScaling(
-            maxScaleFactor: 1.3,
-            child: ModuleTitleBar(
-              tone: _page,
-              art: ListingArt.luggage,
-              title: TripStringsTab.title,
-              subtitle: _lead,
-              subtitleFirst: true,
+          const HubHeader(title: TripStringsHub.title, lead: TripStringsHub.lead),
+          Obx(() {
+            final trips = _trips.continueTrips;
+            return trips.isEmpty
+                ? const SizedBox.shrink()
+                : HubContinueBar(trips: trips.toList(), onContinue: _continue);
+          }),
+          const HubSectionTitle(title: TripStringsHub.needTitle, sub: TripStringsHub.needSub, top: 22),
+          for (final t in tiles)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 40, 16, 0),
+              child: HubTile(key: ValueKey('hub-tile-${t.id}'), config: t, onTap: () => _open(t)),
             ),
-          ),
-          _searchBox(),
-          _filterRow(),
-          if (!_typing) ...[
-            Obx(() {
-              final trips = _trips.continueTrips;
-              return trips.isEmpty ? const SizedBox.shrink() : _continueSection(trips);
-            }),
-            TitleRow3D(title: TripStringsTab.sectionTitle, subtitle: TripStringsTab.sectionSub, tone: _page),
-          ] else
-            const SizedBox(height: 8),
+          SizedBox(height: BarMetrics.bodyBottomOf(context)),
         ],
-      );
-
-  Widget _searchBox() => SearchPill(
-        tone: _page,
-        inline: true,
-        value: TripStringsTab.searchHint,
-        buttonArt: ListingArt.search,
-        field: TextField(
-          controller: _search,
-          focusNode: _focus,
-          onChanged: _onSearch,
-          inputFormatters: noEmojiInputFormatters,
-          textInputAction: TextInputAction.search,
-          cursorColor: _page.g2,
-          maxLines: 1,
-          style: Ink3D.text(16, FontWeight.w400, Ink3D.body, letterSpacing: 0),
-          decoration: InputDecoration(
-            isCollapsed: true,
-            isDense: true,
-            filled: false,
-            contentPadding: const EdgeInsets.symmetric(vertical: 8),
-            hintText: TripStringsTab.searchHint,
-            hintStyle: Ink3D.text(16, FontWeight.w400, Ink3D.hint, letterSpacing: 0),
-            border: InputBorder.none,
-            enabledBorder: InputBorder.none,
-            focusedBorder: InputBorder.none,
-            disabledBorder: InputBorder.none,
-          ),
-        ),
-        buttonSemantics: _query.isEmpty ? TripStringsTab.searchHint : TripStringsTab.clearSearch,
-        onButtonTap: _query.isEmpty ? _focus.requestFocus : _clearSearch,
-        buttonChild: _query.isEmpty
-            ? null
-            : const Tooltip(
-                message: TripStringsTab.clearSearch,
-                child: Icon(Icons.close_rounded, color: DesignColors.onPrimary, size: 26),
-              ),
-      );
-
-  Widget _filterRow() {
-    if (_states.length < 2) return const SizedBox.shrink();
-    return ChipCPRow(
-      children: [
-        ChipCP(
-          tone: ListingTone.teal,
-          art: ListingArt.worldMap,
-          label: TripStringsTab.all,
-          off: _state != null,
-          onTap: () => _pickState(null),
-        ),
-        for (var i = 0; i < _states.length; i++)
-          ChipCP(
-            tone: _stateTones[i % _stateTones.length],
-            art: _stateArts[i % _stateArts.length],
-            label: _states[i],
-            off: _state != _states[i],
-            onTap: () => _pickState(_states[i]),
-          ),
-      ],
-    );
-  }
-
-  Widget _continueSection(List<TripSummaryModel> trips) => Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          TitleRow3D(
-            title: TripStringsTab.continueHeading,
-            action: TripStringsTab.viewAll,
-            onAction: TripNavigation.openMyTrips,
-            tone: _page,
-          ),
-          TripContinueRail(trips: trips, tone: _page, onOpen: _continue),
-        ],
-      );
-
-  double _cell(double screenW) => ((screenW > _maxWidth ? _maxWidth : screenW) - 16) / 2;
-
-  Widget _pair(double cell, Widget a, Widget? b) => _center(
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          child: IntrinsicHeight(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [a, b ?? SizedBox(width: cell)],
-            ),
-          ),
-        ),
-      );
-
-  Widget _stateBox(Widget card) => _center(Padding(padding: const EdgeInsets.fromLTRB(18, 8, 18, 0), child: card));
-
-  List<Widget> _body(double screenW) {
-    final cell = _cell(screenW);
-    if (_load == _Load.loading && _cities.isEmpty) {
-      return [
-        SliverList.builder(
-          itemCount: 3,
-          itemBuilder: (_, _) => _pair(cell, MealsCardSkeleton(width: cell), MealsCardSkeleton(width: cell)),
-        ),
-      ];
-    }
-    if (_cities.isEmpty) {
-      final StateCard card;
-      switch (_load) {
-        case _Load.plannerOff:
-          card = const StateCard(
-              title: TripStrings.plannerOff, message: TripStrings.plannerOffSubtitle, kit: KitTone.trip);
-        case _Load.failed:
-          card = StateCard.error(
-            title: TripStringsTab.errorTitle,
-            message: TripStringsTab.errorSub,
-            kit: KitTone.trip,
-            actionLabel: TripStringsTab.retry,
-            onAction: _retry,
-          );
-        default:
-          final searching = _typing || _state != null;
-          card = StateCard(
-            title: searching ? TripStringsTab.emptyTitle : TripStringsTab.noCitiesTitle,
-            message: searching ? TripStringsTab.emptySub : TripStringsTab.noCitiesSub,
-            kit: KitTone.trip,
-            actionLabel: _state != null ? TripStringsTab.showAllStates : null,
-            onAction: _state != null ? () => _pickState(null) : null,
-          );
-      }
-      return [SliverToBoxAdapter(child: _stateBox(card))];
-    }
-    final cities = _cities;
-    Widget tile(int i) => TripCityTile(
-          key: ValueKey(cities[i].cityKey),
-          city: cities[i],
-          index: i,
-          width: cell,
-          onTap: () => TripNavigation.startWithCities([cities[i]]),
-        );
-    return [
-      SliverList(
-        delegate: SliverChildBuilderDelegate(
-          (_, r) => KeyedSubtree(
-            key: ValueKey(cities[r * 2].cityKey),
-            child: _pair(cell, tile(r * 2), r * 2 + 1 < cities.length ? tile(r * 2 + 1) : null),
-          ),
-          childCount: (cities.length + 1) ~/ 2,
-          addRepaintBoundaries: false,
-          findChildIndexCallback: (k) {
-            final id = (k as ValueKey<int>).value;
-            final i = cities.indexWhere((c) => c.cityKey == id);
-            return i < 0 || i.isOdd ? null : i ~/ 2;
-          },
-        ),
       ),
-    ];
+    );
   }
 }

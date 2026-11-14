@@ -381,6 +381,8 @@ class TripNavigation {
 
   static Future<void>? openSummary(String tripId) => Get.toNamed(AppRoutes.tripSummary, arguments: {'tripId': tripId});
 
+  static Future<void>? openWhereToNext() => Get.toNamed(AppRoutes.tripWhere);
+
   static Future<void>? openMyTrips() => Get.toNamed(AppRoutes.myTrips);
 
   static Future<void>? replaceWithMyTrips() => Get.offNamed(AppRoutes.myTrips);

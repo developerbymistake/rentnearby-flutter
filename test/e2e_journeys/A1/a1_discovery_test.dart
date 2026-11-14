@@ -1,11 +1,11 @@
 import 'dart:io';
 
 import 'package:bakhli/config/app_routes.dart';
-import 'package:bakhli/design/design.dart';
 import 'package:bakhli/features/trip/controllers/my_trips_controller.dart';
 import 'package:bakhli/features/trip/data/trip_city_catalog.dart';
 import 'package:bakhli/features/trip/models/trip_city_model.dart';
 import 'package:bakhli/features/trip/models/trip_model.dart';
+import 'package:bakhli/features/trip/screens/trip_where_screen.dart';
 import 'package:bakhli/features/trip/screens/trips_discovery_screen.dart';
 import 'package:bakhli/features/trip/trip_navigation.dart';
 import 'package:bakhli/features/trip/widgets/trip_city_sheet.dart';
@@ -93,6 +93,7 @@ Future<void> _pump(
   double scale = 1,
   double inset = 0,
   TripSummaryModel? trip,
+  bool where = false,
 }) async {
   Get.put<TripCityCatalog>(_Catalog(cities), permanent: true);
   Get.put<MyTripsController>(_Trips(trip), permanent: true);
@@ -101,7 +102,7 @@ Future<void> _pump(
     theme: ThemeData(fontFamily: 'WorkSans'),
     home: MediaQuery(
       data: MediaQueryData(size: Size(w, 800), textScaler: TextScaler.linear(scale), viewInsets: EdgeInsets.only(bottom: inset)),
-      child: const TripsDiscoveryScreen(),
+      child: where ? const TripWhereScreen() : const TripsDiscoveryScreen(),
     ),
   ));
   await t.pump();
@@ -157,8 +158,8 @@ void main() {
   group('empty search card', () {
     testWidgets('Show all states appears with a state chip on and brings the grid back', (t) async {
       final cities = [_city(1, 'Nainital'), _city(2, 'Shimla', state: 'Himachal Pradesh')];
-      await _pump(t, cities, 360);
-      final chip = find.widgetWithText(ChipCP, 'Himachal Pradesh');
+      await _pump(t, cities, 360, where: true);
+      final chip = find.text('Himachal Pradesh');
       await t.ensureVisible(chip);
       await t.pump();
       await t.tap(chip);
@@ -174,7 +175,7 @@ void main() {
     });
 
     testWidgets('no action when no state chip is on', (t) async {
-      await _pump(t, [_city(1, 'Nainital'), _city(2, 'Shimla', state: 'Himachal Pradesh')], 360);
+      await _pump(t, [_city(1, 'Nainital'), _city(2, 'Shimla', state: 'Himachal Pradesh')], 360, where: true);
       await t.enterText(find.byType(TextField), 'zzzz');
       await t.pump();
       expect(find.text('No city found'), findsOneWidget);
@@ -183,7 +184,7 @@ void main() {
 
     testWidgets('a city with no places is never listed', (t) async {
       final cities = [_city(1, 'Nainital'), _city(2, 'Nainpur', ready: false)];
-      await _pump(t, cities, 360);
+      await _pump(t, cities, 360, where: true);
       expect(find.text('Nainpur'), findsNothing);
       await t.enterText(find.byType(TextField), 'Nain');
       await t.pump();
@@ -194,7 +195,7 @@ void main() {
     });
 
     testWidgets('only a no-places match: just the empty card', (t) async {
-      await _pump(t, [_city(1, 'Nainital'), _city(2, 'Zebra Falls', ready: false)], 360);
+      await _pump(t, [_city(1, 'Nainital'), _city(2, 'Zebra Falls', ready: false)], 360, where: true);
       await t.enterText(find.byType(TextField), 'Zebra');
       await t.pump();
       expect(find.text('No city found'), findsOneWidget);
@@ -202,35 +203,33 @@ void main() {
     });
   });
 
-  group('Continue card and keyboard', () {
-    testWidgets('card shows the heading, the trip name and the saved step', (t) async {
+  group('Continue bar and keyboard', () {
+    testWidgets('bar shows the heading, the trip name and the saved step', (t) async {
       await _pump(t, [_city(1, 'Nainital')], 360, trip: _trip(title: 'Hills with family'));
-      expect(find.text('Hills with family'), findsOneWidget);
+      expect(find.textContaining('Hills with family'), findsOneWidget);
       expect(find.textContaining('Local taxi'), findsOneWidget);
       expect(find.text('Continue your trip'), findsOneWidget);
     });
 
     testWidgets('no title falls back to the route', (t) async {
       await _pump(t, [_city(1, 'Nainital')], 360, trip: _trip());
-      expect(find.text('Nainital'), findsWidgets);
+      expect(find.textContaining('Nainital'), findsWidgets);
       expect(find.textContaining('Local taxi'), findsOneWidget);
     });
 
     for (final w in [300.0, 360.0]) {
-      testWidgets('typing hides the Continue card and heading with the keyboard open @${w.toInt()}', (t) async {
-        await _pump(t, [_city(1, 'Nainital')], w, scale: 1.5, inset: 300, trip: _trip(title: 'Hills with family'));
-        expect(find.text('Hills with family'), findsOneWidget);
-        expect(find.text('Where to next?'), findsOneWidget);
+      testWidgets('typing in Where to next with the keyboard open fits and clearing restores Popular @${w.toInt()}', (t) async {
+        await _pump(t, [_city(1, 'Nainital')], w, scale: 1.5, inset: 300, where: true);
+        expect(find.text('Popular'), findsOneWidget);
         await t.enterText(find.byType(TextField), 'Nain');
         await t.pump();
-        expect(find.text('Hills with family'), findsNothing);
-        expect(find.text('Where to next?'), findsNothing);
+        expect(find.text('Cities'), findsOneWidget);
+        expect(find.text('Popular'), findsNothing);
         expect(find.byType(TripCityTile), findsOneWidget);
         expect(t.takeException(), isNull);
         await t.enterText(find.byType(TextField), '');
         await t.pump();
-        expect(find.text('Hills with family'), findsOneWidget);
-        expect(find.text('Where to next?'), findsOneWidget);
+        expect(find.text('Popular'), findsOneWidget);
       });
     }
   });

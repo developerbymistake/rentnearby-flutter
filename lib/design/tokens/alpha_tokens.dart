@@ -32,4 +32,5 @@ abstract final class Alpha {
   static const double v15 = 0.15;
   static const double v14 = 0.14;
   static const double v18 = 0.18;
+  static const double v16 = 0.16;
 }

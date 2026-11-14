@@ -119,6 +119,8 @@ class SearchPill extends StatelessWidget {
     this.buttonChild,
     this.buttonSemantics,
     this.margin,
+    this.padding,
+    this.flat = false,
   });
 
   final ListingTone tone;
@@ -135,6 +137,8 @@ class SearchPill extends StatelessWidget {
   final Widget? buttonChild;
   final String? buttonSemantics;
   final EdgeInsets? margin;
+  final EdgeInsets? padding;
+  final bool flat;
 
   @override
   Widget build(BuildContext context) {
@@ -174,17 +178,21 @@ class SearchPill extends StatelessWidget {
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           gradient: tone.gradient,
-          boxShadow: _toneShadow(tone, inline ? const Offset(3, 6) : const Offset(4, 8), inline ? 10 : 12),
+          boxShadow: flat ? const [] : _toneShadow(tone, inline ? const Offset(3, 6) : const Offset(4, 8), inline ? 10 : 12),
         ),
         alignment: Alignment.center,
         child: buttonChild ?? Art3D(asset: buttonArt, size: inline ? 30 : 42, shadowBlur: 2, shadowOffset: const Offset(2, 3), shadowAlpha: 0.3),
       ),
     );
-    const pill = BoxDecoration(color: Colors.white, borderRadius: BorderRadius.all(Radius.circular(38)), boxShadow: _kFieldShadow);
+    final pill = BoxDecoration(
+      color: Colors.white,
+      borderRadius: const BorderRadius.all(Radius.circular(38)),
+      boxShadow: flat ? const [BoxShadow(color: Color(0x1F000000), offset: Offset(0, 3), blurRadius: 10)] : _kFieldShadow,
+    );
     if (inline) {
       final body = Container(
         margin: margin ?? const EdgeInsets.fromLTRB(18, 16, 18, 0),
-        padding: const EdgeInsets.fromLTRB(20, 10, 12, 10),
+        padding: padding ?? const EdgeInsets.fromLTRB(20, 10, 12, 10),
         decoration: pill,
         child: Row(children: [Expanded(child: field ?? text), const SizedBox(width: 10), button]),
       );

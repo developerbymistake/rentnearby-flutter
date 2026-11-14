@@ -25,6 +25,7 @@ import 'package:bakhli/features/trip/controllers/my_trips_controller.dart';
 import 'package:bakhli/features/trip/data/trip_city_catalog.dart';
 import 'package:bakhli/features/trip/models/trip_city_model.dart';
 import 'package:bakhli/features/trip/screens/trips_discovery_screen.dart';
+import 'package:bakhli/features/trip/widgets/hub/hub_header.dart';
 import 'package:bakhli/screens/home_screen.dart';
 import 'package:bakhli/screens/profile_screen.dart';
 import 'package:bakhli/design/extra/ext_jobs.dart';
@@ -256,13 +257,14 @@ void main() {
     expect(t.takeException(), isNull);
   });
 
-  testWidgets('trips header: 3D title bar, status strip while scrolling', (t) async {
+  testWidgets('trips header: hub header, status strip while scrolling', (t) async {
     _base();
     Get.put<TripCityCatalog>(_Catalog(), permanent: true);
     Get.put<MyTripsController>(_Trips(), permanent: true);
     await pumpPhone(t, const TripsDiscoveryScreen());
     await settlePhone(t);
-    expect(find.byType(ModuleTitleBar), findsOneWidget);
+    expect(find.byType(HubHeader), findsOneWidget);
+    expect(find.byType(ModuleTitleBar), findsNothing);
     await shot(t, 'H_trips_top');
     await scrollShots(t, find.byType(TripsDiscoveryScreen), 'H_trips_scroll', _offsets);
     expect(find.byType(ModuleScrollFrame), findsNothing);

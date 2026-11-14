@@ -9,9 +9,16 @@ import 'screens/trip_spots_screen.dart';
 import 'screens/trip_stay_screen.dart';
 import 'screens/trip_taxi_replies_screen.dart';
 import 'screens/trip_summary_screen.dart';
+import 'screens/trip_where_screen.dart';
 import 'screens/trip_taxi_screen.dart';
 
 final List<GetPage> tripPages = [
+  GetPage(
+    name: AppRoutes.tripWhere,
+    page: () => const TripWhereScreen(),
+    customTransition: TemplateTransition(),
+    transitionDuration: templateTransitionDuration,
+  ),
   GetPage(
     name: AppRoutes.tripSpots,
     page: () => const TripSpotsScreen(),
