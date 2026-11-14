@@ -36,7 +36,7 @@ class PlanAccent {
       );
 
   static String iconAsset(String? featureKey) => switch (featureKey) {
-        'Stay' => '${_dir}house_with_garden.png',
+        'Stay' => '${_dir}camping.png',
         'Taxi' => '${_dir}taxi.png',
         _ => '${_dir}briefcase.png',
       };

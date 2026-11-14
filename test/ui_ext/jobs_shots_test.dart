@@ -282,7 +282,7 @@ void main() {
       Get.put<TripCityCatalog>(catalog ?? _Catalog(), permanent: true);
       final c = Get.put(ctrl ?? _feedCtrl(), tag: JobsFeedController.tag);
       await pumpPhone(t, const JobsLandingScreenV2(), size: size, textScale: scale);
-      if (city) c.pickCity(_city(1, 'Nainital', 'Nainital', 'Uttarakhand'));
+      if (city) c.city.value = _city(1, 'Nainital', 'Nainital', 'Uttarakhand');
       await t.pump(const Duration(milliseconds: 300));
       return c;
     }
@@ -294,7 +294,7 @@ void main() {
         c.isLoadingMore.value = true;
         await _snap(t, 'land_$tag');
         expect(find.text('Cook for homestay'), findsOneWidget);
-        expect(find.text('Search'), findsOneWidget);
+        expect(find.text('Nainital, Uttarakhand'), findsOneWidget);
         expect(t.takeException(), isNull);
         debugDisableShadows = true;
       });
@@ -306,8 +306,8 @@ void main() {
       c.pickPin(29.39, 79.45, 'Mall Road, Nainital');
       await t.pump(const Duration(milliseconds: 300));
       await _snap(t, 'land_pin');
-      expect(find.text('Cancel'), findsOneWidget);
-      await t.tap(find.text('Cancel'));
+      expect(find.byIcon(Icons.close_rounded), findsOneWidget);
+      await t.tap(find.byIcon(Icons.close_rounded));
       await t.pump(const Duration(milliseconds: 300));
       expect(c.searchPin.value, isNull);
       debugDisableShadows = true;
@@ -328,7 +328,7 @@ void main() {
       debugDisableShadows = false;
       await open(t, ctrl: _feedCtrl(hold: Completer()), city: false);
       await _snap(t, 'land_load');
-      expect(find.text('My location'), findsOneWidget);
+      expect(find.text('Search a place'), findsOneWidget);
       debugDisableShadows = true;
     });
 

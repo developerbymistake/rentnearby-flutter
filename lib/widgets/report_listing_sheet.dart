@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:bakhli/design/design.dart';
 import 'package:bakhli/design/extra/ext_reports.dart';
+import 'package:bakhli/design/extra/sheet_close_button.dart';
 import '../config/module_palette.dart';
 import '../controllers/report_controller.dart';
 import '../utils/app_toast.dart';
@@ -215,6 +216,7 @@ class _ReportListingSheetState extends State<ReportListingSheet> {
             ),
           ),
           const Positioned(top: 0, left: 0, right: 0, child: Center(child: ReportSheetArt())),
+          Positioned(top: room + 12, right: 12, child: SheetCloseButton(enabled: !_submitting)),
         ],
       ),
     );

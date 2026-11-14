@@ -89,7 +89,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final estimate = _headerEstimate(context);
     return Scaffold(
-      backgroundColor: ListingPalette.indigo.page,
+      backgroundColor: ListingPalette.sunrise.page,
       body: TabEntrance(
         tab: AppTabs.home,
         child: ValueListenableBuilder<double>(
@@ -99,7 +99,7 @@ class _HomeScreenState extends State<HomeScreen> {
             return Stack(
               children: [
                 RefreshIndicator(
-                  color: ListingPalette.indigo.g2,
+                  color: ListingPalette.sunrise.g2,
                   edgeOffset: top - _headerGap,
                   onRefresh: _refresh,
                   child: SingleChildScrollView(
@@ -149,7 +149,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildTopBar(BuildContext context) {
     return ColoredBox(
-      color: ListingPalette.indigo.page,
+      color: ListingPalette.sunrise.page,
       child: Padding(
         padding: EdgeInsets.only(top: MediaQuery.paddingOf(context).top),
         child: Obx(() {

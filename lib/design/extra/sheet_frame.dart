@@ -17,6 +17,8 @@ class SheetFrame extends StatelessWidget {
     this.tone,
     this.art,
     this.size = SheetSize.hug,
+    this.showClose = true,
+    this.closeEnabled = true,
   });
 
   final Widget child;
@@ -29,6 +31,8 @@ class SheetFrame extends StatelessWidget {
   final ListingTone? tone;
   final String? art;
   final SheetSize size;
+  final bool showClose;
+  final bool closeEnabled;
 
   static Future<T?> show<T>(
     BuildContext context, {
@@ -59,6 +63,8 @@ class SheetFrame extends StatelessWidget {
       subtitle: subtitle,
       centerTitle: art != null,
       size: size,
+      showClose: showClose,
+      closeEnabled: closeEnabled,
       footer: footer,
       scrollable: scrollable,
       padding: footer == null ? padding.copyWith(bottom: 0) : padding,

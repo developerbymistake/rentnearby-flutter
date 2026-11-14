@@ -22,7 +22,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
   final _otpFocus = FocusNode();
   final _phoneFocus = FocusNode();
   static final ListingTone _tone = ListingTone.indigo;
-  static const double _cardHeight = 364;
+  static const double _cardHeight = 346;
   bool _phoneBad = false;
   final _auth = Get.find<AuthController>();
   late final AnimationController _enter =
@@ -190,7 +190,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
       hero: TemplateEntrance(
         animation: templateInterval(_enter, 0, 3),
         animationController: _enter,
-        child: AuthHero(tone: _tone, art: ListingArt.roundPushpin, title: 'Bakhli', subtitle: 'Plan your next trip'),
+        child: AuthHero(tone: _tone, art: ListingArt.panda, title: 'Bakhli', subtitle: 'Plan your next trip'),
       ),
       card: TemplateEntrance(
         animation: templateInterval(_enter, 2, 3),
@@ -215,7 +215,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
             const AuthCaption('Enter your mobile number to continue'),
           ],
         ),
-        const SizedBox(height: 16),
+        const AuthGap(16),
         AuthPillInput(
           tone: _tone,
           focusNode: _phoneFocus,
@@ -237,7 +237,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
             onFieldSubmitted: (_) => _sendOtp(),
           ),
         ),
-        const SizedBox(height: 16),
+        const AuthGap(16),
         AuthAgreeRow(
           tone: _tone,
           value: _agreed,
@@ -245,7 +245,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
           onTerms: () => _openLegal(const TermsOfServiceScreen()),
           onPrivacy: () => _openLegal(const PrivacyPolicyScreen()),
         ),
-        const SizedBox(height: 16),
+        const AuthGap(16),
         Obx(() => GradientPillButton(
               tone: _tone,
               label: 'Send OTP',
@@ -277,7 +277,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
             AuthNumberChip(tone: _tone, art: ListingArt.speechBalloon, text: '+91 $_phone'),
           ],
         ),
-        const SizedBox(height: 16),
+        const AuthGap(16),
         Center(
           child: Pinput(
             controller: _otpCtrl,
@@ -293,7 +293,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
             onCompleted: _verifyOtp,
           ),
         ),
-        const SizedBox(height: 16),
+        const AuthGap(16),
         Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [

@@ -53,6 +53,7 @@ class ListingTone {
   static final ListingTone indigo = ListingTone.palette(ListingPalette.indigo);
   static final ListingTone forest = ListingTone.palette(ListingPalette.forest);
   static final ListingTone coral = ListingTone.palette(ListingPalette.coral);
+  static final ListingTone sunrise = ListingTone.palette(ListingPalette.sunrise);
   static final ListingTone cA = ListingTone.meals(MealsGradient.cA);
   static final ListingTone cB = ListingTone.meals(MealsGradient.cB);
   static final ListingTone cC = ListingTone.meals(MealsGradient.cC);

@@ -13,7 +13,7 @@ Widget _bar(int selected, {double inset = 24}) => TemplateBottomBar(
       onTap: (_) {},
       items: [
         const TemplateNavItem(index: 0, label: 'Home', image: '${_t3d}compass.png'),
-        TemplateNavItem(index: 1, label: 'Stays', image: '${_t3d}hotel.png', activeColor: ListingPalette.forest.text),
+        TemplateNavItem(index: 1, label: 'Stays', image: ListingArt.stay, activeColor: ListingPalette.forest.text),
         const TemplateNavItem(index: 2, label: 'Trips', image: '${_t3d}luggage.png', center: true),
         TemplateNavItem(index: 3, label: 'Taxi', image: '${_t3d}taxi.png', activeColor: ListingPalette.coral.text),
         const TemplateNavItem(index: 4, label: 'Profile', image: '${_t3d}backpack.png'),

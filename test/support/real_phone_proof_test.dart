@@ -52,9 +52,9 @@ class _Trips extends MyTripsController {
   @override
   Future<void> load({bool refresh = false}) async {}
   @override
-  TripSummaryModel? get continueTrip {
+  List<TripSummaryModel> get continueTrips {
     active.length;
-    return TripSummaryModel(
+    return [TripSummaryModel(
       id: 't1',
       title: 'Nainital and Almora',
       status: 'draft',
@@ -64,14 +64,9 @@ class _Trips extends MyTripsController {
       category: 'trip',
       updatedAt: DateTime(2030, 1, 1),
       progress: const TripProgress(total: 5, done: 3, percent: 60),
-    );
+    )];
   }
 
-  @override
-  int get openTripCount {
-    active.length;
-    return 2;
-  }
 }
 
 class _Repo implements TripShortlistRepository {

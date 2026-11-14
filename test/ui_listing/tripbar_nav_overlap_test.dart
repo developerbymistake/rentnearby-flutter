@@ -1,4 +1,5 @@
 import 'package:bakhli/config/app_theme.dart';
+import 'package:bakhli/design/design.dart';
 import 'package:bakhli/design/extra/template_nav.dart';
 import 'package:bakhli/features/trip/controllers/my_trips_controller.dart';
 import 'package:bakhli/features/trip/widgets/trip_bar.dart';
@@ -35,7 +36,7 @@ class _Shell extends StatelessWidget {
           onTap: taps.add,
           items: const [
             TemplateNavItem(index: 0, label: 'Home', image: 'assets/images/design/travel3d/compass.png'),
-            TemplateNavItem(index: 1, label: 'Stays', image: 'assets/images/design/travel3d/hotel.png'),
+            TemplateNavItem(index: 1, label: 'Stays', image: ListingArt.stay),
             TemplateNavItem(index: 2, label: 'Trips', image: 'assets/images/design/travel3d/luggage.png', center: true),
             TemplateNavItem(index: 3, label: 'Taxi', image: 'assets/images/design/travel3d/taxi.png'),
             TemplateNavItem(index: 4, label: 'Profile', image: 'assets/images/design/travel3d/backpack.png'),

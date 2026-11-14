@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../tokens/design_colors.dart';
 import 'art_3d.dart';
 import 'motion_kit.dart';
 import 'template_motion.dart';
@@ -174,6 +175,8 @@ class MealsCardV extends StatelessWidget {
     this.wholeWords = false,
     this.titleLines = 1,
     this.descriptionLines = 2,
+    this.uniformSlots = false,
+    this.starBadge = false,
   });
 
   final ListingTone tone;
@@ -195,6 +198,10 @@ class MealsCardV extends StatelessWidget {
   final bool wholeWords;
   final int titleLines;
   final int descriptionLines;
+  final bool uniformSlots;
+  final bool starBadge;
+
+  static const double slotGap = 16;
 
   static const EdgeInsets cellPadding = EdgeInsets.fromLTRB(8, 46, 8, 18);
 
@@ -240,14 +247,30 @@ class MealsCardV extends StatelessWidget {
                         ),
                       ),
                     ),
-                  Text(
-                    KitText.fitWords(title, titleStyle, scaler, titleRoom - 1, titleLines),
-                    maxLines: titleLines,
-                    overflow: TextOverflow.ellipsis,
-                    style: titleStyle,
+                  ConstrainedBox(
+                    constraints: BoxConstraints(
+                      minHeight: uniformSlots ? scaler.scale(17) * 1.3 * titleLines : 0,
+                    ),
+                    child: Text(
+                      KitText.fitWords(title, titleStyle, scaler, titleRoom - 1, titleLines),
+                      maxLines: titleLines,
+                      overflow: TextOverflow.ellipsis,
+                      style: titleStyle,
+                    ),
                   ),
-                  if (description != null) const SizedBox(height: 6),
-                  if (description != null)
+                  if (description != null || uniformSlots) const SizedBox(height: 6),
+                  if (uniformSlots)
+                    ConstrainedBox(
+                      constraints: BoxConstraints(minHeight: scaler.scale(12) * 1.55),
+                      child: Text(
+                        description ?? '',
+                        maxLines: 1,
+                        softWrap: false,
+                        overflow: TextOverflow.ellipsis,
+                        style: Ink3D.text(12, FontWeight.w500, white, height: 1.55),
+                      ),
+                    )
+                  else if (description != null)
                   ConstrainedBox(
                     constraints: BoxConstraints(minHeight: descMin),
                     child: wholeWords
@@ -282,15 +305,15 @@ class MealsCardV extends StatelessWidget {
                             ),
                           ),
                   ),
-                  if (chips != null) ...[
-                    const SizedBox(height: 6),
+                  if (chips != null || uniformSlots) ...[
+                    SizedBox(height: uniformSlots ? 8 : 6),
                     _ChipsRow(
-                      chips!,
-                      height: (scaler.scale(10.5) * 1.35 + 4) * 2 + 6,
+                      chips ?? const [],
+                      height: (scaler.scale(10.5) * 1.35 + 4) * (uniformSlots ? 1 : 2) + (uniformSlots ? 0 : 6),
                       maxChipWidth: width - 30,
                     ),
                   ],
-                  const SizedBox(height: 8),
+                  SizedBox(height: uniformSlots ? slotGap : 8),
                 ],
               ),
               Column(
@@ -377,6 +400,8 @@ class MealsCardV extends StatelessWidget {
               ),
             ),
           ],
+          if (starBadge && (photo != null || art != null))
+            const Positioned(left: 90, top: -8, child: _StarBadge()),
         ],
       ),
     );
@@ -396,6 +421,33 @@ class MealsCardV extends StatelessWidget {
       container: true,
       excludeSemantics: true,
       child: body,
+    );
+  }
+}
+
+class _StarBadge extends StatelessWidget {
+  const _StarBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      key: const ValueKey('meals-star-badge'),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.28),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: const SizedBox(
+        width: 30,
+        height: 30,
+        child: Icon(Icons.star_rounded, size: 19, color: DesignColors.amber),
+      ),
     );
   }
 }

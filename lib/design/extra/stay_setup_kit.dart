@@ -19,7 +19,7 @@ import '../tokens/listing_palette.dart';
 
 class SetupAssets {
   static const String _dir = 'assets/images/design/travel3d/';
-  static const String hotel = '${_dir}house_with_garden.png';
+  static const String hotel = '${_dir}camping.png';
   static const String bed = '${_dir}bed.png';
   static const String clipboard = '${_dir}clipboard.png';
   static const String key = '${_dir}key.png';

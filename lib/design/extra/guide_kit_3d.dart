@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'art_3d.dart';
 import 'buttons_kit.dart';
 import 'motion_kit.dart';
+import 'sheet_close_button.dart';
 import 'wide_card.dart';
 
 const double _kContentMax = 520;
@@ -72,7 +73,6 @@ class GuideSheetScaffold extends StatelessWidget {
     this.ringLabel,
     this.children = const [],
     this.bottom,
-    this.sheetHeight = 640,
     this.header,
     this.centerText = false,
     this.scrollKey,
@@ -90,18 +90,15 @@ class GuideSheetScaffold extends StatelessWidget {
   final String? ringLabel;
   final List<Widget> children;
   final Widget? bottom;
-  final double sheetHeight;
   final Widget? header;
 
-  static const double minTop = 150;
-  static const double overlap = 14;
-
-  // Depends only on the space, never on the content, so every step has the same sheet.
-  static double sheetHeightFor(double available, {double topInset = 0, double bottomInset = 0, double max = 640}) {
-    final room = available - topInset;
-    final h = math.min(max + bottomInset, room - minTop + overlap);
-    return math.max(h, math.min(room, 320 + bottomInset));
-  }
+  static const Key circleKey = ValueKey('guide_circle');
+  static const double circleLeft = 20;
+  static const double circleSize = 88;
+  static const double circleArt = 62;
+  static const double circleOnHeader = 44;
+  // Sheet top below the page top: the half of the circle that sits on the page plus 12.
+  static const double sheetTop = circleSize - circleOnHeader + 12;
 
   @override
   Widget build(BuildContext context) {
@@ -110,38 +107,30 @@ class GuideSheetScaffold extends StatelessWidget {
       decoration: const BoxDecoration(
         gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0xFFF2F3F8), Colors.white]),
       ),
-      child: LayoutBuilder(
-        builder: (context, c) {
-          final avail = c.maxHeight.isFinite ? c.maxHeight : MediaQuery.sizeOf(context).height;
-          final h = sheetHeightFor(avail, topInset: pad.top, bottomInset: pad.bottom, max: sheetHeight);
-          final zone = math.max(0.0, avail - pad.top - h + overlap);
-          final artSize = (zone - 20).clamp(0.0, 160.0).toDouble();
-          return SizedBox(
-            height: avail,
-            child: Stack(
-              children: [
-                if (artSize >= 56)
-                  Positioned(
-                    left: 0,
-                    right: 0,
-                    top: pad.top,
-                    height: zone,
-                    child: ExcludeSemantics(
-                      child: Stack(
-                        alignment: Alignment.center,
-                        clipBehavior: Clip.none,
-                        children: [
-                          _halo(artSize * 1.15, tone.haloBase.withValues(alpha: 0.14)),
-                          Art3D(asset: art, size: artSize, shadowBlur: 10, shadowOffset: const Offset(8, 12), shadowAlpha: 0.22),
-                        ],
-                      ),
-                    ),
-                  ),
-                Positioned(left: 0, right: 0, bottom: 0, height: h, child: _sheet(context, pad.bottom)),
-              ],
-            ),
-          );
-        },
+      child: Stack(
+        clipBehavior: Clip.none,
+        fit: StackFit.expand,
+        children: [
+          Positioned(left: 0, right: 0, bottom: 0, top: sheetTop, child: _sheet(context, pad.bottom)),
+          Positioned(left: circleLeft, top: -circleOnHeader, child: _circle()),
+        ],
+      ),
+    );
+  }
+
+  Widget _circle() {
+    return ExcludeSemantics(
+      child: Container(
+        key: circleKey,
+        width: circleSize,
+        height: circleSize,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          shape: BoxShape.circle,
+          boxShadow: [BoxShadow(color: tone.shadow.withValues(alpha: 0.33), offset: const Offset(0, 6), blurRadius: 16)],
+        ),
+        child: Art3D(asset: art, size: circleArt, shadowBlur: 5, shadowOffset: const Offset(4, 6), shadowAlpha: 0.25),
       ),
     );
   }
@@ -161,44 +150,41 @@ class GuideSheetScaffold extends StatelessWidget {
               children: [
                 Expanded(
                   child: ClipRect(
-                    child: Padding(
-                      padding: const EdgeInsets.only(top: 10),
-                      child: PageStorage(
-                        bucket: PageStorageBucket(),
-                        child: SingleChildScrollView(
-                          key: ValueKey(scrollKey ?? title),
-                          padding: const EdgeInsets.fromLTRB(20, 14, 20, 16),
-                          child: Center(
-                            child: ConstrainedBox(
-                              constraints: const BoxConstraints(maxWidth: _kContentMax),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  header ?? GuideStepHeader(tone: tone, label: stepLabel, progress: progress),
+                    child: PageStorage(
+                      bucket: PageStorageBucket(),
+                      child: SingleChildScrollView(
+                        key: ValueKey(scrollKey ?? title),
+                        padding: const EdgeInsets.fromLTRB(20, 14, 20, 16),
+                        child: Center(
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: _kContentMax),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                header ?? GuideStepHeader(tone: tone, label: stepLabel, progress: progress),
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 4),
+                                  child: Text(
+                                    title,
+                                    maxLines: 3,
+                                    overflow: TextOverflow.ellipsis,
+                                    textAlign: centerText ? TextAlign.center : TextAlign.start,
+                                    style: Ink3D.text(26, FontWeight.w700, Ink3D.title, height: 1.4, letterSpacing: 0.27),
+                                  ),
+                                ),
+                                if (body.isNotEmpty)
                                   Padding(
-                                    padding: const EdgeInsets.only(top: 4),
+                                    padding: const EdgeInsets.only(top: 6),
                                     child: Text(
-                                      title,
-                                      maxLines: 3,
+                                      body,
+                                      maxLines: 5,
                                       overflow: TextOverflow.ellipsis,
                                       textAlign: centerText ? TextAlign.center : TextAlign.start,
-                                      style: Ink3D.text(26, FontWeight.w700, Ink3D.title, height: 1.4, letterSpacing: 0.27),
+                                      style: Ink3D.text(15, FontWeight.w400, Ink3D.copy, height: 1.45, letterSpacing: 0),
                                     ),
                                   ),
-                                  if (body.isNotEmpty)
-                                    Padding(
-                                      padding: const EdgeInsets.only(top: 6),
-                                      child: Text(
-                                        body,
-                                        maxLines: 5,
-                                        overflow: TextOverflow.ellipsis,
-                                        textAlign: centerText ? TextAlign.center : TextAlign.start,
-                                        style: Ink3D.text(15, FontWeight.w400, Ink3D.copy, height: 1.45, letterSpacing: 0),
-                                      ),
-                                    ),
-                                  ...children,
-                                ],
-                              ),
+                                ...children,
+                              ],
                             ),
                           ),
                         ),
@@ -646,6 +632,7 @@ class SheetModalBody extends StatelessWidget {
             ),
           ),
         ),
+        const Positioned(top: artRoom + 12, right: 12, child: SheetCloseButton()),
         Positioned(top: 0, child: IgnorePointer(child: _halo(144, tone.haloBase.withValues(alpha: 0.18)))),
         Positioned(
           top: 4,

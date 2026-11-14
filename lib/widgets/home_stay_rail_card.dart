@@ -24,7 +24,8 @@ class HomeStayRailCard extends StatelessWidget {
       tone: ListingTone.list(ListingTone.forest, index),
       tag: item.tagLabel,
       title: item.title,
-      description: item.locationLabel,
+      description: item.placeName ?? item.locationLabel,
+      chips: item.distanceLabel == null ? null : [item.distanceLabel!],
       photo: hasPhoto ? KitPhoto(url: url, width: 100, height: 100, asset: TravelIcon.stay, iconSize: 40) : null,
       sticker: hasPhoto ? sticker : null,
       art: hasPhoto ? null : ListingArt.hotel,
@@ -33,6 +34,7 @@ class HomeStayRailCard extends StatelessWidget {
       unit: item.priceUnit,
       width: cellWidth,
       titleLines: 2,
+      uniformSlots: true,
       onTap: onOpen ?? () => Get.toNamed(AppRoutes.stayDetail, arguments: {'id': item.id}),
     );
   }

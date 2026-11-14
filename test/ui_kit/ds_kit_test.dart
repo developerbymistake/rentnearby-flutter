@@ -76,7 +76,7 @@ void main() {
             selectedIndex: 0,
             onTap: (i) => tapped = i,
             items: const [
-              TemplateNavItem(index: 0, label: 'A', image: TravelIcon.stay),
+              TemplateNavItem(index: 0, label: 'A', image: ListingArt.stay),
               TemplateNavItem(index: 1, label: 'B', image: TravelIcon.taxi),
               TemplateNavItem(index: 2, label: 'C', image: TravelIcon.route, center: true),
               TemplateNavItem(index: 3, label: 'D', image: TravelIcon.map),

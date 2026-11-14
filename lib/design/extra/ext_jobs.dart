@@ -16,7 +16,6 @@ abstract final class JobsLook {
   );
   static const Color muted = Color(0xFF8A8F99);
   static const Color about = Color(0xFF3D4A50);
-  static const Color clearFill = Color(0xFFF2F3F8);
   static const Color bannerFill = Color(0xFFFFE9E7);
   static const Color bannerText = Color(0xFFC0392B);
   static const List<BoxShadow> card3 = [BoxShadow(color: Color(0x409E9E9E), offset: Offset(1.1, 1.1), blurRadius: 10)];
@@ -135,101 +134,6 @@ class _JobsTitle extends StatelessWidget {
       }
       return Text(text, maxLines: 2, overflow: TextOverflow.ellipsis, style: style);
     });
-  }
-}
-
-class JobsPlaceBar extends StatelessWidget {
-  const JobsPlaceBar({
-    super.key,
-    required this.tone,
-    required this.label,
-    required this.onPlaceTap,
-    required this.actionLabel,
-    required this.onAction,
-    this.onClear,
-    this.cancel = false,
-  });
-
-  final ListingTone tone;
-  final String label;
-  final VoidCallback? onPlaceTap;
-  final VoidCallback? onClear;
-  final String actionLabel;
-  final VoidCallback? onAction;
-  final bool cancel;
-
-  @override
-  Widget build(BuildContext context) {
-    final narrow = MediaQuery.sizeOf(context).width < 340;
-    final clear = onClear;
-    final end = clear != null
-        ? Tap3D(
-            onTap: clear,
-            label: 'Clear',
-            child: SizedBox(
-              width: 40,
-              height: 44,
-              child: Center(
-                child: Container(
-                  width: 30,
-                  height: 30,
-                  decoration: const BoxDecoration(color: JobsLook.clearFill, shape: BoxShape.circle),
-                  child: const Icon(Icons.close_rounded, size: 17, color: Ink3D.body),
-                ),
-              ),
-            ),
-          )
-        : Container(
-            width: 30,
-            height: 30,
-            decoration: const BoxDecoration(color: JobsLook.clearFill, shape: BoxShape.circle),
-            child: const Icon(Icons.arrow_drop_down_rounded, size: 22, color: Ink3D.body),
-          );
-    final field = Tap3D(
-      onTap: onPlaceTap,
-      label: label,
-      child: Container(
-        constraints: const BoxConstraints(minHeight: 64),
-        padding: const EdgeInsets.fromLTRB(12, 8, 10, 8),
-        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(38), boxShadow: JobsLook.field),
-        child: Row(
-          children: [
-            ExcludeSemantics(child: Art3D(asset: ListingArt.roundPushpin, size: narrow ? 34 : 44, shadowBlur: 3, shadowOffset: const Offset(2, 4), shadowAlpha: 0.25)),
-            SizedBox(width: narrow ? 8 : 12),
-            Expanded(child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(15, FontWeight.w400, Ink3D.body, letterSpacing: 0))),
-            const SizedBox(width: 6),
-            end,
-          ],
-        ),
-      ),
-    );
-    final ink = cancel ? tone.text : Colors.white;
-    final action = Tap3D(
-      onTap: onAction,
-      label: actionLabel,
-      exclude: true,
-      child: Container(
-        constraints: const BoxConstraints(minHeight: 46),
-        padding: EdgeInsets.symmetric(horizontal: narrow ? 14 : 20),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(24),
-          gradient: cancel ? null : tone.gradient,
-          color: cancel ? Colors.white : null,
-          boxShadow: cancel ? JobsLook.pill : JobsLook.toneGlow(tone),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (cancel) ...[Icon(Icons.close_rounded, size: 18, color: ink), const SizedBox(width: 6)],
-            Text(actionLabel, maxLines: 1, style: Ink3D.text(15, FontWeight.w700, ink, letterSpacing: 0)),
-          ],
-        ),
-      ),
-    );
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(18, 10, 18, 0),
-      child: Row(children: [Expanded(child: field), const SizedBox(width: 10), action]),
-    );
   }
 }
 

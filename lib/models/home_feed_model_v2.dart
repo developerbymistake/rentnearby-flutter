@@ -1,4 +1,5 @@
 import '../features/nearby/models/nearby_models.dart';
+import '../features/nearby/nearby_strings.dart';
 import '../features/nearby/widgets/nearby_label_text.dart';
 import '../features/stay/models/stay_browse_item.dart';
 import '../features/taxi/models/taxi_browse_item.dart';
@@ -19,8 +20,13 @@ abstract final class HomeFeedModelV2 {
   static HomeStayModel stay(Map<String, dynamic> j) {
     final line = labelLine(j);
     final shown = line == null ? j : {...j, 'cityName': line, 'districtName': ''};
+    final d = NearbyDistance.fromJson(j);
+    final place = _text(j['cityName']) ?? _text(j['districtName']) ?? '';
     return HomeStayModel(
-      item: StayBrowseItem.fromJson(shown),
+      item: StayBrowseItem.fromJson(shown).withPlace(
+        placeName: place,
+        distanceLabel: d == null ? null : NearbyStrings.kmAway(d.km),
+      ),
       districtName: j['districtName'] as String? ?? '',
       createdAt: DateTime.tryParse(j['createdAt'] as String? ?? ''),
     );
@@ -28,7 +34,8 @@ abstract final class HomeFeedModelV2 {
 
   static TaxiBrowseItem taxi(Map<String, dynamic> j) {
     final line = labelLine(j, taxi: true);
-    return TaxiBrowseItem.fromJson(line == null ? j : {...j, 'cityName': line});
+    final base = _text(j['cityName']) ?? _text(j['districtName']) ?? '';
+    return TaxiBrowseItem.fromJson({...j, 'cityName': ?line, 'baseCityName': base});
   }
 
   static String? labelLine(Map<String, dynamic> j, {bool taxi = false}) {

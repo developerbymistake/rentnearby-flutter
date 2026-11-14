@@ -7,6 +7,7 @@ import '../tokens/design_colors.dart';
 import 'art_3d.dart';
 import 'dock_inset.dart';
 import 'pill_buttons_3d.dart';
+import 'sheet_close_button.dart';
 
 enum SheetSize { hug, short, confirm, list, form }
 
@@ -29,6 +30,8 @@ class Sheet3D extends StatelessWidget {
     this.padding = const EdgeInsets.fromLTRB(22, 0, 22, 0),
     this.fitTitle = false,
     this.artRight = false,
+    this.showClose = true,
+    this.closeEnabled = true,
   });
 
   final ListingTone tone;
@@ -47,8 +50,12 @@ class Sheet3D extends StatelessWidget {
   final EdgeInsets padding;
   final bool fitTitle;
   final bool artRight;
+  final bool showClose;
+  final bool closeEnabled;
 
   static const double artRoom = 70;
+  static const double closeRoom = 44;
+  static const double artRightInset = 70;
   static const BorderRadius radius = BorderRadius.vertical(top: Radius.circular(32));
 
   static Future<T?> show<T>(
@@ -85,9 +92,10 @@ class Sheet3D extends StatelessWidget {
   }
 
   Widget _header(BuildContext context) {
+    final sideRoom = showClose && art == null ? closeRoom : 0.0;
     if (centerTitle) {
       return Padding(
-        padding: const EdgeInsets.fromLTRB(22, 0, 22, 14),
+        padding: EdgeInsets.fromLTRB(22 + sideRoom, 0, 22 + sideRoom, 14),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -109,7 +117,7 @@ class Sheet3D extends StatelessWidget {
     }
     final action = headerAction;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(18, 0, 18, 6),
+      padding: EdgeInsets.fromLTRB(18, 0, 18 + (showClose && !(artRight && art != null) ? closeRoom : 0), 6),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -136,7 +144,7 @@ class Sheet3D extends StatelessWidget {
               children: [
                 Container(
                   constraints: const BoxConstraints(minHeight: 40),
-                  padding: EdgeInsets.only(right: artRight && art != null ? 132 : 0),
+                  padding: EdgeInsets.only(right: artRight && art != null ? 128 + artRightInset - 18 : 0),
                   child: Align(
                     alignment: Alignment.centerLeft,
                     child: Semantics(
@@ -241,13 +249,15 @@ class Sheet3D extends StatelessWidget {
                   if (a != null)
                     Positioned(
                       top: -66,
-                      right: artRight ? 18 : null,
+                      right: artRight ? artRightInset : null,
                       child: IgnorePointer(
                         child: ExcludeSemantics(
                           child: Art3D(asset: a, size: 128, halo: 136, haloColor: tone.haloBase.withValues(alpha: 0.18), shadowBlur: 7, shadowOffset: const Offset(5, 9), shadowAlpha: 0.3),
                         ),
                       ),
                     ),
+                  if (showClose)
+                    Positioned(top: 12, right: 12, child: SheetCloseButton(enabled: closeEnabled)),
                 ],
               ),
             ),

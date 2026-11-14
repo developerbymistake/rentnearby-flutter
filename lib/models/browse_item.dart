@@ -13,6 +13,8 @@ class BrowseItem {
   final String priceValue;
   final String priceUnit;
   final bool isFeatured;
+  final String? placeName;
+  final String? distanceLabel;
 
   BrowseItem({
     required this.id,
@@ -26,7 +28,25 @@ class BrowseItem {
     required this.priceValue,
     required this.priceUnit,
     this.isFeatured = false,
+    this.placeName,
+    this.distanceLabel,
   });
+
+  BrowseItem withPlace({required String placeName, String? distanceLabel}) => BrowseItem(
+        id: id,
+        userId: userId,
+        thumbnailUrl: thumbnailUrl,
+        tagLabel: tagLabel,
+        title: title,
+        locationLabel: locationLabel,
+        facts: facts,
+        priceCaption: priceCaption,
+        priceValue: priceValue,
+        priceUnit: priceUnit,
+        isFeatured: isFeatured,
+        placeName: placeName,
+        distanceLabel: distanceLabel,
+      );
 
   static String inr(num v) => Money.exact(v);
 }

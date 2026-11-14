@@ -55,6 +55,17 @@ class ListingPalette {
     button: Color(0xFFC4E2C6),
   );
 
+  static const ListingPalette sunrise = ListingPalette(
+    g1: Color(0xFFFFC371),
+    g2: Color(0xFFFF8A3D),
+    text: Color(0xFFB85A12),
+    page: Color(0xFFFFF0DB),
+    tint: Color(0xFFFFF6EA),
+    line: Color(0xFFFFDDB0),
+    shadow: Color(0xFFFF8A3D),
+    button: Color(0xFFFFDDB8),
+  );
+
   static const ListingPalette teal = ListingPalette(
     g1: Color(0xFF54D3C2),
     g2: Color(0xFF1FA396),
@@ -110,11 +121,11 @@ abstract final class ListingArt {
 
   static const String taxi = '${_dir}taxi.png';
   static const String bus = '${_dir}bus.png';
-  static const String stay = '${_dir}house_with_garden.png';
+  static const String stay = '${_dir}camping.png';
   static const String hotel = stay;
   static const String hotelBuilding = '${_dir}hotel.png';
   static const String search = '${_dir}magnifying_glass_tilted_left.png';
-  static const String profile = '${_dir}bust_in_silhouette.png';
+  static const String profile = '${_dir}fox.png';
   static const String guests = '${_dir}busts_in_silhouette.png';
   static const String briefcase = '${_dir}briefcase.png';
   static const String flag = '${_dir}chequered_flag.png';
@@ -132,10 +143,35 @@ abstract final class ListingArt {
   static const String airplane = '${_dir}airplane.png';
   static const String mountain = '${_dir}mountain.png';
   static const String camping = '${_dir}camping.png';
+  static const String fox = '${_dir}fox.png';
+  static const String seedling = '${_dir}seedling.png';
+  static const String cardIndex = '${_dir}card_index_dividers.png';
+  static const String alarmClock = '${_dir}alarm_clock.png';
+  static const String memo = '${_dir}memo.png';
+  static const String shield = '${_dir}shield.png';
+  static const String locked = '${_dir}locked.png';
+  static const String mobilePhone = '${_dir}mobile_phone.png';
+  static const String hinduTemple = '${_dir}hindu_temple.png';
+  static const String sunriseMountains = '${_dir}sunrise_over_mountains.png';
+  static const String canoe = '${_dir}canoe.png';
+  static const String ferrisWheel = '${_dir}ferris_wheel.png';
+  static const String classicalBuilding = '${_dir}classical_building.png';
+  static const String tiger = '${_dir}tiger.png';
+  static const String droplet = '${_dir}droplet.png';
+  static const String rock = '${_dir}rock.png';
+  static const String framedPicture = '${_dir}framed_picture.png';
+  static const String lion = '${_dir}lion.png';
+  static const String bridge = '${_dir}bridge_at_night.png';
+  static const String castle = '${_dir}castle.png';
+  static const String crown = '${_dir}crown.png';
+  static const String diyaLamp = '${_dir}diya_lamp.png';
+  static const String tree = '${_dir}deciduous_tree.png';
+  static const String tulip = '${_dir}tulip.png';
   static const String tent = '${_dir}tent.png';
   static const String beach = '${_dir}beach_with_umbrella.png';
   static const String worldMap = '${_dir}world_map.png';
   static const String roundPushpin = '${_dir}round_pushpin.png';
+  static const String panda = '${_dir}panda.png';
   static const String star = '${_dir}star.png';
   static const String moneyBag = '${_dir}money_bag.png';
   static const String speechBalloon = '${_dir}speech_balloon.png';

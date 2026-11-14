@@ -88,16 +88,11 @@ class _Trips extends MyTripsController {
   @override
   Future<void> refreshIfStale() async {}
   @override
-  TripSummaryModel? get continueTrip {
+  List<TripSummaryModel> get continueTrips {
     active.length;
-    return trip;
+    return [?trip];
   }
 
-  @override
-  int get openTripCount {
-    active.length;
-    return 2;
-  }
 }
 
 final _cities = [

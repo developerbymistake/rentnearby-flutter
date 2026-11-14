@@ -265,7 +265,7 @@ class _PhoneVerifyScreenState extends State<PhoneVerifyScreen> with TickerProvid
             _isChange ? 'Your old number will be replaced after verification' : 'You\'ll receive an OTP on WhatsApp',
             lines: 2,
           ),
-          const SizedBox(height: 28),
+          const AuthGap(28),
           AuthPillInput(
             tone: _tone,
             focusNode: _phoneFocus,
@@ -284,7 +284,7 @@ class _PhoneVerifyScreenState extends State<PhoneVerifyScreen> with TickerProvid
               },
             ),
           ),
-          const SizedBox(height: 24),
+          const AuthGap(24),
           Obx(() => GradientPillButton(
                 tone: _tone,
                 label: 'Send OTP',
@@ -314,7 +314,7 @@ class _PhoneVerifyScreenState extends State<PhoneVerifyScreen> with TickerProvid
         AuthCaption('Sent to +91 ${_phoneCtrl.text}'),
         const AuthArtLine(art: ListingArt.speechBalloon, text: 'Check your WhatsApp for the OTP'),
         AuthWarnLine(_attempts > 0 ? '$left attempt${left == 1 ? '' : 's'} remaining' : null),
-        const SizedBox(height: 20),
+        const AuthGap(20),
         Center(
           child: Pinput(
             length: 4,
@@ -332,7 +332,7 @@ class _PhoneVerifyScreenState extends State<PhoneVerifyScreen> with TickerProvid
             onCompleted: (pin) => _verifyOtp(pin),
           ),
         ),
-        const SizedBox(height: 24),
+        const AuthGap(24),
         Obx(() => GradientPillButton(
               tone: _tone,
               label: 'Verify Number',

@@ -380,7 +380,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
         if (_tabConfigCtrl.isActive(AppTabKeys.stays))
           TemplateNavItem(
               index: AppTabs.stays,
-              image: '${t3d}house_with_garden.png',
+              image: '${t3d}camping.png',
               activeColor: ListingPalette.forest.text,
               itemKey: TourKeys.homeStaysNavIcon,
               label: _tabConfigCtrl.displayNameForIndex(AppTabs.stays, 'Stays')),
@@ -398,7 +398,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
               label: _tabConfigCtrl.displayNameForIndex(AppTabs.taxi, 'Taxi')),
         TemplateNavItem(
             index: AppTabs.profile,
-            image: '${t3d}bust_in_silhouette.png',
+            image: '${t3d}fox.png',
             itemKey: TourKeys.homeProfileNavIcon,
             label: _tabConfigCtrl.displayNameForIndex(AppTabs.profile, 'Profile')),
       ],

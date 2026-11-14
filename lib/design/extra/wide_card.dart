@@ -273,6 +273,7 @@ class WideCard extends StatelessWidget {
     this.kind = WideKind.halo,
     this.tag,
     this.subtitle = '',
+    this.subtitleSlots,
     this.badge,
     this.badgeSolid = false,
     this.art,
@@ -305,6 +306,7 @@ class WideCard extends StatelessWidget {
   final WideKind kind;
   final String? tag;
   final String subtitle;
+  final List<int>? subtitleSlots;
   final String? badge;
   final bool badgeSolid;
   final String? art;
@@ -333,6 +335,8 @@ class WideCard extends StatelessWidget {
 
   static const double bannerHeight = 164;
 
+  int _slotLines(int i) => subtitleSlots != null && i < subtitleSlots!.length ? subtitleSlots![i] : 2;
+
   @override
   Widget build(BuildContext context) {
     final scaler = MediaQuery.textScalerOf(context);
@@ -359,7 +363,7 @@ class WideCard extends StatelessWidget {
     final hasTrailing = trailing != null;
 
     final tagText = hasTag
-        ? StarText(tag!.toUpperCase(), maxLines: 2, style: Ink3D.text(10.5, FontWeight.w700, white.withValues(alpha: 0.9), letterSpacing: 0.6))
+        ? StarText(tag!.toUpperCase(), maxLines: subtitleSlots != null ? 1 : 2, style: Ink3D.text(10.5, FontWeight.w700, white.withValues(alpha: 0.9), letterSpacing: 0.6))
         : null;
     final badgePill = !hasBadge
         ? null
@@ -401,7 +405,7 @@ class WideCard extends StatelessWidget {
           )
         else if (tagText != null)
           Padding(padding: const EdgeInsets.only(bottom: 2), child: tagText),
-        Text(KitText.fitWords(title, titleStyle, scaler, titleW - 1, 2), key: titleKey, maxLines: 2, overflow: TextOverflow.ellipsis, style: titleStyle),
+        Text(KitText.fitWords(title, titleStyle, scaler, titleW - 1, subtitleSlots != null ? 1 : 2), key: titleKey, maxLines: subtitleSlots != null ? 1 : 2, overflow: TextOverflow.ellipsis, style: titleStyle),
         if (lines.isNotEmpty && !splitSub)
           Padding(
             padding: EdgeInsets.only(top: slim ? 2 : 4),
@@ -410,7 +414,11 @@ class WideCard extends StatelessWidget {
                 : Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      for (final l in lines) Text(l, maxLines: 2, overflow: TextOverflow.ellipsis, style: KitText.wholeWords(l, Ink3D.text(12.5, FontWeight.w500, white.withValues(alpha: 0.96), height: 1.5), textW, scaler)),
+                      for (var i = 0; i < lines.length; i++)
+                        ConstrainedBox(
+                          constraints: BoxConstraints(minHeight: subtitleSlots == null ? 0 : _slotLines(i) * scaler.scale(12.5 * 1.5)),
+                          child: Text(lines[i], maxLines: _slotLines(i), overflow: TextOverflow.ellipsis, style: KitText.wholeWords(lines[i], Ink3D.text(12.5, FontWeight.w500, white.withValues(alpha: 0.96), height: 1.5), textW, scaler)),
+                        ),
                     ],
                   ),
           ),

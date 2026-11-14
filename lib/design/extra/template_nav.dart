@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../template/fitness_app_theme.dart';
-import '../tokens/design_colors.dart';
 import '../tokens/bar_metrics.dart';
 import '../tokens/listing_palette.dart';
 import 'art_3d.dart';
@@ -447,20 +446,18 @@ class _CenterButtonState extends State<_CenterButton>
           curve: const Interval(0.1, 1.0, curve: Curves.fastOutSlowIn))),
       child: Container(
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-              colors: [DesignColors.navAccentEnd, ListingPalette.indigo.g2],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight),
+          color: FitnessAppTheme.white,
           shape: BoxShape.circle,
+          border: Border.all(color: ListingPalette.indigo.g2, width: 3.5),
           boxShadow: <BoxShadow>[
-            BoxShadow(color: ListingPalette.indigo.g2.withValues(alpha: 0.4), offset: const Offset(8, 16), blurRadius: 16),
+            BoxShadow(color: ListingPalette.indigo.g2.withValues(alpha: 0.28), offset: const Offset(0, 6), blurRadius: 14),
           ],
         ),
         child: Material(
           color: Colors.transparent,
           child: InkWell(
             customBorder: const CircleBorder(),
-            splashColor: DesignColors.overlayWhiteFaint,
+            splashColor: ListingPalette.indigo.g2.withValues(alpha: 0.12),
             highlightColor: Colors.transparent,
             focusColor: Colors.transparent,
             onTap: widget.onTap,

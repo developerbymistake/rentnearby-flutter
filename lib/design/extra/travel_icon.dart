@@ -8,9 +8,9 @@ class TravelIcon extends StatelessWidget {
 
   static const String _dir = 'assets/images/design/travel3d/';
   static const String taxi = '${_dir}taxi.png';
-  static const String stay = '${_dir}house_with_garden.png';
+  static const String stay = '${_dir}camping.png';
   static const String search = '${_dir}magnifying_glass_tilted_left.png';
-  static const String profile = '${_dir}bust_in_silhouette.png';
+  static const String profile = '${_dir}fox.png';
   static const String flag = '${_dir}chequered_flag.png';
   static const String warning = '${_dir}warning.png';
   static const String route = '${_dir}compass.png';
@@ -28,6 +28,30 @@ class TravelIcon extends StatelessWidget {
   static const String airplane = '${_dir}airplane.png';
   static const String note ='${_dir}clipboard.png';
   static const String plane = '${_dir}airplane.png';
+  static const String fox = '${_dir}fox.png';
+  static const String seedling = '${_dir}seedling.png';
+  static const String cardIndex = '${_dir}card_index_dividers.png';
+  static const String alarmClock = '${_dir}alarm_clock.png';
+  static const String memo = '${_dir}memo.png';
+  static const String shield = '${_dir}shield.png';
+  static const String locked = '${_dir}locked.png';
+  static const String mobilePhone = '${_dir}mobile_phone.png';
+  static const String hinduTemple = '${_dir}hindu_temple.png';
+  static const String sunriseMountains = '${_dir}sunrise_over_mountains.png';
+  static const String canoe = '${_dir}canoe.png';
+  static const String ferrisWheel = '${_dir}ferris_wheel.png';
+  static const String classicalBuilding = '${_dir}classical_building.png';
+  static const String tiger = '${_dir}tiger.png';
+  static const String droplet = '${_dir}droplet.png';
+  static const String rock = '${_dir}rock.png';
+  static const String framedPicture = '${_dir}framed_picture.png';
+  static const String lion = '${_dir}lion.png';
+  static const String bridge = '${_dir}bridge_at_night.png';
+  static const String castle = '${_dir}castle.png';
+  static const String crown = '${_dir}crown.png';
+  static const String diyaLamp = '${_dir}diya_lamp.png';
+  static const String tree = '${_dir}deciduous_tree.png';
+  static const String tulip = '${_dir}tulip.png';
 
   @override
   Widget build(BuildContext context) {

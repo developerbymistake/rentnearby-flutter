@@ -206,7 +206,7 @@ class _HeroSlide extends StatelessWidget {
   const _HeroSlide({required this.slide, required this.isOwner});
 
   static ListingTone toneOf(_Slide slide) => switch (slide) {
-    _Slide.trip => ListingTone.indigo,
+    _Slide.trip => ListingTone.sunrise,
     _Slide.stay => ListingTone.forest,
     _Slide.taxi => ListingTone.coral,
   };
@@ -235,7 +235,7 @@ class _HeroSlide extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (slide == _Slide.trip) return const TripHomeCard(entrance: false);
+    if (slide == _Slide.trip) return TripHomeCard(entrance: false, tone: toneOf(slide));
     final (seekerBadge, seekerTitle, seekerSubtitle) = seekerCopyOf(slide);
     return WorkoutCard(
       tone: toneOf(slide),

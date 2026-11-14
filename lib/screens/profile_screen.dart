@@ -5,6 +5,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:bakhli/design/design.dart';
 import 'package:bakhli/design/extra/replies_kit.dart';
+import 'package:bakhli/design/extra/sheet_close_button.dart';
 import '../config/app_routes.dart';
 import '../config/app_tabs.dart';
 import '../controllers/auth_controller.dart';
@@ -99,24 +100,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           _accountRoleTile(),
                         ])),
                         item(Obx(() {
-                          final jobs = _auth.jobsBrowseEnabled;
-                          final journeys = _auth.taxisEnabled;
+                          final rows = <({String art, String title, String route})>[
+                            (art: ListingArt.luggage, title: 'My Trips', route: AppRoutes.myTrips),
+                            if (_auth.jobsBrowseEnabled) (art: ListingArt.briefcase, title: 'Jobs', route: AppRoutes.jobs),
+                            if (_auth.canOpenRoute(AppRoutes.myJourneys))
+                              (art: ListingArt.compass, title: 'My Journeys', route: AppRoutes.myJourneys),
+                            (art: ListingArt.warning, title: 'My Reports', route: AppRoutes.myFiledReports),
+                          ];
                           return _sectionGroup('ACTIVITY', [
-                            if (jobs)
-                              IconRow3D(art: ListingArt.briefcase, title: 'Jobs', onTap: () => Get.toNamed(AppRoutes.jobs)),
-                            if (journeys)
+                            for (var r = 0; r < rows.length; r++)
                               IconRow3D(
-                                art: ListingArt.compass,
-                                title: 'My Journeys',
-                                divider: jobs,
-                                onTap: () => Get.toNamed(AppRoutes.myJourneys),
+                                art: rows[r].art,
+                                title: rows[r].title,
+                                divider: r > 0,
+                                onTap: () => Get.toNamed(rows[r].route),
                               ),
-                            IconRow3D(
-                              art: ListingArt.warning,
-                              title: 'My Reports',
-                              divider: jobs || journeys,
-                              onTap: () => Get.toNamed(AppRoutes.myFiledReports),
-                            ),
                           ]);
                         })),
                         item(_sectionGroup('SUPPORT', [
@@ -980,6 +978,7 @@ class _ProfileSheet extends StatelessWidget {
             ),
           ),
         ),
+        if (!dialog) const Positioned(top: _artRoom + 12, right: 12, child: SheetCloseButton()),
       ],
     );
   }
