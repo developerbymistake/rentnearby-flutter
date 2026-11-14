@@ -58,6 +58,11 @@ class JourneyDriverCard extends StatelessWidget {
     ContactLauncher.call(phone);
   }
 
+  static void whatsApp(WayDriver d) {
+    final phone = d.whatsApp;
+    if (phone != null) ContactLauncher.whatsApp(phone);
+  }
+
   @override
   Widget build(BuildContext context) {
     final d = driver;

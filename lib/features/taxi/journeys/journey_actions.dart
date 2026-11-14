@@ -4,7 +4,6 @@ import 'package:bakhli/design/design.dart';
 import '../../../config/app_routes.dart';
 import '../../trip/trip_strings_mcb_a3.dart';
 import '../../trip/trip_strings_steps_a3.dart';
-import '../ways/ask_drivers_sheet.dart';
 import '../ways/change_driver_sheet.dart';
 import '../ways/taxi_ways_strings.dart';
 import 'journey_models.dart';
@@ -14,23 +13,6 @@ import 'journeys_controller.dart';
 
 class JourneyActions {
   const JourneyActions._();
-
-  static Future<bool> ask(BuildContext context, SavedJourney j) async {
-    if (j.legs.isEmpty) return false;
-    final result = await AskDriversSheet.show(
-      context,
-      plan: j.toWayPlan(),
-      chosen: j.chosenDrivers(),
-      date: j.date,
-      people: j.people,
-      journeyId: j.id,
-      fromName: j.fromName,
-      toName: j.toName,
-    );
-    if (result == null) return false;
-    JourneysController.ensure().recordAsk(j.id, result);
-    return true;
-  }
 
   static Future<void> changeDriver(BuildContext context, SavedJourney j, SavedJourneyLeg leg) async {
     final picked = await ChangeDriverSheet.show(

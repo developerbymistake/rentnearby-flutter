@@ -11,7 +11,6 @@ import '../../trip/trip_strings_steps_k3.dart';
 import '../../trip/utils/trip_travel_rules.dart';
 import '../journeys/journey_models.dart';
 import '../journeys/journeys_controller.dart';
-import 'ask_drivers_sheet.dart';
 import 'models/ask_models.dart';
 import 'models/taxi_ways_models.dart';
 import 'taxi_ways_ask_repository.dart';
@@ -238,67 +237,6 @@ class WayActions {
         TaxiWaysNavigation.openSavedJourney(saved.id);
       } else if (link == WaySegmentLink.linked) {
         back();
-      }
-    } finally {
-      busy.remove(plan.planKey);
-    }
-  }
-
-  Future<void> askDrivers(BuildContext context, WayPlan plan) async {
-    if (busy.contains(plan.planKey)) return;
-    busy.add(plan.planKey);
-    try {
-      var replaceBooked = false;
-      var closeOld = false;
-      if (forSegment) {
-        final gate = await segmentGate(context, plan);
-        if (!gate.go) return;
-        replaceBooked = gate.replaceBooked;
-      } else if (forTrip) {
-        final gate = await stepGate(context, plan);
-        if (!gate.go) return;
-        closeOld = gate.close;
-      }
-      final journey = await saveIfNeeded(plan, quiet: forTrip || forSegment);
-      if (journey == null) {
-        if (forSegment) await releaseUnsaved(plan);
-        return;
-      }
-      final bool linked;
-      if (forSegment) {
-        if (!context.mounted) {
-          await trip?.releaseJourneyLink(journey.id);
-          return;
-        }
-        final link = await linkSegment(context, journey, plan, replaceBooked: replaceBooked);
-        if (link == WaySegmentLink.failed) return;
-        linked = link == WaySegmentLink.linked;
-      } else if (forTrip) {
-        final link = await _linkStep(journey, closeOld);
-        if (link == WaySegmentLink.failed) return;
-        linked = link == WaySegmentLink.linked;
-      } else {
-        linked = false;
-      }
-      if (!context.mounted) return;
-      final res = await AskDriversSheet.show(
-        context,
-        plan: plan,
-        chosen: chosenOf(plan.planKey),
-        date: date(),
-        people: people(),
-        journeyId: journey.id,
-        fromName: plan.from.name,
-        toName: plan.to.name,
-      );
-      if (res == null) return;
-      JourneysController.ensure().recordAsk(journey.id, res);
-      if (linked) {
-        final t = trip;
-        if (t != null) unawaited(t.refreshEnquiries());
-        back();
-      } else {
-        TaxiWaysNavigation.openSavedJourney(journey.id);
       }
     } finally {
       busy.remove(plan.planKey);

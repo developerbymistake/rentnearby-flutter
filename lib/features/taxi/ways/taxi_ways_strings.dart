@@ -30,7 +30,6 @@ class TaxiWaysStrings {
   static String orPlaces(List<String> places) => places.join(' or ');
   static String bestPlanReason(int changes, int total) =>
       '$changes ${changes == 1 ? 'change' : 'changes'}, about ${BrowseItem.inr(total)}';
-  static const String askEachCar = 'Open an option and ask for each car.';
   static const String noDirect2 = 'No driver goes all the way. The best way is 2 cars.';
   static const String noDirect3 = 'No driver goes all the way, and no 2-car plan exists. This needs 3 cars.';
   static String orInCars(int n) => 'Or in $n cars';
@@ -63,16 +62,12 @@ class TaxiWaysStrings {
   static String carOf(int i, int n) => 'Car $i of $n';
   static String comesFrom(String place) => 'Comes from $place with another driver';
 
-  static const String askBoth = 'Ask both drivers if they are free';
-  static String askAll(int n) => 'Ask all $n drivers if they are free';
-  static String askThese(int n) => 'Ask these $n drivers if they are free';
-  static const String askOne = 'Ask this driver if he is free';
   static const String payLine = 'Pay each driver directly. Bakhli does not take or hold payment.';
   static const String call = 'Call';
   static String callName(String name) => 'Call $name';
+  static String whatsAppName(String name) => 'WhatsApp $name';
   static String toPlace(String to) => to.isEmpty ? '' : 'to $to';
   static const String savePlan = 'Save plan';
-  static String askPlan(int drivers) => drivers <= 1 ? 'Ask this driver' : (drivers == 2 ? 'Ask both drivers' : 'Ask all $drivers drivers');
   static const String useNote = 'Saves the way in your trip. Nobody is contacted.';
   static const String faresNote = 'Fares are listed by drivers. Nobody is booked from this screen.';
   static const String whatsApp = 'WhatsApp';
@@ -109,19 +104,17 @@ class TaxiWaysStrings {
       '${TripFormat.shortDate(date)} · $cars ${cars == 1 ? 'car' : 'cars'} · ${TaxiWaysStrings.people(people)}';
   static const String statusReady = 'Ready';
   static String statusUnavailable(int n) => '$n ${n == 1 ? 'driver' : 'drivers'} unavailable';
-  static const String statusNotAsked = 'Not asked yet';
+  static const String statusNotAsked = 'Saved';
   static const String statusCompleted = 'Completed';
   static String pausedBody(String name, String backup) => '$name paused his taxi. Backup ready: $backup.';
   static String pausedNoBackup(String name) => '$name paused his taxi. Pick another driver.';
   static String replaceWith(String name) => 'Replace with $name';
   static const String open = 'Open';
-  static const String askDrivers = 'Ask drivers';
-  static const String markDone = 'Mark done';
   static const String deleteJourney = 'Delete journey';
   static String legFree(String ago) => 'Free · asked $ago';
   static const String legNotFree = 'Not available';
   static String legNoAnswer(String ago) => 'No answer yet · asked $ago';
-  static const String legNotAsked = 'Not asked yet';
+  static const String legNotAsked = 'Saved';
   static String fareChanged(int old, int now) => 'Fare changed: ${BrowseItem.inr(old)} → ${BrowseItem.inr(now)}';
 
   static String atPlace(String city) => 'At $city';
@@ -151,8 +144,6 @@ class TaxiWaysStrings {
   static const String noWays = 'No way found yet';
   static String noWaysBody(String to) => 'No driver reaches $to from here yet';
 
-  static String asked(int n) => n == 1 ? 'Asked 1 driver' : 'Asked $n drivers';
-  static String askBackups(int n) => n == 1 ? '+1 backup' : '+$n backups';
   static const String saveFailed = "Couldn't save this journey. Try again.";
   static const String askFailed = "Couldn't ask drivers. Try again.";
   static const String askPaused = 'Asking is paused right now';

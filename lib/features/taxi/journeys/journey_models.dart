@@ -566,10 +566,4 @@ class JourneyFormat {
     final at = j.lastRefreshedAt;
     return at == null ? null : TaxiWaysStrings.checkedAgo(TaxiWaysStrings.ago(at, now: now));
   }
-
-  static String askLabel(SavedJourney j) {
-    final n = j.legs.length;
-    if (n <= 1) return TaxiWaysStrings.askOne;
-    return n == 2 ? TaxiWaysStrings.askBoth : TaxiWaysStrings.askAll(n);
-  }
 }

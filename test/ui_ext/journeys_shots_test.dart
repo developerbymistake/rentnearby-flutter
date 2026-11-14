@@ -217,7 +217,7 @@ void main() {
         expect(c.refreshes, 1);
         await _scroll(t, 3000);
         await shot(t, 'saved_end_$tag');
-        expect(find.text('Mark done'), findsOneWidget);
+        expect(find.text('Mark done'), findsNothing);
         expect(find.text('Delete journey'), findsOneWidget);
         expect(find.text('WhatsApp'), findsNothing);
         expect(t.takeException(), isNull);

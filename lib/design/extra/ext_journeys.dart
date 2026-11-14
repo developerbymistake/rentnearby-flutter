@@ -832,34 +832,6 @@ class JourneyPayLine extends StatelessWidget {
       );
 }
 
-class JourneyRoundButton3D extends StatelessWidget {
-  const JourneyRoundButton3D({super.key, required this.art, required this.tooltip, this.onTap});
-
-  final String art;
-  final String tooltip;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) => Tooltip(
-        message: tooltip,
-        excludeFromSemantics: true,
-        child: Tap3D(
-          onTap: onTap,
-          label: tooltip,
-          child: Opacity(
-            opacity: onTap == null ? 0.5 : 1,
-            child: Container(
-              width: 52,
-              height: 52,
-              decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle, boxShadow: Ink3D.softShadow),
-              alignment: Alignment.center,
-              child: Art3D(asset: art, size: 34, shadowBlur: 2, shadowOffset: const Offset(2, 3), shadowAlpha: 0.25),
-            ),
-          ),
-        ),
-      );
-}
-
 class JourneyBookRow3D extends StatelessWidget {
   const JourneyBookRow3D({super.key, required this.label, this.onTap, this.booked = false});
 

@@ -124,7 +124,6 @@ class _SavedJourneyScreenState extends State<SavedJourneyScreen> with WidgetsBin
               child: _header(j, id, busy),
             ),
           Expanded(child: j == null ? _missing(loading, offline) : _content(j, busy, offline)),
-          if (j != null && !j.isCompleted) _enter(_count - 2, _askBar(j, busy)),
         ]);
       }),
     );
@@ -303,38 +302,11 @@ class _SavedJourneyScreenState extends State<SavedJourneyScreen> with WidgetsBin
       fontSize: 15,
       onTap: busy ? null : () => _delete(j),
     );
-    if (j.isCompleted) return delete;
-    return PillButtonRow(children: [
-      WhitePillButton(
-        tone: tone,
-        label: TaxiWaysStrings.markDone,
-        height: 52,
-        fontSize: 15,
-        onTap: busy ? null : () => _ctrl.complete(j.id),
-      ),
-      delete,
-    ]);
+    return delete;
   }
 
   Future<void> _delete(SavedJourney j) async {
     final removed = await JourneyActions.confirmDelete(context, j);
     if (removed && mounted) Get.back();
-  }
-
-  Widget _askBar(SavedJourney j, bool busy) {
-    final enabled = !j.hasUnavailable && !busy && j.legs.isNotEmpty;
-    return JourneyDock3D(
-      maxWidth: _maxWidth,
-      children: [
-        GradientPillButton(
-          tone: ListingTone.coral,
-          label: JourneyFormat.askLabel(j),
-          height: 52,
-          fontSize: 15,
-          onTap: enabled ? () => JourneyActions.ask(context, j) : null,
-        ),
-        const JourneyPayLine(TaxiWaysStrings.payLine),
-      ],
-    );
   }
 }

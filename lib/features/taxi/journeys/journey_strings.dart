@@ -10,7 +10,6 @@ class JourneyStrings {
   static const String notFoundBody = 'It may have been deleted';
   static const String loadFailed = "Couldn't load journeys";
   static const String driverReplaced = 'Driver replaced';
-  static const String markedDone = 'Marked done';
   static const String deleted = 'Journey deleted';
   static String driverQuote(int fare) => 'Driver says ${BrowseItem.inr(fare)}';
   static String seatsLabel(int n) => '$n seats';

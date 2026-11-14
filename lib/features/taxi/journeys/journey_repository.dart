@@ -27,7 +27,4 @@ class JourneyRepository {
 
   Future<SavedJourney> replaceDriver(String id, int legIndex, String taxiId) async =>
       _one(await ApiService.put('/taxis/journeys/$id/legs/$legIndex/driver', {'taxiId': taxiId}));
-
-  Future<SavedJourney> complete(String id) async =>
-      _one(await ApiService.put('/taxis/journeys/$id/status', const {'status': 'Completed'}));
 }

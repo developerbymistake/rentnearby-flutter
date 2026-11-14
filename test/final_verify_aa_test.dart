@@ -274,19 +274,7 @@ void main() {
       expect(back.coverDrivers.single.taxiId, 'a');
       expect(back.carsNeeded, 2);
       final plan = j.toWayPlan();
-      expect(j.chosenDrivers(), isEmpty);
-      expect(plan.totalWith(j.chosenDrivers(), people: 10), 15000);
       expect(plan.legs.single.carsNeeded, 2);
-      final req = AskDriversRequest.fromPlan(
-        plan: plan,
-        chosen: j.chosenDrivers(),
-        date: j.date,
-        people: 10,
-        journeyId: j.id,
-        fromName: j.fromName,
-        toName: j.toName,
-      )!;
-      expect(req.legs.single.taxiIds, ['c', 'a']);
     });
 
     test('an old saved leg without a cover keeps the driver count and an exact per-car fare', () {

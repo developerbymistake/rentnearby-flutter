@@ -4,18 +4,12 @@ import 'package:bakhli/design/extra/ext_journeys.dart';
 import '../../../../models/browse_item.dart';
 import '../taxi_ways_strings.dart';
 
-class JourneyAskButton extends StatelessWidget {
+class JourneyPrimaryButton extends StatelessWidget {
   final String label;
   final VoidCallback? onPressed;
   final bool busy;
 
-  const JourneyAskButton({super.key, required this.label, required this.onPressed, this.busy = false});
-
-  static String labelFor(int drivers, {bool these = false}) {
-    if (drivers <= 1) return TaxiWaysStrings.askOne;
-    if (these) return TaxiWaysStrings.askThese(drivers);
-    return drivers == 2 ? TaxiWaysStrings.askBoth : TaxiWaysStrings.askAll(drivers);
-  }
+  const JourneyPrimaryButton({super.key, required this.label, required this.onPressed, this.busy = false});
 
   @override
   Widget build(BuildContext context) {
@@ -32,8 +26,6 @@ class JourneyAskButton extends StatelessWidget {
 
 class JourneyTotalBar extends StatelessWidget {
   final int total;
-  final String askLabel;
-  final VoidCallback? onAsk;
   final VoidCallback? onSave;
   final VoidCallback? onUse;
   final String? useLabel;
@@ -42,8 +34,6 @@ class JourneyTotalBar extends StatelessWidget {
   const JourneyTotalBar({
     super.key,
     required this.total,
-    required this.askLabel,
-    required this.onAsk,
     this.onSave,
     this.onUse,
     this.useLabel,
@@ -68,18 +58,10 @@ class JourneyTotalBar extends StatelessWidget {
           Text(BrowseItem.inr(total), style: Ink3D.text(26, FontWeight.w700, tone.text)),
         ]),
         const SizedBox(height: 12),
-        if (onUse != null) ...[
-          JourneyAskButton(label: useLabel ?? '', onPressed: onUse, busy: busy),
-          const SizedBox(height: 10),
-          WhitePillButton(tone: tone, label: askLabel, height: 52, fontSize: 15, onTap: busy ? null : onAsk),
-        ] else
-          Row(children: [
-            if (onSave != null) ...[
-              JourneyRoundButton3D(art: ListingArt.clipboard, tooltip: TaxiWaysStrings.saveJourney, onTap: busy ? null : onSave),
-              const SizedBox(width: 12),
-            ],
-            Expanded(child: JourneyAskButton(label: askLabel, onPressed: onAsk, busy: busy)),
-          ]),
+        if (onUse != null)
+          JourneyPrimaryButton(label: useLabel ?? '', onPressed: onUse, busy: busy)
+        else if (onSave != null)
+          JourneyPrimaryButton(label: TaxiWaysStrings.saveJourney, onPressed: onSave, busy: busy),
         const JourneyPayLine(TaxiWaysStrings.payLine),
       ],
     );

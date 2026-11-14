@@ -100,7 +100,7 @@ void main() {
     final asked = now.subtract(const Duration(hours: 3)).toIso8601String();
     String line(String s, {String? at}) =>
         JourneyFormat.statusLine(SavedJourneyLeg.fromJson(leg(1, status: s, asked: at)), now);
-    expect(line('Unknown'), 'Not asked yet');
+    expect(line('Unknown'), 'Saved');
     expect(line('NotFree', at: asked), 'Not available');
     expect(line('Free', at: asked), 'Free · asked 3 h ago');
     expect(line('NoAnswer', at: asked), 'No answer yet · asked 3 h ago');

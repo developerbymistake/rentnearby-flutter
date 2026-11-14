@@ -28,7 +28,6 @@ import 'taxi_ways_navigation.dart';
 import 'taxi_ways_strings.dart';
 import 'trip_strings_a6.dart';
 import 'trip_strings_mcb_a2.dart';
-import 'widgets/journey_total_bar.dart';
 import 'widgets/ways_arrange_bar.dart';
 import 'widgets/way_driver_row.dart';
 import 'widgets/way_plan_ribbon_card.dart';
@@ -42,8 +41,7 @@ class TaxiWaysFeedScreen extends StatefulWidget {
   @visibleForTesting
   final GuideArgs? debugGuide;
 
-  static String planOnlyText(int cars) =>
-      '${cars >= 3 ? TaxiWaysStrings.noDirect3 : TaxiWaysStrings.noDirect2} ${TaxiWaysStrings.askEachCar}';
+  static String planOnlyText(int cars) => cars >= 3 ? TaxiWaysStrings.noDirect3 : TaxiWaysStrings.noDirect2;
 
   @override
   State<TaxiWaysFeedScreen> createState() => _TaxiWaysFeedScreenState();
@@ -725,8 +723,6 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen>
         );
       }
       children.addAll(_rows(context, c, r, rows, sort));
-      final ask = _guide != null ? null : _askTheseButton(context, c, r);
-      if (ask != null) children.add(_enter(ask));
       if (planOnly) children.add(_enter(fares));
     }
     if (!c.inTrip) {
@@ -905,8 +901,6 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen>
                   : null,
               useBusy: c.busyPlans.contains(row.planKey),
               useNote: canUse && !noteShown && (noteShown = true),
-              onAsk: () => c.actions.askDrivers(context, row),
-              askBusy: c.busyPlans.contains(row.planKey),
             ),
           ),
         );
@@ -1012,24 +1006,6 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen>
             taxiIds: [for (final d in drivers) d.taxiId],
           );
         },
-      ),
-    );
-  }
-
-  Widget? _askTheseButton(
-    BuildContext context,
-    TaxiWaysController c,
-    TaxiWaysResult r,
-  ) {
-    if (!c.fromMyLocation.value || r.allTheWay.isEmpty) return null;
-    final drivers = _basedHereFirst(r.allTheWay).take(3).toList();
-    final busy = c.busyPlans.isNotEmpty;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(_side, 14, _side, 0),
-      child: JourneyAskButton(
-        label: JourneyAskButton.labelFor(drivers.length, these: true),
-        busy: busy,
-        onPressed: () => c.actions.askDrivers(context, c.singlePlan(drivers)),
       ),
     );
   }

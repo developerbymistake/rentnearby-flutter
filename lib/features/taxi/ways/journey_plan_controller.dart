@@ -104,8 +104,6 @@ class JourneyPlanController extends GetxController {
     if (picked != null) choose(leg.index, picked);
   }
 
-  Future<void> askDrivers(BuildContext context) => actions.askDrivers(context, plan.value);
-
   Future<void> useForTrip(BuildContext context) => actions.useForTrip(plan.value, context: context);
 
   Future<void> saveJourney() => actions.saveJourney(plan.value);

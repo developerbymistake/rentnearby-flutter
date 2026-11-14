@@ -414,21 +414,6 @@ class JourneysController extends GetxController {
     }
   }
 
-  Future<bool> complete(String id) async {
-    if (busyIds.contains(id)) return false;
-    busyIds.add(id);
-    try {
-      await _commit(await _repo.complete(id));
-      AppToast.success(JourneyStrings.markedDone);
-      return true;
-    } catch (e) {
-      _handleError(e, id);
-      return false;
-    } finally {
-      busyIds.remove(id);
-    }
-  }
-
   Future<bool> remove(String id) async {
     if (busyIds.contains(id)) return false;
     busyIds.add(id);

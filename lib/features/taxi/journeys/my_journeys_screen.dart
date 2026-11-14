@@ -6,7 +6,6 @@ import 'package:bakhli/design/extra/ext_journeys.dart';
 import '../../../config/app_insets.dart';
 import '../ways/taxi_ways_strings.dart';
 import 'journey_actions.dart';
-import 'journey_models.dart';
 import 'journey_strings.dart';
 import 'journeys_controller.dart';
 import 'widgets/journey_header.dart';
@@ -59,11 +58,6 @@ class _MyJourneysScreenState extends State<MyJourneysScreen> with WidgetsBinding
     final a = Get.arguments;
     if (a is Map) return (a['journeyId'] ?? a['id'])?.toString();
     return a is String && a.isNotEmpty ? a : null;
-  }
-
-  Future<void> _ask(SavedJourney j) async {
-    final ok = await JourneyActions.ask(context, j);
-    if (ok && mounted) JourneyActions.openSaved(j.id);
   }
 
   Widget _enter(int i, Widget child) => TemplateEntrance(
@@ -133,7 +127,6 @@ class _MyJourneysScreenState extends State<MyJourneysScreen> with WidgetsBinding
               journey: j,
               busy: _ctrl.busyIds.contains(j.id),
               onOpen: () => JourneyActions.openSaved(j.id),
-              onAsk: () => _ask(j),
               onReplace: (leg, backup) => _ctrl.replaceDriver(j.id, leg.legIndex, backup.taxiId),
             )),
     ]);

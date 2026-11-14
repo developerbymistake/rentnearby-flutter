@@ -1,6 +1,5 @@
 import 'dart:io';
 
-import 'package:bakhli/features/taxi/ways/ask_drivers_sheet.dart';
 import 'package:bakhli/features/taxi/ways/change_driver_sheet.dart';
 import 'package:bakhli/features/taxi/ways/journey_plan_controller.dart';
 import 'package:bakhli/features/taxi/ways/journey_plan_screen.dart';
@@ -100,7 +99,6 @@ Future<void> _open(WidgetTester t, Future<void> Function(BuildContext c) show, {
   if (settle) await settlePhone(t);
 }
 
-Map<int, WayDriver> _chosen(WayPlan p) => {for (final l in p.legs) l.index: l.firstDriver!};
 
 void main() {
   shotsDir = r'F:\Dhasu\UI_Template_resume\Mock_Final\shots\journeys';
@@ -124,7 +122,7 @@ void main() {
         await settlePhone(t);
         await shot(t, 'plan_$tag');
         expect(find.text('2 other drivers', skipOffstage: false), findsOneWidget);
-        expect(find.byTooltip('Save journey'), findsOneWidget);
+        expect(find.text('Save journey'), findsOneWidget);
         await _scroll(t, 3000);
         await shot(t, 'plan_end_$tag');
         expect(t.takeException(), isNull);
@@ -188,7 +186,6 @@ void main() {
           await settlePhone(t);
         }
         await shot(t, 'road_open_$tag');
-        expect(find.text('Ask both drivers if they are free').hitTestable(), findsOneWidget);
         expect(t.takeException(), isNull);
         debugDisableShadows = true;
       });
@@ -203,28 +200,6 @@ void main() {
   });
 
   group('sheets', () {
-    for (final (size, scale, tag) in _cases) {
-      testWidgets('ask $tag', (t) async {
-        installFakeApi([
-          FakeRoute.value('POST', '/taxis/ways/ask', null, code: 429, errorType: 'TooManyAsks', headers: {'retry-after': '720'}),
-        ]);
-        final p = _plan();
-        await _open(
-          t,
-          (c) => AskDriversSheet.show(c, plan: p, chosen: _chosen(p), date: DateTime.now(), people: 2, journeyId: 'j', fromName: 'Haldwani', toName: 'Almora'),
-          size: size,
-          scale: scale,
-        );
-        await shot(t, 'ask_$tag');
-        await t.tap(find.text('Ask both drivers if they are free'));
-        await t.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 300)));
-        await t.pump(const Duration(milliseconds: 300));
-        await shot(t, 'ask_err_$tag');
-        expect(find.textContaining('Ask limit reached'), findsOneWidget);
-        debugDisableShadows = true;
-      });
-    }
-
     for (final (name, code, items) in [('cd', 200, true), ('cd_on', 200, true), ('cd_empty', 200, false), ('cd_fail', 500, false)]) {
       testWidgets(name, (t) async {
         installFakeApi([

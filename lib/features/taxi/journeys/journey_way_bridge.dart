@@ -10,7 +10,6 @@ extension SavedJourneyWays on SavedJourney {
       );
 
   // Saved legs are the server's priced choice: no manual pick, so asks follow the saved seat cover.
-  Map<int, WayDriver> chosenDrivers() => const {};
 
   WayLeg wayLeg(SavedJourneyLeg leg) {
     final keys = leg.legKey.split('~');

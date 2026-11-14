@@ -15,8 +15,6 @@ class WayPlanCardFrame extends StatelessWidget {
   final VoidCallback? onUse;
   final bool useBusy;
   final bool useNote;
-  final VoidCallback? onAsk;
-  final bool askBusy;
   final Widget child;
 
   const WayPlanCardFrame({
@@ -29,8 +27,6 @@ class WayPlanCardFrame extends StatelessWidget {
     this.onUse,
     this.useBusy = false,
     this.useNote = false,
-    this.onAsk,
-    this.askBusy = false,
   });
 
   ListingTone get _tone => bestReason != null ? ListingTone.coral : [ListingTone.cB, ListingTone.cC, ListingTone.cD][planIndex.abs() % 3];
@@ -52,16 +48,19 @@ class WayPlanCardFrame extends StatelessWidget {
 
   List<WayButton> _buttons() {
     final drivers = [for (final l in plan.legs) ?l.firstDriver];
-    final ask = onAsk;
     final use = onUse;
     return [
-      for (final (i, d) in drivers.indexed)
+      for (final d in drivers) ...[
         WayButton(
           label: drivers.length > 1 ? TaxiWaysStrings.callName(d.firstName) : TaxiWaysStrings.call,
           onTap: () => JourneyDriverCard.call(d),
-          full: drivers.length.isOdd && i == drivers.length - 1,
         ),
-      if (ask != null) WayButton(label: TaxiWaysStrings.askPlan(drivers.length), onTap: ask, primary: true, busy: askBusy),
+        if (d.whatsApp != null)
+          WayButton(
+            label: drivers.length > 1 ? TaxiWaysStrings.whatsAppName(d.firstName) : TaxiWaysStrings.whatsApp,
+            onTap: () => JourneyDriverCard.whatsApp(d),
+          ),
+      ],
       if (use != null) WayButton(label: TaxiWaysStrings.savePlan, onTap: use, busy: useBusy),
       WayButton(label: TaxiWaysStrings.openJourney, onTap: onOpen, full: true),
     ];
@@ -96,8 +95,6 @@ class WayPlanStackCard extends StatelessWidget {
   final VoidCallback? onUse;
   final bool useBusy;
   final bool useNote;
-  final VoidCallback? onAsk;
-  final bool askBusy;
 
   const WayPlanStackCard({
     super.key,
@@ -108,8 +105,6 @@ class WayPlanStackCard extends StatelessWidget {
     this.onUse,
     this.useBusy = false,
     this.useNote = false,
-    this.onAsk,
-    this.askBusy = false,
   });
 
   static String driverLabel(WayLeg leg) {
@@ -128,8 +123,6 @@ class WayPlanStackCard extends StatelessWidget {
         onUse: onUse,
         useBusy: useBusy,
         useNote: useNote,
-        onAsk: onAsk,
-        askBusy: askBusy,
         child: const SizedBox.shrink(),
       );
 }

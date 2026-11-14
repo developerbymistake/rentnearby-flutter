@@ -10,7 +10,6 @@ import 'taxi_ways_strings.dart';
 import 'trip_strings_a6.dart';
 import 'widgets/journey_driver_card.dart';
 import 'widgets/journey_rail.dart';
-import 'widgets/journey_total_bar.dart';
 import 'widgets/road_view.dart';
 
 class JourneyRoadScreen extends StatefulWidget {
@@ -164,7 +163,6 @@ class _JourneyRoadScreenState extends State<JourneyRoadScreen> with TickerProvid
       ),
       child: Obx(() {
         final chosen = c.chosen;
-        final busy = c.isBusy;
         final legs = plan.legs;
         return ListView(
           controller: scroll,
@@ -184,15 +182,6 @@ class _JourneyRoadScreenState extends State<JourneyRoadScreen> with TickerProvid
                 child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                   for (final (i, leg) in legs.indexed)
                     if ((chosen[leg.index] ?? leg.firstDriver) != null) ..._legCard(context, c, leg, (chosen[leg.index] ?? leg.firstDriver)!, i, legs.length),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
-                    child: JourneyAskButton(
-                      label: JourneyAskButton.labelFor(legs.length),
-                      busy: busy,
-                      onPressed: () => c.askDrivers(context),
-                    ),
-                  ),
-                  const Padding(padding: EdgeInsets.symmetric(horizontal: 16), child: JourneyPayLine(TaxiWaysStrings.payLine)),
                 ]),
               ),
             ),

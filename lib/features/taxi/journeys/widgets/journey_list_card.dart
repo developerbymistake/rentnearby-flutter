@@ -12,7 +12,6 @@ class JourneyListCard extends StatelessWidget {
   final SavedJourney journey;
   final bool busy;
   final VoidCallback onOpen;
-  final VoidCallback onAsk;
   final void Function(SavedJourneyLeg leg, JourneyContact backup) onReplace;
 
   const JourneyListCard({
@@ -20,7 +19,6 @@ class JourneyListCard extends StatelessWidget {
     required this.journey,
     required this.busy,
     required this.onOpen,
-    required this.onAsk,
     required this.onReplace,
   });
 
@@ -59,9 +57,6 @@ class JourneyListCard extends StatelessWidget {
         ];
       }
       return [openCell, null];
-    }
-    if (j.status == JourneyStatus.notAsked) {
-      return [openCell, JourneyCell(label: TaxiWaysStrings.askDrivers, icon: Icons.mail_outline_rounded, onTap: onAsk)];
     }
     return [openCell, null];
   }

@@ -103,9 +103,7 @@ class _JourneyPlanScreenState extends State<JourneyPlanScreen> with TickerProvid
               offset: -30,
               child: JourneyTotalBar(
                 total: plan.totalWith(c.chosen, people: c.args.people),
-                askLabel: JourneyAskButton.labelFor(plan.legs.length),
                 busy: c.isBusy || c.loading.value,
-                onAsk: () => c.askDrivers(context),
                 onSave: c.args.inTrip ? null : c.saveJourney,
                 onUse: c.args.inTrip ? () => c.useForTrip(context) : null,
                 useLabel: TripStringsStepsA3.useForMyTrip,

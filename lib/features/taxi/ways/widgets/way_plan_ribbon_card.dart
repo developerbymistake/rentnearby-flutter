@@ -10,8 +10,6 @@ class WayPlanRibbonCard extends StatelessWidget {
   final VoidCallback? onUse;
   final bool useBusy;
   final bool useNote;
-  final VoidCallback? onAsk;
-  final bool askBusy;
 
   const WayPlanRibbonCard({
     super.key,
@@ -22,8 +20,6 @@ class WayPlanRibbonCard extends StatelessWidget {
     this.onUse,
     this.useBusy = false,
     this.useNote = false,
-    this.onAsk,
-    this.askBusy = false,
   });
 
   @override
@@ -35,7 +31,5 @@ class WayPlanRibbonCard extends StatelessWidget {
         onUse: onUse,
         useBusy: useBusy,
         useNote: useNote,
-        onAsk: onAsk,
-        askBusy: askBusy,
       );
 }
