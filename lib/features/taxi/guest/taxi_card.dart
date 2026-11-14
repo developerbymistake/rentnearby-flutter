@@ -84,7 +84,8 @@ class TaxiCard extends StatelessWidget {
     return WideCard(
       tone: tone ?? ListingTone.cA,
       art: TaxiVehicleIcon.assetFor(t.vehicleTypeName),
-      tag: t.isFeatured ? 'Taxi · ${KitText.star} Featured' : 'Taxi',
+      tag: 'Taxi',
+      starBadge: t.isFeatured,
       title: t.driverName,
       subtitle: [vehicle, t.locality].where((e) => e.isNotEmpty).join('\n'),
       chips: chips,

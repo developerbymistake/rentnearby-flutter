@@ -401,7 +401,7 @@ class MealsCardV extends StatelessWidget {
             ),
           ],
           if (starBadge && (photo != null || art != null))
-            const Positioned(left: 90, top: -8, child: _StarBadge()),
+            const Positioned(left: 90, top: -8, child: StarBadge()),
         ],
       ),
     );
@@ -425,8 +425,8 @@ class MealsCardV extends StatelessWidget {
   }
 }
 
-class _StarBadge extends StatelessWidget {
-  const _StarBadge();
+class StarBadge extends StatelessWidget {
+  const StarBadge({super.key});
 
   @override
   Widget build(BuildContext context) {

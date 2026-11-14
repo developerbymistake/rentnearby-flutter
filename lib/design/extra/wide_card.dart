@@ -276,6 +276,7 @@ class WideCard extends StatelessWidget {
     this.subtitleSlots,
     this.badge,
     this.badgeSolid = false,
+    this.starBadge = false,
     this.art,
     this.photo,
     this.sticker,
@@ -308,6 +309,7 @@ class WideCard extends StatelessWidget {
   final String subtitle;
   final List<int>? subtitleSlots;
   final String? badge;
+  final bool starBadge;
   final bool badgeSolid;
   final String? art;
   final Widget? photo;
@@ -637,6 +639,12 @@ class WideCard extends StatelessWidget {
                   ? Art3D(asset: artAsset, size: m.art, shadowBlur: 3, shadowOffset: const Offset(2, 4), shadowAlpha: 0.3)
                   : Art3D(asset: artAsset, size: m.art),
             ),
+          ),
+        if (starBadge && !photoKind && artAsset != null)
+          Positioned(
+            left: _WideMetrics.side + m.artAt.dx + m.art * 0.82,
+            top: m.top + m.artAt.dy - 2,
+            child: const IgnorePointer(child: StarBadge()),
           ),
       ],
     );
