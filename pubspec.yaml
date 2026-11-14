@@ -116,6 +116,7 @@ flutter:
     - assets/images/design/travel3d/
     - assets/map_style.json
     - assets/sprites/
+    - assets/sounds/
   fonts:
     - family: Poppins
       fonts:
