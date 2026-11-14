@@ -361,7 +361,7 @@ void main() {
                 child: TemplateBottomBar(
                   items: const [
                     TemplateNavItem(index: 0, image: '${_fit}tab_1.png', selectedImage: '${_fit}tab_1s.png', label: 'Home'),
-                    TemplateNavItem(index: 1, image: '${_t3d}hotel.png', label: 'Stays'),
+                    TemplateNavItem(index: 1, image: ListingArt.stay, label: 'Stays'),
                     TemplateNavItem(index: 2, image: '${_t3d}compass.png', label: 'Trips', center: true),
                     TemplateNavItem(index: 3, image: '${_t3d}taxi.png', label: 'Taxi'),
                     TemplateNavItem(index: 4, image: '${_fit}tab_4.png', selectedImage: '${_fit}tab_4s.png', label: 'Profile'),
