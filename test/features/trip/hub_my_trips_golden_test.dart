@@ -1,11 +1,8 @@
-import 'dart:io';
-import 'dart:ui' as ui;
 import 'package:bakhli/features/trip/controllers/my_trips_controller.dart';
 import 'package:bakhli/features/trip/models/trip_model.dart';
 import 'package:bakhli/features/trip/models/trip_plan_model.dart';
 import 'package:bakhli/features/trip/screens/my_trips_screen.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
@@ -154,13 +151,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
     await tester.pump(const Duration(seconds: 2));
 
-    await tester.runAsync(() async {
-      final boundary = key.currentContext!.findRenderObject() as RenderRepaintBoundary;
-      final img = await boundary.toImage(pixelRatio: 1);
-      final bytes = await img.toByteData(format: ui.ImageByteFormat.png);
-      final f = File('test/features/trip/goldens/hub_my_trips.png');
-      f.writeAsBytesSync(bytes!.buffer.asUint8List());
-    });
+    await expectLater(find.byKey(key), matchesGoldenFile('goldens/hub_my_trips.png'));
     expect(find.text('My Trips'), findsOneWidget);
   });
 }
