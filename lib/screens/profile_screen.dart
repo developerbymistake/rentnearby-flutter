@@ -495,7 +495,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         }
       }
       return _row(
-        art: RoleVisuals.iconAsset(roleKey),
+        art: ListingArt.panda,
         title: title,
         divider: true,
         below: Text(
