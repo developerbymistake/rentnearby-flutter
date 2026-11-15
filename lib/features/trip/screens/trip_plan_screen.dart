@@ -425,8 +425,6 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
           if (editing && _c.canAddDay) _addDayButton(),
           if (editable && !editing) ...[
             w(const TripAddCityCard()),
-            Gap.v(14),
-            if (!_c.isCompleted) w(_g(_nextButton(plan.spotCount))),
           ] else
             Gap.v(8),
           ],
@@ -465,6 +463,18 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
               ),
             ),
         ],
+      );
+
+  Widget _nextBar(BuildContext context, bool bottomInset, int spots) => Container(
+        padding: EdgeInsets.fromLTRB(DS.s(16), DS.s(10), DS.s(16), bottomInset ? AppInsets.bottomViewPadding(context) + DS.s(10) : DS.s(10)),
+        decoration: _barDecoration,
+        child: Center(
+          heightFactor: 1,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 640),
+            child: _nextButton(spots),
+          ),
+        ),
       );
 
   Widget _stepBar(BuildContext context, bool bottomInset) => Container(
@@ -575,7 +585,8 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
       final guided = _c.guideState.on.value;
       final mini = !guided && !_c.editMode.value && _c.easyInProgress != null;
       final nav = !guided && !_c.editMode.value && !_c.isReadOnly && _c.planStep.value == 2;
-      if (!complete && !mini && !nav) return const SizedBox.shrink();
+      final nextNav = !guided && !_c.editMode.value && !_c.isReadOnly && _c.planStep.value == 1;
+      if (!complete && !mini && !nav && !nextNav) return const SizedBox.shrink();
       return _BarIn(
         key: ValueKey(_c.planStep.value),
         child: Column(
@@ -594,6 +605,7 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
               ),
             ),
           if (nav) _stepBar(context, !complete),
+          if (nextNav) _nextBar(context, !complete, _c.plan.value!.spotCount),
           if (complete) _completeBar(context),
         ],
       ));
