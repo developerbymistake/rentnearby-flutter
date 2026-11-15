@@ -102,7 +102,7 @@ class TripJourneyStrip extends StatelessWidget {
         children: [
           _places(j),
           for (final l in j.legs) ...[
-            const SizedBox(height: 8),
+            Gap.v(8),
             _car(
               context,
               j,
@@ -114,15 +114,15 @@ class TripJourneyStrip extends StatelessWidget {
             ),
           ],
           if (total != null) ...[
-            const SizedBox(height: 8),
+            Gap.v(8),
             Text(
               TripStringsMcbA2.about(BrowseItem.inr(total)),
               textAlign: TextAlign.end,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
+              style: TextStyle(
                 fontFamily: FitnessAppTheme.fontName,
-                fontSize: 12,
+                fontSize: DS.f(12),
                 fontWeight: FontWeight.w700,
                 color: FitnessAppTheme.darkText,
               ),
@@ -165,9 +165,9 @@ class TripJourneyStrip extends StatelessWidget {
       TextSpan(children: spans),
       maxLines: 2,
       overflow: TextOverflow.ellipsis,
-      style: const TextStyle(
+      style: TextStyle(
         fontFamily: FitnessAppTheme.fontName,
-        fontSize: 12,
+        fontSize: DS.f(12),
         fontWeight: FontWeight.w700,
         color: FitnessAppTheme.darkerText,
       ),
@@ -179,10 +179,10 @@ class TripJourneyStrip extends StatelessWidget {
     final legs = j.legs;
     return LayoutBuilder(
       builder: (context, box) {
-        const stop = 64.0;
+        final stop = DS.s(64.0);
         final fits =
             legs.length <= 3 &&
-            box.maxWidth >= nodes.length * stop + legs.length * 52;
+            box.maxWidth >= nodes.length * stop + legs.length * DS.s(52);
         return fits
             ? KitRouteReveal(child: _ribbonRow(nodes, legs, stop))
             : KitRouteReveal(axis: Axis.vertical, child: _ribbonColumn(nodes, legs));
@@ -210,30 +210,30 @@ class TripJourneyStrip extends StatelessWidget {
   Widget _stop(String name, bool change) => Column(
     mainAxisSize: MainAxisSize.min,
     children: [
-      const SizedBox(height: 6),
+      Gap.v(6),
       _dot(change),
-      const SizedBox(height: 4),
+      Gap.v(4),
       Text(
         name,
         textAlign: TextAlign.center,
         maxLines: 2,
         overflow: TextOverflow.ellipsis,
-        style: const TextStyle(
+        style: TextStyle(
           fontFamily: FitnessAppTheme.fontName,
-          fontSize: 11,
+          fontSize: DS.f(11),
           fontWeight: FontWeight.w700,
           color: FitnessAppTheme.darkerText,
         ),
       ),
       if (change)
-        const Text(
+        Text(
           TripStringsMcbA2.changeCar,
           textAlign: TextAlign.center,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: TextStyle(
             fontFamily: FitnessAppTheme.fontName,
-            fontSize: 11,
+            fontSize: DS.f(11),
             fontWeight: FontWeight.w700,
             color: TripUi.warn,
           ),
@@ -242,12 +242,12 @@ class TripJourneyStrip extends StatelessWidget {
   );
 
   Widget _dot(bool change) => Container(
-    width: 12,
-    height: 12,
+    width: DS.s(12),
+    height: DS.s(12),
     decoration: BoxDecoration(
       shape: BoxShape.circle,
       color: change ? FitnessAppTheme.white : TripUi.taxiDark,
-      border: change ? Border.all(color: TripUi.warn, width: 3) : null,
+      border: change ? Border.all(color: TripUi.warn, width: DS.s(3)) : null,
     ),
   );
 
@@ -255,28 +255,28 @@ class TripJourneyStrip extends StatelessWidget {
     final color = l.driverAvailable ? carColor(i) : TripUi.warn;
     final fare = fareOf(l);
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 2),
+      padding: DS.sym(h: 2),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const SizedBox(height: 10),
+          Gap.v(10),
           Container(
-            height: 4,
+            height: DS.s(4),
             decoration: BoxDecoration(
               color: color,
-              borderRadius: CardRadius.pill,
+              borderRadius: DS.br(CardRadius.pill),
             ),
           ),
-          const SizedBox(height: 3),
+          Gap.v(3),
           if (fare != null)
             FittedBox(
               fit: BoxFit.scaleDown,
               child: Text(
                 BrowseItem.inr(fare),
                 maxLines: 1,
-                style: const TextStyle(
+                style: TextStyle(
                   fontFamily: FitnessAppTheme.fontName,
-                  fontSize: 11,
+                  fontSize: DS.f(11),
                   fontWeight: FontWeight.w800,
                   color: FitnessAppTheme.darkerText,
                 ),
@@ -286,9 +286,9 @@ class TripJourneyStrip extends StatelessWidget {
             firstName(l.driverName),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
+            style: TextStyle(
               fontFamily: FitnessAppTheme.fontName,
-              fontSize: 11,
+              fontSize: DS.f(11),
               color: FitnessAppTheme.lightText,
             ),
           ),
@@ -304,8 +304,8 @@ class TripJourneyStrip extends StatelessWidget {
       rows.add(
         Row(
           children: [
-            SizedBox(width: 20, child: Center(child: _dot(change))),
-            const SizedBox(width: 8),
+            SizedBox(width: DS.s(20), child: Center(child: _dot(change))),
+            Gap.h(8),
             Expanded(
               child: Text(
                 change
@@ -315,7 +315,7 @@ class TripJourneyStrip extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontFamily: FitnessAppTheme.fontName,
-                  fontSize: 12,
+                  fontSize: DS.f(12),
                   fontWeight: FontWeight.w700,
                   color: change ? TripUi.warn : FitnessAppTheme.darkerText,
                 ),
@@ -333,21 +333,21 @@ class TripJourneyStrip extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 SizedBox(
-                  width: 20,
+                  width: DS.s(20),
                   child: Center(
                     child: Container(
-                      width: 4,
+                      width: DS.s(4),
                       decoration: BoxDecoration(
                         color: l.driverAvailable ? carColor(i) : TripUi.warn,
-                        borderRadius: CardRadius.pill,
+                        borderRadius: DS.br(CardRadius.pill),
                       ),
                     ),
                   ),
                 ),
-                const SizedBox(width: 8),
+                Gap.h(8),
                 Expanded(
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    padding: DS.sym(v: 4),
                     child: Text(
                       [
                         if (fare != null) BrowseItem.inr(fare),
@@ -355,9 +355,9 @@ class TripJourneyStrip extends StatelessWidget {
                       ].join(' · '),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontFamily: FitnessAppTheme.fontName,
-                        fontSize: 11,
+                        fontSize: DS.f(11),
                         color: FitnessAppTheme.lightText,
                       ),
                     ),
@@ -518,7 +518,7 @@ class TripJourneyStrip extends StatelessWidget {
       header: Align(
         alignment: Alignment.centerLeft,
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 220),
+          constraints: BoxConstraints(maxWidth: DS.s(220)),
           child: _pill(pill, tone, fill),
         ),
       ),
@@ -531,24 +531,24 @@ class TripJourneyStrip extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     if (alert != null) ...[
-                      const SizedBox(height: 6),
+                      Gap.v(6),
                       InkWell(
                         onTap: () =>
                             TripJourneyCard.findAnotherCar(context, j, car),
-                        borderRadius: CardRadius.chip,
+                        borderRadius: DS.br(CardRadius.chip),
                         child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 2),
+                          padding: DS.sym(v: 2),
                           child: Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Padding(
-                                padding: const EdgeInsets.only(top: 1),
+                                padding: EdgeInsets.only(top: DS.s(1)),
                                 child: TravelIcon(
                                   TravelIcon.calendar,
                                   size: 16,
                                 ),
                               ),
-                              const SizedBox(width: 6),
+                              Gap.h(6),
                               Expanded(
                                 child: Text(
                                   alert,
@@ -556,7 +556,7 @@ class TripJourneyStrip extends StatelessWidget {
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
                                     fontFamily: FitnessAppTheme.fontName,
-                                    fontSize: 12,
+                                    fontSize: DS.f(12),
                                     fontWeight: FontWeight.w700,
                                     color: alertColor,
                                   ),
@@ -568,7 +568,7 @@ class TripJourneyStrip extends StatelessWidget {
                       ),
                     ],
                     if (phone != null || canBook) ...[
-                      const SizedBox(height: 8),
+                      Gap.v(8),
                       LayoutBuilder(
                         builder: (context, box) {
                           final call = phone == null
@@ -598,12 +598,12 @@ class TripJourneyStrip extends StatelessWidget {
                                 );
                           final buttons = [?call, ?book];
                           if (buttons.length == 1) return buttons.first;
-                          if (box.maxWidth < 220) {
+                          if (box.maxWidth < DS.s(220)) {
                             return Column(
                               crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
                                 buttons[0],
-                                const SizedBox(height: 8),
+                                Gap.v(8),
                                 buttons[1],
                               ],
                             );
@@ -611,7 +611,7 @@ class TripJourneyStrip extends StatelessWidget {
                           return Row(
                             children: [
                               Expanded(child: buttons[0]),
-                              const SizedBox(width: 8),
+                              Gap.h(8),
                               Expanded(child: buttons[1]),
                             ],
                           );
@@ -636,7 +636,7 @@ class TripJourneyStrip extends StatelessWidget {
                       ),
                     if (exits || (own && canAct))
                       Wrap(
-                        spacing: 2,
+                        spacing: DS.gh(2),
                         runSpacing: 0,
                         children: [
                           if (own)
@@ -705,15 +705,15 @@ class TripJourneyStrip extends StatelessWidget {
   }
 
   static Widget _pill(String text, Color tone, Color fill) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-    decoration: BoxDecoration(color: fill, borderRadius: CardRadius.pill),
+    padding: DS.sym(h: 8, v: 3),
+    decoration: BoxDecoration(color: fill, borderRadius: DS.br(CardRadius.pill)),
     child: Text(
       text,
       maxLines: 1,
       overflow: TextOverflow.ellipsis,
       style: TextStyle(
         fontFamily: FitnessAppTheme.fontName,
-        fontSize: 11,
+        fontSize: DS.f(11),
         fontWeight: FontWeight.w700,
         color: tone,
       ),

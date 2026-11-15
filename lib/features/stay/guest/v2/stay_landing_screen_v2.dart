@@ -26,7 +26,6 @@ const _kSections = 4;
 // WideCard price row overflows past this scale on 300 dp phones.
 const _kCardMaxScale = 1.6;
 const _kTone = KitTone.stay;
-const _kTypeArt = [ListingArt.bed, ListingArt.hotel, ListingArt.beach, ListingArt.tent, ListingArt.hotelBuilding, ListingArt.key];
 
 ListingTone get _page => ListingTone.forest;
 List<ListingTone> get _typeTones => [ListingTone.cA, ListingTone.cB, ListingTone.cC, ListingTone.cF, ListingTone.cD];
@@ -169,14 +168,14 @@ class _StayLandingScreenV2State extends State<StayLandingScreenV2> {
     if (result == true) MyJobsController.invalidateList();
   }
 
-  Widget _tile({required String title, required String sub, required String art, required ListingTone tone, required VoidCallback onTap, bool plus = false, double width = 160}) =>
+  Widget _tile({required String title, required String sub, required String art, required ListingTone tone, required VoidCallback onTap, bool plus = false, double? width}) =>
       MealsCardV(width: width, tone: tone, art: art, title: title, description: sub, goIcon: plus ? Icons.add : Icons.arrow_forward, onTap: onTap, semanticsLabel: title);
 
   Widget _buildTiles() {
     return Obx(() {
       if (!_auth.staysEnabled) return const SizedBox.shrink();
       final List<Widget> tiles;
-      final w2 = ((MediaQuery.sizeOf(context).width - 20) / 2).clamp(120.0, 160.0);
+      final w2 = ((MediaQuery.sizeOf(context).width - 20) / 2).clamp(DS.s(120.0), DS.s(160.0));
       if (_auth.user.value?.stayStatus == 'Approved') {
         tiles = [
           _tile(title: 'My Stays', sub: 'Your listings', art: ListingArt.hotel, tone: ListingTone.cE, onTap: _openMyStays),
@@ -223,7 +222,7 @@ class _StayLandingScreenV2State extends State<StayLandingScreenV2> {
                 final String? id = i == 0 ? null : types[i - 1].id;
                 return ChipCP(
                   tone: i == 0 ? ListingTone.cE : _typeTones[(i - 1) % _typeTones.length],
-                  art: i == 0 ? ListingArt.sunrise : _kTypeArt[(i - 1) % _kTypeArt.length],
+                  art: i == 0 ? ListingArt.sunrise : ListingArt.stay,
                   label: i == 0 ? 'All' : types[i - 1].name,
                   off: selected != id,
                   onTap: () => _ctrl.setStayType(id),
@@ -391,7 +390,7 @@ class _StayLandingScreenV2State extends State<StayLandingScreenV2> {
         child = const NearbyThin();
       }
       return Padding(
-        padding: EdgeInsets.only(top: DS.gv(12), bottom: bottom + 64 + (_ctrl.items.isEmpty || _ctrl.isThin ? 96 : 0)),
+        padding: EdgeInsets.only(top: DS.gv(12), bottom: bottom + DS.s(64) + (_ctrl.items.isEmpty || _ctrl.isThin ? DS.s(96) : 0)),
         child: child,
       );
     });

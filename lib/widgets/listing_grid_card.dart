@@ -72,7 +72,7 @@ class ListingGridCard extends StatelessWidget {
                             fit: BoxFit.cover,
                             memCacheWidth: (190 * dpr).round(),
                             memCacheHeight: (104 * dpr).round(),
-                            placeholder: (_, _) => const TemplatePlaceholder(height: 104, radius: 0),
+                            placeholder: (_, _) => TemplatePlaceholder(height: DS.s(104), radius: 0),
                             errorWidget: (_, _, _) => _placeholder(),
                           )
                         : _placeholder(),

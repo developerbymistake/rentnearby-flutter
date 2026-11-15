@@ -19,10 +19,10 @@ class TripContinueRail extends StatefulWidget {
   final ListingTone tone;
   final ValueChanged<TripSummaryModel> onOpen;
 
-  static const double cardWidth = 292;
-  static const double gap = 12;
-  static const double inset = 18;
-  static const double _cardSide = 14;
+  static double get cardWidth => DS.s(292);
+  static double get gap => DS.gh(12);
+  static double get inset => DS.s(18);
+  static double get _cardSide => DS.s(14);
 
   @override
   State<TripContinueRail> createState() => _TripContinueRailState();
@@ -83,11 +83,11 @@ class _TripContinueRailState extends State<TripContinueRail> {
   }
 
   Widget _railItem(TripSummaryModel t) {
-    const side = TripContinueRail._cardSide;
-    const full = TripContinueRail.cardWidth + side * 2;
-    const shown = TripContinueRail.cardWidth + TripContinueRail.gap;
+    final side = TripContinueRail._cardSide;
+    final full = TripContinueRail.cardWidth + side * 2;
+    final shown = TripContinueRail.cardWidth + TripContinueRail.gap;
     return Align(
-      alignment: const Alignment(2 * side / (full - shown) - 1, 0),
+      alignment: Alignment(2 * side / (full - shown) - 1, 0),
       widthFactor: shown / full,
       child: SizedBox(width: full, child: _card(t)),
     );
@@ -97,7 +97,7 @@ class _TripContinueRailState extends State<TripContinueRail> {
   Widget build(BuildContext context) {
     final trips = widget.trips;
     if (trips.length == 1) return _card(trips.first);
-    const itemW = TripContinueRail.cardWidth + TripContinueRail.gap;
+    final itemW = TripContinueRail.cardWidth + TripContinueRail.gap;
     _extent = itemW;
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -105,8 +105,8 @@ class _TripContinueRailState extends State<TripContinueRail> {
         SingleChildScrollView(
           controller: _scroll,
           scrollDirection: Axis.horizontal,
-          physics: const _RailSnapPhysics(itemW),
-          padding: const EdgeInsets.only(left: TripContinueRail.inset),
+          physics: _RailSnapPhysics(itemW),
+          padding: EdgeInsets.only(left: TripContinueRail.inset),
           child: IntrinsicHeight(
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -116,7 +116,7 @@ class _TripContinueRailState extends State<TripContinueRail> {
             ),
           ),
         ),
-        const SizedBox(height: 4),
+        Gap.v(4),
         _RailDots(count: trips.length, index: _page, tone: widget.tone),
       ],
     );
@@ -147,14 +147,14 @@ class _RailDots extends StatelessWidget {
                   ? Duration.zero
                   : templateTransitionDuration,
               curve: Curves.fastOutSlowIn,
-              width: i == index ? 20 : 7,
-              height: 7,
-              margin: const EdgeInsets.symmetric(horizontal: 3),
+              width: DS.s(i == index ? 20 : 7),
+              height: DS.s(7),
+              margin: EdgeInsets.symmetric(horizontal: DS.gh(3)),
               decoration: BoxDecoration(
                 color: i == index
                     ? tone.g2
                     : tone.g2.withValues(alpha: Alpha.soft),
-                borderRadius: BorderRadius.circular(4),
+                borderRadius: DS.circular(4),
               ),
             ),
         ],

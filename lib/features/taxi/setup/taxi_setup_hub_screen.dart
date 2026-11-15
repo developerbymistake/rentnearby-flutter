@@ -182,13 +182,13 @@ class _TaxiSetupHubScreenState extends State<TaxiSetupHubScreen> with TickerProv
   Widget _skeleton() => Padding(
         padding: EdgeInsets.fromLTRB(DS.s(18), DS.gv(16), DS.s(18), 0),
         child: Column(children: [
-          const SkeletonBox(height: 160, radius: 8),
+          SkeletonBox(height: DS.s(160), radius: DS.radius(8)),
           Gap.v(16),
-          const SkeletonBox(height: 78, radius: 8),
+          SkeletonBox(height: DS.s(78), radius: DS.radius(8)),
           Gap.v(16),
-          const SkeletonBox(height: 78, radius: 8),
+          SkeletonBox(height: DS.s(78), radius: DS.radius(8)),
           Gap.v(16),
-          const SkeletonBox(height: 78, radius: 8),
+          SkeletonBox(height: DS.s(78), radius: DS.radius(8)),
         ]),
       );
 

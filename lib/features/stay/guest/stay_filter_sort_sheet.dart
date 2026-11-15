@@ -39,11 +39,11 @@ class _StayFilterSortSheetState extends State<StayFilterSortSheet> {
 
   static final _typeLook = [
     (ListingTone.cE, ListingArt.sunrise),
-    (ListingTone.cA, ListingArt.bed),
-    (ListingTone.cB, ListingArt.hotel),
-    (ListingTone.cC, ListingArt.beach),
-    (ListingTone.cF, ListingArt.tent),
-    (ListingTone.cD, ListingArt.mountain),
+    (ListingTone.cA, ListingArt.stay),
+    (ListingTone.cB, ListingArt.stay),
+    (ListingTone.cC, ListingArt.stay),
+    (ListingTone.cF, ListingArt.stay),
+    (ListingTone.cD, ListingArt.stay),
   ];
   static final _mealLook = [
     (ListingTone.cA, ListingArt.key),
@@ -182,7 +182,7 @@ class _StayFilterSortSheetState extends State<StayFilterSortSheet> {
       ];
       return _grid([
         for (var i = 0; i < options.length; i++)
-          _card(_typeLook[i % _typeLook.length], options[i].name, _stayTypeId == options[i].id,
+          _card(i == 0 ? _typeLook[0] : (_typeLook[i % _typeLook.length].$1, ListingArt.stay), options[i].name, _stayTypeId == options[i].id,
               () => setState(() => _stayTypeId = options[i].id)),
       ]);
     });

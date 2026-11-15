@@ -268,7 +268,7 @@ class _ChatsListScreenState extends State<ChatsListScreen>
       child: SizedBox(
         width: DS.s(24),
         height: DS.s(24),
-        child: CircularProgressIndicator(strokeWidth: 3, color: _tone.g2, backgroundColor: _tone.haloBase.withValues(alpha: Alpha.soft)),
+        child: CircularProgressIndicator(strokeWidth: DS.s(3), color: _tone.g2, backgroundColor: _tone.haloBase.withValues(alpha: Alpha.soft)),
       ),
     ),
   );

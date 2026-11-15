@@ -75,13 +75,13 @@ class TripDriverRow extends StatelessWidget {
     final forDays = rate != null && days > 1 ? TripStringsV2Find.forDays(BrowseItem.inr(rate * days), days) : null;
     final extraText = extra != null && extra > 0 ? TripStringsAlgoAa.extraKm(extra) : null;
     final menu = SizedBox(
-      width: KitMetrics.touch,
-      height: KitMetrics.touch,
+      width: DS.s(KitMetrics.touch),
+      height: DS.s(KitMetrics.touch),
       child: PopupMenuButton<int>(
         padding: EdgeInsets.zero,
         tooltip: TripStringsA3.more,
-        icon: const Icon(Icons.more_vert_rounded, size: 22, color: DesignColors.textInverse),
-        shape: const RoundedRectangleBorder(borderRadius: CardRadius.tile),
+        icon: Icon(Icons.more_vert_rounded, size: DS.s(22), color: DesignColors.textInverse),
+        shape: RoundedRectangleBorder(borderRadius: DS.br(CardRadius.tile)),
         onSelected: onMenu,
         itemBuilder: (_) => menuItems,
       ),

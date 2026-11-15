@@ -63,7 +63,7 @@ class _ReplyBody extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           GradientPillButton(tone: tone, label: TripStrings.iBooked, onTap: () => Navigator.pop(context, true)),
-          const SizedBox(height: 10),
+          Gap.v(10),
           WhitePillButton(tone: tone, label: TripStrings.call, onTap: phone == null ? null : () => ContactLauncher.call(phone)),
         ],
       ),
@@ -72,8 +72,8 @@ class _ReplyBody extends StatelessWidget {
         if (rate != null && total != null)
           KeyValueRow(label: TripStrings.listedRate, value: TripStrings.listedTimes(BrowseItem.inr(rate), TripLeadFormat.dayCount(e), BrowseItem.inr(total))),
         if (note.isNotEmpty) ...[
-          Padding(padding: const EdgeInsets.only(top: 16, bottom: 4), child: Text(TripStrings.noteFromDriver.toUpperCase(), style: RepliesLook.section)),
-          Padding(padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6), child: Text(note, style: Ink3D.text(14, FontWeight.w500, Ink3D.body, height: 1.4))),
+          Padding(padding: EdgeInsets.only(top: DS.gv(16), bottom: DS.gv(4)), child: Text(TripStrings.noteFromDriver.toUpperCase(), style: RepliesLook.section)),
+          Padding(padding: DS.sym(h: 4, v: 6), child: Text(note, style: Ink3D.text(14, FontWeight.w500, Ink3D.body, height: 1.4))),
         ],
       ],
     );

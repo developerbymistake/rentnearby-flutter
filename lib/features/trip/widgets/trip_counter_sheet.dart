@@ -155,10 +155,10 @@ class _CounterBodyState extends State<_CounterBody> {
           textCapitalization: TextCapitalization.sentences,
           inputFormatters: [...noEmojiInputFormatters, LengthLimitingTextInputFormatter(TripConstants.noteMax)],
         ),
-        Padding(padding: const EdgeInsets.only(top: 12), child: Text(TripStrings.counterInfo, style: RepliesLook.foot)),
+        Padding(padding: EdgeInsets.only(top: DS.gv(12)), child: Text(TripStrings.counterInfo, style: RepliesLook.foot)),
         if (_serverError != null)
           Padding(
-            padding: const EdgeInsets.only(top: 8),
+            padding: EdgeInsets.only(top: DS.gv(8)),
             child: Text(_serverError!, maxLines: 3, overflow: TextOverflow.ellipsis, style: FieldMessage.errorStyle),
           ),
       ],

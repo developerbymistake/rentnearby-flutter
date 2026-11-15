@@ -1,7 +1,6 @@
-import '../../../design/tokens/alpha_tokens.dart';
 import 'package:flutter/material.dart';
+import 'package:bakhli/design/design.dart';
 import 'package:bakhli/design/extra/trip_plan_look.dart';
-import 'package:bakhli/design/template/fitness_app_theme.dart';
 import 'package:get/get.dart';
 import '../controllers/trip_plan_controller.dart';
 import '../models/trip_plan_model.dart';
@@ -20,22 +19,22 @@ class TripEasyCard extends StatelessWidget {
       };
 
   Widget _heading(String text) => Padding(
-        padding: const EdgeInsets.only(top: 6, bottom: 8),
+        padding: EdgeInsets.only(top: DS.gv(6), bottom: DS.gv(8)),
         child: Row(
           children: [
             Container(
-              width: 2,
-              height: 16,
-              decoration: BoxDecoration(color: TripLook.accentLight.withValues(alpha: Alpha.half), borderRadius: BorderRadius.circular(4)),
+              width: DS.s(2),
+              height: DS.s(16),
+              decoration: BoxDecoration(color: TripLook.accentLight.withValues(alpha: Alpha.half), borderRadius: DS.circular(4)),
             ),
-            const SizedBox(width: 8),
+            Gap.h(8),
             Expanded(
               child: Text(
                 text,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                    fontFamily: FitnessAppTheme.fontName, fontSize: 14, fontWeight: FontWeight.w500, letterSpacing: 0.5, color: TripLook.textLight),
+                style: TextStyle(
+                    fontFamily: FitnessAppTheme.fontName, fontSize: DS.f(14), fontWeight: FontWeight.w500, letterSpacing: 0.5, color: TripLook.textLight),
               ),
             ),
           ],
@@ -64,7 +63,7 @@ class TripEasyCard extends StatelessWidget {
         children.add(TripEasyRow(r, key: ValueKey('${r.key.id}-$failed')));
       }
       return Container(
-        padding: const EdgeInsets.fromLTRB(14, 14, 14, 4),
+        padding: DS.insets(l: 14, t: 14, r: 14, b: 4),
         decoration: TripLook.card(radius: TripLook.cardRadius),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -75,29 +74,29 @@ class TripEasyCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(TripStringsV2Easy.title,
+                      Text(TripStringsV2Easy.title,
                           style: TextStyle(
-                              fontFamily: FitnessAppTheme.fontName, fontSize: 16, fontWeight: FontWeight.w700, letterSpacing: 0.18, color: TripLook.textDark)),
+                              fontFamily: FitnessAppTheme.fontName, fontSize: DS.f(16), fontWeight: FontWeight.w700, letterSpacing: 0.18, color: TripLook.textDark)),
                       Text(
                         TripEasyRules.allResolved(rows)
                             ? TripStringsV2Easy.optional
                             : (multi ? TripStringsV2Easy.groupedLine : TripStringsV2Easy.cardLine),
-                        style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, color: TripLook.textLight),
+                        style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: DS.f(12), color: TripLook.textLight),
                       ),
                     ],
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 10),
+            Gap.v(10),
             ...children,
             if (c.trip.value?.id != null)
               InkWell(
                 onTap: () => TripNavigation.openSummary(c.trip.value!.id),
                 splashColor: Colors.transparent,
                 highlightColor: Colors.transparent,
-                child: const SizedBox(
-                  height: 44,
+                child: SizedBox(
+                  height: DS.s(44),
                   child: Center(
                     child: Text(TripStringsV2Easy.viewSummary,
                         style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontWeight: FontWeight.w700, color: FitnessAppTheme.nearlyDarkBlue)),

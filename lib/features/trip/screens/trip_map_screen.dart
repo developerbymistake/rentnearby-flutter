@@ -852,15 +852,15 @@ class _TripMapScreenState extends State<TripMapScreen> with TickerProviderStateM
       return;
     }
     final size = MediaQuery.sizeOf(context);
-    var top = _overlayHeight(_topKey, DS.s(120)) + 24;
-    var bottom = _overlayHeight(_cardKey, DS.s(220)) + 24;
-    final room = size.height - 120;
+    var top = _overlayHeight(_topKey, DS.s(120)) + DS.s(24);
+    var bottom = _overlayHeight(_cardKey, DS.s(220)) + DS.s(24);
+    final room = size.height - DS.s(120);
     if (top + bottom > room && room > 0) {
       final scale = room / (top + bottom);
       top *= scale;
       bottom *= scale;
     }
-    final side = min(48.0, size.width * 0.12);
+    final side = min(DS.s(48), size.width * 0.12);
     await map.animateCamera(CameraUpdate.newLatLngBounds(
       box,
       left: side,

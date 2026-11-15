@@ -104,7 +104,7 @@ class _TripDayChipsState extends State<TripDayChips> {
       child: Row(
         children: [
           for (var d = 1; d <= dayCount; d++) ...[
-            if (d > 1) const SizedBox(width: 10),
+            if (d > 1) Gap.h(10),
             TripChoiceChip(
               label: 'Day $d',
               selected: selected == d,
@@ -113,7 +113,7 @@ class _TripDayChipsState extends State<TripDayChips> {
             ),
           ],
           if (widget.includeAll) ...[
-            const SizedBox(width: 8),
+            Gap.h(8),
             TripChoiceChip(
               label: 'All',
               selected: selected == TripDayChips.all,
@@ -136,7 +136,7 @@ class _TripDayChipsState extends State<TripDayChips> {
     final row = Row(
       children: [
         for (var i = 0; i < order.length; i++) ...[
-          if (i > 0) const SizedBox(width: 10),
+          if (i > 0) Gap.h(10),
           _compactChip(order[i], numeric),
         ],
       ],
@@ -155,7 +155,7 @@ class _TripDayChipsState extends State<TripDayChips> {
           blendMode: BlendMode.dstIn,
           shaderCallback: (rect) {
             final w = rect.width <= 0 ? 1.0 : rect.width;
-            final f = (_fade / w).clamp(0.0, 0.5);
+            final f = (DS.s(_fade) / w).clamp(0.0, 0.5);
             return LinearGradient(
               colors: [
                 _atStart ? FitnessAppTheme.white : Colors.transparent,
@@ -222,22 +222,22 @@ class TripDayMultiChips extends StatelessWidget {
         for (final e in groups.entries) ...[
           if (e.key.isNotEmpty)
             Padding(
-              padding: const EdgeInsets.only(top: 4, bottom: 6),
+              padding: EdgeInsets.only(top: DS.gv(4), bottom: DS.gv(6)),
               child: Text(
                 e.key,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                    fontFamily: FitnessAppTheme.fontName, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.4, color: TripLook.textLight),
+                style: TextStyle(
+                    fontFamily: FitnessAppTheme.fontName, fontSize: DS.f(11), fontWeight: FontWeight.w700, letterSpacing: 0.4, color: TripLook.textLight),
               ),
             ),
           Wrap(
-            spacing: 8,
-            runSpacing: 8,
+            spacing: DS.gh(8),
+            runSpacing: DS.gv(8),
             children: [
               for (final d in e.value)
                 ConstrainedBox(
-                  constraints: const BoxConstraints(minWidth: 44, minHeight: 36),
+                  constraints: BoxConstraints(minWidth: DS.s(44), minHeight: DS.s(36)),
                   child: TripChoiceChip(
                     label: 'Day $d',
                     selected: selected.contains(d),

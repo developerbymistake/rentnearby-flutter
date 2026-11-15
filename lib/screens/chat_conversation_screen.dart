@@ -947,7 +947,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> with Wi
               width: DS.s(24),
               height: DS.s(24),
               child: CircularProgressIndicator(
-                strokeWidth: 3,
+                strokeWidth: DS.s(3),
                 color: _tone.g2,
                 backgroundColor: _tone.haloBase.withValues(alpha: Alpha.soft),
               ),

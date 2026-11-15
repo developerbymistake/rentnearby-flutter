@@ -128,7 +128,7 @@ class TripCitySheet extends StatefulWidget {
       elevation: 0,
       clipBehavior: Clip.antiAlias,
       constraints: const BoxConstraints(maxWidth: 640),
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(32))),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(DS.radius(32)))),
       builder: (_) => TripCitySheet(mode: mode, afterCity: afterCity, inTrip: inTrip),
     );
   }
@@ -269,7 +269,7 @@ class _TripCitySheetState extends State<TripCitySheet> {
           if (!_add && _picked.isNotEmpty) _continueBar(),
           ColoredBox(
             color: !_add && _picked.isNotEmpty ? DesignColors.surface : DesignColors.scaffold,
-            child: SizedBox(height: 14 + AppInsets.bottomViewPadding(context)),
+            child: SizedBox(height: DS.s(14) + AppInsets.bottomViewPadding(context)),
           ),
         ],
       ),
@@ -289,8 +289,8 @@ class _TripCitySheetState extends State<TripCitySheet> {
     final narrow = MediaQuery.sizeOf(context).width < 340;
     final art = narrow ? 84.0 : 104.0;
     final header = Container(
-      constraints: const BoxConstraints(minHeight: 112),
-      padding: EdgeInsets.fromLTRB(22, 22, art + 66, 18),
+      constraints: BoxConstraints(minHeight: DS.s(112)),
+      padding: EdgeInsets.fromLTRB(DS.s(22), DS.s(22), DS.s(art + 66), DS.s(18)),
       decoration: BoxDecoration(gradient: _tone.gradient),
       child: Stack(
         clipBehavior: Clip.none,
@@ -304,13 +304,13 @@ class _TripCitySheetState extends State<TripCitySheet> {
                 overflow: TextOverflow.ellipsis,
                 style: Ink3D.text(22, FontWeight.w700, DesignColors.textInverse),
               ),
-              const SizedBox(height: 2),
+              SizedBox(height: DS.s(2)),
               Text(_subtitle, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(12.5, FontWeight.w500, DesignColors.whiteHigh)),
             ],
           ),
           Positioned(
-            right: -art - 10,
-            top: -12,
+            right: DS.s(-art - 10),
+            top: DS.s(-12),
             child: IgnorePointer(
               child: Art3D(asset: ListingArt.luggage, size: art, halo: art + 10, haloColor: DesignColors.tint(DesignColors.surface, Alpha.v22)),
             ),
@@ -318,43 +318,43 @@ class _TripCitySheetState extends State<TripCitySheet> {
         ],
       ),
     );
-    return Stack(children: [header, const Positioned(top: 4, right: 4, child: SheetCloseButton())]);
+    return Stack(children: [header, Positioned(top: DS.s(4), right: DS.s(4), child: const SheetCloseButton())]);
   }
 
   Widget _pickedRow() {
     return SizedBox(
-      height: 50,
+      height: DS.s(50),
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.fromLTRB(18, 4, 18, 8),
+        padding: EdgeInsets.fromLTRB(DS.s(18), DS.s(4), DS.s(18), DS.s(8)),
         itemCount: _picked.length,
-        separatorBuilder: (_, _) => const SizedBox(width: 8),
+        separatorBuilder: (_, _) => Gap.h(8),
         itemBuilder: (_, i) {
           final c = _picked[i];
           return Tap3D(
             onTap: () => _togglePicked(c),
             label: '${c.name}, ${_SheetText.remove}',
             child: Container(
-              padding: const EdgeInsets.fromLTRB(6, 0, 10, 0),
+              padding: EdgeInsets.fromLTRB(DS.s(6), 0, DS.s(10), 0),
               decoration: BoxDecoration(
                 gradient: _tone.gradient,
-                borderRadius: CardRadius.pill,
-                boxShadow: [BoxShadow(color: _tone.shadow, offset: const Offset(1, 3), blurRadius: 6)],
+                borderRadius: DS.br(CardRadius.pill),
+                boxShadow: [BoxShadow(color: _tone.shadow, offset: DS.shadowOffset(const Offset(1, 3)), blurRadius: DS.shadowBlur(6))],
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Container(
-                    width: 24,
-                    height: 24,
+                    width: DS.s(24),
+                    height: DS.s(24),
                     alignment: Alignment.center,
                     decoration: const BoxDecoration(color: DesignColors.surface, shape: BoxShape.circle),
                     child: Text('${i + 1}', style: Ink3D.text(12, FontWeight.w700, _tone.text)),
                   ),
-                  const SizedBox(width: 8),
+                  Gap.h(8),
                   Text(c.name, style: Ink3D.text(13, FontWeight.w700, DesignColors.textInverse)),
-                  const SizedBox(width: 4),
-                  const Icon(Icons.close_rounded, size: 16, color: DesignColors.surface),
+                  Gap.h(4),
+                  Icon(Icons.close_rounded, size: DS.s(16), color: DesignColors.surface),
                 ],
               ),
             ),
@@ -366,8 +366,8 @@ class _TripCitySheetState extends State<TripCitySheet> {
 
   Widget _continueBar() {
     return Container(
-      padding: const EdgeInsets.fromLTRB(18, 12, 18, 0),
-      decoration: const BoxDecoration(color: DesignColors.surface, boxShadow: Ink3D.topEdge),
+      padding: EdgeInsets.fromLTRB(DS.s(18), DS.s(12), DS.s(18), 0),
+      decoration: BoxDecoration(color: DesignColors.surface, boxShadow: DS.shadows(Ink3D.topEdge)),
       child: GradientPillButton(tone: _tone, label: _SheetText.continueCities(_picked.length), onTap: _continue),
     );
   }
@@ -380,21 +380,21 @@ class _TripCitySheetState extends State<TripCitySheet> {
       trailingArt: ListingArt.search,
       inputFormatters: noEmojiInputFormatters,
       onChanged: _onSearch,
-      margin: const EdgeInsets.fromLTRB(18, 16, 18, 8),
+      margin: DS.gapInsets(l: 18, t: 16, r: 18, b: 8),
     );
   }
 
   Widget _group(List<Widget> rows) => Container(
-        margin: const EdgeInsets.fromLTRB(18, 0, 18, 6),
+        margin: DS.gapInsets(l: 18, t: 0, r: 18, b: 6),
         decoration: BoxDecoration(
           color: DesignColors.surface,
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(8),
-            bottomLeft: Radius.circular(8),
-            bottomRight: Radius.circular(8),
-            topRight: Radius.circular(28),
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(DS.radius(8)),
+            bottomLeft: Radius.circular(DS.radius(8)),
+            bottomRight: Radius.circular(DS.radius(8)),
+            topRight: Radius.circular(DS.radius(28)),
           ),
-          boxShadow: Ink3D.softShadow,
+          boxShadow: DS.shadows(Ink3D.softShadow),
         ),
         clipBehavior: Clip.antiAlias,
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: rows),
@@ -417,12 +417,12 @@ class _TripCitySheetState extends State<TripCitySheet> {
     final browsing = _query.trim().isEmpty;
     if (!browsing) {
       return ListView(
-        padding: const EdgeInsets.only(top: 8, bottom: 8),
+        padding: EdgeInsets.only(top: DS.gv(8), bottom: DS.gv(8)),
         children: [_group([for (var i = 0; i < _items.length; i++) _cityRow(_items[i], divider: i > 0)])],
       );
     }
     return ListView(
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: EdgeInsets.only(bottom: DS.gv(8)),
       children: _stag(_sectionedRows(_items)),
     );
   }
@@ -448,7 +448,7 @@ class _TripCitySheetState extends State<TripCitySheet> {
   }
 
   Widget _sectionHeader(String text) => Padding(
-        padding: const EdgeInsets.fromLTRB(22, 12, 22, 8),
+        padding: DS.gapInsets(l: 22, t: 12, r: 22, b: 8),
         child: Text(
           text.toUpperCase(),
           maxLines: 1,
@@ -458,8 +458,8 @@ class _TripCitySheetState extends State<TripCitySheet> {
       );
 
   Widget _ring() => Container(
-        width: 28,
-        height: 28,
+        width: DS.s(28),
+        height: DS.s(28),
         decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: Ink3D.hint, width: 1.5)),
       );
 
@@ -518,11 +518,11 @@ class _TripCitySheetState extends State<TripCitySheet> {
         children: [
           if (ready)
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-              decoration: BoxDecoration(color: _tone.tint, borderRadius: CardRadius.pill),
+              padding: DS.sym(h: 8, v: 2),
+              decoration: BoxDecoration(color: _tone.tint, borderRadius: DS.br(CardRadius.pill)),
               child: Text(TripStringsA4.ready, style: Ink3D.text(11, FontWeight.w700, _tone.text)),
             ),
-          Icon(open ? Icons.expand_less_rounded : Icons.expand_more_rounded, size: 22, color: _tone.text),
+          Icon(open ? Icons.expand_less_rounded : Icons.expand_more_rounded, size: DS.s(22), color: _tone.text),
         ],
       );
     }
@@ -562,27 +562,27 @@ class _TripCitySheetState extends State<TripCitySheet> {
       icon = ListingArt.calendar;
     }
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 14),
+      padding: EdgeInsets.fromLTRB(DS.s(20), 0, DS.s(20), DS.gv(14)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
             children: [
               Art3D(asset: icon, size: 26, shadowBlur: 2, shadowOffset: const Offset(1, 2)),
-              const SizedBox(width: 8),
+              Gap.h(8),
               Expanded(child: Text(line, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(12.5, FontWeight.w500, Ink3D.grey))),
               if (failed)
                 Tap3D(
                   onTap: () => setState(() => _loadSupply(key)),
                   label: TripStrings.retry,
                   child: ConstrainedBox(
-                    constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+                    constraints: BoxConstraints(minWidth: DS.s(44), minHeight: DS.s(44)),
                     child: Center(child: Text(TripStrings.retry, style: Ink3D.text(13, FontWeight.w700, _tone.text))),
                   ),
                 ),
             ],
           ),
-          const SizedBox(height: 10),
+          Gap.v(10),
           GradientPillButton(
             tone: _tone,
             height: 46,
@@ -600,18 +600,18 @@ class _TripCitySheetState extends State<TripCitySheet> {
   }
 
   Widget _loadingIndicator() => ListView(
-        padding: const EdgeInsets.only(top: 14),
+        padding: EdgeInsets.only(top: DS.gv(14)),
         physics: const NeverScrollableScrollPhysics(),
         children: [_group([for (var i = 0; i < 5; i++) const SkeletonListRow()])],
       );
 
   Widget _emptyState(String message) => ListView(
-        padding: const EdgeInsets.fromLTRB(0, 20, 0, 20),
+        padding: EdgeInsets.fromLTRB(0, DS.gv(20), 0, DS.gv(20)),
         children: [StateCard3D(tone: _tone, art: ListingArt.compass, layout: StateLayout.plain, title: message)],
       );
 
   Widget _messageState(String title, String subtitle, {VoidCallback? onRetry}) => ListView(
-        padding: const EdgeInsets.fromLTRB(0, 20, 0, 20),
+        padding: EdgeInsets.fromLTRB(0, DS.gv(20), 0, DS.gv(20)),
         children: [
           StateCard3D(
             tone: _tone,

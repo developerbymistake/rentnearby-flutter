@@ -56,7 +56,7 @@ class TripMapDayCard extends StatefulWidget {
 }
 
 class _TripMapDayCardState extends State<TripMapDayCard> {
-  static const double _fallbackHeight = 120;
+  static double get _fallbackHeight => DS.s(120);
   static const _anim = Duration(milliseconds: 220);
 
   late PageController _pages;
@@ -178,12 +178,12 @@ class _TripMapDayCardState extends State<TripMapDayCard> {
     final screenH = MediaQuery.sizeOf(context).height;
     final m = _ArtMetrics.of(MediaQuery.sizeOf(context).width);
     final showDots = _pageCount > 1;
-    final maxContent = max(80.0, screenH * 0.45 - 24 - (showDots ? 18 : 0));
+    final maxContent = max(DS.s(80), screenH * 0.45 - DS.s(24) - (showDots ? DS.s(18) : 0));
     final height = min(_heights[_current] ?? _fallbackHeight, maxContent);
     final c = TripPlanController.to;
     final art = _artOf(c, _at(_current));
     return Padding(
-      padding: EdgeInsets.fromLTRB(16, 0, 16, AppInsets.bottomViewPadding(context) + 16),
+      padding: EdgeInsets.fromLTRB(DS.s(16), 0, DS.s(16), AppInsets.bottomViewPadding(context) + DS.s(16)),
       child: Align(
         alignment: Alignment.bottomCenter,
         heightFactor: 1,
@@ -193,15 +193,15 @@ class _TripMapDayCardState extends State<TripMapDayCard> {
             clipBehavior: Clip.none,
             children: [
               Padding(
-                padding: EdgeInsets.only(top: m.overhang),
+                padding: EdgeInsets.only(top: DS.s(m.overhang)),
                 child: DecoratedBox(
                   decoration: BoxDecoration(
                     gradient: ListingTone.indigo.gradient,
-                    borderRadius: kMealsRadius,
-                    boxShadow: [BoxShadow(color: ListingTone.indigo.shadow, offset: const Offset(1.1, 6), blurRadius: 14)],
+                    borderRadius: DS.br(kMealsRadius),
+                    boxShadow: [BoxShadow(color: ListingTone.indigo.shadow, offset: DS.shadowOffset(const Offset(1.1, 6)), blurRadius: DS.shadowBlur(14))],
                   ),
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(4, 16, 4, 12),
+                    padding: DS.insets(l: 4, t: 16, r: 4, b: 12),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -215,7 +215,7 @@ class _TripMapDayCardState extends State<TripMapDayCard> {
                             onPageChanged: _onPageChanged,
                             itemBuilder: (_, page) => SingleChildScrollView(
                               physics: const ClampingScrollPhysics(),
-                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              padding: DS.sym(h: 16),
                               child: _MeasureSize(
                                 onChange: (s) => _onMeasured(page, s.height),
                                 child: _pageBody(c, _at(page), m),
@@ -230,17 +230,17 @@ class _TripMapDayCardState extends State<TripMapDayCard> {
                 ),
               ),
               Positioned(
-                left: m.artLeft - 2,
-                top: 6,
+                left: DS.s(m.artLeft - 2),
+                top: DS.s(6),
                 child: IgnorePointer(
                   child: DecoratedBox(
                     decoration: BoxDecoration(shape: BoxShape.circle, color: DesignColors.tint(DesignColors.surface, Alpha.v24)),
-                    child: SizedBox(width: m.halo, height: m.halo),
+                    child: SizedBox(width: DS.s(m.halo), height: DS.s(m.halo)),
                   ),
                 ),
               ),
               Positioned(
-                left: m.artLeft,
+                left: DS.s(m.artLeft),
                 top: 0,
                 child: IgnorePointer(
                   child: AnimatedSwitcher(
@@ -264,9 +264,9 @@ class _TripMapDayCardState extends State<TripMapDayCard> {
 
   Widget _dots() {
     return Padding(
-      padding: const EdgeInsets.only(top: 10),
+      padding: EdgeInsets.only(top: DS.gv(10)),
       child: SizedBox(
-        height: 10,
+        height: DS.s(10),
         child: FittedBox(
           fit: BoxFit.scaleDown,
           child: Row(
@@ -275,12 +275,12 @@ class _TripMapDayCardState extends State<TripMapDayCard> {
               for (var i = 0; i < _pageCount; i++)
                 AnimatedContainer(
                   duration: _anim,
-                  width: i == _current ? 16 : 6,
-                  height: 6,
-                  margin: const EdgeInsets.symmetric(horizontal: 2.5),
+                  width: DS.s(i == _current ? 16 : 6),
+                  height: DS.s(6),
+                  margin: EdgeInsets.symmetric(horizontal: DS.gh(2.5)),
                   decoration: BoxDecoration(
                     color: i == _current ? DesignColors.surface : DesignColors.tint(DesignColors.surface, Alpha.v40),
-                    borderRadius: BorderRadius.circular(3),
+                    borderRadius: DS.circular(3),
                   ),
                 ),
             ],
@@ -296,15 +296,15 @@ class _TripMapDayCardState extends State<TripMapDayCard> {
     return TripRouteStrip.routeLine(c, day);
   }
 
-  static const _eyebrowStyle = TextStyle(
-      fontFamily: FitnessAppTheme.fontName, fontSize: 10.5, fontWeight: FontWeight.w700, letterSpacing: 0.6, height: 1.3, color: DesignColors.whiteHigh);
-  static const _lineStyle = TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12.5, fontWeight: FontWeight.w500, height: 1.45, color: DesignColors.textInverse);
+  static TextStyle get _eyebrowStyle => TextStyle(
+      fontFamily: FitnessAppTheme.fontName, fontSize: DS.f(10.5), fontWeight: FontWeight.w700, letterSpacing: 0.6, height: 1.3, color: DesignColors.whiteHigh);
+  static TextStyle get _lineStyle => TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: DS.f(12.5), fontWeight: FontWeight.w500, height: 1.45, color: DesignColors.textInverse);
 
   Widget _head(_ArtMetrics m, {required String eyebrow, required String title, required List<String> lines}) {
     return ConstrainedBox(
-      constraints: BoxConstraints(minHeight: m.headMin),
+      constraints: BoxConstraints(minHeight: DS.s(m.headMin)),
       child: Padding(
-        padding: EdgeInsets.only(left: m.textLeft),
+        padding: EdgeInsets.only(left: DS.s(m.textLeft)),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
@@ -314,7 +314,7 @@ class _TripMapDayCardState extends State<TripMapDayCard> {
               title,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: m.title, fontWeight: FontWeight.w700, height: 1.25, color: DesignColors.textInverse),
+              style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: DS.f(m.title), fontWeight: FontWeight.w700, height: 1.25, color: DesignColors.textInverse),
             ),
             for (final l in lines)
               if (l.isNotEmpty) Text(l, maxLines: 3, overflow: TextOverflow.ellipsis, style: _lineStyle),
@@ -382,7 +382,7 @@ class _TripMapDayCardState extends State<TripMapDayCard> {
             ],
           ),
           if (travel) ...[
-            const SizedBox(height: 10),
+            Gap.v(10),
             TripMapTravelBlock(legIndex: c.legIndexOf(day)),
           ],
           _PillRow(pills: [
@@ -420,29 +420,29 @@ class _TripMapDayCardState extends State<TripMapDayCard> {
     return (line: parts.join(' · '), pills: pills);
   }
 
-  static Widget _icon(String name) => Image.asset('assets/images/design/travel3d/$name.png', width: 16, height: 16);
+  static Widget _icon(String name) => Image.asset('assets/images/design/travel3d/$name.png', width: DS.s(16), height: DS.s(16));
 
   static Widget _dot(Color color) => Container(
-        width: 14,
-        height: 14,
+        width: DS.s(14),
+        height: DS.s(14),
         alignment: Alignment.center,
         decoration: const BoxDecoration(color: DesignColors.surface, shape: BoxShape.circle),
-        child: Container(width: 8, height: 8, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+        child: Container(width: DS.s(8), height: DS.s(8), decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
       );
 
   static Widget _dash() => Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           for (var i = 0; i < 2; i++) ...[
-            if (i > 0) const SizedBox(width: 3),
-            Container(width: 5, height: 3, decoration: BoxDecoration(color: DesignColors.surface, borderRadius: BorderRadius.circular(1))),
+            if (i > 0) Gap.h(3),
+            Container(width: DS.s(5), height: DS.s(3), decoration: BoxDecoration(color: DesignColors.surface, borderRadius: DS.circular(1))),
           ],
         ],
       );
 
   static Widget _stayLead() => Container(
-        width: 16,
-        height: 16,
+        width: DS.s(16),
+        height: DS.s(16),
         decoration: const BoxDecoration(color: DesignColors.statusAttention, shape: BoxShape.circle),
         child: const TravelIcon(TravelIcon.stay, size: 9),
       );
@@ -534,27 +534,27 @@ class _PillRow extends StatelessWidget {
 
   final List<_Pill> pills;
 
-  static const _style = TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 11.5, fontWeight: FontWeight.w700, color: DesignColors.textInverse);
-  static const double _gap = 8;
-  static const double _pad = 12;
+  static TextStyle get _style => TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: DS.f(11.5), fontWeight: FontWeight.w700, color: DesignColors.textInverse);
+  static double get _gap => DS.gh(8);
+  static double get _pad => DS.s(12);
 
   @override
   Widget build(BuildContext context) {
     if (pills.isEmpty) return const SizedBox.shrink();
     final scaler = MediaQuery.textScalerOf(context);
     return Padding(
-      padding: const EdgeInsets.only(top: 12),
+      padding: EdgeInsets.only(top: DS.gv(12)),
       child: LayoutBuilder(builder: (context, box) {
         final w = box.maxWidth;
         final n = pills.length;
         const slots = 3;
         final cell = (w - _gap * (slots - 1)) / slots;
-        final even = n <= slots && pills.every((p) => KitText.widthOf(p.label, _style, scaler) + 16 + 6 + _pad * 2 <= cell);
+        final even = n <= slots && pills.every((p) => KitText.widthOf(p.label, _style, scaler) + DS.s(16) + DS.gh(6) + _pad * 2 <= cell);
         if (even) {
           return Row(
             children: [
               for (var i = 0; i < n; i++) ...[
-                if (i > 0) const SizedBox(width: _gap),
+                if (i > 0) SizedBox(width: _gap),
                 SizedBox(width: cell, child: _pill(pills[i], center: true)),
               ],
             ],
@@ -562,7 +562,7 @@ class _PillRow extends StatelessWidget {
         }
         return Wrap(
           spacing: _gap,
-          runSpacing: _gap,
+          runSpacing: DS.gv(8),
           children: [
             for (final p in pills) ConstrainedBox(constraints: BoxConstraints(maxWidth: w), child: _pill(p, center: false)),
           ],
@@ -573,15 +573,15 @@ class _PillRow extends StatelessWidget {
 
   Widget _pill(_Pill p, {required bool center}) {
     final body = Container(
-      constraints: const BoxConstraints(minHeight: 32),
-      padding: const EdgeInsets.symmetric(horizontal: _pad, vertical: 6),
-      decoration: BoxDecoration(color: DesignColors.tint(DesignColors.surface, Alpha.v26), borderRadius: BorderRadius.circular(16)),
+      constraints: BoxConstraints(minHeight: DS.s(32)),
+      padding: EdgeInsets.symmetric(horizontal: _pad, vertical: DS.s(6)),
+      decoration: BoxDecoration(color: DesignColors.tint(DesignColors.surface, Alpha.v26), borderRadius: DS.circular(16)),
       child: Row(
         mainAxisSize: center ? MainAxisSize.max : MainAxisSize.min,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           p.lead,
-          const SizedBox(width: 6),
+          Gap.h(6),
           Flexible(child: Text(p.label, maxLines: 2, overflow: TextOverflow.ellipsis, style: _style)),
         ],
       ),

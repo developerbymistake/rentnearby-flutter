@@ -53,7 +53,7 @@ class DestinationStayCard extends StatelessWidget {
         [place, TripFormat.km(stay.distanceKm)].where((e) => e.isNotEmpty).join(' · '),
         if (stay.stayTypeName != null) stay.stayTypeName!,
       ],
-      photo: hasPhoto ? KitPhoto(url: url, width: 100, height: 100, asset: TravelIcon.stay, iconSize: 40) : null,
+      photo: hasPhoto ? KitPhoto(url: url, width: DS.s(100), height: DS.s(100), asset: TravelIcon.stay, iconSize: 40) : null,
       sticker: hasPhoto ? ListingArt.stay : null,
       art: hasPhoto ? null : ListingArt.stay,
       number: price == null ? null : BrowseItem.inr(price),

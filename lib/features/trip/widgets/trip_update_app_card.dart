@@ -20,7 +20,7 @@ class TripUpdateAppCard extends StatelessWidget {
       child: Center(
         heightFactor: 1,
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 640),
+          constraints: BoxConstraints(maxWidth: DS.s(640)),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,

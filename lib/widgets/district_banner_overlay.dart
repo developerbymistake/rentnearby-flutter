@@ -63,7 +63,7 @@ class _DistrictBannerOverlayState extends State<DistrictBannerOverlay>
         imageUrl: banner.imageUrl,
         width: double.infinity,
         fit: BoxFit.cover,
-        placeholder: (context, url) => const SkeletonBox(height: 200, radius: 0),
+        placeholder: (context, url) => SkeletonBox(height: DS.s(200), radius: 0),
         errorWidget: (context, url, error) => Container(
           height: DS.s(200),
           color: ListingTone.indigo.tint,

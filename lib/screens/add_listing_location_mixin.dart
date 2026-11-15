@@ -328,7 +328,7 @@ mixin AddListingLocationMixin<T extends StatefulWidget> on State<T> {
       });
       await ctrl.animateCamera(CameraUpdate.newLatLngBounds(
         LatLngBounds(southwest: LatLng(south, west), northeast: LatLng(north, east)),
-        left: 24, top: 24, right: 24, bottom: 24,
+        left: DS.s(24), top: DS.s(24), right: DS.s(24), bottom: DS.s(24),
       ));
     }
   }

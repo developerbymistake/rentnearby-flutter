@@ -19,14 +19,14 @@ class TripArrangeConfirm {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: FitnessAppTheme.white,
-        shape: const RoundedRectangleBorder(borderRadius: TripLook.softRadius),
-        title: const Text(
+        shape: RoundedRectangleBorder(borderRadius: DS.br(TripLook.softRadius)),
+        title: Text(
           TripStringsV2Easy.confirmTitle,
-          style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 16, fontWeight: FontWeight.w700, color: TripLook.textDark),
+          style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: DS.f(16), fontWeight: FontWeight.w700, color: TripLook.textDark),
         ),
         content: Text(
           TripStringsV2Easy.confirmBody(whatOf(key)),
-          style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 13, color: TripLook.textMedium, height: 1.4),
+          style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: DS.f(13), color: TripLook.textMedium, height: 1.4),
         ),
         actions: [
           TextLink(label: TripStringsV2Easy.cancel, onTap: () => Navigator.pop(ctx, false), tone: KitTone.trip),
@@ -45,10 +45,10 @@ class TripArrangeConfirm {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: FitnessAppTheme.white,
-        shape: const RoundedRectangleBorder(borderRadius: TripLook.softRadius),
+        shape: RoundedRectangleBorder(borderRadius: DS.br(TripLook.softRadius)),
         content: Text(
           TripStringsV2Easy.withdrawLine(res.open.length),
-          style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 14, color: TripLook.textDark, height: 1.4),
+          style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: DS.f(14), color: TripLook.textDark, height: 1.4),
         ),
         actions: [
           TextLink(label: TripStringsV2Easy.cancel, onTap: () => Navigator.pop(ctx, false), tone: KitTone.trip),

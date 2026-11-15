@@ -173,7 +173,7 @@ class _TripMapChipsState extends State<TripMapChips> {
             blendMode: BlendMode.dstIn,
             shaderCallback: (rect) {
               final w = rect.width <= 0 ? 1.0 : rect.width;
-              final f = (_fade / w).clamp(0.0, 0.5);
+              final f = (DS.s(_fade) / w).clamp(0.0, 0.5);
               return LinearGradient(
                 colors: [
                   _atStart ? DesignColors.surface : Colors.transparent,
@@ -191,7 +191,7 @@ class _TripMapChipsState extends State<TripMapChips> {
               child: Row(
                 children: [
                   for (var i = 0; i < chips.length; i++) ...[
-                    if (i > 0) const SizedBox(width: 10),
+                    if (i > 0) Gap.h(10),
                     chips[i],
                   ],
                 ],

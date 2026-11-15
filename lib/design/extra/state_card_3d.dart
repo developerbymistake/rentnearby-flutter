@@ -161,7 +161,7 @@ class StateCard3D extends StatelessWidget {
     final artIn = artInside;
     final card = Container(
       width: double.infinity,
-      constraints: BoxConstraints(minHeight: minHeight ?? 0),
+      constraints: BoxConstraints(minHeight: DS.s(minHeight ?? 0)),
       padding: DS.insets(l: 28, t: artIn ? 28 : artSize - 66, r: 28, b: 34),
       decoration: BoxDecoration(gradient: tone.gradient, borderRadius: DS.br(tallRadius), boxShadow: tone.glow()),
       child: Column(

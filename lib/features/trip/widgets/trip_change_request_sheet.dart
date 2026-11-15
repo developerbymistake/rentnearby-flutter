@@ -244,18 +244,18 @@ class _ChangeBodyState extends State<_ChangeBody> {
           title: '$_kNow: $now',
           subtitle: [TripStrings.peopleCount(_origAdults + _origKids), _origRooms == 1 ? '1 room' : '$_origRooms rooms'].join(' · '),
           value: total != null && total > 0 ? BrowseItem.inr(total) : '',
-          margin: const EdgeInsets.only(top: 6, bottom: 12),
+          margin: EdgeInsets.only(top: DS.gv(6), bottom: DS.gv(12)),
         ),
         LayoutBuilder(
           builder: (context, box) => box.maxWidth >= 300
-              ? Row(children: [Expanded(child: dates[0]), const SizedBox(width: 10), Expanded(child: dates[1])])
-              : Column(children: [dates[0], const SizedBox(height: 10), dates[1]]),
+              ? Row(children: [Expanded(child: dates[0]), Gap.h(10), Expanded(child: dates[1])])
+              : Column(children: [dates[0], Gap.v(10), dates[1]]),
         ),
-        const SizedBox(height: 12),
+        Gap.v(12),
         StepperField(tone: _tone, filled: true, leadingArt: ListingArt.guests, label: TripStrings.adults, value: _adults, min: 1, max: TripConstants.maxAdults, onChanged: _busy ? null : (v) => setState(() => _adults = v)),
-        const SizedBox(height: 12),
+        Gap.v(12),
         StepperField(tone: _tone, filled: true, leadingArt: ListingArt.star, label: TripStrings.kids, value: _kids, min: 0, max: TripConstants.maxKids, onChanged: _busy ? null : (v) => setState(() => _kids = v)),
-        const SizedBox(height: 12),
+        Gap.v(12),
         StepperField(tone: _tone, filled: true, leadingArt: ListingArt.bed, label: TripStrings.rooms, value: _rooms, min: 1, max: _maxRooms, onChanged: _busy ? null : (v) => setState(() => _rooms = v)),
         PillField(
           tone: _tone,
@@ -271,7 +271,7 @@ class _ChangeBodyState extends State<_ChangeBody> {
         ),
         if (message != null)
           Padding(
-            padding: const EdgeInsets.only(top: 10),
+            padding: EdgeInsets.only(top: DS.gv(10)),
             child: Text(message, maxLines: 3, overflow: TextOverflow.ellipsis, style: _serverError != null ? FieldMessage.errorStyle : RepliesLook.foot),
           ),
       ],

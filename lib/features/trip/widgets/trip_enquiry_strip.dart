@@ -137,7 +137,7 @@ class TripEnquiryStrip extends StatelessWidget {
       extra: advance == null
           ? null
           : Padding(
-              padding: const EdgeInsets.only(top: 3),
+              padding: EdgeInsets.only(top: DS.s(3)),
               child: Text(advance.$1, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(11.5, FontWeight.w600, advance.$2)),
             ),
       onMenu: menu

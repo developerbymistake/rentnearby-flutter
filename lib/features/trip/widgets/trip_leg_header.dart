@@ -51,13 +51,13 @@ class TripLegHeader extends StatelessWidget {
                       onTap: () => TripLegMenuSheet.show(context, legIndex),
                       label: _more,
                       child: SizedBox(
-                        width: 48,
-                        height: 48,
+                        width: DS.s(48),
+                        height: DS.s(48),
                         child: Center(
                           child: Container(
-                            width: 40,
-                            height: 40,
-                            decoration: const BoxDecoration(color: DesignColors.surface, shape: BoxShape.circle, boxShadow: Ink3D.whiteBtn),
+                            width: DS.s(40),
+                            height: DS.s(40),
+                            decoration: BoxDecoration(color: DesignColors.surface, shape: BoxShape.circle, boxShadow: DS.shadows(Ink3D.whiteBtn)),
                             child: Icon(Icons.more_vert_rounded, color: tone.text),
                           ),
                         ),
@@ -73,7 +73,7 @@ class TripLegHeader extends StatelessWidget {
               title: TripStringsMcaN2.cityUnavailable,
               actionLabel: menu ? TripStringsMcaA3.removeCity : null,
               onAction: menu ? () => TripLegMenuSheet.show(context, legIndex) : null,
-              margin: const EdgeInsets.fromLTRB(18, 0, 18, 6),
+              margin: DS.gapInsets(l: 18, t: 0, r: 18, b: 6),
             ),
         ],
       );

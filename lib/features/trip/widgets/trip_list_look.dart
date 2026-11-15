@@ -48,7 +48,7 @@ class TripListTopBar extends StatelessWidget {
     final step = TripGuideStepInfo.of(guide);
     final skip = skipLabel;
     return Padding(
-      padding: EdgeInsets.only(top: MediaQuery.paddingOf(context).top, bottom: 6),
+      padding: EdgeInsets.only(top: MediaQuery.paddingOf(context).top, bottom: DS.gv(6)),
       child: TopBar3D(
         tone: tone,
         title: title,
@@ -79,12 +79,12 @@ class TripSkipPill extends StatelessWidget {
           behavior: HitTestBehavior.opaque,
           onTap: onTap,
           child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 46, minWidth: 46),
+            constraints: BoxConstraints(minHeight: DS.s(46), minWidth: DS.s(46)),
             child: Center(
               widthFactor: 1,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                decoration: BoxDecoration(color: DesignColors.surface,borderRadius: BorderRadius.circular(22), boxShadow: Ink3D.softShadow),
+                padding: DS.sym(h: 16, v: 10),
+                decoration: BoxDecoration(color: DesignColors.surface,borderRadius: DS.circular(22), boxShadow: DS.shadows(Ink3D.softShadow)),
                 child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(14, FontWeight.w700, tone.text, letterSpacing: 0)),
               ),
             ),

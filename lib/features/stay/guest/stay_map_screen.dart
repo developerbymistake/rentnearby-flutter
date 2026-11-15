@@ -482,8 +482,8 @@ class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateM
     if (loc == null) return null;
     return _MapMarkerData(
       position: loc,
-      width: 120,
-      height: 120,
+      width: DS.s(120),
+      height: DS.s(120),
       isUser: true,
       widget: AnimatedBuilder(
         animation: _radarController,
@@ -1220,7 +1220,7 @@ class _RadarPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     if (progress == 0) return;
     final center = Offset(size.width / 2, size.height / 2);
-    const maxRadius = 52.0;
+    final maxRadius = DS.s(52.0);
 
     for (int i = 0; i < 3; i++) {
       final p = (progress + i / 3.0) % 1.0;

@@ -40,13 +40,13 @@ class TripEasyStatePill extends StatelessWidget {
   Widget build(BuildContext context) {
     final (bg, fg) = colors(state);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
-      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(20)),
+      padding: DS.sym(h: 9, v: 3),
+      decoration: BoxDecoration(color: bg, borderRadius: DS.circular(20)),
       child: Text(
         label(state),
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
-        style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 11, fontWeight: FontWeight.w600, color: fg),
+        style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: DS.f(11), fontWeight: FontWeight.w600, color: fg),
       ),
     );
   }
@@ -113,22 +113,22 @@ class _TripEasyRowState extends State<TripEasyRow> {
         TripEasyRowKind.gettingThere || TripEasyRowKind.comingBack => const TravelIcon(TravelIcon.route, size: 22),
         TripEasyRowKind.stay => const TravelIcon(TravelIcon.stay, size: 22),
         TripEasyRowKind.taxi => const TravelIcon(TravelIcon.taxi, size: 22),
-        TripEasyRowKind.between => Icon(TripEasyRow.iconOf(k), size: 18, color: TripLook.accentDark),
+        TripEasyRowKind.between => Icon(TripEasyRow.iconOf(k), size: DS.s(18), color: TripLook.accentDark),
       };
 
   Widget _menu() => SizedBox(
-        width: 32,
-        height: 32,
+        width: DS.s(32),
+        height: DS.s(32),
         child: PopupMenuButton<int>(
           padding: EdgeInsets.zero,
           tooltip: TripStringsV2Easy.more,
-          icon: const Icon(Icons.more_vert, size: 18, color: TripLook.textMedium),
+          icon: Icon(Icons.more_vert, size: DS.s(18), color: TripLook.textMedium),
           onSelected: (_) => _arrange(),
-          itemBuilder: (_) => const [
+          itemBuilder: (_) => [
             PopupMenuItem<int>(
               value: 0,
               child: Text(TripStringsV2Easy.arrangeMyself,
-                  style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 13, fontWeight: FontWeight.w500)),
+                  style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: DS.f(13), fontWeight: FontWeight.w500)),
             ),
           ],
         ),
@@ -171,7 +171,7 @@ class _TripEasyRowState extends State<TripEasyRow> {
         t,
         maxLines: 2,
         overflow: TextOverflow.ellipsis,
-        style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: size, color: color, fontWeight: w, height: 1.3),
+        style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: DS.f(size), color: color, fontWeight: w, height: 1.3),
       );
 
   Widget _link(String label, VoidCallback? onTap, {Color color = DesignColors.lunchEnd}) =>
@@ -193,14 +193,14 @@ class _TripEasyRowState extends State<TripEasyRow> {
                 tone: KitTone.trip,
                 onPressed: _busy ? null : () => TripNavigation.helpMeFind(context, _i.key),
               ),
-              const SizedBox(height: 8),
+              Gap.v(8),
             ],
             noSupply
                 ? PrimaryButton(
                     label: TripStringsV2Easy.arrangeMyself, height: 44, tone: KitTone.trip, onPressed: _busy ? null : _arrange)
                 : SecondaryButton(
                     label: TripStringsV2Easy.arrangeMyself, height: 44, tone: KitTone.trip, onPressed: _busy ? null : _arrange),
-            const SizedBox(height: 8),
+            Gap.v(8),
             SecondaryButton(
                 label: TripStringsV2Easy.skip, height: 44, tone: KitTone.trip, neutral: true, onPressed: _busy ? null : _skip),
           ],
@@ -258,14 +258,14 @@ class _TripEasyRowState extends State<TripEasyRow> {
         onTap: _busy ? null : () => _c.retrySupply(_supplyDay),
         behavior: HitTestBehavior.opaque,
         child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 32),
+          constraints: BoxConstraints(minHeight: DS.s(32)),
           child: Container(
             alignment: Alignment.center,
-            padding: const EdgeInsets.symmetric(horizontal: 6),
-            decoration: BoxDecoration(color: TripLook.errorSurface, borderRadius: BorderRadius.circular(20)),
-            child: const Text(TripStringsV2Easy.retry,
+            padding: DS.sym(h: 6),
+            decoration: BoxDecoration(color: TripLook.errorSurface, borderRadius: DS.circular(20)),
+            child: Text(TripStringsV2Easy.retry,
                 style: TextStyle(
-                    fontFamily: FitnessAppTheme.fontName, fontSize: 11.5, fontWeight: FontWeight.w700, color: TripLook.errorText)),
+                    fontFamily: FitnessAppTheme.fontName, fontSize: DS.f(11.5), fontWeight: FontWeight.w700, color: TripLook.errorText)),
           ),
         ),
       );
@@ -273,22 +273,22 @@ class _TripEasyRowState extends State<TripEasyRow> {
     if (_noSupply) return const SizedBox.shrink();
     if (_offlineTodo) {
       return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
-        decoration: BoxDecoration(color: TripLook.neutralChip, borderRadius: BorderRadius.circular(20)),
-        child: const Text(TripStringsV2Easy.pillOffline,
+        padding: DS.sym(h: 9, v: 3),
+        decoration: BoxDecoration(color: TripLook.neutralChip, borderRadius: DS.circular(20)),
+        child: Text(TripStringsV2Easy.pillOffline,
             style: TextStyle(
-                fontFamily: FitnessAppTheme.fontName, fontSize: 11, fontWeight: FontWeight.w600, color: TripLook.neutralChipText)),
+                fontFamily: FitnessAppTheme.fontName, fontSize: DS.f(11), fontWeight: FontWeight.w600, color: TripLook.neutralChipText)),
       );
     }
     if (_i.state == TripRowState.todo && !_c.isReadOnly && _c.guideState.notNow.contains(_i.key.id)) {
       return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
-        decoration: BoxDecoration(color: TripLook.warningSurface, borderRadius: BorderRadius.circular(20)),
-        child: const Text(TripStringsGuide.pendingTag,
+        padding: DS.sym(h: 9, v: 3),
+        decoration: BoxDecoration(color: TripLook.warningSurface, borderRadius: DS.circular(20)),
+        child: Text(TripStringsGuide.pendingTag,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
-                fontFamily: FitnessAppTheme.fontName, fontSize: 11, fontWeight: FontWeight.w600, color: TripLook.warningText)),
+                fontFamily: FitnessAppTheme.fontName, fontSize: DS.f(11), fontWeight: FontWeight.w600, color: TripLook.warningText)),
       );
     }
     return TripEasyStatePill(_i.state);
@@ -297,7 +297,7 @@ class _TripEasyRowState extends State<TripEasyRow> {
   Widget _notice() {
     if (_blocked) {
       return Padding(
-        padding: const EdgeInsets.only(top: 8),
+        padding: EdgeInsets.only(top: DS.gv(8)),
         child: Row(children: [
           Expanded(child: _text(_blockedText, color: TripLook.errorText, w: FontWeight.w600)),
           _link(TripStringsV2Easy.cancel, _clearNotice, color: TripLook.textMedium),
@@ -306,7 +306,7 @@ class _TripEasyRowState extends State<TripEasyRow> {
     }
     if (_withdraw.isNotEmpty) {
       return Padding(
-        padding: const EdgeInsets.only(top: 8),
+        padding: EdgeInsets.only(top: DS.gv(8)),
         child: Row(children: [
           Expanded(child: _text(TripStringsV2Easy.withdrawLine(_withdraw.length), color: TripLook.textDark, w: FontWeight.w600)),
           _link(TripStringsV2Easy.keepAsks, _clearNotice, color: TripLook.textMedium),
@@ -366,15 +366,15 @@ class _TripEasyRowState extends State<TripEasyRow> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Container(
-                      width: 34,
-                      height: 34,
+                      width: DS.s(34),
+                      height: DS.s(34),
                       decoration: BoxDecoration(
-                          color: own ? TripLook.successSurface : TripLook.surface, borderRadius: BorderRadius.circular(10)),
+                          color: own ? TripLook.successSurface : TripLook.surface, borderRadius: DS.circular(10)),
                       child: own
-                          ? Icon(Icons.check_circle_rounded, size: 20, color: TripLook.success)
+                          ? Icon(Icons.check_circle_rounded, size: DS.s(20), color: TripLook.success)
                           : _kindIcon(i.kind)
                     ),
-                    const SizedBox(width: 12),
+                    Gap.h(12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -383,23 +383,23 @@ class _TripEasyRowState extends State<TripEasyRow> {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
-                                  fontFamily: FitnessAppTheme.fontName, fontSize: 14, fontWeight: FontWeight.w600, color: muted ? DesignColors.textMuted : TripLook.textDark)),
-                          const SizedBox(height: 2),
+                                  fontFamily: FitnessAppTheme.fontName, fontSize: DS.f(14), fontWeight: FontWeight.w600, color: muted ? DesignColors.textMuted : TripLook.textDark)),
+                          SizedBox(height: DS.s(2)),
                           Row(children: [
                             if (i.state == TripRowState.asked || i.state == TripRowState.offer) ...[
                               Container(
-                                width: 7,
-                                height: 7,
+                                width: DS.s(7),
+                                height: DS.s(7),
                                 decoration: const BoxDecoration(color: TripLook.warning, shape: BoxShape.circle),
                               ),
-                              const SizedBox(width: 6),
+                              Gap.h(6),
                             ],
                             Expanded(child: _text(subtitle, color: subtitleColor)),
                           ]),
                         ],
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    Gap.h(8),
                     if (own)
                       if (_c.isReadOnly) const SizedBox.shrink() else _link(TripStringsV2Easy.undo, () => _c.undoMark(i.key))
                     else if (i.state == TripRowState.skipped && !_c.isReadOnly)
@@ -409,11 +409,11 @@ class _TripEasyRowState extends State<TripEasyRow> {
                       ])
                     else if (_i.state == TripRowState.asked || _i.state == TripRowState.offer)
                       Row(mainAxisSize: MainAxisSize.min, children: [
-                        Padding(padding: const EdgeInsets.only(top: 2), child: _pill()),
-                        if (!_c.isReadOnly) ...[const SizedBox(width: 2), _menu()],
+                        Padding(padding: EdgeInsets.only(top: DS.s(2)), child: _pill()),
+                        if (!_c.isReadOnly) ...[SizedBox(width: DS.gh(2)), _menu()],
                       ])
                     else
-                      Padding(padding: const EdgeInsets.only(top: 2), child: _pill()),
+                      Padding(padding: EdgeInsets.only(top: DS.s(2)), child: _pill()),
                   ],
                 ),
                 if (_clickable && !_c.isReadOnly)
@@ -431,9 +431,9 @@ class _TripEasyRowState extends State<TripEasyRow> {
                       () => TripNavigation.openStay(i.legIndex!, onlyDays: i.uncoveredDays),
                     ),
                   ),
-                if (!_clickable) ...[const SizedBox(height: 8), _actions()],
+                if (!_clickable) ...[Gap.v(8), _actions()],
                 _notice(),
-                const SizedBox(height: 4),
+                SizedBox(height: DS.s(4)),
               ],
             ),
         ),

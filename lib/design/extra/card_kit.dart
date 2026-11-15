@@ -424,7 +424,7 @@ class RailCard extends StatelessWidget {
       shadow: selected ? ShadowTokens.elev3 : ShadowTokens.elev2,
       foreground: selected
           ? BoxDecoration(
-              borderRadius: CardRadius.tile,
+              borderRadius: DS.br(CardRadius.tile),
               border: Border.all(color: tone.accentDark, width: DS.s(2)),
             )
           : null,

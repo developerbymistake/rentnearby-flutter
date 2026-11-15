@@ -21,7 +21,7 @@ class TripFilterChips extends StatelessWidget {
   Widget build(BuildContext context) {
     if (items.isEmpty) return const SizedBox.shrink();
     return Wrap(
-      spacing: 6,
+      spacing: DS.gh(6),
       runSpacing: 0,
       children: [for (final c in items) TripChipView(chip: c, accent: accent)],
     );
@@ -45,18 +45,18 @@ class TripChipView extends StatelessWidget {
         behavior: HitTestBehavior.opaque,
         onTap: chip.onTap,
         child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 44),
+          constraints: BoxConstraints(minHeight: DS.s(44)),
           child: Center(
             widthFactor: 1,
             heightFactor: 1,
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 180),
               curve: Curves.fastOutSlowIn,
-              constraints: const BoxConstraints(minHeight: 34),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+              constraints: BoxConstraints(minHeight: DS.s(34)),
+              padding: DS.sym(h: 16, v: 6),
               decoration: BoxDecoration(
                 color: on ? accent : FitnessAppTheme.white,
-                borderRadius: BorderRadius.circular(24),
+                borderRadius: DS.circular(24),
                 border: Border.all(color: accent.withValues(alpha: on ? 1 : 0.6)),
               ),
               child: Row(
@@ -64,17 +64,17 @@ class TripChipView extends StatelessWidget {
                 children: [
                   if (chip.iconAsset != null) ...[
                     TravelIcon(chip.iconAsset!, size: 16),
-                    const SizedBox(width: 5),
+                    Gap.h(5),
                   ] else if (chip.icon != null) ...[
-                    Icon(chip.icon, size: 14, color: fg),
-                    const SizedBox(width: 5),
+                    Icon(chip.icon, size: DS.s(14), color: fg),
+                    Gap.h(5),
                   ],
                   Flexible(
                     child: Text(
                       chip.label,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, fontWeight: FontWeight.w600, letterSpacing: 0.27, color: fg),
+                      style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: DS.f(12), fontWeight: FontWeight.w600, letterSpacing: 0.27, color: fg),
                     ),
                   ),
                 ],

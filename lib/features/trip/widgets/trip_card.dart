@@ -45,8 +45,8 @@ class TripProgressRing extends StatelessWidget {
     final p = percent.clamp(0, 100).toInt();
     final a = animation;
     return Container(
-      width: size,
-      height: size,
+      width: DS.s(size),
+      height: DS.s(size),
       decoration: fill == null ? null : BoxDecoration(color: fill, shape: BoxShape.circle),
       child: Stack(
         alignment: Alignment.center,
@@ -58,7 +58,7 @@ class TripProgressRing extends StatelessWidget {
             '$p%',
             textScaler: MediaQuery.textScalerOf(context).clamp(maxScaleFactor: 1.15),
             style: TextStyle(
-                fontFamily: FitnessAppTheme.fontName, fontSize: size * 0.21, fontWeight: FontWeight.w700, color: textColor),
+                fontFamily: FitnessAppTheme.fontName, fontSize: DS.f(size * 0.21), fontWeight: FontWeight.w700, color: textColor),
           ),
         ],
       ),
@@ -100,11 +100,11 @@ class TripCard extends StatelessWidget {
   }
 
   Widget _menu() => PopupMenuButton<String>(
-        constraints: const BoxConstraints(minWidth: 140),
-        icon: const Icon(Icons.more_vert_rounded, size: 22, color: DesignColors.onPrimary),
+        constraints: BoxConstraints(minWidth: DS.s(140)),
+        icon: Icon(Icons.more_vert_rounded, size: DS.s(22), color: DesignColors.onPrimary),
         color: DesignColors.surface,
         elevation: 8,
-        shape: const RoundedRectangleBorder(borderRadius: CardRadius.tile),
+        shape: RoundedRectangleBorder(borderRadius: DS.br(CardRadius.tile)),
         onSelected: (v) {
           if (v == 'share') onShare?.call();
           if (v == 'complete') onMarkComplete?.call();
@@ -114,18 +114,18 @@ class TripCard extends StatelessWidget {
           if (onShare != null)
             PopupMenuItem(
               value: 'share',
-              height: 44,
+              height: DS.s(44),
               child: Text(TripStringsA5.share, style: TypeTokens.style(14, FontWeight.w500)),
             ),
           if (onMarkComplete != null)
             PopupMenuItem(
               value: 'complete',
-              height: 44,
+              height: DS.s(44),
               child: Text(TripStrings.markComplete, style: TypeTokens.style(14, FontWeight.w500)),
             ),
           PopupMenuItem(
             value: 'delete',
-            height: 44,
+            height: DS.s(44),
             child: Text(TripStrings.delete, style: TypeTokens.style(14, FontWeight.w500, color: DesignColors.error)),
           ),
         ],

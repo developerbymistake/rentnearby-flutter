@@ -89,7 +89,7 @@ class _CancelBodyState extends State<_CancelBody> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           GradientPillButton(tone: tone, label: TripStrings.cancelBooking, danger: true, loading: _saving, onTap: _saving ? null : _cancel),
-          const SizedBox(height: 10),
+          Gap.v(10),
           WhitePillButton(tone: tone, label: TripStrings.keepBooking, onTap: _saving ? null : () => Navigator.pop(context, false)),
         ],
       ),
@@ -113,7 +113,7 @@ class _CancelBodyState extends State<_CancelBody> {
             inputFormatters: [...noEmojiInputFormatters, LengthLimitingTextInputFormatter(TripConstants.cancelReasonMax)],
           ),
         if (_pastCheckIn)
-          RepliesBanner(art: ListingArt.roundPushpin, text: owner ? _Copy.tellGuest : TripStrings.tellHostBeforeLeaving, margin: const EdgeInsets.only(top: 14)),
+          RepliesBanner(art: ListingArt.roundPushpin, text: owner ? _Copy.tellGuest : TripStrings.tellHostBeforeLeaving, margin: EdgeInsets.only(top: DS.gv(14))),
       ],
     );
   }

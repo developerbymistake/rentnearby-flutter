@@ -11,49 +11,49 @@ class TripBackToPlanBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(12, 4, 8, 4),
+      padding: DS.insets(l: 12, t: 4, r: 8, b: 4),
       decoration: BoxDecoration(
         color: FitnessAppTheme.white,
-        borderRadius: TripKit.cardRadiusSmall,
-        boxShadow: TripKit.shadow(),
+        borderRadius: DS.br(TripKit.cardRadiusSmall),
+        boxShadow: DS.shadows(TripKit.shadow()),
       ),
       child: Row(
         children: [
           const TravelIcon(TravelIcon.note, size: 18),
-          const SizedBox(width: 8),
+          Gap.h(8),
           Expanded(
             child: Text(
               label,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
+              style: TextStyle(
                   fontFamily: FitnessAppTheme.fontName,
-                  fontSize: 12,
+                  fontSize: DS.f(12),
                   fontWeight: FontWeight.w600,
                   letterSpacing: 0.2,
                   color: FitnessAppTheme.darkerText),
             ),
           ),
-          const SizedBox(width: 8),
+          Gap.h(8),
           Material(
             color: FitnessAppTheme.nearlyDarkBlue,
-            borderRadius: BorderRadius.circular(24),
+            borderRadius: DS.circular(24),
             child: InkWell(
               onTap: TripNavigation.backToPlan,
               splashColor: FitnessAppTheme.white.withValues(alpha: Alpha.soft),
               highlightColor: Colors.transparent,
-              borderRadius: BorderRadius.circular(24),
+              borderRadius: DS.circular(24),
               child: ConstrainedBox(
-                constraints: const BoxConstraints(minHeight: 40),
-                child: const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 14),
+                constraints: BoxConstraints(minHeight: DS.s(40)),
+                child: Padding(
+                  padding: DS.sym(h: 14),
                   child: Center(
                     widthFactor: 1,
                     child: Text(
                       TripStringsV2Find.backToPlan,
                       style: TextStyle(
                           fontFamily: FitnessAppTheme.fontName,
-                          fontSize: 12.5,
+                          fontSize: DS.f(12.5),
                           fontWeight: FontWeight.w700,
                           letterSpacing: 0.27,
                           color: FitnessAppTheme.white),

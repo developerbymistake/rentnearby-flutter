@@ -103,7 +103,7 @@ class _TripPopularRailState extends State<TripPopularRail> {
       width: width,
       description: place,
       art: cover == null ? art : null,
-      photo: cover == null ? null : KitPhoto(url: cover, width: 100, height: 100, asset: TravelIcon.map, iconSize: 40),
+      photo: cover == null ? null : KitPhoto(url: cover, width: DS.s(100), height: DS.s(100), asset: TravelIcon.map, iconSize: 40),
       number: hasNumber ? '$spots' : null,
       unit: TripStringsTab.cityUnit(spots),
       onTap: () => TripNavigation.startWithCities([city]),

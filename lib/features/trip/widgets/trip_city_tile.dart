@@ -54,7 +54,7 @@ class TripCityTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final spots = city.spotCount;
     final scaler = MediaQuery.textScalerOf(context);
-    final room = width - MealsCardV.cellPadding.horizontal - 32;
+    final room = width - MealsCardV.cellPadding.horizontal - DS.s(32);
     final placed = placeLines(city);
     final lines = (hub && placed.isNotEmpty ? [placed.last] : placed).map((e) => _fit(e, room, scaler)).toList();
     final place = lines.join('\n');
@@ -70,8 +70,8 @@ class TripCityTile extends StatelessWidget {
             ? null
             : KitPhoto(
                 url: cover,
-                width: 100,
-                height: 100,
+                width: DS.s(100),
+                height: DS.s(100),
                 tone: TripCityArt.toneOf(city.cityKey),
                 asset: TravelIcon.map,
                 iconSize: 40,

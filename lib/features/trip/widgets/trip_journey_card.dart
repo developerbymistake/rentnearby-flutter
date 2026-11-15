@@ -171,17 +171,17 @@ class TripJourneyCard {
     final again = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape: const RoundedRectangleBorder(borderRadius: CardRadius.tile),
-        title: const Text(
+        shape: RoundedRectangleBorder(borderRadius: DS.br(CardRadius.tile)),
+        title: Text(
           TripStringsJourneyCard.startChanged,
-          style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontWeight: FontWeight.w600, fontSize: 17),
+          style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontWeight: FontWeight.w600, fontSize: DS.f(17)),
         ),
         content: Text(
           TripStringsJourneyCard.searchFromAgain(city),
-          style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 13, color: FitnessAppTheme.darkText),
+          style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: DS.f(13), color: FitnessAppTheme.darkText),
         ),
         actionsOverflowDirection: VerticalDirection.down,
-        actionsOverflowButtonSpacing: 4,
+        actionsOverflowButtonSpacing: DS.gv(4),
         actions: [
           TextLink(label: TripStringsJourneyCard.later, onTap: () => Navigator.pop(ctx, false), tone: KitTone.trip),
           TextLink(label: TripStringsJourneyCard.searchAgain, onTap: () => Navigator.pop(ctx, true), tone: KitTone.trip),

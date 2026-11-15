@@ -55,10 +55,10 @@ class TripJourneyCompact extends StatelessWidget {
                 ? KitRouteReveal(child: _railRow())
                 : KitRouteReveal(axis: Axis.vertical, child: _railColumn()),
           ),
-          const SizedBox(height: 10),
+          Gap.v(10),
         ],
         for (var i = 0; i < legs.length; i++) ...[
-          if (i > 0) const SizedBox(height: 10),
+          if (i > 0) Gap.v(10),
           _legBlock(legs[i], i, single: legs.length == 1),
         ],
       ],
@@ -78,20 +78,20 @@ class TripJourneyCompact extends StatelessWidget {
           _nodes.join(' → '),
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
-          style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 13, fontWeight: FontWeight.w700, color: FitnessAppTheme.darkerText),
+          style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: DS.f(13), fontWeight: FontWeight.w700, color: FitnessAppTheme.darkerText),
         ),
         if (fares.isNotEmpty) ...[
-          const SizedBox(height: 2),
+          Gap.v(2),
           Text(
             fares,
             maxLines: 3,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, color: FitnessAppTheme.lightText),
+            style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: DS.f(12), color: FitnessAppTheme.lightText),
           ),
         ],
         if (showContacts)
           for (var i = 0; i < legs.length; i++) ...[
-            const SizedBox(height: 8),
+            Gap.v(8),
             _contacts(legs[i]),
           ],
       ],
@@ -104,32 +104,32 @@ class TripJourneyCompact extends StatelessWidget {
     final children = <Widget>[];
     for (var i = 0; i < nodes.length; i++) {
       final change = i > 0 && i < nodes.length - 1;
-      children.add(SizedBox(width: change ? 64 : 56, child: _node(nodes[i], change: change)));
+      children.add(SizedBox(width: DS.s(change ? 64 : 56), child: _node(nodes[i], change: change)));
       if (i < legs.length) {
         final l = legs[i];
         children.add(Expanded(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 2),
+            padding: DS.sym(h: 2),
             child: Column(
               children: [
                 TravelIcon(TravelIcon.taxi, size: 14),
-                const SizedBox(height: 3),
+                Gap.v(3),
                 Container(
-                  height: 5,
+                  height: DS.s(5),
                   decoration: BoxDecoration(
                     color: l.driverAvailable ? legColor(i) : TripUi.warn,
                     borderRadius: CardRadius.pill,
                   ),
                 ),
-                const SizedBox(height: 3),
+                Gap.v(3),
                 if (fareOf(l.listedFare) != null)
                   FittedBox(
                     fit: BoxFit.scaleDown,
                     child: Text(
                       fareOf(l.listedFare)!,
                       maxLines: 1,
-                      style: const TextStyle(
-                          fontFamily: FitnessAppTheme.fontName, fontSize: 11, fontWeight: FontWeight.w800, color: TripUi.warn),
+                      style: TextStyle(
+                          fontFamily: FitnessAppTheme.fontName, fontSize: DS.f(11), fontWeight: FontWeight.w800, color: TripUi.warn),
                     ),
                   ),
               ],
@@ -144,31 +144,31 @@ class TripJourneyCompact extends StatelessWidget {
   Widget _node(String name, {required bool change}) {
     return Column(
       children: [
-        const SizedBox(height: 8),
+        SizedBox(height: DS.s(8)),
         Container(
-          width: 12,
-          height: 12,
+          width: DS.s(12),
+          height: DS.s(12),
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: change ? FitnessAppTheme.white : TripUi.taxiDark,
-            border: change ? Border.all(color: TripUi.warn, width: 3) : null,
+            border: change ? Border.all(color: TripUi.warn, width: DS.s(3)) : null,
           ),
         ),
-        const SizedBox(height: 4),
+        Gap.v(4),
         Text(
           name,
           textAlign: TextAlign.center,
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
-          style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 11, fontWeight: FontWeight.w700, color: FitnessAppTheme.darkerText),
+          style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: DS.f(11), fontWeight: FontWeight.w700, color: FitnessAppTheme.darkerText),
         ),
         if (change)
-          const Text(
+          Text(
             TripStringsStepsA2.changeCar,
             textAlign: TextAlign.center,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 11, fontWeight: FontWeight.w700, color: TripUi.warn),
+            style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: DS.f(11), fontWeight: FontWeight.w700, color: TripUi.warn),
           ),
       ],
     );
@@ -183,20 +183,20 @@ class TripJourneyCompact extends StatelessWidget {
       rows.add(Row(
         children: [
           SizedBox(
-            width: 20,
+            width: DS.s(20),
             child: Center(
               child: Container(
-                width: 12,
-                height: 12,
+                width: DS.s(12),
+                height: DS.s(12),
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: change ? FitnessAppTheme.white : TripUi.taxiDark,
-                  border: change ? Border.all(color: TripUi.warn, width: 3) : null,
+                  border: change ? Border.all(color: TripUi.warn, width: DS.s(3)) : null,
                 ),
               ),
             ),
           ),
-          const SizedBox(width: 8),
+          Gap.h(8),
           Expanded(
             child: Text(
               change ? '${nodes[i]} · ${TripStringsStepsA2.changeCar}' : nodes[i],
@@ -204,7 +204,7 @@ class TripJourneyCompact extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 fontFamily: FitnessAppTheme.fontName,
-                fontSize: 12,
+                fontSize: DS.f(12),
                 fontWeight: FontWeight.w700,
                 color: change ? TripUi.warn : FitnessAppTheme.darkerText,
               ),
@@ -220,20 +220,20 @@ class TripJourneyCompact extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               SizedBox(
-                width: 20,
+                width: DS.s(20),
                 child: Center(
-                  child: Container(width: 4, decoration: BoxDecoration(color: color, borderRadius: CardRadius.pill)),
+                  child: Container(width: DS.s(4), decoration: BoxDecoration(color: color, borderRadius: CardRadius.pill)),
                 ),
               ),
-              const SizedBox(width: 8),
+              Gap.h(8),
               Expanded(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  padding: DS.sym(v: 6),
                   child: Text(
                     [TripStringsStepsA2.carDriver(i + 1), ?fareOf(l.listedFare)].join(' · '),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 11, color: FitnessAppTheme.lightText),
+                    style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: DS.f(11), color: FitnessAppTheme.lightText),
                   ),
                 ),
               ),
@@ -259,10 +259,10 @@ class TripJourneyCompact extends StatelessWidget {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Container(width: 5, color: paused ? TripUi.warn : (tone ?? TripUi.taxiDark)),
+                    Container(width: DS.s(5), color: paused ? TripUi.warn : (tone ?? TripUi.taxiDark)),
                     Expanded(
                       child: Padding(
-                        padding: const EdgeInsets.fromLTRB(10, 9, 10, 9),
+                        padding: DS.insets(l: 10, t: 9, r: 10, b: 9),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -297,7 +297,7 @@ class TripJourneyCompact extends StatelessWidget {
             ]),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, color: FitnessAppTheme.lightText),
+            style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: DS.f(12), color: FitnessAppTheme.lightText),
           );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -305,11 +305,11 @@ class TripJourneyCompact extends StatelessWidget {
       children: [
         head,
         if (paused) ...[
-          const SizedBox(height: 6),
+          Gap.v(6),
           _pausedLine(name, l.backupName),
         ],
         if (showContacts) ...[
-          const SizedBox(height: 8),
+          Gap.v(8),
           _contacts(l),
         ],
       ],
@@ -319,18 +319,18 @@ class TripJourneyCompact extends StatelessWidget {
   Widget _pausedLine(String name, String? backup) => Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Padding(
-            padding: EdgeInsets.only(top: 1),
-            child: TravelIcon(TravelIcon.calendar, size: 16),
+          Padding(
+            padding: EdgeInsets.only(top: DS.s(1)),
+            child: const TravelIcon(TravelIcon.calendar, size: 16),
           ),
-          const SizedBox(width: 6),
+          Gap.h(6),
           Expanded(
             child: Text(
               TripStringsStepsA2.driverPaused(name, backup),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                  fontFamily: FitnessAppTheme.fontName, fontSize: 12, fontWeight: FontWeight.w600, color: TripUi.warn),
+              style: TextStyle(
+                  fontFamily: FitnessAppTheme.fontName, fontSize: DS.f(12), fontWeight: FontWeight.w600, color: TripUi.warn),
             ),
           ),
         ],

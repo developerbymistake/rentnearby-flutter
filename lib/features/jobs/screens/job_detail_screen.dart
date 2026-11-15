@@ -120,13 +120,13 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                 Padding(
                   padding: EdgeInsets.fromLTRB(DS.s(18), DS.gv(6), DS.s(18), 0),
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    const SkeletonBox(height: 14, width: 120),
+                    SkeletonBox(height: DS.s(14), width: DS.s(120)),
                     Gap.v(12),
-                    const SkeletonBox(height: 28),
+                    SkeletonBox(height: DS.s(28)),
                     Gap.v(18),
-                    const SkeletonBox(height: 330, radius: 24),
+                    SkeletonBox(height: DS.s(330), radius: DS.radius(24)),
                     Gap.v(24),
-                    const SkeletonBox(height: 110, radius: 24),
+                    SkeletonBox(height: DS.s(110), radius: DS.radius(24)),
                   ]),
                 ),
               ],

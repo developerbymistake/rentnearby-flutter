@@ -24,7 +24,7 @@ void main() {
         ),
       ),
     ));
-    expect(t.widgetList<Art3D>(find.byType(Art3D)).where((a) => a.asset == ListingArt.key), isNotEmpty);
+    expect(t.widgetList<Art3D>(find.byType(Art3D)).where((a) => a.asset == ListingArt.stay), isNotEmpty);
     expect(find.byIcon(Icons.call_rounded), findsOneWidget);
     await t.tap(find.byIcon(Icons.call_rounded));
     expect(called, 1);

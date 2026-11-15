@@ -65,7 +65,7 @@ class TripMapTravelBlock extends StatelessWidget {
           open = Align(
             alignment: Alignment.centerLeft,
             child: Padding(
-              padding: const EdgeInsets.only(top: 8),
+              padding: EdgeInsets.only(top: DS.gv(8)),
               child: WhitePillButton(
                 tone: ListingTone.coral,
                 onGradient: true,
@@ -95,18 +95,18 @@ class TripMapTravelBlock extends StatelessWidget {
           Row(
             children: [
               const TravelIcon(TravelIcon.taxi, size: 14),
-              const SizedBox(width: 6),
+              Gap.h(6),
               Expanded(
                 child: Text(
                   route,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12.5, fontWeight: FontWeight.w700, color: DesignColors.textInverse),
+                  style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: DS.f(12.5), fontWeight: FontWeight.w700, color: DesignColors.textInverse),
                 ),
               ),
             ],
           ),
-          for (final r in rows) ...[SizedBox(height: dense ? 6 : 8), r],
+          for (final r in rows) ...[Gap.v(dense ? 6 : 8), r],
           ?open,
         ],
       );
@@ -145,19 +145,19 @@ class TripMapTravelBlock extends StatelessWidget {
     return Row(
       children: [
         Container(
-          width: 30,
-          height: 30,
+          width: DS.s(30),
+          height: DS.s(30),
           alignment: Alignment.center,
           decoration: const BoxDecoration(color: DesignColors.surface, shape: BoxShape.circle),
           child: initial != null
               ? Text(
                   initial,
                   maxLines: 1,
-                  style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 13, fontWeight: FontWeight.w700, color: tone),
+                  style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: DS.f(13), fontWeight: FontWeight.w700, color: tone),
                 )
-              : Image.asset('assets/images/design/travel3d/$icon.png', width: 18, height: 18),
+              : Image.asset('assets/images/design/travel3d/$icon.png', width: DS.s(18), height: DS.s(18)),
         ),
-        const SizedBox(width: 10),
+        Gap.h(10),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -167,14 +167,14 @@ class TripMapTravelBlock extends StatelessWidget {
                 title,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12.5, fontWeight: FontWeight.w700, color: DesignColors.textInverse),
+                style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: DS.f(12.5), fontWeight: FontWeight.w700, color: DesignColors.textInverse),
               ),
               if (subtitle != null && subtitle.isNotEmpty)
                 Text(
                   subtitle,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 11.5, color: DesignColors.whiteHigh),
+                  style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: DS.f(11.5), color: DesignColors.whiteHigh),
                 ),
             ],
           ),

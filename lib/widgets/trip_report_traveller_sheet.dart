@@ -142,7 +142,7 @@ class _ReportBodyState extends State<_ReportBody> {
   Widget _reasonsEmpty() {
     if (_loading) {
       return Column(children: [
-        for (var i = 0; i < 3; i++) Padding(padding: EdgeInsets.only(top: DS.gv(12)), child: const SkeletonBox(height: 70, radius: 20)),
+        for (var i = 0; i < 3; i++) Padding(padding: EdgeInsets.only(top: DS.gv(12)), child: SkeletonBox(height: DS.s(70), radius: DS.radius(20))),
       ]);
     }
     return StateCard3D(

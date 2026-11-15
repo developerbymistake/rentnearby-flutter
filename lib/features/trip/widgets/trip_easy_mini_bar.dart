@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:bakhli/design/extra/motion_kit.dart';
+import 'package:bakhli/design/design.dart';
 import 'package:bakhli/design/extra/trip_plan_look.dart';
-import 'package:bakhli/design/template/fitness_app_theme.dart';
 import 'package:get/get.dart';
 import '../controllers/trip_plan_controller.dart';
 import '../models/trip_plan_model.dart';
@@ -59,48 +58,48 @@ class _TripEasyMiniBarState extends State<TripEasyMiniBar> with SingleTickerProv
       return DecoratedBox(
         decoration: TripLook.card(),
         child: InkWell(
-          borderRadius: TripLook.softRadius,
+          borderRadius: DS.br(TripLook.softRadius),
           splashColor: Colors.transparent,
           highlightColor: Colors.transparent,
           onTap: () => TripNavigation.openRepliesForRow(row.key),
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(14, 6, 6, 6),
+            padding: DS.insets(l: 14, t: 6, r: 6, b: 6),
             child: Row(
               children: [
                 FadeTransition(
                   opacity: _fade,
                   child: Container(
-                    width: 8,
-                    height: 8,
+                    width: DS.s(8),
+                    height: DS.s(8),
                     decoration: const BoxDecoration(color: TripLook.warning, shape: BoxShape.circle),
                   ),
                 ),
-                const SizedBox(width: 10),
+                Gap.h(10),
                 Expanded(
                   child: Text(
                     TripEasyMiniBar.lineOf(row),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                        fontFamily: FitnessAppTheme.fontName, fontSize: 13, fontWeight: FontWeight.w600, color: TripLook.textDark),
+                    style: TextStyle(
+                        fontFamily: FitnessAppTheme.fontName, fontSize: DS.f(13), fontWeight: FontWeight.w600, color: TripLook.textDark),
                   ),
                 ),
                 InkWell(
                   onTap: () => TripNavigation.openRepliesForRow(row.key),
                   splashColor: Colors.transparent,
                   highlightColor: Colors.transparent,
-                  child: const SizedBox(
-                    height: 44,
+                  child: SizedBox(
+                    height: DS.s(44),
                     child: Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 12),
+                      padding: DS.sym(h: 12),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(TripStringsV2Easy.view,
                               style: TextStyle(
-                                  fontFamily: FitnessAppTheme.fontName, fontSize: 13, fontWeight: FontWeight.w700, color: FitnessAppTheme.nearlyDarkBlue)),
-                          SizedBox(width: 4),
-                          Icon(Icons.arrow_forward, size: 16, color: FitnessAppTheme.nearlyDarkBlue),
+                                  fontFamily: FitnessAppTheme.fontName, fontSize: DS.f(13), fontWeight: FontWeight.w700, color: FitnessAppTheme.nearlyDarkBlue)),
+                          Gap.h(4),
+                          Icon(Icons.arrow_forward, size: DS.s(16), color: FitnessAppTheme.nearlyDarkBlue),
                         ],
                       ),
                     ),

@@ -28,7 +28,7 @@ class TripDaySpotList extends StatelessWidget {
     await TripLegMenuSheet.addPlaces(legIndex, pickDay: day, replaceSpotId: spotId);
   }
 
-  static const BorderRadius _radius = kMealsRadius;
+  static BorderRadius get _radius => DS.br(kMealsRadius);
 
   @override
   Widget build(BuildContext context) {
@@ -57,12 +57,12 @@ class TripDaySpotList extends StatelessWidget {
           clipBehavior: Clip.none,
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(18, 40, 18, 16),
+              padding: EdgeInsets.fromLTRB(DS.s(18), DS.s(40), DS.s(18), DS.gv(16)),
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   color: DesignColors.surface,
                   borderRadius: _radius,
-                  boxShadow: [BoxShadow(color: tone.shadow, offset: const Offset(1.1, 6), blurRadius: 14)],
+                  boxShadow: [BoxShadow(color: tone.shadow, offset: DS.shadowOffset(const Offset(1.1, 6)), blurRadius: DS.shadowBlur(14))],
                 ),
                 child: ClipRRect(
                   borderRadius: _radius,
@@ -70,9 +70,9 @@ class TripDaySpotList extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      _header(c, plan, d, color, editing, narrow ? 104.0 : 120.0),
+                      _header(c, plan, d, color, editing, DS.s(narrow ? 104.0 : 120.0)),
                       Padding(
-                        padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+                        padding: EdgeInsets.fromLTRB(DS.s(12), DS.s(10), DS.s(12), DS.s(10)),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           mainAxisSize: MainAxisSize.min,
@@ -83,11 +83,11 @@ class TripDaySpotList extends StatelessWidget {
                               _spots(context, c, plan, d, color, locked, editing),
                             for (final text in closed)
                               Padding(
-                                padding: const EdgeInsets.only(top: 8),
+                                padding: EdgeInsets.only(top: DS.gv(8)),
                                 child: Row(
                                   children: [
                                     const Art3D(asset: ListingArt.clipboard, size: 20, shadowBlur: 2, shadowOffset: Offset(1, 2)),
-                                    const SizedBox(width: 8),
+                                    Gap.h(8),
                                     Expanded(
                                       child: Text(text, style: Ink3D.text(12, FontWeight.w600, TripLook.warningText)),
                                     ),
@@ -104,7 +104,7 @@ class TripDaySpotList extends StatelessWidget {
               ),
             ),
             Positioned(
-              left: 22,
+              left: DS.s(22),
               top: 0,
               child: IgnorePointer(
                 child: Art3D(asset: _dayArts[(day - 1) % _dayArts.length], size: artSize, halo: artSize + 4, haloColor: DesignColors.tint(DesignColors.surface, Alpha.v22)),
@@ -117,11 +117,11 @@ class TripDaySpotList extends StatelessWidget {
   }
 
   Widget _emptyBody(TripDay d) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 14),
+        padding: DS.sym(v: 14),
         child: Column(
           children: [
             Art3D(asset: d.restDay ? ListingArt.bed : ListingArt.compass, size: 72),
-            const SizedBox(height: 6),
+            Gap.v(6),
             Text(
               d.restDay ? TripStringsV2Plan.restDay : TripStringsV2Plan.noPlacesThisDay,
               textAlign: TextAlign.center,
@@ -139,8 +139,8 @@ class TripDaySpotList extends StatelessWidget {
     final title = TripStringsV2Plan.dayHeaderEmpty(day, dateText);
     const white = DesignColors.surface;
     return Container(
-      constraints: const BoxConstraints(minHeight: 96),
-      padding: EdgeInsets.fromLTRB(artRoom, 14, 12, 12),
+      constraints: BoxConstraints(minHeight: DS.s(96)),
+      padding: EdgeInsets.fromLTRB(artRoom, DS.s(14), DS.s(12), DS.s(12)),
       decoration: BoxDecoration(gradient: ListingTone.indigo.gradient),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -149,11 +149,11 @@ class TripDaySpotList extends StatelessWidget {
           Row(
             children: [
               Container(
-                width: 14,
-                height: 14,
-                decoration: BoxDecoration(color: color, shape: BoxShape.circle, border: Border.all(color: white, width: 2.5)),
+                width: DS.s(14),
+                height: DS.s(14),
+                decoration: BoxDecoration(color: color, shape: BoxShape.circle, border: Border.all(color: white, width: DS.s(2.5))),
               ),
-              const SizedBox(width: 8),
+              Gap.h(8),
               Expanded(
                 child: Text(
                   title,
@@ -166,10 +166,10 @@ class TripDaySpotList extends StatelessWidget {
           ),
           if (d.spots.isNotEmpty)
             Padding(
-              padding: const EdgeInsets.only(top: 2),
+              padding: EdgeInsets.only(top: DS.s(2)),
               child: Wrap(
-                spacing: 6,
-                runSpacing: 4,
+                spacing: DS.gh(6),
+                runSpacing: DS.gv(4),
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
                   Text(TripFormat.duration(load), style: Ink3D.text(12.5, FontWeight.w600, white)),
@@ -177,10 +177,10 @@ class TripDaySpotList extends StatelessWidget {
                 ],
               ),
             ),
-          const SizedBox(height: 8),
+          Gap.v(8),
           Wrap(
-            spacing: 6,
-            runSpacing: 6,
+            spacing: DS.gh(6),
+            runSpacing: DS.gv(6),
             children: [
               _pill(TripStringsV2Plan.placesCount(d.spots.length)),
               if (plan.isMultiCity) _pill(c.cityNameOf(day)),
@@ -198,8 +198,8 @@ class TripDaySpotList extends StatelessWidget {
   }
 
   Widget _pill(String text, {Color? fill, Color? ink}) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-        decoration: BoxDecoration(color: fill ?? DesignColors.tint(DesignColors.surface, Alpha.v26), borderRadius: BorderRadius.circular(10)),
+        padding: DS.sym(h: 10, v: 3),
+        decoration: BoxDecoration(color: fill ?? DesignColors.tint(DesignColors.surface, Alpha.v26), borderRadius: DS.circular(10)),
         child: Text(text, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(11, FontWeight.w700, ink ?? DesignColors.surface)),
       );
 
@@ -246,13 +246,13 @@ class TripDaySpotList extends StatelessWidget {
       children: [
         if (travel && prev != null)
           Container(
-            margin: const EdgeInsets.only(bottom: 6),
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-            decoration: BoxDecoration(color: ListingTone.indigo.tint, borderRadius: BorderRadius.circular(12)),
+            margin: EdgeInsets.only(bottom: DS.gv(6)),
+            padding: DS.sym(h: 10, v: 8),
+            decoration: BoxDecoration(color: ListingTone.indigo.tint, borderRadius: DS.circular(12)),
             child: Row(
               children: [
                 const Art3D(asset: ListingArt.taxi, size: 22, shadowBlur: 2, shadowOffset: Offset(1, 2)),
-                const SizedBox(width: 8),
+                Gap.h(8),
                 Expanded(
                   child: Text(
                     TripStringsV2Plan.travelRow(prev, plan.legAt(k)?.cityName ?? '', TripFormat.duration(reserved)),
@@ -298,7 +298,7 @@ class TripDaySpotList extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: [
-        const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Divider(height: 1, color: Ink3D.line)),
+        Padding(padding: DS.sym(v: 8), child: const Divider(height: 1, color: Ink3D.line)),
         Row(
           children: [
             Expanded(
@@ -308,7 +308,7 @@ class TripDaySpotList extends StatelessWidget {
                 full ? null : () => TripLegMenuSheet.addPlaces(d.leg, pickDay: day),
               ),
             ),
-            const SizedBox(width: 10),
+            Gap.h(10),
             Expanded(
               child: _action(
                 ListingArt.bed,
@@ -330,7 +330,7 @@ class TripDaySpotList extends StatelessWidget {
                     TripUpdateAskSheet.afterDaysEdit();
                   }
                 : null,
-            margin: const EdgeInsets.only(top: 10),
+            margin: EdgeInsets.only(top: DS.gv(10)),
           ),
       ],
     );
@@ -365,14 +365,14 @@ class TripDaySpotList extends StatelessWidget {
         onTap: onTap,
         label: label,
         child: Container(
-          constraints: const BoxConstraints(minHeight: 44),
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
-          decoration: BoxDecoration(color: tone.tint, borderRadius: BorderRadius.circular(24)),
+          constraints: BoxConstraints(minHeight: DS.s(44)),
+          padding: DS.sym(h: 6, v: 6),
+          decoration: BoxDecoration(color: tone.tint, borderRadius: DS.circular(24)),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Art3D(asset: art, size: 20, shadowBlur: 2, shadowOffset: const Offset(1, 2)),
-              const SizedBox(width: 5),
+              Gap.h(5),
               Flexible(
                 child: Text(label, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(11.5, FontWeight.w600, tone.text)),
               ),
@@ -447,7 +447,7 @@ class _StopItem extends StatelessWidget {
   Widget build(BuildContext context) {
     final drive = driveMinutes;
     final narrow = MediaQuery.sizeOf(context).width < 340;
-    final timeW = MediaQuery.textScalerOf(context).scale(narrow ? 52 : 60);
+    final timeW = MediaQuery.textScalerOf(context).scale(DS.s(narrow ? 52 : 60));
     return Material(
       color: DesignColors.surface,
       child: Column(
@@ -455,19 +455,19 @@ class _StopItem extends StatelessWidget {
         children: [
           InkWell(
             onTap: onTap,
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: DS.circular(10),
             child: ConstrainedBox(
-              constraints: const BoxConstraints(minHeight: 50),
+              constraints: BoxConstraints(minHeight: DS.s(50)),
               child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
+                padding: DS.sym(v: 4),
                 child: Row(
                   children: [
                     if (editing)
                       ReorderableDelayedDragStartListener(
                         index: index,
-                        child: const Padding(
-                          padding: EdgeInsets.only(right: 4),
-                          child: Icon(Icons.drag_indicator_rounded, size: 20, color: TripLook.textHint),
+                        child: Padding(
+                          padding: EdgeInsets.only(right: DS.s(4)),
+                          child: Icon(Icons.drag_indicator_rounded, size: DS.s(20), color: TripLook.textHint),
                         ),
                       ),
                     SizedBox(
@@ -475,13 +475,13 @@ class _StopItem extends StatelessWidget {
                       child: Text(time, maxLines: 1, style: Ink3D.text(11.5, FontWeight.w600, Ink3D.sub)),
                     ),
                     Container(
-                      width: 26,
-                      height: 26,
+                      width: DS.s(26),
+                      height: DS.s(26),
                       alignment: Alignment.center,
                       decoration: BoxDecoration(color: color, shape: BoxShape.circle),
                       child: Text('${index + 1}', style: Ink3D.text(11.5, FontWeight.w700, DesignColors.surface)),
                     ),
-                    const SizedBox(width: 10),
+                    Gap.h(10),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -501,17 +501,17 @@ class _StopItem extends StatelessWidget {
                       IconButton(
                         onPressed: onRemove,
                         tooltip: TripStringsV2Plan.removePlace,
-                        constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+                        constraints: BoxConstraints(minWidth: DS.s(44), minHeight: DS.s(44)),
                         icon: Container(
-                          width: 32,
-                          height: 32,
+                          width: DS.s(32),
+                          height: DS.s(32),
                           decoration: BoxDecoration(color: TripLook.errorSurface, shape: BoxShape.circle),
-                          child: const Icon(Icons.close_rounded, size: 18, color: TripLook.error),
+                          child: Icon(Icons.close_rounded, size: DS.s(18), color: TripLook.error),
                         ),
                       )
                     else
                       Padding(
-                        padding: const EdgeInsets.only(left: 6),
+                        padding: EdgeInsets.only(left: DS.s(6)),
                         child: Art3D(asset: TripSpotLook.assetOf(spot.category), size: 34, shadowBlur: 2, shadowOffset: const Offset(1, 3)),
                       ),
                   ],
@@ -521,18 +521,18 @@ class _StopItem extends StatelessWidget {
           ),
           if (showDrive)
             Padding(
-              padding: EdgeInsets.only(left: (editing ? 24 : 0) + timeW + 12),
+              padding: EdgeInsets.only(left: DS.s(editing ? 24 : 0) + timeW + DS.s(12)),
               child: Container(
-                padding: const EdgeInsets.only(left: 19, top: 2, bottom: 2),
+                padding: EdgeInsets.only(left: DS.s(19), top: DS.s(2), bottom: DS.s(2)),
                 decoration: BoxDecoration(
-                  border: Border(left: BorderSide(color: color.withValues(alpha: Alpha.scrim), width: 2)),
+                  border: Border(left: BorderSide(color: color.withValues(alpha: Alpha.scrim), width: DS.s(2))),
                 ),
                 child: drive == null
-                    ? const SizedBox(height: 14)
+                    ? SizedBox(height: DS.s(14))
                     : Row(
                         children: [
                           const Art3D(asset: ListingArt.taxi, size: 16, shadowBlur: 0),
-                          const SizedBox(width: 6),
+                          Gap.h(6),
                           Text(TripFormat.duration(drive), style: Ink3D.text(11.5, FontWeight.w500, Ink3D.grey)),
                         ],
                       ),

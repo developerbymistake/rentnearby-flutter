@@ -5,7 +5,7 @@ import '../design/design.dart';
 import '../models/home_feed_model.dart';
 
 class HomeStayRailCard extends StatelessWidget {
-  static const double cellWidth = 160;
+  static double get cellWidth => DS.s(160);
 
   final HomeStayModel stay;
   final VoidCallback? onOpen;
@@ -24,7 +24,7 @@ class HomeStayRailCard extends StatelessWidget {
       title: item.title,
       description: item.placeName ?? item.locationLabel,
       chips: item.distanceLabel == null ? null : [item.distanceLabel!],
-      photo: hasPhoto ? KitPhoto(url: url, width: 100, height: 100, asset: TravelIcon.stay, iconSize: DS.s(40)) : null,
+      photo: hasPhoto ? KitPhoto(url: url, width: DS.s(100), height: DS.s(100), asset: TravelIcon.stay, iconSize: 40) : null,
       sticker: hasPhoto ? ListingArt.stay : null,
       art: hasPhoto ? null : ListingArt.stay,
       caption: item.priceCaption,

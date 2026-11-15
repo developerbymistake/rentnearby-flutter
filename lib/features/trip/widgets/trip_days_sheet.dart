@@ -126,7 +126,7 @@ class _TripDaysSheetState extends State<TripDaysSheet> {
         onTap: _changed && !_busy ? _apply : null,
       ),
       scrollable: false,
-      padding: const EdgeInsets.only(bottom: 20),
+      padding: EdgeInsets.only(bottom: DS.s(20)),
       child: TripSheetFill(
         gap: 4,
         children: [
@@ -150,7 +150,7 @@ class _TripDaysSheetState extends State<TripDaysSheet> {
                   ],
                 ),
               ),
-              const SizedBox(height: 6),
+              Gap.v(6),
               Text(
                 TripStringsV2Plan.daysHint(total),
                 textAlign: TextAlign.center,
@@ -163,7 +163,7 @@ class _TripDaysSheetState extends State<TripDaysSheet> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 for (var i = 0; i < _alloc.length; i++) ...[
-                  if (i > 0) const SizedBox(height: 10),
+                  if (i > 0) Gap.v(10),
                   _cityRow(i),
                 ],
               ],
@@ -179,12 +179,12 @@ class _TripDaysSheetState extends State<TripDaysSheet> {
   }
 
   Widget _pill({required Widget child, double height = 56}) => Container(
-        constraints: BoxConstraints(minHeight: height),
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+        constraints: BoxConstraints(minHeight: DS.s(height)),
+        padding: DS.sym(h: 6, v: 6),
         decoration: BoxDecoration(
           color: DesignColors.surface,
-          borderRadius: BorderRadius.circular(height / 2),
-          boxShadow: Ink3D.softShadow,
+          borderRadius: DS.circular(height / 2),
+          boxShadow: DS.shadows(Ink3D.softShadow),
         ),
         child: child,
       );
@@ -194,13 +194,13 @@ class _TripDaysSheetState extends State<TripDaysSheet> {
     return _pill(
       child: Row(
         children: [
-          const SizedBox(width: 12),
+          SizedBox(width: DS.s(12)),
           Expanded(
             child: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(15, FontWeight.w600, Ink3D.title)),
           ),
           _btn(Icons.remove_rounded, _alloc[i] > _min[i] ? () => _stepCity(i, -1) : null),
           ConstrainedBox(
-            constraints: const BoxConstraints(minWidth: 72),
+            constraints: BoxConstraints(minWidth: DS.s(72)),
             child: Text(
               TripStringsV2Plan.days(_alloc[i]),
               textAlign: TextAlign.center,
@@ -226,14 +226,14 @@ class _TripDaysSheetState extends State<TripDaysSheet> {
         child: Opacity(
           opacity: onTap == null ? Alpha.v45 : 1,
           child: Container(
-            width: size,
-            height: size,
+            width: DS.s(size),
+            height: DS.s(size),
             decoration: BoxDecoration(
               gradient: tone.gradient,
               shape: BoxShape.circle,
-              boxShadow: onTap == null ? null : [BoxShadow(color: tone.shadow, offset: const Offset(1, 4), blurRadius: 8)],
+              boxShadow: onTap == null ? null : [BoxShadow(color: tone.shadow, offset: DS.shadowOffset(const Offset(1, 4)), blurRadius: DS.shadowBlur(8))],
             ),
-            child: Icon(icon, color: DesignColors.surface, size: 24),
+            child: Icon(icon, color: DesignColors.surface, size: DS.s(24)),
           ),
         ),
       ),

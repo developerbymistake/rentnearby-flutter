@@ -332,26 +332,26 @@ class _LegMenuBodyState extends State<_LegMenuBody> {
       child: Opacity(
         opacity: enabled ? 1 : Alpha.v45,
         child: Container(
-          constraints: const BoxConstraints(minHeight: 70),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          constraints: BoxConstraints(minHeight: DS.s(70)),
+          padding: DS.sym(h: 14, v: 10),
           decoration: BoxDecoration(border: divider ? const Border(top: BorderSide(color: Ink3D.line)) : null),
           child: Row(
             children: [
               Container(
-                width: 46,
-                height: 46,
-                decoration: BoxDecoration(color: danger ? TripLook.errorSurface : tone.tint, borderRadius: BorderRadius.circular(14)),
+                width: DS.s(46),
+                height: DS.s(46),
+                decoration: BoxDecoration(color: danger ? TripLook.errorSurface : tone.tint, borderRadius: DS.circular(14)),
                 child: Center(
                   child: icon is String
                       ? Art3D(asset: icon, size: 44, shadowBlur: 3, shadowOffset: const Offset(2, 3))
-                      : Icon(icon as IconData, size: 26, color: danger ? TripLook.error : tone.text),
+                      : Icon(icon as IconData, size: DS.s(26), color: danger ? TripLook.error : tone.text),
                 ),
               ),
-              const SizedBox(width: 14),
+              Gap.h(14),
               Expanded(
                 child: Text(label, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(15, FontWeight.w600, fg)),
               ),
-              const SizedBox(width: 8),
+              Gap.h(8),
               if (trailing != null)
                 Flexible(
                   child: Text(trailing,
@@ -361,7 +361,7 @@ class _LegMenuBodyState extends State<_LegMenuBody> {
                       style: Ink3D.text(12, FontWeight.w600, Ink3D.grey)),
                 )
               else
-                Icon(Icons.chevron_right_rounded, size: 20, color: danger ? TripLook.error : Ink3D.grey),
+                Icon(Icons.chevron_right_rounded, size: DS.s(20), color: danger ? TripLook.error : Ink3D.grey),
             ],
           ),
         ),
@@ -381,10 +381,10 @@ class _LegMenuBodyState extends State<_LegMenuBody> {
         child: Opacity(
           opacity: onTap == null ? Alpha.v45 : 1,
           child: Container(
-            width: 44,
-            height: 44,
+            width: DS.s(44),
+            height: DS.s(44),
             decoration: BoxDecoration(gradient: tone.gradient, shape: BoxShape.circle),
-            child: Icon(icon, size: 22, color: DesignColors.surface),
+            child: Icon(icon, size: DS.s(22), color: DesignColors.surface),
           ),
         ),
       ),
@@ -399,9 +399,9 @@ class _LegMenuBodyState extends State<_LegMenuBody> {
     final fewer = _days < current && p.legSpotCount(_leg) > 0;
     final blocked = !fewer && _days >= current && _c.growthBlockedByBookings(_leg);
     return Container(
-      margin: const EdgeInsets.fromLTRB(12, 0, 12, 10),
-      padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
-      decoration: BoxDecoration(color: ListingTone.indigo.tint, borderRadius: BorderRadius.circular(22)),
+      margin: EdgeInsets.fromLTRB(DS.s(12), 0, DS.s(12), DS.gv(10)),
+      padding: DS.all(10),
+      decoration: BoxDecoration(color: ListingTone.indigo.tint, borderRadius: DS.circular(22)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -418,7 +418,7 @@ class _LegMenuBodyState extends State<_LegMenuBody> {
               _stepButton(Icons.add_rounded, _days < max ? () => setState(() => _days++) : null),
             ],
           ),
-          const SizedBox(height: 4),
+          Gap.v(4),
           Text(
               fewer
                   ? TripStringsMcaA3.fewerDays
@@ -427,7 +427,7 @@ class _LegMenuBodyState extends State<_LegMenuBody> {
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
               style: Ink3D.text(12, FontWeight.w500, fewer || blocked ? TripLook.warningText : Ink3D.grey)),
-          const SizedBox(height: 8),
+          Gap.v(8),
           GradientPillButton(
             tone: ListingTone.indigo,
             label: TripStringsMcaA3.save,
@@ -446,7 +446,7 @@ class _LegMenuBodyState extends State<_LegMenuBody> {
       _c.enquiryList.length;
       final leg = p?.legAt(_leg);
       if (p == null || leg == null) {
-        return SheetFrame(tone: ListingTone.indigo, title: TripStringsMcaA3.removeCity, child: const SizedBox(height: 24));
+        return SheetFrame(tone: ListingTone.indigo, title: TripStringsMcaA3.removeCity, child: SizedBox(height: DS.s(24)));
       }
       final a = p.legStart(_leg);
       final b = p.legEnd(_leg);
@@ -462,7 +462,7 @@ class _LegMenuBodyState extends State<_LegMenuBody> {
         title: leg.cityName,
         subtitle: TripStringsMcaA3.dayRangeWithDates(a, b, _c.dateOf(a), _c.dateOf(b)),
         child: Container(
-          decoration: BoxDecoration(color: DesignColors.surface, borderRadius: BorderRadius.circular(20), boxShadow: Ink3D.softShadow),
+          decoration: BoxDecoration(color: DesignColors.surface, borderRadius: DS.circular(20), boxShadow: DS.shadows(Ink3D.softShadow)),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [

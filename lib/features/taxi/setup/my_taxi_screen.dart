@@ -209,7 +209,7 @@ class _MyTaxiScreenState extends State<MyTaxiScreen> with WidgetsBindingObserver
 
   Widget _skeleton() => Padding(
         padding: EdgeInsets.fromLTRB(DS.s(18), DS.gv(24), DS.s(18), 0),
-        child: const SkeletonFormCard(height: 420),
+        child: SkeletonFormCard(height: DS.s(420)),
       );
 
   Future<void> _setAvailable(bool available) async {

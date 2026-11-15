@@ -18,7 +18,7 @@ class TripBarHideSheet {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             PrimaryButton(label: TripStringsBar.hideAction, tone: KitTone.trip, onPressed: () => Navigator.pop(ctx, true)),
-            const SizedBox(height: 12),
+            Gap.v(12),
             SecondaryButton(label: TripStringsBar.keepShowing, tone: KitTone.trip, onPressed: () => Navigator.pop(ctx, false)),
           ],
         ),

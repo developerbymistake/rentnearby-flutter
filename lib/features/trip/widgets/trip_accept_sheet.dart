@@ -202,7 +202,7 @@ class _TripAcceptSheetState extends State<TripAcceptSheet> {
           ...rows,
           if (_error != null)
             Padding(
-              padding: const EdgeInsets.only(top: 10),
+              padding: EdgeInsets.only(top: DS.gv(10)),
               child: Text(_error!, maxLines: 3, overflow: TextOverflow.ellipsis, style: FieldMessage.errorStyle),
             ),
         ],
@@ -219,7 +219,7 @@ class _TripAcceptSheetState extends State<TripAcceptSheet> {
       footer: GradientPillButton(tone: _tone, label: TripStrings.acceptOffer, loading: _busy, onTap: _busy ? null : _submit),
       children: [
         ...rows,
-        const SizedBox(height: 6),
+        Gap.v(6),
         CheckRow(tone: _tone, value: _tell, label: TripStrings.tellOtherStays, onChanged: _busy ? null : (v) => setState(() => _tell = v)),
       ],
     );
