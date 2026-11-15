@@ -26,6 +26,7 @@ import 'widgets/tour_host.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  DS.applyApproved();
   PaintingBinding.instance.imageCache
     ..maximumSizeBytes = 100 << 20
     ..maximumSize = 300;

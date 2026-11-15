@@ -688,6 +688,6 @@ void main() {
 
     await pumpPhone(t, const Scaffold(body: SizedBox()));
     expect(ToastLane.showInHost(ToastKind.info, 'No host'), isFalse);
-    expect(ToastLane.topOffset(t.element(find.byType(Scaffold))), phoneTopInset + 8);
+    expect(ToastLane.topOffset(t.element(find.byType(Scaffold))), phoneTopInset + DS.s(8));
   });
 }

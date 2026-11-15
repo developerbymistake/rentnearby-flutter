@@ -8,12 +8,14 @@ import 'travel_icon.dart';
 import 'trip_pick_kit.dart';
 
 class StayGridCard extends StatelessWidget {
-  static double get height => DS.s(300);
+  static double get _floorSlack => DS.s(170) * ((DS.f(11) / DS.s(11) - 1) * 0.3);
+
+  static double get height => DS.s(300) + _floorSlack;
   static double get photoHeight => DS.s(112);
 
   static double heightOf(BuildContext context) {
     final s = MediaQuery.textScalerOf(context).scale(1).clamp(1.0, 2.5).toDouble();
-    return photoHeight + DS.s(18) + DS.s(170) * s;
+    return photoHeight + DS.s(18) + (DS.s(170) + _floorSlack) * s;
   }
 
   const StayGridCard({

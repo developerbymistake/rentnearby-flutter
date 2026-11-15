@@ -117,7 +117,7 @@ class _StayLandingScreenV2State extends State<StayLandingScreenV2> {
                   child: Center(
                     child: EntranceOnce(
                       index: 3,
-                      offset: DS.s(24),
+                      offset: 24,
                       child: MapPill3D(key: TourKeys.staysLandingMapPill, tone: _page, label: 'Map view', onTap: StayNavigation.openMap),
                     ),
                   ),

@@ -1,5 +1,6 @@
 import 'package:bakhli/design/tokens/design_scale.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 
 import '../tokens/design_colors.dart';
 import 'art_3d.dart';
@@ -377,7 +378,7 @@ class MealsCardV extends StatelessWidget {
       ),
       child: SizedBox(width: DS.s(112), height: DS.s(112)),
     );
-    Widget body = SizedBox(
+    Widget body = _FixedWidth(
       width: width,
       child: Stack(
         clipBehavior: Clip.none,
@@ -625,4 +626,33 @@ class MealsCardSkeleton extends StatelessWidget {
       ),
     );
   }
+}
+
+class _FixedWidth extends SingleChildRenderObjectWidget {
+  const _FixedWidth({required this.width, required super.child});
+
+  final double width;
+
+  @override
+  RenderObject createRenderObject(BuildContext context) =>
+      _RenderFixedWidth(BoxConstraints.tightFor(width: width), width);
+
+  @override
+  void updateRenderObject(BuildContext context, _RenderFixedWidth renderObject) {
+    renderObject
+      ..additionalConstraints = BoxConstraints.tightFor(width: width)
+      ..fixedWidth = width;
+  }
+}
+
+class _RenderFixedWidth extends RenderConstrainedBox {
+  _RenderFixedWidth(BoxConstraints constraints, this.fixedWidth) : super(additionalConstraints: constraints);
+
+  double fixedWidth;
+
+  @override
+  double computeMinIntrinsicHeight(double width) => super.computeMinIntrinsicHeight(fixedWidth);
+
+  @override
+  double computeMaxIntrinsicHeight(double width) => super.computeMaxIntrinsicHeight(fixedWidth);
 }

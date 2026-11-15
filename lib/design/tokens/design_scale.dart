@@ -14,7 +14,7 @@ abstract final class DS {
   static const double approvedGapRel = 0.90;
 
   /// Font floor at approved values.
-  static const double approvedFontFloor = 9;
+  static const double approvedFontFloor = 10;
 
   /// Font floor at identity (the legacy TypeTokens floor, so identity is pixel-identical).
   static const double identityFontFloor = 11;
@@ -64,7 +64,7 @@ abstract final class DS {
   /// Font scale with floor; returns n untouched at font == 1.0.
   static double f(double n, {bool scaled = true}) {
     if (!scaled || font == 1.0) return n;
-    return math.max(n * font, fontFloor);
+    return math.max(n * font, math.min(n, fontFloor));
   }
 
   /// Vertical gap between sibling widgets.

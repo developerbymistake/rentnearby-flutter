@@ -1,3 +1,4 @@
+import 'package:bakhli/design/design.dart';
 import 'package:bakhli/features/trip/widgets/hub/hub_tile.dart';
 import 'package:bakhli/features/trip/widgets/hub/hub_tile_config.dart';
 import 'package:flutter/material.dart';
@@ -22,10 +23,10 @@ void main() {
         ),
       ),
     );
-    expect(tester.getSize(find.byType(HubTile)).height, 160);
-    final art = tester.widgetList<Positioned>(find.byType(Positioned)).where((p) => p.width == 158);
+    expect(tester.getSize(find.byType(HubTile)).height, closeTo(DS.s(160), 0.001));
+    final art = tester.widgetList<Positioned>(find.byType(Positioned)).where((p) => p.width == DS.s(158));
     expect(art.length, 1);
-    expect(art.first.top, -46);
-    expect(art.first.bottom, 2);
+    expect(art.first.top, DS.s(-46));
+    expect(art.first.bottom, DS.s(2));
   });
 }

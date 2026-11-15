@@ -34,7 +34,7 @@ Future<void> _pump(WidgetTester t, double w) async {
 
 Rect _card(WidgetTester t, int n) {
   final r = t.getRect(find.byKey(ValueKey('continue-trip-$n')));
-  return Rect.fromLTRB(r.left + 14, r.top, r.right - 14, r.bottom);
+  return Rect.fromLTRB(r.left + DS.s(14), r.top, r.right - DS.s(14), r.bottom);
 }
 
 void main() {
@@ -43,9 +43,9 @@ void main() {
       await _pump(t, w);
       final a = _card(t, 1);
       final b = _card(t, 2);
-      expect(a.left, 18);
-      expect(a.width, TripContinueRail.cardWidth);
-      expect(b.left - a.right, 12);
+      expect(a.left, closeTo(TripContinueRail.inset, 0.001));
+      expect(a.width, closeTo(TripContinueRail.cardWidth, 0.001));
+      expect(b.left - a.right, closeTo(TripContinueRail.gap, 0.001));
     });
   }
 

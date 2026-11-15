@@ -112,11 +112,12 @@ void main() {
     await t.pumpAndSettle();
     final x = find.byType(SheetCloseButton);
     expect(x, findsOneWidget);
-    expect(t.getSize(x), const Size(44, 44));
+    expect(t.getSize(x).width, closeTo(DS.s(44), 0.01));
+    expect(t.getSize(x).height, closeTo(DS.s(44), 0.01));
     expect(find.bySemanticsLabel('Close'), findsOneWidget);
     final icon = t.widget<Icon>(find.descendant(of: x, matching: find.byType(Icon)));
     expect(icon.icon, Icons.close_rounded);
-    expect(icon.size, 16);
+    expect(icon.size, closeTo(DS.s(16), 0.01));
     expect(icon.color, DesignColors.error);
     final sheet = t.getRect(find.byType(SheetModalBody));
     expect(t.getRect(x).right, lessThanOrEqualTo(sheet.right));
@@ -216,8 +217,9 @@ void main() {
 
         final header = t.getRect(find.byType(TripPlanHeader));
         final circle = t.getRect(find.byKey(GuideSheetScaffold.circleKey));
-        expect(circle.size, const Size(88, 88));
-        expect(circle.left, 20);
+        expect(circle.width, closeTo(DS.s(88), 0.01));
+        expect(circle.height, closeTo(DS.s(88), 0.01));
+        expect(circle.left, closeTo(DS.s(20), 0.01));
         expect(circle.center.dy, closeTo(header.bottom, 0.5), reason: 'circle sits half on header, half on page');
         expect(circle.top, lessThan(header.bottom));
         expect(circle.bottom, greaterThan(header.bottom));

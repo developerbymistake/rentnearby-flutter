@@ -144,8 +144,8 @@ void main() {
       final d = t.getCenter(find.text('Directions'));
       final c = t.getCenter(find.text('Call'));
       final h = t.getCenter(find.text('Chat'));
-      expect(c.dy, d.dy);
-      expect(h.dy, d.dy);
+      expect(c.dy, closeTo(d.dy, 0.01));
+      expect(h.dy, closeTo(d.dy, 0.01));
       expect(d.dx, lessThan(c.dx));
       expect(c.dx, lessThan(h.dx));
       expect(t.getCenter(find.text('Report this listing')).dy, greaterThan(d.dy));

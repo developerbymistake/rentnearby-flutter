@@ -212,7 +212,7 @@ void main() {
       final rows = find.byType(ListRow).evaluate().map((e) => (e.renderObject as RenderBox).size).toList();
       expect(rows[0].width, rows[1].width);
       for (final s in rows) {
-        expect(s.height, greaterThanOrEqualTo(ListRow.minHeight));
+        expect(s.height, greaterThanOrEqualTo(DS.s(ListRow.minHeight)));
       }
       expect(find.byType(PlaceholderTile), findsWidgets);
     });
@@ -225,7 +225,7 @@ void main() {
       await t.pumpWidget(_host(Padding(padding: const EdgeInsets.all(16), child: _hero())));
       await _settle(t);
       expect(t.takeException(), isNull);
-      expect(t.getSize(find.byType(HeroBanner)).height, greaterThanOrEqualTo(120));
+      expect(t.getSize(find.byType(HeroBanner)).height, greaterThanOrEqualTo(DS.s(120)));
       expect(find.text('Plan your trip'), findsOneWidget);
     });
     testWidgets('golden', (t) => _golden(t, 'hero_banner', _hero(), 1.0));

@@ -140,7 +140,7 @@ class _EntranceOnceState extends State<EntranceOnce>
       builder: (context, child) => Opacity(
         opacity: _a.value,
         child: Transform.translate(
-          offset: Offset(widget.dx * (1 - _a.value), widget.offset * (1 - _a.value)),
+          offset: Offset(DS.s(widget.dx) * (1 - _a.value), DS.s(widget.offset) * (1 - _a.value)),
           child: child,
         ),
       ),

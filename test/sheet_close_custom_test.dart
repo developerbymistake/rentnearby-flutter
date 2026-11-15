@@ -147,8 +147,8 @@ void main() {
     expect(find.text('Nainital'), findsWidgets);
     final x = _x(t);
     final sheet = t.getRect(find.byType(TripCitySheet));
-    expect(x.right, closeTo(sheet.right - 4, 0.5));
-    expect(x.top, closeTo(sheet.top + 4, 0.5));
+    expect(x.right, closeTo(sheet.right - DS.s(4), 0.5));
+    expect(x.top, closeTo(sheet.top + DS.s(4), 0.5));
     expect(t.getRect(find.byType(Art3D).first).right, lessThanOrEqualTo(x.left + 0.5));
     await _tapClose(t, run);
   });
@@ -167,8 +167,8 @@ void main() {
     });
     expect(find.text('Naini Lake'), findsOneWidget);
     final sheet = t.getRect(find.byType(TripSpotDetailSheet));
-    expect(_x(t).right, closeTo(sheet.right - 12, 0.5));
-    expect(_x(t).top, closeTo(sheet.top + 12, 0.5));
+    expect(_x(t).right, closeTo(sheet.right - DS.s(12), 0.5));
+    expect(_x(t).top, closeTo(sheet.top + DS.s(12), 0.5));
     await _tapClose(t, run);
   });
 
@@ -180,7 +180,7 @@ void main() {
     });
     expect(find.text('Cancel'), findsOneWidget);
     expect(find.text('Report this listing'), findsOneWidget);
-    expect(_x(t).right, closeTo(360 - 12, 0.5));
+    expect(_x(t).right, closeTo(360 - DS.s(12), 0.5));
     await _tapClose(t, run);
   });
 

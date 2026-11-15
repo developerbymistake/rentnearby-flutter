@@ -54,9 +54,10 @@ void main() {
     expect(t.widget<Icon>(find.byIcon(Icons.close_rounded)).color, DesignColors.error);
     final panel = t.getRect(find.byType(Sheet3D));
     final x = t.getRect(find.byType(SheetCloseButton));
-    expect(x.size, const Size(44, 44));
-    expect(x.right, closeTo(panel.right - 12, 0.5));
-    expect(x.top, closeTo(panel.top + Sheet3D.artRoom + 12, 0.5));
+    expect(x.width, closeTo(DS.s(44), 0.01));
+    expect(x.height, closeTo(DS.s(44), 0.01));
+    expect(x.right, closeTo(panel.right - DS.s(12), 0.5));
+    expect(x.top, closeTo(panel.top + Sheet3D.artRoom + DS.s(12), 0.5));
     expect(find.bySemanticsLabel('Close'), findsOneWidget);
   });
 
