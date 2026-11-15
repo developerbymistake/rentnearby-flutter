@@ -43,7 +43,7 @@ class HubTile extends StatelessWidget {
         behavior: HitTestBehavior.opaque,
         onTap: _tap,
         child: SizedBox(
-          height: height,
+          height: DS.s(height),
           child: LayoutBuilder(
             builder: (context, box) {
               final w = box.maxWidth;
@@ -69,13 +69,13 @@ class HubTile extends StatelessWidget {
   Widget _artLayer(double w) {
     final items = <Widget>[for (final a in config.art) _art(a)];
     return Positioned(
-      top: artTop,
-      bottom: artBottom,
-      width: artWidth,
-      left: _textLeft ? null : 12,
-      right: _textLeft ? 12 : null,
+      top: DS.s(artTop),
+      bottom: DS.s(artBottom),
+      width: DS.s(artWidth),
+      left: _textLeft ? null : DS.s(12),
+      right: _textLeft ? DS.s(12) : null,
       child: ClipRect(
-        clipper: const _ArtClipper(),
+        clipper: _ArtClipper(),
         child: Stack(clipBehavior: Clip.none, children: items),
       ),
     );
@@ -92,12 +92,12 @@ class HubTile extends StatelessWidget {
     if (a.flipX) img = Transform.flip(flipX: true, child: img);
     final useBottom = a.top == null;
     return Positioned(
-      left: a.left,
-      right: a.right,
-      top: a.top,
-      bottom: useBottom ? (a.bottom ?? 0) : null,
-      width: a.size,
-      height: a.size,
+      left: a.left == null ? null : DS.s(a.left!),
+      right: a.right == null ? null : DS.s(a.right!),
+      top: a.top == null ? null : DS.s(a.top!),
+      bottom: useBottom ? DS.s(a.bottom ?? 0) : null,
+      width: DS.s(a.size),
+      height: DS.s(a.size),
       child: ExcludeSemantics(child: img),
     );
   }
@@ -110,8 +110,8 @@ class HubTile extends StatelessWidget {
     return Positioned(
       top: 0,
       bottom: 0,
-      left: _textLeft ? 26 : null,
-      right: _textLeft ? null : 26,
+      left: _textLeft ? DS.s(26) : null,
+      right: _textLeft ? null : DS.s(26),
       width: textW,
       child: MediaQuery.withClampedTextScaling(
         maxScaleFactor: 1.2,
@@ -131,19 +131,19 @@ class HubTile extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: Ink3D.text(16, FontWeight.w400, c.text, height: 1.28, letterSpacing: 0),
                 ),
-                const SizedBox(height: 3),
+                SizedBox(height: DS.s(3)),
                 Text(
                   c.title,
                   textAlign: ta,
                   style: Ink3D.text(22, FontWeight.w700, c.text, height: 1.12, letterSpacing: 0.2),
                 ),
                 if (_soon) ...[
-                  const SizedBox(height: 8),
+                  SizedBox(height: DS.s(8)),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+                    padding: DS.sym(h: 10, v: 2),
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: Alpha.v92),
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: DS.circular(12),
                     ),
                     child: Text(
                       TripStringsHub.comingSoon,
@@ -161,10 +161,10 @@ class HubTile extends StatelessWidget {
 }
 
 class _ArtClipper extends CustomClipper<Rect> {
-  const _ArtClipper();
+  _ArtClipper();
 
   @override
-  Rect getClip(Size size) => Rect.fromLTRB(-90, -60, size.width + 30, size.height - 8);
+  Rect getClip(Size size) => Rect.fromLTRB(DS.s(-90), DS.s(-60), size.width + DS.s(30), size.height - DS.s(8));
 
   @override
   bool shouldReclip(_ArtClipper old) => false;
@@ -234,24 +234,24 @@ class HubTileShapePainter extends CustomPainter {
     final p = shape();
     final device = p.transform(storage);
 
-    if (soon) canvas.saveLayer((Offset.zero & size).inflate(48), Paint()..color = const Color(0xE6FFFFFF));
+    if (soon) canvas.saveLayer((Offset.zero & size).inflate(DS.s(48)), Paint()..color = const Color(0xE6FFFFFF));
 
-    final under = Path.combine(PathOperation.union, device, device.shift(const Offset(0, 5)));
+    final under = Path.combine(PathOperation.union, device, device.shift(Offset(0, DS.s(5))));
     final white = Paint()..color = Colors.white.withValues(alpha: Alpha.v90);
-    canvas.drawPath(under.shift(const Offset(0, -1)), white);
+    canvas.drawPath(under.shift(Offset(0, DS.s(-1))), white);
     canvas.drawPath(
-      under.shift(const Offset(0, 13)),
+      under.shift(Offset(0, DS.s(13))),
       Paint()
         ..color = Colors.white.withValues(alpha: Alpha.v90)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 12),
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, DS.s(12)),
     );
     canvas.drawPath(
-      under.shift(const Offset(0, 14)),
+      under.shift(Offset(0, DS.s(14))),
       Paint()
         ..color = const Color(0x611E286E)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 12),
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, DS.s(12)),
     );
-    canvas.drawPath(device.shift(const Offset(0, 5)), Paint()..color = const Color(0x61374196));
+    canvas.drawPath(device.shift(Offset(0, DS.s(5))), Paint()..color = const Color(0x61374196));
 
     canvas.save();
     canvas.transform(storage);

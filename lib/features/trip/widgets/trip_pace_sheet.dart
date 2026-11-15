@@ -14,7 +14,7 @@ class TripPaceSheet {
         art: ListingArt.sunrise,
         size: SheetSize.confirm,
         scrollable: false,
-        padding: const EdgeInsets.only(bottom: 20),
+        padding: DS.insets(b: 20),
         title: TripStringsV2Plan.paceTitle,
         subtitle: TripStringsV2Plan.paceSub,
         footer: Text(
@@ -54,7 +54,7 @@ class TripSheetFill extends StatelessWidget {
   @override
   Widget build(BuildContext context) => LayoutBuilder(
         builder: (context, box) => SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
+          padding: DS.sym(h: 20),
           child: ConstrainedBox(
             constraints: BoxConstraints(minHeight: box.maxHeight),
             child: Column(
@@ -62,7 +62,7 @@ class TripSheetFill extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 for (var i = 0; i < children.length; i++) ...[
-                  if (i > 0) SizedBox(height: gap),
+                  if (i > 0) Gap.v(gap),
                   children[i],
                 ],
               ],
@@ -83,7 +83,7 @@ class TripChoiceCard extends StatelessWidget {
   final Widget? trailing;
   final Color? labelDot;
 
-  static const double topRoom = 26;
+  static double get topRoom => DS.s(26);
 
   @override
   Widget build(BuildContext context) {
@@ -99,22 +99,22 @@ class TripChoiceCard extends StatelessWidget {
       child: Opacity(
         opacity: onTap == null ? Alpha.v45 : (selected ? 1 : Alpha.v80),
         child: Padding(
-          padding: const EdgeInsets.only(top: topRoom, bottom: 8),
+          padding: EdgeInsets.only(top: topRoom, bottom: DS.s(8)),
           child: Stack(
             clipBehavior: Clip.none,
             children: [
               Container(
-                constraints: const BoxConstraints(minHeight: 78),
-                padding: EdgeInsets.fromLTRB(artSize + 22, 12, 14, 12),
+                constraints: BoxConstraints(minHeight: DS.s(78)),
+                padding: DS.insets(l: artSize + 22, t: 12, r: 14, b: 12),
                 decoration: BoxDecoration(
                   gradient: tone.gradient,
-                  borderRadius: const BorderRadius.only(
+                  borderRadius: DS.br(const BorderRadius.only(
                     topLeft: Radius.circular(8),
                     topRight: Radius.circular(32),
                     bottomLeft: Radius.circular(8),
                     bottomRight: Radius.circular(8),
-                  ),
-                  boxShadow: selected ? [BoxShadow(color: tone.shadow, offset: const Offset(1.1, 6), blurRadius: 12)] : null,
+                  )),
+                  boxShadow: selected ? [BoxShadow(color: tone.shadow, offset: DS.shadowOffset(const Offset(1.1, 6)), blurRadius: DS.shadowBlur(12))] : null,
                 ),
                 child: Row(
                   children: [
@@ -127,11 +127,11 @@ class TripChoiceCard extends StatelessWidget {
                             children: [
                               if (labelDot != null) ...[
                                 Container(
-                                  width: 11,
-                                  height: 11,
+                                  width: DS.s(11),
+                                  height: DS.s(11),
                                   decoration: BoxDecoration(color: labelDot, shape: BoxShape.circle, border: Border.all(color: white, width: 1.5)),
                                 ),
-                                const SizedBox(width: 8),
+                                Gap.h(8),
                               ],
                               Flexible(child: Text(label, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(16, FontWeight.w700, white))),
                             ],
@@ -141,19 +141,19 @@ class TripChoiceCard extends StatelessWidget {
                         ],
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    Gap.h(8),
                     trailing ??
                         Container(
-                          width: 30,
-                          height: 30,
+                          width: DS.s(30),
+                          height: DS.s(30),
                           decoration: BoxDecoration(color: DesignColors.tint(white, selected ? Alpha.full : Alpha.v30), shape: BoxShape.circle),
-                          child: selected ? Icon(Icons.check_rounded, size: 20, color: tone.text) : null,
+                          child: selected ? Icon(Icons.check_rounded, size: DS.s(20), color: tone.text) : null,
                         ),
                   ],
                 ),
               ),
               Positioned(
-                left: 10,
+                left: DS.s(10),
                 top: -topRoom,
                 child: IgnorePointer(
                   child: Art3D(asset: art, size: artSize, halo: artSize - 6, haloColor: DesignColors.tint(white, Alpha.v22)),

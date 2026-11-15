@@ -298,7 +298,7 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 640),
           child: ChipCPRow(
-            padding: const EdgeInsets.fromLTRB(18, 8, 18, 0),
+            padding: EdgeInsets.fromLTRB(DS.s(18), DS.gv(8), DS.s(18), 0),
             children: [
               ChipCP(tone: ListingTone.indigo, art: ListingArt.worldMap, label: TripStringsV2Plan.allCities, off: filter != null, onTap: () => pick(null)),
               for (final leg in p.legs)
@@ -320,12 +320,12 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
   EdgeInsets _bannerMargin() {
     final g = _c.guideState;
     final onQuestion = g.on.value && g.index.value < g.total.value;
-    if (!onQuestion) return const EdgeInsets.fromLTRB(18, 10, 18, 0);
-    final left = GuideSheetScaffold.circleLeft + GuideSheetScaffold.circleSize + 8;
+    if (!onQuestion) return EdgeInsets.fromLTRB(DS.s(18), DS.gv(10), DS.s(18), 0);
+    final left = DS.s(GuideSheetScaffold.circleLeft + GuideSheetScaffold.circleSize + 8);
     final mq = MediaQuery.of(context);
-    final room = mq.size.width - left - 18;
-    if (room < 190 * mq.textScaler.scale(1).clamp(1.0, 2.0)) return EdgeInsets.fromLTRB(18, 10 + GuideSheetScaffold.circleSize / 2, 18, 0);
-    return EdgeInsets.fromLTRB(left, 10, 18, 0);
+    final room = mq.size.width - left - DS.s(18);
+    if (room < DS.s(190) * mq.textScaler.scale(1).clamp(1.0, 2.0)) return EdgeInsets.fromLTRB(DS.s(18), DS.gv(10) + DS.s(GuideSheetScaffold.circleSize / 2), DS.s(18), 0);
+    return EdgeInsets.fromLTRB(left, DS.gv(10), DS.s(18), 0);
   }
 
   Widget _buildOffline() {
@@ -355,7 +355,7 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
             onAction: saving ? null : _c.retrySave,
             margin: _bannerMargin(),
           ),
-          if (saving) const Padding(padding: EdgeInsets.only(right: 34, top: 10), child: KitDots(color: DesignColors.warning)),
+          if (saving) Padding(padding: EdgeInsets.only(right: DS.s(34), top: DS.s(10)), child: const KitDots(color: DesignColors.warning)),
         ],
       );
     });
@@ -365,7 +365,7 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
     return Obx(() {
       if (_c.tripGone.value) return ListView(children: const [TripNotFoundView()]);
       if (_c.plannerOff.value) {
-        return ListView(padding: const EdgeInsets.only(top: 40), children: const [
+        return ListView(padding: EdgeInsets.only(top: DS.s(40)), children: const [
           StateCard(
             asset: TravelIcon.route,
             title: TripStrings.plannerOff,
@@ -377,7 +377,7 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
       final plan = _c.plan.value;
       if (plan == null) {
         if (_c.openFailed.value) {
-          return ListView(padding: const EdgeInsets.only(top: 40), children: [
+          return ListView(padding: EdgeInsets.only(top: DS.s(40)), children: [
             StateCard.error(
               title: TripStrings.tripFailed,
               message: TripStrings.checkConnection,
@@ -400,7 +400,7 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
       Widget w(Widget child) => _in(n++, child);
       return ListView(
         controller: _scroll,
-        padding: const EdgeInsets.fromLTRB(0, 0, 0, 24),
+        padding: EdgeInsets.only(bottom: DS.s(24)),
         children: [
           if (!editing) w(TripPlanStepCard(onMenu: _onMenu)),
           MediaQuery.withClampedTextScaling(maxScaleFactor: 1.3, child: _buildLegChips()),
@@ -425,23 +425,23 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
           if (editing && _c.canAddDay) _addDayButton(),
           if (editable && !editing) ...[
             w(const TripAddCityCard()),
-            const SizedBox(height: 14),
+            Gap.v(14),
             if (!_c.isCompleted) w(_g(_nextButton(plan.spotCount))),
           ] else
-            const SizedBox(height: 8),
+            Gap.v(8),
           ],
         ],
       );
     });
   }
 
-  static const _barDecoration = BoxDecoration(
+  static BoxDecoration get _barDecoration => BoxDecoration(
     color: DesignColors.surface,
-    borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-    boxShadow: Ink3D.topEdge,
+    borderRadius: DS.br(const BorderRadius.vertical(top: Radius.circular(24))),
+    boxShadow: DS.shadows(Ink3D.topEdge),
   );
 
-  Widget _g(Widget child) => Padding(padding: const EdgeInsets.symmetric(horizontal: 18), child: child);
+  Widget _g(Widget child) => Padding(padding: DS.sym(h: 18), child: child);
 
   Widget _nextButton(int spots) => Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -457,7 +457,7 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
           ),
           if (spots == 0)
             Padding(
-              padding: const EdgeInsets.only(top: 10),
+              padding: EdgeInsets.only(top: DS.gv(10)),
               child: Text(
                 TripStringsV2Plan.nextHintNoPlaces,
                 textAlign: TextAlign.center,
@@ -468,7 +468,7 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
       );
 
   Widget _stepBar(BuildContext context, bool bottomInset) => Container(
-        padding: EdgeInsets.fromLTRB(16, 10, 16, bottomInset ? AppInsets.bottomViewPadding(context) + 10 : 10),
+        padding: EdgeInsets.fromLTRB(DS.s(16), DS.s(10), DS.s(16), bottomInset ? AppInsets.bottomViewPadding(context) + DS.s(10) : DS.s(10)),
         decoration: _barDecoration,
         child: Center(
           heightFactor: 1,
@@ -479,7 +479,7 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
                 Expanded(
                   child: WhitePillButton(tone: ListingTone.indigo, label: TripStringsV2Plan.previous, onTap: () => _c.planStep.value = 1),
                 ),
-                const SizedBox(width: 12),
+                Gap.h(12),
                 Expanded(
                   child: GradientPillButton(
                     tone: ListingTone.indigo,
@@ -493,16 +493,16 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
         ),
       );
 
-  Widget _editBanner() => const Banner3D(
+  Widget _editBanner() => Banner3D(
         kind: BannerKind.warn,
         art: ListingArt.roundPushpin,
         title: TripStringsV2Plan.editBanner,
         compact: true,
-        margin: EdgeInsets.fromLTRB(18, 14, 18, 0),
+        margin: EdgeInsets.fromLTRB(DS.s(18), DS.gv(14), DS.s(18), 0),
       );
 
   Widget _addDayButton() => Padding(
-        padding: const EdgeInsets.fromLTRB(18, 4, 18, 10),
+        padding: EdgeInsets.fromLTRB(DS.s(18), DS.gv(4), DS.s(18), DS.gv(10)),
         child: WhitePillButton(
           tone: ListingTone.indigo,
           label: TripStringsV2Plan.addDay,
@@ -523,14 +523,14 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
       );
 
   Widget _skeletons() => ListView(
-        padding: const EdgeInsets.only(bottom: 24),
+        padding: EdgeInsets.only(bottom: DS.s(24)),
         children: [for (var i = 0; i < 4; i++) const WideCardSkeleton()],
       );
 
   Widget _completeBar(BuildContext context) {
     if (!_c.isLastDayOrAfter || !_c.canComplete) return const SizedBox.shrink();
     return Container(
-      padding: EdgeInsets.fromLTRB(16, 10, 16, AppInsets.bottomViewPadding(context) + 10),
+      padding: EdgeInsets.fromLTRB(DS.s(16), DS.s(10), DS.s(16), AppInsets.bottomViewPadding(context) + DS.s(10)),
       decoration: _barDecoration,
       child: Center(
         heightFactor: 1,
@@ -552,7 +552,7 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
                 overflow: TextOverflow.ellipsis,
                 style: Ink3D.text(12, FontWeight.w400, Ink3D.grey),
               ),
-              const SizedBox(height: 10),
+              Gap.v(10),
               GradientPillButton(
                 tone: ListingTone.indigo,
                 label: TripStrings.markTripComplete,
@@ -588,7 +588,7 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 640),
                 child: Padding(
-                  padding: EdgeInsets.fromLTRB(16, 0, 16, complete || nav ? 8 : AppInsets.bottomViewPadding(context) + 8),
+                  padding: EdgeInsets.fromLTRB(DS.s(16), 0, DS.s(16), complete || nav ? DS.s(8) : AppInsets.bottomViewPadding(context) + DS.s(8)),
                   child: const TripEasyMiniBar(),
                 ),
               ),

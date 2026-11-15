@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../template/fitness_app_theme.dart';
 import 'motion_kit.dart';
+import '../tokens/design_scale.dart';
 
 class TemplateTransition extends CustomTransition {
   @override
@@ -135,14 +136,14 @@ class _TemplateStaggerState extends State<TemplateStagger>
 class TemplatePlaceholder extends StatefulWidget {
   const TemplatePlaceholder({
     super.key,
-    this.height = 16,
+    this.height,
     this.width,
-    this.radius = 8,
+    this.radius,
   });
 
-  final double height;
+  final double? height;
   final double? width;
-  final double radius;
+  final double? radius;
 
   @override
   State<TemplatePlaceholder> createState() => _TemplatePlaceholderState();
@@ -178,12 +179,12 @@ class _TemplatePlaceholderState extends State<TemplatePlaceholder>
       animation: _animation,
       builder: (BuildContext context, Widget? _) {
         return Container(
-          height: widget.height,
+          height: widget.height ?? DS.s(16),
           width: widget.width,
           decoration: BoxDecoration(
             color: Color.lerp(FitnessAppTheme.background,
                 FitnessAppTheme.grey.withValues(alpha: Alpha.soft), _animation.value),
-            borderRadius: BorderRadius.circular(widget.radius),
+            borderRadius: BorderRadius.circular(widget.radius ?? DS.radius(8)),
           ),
         );
       },

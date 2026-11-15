@@ -181,7 +181,7 @@ class _TripTaxiRepliesScreenState extends State<TripTaxiRepliesScreen> with Tick
       onRefresh: _c.refreshEnquiries,
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: EdgeInsets.only(bottom: 24 + MediaQuery.paddingOf(context).bottom),
+        padding: EdgeInsets.only(bottom: DS.s(24) + MediaQuery.paddingOf(context).bottom),
         children: [
           for (var i = 0; i < children.length; i++)
             TemplateEntrance(

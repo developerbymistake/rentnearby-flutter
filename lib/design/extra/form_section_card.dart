@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'art_3d.dart';
 import 'pill_buttons_3d.dart';
+import 'package:bakhli/design/tokens/design_scale.dart';
 
 enum FormArtSide { left, right }
 
@@ -35,7 +36,7 @@ class FormSectionCard extends StatelessWidget {
   final Widget? trailing;
   final EdgeInsets? margin;
 
-  static const double topRoom = 46;
+  static double get topRoom => DS.s(46);
 
   Widget _title(double size, {bool oneLine = true}) {
     final text = Text.rich(
@@ -56,7 +57,7 @@ class FormSectionCard extends StatelessWidget {
     final h = hint;
     if (h == null || h.isEmpty) return null;
     return Padding(
-      padding: const EdgeInsets.only(top: 2),
+      padding: EdgeInsets.only(top: DS.s(2)),
       child: Text(h, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(12, FontWeight.w600, Form3D.amber, letterSpacing: 0)),
     );
   }
@@ -65,9 +66,9 @@ class FormSectionCard extends StatelessWidget {
     final t = tag;
     if (t == null || t.isEmpty) return null;
     return Container(
-      margin: const EdgeInsets.only(top: 3),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-      decoration: BoxDecoration(borderRadius: BorderRadius.circular(10), color: tagMuted ? Form3D.limit : Form3D.wash(tone, 0.13)),
+      margin: EdgeInsets.only(top: DS.s(3)),
+      padding: EdgeInsets.symmetric(horizontal: DS.s(10), vertical: DS.s(3)),
+      decoration: BoxDecoration(borderRadius: DS.circular(10), color: tagMuted ? Form3D.limit : Form3D.wash(tone, 0.13)),
       child: Text(t.toUpperCase(), maxLines: 1, style: Ink3D.text(10.5, FontWeight.w700, tagMuted ? Form3D.muted : tone.text, letterSpacing: 0.5)),
     );
   }
@@ -76,45 +77,45 @@ class FormSectionCard extends StatelessWidget {
     final tag = _tag();
     final hint = _hint();
     return Padding(
-      padding: const EdgeInsets.only(top: 12, bottom: 14),
+      padding: EdgeInsets.only(top: DS.s(12), bottom: DS.s(14)),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           SizedBox(
-            width: 62,
-            height: 26,
+            width: DS.s(62),
+            height: DS.s(26),
             child: OverflowBox(
               alignment: Alignment.bottomCenter,
-              minHeight: 62,
-              maxHeight: 62,
+              minHeight: DS.s(62),
+              maxHeight: DS.s(62),
               child: ExcludeSemantics(
                 child: Stack(
                   clipBehavior: Clip.none,
                   children: [
-                    Container(width: 62, height: 62, decoration: BoxDecoration(borderRadius: BorderRadius.circular(18), color: Form3D.wash(tone, 0.14))),
-                    Positioned(left: -5, top: -16, child: Art3D(asset: art, size: 72, shadowBlur: 4, shadowOffset: const Offset(3, 5), shadowAlpha: 0.28)),
+                    Container(width: DS.s(62), height: DS.s(62), decoration: BoxDecoration(borderRadius: DS.circular(18), color: Form3D.wash(tone, 0.14))),
+                    Positioned(left: DS.s(-5), top: DS.s(-16), child: Art3D(asset: art, size: 72, shadowBlur: 4, shadowOffset: const Offset(3, 5), shadowAlpha: 0.28)),
                   ],
                 ),
               ),
             ),
           ),
-          const SizedBox(width: 12),
+          SizedBox(width: DS.s(12)),
           Expanded(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(minHeight: 46),
+              constraints: BoxConstraints(minHeight: DS.s(46)),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 mainAxisAlignment: MainAxisAlignment.end,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if (tag == null && hint == null) Padding(padding: const EdgeInsets.only(bottom: 18), child: _title(16.5)) else _title(16.5),
+                  if (tag == null && hint == null) Padding(padding: EdgeInsets.only(bottom: DS.s(18)), child: _title(16.5)) else _title(16.5),
                   ?tag,
                   ?hint,
                 ],
               ),
             ),
           ),
-          if (trailing != null) Padding(padding: const EdgeInsets.only(left: 8), child: trailing),
+          if (trailing != null) Padding(padding: EdgeInsets.only(left: DS.s(8)), child: trailing),
         ],
       ),
     );
@@ -124,9 +125,9 @@ class FormSectionCard extends StatelessWidget {
     final tag = _tag();
     final hint = _hint();
     return Padding(
-      padding: const EdgeInsets.only(top: 18, bottom: 14, right: 86),
+      padding: EdgeInsets.only(top: DS.s(18), bottom: DS.s(14), right: DS.s(86)),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 26),
+        constraints: BoxConstraints(minHeight: DS.s(26)),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -140,11 +141,11 @@ class FormSectionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final right = artSide == FormArtSide.right;
     final card = Container(
-      padding: const EdgeInsets.fromLTRB(18, 0, 18, 18),
+      padding: EdgeInsets.fromLTRB(DS.s(18), 0, DS.s(18), DS.s(18)),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.only(topLeft: const Radius.circular(8), topRight: Radius.circular(corner), bottomLeft: const Radius.circular(8), bottomRight: const Radius.circular(8)),
-        boxShadow: Form3D.cardShadow,
+        borderRadius: BorderRadius.only(topLeft: Radius.circular(DS.radius(8)), topRight: Radius.circular(DS.radius(corner)), bottomLeft: Radius.circular(DS.radius(8)), bottomRight: Radius.circular(DS.radius(8))),
+        boxShadow: DS.shadows(Form3D.cardShadow),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -153,15 +154,15 @@ class FormSectionCard extends StatelessWidget {
       ),
     );
     return Padding(
-      padding: margin ?? const EdgeInsets.fromLTRB(18, topRoom, 18, 0),
+      padding: margin ?? EdgeInsets.fromLTRB(DS.s(18), topRoom, DS.s(18), 0),
       child: right
           ? Stack(
               clipBehavior: Clip.none,
               children: [
                 card,
                 Positioned(
-                  right: 12,
-                  top: -40,
+                  right: DS.s(12),
+                  top: DS.s(-40),
                   child: IgnorePointer(child: ExcludeSemantics(child: Art3D(asset: art, size: 86, halo: 88, haloColor: tone.halo, haloDy: 3, shadowBlur: 5, shadowOffset: const Offset(4, 7)))),
                 ),
               ],
@@ -182,7 +183,7 @@ class FormNoteCard extends StatelessWidget {
   final VoidCallback? onTap;
   final EdgeInsets? margin;
 
-  static const double topRoom = 34;
+  static double get topRoom => DS.s(34);
 
   @override
   Widget build(BuildContext context) {
@@ -193,12 +194,12 @@ class FormNoteCard extends StatelessWidget {
       children: [
         Container(
           width: double.infinity,
-          constraints: const BoxConstraints(minHeight: 70),
-          padding: EdgeInsets.fromLTRB(84, 14, onTap == null ? 16 : 10, 14),
-          decoration: const BoxDecoration(
+          constraints: BoxConstraints(minHeight: DS.s(70)),
+          padding: EdgeInsets.fromLTRB(DS.s(84), DS.s(14), DS.s(onTap == null ? 16 : 10), DS.s(14)),
+          decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(24), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8)),
-            boxShadow: Form3D.cardShadow,
+            borderRadius: BorderRadius.only(topLeft: Radius.circular(DS.radius(8)), topRight: Radius.circular(DS.radius(24)), bottomLeft: Radius.circular(DS.radius(8)), bottomRight: Radius.circular(DS.radius(8))),
+            boxShadow: DS.shadows(Form3D.cardShadow),
           ),
           child: Row(
             children: [
@@ -212,15 +213,15 @@ class FormNoteCard extends StatelessWidget {
                   ],
                 ),
               ),
-              if (onTap != null) Icon(Icons.chevron_right_rounded, size: 26, color: tone.text),
+              if (onTap != null) Icon(Icons.chevron_right_rounded, size: DS.s(26), color: tone.text),
             ],
           ),
         ),
-        Positioned(left: 10, top: -20, child: ExcludeSemantics(child: Art3D(asset: art, size: 64, halo: 60, haloColor: tone.halo, haloDy: 4, shadowBlur: 4, shadowOffset: const Offset(3, 5)))),
+        Positioned(left: DS.s(10), top: DS.s(-20), child: ExcludeSemantics(child: Art3D(asset: art, size: 64, halo: 60, haloColor: tone.halo, haloDy: 4, shadowBlur: 4, shadowOffset: const Offset(3, 5)))),
       ],
     );
     return Padding(
-      padding: margin ?? const EdgeInsets.fromLTRB(18, topRoom, 18, 0),
+      padding: margin ?? EdgeInsets.fromLTRB(DS.s(18), topRoom, DS.s(18), 0),
       child: onTap == null ? card : Tap3D(onTap: onTap, child: card),
     );
   }

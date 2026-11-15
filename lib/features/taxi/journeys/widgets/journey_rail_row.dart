@@ -10,21 +10,21 @@ class JourneyRailRow extends StatelessWidget {
 
   const JourneyRailRow({super.key, required this.marker, required this.child, this.topColor, this.bottomColor});
 
-  Widget _line(Color? c) => Container(width: 4, decoration: BoxDecoration(color: c, borderRadius: BorderRadius.circular(2)));
+  Widget _line(Color? c) => Container(width: DS.s(4), decoration: BoxDecoration(color: c, borderRadius: DS.circular(2)));
 
   @override
   Widget build(BuildContext context) {
     return IntrinsicHeight(
       child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         SizedBox(
-          width: 32,
+          width: DS.s(32),
           child: Column(children: [
             Expanded(child: Center(child: _line(topColor))),
             marker,
             Expanded(child: Center(child: _line(bottomColor))),
           ]),
         ),
-        const SizedBox(width: 8),
+        Gap.h(8),
         Expanded(child: child),
       ]),
     );
@@ -46,15 +46,15 @@ class JourneyChangeDot extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 28,
-      height: 28,
+      width: DS.s(28),
+      height: DS.s(28),
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: DesignColors.surface,
-        border: Border.all(color: TripLook.warning, width: 2),
-        boxShadow: ShadowTokens.elev1,
+        border: Border.all(color: TripLook.warning, width: DS.s(2)),
+        boxShadow: DS.shadows(ShadowTokens.elev1),
       ),
-      child: const Icon(Icons.swap_horiz_rounded, size: 16, color: TripLook.warning),
+      child: Icon(Icons.swap_horiz_rounded, size: DS.s(16), color: TripLook.warning),
     );
   }
 }
@@ -69,10 +69,10 @@ class JourneyStop extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: DS.sym(v: 8),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Wrap(spacing: 6, runSpacing: 4, crossAxisAlignment: WrapCrossAlignment.center, children: [
-          Text(title, maxLines: 2, overflow: TextOverflow.ellipsis, style: FitnessAppTheme.title.copyWith(fontSize: 15)),
+        Wrap(spacing: DS.gh(6), runSpacing: DS.gv(4), crossAxisAlignment: WrapCrossAlignment.center, children: [
+          Text(title, maxLines: 2, overflow: TextOverflow.ellipsis, style: FitnessAppTheme.title.copyWith(fontSize: DS.f(15))),
           if (tag != null)
             JourneyPill(text: tag!, fg: DesignColors.textPrimary, bg: TripLook.warningSurface, fontSize: 11, maxLines: 1),
         ]),
@@ -80,7 +80,7 @@ class JourneyStop extends StatelessWidget {
           Text(subtitle!,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: FitnessAppTheme.caption.copyWith(fontSize: 11.5, fontWeight: FontWeight.w600)),
+              style: FitnessAppTheme.caption.copyWith(fontSize: DS.f(11.5), fontWeight: FontWeight.w600)),
       ]),
     );
   }

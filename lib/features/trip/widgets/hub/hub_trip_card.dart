@@ -54,11 +54,11 @@ class HubTripCard extends StatelessWidget {
 
   Widget _menu() => PopupMenuButton<String>(
         padding: EdgeInsets.zero,
-        constraints: const BoxConstraints(minWidth: 140),
-        icon: const Icon(Icons.more_vert_rounded, size: 22, color: HubTokens.sub),
+        constraints: BoxConstraints(minWidth: DS.s(140)),
+        icon: Icon(Icons.more_vert_rounded, size: DS.s(22), color: HubTokens.sub),
         color: DesignColors.surface,
         elevation: 8,
-        shape: const RoundedRectangleBorder(borderRadius: CardRadius.tile),
+        shape: RoundedRectangleBorder(borderRadius: DS.br(CardRadius.tile)),
         onSelected: (v) {
           if (v == 'share') onShare?.call();
           if (v == 'complete') onMarkComplete?.call();
@@ -68,18 +68,18 @@ class HubTripCard extends StatelessWidget {
           if (onShare != null)
             PopupMenuItem(
               value: 'share',
-              height: 44,
+              height: DS.s(44),
               child: Text(TripStringsA5.share, style: TypeTokens.style(14, FontWeight.w500)),
             ),
           if (onMarkComplete != null)
             PopupMenuItem(
               value: 'complete',
-              height: 44,
+              height: DS.s(44),
               child: Text(TripStrings.markComplete, style: TypeTokens.style(14, FontWeight.w500)),
             ),
           PopupMenuItem(
             value: 'delete',
-            height: 44,
+            height: DS.s(44),
             child: Text(TripStrings.delete, style: TypeTokens.style(14, FontWeight.w500, color: DesignColors.error)),
           ),
         ],
@@ -90,7 +90,7 @@ class HubTripCard extends StatelessWidget {
     final dates = datesOf(trip, TripClock.today(), past: past);
     final radius = HubTokens.cardRadius(68);
     return Padding(
-      padding: const EdgeInsets.fromLTRB(18, 20, 18, 0),
+      padding: EdgeInsets.fromLTRB(DS.s(18), DS.gv(20), DS.s(18), 0),
       child: Container(
         decoration: BoxDecoration(color: Colors.white, borderRadius: radius, boxShadow: HubTokens.cardShadow),
         child: ClipRRect(
@@ -102,12 +102,12 @@ class HubTripCard extends StatelessWidget {
                 InkWell(
                   onTap: onOpen,
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(18, 20, 18, 16),
+                    padding: DS.insets(l: 18, t: 20, r: 18, b: 16),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         Padding(
-                          padding: const EdgeInsets.only(right: 50),
+                          padding: EdgeInsets.only(right: DS.s(50)),
                           child: Text(
                             titleOf(trip),
                             maxLines: 2,
@@ -116,7 +116,7 @@ class HubTripCard extends StatelessWidget {
                           ),
                         ),
                         Padding(
-                          padding: const EdgeInsets.only(top: 2, bottom: 10),
+                          padding: EdgeInsets.only(top: DS.s(2), bottom: DS.s(10)),
                           child: Text(
                             dates,
                             maxLines: 1,
@@ -129,7 +129,7 @@ class HubTripCard extends StatelessWidget {
                     ),
                   ),
                 ),
-                Positioned(right: 10, top: 8, width: 34, height: 34, child: _menu()),
+                Positioned(right: DS.s(10), top: DS.s(8), width: DS.s(34), height: DS.s(34), child: _menu()),
               ],
             ),
           ),

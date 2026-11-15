@@ -551,7 +551,7 @@ mixin AddListingLocationMixin<T extends StatefulWidget> on State<T> {
 
   Widget addressStepWidget() => SingleChildScrollView(
     key: const ValueKey(2),
-    padding: const EdgeInsets.only(bottom: 24),
+    padding: EdgeInsets.only(bottom: DS.s(24)),
     child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       _card(
         art: ListingArt.worldMap,
@@ -562,7 +562,7 @@ mixin AddListingLocationMixin<T extends StatefulWidget> on State<T> {
         ]),
       ),
       _card(
-        art: _coral ? ListingArt.taxi : ListingArt.hotel,
+        art: _coral ? ListingArt.taxi : ListingArt.stay,
         title: 'Address',
         child: PillField(
           tone: _tone,
@@ -570,9 +570,9 @@ mixin AddListingLocationMixin<T extends StatefulWidget> on State<T> {
           focusNode: _addressFocusNode,
           inputFormatters: noEmojiInputFormatters,
           hint: 'Street, landmark, nearby place...',
-          leadingArt: _coral ? ListingArt.taxi : ListingArt.hotel,
+          leadingArt: _coral ? ListingArt.taxi : ListingArt.stay,
           suffix: _isResolvingDistrict
-              ? SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: _tone.g2))
+              ? SizedBox(width: DS.s(16), height: DS.s(16), child: CircularProgressIndicator(strokeWidth: 2, color: _tone.g2))
               : null,
         ),
       ),

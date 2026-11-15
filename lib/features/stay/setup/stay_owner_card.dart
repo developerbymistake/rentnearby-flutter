@@ -50,7 +50,7 @@ class StayOwnerCard extends StatelessWidget {
       photo: photo == null
           ? _noPhoto()
           : CachedNetworkImage(imageUrl: photo, fit: BoxFit.cover, placeholder: (_, _) => _noPhoto(), errorWidget: (_, _, _) => _noPhoto()),
-      sticker: ListingArt.hotel,
+      sticker: ListingArt.stay,
       chips: [if (stay.minPricePerNight != null) 'From ${BrowseItem.inr(stay.minPricePerNight!)}/night'],
       localityLabel: 'LOCALITY',
       locality: stay.locality,
@@ -140,9 +140,9 @@ class StayOwnerCard extends StatelessWidget {
   Widget _roomRow(StayRoomModel r) {
     final canEdit = onEditPrice != null && !stay.isPendingReview;
     return ConstrainedBox(
-      constraints: const BoxConstraints(minHeight: 44),
+      constraints: BoxConstraints(minHeight: DS.s(44)),
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 6),
+        padding: DS.sym(v: 6),
         child: Row(
           children: [
             Expanded(
@@ -153,7 +153,7 @@ class StayOwnerCard extends StatelessWidget {
                 style: Ink3D.text(13, FontWeight.w600, DesignColors.onPrimary, height: 1.3),
               ),
             ),
-            if (canEdit) ...[const SizedBox(width: 8), OnCardPill(label: 'Edit price', width: 84, color: _tone.button, onTap: () => onEditPrice!(r))],
+            if (canEdit) ...[Gap.h(8), OnCardPill(label: 'Edit price', width: DS.s(84), color: _tone.button, onTap: () => onEditPrice!(r))],
           ],
         ),
       ),
@@ -163,13 +163,13 @@ class StayOwnerCard extends StatelessWidget {
   Widget _enquiriesRow() {
     const ink = DesignColors.onPrimary;
     final row = Container(
-      constraints: const BoxConstraints(minHeight: 58),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(color: ink.withValues(alpha: Alpha.v18), borderRadius: BorderRadius.circular(12)),
+      constraints: BoxConstraints(minHeight: DS.s(58)),
+      padding: DS.sym(h: 12, v: 6),
+      decoration: BoxDecoration(color: ink.withValues(alpha: Alpha.v18), borderRadius: DS.circular(12)),
       child: Row(
         children: [
           Art3D(asset: ListingArt.speechBalloon, size: 34, shadowBlur: 3, shadowOffset: const Offset(2, 3), shadowAlpha: 0.25),
-          const SizedBox(width: 10),
+          Gap.h(10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -185,7 +185,7 @@ class StayOwnerCard extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(width: 8),
+          Gap.h(8),
           if (enquiryNewCount != null)
             Obx(() {
               final n = enquiryNewCount!.value;

@@ -324,7 +324,7 @@ class _PhoneVerifyScreenState extends State<PhoneVerifyScreen> with TickerProvid
             keyboardType: TextInputType.number,
             autofillHints: const [],
             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            separatorBuilder: (_) => const SizedBox(width: 12),
+            separatorBuilder: (_) => Gap.h(12),
             defaultPinTheme: _defaultTheme,
             focusedPinTheme: _focusedTheme,
             submittedPinTheme: _submittedTheme,

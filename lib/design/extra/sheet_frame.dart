@@ -3,6 +3,7 @@ import '../tokens/design_colors.dart';
 import 'art_3d.dart';
 import 'dock_inset.dart';
 import 'sheet_3d.dart';
+import 'package:bakhli/design/tokens/design_scale.dart';
 
 class SheetFrame extends StatelessWidget {
   const SheetFrame({
@@ -11,7 +12,7 @@ class SheetFrame extends StatelessWidget {
     this.title,
     this.subtitle,
     this.footer,
-    this.padding = const EdgeInsets.fromLTRB(20, 0, 20, 20),
+    this.padding,
     this.handle = true,
     this.scrollable = true,
     this.tone,
@@ -25,7 +26,7 @@ class SheetFrame extends StatelessWidget {
   final String? title;
   final String? subtitle;
   final Widget? footer;
-  final EdgeInsets padding;
+  final EdgeInsets? padding;
   final bool handle;
   final bool scrollable;
   final ListingTone? tone;
@@ -56,6 +57,7 @@ class SheetFrame extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final pad = padding ?? DS.insets(l: 20, b: 20, r: 20);
     return Sheet3D(
       tone: tone ?? ListingTone.indigo,
       art: art,
@@ -67,7 +69,7 @@ class SheetFrame extends StatelessWidget {
       closeEnabled: closeEnabled,
       footer: footer,
       scrollable: scrollable,
-      padding: footer == null ? padding.copyWith(bottom: 0) : padding,
+      padding: footer == null ? pad.copyWith(bottom: 0) : pad,
       child: child,
     );
   }

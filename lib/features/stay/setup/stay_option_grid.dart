@@ -21,15 +21,15 @@ class StayOptionGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const radius = BorderRadius.all(Radius.circular(24));
+    final radius = BorderRadius.all(Radius.circular(DS.radius(24)));
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       padding: EdgeInsets.zero,
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: crossAxisCount,
-        crossAxisSpacing: 10,
-        mainAxisSpacing: 10,
+        crossAxisSpacing: DS.gh(10),
+        mainAxisSpacing: DS.gv(10),
         childAspectRatio: childAspectRatio,
       ),
       itemCount: labels.length,
@@ -41,7 +41,7 @@ class StayOptionGrid extends StatelessWidget {
             color: active ? accent : DesignColors.surface,
             borderRadius: radius,
             border: Border.all(color: active ? accent : DesignColors.dividerSoft, width: 1.5),
-            boxShadow: active ? ShadowTokens.elev3 : ShadowTokens.elev1,
+            boxShadow: DS.shadows(active ? ShadowTokens.elev3 : ShadowTokens.elev1),
           ),
           child: Material(
             color: Colors.transparent,
@@ -50,7 +50,7 @@ class StayOptionGrid extends StatelessWidget {
               onTap: () => onTap(i),
               child: Center(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  padding: DS.sym(h: 8),
                   child: FittedBox(
                     fit: BoxFit.scaleDown,
                     child: Text(labels[i],

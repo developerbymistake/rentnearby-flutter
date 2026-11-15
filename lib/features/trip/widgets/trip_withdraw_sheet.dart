@@ -122,8 +122,8 @@ class _WithdrawBodyState extends State<_WithdrawBody> {
       ),
       children: [
         if (named.isNotEmpty)
-          NameChips3D(tone: tone, items: [for (final e in named) (e.isTaxi ? ListingArt.taxi : ListingArt.bed, e.listingName)]),
-        const SizedBox(height: 16),
+          NameChips3D(tone: tone, items: [for (final e in named) (e.isTaxi ? ListingArt.taxi : ListingArt.stay, e.listingName)]),
+        Gap.v(16),
       ],
     );
   }

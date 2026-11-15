@@ -153,7 +153,7 @@ class _EnquiryBodyState extends State<_EnquiryBody> {
       final p = _c.plan.value;
       final s = _c.settings;
       if (p == null) {
-        return TripSheetFrame(tone: _tone, art: ListingArt.taxi, title: TripStrings.taxiEnquiry, children: const [SizedBox(height: 24)]);
+        return TripSheetFrame(tone: _tone, art: ListingArt.taxi, title: TripStrings.taxiEnquiry, children: [Gap.v(24)]);
       }
       if (_days.isEmpty) {
         return TripSheetFrame(
@@ -190,20 +190,20 @@ class _EnquiryBodyState extends State<_EnquiryBody> {
             RepliesBanner(
               art: ListingArt.clipboard,
               text: limitBody.isEmpty ? TripStrings.askLimitTitle : '${TripStrings.askLimitTitle}. $limitBody',
-              margin: const EdgeInsets.only(bottom: 4),
+              margin: EdgeInsets.only(bottom: DS.gv(4)),
             ),
           Row(
             children: [
               if (from != null)
                 Expanded(child: PillPickerField(tone: _tone, sublabel: TripStrings.from, value: TripFormat.shortDate(from), leadingArt: ListingArt.calendar, trailing: const SizedBox.shrink(), onTap: null)),
-              if (from != null && to != null) const SizedBox(width: 10),
+              if (from != null && to != null) Gap.h(10),
               if (to != null)
                 Expanded(child: PillPickerField(tone: _tone, sublabel: TripStrings.to, value: TripFormat.shortDate(to), leadingArt: ListingArt.calendar, trailing: const SizedBox.shrink(), onTap: null)),
             ],
           ),
-          const SizedBox(height: 12),
+          Gap.v(12),
           PillPickerField(tone: _tone, sublabel: TripStrings.people, value: s.peopleSummary, hint: TripStrings.addPeople, leadingArt: ListingArt.guests, onTap: () => TripDatesSheet.edit(context)),
-          if (short) RepliesBanner(art: ListingArt.calendar, text: TripStringsV2Find.veryShortNoticeDriver, margin: const EdgeInsets.only(top: 12)),
+          if (short) RepliesBanner(art: ListingArt.calendar, text: TripStringsV2Find.veryShortNoticeDriver, margin: EdgeInsets.only(top: DS.gv(12))),
           LayoutBuilder(builder: (context, c) {
             final time = PillPickerField(
               tone: _tone,
@@ -224,17 +224,17 @@ class _EnquiryBodyState extends State<_EnquiryBody> {
               inputFormatters: [...noEmojiInputFormatters, LengthLimitingTextInputFormatter(TripTaxiEnquirySheet.placeMax)],
             );
             return c.maxWidth >= 320
-                ? Row(crossAxisAlignment: CrossAxisAlignment.start, children: [Expanded(child: time), const SizedBox(width: 10), Expanded(child: place)])
+                ? Row(crossAxisAlignment: CrossAxisAlignment.start, children: [Expanded(child: time), Gap.h(10), Expanded(child: place)])
                 : Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [time, place]);
           }),
-          Padding(padding: const EdgeInsets.only(top: 16, bottom: 6), child: Text(TripStrings.itineraryFromPlan.toUpperCase(), style: RepliesLook.section)),
+          Padding(padding: EdgeInsets.only(top: DS.gv(16), bottom: DS.gv(6)), child: Text(TripStrings.itineraryFromPlan.toUpperCase(), style: RepliesLook.section)),
           for (final n in _days)
             if (p.dayAt(n) != null)
               KeyValueRow(
                 label: '${TripStrings.dayN(n)} · ${TripFormat.duration(_c.dayTotalMinutes(n))}',
                 value: p.dayAt(n)!.spots.map((x) => x.name).join(' → '),
               ),
-          Padding(padding: const EdgeInsets.only(top: 12), child: Text(TripStrings.driverSeesPhone, style: RepliesLook.foot)),
+          Padding(padding: EdgeInsets.only(top: DS.gv(12)), child: Text(TripStrings.driverSeesPhone, style: RepliesLook.foot)),
         ],
       );
     });

@@ -1,3 +1,4 @@
+import 'package:bakhli/design/tokens/design_scale.dart';
 import 'package:bakhli/design/tokens/design_colors.dart';
 import 'package:bakhli/design/tokens/alpha_tokens.dart';
 import 'package:flutter/material.dart';
@@ -52,12 +53,12 @@ class InfoRowCard extends StatelessWidget {
       onTap: onTap,
       margin: EdgeInsets.zero,
       leading: Container(
-        width: ListRow.tileSize,
-        height: ListRow.tileSize,
-        padding: const EdgeInsets.all(14),
+        width: DS.s(ListRow.tileSize),
+        height: DS.s(ListRow.tileSize),
+        padding: DS.all(14),
         decoration: BoxDecoration(
           gradient: tone.gradient,
-          borderRadius: KitMetrics.tileSmall,
+          borderRadius: DS.br(KitMetrics.tileSmall),
         ),
         child: Image.asset(iconAsset),
       ),

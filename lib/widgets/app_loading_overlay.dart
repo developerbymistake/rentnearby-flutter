@@ -39,7 +39,7 @@ class _LoadingBody extends StatelessWidget {
   const _LoadingBody({required this.message});
 
   static String _artFor(ListingTone tone) {
-    if (identical(tone, ListingTone.forest)) return ListingArt.hotel;
+    if (identical(tone, ListingTone.forest)) return ListingArt.stay;
     if (identical(tone, ListingTone.coral)) return ListingArt.taxi;
     return ListingArt.airplane;
   }

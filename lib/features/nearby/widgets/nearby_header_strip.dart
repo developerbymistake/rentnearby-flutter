@@ -19,7 +19,7 @@ class NearbyHeaderStrip extends StatelessWidget {
     if (h.citiesUnavailable) lines.add('${NearbyStrings.citiesLoadingTitle}. ${NearbyStrings.citiesLoadingBody}');
     if (lines.isEmpty) return const SizedBox.shrink();
     return Padding(
-      padding: const EdgeInsets.fromLTRB(18, 6, 18, 4),
+      padding: EdgeInsets.fromLTRB(DS.s(18), DS.gv(6), DS.s(18), DS.gv(4)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

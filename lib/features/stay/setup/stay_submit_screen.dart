@@ -68,7 +68,7 @@ class _StaySubmitScreenState extends State<StaySubmitScreen> {
             child: Obx(() {
               final s = _ctrl.stay.value;
               return ListView(
-                padding: const EdgeInsets.only(bottom: 24),
+                padding: EdgeInsets.only(bottom: DS.s(24)),
                 children: [
                   FormSectionCard(
                     tone: _tone,

@@ -115,7 +115,7 @@ class _PostJobScreenState extends State<PostJobScreen> {
             labels: _steps,
             current: _ctrl.step.value,
             activeLabelColor: Ink3D.title,
-            margin: const EdgeInsets.fromLTRB(18, 16, 18, 0),
+            margin: EdgeInsets.fromLTRB(DS.s(18), DS.gv(16), DS.s(18), 0),
           ),
           _blockBanner(),
         ],
@@ -153,7 +153,7 @@ class _PostJobScreenState extends State<PostJobScreen> {
             title: "Couldn't load the form",
             actionLabel: 'Retry',
             onAction: _ctrl.load,
-            padding: const EdgeInsets.fromLTRB(30, 60, 30, 24),
+            padding: EdgeInsets.fromLTRB(DS.s(30), DS.gv(60), DS.s(30), DS.gv(24)),
           ),
         ],
       );
@@ -219,7 +219,7 @@ class _PostJobScreenState extends State<PostJobScreen> {
   Widget _stepBody(int key, List<Widget> cards) => SingleChildScrollView(
         key: ValueKey(key),
         physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.only(bottom: 24),
+        padding: EdgeInsets.only(bottom: DS.gv(24)),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -329,7 +329,7 @@ class _PostJobScreenState extends State<PostJobScreen> {
               hint: '15000',
             ),
           ),
-          const SizedBox(width: 10),
+          Gap.h(10),
           Expanded(
             child: PillField(
               tone: _look,
@@ -424,7 +424,7 @@ class _PostJobScreenState extends State<PostJobScreen> {
             prefixText: '+91',
             hint: '10-digit WhatsApp',
           ),
-          const SizedBox(height: 8),
+          Gap.v(8),
           ToggleRow(
             tone: _look,
             label: 'Same as my login number',
@@ -434,7 +434,7 @@ class _PostJobScreenState extends State<PostJobScreen> {
         ]),
       ),
       Padding(
-        padding: const EdgeInsets.fromLTRB(24, 18, 24, 0),
+        padding: EdgeInsets.fromLTRB(DS.s(24), DS.gv(18), DS.s(24), 0),
         child: Text(
           'Your job goes live right after you post. Seekers call or WhatsApp you from the job.',
           style: Ink3D.text(12.5, FontWeight.w400, Ink3D.grey, letterSpacing: 0, height: 1.45),

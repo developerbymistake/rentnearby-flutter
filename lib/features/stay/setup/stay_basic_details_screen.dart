@@ -324,7 +324,7 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
           children: [
             SheetOptionCard(tone: _tone, art: ListingArt.camera, title: 'Take Photo', subtitle: 'Use camera to capture now', onTap: () => Navigator.pop(sheetCtx, ImageSource.camera)),
             SheetOptionCard(tone: _tone, art: ListingArt.sunrise, title: 'Choose from Gallery', subtitle: 'Pick existing photos', onTap: () => Navigator.pop(sheetCtx, ImageSource.gallery)),
-            const SizedBox(height: 8),
+            Gap.v(8),
           ],
         ),
       ),
@@ -608,7 +608,7 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
                 child: _step == 0
                     ? _detailsStep()
                     : _step == 1
-                        ? SingleChildScrollView(key: const ValueKey(1), padding: const EdgeInsets.only(bottom: 24), child: locationStepWidget())
+                        ? SingleChildScrollView(key: const ValueKey(1), padding: EdgeInsets.only(bottom: DS.s(24)), child: locationStepWidget())
                         : _step == 2
                             ? addressStepWidget()
                             : _photosStep(),
@@ -666,10 +666,10 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
 
   Widget _detailsStep() => SingleChildScrollView(
         key: const ValueKey(0),
-        padding: const EdgeInsets.only(bottom: 24),
+        padding: EdgeInsets.only(bottom: DS.s(24)),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           _card(
-            art: ListingArt.hotel,
+            art: ListingArt.stay,
             title: 'Stay Name',
             child: PillField(
               tone: _tone,
@@ -682,7 +682,7 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
             ),
           ),
           _card(
-            art: ListingArt.bed,
+            art: ListingArt.stay,
             title: 'Stay Type',
             child: Obx(() {
               final types = _types.types;
@@ -737,8 +737,8 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
             title: 'Facilities',
             optional: true,
             child: Wrap(
-              spacing: 8,
-              runSpacing: 8,
+              spacing: DS.gh(8),
+              runSpacing: DS.gv(8),
               children: [
                 for (final o in StayOptionSets.facilities)
                   ChoicePill(
@@ -921,16 +921,16 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
     final left = max - _photos.length;
     return SingleChildScrollView(
       key: const ValueKey(3),
-      padding: const EdgeInsets.only(bottom: 24),
+      padding: EdgeInsets.only(bottom: DS.s(24)),
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         _card(
           art: ListingArt.camera,
           title: 'Stay Photos',
           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             Text('${_photos.length}/$max photos added', style: Ink3D.text(13, FontWeight.w400, Ink3D.sub)),
-            const SizedBox(height: 4),
+            Gap.v(4),
             Text('Good photos get 3x more responses', style: Ink3D.text(12.5, FontWeight.w600, _tone.text)),
-            const SizedBox(height: 14),
+            Gap.v(14),
             if (_photos.isEmpty)
               PhotoDropZone3D(tone: _tone, title: 'Add Stay Photos', subtitle: 'Camera or Gallery', onTap: _pickPhoto)
             else
@@ -939,7 +939,7 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
                 physics: const NeverScrollableScrollPhysics(),
                 padding: EdgeInsets.zero,
                 clipBehavior: Clip.none,
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 3, crossAxisSpacing: 10, mainAxisSpacing: 10),
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 3, crossAxisSpacing: DS.gh(10), mainAxisSpacing: DS.gv(10)),
                 itemCount: _photos.length + (left > 0 ? 1 : 0),
                 itemBuilder: (_, i) => i == _photos.length ? PhotoAddTile3D(tone: _tone, label: 'Add', onTap: _pickPhoto) : _photoTile(i),
               ),
@@ -947,7 +947,7 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
               LinkLine3D(
                 center: true,
                 color: _tone.text,
-                padding: const EdgeInsets.only(top: 8),
+                padding: EdgeInsets.only(top: DS.gv(8)),
                 text: '+ Add $left more photo${left == 1 ? '' : 's'}',
                 onTap: _pickPhoto,
               ),

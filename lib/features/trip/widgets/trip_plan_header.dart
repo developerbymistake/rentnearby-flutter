@@ -28,9 +28,9 @@ enum TripPlanMenu {
 }
 
 class TripPlanHeader extends StatelessWidget {
-  static const double _guideSide = 16;
+  static double get _guideSide => DS.s(16);
   // Left room kept free for the question circle, less the header side padding.
-  static const double _circleRoom = GuideSheetScaffold.circleLeft + GuideSheetScaffold.circleSize - _guideSide;
+  static double get _circleRoom => DS.s(GuideSheetScaffold.circleLeft + GuideSheetScaffold.circleSize) - _guideSide;
 
   final ValueChanged<TripPlanMenu> onMenu;
 
@@ -138,7 +138,7 @@ class TripPlanHeader extends StatelessWidget {
                   onTap: () => c.editMode.value = false,
                 )
               else
-                Padding(padding: const EdgeInsets.only(left: 8), child: _MapAction(onTap: () => onMenu(TripPlanMenu.map))),
+                Padding(padding: EdgeInsets.only(left: DS.gh(8)), child: _MapAction(onTap: () => onMenu(TripPlanMenu.map))),
               _menu(c),
             ],
           ],
@@ -162,7 +162,7 @@ class TripPlanHeader extends StatelessWidget {
         behavior: HitTestBehavior.opaque,
         onTap: () => onMenu(TripPlanMenu.easy),
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(12, 8, 0, 0),
+          padding: DS.insets(l: 12, t: 8),
           child: Row(
             children: [
               TweenAnimationBuilder<double>(
@@ -183,7 +183,7 @@ class TripPlanHeader extends StatelessWidget {
                   textColor: DesignColors.surface,
                 ),
               ),
-              const SizedBox(width: 12),
+              Gap.h(12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -212,12 +212,12 @@ class TripPlanHeader extends StatelessWidget {
                           color: DesignColors.whiteHigh,
                         ),
                       ),
-                    const SizedBox(height: 6),
+                    Gap.v(6),
                     ClipRRect(
-                      borderRadius: BorderRadius.circular(4),
+                      borderRadius: DS.circular(4),
                       child: LinearProgressIndicator(
                         value: progress.percent.clamp(0, 100) / 100,
-                        minHeight: 4,
+                        minHeight: DS.s(4),
                         color: DesignColors.surface,
                         backgroundColor: DesignColors.tint(
                           DesignColors.surface,
@@ -228,9 +228,9 @@ class TripPlanHeader extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(width: 8),
+              Gap.h(8),
               ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 120),
+                constraints: BoxConstraints(maxWidth: DS.s(120)),
                 child: _paceChip(context, c, editable),
               ),
             ],
@@ -248,32 +248,32 @@ class TripPlanHeader extends StatelessWidget {
       width: double.infinity,
       decoration: BoxDecoration(
         gradient: ListingTone.indigo.gradient,
-        borderRadius: CardRadius.header,
-        boxShadow: ShadowTokens.glow(KitTone.brand.glow),
+        borderRadius: DS.br(CardRadius.header),
+        boxShadow: DS.shadows(ShadowTokens.glow(KitTone.brand.glow)),
       ),
-      padding: EdgeInsets.fromLTRB(_guideSide, MediaQuery.paddingOf(context).top + 8, _guideSide, 10),
+      padding: EdgeInsets.fromLTRB(_guideSide, MediaQuery.paddingOf(context).top + DS.s(8), _guideSide, DS.s(10)),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Row(
             children: [
               _BackCircle(onTap: () => Get.back()),
-              const SizedBox(width: 10),
+              Gap.h(10),
               Expanded(child: _GuideTitle(title: text.title, subtitle: text.subtitle)),
-              const SizedBox(width: 8),
+              Gap.h(8),
               _MapAction(onTap: () => onMenu(TripPlanMenu.map)),
               _menu(c),
             ],
           ),
           Padding(
-            padding: const EdgeInsets.only(top: 6, left: _circleRoom),
+            padding: EdgeInsets.only(top: DS.s(6), left: _circleRoom),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 if (shown != null) Flexible(child: _statusPill(shown)),
-                if (shown != null) const SizedBox(width: 8),
+                if (shown != null) Gap.h(8),
                 ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 120),
+                  constraints: BoxConstraints(maxWidth: DS.s(120)),
                   child: _paceChip(context, c, editable),
                 ),
               ],
@@ -288,8 +288,8 @@ class TripPlanHeader extends StatelessWidget {
 
   Widget _statusPill(String text) => Container(
         key: const ValueKey('guide_status_pill'),
-        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
-        decoration: const BoxDecoration(color: DesignColors.whiteSoft, borderRadius: BorderRadius.all(Radius.circular(16))),
+        padding: DS.sym(h: 11, v: 5),
+        decoration: BoxDecoration(color: DesignColors.whiteSoft, borderRadius: DS.circular(16)),
         child: Text(
           text,
           maxLines: 2,
@@ -306,7 +306,7 @@ class TripPlanHeader extends StatelessWidget {
   ) {
     final shown = _shownHint(hint);
     return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 8, 0, 0),
+      padding: DS.insets(l: 12, t: 8),
       child: Row(
         children: [
           Expanded(
@@ -319,9 +319,9 @@ class TripPlanHeader extends StatelessWidget {
                     style: TypeTokens.style(12, FontWeight.w500, color: DesignColors.whiteHigh),
                   ),
           ),
-          const SizedBox(width: 8),
+          Gap.h(8),
           ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 120),
+            constraints: BoxConstraints(maxWidth: DS.s(120)),
             child: _paceChip(context, c, editable),
           ),
         ],
@@ -344,13 +344,13 @@ class TripPlanHeader extends StatelessWidget {
               }
             : null,
         child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 36),
+          constraints: BoxConstraints(minHeight: DS.s(36)),
           child: Container(
             alignment: Alignment.center,
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            padding: DS.sym(h: 12, v: 6),
             decoration: BoxDecoration(
               color: DesignColors.whiteSoft,
-              borderRadius: CardRadius.pill,
+              borderRadius: DS.br(CardRadius.pill),
               border: Border.all(
                 color: DesignColors.tint(DesignColors.surface, Alpha.half),
               ),
@@ -371,9 +371,9 @@ class TripPlanHeader extends StatelessWidget {
                   ),
                 ),
                 if (editable)
-                  const Icon(
+                  Icon(
                     Icons.keyboard_arrow_down_rounded,
-                    size: 16,
+                    size: DS.s(16),
                     color: DesignColors.surface,
                   ),
               ],
@@ -387,13 +387,13 @@ class TripPlanHeader extends StatelessWidget {
   Widget _menu(TripPlanController c) {
     return PopupMenuButton<TripPlanMenu>(
       icon: const Icon(Icons.more_vert_rounded, color: DesignColors.surface),
-      iconSize: 24,
-      padding: const EdgeInsets.all(8),
+      iconSize: DS.s(24),
+      padding: DS.all(8),
       color: DesignColors.surface,
-      elevation: 12,
+      elevation: DS.s(12),
       shadowColor: DesignColors.tint(DesignColors.shadowBase, Alpha.soft),
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(20))),
-      offset: const Offset(0, 56),
+      shape: RoundedRectangleBorder(borderRadius: DS.circular(20)),
+      offset: Offset(0, DS.s(56)),
       onSelected: onMenu,
       itemBuilder: (_) {
         final saved = c.trip.value != null;
@@ -450,16 +450,16 @@ class TripPlanHeader extends StatelessWidget {
   }
 
   static Widget _tile(Object icon, {bool danger = false}) => Container(
-        width: 44,
-        height: 44,
+        width: DS.s(44),
+        height: DS.s(44),
         decoration: BoxDecoration(
           color: danger ? TripLook.errorSurface : ListingTone.indigo.tint,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: DS.circular(12),
         ),
         child: Center(
           child: icon is String
               ? Art3D(asset: icon, size: 40, shadowBlur: 3, shadowOffset: const Offset(2, 3))
-              : Icon(icon as IconData, size: 24, color: TripLook.error),
+              : Icon(icon as IconData, size: DS.s(24), color: TripLook.error),
         ),
       );
 
@@ -470,11 +470,11 @@ class TripPlanHeader extends StatelessWidget {
     Color color = Ink3D.title,
   }) => PopupMenuItem(
     value: value,
-    height: 62,
+    height: DS.s(62),
     child: Row(
       children: [
         _tile(icon, danger: icon is! String),
-        const SizedBox(width: 14),
+        Gap.h(14),
         Expanded(child: Text(label, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(15, icon is String ? FontWeight.w500 : FontWeight.w600, color))),
       ],
     ),
@@ -484,11 +484,11 @@ class TripPlanHeader extends StatelessWidget {
     final muted = c.trip.value?.isMuted ?? false;
     return PopupMenuItem(
       value: TripPlanMenu.mute,
-      height: 62,
+      height: DS.s(62),
       child: Row(
         children: [
           _tile(ListingArt.speechBalloon),
-          const SizedBox(width: 14),
+          Gap.h(14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -514,8 +514,8 @@ class _BackCircle extends StatelessWidget {
   Widget build(BuildContext context) {
     return PressScale(
       child: SizedBox(
-        width: KitMetrics.touch,
-        height: KitMetrics.touch,
+        width: DS.s(KitMetrics.touch),
+        height: DS.s(KitMetrics.touch),
         child: InkWell(
           customBorder: const CircleBorder(),
           splashColor: DesignColors.whiteSoft,
@@ -523,10 +523,10 @@ class _BackCircle extends StatelessWidget {
           onTap: onTap,
           child: Center(
             child: Container(
-              width: 44,
-              height: 44,
+              width: DS.s(44),
+              height: DS.s(44),
               decoration: const BoxDecoration(color: DesignColors.whiteSoft, shape: BoxShape.circle),
-              child: const Icon(Icons.arrow_back_ios_new_rounded, size: 20, color: DesignColors.textInverse),
+              child: Icon(Icons.arrow_back_ios_new_rounded, size: DS.s(20), color: DesignColors.textInverse),
             ),
           ),
         ),
@@ -549,7 +549,7 @@ class _GuideTitle extends StatelessWidget {
     final scaler = MediaQuery.textScalerOf(context);
     final dir = Directionality.of(context);
     return ConstrainedBox(
-      constraints: const BoxConstraints(minHeight: 48),
+      constraints: BoxConstraints(minHeight: DS.s(48)),
       child: LayoutBuilder(
         builder: (context, box) {
           TextStyle styleOf(double size) => TypeTokens.style(size, FontWeight.w700, color: DesignColors.textInverse, letterSpacing: 0.3);
@@ -609,9 +609,9 @@ class _MapAction extends StatelessWidget {
             behavior: HitTestBehavior.opaque,
             onTap: onTap,
             child: Container(
-              width: 46,
-              height: 46,
-              decoration: const BoxDecoration(color: DesignColors.surface, shape: BoxShape.circle, boxShadow: Ink3D.whiteBtn),
+              width: DS.s(46),
+              height: DS.s(46),
+              decoration: BoxDecoration(color: DesignColors.surface, shape: BoxShape.circle, boxShadow: DS.shadows(Ink3D.whiteBtn)),
               child: const Center(child: Art3D(asset: ListingArt.worldMap, size: 30, shadowBlur: 2, shadowOffset: Offset(1, 2))),
             ),
           ),
@@ -658,19 +658,19 @@ class TripPlanStepCard extends StatelessWidget {
           clipBehavior: Clip.none,
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(18, 36, 18, 6),
+              padding: EdgeInsets.fromLTRB(DS.s(18), DS.s(36), DS.s(18), DS.gv(6)),
               child: Container(
-                padding: EdgeInsets.fromLTRB(20, 22, 16, 16),
+                padding: DS.insets(l: 20, t: 22, r: 16, b: 16),
                 decoration: BoxDecoration(
                   gradient: tone.gradient,
-                  borderRadius: kMealsRadius,
-                  boxShadow: [BoxShadow(color: tone.shadow, offset: const Offset(1.1, 6), blurRadius: 14)],
+                  borderRadius: DS.br(kMealsRadius),
+                  boxShadow: [BoxShadow(color: tone.shadow, offset: DS.shadowOffset(const Offset(1.1, 6)), blurRadius: DS.shadowBlur(14))],
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Padding(
-                      padding: EdgeInsets.only(right: art - 10),
+                      padding: EdgeInsets.only(right: DS.s(art - 10)),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -681,7 +681,7 @@ class TripPlanStepCard extends StatelessWidget {
                         ],
                       ),
                     ),
-                    const SizedBox(height: 14),
+                    Gap.v(14),
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
@@ -690,20 +690,20 @@ class TripPlanStepCard extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               ClipRRect(
-                                borderRadius: BorderRadius.circular(4),
+                                borderRadius: DS.circular(4),
                                 child: LinearProgressIndicator(
                                   value: pct / 100,
-                                  minHeight: 4,
+                                  minHeight: DS.s(4),
                                   color: white,
                                   backgroundColor: DesignColors.tint(white, Alpha.scrim),
                                 ),
                               ),
-                              const SizedBox(height: 12),
+                              Gap.v(12),
                               _pace(context, c, editable, tone),
                             ],
                           ),
                         ),
-                        const SizedBox(width: 12),
+                        Gap.h(12),
                         TweenAnimationBuilder<double>(
                           tween: Tween<double>(begin: 0, end: pct),
                           duration: KitMotion.reduce(context) ? Duration.zero : const Duration(milliseconds: 600),
@@ -717,7 +717,7 @@ class TripPlanStepCard extends StatelessWidget {
               ),
             ),
             Positioned(
-              right: 26,
+              right: DS.s(26),
               top: 0,
               child: IgnorePointer(
                 child: Art3D(asset: ListingArt.luggage, size: art, halo: art + 8, haloColor: DesignColors.tint(white, Alpha.v22)),
@@ -740,15 +740,15 @@ class TripPlanStepCard extends StatelessWidget {
           : null,
       label: label,
       child: Container(
-        constraints: const BoxConstraints(minHeight: 36),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-        decoration: const BoxDecoration(color: DesignColors.surface, borderRadius: CardRadius.pill, boxShadow: Ink3D.whiteBtn),
+        constraints: BoxConstraints(minHeight: DS.s(36)),
+        padding: DS.sym(h: 14, v: 6),
+        decoration: BoxDecoration(color: DesignColors.surface, borderRadius: DS.br(CardRadius.pill), boxShadow: DS.shadows(Ink3D.whiteBtn)),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Flexible(child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(13, FontWeight.w700, tone.text))),
-            if (editable) Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: tone.text),
-            const SizedBox(width: 2),
+            if (editable) Icon(Icons.keyboard_arrow_down_rounded, size: DS.s(18), color: tone.text),
+            Gap.h(2),
             Text(TripStringsV2Plan.paceTitle.toLowerCase(), maxLines: 1, style: Ink3D.text(10.5, FontWeight.w500, Ink3D.grey)),
           ],
         ),

@@ -97,7 +97,7 @@ class _StayFilterSortSheetState extends State<StayFilterSortSheet> {
         art: ListingArt.hotel,
         title: 'Filter & Sort · Stays',
         centerTitle: false,
-        padding: const EdgeInsets.fromLTRB(18, 0, 18, 8),
+        padding: EdgeInsets.fromLTRB(DS.s(18), 0, DS.s(18), DS.s(8)),
         footer: _footer(),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -124,7 +124,7 @@ class _StayFilterSortSheetState extends State<StayFilterSortSheet> {
   }
 
   Widget _label(String text, {bool first = false}) => Padding(
-        padding: EdgeInsets.fromLTRB(2, first ? 4 : 18, 2, 0),
+        padding: EdgeInsets.fromLTRB(DS.s(2), DS.gv(first ? 4 : 18), DS.s(2), 0),
         child: Semantics(header: true, child: Text(text, style: Ink3D.text(15, FontWeight.w600, Ink3D.title, height: 1.45))),
       );
 
@@ -138,7 +138,7 @@ class _StayFilterSortSheetState extends State<StayFilterSortSheet> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           for (var j = i; j < i + 3; j++) ...[
-            if (j > i) const SizedBox(width: 10),
+            if (j > i) Gap.h(10),
             Expanded(child: j < cards.length ? cards[j] : const SizedBox.shrink()),
           ],
         ],

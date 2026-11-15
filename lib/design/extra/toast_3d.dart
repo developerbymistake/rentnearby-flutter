@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../tokens/listing_palette.dart';
 import 'art_3d.dart';
+import 'package:bakhli/design/tokens/design_scale.dart';
 
 enum ToastKind { success, error, warning, info }
 
@@ -35,20 +36,20 @@ class Toast3D extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final look = _ToastLook.of(kind);
-    final glyph = compact ? 30.0 : 36.0;
+    final glyph = DS.s(compact ? 30.0 : 36.0);
     return Semantics(
       container: true,
       liveRegion: true,
       child: Material(
         type: MaterialType.transparency,
         child: Container(
-          constraints: BoxConstraints(minHeight: compact ? 46 : 62),
-          padding: EdgeInsets.symmetric(horizontal: 14, vertical: compact ? 6 : 10),
+          constraints: BoxConstraints(minHeight: DS.s(compact ? 46 : 62)),
+          padding: EdgeInsets.symmetric(horizontal: DS.s(14), vertical: DS.s(compact ? 6 : 10)),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: DS.circular(16),
             border: Border.all(color: look.color.withValues(alpha: 0.4), width: 1.4),
-            boxShadow: const [BoxShadow(color: Color(0x24000000), offset: Offset(0, 6), blurRadius: 16)],
+            boxShadow: [BoxShadow(color: Color(0x24000000), offset: DS.shadowOffset(const Offset(0, 6)), blurRadius: DS.shadowBlur(16))],
           ),
           child: Row(
             children: [
@@ -59,7 +60,7 @@ class Toast3D extends StatelessWidget {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   gradient: LinearGradient(colors: [look.g1, look.g2], begin: Alignment.topLeft, end: Alignment.bottomRight),
-                  boxShadow: [BoxShadow(color: look.color.withValues(alpha: 0.4), offset: const Offset(2, 4), blurRadius: 8)],
+                  boxShadow: [BoxShadow(color: look.color.withValues(alpha: 0.4), offset: DS.shadowOffset(const Offset(2, 4)), blurRadius: DS.shadowBlur(8))],
                 ),
                 child: look.glyph.isEmpty
                     ? Icon(Icons.check_rounded, size: glyph * 0.56, color: Colors.white)
@@ -69,7 +70,7 @@ class Toast3D extends StatelessWidget {
                         style: Ink3D.text(16, FontWeight.w700, Colors.white, height: 1, letterSpacing: 0),
                       ),
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: DS.s(12)),
               Expanded(
                 child: Text(
                   message,
@@ -102,35 +103,35 @@ class NoDataToast3D extends StatelessWidget {
       child: Material(
         type: MaterialType.transparency,
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          padding: EdgeInsets.symmetric(horizontal: DS.s(14), vertical: DS.s(12)),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: DS.circular(16),
             border: Border.all(color: const Color(0xFFE6E8EE)),
-            boxShadow: [BoxShadow(color: accent.withValues(alpha: 0.25), offset: const Offset(0, 6), blurRadius: 16)],
+            boxShadow: [BoxShadow(color: accent.withValues(alpha: 0.25), offset: DS.shadowOffset(const Offset(0, 6)), blurRadius: DS.shadowBlur(16))],
           ),
           child: Row(
             children: [
               SizedBox(
-                width: 46,
-                height: 46,
+                width: DS.s(46),
+                height: DS.s(46),
                 child: Stack(
                   clipBehavior: Clip.none,
                   children: [
                     Positioned.fill(
                       child: DecoratedBox(
-                        decoration: BoxDecoration(color: accent.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(14)),
+                        decoration: BoxDecoration(color: accent.withValues(alpha: 0.14), borderRadius: DS.circular(14)),
                       ),
                     ),
                     Positioned(
-                      left: -4,
-                      top: -10,
+                      left: DS.s(-4),
+                      top: DS.s(-10),
                       child: Art3D(asset: art ?? ListingArt.compass, size: 54, shadowBlur: 4, shadowOffset: const Offset(3, 5), shadowAlpha: 0.28),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(width: 14),
+              SizedBox(width: DS.s(14)),
               Expanded(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -150,9 +151,9 @@ class NoDataToast3D extends StatelessWidget {
 }
 
 class ToastDock extends StatefulWidget {
-  const ToastDock({super.key, this.margin = const EdgeInsets.only(bottom: 4)});
+  const ToastDock({super.key, this.margin});
 
-  final EdgeInsets margin;
+  final EdgeInsets? margin;
 
   @override
   State<ToastDock> createState() => _ToastDockState();
@@ -163,13 +164,13 @@ class _ToastDockState extends _ToastHostState<ToastDock> {
   bool get isDock => true;
 
   @override
-  EdgeInsets get margin => widget.margin;
+  EdgeInsets get margin => widget.margin ?? DS.gapInsets(b: 4);
 }
 
 class ToastSlot extends StatefulWidget {
-  const ToastSlot({super.key, this.margin = const EdgeInsets.fromLTRB(18, 14, 18, 0)});
+  const ToastSlot({super.key, this.margin});
 
-  final EdgeInsets margin;
+  final EdgeInsets? margin;
 
   @override
   State<ToastSlot> createState() => _ToastSlotState();
@@ -180,7 +181,7 @@ class _ToastSlotState extends _ToastHostState<ToastSlot> {
   bool get isDock => false;
 
   @override
-  EdgeInsets get margin => widget.margin;
+  EdgeInsets get margin => widget.margin ?? DS.gapInsets(l: 18, t: 14, r: 18);
 }
 
 abstract class _ToastHostState<T extends StatefulWidget> extends State<T> {
@@ -270,5 +271,5 @@ abstract final class ToastLane {
     return true;
   }
 
-  static double topOffset(BuildContext context) => MediaQuery.paddingOf(context).top + 8;
+  static double topOffset(BuildContext context) => MediaQuery.paddingOf(context).top + DS.s(8);
 }

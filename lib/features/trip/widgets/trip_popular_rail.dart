@@ -72,8 +72,8 @@ class _TripPopularRailState extends State<TripPopularRail> {
     );
   }
 
-  static const double _minWidth = 160;
-  static const double _maxWidth = 210;
+  static double get _minWidth => DS.s(160);
+  static double get _maxWidth => DS.s(210);
 
   double _cardWidth(List<TripCityModel> cities) {
     final scaler = MediaQuery.textScalerOf(context);
@@ -85,7 +85,7 @@ class _TripPopularRailState extends State<TripPopularRail> {
         if (x > longest) longest = x;
       }
     }
-    final need = (longest + MealsCardV.cellPadding.horizontal + 32).ceilToDouble();
+    final need = (longest + MealsCardV.cellPadding.horizontal + DS.s(32)).ceilToDouble();
     return need.clamp(_minWidth, _maxWidth);
   }
 

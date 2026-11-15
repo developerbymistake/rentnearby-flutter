@@ -54,10 +54,10 @@ class JourneyTotalBar extends StatelessWidget {
               style: Ink3D.text(12, FontWeight.w400, Ink3D.grey, height: 1.35),
             ),
           ),
-          const SizedBox(width: 12),
+          Gap.h(12),
           Text(BrowseItem.inr(total), style: Ink3D.text(26, FontWeight.w700, tone.text)),
         ]),
-        const SizedBox(height: 12),
+        Gap.v(12),
         if (onUse != null)
           JourneyPrimaryButton(label: useLabel ?? '', onPressed: onUse, busy: busy)
         else if (onSave != null)

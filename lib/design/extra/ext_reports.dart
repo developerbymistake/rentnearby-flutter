@@ -4,6 +4,7 @@ import '../tokens/listing_palette.dart';
 import 'art_3d.dart';
 import 'pill_buttons_3d.dart';
 import 'skeleton_3d.dart';
+import '../tokens/design_scale.dart';
 
 abstract final class Report3D {
   static ListingTone tone(String listingType) => switch (listingType) {
@@ -21,7 +22,7 @@ abstract final class Report3D {
   static const Color indigoPage = Color(0xFFF2F3F8);
 
   static String art(String listingType) => switch (listingType) {
-    'Stay' => ListingArt.hotel,
+    'Stay' => ListingArt.stay,
     'Taxi' => ListingArt.taxi,
     'Job' => ListingArt.luggage,
     _ => ListingArt.clipboard,
@@ -38,14 +39,14 @@ abstract final class Report3D {
   static const Color warnText = Color(0xFF6A4A1A);
   static const Color menuShadow = Color(0x33000000);
 
-  static const BoxDecoration sheetDecoration = BoxDecoration(
+  static BoxDecoration get sheetDecoration => BoxDecoration(
     color: Colors.white,
-    borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
-    boxShadow: [BoxShadow(color: menuShadow, offset: Offset(0, -4), blurRadius: 24)],
+    borderRadius: BorderRadius.vertical(top: Radius.circular(DS.radius(32))),
+    boxShadow: [BoxShadow(color: menuShadow, offset: DS.shadowOffset(const Offset(0, -4)), blurRadius: DS.shadowBlur(24))],
   );
 
-  static const BorderRadius wideRadius = BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(54), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8));
-  static const BorderRadius noteRadius = BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(24), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8));
+  static BorderRadius get wideRadius => BorderRadius.only(topLeft: Radius.circular(DS.radius(8)), topRight: Radius.circular(DS.radius(54)), bottomLeft: Radius.circular(DS.radius(8)), bottomRight: Radius.circular(DS.radius(8)));
+  static BorderRadius get noteRadius => BorderRadius.only(topLeft: Radius.circular(DS.radius(8)), topRight: Radius.circular(DS.radius(24)), bottomLeft: Radius.circular(DS.radius(8)), bottomRight: Radius.circular(DS.radius(8)));
 
   static bool pending(String status) => status == 'Pending';
   static Color statusText(String status) => pending(status) ? pendingText : resolvedText;
@@ -66,17 +67,17 @@ class ReportHeader3D extends StatelessWidget {
     final art = narrow ? 52.0 : 68.0;
     final tip = MaterialLocalizations.of(context).backButtonTooltip;
     return ConstrainedBox(
-      constraints: BoxConstraints(minHeight: narrow ? 90 : 100),
+      constraints: BoxConstraints(minHeight: DS.s(narrow ? 90 : 100)),
       child: Stack(
         clipBehavior: Clip.none,
         children: [
           Positioned(
-            right: 8,
+            right: DS.s(8),
             top: 0,
             child: ExcludeSemantics(child: Art3D(asset: ListingArt.clipboard, size: art, halo: art + 6, haloColor: tone.halo, haloDy: 4, shadowAlpha: 0.24)),
           ),
           Padding(
-            padding: EdgeInsets.fromLTRB(18, 12, art + 14, 12),
+            padding: EdgeInsets.fromLTRB(DS.s(18), DS.s(12), DS.s(art + 14), DS.s(12)),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -88,17 +89,17 @@ class ReportHeader3D extends StatelessWidget {
                     label: tip,
                     exclude: true,
                     child: Container(
-                      width: 46,
-                      height: 46,
-                      decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle, boxShadow: Ink3D.softShadow),
-                      child: Icon(Icons.chevron_left_rounded, size: 28, color: tone.text),
+                      width: DS.s(46),
+                      height: DS.s(46),
+                      decoration: BoxDecoration(color: Colors.white, shape: BoxShape.circle, boxShadow: DS.shadows(Ink3D.softShadow)),
+                      child: Icon(Icons.chevron_left_rounded, size: DS.s(28), color: tone.text),
                     ),
                   ),
                 ),
-                const SizedBox(width: 12),
+                Gap.h(12),
                 Expanded(
                   child: Padding(
-                    padding: const EdgeInsets.only(top: 2),
+                    padding: EdgeInsets.only(top: DS.gv(2)),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
@@ -108,9 +109,9 @@ class ReportHeader3D extends StatelessWidget {
                           child: Text(title, maxLines: 3, overflow: TextOverflow.ellipsis, style: Ink3D.text(narrow ? 20 : 22, FontWeight.w700, Ink3D.title, height: 1.2)),
                         ),
                         Padding(
-                          padding: const EdgeInsets.only(top: 4),
+                          padding: EdgeInsets.only(top: DS.gv(4)),
                           child: ConstrainedBox(
-                            constraints: const BoxConstraints(minHeight: 18),
+                            constraints: BoxConstraints(minHeight: DS.s(18)),
                             child: Text(subtitle ?? '', maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(13, FontWeight.w400, Ink3D.sub, letterSpacing: 0, height: 1.45)),
                           ),
                         ),
@@ -135,7 +136,7 @@ class ReportCountLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(22, 6, 22, 0),
+      padding: EdgeInsets.fromLTRB(DS.s(22), DS.s(6), DS.s(22), 0),
       child: Text(text, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(13, FontWeight.w700, Ink3D.sub, letterSpacing: 0.6)),
     );
   }
@@ -152,8 +153,8 @@ class ReportStatusPill extends StatelessWidget {
     final row = Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Container(width: plain ? 9 : 10, height: plain ? 9 : 10, decoration: BoxDecoration(shape: BoxShape.circle, color: Report3D.statusDot(status))),
-        SizedBox(width: plain ? 8 : 7),
+        Container(width: DS.s(plain ? 9 : 10), height: DS.s(plain ? 9 : 10), decoration: BoxDecoration(shape: BoxShape.circle, color: Report3D.statusDot(status))),
+        Gap.h(plain ? 8 : 7),
         Flexible(
           child: Text(status, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(plain ? 14.5 : 13, plain ? FontWeight.w600 : FontWeight.w700, Report3D.statusText(status), height: 1.4)),
         ),
@@ -161,8 +162,8 @@ class ReportStatusPill extends StatelessWidget {
     );
     if (plain) return row;
     return Container(
-      padding: const EdgeInsets.fromLTRB(10, 6, 14, 6),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), boxShadow: Ink3D.whiteBtn),
+      padding: EdgeInsets.fromLTRB(DS.s(10), DS.s(6), DS.s(14), DS.s(6)),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: DS.circular(16), boxShadow: DS.shadows(Ink3D.whiteBtn)),
       child: row,
     );
   }
@@ -193,7 +194,7 @@ class ReportCard3D extends StatelessWidget {
     final narrow = MediaQuery.sizeOf(context).width < 340;
     final scale = MediaQuery.textScalerOf(context).scale(1);
     final artSize = narrow ? 112.0 : 144.0;
-    final left = narrow ? 128.0 : 160.0;
+    final left = DS.s(narrow ? 128.0 : 160.0);
     final card = Container(
       width: double.infinity,
       decoration: BoxDecoration(gradient: tone.gradient, borderRadius: Report3D.wideRadius, boxShadow: tone.glow()),
@@ -202,39 +203,39 @@ class ReportCard3D extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 112),
+            constraints: BoxConstraints(minHeight: DS.s(112)),
             child: Padding(
-              padding: EdgeInsets.fromLTRB(left, 18, 20, 0),
+              padding: EdgeInsets.fromLTRB(left, DS.s(18), DS.s(20), 0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   ConstrainedBox(
-                    constraints: BoxConstraints(minHeight: 14 * scale),
+                    constraints: BoxConstraints(minHeight: DS.s(14) * scale),
                     child: Text((eyebrow ?? '').toUpperCase(), maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(10.5, FontWeight.w700, Colors.white.withValues(alpha: 0.9), letterSpacing: 0.6, height: 1.3)),
                   ),
-                  const SizedBox(height: 2),
+                  Gap.v(2),
                   ConstrainedBox(
-                    constraints: BoxConstraints(minHeight: 46 * scale),
+                    constraints: BoxConstraints(minHeight: DS.s(46) * scale),
                     child: Text(title, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(19, FontWeight.w700, Colors.white, height: 1.2)),
                   ),
-                  const SizedBox(height: 4),
+                  Gap.v(4),
                   Text(subtitle, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(12.5, FontWeight.w500, Colors.white.withValues(alpha: 0.96), height: 1.5)),
                 ],
               ),
             ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+            padding: EdgeInsets.fromLTRB(DS.s(20), DS.s(12), DS.s(20), DS.s(16)),
             child: Row(
               children: [
                 Flexible(child: Align(alignment: Alignment.centerLeft, child: ReportStatusPill(status: status))),
-                const SizedBox(width: 12),
+                Gap.h(12),
                 Container(
-                  width: 42,
-                  height: 42,
-                  decoration: const BoxDecoration(color: Color(0xFFFAFAFA), shape: BoxShape.circle, boxShadow: Ink3D.goBtn),
-                  child: Icon(Icons.arrow_forward_rounded, size: 24, color: tone.button),
+                  width: DS.s(42),
+                  height: DS.s(42),
+                  decoration: BoxDecoration(color: Color(0xFFFAFAFA), shape: BoxShape.circle, boxShadow: DS.shadows(Ink3D.goBtn)),
+                  child: Icon(Icons.arrow_forward_rounded, size: DS.s(24), color: tone.button),
                 ),
               ],
             ),
@@ -243,7 +244,7 @@ class ReportCard3D extends StatelessWidget {
       ),
     );
     return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 66, 14, 8),
+      padding: EdgeInsets.fromLTRB(DS.s(14), DS.s(66), DS.s(14), DS.s(8)),
       child: Tap3D(
         onTap: onTap,
         label: '${eyebrow == null || eyebrow!.isEmpty ? '' : '$eyebrow, '}$title, $subtitle, $status',
@@ -253,8 +254,8 @@ class ReportCard3D extends StatelessWidget {
           children: [
             card,
             Positioned(
-              left: 6,
-              top: narrow ? -40 : -52,
+              left: DS.s(6),
+              top: DS.s(narrow ? -40 : -52),
               child: ExcludeSemantics(child: Art3D(asset: art, size: artSize, halo: artSize + 4, haloColor: const Color(0x3DFAFAFA), haloDy: 3)),
             ),
           ],
@@ -271,47 +272,47 @@ class ReportCardSkeleton extends StatelessWidget {
   Widget build(BuildContext context) {
     final narrow = MediaQuery.sizeOf(context).width < 340;
     final artSize = narrow ? 112.0 : 144.0;
-    final left = narrow ? 128.0 : 160.0;
+    final left = DS.s(narrow ? 128.0 : 160.0);
     return ExcludeSemantics(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(14, 66, 14, 8),
+        padding: EdgeInsets.fromLTRB(DS.s(14), DS.s(66), DS.s(14), DS.s(8)),
         child: Stack(
           clipBehavior: Clip.none,
           children: [
             Container(
               width: double.infinity,
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 gradient: LinearGradient(colors: [Color(0xFFE3E6EE), Color(0xFFF1F2F7), Color(0xFFE3E6EE)], stops: [0.2, 0.4, 0.6]),
                 borderRadius: Report3D.wideRadius,
-                boxShadow: [BoxShadow(color: Color(0x409E9E9E), offset: Offset(1.1, 4), blurRadius: 10)],
+                boxShadow: [BoxShadow(color: Color(0x409E9E9E), offset: DS.shadowOffset(const Offset(1.1, 4)), blurRadius: DS.shadowBlur(10))],
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   SizedBox(
-                    height: 112,
+                    height: DS.s(112),
                     child: Padding(
-                      padding: EdgeInsets.fromLTRB(left, 18, 20, 0),
-                      child: const Column(
+                      padding: EdgeInsets.fromLTRB(left, DS.s(18), DS.s(20), 0),
+                      child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          SkeletonBox(width: 60, height: 10, radius: 5),
-                          SizedBox(height: 10),
-                          SkeletonBox(width: 150, height: 20, radius: 7),
-                          SizedBox(height: 10),
-                          SkeletonBox(width: 110, height: 14, radius: 7),
+                          SkeletonBox(width: DS.s(60), height: DS.s(10), radius: DS.radius(5)),
+                          Gap.v(10),
+                          SkeletonBox(width: DS.s(150), height: DS.s(20), radius: DS.radius(7)),
+                          Gap.v(10),
+                          SkeletonBox(width: DS.s(110), height: DS.s(14), radius: DS.radius(7)),
                         ],
                       ),
                     ),
                   ),
-                  const Padding(
-                    padding: EdgeInsets.fromLTRB(20, 12, 20, 16),
+                  Padding(
+                    padding: EdgeInsets.fromLTRB(DS.s(20), DS.s(12), DS.s(20), DS.s(16)),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        SkeletonBox(width: 104, height: 30, radius: 16),
-                        SkeletonBox(width: 42, height: 42, radius: 21),
+                        SkeletonBox(width: DS.s(104), height: DS.s(30), radius: DS.radius(16)),
+                        SkeletonBox(width: DS.s(42), height: DS.s(42), radius: DS.radius(21)),
                       ],
                     ),
                   ),
@@ -319,9 +320,9 @@ class ReportCardSkeleton extends StatelessWidget {
               ),
             ),
             Positioned(
-              left: 4,
-              top: narrow ? -40 : -52,
-              child: SkeletonBox(width: artSize, height: artSize, radius: artSize / 2),
+              left: DS.s(4),
+              top: DS.s(narrow ? -40 : -52),
+              child: SkeletonBox(width: DS.s(artSize), height: DS.s(artSize), radius: DS.radius(artSize / 2)),
             ),
           ],
         ),
@@ -341,34 +342,34 @@ class ReportReasonCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final narrow = MediaQuery.sizeOf(context).width < 340;
     final artSize = narrow ? 112.0 : 144.0;
-    final left = narrow ? 128.0 : 160.0;
+    final left = DS.s(narrow ? 128.0 : 160.0);
     final scale = MediaQuery.textScalerOf(context).scale(1);
     return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 66, 14, 8),
+      padding: EdgeInsets.fromLTRB(DS.s(14), DS.s(66), DS.s(14), DS.s(8)),
       child: Stack(
         clipBehavior: Clip.none,
         children: [
           Container(
             width: double.infinity,
-            constraints: const BoxConstraints(minHeight: 124),
-            padding: EdgeInsets.fromLTRB(left, 24, 20, 18),
+            constraints: BoxConstraints(minHeight: DS.s(124)),
+            padding: EdgeInsets.fromLTRB(left, DS.s(24), DS.s(20), DS.s(18)),
             decoration: BoxDecoration(gradient: tone.gradient, borderRadius: Report3D.wideRadius, boxShadow: tone.glow()),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(label.toUpperCase(), maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(10.5, FontWeight.w700, Colors.white.withValues(alpha: 0.9), letterSpacing: 0.6, height: 1.3)),
-                const SizedBox(height: 2),
+                Gap.v(2),
                 ConstrainedBox(
-                  constraints: BoxConstraints(minHeight: 52 * scale),
+                  constraints: BoxConstraints(minHeight: DS.s(52) * scale),
                   child: Text(reason, maxLines: 3, overflow: TextOverflow.ellipsis, style: Ink3D.text(narrow ? 19 : 21, FontWeight.w700, Colors.white, height: 1.24)),
                 ),
               ],
             ),
           ),
           Positioned(
-            left: 6,
-            top: narrow ? -40 : -52,
+            left: DS.s(6),
+            top: DS.s(narrow ? -40 : -52),
             child: ExcludeSemantics(child: Art3D(asset: ListingArt.warning, size: artSize, halo: artSize + 4, haloColor: const Color(0x3DFAFAFA), haloDy: 3)),
           ),
         ],
@@ -378,13 +379,13 @@ class ReportReasonCard extends StatelessWidget {
 }
 
 class ReportNote3D extends StatelessWidget {
-  const ReportNote3D({super.key, required this.art, required this.text, required this.fill, required this.color, this.margin = const EdgeInsets.fromLTRB(18, 22, 18, 0)});
+  const ReportNote3D({super.key, required this.art, required this.text, required this.fill, required this.color, this.margin});
 
   final String art;
   final String text;
   final Color fill;
   final Color color;
-  final EdgeInsets margin;
+  final EdgeInsets? margin;
 
   factory ReportNote3D.privacy({Key? key, required ListingTone tone, required String text}) =>
       ReportNote3D(key: key, art: ListingArt.key, text: text, fill: tone.haloBase.withValues(alpha: 0.13), color: Ink3D.sub);
@@ -395,14 +396,14 @@ class ReportNote3D extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: margin,
-      constraints: const BoxConstraints(minHeight: 62),
-      padding: const EdgeInsets.fromLTRB(12, 12, 16, 12),
+      margin: (margin ?? EdgeInsets.fromLTRB(DS.s(18), DS.gv(22), DS.s(18), 0)),
+      constraints: BoxConstraints(minHeight: DS.s(62)),
+      padding: EdgeInsets.fromLTRB(DS.s(12), DS.s(12), DS.s(16), DS.s(12)),
       decoration: BoxDecoration(color: fill, borderRadius: Report3D.noteRadius),
       child: Row(
         children: [
           ExcludeSemantics(child: Art3D(asset: art, size: 40, shadowBlur: 3, shadowOffset: const Offset(2, 4))),
-          const SizedBox(width: 12),
+          Gap.h(12),
           Expanded(child: Text(text, style: Ink3D.text(12.5, FontWeight.w500, color, letterSpacing: 0, height: 1.4))),
         ],
       ),
@@ -422,9 +423,9 @@ class ReportSheetBand extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      constraints: const BoxConstraints(minHeight: 146),
-      padding: const EdgeInsets.fromLTRB(24, 70, 24, 22),
-      decoration: BoxDecoration(gradient: tone.gradient, borderRadius: const BorderRadius.vertical(top: Radius.circular(32))),
+      constraints: BoxConstraints(minHeight: DS.s(146)),
+      padding: EdgeInsets.fromLTRB(DS.s(24), DS.s(70), DS.s(24), DS.s(22)),
+      decoration: BoxDecoration(gradient: tone.gradient, borderRadius: BorderRadius.vertical(top: Radius.circular(DS.radius(32)))),
       alignment: Alignment.bottomCenter,
       child: Semantics(
         header: true,
@@ -447,7 +448,7 @@ class ReportSheetArt extends StatelessWidget {
 
 abstract final class ReportField3D {
   static OutlineInputBorder _border(double r, Color c, double w) =>
-      OutlineInputBorder(borderRadius: BorderRadius.circular(r), borderSide: BorderSide(color: c, width: w));
+      OutlineInputBorder(borderRadius: DS.circular(r), borderSide: BorderSide(color: c, width: w));
 
   static TextStyle get text => Ink3D.text(15, FontWeight.w400, Ink3D.body, letterSpacing: 0);
   static TextStyle get hint => Ink3D.text(15, FontWeight.w400, Form3D.hint, letterSpacing: 0);
@@ -456,45 +457,45 @@ abstract final class ReportField3D {
     hintStyle: hint,
     filled: true,
     fillColor: Report3D.fieldFill,
-    contentPadding: const EdgeInsets.fromLTRB(22, 16, 8, 16),
+    contentPadding: EdgeInsets.fromLTRB(DS.s(22), DS.s(16), DS.s(8), DS.s(16)),
     border: _border(28, Report3D.fieldLine, 1),
     enabledBorder: _border(28, Report3D.fieldLine, 1),
     focusedBorder: _border(28, tone.g2, 1.5),
   );
 
   static Widget caret(ListingTone tone) => Container(
-    width: 40,
-    height: 40,
-    margin: const EdgeInsets.only(right: 8),
-    decoration: BoxDecoration(gradient: tone.gradient, shape: BoxShape.circle, boxShadow: [BoxShadow(color: tone.g2.withValues(alpha: 0.45), offset: const Offset(2, 4), blurRadius: 8)]),
-    child: const Icon(Icons.arrow_drop_down_rounded, size: 24, color: Colors.white),
+    width: DS.s(40),
+    height: DS.s(40),
+    margin: EdgeInsets.only(right: DS.s(8)),
+    decoration: BoxDecoration(gradient: tone.gradient, shape: BoxShape.circle, boxShadow: [BoxShadow(color: tone.g2.withValues(alpha: 0.45), offset: DS.shadowOffset(const Offset(2, 4)), blurRadius: DS.shadowBlur(8))]),
+    child: Icon(Icons.arrow_drop_down_rounded, size: DS.s(24), color: Colors.white),
   );
 
-  static MenuStyle menuStyle = const MenuStyle(
+  static MenuStyle get menuStyle => MenuStyle(
     backgroundColor: WidgetStatePropertyAll(Colors.white),
     surfaceTintColor: WidgetStatePropertyAll(Colors.transparent),
     shadowColor: WidgetStatePropertyAll(Report3D.menuShadow),
     elevation: WidgetStatePropertyAll(8),
-    padding: WidgetStatePropertyAll(EdgeInsets.symmetric(vertical: 6)),
-    shape: WidgetStatePropertyAll(RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(20)), side: BorderSide(color: Report3D.fieldLine))),
+    padding: WidgetStatePropertyAll(EdgeInsets.symmetric(vertical: DS.s(6))),
+    shape: WidgetStatePropertyAll(RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(DS.radius(20))), side: BorderSide(color: Report3D.fieldLine))),
   );
 
   static ButtonStyle entryStyle(ListingTone tone, bool selected) => ButtonStyle(
-    minimumSize: const WidgetStatePropertyAll(Size.fromHeight(48)),
-    padding: const WidgetStatePropertyAll(EdgeInsets.symmetric(horizontal: 20)),
+    minimumSize: WidgetStatePropertyAll(Size.fromHeight(DS.s(48))),
+    padding: WidgetStatePropertyAll(EdgeInsets.symmetric(horizontal: DS.s(20))),
     backgroundColor: WidgetStatePropertyAll(selected ? tone.haloBase.withValues(alpha: 0.12) : Colors.white),
     foregroundColor: WidgetStatePropertyAll(selected ? tone.text : Ink3D.body),
     textStyle: WidgetStatePropertyAll(Ink3D.text(15, selected ? FontWeight.w700 : FontWeight.w500, selected ? tone.text : Ink3D.body, letterSpacing: 0)),
   );
 
-  static Widget check(ListingTone tone) => Icon(Icons.check_rounded, size: 20, color: tone.text);
+  static Widget check(ListingTone tone) => Icon(Icons.check_rounded, size: DS.s(20), color: tone.text);
 
   static InputDecoration area(ListingTone tone, {required String hintText, required bool focused}) => InputDecoration(
     hintText: hintText,
     hintStyle: Ink3D.text(14.5, FontWeight.w400, Form3D.hint, letterSpacing: 0),
     filled: true,
     fillColor: focused ? Colors.white : Report3D.fieldFill,
-    contentPadding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+    contentPadding: EdgeInsets.fromLTRB(DS.s(20), DS.s(16), DS.s(20), DS.s(16)),
     border: _border(24, Report3D.fieldLine, 1),
     enabledBorder: _border(24, Report3D.fieldLine, 1),
     focusedBorder: _border(24, tone.g2, 1.5),

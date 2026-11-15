@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'art_3d.dart';
 import 'pill_buttons_3d.dart';
+import 'package:bakhli/design/tokens/design_scale.dart';
 
 enum StepCardState { locked, current, done }
 
@@ -33,8 +34,8 @@ class StepCard3D extends StatelessWidget {
   final bool subtitleBad;
   final String? semanticsLabel;
 
-  static const double topRoom = 36;
-  static const double gap = 16;
+  static double get topRoom => DS.s(36);
+  static double get gap => DS.gv(16);
   static const List<double> _grey = <double>[0.2126, 0.7152, 0.0722, 0, 0, 0.2126, 0.7152, 0.0722, 0, 0, 0.2126, 0.7152, 0.0722, 0, 0, 0, 0, 0, 1, 0];
 
   Widget? _trailing(bool locked, double k) {
@@ -42,22 +43,22 @@ class StepCard3D extends StatelessWidget {
     final label = trailingLabel;
     if (icon != null) {
       return Container(
-        width: 32,
-        height: 32,
-        decoration: BoxDecoration(shape: BoxShape.circle, color: locked ? Colors.white.withValues(alpha: 0.35) : Colors.white, boxShadow: locked ? null : Form3D.badge),
-        child: Icon(icon, size: 18, color: locked ? Colors.white : tone.button),
+        width: DS.s(32),
+        height: DS.s(32),
+        decoration: BoxDecoration(shape: BoxShape.circle, color: locked ? Colors.white.withValues(alpha: 0.35) : Colors.white, boxShadow: locked ? null : DS.shadows(Form3D.badge)),
+        child: Icon(icon, size: DS.s(18), color: locked ? Colors.white : tone.button),
       );
     }
     if (label == null || label.isEmpty) return null;
     return Container(
-      width: 78 * k,
-      height: 26 * k,
-      padding: const EdgeInsets.symmetric(horizontal: 8),
+      width: DS.s(78 * k),
+      height: DS.s(26 * k),
+      padding: EdgeInsets.symmetric(horizontal: DS.s(8)),
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(14 * k),
+        borderRadius: DS.circular(14 * k),
         color: locked ? Colors.white.withValues(alpha: 0.35) : Colors.white,
-        boxShadow: locked ? null : Form3D.badge,
+        boxShadow: locked ? null : DS.shadows(Form3D.badge),
       ),
       child: FittedBox(
         fit: BoxFit.scaleDown,
@@ -85,24 +86,24 @@ class StepCard3D extends StatelessWidget {
     }
 
     final card = Container(
-      constraints: const BoxConstraints(minHeight: 116),
-      padding: EdgeInsets.fromLTRB(left, 10, 14, 14),
+      constraints: BoxConstraints(minHeight: DS.s(116)),
+      padding: EdgeInsets.fromLTRB(DS.s(left), DS.s(10), DS.s(14), DS.s(14)),
       decoration: BoxDecoration(
-        borderRadius: const BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(54), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8)),
+        borderRadius: BorderRadius.only(topLeft: Radius.circular(DS.radius(8)), topRight: Radius.circular(DS.radius(54)), bottomLeft: Radius.circular(DS.radius(8)), bottomRight: Radius.circular(DS.radius(8))),
         gradient: locked ? Form3D.lockGradient : tone.gradient,
-        border: state == StepCardState.current ? Border.all(color: Colors.white, width: 3, strokeAlign: BorderSide.strokeAlignOutside) : null,
+        border: state == StepCardState.current ? Border.all(color: Colors.white, width: DS.s(3), strokeAlign: BorderSide.strokeAlignOutside) : null,
         boxShadow: locked
             ? null
             : (state == StepCardState.current
-                ? [BoxShadow(color: tone.shadow, offset: const Offset(1.1, 8), blurRadius: 16)]
-                : [BoxShadow(color: tone.shadow, offset: const Offset(1.1, 4), blurRadius: 10)]),
+                ? [BoxShadow(color: tone.shadow, offset: DS.shadowOffset(const Offset(1.1, 8)), blurRadius: DS.shadowBlur(16))]
+                : [BoxShadow(color: tone.shadow, offset: DS.shadowOffset(const Offset(1.1, 4)), blurRadius: DS.shadowBlur(10))]),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 26),
+            constraints: BoxConstraints(minHeight: DS.s(26)),
             child: LayoutBuilder(builder: (context, box) {
               final eyeStyle = Ink3D.text(10.5, FontWeight.w700, Colors.white.withValues(alpha: 0.92), letterSpacing: 0.7);
               final eyeText = eye == null || eye.isEmpty ? null : Text(eye.toUpperCase(), maxLines: 2, overflow: TextOverflow.ellipsis, style: eyeStyle);
@@ -110,33 +111,33 @@ class StepCard3D extends StatelessWidget {
                 final p = TextPainter(text: TextSpan(text: eye!.toUpperCase(), style: eyeStyle), maxLines: 1, textDirection: TextDirection.ltr, textScaler: scaler)..layout();
                 final need = p.width;
                 p.dispose();
-                final pillW = trailingIcon != null ? 32.0 : 78 * k;
-                if (need > box.maxWidth - pillW - 8) {
+                final pillW = DS.s(trailingIcon != null ? 32.0 : 78 * k);
+                if (need > box.maxWidth - pillW - DS.s(8)) {
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     mainAxisSize: MainAxisSize.min,
-                    children: [Align(alignment: Alignment.centerRight, child: trail), const SizedBox(height: 6), eyeText],
+                    children: [Align(alignment: Alignment.centerRight, child: trail), SizedBox(height: DS.s(6)), eyeText],
                   );
                 }
               }
               return Row(
                 children: [
                   Expanded(child: eyeText ?? const SizedBox.shrink()),
-                  if (trail != null) Padding(padding: const EdgeInsets.only(left: 8), child: trail),
+                  if (trail != null) Padding(padding: EdgeInsets.only(left: DS.s(8)), child: trail),
                 ],
               );
             }),
           ),
-          const SizedBox(height: 2),
+          SizedBox(height: DS.s(2)),
           Padding(
-            padding: const EdgeInsets.only(right: 4),
+            padding: EdgeInsets.only(right: DS.s(4)),
             child: FitLine3D(text: title, style: Ink3D.text(18, FontWeight.w700, Colors.white, height: 1.3)),
           ),
-          const SizedBox(height: 4),
+          SizedBox(height: DS.s(4)),
           ConstrainedBox(
-            constraints: BoxConstraints(minHeight: scaler.scale(12.5) * 1.38 * 2),
+            constraints: BoxConstraints(minHeight: scaler.scale(DS.f(12.5)) * 1.38 * 2),
             child: Padding(
-              padding: const EdgeInsets.only(right: 4),
+              padding: EdgeInsets.only(right: DS.s(4)),
               child: Align(
                 alignment: Alignment.topLeft,
                 child: Text(
@@ -155,7 +156,7 @@ class StepCard3D extends StatelessWidget {
     final label = semanticsLabel ?? [if (eye != null && eye.isNotEmpty) eye, title, if (sub.isNotEmpty) sub, ?trailingLabel, if (state == StepCardState.done) 'done', if (locked) 'locked'].join(', ');
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(18, topRoom + gap, 18, 0),
+      padding: EdgeInsets.fromLTRB(DS.s(18), topRoom + gap, DS.s(18), 0),
       child: Tap3D(
         onTap: live ? onTap : null,
         label: label,
@@ -164,16 +165,16 @@ class StepCard3D extends StatelessWidget {
           clipBehavior: Clip.none,
           children: [
             card,
-            Positioned(left: 8, top: -topRoom - ArtLift.of(art, artSize), child: image),
+            Positioned(left: DS.s(8), top: -topRoom - ArtLift.of(art, DS.s(artSize)), child: image),
             if (state == StepCardState.done)
               Positioned(
-                left: narrow ? 78 : 96,
-                top: narrow ? 44 : 56,
+                left: DS.s(narrow ? 78 : 96),
+                top: DS.s(narrow ? 44 : 56),
                 child: Container(
-                  width: 30,
-                  height: 30,
-                  decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.white, boxShadow: Form3D.badge),
-                  child: Icon(Icons.check_rounded, size: 20, color: tone.button),
+                  width: DS.s(30),
+                  height: DS.s(30),
+                  decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white, boxShadow: DS.shadows(Form3D.badge)),
+                  child: Icon(Icons.check_rounded, size: DS.s(20), color: tone.button),
                 ),
               ),
           ],

@@ -852,8 +852,8 @@ class _TripMapScreenState extends State<TripMapScreen> with TickerProviderStateM
       return;
     }
     final size = MediaQuery.sizeOf(context);
-    var top = _overlayHeight(_topKey, 120) + 24;
-    var bottom = _overlayHeight(_cardKey, 220) + 24;
+    var top = _overlayHeight(_topKey, DS.s(120)) + 24;
+    var bottom = _overlayHeight(_cardKey, DS.s(220)) + 24;
     final room = size.height - 120;
     if (top + bottom > room && room > 0) {
       final scale = room / (top + bottom);
@@ -966,7 +966,7 @@ class _TripMapScreenState extends State<TripMapScreen> with TickerProviderStateM
         animation: templateInterval(_enter, 1, 3),
         animationController: _enter,
         child: Padding(
-          padding: const EdgeInsets.only(top: 2, bottom: 2),
+          padding: EdgeInsets.only(top: DS.gv(2), bottom: DS.gv(2)),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -975,7 +975,7 @@ class _TripMapScreenState extends State<TripMapScreen> with TickerProviderStateM
                   onAll: () => _select(TripDayChips.all),
                   onLeg: _selectLeg,
                   onDay: _select,
-                  padding: const EdgeInsets.symmetric(horizontal: 18),
+                  padding: DS.sym(h: 18),
                 )
               else if (count > 1)
                 TripDayChips(
@@ -985,11 +985,11 @@ class _TripMapScreenState extends State<TripMapScreen> with TickerProviderStateM
                   includeAll: true,
                   compact: true,
                   allFirst: true,
-                  padding: const EdgeInsets.symmetric(horizontal: 18),
+                  padding: DS.sym(h: 18),
                 ),
               if (missing)
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(18, 6, 18, 0),
+                  padding: EdgeInsets.fromLTRB(DS.s(18), DS.gv(6), DS.s(18), 0),
                   child: _routeMissingChip(),
                 ),
             ],
@@ -1029,22 +1029,22 @@ class _TripMapScreenState extends State<TripMapScreen> with TickerProviderStateM
 
   Widget _routeMissingChip() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+      padding: DS.sym(h: 12, v: 7),
       decoration: BoxDecoration(
         color: ListingTone.indigo.tint,
-        borderRadius: CardRadius.pill,
+        borderRadius: DS.br(CardRadius.pill),
       ),
-      child: const Row(
+      child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.warning_amber_rounded, size: 14, color: DesignColors.amber),
-          SizedBox(width: 6),
+          Icon(Icons.warning_amber_rounded, size: DS.s(14), color: DesignColors.amber),
+          Gap.h(6),
           Flexible(
             child: Text(
               TripStrings.routeMissing,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 11, fontWeight: FontWeight.w600, color: FitnessAppTheme.darkText),
+              style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: DS.f(11), fontWeight: FontWeight.w600, color: FitnessAppTheme.darkText),
             ),
           ),
         ],
@@ -1083,7 +1083,7 @@ class _TripMapScreenState extends State<TripMapScreen> with TickerProviderStateM
       return Container(
         color: DesignColors.scaffold,
         alignment: Alignment.topCenter,
-        padding: EdgeInsets.only(top: MediaQuery.paddingOf(context).top + 150),
+        padding: EdgeInsets.only(top: MediaQuery.paddingOf(context).top + DS.s(150)),
         child: gone
             ? const TripNotFoundView()
             : off

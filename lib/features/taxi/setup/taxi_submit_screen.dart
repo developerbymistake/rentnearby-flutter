@@ -104,7 +104,7 @@ class _TaxiSubmitScreenState extends State<TaxiSubmitScreen> with TickerProvider
                 child: Obx(() {
                   final t = _ctrl.taxi.value;
                   return ListView(
-                    padding: const EdgeInsets.only(bottom: 24),
+                    padding: EdgeInsets.only(bottom: DS.s(24)),
                     children: [
                       SetupEntrance(controller: _anim, index: 0, count: 3, child: TitleRow3D(title: 'Check your taxi', tone: _tone)),
                       if (t != null) ...[

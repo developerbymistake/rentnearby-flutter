@@ -9,21 +9,21 @@ class TripStatusCard extends StatelessWidget {
   final Widget child;
   final VoidCallback? onTap;
 
-  static const BorderRadius _radius = BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(32), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8));
+  static BorderRadius get _radius => DS.br(const BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(32), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8)));
 
   @override
   Widget build(BuildContext context) {
     final tone = TripStatusVisuals.tone3d(status);
     Widget card = DecoratedBox(
-      decoration: const BoxDecoration(color: DesignColors.surface, borderRadius: _radius, boxShadow: Form3D.cardShadow),
+      decoration: BoxDecoration(color: DesignColors.surface, borderRadius: _radius, boxShadow: DS.shadows(Form3D.cardShadow)),
       child: ClipRRect(
         borderRadius: _radius,
         child: IntrinsicHeight(
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              DecoratedBox(decoration: BoxDecoration(gradient: tone.gradient), child: const SizedBox(width: 5)),
-              Expanded(child: Padding(padding: const EdgeInsets.fromLTRB(14, 14, 16, 14), child: child)),
+              DecoratedBox(decoration: BoxDecoration(gradient: tone.gradient), child: SizedBox(width: DS.s(5))),
+              Expanded(child: Padding(padding: DS.insets(l: 14, t: 14, r: 16, b: 14), child: child)),
             ],
           ),
         ),

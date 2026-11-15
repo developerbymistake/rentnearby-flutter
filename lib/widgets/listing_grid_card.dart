@@ -5,7 +5,7 @@ import '../models/card_fact.dart';
 import 'plan_badge_chip.dart';
 
 class ListingGridCard extends StatelessWidget {
-  static const double height = 262;
+  static double get height => DS.s(262);
 
   final String? thumbnailUrl;
   final String tagLabel;
@@ -52,7 +52,7 @@ class ListingGridCard extends StatelessWidget {
       decoration: GateKit.cardSmall(),
       child: Material(
         color: Colors.transparent,
-        borderRadius: TripKit.cardRadiusSmall,
+        borderRadius: DS.br(TripKit.cardRadiusSmall),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: onViewDetails,
@@ -61,7 +61,7 @@ class ListingGridCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               SizedBox(
-                height: 104,
+                height: DS.s(104),
                 width: double.infinity,
                 child: Stack(
                   fit: StackFit.expand,
@@ -77,15 +77,15 @@ class ListingGridCard extends StatelessWidget {
                           )
                         : _placeholder(),
                     Positioned(
-                      top: 6,
-                      left: 6,
+                      top: DS.s(6),
+                      left: DS.s(6),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                        decoration: BoxDecoration(color: _accent, borderRadius: BorderRadius.circular(38)),
+                        padding: DS.sym(h: 8, v: 2),
+                        decoration: BoxDecoration(color: _accent, borderRadius: DS.circular(38)),
                         child: Text(
                           tagLabel,
                           style: FitnessAppTheme.caption.copyWith(
-                            fontSize: 11,
+                            fontSize: DS.f(11),
                             fontWeight: FontWeight.w700,
                             letterSpacing: 0.5,
                             color: FitnessAppTheme.white,
@@ -94,13 +94,13 @@ class ListingGridCard extends StatelessWidget {
                       ),
                     ),
                     if (isFeatured)
-                      Positioned(top: 6, right: 6, child: PlanBadgeChip(color: _accentDark)),
+                      Positioned(top: DS.s(6), right: DS.s(6), child: PlanBadgeChip(color: _accentDark)),
                   ],
                 ),
               ),
               Expanded(
                 child: Padding(
-                  padding: const EdgeInsets.all(10),
+                  padding: DS.all(10),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -110,33 +110,33 @@ class ListingGridCard extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                         style: TripKit.text(13, weight: FontWeight.w700),
                       ),
-                      const SizedBox(height: 4),
+                      SizedBox(height: DS.s(4)),
                       Row(
                         children: [
                           const TravelIcon(TravelIcon.place, size: 12),
-                          const SizedBox(width: 2),
+                          SizedBox(width: DS.s(2)),
                           Expanded(
                             child: Text(
                               locationLabel,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: FitnessAppTheme.caption.copyWith(fontSize: 11),
+                              style: FitnessAppTheme.caption.copyWith(fontSize: DS.f(11)),
                             ),
                           ),
                         ],
                       ),
                       if (facts.isNotEmpty) ...[
-                        const SizedBox(height: 8),
+                        SizedBox(height: DS.s(8)),
                         Wrap(
-                          spacing: 4,
-                          runSpacing: 4,
+                          spacing: DS.gh(4),
+                          runSpacing: DS.gv(4),
                           children: [for (final f in facts.take(3)) _factChip(f)],
                         ),
                       ],
                       const Spacer(),
-                      const SizedBox(height: 8),
+                      SizedBox(height: DS.s(8)),
                       Container(height: 1, color: FitnessAppTheme.spacer),
-                      const SizedBox(height: 8),
+                      SizedBox(height: DS.s(8)),
                       Row(
                         children: [
                           Expanded(
@@ -149,21 +149,21 @@ class ListingGridCard extends StatelessWidget {
                                   Text(
                                     priceCaption,
                                     style: FitnessAppTheme.caption
-                                        .copyWith(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.6),
+                                        .copyWith(fontSize: DS.f(11), fontWeight: FontWeight.w700, letterSpacing: 0.6),
                                   ),
-                                  const SizedBox(height: 2),
+                                  SizedBox(height: DS.s(2)),
                                   Text.rich(
                                     TextSpan(
                                       children: [
                                         TextSpan(
                                           text: priceValue,
                                           style: FitnessAppTheme.title
-                                              .copyWith(fontSize: 13, fontWeight: FontWeight.w800, color: PickKit.gold),
+                                              .copyWith(fontSize: DS.f(13), fontWeight: FontWeight.w800, color: PickKit.gold),
                                         ),
                                         TextSpan(
                                           text: priceUnit,
                                           style: FitnessAppTheme.caption
-                                              .copyWith(fontSize: 11, fontWeight: FontWeight.w600),
+                                              .copyWith(fontSize: DS.f(11), fontWeight: FontWeight.w600),
                                         ),
                                       ],
                                     ),
@@ -173,8 +173,8 @@ class ListingGridCard extends StatelessWidget {
                               ),
                             ),
                           ),
-                          const SizedBox(width: 6),
-                          const Icon(Icons.arrow_forward, size: 16, color: FitnessAppTheme.darkText),
+                          SizedBox(width: DS.s(6)),
+                          Icon(Icons.arrow_forward, size: DS.s(16), color: FitnessAppTheme.darkText),
                         ],
                       ),
                     ],
@@ -197,13 +197,13 @@ class ListingGridCard extends StatelessWidget {
       FactTone.slate => (FitnessAppTheme.spacer, FitnessAppTheme.lightText),
     };
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(8)),
+      padding: DS.sym(h: 6, v: 2),
+      decoration: BoxDecoration(color: bg, borderRadius: DS.circular(8)),
       child: Text(
         f.label,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
-        style: FitnessAppTheme.caption.copyWith(fontSize: 11, fontWeight: FontWeight.w600, color: fg),
+        style: FitnessAppTheme.caption.copyWith(fontSize: DS.f(11), fontWeight: FontWeight.w600, color: fg),
       ),
     );
   }

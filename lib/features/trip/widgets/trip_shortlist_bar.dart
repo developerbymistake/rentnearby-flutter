@@ -129,33 +129,31 @@ class _ReviewChips extends StatelessWidget {
   final String art;
   final List<String> labels;
 
-  static const double _gap = 8;
-
   @override
   Widget build(BuildContext context) {
     final style = Ink3D.text(14, FontWeight.w700, tone.text);
     final textH = KitText.heightOf('Ag', style, MediaQuery.textScalerOf(context), 400, 1);
-    final rowH = (textH > 28 ? textH : 28) + 10;
-    final reserve = labels.length * rowH + (labels.length - 1) * _gap;
+    final rowH = (textH > DS.s(28) ? textH : DS.s(28)) + DS.s(10);
+    final reserve = labels.length * rowH + (labels.length - 1) * DS.gv(8);
     return Padding(
-      padding: const EdgeInsets.only(top: 16),
+      padding: EdgeInsets.only(top: DS.gv(16)),
       child: ConstrainedBox(
         constraints: BoxConstraints(minHeight: reserve, minWidth: double.infinity),
         child: Center(
           child: Wrap(
-            spacing: _gap,
-            runSpacing: _gap,
+            spacing: DS.gh(8),
+            runSpacing: DS.gv(8),
             alignment: WrapAlignment.center,
             children: [
               for (final l in labels)
                 Container(
-                  padding: const EdgeInsets.fromLTRB(6, 5, 14, 5),
-                  decoration: BoxDecoration(color: tone.tint, borderRadius: BorderRadius.circular(20)),
+                  padding: DS.insets(l: 6, t: 5, r: 14, b: 5),
+                  decoration: BoxDecoration(color: tone.tint, borderRadius: DS.circular(20)),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Image.asset(art, width: 28, height: 28, fit: BoxFit.contain),
-                      const SizedBox(width: 6),
+                      Image.asset(art, width: DS.s(28), height: DS.s(28), fit: BoxFit.contain),
+                      Gap.h(6),
                       Flexible(child: Text(l, maxLines: 1, overflow: TextOverflow.ellipsis, style: style)),
                     ],
                   ),
@@ -183,7 +181,7 @@ class _ReviewBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final art = taxi ? ListingArt.taxi : ListingArt.hotel;
+    final art = taxi ? ListingArt.taxi : ListingArt.stay;
     final tone = taxi ? ListingTone.coral : ListingTone.forest;
     final labels = [for (final n in names) if (n.trim().isNotEmpty) _label(n, taxi)];
     return SheetModalBody(

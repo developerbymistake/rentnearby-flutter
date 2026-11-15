@@ -223,14 +223,14 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen>
                 ),
                 SliverToBoxAdapter(
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+                    padding: EdgeInsets.fromLTRB(DS.s(24), DS.gv(8), DS.s(24), DS.gv(24)),
                     child: Obx(
                       () => c.result.value != null
                           ? const SizedBox.shrink()
                           : Text(
                               TaxiWaysStrings.faresNote,
                               textAlign: TextAlign.center,
-                              style: FitnessAppTheme.caption.copyWith(fontSize: 12),
+                              style: FitnessAppTheme.caption.copyWith(fontSize: DS.f(12)),
                             ),
                     ),
                   ),
@@ -289,7 +289,7 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen>
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark,
       child: Padding(
-        padding: EdgeInsets.only(top: MediaQuery.paddingOf(context).top, bottom: 4),
+        padding: EdgeInsets.only(top: MediaQuery.paddingOf(context).top, bottom: DS.gv(4)),
         child: _centred(
           Obx(() {
             final r = c.result.value;
@@ -303,19 +303,19 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen>
               onBack: () => Get.back(),
               trailing: _guide != null ? null : _journeysButton(),
               bottom: Padding(
-                padding: const EdgeInsets.fromLTRB(18, 14, 18, 0),
+                padding: EdgeInsets.fromLTRB(DS.s(18), DS.gv(14), DS.s(18), 0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
+                      spacing: DS.gh(8),
+                      runSpacing: DS.gv(8),
                       crossAxisAlignment: WrapCrossAlignment.center,
                       children: [_dateChip(context, c), _peopleStepper(c)],
                     ),
                     if (c.lockedDate)
                       Padding(
-                        padding: const EdgeInsets.only(top: 6, left: 4),
+                        padding: EdgeInsets.only(top: DS.gv(6), left: DS.s(4)),
                         child: Text(
                           TripStringsMcbA2.travelDayOfTrip,
                           maxLines: 1,
@@ -323,7 +323,7 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen>
                           style: Ink3D.text(11, FontWeight.w400, Ink3D.sub, letterSpacing: 0),
                         ),
                       ),
-                    const SizedBox(height: 12),
+                    Gap.v(12),
                     _routeCard(c),
                   ],
                 ),
@@ -349,8 +349,8 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen>
           semanticsLabel: TaxiWaysStrings.myJourneys,
           badge: alert
               ? Container(
-                  width: 12,
-                  height: 12,
+                  width: DS.s(12),
+                  height: DS.s(12),
                   decoration: BoxDecoration(
                     color: WaysTokens.confirmEnd,
                     shape: BoxShape.circle,
@@ -364,18 +364,18 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen>
   }
 
   Widget _pill({required Widget child, VoidCallback? onTap}) => DecoratedBox(
-    decoration: const BoxDecoration(
+    decoration: BoxDecoration(
       color: DesignColors.surface,
-      borderRadius: WaysKit.pillRadius,
-      boxShadow: Ink3D.softShadow,
+      borderRadius: DS.br(WaysKit.pillRadius),
+      boxShadow: DS.shadows(Ink3D.softShadow),
     ),
     child: Material(
       type: MaterialType.transparency,
       child: InkWell(
         onTap: onTap,
-        borderRadius: WaysKit.pillRadius,
+        borderRadius: DS.br(WaysKit.pillRadius),
         child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 44),
+          constraints: BoxConstraints(minHeight: DS.s(44)),
           child: child,
         ),
       ),
@@ -389,18 +389,18 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen>
     final chip = _pill(
       onTap: locked ? null : () => _pickDate(context, c),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14),
+        padding: DS.sym(h: 14),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             locked
                 ? Icon(
                     Icons.lock_rounded,
-                    size: 14,
+                    size: DS.s(14),
                     color: ListingTone.coral.text,
                   )
                 : const TravelIcon(TravelIcon.calendar, size: 18),
-            const SizedBox(width: 6),
+            SizedBox(width: DS.s(6)),
             Flexible(
               child: Text(
                 _dateText(c.date.value),
@@ -447,12 +447,12 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen>
     if (c.lockedPeople) {
       return _pill(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14),
+          padding: DS.sym(h: 14),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               const TravelIcon(_peopleIcon, size: 18),
-              const SizedBox(width: 6),
+              SizedBox(width: DS.s(6)),
               Text(TaxiWaysStrings.people(n), style: _pillText),
             ],
           ),
@@ -460,13 +460,13 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen>
       );
     }
     Widget btn(IconData icon, bool enabled, VoidCallback onTap) => SizedBox(
-      width: 44,
-      height: 44,
+      width: DS.s(44),
+      height: DS.s(44),
       child: InkResponse(
         onTap: enabled ? onTap : null,
         child: Icon(
           icon,
-          size: 18,
+          size: DS.s(18),
           color: enabled
               ? ListingTone.coral.text
               : Ink3D.hint,
@@ -479,7 +479,7 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen>
         children: [
           btn(Icons.remove_rounded, n > 1, () => c.setPeople(n - 1)),
           const TravelIcon(_peopleIcon, size: 18),
-          const SizedBox(width: 6),
+          SizedBox(width: DS.s(6)),
           Text(TaxiWaysStrings.people(n), style: _pillText),
           btn(
             Icons.add_rounded,
@@ -512,7 +512,7 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen>
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: FitnessAppTheme.caption.copyWith(
-                  fontSize: 11,
+                  fontSize: DS.f(11),
                   fontWeight: FontWeight.w700,
                   letterSpacing: 0.6,
                   color: DesignColors.textSecondary,
@@ -520,10 +520,10 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen>
               ),
             ),
             if (locked) ...[
-              const SizedBox(width: 4),
-              const Icon(
+              SizedBox(width: DS.s(4)),
+              Icon(
                 Icons.lock_rounded,
-                size: 11,
+                size: DS.s(11),
                 color: DesignColors.textSecondary,
               ),
             ],
@@ -534,7 +534,7 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen>
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: FitnessAppTheme.title.copyWith(
-            fontSize: 14,
+            fontSize: DS.f(14),
             color: ListingPalette.coral.text,
           ),
         ),
@@ -545,11 +545,11 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen>
         : TaxiWaysStrings.fromLabel;
     final day = c.segmentDay;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      padding: DS.sym(h: 14, v: 10),
       decoration: BoxDecoration(
         color: DesignColors.surface,
-        borderRadius: TripLook.softRadius,
-        boxShadow: PickKit.greyShadow(),
+        borderRadius: DS.br(TripLook.softRadius),
+        boxShadow: DS.shadows(PickKit.greyShadow()),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -560,11 +560,11 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen>
               Expanded(
                 child: end(fromLabel, fromName, CrossAxisAlignment.start),
               ),
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 8),
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: DS.s(8)),
                 child: Icon(
                   Icons.arrow_forward_rounded,
-                  size: 18,
+                  size: DS.s(18),
                   color: PickKit.taxi,
                 ),
               ),
@@ -578,24 +578,24 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen>
             ],
           ),
           if (locked && day != null) ...[
-            const SizedBox(height: 8),
+            Gap.v(8),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              padding: DS.sym(h: 10, v: 6),
               decoration: BoxDecoration(
                 color: TripLook.surface,
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: DS.circular(10),
               ),
               child: Row(
                 children: [
                   const TravelIcon(TravelIcon.route, size: 16),
-                  const SizedBox(width: 6),
+                  SizedBox(width: DS.s(6)),
                   Expanded(
                     child: Text(
                       TripStringsMcbA2.fromYourTrip(day),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: FitnessAppTheme.caption.copyWith(
-                        fontSize: 11.5,
+                        fontSize: DS.f(11.5),
                         fontWeight: FontWeight.w600,
                         color: ListingPalette.coral.text,
                       ),
@@ -655,7 +655,7 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen>
       children.add(
         _enter(
           Padding(
-            padding: const EdgeInsets.fromLTRB(_side, 12, _side, 0),
+            padding: EdgeInsets.fromLTRB(DS.s(_side), DS.gv(12), DS.s(_side), 0),
             child: WaysSortChips(value: sort, onChanged: c.setSort),
           ),
         ),
@@ -726,7 +726,7 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen>
       if (planOnly) children.add(_enter(fares));
     }
     if (!c.inTrip) {
-      children.add(const SizedBox(height: 8));
+      children.add(Gap.v(8));
       children.add(
         AtDestinationSection(
           cityName: r.to.name.isNotEmpty ? r.to.name : c.to.value.name,
@@ -742,7 +742,7 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen>
     }
     if (!r.hasWays) children.add(_foot('${TaxiWaysStrings.faresNote} ${TaxiWaysStrings.payLine}'));
     children.add(
-      SizedBox(height: 32 + MediaQuery.viewPaddingOf(context).bottom),
+      SizedBox(height: DS.gv(32) + MediaQuery.viewPaddingOf(context).bottom),
     );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -751,7 +751,7 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen>
   }
 
   Widget _foot(String text, {bool center = false}) => Padding(
-    padding: const EdgeInsets.fromLTRB(22, 22, 22, 0),
+    padding: EdgeInsets.fromLTRB(DS.s(22), DS.gv(22), DS.s(22), 0),
     child: Row(
       mainAxisAlignment: center ? MainAxisAlignment.center : MainAxisAlignment.start,
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -762,7 +762,7 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen>
   );
 
   static const double _side = 16;
-  static const EdgeInsets _bannerMargin = EdgeInsets.fromLTRB(18, 12, 18, 0);
+  static EdgeInsets get _bannerMargin => EdgeInsets.fromLTRB(DS.s(18), DS.gv(12), DS.s(18), 0);
 
   Widget _gapCard(
     BuildContext context,
@@ -782,13 +782,13 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen>
 
   Widget _skeleton() => Padding(
     key: const ValueKey('list-loading'),
-    padding: const EdgeInsets.only(top: 12),
+    padding: EdgeInsets.only(top: DS.gv(12)),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (_guide != null)
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 22),
+            padding: DS.sym(h: 22),
             child: Text(
               TripStringsShortlist.loadingTaxis,
               style: Ink3D.text(13, FontWeight.w500, Ink3D.sub, letterSpacing: 0),
@@ -802,7 +802,7 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen>
   );
 
   Widget _offlineBanner() => Padding(
-    padding: const EdgeInsets.fromLTRB(_side, 12, _side, 0),
+    padding: EdgeInsets.fromLTRB(DS.s(_side), DS.gv(12), DS.s(_side), 0),
     child: JourneyBanner3D(
       text: '${TaxiWaysStrings.offlineTitle} · ${TaxiWaysStrings.offlineBody}',
     ),

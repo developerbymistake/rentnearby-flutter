@@ -29,12 +29,12 @@ class ReportDetailScreen extends StatelessWidget {
           Expanded(
             child: SingleChildScrollView(
               physics: const BouncingScrollPhysics(),
-              padding: EdgeInsets.only(bottom: KitMetrics.sectionGap + AppInsets.bottomViewPadding(context)),
+              padding: EdgeInsets.only(bottom: DS.s(KitMetrics.sectionGap) + AppInsets.bottomViewPadding(context)),
               child: StaggerColumn(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(18, 4, 18, 0),
+                    padding: EdgeInsets.fromLTRB(DS.s(18), DS.s(4), DS.s(18), 0),
                     child: Align(
                       alignment: Alignment.centerLeft,
                       child: TagPill3D(label: ListingKindVisuals.labelOf(r.listingType), color: tone.text, art: Report3D.art(r.listingType)),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'art_3d.dart';
 import 'pill_buttons_3d.dart';
+import '../tokens/design_scale.dart';
 
 abstract final class NotificationTone {
   static ListingTone of(String kind) => switch (kind) {
@@ -19,10 +20,10 @@ abstract final class NotificationTone {
   static const Color goFill = Color(0xFFFAFAFA);
   static const Color pillFill = Color(0x42FFFFFF);
   static const Color haloFill = Color(0x3DFAFAFA);
-  static const List<BoxShadow> readShadow = [BoxShadow(color: Color(0x24000000), offset: Offset(1.1, 2), blurRadius: 6)];
-  static const List<BoxShadow> newPillShadow = [BoxShadow(color: Color(0x2E000000), offset: Offset(2, 3), blurRadius: 6)];
-  static const List<BoxShadow> goShadow = [BoxShadow(color: Color(0x59213333), offset: Offset(6, 6), blurRadius: 8)];
-  static const List<BoxShadow> skeletonShadow = [BoxShadow(color: Color(0x4D9E9E9E), offset: Offset(1.1, 3), blurRadius: 8)];
+  static List<BoxShadow> get readShadow => [BoxShadow(color: Color(0x24000000), offset: DS.shadowOffset(const Offset(1.1, 2)), blurRadius: DS.shadowBlur(6))];
+  static List<BoxShadow> get newPillShadow => [BoxShadow(color: Color(0x2E000000), offset: DS.shadowOffset(const Offset(2, 3)), blurRadius: DS.shadowBlur(6))];
+  static List<BoxShadow> get goShadow => [BoxShadow(color: Color(0x59213333), offset: DS.shadowOffset(const Offset(6, 6)), blurRadius: DS.shadowBlur(8))];
+  static List<BoxShadow> get skeletonShadow => [BoxShadow(color: Color(0x4D9E9E9E), offset: DS.shadowOffset(const Offset(1.1, 3)), blurRadius: DS.shadowBlur(8))];
 
   static Color washed(Color c) {
     const s = 0.5;
@@ -38,7 +39,7 @@ abstract final class NotificationTone {
   }
 }
 
-const BorderRadius _cardRadius = BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(44), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8));
+BorderRadius get _cardRadius => BorderRadius.only(topLeft: Radius.circular(DS.radius(8)), topRight: Radius.circular(DS.radius(44)), bottomLeft: Radius.circular(DS.radius(8)), bottomRight: Radius.circular(DS.radius(8)));
 
 class NotificationHeader3D extends StatelessWidget {
   const NotificationHeader3D({super.key, required this.tone, required this.title, required this.art, this.onBack, this.action});
@@ -52,16 +53,16 @@ class NotificationHeader3D extends StatelessWidget {
   static double heightFor(BuildContext context) {
     final s = MediaQuery.textScalerOf(context).scale(1);
     final narrow = MediaQuery.sizeOf(context).width < Form3D.narrow;
-    final title = (narrow ? 24.0 : 28.0) * 1.2 * s;
-    final h = 10 + 46 + 14 + title + 8;
-    return h < 128 ? 128 : h;
+    final title = DS.f(narrow ? 24.0 : 28.0) * 1.2 * s;
+    final h = DS.s(10) + DS.s(46) + DS.gv(14) + title + DS.s(8);
+    return h < DS.s(128) ? DS.s(128) : h;
   }
 
   @override
   Widget build(BuildContext context) {
     final narrow = MediaQuery.sizeOf(context).width < Form3D.narrow;
     final artSize = narrow ? 84.0 : 118.0;
-    final clear = artSize + (narrow ? 30 : 34);
+    final clear = DS.s(artSize + (narrow ? 30 : 34));
     final tip = MaterialLocalizations.of(context).backButtonTooltip;
     final back = onBack == null
         ? null
@@ -73,10 +74,10 @@ class NotificationHeader3D extends StatelessWidget {
               label: tip,
               exclude: true,
               child: Container(
-                width: 46,
-                height: 46,
-                decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle, boxShadow: Ink3D.softShadow),
-                child: Icon(Icons.chevron_left_rounded, size: 30, color: tone.text),
+                width: DS.s(46),
+                height: DS.s(46),
+                decoration: BoxDecoration(color: Colors.white, shape: BoxShape.circle, boxShadow: DS.shadows(Ink3D.softShadow)),
+                child: Icon(Icons.chevron_left_rounded, size: DS.s(30), color: tone.text),
               ),
             ),
           );
@@ -86,25 +87,25 @@ class NotificationHeader3D extends StatelessWidget {
         clipBehavior: Clip.none,
         children: [
           Positioned(
-            right: 16,
-            top: 6,
+            right: DS.s(16),
+            top: DS.s(6),
             child: ExcludeSemantics(child: Art3D(asset: art, size: artSize, halo: artSize + 6, haloColor: tone.halo, haloDy: -1)),
           ),
           Padding(
-            padding: EdgeInsets.fromLTRB(18, 10, clear, 0),
+            padding: EdgeInsets.fromLTRB(DS.s(18), DS.s(10), clear, 0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 SizedBox(
-                  height: 46,
+                  height: DS.s(46),
                   child: Row(
                     children: [
                       ?back,
-                      if (action != null) ...[const SizedBox(width: 12), Flexible(child: action!)],
+                      if (action != null) ...[Gap.h(12), Flexible(child: action!)],
                     ],
                   ),
                 ),
-                const SizedBox(height: 14),
+                Gap.v(14),
                 Semantics(
                   header: true,
                   child: FittedBox(
@@ -140,7 +141,7 @@ class _NotificationFrame extends StatelessWidget {
     final s = MediaQuery.textScalerOf(context).scale(1);
     final narrow = MediaQuery.sizeOf(context).width < Form3D.narrow;
     final artSize = narrow ? 80.0 : 94.0;
-    final textLeft = narrow ? 92.0 : 108.0;
+    final textLeft = DS.s(narrow ? 92.0 : 108.0);
     final g1 = read ? NotificationTone.washed(tone.g1) : tone.g1;
     final g2 = read ? NotificationTone.washed(tone.g2) : tone.g2;
     final content = Column(
@@ -148,21 +149,21 @@ class _NotificationFrame extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Padding(
-          padding: EdgeInsets.fromLTRB(textLeft, 12, 14, 2),
+          padding: EdgeInsets.fromLTRB(textLeft, DS.s(12), DS.s(14), DS.s(2)),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(title, maxLines: titleLines, overflow: TextOverflow.ellipsis, style: Ink3D.text(14.5, FontWeight.w700, Colors.white, height: 20 / 14.5)),
-              const SizedBox(height: 4),
+              SizedBox(height: DS.s(4)),
               ConstrainedBox(
-                constraints: BoxConstraints(minHeight: 36 * s),
+                constraints: BoxConstraints(minHeight: DS.s(36) * s),
                 child: Text(body, maxLines: bodyLines, overflow: TextOverflow.ellipsis, style: Ink3D.text(12.5, FontWeight.w500, Colors.white.withValues(alpha: 0.96), height: 18 / 12.5)),
               ),
             ],
           ),
         ),
-        Padding(padding: const EdgeInsets.fromLTRB(16, 8, 16, 12), child: bottom),
+        Padding(padding: EdgeInsets.fromLTRB(DS.s(16), DS.s(8), DS.s(16), DS.s(12)), child: bottom),
       ],
     );
     final card = Container(
@@ -175,18 +176,18 @@ class _NotificationFrame extends StatelessWidget {
         type: MaterialType.transparency,
         borderRadius: _cardRadius,
         clipBehavior: Clip.antiAlias,
-        child: onTap == null ? content : InkWell(onTap: onTap, customBorder: const RoundedRectangleBorder(borderRadius: _cardRadius), child: content),
+        child: onTap == null ? content : InkWell(onTap: onTap, customBorder: RoundedRectangleBorder(borderRadius: _cardRadius), child: content),
       ),
     );
     return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 34, 14, 0),
+      padding: EdgeInsets.fromLTRB(DS.s(14), DS.s(34), DS.s(14), 0),
       child: Stack(
         clipBehavior: Clip.none,
         children: [
           card,
           Positioned(
-            left: 7,
-            top: -32,
+            left: DS.s(7),
+            top: DS.s(-32),
             child: IgnorePointer(
               child: ExcludeSemantics(child: Art3D(asset: art, size: artSize, halo: artSize, haloColor: NotificationTone.haloFill, haloDy: 4, shadowBlur: 5, shadowOffset: const Offset(4, 7))),
             ),
@@ -226,10 +227,10 @@ class NotificationCard3D extends StatelessWidget {
   final VoidCallback? onTap;
 
   Widget _pill(String label, {bool white = false, required Color ink}) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+        padding: EdgeInsets.symmetric(horizontal: DS.s(10), vertical: DS.s(3)),
         decoration: BoxDecoration(
           color: white ? Colors.white : NotificationTone.pillFill,
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: DS.circular(10),
           boxShadow: white ? NotificationTone.newPillShadow : null,
         ),
         child: Text(label, maxLines: 1, softWrap: false, style: Ink3D.text(11, FontWeight.w700, white ? ink : Colors.white, letterSpacing: 0.4)),
@@ -243,11 +244,11 @@ class NotificationCard3D extends StatelessWidget {
       if (isNew) _pill('NEW', white: true, ink: ListingTone.indigo.g2),
     ];
     final bottom = SizedBox(
-      height: 36,
+      height: DS.s(36),
       child: Row(
         children: [
           ConstrainedBox(
-            constraints: const BoxConstraints(minWidth: 86),
+            constraints: BoxConstraints(minWidth: DS.s(86)),
             child: FittedBox(
               fit: BoxFit.scaleDown,
               alignment: Alignment.centerLeft,
@@ -257,31 +258,31 @@ class NotificationCard3D extends StatelessWidget {
                 children: [
                   Text(time, maxLines: 1, softWrap: false, style: Ink3D.text(20, FontWeight.w600, Colors.white, height: 1, letterSpacing: 0)),
                   if (unit.isNotEmpty) ...[
-                    const SizedBox(width: 4),
+                    Gap.h(4),
                     Text(unit, maxLines: 1, softWrap: false, style: Ink3D.text(11, FontWeight.w500, Colors.white, height: 1)),
                   ],
                 ],
               ),
             ),
           ),
-          const SizedBox(width: 10),
+          Gap.h(10),
           Expanded(
             child: Align(
               alignment: Alignment.centerLeft,
               child: FittedBox(
                 fit: BoxFit.scaleDown,
                 alignment: Alignment.centerLeft,
-                child: Row(mainAxisSize: MainAxisSize.min, children: [for (var i = 0; i < pills.length; i++) ...[if (i > 0) const SizedBox(width: 6), pills[i]]]),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [for (var i = 0; i < pills.length; i++) ...[if (i > 0) Gap.h(6), pills[i]]]),
               ),
             ),
           ),
-          const SizedBox(width: 10),
+          Gap.h(10),
           ExcludeSemantics(
             child: Container(
-              width: 36,
-              height: 36,
-              decoration: const BoxDecoration(color: NotificationTone.goFill, shape: BoxShape.circle, boxShadow: NotificationTone.goShadow),
-              child: Icon(opens ? Icons.arrow_forward_rounded : Icons.check_rounded, size: 20, color: ink),
+              width: DS.s(36),
+              height: DS.s(36),
+              decoration: BoxDecoration(color: NotificationTone.goFill, shape: BoxShape.circle, boxShadow: NotificationTone.goShadow),
+              child: Icon(opens ? Icons.arrow_forward_rounded : Icons.check_rounded, size: DS.s(20), color: ink),
             ),
           ),
         ],
@@ -308,10 +309,10 @@ class NotificationBannerCard3D extends StatelessWidget {
       label: actionLabel,
       exclude: true,
       child: Container(
-        constraints: const BoxConstraints(minHeight: 36),
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+        constraints: BoxConstraints(minHeight: DS.s(36)),
+        padding: EdgeInsets.symmetric(horizontal: DS.s(20), vertical: DS.s(6)),
         alignment: Alignment.center,
-        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18), boxShadow: Ink3D.whiteBtn),
+        decoration: BoxDecoration(color: Colors.white, borderRadius: DS.circular(18), boxShadow: DS.shadows(Ink3D.whiteBtn)),
         child: Text(actionLabel, maxLines: 1, softWrap: false, style: Ink3D.text(14, FontWeight.w700, tone.button)),
       ),
     );
@@ -356,23 +357,23 @@ class _NotificationCardSkeletonState extends State<NotificationCardSkeleton> wit
 
   Widget _bar(double? w, double h) => FadeTransition(
         opacity: _c,
-        child: Container(width: w, height: h, decoration: BoxDecoration(color: NotificationTone.skeletonBar, borderRadius: BorderRadius.circular(h / 2))),
+        child: Container(width: w == null ? null : DS.s(w), height: DS.s(h), decoration: BoxDecoration(color: NotificationTone.skeletonBar, borderRadius: DS.circular(h / 2))),
       );
 
   @override
   Widget build(BuildContext context) {
     final narrow = MediaQuery.sizeOf(context).width < Form3D.narrow;
     final artSize = narrow ? 80.0 : 94.0;
-    final textLeft = narrow ? 92.0 : 108.0;
+    final textLeft = DS.s(narrow ? 92.0 : 108.0);
     return ExcludeSemantics(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(14, 34, 14, 0),
+        padding: EdgeInsets.fromLTRB(DS.s(14), DS.s(34), DS.s(14), 0),
         child: Stack(
           clipBehavior: Clip.none,
           children: [
             Container(
-              height: 130,
-              decoration: const BoxDecoration(
+              height: DS.s(130),
+              decoration: BoxDecoration(
                 borderRadius: _cardRadius,
                 gradient: LinearGradient(colors: [NotificationTone.skeletonA, NotificationTone.skeletonB], begin: Alignment.topLeft, end: Alignment.bottomRight),
                 boxShadow: NotificationTone.skeletonShadow,
@@ -381,28 +382,28 @@ class _NotificationCardSkeletonState extends State<NotificationCardSkeleton> wit
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Padding(
-                    padding: EdgeInsets.fromLTRB(textLeft, 16, 14, 0),
+                    padding: EdgeInsets.fromLTRB(textLeft, DS.s(16), DS.s(14), 0),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         FractionallySizedBox(widthFactor: 0.88, child: _bar(null, 12)),
-                        const SizedBox(height: 12),
+                        Gap.v(12),
                         _bar(null, 12),
-                        const SizedBox(height: 8),
+                        Gap.v(8),
                         FractionallySizedBox(widthFactor: 0.64, child: _bar(null, 12)),
                       ],
                     ),
                   ),
                   const Spacer(),
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                    padding: EdgeInsets.fromLTRB(DS.s(16), 0, DS.s(16), DS.s(12)),
                     child: Row(
                       children: [
                         _bar(64, 18),
-                        const SizedBox(width: 32),
+                        Gap.h(32),
                         _bar(48, 18),
                         const Spacer(),
-                        Container(width: 36, height: 36, decoration: const BoxDecoration(color: NotificationTone.skeletonGo, shape: BoxShape.circle)),
+                        Container(width: DS.s(36), height: DS.s(36), decoration: const BoxDecoration(color: NotificationTone.skeletonGo, shape: BoxShape.circle)),
                       ],
                     ),
                   ),
@@ -410,11 +411,11 @@ class _NotificationCardSkeletonState extends State<NotificationCardSkeleton> wit
               ),
             ),
             Positioned(
-              left: 6,
-              top: -28,
+              left: DS.s(6),
+              top: DS.s(-28),
               child: FadeTransition(
                 opacity: _c,
-                child: Container(width: artSize, height: artSize, decoration: const BoxDecoration(color: NotificationTone.skeletonHalo, shape: BoxShape.circle)),
+                child: Container(width: DS.s(artSize), height: DS.s(artSize), decoration: const BoxDecoration(color: NotificationTone.skeletonHalo, shape: BoxShape.circle)),
               ),
             ),
           ],
@@ -429,10 +430,10 @@ class NotificationDaySkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(18, 18, 18, 0),
+        padding: EdgeInsets.fromLTRB(DS.s(18), DS.s(18), DS.s(18), 0),
         child: Align(
           alignment: Alignment.centerLeft,
-          child: Container(width: 64, height: 10, decoration: BoxDecoration(color: NotificationTone.skeletonB, borderRadius: BorderRadius.circular(5))),
+          child: Container(width: DS.s(64), height: DS.s(10), decoration: BoxDecoration(color: NotificationTone.skeletonB, borderRadius: DS.circular(5))),
         ),
       );
 }
@@ -442,9 +443,9 @@ class NotificationMoreSpinner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(top: 22, bottom: 8),
+        padding: EdgeInsets.only(top: DS.gv(22), bottom: DS.gv(8)),
         child: Center(
-          child: SizedBox(width: 26, height: 26, child: CircularProgressIndicator(strokeWidth: 3.5, color: ListingTone.indigo.g2, backgroundColor: ListingTone.indigo.g2.withValues(alpha: 0.28))),
+          child: SizedBox(width: DS.s(26), height: DS.s(26), child: CircularProgressIndicator(strokeWidth: DS.s(3.5), color: ListingTone.indigo.g2, backgroundColor: ListingTone.indigo.g2.withValues(alpha: 0.28))),
         ),
       );
 }

@@ -25,12 +25,12 @@ class LocationPill extends StatelessWidget {
           ? [TextSpan(text: searchLabel)]
           : [
               TextSpan(text: district.name),
-              const WidgetSpan(
+              WidgetSpan(
                 alignment: PlaceholderAlignment.middle,
                 child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 4),
+                  padding: EdgeInsets.symmetric(horizontal: DS.s(4)),
                   child: Icon(Icons.chevron_right_rounded,
-                      size: 14, color: FitnessAppTheme.lightText),
+                      size: DS.s(14), color: FitnessAppTheme.lightText),
                 ),
               ),
               TextSpan(text: cityName),
@@ -42,26 +42,26 @@ class LocationPill extends StatelessWidget {
             : () => LocationSwitchSheet.show(context, palette: palette),
         child: Container(
           width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          padding: DS.sym(h: 14, v: 10),
           decoration: GateKit.pill(),
           child: Row(children: [
             const TravelIcon(TravelIcon.map, size: 18),
-            const SizedBox(width: 8),
+            SizedBox(width: DS.s(8)),
             Expanded(
               child: Text.rich(
                 TextSpan(children: spans),
                 overflow: TextOverflow.ellipsis,
                 maxLines: 1,
                 style: FitnessAppTheme.body2.copyWith(
-                    fontSize: 13,
+                    fontSize: DS.f(13),
                     fontWeight: FontWeight.w700,
                     color: FitnessAppTheme.nearlyDarkBlue),
               ),
             ),
             if (!searching) ...[
-              const SizedBox(width: 4),
-              const Icon(Icons.keyboard_arrow_down_rounded,
-                  color: FitnessAppTheme.nearlyDarkBlue, size: 16),
+              SizedBox(width: DS.s(4)),
+              Icon(Icons.keyboard_arrow_down_rounded,
+                  color: FitnessAppTheme.nearlyDarkBlue, size: DS.s(16)),
             ],
           ]),
         ),

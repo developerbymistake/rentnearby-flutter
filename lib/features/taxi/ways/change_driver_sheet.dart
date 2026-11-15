@@ -83,11 +83,11 @@ class _ChangeDriverBodyState extends State<_ChangeDriverBody> with TickerProvide
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     JourneyFilterPill3D(label: TaxiWaysStrings.seats6, selected: _ctrl.seats6.value, onTap: _ctrl.toggleSeats6),
-                    const SizedBox(width: 6),
+                    Gap.h(6),
                     JourneyFilterPill3D(label: TaxiWaysStrings.suv, selected: _ctrl.suv.value, onTap: _ctrl.toggleSuv),
-                    const SizedBox(width: 6),
+                    Gap.h(6),
                     JourneyFilterPill3D(label: _cap(TaxiWaysStrings.repliesInApp), selected: _ctrl.repliesOnly.value, onTap: _ctrl.toggleReplies),
-                    const SizedBox(width: 6),
+                    Gap.h(6),
                     JourneyFilterPill3D(
                       label: TaxiWaysStrings.lowestPrice,
                       selected: _ctrl.sort.value == ChangeDriverSort.lowestPrice,
@@ -107,7 +107,7 @@ class _ChangeDriverBodyState extends State<_ChangeDriverBody> with TickerProvide
   List<Widget> _content() {
     if (_ctrl.isLoading.value) {
       return [
-        const SizedBox(height: 22),
+        Gap.v(22),
         for (var i = 0; i < 4; i++) const JourneyDriverPickSkeleton(),
       ];
     }
@@ -140,7 +140,7 @@ class _ChangeDriverBodyState extends State<_ChangeDriverBody> with TickerProvide
       _enter(
         1,
         Padding(
-          padding: const EdgeInsets.fromLTRB(4, 8, 4, 0),
+          padding: DS.gapInsets(l: 4, t: 8, r: 4),
           child: Text(
             bestFit
                 ? TaxiWaysStrings.bestFitFirst(widget.people, shown, _ctrl.total.value)
@@ -168,9 +168,9 @@ class _ChangeDriverBodyState extends State<_ChangeDriverBody> with TickerProvide
     final tone = ListingTone.coral;
     if (_ctrl.isLoadingMore.value) {
       return SizedBox(
-        height: 48,
+        height: DS.s(48),
         child: Center(
-          child: SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.4, color: tone.g2)),
+          child: SizedBox(width: DS.s(22), height: DS.s(22), child: CircularProgressIndicator(strokeWidth: 2.4, color: tone.g2)),
         ),
       );
     }
@@ -180,7 +180,7 @@ class _ChangeDriverBodyState extends State<_ChangeDriverBody> with TickerProvide
       onTap: _ctrl.loadMore,
       label: label,
       child: SizedBox(
-        height: 52,
+        height: DS.s(52),
         child: Center(child: Text(label, style: Ink3D.text(14, FontWeight.w700, tone.text))),
       ),
     );

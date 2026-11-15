@@ -11,7 +11,7 @@ class TripNotFoundView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(top: 40),
+      padding: EdgeInsets.only(top: DS.gv(40)),
       child: StateCard(
         asset: ListingArt.luggage,
         title: TripStrings.tripNotFoundTitle,

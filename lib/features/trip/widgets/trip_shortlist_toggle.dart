@@ -39,22 +39,22 @@ class TripShortlistToggle extends StatelessWidget {
           child: Opacity(
             opacity: onTap == null ? 0.5 : 1,
             child: Container(
-              constraints: BoxConstraints(minHeight: height),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              constraints: BoxConstraints(minHeight: DS.s(height)),
+              padding: DS.sym(h: 12, v: 8),
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(22),
+                borderRadius: DS.circular(22),
                 color: selected ? DesignColors.surface : null,
                 gradient: selected ? null : t.gradient,
-                boxShadow: selected ? Ink3D.softShadow : t.glow(blur: 8),
+                boxShadow: selected ? DS.shadows(Ink3D.softShadow) : t.glow(blur: 8),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   if (busy)
-                    SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: ink))
+                    SizedBox(width: DS.s(16), height: DS.s(16), child: CircularProgressIndicator(strokeWidth: 2, color: ink))
                   else
-                    Icon(selected ? Icons.check_circle_rounded : Icons.add_circle_outline_rounded, size: 18, color: ink),
-                  const SizedBox(width: 8),
+                    Icon(selected ? Icons.check_circle_rounded : Icons.add_circle_outline_rounded, size: DS.s(18), color: ink),
+                  Gap.h(8),
                   Flexible(child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(14, FontWeight.w700, ink, letterSpacing: 0))),
                 ],
               ),

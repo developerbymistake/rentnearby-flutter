@@ -160,7 +160,7 @@ class _TripsDiscoveryScreenState extends State<TripsDiscoveryScreen> {
               )),
           for (final (i, t) in tiles.indexed)
             Padding(
-              padding: EdgeInsets.fromLTRB(16, i == 0 ? 20 : 34, 16, 0),
+              padding: EdgeInsets.fromLTRB(DS.s(16), DS.gv(i == 0 ? 20 : 34), DS.s(16), 0),
               child: HubTile(
                 key: ValueKey('hub-tile-${t.id}'),
                 config: t,

@@ -122,7 +122,7 @@ class _JobsLandingScreenV2State extends State<JobsLandingScreenV2> {
       return PlaceSearchBarView(
         label: label,
         hint: 'Search a place',
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        margin: EdgeInsets.symmetric(horizontal: DS.s(16), vertical: DS.gv(10)),
         onTap: _searchPlace,
         onClear: label == null ? null : _ctrl.useMyLocation,
       );
@@ -238,7 +238,7 @@ class _JobsLandingScreenV2State extends State<JobsLandingScreenV2> {
       mainAxisSize: MainAxisSize.min,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(18, 20, 18, 10),
+          padding: EdgeInsets.fromLTRB(DS.s(18), DS.gv(20), DS.s(18), DS.gv(10)),
           child: Row(
             children: [
               Expanded(
@@ -254,7 +254,7 @@ class _JobsLandingScreenV2State extends State<JobsLandingScreenV2> {
                   ),
                 ),
               ),
-              const SizedBox(width: 10),
+              Gap.h(10),
               Obx(
                 () => JobsFilterButton(
                   tone: _look,
@@ -266,7 +266,7 @@ class _JobsLandingScreenV2State extends State<JobsLandingScreenV2> {
           ),
         ),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 18),
+          padding: DS.sym(h: 18),
           child: Obx(() => NearbyHeaderStrip(header: _ctrl.header.value)),
         ),
       ],
@@ -336,9 +336,9 @@ class _JobsLandingScreenV2State extends State<JobsLandingScreenV2> {
   Widget _buildFooter() {
     final bottom = MediaQuery.paddingOf(context).bottom;
     return Obx(() {
-      if (_ctrl.items.isEmpty) return SizedBox(height: 32 + bottom);
+      if (_ctrl.items.isEmpty) return SizedBox(height: DS.gv(32) + bottom);
       if (!_ctrl.hasMore.value && !_ctrl.isLoading.value && _ctrl.items.length < 3) {
-        return Padding(padding: EdgeInsets.only(top: 12, bottom: 32 + bottom), child: const NearbyThin());
+        return Padding(padding: EdgeInsets.only(top: DS.gv(12), bottom: DS.gv(32) + bottom), child: const NearbyThin());
       }
       Widget child = const SizedBox.shrink();
       if (_ctrl.isLoadingMore.value) {
@@ -350,15 +350,15 @@ class _JobsLandingScreenV2State extends State<JobsLandingScreenV2> {
             label: "Couldn't load more. Tap to retry",
             exclude: true,
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+              padding: DS.sym(h: 18, v: 12),
               child: Text("Couldn't load more. Tap to retry", textAlign: TextAlign.center, style: Ink3D.text(14, FontWeight.w600, _look.text, letterSpacing: 0)),
             ),
           ),
         );
       }
       return Padding(
-        padding: EdgeInsets.only(top: 14, bottom: 32 + bottom),
-        child: ConstrainedBox(constraints: const BoxConstraints(minHeight: 56), child: Center(child: child)),
+        padding: EdgeInsets.only(top: DS.gv(14), bottom: DS.gv(32) + bottom),
+        child: ConstrainedBox(constraints: BoxConstraints(minHeight: DS.s(56)), child: Center(child: child)),
       );
     });
   }

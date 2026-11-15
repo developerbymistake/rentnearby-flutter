@@ -8,6 +8,7 @@ import '../tokens/type_tokens.dart';
 import 'kit_tone.dart';
 import 'motion_kit.dart';
 import 'template_motion.dart';
+import 'package:bakhli/design/tokens/design_scale.dart';
 
 class ModuleHeader extends StatelessWidget {
   const ModuleHeader({
@@ -61,25 +62,25 @@ class ModuleHeader extends StatelessWidget {
       MediaQuery.textScalerOf(context).scale(1).clamp(1.0, 2.5).toDouble();
 
   static double toolbarOf(BuildContext context) =>
-      toolbarHeight + 26 * (_scale(context) - 1);
+      DS.s(toolbarHeight + 26 * (_scale(context) - 1));
 
   static double subtitleOf(BuildContext context, int lines) =>
-      subtitleHeight * lines * _scale(context);
+      DS.s(subtitleHeight) * lines * _scale(context);
 
   static double heightOf(BuildContext context,
           {bool hasSubtitle = false, double bottomHeight = 0, int subtitleLines = 1}) =>
       MediaQuery.paddingOf(context).top +
-      paddingTop +
+      DS.s(paddingTop) +
       toolbarOf(context) +
       (hasSubtitle ? subtitleOf(context, subtitleLines) : 0) +
       bottomHeight +
-      paddingBottom;
+      DS.s(paddingBottom);
 
   static double contentTop(BuildContext context,
           {bool hasSubtitle = false, double bottomHeight = 0, int subtitleLines = 1}) =>
       heightOf(context,
           hasSubtitle: hasSubtitle, bottomHeight: bottomHeight, subtitleLines: subtitleLines) +
-      contentGap;
+      DS.gv(contentGap);
 
   @override
   Widget build(BuildContext context) {
@@ -92,11 +93,11 @@ class ModuleHeader extends StatelessWidget {
       width: double.infinity,
       decoration: BoxDecoration(
         gradient: gradient ?? tone.gradient,
-        borderRadius: CardRadius.header,
-        boxShadow: ShadowTokens.glow(tone.glow),
+        borderRadius: DS.br(CardRadius.header),
+        boxShadow: DS.shadows(ShadowTokens.glow(tone.glow)),
       ),
       child: Padding(
-        padding: EdgeInsets.only(top: top + paddingTop, left: onBack != null ? 14 : 8, right: 16, bottom: paddingBottom),
+        padding: EdgeInsets.only(top: top + DS.s(paddingTop), left: DS.s(onBack != null ? 14 : 8), right: DS.s(16), bottom: DS.s(paddingBottom)),
         child: Column(
           mainAxisSize: autoHeight ? MainAxisSize.min : MainAxisSize.max,
           children: [
@@ -108,8 +109,8 @@ class ModuleHeader extends StatelessWidget {
                   if (onBack != null)
                     PressScale(
                       child: SizedBox(
-                        width: KitMetrics.touch,
-                        height: KitMetrics.touch,
+                        width: DS.s(KitMetrics.touch),
+                        height: DS.s(KitMetrics.touch),
                         child: InkWell(
                           customBorder: const CircleBorder(),
                           splashColor: DesignColors.whiteSoft,
@@ -117,33 +118,33 @@ class ModuleHeader extends StatelessWidget {
                           onTap: onBack,
                           child: Center(
                             child: Container(
-                              width: 44,
-                              height: 44,
+                              width: DS.s(44),
+                              height: DS.s(44),
                               decoration: const BoxDecoration(
                                   color: DesignColors.whiteSoft, shape: BoxShape.circle),
-                              child: const Icon(Icons.arrow_back_ios_new_rounded,
-                                  size: 20, color: DesignColors.textInverse),
+                              child: Icon(Icons.arrow_back_ios_new_rounded,
+                                  size: DS.s(20), color: DesignColors.textInverse),
                             ),
                           ),
                         ),
                       ),
                     )
                   else
-                    const SizedBox(width: 12),
-                  if (onBack != null) const SizedBox(width: 10),
-                  if (leading != null) ...[leading!, const SizedBox(width: 10)],
+                    SizedBox(width: DS.s(12)),
+                  if (onBack != null) SizedBox(width: DS.s(10)),
+                  if (leading != null) ...[leading!, SizedBox(width: DS.s(10))],
                   if (leadingAsset != null) ...[
                     Container(
-                      width: 44,
-                      height: 44,
-                      padding: const EdgeInsets.all(8),
+                      width: DS.s(44),
+                      height: DS.s(44),
+                      padding: DS.all(8),
                       decoration: BoxDecoration(
                         color: DesignColors.tint(DesignColors.surfaceAlt, Alpha.soft),
                         shape: BoxShape.circle,
                       ),
                       child: Image.asset(leadingAsset!),
                     ),
-                    const SizedBox(width: 10),
+                    SizedBox(width: DS.s(10)),
                   ],
                   Expanded(
                     child: Column(

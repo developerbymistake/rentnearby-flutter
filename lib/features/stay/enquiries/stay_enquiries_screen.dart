@@ -112,7 +112,7 @@ class _StayEnquiriesScreenState extends State<StayEnquiriesScreen> with WidgetsB
             EntranceOnce(index: 1, offset: 20, child: _chips()),
             Obx(() => Get.find<AuthController>().staysEnabled
                 ? const SizedBox.shrink()
-                : const RepliesBanner(art: ListingArt.calendar, text: TripStrings.pausedHere)),
+                : RepliesBanner(art: ListingArt.calendar, text: TripStrings.pausedHere)),
           ],
         ),
         body: Obx(_body),
@@ -137,15 +137,15 @@ class _StayEnquiriesScreenState extends State<StayEnquiriesScreen> with WidgetsB
 
       final keys = StayEnquiryBucket.all;
       return Padding(
-        padding: const EdgeInsets.fromLTRB(18, 6, 18, 4),
+        padding: DS.gapInsets(l: 18, t: 6, r: 18, b: 4),
         child: Column(
           children: [
             for (var r = 0; r < keys.length; r += 2) ...[
-              if (r > 0) const SizedBox(height: 2),
+              if (r > 0) Gap.v(2),
               Row(
                 children: [
                   Expanded(child: chip(keys[r])),
-                  const SizedBox(width: 12),
+                  Gap.h(12),
                   Expanded(child: r + 1 < keys.length ? chip(keys[r + 1]) : const SizedBox.shrink()),
                 ],
               ),
@@ -162,7 +162,7 @@ class _StayEnquiriesScreenState extends State<StayEnquiriesScreen> with WidgetsB
     final failed = _ctrl.failed.value;
     final bucket = _ctrl.bucket.value;
     final highlight = _highlight.value;
-    final bottom = AppInsets.bottomViewPadding(context) + 16;
+    final bottom = AppInsets.bottomViewPadding(context) + DS.s(16);
 
     if (loading && items.isEmpty) {
       return _column(ListView(
@@ -217,20 +217,20 @@ class _StayEnquiriesScreenState extends State<StayEnquiriesScreen> with WidgetsB
 
   Widget _column(Widget child) => Align(
         alignment: Alignment.topCenter,
-        child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 640), child: child),
+        child: ConstrainedBox(constraints: BoxConstraints(maxWidth: DS.s(640)), child: child),
       );
 
   Widget _footer() {
     if (_ctrl.loadMoreFailed.value) {
       return Padding(
-        padding: const EdgeInsets.fromLTRB(22, 14, 22, 0),
+        padding: DS.gapInsets(l: 22, t: 14, r: 22),
         child: Center(
           child: Tap3D(
             onTap: _ctrl.loadMore,
             label: '${StayEnquiryStrings.retryMore} · ${TripStrings.retry}',
             exclude: true,
             child: ConstrainedBox(
-              constraints: const BoxConstraints(minHeight: 44),
+              constraints: BoxConstraints(minHeight: DS.s(44)),
               child: Center(
                 widthFactor: 1,
                 child: Text('${StayEnquiryStrings.retryMore} · ${TripStrings.retry}', style: Ink3D.text(13, FontWeight.w700, _tone.text)),
@@ -241,7 +241,7 @@ class _StayEnquiriesScreenState extends State<StayEnquiriesScreen> with WidgetsB
       );
     }
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 16),
+      padding: EdgeInsets.symmetric(vertical: DS.gv(16)),
       child: Center(child: KitDots(color: _tone.g2)),
     );
   }
@@ -440,10 +440,10 @@ class _EnquiryCard extends StatelessWidget {
       return Stack(
         children: [
           Positioned.fill(
-            top: 44,
+            top: DS.s(44),
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 250),
-              decoration: BoxDecoration(color: highlighted ? ListingTone.forest.tint : Colors.transparent, borderRadius: BorderRadius.circular(28)),
+              decoration: BoxDecoration(color: highlighted ? ListingTone.forest.tint : Colors.transparent, borderRadius: DS.circular(28)),
             ),
           ),
           ReplyCard3D(

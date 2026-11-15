@@ -26,7 +26,6 @@ const _kSections = 4;
 // WideCard price row overflows past this scale on 300 dp phones.
 const _kCardMaxScale = 1.6;
 const _kTone = KitTone.stay;
-const _kStickers = [ListingArt.key, ListingArt.bed, ListingArt.hotel];
 const _kTypeArt = [ListingArt.bed, ListingArt.hotel, ListingArt.beach, ListingArt.tent, ListingArt.hotelBuilding, ListingArt.key];
 
 ListingTone get _page => ListingTone.forest;
@@ -119,7 +118,7 @@ class _StayLandingScreenV2State extends State<StayLandingScreenV2> {
                   child: Center(
                     child: EntranceOnce(
                       index: 3,
-                      offset: 24,
+                      offset: DS.s(24),
                       child: MapPill3D(key: TourKeys.staysLandingMapPill, tone: _page, label: 'Map view', onTap: StayNavigation.openMap),
                     ),
                   ),
@@ -153,7 +152,7 @@ class _StayLandingScreenV2State extends State<StayLandingScreenV2> {
   Widget _buildSearchPill() {
     return KeyedSubtree(
       key: TourKeys.staysLandingLocation,
-      child: PlaceSearchBar(key: TourKeys.staysLandingSearch, margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10)),
+      child: PlaceSearchBar(key: TourKeys.staysLandingSearch, margin: EdgeInsets.symmetric(horizontal: DS.s(16), vertical: DS.gv(10))),
     );
   }
 
@@ -198,11 +197,11 @@ class _StayLandingScreenV2State extends State<StayLandingScreenV2> {
             plus: !draft,
             width: w2,
           ),
-          _tile(title: 'My Stays', sub: 'Your listings', art: ListingArt.bed, tone: ListingTone.cA, onTap: _openMyStays, width: w2),
+          _tile(title: 'My Stays', sub: 'Your listings', art: ListingArt.stay, tone: ListingTone.cA, onTap: _openMyStays, width: w2),
         ];
       }
       return Padding(
-        padding: const EdgeInsets.only(top: 4),
+        padding: EdgeInsets.only(top: DS.gv(4)),
         child: KeyedSubtree(
           key: TourKeys.staysLandingTiles,
           child: MealsRail(children: tiles),
@@ -248,12 +247,12 @@ class _StayLandingScreenV2State extends State<StayLandingScreenV2> {
           final far = _ctrl.header.value?.farAway ?? false;
           final title = pin == null ? (far ? NearbyStrings.staysNearest : NearbyStrings.staysNear) : (far ? NearbyStrings.staysNearestToPlace(pin) : NearbyStrings.staysNearPlace(pin));
           return Padding(
-            padding: const EdgeInsets.fromLTRB(18, 28, 18, 10),
+            padding: EdgeInsets.fromLTRB(DS.s(18), DS.gv(28), DS.s(18), DS.gv(10)),
             child: Wrap(
               alignment: WrapAlignment.spaceBetween,
               crossAxisAlignment: WrapCrossAlignment.center,
-              spacing: 10,
-              runSpacing: 10,
+              spacing: DS.gh(10),
+              runSpacing: DS.gv(10),
               children: [
                 Semantics(
                   header: true,
@@ -265,7 +264,7 @@ class _StayLandingScreenV2State extends State<StayLandingScreenV2> {
           );
         }),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 18),
+          padding: EdgeInsets.symmetric(horizontal: DS.s(18)),
           child: Obx(() {
             final centre = NearbyCentreController.to;
             centre.centreVersion.value;
@@ -306,7 +305,7 @@ class _StayLandingScreenV2State extends State<StayLandingScreenV2> {
             : SizedBox.expand(
                 child: KitPhoto(url: url, width: double.infinity, height: double.infinity),
               ),
-        sticker: _kStickers[index % _kStickers.length],
+        sticker: ListingArt.stay,
         badge: b.isFeatured ? 'Featured' : null,
         tag: b.tagLabel,
         title: b.title,
@@ -392,7 +391,7 @@ class _StayLandingScreenV2State extends State<StayLandingScreenV2> {
         child = const NearbyThin();
       }
       return Padding(
-        padding: EdgeInsets.only(top: 12, bottom: bottom + 64 + (_ctrl.items.isEmpty || _ctrl.isThin ? 96 : 0)),
+        padding: EdgeInsets.only(top: DS.gv(12), bottom: bottom + 64 + (_ctrl.items.isEmpty || _ctrl.isThin ? 96 : 0)),
         child: child,
       );
     });

@@ -131,7 +131,7 @@ class _ChatsListScreenState extends State<ChatsListScreen>
           child: Column(
             children: [
               Padding(
-                padding: const EdgeInsets.fromLTRB(18, 10, 18, 0),
+                padding: EdgeInsets.fromLTRB(DS.s(18), DS.s(10), DS.s(18), 0),
                 child: Row(
                   children: [
                     ChatRoundButton3D(icon: Icons.chevron_left_rounded, onTap: () => Get.back(), tooltip: 'Back', tone: _tone),
@@ -148,7 +148,7 @@ class _ChatsListScreenState extends State<ChatsListScreen>
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.only(top: 18),
+                padding: EdgeInsets.only(top: DS.gv(18)),
                 child: ModuleTitleBar(tone: _tone, art: ListingArt.speechBalloon, title: 'Messages'),
               ),
               SizeTransition(
@@ -180,7 +180,7 @@ class _ChatsListScreenState extends State<ChatsListScreen>
                     child: ListView.builder(
                       controller: _scrollCtrl,
                       physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
-                      padding: EdgeInsets.only(bottom: KitMetrics.gutter + AppInsets.bottomViewPadding(context)),
+                      padding: EdgeInsets.only(bottom: DS.s(KitMetrics.gutter) + AppInsets.bottomViewPadding(context)),
                       itemCount: filtered.length + (loadingMore ? 1 : 0),
                       itemBuilder: (_, i) {
                         if (i >= filtered.length) {
@@ -209,8 +209,8 @@ class _ChatsListScreenState extends State<ChatsListScreen>
       value: '',
       buttonArt: '',
       inline: true,
-      margin: const EdgeInsets.fromLTRB(18, 18, 18, 0),
-      buttonChild: const Icon(Icons.search_rounded, size: 24, color: DesignColors.onPrimary),
+      margin: EdgeInsets.fromLTRB(DS.s(18), DS.gv(18), DS.s(18), 0),
+      buttonChild: Icon(Icons.search_rounded, size: DS.s(24), color: DesignColors.onPrimary),
       field: TextField(
         controller: _searchCtrl,
         inputFormatters: noEmojiInputFormatters,
@@ -224,7 +224,7 @@ class _ChatsListScreenState extends State<ChatsListScreen>
         decoration: InputDecoration(
           isCollapsed: true,
           filled: false,
-          contentPadding: const EdgeInsets.symmetric(vertical: 10),
+          contentPadding: EdgeInsets.symmetric(vertical: DS.s(10)),
           hintText: 'Search by name or address',
           hintStyle: Ink3D.text(16, FontWeight.w400, Ink3D.hint, letterSpacing: 0),
           border: InputBorder.none,
@@ -263,11 +263,11 @@ class _ChatsListScreenState extends State<ChatsListScreen>
   }
 
   Widget _buildLoadMoreSpinner() => Padding(
-    padding: const EdgeInsets.only(top: 26, bottom: 16),
+    padding: EdgeInsets.only(top: DS.s(26), bottom: DS.s(16)),
     child: Center(
       child: SizedBox(
-        width: 24,
-        height: 24,
+        width: DS.s(24),
+        height: DS.s(24),
         child: CircularProgressIndicator(strokeWidth: 3, color: _tone.g2, backgroundColor: _tone.haloBase.withValues(alpha: Alpha.soft)),
       ),
     ),

@@ -7,17 +7,18 @@ import 'buttons_kit.dart';
 import 'motion_kit.dart';
 import 'sheet_close_button.dart';
 import 'wide_card.dart';
+import 'package:bakhli/design/tokens/design_scale.dart';
 
 const double _kContentMax = 520;
-const BorderRadius _kSheetTop = BorderRadius.vertical(top: Radius.circular(32));
-const BorderRadius _kWayRadius = BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(54), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8));
+BorderRadius get _kSheetTop => BorderRadius.vertical(top: Radius.circular(DS.radius(32)));
+BorderRadius get _kWayRadius => BorderRadius.only(topLeft: Radius.circular(DS.radius(8)), topRight: Radius.circular(DS.radius(54)), bottomLeft: Radius.circular(DS.radius(8)), bottomRight: Radius.circular(DS.radius(8)));
 
 bool _narrow(BuildContext context) => MediaQuery.sizeOf(context).width < 340;
 double _scale(BuildContext context) => MediaQuery.textScalerOf(context).scale(1);
 
 Widget _halo(double size, Color color) => DecoratedBox(
   decoration: BoxDecoration(shape: BoxShape.circle, color: color),
-  child: SizedBox(width: size, height: size),
+  child: SizedBox(width: DS.s(size), height: DS.s(size)),
 );
 
 class GuideStepHeader extends StatelessWidget {
@@ -34,9 +35,9 @@ class GuideStepHeader extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Padding(
-          padding: const EdgeInsets.only(right: 70),
+          padding: EdgeInsets.only(right: DS.s(70)),
           child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: 20 * _scale(context)),
+            constraints: BoxConstraints(minHeight: DS.s(20) * _scale(context)),
             child: Align(
               alignment: Alignment.centerLeft,
               child: Text(label.toUpperCase(), style: Ink3D.text(13, FontWeight.w700, tone.g2, height: 1.4, letterSpacing: 0.3)),
@@ -44,15 +45,15 @@ class GuideStepHeader extends StatelessWidget {
           ),
         ),
         Container(
-          height: 6,
-          margin: const EdgeInsets.only(top: 14),
-          decoration: BoxDecoration(color: Ink3D.line, borderRadius: BorderRadius.circular(4)),
+          height: DS.s(6),
+          margin: EdgeInsets.only(top: DS.s(14)),
+          decoration: BoxDecoration(color: Ink3D.line, borderRadius: DS.circular(4)),
           alignment: Alignment.centerLeft,
           child: FractionallySizedBox(
             widthFactor: progress.clamp(0, 1).toDouble(),
             child: DecoratedBox(
-              decoration: BoxDecoration(color: tone.g1, borderRadius: BorderRadius.circular(4)),
-              child: const SizedBox(height: 6, width: double.infinity),
+              decoration: BoxDecoration(color: tone.g1, borderRadius: DS.circular(4)),
+              child: SizedBox(height: DS.s(6), width: double.infinity),
             ),
           ),
         ),
@@ -111,8 +112,8 @@ class GuideSheetScaffold extends StatelessWidget {
         clipBehavior: Clip.none,
         fit: StackFit.expand,
         children: [
-          Positioned(left: 0, right: 0, bottom: 0, top: sheetTop, child: _sheet(context, pad.bottom)),
-          Positioned(left: circleLeft, top: -circleOnHeader, child: _circle()),
+          Positioned(left: 0, right: 0, bottom: 0, top: DS.s(sheetTop), child: _sheet(context, pad.bottom)),
+          Positioned(left: DS.s(circleLeft), top: DS.s(-circleOnHeader), child: _circle()),
         ],
       ),
     );
@@ -122,13 +123,13 @@ class GuideSheetScaffold extends StatelessWidget {
     return ExcludeSemantics(
       child: Container(
         key: circleKey,
-        width: circleSize,
-        height: circleSize,
+        width: DS.s(circleSize),
+        height: DS.s(circleSize),
         alignment: Alignment.center,
         decoration: BoxDecoration(
           color: Colors.white,
           shape: BoxShape.circle,
-          boxShadow: [BoxShadow(color: tone.shadow.withValues(alpha: 0.33), offset: const Offset(0, 6), blurRadius: 16)],
+          boxShadow: [BoxShadow(color: tone.shadow.withValues(alpha: 0.33), offset: DS.shadowOffset(const Offset(0, 6)), blurRadius: DS.shadowBlur(16))],
         ),
         child: Art3D(asset: art, size: circleArt, shadowBlur: 5, shadowOffset: const Offset(4, 6), shadowAlpha: 0.25),
       ),
@@ -137,10 +138,10 @@ class GuideSheetScaffold extends StatelessWidget {
 
   Widget _sheet(BuildContext context, double inset) {
     return DecoratedBox(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: _kSheetTop,
-        boxShadow: [BoxShadow(color: Color(0x4D9E9E9E), offset: Offset(0, -2), blurRadius: 16)],
+        boxShadow: [BoxShadow(color: Color(0x4D9E9E9E), offset: DS.shadowOffset(const Offset(0, -2)), blurRadius: DS.shadowBlur(16))],
       ),
       child: Stack(
         clipBehavior: Clip.none,
@@ -154,7 +155,7 @@ class GuideSheetScaffold extends StatelessWidget {
                       bucket: PageStorageBucket(),
                       child: SingleChildScrollView(
                         key: ValueKey(scrollKey ?? title),
-                        padding: const EdgeInsets.fromLTRB(20, 14, 20, 16),
+                        padding: EdgeInsets.fromLTRB(DS.s(20), DS.s(14), DS.s(20), DS.s(16)),
                         child: Center(
                           child: ConstrainedBox(
                             constraints: const BoxConstraints(maxWidth: _kContentMax),
@@ -163,7 +164,7 @@ class GuideSheetScaffold extends StatelessWidget {
                               children: [
                                 header ?? GuideStepHeader(tone: tone, label: stepLabel, progress: progress),
                                 Padding(
-                                  padding: const EdgeInsets.only(top: 4),
+                                  padding: EdgeInsets.only(top: DS.s(4)),
                                   child: Text(
                                     title,
                                     maxLines: 3,
@@ -174,7 +175,7 @@ class GuideSheetScaffold extends StatelessWidget {
                                 ),
                                 if (body.isNotEmpty)
                                   Padding(
-                                    padding: const EdgeInsets.only(top: 6),
+                                    padding: EdgeInsets.only(top: DS.s(6)),
                                     child: Text(
                                       body,
                                       maxLines: 5,
@@ -195,7 +196,7 @@ class GuideSheetScaffold extends StatelessWidget {
                 const _ScrollFade(),
                 if (bottom != null)
                   Padding(
-                    padding: EdgeInsets.fromLTRB(20, 4, 20, 22 + inset),
+                    padding: EdgeInsets.fromLTRB(DS.s(20), DS.s(4), DS.s(20), DS.s(22) + inset),
                     child: Center(
                       child: ConstrainedBox(
                         constraints: const BoxConstraints(maxWidth: _kContentMax),
@@ -204,23 +205,23 @@ class GuideSheetScaffold extends StatelessWidget {
                     ),
                   )
                 else
-                  SizedBox(height: 22 + inset),
+                  SizedBox(height: DS.s(22) + inset),
               ],
             ),
           ),
           Positioned(
-            right: 20,
-            top: -30,
+            right: DS.s(20),
+            top: DS.s(-30),
             child: ExcludeSemantics(
               child: Container(
-                width: 60,
-                height: 60,
+                width: DS.s(60),
+                height: DS.s(60),
                 alignment: Alignment.center,
-                padding: const EdgeInsets.symmetric(horizontal: 6),
+                padding: EdgeInsets.symmetric(horizontal: DS.s(6)),
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   gradient: tone.gradient,
-                  boxShadow: [BoxShadow(color: tone.shadow.withValues(alpha: 0.5), offset: const Offset(3, 8), blurRadius: 14)],
+                  boxShadow: [BoxShadow(color: tone.shadow.withValues(alpha: 0.5), offset: DS.shadowOffset(const Offset(3, 8)), blurRadius: DS.shadowBlur(14))],
                 ),
                 child: FittedBox(
                   fit: BoxFit.scaleDown,
@@ -250,14 +251,14 @@ class _ScrollFade extends StatelessWidget {
       height: 0,
       child: OverflowBox(
         alignment: Alignment.bottomCenter,
-        minHeight: 16,
-        maxHeight: 16,
-        child: const IgnorePointer(
+        minHeight: DS.s(16),
+        maxHeight: DS.s(16),
+        child: IgnorePointer(
           child: DecoratedBox(
             decoration: BoxDecoration(
               gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0x00FFFFFF), Colors.white]),
             ),
-            child: SizedBox(height: 16, width: double.infinity),
+            child: SizedBox(height: DS.s(16), width: double.infinity),
           ),
         ),
       ),
@@ -277,8 +278,8 @@ class OptionCard extends StatelessWidget {
   final VoidCallback? onTap;
   final Widget? trailing;
 
-  static const double topRoom = 26;
-  static const BorderRadius radius = BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(40), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8));
+  static double get topRoom => DS.s(26);
+  static BorderRadius get radius => DS.br(const BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(40), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8)));
 
   @override
   Widget build(BuildContext context) {
@@ -287,10 +288,10 @@ class OptionCard extends StatelessWidget {
     final off = state == OptionState.off;
     final on = state == OptionState.on;
     final check = Container(
-      width: 28,
-      height: 28,
+      width: DS.s(28),
+      height: DS.s(28),
       decoration: BoxDecoration(shape: BoxShape.circle, color: on ? Colors.white : Colors.white.withValues(alpha: 0.35)),
-      child: on ? Icon(Icons.check_rounded, size: 17, color: tone.g2) : null,
+      child: on ? Icon(Icons.check_rounded, size: DS.s(17), color: tone.g2) : null,
     );
     final card = Opacity(
       opacity: off ? 0.78 : 1,
@@ -298,13 +299,13 @@ class OptionCard extends StatelessWidget {
         clipBehavior: Clip.none,
         children: [
           Padding(
-            padding: const EdgeInsets.only(top: topRoom),
+            padding: EdgeInsets.only(top: topRoom),
             child: DecoratedBox(
               decoration: BoxDecoration(borderRadius: radius, gradient: tone.gradient, boxShadow: off ? const [] : tone.glow(blur: 8)),
               child: ConstrainedBox(
-                constraints: const BoxConstraints(minHeight: 80, minWidth: double.infinity),
+                constraints: BoxConstraints(minHeight: DS.s(80), minWidth: double.infinity),
                 child: Padding(
-                  padding: EdgeInsets.fromLTRB(small ? 74 : 98, 16, 14, 16),
+                  padding: EdgeInsets.fromLTRB(DS.s(small ? 74 : 98), DS.s(16), DS.s(14), DS.s(16)),
                   child: Row(
                     children: [
                       Expanded(
@@ -316,7 +317,7 @@ class OptionCard extends StatelessWidget {
                           style: Ink3D.text(small ? 15 : 17, FontWeight.w700, Colors.white, height: 1.4),
                         ),
                       ),
-                      const SizedBox(width: 10),
+                      SizedBox(width: DS.s(10)),
                       trailing ?? check,
                     ],
                   ),
@@ -325,13 +326,13 @@ class OptionCard extends StatelessWidget {
             ),
           ),
           Positioned(
-            left: 6,
-            top: topRoom - (small ? 26 : 32),
+            left: DS.s(6),
+            top: topRoom - DS.s(small ? 26 : 32),
             child: IgnorePointer(child: _halo(artSize + 8, Colors.white.withValues(alpha: 0.22))),
           ),
           Positioned(
-            left: 10,
-            top: topRoom - (small ? 22 : 28),
+            left: DS.s(10),
+            top: topRoom - DS.s(small ? 22 : 28),
             child: IgnorePointer(
               child: Art3D(asset: art, size: artSize, shadowBlur: 5, shadowOffset: const Offset(4, 6), shadowAlpha: 0.25),
             ),
@@ -370,7 +371,7 @@ class GuideButtons extends StatelessWidget {
   final String why;
   final ListingTone tone;
 
-  static const BorderRadius primaryRadius = BorderRadius.only(topLeft: Radius.circular(18), topRight: Radius.circular(18), bottomRight: Radius.circular(18), bottomLeft: Radius.circular(8));
+  static BorderRadius get primaryRadius => DS.br(const BorderRadius.only(topLeft: Radius.circular(18), topRight: Radius.circular(18), bottomRight: Radius.circular(18), bottomLeft: Radius.circular(8)));
 
   @override
   Widget build(BuildContext context) {
@@ -390,28 +391,28 @@ class GuideButtons extends StatelessWidget {
           child: Opacity(
             opacity: onSquare == null ? 0.45 : 1,
             child: Container(
-              width: wide ? null : 52,
-              constraints: const BoxConstraints(minHeight: 52),
-              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), boxShadow: Ink3D.softShadow),
+              width: wide ? null : DS.s(52),
+              constraints: BoxConstraints(minHeight: DS.s(52)),
+              decoration: BoxDecoration(color: Colors.white, borderRadius: DS.circular(16), boxShadow: DS.shadows(Ink3D.softShadow)),
               child: wide
                   ? Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(squareIcon, size: 22, color: Ink3D.hint),
-                        const SizedBox(width: 8),
+                        Icon(squareIcon, size: DS.s(22), color: Ink3D.hint),
+                        SizedBox(width: DS.s(8)),
                         Flexible(
                           child: Text(squareSemantics, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(15, FontWeight.w600, Ink3D.hint)),
                         ),
                       ],
                     )
-                  : Icon(squareIcon, size: 26, color: Ink3D.hint),
+                  : Icon(squareIcon, size: DS.s(26), color: Ink3D.hint),
             ),
           ),
         ),
       ),
     );
     final primary = label == null
-        ? const SizedBox(height: 52)
+        ? SizedBox(height: DS.s(52))
         : Semantics(
             button: true,
             enabled: live,
@@ -425,13 +426,13 @@ class GuideButtons extends StatelessWidget {
                 child: Opacity(
                   opacity: enabled ? 1 : 0.5,
                   child: Container(
-                    constraints: const BoxConstraints(minHeight: 52),
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    constraints: BoxConstraints(minHeight: DS.s(52)),
+                    padding: EdgeInsets.symmetric(horizontal: DS.s(14), vertical: DS.s(8)),
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
                       borderRadius: primaryRadius,
                       gradient: tone.gradient,
-                      boxShadow: [BoxShadow(color: tone.shadow.withValues(alpha: 0.5), offset: const Offset(1.1, 6), blurRadius: 14)],
+                      boxShadow: [BoxShadow(color: tone.shadow.withValues(alpha: 0.5), offset: DS.shadowOffset(const Offset(1.1, 6)), blurRadius: DS.shadowBlur(14))],
                     ),
                     child: loading ? const KitDots(color: Colors.white) : Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(17, FontWeight.w700, Colors.white)),
                   ),
@@ -447,14 +448,14 @@ class GuideButtons extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              if (wide) Expanded(child: square) else ...[square, const SizedBox(width: 14), Expanded(child: primary)],
+              if (wide) Expanded(child: square) else ...[square, Gap.h(14), Expanded(child: primary)],
             ],
           ),
         ),
         Padding(
-          padding: const EdgeInsets.only(top: 12),
+          padding: EdgeInsets.only(top: DS.s(12)),
           child: SizedBox(
-            height: 18 * _scale(context),
+            height: DS.s(18) * _scale(context),
             child: why.isEmpty
                 ? null
                 : FittedBox(
@@ -510,12 +511,12 @@ class SheetModalBody extends StatelessWidget {
   final Key? secondaryKey;
   final Widget? extra;
 
-  static const double artRoom = 78;
-  static const BorderRadius primaryRadius = BorderRadius.only(topLeft: Radius.circular(20), topRight: Radius.circular(20), bottomRight: Radius.circular(20), bottomLeft: Radius.circular(8));
+  static double get artRoom => DS.s(78);
+  static BorderRadius get primaryRadius => DS.br(const BorderRadius.only(topLeft: Radius.circular(20), topRight: Radius.circular(20), bottomRight: Radius.circular(20), bottomLeft: Radius.circular(8)));
 
   Widget _button(String label, VoidCallback? onTap, Key? key, {required bool primary}) {
     return Padding(
-      padding: EdgeInsets.only(top: primary ? 22 : 12),
+      padding: EdgeInsets.only(top: DS.gv(primary ? 22 : 12)),
       child: Semantics(
         button: true,
         enabled: onTap != null,
@@ -528,16 +529,16 @@ class SheetModalBody extends StatelessWidget {
             behavior: HitTestBehavior.opaque,
             onTap: onTap,
             child: Container(
-              constraints: BoxConstraints(minHeight: primary ? 54 : 50, minWidth: double.infinity),
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              constraints: BoxConstraints(minHeight: DS.s(primary ? 54 : 50), minWidth: double.infinity),
+              padding: EdgeInsets.symmetric(horizontal: DS.s(14), vertical: DS.s(8)),
               alignment: Alignment.center,
               decoration: primary
                   ? BoxDecoration(
                       borderRadius: primaryRadius,
                       gradient: tone.gradient,
-                      boxShadow: [BoxShadow(color: tone.shadow.withValues(alpha: 0.5), offset: const Offset(1.1, 6), blurRadius: 14)],
+                      boxShadow: [BoxShadow(color: tone.shadow.withValues(alpha: 0.5), offset: DS.shadowOffset(const Offset(1.1, 6)), blurRadius: DS.shadowBlur(14))],
                     )
-                  : BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18), boxShadow: Ink3D.softShadow),
+                  : BoxDecoration(color: Colors.white, borderRadius: DS.circular(18), boxShadow: DS.shadows(Ink3D.softShadow)),
               child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(primary ? 17 : 16, FontWeight.w700, primary ? Colors.white : tone.text)),
             ),
           ),
@@ -550,7 +551,7 @@ class SheetModalBody extends StatelessWidget {
   Widget build(BuildContext context) {
     final pad = MediaQuery.paddingOf(context);
     final screen = MediaQuery.sizeOf(context).height;
-    final maxSheet = math.max(260.0, screen - pad.top - artRoom - 12);
+    final maxSheet = math.max(DS.s(260), screen - pad.top - artRoom - DS.s(12));
     final content = Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -558,26 +559,26 @@ class SheetModalBody extends StatelessWidget {
         Text(title, maxLines: 3, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center, style: Ink3D.text(26, FontWeight.w700, Ink3D.title, height: 1.4)),
         if (body.isNotEmpty)
           Padding(
-            padding: const EdgeInsets.only(top: 6),
+            padding: EdgeInsets.only(top: DS.s(6)),
             child: Text(body, maxLines: 6, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center, style: Ink3D.text(15, FontWeight.w400, Ink3D.copy, height: 1.45, letterSpacing: 0)),
           ),
         if (names.isNotEmpty)
           Padding(
-            padding: const EdgeInsets.only(top: 16),
+            padding: EdgeInsets.only(top: DS.s(16)),
             child: Wrap(
-              spacing: 8,
-              runSpacing: 8,
+              spacing: DS.gh(8),
+              runSpacing: DS.gv(8),
               alignment: WrapAlignment.center,
               children: [
                 for (final n in names)
                   Container(
-                    padding: const EdgeInsets.fromLTRB(6, 5, 14, 5),
-                    decoration: BoxDecoration(color: tone.tint, borderRadius: BorderRadius.circular(20)),
+                    padding: EdgeInsets.fromLTRB(DS.s(6), DS.s(5), DS.s(14), DS.s(5)),
+                    decoration: BoxDecoration(color: tone.tint, borderRadius: DS.circular(20)),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Image.asset(n.art, width: 28, height: 28, fit: BoxFit.contain),
-                        const SizedBox(width: 6),
+                        Image.asset(n.art, width: DS.s(28), height: DS.s(28), fit: BoxFit.contain),
+                        SizedBox(width: DS.s(6)),
                         Flexible(
                           child: Text(n.label, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(14, FontWeight.w700, tone.text)),
                         ),
@@ -597,7 +598,7 @@ class SheetModalBody extends StatelessWidget {
               behavior: HitTestBehavior.opaque,
               onTap: onLink,
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+                padding: EdgeInsets.fromLTRB(DS.s(16), DS.s(16), DS.s(16), DS.s(4)),
                 child: Text(linkLabel!, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(14, FontWeight.w600, Ink3D.grey)),
               ),
             ),
@@ -609,19 +610,19 @@ class SheetModalBody extends StatelessWidget {
       alignment: Alignment.topCenter,
       children: [
         Padding(
-          padding: const EdgeInsets.only(top: artRoom),
+          padding: EdgeInsets.only(top: artRoom),
           child: Container(
             width: double.infinity,
-            constraints: BoxConstraints(minHeight: math.min(430.0 + pad.bottom, maxSheet), maxHeight: maxSheet),
-            decoration: const BoxDecoration(
+            constraints: BoxConstraints(minHeight: math.min(DS.s(430) + pad.bottom, maxSheet), maxHeight: maxSheet),
+            decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: _kSheetTop,
-              boxShadow: [BoxShadow(color: Color(0x33000000), offset: Offset(0, -4), blurRadius: 24)],
+              boxShadow: [BoxShadow(color: Color(0x33000000), offset: DS.shadowOffset(const Offset(0, -4)), blurRadius: DS.shadowBlur(24))],
             ),
             child: Material(
               type: MaterialType.transparency,
               child: SingleChildScrollView(
-                padding: EdgeInsets.fromLTRB(22, 84, 22, 22 + pad.bottom),
+                padding: EdgeInsets.fromLTRB(DS.s(22), DS.s(84), DS.s(22), DS.s(22) + pad.bottom),
                 child: Center(
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: _kContentMax),
@@ -632,10 +633,10 @@ class SheetModalBody extends StatelessWidget {
             ),
           ),
         ),
-        const Positioned(top: artRoom + 12, right: 12, child: SheetCloseButton()),
+        Positioned(top: artRoom + DS.s(12), right: DS.s(12), child: SheetCloseButton()),
         Positioned(top: 0, child: IgnorePointer(child: _halo(144, tone.haloBase.withValues(alpha: 0.18)))),
         Positioned(
-          top: 4,
+          top: DS.s(4),
           child: IgnorePointer(
             child: Art3D(asset: art, size: 136, shadowBlur: 7, shadowOffset: const Offset(5, 9), shadowAlpha: 0.3),
           ),
@@ -783,7 +784,7 @@ class WayCard extends StatelessWidget {
   final String? note;
   final VoidCallback? onTap;
 
-  static const double topRoom = 38;
+  static double get topRoom => DS.s(38);
 
   @override
   Widget build(BuildContext context) {
@@ -797,33 +798,33 @@ class WayCard extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: _kWayRadius,
         gradient: tone.gradient,
-        boxShadow: [BoxShadow(color: tone.shadow.withValues(alpha: 0.55), offset: const Offset(1.1, 4), blurRadius: 10)],
+        boxShadow: [BoxShadow(color: tone.shadow.withValues(alpha: 0.55), offset: DS.shadowOffset(const Offset(1.1, 4)), blurRadius: DS.shadowBlur(10))],
       ),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(22, 22, 22, 18),
+        padding: EdgeInsets.fromLTRB(DS.s(22), DS.s(22), DS.s(22), DS.s(18)),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Padding(
-              padding: EdgeInsets.only(left: small ? 90 : 114),
+              padding: EdgeInsets.only(left: DS.s(small ? 90 : 114)),
               child: ConstrainedBox(
-                constraints: BoxConstraints(minHeight: small ? 50 : 60),
+                constraints: BoxConstraints(minHeight: DS.s(small ? 50 : 60)),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     if (best != null && best.isNotEmpty)
                       Padding(
-                        padding: const EdgeInsets.only(bottom: 6),
+                        padding: EdgeInsets.only(bottom: DS.s(6)),
                         child: DecoratedBox(
-                          decoration: BoxDecoration(color: white, borderRadius: BorderRadius.circular(12)),
+                          decoration: BoxDecoration(color: white, borderRadius: DS.circular(12)),
                           child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                            padding: EdgeInsets.symmetric(horizontal: DS.s(10), vertical: DS.s(3)),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(Icons.star_rounded, size: 14, color: tone.g2),
-                                const SizedBox(width: 3),
+                                Icon(Icons.star_rounded, size: DS.s(14), color: tone.g2),
+                                SizedBox(width: DS.s(3)),
                                 Flexible(
                                   child: Text(best, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(12, FontWeight.w700, tone.g2, letterSpacing: 0.4)),
                                 ),
@@ -835,7 +836,7 @@ class WayCard extends StatelessWidget {
                     Text(title, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(20, FontWeight.w700, white, height: 1.3)),
                     if (subtitle.isNotEmpty)
                       Padding(
-                        padding: const EdgeInsets.only(top: 2),
+                        padding: EdgeInsets.only(top: DS.s(2)),
                         child: Text(subtitle, maxLines: 3, overflow: TextOverflow.ellipsis, style: sub),
                       ),
                     if (reason != null && reason.isNotEmpty) Text(reason, maxLines: 2, overflow: TextOverflow.ellipsis, style: sub),
@@ -845,15 +846,15 @@ class WayCard extends StatelessWidget {
             ),
             if (rows.isNotEmpty)
               Container(
-                margin: const EdgeInsets.only(top: 14),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                decoration: BoxDecoration(color: white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(14)),
+                margin: EdgeInsets.only(top: DS.s(14)),
+                padding: EdgeInsets.symmetric(horizontal: DS.s(16), vertical: DS.s(12)),
+                decoration: BoxDecoration(color: white.withValues(alpha: 0.2), borderRadius: DS.circular(14)),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [for (final r in rows) _row(r)]),
               ),
-            if (buttons.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 14), child: _grid(context)),
+            if (buttons.isNotEmpty) Padding(padding: EdgeInsets.only(top: DS.s(14)), child: _grid(context)),
             if (note != null && note!.isNotEmpty)
               Padding(
-                padding: const EdgeInsets.only(top: 8),
+                padding: EdgeInsets.only(top: DS.s(8)),
                 child: Text(note!, maxLines: 3, overflow: TextOverflow.ellipsis, style: Ink3D.text(11.5, FontWeight.w400, white.withValues(alpha: 0.9), height: 1.4, letterSpacing: 0)),
               ),
           ],
@@ -863,15 +864,15 @@ class WayCard extends StatelessWidget {
     final stack = Stack(
       clipBehavior: Clip.none,
       children: [
-        Padding(padding: const EdgeInsets.fromLTRB(18, topRoom, 18, 0), child: card),
+        Padding(padding: EdgeInsets.fromLTRB(DS.s(18), topRoom, DS.s(18), 0), child: card),
         Positioned(
-          left: 18 + 10,
-          top: topRoom - (small ? 26 : 34),
+          left: DS.s(18 + 10),
+          top: topRoom - DS.s(small ? 26 : 34),
           child: IgnorePointer(child: _halo(artSize + 4, white.withValues(alpha: 0.24))),
         ),
         Positioned(
-          left: 18 + (small ? 12 : 8),
-          top: topRoom - (small ? 30 : 40),
+          left: DS.s(18 + (small ? 12 : 8)),
+          top: topRoom - DS.s(small ? 30 : 40),
           child: IgnorePointer(
             child: Art3D(asset: art, size: artSize),
           ),
@@ -888,31 +889,31 @@ class WayCard extends StatelessWidget {
     const white = Colors.white;
     if (r.kind == WayRowKind.stop) {
       return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 3),
+        padding: EdgeInsets.symmetric(vertical: DS.s(3)),
         child: Row(
           children: [
             Container(
-              width: 14,
-              height: 14,
+              width: DS.s(14),
+              height: DS.s(14),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: r.filled ? white : null,
-                border: Border.all(color: white, width: 3),
+                border: Border.all(color: white, width: DS.s(3)),
               ),
             ),
-            const SizedBox(width: 10),
+            SizedBox(width: DS.s(10)),
             Expanded(
               child: Wrap(
-                spacing: 10,
-                runSpacing: 2,
+                spacing: DS.s(10),
+                runSpacing: DS.s(2),
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
                   Text(r.text, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(15, FontWeight.w700, white, height: 1.5)),
                   if (r.tag != null)
                     DecoratedBox(
-                      decoration: BoxDecoration(color: white, borderRadius: BorderRadius.circular(10)),
+                      decoration: BoxDecoration(color: white, borderRadius: DS.circular(10)),
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 2),
+                        padding: EdgeInsets.symmetric(horizontal: DS.s(9), vertical: DS.s(2)),
                         child: Text(r.tag!, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(11, FontWeight.w700, tone.g2)),
                       ),
                     ),
@@ -925,11 +926,11 @@ class WayCard extends StatelessWidget {
     }
     final note = r.note;
     return Container(
-      constraints: const BoxConstraints(minHeight: 34),
-      margin: const EdgeInsets.fromLTRB(24, 2, 0, 2),
-      padding: const EdgeInsets.only(left: 10),
+      constraints: BoxConstraints(minHeight: DS.s(34)),
+      margin: EdgeInsets.fromLTRB(DS.s(24), DS.s(2), 0, DS.s(2)),
+      padding: EdgeInsets.only(left: DS.s(10)),
       decoration: BoxDecoration(
-        border: Border(left: BorderSide(color: white.withValues(alpha: 0.6), width: 3)),
+        border: Border(left: BorderSide(color: white.withValues(alpha: 0.6), width: DS.s(3))),
       ),
       alignment: Alignment.centerLeft,
       child: LayoutBuilder(builder: (context, box) {
@@ -937,13 +938,13 @@ class WayCard extends StatelessWidget {
         final textStyle = Ink3D.text(14, FontWeight.w500, white, height: 1.4);
         final rightStyle = Ink3D.text(15, FontWeight.w700, white);
         final right = r.right;
-        final rightW = right == null ? 0.0 : KitText.widthOf(right, rightStyle, scaler) + 8;
+        final rightW = right == null ? 0.0 : KitText.widthOf(right, rightStyle, scaler) + DS.s(8);
         var longest = 0.0;
         for (final w in r.text.split(RegExp(r'\s+'))) {
           final x = KitText.widthOf(w, textStyle, scaler);
           if (x > longest) longest = x;
         }
-        final stack = right != null && box.maxWidth - rightW < (longest > 110 ? longest : 110) * 1.15;
+        final stack = right != null && box.maxWidth - rightW < (longest > DS.s(110) ? longest : DS.s(110)) * 1.15;
         final text = Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
@@ -959,7 +960,7 @@ class WayCard extends StatelessWidget {
           children: [
             Expanded(child: text),
             Padding(
-              padding: const EdgeInsets.only(left: 8),
+              padding: EdgeInsets.only(left: DS.s(8)),
               child: Text(right, maxLines: 1, softWrap: false, style: rightStyle),
             ),
           ],
@@ -981,13 +982,13 @@ class WayCard extends StatelessWidget {
         onTap: b.busy ? null : b.onTap,
         child: Container(
           constraints: BoxConstraints(minHeight: minHeight),
-          padding: const EdgeInsets.symmetric(horizontal: 8),
+          padding: EdgeInsets.symmetric(horizontal: DS.s(8)),
           alignment: Alignment.center,
-          decoration: BoxDecoration(borderRadius: BorderRadius.circular(22), color: b.primary ? Colors.white : Colors.white.withValues(alpha: 0.24), boxShadow: b.primary ? Ink3D.whiteBtn : const []),
+          decoration: BoxDecoration(borderRadius: DS.circular(22), color: b.primary ? Colors.white : Colors.white.withValues(alpha: 0.24), boxShadow: b.primary ? DS.shadows(Ink3D.whiteBtn) : const []),
           child: b.busy
-              ? SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation(ink)))
+              ? SizedBox(width: DS.s(18), height: DS.s(18), child: CircularProgressIndicator(strokeWidth: DS.s(2), valueColor: AlwaysStoppedAnimation(ink)))
               : Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  padding: EdgeInsets.symmetric(vertical: DS.s(4)),
                   child: Text(b.label, maxLines: 2, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center, style: Ink3D.text(13.5, FontWeight.w700, ink, height: 1.25)),
                 ),
         ),
@@ -997,11 +998,11 @@ class WayCard extends StatelessWidget {
 
   // Two columns; a full button, or one left without a partner, takes the whole row.
   Widget _grid(BuildContext context) {
-    final double h = 44.0 * math.max<double>(1, _scale(context));
+    final double h = DS.s(44) * math.max<double>(1, _scale(context));
     final out = <Widget>[];
     var i = 0;
     while (i < buttons.length) {
-      if (out.isNotEmpty) out.add(const SizedBox(height: 10));
+      if (out.isNotEmpty) out.add(Gap.v(10));
       final b = buttons[i];
       if (b.full || i + 1 >= buttons.length || buttons[i + 1].full) {
         out.add(_btn(b, h));
@@ -1013,7 +1014,7 @@ class WayCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Expanded(child: _btn(b, h)),
-                const SizedBox(width: 10),
+                Gap.h(10),
                 Expanded(child: _btn(buttons[i + 1], h)),
               ],
             ),

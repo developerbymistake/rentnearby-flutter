@@ -2,12 +2,12 @@ import 'package:bakhli/design/design.dart';
 import 'package:flutter/material.dart';
 
 class TripShimmers {
-  static Widget rowBox({double height = 76, double radius = 16}) => TemplatePlaceholder(height: height, radius: radius);
+  static Widget rowBox({double height = 76, double radius = 16}) => TemplatePlaceholder(height: DS.s(height), radius: DS.radius(radius));
 
   static Widget card({required double height, required Widget child, BorderRadius radius = TripEntryStyle.ringRadius}) => Container(
-        height: height,
-        padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-        decoration: BoxDecoration(color: DesignColors.surface, borderRadius: radius, boxShadow: TripEntryStyle.cardShadow),
+        height: DS.s(height),
+        padding: DS.insets(l: 14, t: 12, r: 14, b: 12),
+        decoration: BoxDecoration(color: DesignColors.surface, borderRadius: DS.br(radius), boxShadow: DS.shadows(TripEntryStyle.cardShadow)),
         child: child,
       );
 }
@@ -19,14 +19,14 @@ class TripSpotRowSkeleton extends StatelessWidget {
   Widget build(BuildContext context) => TripShimmers.card(
         height: 188,
         radius: TripEntryStyle.cardRadius,
-        child: const Column(
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Expanded(child: TemplatePlaceholder(height: double.infinity)),
-            SizedBox(height: 10),
-            TemplatePlaceholder(height: 14),
-            SizedBox(height: 6),
-            Align(alignment: Alignment.centerLeft, child: FractionallySizedBox(widthFactor: 0.5, child: TemplatePlaceholder(height: 12))),
+            Expanded(child: TemplatePlaceholder(height: double.infinity, radius: DS.radius(8))),
+            Gap.v(10),
+            TemplatePlaceholder(height: DS.s(14), radius: DS.radius(8)),
+            Gap.v(6),
+            Align(alignment: Alignment.centerLeft, child: FractionallySizedBox(widthFactor: 0.5, child: TemplatePlaceholder(height: DS.s(12), radius: DS.radius(8)))),
           ],
         ),
       );
@@ -37,17 +37,17 @@ class TripDayCardSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(bottom: 10),
+        padding: EdgeInsets.only(bottom: DS.gv(10)),
         child: TripShimmers.card(
           height: 150,
-          child: const Column(
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              TemplatePlaceholder(height: 24, width: 80, radius: 16),
-              SizedBox(height: 14),
-              TemplatePlaceholder(height: 18),
-              SizedBox(height: 10),
-              TemplatePlaceholder(height: 18),
+              TemplatePlaceholder(height: DS.s(24), width: DS.s(80), radius: DS.radius(16)),
+              Gap.v(14),
+              TemplatePlaceholder(height: DS.s(18), radius: DS.radius(8)),
+              Gap.v(10),
+              TemplatePlaceholder(height: DS.s(18), radius: DS.radius(8)),
             ],
           ),
         ),
@@ -66,26 +66,26 @@ class TripCardSkeleton extends StatelessWidget {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const TemplatePlaceholder(height: 48, width: 48, radius: 24),
-                const SizedBox(width: 12),
+                TemplatePlaceholder(height: DS.s(48), width: DS.s(48), radius: DS.radius(24)),
+                Gap.h(12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const FractionallySizedBox(widthFactor: 0.7, child: TemplatePlaceholder(height: 14)),
-                      const SizedBox(height: 8),
-                      const FractionallySizedBox(widthFactor: 0.45, child: TemplatePlaceholder(height: 12)),
-                      const SizedBox(height: 8),
-                      const FractionallySizedBox(widthFactor: 0.55, child: TemplatePlaceholder(height: 12)),
+                      FractionallySizedBox(widthFactor: 0.7, child: TemplatePlaceholder(height: DS.s(14), radius: DS.radius(8))),
+                      Gap.v(8),
+                      FractionallySizedBox(widthFactor: 0.45, child: TemplatePlaceholder(height: DS.s(12), radius: DS.radius(8))),
+                      Gap.v(8),
+                      FractionallySizedBox(widthFactor: 0.55, child: TemplatePlaceholder(height: DS.s(12), radius: DS.radius(8))),
                     ],
                   ),
                 ),
-                const SizedBox(width: 8),
-                const TemplatePlaceholder(height: 24, width: 64, radius: 16),
+                Gap.h(8),
+                TemplatePlaceholder(height: DS.s(24), width: DS.s(64), radius: DS.radius(16)),
               ],
             ),
             const Spacer(),
-            const TemplatePlaceholder(height: 44, radius: 16),
+            TemplatePlaceholder(height: DS.s(44), radius: DS.radius(16)),
           ],
         ),
       );

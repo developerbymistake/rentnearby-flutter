@@ -120,7 +120,7 @@ class _JourneyRoadScreenState extends State<JourneyRoadScreen> with TickerProvid
       ]);
     }
     return LayoutBuilder(builder: (context, box) {
-      final reserve = box.maxHeight * _sheetMin + 16;
+      final reserve = box.maxHeight * _sheetMin + DS.s(16);
       return Stack(children: [
         Positioned.fill(
           child: ListView(
@@ -156,24 +156,24 @@ class _JourneyRoadScreenState extends State<JourneyRoadScreen> with TickerProvid
 
   Widget _sheet(BuildContext context, JourneyPlanController c, WayPlan plan, ScrollController scroll) {
     return Container(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: DesignColors.sheet,
-        borderRadius: BorderRadius.only(topLeft: Radius.circular(32), topRight: Radius.circular(32)),
-        boxShadow: JourneyInk.sheetShadow,
+        borderRadius: BorderRadius.only(topLeft: Radius.circular(DS.radius(32)), topRight: Radius.circular(DS.radius(32))),
+        boxShadow: DS.shadows(JourneyInk.sheetShadow),
       ),
       child: Obx(() {
         final chosen = c.chosen;
         final legs = plan.legs;
         return ListView(
           controller: scroll,
-          padding: EdgeInsets.fromLTRB(0, 8, 0, 16 + AppInsets.bottomViewPadding(context)),
+          padding: EdgeInsets.fromLTRB(0, DS.s(8), 0, DS.s(16) + AppInsets.bottomViewPadding(context)),
           children: [
             Center(
               child: Container(
-                width: 40,
-                height: 4,
-                margin: const EdgeInsets.only(bottom: 4),
-                decoration: BoxDecoration(color: Ink3D.line, borderRadius: BorderRadius.circular(2)),
+                width: DS.s(40),
+                height: DS.s(4),
+                margin: EdgeInsets.only(bottom: DS.s(4)),
+                decoration: BoxDecoration(color: Ink3D.line, borderRadius: DS.circular(2)),
               ),
             ),
             Center(
@@ -214,7 +214,7 @@ class _JourneyRoadScreenState extends State<JourneyRoadScreen> with TickerProvid
         Align(
           alignment: Alignment.centerRight,
           child: Padding(
-            padding: const EdgeInsets.only(right: 16),
+            padding: EdgeInsets.only(right: DS.s(16)),
             child: JourneyChip3D(label: '${TaxiWaysStrings.otherDrivers(leg.otherCount)} ›', onTap: () => c.changeDriver(context, leg)),
           ),
         ),

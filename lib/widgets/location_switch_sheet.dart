@@ -316,7 +316,7 @@ class _LocationSwitchSheetState extends State<LocationSwitchSheet>
     final baseHeight = _baseHeight ?? media.size.height;
     final baseTopPadding = _baseTopPadding ?? media.padding.top;
     final maxHeight = (baseHeight - baseTopPadding) * 0.94;
-    final fiveRows = 615.0 + (widget.title != null ? 19 : 0);
+    final fiveRows = DS.s(615.0) + (widget.title != null ? DS.s(19) : 0);
     final sheetHeight = math.max(baseHeight * 0.75, fiveRows).clamp(0.0, maxHeight);
     final (title, subtitle, onBack, action, onAction) = _header();
     return SizedBox(
@@ -428,7 +428,7 @@ class _LocationSwitchSheetState extends State<LocationSwitchSheet>
     _rows.forward(from: 0);
     final count = math.min(rows.length, 10);
     return ListView.builder(
-      padding: const EdgeInsets.only(top: 4, bottom: 8),
+      padding: DS.insets(t: 4, b: 8),
       itemCount: rows.length,
       itemBuilder: (context, i) {
         final r = rows[i];
@@ -577,7 +577,7 @@ class _Row {
 // Five skeleton rows with the list dividers (location sheets).
 Widget sheetSkeleton({required bool twoLines}) => ListView(
   physics: const NeverScrollableScrollPhysics(),
-  padding: const EdgeInsets.only(top: 4),
+  padding: DS.insets(t: 4),
   children: [
     for (var i = 0; i < 5; i++)
       DecoratedBox(
@@ -632,7 +632,7 @@ class SheetListHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final a = action;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(18, 0, 18, 0),
+      padding: DS.insets(l: 18, r: 18),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -643,22 +643,22 @@ class SheetListHeader extends StatelessWidget {
                 onTap: onBack,
                 label: 'Back',
                 child: Container(
-                  width: 40,
-                  height: 40,
-                  decoration: const BoxDecoration(
+                  width: DS.s(40),
+                  height: DS.s(40),
+                  decoration: BoxDecoration(
                     color: DesignColors.surface,
                     shape: BoxShape.circle,
-                    boxShadow: Ink3D.softShadow,
+                    boxShadow: DS.shadows(Ink3D.softShadow),
                   ),
                   child: Icon(
                     Icons.chevron_left_rounded,
-                    size: 26,
+                    size: DS.s(26),
                     color: tone.text,
                   ),
                 ),
               ),
             ),
-            const SizedBox(width: 12),
+            SizedBox(width: DS.s(12)),
           ],
           Expanded(
             child: Column(
@@ -666,7 +666,7 @@ class SheetListHeader extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 ConstrainedBox(
-                  constraints: const BoxConstraints(minHeight: 40),
+                  constraints: BoxConstraints(minHeight: DS.s(40)),
                   child: Align(
                     alignment: Alignment.centerLeft,
                     child: FittedBox(
@@ -699,22 +699,19 @@ class SheetListHeader extends StatelessWidget {
             ),
           ),
           if (a != null) ...[
-            const SizedBox(width: 10),
+            SizedBox(width: DS.s(10)),
             SizedBox(
-              height: 40,
+              height: DS.s(40),
               child: Center(
                 child: Tap3D(
                   onTap: onAction,
                   child: Container(
-                    constraints: const BoxConstraints(minHeight: 34),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
-                    ),
+                    constraints: BoxConstraints(minHeight: DS.s(34)),
+                    padding: DS.sym(h: 12, v: 6),
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
                       gradient: tone.gradient,
-                      borderRadius: BorderRadius.circular(18),
+                      borderRadius: DS.circular(18),
                       boxShadow: tone.glow(blur: 8, dy: 3),
                     ),
                     child: Row(

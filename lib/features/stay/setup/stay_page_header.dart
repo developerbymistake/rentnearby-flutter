@@ -46,12 +46,12 @@ class StayFooter extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: DesignColors.surface,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-        boxShadow: Ink3D.topEdge,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(DS.radius(16))),
+        boxShadow: DS.shadows(Ink3D.topEdge),
       ),
-      padding: EdgeInsets.fromLTRB(18, 14, 18, MediaQuery.viewPaddingOf(context).bottom + 20),
+      padding: EdgeInsets.fromLTRB(DS.s(18), DS.s(14), DS.s(18), MediaQuery.viewPaddingOf(context).bottom + DS.s(20)),
       child: child,
     );
   }

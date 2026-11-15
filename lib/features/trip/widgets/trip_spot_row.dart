@@ -30,7 +30,7 @@ class TripSpotRow extends StatelessWidget {
               fit: StackFit.expand,
               children: [
                 TripSpotMedia(spot: spot),
-                if (extra > 0) Positioned(right: 12, top: 12, child: TripPhotoCount(count: extra)),
+                if (extra > 0) Positioned(right: DS.s(12), top: DS.s(12), child: TripPhotoCount(count: extra)),
               ],
             )
           : null,
@@ -63,14 +63,14 @@ class TripPhotoCount extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => DecoratedBox(
-        decoration: BoxDecoration(color: DesignColors.tint(DesignColors.textInk, Alpha.v55), borderRadius: CardRadius.pill),
+        decoration: BoxDecoration(color: DesignColors.tint(DesignColors.textInk, Alpha.v55), borderRadius: DS.br(CardRadius.pill)),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          padding: DS.sym(h: 10, v: 4),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               const Art3D(asset: ListingArt.camera, size: 16, shadowBlur: 0),
-              const SizedBox(width: 4),
+              Gap.h(4),
               Text('+$count', maxLines: 1, style: Ink3D.text(11.5, FontWeight.w700, DesignColors.surface)),
             ],
           ),
@@ -84,9 +84,9 @@ class TripFeaturedChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DecoratedBox(
-      decoration: BoxDecoration(color: DesignColors.surface, borderRadius: CardRadius.pill),
+      decoration: BoxDecoration(color: DesignColors.surface, borderRadius: DS.br(CardRadius.pill)),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+        padding: DS.sym(h: 10, v: 3),
         child: Text(
           TripStringsSpotsX.featured,
           maxLines: 1,
@@ -120,18 +120,18 @@ class TripSpotAddButton extends StatelessWidget {
           label: label,
           selected: selected,
           child: SizedBox(
-            width: KitMetrics.touch,
-            height: KitMetrics.touch,
+            width: DS.s(KitMetrics.touch),
+            height: DS.s(KitMetrics.touch),
             child: Center(
               child: Container(
-                width: 40,
-                height: 40,
+                width: DS.s(40),
+                height: DS.s(40),
                 decoration: BoxDecoration(
                   color: DesignColors.surface,
                   shape: BoxShape.circle,
-                  boxShadow: off ? null : [BoxShadow(color: tone.shadow, offset: const Offset(1, 4), blurRadius: 8)],
+                  boxShadow: off ? null : [BoxShadow(color: tone.shadow, offset: DS.shadowOffset(const Offset(1, 4)), blurRadius: DS.shadowBlur(8))],
                 ),
-                child: Icon(selected ? Icons.check_rounded : Icons.add_rounded, size: 24, color: tone.button),
+                child: Icon(selected ? Icons.check_rounded : Icons.add_rounded, size: DS.s(24), color: tone.button),
               ),
             ),
           ),

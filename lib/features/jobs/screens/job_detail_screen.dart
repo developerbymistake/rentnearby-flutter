@@ -70,7 +70,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
   }
 
   void _onScroll() {
-    _fade.value = ((_scroll.offset - _fadeStart) / _fadeSpan).clamp(0.0, 1.0);
+    _fade.value = ((_scroll.offset - DS.s(_fadeStart)) / DS.s(_fadeSpan)).clamp(0.0, 1.0);
   }
 
   void _retry() {
@@ -111,28 +111,28 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 SizedBox(
-                  height: _heroHeight + top,
+                  height: DS.s(_heroHeight) + top,
                   child: Stack(children: [
-                    Positioned.fill(child: TemplatePlaceholder(height: _heroHeight + top, radius: 0)),
+                    Positioned.fill(child: TemplatePlaceholder(height: DS.s(_heroHeight) + top, radius: 0)),
                     _seamStrip(),
                   ]),
                 ),
-                const Padding(
-                  padding: EdgeInsets.fromLTRB(18, 6, 18, 0),
+                Padding(
+                  padding: EdgeInsets.fromLTRB(DS.s(18), DS.gv(6), DS.s(18), 0),
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    SkeletonBox(height: 14, width: 120),
-                    SizedBox(height: 12),
-                    SkeletonBox(height: 28),
-                    SizedBox(height: 18),
-                    SkeletonBox(height: 330, radius: 24),
-                    SizedBox(height: 24),
-                    SkeletonBox(height: 110, radius: 24),
+                    const SkeletonBox(height: 14, width: 120),
+                    Gap.v(12),
+                    const SkeletonBox(height: 28),
+                    Gap.v(18),
+                    const SkeletonBox(height: 330, radius: 24),
+                    Gap.v(24),
+                    const SkeletonBox(height: 110, radius: 24),
                   ]),
                 ),
               ],
             ),
           ),
-          Positioned(top: top + 10, left: 16, child: _backButton()),
+          Positioned(top: top + DS.s(10), left: DS.s(16), child: _backButton()),
         ],
       ),
     );
@@ -142,11 +142,11 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
         left: 0,
         right: 0,
         bottom: 0,
-        height: JobsDetailHero.seam,
+        height: DS.s(JobsDetailHero.seam),
         child: DecoratedBox(
           decoration: BoxDecoration(
             color: JobsLook.pageColor,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(JobsDetailHero.seam)),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(DS.radius(JobsDetailHero.seam))),
           ),
         ),
       );
@@ -157,7 +157,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
         value: _darkIcons,
         child: SafeArea(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Padding(padding: const EdgeInsets.fromLTRB(18, 10, 18, 0), child: _backButton()),
+            Padding(padding: DS.insets(l: 18, t: 10, r: 18), child: _backButton()),
             Expanded(
               child: Center(
                 child: SingleChildScrollView(
@@ -187,22 +187,22 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     final top = MediaQuery.paddingOf(context).top;
     final children = <Widget>[
       if (!j.isActive)
-        const Padding(
-          padding: EdgeInsets.only(top: 14),
-          child: JobsNoteCard(art: ListingArt.locked, text: 'This job is closed'),
+        Padding(
+          padding: EdgeInsets.only(top: DS.gv(14)),
+          child: const JobsNoteCard(art: ListingArt.locked, text: 'This job is closed'),
         ),
-      Padding(padding: const EdgeInsets.only(top: 18), child: _titleRow(j)),
-      Padding(padding: const EdgeInsets.only(top: 18), child: _infoCard(j)),
+      Padding(padding: EdgeInsets.only(top: DS.gv(18)), child: _titleRow(j)),
+      Padding(padding: EdgeInsets.only(top: DS.gv(18)), child: _infoCard(j)),
       if (j.description.isNotEmpty)
         Padding(
-          padding: const EdgeInsets.only(top: 24),
+          padding: EdgeInsets.only(top: DS.gv(24)),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Semantics(header: true, child: Text('About this job', style: Ink3D.text(16, FontWeight.w700, Ink3D.title))),
-            const SizedBox(height: 8),
+            Gap.v(8),
             Text(j.description, style: Ink3D.text(14, FontWeight.w400, JobsLook.about, letterSpacing: 0, height: 1.6)),
           ]),
         ),
-      Padding(padding: const EdgeInsets.only(top: 14), child: JobsArtLine(art: ListingArt.calendar, text: j.postedAgoLong)),
+      Padding(padding: EdgeInsets.only(top: DS.gv(14)), child: JobsArtLine(art: ListingArt.calendar, text: j.postedAgoLong)),
     ];
     return Stack(children: [
       _reveal.wrap(CustomScrollView(
@@ -212,7 +212,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
           SliverToBoxAdapter(child: _buildHero(j, top)),
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(18, 0, 18, 28),
+              padding: EdgeInsets.fromLTRB(DS.s(18), 0, DS.s(18), DS.gv(28)),
               child: StaggerColumn(crossAxisAlignment: CrossAxisAlignment.stretch, children: children),
             ),
           ),
@@ -230,20 +230,20 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       builder: (_, t, _) => AnnotatedRegion<SystemUiOverlayStyle>(
         value: t < 0.5 ? ModuleHeader.lightIcons : _darkIcons,
         child: SizedBox(
-          height: top + 64,
+          height: top + DS.s(64),
           child: Stack(children: [
             Positioned.fill(
               child: Opacity(
                 opacity: t,
-                child: const DecoratedBox(decoration: BoxDecoration(color: DesignColors.surface, boxShadow: JobsLook.card3)),
+                child: DecoratedBox(decoration: BoxDecoration(color: DesignColors.surface, boxShadow: DS.shadows(JobsLook.card3))),
               ),
             ),
-            Positioned(top: top + 9, left: 18, child: _backButton()),
+            Positioned(top: top + DS.s(9), left: DS.s(18), child: _backButton()),
             Positioned(
               top: top,
-              left: 78,
-              right: 18,
-              height: 64,
+              left: DS.s(78),
+              right: DS.s(18),
+              height: DS.s(64),
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: Opacity(
@@ -260,11 +260,11 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
 
   Widget _titleRow(JobDetailModel j) {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Wrap(spacing: 8, runSpacing: 8, children: [
+      Wrap(spacing: DS.gh(8), runSpacing: DS.gv(8), children: [
         JobsTagPill(tone: _look, label: 'JOB', solid: true),
         JobsTagPill(tone: _look, label: j.experienceLabel),
       ]),
-      const SizedBox(height: 12),
+      Gap.v(12),
       LayoutBuilder(builder: (context, constraints) {
         final scaler = MediaQuery.textScalerOf(context);
         final titleStyle = Ink3D.text(18, FontWeight.w700, Ink3D.title, height: 1.25);
@@ -278,7 +278,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
           final x = KitText.widthOf(w, titleStyle, scaler);
           if (x > longest) longest = x;
         }
-        final titleMax = constraints.maxWidth - 60 - 18;
+        final artW = DS.s(52) + DS.gh(8);
+        final titleMax = constraints.maxWidth - artW - DS.gh(18);
         final salaryBox = (titleMax - longest * 0.9).clamp(salaryW * 0.85, salaryW).toDouble();
         final stacked = longest * 0.8 > titleMax - salaryBox;
         final salary = Column(crossAxisAlignment: stacked ? CrossAxisAlignment.start : CrossAxisAlignment.end, children: [
@@ -306,13 +307,13 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
         const art = ExcludeSemantics(child: Art3D(asset: ListingArt.briefcase, size: 52, shadowBlur: 3, shadowOffset: Offset(2, 4), shadowAlpha: 0.25));
         if (stacked) {
           return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Row(children: [art, const SizedBox(width: 8), Expanded(child: title)]),
-            Padding(padding: const EdgeInsets.only(top: 10, left: 60), child: salary),
+            Row(children: [art, Gap.h(8), Expanded(child: title)]),
+            Padding(padding: EdgeInsets.only(top: DS.gv(10), left: artW), child: salary),
           ]);
         }
         return Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
-          Expanded(child: Row(children: [art, const SizedBox(width: 8), Expanded(child: title)])),
-          const SizedBox(width: 18),
+          Expanded(child: Row(children: [art, Gap.h(8), Expanded(child: title)])),
+          Gap.h(18),
           ConstrainedBox(constraints: BoxConstraints(maxWidth: salaryBox), child: salary),
         ]);
       }),
@@ -335,7 +336,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
 
   Widget _buildHero(JobDetailModel j, double top) {
     final url = j.coverPhotoUrl;
-    final h = _heroHeight + top;
+    final h = DS.s(_heroHeight) + top;
     final hasPhoto = url != null && url.isNotEmpty;
     return JobsDetailHero(
       tone: _look,
@@ -359,7 +360,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       JobsInfoRow(tone: _look, art: ListingArt.briefcase, label: 'Job role', value: j.roleName, divider: false),
       JobsInfoRow(
         tone: _look,
-        art: ListingArt.hotel,
+        art: ListingArt.stay,
         label: 'Stay',
         value: j.stayName,
         onTap: j.stayListingId.isEmpty ? null : () => _openStay(j),

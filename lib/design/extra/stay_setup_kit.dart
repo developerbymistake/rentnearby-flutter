@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../tokens/alpha_tokens.dart';
 import '../tokens/card_tokens.dart';
 import '../tokens/design_colors.dart';
+import '../tokens/design_scale.dart';
 import '../tokens/shadow_tokens.dart';
 import '../tokens/type_tokens.dart';
 import '../tokens/util_tokens.dart';
@@ -75,7 +76,7 @@ class SetupKit {
     int? errorMaxLines,
   }) {
     OutlineInputBorder b(Color c, double w) => OutlineInputBorder(
-        borderRadius: KitMetrics.tileSmall,
+        borderRadius: DS.br(KitMetrics.tileSmall),
         borderSide: w == 0 ? BorderSide.none : BorderSide(color: c, width: w));
     return InputDecoration(
       hintText: hint,
@@ -95,7 +96,7 @@ class SetupKit {
       hintStyle: TypeTokens.style(14, FontWeight.w400, color: DesignColors.inputHint),
       errorStyle: TypeTokens.style(12, FontWeight.w400, color: DesignColors.error),
       helperStyle: TypeTokens.style(12, FontWeight.w400, color: DesignColors.inputLabel),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      contentPadding: DS.sym(h: 16, v: 14),
       border: b(Colors.transparent, 0),
       enabledBorder: b(Colors.transparent, 0),
       disabledBorder: b(Colors.transparent, 0),
@@ -112,25 +113,25 @@ class SetupKit {
       backgroundColor: Colors.transparent,
       barrierColor: DesignColors.scrim,
       elevation: 0,
-      constraints: const BoxConstraints(maxWidth: 560),
+      constraints: BoxConstraints(maxWidth: DS.s(560)),
       builder: (ctx) => DecoratedBox(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           color: DesignColors.sheet,
-          borderRadius: CardRadius.sheet,
-          boxShadow: DesignShadows.top,
+          borderRadius: DS.br(CardRadius.sheet),
+          boxShadow: DS.shadows(DesignShadows.top),
         ),
-        child: ClipRRect(borderRadius: CardRadius.sheet, child: builder(ctx)),
+        child: ClipRRect(borderRadius: DS.br(CardRadius.sheet), child: builder(ctx)),
       ),
     );
   }
 
   static Widget grabber() => Center(
         child: Container(
-          width: 36,
-          height: 4,
-          margin: const EdgeInsets.only(top: 10, bottom: 14),
+          width: DS.s(36),
+          height: DS.s(4),
+          margin: EdgeInsets.only(top: DS.s(10), bottom: DS.s(14)),
           decoration: BoxDecoration(
-              color: DesignColors.tint(DesignColors.textGrey, Alpha.half), borderRadius: BorderRadius.circular(2)),
+              color: DesignColors.tint(DesignColors.textGrey, Alpha.half), borderRadius: DS.circular(2)),
         ),
       );
 }
@@ -206,11 +207,11 @@ class SetupHeader extends StatelessWidget {
       animate: animation == null,
       trailing: [
         if (trailing != null) trailing!,
-        const SizedBox(width: 8),
+        Gap.h(8),
         Container(
-          width: 56,
-          height: 56,
-          padding: const EdgeInsets.all(8),
+          width: DS.s(56),
+          height: DS.s(56),
+          padding: DS.all(8),
           decoration: const BoxDecoration(color: DesignColors.overlayWhiteSoft, shape: BoxShape.circle),
           child: Image.asset(asset),
         ),
@@ -222,19 +223,19 @@ class SetupHeader extends StatelessWidget {
 }
 
 class SetupCard extends StatelessWidget {
-  const SetupCard({super.key, this.title, required this.child, this.margin = const EdgeInsets.only(bottom: 16)});
+  const SetupCard({super.key, this.title, required this.child, this.margin});
 
   final String? title;
   final Widget child;
-  final EdgeInsetsGeometry margin;
+  final EdgeInsetsGeometry? margin;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: margin,
+      padding: margin ?? EdgeInsets.only(bottom: DS.gv(16)),
       child: SectionTile(
         title: title,
-        padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+        padding: DS.insets(l: 16, t: 14, r: 16, b: 16),
         child: child,
       ),
     );
@@ -248,8 +249,8 @@ class SetupFooter extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(color: DesignColors.surface, boxShadow: ShadowTokens.elev3Up),
-      padding: EdgeInsets.fromLTRB(16, 12, 16, MediaQuery.viewPaddingOf(context).bottom + 16),
+      decoration: BoxDecoration(color: DesignColors.surface, boxShadow: DS.shadows(ShadowTokens.elev3Up)),
+      padding: EdgeInsets.fromLTRB(DS.s(16), DS.s(12), DS.s(16), MediaQuery.viewPaddingOf(context).bottom + DS.s(16)),
       child: child,
     );
   }
@@ -275,7 +276,7 @@ class SetupPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ConstrainedBox(
-      constraints: const BoxConstraints(minWidth: 88),
+      constraints: BoxConstraints(minWidth: DS.s(88)),
       child: PrimaryButton(
         label: label,
         onPressed: onTap,
@@ -357,7 +358,7 @@ class SetupEmpty extends StatelessWidget {
     this.subtitle,
     this.retryLabel,
     this.onRetry,
-    this.padding = const EdgeInsets.all(24),
+    this.padding,
   });
 
   final String asset;
@@ -365,7 +366,7 @@ class SetupEmpty extends StatelessWidget {
   final String? subtitle;
   final String? retryLabel;
   final VoidCallback? onRetry;
-  final EdgeInsets padding;
+  final EdgeInsets? padding;
 
   @override
   Widget build(BuildContext context) => StateCard(
@@ -375,7 +376,7 @@ class SetupEmpty extends StatelessWidget {
         kit: KitTone.stay,
         actionLabel: retryLabel,
         onAction: onRetry,
-        padding: padding,
+        padding: padding ?? DS.all(24),
       );
 }
 

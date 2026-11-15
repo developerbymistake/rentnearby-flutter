@@ -33,7 +33,7 @@ class TripGuideProgress extends StatelessWidget {
               children: [
                 header,
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(4, 4, 4, 0),
+                  padding: EdgeInsets.fromLTRB(DS.s(4), DS.gv(4), DS.s(4), 0),
                   child: Text(tag, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(12, FontWeight.w600, Ink3D.grey, letterSpacing: 0)),
                 ),
               ],

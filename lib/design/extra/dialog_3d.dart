@@ -7,6 +7,7 @@ import '../tokens/design_colors.dart';
 import '../tokens/listing_palette.dart';
 import 'art_3d.dart';
 import 'pill_buttons_3d.dart';
+import 'package:bakhli/design/tokens/design_scale.dart';
 
 class DialogLine {
   const DialogLine(this.text, {this.art});
@@ -83,7 +84,7 @@ class Dialog3D extends StatelessWidget {
   final bool secondaryNeutral;
   final double titleSize;
 
-  static const double artRoom = 66;
+  static double get artRoom => DS.s(66);
 
   static Future<T?> show<T>(BuildContext context, {required WidgetBuilder builder, bool barrierDismissible = true}) =>
       showGeneralDialog<T>(
@@ -108,7 +109,7 @@ class Dialog3D extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          for (var i = 0; i < custom.length; i++) ...[if (i > 0) const SizedBox(height: 10), custom[i]],
+          for (var i = 0; i < custom.length; i++) ...[if (i > 0) Gap.v(10), custom[i]],
         ],
       );
     }
@@ -137,7 +138,7 @@ class Dialog3D extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          for (var i = 0; i < list.length; i++) ...[if (i > 0) const SizedBox(height: 10), list[i]],
+          for (var i = 0; i < list.length; i++) ...[if (i > 0) Gap.v(10), list[i]],
         ],
       );
     }
@@ -157,7 +158,7 @@ class Dialog3D extends StatelessWidget {
       children: [
         if (label != null)
           Padding(
-            padding: const EdgeInsets.only(bottom: 2),
+            padding: EdgeInsets.only(bottom: DS.s(2)),
             child: Text(label!, textAlign: TextAlign.center, style: Ink3D.text(12.5, FontWeight.w600, Ink3D.grey, letterSpacing: 0.3)),
           ),
         Semantics(
@@ -173,31 +174,31 @@ class Dialog3D extends StatelessWidget {
         ),
         if (body != null)
           Padding(
-            padding: const EdgeInsets.only(top: 10),
+            padding: EdgeInsets.only(top: DS.s(10)),
             child: ConstrainedBox(
-              constraints: BoxConstraints(minHeight: simple ? minBodyLines * 14.5 * 1.5 * scale : 0),
+              constraints: BoxConstraints(minHeight: simple ? minBodyLines * DS.f(14.5) * 1.5 * scale : 0),
               child: Text(body!, textAlign: align, style: Ink3D.text(14.5, FontWeight.w400, Ink3D.copy, height: 1.5)),
             ),
           ),
         if (note != null)
           Padding(
-            padding: const EdgeInsets.only(top: 6),
+            padding: EdgeInsets.only(top: DS.s(6)),
             child: Text(note!, textAlign: TextAlign.center, style: Ink3D.text(12.5, FontWeight.w400, const Color(0xFF8A8F99), height: 1.4)),
           ),
         if (lines.isNotEmpty)
           Container(
-            margin: const EdgeInsets.only(top: 10),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            decoration: BoxDecoration(color: const Color(0xFFF2F3F8), borderRadius: BorderRadius.circular(16)),
+            margin: EdgeInsets.only(top: DS.s(10)),
+            padding: EdgeInsets.symmetric(horizontal: DS.s(14), vertical: DS.s(10)),
+            decoration: BoxDecoration(color: const Color(0xFFF2F3F8), borderRadius: DS.circular(16)),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 for (final l in lines)
                   Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    padding: EdgeInsets.symmetric(vertical: DS.s(4)),
                     child: Row(
                       children: [
-                        if (l.art != null) ...[Image.asset(l.art!, width: 26, height: 26, fit: BoxFit.contain), const SizedBox(width: 10)],
+                        if (l.art != null) ...[Image.asset(l.art!, width: DS.s(26), height: DS.s(26), fit: BoxFit.contain), SizedBox(width: DS.s(10))],
                         Expanded(child: Text(l.text, style: Ink3D.text(13, FontWeight.w500, Ink3D.body, height: 1.35))),
                       ],
                     ),
@@ -205,17 +206,17 @@ class Dialog3D extends StatelessWidget {
               ],
             ),
           ),
-        if (content != null) Padding(padding: const EdgeInsets.only(top: 12), child: content),
+        if (content != null) Padding(padding: EdgeInsets.only(top: DS.s(12)), child: content),
       ],
     );
     final card = Container(
       width: double.infinity,
-      constraints: BoxConstraints(minHeight: simple && !tight ? 300 : 0),
-      padding: EdgeInsets.fromLTRB(22, a != null ? 84 : 26, 22, 22),
+      constraints: BoxConstraints(minHeight: simple && !tight ? DS.s(300) : 0),
+      padding: EdgeInsets.fromLTRB(DS.s(22), DS.s(a != null ? 84 : 26), DS.s(22), DS.s(22)),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: familyCorner ? BusyOverlay3D.radius : BorderRadius.circular(28),
-        boxShadow: const [BoxShadow(color: Color(0x40000000), offset: Offset(0, 10), blurRadius: 30)],
+        borderRadius: familyCorner ? BusyOverlay3D.radius : DS.circular(28),
+        boxShadow: [BoxShadow(color: Color(0x40000000), offset: DS.shadowOffset(const Offset(0, 10)), blurRadius: DS.shadowBlur(30))],
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -223,16 +224,16 @@ class Dialog3D extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           top,
-          if (buttons != null) Padding(padding: const EdgeInsets.only(top: 22), child: buttons),
+          if (buttons != null) Padding(padding: EdgeInsets.only(top: DS.s(22)), child: buttons),
         ],
       ),
     );
     return SafeArea(
       child: Center(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+          padding: EdgeInsets.symmetric(horizontal: DS.s(18), vertical: DS.s(16)),
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 360),
+            constraints: BoxConstraints(maxWidth: DS.s(360)),
             child: Material(
               type: MaterialType.transparency,
               child: Padding(
@@ -245,7 +246,7 @@ class Dialog3D extends StatelessWidget {
                     if (a != null)
                       Positioned(
                         top: -artRoom,
-                        left: leftAlign ? 4 : null,
+                        left: leftAlign ? DS.s(4) : null,
                         child: IgnorePointer(
                           child: ExcludeSemantics(
                             child: Art3D(asset: a, size: 128, halo: 136, haloColor: (artDanger ? const Color(0xFFE0525C) : tone.haloBase).withValues(alpha: 0.18), shadowBlur: 7, shadowOffset: const Offset(5, 9), shadowAlpha: 0.3),
@@ -272,31 +273,31 @@ class BusyOverlay3D extends StatelessWidget {
   final double? progress;
   final String? caption;
 
-  static const BorderRadius radius = BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(54), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8));
+  static BorderRadius get radius => DS.br(const BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(54), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8)));
 
   @override
   Widget build(BuildContext context) {
     final p = progress;
     final card = Container(
-      width: 280,
-      padding: const EdgeInsets.fromLTRB(22, 84, 22, 24),
-      decoration: const BoxDecoration(
+      width: DS.s(280),
+      padding: EdgeInsets.fromLTRB(DS.s(22), DS.s(84), DS.s(22), DS.s(24)),
+      decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: radius,
-        boxShadow: [BoxShadow(color: Color(0x4D000000), offset: Offset(0, 10), blurRadius: 30)],
+        boxShadow: [BoxShadow(color: Color(0x4D000000), offset: DS.shadowOffset(const Offset(0, 10)), blurRadius: DS.shadowBlur(30))],
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(message, textAlign: TextAlign.center, style: Ink3D.text(17, FontWeight.w700, Ink3D.title, height: 1.3)),
           if (p == null)
-            Padding(padding: const EdgeInsets.only(top: 8), child: SizedBox(height: 30, child: _BusyDots(color: tone.g2)))
+            Padding(padding: EdgeInsets.only(top: DS.s(8)), child: SizedBox(height: DS.s(30), child: _BusyDots(color: tone.g2)))
           else
             Padding(
-              padding: const EdgeInsets.only(top: 16),
+              padding: EdgeInsets.only(top: DS.s(16)),
               child: SizedBox(
-                width: 112,
-                height: 112,
+                width: DS.s(112),
+                height: DS.s(112),
                 child: CustomPaint(
                   painter: _RingPainter(progress: p.clamp(0, 1).toDouble(), color: tone.g2, track: tone.haloBase.withValues(alpha: 0.16)),
                   child: Center(
@@ -307,7 +308,7 @@ class BusyOverlay3D extends StatelessWidget {
             ),
           if (caption != null)
             Padding(
-              padding: const EdgeInsets.only(top: 12),
+              padding: EdgeInsets.only(top: DS.s(12)),
               child: Text(caption!, textAlign: TextAlign.center, style: Ink3D.text(13, FontWeight.w400, Ink3D.grey)),
             ),
         ],
@@ -321,7 +322,7 @@ class BusyOverlay3D extends StatelessWidget {
           color: DesignColors.scrim,
           child: Center(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(20, 80, 20, 20),
+              padding: EdgeInsets.fromLTRB(DS.s(20), DS.s(80), DS.s(20), DS.s(20)),
               child: Material(
                 type: MaterialType.transparency,
                 child: Stack(
@@ -330,7 +331,7 @@ class BusyOverlay3D extends StatelessWidget {
                   children: [
                     card,
                     Positioned(
-                      top: -58,
+                      top: DS.s(-58),
                       child: ExcludeSemantics(
                         child: Art3D(asset: art ?? ListingArt.airplane, size: 124, halo: 124, haloColor: const Color(0x47FFFFFF), shadowBlur: 7, shadowOffset: const Offset(5, 9), shadowAlpha: 0.3),
                       ),
@@ -383,9 +384,9 @@ class _BusyDotsState extends State<_BusyDots> with SingleTickerProviderStateMixi
         children: [
           for (var i = 0; i < 3; i++)
             Container(
-              width: 10,
-              height: 10,
-              margin: const EdgeInsets.symmetric(horizontal: 4),
+              width: DS.s(10),
+              height: DS.s(10),
+              margin: EdgeInsets.symmetric(horizontal: DS.s(4)),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: widget.color.withValues(alpha: 0.35 + 0.65 * (0.5 + 0.5 * math.sin((_c.value - i * 0.18) * 2 * math.pi))),
@@ -406,10 +407,10 @@ class _RingPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final rect = (Offset.zero & size).deflate(4);
+    final rect = (Offset.zero & size).deflate(DS.s(4));
     final paint = Paint()
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 8
+      ..strokeWidth = DS.s(8)
       ..color = track;
     canvas.drawArc(rect, 0, 2 * math.pi, false, paint);
     paint
@@ -444,12 +445,12 @@ class MenuPopup3D extends StatelessWidget {
     return Material(
       type: MaterialType.transparency,
       child: Container(
-        width: width,
-        padding: const EdgeInsets.symmetric(vertical: 6),
+        width: DS.s(width),
+        padding: EdgeInsets.symmetric(vertical: DS.s(6)),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: const BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(32), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8)),
-          boxShadow: const [BoxShadow(color: Color(0x4D000000), offset: Offset(0, 10), blurRadius: 28)],
+          borderRadius: BorderRadius.only(topLeft: Radius.circular(DS.radius(8)), topRight: Radius.circular(DS.radius(32)), bottomLeft: Radius.circular(DS.radius(8)), bottomRight: Radius.circular(DS.radius(8))),
+          boxShadow: [BoxShadow(color: Color(0x4D000000), offset: DS.shadowOffset(const Offset(0, 10)), blurRadius: DS.shadowBlur(28))],
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -471,17 +472,17 @@ class MenuPopup3D extends StatelessWidget {
                 child: Opacity(
                   opacity: item.onTap == null ? 0.45 : 1,
                   child: ConstrainedBox(
-                    constraints: const BoxConstraints(minHeight: 48),
+                    constraints: BoxConstraints(minHeight: DS.s(48)),
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      padding: EdgeInsets.symmetric(horizontal: DS.s(16), vertical: DS.s(8)),
                       child: Row(
                         children: [
                           if (item.art != null) ...[
-                            Image.asset(item.art!, width: 30, height: 30, fit: BoxFit.contain),
-                            const SizedBox(width: 12),
+                            Image.asset(item.art!, width: DS.s(30), height: DS.s(30), fit: BoxFit.contain),
+                            SizedBox(width: DS.s(12)),
                           ] else if (item.icon != null) ...[
-                            SizedBox(width: 30, height: 30, child: Icon(item.icon, size: 22, color: _ink(item))),
-                            const SizedBox(width: 12),
+                            SizedBox(width: DS.s(30), height: DS.s(30), child: Icon(item.icon, size: DS.s(22), color: _ink(item))),
+                            SizedBox(width: DS.s(12)),
                           ],
                           Expanded(child: Text(item.label, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(14.5, FontWeight.w600, _ink(item)))),
                         ],
@@ -537,14 +538,14 @@ class _MenuLayout extends SingleChildLayoutDelegate {
   final bool cover;
 
   @override
-  BoxConstraints getConstraintsForChild(BoxConstraints constraints) => BoxConstraints.loose(Size(constraints.maxWidth - 16, constraints.maxHeight - inset.vertical - 16));
+  BoxConstraints getConstraintsForChild(BoxConstraints constraints) => BoxConstraints.loose(Size(constraints.maxWidth - DS.s(16), constraints.maxHeight - inset.vertical - DS.s(16)));
 
   @override
   Offset getPositionForChild(Size size, Size child) {
-    final x = (anchor.right - child.width).clamp(8.0, math.max(8.0, size.width - child.width - 8)).toDouble();
-    var y = cover ? anchor.top : anchor.bottom + 6;
-    final maxY = size.height - inset.bottom - child.height - 8;
-    if (y > maxY) y = math.max(inset.top + 8, anchor.top - child.height - 6);
+    final x = (anchor.right - child.width).clamp(DS.s(8), math.max(DS.s(8), size.width - child.width - DS.s(8))).toDouble();
+    var y = cover ? anchor.top : anchor.bottom + DS.s(6);
+    final maxY = size.height - inset.bottom - child.height - DS.s(8);
+    if (y > maxY) y = math.max(inset.top + DS.s(8), anchor.top - child.height - DS.s(6));
     return Offset(x, y);
   }
 

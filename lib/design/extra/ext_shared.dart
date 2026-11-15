@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../tokens/listing_palette.dart';
 import 'art_3d.dart';
 import 'pill_buttons_3d.dart';
+import '../tokens/design_scale.dart';
 
 class ThinNote3D extends StatelessWidget {
   const ThinNote3D(this.text, {super.key, this.art = ListingArt.sunrise});
@@ -14,18 +15,18 @@ class ThinNote3D extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Container(
-        margin: const EdgeInsets.fromLTRB(18, 26, 18, 0),
-        padding: const EdgeInsets.fromLTRB(10, 8, 20, 8),
+        margin: EdgeInsets.fromLTRB(DS.s(18), DS.gv(26), DS.s(18), 0),
+        padding: EdgeInsets.fromLTRB(DS.s(10), DS.s(8), DS.s(20), DS.s(8)),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: const [BoxShadow(color: Color(0x4D9E9E9E), offset: Offset(3, 5), blurRadius: 12)],
+          borderRadius: DS.circular(24),
+          boxShadow: [BoxShadow(color: Color(0x4D9E9E9E), offset: DS.shadowOffset(const Offset(3, 5)), blurRadius: DS.shadowBlur(12))],
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             ExcludeSemantics(child: Art3D(asset: art, size: 36, shadowBlur: 2, shadowOffset: const Offset(2, 3), shadowAlpha: 0.25)),
-            const SizedBox(width: 10),
+            Gap.h(10),
             Flexible(child: Text(text, textAlign: TextAlign.center, style: Ink3D.text(14, FontWeight.w400, Ink3D.sub, height: 1.35))),
           ],
         ),
@@ -48,14 +49,14 @@ class BusyWhitePill extends StatelessWidget {
       enabled: false,
       label: semanticsLabel,
       child: Container(
-        height: height,
+        height: DS.s(height),
         alignment: Alignment.center,
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(height / 2),
-          boxShadow: const [BoxShadow(color: Color(0x4D9E9E9E), offset: Offset(3, 5), blurRadius: 10)],
+          borderRadius: DS.circular(height / 2),
+          boxShadow: [BoxShadow(color: Color(0x4D9E9E9E), offset: DS.shadowOffset(const Offset(3, 5)), blurRadius: DS.shadowBlur(10))],
         ),
-        child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2.4, color: tone.g2)),
+        child: SizedBox(width: DS.s(20), height: DS.s(20), child: CircularProgressIndicator(strokeWidth: DS.s(2.4), color: tone.g2)),
       ),
     );
   }
@@ -68,15 +69,15 @@ class BannerCard3D extends StatelessWidget {
   final VoidCallback onClose;
   final List<Widget> buttons;
 
-  static const BorderRadius _radius = BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(54), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8));
+  static BorderRadius get _radius => BorderRadius.only(topLeft: Radius.circular(DS.radius(8)), topRight: Radius.circular(DS.radius(54)), bottomLeft: Radius.circular(DS.radius(8)), bottomRight: Radius.circular(DS.radius(8)));
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: _radius,
-        boxShadow: [BoxShadow(color: Color(0x40000000), offset: Offset(0, 10), blurRadius: 30)],
+        boxShadow: [BoxShadow(color: Color(0x40000000), offset: DS.shadowOffset(const Offset(0, 10)), blurRadius: DS.shadowBlur(30))],
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -85,29 +86,29 @@ class BannerCard3D extends StatelessWidget {
           Stack(
             children: [
               ClipRRect(
-                borderRadius: buttons.isEmpty ? _radius : const BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(54)),
+                borderRadius: buttons.isEmpty ? _radius : BorderRadius.only(topLeft: Radius.circular(DS.radius(8)), topRight: Radius.circular(DS.radius(54))),
                 child: image,
               ),
               Positioned(
-                top: 12,
-                right: 12,
+                top: DS.s(12),
+                right: DS.s(12),
                 child: Tooltip(
                   message: 'Close',
                   child: Tap3D(
                     onTap: onClose,
                     label: 'Close',
                     child: Container(
-                      width: 40,
-                      height: 40,
-                      decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle, boxShadow: Ink3D.whiteBtn),
-                      child: const Icon(Icons.close_rounded, color: Ink3D.title, size: 22),
+                      width: DS.s(40),
+                      height: DS.s(40),
+                      decoration: BoxDecoration(color: Colors.white, shape: BoxShape.circle, boxShadow: DS.shadows(Ink3D.whiteBtn)),
+                      child: Icon(Icons.close_rounded, color: Ink3D.title, size: DS.s(22)),
                     ),
                   ),
                 ),
               ),
             ],
           ),
-          if (buttons.isNotEmpty) Padding(padding: const EdgeInsets.fromLTRB(18, 16, 18, 18), child: PillButtonRow(children: buttons)),
+          if (buttons.isNotEmpty) Padding(padding: EdgeInsets.fromLTRB(DS.s(18), DS.s(16), DS.s(18), DS.s(18)), child: PillButtonRow(children: buttons)),
         ],
       ),
     );

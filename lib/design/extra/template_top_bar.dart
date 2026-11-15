@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../template/fitness_app_theme.dart';
 
 import 'package:bakhli/design/tokens/shadow_tokens.dart';
+import 'package:bakhli/design/tokens/design_scale.dart';
 class TemplateTopBar extends StatelessWidget {
   const TemplateTopBar({
     super.key,
@@ -41,10 +42,10 @@ class TemplateTopBar extends StatelessWidget {
               decoration: BoxDecoration(
                 color: gradient == null ? FitnessAppTheme.white.withValues(alpha: opacity) : null,
                 gradient: gradient,
-                borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(32.0)),
-                boxShadow: <BoxShadow>[
+                borderRadius: BorderRadius.only(bottomLeft: Radius.circular(DS.radius(32.0))),
+                boxShadow: DS.shadows(<BoxShadow>[
                   ShadowTokens.tint(FitnessAppTheme.grey, ShadowSpec.strong.scaled(opacity)),
-                ],
+                ]),
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -52,22 +53,22 @@ class TemplateTopBar extends StatelessWidget {
                   SizedBox(height: MediaQuery.of(context).padding.top),
                   Padding(
                     padding: EdgeInsets.only(
-                        left: 8, right: 16, top: 16 - 8.0 * opacity, bottom: 12 - 8.0 * opacity),
+                        left: DS.s(8), right: DS.s(16), top: DS.s(16 - 8.0 * opacity), bottom: DS.s(12 - 8.0 * opacity)),
                     child: Row(
                       children: <Widget>[
                         SizedBox(
-                          width: 38,
-                          height: 38,
+                          width: DS.s(38),
+                          height: DS.s(38),
                           child: InkWell(
                             highlightColor: Colors.transparent,
-                            borderRadius: const BorderRadius.all(Radius.circular(32.0)),
+                            borderRadius: BorderRadius.all(Radius.circular(DS.radius(32.0))),
                             onTap: onBack,
-                            child: const Center(
-                              child: Icon(Icons.keyboard_arrow_left, color: FitnessAppTheme.grey, size: 28),
+                            child: Center(
+                              child: Icon(Icons.keyboard_arrow_left, color: FitnessAppTheme.grey, size: DS.s(28)),
                             ),
                           ),
                         ),
-                        const SizedBox(width: 4),
+                        SizedBox(width: DS.s(4)),
                         Expanded(
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
@@ -80,7 +81,7 @@ class TemplateTopBar extends StatelessWidget {
                                 style: TextStyle(
                                   fontFamily: FitnessAppTheme.fontName,
                                   fontWeight: FontWeight.w700,
-                                  fontSize: 22 + 6 - 6 * opacity,
+                                  fontSize: DS.f(22 + 6 - 6 * opacity),
                                   letterSpacing: 1.2,
                                   color: FitnessAppTheme.darkerText,
                                 ),

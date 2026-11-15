@@ -20,12 +20,12 @@ class HubDots extends StatelessWidget {
             AnimatedContainer(
               duration: duration,
               curve: Curves.fastOutSlowIn,
-              width: i == index ? 20 : 7,
-              height: 7,
-              margin: const EdgeInsets.symmetric(horizontal: 3),
+              width: DS.s(i == index ? 20 : 7),
+              height: DS.s(7),
+              margin: EdgeInsets.symmetric(horizontal: DS.gh(3)),
               decoration: BoxDecoration(
                 color: i == index ? HubTokens.accent : HubTokens.dotOff,
-                borderRadius: BorderRadius.circular(4),
+                borderRadius: DS.circular(4),
               ),
             ),
         ],

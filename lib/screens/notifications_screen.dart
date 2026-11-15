@@ -92,12 +92,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             color: _tone.g2,
             backgroundColor: DesignColors.surface,
             edgeOffset: NotificationHeader3D.heightFor(context),
-            displacement: 30,
+            displacement: DS.s(30),
             onRefresh: _refresh,
             child: ListView.builder(
               controller: _scrollCtrl,
               physics: const AlwaysScrollableScrollPhysics(parent: ClampingScrollPhysics()),
-              padding: EdgeInsets.only(bottom: 20 + AppInsets.bottomViewPadding(context)),
+              padding: EdgeInsets.only(bottom: DS.s(20) + AppInsets.bottomViewPadding(context)),
               itemCount: 1 + cells.length + extra,
               itemBuilder: (_, index) {
                 if (index == 0) return _buildHeader();
@@ -150,9 +150,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   Widget _centred(Widget child) => LayoutBuilder(
         builder: (context, box) => SingleChildScrollView(
-          padding: EdgeInsets.only(bottom: 20 + AppInsets.bottomViewPadding(context)),
+          padding: EdgeInsets.only(bottom: DS.s(20) + AppInsets.bottomViewPadding(context)),
           child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: box.maxHeight - 20 - AppInsets.bottomViewPadding(context)),
+            constraints: BoxConstraints(minHeight: box.maxHeight - DS.s(20) - AppInsets.bottomViewPadding(context)),
             child: Center(child: child),
           ),
         ),

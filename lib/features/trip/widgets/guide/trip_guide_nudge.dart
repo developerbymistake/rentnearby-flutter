@@ -54,13 +54,13 @@ class TripGuideTwoButtons extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(top: 26),
+        padding: EdgeInsets.only(top: DS.gv(26)),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           mainAxisSize: MainAxisSize.min,
           children: [
             TripGuideSheetButton(label: primaryLabel, tone: tone, loading: busy, onTap: busy ? null : onPrimary),
-            const SizedBox(height: 12),
+            Gap.v(12),
             TripGuideSheetButton(label: secondaryLabel, tone: tone, primary: false, onTap: busy ? null : onSecondary),
           ],
         ),

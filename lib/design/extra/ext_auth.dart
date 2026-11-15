@@ -9,6 +9,7 @@ import '../tokens/listing_palette.dart';
 import 'art_3d.dart';
 import 'motion_kit.dart';
 import 'pill_buttons_3d.dart';
+import '../tokens/design_scale.dart';
 
 abstract final class AuthInk {
   static const Color page = Color(0xFFF2F3F8);
@@ -28,14 +29,13 @@ abstract final class AuthInk {
   static const Color boneLine = Color(0xFFF4F5F9);
   static const String automobile = 'assets/images/design/travel3d/automobile.png';
 
-  static const BorderRadius cardRadius =
-      BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(54), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8));
-  static const List<BoxShadow> cardShadow = [BoxShadow(color: Color(0x4D9E9E9E), offset: Offset(1.1, 4), blurRadius: 16)];
-  static const List<BoxShadow> chipShadow = [BoxShadow(color: Color(0x4D9E9E9E), offset: Offset(2, 4), blurRadius: 8)];
-  static const List<BoxShadow> artShadow = [BoxShadow(color: Color(0x40000000), offset: Offset(3, 4), blurRadius: 6)];
+  static BorderRadius get cardRadius => BorderRadius.only(topLeft: Radius.circular(DS.radius(8)), topRight: Radius.circular(DS.radius(54)), bottomLeft: Radius.circular(DS.radius(8)), bottomRight: Radius.circular(DS.radius(8)));
+  static List<BoxShadow> get cardShadow => [BoxShadow(color: Color(0x4D9E9E9E), offset: DS.shadowOffset(const Offset(1.1, 4)), blurRadius: DS.shadowBlur(16))];
+  static List<BoxShadow> get chipShadow => [BoxShadow(color: Color(0x4D9E9E9E), offset: DS.shadowOffset(const Offset(2, 4)), blurRadius: DS.shadowBlur(8))];
+  static List<BoxShadow> get artShadow => [BoxShadow(color: Color(0x40000000), offset: DS.shadowOffset(const Offset(3, 4)), blurRadius: DS.shadowBlur(6))];
 
-  static List<BoxShadow> heroShadow(ListingTone tone) => [BoxShadow(color: tone.haloBase.withValues(alpha: 0.35), offset: const Offset(0, 8), blurRadius: 20)];
-  static List<BoxShadow> focusShadow(Color c) => [BoxShadow(color: c.withValues(alpha: 0.22), offset: const Offset(3, 6), blurRadius: 12)];
+  static List<BoxShadow> heroShadow(ListingTone tone) => [BoxShadow(color: tone.haloBase.withValues(alpha: 0.35), offset: DS.shadowOffset(const Offset(0, 8)), blurRadius: DS.shadowBlur(20))];
+  static List<BoxShadow> focusShadow(Color c) => [BoxShadow(color: c.withValues(alpha: 0.22), offset: DS.shadowOffset(const Offset(3, 6)), blurRadius: DS.shadowBlur(12))];
   static Color white(double a) => Colors.white.withValues(alpha: a);
 
   static ListingTone lerp(ListingTone a, ListingTone b, double t) => ListingTone(
@@ -72,9 +72,9 @@ class AuthHeroScaffold extends StatelessWidget {
           child: Builder(
             builder: (context) {
               final heroH = AuthHero.height(context);
-              const overlap = AuthHero.fullOverlap;
+              final overlap = DS.s(AuthHero.fullOverlap);
               final inset = MediaQuery.viewInsetsOf(context).bottom;
-              const shadowRoom = 12.0;
+              final shadowRoom = DS.s(12.0);
               return Stack(
                 children: [
                   Positioned(
@@ -91,7 +91,7 @@ class AuthHeroScaffold extends StatelessWidget {
                     bottom: inset,
                     child: SingleChildScrollView(
                       physics: const BouncingScrollPhysics(),
-                      padding: EdgeInsets.only(top: shadowRoom, bottom: 24 + (inset > 0 ? 0 : MediaQuery.paddingOf(context).bottom)),
+                      padding: EdgeInsets.only(top: shadowRoom, bottom: DS.s(24) + (inset > 0 ? 0 : MediaQuery.paddingOf(context).bottom)),
                       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
                       child: card,
                     ),
@@ -122,7 +122,7 @@ class AuthHero extends StatelessWidget {
 
   static double _full(BuildContext context) {
     final s = MediaQuery.textScalerOf(context);
-    return MediaQuery.paddingOf(context).top + 20 + _halo + 6 + s.scale(30) * 1.15 + 6 + s.scale(14) * 1.35 + 34 + fullOverlap;
+    return MediaQuery.paddingOf(context).top + DS.s(20) + DS.s(_halo) + DS.gv(6) + s.scale(DS.f(30)) * 1.15 + DS.gv(6) + s.scale(DS.f(14)) * 1.35 + DS.s(34) + DS.s(fullOverlap);
   }
 
   static double height(BuildContext context) => _full(context);
@@ -134,7 +134,7 @@ class AuthHero extends StatelessWidget {
     return DecoratedBox(
       decoration: BoxDecoration(
         gradient: tone.gradient,
-        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(32)),
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(DS.radius(32))),
         boxShadow: AuthInk.heroShadow(tone),
       ),
       child: Stack(
@@ -154,8 +154,8 @@ class AuthHero extends StatelessWidget {
           ),
           if (onBack != null)
             Positioned(
-              left: 18,
-              top: top + 12,
+              left: DS.s(18),
+              top: top + DS.s(12),
               child: Tooltip(
                 message: 'Back',
                 child: Tap3D(
@@ -163,10 +163,10 @@ class AuthHero extends StatelessWidget {
                   label: 'Back',
                   exclude: true,
                   child: Container(
-                    width: 46,
-                    height: 46,
+                    width: DS.s(46),
+                    height: DS.s(46),
                     decoration: BoxDecoration(color: AuthInk.white(0.25), shape: BoxShape.circle),
-                    child: const Icon(Icons.chevron_left_rounded, size: 30, color: Colors.white),
+                    child: Icon(Icons.chevron_left_rounded, size: DS.s(30), color: Colors.white),
                   ),
                 ),
               ),
@@ -180,19 +180,19 @@ class AuthHero extends StatelessWidget {
         key: const ValueKey('full'),
         height: h,
         child: Padding(
-          padding: EdgeInsets.fromLTRB(22, top + 20, 22, 0),
+          padding: EdgeInsets.fromLTRB(DS.s(22), top + DS.s(20), DS.s(22), 0),
           child: Column(
             children: [
               SizedBox(
-                width: _halo,
-                height: _halo,
+                width: DS.s(_halo),
+                height: DS.s(_halo),
                 child: Center(
                   child: ExcludeSemantics(
                     child: Art3D(asset: art, size: _artSize, halo: _halo, haloColor: AuthInk.white(0.18), shadowBlur: 8, shadowOffset: const Offset(6, 10), shadowAlpha: 0.3),
                   ),
                 ),
               ),
-              const SizedBox(height: 6),
+              Gap.v(6),
               Semantics(
                 header: true,
                 child: Text(
@@ -203,7 +203,7 @@ class AuthHero extends StatelessWidget {
                   style: Ink3D.text(smallTitle ? 24 : 30, FontWeight.w700, Colors.white, height: 1.15),
                 ),
               ),
-              const SizedBox(height: 6),
+              Gap.v(6),
               Text(subtitle,
                   textAlign: TextAlign.center,
                   maxLines: 1,
@@ -221,7 +221,7 @@ class AuthGap extends StatelessWidget {
   final double height;
 
   @override
-  Widget build(BuildContext context) => SizedBox(height: height);
+  Widget build(BuildContext context) => SizedBox(height: DS.gv(height));
 }
 
 class AuthCard extends StatelessWidget {
@@ -235,10 +235,10 @@ class AuthCard extends StatelessWidget {
     final fixed = fixedHeight;
     return Container(
       width: double.infinity,
-      margin: const EdgeInsets.symmetric(horizontal: 18),
-      constraints: BoxConstraints(minHeight: fixed ?? 0),
-      padding: fixed != null ? const EdgeInsets.fromLTRB(24, 26, 24, 22) : const EdgeInsets.fromLTRB(24, 28, 24, 24),
-      decoration: const BoxDecoration(color: Colors.white, borderRadius: AuthInk.cardRadius, boxShadow: AuthInk.cardShadow),
+      margin: EdgeInsets.symmetric(horizontal: DS.s(18)),
+      constraints: BoxConstraints(minHeight: DS.s(fixed ?? 0)),
+      padding: fixed != null ? EdgeInsets.fromLTRB(DS.s(24), DS.s(26), DS.s(24), DS.s(22)) : EdgeInsets.fromLTRB(DS.s(24), DS.s(28), DS.s(24), DS.s(24)),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: AuthInk.cardRadius, boxShadow: AuthInk.cardShadow),
       child: Column(
         mainAxisAlignment: fixed != null ? MainAxisAlignment.spaceBetween : MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -258,7 +258,7 @@ class AuthHeading extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ConstrainedBox(
-      constraints: BoxConstraints(minHeight: onBack != null ? 36 : 28),
+      constraints: BoxConstraints(minHeight: DS.s(onBack != null ? 36 : 28)),
       child: Row(
         children: [
           if (onBack != null) ...[
@@ -269,20 +269,20 @@ class AuthHeading extends StatelessWidget {
                 label: 'Back',
                 exclude: true,
                 child: SizedBox(
-                  width: 44,
-                  height: 44,
+                  width: DS.s(44),
+                  height: DS.s(44),
                   child: Center(
                     child: Container(
-                      width: 36,
-                      height: 36,
+                      width: DS.s(36),
+                      height: DS.s(36),
                       decoration: const BoxDecoration(color: AuthInk.page, shape: BoxShape.circle),
-                      child: Icon(Icons.chevron_left_rounded, size: 24, color: tone.text),
+                      child: Icon(Icons.chevron_left_rounded, size: DS.s(24), color: tone.text),
                     ),
                   ),
                 ),
               ),
             ),
-            const SizedBox(width: 4),
+            Gap.h(4),
           ],
           Expanded(
             child: Semantics(
@@ -307,9 +307,9 @@ class AuthCaption extends StatelessWidget {
     final style = Ink3D.text(13, FontWeight.w400, Ink3D.grey, height: 1.45);
     final t = Text(text, style: style);
     final l = lines;
-    if (l == null) return Padding(padding: const EdgeInsets.only(top: 4), child: t);
-    final h = MediaQuery.textScalerOf(context).scale(13) * 1.45 * l;
-    return Padding(padding: const EdgeInsets.only(top: 4), child: ConstrainedBox(constraints: BoxConstraints(minHeight: h), child: t));
+    if (l == null) return Padding(padding: EdgeInsets.only(top: DS.s(4)), child: t);
+    final h = MediaQuery.textScalerOf(context).scale(DS.f(13)) * 1.45 * l;
+    return Padding(padding: EdgeInsets.only(top: DS.s(4)), child: ConstrainedBox(constraints: BoxConstraints(minHeight: h), child: t));
   }
 }
 
@@ -320,9 +320,9 @@ class AuthWarnLine extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final h = MediaQuery.textScalerOf(context).scale(13) * 1.5;
+    final h = MediaQuery.textScalerOf(context).scale(DS.f(13)) * 1.5;
     return Padding(
-      padding: const EdgeInsets.only(top: 4),
+      padding: EdgeInsets.only(top: DS.s(4)),
       child: SizedBox(
         height: h,
         child: Text(text ?? '', maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(13, FontWeight.w600, AuthInk.warn, height: 1.5)),
@@ -340,11 +340,11 @@ class AuthArtLine extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(top: 4),
+      padding: EdgeInsets.only(top: DS.s(4)),
       child: Row(
         children: [
-          Image.asset(art, width: 22, height: 22),
-          const SizedBox(width: 6),
+          Image.asset(art, width: DS.s(22), height: DS.s(22)),
+          Gap.h(6),
           Flexible(child: Text(text, style: Ink3D.text(13, FontWeight.w600, Ink3D.sub, height: 1.4))),
         ],
       ),
@@ -364,14 +364,14 @@ class AuthNumberChip extends StatelessWidget {
     return Align(
       alignment: Alignment.centerLeft,
       child: Container(
-        margin: const EdgeInsets.only(top: 10),
-        padding: const EdgeInsets.fromLTRB(6, 6, 16, 6),
-        decoration: BoxDecoration(color: AuthInk.page, borderRadius: BorderRadius.circular(22)),
+        margin: EdgeInsets.only(top: DS.gv(10)),
+        padding: EdgeInsets.fromLTRB(DS.s(6), DS.s(6), DS.s(16), DS.s(6)),
+        decoration: BoxDecoration(color: AuthInk.page, borderRadius: DS.circular(22)),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Image.asset(art, width: 30, height: 30),
-            const SizedBox(width: 8),
+            Image.asset(art, width: DS.s(30), height: DS.s(30)),
+            Gap.h(8),
             Flexible(child: Text(text, style: Ink3D.text(15, FontWeight.w700, tone.text, letterSpacing: 0.8))),
           ],
         ),
@@ -387,7 +387,7 @@ class AuthFieldLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(6, 0, 0, 8),
+        padding: EdgeInsets.fromLTRB(DS.s(6), 0, 0, DS.s(8)),
         child: Text(text, style: Ink3D.text(13, FontWeight.w600, Ink3D.sub)),
       );
 }
@@ -411,9 +411,9 @@ class AuthPillInput extends StatefulWidget {
   final String? leadingArt;
   final bool bad;
 
-  static TextStyle textStyle = Ink3D.text(17, FontWeight.w600, AuthInk.input, letterSpacing: 0.6);
-  static TextStyle nameStyle = Ink3D.text(17, FontWeight.w600, AuthInk.input, letterSpacing: 0);
-  static TextStyle hintStyle = Ink3D.text(17, FontWeight.w500, Form3D.hint, letterSpacing: 0);
+  static TextStyle get textStyle => Ink3D.text(17, FontWeight.w600, AuthInk.input, letterSpacing: 0.6);
+  static TextStyle get nameStyle => Ink3D.text(17, FontWeight.w600, AuthInk.input, letterSpacing: 0);
+  static TextStyle get hintStyle => Ink3D.text(17, FontWeight.w500, Form3D.hint, letterSpacing: 0);
 
   static InputDecoration decoration(String hint) => InputDecoration(
         isCollapsed: true,
@@ -427,7 +427,7 @@ class AuthPillInput extends StatefulWidget {
         errorBorder: InputBorder.none,
         focusedErrorBorder: InputBorder.none,
         disabledBorder: InputBorder.none,
-        contentPadding: const EdgeInsets.symmetric(vertical: 4),
+        contentPadding: EdgeInsets.symmetric(vertical: DS.s(4)),
       );
 
   @override
@@ -466,20 +466,20 @@ class _AuthPillInputState extends State<AuthPillInput> {
     final ring = widget.bad ? AuthInk.ringBad : (focus ? widget.tone.g1 : null);
     final art = widget.leadingArt;
     return Container(
-      constraints: const BoxConstraints(minHeight: 58),
-      padding: const EdgeInsets.fromLTRB(8, 6, 18, 6),
+      constraints: BoxConstraints(minHeight: DS.s(58)),
+      padding: EdgeInsets.fromLTRB(DS.s(8), DS.s(6), DS.s(18), DS.s(6)),
       decoration: BoxDecoration(
         color: ring != null ? Colors.white : AuthInk.page,
-        borderRadius: BorderRadius.circular(30),
-        border: Border.all(color: ring ?? Colors.transparent, width: 2),
+        borderRadius: DS.circular(30),
+        border: Border.all(color: ring ?? Colors.transparent, width: DS.s(2)),
         boxShadow: ring != null ? AuthInk.focusShadow(widget.bad ? AuthInk.ringBad : widget.tone.haloBase) : null,
       ),
       child: Row(
         children: [
-          if (widget.prefix != null) ...[widget.prefix!, const SizedBox(width: 10)],
+          if (widget.prefix != null) ...[widget.prefix!, Gap.h(10)],
           if (art != null) ...[
             ExcludeSemantics(child: Art3D(asset: art, size: 42, shadowBlur: 3, shadowOffset: const Offset(2, 4))),
-            const SizedBox(width: 10),
+            Gap.h(10),
           ],
           Expanded(child: widget.child),
         ],
@@ -495,8 +495,8 @@ class AuthCountryCode extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), boxShadow: AuthInk.chipShadow),
+        padding: EdgeInsets.symmetric(horizontal: DS.s(12), vertical: DS.s(9)),
+        decoration: BoxDecoration(color: Colors.white, borderRadius: DS.circular(20), boxShadow: AuthInk.chipShadow),
         child: Text('+91', style: Ink3D.text(14, FontWeight.w700, tone.text, letterSpacing: 0)),
       );
 }
@@ -526,18 +526,18 @@ class AuthAgreeRow extends StatelessWidget {
             behavior: HitTestBehavior.opaque,
             onTap: () => onChanged(!value),
             child: Padding(
-              padding: const EdgeInsets.only(top: 1, right: 10),
+              padding: EdgeInsets.only(top: DS.s(1), right: DS.s(10)),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 160),
-                width: 24,
-                height: 24,
+                width: DS.s(24),
+                height: DS.s(24),
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(7),
+                  borderRadius: DS.circular(7),
                   gradient: value ? tone.gradient : null,
-                  border: value ? null : Border.all(color: AuthInk.box, width: 2),
+                  border: value ? null : Border.all(color: AuthInk.box, width: DS.s(2)),
                   boxShadow: value ? tone.glow(blur: 6, dy: 3) : null,
                 ),
-                child: value ? const Icon(Icons.check_rounded, size: 16, color: Colors.white) : null,
+                child: value ? Icon(Icons.check_rounded, size: DS.s(16), color: Colors.white) : null,
               ),
             ),
           ),
@@ -579,7 +579,7 @@ class AuthTextLink extends StatelessWidget {
   Widget build(BuildContext context) {
     final on = onTap != null;
     return Padding(
-      padding: const EdgeInsets.only(top: 6),
+      padding: EdgeInsets.only(top: DS.gv(6)),
       child: Center(
         child: Semantics(
           button: true,
@@ -588,7 +588,7 @@ class AuthTextLink extends StatelessWidget {
             behavior: HitTestBehavior.opaque,
             onTap: onTap,
             child: ConstrainedBox(
-              constraints: const BoxConstraints(minHeight: 34, minWidth: 120),
+              constraints: BoxConstraints(minHeight: DS.s(34), minWidth: DS.s(120)),
               child: Center(
                 child: Text(label, textAlign: TextAlign.center, style: Ink3D.text(14, FontWeight.w600, on ? tone.text : AuthInk.linkOff)),
               ),
@@ -610,18 +610,18 @@ class AuthVerifiedRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final ok = ListingTone.forest;
     return Container(
-      constraints: const BoxConstraints(minHeight: 58),
-      padding: const EdgeInsets.fromLTRB(8, 6, 10, 6),
-      decoration: BoxDecoration(color: AuthInk.page, borderRadius: BorderRadius.circular(30)),
+      constraints: BoxConstraints(minHeight: DS.s(58)),
+      padding: EdgeInsets.fromLTRB(DS.s(8), DS.s(6), DS.s(10), DS.s(6)),
+      decoration: BoxDecoration(color: AuthInk.page, borderRadius: DS.circular(30)),
       child: Row(
         children: [
           ExcludeSemantics(child: Art3D(asset: art, size: 42, shadowBlur: 3, shadowOffset: const Offset(2, 4))),
-          const SizedBox(width: 10),
+          Gap.h(10),
           Expanded(child: FitLine3D(text: text, style: Ink3D.text(16, FontWeight.w600, AuthInk.input))),
-          const SizedBox(width: 8),
+          Gap.h(8),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(gradient: ok.gradient, borderRadius: BorderRadius.circular(14), boxShadow: ok.glow(blur: 6, dy: 3)),
+            padding: EdgeInsets.symmetric(horizontal: DS.s(12), vertical: DS.s(6)),
+            decoration: BoxDecoration(gradient: ok.gradient, borderRadius: DS.circular(14), boxShadow: ok.glow(blur: 6, dy: 3)),
             child: Text('Verified', style: Ink3D.text(12, FontWeight.w700, Colors.white)),
           ),
         ],
@@ -633,14 +633,14 @@ class AuthVerifiedRow extends StatelessWidget {
 abstract final class AuthPins {
   static double boxSize(BuildContext context) {
     final w = MediaQuery.sizeOf(context).width;
-    return ((w - 36 - 48 - 36) / 4).clamp(48.0, 64.0);
+    return ((w - DS.s(36) - DS.s(48) - DS.s(36)) / 4).clamp(DS.s(48.0), DS.s(64.0));
   }
 
   static PinTheme base(double s) => PinTheme(
         width: s,
         height: s,
         textStyle: Ink3D.text(26, FontWeight.w700, Ink3D.title),
-        decoration: BoxDecoration(color: AuthInk.page, borderRadius: BorderRadius.circular(18)),
+        decoration: BoxDecoration(color: AuthInk.page, borderRadius: DS.circular(18)),
       );
 
   static PinTheme focused(ListingTone tone, double s) => PinTheme(
@@ -649,8 +649,8 @@ abstract final class AuthPins {
         textStyle: Ink3D.text(26, FontWeight.w700, Ink3D.title),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: tone.g1, width: 2),
+          borderRadius: DS.circular(18),
+          border: Border.all(color: tone.g1, width: DS.s(2)),
           boxShadow: AuthInk.focusShadow(tone.haloBase),
         ),
       );
@@ -659,17 +659,17 @@ abstract final class AuthPins {
         width: s,
         height: s,
         textStyle: Ink3D.text(26, FontWeight.w700, Colors.white),
-        decoration: BoxDecoration(gradient: tone.gradient, borderRadius: BorderRadius.circular(18), boxShadow: tone.glow(blur: 8)),
+        decoration: BoxDecoration(gradient: tone.gradient, borderRadius: DS.circular(18), boxShadow: tone.glow(blur: 8)),
       );
 
   static Widget cursor(ListingTone tone) => Column(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
           Container(
-            margin: const EdgeInsets.only(bottom: 12),
-            width: 22,
-            height: 3,
-            decoration: BoxDecoration(color: tone.g2, borderRadius: BorderRadius.circular(2)),
+            margin: EdgeInsets.only(bottom: DS.gv(12)),
+            width: DS.s(22),
+            height: DS.s(3),
+            decoration: BoxDecoration(color: tone.g2, borderRadius: DS.circular(2)),
           ),
         ],
       );
@@ -689,16 +689,16 @@ class AuthDialogNumber extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 10),
-          decoration: BoxDecoration(color: AuthInk.page, borderRadius: BorderRadius.circular(16)),
+          padding: EdgeInsets.symmetric(horizontal: DS.s(22), vertical: DS.s(10)),
+          decoration: BoxDecoration(color: AuthInk.page, borderRadius: DS.circular(16)),
           child: Text(text, style: Ink3D.text(19, FontWeight.w700, tone.text, letterSpacing: 1.5)),
         ),
         if (viaText != null) ...[
-          const SizedBox(height: 8),
+          Gap.v(8),
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              if (viaArt != null) ...[Image.asset(viaArt!, width: 22, height: 22), const SizedBox(width: 6)],
+              if (viaArt != null) ...[Image.asset(viaArt!, width: DS.s(22), height: DS.s(22)), Gap.h(6)],
               Text(viaText!, style: Ink3D.text(13, FontWeight.w600, Ink3D.sub)),
             ],
           ),
@@ -732,7 +732,7 @@ class AuthRoleCard extends StatelessWidget {
   final VoidCallback? onTap;
 
   static const double topRoom = 32;
-  static final TextStyle _descStyle = Ink3D.text(12.5, FontWeight.w500, AuthInk.white(0.95), height: 1.35);
+  static TextStyle get _descStyle => Ink3D.text(12.5, FontWeight.w500, AuthInk.white(0.95), height: 1.35);
 
   @override
   Widget build(BuildContext context) {
@@ -740,7 +740,7 @@ class AuthRoleCard extends StatelessWidget {
     if (scope == null) return _build(context, 3);
     return LayoutBuilder(builder: (context, box) {
       final narrow = MediaQuery.sizeOf(context).width < 340;
-      final textW = box.maxWidth - (narrow ? 116.0 : 134.0) - 58;
+      final textW = box.maxWidth - DS.s(narrow ? 116.0 : 134.0) - DS.s(58);
       return _build(context, scope.linesFor(textW, MediaQuery.textScalerOf(context)));
     });
   }
@@ -748,37 +748,37 @@ class AuthRoleCard extends StatelessWidget {
   Widget _build(BuildContext context, int descLines) {
     final narrow = MediaQuery.sizeOf(context).width < 340;
     final artSize = narrow ? 96.0 : 112.0;
-    final left = narrow ? 116.0 : 134.0;
+    final left = DS.s(narrow ? 116.0 : 134.0);
     final scaler = MediaQuery.textScalerOf(context);
-    final descH = (scaler.scale(12.5) * 1.35 * descLines).ceilToDouble() + 2;
+    final descH = (scaler.scale(DS.f(12.5)) * 1.35 * descLines).ceilToDouble() + DS.s(2);
     final b = badge;
     final text = Padding(
-      padding: EdgeInsets.fromLTRB(left, 12, 58, 10),
+      padding: EdgeInsets.fromLTRB(left, DS.s(12), DS.s(58), DS.s(10)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
           SizedBox(
-            height: scaler.scale(10.5) * 1.75,
+            height: scaler.scale(DS.f(10.5)) * 1.75,
             child: b == null
                 ? null
                 : Align(
                     alignment: Alignment.centerLeft,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 1),
-                      decoration: BoxDecoration(color: AuthInk.white(0.3), borderRadius: BorderRadius.circular(9)),
+                      padding: EdgeInsets.symmetric(horizontal: DS.s(9), vertical: DS.s(1)),
+                      decoration: BoxDecoration(color: AuthInk.white(0.3), borderRadius: DS.circular(9)),
                       child: Text(b, style: Ink3D.text(10.5, FontWeight.w700, Colors.white, letterSpacing: 0.8)),
                     ),
                   ),
           ),
           SizedBox(
-            height: scaler.scale(20) * 1.3,
+            height: scaler.scale(DS.f(20)) * 1.3,
             child: Align(
               alignment: Alignment.centerLeft,
               child: FitLine3D(text: title, stretch: 1.5, style: Ink3D.text(20, FontWeight.w700, Colors.white, height: 1.3)),
             ),
           ),
-          const SizedBox(height: 3),
+          Gap.v(3),
           ConstrainedBox(
             constraints: BoxConstraints(minHeight: descH),
             child: Text(description, maxLines: 3, overflow: TextOverflow.ellipsis, style: _descStyle),
@@ -790,12 +790,12 @@ class AuthRoleCard extends StatelessWidget {
       opacity: dimmed ? 0.82 : 1,
       child: Container(
         width: double.infinity,
-        constraints: const BoxConstraints(minHeight: 116),
+        constraints: BoxConstraints(minHeight: DS.s(116)),
         decoration: BoxDecoration(gradient: tone.gradient, borderRadius: AuthInk.cardRadius, boxShadow: selected ? tone.glow(blur: 16, dy: 8) : tone.glow()),
         child: text,
       ),
     );
-    const ringR = BorderRadius.only(topLeft: Radius.circular(12), topRight: Radius.circular(58), bottomLeft: Radius.circular(12), bottomRight: Radius.circular(12));
+    final ringR = BorderRadius.only(topLeft: Radius.circular(DS.radius(12)), topRight: Radius.circular(DS.radius(58)), bottomLeft: Radius.circular(DS.radius(12)), bottomRight: Radius.circular(DS.radius(12)));
     return Semantics(
       button: onTap != null,
       selected: selected,
@@ -807,27 +807,27 @@ class AuthRoleCard extends StatelessWidget {
           behavior: HitTestBehavior.opaque,
           onTap: onTap,
           child: Padding(
-            padding: const EdgeInsets.only(top: topRoom),
+            padding: EdgeInsets.only(top: DS.s(topRoom)),
             child: Stack(
               clipBehavior: Clip.none,
               children: [
                 if (selected)
                   Positioned(
-                    left: -6,
-                    top: -6,
-                    right: -6,
-                    bottom: -6,
+                    left: DS.s(-6),
+                    top: DS.s(-6),
+                    right: DS.s(-6),
+                    bottom: DS.s(-6),
                     child: DecoratedBox(
                       decoration: BoxDecoration(
                         borderRadius: ringR,
-                        border: Border.all(color: tone.g2, width: 3),
+                        border: Border.all(color: tone.g2, width: DS.s(3)),
                       ),
                       child: Padding(
-                        padding: const EdgeInsets.all(3),
+                        padding: DS.all(3),
                         child: DecoratedBox(
                           decoration: BoxDecoration(
-                            borderRadius: const BorderRadius.only(topLeft: Radius.circular(9), topRight: Radius.circular(55), bottomLeft: Radius.circular(9), bottomRight: Radius.circular(9)),
-                            border: Border.all(color: Colors.white, width: 3),
+                            borderRadius: BorderRadius.only(topLeft: Radius.circular(DS.radius(9)), topRight: Radius.circular(DS.radius(55)), bottomLeft: Radius.circular(DS.radius(9)), bottomRight: Radius.circular(DS.radius(9))),
+                            border: Border.all(color: Colors.white, width: DS.s(3)),
                           ),
                         ),
                       ),
@@ -835,21 +835,21 @@ class AuthRoleCard extends StatelessWidget {
                   ),
                 card,
                 Positioned(
-                  left: narrow ? 8 : 10,
-                  top: -topRoom,
+                  left: DS.s(narrow ? 8 : 10),
+                  top: DS.s(-topRoom),
                   child: IgnorePointer(
                     child: Art3D(asset: art, size: artSize, halo: artSize, haloColor: AuthInk.white(0.24)),
                   ),
                 ),
                 if (selected)
                   Positioned(
-                    right: 18,
-                    top: 24,
+                    right: DS.s(18),
+                    top: DS.s(24),
                     child: Container(
-                      width: 28,
-                      height: 28,
-                      decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle, boxShadow: AuthInk.artShadow),
-                      child: Icon(Icons.check_rounded, size: 18, color: tone.g2),
+                      width: DS.s(28),
+                      height: DS.s(28),
+                      decoration: BoxDecoration(color: Colors.white, shape: BoxShape.circle, boxShadow: AuthInk.artShadow),
+                      child: Icon(Icons.check_rounded, size: DS.s(18), color: tone.g2),
                     ),
                   ),
               ],
@@ -894,38 +894,38 @@ class AuthRoleSkeleton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final narrow = MediaQuery.sizeOf(context).width < 340;
-    final left = narrow ? 116.0 : 134.0;
+    final left = DS.s(narrow ? 116.0 : 134.0);
     Widget line(double f) => FractionallySizedBox(
           widthFactor: f,
-          child: Container(height: 14, margin: const EdgeInsets.only(top: 10), decoration: BoxDecoration(color: AuthInk.boneLine, borderRadius: BorderRadius.circular(7))),
+          child: Container(height: DS.s(14), margin: EdgeInsets.only(top: DS.gv(10)), decoration: BoxDecoration(color: AuthInk.boneLine, borderRadius: DS.circular(7))),
         );
     return ExcludeSemantics(
       child: Padding(
-        padding: const EdgeInsets.only(top: AuthRoleCard.topRoom),
+        padding: EdgeInsets.only(top: DS.s(AuthRoleCard.topRoom)),
         child: Stack(
           clipBehavior: Clip.none,
           children: [
             Container(
               width: double.infinity,
-              height: 116,
-              padding: EdgeInsets.fromLTRB(left, 14, 50, 12),
-              decoration: const BoxDecoration(
+              height: DS.s(116),
+              padding: EdgeInsets.fromLTRB(left, DS.s(14), DS.s(50), DS.s(12)),
+              decoration: BoxDecoration(
                 gradient: LinearGradient(colors: [AuthInk.bone, AuthInk.boneLight, AuthInk.bone]),
                 borderRadius: AuthInk.cardRadius,
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Align(alignment: Alignment.centerLeft, child: FractionallySizedBox(widthFactor: 0.4, child: Container(height: 14, decoration: BoxDecoration(color: AuthInk.boneLine, borderRadius: BorderRadius.circular(7))))),
+                  Align(alignment: Alignment.centerLeft, child: FractionallySizedBox(widthFactor: 0.4, child: Container(height: DS.s(14), decoration: BoxDecoration(color: AuthInk.boneLine, borderRadius: DS.circular(7))))),
                   line(0.8),
                   line(0.6),
                 ],
               ),
             ),
             Positioned(
-              left: 8,
-              top: -AuthRoleCard.topRoom,
-              child: Container(width: narrow ? 96 : 112, height: narrow ? 96 : 112, decoration: const BoxDecoration(color: AuthInk.bone, shape: BoxShape.circle)),
+              left: DS.s(8),
+              top: DS.s(-AuthRoleCard.topRoom),
+              child: Container(width: DS.s(narrow ? 96 : 112), height: DS.s(narrow ? 96 : 112), decoration: const BoxDecoration(color: AuthInk.bone, shape: BoxShape.circle)),
             ),
           ],
         ),
@@ -948,9 +948,9 @@ class AuthStateCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final label = actionLabel;
     return Container(
-      margin: const EdgeInsets.fromLTRB(18, 14, 18, 0),
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(gradient: tone.gradient, borderRadius: AuthInk.cardRadius, boxShadow: [BoxShadow(color: tone.haloBase.withValues(alpha: 0.5), offset: const Offset(1.1, 4), blurRadius: 12)]),
+      margin: EdgeInsets.fromLTRB(DS.s(18), DS.gv(14), DS.s(18), 0),
+      padding: DS.all(24),
+      decoration: BoxDecoration(gradient: tone.gradient, borderRadius: AuthInk.cardRadius, boxShadow: [BoxShadow(color: tone.haloBase.withValues(alpha: 0.5), offset: DS.shadowOffset(const Offset(1.1, 4)), blurRadius: DS.shadowBlur(12))]),
       child: Center(
         child: SingleChildScrollView(
           child: Column(
@@ -959,11 +959,11 @@ class AuthStateCard extends StatelessWidget {
               ExcludeSemantics(
                 child: Art3D(asset: art, size: 190, halo: 210, haloColor: AuthInk.white(0.2), shadowBlur: 8, shadowOffset: const Offset(6, 10), shadowAlpha: 0.3),
               ),
-              const SizedBox(height: 20),
+              Gap.v(20),
               Text(title, textAlign: TextAlign.center, style: Ink3D.text(22, FontWeight.w700, Colors.white, height: 1.3)),
-              const SizedBox(height: 22),
+              Gap.v(22),
               SizedBox(
-                width: 180,
+                width: DS.s(180),
                 child: Visibility(
                   visible: label != null,
                   maintainSize: true,
@@ -998,23 +998,23 @@ class AuthStatusStrip extends StatelessWidget {
       AuthStripKind.later => (AuthInk.laterBg, AuthInk.laterText),
     };
     return Container(
-      constraints: const BoxConstraints(minHeight: 58),
-      padding: const EdgeInsets.fromLTRB(10, 6, 16, 6),
+      constraints: BoxConstraints(minHeight: DS.s(58)),
+      padding: EdgeInsets.fromLTRB(DS.s(10), DS.s(6), DS.s(16), DS.s(6)),
       decoration: BoxDecoration(
         color: bg,
-        borderRadius: const BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(24), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8)),
+        borderRadius: BorderRadius.only(topLeft: Radius.circular(DS.radius(8)), topRight: Radius.circular(DS.radius(24)), bottomLeft: Radius.circular(DS.radius(8)), bottomRight: Radius.circular(DS.radius(8))),
       ),
       child: Row(
         children: [
           ExcludeSemantics(child: Art3D(asset: art, size: 46, shadowBlur: 3, shadowOffset: const Offset(2, 4), shadowAlpha: 0.22)),
-          const SizedBox(width: 10),
+          Gap.h(10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(title, style: Ink3D.text(14, FontWeight.w700, fg, height: 1.35)),
-                if (message.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 2), child: Text(message, style: Ink3D.text(12.5, FontWeight.w400, Ink3D.sub, height: 1.35))),
+                if (message.isNotEmpty) Padding(padding: EdgeInsets.only(top: DS.s(2)), child: Text(message, style: Ink3D.text(12.5, FontWeight.w400, Ink3D.sub, height: 1.35))),
               ],
             ),
           ),
@@ -1039,7 +1039,7 @@ class AuthRoleHeader extends StatelessWidget {
     final h = MediaQuery.sizeOf(context).height;
     final art = h < 760 ? 64.0 : (h < 820 ? 76.0 : 120.0);
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 18),
+      padding: EdgeInsets.symmetric(horizontal: DS.s(18)),
       child: Stack(
         alignment: Alignment.topCenter,
         children: [
@@ -1047,9 +1047,9 @@ class AuthRoleHeader extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Center(child: ExcludeSemantics(child: Art3D(asset: this.art, size: art, halo: art, haloColor: tone.halo))),
-              const SizedBox(height: 8),
+              Gap.v(8),
               Semantics(header: true, child: Text(title, textAlign: TextAlign.center, style: Ink3D.text(24, FontWeight.w700, Ink3D.title, height: 1.3, letterSpacing: 0.27))),
-              const SizedBox(height: 4),
+              Gap.v(4),
               Text(subtitle, textAlign: TextAlign.center, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(14, FontWeight.w400, Ink3D.sub, height: 1.4)),
             ],
           ),
@@ -1064,10 +1064,10 @@ class AuthRoleHeader extends StatelessWidget {
                   label: 'Back',
                   exclude: true,
                   child: Container(
-                    width: 46,
-                    height: 46,
-                    decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle, boxShadow: Ink3D.softShadow),
-                    child: Icon(Icons.chevron_left_rounded, size: 26, color: tone.text),
+                    width: DS.s(46),
+                    height: DS.s(46),
+                    decoration: BoxDecoration(color: Colors.white, shape: BoxShape.circle, boxShadow: DS.shadows(Ink3D.softShadow)),
+                    child: Icon(Icons.chevron_left_rounded, size: DS.s(26), color: tone.text),
                   ),
                 ),
               ),
@@ -1090,7 +1090,7 @@ class IntroCard3D extends StatelessWidget {
 
   static const double topRoom = 64;
   static const double cardHeight = 200;
-  static const double height = topRoom + cardHeight;
+  static double get height => DS.s(topRoom + cardHeight);
 
   @override
   Widget build(BuildContext context) {
@@ -1104,29 +1104,29 @@ class IntroCard3D extends StatelessWidget {
           Positioned(
             left: 0,
             right: 0,
-            top: topRoom,
-            height: cardHeight,
+            top: DS.s(topRoom),
+            height: DS.s(cardHeight),
             child: Container(
-              padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
+              padding: EdgeInsets.fromLTRB(DS.s(20), DS.s(18), DS.s(20), DS.s(16)),
               decoration: BoxDecoration(gradient: tone.gradient, borderRadius: AuthInk.cardRadius, boxShadow: tone.glow()),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   SizedBox(
-                    height: 26,
+                    height: DS.s(26),
                     child: Padding(
-                      padding: EdgeInsets.only(right: artSize + 12),
+                      padding: EdgeInsets.only(right: DS.s(artSize) + DS.s(12)),
                       child: FitLine3D(text: title, stretch: 1.5, style: Ink3D.text(20, FontWeight.w700, Colors.white, height: 1.3)),
                     ),
                   ),
-                  const SizedBox(height: 18),
+                  Gap.v(18),
                   Expanded(child: Center(child: child)),
                 ],
               ),
             ),
           ),
           Positioned(
-            right: 16,
+            right: DS.s(16),
             top: 0,
             child: IgnorePointer(
               child: Transform.scale(
@@ -1151,8 +1151,8 @@ class IntroChip3D extends StatelessWidget {
   @override
   Widget build(BuildContext context) => AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-        decoration: BoxDecoration(color: on ? Colors.white : AuthInk.white(0.24), borderRadius: BorderRadius.circular(12)),
+        padding: EdgeInsets.symmetric(horizontal: DS.s(9), vertical: DS.s(4)),
+        decoration: BoxDecoration(color: on ? Colors.white : AuthInk.white(0.24), borderRadius: DS.circular(12)),
         child: Text(label, maxLines: 1, style: Ink3D.text(11, FontWeight.w700, on ? tone.g2 : Colors.white, height: 16 / 11)),
       );
 }
@@ -1169,16 +1169,16 @@ class IntroPill3D extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = ghost ? Colors.white : tone.g2;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      padding: EdgeInsets.symmetric(horizontal: DS.s(16), vertical: DS.s(6)),
       decoration: BoxDecoration(
         color: ghost ? AuthInk.white(0.24) : Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: ghost ? null : Ink3D.whiteBtn,
+        borderRadius: DS.circular(16),
+        boxShadow: ghost ? null : DS.shadows(Ink3D.whiteBtn),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (icon != null) ...[Icon(icon, size: 15, color: color), const SizedBox(width: 4)],
+          if (icon != null) ...[Icon(icon, size: DS.s(15), color: color), Gap.h(4)],
           Flexible(child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(13, FontWeight.w700, color))),
         ],
       ),
@@ -1196,21 +1196,21 @@ class IntroRow3D extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 22,
+      height: DS.s(22),
       child: Row(
         children: [
           AnimatedContainer(
             duration: const Duration(milliseconds: 200),
-            width: 18,
-            height: 18,
+            width: DS.s(18),
+            height: DS.s(18),
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: done ? Colors.white : Colors.transparent,
-              border: done ? null : Border.all(color: AuthInk.white(0.75), width: 2),
+              border: done ? null : Border.all(color: AuthInk.white(0.75), width: DS.s(2)),
             ),
-            child: done ? Icon(Icons.check_rounded, size: 13, color: tone.g2) : null,
+            child: done ? Icon(Icons.check_rounded, size: DS.s(13), color: tone.g2) : null,
           ),
-          const SizedBox(width: 9),
+          Gap.h(9),
           Expanded(child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(13, FontWeight.w600, Colors.white))),
         ],
       ),
@@ -1227,7 +1227,7 @@ class IntroRing3D extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => SizedBox.square(
-        dimension: 92,
+        dimension: DS.s(92),
         child: CustomPaint(
           painter: _IntroRingPainter(value: value, fill: tone.g2),
           child: Center(child: Text(label, maxLines: 1, style: Ink3D.text(24, FontWeight.w700, Colors.white))),
@@ -1247,7 +1247,7 @@ class _IntroRingPainter extends CustomPainter {
     final r = size.width / 2;
     canvas.drawCircle(c, r, Paint()..color = AuthInk.white(0.3));
     canvas.drawArc(Rect.fromCircle(center: c, radius: r), -math.pi / 2, 2 * math.pi * value, true, Paint()..color = Colors.white);
-    canvas.drawCircle(c, r - 8, Paint()..color = fill);
+    canvas.drawCircle(c, r - DS.s(8), Paint()..color = fill);
   }
 
   @override
@@ -1267,42 +1267,42 @@ class IntroTrack3D extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 64,
+      height: DS.s(64),
       child: LayoutBuilder(builder: (context, c) {
         final w = c.maxWidth;
         final n = labels.length;
-        double xOf(int i) => n == 1 ? w / 2 : 8 + (w - 16) * i / (n - 1);
-        final carX = 8 + (w - 16) * carAt;
+        double xOf(int i) => n == 1 ? w / 2 : DS.s(8) + (w - DS.s(16)) * i / (n - 1);
+        final carX = DS.s(8) + (w - DS.s(16)) * carAt;
         return Stack(
           clipBehavior: Clip.none,
           children: [
-            Positioned(left: 8, right: 8, top: 30, height: 4, child: DecoratedBox(decoration: BoxDecoration(color: AuthInk.white(0.4), borderRadius: BorderRadius.circular(2)))),
-            Positioned(left: 8, top: 30, width: (w - 16) * carAt, height: 4, child: DecoratedBox(decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(2)))),
+            Positioned(left: DS.s(8), right: DS.s(8), top: DS.s(30), height: DS.s(4), child: DecoratedBox(decoration: BoxDecoration(color: AuthInk.white(0.4), borderRadius: DS.circular(2)))),
+            Positioned(left: DS.s(8), top: DS.s(30), width: (w - DS.s(16)) * carAt, height: DS.s(4), child: DecoratedBox(decoration: BoxDecoration(color: Colors.white, borderRadius: DS.circular(2)))),
             for (var i = 0; i < n; i++) ...[
               Positioned(
-                left: xOf(i) - 8,
-                top: 24,
+                left: xOf(i) - DS.s(8),
+                top: DS.s(24),
                 child: Container(
-                  width: 16,
-                  height: 16,
-                  decoration: BoxDecoration(color: Colors.white, shape: BoxShape.circle, boxShadow: [BoxShadow(color: AuthInk.white(0.3), spreadRadius: 4)]),
+                  width: DS.s(16),
+                  height: DS.s(16),
+                  decoration: BoxDecoration(color: Colors.white, shape: BoxShape.circle, boxShadow: [BoxShadow(color: AuthInk.white(0.3), spreadRadius: DS.s(4))]),
                 ),
               ),
               Positioned(
-                left: i == 0 ? 0 : (i == n - 1 ? null : xOf(i) - 60),
+                left: i == 0 ? 0 : (i == n - 1 ? null : xOf(i) - DS.s(60)),
                 right: i == n - 1 ? 0 : null,
-                width: i == 0 || i == n - 1 ? null : 120,
-                top: 46,
+                width: i == 0 || i == n - 1 ? null : DS.s(120),
+                top: DS.s(46),
                 child: Text(labels[i], maxLines: 1, textAlign: i == 0 ? TextAlign.left : (i == n - 1 ? TextAlign.right : TextAlign.center), style: Ink3D.text(12, FontWeight.w700, Colors.white)),
               ),
             ],
-            Positioned(left: carX - 20, top: -4, child: ExcludeSemantics(child: Art3D(asset: carArt, size: 40, shadowBlur: 3, shadowOffset: const Offset(2, 4), shadowAlpha: 0.3))),
+            Positioned(left: carX - DS.s(20), top: DS.s(-4), child: ExcludeSemantics(child: Art3D(asset: carArt, size: 40, shadowBlur: 3, shadowOffset: const Offset(2, 4), shadowAlpha: 0.3))),
             Positioned(
-              left: carX + 24,
-              top: 2,
+              left: carX + DS.s(24),
+              top: DS.s(2),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10)),
+                padding: EdgeInsets.symmetric(horizontal: DS.s(8), vertical: DS.s(2)),
+                decoration: BoxDecoration(color: Colors.white, borderRadius: DS.circular(10)),
                 child: Text(tag, maxLines: 1, style: Ink3D.text(10.5, FontWeight.w700, tone.g2)),
               ),
             ),
@@ -1322,23 +1322,24 @@ class IntroThreadPainter extends CustomPainter {
   final int count;
   final int current;
 
-  static double xOf(Size size, int count, double i) => 8 + (size.width - 16) * (i / (count - 1));
+  static double xOf(Size size, int count, double i) => DS.s(8) + (size.width - DS.s(16)) * (i / (count - 1));
 
   @override
   void paint(Canvas canvas, Size size) {
-    const y = 24.0;
-    final line = RRect.fromLTRBR(0, y - 2, size.width, y + 2, const Radius.circular(2));
+    final y = DS.s(24.0);
+    final hw = DS.s(2);
+    final line = RRect.fromLTRBR(0, y - hw, size.width, y + hw, Radius.circular(DS.radius(hw)));
     canvas.drawRRect(line, Paint()..color = tone.haloBase.withValues(alpha: 0.2));
     final fx = xOf(size, count, page.clamp(0, count - 1).toDouble());
     canvas.drawRRect(
-      RRect.fromLTRBR(0, y - 2, fx, y + 2, const Radius.circular(2)),
-      Paint()..shader = LinearGradient(colors: [tone.g1, tone.g2]).createShader(Rect.fromLTWH(0, y - 2, math.max(fx, 1), 4)),
+      RRect.fromLTRBR(0, y - hw, fx, y + hw, Radius.circular(DS.radius(hw))),
+      Paint()..shader = LinearGradient(colors: [tone.g1, tone.g2]).createShader(Rect.fromLTWH(0, y - hw, math.max(fx, 1), hw * 2)),
     );
     for (var k = 0; k < count; k++) {
       final c = Offset(xOf(size, count, k.toDouble()), y);
       final on = k <= current;
-      canvas.drawCircle(c, 11, Paint()..color = tone.haloBase.withValues(alpha: on ? 0.35 : 0.3));
-      canvas.drawCircle(c, 8, Paint()..color = on ? tone.g2 : Colors.white);
+      canvas.drawCircle(c, DS.s(11), Paint()..color = tone.haloBase.withValues(alpha: on ? 0.35 : 0.3));
+      canvas.drawCircle(c, DS.s(8), Paint()..color = on ? tone.g2 : Colors.white);
     }
   }
 
@@ -1349,10 +1350,10 @@ class IntroThreadPainter extends CustomPainter {
 
 /// Scrollable list that spreads its children evenly over the free height (`.rlist`); fades the bottom edge only while more content is below.
 class AuthEvenList extends StatefulWidget {
-  const AuthEvenList({super.key, required this.children, this.padding = const EdgeInsets.fromLTRB(18, 0, 18, 10)});
+  const AuthEvenList({super.key, required this.children, this.padding});
 
   final List<Widget> children;
-  final EdgeInsets padding;
+  final EdgeInsets? padding;
 
   static const double _fade = 22;
 
@@ -1381,16 +1382,16 @@ class _AuthEvenListState extends State<AuthEvenList> {
 
   @override
   Widget build(BuildContext context) {
-    final padding = widget.padding;
+    final padding = widget.padding ?? EdgeInsets.fromLTRB(DS.s(18), 0, DS.s(18), DS.s(10));
     return Padding(
-      padding: const EdgeInsets.only(bottom: 14),
+      padding: EdgeInsets.only(bottom: DS.gv(14)),
       child: ShaderMask(
         blendMode: BlendMode.dstIn,
         shaderCallback: (r) => LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: _more ? const [Colors.white, Colors.white, Colors.transparent] : const [Colors.white, Colors.white, Colors.white],
-          stops: [0, r.height <= AuthEvenList._fade ? 0 : 1 - AuthEvenList._fade / r.height, 1],
+          stops: [0, r.height <= DS.s(AuthEvenList._fade) ? 0 : 1 - DS.s(AuthEvenList._fade) / r.height, 1],
         ).createShader(r),
         child: NotificationListener<ScrollMetricsNotification>(
           onNotification: _onMetrics,

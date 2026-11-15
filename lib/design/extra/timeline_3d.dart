@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'art_3d.dart';
 import 'motion_kit.dart';
+import 'package:bakhli/design/tokens/design_scale.dart';
 
 enum TimelineState { done, current, todo }
 
@@ -49,14 +50,14 @@ class Timeline3D extends StatelessWidget {
     final on = item.state != TimelineState.todo;
     if (item.art != null) {
       return SizedBox(
-        width: 44,
-        height: 44,
+        width: DS.s(44),
+        height: DS.s(44),
         child: Stack(
           clipBehavior: Clip.none,
           alignment: Alignment.center,
           children: [
             Positioned.fill(
-              child: DecoratedBox(decoration: BoxDecoration(color: tone.haloBase.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(14))),
+              child: DecoratedBox(decoration: BoxDecoration(color: tone.haloBase.withValues(alpha: 0.14), borderRadius: DS.circular(14))),
             ),
             Art3D(asset: item.art!, size: 40, shadowBlur: 3, shadowOffset: const Offset(2, 4), shadowAlpha: 0.25),
           ],
@@ -65,33 +66,33 @@ class Timeline3D extends StatelessWidget {
     }
     if (item.badge != null) {
       return Container(
-        width: 30,
-        height: 30,
+        width: DS.s(30),
+        height: DS.s(30),
         alignment: Alignment.center,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           color: on ? null : _idle,
           gradient: on ? tone.gradient : null,
-          boxShadow: item.state == TimelineState.current ? [BoxShadow(color: tone.shadow, offset: const Offset(1.1, 3), blurRadius: 6)] : null,
+          boxShadow: item.state == TimelineState.current ? [BoxShadow(color: tone.shadow, offset: DS.shadowOffset(const Offset(1.1, 3)), blurRadius: DS.shadowBlur(6))] : null,
         ),
         child: item.state == TimelineState.done
-            ? const Icon(Icons.check_rounded, size: 17, color: Colors.white)
+            ? Icon(Icons.check_rounded, size: DS.s(17), color: Colors.white)
             : Text(item.badge!, textScaler: TextScaler.noScaling, style: Ink3D.text(13, FontWeight.w700, on ? Colors.white : Ink3D.grey, height: 1, letterSpacing: 0)),
       );
     }
     final c = item.dotColor!;
-    final size = dense ? 12.0 : 24.0;
+    final size = DS.s(dense ? 12.0 : 24.0);
     return Container(
       width: size,
       height: size,
-      decoration: BoxDecoration(shape: BoxShape.circle, color: on ? c : Colors.white, border: Border.all(color: c, width: dense ? 3 : 5)),
+      decoration: BoxDecoration(shape: BoxShape.circle, color: on ? c : Colors.white, border: Border.all(color: c, width: DS.s(dense ? 3 : 5))),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final rail = dense ? 30.0 : 44.0;
-    final lineW = dense ? 3.0 : 4.0;
+    final rail = DS.s(dense ? 30.0 : 44.0);
+    final lineW = DS.s(dense ? 3.0 : 4.0);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
@@ -125,14 +126,14 @@ class Timeline3D extends StatelessWidget {
                   ],
                 ),
               ),
-              if (item.trailing != null) ...[const SizedBox(width: 8), item.trailing!],
+              if (item.trailing != null) ...[SizedBox(width: DS.s(8)), item.trailing!],
             ],
           ),
         if (item.child != null) item.child!,
       ],
     );
     Widget content = Padding(
-      padding: EdgeInsets.only(left: 12, top: item.hasNode ? (dense ? 0 : 2) : 0, bottom: last ? 0 : (dense ? 12 : 16)),
+      padding: EdgeInsets.only(left: DS.s(12), top: item.hasNode ? DS.s(dense ? 0 : 2) : 0, bottom: last ? 0 : DS.gv(dense ? 12 : 16)),
       child: Opacity(opacity: item.faded ? 0.5 : 1, child: text),
     );
     if (item.onTap != null) {
@@ -151,7 +152,7 @@ class Timeline3D extends StatelessWidget {
               child: Column(
                 children: [
                   if (item.hasNode) ...[
-                    SizedBox(height: dense ? 3 : 2, child: seg(above)),
+                    SizedBox(height: DS.s(dense ? 3 : 2), child: seg(above)),
                     Opacity(opacity: item.faded ? 0.5 : 1, child: _node(item)),
                   ],
                   Expanded(child: seg(below ?? (item.hasNode ? null : above))),
@@ -177,41 +178,41 @@ class RailStop3D extends StatelessWidget {
   final bool connectorBelow;
   final Widget? trailing;
 
-  static const double topRoom = 30;
-  static const BorderRadius radius = BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(24), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8));
+  static double get topRoom => DS.s(30);
+  static BorderRadius get radius => DS.br(const BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(24), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8)));
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(14, topRoom, 14, 0),
+      padding: EdgeInsets.fromLTRB(DS.s(14), topRoom, DS.s(14), 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            constraints: const BoxConstraints(minHeight: 72),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: const BoxDecoration(
+            constraints: BoxConstraints(minHeight: DS.s(72)),
+            padding: EdgeInsets.symmetric(horizontal: DS.s(16), vertical: DS.s(12)),
+            decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: radius,
-              boxShadow: [BoxShadow(color: Color(0x409E9E9E), offset: Offset(1.1, 1.1), blurRadius: 10)],
+              boxShadow: [BoxShadow(color: Color(0x409E9E9E), offset: DS.shadowOffset(const Offset(1.1, 1.1)), blurRadius: DS.shadowBlur(10))],
             ),
             child: Row(
               children: [
                 SizedBox(
-                  width: 56,
-                  height: 56,
+                  width: DS.s(56),
+                  height: DS.s(56),
                   child: Stack(
                     clipBehavior: Clip.none,
                     children: [
                       Positioned.fill(
-                        child: DecoratedBox(decoration: BoxDecoration(color: tone.haloBase.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(18))),
+                        child: DecoratedBox(decoration: BoxDecoration(color: tone.haloBase.withValues(alpha: 0.14), borderRadius: DS.circular(18))),
                       ),
-                      Positioned(left: -4, top: -14, child: Art3D(asset: art, size: 66, shadowBlur: 4, shadowOffset: const Offset(3, 5), shadowAlpha: 0.28)),
+                      Positioned(left: DS.s(-4), top: DS.s(-14), child: Art3D(asset: art, size: 66, shadowBlur: 4, shadowOffset: const Offset(3, 5), shadowAlpha: 0.28)),
                     ],
                   ),
                 ),
-                const SizedBox(width: 14),
+                SizedBox(width: DS.s(14)),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -223,14 +224,14 @@ class RailStop3D extends StatelessWidget {
                     ],
                   ),
                 ),
-                if (trailing != null) ...[const SizedBox(width: 8), trailing!],
+                if (trailing != null) ...[SizedBox(width: DS.s(8)), trailing!],
               ],
             ),
           ),
           if (connectorBelow)
             Align(
               alignment: Alignment.centerLeft,
-              child: Container(margin: const EdgeInsets.only(left: 42), width: 4, height: 26, color: tone.g1),
+              child: Container(margin: EdgeInsets.only(left: DS.s(42)), width: DS.s(4), height: DS.s(26), color: tone.g1),
             ),
         ],
       ),

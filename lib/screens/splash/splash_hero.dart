@@ -120,12 +120,12 @@ class _SplashHeroState extends State<SplashHero> with TickerProviderStateMixin {
               SafeArea(
                 child: Center(
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                    padding: EdgeInsets.fromLTRB(DS.s(24), 0, DS.s(24), DS.s(24)),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         _wordmark(SplashType.wordSize(width), reduce),
-                        const SizedBox(height: 14),
+                        Gap.v(14),
                         _tagline(SplashType.tagSize(width), reduce),
                       ],
                     ),
@@ -144,11 +144,11 @@ class _SplashHeroState extends State<SplashHero> with TickerProviderStateMixin {
       animation: Listenable.merge([_intro, _idle]),
       builder: (context, _) {
         final t = reduce ? 1.0 : _word.value;
-        final float = reduce ? 0.0 : -4 * Curves.easeInOut.transform(_idle.value);
+        final float = reduce ? 0.0 : -DS.s(4) * Curves.easeInOut.transform(_idle.value);
         return Opacity(
           opacity: reduce ? _intro.value : t,
           child: Transform.translate(
-            offset: Offset(0, (1 - t) * 24 + float),
+            offset: Offset(0, (1 - t) * DS.s(24) + float),
             child: Transform.scale(
               scale: 0.94 + 0.06 * t,
               child: MediaQuery(
@@ -177,8 +177,8 @@ class _SplashHeroState extends State<SplashHero> with TickerProviderStateMixin {
                         color: SplashInk.white,
                         height: 1.0,
                         letterSpacing: reduce ? 6 : 14 - 8 * t,
-                      ).copyWith(shadows: const [
-                        Shadow(color: SplashInk.textShadow, blurRadius: 30, offset: Offset(0, 8)),
+                      ).copyWith(shadows: [
+                        Shadow(color: SplashInk.textShadow, blurRadius: DS.shadowBlur(30), offset: DS.shadowOffset(const Offset(0, 8))),
                       ]),
                     ),
                   ),
@@ -198,7 +198,7 @@ class _SplashHeroState extends State<SplashHero> with TickerProviderStateMixin {
         final t = reduce ? _intro.value : _tag.value;
         return Opacity(
           opacity: t,
-          child: Transform.translate(offset: Offset(0, reduce ? 0 : (1 - t) * 14), child: child),
+          child: Transform.translate(offset: Offset(0, reduce ? 0 : (1 - t) * DS.s(14)), child: child),
         );
       },
       child: MediaQuery(

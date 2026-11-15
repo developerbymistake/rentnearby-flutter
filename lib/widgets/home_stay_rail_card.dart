@@ -6,7 +6,6 @@ import '../models/home_feed_model.dart';
 
 class HomeStayRailCard extends StatelessWidget {
   static const double cellWidth = 160;
-  static const List<String> stickers = [ListingArt.key, ListingArt.bed, ListingArt.hotel];
 
   final HomeStayModel stay;
   final VoidCallback? onOpen;
@@ -19,16 +18,15 @@ class HomeStayRailCard extends StatelessWidget {
     final item = stay.item;
     final url = item.thumbnailUrl;
     final hasPhoto = url != null && url.isNotEmpty;
-    final sticker = stickers[index % stickers.length];
     return MealsCardV(
       tone: ListingTone.list(ListingTone.forest, index),
       tag: item.tagLabel,
       title: item.title,
       description: item.placeName ?? item.locationLabel,
       chips: item.distanceLabel == null ? null : [item.distanceLabel!],
-      photo: hasPhoto ? KitPhoto(url: url, width: 100, height: 100, asset: TravelIcon.stay, iconSize: 40) : null,
-      sticker: hasPhoto ? sticker : null,
-      art: hasPhoto ? null : ListingArt.hotel,
+      photo: hasPhoto ? KitPhoto(url: url, width: 100, height: 100, asset: TravelIcon.stay, iconSize: DS.s(40)) : null,
+      sticker: hasPhoto ? ListingArt.stay : null,
+      art: hasPhoto ? null : ListingArt.stay,
       caption: item.priceCaption,
       number: item.priceValue.isEmpty ? null : item.priceValue,
       unit: item.priceUnit,

@@ -3,6 +3,7 @@ import '../template/fitness_app_theme.dart';
 import '../tokens/alpha_tokens.dart';
 import '../tokens/card_tokens.dart';
 import '../tokens/design_colors.dart';
+import '../tokens/design_scale.dart';
 import '../tokens/shadow_tokens.dart';
 import '../tokens/template_tokens.dart';
 import '../tokens/type_tokens.dart';
@@ -46,10 +47,10 @@ class TripKitSurface extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final card = DecoratedBox(
-      decoration: BoxDecoration(color: color, borderRadius: radius, boxShadow: shadow),
+      decoration: BoxDecoration(color: color, borderRadius: DS.br(radius), boxShadow: DS.shadows(shadow)),
       child: Material(
         color: Colors.transparent,
-        borderRadius: radius,
+        borderRadius: DS.br(radius),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: onTap,
@@ -75,7 +76,7 @@ class TripKitStateView extends StatelessWidget {
     this.actionLabel,
     this.onAction,
     this.tone = KitTone.trip,
-    this.padding = const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+    this.padding,
     this.carded = false,
   });
 
@@ -85,17 +86,18 @@ class TripKitStateView extends StatelessWidget {
   final String? actionLabel;
   final VoidCallback? onAction;
   final KitTone tone;
-  final EdgeInsetsGeometry padding;
+  final EdgeInsetsGeometry? padding;
   final bool carded;
 
   @override
   Widget build(BuildContext context) {
+    final pad = padding ?? DS.sym(h: 32, v: 24);
     final body = Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          width: 72,
-          height: 72,
+          width: DS.s(72),
+          height: DS.s(72),
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             gradient: LinearGradient(
@@ -109,25 +111,25 @@ class TripKitStateView extends StatelessWidget {
           ),
           child: Center(child: leading),
         ),
-        const SizedBox(height: 16),
+        Gap.v(16),
         Text(title,
             textAlign: TextAlign.center,
             style: TypeTokens.style(16, FontWeight.w700, color: DesignColors.textStrong, letterSpacing: 0.2)),
         if (subtitle != null && subtitle!.isNotEmpty) ...[
-          const SizedBox(height: 8),
+          Gap.v(8),
           Text(subtitle!,
               textAlign: TextAlign.center,
               style: TypeTokens.style(14, FontWeight.w400, color: TypeTokens.secondary)),
         ],
         if (actionLabel != null && onAction != null) ...[
-          const SizedBox(height: 16),
+          Gap.v(16),
           PrimaryButton(label: actionLabel!, onPressed: onAction, tone: tone, expand: false),
         ],
       ],
     );
     final content = carded
-        ? TripKitSurface(padding: padding, child: SizedBox(width: double.infinity, child: body))
-        : Padding(padding: padding, child: body);
+        ? TripKitSurface(padding: pad, child: SizedBox(width: double.infinity, child: body))
+        : Padding(padding: pad, child: body);
     return EntranceOnce(
       child: LayoutBuilder(
         builder: (context, c) => c.hasBoundedHeight ? ListView(shrinkWrap: true, padding: EdgeInsets.zero, children: [content]) : content,
@@ -169,25 +171,25 @@ class TripKit {
       BoxDecoration(
         color: color,
         gradient: gradient,
-        borderRadius: radius,
+        borderRadius: DS.br(radius),
         border: border,
-        boxShadow: gradient == null ? ShadowTokens.elev2 : cardShadow(shadowColor),
+        boxShadow: DS.shadows(gradient == null ? ShadowTokens.elev2 : cardShadow(shadowColor)),
       );
 
   static Widget iconBadge(String asset, {double size = 28, double image = 18}) => Container(
-        width: size,
-        height: size,
+        width: DS.s(size),
+        height: DS.s(size),
         alignment: Alignment.center,
         decoration: BoxDecoration(color: DesignColors.surface.withValues(alpha: Alpha.scrim), shape: BoxShape.circle),
-        child: Image.asset('$iconDir$asset.png', width: image, height: image),
+        child: Image.asset('$iconDir$asset.png', width: DS.s(image), height: DS.s(image)),
       );
 
   static Widget travelBadge(String assetPath, {double size = 28, double image = 18}) => Container(
-        width: size,
-        height: size,
+        width: DS.s(size),
+        height: DS.s(size),
         alignment: Alignment.center,
         decoration: BoxDecoration(color: DesignColors.surface.withValues(alpha: Alpha.scrim), shape: BoxShape.circle),
-        child: Image.asset(assetPath, width: image, height: image),
+        child: Image.asset(assetPath, width: DS.s(image), height: DS.s(image)),
       );
 
   static const List<Color> dayColors = [
@@ -243,7 +245,7 @@ class TripKitChip extends StatelessWidget {
     final fg = selected ? DesignColors.onPrimary : DesignColors.textPrimary;
     return PressScale(
       child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: KitMetrics.touch),
+        constraints: BoxConstraints(minHeight: DS.s(KitMetrics.touch)),
         child: Center(
           widthFactor: 1,
           heightFactor: 1,
@@ -253,27 +255,27 @@ class TripKitChip extends StatelessWidget {
             decoration: BoxDecoration(
               gradient: selected ? tone.gradient : null,
               color: selected ? null : DesignColors.chipBackground,
-              borderRadius: CardRadius.pill,
-              boxShadow: selected ? ShadowTokens.glow(tone.glow) : const [],
+              borderRadius: DS.br(CardRadius.pill),
+              boxShadow: selected ? DS.shadows(ShadowTokens.glow(tone.glow)) : const [],
             ),
             child: Material(
               color: Colors.transparent,
               child: InkWell(
-                borderRadius: CardRadius.pill,
+                borderRadius: DS.br(CardRadius.pill),
                 splashColor: selected ? TemplateTokens.white24 : DesignColors.tint(color, Alpha.soft),
                 highlightColor: Colors.transparent,
                 onTap: onTap,
                 child: Padding(
-                  padding: padding ?? const EdgeInsets.symmetric(vertical: 9, horizontal: 16),
+                  padding: padding ?? DS.sym(h: 16, v: 9),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       if (iconAsset != null) ...[
-                        Image.asset(iconAsset!, width: 16, height: 16),
-                        const SizedBox(width: 6),
+                        Image.asset(iconAsset!, width: DS.s(16), height: DS.s(16)),
+                        Gap.h(6),
                       ] else if (icon != null) ...[
-                        Icon(icon, size: 16, color: fg),
-                        const SizedBox(width: 6),
+                        Icon(icon, size: DS.s(16), color: fg),
+                        Gap.h(6),
                       ],
                       Flexible(
                         child: Text(label,
@@ -328,12 +330,12 @@ class TripKitEmpty extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return TripKitStateView(
-      padding: const EdgeInsets.fromLTRB(32, 48, 32, 0),
+      padding: DS.insets(l: 32, t: 48, r: 32),
       leading: travelAsset != null
-          ? Image.asset(travelAsset!, width: 40, height: 40)
+          ? Image.asset(travelAsset!, width: DS.s(40), height: DS.s(40))
           : iconAsset != null
-              ? Image.asset('${TripKit.iconDir}$iconAsset.png', width: 40, height: 40)
-              : Icon(icon ?? Icons.place_rounded, size: 34, color: KitTone.trip.accentDark),
+              ? Image.asset('${TripKit.iconDir}$iconAsset.png', width: DS.s(40), height: DS.s(40))
+              : Icon(icon ?? Icons.place_rounded, size: DS.s(34), color: KitTone.trip.accentDark),
       title: title,
       subtitle: subtitle,
       actionLabel: onRetry != null ? retryLabel : null,

@@ -352,7 +352,7 @@ class _PlansBillingScreenState extends State<PlansBillingScreen> {
       count: 8,
       child: ListView(
         physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
-        padding: EdgeInsets.only(bottom: KitMetrics.sectionGap + (barVisible ? 0 : AppInsets.bottomViewPadding(context))),
+        padding: EdgeInsets.only(bottom: DS.s(KitMetrics.sectionGap) + (barVisible ? 0 : AppInsets.bottomViewPadding(context))),
         children: [
           _header(tone, me.featureKey),
           for (final w in children)
@@ -400,7 +400,7 @@ class _PlansBillingScreenState extends State<PlansBillingScreen> {
         ],
         if (otherAccount)
           Padding(
-            padding: const EdgeInsets.fromLTRB(22, 14, 22, 0),
+            padding: EdgeInsets.fromLTRB(DS.s(22), DS.gv(14), DS.s(22), 0),
             child: Text('Subscribed on another Bakhli account',
                 style: TypeTokens.style(12.5, FontWeight.w500, color: TypeTokens.secondary)),
           ),

@@ -47,7 +47,7 @@ class TripSheetFrame extends StatelessWidget {
       closeEnabled: closeEnabled,
       footer: footer,
       footnote: footnote,
-      padding: EdgeInsets.fromLTRB(22, 0, 22, footer == null ? 20 : 4),
+      padding: EdgeInsets.fromLTRB(DS.s(22), 0, DS.s(22), DS.s(footer == null ? 20 : 4)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -55,7 +55,7 @@ class TripSheetFrame extends StatelessWidget {
             TemplateEntranceOnce(index: i, count: count, child: children[i]),
           if (endNote case final note?)
             Padding(
-              padding: const EdgeInsets.only(top: 16),
+              padding: EdgeInsets.only(top: DS.gv(16)),
               child: Text(note, textAlign: TextAlign.center, style: RepliesLook.foot),
             ),
         ],

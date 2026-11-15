@@ -124,11 +124,11 @@ class _EnquiryBodyState extends State<_EnquiryBody> {
           Row(
             children: [
               Expanded(child: PillPickerField(tone: _tone, sublabel: TripStrings.checkIn, value: TripFormat.shortDate(checkIn), leadingArt: ListingArt.calendar, trailing: const SizedBox.shrink(), onTap: null)),
-              const SizedBox(width: 10),
+              Gap.h(10),
               Expanded(child: PillPickerField(tone: _tone, sublabel: TripStrings.checkOut, value: TripFormat.shortDate(checkOut), leadingArt: ListingArt.calendar, trailing: const SizedBox.shrink(), onTap: null)),
             ],
           ),
-          const SizedBox(height: 12),
+          Gap.v(12),
           PillPickerField(
             tone: _tone,
             sublabel: TripStrings.people,
@@ -139,20 +139,20 @@ class _EnquiryBodyState extends State<_EnquiryBody> {
           ),
           if (nights > 1) KeyValueRow(label: TripStringsV2Find.nightsLabel, value: TripStringsV2Find.nightsText(nights), divider: false),
           GreyPillBox(
-            radius: 22,
-            padding: const EdgeInsets.fromLTRB(18, 12, 18, 12),
+            radius: DS.radius(22),
+            padding: DS.insets(l: 18, t: 12, r: 18, b: 12),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(TripStrings.sentToOwners.toUpperCase(), style: RepliesLook.section),
-                const SizedBox(height: 4),
+                SizedBox(height: DS.s(4)),
                 Text(preview, style: Ink3D.text(13, FontWeight.w500, Ink3D.body, height: 1.4, letterSpacing: 0)),
               ],
             ),
           ),
-          if (short) RepliesBanner(art: ListingArt.calendar, text: TripStrings.veryShortNotice, margin: const EdgeInsets.only(top: 12)),
+          if (short) RepliesBanner(art: ListingArt.calendar, text: TripStrings.veryShortNotice, margin: EdgeInsets.only(top: DS.gv(12))),
           if (limit != null)
-            RepliesBanner(art: ListingArt.clipboard, text: '${TripStrings.askLimitTitle}. ${TripStrings.askLimitBody(limit)}', margin: const EdgeInsets.only(top: 12)),
+            RepliesBanner(art: ListingArt.clipboard, text: '${TripStrings.askLimitTitle}. ${TripStrings.askLimitBody(limit)}', margin: EdgeInsets.only(top: DS.gv(12))),
         ],
       );
     });

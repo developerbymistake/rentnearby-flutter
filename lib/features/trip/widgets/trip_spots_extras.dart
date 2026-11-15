@@ -59,7 +59,7 @@ class TripMustSeeRail extends StatelessWidget {
         children: [
           MealsCardV(
             tone: _tone,
-            width: 168,
+            width: DS.s(168),
             title: s.title,
             description: '${TripSpotCategory.label(s.category)}\n~${TripFormat.visit(s.visitMinutes)}',
             photo: s.hasPhoto ? TripSpotMedia(spot: s) : null,
@@ -69,8 +69,8 @@ class TripMustSeeRail extends StatelessWidget {
             onTap: () => TripSpotDetailSheet.show(context, spot: s, selected: on, locked: locked, onToggle: toggle),
           ),
           Positioned(
-            left: 18,
-            bottom: 26,
+            left: DS.s(18),
+            bottom: DS.s(26),
             child: Tooltip(
               message: label,
               excludeFromSemantics: true,
@@ -78,7 +78,7 @@ class TripMustSeeRail extends StatelessWidget {
                 onTap: toggle,
                 label: label,
                 selected: on,
-                child: const SizedBox(width: 48, height: 48),
+                child: SizedBox(width: DS.s(48), height: DS.s(48)),
               ),
             ),
           ),
@@ -98,19 +98,19 @@ class TripSuggestionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) => TemplateEntranceOnce(
         child: Container(
-          margin: const EdgeInsets.fromLTRB(18, 0, 18, 14),
-          constraints: const BoxConstraints(minHeight: 68),
-          padding: const EdgeInsets.fromLTRB(12, 10, 4, 10),
-          decoration: BoxDecoration(color: DesignColors.surface, borderRadius: Banner3D.radius, boxShadow: Ink3D.softShadow),
+          margin: EdgeInsets.fromLTRB(DS.s(18), 0, DS.s(18), DS.gv(14)),
+          constraints: BoxConstraints(minHeight: DS.s(68)),
+          padding: DS.insets(l: 12, t: 10, r: 4, b: 10),
+          decoration: BoxDecoration(color: DesignColors.surface, borderRadius: DS.br(Banner3D.radius), boxShadow: DS.shadows(Ink3D.softShadow)),
           child: Row(
             children: [
               Container(
-                width: 46,
-                height: 46,
-                decoration: BoxDecoration(color: _tone.tint, borderRadius: BorderRadius.circular(14)),
+                width: DS.s(46),
+                height: DS.s(46),
+                decoration: BoxDecoration(color: _tone.tint, borderRadius: DS.circular(14)),
                 child: const Center(child: Art3D(asset: ListingArt.compass, size: 40, shadowBlur: 3, shadowOffset: Offset(2, 3))),
               ),
-              const SizedBox(width: 12),
+              Gap.h(12),
               Expanded(
                 child: Text(
                   text,
@@ -119,13 +119,13 @@ class TripSuggestionCard extends StatelessWidget {
                   style: Ink3D.text(13, FontWeight.w600, Ink3D.title),
                 ),
               ),
-              const SizedBox(width: 8),
+              Gap.h(8),
               GradientPillButton(tone: _tone, label: TripStringsSpotsX.add, onTap: onAdd, height: 34, fontSize: 13, expand: false),
               IconButton(
                 onPressed: onDismiss,
                 tooltip: TripStringsSpotsX.dismiss,
-                constraints: const BoxConstraints(minWidth: KitMetrics.touch, minHeight: KitMetrics.touch),
-                icon: Icon(Icons.close_rounded, size: 20, color: Ink3D.grey),
+                constraints: BoxConstraints(minWidth: DS.s(KitMetrics.touch), minHeight: DS.s(KitMetrics.touch)),
+                icon: Icon(Icons.close_rounded, size: DS.s(20), color: Ink3D.grey),
               ),
             ],
           ),
@@ -142,7 +142,7 @@ class TripSpotsRouteStrip extends StatelessWidget {
   Widget build(BuildContext context) => Row(
         children: [
           const Art3D(asset: ListingArt.compass, size: 22, shadowBlur: 2, shadowOffset: Offset(1, 2)),
-          const SizedBox(width: 6),
+          Gap.h(6),
           Expanded(
             child: Text(
               TripSpotPicks.routeText(route),
@@ -167,6 +167,6 @@ class TripOfflineBanner extends StatelessWidget {
         art: ListingArt.worldMap,
         title: TripStringsSpotsX.offline,
         onTap: onTap,
-        margin: const EdgeInsets.fromLTRB(18, 8, 18, 4),
+        margin: EdgeInsets.fromLTRB(DS.s(18), DS.gv(8), DS.s(18), DS.gv(4)),
       );
 }

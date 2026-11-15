@@ -116,7 +116,7 @@ class _ReportListingSheetState extends State<ReportListingSheet> {
     final tone = _tone;
     return Obx(() {
       final reasons = _ctrl.reportReasons;
-      final fieldWidth = MediaQuery.of(context).size.width - 48;
+      final fieldWidth = MediaQuery.of(context).size.width - DS.s(48);
       return DropdownMenu<String>(
         key: ValueKey(_selectedReasonId),
         initialSelection: _selectedReasonId,
@@ -150,8 +150,8 @@ class _ReportListingSheetState extends State<ReportListingSheet> {
     final tone = _tone;
     final mq = MediaQuery.of(context);
     final avail = mq.size.height - mq.padding.top - 60 - SheetInsets.lift(context);
-    final height = math.max(320.0, math.min(744.0 + mq.padding.bottom, avail));
-    const room = ReportSheetBand.artRoom;
+    final height = math.max(DS.s(320.0), math.min(DS.s(744.0) + mq.padding.bottom, avail));
+    final room = ReportSheetBand.artRoom;
     return SizedBox(
       height: height + room,
       child: Stack(
@@ -167,14 +167,14 @@ class _ReportListingSheetState extends State<ReportListingSheet> {
                   ReportSheetBand(tone: tone, title: 'Report this listing'),
                   Expanded(
                     child: SingleChildScrollView(
-                      padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+                      padding: DS.insets(l: 24, t: 20, r: 24),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           ReportNote3D.warn(text: 'Please report responsibly. Misuse may lead to action on your account.'),
-                          const SizedBox(height: 18),
+                          Gap.v(18),
                           Align(alignment: Alignment.centerLeft, child: _reasonPicker(context)),
-                          const SizedBox(height: 18),
+                          Gap.v(18),
                           TextField(
                             controller: _detailsCtrl,
                             focusNode: _detailsFocus,
@@ -191,7 +191,7 @@ class _ReportListingSheetState extends State<ReportListingSheet> {
                     ),
                   ),
                   Padding(
-                    padding: EdgeInsets.fromLTRB(24, 14, 24, 26 + mq.padding.bottom),
+                    padding: EdgeInsets.fromLTRB(DS.s(24), DS.s(14), DS.s(24), DS.s(26) + mq.padding.bottom),
                     child: PillButtonRow(
                       children: [
                         WhitePillButton(
@@ -216,7 +216,7 @@ class _ReportListingSheetState extends State<ReportListingSheet> {
             ),
           ),
           const Positioned(top: 0, left: 0, right: 0, child: Center(child: ReportSheetArt())),
-          Positioned(top: room + 12, right: 12, child: SheetCloseButton(enabled: !_submitting)),
+          Positioned(top: room + DS.s(12), right: DS.s(12), child: SheetCloseButton(enabled: !_submitting)),
         ],
       ),
     );

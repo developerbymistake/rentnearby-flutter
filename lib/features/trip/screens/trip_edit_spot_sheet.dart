@@ -82,11 +82,11 @@ class TripEditSpotSheet extends StatelessWidget {
       labelDot: TripKit.dayColor(day),
       trailing: current
           ? Container(
-              width: 28,
-              height: 28,
+              width: DS.s(28),
+              height: DS.s(28),
               alignment: Alignment.center,
-              decoration: BoxDecoration(color: DesignColors.surface, borderRadius: BorderRadius.circular(9)),
-              child: Icon(Icons.check_rounded, size: 18, color: ListingTone.indigo.text),
+              decoration: BoxDecoration(color: DesignColors.surface, borderRadius: DS.circular(9)),
+              child: Icon(Icons.check_rounded, size: DS.s(18), color: ListingTone.indigo.text),
             )
           : const SizedBox.shrink(),
     );

@@ -13,8 +13,8 @@ class TripPaymentLine extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Image.asset(ListingArt.moneyBag, width: 22, height: 22, fit: BoxFit.contain),
-        const SizedBox(width: 8),
+        Image.asset(ListingArt.moneyBag, width: DS.s(22), height: DS.s(22), fit: BoxFit.contain),
+        Gap.h(8),
         Expanded(child: Text(text, maxLines: 3, overflow: TextOverflow.ellipsis, style: RepliesLook.foot)),
       ],
     );

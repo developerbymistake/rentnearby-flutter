@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'package:bakhli/design/design.dart';
 import 'package:flutter/material.dart';
 import 'hub_tokens.dart';
 
@@ -22,10 +23,10 @@ class HubRing extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => SizedBox(
-        width: size,
-        height: size,
+        width: DS.s(size),
+        height: DS.s(size),
         child: CustomPaint(
-          painter: _RingPainter(percent.clamp(0, 100) / 100, thickness, arc, track),
+          painter: _RingPainter(percent.clamp(0, 100) / 100, DS.s(thickness), arc, track),
           child: center == null ? null : Center(child: center),
         ),
       );

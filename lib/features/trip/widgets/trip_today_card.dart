@@ -67,14 +67,14 @@ class TripTodayCard extends StatelessWidget {
         clipBehavior: Clip.none,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(18, 26, 18, 14),
+            padding: EdgeInsets.fromLTRB(DS.s(18), DS.s(26), DS.s(18), DS.gv(14)),
             child: Container(
               width: double.infinity,
-              padding: const EdgeInsets.fromLTRB(14, 18, 14, 16),
+              padding: DS.insets(l: 14, t: 18, r: 14, b: 16),
               decoration: BoxDecoration(
                 gradient: tone.gradient,
-                borderRadius: kMealsRadius,
-                boxShadow: [BoxShadow(color: tone.shadow, offset: const Offset(1.1, 6), blurRadius: 14)],
+                borderRadius: DS.br(kMealsRadius),
+                boxShadow: [BoxShadow(color: tone.shadow, offset: DS.shadowOffset(const Offset(1.1, 6)), blurRadius: DS.shadowBlur(14))],
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -83,20 +83,20 @@ class TripTodayCard extends StatelessWidget {
                     index: 0,
                     count: 6,
                     child: Padding(
-                      padding: EdgeInsets.fromLTRB(4, 0, art - 6, 0),
+                      padding: EdgeInsets.fromLTRB(DS.s(4), 0, DS.s(art - 6), 0),
                       child: Text(title, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(19, FontWeight.w700, DesignColors.textInverse, height: 1.25)),
                     ),
                   ),
                   if (offline) ...[
-                    const SizedBox(height: 10),
+                    Gap.v(10),
                     _offlineBanner(),
                   ],
                   for (var i = 0; i < rows.length; i++) ...[
-                    const SizedBox(height: 10),
+                    Gap.v(10),
                     TemplateEntranceOnce(index: i + 1, count: 6, child: rows[i]),
                   ],
                   if (today != null || _problemAllowed(c)) ...[
-                    const SizedBox(height: 12),
+                    Gap.v(12),
                     TemplateEntranceOnce(index: 5, count: 6, child: _problemButton(context, n)),
                   ],
                 ],
@@ -104,7 +104,7 @@ class TripTodayCard extends StatelessWidget {
             ),
           ),
           Positioned(
-            right: 26,
+            right: DS.s(26),
             top: 0,
             child: IgnorePointer(child: Art3D(asset: ListingArt.sunrise, size: art, halo: art + 6, haloColor: DesignColors.tint(DesignColors.surface, Alpha.v22))),
           ),
@@ -116,11 +116,11 @@ class TripTodayCard extends StatelessWidget {
   Widget _offlineBanner() => _onCardLine(Icons.cloud_off_rounded, TripStrings.offlineSaved);
 
   static Widget _onCardLine(IconData icon, String text) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-        decoration: BoxDecoration(color: DesignColors.tint(DesignColors.surface, Alpha.soft), borderRadius: BorderRadius.circular(14)),
+        padding: DS.sym(h: 12, v: 9),
+        decoration: BoxDecoration(color: DesignColors.tint(DesignColors.surface, Alpha.soft), borderRadius: DS.circular(14)),
         child: Row(children: [
-          Icon(icon, size: 16, color: DesignColors.surface),
-          const SizedBox(width: 8),
+          Icon(icon, size: DS.s(16), color: DesignColors.surface),
+          Gap.h(8),
           Expanded(child: Text(text, maxLines: 3, overflow: TextOverflow.ellipsis, style: Ink3D.text(12, FontWeight.w600, DesignColors.textInverse))),
         ]),
       );
@@ -179,7 +179,7 @@ class TripTodayCard extends StatelessWidget {
   }
 
   static Widget _caps(String text) => Padding(
-        padding: const EdgeInsets.only(left: 4),
+        padding: EdgeInsets.only(left: DS.s(4)),
         child: Text(text.toUpperCase(),
             maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(11, FontWeight.w700, DesignColors.whiteHigh, letterSpacing: 0.6)),
       );
@@ -375,14 +375,14 @@ class TripTodayCard extends StatelessWidget {
         onTap: () => TripProblemSheet.show(context, day: n),
         label: TripStrings.problemOnTrip,
         child: Container(
-          constraints: const BoxConstraints(minHeight: 48),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-          decoration: const BoxDecoration(color: DesignColors.surface, borderRadius: CardRadius.pill, boxShadow: Ink3D.whiteBtn),
+          constraints: BoxConstraints(minHeight: DS.s(48)),
+          padding: DS.sym(h: 14, v: 8),
+          decoration: BoxDecoration(color: DesignColors.surface, borderRadius: DS.br(CardRadius.pill), boxShadow: DS.shadows(Ink3D.whiteBtn)),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.warning_amber_rounded, size: 17, color: DesignColors.error),
-              const SizedBox(width: 6),
+              Icon(Icons.warning_amber_rounded, size: DS.s(17), color: DesignColors.error),
+              Gap.h(6),
               Flexible(
                 child: Text(TripStrings.problemOnTrip,
                     maxLines: 2, textAlign: TextAlign.center, overflow: TextOverflow.ellipsis, style: Ink3D.text(13.5, FontWeight.w700, DesignColors.error)),
@@ -418,20 +418,20 @@ class _TodayTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(10, 10, 12, 10),
-      decoration: BoxDecoration(color: DesignColors.surface, borderRadius: BorderRadius.circular(16)),
+      padding: DS.insets(l: 10, t: 10, r: 12, b: 10),
+      decoration: BoxDecoration(color: DesignColors.surface, borderRadius: DS.circular(16)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
             children: [
               Container(
-                width: 46,
-                height: 46,
-                decoration: BoxDecoration(color: ListingTone.indigo.tint, borderRadius: BorderRadius.circular(14)),
+                width: DS.s(46),
+                height: DS.s(46),
+                decoration: BoxDecoration(color: ListingTone.indigo.tint, borderRadius: DS.circular(14)),
                 child: Center(child: Art3D(asset: art, size: 42, shadowBlur: 3, shadowOffset: const Offset(2, 3))),
               ),
-              const SizedBox(width: 10),
+              Gap.h(10),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -443,7 +443,7 @@ class _TodayTile extends StatelessWidget {
                   ],
                 ),
               ),
-              if (trailing != null) ...[const SizedBox(width: 8), trailing!],
+              if (trailing != null) ...[Gap.h(8), trailing!],
             ],
           ),
         ],

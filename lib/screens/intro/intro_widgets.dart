@@ -14,7 +14,7 @@ bool introReduceMotion(BuildContext context) => MediaQuery.disableAnimationsOf(c
 
 class IntroSlideCanvas {
   IntroSlideCanvas._();
-  static const Size size = Size(324, IntroCard3D.height);
+  static Size get size => Size(DS.s(324), IntroCard3D.height);
 }
 
 class IntroInteractionNotification extends Notification {
@@ -45,7 +45,7 @@ class IntroTones {
   static const List<String> art = [
     ListingArt.airplane,
     ListingArt.compass,
-    ListingArt.bed,
+    ListingArt.stay,
     AuthInk.automobile,
     ListingArt.sunrise,
     ListingArt.backpack,
@@ -151,7 +151,7 @@ class _IntroPageChromeState extends State<IntroPageChrome> with SingleTickerProv
     final v = interval.transform(_entrance.value);
     return Opacity(
       opacity: v.clamp(0.0, 1.0),
-      child: Transform.translate(offset: Offset(0, 12 * (1 - v)), child: child),
+      child: Transform.translate(offset: Offset(0, DS.s(12) * (1 - v)), child: child),
     );
   }
 
@@ -170,9 +170,9 @@ class _IntroPageChromeState extends State<IntroPageChrome> with SingleTickerProv
     }
 
     return h(copy.eyebrow, Ink3D.text(12, FontWeight.w700, DesignColors.onPrimary, letterSpacing: 1.4), 1) +
-        6 +
+        DS.gv(6) +
         h(copy.headline, Ink3D.text(26, FontWeight.w700, Ink3D.title, height: 1.2, letterSpacing: 0), 2) +
-        6 +
+        DS.gv(6) +
         h(copy.sub, Ink3D.text(14.5, FontWeight.w400, Ink3D.sub, height: 1.45, letterSpacing: 0), 3);
   }
 
@@ -199,8 +199,8 @@ class _IntroPageChromeState extends State<IntroPageChrome> with SingleTickerProv
       builder: (context, constraints) {
         final w = constraints.maxWidth;
         final avail = math.max(0.0, constraints.maxHeight - widget.topReserve - widget.bottomReserve);
-        final textH = _textHeight(context, copy, w - 52);
-        final artH = (avail - textH - IntroSlideCanvas.size.height).clamp(96.0, 190.0);
+        final textH = _textHeight(context, copy, w - DS.s(52));
+        final artH = (avail - textH - IntroSlideCanvas.size.height).clamp(DS.s(96), DS.s(190));
 
         final art = AnimatedBuilder(
           animation: _entrance,
@@ -223,7 +223,7 @@ class _IntroPageChromeState extends State<IntroPageChrome> with SingleTickerProv
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _rise(_eyebrowIn, Text(copy.eyebrow, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(12, FontWeight.w700, tone.g2, letterSpacing: 1.4))),
-              const SizedBox(height: 6),
+              Gap.v(6),
               _rise(
                 _headlineIn,
                 Semantics(
@@ -231,7 +231,7 @@ class _IntroPageChromeState extends State<IntroPageChrome> with SingleTickerProv
                   child: Text(copy.headline, maxLines: 3, overflow: TextOverflow.ellipsis, style: Ink3D.text(26, FontWeight.w700, Ink3D.title, height: 1.2, letterSpacing: 0)),
                 ),
               ),
-              const SizedBox(height: 6),
+              Gap.v(6),
               _rise(_subIn, Text(copy.sub, maxLines: 3, overflow: TextOverflow.ellipsis, style: Ink3D.text(14.5, FontWeight.w400, Ink3D.sub, height: 1.45, letterSpacing: 0))),
             ],
           ),
@@ -248,11 +248,11 @@ class _IntroPageChromeState extends State<IntroPageChrome> with SingleTickerProv
                 constraints: BoxConstraints(minHeight: textH),
                 child: Align(
                   alignment: Alignment.bottomLeft,
-                  child: Padding(padding: const EdgeInsets.fromLTRB(26, 0, 26, 0), child: _layer(0.25, w, text, fade: true)),
+                  child: Padding(padding: EdgeInsets.fromLTRB(DS.s(26), 0, DS.s(26), 0), child: _layer(0.25, w, text, fade: true)),
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 18),
+                padding: EdgeInsets.symmetric(horizontal: DS.s(18)),
                 child: SizedBox(height: IntroSlideCanvas.size.height, child: RepaintBoundary(child: widget.graphic)),
               ),
             ],
@@ -277,8 +277,8 @@ class IntroPillButton extends StatelessWidget {
       label: label,
       exclude: true,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 8),
-        decoration: BoxDecoration(color: DesignColors.onPrimary, borderRadius: BorderRadius.circular(20), boxShadow: Ink3D.softShadow),
+        padding: DS.sym(h: 22, v: 8),
+        decoration: BoxDecoration(color: DesignColors.onPrimary, borderRadius: DS.circular(20), boxShadow: DS.shadows(Ink3D.softShadow)),
         child: Text(label, maxLines: 1, style: Ink3D.text(14, FontWeight.w700, color ?? ListingTone.indigo.text)),
       ),
     );
@@ -308,7 +308,7 @@ class IntroCtaButton extends StatelessWidget {
             builder: (context, p, _) {
               final tone = IntroTones.at(p);
               return DecoratedBox(
-                decoration: BoxDecoration(gradient: tone.gradient, borderRadius: BorderRadius.circular(27), boxShadow: Form3D.glow(tone)),
+                decoration: BoxDecoration(gradient: tone.gradient, borderRadius: DS.circular(27), boxShadow: Form3D.glow(tone)),
                 child: SizedBox.expand(
                   child: Center(
                     child: AnimatedSwitcher(
@@ -319,7 +319,7 @@ class IntroCtaButton extends StatelessWidget {
                       ),
                       child: Padding(
                         key: ValueKey(isLast ? 'cta_start' : 'cta_next'),
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        padding: DS.sym(h: 16),
                         child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(17, FontWeight.w700, DesignColors.onPrimary)),
                       ),
                     ),
@@ -397,9 +397,9 @@ class _IntroJourneyThreadState extends State<IntroJourneyThread> with SingleTick
             ),
             for (var k = 0; k < widget.pageCount; k++)
               Positioned(
-                left: IntroThreadPainter.xOf(size, widget.pageCount, k.toDouble()) - 22,
+                left: IntroThreadPainter.xOf(size, widget.pageCount, k.toDouble()) - DS.s(22),
                 top: 0,
-                width: 44,
+                width: DS.s(44),
                 height: size.height,
                 child: Semantics(
                   button: true,
@@ -414,10 +414,10 @@ class _IntroJourneyThreadState extends State<IntroJourneyThread> with SingleTick
                 final x = IntroThreadPainter.xOf(size, widget.pageCount, page);
                 final wiggle = 0.12 * math.sin(4 * math.pi * _wiggle.value);
                 return Positioned(
-                  left: x - 22,
-                  top: -16,
-                  width: 44,
-                  height: 44,
+                  left: x - DS.s(22),
+                  top: -DS.s(16),
+                  width: DS.s(44),
+                  height: DS.s(44),
                   child: GestureDetector(
                     behavior: HitTestBehavior.opaque,
                     onTap: _onTaxiTap,
@@ -486,7 +486,7 @@ abstract class IntroSlideState<T extends StatefulWidget> extends State<T> with S
       builder: (context, child) {
         final b = (0.15 + 0.15 * step).clamp(0.0, 0.7);
         final v = Interval(b, math.min(1.0, b + 0.45), curve: Curves.easeOutCubic).transform(entrance.value);
-        return Opacity(opacity: v, child: Transform.translate(offset: Offset(0, 10 * (1 - v)), child: child));
+        return Opacity(opacity: v, child: Transform.translate(offset: Offset(0, DS.s(10) * (1 - v)), child: child));
       },
     );
   }
@@ -510,7 +510,7 @@ class IntroSlideFrame extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tone = IntroTones.card[index];
-    const art = [ListingArt.mountain, ListingArt.worldMap, ListingArt.hotel, ListingArt.taxi, ListingArt.calendar, ListingArt.luggage];
+    const art = [ListingArt.mountain, ListingArt.worldMap, ListingArt.stay, ListingArt.taxi, ListingArt.calendar, ListingArt.luggage];
     return LayoutBuilder(builder: (context, c) {
       final w = c.hasBoundedWidth ? c.maxWidth : IntroSlideCanvas.size.width;
       final h = IntroSlideCanvas.size.height;
@@ -522,7 +522,7 @@ class IntroSlideFrame extends StatelessWidget {
           child: card,
           builder: (context, child) {
             final v = const Interval(0, 0.5, curve: Curves.fastOutSlowIn).transform(e.value);
-            return Opacity(opacity: v, child: Transform.translate(offset: Offset(0, 16 * (1 - v)), child: child));
+            return Opacity(opacity: v, child: Transform.translate(offset: Offset(0, DS.s(16) * (1 - v)), child: child));
           },
         );
       }

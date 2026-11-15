@@ -97,7 +97,7 @@ class _TaxiListScreenState extends State<TaxiListScreen> {
   Widget build(BuildContext context) {
     final bottom = widget.root
         ? BarMetrics.bodyBottomOf(context)
-        : 32 + MediaQuery.paddingOf(context).bottom;
+        : DS.s(32) + MediaQuery.paddingOf(context).bottom;
     final body = Scaffold(
       backgroundColor: DesignColors.scaffold,
       body: RefreshIndicator(
@@ -122,9 +122,9 @@ class _TaxiListScreenState extends State<TaxiListScreen> {
     return widget.root ? TabEntrance(tab: AppTabs.taxi, child: body) : body;
   }
 
-  static const double _selectorCard = 88;
-  static const double _headerBottom = 44;
-  static const double _selectorOverlap = _headerBottom + ModuleHeader.paddingBottom;
+  static double get _selectorCard => DS.s(88);
+  static double get _headerBottom => DS.s(44);
+  static double get _selectorOverlap => _headerBottom + ModuleHeader.paddingBottom;
 
   Widget _buildHeader(BuildContext context) {
     final headerH = ModuleHeader.heightOf(context, hasSubtitle: true, bottomHeight: _headerBottom);
@@ -133,7 +133,7 @@ class _TaxiListScreenState extends State<TaxiListScreen> {
           ? Get.find<TabConfigController>().displayNameForIndex(AppTabs.taxi, 'Taxi')
           : 'Taxi';
       return SizedBox(
-        height: headerH + (_selectorCard - _selectorOverlap) + 12,
+        height: headerH + (_selectorCard - _selectorOverlap) + DS.s(12),
         child: Stack(
           clipBehavior: Clip.none,
           children: [
@@ -147,8 +147,8 @@ class _TaxiListScreenState extends State<TaxiListScreen> {
               bottom: const SizedBox.shrink(),
             ),
             Positioned(
-              left: KitMetrics.gutter,
-              right: KitMetrics.gutter,
+              left: DS.s(KitMetrics.gutter),
+              right: DS.s(KitMetrics.gutter),
               top: headerH - _selectorOverlap,
               child: _buildSelectors(),
             ),
@@ -165,8 +165,8 @@ class _TaxiListScreenState extends State<TaxiListScreen> {
       return DecoratedBox(
         decoration: BoxDecoration(
           color: DesignColors.surface,
-          borderRadius: CardRadius.tile,
-          boxShadow: ShadowTokens.elev3,
+          borderRadius: DS.br(CardRadius.tile),
+          boxShadow: DS.shadows(ShadowTokens.elev3),
         ),
         child: SizedBox(
           height: _selectorCard,
@@ -180,10 +180,10 @@ class _TaxiListScreenState extends State<TaxiListScreen> {
                 onTap: () => _pick(isFrom: true),
                 trailing: _ctrl.fromIsCurrent.value || f == null && _ctrl.isLoading.value
                     ? null
-                    : _trailingButton(Image.asset(TravelIcon.pin, width: 22, height: 22), _ctrl.useCurrentFrom),
+                    : _trailingButton(Image.asset(TravelIcon.pin, width: DS.s(22), height: DS.s(22)), _ctrl.useCurrentFrom),
               ),
             ),
-            const Divider(height: 1, indent: 16, endIndent: 16, color: DesignColors.dividerSoft),
+            Divider(height: 1, indent: DS.s(16), endIndent: DS.s(16), color: DesignColors.dividerSoft),
             Expanded(
               child: _selector(
                 label: 'To',
@@ -193,7 +193,7 @@ class _TaxiListScreenState extends State<TaxiListScreen> {
                 onTap: () => _pick(isFrom: false),
                 trailing: t != null
                     ? _trailingButton(
-                        const Icon(Icons.close_rounded, size: 18, color: DesignColors.primary), _ctrl.clearTo)
+                        Icon(Icons.close_rounded, size: DS.s(18), color: DesignColors.primary), _ctrl.clearTo)
                     : null,
               ),
             ),
@@ -206,8 +206,8 @@ class _TaxiListScreenState extends State<TaxiListScreen> {
   Widget _trailingButton(Widget icon, VoidCallback onTap) {
     return InkResponse(
       onTap: onTap,
-      radius: 22,
-      child: SizedBox(width: 44, height: 44, child: Center(child: icon)),
+      radius: DS.s(22),
+      child: SizedBox(width: DS.s(44), height: DS.s(44), child: Center(child: icon)),
     );
   }
 
@@ -224,11 +224,11 @@ class _TaxiListScreenState extends State<TaxiListScreen> {
       onTap: onTap,
       splashColor: DesignColors.splash,
       child: Padding(
-        padding: EdgeInsets.only(left: 16, right: trailing != null ? 4 : 12),
+        padding: EdgeInsets.only(left: DS.s(16), right: DS.s(trailing != null ? 4 : 12)),
         child: Row(
           children: [
-            Image.asset(asset, width: 24, height: 24),
-            const SizedBox(width: 12),
+            Image.asset(asset, width: DS.s(24), height: DS.s(24)),
+            Gap.h(12),
             Expanded(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -245,8 +245,8 @@ class _TaxiListScreenState extends State<TaxiListScreen> {
                 ],
               ),
             ),
-            const SizedBox(width: 6),
-            trailing ?? const Icon(Icons.keyboard_arrow_down_rounded, size: 22, color: DesignColors.primary),
+            Gap.h(6),
+            trailing ?? Icon(Icons.keyboard_arrow_down_rounded, size: DS.s(22), color: DesignColors.primary),
           ],
         ),
       ),
@@ -282,7 +282,7 @@ class _TaxiListScreenState extends State<TaxiListScreen> {
 
   Widget _buildListHeader() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(KitMetrics.gutter, 12, KitMetrics.gutter, 4),
+      padding: EdgeInsets.fromLTRB(DS.s(KitMetrics.gutter), DS.gv(12), DS.s(KitMetrics.gutter), DS.gv(4)),
       child: Obx(() => Text(
             _ctrl.to.value != null ? 'Route taxis' : 'Taxis near you',
             maxLines: 1,
@@ -370,15 +370,15 @@ class _TaxiListScreenState extends State<TaxiListScreen> {
       if (_ctrl.items.isEmpty) return SizedBox(height: bottom);
       Widget child = const SizedBox.shrink();
       if (_ctrl.isLoadingMore.value) {
-        child = const Center(child: CircularProgressIndicator(strokeWidth: 2, color: DesignColors.primary));
+        child = Center(child: CircularProgressIndicator(strokeWidth: DS.s(2), color: DesignColors.primary));
       } else if (_ctrl.loadMoreFailed.value) {
         child = Center(
           child: TextLink(label: "Couldn't load more. Tap to retry", onTap: _ctrl.retryLoadMore),
         );
       }
       return Padding(
-        padding: EdgeInsets.only(top: 12, bottom: bottom),
-        child: SizedBox(height: 44, child: child),
+        padding: EdgeInsets.only(top: DS.gv(12), bottom: bottom),
+        child: SizedBox(height: DS.s(44), child: child),
       );
     });
   }

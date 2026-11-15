@@ -19,8 +19,8 @@ class JourneyLegTag extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-        decoration: BoxDecoration(color: TaxiOwnerLook.cream, borderRadius: BorderRadius.circular(12)),
+        padding: DS.sym(h: 12, v: 4),
+        decoration: BoxDecoration(color: TaxiOwnerLook.cream, borderRadius: DS.circular(12)),
         child: Text(text, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(11.5, FontWeight.w700, TaxiOwnerLook.creamText, letterSpacing: 0)),
       );
 }

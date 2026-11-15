@@ -44,7 +44,7 @@ class _ListingReportsScreenState extends State<ListingReportsScreen> {
         child: Column(
           children: [
             ReportHeader3D(tone: tone, title: 'Reports on $_title', subtitle: 'Reason, status and filed date only', onBack: () => Get.back()),
-            const ToastSlot(margin: EdgeInsets.fromLTRB(16, 10, 16, 0)),
+            ToastSlot(margin: EdgeInsets.fromLTRB(DS.s(16), DS.gv(10), DS.s(16), 0)),
             Expanded(
               child: KitSwitcher(
                 child: _loading
@@ -63,20 +63,20 @@ class _ListingReportsScreenState extends State<ListingReportsScreen> {
         ? LayoutBuilder(
             builder: (context, box) => SingleChildScrollView(
               physics: const BouncingScrollPhysics(),
-              padding: EdgeInsets.only(bottom: KitMetrics.gutter + AppInsets.bottomViewPadding(context)),
+              padding: EdgeInsets.only(bottom: DS.s(KitMetrics.gutter) + AppInsets.bottomViewPadding(context)),
               child: StateCard3D(
                 tone: tone,
                 art: ListingArt.clipboard,
                 title: 'No reports found',
                 layout: StateLayout.tall,
                 artInside: true,
-                minHeight: (box.maxHeight - 200).clamp(300.0, 540.0),
+                minHeight: (box.maxHeight - DS.s(200)).clamp(DS.s(300), DS.s(540)),
               ),
             ),
           )
         : ListView.builder(
             physics: const BouncingScrollPhysics(),
-            padding: EdgeInsets.only(bottom: KitMetrics.gutter + AppInsets.bottomViewPadding(context)),
+            padding: EdgeInsets.only(bottom: DS.s(KitMetrics.gutter) + AppInsets.bottomViewPadding(context)),
             itemCount: _reports.length + 1,
             itemBuilder: (_, i) {
               if (i == 0) return ReportCountLabel(_reports.length == 1 ? '1 REPORT' : '${_reports.length} REPORTS');

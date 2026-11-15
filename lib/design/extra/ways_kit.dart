@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../tokens/alpha_tokens.dart';
 import '../tokens/card_tokens.dart';
 import '../tokens/design_colors.dart';
+import '../tokens/design_scale.dart';
 import '../tokens/shadow_tokens.dart';
 import '../tokens/type_tokens.dart';
 import '../tokens/template_tokens.dart';
@@ -41,7 +42,7 @@ class WaysTopBar extends StatelessWidget {
       builder: (context, _) => FadeTransition(
         opacity: animation,
         child: Transform(
-          transform: Matrix4.translationValues(0.0, 30 * (1.0 - animation.value), 0.0),
+          transform: Matrix4.translationValues(0.0, DS.s(30) * (1.0 - animation.value), 0.0),
           child: child,
         ),
       ),
@@ -98,7 +99,7 @@ class KitFlexButton extends StatelessWidget {
         : filled
             ? (foreground ?? DesignColors.onPrimary)
             : (foreground ?? tone.accentDark);
-    final h = minHeight < KitMetrics.touch ? KitMetrics.touch : minHeight;
+    final h = DS.s(minHeight < KitMetrics.touch ? KitMetrics.touch : minHeight);
     final text = Text(
       label,
       maxLines: maxLines,
@@ -112,12 +113,12 @@ class KitFlexButton extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              if (icon != null) ...[icon!, const SizedBox(width: 6)],
+              if (icon != null) ...[icon!, Gap.h(6)],
               Flexible(child: scaleLabel ? FittedBox(fit: BoxFit.scaleDown, child: text) : text),
             ],
           );
     final inner = Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      padding: DS.sym(h: 14, v: 8),
       child: shrink ? content : Center(child: content),
     );
     return PressScale(
@@ -127,16 +128,16 @@ class KitFlexButton extends StatelessWidget {
         decoration: BoxDecoration(
           gradient: filled && live ? (gradient ?? tone.gradient) : null,
           color: filled ? (live ? null : DesignColors.surfaceMuted) : DesignColors.surface,
-          borderRadius: KitMetrics.buttonRadius,
+          borderRadius: DS.br(KitMetrics.buttonRadius),
           border: filled
               ? null
               : Border.all(color: !live ? DesignColors.border : (borderColor ?? tone.accentDark), width: 1.5),
-          boxShadow: filled && live ? ShadowTokens.glow(glowColor ?? tone.glow) : const [],
+          boxShadow: filled && live ? DS.shadows(ShadowTokens.glow(glowColor ?? tone.glow)) : const [],
         ),
         child: Material(
           color: Colors.transparent,
           child: InkWell(
-            borderRadius: KitMetrics.buttonRadius,
+            borderRadius: DS.br(KitMetrics.buttonRadius),
             splashColor: filled ? TemplateTokens.white24 : DesignColors.tint(tone.accentDark, Alpha.soft),
             highlightColor: Colors.transparent,
             onTap: enabled ? onPressed : null,
@@ -227,11 +228,11 @@ class WaysBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-      decoration: const BoxDecoration(color: DesignColors.warningSoft, borderRadius: KitMetrics.tileSmall),
+      padding: DS.sym(h: 12, v: 10),
+      decoration: BoxDecoration(color: DesignColors.warningSoft, borderRadius: DS.br(KitMetrics.tileSmall)),
       child: Row(children: [
-        Icon(icon, size: 18, color: DesignColors.warnDeep),
-        const SizedBox(width: 8),
+        Icon(icon, size: DS.s(18), color: DesignColors.warnDeep),
+        Gap.h(8),
         Expanded(
           child: Text(text, style: WaysKit.caption(12, color: DesignColors.warnDeep, weight: FontWeight.w600)),
         ),

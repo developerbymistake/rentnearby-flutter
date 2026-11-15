@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../tokens/design_colors.dart';
+import '../tokens/design_scale.dart';
 
 class WhatsAppGlyph extends StatelessWidget {
   const WhatsAppGlyph({
@@ -15,15 +16,16 @@ class WhatsAppGlyph extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final box = DS.s(size);
     return ExcludeSemantics(
       child: SizedBox(
-        width: size,
-        height: size,
+        width: box,
+        height: box,
         child: Stack(
           alignment: Alignment.center,
           children: [
-            CustomPaint(size: Size.square(size), painter: _BubblePainter(color)),
-            Icon(Icons.call_rounded, size: size * 0.52, color: onColor),
+            CustomPaint(size: Size.square(box), painter: _BubblePainter(color)),
+            Icon(Icons.call_rounded, size: box * 0.52, color: onColor),
           ],
         ),
       ),

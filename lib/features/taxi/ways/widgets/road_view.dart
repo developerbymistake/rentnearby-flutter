@@ -75,7 +75,7 @@ class RoadView extends StatelessWidget {
       child: JourneyRoadPlace(title: legs.last.to.name, caption: TaxiWaysStrings.youArrive),
     ));
     return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 18, 14, 0),
+      padding: EdgeInsets.fromLTRB(DS.s(14), DS.gv(18), DS.s(14), 0),
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: rows),
     );
   }
@@ -100,7 +100,7 @@ class RoadView extends StatelessWidget {
       ],
       sketch: geometry == null
           ? null
-          : SizedBox(height: 40, width: double.infinity, child: CustomPaint(painter: _LineSketchPainter(points: geometry, color: DesignColors.textInverse))),
+          : SizedBox(height: DS.s(40), width: double.infinity, child: CustomPaint(painter: _LineSketchPainter(points: geometry, color: DesignColors.textInverse))),
       selected: selectedLeg == leg.index,
       onTap: () => onSelectLeg(leg.index),
     );
@@ -127,7 +127,7 @@ class _LineSketchPainter extends CustomPainter {
     final kx = math.cos((minLat + maxLat) / 2 * math.pi / 180);
     final w = math.max((maxLng - minLng) * kx, 1e-6);
     final h = math.max(maxLat - minLat, 1e-6);
-    const pad = 6.0;
+    final pad = DS.s(6);
     final scale = math.min((size.width - 2 * pad) / w, (size.height - 2 * pad) / h);
     final ox = (size.width - w * scale) / 2;
     final oy = (size.height - h * scale) / 2;
@@ -142,13 +142,13 @@ class _LineSketchPainter extends CustomPainter {
       Paint()
         ..color = color
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 3
+        ..strokeWidth = DS.s(3)
         ..strokeJoin = StrokeJoin.round
         ..strokeCap = StrokeCap.round,
     );
     final dot = Paint()..color = color;
-    canvas.drawCircle(at(points.first), 3.5, dot);
-    canvas.drawCircle(at(points.last), 3.5, dot);
+    canvas.drawCircle(at(points.first), DS.s(3.5), dot);
+    canvas.drawCircle(at(points.last), DS.s(3.5), dot);
   }
 
   @override

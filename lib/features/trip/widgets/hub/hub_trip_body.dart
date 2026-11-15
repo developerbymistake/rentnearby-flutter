@@ -65,17 +65,17 @@ class HubTripBody extends StatelessWidget {
                     value: p.total == 0 ? '0' : TripStringsHubTrips.stepsOf(p.done, p.total),
                     label: p.total == 0 ? TripStringsV2Plan.nothingToArrange : TripStringsHubTrips.stepsDone,
                   ),
-                  const SizedBox(height: 12),
+                  Gap.v(12),
                   if (past)
                     _Stat(icon: TravelIcon.calendar, value: TripStringsHubTrips.doneLabel, label: _pastDate(trip))
                   else
                     _Stat(icon: TravelIcon.bell, value: '$needs', label: TripStringsHubTrips.needsYou),
-                  const SizedBox(height: 12),
+                  Gap.v(12),
                 ],
               ),
             ),
             Padding(
-              padding: const EdgeInsets.only(right: 2),
+              padding: EdgeInsets.only(right: DS.s(2)),
               child: HubRing(
                 percent: percent,
                 size: 104,
@@ -116,13 +116,13 @@ class _Stat extends StatelessWidget {
     return Row(
       children: [
         Container(
-          width: 34,
-          height: 34,
+          width: DS.s(34),
+          height: DS.s(34),
           alignment: Alignment.center,
           decoration: const BoxDecoration(color: HubTokens.chipBg, shape: BoxShape.circle),
-          child: Image.asset(icon, width: 22, height: 22),
+          child: Image.asset(icon, width: DS.s(22), height: DS.s(22)),
         ),
-        const SizedBox(width: 10),
+        Gap.h(10),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -157,12 +157,12 @@ class _Strip extends StatelessWidget {
     final to = past ? const Color(0xFF6B7488) : HubTokens.accent;
     final shadow = past ? const Color(0x386B7488) : const Color(0x405C5EDD);
     return Padding(
-      padding: const EdgeInsets.only(top: 14),
+      padding: EdgeInsets.only(top: DS.gv(14)),
       child: DecoratedBox(
         decoration: BoxDecoration(
           borderRadius: HubTokens.cardRadius(30),
           gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [from, to]),
-          boxShadow: [BoxShadow(color: shadow, offset: const Offset(0, 6), blurRadius: 14)],
+          boxShadow: [BoxShadow(color: shadow, offset: Offset(0, DS.s(6)), blurRadius: DS.s(14))],
         ),
         child: Material(
           color: Colors.transparent,
@@ -170,7 +170,7 @@ class _Strip extends StatelessWidget {
             onTap: onTap,
             borderRadius: HubTokens.cardRadius(30),
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 13, 12, 13),
+              padding: DS.insets(l: 16, t: 13, r: 12, b: 13),
               child: Row(
                 children: [
                   Expanded(
@@ -190,17 +190,17 @@ class _Strip extends StatelessWidget {
                       ],
                     ),
                   ),
-                  const SizedBox(width: 10),
+                  Gap.h(10),
                   Container(
-                    width: 38,
-                    height: 38,
-                    decoration: const BoxDecoration(
+                    width: DS.s(38),
+                    height: DS.s(38),
+                    decoration: BoxDecoration(
                       color: Color(0xFFFAFAFA),
                       shape: BoxShape.circle,
-                      boxShadow: [BoxShadow(color: Color(0x2E000000), offset: Offset(3, 5), blurRadius: 8)],
+                      boxShadow: [BoxShadow(color: const Color(0x2E000000), offset: Offset(DS.s(3), DS.s(5)), blurRadius: DS.s(8))],
                     ),
                     alignment: Alignment.center,
-                    child: Icon(past ? Icons.north_east_rounded : Icons.arrow_forward_rounded, size: 20, color: color),
+                    child: Icon(past ? Icons.north_east_rounded : Icons.arrow_forward_rounded, size: DS.s(20), color: color),
                   ),
                 ],
               ),

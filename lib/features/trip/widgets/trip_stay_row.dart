@@ -132,7 +132,6 @@ class TripStayRow extends StatelessWidget {
   static const String _from = 'FROM';
   static const String _group = 'YOUR GROUP';
   static const String _perNight = '/night';
-  static const List<String> _stickers = [ListingArt.key, ListingArt.bed, ListingArt.hotel];
 
   @override
   Widget build(BuildContext context) {
@@ -145,7 +144,7 @@ class TripStayRow extends StatelessWidget {
     final st = status;
     final url = stay.thumbnailUrl;
     final hasPhoto = url != null && url.isNotEmpty;
-    final sticker = _stickers[index % _stickers.length];
+    const sticker = ListingArt.stay;
     final line = _paused ? null : statusLine;
     final km = nearKm > 0 ? TripStringsFinalAa.kmAway(nearKm) : null;
     return EntranceOnce(

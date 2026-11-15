@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../tokens/card_tokens.dart';
 import '../tokens/design_colors.dart';
+import '../tokens/design_scale.dart';
 import '../tokens/shadow_tokens.dart';
 import 'buttons_kit.dart';
 import 'kit_tone.dart';
@@ -130,12 +131,12 @@ class PickEmpty extends StatelessWidget {
     final tone = identical(gradient, PickKit.tripGradient) ? KitTone.brand : tripToneOf(gradient, accent);
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: DS.all(24),
         child: TripKitStateView(
           carded: true,
           tone: tone,
-          padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
-          leading: asset != null ? TravelIcon(asset!, size: 40) : Icon(icon, size: 34, color: tone.accentDark),
+          padding: DS.insets(l: 20, t: 24, r: 20, b: 20),
+          leading: asset != null ? TravelIcon(asset!, size: 40) : Icon(icon, size: DS.s(34), color: tone.accentDark),
           title: title,
           subtitle: subtitle,
           actionLabel: onRetry != null ? retryLabel : null,

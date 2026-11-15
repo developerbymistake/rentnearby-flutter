@@ -34,7 +34,7 @@ class _SpotlightPainter extends CustomPainter {
     // is also what's shown when reduced-motion is on and the controller
     // never starts (parked at its initial value 0.0).
     final t = Curves.fastOutSlowIn.transform(pulse.value);
-    final ringWidth = 8.0 + (11.0 - 8.0) * t;
+    final ringWidth = DS.s(8.0) + (DS.s(11.0) - DS.s(8.0)) * t;
     final ringOpacity = 0.55 + (0.30 - 0.55) * t;
     final ringRRect = RRect.fromRectAndRadius(
       targetRect.inflate(ringWidth / 2),
@@ -52,7 +52,7 @@ class _SpotlightPainter extends CustomPainter {
       rrect,
       Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 2.5
+        ..strokeWidth = DS.s(2.5)
         ..color = FitnessAppTheme.white.withValues(alpha: Alpha.high),
     );
   }
@@ -136,7 +136,7 @@ class _TourOverlayState extends State<TourOverlay>
     if (!isTourTargetReady(widget.step.key)) return const SizedBox.shrink();
     final renderBox = widget.step.key.currentContext!.findRenderObject() as RenderBox;
     final targetRect =
-        (renderBox.localToGlobal(Offset.zero) & renderBox.size).inflate(8);
+        (renderBox.localToGlobal(Offset.zero) & renderBox.size).inflate(DS.s(8));
     final screenSize = MediaQuery.of(context).size;
     final viewPadding = MediaQuery.of(context).viewPadding;
     final isLast = widget.index == widget.total - 1;
@@ -176,18 +176,18 @@ class _TourOverlayState extends State<TourOverlay>
               child: CustomPaint(
                 painter: _SpotlightPainter(
                   targetRect: targetRect,
-                  radius: 14,
+                  radius: DS.s(14),
                   pulse: _pulseController,
                 ),
               ),
             ),
             Positioned(
-              left: 20,
-              right: 20,
-              top: showBelow ? targetRect.bottom + 16 : null,
+              left: DS.s(20),
+              right: DS.s(20),
+              top: showBelow ? targetRect.bottom + DS.gv(16) : null,
               bottom: showBelow
                   ? null
-                  : (screenSize.height - targetRect.top + 16),
+                  : (screenSize.height - targetRect.top + DS.gv(16)),
               child: _TourCard(
                 key: ValueKey('tour-card-${widget.index}'),
                 step: widget.step,
@@ -259,7 +259,7 @@ class _TourCardState extends State<_TourCard> with SingleTickerProviderStateMixi
   Widget _card(TourStep step, int index, int total, String tourLabel, bool isLast, VoidCallback onNext,
       VoidCallback onSkip) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(18, 18, 26, 14),
+      padding: DS.insets(l: 18, t: 18, r: 26, b: 14),
       decoration: GateKit.card(),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -268,12 +268,12 @@ class _TourCardState extends State<_TourCard> with SingleTickerProviderStateMixi
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(step.icon, size: 13, color: FitnessAppTheme.nearlyBlue),
-              const SizedBox(width: 5),
+              Icon(step.icon, size: DS.s(13), color: FitnessAppTheme.nearlyBlue),
+              SizedBox(width: DS.s(5)),
               Text(
                 '${tourLabel.toUpperCase()} · ${index + 1} OF $total',
                 style: FitnessAppTheme.caption.copyWith(
-                  fontSize: 11,
+                  fontSize: DS.f(11),
                   fontWeight: FontWeight.w700,
                   letterSpacing: 0.6,
                   color: FitnessAppTheme.nearlyBlue,
@@ -281,31 +281,31 @@ class _TourCardState extends State<_TourCard> with SingleTickerProviderStateMixi
               ),
             ],
           ),
-          const SizedBox(height: 6),
-          Text(step.title, style: FitnessAppTheme.title.copyWith(fontSize: 15)),
-          const SizedBox(height: 6),
+          SizedBox(height: DS.s(6)),
+          Text(step.title, style: FitnessAppTheme.title.copyWith(fontSize: DS.f(15))),
+          SizedBox(height: DS.s(6)),
           Text(
             step.body,
-            style: FitnessAppTheme.body2.copyWith(fontSize: 12.5, height: 1.5, color: FitnessAppTheme.lightText),
+            style: FitnessAppTheme.body2.copyWith(fontSize: DS.f(12.5), height: 1.5, color: FitnessAppTheme.lightText),
           ),
-          const SizedBox(height: 14),
+          SizedBox(height: DS.s(14)),
           Row(
             children: List.generate(total, (i) {
               final active = i == index;
               return AnimatedContainer(
                 duration: templateTransitionDuration,
-                margin: const EdgeInsets.only(right: 4),
-                width: active ? 14 : 5,
-                height: 5,
+                margin: EdgeInsets.only(right: DS.s(4)),
+                width: DS.s(active ? 14 : 5),
+                height: DS.s(5),
                 decoration: BoxDecoration(
                   color: active ? null : FitnessAppTheme.spacer,
                   gradient: active ? TripEntryStyle.gradient : null,
-                  borderRadius: BorderRadius.circular(32),
+                  borderRadius: DS.circular(32),
                 ),
               );
             }),
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: DS.s(12)),
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
@@ -316,9 +316,9 @@ class _TourCardState extends State<_TourCard> with SingleTickerProviderStateMixi
                 fontSize: 12.5,
                 weight: FontWeight.w700,
               ),
-              const SizedBox(width: 4),
+              SizedBox(width: DS.s(4)),
               SizedBox(
-                width: 110,
+                width: DS.s(110),
                 child: GateButton(
                   label: isLast ? 'Finish' : 'Next',
                   height: 40,

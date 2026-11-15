@@ -227,16 +227,16 @@ class _UpdateBodyState extends State<_UpdateBody> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           GradientPillButton(tone: tone, label: TripStringsV2Find.updateAsk, loading: _busy, onTap: _busy ? null : _update),
-          const SizedBox(height: 10),
+          Gap.v(10),
           WhitePillButton(tone: tone, label: TripStringsV2Find.keepAsIs, onTap: _busy ? null : () => Navigator.pop(context, false)),
         ],
       ),
       children: [
         for (final (taxi, r) in strips)
-          ReplySummaryStrip(tone: taxi ? ListingTone.coral : tone, title: r.title, subtitle: r.sub, trailing: const Icon(Icons.refresh_rounded, size: 26, color: DesignColors.textInverse), margin: const EdgeInsets.only(top: 12)),
+          ReplySummaryStrip(tone: taxi ? ListingTone.coral : tone, title: r.title, subtitle: r.sub, trailing: Icon(Icons.refresh_rounded, size: DS.s(26), color: DesignColors.textInverse), margin: EdgeInsets.only(top: DS.gv(12))),
         if (widget.confirmed.isNotEmpty || widget.confirmedTaxis.isNotEmpty)
           Padding(
-            padding: const EdgeInsets.only(top: 12),
+            padding: EdgeInsets.only(top: DS.gv(12)),
             child: Text(
               TripStringsV2Find.confirmedRow((widget.confirmedTaxis.isNotEmpty ? widget.confirmedTaxis : widget.confirmed).first.listingName),
               textAlign: TextAlign.center,

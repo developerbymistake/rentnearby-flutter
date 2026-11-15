@@ -283,7 +283,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
             controller: _otpCtrl,
             focusNode: _otpFocus,
             length: 4,
-            separatorBuilder: (_) => const SizedBox(width: 12),
+            separatorBuilder: (_) => Gap.h(12),
             defaultPinTheme: _defaultTheme,
             focusedPinTheme: _focusedTheme,
             submittedPinTheme: _submittedTheme,

@@ -55,12 +55,12 @@ class _JobsFilterSheetState extends State<JobsFilterSheet> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(label, style: _sectionLabelStyle),
-          const SizedBox(height: 8),
+          Gap.v(8),
           chips,
           if (!last) ...[
-            const SizedBox(height: 12),
+            Gap.v(12),
             const Divider(height: 1, color: DesignColors.dividerSoft),
-            const SizedBox(height: 16),
+            Gap.v(16),
           ],
         ],
       );
@@ -94,7 +94,7 @@ class _JobsFilterSheetState extends State<JobsFilterSheet> {
               }),
             ),
           ),
-          const SizedBox(width: 12),
+          Gap.h(12),
           Expanded(
             flex: 2,
             child: PrimaryButton(
@@ -141,5 +141,5 @@ class _JobsFilterSheetState extends State<JobsFilterSheet> {
 
   static JobExperienceBucket? _experienceAt(int i) => i == 0 ? null : JobExperienceBucket.all[i - 1];
 
-  static final _sectionLabelStyle = TypeTokens.style(11, FontWeight.w600, color: DesignColors.textSecondary, letterSpacing: 0.4);
+  static TextStyle get _sectionLabelStyle => TypeTokens.style(11, FontWeight.w600, color: DesignColors.textSecondary, letterSpacing: 0.4);
 }

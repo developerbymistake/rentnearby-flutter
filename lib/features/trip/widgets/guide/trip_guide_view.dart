@@ -128,7 +128,7 @@ class _TripGuideViewState extends State<TripGuideView> {
         body: TripStringsGuide.sentBody(_g.sent[key] ?? 0, taxi: !step.isStay),
         asset: ListingArt.speechBalloon,
         tone: tone,
-        child: TripGuideSentRows(names: _sentNames[key] ?? _sl.namesOf(key).values.toList(), art: asset),
+        child: TripGuideSentRows(names: _sentNames[key] ?? _sl.namesOf(key).values.toList(), art: step.isStay ? ListingArt.stay : asset),
       );
     }
     switch (k.card) {

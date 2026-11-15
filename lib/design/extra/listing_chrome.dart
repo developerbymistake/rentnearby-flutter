@@ -34,8 +34,8 @@ List<BoxShadow> _toneShadow(
 ]) => [
   BoxShadow(
     color: tone.haloBase.withValues(alpha: alpha),
-    offset: offset,
-    blurRadius: blur,
+    offset: DS.shadowOffset(offset),
+    blurRadius: DS.shadowBlur(blur),
   ),
 ];
 
@@ -88,15 +88,15 @@ class ChipCP extends StatelessWidget {
           clipBehavior: Clip.none,
           children: [
             Padding(
-              padding: const EdgeInsets.only(top: 20),
+              padding: EdgeInsets.only(top: DS.s(20)),
               child: DecoratedBox(
                 decoration: BoxDecoration(
-                  borderRadius: _kChipRadius,
+                  borderRadius: DS.br(_kChipRadius),
                   gradient: tone.gradient,
                   boxShadow: off ? const [] : tone.glow(blur: 8),
                 ),
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(70, 12, 18, 12),
+                  padding: DS.insets(l: 70, t: 12, r: 18, b: 12),
                   child: Text(
                     label,
                     maxLines: 1,
@@ -113,7 +113,7 @@ class ChipCP extends StatelessWidget {
               ),
             ),
             Positioned(
-              left: 6,
+              left: DS.s(6),
               top: 0,
               child: Art3D(
                 asset: art,
@@ -148,15 +148,17 @@ class ChipCPRow extends StatelessWidget {
       controller: controller,
       scrollDirection: Axis.horizontal,
       clipBehavior: Clip.none,
-      padding: padding.copyWith(
-        top: (padding.top - 20).clamp(0, double.infinity),
-        bottom: padding.bottom + 8,
+      padding: EdgeInsets.fromLTRB(
+        DS.s(padding.left),
+        DS.gv((padding.top - 20).clamp(0, double.infinity)),
+        DS.s(padding.right),
+        DS.gv(padding.bottom + 8),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           for (var i = 0; i < children.length; i++) ...[
-            if (i > 0) const SizedBox(width: 12),
+            if (i > 0) Gap.h(12),
             children[i],
           ],
         ],
@@ -205,14 +207,14 @@ class SearchPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final size = inline ? 44.0 : 56.0;
+    final size = DS.s(inline ? 44.0 : 56.0);
     final text = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
         if (label != null)
           Padding(
-            padding: const EdgeInsets.only(bottom: 1),
+            padding: EdgeInsets.only(bottom: DS.s(1)),
             child: Text(
               label!,
               maxLines: 1,
@@ -297,26 +299,26 @@ class SearchPill extends StatelessWidget {
     );
     final pill = BoxDecoration(
       color: Colors.white,
-      borderRadius: const BorderRadius.all(Radius.circular(38)),
+      borderRadius: DS.circular(38),
       boxShadow: flat
-          ? const [
+          ? DS.shadows(const [
               BoxShadow(
                 color: Color(0x1F000000),
                 offset: Offset(0, 3),
                 blurRadius: 10,
               ),
-            ]
-          : _kFieldShadow,
+            ])
+          : DS.shadows(_kFieldShadow),
     );
     if (inline) {
       final body = Container(
-        margin: margin ?? const EdgeInsets.fromLTRB(18, 16, 18, 0),
-        padding: padding ?? const EdgeInsets.fromLTRB(20, 10, 12, 10),
+        margin: margin ?? EdgeInsets.fromLTRB(DS.s(18), DS.gv(16), DS.s(18), 0),
+        padding: padding ?? DS.insets(l: 20, t: 10, r: 12, b: 10),
         decoration: pill,
         child: Row(
           children: [
             Expanded(child: field ?? text),
-            const SizedBox(width: 10),
+            SizedBox(width: DS.s(10)),
             button,
           ],
         ),
@@ -330,7 +332,7 @@ class SearchPill extends StatelessWidget {
     }
     return Padding(
       padding:
-          margin ?? const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          margin ?? EdgeInsets.symmetric(horizontal: DS.s(16), vertical: DS.gv(10)),
       child: Row(
         children: [
           Expanded(
@@ -340,12 +342,12 @@ class SearchPill extends StatelessWidget {
                 behavior: HitTestBehavior.opaque,
                 onTap: onTap,
                 child: Container(
-                  constraints: const BoxConstraints(minHeight: 64),
-                  padding: EdgeInsets.fromLTRB(
-                    leadingArt == null ? 22 : 12,
-                    10,
-                    18,
-                    10,
+                  constraints: BoxConstraints(minHeight: DS.s(64)),
+                  padding: DS.insets(
+                    l: leadingArt == null ? 22 : 12,
+                    t: 10,
+                    r: 18,
+                    b: 10,
                   ),
                   decoration: pill,
                   child: Row(
@@ -358,7 +360,7 @@ class SearchPill extends StatelessWidget {
                           shadowOffset: const Offset(2, 4),
                           shadowAlpha: 0.25,
                         ),
-                        const SizedBox(width: 12),
+                        SizedBox(width: DS.s(12)),
                       ],
                       Expanded(child: text),
                     ],
@@ -367,7 +369,7 @@ class SearchPill extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(width: 10),
+          Gap.h(10),
           button,
         ],
       ),
@@ -398,7 +400,7 @@ class ModuleTitleBar extends StatelessWidget {
     final narrow = MediaQuery.sizeOf(context).width < 340;
     final hasArt = art.isNotEmpty;
     final size = narrow ? 58.0 : 71.0;
-    final halo = size + 6;
+    final halo = DS.s(size + 6);
     final t = Text(
       title,
       maxLines: 2,
@@ -414,16 +416,16 @@ class ModuleTitleBar extends StatelessWidget {
             style: Ink3D.text(14, FontWeight.w400, Ink3D.sub, letterSpacing: 0),
           );
     return ConstrainedBox(
-      constraints: const BoxConstraints(minHeight: 100),
+      constraints: BoxConstraints(minHeight: DS.s(100)),
       child: Padding(
-        padding: const EdgeInsets.only(top: 12),
+        padding: EdgeInsets.only(top: DS.gv(12)),
         child: Stack(
           clipBehavior: Clip.none,
           children: [
             if (hasArt) ...[
               Positioned(
-                right: 12,
-                top: -4,
+                right: DS.s(12),
+                top: DS.s(-4),
                 child: ExcludeSemantics(
                   child: Container(
                     width: halo,
@@ -436,15 +438,15 @@ class ModuleTitleBar extends StatelessWidget {
                 ),
               ),
               Positioned(
-                right: 16,
-                top: -6,
+                right: DS.s(16),
+                top: DS.s(-6),
                 child: ExcludeSemantics(
                   child: Art3D(asset: art, size: size),
                 ),
               ),
             ],
             Padding(
-              padding: EdgeInsets.fromLTRB(18, 10, hasArt ? size + 22 : 18, 0),
+              padding: EdgeInsets.fromLTRB(DS.s(18), DS.s(10), DS.s(hasArt ? size + 22 : 18), 0),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
@@ -457,7 +459,7 @@ class ModuleTitleBar extends StatelessWidget {
                         t,
                         if (!subtitleFirst && s != null)
                           Padding(
-                            padding: const EdgeInsets.only(top: 3),
+                            padding: EdgeInsets.only(top: DS.s(3)),
                             child: s,
                           ),
                       ],
@@ -465,7 +467,7 @@ class ModuleTitleBar extends StatelessWidget {
                   ),
                   if (trailing != null)
                     Padding(
-                      padding: const EdgeInsets.only(left: 10),
+                      padding: EdgeInsets.only(left: DS.gh(10)),
                       child: trailing,
                     ),
                 ],
@@ -573,7 +575,7 @@ class TitleRow3D extends StatelessWidget {
     final t = tone ?? ListingTone.indigo;
     final sub = subtitle;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(18, 28, 18, 10),
+      padding: EdgeInsets.fromLTRB(DS.s(18), DS.gv(28), DS.s(18), DS.gv(10)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
@@ -599,16 +601,16 @@ class TitleRow3D extends StatelessWidget {
               ),
               if (trailing != null)
                 Padding(
-                  padding: const EdgeInsets.only(left: 10),
+                  padding: EdgeInsets.only(left: DS.gh(10)),
                   child: trailing,
                 ),
               if (trailing == null && action != null)
                 Padding(
-                  padding: const EdgeInsets.only(left: 10),
+                  padding: EdgeInsets.only(left: DS.gh(10)),
                   child: _tap(
                     onTap: onAction,
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      padding: DS.sym(v: 6),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
@@ -622,8 +624,8 @@ class TitleRow3D extends StatelessWidget {
                               letterSpacing: 0.4,
                             ),
                           ),
-                          const SizedBox(width: 4),
-                          Icon(Icons.arrow_forward, size: 18, color: t.text),
+                          SizedBox(width: DS.s(4)),
+                          Icon(Icons.arrow_forward, size: DS.s(18), color: t.text),
                         ],
                       ),
                     ),
@@ -633,7 +635,7 @@ class TitleRow3D extends StatelessWidget {
           ),
           if (sub != null && sub.isNotEmpty)
             Padding(
-              padding: const EdgeInsets.only(top: 4),
+              padding: EdgeInsets.only(top: DS.s(4)),
               child: Text(
                 sub,
                 maxLines: 2,
@@ -676,21 +678,21 @@ class ListingFilterChip extends StatelessWidget {
     return _tap(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: DS.sym(h: 16, v: 8),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(22),
+          borderRadius: DS.circular(22),
           gradient: selected ? tone.gradient : null,
           color: selected ? null : Colors.white,
           boxShadow: selected
               ? _toneShadow(tone, const Offset(1.1, 4), 8)
-              : Ink3D.softShadow,
+              : DS.shadows(Ink3D.softShadow),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             if (icon != null) ...[
-              Icon(icon, size: 16, color: ink),
-              const SizedBox(width: 6),
+              Icon(icon, size: DS.s(16), color: ink),
+              SizedBox(width: DS.s(6)),
             ],
             Flexible(
               child: Text(
@@ -701,10 +703,10 @@ class ListingFilterChip extends StatelessWidget {
               ),
             ),
             if (dot) ...[
-              const SizedBox(width: 7),
+              SizedBox(width: DS.s(7)),
               Container(
-                width: 8,
-                height: 8,
+                width: DS.s(8),
+                height: DS.s(8),
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: selected ? Colors.white : tone.g2,
@@ -737,9 +739,9 @@ class MapPill3D extends StatelessWidget {
     return _tap(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.fromLTRB(12, 10, 22, 10),
+        padding: DS.insets(l: 12, t: 10, r: 22, b: 10),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(26),
+          borderRadius: DS.circular(26),
           gradient: tone.gradient,
           boxShadow: _toneShadow(tone, const Offset(3, 8), 14, 0.55),
         ),
@@ -753,7 +755,7 @@ class MapPill3D extends StatelessWidget {
               shadowOffset: const Offset(2, 3),
               shadowAlpha: 0.3,
             ),
-            const SizedBox(width: 8),
+            SizedBox(width: DS.s(8)),
             Flexible(
               child: Text(
                 label,
@@ -798,7 +800,7 @@ class TopBar3D extends StatelessWidget {
   Widget build(BuildContext context) {
     final chip = stepChip;
     final bar = Padding(
-      padding: const EdgeInsets.fromLTRB(18, 10, 18, 0),
+      padding: EdgeInsets.fromLTRB(DS.s(18), DS.gv(10), DS.s(18), 0),
       child: Row(
         children: [
           if (onBack != null) ...[
@@ -807,22 +809,22 @@ class TopBar3D extends StatelessWidget {
               child: _tap(
                 onTap: onBack,
                 child: Container(
-                  width: 46,
-                  height: 46,
-                  decoration: const BoxDecoration(
+                  width: DS.s(46),
+                  height: DS.s(46),
+                  decoration: BoxDecoration(
                     color: Colors.white,
                     shape: BoxShape.circle,
-                    boxShadow: Ink3D.softShadow,
+                    boxShadow: DS.shadows(Ink3D.softShadow),
                   ),
                   child: Icon(
                     Icons.chevron_left_rounded,
-                    size: 26,
+                    size: DS.s(26),
                     color: tone.text,
                   ),
                 ),
               ),
             ),
-            const SizedBox(width: 12),
+            Gap.h(12),
           ],
           Expanded(
             child: Column(
@@ -860,11 +862,11 @@ class TopBar3D extends StatelessWidget {
             ),
           ),
           if (chip != null && chip.isNotEmpty) ...[
-            const SizedBox(width: 12),
+            Gap.h(12),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              padding: DS.sym(h: 12, v: 6),
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: DS.circular(14),
                 gradient: tone.gradient,
                 boxShadow: _toneShadow(tone, const Offset(1.1, 3), 8),
               ),
@@ -881,7 +883,7 @@ class TopBar3D extends StatelessWidget {
             ),
           ],
           if (trailing != null)
-            Padding(padding: const EdgeInsets.only(left: 12), child: trailing),
+            Padding(padding: EdgeInsets.only(left: DS.gh(12)), child: trailing),
         ],
       ),
     );
@@ -909,25 +911,25 @@ class DisclaimerBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: margin,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      decoration: const BoxDecoration(
+      margin: EdgeInsets.fromLTRB(DS.s(margin.left), DS.gv(margin.top), DS.s(margin.right), DS.gv(margin.bottom)),
+      padding: DS.sym(h: 16, v: 14),
+      decoration: BoxDecoration(
         color: _kBannerFill,
-        borderRadius: _kChipRadius,
-        boxShadow: [
+        borderRadius: DS.br(_kChipRadius),
+        boxShadow: DS.shadows(const [
           BoxShadow(
             color: Color(0x409E9E9E),
             offset: Offset(1.1, 1.1),
             blurRadius: 10,
           ),
-        ],
+        ]),
       ),
       child: Row(
         children: [
           ExcludeSemantics(
-            child: Image.asset(art, width: 34, height: 34, fit: BoxFit.contain),
+            child: Image.asset(art, width: DS.s(34), height: DS.s(34), fit: BoxFit.contain),
           ),
-          const SizedBox(width: 10),
+          SizedBox(width: DS.s(10)),
           Expanded(
             child: Text(
               text,
@@ -963,17 +965,17 @@ class _DockShell extends StatelessWidget {
   Widget build(BuildContext context) {
     final inset = MediaQuery.paddingOf(context).bottom;
     return Container(
-      constraints: BoxConstraints(minHeight: 86 + inset),
-      padding: EdgeInsets.fromLTRB(side, 10, side, 12 + inset),
-      decoration: const BoxDecoration(
+      constraints: BoxConstraints(minHeight: DS.s(86) + inset),
+      padding: EdgeInsets.fromLTRB(DS.s(side), DS.s(10), DS.s(side), DS.s(12) + inset),
+      decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-        boxShadow: Ink3D.topEdge,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(DS.radius(16))),
+        boxShadow: DS.shadows(Ink3D.topEdge),
       ),
       child: Align(
         heightFactor: 1,
         child: ConstrainedBox(
-          constraints: BoxConstraints(maxWidth: maxWidth, minHeight: 64),
+          constraints: BoxConstraints(maxWidth: maxWidth, minHeight: DS.s(64)),
           child: Center(heightFactor: 1, child: child),
         ),
       ),
@@ -1023,7 +1025,7 @@ class DockBar extends StatelessWidget {
         ),
         if (subtitle.isNotEmpty)
           Padding(
-            padding: const EdgeInsets.only(top: 2),
+            padding: EdgeInsets.only(top: DS.s(2)),
             child: Text(
               subtitle,
               key: subtitleKey,
@@ -1049,13 +1051,13 @@ class DockBar extends StatelessWidget {
               onTap: enabled ? onAction : null,
               label: loading ? label : null,
               child: Container(
-                padding: EdgeInsets.symmetric(
-                  horizontal: stacked ? 20 : 38,
-                  vertical: 14,
+                padding: DS.sym(
+                  h: stacked ? 20 : 38,
+                  v: 14,
                 ),
                 alignment: stacked ? Alignment.center : null,
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(30),
+                  borderRadius: DS.circular(30),
                   gradient: tone.gradient,
                   boxShadow: _toneShadow(tone, const Offset(3, 8), 14),
                 ),
@@ -1077,11 +1079,11 @@ class DockBar extends StatelessWidget {
                       ),
                     ),
                     if (loading)
-                      const SizedBox(
-                        width: 18,
-                        height: 18,
+                      SizedBox(
+                        width: DS.s(18),
+                        height: DS.s(18),
                         child: CircularProgressIndicator(
-                          strokeWidth: 2.2,
+                          strokeWidth: DS.s(2.2),
                           color: Colors.white,
                         ),
                       ),
@@ -1100,7 +1102,7 @@ class DockBar extends StatelessWidget {
                 text,
                 if (button != null)
                   Padding(
-                    padding: const EdgeInsets.only(top: 10),
+                    padding: EdgeInsets.only(top: DS.gv(10)),
                     child: button,
                   ),
               ],
@@ -1110,7 +1112,7 @@ class DockBar extends StatelessWidget {
                 children: [
                   Expanded(child: text),
                   if (button != null) ...[
-                    const SizedBox(width: 12),
+                    Gap.h(12),
                     ConstrainedBox(
                       constraints: BoxConstraints(
                         maxWidth: box.maxWidth * 0.58,
@@ -1147,10 +1149,10 @@ class DockLinks extends StatelessWidget {
     child: _tap(
       onTap: onTap,
       child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 48),
+        constraints: BoxConstraints(minHeight: DS.s(48)),
         child: Center(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+            padding: DS.all(4),
             child: Text(
               label,
               maxLines: 3,
@@ -1180,7 +1182,7 @@ class DockLinks extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _link(firstLabel, onFirst, (tone ?? ListingTone.indigo).text),
-            const SizedBox(width: 8),
+            Gap.h(8),
             _link(secondLabel, onSecond, Ink3D.grey),
           ],
         ),
@@ -1223,12 +1225,12 @@ class IconRow3D extends StatelessWidget {
               border: Border(top: BorderSide(color: Ink3D.line)),
             )
           : null,
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 13),
+      padding: DS.sym(h: 18, v: 13),
       child: Row(
         children: [
           SizedBox(
-            width: tile,
-            height: tile,
+            width: DS.s(tile),
+            height: DS.s(tile),
             child: Stack(
               clipBehavior: Clip.none,
               children: [
@@ -1236,13 +1238,13 @@ class IconRow3D extends StatelessWidget {
                   child: DecoratedBox(
                     decoration: BoxDecoration(
                       color: t.haloBase.withValues(alpha: 0.14),
-                      borderRadius: BorderRadius.circular(tile > 56 ? 18 : 16),
+                      borderRadius: DS.circular(tile > 56 ? 18 : 16),
                     ),
                   ),
                 ),
                 Positioned(
-                  left: -2,
-                  top: tile > 56 ? -12 : -10,
+                  left: DS.s(-2),
+                  top: DS.s(tile > 56 ? -12 : -10),
                   child: ExcludeSemantics(
                     child: Art3D(
                       asset: art,
@@ -1256,7 +1258,7 @@ class IconRow3D extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(width: 14),
+          SizedBox(width: DS.s(14)),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1292,11 +1294,11 @@ class IconRow3D extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(width: 8),
+          SizedBox(width: DS.s(8)),
           trailing ??
-              const Icon(
+              Icon(
                 Icons.chevron_right_rounded,
-                size: 22,
+                size: DS.s(22),
                 color: _kChevron,
               ),
         ],
@@ -1329,18 +1331,18 @@ class WhiteCard3D extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: margin,
-      padding: padding,
-      decoration: const BoxDecoration(
+      margin: EdgeInsets.fromLTRB(DS.s(margin.left), DS.gv(margin.top), DS.s(margin.right), DS.gv(margin.bottom)),
+      padding: DS.insets(l: padding.left, t: padding.top, r: padding.right, b: padding.bottom),
+      decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: _kWhiteCardRadius,
-        boxShadow: [
+        borderRadius: DS.br(_kWhiteCardRadius),
+        boxShadow: DS.shadows(const [
           BoxShadow(
             color: Color(0x339E9E9E),
             offset: Offset(1.1, 1.1),
             blurRadius: 10,
           ),
-        ],
+        ]),
       ),
       child: child,
     );

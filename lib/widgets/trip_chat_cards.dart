@@ -135,12 +135,12 @@ class TripChatCards {
     final recent = DateTime.now().difference(m.createdAt).inSeconds.abs() < 10;
     return RepliesEntrance(
       animate: recent,
-      child: Padding(padding: const EdgeInsets.symmetric(vertical: 2), child: card),
+      child: Padding(padding: EdgeInsets.symmetric(vertical: DS.gv(2)), child: card),
     );
   }
 
   static Widget bubble(MessageModel m, String text) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 3),
+        padding: EdgeInsets.symmetric(vertical: DS.gv(3)),
         child: ChatBubble3D(
           tone: ListingTone.forest,
           text: text,
@@ -193,7 +193,7 @@ class TripChatCards {
       m,
       ChatTripCard3D(
         status: pill.$1,
-        art: ListingArt.hotel,
+        art: ListingArt.stay,
         pill: pill.$2,
         title: title,
         line: [if (nights != null) TripStrings.nights(nights), ?range].join(' · '),

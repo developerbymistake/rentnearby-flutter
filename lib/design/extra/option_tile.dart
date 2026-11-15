@@ -1,3 +1,4 @@
+import 'package:bakhli/design/tokens/design_scale.dart';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
@@ -56,13 +57,13 @@ class OptionTileGrid extends StatelessWidget {
           Container(
             height: height,
             alignment: Alignment.bottomCenter,
-            padding: const EdgeInsets.fromLTRB(4, 0, 4, 10),
+            padding: DS.insets(l: 4, r: 4, b: 10),
             decoration: BoxDecoration(
-              borderRadius: const BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(22), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8)),
+              borderRadius: DS.br(const BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(22), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8))),
               color: on ? null : Form3D.wash(tone, 0.11),
               gradient: on ? tone.gradient : null,
               border: bad ? Border.all(color: Form3D.error, width: 1.5) : null,
-              boxShadow: on ? [BoxShadow(color: tone.shadow, offset: const Offset(1.1, 4), blurRadius: 8)] : null,
+              boxShadow: on ? DS.shadows([BoxShadow(color: tone.shadow, offset: const Offset(1.1, 4), blurRadius: 8)]) : null,
             ),
             child: FittedBox(
               fit: BoxFit.scaleDown,
@@ -70,25 +71,25 @@ class OptionTileGrid extends StatelessWidget {
             ),
           ),
           Positioned(
-            top: -32,
+            top: DS.s(-32),
             child: Art3D(asset: item.art, size: art, halo: halo, haloColor: Form3D.wash(tone, 0.14), haloDy: 2, shadowBlur: 4, shadowOffset: const Offset(3, 5)),
           ),
           if (big != null)
             Positioned(
-              top: 20,
+              top: DS.s(20),
               left: 0,
               right: 0,
               child: Center(child: Text(big, maxLines: 1, style: Ink3D.text(22, FontWeight.w700, on ? Colors.white : tone.text, letterSpacing: 0, height: 1.2))),
             ),
           if (on)
             Positioned(
-              right: -7,
-              top: -7,
+              right: DS.s(-7),
+              top: DS.s(-7),
               child: Container(
-                width: 22,
-                height: 22,
-                decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.white, boxShadow: Form3D.knob),
-                child: Icon(Icons.check_rounded, size: 15, color: tone.button),
+                width: DS.s(22),
+                height: DS.s(22),
+                decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white, boxShadow: DS.shadows(Form3D.knob)),
+                child: Icon(Icons.check_rounded, size: DS.s(15), color: tone.button),
               ),
             ),
         ],
@@ -100,7 +101,9 @@ class OptionTileGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     final scaler = MediaQuery.textScalerOf(context);
     final hasBig = items.any((e) => e.big != null);
-    final height = (hasBig ? tileHeight + 20 : tileHeight) + (scaler.scale(13) - 13) * 1.4 + (hasBig ? (scaler.scale(22) - 22) * 1.2 : 0);
+    final f13 = DS.f(13);
+    final f22 = DS.f(22);
+    final height = DS.s(hasBig ? tileHeight + 20 : tileHeight) + (scaler.scale(f13) - f13) * 1.4 + (hasBig ? (scaler.scale(f22) - f22) * 1.2 : 0);
     final e = errorText;
     final bad = e != null && e.isNotEmpty;
     final rows = (items.length / columns).ceil();
@@ -110,11 +113,11 @@ class OptionTileGrid extends StatelessWidget {
       children: [
         for (var r = 0; r < rows; r++)
           Padding(
-            padding: EdgeInsets.only(top: r == 0 ? topRoom : rowGap),
+            padding: EdgeInsets.only(top: r == 0 ? DS.s(topRoom) : DS.gv(rowGap)),
             child: Row(
               children: [
                 for (var c = 0; c < columns; c++) ...[
-                  if (c > 0) const SizedBox(width: 10),
+                  if (c > 0) Gap.h(10),
                   Expanded(child: r * columns + c < items.length ? _tile(r * columns + c, height, bad) : const SizedBox.shrink()),
                 ],
               ],
@@ -141,10 +144,11 @@ class GradientOptionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scaler = MediaQuery.textScalerOf(context);
-    final h = height + (scaler.scale(12) - 12) * 2.4;
+    final f12 = DS.f(12);
+    final h = DS.s(height) + (scaler.scale(f12) - f12) * 2.4;
     final narrow = MediaQuery.sizeOf(context).width < Form3D.narrow;
     return Padding(
-      padding: const EdgeInsets.only(top: topRoom),
+      padding: EdgeInsets.only(top: DS.s(topRoom)),
       child: Tap3D(
         onTap: onTap,
         label: label,
@@ -156,29 +160,29 @@ class GradientOptionCard extends StatelessWidget {
             Container(
               height: h,
               alignment: Alignment.bottomLeft,
-              padding: const EdgeInsets.fromLTRB(8, 0, 8, 9),
+              padding: DS.insets(l: 8, r: 8, b: 9),
               decoration: BoxDecoration(
-                borderRadius: const BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(24), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8)),
+                borderRadius: DS.br(const BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(24), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8))),
                 gradient: tone.gradient,
                 boxShadow: selected
-                    ? [
+                    ? DS.shadows([
                         BoxShadow(color: tone.shadow, offset: const Offset(1.1, 6), blurRadius: 12),
                         BoxShadow(color: tone.g2, spreadRadius: 5),
                         const BoxShadow(color: Colors.white, spreadRadius: 3),
-                      ]
+                      ])
                     : null,
               ),
               child: Text(label, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(12, FontWeight.w700, Colors.white, letterSpacing: 0, height: 1.2)),
             ),
-            Positioned(left: 4, top: narrow ? -18 : -topRoom, child: Art3D(asset: art, size: narrow ? 48 : 62, shadowBlur: 4, shadowOffset: const Offset(3, 5), shadowAlpha: 0.28)),
+            Positioned(left: DS.s(4), top: DS.s(narrow ? -18 : -topRoom), child: Art3D(asset: art, size: narrow ? 48 : 62, shadowBlur: 4, shadowOffset: const Offset(3, 5), shadowAlpha: 0.28)),
             Positioned(
-              right: 8,
-              top: 8,
+              right: DS.s(8),
+              top: DS.s(8),
               child: Container(
-                width: 20,
-                height: 20,
+                width: DS.s(20),
+                height: DS.s(20),
                 decoration: BoxDecoration(shape: BoxShape.circle, color: selected ? Colors.white : Colors.white.withValues(alpha: 0.4)),
-                child: selected ? Icon(Icons.check_rounded, size: 14, color: tone.button) : null,
+                child: selected ? Icon(Icons.check_rounded, size: DS.s(14), color: tone.button) : null,
               ),
             ),
           ],
@@ -217,12 +221,12 @@ class ChoicePill extends StatelessWidget {
     final top = topLabel;
     final live = enabled && onTap != null;
     final ink = selected ? Colors.white : (outlined ? Ink3D.body : tone.text);
-    final h = top == null ? height : (height < 64 ? 64.0 : height);
+    final h = DS.s(top == null ? height : (height < 64 ? 64.0 : height));
     final Widget content = top == null
         ? Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              if (check && selected) ...[const Icon(Icons.check_rounded, size: 15, color: Colors.white), const SizedBox(width: 6)],
+              if (check && selected) ...[Icon(Icons.check_rounded, size: DS.s(15), color: Colors.white), SizedBox(width: DS.s(6))],
               Flexible(child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(13, FontWeight.w600, ink, letterSpacing: 0))),
             ],
           )
@@ -235,14 +239,14 @@ class ChoicePill extends StatelessWidget {
             ],
           );
     final pill = Container(
-      constraints: BoxConstraints(minHeight: h, minWidth: top == null ? 0 : 52),
-      padding: EdgeInsets.symmetric(horizontal: top == null ? 14 : 10, vertical: 6),
+      constraints: BoxConstraints(minHeight: h, minWidth: top == null ? 0 : DS.s(52)),
+      padding: DS.sym(h: top == null ? 14 : 10, v: 6),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(top == null ? h / 2 : 20),
+        borderRadius: BorderRadius.circular(top == null ? h / 2 : DS.radius(20)),
         color: selected ? null : (outlined ? Colors.white : Form3D.wash(tone, 0.11)),
         gradient: selected ? tone.gradient : null,
         border: Border.all(color: outlined && !selected ? Form3D.outline : Colors.transparent, width: 1.5),
-        boxShadow: selected && live ? [BoxShadow(color: tone.shadow, offset: const Offset(1.1, 3), blurRadius: 6)] : null,
+        boxShadow: selected && live ? DS.shadows([BoxShadow(color: tone.shadow, offset: const Offset(1.1, 3), blurRadius: 6)]) : null,
       ),
       child: Center(widthFactor: 1, heightFactor: 1, child: content),
     );
@@ -275,15 +279,15 @@ class SegmentPills extends StatelessWidget {
       selected: on,
       exclude: true,
       child: Container(
-        height: height,
+        height: DS.s(height),
         alignment: Alignment.center,
-        padding: const EdgeInsets.symmetric(horizontal: 6),
+        padding: DS.sym(h: 6),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(height / 2),
+          borderRadius: BorderRadius.circular(DS.s(height) / 2),
           color: on ? null : Form3D.fill,
           gradient: on ? tone.gradient : null,
-          border: Border.all(color: errorRing ? Form3D.error : Colors.transparent, width: 2),
-          boxShadow: on ? [BoxShadow(color: tone.shadow, offset: const Offset(1.1, 4), blurRadius: 8)] : null,
+          border: Border.all(color: errorRing ? Form3D.error : Colors.transparent, width: DS.s(2)),
+          boxShadow: on ? DS.shadows([BoxShadow(color: tone.shadow, offset: const Offset(1.1, 4), blurRadius: 8)]) : null,
         ),
         child: FittedBox(
           fit: BoxFit.scaleDown,
@@ -302,11 +306,11 @@ class SegmentPills extends StatelessWidget {
       children: [
         for (var r = 0; r < rows; r++)
           Padding(
-            padding: EdgeInsets.only(top: r == 0 ? 0 : 10),
+            padding: EdgeInsets.only(top: r == 0 ? 0 : DS.gv(10)),
             child: Row(
               children: [
                 for (var c = 0; c < cols; c++) ...[
-                  if (c > 0) const SizedBox(width: 10),
+                  if (c > 0) Gap.h(10),
                   Expanded(child: r * cols + c < labels.length ? _cell(r * cols + c) : const SizedBox.shrink()),
                 ],
               ],
@@ -332,25 +336,25 @@ class DashedAddRow3D extends StatelessWidget {
     final live = enabled && onTap != null;
     final t = trailing;
     final row = CustomPaint(
-      painter: _DashPainter(Form3D.wash(tone, 0.5), Form3D.wash(tone, 0.06)),
+      painter: _DashPainter(Form3D.wash(tone, 0.5), Form3D.wash(tone, 0.06), DS.s(1)),
       child: Container(
-        constraints: const BoxConstraints(minHeight: 58),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        constraints: BoxConstraints(minHeight: DS.s(58)),
+        padding: DS.sym(h: 16, v: 8),
         child: Row(
           children: [
             Container(
-              width: 30,
-              height: 30,
+              width: DS.s(30),
+              height: DS.s(30),
               decoration: BoxDecoration(shape: BoxShape.circle, gradient: tone.gradient),
-              child: const Icon(Icons.add_rounded, size: 20, color: Colors.white),
+              child: Icon(Icons.add_rounded, size: DS.s(20), color: Colors.white),
             ),
-            const SizedBox(width: 12),
+            SizedBox(width: DS.s(12)),
             Expanded(child: FitOrWrap3D(text: label, style: Ink3D.text(14.5, FontWeight.w700, tone.text, letterSpacing: 0))),
             if (t != null && t.isNotEmpty)
               Padding(
-                padding: const EdgeInsets.only(left: 8),
+                padding: EdgeInsets.only(left: DS.s(8)),
                 child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 124),
+                  constraints: BoxConstraints(maxWidth: DS.s(124)),
                   child: FittedBox(fit: BoxFit.scaleDown, child: Text(t, maxLines: 1, style: Ink3D.text(12, FontWeight.w600, Form3D.muted, letterSpacing: 0))),
                 ),
               ),
@@ -359,42 +363,43 @@ class DashedAddRow3D extends StatelessWidget {
       ),
     );
     return Padding(
-      padding: margin,
+      padding: EdgeInsets.fromLTRB(DS.s(margin.left), DS.gv(margin.top), DS.s(margin.right), DS.gv(margin.bottom)),
       child: Tap3D(onTap: live ? onTap : null, child: live ? row : Opacity(opacity: 0.5, child: row)),
     );
   }
 }
 
 class _DashPainter extends CustomPainter {
-  const _DashPainter(this.line, this.fill);
+  const _DashPainter(this.line, this.fill, this.unit);
 
   final Color line;
   final Color fill;
+  final double unit;
 
   @override
   void paint(Canvas canvas, Size size) {
     final box = RRect.fromRectAndCorners(
-      (Offset.zero & size).deflate(1),
-      topLeft: const Radius.circular(8),
-      topRight: const Radius.circular(28),
-      bottomLeft: const Radius.circular(8),
-      bottomRight: const Radius.circular(8),
+      (Offset.zero & size).deflate(unit),
+      topLeft: Radius.circular(8 * unit),
+      topRight: Radius.circular(28 * unit),
+      bottomLeft: Radius.circular(8 * unit),
+      bottomRight: Radius.circular(8 * unit),
     );
     canvas.drawRRect(box, Paint()..color = fill);
     final pen = Paint()
       ..color = line
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 2;
+      ..strokeWidth = 2 * unit;
     final path = Path()..addRRect(box);
     for (final ui.PathMetric m in path.computeMetrics()) {
       var d = 0.0;
       while (d < m.length) {
-        canvas.drawPath(m.extractPath(d, d + 7), pen);
-        d += 12;
+        canvas.drawPath(m.extractPath(d, d + 7 * unit), pen);
+        d += 12 * unit;
       }
     }
   }
 
   @override
-  bool shouldRepaint(_DashPainter old) => old.line != line || old.fill != fill;
+  bool shouldRepaint(_DashPainter old) => old.line != line || old.fill != fill || old.unit != unit;
 }

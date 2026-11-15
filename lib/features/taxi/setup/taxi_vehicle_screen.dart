@@ -656,13 +656,13 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
       );
 
   Widget _note(String text, {bool accent = false, double top = 6}) => Padding(
-        padding: EdgeInsets.only(top: top, left: 4),
+        padding: EdgeInsets.only(top: DS.gv(top), left: DS.s(4)),
         child: Text(text, style: accent ? Ink3D.text(11.5, FontWeight.w600, _tone.text, height: 1.4, letterSpacing: 0) : FieldMessage.helperStyle),
       );
 
   Widget _scroll(int key, List<Widget> children) => SingleChildScrollView(
         key: ValueKey(key),
-        padding: const EdgeInsets.only(bottom: 24),
+        padding: EdgeInsets.only(bottom: DS.s(24)),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: children),
       );
 
@@ -731,8 +731,8 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
 
   Widget _photoBlock() => GridView.count(
         crossAxisCount: 3,
-        crossAxisSpacing: 10,
-        mainAxisSpacing: 10,
+        crossAxisSpacing: DS.gh(10),
+        mainAxisSpacing: DS.gv(10),
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
         padding: EdgeInsets.zero,
@@ -755,7 +755,7 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
               placeholder: (_, _) => ColoredBox(color: _tone.tint),
               errorWidget: (_, _, _) => Container(
                 color: _tone.tint,
-                padding: const EdgeInsets.all(16),
+                padding: DS.all(16),
                 child: Image.asset(ListingArt.taxi),
               ),
             ),
@@ -879,7 +879,7 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
               if (_ring == _Ring.whatsApp) setState(() => _ring = null);
             },
           ),
-          const SizedBox(height: 8),
+          Gap.v(8),
           ToggleRow(
             tone: _tone,
             label: 'Same as my login number',
@@ -912,7 +912,7 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
     // Scrolls only when the content is taller than the screen, so on most phones map drags still reach the map.
     return SingleChildScrollView(
       key: const ValueKey(2),
-      padding: const EdgeInsets.only(bottom: 24),
+      padding: EdgeInsets.only(bottom: DS.s(24)),
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         locationStepWidget(),
         FormSectionCard(
@@ -922,11 +922,11 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
           artSide: FormArtSide.right,
           title: 'District and City',
           child: Container(
-            constraints: const BoxConstraints(minHeight: 52),
-            padding: const EdgeInsets.fromLTRB(4, 8, 18, 8),
+            constraints: BoxConstraints(minHeight: DS.s(52)),
+            padding: DS.insets(l: 4, t: 8, r: 18, b: 8),
             decoration: BoxDecoration(
               color: ring ? Form3D.fillError : Form3D.fill,
-              borderRadius: BorderRadius.circular(26),
+              borderRadius: DS.circular(26),
               border: Border.all(color: ring ? Form3D.error : Colors.transparent, width: 1.5),
             ),
             child: Row(children: [
@@ -937,11 +937,11 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
                     overflow: TextOverflow.ellipsis,
                     style: Ink3D.text(15, FontWeight.w400, district != null ? Ink3D.body : Form3D.hint, letterSpacing: 0)),
               ),
-              const SizedBox(width: 8),
+              Gap.h(8),
               if (resolving)
-                SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2.5, color: _tone.g2))
+                SizedBox(width: DS.s(16), height: DS.s(16), child: CircularProgressIndicator(strokeWidth: DS.s(2.5), color: _tone.g2))
               else if (district != null)
-                Image.asset(ListingArt.pushpin, width: 26, height: 26),
+                Image.asset(ListingArt.pushpin, width: DS.s(26), height: DS.s(26)),
             ]),
           ),
         ),

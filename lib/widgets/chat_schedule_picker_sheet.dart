@@ -74,11 +74,11 @@ class _ChatSchedulePickerSheetState extends State<ChatSchedulePickerSheet> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Padding(
-            padding: const EdgeInsets.only(top: 4),
+            padding: EdgeInsets.only(top: DS.gv(4)),
             child: Row(
               children: [
                 for (var i = 0; i < _dates.length; i++) ...[
-                  if (i > 0) const SizedBox(width: 6),
+                  if (i > 0) Gap.h(6),
                   Expanded(
                     child: ChatDayPill3D(
                       tone: tone,
@@ -96,21 +96,21 @@ class _ChatSchedulePickerSheetState extends State<ChatSchedulePickerSheet> {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.only(top: 18, bottom: 10),
+            padding: EdgeInsets.only(top: DS.gv(18), bottom: DS.gv(10)),
             child: Text('Tap one or more times to offer a choice', style: Ink3D.text(12, FontWeight.w400, Ink3D.grey)),
           ),
           for (var r = 0; r < _slots.length; r += 3) ...[
-            if (r > 0) const SizedBox(height: 10),
+            if (r > 0) Gap.v(10),
             Row(
               children: [
                 for (var c = r; c < r + 3 && c < _slots.length; c++) ...[
-                  if (c > r) const SizedBox(width: 10),
+                  if (c > r) Gap.h(10),
                   Expanded(child: _slot(selectedDate, _slots[c])),
                 ],
               ],
             ),
           ],
-          const SizedBox(height: 14),
+          Gap.v(14),
         ],
       ),
     );

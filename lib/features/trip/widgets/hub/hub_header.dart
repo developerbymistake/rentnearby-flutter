@@ -27,24 +27,24 @@ class HubHeader extends StatelessWidget {
     return MediaQuery.withClampedTextScaling(
       maxScaleFactor: 1.3,
       child: Padding(
-        padding: EdgeInsets.only(top: safeTop + 12, bottom: 8),
+        padding: EdgeInsets.only(top: safeTop + DS.s(12), bottom: DS.s(8)),
         child: Stack(
           clipBehavior: Clip.none,
           children: [
             Positioned(
-              top: -10,
-              right: 12,
+              top: DS.s(-10),
+              right: DS.s(12),
               child: Container(
-                width: 74,
-                height: 74,
+                width: DS.s(74),
+                height: DS.s(74),
                 decoration: BoxDecoration(shape: BoxShape.circle, color: HubTokens.accent.withValues(alpha: Alpha.v16)),
               ),
             ),
-            const Positioned(top: -8, right: 16, child: Art3D(asset: ListingArt.luggage, size: 71)),
+            Positioned(top: DS.s(-8), right: DS.s(16), child: const Art3D(asset: ListingArt.luggage, size: 71)),
             ConstrainedBox(
-              constraints: BoxConstraints(minHeight: minHeight),
+              constraints: BoxConstraints(minHeight: DS.s(minHeight)),
               child: Padding(
-                padding: EdgeInsets.only(left: back ? 74 : 18, right: 98, top: titleTop),
+                padding: EdgeInsets.only(left: DS.s(back ? 74 : 18), right: DS.s(98), top: DS.s(titleTop)),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
@@ -60,7 +60,7 @@ class HubHeader extends StatelessWidget {
             ),
             if (back)
               Positioned(
-                left: 16,
+                left: DS.s(16),
                 top: 0,
                 child: Semantics(
                   button: true,
@@ -68,9 +68,9 @@ class HubHeader extends StatelessWidget {
                   child: GestureDetector(
                     onTap: onBack ?? Get.back,
                     child: Container(
-                      width: 42,
-                      height: 42,
-                      decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.white, boxShadow: Ink3D.softShadow),
+                      width: DS.s(42),
+                      height: DS.s(42),
+                      decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white, boxShadow: DS.shadows(Ink3D.softShadow)),
                       alignment: Alignment.center,
                       child: Text('\u2039', style: Ink3D.text(28, FontWeight.w400, HubTokens.blue, letterSpacing: 0)),
                     ),

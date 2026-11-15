@@ -117,7 +117,7 @@ class _LocationSearchSheetState extends State<LocationSearchSheet>
     final baseHeight = _baseHeight ?? media.size.height;
     final baseTopPadding = _baseTopPadding ?? media.padding.top;
     final maxHeight = (baseHeight - baseTopPadding) * 0.94;
-    final sheetHeight = math.max(baseHeight * 0.75, 615.0).clamp(0.0, maxHeight);
+    final sheetHeight = math.max(baseHeight * 0.75, DS.s(615.0)).clamp(0.0, maxHeight);
     return SizedBox(
       height: sheetHeight + Sheet3D.artRoom,
       child: MediaQuery.removeViewInsets(
@@ -175,7 +175,7 @@ class _LocationSearchSheetState extends State<LocationSearchSheet>
     }
     final count = math.min(_results.length, 10);
     return ListView.builder(
-      padding: const EdgeInsets.only(top: 4, bottom: 8),
+      padding: DS.insets(t: 4, b: 8),
       itemCount: _results.length,
       itemBuilder: (context, i) {
         final result = _results[i];

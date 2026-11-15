@@ -52,7 +52,7 @@ class _HubContinueBarState extends State<HubContinueBar> {
         GestureDetector(
           onHorizontalDragEnd: _swipe,
           child: Container(
-            margin: const EdgeInsets.fromLTRB(18, 14, 18, 0),
+            margin: EdgeInsets.fromLTRB(DS.s(18), DS.gv(14), DS.s(18), 0),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: HubTokens.cardRadius(44),
@@ -77,7 +77,7 @@ class _HubContinueBarState extends State<HubContinueBar> {
           ),
         ),
         if (trips.length > 1) ...[
-          const SizedBox(height: 13),
+          Gap.v(13),
           HubDots(count: trips.length, index: _safeIndex),
         ],
       ],
@@ -92,14 +92,14 @@ class _HubContinueBarState extends State<HubContinueBar> {
       child: InkWell(
         onTap: _toggle,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          padding: DS.sym(h: 14, v: 12),
           child: Row(
             children: [
               HubRing(
                 percent: t.progress.percent,
                 center: Text('${t.progress.percent}%', style: Ink3D.text(12, FontWeight.w700, HubTokens.ink, letterSpacing: 0)),
               ),
-              const SizedBox(width: 12),
+              Gap.h(12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -120,16 +120,16 @@ class _HubContinueBarState extends State<HubContinueBar> {
                   ],
                 ),
               ),
-              const SizedBox(width: 12),
+              Gap.h(12),
               Container(
-                width: 34,
-                height: 34,
-                margin: const EdgeInsets.only(right: 22),
+                width: DS.s(34),
+                height: DS.s(34),
+                margin: EdgeInsets.only(right: DS.s(22)),
                 decoration: const BoxDecoration(shape: BoxShape.circle, color: HubTokens.chipBg),
                 child: AnimatedRotation(
                   turns: _open ? 0.5 : 0,
                   duration: const Duration(milliseconds: 300),
-                  child: const Center(child: CustomPaint(size: Size(9, 5), painter: _CaretPainter())),
+                  child: Center(child: CustomPaint(size: Size(DS.s(9), DS.s(5)), painter: const _CaretPainter())),
                 ),
               ),
             ],
@@ -141,7 +141,7 @@ class _HubContinueBarState extends State<HubContinueBar> {
 
   Widget _body(TripSummaryModel t) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      padding: DS.insets(l: 16, r: 16, b: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -150,15 +150,15 @@ class _HubContinueBarState extends State<HubContinueBar> {
             child: InkWell(
               onTap: TripNavigation.openMyTrips,
               child: ConstrainedBox(
-                constraints: const BoxConstraints(minHeight: 32),
+                constraints: BoxConstraints(minHeight: DS.s(32)),
                 child: Align(
                   widthFactor: 1,
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(TripStringsHub.viewAll, style: Ink3D.text(14, FontWeight.w700, HubTokens.blue, letterSpacing: 0)),
-                      const SizedBox(width: 4),
-                      const Icon(Icons.arrow_forward_rounded, size: 16, color: HubTokens.blue),
+                      Gap.h(4),
+                      Icon(Icons.arrow_forward_rounded, size: DS.s(16), color: HubTokens.blue),
                     ],
                   ),
                 ),

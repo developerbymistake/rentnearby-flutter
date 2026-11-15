@@ -1,3 +1,4 @@
+import 'package:bakhli/design/tokens/design_scale.dart';
 import 'package:flutter/material.dart';
 
 import '../tokens/listing_palette.dart';
@@ -191,14 +192,15 @@ class RingBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = progress.clamp(0, 1).toDouble();
+    final box = DS.s(size);
     return SizedBox(
-      width: size,
-      height: size,
+      width: box,
+      height: box,
       child: CustomPaint(
-        painter: _RingPainter(p, fill),
+        painter: _RingPainter(p, fill, DS.s(6)),
         child: Center(
           child: Padding(
-            padding: EdgeInsets.all(size * 0.25),
+            padding: EdgeInsets.all(box * 0.25),
             child: FittedBox(
               fit: BoxFit.scaleDown,
               child: Text(label ?? '${(p * 100).round()}%', maxLines: 1, style: Ink3D.text(15, FontWeight.w700, Colors.white)),
@@ -211,10 +213,11 @@ class RingBadge extends StatelessWidget {
 }
 
 class _RingPainter extends CustomPainter {
-  _RingPainter(this.p, this.fill);
+  _RingPainter(this.p, this.fill, this.inset);
 
   final double p;
   final Color fill;
+  final double inset;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -222,11 +225,11 @@ class _RingPainter extends CustomPainter {
     final c = Offset(r, r);
     canvas.drawCircle(c, r, Paint()..color = Colors.white.withValues(alpha: 0.3));
     canvas.drawArc(Rect.fromCircle(center: c, radius: r), -1.5707963, 6.2831853 * p, true, Paint()..color = Colors.white);
-    canvas.drawCircle(c, r - 6, Paint()..color = fill);
+    canvas.drawCircle(c, r - inset, Paint()..color = fill);
   }
 
   @override
-  bool shouldRepaint(_RingPainter old) => old.p != p || old.fill != fill;
+  bool shouldRepaint(_RingPainter old) => old.p != p || old.fill != fill || old.inset != inset;
 }
 
 class _WideMetrics {
@@ -242,6 +245,17 @@ class _WideMetrics {
 
   static const double side = 14;
   static const double gap = 8;
+
+  static double get sideS => DS.s(side);
+  static double get gapS => DS.gv(gap);
+
+  double get topS => DS.s(top);
+  EdgeInsets get headPadS => DS.insets(l: headPad.left, t: headPad.top, r: headPad.right, b: headPad.bottom);
+  double get headMinS => DS.s(headMin);
+  double get artS => DS.s(art);
+  double get haloS => DS.s(halo);
+  Offset get artAtS => DS.shadowOffset(artAt);
+  Offset get haloAtS => DS.shadowOffset(haloAt);
 
   static _WideMetrics of(WideKind kind, double width, [double scale = 1]) {
     final narrow = width < 340;
@@ -337,7 +351,7 @@ class WideCard extends StatelessWidget {
   final Key? titleKey;
   final String? semanticsLabel;
 
-  static const double bannerHeight = 164;
+  static double get bannerHeight => DS.s(164);
 
   int _slotLines(int i) => subtitleSlots != null && i < subtitleSlots!.length ? subtitleSlots![i] : 2;
 
@@ -351,8 +365,8 @@ class WideCard extends StatelessWidget {
     final slim = kind == WideKind.slim;
     final photoKind = kind == WideKind.photo;
     final m = _WideMetrics.of(kind, width, scaler.scale(1));
-    final trailW = trailingWidth ?? (slim ? 96.0 : 38.0);
-    const bannerH = WideCard.bannerHeight;
+    final trailW = DS.s(trailingWidth ?? (slim ? 96.0 : 38.0));
+    final bannerH = WideCard.bannerHeight;
     const white = Colors.white;
 
     final rows = <List<WideAction>>[
@@ -372,47 +386,47 @@ class WideCard extends StatelessWidget {
     final badgePill = !hasBadge
         ? null
         : DecoratedBox(
-            decoration: BoxDecoration(color: badgeSolid ? white : white.withValues(alpha: 0.3), borderRadius: BorderRadius.circular(12)),
+            decoration: BoxDecoration(color: badgeSolid ? white : white.withValues(alpha: 0.3), borderRadius: DS.circular(12)),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+              padding: DS.sym(h: 10, v: 3),
               child: Text(badge!, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(11, FontWeight.w700, badgeSolid ? tone.g2 : white, letterSpacing: 0.3)),
             ),
           );
 
     final titleSize = slim ? 17.0 : (narrow ? 18.0 : 20.0);
-    final textW = width - _WideMetrics.side * 2 - m.headPad.horizontal - (hasTrailing && !slim ? trailW : 0);
-    final slimText = width - _WideMetrics.side * 2 - m.headPad.horizontal - 10 - trailW;
+    final textW = width - _WideMetrics.sideS * 2 - m.headPadS.horizontal - (hasTrailing && !slim ? trailW : 0);
+    final slimText = width - _WideMetrics.sideS * 2 - m.headPadS.horizontal - DS.s(10) - trailW;
     final iconTrailing = slim && hasTrailing && trailW <= 56;
-    final stackTrailing = slim && hasTrailing && !iconTrailing && slimText < scaler.scale(120);
+    final stackTrailing = slim && hasTrailing && !iconTrailing && slimText < scaler.scale(DS.s(120));
     final lines = subtitle.split('\n').where((e) => e.isNotEmpty).toList();
     final splitSub = iconTrailing && lines.isNotEmpty;
     final titleW = slim && hasTrailing && !stackTrailing && !splitSub ? slimText : textW;
     final titleStyle = KitText.wholeWords(title, Ink3D.text(titleSize, FontWeight.w700, white, height: 1.2), titleW, scaler);
-    final stackBadge = hasBadge && textW < scaler.scale(badgeSolid ? 120 : 190);
+    final stackBadge = hasBadge && textW < scaler.scale(DS.s(badgeSolid ? 120 : 190));
     final slimSub = Text(subtitle, maxLines: 6, overflow: TextOverflow.ellipsis, style: Ink3D.text(12.5, FontWeight.w500, white.withValues(alpha: 0.96), height: 1.5));
     final headText = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
         if (badgePill != null && stackBadge)
-          Padding(padding: const EdgeInsets.only(bottom: 4), child: Align(alignment: Alignment.centerLeft, child: badgePill)),
+          Padding(padding: EdgeInsets.only(bottom: DS.s(4)), child: Align(alignment: Alignment.centerLeft, child: badgePill)),
         if (badgePill != null && !stackBadge)
           Padding(
-            padding: const EdgeInsets.only(bottom: 2),
+            padding: EdgeInsets.only(bottom: DS.s(2)),
             child: Row(
               children: [
                 Expanded(child: tagText ?? const SizedBox.shrink()),
-                const SizedBox(width: 6),
+                SizedBox(width: DS.s(6)),
                 badgePill,
               ],
             ),
           )
         else if (tagText != null)
-          Padding(padding: const EdgeInsets.only(bottom: 2), child: tagText),
+          Padding(padding: EdgeInsets.only(bottom: DS.s(2)), child: tagText),
         Text(KitText.fitWords(title, titleStyle, scaler, titleW - 1, subtitleSlots != null ? 1 : 2), key: titleKey, maxLines: subtitleSlots != null ? 1 : 2, overflow: TextOverflow.ellipsis, style: titleStyle),
         if (lines.isNotEmpty && !splitSub)
           Padding(
-            padding: EdgeInsets.only(top: slim ? 2 : 4),
+            padding: EdgeInsets.only(top: DS.s(slim ? 2 : 4)),
             child: slim
                 ? slimSub
                 : Column(
@@ -420,7 +434,7 @@ class WideCard extends StatelessWidget {
                     children: [
                       for (var i = 0; i < lines.length; i++)
                         ConstrainedBox(
-                          constraints: BoxConstraints(minHeight: subtitleSlots == null ? 0 : _slotLines(i) * scaler.scale(12.5 * 1.5)),
+                          constraints: BoxConstraints(minHeight: subtitleSlots == null ? 0 : _slotLines(i) * scaler.scale(DS.f(12.5) * 1.5)),
                           child: Text(lines[i], maxLines: _slotLines(i), overflow: TextOverflow.ellipsis, style: KitText.wholeWords(lines[i], Ink3D.text(12.5, FontWeight.w500, white.withValues(alpha: 0.96), height: 1.5), textW, scaler)),
                         ),
                     ],
@@ -428,9 +442,9 @@ class WideCard extends StatelessWidget {
           ),
       ],
     );
-    final headPad = m.headPad.copyWith(right: m.headPad.right + (hasTrailing && !slim ? trailW : 0));
+    final headPad = m.headPadS.copyWith(right: m.headPadS.right + (hasTrailing && !slim ? trailW : 0));
     final head = ConstrainedBox(
-      constraints: BoxConstraints(minHeight: m.headMin),
+      constraints: BoxConstraints(minHeight: m.headMinS),
       child: Padding(
         padding: headPad,
         child: !slim || !hasTrailing
@@ -442,12 +456,12 @@ class WideCard extends StatelessWidget {
                 children: [
                   headText,
                   Padding(
-                    padding: const EdgeInsets.only(top: 2),
+                    padding: EdgeInsets.only(top: DS.s(2)),
                     child: Row(
                       children: [
                         Expanded(child: slimSub),
                         Padding(
-                          padding: const EdgeInsets.only(left: 10),
+                          padding: EdgeInsets.only(left: DS.s(10)),
                           child: ConstrainedBox(constraints: BoxConstraints(maxWidth: trailW), child: trailing),
                         ),
                       ],
@@ -459,13 +473,13 @@ class WideCard extends StatelessWidget {
                 ? Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
-                    children: [headText, const SizedBox(height: 10), trailing!],
+                    children: [headText, SizedBox(height: DS.s(10)), trailing!],
                   )
                 : Row(
                     children: [
                       Expanded(child: headText),
                       Padding(
-                        padding: const EdgeInsets.only(left: 10),
+                        padding: EdgeInsets.only(left: DS.s(10)),
                         child: ConstrainedBox(constraints: BoxConstraints(maxWidth: trailW), child: trailing),
                       ),
                     ],
@@ -476,14 +490,14 @@ class WideCard extends StatelessWidget {
     final hasRing = !slim && progress != null;
     final hasChips = !slim && (chips.isNotEmpty || reserveChips || hasRing);
     final chipWrap = Wrap(
-      spacing: 6,
-      runSpacing: 6,
+      spacing: DS.gh(6),
+      runSpacing: DS.gv(6),
       children: [
         for (final c in chips)
           DecoratedBox(
-            decoration: BoxDecoration(color: white.withValues(alpha: 0.26), borderRadius: BorderRadius.circular(10)),
+            decoration: BoxDecoration(color: white.withValues(alpha: 0.26), borderRadius: DS.circular(10)),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+              padding: DS.sym(h: 10, v: 3),
               child: Text(c, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(11, FontWeight.w700, white)),
             ),
           ),
@@ -492,14 +506,14 @@ class WideCard extends StatelessWidget {
     final chipsRow = !hasChips
         ? null
         : Padding(
-            padding: EdgeInsets.fromLTRB(20, hasRing ? 6 : 12, 20, 0),
+            padding: DS.insets(l: 20, t: hasRing ? 6 : 12, r: 20),
             child: ConstrainedBox(
-              constraints: BoxConstraints(minHeight: scaler.scale(26)),
+              constraints: BoxConstraints(minHeight: scaler.scale(DS.s(26))),
               child: hasRing
                   ? Row(
                       children: [
                         Expanded(child: chipWrap),
-                        SizedBox(width: 78, child: Align(alignment: Alignment.centerRight, child: RingBadge(progress: progress!, fill: tone.g2))),
+                        SizedBox(width: DS.s(78), child: Align(alignment: Alignment.centerRight, child: RingBadge(progress: progress!, fill: tone.g2))),
                       ],
                     )
                   : Align(alignment: Alignment.topLeft, child: chipWrap),
@@ -511,18 +525,18 @@ class WideCard extends StatelessWidget {
     final priceRow = (slim || !(showPrice || showGo))
         ? null
         : Padding(
-            padding: EdgeInsets.fromLTRB(20, hasChips ? 12 : 10, 20, 0),
+            padding: DS.insets(l: 20, t: hasChips ? 12 : 10, r: 20),
             child: ConstrainedBox(
-              constraints: BoxConstraints(minHeight: scaler.scale(28)),
+              constraints: BoxConstraints(minHeight: scaler.scale(DS.s(28))),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Expanded(
                     child: showPrice && hasNumber
-                        ? _WidePrice(number: number!, unit: unit, caption: priceCaption, room: width - _WideMetrics.side * 2 - 40 - (showGo ? 52 : 0))
+                        ? _WidePrice(number: number!, unit: unit, caption: priceCaption, room: width - _WideMetrics.sideS * 2 - DS.s(40) - (showGo ? DS.s(52) : 0))
                         : const SizedBox.shrink(),
                   ),
-                  if (showGo) Padding(padding: const EdgeInsets.only(left: 10), child: RoundGoButton(color: tone.button, size: 42, icon: goIcon, onTap: onGo)),
+                  if (showGo) Padding(padding: EdgeInsets.only(left: DS.s(10)), child: RoundGoButton(color: tone.button, size: 42, icon: goIcon, onTap: onGo)),
                 ],
               ),
             ),
@@ -534,23 +548,23 @@ class WideCard extends StatelessWidget {
     final strip = !hasStrip
         ? null
         : Container(
-            margin: const EdgeInsets.only(top: 12),
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 9),
+            margin: EdgeInsets.only(top: DS.s(12)),
+            padding: DS.sym(h: 20, v: 9),
             color: Colors.black.withValues(alpha: 0.11),
             child: Row(
               children: [
                 Transform.translate(
-                  offset: const Offset(-4, 0),
+                  offset: Offset(DS.s(-4), 0),
                   child: const Art3D(asset: ListingArt.roundPushpin, size: 20, shadowBlur: 2, shadowOffset: Offset(1, 2), shadowAlpha: 0.3),
                 ),
-                const SizedBox(width: 4),
+                SizedBox(width: DS.s(4)),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       SizedBox(
-                        width: KitText.balancedWidth(label!, stripStyle, scaler, width - _WideMetrics.side * 2 - 40 - 20),
+                        width: KitText.balancedWidth(label!, stripStyle, scaler, width - _WideMetrics.sideS * 2 - DS.s(60)),
                         child: Text(label!, maxLines: 3, overflow: TextOverflow.ellipsis, style: stripStyle),
                       ),
                       if (hasNote) Text(labelNote!, maxLines: 2, overflow: TextOverflow.ellipsis, style: stripStyle.copyWith(color: white.withValues(alpha: 0.8))),
@@ -564,7 +578,7 @@ class WideCard extends StatelessWidget {
     final bar = !hasBar
         ? null
         : Padding(
-            padding: EdgeInsets.only(top: hasStrip ? 0 : 14),
+            padding: EdgeInsets.only(top: hasStrip ? 0 : DS.s(14)),
             child: DecoratedBox(
               decoration: BoxDecoration(color: white.withValues(alpha: 0.2)),
               child: Column(
@@ -573,7 +587,7 @@ class WideCard extends StatelessWidget {
                 children: [
                   for (var i = 0; i < rows.length; i++) ...[
                     if (i > 0) Container(height: 1, color: white.withValues(alpha: 0.28)),
-                    _ActionRow(actions: rows[i], tone: tone, width: width - _WideMetrics.side * 2),
+                    _ActionRow(actions: rows[i], tone: tone, width: width - _WideMetrics.sideS * 2),
                   ],
                 ],
               ),
@@ -590,27 +604,27 @@ class WideCard extends StatelessWidget {
         ?priceRow,
         ?strip,
         ?bar,
-        if (!slim && !hasBar && !hasStrip) const SizedBox(height: 16),
+        if (!slim && !hasBar && !hasStrip) SizedBox(height: DS.s(16)),
       ],
     );
     final ring = ringColor ?? white;
     final cardBox = Container(
       decoration: BoxDecoration(
-        borderRadius: kMealsRadius,
+        borderRadius: DS.br(kMealsRadius),
         gradient: tone.gradient,
         boxShadow: picked || ringColor != null
-            ? [BoxShadow(color: tone.shadow, offset: const Offset(1.1, 6), blurRadius: 14)]
+            ? DS.shadows([BoxShadow(color: tone.shadow, offset: const Offset(1.1, 6), blurRadius: 14)])
             : tone.glow(),
       ),
       foregroundDecoration: picked || ringColor != null
-          ? BoxDecoration(borderRadius: kMealsRadius, border: Border.all(color: ring, width: 3, strokeAlign: BorderSide.strokeAlignOutside))
+          ? BoxDecoration(borderRadius: DS.br(kMealsRadius), border: Border.all(color: ring, width: DS.s(3), strokeAlign: BorderSide.strokeAlignOutside))
           : null,
       child: ClipRRect(
-        borderRadius: kMealsRadius,
+        borderRadius: DS.br(kMealsRadius),
         child: Stack(
           children: [
             content,
-            if (hasTrailing && !slim) Positioned(right: 6, top: photoKind ? bannerH + 6 : 6, child: trailing!),
+            if (hasTrailing && !slim) Positioned(right: DS.s(6), top: photoKind ? bannerH + DS.s(6) : DS.s(6), child: trailing!),
           ],
         ),
       ),
@@ -620,22 +634,22 @@ class WideCard extends StatelessWidget {
     Widget body = Stack(
       clipBehavior: Clip.none,
       children: [
-        Padding(padding: EdgeInsets.fromLTRB(_WideMetrics.side, m.top, _WideMetrics.side, _WideMetrics.gap), child: cardBox),
+        Padding(padding: EdgeInsets.fromLTRB(_WideMetrics.sideS, m.topS, _WideMetrics.sideS, _WideMetrics.gapS), child: cardBox),
         if (!photoKind && artAsset != null)
           Positioned(
-            left: _WideMetrics.side + m.haloAt.dx,
-            top: m.top + m.haloAt.dy,
+            left: _WideMetrics.sideS + m.haloAtS.dx,
+            top: m.topS + m.haloAtS.dy,
             child: IgnorePointer(
               child: DecoratedBox(
                 decoration: BoxDecoration(shape: BoxShape.circle, color: white.withValues(alpha: 0.24)),
-                child: SizedBox(width: m.halo, height: m.halo),
+                child: SizedBox(width: m.haloS, height: m.haloS),
               ),
             ),
           ),
         if (artAsset != null)
           Positioned(
-            left: _WideMetrics.side + m.artAt.dx,
-            top: m.top + m.artAt.dy,
+            left: _WideMetrics.sideS + m.artAtS.dx,
+            top: m.topS + m.artAtS.dy,
             child: IgnorePointer(
               child: photoKind
                   ? Art3D(asset: artAsset, size: m.art, shadowBlur: 3, shadowOffset: const Offset(2, 4), shadowAlpha: 0.3)
@@ -644,8 +658,8 @@ class WideCard extends StatelessWidget {
           ),
         if (starBadge && !photoKind && artAsset != null)
           Positioned(
-            left: _WideMetrics.side + m.artAt.dx + m.art * 0.82,
-            top: m.top + m.artAt.dy - 2,
+            left: _WideMetrics.sideS + m.artAtS.dx + m.artS * 0.82,
+            top: m.topS + m.artAtS.dy - DS.s(2),
             child: const IgnorePointer(child: StarBadge()),
           ),
       ],
@@ -685,8 +699,8 @@ class _Banner extends StatelessWidget {
               ),
           if (photo == null)
             Positioned(
-              right: -30,
-              top: -34,
+              right: DS.s(-30),
+              top: DS.s(-34),
               child: IgnorePointer(
                 child: DecoratedBox(
                   decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withValues(alpha: 0.16)),
@@ -696,24 +710,24 @@ class _Banner extends StatelessWidget {
             ),
           if (badge != null && badge!.isNotEmpty)
             Positioned(
-              left: 14,
-              top: 12,
-              right: 60,
+              left: DS.s(14),
+              top: DS.s(12),
+              right: DS.s(60),
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: DecoratedBox(
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.92),
-                    borderRadius: BorderRadius.circular(14),
-                    boxShadow: const [BoxShadow(color: Color(0x33000000), offset: Offset(0, 2), blurRadius: 8)],
+                    borderRadius: DS.circular(14),
+                    boxShadow: DS.shadows(const [BoxShadow(color: Color(0x33000000), offset: Offset(0, 2), blurRadius: 8)]),
                   ),
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(10, 4, 12, 4),
+                    padding: DS.insets(l: 10, t: 4, r: 12, b: 4),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.star_rounded, size: 14, color: Ink3D.title),
-                        const SizedBox(width: 4),
+                        Icon(Icons.star_rounded, size: DS.s(14), color: Ink3D.title),
+                        SizedBox(width: DS.s(4)),
                         Flexible(child: Text(badge!, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(12, FontWeight.w700, Ink3D.title))),
                       ],
                     ),
@@ -747,23 +761,23 @@ class _WidePrice extends StatelessWidget {
       return Row(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          if (cap.isNotEmpty) Padding(padding: const EdgeInsets.only(right: 6, bottom: 3), child: capText),
+          if (cap.isNotEmpty) Padding(padding: EdgeInsets.only(right: DS.s(6), bottom: DS.s(3)), child: capText),
           Flexible(child: Text(text, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(16, FontWeight.w700, white, height: 1.25))),
         ],
       );
     }
     final numStyle = Ink3D.text(28, FontWeight.w500, white, height: 1);
     final unitStyle = Ink3D.text(12, FontWeight.w500, white, height: 1.25);
-    final capW = cap.isEmpty ? 0.0 : KitText.widthOf(cap, capStyle, scaler) + 6;
+    final capW = cap.isEmpty ? 0.0 : KitText.widthOf(cap, capStyle, scaler) + DS.s(6);
     final numW = KitText.widthOf(number, numStyle, scaler) + 1;
     final firstWord = unit.trim().split(RegExp(r'\s+')).first;
-    final unitMin = unit.isEmpty ? 0.0 : KitText.widthOf(firstWord, unitStyle, scaler) + 6;
+    final unitMin = unit.isEmpty ? 0.0 : KitText.widthOf(firstWord, unitStyle, scaler) + DS.s(6);
     final capInline = capW + numW + unitMin <= room;
     final numRoom = room - (capInline ? capW : 0) - unitMin;
     var fit = numW <= numRoom ? 1.0 : (numRoom / numW).clamp(0.8, 1.0);
     double unitLines(double f) => unit.isEmpty
         ? 0
-        : KitText.heightOf(unit, unitStyle, scaler, room - (capInline ? capW : 0) - numW * f - 5, 9) / scaler.scale(12 * 1.25);
+        : KitText.heightOf(unit, unitStyle, scaler, room - (capInline ? capW : 0) - numW * f - DS.s(5), 9) / scaler.scale(DS.f(12) * 1.25);
     if (unitLines(fit) > 2.1) fit = (fit * 0.9).clamp(0.8, 1.0);
     if (unitLines(fit) > 2.1) {
       final f = numW <= room - (capInline ? capW : 0) ? 1.0 : ((room - (capInline ? capW : 0)) / numW).clamp(0.8, 1.0);
@@ -771,30 +785,30 @@ class _WidePrice extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (!capInline && cap.isNotEmpty) Padding(padding: const EdgeInsets.only(bottom: 2), child: capText),
+          if (!capInline && cap.isNotEmpty) Padding(padding: EdgeInsets.only(bottom: DS.s(2)), child: capText),
           Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              if (capInline && cap.isNotEmpty) Padding(padding: const EdgeInsets.only(right: 6, bottom: 5), child: capText),
-              Flexible(child: Text(number, maxLines: 1, softWrap: false, overflow: TextOverflow.ellipsis, style: numStyle.copyWith(fontSize: 28 * f))),
+              if (capInline && cap.isNotEmpty) Padding(padding: EdgeInsets.only(right: DS.s(6), bottom: DS.s(5)), child: capText),
+              Flexible(child: Text(number, maxLines: 1, softWrap: false, overflow: TextOverflow.ellipsis, style: numStyle.copyWith(fontSize: (numStyle.fontSize ?? 28) * f))),
             ],
           ),
-          Padding(padding: const EdgeInsets.only(top: 4), child: Text(unit, maxLines: 2, overflow: TextOverflow.ellipsis, style: unitStyle)),
+          Padding(padding: EdgeInsets.only(top: DS.s(4)), child: Text(unit, maxLines: 2, overflow: TextOverflow.ellipsis, style: unitStyle)),
         ],
       );
     }
     final row = Row(
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
-        if (capInline && cap.isNotEmpty) Padding(padding: const EdgeInsets.only(right: 6, bottom: 5), child: capText),
+        if (capInline && cap.isNotEmpty) Padding(padding: EdgeInsets.only(right: DS.s(6), bottom: DS.s(5)), child: capText),
         ConstrainedBox(
-          constraints: BoxConstraints(maxWidth: numRoom > 40 ? numRoom : 40),
-          child: Text(number, maxLines: 1, softWrap: false, overflow: TextOverflow.ellipsis, style: numStyle.copyWith(fontSize: 28 * fit)),
+          constraints: BoxConstraints(maxWidth: numRoom > DS.s(40) ? numRoom : DS.s(40)),
+          child: Text(number, maxLines: 1, softWrap: false, overflow: TextOverflow.ellipsis, style: numStyle.copyWith(fontSize: (numStyle.fontSize ?? 28) * fit)),
         ),
         if (unit.isNotEmpty)
           Flexible(
             child: Padding(
-              padding: const EdgeInsets.only(left: 5, bottom: 2),
+              padding: EdgeInsets.only(left: DS.s(5), bottom: DS.s(2)),
               child: Text(unit, maxLines: 2, overflow: TextOverflow.ellipsis, style: unitStyle),
             ),
           ),
@@ -804,7 +818,7 @@ class _WidePrice extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
-      children: [Padding(padding: const EdgeInsets.only(bottom: 2), child: capText), row],
+      children: [Padding(padding: EdgeInsets.only(bottom: DS.s(2)), child: capText), row],
     );
   }
 }
@@ -820,7 +834,7 @@ class _ActionRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final scaler = MediaQuery.textScalerOf(context);
     final cellW = (width - (actions.length - 1)) / actions.length;
-    final room = cellW - _ActionCell.sidePad * 2 - 34;
+    final room = cellW - _ActionCell.sidePad * 2 - DS.s(34);
     final style = Ink3D.text(14, FontWeight.w700, Colors.white);
     final stacked = actions.any((a) => KitText.widthOf(a.label, style, scaler) > room);
     return IntrinsicHeight(
@@ -844,7 +858,7 @@ class _ActionCell extends StatelessWidget {
   final ListingTone tone;
   final bool stacked;
 
-  static const double sidePad = 6;
+  static double get sidePad => DS.s(6);
 
   @override
   Widget build(BuildContext context) {
@@ -858,27 +872,27 @@ class _ActionCell extends StatelessWidget {
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: on ? tone.button : Colors.white,
-        boxShadow: const [BoxShadow(color: Color(0x40000000), offset: Offset(3, 4), blurRadius: 6)],
+        boxShadow: DS.shadows(const [BoxShadow(color: Color(0x40000000), offset: Offset(3, 4), blurRadius: 6)]),
       ),
       child: SizedBox(
-        width: 26,
-        height: 26,
+        width: DS.s(26),
+        height: DS.s(26),
         child: action.busy
             ? Padding(
-                padding: const EdgeInsets.all(6),
-                child: CircularProgressIndicator(strokeWidth: 2, color: on ? Colors.white : Ink3D.body),
+                padding: DS.all(6),
+                child: CircularProgressIndicator(strokeWidth: DS.s(2), color: on ? Colors.white : Ink3D.body),
               )
-            : Icon(action.icon, size: 14, color: on ? Colors.white : Ink3D.body),
+            : Icon(action.icon, size: DS.s(14), color: on ? Colors.white : Ink3D.body),
       ),
     );
     final chip = custom == null
         ? null
         : DecoratedBox(
-            decoration: BoxDecoration(color: (on ? tone.button : Colors.white).withValues(alpha: on ? 0.14 : 0.3), borderRadius: BorderRadius.circular(10)),
+            decoration: BoxDecoration(color: (on ? tone.button : Colors.white).withValues(alpha: on ? 0.14 : 0.3), borderRadius: DS.circular(10)),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              padding: DS.sym(h: 8, v: 2),
               child: ConstrainedBox(
-                constraints: BoxConstraints(maxHeight: MediaQuery.textScalerOf(context).scale(15)),
+                constraints: BoxConstraints(maxHeight: MediaQuery.textScalerOf(context).scale(DS.s(15))),
                 child: custom,
               ),
             ),
@@ -888,16 +902,16 @@ class _ActionCell extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
   icon,
-  const SizedBox(height: 6),
+  SizedBox(height: DS.s(6)),
   Text(action.label, maxLines: 2, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center, style: labelStyle.copyWith(height: 1.25)),
-  if (chip != null) Padding(padding: const EdgeInsets.only(top: 3), child: chip),
+  if (chip != null) Padding(padding: EdgeInsets.only(top: DS.s(3)), child: chip),
             ],
           )
         : Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
   icon,
-  const SizedBox(width: 8),
+  SizedBox(width: DS.s(8)),
   Flexible(
     child: chip == null
         ? Text(action.label, maxLines: 1, overflow: TextOverflow.ellipsis, style: labelStyle)
@@ -906,7 +920,7 @@ class _ActionCell extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(action.label, maxLines: 1, overflow: TextOverflow.ellipsis, style: labelStyle),
-              const SizedBox(height: 3),
+              SizedBox(height: DS.s(3)),
               chip,
             ],
           ),
@@ -926,7 +940,7 @@ class _ActionCell extends StatelessWidget {
           child: Opacity(
             opacity: faded ? 0.75 : 1,
             child: Padding(
-  padding: EdgeInsets.symmetric(vertical: stacked ? 10 : 13, horizontal: sidePad),
+  padding: EdgeInsets.symmetric(vertical: DS.s(stacked ? 10 : 13), horizontal: sidePad),
   child: Center(child: inner),
             ),
           ),
@@ -948,32 +962,32 @@ class WideCardSkeleton extends StatelessWidget {
     final m = _WideMetrics.of(kind, MediaQuery.sizeOf(context).width);
     final slim = kind == WideKind.slim;
     final photoKind = kind == WideKind.photo;
-    final lower = slim ? 0.0 : 12 + 26 * scale + 12 + 28 * scale + 14 + 26 + 26 * scale;
-    final headHeight = slim || !photoKind ? m.headMin : m.headMin * scale;
+    final lower = slim ? 0.0 : DS.s(12 + 26 * scale + 12 + 28 * scale + 14 + 26 + 26 * scale);
+    final headHeight = slim || !photoKind ? m.headMinS : m.headMinS * scale;
     final card = Padding(
-      padding: EdgeInsets.fromLTRB(_WideMetrics.side, m.top, _WideMetrics.side, _WideMetrics.gap),
+      padding: EdgeInsets.fromLTRB(_WideMetrics.sideS, m.topS, _WideMetrics.sideS, _WideMetrics.gapS),
       child: Container(
         height: (photoKind ? WideCard.bannerHeight : 0) + headHeight + lower,
         clipBehavior: Clip.antiAlias,
-        decoration: const BoxDecoration(color: Colors.white, borderRadius: kMealsRadius, boxShadow: Ink3D.softShadow),
+        decoration: BoxDecoration(color: Colors.white, borderRadius: DS.br(kMealsRadius), boxShadow: DS.shadows(Ink3D.softShadow)),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            if (photoKind) const TemplatePlaceholder(height: WideCard.bannerHeight, radius: 0),
+            if (photoKind) TemplatePlaceholder(height: WideCard.bannerHeight, radius: 0),
             Expanded(
               child: Padding(
-                padding: EdgeInsets.fromLTRB(m.headPad.left, 16, 20, 14),
+                padding: EdgeInsets.fromLTRB(m.headPadS.left, DS.s(16), DS.s(20), DS.s(14)),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const TemplatePlaceholder(height: 16, width: 130),
-                    const SizedBox(height: 10),
-                    const TemplatePlaceholder(height: 10, width: 90),
+                    TemplatePlaceholder(height: DS.s(16), width: DS.s(130), radius: DS.radius(8)),
+                    SizedBox(height: DS.s(10)),
+                    TemplatePlaceholder(height: DS.s(10), width: DS.s(90), radius: DS.radius(8)),
                     if (!slim) ...[
                       const Spacer(),
-                      const TemplatePlaceholder(height: 22, width: 110),
+                      TemplatePlaceholder(height: DS.s(22), width: DS.s(110), radius: DS.radius(8)),
                       const Spacer(),
-                      const TemplatePlaceholder(height: 14),
+                      TemplatePlaceholder(height: DS.s(14), radius: DS.radius(8)),
                     ],
                   ],
                 ),
@@ -989,11 +1003,11 @@ class WideCardSkeleton extends StatelessWidget {
       children: [
         card,
         Positioned(
-          left: _WideMetrics.side + m.artAt.dx,
-          top: m.top + m.artAt.dy,
+          left: _WideMetrics.sideS + m.artAtS.dx,
+          top: m.topS + m.artAtS.dy,
           child: DecoratedBox(
             decoration: BoxDecoration(shape: BoxShape.circle, color: Ink3D.body.withValues(alpha: 0.16)),
-            child: SizedBox(width: m.art, height: m.art),
+            child: SizedBox(width: m.artS, height: m.artS),
           ),
         ),
       ],

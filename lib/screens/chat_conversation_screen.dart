@@ -875,8 +875,8 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> with Wi
                   final renderList = _buildRenderList();
                   if (renderList.isEmpty) return _buildEmpty();
                   final bottom = _status.value != 'Active'
-                      ? ChatNoticePanel3D.overhang + 8
-                      : 20 + MediaQuery.paddingOf(context).bottom;
+                      ? ChatNoticePanel3D.overhang + DS.s(8)
+                      : DS.s(20) + MediaQuery.paddingOf(context).bottom;
                   return ChatThreadFade(
                     child: RefreshIndicator(
                       color: _tone.g2,
@@ -885,7 +885,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> with Wi
                       child: ListView(
                         controller: _scrollCtrl,
                         physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
-                        padding: EdgeInsets.fromLTRB(18, 8, 18, bottom),
+                        padding: EdgeInsets.fromLTRB(DS.s(18), DS.s(8), DS.s(18), bottom),
                         children: renderList,
                       ),
                     ),
@@ -941,11 +941,11 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> with Wi
     if (_loadingOlder.value) {
       items.add(
         Padding(
-          padding: const EdgeInsets.only(top: 4, bottom: 12),
+          padding: EdgeInsets.only(top: DS.s(4), bottom: DS.s(12)),
           child: Center(
             child: SizedBox(
-              width: 24,
-              height: 24,
+              width: DS.s(24),
+              height: DS.s(24),
               child: CircularProgressIndicator(
                 strokeWidth: 3,
                 color: _tone.g2,
@@ -1011,7 +1011,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> with Wi
     const widths = [180.0, 140.0, 220.0, 120.0, 190.0];
     return ListView.builder(
       physics: const NeverScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(18, 8, 18, 10),
+      padding: EdgeInsets.fromLTRB(DS.s(18), DS.s(8), DS.s(18), DS.s(10)),
       itemCount: widths.length,
       itemBuilder: (_, i) => EntranceOnce(
         index: i,
@@ -1141,7 +1141,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> with Wi
         tone: _tone,
         art: ListingArt.speechBalloon,
         title: 'No messages in this conversation',
-        margin: const EdgeInsets.fromLTRB(36, 90, 36, 0),
+        margin: EdgeInsets.fromLTRB(DS.s(36), DS.s(90), DS.s(36), 0),
       ),
     ],
   );

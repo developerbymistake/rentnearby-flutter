@@ -11,8 +11,8 @@ class HubCardBars extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(top: 6),
-      padding: const EdgeInsets.only(top: 12),
+      margin: EdgeInsets.only(top: DS.gv(6)),
+      padding: EdgeInsets.only(top: DS.s(12)),
       decoration: const BoxDecoration(border: Border(top: BorderSide(color: HubTokens.line))),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -25,7 +25,7 @@ class HubCardBars extends StatelessWidget {
               to: const Color(0xFF2E7D32),
             ),
           ),
-          const SizedBox(width: 10),
+          Gap.h(10),
           Expanded(
             child: _Bar(
               label: TripStringsHubTrips.taxi,
@@ -34,7 +34,7 @@ class HubCardBars extends StatelessWidget {
               to: const Color(0xFFE0525C),
             ),
           ),
-          const SizedBox(width: 10),
+          Gap.h(10),
           Expanded(
             child: _Bar(
               label: TripStringsHubTrips.travel,
@@ -64,15 +64,15 @@ class _Bar extends StatelessWidget {
         Text(label, style: Ink3D.text(11.5, FontWeight.w600, HubTokens.sub, height: 1.5, letterSpacing: 0)),
         Container(
           width: double.infinity,
-          height: 6,
-          margin: const EdgeInsets.fromLTRB(0, 5, 0, 4),
-          decoration: BoxDecoration(color: HubTokens.trackBar, borderRadius: BorderRadius.circular(4)),
+          height: DS.s(6),
+          margin: EdgeInsets.fromLTRB(0, DS.gv(5), 0, DS.gv(4)),
+          decoration: BoxDecoration(color: HubTokens.trackBar, borderRadius: DS.circular(4)),
           child: FractionallySizedBox(
             alignment: Alignment.centerLeft,
             widthFactor: bar.fraction.clamp(0.0, 1.0),
             child: DecoratedBox(
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(4),
+                borderRadius: DS.circular(4),
                 gradient: LinearGradient(colors: [from, to]),
               ),
             ),

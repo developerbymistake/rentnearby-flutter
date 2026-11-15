@@ -19,43 +19,43 @@ class DashedAddRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const radius = TripKit.cardRadiusSmall;
+    final radius = DS.br(TripKit.cardRadiusSmall);
     return PressScale(
       enabled: enabled,
       child: Container(
         decoration: BoxDecoration(
             color: enabled ? DesignColors.surface : DesignColors.surfaceMuted,
             borderRadius: radius,
-            boxShadow: enabled ? ShadowTokens.elev1 : const []),
+            boxShadow: enabled ? DS.shadows(ShadowTokens.elev1) : const []),
         child: Material(
           color: Colors.transparent,
           child: InkWell(
             onTap: enabled ? onTap : null,
             borderRadius: radius,
             child: ConstrainedBox(
-              constraints: const BoxConstraints(minHeight: 48),
+              constraints: BoxConstraints(minHeight: DS.s(48)),
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(12, 10, 16, 10),
+                padding: DS.insets(l: 12, t: 10, r: 16, b: 10),
                 child: Row(children: [
                   Container(
-                    width: 36,
-                    height: 36,
+                    width: DS.s(36),
+                    height: DS.s(36),
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       gradient: enabled ? PickKit.stayGradient : null,
                       color: enabled ? null : DesignColors.textMuted,
-                      boxShadow: enabled ? ShadowTokens.elev1 : const [],
+                      boxShadow: enabled ? DS.shadows(ShadowTokens.elev1) : const [],
                     ),
-                    child: const Icon(Icons.add_rounded, size: 20, color: DesignColors.onPrimary),
+                    child: Icon(Icons.add_rounded, size: DS.s(20), color: DesignColors.onPrimary),
                   ),
-                  const SizedBox(width: 12),
+                  Gap.h(12),
                   Expanded(
                     child: Text(label,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: TripKit.text(14, color: enabled ? DesignColors.primary : DesignColors.textMuted).copyWith(letterSpacing: 0.2)),
                   ),
-                  const SizedBox(width: 8),
+                  Gap.h(8),
                   Flexible(
                     child: Text(counter,
                         maxLines: 2,

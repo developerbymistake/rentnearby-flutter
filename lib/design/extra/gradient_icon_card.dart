@@ -1,3 +1,4 @@
+import 'package:bakhli/design/tokens/design_scale.dart';
 import 'package:bakhli/design/template/fitness_app_theme.dart';
 import 'package:bakhli/design/tokens/alpha_tokens.dart';
 import 'package:bakhli/design/tokens/card_tokens.dart';
@@ -42,7 +43,7 @@ class GradientIconCard extends StatelessWidget {
   final String? caption;
   final String? tag;
 
-  static const BorderRadius _radius = CardRadius.hero;
+  BorderRadius get _radius => DS.br(CardRadius.hero);
 
   @override
   Widget build(BuildContext context) {
@@ -52,17 +53,16 @@ class GradientIconCard extends StatelessWidget {
           textScaler: MediaQuery.textScalerOf(context).clamp(maxScaleFactor: 1.15)),
       child: PressScale(
       child: SizedBox(
-      width: width,
-      height: height,
+      width: DS.s(width),
+      height: DS.s(height),
       child: Stack(
         children: <Widget>[
           Padding(
-            padding:
-                const EdgeInsets.only(top: 32, left: 8, right: 8, bottom: 16),
+            padding: EdgeInsets.fromLTRB(DS.s(8), DS.s(32), DS.s(8), DS.s(16)),
             child: Container(
               decoration: BoxDecoration(
                 boxShadow: <BoxShadow>[
-                  ...ShadowTokens.glow(endColor),
+                  ...DS.shadows(ShadowTokens.glow(endColor)),
                 ],
                 gradient: LinearGradient(
                   colors: <Color>[startColor, endColor],
@@ -77,8 +77,7 @@ class GradientIconCard extends StatelessWidget {
                   borderRadius: _radius,
                   onTap: onTap,
                   child: Padding(
-                    padding: const EdgeInsets.only(
-                        top: 46, left: 16, right: 16, bottom: 6),
+                    padding: DS.insets(l: 16, t: 46, r: 16, b: 6),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -87,24 +86,24 @@ class GradientIconCard extends StatelessWidget {
                           title,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontFamily: FitnessAppTheme.fontName,
                             fontWeight: FontWeight.bold,
-                            fontSize: 16,
+                            fontSize: DS.f(16),
                             letterSpacing: 0.2,
                             color: FitnessAppTheme.white,
                           ),
                         ),
                         Expanded(
                           child: Padding(
-                            padding: const EdgeInsets.only(top: 4, bottom: 4),
+                            padding: EdgeInsets.symmetric(vertical: DS.s(4)),
                             child: Text(
                               subtitleLines.join('\n'),
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontFamily: FitnessAppTheme.fontName,
                                 fontWeight: FontWeight.w500,
-                                fontSize: 11,
+                                fontSize: DS.f(11),
                                 letterSpacing: 0.2,
                                 color: FitnessAppTheme.white,
                               ),
@@ -113,15 +112,15 @@ class GradientIconCard extends StatelessWidget {
                         ),
                         if (caption != null && caption!.isNotEmpty)
                           Padding(
-                            padding: const EdgeInsets.only(bottom: 2),
+                            padding: EdgeInsets.only(bottom: DS.s(2)),
                             child: Text(
                               caption!,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontFamily: FitnessAppTheme.fontName,
                                 fontWeight: FontWeight.w700,
-                                fontSize: 11,
+                                fontSize: DS.f(11),
                                 letterSpacing: 0.6,
                                 color: FitnessAppTheme.white,
                               ),
@@ -136,10 +135,10 @@ class GradientIconCard extends StatelessWidget {
                                   value!,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontFamily: FitnessAppTheme.fontName,
                                     fontWeight: FontWeight.w500,
-                                    fontSize: 24,
+                                    fontSize: DS.f(24),
                                     letterSpacing: 0.2,
                                     color: FitnessAppTheme.white,
                                   ),
@@ -147,14 +146,13 @@ class GradientIconCard extends StatelessWidget {
                               ),
                               if (unit != null)
                                 Padding(
-                                  padding:
-                                      const EdgeInsets.only(left: 4, bottom: 3),
+                                  padding: EdgeInsets.only(left: DS.s(4), bottom: DS.s(3)),
                                   child: Text(
                                     unit!,
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontFamily: FitnessAppTheme.fontName,
                                       fontWeight: FontWeight.w500,
-                                      fontSize: 11,
+                                      fontSize: DS.f(11),
                                       letterSpacing: 0.2,
                                       color: FitnessAppTheme.white,
                                     ),
@@ -169,16 +167,16 @@ class GradientIconCard extends StatelessWidget {
                               decoration: BoxDecoration(
                                 color: FitnessAppTheme.nearlyWhite,
                                 shape: BoxShape.circle,
-                                boxShadow: <BoxShadow>[
+                                boxShadow: DS.shadows(<BoxShadow>[
                                   ShadowTokens.tint(FitnessAppTheme.nearlyBlack, ShadowSpec.elev3Spec),
-                                ],
+                                ]),
                               ),
                               child: Padding(
-                                padding: const EdgeInsets.all(6.0),
+                                padding: DS.all(6),
                                 child: Icon(
                                   Icons.add,
                                   color: endColor,
-                                  size: 24,
+                                  size: DS.s(24),
                                 ),
                               ),
                             ),
@@ -194,8 +192,8 @@ class GradientIconCard extends StatelessWidget {
             top: 0,
             left: 0,
             child: Container(
-              width: 84,
-              height: 84,
+              width: DS.s(84),
+              height: DS.s(84),
               decoration: BoxDecoration(
                 color: FitnessAppTheme.nearlyWhite.withValues(alpha: Alpha.soft),
                 shape: BoxShape.circle,
@@ -204,10 +202,10 @@ class GradientIconCard extends StatelessWidget {
           ),
           Positioned(
             top: 0,
-            left: 8,
+            left: DS.s(8),
             child: SizedBox(
-              width: 80,
-              height: 80,
+              width: DS.s(80),
+              height: DS.s(80),
               child: imageUrl == null
                   ? Image.asset(iconAsset)
                   : ClipOval(
@@ -222,20 +220,20 @@ class GradientIconCard extends StatelessWidget {
           ),
           if (tag != null && tag!.isNotEmpty)
             Positioned(
-              top: 40,
-              right: 16,
+              top: DS.s(40),
+              right: DS.s(16),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
+                padding: DS.sym(h: 7, v: 1),
                 decoration: BoxDecoration(
                   color: FitnessAppTheme.nearlyWhite.withValues(alpha: Alpha.soft),
-                  borderRadius: BorderRadius.circular(999),
+                  borderRadius: DS.circular(999),
                 ),
                 child: Text(
                   tag!,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontFamily: FitnessAppTheme.fontName,
                     fontWeight: FontWeight.w700,
-                    fontSize: 11,
+                    fontSize: DS.f(11),
                     letterSpacing: 0.5,
                     color: FitnessAppTheme.white,
                   ),

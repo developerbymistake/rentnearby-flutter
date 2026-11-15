@@ -117,9 +117,9 @@ class _DatesBodyState extends State<_DatesBody> {
           onTap: _saving ? null : _pickDate,
         ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(4, 8, 4, 0),
+          padding: EdgeInsets.fromLTRB(DS.s(4), DS.gv(8), DS.s(4), 0),
           child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 18),
+            constraints: BoxConstraints(minHeight: DS.s(18)),
             child: end != null && days > 0
                 ? Text(TripStringsV2Find.daysBack(days, _short(end)), style: Ink3D.text(12.5, FontWeight.w400, Ink3D.sub))
                 : const SizedBox.shrink(),
@@ -146,7 +146,7 @@ class _DatesBodyState extends State<_DatesBody> {
       title: widget.heading,
       subtitle: widget.clearStart ? TripStringsV2Find.datesPassedSub : TripStringsV2Find.datesSub,
       centerTitle: false,
-      padding: const EdgeInsets.fromLTRB(18, 0, 18, 0),
+      padding: DS.sym(h: 18),
       footer: GradientPillButton(
         tone: _tone,
         label: widget.cta,
@@ -159,7 +159,7 @@ class _DatesBodyState extends State<_DatesBody> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _dateField(),
-          const SizedBox(height: 4),
+          Gap.v(4),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -167,14 +167,14 @@ class _DatesBodyState extends State<_DatesBody> {
                 child: _stepper(
                     TripStringsV2Find.adults, _adults, 1, TripDatesSheet._maxAdults, (v) => setState(() => _adults = v)),
               ),
-              const SizedBox(width: 12),
+              Gap.h(12),
               Expanded(
                 child: _stepper(
                     TripStringsV2Find.children, _kids, 0, TripDatesSheet._maxKids, (v) => setState(() => _kids = v)),
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          Gap.v(8),
         ],
       ),
     );

@@ -1,3 +1,4 @@
+import 'package:bakhli/design/tokens/design_scale.dart';
 import 'dart:math' as math;
 import 'package:bakhli/models/card_fact.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -13,6 +14,8 @@ import 'motion_kit.dart';
 import 'template_motion.dart';
 import 'travel_icon.dart';
 
+EdgeInsets _scaleMargin(EdgeInsets m) => EdgeInsets.fromLTRB(DS.s(m.left), DS.gv(m.top), DS.s(m.right), DS.gv(m.bottom));
+
 class _Bone extends StatelessWidget {
   const _Bone({this.width, this.height = 12, this.radius = 6});
   final double? width;
@@ -21,7 +24,7 @@ class _Bone extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) =>
-      TemplatePlaceholder(width: width, height: height, radius: radius);
+      TemplatePlaceholder(width: width == null ? null : DS.s(width!), height: DS.s(height), radius: DS.radius(radius));
 }
 
 class _Surface extends StatelessWidget {
@@ -48,13 +51,13 @@ class _Surface extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final card = DecoratedBox(
-      decoration: BoxDecoration(color: gradient == null ? color : null, borderRadius: radius, boxShadow: shadow),
+      decoration: BoxDecoration(color: gradient == null ? color : null, borderRadius: DS.br(radius), boxShadow: DS.shadows(shadow)),
       child: Material(
         color: Colors.transparent,
-        borderRadius: radius,
+        borderRadius: DS.br(radius),
         clipBehavior: Clip.antiAlias,
         child: Ink(
-          decoration: gradient == null ? null : BoxDecoration(gradient: gradient, borderRadius: radius),
+          decoration: gradient == null ? null : BoxDecoration(gradient: gradient, borderRadius: DS.br(radius)),
           child: InkWell(
             onTap: onTap,
             splashColor: DesignColors.splash,
@@ -84,8 +87,8 @@ class KitFactChip extends StatelessWidget {
       FactTone.slate => (DesignColors.scaffold, DesignColors.textGrey),
     };
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-      decoration: BoxDecoration(color: bg, borderRadius: CardRadius.chip),
+      padding: DS.sym(h: 6, v: 3),
+      decoration: BoxDecoration(color: bg, borderRadius: DS.br(CardRadius.chip)),
       child: Text(fact.label,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
@@ -106,10 +109,10 @@ class KitTagChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = color ?? tone.accentDark;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      padding: DS.sym(h: 8, v: 3),
       decoration: BoxDecoration(
         color: solid ? c : DesignColors.tint(c, Alpha.tint),
-        borderRadius: CardRadius.chip,
+        borderRadius: DS.br(CardRadius.chip),
       ),
       child: Text(label,
           maxLines: 1,
@@ -129,13 +132,13 @@ class KitFeaturedRibbon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(6, 3, 8, 3),
-      decoration: BoxDecoration(gradient: tone.gradient, borderRadius: CardRadius.pill),
+      padding: DS.insets(l: 6, t: 3, r: 8, b: 3),
+      decoration: BoxDecoration(gradient: tone.gradient, borderRadius: DS.br(CardRadius.pill)),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           const TravelIcon(TravelIcon.star, size: 12),
-          const SizedBox(width: 3),
+          SizedBox(width: DS.s(3)),
           Flexible(
             child: Text(label,
                 maxLines: 1,
@@ -179,7 +182,7 @@ class PlaceholderTile extends StatelessWidget {
       width: width,
       height: height,
       decoration: BoxDecoration(
-        borderRadius: radius,
+        borderRadius: DS.br(radius),
         gradient: LinearGradient(
           colors: rich
               ? [gradient?.colors.first ?? tone.accent, gradient?.colors.last ?? tone.accentDark]
@@ -193,12 +196,12 @@ class PlaceholderTile extends StatelessWidget {
       ),
       child: Center(
         child: Container(
-          width: iconSize + 24,
-          height: iconSize + 24,
+          width: DS.s(iconSize + 24),
+          height: DS.s(iconSize + 24),
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: DesignColors.tint(DesignColors.surfaceAlt, rich ? Alpha.half : Alpha.soft),
-            boxShadow: rich ? ShadowTokens.tight(tone.accentDark) : null,
+            boxShadow: rich ? DS.shadows(ShadowTokens.tight(tone.accentDark)) : null,
           ),
           child: Center(child: TravelIcon(asset, size: iconSize)),
         ),
@@ -243,7 +246,7 @@ class KitPhoto extends StatelessWidget {
     final image = url == null || url!.isEmpty
         ? fallback
         : ClipRRect(
-            borderRadius: radius,
+            borderRadius: DS.br(radius),
             child: CachedNetworkImage(
               imageUrl: url!,
               width: width,
@@ -262,7 +265,7 @@ class KitPhoto extends StatelessWidget {
         child: DecoratedBox(
           decoration: BoxDecoration(
             color: DesignColors.tint(DesignColors.surface, Alpha.strong),
-            borderRadius: radius,
+            borderRadius: DS.br(radius),
           ),
         ),
       ),
@@ -318,16 +321,16 @@ class RailCard extends StatelessWidget {
   final Widget? media;
 
   static SliverGridDelegate gridDelegate() =>
-      const SliverGridDelegateWithMaxCrossAxisExtent(
-        maxCrossAxisExtent: gridMaxExtent,
-        mainAxisExtent: height,
-        mainAxisSpacing: gridSpacing,
-        crossAxisSpacing: gridSpacing,
+      SliverGridDelegateWithMaxCrossAxisExtent(
+        maxCrossAxisExtent: DS.s(gridMaxExtent),
+        mainAxisExtent: DS.s(height),
+        mainAxisSpacing: DS.gv(gridSpacing),
+        crossAxisSpacing: DS.gh(gridSpacing),
       );
 
   static Widget skeleton({double? cardWidth}) => SizedBox(
-        width: cardWidth ?? width,
-        height: height,
+        width: DS.s(cardWidth ?? width),
+        height: DS.s(height),
         child: _Surface(
           press: false,
           child: Column(
@@ -335,18 +338,18 @@ class RailCard extends StatelessWidget {
             children: [
               const _Bone(height: photoHeight, radius: 0),
               Padding(
-                padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
+                padding: DS.insets(l: 10, t: 10, r: 10, b: 10),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: const [
+                  children: [
                     _Bone(height: 14),
-                    SizedBox(height: 6),
+                    SizedBox(height: DS.s(6)),
                     _Bone(height: 14, width: 90),
-                    SizedBox(height: 8),
+                    SizedBox(height: DS.s(8)),
                     _Bone(height: 11, width: 70),
-                    SizedBox(height: 8),
-                    Row(children: [_Bone(height: 18, width: 44, radius: 8), SizedBox(width: 6), _Bone(height: 18, width: 44, radius: 8)]),
-                    SizedBox(height: 12),
+                    SizedBox(height: DS.s(8)),
+                    Row(children: [_Bone(height: 18, width: 44, radius: 8), SizedBox(width: DS.s(6)), _Bone(height: 18, width: 44, radius: 8)]),
+                    SizedBox(height: DS.s(12)),
                     _Bone(height: 16, width: 80),
                   ],
                 ),
@@ -403,12 +406,12 @@ class RailCard extends StatelessWidget {
                       ),
                     ),
         ),
-        const SizedBox(width: 6),
+        SizedBox(width: DS.s(6)),
         Container(
-          width: 28,
-          height: 28,
+          width: DS.s(28),
+          height: DS.s(28),
           decoration: BoxDecoration(gradient: tone.gradient, shape: BoxShape.circle),
-          child: const Icon(Icons.chevron_right_rounded, size: 20, color: DesignColors.onPrimary),
+          child: Icon(Icons.chevron_right_rounded, size: DS.s(20), color: DesignColors.onPrimary),
         ),
       ],
     );
@@ -422,14 +425,14 @@ class RailCard extends StatelessWidget {
       foreground: selected
           ? BoxDecoration(
               borderRadius: CardRadius.tile,
-              border: Border.all(color: tone.accentDark, width: 2),
+              border: Border.all(color: tone.accentDark, width: DS.s(2)),
             )
           : null,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            height: photoHeight,
+            height: DS.s(photoHeight),
             width: double.infinity,
             child: Stack(
               fit: StackFit.expand,
@@ -439,7 +442,7 @@ class RailCard extends StatelessWidget {
                       builder: (context, c) => KitPhoto(
                         url: thumbnailUrl,
                         width: c.maxWidth,
-                        height: photoHeight,
+                        height: DS.s(photoHeight),
                         tone: tone,
                         asset: fallbackAsset,
                         iconSize: 40,
@@ -447,22 +450,22 @@ class RailCard extends StatelessWidget {
                     ),
                 if (tagLabel != null && tagLabel!.isNotEmpty)
                   Positioned(
-                    top: 8,
-                    left: 8,
-                    right: 8,
+                    top: DS.s(8),
+                    left: DS.s(8),
+                    right: DS.s(8),
                     child: Align(
                       alignment: Alignment.topLeft,
                       child: KitTagChip(tagLabel!, tone: tone, solid: true),
                     ),
                   ),
                 if (isFeatured)
-                  Positioned(left: 8, bottom: 8, child: PlanBadgeChip(color: tone.accentDark, compact: false)),
+                  Positioned(left: DS.s(8), bottom: DS.s(8), child: PlanBadgeChip(color: tone.accentDark, compact: false)),
               ],
             ),
           ),
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+              padding: DS.insets(l: 10, t: 8, r: 10, b: 10),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -471,11 +474,11 @@ class RailCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: TypeTokens.style(14, FontWeight.w700, color: DesignColors.textStrong, height: 1.2)),
                   if (locationLabel != null && locationLabel!.isNotEmpty) ...[
-                    const SizedBox(height: 4),
+                    SizedBox(height: DS.s(4)),
                     Row(
                       children: [
                         const TravelIcon(TravelIcon.place, size: 12),
-                        const SizedBox(width: 3),
+                        SizedBox(width: DS.s(3)),
                         Expanded(
                           child: Text(locationLabel!,
                               maxLines: 1,
@@ -486,14 +489,14 @@ class RailCard extends StatelessWidget {
                     ),
                   ],
                   if (facts.isNotEmpty) ...[
-                    const SizedBox(height: 6),
+                    SizedBox(height: DS.s(6)),
                     SizedBox(
-                      height: 22,
+                      height: DS.s(22),
                       width: double.infinity,
                       child: ClipRect(
                         child: Wrap(
-                          spacing: 4,
-                          runSpacing: 4,
+                          spacing: DS.gh(4),
+                          runSpacing: DS.gv(4),
                           children: [for (final f in facts) KitFactChip(f, tone: tone)],
                         ),
                       ),
@@ -588,29 +591,29 @@ class ListRow extends StatelessWidget {
   static Widget skeleton({bool compact = false, EdgeInsets margin = const EdgeInsets.symmetric(horizontal: KitMetrics.gutter, vertical: 6)}) {
     final t = compact ? tileSizeCompact : tileSize;
     return Padding(
-      padding: margin,
+      padding: _scaleMargin(margin),
       child: _Surface(
         shadow: ShadowTokens.elev1,
         press: false,
         child: Padding(
-          padding: EdgeInsets.all(compact ? 8 : 8),
+          padding: DS.all(8),
           child: Row(
             children: [
               _Bone(width: t, height: t, radius: 12),
-              const SizedBox(width: 12),
-              const Expanded(
+              SizedBox(width: DS.s(12)),
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _Bone(width: 56, height: 14, radius: 8),
-                    SizedBox(height: 6),
+                    SizedBox(height: DS.s(6)),
                     _Bone(height: 14),
-                    SizedBox(height: 6),
+                    SizedBox(height: DS.s(6)),
                     _Bone(width: 110, height: 11),
                   ],
                 ),
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: DS.s(12)),
               const _Bone(width: 44, height: 16),
             ],
           ),
@@ -621,7 +624,7 @@ class ListRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final t = compact ? tileSizeCompact : tileSize;
+    final t = DS.s(compact ? tileSizeCompact : tileSize);
     final titleColor = dimmed ? DesignColors.textMuted : DesignColors.textStrong;
     final lead = leading ??
         Stack(
@@ -639,11 +642,11 @@ class ListRow extends StatelessWidget {
             ),
             if (isFeatured)
               Positioned(
-                left: 4,
-                bottom: 4,
+                left: DS.s(4),
+                bottom: DS.s(4),
                 child: Container(
-                  width: 20,
-                  height: 20,
+                  width: DS.s(20),
+                  height: DS.s(20),
                   decoration: BoxDecoration(gradient: tone.gradient, shape: BoxShape.circle),
                   child: const Center(child: TravelIcon(TravelIcon.star, size: 12)),
                 ),
@@ -667,12 +670,12 @@ class ListRow extends StatelessWidget {
                       Text(priceUnit!, style: TypeTokens.caption),
                   ],
                   if (showChevron && onTap != null)
-                    Icon(Icons.chevron_right_rounded, size: 22, color: DesignColors.textDisabled),
+                    Icon(Icons.chevron_right_rounded, size: DS.s(22), color: DesignColors.textDisabled),
                 ],
               )
             : null);
     return Padding(
-      padding: margin,
+      padding: _scaleMargin(margin),
       child: _Surface(
         onTap: onTap,
         shadow: rich ? ShadowTokens.tight(tone.accentDark) : (elevated ? ShadowTokens.elev3 : ShadowTokens.elev1),
@@ -685,9 +688,9 @@ class ListRow extends StatelessWidget {
           children: [
             if (header != null) header!,
             ConstrainedBox(
-          constraints: BoxConstraints(minHeight: compact ? 72 : minHeight),
+          constraints: BoxConstraints(minHeight: DS.s(compact ? 72 : minHeight)),
           child: Padding(
-            padding: const EdgeInsets.all(8),
+            padding: DS.all(8),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -695,7 +698,7 @@ class ListRow extends StatelessWidget {
                   crossAxisAlignment: trailingTop ? CrossAxisAlignment.start : CrossAxisAlignment.center,
                   children: [
                     lead,
-                    const SizedBox(width: 12),
+                    SizedBox(width: DS.s(12)),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -703,10 +706,10 @@ class ListRow extends StatelessWidget {
                         children: [
                           if ((tag != null && tag!.isNotEmpty) || notice != null || tagBadge != null)
                             Padding(
-                              padding: const EdgeInsets.only(bottom: 4),
+                              padding: EdgeInsets.only(bottom: DS.s(4)),
                               child: Wrap(
-                                spacing: 4,
-                                runSpacing: 4,
+                                spacing: DS.gh(4),
+                                runSpacing: DS.gv(4),
                                 children: [
                                   if (tag != null && tag!.isNotEmpty) KitTagChip(tag!, tone: tone, solid: solidTag),
                                   if (tagBadge != null) tagBadge!,
@@ -720,34 +723,34 @@ class ListRow extends StatelessWidget {
                               overflow: TextOverflow.ellipsis,
                               style: TypeTokens.style(rich ? 16 : 14, FontWeight.w700, color: titleColor, height: 1.2)),
                           if (subtitle != null && subtitle!.isNotEmpty) ...[
-                            const SizedBox(height: 2),
+                            SizedBox(height: DS.s(2)),
                             Text(subtitle!,
                                 maxLines: subtitleLines,
                                 overflow: TextOverflow.ellipsis,
                                 style: TypeTokens.caption),
                           ],
                           if (facts.isNotEmpty) ...[
-                            const SizedBox(height: 6),
+                            SizedBox(height: DS.s(6)),
                             Wrap(
-                              spacing: 4,
-                              runSpacing: 4,
+                              spacing: DS.gh(4),
+                              runSpacing: DS.gv(4),
                               children: [for (final f in facts.take(2)) KitFactChip(f, tone: tone)],
                             ),
                           ],
-                          if (body != null) ...[const SizedBox(height: 6), body!],
+                          if (body != null) ...[SizedBox(height: DS.s(6)), body!],
                         ],
                       ),
                     ),
-                    if (right != null) ...[const SizedBox(width: 8), right],
+                    if (right != null) ...[SizedBox(width: DS.s(8)), right],
                   ],
                 ),
-                for (final r in rows) ...[const SizedBox(height: 8), r],
+                for (final r in rows) ...[SizedBox(height: DS.s(8)), r],
                 if (footer != null) ...[
-                  const Padding(
-                    padding: EdgeInsets.only(top: 8),
+                  Padding(
+                    padding: EdgeInsets.only(top: DS.s(8)),
                     child: Divider(height: 1, color: DesignColors.dividerSoft),
                   ),
-                  Padding(padding: const EdgeInsets.fromLTRB(4, 4, 4, 0), child: footer),
+                  Padding(padding: DS.insets(l: 4, t: 4, r: 4, b: 0), child: footer),
                 ],
               ],
             ),
@@ -788,17 +791,17 @@ class SlimBar extends StatelessWidget {
 
   static Widget skeleton({EdgeInsets margin = const EdgeInsets.symmetric(horizontal: KitMetrics.gutter, vertical: 6)}) =>
       Padding(
-        padding: margin,
+        padding: _scaleMargin(margin),
         child: _Surface(
           shadow: ShadowTokens.elev1,
           press: false,
-          child: const SizedBox(
-            height: 56,
+          child: SizedBox(
+            height: DS.s(56),
             child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: 12),
+              padding: DS.sym(h: 12),
               child: Row(children: [
                 _Bone(width: 32, height: 32, radius: 16),
-                SizedBox(width: 12),
+                SizedBox(width: DS.s(12)),
                 Expanded(child: _Bone(height: 14)),
               ]),
             ),
@@ -813,9 +816,9 @@ class SlimBar extends StatelessWidget {
     final lead = leading ??
         (leadingAsset != null
             ? Container(
-                width: 36,
-                height: 36,
-                padding: const EdgeInsets.all(6),
+                width: DS.s(36),
+                height: DS.s(36),
+                padding: DS.all(6),
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: filled ? DesignColors.whiteSoft : tone.tint,
@@ -824,19 +827,19 @@ class SlimBar extends StatelessWidget {
               )
             : null);
     return Padding(
-      padding: margin,
+      padding: _scaleMargin(margin),
       child: _Surface(
         onTap: onTap,
         shadow: filled ? ShadowTokens.glow(tone.glow) : (elevated ? ShadowTokens.elev3 : ShadowTokens.elev1),
         color: filled ? Colors.transparent : DesignColors.surface,
         foreground: null,
         child: Container(
-          constraints: const BoxConstraints(minHeight: 56),
+          constraints: BoxConstraints(minHeight: DS.s(56)),
           decoration: filled ? BoxDecoration(gradient: tone.gradient) : null,
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          padding: DS.sym(h: 12, v: 8),
           child: Row(
             children: [
-              if (lead != null) ...[lead, const SizedBox(width: 12)],
+              if (lead != null) ...[lead, SizedBox(width: DS.s(12))],
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -854,9 +857,9 @@ class SlimBar extends StatelessWidget {
                   ],
                 ),
               ),
-              if (trailing != null) ...[const SizedBox(width: 8), trailing!]
+              if (trailing != null) ...[SizedBox(width: DS.s(8)), trailing!]
               else if (onTap != null)
-                Icon(Icons.chevron_right_rounded, size: 22, color: filled ? DesignColors.onPrimary : DesignColors.textDisabled),
+                Icon(Icons.chevron_right_rounded, size: DS.s(22), color: filled ? DesignColors.onPrimary : DesignColors.textDisabled),
             ],
           ),
         ),
@@ -886,17 +889,17 @@ class SectionTile extends StatelessWidget {
   final KitTone tone;
 
   static Widget skeleton({int lines = 3, EdgeInsets margin = EdgeInsets.zero}) => Padding(
-        padding: margin,
+        padding: _scaleMargin(margin),
         child: _Surface(
           shadow: ShadowTokens.elev1,
           press: false,
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: DS.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 for (var i = 0; i < lines; i++) ...[
-                  if (i > 0) const SizedBox(height: 10),
+                  if (i > 0) SizedBox(height: DS.s(10)),
                   _Bone(height: 14, width: i == lines - 1 ? 120 : null),
                 ],
               ],
@@ -908,24 +911,24 @@ class SectionTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: margin,
+      padding: _scaleMargin(margin),
       child: _Surface(
         onTap: onTap,
         shadow: selected ? ShadowTokens.elev3 : ShadowTokens.elev1,
         foreground: selected
             ? BoxDecoration(
-                borderRadius: CardRadius.tile,
-                border: Border.all(color: tone.accentDark, width: 2))
+                borderRadius: DS.br(CardRadius.tile),
+                border: Border.all(color: tone.accentDark, width: DS.s(2)))
             : null,
         child: Padding(
-          padding: padding,
+          padding: DS.insets(l: padding.left, t: padding.top, r: padding.right, b: padding.bottom),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
               if (title != null) ...[
                 Text(title!, style: TypeTokens.style(16, FontWeight.w700, color: DesignColors.textStrong)),
-                const SizedBox(height: 12),
+                SizedBox(height: DS.s(12)),
               ],
               child,
             ],
@@ -971,18 +974,18 @@ class HeroBanner extends StatelessWidget {
         radius: CardRadius.hero,
         shadow: ShadowTokens.elev1,
         child: SizedBox(
-          height: height,
-          child: const Padding(
-            padding: EdgeInsets.all(16),
+          height: DS.s(height),
+          child: Padding(
+            padding: DS.all(16),
             child: Row(
               children: [
                 _Bone(width: 84, height: 84, radius: 42),
-                SizedBox(width: 14),
+                SizedBox(width: DS.s(14)),
                 Expanded(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [_Bone(height: 16), SizedBox(height: 8), _Bone(height: 12, width: 120)],
+                    children: [_Bone(height: 16), SizedBox(height: DS.s(8)), _Bone(height: 12, width: 120)],
                   ),
                 ),
               ],
@@ -995,9 +998,9 @@ class HeroBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     final art = illustration ??
         Container(
-          width: 84,
-          height: 84,
-          padding: const EdgeInsets.all(18),
+          width: DS.s(84),
+          height: DS.s(84),
+          padding: DS.all(18),
           decoration: const BoxDecoration(color: DesignColors.whiteSoft, shape: BoxShape.circle),
           child: iconAsset == null ? null : Image.asset(iconAsset!),
         );
@@ -1009,39 +1012,39 @@ class HeroBanner extends StatelessWidget {
         shadow: ShadowTokens.glow(tone.glow),
         color: Colors.transparent,
         foreground: selected
-            ? const BoxDecoration(
-                borderRadius: CardRadius.hero,
-                border: Border.fromBorderSide(BorderSide(color: DesignColors.onPrimary, width: 3)))
+            ? BoxDecoration(
+                borderRadius: DS.br(CardRadius.hero),
+                border: Border.fromBorderSide(BorderSide(color: DesignColors.onPrimary, width: DS.s(3))))
             : null,
         child: Container(
-          constraints: BoxConstraints(minHeight: height),
+          constraints: BoxConstraints(minHeight: DS.s(height)),
           decoration: BoxDecoration(gradient: tone.gradient),
           child: Stack(
             children: [
               Positioned(
-                right: -28,
-                bottom: -36,
+                right: DS.s(-28),
+                bottom: DS.s(-36),
                 child: Container(
-                  width: 120,
-                  height: 120,
+                  width: DS.s(120),
+                  height: DS.s(120),
                   decoration: const BoxDecoration(color: DesignColors.overlayWhiteFaint, shape: BoxShape.circle),
                 ),
               ),
               Positioned(
-                right: 30,
-                top: -26,
+                right: DS.s(30),
+                top: DS.s(-26),
                 child: Container(
-                  width: 56,
-                  height: 56,
+                  width: DS.s(56),
+                  height: DS.s(56),
                   decoration: const BoxDecoration(color: DesignColors.overlayWhiteFaint, shape: BoxShape.circle),
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.all(16),
+                padding: DS.all(16),
                 child: Row(
                   children: [
                     art,
-                    const SizedBox(width: 14),
+                    SizedBox(width: DS.s(14)),
                     Expanded(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -1056,9 +1059,9 @@ class HeroBanner extends StatelessWidget {
                               maintainState: true,
                               maintainSemantics: false,
                               child: Container(
-                                margin: const EdgeInsets.only(bottom: 4),
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                decoration: BoxDecoration(color: DesignColors.surface, borderRadius: CardRadius.pill),
+                                margin: EdgeInsets.only(bottom: DS.s(4)),
+                                padding: DS.sym(h: 8, v: 2),
+                                decoration: BoxDecoration(color: DesignColors.surface, borderRadius: DS.br(CardRadius.pill)),
                                 child: Text(badge ?? 'CURRENT',
                                     style: TypeTokens.style(10, FontWeight.w700, color: tone.accentDark, chip: true)),
                               ),
@@ -1068,7 +1071,7 @@ class HeroBanner extends StatelessWidget {
                               overflow: TextOverflow.ellipsis,
                               style: TypeTokens.onGradientTitle),
                           if (subtitle != null && subtitle!.isNotEmpty) ...[
-                            const SizedBox(height: 4),
+                            SizedBox(height: DS.s(4)),
                             Stack(
                               children: [
                                 if (reserveSubtitle)
@@ -1085,11 +1088,11 @@ class HeroBanner extends StatelessWidget {
                             ),
                           ],
                           if (cta != null) ...[
-                            const SizedBox(height: 8),
+                            SizedBox(height: DS.s(8)),
                             Row(mainAxisSize: MainAxisSize.min, children: [
                               Text(cta!, style: TypeTokens.style(12, FontWeight.w700, color: DesignColors.onPrimary)),
-                              const SizedBox(width: 4),
-                              const Icon(Icons.arrow_forward_rounded, size: 16, color: DesignColors.onPrimary),
+                              SizedBox(width: DS.s(4)),
+                              Icon(Icons.arrow_forward_rounded, size: DS.s(16), color: DesignColors.onPrimary),
                             ]),
                           ],
                         ],
@@ -1153,30 +1156,30 @@ class OwnerListingCard extends StatelessWidget {
 
   static Widget skeleton({EdgeInsets margin = const EdgeInsets.symmetric(horizontal: KitMetrics.gutter, vertical: 6)}) =>
       Padding(
-        padding: margin,
+        padding: _scaleMargin(margin),
         child: _Surface(
           shadow: ShadowTokens.elev1,
           press: false,
-          child: const Padding(
-            padding: EdgeInsets.all(8),
+          child: Padding(
+            padding: DS.all(8),
             child: Column(
               children: [
                 Row(
                   children: [
                     _Bone(width: 72, height: 72, radius: 12),
-                    SizedBox(width: 12),
+                    SizedBox(width: DS.s(12)),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [_Bone(height: 14), SizedBox(height: 6), _Bone(width: 110, height: 11)],
+                        children: [_Bone(height: 14), SizedBox(height: DS.s(6)), _Bone(width: 110, height: 11)],
                       ),
                     ),
-                    SizedBox(width: 12),
+                    SizedBox(width: DS.s(12)),
                     _Bone(width: 56, height: 20, radius: 8),
                   ],
                 ),
-                SizedBox(height: 12),
-                Row(children: [_Bone(width: 88, height: 36, radius: 18), SizedBox(width: 8), _Bone(width: 88, height: 36, radius: 18)]),
+                SizedBox(height: DS.s(12)),
+                Row(children: [_Bone(width: 88, height: 36, radius: 18), SizedBox(width: DS.s(8)), _Bone(width: 88, height: 36, radius: 18)]),
               ],
             ),
           ),
@@ -1206,7 +1209,7 @@ class OwnerListingCard extends StatelessWidget {
           : KitTagChip(status!, tone: tone, color: statusColor),
       footer: actions.isEmpty
           ? null
-          : Wrap(spacing: 8, runSpacing: 0, children: actions),
+          : Wrap(spacing: DS.gh(8), runSpacing: DS.gv(0), children: actions),
     );
   }
 }
@@ -1259,30 +1262,30 @@ class DriverOptionCard extends StatelessWidget {
 
   static Widget skeleton({EdgeInsets margin = const EdgeInsets.symmetric(horizontal: KitMetrics.gutter, vertical: 6)}) =>
       Padding(
-        padding: margin,
+        padding: _scaleMargin(margin),
         child: _Surface(
           shadow: ShadowTokens.elev2,
           press: false,
-          child: const Padding(
-            padding: EdgeInsets.all(12),
+          child: Padding(
+            padding: DS.all(12),
             child: Column(
               children: [
                 Row(
                   children: [
                     _Bone(width: 48, height: 48, radius: 24),
-                    SizedBox(width: 12),
+                    SizedBox(width: DS.s(12)),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [_Bone(height: 14, width: 140), SizedBox(height: 6), _Bone(height: 11, width: 90)],
+                        children: [_Bone(height: 14, width: 140), SizedBox(height: DS.s(6)), _Bone(height: 11, width: 90)],
                       ),
                     ),
-                    SizedBox(width: 12),
+                    SizedBox(width: DS.s(12)),
                     _Bone(width: 56, height: 20),
                   ],
                 ),
-                SizedBox(height: 12),
-                Row(children: [_Bone(width: 88, height: 36, radius: 18), SizedBox(width: 8), _Bone(width: 88, height: 36, radius: 18)]),
+                SizedBox(height: DS.s(12)),
+                Row(children: [_Bone(width: 88, height: 36, radius: 18), SizedBox(width: DS.s(8)), _Bone(width: 88, height: 36, radius: 18)]),
               ],
             ),
           ),
@@ -1294,14 +1297,14 @@ class DriverOptionCard extends StatelessWidget {
     final nameColor = dimmed ? DesignColors.textMuted : DesignColors.textStrong;
     final tone = legColor == null ? this.tone : KitTone.solid(legColor!);
     return Padding(
-      padding: margin,
+      padding: _scaleMargin(margin),
       child: _Surface(
         onTap: onTap,
         shadow: selected ? ShadowTokens.elev3 : ShadowTokens.elev2,
         foreground: selected
             ? BoxDecoration(
-                borderRadius: CardRadius.tile,
-                border: Border.all(color: tone.accentDark, width: 2),
+                borderRadius: DS.br(CardRadius.tile),
+                border: Border.all(color: tone.accentDark, width: DS.s(2)),
               )
             : null,
         child: Column(
@@ -1309,9 +1312,9 @@ class DriverOptionCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             if (header != null)
-              Padding(padding: const EdgeInsets.fromLTRB(12, 10, 12, 0), child: header),
+              Padding(padding: DS.insets(l: 12, t: 10, r: 12, b: 0), child: header),
             Padding(
-          padding: const EdgeInsets.all(12),
+          padding: DS.all(12),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -1319,9 +1322,9 @@ class DriverOptionCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Container(
-                    width: 48,
-                    height: 48,
-                    padding: const EdgeInsets.all(10),
+                    width: DS.s(48),
+                    height: DS.s(48),
+                    padding: DS.all(10),
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       gradient: LinearGradient(
@@ -1338,15 +1341,15 @@ class DriverOptionCard extends StatelessWidget {
                                     style: TypeTokens.style(18, FontWeight.w800, color: tone.accentDark)))
                             : Image.asset(avatarAsset)),
                   ),
-                  const SizedBox(width: 12),
+                  SizedBox(width: DS.s(12)),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         if (badge != null || isFeatured)
                           Padding(
-                            padding: const EdgeInsets.only(bottom: 4),
-                            child: Wrap(spacing: 4, children: [
+                            padding: EdgeInsets.only(bottom: DS.s(4)),
+                            child: Wrap(spacing: DS.gh(4), children: [
                               if (isFeatured) KitFeaturedRibbon(tone: tone),
                               if (badge != null) KitTagChip(badge!, tone: tone),
                             ]),
@@ -1360,16 +1363,16 @@ class DriverOptionCard extends StatelessWidget {
                         if (subtitle != null && subtitle!.isNotEmpty)
                           Text(subtitle!, maxLines: 1, overflow: TextOverflow.ellipsis, style: TypeTokens.caption),
                         if (facts.isNotEmpty) ...[
-                          const SizedBox(height: 6),
-                          Wrap(spacing: 4, runSpacing: 4, children: [for (final f in facts.take(3)) KitFactChip(f, tone: tone)]),
+                          SizedBox(height: DS.s(6)),
+                          Wrap(spacing: DS.gh(4), runSpacing: DS.gv(4), children: [for (final f in facts.take(3)) KitFactChip(f, tone: tone)]),
                         ],
                       ],
                     ),
                   ),
                   if (fareValue != null && fareValue!.isNotEmpty) ...[
-                    const SizedBox(width: 8),
+                    SizedBox(width: DS.s(8)),
                     ConstrainedBox(
-                      constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width < 340 ? 84 : 112),
+                      constraints: BoxConstraints(maxWidth: DS.s(MediaQuery.sizeOf(context).width < 340 ? 84 : 112)),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
@@ -1390,14 +1393,14 @@ class DriverOptionCard extends StatelessWidget {
                 ],
               ),
               if (actions.isNotEmpty) ...[
-                const Padding(
-                  padding: EdgeInsets.only(top: 8),
+                Padding(
+                  padding: EdgeInsets.only(top: DS.s(8)),
                   child: Divider(height: 1, color: DesignColors.dividerSoft),
                 ),
-                const SizedBox(height: 4),
+                SizedBox(height: DS.s(4)),
                 Align(
                   alignment: Alignment.centerLeft,
-                  child: Wrap(spacing: 8, children: actions),
+                  child: Wrap(spacing: DS.gh(8), children: actions),
                 ),
               ],
             ],
@@ -1420,11 +1423,11 @@ class KitStatusStrip extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        decoration: BoxDecoration(color: DesignColors.tint(color, Alpha.tint), borderRadius: KitMetrics.tileSmall),
+        padding: DS.sym(h: 10, v: 8),
+        decoration: BoxDecoration(color: DesignColors.tint(color, Alpha.tint), borderRadius: DS.br(KitMetrics.tileSmall)),
         child: Row(
           children: [
-            if (icon != null) ...[Icon(icon, size: 16, color: color), const SizedBox(width: 6)],
+            if (icon != null) ...[Icon(icon, size: DS.s(16), color: color), SizedBox(width: DS.s(6))],
             Expanded(
               child: Text(label,
                   maxLines: 3,
@@ -1454,7 +1457,7 @@ class OwnerPhotoBand extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => SizedBox(
-        height: height,
+        height: DS.s(height),
         child: Stack(
           fit: StackFit.expand,
           children: [
@@ -1462,14 +1465,14 @@ class OwnerPhotoBand extends StatelessWidget {
               builder: (context, c) => KitPhoto(
                 url: url,
                 width: c.maxWidth,
-                height: height,
+                height: DS.s(height),
                 tone: tone,
                 asset: asset,
                 radius: BorderRadius.zero,
                 iconSize: 44,
               ),
             ),
-            if (badge != null) Positioned(top: 8, left: 8, child: badge!),
+            if (badge != null) Positioned(top: DS.s(8), left: DS.s(8), child: badge!),
           ],
         ),
       );

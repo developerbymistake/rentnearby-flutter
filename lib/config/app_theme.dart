@@ -58,6 +58,7 @@ class AppTheme {
         fontFamilyFallback: FitnessAppTheme.fontFallback,
         colorScheme: _scheme,
         textTheme: FitnessAppTheme.textTheme.apply(fontSizeFactor: DS.font),
+        iconTheme: IconThemeData(color: kDefaultIconDarkColor, size: DS.s(24)),
         scaffoldBackgroundColor: DesignColors.scaffold,
         canvasColor: DesignColors.surface,
         dividerColor: DesignColors.divider,
@@ -96,8 +97,9 @@ class AppTheme {
             letterSpacing: 1.2,
             color: DesignColors.textStrong,
           ),
-          iconTheme: IconThemeData(color: DesignColors.textStrong),
-          actionsIconTheme: IconThemeData(color: DesignColors.textStrong),
+          toolbarHeight: DS.s(56),
+          iconTheme: IconThemeData(color: DesignColors.textStrong, size: DS.s(24)),
+          actionsIconTheme: IconThemeData(color: DesignColors.textStrong, size: DS.s(24)),
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
@@ -117,6 +119,7 @@ class AppTheme {
             foregroundColor: DesignColors.onPrimary,
             disabledBackgroundColor: DesignColors.surfaceMuted,
             disabledForegroundColor: DesignColors.textDisabled,
+            minimumSize: Size(DS.s(64), DS.s(40)),
             shape: RoundedRectangleBorder(borderRadius: _radius),
             textStyle: _button,
           ),
@@ -126,6 +129,7 @@ class AppTheme {
             foregroundColor: DesignColors.primary,
             disabledForegroundColor: DesignColors.textDisabled,
             side: const BorderSide(color: DesignColors.primary),
+            minimumSize: Size(DS.s(64), DS.s(40)),
             shape: RoundedRectangleBorder(borderRadius: _radius),
             textStyle: _button,
           ),
@@ -134,12 +138,13 @@ class AppTheme {
           style: TextButton.styleFrom(
             foregroundColor: DesignColors.primary,
             disabledForegroundColor: DesignColors.textDisabled,
+            minimumSize: Size(DS.s(64), DS.s(40)),
             shape: RoundedRectangleBorder(borderRadius: _radius),
             textStyle: _button,
           ),
         ),
         iconButtonTheme: IconButtonThemeData(
-          style: IconButton.styleFrom(foregroundColor: DesignColors.textStrong),
+          style: IconButton.styleFrom(foregroundColor: DesignColors.textStrong, iconSize: DS.s(24)),
         ),
         floatingActionButtonTheme: const FloatingActionButtonThemeData(
           backgroundColor: DesignColors.primary,
@@ -218,7 +223,8 @@ class AppTheme {
           type: BottomNavigationBarType.fixed,
           elevation: 0,
         ),
-        navigationBarTheme: const NavigationBarThemeData(
+        navigationBarTheme: NavigationBarThemeData(
+          height: DS.s(80),
           backgroundColor: DesignColors.navBar,
           surfaceTintColor: Colors.transparent,
           indicatorColor: DesignColors.primarySoft,
@@ -294,7 +300,9 @@ class AppTheme {
                   ? DesignColors.primary
                   : DesignColors.textMuted),
         ),
-        listTileTheme: const ListTileThemeData(
+        listTileTheme: ListTileThemeData(
+          minLeadingWidth: DS.s(40),
+          horizontalTitleGap: DS.gh(16),
           iconColor: DesignColors.textSecondary,
           textColor: DesignColors.textPrimary,
         ),

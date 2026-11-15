@@ -26,7 +26,7 @@ class EmptyStateView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(32, 48, 32, 0),
+      padding: DS.insets(l: 32, t: 48, r: 32),
       child: TemplateStagger(
         children: [
           GateBadge(
@@ -35,22 +35,22 @@ class EmptyStateView extends StatelessWidget {
             glyph: icon,
             gradient: palette.gradient,
           ),
-          const SizedBox(height: 16),
+          Gap.v(16),
           Text(
             title,
             textAlign: TextAlign.center,
-            style: FitnessAppTheme.title,
+            style: FitnessAppTheme.title.copyWith(fontSize: DS.f(16)),
           ),
-          const SizedBox(height: 4),
+          Gap.v(4),
           Text(
             subtitle,
             textAlign: TextAlign.center,
-            style: FitnessAppTheme.caption,
+            style: FitnessAppTheme.caption.copyWith(fontSize: DS.f(12)),
           ),
           if (onRetry != null) ...[
-            const SizedBox(height: 16),
+            Gap.v(16),
             SizedBox(
-              width: 180,
+              width: DS.s(180),
               child: GradientButton(
                 label: retryLabel,
                 height: 44,

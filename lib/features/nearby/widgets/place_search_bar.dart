@@ -68,7 +68,7 @@ class PlaceSearchBarView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final has = label != null && label!.isNotEmpty;
-    final height = compact ? KitMetrics.touch : 56.0;
+    final height = DS.s(compact ? KitMetrics.touch : 56.0);
     final hintText = hint ?? NearbyStrings.searchPlaceHint;
     final cap = caption;
     final valueText = Text(
@@ -82,7 +82,7 @@ class PlaceSearchBarView extends StatelessWidget {
       child: Container(
         height: cap == null ? height : null,
         constraints: cap == null ? null : BoxConstraints(minHeight: height),
-        decoration: BoxDecoration(color: DesignColors.surface, borderRadius: BorderRadius.circular(38), boxShadow: ShadowTokens.elev2),
+        decoration: BoxDecoration(color: DesignColors.surface, borderRadius: DS.circular(38), boxShadow: DS.shadows(ShadowTokens.elev2)),
         child: _grow(
           cap != null,
           Row(
@@ -93,14 +93,14 @@ class PlaceSearchBarView extends StatelessWidget {
                   button: true,
                   label: cap == null ? (has ? label : hintText) : '$cap, ${has ? label : hintText}',
                   child: InkWell(
-                    borderRadius: BorderRadius.circular(38),
+                    borderRadius: DS.circular(38),
                     onTap: busy ? null : onTap,
                     child: Padding(
-                      padding: const EdgeInsets.only(left: 8),
+                      padding: EdgeInsets.only(left: DS.s(8)),
                       child: Row(
                         children: [
                           ExcludeSemantics(child: Art3D(asset: art ?? TravelIcon.search, size: compact ? 30 : 36, shadowBlur: 3, shadowOffset: const Offset(2, 3), shadowAlpha: 0.25)),
-                          const SizedBox(width: 10),
+                          Gap.h(10),
                           Expanded(
                             child: ExcludeSemantics(
                               child: cap == null
@@ -122,7 +122,7 @@ class PlaceSearchBarView extends StatelessWidget {
                 ),
               ),
               if (busy)
-                const Padding(padding: EdgeInsets.symmetric(horizontal: 14), child: KitDots(color: DesignColors.primary, size: 6))
+                Padding(padding: DS.sym(h: 14), child: const KitDots(color: DesignColors.primary, size: 6))
               else if (has && onClear != null)
                 Center(
                   child: Semantics(
@@ -132,14 +132,14 @@ class PlaceSearchBarView extends StatelessWidget {
                       customBorder: const CircleBorder(),
                       onTap: onClear,
                       child: SizedBox(
-                        width: KitMetrics.touch,
-                        height: KitMetrics.touch,
+                        width: DS.s(KitMetrics.touch),
+                        height: DS.s(KitMetrics.touch),
                         child: Center(
                           child: Container(
-                            width: 22,
-                            height: 22,
+                            width: DS.s(22),
+                            height: DS.s(22),
                             decoration: const BoxDecoration(color: DesignColors.error, shape: BoxShape.circle),
-                            child: const Icon(Icons.close_rounded, size: 14, color: DesignColors.onPrimary),
+                            child: Icon(Icons.close_rounded, size: DS.s(14), color: DesignColors.onPrimary),
                           ),
                         ),
                       ),
@@ -147,7 +147,7 @@ class PlaceSearchBarView extends StatelessWidget {
                   ),
                 )
               else
-                const SizedBox(width: 14),
+                SizedBox(width: DS.s(14)),
             ],
           ),
         ),

@@ -22,8 +22,8 @@ class AppToast {
       alignment: Alignment.bottomCenter,
       autoCloseDuration: _duration,
       builder: (context, holder) => Padding(
-        padding: EdgeInsets.fromLTRB(16, 0, 16, DockInset.lastHeight + 12),
-        child: NoDataToast3D(title: title, subtitle: subtitle, accent: accent, art: ListingArt.hotel),
+        padding: EdgeInsets.fromLTRB(DS.s(16), 0, DS.s(16), DockInset.lastHeight + DS.gv(12)),
+        child: NoDataToast3D(title: title, subtitle: subtitle, accent: accent, art: ListingArt.stay),
       ),
     );
   }
@@ -37,7 +37,7 @@ class AppToast {
       alignment: alignment,
       autoCloseDuration: _duration,
       builder: (context, holder) => Padding(
-        padding: EdgeInsets.fromLTRB(16, top ? 8 : 0, 16, top ? 0 : 8),
+        padding: EdgeInsets.fromLTRB(DS.s(16), top ? DS.s(8) : 0, DS.s(16), top ? 0 : DS.s(8)),
         child: Toast3D(kind: kind, message: message, compact: compact),
       ),
     );

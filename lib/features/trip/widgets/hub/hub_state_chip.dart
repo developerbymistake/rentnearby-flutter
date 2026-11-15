@@ -16,6 +16,8 @@ class HubStateChip extends StatelessWidget {
     bottomRight: Radius.circular(14),
   );
 
+  static BorderRadius get _scaledRadius => DS.br(_radius);
+
   @override
   Widget build(BuildContext context) {
     return Semantics(
@@ -26,16 +28,16 @@ class HubStateChip extends StatelessWidget {
         onTap: onTap,
         child: DecoratedBox(
           decoration: BoxDecoration(
-            borderRadius: _radius,
+            borderRadius: _scaledRadius,
             gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: colors),
           ),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            padding: DS.sym(h: 10, v: 6),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Art3D(asset: art, size: 24, shadowBlur: 0, shadowAlpha: 0),
-                const SizedBox(width: 6),
+                Gap.h(6),
                 Text(label, maxLines: 1, softWrap: false, style: Ink3D.text(12, FontWeight.w700, Colors.white, letterSpacing: 0)),
               ],
             ),

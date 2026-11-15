@@ -150,22 +150,22 @@ class RouteCitiesStripView extends StatelessWidget {
   Widget build(BuildContext context) {
     if (rows.isEmpty) return const SizedBox.shrink();
     return Padding(
-      padding: const EdgeInsets.only(top: 18, bottom: 4),
+      padding: EdgeInsets.only(top: DS.gv(18), bottom: DS.gv(4)),
       child: WhiteCard3D(
-        padding: const EdgeInsets.fromLTRB(20, 14, 18, 14),
+        padding: DS.insets(l: 20, t: 14, r: 18, b: 14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('Cities on the way', maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(16, FontWeight.w600, Ink3D.title)),
-            const SizedBox(height: 8),
+            Gap.v(8),
             for (final r in rows)
               Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
+                padding: DS.sym(v: 4),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Art3D(asset: ListingArt.roundPushpin, size: 20, shadowBlur: 2, shadowOffset: Offset(1, 2), shadowAlpha: 0.3),
-                    const SizedBox(width: 10),
+                    Gap.h(10),
                     Expanded(
                       child: Text.rich(
                         TextSpan(

@@ -13,6 +13,7 @@ import 'template_motion.dart';
 import 'travel_icon.dart';
 import 'trip_kit.dart';
 import 'trip_pick_kit.dart';
+import '../tokens/design_scale.dart';
 
 class ChatKindStyle {
   const ChatKindStyle._(this.accent, this.dark, this.tint, this.gradient);
@@ -63,46 +64,46 @@ class ChatHeader extends StatelessWidget {
         width: double.infinity,
         decoration: BoxDecoration(
           gradient: gradient,
-          borderRadius: CardRadius.header,
-          boxShadow: ShadowTokens.glow(shadowColor),
+          borderRadius: DS.br(CardRadius.header),
+          boxShadow: DS.shadows(ShadowTokens.glow(shadowColor)),
         ),
-        margin: const EdgeInsets.only(bottom: 4),
-        padding: EdgeInsets.fromLTRB(8, top + ModuleHeader.paddingTop, 12, ModuleHeader.paddingBottom),
+        margin: EdgeInsets.only(bottom: DS.gv(4)),
+        padding: EdgeInsets.fromLTRB(DS.s(8), top + DS.s(ModuleHeader.paddingTop), DS.s(12), DS.s(ModuleHeader.paddingBottom)),
         child: Row(
           children: [
             PressScale(
               child: SizedBox(
-                width: KitMetrics.touch,
-                height: KitMetrics.touch,
+                width: DS.s(KitMetrics.touch),
+                height: DS.s(KitMetrics.touch),
                 child: InkWell(
                   customBorder: const CircleBorder(),
                   splashColor: DesignColors.whiteSoft,
                   highlightColor: Colors.transparent,
                   onTap: onBack,
-                  child: const Icon(Icons.arrow_back_ios_new_rounded, size: 20, color: DesignColors.textInverse),
+                  child: Icon(Icons.arrow_back_ios_new_rounded, size: DS.s(20), color: DesignColors.textInverse),
                 ),
               ),
             ),
-            if (leading != null) ...[leading!, const SizedBox(width: 10)] else const SizedBox(width: 2),
+            if (leading != null) ...[leading!, Gap.h(10)] else Gap.h(2),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
-                children: [title, if (subtitle != null) ...[const SizedBox(height: 2), subtitle!]],
+                children: [title, if (subtitle != null) ...[Gap.v(2), subtitle!]],
               ),
             ),
             if (actions.isNotEmpty)
               ConstrainedBox(
-                constraints: BoxConstraints(maxWidth: math.max(MediaQuery.sizeOf(context).width * 0.3, 140.0)),
+                constraints: BoxConstraints(maxWidth: math.max(MediaQuery.sizeOf(context).width * 0.3, DS.s(140.0))),
                 child: Row(mainAxisSize: MainAxisSize.min, children: [for (final a in actions) Flexible(child: a)]),
               ),
             if (trailingAsset != null) ...[
-              const SizedBox(width: 8),
+              Gap.h(8),
               Container(
-                width: 56,
-                height: 56,
+                width: DS.s(56),
+                height: DS.s(56),
                 decoration: BoxDecoration(color: DesignColors.tint(DesignColors.surfaceAlt, Alpha.soft), shape: BoxShape.circle),
-                child: Padding(padding: const EdgeInsets.all(8), child: Image.asset(trailingAsset!)),
+                child: Padding(padding: DS.all(8), child: Image.asset(trailingAsset!)),
               ),
             ],
           ],
@@ -131,7 +132,7 @@ class ChatRowCard extends StatelessWidget {
     super.key,
     required this.child,
     this.onTap,
-    this.padding = const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+    this.padding,
     this.color = DesignColors.surface,
     this.shadowAlpha = 0.2,
     this.margin = EdgeInsets.zero,
@@ -139,7 +140,7 @@ class ChatRowCard extends StatelessWidget {
 
   final Widget child;
   final VoidCallback? onTap;
-  final EdgeInsetsGeometry padding;
+  final EdgeInsetsGeometry? padding;
   final Color color;
   final double shadowAlpha;
   final EdgeInsetsGeometry margin;
@@ -147,7 +148,7 @@ class ChatRowCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) => TripKitSurface(
         margin: margin,
-        padding: padding,
+        padding: (padding ?? EdgeInsets.symmetric(horizontal: DS.s(14), vertical: DS.s(12))),
         color: color,
         onTap: onTap,
         shadow: shadowAlpha == 0.2
@@ -166,8 +167,8 @@ class ChatPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
-        decoration: BoxDecoration(color: fill, borderRadius: CardRadius.pill),
+        padding: EdgeInsets.symmetric(horizontal: DS.s(9), vertical: DS.s(3)),
+        decoration: BoxDecoration(color: fill, borderRadius: DS.br(CardRadius.pill)),
         child: Text(label, style: TypeTokens.style(size, FontWeight.w700, color: color, letterSpacing: 0.4, chip: true)),
       );
 }
@@ -221,14 +222,14 @@ class _ChatRevealState extends State<ChatReveal> with SingleTickerProviderStateM
   @override
   Widget build(BuildContext context) {
     if (!widget.horizontal) {
-      return TemplateEntrance(animation: _animation, animationController: _controller, offset: widget.offset, child: widget.child);
+      return TemplateEntrance(animation: _animation, animationController: _controller, offset: DS.s(widget.offset), child: widget.child);
     }
     return AnimatedBuilder(
       animation: _controller,
       builder: (BuildContext context, Widget? _) => FadeTransition(
         opacity: _animation,
         child: Transform(
-          transform: Matrix4.translationValues(widget.offset * (1.0 - _animation.value), 0.0, 0.0),
+          transform: Matrix4.translationValues(DS.s(widget.offset) * (1.0 - _animation.value), 0.0, 0.0),
           child: widget.child,
         ),
       ),
@@ -270,9 +271,9 @@ class ChatButton extends StatelessWidget {
         expand: expand,
         compact: true,
         icon: loading
-            ? SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: color))
+            ? SizedBox(width: DS.s(18), height: DS.s(18), child: CircularProgressIndicator(strokeWidth: DS.s(2), color: color))
             : icon != null
-                ? Icon(icon, size: 18, color: onPressed == null ? DesignColors.textDisabled : color)
+                ? Icon(icon, size: DS.s(18), color: onPressed == null ? DesignColors.textDisabled : color)
                 : null,
       );
     }
@@ -284,7 +285,7 @@ class ChatButton extends StatelessWidget {
       height: height,
       expand: expand,
       compact: true,
-      icon: icon != null ? Icon(icon, size: 18, color: onPressed == null ? DesignColors.textDisabled : DesignColors.onPrimary) : null,
+      icon: icon != null ? Icon(icon, size: DS.s(18), color: onPressed == null ? DesignColors.textDisabled : DesignColors.onPrimary) : null,
     );
   }
 }
@@ -296,20 +297,20 @@ class ChatSheetFrame extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           color: DesignColors.sheet,
-          borderRadius: CardRadius.sheet,
-          boxShadow: DesignShadows.top,
+          borderRadius: DS.br(CardRadius.sheet),
+          boxShadow: DS.shadows(DesignShadows.top),
         ),
         child: child,
       );
 
   static Widget grabber() => Center(
         child: Container(
-          width: 36,
-          height: 4,
-          margin: const EdgeInsets.only(top: 10, bottom: 14),
-          decoration: BoxDecoration(color: DesignColors.tint(DesignColors.textGrey, Alpha.half), borderRadius: BorderRadius.circular(2)),
+          width: DS.s(36),
+          height: DS.s(4),
+          margin: EdgeInsets.only(top: DS.gv(10), bottom: DS.gv(14)),
+          decoration: BoxDecoration(color: DesignColors.tint(DesignColors.textGrey, Alpha.half), borderRadius: DS.circular(2)),
         ),
       );
 }
@@ -326,24 +327,24 @@ class ChatSheetRow extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        borderRadius: CardRadius.tile,
+        borderRadius: DS.br(CardRadius.tile),
         splashColor: DesignColors.splash,
         highlightColor: Colors.transparent,
         onTap: onTap,
         child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: KitMetrics.touch),
+          constraints: BoxConstraints(minHeight: DS.s(KitMetrics.touch)),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+            padding: EdgeInsets.symmetric(horizontal: DS.s(8), vertical: DS.s(10)),
             child: Row(
               children: [
                 Container(
-                  width: 44,
-                  height: 44,
+                  width: DS.s(44),
+                  height: DS.s(44),
                   alignment: Alignment.center,
                   decoration: BoxDecoration(color: DesignColors.tint(color, Alpha.tint), shape: BoxShape.circle),
                   child: TravelIcon(asset, size: 24),
                 ),
-                const SizedBox(width: 14),
+                Gap.h(14),
                 Expanded(
                   child: Text(label, style: TypeTokens.style(15, FontWeight.w500, color: DesignColors.textStrong)),
                 ),
@@ -362,7 +363,7 @@ class ChatSheetLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
+        padding: EdgeInsets.fromLTRB(DS.s(8), DS.s(4), DS.s(8), DS.s(4)),
         child: Text(text.toUpperCase(), style: TypeTokens.style(11, FontWeight.w700, color: TypeTokens.secondary, letterSpacing: 0.4)),
       );
 }
@@ -373,7 +374,7 @@ class ChatDayLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(2, 4, 2, 8),
+        padding: EdgeInsets.fromLTRB(DS.s(2), DS.s(4), DS.s(2), DS.s(8)),
         child: Text(label.toUpperCase(), style: TypeTokens.style(12, FontWeight.w700, color: TypeTokens.secondary, letterSpacing: 0.5)),
       );
 }
@@ -402,7 +403,7 @@ class ChatSkeletonCard extends StatelessWidget {
   Widget build(BuildContext context) => ChatRowCard(
         child: Row(
           children: [
-            if (avatar > 0) ...[TemplatePlaceholder(height: avatar, width: avatar, radius: avatar / 2), const SizedBox(width: 12)],
+            if (avatar > 0) ...[TemplatePlaceholder(height: DS.s(avatar), width: DS.s(avatar), radius: DS.radius(avatar / 2)), Gap.h(12)],
             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: children)),
           ],
         ),

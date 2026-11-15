@@ -130,7 +130,7 @@ class _StayRulesScreenState extends State<StayRulesScreen> {
             StayPageHeader(title: 'Rules', onBack: _onBack, asset: SetupAssets.clipboard),
             Expanded(
               child: ListView(
-                padding: const EdgeInsets.only(bottom: 24),
+                padding: EdgeInsets.only(bottom: DS.s(24)),
                 children: [
                   FormSectionCard(
                     tone: _tone,
@@ -139,7 +139,7 @@ class _StayRulesScreenState extends State<StayRulesScreen> {
                     tag: 'Required',
                     child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
                       Expanded(child: _timeField('Check-in', _checkIn, () => _pickTime(true))),
-                      const SizedBox(width: 12),
+                      Gap.h(12),
                       Expanded(child: _timeField('Check-out', _checkOut, () => _pickTime(false))),
                     ]),
                   ),

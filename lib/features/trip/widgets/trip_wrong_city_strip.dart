@@ -42,31 +42,31 @@ class TripWrongCityStrip extends StatelessWidget {
           label: label,
           exclude: true,
           child: ConstrainedBox(
-            constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+            constraints: BoxConstraints(minWidth: DS.s(44), minHeight: DS.s(44)),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10),
+              padding: DS.sym(h: 10),
               child: Center(widthFactor: 1, child: Text(label, maxLines: 1, style: Ink3D.text(13, FontWeight.w700, RepliesLook.badInk, letterSpacing: 0))),
             ),
           ),
         );
     return Container(
-      margin: EdgeInsets.only(top: dense ? 6 : 8),
-      padding: const EdgeInsets.fromLTRB(14, 10, 6, 4),
-      decoration: BoxDecoration(color: RepliesLook.badSurface, borderRadius: BorderRadius.circular(dense ? 18 : 22)),
+      margin: EdgeInsets.only(top: DS.gv(dense ? 6 : 8)),
+      padding: DS.insets(l: 14, t: 10, r: 6, b: 4),
+      decoration: BoxDecoration(color: RepliesLook.badSurface, borderRadius: DS.circular(dense ? 18 : 22)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
           Row(
             children: [
-              Image.asset(enquiry.isTaxi ? ListingArt.taxi : ListingArt.hotel, width: 22, height: 22, fit: BoxFit.contain),
-              const SizedBox(width: 8),
+              Image.asset(enquiry.isTaxi ? ListingArt.taxi : ListingArt.stay, width: DS.s(22), height: DS.s(22), fit: BoxFit.contain),
+              Gap.h(8),
               Expanded(child: Text(TripStringsMccA2.wrongCityNow, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(13, FontWeight.w700, RepliesLook.badInk, letterSpacing: 0))),
             ],
           ),
-          const SizedBox(height: 2),
+          Gap.v(2),
           Padding(
-            padding: const EdgeInsets.only(right: 8),
+            padding: EdgeInsets.only(right: DS.s(8)),
             child: Text(name.isEmpty || dense ? line : '$name · $line', maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(12.5, FontWeight.w500, RepliesLook.badInk, letterSpacing: 0)),
           ),
           if (onCancel != null || onChangeDays != null)
@@ -78,7 +78,7 @@ class TripWrongCityStrip extends StatelessWidget {
               ]),
             )
           else
-            const SizedBox(height: 6),
+            Gap.v(6),
         ],
       ),
     );

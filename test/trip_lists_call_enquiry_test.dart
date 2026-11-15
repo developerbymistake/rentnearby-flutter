@@ -131,7 +131,7 @@ void main() {
         await t.pumpWidget(_host(TripStayRow(key: ValueKey('$url'), stay: _stay(url: url), onOpen: () {})));
         expect(find.byType(KitPhoto), findsNothing);
         expect(t.widget<WideCard>(find.byType(WideCard)).kind, WideKind.halo);
-        expect(t.widgetList<Art3D>(find.byType(Art3D)).where((a) => a.asset == ListingArt.key), isNotEmpty);
+        expect(t.widgetList<Art3D>(find.byType(Art3D)).where((a) => a.asset == ListingArt.stay), isNotEmpty);
       }
     });
 

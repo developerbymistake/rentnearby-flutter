@@ -16,8 +16,8 @@ enum _Slide { trip, stay, taxi }
 class HomeHeroCarousel extends StatefulWidget {
   const HomeHeroCarousel({super.key});
 
-  static const EdgeInsets pagePadding = EdgeInsets.only(bottom: 8);
-  static const double dotsBottom = 12;
+  static EdgeInsets get pagePadding => EdgeInsets.only(bottom: DS.gv(8));
+  static double get dotsBottom => DS.gv(12);
 
   @override
   State<HomeHeroCarousel> createState() => _HomeHeroCarouselState();
@@ -122,7 +122,7 @@ class _HomeHeroCarouselState extends State<HomeHeroCarousel>
       if (slides.isEmpty) return const SizedBox.shrink();
       final n = slides.length;
       Widget page(int i) => Padding(
-            padding: n == 1 ? const EdgeInsets.only(bottom: HomeHeroCarousel.dotsBottom) : HomeHeroCarousel.pagePadding,
+            padding: n == 1 ? EdgeInsets.only(bottom: HomeHeroCarousel.dotsBottom) : HomeHeroCarousel.pagePadding,
             child: _HeroSlide(slide: slides[i % n], isOwner: owner),
           );
       final scaler = MediaQuery.textScalerOf(context).clamp(maxScaleFactor: 1.15);
@@ -175,7 +175,7 @@ class _Dots extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: HomeHeroCarousel.dotsBottom),
+      padding: EdgeInsets.only(bottom: HomeHeroCarousel.dotsBottom),
       child: ExcludeSemantics(
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -184,12 +184,12 @@ class _Dots extends StatelessWidget {
               AnimatedContainer(
                 duration: KitMotion.reduce(context) ? Duration.zero : templateTransitionDuration,
                 curve: Curves.fastOutSlowIn,
-                width: i == index ? 18 : 7,
-                height: 7,
-                margin: const EdgeInsets.symmetric(horizontal: 3),
+                width: DS.s(i == index ? 18 : 7),
+                height: DS.s(7),
+                margin: EdgeInsets.symmetric(horizontal: DS.gh(3)),
                 decoration: BoxDecoration(
                   color: i == index ? DesignColors.primary : DesignColors.primary.withValues(alpha: Alpha.soft),
-                  borderRadius: BorderRadius.circular(4),
+                  borderRadius: DS.circular(4),
                 ),
               ),
           ],

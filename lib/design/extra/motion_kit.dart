@@ -3,6 +3,7 @@ import 'package:bakhli/controllers/auth_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:get/get.dart';
+import '../tokens/design_scale.dart';
 
 abstract final class KitMotion {
   static bool reduce(BuildContext context) =>
@@ -475,8 +476,8 @@ class RailReveal extends StatefulWidget {
     super.key,
     required this.itemCount,
     required this.itemBuilder,
-    this.padding = const EdgeInsets.symmetric(horizontal: 20),
-    this.separator = 12,
+    this.padding,
+    this.separator,
     this.physics,
     this.cellPadding = EdgeInsets.zero,
   });
@@ -484,8 +485,8 @@ class RailReveal extends StatefulWidget {
   final EdgeInsets cellPadding;
   final int itemCount;
   final Widget Function(BuildContext context, int index) itemBuilder;
-  final EdgeInsets padding;
-  final double separator;
+  final EdgeInsets? padding;
+  final double? separator;
   final ScrollPhysics? physics;
 
   @override
@@ -535,11 +536,11 @@ class _RailRevealState extends State<RailReveal>
     return FirstVisible(
       onVisible: _go,
       child: ListView.separated(
-        padding: widget.padding,
+        padding: widget.padding ?? DS.sym(h: 20),
         physics: widget.physics,
         scrollDirection: Axis.horizontal,
         itemCount: widget.itemCount,
-        separatorBuilder: (_, _) => SizedBox(width: widget.separator),
+        separatorBuilder: (_, _) => SizedBox(width: widget.separator ?? DS.gh(12)),
         itemBuilder: (context, index) {
           final a = _c.drive(CurveTween(
               curve: Interval((1 / count) * math.min(index, count - 1) * 0.6, 1.0,

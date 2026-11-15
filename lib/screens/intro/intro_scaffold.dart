@@ -195,8 +195,8 @@ class _IntroScaffoldState extends State<IntroScaffold> with TickerProviderStateM
     final viewPadding = MediaQuery.viewPaddingOf(context);
     final width = MediaQuery.sizeOf(context).width;
     final isLast = currentPage >= _last;
-    final bottomReserve = 170 + viewPadding.bottom;
-    final topReserve = viewPadding.top + 48;
+    final bottomReserve = DS.s(170) + viewPadding.bottom;
+    final topReserve = viewPadding.top + DS.s(48);
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark.copyWith(
@@ -240,8 +240,8 @@ class _IntroScaffoldState extends State<IntroScaffold> with TickerProviderStateM
                 ),
               ),
               Positioned(
-                top: viewPadding.top + 10,
-                right: 16,
+                top: viewPadding.top + DS.s(10),
+                right: DS.s(16),
                 child: IgnorePointer(
                   ignoring: isLast,
                   child: ExcludeSemantics(
@@ -267,8 +267,8 @@ class _IntroScaffoldState extends State<IntroScaffold> with TickerProviderStateM
               Positioned(
                 left: width * 0.12,
                 right: width * 0.12,
-                bottom: 24 + 54 + 18 + viewPadding.bottom,
-                height: 34,
+                bottom: DS.s(24 + 54 + 18) + viewPadding.bottom,
+                height: DS.s(34),
                 child: RepaintBoundary(
                   child: IntroJourneyThread(
                     key: const Key('intro_thread'),
@@ -284,10 +284,10 @@ class _IntroScaffoldState extends State<IntroScaffold> with TickerProviderStateM
                 ),
               ),
               Positioned(
-                left: 20,
-                right: 20,
-                bottom: 24 + viewPadding.bottom,
-                height: 54,
+                left: DS.s(20),
+                right: DS.s(20),
+                bottom: DS.s(24) + viewPadding.bottom,
+                height: DS.s(54),
                 child: IntroCtaButton(
                   key: const Key('intro_cta'),
                   progress: _progress,

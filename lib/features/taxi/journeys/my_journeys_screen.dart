@@ -90,7 +90,7 @@ class _MyJourneysScreenState extends State<MyJourneysScreen> with WidgetsBinding
         child: LayoutBuilder(
           builder: (context, c) => ListView(
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: EdgeInsets.fromLTRB(_pad(c.maxWidth), 0, _pad(c.maxWidth), 24 + AppInsets.bottomViewPadding(context)),
+            padding: EdgeInsets.fromLTRB(_pad(c.maxWidth), 0, _pad(c.maxWidth), DS.s(24) + AppInsets.bottomViewPadding(context)),
             children: [
               if (_ctrl.isOffline.value && !(_ctrl.journeys.isEmpty && _ctrl.loadFailed.value)) const JourneyOfflineBanner(),
               for (var i = 0; i < children.length; i++) _enter(i, children[i]),

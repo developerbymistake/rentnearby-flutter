@@ -24,11 +24,12 @@ class HomeCardSurface extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final radius = DS.br(this.radius);
     final card = DecoratedBox(
       decoration: BoxDecoration(
         color: gradient == null ? color : null,
         borderRadius: radius,
-        boxShadow: shadow,
+        boxShadow: DS.shadows(shadow),
       ),
       child: Material(
         color: Colors.transparent,
@@ -68,9 +69,9 @@ class HomeRailTile extends StatelessWidget {
     this.fallbackAsset = TravelIcon.stay,
   });
 
-  static const double width = 148;
-  static const double height = 224;
-  static const double photoHeight = 92;
+  static double get width => DS.s(148);
+  static double get height => DS.s(224);
+  static double get photoHeight => DS.s(92);
   static const double maxTextScale = 1.3;
 
   final String title;
@@ -170,20 +171,20 @@ class HomeRailTile extends StatelessWidget {
                         height: photoHeight,
                         tone: tone,
                         asset: fallbackAsset,
-                        iconSize: 36,
+                        iconSize: DS.s(36),
                         rich: true,
                       ),
                     ),
                     if (tagLabel != null && tagLabel!.isNotEmpty)
                       Positioned(
-                        top: 8,
-                        left: 8,
+                        top: DS.s(8),
+                        left: DS.s(8),
                         child: KitTagChip(tagLabel!, tone: tone, solid: true),
                       ),
                     if (isFeatured)
                       Positioned(
-                        left: 8,
-                        bottom: 8,
+                        left: DS.s(8),
+                        bottom: DS.s(8),
                         child: PlanBadgeChip(
                           color: tone.accentDark,
                           compact: false,
@@ -194,7 +195,7 @@ class HomeRailTile extends StatelessWidget {
               ),
               Expanded(
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(10, 6, 10, 10),
+                  padding: DS.insets(l: 10, t: 6, r: 10, b: 10),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -211,11 +212,11 @@ class HomeRailTile extends StatelessWidget {
                       ),
                       if (locationLabel != null &&
                           locationLabel!.isNotEmpty) ...[
-                        const SizedBox(height: 4),
+                        SizedBox(height: DS.s(4)),
                         Row(
                           children: [
                             const TravelIcon(TravelIcon.place, size: 12),
-                            const SizedBox(width: 3),
+                            Gap.h(3),
                             Expanded(
                               child: Text(
                                 locationLabel!,
@@ -228,14 +229,14 @@ class HomeRailTile extends StatelessWidget {
                         ),
                       ],
                       if (facts.isNotEmpty) ...[
-                        const SizedBox(height: 6),
+                        SizedBox(height: DS.s(6)),
                         Expanded(
                           child: ClipRect(
                             child: Align(
                               alignment: Alignment.topLeft,
                               child: Wrap(
-                                spacing: 4,
-                                runSpacing: 4,
+                                spacing: DS.gh(4),
+                                runSpacing: DS.gv(4),
                                 children: [
                                   for (final f in facts.take(3))
                                     KitFactChip(f, tone: tone),
@@ -249,17 +250,17 @@ class HomeRailTile extends StatelessWidget {
                       Row(
                         children: [
                           Expanded(child: _price()),
-                          const SizedBox(width: 6),
+                          Gap.h(6),
                           Container(
-                            width: 28,
-                            height: 28,
+                            width: DS.s(28),
+                            height: DS.s(28),
                             decoration: BoxDecoration(
                               gradient: tone.gradient,
                               shape: BoxShape.circle,
                             ),
-                            child: const Icon(
+                            child: Icon(
                               Icons.chevron_right_rounded,
-                              size: 20,
+                              size: DS.s(20),
                               color: DesignColors.onPrimary,
                             ),
                           ),

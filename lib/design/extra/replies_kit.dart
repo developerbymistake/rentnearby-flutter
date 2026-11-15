@@ -12,6 +12,7 @@ import 'motion_kit.dart';
 import 'template_motion.dart';
 import 'travel_icon.dart';
 import 'trip_kit.dart';
+import '../tokens/design_scale.dart';
 
 class RepliesTone {
   RepliesTone._();
@@ -23,22 +24,22 @@ class RepliesTone {
   static const Color warnSurface = DesignColors.statusAskedSoft;
   static const Color bad = DesignColors.roseDeep;
   static const Color badSurface = DesignColors.statusSavedSoft;
-  static const Color chip = FitnessAppTheme.spacer;
-  static const Color shadow = DesignColors.shadowCool;
-  static const LinearGradient gradient = DesignGradients.lunch;
+  static Color chip = FitnessAppTheme.spacer;
+  static Color shadow = DesignColors.shadowCool;
+  static LinearGradient gradient = DesignGradients.lunch;
 }
 
 class RepliesCard extends StatelessWidget {
-  const RepliesCard({super.key, required this.child, this.padding = const EdgeInsets.all(16), this.onTap, this.color = DesignColors.surface});
+  const RepliesCard({super.key, required this.child, this.padding, this.onTap, this.color = DesignColors.surface});
   final Widget child;
-  final EdgeInsetsGeometry padding;
+  final EdgeInsetsGeometry? padding;
   final VoidCallback? onTap;
   final Color color;
 
-  static const BorderRadius radius = CardRadius.tile;
+  static BorderRadius get radius => DS.br(CardRadius.tile);
 
   @override
-  Widget build(BuildContext context) => TripKitSurface(color: color, padding: padding, onTap: onTap, child: child);
+  Widget build(BuildContext context) => TripKitSurface(color: color, padding: (padding ?? DS.all(16)), onTap: onTap, child: child);
 }
 
 class RepliesButton extends StatelessWidget {
@@ -62,7 +63,7 @@ class RepliesButton extends StatelessWidget {
         icon: iconAsset != null
             ? TravelIcon(iconAsset!, size: 20)
             : icon != null
-                ? Icon(icon, size: 18, color: DesignColors.onPrimary)
+                ? Icon(icon, size: DS.s(18), color: DesignColors.onPrimary)
                 : null,
       );
 }
@@ -75,10 +76,10 @@ class RepliesIconCircle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        width: size,
-        height: size,
+        width: DS.s(size),
+        height: DS.s(size),
         decoration: BoxDecoration(color: DesignColors.tint(color, Alpha.tint), shape: BoxShape.circle),
-        child: Icon(icon, size: size * 0.5, color: color),
+        child: Icon(icon, size: DS.s(size * 0.5), color: color),
       );
 }
 
@@ -93,11 +94,11 @@ class RepliesEmpty extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(top: 32),
+      padding: EdgeInsets.only(top: DS.gv(32)),
       child: TripKitStateView(
         carded: true,
-        padding: const EdgeInsets.fromLTRB(20, 28, 20, 20),
-        leading: Image.asset(asset, width: 40, height: 40, fit: BoxFit.contain),
+        padding: EdgeInsets.fromLTRB(DS.s(20), DS.s(28), DS.s(20), DS.s(20)),
+        leading: Image.asset(asset, width: DS.s(40), height: DS.s(40), fit: BoxFit.contain),
         title: title,
         subtitle: subtitle,
         actionLabel: onRetry != null ? retryLabel : null,
@@ -121,34 +122,34 @@ class RepliesHeader extends StatelessWidget {
       child: Container(
         decoration: BoxDecoration(
           gradient: KitTone.trip.gradient,
-          borderRadius: CardRadius.header,
-          boxShadow: ShadowTokens.glow(KitTone.trip.glow),
+          borderRadius: DS.br(CardRadius.header),
+          boxShadow: DS.shadows(ShadowTokens.glow(KitTone.trip.glow)),
         ),
-        margin: const EdgeInsets.only(bottom: 4),
-        padding: EdgeInsets.fromLTRB(8, top + ModuleHeader.paddingTop, 16, ModuleHeader.paddingBottom),
+        margin: EdgeInsets.only(bottom: DS.gv(4)),
+        padding: EdgeInsets.fromLTRB(DS.s(8), top + DS.s(ModuleHeader.paddingTop), DS.s(16), DS.s(ModuleHeader.paddingBottom)),
         child: Row(
           children: [
             PressScale(
               child: SizedBox(
-                width: KitMetrics.touch,
-                height: KitMetrics.touch,
+                width: DS.s(KitMetrics.touch),
+                height: DS.s(KitMetrics.touch),
                 child: InkWell(
                   customBorder: const CircleBorder(),
                   splashColor: DesignColors.whiteSoft,
                   highlightColor: Colors.transparent,
                   onTap: onBack,
-                  child: const Icon(Icons.arrow_back_ios_new_rounded, size: 20, color: DesignColors.textInverse),
+                  child: Icon(Icons.arrow_back_ios_new_rounded, size: DS.s(20), color: DesignColors.textInverse),
                 ),
               ),
             ),
-            const SizedBox(width: 2),
+            Gap.h(2),
             Expanded(child: child),
-            const SizedBox(width: 8),
+            Gap.h(8),
             Container(
-              width: 56,
-              height: 56,
+              width: DS.s(56),
+              height: DS.s(56),
               decoration: BoxDecoration(color: DesignColors.tint(DesignColors.surfaceAlt, Alpha.soft), shape: BoxShape.circle),
-              child: Padding(padding: const EdgeInsets.all(8), child: Image.asset(iconAsset)),
+              child: Padding(padding: DS.all(8), child: Image.asset(iconAsset)),
             ),
           ],
         ),
@@ -173,26 +174,26 @@ class RepliesChip extends StatelessWidget {
     return PressScale(
       enabled: onTap != null,
       child: Container(
-        constraints: BoxConstraints(minHeight: height),
-        decoration: BoxDecoration(color: DesignColors.tint(c, Alpha.tint), borderRadius: CardRadius.pill),
+        constraints: BoxConstraints(minHeight: DS.s(height)),
+        decoration: BoxDecoration(color: DesignColors.tint(c, Alpha.tint), borderRadius: DS.br(CardRadius.pill)),
         child: Material(
           color: Colors.transparent,
           child: InkWell(
-            borderRadius: CardRadius.pill,
+            borderRadius: DS.br(CardRadius.pill),
             splashColor: DesignColors.tint(c, Alpha.soft),
             highlightColor: Colors.transparent,
             onTap: onTap,
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              padding: EdgeInsets.symmetric(horizontal: DS.s(12), vertical: DS.s(6)),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   if (iconAsset != null) ...[
                     TravelIcon(iconAsset!, size: 18),
-                    const SizedBox(width: 6),
+                    Gap.h(6),
                   ] else if (icon != null) ...[
-                    Icon(icon, size: 16, color: c),
-                    const SizedBox(width: 6),
+                    Icon(icon, size: DS.s(16), color: c),
+                    Gap.h(6),
                   ],
                   Flexible(
                     child: FittedBox(
@@ -239,7 +240,7 @@ class _RepliesEntranceState extends State<RepliesEntrance> with SingleTickerProv
 
   @override
   Widget build(BuildContext context) =>
-      TemplateEntrance(animation: _animation, animationController: _controller, offset: widget.offset, child: widget.child);
+      TemplateEntrance(animation: _animation, animationController: _controller, offset: DS.s(widget.offset), child: widget.child);
 }
 
 class RepliesInfoStrip extends StatelessWidget {
@@ -251,11 +252,11 @@ class RepliesInfoStrip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(color: color, borderRadius: CardRadius.chip),
+        padding: EdgeInsets.symmetric(horizontal: DS.s(12), vertical: DS.s(8)),
+        decoration: BoxDecoration(color: color, borderRadius: DS.br(CardRadius.chip)),
         child: Row(
           children: [
-            if (iconAsset != null) ...[TravelIcon(iconAsset!, size: iconSize), const SizedBox(width: 8)],
+            if (iconAsset != null) ...[TravelIcon(iconAsset!, size: iconSize), Gap.h(8)],
             Expanded(child: child),
           ],
         ),
@@ -270,7 +271,7 @@ class RepliesDialogButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ConstrainedBox(
-        constraints: const BoxConstraints(minWidth: 64),
+        constraints: BoxConstraints(minWidth: DS.s(64)),
         child: PrimaryButton(label: label, onPressed: onPressed, expand: false, compact: true, tone: tripToneForColor(color)),
       );
 }

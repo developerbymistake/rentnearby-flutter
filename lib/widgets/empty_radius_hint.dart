@@ -64,26 +64,26 @@ class _EmptyRadiusHintState extends State<EmptyRadiusHint> with TickerProviderSt
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              padding: EdgeInsets.fromLTRB(8 * scale, 6 * scale, 14 * scale, 6 * scale),
+              padding: DS.insets(l: 8 * scale, t: 6 * scale, r: 14 * scale, b: 6 * scale),
               decoration: BoxDecoration(
                 color: DesignColors.surface,
-                borderRadius: BorderRadius.circular(24),
-                boxShadow: [BoxShadow(color: _tone.shadow, offset: const Offset(1.1, 4), blurRadius: 10)],
+                borderRadius: DS.circular(24),
+                boxShadow: DS.shadows([BoxShadow(color: _tone.shadow, offset: const Offset(1.1, 4), blurRadius: 10)]),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   ExcludeSemantics(child: Art3D(asset: ListingArt.worldMap, size: 26 * scale, shadowBlur: 2, shadowOffset: const Offset(2, 3), shadowAlpha: 0.25)),
-                  SizedBox(width: 8 * scale),
+                  SizedBox(width: DS.s(8 * scale)),
                   Text(widget.label, style: Ink3D.text(12 * scale, FontWeight.w600, Ink3D.title)),
                 ],
               ),
             ),
             Transform.translate(
-              offset: Offset(0, -5 * scale),
+              offset: Offset(0, DS.s(-5 * scale)),
               child: Transform.rotate(
                 angle: 0.7854,
-                child: Container(width: 9 * scale, height: 9 * scale, color: DesignColors.surface),
+                child: Container(width: DS.s(9 * scale), height: DS.s(9 * scale), color: DesignColors.surface),
               ),
             ),
           ],

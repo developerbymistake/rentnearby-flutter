@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../tokens/card_tokens.dart';
 import '../tokens/design_colors.dart';
+import '../tokens/design_scale.dart';
 import '../tokens/shadow_tokens.dart';
 import '../tokens/type_tokens.dart';
 import '../tokens/util_tokens.dart';
@@ -54,29 +55,29 @@ class TaxiSetupHeader extends StatelessWidget {
       width: double.infinity,
       decoration: BoxDecoration(
         gradient: KitTone.taxi.gradient,
-        borderRadius: CardRadius.header,
-        boxShadow: ShadowTokens.glow(KitTone.taxi.glow),
+        borderRadius: DS.br(CardRadius.header),
+        boxShadow: DS.shadows(ShadowTokens.glow(KitTone.taxi.glow)),
       ),
-      padding: EdgeInsets.fromLTRB(showBack ? 8 : 20, top + ModuleHeader.paddingTop, 16, ModuleHeader.paddingBottom),
+      padding: EdgeInsets.fromLTRB(DS.s(showBack ? 8 : 20), top + DS.s(ModuleHeader.paddingTop), DS.s(16), DS.s(ModuleHeader.paddingBottom)),
       child: Column(mainAxisSize: MainAxisSize.min, children: [
         ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: ModuleHeader.toolbarHeight),
+          constraints: BoxConstraints(minHeight: DS.s(ModuleHeader.toolbarHeight)),
           child: Row(children: [
             if (showBack) ...[
               PressScale(
                 child: SizedBox(
-                  width: KitMetrics.touch,
-                  height: KitMetrics.touch,
+                  width: DS.s(KitMetrics.touch),
+                  height: DS.s(KitMetrics.touch),
                   child: InkWell(
                     customBorder: const CircleBorder(),
                     splashColor: DesignColors.whiteSoft,
                     highlightColor: Colors.transparent,
                     onTap: onBack,
-                    child: const Icon(Icons.arrow_back_ios_new_rounded, size: 20, color: DesignColors.textInverse),
+                    child: Icon(Icons.arrow_back_ios_new_rounded, size: DS.s(20), color: DesignColors.textInverse),
                   ),
                 ),
               ),
-              const SizedBox(width: 2),
+              Gap.h(2),
             ],
             Expanded(
               child: Column(
@@ -93,18 +94,18 @@ class TaxiSetupHeader extends StatelessWidget {
             ),
             if (trailing != null) trailing!,
             if (showAsset) ...[
-              const SizedBox(width: 8),
+              Gap.h(8),
               Container(
-                width: 56,
-                height: 56,
-                padding: const EdgeInsets.all(8),
+                width: DS.s(56),
+                height: DS.s(56),
+                padding: DS.all(8),
                 decoration: const BoxDecoration(color: DesignColors.overlayWhiteSoft, shape: BoxShape.circle),
                 child: Image.asset(asset),
               ),
             ],
           ]),
         ),
-        if (bottom != null) ...[const SizedBox(height: 12), bottom!],
+        if (bottom != null) ...[Gap.v(12), bottom!],
       ]),
     );
     if (animation != null) bar = FadeTransition(opacity: animation!, child: bar);
@@ -121,7 +122,7 @@ class TaxiPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ConstrainedBox(
-      constraints: const BoxConstraints(minWidth: 88),
+      constraints: BoxConstraints(minWidth: DS.s(88)),
       child: PrimaryButton(
         label: label,
         onPressed: onTap,
@@ -167,7 +168,7 @@ class TaxiEmpty extends StatelessWidget {
     this.subtitle,
     this.actionLabel,
     this.onAction,
-    this.padding = const EdgeInsets.all(24),
+    this.padding,
   });
 
   final String asset;
@@ -175,7 +176,7 @@ class TaxiEmpty extends StatelessWidget {
   final String? subtitle;
   final String? actionLabel;
   final VoidCallback? onAction;
-  final EdgeInsets padding;
+  final EdgeInsets? padding;
 
   @override
   Widget build(BuildContext context) => StateCard(
@@ -185,7 +186,7 @@ class TaxiEmpty extends StatelessWidget {
         kit: KitTone.taxi,
         actionLabel: actionLabel,
         onAction: onAction,
-        padding: padding,
+        padding: padding ?? DS.all(24),
       );
 }
 
@@ -228,24 +229,24 @@ class _TaxiStepDotState extends State<TaxiStepDot> with SingleTickerProviderStat
         scale: _scale,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 250),
-          width: 32,
-          height: 32,
+          width: DS.s(32),
+          height: DS.s(32),
           decoration: BoxDecoration(
             gradient: (active || done) ? KitTone.taxi.gradient : null,
             color: (active || done) ? null : DesignColors.dividerSoft,
             shape: BoxShape.circle,
-            boxShadow: (active || done) ? ShadowTokens.elev2 : const [],
+            boxShadow: (active || done) ? DS.shadows(ShadowTokens.elev2) : const [],
           ),
           child: Center(
             child: done
-                ? const Icon(Icons.check_rounded, color: DesignColors.onPrimary, size: 16)
+                ? Icon(Icons.check_rounded, color: DesignColors.onPrimary, size: DS.s(16))
                 : Text('${widget.index + 1}',
                     style: TypeTokens.style(13, FontWeight.w700,
                         color: active ? DesignColors.onPrimary : DesignColors.textSecondary)),
           ),
         ),
       ),
-      const SizedBox(height: 4),
+      Gap.v(4),
       Text(widget.label,
           style: TypeTokens.style(11, FontWeight.w500, color: (active || done) ? KitTone.taxi.accentDark : DesignColors.textSecondary)),
     ]);

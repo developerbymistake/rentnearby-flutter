@@ -241,7 +241,7 @@ class _ProblemBodyState extends State<_ProblemBody> {
               textCapitalization: TextCapitalization.sentences,
               inputFormatters: [...noEmojiInputFormatters, LengthLimitingTextInputFormatter(TripConstants.problemNoteMax)],
             ),
-            const SizedBox(height: 12),
+            Gap.v(12),
             GradientPillButton(
               tone: _tone,
               label: TripStrings.done,
@@ -263,11 +263,11 @@ class _ProblemBodyState extends State<_ProblemBody> {
     if (rows.length + cars.length == 1) {
       if (rows.isEmpty) return const [];
       if (!_spansEarlier(rows.first)) return const [];
-      return [RepliesBanner(art: ListingArt.calendar, text: TripStringsA5.failsNightAndLater(widget.day, taxi: taxi), margin: const EdgeInsets.only(top: 10))];
+      return [RepliesBanner(art: ListingArt.calendar, text: TripStringsA5.failsNightAndLater(widget.day, taxi: taxi), margin: EdgeInsets.only(top: DS.gv(10)))];
     }
     if (_pickerKind != kind) return const [];
     return [
-      Padding(padding: const EdgeInsets.fromLTRB(4, 14, 4, 0), child: Text(TripStrings.whichBooking, style: Ink3D.text(14, FontWeight.w700, Ink3D.title))),
+      Padding(padding: EdgeInsets.fromLTRB(DS.s(4), DS.gv(14), DS.s(4), 0), child: Text(TripStrings.whichBooking, style: Ink3D.text(14, FontWeight.w700, Ink3D.title))),
       for (final e in rows) _candidate(e, taxi),
       for (final car in cars) CandidateRow3D(title: _journeyCarLabel(car), onTap: _busyKind == null ? () => _pickCar(car) : null),
     ];
@@ -293,17 +293,17 @@ class _ProblemBodyState extends State<_ProblemBody> {
 
   Widget _offlineBlock(List<({String name, String phone})> contacts) {
     return Container(
-      margin: const EdgeInsets.only(top: 4),
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-      decoration: BoxDecoration(color: RepliesLook.warnSurface, borderRadius: BorderRadius.circular(20)),
+      margin: EdgeInsets.only(top: DS.gv(4)),
+      padding: DS.insets(l: 16, t: 14, r: 16, b: 14),
+      decoration: BoxDecoration(color: RepliesLook.warnSurface, borderRadius: DS.circular(20)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(TripStrings.noNetworkTitle, style: Ink3D.text(15, FontWeight.w700, RepliesLook.warnInk)),
-          const SizedBox(height: 2),
+          Gap.v(2),
           Text(TripStrings.callHostOrDriver, style: Ink3D.text(13, FontWeight.w400, RepliesLook.warnInk)),
           for (final x in contacts) ...[
-            const SizedBox(height: 10),
+            Gap.v(10),
             WhitePillButton(tone: _tone, label: '${TripStrings.call} · ${x.name}', height: 46, fontSize: 14, onTap: () => ContactLauncher.call(x.phone)),
           ],
         ],

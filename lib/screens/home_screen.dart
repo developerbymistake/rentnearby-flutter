@@ -292,21 +292,21 @@ class _HomeScreenState extends State<HomeScreen> {
           message: text,
           asset: asset,
           kit: tone,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          padding: DS.sym(h: 16, v: 12),
         ),
       );
 
   Widget _railErrorMessage(VoidCallback onRetry) => _railMessage(
         onTap: onRetry,
-        child: const StateCard.error(
+        child: StateCard.error(
           title: "Couldn't load",
           message: 'Tap to retry',
-          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          padding: DS.sym(h: 16, v: 12),
         ),
       );
 
   Widget _railMessage({required Widget child, VoidCallback? onTap}) => Padding(
-        padding: const EdgeInsets.fromLTRB(18, 4, 18, 16),
+        padding: EdgeInsets.fromLTRB(DS.s(18), DS.gv(4), DS.s(18), DS.gv(16)),
         child: SectionTile(
           onTap: onTap,
           padding: EdgeInsets.zero,
@@ -366,7 +366,7 @@ class _HomeScreenState extends State<HomeScreen> {
           KeyedSubtree(
             key: TourKeys.homeQuickActionAddStay,
             child: _ownerQuickActionTile(
-              art: ListingArt.hotel,
+              art: ListingArt.stay,
               tone: ListingTone.forest,
               plus: true,
               label: 'Add Stay',
@@ -473,7 +473,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   static final List<ListingTone> _recentTones = [ListingTone.cE, ListingTone.cF, ListingTone.cB];
-  static const List<String> _recentStickers = [ListingArt.hotel, ListingArt.bed, ListingArt.key];
 
   Widget _recentRow(HomeRecentItem item, int index) {
     final s = item.stay;
@@ -484,7 +483,7 @@ class _HomeScreenState extends State<HomeScreen> {
       kind: WideKind.photo,
       tone: _recentTones[index % _recentTones.length],
       photo: url == null || url.isEmpty ? null : SizedBox.expand(child: KitPhoto(url: url, width: double.infinity, height: double.infinity)),
-      sticker: _recentStickers[index % _recentStickers.length],
+      sticker: ListingArt.stay,
       badge: s.item.isFeatured ? 'Featured' : null,
       tag: s.item.tagLabel,
       title: s.item.title,
@@ -500,7 +499,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildInstagramCard() {
     return Padding(
-      padding: const EdgeInsets.only(top: 14),
+      padding: EdgeInsets.only(top: DS.gv(14)),
       child: KeyedSubtree(
         key: TourKeys.homeInstagramCard,
         child: WorkoutCard(
@@ -566,9 +565,9 @@ class _WhitePill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DecoratedBox(
-      decoration: BoxDecoration(color: DesignColors.onPrimary, borderRadius: BorderRadius.circular(22), boxShadow: Ink3D.whiteBtn),
+      decoration: BoxDecoration(color: DesignColors.onPrimary, borderRadius: DS.circular(22), boxShadow: DS.shadows(Ink3D.whiteBtn)),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        padding: DS.sym(h: 14, v: 8),
         child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(13, FontWeight.w700, color)),
       ),
     );

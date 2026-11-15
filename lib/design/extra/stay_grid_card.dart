@@ -8,12 +8,12 @@ import 'travel_icon.dart';
 import 'trip_pick_kit.dart';
 
 class StayGridCard extends StatelessWidget {
-  static const double height = 300;
-  static const double photoHeight = 112;
+  static double get height => DS.s(300);
+  static double get photoHeight => DS.s(112);
 
   static double heightOf(BuildContext context) {
     final s = MediaQuery.textScalerOf(context).scale(1).clamp(1.0, 2.5).toDouble();
-    return photoHeight + 18 + 170 * s;
+    return photoHeight + DS.s(18) + DS.s(170) * s;
   }
 
   const StayGridCard({
@@ -42,12 +42,12 @@ class StayGridCard extends StatelessWidget {
   final VoidCallback onViewDetails;
 
   static const _tone = KitTone.stay;
-  static const _radius = BorderRadius.all(Radius.circular(16));
+  static BorderRadius get _radius => DS.br(const BorderRadius.all(Radius.circular(16)));
 
   @override
   Widget build(BuildContext context) {
     final card = DecoratedBox(
-      decoration: BoxDecoration(borderRadius: _radius, boxShadow: ShadowTokens.tight(_tone.accentDark)),
+      decoration: BoxDecoration(borderRadius: _radius, boxShadow: DS.shadows(ShadowTokens.tight(_tone.accentDark))),
       child: Material(
         color: Colors.transparent,
         borderRadius: _radius,
@@ -78,22 +78,22 @@ class StayGridCard extends StatelessWidget {
                         builder: (_, c) => KitPhoto(url: thumbnailUrl, width: c.maxWidth, height: photoHeight, tone: _tone, iconSize: 44, rich: true),
                       ),
                       if (thumbnailUrl != null && thumbnailUrl!.isNotEmpty)
-                        const Positioned(
+                        Positioned(
                           left: 0,
                           right: 0,
                           bottom: 0,
-                          height: 36,
-                          child: IgnorePointer(child: DecoratedBox(decoration: BoxDecoration(gradient: DesignGradients.scrimBottom))),
+                          height: DS.s(36),
+                          child: const IgnorePointer(child: DecoratedBox(decoration: BoxDecoration(gradient: DesignGradients.scrimBottom))),
                         ),
                       if (tagLabel.isNotEmpty)
-                        Positioned(top: 8, left: 8, right: 8, child: Align(alignment: Alignment.topLeft, child: KitTagChip(tagLabel, tone: _tone, solid: true))),
-                      if (isFeatured) Positioned(left: 8, bottom: 8, child: PlanBadgeChip(color: _tone.accentDark, compact: false)),
+                        Positioned(top: DS.s(8), left: DS.s(8), right: DS.s(8), child: Align(alignment: Alignment.topLeft, child: KitTagChip(tagLabel, tone: _tone, solid: true))),
+                      if (isFeatured) Positioned(left: DS.s(8), bottom: DS.s(8), child: PlanBadgeChip(color: _tone.accentDark, compact: false)),
                     ],
                   ),
                 ),
                 Expanded(
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+                    padding: DS.insets(l: 10, t: 8, r: 10, b: 10),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -102,16 +102,16 @@ class StayGridCard extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                             style: TypeTokens.style(16, FontWeight.w700, color: DesignColors.textStrong, height: 1.2)),
                         if (locationLabel.isNotEmpty) ...[
-                          const SizedBox(height: 4),
+                          SizedBox(height: DS.s(4)),
                           Row(children: [
                             const TravelIcon(TravelIcon.place, size: 12),
-                            const SizedBox(width: 3),
+                            SizedBox(width: DS.s(3)),
                             Expanded(child: Text(locationLabel, maxLines: 1, overflow: TextOverflow.ellipsis, style: TypeTokens.style(12, FontWeight.w500, color: TypeTokens.secondary))),
                           ]),
                         ],
                         if (facts.isNotEmpty) ...[
-                          const SizedBox(height: 6),
-                          Wrap(spacing: 4, runSpacing: 4, children: [for (final f in facts.take(3)) KitFactChip(f, tone: _tone)]),
+                          SizedBox(height: DS.s(6)),
+                          Wrap(spacing: DS.gh(4), runSpacing: DS.gv(4), children: [for (final f in facts.take(3)) KitFactChip(f, tone: _tone)]),
                         ],
                         const Spacer(),
                         Row(children: [
@@ -129,12 +129,12 @@ class StayGridCard extends StatelessWidget {
                               ),
                             ),
                           ),
-                          const SizedBox(width: 6),
+                          SizedBox(width: DS.s(6)),
                           Container(
-                            width: 28,
-                            height: 28,
+                            width: DS.s(28),
+                            height: DS.s(28),
                             decoration: BoxDecoration(gradient: _tone.gradient, shape: BoxShape.circle),
-                            child: const Icon(Icons.chevron_right_rounded, size: 20, color: DesignColors.onPrimary),
+                            child: Icon(Icons.chevron_right_rounded, size: DS.s(20), color: DesignColors.onPrimary),
                           ),
                         ]),
                       ],
@@ -169,25 +169,25 @@ class StayFloatingPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const radius = BorderRadius.all(Radius.circular(24));
+    final radius = DS.br(const BorderRadius.all(Radius.circular(24)));
     return Container(
-      decoration: BoxDecoration(gradient: gradient, borderRadius: radius, boxShadow: PickKit.shadow(shadowColor)),
+      decoration: BoxDecoration(gradient: gradient, borderRadius: radius, boxShadow: DS.shadows(PickKit.shadow(shadowColor))),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           borderRadius: radius,
           onTap: onTap,
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            padding: DS.sym(h: 20, v: 12),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 TravelIcon(iconAsset, size: 22),
-                const SizedBox(width: 8),
+                SizedBox(width: DS.s(8)),
                 Text(label,
-                    style: const TextStyle(
+                    style: TextStyle(
                         fontFamily: FitnessAppTheme.fontName,
-                        fontSize: 14,
+                        fontSize: DS.f(14),
                         fontWeight: FontWeight.w600,
                         letterSpacing: 0.2,
                         color: FitnessAppTheme.white)),

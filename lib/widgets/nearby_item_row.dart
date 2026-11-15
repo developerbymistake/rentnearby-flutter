@@ -71,7 +71,7 @@ class NearbyItemRow extends StatelessWidget {
       tone: tone,
       elevated: elevated,
       onTap: onTap,
-      margin: elevated ? EdgeInsets.zero : const EdgeInsets.symmetric(horizontal: KitMetrics.gutter, vertical: 6),
+      margin: elevated ? EdgeInsets.zero : EdgeInsets.symmetric(horizontal: DS.s(KitMetrics.gutter), vertical: DS.gv(6)),
       trailing: _price(tone),
       footer: hasActions ? Row(children: [for (final a in actions!) Expanded(child: a)]) : null,
     );
@@ -81,7 +81,7 @@ class NearbyItemRow extends StatelessWidget {
 
   Widget _price(KitTone tone) {
     return ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: 104),
+      constraints: BoxConstraints(maxWidth: DS.s(104)),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.end,
@@ -100,8 +100,8 @@ class NearbyItemRow extends StatelessWidget {
               style: TypeTokens.style(18, FontWeight.w800, color: tone.accentDark),
             ),
           ),
-          const SizedBox(height: 4),
-          trailing ?? Icon(Icons.arrow_forward, size: 18, color: tone.accentDark),
+          SizedBox(height: DS.s(4)),
+          trailing ?? Icon(Icons.arrow_forward, size: DS.s(18), color: tone.accentDark),
         ],
       ),
     );
@@ -122,10 +122,10 @@ class NearbyRowAction extends StatelessWidget {
         splashColor: DesignColors.splash,
         highlightColor: Colors.transparent,
         child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: KitMetrics.touch),
+          constraints: BoxConstraints(minHeight: DS.s(KitMetrics.touch)),
           child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
             icon,
-            const SizedBox(width: 6),
+            SizedBox(width: DS.s(6)),
             Flexible(
               child: Text(label,
                   maxLines: 1,

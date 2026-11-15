@@ -10,13 +10,11 @@ import '../../../trip/utils/trip_format.dart';
 import '../taxi_ways_strings.dart';
 
 class DestinationStayCard extends StatelessWidget {
-  static const List<String> _stickers = [ListingArt.key, ListingArt.bed, ListingArt.hotel];
-
   final StayNearbyModel stay;
   final String cityName;
   final DateTime date;
   final int people;
-  final double width;
+  final double? width;
   final int index;
 
   const DestinationStayCard({
@@ -25,7 +23,7 @@ class DestinationStayCard extends StatelessWidget {
     required this.cityName,
     required this.date,
     required this.people,
-    this.width = 160,
+    this.width,
     this.index = 0,
   });
 
@@ -56,12 +54,12 @@ class DestinationStayCard extends StatelessWidget {
         if (stay.stayTypeName != null) stay.stayTypeName!,
       ],
       photo: hasPhoto ? KitPhoto(url: url, width: 100, height: 100, asset: TravelIcon.stay, iconSize: 40) : null,
-      sticker: hasPhoto ? _stickers[index % _stickers.length] : null,
-      art: hasPhoto ? null : ListingArt.hotel,
+      sticker: hasPhoto ? ListingArt.stay : null,
+      art: hasPhoto ? null : ListingArt.stay,
       number: price == null ? null : BrowseItem.inr(price),
       unit: price == null ? '' : ' /night',
       buttonLabel: TaxiWaysStrings.askRoom,
-      width: width,
+      width: width ?? DS.s(160),
       onTap: _ask,
     );
   }

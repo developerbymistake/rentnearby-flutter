@@ -12,13 +12,13 @@ class WaysSortChips extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Wrap(
-      spacing: 8,
-      runSpacing: 6,
+      spacing: DS.gh(8),
+      runSpacing: DS.gv(6),
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
         Text(
           TaxiWaysStrings.sortLabel,
-          style: FitnessAppTheme.caption.copyWith(fontSize: 12, fontWeight: FontWeight.w600, color: DesignColors.textSecondary),
+          style: FitnessAppTheme.caption.copyWith(fontSize: DS.f(12), fontWeight: FontWeight.w600, color: DesignColors.textSecondary),
         ),
         _chip(TaxiWaysStrings.fewestCars, WaysSort.fewestCars),
         _chip(TaxiWaysStrings.lowestPrice, WaysSort.lowestPrice),
@@ -32,7 +32,7 @@ class WaysSortChips extends StatelessWidget {
       selected: on,
       button: true,
       child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 44),
+        constraints: BoxConstraints(minHeight: DS.s(44)),
         child: Center(
           widthFactor: 1,
           heightFactor: 1,
@@ -60,17 +60,17 @@ class _SortPill extends StatelessWidget {
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          padding: DS.sym(h: 14, v: 10),
           decoration: BoxDecoration(
             gradient: on ? p.gradient : null,
             color: on ? null : DesignColors.chipBackground,
-            borderRadius: CardRadius.pill,
-            boxShadow: on ? ShadowTokens.glow(p.g2) : const [],
+            borderRadius: DS.br(CardRadius.pill),
+            boxShadow: on ? DS.shadows(ShadowTokens.glow(p.g2)) : const [],
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              if (on) const Padding(padding: EdgeInsets.only(right: 6), child: Icon(Icons.check_rounded, size: 18, color: DesignColors.textInverse)),
+              if (on) Padding(padding: EdgeInsets.only(right: DS.s(6)), child: Icon(Icons.check_rounded, size: DS.s(18), color: DesignColors.textInverse)),
               Flexible(child: Text(label, style: Ink3D.text(14, FontWeight.w600, on ? DesignColors.textInverse : DesignColors.textPrimary, letterSpacing: 0))),
             ],
           ),

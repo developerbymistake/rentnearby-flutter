@@ -191,27 +191,27 @@ class _TripLeadsScreenState extends State<TripLeadsScreen> with WidgetsBindingOb
       const all = TripLeadBucket.all;
       if (compact) {
         return Padding(
-          padding: const EdgeInsets.fromLTRB(18, 10, 18, 6),
+          padding: EdgeInsets.fromLTRB(DS.s(18), DS.gv(10), DS.s(18), DS.gv(6)),
           child: Align(
             alignment: Alignment.centerLeft,
             child: FittedBox(
               fit: BoxFit.scaleDown,
               alignment: Alignment.centerLeft,
               child: Row(mainAxisSize: MainAxisSize.min, children: [
-                for (var i = 0; i < all.length; i++) ...[if (i > 0) const SizedBox(width: 8), chip(all[i])],
+                for (var i = 0; i < all.length; i++) ...[if (i > 0) Gap.h(8), chip(all[i])],
               ]),
             ),
           ),
         );
       }
       return Padding(
-        padding: const EdgeInsets.fromLTRB(18, 8, 18, 4),
+        padding: EdgeInsets.fromLTRB(DS.s(18), DS.gv(8), DS.s(18), DS.gv(4)),
         child: Column(children: [
           for (var r = 0; r < all.length; r += 2) ...[
-            if (r > 0) const SizedBox(height: 8),
+            if (r > 0) Gap.v(8),
             Row(children: [
               Expanded(child: chip(all[r])),
-              const SizedBox(width: 12),
+              Gap.h(12),
               Expanded(child: r + 1 < all.length ? chip(all[r + 1]) : const SizedBox.shrink()),
             ]),
           ],
@@ -224,7 +224,7 @@ class _TripLeadsScreenState extends State<TripLeadsScreen> with WidgetsBindingOb
 
   Widget _column(Widget child) => Align(
         alignment: Alignment.topCenter,
-        child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 640), child: child),
+        child: ConstrainedBox(constraints: BoxConstraints(maxWidth: 640), child: child),
       );
 
   String _emptyTitle(String bucket) => switch (bucket) {
@@ -239,7 +239,7 @@ class _TripLeadsScreenState extends State<TripLeadsScreen> with WidgetsBindingOb
     final s = MediaQuery.textScalerOf(context);
     final art = w < 340 ? 150.0 : 186.0;
     final lines = w < 340 || s.scale(1) > 1.15 ? 3 : 2;
-    return 100 + art - 66 + s.scale(30) + 6 + s.scale(21) * lines + 34 + (action ? 78 : 0) + 24;
+    return DS.s(100 + art - 66 + s.scale(30) + 6 + s.scale(21) * lines + 34 + (action ? 78 : 0) + 24);
   }
 
   Widget _body() {
@@ -253,7 +253,7 @@ class _TripLeadsScreenState extends State<TripLeadsScreen> with WidgetsBindingOb
     if (loading && items.isEmpty) {
       return _column(ListView.builder(
         physics: const NeverScrollableScrollPhysics(),
-        padding: const EdgeInsets.only(top: 4, bottom: 16),
+        padding: EdgeInsets.only(top: DS.s(4), bottom: DS.s(16)),
         itemCount: 2,
         itemBuilder: (_, i) => _enter(i, 2, const ReplyCardSkeleton()),
       ));
@@ -291,7 +291,7 @@ class _TripLeadsScreenState extends State<TripLeadsScreen> with WidgetsBindingOb
         child: LayoutBuilder(
           builder: (context, box) => _column(ListView(
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.only(bottom: 24),
+            padding: EdgeInsets.only(bottom: DS.gv(24)),
             children: [_enter(0, 1, empty(box.maxHeight >= _tallNeed(context, failed && !off) ? StateLayout.tall : StateLayout.wide))],
           )),
         ),
@@ -303,7 +303,7 @@ class _TripLeadsScreenState extends State<TripLeadsScreen> with WidgetsBindingOb
       child: _column(ListView.builder(
         controller: _scroll,
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.only(bottom: 16),
+        padding: EdgeInsets.only(bottom: DS.gv(16)),
         itemCount: items.length + moreFooter,
         itemBuilder: (_, i) {
           if (i >= items.length) return _moreFooter();
@@ -324,16 +324,16 @@ class _TripLeadsScreenState extends State<TripLeadsScreen> with WidgetsBindingOb
   Widget _moreFooter() {
     if (_ctrl.loadMoreFailed.value) {
       return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
+        padding: EdgeInsets.symmetric(vertical: DS.gv(8)),
         child: Center(
           child: WhitePillButton(tone: _tone, label: TripStrings.retry, expand: false, height: 44, fontSize: 14, onTap: _ctrl.loadMore),
         ),
       );
     }
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 16),
+      padding: EdgeInsets.symmetric(vertical: DS.gv(16)),
       child: Center(
-        child: SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2.5, color: _tone.button)),
+        child: SizedBox(width: DS.s(24), height: DS.s(24), child: CircularProgressIndicator(strokeWidth: DS.s(2.5), color: _tone.button)),
       ),
     );
   }

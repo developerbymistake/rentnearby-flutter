@@ -363,8 +363,8 @@ class _OfferBodyState extends State<_OfferBody> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           SummaryBar3D(tone: t, label: '${TripStrings.total} · ${TripStrings.nights(_nights < 0 ? 0 : _nights)}', value: BrowseItem.inr(_total)),
-          if (_serverError != null) Padding(padding: const EdgeInsets.only(top: 8), child: Text(_serverError!, style: FieldMessage.errorStyle)),
-          const SizedBox(height: 8),
+          if (_serverError != null) Padding(padding: EdgeInsets.only(top: DS.gv(8)), child: Text(_serverError!, style: FieldMessage.errorStyle)),
+          Gap.v(8),
           GradientPillButton(
             tone: t,
             label: revised ? TripStrings.sendRevisedOffer : TripStrings.sendOffer,
@@ -375,19 +375,19 @@ class _OfferBodyState extends State<_OfferBody> {
       ),
       children: [
         if (counter != null && counterPrice != null) _counterSummary(counter, counterPrice),
-        const SizedBox(height: 4),
+        Gap.v(4),
         _twoUp(
           _dateField(TripStrings.checkIn, _checkIn, () => _pickDate(isCheckIn: true)),
           _dateField(TripStrings.checkOut, _checkOut, () => _pickDate(isCheckIn: false)),
         ),
-        if (_tripHint != null) Padding(padding: const EdgeInsets.fromLTRB(6, 6, 6, 0), child: Text(_tripHint!, style: RepliesLook.foot)),
+        if (_tripHint != null) Padding(padding: DS.gapInsets(l: 6, t: 6, r: 6), child: Text(_tripHint!, style: RepliesLook.foot)),
         if (_clamped)
           Padding(
-            padding: const EdgeInsets.fromLTRB(6, 4, 6, 0),
+            padding: DS.gapInsets(l: 6, t: 4, r: 6),
             child: Text(TripStringsI5.datesMovedInside, style: Ink3D.text(12, FontWeight.w600, Ink3D.body, letterSpacing: 0)),
           ),
         Padding(
-          padding: const EdgeInsets.only(top: 16),
+          padding: EdgeInsets.only(top: DS.gv(16)),
           child: Row(
             children: [
               Expanded(child: Text(TripStrings.roomLines.toUpperCase(), style: RepliesLook.section)),
@@ -397,10 +397,10 @@ class _OfferBodyState extends State<_OfferBody> {
                   label: TripStrings.addRoomLine,
                   exclude: true,
                   child: Container(
-                    constraints: const BoxConstraints(minHeight: 34),
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                    constraints: BoxConstraints(minHeight: DS.s(34)),
+                    padding: DS.sym(h: 14, v: 6),
                     alignment: Alignment.center,
-                    decoration: BoxDecoration(color: t.tint, borderRadius: BorderRadius.circular(16)),
+                    decoration: BoxDecoration(color: t.tint, borderRadius: DS.circular(16)),
                     child: Text('+ ${TripStrings.addRoomLine}', style: Ink3D.text(13, FontWeight.w700, t.text, letterSpacing: 0)),
                   ),
                 ),
@@ -416,10 +416,10 @@ class _OfferBodyState extends State<_OfferBody> {
         ),
         _field(_cancel, TripStrings.cancellationTerms, art: ListingArt.clipboard, maxLength: 300, lines: 2),
         _field(_inclusions, StayEnquiryStrings.inclusions, art: ListingArt.star, maxLength: 200, hint: StayEnquiryStrings.optional),
-        const SizedBox(height: 12),
+        Gap.v(12),
         ToggleRow(tone: t, label: TripStrings.gstInvoice, value: _gst, filled: true, onChanged: _saving ? null : (v) => setState(() => _gst = v)),
         if (!revised) KeyValueRow(label: TripStrings.validForLabel, value: StayEnquiryStrings.offerValid(e.isUrgent), divider: false),
-        const SizedBox(height: 8),
+        Gap.v(8),
       ],
     );
   }
@@ -436,7 +436,7 @@ class _OfferBodyState extends State<_OfferBody> {
       title: TripStringsAD.perRoomPerNight(price),
       subtitle: [TripStringsAD.roomsNightsTotal(rooms, nights, total), if (listed != null) TripStringsAD.listedPerNight(listed)].join('\n'),
       value: BrowseItem.inr(total),
-      margin: const EdgeInsets.only(bottom: 8),
+      margin: EdgeInsets.only(bottom: DS.gv(8)),
     );
   }
 
@@ -445,7 +445,7 @@ class _OfferBodyState extends State<_OfferBody> {
           if (c.maxWidth >= 300) {
             return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Expanded(child: a),
-              const SizedBox(width: 10),
+              Gap.h(10),
               Expanded(child: b),
             ]);
           }
@@ -502,13 +502,13 @@ class _OfferBodyState extends State<_OfferBody> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (i > 0) const Padding(padding: EdgeInsets.only(top: 14), child: Divider(height: 1, color: RepliesLook.rule)),
-        const SizedBox(height: 12),
+        if (i > 0) Padding(padding: EdgeInsets.only(top: DS.gv(14)), child: const Divider(height: 1, color: RepliesLook.rule)),
+        Gap.v(12),
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
-              child: Wrap(spacing: 8, runSpacing: 8, children: [
+              child: Wrap(spacing: DS.gh(8), runSpacing: DS.gv(8), children: [
                 for (final r in rooms)
                   ChoicePill(
                     tone: t,
@@ -526,18 +526,18 @@ class _OfferBodyState extends State<_OfferBody> {
             if (_lines.length > 1)
               IconButton(
                 tooltip: StayEnquiryStrings.removeRoom,
-                constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+                constraints: BoxConstraints(minWidth: DS.s(44), minHeight: DS.s(44)),
                 onPressed: () => setState(() {
                   _lines.removeAt(i).dispose();
                 }),
-                icon: const Icon(Icons.delete_outline_rounded, size: 22, color: Form3D.error),
+                icon: Icon(Icons.delete_outline_rounded, size: DS.s(22), color: Form3D.error),
               ),
           ],
         ),
         if (l.isOther) _field(l.otherCtrl, StayEnquiryStrings.roomName, art: ListingArt.bed, maxLength: TripConstants.roomNameMax),
-        const SizedBox(height: 12),
+        Gap.v(12),
         StepperField(tone: t, filled: true, leadingArt: ListingArt.bed, label: TripStrings.units, value: l.units, min: 1, max: 10, onChanged: (v) => setState(() => l.units = v)),
-        const SizedBox(height: 12),
+        Gap.v(12),
         StepperField(tone: t, filled: true, leadingArt: ListingArt.guests, label: TripStrings.guests, value: l.guests, min: 1, max: 40, onChanged: (v) => setState(() => l.guests = v)),
         _field(l.priceCtrl, TripStrings.pricePerNight, art: ListingArt.moneyBag, digits: true, maxLength: 7, prefix: '₹ ', ring: _tried && l.price < 1),
       ],

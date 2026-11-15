@@ -41,7 +41,7 @@ class TripSummaryStats extends StatelessWidget {
     if (items.isEmpty) return const SizedBox.shrink();
     return MealsGrid(
       count: items.length,
-      padding: const EdgeInsets.symmetric(horizontal: 10),
+      padding: DS.sym(h: 10),
       cardBuilder: (context, i, width) {
         final it = items[i];
         return MealsCardV(

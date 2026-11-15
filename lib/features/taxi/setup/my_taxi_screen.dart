@@ -123,7 +123,7 @@ class _MyTaxiScreenState extends State<MyTaxiScreen> with WidgetsBindingObserver
                       Builder(builder: (ctx) => Obx(() => _card(ctx, taxi))),
                       if (!taxi.isPendingReview)
                         Padding(
-                          padding: const EdgeInsets.only(top: 22),
+                          padding: EdgeInsets.only(top: DS.gv(22)),
                           child: Center(
                             child: WhitePillButton(
                               tone: _tone,
@@ -144,7 +144,7 @@ class _MyTaxiScreenState extends State<MyTaxiScreen> with WidgetsBindingObserver
                     onRefresh: _ctrl.load,
                     child: ListView(
                       physics: const AlwaysScrollableScrollPhysics(),
-                      padding: EdgeInsets.fromLTRB(0, 0, 0, 24 + MediaQuery.paddingOf(context).bottom),
+                      padding: EdgeInsets.fromLTRB(0, 0, 0, DS.s(24) + MediaQuery.paddingOf(context).bottom),
                       children: [
                         for (var i = 0; i < items.length; i++)
                           SetupEntrance(controller: _anim, index: i, count: items.length, child: items[i]),
@@ -196,7 +196,7 @@ class _MyTaxiScreenState extends State<MyTaxiScreen> with WidgetsBindingObserver
       );
 
   Widget _error() => Padding(
-        padding: const EdgeInsets.only(top: 60),
+        padding: EdgeInsets.only(top: DS.s(60)),
         child: StateCard3D(
           tone: _tone,
           art: ListingArt.clipboard,
@@ -207,9 +207,9 @@ class _MyTaxiScreenState extends State<MyTaxiScreen> with WidgetsBindingObserver
         ),
       );
 
-  Widget _skeleton() => const Padding(
-        padding: EdgeInsets.fromLTRB(18, 24, 18, 0),
-        child: SkeletonFormCard(height: 420),
+  Widget _skeleton() => Padding(
+        padding: EdgeInsets.fromLTRB(DS.s(18), DS.gv(24), DS.s(18), 0),
+        child: const SkeletonFormCard(height: 420),
       );
 
   Future<void> _setAvailable(bool available) async {
@@ -255,7 +255,7 @@ class _MyTaxiScreenState extends State<MyTaxiScreen> with WidgetsBindingObserver
             },
           ),
           child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            const SizedBox(height: 8),
+            Gap.v(8),
             PillField(
               tone: _tone,
               controller: fareCtrl,
@@ -270,8 +270,8 @@ class _MyTaxiScreenState extends State<MyTaxiScreen> with WidgetsBindingObserver
               },
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(4, 8, 4, 12),
-              child: Text('Change it if the plan needs more.\nTravellers see this fare on your taxi.', style: FieldMessage.helperStyle.copyWith(fontSize: 12)),
+              padding: EdgeInsets.fromLTRB(DS.s(4), DS.gv(8), DS.s(4), DS.gv(12)),
+              child: Text('Change it if the plan needs more.\nTravellers see this fare on your taxi.', style: FieldMessage.helperStyle.copyWith(fontSize: DS.f(12))),
             ),
           ]),
         ),

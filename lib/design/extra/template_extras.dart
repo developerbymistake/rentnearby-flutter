@@ -5,6 +5,7 @@ import '../tokens/design_colors.dart';
 import '../tokens/shadow_tokens.dart';
 import 'motion_kit.dart';
 import 'template_motion.dart';
+import 'package:bakhli/design/tokens/design_scale.dart';
 
 class TemplateEntranceOnce extends StatefulWidget {
   const TemplateEntranceOnce({
@@ -80,13 +81,13 @@ class TemplateMiniRing extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: size,
-      height: size,
+      width: DS.s(size),
+      height: DS.s(size),
       child: CustomPaint(
         painter: _MiniRingPainter(
           fraction: (percent.clamp(0, 100) / 100) * progress,
           colors: colors,
-          stroke: stroke,
+          stroke: DS.s(stroke),
           track: track,
         ),
       ),
@@ -153,16 +154,16 @@ class TemplateRoundButton extends StatelessWidget {
     return PressScale(
       enabled: on,
       child: SizedBox(
-      width: 44,
-      height: 44,
+      width: DS.s(44),
+      height: DS.s(44),
       child: Center(
         child: Container(
-          width: size,
-          height: size,
+          width: DS.s(size),
+          height: DS.s(size),
           decoration: BoxDecoration(
             color: on ? DesignColors.surface : DesignColors.scaffold,
             shape: BoxShape.circle,
-            boxShadow: on ? ShadowTokens.elev2 : null,
+            boxShadow: on ? DS.shadows(ShadowTokens.elev2) : null,
           ),
           child: Material(
             color: Colors.transparent,
@@ -173,7 +174,7 @@ class TemplateRoundButton extends StatelessWidget {
               splashColor: DesignColors.tint(DesignColors.primary, Alpha.soft),
               highlightColor: Colors.transparent,
               child: Icon(icon,
-                  size: 22, color: on ? DesignColors.primary : DesignColors.textDisabled),
+                  size: DS.s(22), color: on ? DesignColors.primary : DesignColors.textDisabled),
             ),
           ),
         ),

@@ -54,11 +54,11 @@ class TripRouteStrip extends StatelessWidget {
         children: [
           if (count > 1)
             SizedBox(
-              height: 44,
+              height: DS.s(44),
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 itemCount: count,
-                separatorBuilder: (_, _) => const SizedBox(width: 8),
+                separatorBuilder: (_, _) => Gap.h(8),
                 itemBuilder: (_, i) {
                   final d = i + 1;
                   return TripChipView(
@@ -75,18 +75,18 @@ class TripRouteStrip extends StatelessWidget {
               ),
             ),
           if (line != null) ...[
-            if (count > 1) const SizedBox(height: 2),
+            if (count > 1) Gap.v(2),
             Row(
               children: [
                 const TravelIcon(TravelIcon.route, size: 14),
-                const SizedBox(width: 6),
+                Gap.h(6),
                 Expanded(
                   child: Text(
                     line,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                        fontFamily: FitnessAppTheme.fontName, fontSize: 12, fontWeight: FontWeight.w600, letterSpacing: 0.2, color: DesignColors.textSecondary),
+                    style: TextStyle(
+                        fontFamily: FitnessAppTheme.fontName, fontSize: DS.f(12), fontWeight: FontWeight.w600, letterSpacing: 0.2, color: DesignColors.textSecondary),
                   ),
                 ),
               ],

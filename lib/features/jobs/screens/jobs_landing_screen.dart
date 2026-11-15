@@ -56,7 +56,7 @@ class _JobsLandingScreenState extends State<JobsLandingScreen> with ExploreLocat
 
   void _viewDetails(JobSummaryModel job) => Get.toNamed(AppRoutes.jobDetail, arguments: {'id': job.id});
 
-  double get _chipsHeight => 24 + MediaQuery.textScalerOf(context).scale(17);
+  double get _chipsHeight => DS.s(24) + MediaQuery.textScalerOf(context).scale(DS.f(17));
 
   @override
   Widget build(BuildContext context) {
@@ -72,8 +72,8 @@ class _JobsLandingScreenState extends State<JobsLandingScreen> with ExploreLocat
           slivers: [
             SliverToBoxAdapter(child: _buildHeader()),
             PinnedFilterBar(
-              extent: _chipsHeight + top + 8,
-              padding: EdgeInsets.only(top: top + 4, bottom: 4),
+              extent: _chipsHeight + top + DS.s(8),
+              padding: EdgeInsets.only(top: top + DS.s(4), bottom: DS.s(4)),
               child: SizedBox(height: _chipsHeight, child: _buildFilterChips()),
             ),
             SliverToBoxAdapter(child: _buildListHeader()),
@@ -93,7 +93,7 @@ class _JobsLandingScreenState extends State<JobsLandingScreen> with ExploreLocat
         subtitle: 'Work at stays near you',
         onBack: () => Get.back(),
         trailing: [_buildSearchButton()],
-        bottom: Padding(padding: const EdgeInsets.fromLTRB(12, 8, 4, 0), child: _buildDistrictPill()),
+        bottom: Padding(padding: EdgeInsets.fromLTRB(DS.s(12), DS.gv(8), DS.s(4), 0), child: _buildDistrictPill()),
         autoHeight: true,
       ),
     );
@@ -109,17 +109,17 @@ class _JobsLandingScreenState extends State<JobsLandingScreen> with ExploreLocat
           behavior: HitTestBehavior.opaque,
           onTap: resolving ? null : () => onSearchToggleTap(context),
           child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: KitMetrics.touch),
+            constraints: BoxConstraints(minHeight: DS.s(KitMetrics.touch)),
             child: Center(
               widthFactor: 1,
               child: Container(
-                height: 40,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+                height: DS.s(40),
+                padding: DS.sym(h: 16),
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
                   color: active ? DesignColors.error : DesignColors.surface,
-                  borderRadius: CardRadius.pill,
-                  boxShadow: ShadowTokens.elev1,
+                  borderRadius: DS.br(CardRadius.pill),
+                  boxShadow: DS.shadows(ShadowTokens.elev1),
                 ),
                 child: resolving
                     ? KitDots(color: _tone.accentDark, size: 6)
@@ -128,8 +128,8 @@ class _JobsLandingScreenState extends State<JobsLandingScreen> with ExploreLocat
                     : Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.search_rounded, size: 20, color: _tone.accentDark),
-                          const SizedBox(width: 6),
+                          Icon(Icons.search_rounded, size: DS.s(20), color: _tone.accentDark),
+                          SizedBox(width: DS.s(6)),
                           Text('Search', style: TypeTokens.style(14, FontWeight.w600, color: _tone.accentDark)),
                         ],
                       ),
@@ -152,11 +152,11 @@ class _JobsLandingScreenState extends State<JobsLandingScreen> with ExploreLocat
           ? [TextSpan(text: searchLabel ?? 'Pick a district')]
           : [
               TextSpan(text: district.name),
-              const WidgetSpan(
+              WidgetSpan(
                 alignment: PlaceholderAlignment.middle,
                 child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 4),
-                  child: Icon(Icons.chevron_right_rounded, size: 16, color: DesignColors.textGrey),
+                  padding: DS.sym(h: 4),
+                  child: Icon(Icons.chevron_right_rounded, size: DS.s(16), color: DesignColors.textGrey),
                 ),
               ),
               TextSpan(text: cityName),
@@ -164,23 +164,23 @@ class _JobsLandingScreenState extends State<JobsLandingScreen> with ExploreLocat
       return PressScale(
         enabled: !searching,
         child: DecoratedBox(
-          decoration: const BoxDecoration(color: DesignColors.surface, borderRadius: CardRadius.pill, boxShadow: ShadowTokens.elev1),
+          decoration: BoxDecoration(color: DesignColors.surface, borderRadius: DS.br(CardRadius.pill), boxShadow: DS.shadows(ShadowTokens.elev1)),
           child: Material(
             color: Colors.transparent,
-            borderRadius: CardRadius.pill,
+            borderRadius: DS.br(CardRadius.pill),
             clipBehavior: Clip.antiAlias,
             child: InkWell(
               splashColor: DesignColors.splash,
               highlightColor: Colors.transparent,
               onTap: searching ? null : () => LocationSwitchSheet.show(context, palette: JobColors.palette),
               child: ConstrainedBox(
-                constraints: const BoxConstraints(minHeight: 46),
+                constraints: BoxConstraints(minHeight: DS.s(46)),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                  padding: DS.sym(h: 14, v: 6),
                   child: Row(
                     children: [
                       const TravelIcon(TravelIcon.place, size: 22),
-                      const SizedBox(width: 8),
+                      SizedBox(width: DS.s(8)),
                       Expanded(
                         child: Text.rich(
                           TextSpan(children: spans),
@@ -191,10 +191,10 @@ class _JobsLandingScreenState extends State<JobsLandingScreen> with ExploreLocat
                       ),
                       if (!searching)
                         Container(
-                          width: 28,
-                          height: 28,
+                          width: DS.s(28),
+                          height: DS.s(28),
                           decoration: const BoxDecoration(color: DesignColors.scaffold, shape: BoxShape.circle),
-                          child: const Icon(Icons.keyboard_arrow_down_rounded, size: 20, color: DesignColors.textStrong),
+                          child: Icon(Icons.keyboard_arrow_down_rounded, size: DS.s(20), color: DesignColors.textStrong),
                         ),
                     ],
                   ),
@@ -253,9 +253,9 @@ class _JobsLandingScreenState extends State<JobsLandingScreen> with ExploreLocat
       return ListView.separated(
         scrollDirection: Axis.horizontal,
         physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.symmetric(horizontal: KitMetrics.gutter),
+        padding: EdgeInsets.symmetric(horizontal: DS.s(KitMetrics.gutter)),
         itemCount: chips.length,
-        separatorBuilder: (_, _) => const SizedBox(width: 8),
+        separatorBuilder: (_, _) => Gap.h(8),
         itemBuilder: (_, i) => Center(child: chips[i]),
       );
     });
@@ -290,7 +290,7 @@ class _JobsLandingScreenState extends State<JobsLandingScreen> with ExploreLocat
 
   Widget _buildListHeader() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(KitMetrics.gutter, KitMetrics.sectionGap - 8, KitMetrics.gutter, 4),
+      padding: EdgeInsets.fromLTRB(DS.s(KitMetrics.gutter), DS.gv(KitMetrics.sectionGap - 8), DS.s(KitMetrics.gutter), DS.gv(4)),
       child: Row(
         children: [
           Expanded(
@@ -310,7 +310,7 @@ class _JobsLandingScreenState extends State<JobsLandingScreen> with ExploreLocat
               label: 'Filter',
               tone: _tone,
               filled: active,
-              icon: Icon(Icons.tune_rounded, size: 16, color: active ? DesignColors.onPrimary : _tone.accentDark),
+              icon: Icon(Icons.tune_rounded, size: DS.s(16), color: active ? DesignColors.onPrimary : _tone.accentDark),
               onTap: () => JobsFilterSheet.show(context, controller: _ctrl),
             );
           }),
@@ -324,10 +324,10 @@ class _JobsLandingScreenState extends State<JobsLandingScreen> with ExploreLocat
       final items = _ctrl.items;
       if (items.isEmpty) {
         if (_ctrl.noDistrict.value) {
-          return const SliverToBoxAdapter(
+          return SliverToBoxAdapter(
             child: Padding(
-              padding: EdgeInsets.only(top: 24),
-              child: StateCard(kit: _tone, asset: TravelIcon.place, title: 'Pick a district', message: 'Choose where to find jobs'),
+              padding: EdgeInsets.only(top: DS.gv(24)),
+              child: const StateCard(kit: _tone, asset: TravelIcon.place, title: 'Pick a district', message: 'Choose where to find jobs'),
             ),
           );
         }
@@ -335,7 +335,7 @@ class _JobsLandingScreenState extends State<JobsLandingScreen> with ExploreLocat
         final failed = _ctrl.loadFailed.value;
         return SliverToBoxAdapter(
           child: Padding(
-            padding: const EdgeInsets.only(top: 24),
+            padding: EdgeInsets.only(top: DS.gv(24)),
             child: failed
                 ? StateCard.error(
                     kit: _tone,
@@ -349,7 +349,7 @@ class _JobsLandingScreenState extends State<JobsLandingScreen> with ExploreLocat
         );
       }
       return SliverPadding(
-        padding: const EdgeInsets.only(top: 4),
+        padding: EdgeInsets.only(top: DS.gv(4)),
         sliver: SliverList.builder(
           itemCount: items.length,
           itemBuilder: (_, i) {
@@ -379,7 +379,7 @@ class _JobsLandingScreenState extends State<JobsLandingScreen> with ExploreLocat
 
   Widget _buildPlaceholderList() {
     return SliverPadding(
-      padding: const EdgeInsets.only(top: 4),
+      padding: EdgeInsets.only(top: DS.gv(4)),
       sliver: SliverList.builder(itemCount: 5, itemBuilder: (_, _) => ListRow.skeleton()),
     );
   }
@@ -387,7 +387,7 @@ class _JobsLandingScreenState extends State<JobsLandingScreen> with ExploreLocat
   Widget _buildFooter() {
     final bottom = MediaQuery.paddingOf(context).bottom;
     return Obx(() {
-      if (_ctrl.items.isEmpty) return SizedBox(height: 32 + bottom);
+      if (_ctrl.items.isEmpty) return SizedBox(height: DS.gv(32) + bottom);
       Widget child = const SizedBox.shrink();
       if (_ctrl.isLoadingMore.value) {
         child = Center(child: KitDots(color: _tone.accentDark));
@@ -397,8 +397,8 @@ class _JobsLandingScreenState extends State<JobsLandingScreen> with ExploreLocat
         );
       }
       return Padding(
-        padding: EdgeInsets.only(top: 12, bottom: 32 + bottom),
-        child: SizedBox(height: KitMetrics.touch, child: child),
+        padding: EdgeInsets.only(top: DS.gv(12), bottom: DS.gv(32) + bottom),
+        child: SizedBox(height: DS.s(KitMetrics.touch), child: child),
       );
     });
   }

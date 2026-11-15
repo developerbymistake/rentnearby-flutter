@@ -5,6 +5,7 @@ import 'art_3d.dart';
 import 'meals_card_v.dart';
 import 'motion_kit.dart';
 import 'pill_buttons_3d.dart';
+import '../tokens/design_scale.dart';
 
 abstract final class JourneyArt {
   static const String automobile = 'assets/images/design/travel3d/automobile.png';
@@ -18,7 +19,7 @@ abstract final class JourneyArt {
 }
 
 abstract final class JourneyInk {
-  static const List<BoxShadow> sheetShadow = [BoxShadow(color: Color(0x2E000000), offset: Offset(0, -4), blurRadius: 24)];
+  static List<BoxShadow> get sheetShadow => [BoxShadow(color: Color(0x2E000000), offset: DS.shadowOffset(const Offset(0, -4)), blurRadius: DS.shadowBlur(24))];
   static const Color ok = Color(0xFF2E7D32);
   static const Color bad = Color(0xFFC2410C);
   static const Color booked = Color(0xFF2633C5);
@@ -64,30 +65,30 @@ class JourneyHeader3D extends StatelessWidget {
         label: MaterialLocalizations.of(context).backButtonTooltip,
         exclude: true,
         child: Container(
-          width: 46,
-          height: 46,
-          decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle, boxShadow: Ink3D.softShadow),
-          child: Icon(Icons.chevron_left_rounded, size: 28, color: t.text),
+          width: DS.s(46),
+          height: DS.s(46),
+          decoration: BoxDecoration(color: Colors.white, shape: BoxShape.circle, boxShadow: DS.shadows(Ink3D.softShadow)),
+          child: Icon(Icons.chevron_left_rounded, size: DS.s(28), color: t.text),
         ),
       ),
     );
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 6, 12, 0),
+      padding: EdgeInsets.fromLTRB(DS.s(16), DS.s(6), DS.s(12), 0),
       child: Stack(
         clipBehavior: Clip.none,
         children: [
           Positioned(right: 0, top: 0, child: ExcludeSemantics(child: Art3D(asset: art, size: size, halo: size - 6, haloColor: t.halo, haloDy: 4))),
           ConstrainedBox(
-            constraints: BoxConstraints(minHeight: size - 6),
+            constraints: BoxConstraints(minHeight: DS.s(size - 6)),
             child: Padding(
-              padding: EdgeInsets.only(right: size + 4),
+              padding: EdgeInsets.only(right: DS.s(size + 4)),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Row(children: [
                     back,
-                    const SizedBox(width: 12),
+                    Gap.h(12),
                     Expanded(
                       child: Semantics(
                         header: true,
@@ -97,7 +98,7 @@ class JourneyHeader3D extends StatelessWidget {
                   ]),
                   if (sub != null && sub.isNotEmpty)
                     Padding(
-                      padding: const EdgeInsets.only(left: 58),
+                      padding: EdgeInsets.only(left: DS.s(58)),
                       child: Text(sub, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(12.5, FontWeight.w400, Ink3D.sub, height: 1.4)),
                     ),
                 ],
@@ -113,19 +114,19 @@ class JourneyHeader3D extends StatelessWidget {
   Widget build(BuildContext context) {
     final top = MediaQuery.paddingOf(context).top;
     return DecoratedBox(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.only(bottomLeft: Radius.circular(32)),
-        boxShadow: [BoxShadow(color: Color(0x409E9E9E), offset: Offset(0, 6), blurRadius: 16)],
+        borderRadius: BorderRadius.only(bottomLeft: Radius.circular(DS.radius(32))),
+        boxShadow: [BoxShadow(color: Color(0x409E9E9E), offset: DS.shadowOffset(const Offset(0, 6)), blurRadius: DS.shadowBlur(16))],
       ),
       child: Padding(
-        padding: EdgeInsets.only(top: top, bottom: 16),
+        padding: EdgeInsets.only(top: top, bottom: DS.gv(16)),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _head(context),
-            if (bottom != null) Padding(padding: const EdgeInsets.fromLTRB(16, 4, 16, 0), child: bottom),
+            if (bottom != null) Padding(padding: EdgeInsets.fromLTRB(DS.s(16), DS.s(4), DS.s(16), 0), child: bottom),
           ],
         ),
       ),
@@ -148,21 +149,21 @@ class JourneyChip3D extends StatelessWidget {
     final t = tone ?? ListingTone.coral;
     final fg = filled ? Colors.white : Ink3D.copy;
     final chip = Container(
-      constraints: const BoxConstraints(minHeight: 44),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      constraints: BoxConstraints(minHeight: DS.s(44)),
+      padding: EdgeInsets.symmetric(horizontal: DS.s(16), vertical: DS.s(8)),
       decoration: BoxDecoration(
         color: filled ? null : Form3D.fill,
         gradient: filled ? t.gradient : null,
-        borderRadius: BorderRadius.circular(22),
-        boxShadow: filled ? [BoxShadow(color: t.shadow, offset: const Offset(1.1, 4), blurRadius: 8)] : null,
+        borderRadius: DS.circular(22),
+        boxShadow: filled ? [BoxShadow(color: t.shadow, offset: DS.shadowOffset(const Offset(1.1, 4)), blurRadius: DS.shadowBlur(8))] : null,
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           if (busy)
-            Padding(padding: const EdgeInsets.only(right: 6), child: SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: fg)))
+            Padding(padding: EdgeInsets.only(right: DS.s(6)), child: SizedBox(width: DS.s(14), height: DS.s(14), child: CircularProgressIndicator(strokeWidth: DS.s(2), color: fg)))
           else if (icon != null)
-            Padding(padding: const EdgeInsets.only(right: 4), child: Icon(icon, size: 16, color: fg)),
+            Padding(padding: EdgeInsets.only(right: DS.s(4)), child: Icon(icon, size: DS.s(16), color: fg)),
           Flexible(child: Text(label, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(13, FontWeight.w700, fg, letterSpacing: 0))),
         ],
       ),
@@ -182,9 +183,9 @@ class JourneyPill3D extends StatelessWidget {
   Widget build(BuildContext context) {
     final on = ink != null;
     return DecoratedBox(
-      decoration: BoxDecoration(color: on ? Colors.white : Colors.white.withValues(alpha: 0.26), borderRadius: BorderRadius.circular(10)),
+      decoration: BoxDecoration(color: on ? Colors.white : Colors.white.withValues(alpha: 0.26), borderRadius: DS.circular(10)),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+        padding: EdgeInsets.symmetric(horizontal: DS.s(10), vertical: DS.s(3)),
         child: Text(label, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(11.5, FontWeight.w700, ink ?? Colors.white)),
       ),
     );
@@ -267,9 +268,9 @@ class JourneyCard3D extends StatelessWidget {
     final hasTag = tag != null && tag!.isNotEmpty;
     final tagStyle = Ink3D.text(10.5, FontWeight.w700, white.withValues(alpha: 0.9), letterSpacing: 0.6);
     final head = ConstrainedBox(
-      constraints: BoxConstraints(minHeight: m.headMin),
+      constraints: BoxConstraints(minHeight: DS.s(m.headMin)),
       child: Padding(
-        padding: EdgeInsets.fromLTRB(m.left, 20, 18, 0),
+        padding: EdgeInsets.fromLTRB(DS.s(m.left), DS.s(20), DS.s(18), 0),
         child: Align(
           alignment: Alignment.centerLeft,
           child: Column(
@@ -277,7 +278,7 @@ class JourneyCard3D extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Padding(
-                padding: const EdgeInsets.only(bottom: 2),
+                padding: EdgeInsets.only(bottom: DS.gv(2)),
                 child: Visibility(
                   visible: hasTag,
                   maintainSize: true,
@@ -289,7 +290,7 @@ class JourneyCard3D extends StatelessWidget {
               Text(title, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(width < 340 ? 18 : 20, FontWeight.w700, white, height: 1.2)),
               for (final (i, l) in subtitle.indexed)
                 Padding(
-                  padding: EdgeInsets.only(top: i == 0 ? 4 : 0),
+                  padding: EdgeInsets.only(top: i == 0 ? DS.gv(4) : 0),
                   child: Text(l, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(12.5, FontWeight.w500, white.withValues(alpha: 0.96), height: 1.45)),
                 ),
             ],
@@ -298,21 +299,21 @@ class JourneyCard3D extends StatelessWidget {
       ),
     );
     final pillRow = Padding(
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+      padding: EdgeInsets.fromLTRB(DS.s(20), DS.s(12), DS.s(20), 0),
       child: ConstrainedBox(
-        constraints: BoxConstraints(minHeight: scaler.scale(24)),
+        constraints: BoxConstraints(minHeight: scaler.scale(DS.s(24))),
         child: Align(alignment: Alignment.topLeft, child: pill ?? const SizedBox.shrink()),
       ),
     );
     final fareRow = fare == null
         ? null
         : Padding(
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+            padding: EdgeInsets.fromLTRB(DS.s(20), DS.s(12), DS.s(20), 0),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Padding(
-                  padding: const EdgeInsets.only(right: 6, bottom: 5),
+                  padding: EdgeInsets.only(right: DS.s(6), bottom: DS.s(5)),
                   child: Text(fareCaption, style: Ink3D.text(11, FontWeight.w700, white.withValues(alpha: 0.9), letterSpacing: 0.5)),
                 ),
                 Flexible(
@@ -330,8 +331,8 @@ class JourneyCard3D extends StatelessWidget {
     final strip = noteLines == 0 && lines.isEmpty
         ? null
         : Container(
-      margin: const EdgeInsets.only(top: 12),
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 9),
+      margin: EdgeInsets.only(top: DS.gv(12)),
+      padding: EdgeInsets.symmetric(horizontal: DS.s(20), vertical: DS.s(9)),
       color: Colors.black.withValues(alpha: 0.11),
       child: Row(
         children: [
@@ -341,14 +342,14 @@ class JourneyCard3D extends StatelessWidget {
             maintainAnimation: true,
             maintainState: true,
             child: Transform.translate(
-              offset: const Offset(-4, 0),
+              offset: Offset(DS.s(-4), 0),
               child: const Art3D(asset: ListingArt.roundPushpin, size: 20, shadowBlur: 2, shadowOffset: Offset(1, 2), shadowAlpha: 0.3),
             ),
           ),
-          const SizedBox(width: 4),
+          Gap.h(4),
           Expanded(
             child: ConstrainedBox(
-              constraints: BoxConstraints(minHeight: scaler.scale(12.5 * 1.35) * (noteLines < 1 ? 1 : noteLines)),
+              constraints: BoxConstraints(minHeight: scaler.scale(DS.f(12.5)) * 1.35 * (noteLines < 1 ? 1 : noteLines)),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -378,38 +379,38 @@ class JourneyCard3D extends StatelessWidget {
           );
     final cardBox = Container(
       decoration: BoxDecoration(
-        borderRadius: kMealsRadius,
+        borderRadius: DS.br(kMealsRadius),
         gradient: tone.gradient,
-        boxShadow: picked ? [BoxShadow(color: tone.shadow, offset: const Offset(1.1, 6), blurRadius: 14)] : tone.glow(),
+        boxShadow: picked ? [BoxShadow(color: tone.shadow, offset: DS.shadowOffset(const Offset(1.1, 6)), blurRadius: DS.shadowBlur(14))] : tone.glow(),
       ),
       foregroundDecoration: picked
-          ? BoxDecoration(borderRadius: kMealsRadius, border: Border.all(color: white, width: 3, strokeAlign: BorderSide.strokeAlignOutside))
+          ? BoxDecoration(borderRadius: DS.br(kMealsRadius), border: Border.all(color: white, width: DS.s(3), strokeAlign: BorderSide.strokeAlignOutside))
           : null,
       child: ClipRRect(
-        borderRadius: kMealsRadius,
+        borderRadius: DS.br(kMealsRadius),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           mainAxisSize: MainAxisSize.min,
-          children: [head, pillRow, ?fareRow, ?strip, if (strip == null && bar != null) const SizedBox(height: 14), ?bar, if (bar == null) const SizedBox(height: 4)],
+          children: [head, pillRow, ?fareRow, ?strip, if (strip == null && bar != null) Gap.v(14), ?bar, if (bar == null) Gap.v(4)],
         ),
       ),
     );
     Widget body = Stack(
       clipBehavior: Clip.none,
       children: [
-        if (linkAbove != null) Positioned(left: 56, top: 0, width: 4, height: m.top + m.haloAt.dy + 6, child: ColoredBox(color: linkAbove!)),
-        Padding(padding: EdgeInsets.fromLTRB(14, m.top, 14, 8), child: cardBox),
+        if (linkAbove != null) Positioned(left: DS.s(56), top: 0, width: DS.s(4), height: DS.s(m.top + m.haloAt.dy + 6), child: ColoredBox(color: linkAbove!)),
+        Padding(padding: EdgeInsets.fromLTRB(DS.s(14), DS.s(m.top), DS.s(14), DS.s(8)), child: cardBox),
         Positioned(
-          left: 14 + m.haloAt.dx,
-          top: m.top + m.haloAt.dy,
+          left: DS.s(14 + m.haloAt.dx),
+          top: DS.s(m.top + m.haloAt.dy),
           child: IgnorePointer(
             child: DecoratedBox(
               decoration: BoxDecoration(shape: BoxShape.circle, color: white.withValues(alpha: 0.24)),
-              child: SizedBox(width: m.halo, height: m.halo),
+              child: SizedBox(width: DS.s(m.halo), height: DS.s(m.halo)),
             ),
           ),
         ),
-        Positioned(left: 14 + m.artAt.dx, top: m.top + m.artAt.dy, child: IgnorePointer(child: Art3D(asset: art, size: m.art))),
+        Positioned(left: DS.s(14 + m.artAt.dx), top: DS.s(m.top + m.artAt.dy), child: IgnorePointer(child: Art3D(asset: art, size: m.art))),
       ],
     );
     if (onTap != null) body = PressScale(child: GestureDetector(behavior: HitTestBehavior.opaque, onTap: onTap, child: body));
@@ -426,31 +427,31 @@ class _Cell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = cell;
-    if (c == null) return const SizedBox(height: 52);
+    if (c == null) return SizedBox(height: DS.s(52));
     final enabled = c.onTap != null && !c.busy;
     final inner = ConstrainedBox(
-      constraints: const BoxConstraints(minHeight: 52),
+      constraints: BoxConstraints(minHeight: DS.s(52)),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+        padding: EdgeInsets.symmetric(horizontal: DS.s(8), vertical: DS.s(10)),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             if (c.icon != null || c.busy) ...[
               DecoratedBox(
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: Colors.white,
-                  boxShadow: [BoxShadow(color: Color(0x40000000), offset: Offset(3, 4), blurRadius: 6)],
+                  boxShadow: [BoxShadow(color: Color(0x40000000), offset: DS.shadowOffset(const Offset(3, 4)), blurRadius: DS.shadowBlur(6))],
                 ),
                 child: SizedBox(
-                  width: 26,
-                  height: 26,
+                  width: DS.s(26),
+                  height: DS.s(26),
                   child: c.busy
-                      ? const Padding(padding: EdgeInsets.all(6), child: CircularProgressIndicator(strokeWidth: 2, color: Ink3D.body))
-                      : Icon(c.icon, size: 14, color: Ink3D.body),
+                      ? Padding(padding: DS.all(6), child: CircularProgressIndicator(strokeWidth: DS.s(2), color: Ink3D.body))
+                      : Icon(c.icon, size: DS.s(14), color: Ink3D.body),
                 ),
               ),
-              const SizedBox(width: 8),
+              Gap.h(8),
             ],
             Flexible(
               child: Text(c.label, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(14, FontWeight.w700, Colors.white, height: 1.2)),
@@ -479,22 +480,22 @@ class JourneyCardSkeleton extends StatelessWidget {
   Widget build(BuildContext context) {
     final narrow = MediaQuery.sizeOf(context).width < 340;
     const bone = JourneyInk.skeleton;
-    Widget box(double w, double h, [double r = 14]) => Container(width: w, height: h, decoration: BoxDecoration(color: bone, borderRadius: BorderRadius.circular(r)));
-    final left = narrow ? 124.0 : 156.0;
+    Widget box(double w, double h, [double r = 14]) => Container(width: DS.s(w), height: DS.s(h), decoration: BoxDecoration(color: bone, borderRadius: DS.circular(r)));
+    final left = DS.s(narrow ? 124.0 : 156.0);
     return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 58, 14, 8),
+      padding: EdgeInsets.fromLTRB(DS.s(14), DS.s(58), DS.s(14), DS.s(8)),
       child: Stack(
         clipBehavior: Clip.none,
         children: [
           Container(
-            height: 172,
-            decoration: const BoxDecoration(color: Colors.white, borderRadius: kMealsRadius, boxShadow: Form3D.cardShadow),
+            height: DS.s(172),
+            decoration: BoxDecoration(color: Colors.white, borderRadius: DS.br(kMealsRadius), boxShadow: DS.shadows(Form3D.cardShadow)),
           ),
-          Positioned(left: 8, top: -46, child: box(narrow ? 108 : 140, narrow ? 108 : 140, 70)),
-          Positioned(left: left, top: 26, child: box(narrow ? 110 : 150, 18)),
-          Positioned(left: left, top: 56, child: box(110, 13)),
-          Positioned(left: left, top: 80, child: box(narrow ? 100 : 130, 13)),
-          Positioned(left: 20, right: 20, bottom: 16, child: box(double.infinity, 30, 15)),
+          Positioned(left: DS.s(8), top: DS.s(-46), child: box(narrow ? 108 : 140, narrow ? 108 : 140, 70)),
+          Positioned(left: left, top: DS.s(26), child: box(narrow ? 110 : 150, 18)),
+          Positioned(left: left, top: DS.s(56), child: box(110, 13)),
+          Positioned(left: left, top: DS.s(80), child: box(narrow ? 100 : 130, 13)),
+          Positioned(left: DS.s(20), right: DS.s(20), bottom: DS.s(16), child: box(double.infinity, 30, 15)),
         ],
       ),
     );
@@ -506,9 +507,9 @@ class JourneyPillSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        height: 44,
-        margin: const EdgeInsets.fromLTRB(16, 18, 16, 0),
-        decoration: BoxDecoration(color: JourneyInk.skeleton, borderRadius: BorderRadius.circular(22)),
+        height: DS.s(44),
+        margin: EdgeInsets.fromLTRB(DS.s(16), DS.gv(18), DS.s(16), 0),
+        decoration: BoxDecoration(color: JourneyInk.skeleton, borderRadius: DS.circular(22)),
       );
 }
 
@@ -543,27 +544,27 @@ class JourneyEmpty3D extends StatelessWidget {
     final t = tone ?? ListingTone.coral;
     final size = artSize ?? (compact ? 142.0 : 180.0);
     return Padding(
-      padding: EdgeInsets.fromLTRB(30, artSize != null ? 8 : (compact ? 18 : 40), 30, 24),
+      padding: EdgeInsets.fromLTRB(DS.s(30), artSize != null ? DS.s(8) : (compact ? DS.s(18) : DS.s(40)), DS.s(30), DS.s(24)),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Art3D(asset: art, size: size, halo: size - 2, haloColor: t.halo, shadowBlur: 10, shadowOffset: const Offset(8, 12)),
-          SizedBox(height: compact ? 12 : 16),
+          Gap.v(compact ? 12 : 16),
           Text(title, textAlign: TextAlign.center, maxLines: 3, overflow: TextOverflow.ellipsis, style: Ink3D.text(compact ? 19 : 22, FontWeight.w700, Ink3D.title, height: 1.25)),
           if (body != null && body!.isNotEmpty)
             Padding(
-              padding: const EdgeInsets.only(top: 6),
+              padding: EdgeInsets.only(top: DS.gv(6)),
               child: Text(body!, textAlign: TextAlign.center, style: Ink3D.text(14.5, FontWeight.w400, Ink3D.copy, height: 1.45)),
             ),
           if (actionLabel != null)
             Padding(
-              padding: const EdgeInsets.only(top: 22),
-              child: SizedBox(width: 230, child: GradientPillButton(tone: t, label: actionLabel!, onTap: onAction, height: 52, fontSize: 15)),
+              padding: EdgeInsets.only(top: DS.gv(22)),
+              child: SizedBox(width: DS.s(230), child: GradientPillButton(tone: t, label: actionLabel!, onTap: onAction, height: 52, fontSize: 15)),
             ),
           if (secondaryLabel != null)
             Padding(
-              padding: const EdgeInsets.only(top: 12),
-              child: SizedBox(width: 230, child: WhitePillButton(tone: t, label: secondaryLabel!, onTap: onSecondary, height: 52, fontSize: 15)),
+              padding: EdgeInsets.only(top: DS.gv(12)),
+              child: SizedBox(width: DS.s(230), child: WhitePillButton(tone: t, label: secondaryLabel!, onTap: onSecondary, height: 52, fontSize: 15)),
             ),
         ],
       ),
@@ -584,8 +585,8 @@ class JourneyStop3D extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tile = SizedBox(
-      width: 56,
-      height: 56,
+      width: DS.s(56),
+      height: DS.s(56),
       child: Stack(
         clipBehavior: Clip.none,
         children: [
@@ -593,33 +594,33 @@ class JourneyStop3D extends StatelessWidget {
             child: DecoratedBox(
               decoration: BoxDecoration(
                 color: change ? Colors.white.withValues(alpha: 0.55) : ListingTone.coral.haloBase.withValues(alpha: 0.14),
-                borderRadius: BorderRadius.circular(18),
+                borderRadius: DS.circular(18),
               ),
             ),
           ),
-          Positioned(left: -4, top: -14, child: Art3D(asset: art, size: 66, shadowBlur: 4, shadowOffset: const Offset(3, 5), shadowAlpha: 0.28)),
+          Positioned(left: DS.s(-4), top: DS.s(-14), child: Art3D(asset: art, size: 66, shadowBlur: 4, shadowOffset: const Offset(3, 5), shadowAlpha: 0.28)),
         ],
       ),
     );
     return Padding(
-      padding: EdgeInsets.fromLTRB(14, top, 14, 0),
+      padding: EdgeInsets.fromLTRB(DS.s(14), DS.gv(top), DS.s(14), 0),
       child: Container(
-        constraints: BoxConstraints(minHeight: change ? 84 : 72),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        constraints: BoxConstraints(minHeight: DS.s(change ? 84 : 72)),
+        padding: EdgeInsets.symmetric(horizontal: DS.s(16), vertical: DS.s(12)),
         decoration: BoxDecoration(
           color: change ? null : Colors.white,
           gradient: change ? const LinearGradient(colors: [Color(0xFFFFE7C2), Color(0xFFFFD59A)], begin: Alignment.topLeft, end: Alignment.bottomRight) : null,
-          borderRadius: const BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(24), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8)),
+          borderRadius: BorderRadius.only(topLeft: Radius.circular(DS.radius(8)), topRight: Radius.circular(DS.radius(24)), bottomLeft: Radius.circular(DS.radius(8)), bottomRight: Radius.circular(DS.radius(8))),
           boxShadow: [
             change
-                ? const BoxShadow(color: Color(0x4DF57C00), offset: Offset(1.1, 4), blurRadius: 10)
-                : const BoxShadow(color: Color(0x409E9E9E), offset: Offset(1.1, 1.1), blurRadius: 10),
+                ? BoxShadow(color: Color(0x4DF57C00), offset: DS.shadowOffset(const Offset(1.1, 4)), blurRadius: DS.shadowBlur(10))
+                : BoxShadow(color: Color(0x409E9E9E), offset: DS.shadowOffset(const Offset(1.1, 1.1)), blurRadius: DS.shadowBlur(10)),
           ],
         ),
         child: Row(
           children: [
             tile,
-            const SizedBox(width: 14),
+            Gap.h(14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -648,7 +649,7 @@ class JourneyLink3D extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Align(
         alignment: Alignment.centerLeft,
-        child: Container(margin: const EdgeInsets.only(left: 56), width: 4, height: height, color: color),
+        child: Container(margin: EdgeInsets.only(left: DS.s(56)), width: DS.s(4), height: DS.s(height), color: color),
       );
 }
 
@@ -663,40 +664,40 @@ class JourneyTripCard3D extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = ListingTone.indigo;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 30, 14, 0),
+      padding: EdgeInsets.fromLTRB(DS.s(14), DS.s(30), DS.s(14), 0),
       child: Container(
-        constraints: const BoxConstraints(minHeight: 72),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        constraints: BoxConstraints(minHeight: DS.s(72)),
+        padding: EdgeInsets.symmetric(horizontal: DS.s(16), vertical: DS.s(12)),
         decoration: BoxDecoration(
           gradient: t.gradient,
-          borderRadius: const BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(24), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8)),
-          boxShadow: const [BoxShadow(color: Color(0x805C5EDD), offset: Offset(1.1, 4), blurRadius: 10)],
+          borderRadius: BorderRadius.only(topLeft: Radius.circular(DS.radius(8)), topRight: Radius.circular(DS.radius(24)), bottomLeft: Radius.circular(DS.radius(8)), bottomRight: Radius.circular(DS.radius(8))),
+          boxShadow: [BoxShadow(color: Color(0x805C5EDD), offset: DS.shadowOffset(const Offset(1.1, 4)), blurRadius: DS.shadowBlur(10))],
         ),
         child: Row(
           children: [
             SizedBox(
-              width: 56,
-              height: 56,
+              width: DS.s(56),
+              height: DS.s(56),
               child: Stack(
                 clipBehavior: Clip.none,
                 children: [
-                  Positioned.fill(child: DecoratedBox(decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.22), borderRadius: BorderRadius.circular(18)))),
-                  const Positioned(left: -4, top: -14, child: Art3D(asset: ListingArt.luggage, size: 66, shadowBlur: 4, shadowOffset: Offset(3, 5), shadowAlpha: 0.28)),
+                  Positioned.fill(child: DecoratedBox(decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.22), borderRadius: DS.circular(18)))),
+                  Positioned(left: DS.s(-4), top: DS.s(-14), child: Art3D(asset: ListingArt.luggage, size: 66, shadowBlur: 4, shadowOffset: Offset(3, 5), shadowAlpha: 0.28)),
                 ],
               ),
             ),
-            const SizedBox(width: 14),
+            Gap.h(14),
             Expanded(child: Text(text, maxLines: 3, overflow: TextOverflow.ellipsis, style: Ink3D.text(13, FontWeight.w700, Colors.white, height: 1.35))),
-            const SizedBox(width: 8),
+            Gap.h(8),
             Tap3D(
               onTap: onAction,
               label: actionLabel,
               child: Container(
-                constraints: const BoxConstraints(minHeight: 44, minWidth: 64),
+                constraints: BoxConstraints(minHeight: DS.s(44), minWidth: DS.s(64)),
                 alignment: Alignment.center,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
-                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18), boxShadow: Ink3D.whiteBtn),
+                  padding: EdgeInsets.symmetric(horizontal: DS.s(13), vertical: DS.s(8)),
+                  decoration: BoxDecoration(color: Colors.white, borderRadius: DS.circular(18), boxShadow: DS.shadows(Ink3D.whiteBtn)),
                   child: Text(actionLabel, maxLines: 1, softWrap: false, style: Ink3D.text(12.5, FontWeight.w700, t.g2)),
                 ),
               ),
@@ -716,18 +717,18 @@ class JourneyTotalCard3D extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        margin: const EdgeInsets.fromLTRB(14, 22, 14, 0),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: const BoxDecoration(
+        margin: EdgeInsets.fromLTRB(DS.s(14), DS.gv(22), DS.s(14), 0),
+        padding: EdgeInsets.symmetric(horizontal: DS.s(16), vertical: DS.s(14)),
+        decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(24), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8)),
-          boxShadow: [BoxShadow(color: Color(0x409E9E9E), offset: Offset(1.1, 1.1), blurRadius: 10)],
+          borderRadius: BorderRadius.only(topLeft: Radius.circular(DS.radius(8)), topRight: Radius.circular(DS.radius(24)), bottomLeft: Radius.circular(DS.radius(8)), bottomRight: Radius.circular(DS.radius(8))),
+          boxShadow: [BoxShadow(color: Color(0x409E9E9E), offset: DS.shadowOffset(const Offset(1.1, 1.1)), blurRadius: DS.shadowBlur(10))],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(title, style: Ink3D.text(16, FontWeight.w700, Ink3D.title)),
-            const SizedBox(height: 2),
+            Gap.v(2),
             Text(caption, style: Ink3D.text(12, FontWeight.w400, Ink3D.grey)),
           ],
         ),
@@ -751,7 +752,7 @@ class JourneyBanner3D extends StatelessWidget {
     final row = Row(
       children: [
         Art3D(asset: art, size: 34, shadowBlur: 2, shadowOffset: const Offset(1, 2), shadowAlpha: 0.25),
-        const SizedBox(width: 10),
+        Gap.h(10),
         Expanded(
           child: title == null
               ? Text(text, style: Ink3D.text(13, FontWeight.w600, fg, height: 1.35))
@@ -769,23 +770,23 @@ class JourneyBanner3D extends StatelessWidget {
             onTap: onLink,
             label: linkLabel,
             child: ConstrainedBox(
-              constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
-              child: Center(widthFactor: 1, child: Padding(padding: const EdgeInsets.only(left: 8), child: Text(linkLabel!, style: Ink3D.text(13, FontWeight.w700, ListingTone.coral.text)))),
+              constraints: BoxConstraints(minWidth: DS.s(44), minHeight: DS.s(44)),
+              child: Center(widthFactor: 1, child: Padding(padding: EdgeInsets.only(left: DS.s(8)), child: Text(linkLabel!, style: Ink3D.text(13, FontWeight.w700, ListingTone.coral.text)))),
             ),
           ),
       ],
     );
     return Container(
-      margin: const EdgeInsets.fromLTRB(16, 14, 16, 0),
-      padding: EdgeInsets.fromLTRB(14, linkLabel == null ? 12 : 4, 14, linkLabel == null ? 12 : 4),
+      margin: EdgeInsets.fromLTRB(DS.s(16), DS.gv(14), DS.s(16), 0),
+      padding: EdgeInsets.fromLTRB(DS.s(14), linkLabel == null ? DS.s(12) : DS.s(4), DS.s(14), linkLabel == null ? DS.s(12) : DS.s(4)),
       decoration: BoxDecoration(
         color: error ? JourneyInk.errFill : JourneyInk.warnFill,
-        borderRadius: const BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(24), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8)),
-        boxShadow: const [BoxShadow(color: Color(0x339E9E9E), offset: Offset(1.1, 1.1), blurRadius: 10)],
+        borderRadius: BorderRadius.only(topLeft: Radius.circular(DS.radius(8)), topRight: Radius.circular(DS.radius(24)), bottomLeft: Radius.circular(DS.radius(8)), bottomRight: Radius.circular(DS.radius(8))),
+        boxShadow: [BoxShadow(color: Color(0x339E9E9E), offset: DS.shadowOffset(const Offset(1.1, 1.1)), blurRadius: DS.shadowBlur(10))],
       ),
       child: button == null
           ? row
-          : Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [row, const SizedBox(height: 10), button!]),
+          : Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [row, Gap.v(10), button!]),
     );
   }
 }
@@ -800,17 +801,17 @@ class JourneyDock3D extends StatelessWidget {
   Widget build(BuildContext context) {
     final bottom = MediaQuery.paddingOf(context).bottom;
     return DecoratedBox(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-        boxShadow: [BoxShadow(color: Color(0x599E9E9E), offset: Offset(0, -2), blurRadius: 16)],
+        borderRadius: BorderRadius.vertical(top: Radius.circular(DS.radius(16))),
+        boxShadow: [BoxShadow(color: Color(0x599E9E9E), offset: DS.shadowOffset(const Offset(0, -2)), blurRadius: DS.shadowBlur(16))],
       ),
       child: Padding(
-        padding: EdgeInsets.fromLTRB(18, 14, 18, 16 + bottom),
+        padding: EdgeInsets.fromLTRB(DS.s(18), DS.s(14), DS.s(18), DS.s(16) + bottom),
         child: Center(
           heightFactor: 1,
           child: ConstrainedBox(
-            constraints: BoxConstraints(maxWidth: maxWidth),
+            constraints: BoxConstraints(maxWidth: DS.s(maxWidth)),
             child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: children),
           ),
         ),
@@ -827,7 +828,7 @@ class JourneyPayLine extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(top: 8),
+        padding: EdgeInsets.only(top: DS.gv(8)),
         child: Text(text, textAlign: center ? TextAlign.center : TextAlign.start, style: Ink3D.text(11, FontWeight.w400, Ink3D.grey, height: 1.35)),
       );
 }
@@ -842,14 +843,14 @@ class JourneyBookRow3D extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final pill = Container(
-      constraints: const BoxConstraints(minHeight: 46),
-      margin: const EdgeInsets.fromLTRB(14, 10, 14, 0),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(23), boxShadow: const [BoxShadow(color: Color(0x599E9E9E), offset: Offset(3, 5), blurRadius: 10)]),
+      constraints: BoxConstraints(minHeight: DS.s(46)),
+      margin: EdgeInsets.fromLTRB(DS.s(14), DS.gv(10), DS.s(14), 0),
+      padding: EdgeInsets.symmetric(horizontal: DS.s(16), vertical: DS.s(8)),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: DS.circular(23), boxShadow: [BoxShadow(color: Color(0x599E9E9E), offset: DS.shadowOffset(const Offset(3, 5)), blurRadius: DS.shadowBlur(10))]),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          if (booked) ...[Icon(Icons.check_circle_rounded, size: 18, color: ListingTone.coral.text), const SizedBox(width: 8)],
+          if (booked) ...[Icon(Icons.check_circle_rounded, size: DS.s(18), color: ListingTone.coral.text), Gap.h(8)],
           Flexible(child: Text(label, maxLines: 2, textAlign: TextAlign.center, overflow: TextOverflow.ellipsis, style: Ink3D.text(14, FontWeight.w700, ListingTone.coral.text))),
         ],
       ),
@@ -890,16 +891,16 @@ class JourneySlimCard3D extends StatelessWidget {
     const white = Colors.white;
     final narrow = MediaQuery.sizeOf(context).width < 340;
     final art = narrow ? 96.0 : 120.0;
-    final left = narrow ? 108.0 : 134.0;
+    final left = DS.s(narrow ? 108.0 : 134.0);
     final card = Container(
-      constraints: const BoxConstraints(minHeight: 108),
-      padding: EdgeInsets.fromLTRB(left, 14, 70, 14),
+      constraints: BoxConstraints(minHeight: DS.s(108)),
+      padding: EdgeInsets.fromLTRB(left, DS.s(14), DS.s(70), DS.s(14)),
       decoration: BoxDecoration(
         gradient: tone.gradient,
-        borderRadius: kMealsRadius,
-        boxShadow: picked ? [BoxShadow(color: tone.shadow, offset: const Offset(1.1, 6), blurRadius: 14)] : tone.glow(),
+        borderRadius: DS.br(kMealsRadius),
+        boxShadow: picked ? [BoxShadow(color: tone.shadow, offset: DS.shadowOffset(const Offset(1.1, 6)), blurRadius: DS.shadowBlur(14))] : tone.glow(),
       ),
-      foregroundDecoration: picked ? BoxDecoration(borderRadius: kMealsRadius, border: Border.all(color: white, width: 3, strokeAlign: BorderSide.strokeAlignOutside)) : null,
+      foregroundDecoration: picked ? BoxDecoration(borderRadius: DS.br(kMealsRadius), border: Border.all(color: white, width: DS.s(3), strokeAlign: BorderSide.strokeAlignOutside)) : null,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.center,
@@ -920,24 +921,24 @@ class JourneySlimCard3D extends StatelessWidget {
         child: Opacity(
           opacity: onCall == null ? 0.5 : 1,
           child: Container(
-            width: 44,
-            height: 44,
-            decoration: const BoxDecoration(color: Color(0xFFFAFAFA), shape: BoxShape.circle, boxShadow: Ink3D.goBtn),
-            child: Icon(Icons.call_rounded, size: 20, color: tone.button),
+            width: DS.s(44),
+            height: DS.s(44),
+            decoration: BoxDecoration(color: Color(0xFFFAFAFA), shape: BoxShape.circle, boxShadow: DS.shadows(Ink3D.goBtn)),
+            child: Icon(Icons.call_rounded, size: DS.s(20), color: tone.button),
           ),
         ),
       ),
     );
     Widget body = Padding(
-      padding: const EdgeInsets.fromLTRB(16, 46, 16, 0),
+      padding: EdgeInsets.fromLTRB(DS.s(16), DS.s(46), DS.s(16), 0),
       child: Stack(
         clipBehavior: Clip.none,
         fit: StackFit.passthrough,
         children: [
           card,
-          Positioned(left: 4, top: -30, child: IgnorePointer(child: DecoratedBox(decoration: BoxDecoration(shape: BoxShape.circle, color: white.withValues(alpha: 0.24)), child: SizedBox(width: art - 2, height: art - 2)))),
-          Positioned(left: 6, top: -36, child: IgnorePointer(child: Art3D(asset: this.art, size: art))),
-          Positioned(right: 18, top: 0, bottom: 0, child: Center(child: call)),
+          Positioned(left: DS.s(4), top: DS.s(-30), child: IgnorePointer(child: DecoratedBox(decoration: BoxDecoration(shape: BoxShape.circle, color: white.withValues(alpha: 0.24)), child: SizedBox(width: DS.s(art - 2), height: DS.s(art - 2))))),
+          Positioned(left: DS.s(6), top: DS.s(-36), child: IgnorePointer(child: Art3D(asset: this.art, size: art))),
+          Positioned(right: DS.s(18), top: 0, bottom: 0, child: Center(child: call)),
         ],
       ),
     );
@@ -969,17 +970,17 @@ class JourneyLegTile3D extends StatelessWidget {
     final t = ListingTone.coral;
     final narrow = MediaQuery.sizeOf(context).width < 340;
     return Padding(
-      padding: const EdgeInsets.only(top: 22),
+      padding: EdgeInsets.only(top: DS.gv(22)),
       child: Stack(
         clipBehavior: Clip.none,
         children: [
           Container(
-            constraints: const BoxConstraints(minHeight: 112),
-            padding: EdgeInsets.fromLTRB(narrow ? 84 : 104, 12, 14, 12),
-            decoration: const BoxDecoration(
+            constraints: BoxConstraints(minHeight: DS.s(112)),
+            padding: EdgeInsets.fromLTRB(narrow ? DS.s(84) : DS.s(104), DS.s(12), DS.s(14), DS.s(12)),
+            decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(24), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8)),
-              boxShadow: [BoxShadow(color: Color(0x4D9E9E9E), offset: Offset(1.1, 1.1), blurRadius: 10)],
+              borderRadius: BorderRadius.only(topLeft: Radius.circular(DS.radius(8)), topRight: Radius.circular(DS.radius(24)), bottomLeft: Radius.circular(DS.radius(8)), bottomRight: Radius.circular(DS.radius(8))),
+              boxShadow: [BoxShadow(color: Color(0x4D9E9E9E), offset: DS.shadowOffset(const Offset(1.1, 1.1)), blurRadius: DS.shadowBlur(10))],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -993,16 +994,16 @@ class JourneyLegTile3D extends StatelessWidget {
                 Text(route, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(13.5, FontWeight.w700, Ink3D.title)),
                 if (names != null || badge != null)
                   Padding(
-                    padding: const EdgeInsets.only(top: 6),
+                    padding: EdgeInsets.only(top: DS.gv(6)),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         Expanded(child: Text(names ?? '', maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(13.5, FontWeight.w700, Ink3D.title))),
                         if (badge != null) ...[
-                          const SizedBox(width: 6),
+                          Gap.h(6),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(color: t.haloBase.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(10)),
+                            padding: EdgeInsets.symmetric(horizontal: DS.s(8), vertical: DS.s(3)),
+                            decoration: BoxDecoration(color: t.haloBase.withValues(alpha: 0.14), borderRadius: DS.circular(10)),
                             child: Text(badge!, maxLines: 1, style: Ink3D.text(11, FontWeight.w700, t.text)),
                           ),
                         ],
@@ -1011,14 +1012,14 @@ class JourneyLegTile3D extends StatelessWidget {
                   ),
                 for (final (i, n) in notes.indexed)
                   Padding(
-                    padding: EdgeInsets.only(top: i == 0 ? 6 : 0),
+                    padding: EdgeInsets.only(top: i == 0 ? DS.gv(6) : 0),
                     child: Text(n, style: Ink3D.text(11.5, FontWeight.w400, Ink3D.grey, height: 1.4)),
                   ),
               ],
             ),
           ),
-          Positioned(left: 8, top: -14, child: IgnorePointer(child: DecoratedBox(decoration: BoxDecoration(shape: BoxShape.circle, color: t.halo), child: SizedBox(width: narrow ? 70 : 86, height: narrow ? 70 : 86)))),
-          Positioned(left: 4, top: -20, child: IgnorePointer(child: Art3D(asset: art, size: narrow ? 76 : 94, shadowBlur: 5, shadowOffset: const Offset(4, 7), shadowAlpha: 0.28))),
+          Positioned(left: DS.s(8), top: DS.s(-14), child: IgnorePointer(child: DecoratedBox(decoration: BoxDecoration(shape: BoxShape.circle, color: t.halo), child: SizedBox(width: DS.s(narrow ? 70 : 86), height: DS.s(narrow ? 70 : 86))))),
+          Positioned(left: DS.s(4), top: DS.s(-20), child: IgnorePointer(child: Art3D(asset: art, size: narrow ? 76 : 94, shadowBlur: 5, shadowOffset: const Offset(4, 7), shadowAlpha: 0.28))),
         ],
       ),
     );
@@ -1034,14 +1035,14 @@ class JourneyNoteBox3D extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
         width: double.infinity,
-        margin: const EdgeInsets.only(top: 10),
-        constraints: const BoxConstraints(minHeight: 56),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        margin: EdgeInsets.only(top: DS.gv(10)),
+        constraints: BoxConstraints(minHeight: DS.s(56)),
+        padding: EdgeInsets.symmetric(horizontal: DS.s(12), vertical: DS.s(10)),
         alignment: Alignment.centerLeft,
-        decoration: BoxDecoration(color: error ? JourneyInk.errFill : JourneyInk.warnFill, borderRadius: BorderRadius.circular(12)),
+        decoration: BoxDecoration(color: error ? JourneyInk.errFill : JourneyInk.warnFill, borderRadius: DS.circular(12)),
         child: Row(
           children: [
-            if (!error) ...[const Icon(Icons.warning_amber_rounded, size: 16, color: JourneyInk.warnText), const SizedBox(width: 8)],
+            if (!error) ...[Icon(Icons.warning_amber_rounded, size: DS.s(16), color: JourneyInk.warnText), Gap.h(8)],
             Expanded(child: Text(text, style: Ink3D.text(12.5, FontWeight.w600, error ? JourneyInk.errText : JourneyInk.warnText, height: 1.4))),
           ],
         ),
@@ -1063,18 +1064,18 @@ class JourneyFilterPill3D extends StatelessWidget {
       label: label,
       selected: selected,
       child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 44),
+        constraints: BoxConstraints(minHeight: DS.s(44)),
         child: Center(
           widthFactor: 1,
           heightFactor: 1,
           child: Container(
-            constraints: const BoxConstraints(minHeight: 36),
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+            constraints: BoxConstraints(minHeight: DS.s(36)),
+            padding: EdgeInsets.symmetric(horizontal: DS.s(10), vertical: DS.s(9)),
             decoration: BoxDecoration(
               color: selected ? null : Colors.white,
               gradient: selected ? t.gradient : null,
-              borderRadius: BorderRadius.circular(18),
-              boxShadow: selected ? [BoxShadow(color: t.shadow, offset: const Offset(1.1, 4), blurRadius: 8)] : const [BoxShadow(color: Color(0x4D9E9E9E), offset: Offset(3, 5), blurRadius: 10)],
+              borderRadius: DS.circular(18),
+              boxShadow: selected ? [BoxShadow(color: t.shadow, offset: DS.shadowOffset(const Offset(1.1, 4)), blurRadius: DS.shadowBlur(8))] : [BoxShadow(color: Color(0x4D9E9E9E), offset: DS.shadowOffset(const Offset(3, 5)), blurRadius: DS.shadowBlur(10))],
             ),
             child: Text(label, maxLines: 1, style: Ink3D.text(11, FontWeight.w700, selected ? Colors.white : t.text, letterSpacing: 0)),
           ),
@@ -1101,9 +1102,9 @@ class JourneyDriverPick3D extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = ListingTone.coral;
     Widget tag(String text, Color bg, Color fg) => Container(
-          margin: const EdgeInsets.only(top: 3, right: 6),
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
-          decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(8)),
+          margin: EdgeInsets.only(top: DS.gv(3), right: DS.s(6)),
+          padding: EdgeInsets.symmetric(horizontal: DS.s(8), vertical: DS.s(1)),
+          decoration: BoxDecoration(color: bg, borderRadius: DS.circular(8)),
           child: Text(text, style: Ink3D.text(10.5, FontWeight.w700, fg)),
         );
     final tags = [
@@ -1115,30 +1116,30 @@ class JourneyDriverPick3D extends StatelessWidget {
       label: name,
       selected: current,
       child: Container(
-        margin: const EdgeInsets.only(top: 10),
-        constraints: const BoxConstraints(minHeight: 74),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        margin: EdgeInsets.only(top: DS.gv(10)),
+        constraints: BoxConstraints(minHeight: DS.s(74)),
+        padding: EdgeInsets.symmetric(horizontal: DS.s(14), vertical: DS.s(8)),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: const BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(24), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8)),
-          border: Border.all(color: current ? t.g2 : Colors.transparent, width: 2.5),
-          boxShadow: const [BoxShadow(color: Color(0x479E9E9E), offset: Offset(1.1, 1.1), blurRadius: 10)],
+          borderRadius: BorderRadius.only(topLeft: Radius.circular(DS.radius(8)), topRight: Radius.circular(DS.radius(24)), bottomLeft: Radius.circular(DS.radius(8)), bottomRight: Radius.circular(DS.radius(8))),
+          border: Border.all(color: current ? t.g2 : Colors.transparent, width: DS.s(2.5)),
+          boxShadow: [BoxShadow(color: Color(0x479E9E9E), offset: DS.shadowOffset(const Offset(1.1, 1.1)), blurRadius: DS.shadowBlur(10))],
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             SizedBox(
-              width: 50,
-              height: 50,
+              width: DS.s(50),
+              height: DS.s(50),
               child: Stack(
                 clipBehavior: Clip.none,
                 children: [
-                  Positioned.fill(child: DecoratedBox(decoration: BoxDecoration(color: t.haloBase.withValues(alpha: 0.16), borderRadius: BorderRadius.circular(16)))),
-                  Positioned(left: -4, top: -6, child: Art3D(asset: art, size: 58, shadowBlur: 3, shadowOffset: const Offset(2, 4), shadowAlpha: 0.25)),
+                  Positioned.fill(child: DecoratedBox(decoration: BoxDecoration(color: t.haloBase.withValues(alpha: 0.16), borderRadius: DS.circular(16)))),
+                  Positioned(left: DS.s(-4), top: DS.s(-6), child: Art3D(asset: art, size: 58, shadowBlur: 3, shadowOffset: const Offset(2, 4), shadowAlpha: 0.25)),
                 ],
               ),
             ),
-            const SizedBox(width: 12),
+            Gap.h(12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1150,17 +1151,17 @@ class JourneyDriverPick3D extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(width: 8),
+            Gap.h(8),
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               mainAxisSize: MainAxisSize.min,
               children: [
-                if (fare != null) ConstrainedBox(constraints: const BoxConstraints(maxWidth: 96), child: FittedBox(fit: BoxFit.scaleDown, child: Text(fare!, style: Ink3D.text(16, FontWeight.w700, Ink3D.title)))),
-                const SizedBox(height: 4),
+                if (fare != null) ConstrainedBox(constraints: BoxConstraints(maxWidth: DS.s(96)), child: FittedBox(fit: BoxFit.scaleDown, child: Text(fare!, style: Ink3D.text(16, FontWeight.w700, Ink3D.title)))),
+                Gap.v(4),
                 Container(
-                  width: 22,
-                  height: 22,
-                  decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: current ? t.g2 : JourneyInk.radioOff, width: current ? 6 : 2)),
+                  width: DS.s(22),
+                  height: DS.s(22),
+                  decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: current ? t.g2 : JourneyInk.radioOff, width: DS.s(current ? 6 : 2))),
                 ),
               ],
             ),
@@ -1176,21 +1177,21 @@ class JourneyDriverPickSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Widget box(double w, double h, double r) => Container(width: w, height: h, decoration: BoxDecoration(color: JourneyInk.skeleton, borderRadius: BorderRadius.circular(r)));
+    Widget box(double w, double h, double r) => Container(width: DS.s(w), height: DS.s(h), decoration: BoxDecoration(color: JourneyInk.skeleton, borderRadius: DS.circular(r)));
     return Container(
-      margin: const EdgeInsets.only(top: 10),
-      height: 74,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: const BoxDecoration(
+      margin: EdgeInsets.only(top: DS.gv(10)),
+      height: DS.s(74),
+      padding: EdgeInsets.symmetric(horizontal: DS.s(14), vertical: DS.s(12)),
+      decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(24), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8)),
-        boxShadow: [BoxShadow(color: Color(0x479E9E9E), offset: Offset(1.1, 1.1), blurRadius: 10)],
+        borderRadius: BorderRadius.only(topLeft: Radius.circular(DS.radius(8)), topRight: Radius.circular(DS.radius(24)), bottomLeft: Radius.circular(DS.radius(8)), bottomRight: Radius.circular(DS.radius(8))),
+        boxShadow: [BoxShadow(color: Color(0x479E9E9E), offset: DS.shadowOffset(const Offset(1.1, 1.1)), blurRadius: DS.shadowBlur(10))],
       ),
       child: Row(
         children: [
           box(50, 50, 16),
-          const SizedBox(width: 12),
-          Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start, children: [box(130, 14, 7), const SizedBox(height: 8), box(150, 11, 6)]),
+          Gap.h(12),
+          Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start, children: [box(130, 14, 7), Gap.v(8), box(150, 11, 6)]),
         ],
       ),
     );
@@ -1217,8 +1218,8 @@ class JourneyRoadRow extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          SizedBox(width: 30, child: CustomPaint(painter: _RoadGutter(mark, above, below, dashedAbove, dashedBelow))),
-          const SizedBox(width: 12),
+          SizedBox(width: DS.s(30), child: CustomPaint(painter: _RoadGutter(mark, above, below, dashedAbove, dashedBelow))),
+          Gap.h(12),
           Expanded(child: child),
         ],
       ),
@@ -1238,9 +1239,9 @@ class _RoadGutter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    const x = 15.5;
+    final x = DS.s(15.5);
     final mid = size.height / 2;
-    final p = Paint()..strokeWidth = 5;
+    final p = Paint()..strokeWidth = DS.s(5);
     void line(double a, double b, Color c, bool dashed) {
       p.color = c;
       if (!dashed) {
@@ -1249,8 +1250,8 @@ class _RoadGutter extends CustomPainter {
       }
       var y = a;
       while (y < b) {
-        canvas.drawLine(Offset(x, y), Offset(x, (y + 7).clamp(a, b)), p);
-        y += 12;
+        canvas.drawLine(Offset(x, y), Offset(x, (y + DS.s(7)).clamp(a, b)), p);
+        y += DS.s(12);
       }
     }
 
@@ -1261,13 +1262,13 @@ class _RoadGutter extends CustomPainter {
     switch (mark) {
       case RoadMark.start:
       case RoadMark.end:
-        canvas.drawCircle(c, 12, Paint()..color = (below ?? above ?? ListingTone.coral.g1));
+        canvas.drawCircle(c, DS.s(12), Paint()..color = (below ?? above ?? ListingTone.coral.g1));
       case RoadMark.change:
-        canvas.drawCircle(c, 12, Paint()..color = const Color(0xFFFFE7C2));
-        canvas.drawCircle(c, 9.5, Paint()
+        canvas.drawCircle(c, DS.s(12), Paint()..color = const Color(0xFFFFE7C2));
+        canvas.drawCircle(c, DS.s(9.5), Paint()
           ..color = JourneyInk.changeLine
           ..style = PaintingStyle.stroke
-          ..strokeWidth = 5);
+          ..strokeWidth = DS.s(5));
       case RoadMark.none:
         break;
     }
@@ -1287,7 +1288,7 @@ class JourneyRoadPlace extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 10),
+        padding: EdgeInsets.symmetric(vertical: DS.gv(10)),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisAlignment: MainAxisAlignment.center,
@@ -1316,16 +1317,16 @@ class JourneyRoadStretch extends StatelessWidget {
   Widget build(BuildContext context) {
     final narrow = MediaQuery.sizeOf(context).width < 340;
     final art = narrow ? 92.0 : 122.0;
-    final left = narrow ? 100.0 : 128.0;
+    final left = DS.s(narrow ? 100.0 : 128.0);
     final card = Container(
-      constraints: const BoxConstraints(minHeight: 118),
-      padding: EdgeInsets.fromLTRB(left, 16, 16, 16),
+      constraints: BoxConstraints(minHeight: DS.s(118)),
+      padding: EdgeInsets.fromLTRB(left, DS.s(16), DS.s(16), DS.s(16)),
       decoration: BoxDecoration(
         gradient: tone.gradient,
-        borderRadius: kMealsRadius,
+        borderRadius: DS.br(kMealsRadius),
         boxShadow: tone.glow(dy: 4, blur: 8),
       ),
-      foregroundDecoration: selected ? BoxDecoration(borderRadius: kMealsRadius, border: Border.all(color: Colors.white, width: 3, strokeAlign: BorderSide.strokeAlignOutside)) : null,
+      foregroundDecoration: selected ? BoxDecoration(borderRadius: DS.br(kMealsRadius), border: Border.all(color: Colors.white, width: DS.s(3), strokeAlign: BorderSide.strokeAlignOutside)) : null,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.center,
@@ -1333,8 +1334,8 @@ class JourneyRoadStretch extends StatelessWidget {
         children: [
           Text(title, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(15, FontWeight.w700, Colors.white, height: 1.25)),
           for (final l in lines)
-            Padding(padding: const EdgeInsets.only(top: 2), child: Text(l, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(11.5, FontWeight.w500, Colors.white.withValues(alpha: 0.95), height: 1.4))),
-          if (sketch != null) Padding(padding: const EdgeInsets.only(top: 8), child: sketch),
+            Padding(padding: EdgeInsets.only(top: DS.gv(2)), child: Text(l, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(11.5, FontWeight.w500, Colors.white.withValues(alpha: 0.95), height: 1.4))),
+          if (sketch != null) Padding(padding: EdgeInsets.only(top: DS.gv(8)), child: sketch),
         ],
       ),
     );
@@ -1345,13 +1346,13 @@ class JourneyRoadStretch extends StatelessWidget {
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.only(top: 46, bottom: 12),
+          padding: EdgeInsets.only(top: DS.gv(46), bottom: DS.gv(12)),
           child: Stack(
             clipBehavior: Clip.none,
             children: [
               card,
-              Positioned(left: 4, top: -34, child: IgnorePointer(child: DecoratedBox(decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withValues(alpha: 0.22)), child: SizedBox(width: art - 6, height: art - 6)))),
-              Positioned(left: 2, top: -40, child: IgnorePointer(child: Art3D(asset: this.art, size: art))),
+              Positioned(left: DS.s(4), top: DS.s(-34), child: IgnorePointer(child: DecoratedBox(decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withValues(alpha: 0.22)), child: SizedBox(width: DS.s(art - 6), height: DS.s(art - 6))))),
+              Positioned(left: DS.s(2), top: DS.s(-40), child: IgnorePointer(child: Art3D(asset: this.art, size: art))),
             ],
           ),
         ),
@@ -1375,39 +1376,39 @@ class JourneyGapCard3D extends StatelessWidget {
     final narrow = MediaQuery.sizeOf(context).width < 340;
     final art = narrow ? 92.0 : 112.0;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 58, 14, 0),
+      padding: EdgeInsets.fromLTRB(DS.s(14), DS.s(58), DS.s(14), 0),
       child: Stack(
         clipBehavior: Clip.none,
         children: [
           Container(
-            padding: const EdgeInsets.fromLTRB(18, 22, 18, 18),
-            decoration: const BoxDecoration(color: Colors.white, borderRadius: kMealsRadius, boxShadow: [BoxShadow(color: Color(0x4D9E9E9E), offset: Offset(1.1, 1.1), blurRadius: 10)]),
+            padding: EdgeInsets.fromLTRB(DS.s(18), DS.s(22), DS.s(18), DS.s(18)),
+            decoration: BoxDecoration(color: Colors.white, borderRadius: DS.br(kMealsRadius), boxShadow: [BoxShadow(color: Color(0x4D9E9E9E), offset: DS.shadowOffset(const Offset(1.1, 1.1)), blurRadius: DS.shadowBlur(10))]),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 ConstrainedBox(
-                  constraints: const BoxConstraints(minHeight: 62),
+                  constraints: BoxConstraints(minHeight: DS.s(62)),
                   child: Padding(
-                    padding: EdgeInsets.only(left: art + 6),
+                    padding: EdgeInsets.only(left: DS.s(art + 6)),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(title, maxLines: 3, overflow: TextOverflow.ellipsis, style: Ink3D.text(16, FontWeight.w700, Ink3D.title, height: 1.3)),
-                        if (tag != null) Padding(padding: const EdgeInsets.only(top: 2), child: Text(tag!, maxLines: 2, style: Ink3D.text(12.5, FontWeight.w600, t.text))),
+                        if (tag != null) Padding(padding: EdgeInsets.only(top: DS.gv(2)), child: Text(tag!, maxLines: 2, style: Ink3D.text(12.5, FontWeight.w600, t.text))),
                       ],
                     ),
                   ),
                 ),
                 if (body != null)
-                  Padding(padding: const EdgeInsets.only(top: 12), child: Text(body!, maxLines: 4, overflow: TextOverflow.ellipsis, style: Ink3D.text(13, FontWeight.w400, Ink3D.copy, height: 1.4))),
-                const SizedBox(height: 16),
+                  Padding(padding: EdgeInsets.only(top: DS.gv(12)), child: Text(body!, maxLines: 4, overflow: TextOverflow.ellipsis, style: Ink3D.text(13, FontWeight.w400, Ink3D.copy, height: 1.4))),
+                Gap.v(16),
                 WhitePillButton(tone: t, label: actionLabel, height: 52, fontSize: 15, onTap: onAction),
               ],
             ),
           ),
-          Positioned(left: 8, top: -46, child: IgnorePointer(child: DecoratedBox(decoration: BoxDecoration(shape: BoxShape.circle, color: t.halo), child: SizedBox(width: art, height: art)))),
-          Positioned(left: 8, top: -50, child: IgnorePointer(child: Art3D(asset: ListingArt.taxi, size: art, shadowBlur: 6, shadowOffset: const Offset(5, 8)))),
+          Positioned(left: DS.s(8), top: DS.s(-46), child: IgnorePointer(child: DecoratedBox(decoration: BoxDecoration(shape: BoxShape.circle, color: t.halo), child: SizedBox(width: DS.s(art), height: DS.s(art))))),
+          Positioned(left: DS.s(8), top: DS.s(-50), child: IgnorePointer(child: Art3D(asset: ListingArt.taxi, size: art, shadowBlur: 6, shadowOffset: const Offset(5, 8)))),
         ],
       ),
     );
@@ -1442,9 +1443,9 @@ class JourneyRailCard3D extends StatelessWidget {
   final VoidCallback? onTap;
   final double width;
 
-  static const EdgeInsets cellPadding = EdgeInsets.fromLTRB(8, 46, 8, 14);
+  static EdgeInsets get cellPadding => EdgeInsets.fromLTRB(DS.s(8), DS.s(46), DS.s(8), DS.s(14));
 
-  static double heightFor(BuildContext context) => 300 + (MediaQuery.textScalerOf(context).scale(1).clamp(1.0, 1.2) - 1) * 90;
+  static double heightFor(BuildContext context) => DS.s(300) + (MediaQuery.textScalerOf(context).scale(1).clamp(1.0, 1.2) - 1) * DS.s(90);
 
   @override
   Widget build(BuildContext context) {
@@ -1452,17 +1453,17 @@ class JourneyRailCard3D extends StatelessWidget {
     final scaler = MediaQuery.textScalerOf(context).clamp(maxScaleFactor: 1.2);
     final n = number;
     final card = DecoratedBox(
-      decoration: BoxDecoration(borderRadius: kMealsRadius, gradient: tone.gradient, boxShadow: tone.glow(blur: 8)),
+      decoration: BoxDecoration(borderRadius: DS.br(kMealsRadius), gradient: tone.gradient, boxShadow: tone.glow(blur: 8)),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(15, 64, 15, 12),
+        padding: EdgeInsets.fromLTRB(DS.s(15), DS.s(64), DS.s(15), DS.s(12)),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(17, FontWeight.w700, white, height: 1.3)),
-            const SizedBox(height: 4),
+            Gap.v(4),
             ConstrainedBox(
-              constraints: BoxConstraints(minHeight: scaler.scale(12) * 1.5 * 2),
+              constraints: BoxConstraints(minHeight: scaler.scale(DS.f(12)) * 1.5 * 2),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -1471,15 +1472,15 @@ class JourneyRailCard3D extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(height: 6),
+            Gap.v(6),
             ConstrainedBox(
-              constraints: BoxConstraints(minHeight: scaler.scale(30)),
+              constraints: BoxConstraints(minHeight: scaler.scale(DS.s(30))),
               child: Align(
                 alignment: Alignment.bottomLeft,
                 child: n == null || n.isEmpty ? const SizedBox.shrink() : PriceLine(number: n, unit: unit, numberSize: 24),
               ),
             ),
-            const SizedBox(height: 8),
+            Gap.v(8),
             WhitePillButton(tone: tone, label: buttonLabel, onTap: onTap, onGradient: true, height: 34, fontSize: 13),
           ],
         ),
@@ -1487,22 +1488,22 @@ class JourneyRailCard3D extends StatelessWidget {
     );
     final halo = DecoratedBox(
       decoration: BoxDecoration(shape: BoxShape.circle, color: white.withValues(alpha: 0.22)),
-      child: const SizedBox(width: 112, height: 112),
+      child: SizedBox(width: DS.s(112), height: DS.s(112)),
     );
     final p = photo;
     final a = art;
     final body = SizedBox(
-      width: width,
+      width: DS.s(width),
       child: Stack(
         clipBehavior: Clip.none,
         children: [
           Padding(padding: cellPadding, child: card),
           if (p != null) ...[
-            Positioned(left: 6, top: 0, child: IgnorePointer(child: halo)),
-            Positioned(left: 12, top: 2, child: IgnorePointer(child: PhotoSticker(photo: p, sticker: sticker ?? '', size: 100, stickerSize: 52, stickerOffset: const Offset(66, 64)))),
+            Positioned(left: DS.s(6), top: 0, child: IgnorePointer(child: halo)),
+            Positioned(left: DS.s(12), top: DS.s(2), child: IgnorePointer(child: PhotoSticker(photo: p, sticker: sticker ?? '', size: 100, stickerSize: 52, stickerOffset: const Offset(66, 64)))),
           ] else if (a != null) ...[
-            Positioned(left: 6, top: 0, child: IgnorePointer(child: halo)),
-            Positioned(left: 8, top: -6, child: IgnorePointer(child: Art3D(asset: a, size: 110, shadowBlur: 5, shadowOffset: const Offset(4, 6), shadowAlpha: 0.22))),
+            Positioned(left: DS.s(6), top: 0, child: IgnorePointer(child: halo)),
+            Positioned(left: DS.s(8), top: DS.s(-6), child: IgnorePointer(child: Art3D(asset: a, size: 110, shadowBlur: 5, shadowOffset: const Offset(4, 6), shadowAlpha: 0.22))),
           ],
         ],
       ),

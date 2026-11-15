@@ -23,11 +23,11 @@ class NearestControlBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+      padding: DS.sym(h: 8, v: 10),
       decoration: BoxDecoration(
         color: FitnessAppTheme.white,
-        borderRadius: const BorderRadius.all(Radius.circular(16)),
-        boxShadow: GateKit.barShadow,
+        borderRadius: DS.circular(16),
+        boxShadow: DS.shadows(GateKit.barShadow),
       ),
       child: Row(
         children: [
@@ -37,7 +37,7 @@ class NearestControlBar extends StatelessWidget {
               iconLeading: true,
               enabled: current > 0,
               onTap: onPrev),
-          const SizedBox(width: 6),
+          Gap.h(6),
           _NavButton(
               icon: Icons.chevron_right_rounded,
               label: 'Next',
@@ -52,13 +52,13 @@ class NearestControlBar extends StatelessWidget {
                   final active = i == current;
                   return AnimatedContainer(
                     duration: templateTransitionDuration,
-                    margin: const EdgeInsets.symmetric(horizontal: 2),
-                    width: active ? 16 : 6,
-                    height: 6,
+                    margin: EdgeInsets.symmetric(horizontal: DS.gh(2)),
+                    width: DS.s(active ? 16 : 6),
+                    height: DS.s(6),
                     decoration: BoxDecoration(
                       gradient: active ? TripEntryStyle.gradient : null,
                       color: active ? null : FitnessAppTheme.spacer,
-                      borderRadius: BorderRadius.circular(32),
+                      borderRadius: DS.circular(32),
                     ),
                   );
                 }),
@@ -68,16 +68,16 @@ class NearestControlBar extends StatelessWidget {
           GestureDetector(
             onTap: onCancel,
             child: Container(
-              height: 36,
-              padding: const EdgeInsets.symmetric(horizontal: 14),
+              height: DS.s(36),
+              padding: DS.sym(h: 14),
               alignment: Alignment.center,
               decoration: BoxDecoration(
                 gradient: TripEntryStyle.rose,
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: DS.circular(16),
               ),
               child: Text('Cancel',
                   style: FitnessAppTheme.body2.copyWith(
-                      fontSize: 13,
+                      fontSize: DS.f(13),
                       fontWeight: FontWeight.w600,
                       color: FitnessAppTheme.white)),
             ),
@@ -107,31 +107,31 @@ class _NavButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final color =
         enabled ? FitnessAppTheme.white : FitnessAppTheme.deactivatedText;
-    final iconWidget = Icon(icon, size: 18, color: color);
+    final iconWidget = Icon(icon, size: DS.s(18), color: color);
     final textWidget = Text(label,
         style: FitnessAppTheme.body2
-            .copyWith(fontSize: 13, fontWeight: FontWeight.w600, color: color));
+            .copyWith(fontSize: DS.f(13), fontWeight: FontWeight.w600, color: color));
     return GestureDetector(
       onTap: enabled ? onTap : null,
       child: Container(
-        height: 36,
-        padding: const EdgeInsets.symmetric(horizontal: 10),
+        height: DS.s(36),
+        padding: DS.sym(h: 10),
         alignment: Alignment.center,
         decoration: BoxDecoration(
           gradient: enabled ? TripEntryStyle.gradient : null,
           color: enabled ? null : FitnessAppTheme.spacer,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: DS.circular(16),
           boxShadow: enabled
-              ? [
+              ? DS.shadows([
                   ShadowTokens.tint(TravelPalette.skyEnd, ShadowSpec.glowSpec),
-                ]
+                ])
               : null,
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: iconLeading
-              ? [iconWidget, const SizedBox(width: 3), textWidget]
-              : [textWidget, const SizedBox(width: 3), iconWidget],
+              ? [iconWidget, SizedBox(width: DS.s(3)), textWidget]
+              : [textWidget, SizedBox(width: DS.s(3)), iconWidget],
         ),
       ),
     );

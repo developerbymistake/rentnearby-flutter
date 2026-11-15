@@ -8,6 +8,7 @@ import 'kit_tone.dart';
 import 'motion_kit.dart';
 import 'pill_buttons_3d.dart';
 import 'state_card.dart';
+import 'package:bakhli/design/tokens/design_scale.dart';
 
 const List<String> _months = [
   'January',
@@ -276,15 +277,15 @@ class _CalendarGridState extends State<_CalendarGrid> {
         ? [for (var y = _lastYear; y >= _firstYear; y--) y]
         : [for (var m = 0; m < 12; m++) m];
     return SizedBox(
-      height: 300,
+      height: DS.s(300),
       child: GridView.builder(
-        padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
+        padding: EdgeInsets.fromLTRB(DS.s(12), DS.s(4), DS.s(12), DS.s(8)),
         physics: const BouncingScrollPhysics(),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 4,
-          mainAxisExtent: 52,
-          mainAxisSpacing: 8,
-          crossAxisSpacing: 8,
+          mainAxisExtent: DS.s(52),
+          mainAxisSpacing: DS.gv(8),
+          crossAxisSpacing: DS.gh(8),
         ),
         itemCount: items.length,
         itemBuilder: (_, i) {
@@ -310,7 +311,7 @@ class _CalendarGridState extends State<_CalendarGrid> {
               alignment: Alignment.center,
               decoration: BoxDecoration(
                 color: on ? accent : widget.tone.tint,
-                borderRadius: const BorderRadius.all(Radius.circular(16)),
+                borderRadius: BorderRadius.all(Radius.circular(DS.radius(16))),
               ),
               child: Text(
                 years ? '$v' : _monthsShort[v],
@@ -406,7 +407,7 @@ class _CalendarGridState extends State<_CalendarGrid> {
                   _pickStage = _pickStage == 0 ? 1 : 0;
                 }),
                 child: SizedBox(
-                  height: 44,
+                  height: DS.s(44),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -434,13 +435,13 @@ class _CalendarGridState extends State<_CalendarGrid> {
           _jumpGrid(accent)
         else ...[
           Padding(
-            padding: const EdgeInsets.only(top: 8, bottom: 2),
+            padding: EdgeInsets.only(top: DS.s(8), bottom: DS.s(2)),
             child: Row(
               children: [
                 for (final d in _days)
                   Expanded(
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 2),
+                      padding: EdgeInsets.symmetric(horizontal: DS.s(2)),
                       child: FittedBox(
                         fit: BoxFit.scaleDown,
                         child: Text(d, maxLines: 1, softWrap: false, textScaler: TextScaler.noScaling, style: Ink3D.text(12, FontWeight.w700, Ink3D.hint, letterSpacing: 0)),
@@ -452,7 +453,7 @@ class _CalendarGridState extends State<_CalendarGrid> {
           ),
           for (var r = 0; r < 6; r++)
             Padding(
-              padding: const EdgeInsets.only(top: 4),
+              padding: EdgeInsets.only(top: DS.s(4)),
               child: Row(
                 children: [
                   for (var k = 0; k < 7; k++) Expanded(child: _cell(cells[r * 7 + k], today)),
@@ -470,19 +471,19 @@ class _CalendarGridState extends State<_CalendarGrid> {
       onTap: enabled ? onTap : null,
       label: tip,
       child: SizedBox(
-        width: 44,
-        height: 44,
+        width: DS.s(44),
+        height: DS.s(44),
         child: Center(
           child: Container(
-            width: 36,
-            height: 36,
+            width: DS.s(36),
+            height: DS.s(36),
             decoration: BoxDecoration(
               color: Colors.white,
               shape: BoxShape.circle,
-              boxShadow: enabled ? const [BoxShadow(color: Color(0x669E9E9E), offset: Offset(2, 4), blurRadius: 8)] : null,
+              boxShadow: enabled ? [BoxShadow(color: Color(0x669E9E9E), offset: DS.shadowOffset(const Offset(2, 4)), blurRadius: DS.shadowBlur(8))] : null,
               border: enabled ? null : Border.all(color: Ink3D.line),
             ),
-            child: Icon(icon, size: 22, color: enabled ? widget.tone.text : const Color(0xFFC6C9D1)),
+            child: Icon(icon, size: DS.s(22), color: enabled ? widget.tone.text : const Color(0xFFC6C9D1)),
           ),
         ),
       ),
@@ -492,7 +493,7 @@ class _CalendarGridState extends State<_CalendarGrid> {
   Widget _cell(DateTime d, DateTime today) {
     final tone = widget.tone;
     final inMonth = d.month == _month.month;
-    if (!inMonth) return const SizedBox(height: 38);
+    if (!inMonth) return SizedBox(height: DS.s(38));
     final edge = _isEdge(d);
     final range = (edge || _inRange(d)) && !widget.single && widget.start != null && widget.end != null;
     final isStart = _same(widget.start, d) || d.weekday == 1;
@@ -513,31 +514,31 @@ class _CalendarGridState extends State<_CalendarGrid> {
         behavior: HitTestBehavior.opaque,
         onTap: allowed ? () => _tap(d) : null,
         child: SizedBox(
-          height: 38,
+          height: DS.s(38),
           child: Stack(
             alignment: Alignment.center,
             children: [
               if (range)
                 Positioned.fill(
-                  top: 3,
-                  bottom: 3,
+                  top: DS.s(3),
+                  bottom: DS.s(3),
                   child: DecoratedBox(
                     decoration: BoxDecoration(
                       color: tone.tint,
-                      borderRadius: BorderRadius.horizontal(left: Radius.circular(isStart ? 19 : 0), right: Radius.circular(isEnd ? 19 : 0)),
+                      borderRadius: BorderRadius.horizontal(left: Radius.circular(DS.radius(isStart ? 19 : 0)), right: Radius.circular(DS.radius(isEnd ? 19 : 0))),
                     ),
                   ),
                 ),
               AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
-                width: 36,
-                height: 36,
+                width: DS.s(36),
+                height: DS.s(36),
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   gradient: edge ? tone.gradient : null,
-                  border: isToday && !edge ? Border.all(color: tone.g1, width: 2) : null,
-                  boxShadow: edge ? [BoxShadow(color: tone.shadow.withValues(alpha: 0.5), offset: const Offset(2, 5), blurRadius: 8)] : null,
+                  border: isToday && !edge ? Border.all(color: tone.g1, width: DS.s(2)) : null,
+                  boxShadow: edge ? [BoxShadow(color: tone.shadow.withValues(alpha: 0.5), offset: DS.shadowOffset(const Offset(2, 5)), blurRadius: DS.shadowBlur(8))] : null,
                 ),
                 child: Text(
                   '${d.day}',

@@ -210,40 +210,40 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       builder: (dialogContext) => Dialog(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        insetPadding: const EdgeInsets.symmetric(horizontal: 36),
+        insetPadding: EdgeInsets.symmetric(horizontal: DS.s(36)),
         child: DecoratedBox(
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             color: DesignColors.surface,
-            borderRadius: CardRadius.hero,
-            boxShadow: ShadowTokens.elev3,
+            borderRadius: DS.br(CardRadius.hero),
+            boxShadow: DS.shadows(ShadowTokens.elev3),
           ),
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
+            padding: DS.insets(l: 24, t: 28, r: 24, b: 24),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Container(
-                  width: 72,
-                  height: 72,
+                  width: DS.s(72),
+                  height: DS.s(72),
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     gradient: KitTone.rose.gradient,
-                    boxShadow: ShadowTokens.glow(KitTone.rose.glow),
+                    boxShadow: DS.shadows(ShadowTokens.glow(KitTone.rose.glow)),
                   ),
-                  child: const Icon(Icons.logout_rounded, size: 32, color: DesignColors.onPrimary),
+                  child: Icon(Icons.logout_rounded, size: DS.s(32), color: DesignColors.onPrimary),
                 ),
-                const SizedBox(height: 16),
+                Gap.v(16),
                 Text(
                   'Exit App?',
                   style: TypeTokens.style(18, FontWeight.w700, color: DesignColors.textStrong),
                 ),
-                const SizedBox(height: 8),
+                Gap.v(8),
                 Text(
                   'Are you sure you want to exit?',
                   textAlign: TextAlign.center,
                   style: TypeTokens.style(14, FontWeight.w400, color: TypeTokens.secondary, height: 1.5),
                 ),
-                const SizedBox(height: 24),
+                Gap.v(24),
                 Row(
                   children: [
                     Expanded(
@@ -253,7 +253,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
                         onPressed: () => Navigator.pop(dialogContext),
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    Gap.h(12),
                     Expanded(
                       child: PrimaryButton(
                         label: 'Exit',

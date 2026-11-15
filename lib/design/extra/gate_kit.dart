@@ -20,6 +20,7 @@ import 'trip_kit.dart';
 
 import 'package:bakhli/design/tokens/shadow_tokens.dart';
 import '../tokens/alpha_tokens.dart';
+import 'package:bakhli/design/tokens/design_scale.dart';
 
 class GateKit {
   GateKit._();
@@ -43,16 +44,16 @@ class GateKit {
   static BoxDecoration card({BorderRadius radius = TripKit.cardRadius}) =>
       BoxDecoration(
         color: FitnessAppTheme.white,
-        borderRadius: radius,
-        boxShadow: shadow,
+        borderRadius: DS.br(radius),
+        boxShadow: DS.shadows(shadow),
       );
 
   static BoxDecoration cardSmall() => card(radius: TripKit.cardRadiusSmall);
 
   static BoxDecoration heroCard() => BoxDecoration(
     color: FitnessAppTheme.white,
-    borderRadius: CardRadius.hero,
-    boxShadow: ShadowTokens.elev3,
+    borderRadius: DS.br(CardRadius.hero),
+    boxShadow: DS.shadows(ShadowTokens.elev3),
   );
 
   static TextStyle get bodyText => TypeTokens.style(
@@ -65,13 +66,13 @@ class GateKit {
   static BoxDecoration pill({Color color = FitnessAppTheme.white}) =>
       BoxDecoration(
         color: color,
-        borderRadius: const BorderRadius.all(Radius.circular(38)),
-        boxShadow: pillShadow,
+        borderRadius: BorderRadius.all(Radius.circular(DS.radius(38))),
+        boxShadow: DS.shadows(pillShadow),
       );
 
-  static const TextStyle label = TextStyle(
+  static TextStyle get label => TextStyle(
     fontFamily: FitnessAppTheme.fontName,
-    fontSize: 16,
+    fontSize: DS.f(16),
     fontWeight: FontWeight.w700,
     color: FitnessAppTheme.white,
   );
@@ -94,19 +95,19 @@ class GateBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: size,
-      height: size,
+      width: DS.s(size),
+      height: DS.s(size),
       decoration: BoxDecoration(
         gradient: gradient,
         shape: BoxShape.circle,
-        boxShadow: <BoxShadow>[
+        boxShadow: DS.shadows(<BoxShadow>[
           ShadowTokens.tint(DesignColors.lunchEnd, ShadowSpec.glow),
-        ],
+        ]),
       ),
       child: Center(
         child: Container(
-          width: size * 0.78,
-          height: size * 0.78,
+          width: DS.s(size * 0.78),
+          height: DS.s(size * 0.78),
           decoration: BoxDecoration(
             color: FitnessAppTheme.nearlyWhite.withValues(alpha: Alpha.soft),
             shape: BoxShape.circle,
@@ -114,7 +115,7 @@ class GateBadge extends StatelessWidget {
           child: Center(
             child: asset != null
                 ? TravelIcon(asset!, size: size * 0.5)
-                : Icon(glyph, size: size * 0.38, color: FitnessAppTheme.white),
+                : Icon(glyph, size: DS.s(size * 0.38), color: FitnessAppTheme.white),
           ),
         ),
       ),
@@ -149,7 +150,7 @@ class GateButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final disabled = onPressed == null && !isLoading;
-    final h = height < KitMetrics.touch ? KitMetrics.touch : height;
+    final h = DS.s(height < KitMetrics.touch ? KitMetrics.touch : height);
     return PressScale(
       enabled: !disabled && !isLoading,
       child: Container(
@@ -158,13 +159,13 @@ class GateButton extends StatelessWidget {
         decoration: BoxDecoration(
           gradient: disabled ? null : gradient,
           color: disabled ? FitnessAppTheme.spacer : null,
-          borderRadius: radius,
-          boxShadow: disabled ? null : ShadowTokens.glow(shadowColor),
+          borderRadius: DS.br(radius),
+          boxShadow: disabled ? null : DS.shadows(ShadowTokens.glow(shadowColor)),
         ),
         child: Material(
           color: Colors.transparent,
           child: InkWell(
-            borderRadius: radius,
+            borderRadius: DS.br(radius),
             splashColor: FitnessAppTheme.white.withValues(alpha: Alpha.soft),
             highlightColor: Colors.transparent,
             onTap: isLoading ? null : onPressed,
@@ -176,10 +177,10 @@ class GateButton extends StatelessWidget {
                       children: <Widget>[
                         if (iconAsset != null) ...<Widget>[
                           TravelIcon(iconAsset!, size: 20),
-                          const SizedBox(width: 8),
+                          SizedBox(width: DS.s(8)),
                         ] else if (icon != null) ...<Widget>[
-                          Icon(icon, size: 18, color: FitnessAppTheme.white),
-                          const SizedBox(width: 8),
+                          Icon(icon, size: DS.s(18), color: FitnessAppTheme.white),
+                          SizedBox(width: DS.s(8)),
                         ],
                         Flexible(
                           child: Text(
@@ -187,7 +188,7 @@ class GateButton extends StatelessWidget {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: GateKit.label.copyWith(
-                              fontSize: 16,
+                              fontSize: DS.f(16),
                               color: disabled
                                   ? FitnessAppTheme.deactivatedText
                                   : FitnessAppTheme.white,
@@ -226,10 +227,10 @@ class GateOutlineButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const radius = KitMetrics.buttonRadius;
+    final radius = DS.br(KitMetrics.buttonRadius);
     final disabled = onPressed == null;
     final tint = disabled ? FitnessAppTheme.deactivatedText : color;
-    final h = height < KitMetrics.touch ? KitMetrics.touch : height;
+    final h = DS.s(height < KitMetrics.touch ? KitMetrics.touch : height);
     return PressScale(
       enabled: !disabled,
       child: Container(
@@ -258,10 +259,10 @@ class GateOutlineButton extends StatelessWidget {
                 children: <Widget>[
                   if (iconAsset != null) ...<Widget>[
                     TravelIcon(iconAsset!, size: 18),
-                    const SizedBox(width: 8),
+                    SizedBox(width: DS.s(8)),
                   ] else if (icon != null) ...<Widget>[
-                    Icon(icon, size: 18, color: tint),
-                    const SizedBox(width: 8),
+                    Icon(icon, size: DS.s(18), color: tint),
+                    SizedBox(width: DS.s(8)),
                   ],
                   Flexible(
                     child: Text(
@@ -269,7 +270,7 @@ class GateOutlineButton extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: FitnessAppTheme.body2.copyWith(
-                        fontSize: 15,
+                        fontSize: DS.f(15),
                         fontWeight: FontWeight.w600,
                         color: tint,
                       ),
@@ -306,12 +307,12 @@ class GateTextButton extends StatelessWidget {
     return TextButton(
       onPressed: onPressed,
       style: TextButton.styleFrom(
-        minimumSize: const Size(KitMetrics.touch, KitMetrics.touch),
+        minimumSize: Size(DS.s(KitMetrics.touch), DS.s(KitMetrics.touch)),
       ),
       child: Text(
         label,
         style: FitnessAppTheme.body2.copyWith(
-          fontSize: fontSize < TypeTokens.floor ? TypeTokens.floor : fontSize,
+          fontSize: DS.f(fontSize) < TypeTokens.floor ? TypeTokens.floor : DS.f(fontSize),
           fontWeight: weight,
           color: onPressed == null ? FitnessAppTheme.deactivatedText : color,
         ),
@@ -416,10 +417,10 @@ class GateSheetHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(20, 10, 20, 16),
-      decoration: const BoxDecoration(
+      padding: EdgeInsets.fromLTRB(DS.s(20), DS.s(10), DS.s(20), DS.s(16)),
+      decoration: BoxDecoration(
         gradient: TripEntryStyle.gradient,
-        borderRadius: CardRadius.sheet,
+        borderRadius: DS.br(CardRadius.sheet),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -427,22 +428,22 @@ class GateSheetHeader extends StatelessWidget {
         children: <Widget>[
           Center(
             child: Container(
-              width: 40,
-              height: 4,
+              width: DS.s(40),
+              height: DS.s(4),
               decoration: BoxDecoration(
                 color: FitnessAppTheme.nearlyWhite.withValues(
                   alpha: Alpha.half,
                 ),
-                borderRadius: BorderRadius.circular(2),
+                borderRadius: DS.circular(2),
               ),
             ),
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: DS.s(12)),
           Row(
             children: <Widget>[
               if (leading != null) ...<Widget>[
                 leading!,
-                const SizedBox(width: 8),
+                SizedBox(width: DS.s(8)),
               ],
               Expanded(
                 child: Text(
@@ -450,6 +451,7 @@ class GateSheetHeader extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: FitnessAppTheme.title.copyWith(
+                    fontSize: DS.f(16),
                     color: FitnessAppTheme.white,
                   ),
                 ),
@@ -458,10 +460,11 @@ class GateSheetHeader extends StatelessWidget {
             ],
           ),
           if (subtitle != null) ...<Widget>[
-            const SizedBox(height: 2),
+            SizedBox(height: DS.s(2)),
             Text(
               subtitle!,
               style: FitnessAppTheme.caption.copyWith(
+                fontSize: DS.f(12),
                 color: FitnessAppTheme.white.withValues(alpha: Alpha.strong),
               ),
             ),
@@ -495,16 +498,16 @@ class GateSearchBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: EdgeInsets.symmetric(horizontal: DS.s(16)),
       decoration: GateKit.pill(color: FitnessAppTheme.background),
       child: Row(
         children: <Widget>[
-          const Icon(
+          Icon(
             Icons.search_rounded,
-            size: 20,
+            size: DS.s(20),
             color: FitnessAppTheme.nearlyBlue,
           ),
-          const SizedBox(width: 10),
+          SizedBox(width: DS.s(10)),
           Expanded(
             child: TextField(
               controller: controller,
@@ -513,16 +516,17 @@ class GateSearchBar extends StatelessWidget {
               inputFormatters: inputFormatters,
               onChanged: onChanged,
               cursorColor: FitnessAppTheme.nearlyDarkBlue,
-              style: FitnessAppTheme.body1,
+              style: FitnessAppTheme.body1.copyWith(fontSize: DS.f(16)),
               decoration: InputDecoration(
                 border: InputBorder.none,
                 enabledBorder: InputBorder.none,
                 focusedBorder: InputBorder.none,
                 filled: false,
                 isDense: true,
-                contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                contentPadding: EdgeInsets.symmetric(vertical: DS.s(14)),
                 hintText: hint,
                 hintStyle: FitnessAppTheme.body1.copyWith(
+                  fontSize: DS.f(16),
                   color: FitnessAppTheme.deactivatedText,
                 ),
               ),
@@ -557,7 +561,7 @@ class GateStatusPage extends StatelessWidget {
   final Widget? extra;
   final ListingTone? tone;
 
-  static const double panelHeight = 376;
+  static double get panelHeight => DS.s(376);
 
   @override
   Widget build(BuildContext context) {
@@ -569,11 +573,11 @@ class GateStatusPage extends StatelessWidget {
       constraints: BoxConstraints(
         minHeight: panelHeight + mq.viewPadding.bottom,
       ),
-      padding: EdgeInsets.fromLTRB(24, 30, 24, 34 + mq.viewPadding.bottom),
-      decoration: const BoxDecoration(
+      padding: EdgeInsets.fromLTRB(DS.s(24), DS.s(30), DS.s(24), DS.s(34) + mq.viewPadding.bottom),
+      decoration: BoxDecoration(
         color: FitnessAppTheme.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
-        boxShadow: Ink3D.topEdge,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(DS.radius(32))),
+        boxShadow: DS.shadows(Ink3D.topEdge),
       ),
       child: Align(
         heightFactor: 1,
@@ -583,7 +587,7 @@ class GateStatusPage extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
               ConstrainedBox(
-                constraints: BoxConstraints(minHeight: 2 * 25 * 1.25 * scale),
+                constraints: BoxConstraints(minHeight: 2 * DS.f(25) * 1.25 * scale),
                 child: Align(
                   alignment: Alignment.bottomCenter,
                   child: Semantics(
@@ -601,14 +605,14 @@ class GateStatusPage extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(height: 10),
+              SizedBox(height: DS.s(10)),
               Text(
                 body,
                 textAlign: TextAlign.center,
                 style: Ink3D.text(15, FontWeight.w400, Ink3D.copy, height: 1.5),
               ),
               if (extra != null) ...<Widget>[
-                const SizedBox(height: 12),
+                SizedBox(height: DS.s(12)),
                 DefaultTextStyle.merge(
                   textAlign: TextAlign.center,
                   style: Ink3D.text(13, FontWeight.w400, Ink3D.grey),
@@ -616,15 +620,15 @@ class GateStatusPage extends StatelessWidget {
                 ),
               ],
               if (primary != null) ...<Widget>[
-                const SizedBox(height: 24),
+                Gap.v(24),
                 primary!,
               ],
               if (secondary != null) ...<Widget>[
-                SizedBox(height: primary == null ? 24 : 12),
+                Gap.v(primary == null ? 24 : 12),
                 secondary!,
               ],
               if (footer != null) ...<Widget>[
-                const SizedBox(height: 12),
+                Gap.v(12),
                 footer!,
               ],
             ],
@@ -642,10 +646,10 @@ class GateStatusPage extends StatelessWidget {
                 padding: EdgeInsets.only(top: mq.viewPadding.top),
                 child: LayoutBuilder(
                   builder: (context, top) {
-                    final size = (top.maxHeight - 40)
-                        .clamp(0.0, 206.0)
+                    final size = (top.maxHeight - DS.s(40))
+                        .clamp(0.0, DS.s(206))
                         .toDouble();
-                    if (size < 72) return const SizedBox.shrink();
+                    if (size < DS.s(72)) return const SizedBox.shrink();
                     return Center(
                       child: ExcludeSemantics(
                         child: Art3D(
@@ -653,9 +657,10 @@ class GateStatusPage extends StatelessWidget {
                           size: size,
                           halo: size * 236 / 206,
                           haloColor: t.haloBase.withValues(alpha: Alpha.v14),
-                          shadowBlur: 10,
-                          shadowOffset: const Offset(8, 12),
+                          shadowBlur: DS.shadowBlur(10),
+                          shadowOffset: DS.shadowOffset(const Offset(8, 12)),
                           shadowAlpha: Alpha.v25,
+                          scaled: false,
                         ),
                       ),
                     );
@@ -665,7 +670,7 @@ class GateStatusPage extends StatelessWidget {
             ),
             ConstrainedBox(
               constraints: BoxConstraints(
-                maxHeight: (box.maxHeight - mq.viewPadding.top - 20)
+                maxHeight: (box.maxHeight - mq.viewPadding.top - DS.s(20))
                     .clamp(panelHeight, double.infinity)
                     .toDouble(),
               ),
@@ -715,24 +720,24 @@ class GateHeroHeader extends StatelessWidget {
           height: height,
           clipBehavior: Clip.antiAlias,
           padding: EdgeInsets.fromLTRB(
-            KitMetrics.gutter,
-            topPad + 12,
-            KitMetrics.gutter,
-            40,
+            DS.s(KitMetrics.gutter),
+            topPad + DS.s(12),
+            DS.s(KitMetrics.gutter),
+            DS.s(40),
           ),
           decoration: BoxDecoration(
             gradient: TripEntryStyle.gradient,
-            borderRadius: const BorderRadius.only(
+            borderRadius: DS.br(const BorderRadius.only(
               bottomRight: Radius.circular(CardRadius.heroNotch),
               bottomLeft: Radius.circular(CardRadius.corner),
-            ),
-            boxShadow: ShadowTokens.glow(DesignColors.lunchEnd),
+            )),
+            boxShadow: DS.shadows(ShadowTokens.glow(DesignColors.lunchEnd)),
           ),
           child: Stack(
             clipBehavior: Clip.none,
             children: <Widget>[
-              Positioned(right: -56, top: -24, child: _halo(180)),
-              Positioned(left: -40, bottom: -64, child: _halo(140)),
+              Positioned(right: DS.s(-56), top: DS.s(-24), child: _halo(180)),
+              Positioned(left: DS.s(-40), bottom: DS.s(-64), child: _halo(140)),
               SizedBox(
                 width: double.infinity,
                 child: Column(
@@ -740,8 +745,8 @@ class GateHeroHeader extends StatelessWidget {
                   children: <Widget>[
                     if (top != null) top!,
                     Container(
-                      width: 84,
-                      height: 84,
+                      width: DS.s(84),
+                      height: DS.s(84),
                       decoration: BoxDecoration(
                         color: FitnessAppTheme.nearlyWhite.withValues(
                           alpha: Alpha.soft,
@@ -760,23 +765,23 @@ class GateHeroHeader extends StatelessWidget {
                                   ? TravelIcon(asset!, size: 48)
                                   : Icon(
                                       glyph,
-                                      size: 40,
+                                      size: DS.s(40),
                                       color: FitnessAppTheme.white,
                                     ),
                             ),
                     ),
-                    const SizedBox(height: 12),
+                    SizedBox(height: DS.s(12)),
                     Text(
                       title,
                       textAlign: TextAlign.center,
                       style: FitnessAppTheme.headline.copyWith(
-                        fontSize: titleSize,
+                        fontSize: DS.f(titleSize),
                         letterSpacing: 1.2,
                         color: FitnessAppTheme.white,
                       ),
                     ),
                     if (subtitle != null) ...<Widget>[
-                      const SizedBox(height: 4),
+                      SizedBox(height: DS.s(4)),
                       Text(
                         subtitle!,
                         textAlign: TextAlign.center,
@@ -799,8 +804,8 @@ class GateHeroHeader extends StatelessWidget {
 
   static Widget _halo(double size) => IgnorePointer(
     child: Container(
-      width: size,
-      height: size,
+      width: DS.s(size),
+      height: DS.s(size),
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: FitnessAppTheme.nearlyWhite.withValues(alpha: Alpha.faint),
@@ -825,13 +830,13 @@ class GateHeroLayout extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final h = heroHeight + MediaQuery.paddingOf(context).top;
+    final h = DS.s(heroHeight) + MediaQuery.paddingOf(context).top;
     return Stack(
       clipBehavior: Clip.none,
       children: <Widget>[
         Positioned(top: 0, left: 0, right: 0, height: h, child: hero),
         Padding(
-          padding: EdgeInsets.only(top: h - overlap),
+          padding: EdgeInsets.only(top: h - DS.s(overlap)),
           child: child,
         ),
       ],
@@ -859,32 +864,32 @@ class GatePageBar extends StatelessWidget {
     final bar = Container(
       decoration: BoxDecoration(
         color: FitnessAppTheme.white.withValues(alpha: op),
-        borderRadius: CardRadius.header,
-        boxShadow: <BoxShadow>[
+        borderRadius: DS.br(CardRadius.header),
+        boxShadow: DS.shadows(<BoxShadow>[
           ShadowTokens.tint(FitnessAppTheme.grey, ShadowSpec.strong.scaled(op)),
-        ],
+        ]),
       ),
       child: Padding(
         padding: EdgeInsets.only(
-          top: MediaQuery.paddingOf(context).top + 16 - 8.0 * op,
-          left: 8,
-          right: 16,
-          bottom: 12 - 8.0 * op,
+          top: MediaQuery.paddingOf(context).top + DS.s(16 - 8.0 * op),
+          left: DS.s(8),
+          right: DS.s(16),
+          bottom: DS.s(12 - 8.0 * op),
         ),
         child: Row(
           children: <Widget>[
             SizedBox(
-              width: KitMetrics.touch,
-              height: KitMetrics.touch,
+              width: DS.s(KitMetrics.touch),
+              height: DS.s(KitMetrics.touch),
               child: InkWell(
                 highlightColor: Colors.transparent,
-                borderRadius: CardRadius.pill,
+                borderRadius: DS.br(CardRadius.pill),
                 onTap: onBack,
-                child: const Center(
+                child: Center(
                   child: Icon(
                     Icons.keyboard_arrow_left,
                     color: FitnessAppTheme.grey,
-                    size: 28,
+                    size: DS.s(28),
                   ),
                 ),
               ),
@@ -896,7 +901,7 @@ class GatePageBar extends StatelessWidget {
                 style: TextStyle(
                   fontFamily: FitnessAppTheme.fontName,
                   fontWeight: FontWeight.w700,
-                  fontSize: 28 - 6 * op,
+                  fontSize: DS.f(28 - 6 * op),
                   letterSpacing: 1.2,
                   color: FitnessAppTheme.darkerText,
                 ),
@@ -915,44 +920,44 @@ class GatePinThemes {
   GatePinThemes._();
 
   static PinTheme base(double boxSize) => PinTheme(
-    width: boxSize,
-    height: boxSize + 8,
+    width: DS.s(boxSize),
+    height: DS.s(boxSize + 8),
     textStyle: FitnessAppTheme.title.copyWith(
-      fontSize: boxSize * 0.38,
+      fontSize: DS.f(boxSize * 0.38),
       color: FitnessAppTheme.nearlyDarkBlue,
     ),
     decoration: BoxDecoration(
       color: FitnessAppTheme.white,
-      borderRadius: CardRadius.chip,
+      borderRadius: DS.br(CardRadius.chip),
       border: Border.all(
         color: FitnessAppTheme.grey.withValues(alpha: Alpha.soft),
         width: 1.5,
       ),
-      boxShadow: <BoxShadow>[
+      boxShadow: DS.shadows(<BoxShadow>[
         ShadowTokens.tint(FitnessAppTheme.grey, ShadowSpec.elev2Spec),
-      ],
+      ]),
     ),
   );
 
   static PinTheme focused(double boxSize) => base(boxSize).copyWith(
     decoration: BoxDecoration(
       color: FitnessAppTheme.white,
-      borderRadius: CardRadius.chip,
-      border: Border.all(color: FitnessAppTheme.nearlyDarkBlue, width: 2),
-      boxShadow: <BoxShadow>[
+      borderRadius: DS.br(CardRadius.chip),
+      border: Border.all(color: FitnessAppTheme.nearlyDarkBlue, width: DS.s(2)),
+      boxShadow: DS.shadows(<BoxShadow>[
         ShadowTokens.tint(FitnessAppTheme.nearlyDarkBlue, ShadowSpec.ringStrong),
-      ],
+      ]),
     ),
   );
 
   static PinTheme submitted(double boxSize) => base(boxSize).copyWith(
     textStyle: FitnessAppTheme.title.copyWith(
-      fontSize: boxSize * 0.38,
+      fontSize: DS.f(boxSize * 0.38),
       color: FitnessAppTheme.white,
     ),
     decoration: BoxDecoration(
       gradient: TripEntryStyle.gradient,
-      borderRadius: CardRadius.chip,
+      borderRadius: DS.br(CardRadius.chip),
     ),
   );
 }
@@ -1089,7 +1094,7 @@ class _GateLegalPageState extends State<GateLegalPage>
   @override
   Widget build(BuildContext context) {
     final n = widget.children.length;
-    final topPad = MediaQuery.paddingOf(context).top + 64 + 16;
+    final topPad = MediaQuery.paddingOf(context).top + DS.s(64 + 16);
     return Container(
       color: FitnessAppTheme.background,
       child: Scaffold(
@@ -1103,7 +1108,7 @@ class _GateLegalPageState extends State<GateLegalPage>
                 0,
                 topPad,
                 0,
-                24 + MediaQuery.paddingOf(context).bottom,
+                DS.s(24) + MediaQuery.paddingOf(context).bottom,
               ),
               itemCount: n,
               itemBuilder: (context, i) {
@@ -1142,13 +1147,13 @@ class GateLegalHeading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(
-      KitMetrics.gutter,
+    padding: EdgeInsets.fromLTRB(
+      DS.s(KitMetrics.gutter),
       0,
-      KitMetrics.gutter,
-      4,
+      DS.s(KitMetrics.gutter),
+      DS.s(4),
     ),
-    child: Text(text, style: FitnessAppTheme.headline),
+    child: Text(text, style: FitnessAppTheme.headline.copyWith(fontSize: DS.f(24))),
   );
 }
 
@@ -1159,11 +1164,11 @@ class GateLegalCaption extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(
-      KitMetrics.gutter,
-      4,
-      KitMetrics.gutter,
-      12,
+    padding: EdgeInsets.fromLTRB(
+      DS.s(KitMetrics.gutter),
+      DS.s(4),
+      DS.s(KitMetrics.gutter),
+      DS.s(12),
     ),
     child: Text(
       text,
@@ -1179,11 +1184,11 @@ class GateLegalBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(
-      KitMetrics.gutter,
-      4,
-      KitMetrics.gutter,
-      8,
+    padding: EdgeInsets.fromLTRB(
+      DS.s(KitMetrics.gutter),
+      DS.s(4),
+      DS.s(KitMetrics.gutter),
+      DS.s(8),
     ),
     child: Text(text, style: GateKit.bodyText),
   );
@@ -1204,11 +1209,11 @@ class GateLegalSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.symmetric(
-        horizontal: KitMetrics.gutter,
-        vertical: 8,
+      margin: EdgeInsets.symmetric(
+        horizontal: DS.s(KitMetrics.gutter),
+        vertical: DS.gv(8),
       ),
-      padding: const EdgeInsets.all(16),
+      padding: DS.all(16),
       decoration: GateKit.card(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1218,32 +1223,32 @@ class GateLegalSection extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 Container(
-                  width: 3,
-                  height: 18,
-                  margin: const EdgeInsets.only(top: 1, right: 10),
+                  width: DS.s(3),
+                  height: DS.s(18),
+                  margin: EdgeInsets.only(top: DS.s(1), right: DS.s(10)),
                   decoration: BoxDecoration(
                     gradient: TripEntryStyle.gradient,
-                    borderRadius: BorderRadius.circular(2),
+                    borderRadius: DS.circular(2),
                   ),
                 ),
-                Expanded(child: Text(title, style: FitnessAppTheme.title)),
+                Expanded(child: Text(title, style: FitnessAppTheme.title.copyWith(fontSize: DS.f(16)))),
               ],
             ),
-            const SizedBox(height: 8),
+            SizedBox(height: DS.s(8)),
           ],
           if (body != null) Text(body!, style: GateKit.bodyText),
-          if (body != null && bullets != null) const SizedBox(height: 8),
+          if (body != null && bullets != null) SizedBox(height: DS.s(8)),
           if (bullets != null)
             for (final b in bullets!)
               Padding(
-                padding: const EdgeInsets.only(bottom: 6),
+                padding: EdgeInsets.only(bottom: DS.s(6)),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
                     Container(
-                      width: 6,
-                      height: 6,
-                      margin: const EdgeInsets.only(top: 8, right: 10),
+                      width: DS.s(6),
+                      height: DS.s(6),
+                      margin: EdgeInsets.only(top: DS.s(8), right: DS.s(10)),
                       decoration: const BoxDecoration(
                         color: FitnessAppTheme.nearlyBlue,
                         shape: BoxShape.circle,

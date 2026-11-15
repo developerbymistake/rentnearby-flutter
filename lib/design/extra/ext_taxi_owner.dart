@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../tokens/design_scale.dart';
 import '../tokens/listing_palette.dart';
 import 'art_3d.dart';
 import 'dialog_3d.dart';
@@ -63,7 +64,7 @@ class TaxiStepCard3D extends StatelessWidget {
   final bool current;
   final VoidCallback? onTap;
 
-  static const double topRoom = 36;
+  static double get topRoom => DS.s(36);
 
   IconData get _glyph => switch (icon) {
         TaxiStepIcon.check => Icons.check_rounded,
@@ -86,19 +87,19 @@ class TaxiStepCard3D extends StatelessWidget {
     final image = Art3D(asset: art, size: artSize, halo: artSize - 4, haloColor: locked ? TaxiOwnerLook.lockHalo : TaxiOwnerLook.soft, haloDy: 4);
 
     final button = Container(
-      width: 44,
-      height: 44,
-      decoration: BoxDecoration(shape: BoxShape.circle, color: locked ? TaxiOwnerLook.soft : Colors.white, boxShadow: locked ? null : TaxiOwnerLook.btn),
-      child: Icon(_glyph, size: locked ? 20 : 22, color: locked ? Colors.white : tone.button),
+      width: DS.s(44),
+      height: DS.s(44),
+      decoration: BoxDecoration(shape: BoxShape.circle, color: locked ? TaxiOwnerLook.soft : Colors.white, boxShadow: locked ? null : DS.shadows(TaxiOwnerLook.btn)),
+      child: Icon(_glyph, size: DS.s(locked ? 20 : 22), color: locked ? Colors.white : tone.button),
     );
 
     final card = Container(
-      constraints: BoxConstraints(minHeight: 132 * scaler.scale(1).clamp(1.0, 1.15)),
-      padding: EdgeInsets.fromLTRB(left, 16, 14, 16),
+      constraints: BoxConstraints(minHeight: DS.s(132) * scaler.scale(1).clamp(1.0, 1.15)),
+      padding: EdgeInsets.fromLTRB(DS.s(left), DS.s(16), DS.s(14), DS.s(16)),
       decoration: BoxDecoration(
-        borderRadius: TaxiOwnerLook.card,
+        borderRadius: DS.br(TaxiOwnerLook.card),
         gradient: locked ? Form3D.lockGradient : tone.gradient,
-        border: current ? Border.all(color: Colors.white, width: 3, strokeAlign: BorderSide.strokeAlignOutside) : null,
+        border: current ? Border.all(color: Colors.white, width: DS.s(3), strokeAlign: BorderSide.strokeAlignOutside) : null,
         boxShadow: locked ? null : tone.glow(blur: current ? 16 : 10, dy: current ? 8 : 4),
       ),
       child: Row(
@@ -112,32 +113,32 @@ class TaxiStepCard3D extends StatelessWidget {
                   children: [
                     Flexible(child: Text(step.toUpperCase(), maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(10.5, FontWeight.w700, Colors.white, letterSpacing: 0.7))),
                     if (t != null && t.isNotEmpty) ...[
-                      const SizedBox(width: 8),
+                      Gap.h(8),
                       Flexible(
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 2),
-                          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10)),
+                          padding: DS.sym(h: 9, v: 2),
+                          decoration: BoxDecoration(color: Colors.white, borderRadius: DS.circular(10)),
                           child: Text(t, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(11, FontWeight.w700, tone.button, letterSpacing: 0)),
                         ),
                       ),
                     ],
                   ],
                 ),
-                const SizedBox(height: 4),
+                SizedBox(height: DS.s(4)),
                 Text(title, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(17, FontWeight.w700, Colors.white, height: 1.2)),
-                const SizedBox(height: 3),
+                SizedBox(height: DS.s(3)),
                 Text(subtitle, maxLines: 3, overflow: TextOverflow.ellipsis, style: Ink3D.text(12.5, FontWeight.w500, Colors.white, height: 1.35, letterSpacing: 0)),
               ],
             ),
           ),
-          const SizedBox(width: 8),
+          Gap.h(8),
           button,
         ],
       ),
     );
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(18, topRoom + 14, 18, 0),
+      padding: EdgeInsets.fromLTRB(DS.s(18), topRoom + DS.s(14), DS.s(18), 0),
       child: Tap3D(
         onTap: locked ? null : onTap,
         label: [step, title, subtitle, ?tag, if (locked) 'locked'].join(', '),
@@ -146,7 +147,7 @@ class TaxiStepCard3D extends StatelessWidget {
           clipBehavior: Clip.none,
           children: [
             card,
-            Positioned(left: 6, top: -topRoom, child: image),
+            Positioned(left: DS.s(6), top: -topRoom, child: image),
           ],
         ),
       ),
@@ -172,9 +173,9 @@ class TaxiRingCard3D extends StatelessWidget {
     final ring = narrow ? 58.0 : 66.0;
     final cap = caption;
     final card = Container(
-      constraints: const BoxConstraints(minHeight: 128),
-      padding: EdgeInsets.fromLTRB(left, 16, 14, 16),
-      decoration: BoxDecoration(borderRadius: TaxiOwnerLook.card, gradient: tone.gradient, boxShadow: tone.glow()),
+      constraints: BoxConstraints(minHeight: DS.s(128)),
+      padding: EdgeInsets.fromLTRB(DS.s(left), DS.s(16), DS.s(14), DS.s(16)),
+      decoration: BoxDecoration(borderRadius: DS.br(TaxiOwnerLook.card), gradient: tone.gradient, boxShadow: tone.glow()),
       child: Row(
         children: [
           Expanded(
@@ -185,22 +186,22 @@ class TaxiRingCard3D extends StatelessWidget {
                 Text(title, maxLines: 3, overflow: TextOverflow.ellipsis, style: Ink3D.text(17, FontWeight.w700, Colors.white, height: 1.2)),
                 if (cap != null && cap.isNotEmpty)
                   Padding(
-                    padding: const EdgeInsets.only(top: 4),
+                    padding: EdgeInsets.only(top: DS.s(4)),
                     child: Text(cap, maxLines: 3, overflow: TextOverflow.ellipsis, style: Ink3D.text(12.5, FontWeight.w500, Colors.white, height: 1.35, letterSpacing: 0)),
                   ),
               ],
             ),
           ),
-          const SizedBox(width: 8),
+          Gap.h(8),
           SizedBox(
-            width: ring,
-            height: ring,
+            width: DS.s(ring),
+            height: DS.s(ring),
             child: CustomPaint(
               painter: _RingPainter(progress.clamp(0.0, 1.0)),
               child: Center(
                 child: FittedBox(
                   fit: BoxFit.scaleDown,
-                  child: Padding(padding: const EdgeInsets.all(10), child: Text(value, maxLines: 1, style: Ink3D.text(15, FontWeight.w700, Colors.white, letterSpacing: 0))),
+                  child: Padding(padding: DS.all(10), child: Text(value, maxLines: 1, style: Ink3D.text(15, FontWeight.w700, Colors.white, letterSpacing: 0))),
                 ),
               ),
             ),
@@ -209,7 +210,7 @@ class TaxiRingCard3D extends StatelessWidget {
       ),
     );
     return Padding(
-      padding: const EdgeInsets.fromLTRB(18, 50, 18, 0),
+      padding: EdgeInsets.fromLTRB(DS.s(18), DS.s(50), DS.s(18), 0),
       child: Semantics(
         label: '$title. ${cap ?? ''}',
         excludeSemantics: true,
@@ -217,7 +218,7 @@ class TaxiRingCard3D extends StatelessWidget {
           clipBehavior: Clip.none,
           children: [
             card,
-            Positioned(left: 6, top: -34, child: ExcludeSemantics(child: Art3D(asset: ListingArt.star, size: artSize, halo: artSize - 4, haloColor: TaxiOwnerLook.soft, haloDy: 4))),
+            Positioned(left: DS.s(6), top: -DS.s(34), child: ExcludeSemantics(child: Art3D(asset: ListingArt.star, size: artSize, halo: artSize - 4, haloColor: TaxiOwnerLook.soft, haloDy: 4))),
           ],
         ),
       ),
@@ -232,18 +233,18 @@ class _RingPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final rect = Offset.zero & size;
-    final r = rect.deflate(4);
+    final r = rect.deflate(DS.s(4));
     final track = Paint()
       ..color = TaxiOwnerLook.soft
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 6;
+      ..strokeWidth = DS.s(6);
     canvas.drawOval(r, track);
     if (value <= 0) return;
     final arc = Paint()
       ..color = Colors.white
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round
-      ..strokeWidth = 6;
+      ..strokeWidth = DS.s(6);
     canvas.drawArc(r, -math.pi / 2, 2 * math.pi * value, false, arc);
   }
 
@@ -268,10 +269,10 @@ class TaxiHeaderButton extends StatelessWidget {
           label: tooltip,
           exclude: true,
           child: Container(
-            width: 44,
-            height: 44,
-            decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle, boxShadow: Ink3D.softShadow),
-            child: Icon(icon, size: 24, color: tone.text),
+            width: DS.s(44),
+            height: DS.s(44),
+            decoration: BoxDecoration(color: Colors.white, shape: BoxShape.circle, boxShadow: DS.shadows(Ink3D.softShadow)),
+            child: Icon(icon, size: DS.s(24), color: tone.text),
           ),
         ),
       );
@@ -295,14 +296,14 @@ class TaxiRouteCard3D extends StatelessWidget {
           label: tip,
           exclude: true,
           child: SizedBox(
-            width: 44,
-            height: 44,
+            width: DS.s(44),
+            height: DS.s(44),
             child: Center(
               child: Container(
-                width: 38,
-                height: 38,
-                decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle, boxShadow: TaxiOwnerLook.btn),
-                child: Icon(icon, size: 20, color: tone.button),
+                width: DS.s(38),
+                height: DS.s(38),
+                decoration: BoxDecoration(color: Colors.white, shape: BoxShape.circle, boxShadow: DS.shadows(TaxiOwnerLook.btn)),
+                child: Icon(icon, size: DS.s(20), color: tone.button),
               ),
             ),
           ),
@@ -315,14 +316,14 @@ class TaxiRouteCard3D extends StatelessWidget {
     final artSize = narrow ? 80.0 : 96.0;
     final left = narrow ? 92.0 : 114.0;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(18, 30, 18, 0),
+      padding: EdgeInsets.fromLTRB(DS.s(18), DS.s(30), DS.s(18), 0),
       child: Stack(
         clipBehavior: Clip.none,
         children: [
           Container(
-            constraints: const BoxConstraints(minHeight: 104),
-            padding: EdgeInsets.fromLTRB(left, 14, 12, 14),
-            decoration: BoxDecoration(borderRadius: TaxiOwnerLook.card, gradient: tone.gradient, boxShadow: tone.glow()),
+            constraints: BoxConstraints(minHeight: DS.s(104)),
+            padding: EdgeInsets.fromLTRB(DS.s(left), DS.s(14), DS.s(12), DS.s(14)),
+            decoration: BoxDecoration(borderRadius: DS.br(TaxiOwnerLook.card), gradient: tone.gradient, boxShadow: tone.glow()),
             child: Row(
               children: [
                 Expanded(
@@ -331,9 +332,9 @@ class TaxiRouteCard3D extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(tag.toUpperCase(), maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(10.5, FontWeight.w700, Colors.white, letterSpacing: 0.7)),
-                      const SizedBox(height: 2),
+                      SizedBox(height: DS.s(2)),
                       Text(title, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(17, FontWeight.w700, Colors.white, height: 1.2)),
-                      const SizedBox(height: 2),
+                      SizedBox(height: DS.s(2)),
                       FitLine3D(text: subtitle, style: Ink3D.text(12.5, FontWeight.w600, Colors.white, letterSpacing: 0), stretch: 1.6),
                     ],
                   ),
@@ -343,7 +344,7 @@ class TaxiRouteCard3D extends StatelessWidget {
               ],
             ),
           ),
-          Positioned(left: 4, top: -24, child: ExcludeSemantics(child: Art3D(asset: ListingArt.compass, size: artSize, halo: artSize - 2, haloColor: TaxiOwnerLook.soft, haloDy: 3))),
+          Positioned(left: DS.s(4), top: -DS.s(24), child: ExcludeSemantics(child: Art3D(asset: ListingArt.compass, size: artSize, halo: artSize - 2, haloColor: TaxiOwnerLook.soft, haloDy: 3))),
         ],
       ),
     );
@@ -360,14 +361,14 @@ class TaxiPlateTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Stack(
         children: [
-          Positioned.fill(child: ClipRRect(borderRadius: BorderRadius.circular(18), child: photo)),
+          Positioned.fill(child: ClipRRect(borderRadius: DS.circular(18), child: photo)),
           Positioned(
             left: 0,
             right: 0,
             bottom: 0,
             child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              decoration: BoxDecoration(gradient: tone.gradient, borderRadius: const BorderRadius.vertical(bottom: Radius.circular(18))),
+              padding: DS.sym(v: 4),
+              decoration: BoxDecoration(gradient: tone.gradient, borderRadius: DS.br(const BorderRadius.vertical(bottom: Radius.circular(18)))),
               child: Text('Plate', textAlign: TextAlign.center, maxLines: 1, style: Ink3D.text(11, FontWeight.w700, Colors.white)),
             ),
           ),
@@ -382,12 +383,12 @@ class TaxiPlateTile extends StatelessWidget {
                 label: 'Remove photo',
                 exclude: true,
                 child: Padding(
-                  padding: const EdgeInsets.all(4),
+                  padding: DS.all(4),
                   child: Container(
-                    width: 26,
-                    height: 26,
-                    decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle, boxShadow: TaxiOwnerLook.btn),
-                    child: Icon(Icons.close_rounded, size: 16, color: Form3D.error),
+                    width: DS.s(26),
+                    height: DS.s(26),
+                    decoration: BoxDecoration(color: Colors.white, shape: BoxShape.circle, boxShadow: DS.shadows(TaxiOwnerLook.btn)),
+                    child: Icon(Icons.close_rounded, size: DS.s(16), color: Form3D.error),
                   ),
                 ),
               ),
@@ -412,14 +413,14 @@ class TaxiAddPhotoTile extends StatelessWidget {
         child: Container(
           decoration: BoxDecoration(
             color: error ? Form3D.fillError : tone.tint,
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: DS.circular(18),
             border: Border.all(color: error ? Form3D.error : tone.g1, width: 1.5),
           ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Image.asset(ListingArt.camera, width: 40, height: 40),
-              const SizedBox(height: 4),
+              Image.asset(ListingArt.camera, width: DS.s(40), height: DS.s(40)),
+              SizedBox(height: DS.s(4)),
               Text('Add', maxLines: 1, style: Ink3D.text(12, FontWeight.w700, error ? Form3D.errorText : tone.text)),
             ],
           ),
@@ -443,13 +444,13 @@ class TaxiBucketChip extends StatelessWidget {
         selected: selected,
         exclude: true,
         child: Container(
-          constraints: const BoxConstraints(minHeight: 38),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          constraints: BoxConstraints(minHeight: DS.s(38)),
+          padding: DS.sym(h: 16, v: 8),
           decoration: BoxDecoration(
             color: selected ? null : Colors.white,
             gradient: selected ? tone.gradient : null,
-            borderRadius: BorderRadius.circular(19),
-            boxShadow: selected ? tone.glow(blur: 8) : Ink3D.whiteBtn,
+            borderRadius: DS.circular(19),
+            boxShadow: selected ? tone.glow(blur: 8) : DS.shadows(Ink3D.whiteBtn),
           ),
           child: Text(label, maxLines: 1, softWrap: false, style: Ink3D.text(14, FontWeight.w700, selected ? Colors.white : tone.button, letterSpacing: 0)),
         ),
@@ -467,21 +468,21 @@ class TaxiBucketChip extends StatelessWidget {
             clipBehavior: Clip.none,
             children: [
               Padding(
-                padding: const EdgeInsets.only(top: 20),
+                padding: EdgeInsets.only(top: DS.s(20)),
                 child: Container(
                   width: double.infinity,
-                  constraints: const BoxConstraints(minHeight: 46),
-                  padding: EdgeInsets.fromLTRB(MediaQuery.sizeOf(context).width < Form3D.narrow ? 62 : 70, 10, 10, 10),
+                  constraints: BoxConstraints(minHeight: DS.s(46)),
+                  padding: EdgeInsets.fromLTRB(DS.s(MediaQuery.sizeOf(context).width < Form3D.narrow ? 62 : 70), DS.s(10), DS.s(10), DS.s(10)),
                   alignment: Alignment.centerLeft,
                   decoration: BoxDecoration(
-                    borderRadius: const BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(24), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8)),
+                    borderRadius: DS.br(const BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(24), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8))),
                     gradient: tone.gradient,
                     boxShadow: selected ? tone.glow(blur: 8) : const [],
                   ),
                   child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(label, maxLines: 1, softWrap: false, style: Ink3D.text(14, FontWeight.w700, Colors.white, letterSpacing: 0))),
                 ),
               ),
-              Positioned(left: 6, top: 0, child: Art3D(asset: art, size: 56, shadowBlur: 4, shadowOffset: const Offset(3, 5), shadowAlpha: 0.28)),
+              Positioned(left: DS.s(6), top: 0, child: Art3D(asset: art, size: 56, shadowBlur: 4, shadowOffset: const Offset(3, 5), shadowAlpha: 0.28)),
             ],
           ),
         ),
@@ -535,13 +536,13 @@ class TaxiLeadCard3D extends StatelessWidget {
   final List<TaxiLeadButton?> buttons;
   final bool highlighted;
 
-  static const double topRoom = 50;
+  static double get topRoom => DS.s(50);
 
   Widget _pill(String text, {bool hot = false}) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+        padding: DS.sym(h: 10, v: 3),
         decoration: BoxDecoration(
           color: hot ? TaxiOwnerLook.urgent : Colors.white,
-          borderRadius: const BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(14), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8)),
+          borderRadius: DS.br(const BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(14), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8))),
         ),
         child: Text(text.toUpperCase(), maxLines: 1, style: Ink3D.text(11, FontWeight.w700, hot ? TaxiOwnerLook.urgentText : (pillColor ?? tone.button), letterSpacing: 0.4)),
       );
@@ -555,14 +556,14 @@ class TaxiLeadCard3D extends StatelessWidget {
     final box = Container(
       height: h,
       alignment: Alignment.center,
-      padding: const EdgeInsets.symmetric(horizontal: 12),
+      padding: DS.sym(h: 12),
       decoration: BoxDecoration(
         color: solid ? Colors.white : TaxiOwnerLook.glass,
         borderRadius: BorderRadius.circular(h / 2),
-        boxShadow: solid ? TaxiOwnerLook.btn : null,
+        boxShadow: solid ? DS.shadows(TaxiOwnerLook.btn) : null,
       ),
       child: b.busy
-          ? SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2.4, color: solid ? tone.button : Colors.white))
+          ? SizedBox(width: DS.s(18), height: DS.s(18), child: CircularProgressIndicator(strokeWidth: DS.s(2.4), color: solid ? tone.button : Colors.white))
           : FittedBox(fit: BoxFit.scaleDown, child: Text(b.label, maxLines: 1, softWrap: false, style: Ink3D.text(13.5, FontWeight.w700, solid ? tone.button : Colors.white, letterSpacing: 0))),
     );
     return Tap3D(onTap: live ? b.onTap : null, label: b.label, exclude: true, child: box);
@@ -574,7 +575,7 @@ class TaxiLeadCard3D extends StatelessWidget {
     final scale = MediaQuery.textScalerOf(context).scale(1);
     final artSize = narrow ? 104.0 : 136.0;
     final left = narrow ? 116.0 : 156.0;
-    final h = 44.0 * scale.clamp(1.0, 1.2);
+    final h = DS.s(44.0) * scale.clamp(1.0, 1.2);
     final j = journey;
     final d = detail;
     final x = extra;
@@ -582,9 +583,9 @@ class TaxiLeadCard3D extends StatelessWidget {
     final bs = [for (var i = 0; i < 3; i++) i < buttons.length ? buttons[i] : null];
 
     final head = ConstrainedBox(
-      constraints: BoxConstraints(minHeight: narrow ? 70 : 92),
+      constraints: BoxConstraints(minHeight: DS.s(narrow ? 70 : 92)),
       child: Padding(
-        padding: EdgeInsets.fromLTRB(left, 14, 12, 0),
+        padding: EdgeInsets.fromLTRB(DS.s(left), DS.s(14), DS.s(12), 0),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -599,7 +600,7 @@ class TaxiLeadCard3D extends StatelessWidget {
               ),
             ),
             if (onMenu == null)
-              const SizedBox(width: 44, height: 44)
+              SizedBox(width: DS.s(44), height: DS.s(44))
             else
               Tooltip(
                 message: 'More',
@@ -610,14 +611,14 @@ class TaxiLeadCard3D extends StatelessWidget {
                   label: 'More',
                   exclude: true,
                   child: SizedBox(
-                    width: 44,
-                    height: 44,
+                    width: DS.s(44),
+                    height: DS.s(44),
                     child: Center(
                       child: Container(
-                        width: 38,
-                        height: 38,
+                        width: DS.s(38),
+                        height: DS.s(38),
                         decoration: const BoxDecoration(color: TaxiOwnerLook.soft, shape: BoxShape.circle),
-                        child: const Icon(Icons.more_vert_rounded, size: 22, color: Colors.white),
+                        child: Icon(Icons.more_vert_rounded, size: DS.s(22), color: Colors.white),
                       ),
                     ),
                   ),
@@ -629,36 +630,36 @@ class TaxiLeadCard3D extends StatelessWidget {
     );
 
     final body = Padding(
-      padding: const EdgeInsets.fromLTRB(18, 8, 18, 0),
+      padding: EdgeInsets.fromLTRB(DS.s(18), DS.gv(8), DS.s(18), 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: [
           SizedBox(
-            height: 24 * scale.clamp(1.0, 1.3),
+            height: DS.s(24) * scale.clamp(1.0, 1.3),
             child: FittedBox(
               fit: BoxFit.scaleDown,
               alignment: Alignment.centerLeft,
               child: Row(mainAxisSize: MainAxisSize.min, children: [
-                if (u != null) ...[_pill(u, hot: true), const SizedBox(width: 6)],
-                for (var i = 0; i < pills.length; i++) ...[if (i > 0) const SizedBox(width: 6), _pill(pills[i])],
+                if (u != null) ...[_pill(u, hot: true), Gap.h(6)],
+                for (var i = 0; i < pills.length; i++) ...[if (i > 0) Gap.h(6), _pill(pills[i])],
               ]),
             ),
           ),
-          const SizedBox(height: 6),
+          Gap.v(6),
           SizedBox(
-            height: (narrow ? 53 : 36) * scale,
+            height: DS.s(narrow ? 53 : 36) * scale,
             child: Text(summary, maxLines: narrow ? 3 : 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(12.5, FontWeight.w600, Colors.white, height: 1.4, letterSpacing: 0)),
           ),
           if (j != null && j.isNotEmpty) ...[
-            const SizedBox(height: 4),
+            SizedBox(height: DS.s(4)),
             SizedBox(
-              height: 32 * scale.clamp(1.0, 1.3),
+              height: DS.s(32) * scale.clamp(1.0, 1.3),
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                  decoration: BoxDecoration(color: TaxiOwnerLook.cream, borderRadius: BorderRadius.circular(12)),
+                  padding: DS.sym(h: 12, v: 4),
+                  decoration: BoxDecoration(color: TaxiOwnerLook.cream, borderRadius: DS.circular(12)),
                   child: FittedBox(fit: BoxFit.scaleDown, child: Text(j, maxLines: 1, softWrap: false, style: Ink3D.text(11.5, FontWeight.w700, TaxiOwnerLook.creamText, letterSpacing: 0))),
                 ),
               ),
@@ -669,25 +670,25 @@ class TaxiLeadCard3D extends StatelessWidget {
     );
 
     final strip = Container(
-      margin: const EdgeInsets.only(top: 6),
-      constraints: BoxConstraints(minHeight: 38 * scale.clamp(1.0, 1.3)),
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
+      margin: EdgeInsets.only(top: DS.gv(6)),
+      constraints: BoxConstraints(minHeight: DS.s(38) * scale.clamp(1.0, 1.3)),
+      padding: DS.sym(h: 18, v: 6),
       color: TaxiOwnerLook.band,
       child: Row(
         children: [
-          Image.asset(ListingArt.roundPushpin, width: 18, height: 18),
-          const SizedBox(width: 8),
+          Image.asset(ListingArt.roundPushpin, width: DS.s(18), height: DS.s(18)),
+          Gap.h(8),
           Expanded(child: Text(places, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(12.5, FontWeight.w500, Colors.white, letterSpacing: 0))),
         ],
       ),
     );
 
     final detailLine = d == null && x == null && (j == null || j.isEmpty)
-        ? const SizedBox(height: 10)
+        ? Gap.v(10)
         : Padding(
-      padding: const EdgeInsets.fromLTRB(18, 8, 18, 0),
+      padding: EdgeInsets.fromLTRB(DS.s(18), DS.gv(8), DS.s(18), 0),
       child: ConstrainedBox(
-        constraints: BoxConstraints(minHeight: 36 * scale),
+        constraints: BoxConstraints(minHeight: DS.s(36) * scale),
         child: Align(
           alignment: Alignment.topLeft,
           child: Column(
@@ -703,14 +704,14 @@ class TaxiLeadCard3D extends StatelessWidget {
     );
 
     final actions = Padding(
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+      padding: EdgeInsets.fromLTRB(DS.s(16), DS.s(4), DS.s(16), DS.s(16)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: [
           _button(bs[0], h),
-          const SizedBox(height: 10),
-          Row(children: [Expanded(child: _button(bs[1], h)), const SizedBox(width: 10), Expanded(child: _button(bs[2], h))]),
+          Gap.v(10),
+          Row(children: [Expanded(child: _button(bs[1], h)), Gap.h(10), Expanded(child: _button(bs[2], h))]),
         ],
       ),
     );
@@ -720,9 +721,9 @@ class TaxiLeadCard3D extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         gradient: tone.gradient,
-        borderRadius: TaxiOwnerLook.card,
+        borderRadius: DS.br(TaxiOwnerLook.card),
         boxShadow: tone.glow(),
-        border: highlighted ? Border.all(color: Colors.white, width: 3, strokeAlign: BorderSide.strokeAlignOutside) : null,
+        border: highlighted ? Border.all(color: Colors.white, width: DS.s(3), strokeAlign: BorderSide.strokeAlignOutside) : null,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -732,12 +733,12 @@ class TaxiLeadCard3D extends StatelessWidget {
     );
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(14, topRoom, 14, 8),
+      padding: EdgeInsets.fromLTRB(DS.s(14), topRoom, DS.s(14), DS.gv(8)),
       child: Stack(
         clipBehavior: Clip.none,
         children: [
           card,
-          Positioned(left: 4, top: narrow ? -30 : -44, child: IgnorePointer(child: ExcludeSemantics(child: Art3D(asset: ListingArt.taxi, size: artSize, halo: artSize + 4, haloColor: TaxiOwnerLook.soft, haloDy: 4)))),
+          Positioned(left: DS.s(4), top: -DS.s(narrow ? 30 : 44), child: IgnorePointer(child: ExcludeSemantics(child: Art3D(asset: ListingArt.taxi, size: artSize, halo: artSize + 4, haloColor: TaxiOwnerLook.soft, haloDy: 4)))),
         ],
       ),
     );
@@ -757,33 +758,34 @@ class TaxiEmptyCard3D extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const artSize = 150.0;
+    final artS = DS.s(artSize);
     return Padding(
-      padding: const EdgeInsets.fromLTRB(18, 24 + artSize / 2, 18, 0),
+      padding: EdgeInsets.fromLTRB(DS.s(18), DS.s(24) + artS / 2, DS.s(18), 0),
       child: Stack(
         clipBehavior: Clip.none,
         alignment: Alignment.topCenter,
         children: [
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.fromLTRB(24, artSize / 2 + 22, 24, 26),
-            decoration: const BoxDecoration(
+            padding: EdgeInsets.fromLTRB(DS.s(24), artS / 2 + DS.s(22), DS.s(24), DS.s(26)),
+            decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(68), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8)),
-              boxShadow: [BoxShadow(color: Color(0x299E9E9E), offset: Offset(2, 4), blurRadius: 12)],
+              borderRadius: DS.br(const BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(68), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8))),
+              boxShadow: DS.shadows(const [BoxShadow(color: Color(0x299E9E9E), offset: Offset(2, 4), blurRadius: 12)]),
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Semantics(header: true, child: Text(title, textAlign: TextAlign.center, style: Ink3D.text(22, FontWeight.w700, Ink3D.title, height: 1.25))),
-                const SizedBox(height: 6),
+                Gap.v(6),
                 Text(message, textAlign: TextAlign.center, style: Ink3D.text(14.5, FontWeight.w400, Ink3D.sub, height: 1.45)),
-                const SizedBox(height: 22),
+                Gap.v(22),
                 GradientPillButton(tone: tone, label: actionLabel, onTap: onAction),
               ],
             ),
           ),
           Positioned(
-            top: -artSize / 2,
+            top: -artS / 2,
             child: ExcludeSemantics(child: Art3D(asset: art, size: artSize, halo: artSize - 10, haloColor: tone.haloBase.withValues(alpha: 0.18), shadowBlur: 8, shadowOffset: const Offset(6, 10), shadowAlpha: 0.28)),
           ),
         ],
@@ -800,8 +802,8 @@ class TaxiPayBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
         width: double.infinity,
-        padding: EdgeInsets.fromLTRB(18, 12, 18, 14 + MediaQuery.paddingOf(context).bottom),
-        decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(16)), boxShadow: TaxiOwnerLook.bar),
+        padding: EdgeInsets.fromLTRB(DS.s(18), DS.s(12), DS.s(18), DS.s(14) + MediaQuery.paddingOf(context).bottom),
+        decoration: BoxDecoration(color: Colors.white, borderRadius: DS.br(const BorderRadius.vertical(top: Radius.circular(16))), boxShadow: DS.shadows(TaxiOwnerLook.bar)),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -809,8 +811,8 @@ class TaxiPayBar extends StatelessWidget {
             const ToastDock(),
             Row(
               children: [
-                Image.asset(ListingArt.moneyBag, width: 40, height: 40),
-                const SizedBox(width: 12),
+                Image.asset(ListingArt.moneyBag, width: DS.s(40), height: DS.s(40)),
+                Gap.h(12),
                 Expanded(child: Text(text, maxLines: 3, overflow: TextOverflow.ellipsis, style: Ink3D.text(12.5, FontWeight.w600, Ink3D.sub, height: 1.4, letterSpacing: 0))),
               ],
             ),
@@ -903,9 +905,9 @@ class TaxiOwnerCard3D extends StatelessWidget {
   final VoidCallback? onStrip;
 
   Widget _panel(Widget child) => Container(
-        margin: const EdgeInsets.fromLTRB(14, 10, 14, 0),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-        decoration: BoxDecoration(color: TaxiOwnerLook.panel, borderRadius: BorderRadius.circular(14)),
+        margin: EdgeInsets.fromLTRB(DS.s(14), DS.gv(10), DS.s(14), 0),
+        padding: DS.sym(h: 14, v: 4),
+        decoration: BoxDecoration(color: TaxiOwnerLook.panel, borderRadius: DS.circular(14)),
         child: child,
       );
 
@@ -920,7 +922,7 @@ class TaxiOwnerCard3D extends StatelessWidget {
       );
 
   Widget _route(TaxiOwnerRoute r) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
+        padding: DS.sym(v: 8),
         child: Row(
           children: [
             Expanded(
@@ -933,13 +935,13 @@ class TaxiOwnerCard3D extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(width: 8),
+            Gap.h(8),
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(r.fare, maxLines: 1, style: Ink3D.text(15, FontWeight.w700, Colors.white, letterSpacing: 0)),
-                if (r.onEdit != null) ...[const SizedBox(height: 4), OnCardPill(label: 'Edit fare', color: tone.button, width: 76, onTap: r.onEdit)],
+                if (r.onEdit != null) ...[SizedBox(height: DS.s(4)), OnCardPill(label: 'Edit fare', color: tone.button, width: DS.s(76), onTap: r.onEdit)],
               ],
             ),
           ],
@@ -951,18 +953,18 @@ class TaxiOwnerCard3D extends StatelessWidget {
         label: '${l.title}, ${l.subtitle}, ${l.pill}',
         exclude: true,
         child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 64),
+          constraints: BoxConstraints(minHeight: DS.s(64)),
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
+            padding: DS.sym(v: 8),
             child: Row(
               children: [
                 Container(
-                  width: 48,
-                  height: 48,
+                  width: DS.s(48),
+                  height: DS.s(48),
                   decoration: const BoxDecoration(shape: BoxShape.circle, color: TaxiOwnerLook.soft),
-                  child: Center(child: Image.asset(l.art, width: 44, height: 44)),
+                  child: Center(child: Image.asset(l.art, width: DS.s(44), height: DS.s(44))),
                 ),
-                const SizedBox(width: 10),
+                Gap.h(10),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -974,16 +976,16 @@ class TaxiOwnerCard3D extends StatelessWidget {
                     ],
                   ),
                 ),
-                const SizedBox(width: 8),
+                Gap.h(8),
                 l.red
                     ? Container(
-                        constraints: const BoxConstraints(minWidth: 64, minHeight: 28),
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        constraints: BoxConstraints(minWidth: DS.s(64), minHeight: DS.s(28)),
+                        padding: DS.sym(h: 12),
                         alignment: Alignment.center,
-                        decoration: BoxDecoration(color: TaxiOwnerLook.redPill, borderRadius: BorderRadius.circular(16)),
+                        decoration: BoxDecoration(color: TaxiOwnerLook.redPill, borderRadius: DS.circular(16)),
                         child: Text(l.pill, maxLines: 1, style: Ink3D.text(12.5, FontWeight.w700, Colors.white, letterSpacing: 0)),
                       )
-                    : OnCardPill(label: l.pill, color: tone.button, width: l.pill.length <= 6 ? 64 : null, onTap: l.onTap),
+                    : OnCardPill(label: l.pill, color: tone.button, width: l.pill.length <= 6 ? DS.s(64) : null, onTap: l.onTap),
               ],
             ),
           ),
@@ -999,20 +1001,20 @@ class TaxiOwnerCard3D extends StatelessWidget {
     final st = strip;
 
     final head = Padding(
-      padding: EdgeInsets.fromLTRB(left, 16, 16, 0),
+      padding: EdgeInsets.fromLTRB(DS.s(left), DS.s(16), DS.s(16), 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
+            padding: DS.sym(h: 10, v: 3),
+            decoration: BoxDecoration(color: Colors.white, borderRadius: DS.circular(12)),
             child: Text(status.label, maxLines: 1, style: Ink3D.text(11, FontWeight.w700, status.color, letterSpacing: 0.5)),
           ),
-          const SizedBox(height: 6),
+          Gap.v(6),
           FitLine3D(text: title, style: Ink3D.text(19, FontWeight.w700, Colors.white, height: 1.25), stretch: 1.6),
           Text(ago, maxLines: 1, style: Ink3D.text(12.5, FontWeight.w500, Colors.white, letterSpacing: 0)),
-          const SizedBox(height: 8),
+          Gap.v(8),
           Text(vehicleLabel, maxLines: 1, style: Ink3D.text(10.5, FontWeight.w700, Colors.white, letterSpacing: 0.6)),
           Text(vehicle.replaceAll(' seats', '\u00A0seats'), maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(12.5, FontWeight.w500, Colors.white, letterSpacing: 0)),
         ],
@@ -1022,17 +1024,17 @@ class TaxiOwnerCard3D extends StatelessWidget {
     final reportRow = rep == null
         ? null
         : Padding(
-            padding: const EdgeInsets.fromLTRB(14, 10, 14, 0),
+            padding: EdgeInsets.fromLTRB(DS.s(14), DS.gv(10), DS.s(14), 0),
             child: OnCardRow(title: rep, art: ListingArt.warning, light: true, onTap: onReport, trailing: Icon(Icons.chevron_right_rounded, color: Form3D.errorText)),
           );
 
     final price = Padding(
-      padding: const EdgeInsets.fromLTRB(22, 10, 18, 0),
+      padding: EdgeInsets.fromLTRB(DS.s(22), DS.gv(10), DS.s(18), 0),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          Padding(padding: const EdgeInsets.only(bottom: 6), child: Text(fromLabel, maxLines: 1, style: Ink3D.text(11, FontWeight.w700, Colors.white, letterSpacing: 0.5))),
-          const SizedBox(width: 8),
+          Padding(padding: EdgeInsets.only(bottom: DS.s(6)), child: Text(fromLabel, maxLines: 1, style: Ink3D.text(11, FontWeight.w700, Colors.white, letterSpacing: 0.5))),
+          Gap.h(8),
           Flexible(child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(from, maxLines: 1, style: Ink3D.text(28, FontWeight.w500, Colors.white, letterSpacing: 0, height: 1.2)))),
         ],
       ),
@@ -1044,7 +1046,7 @@ class TaxiOwnerCard3D extends StatelessWidget {
       toggled: available,
       exclude: true,
       child: SizedBox(
-        height: 52,
+        height: DS.s(52),
         child: Row(
           children: [
             Expanded(child: Text('Available now', maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(14, FontWeight.w700, Colors.white, letterSpacing: 0))),
@@ -1057,7 +1059,7 @@ class TaxiOwnerCard3D extends StatelessWidget {
     final stripRow = st == null
         ? null
         : Padding(
-            padding: const EdgeInsets.fromLTRB(14, 10, 14, 0),
+            padding: EdgeInsets.fromLTRB(DS.s(14), DS.gv(10), DS.s(14), 0),
             child: OnCardRow(
               title: st,
               art: stripArt,
@@ -1065,14 +1067,14 @@ class TaxiOwnerCard3D extends StatelessWidget {
               trailing: stripAction == null
                   ? null
                   : ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 124),
+                      constraints: BoxConstraints(maxWidth: DS.s(124)),
                       child: FittedBox(fit: BoxFit.scaleDown, child: OnCardPill(label: stripAction!, color: tone.button, onTap: onStrip)),
                     ),
             ),
           );
 
     final bar = Container(
-      margin: const EdgeInsets.only(top: 14),
+      margin: EdgeInsets.only(top: DS.gv(14)),
       color: TaxiOwnerLook.band,
       child: IntrinsicHeight(
         child: Row(
@@ -1088,19 +1090,19 @@ class TaxiOwnerCard3D extends StatelessWidget {
                   child: Opacity(
                     opacity: actions[i].onTap == null ? 0.5 : 1,
                     child: Container(
-                      constraints: const BoxConstraints(minHeight: 64),
+                      constraints: BoxConstraints(minHeight: DS.s(64)),
                       alignment: Alignment.center,
-                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      padding: DS.sym(v: 8),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Container(
-                            width: 26,
-                            height: 26,
+                            width: DS.s(26),
+                            height: DS.s(26),
                             decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-                            child: Icon(actions[i].icon, size: 16, color: tone.text),
+                            child: Icon(actions[i].icon, size: DS.s(16), color: tone.text),
                           ),
-                          const SizedBox(height: 4),
+                          SizedBox(height: DS.s(4)),
                           Text(actions[i].label, maxLines: 1, style: Ink3D.text(13, FontWeight.w700, Colors.white, letterSpacing: 0)),
                         ],
                       ),
@@ -1117,7 +1119,7 @@ class TaxiOwnerCard3D extends StatelessWidget {
     final card = Container(
       width: double.infinity,
       clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(gradient: tone.gradient, borderRadius: TaxiOwnerLook.card, boxShadow: tone.glow()),
+      decoration: BoxDecoration(gradient: tone.gradient, borderRadius: DS.br(TaxiOwnerLook.card), boxShadow: tone.glow()),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
@@ -1129,18 +1131,18 @@ class TaxiOwnerCard3D extends StatelessWidget {
           if (routes.isNotEmpty) _panel(_divided([for (final r in routes) _route(r)])),
           if (links.isNotEmpty) _panel(_divided([for (final l in links) _link(l)])),
           ?stripRow,
-          if (actions.isNotEmpty) bar else const SizedBox(height: 16),
+          if (actions.isNotEmpty) bar else SizedBox(height: DS.s(16)),
         ],
       ),
     );
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 50, 14, 0),
+      padding: EdgeInsets.fromLTRB(DS.s(14), DS.s(50), DS.s(14), 0),
       child: Stack(
         clipBehavior: Clip.none,
         children: [
           card,
-          Positioned(left: 4, top: -44, child: IgnorePointer(child: ExcludeSemantics(child: Art3D(asset: ListingArt.taxi, size: artSize, halo: artSize + 4, haloColor: TaxiOwnerLook.soft, haloDy: 4)))),
+          Positioned(left: DS.s(4), top: -DS.s(44), child: IgnorePointer(child: ExcludeSemantics(child: Art3D(asset: ListingArt.taxi, size: artSize, halo: artSize + 4, haloColor: TaxiOwnerLook.soft, haloDy: 4)))),
         ],
       ),
     );

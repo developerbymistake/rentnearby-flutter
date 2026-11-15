@@ -57,8 +57,8 @@ class _PickState extends IntroSlideState<IntroSlidePick> {
         1,
         Wrap(
           alignment: WrapAlignment.center,
-          spacing: 6,
-          runSpacing: 6,
+          spacing: DS.gh(6),
+          runSpacing: DS.gv(6),
           children: [
             for (var i = 0; i < IntroStrings.travelStyles.length; i++)
               Semantics(
@@ -154,7 +154,7 @@ class _PlanState extends IntroSlideState<IntroSlidePlan> {
               tag: IntroStrings.yourRide,
             ),
           ),
-          const SizedBox(height: 8),
+          Gap.v(8),
           reveal(
             2,
             Align(
@@ -167,9 +167,9 @@ class _PlanState extends IntroSlideState<IntroSlidePlan> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          ConstrainedBox(constraints: const BoxConstraints(maxWidth: 220), child: _dayPill(tone, 1)),
-                          const SizedBox(width: 8),
-                          ConstrainedBox(constraints: const BoxConstraints(maxWidth: 220), child: _dayPill(tone, 2)),
+                          ConstrainedBox(constraints: BoxConstraints(maxWidth: DS.s(220)), child: _dayPill(tone, 1)),
+                          Gap.h(8),
+                          ConstrainedBox(constraints: BoxConstraints(maxWidth: DS.s(220)), child: _dayPill(tone, 2)),
                         ],
                       ),
                     ),
@@ -232,7 +232,7 @@ class _TaxiState extends IntroSlideState<IntroSlideTaxi> {
                 done: true,
               ),
             ),
-            const SizedBox(height: 8),
+            Gap.v(8),
           ],
           reveal(
             3,
@@ -241,7 +241,7 @@ class _TaxiState extends IntroSlideState<IntroSlideTaxi> {
               alignment: Alignment.centerLeft,
               child: Row(
                 mainAxisSize: MainAxisSize.min,
-                spacing: 6,
+                spacing: DS.gh(6),
                 children: [
                   for (var i = 0; i < IntroStrings.carTypes.length; i++)
                     Semantics(

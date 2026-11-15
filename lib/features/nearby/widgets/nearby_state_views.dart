@@ -7,7 +7,7 @@ import '../nearby_strings.dart';
 String _artFor(ListingTone tone, String title) {
   if (title == NearbyStrings.jobsEmptyTitle) return ListingArt.clipboard;
   if (identical(tone, ListingTone.coral)) return ListingArt.taxi;
-  return ListingArt.hotel;
+  return ListingArt.stay;
 }
 
 class NearbyEmpty extends StatelessWidget {
@@ -28,9 +28,9 @@ class NearbyThin extends StatelessWidget {
   const NearbyThin({super.key});
 
   @override
-  Widget build(BuildContext context) => const Padding(
-        padding: EdgeInsets.only(bottom: 16),
-        child: ThinNote3D(NearbyStrings.thin),
+  Widget build(BuildContext context) => Padding(
+        padding: EdgeInsets.only(bottom: DS.gv(16)),
+        child: const ThinNote3D(NearbyStrings.thin),
       );
 }
 

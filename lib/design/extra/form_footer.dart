@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'art_3d.dart';
 import 'pill_buttons_3d.dart';
+import 'package:bakhli/design/tokens/design_scale.dart';
 
 class FormFooter extends StatelessWidget {
   const FormFooter({
@@ -39,9 +40,9 @@ class FormFooter extends StatelessWidget {
     final n = note;
     final primary = GradientPillButton(key: primaryKey, tone: tone, label: primaryLabel, onTap: onPrimary, loading: primaryLoading, enabled: primaryEnabled, danger: primaryDanger);
     return DecoratedBox(
-      decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(16)), boxShadow: Ink3D.topEdge),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(DS.radius(16))), boxShadow: DS.shadows(Ink3D.topEdge)),
       child: Padding(
-        padding: EdgeInsets.fromLTRB(18, 14, 18, 20 + MediaQuery.paddingOf(context).bottom),
+        padding: EdgeInsets.fromLTRB(DS.s(18), DS.s(14), DS.s(18), DS.s(20) + MediaQuery.paddingOf(context).bottom),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -53,7 +54,7 @@ class FormFooter extends StatelessWidget {
               PillButtonRow(children: [WhitePillButton(key: secondaryKey, tone: tone, label: s, onTap: onSecondary), primary]),
             if (n != null && n.isNotEmpty)
               Padding(
-                padding: const EdgeInsets.only(top: 8),
+                padding: EdgeInsets.only(top: DS.s(8)),
                 child: Text(n, maxLines: 3, textAlign: TextAlign.center, overflow: TextOverflow.ellipsis, style: Ink3D.text(12, FontWeight.w400, Form3D.muted, letterSpacing: 0)),
               ),
           ],

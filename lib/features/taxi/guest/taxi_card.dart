@@ -194,45 +194,45 @@ class TaxiCardSkeleton extends StatelessWidget {
     final t = tone ?? ListingTone.cA;
     const white = DesignColors.onPrimary;
     Widget bar(double h, [double? w]) => Container(
-          height: h,
-          width: w,
-          decoration: BoxDecoration(color: white.withValues(alpha: Alpha.v28), borderRadius: BorderRadius.circular(8)),
+          height: DS.s(h),
+          width: w == null ? null : DS.s(w),
+          decoration: BoxDecoration(color: white.withValues(alpha: Alpha.v28), borderRadius: DS.circular(8)),
         );
     return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 60, 14, 8),
+      padding: EdgeInsets.fromLTRB(DS.s(14), DS.s(60), DS.s(14), DS.gv(8)),
       child: Stack(
         clipBehavior: Clip.none,
         children: [
           Container(
-            decoration: BoxDecoration(borderRadius: kMealsRadius, gradient: t.gradient, boxShadow: t.glow()),
+            decoration: BoxDecoration(borderRadius: DS.br(kMealsRadius), gradient: t.gradient, boxShadow: t.glow()),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(160, 20, 20, 0),
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [bar(10, 60), const SizedBox(height: 8), bar(18, 120), const SizedBox(height: 8), bar(12, 90)]),
+                  padding: DS.insets(l: 160, t: 20, r: 20),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [bar(10, 60), Gap.v(8), bar(18, 120), Gap.v(8), bar(12, 90)]),
                 ),
-                const SizedBox(height: 28),
-                Padding(padding: const EdgeInsets.symmetric(horizontal: 20), child: Align(alignment: Alignment.centerLeft, child: bar(26, 110))),
-                const SizedBox(height: 14),
-                Container(height: 46, color: white.withValues(alpha: Alpha.soft)),
+                Gap.v(28),
+                Padding(padding: DS.sym(h: 20), child: Align(alignment: Alignment.centerLeft, child: bar(26, 110))),
+                Gap.v(14),
+                Container(height: DS.s(46), color: white.withValues(alpha: Alpha.soft)),
               ],
             ),
           ),
           Positioned(
-            left: 4,
-            top: -46,
+            left: DS.s(4),
+            top: -DS.s(46),
             child: DecoratedBox(
               decoration: BoxDecoration(shape: BoxShape.circle, color: white.withValues(alpha: Alpha.v24)),
-              child: const SizedBox(width: 132, height: 132),
+              child: SizedBox(width: DS.s(132), height: DS.s(132)),
             ),
           ),
           Positioned(
-            left: 18,
-            top: -34,
+            left: DS.s(18),
+            top: -DS.s(34),
             child: DecoratedBox(
               decoration: BoxDecoration(shape: BoxShape.circle, color: white.withValues(alpha: Alpha.v40)),
-              child: const SizedBox(width: 100, height: 100),
+              child: SizedBox(width: DS.s(100), height: DS.s(100)),
             ),
           ),
         ],

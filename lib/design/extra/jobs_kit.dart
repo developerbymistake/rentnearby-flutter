@@ -12,6 +12,7 @@ import 'motion_kit.dart';
 import 'sheet_frame.dart';
 import 'stay_setup_kit.dart';
 import 'template_motion.dart';
+import '../tokens/design_scale.dart';
 
 class JobsKit {
   JobsKit._();
@@ -37,8 +38,8 @@ class JobsKit {
     statusBarBrightness: Brightness.light,
   );
 
-  static const BorderRadius dialogRadius = CardRadius.tile;
-  static const BorderRadius sheetRadius = CardRadius.sheet;
+  static BorderRadius get dialogRadius => DS.br(CardRadius.tile);
+  static BorderRadius get sheetRadius => DS.br(CardRadius.sheet);
 
   static TextStyle text(
     double size, {
@@ -49,9 +50,9 @@ class JobsKit {
   }) =>
       TypeTokens.style(size, weight, color: color, letterSpacing: letterSpacing, height: height);
 
-  static List<BoxShadow> pillShadow() => ShadowTokens.elev2;
+  static List<BoxShadow> pillShadow() => DS.shadows(ShadowTokens.elev2);
 
-  static List<BoxShadow> barShadow() => ShadowTokens.elev2;
+  static List<BoxShadow> barShadow() => DS.shadows(ShadowTokens.elev2);
 
   static Future<bool> confirm(
     BuildContext context, {
@@ -86,7 +87,7 @@ class JobsKit {
       context,
       builder: (sheetCtx) => SheetFrame(
         title: title,
-        padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+        padding: EdgeInsets.fromLTRB(DS.s(20), 0, DS.s(20), DS.s(12)),
         child: _OptionList(labels: labels, selectedIndex: selectedIndex),
       ),
     );
@@ -144,8 +145,8 @@ class _OptionListState extends State<_OptionList> with TickerProviderStateMixin 
         splashColor: DesignColors.tint(JobsKit.accent, Alpha.tint),
         highlightColor: Colors.transparent,
         child: Container(
-          constraints: const BoxConstraints(minHeight: KitMetrics.touch + 4),
-          padding: const EdgeInsets.symmetric(vertical: 10),
+          constraints: BoxConstraints(minHeight: DS.s(KitMetrics.touch + 4)),
+          padding: EdgeInsets.symmetric(vertical: DS.s(10)),
           child: Row(children: [
             Expanded(
               child: Text(
@@ -158,13 +159,13 @@ class _OptionListState extends State<_OptionList> with TickerProviderStateMixin 
               ),
             ),
             if (on) ...[
-              const SizedBox(width: 8),
-              const Icon(Icons.check_circle_rounded, size: 20, color: JobsKit.accent),
+              Gap.h(8),
+              Icon(Icons.check_circle_rounded, size: DS.s(20), color: JobsKit.accent),
             ],
           ]),
         ),
       ),
-      const Divider(height: 1, color: DesignColors.dividerSoft),
+      Divider(height: 1, color: DesignColors.dividerSoft),
     ]);
     if (i >= cap) return row;
     return TemplateEntrance(animation: templateInterval(_c, i, cap), animationController: _c, child: row);
@@ -183,12 +184,12 @@ class JobsCircleButton extends StatelessWidget {
     return PressScale(
       enabled: onTap != null,
       child: SizedBox(
-        width: KitMetrics.touch,
-        height: KitMetrics.touch,
+        width: DS.s(KitMetrics.touch),
+        height: DS.s(KitMetrics.touch),
         child: Center(
           child: Container(
-            width: size,
-            height: size,
+            width: DS.s(size),
+            height: DS.s(size),
             decoration: BoxDecoration(
               color: DesignColors.surface,
               shape: BoxShape.circle,
@@ -202,7 +203,7 @@ class JobsCircleButton extends StatelessWidget {
                 onTap: onTap,
                 splashColor: DesignColors.tint(JobsKit.accent, Alpha.soft),
                 highlightColor: Colors.transparent,
-                child: Icon(icon, size: 16, color: DesignColors.textStrong),
+                child: Icon(icon, size: DS.s(16), color: DesignColors.textStrong),
               ),
             ),
           ),
@@ -247,18 +248,18 @@ class JobsTopBar extends StatelessWidget {
       value: JobsKit.darkIcons,
       child: Container(
         decoration: BoxDecoration(color: DesignColors.surface, boxShadow: JobsKit.barShadow()),
-        padding: EdgeInsets.fromLTRB(20, top + 8, 20, 12),
+        padding: EdgeInsets.fromLTRB(DS.s(20), top + DS.s(8), DS.s(20), DS.s(12)),
         child: Row(children: [
           JobsCircleButton(icon: Icons.arrow_back_ios_new_rounded, onTap: onBack),
-          const SizedBox(width: 10),
+          Gap.h(10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
-              children: [title, const SizedBox(height: 2), subtitle],
+              children: [title, Gap.v(2), subtitle],
             ),
           ),
-          if (trailing != null) ...[const SizedBox(width: 12), trailing!],
+          if (trailing != null) ...[Gap.h(12), trailing!],
         ]),
       ),
     );
@@ -276,10 +277,10 @@ class JobsTag extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+      padding: EdgeInsets.symmetric(horizontal: DS.s(10), vertical: DS.s(3)),
       decoration: BoxDecoration(
         color: background ?? (filled ? color : color.withValues(alpha: Alpha.tint)),
-        borderRadius: CardRadius.pill,
+        borderRadius: DS.br(CardRadius.pill),
       ),
       child: Text(
         label,
@@ -304,7 +305,7 @@ class JobsDropdownChip extends StatelessWidget {
     final fg = selected ? DesignColors.onPrimary : DesignColors.textPrimary;
     return PressScale(
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 200, minHeight: KitMetrics.touch),
+        constraints: BoxConstraints(maxWidth: DS.s(200), minHeight: DS.s(KitMetrics.touch)),
         child: Center(
           widthFactor: 1,
           heightFactor: 1,
@@ -312,18 +313,18 @@ class JobsDropdownChip extends StatelessWidget {
             decoration: BoxDecoration(
               gradient: selected ? KitTone.jobs.gradient : null,
               color: selected ? null : DesignColors.chipBackground,
-              borderRadius: CardRadius.pill,
-              boxShadow: selected ? ShadowTokens.glow(KitTone.jobs.glow) : const [],
+              borderRadius: DS.br(CardRadius.pill),
+              boxShadow: selected ? DS.shadows(ShadowTokens.glow(KitTone.jobs.glow)) : const [],
             ),
             child: Material(
               color: Colors.transparent,
               child: InkWell(
-                borderRadius: CardRadius.pill,
+                borderRadius: DS.br(CardRadius.pill),
                 onTap: onTap,
                 splashColor: DesignColors.tint(JobsKit.accent, Alpha.soft),
                 highlightColor: Colors.transparent,
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 9, 10, 9),
+                  padding: EdgeInsets.fromLTRB(DS.s(16), DS.s(9), DS.s(10), DS.s(9)),
                   child: Row(mainAxisSize: MainAxisSize.min, children: [
                     Flexible(
                       child: Text(label,
@@ -331,8 +332,8 @@ class JobsDropdownChip extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                           style: JobsKit.text(13, weight: FontWeight.w600, color: fg)),
                     ),
-                    const SizedBox(width: 2),
-                    Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: fg),
+                    Gap.h(2),
+                    Icon(Icons.keyboard_arrow_down_rounded, size: DS.s(18), color: fg),
                   ]),
                 ),
               ),
@@ -354,10 +355,10 @@ class JobsOptionWrap extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
+      padding: EdgeInsets.only(bottom: DS.gv(4)),
       child: Wrap(
-        spacing: 10,
-        runSpacing: 4,
+        spacing: DS.gh(10),
+        runSpacing: DS.gv(4),
         children: [
           for (var i = 0; i < labels.length; i++)
             KitChoiceChip(
@@ -393,20 +394,20 @@ class JobsEmpty extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(24),
+      padding: DS.all(24),
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
-        decoration: const BoxDecoration(
+        padding: EdgeInsets.fromLTRB(DS.s(20), DS.s(24), DS.s(20), DS.s(20)),
+        decoration: BoxDecoration(
           color: DesignColors.surface,
-          borderRadius: CardRadius.tile,
-          boxShadow: ShadowTokens.elev2,
+          borderRadius: DS.br(CardRadius.tile),
+          boxShadow: DS.shadows(ShadowTokens.elev2),
         ),
         child: TemplateStagger(children: [
           Container(
-            width: 72,
-            height: 72,
-            padding: const EdgeInsets.all(14),
+            width: DS.s(72),
+            height: DS.s(72),
+            padding: DS.all(14),
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               gradient: LinearGradient(colors: [
@@ -416,18 +417,18 @@ class JobsEmpty extends StatelessWidget {
             ),
             child: Image.asset(iconAsset, fit: BoxFit.contain),
           ),
-          const SizedBox(height: 16),
+          Gap.v(16),
           Text(title,
               textAlign: TextAlign.center,
               style: JobsKit.text(16, weight: FontWeight.w700, color: DesignColors.textStrong)),
           if (subtitle != null) ...[
-            const SizedBox(height: 8),
+            Gap.v(8),
             Text(subtitle!,
                 textAlign: TextAlign.center,
                 style: JobsKit.text(14, weight: FontWeight.w400, color: TypeTokens.secondary)),
           ],
           if (onRetry != null) ...[
-            const SizedBox(height: 16),
+            Gap.v(16),
             PrimaryButton(label: retryLabel, onPressed: onRetry, tone: KitTone.jobs, expand: false),
           ],
           ...extras,
@@ -486,10 +487,10 @@ class JobsPlaceholderCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+      margin: EdgeInsets.fromLTRB(DS.s(20), 0, DS.s(20), DS.gv(16)),
       child: ClipRRect(
-        borderRadius: CardRadius.tile,
-        child: TemplatePlaceholder(height: height, radius: 0),
+        borderRadius: DS.br(CardRadius.tile),
+        child: TemplatePlaceholder(height: DS.s(height), radius: 0),
       ),
     );
   }

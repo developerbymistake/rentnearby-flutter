@@ -99,7 +99,7 @@ class _RoleSelectScreenState extends State<RoleSelectScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                SizedBox(height: pad.top + (MediaQuery.sizeOf(context).height < 820 ? 40 : 64)),
+                SizedBox(height: pad.top + DS.s(MediaQuery.sizeOf(context).height < 820 ? 40 : 64)),
                 item(
                   0,
                   AuthRoleHeader(
@@ -118,7 +118,7 @@ class _RoleSelectScreenState extends State<RoleSelectScreen> {
                   child: _loading
                       ? const AuthEvenList(children: [AuthRoleSkeleton(), AuthRoleSkeleton(), AuthRoleSkeleton()])
                       : _roles.isEmpty
-                          ? Padding(padding: const EdgeInsets.only(bottom: 16), child: RoleLoadError(onRetry: _retry))
+                          ? Padding(padding: EdgeInsets.only(bottom: DS.gv(16)), child: RoleLoadError(onRetry: _retry))
                           : AuthEvenList(
                               children: [
                                 for (var i = 0; i < _roles.length; i++)
@@ -136,7 +136,7 @@ class _RoleSelectScreenState extends State<RoleSelectScreen> {
                 item(
                   count - 1,
                   Padding(
-                    padding: EdgeInsets.fromLTRB(18, 0, 18, 22 + pad.bottom),
+                    padding: EdgeInsets.fromLTRB(DS.s(18), 0, DS.s(18), DS.s(22) + pad.bottom),
                     child: Obx(() {
                       final busy = _auth.isLoading.value;
                       final disabled = _loading || _roles.isEmpty || busy;

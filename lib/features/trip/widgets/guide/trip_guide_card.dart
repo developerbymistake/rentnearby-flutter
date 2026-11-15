@@ -29,8 +29,8 @@ class TripGuideSheetButton extends StatelessWidget {
   final bool primary;
   final bool loading;
 
-  static const BorderRadius _primaryRadius =
-      BorderRadius.only(topLeft: Radius.circular(18), topRight: Radius.circular(18), bottomRight: Radius.circular(18), bottomLeft: Radius.circular(8));
+  static BorderRadius get _primaryRadius =>
+      DS.br(const BorderRadius.only(topLeft: Radius.circular(18), topRight: Radius.circular(18), bottomRight: Radius.circular(18), bottomLeft: Radius.circular(8)));
 
   @override
   Widget build(BuildContext context) {
@@ -48,16 +48,16 @@ class TripGuideSheetButton extends StatelessWidget {
           child: Opacity(
             opacity: onTap == null && !loading ? 0.5 : 1,
             child: Container(
-              constraints: BoxConstraints(minHeight: 52, minWidth: double.infinity),
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              constraints: BoxConstraints(minHeight: DS.s(52), minWidth: double.infinity),
+              padding: DS.sym(h: 14, v: 8),
               alignment: Alignment.center,
               decoration: primary
                   ? BoxDecoration(
                       borderRadius: _primaryRadius,
                       gradient: tone.gradient,
-                      boxShadow: [BoxShadow(color: tone.shadow.withValues(alpha: Alpha.half), offset: const Offset(1.1, 6), blurRadius: 14)],
+                      boxShadow: [BoxShadow(color: tone.shadow.withValues(alpha: Alpha.half), offset: DS.shadowOffset(const Offset(1.1, 6)), blurRadius: DS.shadowBlur(14))],
                     )
-                  : BoxDecoration(color: DesignColors.surface, borderRadius: BorderRadius.circular(18), boxShadow: Ink3D.softShadow),
+                  : BoxDecoration(color: DesignColors.surface, borderRadius: DS.circular(18), boxShadow: DS.shadows(Ink3D.softShadow)),
               child: loading
                   ? KitDots(color: primary ? DesignColors.textInverse : tone.text)
                   : Text(label,
@@ -91,9 +91,9 @@ class TripGuideLink extends StatelessWidget {
           child: Opacity(
             opacity: onTap == null ? 0.5 : 1,
             child: ConstrainedBox(
-              constraints: const BoxConstraints(minHeight: 44),
+              constraints: BoxConstraints(minHeight: DS.s(44)),
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
+                padding: DS.sym(h: 12),
                 child: Center(
                   widthFactor: 1,
                   child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(14, FontWeight.w600, color ?? Ink3D.grey)),

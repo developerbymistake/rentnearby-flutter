@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/widgets.dart';
 
 import 'bar_metrics.dart';
+import 'design_scale.dart';
 
 abstract final class OverlayInsets {
   static const double pillHeight = 56;
@@ -17,7 +18,7 @@ abstract final class OverlayInsets {
   static double pillBottom(BuildContext context) => dock(context);
 
   static double list(BuildContext context, {bool pill = false}) =>
-      dock(context) + (pill ? pillHeight + pillGap : 0);
+      dock(context) + (pill ? DS.s(pillHeight) + DS.gv(pillGap) : 0);
 
   static Widget sliver(BuildContext context, {bool pill = false}) =>
       SliverToBoxAdapter(child: SizedBox(height: list(context, pill: pill)));

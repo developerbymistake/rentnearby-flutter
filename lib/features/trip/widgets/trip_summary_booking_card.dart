@@ -27,7 +27,7 @@ class TripSummaryBookingCard extends StatelessWidget {
   final Widget? body;
   final String? payLine;
 
-  static const double topRoom = 40;
+  static double get topRoom => DS.s(40);
 
   static Widget statusPill(TripDisplayStatus s, {bool taxi = false, String? label}) => StatusPill3D(
         label: label ?? TripStatusVisuals.label(s, taxi: taxi),
@@ -39,13 +39,14 @@ class TripSummaryBookingCard extends StatelessWidget {
     const white = DesignColors.surface;
     final narrow = MediaQuery.sizeOf(context).width < 340;
     final artSize = narrow ? 92.0 : 112.0;
-    final textLeft = artSize + 20;
+    final artScaled = DS.s(artSize);
+    final textLeft = DS.s(artSize + 20);
     final soft = DesignColors.tint(white, Alpha.v90);
     final labelStyle = Ink3D.text(12, FontWeight.w600, soft);
     final scaler = MediaQuery.textScalerOf(context);
-    var labelW = narrow ? 74.0 : 86.0;
+    var labelW = DS.s(narrow ? 74.0 : 86.0);
     for (final r in rows) {
-      final w = KitText.widthOf(r.$1, labelStyle, scaler) + 10;
+      final w = KitText.widthOf(r.$1, labelStyle, scaler) + DS.s(10);
       if (w > labelW) labelW = w;
     }
     labelW = labelW.clamp(0.0, MediaQuery.sizeOf(context).width * 0.4);
@@ -53,20 +54,20 @@ class TripSummaryBookingCard extends StatelessWidget {
       clipBehavior: Clip.none,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(18, topRoom, 18, 8),
+          padding: EdgeInsets.fromLTRB(DS.s(18), topRoom, DS.s(18), DS.gv(8)),
           child: Container(
             decoration: BoxDecoration(
               gradient: tone.gradient,
-              borderRadius: kMealsRadius,
-              boxShadow: [BoxShadow(color: tone.shadow, offset: const Offset(1.1, 6), blurRadius: 14)],
+              borderRadius: DS.br(kMealsRadius),
+              boxShadow: [BoxShadow(color: tone.shadow, offset: DS.shadowOffset(const Offset(1.1, 6)), blurRadius: DS.shadowBlur(14))],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 ConstrainedBox(
-                  constraints: BoxConstraints(minHeight: artSize - topRoom + 8),
+                  constraints: BoxConstraints(minHeight: artScaled - topRoom + DS.s(8)),
                   child: Padding(
-                    padding: EdgeInsets.fromLTRB(textLeft, 16, 16, 4),
+                    padding: EdgeInsets.fromLTRB(textLeft, DS.s(16), DS.s(16), DS.s(4)),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -82,19 +83,19 @@ class TripSummaryBookingCard extends StatelessWidget {
                 ),
                 if (pill != null)
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                    padding: DS.insets(l: 16, t: 8, r: 16),
                     child: Align(alignment: Alignment.centerLeft, child: pill),
                   ),
                 if (rows.isNotEmpty)
                   Container(
-                    margin: const EdgeInsets.fromLTRB(14, 12, 14, 0),
-                    padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
-                    decoration: BoxDecoration(color: DesignColors.tint(white, Alpha.soft), borderRadius: BorderRadius.circular(14)),
+                    margin: DS.insets(l: 14, t: 12, r: 14),
+                    padding: DS.insets(l: 12, t: 8, r: 12, b: 10),
+                    decoration: BoxDecoration(color: DesignColors.tint(white, Alpha.soft), borderRadius: DS.circular(14)),
                     child: Column(
                       children: [
                         for (final r in rows)
                           Padding(
-                            padding: const EdgeInsets.only(top: 3),
+                            padding: EdgeInsets.only(top: DS.s(3)),
                             child: Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
@@ -109,20 +110,20 @@ class TripSummaryBookingCard extends StatelessWidget {
                       ],
                     ),
                   ),
-                if (body != null) Padding(padding: const EdgeInsets.fromLTRB(14, 12, 14, 0), child: body),
-                const SizedBox(height: 14),
+                if (body != null) Padding(padding: DS.insets(l: 14, t: 12, r: 14), child: body),
+                Gap.v(14),
                 if ((payLine ?? '').isNotEmpty)
                   Container(
-                    padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+                    padding: DS.insets(l: 16, t: 10, r: 16, b: 12),
                     decoration: BoxDecoration(
                       color: DesignColors.tint(DesignColors.shadowBase, Alpha.tint),
-                      borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8)),
+                      borderRadius: DS.br(const BorderRadius.only(bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8))),
                     ),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Art3D(asset: ListingArt.roundPushpin, size: 18, shadowBlur: 1, shadowOffset: Offset(1, 1)),
-                        const SizedBox(width: 8),
+                        Gap.h(8),
                         Expanded(child: Text(payLine!, style: Ink3D.text(12, FontWeight.w600, white, height: 1.35))),
                       ],
                     ),
@@ -132,7 +133,7 @@ class TripSummaryBookingCard extends StatelessWidget {
           ),
         ),
         Positioned(
-          left: 26,
+          left: DS.s(26),
           top: 0,
           child: IgnorePointer(
             child: Art3D(asset: art, size: artSize, halo: artSize + 4, haloColor: DesignColors.tint(white, Alpha.v22)),

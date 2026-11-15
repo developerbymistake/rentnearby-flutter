@@ -41,7 +41,7 @@ class LegalPage3D extends StatefulWidget {
 class _LegalPage3DState extends State<LegalPage3D> {
   final ScrollController _scroll = ScrollController();
   final ValueNotifier<bool> _compact = ValueNotifier<bool>(false);
-  static const double _compactAfter = 150;
+  static double get _compactAfter => DS.s(150);
 
   @override
   void initState() {
@@ -72,7 +72,7 @@ class _LegalPage3DState extends State<LegalPage3D> {
             ListView(
               controller: _scroll,
               physics: const BouncingScrollPhysics(),
-              padding: EdgeInsets.only(bottom: 40 + MediaQuery.paddingOf(context).bottom),
+              padding: EdgeInsets.only(bottom: DS.s(40) + MediaQuery.paddingOf(context).bottom),
               children: [
                 PageHeader3D(tone: tone, title: w.title, subtitle: w.updated, art: w.art, artSize: 83, onBack: _back),
                 LegalCard3D(children: [

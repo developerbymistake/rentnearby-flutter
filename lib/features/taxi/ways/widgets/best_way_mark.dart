@@ -12,24 +12,24 @@ class BestWayMark extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Wrap(
-      spacing: 8,
-      runSpacing: 4,
+      spacing: DS.gh(8),
+      runSpacing: DS.gv(4),
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+          padding: DS.sym(h: 9, v: 4),
           decoration: BoxDecoration(
             gradient: PickKit.taxiGradient,
-            borderRadius: WaysKit.chipRadius,
-            boxShadow: TripLook.shadowFor(PickKit.taxi),
+            borderRadius: DS.br(WaysKit.chipRadius),
+            boxShadow: DS.shadows(TripLook.shadowFor(PickKit.taxi)),
           ),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
             const TravelIcon(TravelIcon.star, size: 13),
-            const SizedBox(width: 3),
+            SizedBox(width: DS.s(3)),
             Text(
               TaxiWaysStrings.bestWay,
               style: FitnessAppTheme.caption.copyWith(
-                fontSize: 11,
+                fontSize: DS.f(11),
                 fontWeight: FontWeight.w800,
                 letterSpacing: 0.6,
                 color: DesignColors.surface,
@@ -39,7 +39,7 @@ class BestWayMark extends StatelessWidget {
         ),
         Text(
           reason,
-          style: FitnessAppTheme.subtitle.copyWith(fontSize: 12, fontWeight: FontWeight.w600, color: DesignColors.textGrey),
+          style: FitnessAppTheme.subtitle.copyWith(fontSize: DS.f(12), fontWeight: FontWeight.w600, color: DesignColors.textGrey),
         ),
       ],
     );

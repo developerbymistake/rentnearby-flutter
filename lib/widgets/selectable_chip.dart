@@ -23,7 +23,7 @@ class SelectableChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const radius = BorderRadius.all(Radius.circular(24));
+    final radius = DS.circular(24);
     final fg = selected ? FitnessAppTheme.white : activeColor;
     return Container(
       decoration: BoxDecoration(
@@ -32,7 +32,7 @@ class SelectableChip extends StatelessWidget {
         borderRadius: radius,
         border: Border.all(color: activeColor),
         boxShadow: selected && gradient != null
-            ? [ShadowTokens.tint(activeColor, ShadowSpec.lift)]
+            ? DS.shadows([ShadowTokens.tint(activeColor, ShadowSpec.lift)])
             : null,
       ),
       child: Material(
@@ -43,21 +43,21 @@ class SelectableChip extends StatelessWidget {
           highlightColor: Colors.transparent,
           onTap: onTap,
           child: Padding(
-            padding: padding ?? const EdgeInsets.symmetric(vertical: 8, horizontal: 14),
+            padding: padding ?? DS.sym(v: 8, h: 14),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 if (icon != null) ...[
-                  Icon(icon, size: 15, color: fg),
-                  const SizedBox(width: 6),
+                  Icon(icon, size: DS.s(15), color: fg),
+                  SizedBox(width: DS.s(6)),
                 ],
                 Flexible(
                   child: Text(
                     label,
                     overflow: TextOverflow.ellipsis,
                     style: FitnessAppTheme.body2.copyWith(
-                      fontSize: 12,
+                      fontSize: DS.f(12),
                       fontWeight: FontWeight.w600,
                       letterSpacing: 0.27,
                       color: fg,

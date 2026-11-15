@@ -90,7 +90,7 @@ class _TaxiListScreenV2State extends State<TaxiListScreenV2> {
 
   @override
   Widget build(BuildContext context) {
-    final bottom = widget.root ? OverlayInsets.list(context) : 32 + MediaQuery.paddingOf(context).bottom;
+    final bottom = widget.root ? OverlayInsets.list(context) : DS.s(32) + MediaQuery.paddingOf(context).bottom;
     final body = Scaffold(
       backgroundColor: ListingPalette.coral.page,
       body: KitStatusBar(
@@ -161,7 +161,7 @@ class _TaxiListScreenV2State extends State<TaxiListScreenV2> {
             onTap: () => _pick(isFrom: true),
             onClear: f == null ? null : _ctrl.useCentreAsFrom,
             clearLabel: 'Use my centre',
-            margin: const EdgeInsets.fromLTRB(16, 24, 16, 0),
+            margin: EdgeInsets.fromLTRB(DS.s(16), DS.gv(24), DS.s(16), 0),
           ),
           PlaceSearchBarView(
             caption: 'To',
@@ -171,7 +171,7 @@ class _TaxiListScreenV2State extends State<TaxiListScreenV2> {
             onTap: () => _pick(isFrom: false),
             onClear: t == null ? null : _ctrl.clearTo,
             clearLabel: 'Clear To',
-            margin: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+            margin: EdgeInsets.fromLTRB(DS.s(16), DS.gv(12), DS.s(16), DS.gv(4)),
           ),
         ],
       );
@@ -196,7 +196,7 @@ class _TaxiListScreenV2State extends State<TaxiListScreenV2> {
     return Obx(() {
       if (!_auth.taxisEnabled || !widget.root) return const SizedBox.shrink();
       return Padding(
-        padding: const EdgeInsets.only(top: 18),
+        padding: EdgeInsets.only(top: DS.gv(18)),
         child: WhiteCard3D(
           child: IconRow3D(art: ListingArt.taxi, title: 'My Taxi', tone: _tone, onTap: () => Get.toNamed(AppRoutes.myTaxi)),
         ),
@@ -262,8 +262,8 @@ class _TaxiListScreenV2State extends State<TaxiListScreenV2> {
   // Same width and style as the WorkoutCard subtitle beside its arrow.
   int _heroSubLines(String s) {
     final w = MediaQuery.sizeOf(context).width;
-    final art = w < 340 ? 88.0 : 104.0;
-    final width = w - 36 - 44 - (art - 8 > 80 ? art - 8 : 80);
+    final art = DS.s(w < 340 ? 88.0 : 104.0);
+    final width = w - DS.s(36) - DS.s(44) - (art - DS.s(8) > DS.s(80) ? art - DS.s(8) : DS.s(80));
     if (width <= 0) return 0;
     final tp = TextPainter(
       text: TextSpan(text: s, style: Ink3D.text(13, FontWeight.w400, Ink3D.title, height: 1.35)),
@@ -299,7 +299,7 @@ class _TaxiListScreenV2State extends State<TaxiListScreenV2> {
       key: ValueKey('${f.id}-hero'),
       index: 0,
       child: Padding(
-        padding: const EdgeInsets.only(top: 24, bottom: 4),
+        padding: EdgeInsets.only(top: DS.gv(24), bottom: DS.gv(4)),
         child: WorkoutCard(
           tone: _tone,
           art: TaxiVehicleIcon.assetFor(t.vehicleTypeName),
@@ -361,9 +361,9 @@ class _TaxiListScreenV2State extends State<TaxiListScreenV2> {
     return Obx(() {
       final loading = _ctrl.loadingTiers.contains(t.key);
       return Padding(
-        padding: const EdgeInsets.fromLTRB(KitMetrics.gutter, 4, KitMetrics.gutter, 8),
+        padding: EdgeInsets.fromLTRB(DS.s(KitMetrics.gutter), DS.gv(4), DS.s(KitMetrics.gutter), DS.gv(8)),
         child: loading
-            ? Center(child: SizedBox(height: 24, width: 24, child: CircularProgressIndicator(strokeWidth: 2, color: _tone.g2)))
+            ? Center(child: SizedBox(height: DS.s(24), width: DS.s(24), child: CircularProgressIndicator(strokeWidth: DS.s(2), color: _tone.g2)))
             : Center(child: ListingFilterChip(tone: _tone, label: NearbyStrings.showMore, selected: false, onTap: () => _ctrl.showMoreOf(t.key))),
       );
     });
@@ -420,13 +420,13 @@ class _TaxiListScreenV2State extends State<TaxiListScreenV2> {
     return Obx(() {
       Widget child = const SizedBox.shrink();
       if (_ctrl.isLoadingMore.value) {
-        child = Center(child: CircularProgressIndicator(strokeWidth: 2, color: _tone.g2));
+        child = Center(child: CircularProgressIndicator(strokeWidth: DS.s(2), color: _tone.g2));
       } else if (_ctrl.loadMoreFailed.value) {
         child = Center(child: TextLink(label: "Couldn't load more. Tap to retry", onTap: _ctrl.retryLoadMore));
       }
       return Padding(
-        padding: EdgeInsets.only(top: 12, bottom: bottom),
-        child: SizedBox(height: 44, child: child),
+        padding: EdgeInsets.only(top: DS.gv(12), bottom: bottom),
+        child: SizedBox(height: DS.s(44), child: child),
       );
     });
   }

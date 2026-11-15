@@ -26,7 +26,7 @@ class StayNearbyRow extends StatelessWidget {
         tone: ListingTone.list(ListingTone.forest, index),
         kind: WideKind.photo,
         photo: hasPhoto ? SizedBox.expand(child: KitPhoto(url: url, width: double.infinity, height: double.infinity)) : null,
-        art: hasPhoto ? null : ListingArt.hotel,
+        art: hasPhoto ? null : ListingArt.stay,
         badge: stay.isFeatured ? 'Featured' : null,
         tag: 'FOR STAY',
         title: stay.title,
@@ -69,17 +69,17 @@ class StayNearbyListSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(color: DesignColors.sheet, borderRadius: CardRadius.sheet, boxShadow: DesignShadows.top),
+      decoration: BoxDecoration(color: DesignColors.sheet, borderRadius: DS.br(CardRadius.sheet), boxShadow: DS.shadows(DesignShadows.top)),
       child: Column(
         children: [
           Container(
-            width: 36,
-            height: 4,
-            margin: const EdgeInsets.only(top: 10, bottom: 14),
-            decoration: BoxDecoration(color: DesignColors.tint(DesignColors.textGrey, Alpha.half), borderRadius: BorderRadius.circular(2)),
+            width: DS.s(36),
+            height: DS.s(4),
+            margin: EdgeInsets.only(top: DS.s(10), bottom: DS.s(14)),
+            decoration: BoxDecoration(color: DesignColors.tint(DesignColors.textGrey, Alpha.half), borderRadius: DS.circular(2)),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(KitMetrics.gutter, 0, KitMetrics.gutter, 12),
+            padding: EdgeInsets.fromLTRB(DS.s(KitMetrics.gutter), 0, DS.s(KitMetrics.gutter), DS.s(12)),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -92,8 +92,8 @@ class StayNearbyListSheet extends StatelessWidget {
                 }),
                 PressScale(
                   child: SizedBox(
-                    width: KitMetrics.touch,
-                    height: KitMetrics.touch,
+                    width: DS.s(KitMetrics.touch),
+                    height: DS.s(KitMetrics.touch),
                     child: InkWell(
                       customBorder: const CircleBorder(),
                       splashColor: DesignColors.splash,
@@ -101,10 +101,10 @@ class StayNearbyListSheet extends StatelessWidget {
                       onTap: () => Navigator.pop(sheetContext),
                       child: Center(
                         child: Container(
-                          width: 28,
-                          height: 28,
+                          width: DS.s(28),
+                          height: DS.s(28),
                           decoration: const BoxDecoration(color: DesignColors.scaffold, shape: BoxShape.circle),
-                          child: const Icon(Icons.close_rounded, size: 16, color: DesignColors.textStrong),
+                          child: Icon(Icons.close_rounded, size: DS.s(16), color: DesignColors.textStrong),
                         ),
                       ),
                     ),
@@ -114,14 +114,14 @@ class StayNearbyListSheet extends StatelessWidget {
             ),
           ),
           const Divider(height: 1, color: DesignColors.dividerSoft),
-          const SizedBox(height: 8),
+          Gap.v(8),
           Expanded(
             child: Obx(() {
               final items = guest.nearbyStays.toList();
               return ListView.builder(
                 controller: scrollController,
                 physics: const BouncingScrollPhysics(),
-                padding: EdgeInsets.only(bottom: 16 + AppInsets.bottomViewPadding(context)),
+                padding: EdgeInsets.only(bottom: DS.gv(16) + AppInsets.bottomViewPadding(context)),
                 itemCount: items.length,
                 itemBuilder: (_, i) {
                   final row = StayNearbyRow(key: ValueKey(items[i].id), stay: items[i], index: i);

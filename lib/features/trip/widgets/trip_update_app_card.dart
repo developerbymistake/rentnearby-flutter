@@ -11,11 +11,11 @@ class TripUpdateAppCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.fromLTRB(18, 18, 18, AppInsets.bottomViewPadding(context) + 14),
-      decoration: const BoxDecoration(
+      padding: EdgeInsets.fromLTRB(DS.s(18), DS.s(18), DS.s(18), AppInsets.bottomViewPadding(context) + DS.s(14)),
+      decoration: BoxDecoration(
         color: DesignColors.surface,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        boxShadow: Ink3D.topEdge,
+        borderRadius: DS.br(const BorderRadius.vertical(top: Radius.circular(24))),
+        boxShadow: DS.shadows(Ink3D.topEdge),
       ),
       child: Center(
         heightFactor: 1,
@@ -26,9 +26,9 @@ class TripUpdateAppCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(TripStrings.updateAppTitle, style: Ink3D.text(17, FontWeight.w700, Ink3D.title)),
-              const SizedBox(height: 2),
+              Gap.v(2),
               Text(TripStrings.updateAppBody, style: Ink3D.text(12.5, FontWeight.w400, Ink3D.grey)),
-              const SizedBox(height: 14),
+              Gap.v(14),
               GradientPillButton(
                 tone: ListingTone.indigo,
                 label: TripStringsA4.openPlayStore,

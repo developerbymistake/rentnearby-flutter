@@ -1,3 +1,4 @@
+import 'package:bakhli/design/design.dart';
 import 'package:flutter/material.dart';
 
 abstract final class HubTokens {
@@ -16,15 +17,17 @@ abstract final class HubTokens {
   static const Color dotOff = Color(0xFFB7C3F2);
   static const Color statusStrip = Color(0xFFEEF1FD);
 
-  static const List<BoxShadow> cardShadow = [
+  static const List<BoxShadow> _cardShadow = [
     BoxShadow(color: Color(0x303A5160), offset: Offset(1.1, 1.6), blurRadius: 12),
   ];
 
+  static List<BoxShadow> get cardShadow => DS.shadows(_cardShadow);
+
   static BorderRadius cardRadius(double corner) => BorderRadius.only(
-        topLeft: const Radius.circular(8),
-        topRight: Radius.circular(corner),
-        bottomLeft: const Radius.circular(8),
-        bottomRight: const Radius.circular(8),
+        topLeft: Radius.circular(DS.radius(8)),
+        topRight: Radius.circular(DS.radius(corner)),
+        bottomLeft: Radius.circular(DS.radius(8)),
+        bottomRight: Radius.circular(DS.radius(8)),
       );
 
   static const LinearGradient pageGradient = LinearGradient(

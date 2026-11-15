@@ -89,14 +89,14 @@ class _FareBodyState extends State<_FareBody> with SingleTickerProviderStateMixi
     if (days.isEmpty) return const SizedBox.shrink();
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(color: Form3D.fill, borderRadius: BorderRadius.circular(16)),
+      padding: DS.sym(h: 14, v: 10),
+      decoration: BoxDecoration(color: Form3D.fill, borderRadius: DS.circular(16)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           for (final d in days)
             Padding(
-              padding: const EdgeInsets.symmetric(vertical: 1),
+              padding: DS.sym(v: 1),
               child: Text(TripStrings.dayLine(d.day, TripFormat.duration(d.minutes), d.spots.join(' → ')),
                   maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(12.5, FontWeight.w400, Ink3D.body, height: 1.4, letterSpacing: 0)),
             ),
@@ -110,8 +110,8 @@ class _FareBodyState extends State<_FareBody> with SingleTickerProviderStateMixi
     final total = TripLeadFormat.listedTotal(_lead);
     if (rate == null || total == null) return const SizedBox.shrink();
     Widget cell(String top, String bottom, CrossAxisAlignment align) => Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-          decoration: BoxDecoration(color: _tone.tint, borderRadius: BorderRadius.circular(16)),
+          padding: DS.sym(h: 14, v: 10),
+          decoration: BoxDecoration(color: _tone.tint, borderRadius: DS.circular(16)),
           child: Column(
             crossAxisAlignment: align,
             children: [
@@ -125,11 +125,11 @@ class _FareBodyState extends State<_FareBody> with SingleTickerProviderStateMixi
           ),
         );
     return Padding(
-      padding: const EdgeInsets.only(top: 10),
+      padding: EdgeInsets.only(top: DS.gv(10)),
       child: Row(
         children: [
           Expanded(child: cell(TripStrings.yourListedRate, TripStrings.perDay(BrowseItem.inr(rate)), CrossAxisAlignment.start)),
-          const SizedBox(width: 12),
+          Gap.h(12),
           Expanded(child: cell(TripStrings.nDays(TripLeadFormat.dayCount(_lead)), BrowseItem.inr(total), CrossAxisAlignment.end)),
         ],
       ),
@@ -197,15 +197,15 @@ class _FareBodyState extends State<_FareBody> with SingleTickerProviderStateMixi
               inputFormatters: [...noEmojiInputFormatters, LengthLimitingTextInputFormatter(TripConstants.driverNoteMax)],
             ),
           ),
-          if (replied) Padding(padding: const EdgeInsets.only(top: 8, left: 4), child: Text(TripStrings.changesLeft(left), style: FieldMessage.helperStyle)),
-          const SizedBox(height: 12),
+          if (replied) Padding(padding: EdgeInsets.only(top: DS.gv(8), left: DS.s(4)), child: Text(TripStrings.changesLeft(left), style: FieldMessage.helperStyle)),
+          Gap.v(12),
           const Divider(height: 1, color: Ink3D.line),
-          const SizedBox(height: 10),
+          Gap.v(10),
           Text(TripStrings.fareFooter, style: Ink3D.text(11.5, FontWeight.w400, Form3D.muted, height: 1.4, letterSpacing: 0)),
-          const SizedBox(height: 6),
+          Gap.v(6),
           Row(children: [
-            Image.asset(ListingArt.moneyBag, width: 26, height: 26),
-            const SizedBox(width: 8),
+            Image.asset(ListingArt.moneyBag, width: DS.s(26), height: DS.s(26)),
+            Gap.h(8),
             Expanded(child: Text(TripStrings.taxiPayLine, style: Ink3D.text(11.5, FontWeight.w700, Ink3D.sub, height: 1.4, letterSpacing: 0))),
           ]),
         ],

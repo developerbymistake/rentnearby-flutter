@@ -126,7 +126,7 @@ class _JourneyPlanScreenState extends State<JourneyPlanScreen> with TickerProvid
       subtitle: '${TaxiWaysStrings.subtitle(from, to)} · ${TaxiWaysStrings.dateChip(a.date)}',
       below: plan.legs.isEmpty
           ? null
-          : Wrap(spacing: 10, runSpacing: 10, crossAxisAlignment: WrapCrossAlignment.center, children: [
+          : Wrap(spacing: DS.gh(10), runSpacing: DS.gv(10), crossAxisAlignment: WrapCrossAlignment.center, children: [
               JourneyChip3D(label: JourneyPlanController.carsChip(plan, c.chosen, a.people)),
               JourneyChip3D(label: '${TaxiWaysStrings.viewOnRoad} ›', filled: true, onTap: () => _openRoad(c)),
             ]),
@@ -164,7 +164,7 @@ class _JourneyPlanScreenState extends State<JourneyPlanScreen> with TickerProvid
       onRefresh: c.load,
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.only(bottom: 24),
+        padding: EdgeInsets.only(bottom: DS.s(24)),
         children: [
           TemplateEntrance(animation: templateInterval(_ac, 0, 3), animationController: _ac, offset: 0, child: _header(context, c, plan)),
           Center(

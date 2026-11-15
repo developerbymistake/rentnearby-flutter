@@ -1,8 +1,9 @@
+import 'package:bakhli/design/tokens/design_scale.dart';
 import 'package:flutter/material.dart';
 
 import 'art_3d.dart';
 
-const BorderRadius _kPillRadius = BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(14), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8));
+BorderRadius get _kPillRadius => DS.br(const BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(14), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8)));
 
 enum StatusTone3D {
   shortlisted,
@@ -54,18 +55,18 @@ class StatusPill3D extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = color ?? (status ?? StatusTone3D.shortlisted).pillText;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      padding: DS.sym(h: 10, v: 4),
       decoration: BoxDecoration(
         color: onGradient ? Colors.white : c.withValues(alpha: 0.12),
         borderRadius: _kPillRadius,
-        boxShadow: onGradient ? const [BoxShadow(color: Color(0x26000000), offset: Offset(0, 2), blurRadius: 6)] : null,
+        boxShadow: onGradient ? DS.shadows(const [BoxShadow(color: Color(0x26000000), offset: Offset(0, 2), blurRadius: 6)]) : null,
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           if (dot) ...[
-            Container(width: 8, height: 8, decoration: BoxDecoration(shape: BoxShape.circle, color: c)),
-            const SizedBox(width: 6),
+            Container(width: DS.s(8), height: DS.s(8), decoration: BoxDecoration(shape: BoxShape.circle, color: c)),
+            SizedBox(width: DS.s(6)),
           ],
           Flexible(
             child: Text(label, maxLines: 1, softWrap: false, overflow: TextOverflow.ellipsis, style: Ink3D.text(11.5, FontWeight.w700, c, height: 1.3)),
@@ -84,11 +85,11 @@ class UrgentPill3D extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: const BoxDecoration(
-        color: Color(0xFFFF5287),
+      padding: DS.sym(h: 10, v: 4),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFF5287),
         borderRadius: _kPillRadius,
-        boxShadow: [BoxShadow(color: Color(0x26000000), offset: Offset(0, 2), blurRadius: 6)],
+        boxShadow: DS.shadows(const [BoxShadow(color: Color(0x26000000), offset: Offset(0, 2), blurRadius: 6)]),
       ),
       child: Text(label, maxLines: 1, softWrap: false, overflow: TextOverflow.ellipsis, style: Ink3D.text(11.5, FontWeight.w700, Colors.white, height: 1.3)),
     );
@@ -109,17 +110,17 @@ class TagPill3D extends StatelessWidget {
     final a = art;
     if (a != null) {
       return Container(
-        padding: const EdgeInsets.fromLTRB(6, 5, 16, 5),
+        padding: DS.insets(l: 6, t: 5, r: 16, b: 5),
         decoration: BoxDecoration(
           color: filled ? Colors.white : c.withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: filled ? const [BoxShadow(color: Color(0x4D9E9E9E), offset: Offset(3, 5), blurRadius: 10)] : null,
+          borderRadius: DS.circular(20),
+          boxShadow: filled ? DS.shadows(const [BoxShadow(color: Color(0x4D9E9E9E), offset: Offset(3, 5), blurRadius: 10)]) : null,
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Image.asset(a, width: 30, height: 30, fit: BoxFit.contain),
-            const SizedBox(width: 8),
+            Image.asset(a, width: DS.s(30), height: DS.s(30), fit: BoxFit.contain),
+            SizedBox(width: DS.s(8)),
             Flexible(
               child: Text(label, maxLines: 1, softWrap: false, overflow: TextOverflow.ellipsis, style: Ink3D.text(13, FontWeight.w700, c, letterSpacing: 0.6)),
             ),
@@ -128,11 +129,11 @@ class TagPill3D extends StatelessWidget {
       );
     }
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+      padding: DS.sym(h: 10, v: 3),
       decoration: BoxDecoration(
         color: filled ? c : Colors.white,
-        borderRadius: BorderRadius.circular(10),
-        boxShadow: filled ? null : const [BoxShadow(color: Color(0x2E000000), offset: Offset(2, 3), blurRadius: 6)],
+        borderRadius: DS.circular(10),
+        boxShadow: filled ? null : DS.shadows(const [BoxShadow(color: Color(0x2E000000), offset: Offset(2, 3), blurRadius: 6)]),
       ),
       child: Text(label, maxLines: 1, softWrap: false, overflow: TextOverflow.ellipsis, style: Ink3D.text(11, FontWeight.w700, filled ? Colors.white : c, letterSpacing: 0.4, height: 1.4)),
     );

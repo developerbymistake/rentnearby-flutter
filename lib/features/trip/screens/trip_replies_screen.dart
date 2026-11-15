@@ -36,7 +36,6 @@ class TripRepliesScreen extends StatefulWidget {
 }
 
 const int _maxOpenAsks = 3;
-const List<String> _stayArt = [ListingArt.hotel, ListingArt.bed, ListingArt.key];
 
 class _Entry {
   final String stayId;
@@ -294,7 +293,7 @@ class _TripRepliesScreenState extends State<TripRepliesScreen> with TickerProvid
       onRefresh: _c.refreshEnquiries,
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: EdgeInsets.only(bottom: 24 + MediaQuery.paddingOf(context).bottom),
+        padding: EdgeInsets.only(bottom: DS.s(24) + MediaQuery.paddingOf(context).bottom),
         children: [
           for (var i = 0; i < children.length; i++)
             TemplateEntrance(
@@ -542,7 +541,7 @@ class _TripRepliesScreenState extends State<TripRepliesScreen> with TickerProvid
       if (!chatPrimary && e?.conversationId != null)
         MenuItem3D(label: TripStrings.openChat, art: ListingArt.speechBalloon, onTap: live(() => TripNavigation.openChatForEnquiry(e!))),
       if (status == TripDisplayStatus.offered && offer != null)
-        MenuItem3D(label: TripStrings.decline, art: ListingArt.bed, danger: true, onTap: live(() => _decline(e!))),
+        MenuItem3D(label: TripStrings.decline, art: ListingArt.stay, danger: true, onTap: live(() => _decline(e!))),
       if (status == TripDisplayStatus.offered || status == TripDisplayStatus.asked)
         MenuItem3D(label: TripStrings.withdraw, art: ListingArt.clipboard, danger: true, onTap: live(() => TripWithdrawSheet.show(context, enquiry: e!))),
       if (confirmed)
@@ -558,7 +557,7 @@ class _TripRepliesScreenState extends State<TripRepliesScreen> with TickerProvid
     return ReplyCard3D(
       key: ValueKey('reply-$key'),
       status: StatusTone3D.of(status.name),
-      art: _stayArt[i % _stayArt.length],
+      art: ListingArt.stay,
       pill: _label(x),
       urgent: e?.isUrgent ?? false,
       title: x.name.isEmpty ? TripStrings.stay : x.name,

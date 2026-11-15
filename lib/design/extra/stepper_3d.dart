@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'art_3d.dart';
 import 'pill_buttons_3d.dart';
+import 'package:bakhli/design/tokens/design_scale.dart';
 
 class StepperField extends StatelessWidget {
   const StepperField({
@@ -43,15 +44,15 @@ class StepperField extends StatelessWidget {
         label: tip,
         exclude: true,
         child: Container(
-          width: size,
-          height: size,
+          width: DS.s(size),
+          height: DS.s(size),
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: live ? null : Form3D.limit,
             gradient: live ? tone.gradient : null,
-            boxShadow: live ? Form3D.glow(tone, offset: const Offset(1.1, 4), blur: 8) : null,
+            boxShadow: live ? DS.shadows(Form3D.glow(tone, offset: const Offset(1.1, 4), blur: 8)) : null,
           ),
-          child: Icon(plus ? Icons.add_rounded : Icons.remove_rounded, size: size * 0.5, color: live ? Colors.white : Form3D.hint),
+          child: Icon(plus ? Icons.add_rounded : Icons.remove_rounded, size: DS.s(size * 0.5), color: live ? Colors.white : Form3D.hint),
         ),
       ),
     );
@@ -66,15 +67,15 @@ class StepperField extends StatelessWidget {
     final Widget body;
     if (filled) {
       body = Container(
-        constraints: const BoxConstraints(minHeight: 58),
-        padding: EdgeInsets.fromLTRB(a == null ? 18 : 10, 8, 10, 8),
-        decoration: BoxDecoration(color: Form3D.fill, borderRadius: BorderRadius.circular(30)),
+        constraints: BoxConstraints(minHeight: DS.s(58)),
+        padding: EdgeInsets.fromLTRB(DS.s(a == null ? 18 : 10), DS.s(8), DS.s(10), DS.s(8)),
+        decoration: BoxDecoration(color: Form3D.fill, borderRadius: DS.circular(30)),
         child: Row(
           children: [
-            if (a != null) ...[Art3D(asset: a, size: 40, shadowBlur: 3, shadowOffset: const Offset(2, 4), shadowAlpha: 0.22), const SizedBox(width: 12)],
+            if (a != null) ...[Art3D(asset: a, size: 40, shadowBlur: 3, shadowOffset: const Offset(2, 4), shadowAlpha: 0.22), SizedBox(width: DS.s(12))],
             Expanded(child: Text(l ?? '', maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(15, FontWeight.w600, Ink3D.body, letterSpacing: 0))),
             _button(false, 38),
-            SizedBox(width: 46, child: Center(child: FittedBox(fit: BoxFit.scaleDown, child: _value()))),
+            SizedBox(width: DS.s(46), child: Center(child: FittedBox(fit: BoxFit.scaleDown, child: _value()))),
             _button(true, 38),
           ],
         ),
@@ -86,13 +87,13 @@ class StepperField extends StatelessWidget {
         children: [
           if (l != null && l.isNotEmpty)
             Padding(
-              padding: const EdgeInsets.fromLTRB(4, 0, 4, 7),
+              padding: EdgeInsets.fromLTRB(DS.s(4), 0, DS.s(4), DS.s(7)),
               child: Text(l, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(12.5, FontWeight.w600, Form3D.label, letterSpacing: 0)),
             ),
           Container(
-            height: 56,
-            padding: const EdgeInsets.symmetric(horizontal: 6),
-            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(30), boxShadow: Ink3D.softShadow),
+            height: DS.s(56),
+            padding: EdgeInsets.symmetric(horizontal: DS.s(6)),
+            decoration: BoxDecoration(color: Colors.white, borderRadius: DS.circular(30), boxShadow: DS.shadows(Ink3D.softShadow)),
             child: Row(
               children: [
                 _button(false, 44),

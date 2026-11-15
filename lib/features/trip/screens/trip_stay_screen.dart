@@ -228,36 +228,36 @@ class _TripStayScreenState extends State<TripStayScreen> with TickerProviderStat
   Widget _noSupplyView() {
     final paused = _plan.stayTabOff.value;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
+      padding: EdgeInsets.fromLTRB(DS.s(16), DS.gv(24), DS.s(16), 0),
       child: _enter(
         Container(
           width: double.infinity,
-          padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
-          decoration: BoxDecoration(color: FitnessAppTheme.white, borderRadius: CardRadius.tile, boxShadow: ShadowTokens.elev1),
+          padding: DS.insets(l: 20, t: 24, r: 20, b: 20),
+          decoration: BoxDecoration(color: FitnessAppTheme.white, borderRadius: DS.br(CardRadius.tile), boxShadow: DS.shadows(ShadowTokens.elev1)),
           child: Column(
             children: [
               Container(
-                width: 72,
-                height: 72,
-                decoration: BoxDecoration(shape: BoxShape.circle, gradient: KitTone.stay.gradient, boxShadow: ShadowTokens.glow(TripUi.stay)),
+                width: DS.s(72),
+                height: DS.s(72),
+                decoration: BoxDecoration(shape: BoxShape.circle, gradient: KitTone.stay.gradient, boxShadow: DS.shadows(ShadowTokens.glow(TripUi.stay))),
                 child: const Center(child: TravelIcon(TravelIcon.stay, size: 40)),
               ),
-              const SizedBox(height: 16),
+              Gap.v(16),
               Text(paused ? TripStringsV2Find.staysPaused : TripStringsV2Find.noStaysTitle,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
+                  style: TextStyle(
                       fontFamily: FitnessAppTheme.fontName,
-                      fontSize: 18,
+                      fontSize: DS.f(18),
                       fontWeight: FontWeight.bold,
                       letterSpacing: 0.2,
                       color: FitnessAppTheme.darkerText)),
-              const SizedBox(height: 6),
+              Gap.v(6),
               Text(TripStringsV2Find.noStaysBody(_city),
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
-                      fontFamily: FitnessAppTheme.fontName, fontSize: 14, fontWeight: FontWeight.w500, color: FitnessAppTheme.lightText)),
+                  style: TextStyle(
+                      fontFamily: FitnessAppTheme.fontName, fontSize: DS.f(14), fontWeight: FontWeight.w500, color: FitnessAppTheme.lightText)),
               if (!_plan.isReadOnly) ...[
-                const SizedBox(height: 16),
+                Gap.v(16),
                 TripButton(
                   onPressed: _arrange,
                   label: TripStringsV2Find.arrangeMyself,
@@ -265,21 +265,21 @@ class _TripStayScreenState extends State<TripStayScreen> with TickerProviderStat
                   gradient: KitTone.stay.gradient,
                   shadowColor: TripUi.stay,
                 ),
-                const SizedBox(height: 12),
+                Gap.v(12),
                 InkWell(
                   onTap: _skip,
-                  borderRadius: BorderRadius.circular(24),
+                  borderRadius: DS.circular(24),
                   child: Container(
-                    height: 48,
+                    height: DS.s(48),
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
                       color: FitnessAppTheme.white,
-                      borderRadius: BorderRadius.circular(24),
+                      borderRadius: DS.circular(24),
                       border: Border.all(color: TripUi.good, width: 1.5),
                     ),
-                    child: const Text(TripStringsV2Find.skip,
+                    child: Text(TripStringsV2Find.skip,
                         style: TextStyle(
-                            fontFamily: FitnessAppTheme.fontName, fontSize: 14, fontWeight: FontWeight.w700, color: TripUi.good)),
+                            fontFamily: FitnessAppTheme.fontName, fontSize: DS.f(14), fontWeight: FontWeight.w700, color: TripUi.good)),
                   ),
                 ),
               ],
@@ -303,7 +303,7 @@ class _TripStayScreenState extends State<TripStayScreen> with TickerProviderStat
         value: value,
         leadingArt: ListingArt.roundPushpin,
         buttonArt: ListingArt.search,
-        margin: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+        margin: EdgeInsets.fromLTRB(DS.s(16), DS.gv(4), DS.s(16), DS.gv(12)),
       ),
     );
   }
@@ -321,7 +321,7 @@ class _TripStayScreenState extends State<TripStayScreen> with TickerProviderStat
                   _enter(_nearPill(), 0),
                 if (showChips)
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    padding: DS.sym(h: 16),
                     child: _enter(TripFilterChips(items: _chips(), accent: TripUi.stay), 1),
                   ),
               ],
@@ -492,11 +492,11 @@ class _TripStayScreenState extends State<TripStayScreen> with TickerProviderStat
           sliver: SliverList.builder(
             itemCount: rows.length + 1,
             itemBuilder: (_, i) => i == rows.length
-                ? const Padding(
-                    padding: EdgeInsets.fromLTRB(16, 16, 16, 16),
+                ? Padding(
+                    padding: DS.all(16),
                     child: Text(TripStringsV2Find.askNote,
                         textAlign: TextAlign.center,
-                        style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, color: FitnessAppTheme.lightText)),
+                        style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: DS.f(12), color: FitnessAppTheme.lightText)),
                   )
                 : _enter(_row(rows[i], day, nights, asked[rows[i].id], i), i + 2),
           ),
@@ -522,11 +522,11 @@ class _TripStayScreenState extends State<TripStayScreen> with TickerProviderStat
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const Padding(
-                      padding: EdgeInsets.fromLTRB(16, 8, 16, 8),
+                    Padding(
+                      padding: EdgeInsets.fromLTRB(DS.s(16), DS.gv(8), DS.s(16), DS.gv(8)),
                       child: Text(TripStringsV2Find.splitNote,
                           textAlign: TextAlign.center,
-                          style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, color: FitnessAppTheme.lightText)),
+                          style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: DS.f(12), color: FitnessAppTheme.lightText)),
                     ),
                   ],
                 ),
@@ -547,15 +547,15 @@ class _TripStayScreenState extends State<TripStayScreen> with TickerProviderStat
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(18, 16, 18, 0),
+                    padding: EdgeInsets.fromLTRB(DS.s(18), DS.gv(16), DS.s(18), 0),
                     child: Text(TripStringsV2Find.nightLabel(day - _firstDay + 1, date == null ? null : TripFormat.shortDate(date)),
-                        style: const TextStyle(
-                            fontFamily: FitnessAppTheme.fontName, fontSize: 18, fontWeight: FontWeight.w500, letterSpacing: -0.4, color: FitnessAppTheme.darkerText)),
+                        style: TextStyle(
+                            fontFamily: FitnessAppTheme.fontName, fontSize: DS.f(18), fontWeight: FontWeight.w500, letterSpacing: -0.4, color: FitnessAppTheme.darkerText)),
                   ),
                   for (final (j, s) in visible.indexed) _row(s, day, 1, asked[s.id], j),
                   if (rows.length > _nightPreview)
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      padding: DS.sym(h: 16),
                       child: TextLink(label: open ? TripStringsV2Find.showLess : TripStringsV2Find.showAll(rows.length), onTap: () => open ? _expanded.remove(day) : _expanded.add(day), tone: KitTone.trip),
                     ),
                 ],
@@ -600,7 +600,7 @@ class _TripStayScreenState extends State<TripStayScreen> with TickerProviderStat
                 slivers: [
                   SliverToBoxAdapter(child: _top()),
                   _buildBody(),
-                  const SliverToBoxAdapter(child: SizedBox(height: 24)),
+                  SliverToBoxAdapter(child: Gap.v(24)),
                 ],
               ),
             ),
@@ -620,30 +620,30 @@ class _PriceBody extends StatelessWidget {
     final on = (current ?? 0) == value;
     return InkWell(
       onTap: () => Navigator.pop(context, value),
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: DS.circular(12),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 48),
+        constraints: BoxConstraints(minHeight: DS.s(48)),
         child: Row(
           children: [
             Container(
-              width: 20,
-              height: 20,
+              width: DS.s(20),
+              height: DS.s(20),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                border: Border.all(color: on ? TripUi.stay : FitnessAppTheme.deactivatedText, width: 2),
+                border: Border.all(color: on ? TripUi.stay : FitnessAppTheme.deactivatedText, width: DS.s(2)),
               ),
               child: on
                   ? Center(
                       child: Container(
-                          width: 10, height: 10, decoration: const BoxDecoration(shape: BoxShape.circle, color: TripUi.stay)))
+                          width: DS.s(10), height: DS.s(10), decoration: const BoxDecoration(shape: BoxShape.circle, color: TripUi.stay)))
                   : null,
             ),
-            const SizedBox(width: 12),
+            Gap.h(12),
             Expanded(
               child: Text(label,
                   style: TextStyle(
                       fontFamily: FitnessAppTheme.fontName,
-                      fontSize: 14,
+                      fontSize: DS.f(14),
                       fontWeight: on ? FontWeight.w700 : FontWeight.w500,
                       color: FitnessAppTheme.darkerText)),
             ),

@@ -79,7 +79,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
           child: AuthCard(
             children: [
               AuthVerifiedRow(art: ListingArt.key, text: '+91 $_phone'),
-              const SizedBox(height: 24),
+              Gap.v(24),
               const AuthFieldLabel('Full Name'),
               AuthPillInput(
                 tone: _tone,
@@ -101,7 +101,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
                   onFieldSubmitted: (_) => _submit(),
                 ),
               ),
-              const SizedBox(height: 28),
+              Gap.v(28),
               Obx(() => GradientPillButton(
                     tone: _tone,
                     label: 'Get Started',

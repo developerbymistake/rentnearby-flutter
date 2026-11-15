@@ -86,7 +86,7 @@ class ChatMessageBubble extends StatelessWidget {
     }
 
     final bubble = Padding(
-      padding: const EdgeInsets.symmetric(vertical: 5),
+      padding: EdgeInsets.symmetric(vertical: DS.gv(5)),
       child: ChatBubble3D(
         tone: _tone,
         text: text,
@@ -99,12 +99,12 @@ class ChatMessageBubble extends StatelessWidget {
       return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         bubble,
         Padding(
-          padding: const EdgeInsets.only(top: 6, bottom: 8),
+          padding: EdgeInsets.only(top: DS.gv(6), bottom: DS.gv(8)),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               for (var i = 0; i < answerOptions.length; i++) ...[
-                if (i > 0) const SizedBox(height: 8),
+                if (i > 0) Gap.v(8),
                 ChatAnswerPill(
                   tone: _tone,
                   label: answerOptions[i].text,
@@ -147,7 +147,7 @@ class ChatMessageBubble extends StatelessWidget {
       const ChatSystemNote('Contact shared'),
       if (phone != null)
         Padding(
-          padding: const EdgeInsets.only(top: 4, bottom: 8),
+          padding: EdgeInsets.only(top: DS.gv(4), bottom: DS.gv(8)),
           child: GradientPillButton(
             tone: _tone,
             label: 'Call',
@@ -200,7 +200,7 @@ class ChatMessageBubble extends StatelessWidget {
   }
 }
 
-Widget _cardSlot(Widget card) => Padding(padding: const EdgeInsets.only(top: 4, bottom: 6), child: card);
+Widget _cardSlot(Widget card) => Padding(padding: EdgeInsets.only(top: DS.gv(4), bottom: DS.gv(6)), child: card);
 
 extension _SafePayload on Map<String, dynamic> {
   String? safeString(String key) {

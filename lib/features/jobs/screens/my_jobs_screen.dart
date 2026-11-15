@@ -76,13 +76,13 @@ class _MyJobsScreenState extends State<MyJobsScreen> {
   Widget _content(MyJobsPage? page) {
     return LayoutBuilder(
       builder: (context, box) {
-        final fill = BoxConstraints(minHeight: (box.maxHeight - 40).clamp(0, double.infinity));
+        final fill = BoxConstraints(minHeight: (box.maxHeight - DS.s(40)).clamp(0, double.infinity));
         return RefreshIndicator(
           color: _look.g2,
           onRefresh: _ctrl.load,
           child: ListView(
             physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
-            padding: EdgeInsets.fromLTRB(0, 0, 0, 24 + AppInsets.bottomViewPadding(context)),
+            padding: EdgeInsets.fromLTRB(0, 0, 0, DS.gv(24) + AppInsets.bottomViewPadding(context)),
             children: [
               if (page != null) ...[
                 if (page.items.isEmpty)

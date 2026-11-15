@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:bakhli/design/tokens/design_scale.dart';
 
 const Color _kBone = Color(0xFFE8EAF0);
 const Color _kBoneLight = Color(0xFFF5F6F9);
@@ -52,58 +53,58 @@ class _ShimmerState extends State<_Shimmer> with SingleTickerProviderStateMixin 
 }
 
 class SkeletonBox extends StatelessWidget {
-  const SkeletonBox({super.key, this.width, this.height = 14, this.radius = 7});
+  const SkeletonBox({super.key, this.width, this.height, this.radius});
 
   final double? width;
-  final double height;
-  final double radius;
+  final double? height;
+  final double? radius;
 
   @override
   Widget build(BuildContext context) {
     return _Shimmer(
       child: Container(
         width: width,
-        height: height,
-        decoration: BoxDecoration(color: _kBone, borderRadius: BorderRadius.circular(radius)),
+        height: height ?? DS.s(14),
+        decoration: BoxDecoration(color: _kBone, borderRadius: BorderRadius.circular(radius ?? DS.radius(7))),
       ),
     );
   }
 }
 
 Widget _bone({double? width, double height = 14, double radius = 7, bool round = false}) => Container(
-  width: width,
-  height: height,
-  decoration: BoxDecoration(color: _kBone, shape: round ? BoxShape.circle : BoxShape.rectangle, borderRadius: round ? null : BorderRadius.circular(radius)),
+  width: width == null ? null : DS.s(width),
+  height: DS.s(height),
+  decoration: BoxDecoration(color: _kBone, shape: round ? BoxShape.circle : BoxShape.rectangle, borderRadius: round ? null : DS.circular(radius)),
 );
 
 class SkeletonSlimCard extends StatelessWidget {
-  const SkeletonSlimCard({super.key, this.height = 116});
+  const SkeletonSlimCard({super.key, this.height});
 
-  final double height;
+  final double? height;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(18, 36, 18, 0),
+      padding: EdgeInsets.fromLTRB(DS.s(18), DS.s(36), DS.s(18), 0),
       child: Stack(
         clipBehavior: Clip.none,
         children: [
           Container(
-            height: height,
-            padding: const EdgeInsets.fromLTRB(134, 22, 20, 16),
-            decoration: const BoxDecoration(
+            height: height ?? DS.s(116),
+            padding: EdgeInsets.fromLTRB(DS.s(134), DS.s(22), DS.s(20), DS.s(16)),
+            decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(54), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8)),
-              boxShadow: [BoxShadow(color: Color(0x409E9E9E), offset: Offset(1.1, 4), blurRadius: 10)],
+              borderRadius: BorderRadius.only(topLeft: Radius.circular(DS.radius(8)), topRight: Radius.circular(DS.radius(54)), bottomLeft: Radius.circular(DS.radius(8)), bottomRight: Radius.circular(DS.radius(8))),
+              boxShadow: [BoxShadow(color: Color(0x409E9E9E), offset: DS.shadowOffset(const Offset(1.1, 4)), blurRadius: DS.shadowBlur(10))],
             ),
             child: _Shimmer(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: [_bone(width: 70, height: 10, radius: 5), const SizedBox(height: 10), _bone(width: 150, height: 16, radius: 8), const SizedBox(height: 10), _bone(width: 110, height: 12, radius: 6)],
+                children: [_bone(width: 70, height: 10, radius: 5), SizedBox(height: DS.s(10)), _bone(width: 150, height: 16, radius: 8), SizedBox(height: DS.s(10)), _bone(width: 110, height: 12, radius: 6)],
               ),
             ),
           ),
-          Positioned(left: 8, top: -30, child: _Shimmer(child: _bone(width: 112, height: 112, round: true))),
+          Positioned(left: DS.s(8), top: DS.s(-30), child: _Shimmer(child: _bone(width: 112, height: 112, round: true))),
         ],
       ),
     );
@@ -118,20 +119,20 @@ class SkeletonListRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      constraints: const BoxConstraints(minHeight: 76),
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      constraints: BoxConstraints(minHeight: DS.s(76)),
+      padding: EdgeInsets.symmetric(horizontal: DS.s(20), vertical: DS.s(12)),
       child: _Shimmer(
         child: Row(
           children: [
             _bone(width: 52, height: 52, radius: 16),
-            const SizedBox(width: 14),
+            SizedBox(width: DS.s(14)),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   FractionallySizedBox(widthFactor: 0.62, child: _bone()),
-                  if (twoLines) ...[const SizedBox(height: 8), FractionallySizedBox(widthFactor: 0.4, child: _bone(height: 10, radius: 5))],
+                  if (twoLines) ...[SizedBox(height: DS.s(8)), FractionallySizedBox(widthFactor: 0.4, child: _bone(height: 10, radius: 5))],
                 ],
               ),
             ),
@@ -143,26 +144,26 @@ class SkeletonListRow extends StatelessWidget {
 }
 
 class SkeletonFormCard extends StatelessWidget {
-  const SkeletonFormCard({super.key, this.height = 140});
+  const SkeletonFormCard({super.key, this.height});
 
-  final double height;
+  final double? height;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: height,
-      margin: const EdgeInsets.fromLTRB(18, 46, 18, 0),
-      padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
-      decoration: const BoxDecoration(
+      height: height ?? DS.s(140),
+      margin: EdgeInsets.fromLTRB(DS.s(18), DS.gv(46), DS.s(18), 0),
+      padding: EdgeInsets.fromLTRB(DS.s(18), DS.s(18), DS.s(18), DS.s(18)),
+      decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(68), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8)),
-        boxShadow: [BoxShadow(color: Color(0x389E9E9E), offset: Offset(1.1, 1.1), blurRadius: 10)],
+        borderRadius: BorderRadius.only(topLeft: Radius.circular(DS.radius(8)), topRight: Radius.circular(DS.radius(68)), bottomLeft: Radius.circular(DS.radius(8)), bottomRight: Radius.circular(DS.radius(8))),
+        boxShadow: [BoxShadow(color: Color(0x389E9E9E), offset: DS.shadowOffset(const Offset(1.1, 1.1)), blurRadius: DS.shadowBlur(10))],
       ),
       child: _Shimmer(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(children: [_bone(width: 62, height: 62, radius: 18), const SizedBox(width: 14), _bone(width: 130, height: 16, radius: 8)]),
+            Row(children: [_bone(width: 62, height: 62, radius: 18), SizedBox(width: DS.s(14)), _bone(width: 130, height: 16, radius: 8)]),
             const Spacer(),
             _bone(height: 26, radius: 13),
           ],

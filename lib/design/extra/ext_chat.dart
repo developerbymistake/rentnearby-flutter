@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../tokens/listing_palette.dart';
 import 'art_3d.dart';
 import 'pill_buttons_3d.dart';
+import '../tokens/design_scale.dart';
 
 abstract final class ChatLook3D {
   static const Color bannerFill = Color(0xFFFFF1DE);
@@ -22,11 +23,11 @@ abstract final class ChatLook3D {
   static const Color skeletonBone = Color(0xFFD3DCD5);
   static const Color skeletonRing = Color(0xFFEEF2EF);
   static const Color skeletonStrip = Color(0x0A000000);
-  static const List<BoxShadow> grey = [BoxShadow(color: Color(0x599E9E9E), offset: Offset(3, 5), blurRadius: 10)];
-  static const List<BoxShadow> card = [BoxShadow(color: Color(0x409E9E9E), offset: Offset(1.1, 1.1), blurRadius: 10)];
-  static const List<BoxShadow> panel = [BoxShadow(color: Color(0x26000000), offset: Offset(0, -4), blurRadius: 20)];
-  static const List<BoxShadow> badge = [BoxShadow(color: Color(0x38000000), offset: Offset(3, 5), blurRadius: 8)];
-  static const List<BoxShadow> avatar = [BoxShadow(color: Color(0x4D000000), offset: Offset(4, 8), blurRadius: 12)];
+  static List<BoxShadow> get grey => [BoxShadow(color: Color(0x599E9E9E), offset: DS.shadowOffset(const Offset(3, 5)), blurRadius: DS.shadowBlur(10))];
+  static List<BoxShadow> get card => [BoxShadow(color: Color(0x409E9E9E), offset: DS.shadowOffset(const Offset(1.1, 1.1)), blurRadius: DS.shadowBlur(10))];
+  static List<BoxShadow> get panel => [BoxShadow(color: Color(0x26000000), offset: DS.shadowOffset(const Offset(0, -4)), blurRadius: DS.shadowBlur(20))];
+  static List<BoxShadow> get badge => [BoxShadow(color: Color(0x38000000), offset: DS.shadowOffset(const Offset(3, 5)), blurRadius: DS.shadowBlur(8))];
+  static List<BoxShadow> get avatar => [BoxShadow(color: Color(0x4D000000), offset: DS.shadowOffset(const Offset(4, 8)), blurRadius: DS.shadowBlur(12))];
   static const LinearGradient avatarGradient = LinearGradient(
     colors: [Color(0xFF81C784), Color(0xFF1B5E20)],
     begin: Alignment.topLeft,
@@ -40,7 +41,7 @@ abstract final class ChatLook3D {
   };
 
   static String artFor(String listingType) => switch (listingType) {
-    'Stay' => ListingArt.hotel,
+    'Stay' => ListingArt.stay,
     'Taxi' => ListingArt.taxi,
     _ => ListingArt.compass,
   };
@@ -50,23 +51,23 @@ abstract final class ChatLook3D {
   static List<BoxShadow> glow(ListingTone tone, {double alpha = 0.5, double blur = 10, Offset offset = const Offset(1.1, 4)}) => [
     BoxShadow(
       color: tone.haloBase.withValues(alpha: alpha),
-      offset: offset,
-      blurRadius: blur,
+      offset: DS.shadowOffset(offset),
+      blurRadius: DS.shadowBlur(blur),
     ),
   ];
 }
 
-const BorderRadius _kRow = BorderRadius.only(
-  topLeft: Radius.circular(8),
-  topRight: Radius.circular(54),
-  bottomLeft: Radius.circular(8),
-  bottomRight: Radius.circular(8),
+BorderRadius get _kRow => BorderRadius.only(
+  topLeft: Radius.circular(DS.radius(8)),
+  topRight: Radius.circular(DS.radius(54)),
+  bottomLeft: Radius.circular(DS.radius(8)),
+  bottomRight: Radius.circular(DS.radius(8)),
 );
-const BorderRadius _kChip = BorderRadius.only(
-  topLeft: Radius.circular(8),
-  topRight: Radius.circular(24),
-  bottomLeft: Radius.circular(8),
-  bottomRight: Radius.circular(8),
+BorderRadius get _kChip => BorderRadius.only(
+  topLeft: Radius.circular(DS.radius(8)),
+  topRight: Radius.circular(DS.radius(24)),
+  bottomLeft: Radius.circular(DS.radius(8)),
+  bottomRight: Radius.circular(DS.radius(8)),
 );
 
 double _scale(BuildContext context) => MediaQuery.textScalerOf(context).scale(1);
@@ -114,15 +115,15 @@ class ChatRoundButton3D extends StatelessWidget {
         exclude: true,
         tapKey: tapKey,
         child: Container(
-          width: size,
-          height: size,
+          width: DS.s(size),
+          height: DS.s(size),
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: glass ? ChatLook3D.headerButton : (gradient ? null : Colors.white),
             gradient: gradient ? t.gradient : null,
-            boxShadow: glass ? null : (gradient ? ChatLook3D.glow(t, offset: const Offset(3, 6)) : Ink3D.softShadow),
+            boxShadow: glass ? null : (gradient ? ChatLook3D.glow(t, offset: const Offset(3, 6)) : DS.shadows(Ink3D.softShadow)),
           ),
-          child: Icon(icon, size: size * 0.55, color: ink),
+          child: Icon(icon, size: DS.s(size * 0.55), color: ink),
         ),
       ),
     );
@@ -175,28 +176,28 @@ class ChatThreadCard extends StatelessWidget {
   static const double topRoom = 44;
 
   Widget _bone(double w, double h) => Container(
-    width: w,
-    height: h,
-    decoration: BoxDecoration(color: ChatLook3D.skeletonBone, borderRadius: BorderRadius.circular(h / 2)),
+    width: DS.s(w),
+    height: DS.s(h),
+    decoration: BoxDecoration(color: ChatLook3D.skeletonBone, borderRadius: DS.circular(h / 2)),
   );
 
   @override
   Widget build(BuildContext context) {
     final narrow = MediaQuery.sizeOf(context).width < 340;
-    final av = narrow ? 72.0 : 88.0;
-    final left = narrow ? 102.0 : 124.0;
-    final right = narrow ? 70.0 : 72.0;
-    final tagRight = narrow ? 52.0 : 56.0;
+    final av = DS.s(narrow ? 72.0 : 88.0);
+    final left = DS.s(narrow ? 102.0 : 124.0);
+    final right = DS.s(narrow ? 70.0 : 72.0);
+    final tagRight = DS.s(narrow ? 52.0 : 56.0);
     final t = tone ?? ListingTone.forest;
     final hasBadge = unread.isNotEmpty;
     final head = ConstrainedBox(
-      constraints: BoxConstraints(minHeight: 94 * _scale(context).clamp(1.0, 1.6)),
+      constraints: BoxConstraints(minHeight: DS.s(94) * _scale(context).clamp(1.0, 1.6)),
       child: Padding(
-        padding: EdgeInsets.fromLTRB(left, 14, 0, 12),
+        padding: EdgeInsets.fromLTRB(left, DS.s(14), 0, DS.s(12)),
         child: skeleton
             ? Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: [_bone(42, 12), const SizedBox(height: 10), _bone(118, 16), const SizedBox(height: 10), _bone(150, 11)],
+                children: [_bone(42, 12), Gap.v(10), _bone(118, 16), Gap.v(10), _bone(150, 11)],
               )
             : Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -211,7 +212,7 @@ class ChatThreadCard extends StatelessWidget {
                       style: Ink3D.text(10, FontWeight.w700, Colors.white.withValues(alpha: 0.92), letterSpacing: 0.4),
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  Gap.v(4),
                   Padding(
                     padding: EdgeInsets.only(right: right),
                     child: FittedBox(
@@ -220,9 +221,9 @@ class ChatThreadCard extends StatelessWidget {
                       child: Text(title, maxLines: 1, softWrap: false, style: Ink3D.text(narrow ? 16 : 18, FontWeight.w700, Colors.white)),
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  Gap.v(4),
                   Padding(
-                    padding: const EdgeInsets.only(right: 14),
+                    padding: EdgeInsets.only(right: DS.s(14)),
                     child: Text(subtitle, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(12.5, FontWeight.w500, Colors.white.withValues(alpha: 0.95))),
                   ),
                 ],
@@ -231,8 +232,8 @@ class ChatThreadCard extends StatelessWidget {
     );
     final strip = Container(
       width: double.infinity,
-      constraints: BoxConstraints(minHeight: 42 * _scale(context).clamp(1.0, 1.6)),
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      constraints: BoxConstraints(minHeight: DS.s(42) * _scale(context).clamp(1.0, 1.6)),
+      padding: EdgeInsets.symmetric(horizontal: DS.s(20), vertical: DS.s(10)),
       alignment: Alignment.centerLeft,
       color: skeleton ? ChatLook3D.skeletonStrip : ChatLook3D.strip,
       child: skeleton
@@ -240,23 +241,23 @@ class ChatThreadCard extends StatelessWidget {
           : Text(preview, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(13.5, hasBadge ? FontWeight.w700 : FontWeight.w400, Colors.white)),
     );
     final side = Positioned(
-      right: 16,
-      top: 14,
+      right: DS.s(16),
+      top: DS.s(14),
       child: SizedBox(
-        width: 46,
+        width: DS.s(46),
         child: Column(
           children: [
             skeleton ? _bone(28, 11) : Text(time, maxLines: 1, style: Ink3D.text(12, FontWeight.w600, Colors.white, height: 1.2)),
-            const SizedBox(height: 6),
+            Gap.v(6),
             if (hasBadge)
               Container(
-                constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-                padding: const EdgeInsets.symmetric(horizontal: 7),
-                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), boxShadow: ChatLook3D.badge),
+                constraints: BoxConstraints(minWidth: DS.s(28), minHeight: DS.s(28)),
+                padding: EdgeInsets.symmetric(horizontal: DS.s(7)),
+                decoration: BoxDecoration(color: Colors.white, borderRadius: DS.circular(14), boxShadow: ChatLook3D.badge),
                 child: Center(widthFactor: 1, heightFactor: 1, child: Text(unread, maxLines: 1, style: Ink3D.text(13, FontWeight.w700, t.g2, letterSpacing: 0))),
               )
             else
-              const SizedBox(height: 28),
+              Gap.v(28),
           ],
         ),
       ),
@@ -278,16 +279,16 @@ class ChatThreadCard extends StatelessWidget {
         ),
       ),
     );
-    final halo = av + 16;
+    final halo = av + DS.s(16);
     final body = Padding(
-      padding: const EdgeInsets.fromLTRB(14, topRoom, 14, 0),
+      padding: EdgeInsets.fromLTRB(DS.s(14), DS.s(topRoom), DS.s(14), 0),
       child: Stack(
         clipBehavior: Clip.none,
         children: [
           card,
           Positioned(
-            left: 6,
-            top: -30,
+            left: DS.s(6),
+            top: DS.s(-30),
             child: ExcludeSemantics(
               child: Container(
                 width: halo,
@@ -297,8 +298,8 @@ class ChatThreadCard extends StatelessWidget {
             ),
           ),
           Positioned(
-            left: 14,
-            top: -22,
+            left: DS.s(14),
+            top: DS.s(-22),
             child: ExcludeSemantics(
               child: Container(
                 width: av,
@@ -308,7 +309,7 @@ class ChatThreadCard extends StatelessWidget {
                   shape: BoxShape.circle,
                   color: skeleton ? ChatLook3D.skeletonBone : null,
                   gradient: skeleton ? null : ChatLook3D.avatarGradient,
-                  border: Border.all(color: skeleton ? ChatLook3D.skeletonRing : Colors.white, width: 4),
+                  border: Border.all(color: skeleton ? ChatLook3D.skeletonRing : Colors.white, width: DS.s(4)),
                   boxShadow: skeleton ? null : ChatLook3D.avatar,
                 ),
                 child: skeleton
@@ -319,7 +320,7 @@ class ChatThreadCard extends StatelessWidget {
           ),
           if (!skeleton)
             Positioned(
-              left: av * 0.6 + 13,
+              left: av * 0.6 + DS.s(13),
               top: av * 0.43,
               child: ExcludeSemantics(
                 child: Art3D(asset: sticker, size: narrow ? 44 : 52, shadowBlur: 3, shadowOffset: const Offset(2, 4), shadowAlpha: 0.3),
@@ -348,28 +349,28 @@ class ChatStateCard3D extends StatelessWidget {
     required this.art,
     required this.title,
     this.message,
-    this.margin = const EdgeInsets.fromLTRB(18, 110, 18, 0),
+    this.margin,
   });
 
   final ListingTone tone;
   final String art;
   final String title;
   final String? message;
-  final EdgeInsets margin;
+  final EdgeInsets? margin;
 
   @override
   Widget build(BuildContext context) {
     final narrow = MediaQuery.sizeOf(context).width < 340;
     final size = narrow ? 120.0 : 146.0;
     return Padding(
-      padding: margin,
+      padding: (margin ?? EdgeInsets.fromLTRB(DS.s(18), DS.s(110), DS.s(18), 0)),
       child: Stack(
         clipBehavior: Clip.none,
         alignment: Alignment.topCenter,
         children: [
           Container(
             width: double.infinity,
-            padding: EdgeInsets.fromLTRB(24, size - 50, 24, 30),
+            padding: EdgeInsets.fromLTRB(DS.s(24), DS.s(size) - DS.s(50), DS.s(24), DS.s(30)),
             decoration: BoxDecoration(color: Colors.white, borderRadius: _kRow, boxShadow: ChatLook3D.glow(tone, alpha: 0.28, blur: 14)),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -380,14 +381,14 @@ class ChatStateCard3D extends StatelessWidget {
                 ),
                 if (message != null)
                   Padding(
-                    padding: const EdgeInsets.only(top: 6),
+                    padding: EdgeInsets.only(top: DS.s(6)),
                     child: Text(message!, textAlign: TextAlign.center, style: Ink3D.text(14, FontWeight.w400, Ink3D.copy, height: 1.45)),
                   ),
               ],
             ),
           ),
           Positioned(
-            top: -size / 2,
+            top: DS.s(-size / 2),
             child: ExcludeSemantics(
               child: Art3D(asset: art, size: size, halo: size + 10, haloColor: tone.haloBase.withValues(alpha: 0.16)),
             ),
@@ -429,19 +430,19 @@ class ChatHeader3D extends StatelessWidget {
     final artSize = narrow ? 66.0 : 82.0;
     return Container(
       width: double.infinity,
-      constraints: BoxConstraints(minHeight: 158 + top),
-      padding: EdgeInsets.fromLTRB(16, top + 12, 16, 20),
+      constraints: BoxConstraints(minHeight: DS.s(158) + top),
+      padding: EdgeInsets.fromLTRB(DS.s(16), top + DS.s(12), DS.s(16), DS.s(20)),
       decoration: BoxDecoration(
         gradient: tone.gradient,
-        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(32)),
-        boxShadow: [BoxShadow(color: tone.haloBase.withValues(alpha: 0.35), offset: const Offset(0, 8), blurRadius: 20)],
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(DS.radius(32))),
+        boxShadow: [BoxShadow(color: tone.haloBase.withValues(alpha: 0.35), offset: DS.shadowOffset(const Offset(0, 8)), blurRadius: DS.shadowBlur(20))],
       ),
       child: Stack(
         clipBehavior: Clip.none,
         children: [
           Positioned(
-            right: -4,
-            bottom: -14,
+            right: DS.s(-4),
+            bottom: DS.s(-14),
             child: ExcludeSemantics(
               child: Art3D(asset: art, size: artSize, halo: artSize + 4, haloColor: ChatLook3D.headerHalo, shadowOffset: const Offset(5, 8), shadowAlpha: 0.3),
             ),
@@ -466,23 +467,23 @@ class ChatHeader3D extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
+              Gap.v(12),
               Padding(
-                padding: EdgeInsets.only(right: artSize + 2),
+                padding: EdgeInsets.only(right: DS.s(artSize) + DS.s(2)),
                 child: Row(
                   children: [
                     Container(
-                      width: 54,
-                      height: 54,
+                      width: DS.s(54),
+                      height: DS.s(54),
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: ChatLook3D.avatarFill,
-                        border: Border.all(color: ChatLook3D.avatarRing, width: 3),
+                        border: Border.all(color: ChatLook3D.avatarRing, width: DS.s(3)),
                       ),
                       child: Text(initial, textScaler: TextScaler.noScaling, style: Ink3D.text(23, FontWeight.w700, Colors.white, letterSpacing: 0)),
                     ),
-                    const SizedBox(width: 12),
+                    Gap.h(12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -501,11 +502,11 @@ class ChatHeader3D extends StatelessWidget {
                               ),
                             ),
                           ),
-                          const SizedBox(height: 2),
+                          Gap.v(2),
                           Row(
                             children: [
-                              ExcludeSemantics(child: Image.asset(sticker, width: 18, height: 18, fit: BoxFit.contain)),
-                              const SizedBox(width: 5),
+                              ExcludeSemantics(child: Image.asset(sticker, width: DS.s(18), height: DS.s(18), fit: BoxFit.contain)),
+                              Gap.h(5),
                               Expanded(
                                 child: Text(
                                   subtitle,
@@ -541,7 +542,7 @@ class ChatStripCard3D extends StatelessWidget {
     this.extra,
     this.onMenu,
     this.menuKey,
-    this.margin = const EdgeInsets.fromLTRB(18, 16, 18, 0),
+    this.margin,
   });
 
   final Color barColor;
@@ -552,31 +553,31 @@ class ChatStripCard3D extends StatelessWidget {
   final VoidCallback onTap;
   final ChatMenuTap? onMenu;
   final Key? menuKey;
-  final EdgeInsets margin;
+  final EdgeInsets? margin;
 
   @override
   Widget build(BuildContext context) {
     final body = Container(
-      decoration: const BoxDecoration(color: Colors.white, borderRadius: _kChip, boxShadow: ChatLook3D.card),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: _kChip, boxShadow: ChatLook3D.card),
       clipBehavior: Clip.antiAlias,
       child: IntrinsicHeight(
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Container(width: 5, color: barColor),
+            Container(width: DS.s(5), color: barColor),
             Expanded(
               child: Tap3D(
                 onTap: onTap,
                 child: ConstrainedBox(
-                  constraints: const BoxConstraints(minHeight: 72),
+                  constraints: BoxConstraints(minHeight: DS.s(72)),
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(8, 10, 0, 10),
+                    padding: EdgeInsets.fromLTRB(DS.s(8), DS.s(10), 0, DS.s(10)),
                     child: Row(
                       children: [
                         const ExcludeSemantics(
                           child: Art3D(asset: ListingArt.luggage, size: 42, shadowBlur: 3, shadowOffset: Offset(2, 4), shadowAlpha: 0.25),
                         ),
-                        const SizedBox(width: 8),
+                        Gap.h(8),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -585,7 +586,7 @@ class ChatStripCard3D extends StatelessWidget {
                               Text(title, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(13.5, FontWeight.w700, Ink3D.title, letterSpacing: 0)),
                               if (detail.isNotEmpty)
                                 Text(detail, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(12, FontWeight.w400, Ink3D.sub)),
-                              Padding(padding: const EdgeInsets.only(top: 3), child: pill),
+                              Padding(padding: EdgeInsets.only(top: DS.s(3)), child: pill),
                               ?extra,
                             ],
                           ),
@@ -597,7 +598,7 @@ class ChatStripCard3D extends StatelessWidget {
               ),
             ),
             SizedBox(
-              width: 30,
+              width: DS.s(30),
               child: onMenu == null
                   ? null
                   : Tooltip(
@@ -609,7 +610,7 @@ class ChatStripCard3D extends StatelessWidget {
                           label: 'More',
                           exclude: true,
                           tapKey: menuKey,
-                          child: const Center(child: Icon(Icons.more_vert_rounded, size: 22, color: Ink3D.grey)),
+                          child: Center(child: Icon(Icons.more_vert_rounded, size: DS.s(22), color: Ink3D.grey)),
                         ),
                       ),
                     ),
@@ -618,26 +619,26 @@ class ChatStripCard3D extends StatelessWidget {
         ),
       ),
     );
-    return Padding(padding: margin, child: body);
+    return Padding(padding: (margin ?? EdgeInsets.fromLTRB(DS.s(18), DS.s(16), DS.s(18), 0)), child: body);
   }
 }
 
 class ChatSafetyNote3D extends StatelessWidget {
-  const ChatSafetyNote3D({super.key, required this.text, this.margin = const EdgeInsets.fromLTRB(18, 14, 18, 0)});
+  const ChatSafetyNote3D({super.key, required this.text, this.margin});
 
   final String text;
-  final EdgeInsets margin;
+  final EdgeInsets? margin;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: margin,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: const BoxDecoration(color: ChatLook3D.bannerFill, borderRadius: _kChip, boxShadow: ChatLook3D.card),
+      margin: (margin ?? EdgeInsets.fromLTRB(DS.s(18), DS.gv(14), DS.s(18), 0)),
+      padding: EdgeInsets.symmetric(horizontal: DS.s(14), vertical: DS.s(10)),
+      decoration: BoxDecoration(color: ChatLook3D.bannerFill, borderRadius: _kChip, boxShadow: ChatLook3D.card),
       child: Row(
         children: [
-          ExcludeSemantics(child: Image.asset(ListingArt.clipboard, width: 38, height: 38, fit: BoxFit.contain)),
-          const SizedBox(width: 10),
+          ExcludeSemantics(child: Image.asset(ListingArt.clipboard, width: DS.s(38), height: DS.s(38), fit: BoxFit.contain)),
+          Gap.h(10),
           Expanded(child: Text(text, style: Ink3D.text(12.5, FontWeight.w400, ChatLook3D.bannerText, letterSpacing: 0, height: 1.4))),
         ],
       ),
@@ -664,10 +665,10 @@ class ChatNoticePanel3D extends StatelessWidget {
       children: [
         Container(
           width: double.infinity,
-          padding: EdgeInsets.fromLTRB(26, 46, 26, 22 + bottom),
-          decoration: const BoxDecoration(
+          padding: EdgeInsets.fromLTRB(DS.s(26), DS.s(46), DS.s(26), DS.s(22) + bottom),
+          decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(DS.radius(32))),
             boxShadow: ChatLook3D.panel,
           ),
           child: Column(
@@ -679,9 +680,9 @@ class ChatNoticePanel3D extends StatelessWidget {
               ),
               if (actionLabel != null)
                 Padding(
-                  padding: const EdgeInsets.only(top: 12),
+                  padding: EdgeInsets.only(top: DS.gv(12)),
                   child: SizedBox(
-                    width: 170,
+                    width: DS.s(170),
                     child: GradientPillButton(tone: tone, label: actionLabel!, onTap: onAction, height: 44, fontSize: 14),
                   ),
                 ),
@@ -689,7 +690,7 @@ class ChatNoticePanel3D extends StatelessWidget {
           ),
         ),
         Positioned(
-          top: -overhang,
+          top: DS.s(-overhang),
           child: ExcludeSemantics(
             child: Art3D(
               asset: ListingArt.pushpin,
@@ -725,13 +726,13 @@ class ChatBarButton3D extends StatelessWidget {
     final live = onTap != null && !busy;
     final ink = filled ? Colors.white : (kind == ChatBarKind.negative ? ChatLook3D.red : tone.text);
     final box = Container(
-      constraints: BoxConstraints(minHeight: 44 * _scale(context).clamp(1.0, 1.3)),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      constraints: BoxConstraints(minHeight: DS.s(44) * _scale(context).clamp(1.0, 1.3)),
+      padding: EdgeInsets.symmetric(horizontal: DS.s(12), vertical: DS.s(4)),
       alignment: Alignment.center,
       decoration: BoxDecoration(
         color: filled ? null : Colors.white,
         gradient: filled ? tone.gradient : null,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: DS.circular(24),
         border: filled ? null : Border.all(color: kind == ChatBarKind.negative ? ChatLook3D.redBorder : ChatLook3D.outline, width: 1.5),
         boxShadow: onTap == null && !busy ? null : (filled ? ChatLook3D.glow(tone) : ChatLook3D.grey),
       ),
@@ -739,11 +740,11 @@ class ChatBarButton3D extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           if (busy) ...[
-            SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2.4, color: ink)),
-            const SizedBox(width: 8),
+            SizedBox(width: DS.s(16), height: DS.s(16), child: CircularProgressIndicator(strokeWidth: DS.s(2.4), color: ink)),
+            Gap.h(8),
           ] else if (icon != null) ...[
-            Icon(icon, size: 18, color: ink),
-            const SizedBox(width: 6),
+            Icon(icon, size: DS.s(18), color: ink),
+            Gap.h(6),
           ],
           Flexible(
             child: FittedBox(
@@ -764,30 +765,30 @@ class ChatBarButton3D extends StatelessWidget {
 }
 
 class ChatActionBar3D extends StatelessWidget {
-  const ChatActionBar3D({super.key, required this.rows, this.note, this.margin = const EdgeInsets.only(top: 14, bottom: 4)});
+  const ChatActionBar3D({super.key, required this.rows, this.note, this.margin});
 
   final List<List<Widget>> rows;
   final String? note;
-  final EdgeInsets margin;
+  final EdgeInsets? margin;
 
   @override
   Widget build(BuildContext context) {
     final narrow = MediaQuery.sizeOf(context).width < 340 || _scale(context) > 1.25;
     final out = <Widget>[];
     for (final r in rows) {
-      if (out.isNotEmpty) out.add(const SizedBox(height: 10));
+      if (out.isNotEmpty) out.add(Gap.v(10));
       final cells = r.where((w) => w is! ChatBarMenu3D).toList();
       final menus = r.whereType<ChatBarMenu3D>();
       final menu = menus.isEmpty ? null : menus.first;
       if (narrow && cells.length > 1) {
         for (var i = 0; i < cells.length; i++) {
-          if (i > 0) out.add(const SizedBox(height: 10));
+          if (i > 0) out.add(Gap.v(10));
           out.add(
             i == cells.length - 1 && menu != null
                 ? Row(
                     children: [
                       Expanded(child: cells[i]),
-                      const SizedBox(width: 10),
+                      Gap.h(10),
                       menu,
                     ],
                   )
@@ -799,23 +800,23 @@ class ChatActionBar3D extends StatelessWidget {
       out.add(
         Row(
           children: [
-            for (var i = 0; i < cells.length; i++) ...[if (i > 0) const SizedBox(width: 10), Expanded(child: cells[i])],
-            if (menu != null) ...[const SizedBox(width: 10), menu],
+            for (var i = 0; i < cells.length; i++) ...[if (i > 0) Gap.h(10), Expanded(child: cells[i])],
+            if (menu != null) ...[Gap.h(10), menu],
           ],
         ),
       );
     }
     return Container(
-      margin: margin,
-      padding: const EdgeInsets.all(10),
-      decoration: const BoxDecoration(color: Colors.white, borderRadius: _kChip, boxShadow: ChatLook3D.card),
+      margin: (margin ?? EdgeInsets.only(top: DS.gv(14), bottom: DS.gv(4))),
+      padding: DS.all(10),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: _kChip, boxShadow: ChatLook3D.card),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: [
           if (note != null)
             Padding(
-              padding: const EdgeInsets.fromLTRB(4, 0, 4, 10),
+              padding: EdgeInsets.fromLTRB(DS.s(4), 0, DS.s(4), DS.s(10)),
               child: Text(note!, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(12, FontWeight.w600, Ink3D.title)),
             ),
           ...out,
@@ -832,7 +833,7 @@ class ChatBarMenu3D extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final s = 44 * _scale(context).clamp(1.0, 1.3);
+    final s = DS.s(44) * _scale(context).clamp(1.0, 1.3);
     return Tooltip(
       message: 'More',
       excludeFromSemantics: true,
@@ -850,7 +851,7 @@ class ChatBarMenu3D extends StatelessWidget {
               border: Border.all(color: ChatLook3D.outline, width: 1.5),
               boxShadow: ChatLook3D.grey,
             ),
-            child: const Icon(Icons.more_vert_rounded, size: 22, color: Ink3D.grey),
+            child: Icon(Icons.more_vert_rounded, size: DS.s(22), color: Ink3D.grey),
           ),
         ),
       ),
@@ -865,7 +866,7 @@ class ChatSheetLabel3D extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(8, 12, 8, 2),
+    padding: EdgeInsets.fromLTRB(DS.s(8), DS.s(12), DS.s(8), DS.s(2)),
     child: Text(text.toUpperCase(), style: Ink3D.text(11, FontWeight.w700, Ink3D.grey, letterSpacing: 0.5)),
   );
 }
@@ -874,7 +875,7 @@ class ChatSheetDivider3D extends StatelessWidget {
   const ChatSheetDivider3D({super.key});
 
   @override
-  Widget build(BuildContext context) => Container(height: 1, margin: const EdgeInsets.symmetric(vertical: 6), color: ChatLook3D.divider);
+  Widget build(BuildContext context) => Container(height: 1, margin: EdgeInsets.symmetric(vertical: DS.gv(6)), color: ChatLook3D.divider);
 }
 
 class ChatSheetRow3D extends StatelessWidget {
@@ -892,14 +893,14 @@ class ChatSheetRow3D extends StatelessWidget {
       label: label,
       exclude: true,
       child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 60),
+        constraints: BoxConstraints(minHeight: DS.s(60)),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+          padding: EdgeInsets.symmetric(horizontal: DS.s(8), vertical: DS.s(6)),
           child: Row(
             children: [
               SizedBox(
-                width: 46,
-                height: 46,
+                width: DS.s(46),
+                height: DS.s(46),
                 child: Stack(
                   clipBehavior: Clip.none,
                   children: [
@@ -907,14 +908,14 @@ class ChatSheetRow3D extends StatelessWidget {
                       decoration: BoxDecoration(shape: BoxShape.circle, color: tone.haloBase.withValues(alpha: 0.14)),
                     ),
                     Positioned(
-                      left: -2,
-                      top: -6,
+                      left: DS.s(-2),
+                      top: DS.s(-6),
                       child: Art3D(asset: art, size: 50, shadowBlur: 3, shadowOffset: const Offset(2, 4), shadowAlpha: 0.25),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(width: 14),
+              Gap.h(14),
               Expanded(child: Text(label, style: Ink3D.text(15, FontWeight.w500, Ink3D.body, height: 1.3))),
             ],
           ),
@@ -942,14 +943,14 @@ class ChatDayPill3D extends StatelessWidget {
       selected: selected,
       exclude: true,
       child: Container(
-        constraints: BoxConstraints(minHeight: 64 * _scale(context).clamp(1.0, 1.4)),
-        padding: const EdgeInsets.symmetric(vertical: 6),
+        constraints: BoxConstraints(minHeight: DS.s(64) * _scale(context).clamp(1.0, 1.4)),
+        padding: EdgeInsets.symmetric(vertical: DS.s(6)),
         decoration: BoxDecoration(
           color: selected ? null : Colors.white,
           gradient: selected ? tone.gradient : null,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: DS.circular(16),
           border: Border.all(color: selected ? Colors.transparent : ChatLook3D.outline, width: 1.5),
-          boxShadow: selected ? ChatLook3D.glow(tone) : const [BoxShadow(color: Color(0x409E9E9E), offset: Offset(2, 4), blurRadius: 8)],
+          boxShadow: selected ? ChatLook3D.glow(tone) : [BoxShadow(color: Color(0x409E9E9E), offset: DS.shadowOffset(const Offset(2, 4)), blurRadius: DS.shadowBlur(8))],
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -958,7 +959,7 @@ class ChatDayPill3D extends StatelessWidget {
               fit: BoxFit.scaleDown,
               child: Text(top, maxLines: 1, style: Ink3D.text(10.5, FontWeight.w500, selected ? Colors.white : tone.text, letterSpacing: 0)),
             ),
-            const SizedBox(height: 2),
+            Gap.v(2),
             FittedBox(
               fit: BoxFit.scaleDown,
               child: Text(day, maxLines: 1, style: Ink3D.text(16, FontWeight.w700, ink, letterSpacing: 0)),
@@ -982,13 +983,13 @@ class ChatSlotPill3D extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final pill = Container(
-      constraints: BoxConstraints(minHeight: 44 * _scale(context).clamp(1.0, 1.4)),
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      constraints: BoxConstraints(minHeight: DS.s(44) * _scale(context).clamp(1.0, 1.4)),
+      padding: EdgeInsets.symmetric(horizontal: DS.s(8), vertical: DS.s(4)),
       alignment: Alignment.center,
       decoration: BoxDecoration(
         color: selected ? null : Colors.white,
         gradient: selected ? tone.gradient : null,
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: DS.circular(22),
         border: Border.all(color: selected ? Colors.transparent : ChatLook3D.outline, width: 1.5),
         boxShadow: selected && !off ? ChatLook3D.glow(tone, alpha: 0.45, blur: 8) : null,
       ),
@@ -1015,14 +1016,14 @@ class ChatSkeletonBubble3D extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 5),
+    padding: EdgeInsets.symmetric(vertical: DS.gv(5)),
     child: Align(
       alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
-        width: width,
-        height: 40,
+        width: DS.s(width),
+        height: DS.s(40),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: DS.circular(16),
           gradient: const LinearGradient(colors: [Color(0xFFCFD8D1), Color(0xFFEEF2EF), Color(0xFFCFD8D1)]),
         ),
       ),
@@ -1041,7 +1042,7 @@ class ChatThreadFade extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, c) {
-        final stop = c.maxHeight.isFinite && c.maxHeight > 0 ? (edge / c.maxHeight).clamp(0.0, 0.5) : 0.0;
+        final stop = c.maxHeight.isFinite && c.maxHeight > 0 ? (DS.s(edge) / c.maxHeight).clamp(0.0, 0.5) : 0.0;
         const clear = Color(0x00000000);
         const solid = Color(0xFF000000);
         return ShaderMask(

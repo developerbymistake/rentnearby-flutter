@@ -8,6 +8,7 @@ import 'kit_tone.dart';
 import 'motion_kit.dart';
 import 'pill_buttons_3d.dart';
 import 'state_card.dart';
+import 'package:bakhli/design/tokens/design_scale.dart';
 
 class TemplateTimePopup extends StatefulWidget {
   const TemplateTimePopup({
@@ -116,7 +117,7 @@ class _TemplateTimePopupState extends State<TemplateTimePopup>
         scale: Tween<double>(begin: 0.94, end: 1).animate(_fade),
         child: Dialog3D(
           tone: tone,
-          art: widget.art ?? (identical(tone, ListingTone.coral) ? ListingArt.taxi : (identical(tone, ListingTone.forest) ? ListingArt.hotel : ListingArt.calendar)),
+          art: widget.art ?? (identical(tone, ListingTone.coral) ? ListingArt.taxi : (identical(tone, ListingTone.forest) ? ListingArt.stay : ListingArt.calendar)),
           label: widget.label,
           title: '${_two(_hour12)}:${_two(_minute)} ${_pm ? 'PM' : 'AM'}',
           content: Column(
@@ -124,18 +125,18 @@ class _TemplateTimePopupState extends State<TemplateTimePopup>
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               DecoratedBox(
-                decoration: BoxDecoration(color: const Color(0xFFF5F6FA), borderRadius: BorderRadius.circular(22)),
+                decoration: BoxDecoration(color: const Color(0xFFF5F6FA), borderRadius: DS.circular(22)),
                 child: MediaQuery.withNoTextScaling(
                   child: SizedBox(
-                    height: 148,
+                    height: DS.s(148),
                     child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    padding: EdgeInsets.symmetric(vertical: DS.s(8)),
                     child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       _column(_hc, 12, (i) => _two(i + 1), _hour12 - 1, (i) => setState(() => _hour12 = i + 1), 'Hour'),
                       Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        padding: EdgeInsets.symmetric(horizontal: DS.s(12)),
                         child: Text(':', style: Ink3D.text(26, FontWeight.w700, Ink3D.title, height: 1)),
                       ),
                       _column(_mc, 60, _two, _minute, (i) => setState(() => _minute = i), 'Minute'),
@@ -145,11 +146,11 @@ class _TemplateTimePopupState extends State<TemplateTimePopup>
                   ),
                 ),
               ),
-              const SizedBox(height: 14),
+              SizedBox(height: DS.s(14)),
               Row(
                 children: [
                   Expanded(child: _periodChip('AM', !_pm, tone, () => setState(() => _pm = false))),
-                  const SizedBox(width: 10),
+                  Gap.h(10),
                   Expanded(child: _periodChip('PM', _pm, tone, () => setState(() => _pm = true))),
                 ],
               ),
@@ -166,21 +167,21 @@ class _TemplateTimePopupState extends State<TemplateTimePopup>
     label: name,
     value: label(current),
     child: SizedBox(
-      width: 76,
+      width: DS.s(76),
       child: Stack(
         alignment: Alignment.center,
         children: [
           DecoratedBox(
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(14),
-              boxShadow: const [BoxShadow(color: Color(0x4D9E9E9E), offset: Offset(2, 4), blurRadius: 8)],
+              borderRadius: DS.circular(14),
+              boxShadow: [BoxShadow(color: Color(0x4D9E9E9E), offset: DS.shadowOffset(const Offset(2, 4)), blurRadius: DS.shadowBlur(8))],
             ),
-            child: const SizedBox(height: 44, width: 76),
+            child: SizedBox(height: DS.s(44), width: DS.s(76)),
           ),
           ListWheelScrollView.useDelegate(
             controller: c,
-            itemExtent: 44,
+            itemExtent: DS.s(44),
             perspective: 0.0001,
             diameterRatio: 100,
             physics: const FixedExtentScrollPhysics(),
@@ -210,13 +211,13 @@ class _TemplateTimePopupState extends State<TemplateTimePopup>
     selected: on,
     child: AnimatedContainer(
       duration: const Duration(milliseconds: 200),
-      height: 42,
+      height: DS.s(42),
       alignment: Alignment.center,
       decoration: BoxDecoration(
         color: on ? null : const Color(0xFFEEF0F4),
         gradient: on ? tone.gradient : null,
-        borderRadius: BorderRadius.circular(21),
-        boxShadow: on ? [BoxShadow(color: tone.shadow.withValues(alpha: 0.45), offset: const Offset(2, 5), blurRadius: 8)] : null,
+        borderRadius: DS.circular(21),
+        boxShadow: on ? [BoxShadow(color: tone.shadow.withValues(alpha: 0.45), offset: DS.shadowOffset(const Offset(2, 5)), blurRadius: DS.shadowBlur(8))] : null,
       ),
       child: Text(t, textScaler: TextScaler.noScaling, style: Ink3D.text(15, FontWeight.w700, on ? Colors.white : Ink3D.grey)),
     ),

@@ -67,14 +67,14 @@ class _TaxiVehicleTypePickerSheetState extends State<TaxiVehicleTypePickerSheet>
             ),
             if (_query.isNotEmpty)
               Padding(
-                padding: const EdgeInsets.only(right: 24, top: 6),
+                padding: EdgeInsets.only(right: DS.s(24), top: DS.s(6)),
                 child: IconButton(
                   tooltip: 'Clear',
                   onPressed: () => setState(() {
                     _searchCtrl.clear();
                     _query = '';
                   }),
-                  icon: const Icon(Icons.close_rounded, size: 20, color: Ink3D.grey),
+                  icon: Icon(Icons.close_rounded, size: DS.s(20), color: Ink3D.grey),
                 ),
               ),
           ],
@@ -85,7 +85,7 @@ class _TaxiVehicleTypePickerSheetState extends State<TaxiVehicleTypePickerSheet>
   }
 
   Widget _plain(String art, String title, {String? action, VoidCallback? onAction}) => ListView(
-        padding: const EdgeInsets.only(top: 40),
+        padding: EdgeInsets.only(top: DS.s(40)),
         children: [
           StateCard3D(tone: _tone, art: art, title: title, actionLabel: action, onAction: onAction, layout: StateLayout.plain),
         ],
@@ -99,7 +99,7 @@ class _TaxiVehicleTypePickerSheetState extends State<TaxiVehicleTypePickerSheet>
       if (loading) {
         return ListView(
           physics: const NeverScrollableScrollPhysics(),
-          padding: const EdgeInsets.only(top: 6),
+          padding: EdgeInsets.only(top: DS.s(6)),
           children: [for (var i = 0; i < 5; i++) const SkeletonListRow()],
         );
       }
@@ -112,12 +112,12 @@ class _TaxiVehicleTypePickerSheetState extends State<TaxiVehicleTypePickerSheet>
       for (final entry in groups.entries) ...[entry.key, ...entry.value],
     ];
     return ListView.builder(
-      padding: EdgeInsets.only(bottom: MediaQuery.paddingOf(context).bottom + 16),
+      padding: EdgeInsets.only(bottom: MediaQuery.paddingOf(context).bottom + DS.s(16)),
       itemCount: items.length,
       itemBuilder: (_, i) {
         final item = items[i];
         if (item is TaxiVehicleTypeModel) return _row(item, divider: i > 0 && items[i - 1] is! String);
-        return Padding(padding: const EdgeInsets.only(top: 12, bottom: 2), child: DayLabel3D(TaxiOptionSets.categoryLabel(item as String).toUpperCase()));
+        return Padding(padding: EdgeInsets.only(top: DS.gv(12), bottom: DS.gv(2)), child: DayLabel3D(TaxiOptionSets.categoryLabel(item as String).toUpperCase()));
       },
     );
   }
@@ -134,12 +134,12 @@ class _TaxiVehicleTypePickerSheetState extends State<TaxiVehicleTypePickerSheet>
       onTap: () => Navigator.pop(context, t),
       trailing: Row(mainAxisSize: MainAxisSize.min, children: [
         if (t.defaultSeats != null) Text('${TaxiOptionSets.seatsLabel(t.defaultSeats!)} seats', style: Ink3D.text(12.5, FontWeight.w400, Ink3D.grey)),
-        const SizedBox(width: 10),
+        Gap.h(10),
         Container(
-          width: 28,
-          height: 28,
+          width: DS.s(28),
+          height: DS.s(28),
           decoration: selected ? BoxDecoration(shape: BoxShape.circle, gradient: _tone.gradient, boxShadow: _tone.glow(blur: 6, dy: 3)) : null,
-          child: selected ? const Icon(Icons.check_rounded, size: 17, color: DesignColors.textInverse) : null,
+          child: selected ? Icon(Icons.check_rounded, size: DS.s(17), color: DesignColors.textInverse) : null,
         ),
       ]),
     );

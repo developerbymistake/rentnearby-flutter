@@ -28,11 +28,11 @@ class DetailTitleRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final filledTag = Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
-      decoration: BoxDecoration(color: accent, borderRadius: BorderRadius.circular(8)),
+      padding: DS.sym(h: 9, v: 3),
+      decoration: BoxDecoration(color: accent, borderRadius: DS.circular(8)),
       child: Text(tag,
           style: FitnessAppTheme.caption.copyWith(
-              fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.6, color: FitnessAppTheme.white)),
+              fontSize: DS.f(11), fontWeight: FontWeight.w700, letterSpacing: 0.6, color: FitnessAppTheme.white)),
     );
     return LayoutBuilder(
         builder: (context, constraints) => Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -41,30 +41,30 @@ class DetailTitleRow extends StatelessWidget {
                   if (secondTag == null)
                     filledTag
                   else
-                    Wrap(spacing: 6, runSpacing: 6, children: [
+                    Wrap(spacing: DS.gh(6), runSpacing: DS.gv(6), children: [
                       filledTag,
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 2),
+                        padding: DS.sym(h: 9, v: 2),
                         decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: DS.circular(8),
                           border: Border.all(color: accent),
                         ),
                         child: Text(secondTag!,
                             style: FitnessAppTheme.caption.copyWith(
-                                fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.4, color: accent)),
+                                fontSize: DS.f(11), fontWeight: FontWeight.w700, letterSpacing: 0.4, color: accent)),
                       ),
                     ]),
-                  const SizedBox(height: 6),
+                  Gap.v(6),
                   Row(children: [
-                    if (iconAsset != null) TravelIcon(iconAsset!, size: 24) else Icon(icon, size: 22, color: accent),
-                    const SizedBox(width: 8),
+                    if (iconAsset != null) TravelIcon(iconAsset!, size: 24) else Icon(icon, size: DS.s(22), color: accent),
+                    SizedBox(width: DS.s(8)),
                     Flexible(
-                      child: Text(title, style: FitnessAppTheme.headline.copyWith(fontSize: 22)),
+                      child: Text(title, style: FitnessAppTheme.headline.copyWith(fontSize: DS.f(22))),
                     ),
                   ]),
                 ]),
               ),
-              const SizedBox(width: 12),
+              Gap.h(12),
               ConstrainedBox(
                 constraints: BoxConstraints(maxWidth: constraints.maxWidth * 0.45),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
@@ -72,7 +72,7 @@ class DetailTitleRow extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: FitnessAppTheme.caption
-                          .copyWith(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.6)),
+                          .copyWith(fontSize: DS.f(11), fontWeight: FontWeight.w700, letterSpacing: 0.6)),
                   FittedBox(
                     fit: BoxFit.scaleDown,
                     alignment: Alignment.centerRight,
@@ -82,13 +82,13 @@ class DetailTitleRow extends StatelessWidget {
                         if (unit.isNotEmpty)
                           TextSpan(
                               text: unit,
-                              style: const TextStyle(fontFamily: FitnessAppTheme.fontName,
-                                  fontSize: 11, fontWeight: FontWeight.w600, color: FitnessAppTheme.lightText)),
+                              style: TextStyle(fontFamily: FitnessAppTheme.fontName,
+                                  fontSize: DS.f(11), fontWeight: FontWeight.w600, color: FitnessAppTheme.lightText)),
                       ]),
                       maxLines: 1,
                       softWrap: false,
                       style: FitnessAppTheme.title
-                          .copyWith(fontSize: 20, fontWeight: FontWeight.w800, color: PickKit.gold, height: 1.2),
+                          .copyWith(fontSize: DS.f(20), fontWeight: FontWeight.w800, color: PickKit.gold, height: 1.2),
                     ),
                   ),
                 ]),
@@ -114,26 +114,26 @@ class DetailChipRow extends StatelessWidget {
         child: Align(
           alignment: Alignment.centerLeft,
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(color: accent.withValues(alpha: Alpha.v10), borderRadius: BorderRadius.circular(8)),
+            padding: DS.sym(h: 10, v: 4),
+            decoration: BoxDecoration(color: accent.withValues(alpha: Alpha.v10), borderRadius: DS.circular(8)),
             child: Row(mainAxisSize: MainAxisSize.min, children: [
-              if (iconAsset != null) TravelIcon(iconAsset!, size: 16) else Icon(icon, size: 13, color: accent),
-              const SizedBox(width: 5),
+              if (iconAsset != null) TravelIcon(iconAsset!, size: 16) else Icon(icon, size: DS.s(13), color: accent),
+              SizedBox(width: DS.s(5)),
               Flexible(
                 child: Text(label,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: FitnessAppTheme.caption.copyWith(fontWeight: FontWeight.w500, color: accent)),
+                    style: FitnessAppTheme.caption.copyWith(fontSize: DS.f(12), fontWeight: FontWeight.w500, color: accent)),
               ),
             ]),
           ),
         ),
       ),
       if (distanceKm != null) ...[
-        const SizedBox(width: 8),
+        Gap.h(8),
         const TravelIcon(TravelIcon.place, size: 14),
-        const SizedBox(width: 4),
-        Text('${distanceKm!.toStringAsFixed(1)} km away', style: FitnessAppTheme.caption),
+        SizedBox(width: DS.s(4)),
+        Text('${distanceKm!.toStringAsFixed(1)} km away', style: FitnessAppTheme.caption.copyWith(fontSize: DS.f(12))),
       ],
     ]);
   }

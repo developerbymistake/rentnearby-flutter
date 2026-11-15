@@ -109,13 +109,13 @@ class _RoleChangeScreenState extends State<RoleChangeScreen> with SingleTickerPr
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            SizedBox(height: pad.top + (MediaQuery.sizeOf(context).height < 820 ? 40 : 64)),
+            SizedBox(height: pad.top + DS.s(MediaQuery.sizeOf(context).height < 820 ? 40 : 64)),
             FadeTransition(
               opacity: _barAnim,
               child: TopBar3D(tone: tone, title: 'Change role', onBack: () => Get.back()),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(18, 8, 18, 0),
+              padding: EdgeInsets.fromLTRB(DS.s(18), DS.gv(8), DS.s(18), 0),
               child: Text(
                 'Needs admin approval.',
                 textAlign: TextAlign.center,
@@ -158,10 +158,10 @@ class _RoleChangeScreenState extends State<RoleChangeScreen> with SingleTickerPr
                 if (_loading) {
                   body = const AuthEvenList(children: [AuthRoleSkeleton(), AuthRoleSkeleton(), AuthRoleSkeleton()]);
                 } else if (_roles.isEmpty) {
-                  body = Padding(padding: const EdgeInsets.only(bottom: 16), child: RoleLoadError(onRetry: _retry));
+                  body = Padding(padding: EdgeInsets.only(bottom: DS.gv(16)), child: RoleLoadError(onRetry: _retry));
                 } else if (targetKey == null) {
                   body = Padding(
-                    padding: const EdgeInsets.only(bottom: 16),
+                    padding: EdgeInsets.only(bottom: DS.gv(16)),
                     child: AuthStateCard(tone: tone, art: ListingArt.profile, title: 'No other role available'),
                   );
                 } else {
@@ -217,15 +217,15 @@ class _RoleChangeScreenState extends State<RoleChangeScreen> with SingleTickerPr
                       Expanded(child: body),
                       if (strips.isNotEmpty)
                         Padding(
-                          padding: const EdgeInsets.fromLTRB(18, 0, 18, 14),
+                          padding: EdgeInsets.fromLTRB(DS.s(18), 0, DS.s(18), DS.gv(14)),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
-                            spacing: 8,
+                            spacing: DS.gv(8),
                             children: strips,
                           ),
                         ),
                       Padding(
-                        padding: EdgeInsets.fromLTRB(18, 0, 18, 22 + pad.bottom),
+                        padding: EdgeInsets.fromLTRB(DS.s(18), 0, DS.s(18), DS.s(22) + pad.bottom),
                         child: GradientPillButton(
                           tone: tone,
                           label: 'Send request',

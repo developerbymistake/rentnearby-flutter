@@ -27,7 +27,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final _auth = Get.find<AuthController>();
 
   static const int _count = 8;
-  static const double _heroOverhang = 30;
+  static double get _heroOverhang => DS.s(30);
 
   static final ListingTone _tone = ListingTone.indigo;
   static final ListingTone _bad = ListingTone.coral;
@@ -92,7 +92,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   _hero(),
-                  const SizedBox(height: _heroOverhang),
+                  SizedBox(height: _heroOverhang),
                         item(Obx(() => _auth.isOwner ? _buildPlansCard() : const SizedBox.shrink())),
                         item(_sectionGroup('ACCOUNT', [
                           _accountPhoneTile(),
@@ -137,7 +137,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ])),
                         item(_logoutButton()),
                         item(Padding(
-                          padding: EdgeInsets.fromLTRB(18, 14, 18, BarMetrics.bodyBottomOf(context)),
+                          padding: EdgeInsets.fromLTRB(DS.s(18), DS.gv(14), DS.s(18), BarMetrics.bodyBottomOf(context)),
                           child: Center(
                             child: Obx(() => TextLink(
                                   label: 'Delete Account',
@@ -167,25 +167,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final narrow = MediaQuery.sizeOf(context).width < 340;
     final art = narrow ? 46.0 : 77.0;
     final halo = narrow ? 50.0 : 82.0;
-    final reserve = halo + 16;
+    final reserve = DS.s(halo + 16);
     return Stack(
       clipBehavior: Clip.none,
       children: [
         Container(
           width: double.infinity,
-          padding: EdgeInsets.fromLTRB(20, MediaQuery.paddingOf(context).top + 28, reserve, 30),
+          padding: EdgeInsets.fromLTRB(DS.s(20), MediaQuery.paddingOf(context).top + DS.s(28), reserve, DS.s(30)),
           decoration: BoxDecoration(
             gradient: _tone.gradient,
-            borderRadius: const BorderRadius.vertical(bottom: Radius.circular(32)),
-            boxShadow: [BoxShadow(color: _tone.haloBase.withValues(alpha: Alpha.scrim), offset: const Offset(0, 8), blurRadius: 20)],
+            borderRadius: BorderRadius.vertical(bottom: Radius.circular(DS.radius(32))),
+            boxShadow: [BoxShadow(color: _tone.haloBase.withValues(alpha: Alpha.scrim), offset: DS.shadowOffset(const Offset(0, 8)), blurRadius: DS.shadowBlur(20))],
           ),
           child: Obx(() {
             final name = _auth.profileName.value;
             return Row(
               children: [
                 SizedBox(
-                  width: 72,
-                  height: 72,
+                  width: DS.s(72),
+                  height: DS.s(72),
                   child: Stack(
                     clipBehavior: Clip.none,
                     children: [
@@ -202,10 +202,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               behavior: HitTestBehavior.opaque,
                               onTap: _openEditNameSheet,
                               child: Container(
-                                width: 28,
-                                height: 28,
-                                decoration: BoxDecoration(color: DesignColors.onPrimary, shape: BoxShape.circle, boxShadow: Ink3D.whiteBtn),
-                                child: Icon(Icons.edit_rounded, size: 15, color: _tone.g2),
+                                width: DS.s(28),
+                                height: DS.s(28),
+                                decoration: BoxDecoration(color: DesignColors.onPrimary, shape: BoxShape.circle, boxShadow: DS.shadows(Ink3D.whiteBtn)),
+                                child: Icon(Icons.edit_rounded, size: DS.s(15), color: _tone.g2),
                               ),
                             ),
                           ),
@@ -214,14 +214,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ],
                   ),
                 ),
-                const SizedBox(width: 12),
+                Gap.h(12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       _HeroName(name.trim().isNotEmpty ? name.trim() : 'Your Profile'),
-                      const SizedBox(height: 4),
+                      Gap.v(4),
                       Obx(() => FittedBox(
                             fit: BoxFit.scaleDown,
                             alignment: Alignment.centerLeft,
@@ -239,19 +239,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
           }),
         ),
         Positioned(
-          right: 8,
-          bottom: -34,
+          right: DS.s(8),
+          bottom: -DS.s(34),
           child: IgnorePointer(
             child: Container(
-              width: halo,
-              height: halo,
+              width: DS.s(halo),
+              height: DS.s(halo),
               decoration: BoxDecoration(shape: BoxShape.circle, color: DesignColors.onPrimary.withValues(alpha: Alpha.v18)),
             ),
           ),
         ),
         Positioned(
-          right: 14,
-          bottom: -30,
+          right: DS.s(14),
+          bottom: -DS.s(30),
           child: IgnorePointer(child: ExcludeSemantics(child: Art3D(asset: ListingArt.profile, size: art, shadowAlpha: 0.3))),
         ),
       ],
@@ -261,18 +261,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget _avatar(String name) {
     final initials = _initials(name);
     return Container(
-      width: 66,
-      height: 66,
+      width: DS.s(66),
+      height: DS.s(66),
       decoration: BoxDecoration(
         color: DesignColors.onPrimary.withValues(alpha: Alpha.v25),
         shape: BoxShape.circle,
-        border: Border.all(color: DesignColors.onPrimary.withValues(alpha: Alpha.v60), width: 3),
+        border: Border.all(color: DesignColors.onPrimary.withValues(alpha: Alpha.v60), width: DS.s(3)),
       ),
       child: Center(
         child: initials.isNotEmpty
             ? Text(initials, maxLines: 1, style: Ink3D.text(28, FontWeight.w700, DesignColors.onPrimary, letterSpacing: 0))
             : ClipOval(
-                child: Image.asset('assets/images/design/images/userImage.webp', width: 54, height: 54, fit: BoxFit.cover)),
+                child: Image.asset('assets/images/design/images/userImage.webp', width: DS.s(54), height: DS.s(54), fit: BoxFit.cover)),
       ),
     );
   }
@@ -286,11 +286,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
             behavior: HitTestBehavior.opaque,
             onTap: onTap,
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 9),
+              padding: DS.sym(h: 18, v: 9),
               decoration: BoxDecoration(
                 gradient: _tone.gradient,
-                borderRadius: BorderRadius.circular(22),
-                boxShadow: [BoxShadow(color: _tone.haloBase.withValues(alpha: Alpha.half), offset: const Offset(1.1, 4), blurRadius: 8)],
+                borderRadius: DS.circular(22),
+                boxShadow: [BoxShadow(color: _tone.haloBase.withValues(alpha: Alpha.half), offset: DS.shadowOffset(const Offset(1.1, 4)), blurRadius: DS.shadowBlur(8))],
               ),
               child: Text(label, maxLines: 1, style: Ink3D.text(14, FontWeight.w700, DesignColors.onPrimary)),
             ),
@@ -299,7 +299,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       );
 
   Widget _planPill(String label, VoidCallback onTap) => ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 104),
+        constraints: BoxConstraints(maxWidth: DS.s(104)),
         child: FittedBox(fit: BoxFit.scaleDown, child: _gradientPill(label, onTap)),
       );
 
@@ -307,7 +307,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final plans = Get.find<PlanController>();
     final compact = MediaQuery.sizeOf(context).width < 340 || MediaQuery.textScalerOf(context).scale(10) > 11.5;
     return WhiteCard3D(
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 5),
+      padding: DS.sym(h: 4, v: 5),
       child: Obx(() {
         final me = plans.myPlan.value;
         final name = me.planName.toLowerCase().contains('plan') ? me.planName : '${me.planName} plan';
@@ -320,7 +320,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           onTap: () => Get.toNamed(AppRoutes.plansBilling),
           trailing: me.paymentEnabled && !compact
               ? _planPill(me.hasPaidPlan ? 'Manage' : 'Upgrade', () => Get.toNamed(AppRoutes.plansBilling))
-              : const Icon(Icons.chevron_right_rounded, size: 22, color: DesignColors.textDisabled),
+              : Icon(Icons.chevron_right_rounded, size: DS.s(22), color: DesignColors.textDisabled),
         );
       }),
     );
@@ -331,7 +331,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(22, 22, 22, 12),
+          padding: EdgeInsets.fromLTRB(DS.s(22), DS.gv(22), DS.s(22), DS.gv(12)),
           child: Text(label, style: Ink3D.text(12, FontWeight.w700, Ink3D.grey, letterSpacing: 0.8)),
         ),
         WhiteCard3D(child: Column(children: children)),
@@ -352,23 +352,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final style = Ink3D.text(16, bold ? FontWeight.w700 : FontWeight.w500, Ink3D.title, letterSpacing: 0, height: 1.3);
     final row = Container(
       decoration: divider ? const BoxDecoration(border: Border(top: BorderSide(color: Ink3D.line))) : null,
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 13),
+      padding: DS.sym(h: 18, v: 13),
       child: Row(
         children: [
           SizedBox(
-            width: 56,
-            height: 56,
+            width: DS.s(56),
+            height: DS.s(56),
             child: Stack(
               clipBehavior: Clip.none,
               children: [
                 Positioned.fill(
                   child: DecoratedBox(
-                    decoration: BoxDecoration(color: _tone.haloBase.withValues(alpha: Alpha.v14), borderRadius: BorderRadius.circular(16)),
+                    decoration: BoxDecoration(color: _tone.haloBase.withValues(alpha: Alpha.v14), borderRadius: DS.circular(16)),
                   ),
                 ),
                 Positioned(
-                  left: -2,
-                  top: -10,
+                  left: -DS.s(2),
+                  top: -DS.s(10),
                   child: ExcludeSemantics(
                     child: Art3D(asset: art, size: 66, shadowBlur: 4, shadowOffset: const Offset(3, 5), shadowAlpha: 0.28),
                   ),
@@ -376,7 +376,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ],
             ),
           ),
-          const SizedBox(width: 14),
+          Gap.h(14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -385,11 +385,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 fitTitle
                     ? FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(title, maxLines: 1, style: style))
                     : Text(title, maxLines: 3, overflow: TextOverflow.ellipsis, style: style),
-                if (below != null) Padding(padding: const EdgeInsets.only(top: 4), child: below),
+                if (below != null) Padding(padding: EdgeInsets.only(top: DS.s(4)), child: below),
               ],
             ),
           ),
-          if (trailing != null) ...[const SizedBox(width: 8), trailing],
+          if (trailing != null) ...[Gap.h(8), trailing],
         ],
       ),
     );
@@ -398,11 +398,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _pill(String text, IconData icon, Color color, Color surface) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
-        decoration: BoxDecoration(color: surface, borderRadius: BorderRadius.circular(12)),
+        padding: DS.sym(h: 9, v: 3),
+        decoration: BoxDecoration(color: surface, borderRadius: DS.circular(12)),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
-          Icon(icon, color: color, size: 12),
-          const SizedBox(width: 4),
+          Icon(icon, color: color, size: DS.s(12)),
+          Gap.h(4),
           Flexible(child: Text(text, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(11, FontWeight.w600, color, letterSpacing: 0))),
         ]),
       );
@@ -428,9 +428,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   behavior: HitTestBehavior.opaque,
                   onTap: _openPhoneVerify,
                   child: ConstrainedBox(
-                    constraints: const BoxConstraints(minHeight: KitMetrics.touch),
+                    constraints: BoxConstraints(minHeight: DS.s(KitMetrics.touch)),
                     child: Padding(
-                      padding: const EdgeInsets.only(left: 8),
+                      padding: EdgeInsets.only(left: DS.s(8)),
                       child: Center(
                         widthFactor: 1,
                         child: Text('Change', maxLines: 1, style: Ink3D.text(13, FontWeight.w700, _tone.g2)),
@@ -504,7 +504,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           overflow: TextOverflow.ellipsis,
           style: Ink3D.text(13, amber ? FontWeight.w600 : FontWeight.w400, amber ? DesignColors.warnDeep : Ink3D.grey, letterSpacing: 0, height: 1.35),
         ),
-        trailing: locked ? null : const Icon(Icons.chevron_right_rounded, size: 22, color: DesignColors.textDisabled),
+        trailing: locked ? null : Icon(Icons.chevron_right_rounded, size: DS.s(22), color: DesignColors.textDisabled),
         onTap: locked ? null : () => Get.toNamed(AppRoutes.roleChange),
       );
     });
@@ -523,8 +523,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   static Widget _fieldBox(Widget field) => Container(
         decoration: BoxDecoration(
           color: DesignColors.onPrimary,
-          borderRadius: const BorderRadius.all(Radius.circular(38)),
-          boxShadow: Ink3D.softShadow,
+          borderRadius: DS.circular(38),
+          boxShadow: DS.shadows(Ink3D.softShadow),
         ),
         child: field,
       );
@@ -576,7 +576,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _logoutButton() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(18, 30, 18, 0),
+      padding: EdgeInsets.fromLTRB(DS.s(18), DS.gv(30), DS.s(18), 0),
       child: Semantics(
         button: true,
         label: 'Logout',
@@ -586,12 +586,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
             behavior: HitTestBehavior.opaque,
             onTap: _confirmLogout,
             child: Container(
-              padding: const EdgeInsets.all(15),
+              padding: DS.all(15),
               alignment: Alignment.center,
               decoration: BoxDecoration(
                 gradient: _logoutGradient,
-                borderRadius: BorderRadius.circular(30),
-                boxShadow: [BoxShadow(color: _bad.g2.withValues(alpha: Alpha.v45), offset: const Offset(3, 8), blurRadius: 14)],
+                borderRadius: DS.circular(30),
+                boxShadow: [BoxShadow(color: _bad.g2.withValues(alpha: Alpha.v45), offset: DS.shadowOffset(const Offset(3, 8)), blurRadius: DS.shadowBlur(14))],
               ),
               child: Text('Logout', maxLines: 1, style: Ink3D.text(17, FontWeight.w700, DesignColors.onPrimary)),
             ),
@@ -606,7 +606,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         surfaceTintColor: Colors.transparent,
         shadowColor: Colors.transparent,
         elevation: 0,
-        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+        insetPadding: DS.sym(h: 24, v: 24),
         child: child,
       );
 
@@ -657,14 +657,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
         canPop: false,
         child: Center(
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 36, vertical: 32),
-            decoration: BoxDecoration(color: DesignColors.onPrimary, borderRadius: BorderRadius.circular(32)),
+            padding: DS.sym(h: 36, v: 32),
+            decoration: BoxDecoration(color: DesignColors.onPrimary, borderRadius: DS.circular(32)),
             child: Column(mainAxisSize: MainAxisSize.min, children: [
-              SizedBox(width: 48, height: 48, child: CircularProgressIndicator(strokeWidth: 3, color: _bad.g2)),
-              const SizedBox(height: 20),
+              SizedBox(width: DS.s(48), height: DS.s(48), child: CircularProgressIndicator(strokeWidth: 3, color: _bad.g2)),
+              Gap.v(20),
               Text('Deleting your account...',
                   style: Ink3D.text(15, FontWeight.w600, Ink3D.title).copyWith(decoration: TextDecoration.none)),
-              const SizedBox(height: 6),
+              Gap.v(6),
               Text('Please do not close the app.',
                   style: Ink3D.text(12, FontWeight.w500, Ink3D.grey).copyWith(decoration: TextDecoration.none)),
             ]),
@@ -716,7 +716,7 @@ class _EditNameSheetState extends State<_EditNameSheet> {
         secondaryLabel: 'Cancel',
         onSecondary: widget.onCancel,
         extra: Padding(
-          padding: const EdgeInsets.only(top: 18),
+          padding: EdgeInsets.only(top: DS.gv(18)),
           child: _ProfileScreenState._fieldBox(TextFormField(
             controller: _ctrl,
             autofocus: true,
@@ -731,7 +731,7 @@ class _EditNameSheetState extends State<_EditNameSheet> {
               enabledBorder: InputBorder.none,
               focusedBorder: InputBorder.none,
               filled: false,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 22, vertical: 16),
+              contentPadding: DS.sym(h: 22, v: 16),
             ),
             onChanged: (_) => setState(() {}),
           )),
@@ -777,19 +777,19 @@ class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
           extra: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 12),
+              Gap.v(12),
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                decoration: BoxDecoration(color: _ProfileScreenState._bad.tint, borderRadius: BorderRadius.circular(16)),
+                padding: DS.sym(h: 16, v: 12),
+                decoration: BoxDecoration(color: _ProfileScreenState._bad.tint, borderRadius: DS.circular(16)),
                 child: Text(
                   'This will permanently delete your account, listings, photos and plan. This cannot be undone.',
                   style: Ink3D.text(13, FontWeight.w500, _ProfileScreenState._bad.text, height: 1.5, letterSpacing: 0),
                 ),
               ),
-              const SizedBox(height: 18),
+              Gap.v(18),
               Text('Type DELETE to confirm', style: Ink3D.text(13, FontWeight.w600, Ink3D.grey, letterSpacing: 0)),
-              const SizedBox(height: 8),
+              Gap.v(8),
               _ProfileScreenState._fieldBox(TextField(
                 controller: _ctrl,
                 autofocus: true,
@@ -803,8 +803,8 @@ class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
                   border: InputBorder.none,
                   enabledBorder: InputBorder.none,
                   focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(38), borderSide: BorderSide(color: _ProfileScreenState._bad.g2, width: 1.5)),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                      borderRadius: DS.circular(38), borderSide: BorderSide(color: _ProfileScreenState._bad.g2, width: 1.5)),
+                  contentPadding: DS.sym(h: 20, v: 14),
                 ),
               )),
             ],
@@ -873,13 +873,13 @@ class _ProfileSheet extends StatelessWidget {
   final VoidCallback onSecondary;
   final bool dialog;
 
-  static const double _artRoom = 56;
+  static double get _artRoom => DS.s(56);
   static const BorderRadius _primaryRadius =
       BorderRadius.only(topLeft: Radius.circular(20), topRight: Radius.circular(20), bottomRight: Radius.circular(20), bottomLeft: Radius.circular(8));
 
   Widget _button(String label, VoidCallback? onTap, {required bool primary}) {
     return Padding(
-      padding: EdgeInsets.only(top: primary ? 22 : 12),
+      padding: EdgeInsets.only(top: DS.gv(primary ? 22 : 12)),
       child: Semantics(
         button: true,
         enabled: onTap != null,
@@ -893,18 +893,18 @@ class _ProfileSheet extends StatelessWidget {
               behavior: HitTestBehavior.opaque,
               onTap: onTap,
               child: Container(
-                constraints: BoxConstraints(minHeight: primary ? 54 : 50, minWidth: double.infinity),
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                constraints: BoxConstraints(minHeight: DS.s(primary ? 54 : 50), minWidth: double.infinity),
+                padding: DS.sym(h: 14, v: 8),
                 alignment: Alignment.center,
                 decoration: primary
                     ? BoxDecoration(
-                        borderRadius: _primaryRadius,
+                        borderRadius: DS.br(_primaryRadius),
                         gradient: tone.gradient,
                         boxShadow: onTap == null
                             ? null
-                            : [BoxShadow(color: tone.haloBase.withValues(alpha: Alpha.half), offset: const Offset(1.1, 6), blurRadius: 14)],
+                            : [BoxShadow(color: tone.haloBase.withValues(alpha: Alpha.half), offset: DS.shadowOffset(const Offset(1.1, 6)), blurRadius: DS.shadowBlur(14))],
                       )
-                    : BoxDecoration(color: DesignColors.onPrimary, borderRadius: BorderRadius.circular(18), boxShadow: Ink3D.softShadow),
+                    : BoxDecoration(color: DesignColors.onPrimary, borderRadius: DS.circular(18), boxShadow: DS.shadows(Ink3D.softShadow)),
                 child: Text(label,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -920,27 +920,27 @@ class _ProfileSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bottom = dialog ? 0.0 : MediaQuery.viewPaddingOf(context).bottom;
-    final radius = dialog ? BorderRadius.circular(32) : const BorderRadius.vertical(top: Radius.circular(32));
+    final radius = dialog ? DS.circular(32) : BorderRadius.vertical(top: Radius.circular(DS.radius(32)));
     return Stack(
       clipBehavior: Clip.none,
       alignment: Alignment.topCenter,
       children: [
         Padding(
-          padding: const EdgeInsets.only(top: _artRoom),
+          padding: EdgeInsets.only(top: _artRoom),
           child: Container(
             width: double.infinity,
             decoration: BoxDecoration(
               color: DesignColors.onPrimary,
               borderRadius: radius,
-              boxShadow: [BoxShadow(color: TemplateTokens.black.withValues(alpha: Alpha.soft), offset: const Offset(0, -4), blurRadius: 24)],
+              boxShadow: [BoxShadow(color: TemplateTokens.black.withValues(alpha: Alpha.soft), offset: DS.shadowOffset(const Offset(0, -4)), blurRadius: DS.shadowBlur(24))],
             ),
             child: Material(
               type: MaterialType.transparency,
               child: SingleChildScrollView(
-                padding: EdgeInsets.fromLTRB(22, 66, 22, 22 + bottom),
+                padding: EdgeInsets.fromLTRB(DS.s(22), DS.s(66), DS.s(22), DS.s(22) + bottom),
                 child: Center(
                   child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 520),
+                    constraints: BoxConstraints(maxWidth: DS.s(520)),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -952,7 +952,7 @@ class _ProfileSheet extends StatelessWidget {
                             style: Ink3D.text(22, FontWeight.w700, Ink3D.title, height: 1.3)),
                         if (body.isNotEmpty)
                           Padding(
-                            padding: const EdgeInsets.only(top: 6),
+                            padding: EdgeInsets.only(top: DS.s(6)),
                             child: Text(body,
                                 maxLines: 6,
                                 overflow: TextOverflow.ellipsis,
@@ -978,7 +978,7 @@ class _ProfileSheet extends StatelessWidget {
             ),
           ),
         ),
-        if (!dialog) const Positioned(top: _artRoom + 12, right: 12, child: SheetCloseButton()),
+        if (!dialog) Positioned(top: _artRoom + DS.s(12), right: DS.s(12), child: const SheetCloseButton()),
       ],
     );
   }

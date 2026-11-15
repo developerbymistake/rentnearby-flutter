@@ -131,7 +131,7 @@ class _TaxiSetupHubScreenState extends State<TaxiSetupHubScreen> with TickerProv
                       ? _skeleton()
                       : failed
                           ? ListView(
-                              padding: const EdgeInsets.only(top: 60, bottom: 24),
+                              padding: EdgeInsets.only(top: DS.s(60), bottom: DS.s(24)),
                               children: [
                                 StateCard3D(
                                   tone: _tone,
@@ -149,7 +149,7 @@ class _TaxiSetupHubScreenState extends State<TaxiSetupHubScreen> with TickerProv
                               onRefresh: _ctrl.load,
                               child: ListView(
                                 physics: const AlwaysScrollableScrollPhysics(),
-                                padding: EdgeInsets.only(bottom: 28 + MediaQuery.paddingOf(context).bottom),
+                                padding: EdgeInsets.only(bottom: DS.s(28) + MediaQuery.paddingOf(context).bottom),
                                 children: _content(taxi, gated),
                               ),
                             ),
@@ -179,16 +179,16 @@ class _TaxiSetupHubScreenState extends State<TaxiSetupHubScreen> with TickerProv
         ),
       );
 
-  Widget _skeleton() => const Padding(
-        padding: EdgeInsets.fromLTRB(18, 16, 18, 0),
+  Widget _skeleton() => Padding(
+        padding: EdgeInsets.fromLTRB(DS.s(18), DS.gv(16), DS.s(18), 0),
         child: Column(children: [
-          SkeletonBox(height: 160, radius: 8),
-          SizedBox(height: 16),
-          SkeletonBox(height: 78, radius: 8),
-          SizedBox(height: 16),
-          SkeletonBox(height: 78, radius: 8),
-          SizedBox(height: 16),
-          SkeletonBox(height: 78, radius: 8),
+          const SkeletonBox(height: 160, radius: 8),
+          Gap.v(16),
+          const SkeletonBox(height: 78, radius: 8),
+          Gap.v(16),
+          const SkeletonBox(height: 78, radius: 8),
+          Gap.v(16),
+          const SkeletonBox(height: 78, radius: 8),
         ]),
       );
 
@@ -279,16 +279,16 @@ class _TaxiSetupHubScreenState extends State<TaxiSetupHubScreen> with TickerProv
   }
 
   Widget _wrongRoleLink(int percent) => Padding(
-        padding: const EdgeInsets.only(top: 6),
+        padding: EdgeInsets.only(top: DS.gv(6)),
         child: Center(
           child: Tap3D(
             onTap: () => Get.toNamed(AppRoutes.roleSelect, arguments: {'correction': true, 'percent': percent}),
             label: 'Wrong role? Change it',
             exclude: true,
             child: ConstrainedBox(
-              constraints: const BoxConstraints(minHeight: 44),
+              constraints: BoxConstraints(minHeight: DS.s(44)),
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+                padding: DS.sym(h: 16),
                 child: Center(
                   widthFactor: 1,
                   child: Text('Wrong role? Change it', style: Ink3D.text(13.5, FontWeight.w700, _tone.text)),

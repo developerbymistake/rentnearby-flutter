@@ -1,3 +1,4 @@
+import 'package:bakhli/design/tokens/design_scale.dart';
 import 'package:flutter/material.dart';
 
 import 'art_3d.dart';
@@ -12,8 +13,8 @@ class Switch3D extends StatelessWidget {
   final bool onGradient;
   final String? semanticsLabel;
 
-  static const double width = 50;
-  static const double height = 28;
+  static double get width => DS.s(50);
+  static double get height => DS.s(28);
 
   @override
   Widget build(BuildContext context) {
@@ -23,9 +24,9 @@ class Switch3D extends StatelessWidget {
       duration: fast,
       width: width,
       height: height,
-      padding: const EdgeInsets.all(3),
+      padding: DS.all(3),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(15),
+        borderRadius: DS.circular(15),
         color: onGradient ? (value ? Colors.white : Colors.white.withValues(alpha: 0.35)) : (value ? null : Form3D.switchOff),
         gradient: !onGradient && value ? tone.gradient : null,
       ),
@@ -34,9 +35,9 @@ class Switch3D extends StatelessWidget {
         curve: Curves.easeOut,
         alignment: value ? Alignment.centerRight : Alignment.centerLeft,
         child: Container(
-          width: 22,
-          height: 22,
-          decoration: BoxDecoration(shape: BoxShape.circle, color: onGradient && value ? tone.button : Colors.white, boxShadow: Form3D.knob),
+          width: DS.s(22),
+          height: DS.s(22),
+          decoration: BoxDecoration(shape: BoxShape.circle, color: onGradient && value ? tone.button : Colors.white, boxShadow: DS.shadows(Form3D.knob)),
         ),
       ),
     );
@@ -49,7 +50,7 @@ class Switch3D extends StatelessWidget {
         behavior: HitTestBehavior.opaque,
         onTap: live ? () => onChanged!(!value) : null,
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8),
+          padding: DS.sym(v: 8),
           child: live ? track : Opacity(opacity: 0.5, child: track),
         ),
       ),
@@ -90,17 +91,17 @@ class ToggleRow extends StatelessWidget {
       children: [
         if (a != null) ...[
           SizedBox(
-            width: 44,
-            height: 44,
+            width: DS.s(44),
+            height: DS.s(44),
             child: Stack(
               clipBehavior: Clip.none,
               children: [
-                Container(decoration: BoxDecoration(borderRadius: BorderRadius.circular(14), color: Form3D.wash(tone, 0.13))),
-                Positioned(left: -3, top: -8, child: Art3D(asset: a, size: 50, shadowBlur: 3, shadowOffset: const Offset(2, 4))),
+                Container(decoration: BoxDecoration(borderRadius: DS.circular(14), color: Form3D.wash(tone, 0.13))),
+                Positioned(left: DS.s(-3), top: DS.s(-8), child: Art3D(asset: a, size: 50, shadowBlur: 3, shadowOffset: const Offset(2, 4))),
               ],
             ),
           ),
-          const SizedBox(width: 12),
+          Gap.h(12),
         ],
         Expanded(
           child: Column(
@@ -112,22 +113,22 @@ class ToggleRow extends StatelessWidget {
             ],
           ),
         ),
-        const SizedBox(width: 12),
+        Gap.h(12),
         ExcludeSemantics(child: IgnorePointer(child: Switch3D(tone: tone, value: value, onChanged: live ? (_) {} : null))),
       ],
     );
     final Widget body;
     if (filled) {
       body = Container(
-        constraints: const BoxConstraints(minHeight: 54),
-        padding: const EdgeInsets.fromLTRB(18, 4, 12, 4),
-        decoration: BoxDecoration(color: Form3D.fill, borderRadius: BorderRadius.circular(30)),
+        constraints: BoxConstraints(minHeight: DS.s(54)),
+        padding: DS.insets(l: 18, t: 4, r: 12, b: 4),
+        decoration: BoxDecoration(color: Form3D.fill, borderRadius: DS.circular(30)),
         child: row,
       );
     } else {
       body = Container(
-        constraints: const BoxConstraints(minHeight: 48),
-        padding: EdgeInsets.symmetric(vertical: a == null ? 2 : 9),
+        constraints: BoxConstraints(minHeight: DS.s(48)),
+        padding: DS.sym(v: a == null ? 2 : 9),
         decoration: divider ? const BoxDecoration(border: Border(top: BorderSide(color: Form3D.limit))) : null,
         child: row,
       );

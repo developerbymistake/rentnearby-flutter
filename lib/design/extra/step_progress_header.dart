@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import 'art_3d.dart';
 import 'pill_buttons_3d.dart';
+import 'package:bakhli/design/tokens/design_scale.dart';
 
 class StepProgressHeader extends StatelessWidget {
   const StepProgressHeader({
@@ -12,7 +13,7 @@ class StepProgressHeader extends StatelessWidget {
     required this.labels,
     required this.current,
     this.onStepTap,
-    this.margin = const EdgeInsets.fromLTRB(18, 6, 18, 0),
+    this.margin,
     this.activeLabelColor,
   });
 
@@ -20,10 +21,10 @@ class StepProgressHeader extends StatelessWidget {
   final List<String> labels;
   final int current;
   final ValueChanged<int>? onStepTap;
-  final EdgeInsets margin;
+  final EdgeInsets? margin;
   final Color? activeLabelColor;
 
-  static const double dot = 38;
+  static double get dot => DS.s(38);
 
   String _state(int i) => i < current ? 'done' : (i == current ? 'current' : 'to do');
 
@@ -39,11 +40,11 @@ class StepProgressHeader extends StatelessWidget {
         color: done || on ? null : Form3D.todo,
         gradient: done || on ? tone.gradient : null,
         boxShadow: on
-            ? [BoxShadow(color: Form3D.wash(tone, 0.18), spreadRadius: 4), BoxShadow(color: tone.shadow, offset: const Offset(2, 5), blurRadius: 8)]
+            ? [BoxShadow(color: Form3D.wash(tone, 0.18), spreadRadius: DS.s(4)), BoxShadow(color: tone.shadow, offset: DS.shadowOffset(const Offset(2, 5)), blurRadius: DS.shadowBlur(8))]
             : null,
       ),
       child: done
-          ? const Icon(Icons.check_rounded, size: 22, color: Colors.white)
+          ? Icon(Icons.check_rounded, size: DS.s(22), color: Colors.white)
           : Text('${i + 1}', textScaler: TextScaler.noScaling, style: Ink3D.text(15, FontWeight.w700, on ? Colors.white : Form3D.todoText, letterSpacing: 0)),
     );
   }
@@ -53,16 +54,16 @@ class StepProgressHeader extends StatelessWidget {
     final n = labels.length;
     final scale = MediaQuery.textScalerOf(context).scale(100) / 100;
     return Container(
-      margin: margin,
-      padding: const EdgeInsets.fromLTRB(14, 14, 14, 10),
-      decoration: const BoxDecoration(
+      margin: margin ?? DS.gapInsets(l: 18, t: 6, r: 18),
+      padding: EdgeInsets.fromLTRB(DS.s(14), DS.s(14), DS.s(14), DS.s(10)),
+      decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(30), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8)),
-        boxShadow: Form3D.cardShadow,
+        borderRadius: BorderRadius.only(topLeft: Radius.circular(DS.radius(8)), topRight: Radius.circular(DS.radius(30)), bottomLeft: Radius.circular(DS.radius(8)), bottomRight: Radius.circular(DS.radius(8))),
+        boxShadow: DS.shadows(Form3D.cardShadow),
       ),
       child: LayoutBuilder(
         builder: (context, box) {
-          final cell = math.max(dot + 2, math.min(62 * scale.clamp(1.0, 1.3), (box.maxWidth - 10 * (n - 1)) / n));
+          final cell = math.max(dot + DS.s(2), math.min(DS.s(62) * scale.clamp(1.0, 1.3), (box.maxWidth - DS.gh(10) * (n - 1)) / n));
           return Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -70,10 +71,10 @@ class StepProgressHeader extends StatelessWidget {
                 if (i > 0)
                   Expanded(
                     child: Container(
-                      height: 3,
-                      margin: const EdgeInsets.only(top: (dot - 3) / 2),
+                      height: DS.s(3),
+                      margin: EdgeInsets.only(top: (dot - DS.s(3)) / 2),
                       decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(2),
+                        borderRadius: DS.circular(2),
                         color: i <= current ? null : Form3D.todo,
                         gradient: i <= current ? LinearGradient(colors: [tone.g1, tone.g2]) : null,
                       ),
@@ -89,7 +90,7 @@ class StepProgressHeader extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         _dot(i),
-                        const SizedBox(height: 6),
+                        SizedBox(height: DS.s(6)),
                         FittedBox(
                           fit: BoxFit.scaleDown,
                           child: Text(

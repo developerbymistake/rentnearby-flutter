@@ -9,6 +9,7 @@ import '../utils/trip_format.dart';
 import 'package:bakhli/design/extra/art_3d.dart';
 import 'package:bakhli/design/extra/status_pill.dart';
 import '../../../design/tokens/alpha_tokens.dart';
+import '../../../design/tokens/design_scale.dart';
 enum TripDisplayStatus {
   none,
   shortlisted,
@@ -195,15 +196,15 @@ class TripBookingStatePill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ConstrainedBox(
-      constraints: const BoxConstraints(minHeight: 36),
+      constraints: BoxConstraints(minHeight: DS.s(36)),
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: TripBookingStateVisuals.surface(state),
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: DS.circular(18),
           border: Border.all(color: TripBookingStateVisuals.bar(state).withValues(alpha: Alpha.scrim)),
         ),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          padding: DS.sym(h: 12, v: 6),
           child: Center(
             widthFactor: 1,
             child: FittedBox(
@@ -211,7 +212,7 @@ class TripBookingStatePill extends StatelessWidget {
               child: Text(
                 TripBookingStateVisuals.label(state),
                 maxLines: 1,
-                style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, fontWeight: FontWeight.w600, color: TripBookingStateVisuals.text(state)),
+                style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: DS.f(12), fontWeight: FontWeight.w600, color: TripBookingStateVisuals.text(state)),
               ),
             ),
           ),

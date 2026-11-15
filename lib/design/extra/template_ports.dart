@@ -12,6 +12,7 @@ import 'kit_tone.dart';
 import 'motion_kit.dart';
 import 'template_motion.dart';
 import 'travel_icon.dart';
+import 'package:bakhli/design/tokens/design_scale.dart';
 
 class ScrollFadeTopBar extends StatefulWidget {
   const ScrollFadeTopBar({
@@ -32,7 +33,7 @@ class ScrollFadeTopBar extends StatefulWidget {
   final double threshold;
 
   static double heightOf(BuildContext context) =>
-      MediaQuery.paddingOf(context).top + 16 + 38 + 12 + 16;
+      MediaQuery.paddingOf(context).top + DS.s(16 + 38 + 12 + 16);
 
   @override
   State<ScrollFadeTopBar> createState() => _ScrollFadeTopBarState();
@@ -97,11 +98,11 @@ class _ScrollFadeTopBarState extends State<ScrollFadeTopBar>
       child: Container(
         decoration: BoxDecoration(
           color: DesignColors.tint(DesignColors.surface, op),
-          borderRadius: CardRadius.header,
-          boxShadow: [
+          borderRadius: DS.br(CardRadius.header),
+          boxShadow: DS.shadows([
             ShadowTokens.tint(DesignColors.textGrey,
                 const ShadowSpec(0.4, Offset(1.1, 1.1), 10).scaled(op)),
-          ],
+          ]),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -109,22 +110,22 @@ class _ScrollFadeTopBarState extends State<ScrollFadeTopBar>
             SizedBox(height: MediaQuery.paddingOf(context).top),
             Padding(
               padding: EdgeInsets.only(
-                  left: 16, right: 16, top: 16, bottom: 12),
+                  left: DS.s(16), right: DS.s(16), top: DS.s(16), bottom: DS.s(12)),
               child: Row(
                 children: [
                   if (widget.onBack != null)
                     SizedBox(
-                      width: 38,
-                      height: 38,
+                      width: DS.s(38),
+                      height: DS.s(38),
                       child: InkWell(
                         highlightColor: Colors.transparent,
-                        borderRadius: const BorderRadius.all(Radius.circular(32)),
+                        borderRadius: BorderRadius.all(Radius.circular(DS.radius(32))),
                         onTap: widget.onBack,
-                        child: const Icon(Icons.keyboard_arrow_left,
-                            size: 28, color: DesignColors.textGrey),
+                        child: Icon(Icons.keyboard_arrow_left,
+                            size: DS.s(28), color: DesignColors.textGrey),
                       ),
                     ),
-                  if (widget.onBack != null) const SizedBox(width: 4),
+                  if (widget.onBack != null) SizedBox(width: DS.s(4)),
                   Expanded(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
@@ -211,14 +212,14 @@ class RingSweep extends StatelessWidget {
   Widget build(BuildContext context) {
     final p = progress.clamp(0.0, 1.0);
     final d = KitMotion.reduce(context) ? Duration.zero : duration;
-    final inner = size - 8;
+    final inner = DS.s(size - 8);
     return TweenAnimationBuilder<double>(
       tween: Tween<double>(begin: 0, end: p),
       duration: d,
       curve: Curves.fastOutSlowIn,
       builder: (context, v, _) => SizedBox(
-        width: size,
-        height: size,
+        width: DS.s(size),
+        height: DS.s(size),
         child: Stack(
           alignment: Alignment.center,
           children: [
@@ -229,14 +230,14 @@ class RingSweep extends StatelessWidget {
                 color: DesignColors.surface,
                 shape: BoxShape.circle,
                 border: Border.all(
-                    width: 4,
+                    width: DS.s(4),
                     color: DesignColors.tint(DesignColors.primary, Alpha.soft)),
               ),
               child: center == null ? null : Center(child: center),
             ),
             CustomPaint(
               painter: CurvePainter(colors: colors, angle: 5 + 360 * v),
-              child: SizedBox(width: size, height: size),
+              child: SizedBox(width: DS.s(size), height: DS.s(size)),
             ),
           ],
         ),
@@ -254,8 +255,7 @@ class HeroGradientCard extends StatelessWidget {
     this.iconAsset,
     this.tone = KitTone.brand,
     this.gradient,
-    this.margin =
-        const EdgeInsets.symmetric(horizontal: KitMetrics.gutter, vertical: 12),
+    this.margin,
   });
 
   final String title;
@@ -264,28 +264,28 @@ class HeroGradientCard extends StatelessWidget {
   final VoidCallback? onTap;
   final KitTone tone;
   final Gradient? gradient;
-  final EdgeInsets margin;
+  final EdgeInsets? margin;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: margin,
+      padding: margin ?? EdgeInsets.symmetric(horizontal: DS.s(KitMetrics.gutter), vertical: DS.s(12)),
       child: PressScale(
         child: Container(
           decoration: BoxDecoration(
             gradient: gradient ?? tone.gradient,
-            borderRadius: CardRadius.hero,
-            boxShadow: ShadowTokens.glow(tone.glow),
+            borderRadius: DS.br(CardRadius.hero),
+            boxShadow: DS.shadows(ShadowTokens.glow(tone.glow)),
           ),
           child: Material(
             color: Colors.transparent,
             child: InkWell(
-              borderRadius: CardRadius.hero,
+              borderRadius: DS.br(CardRadius.hero),
               splashColor: TemplateTokens.white24,
               highlightColor: Colors.transparent,
               onTap: onTap,
               child: Padding(
-                padding: const EdgeInsets.all(16),
+                padding: DS.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -298,7 +298,7 @@ class HeroGradientCard extends StatelessWidget {
                             children: [
                               if (label != null)
                                 Text(label!, style: TypeTokens.onGradientBody),
-                              const SizedBox(height: 8),
+                              SizedBox(height: DS.s(8)),
                               Text(title,
                                   maxLines: 3,
                                   overflow: TextOverflow.ellipsis,
@@ -309,9 +309,9 @@ class HeroGradientCard extends StatelessWidget {
                         ),
                         if (iconAsset != null)
                           Container(
-                            width: 84,
-                            height: 84,
-                            padding: const EdgeInsets.all(18),
+                            width: DS.s(84),
+                            height: DS.s(84),
+                            padding: DS.all(18),
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               color: DesignColors.tint(
@@ -321,22 +321,22 @@ class HeroGradientCard extends StatelessWidget {
                           ),
                       ],
                     ),
-                    const SizedBox(height: 24),
+                    SizedBox(height: DS.s(24)),
                     Align(
                       alignment: Alignment.centerRight,
                       child: Container(
-                        width: 44,
-                        height: 44,
+                        width: DS.s(44),
+                        height: DS.s(44),
                         decoration: BoxDecoration(
                           color: DesignColors.surface,
                           shape: BoxShape.circle,
-                          boxShadow: [
+                          boxShadow: DS.shadows([
                             ShadowTokens.tint(TemplateTokens.nearlyBlack,
                                 const ShadowSpec(0.4, Offset(8, 8), 8))
-                          ],
+                          ]),
                         ),
                         child: Icon(Icons.arrow_forward_rounded,
-                            size: 22, color: tone.accentDark),
+                            size: DS.s(22), color: tone.accentDark),
                       ),
                     ),
                   ],
@@ -381,11 +381,11 @@ class OverlappedImageCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const photo = height - 48.0;
+    final photo = DS.s(height - 48.0);
     return PressScale(
       child: SizedBox(
-        width: width,
-        height: height,
+        width: DS.s(width),
+        height: DS.s(height),
         child: InkWell(
           splashColor: Colors.transparent,
           highlightColor: Colors.transparent,
@@ -393,13 +393,13 @@ class OverlappedImageCard extends StatelessWidget {
           child: Stack(
             children: [
               Positioned.fill(
-                left: 48,
+                left: DS.s(48),
                 child: Container(
-                  decoration: const BoxDecoration(
+                  decoration: BoxDecoration(
                     color: TemplateTokens.courseCardBackground,
-                    borderRadius: BorderRadius.all(Radius.circular(16)),
+                    borderRadius: BorderRadius.all(Radius.circular(DS.radius(16))),
                   ),
-                  padding: const EdgeInsets.fromLTRB(72 + 16, 16, 16, 12),
+                  padding: EdgeInsets.fromLTRB(DS.s(72 + 16), DS.s(16), DS.s(16), DS.s(12)),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -424,12 +424,12 @@ class OverlappedImageCard extends StatelessWidget {
                             Text(ratingText!,
                                 style: TypeTokens.style(14, FontWeight.w600,
                                     color: DesignColors.textGrey)),
-                            const SizedBox(width: 2),
+                            SizedBox(width: DS.s(2)),
                             const TravelIcon(TravelIcon.star, size: 16),
                           ],
                         ],
                       ),
-                      const SizedBox(height: 4),
+                      SizedBox(height: DS.s(4)),
                       Row(
                         children: [
                           Expanded(
@@ -443,13 +443,13 @@ class OverlappedImageCard extends StatelessWidget {
                           GestureDetector(
                             onTap: onAction ?? onTap,
                             child: Container(
-                              width: 32,
-                              height: 32,
+                              width: DS.s(32),
+                              height: DS.s(32),
                               decoration: BoxDecoration(
                                   color: tone.accentDark,
-                                  borderRadius: CardRadius.chip),
+                                  borderRadius: DS.br(CardRadius.chip)),
                               child: Icon(actionIcon,
-                                  size: 20, color: DesignColors.onPrimary),
+                                  size: DS.s(20), color: DesignColors.onPrimary),
                             ),
                           ),
                         ],
@@ -459,15 +459,15 @@ class OverlappedImageCard extends StatelessWidget {
                 ),
               ),
               Positioned(
-                left: 16,
-                top: 24,
+                left: DS.s(16),
+                top: DS.s(24),
                 child: DecoratedBox(
                   decoration: BoxDecoration(
-                    borderRadius: KitMetrics.photo,
-                    boxShadow: [
+                    borderRadius: DS.br(KitMetrics.photo),
+                    boxShadow: DS.shadows([
                       ShadowTokens.tint(
                           DesignColors.textGrey, ShadowSpec.ring)
-                    ],
+                    ]),
                   ),
                   child: KitPhoto(
                     url: imageUrl,
@@ -475,7 +475,7 @@ class OverlappedImageCard extends StatelessWidget {
                     height: photo,
                     tone: tone,
                     asset: fallbackAsset,
-                    radius: KitMetrics.photo,
+                    radius: DS.br(KitMetrics.photo),
                   ),
                 ),
               ),
@@ -491,37 +491,37 @@ class PinnedFilterBar extends StatelessWidget {
   const PinnedFilterBar({
     super.key,
     required this.child,
-    this.extent = defaultExtent,
-    this.padding = const EdgeInsets.fromLTRB(16, 8, 16, 4),
+    this.extent,
+    this.padding,
   });
 
   final Widget child;
-  final double extent;
-  final EdgeInsetsGeometry padding;
+  final double? extent;
+  final EdgeInsetsGeometry? padding;
   static const double defaultExtent = 52;
 
   @override
   Widget build(BuildContext context) {
     return SliverPersistentHeader(
       pinned: true,
-      delegate: _PinnedDelegate(child, extent, padding),
+      delegate: _PinnedDelegate(child, extent ?? DS.s(defaultExtent), padding ?? DS.insets(l: 16, t: 8, r: 16, b: 4)),
     );
   }
 }
 
 class FixedFilterBar extends StatelessWidget {
-  const FixedFilterBar({super.key, required this.child, this.height = PinnedFilterBar.defaultExtent});
+  const FixedFilterBar({super.key, required this.child, this.height});
 
   final Widget child;
-  final double height;
+  final double? height;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: height,
+      height: height ?? DS.s(PinnedFilterBar.defaultExtent),
       decoration: BoxDecoration(
         color: DesignColors.scaffold,
-        boxShadow: [ShadowTokens.tint(DesignColors.textGrey, ShadowSpec.topBar)],
+        boxShadow: DS.shadows([ShadowTokens.tint(DesignColors.textGrey, ShadowSpec.topBar)]),
         border: const Border(bottom: BorderSide(color: DesignColors.divider)),
       ),
       child: child,
@@ -546,12 +546,12 @@ class _PinnedDelegate extends SliverPersistentHeaderDelegate {
           left: 0,
           right: 0,
           child: Container(
-            height: 24,
+            height: DS.s(24),
             decoration: BoxDecoration(
               color: DesignColors.scaffold,
-              boxShadow: [
+              boxShadow: DS.shadows([
                 ShadowTokens.tint(DesignColors.textGrey, ShadowSpec.topBar)
-              ],
+              ]),
             ),
           ),
         ),
@@ -588,14 +588,14 @@ double kitSigma(double radius) => radius * 0.57735 + 0.5;
 void paintRingThumb(Canvas canvas, Offset c, Color color) {
   canvas.drawPath(
     Path()
-      ..addOval(Rect.fromCenter(center: c, width: 24, height: 24))
+      ..addOval(Rect.fromCenter(center: c, width: DS.s(24), height: DS.s(24)))
       ..fillType = PathFillType.evenOdd,
     Paint()
       ..color = TemplateTokens.black.withValues(alpha: Alpha.half)
-      ..maskFilter = MaskFilter.blur(BlurStyle.normal, kitSigma(8)),
+      ..maskFilter = MaskFilter.blur(BlurStyle.normal, kitSigma(DS.s(8))),
   );
-  canvas.drawCircle(c, 12, Paint()..color = TemplateTokens.white);
-  canvas.drawCircle(c, 10, Paint()..color = color);
+  canvas.drawCircle(c, DS.s(12), Paint()..color = TemplateTokens.white);
+  canvas.drawCircle(c, DS.s(10), Paint()..color = color);
 }
 
 class RingThumbShape extends SliderComponentShape {
@@ -603,7 +603,7 @@ class RingThumbShape extends SliderComponentShape {
 
   @override
   Size getPreferredSize(bool isEnabled, bool isDiscrete) =>
-      const Size.fromRadius(12);
+      Size.fromRadius(DS.s(12));
 
   @override
   void paint(
@@ -630,7 +630,7 @@ class RingRangeThumbShape extends RangeSliderThumbShape {
 
   @override
   Size getPreferredSize(bool isEnabled, bool isDiscrete) =>
-      const Size.fromRadius(12);
+      Size.fromRadius(DS.s(12));
 
   @override
   void paint(
@@ -658,7 +658,7 @@ SliderThemeData ringSliderTheme(BuildContext context, {Color? color}) {
     inactiveTrackColor: DesignColors.tint(DesignColors.textGrey, Alpha.soft),
     thumbColor: c,
     overlayColor: DesignColors.tint(c, Alpha.tint),
-    trackHeight: 4,
+    trackHeight: DS.s(4),
     thumbShape: const RingThumbShape(),
     rangeThumbShape: const RingRangeThumbShape(),
   );
@@ -693,7 +693,7 @@ class RingSlider extends StatelessWidget {
         if (label != null)
           LayoutBuilder(
             builder: (context, c) {
-              const pad = 12.0;
+              final pad = DS.s(12);
               final w = math.max(0.0, c.maxWidth - pad * 2);
               return Container(
                 alignment: Alignment.centerLeft,

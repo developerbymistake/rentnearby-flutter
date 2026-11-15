@@ -44,11 +44,11 @@ class _TaxiDetailScreenState extends State<TaxiDetailScreen> with TickerProvider
 
   bool get _isOwner => _taxi != null && _auth.user.value?.id == _taxi!.userId;
 
-  double _heroHeight(BuildContext context) => 242 + MediaQuery.paddingOf(context).top;
+  double _heroHeight(BuildContext context) => DS.s(242) + MediaQuery.paddingOf(context).top;
 
   void _onScroll() {
     if (!_scroll.hasClients) return;
-    final on = _scroll.offset > _heroHeight(context) - DetailTopBar.heightOf(context) - 26;
+    final on = _scroll.offset > _heroHeight(context) - DetailTopBar.heightOf(context) - DS.s(26);
     if (on != _barOn.value) _barOn.value = on;
   }
 
@@ -147,7 +147,7 @@ class _TaxiDetailScreenState extends State<TaxiDetailScreen> with TickerProvider
         Column(children: [
           ToastSlot(
             margin: EdgeInsets.fromLTRB(
-                18, !_loading && _taxi != null ? DetailTopBar.heightOf(context) + 14 : MediaQuery.paddingOf(context).top + 64, 18, 0),
+                DS.s(18), !_loading && _taxi != null ? DetailTopBar.heightOf(context) + DS.s(14) : MediaQuery.paddingOf(context).top + DS.s(64), DS.s(18), 0),
           ),
           Expanded(child: _loading ? _buildLoader() : _buildContent()),
         ]),
@@ -160,8 +160,8 @@ class _TaxiDetailScreenState extends State<TaxiDetailScreen> with TickerProvider
   }
 
   Widget _backAt(BuildContext context, {bool strong = false}) => Positioned(
-        top: MediaQuery.paddingOf(context).top + 10,
-        left: 14,
+        top: MediaQuery.paddingOf(context).top + DS.s(10),
+        left: DS.s(14),
         child: DetailGlassButton(onTap: () => Get.back(), dark: true, strong: strong),
       );
 
@@ -237,7 +237,7 @@ class _TaxiDetailScreenState extends State<TaxiDetailScreen> with TickerProvider
                   animationController: _anim,
                   child: sections[i],
                 ),
-              const SizedBox(height: 28),
+              Gap.v(28),
             ]),
           ),
           RevealBarPad(_reveal),
@@ -364,19 +364,19 @@ class DetailSharingOverlay extends StatelessWidget {
           color: DesignColors.scrim,
           child: Center(
             child: Container(
-              padding: const EdgeInsets.fromLTRB(34, 24, 34, 24),
-              decoration: const BoxDecoration(
+              padding: DS.insets(l: 34, t: 24, r: 34, b: 24),
+              decoration: BoxDecoration(
                 color: DesignColors.surface,
-                borderRadius: BorderRadius.all(Radius.circular(24)),
-                boxShadow: ShadowTokens.elev3,
+                borderRadius: DS.circular(24),
+                boxShadow: DS.shadows(ShadowTokens.elev3),
               ),
               child: Column(mainAxisSize: MainAxisSize.min, children: [
                 SizedBox(
-                  width: 42,
-                  height: 42,
-                  child: CircularProgressIndicator(strokeWidth: 4, color: tone.g2, backgroundColor: DesignColors.tint(tone.haloBase, Alpha.soft)),
+                  width: DS.s(42),
+                  height: DS.s(42),
+                  child: CircularProgressIndicator(strokeWidth: DS.s(4), color: tone.g2, backgroundColor: DesignColors.tint(tone.haloBase, Alpha.soft)),
                 ),
-                const SizedBox(height: 14),
+                Gap.v(14),
                 ExcludeSemantics(
                   child: Material(
                     type: MaterialType.transparency,

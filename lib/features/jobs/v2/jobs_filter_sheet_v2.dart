@@ -55,7 +55,7 @@ class _JobsFilterSheetV2State extends State<JobsFilterSheetV2> {
   Widget _section(String label, Widget chips, {bool first = false}) => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (!first) Container(height: 1, margin: const EdgeInsets.only(top: 12), color: Ink3D.line),
+          if (!first) Container(height: 1, margin: EdgeInsets.only(top: DS.gv(12)), color: Ink3D.line),
           JobsSheetLabel(label, first: first),
           chips,
         ],

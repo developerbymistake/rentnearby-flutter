@@ -186,7 +186,7 @@ class _AskBodyState extends State<_AskBody> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (_serverError != null) Padding(padding: const EdgeInsets.only(bottom: 8), child: Text(_serverError!, style: FieldMessage.errorStyle)),
+          if (_serverError != null) Padding(padding: EdgeInsets.only(bottom: DS.gv(8)), child: Text(_serverError!, style: FieldMessage.errorStyle)),
           GradientPillButton(tone: _look, label: TripStrings.sendInChat, loading: _saving, enabled: !_tooLate, onTap: _saving || _tooLate ? null : _submit),
         ],
       ),
@@ -225,7 +225,7 @@ class _AskBodyState extends State<_AskBody> {
         _editWa
             ? _field(_wa, TripStrings.whatsAppForProof, art: ListingArt.speechBalloon, prefix: '+91 ', error: _waError, formatters: StayEnquiryFormat.phoneFormatters, keyboard: TextInputType.number)
             : _fromSetupRow(TripStrings.whatsAppForProof, TripStrings.whatsAppFromSetup, ListingArt.speechBalloon, '+91 ${_wa.text.trim()}', () => setState(() => _editWa = true)),
-        Padding(padding: const EdgeInsets.only(top: 12), child: Text(TripStrings.stayPayLine, style: RepliesLook.foot)),
+        Padding(padding: EdgeInsets.only(top: DS.gv(12)), child: Text(TripStrings.stayPayLine, style: RepliesLook.foot)),
       ],
     );
   }
@@ -271,8 +271,8 @@ class _AskBodyState extends State<_AskBody> {
         enabled: !_saving,
         onTap: _saving ? null : onChange,
         trailing: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-          decoration: BoxDecoration(gradient: _look.gradient, borderRadius: BorderRadius.circular(14)),
+          padding: DS.sym(h: 12, v: 5),
+          decoration: BoxDecoration(gradient: _look.gradient, borderRadius: DS.circular(14)),
           child: Text(TripStrings.change, style: Ink3D.text(12, FontWeight.w700, DesignColors.textInverse, letterSpacing: 0)),
         ),
       );

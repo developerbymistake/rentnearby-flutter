@@ -17,14 +17,14 @@ class AddListingShortcutButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const radius = BorderRadius.all(Radius.circular(38));
+    final radius = DS.circular(38);
     return Container(
       decoration: BoxDecoration(
         gradient: gradient,
         borderRadius: radius,
-        boxShadow: [
+        boxShadow: DS.shadows([
           ShadowTokens.tint(FitnessAppTheme.grey, ShadowSpec.elev3Spec),
-        ],
+        ]),
       ),
       child: Material(
         color: Colors.transparent,
@@ -34,24 +34,24 @@ class AddListingShortcutButton extends StatelessWidget {
           highlightColor: Colors.transparent,
           onTap: onTap,
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(11, 9, 15, 9),
+            padding: DS.insets(l: 11, t: 9, r: 15, b: 9),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Container(
-                  width: 22,
-                  height: 22,
+                  width: DS.s(22),
+                  height: DS.s(22),
                   decoration: BoxDecoration(
                     color: FitnessAppTheme.nearlyWhite.withValues(alpha: Alpha.soft),
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(icon, size: 13, color: FitnessAppTheme.white),
+                  child: Icon(icon, size: DS.s(13), color: FitnessAppTheme.white),
                 ),
-                const SizedBox(width: 6),
+                SizedBox(width: DS.s(6)),
                 Text(
                   label,
                   style: FitnessAppTheme.body2.copyWith(
-                    fontSize: 13,
+                    fontSize: DS.f(13),
                     fontWeight: FontWeight.w700,
                     color: FitnessAppTheme.white,
                   ),

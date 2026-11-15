@@ -18,14 +18,14 @@ abstract final class JobsLook {
   static const Color about = Color(0xFF3D4A50);
   static const Color bannerFill = Color(0xFFFFE9E7);
   static const Color bannerText = Color(0xFFC0392B);
-  static const List<BoxShadow> card3 = [BoxShadow(color: Color(0x409E9E9E), offset: Offset(1.1, 1.1), blurRadius: 10)];
-  static const List<BoxShadow> pill = [BoxShadow(color: Color(0x669E9E9E), offset: Offset(3, 5), blurRadius: 10)];
-  static const List<BoxShadow> field = [BoxShadow(color: Color(0x599E9E9E), offset: Offset(3, 5), blurRadius: 12)];
-  static List<BoxShadow> toneGlow(ListingTone t) => [BoxShadow(color: t.haloBase.withValues(alpha: 0.5), offset: const Offset(1.1, 5), blurRadius: 10)];
+  static List<BoxShadow> get card3 => [BoxShadow(color: Color(0x409E9E9E), offset: DS.shadowOffset(const Offset(1.1, 1.1)), blurRadius: DS.shadowBlur(10))];
+  static List<BoxShadow> get pill => [BoxShadow(color: Color(0x669E9E9E), offset: DS.shadowOffset(const Offset(3, 5)), blurRadius: DS.shadowBlur(10))];
+  static List<BoxShadow> get field => [BoxShadow(color: Color(0x599E9E9E), offset: DS.shadowOffset(const Offset(3, 5)), blurRadius: DS.shadowBlur(12))];
+  static List<BoxShadow> toneGlow(ListingTone t) => [BoxShadow(color: t.haloBase.withValues(alpha: 0.5), offset: DS.shadowOffset(const Offset(1.1, 5)), blurRadius: DS.shadowBlur(10))];
   static Color soft(ListingTone t) => t.haloBase.withValues(alpha: 0.14);
   static Color halo(ListingTone t) => t.haloBase.withValues(alpha: 0.16);
-  static const BorderRadius tileRadius = BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(24), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8));
-  static const BorderRadius infoRadius = BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(40), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8));
+  static BorderRadius get tileRadius => BorderRadius.only(topLeft: Radius.circular(DS.radius(8)), topRight: Radius.circular(DS.radius(24)), bottomLeft: Radius.circular(DS.radius(8)), bottomRight: Radius.circular(DS.radius(8)));
+  static BorderRadius get infoRadius => BorderRadius.only(topLeft: Radius.circular(DS.radius(8)), topRight: Radius.circular(DS.radius(40)), bottomLeft: Radius.circular(DS.radius(8)), bottomRight: Radius.circular(DS.radius(8)));
 }
 
 class JobsBackButton extends StatelessWidget {
@@ -37,7 +37,7 @@ class JobsBackButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (onTap == null) return SizedBox(width: size, height: size);
+    if (onTap == null) return SizedBox(width: DS.s(size), height: DS.s(size));
     return Tooltip(
       message: 'Back',
       excludeFromSemantics: true,
@@ -46,10 +46,10 @@ class JobsBackButton extends StatelessWidget {
         label: 'Back',
         exclude: true,
         child: Container(
-          width: size,
-          height: size,
-          decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle, boxShadow: JobsLook.pill),
-          child: Icon(Icons.chevron_left_rounded, size: 28, color: tone.text),
+          width: DS.s(size),
+          height: DS.s(size),
+          decoration: BoxDecoration(color: Colors.white, shape: BoxShape.circle, boxShadow: JobsLook.pill),
+          child: Icon(Icons.chevron_left_rounded, size: DS.s(28), color: tone.text),
         ),
       ),
     );
@@ -69,31 +69,31 @@ class JobsHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final narrow = MediaQuery.sizeOf(context).width < 340;
     final size = narrow ? 62.0 : 81.0;
-    final clear = size + 16;
+    final clear = DS.s(size + 16);
     final sub = subtitle;
     return Stack(
       clipBehavior: Clip.none,
       children: [
         Positioned(
-          right: 10,
-          top: 6,
+          right: DS.s(10),
+          top: DS.s(6),
           child: ExcludeSemantics(child: Art3D(asset: art, size: size, halo: size + 6, haloColor: JobsLook.halo(tone))),
         ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(18, 12, 18, 0),
+          padding: EdgeInsets.fromLTRB(DS.s(18), DS.s(12), DS.s(18), 0),
           child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: size - 6),
+            constraints: BoxConstraints(minHeight: DS.s(size - 6)),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                if (sub == null) const SizedBox(height: 30),
+                if (sub == null) Gap.v(30),
                 Padding(
                   padding: EdgeInsets.only(right: clear),
                   child: Row(
                     children: [
                       JobsBackButton(tone: tone, onTap: onBack),
-                      const SizedBox(width: 12),
+                      Gap.h(12),
                       Expanded(
                         child: Semantics(
                           header: true,
@@ -105,7 +105,7 @@ class JobsHeader extends StatelessWidget {
                 ),
                 if (sub != null)
                   Padding(
-                    padding: EdgeInsets.fromLTRB(0, 8, clear, 0),
+                    padding: EdgeInsets.fromLTRB(0, DS.s(8), clear, 0),
                     child: Text(sub, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(14, FontWeight.w400, Ink3D.sub, letterSpacing: 0, height: 1.35)),
                   ),
               ],
@@ -161,10 +161,10 @@ class JobsFilterTile extends StatelessWidget {
           clipBehavior: Clip.none,
           children: [
             Padding(
-              padding: const EdgeInsets.only(top: topRoom),
+              padding: EdgeInsets.only(top: DS.s(topRoom)),
               child: Container(
-                constraints: const BoxConstraints(minHeight: 74),
-                padding: const EdgeInsets.fromLTRB(10, 38, 8, 10),
+                constraints: BoxConstraints(minHeight: DS.s(74)),
+                padding: EdgeInsets.fromLTRB(DS.s(10), DS.s(38), DS.s(8), DS.s(10)),
                 alignment: Alignment.bottomLeft,
                 decoration: BoxDecoration(borderRadius: JobsLook.tileRadius, gradient: tone.gradient, boxShadow: selected ? tone.glow(blur: 8) : const []),
                 child: _TileSize.of(context) == null
@@ -172,15 +172,15 @@ class JobsFilterTile extends StatelessWidget {
                     : Text(label, maxLines: 1, softWrap: false, overflow: TextOverflow.ellipsis, style: Ink3D.text(_TileSize.of(context)!, FontWeight.w700, Colors.white, letterSpacing: 0)),
               ),
             ),
-            Positioned(left: 4, top: 0, child: ExcludeSemantics(child: Art3D(asset: art, size: 58, shadowBlur: 4, shadowOffset: const Offset(3, 5), shadowAlpha: 0.28))),
+            Positioned(left: DS.s(4), top: 0, child: ExcludeSemantics(child: Art3D(asset: art, size: 58, shadowBlur: 4, shadowOffset: const Offset(3, 5), shadowAlpha: 0.28))),
             Positioned(
-              right: 8,
-              top: topRoom + 8,
+              right: DS.s(8),
+              top: DS.s(topRoom + 8),
               child: Container(
-                width: 24,
-                height: 24,
+                width: DS.s(24),
+                height: DS.s(24),
                 decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.95), shape: BoxShape.circle),
-                child: Icon(Icons.arrow_drop_down_rounded, size: 20, color: tone.text),
+                child: Icon(Icons.arrow_drop_down_rounded, size: DS.s(20), color: tone.text),
               ),
             ),
           ],
@@ -210,10 +210,10 @@ class JobsFilterTiles extends StatelessWidget {
   Widget build(BuildContext context) {
     final scaler = MediaQuery.textScalerOf(context);
     return Padding(
-      padding: const EdgeInsets.fromLTRB(18, 12, 18, 4),
+      padding: EdgeInsets.fromLTRB(DS.s(18), DS.s(12), DS.s(18), DS.s(4)),
       child: LayoutBuilder(
         builder: (context, box) {
-          final room = (box.maxWidth - 10 * (children.length - 1)) / children.length - 18;
+          final room = (box.maxWidth - DS.gh(10) * (children.length - 1)) / children.length - DS.s(18);
           var size = 13.0;
           for (final c in children.whereType<JobsFilterTile>()) {
             final w = KitText.widthOf(c.label, Ink3D.text(13, FontWeight.w700, Colors.white, letterSpacing: 0), scaler);
@@ -224,7 +224,7 @@ class JobsFilterTiles extends StatelessWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                for (var i = 0; i < children.length; i++) ...[if (i > 0) const SizedBox(width: 10), Expanded(child: children[i])],
+                for (var i = 0; i < children.length; i++) ...[if (i > 0) Gap.h(10), Expanded(child: children[i])],
               ],
             ),
           );
@@ -250,10 +250,10 @@ class JobsFilterButton extends StatelessWidget {
       label: label,
       exclude: true,
       child: Container(
-        constraints: const BoxConstraints(minHeight: 40),
-        padding: const EdgeInsets.symmetric(horizontal: 18),
+        constraints: BoxConstraints(minHeight: DS.s(40)),
+        padding: EdgeInsets.symmetric(horizontal: DS.s(18)),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(22),
+          borderRadius: DS.circular(22),
           gradient: active ? tone.gradient : null,
           color: active ? null : Colors.white,
           boxShadow: active ? JobsLook.toneGlow(tone) : JobsLook.pill,
@@ -262,8 +262,8 @@ class JobsFilterButton extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(label, maxLines: 1, style: Ink3D.text(14, FontWeight.w700, ink, letterSpacing: 0)),
-            const SizedBox(width: 6),
-            Icon(Icons.menu_rounded, size: 16, color: ink),
+            Gap.h(6),
+            Icon(Icons.menu_rounded, size: DS.s(16), color: ink),
           ],
         ),
       ),
@@ -284,7 +284,7 @@ class JobsStateBlock extends StatelessWidget {
     this.hint,
     this.linkLabel,
     this.onLink,
-    this.padding = const EdgeInsets.fromLTRB(30, 34, 30, 16),
+    this.padding,
   });
 
   final ListingTone tone;
@@ -297,7 +297,7 @@ class JobsStateBlock extends StatelessWidget {
   final String? hint;
   final String? linkLabel;
   final VoidCallback? onLink;
-  final EdgeInsets padding;
+  final EdgeInsets? padding;
 
   @override
   Widget build(BuildContext context) {
@@ -306,31 +306,31 @@ class JobsStateBlock extends StatelessWidget {
     final h = hint;
     final link = linkLabel;
     return Padding(
-      padding: padding,
+      padding: (padding ?? EdgeInsets.fromLTRB(DS.s(30), DS.s(34), DS.s(30), DS.s(16))),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           ExcludeSemantics(
             child: Art3D(asset: art, size: narrow ? 140 : 168, halo: narrow ? 156 : 184, haloColor: tone.haloBase.withValues(alpha: 0.15), shadowBlur: 10, shadowOffset: const Offset(8, 12), shadowAlpha: 0.25),
           ),
-          const SizedBox(height: 14),
+          Gap.v(14),
           Semantics(header: true, child: Text(title, textAlign: TextAlign.center, style: Ink3D.text(22, FontWeight.w700, Ink3D.title, height: 1.3))),
           if (msg != null && msg.isNotEmpty)
-            Padding(padding: const EdgeInsets.only(top: 6), child: Text(msg, textAlign: TextAlign.center, style: Ink3D.text(15, FontWeight.w400, Ink3D.copy, height: 1.45))),
+            Padding(padding: EdgeInsets.only(top: DS.gv(6)), child: Text(msg, textAlign: TextAlign.center, style: Ink3D.text(15, FontWeight.w400, Ink3D.copy, height: 1.45))),
           if (actionLabel != null)
             Padding(
-              padding: const EdgeInsets.only(top: 22),
-              child: SizedBox(width: 220, child: GradientPillButton(tone: tone, label: actionLabel!, onTap: onAction, enabled: actionEnabled && onAction != null, height: 52)),
+              padding: EdgeInsets.only(top: DS.gv(22)),
+              child: SizedBox(width: DS.s(220), child: GradientPillButton(tone: tone, label: actionLabel!, onTap: onAction, enabled: actionEnabled && onAction != null, height: 52)),
             ),
           if (h != null)
-            Padding(padding: const EdgeInsets.only(top: 12), child: Text(h, textAlign: TextAlign.center, style: Ink3D.text(13, FontWeight.w400, Ink3D.grey, height: 1.4))),
+            Padding(padding: EdgeInsets.only(top: DS.gv(12)), child: Text(h, textAlign: TextAlign.center, style: Ink3D.text(13, FontWeight.w400, Ink3D.grey, height: 1.4))),
           if (link != null)
             Tap3D(
               onTap: onLink,
               label: link,
               exclude: true,
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: EdgeInsets.symmetric(horizontal: DS.s(12), vertical: DS.s(8)),
                 child: Text(link, style: Ink3D.text(14, FontWeight.w700, tone.text)),
               ),
             ),
@@ -357,8 +357,8 @@ class JobsOptionRow extends StatelessWidget {
       selected: selected,
       exclude: true,
       child: Container(
-        constraints: const BoxConstraints(minHeight: 62),
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+        constraints: BoxConstraints(minHeight: DS.s(62)),
+        padding: EdgeInsets.symmetric(horizontal: DS.s(4), vertical: DS.s(8)),
         decoration: BoxDecoration(border: divider ? const Border(top: BorderSide(color: Ink3D.line)) : null),
         child: Row(
           children: [
@@ -367,10 +367,10 @@ class JobsOptionRow extends StatelessWidget {
             ),
             if (selected)
               Container(
-                width: 26,
-                height: 26,
-                decoration: BoxDecoration(shape: BoxShape.circle, gradient: tone.gradient, boxShadow: [BoxShadow(color: tone.haloBase.withValues(alpha: 0.45), offset: const Offset(1, 3), blurRadius: 6)]),
-                child: const Icon(Icons.check_rounded, size: 16, color: Colors.white),
+                width: DS.s(26),
+                height: DS.s(26),
+                decoration: BoxDecoration(shape: BoxShape.circle, gradient: tone.gradient, boxShadow: [BoxShadow(color: tone.haloBase.withValues(alpha: 0.45), offset: DS.shadowOffset(const Offset(1, 3)), blurRadius: DS.shadowBlur(6))]),
+                child: Icon(Icons.check_rounded, size: DS.s(16), color: Colors.white),
               ),
           ],
         ),
@@ -387,7 +387,7 @@ class JobsSheetLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding: EdgeInsets.only(top: first ? 2 : 12, bottom: 8),
+    padding: EdgeInsets.only(top: first ? DS.gv(2) : DS.gv(12), bottom: DS.gv(8)),
     child: Text(text, style: Ink3D.text(12, FontWeight.w700, Ink3D.grey, letterSpacing: 0.8)),
   );
 }
@@ -407,22 +407,22 @@ class JobsSheetMessage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(24, 8, 24, 10),
+        padding: EdgeInsets.fromLTRB(DS.s(24), DS.s(8), DS.s(24), DS.s(10)),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             ExcludeSemantics(child: Art3D(asset: art, size: 168, halo: 190, haloColor: tone.haloBase.withValues(alpha: 0.15), shadowBlur: 8, shadowOffset: const Offset(6, 10), shadowAlpha: 0.25)),
-            const SizedBox(height: 12),
+            Gap.v(12),
             if (loading)
               Padding(
-                padding: const EdgeInsets.only(top: 6),
-                child: SizedBox(width: 30, height: 30, child: CircularProgressIndicator(strokeWidth: 3, color: tone.g2)),
+                padding: EdgeInsets.only(top: DS.gv(6)),
+                child: SizedBox(width: DS.s(30), height: DS.s(30), child: CircularProgressIndicator(strokeWidth: DS.s(3), color: tone.g2)),
               ),
             if (title != null) Text(title!, textAlign: TextAlign.center, style: Ink3D.text(16, FontWeight.w700, Ink3D.title)),
-            if (body != null) Padding(padding: const EdgeInsets.only(top: 4), child: Text(body!, textAlign: TextAlign.center, style: Ink3D.text(14, FontWeight.w400, Ink3D.grey, height: 1.4))),
+            if (body != null) Padding(padding: EdgeInsets.only(top: DS.gv(4)), child: Text(body!, textAlign: TextAlign.center, style: Ink3D.text(14, FontWeight.w400, Ink3D.grey, height: 1.4))),
             if (actionLabel != null && onAction != null)
               Padding(
-                padding: const EdgeInsets.only(top: 16),
+                padding: EdgeInsets.only(top: DS.gv(16)),
                 child: GradientPillButton(tone: tone, label: actionLabel!, onTap: onAction, height: 44, expand: false, fontSize: 15),
               ),
           ],
@@ -467,11 +467,11 @@ class JobsDetailHero extends StatelessWidget {
             ),
           ),
           if (p != null)
-            const Positioned(
+            Positioned(
               left: 0,
               right: 0,
               top: 0,
-              height: 120,
+              height: DS.s(120),
               child: IgnorePointer(
                 child: DecoratedBox(
                   decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0x73000000), Color(0x00000000)])),
@@ -482,15 +482,15 @@ class JobsDetailHero extends StatelessWidget {
             left: 0,
             right: 0,
             bottom: 0,
-            height: seam,
+            height: DS.s(seam),
             child: DecoratedBox(
-              decoration: BoxDecoration(color: JobsLook.pageColor, borderRadius: const BorderRadius.vertical(top: Radius.circular(seam))),
+              decoration: BoxDecoration(color: JobsLook.pageColor, borderRadius: BorderRadius.vertical(top: Radius.circular(DS.radius(seam)))),
             ),
           ),
           if (p != null)
             Positioned(
-              right: 16,
-              bottom: -18,
+              right: DS.s(16),
+              bottom: DS.s(-18),
               child: IgnorePointer(
                 child: ExcludeSemantics(child: Art3D(asset: ListingArt.hotel, size: narrow ? 88 : 104, halo: narrow ? 96 : 112, haloColor: tone.haloBase.withValues(alpha: 0.18), shadowBlur: 6, shadowOffset: const Offset(5, 8), shadowAlpha: 0.3)),
               ),
@@ -511,10 +511,10 @@ class JobsTagPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      constraints: const BoxConstraints(minHeight: 28),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      constraints: BoxConstraints(minHeight: DS.s(28)),
+      padding: EdgeInsets.symmetric(horizontal: DS.s(12), vertical: DS.s(4)),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: DS.circular(14),
         gradient: solid ? tone.gradient : null,
         color: solid ? null : JobsLook.soft(tone),
       ),
@@ -531,8 +531,8 @@ class JobsInfoCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
-      decoration: const BoxDecoration(color: Colors.white, borderRadius: JobsLook.infoRadius, boxShadow: JobsLook.card3),
+      padding: EdgeInsets.symmetric(horizontal: DS.s(18), vertical: DS.s(6)),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: JobsLook.infoRadius, boxShadow: JobsLook.card3),
       child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: children),
     );
   }
@@ -551,35 +551,35 @@ class JobsInfoRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final row = Container(
-      constraints: const BoxConstraints(minHeight: 62),
-      padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 8),
+      constraints: BoxConstraints(minHeight: DS.s(62)),
+      padding: EdgeInsets.symmetric(horizontal: DS.s(2), vertical: DS.s(8)),
       decoration: BoxDecoration(border: divider ? const Border(top: BorderSide(color: Ink3D.line)) : null),
       child: Row(
         children: [
           SizedBox(
-            width: 44,
-            height: 44,
+            width: DS.s(44),
+            height: DS.s(44),
             child: Stack(
               clipBehavior: Clip.none,
               children: [
-                Positioned.fill(child: DecoratedBox(decoration: BoxDecoration(color: JobsLook.soft(tone), borderRadius: BorderRadius.circular(14)))),
-                Positioned(left: -3, top: -8, child: ExcludeSemantics(child: Art3D(asset: art, size: 50, shadowBlur: 3, shadowOffset: const Offset(2, 4), shadowAlpha: 0.25))),
+                Positioned.fill(child: DecoratedBox(decoration: BoxDecoration(color: JobsLook.soft(tone), borderRadius: DS.circular(14)))),
+                Positioned(left: DS.s(-3), top: DS.s(-8), child: ExcludeSemantics(child: Art3D(asset: art, size: 50, shadowBlur: 3, shadowOffset: const Offset(2, 4), shadowAlpha: 0.25))),
               ],
             ),
           ),
-          const SizedBox(width: 14),
+          Gap.h(14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(12, FontWeight.w400, JobsLook.muted, letterSpacing: 0)),
-                const SizedBox(height: 2),
+                Gap.v(2),
                 Text(value.isEmpty ? '-' : value, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(14.5, FontWeight.w600, Ink3D.title, letterSpacing: 0)),
               ],
             ),
           ),
-          if (onTap != null) ...[const SizedBox(width: 8), Icon(Icons.chevron_right_rounded, size: 26, color: tone.text)],
+          if (onTap != null) ...[Gap.h(8), Icon(Icons.chevron_right_rounded, size: DS.s(26), color: tone.text)],
         ],
       ),
     );
@@ -597,13 +597,13 @@ class JobsNoteCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      constraints: const BoxConstraints(minHeight: 56),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      decoration: const BoxDecoration(color: Colors.white, borderRadius: JobsLook.tileRadius, boxShadow: JobsLook.card3),
+      constraints: BoxConstraints(minHeight: DS.s(56)),
+      padding: EdgeInsets.symmetric(horizontal: DS.s(16), vertical: DS.s(10)),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: JobsLook.tileRadius, boxShadow: JobsLook.card3),
       child: Row(
         children: [
           ExcludeSemantics(child: Art3D(asset: art, size: 36, shadowBlur: 3, shadowOffset: const Offset(2, 3), shadowAlpha: 0.25)),
-          const SizedBox(width: 12),
+          Gap.h(12),
           Expanded(child: Text(text, style: Ink3D.text(15, FontWeight.w700, Ink3D.sub, letterSpacing: 0))),
         ],
       ),
@@ -622,7 +622,7 @@ class JobsArtLine extends StatelessWidget {
     return Row(
       children: [
         ExcludeSemantics(child: Art3D(asset: art, size: 30, shadowBlur: 2, shadowOffset: const Offset(2, 3), shadowAlpha: 0.25)),
-        const SizedBox(width: 6),
+        Gap.h(6),
         Expanded(child: Text(text, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(12.5, FontWeight.w400, JobsLook.muted, letterSpacing: 0))),
       ],
     );
@@ -641,13 +641,13 @@ class JobsLimitBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     final link = linkLabel;
     return Container(
-      margin: const EdgeInsets.fromLTRB(18, 14, 18, 0),
-      padding: const EdgeInsets.fromLTRB(16, 10, 10, 10),
-      decoration: const BoxDecoration(color: JobsLook.bannerFill, borderRadius: JobsLook.tileRadius),
+      margin: EdgeInsets.fromLTRB(DS.s(18), DS.gv(14), DS.s(18), 0),
+      padding: EdgeInsets.fromLTRB(DS.s(16), DS.s(10), DS.s(10), DS.s(10)),
+      decoration: BoxDecoration(color: JobsLook.bannerFill, borderRadius: JobsLook.tileRadius),
       child: Row(
         children: [
           const ExcludeSemantics(child: Art3D(asset: ListingArt.moneyBag, size: 34, shadowBlur: 3, shadowOffset: Offset(2, 3), shadowAlpha: 0.25)),
-          const SizedBox(width: 10),
+          Gap.h(10),
           Expanded(child: Text(message, style: Ink3D.text(13, FontWeight.w600, JobsLook.bannerText, letterSpacing: 0, height: 1.4))),
           if (link != null)
             Tap3D(
@@ -655,7 +655,7 @@ class JobsLimitBanner extends StatelessWidget {
               label: link,
               exclude: true,
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                padding: EdgeInsets.symmetric(horizontal: DS.s(8), vertical: DS.s(10)),
                 child: Text(link, style: Ink3D.text(14, FontWeight.w700, tone.text, letterSpacing: 0)),
               ),
             ),

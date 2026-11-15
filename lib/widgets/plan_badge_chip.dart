@@ -11,13 +11,13 @@ class PlanBadgeChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: compact ? 6 : 9, vertical: compact ? 1 : 3),
-      decoration: BoxDecoration(color: color, borderRadius: CardRadius.pill),
+      padding: DS.sym(h: compact ? 6 : 9, v: compact ? 1 : 3),
+      decoration: BoxDecoration(color: color, borderRadius: DS.br(CardRadius.pill)),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           TravelIcon(TravelIcon.star, size: compact ? 10 : 13),
-          const SizedBox(width: 2),
+          SizedBox(width: DS.s(2)),
           Text(
             label,
             style: TypeTokens.style(compact ? 10 : 11, FontWeight.w700,

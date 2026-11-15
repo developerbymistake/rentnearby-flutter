@@ -8,14 +8,14 @@ import '../../taxi_option_sets.dart' show TaxiOptionSets;
 import '../taxi_ways_strings.dart';
 
 class LocalTaxiRailCard extends StatelessWidget {
-  static const EdgeInsets cellPadding = JourneyRailCard3D.cellPadding;
+  static EdgeInsets get cellPadding => JourneyRailCard3D.cellPadding;
   static const double baseHeight = 300;
 
   final TaxiBrowseItem item;
-  final double width;
+  final double? width;
   final int index;
 
-  const LocalTaxiRailCard({super.key, required this.item, this.width = 160, this.index = 0});
+  const LocalTaxiRailCard({super.key, required this.item, this.width, this.index = 0});
 
   static double heightFor(BuildContext context) => JourneyRailCard3D.heightFor(context);
 
@@ -35,7 +35,7 @@ class LocalTaxiRailCard extends StatelessWidget {
       number: rate == null ? null : BrowseItem.inr(rate),
       unit: rate == null ? '' : ' /day',
       buttonLabel: TaxiWaysStrings.viewAndCall,
-      width: width,
+      width: width ?? DS.s(160),
       onTap: () => TaxiNavigation.openDetail(item.id),
     );
   }

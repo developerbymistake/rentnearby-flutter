@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'art_3d.dart';
 import 'pill_buttons_3d.dart';
+import 'package:bakhli/design/tokens/design_scale.dart';
 
 class PageHeader3D extends StatelessWidget {
   const PageHeader3D({
@@ -35,7 +36,7 @@ class PageHeader3D extends StatelessWidget {
   final Widget? bottom;
   final bool surface;
 
-  static const double buttonSize = 44;
+  static double get buttonSize => DS.s(44);
 
   Widget? _leading(BuildContext context) {
     final icon = leadingIcon;
@@ -51,8 +52,8 @@ class PageHeader3D extends StatelessWidget {
         child: Container(
           width: buttonSize,
           height: buttonSize,
-          decoration: BoxDecoration(color: Colors.white, shape: BoxShape.circle, boxShadow: surface ? null : Ink3D.softShadow, border: surface ? Border.all(color: Ink3D.line) : null),
-          child: Icon(icon ?? Icons.chevron_left_rounded, size: icon == null ? 28 : 24, color: tone.text),
+          decoration: BoxDecoration(color: Colors.white, shape: BoxShape.circle, boxShadow: surface ? null : DS.shadows(Ink3D.softShadow), border: surface ? Border.all(color: Ink3D.line) : null),
+          child: Icon(icon ?? Icons.chevron_left_rounded, size: DS.s(icon == null ? 28 : 24), color: tone.text),
         ),
       ),
     );
@@ -63,8 +64,9 @@ class PageHeader3D extends StatelessWidget {
     final narrow = MediaQuery.sizeOf(context).width < Form3D.narrow;
     final hasArt = art != null && art!.isNotEmpty;
     final size = narrow ? artSize * 62 / 80 : artSize;
-    final shift = trailing == null ? 0.0 : buttonSize + 12;
-    final clear = (hasArt ? size + (inlineTitle ? 0 : (narrow ? 8 : 10)) : 0.0) + shift;
+    final sz = DS.s(size);
+    final shift = trailing == null ? 0.0 : buttonSize + DS.s(12);
+    final clear = (hasArt ? sz + (inlineTitle ? 0 : DS.s(narrow ? 8 : 10)) : 0.0) + shift;
     final sub = subtitle;
     final lead = _leading(context);
 
@@ -75,19 +77,19 @@ class PageHeader3D extends StatelessWidget {
     final subText = (sub == null || sub.isEmpty)
         ? null
         : Padding(
-            padding: const EdgeInsets.only(top: 4),
+            padding: EdgeInsets.only(top: DS.s(4)),
             child: FitOrWrap3D(text: sub, stretch: 1.5, style: Ink3D.text(14, FontWeight.w400, Ink3D.sub, letterSpacing: 0, height: 1.35)),
           );
 
     final Widget text;
     if (inlineTitle) {
       text = ConstrainedBox(
-        constraints: BoxConstraints(minHeight: hasArt ? size - 4 : buttonSize),
+        constraints: BoxConstraints(minHeight: hasArt ? sz - DS.s(4) : buttonSize),
         child: Padding(
           padding: EdgeInsets.only(right: clear),
           child: Row(
             children: [
-              if (lead != null) ...[lead, const SizedBox(width: 12)],
+              if (lead != null) ...[lead, SizedBox(width: DS.s(12))],
               Expanded(
                 child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [titleText, ?subText]),
               ),
@@ -97,13 +99,13 @@ class PageHeader3D extends StatelessWidget {
       );
     } else {
       text = ConstrainedBox(
-        constraints: BoxConstraints(minHeight: hasArt ? size - 2 : 0),
+        constraints: BoxConstraints(minHeight: hasArt ? sz - DS.s(2) : 0),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             SizedBox(height: buttonSize, child: Align(alignment: Alignment.centerLeft, child: lead)),
-            const SizedBox(height: 10),
+            SizedBox(height: DS.s(10)),
             Padding(padding: EdgeInsets.only(right: clear), child: titleText),
             if (subText != null) Padding(padding: EdgeInsets.only(right: clear), child: subText),
           ],
@@ -112,13 +114,13 @@ class PageHeader3D extends StatelessWidget {
     }
 
     final head = Padding(
-      padding: const EdgeInsets.fromLTRB(18, 8, 18, 0),
+      padding: EdgeInsets.fromLTRB(DS.s(18), DS.s(8), DS.s(18), 0),
       child: Stack(
         clipBehavior: Clip.none,
         children: [
           if (hasArt)
             Positioned(
-              right: -4 + shift,
+              right: DS.s(-4) + shift,
               top: 0,
               child: ExcludeSemantics(child: Art3D(asset: art!, size: size, halo: size - 2, haloColor: tone.halo, haloDy: 4)),
             ),
@@ -131,12 +133,12 @@ class PageHeader3D extends StatelessWidget {
     final body = bottom == null ? head : Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [head, bottom!]);
     if (!surface) return body;
     return DecoratedBox(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
-        boxShadow: Ink3D.softShadow,
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(DS.radius(24))),
+        boxShadow: DS.shadows(Ink3D.softShadow),
       ),
-      child: Padding(padding: const EdgeInsets.only(bottom: 14), child: body),
+      child: Padding(padding: EdgeInsets.only(bottom: DS.s(14)), child: body),
     );
   }
 }

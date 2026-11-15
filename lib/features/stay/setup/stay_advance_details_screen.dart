@@ -124,12 +124,12 @@ class _StayAdvanceDetailsScreenState extends State<StayAdvanceDetailsScreen> {
 
   Widget _centered(Widget child) => Align(
         alignment: Alignment.topCenter,
-        child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 560), child: child),
+        child: ConstrainedBox(constraints: BoxConstraints(maxWidth: DS.s(560)), child: child),
       );
 
   Widget _bone(double top, double height) => Padding(
-        padding: EdgeInsets.fromLTRB(18, top, 18, 0),
-        child: ClipRRect(borderRadius: StayOwnerShapes.card68, child: SkeletonBox(height: height, radius: 0)),
+        padding: DS.gapInsets(l: 18, t: top, r: 18),
+        child: ClipRRect(borderRadius: DS.br(StayOwnerShapes.card68), child: SkeletonBox(height: DS.s(height), radius: 0)),
       );
 
   Widget _loadingView() => _centered(ListView(
@@ -147,25 +147,25 @@ class _StayAdvanceDetailsScreenState extends State<StayAdvanceDetailsScreen> {
             message: TripStrings.checkConnection,
             actionLabel: TripStrings.retry,
             onAction: _ctrl.load,
-            minHeight: math.max(300, box.maxHeight - 160),
+            minHeight: math.max(DS.s(300), box.maxHeight - DS.s(160)),
           ),
         ),
       );
 
   Widget _form() {
-    final bottom = MediaQuery.viewInsetsOf(context).bottom + 24;
+    final bottom = MediaQuery.viewInsetsOf(context).bottom + DS.s(24);
     return _centered(SingleChildScrollView(
       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
       padding: EdgeInsets.only(bottom: bottom),
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         Padding(
-          padding: const EdgeInsets.only(top: 10),
+          padding: EdgeInsets.only(top: DS.gv(10)),
           child: WorkoutCard(
             tone: _tone,
             art: ListingArt.moneyBag,
             title: TripStrings.advanceDetails,
             subtitle: TripStrings.advanceDetailsSub,
-            minHeight: 132,
+            minHeight: DS.s(132),
           ),
         ),
         FormSectionCard(
@@ -207,7 +207,7 @@ class _StayAdvanceDetailsScreenState extends State<StayAdvanceDetailsScreen> {
               },
             ),
             Padding(
-              padding: const EdgeInsets.only(top: 12),
+              padding: EdgeInsets.only(top: DS.gv(12)),
               child: Text(TripStrings.advanceDetailsFooter, style: Ink3D.text(12, FontWeight.w400, Ink3D.grey, height: 1.4)),
             ),
           ]),

@@ -138,7 +138,7 @@ class _SavedJourneyScreenState extends State<SavedJourneyScreen> with WidgetsBin
           : Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               if (j.tripId != null) ...[
                 JourneyChip3D(label: _tripChip(j)),
-                const SizedBox(height: 10),
+                Gap.v(10),
               ],
               Row(children: [
                 Expanded(
@@ -149,7 +149,7 @@ class _SavedJourneyScreenState extends State<SavedJourneyScreen> with WidgetsBin
                     style: Ink3D.text(12.5, FontWeight.w500, Ink3D.sub),
                   ),
                 ),
-                const SizedBox(width: 10),
+                Gap.h(10),
                 JourneyChip3D(
                   label: TaxiWaysStrings.refresh,
                   filled: true,
@@ -223,7 +223,7 @@ class _SavedJourneyScreenState extends State<SavedJourneyScreen> with WidgetsBin
           ),
           if (j.tripId != null) JourneyCarBookRow(journey: j, leg: leg),
         ]));
-        rows.add(Padding(padding: const EdgeInsets.only(top: 10), child: JourneyLink3D(color: line(leg))));
+        rows.add(Padding(padding: EdgeInsets.only(top: DS.gv(10)), child: JourneyLink3D(color: line(leg))));
         if (i < legs.length - 1) {
           final next = legs[i + 1];
           rows.add(JourneyStop3D(
@@ -244,7 +244,7 @@ class _SavedJourneyScreenState extends State<SavedJourneyScreen> with WidgetsBin
       child: LayoutBuilder(
         builder: (context, c) => ListView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: EdgeInsets.only(bottom: 24 + (j.isCompleted ? AppInsets.bottomViewPadding(context) : 0)),
+          padding: EdgeInsets.only(bottom: DS.s(24) + (j.isCompleted ? AppInsets.bottomViewPadding(context) : 0)),
           children: [
             TemplateEntrance(
               animation: templateInterval(_anim, 0, 2),
@@ -285,11 +285,11 @@ class _SavedJourneyScreenState extends State<SavedJourneyScreen> with WidgetsBin
             _enter(
               _count - 2,
               Padding(
-                padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+                padding: DS.gapInsets(l: 20, t: 12, r: 20),
                 child: Text(footer, style: Ink3D.text(12, FontWeight.w400, Ink3D.grey, height: 1.45)),
               ),
             ),
-            _enter(_count - 1, Padding(padding: const EdgeInsets.fromLTRB(16, 16, 16, 0), child: _manage(j, busy))),
+            _enter(_count - 1, Padding(padding: DS.gapInsets(l: 16, t: 16, r: 16), child: _manage(j, busy))),
           ];
 
   Widget _manage(SavedJourney j, bool busy) {

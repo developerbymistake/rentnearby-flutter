@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import 'art_3d.dart';
 import 'pill_buttons_3d.dart';
+import 'package:bakhli/design/tokens/design_scale.dart';
 
 class FieldLabel extends StatelessWidget {
   const FieldLabel(this.text, {super.key, this.requiredMark = false, this.first = false});
@@ -14,7 +15,7 @@ class FieldLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.fromLTRB(8, first ? 0 : 14, 8, 7),
+      padding: EdgeInsets.fromLTRB(DS.s(8), first ? 0 : DS.gv(14), DS.s(8), DS.s(7)),
       child: Text.rich(
         TextSpan(text: text, children: [if (requiredMark) const TextSpan(text: ' *', style: TextStyle(color: Form3D.error))]),
         maxLines: 2,
@@ -34,8 +35,8 @@ class FieldMessage extends StatelessWidget {
   final Color? accent;
   final bool reserve;
 
-  static TextStyle errorStyle = Ink3D.text(11.5, FontWeight.w600, Form3D.errorText, height: 1.35, letterSpacing: 0);
-  static TextStyle helperStyle = Ink3D.text(11.5, FontWeight.w400, Form3D.muted, height: 1.35, letterSpacing: 0);
+  static TextStyle get errorStyle => Ink3D.text(11.5, FontWeight.w600, Form3D.errorText, height: 1.35, letterSpacing: 0);
+  static TextStyle get helperStyle => Ink3D.text(11.5, FontWeight.w400, Form3D.muted, height: 1.35, letterSpacing: 0);
 
   @override
   Widget build(BuildContext context) {
@@ -47,10 +48,10 @@ class FieldMessage extends StatelessWidget {
     final hasCounter = c != null && c.isNotEmpty;
     if (!hasError && !hasHelper && !hasCounter) {
       if (!reserve) return const SizedBox.shrink();
-      return SizedBox(height: 6 + MediaQuery.textScalerOf(context).scale(11.5) * 1.35);
+      return SizedBox(height: DS.s(6) + MediaQuery.textScalerOf(context).scale(DS.f(11.5)) * 1.35);
     }
     return Padding(
-      padding: const EdgeInsets.fromLTRB(18, 6, 18, 0),
+      padding: EdgeInsets.fromLTRB(DS.s(18), DS.s(6), DS.s(18), 0),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -59,7 +60,7 @@ class FieldMessage extends StatelessWidget {
                 ? Semantics(liveRegion: true, child: Text(e, maxLines: 3, overflow: TextOverflow.ellipsis, style: errorStyle))
                 : Text(hasHelper ? h : '', maxLines: 3, overflow: TextOverflow.ellipsis, style: accent == null ? helperStyle : helperStyle.copyWith(color: accent, fontWeight: FontWeight.w600)),
           ),
-          if (hasCounter) Padding(padding: const EdgeInsets.only(left: 8), child: Text(c, maxLines: 1, style: helperStyle)),
+          if (hasCounter) Padding(padding: EdgeInsets.only(left: DS.s(8)), child: Text(c, maxLines: 1, style: helperStyle)),
         ],
       ),
     );
@@ -159,10 +160,10 @@ class PillField extends StatelessWidget {
   final bool requiredMark;
   final bool firstLabel;
 
-  static final TextStyle textStyle = Ink3D.text(15, FontWeight.w400, Ink3D.body, letterSpacing: 0);
+  static TextStyle get textStyle => Ink3D.text(15, FontWeight.w400, Ink3D.body, letterSpacing: 0);
 
   static Widget art(String asset, {double size = 30}) => Padding(
-        padding: const EdgeInsets.only(left: 12, right: 8),
+        padding: EdgeInsets.only(left: DS.s(12), right: DS.s(8)),
         child: Art3D(asset: asset, size: size, shadowBlur: 2, shadowOffset: const Offset(1, 3), shadowAlpha: 0.2),
       );
 
@@ -177,7 +178,7 @@ class PillField extends StatelessWidget {
     bool area = false,
   }) {
     OutlineInputBorder border(Color color, double width) =>
-        OutlineInputBorder(borderRadius: BorderRadius.circular(area ? 24 : 26), borderSide: BorderSide(color: color, width: width));
+        OutlineInputBorder(borderRadius: DS.circular(area ? 24 : 26), borderSide: BorderSide(color: color, width: width));
     Widget? prefix;
     if (prefixIcon != null || (prefixText != null && prefixText.isNotEmpty)) {
       prefix = Row(
@@ -186,7 +187,7 @@ class PillField extends StatelessWidget {
           ?prefixIcon,
           if (prefixText != null && prefixText.isNotEmpty)
             Padding(
-              padding: EdgeInsets.only(left: prefixIcon == null ? 18 : 0, right: 8),
+              padding: EdgeInsets.only(left: DS.s(prefixIcon == null ? 18 : 0), right: DS.s(8)),
               child: Text(prefixText, style: Ink3D.text(15, FontWeight.w700, Form3D.label, letterSpacing: 0)),
             ),
         ],
@@ -206,18 +207,18 @@ class PillField extends StatelessWidget {
       helperStyle: FieldMessage.helperStyle,
       helperMaxLines: 3,
       counterStyle: FieldMessage.helperStyle,
-      contentPadding: EdgeInsets.fromLTRB(prefix == null ? 18 : 0, area ? 14 : 15, suffix == null ? 18 : 0, area ? 14 : 15),
-      constraints: area ? const BoxConstraints(minHeight: 100) : null,
+      contentPadding: EdgeInsets.fromLTRB(DS.s(prefix == null ? 18 : 0), DS.s(area ? 14 : 15), DS.s(suffix == null ? 18 : 0), DS.s(area ? 14 : 15)),
+      constraints: area ? BoxConstraints(minHeight: DS.s(100)) : null,
       prefixIcon: prefix,
       prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
-      suffixIcon: suffix == null ? null : Padding(padding: const EdgeInsets.only(left: 8, right: 18), child: suffix),
+      suffixIcon: suffix == null ? null : Padding(padding: EdgeInsets.only(left: DS.s(8), right: DS.s(18)), child: suffix),
       suffixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
       border: border(Colors.transparent, 1.5),
       enabledBorder: border(Colors.transparent, 1.5),
       disabledBorder: border(Colors.transparent, 1.5),
-      focusedBorder: border(tone.g2, 2),
+      focusedBorder: border(tone.g2, DS.s(2)),
       errorBorder: border(Form3D.error, 1.5),
-      focusedErrorBorder: border(Form3D.error, 2),
+      focusedErrorBorder: border(Form3D.error, DS.s(2)),
     );
   }
 
@@ -340,19 +341,19 @@ class PillPickerField extends StatelessWidget {
     final h = raised ? 56.0 : 52.0;
 
     Widget build0(bool showArt) => Container(
-      constraints: BoxConstraints(minHeight: h),
-      padding: EdgeInsets.fromLTRB(a == null || !showArt ? 18 : 10, 6, 14, 6),
+      constraints: BoxConstraints(minHeight: DS.s(h)),
+      padding: EdgeInsets.fromLTRB(DS.s(a == null || !showArt ? 18 : 10), DS.s(6), DS.s(14), DS.s(6)),
       decoration: BoxDecoration(
         color: bad ? Form3D.fillError : (raised ? Colors.white : (enabled ? Form3D.fill : Form3D.fillOff)),
-        borderRadius: BorderRadius.circular(30),
+        borderRadius: DS.circular(30),
         border: Border.all(color: bad ? Form3D.error : Colors.transparent, width: 1.5),
-        boxShadow: raised && !bad ? Ink3D.softShadow : null,
+        boxShadow: raised && !bad ? DS.shadows(Ink3D.softShadow) : null,
       ),
       child: Row(
         children: [
           if (a != null && showArt) ...[
             Art3D(asset: a, size: raised ? 40 : 34, shadowBlur: 2, shadowOffset: const Offset(2, 3), shadowAlpha: 0.22),
-            const SizedBox(width: 10),
+            SizedBox(width: DS.s(10)),
           ],
           Expanded(
             child: Column(
@@ -367,8 +368,8 @@ class PillPickerField extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(width: 6),
-          trailing ?? Icon(Icons.arrow_drop_down_rounded, size: 24, color: tone.text),
+          SizedBox(width: DS.s(6)),
+          trailing ?? Icon(Icons.arrow_drop_down_rounded, size: DS.s(24), color: tone.text),
         ],
       ),
     );
@@ -408,16 +409,16 @@ class PillStatusBox extends StatelessWidget {
       return Semantics(
         label: MaterialLocalizations.of(context).refreshIndicatorSemanticLabel,
         child: Container(
-          height: 52,
-          decoration: BoxDecoration(color: Form3D.fill, borderRadius: BorderRadius.circular(26)),
+          height: DS.s(52),
+          decoration: BoxDecoration(color: Form3D.fill, borderRadius: DS.circular(26)),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               for (var i = 0; i < 3; i++)
                 Container(
-                  width: 9,
-                  height: 9,
-                  margin: const EdgeInsets.symmetric(horizontal: 4),
+                  width: DS.s(9),
+                  height: DS.s(9),
+                  margin: EdgeInsets.symmetric(horizontal: DS.s(4)),
                   decoration: BoxDecoration(shape: BoxShape.circle, color: tone.g2.withValues(alpha: 1 - i * 0.3)),
                 ),
             ],
@@ -428,10 +429,10 @@ class PillStatusBox extends StatelessWidget {
     return Tap3D(
       onTap: onTap,
       child: Container(
-        constraints: const BoxConstraints(minHeight: 52),
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+        constraints: BoxConstraints(minHeight: DS.s(52)),
+        padding: EdgeInsets.symmetric(horizontal: DS.s(18), vertical: DS.s(10)),
         alignment: Alignment.center,
-        decoration: BoxDecoration(color: Form3D.fillError, borderRadius: BorderRadius.circular(26)),
+        decoration: BoxDecoration(color: Form3D.fillError, borderRadius: DS.circular(26)),
         child: Text(t, maxLines: 3, textAlign: TextAlign.center, overflow: TextOverflow.ellipsis, style: Ink3D.text(12.5, FontWeight.w700, Form3D.errorText, letterSpacing: 0)),
       ),
     );

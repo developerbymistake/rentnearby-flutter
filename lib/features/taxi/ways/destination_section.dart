@@ -101,14 +101,14 @@ class _AtDestinationSectionState extends State<AtDestinationSection> with Ticker
       );
 
   Widget _subHeading(String text, {String? caption}) => Padding(
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+        padding: DS.gapInsets(l: 20, t: 12, r: 20),
         child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
           Expanded(
             child: Text(text, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(15, FontWeight.w700, Ink3D.body)),
           ),
           if (caption != null)
             Padding(
-              padding: const EdgeInsets.only(left: 8),
+              padding: EdgeInsets.only(left: DS.gh(8)),
               child: Text(caption, maxLines: 1, style: Ink3D.text(12, FontWeight.w500, Ink3D.grey)),
             ),
         ]),
@@ -127,15 +127,15 @@ class _AtDestinationSectionState extends State<AtDestinationSection> with Ticker
         key: ValueKey(s.id), stay: s, cityName: widget.cityName, date: widget.date, people: widget.people, width: w, index: i);
     return LayoutBuilder(builder: (context, c) {
       if (c.maxWidth >= _tablet) {
-        final w = (c.maxWidth - 40) / 3;
+        final w = (c.maxWidth - DS.s(40)) / 3;
         return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10),
+          padding: DS.sym(h: 10),
           child: Wrap(children: [for (var i = 0; i < widget.stays.length; i++) card(widget.stays[i], i, w)]),
         );
       }
       return SizedBox(
         height: DestinationStayCard.heightFor(context),
-        child: _HRail(count: widget.stays.length, builder: (i) => card(widget.stays[i], i, 160)),
+        child: _HRail(count: widget.stays.length, builder: (i) => card(widget.stays[i], i, DS.s(160))),
       );
     });
   }
@@ -170,7 +170,7 @@ class _HRailState extends State<_HRail> with TickerProviderStateMixin {
   Widget build(BuildContext context) {
     return ListView.separated(
       scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: 10),
+      padding: DS.sym(h: 10),
       itemCount: widget.count,
       separatorBuilder: (_, _) => const SizedBox.shrink(),
       itemBuilder: (_, i) {

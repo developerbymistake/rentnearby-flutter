@@ -45,33 +45,33 @@ class TripGuideShortlistReview extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = tone ?? ListingTone.indigo;
-    final art = stays ? ListingArt.hotel : ListingArt.taxi;
+    final art = stays ? ListingArt.stay : ListingArt.taxi;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: [
-        const SizedBox(height: 16),
+        Gap.v(16),
         if (step == null)
-          Wrap(alignment: WrapAlignment.center, spacing: 8, runSpacing: 8, children: [for (final n in names) _Entry(name: n, art: art, tone: t, short: !stays)])
+          Wrap(alignment: WrapAlignment.center, spacing: DS.gh(8), runSpacing: DS.gv(8), children: [for (final n in names) _Entry(name: n, art: art, tone: t, short: !stays)])
         else
           _Pills(step: step!, stays: stays, sending: sending, hideNote: hidePillNote, art: art, tone: t),
         Padding(
-          padding: const EdgeInsets.only(top: 8),
+          padding: EdgeInsets.only(top: DS.gv(8)),
           child: Text(TripStringsGuide.shortlisted(names.length), textAlign: TextAlign.center, style: Ink3D.text(12, FontWeight.w500, Ink3D.hint, letterSpacing: 0)),
         ),
         if (failed > 0)
           Padding(
-            padding: const EdgeInsets.only(top: 6),
+            padding: EdgeInsets.only(top: DS.gv(6)),
             child: Text(TripStringsShortlist.failedNote(failed, taxi: !stays), style: _warn(12.5)),
           ),
         if (note != null)
           Padding(
-            padding: const EdgeInsets.only(top: 6),
+            padding: EdgeInsets.only(top: DS.gv(6)),
             child: Text(note!, key: const ValueKey('guide-send-note'), style: _warn(12.5)),
           ),
         if (showSend)
           Padding(
-            padding: const EdgeInsets.only(top: 22),
+            padding: EdgeInsets.only(top: DS.gv(22)),
             child: TripGuideSheetButton(
               label: failed > 0 ? TripStringsGuide.retrySend : TripStringsGuide.sendAll,
               tone: t,
@@ -81,11 +81,11 @@ class TripGuideShortlistReview extends StatelessWidget {
           ),
         if (onChange != null)
           Padding(
-            padding: const EdgeInsets.only(top: 12),
+            padding: EdgeInsets.only(top: DS.gv(12)),
             child: TripGuideSheetButton(label: TripStringsGuide.changePicks, tone: t, primary: false, onTap: sending ? null : onChange),
           ),
         Padding(
-          padding: EdgeInsets.only(top: onChange != null || showSend ? 8 : 10),
+          padding: EdgeInsets.only(top: DS.gv(onChange != null || showSend ? 8 : 10)),
           child: Center(child: TripGuideLink(label: TripStringsGuide.notNow, onTap: sending ? null : onNotNow)),
         ),
       ],
@@ -116,8 +116,8 @@ class _Pills extends StatelessWidget {
         children: [
           Wrap(
             alignment: WrapAlignment.center,
-            spacing: 8,
-            runSpacing: 8,
+            spacing: DS.gh(8),
+            runSpacing: DS.gv(8),
             children: [
               for (final i in items)
                 _Entry(
@@ -135,7 +135,7 @@ class _Pills extends StatelessWidget {
           ),
           if (note != null && !hideNote)
             Padding(
-              padding: const EdgeInsets.only(top: 10),
+              padding: EdgeInsets.only(top: DS.gv(10)),
               child: Text(note, style: _warn(12.5)),
             ),
         ],
@@ -173,23 +173,23 @@ class _Entry extends StatelessWidget {
         behavior: HitTestBehavior.opaque,
         onTap: onRemove,
         child: SizedBox(
-          width: 36,
-          height: 36,
+          width: DS.s(36),
+          height: DS.s(36),
           child: Center(
             child: Container(
-              width: 22,
-              height: 22,
+              width: DS.s(22),
+              height: DS.s(22),
               decoration: BoxDecoration(shape: BoxShape.circle, color: onRemove == null ? tone.tint : DesignColors.surface),
-              child: Icon(Icons.close_rounded, size: 15, color: tone.text),
+              child: Icon(Icons.close_rounded, size: DS.s(15), color: tone.text),
             ),
           ),
         ),
       ),
     );
     final chip = Container(
-      padding: EdgeInsets.fromLTRB(6, removable ? 0 : 5, removable ? 2 : 14, removable ? 0 : 5),
-      constraints: const BoxConstraints(minHeight: 40),
-      decoration: BoxDecoration(color: tone.tint, borderRadius: BorderRadius.circular(20)),
+      padding: DS.insets(l: 6, t: removable ? 0 : 5, r: removable ? 2 : 14, b: removable ? 0 : 5),
+      constraints: BoxConstraints(minHeight: DS.s(40)),
+      decoration: BoxDecoration(color: tone.tint, borderRadius: DS.circular(20)),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -201,8 +201,8 @@ class _Entry extends StatelessWidget {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Image.asset(art, width: 28, height: 28, fit: BoxFit.contain),
-                  const SizedBox(width: 6),
+                  Image.asset(art, width: DS.s(28), height: DS.s(28), fit: BoxFit.contain),
+                  Gap.h(6),
                   Flexible(child: Text(_shown, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(14, FontWeight.w700, tone.text))),
                 ],
               ),
@@ -219,7 +219,7 @@ class _Entry extends StatelessWidget {
       children: [
         chip,
         Padding(
-          padding: const EdgeInsets.only(top: 4, left: 6),
+          padding: EdgeInsets.only(top: DS.gv(4), left: DS.s(6)),
           child: Text(reason!, style: _warn(12)),
         ),
       ],

@@ -129,7 +129,7 @@ class _StaySetupHubScreenState extends State<StaySetupHubScreen> {
                           onRefresh: _ctrl.load,
                           child: ListView(
                             physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
-                            padding: EdgeInsets.only(bottom: 28 + MediaQuery.viewPaddingOf(context).bottom),
+                            padding: EdgeInsets.only(bottom: DS.s(28) + MediaQuery.viewPaddingOf(context).bottom),
                             children: _content(stay, gated),
                           ),
                         ),
@@ -149,7 +149,7 @@ class _StaySetupHubScreenState extends State<StaySetupHubScreen> {
             title: "Couldn't load your stay",
             actionLabel: 'Try again',
             onAction: _ctrl.load,
-            minHeight: math.max(300, box.maxHeight - 160),
+            minHeight: math.max(DS.s(300), box.maxHeight - DS.s(160)),
           ),
         ),
       );
@@ -158,8 +158,8 @@ class _StaySetupHubScreenState extends State<StaySetupHubScreen> {
         physics: const NeverScrollableScrollPhysics(),
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(18, 48, 18, 0),
-            child: ClipRRect(borderRadius: StayOwnerShapes.card68, child: const SkeletonBox(height: 182, radius: 0)),
+            padding: DS.gapInsets(l: 18, t: 48, r: 18),
+            child: ClipRRect(borderRadius: DS.br(StayOwnerShapes.card68), child: SkeletonBox(height: DS.s(182), radius: 0)),
           ),
           for (var i = 0; i < 4; i++) const SkeletonSlimCard(),
         ],
@@ -263,7 +263,7 @@ class _StaySetupHubScreenState extends State<StaySetupHubScreen> {
         text: 'Wrong role? Change it',
         center: true,
         color: _tone.text,
-        padding: const EdgeInsets.fromLTRB(18, 8, 18, 0),
+        padding: DS.gapInsets(l: 18, t: 8, r: 18),
         onTap: () => Get.toNamed(AppRoutes.roleSelect, arguments: {'correction': true, 'percent': percent}),
       );
 
@@ -274,7 +274,7 @@ class _StaySetupHubScreenState extends State<StaySetupHubScreen> {
       _ => '',
     };
     return Padding(
-      padding: const EdgeInsets.only(top: 10),
+      padding: EdgeInsets.only(top: DS.gv(10)),
       child: WorkoutCard(
         tone: _tone,
         art: ListingArt.star,
@@ -283,7 +283,7 @@ class _StaySetupHubScreenState extends State<StaySetupHubScreen> {
         subtitle: caption,
         trailing: WorkoutTrailing.ring,
         progress: percent / 100,
-        minHeight: 182,
+        minHeight: DS.s(182),
       ),
     );
   }

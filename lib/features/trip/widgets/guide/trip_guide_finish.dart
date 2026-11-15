@@ -38,8 +38,8 @@ class TripGuideFinish extends StatelessWidget {
             ctaLabel: TripStringsGuide.openSummary,
             trailing: WorkoutTrailing.ring,
             progress: 1,
-            minHeight: 200,
-            margin: const EdgeInsets.symmetric(horizontal: 18),
+            minHeight: DS.s(200),
+            margin: DS.sym(h: 18),
             semanticsLabel: '${TripStringsGuide.finishTitle}. ${TripStringsGuide.openSummary}',
             onTap: onSummary,
           )
@@ -50,8 +50,8 @@ class TripGuideFinish extends StatelessWidget {
             title: TripStringsGuide.finishSavedTitle,
             subtitle: TripStringsGuide.finishSavedBody,
             ctaLabel: TripStringsGuide.seeStillToDo,
-            minHeight: 170,
-            margin: const EdgeInsets.symmetric(horizontal: 18),
+            minHeight: DS.s(170),
+            margin: DS.sym(h: 18),
             semanticsLabel: '${TripStringsGuide.finishSavedTitle}. ${TripStringsGuide.seeStillToDo}',
             onTap: onSummary,
           );
@@ -59,10 +59,10 @@ class TripGuideFinish extends StatelessWidget {
     return DecoratedBox(
       decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [DesignColors.scaffold, DesignColors.surface])),
       child: ListView(
-        padding: EdgeInsets.fromLTRB(0, 12, 0, 24 + MediaQuery.paddingOf(context).bottom),
+        padding: EdgeInsets.fromLTRB(0, DS.s(12), 0, DS.s(24) + MediaQuery.paddingOf(context).bottom),
         children: [
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 18),
+            padding: DS.sym(h: 18),
             child: Row(
               children: [
                 Semantics(
@@ -76,15 +76,15 @@ class TripGuideFinish extends StatelessWidget {
                       behavior: HitTestBehavior.opaque,
                       onTap: onBack,
                       child: Container(
-                        width: 44,
-                        height: 44,
-                        decoration: BoxDecoration(color: DesignColors.surface, borderRadius: BorderRadius.circular(14), boxShadow: Ink3D.softShadow),
-                        child: const Icon(Icons.chevron_left_rounded, size: 26, color: Ink3D.hint),
+                        width: DS.s(44),
+                        height: DS.s(44),
+                        decoration: BoxDecoration(color: DesignColors.surface, borderRadius: DS.circular(14), boxShadow: DS.shadows(Ink3D.softShadow)),
+                        child: Icon(Icons.chevron_left_rounded, size: DS.s(26), color: Ink3D.hint),
                       ),
                     ),
                   ),
                 ),
-                const SizedBox(width: 14),
+                Gap.h(14),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -95,14 +95,14 @@ class TripGuideFinish extends StatelessWidget {
                   ),
                 ),
                 if (stepText.isNotEmpty) ...[
-                  const SizedBox(width: 10),
+                  Gap.h(10),
                   ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 96),
+                    constraints: BoxConstraints(maxWidth: DS.s(96)),
                     child: FittedBox(
                       fit: BoxFit.scaleDown,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-                        decoration: BoxDecoration(color: tone.tint, borderRadius: BorderRadius.circular(14)),
+                        padding: DS.sym(h: 12, v: 5),
+                        decoration: BoxDecoration(color: tone.tint, borderRadius: DS.circular(14)),
                         child: Text(stepText, maxLines: 1, style: Ink3D.text(13, FontWeight.w700, tone.text, letterSpacing: 0)),
                       ),
                     ),
@@ -111,10 +111,10 @@ class TripGuideFinish extends StatelessWidget {
               ],
             ),
           ),
-          SizedBox(height: 14 + 6 * scale),
+          Gap.v(14 + 6 * scale),
           if (pendingNames.isNotEmpty)
             Padding(
-              padding: const EdgeInsets.fromLTRB(18, 0, 18, 12),
+              padding: EdgeInsets.fromLTRB(DS.s(18), 0, DS.s(18), DS.gv(12)),
               child: Text(
                 '${TripStringsGuide.pendingTag}: ${pendingNames.join(', ')}',
                 style: Ink3D.text(13, FontWeight.w600, Ink3D.grey, letterSpacing: 0),

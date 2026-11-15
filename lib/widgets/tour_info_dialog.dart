@@ -26,33 +26,33 @@ class TourInfoDialog extends StatelessWidget {
         child: Container(
           color: GateKit.scrimDeep,
           alignment: Alignment.center,
-          padding: const EdgeInsets.symmetric(horizontal: 28),
+          padding: DS.sym(h: 28),
           child: Stack(
             clipBehavior: Clip.none,
             alignment: Alignment.topCenter,
             children: [
               Container(
-                margin: const EdgeInsets.only(top: 42),
-                padding: const EdgeInsets.fromLTRB(24, 54, 24, 20),
+                margin: EdgeInsets.only(top: DS.s(42)),
+                padding: DS.insets(l: 24, t: 54, r: 24, b: 20),
                 decoration: GateKit.card(),
                 child: TemplateStagger(
                   children: [
                     Text(
                       content.title,
                       textAlign: TextAlign.center,
-                      style: FitnessAppTheme.title.copyWith(fontSize: 18),
+                      style: FitnessAppTheme.title.copyWith(fontSize: DS.f(18)),
                     ),
-                    const SizedBox(height: 8),
+                    SizedBox(height: DS.s(8)),
                     Text(
                       content.body,
                       textAlign: TextAlign.center,
                       style: FitnessAppTheme.body2
-                          .copyWith(fontSize: 12.5, height: 1.55, color: FitnessAppTheme.lightText),
+                          .copyWith(fontSize: DS.f(12.5), height: 1.55, color: FitnessAppTheme.lightText),
                     ),
-                    const SizedBox(height: 20),
+                    SizedBox(height: DS.s(20)),
                     GateButton(label: content.primaryLabel, height: 48, onPressed: onPrimary),
                     if (content.secondaryLabel != null) ...[
-                      const SizedBox(height: 6),
+                      SizedBox(height: DS.s(6)),
                       GateTextButton(
                         label: content.secondaryLabel!,
                         onPressed: onSecondary,

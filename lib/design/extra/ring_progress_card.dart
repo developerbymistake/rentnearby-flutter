@@ -1,3 +1,4 @@
+import 'package:bakhli/design/tokens/design_scale.dart';
 import '../tokens/alpha_tokens.dart';
 import '../tokens/card_tokens.dart';
 import 'package:bakhli/design/template/fitness_app_theme.dart';
@@ -24,19 +25,19 @@ class RingProgressCard extends StatelessWidget {
   final String? subtitle;
   final VoidCallback? onTap;
 
-  static const BorderRadius _radius = CardRadius.hero;
+  BorderRadius get _radius => DS.br(CardRadius.hero);
 
   @override
   Widget build(BuildContext context) {
     final double p = progress.clamp(0.0, 1.0);
     return Padding(
-      padding: const EdgeInsets.only(left: 24, right: 24, top: 16, bottom: 18),
+      padding: EdgeInsets.fromLTRB(DS.s(24), DS.gv(16), DS.s(24), DS.gv(18)),
       child: Container(
         decoration: BoxDecoration(
           color: FitnessAppTheme.white,
           borderRadius: _radius,
           boxShadow: <BoxShadow>[
-            ShadowTokens.tint(FitnessAppTheme.grey, ShadowSpec.soft),
+            DS.shadows([ShadowTokens.tint(FitnessAppTheme.grey, ShadowSpec.soft)]).first,
           ],
         ),
         child: Material(
@@ -45,7 +46,7 @@ class RingProgressCard extends StatelessWidget {
             borderRadius: _radius,
             onTap: onTap,
             child: Padding(
-              padding: const EdgeInsets.all(24),
+              padding: DS.all(24),
               child: Row(
                 children: <Widget>[
                   Expanded(
@@ -54,23 +55,23 @@ class RingProgressCard extends StatelessWidget {
                       children: <Widget>[
                         Text(
                           title,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontFamily: FitnessAppTheme.fontName,
                             fontWeight: FontWeight.w500,
-                            fontSize: 16,
+                            fontSize: DS.f(16),
                             letterSpacing: -0.1,
                             color: FitnessAppTheme.grey,
                           ),
                         ),
                         if (subtitle != null)
                           Padding(
-                            padding: const EdgeInsets.only(top: 6),
+                            padding: EdgeInsets.only(top: DS.s(6)),
                             child: Text(
                               subtitle!,
                               style: TextStyle(
                                 fontFamily: FitnessAppTheme.fontName,
                                 fontWeight: FontWeight.w500,
-                                fontSize: 12,
+                                fontSize: DS.f(12),
                                 color: FitnessAppTheme.grey.withValues(alpha: Alpha.half),
                               ),
                             ),
@@ -82,13 +83,13 @@ class RingProgressCard extends StatelessWidget {
                     alignment: Alignment.center,
                     children: <Widget>[
                       Container(
-                        width: 100,
-                        height: 100,
+                        width: DS.s(100),
+                        height: DS.s(100),
                         decoration: BoxDecoration(
                           color: FitnessAppTheme.white,
                           shape: BoxShape.circle,
                           border: Border.all(
-                            width: 4,
+                            width: DS.s(4),
                             color: FitnessAppTheme.nearlyDarkBlue
                                 .withValues(alpha: Alpha.soft),
                           ),
@@ -98,10 +99,10 @@ class RingProgressCard extends StatelessWidget {
                           children: <Widget>[
                             Text(
                               value,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontFamily: FitnessAppTheme.fontName,
                                 fontWeight: FontWeight.normal,
-                                fontSize: 24,
+                                fontSize: DS.f(24),
                                 letterSpacing: 0.0,
                                 color: FitnessAppTheme.nearlyDarkBlue,
                               ),
@@ -111,7 +112,7 @@ class RingProgressCard extends StatelessWidget {
                               style: TextStyle(
                                 fontFamily: FitnessAppTheme.fontName,
                                 fontWeight: FontWeight.bold,
-                                fontSize: 12,
+                                fontSize: DS.f(12),
                                 letterSpacing: 0.0,
                                 color: FitnessAppTheme.grey.withValues(alpha: Alpha.half),
                               ),
@@ -128,7 +129,7 @@ class RingProgressCard extends StatelessWidget {
                           ],
                           angle: 5 + 360 * p,
                         ),
-                        child: const SizedBox(width: 108, height: 108),
+                        child: SizedBox(width: DS.s(108), height: DS.s(108)),
                       ),
                     ],
                   ),

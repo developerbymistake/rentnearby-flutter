@@ -51,11 +51,11 @@ class NearestConfirmSheet extends StatelessWidget {
               onConfirm();
             },
           ),
-          const SizedBox(height: 12),
+          Gap.v(12),
           WhitePillButton(tone: tone, label: 'Not Now', height: 52, onTap: () => Navigator.pop(context)),
         ],
       ),
-      child: const SizedBox(height: 12),
+      child: Gap.v(12),
     );
   }
 }

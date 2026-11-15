@@ -16,7 +16,7 @@ class TravelConfirmSheet {
           WhitePillButton(tone: tone, label: TripStringsMcbA2.keep, height: 52, fontSize: 15, onTap: () => Navigator.pop(sheetCtx, false)),
           GradientPillButton(tone: tone, label: confirm, height: 52, fontSize: 15, onTap: () => Navigator.pop(sheetCtx, true)),
         ]),
-        child: const SizedBox(height: 4),
+        child: SizedBox(height: DS.s(4)),
       ),
     );
     return ok == true;

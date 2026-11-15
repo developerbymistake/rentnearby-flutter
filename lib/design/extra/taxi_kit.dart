@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../tokens/card_tokens.dart';
 import '../tokens/design_colors.dart';
+import '../tokens/design_scale.dart';
 import '../tokens/shadow_tokens.dart';
 import '../tokens/type_tokens.dart';
 import 'kit_tone.dart';
@@ -69,8 +70,8 @@ class JourneyPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(color: bg, borderRadius: CardRadius.pill),
+      padding: DS.sym(h: 10, v: 4),
+      decoration: BoxDecoration(color: bg, borderRadius: DS.br(CardRadius.pill)),
       child: Text(
         text,
         maxLines: maxLines,
@@ -114,14 +115,14 @@ class JourneyDotMark extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: size,
-      height: size,
+      width: DS.s(size),
+      height: DS.s(size),
       alignment: Alignment.center,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: color,
-        border: Border.all(color: DesignColors.surface, width: 3),
-        boxShadow: ShadowTokens.elev1,
+        border: Border.all(color: DesignColors.surface, width: DS.s(3)),
+        boxShadow: DS.shadows(ShadowTokens.elev1),
       ),
       child: child,
     );
@@ -132,8 +133,8 @@ Color journeyLegColor(int legIndex) => TripLook.dayColors[(legIndex - 1).abs() %
 
 BoxDecoration journeyBarCard(Color bar) => BoxDecoration(
       color: DesignColors.surface,
-      borderRadius: CardRadius.tile,
-      boxShadow: [ShadowTokens.tint(bar, ShadowSpec.elev2Spec)],
+      borderRadius: DS.br(CardRadius.tile),
+      boxShadow: DS.shadows([ShadowTokens.tint(bar, ShadowSpec.elev2Spec)]),
     );
 
 class JourneySkeletonCard extends StatelessWidget {
@@ -144,31 +145,31 @@ class JourneySkeletonCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: const BoxDecoration(
+      padding: DS.all(14),
+      decoration: BoxDecoration(
         color: DesignColors.surface,
-        borderRadius: CardRadius.tile,
-        boxShadow: ShadowTokens.elev2,
+        borderRadius: DS.br(CardRadius.tile),
+        boxShadow: DS.shadows(ShadowTokens.elev2),
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Expanded(
             child: LayoutBuilder(
               builder: (context, c) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                TemplatePlaceholder(height: 16, width: c.maxWidth * 0.55),
-                const SizedBox(height: 8),
-                TemplatePlaceholder(height: 12, width: c.maxWidth * 0.75),
+                TemplatePlaceholder(height: DS.s(16), width: c.maxWidth * 0.55),
+                Gap.v(8),
+                TemplatePlaceholder(height: DS.s(12), width: c.maxWidth * 0.75),
               ]),
             ),
           ),
-          const SizedBox(width: 8),
-          const TemplatePlaceholder(height: 24, width: 72, radius: 18),
+          Gap.h(8),
+          TemplatePlaceholder(height: DS.s(24), width: DS.s(72), radius: DS.radius(18)),
         ]),
-        const SizedBox(height: 14),
+        Gap.v(14),
         Row(children: [
           for (var i = 0; i < buttons; i++) ...[
-            if (i > 0) const SizedBox(width: 8),
-            const Expanded(child: TemplatePlaceholder(height: 44, radius: 16)),
+            if (i > 0) Gap.h(8),
+            Expanded(child: TemplatePlaceholder(height: DS.s(44), radius: DS.radius(16))),
           ],
         ]),
       ]),

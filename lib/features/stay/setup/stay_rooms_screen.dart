@@ -227,7 +227,7 @@ class _StayRoomsScreenState extends State<StayRoomsScreen> {
                 StayPageHeader(title: 'Rooms', subtitle: 'Add rooms, up to 2', onBack: _onBack, asset: SetupAssets.bed),
                 Expanded(
                   child: ListView(
-                    padding: const EdgeInsets.only(bottom: 24),
+                    padding: EdgeInsets.only(bottom: DS.s(24)),
                     children: [
                       for (var i = 0; i < _rooms.length; i++) KeyedSubtree(key: ObjectKey(_rooms[i]), child: _summaryCard(i)),
                       if (_formOpen) KeyedSubtree(key: ValueKey('form-$_formSeq'), child: _form()),

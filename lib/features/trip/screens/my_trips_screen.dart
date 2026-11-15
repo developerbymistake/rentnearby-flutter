@@ -197,10 +197,10 @@ class _MyTripsScreenState extends State<MyTripsScreen> with TickerProviderStateM
         onMarkComplete: past && !t.isCompleted ? () => TripLifecycleActions.markCompleteFromList(context, t) : null,
       );
 
-  Widget _pad(Widget child) => Padding(padding: const EdgeInsets.fromLTRB(18, 20, 18, 0), child: child);
+  Widget _pad(Widget child) => Padding(padding: EdgeInsets.fromLTRB(DS.s(18), DS.gv(20), DS.s(18), 0), child: child);
 
   Widget _skeleton() => _pad(Container(
-        height: _skeletonHeight,
+        height: DS.s(_skeletonHeight),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: HubTokens.cardRadius(68),
@@ -278,7 +278,7 @@ class _MyTripsScreenState extends State<MyTripsScreen> with TickerProviderStateM
       final at = _ctrl.offlineCopyAt.value;
       if (at == null || _ctrl.active.isEmpty) return const SizedBox.shrink();
       return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 18),
+        padding: DS.sym(h: 18),
         child: _enter(0, DisclaimerBanner(text: TripStringsA5.offlineCopy(TripFormat.time12Of(at)))),
       );
     });
@@ -286,11 +286,11 @@ class _MyTripsScreenState extends State<MyTripsScreen> with TickerProviderStateM
 
   Widget _buildFooter() {
     return Obx(() => Padding(
-          padding: EdgeInsets.only(top: 12, bottom: widget.root ? BarMetrics.bodyBottomOf(context) : 24),
+          padding: EdgeInsets.only(top: DS.gv(12), bottom: widget.root ? BarMetrics.bodyBottomOf(context) : DS.s(24)),
           child: SizedBox(
-            height: 24,
+            height: DS.s(24),
             child: _ctrl.isLoadingMore.value
-                ? const Center(child: TemplatePlaceholder(height: 8, width: 60, radius: 4))
+                ? Center(child: TemplatePlaceholder(height: DS.s(8), width: DS.s(60), radius: DS.radius(4)))
                 : null,
           ),
         ));

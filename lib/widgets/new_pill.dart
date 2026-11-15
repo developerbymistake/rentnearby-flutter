@@ -8,11 +8,11 @@ class NewPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
-      decoration: BoxDecoration(color: color.withValues(alpha: Alpha.v10), borderRadius: BorderRadius.circular(8)),
+      padding: DS.sym(h: 7, v: 2.5),
+      decoration: BoxDecoration(color: color.withValues(alpha: Alpha.v10), borderRadius: DS.circular(8)),
       child: Text(
         'NEW',
-        style: FitnessAppTheme.caption.copyWith(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.3, color: color),
+        style: FitnessAppTheme.caption.copyWith(fontSize: DS.f(11), fontWeight: FontWeight.w700, letterSpacing: 0.3, color: color),
       ),
     );
   }

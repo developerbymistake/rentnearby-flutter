@@ -44,7 +44,7 @@ class _DistrictBannerOverlayState extends State<DistrictBannerOverlay>
               animation: templateInterval(_c, 0, 1),
               animationController: _c,
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
+                padding: DS.sym(h: 20),
                 child: _buildCard(),
               ),
             ),
@@ -65,7 +65,7 @@ class _DistrictBannerOverlayState extends State<DistrictBannerOverlay>
         fit: BoxFit.cover,
         placeholder: (context, url) => const SkeletonBox(height: 200, radius: 0),
         errorWidget: (context, url, error) => Container(
-          height: 200,
+          height: DS.s(200),
           color: ListingTone.indigo.tint,
           alignment: Alignment.center,
           child: const Art3D(asset: ListingArt.camera, size: 72),

@@ -157,7 +157,7 @@ class _TripSummaryScreenState extends State<TripSummaryScreen> with TickerProvid
     return Center(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: _maxWidth),
-        child: ListView(padding: const EdgeInsets.fromLTRB(0, 8, 0, 24), children: children),
+        child: ListView(padding: EdgeInsets.only(top: DS.s(8), bottom: DS.s(24)), children: children),
       ),
     );
   }
@@ -170,7 +170,7 @@ class _TripSummaryScreenState extends State<TripSummaryScreen> with TickerProvid
     }
     if (r == null) {
       return _column([
-        const SizedBox(height: 40),
+        Gap.v(40),
         StateCard3D(
           tone: tone,
           art: ListingArt.worldMap,
@@ -184,7 +184,7 @@ class _TripSummaryScreenState extends State<TripSummaryScreen> with TickerProvid
     }
     if (!TripSummaryText.hasContent(r)) {
       return _column([
-        const SizedBox(height: 40),
+        Gap.v(40),
         StateCard3D(
           tone: tone,
           art: ListingArt.clipboard,
@@ -207,7 +207,7 @@ class _TripSummaryScreenState extends State<TripSummaryScreen> with TickerProvid
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: _maxWidth),
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(0, 4, 0, 24),
+                padding: EdgeInsets.only(top: DS.s(4), bottom: DS.s(24)),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: _stagger([
@@ -234,9 +234,9 @@ class _TripSummaryScreenState extends State<TripSummaryScreen> with TickerProvid
                       ],
                     ],
                     ..._journeySection(r, TripStepRole.comingBack),
-                    const SizedBox(height: 12),
+                    Gap.v(12),
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 22),
+                      padding: DS.sym(h: 22),
                       child: Text(TripSummaryText.footer(r), style: Ink3D.text(11.5, FontWeight.w400, Ink3D.grey, height: 1.4)),
                     ),
                   ]),
@@ -264,7 +264,7 @@ class _TripSummaryScreenState extends State<TripSummaryScreen> with TickerProvid
     if (rows.isEmpty) return const [];
     return [
       Padding(
-        padding: const EdgeInsets.fromLTRB(22, 24, 22, 10),
+        padding: EdgeInsets.fromLTRB(DS.s(22), DS.gv(24), DS.s(22), DS.gv(10)),
         child: Text(TripStringsV2Easy.arrangementsHeading,
             maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(11.5, FontWeight.w700, Ink3D.grey, letterSpacing: 1)),
       ),
@@ -284,7 +284,7 @@ class _TripSummaryScreenState extends State<TripSummaryScreen> with TickerProvid
       divider: divider,
       tone: ListingTone.indigo,
       trailing: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 110),
+        constraints: BoxConstraints(maxWidth: DS.s(110)),
         child: Text(TripSummaryText.stateWord(a.state),
             maxLines: 2,
             textAlign: TextAlign.end,
@@ -307,8 +307,8 @@ class _TripSummaryScreenState extends State<TripSummaryScreen> with TickerProvid
         eyebrow: TripStrings.joinDots([TripFormat.shortDate(j.date), TripStringsStepsA3.carsLine(j.cars)]),
         title: TripStringsStepsA3.routeLine(j.places),
         body: Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(color: DesignColors.surface, borderRadius: BorderRadius.circular(14)),
+          padding: DS.all(10),
+          decoration: BoxDecoration(color: DesignColors.surface, borderRadius: DS.circular(14)),
           child: TripJourneyCompact(journey: j),
         ),
         payLine: TripStrings.taxiPayLine,
@@ -340,7 +340,7 @@ class _TripSummaryScreenState extends State<TripSummaryScreen> with TickerProvid
     final label = n.isCancelled ? TripSummaryText.statusLabel(n.display, n.cancelledBy ?? 'owner') : null;
     return TripSummaryBookingCard(
       tone: ListingTone.forest,
-      art: ListingArt.hotel,
+      art: ListingArt.stay,
       eyebrow: heading,
       title: subtitle ?? n.listingName,
       pill: TripSummaryBookingCard.statusPill(status, label: label),
@@ -383,12 +383,12 @@ class _TripSummaryScreenState extends State<TripSummaryScreen> with TickerProvid
 
   Widget _shareBar(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: DesignColors.surface,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-        boxShadow: Ink3D.topEdge,
+        borderRadius: DS.br(const BorderRadius.vertical(top: Radius.circular(16))),
+        boxShadow: DS.shadows(Ink3D.topEdge),
       ),
-      padding: EdgeInsets.fromLTRB(18, 14, 18, 8 + MediaQuery.paddingOf(context).bottom),
+      padding: EdgeInsets.fromLTRB(DS.s(18), DS.s(14), DS.s(18), DS.s(8) + MediaQuery.paddingOf(context).bottom),
       child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: _maxWidth),

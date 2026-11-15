@@ -55,7 +55,7 @@ class _PlanHistoryScreenState extends State<PlanHistoryScreen> {
     final items = _plans.history.toList();
     final loading = _plans.isLoadingHistory.value;
     final failed = _plans.historyLoadFailed.value;
-    final bottom = KitMetrics.sectionGap + AppInsets.bottomViewPadding(context);
+    final bottom = DS.s(KitMetrics.sectionGap) + AppInsets.bottomViewPadding(context);
     final Widget content;
     if (items.isEmpty && loading) {
       content = const PlanSkeleton3D(hero: false, rows: 4);

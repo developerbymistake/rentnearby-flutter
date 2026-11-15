@@ -217,7 +217,7 @@ class _TripTaxiScreenState extends State<TripTaxiScreen> with TickerProviderStat
     final label = date == null ? TripStrings.dayN(day) : '${TripStrings.dayN(day)} · ${TripFormat.shortDate(date)}';
     final locked = _plan.isDayPast(day);
     return ConstrainedBox(
-      constraints: const BoxConstraints(minHeight: 44),
+      constraints: BoxConstraints(minHeight: DS.s(44)),
       child: TripChoiceChip(
         label: label,
         selected: _days.contains(day),
@@ -226,7 +226,7 @@ class _TripTaxiScreenState extends State<TripTaxiScreen> with TickerProviderStat
           if (!locked) _toggle(day);
         },
         activeColor: TripUi.taxi,
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+        padding: DS.sym(h: 12, v: 12),
       ),
     );
   }
@@ -243,24 +243,24 @@ class _TripTaxiScreenState extends State<TripTaxiScreen> with TickerProviderStat
         children: [
           if (p.isMultiCity)
             Padding(
-              padding: const EdgeInsets.only(bottom: 6, top: 6),
+              padding: EdgeInsets.only(bottom: DS.gv(6), top: DS.gv(6)),
               child: Text(p.cityNameOf(days.first.day),
-                  style: const TextStyle(
-                      fontFamily: FitnessAppTheme.fontName, fontSize: 12, fontWeight: FontWeight.w700, color: FitnessAppTheme.darkText)),
+                  style: TextStyle(
+                      fontFamily: FitnessAppTheme.fontName, fontSize: DS.f(12), fontWeight: FontWeight.w700, color: FitnessAppTheme.darkText)),
             ),
-          Wrap(spacing: 8, runSpacing: 8, children: [for (final d in days) _dayChip(d.day)]),
+          Wrap(spacing: DS.gh(8), runSpacing: DS.gv(8), children: [for (final d in days) _dayChip(d.day)]),
         ],
       ));
     }
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      const Text(TripStringsV2Find.taxiDays,
+      Text(TripStringsV2Find.taxiDays,
           style: TextStyle(
-              fontFamily: FitnessAppTheme.fontName, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.6, color: FitnessAppTheme.darkText)),
-      const SizedBox(height: 4),
+              fontFamily: FitnessAppTheme.fontName, fontSize: DS.f(11), fontWeight: FontWeight.w700, letterSpacing: 0.6, color: FitnessAppTheme.darkText)),
+      Gap.v(4),
       ...groups,
-      const SizedBox(height: 4),
-      const Text(TripStringsV2Find.taxiDayNote,
-          style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 11, color: FitnessAppTheme.darkText)),
+      Gap.v(4),
+      Text(TripStringsV2Find.taxiDayNote,
+          style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: DS.f(11), color: FitnessAppTheme.darkText)),
     ]);
   }
 
@@ -269,13 +269,13 @@ class _TripTaxiScreenState extends State<TripTaxiScreen> with TickerProviderStat
         _days.length;
         final showChips = !_plan.isReadOnly && _supply.taxis.isNotEmpty;
         return _enter(_narrow(Padding(
-          padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+          padding: EdgeInsets.fromLTRB(DS.s(16), DS.gv(14), DS.s(16), 0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               _dayChips(),
               if (showChips) ...[
-                const SizedBox(height: 12),
+                Gap.v(12),
                 TripFilterChips(accent: TripUi.taxi, items: [
                   TripFilterChip(
                     label: TripStringsA3.seats4,
@@ -308,35 +308,35 @@ class _TripTaxiScreenState extends State<TripTaxiScreen> with TickerProviderStat
   }) {
     return SliverToBoxAdapter(
       child: _narrow(Padding(
-        padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
+        padding: EdgeInsets.fromLTRB(DS.s(16), DS.gv(24), DS.s(16), 0),
         child: _enter(
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
-            decoration: BoxDecoration(color: FitnessAppTheme.white, borderRadius: CardRadius.tile, boxShadow: ShadowTokens.elev1),
+            padding: DS.insets(l: 20, t: 24, r: 20, b: 20),
+            decoration: BoxDecoration(color: FitnessAppTheme.white, borderRadius: DS.br(CardRadius.tile), boxShadow: DS.shadows(ShadowTokens.elev1)),
             child: Column(
               children: [
                 Container(
-                  width: 72,
-                  height: 72,
-                  decoration: BoxDecoration(shape: BoxShape.circle, gradient: KitTone.taxi.gradient, boxShadow: ShadowTokens.glow(TripUi.taxi)),
-                  child: Center(child: asset != null ? TravelIcon(asset, size: 40) : Icon(icon, size: 30, color: FitnessAppTheme.white)),
+                  width: DS.s(72),
+                  height: DS.s(72),
+                  decoration: BoxDecoration(shape: BoxShape.circle, gradient: KitTone.taxi.gradient, boxShadow: DS.shadows(ShadowTokens.glow(TripUi.taxi))),
+                  child: Center(child: asset != null ? TravelIcon(asset, size: 40) : Icon(icon, size: DS.s(30), color: FitnessAppTheme.white)),
                 ),
-                const SizedBox(height: 16),
+                Gap.v(16),
                 Text(title,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
+                    style: TextStyle(
                         fontFamily: FitnessAppTheme.fontName,
-                        fontSize: 18,
+                        fontSize: DS.f(18),
                         fontWeight: FontWeight.bold,
                         letterSpacing: 0.2,
                         color: FitnessAppTheme.darkerText)),
-                const SizedBox(height: 6),
+                Gap.v(6),
                 Text(subtitle,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
-                        fontFamily: FitnessAppTheme.fontName, fontSize: 14, fontWeight: FontWeight.w500, color: FitnessAppTheme.lightText)),
-                for (final a in actions) ...[const SizedBox(height: 12), a],
+                    style: TextStyle(
+                        fontFamily: FitnessAppTheme.fontName, fontSize: DS.f(14), fontWeight: FontWeight.w500, color: FitnessAppTheme.lightText)),
+                for (final a in actions) ...[Gap.v(12), a],
               ],
             ),
           ),
@@ -348,16 +348,16 @@ class _TripTaxiScreenState extends State<TripTaxiScreen> with TickerProviderStat
 
   Widget _pill(VoidCallback onTap, Color border, Widget child) => InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: DS.circular(24),
         child: Container(
-          height: 48,
+          height: DS.s(48),
           alignment: Alignment.center,
-          padding: const EdgeInsets.symmetric(horizontal: 20),
+          padding: DS.sym(h: 20),
           decoration: BoxDecoration(
             color: FitnessAppTheme.white,
-            borderRadius: BorderRadius.circular(24),
+            borderRadius: DS.circular(24),
             border: Border.all(color: border, width: 1.5),
-            boxShadow: ShadowTokens.elev1,
+            boxShadow: DS.shadows(ShadowTokens.elev1),
           ),
           child: child,
         ),
@@ -370,13 +370,13 @@ class _TripTaxiScreenState extends State<TripTaxiScreen> with TickerProviderStat
           mainAxisSize: MainAxisSize.min,
           children: [
             icon,
-            const SizedBox(width: 8),
+            Gap.h(8),
             Flexible(
               child: Text(label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                      fontFamily: FitnessAppTheme.fontName, fontSize: 14, fontWeight: FontWeight.w700, color: TripUi.taxiDark)),
+                  style: TextStyle(
+                      fontFamily: FitnessAppTheme.fontName, fontSize: DS.f(14), fontWeight: FontWeight.w700, color: TripUi.taxiDark)),
             ),
           ],
         ),
@@ -385,8 +385,8 @@ class _TripTaxiScreenState extends State<TripTaxiScreen> with TickerProviderStat
   Widget _skipButton() => _pill(
         _skip,
         TripUi.good,
-        const Text(TripStringsV2Find.skip,
-            style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 14, fontWeight: FontWeight.w700, color: TripUi.good)),
+        Text(TripStringsV2Find.skip,
+            style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: DS.f(14), fontWeight: FontWeight.w700, color: TripUi.good)),
       );
 
   Widget _shimmerList() => SliverPadding(
@@ -475,7 +475,7 @@ class _TripTaxiScreenState extends State<TripTaxiScreen> with TickerProviderStat
             icon: Icons.filter_list_rounded,
             title: TripStringsA3.noMatchTitle,
             subtitle: TripStringsA3.noMatchBody,
-            actions: [_outlinedAction(TripStringsA3.clearFilters, const Icon(Icons.close_rounded, size: 20, color: TripUi.taxiDark), _clearFilters)],
+            actions: [_outlinedAction(TripStringsA3.clearFilters, Icon(Icons.close_rounded, size: DS.s(20), color: TripUi.taxiDark), _clearFilters)],
           );
         }
         final n = _days.length;
@@ -524,24 +524,24 @@ class _TripTaxiScreenState extends State<TripTaxiScreen> with TickerProviderStat
           child: Row(
             children: [
               icon,
-              const SizedBox(width: 10),
+              Gap.h(10),
               Flexible(
                 child: Text(label,
-                    style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 13, color: FitnessAppTheme.darkerText)),
+                    style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: DS.f(13), color: FitnessAppTheme.darkerText)),
               ),
             ],
           ),
         );
     return [
-      item(1, const Icon(Icons.receipt_long_outlined, size: 20, color: TripUi.taxiDark), TripStringsA3.iBookedThis),
-      item(2, const Icon(Icons.visibility_outlined, size: 20, color: TripUi.taxiDark), TripStringsA3.viewDetails),
+      item(1, Icon(Icons.receipt_long_outlined, size: DS.s(20), color: TripUi.taxiDark), TripStringsA3.iBookedThis),
+      item(2, Icon(Icons.visibility_outlined, size: DS.s(20), color: TripUi.taxiDark), TripStringsA3.viewDetails),
     ];
   }
 
   Widget _buildFooter() => Obx(() => Padding(
-        padding: const EdgeInsets.only(top: 12, bottom: 24),
+        padding: EdgeInsets.only(top: DS.gv(12), bottom: DS.s(24)),
         child: SizedBox(
-          height: 24,
+          height: DS.s(24),
           child: _supply.taxiLoadingMore.value
               ? const Center(child: KitDots(color: TripUi.taxi))
               : null,

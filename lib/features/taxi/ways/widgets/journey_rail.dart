@@ -36,7 +36,7 @@ class JourneyRail extends StatelessWidget {
     final legs = plan.legs;
     if (legs.isEmpty) return const SizedBox.shrink();
     items.add(JourneyStop3D(
-      top: 16,
+      top: DS.gv(16),
       title: legs.first.from.name,
       subtitle: '${TaxiWaysStrings.youStart} · ${TripFormat.shortDate(date)}',
     ));
@@ -56,7 +56,7 @@ class JourneyRail extends StatelessWidget {
           onChange: onChangeDriver == null ? null : () => onChangeDriver!(leg),
           linkAbove: t.g1,
         ));
-        items.add(Padding(padding: const EdgeInsets.only(top: 2), child: JourneyLink3D(color: t.g1)));
+        items.add(Padding(padding: EdgeInsets.only(top: DS.gv(2)), child: JourneyLink3D(color: t.g1)));
       }
       if (i < legs.length - 1) {
         final next = legs[i + 1];
@@ -96,12 +96,12 @@ class RailRow extends StatelessWidget {
     return IntrinsicHeight(
       child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         SizedBox(
-          width: 30,
+          width: DS.s(30),
           child: CustomPaint(painter: _GutterPainter(marker: marker, above: above, below: below, dashed: dashed)),
         ),
-        const SizedBox(width: 8),
+        Gap.h(8),
         Expanded(
-          child: Padding(padding: const EdgeInsets.only(bottom: 12), child: child),
+          child: Padding(padding: EdgeInsets.only(bottom: DS.gv(12)), child: child),
         ),
       ]),
     );
@@ -116,7 +116,7 @@ class _GutterPainter extends CustomPainter {
 
   _GutterPainter({required this.marker, this.above, this.below, this.dashed = false});
 
-  static const double _markerY = 18;
+  static double get _markerY => DS.s(18);
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -124,7 +124,7 @@ class _GutterPainter extends CustomPainter {
     final hasMarker = marker != RailMarker.none;
     final midY = hasMarker ? _markerY : size.height / 2;
     final line = Paint()
-      ..strokeWidth = 4
+      ..strokeWidth = DS.s(4)
       ..strokeCap = StrokeCap.round;
     if (above != null) {
       line.color = above!;
@@ -138,24 +138,24 @@ class _GutterPainter extends CustomPainter {
     final fill = Paint()..style = PaintingStyle.fill;
     final ring = Paint()
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 3;
+      ..strokeWidth = DS.s(3);
     switch (marker) {
       case RailMarker.change:
         fill.color = TripLook.warningSurface;
         ring.color = WaysTokens.changeAccent;
-        canvas.drawCircle(Offset(x, midY), 11, Paint()..color = DesignColors.surface);
-        canvas.drawCircle(Offset(x, midY), 11, fill);
-        canvas.drawCircle(Offset(x, midY), 11, ring);
+        canvas.drawCircle(Offset(x, midY), DS.s(11), Paint()..color = DesignColors.surface);
+        canvas.drawCircle(Offset(x, midY), DS.s(11), fill);
+        canvas.drawCircle(Offset(x, midY), DS.s(11), ring);
       case RailMarker.start:
         fill.color = DesignColors.surface;
         ring.color = below ?? DesignColors.primary;
-        canvas.drawCircle(Offset(x, midY), 8, fill);
-        canvas.drawCircle(Offset(x, midY), 8, ring);
+        canvas.drawCircle(Offset(x, midY), DS.s(8), fill);
+        canvas.drawCircle(Offset(x, midY), DS.s(8), ring);
       case RailMarker.end:
         fill.color = above ?? DesignColors.primary;
-        canvas.drawCircle(Offset(x, midY), 9, fill);
+        canvas.drawCircle(Offset(x, midY), DS.s(9), fill);
         fill.color = DesignColors.surface;
-        canvas.drawCircle(Offset(x, midY), 3.5, fill);
+        canvas.drawCircle(Offset(x, midY), DS.s(3.5), fill);
       case RailMarker.none:
         break;
     }
@@ -166,8 +166,8 @@ class _GutterPainter extends CustomPainter {
       canvas.drawLine(a, b, p);
       return;
     }
-    const dash = 6.0;
-    const gap = 5.0;
+    final dash = DS.s(6);
+    final gap = DS.s(5);
     var y = a.dy;
     while (y < b.dy) {
       final end = (y + dash).clamp(a.dy, b.dy);

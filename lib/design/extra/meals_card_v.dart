@@ -1,3 +1,4 @@
+import 'package:bakhli/design/tokens/design_scale.dart';
 import 'package:flutter/material.dart';
 
 import '../tokens/design_colors.dart';
@@ -30,14 +31,14 @@ class RoundGoButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final button = Container(
-      width: size,
-      height: size,
-      decoration: const BoxDecoration(
-        color: Color(0xFFFAFAFA),
+      width: DS.s(size),
+      height: DS.s(size),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFAFAFA),
         shape: BoxShape.circle,
-        boxShadow: Ink3D.goBtn,
+        boxShadow: DS.shadows(Ink3D.goBtn),
       ),
-      child: Icon(icon, color: color, size: 22),
+      child: Icon(icon, color: color, size: DS.s(22)),
     );
     if (onTap == null) return button;
     return GestureDetector(
@@ -69,7 +70,7 @@ class PriceLine extends StatelessWidget {
     const white = Colors.white;
     final big = numberSize > 26;
     final cap = caption;
-    final unitMax = MediaQuery.textScalerOf(context).scale(big ? 110 : 62);
+    final unitMax = DS.s(MediaQuery.textScalerOf(context).scale(big ? 110 : 62));
     return FittedBox(
       fit: BoxFit.scaleDown,
       alignment: Alignment.bottomLeft,
@@ -79,7 +80,7 @@ class PriceLine extends StatelessWidget {
         children: [
           if (cap != null && cap.isNotEmpty)
             Padding(
-              padding: const EdgeInsets.only(right: 6, bottom: 5),
+              padding: EdgeInsets.only(right: DS.s(6), bottom: DS.s(5)),
               child: Text(
                 cap,
                 maxLines: 1,
@@ -99,7 +100,7 @@ class PriceLine extends StatelessWidget {
           ),
           if (unit.isNotEmpty)
             Padding(
-              padding: EdgeInsets.only(left: big ? 5 : 4, bottom: big ? 4 : 3),
+              padding: EdgeInsets.only(left: DS.s(big ? 5 : 4), bottom: DS.s(big ? 4 : 3)),
               child: ConstrainedBox(
                 constraints: BoxConstraints(maxWidth: unitMax),
                 child: Text(
@@ -146,7 +147,7 @@ class WholeWordLine extends StatelessWidget {
       final x = widthOf(w, style);
       if (x > longest) longest = x;
     }
-    final usable = room - 6;
+    final usable = room - DS.s(6);
     final fit = longest <= usable ? 1.0 : (usable / longest).clamp(0.7, 1.0);
     final st = fit == 1.0 ? style : style.copyWith(fontSize: (style.fontSize ?? 12) * fit);
     return Text(text, maxLines: 2, overflow: TextOverflow.ellipsis, style: st);
@@ -169,7 +170,7 @@ class MealsCardV extends StatelessWidget {
     this.unit = '',
     this.goIcon = Icons.arrow_forward,
     this.onTap,
-    this.width = 160,
+    this.width,
     this.minCardHeight = 194,
     this.semanticsLabel,
     this.wholeWords = false,
@@ -194,7 +195,7 @@ class MealsCardV extends StatelessWidget {
   final String unit;
   final IconData goIcon;
   final VoidCallback? onTap;
-  final double width;
+  final double? width;
   final double minCardHeight;
   final String? semanticsLabel;
   final bool wholeWords;
@@ -205,28 +206,31 @@ class MealsCardV extends StatelessWidget {
   final double cellBottom;
   final bool compact;
 
-  static const double slotGap = 16;
+  static double get slotGap => DS.s(16);
 
-  static const EdgeInsets cellPadding = EdgeInsets.fromLTRB(8, 46, 8, 18);
+  static EdgeInsets get cellPadding => DS.insets(l: 8, t: 46, r: 8, b: 18);
 
   @override
   Widget build(BuildContext context) {
     final scaler = MediaQuery.textScalerOf(context);
     const white = Colors.white;
-    final descMin = scaler.scale(12) * 1.55 * (compact ? 1 : 2);
+    final width = this.width ?? DS.s(160);
+    final minCardHeight = DS.s(this.minCardHeight);
+    final cellBottom = DS.s(this.cellBottom);
+    final descMin = scaler.scale(DS.f(12)) * 1.55 * (compact ? 1 : 2);
     final hasNumber = number != null && number!.isNotEmpty;
     final titleStyle = Ink3D.text(17, FontWeight.w700, white, height: 1.3);
-    final titleRoom = width - cellPadding.horizontal - 30;
+    final titleRoom = width - cellPadding.horizontal - DS.s(30);
     final card = DecoratedBox(
       decoration: BoxDecoration(
-        borderRadius: kMealsRadius,
+        borderRadius: DS.br(kMealsRadius),
         gradient: tone.gradient,
-        boxShadow: compact ? const [BoxShadow(color: Color(0x2E000000), offset: Offset(0, 6), blurRadius: 12)] : tone.glow(blur: 8),
+        boxShadow: compact ? DS.shadows(const [BoxShadow(color: Color(0x2E000000), offset: Offset(0, 6), blurRadius: 12)]) : tone.glow(blur: 8),
       ),
       child: ConstrainedBox(
         constraints: BoxConstraints(minHeight: minCardHeight),
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(15, 72, 15, 12),
+          padding: DS.insets(l: 15, t: 72, r: 15, b: 12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -238,7 +242,7 @@ class MealsCardV extends StatelessWidget {
                   if (tag != null)
                     ConstrainedBox(
                       constraints: BoxConstraints(
-                        minHeight: scaler.scale(10.5) * 1.5,
+                        minHeight: scaler.scale(DS.f(10.5)) * 1.5,
                       ),
                       child: StarText(
                         tag!.toUpperCase(),
@@ -253,7 +257,7 @@ class MealsCardV extends StatelessWidget {
                     ),
                   ConstrainedBox(
                     constraints: BoxConstraints(
-                      minHeight: uniformSlots ? scaler.scale(17) * 1.3 * titleLines : 0,
+                      minHeight: uniformSlots ? scaler.scale(DS.f(17)) * 1.3 * titleLines : 0,
                     ),
                     child: Text(
                       KitText.fitWords(title, titleStyle, scaler, titleRoom - 1, titleLines),
@@ -262,10 +266,10 @@ class MealsCardV extends StatelessWidget {
                       style: titleStyle,
                     ),
                   ),
-                  if (description != null || uniformSlots) const SizedBox(height: 6),
+                  if (description != null || uniformSlots) SizedBox(height: DS.s(6)),
                   if (uniformSlots)
                     ConstrainedBox(
-                      constraints: BoxConstraints(minHeight: scaler.scale(12) * 1.55),
+                      constraints: BoxConstraints(minHeight: scaler.scale(DS.f(12)) * 1.55),
                       child: Text(
                         description ?? '',
                         maxLines: 1,
@@ -310,14 +314,14 @@ class MealsCardV extends StatelessWidget {
                           ),
                   ),
                   if (chips != null || uniformSlots) ...[
-                    SizedBox(height: uniformSlots ? 8 : 6),
+                    SizedBox(height: DS.s(uniformSlots ? 8 : 6)),
                     _ChipsRow(
                       chips ?? const [],
-                      height: (scaler.scale(10.5) * 1.35 + 4) * (uniformSlots ? 1 : 2) + (uniformSlots ? 0 : 6),
-                      maxChipWidth: width - 30,
+                      height: (scaler.scale(DS.f(10.5)) * 1.35 + DS.s(4)) * (uniformSlots ? 1 : 2) + (uniformSlots ? 0 : DS.gv(6)),
+                      maxChipWidth: width - DS.s(30),
                     ),
                   ],
-                  SizedBox(height: uniformSlots ? slotGap : (compact ? 0 : 8)),
+                  SizedBox(height: uniformSlots ? slotGap : (compact ? 0 : DS.s(8))),
                 ],
               ),
               Column(
@@ -327,7 +331,7 @@ class MealsCardV extends StatelessWidget {
                   if (caption != null && hasNumber)
                     ConstrainedBox(
                       constraints: BoxConstraints(
-                        minHeight: scaler.scale(10.5) * 1.4,
+                        minHeight: scaler.scale(DS.f(10.5)) * 1.4,
                       ),
                       child: Text(
                         caption!,
@@ -344,11 +348,11 @@ class MealsCardV extends StatelessWidget {
                     ),
                   if (hasNumber)
                     ConstrainedBox(
-                      constraints: BoxConstraints(minHeight: scaler.scale(30)),
+                      constraints: BoxConstraints(minHeight: scaler.scale(DS.f(30))),
                       child: Align(
                         alignment: Alignment.bottomLeft,
                         child: Padding(
-                          padding: EdgeInsets.only(bottom: compact ? 5 : 0),
+                          padding: EdgeInsets.only(bottom: compact ? DS.s(5) : 0),
                           child: PriceLine(
                           number: number!,
                           unit: unit,
@@ -371,7 +375,7 @@ class MealsCardV extends StatelessWidget {
         shape: BoxShape.circle,
         color: white.withValues(alpha: 0.22),
       ),
-      child: const SizedBox(width: 112, height: 112),
+      child: SizedBox(width: DS.s(112), height: DS.s(112)),
     );
     Widget body = SizedBox(
       width: width,
@@ -381,10 +385,10 @@ class MealsCardV extends StatelessWidget {
         children: [
           Padding(padding: cellPadding.copyWith(bottom: cellBottom), child: card),
           if (photo != null) ...[
-            Positioned(left: 6, top: 0, child: halo),
+            Positioned(left: DS.s(6), top: 0, child: halo),
             Positioned(
-              left: 12,
-              top: 2,
+              left: DS.s(12),
+              top: DS.s(2),
               child: PhotoSticker(
                 photo: photo!,
                 sticker: sticker ?? '',
@@ -394,10 +398,10 @@ class MealsCardV extends StatelessWidget {
               ),
             ),
           ] else if (art != null) ...[
-            Positioned(left: 6, top: 0, child: halo),
+            Positioned(left: DS.s(6), top: 0, child: halo),
             Positioned(
-              left: 8,
-              top: -6,
+              left: DS.s(8),
+              top: DS.s(-6),
               child: Art3D(
                 asset: art!,
                 size: 110,
@@ -408,7 +412,7 @@ class MealsCardV extends StatelessWidget {
             ),
           ],
           if (starBadge && (photo != null || art != null))
-            const Positioned(left: 90, top: -8, child: StarBadge()),
+            Positioned(left: DS.s(90), top: DS.s(-8), child: const StarBadge()),
         ],
       ),
     );
@@ -445,15 +449,15 @@ class StarBadge extends StatelessWidget {
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.28),
-            blurRadius: 8,
-            offset: const Offset(0, 3),
+            blurRadius: DS.shadowBlur(8),
+            offset: DS.shadowOffset(const Offset(0, 3)),
           ),
         ],
       ),
-      child: const SizedBox(
-        width: 30,
-        height: 30,
-        child: Icon(Icons.star_rounded, size: 19, color: DesignColors.amber),
+      child: SizedBox(
+        width: DS.s(30),
+        height: DS.s(30),
+        child: Icon(Icons.star_rounded, size: DS.s(19), color: DesignColors.amber),
       ),
     );
   }
@@ -477,8 +481,8 @@ class _ChipsRow extends StatelessWidget {
       child: SizedBox(
         width: double.infinity,
         child: Wrap(
-          spacing: 5,
-          runSpacing: 6,
+          spacing: DS.gh(5),
+          runSpacing: DS.gv(6),
           children: [
             for (final chip in chips)
               ConstrainedBox(
@@ -486,13 +490,10 @@ class _ChipsRow extends StatelessWidget {
                 child: DecoratedBox(
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.26),
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: DS.circular(10),
                   ),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 2,
-                    ),
+                    padding: DS.sym(h: 8, v: 2),
                     child: StarText(
                       chip,
                       style: Ink3D.text(
@@ -528,7 +529,7 @@ class MealsRail extends StatelessWidget {
   Widget build(BuildContext context) {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
-      padding: padding,
+      padding: DS.insets(l: padding.left, t: padding.top, r: padding.right, b: padding.bottom),
       physics: physics,
       clipBehavior: Clip.none,
       child: IntrinsicHeight(
@@ -557,7 +558,7 @@ class MealsGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: padding,
+      padding: DS.insets(l: padding.left, t: padding.top, r: padding.right, b: padding.bottom),
       child: LayoutBuilder(
         builder: (context, c) {
           final w = c.maxWidth / 2;
@@ -586,38 +587,38 @@ class MealsGrid extends StatelessWidget {
 }
 
 class MealsCardSkeleton extends StatelessWidget {
-  const MealsCardSkeleton({super.key, this.width = 160});
+  const MealsCardSkeleton({super.key, this.width});
 
-  final double width;
+  final double? width;
 
   @override
   Widget build(BuildContext context) {
     final scale = MediaQuery.textScalerOf(context).scale(1);
-    final height = 104 + 90 * (scale < 1 ? 1.0 : scale);
+    final height = DS.s(104) + DS.s(90) * (scale < 1 ? 1.0 : scale);
     return SizedBox(
-      width: width,
+      width: width ?? DS.s(160),
       child: Padding(
         padding: MealsCardV.cellPadding,
         child: Container(
           height: height,
-          padding: const EdgeInsets.fromLTRB(15, 14, 15, 12),
-          decoration: const BoxDecoration(
+          padding: DS.insets(l: 15, t: 14, r: 15, b: 12),
+          decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: kMealsRadius,
-            boxShadow: Ink3D.softShadow,
+            borderRadius: DS.br(kMealsRadius),
+            boxShadow: DS.shadows(Ink3D.softShadow),
           ),
-          child: const Column(
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              TemplatePlaceholder(height: 48, width: 48, radius: 24),
-              SizedBox(height: 10),
-              TemplatePlaceholder(height: 16, width: 96),
-              SizedBox(height: 12),
-              TemplatePlaceholder(height: 10, width: 76),
-              SizedBox(height: 8),
-              TemplatePlaceholder(height: 10, width: 60),
-              Spacer(),
-              TemplatePlaceholder(height: 22, width: 64),
+              TemplatePlaceholder(height: DS.s(48), width: DS.s(48), radius: DS.radius(24)),
+              SizedBox(height: DS.s(10)),
+              TemplatePlaceholder(height: DS.s(16), width: DS.s(96), radius: DS.radius(8)),
+              SizedBox(height: DS.s(12)),
+              TemplatePlaceholder(height: DS.s(10), width: DS.s(76), radius: DS.radius(8)),
+              SizedBox(height: DS.s(8)),
+              TemplatePlaceholder(height: DS.s(10), width: DS.s(60), radius: DS.radius(8)),
+              const Spacer(),
+              TemplatePlaceholder(height: DS.s(22), width: DS.s(64), radius: DS.radius(8)),
             ],
           ),
         ),

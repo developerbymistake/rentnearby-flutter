@@ -311,7 +311,7 @@ class TripAdvanceCards {
       ],
       extra: [if (others.isNotEmpty) TripStrings.ifPaidFooter],
       note: others.isNotEmpty ? TripStrings.otherStaysReplied(others.length, others.join(', ')) : TripStrings.ifPaidFooter,
-      noteArt: others.isNotEmpty ? ListingArt.hotel : ListingArt.moneyBag,
+      noteArt: others.isNotEmpty ? ListingArt.stay : ListingArt.moneyBag,
       primary: ReplyAction(label: TripStrings.askOtherStays, onTap: () => _askOthers(cb)),
       secondary: ReplyAction(label: TripStrings.callHost, onTap: _call(_tenDigits(cb.hostPhone))),
     );

@@ -33,7 +33,7 @@ class HubSectionTitle extends StatelessWidget {
       ],
     );
     return Padding(
-      padding: EdgeInsets.fromLTRB(18, top, 18, 4),
+      padding: EdgeInsets.fromLTRB(DS.s(18), DS.gv(top), DS.s(18), DS.gv(4)),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
@@ -42,7 +42,7 @@ class HubSectionTitle extends StatelessWidget {
             InkWell(
               onTap: onAction,
               child: ConstrainedBox(
-                constraints: const BoxConstraints(minHeight: 32),
+                constraints: BoxConstraints(minHeight: DS.s(32)),
                 child: Align(
                   alignment: Alignment.centerRight,
                   widthFactor: 1,

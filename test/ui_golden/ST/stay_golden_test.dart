@@ -21,11 +21,11 @@ StayNearbyModel _stay() => StayNearbyModel(
       isFeatured: true,
     );
 
-Widget _gridPair() => const Row(
+Widget _gridPair() => Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        SizedBox(width: 150, height: StayGridCard.height, child: _Card(featured: true)),
-        SizedBox(width: 150, height: StayGridCard.height, child: _Card(featured: false)),
+        SizedBox(width: 150, height: StayGridCard.height, child: const _Card(featured: true)),
+        SizedBox(width: 150, height: StayGridCard.height, child: const _Card(featured: false)),
       ],
     );
 

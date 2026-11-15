@@ -48,27 +48,27 @@ class NearbyCentreBarView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+      padding: EdgeInsets.fromLTRB(DS.s(16), DS.gv(8), DS.s(16), DS.gv(4)),
       child: Wrap(
-        spacing: 8,
-        runSpacing: 8,
+        spacing: DS.gh(8),
+        runSpacing: DS.gv(8),
         crossAxisAlignment: WrapCrossAlignment.center,
         children: [
           ConstrainedBox(
-            constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width - 32),
+            constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width - DS.s(16) * 2),
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(color: DesignColors.primarySoft, borderRadius: BorderRadius.circular(20)),
+              padding: DS.sym(h: 12, v: 8),
+              decoration: BoxDecoration(color: DesignColors.primarySoft, borderRadius: DS.circular(20)),
               child: Row(mainAxisSize: MainAxisSize.min, children: [
-                const Icon(Icons.place_outlined, size: 16, color: DesignColors.primary),
-                const SizedBox(width: 6),
+                Icon(Icons.place_outlined, size: DS.s(16), color: DesignColors.primary),
+                Gap.h(6),
                 Flexible(child: Text(!hasPin && far ? NearbyStrings.usingMyLocation : text, maxLines: 2, overflow: TextOverflow.ellipsis, style: TypeTokens.label.copyWith(color: DesignColors.primary))),
                 if (hasPin)
                   InkWell(
                     onTap: onClear,
-                    child: const Padding(
-                      padding: EdgeInsets.only(left: 6),
-                      child: Icon(Icons.close_rounded, size: 18, color: DesignColors.primary),
+                    child: Padding(
+                      padding: EdgeInsets.only(left: DS.s(6)),
+                      child: Icon(Icons.close_rounded, size: DS.s(18), color: DesignColors.primary),
                     ),
                   ),
               ]),
@@ -76,13 +76,13 @@ class NearbyCentreBarView extends StatelessWidget {
           ),
           TextButton.icon(
             onPressed: onSearch,
-            icon: const Icon(Icons.search_rounded, size: 18),
+            icon: Icon(Icons.search_rounded, size: DS.s(18)),
             label: const Text(NearbyStrings.searchAnyPlace),
           ),
           if (hasPin)
             TextButton.icon(
               onPressed: onUseMyLocation,
-              icon: const Icon(Icons.my_location_rounded, size: 18),
+              icon: Icon(Icons.my_location_rounded, size: DS.s(18)),
               label: const Text(NearbyStrings.useMyLocation),
             ),
         ],

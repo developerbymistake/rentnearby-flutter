@@ -33,7 +33,7 @@ class TripSpotDetailSheet extends StatefulWidget {
       backgroundColor: DesignColors.surface,
       barrierColor: DesignColors.scrim,
       elevation: 0,
-      shape: const RoundedRectangleBorder(borderRadius: CardRadius.sheet),
+      shape: RoundedRectangleBorder(borderRadius: DS.br(CardRadius.sheet)),
       builder: (_) => SafeArea(
         bottom: false,
         child: TripSpotDetailSheet(
@@ -52,8 +52,8 @@ class TripSpotDetailSheet extends StatefulWidget {
 
 class _TripSpotDetailSheetState extends State<TripSpotDetailSheet>
     with TickerProviderStateMixin {
-  static const double _photoHeight = 248;
-  static const double _overlap = 24;
+  static double get _photoHeight => DS.s(248);
+  static double get _overlap => DS.s(24);
 
   final _page = PageController();
   late final AnimationController _enter = AnimationController(
@@ -107,7 +107,7 @@ class _TripSpotDetailSheetState extends State<TripSpotDetailSheet>
               child: wrap(
                 0,
                 ClipRRect(
-                  borderRadius: CardRadius.sheet,
+                  borderRadius: DS.br(CardRadius.sheet),
                   child: Stack(
                     fit: StackFit.expand,
                     children: [
@@ -122,16 +122,16 @@ class _TripSpotDetailSheetState extends State<TripSpotDetailSheet>
                               TripSpotMedia(spot: spot, url: photos[i]),
                         ),
                       Positioned(
-                        top: 10,
+                        top: DS.s(10),
                         left: 0,
                         right: 0,
                         child: Center(
                           child: Container(
-                            width: 36,
-                            height: 4,
+                            width: DS.s(36),
+                            height: DS.s(4),
                             decoration: BoxDecoration(
                               color: DesignColors.tint(DesignColors.surface, Alpha.strong),
-                              borderRadius: BorderRadius.circular(2),
+                              borderRadius: DS.circular(2),
                             ),
                           ),
                         ),
@@ -143,7 +143,7 @@ class _TripSpotDetailSheetState extends State<TripSpotDetailSheet>
             ),
             if (photos.length > 1)
               Positioned(
-                top: _photoHeight - _overlap - 20,
+                top: _photoHeight - _overlap - DS.s(20),
                 left: 0,
                 right: 0,
                 child: IgnorePointer(
@@ -154,15 +154,15 @@ class _TripSpotDetailSheetState extends State<TripSpotDetailSheet>
                         AnimatedContainer(
                           duration: const Duration(milliseconds: 250),
                           curve: Curves.fastOutSlowIn,
-                          margin: const EdgeInsets.symmetric(horizontal: 3),
-                          width: i == _index ? 16 : 6,
-                          height: 6,
+                          margin: EdgeInsets.symmetric(horizontal: DS.gh(3)),
+                          width: DS.s(i == _index ? 16 : 6),
+                          height: DS.s(6),
                           decoration: BoxDecoration(
                             color: i == _index
                                 ? DesignColors.surface
                                 : DesignColors.tint(DesignColors.surface, Alpha.strong),
-                            borderRadius: CardRadius.pill,
-                            boxShadow: ShadowTokens.elev1,
+                            borderRadius: DS.br(CardRadius.pill),
+                            boxShadow: DS.shadows(ShadowTokens.elev1),
                           ),
                         ),
                     ],
@@ -170,15 +170,15 @@ class _TripSpotDetailSheetState extends State<TripSpotDetailSheet>
                 ),
               ),
             Padding(
-              padding: const EdgeInsets.only(top: _photoHeight - _overlap),
+              padding: EdgeInsets.only(top: _photoHeight - _overlap),
               child: Container(
                 width: double.infinity,
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   color: DesignColors.surface,
-                  borderRadius: CardRadius.sheet,
-                  boxShadow: ShadowTokens.elev3,
+                  borderRadius: DS.br(CardRadius.sheet),
+                  boxShadow: DS.shadows(ShadowTokens.elev3),
                 ),
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
+                padding: DS.all(20),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -192,10 +192,10 @@ class _TripSpotDetailSheetState extends State<TripSpotDetailSheet>
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(spot.title, style: Ink3D.text(24, FontWeight.w700, Ink3D.title, height: 1.25)),
-                                const SizedBox(height: 10),
+                                Gap.v(10),
                                 Wrap(
-                                  spacing: 8,
-                                  runSpacing: 8,
+                                  spacing: DS.gh(8),
+                                  runSpacing: DS.gv(8),
                                   children: [
                                     _meta(TripSpotCategory.label(spot.category)),
                                     if (area != null && area.isNotEmpty) _meta(area),
@@ -205,9 +205,9 @@ class _TripSpotDetailSheetState extends State<TripSpotDetailSheet>
                               ],
                             ),
                           ),
-                          const SizedBox(width: 10),
+                          Gap.h(10),
                           Transform.translate(
-                            offset: const Offset(0, -10),
+                            offset: Offset(0, DS.s(-10)),
                             child: Art3D(
                               asset: TripSpotLook.assetOf(spot.category),
                               size: 92,
@@ -219,7 +219,7 @@ class _TripSpotDetailSheetState extends State<TripSpotDetailSheet>
                       ),
                     ),
                     if (hasDescription) ...[
-                      const SizedBox(height: 12),
+                      Gap.v(12),
                       wrap(
                         2,
                         Text(
@@ -229,13 +229,13 @@ class _TripSpotDetailSheetState extends State<TripSpotDetailSheet>
                         ),
                       ),
                     ],
-                    const SizedBox(height: 16),
+                    Gap.v(16),
                     wrap(count - 1, _action()),
                   ],
                 ),
               ),
             ),
-            const Positioned(top: 12, right: 12, child: SheetCloseButton()),
+            Positioned(top: DS.s(12), right: DS.s(12), child: const SheetCloseButton()),
           ],
         ),
       ),
@@ -261,8 +261,8 @@ class _TripSpotDetailSheetState extends State<TripSpotDetailSheet>
   }
 
   Widget _meta(String label) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-    decoration: BoxDecoration(color: ListingTone.indigo.tint, borderRadius: CardRadius.pill),
+    padding: DS.sym(h: 12, v: 5),
+    decoration: BoxDecoration(color: ListingTone.indigo.tint, borderRadius: DS.br(CardRadius.pill)),
     child: Text(label, style: Ink3D.text(12.5, FontWeight.w600, ListingTone.indigo.text)),
   );
 }

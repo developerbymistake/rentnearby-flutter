@@ -69,7 +69,7 @@ class _AskState extends IntroSlideState<IntroSlideAsk> {
               style: Ink3D.text(13, FontWeight.w600, DesignColors.onPrimary),
             ),
           ),
-          const SizedBox(height: 8),
+          Gap.v(8),
           reveal(
             1,
             FittedBox(
@@ -77,7 +77,7 @@ class _AskState extends IntroSlideState<IntroSlideAsk> {
               alignment: Alignment.centerLeft,
               child: Row(
                 mainAxisSize: MainAxisSize.min,
-                spacing: 6,
+                spacing: DS.gh(6),
                 children: [
                   for (var i = 0; i < IntroStrings.stayStyles.length; i++)
                     Semantics(
@@ -99,11 +99,11 @@ class _AskState extends IntroSlideState<IntroSlideAsk> {
               ),
             ),
           ),
-          const SizedBox(height: 8),
+          Gap.v(8),
           reveal(
             2,
             SizedBox(
-              height: 30,
+              height: DS.s(30),
               child: Row(
                 children: [
                   Expanded(
@@ -203,9 +203,9 @@ class _LiveState extends IntroSlideState<IntroSlideLive> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           reveal(0, IntroRow3D(tone: tone, label: rows[0], done: true)),
-          const SizedBox(height: 8),
+          Gap.v(8),
           reveal(1, IntroRow3D(tone: tone, label: rows[1], done: true)),
-          const SizedBox(height: 8),
+          Gap.v(8),
           reveal(
             2,
             Semantics(
@@ -220,11 +220,11 @@ class _LiveState extends IntroSlideState<IntroSlideLive> {
               ),
             ),
           ),
-          const SizedBox(height: 8),
+          Gap.v(8),
           reveal(
             3,
             SizedBox(
-              height: 30,
+              height: DS.s(30),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -237,7 +237,7 @@ class _LiveState extends IntroSlideState<IntroSlideLive> {
                       ghost: true,
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  Gap.h(8),
                   Semantics(
                     button: true,
                     label: IntroStrings.shareTrip,

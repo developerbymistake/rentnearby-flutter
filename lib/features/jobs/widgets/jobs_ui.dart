@@ -36,7 +36,7 @@ abstract final class JobsUi {
 
   static InputDecoration input(String hint, {String? prefix}) {
     OutlineInputBorder border(Color color, [double width = 1]) => OutlineInputBorder(
-          borderRadius: KitMetrics.tileSmall,
+          borderRadius: DS.br(KitMetrics.tileSmall),
           borderSide: BorderSide(color: color, width: width),
         );
     return InputDecoration(
@@ -47,7 +47,7 @@ abstract final class JobsUi {
       filled: true,
       fillColor: DesignColors.scaffold,
       counterText: '',
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      contentPadding: DS.sym(h: 16, v: 14),
       border: border(DesignColors.borderSoft),
       enabledBorder: border(DesignColors.borderSoft),
       disabledBorder: border(DesignColors.borderSoft),
@@ -68,10 +68,10 @@ class JobsAvatar extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = JobsUi.avatarTone(seed);
     return Container(
-      width: size,
-      height: size,
+      width: DS.s(size),
+      height: DS.s(size),
       decoration: BoxDecoration(
-        borderRadius: KitMetrics.tileSmall,
+        borderRadius: DS.br(KitMetrics.tileSmall),
         gradient: dimmed ? null : t.gradient,
         color: dimmed ? DesignColors.surfaceMuted : null,
       ),
@@ -89,11 +89,11 @@ class JobsAvatar extends StatelessWidget {
           ),
           if (initial.isNotEmpty)
             Positioned(
-              right: 4,
-              bottom: 4,
+              right: DS.s(4),
+              bottom: DS.s(4),
               child: Container(
-                width: 22,
-                height: 22,
+                width: DS.s(22),
+                height: DS.s(22),
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: dimmed ? DesignColors.surface : DesignColors.tint(DesignColors.surface, Alpha.high),
@@ -117,7 +117,7 @@ class JobsChoiceChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: 260),
+      constraints: BoxConstraints(maxWidth: DS.s(260)),
       child: ChoicePill(tone: JobsUi.look, label: label, selected: selected, outlined: true, height: 36, onTap: onTap),
     );
   }
@@ -133,8 +133,8 @@ class JobsChoiceWrap extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Wrap(
-      spacing: 8,
-      runSpacing: 8,
+      spacing: DS.gh(8),
+      runSpacing: DS.gv(8),
       children: [
         for (var i = 0; i < labels.length; i++)
           JobsChoiceChip(label: labels[i], selected: isActive(i), onTap: () => onTap(i)),
@@ -155,10 +155,10 @@ class JobsDropdownChip extends StatelessWidget {
     final fg = selected ? DesignColors.textInverse : DesignColors.textPrimary;
     return PressScale(
       child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: KitMetrics.touch, maxWidth: 220),
+        constraints: BoxConstraints(minHeight: DS.s(KitMetrics.touch), maxWidth: DS.s(220)),
         child: InkWell(
           onTap: onTap,
-          borderRadius: CardRadius.pill,
+          borderRadius: DS.br(CardRadius.pill),
           splashColor: DesignColors.tint(JobsUi.tone.accentDark, Alpha.soft),
           highlightColor: Colors.transparent,
           child: Center(
@@ -166,11 +166,11 @@ class JobsDropdownChip extends StatelessWidget {
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 250),
               curve: Curves.fastOutSlowIn,
-              padding: const EdgeInsets.fromLTRB(16, 8, 10, 8),
+              padding: DS.insets(l: 16, t: 8, r: 10, b: 8),
               decoration: BoxDecoration(
                 gradient: selected ? JobsUi.tone.gradient : null,
                 color: selected ? null : DesignColors.surface,
-                borderRadius: CardRadius.pill,
+                borderRadius: DS.br(CardRadius.pill),
                 border: Border.all(color: selected ? Colors.transparent : DesignColors.borderSoft, width: 1.5),
               ),
               child: Row(mainAxisSize: MainAxisSize.min, children: [
@@ -180,8 +180,8 @@ class JobsDropdownChip extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: TypeTokens.style(14, FontWeight.w600, color: fg)),
                 ),
-                const SizedBox(width: 2),
-                Icon(Icons.keyboard_arrow_down_rounded, size: 20, color: fg),
+                SizedBox(width: DS.s(2)),
+                Icon(Icons.keyboard_arrow_down_rounded, size: DS.s(20), color: fg),
               ]),
             ),
           ),

@@ -12,7 +12,7 @@ class ChatNextSlotBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(top: 12, bottom: 4),
+      padding: EdgeInsets.only(top: DS.gv(12), bottom: DS.gv(4)),
       child: ChatAskSlot(
         tone: tone ?? ListingTone.forest,
         label: 'Ask something',

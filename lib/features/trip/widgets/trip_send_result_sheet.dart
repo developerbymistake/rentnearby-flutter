@@ -104,13 +104,13 @@ class _ResultBody extends StatelessWidget {
         children: [
           _back(context),
           if (!empty) ...[
-            const SizedBox(height: 10),
+            Gap.v(10),
             WhitePillButton(tone: _tone, label: taxi ? TripStringsV2Easy.askMoreDrivers : TripStringsV2Easy.askMoreStays, onTap: () => Navigator.pop(context)),
           ],
         ],
       ),
       children: [
-        const SizedBox(height: 4),
+        Gap.v(4),
         ...rows,
       ],
     );

@@ -1,3 +1,4 @@
+import 'package:bakhli/design/tokens/design_scale.dart';
 import 'package:flutter/material.dart';
 
 import 'art_3d.dart';
@@ -7,19 +8,19 @@ import 'motion_kit.dart';
 double _scale(BuildContext context) => MediaQuery.textScalerOf(context).scale(1);
 
 Widget _tile(String art, {required double tile, required double artSize, required Color color, double radius = 16, bool round = false}) => SizedBox(
-  width: tile,
-  height: tile,
+  width: DS.s(tile),
+  height: DS.s(tile),
   child: Stack(
     clipBehavior: Clip.none,
     children: [
       Positioned.fill(
         child: DecoratedBox(
-          decoration: BoxDecoration(color: color, shape: round ? BoxShape.circle : BoxShape.rectangle, borderRadius: round ? null : BorderRadius.circular(radius)),
+          decoration: BoxDecoration(color: color, shape: round ? BoxShape.circle : BoxShape.rectangle, borderRadius: round ? null : DS.circular(radius)),
         ),
       ),
       Positioned(
-        left: (tile - artSize) / 2,
-        top: (tile - artSize) / 2 - 6,
+        left: DS.s((tile - artSize) / 2),
+        top: DS.s((tile - artSize) / 2 - 6),
         child: Art3D(asset: art, size: artSize, shadowBlur: 4, shadowOffset: const Offset(3, 5), shadowAlpha: 0.28),
       ),
     ],
@@ -56,12 +57,12 @@ class InfoFieldCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: margin ?? const EdgeInsets.fromLTRB(18, 22, 18, 0),
-      padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 8),
-      decoration: const BoxDecoration(
+      margin: margin ?? EdgeInsets.fromLTRB(DS.s(18), DS.gv(22), DS.s(18), 0),
+      padding: DS.sym(h: 22, v: 8),
+      decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: radius,
-        boxShadow: [BoxShadow(color: Color(0x339E9E9E), offset: Offset(1.1, 1.1), blurRadius: 10)],
+        borderRadius: DS.br(radius),
+        boxShadow: DS.shadows(const [BoxShadow(color: Color(0x339E9E9E), offset: Offset(1.1, 1.1), blurRadius: 10)]),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -69,14 +70,14 @@ class InfoFieldCard extends StatelessWidget {
         children: [
           for (var i = 0; i < fields.length; i++)
             Container(
-              padding: const EdgeInsets.symmetric(vertical: 14),
+              padding: DS.sym(v: 14),
               decoration: BoxDecoration(border: i == 0 ? null : const Border(top: BorderSide(color: Ink3D.line))),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(fields[i].label.toUpperCase(), style: Ink3D.text(11, FontWeight.w700, Ink3D.hint, letterSpacing: 0.5)),
-                  const SizedBox(height: 4),
+                  SizedBox(height: DS.s(4)),
                   fields[i].child ?? Text(fields[i].value ?? '', style: Ink3D.text(15, FontWeight.w400, Ink3D.sub, height: 1.5)),
                 ],
               ),
@@ -113,35 +114,35 @@ class SummaryRow3D extends StatelessWidget {
   Widget build(BuildContext context) {
     final action = actionLabel;
     return Container(
-      padding: EdgeInsets.only(top: divider ? 24 : 10, bottom: 18),
+      padding: EdgeInsets.only(top: DS.s(divider ? 24 : 10), bottom: DS.s(18)),
       decoration: BoxDecoration(border: divider ? const Border(top: BorderSide(color: Ink3D.line)) : null),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _tile(art, tile: 66, artSize: 78, color: tone.haloBase.withValues(alpha: 0.13), radius: 18),
-          const SizedBox(width: 14),
+          SizedBox(width: DS.s(14)),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
                 ConstrainedBox(
-                  constraints: const BoxConstraints(minHeight: 30),
+                  constraints: BoxConstraints(minHeight: DS.s(30)),
                   child: Row(
                     children: [
                       Expanded(
                         child: Text(title, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(16, FontWeight.w700, Ink3D.title)),
                       ),
                       if (action != null) ...[
-                        const SizedBox(width: 8),
+                        SizedBox(width: DS.s(8)),
                         _tap(
                           onTap: onAction,
                           label: '$action $title',
                           child: Container(
-                            constraints: const BoxConstraints(minWidth: 58, minHeight: 28),
-                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            constraints: BoxConstraints(minWidth: DS.s(58), minHeight: DS.s(28)),
+                            padding: DS.sym(h: 12),
                             alignment: Alignment.center,
-                            decoration: BoxDecoration(color: tone.haloBase.withValues(alpha: 0.13), borderRadius: BorderRadius.circular(15)),
+                            decoration: BoxDecoration(color: tone.haloBase.withValues(alpha: 0.13), borderRadius: DS.circular(15)),
                             child: Text(action, maxLines: 1, style: Ink3D.text(12.5, FontWeight.w700, tone.text)),
                           ),
                         ),
@@ -151,7 +152,7 @@ class SummaryRow3D extends StatelessWidget {
                 ),
                 if (detail != null)
                   Padding(
-                    padding: const EdgeInsets.only(top: 4),
+                    padding: EdgeInsets.only(top: DS.s(4)),
                     child: FitOrWrap3D(
                       text: detail!,
                       maxLines: 3,
@@ -197,18 +198,18 @@ class Banner3D extends StatelessWidget {
     final action = actionLabel;
     final pill = action != null && onAction != null;
     final body = Container(
-      margin: margin ?? const EdgeInsets.fromLTRB(18, 14, 18, 0),
-      constraints: BoxConstraints(minHeight: compact ? 58 : 68),
-      padding: compact ? const EdgeInsets.symmetric(horizontal: 16, vertical: 12) : const EdgeInsets.fromLTRB(14, 12, 16, 12),
+      margin: margin ?? EdgeInsets.fromLTRB(DS.s(18), DS.gv(14), DS.s(18), 0),
+      constraints: BoxConstraints(minHeight: DS.s(compact ? 58 : 68)),
+      padding: compact ? DS.sym(h: 16, v: 12) : DS.insets(l: 14, t: 12, r: 16, b: 12),
       decoration: BoxDecoration(
         color: fill,
-        borderRadius: radius,
-        boxShadow: const [BoxShadow(color: Color(0x389E9E9E), offset: Offset(1.1, 1.1), blurRadius: 10)],
+        borderRadius: DS.br(radius),
+        boxShadow: DS.shadows(const [BoxShadow(color: Color(0x389E9E9E), offset: Offset(1.1, 1.1), blurRadius: 10)]),
       ),
       child: Row(
         children: [
-          if (art != null && compact) ...[Art3D(asset: art!, size: 34, shadowBlur: 3, shadowOffset: const Offset(2, 3), shadowAlpha: 0.25), const SizedBox(width: 10)]
-          else if (art != null) ...[_tile(art!, tile: 46, artSize: 52, color: tileBase.withValues(alpha: 0.16), radius: 14), const SizedBox(width: 12)],
+          if (art != null && compact) ...[Art3D(asset: art!, size: 34, shadowBlur: 3, shadowOffset: const Offset(2, 3), shadowAlpha: 0.25), SizedBox(width: DS.s(10))]
+          else if (art != null) ...[_tile(art!, tile: 46, artSize: 52, color: tileBase.withValues(alpha: 0.16), radius: 14), SizedBox(width: DS.s(12))],
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -217,28 +218,28 @@ class Banner3D extends StatelessWidget {
                 Text(title, maxLines: 3, overflow: TextOverflow.ellipsis, style: compact ? Ink3D.text(13.5, FontWeight.w600, ink) : Ink3D.text(14, FontWeight.w700, ink)),
                 if (subtitle != null)
                   Padding(
-                    padding: const EdgeInsets.only(top: 1),
+                    padding: EdgeInsets.only(top: DS.s(1)),
                     child: Text(subtitle!, maxLines: 4, overflow: TextOverflow.ellipsis, style: Ink3D.text(12.5, FontWeight.w400, const Color(0xFF5F6B76), height: 1.35)),
                   ),
                 if (action != null && !pill)
                   Padding(
-                    padding: const EdgeInsets.only(top: 4),
+                    padding: EdgeInsets.only(top: DS.s(4)),
                     child: Text(action, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(12.5, FontWeight.w700, link)),
                   ),
               ],
             ),
           ),
           if (pill) ...[
-            const SizedBox(width: 10),
+            SizedBox(width: DS.s(10)),
             _tap(
               onTap: onAction,
               label: action,
               child: Container(
-                constraints: BoxConstraints(minHeight: 32 * _scale(context).clamp(1.0, 1.3)),
-                padding: const EdgeInsets.symmetric(horizontal: 14),
+                constraints: BoxConstraints(minHeight: DS.s(32) * _scale(context).clamp(1.0, 1.3)),
+                padding: DS.sym(h: 14),
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(18),
+                  borderRadius: DS.circular(18),
                   gradient: LinearGradient(colors: [g1, g2], begin: Alignment.topLeft, end: Alignment.bottomRight),
                 ),
                 child: Text(action, maxLines: 1, style: Ink3D.text(12.5, FontWeight.w700, Colors.white)),
@@ -262,9 +263,9 @@ class DayLabel3D extends StatelessWidget {
     return Semantics(
       header: true,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(18, 10, 18, 0),
+        padding: EdgeInsets.fromLTRB(DS.s(18), DS.gv(10), DS.s(18), 0),
         child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 18),
+          constraints: BoxConstraints(minHeight: DS.s(18)),
           child: Align(
             alignment: Alignment.centerLeft,
             child: Text(text.toUpperCase(), maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(12, FontWeight.w700, Ink3D.grey, letterSpacing: 0.8)),
@@ -293,12 +294,12 @@ class OnCardRow extends StatelessWidget {
     final row = Opacity(
       opacity: enabled ? 1 : 0.5,
       child: Container(
-        constraints: BoxConstraints(minHeight: subtitle == null ? 44 : 58),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(color: Colors.white.withValues(alpha: light ? 0.92 : 0.18), borderRadius: BorderRadius.circular(12)),
+        constraints: BoxConstraints(minHeight: DS.s(subtitle == null ? 44 : 58)),
+        padding: DS.sym(h: 12, v: 6),
+        decoration: BoxDecoration(color: Colors.white.withValues(alpha: light ? 0.92 : 0.18), borderRadius: DS.circular(12)),
         child: Row(
           children: [
-            if (art != null) ...[Art3D(asset: art!, size: 34, shadowBlur: 3, shadowOffset: const Offset(2, 3), shadowAlpha: 0.25), const SizedBox(width: 10)],
+            if (art != null) ...[Art3D(asset: art!, size: 34, shadowBlur: 3, shadowOffset: const Offset(2, 3), shadowAlpha: 0.25), SizedBox(width: DS.s(10))],
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -313,7 +314,7 @@ class OnCardRow extends StatelessWidget {
                 ],
               ),
             ),
-            if (trailing != null) ...[const SizedBox(width: 8), trailing!],
+            if (trailing != null) ...[SizedBox(width: DS.s(8)), trailing!],
           ],
         ),
       ),
@@ -335,13 +336,13 @@ class OnCardPill extends StatelessWidget {
   Widget build(BuildContext context) {
     final pill = Container(
       width: width,
-      constraints: BoxConstraints(minWidth: width ?? 84, minHeight: 28),
-      padding: const EdgeInsets.symmetric(horizontal: 10),
+      constraints: BoxConstraints(minWidth: width ?? DS.s(84), minHeight: DS.s(28)),
+      padding: DS.sym(h: 10),
       alignment: Alignment.center,
       decoration: BoxDecoration(
         color: enabled ? Colors.white : Colors.white.withValues(alpha: 0.3),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: enabled ? const [BoxShadow(color: Color(0x33000000), offset: Offset(2, 4), blurRadius: 6)] : null,
+        borderRadius: DS.circular(16),
+        boxShadow: enabled ? DS.shadows(const [BoxShadow(color: Color(0x33000000), offset: Offset(2, 4), blurRadius: 6)]) : null,
       ),
       child: FittedBox(
         fit: BoxFit.scaleDown,
@@ -361,10 +362,10 @@ class PayLine3D extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(22, 18, 22, 0),
+      padding: EdgeInsets.fromLTRB(DS.s(22), DS.gv(18), DS.s(22), 0),
       child: Row(
         children: [
-          if (art != null) ...[Image.asset(art!, width: 30, height: 30, fit: BoxFit.contain), const SizedBox(width: 10)],
+          if (art != null) ...[Image.asset(art!, width: DS.s(30), height: DS.s(30), fit: BoxFit.contain), SizedBox(width: DS.s(10))],
           Expanded(
             child: Text(text, textAlign: art == null ? TextAlign.center : TextAlign.start, style: Ink3D.text(12.5, FontWeight.w400, Ink3D.sub, height: 1.4)),
           ),

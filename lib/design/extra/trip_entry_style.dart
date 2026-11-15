@@ -2,6 +2,7 @@ import 'package:bakhli/design/template/fitness_app_theme.dart';
 import 'package:flutter/material.dart';
 import '../tokens/card_tokens.dart';
 import '../tokens/design_colors.dart';
+import '../tokens/design_scale.dart';
 import '../tokens/shadow_tokens.dart';
 import 'buttons_kit.dart';
 import 'kit_tone.dart';
@@ -88,13 +89,13 @@ class TripEntryEmpty extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 32, 24, 16),
+      padding: EdgeInsets.fromLTRB(DS.s(24), DS.gv(32), DS.s(24), DS.gv(16)),
       child: TripKitStateView(
         carded: true,
-        padding: const EdgeInsets.all(20),
+        padding: DS.all(20),
         leading: iconAsset != null
-            ? Image.asset(iconAsset!, width: 40, height: 40, fit: BoxFit.contain)
-            : Icon(icon, size: 34, color: KitTone.trip.accentDark),
+            ? Image.asset(iconAsset!, width: DS.s(40), height: DS.s(40), fit: BoxFit.contain)
+            : Icon(icon, size: DS.s(34), color: KitTone.trip.accentDark),
         title: title,
         subtitle: subtitle,
         actionLabel: onAction != null ? (actionLabel ?? 'Retry') : null,

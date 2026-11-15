@@ -19,7 +19,7 @@ class JourneyHeader extends StatelessWidget {
       bottom: bottom ??
           (chips.isEmpty
               ? null
-              : Wrap(spacing: 10, runSpacing: 10, crossAxisAlignment: WrapCrossAlignment.center, children: chips)),
+              : Wrap(spacing: DS.gh(10), runSpacing: DS.gv(10), crossAxisAlignment: WrapCrossAlignment.center, children: chips)),
     );
   }
 }

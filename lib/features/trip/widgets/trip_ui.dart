@@ -29,7 +29,7 @@ abstract final class TripUi {
   static const Color tripDark = DesignColors.dinnerEnd;
   static const Color tripTint = DesignColors.primaryTint;
 
-  static const EdgeInsets pagePadding = EdgeInsets.symmetric(horizontal: KitMetrics.gutter);
+  static EdgeInsets get pagePadding => EdgeInsets.symmetric(horizontal: DS.s(KitMetrics.gutter));
 }
 
 class TripButton extends StatelessWidget {
@@ -73,7 +73,7 @@ class TripButton extends StatelessWidget {
     final Widget? ic = iconAsset != null
         ? TravelIcon(iconAsset!, size: 20)
         : icon != null
-            ? Icon(icon, size: 18, color: outlined ? t.accentDark : DesignColors.onPrimary)
+            ? Icon(icon, size: DS.s(18), color: outlined ? t.accentDark : DesignColors.onPrimary)
             : null;
     if (outlined) {
       return SecondaryButton(label: label, onPressed: onPressed, tone: t, icon: ic, expand: expand, height: height, neutral: neutral);
@@ -113,7 +113,7 @@ class TripEmpty extends StatelessWidget {
         tone: error ? StateTone.error : StateTone.empty,
         actionLabel: onRetry == null ? null : retryLabel,
         onAction: onRetry,
-        padding: padding,
+        padding: padding * DS.size,
       );
 }
 
@@ -144,24 +144,24 @@ class TripSurface extends StatelessWidget {
     final card = DecoratedBox(
       decoration: BoxDecoration(
         color: color,
-        borderRadius: radius,
-        boxShadow: shadow,
+        borderRadius: DS.br(radius),
+        boxShadow: DS.shadows(shadow),
         border: borderColor == null ? null : Border.all(color: borderColor!),
       ),
       child: Material(
         color: Colors.transparent,
-        borderRadius: radius,
+        borderRadius: DS.br(radius),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: onTap,
           splashColor: DesignColors.splash,
           highlightColor: Colors.transparent,
-          child: Padding(padding: padding, child: child),
+          child: Padding(padding: padding * DS.size, child: child),
         ),
       ),
     );
     return Padding(
-      padding: margin,
+      padding: margin * DS.size,
       child: onTap == null ? card : PressScale(child: card),
     );
   }
@@ -196,7 +196,7 @@ class TripActionChip extends StatelessWidget {
     final Widget? ic = iconAsset != null
         ? TravelIcon(iconAsset!, size: 18)
         : icon != null
-            ? Icon(icon, size: 16, color: filled ? DesignColors.onPrimary : t.accentDark)
+            ? Icon(icon, size: DS.s(16), color: filled ? DesignColors.onPrimary : t.accentDark)
             : null;
     return PillAction(label: label, onTap: onTap, tone: t, icon: ic, filled: filled, height: height);
   }
@@ -212,11 +212,11 @@ class TripNote extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        decoration: BoxDecoration(color: color, borderRadius: CardRadius.chip),
+        padding: DS.sym(h: 12, v: 10),
+        decoration: BoxDecoration(color: color, borderRadius: DS.br(CardRadius.chip)),
         child: Row(
           children: [
-            if (iconAsset != null) ...[TravelIcon(iconAsset!, size: iconSize), const SizedBox(width: 8)],
+            if (iconAsset != null) ...[TravelIcon(iconAsset!, size: iconSize), Gap.h(8)],
             Expanded(child: child),
           ],
         ),
@@ -237,7 +237,7 @@ class TripHeaderAction extends StatelessWidget {
     return PressScale(
       enabled: onTap != null,
       child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: KitMetrics.touch, minWidth: KitMetrics.touch),
+        constraints: BoxConstraints(minHeight: DS.s(KitMetrics.touch), minWidth: DS.s(KitMetrics.touch)),
         child: Center(
           widthFactor: 1,
           child: Material(
@@ -252,11 +252,11 @@ class TripHeaderAction extends StatelessWidget {
               splashColor: TemplateTokens.white24,
               highlightColor: Colors.transparent,
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                padding: DS.sym(h: 14, v: 8),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    if (icon != null) ...[TravelIcon(icon!, size: 18), const SizedBox(width: 6)],
+                    if (icon != null) ...[TravelIcon(icon!, size: 18), Gap.h(6)],
                     Flexible(child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TypeTokens.style(13, FontWeight.w700, color: solid ? ListingTone.indigo.text : DesignColors.textInverse, letterSpacing: 0.27))),
                   ],
                 ),
@@ -304,13 +304,13 @@ class TripChoiceChip extends StatelessWidget {
       child: AnimatedContainer(
         duration: KitMotion.reduce(context) ? Duration.zero : const Duration(milliseconds: 250),
         curve: Curves.fastOutSlowIn,
-        constraints: const BoxConstraints(minHeight: KitMetrics.touch - 8),
+        constraints: BoxConstraints(minHeight: DS.s(KitMetrics.touch - 8)),
         decoration: BoxDecoration(
           gradient: lit ? t.gradient : null,
           color: lit ? null : (muted ? DesignColors.scaffold : DesignColors.surface),
           borderRadius: radius,
           border: lit || muted ? null : Border.all(color: DesignColors.border),
-          boxShadow: lit ? ShadowTokens.elev1 : const [],
+          boxShadow: lit ? DS.shadows(ShadowTokens.elev1) : const [],
         ),
         child: Material(
           color: Colors.transparent,
@@ -321,13 +321,13 @@ class TripChoiceChip extends StatelessWidget {
             splashColor: lit ? TemplateTokens.white24 : DesignColors.splash,
             highlightColor: Colors.transparent,
             child: Padding(
-              padding: padding ?? const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              padding: padding == null ? DS.sym(h: 14, v: 8) : padding! * DS.size,
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  if (iconAsset != null) ...[TravelIcon(iconAsset!, size: 16), const SizedBox(width: 6)]
-                  else if (icon != null) ...[Icon(icon, size: 16, color: fg), const SizedBox(width: 6)],
+                  if (iconAsset != null) ...[TravelIcon(iconAsset!, size: 16), Gap.h(6)]
+                  else if (icon != null) ...[Icon(icon, size: DS.s(16), color: fg), Gap.h(6)],
                   Flexible(
                     child: Text(label,
                         maxLines: 1,

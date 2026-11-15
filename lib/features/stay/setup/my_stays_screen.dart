@@ -110,7 +110,7 @@ class _MyStaysScreenState extends State<MyStaysScreen> with WidgetsBindingObserv
                 child: LayoutBuilder(
                   builder: (context, box) => ListView(
                     physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
-                    padding: EdgeInsets.only(bottom: 16 + MediaQuery.viewPaddingOf(context).bottom),
+                    padding: EdgeInsets.only(bottom: DS.s(16) + MediaQuery.viewPaddingOf(context).bottom),
                     children: [
                       PlanCapStrip(accent: PickKit.stay, icon: Icons.workspace_premium_rounded, showUsage: false),
                       const NotificationOffBanner(),
@@ -126,7 +126,7 @@ class _MyStaysScreenState extends State<MyStaysScreen> with WidgetsBindingObserv
                           : stay == null
                               ? _stateCard(
                                   box,
-                                  art: ListingArt.hotel,
+                                  art: ListingArt.stay,
                                   title: StayFinStrings.noStayYet,
                                   message: StayFinStrings.listStaySteps,
                                   action: StayFinStrings.setUpStay,
@@ -156,7 +156,7 @@ class _MyStaysScreenState extends State<MyStaysScreen> with WidgetsBindingObserv
         message: message,
         actionLabel: action,
         onAction: onAction,
-        minHeight: math.max(300, box.maxHeight - 330),
+        minHeight: math.max(DS.s(300), box.maxHeight - DS.s(330)),
       );
 
   Widget _card(BuildContext ctx, StayOwnerModel s) => StayOwnerCard(
@@ -180,12 +180,12 @@ class _MyStaysScreenState extends State<MyStaysScreen> with WidgetsBindingObserv
         physics: const NeverScrollableScrollPhysics(),
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(18, 26, 18, 0),
-            child: ClipRRect(borderRadius: StayOwnerShapes.card68, child: const SkeletonBox(height: 98, radius: 0)),
+            padding: DS.gapInsets(l: 18, t: 26, r: 18),
+            child: ClipRRect(borderRadius: DS.br(StayOwnerShapes.card68), child: SkeletonBox(height: DS.s(98), radius: 0)),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(14, 30, 14, 0),
-            child: ClipRRect(borderRadius: StayOwnerShapes.card54, child: const SkeletonBox(height: 560, radius: 0)),
+            padding: DS.gapInsets(l: 14, t: 30, r: 14),
+            child: ClipRRect(borderRadius: DS.br(StayOwnerShapes.card54), child: SkeletonBox(height: DS.s(560), radius: 0)),
           ),
         ],
       );
@@ -205,7 +205,7 @@ class _MyStaysScreenState extends State<MyStaysScreen> with WidgetsBindingObserv
         title: '${room.label} price',
         subtitle: 'Price per night',
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          const SizedBox(height: 6),
+          Gap.v(6),
           PillField(
             tone: _tone,
             controller: priceCtrl,
@@ -215,7 +215,7 @@ class _MyStaysScreenState extends State<MyStaysScreen> with WidgetsBindingObserv
             prefixText: '₹',
             hint: 'e.g. 1500',
           ),
-          const SizedBox(height: 16),
+          Gap.v(16),
           GradientPillButton(
             tone: _tone,
             label: 'Save',
@@ -250,7 +250,7 @@ class _MyStaysScreenState extends State<MyStaysScreen> with WidgetsBindingObserv
         cancelLabel: StayFinStrings.cancel,
         confirmLabel: StayFinStrings.delete,
         destructive: true,
-        art: ListingArt.hotel,
+        art: ListingArt.stay,
         onCancel: () => Navigator.pop(ctx),
         onConfirm: () {
           Navigator.pop(ctx);

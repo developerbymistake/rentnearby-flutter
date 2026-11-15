@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'art_3d.dart';
 import 'motion_kit.dart';
+import '../tokens/design_scale.dart';
 
 double _scale(BuildContext context) => MediaQuery.textScalerOf(context).scale(1);
 
@@ -15,13 +16,13 @@ class _Ticks extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (ticks == ChatTicks.none) return const SizedBox(height: 14);
+    if (ticks == ChatTicks.none) return SizedBox(height: DS.s(14));
     final label = switch (ticks) { ChatTicks.sent => 'Sent', ChatTicks.delivered => 'Delivered', _ => 'Read' };
     return Semantics(
       label: label,
       child: Icon(
         ticks == ChatTicks.sent ? Icons.done_rounded : Icons.done_all_rounded,
-        size: 15,
+        size: DS.s(15),
         color: ticks == ChatTicks.read ? color : color.withValues(alpha: 0.65),
       ),
     );
@@ -40,20 +41,20 @@ class ChatBubble3D extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bubble = Container(
-      constraints: const BoxConstraints(maxWidth: 262),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      constraints: BoxConstraints(maxWidth: DS.s(262)),
+      padding: EdgeInsets.symmetric(horizontal: DS.s(14), vertical: DS.s(10)),
       decoration: BoxDecoration(
         color: mine ? null : Colors.white,
         gradient: mine ? tone.gradient : null,
         borderRadius: BorderRadius.only(
-          topLeft: const Radius.circular(16),
-          topRight: const Radius.circular(16),
-          bottomLeft: Radius.circular(mine ? 16 : 8),
-          bottomRight: Radius.circular(mine ? 8 : 16),
+          topLeft: Radius.circular(DS.radius(16)),
+          topRight: Radius.circular(DS.radius(16)),
+          bottomLeft: Radius.circular(DS.radius(mine ? 16 : 8)),
+          bottomRight: Radius.circular(DS.radius(mine ? 8 : 16)),
         ),
         boxShadow: mine
-            ? [BoxShadow(color: tone.shadow.withValues(alpha: 0.45), offset: const Offset(1.1, 4), blurRadius: 10)]
-            : const [BoxShadow(color: Color(0x4D9E9E9E), offset: Offset(1.1, 3), blurRadius: 8)],
+            ? [BoxShadow(color: tone.shadow.withValues(alpha: 0.45), offset: DS.shadowOffset(const Offset(1.1, 4)), blurRadius: DS.shadowBlur(10))]
+            : [BoxShadow(color: Color(0x4D9E9E9E), offset: DS.shadowOffset(const Offset(1.1, 3)), blurRadius: DS.shadowBlur(8))],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.end,
@@ -64,7 +65,7 @@ class ChatBubble3D extends StatelessWidget {
             widthFactor: 1,
             child: Text(text, style: Ink3D.text(14, FontWeight.w400, mine ? Colors.white : Ink3D.body, height: 1.4)),
           ),
-          if (mine && ticks != ChatTicks.none) Padding(padding: const EdgeInsets.only(top: 2), child: _Ticks(ticks, Colors.white)),
+          if (mine && ticks != ChatTicks.none) Padding(padding: EdgeInsets.only(top: DS.s(2)), child: _Ticks(ticks, Colors.white)),
         ],
       ),
     );
@@ -87,19 +88,19 @@ class ChatAnswerPill extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = negative ? const Color(0xFFE0525C) : tone.g2;
     final pill = Container(
-      width: 244,
-      constraints: BoxConstraints(minHeight: 42 * _scale(context).clamp(1.0, 1.4)),
-      padding: const EdgeInsets.fromLTRB(18, 6, 14, 6),
+      width: DS.s(244),
+      constraints: BoxConstraints(minHeight: DS.s(42) * _scale(context).clamp(1.0, 1.4)),
+      padding: EdgeInsets.fromLTRB(DS.s(18), DS.s(6), DS.s(14), DS.s(6)),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: DS.circular(22),
         border: Border.all(color: c, width: 1.5),
-        boxShadow: const [BoxShadow(color: Color(0x4D9E9E9E), offset: Offset(1.1, 3), blurRadius: 8)],
+        boxShadow: [BoxShadow(color: Color(0x4D9E9E9E), offset: DS.shadowOffset(const Offset(1.1, 3)), blurRadius: DS.shadowBlur(8))],
       ),
       child: Row(
         children: [
           Expanded(child: Text(label, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(14, FontWeight.w600, c))),
-          Icon(Icons.chevron_right_rounded, size: 20, color: c),
+          Icon(Icons.chevron_right_rounded, size: DS.s(20), color: c),
         ],
       ),
     );
@@ -125,11 +126,11 @@ class ChatSystemNote extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10),
+      padding: EdgeInsets.symmetric(vertical: DS.gv(10)),
       child: Center(
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-          decoration: BoxDecoration(color: const Color(0x17253840), borderRadius: BorderRadius.circular(14)),
+          padding: EdgeInsets.symmetric(horizontal: DS.s(12), vertical: DS.s(5)),
+          decoration: BoxDecoration(color: const Color(0x17253840), borderRadius: DS.circular(14)),
           child: Text(text, textAlign: TextAlign.center, style: Ink3D.text(12, FontWeight.w500, Ink3D.sub)),
         ),
       ),
@@ -187,36 +188,36 @@ class ChatCard3D extends StatelessWidget {
   final double width;
 
   static const double topRoom = 30;
-  static const BorderRadius radius = BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(32), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8));
+  static BorderRadius get radius => BorderRadius.only(topLeft: Radius.circular(DS.radius(8)), topRight: Radius.circular(DS.radius(32)), bottomLeft: Radius.circular(DS.radius(8)), bottomRight: Radius.circular(DS.radius(8)));
 
   Widget _chip(BuildContext context, ChatChip c) {
     final ring = c.selected || c.selectable;
     final ink = c.selected ? Colors.white : (c.selectable ? tone.text : Ink3D.sub);
     final chip = Container(
-      constraints: BoxConstraints(minHeight: 32 * _scale(context).clamp(1.0, 1.4)),
-      padding: const EdgeInsets.symmetric(horizontal: 11),
+      constraints: BoxConstraints(minHeight: DS.s(32) * _scale(context).clamp(1.0, 1.4)),
+      padding: EdgeInsets.symmetric(horizontal: DS.s(11)),
       decoration: BoxDecoration(
         color: c.selected ? null : (c.selectable ? Colors.white : const Color(0xFFF2F3F8)),
         gradient: c.selected ? tone.gradient : null,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: DS.circular(18),
         border: Border.all(color: c.selectable && !c.selected ? tone.haloBase.withValues(alpha: 0.5) : Colors.transparent, width: 1.5),
-        boxShadow: c.selected ? [BoxShadow(color: tone.shadow.withValues(alpha: 0.45), offset: const Offset(1.1, 3), blurRadius: 6)] : null,
+        boxShadow: c.selected ? [BoxShadow(color: tone.shadow.withValues(alpha: 0.45), offset: DS.shadowOffset(const Offset(1.1, 3)), blurRadius: DS.shadowBlur(6))] : null,
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           if (ring) ...[
             Container(
-              width: 16,
-              height: 16,
+              width: DS.s(16),
+              height: DS.s(16),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: c.selected ? Colors.white : null,
-                border: c.selected ? null : Border.all(color: tone.g2, width: 2),
+                border: c.selected ? null : Border.all(color: tone.g2, width: DS.s(2)),
               ),
-              child: c.selected ? Icon(Icons.check_rounded, size: 12, color: tone.g2) : null,
+              child: c.selected ? Icon(Icons.check_rounded, size: DS.s(12), color: tone.g2) : null,
             ),
-            const SizedBox(width: 6),
+            Gap.h(6),
           ],
           Flexible(child: Text(c.label, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(12, FontWeight.w600, ink))),
         ],
@@ -235,29 +236,29 @@ class ChatCard3D extends StatelessWidget {
     final ink = switch (b.kind) { ChatButtonKind.primary => Colors.white, ChatButtonKind.secondary => tone.text, ChatButtonKind.danger => const Color(0xFFE0525C) };
     final off = b.onTap == null && !b.busy;
     final box = Container(
-      constraints: BoxConstraints(minHeight: 44 * _scale(context).clamp(1.0, 1.3)),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+      constraints: BoxConstraints(minHeight: DS.s(44) * _scale(context).clamp(1.0, 1.3)),
+      padding: EdgeInsets.symmetric(horizontal: DS.s(14), vertical: DS.s(4)),
       alignment: Alignment.center,
       decoration: BoxDecoration(
         color: primary ? null : Colors.white,
         gradient: primary ? tone.gradient : null,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: DS.circular(24),
         border: primary ? null : Border.all(color: b.kind == ChatButtonKind.danger ? const Color(0x59E0525C) : const Color(0xFFE6E8EE), width: 1.5),
         boxShadow: off
             ? null
             : primary
-            ? [BoxShadow(color: tone.shadow.withValues(alpha: 0.5), offset: const Offset(1.1, 4), blurRadius: 8)]
-            : const [BoxShadow(color: Color(0x599E9E9E), offset: Offset(3, 5), blurRadius: 10)],
+            ? [BoxShadow(color: tone.shadow.withValues(alpha: 0.5), offset: DS.shadowOffset(const Offset(1.1, 4)), blurRadius: DS.shadowBlur(8))]
+            : [BoxShadow(color: Color(0x599E9E9E), offset: DS.shadowOffset(const Offset(3, 5)), blurRadius: DS.shadowBlur(10))],
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           if (b.busy) ...[
-            SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2.4, color: ink)),
-            const SizedBox(width: 8),
+            SizedBox(width: DS.s(16), height: DS.s(16), child: CircularProgressIndicator(strokeWidth: DS.s(2.4), color: ink)),
+            Gap.h(8),
           ] else if (b.icon != null) ...[
-            Icon(b.icon, size: 18, color: ink),
-            const SizedBox(width: 8),
+            Icon(b.icon, size: DS.s(18), color: ink),
+            Gap.h(8),
           ],
           Flexible(
             child: FittedBox(
@@ -281,20 +282,20 @@ class ChatCard3D extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final card = Container(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
+      padding: EdgeInsets.fromLTRB(DS.s(16), DS.s(12), DS.s(16), DS.s(14)),
       decoration: BoxDecoration(
         color: dimmed ? const Color(0xFFE9EDEA) : Colors.white,
         borderRadius: radius,
-        boxShadow: dimmed ? null : const [BoxShadow(color: Color(0x529E9E9E), offset: Offset(1.1, 4), blurRadius: 12)],
+        boxShadow: dimmed ? null : [BoxShadow(color: Color(0x529E9E9E), offset: DS.shadowOffset(const Offset(1.1, 4)), blurRadius: DS.shadowBlur(12))],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: [
           ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 30),
+            constraints: BoxConstraints(minHeight: DS.s(30)),
             child: Padding(
-              padding: const EdgeInsets.only(left: 62),
+              padding: EdgeInsets.only(left: DS.s(62)),
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: Text(title, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(14.5, FontWeight.w700, dimmed ? const Color(0xFF8A948D) : Ink3D.title, height: 1.25, letterSpacing: 0)),
@@ -303,20 +304,20 @@ class ChatCard3D extends StatelessWidget {
           ),
           if (subtitle != null)
             Padding(
-              padding: const EdgeInsets.only(top: 10),
+              padding: EdgeInsets.only(top: DS.s(10)),
               child: Text(subtitle!, style: Ink3D.text(13, FontWeight.w400, Ink3D.sub, height: 1.4)),
             ),
-          if (body != null) Padding(padding: const EdgeInsets.only(top: 10), child: body),
+          if (body != null) Padding(padding: EdgeInsets.only(top: DS.s(10)), child: body),
           if (chips.isNotEmpty)
             Padding(
-              padding: const EdgeInsets.only(top: 10),
-              child: Wrap(spacing: 6, runSpacing: 6, children: [for (final c in chips) _chip(context, c)]),
+              padding: EdgeInsets.only(top: DS.s(10)),
+              child: Wrap(spacing: DS.gh(6), runSpacing: DS.gv(6), children: [for (final c in chips) _chip(context, c)]),
             ),
-          if (buttons.isNotEmpty) const SizedBox(height: 5),
-          for (final b in buttons) Padding(padding: const EdgeInsets.only(top: 9), child: _button(context, b)),
+          if (buttons.isNotEmpty) SizedBox(height: DS.s(5)),
+          for (final b in buttons) Padding(padding: EdgeInsets.only(top: DS.s(9)), child: _button(context, b)),
           if (mine)
             Padding(
-              padding: const EdgeInsets.only(top: 8),
+              padding: EdgeInsets.only(top: DS.s(8)),
               child: Align(alignment: Alignment.centerRight, child: _Ticks(ticks, tone.g2)),
             ),
         ],
@@ -325,16 +326,16 @@ class ChatCard3D extends StatelessWidget {
     return Align(
       alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
       child: ConstrainedBox(
-        constraints: BoxConstraints(maxWidth: width),
+        constraints: BoxConstraints(maxWidth: DS.s(width)),
         child: Padding(
-          padding: const EdgeInsets.only(top: topRoom),
+          padding: EdgeInsets.only(top: DS.s(topRoom)),
           child: Stack(
             clipBehavior: Clip.none,
             children: [
               card,
               Positioned(
-                left: 8,
-                top: -30,
+                left: DS.s(8),
+                top: DS.s(-30),
                 child: ExcludeSemantics(
                   child: Opacity(
                     opacity: dimmed ? 0.55 : 1,
@@ -358,7 +359,7 @@ class ChatAskSlot extends StatelessWidget {
   final VoidCallback? onTap;
   final bool enabled;
 
-  static const BorderRadius _radius = BorderRadius.only(topLeft: Radius.circular(16), topRight: Radius.circular(16), bottomLeft: Radius.circular(16), bottomRight: Radius.circular(8));
+  static BorderRadius get _radius => BorderRadius.only(topLeft: Radius.circular(DS.radius(16)), topRight: Radius.circular(DS.radius(16)), bottomLeft: Radius.circular(DS.radius(16)), bottomRight: Radius.circular(DS.radius(8)));
 
   @override
   Widget build(BuildContext context) {
@@ -366,22 +367,22 @@ class ChatAskSlot extends StatelessWidget {
     final slot = CustomPaint(
       foregroundPainter: _DashedBorder(color: tone.haloBase.withValues(alpha: 0.75), radius: _radius),
       child: Container(
-        padding: const EdgeInsets.fromLTRB(6, 6, 16, 6),
+        padding: EdgeInsets.fromLTRB(DS.s(6), DS.s(6), DS.s(16), DS.s(6)),
         decoration: BoxDecoration(color: tone.haloBase.withValues(alpha: 0.08), borderRadius: _radius),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: 30,
-              height: 30,
+              width: DS.s(30),
+              height: DS.s(30),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: tone.gradient,
-                boxShadow: [BoxShadow(color: tone.shadow.withValues(alpha: 0.5), offset: const Offset(1.1, 3), blurRadius: 6)],
+                boxShadow: [BoxShadow(color: tone.shadow.withValues(alpha: 0.5), offset: DS.shadowOffset(const Offset(1.1, 3)), blurRadius: DS.shadowBlur(6))],
               ),
-              child: const Icon(Icons.add_rounded, size: 20, color: Colors.white),
+              child: Icon(Icons.add_rounded, size: DS.s(20), color: Colors.white),
             ),
-            const SizedBox(width: 10),
+            Gap.h(10),
             Flexible(child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(14, FontWeight.w600, tone.g2))),
           ],
         ),
@@ -417,8 +418,8 @@ class _DashedBorder extends CustomPainter {
     for (final m in path.computeMetrics()) {
       var d = 0.0;
       while (d < m.length) {
-        canvas.drawPath(m.extractPath(d, d + 4), paint);
-        d += 7;
+        canvas.drawPath(m.extractPath(d, d + DS.s(4)), paint);
+        d += DS.s(7);
       }
     }
   }

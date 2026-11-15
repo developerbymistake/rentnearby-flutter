@@ -514,23 +514,23 @@ class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateM
           _MapMarkerData(
           position: cluster.center,
           width: _chipWidth(priceText),
-          height: 34,
+          height: DS.s(34),
           widget: GestureDetector(
             onTap: () => _showDetail(rep.id),
             child: _AnimatedPin(
               child: Container(
                 decoration: BoxDecoration(
                     color: DesignColors.surface,
-                  borderRadius: BorderRadius.circular(17),
-                    border: Border.all(color: _forest.accentDark, width: 2),
-                    boxShadow: ShadowTokens.elev2,
+                  borderRadius: DS.circular(17),
+                    border: Border.all(color: _forest.accentDark, width: DS.s(2)),
+                    boxShadow: DS.shadows(ShadowTokens.elev2),
                 ),
                 child: Center(
                   child: Text(
                     priceText,
                       style: TextStyle(
                         fontFamily: TypeTokens.family,
-                        fontSize: 12,
+                        fontSize: DS.f(12),
                         fontWeight: FontWeight.w700,
                         color: _forest.accentDark,
                       ),
@@ -545,17 +545,17 @@ class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateM
         data.add(
           _MapMarkerData(
           position: cluster.center,
-          width: 48,
-          height: 48,
+          width: DS.s(48),
+          height: DS.s(48),
           widget: GestureDetector(
             onTap: () => _zoomToCluster(cluster),
             child: _AnimatedPin(
               child: Container(
-                  decoration: BoxDecoration(gradient: _forest.gradient, shape: BoxShape.circle, boxShadow: ShadowTokens.elev3),
+                  decoration: BoxDecoration(gradient: _forest.gradient, shape: BoxShape.circle, boxShadow: DS.shadows(ShadowTokens.elev3)),
                 child: Center(
                   child: Text(
                     '$count',
-                      style: const TextStyle(fontFamily: TypeTokens.family, fontSize: 14, fontWeight: FontWeight.w700, color: DesignColors.onPrimary),
+                      style: TextStyle(fontFamily: TypeTokens.family, fontSize: DS.f(14), fontWeight: FontWeight.w700, color: DesignColors.onPrimary),
                   ),
                 ),
               ),
@@ -575,22 +575,22 @@ class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateM
         data.add(
           _MapMarkerData(
           position: LatLng(focused.latitude, focused.longitude),
-          width: _chipWidth(priceText) + 10,
-          height: 38,
+          width: _chipWidth(priceText) + DS.s(10),
+          height: DS.s(38),
           widget: GestureDetector(
             onTap: () => Get.toNamed(AppRoutes.stayDetail, arguments: {'id': focused.id, 'distanceKm': focused.distanceKm}),
             child: _AnimatedPin(
               child: Container(
                 decoration: BoxDecoration(
                     gradient: _forest.gradient,
-                  borderRadius: BorderRadius.circular(19),
-                    border: Border.all(color: DesignColors.surface, width: 2.5),
-                    boxShadow: ShadowTokens.elev3,
+                  borderRadius: DS.circular(19),
+                    border: Border.all(color: DesignColors.surface, width: DS.s(2.5)),
+                    boxShadow: DS.shadows(ShadowTokens.elev3),
                 ),
                 child: Center(
                   child: Text(
                     priceText,
-                      style: const TextStyle(fontFamily: TypeTokens.family, fontSize: 12, fontWeight: FontWeight.w700, color: DesignColors.onPrimary),
+                      style: TextStyle(fontFamily: TypeTokens.family, fontSize: DS.f(12), fontWeight: FontWeight.w700, color: DesignColors.onPrimary),
                   ),
                 ),
               ),
@@ -702,7 +702,7 @@ class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateM
   }
 
   static Offset _radiusTopAnchor(Offset center, double radiusPx, Size screenSize) {
-    const topMargin = 150.0;
+    final topMargin = DS.s(150);
     final insetRadius = radiusPx * 0.65;
     final maxUpward = (center.dy - topMargin).clamp(0.0, insetRadius);
     return Offset(center.dx, center.dy - maxUpward);
@@ -722,7 +722,7 @@ class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateM
     return Offset(screenSize.width / 2 + dx, screenSize.height / 2 + dy);
   }
 
-  double _chipWidth(String text) => (text.length * 9.0 + 26).clamp(52.0, 90.0);
+  double _chipWidth(String text) => DS.s((text.length * 9.0 + 26).clamp(52.0, 90.0));
 
   String _pinPrice(int price) => Money.short(price);
 
@@ -836,23 +836,23 @@ class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateM
                     TemplateEntrance(
                       animation: templateInterval(_chromeController, 0, 3),
                       animationController: _chromeController,
-                      offset: -30,
+                      offset: DS.s(-30),
                       child: Container(
-                        decoration: BoxDecoration(gradient: _forest.gradient, borderRadius: CardRadius.header, boxShadow: ShadowTokens.elev3),
+                        decoration: BoxDecoration(gradient: _forest.gradient, borderRadius: DS.br(CardRadius.header), boxShadow: DS.shadows(ShadowTokens.elev3)),
                       child: SafeArea(
                         bottom: false,
                         child: Padding(
-                          padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+                          padding: DS.insets(l: 20, t: 12, r: 20, b: 16),
                             child: Column(
                               children: [
                                 Row(
                                   children: [
                                     _buildBackButton(),
-                                    const SizedBox(width: 10),
+                                    Gap.h(10),
                                     Expanded(child: PlaceSearchBar(controller: _centre, compact: true)),
                                   ],
                                 ),
-                                const SizedBox(height: 10),
+                                Gap.v(10),
                                 _buildRadiusChips(),
                               ],
                             ),
@@ -861,7 +861,7 @@ class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateM
                       ),
                     ),
                     Padding(
-                      padding: const EdgeInsets.only(top: 12, left: 20, right: 20),
+                      padding: EdgeInsets.only(top: DS.gv(12), left: DS.s(20), right: DS.s(20)),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
@@ -878,9 +878,9 @@ class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateM
               Obx(() {
                 if (!_guest.nearestActive.value) {
                   return Positioned(
-                    bottom: lift + 24,
-                    left: 20,
-                    right: 20,
+                    bottom: lift + DS.s(24),
+                    left: DS.s(20),
+                    right: DS.s(20),
                     child: TemplateEntrance(
                       animation: templateInterval(_chromeController, 2, 3),
                       animationController: _chromeController,
@@ -894,16 +894,16 @@ class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateM
                     ),
                   );
                 }
-                return Positioned(bottom: lift + 86, left: 20, right: 20, child: _buildNearestPreviewCard());
+                return Positioned(bottom: lift + DS.s(86), left: DS.s(20), right: DS.s(20), child: _buildNearestPreviewCard());
               }),
               Obx(() {
                 if (!_guest.nearestActive.value) return const SizedBox.shrink();
                 final total = _guest.nearestStays.length;
                 final idx = _guest.nearestFocusIndex.value;
                 return Positioned(
-                  bottom: lift + 20,
-                  left: 20,
-                  right: 20,
+                  bottom: lift + DS.s(20),
+                  left: DS.s(20),
+                  right: DS.s(20),
                   child: NearestControlBar(
                     current: idx,
                     total: total,
@@ -919,11 +919,11 @@ class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateM
                 );
               }),
               Positioned(
-                bottom: lift + 4,
-                left: 8,
-                child: const Text(
+                bottom: lift + DS.s(4),
+                left: DS.s(8),
+                child: Text(
                   '© OpenStreetMap contributors',
-                  style: TextStyle(fontFamily: TypeTokens.family, fontSize: 11, color: DesignColors.textGrey),
+                  style: TextStyle(fontFamily: TypeTokens.family, fontSize: DS.f(11), color: DesignColors.textGrey),
                 ),
               ),
             ],
@@ -941,10 +941,10 @@ class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateM
         Navigator.of(context).maybePop();
       },
       child: Container(
-        width: KitMetrics.touch,
-        height: KitMetrics.touch,
-          decoration: BoxDecoration(color: DesignColors.surface, shape: BoxShape.circle, boxShadow: ShadowTokens.elev2),
-          child: Icon(Icons.chevron_left_rounded, color: _forest.accentDark, size: 26),
+        width: DS.s(KitMetrics.touch),
+        height: DS.s(KitMetrics.touch),
+          decoration: BoxDecoration(color: DesignColors.surface, shape: BoxShape.circle, boxShadow: DS.shadows(ShadowTokens.elev2)),
+          child: Icon(Icons.chevron_left_rounded, color: _forest.accentDark, size: DS.s(26)),
         ),
       ),
     );
@@ -953,8 +953,8 @@ class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateM
   Widget _buildRadiusChips() {
     final radii = AppConstants.radiusOptions;
     return Container(
-      padding: const EdgeInsets.all(3),
-      decoration: BoxDecoration(color: DesignColors.surface, borderRadius: BorderRadius.circular(24), boxShadow: ShadowTokens.elev2),
+      padding: DS.all(3),
+      decoration: BoxDecoration(color: DesignColors.surface, borderRadius: DS.circular(24), boxShadow: DS.shadows(ShadowTokens.elev2)),
       child: Row(
         children: radii.asMap().entries.map((entry) {
           final i = entry.key;
@@ -970,20 +970,20 @@ class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateM
               },
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 250),
-                height: 38,
-                margin: EdgeInsets.only(right: i < radii.length - 1 ? 4 : 0),
+                height: DS.s(38),
+                margin: EdgeInsets.only(right: i < radii.length - 1 ? DS.gh(4) : 0),
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
                   gradient: active ? _forest.gradient : null,
-                  borderRadius: BorderRadius.circular(24),
-                  boxShadow: active ? ShadowTokens.elev1 : null,
+                  borderRadius: DS.circular(24),
+                  boxShadow: active ? DS.shadows(ShadowTokens.elev1) : null,
                 ),
                 child: Text(
                   '${r.toInt()} km',
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                     fontFamily: TypeTokens.family,
-                    fontSize: 12,
+                    fontSize: DS.f(12),
                       fontWeight: FontWeight.w600,
                     color: active ? DesignColors.onPrimary : DesignColors.textSecondary,
                   ),
@@ -1007,10 +1007,10 @@ class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateM
         if (_mapReady) _fitToRadius();
       },
       child: Container(
-        width: KitMetrics.touch + 2,
-        height: KitMetrics.touch + 2,
-          decoration: BoxDecoration(color: DesignColors.surface, shape: BoxShape.circle, boxShadow: ShadowTokens.elev2),
-          child: Icon(Icons.my_location_rounded, color: _forest.accentDark, size: 22),
+        width: DS.s(KitMetrics.touch + 2),
+        height: DS.s(KitMetrics.touch + 2),
+          decoration: BoxDecoration(color: DesignColors.surface, shape: BoxShape.circle, boxShadow: DS.shadows(ShadowTokens.elev2)),
+          child: Icon(Icons.my_location_rounded, color: _forest.accentDark, size: DS.s(22)),
         ),
       ),
     );
@@ -1034,7 +1034,7 @@ class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateM
       priceUnit: s.minPricePerNight != null ? '/night' : '',
       iconAsset: TravelIcon.stay,
       isFeatured: s.isFeatured,
-      margin: elevated ? EdgeInsets.zero : const EdgeInsets.symmetric(horizontal: KitMetrics.gutter, vertical: 6),
+      margin: elevated ? EdgeInsets.zero : EdgeInsets.symmetric(horizontal: DS.s(KitMetrics.gutter), vertical: DS.gv(6)),
       onTap: () => Get.toNamed(AppRoutes.stayDetail, arguments: {'id': s.id, 'distanceKm': s.distanceKm}),
     );
   }
@@ -1045,27 +1045,27 @@ class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateM
       child: GestureDetector(
       onTap: _showListSheet,
       child: Container(
-        constraints: const BoxConstraints(minHeight: KitMetrics.touch),
-        padding: const EdgeInsets.symmetric(horizontal: 14),
+        constraints: BoxConstraints(minHeight: DS.s(KitMetrics.touch)),
+        padding: DS.sym(h: 14),
         decoration: BoxDecoration(
             color: DesignColors.surface,
-            borderRadius: BorderRadius.circular(24),
+            borderRadius: DS.circular(24),
             border: Border.all(color: _forest.accentDark, width: 1.5),
-            boxShadow: ShadowTokens.elev2,
+            boxShadow: DS.shadows(ShadowTokens.elev2),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-              Icon(Icons.format_list_bulleted_rounded, color: _forest.accentDark, size: 18),
-            const SizedBox(width: 6),
+              Icon(Icons.format_list_bulleted_rounded, color: _forest.accentDark, size: DS.s(18)),
+            Gap.h(6),
               Text(
                 'View List',
-                style: TextStyle(fontFamily: TypeTokens.family, fontSize: 13, fontWeight: FontWeight.w700, color: _forest.accentDark),
+                style: TextStyle(fontFamily: TypeTokens.family, fontSize: DS.f(13), fontWeight: FontWeight.w700, color: _forest.accentDark),
               ),
-            const SizedBox(width: 6),
+            Gap.h(6),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(gradient: _forest.gradient, borderRadius: BorderRadius.circular(10)),
+              padding: DS.sym(h: 6, v: 2),
+                decoration: BoxDecoration(gradient: _forest.gradient, borderRadius: DS.circular(10)),
                 child: Text(
                   '$count',
                   style: TypeTokens.style(11, FontWeight.w800, color: DesignColors.onPrimary),
@@ -1114,17 +1114,17 @@ class _ListSheetBodyState extends State<_ListSheetBody> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(color: DesignColors.sheet, borderRadius: CardRadius.sheet, boxShadow: DesignShadows.top),
+      decoration: BoxDecoration(color: DesignColors.sheet, borderRadius: DS.br(CardRadius.sheet), boxShadow: DS.shadows(DesignShadows.top)),
                   child: Column(
                     children: [
                       Container(
-            width: 36,
-                        height: 4,
-            margin: const EdgeInsets.only(top: 10, bottom: 14),
-            decoration: BoxDecoration(color: DesignColors.tint(DesignColors.textGrey, Alpha.half), borderRadius: BorderRadius.circular(2)),
+            width: DS.s(36),
+                        height: DS.s(4),
+            margin: EdgeInsets.only(top: DS.s(10), bottom: DS.s(14)),
+            decoration: BoxDecoration(color: DesignColors.tint(DesignColors.textGrey, Alpha.half), borderRadius: DS.circular(2)),
                       ),
                       Padding(
-            padding: const EdgeInsets.fromLTRB(KitMetrics.gutter, 0, KitMetrics.gutter, 12),
+            padding: EdgeInsets.fromLTRB(DS.s(KitMetrics.gutter), 0, DS.s(KitMetrics.gutter), DS.s(12)),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
@@ -1140,14 +1140,14 @@ class _ListSheetBodyState extends State<_ListSheetBody> {
                   ),
                 ),
           const Divider(height: 1, color: DesignColors.dividerSoft),
-                const SizedBox(height: 8),
+                Gap.v(8),
                 Expanded(
                   child: Obx(() {
               final items = widget.guest.nearbyStays.toList();
                     return ListView.builder(
                 controller: widget.scrollController,
                 physics: const BouncingScrollPhysics(),
-                      padding: EdgeInsets.only(bottom: 16 + AppInsets.bottomViewPadding(context)),
+                      padding: EdgeInsets.only(bottom: DS.gv(16) + AppInsets.bottomViewPadding(context)),
                       itemCount: items.length,
                 itemBuilder: (_, i) {
                   final row = widget.rowBuilder(items[i]);

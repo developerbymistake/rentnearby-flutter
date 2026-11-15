@@ -42,7 +42,7 @@ class StayDetailScreen extends StatefulWidget {
 class _StayDetailScreenState extends State<StayDetailScreen> {
   Widget _sec(int i, Widget child) => StaggerItem(index: i, child: child);
 
-  double _heroHeight(BuildContext context) => 252 + MediaQuery.paddingOf(context).top;
+  double _heroHeight(BuildContext context) => DS.s(252) + MediaQuery.paddingOf(context).top;
 
   final _auth = Get.find<AuthController>();
   final _isSharing = false.obs;
@@ -123,7 +123,7 @@ class _StayDetailScreenState extends State<StayDetailScreen> {
             valueListenable: _barOn,
             builder: (context, on, _) => ToastSlot(
               margin: EdgeInsets.fromLTRB(
-                  18, !_loading && _stay != null && on ? DetailTopBar.heightOf(context) + 14 : MediaQuery.paddingOf(context).top + 64, 18, 0),
+                  DS.s(18), !_loading && _stay != null && on ? DetailTopBar.heightOf(context) + DS.s(14) : MediaQuery.paddingOf(context).top + DS.s(64), DS.s(18), 0),
             ),
           ),
           Expanded(child: _loading ? _buildLoader() : _buildContent()),
@@ -137,8 +137,8 @@ class _StayDetailScreenState extends State<StayDetailScreen> {
   }
 
   Widget _backAt(BuildContext context, {bool solid = false}) => Positioned(
-        top: MediaQuery.paddingOf(context).top + 10,
-        left: 14,
+        top: MediaQuery.paddingOf(context).top + DS.s(10),
+        left: DS.s(14),
         child: DetailGlassButton(onTap: () => Get.back(), solid: solid),
       );
 
@@ -224,14 +224,14 @@ class _StayDetailScreenState extends State<StayDetailScreen> {
           if (s.photos.isNotEmpty) const Positioned(top: 0, left: 0, right: 0, child: DetailTopScrim()),
           if (s.photos.length > 1)
             Positioned(
-              bottom: 42,
+              bottom: DS.s(42),
               left: 0,
               right: 0,
               child: IgnorePointer(child: DetailPhotoDots(count: s.photos.length, index: _currentPhoto)),
             ),
-          Positioned(top: top + 10, left: 14, child: DetailGlassButton(onTap: () => Get.back())),
+          Positioned(top: top + DS.s(10), left: DS.s(14), child: DetailGlassButton(onTap: () => Get.back())),
           if (!_isOwner && s.slug != null)
-            Positioned(top: top + 10, right: 14, child: DetailSharePill(tone: _kTone, onTap: () => _share(s))),
+            Positioned(top: top + DS.s(10), right: DS.s(14), child: DetailSharePill(tone: _kTone, onTap: () => _share(s))),
           Positioned(left: 0, right: 0, bottom: -1, child: DetailEdge(page: _kPage)),
         ],
       ),
@@ -308,7 +308,7 @@ class _StayDetailScreenState extends State<StayDetailScreen> {
                 DetailAboutCard(text: s.description!),
               ])),
             _sec(6, DetailPosted(text: 'Posted ${_timeAgo(s.createdAt)}')),
-            const SizedBox(height: 28),
+            Gap.v(28),
           ]),
         ),
         RevealBarPad(_reveal),

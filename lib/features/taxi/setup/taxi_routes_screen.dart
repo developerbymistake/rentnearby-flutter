@@ -401,7 +401,7 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> with TickerProvider
                 ),
                 Expanded(
                   child: ListView(
-                    padding: const EdgeInsets.only(bottom: 24),
+                    padding: EdgeInsets.only(bottom: DS.s(24)),
                     children: [
                       SetupEntrance(controller: _anim, index: 0, count: 4, child: _localRateCard()),
                       SetupEntrance(
@@ -459,7 +459,7 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> with TickerProvider
         hint: 'Search a place',
         leadingArt: asset,
         errorRing: ring,
-        trailing: Image.asset(ListingArt.pushpin, width: 26, height: 26),
+        trailing: Image.asset(ListingArt.pushpin, width: DS.s(26), height: DS.s(26)),
         onTap: onTap,
       ).withTopGap(first ? 0 : 14);
 
@@ -517,7 +517,7 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> with TickerProvider
       artSide: FormArtSide.right,
       title: 'Local sightseeing',
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Text(TaxiRateStrings.neededToList, style: FieldMessage.helperStyle.copyWith(fontSize: 12.5)),
+        Text(TaxiRateStrings.neededToList, style: FieldMessage.helperStyle.copyWith(fontSize: DS.f(12.5))),
         PillField(
           tone: _tone,
           label: TripStringsA3.driverRateLabel,
@@ -549,9 +549,9 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> with TickerProvider
           }),
         ),
         Padding(
-          padding: const EdgeInsets.only(top: 12),
+          padding: EdgeInsets.only(top: DS.gv(12)),
           child: Text('Travellers see this rate. You can quote a different fare for a trip after you read the itinerary.',
-              style: FieldMessage.helperStyle.copyWith(fontSize: 12)),
+              style: FieldMessage.helperStyle.copyWith(fontSize: DS.f(12))),
         ),
       ]),
     );
@@ -573,5 +573,5 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> with TickerProvider
 }
 
 extension on Widget {
-  Widget withTopGap(double gap) => gap == 0 ? this : Padding(padding: EdgeInsets.only(top: gap), child: this);
+  Widget withTopGap(double gap) => gap == 0 ? this : Padding(padding: EdgeInsets.only(top: DS.gv(gap)), child: this);
 }

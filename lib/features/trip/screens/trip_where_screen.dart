@@ -148,9 +148,9 @@ class _TripWhereScreenState extends State<TripWhereScreen> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     _center(_top()),
-                    const SizedBox(height: 6),
+                    Gap.v(6),
                     ..._body(media.size.width),
-                    const SizedBox(height: 24),
+                    Gap.v(24),
                   ],
                 ),
               ),
@@ -186,8 +186,8 @@ class _TripWhereScreenState extends State<TripWhereScreen> {
         tone: _page,
         inline: true,
         flat: true,
-        margin: const EdgeInsets.fromLTRB(18, 14, 18, 0),
-        padding: const EdgeInsets.fromLTRB(20, 6, 12, 6),
+        margin: EdgeInsets.fromLTRB(DS.s(18), DS.gv(14), DS.s(18), 0),
+        padding: DS.insets(l: 20, t: 6, r: 12, b: 6),
         value: TripStringsTab.searchHint,
         buttonArt: ListingArt.search,
         field: TextField(
@@ -203,7 +203,7 @@ class _TripWhereScreenState extends State<TripWhereScreen> {
             isCollapsed: true,
             isDense: true,
             filled: false,
-            contentPadding: const EdgeInsets.symmetric(vertical: 8),
+            contentPadding: DS.sym(v: 8),
             hintText: TripStringsTab.searchHint,
             hintStyle: Ink3D.text(16, FontWeight.w400, Ink3D.hint, letterSpacing: 0),
             border: InputBorder.none,
@@ -216,9 +216,9 @@ class _TripWhereScreenState extends State<TripWhereScreen> {
         onButtonTap: _query.isEmpty ? _focus.requestFocus : _clearSearch,
         buttonChild: _query.isEmpty
             ? null
-            : const Tooltip(
+            : Tooltip(
                 message: TripStringsTab.clearSearch,
-                child: Icon(Icons.close_rounded, color: DesignColors.onPrimary, size: 26),
+                child: Icon(Icons.close_rounded, color: DesignColors.onPrimary, size: DS.s(26)),
               ),
       );
 
@@ -226,7 +226,7 @@ class _TripWhereScreenState extends State<TripWhereScreen> {
     if (_states.length < 2) return const SizedBox.shrink();
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.fromLTRB(18, 12, 18, 0),
+      padding: EdgeInsets.fromLTRB(DS.s(18), DS.gv(12), DS.s(18), 0),
       child: Row(
         children: [
           HubStateChip(
@@ -236,7 +236,7 @@ class _TripWhereScreenState extends State<TripWhereScreen> {
             onTap: () => _pickState(null),
           ),
           for (var i = 0; i < _states.length; i++) ...[
-            const SizedBox(width: 8),
+            Gap.h(8),
             HubStateChip(
               art: _stateArts[_stateSlot(_states[i])],
               label: _states[i],
@@ -250,25 +250,26 @@ class _TripWhereScreenState extends State<TripWhereScreen> {
   }
 
   double _cell(double screenW) {
-    final col = ((screenW > _maxWidth ? _maxWidth : screenW) - 24) / 2;
-    return col < _tileWidth ? col : _tileWidth;
+    final col = ((screenW > _maxWidth ? _maxWidth : screenW) - (DS.s(20) + DS.gh(4))) / 2;
+    final tile = DS.s(_tileWidth);
+    return col < tile ? col : tile;
   }
 
   Widget _slot(Widget? child) => Expanded(child: Center(child: child));
 
   Widget _pair(double cell, Widget a, Widget? b) => _center(
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10),
+          padding: DS.sym(h: 10),
           child: IntrinsicHeight(
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [_slot(a), const SizedBox(width: 4), _slot(b)],
+              children: [_slot(a), Gap.h(4), _slot(b)],
             ),
           ),
         ),
       );
 
-  Widget _stateBox(Widget card) => _center(Padding(padding: const EdgeInsets.fromLTRB(18, 8, 18, 0), child: card));
+  Widget _stateBox(Widget card) => _center(Padding(padding: EdgeInsets.fromLTRB(DS.s(18), DS.gv(8), DS.s(18), 0), child: card));
 
   List<Widget> _body(double screenW) {
     final cell = _cell(screenW);

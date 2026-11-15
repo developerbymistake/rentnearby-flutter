@@ -363,7 +363,7 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> with TickerProviderSt
         return head(loaded ? TripStringsV2Create.placesLine(total) : 'Places to visit');
       });
     }
-    return SafeArea(bottom: false, child: Padding(padding: const EdgeInsets.only(top: 6), child: body));
+    return SafeArea(bottom: false, child: Padding(padding: EdgeInsets.only(top: DS.s(6)), child: body));
   }
 
   void _backTo(int index) {
@@ -381,7 +381,7 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> with TickerProviderSt
     return Obx(() {
       _ctrl.selected.length;
       return ChipCPRow(
-        padding: const EdgeInsets.fromLTRB(18, 6, 18, 0),
+        padding: EdgeInsets.fromLTRB(DS.s(18), DS.gv(6), DS.s(18), 0),
         children: [
           for (var i = 0; i < _chain.length; i++)
             ChipCP(
@@ -404,7 +404,7 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> with TickerProviderSt
       if (_ctrl.isLoading.value || _ctrl.plannerOff.value || cats.length <= 1) return const SizedBox.shrink();
       final current = _ctrl.filter.value;
       return ChipCPRow(
-        padding: const EdgeInsets.fromLTRB(18, 4, 18, 4),
+        padding: EdgeInsets.fromLTRB(DS.s(18), DS.gv(4), DS.s(18), DS.gv(4)),
         children: [
           _chip(ListingArt.worldMap, TripStrings.allCategories, current == null, () => _ctrl.setFilter(null)),
           for (final cat in cats)
@@ -481,7 +481,7 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> with TickerProviderSt
       final heads = <Widget>[
         if (few && filter == null)
           Padding(
-            padding: const EdgeInsets.fromLTRB(18, 10, 18, 0),
+            padding: EdgeInsets.fromLTRB(DS.s(18), DS.gv(10), DS.s(18), 0),
             child: Text(
               TripStringsSpotsX.fewPlaces(count),
               style: Ink3D.text(13, FontWeight.w600, Ink3D.grey),
@@ -498,19 +498,19 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> with TickerProviderSt
       ];
       return ListView.builder(
         controller: _scroll,
-        padding: const EdgeInsets.only(bottom: 16),
+        padding: EdgeInsets.only(bottom: DS.s(16)),
         itemCount: heads.length + visible.length + (loadingMore ? 1 : 0),
         itemBuilder: (_, k) {
           if (k < heads.length) return _row(k, heads[k]);
           final i = k - heads.length;
           if (i == visible.length) {
             return Padding(
-              padding: const EdgeInsets.symmetric(vertical: 12),
+              padding: DS.sym(v: 12),
               child: Center(
                 child: SizedBox(
-                  width: 24,
-                  height: 24,
-                  child: CircularProgressIndicator(strokeWidth: 2, color: ListingTone.indigo.g2),
+                  width: DS.s(24),
+                  height: DS.s(24),
+                  child: CircularProgressIndicator(strokeWidth: DS.s(2), color: ListingTone.indigo.g2),
                 ),
               ),
             );
@@ -546,7 +546,7 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> with TickerProviderSt
   }
 
   Widget _message(Widget child) => ListView(
-        padding: const EdgeInsets.only(top: 40),
+        padding: EdgeInsets.only(top: DS.s(40)),
         children: [TemplateStagger(children: [child])],
       );
 
@@ -558,7 +558,7 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> with TickerProviderSt
 
   Widget _skeleton() => ListView.builder(
         physics: const NeverScrollableScrollPhysics(),
-        padding: const EdgeInsets.only(bottom: 16),
+        padding: EdgeInsets.only(bottom: DS.s(16)),
         itemCount: 4,
         itemBuilder: (_, _) => const WideCardSkeleton(kind: WideKind.photo),
       );
@@ -580,7 +580,7 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> with TickerProviderSt
       if (route != null) {
         children
           ..add(TripSpotsRouteStrip(route: route))
-          ..add(const SizedBox(height: 6));
+          ..add(Gap.v(6));
       }
       if (_creating) {
         final total = _counts().fold<int>(0, (a, b) => a + b);
@@ -602,11 +602,11 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> with TickerProviderSt
         ));
       }
       if (_creating && n == 0 && !_canContinue(0)) {
-        if (children.isNotEmpty) children.add(const SizedBox(height: 6));
+        if (children.isNotEmpty) children.add(Gap.v(6));
         children.add(Text(TripStringsV2Create.pickOnePlace, style: Ink3D.text(13, FontWeight.w600, Ink3D.grey)));
       }
       if (_canContinue(n)) {
-        if (children.isNotEmpty) children.add(const SizedBox(height: 12));
+        if (children.isNotEmpty) children.add(Gap.v(12));
         children.add(GradientPillButton(
           tone: ListingTone.indigo,
           label: _creating
@@ -621,11 +621,11 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> with TickerProviderSt
   }
 
   Widget _barFrame(BuildContext context, List<Widget> children) => Container(
-        padding: EdgeInsets.fromLTRB(18, 14, 18, AppInsets.bottomViewPadding(context) + 16),
-        decoration: const BoxDecoration(
+        padding: EdgeInsets.fromLTRB(DS.s(18), DS.s(14), DS.s(18), AppInsets.bottomViewPadding(context) + DS.s(16)),
+        decoration: BoxDecoration(
           color: DesignColors.surface,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-          boxShadow: Ink3D.topEdge,
+          borderRadius: DS.br(const BorderRadius.vertical(top: Radius.circular(24))),
+          boxShadow: DS.shadows(Ink3D.topEdge),
         ),
         child: AnimatedSize(
           duration: const Duration(milliseconds: 220),
@@ -652,7 +652,7 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> with TickerProviderSt
       kind: BannerKind.warn,
       art: ListingArt.clipboard,
       title: tripFull ? TripStringsMcaA2.maxPlaces : atMax ? TripStringsV2Create.maxDaysReached : _limitText,
-      margin: const EdgeInsets.fromLTRB(18, 10, 18, 2),
+      margin: EdgeInsets.fromLTRB(DS.s(18), DS.gv(10), DS.s(18), DS.gv(2)),
     );
   }
 }

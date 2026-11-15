@@ -356,10 +356,10 @@ class _BookingBodyState extends State<_BookingBody> {
       footer: GradientPillButton(tone: _bookTone, label: TripStrings.saveBooking, loading: _saving, onTap: _saving ? null : _save),
       children: [
         _BookDriverRow(name: t.driverName, line: vehicle, phone: _phone, loading: _phoneLoading),
-        Padding(padding: const EdgeInsets.only(top: 16, bottom: 10), child: Text(TripStrings.days.toUpperCase(), style: RepliesLook.section)),
+        Padding(padding: EdgeInsets.only(top: DS.gv(16), bottom: DS.gv(10)), child: Text(TripStrings.days.toUpperCase(), style: RepliesLook.section)),
         Wrap(
-          spacing: 8,
-          runSpacing: 8,
+          spacing: DS.gh(8),
+          runSpacing: DS.gv(8),
           children: [
             for (final d in _tripPlan.days.map((d) => d.day))
               ChoicePill(
@@ -372,8 +372,8 @@ class _BookingBodyState extends State<_BookingBody> {
               ),
           ],
         ),
-        if (multi) Padding(padding: const EdgeInsets.only(top: 6), child: Text(TripStringsMccK2.pickInOneCity, style: RepliesLook.foot)),
-        const SizedBox(height: 4),
+        if (multi) Padding(padding: EdgeInsets.only(top: DS.gv(6)), child: Text(TripStringsMccK2.pickInOneCity, style: RepliesLook.foot)),
+        Gap.v(4),
         _BookPickup(
           time: TripFormat.time12(TripFormat.hhmm(_time)),
           onTime: _pickTime,
@@ -394,7 +394,7 @@ class _BookingBodyState extends State<_BookingBody> {
             if (_fareError != null) setState(() => _fareError = null);
           },
         ),
-        const SizedBox(height: 6),
+        Gap.v(6),
         CheckRow(tone: _bookTone, value: _toll, label: TripStrings.tollExtra, onChanged: (v) => setState(() => _toll = v)),
       ],
     );
@@ -441,12 +441,12 @@ class _BookDriverRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final p = phone;
     return GreyPillBox(
-      margin: const EdgeInsets.only(top: 4),
-      padding: const EdgeInsets.fromLTRB(10, 8, 8, 8),
+      margin: EdgeInsets.only(top: DS.gv(4)),
+      padding: DS.insets(l: 10, t: 8, r: 8, b: 8),
       child: Row(
         children: [
-          Image.asset(ListingArt.taxi, width: 40, height: 40, fit: BoxFit.contain),
-          const SizedBox(width: 12),
+          Image.asset(ListingArt.taxi, width: DS.s(40), height: DS.s(40), fit: BoxFit.contain),
+          Gap.h(12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -459,7 +459,7 @@ class _BookDriverRow extends StatelessWidget {
             ),
           ),
           if (loading)
-            Padding(padding: const EdgeInsets.all(8), child: KitDots(color: _bookTone.g2))
+            Padding(padding: DS.all(8), child: KitDots(color: _bookTone.g2))
           else if (p != null)
             Tooltip(
               message: TripStrings.call,
@@ -468,10 +468,10 @@ class _BookDriverRow extends StatelessWidget {
                 label: TripStrings.call,
                 exclude: true,
                 child: Container(
-                  width: 44,
-                  height: 44,
+                  width: DS.s(44),
+                  height: DS.s(44),
                   decoration: BoxDecoration(gradient: _bookTone.gradient, shape: BoxShape.circle, boxShadow: _bookTone.glow(blur: 6, dy: 3)),
-                  child: const Icon(Icons.call_rounded, size: 20, color: DesignColors.textInverse),
+                  child: Icon(Icons.call_rounded, size: DS.s(20), color: DesignColors.textInverse),
                 ),
               ),
             ),
@@ -510,7 +510,7 @@ class _BookPickup extends StatelessWidget {
     );
     return LayoutBuilder(
       builder: (context, c) => c.maxWidth >= 320
-          ? Row(crossAxisAlignment: CrossAxisAlignment.start, children: [Expanded(child: timeField), const SizedBox(width: 10), Expanded(child: placeField)])
+          ? Row(crossAxisAlignment: CrossAxisAlignment.start, children: [Expanded(child: timeField), Gap.h(10), Expanded(child: placeField)])
           : Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [timeField, placeField]),
     );
   }
@@ -723,7 +723,7 @@ class _JourneyCarBodyState extends State<_JourneyCarBody> {
           phone: _car.phone,
         ),
         Padding(
-          padding: const EdgeInsets.only(top: 14),
+          padding: EdgeInsets.only(top: DS.gv(14)),
           child: Align(
             alignment: Alignment.centerLeft,
             child: ChoicePill(
@@ -751,7 +751,7 @@ class _JourneyCarBodyState extends State<_JourneyCarBody> {
             if (_fareError != null) setState(() => _fareError = null);
           },
         ),
-        const SizedBox(height: 6),
+        Gap.v(6),
         CheckRow(tone: _bookTone, value: _toll, label: TripStrings.tollExtra, onChanged: (v) => setState(() => _toll = v)),
         PillField(
           tone: _bookTone,

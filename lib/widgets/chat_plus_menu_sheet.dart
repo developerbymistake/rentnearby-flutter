@@ -88,7 +88,7 @@ class ChatPlusMenuSheet extends StatelessWidget {
       art: ListingArt.speechBalloon,
       size: SheetSize.hug,
       scrollable: questions.isEmpty,
-      padding: const EdgeInsets.fromLTRB(22, 0, 22, 0),
+      padding: DS.insets(l: 22, r: 22),
       child: questions.isEmpty
           ? Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: rows)
           : _WholeRowList(children: rows),
@@ -99,8 +99,8 @@ class ChatPlusMenuSheet extends StatelessWidget {
 class _WholeRowList extends StatefulWidget {
   const _WholeRowList({required this.children});
 
-  static const double maxListHeight = 512;
-  static const double topRoom = 334;
+  static double get maxListHeight => DS.s(512);
+  static double get topRoom => DS.s(334);
 
   final List<Widget> children;
 

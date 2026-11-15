@@ -10,11 +10,11 @@ class DayHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final text = Padding(
-      padding: const EdgeInsets.fromLTRB(2, 4, 2, 8),
+      padding: EdgeInsets.fromLTRB(DS.s(2), DS.gv(4), DS.s(2), DS.gv(8)),
       child: Text(
         label.toUpperCase(),
         style: FitnessAppTheme.body2.copyWith(
-          fontSize: 14,
+          fontSize: DS.f(14),
           fontWeight: FontWeight.w500,
           letterSpacing: 0.5,
           color: FitnessAppTheme.lightText,
