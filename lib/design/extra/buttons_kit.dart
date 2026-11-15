@@ -3,6 +3,7 @@ import '../template/fitness_app_theme.dart';
 import '../tokens/alpha_tokens.dart';
 import '../tokens/card_tokens.dart';
 import '../tokens/design_colors.dart';
+import '../tokens/design_scale.dart';
 import '../tokens/shadow_tokens.dart';
 import '../tokens/template_tokens.dart';
 import '../tokens/type_tokens.dart';
@@ -10,10 +11,11 @@ import 'kit_tone.dart';
 import 'motion_kit.dart';
 
 class KitDots extends StatefulWidget {
-  const KitDots({super.key, this.color = DesignColors.onPrimary, this.size = 7});
+  const KitDots({super.key, this.color = DesignColors.onPrimary, this.size = 7, this.scaled = true});
 
   final Color color;
   final double size;
+  final bool scaled;
 
   @override
   State<KitDots> createState() => _KitDotsState();
@@ -41,6 +43,7 @@ class _KitDotsState extends State<KitDots> with SingleTickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
+    final dot = DS.s(widget.size, scaled: widget.scaled);
     return AnimatedBuilder(
       animation: _c,
       builder: (context, _) => Row(
@@ -48,12 +51,12 @@ class _KitDotsState extends State<KitDots> with SingleTickerProviderStateMixin {
         children: [
           for (var i = 0; i < 3; i++)
             Padding(
-              padding: EdgeInsets.symmetric(horizontal: widget.size / 3),
+              padding: EdgeInsets.symmetric(horizontal: dot / 3),
               child: Transform.scale(
                 scale: 0.6 + 0.4 * (1 - ((_c.value * 3 - i) % 3).clamp(0.0, 1.0)),
                 child: Container(
-                  width: widget.size,
-                  height: widget.size,
+                  width: dot,
+                  height: dot,
                   decoration: BoxDecoration(color: widget.color, shape: BoxShape.circle),
                 ),
               ),
@@ -78,8 +81,10 @@ class PrimaryButton extends StatelessWidget {
     this.compact = false,
     this.heroCorner = false,
     this.scaleLabel = true,
+    this.scaled = true,
   });
 
+  final bool scaled;
   final bool compact;
   final bool heroCorner;
   final bool scaleLabel;
@@ -95,14 +100,14 @@ class PrimaryButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final enabled = onPressed != null && !loading;
-    final h = height < KitMetrics.touch ? KitMetrics.touch : height;
-    final radius = heroCorner ? CardRadius.hero : KitMetrics.buttonRadius;
+    final h = DS.s(height < KitMetrics.touch ? KitMetrics.touch : height, scaled: scaled);
+    final radius = heroCorner ? DS.br(CardRadius.hero, scaled: scaled) : DS.circular(KitMetrics.buttonRadiusValue, scaled: scaled);
     final content = loading
-        ? const KitDots()
+        ? KitDots(scaled: scaled)
         : Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              if (icon != null) ...[icon!, const SizedBox(width: 8)],
+              if (icon != null) ...[icon!, SizedBox(width: DS.s(8, scaled: scaled))],
               Flexible(
                 child: _label(
                   Text(
@@ -111,15 +116,15 @@ class PrimaryButton extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: TypeTokens.style(compact ? 13 : 16, FontWeight.w600,
                         color: enabled ? DesignColors.onPrimary : DesignColors.textDisabled,
-                        letterSpacing: 0.2),
+                        letterSpacing: 0.2, scaled: scaled),
                   ),
                   scaleLabel,
                 ),
               ),
               if (trailingArrow) ...[
-                const SizedBox(width: 6),
+                SizedBox(width: DS.s(6, scaled: scaled)),
                 Icon(Icons.arrow_forward_rounded,
-                    size: 18,
+                    size: DS.s(18, scaled: scaled),
                     color: enabled ? DesignColors.onPrimary : DesignColors.textDisabled),
               ],
             ],
@@ -132,7 +137,7 @@ class PrimaryButton extends StatelessWidget {
         gradient: enabled || loading ? tone.gradient : null,
         color: enabled || loading ? null : DesignColors.surfaceMuted,
         borderRadius: radius,
-        boxShadow: enabled || loading ? ShadowTokens.glow(tone.glow) : const [],
+        boxShadow: enabled || loading ? DS.shadows(ShadowTokens.glow(tone.glow), scaled: scaled) : const [],
       ),
       child: Material(
         color: Colors.transparent,
@@ -142,7 +147,7 @@ class PrimaryButton extends StatelessWidget {
           highlightColor: Colors.transparent,
           onTap: enabled ? onPressed : null,
           child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: compact ? 16 : 24),
+            padding: EdgeInsets.symmetric(horizontal: DS.s(compact ? 16 : 24, scaled: scaled)),
             child: Center(widthFactor: expand ? null : 1, child: content),
           ),
         ),
@@ -167,8 +172,10 @@ class SecondaryButton extends StatelessWidget {
     this.neutral = false,
     this.compact = false,
     this.scaleLabel = true,
+    this.scaled = true,
   });
 
+  final bool scaled;
   final bool compact;
   final bool scaleLabel;
 
@@ -188,37 +195,38 @@ class SecondaryButton extends StatelessWidget {
         : neutral
             ? DesignColors.textGrey
             : tone.accentDark;
-    final h = height < KitMetrics.touch ? KitMetrics.touch : height;
+    final h = DS.s(height < KitMetrics.touch ? KitMetrics.touch : height, scaled: scaled);
+    final bRadius = DS.circular(KitMetrics.buttonRadiusValue, scaled: scaled);
     final btn = Container(
       height: h,
       decoration: BoxDecoration(
         color: DesignColors.surface,
-        borderRadius: KitMetrics.buttonRadius,
+        borderRadius: bRadius,
         border: Border.all(
-            color: neutral ? DesignColors.borderStrong : color, width: 1.5),
+            color: neutral ? DesignColors.borderStrong : color, width: DS.s(1.5, scaled: scaled)),
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          borderRadius: KitMetrics.buttonRadius,
+          borderRadius: bRadius,
           splashColor: DesignColors.tint(color, Alpha.soft),
           highlightColor: Colors.transparent,
           onTap: onPressed,
           child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: compact ? 16 : 24),
+            padding: EdgeInsets.symmetric(horizontal: DS.s(compact ? 16 : 24, scaled: scaled)),
             child: Center(
               widthFactor: expand ? null : 1,
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  if (icon != null) ...[icon!, const SizedBox(width: 8)],
+                  if (icon != null) ...[icon!, SizedBox(width: DS.s(8, scaled: scaled))],
                   Flexible(
                     child: _label(
                       Text(label,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TypeTokens.style(compact ? 13 : 16, FontWeight.w600,
-                              color: color, letterSpacing: 0.2)),
+                              color: color, letterSpacing: 0.2, scaled: scaled)),
                       scaleLabel,
                     ),
                   ),
@@ -247,8 +255,10 @@ class PillAction extends StatelessWidget {
     this.height = 40,
     this.maxWidth,
     this.compact = false,
+    this.scaled = true,
   });
 
+  final bool scaled;
   final bool compact;
   final double? maxWidth;
 
@@ -271,17 +281,17 @@ class PillAction extends StatelessWidget {
     return PressScale(
       enabled: enabled,
       child: ConstrainedBox(
-        constraints: BoxConstraints(minHeight: compact ? 34 : KitMetrics.touch, maxWidth: maxWidth ?? double.infinity),
+        constraints: BoxConstraints(minHeight: DS.s(compact ? 34 : KitMetrics.touch, scaled: scaled), maxWidth: maxWidth ?? double.infinity),
         child: Center(
           widthFactor: 1,
           heightFactor: 1,
           child: Container(
-            height: compact ? 34 : height,
+            height: DS.s(compact ? 34 : height, scaled: scaled),
             decoration: BoxDecoration(
               gradient: filled && enabled ? tone.gradient : null,
               color: filled && enabled ? null : DesignColors.surface,
               borderRadius: radius,
-              border: filled ? null : Border.all(color: fg, width: 1.5),
+              border: filled ? null : Border.all(color: fg, width: DS.s(1.5, scaled: scaled)),
             ),
             child: Material(
               color: Colors.transparent,
@@ -293,18 +303,18 @@ class PillAction extends StatelessWidget {
                 highlightColor: Colors.transparent,
                 onTap: onTap,
                 child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: compact ? 8 : 16),
+                  padding: EdgeInsets.symmetric(horizontal: DS.s(compact ? 8 : 16, scaled: scaled)),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      if (icon != null) ...[icon!, SizedBox(width: compact ? 4 : 6)],
+                      if (icon != null) ...[icon!, SizedBox(width: DS.s(compact ? 4 : 6, scaled: scaled))],
                       Flexible(
                         child: _label(
                           Text(label,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TypeTokens.style(12, FontWeight.w700,
-                                  color: fg, letterSpacing: 0.27)),
+                                  color: fg, letterSpacing: 0.27, scaled: scaled)),
                           true,
                         ),
                       ),
@@ -327,8 +337,10 @@ class TextLink extends StatelessWidget {
     required this.onTap,
     this.tone = KitTone.brand,
     this.trailingArrow = false,
+    this.scaled = true,
   });
 
+  final bool scaled;
   final String label;
   final VoidCallback? onTap;
   final KitTone tone;
@@ -339,13 +351,13 @@ class TextLink extends StatelessWidget {
     final color = onTap == null ? DesignColors.textDisabled : tone.accentDark;
     return InkWell(
       onTap: onTap,
-      borderRadius: KitMetrics.photo,
+      borderRadius: DS.br(KitMetrics.photo, scaled: scaled),
       splashColor: DesignColors.tint(color, Alpha.soft),
       highlightColor: Colors.transparent,
       child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: KitMetrics.touch),
+        constraints: BoxConstraints(minHeight: DS.s(KitMetrics.touch, scaled: scaled)),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8),
+          padding: EdgeInsets.symmetric(horizontal: DS.s(8, scaled: scaled)),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -355,11 +367,11 @@ class TextLink extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     textAlign: TextAlign.center,
                     style: TypeTokens.style(14, FontWeight.w600,
-                        color: color, letterSpacing: 0.2)),
+                        color: color, letterSpacing: 0.2, scaled: scaled)),
               ),
               if (trailingArrow) ...[
-                const SizedBox(width: 4),
-                Icon(Icons.arrow_forward_rounded, size: 16, color: color),
+                SizedBox(width: DS.s(4, scaled: scaled)),
+                Icon(Icons.arrow_forward_rounded, size: DS.s(16, scaled: scaled), color: color),
               ],
             ],
           ),
@@ -370,8 +382,9 @@ class TextLink extends StatelessWidget {
 }
 
 class KitRoundButton extends StatelessWidget {
-  const KitRoundButton({super.key, required this.icon, required this.onTap, this.size = 40, this.color = FitnessAppTheme.grey});
+  const KitRoundButton({super.key, required this.icon, required this.onTap, this.size = 40, this.color = FitnessAppTheme.grey, this.scaled = true});
 
+  final bool scaled;
   final IconData icon;
   final VoidCallback? onTap;
   final double size;
@@ -381,16 +394,16 @@ class KitRoundButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return PressScale(
       child: SizedBox(
-        width: KitMetrics.touch,
-        height: KitMetrics.touch,
+        width: DS.s(KitMetrics.touch, scaled: scaled),
+        height: DS.s(KitMetrics.touch, scaled: scaled),
         child: Center(
           child: Container(
-            width: size,
-            height: size,
+            width: DS.s(size, scaled: scaled),
+            height: DS.s(size, scaled: scaled),
             decoration: BoxDecoration(
               color: DesignColors.surfaceAlt,
               shape: BoxShape.circle,
-              boxShadow: [ShadowTokens.tint(DesignColors.primary, const ShadowSpec(0.4, Offset(4, 4), 8))],
+              boxShadow: DS.shadows([ShadowTokens.tint(DesignColors.primary, const ShadowSpec(0.4, Offset(4, 4), 8))], scaled: scaled),
             ),
             child: Material(
               color: Colors.transparent,
@@ -399,7 +412,7 @@ class KitRoundButton extends StatelessWidget {
                 splashColor: DesignColors.tint(DesignColors.primary, Alpha.soft),
                 highlightColor: Colors.transparent,
                 onTap: onTap,
-                child: Icon(icon, size: 24, color: color),
+                child: Icon(icon, size: DS.s(24, scaled: scaled), color: color),
               ),
             ),
           ),
@@ -413,8 +426,9 @@ Widget _label(Widget text, bool scale) =>
     scale ? FittedBox(fit: BoxFit.scaleDown, child: text) : text;
 
 class ButtonPair extends StatelessWidget {
-  const ButtonPair({super.key, required this.first, required this.second, this.stackAbove = 1.15, this.gap = 12});
+  const ButtonPair({super.key, required this.first, required this.second, this.stackAbove = 1.15, this.gap = 12, this.scaled = true});
 
+  final bool scaled;
   final Widget first;
   final Widget second;
   final double stackAbove;
@@ -427,10 +441,10 @@ class ButtonPair extends StatelessWidget {
       return Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [first, SizedBox(height: gap), second],
+        children: [first, SizedBox(height: DS.gv(gap, scaled: scaled)), second],
       );
     }
-    return Row(children: [Expanded(child: first), SizedBox(width: gap), Expanded(child: second)]);
+    return Row(children: [Expanded(child: first), SizedBox(width: DS.gh(gap, scaled: scaled)), Expanded(child: second)]);
   }
 }
 
@@ -442,8 +456,10 @@ class KitChoiceChip extends StatelessWidget {
     required this.onTap,
     this.tone = KitTone.brand,
     this.icon,
+    this.scaled = true,
   });
 
+  final bool scaled;
   final String label;
   final bool selected;
   final VoidCallback? onTap;
@@ -456,7 +472,7 @@ class KitChoiceChip extends StatelessWidget {
     return PressScale(
       enabled: onTap != null,
       child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: KitMetrics.touch),
+        constraints: BoxConstraints(minHeight: DS.s(KitMetrics.touch, scaled: scaled)),
         child: Center(
           widthFactor: 1,
           heightFactor: 1,
@@ -467,7 +483,7 @@ class KitChoiceChip extends StatelessWidget {
               gradient: selected ? tone.gradient : null,
               color: selected ? null : DesignColors.chipBackground,
               borderRadius: CardRadius.pill,
-              boxShadow: selected ? ShadowTokens.glow(tone.glow) : const [],
+              boxShadow: selected ? DS.shadows(ShadowTokens.glow(tone.glow), scaled: scaled) : const [],
             ),
             child: Material(
               color: Colors.transparent,
@@ -477,16 +493,16 @@ class KitChoiceChip extends StatelessWidget {
                 highlightColor: Colors.transparent,
                 onTap: onTap,
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+                  padding: EdgeInsets.symmetric(horizontal: DS.s(16, scaled: scaled), vertical: DS.s(9, scaled: scaled)),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      if (icon != null) ...[icon!, const SizedBox(width: 6)],
+                      if (icon != null) ...[icon!, SizedBox(width: DS.s(6, scaled: scaled))],
                       Flexible(
                         child: Text(label,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: TypeTokens.style(13, FontWeight.w600, color: fg, letterSpacing: 0.2)),
+                            style: TypeTokens.style(13, FontWeight.w600, color: fg, letterSpacing: 0.2, scaled: scaled)),
                       ),
                     ],
                   ),
@@ -509,8 +525,10 @@ class KitChainChip extends StatelessWidget {
     required this.done,
     required this.onTap,
     this.tone = KitTone.brand,
+    this.scaled = true,
   });
 
+  final bool scaled;
   final String label;
   final int number;
   final bool current;
@@ -532,7 +550,7 @@ class KitChainChip extends StatelessWidget {
           color: current ? null : DesignColors.surface,
           borderRadius: CardRadius.pill,
           border: Border.all(color: current || done ? accent : DesignColors.divider),
-          boxShadow: current ? ShadowTokens.glow(tone.glow) : const [],
+          boxShadow: current ? DS.shadows(ShadowTokens.glow(tone.glow), scaled: scaled) : const [],
         ),
         child: Material(
           color: Colors.transparent,
@@ -542,33 +560,33 @@ class KitChainChip extends StatelessWidget {
             highlightColor: Colors.transparent,
             onTap: onTap,
             child: ConstrainedBox(
-              constraints: const BoxConstraints(minHeight: 36),
+              constraints: BoxConstraints(minHeight: DS.s(36, scaled: scaled)),
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                padding: EdgeInsets.symmetric(horizontal: DS.s(14, scaled: scaled), vertical: DS.s(6, scaled: scaled)),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     AnimatedContainer(
                       duration: KitMotion.reduce(context) ? Duration.zero : const Duration(milliseconds: 250),
-                      width: 20,
-                      height: 20,
+                      width: DS.s(20, scaled: scaled),
+                      height: DS.s(20, scaled: scaled),
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
                         color: current ? DesignColors.surface : (done ? accent : DesignColors.scaffold),
                         shape: BoxShape.circle,
                       ),
                       child: done
-                          ? const Icon(Icons.check_rounded, size: 14, color: DesignColors.surface)
+                          ? Icon(Icons.check_rounded, size: DS.s(14, scaled: scaled), color: DesignColors.surface)
                           : Text('$number',
-                              style: TypeTokens.style(11, FontWeight.w700,
+                              style: TypeTokens.style(11, FontWeight.w700, scaled: scaled,
                                   color: current ? accent : DesignColors.textMuted)),
                     ),
-                    const SizedBox(width: 6),
+                    SizedBox(width: DS.s(6, scaled: scaled)),
                     Flexible(
                       child: Text(label,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: TypeTokens.style(12, FontWeight.w600, letterSpacing: 0.27, color: fg)),
+                          style: TypeTokens.style(12, FontWeight.w600, letterSpacing: 0.27, color: fg, scaled: scaled)),
                     ),
                   ],
                 ),

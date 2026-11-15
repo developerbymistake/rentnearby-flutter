@@ -3,12 +3,13 @@ import 'package:bakhli/design/template/fitness_app_theme.dart';
 import 'package:bakhli/design/extra/template_ports.dart';
 import 'package:bakhli/design/tokens/card_tokens.dart';
 import 'package:bakhli/design/tokens/design_colors.dart';
+import 'package:bakhli/design/tokens/design_scale.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 class AppTheme {
-  static const BorderRadius _radius = BorderRadius.all(Radius.circular(8));
-  static const BorderRadius _cardRadius = CardRadius.tile;
+  static BorderRadius get _radius => DS.circular(8);
+  static BorderRadius get _cardRadius => DS.br(CardRadius.tile);
   static const String _font = FitnessAppTheme.fontName;
 
   static const ColorScheme _scheme = ColorScheme(
@@ -45,9 +46,9 @@ class AppTheme {
     inversePrimary: DesignColors.primaryLight,
   );
 
-  static const TextStyle _button = TextStyle(
+  static TextStyle get _button => TextStyle(
     fontFamily: _font,
-    fontSize: 16,
+    fontSize: DS.f(16),
     fontWeight: FontWeight.w600,
   );
 
@@ -56,7 +57,7 @@ class AppTheme {
         fontFamily: _font,
         fontFamilyFallback: FitnessAppTheme.fontFallback,
         colorScheme: _scheme,
-        textTheme: FitnessAppTheme.textTheme,
+        textTheme: FitnessAppTheme.textTheme.apply(fontSizeFactor: DS.font),
         scaffoldBackgroundColor: DesignColors.scaffold,
         canvasColor: DesignColors.surface,
         dividerColor: DesignColors.divider,
@@ -79,18 +80,18 @@ class AppTheme {
             ),
           },
         ),
-        appBarTheme: const AppBarTheme(
+        appBarTheme: AppBarTheme(
           backgroundColor: Colors.transparent,
           surfaceTintColor: Colors.transparent,
           elevation: 0,
           scrolledUnderElevation: 0,
-          systemOverlayStyle: SystemUiOverlayStyle(
+          systemOverlayStyle: const SystemUiOverlayStyle(
             statusBarColor: Colors.transparent,
             statusBarIconBrightness: Brightness.dark,
           ),
           titleTextStyle: TextStyle(
             fontFamily: _font,
-            fontSize: 22,
+            fontSize: DS.f(22),
             fontWeight: FontWeight.w700,
             letterSpacing: 1.2,
             color: DesignColors.textStrong,
@@ -104,8 +105,8 @@ class AppTheme {
             foregroundColor: DesignColors.onPrimary,
             disabledBackgroundColor: DesignColors.surfaceMuted,
             disabledForegroundColor: DesignColors.textDisabled,
-            minimumSize: const Size(double.infinity, 54),
-            shape: const RoundedRectangleBorder(borderRadius: _radius),
+            minimumSize: Size(double.infinity, DS.s(54)),
+            shape: RoundedRectangleBorder(borderRadius: _radius),
             textStyle: _button,
             elevation: 0,
           ),
@@ -116,7 +117,7 @@ class AppTheme {
             foregroundColor: DesignColors.onPrimary,
             disabledBackgroundColor: DesignColors.surfaceMuted,
             disabledForegroundColor: DesignColors.textDisabled,
-            shape: const RoundedRectangleBorder(borderRadius: _radius),
+            shape: RoundedRectangleBorder(borderRadius: _radius),
             textStyle: _button,
           ),
         ),
@@ -125,7 +126,7 @@ class AppTheme {
             foregroundColor: DesignColors.primary,
             disabledForegroundColor: DesignColors.textDisabled,
             side: const BorderSide(color: DesignColors.primary),
-            shape: const RoundedRectangleBorder(borderRadius: _radius),
+            shape: RoundedRectangleBorder(borderRadius: _radius),
             textStyle: _button,
           ),
         ),
@@ -133,7 +134,7 @@ class AppTheme {
           style: TextButton.styleFrom(
             foregroundColor: DesignColors.primary,
             disabledForegroundColor: DesignColors.textDisabled,
-            shape: const RoundedRectangleBorder(borderRadius: _radius),
+            shape: RoundedRectangleBorder(borderRadius: _radius),
             textStyle: _button,
           ),
         ),
@@ -145,49 +146,49 @@ class AppTheme {
           foregroundColor: DesignColors.onPrimary,
           elevation: 0,
         ),
-        inputDecorationTheme: const InputDecorationTheme(
+        inputDecorationTheme: InputDecorationTheme(
           filled: true,
           fillColor: DesignColors.inputFill,
-          contentPadding: EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+          contentPadding: EdgeInsets.symmetric(horizontal: DS.s(18), vertical: DS.s(16)),
           border: OutlineInputBorder(
             borderRadius: _radius,
             borderSide: BorderSide.none,
           ),
           enabledBorder: OutlineInputBorder(
             borderRadius: _radius,
-            borderSide: BorderSide(color: DesignColors.inputBorder, width: 1),
+            borderSide: const BorderSide(color: DesignColors.inputBorder, width: 1),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: _radius,
             borderSide:
-                BorderSide(color: DesignColors.inputBorderFocus, width: 2),
+                const BorderSide(color: DesignColors.inputBorderFocus, width: 2),
           ),
           errorBorder: OutlineInputBorder(
             borderRadius: _radius,
-            borderSide: BorderSide(color: DesignColors.inputBorderError),
+            borderSide: const BorderSide(color: DesignColors.inputBorderError),
           ),
           focusedErrorBorder: OutlineInputBorder(
             borderRadius: _radius,
             borderSide:
-                BorderSide(color: DesignColors.inputBorderError, width: 2),
+                const BorderSide(color: DesignColors.inputBorderError, width: 2),
           ),
           hintStyle: TextStyle(
             fontFamily: _font,
             color: DesignColors.inputHint,
-            fontSize: 14,
+            fontSize: DS.f(14),
           ),
-          labelStyle: TextStyle(
+          labelStyle: const TextStyle(
             fontFamily: _font,
             color: DesignColors.inputLabel,
           ),
-          errorStyle: TextStyle(fontFamily: _font, color: DesignColors.error),
+          errorStyle: const TextStyle(fontFamily: _font, color: DesignColors.error),
         ),
         textSelectionTheme: const TextSelectionThemeData(
           cursorColor: DesignColors.inputCursor,
           selectionColor: DesignColors.splash,
           selectionHandleColor: DesignColors.primary,
         ),
-        cardTheme: const CardThemeData(
+        cardTheme: CardThemeData(
           color: DesignColors.card,
           surfaceTintColor: Colors.transparent,
           elevation: 0,
@@ -195,18 +196,18 @@ class AppTheme {
           shape: RoundedRectangleBorder(borderRadius: _cardRadius),
           shadowColor: DesignColors.border,
         ),
-        chipTheme: const ChipThemeData(
+        chipTheme: ChipThemeData(
           backgroundColor: DesignColors.chipBackground,
           selectedColor: DesignColors.chipSelected,
           disabledColor: DesignColors.surfaceMuted,
           surfaceTintColor: Colors.transparent,
-          side: BorderSide(color: DesignColors.chipBorder),
+          side: const BorderSide(color: DesignColors.chipBorder),
           shape: RoundedRectangleBorder(borderRadius: _radius),
           labelStyle: TextStyle(
-              fontFamily: _font, fontSize: 14, color: DesignColors.chipLabel),
+              fontFamily: _font, fontSize: DS.f(14), color: DesignColors.chipLabel),
           secondaryLabelStyle: TextStyle(
               fontFamily: _font,
-              fontSize: 14,
+              fontSize: DS.f(14),
               color: DesignColors.chipLabelSelected),
           checkmarkColor: DesignColors.chipLabelSelected,
         ),
@@ -223,36 +224,35 @@ class AppTheme {
           indicatorColor: DesignColors.primarySoft,
           elevation: 0,
         ),
-        dialogTheme: const DialogThemeData(
+        dialogTheme: DialogThemeData(
           backgroundColor: DesignColors.dialog,
           surfaceTintColor: Colors.transparent,
           shadowColor: Colors.transparent,
           titleTextStyle: TextStyle(
             fontFamily: _font,
-            fontSize: 18,
+            fontSize: DS.f(18),
             fontWeight: FontWeight.bold,
             color: DesignColors.textStrong,
           ),
           contentTextStyle: TextStyle(
             fontFamily: _font,
-            fontSize: 14,
+            fontSize: DS.f(14),
             color: DesignColors.textPrimary,
           ),
           shape: RoundedRectangleBorder(borderRadius: _cardRadius),
         ),
-        bottomSheetTheme: const BottomSheetThemeData(
+        bottomSheetTheme: BottomSheetThemeData(
           backgroundColor: DesignColors.sheet,
           modalBackgroundColor: DesignColors.sheet,
           surfaceTintColor: Colors.transparent,
           modalBarrierColor: DesignColors.scrim,
           elevation: 0,
-          shape: RoundedRectangleBorder(borderRadius: CardRadius.sheet),
+          shape: RoundedRectangleBorder(borderRadius: DS.br(CardRadius.sheet)),
         ),
-        datePickerTheme: const DatePickerThemeData(
+        datePickerTheme: DatePickerThemeData(
           backgroundColor: DesignColors.surface,
           surfaceTintColor: Colors.transparent,
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.all(Radius.circular(24))),
+          shape: RoundedRectangleBorder(borderRadius: DS.circular(24)),
           headerBackgroundColor: DesignColors.primary,
           headerForegroundColor: DesignColors.onPrimary,
         ),
@@ -261,10 +261,10 @@ class AppTheme {
           linearTrackColor: DesignColors.progressTrack,
           circularTrackColor: DesignColors.progressTrack,
         ),
-        snackBarTheme: const SnackBarThemeData(
+        snackBarTheme: SnackBarThemeData(
           backgroundColor: DesignColors.snackBackground,
           contentTextStyle:
-              TextStyle(fontFamily: _font, color: DesignColors.snackText),
+              const TextStyle(fontFamily: _font, color: DesignColors.snackText),
           actionTextColor: DesignColors.primaryLight,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: _radius),
@@ -304,22 +304,22 @@ class AppTheme {
           indicatorColor: DesignColors.primary,
           dividerColor: DesignColors.divider,
         ),
-        sliderTheme: const SliderThemeData(
+        sliderTheme: SliderThemeData(
           activeTrackColor: DesignColors.primary,
           inactiveTrackColor: DesignColors.progressTrack,
           thumbColor: DesignColors.primary,
           overlayColor: DesignColors.primaryTint,
-          trackHeight: 4,
-          thumbShape: RingThumbShape(),
-          rangeThumbShape: RingRangeThumbShape(),
+          trackHeight: DS.s(4),
+          thumbShape: const RingThumbShape(),
+          rangeThumbShape: const RingRangeThumbShape(),
         ),
-        tooltipTheme: const TooltipThemeData(
+        tooltipTheme: TooltipThemeData(
           decoration: BoxDecoration(
             color: DesignColors.snackBackground,
             borderRadius: _radius,
           ),
           textStyle:
-              TextStyle(fontFamily: _font, color: DesignColors.snackText),
+              const TextStyle(fontFamily: _font, color: DesignColors.snackText),
         ),
       );
 }

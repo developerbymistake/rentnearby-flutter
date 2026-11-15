@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 
 import '../template/fitness_app_theme.dart';
+import '../tokens/design_scale.dart';
 import '../tokens/listing_palette.dart';
 
 abstract final class Ink3D {
@@ -19,8 +20,8 @@ abstract final class Ink3D {
 
   static const List<String> fallback = ['WorkSans'];
 
-  static TextStyle text(double size, FontWeight weight, Color color, {double? height, double letterSpacing = 0.2}) =>
-      TextStyle(fontFamily: font, fontFamilyFallback: fallback, fontSize: size, fontWeight: weight, color: color, height: height, letterSpacing: letterSpacing);
+  static TextStyle text(double size, FontWeight weight, Color color, {double? height, double letterSpacing = 0.2, bool scaled = true}) =>
+      TextStyle(fontFamily: font, fontFamilyFallback: fallback, fontSize: DS.f(size, scaled: scaled), fontWeight: weight, color: color, height: height, letterSpacing: letterSpacing);
 
   static const List<BoxShadow> softShadow = [BoxShadow(color: soft, offset: Offset(3, 5), blurRadius: 10)];
   static const List<BoxShadow> topEdge = [BoxShadow(color: Color(0x599E9E9E), offset: Offset(0, -2), blurRadius: 16)];
@@ -42,7 +43,8 @@ class ListingTone {
   Color get halo => haloBase.withValues(alpha: ListingPalette.haloAlpha);
   Color get tint => haloBase.withValues(alpha: 0.12);
 
-  List<BoxShadow> glow({double blur = 10, double dy = 4}) => [BoxShadow(color: shadow, offset: Offset(1.1, dy), blurRadius: blur)];
+  List<BoxShadow> glow({double blur = 10, double dy = 4, bool scaled = true}) =>
+      [BoxShadow(color: shadow, offset: DS.shadowOffset(Offset(1.1, dy), scaled: scaled), blurRadius: DS.shadowBlur(blur, scaled: scaled))];
 
   factory ListingTone.palette(ListingPalette p) =>
       ListingTone(g1: p.g1, g2: p.g2, shadow: p.glowShadow, haloBase: p.shadow, text: p.text);
@@ -103,6 +105,7 @@ class Art3D extends StatelessWidget {
     this.shadowBlur = 6,
     this.shadowOffset = const Offset(5, 8),
     this.shadowAlpha = 0.25,
+    this.scaled = true,
   });
 
   final String asset;
@@ -113,10 +116,14 @@ class Art3D extends StatelessWidget {
   final double shadowBlur;
   final Offset shadowOffset;
   final double shadowAlpha;
+  final bool scaled;
 
   @override
   Widget build(BuildContext context) {
-    final h = halo;
+    final size = DS.s(this.size, scaled: scaled);
+    final shadowBlur = DS.shadowBlur(this.shadowBlur, scaled: scaled);
+    final shadowOffset = DS.shadowOffset(this.shadowOffset, scaled: scaled);
+    final h = halo == null ? null : DS.s(halo!, scaled: scaled);
     final image = Image.asset(asset, width: size, height: size, fit: BoxFit.contain);
     final shadow = Transform.translate(
       offset: shadowOffset,
@@ -139,7 +146,7 @@ class Art3D extends StatelessWidget {
         children: [
           Positioned(
             left: (size - h) / 2,
-            top: (size - h) / 2 + (haloDy ?? 0),
+            top: (size - h) / 2 + DS.s(haloDy ?? 0, scaled: scaled),
             child: DecoratedBox(
               decoration: BoxDecoration(shape: BoxShape.circle, color: haloColor ?? Colors.white.withValues(alpha: 0.22)),
               child: SizedBox(width: h, height: h),
@@ -161,6 +168,7 @@ class PhotoSticker extends StatelessWidget {
     this.border = 3,
     this.stickerSize,
     this.stickerOffset,
+    this.scaled = true,
   });
 
   final Widget photo;
@@ -169,11 +177,14 @@ class PhotoSticker extends StatelessWidget {
   final double border;
   final double? stickerSize;
   final Offset? stickerOffset;
+  final bool scaled;
 
   @override
   Widget build(BuildContext context) {
-    final s = stickerSize ?? size * 0.52;
-    final o = stickerOffset ?? Offset(size * 0.66, size * 0.64);
+    final size = DS.s(this.size, scaled: scaled);
+    final border = DS.s(this.border, scaled: scaled);
+    final s = stickerSize == null ? size * 0.52 : DS.s(stickerSize!, scaled: scaled);
+    final o = stickerOffset == null ? Offset(size * 0.66, size * 0.64) : DS.shadowOffset(stickerOffset!, scaled: scaled);
     return SizedBox(
       width: size,
       height: size,
@@ -182,10 +193,10 @@ class PhotoSticker extends StatelessWidget {
         children: [
           Positioned.fill(
             child: DecoratedBox(
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: Colors.white,
-                boxShadow: [BoxShadow(color: Color(0x47000000), offset: Offset(3, 6), blurRadius: 10)],
+                boxShadow: DS.shadows(const [BoxShadow(color: Color(0x47000000), offset: Offset(3, 6), blurRadius: 10)], scaled: scaled),
               ),
               child: Padding(padding: EdgeInsets.all(border), child: ClipOval(child: SizedBox.expand(child: photo))),
             ),
@@ -194,7 +205,7 @@ class PhotoSticker extends StatelessWidget {
             Positioned(
               left: o.dx,
               top: o.dy,
-              child: Art3D(asset: sticker, size: s, shadowBlur: 3, shadowOffset: const Offset(2, 4), shadowAlpha: 0.3),
+              child: Art3D(asset: sticker, size: s, shadowBlur: DS.s(3, scaled: scaled), shadowOffset: DS.shadowOffset(const Offset(2, 4), scaled: scaled), shadowAlpha: 0.3, scaled: false),
             ),
         ],
       ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../tokens/design_scale.dart';
 import '../tokens/listing_palette.dart';
 import 'art_3d.dart';
 import 'motion_kit.dart';
@@ -485,6 +486,7 @@ class RoundIconButton3D extends StatelessWidget {
     this.badge,
     this.size = 46,
     this.semanticsLabel,
+    this.scaled = true,
   });
 
   final String asset;
@@ -492,53 +494,55 @@ class RoundIconButton3D extends StatelessWidget {
   final Widget? badge;
   final double size;
   final String? semanticsLabel;
+  final bool scaled;
 
-  static Widget count(String text) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-    constraints: const BoxConstraints(minWidth: 17),
+  static Widget count(String text, {bool scaled = true}) => Container(
+    padding: EdgeInsets.symmetric(horizontal: DS.s(5, scaled: scaled), vertical: DS.s(1, scaled: scaled)),
+    constraints: BoxConstraints(minWidth: DS.s(17, scaled: scaled)),
     decoration: BoxDecoration(
       color: _kBadge,
-      borderRadius: BorderRadius.circular(9),
+      borderRadius: BorderRadius.circular(DS.s(9, scaled: scaled)),
     ),
     child: Text(
       text,
       maxLines: 1,
       textAlign: TextAlign.center,
       textScaler: TextScaler.noScaling,
-      style: Ink3D.text(10, FontWeight.w500, Colors.white, letterSpacing: 0),
+      style: Ink3D.text(10, FontWeight.w500, Colors.white, letterSpacing: 0, scaled: scaled),
     ),
   );
 
   @override
   Widget build(BuildContext context) {
+    final box = DS.s(size, scaled: scaled);
     return _tap(
       onTap: onTap,
       label: semanticsLabel,
       child: SizedBox(
-        width: size,
-        height: size,
+        width: box,
+        height: box,
         child: Stack(
           clipBehavior: Clip.none,
           children: [
             Positioned.fill(
               child: DecoratedBox(
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   color: Colors.white,
                   shape: BoxShape.circle,
-                  boxShadow: Ink3D.softShadow,
+                  boxShadow: DS.shadows(Ink3D.softShadow, scaled: scaled),
                 ),
                 child: Center(
                   child: Image.asset(
                     asset,
-                    width: size * 28 / 46,
-                    height: size * 28 / 46,
+                    width: box * 28 / 46,
+                    height: box * 28 / 46,
                     fit: BoxFit.contain,
                     filterQuality: FilterQuality.high,
                   ),
                 ),
               ),
             ),
-            if (badge != null) Positioned(top: -3, right: -3, child: badge!),
+            if (badge != null) Positioned(top: -DS.s(3, scaled: scaled), right: -DS.s(3, scaled: scaled), child: badge!),
           ],
         ),
       ),

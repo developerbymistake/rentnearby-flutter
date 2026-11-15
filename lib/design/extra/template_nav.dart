@@ -392,7 +392,8 @@ class _NavTabState extends State<_NavTab>
                         size: 38,
                         shadowBlur: 3,
                         shadowOffset: const Offset(2, 3),
-                        shadowAlpha: selected ? 0.25 : 0),
+                        shadowAlpha: selected ? 0.25 : 0,
+                        scaled: false),
                   ),
                 ),
                 Positioned(top: 2, left: 8, child: _dot(8, 0.2, 1.0)),
@@ -462,7 +463,7 @@ class _CenterButtonState extends State<_CenterButton>
             focusColor: Colors.transparent,
             onTap: widget.onTap,
             child: Center(
-              child: Art3D(asset: widget.item.image, size: 46, shadowBlur: 3, shadowOffset: const Offset(2, 4), shadowAlpha: 0.3),
+              child: Art3D(asset: widget.item.image, size: 46, shadowBlur: 3, shadowOffset: const Offset(2, 4), shadowAlpha: 0.3, scaled: false),
             ),
           ),
         ),

@@ -195,12 +195,13 @@ class _HomeScreenState extends State<HomeScreen> {
     return RoundIconButton3D(
       asset: asset,
       semanticsLabel: label,
+      scaled: false,
       onTap: onTap,
       badge: IgnorePointer(
         child: Obx(() {
           final count = unreadCount.value;
           if (count <= 0) return const SizedBox.shrink();
-          return RoundIconButton3D.count(count > 99 ? '99+' : '$count');
+          return RoundIconButton3D.count(count > 99 ? '99+' : '$count', scaled: false);
         }),
       ),
     );
@@ -539,11 +540,11 @@ class _HomeHeader extends StatelessWidget {
                 FittedBox(
                   fit: BoxFit.scaleDown,
                   alignment: Alignment.centerLeft,
-                  child: Text(title, maxLines: 1, style: Ink3D.text(28, FontWeight.w700, Ink3D.title, height: 1.25)),
+                  child: Text(title, maxLines: 1, style: Ink3D.text(28, FontWeight.w700, Ink3D.title, height: 1.25, scaled: false)),
                 ),
                 Padding(
                   padding: const EdgeInsets.only(top: 3),
-                  child: Text(subtitle, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(14, FontWeight.w400, Ink3D.sub, letterSpacing: 0)),
+                  child: Text(subtitle, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(14, FontWeight.w400, Ink3D.sub, letterSpacing: 0, scaled: false)),
                 ),
               ],
             ),

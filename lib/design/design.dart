@@ -1,4 +1,5 @@
 // design system barrel
+export 'tokens/design_scale.dart';
 export 'tokens/design_colors.dart';
 export 'tokens/design_shadows.dart';
 export 'tokens/shadow_tokens.dart';

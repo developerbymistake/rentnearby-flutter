@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../tokens/design_scale.dart';
 import 'art_3d.dart';
 import 'motion_kit.dart';
 
@@ -113,9 +114,9 @@ class FitOrWrap3D extends StatelessWidget {
   }
 }
 
-double _labelWidth(BuildContext context, String text, double size) {
+double _labelWidth(BuildContext context, String text, double size, bool scaled) {
   final p = TextPainter(
-    text: TextSpan(text: text, style: Ink3D.text(size, FontWeight.w700, Colors.white)),
+    text: TextSpan(text: text, style: Ink3D.text(size, FontWeight.w700, Colors.white, scaled: scaled)),
     maxLines: 1,
     textDirection: TextDirection.ltr,
     textScaler: MediaQuery.textScalerOf(context),
@@ -126,13 +127,14 @@ double _labelWidth(BuildContext context, String text, double size) {
 }
 
 class _PillBody extends StatelessWidget {
-  const _PillBody({required this.label, required this.color, required this.height, required this.fontSize, required this.expand, this.icon, this.loading = false});
+  const _PillBody({required this.label, required this.color, required this.height, required this.fontSize, required this.expand, required this.scaled, this.icon, this.loading = false});
 
   final String label;
   final Color color;
   final double height;
   final double fontSize;
   final bool expand;
+  final bool scaled;
   final IconData? icon;
   final bool loading;
 
@@ -143,23 +145,23 @@ class _PillBody extends StatelessWidget {
       children: [
         if (loading) ...[
           SizedBox(
-            width: 20,
-            height: 20,
-            child: CircularProgressIndicator(strokeWidth: 3, color: color, backgroundColor: color.withValues(alpha: 0.4)),
+            width: DS.s(20, scaled: scaled),
+            height: DS.s(20, scaled: scaled),
+            child: CircularProgressIndicator(strokeWidth: DS.s(3, scaled: scaled), color: color, backgroundColor: color.withValues(alpha: 0.4)),
           ),
-          const SizedBox(width: 10),
+          SizedBox(width: DS.s(10, scaled: scaled)),
         ] else if (icon != null) ...[
-          Icon(icon, size: fontSize + 4, color: color),
-          const SizedBox(width: 8),
+          Icon(icon, size: DS.s(fontSize + 4, scaled: scaled), color: color),
+          SizedBox(width: DS.s(8, scaled: scaled)),
         ],
-        Text(label, maxLines: 1, softWrap: false, style: Ink3D.text(fontSize, FontWeight.w700, color)),
+        Text(label, maxLines: 1, softWrap: false, style: Ink3D.text(fontSize, FontWeight.w700, color, scaled: scaled)),
       ],
     );
     final fitted = Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 18),
+      padding: EdgeInsets.symmetric(horizontal: DS.s(18, scaled: scaled)),
       child: FittedBox(fit: BoxFit.scaleDown, child: row),
     );
-    return SizedBox(height: height, width: expand ? double.infinity : null, child: expand ? Center(child: fitted) : Center(widthFactor: 1, child: fitted));
+    return SizedBox(height: DS.s(height, scaled: scaled), width: expand ? double.infinity : null, child: expand ? Center(child: fitted) : Center(widthFactor: 1, child: fitted));
   }
 }
 
@@ -183,8 +185,10 @@ class GradientPillButton extends StatelessWidget implements _PillSpec {
     this.expand = true,
     this.fontSize = 16,
     this.semanticsLabel,
+    this.scaled = true,
   });
 
+  final bool scaled;
   final ListingTone tone;
   @override
   final String label;
@@ -205,11 +209,11 @@ class GradientPillButton extends StatelessWidget implements _PillSpec {
     final live = enabled && onTap != null;
     final body = DecoratedBox(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(height / 2),
+        borderRadius: BorderRadius.circular(DS.s(height, scaled: scaled) / 2),
         gradient: danger ? Form3D.dangerGradient : tone.gradient,
-        boxShadow: live ? (danger ? Form3D.dangerGlow : Form3D.glow(tone)) : null,
+        boxShadow: live ? DS.shadows(danger ? Form3D.dangerGlow : Form3D.glow(tone), scaled: scaled) : null,
       ),
-      child: _PillBody(label: label, color: Colors.white, height: height, fontSize: fontSize, expand: expand, icon: icon, loading: loading),
+      child: _PillBody(label: label, color: Colors.white, height: height, fontSize: fontSize, expand: expand, scaled: scaled, icon: icon, loading: loading),
     );
     return Tap3D(
       onTap: live && !loading ? onTap : null,
@@ -235,8 +239,10 @@ class WhitePillButton extends StatelessWidget implements _PillSpec {
     this.onGradient = false,
     this.semanticsLabel,
     this.neutral = false,
+    this.scaled = true,
   });
 
+  final bool scaled;
   final ListingTone tone;
   @override
   final String label;
@@ -259,11 +265,11 @@ class WhitePillButton extends StatelessWidget implements _PillSpec {
     final color = !live ? Ink3D.grey : (danger ? Form3D.errorText : (neutral ? Ink3D.grey : (onGradient ? tone.button : tone.text)));
     final body = DecoratedBox(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(height / 2),
+        borderRadius: BorderRadius.circular(DS.s(height, scaled: scaled) / 2),
         color: Colors.white,
-        boxShadow: onGradient ? Form3D.onCard : Ink3D.softShadow,
+        boxShadow: DS.shadows(onGradient ? Form3D.onCard : Ink3D.softShadow, scaled: scaled),
       ),
-      child: _PillBody(label: label, color: color, height: height, fontSize: fontSize, expand: expand, icon: icon),
+      child: _PillBody(label: label, color: color, height: height, fontSize: fontSize, expand: expand, scaled: scaled, icon: icon),
     );
     return Tap3D(
       onTap: live ? onTap : null,
@@ -275,11 +281,12 @@ class WhitePillButton extends StatelessWidget implements _PillSpec {
 }
 
 class PillButtonRow extends StatelessWidget {
-  const PillButtonRow({super.key, required this.children, this.gap = 12, this.stackUnder = 280});
+  const PillButtonRow({super.key, required this.children, this.gap = 12, this.stackUnder = 280, this.scaled = true});
 
   final List<Widget> children;
   final double gap;
   final double stackUnder;
+  final bool scaled;
 
   static const double _floor = 0.8;
 
@@ -289,14 +296,15 @@ class PillButtonRow extends StatelessWidget {
     if (children.length == 1) return children.first;
     return LayoutBuilder(
       builder: (context, box) {
-        final cell = (box.maxWidth - gap * (children.length - 1)) / children.length;
+        final g = DS.gh(gap, scaled: scaled);
+        final cell = (box.maxWidth - g * (children.length - 1)) / children.length;
         var stack = box.maxWidth < stackUnder;
         if (!stack) {
           for (final c in children) {
             if (c is! _PillSpec) continue;
             final spec = c as _PillSpec;
-            final need = _labelWidth(context, spec.label, spec.fontSize) + (spec.icon == null ? 0 : spec.fontSize + 12);
-            if (need * _floor > cell - 36) stack = true;
+            final need = _labelWidth(context, spec.label, spec.fontSize, scaled) + (spec.icon == null ? 0 : DS.s(spec.fontSize + 12, scaled: scaled));
+            if (need * _floor > cell - DS.s(36, scaled: scaled)) stack = true;
           }
         }
         if (stack) {
@@ -305,13 +313,13 @@ class PillButtonRow extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              for (var i = 0; i < list.length; i++) ...[if (i > 0) SizedBox(height: gap), list[i]],
+              for (var i = 0; i < list.length; i++) ...[if (i > 0) SizedBox(height: DS.gv(gap, scaled: scaled)), list[i]],
             ],
           );
         }
         return Row(
           children: [
-            for (var i = 0; i < children.length; i++) ...[if (i > 0) SizedBox(width: gap), Expanded(child: children[i])],
+            for (var i = 0; i < children.length; i++) ...[if (i > 0) SizedBox(width: g), Expanded(child: children[i])],
           ],
         );
       },

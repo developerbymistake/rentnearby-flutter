@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 
+import '../tokens/design_scale.dart';
+
 class TravelIcon extends StatelessWidget {
-  const TravelIcon(this.asset, {super.key, this.size = 24});
+  const TravelIcon(this.asset, {super.key, this.size = 24, this.scaled = true});
 
   final String asset;
   final double size;
+  final bool scaled;
 
   static const String _dir = 'assets/images/design/travel3d/';
   static const String taxi = '${_dir}taxi.png';
@@ -55,6 +58,7 @@ class TravelIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Image.asset(asset, width: size, height: size, fit: BoxFit.contain);
+    final d = DS.s(size, scaled: scaled);
+    return Image.asset(asset, width: d, height: d, fit: BoxFit.contain);
   }
 }
