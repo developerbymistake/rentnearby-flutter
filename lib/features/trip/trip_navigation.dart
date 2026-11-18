@@ -20,6 +20,7 @@ import 'trip_strings_mcb_a1.dart';
 import 'trip_strings_steps_a1.dart';
 import 'trip_strings_steps_k3.dart';
 import 'trip_strings_v2_find.dart';
+import 'utils/trip_easy_rules.dart';
 import 'utils/trip_name_rules.dart';
 import 'utils/trip_travel_rules.dart';
 import 'widgets/trip_city_sheet.dart';
@@ -142,6 +143,48 @@ class TripNavigation {
         'name': ?name,
       });
 
+  static Future<void>? openOverview({String? tripId}) =>
+      Get.toNamed(AppRoutes.tripOverview, arguments: {'tripId': tripId ?? TripPlanController.to.trip.value?.id});
+
+  static Future<void>? openTaxiStatus({required String tripId, required String requestId, bool replace = false}) {
+    final args = {'tripId': tripId, 'requestId': requestId};
+    return replace
+        ? Get.offNamed(AppRoutes.tripTaxiStatus, arguments: args)
+        : Get.toNamed(AppRoutes.tripTaxiStatus, arguments: args);
+  }
+
+  // An active request opens its status; otherwise dates come first, then the request page.
+  static Future<bool> openTaxiFlow(BuildContext context) async {
+    final ref = TripPlanController.to.trip.value?.taxiRequest;
+    final tripId = TripPlanController.to.trip.value?.id;
+    if (tripId != null && ref != null && TripEasyRules.taxiRequestActive(ref)) {
+      await openTaxiStatus(tripId: tripId, requestId: ref.requestId);
+      return true;
+    }
+    return openTaxiRequest(context);
+  }
+
+  static Future<bool> openTaxiRequest(BuildContext context, {bool keepChoices = true, bool replace = false}) async {
+    final c = TripPlanController.to;
+    if (c.isReadOnly || c.plan.value == null) return false;
+    if (c.netOff) {
+      AppToast.warning(TripStringsV2Find.offlineAsk);
+      return false;
+    }
+    final ok = await TripDatesSheet.ensure(context, heading: TripStringsV2Find.datesTitle, cta: TripStringsV2Find.showDrivers);
+    if (!ok || !c.hasDates) return false;
+    final tripId = c.trip.value?.id;
+    if (tripId == null) {
+      AppToast.warning(TripStringsStepsK3.notSavedToTrip);
+      return false;
+    }
+    final args = {'tripId': tripId, 'keepChoices': keepChoices};
+    await (replace
+        ? Get.offNamed(AppRoutes.tripTaxiRequest, arguments: args)
+        : Get.toNamed(AppRoutes.tripTaxiRequest, arguments: args));
+    return true;
+  }
+
   static void backToPlan() => Get.until((r) => r.settings.name == AppRoutes.tripPlan || r.isFirst);
 
   static Future<bool> helpMeFind(BuildContext context, TripEasyRowKey key, {GuideArgs? guide}) async {
@@ -153,19 +196,18 @@ class TripNavigation {
     }
     final p = c.plan.value;
     if (p == null) return false;
+    if (key.kind == TripEasyRowKind.taxi) return openTaxiFlow(context);
     final leg = key.legIndex ?? 1;
-    final cta = switch (key.kind) {
-      TripEasyRowKind.stay => TripStringsV2Find.showStaysIn(p.cityNameOf(p.legStart(leg))),
-      TripEasyRowKind.taxi => TripStringsV2Find.showDrivers,
-      _ => TripStringsV2Find.showWays,
-    };
+    final cta = key.kind == TripEasyRowKind.stay
+        ? TripStringsV2Find.showStaysIn(p.cityNameOf(p.legStart(leg)))
+        : TripStringsV2Find.showWays;
     final ok = await TripDatesSheet.ensure(context, heading: TripStringsV2Find.datesTitle, cta: cta);
     if (!ok || !c.hasDates) return false;
     switch (key.kind) {
       case TripEasyRowKind.stay:
         await openStay(leg, guide: guide);
       case TripEasyRowKind.taxi:
-        await openTaxi(guide: guide);
+        return false;
       case TripEasyRowKind.gettingThere:
         await openWays(TripStepRole.gettingThere, guide: guide);
       case TripEasyRowKind.comingBack:
@@ -184,6 +226,9 @@ class TripNavigation {
       case TripEasyRowKind.stay:
         return openReplies(p.legStart(key.legIndex ?? 1));
       case TripEasyRowKind.taxi:
+        final ref = c.trip.value?.taxiRequest;
+        final tripId = c.trip.value?.id;
+        if (ref != null && tripId != null) return openTaxiStatus(tripId: tripId, requestId: ref.requestId);
         final asked = c.taxiAskedDays;
         final day = asked.isNotEmpty ? asked.first : (c.taxiEnquiries.isEmpty ? null : c.firstPlanDayOf(c.taxiEnquiries.first));
         return openTaxiReplies(day ?? 1);

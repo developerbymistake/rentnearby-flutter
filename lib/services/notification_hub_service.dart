@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:get/get.dart';
 import 'package:signalr_netcore/signalr_client.dart';
 import '../config/app_constants.dart';
@@ -13,12 +15,87 @@ import 'notification_service.dart';
 import 'storage_service.dart';
 import 'trip_push_sync.dart';
 
+class TaxiRequestSignal {
+  final String requestId;
+  final int? version;
+  final bool reconnected;
+
+  const TaxiRequestSignal({required this.requestId, this.version, this.reconnected = false});
+}
+
+abstract interface class TaxiRequestRealtime {
+  void subscribeTaxiRequest(String requestId, void Function(TaxiRequestSignal signal) onEvent);
+
+  void unsubscribeTaxiRequest(String requestId);
+}
+
+class TaxiRequestSubscriptions implements TaxiRequestRealtime {
+  TaxiRequestSubscriptions(this._send);
+
+  static const String subscribeMethod = 'SubscribeTaxiRequest';
+  static const String unsubscribeMethod = 'UnsubscribeTaxiRequest';
+  static const String changedEvent = 'TaxiRequestChanged';
+  static const int knownVersion = 1;
+
+  final Future<void> Function(String method, String requestId) _send;
+  final Map<String, void Function(TaxiRequestSignal)> _handlers = {};
+
+  bool isSubscribed(String requestId) => _handlers.containsKey(requestId);
+
+  @override
+  void subscribeTaxiRequest(String requestId, void Function(TaxiRequestSignal signal) onEvent) {
+    _handlers[requestId] = onEvent;
+    unawaited(_send(subscribeMethod, requestId));
+  }
+
+  @override
+  void unsubscribeTaxiRequest(String requestId) {
+    if (_handlers.remove(requestId) != null) unawaited(_send(unsubscribeMethod, requestId));
+  }
+
+  // A new or reconnected connection lost every group, and events may have been missed meanwhile.
+  void onConnected() {
+    for (final e in [..._handlers.entries]) {
+      unawaited(_send(subscribeMethod, e.key));
+      e.value(TaxiRequestSignal(requestId: e.key, reconnected: true));
+    }
+  }
+
+  void onEvent(Object? raw) {
+    if (raw is! Map) return;
+    final v = raw['v'];
+    final id = raw['requestId'];
+    if (v is! num || v.toInt() != knownVersion || id is! String) return;
+    final version = raw['version'];
+    _handlers[id]?.call(TaxiRequestSignal(requestId: id, version: version is num ? version.toInt() : null));
+  }
+
+  void clear() => _handlers.clear();
+}
+
 /// Session-lifetime, push-only connection (like ChatHubService) delivering the generic
 /// NotificationReceived envelope that drives the Home bell.
-class NotificationHubService extends GetxService with SingleFlightHubConnect {
+class NotificationHubService extends GetxService with SingleFlightHubConnect implements TaxiRequestRealtime {
   static NotificationHubService get to => Get.find();
 
   HubConnection? _connection;
+
+  late final TaxiRequestSubscriptions taxiRequests = TaxiRequestSubscriptions(_invoke);
+
+  Future<void> _invoke(String method, String requestId) async {
+    final c = _connection;
+    if (c == null || c.state != HubConnectionState.Connected) return;
+    try {
+      await c.invoke(method, args: [requestId]);
+    } catch (_) {}
+  }
+
+  @override
+  void subscribeTaxiRequest(String requestId, void Function(TaxiRequestSignal signal) onEvent) =>
+      taxiRequests.subscribeTaxiRequest(requestId, onEvent);
+
+  @override
+  void unsubscribeTaxiRequest(String requestId) => taxiRequests.unsubscribeTaxiRequest(requestId);
 
   @override
   HubConnection? get currentConnection => _connection;
@@ -71,8 +148,16 @@ class NotificationHubService extends GetxService with SingleFlightHubConnect {
       } catch (_) {}
     });
 
+    _connection!.on(TaxiRequestSubscriptions.changedEvent, (args) {
+      if (args == null || args.isEmpty) return;
+      taxiRequests.onEvent(args[0]);
+    });
+
+    _connection!.onreconnected(({String? connectionId}) => taxiRequests.onConnected());
+
     try {
       await _connection!.start();
+      taxiRequests.onConnected();
     } catch (_) {
       _connection = null;
     }
@@ -82,9 +167,11 @@ class NotificationHubService extends GetxService with SingleFlightHubConnect {
   Future<void> disconnect() async {
     try {
       _connection?.off('NotificationReceived');
+      _connection?.off(TaxiRequestSubscriptions.changedEvent);
       await _connection?.stop();
     } catch (_) {}
     _connection = null;
+    taxiRequests.clear();
     resetConnecting();
   }
 }

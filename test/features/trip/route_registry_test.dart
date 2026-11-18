@@ -35,7 +35,7 @@ final _constants = <String, String>{
   'taxiReady': AppRoutes.taxiReady,
 };
 
-const _registered = {'/trip-name', '/trip-customize'};
+const _registered = {'/trip-name', '/trip-customize', '/trip-overview', '/trip-taxi-request', '/trip-taxi-status'};
 
 const _driverSix = [
   '/taxi-request-ring',

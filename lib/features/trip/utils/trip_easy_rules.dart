@@ -4,6 +4,7 @@ import '../models/trip_model.dart';
 import '../models/trip_plan_model.dart';
 import 'trip_enquiry_rules.dart';
 import 'trip_format.dart';
+import '../trip_strings_dayplan.dart';
 import '../trip_strings_v2_easy.dart';
 import 'trip_step_rules.dart';
 import 'trip_travel_rules.dart';
@@ -19,6 +20,8 @@ class TripEasyRowInfo {
   final int nightsTotal;
   final int nightsCovered;
   final List<int> uncoveredDays;
+  final TripTaxiRequestRef? taxiRequest;
+  final String? pill;
 
   const TripEasyRowInfo({
     required this.key,
@@ -31,6 +34,8 @@ class TripEasyRowInfo {
     this.nightsTotal = 0,
     this.nightsCovered = 0,
     this.uncoveredDays = const [],
+    this.taxiRequest,
+    this.pill,
   });
 
   TripEasyRowKind get kind => key.kind;
@@ -66,7 +71,11 @@ class TripEasyRowInfo {
         nightsTotal: nightsTotal,
         nightsCovered: nightsCovered,
         uncoveredDays: uncoveredDays,
+        taxiRequest: taxiRequest,
+        pill: s == state ? pill : null,
       );
+
+  bool get fromTaxiRequest => taxiRequest != null;
 }
 
 class TripEasyRules {
@@ -134,13 +143,14 @@ class TripEasyRules {
     List<TripEnquiryModel> enquiries,
     List<TripJourney> journeys, {
     Set<String> dismissed = const {},
+    TripTaxiRequestRef? taxiRequest,
   }) {
     bool gone(String id) => dismissed.contains(id) || p.dismissedEnquiryIds.contains(id);
     return [
       for (final k in keys(p))
         switch (k.kind) {
           TripEasyRowKind.stay => _stay(p, enquiries, k, gone),
-          TripEasyRowKind.taxi => _taxi(p, enquiries, k, gone),
+          TripEasyRowKind.taxi => _taxi(p, enquiries, k, gone, taxiRequest),
           TripEasyRowKind.between => _between(p, enquiries, journeys, k),
           TripEasyRowKind.gettingThere || TripEasyRowKind.comingBack => _step(p, enquiries, journeys, k),
         },
@@ -299,10 +309,54 @@ class TripEasyRules {
     return name.isEmpty ? TripStringsV2Easy.offers(offers.length) : TripStringsV2Easy.offerFrom(name);
   }
 
-  static TripEasyRowInfo _taxi(TripPlan p, List<TripEnquiryModel> all, TripEasyRowKey k, bool Function(String) gone) {
+  static const Set<String> _activeRequestStates = {'Open', 'Collecting', 'Selected', 'Booked', 'InProgress'};
+
+  static const Set<String> _endedRequestStates = {'Cancelled', 'Expired'};
+
+  static bool taxiRequestActive(TripTaxiRequestRef? r) => r != null && _activeRequestStates.contains(r.state);
+
+  // Contract section 4: the new request feeds the taxi row; legacy enquiries only when the trip never had one.
+  static TripEasyRowInfo? _fromRequest(TripPlan p, TripEasyRowKey k, TripTaxiRequestRef r, List<TripEnquiryModel> rows) {
+    TripEasyRowInfo info(TripRowState s, String line, {bool needsYou = false, String? pill}) => TripEasyRowInfo(
+          key: k,
+          state: s,
+          title: titleOf(p, k),
+          subtitle: line,
+          needsYou: needsYou,
+          enquiries: rows,
+          taxiRequest: r,
+          pill: pill,
+        );
+    return switch (r.state) {
+      'Open' => info(TripRowState.asked, TripStringsDayplan.taxiFinding),
+      'Collecting' => info(TripRowState.offer, TripStringsDayplan.taxiChoose, needsYou: true),
+      // Driver has not confirmed yet: not done, unlike the legacy "Booked by you".
+      'Selected' => info(TripRowState.asked, TripStringsDayplan.taxiWaitingConfirm, pill: TripStringsDayplan.pillWaiting),
+      'Booked' => info(TripRowState.confirmed, TripStringsDayplan.taxiBooked),
+      'InProgress' => info(TripRowState.confirmed, TripStringsDayplan.taxiInProgress),
+      'Completed' => info(TripRowState.confirmed, r.view == 'Rate' ? TripStringsDayplan.taxiRate : TripStringsDayplan.taxiDone),
+      _ => null,
+    };
+  }
+
+  static TripEasyRowInfo _taxi(
+    TripPlan p,
+    List<TripEnquiryModel> all,
+    TripEasyRowKey k,
+    bool Function(String) gone, [
+    TripTaxiRequestRef? request,
+  ]) {
     final rows = taxiRows(all);
     final mark = markOf(p, k);
+    if (request != null && taxiRequestActive(request)) return _fromRequest(p, k, request, rows)!;
     if (mark != null) return _marked(p, k, mark, rows);
+    if (request != null) {
+      final done = _fromRequest(p, k, request, rows);
+      if (done != null) return done;
+      if (_endedRequestStates.contains(request.state)) {
+        return TripEasyRowInfo(key: k, state: TripRowState.todo, title: titleOf(p, k), subtitle: hintOf(p, k), enquiries: rows);
+      }
+    }
     final live = [for (final e in rows) if (e.isOpen) e];
     TripEasyRowInfo info(TripRowState s, String line, {bool needsYou = false}) => TripEasyRowInfo(
           key: k,

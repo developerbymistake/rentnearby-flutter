@@ -60,17 +60,17 @@ void main() {
 
   for (final size in const [Size(360, 800), Size(300, 640)]) {
     for (final days in const [1, 6]) {
-      testWidgets('Next · Make it easy stays pinned at the bottom ${size.width.toInt()}x${size.height.toInt()}, $days days', (t) async {
+      testWidgets('Save trip stays pinned at the bottom ${size.width.toInt()}x${size.height.toInt()}, $days days', (t) async {
         await _rig(t, size, days);
-        final next = find.text('Next · Make it easy');
+        final next = find.text('Save trip');
         expect(next, findsOneWidget);
-        expect(find.ancestor(of: next, matching: find.byType(Scrollable)), findsNothing, reason: 'Next must not live inside the scrolling body');
+        expect(find.ancestor(of: next, matching: find.byType(Scrollable)), findsNothing, reason: 'Save trip must not live inside the scrolling body');
         final before = t.getRect(next);
-        expect(before.bottom, greaterThan(size.height * 0.8), reason: 'Next must sit at the bottom of the screen');
+        expect(before.bottom, greaterThan(size.height * 0.8), reason: 'Save trip must sit at the bottom of the screen');
         final list = find.byType(Scrollable).first;
         await t.drag(list, const Offset(0, -300));
         await t.pump();
-        expect(t.getRect(next), before, reason: 'Next must not move when the body scrolls');
+        expect(t.getRect(next), before, reason: 'Save trip must not move when the body scrolls');
         expect(t.takeException(), isNull);
       });
     }

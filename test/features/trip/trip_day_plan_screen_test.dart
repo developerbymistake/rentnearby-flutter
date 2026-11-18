@@ -158,7 +158,7 @@ void main() {
     expect(find.byKey(TripPlanScreen.lockedBannerKey), findsNothing);
     expect(find.byKey(TripPlanScreen.viewButtonKey), findsNothing);
     expect(find.byType(TripAddCityCard), findsOneWidget);
-    expect(find.text('${TripStringsV2Plan.next} · ${TripStringsV2Plan.nextSub}'), findsOneWidget);
+    expect(find.text(TripStringsDayplan.saveTrip), findsOneWidget);
   });
 
   testWidgets('customize_opens_the_route_with_the_leg', (t) async {

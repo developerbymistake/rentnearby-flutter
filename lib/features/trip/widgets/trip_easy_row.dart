@@ -7,15 +7,17 @@ import '../controllers/trip_plan_controller.dart';
 import '../models/trip_plan_model.dart';
 import '../trip_navigation.dart';
 import '../trip_strings_city.dart';
+import '../trip_strings_dayplan.dart';
 import '../trip_strings_guide.dart';
 import '../trip_strings_v2_easy.dart';
 import '../utils/trip_easy_rules.dart';
 import 'trip_arrange_confirm.dart';
 
 class TripEasyStatePill extends StatelessWidget {
-  const TripEasyStatePill(this.state, {super.key});
+  const TripEasyStatePill(this.state, {super.key, this.text});
 
   final TripRowState state;
+  final String? text;
 
   static String label(TripRowState s) => switch (s) {
         TripRowState.todo => TripStringsV2Easy.pillTodo,
@@ -43,7 +45,7 @@ class TripEasyStatePill extends StatelessWidget {
       padding: DS.sym(h: 9, v: 3),
       decoration: BoxDecoration(color: bg, borderRadius: DS.circular(20)),
       child: Text(
-        label(state),
+        text ?? label(state),
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: DS.f(11), fontWeight: FontWeight.w600, color: fg),
@@ -188,7 +190,7 @@ class _TripEasyRowState extends State<TripEasyRow> {
           children: [
             if (!noSupply) ...[
               PrimaryButton(
-                label: TripStringsV2Easy.helpMeFind,
+                label: _i.key.kind == TripEasyRowKind.taxi ? TripStringsDayplan.requestTaxi : TripStringsV2Easy.helpMeFind,
                 height: 44,
                 tone: KitTone.trip,
                 onPressed: _busy ? null : () => TripNavigation.helpMeFind(context, _i.key),
@@ -226,6 +228,11 @@ class _TripEasyRowState extends State<TripEasyRow> {
       default:
         return _i.title;
     }
+  }
+
+  String get _openLabel {
+    if (!_i.fromTaxiRequest) return TripStringsV2Easy.replies;
+    return _i.state == TripRowState.confirmed ? TripStringsDayplan.viewBooking : TripStringsDayplan.viewRequest;
   }
 
   bool get _noSupply {
@@ -291,7 +298,7 @@ class _TripEasyRowState extends State<TripEasyRow> {
                 fontFamily: FitnessAppTheme.fontName, fontSize: DS.f(11), fontWeight: FontWeight.w600, color: TripLook.warningText)),
       );
     }
-    return TripEasyStatePill(_i.state);
+    return TripEasyStatePill(_i.state, text: _i.pill);
   }
 
   Widget _notice() {
@@ -349,7 +356,7 @@ class _TripEasyRowState extends State<TripEasyRow> {
         : (i.state == TripRowState.asked || i.state == TripRowState.offer ? TripLook.warningText : TripLook.textLight);
     return Semantics(
       container: true,
-      label: '${i.title}. ${TripEasyStatePill.label(i.state)}. ${i.subtitle}',
+      label: '${i.title}. ${i.pill ?? TripEasyStatePill.label(i.state)}. ${i.subtitle}',
       child: TripSurface(
         onTap: _clickable ? () => TripNavigation.openRepliesForRow(i.key) : null,
         margin: const EdgeInsets.only(bottom: 12),
@@ -410,7 +417,7 @@ class _TripEasyRowState extends State<TripEasyRow> {
                     else if (_i.state == TripRowState.asked || _i.state == TripRowState.offer)
                       Row(mainAxisSize: MainAxisSize.min, children: [
                         Padding(padding: EdgeInsets.only(top: DS.s(2)), child: _pill()),
-                        if (!_c.isReadOnly) ...[SizedBox(width: DS.gh(2)), _menu()],
+                        if (!_c.isReadOnly && !i.fromTaxiRequest) ...[SizedBox(width: DS.gh(2)), _menu()],
                       ])
                     else
                       Padding(padding: EdgeInsets.only(top: DS.s(2)), child: _pill()),
@@ -419,7 +426,7 @@ class _TripEasyRowState extends State<TripEasyRow> {
                 if (_clickable && !_c.isReadOnly)
                   Align(
                     alignment: Alignment.centerRight,
-                    child: _link(TripStringsV2Easy.replies, () => TripNavigation.openRepliesForRow(i.key)),
+                    child: _link(_openLabel, () => TripNavigation.openRepliesForRow(i.key)),
                   ),
                 if (i.kind == TripEasyRowKind.stay && i.partial && !_c.isReadOnly && i.legIndex != null)
                   Align(

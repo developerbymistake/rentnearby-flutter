@@ -4539,9 +4539,7 @@ class TripPlanController extends GetxController {
       final fresh = await _repo.get(id);
       final t = trip.value;
       if (flow != _flow || t == null || t.id != fresh.id) return;
-      trip.value = fresh.taxiRequest == null
-          ? t.copyWith(planLock: fresh.planLock, clearTaxiRequest: true)
-          : t.copyWith(planLock: fresh.planLock, taxiRequest: fresh.taxiRequest);
+      trip.value = _withTaxiState(t, fresh);
       final local = plan.value;
       if (!fresh.planLock.locked || local == null) return;
       final merged = keepServerStructure(local, fresh.plan);
@@ -4556,6 +4554,25 @@ class TripPlanController extends GetxController {
       }
     } catch (_) {
       return;
+    }
+  }
+
+  static TripModel _withTaxiState(TripModel t, TripModel fresh) => fresh.taxiRequest == null
+      ? t.copyWith(planLock: fresh.planLock, clearTaxiRequest: true)
+      : t.copyWith(planLock: fresh.planLock, taxiRequest: fresh.taxiRequest);
+
+  Future<bool> refreshTaxiState({String? tripId}) async {
+    final t = trip.value;
+    if (t == null || (tripId != null && tripId != t.id)) return false;
+    final flow = _flow;
+    try {
+      final fresh = await _repo.get(t.id);
+      final now = trip.value;
+      if (flow != _flow || now == null || now.id != fresh.id) return false;
+      trip.value = _withTaxiState(now, fresh);
+      return true;
+    } catch (_) {
+      return false;
     }
   }
 

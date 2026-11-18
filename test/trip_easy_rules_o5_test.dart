@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:bakhli/features/trip/models/trip_enquiry_model.dart';
+import 'package:bakhli/features/trip/models/trip_model.dart';
 import 'package:bakhli/features/trip/models/trip_plan_model.dart';
 import 'package:bakhli/features/trip/utils/trip_easy_rules.dart';
 
@@ -100,6 +101,23 @@ void main() {
     expect(of(TripEnquiryStatuses.bookedByTraveller), TripRowState.booked);
     expect(of(TripEnquiryStatuses.confirmedByBoth), TripRowState.confirmed);
     expect(of(TripEnquiryStatuses.expired), TripRowState.attention);
+  });
+
+  test('taxi states without a taxi request still come from legacy enquiries', () {
+    TripEasyRowInfo of(String s) =>
+        _row(TripEasyRules.rows(_plan(), [_taxi(s)], const [], taxiRequest: null), _taxiKey);
+    expect(of(TripEnquiryStatuses.fareSent).state, TripRowState.offer);
+    expect(of(TripEnquiryStatuses.fareSent).fromTaxiRequest, isFalse);
+  });
+
+  test('an active taxi request wins over legacy taxi enquiries and the taxi mark', () {
+    const ref = TripTaxiRequestRef(requestId: 'r1', state: 'Booked', view: 'Booked', version: 3);
+    final row = _row(
+      TripEasyRules.rows(_plan(taxiMark: const TripRowMark.skipped()), [_taxi(TripEnquiryStatuses.asked)], const [], taxiRequest: ref),
+      _taxiKey,
+    );
+    expect(row.state, TripRowState.confirmed);
+    expect(row.taxiRequest, same(ref));
   });
 
   test('progress excludes skipped and counts done', () {

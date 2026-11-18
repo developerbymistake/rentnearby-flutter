@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import '../../../config/app_insets.dart';
 import '../../../config/app_routes.dart';
+import '../../../utils/app_toast.dart';
 import '../../../utils/input_formatters.dart';
 import '../controllers/trip_plan_controller.dart';
 import '../controllers/trip_plan_guide.dart';
@@ -40,6 +41,7 @@ class TripPlanScreen extends StatefulWidget {
   static const Key lockedBannerKey = ValueKey('plan-locked-banner');
   static const Key viewButtonKey = ValueKey('plan-view-taxi');
   static const Key renameFieldKey = ValueKey('plan-rename-field');
+  static const Key saveTripKey = ValueKey('plan-save-trip');
 
   @override
   State<TripPlanScreen> createState() => _TripPlanScreenState();
@@ -71,6 +73,7 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
   String? _nameArg;
   bool _rowDone = true;
   int? _legFilter;
+  bool _savingTrip = false;
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
@@ -470,17 +473,29 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
 
   Widget _g(Widget child) => Padding(padding: DS.sym(h: 18), child: child);
 
+  Future<void> _saveTrip() async {
+    if (_savingTrip) return;
+    setState(() => _savingTrip = true);
+    final ok = await _c.saveNow();
+    if (!mounted) return;
+    setState(() => _savingTrip = false);
+    final id = _c.trip.value?.id;
+    if (!ok || id == null) {
+      if (!_c.saveFailed.value) AppToast.error(TripStringsDayplan.saveTripFailed);
+      return;
+    }
+    await TripNavigation.openOverview(tripId: id);
+  }
+
   Widget _nextButton(int spots) => Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           GradientPillButton(
+            key: TripPlanScreen.saveTripKey,
             tone: ListingTone.indigo,
-            label: '${TripStringsV2Plan.next} · ${TripStringsV2Plan.nextSub}',
-            onTap: spots == 0
-                ? null
-                : () {
-                    _c.planStep.value = 2;
-                  },
+            label: TripStringsDayplan.saveTrip,
+            loading: _savingTrip,
+            onTap: spots == 0 ? null : _saveTrip,
           ),
           if (spots == 0)
             Padding(

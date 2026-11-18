@@ -14,6 +14,18 @@ class TripStringsDayplan {
   static const String viewRequest = 'View request';
   static const String viewBooking = 'View booking';
 
+  static const String saveTrip = 'Save trip';
+  static const String saveTripFailed = 'Could not save your trip. Please try again.';
+  static const String requestTaxi = 'Request taxi';
+  static const String taxiFinding = 'Finding a driver';
+  static const String taxiChoose = 'Choose your driver';
+  static const String taxiWaitingConfirm = 'Waiting for the driver to confirm';
+  static const String pillWaiting = 'Waiting';
+  static const String taxiBooked = 'Taxi booked';
+  static const String taxiInProgress = 'Trip in progress';
+  static const String taxiRate = 'Rate your driver';
+  static const String taxiDone = 'Trip completed';
+
   static String pace({required bool relaxed}) => relaxed ? 'Pace: Relaxed' : 'Pace: Normal';
 
   static String foldedSummary(int days, int places) => '${days == 1 ? '1 day' : '$days days'} · ${places == 1 ? '1 place' : '$places places'} · Tap to open';

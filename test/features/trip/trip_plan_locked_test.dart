@@ -50,7 +50,7 @@ void main() {
     ]);
     expect(c.canEditStructure, isFalse);
     expect(find.byType(TripAddCityCard), findsNothing);
-    expect(find.text('${TripStringsV2Plan.next} · ${TripStringsV2Plan.nextSub}'), findsNothing);
+    expect(find.text(TripStringsDayplan.saveTrip), findsNothing);
     expect(find.text(TripStringsV2Plan.removeDay), findsNothing);
     expect(find.text(TripStringsV2Plan.addDay), findsNothing);
 

@@ -317,6 +317,22 @@ void main() {
     test('a stay row never moves the taxi row', () {
       expect(_row(_rows(_plan(), [_stay('e1', TripEnquiryStatuses.asked)]), _taxi).state, TripRowState.todo);
     });
+
+    test('a taxi request never moves the stay and travel rows', () {
+      const ref = TripTaxiRequestRef(requestId: 'r1', state: 'Collecting', view: 'Collecting', version: 2);
+      final rows = TripEasyRules.rows(_plan(legs: 2), const [], const [], taxiRequest: ref);
+      expect(_row(rows, _taxi).state, TripRowState.offer);
+      for (final k in [_going, _stay1, _between2, _stay2, _back]) {
+        expect(_row(rows, k).state, TripRowState.todo, reason: k.id);
+        expect(_row(rows, k).taxiRequest, isNull, reason: k.id);
+      }
+    });
+
+    test('an ended taxi request with a legacy fare row is to do', () {
+      const ref = TripTaxiRequestRef(requestId: 'r1', state: 'Expired', view: 'Busy', version: 9);
+      final rows = TripEasyRules.rows(_plan(), [_taxiRow('t1', TripEnquiryStatuses.fareSent)], const [], taxiRequest: ref);
+      expect(_row(rows, _taxi).state, TripRowState.todo);
+    });
   });
 
   group('getting there and coming back', () {

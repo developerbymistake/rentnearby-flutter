@@ -292,6 +292,9 @@ void main() {
         AppRoutes.tripReplies,
         AppRoutes.tripTaxiReplies,
         AppRoutes.tripSummary,
+        AppRoutes.tripOverview,
+        AppRoutes.tripTaxiRequest,
+        AppRoutes.tripTaxiStatus,
       ]) {
         expect(AppRoutes.isRegistered(route), isTrue, reason: route);
       }
@@ -301,6 +304,15 @@ void main() {
       final auth = AuthController();
       expect(auth.canOpenRoute(AppRoutes.tripName), isTrue);
       expect(auth.canOpenRoute(AppRoutes.tripCustomize), isTrue);
+    });
+
+    test('traveller taxi pages can open for every role and are not driver only', () {
+      final auth = AuthController();
+      for (final route in [AppRoutes.tripOverview, AppRoutes.tripTaxiRequest, AppRoutes.tripTaxiStatus]) {
+        expect(auth.canOpenRoute(route), isTrue, reason: route);
+        expect(AppRoutes.taxiDriverOnly.contains(route), isFalse, reason: route);
+        expect(AppRoutes.tabKeyForRoute(route), isNull, reason: route);
+      }
     });
   });
 }
