@@ -1571,7 +1571,7 @@ void main() {
       expect(full.plan.value!.days.length, 2);
     });
 
-    test('remove day moves its places to the neighbour', () {
+    test('remove day moves its places into the earliest day with room', () {
       final c = ctlOf(plan6([3, 2]));
       expect(c.removeDay(2), TripDayRemoveBlock.none);
       expect(c.plan.value!.days.length, 1);

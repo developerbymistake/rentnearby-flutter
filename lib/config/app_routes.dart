@@ -86,9 +86,34 @@ class AppRoutes {
   static const String tripSummary = '/trip-summary';
   static const String stayAdvanceDetails = '/stay-advance-details';
 
+  static const String tripName = '/trip-name';
+  static const String tripCustomize = '/trip-customize';
+  static const String tripOverview = '/trip-overview';
+  static const String tripTaxiRequest = '/trip-taxi-request';
+  static const String tripTaxiStatus = '/trip-taxi-status';
+  static const String taxiRequestRing = '/taxi-request-ring';
+  static const String taxiRequests = '/taxi-requests';
+  static const String taxiRequestDetail = '/taxi-request-detail';
+  static const String taxiBookings = '/taxi-bookings';
+  static const String taxiRating = '/taxi-rating';
+  static const String taxiReady = '/taxi-ready';
+
   static const Set<String> ownerOnly = {plansBilling, planHistory};
   static const Set<String> stayOwnerOnly = {staySetup, stayBasicDetails, stayRooms, stayRules, staySubmit, myStays, myJobs, postJob, stayEnquiries, stayAdvanceDetails};
-  static const Set<String> taxiDriverOnly = {taxiSetup, taxiVehicle, taxiRoutes, taxiSubmit, myTaxi, tripLeads};
+  static const Set<String> taxiDriverOnly = {
+    taxiSetup,
+    taxiVehicle,
+    taxiRoutes,
+    taxiSubmit,
+    myTaxi,
+    tripLeads,
+    taxiRequestRing,
+    taxiRequests,
+    taxiRequestDetail,
+    taxiBookings,
+    taxiRating,
+    taxiReady,
+  };
 
   static const Map<String, String> _routeTabKeys = {
     staySetup: AppTabKeys.stays,
@@ -115,6 +140,13 @@ class AppRoutes {
     journeyRoad: AppTabKeys.taxi,
     myJourneys: AppTabKeys.taxi,
     savedJourney: AppTabKeys.taxi,
+    tripLeads: AppTabKeys.taxi,
+    taxiRequestRing: AppTabKeys.taxi,
+    taxiRequests: AppTabKeys.taxi,
+    taxiRequestDetail: AppTabKeys.taxi,
+    taxiBookings: AppTabKeys.taxi,
+    taxiRating: AppTabKeys.taxi,
+    taxiReady: AppTabKeys.taxi,
   };
 
   static String? tabKeyForRoute(String route) => _routeTabKeys[route];

@@ -38,6 +38,8 @@ class GlobalLocationGates extends StatelessWidget {
     AppRoutes.tripPlan,
     AppRoutes.tripSummary,
     AppRoutes.tripMap,
+    AppRoutes.tripCustomize,
+    AppRoutes.tripOverview,
   };
 
   static const Set<String> _tripRoutes = {
@@ -47,6 +49,9 @@ class GlobalLocationGates extends StatelessWidget {
     AppRoutes.tripTaxi,
     AppRoutes.tripReplies,
     AppRoutes.tripTaxiReplies,
+    AppRoutes.tripName,
+    AppRoutes.tripTaxiRequest,
+    AppRoutes.tripTaxiStatus,
     AppRoutes.taxiWays,
     AppRoutes.journeyPlan,
     AppRoutes.journeyRoad,

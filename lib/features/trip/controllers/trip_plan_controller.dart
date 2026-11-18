@@ -36,6 +36,7 @@ import '../models/trip_plan_result_model.dart';
 import '../models/trip_spot_model.dart';
 import '../trip_constants.dart';
 import '../trip_strings.dart';
+import '../trip_strings_dayplan.dart';
 import '../trip_strings_mca_a1.dart';
 import '../trip_strings_mcb_a1.dart';
 import '../trip_strings_mcb_k1.dart';
@@ -48,6 +49,7 @@ import '../utils/trip_clock.dart';
 import '../utils/trip_easy_rules.dart';
 import '../utils/trip_days_rules.dart';
 import '../utils/trip_day_load.dart';
+import '../utils/trip_leg_draft.dart';
 import '../utils/trip_enquiry_rules.dart';
 import '../utils/trip_guide_rules.dart';
 import '../utils/trip_map_rules.dart';
@@ -64,6 +66,12 @@ import 'trip_supply_controller.dart';
 
 enum TripDayRemoveBlock { none, lastDay, placesDontFit, readOnly }
 
+enum TripDayAddBlock { none, readOnly, locked, maxDays, running, bookings }
+
+enum TripStructureBlock { none, readOnly, locked, pastDay }
+
+enum TripLegApplyBlock { none, readOnly, locked, stale, emptyDay, bookings, running, invalid }
+
 class TripPlanController extends GetxController {
   static TripPlanController get to =>
       Get.isRegistered<TripPlanController>()
@@ -71,6 +79,8 @@ class TripPlanController extends GetxController {
           : Get.put(TripPlanController(), permanent: true);
 
   final _repo = const TripRepository();
+
+  static const String planLockedErrorType = 'PlanLocked';
 
   final trip = Rxn<TripModel>();
   final plan = Rxn<TripPlan>();
@@ -217,6 +227,7 @@ class TripPlanController extends GetxController {
     final t = trip.value?.title;
     if (t == null || t.isEmpty) return fallback;
     final stored = trip.value!;
+    if (stored.nameChosen) return t;
     final storedDefault = t == TripStringsMcaA1.defaultTitle(stored.plan.legCities) ||
         t == TripStringsMcaA1.defaultTitle([stored.cityName]);
     return storedDefault ? fallback : t;
@@ -291,7 +302,7 @@ class TripPlanController extends GetxController {
 
   int minDaysForLeg(int legIndex) => legRunning(legIndex) ? _pastDaysOf(legIndex) + 1 : 1;
 
-  bool canEditLeg(int legIndex) => !isReadOnly && !legRunning(legIndex);
+  bool canEditLeg(int legIndex) => !isReadOnly && !isPlanLocked && !legRunning(legIndex);
 
   bool legUnavailable(int legIndex) {
     final leg = plan.value?.legAt(legIndex);
@@ -300,7 +311,7 @@ class TripPlanController extends GetxController {
 
   bool canAddPlaces(int legIndex) {
     final leg = plan.value?.legAt(legIndex);
-    return leg != null && !leg.notReady && !isReadOnly && !isCheckOutDay && !legUnavailable(legIndex);
+    return leg != null && !leg.notReady && !isReadOnly && !isPlanLocked && !isCheckOutDay && !legUnavailable(legIndex);
   }
 
   void markLegReady(int legIndex) {
@@ -855,6 +866,35 @@ class TripPlanController extends GetxController {
 
   bool canEditDay(int day) => !isReadOnly && !isDayPast(day);
 
+  TripPlanLock get planLock => trip.value?.planLock ?? TripPlanLock.none;
+
+  bool get isPlanLocked => planLock.locked;
+
+  String? get planLockReason => isPlanLocked ? planLock.reason : null;
+
+  String? get planLockRequestId => isPlanLocked ? planLock.requestId : null;
+
+  String get planLockMessage => TripStringsDayplan.lockMessage(byBooking: planLock.byBooking);
+
+  bool get canEditStructure => !isReadOnly && !needsUpdate.value && !isPlanLocked && !_saveBlocked;
+
+  TripStructureBlock _structureBlock({int? day, int? leg}) {
+    final p = plan.value;
+    if (p == null || isReadOnly || needsUpdate.value || _saveBlocked) return TripStructureBlock.readOnly;
+    if (isPlanLocked) return TripStructureBlock.locked;
+    if (day != null && isDayPast(day)) return TripStructureBlock.pastDay;
+    if (leg != null) {
+      final days = legDays(leg);
+      if (days.isNotEmpty && days.every(isDayPast)) return TripStructureBlock.pastDay;
+    }
+    return TripStructureBlock.none;
+  }
+
+  bool _structureOk({int? day, int? leg}) => _structureBlock(day: day, leg: leg) == TripStructureBlock.none;
+
+  @visibleForTesting
+  TripStructureBlock structureBlockForTest({int? day, int? leg}) => _structureBlock(day: day, leg: leg);
+
   bool get canComplete => trip.value != null && !isCompleted && (!hasDates || isRunning || isLastDayOrAfter);
 
   TripSteps get steps => plan.value?.steps ?? const TripSteps();
@@ -944,7 +984,7 @@ class TripPlanController extends GetxController {
   void setRestDay(int day, bool value) {
     final p = plan.value;
     final d = p?.dayAt(day);
-    if (p == null || d == null || !canEditDay(day) || d.restDay == value) return;
+    if (p == null || d == null || !_structureOk(day: day) || d.restDay == value) return;
     plan.value = p.copyWith(days: [for (final x in p.days) x.day == day ? x.copyWith(restDay: value) : x]);
     scheduleSave();
   }
@@ -1028,11 +1068,14 @@ class TripPlanController extends GetxController {
         _ => null,
       };
 
-  bool canMarkRow(TripEasyRowKey key) => !isReadOnly && plan.value != null;
+  bool canMarkRow(TripEasyRowKey key) => !isReadOnly && plan.value != null && !_taxiMarkLocked(key);
+
+  // taxiMark is part of the locked structure on the server.
+  bool _taxiMarkLocked(TripEasyRowKey key) => key.kind == TripEasyRowKind.taxi && isPlanLocked;
 
   Future<TripMarkResult> markOwn(TripEasyRowKey key, {bool withdrawOpen = false, bool serverClosed = false}) async {
     final p = plan.value;
-    if (p == null || isReadOnly) return const TripMarked();
+    if (p == null || isReadOnly || _taxiMarkLocked(key)) return const TripMarked();
     final booked = confirmedRowOf(key);
     if (booked != null) return TripMarkBlocked(booked);
     final open = openRowsOf(key);
@@ -1065,7 +1108,7 @@ class TripPlanController extends GetxController {
 
   void skipRow(TripEasyRowKey key) {
     final p = plan.value;
-    if (p == null || isReadOnly || openRowsOf(key).isNotEmpty || confirmedRowOf(key) != null) return;
+    if (p == null || isReadOnly || _taxiMarkLocked(key) || openRowsOf(key).isNotEmpty || confirmedRowOf(key) != null) return;
     const skipped = TripRowMark.skipped();
     final role = _roleOfRow(key);
     switch (key.kind) {
@@ -1091,7 +1134,7 @@ class TripPlanController extends GetxController {
   void undoMark(TripEasyRowKey key) {
     ownPending.remove(key.id);
     final p = plan.value;
-    if (p == null || isReadOnly) return;
+    if (p == null || isReadOnly || _taxiMarkLocked(key)) return;
     final role = _roleOfRow(key);
     switch (key.kind) {
       case TripEasyRowKind.stay:
@@ -2264,7 +2307,7 @@ class TripPlanController extends GetxController {
 
   Future<void> _runAutoPlan() async {
     final p = plan.value;
-    if (p == null || p.spotCount == 0) return;
+    if (p == null || p.spotCount == 0 || isPlanLocked) return;
     _lastPlanWasAuto = true;
     _retryLeg = null;
     final seq = ++_planSeq;
@@ -2362,8 +2405,7 @@ class TripPlanController extends GetxController {
     if (p == null || k == null) return false;
     if (p.legSpotCount(k) == 0) {
       if (exactDays == null) return false;
-      _sizeLeg(k, exactDays);
-      return true;
+      return _sizeLeg(k, exactDays);
     }
     _lastPlanWasAuto = true;
     _retryLeg = (cityKey: cityKey, maxDays: maxDays, exactDays: null, keepDays: keepDays || exactDays != null);
@@ -2380,18 +2422,14 @@ class TripPlanController extends GetxController {
       final edited = plan.value?.legIndexOfCity(cityKey);
       if (seq != _planSeq) {
         if (exactDays == null || edited == null) return false;
-        _sizeLeg(edited, exactDays);
-        return true;
+        return _sizeLeg(edited, exactDays);
       }
       _lastPlanWasAuto = false;
       _retryLeg = null;
       final cur = plan.value;
       final untouched = cur != null && edited != null && _sameLegSpots(sent, _legSpotIds(cur, edited));
       if (edit != _editSeq && !untouched) {
-        if (exactDays != null && edited != null) {
-          _sizeLeg(edited, exactDays);
-          return true;
-        }
+        if (exactDays != null && edited != null) return _sizeLeg(edited, exactDays);
         unawaited(_runRecalculate());
         return exactDays == null;
       }
@@ -2757,10 +2795,10 @@ class TripPlanController extends GetxController {
     return [for (final d in p.days) d.copyWith(spots: d.spots.where((s) => s.id != id).toList())];
   }
 
-  bool moveSpot(String id, int toDay, {bool keepEmptyDays = false}) {
+  bool moveSpot(String id, int toDay, {bool keepEmptyDays = true}) {
     final p = plan.value;
-    if (p == null || isReadOnly) return false;
-    final fromDay = p.dayOfSpot(id);
+    final fromDay = p?.dayOfSpot(id);
+    if (p == null || !_structureOk(day: toDay) || (fromDay != null && !_structureOk(day: fromDay))) return false;
     if (fromDay != null && p.dayAt(toDay) != null && p.legIndexOf(fromDay) != p.legIndexOf(toDay)) {
       AppToast.warning(TripStringsMcaA1.differentCity);
       return false;
@@ -2776,7 +2814,7 @@ class TripPlanController extends GetxController {
   }
 
   void reorder(int day, int oldIndex, int newIndex) {
-    if (isReadOnly) return;
+    if (!_structureOk(day: day)) return;
     final p = plan.value;
     final d = p?.dayAt(day);
     if (p == null || d == null || oldIndex < 0 || oldIndex >= d.spots.length) return;
@@ -2790,14 +2828,14 @@ class TripPlanController extends GetxController {
   }
 
   void removeSpot(String id, {bool keepEmptyDays = false}) {
-    if (isReadOnly) return;
+    if (!_structureOk(day: plan.value?.dayOfSpot(id))) return;
     final next = _removedDays(id);
     if (next != null) _applyEdit(next, keepEmptyDays: keepEmptyDays);
   }
 
   Future<void> setPace(int minutes) async {
     final p = plan.value;
-    if (p == null || isReadOnly || p.settings.dayLimitMinutes == minutes) return;
+    if (p == null || !_structureOk() || p.settings.dayLimitMinutes == minutes) return;
     plan.value = p.copyWith(settings: p.settings.copyWith(dayLimitMinutes: minutes));
     scheduleSave();
     await recalculate();
@@ -2806,7 +2844,7 @@ class TripPlanController extends GetxController {
   void insertSpotAt(TripSpotRef spot, int day, int index) {
     final p = plan.value;
     final d = p?.dayAt(day);
-    if (p == null || d == null || isReadOnly || p.spotById(spot.id) != null) return;
+    if (p == null || d == null || !_structureOk(day: day) || p.spotById(spot.id) != null) return;
     if (d.spots.length >= TripConstants.maxSpotsPerDay) {
       AppToast.warning(TripStringsV2Plan.dayFull);
       return;
@@ -2817,19 +2855,36 @@ class TripPlanController extends GetxController {
     ], keepEmptyDays: true);
   }
 
-  bool get canAddDay {
+  bool get canAddDay => addDayBlock() == TripDayAddBlock.none;
+
+  TripDayAddBlock addDayBlock({int? afterDay}) {
     final p = plan.value;
-    return p != null && !isReadOnly && !needsUpdate.value && p.days.length < TripConstants.maxDaysCap;
+    if (p == null || p.days.isEmpty) return TripDayAddBlock.readOnly;
+    switch (_structureBlock()) {
+      case TripStructureBlock.locked:
+        return TripDayAddBlock.locked;
+      case TripStructureBlock.readOnly:
+        return TripDayAddBlock.readOnly;
+      case TripStructureBlock.none || TripStructureBlock.pastDay:
+        break;
+    }
+    if (p.days.length >= TripConstants.maxDaysCap) return TripDayAddBlock.maxDays;
+    final at = _addDayAt(p, afterDay);
+    final newDate = dateOf(at + 1);
+    if (newDate != null && !newDate.isAfter(_today)) return TripDayAddBlock.running;
+    if (growthBlockedByBookings(p.legIndexOf(at))) return TripDayAddBlock.bookings;
+    return TripDayAddBlock.none;
   }
 
-  void addDay({int? afterDay}) {
-    final p = plan.value;
-    if (p == null || isReadOnly || p.days.isEmpty) return;
-    if (p.days.length >= TripConstants.maxDaysCap) {
-      AppToast.warning(TripStringsV2Plan.maxDays);
-      return;
-    }
-    final at = afterDay != null && p.dayAt(afterDay) != null ? afterDay : p.days.last.day;
+  static int _addDayAt(TripPlan p, int? afterDay) =>
+      afterDay != null && p.dayAt(afterDay) != null ? afterDay : p.days.last.day;
+
+  TripDayAddBlock addDay({int? afterDay}) {
+    final block = addDayBlock(afterDay: afterDay);
+    if (block == TripDayAddBlock.maxDays) AppToast.warning(TripStringsV2Plan.maxDays);
+    if (block != TripDayAddBlock.none) return block;
+    final p = plan.value!;
+    final at = _addDayAt(p, afterDay);
     final leg = p.legIndexOf(at);
     final next = <TripDay>[];
     for (final d in p.days) {
@@ -2837,32 +2892,117 @@ class TripPlanController extends GetxController {
       if (d.day == at) next.add(TripDay(day: -1, leg: leg));
     }
     _applyEdit(next, keepEmptyDays: true);
+    return TripDayAddBlock.none;
   }
+
+  TripLegDraft _draftOf(TripPlan p, int legIndex) => TripLegDraft.from(
+        p,
+        legIndex,
+        frozenDays: _pastDaysOf(legIndex),
+        otherLegsDayCount: _otherLegDays(p, legIndex),
+        otherLegsSpotCount: p.spotCount - p.legSpotCount(legIndex),
+      );
+
+  static List<TripDay> _spliceLeg(TripPlan p, int legIndex, List<TripDay> legDays) => [
+        ...p.days.where((d) => d.leg < legIndex),
+        ...legDays,
+        ...p.days.where((d) => d.leg > legIndex),
+      ];
 
   TripDayRemoveBlock removeDay(int day) {
     final p = plan.value;
     final d = p?.dayAt(day);
-    if (p == null || d == null || !canEditDay(day) || legRunning(d.leg) || _saveBlocked) return TripDayRemoveBlock.readOnly;
-    if (p.legDayCount(d.leg) <= 1) return TripDayRemoveBlock.lastDay;
+    if (p == null || d == null || !_structureOk(day: day)) return TripDayRemoveBlock.readOnly;
+    final n = p.legDayCount(d.leg);
+    if (n <= 1) return TripDayRemoveBlock.lastDay;
+    if (n - 1 < minDaysForLeg(d.leg) || !legShrinkImpact(d.leg, n - 1).isEmpty) return TripDayRemoveBlock.readOnly;
     if (!TripDaysRules.canRemoveDay(p, day)) return TripDayRemoveBlock.placesDontFit;
-    final block = p.daysOf(d.leg).where((x) => x.day != day).toList();
-    final lists = {for (final x in block) x.day: [...x.spots]};
-    final order = [...block]..sort((a, b) => (a.day - day).abs().compareTo((b.day - day).abs()));
-    for (final s in d.spots) {
-      final target = order.firstWhereOrNull((x) => lists[x.day]!.length < TripConstants.maxSpotsPerDay && canEditDay(x.day));
-      if (target == null) return TripDayRemoveBlock.placesDontFit;
-      lists[target.day]!.add(s);
+    final draft = _draftOf(p, d.leg);
+    switch (draft.deleteDay(p.daysOf(d.leg).indexWhere((x) => x.day == day))) {
+      case TripDraftBlock.none:
+        break;
+      case TripDraftBlock.lastDay:
+        return TripDayRemoveBlock.lastDay;
+      case TripDraftBlock.placesDontFit:
+        return TripDayRemoveBlock.placesDontFit;
+      default:
+        return TripDayRemoveBlock.readOnly;
     }
-    _applyEdit([
-      for (final x in p.days)
-        if (x.day != day) lists.containsKey(x.day) ? x.copyWith(spots: lists[x.day]) : x,
-    ], keepEmptyDays: true);
+    _applyEdit(_spliceLeg(p, d.leg, draft.toLegDays()), keepEmptyDays: true);
     return TripDayRemoveBlock.none;
+  }
+
+  TripLegApplyBlock removeDayReason(int day) {
+    final p = plan.value;
+    final d = p?.dayAt(day);
+    if (p == null || d == null) return TripLegApplyBlock.readOnly;
+    switch (_structureBlock(day: day)) {
+      case TripStructureBlock.locked:
+        return TripLegApplyBlock.locked;
+      case TripStructureBlock.readOnly || TripStructureBlock.pastDay:
+        return TripLegApplyBlock.readOnly;
+      case TripStructureBlock.none:
+        break;
+    }
+    final n = p.legDayCount(d.leg);
+    if (n <= 1) return TripLegApplyBlock.none;
+    if (n - 1 < minDaysForLeg(d.leg)) return TripLegApplyBlock.running;
+    if (!legShrinkImpact(d.leg, n - 1).isEmpty) return TripLegApplyBlock.bookings;
+    return TripLegApplyBlock.none;
+  }
+
+  TripLegApplyBlock applyLegDraft(int legIndex, TripLegDraft draft) {
+    switch (_structureBlock(leg: legIndex)) {
+      case TripStructureBlock.locked:
+        return TripLegApplyBlock.locked;
+      case TripStructureBlock.readOnly || TripStructureBlock.pastDay:
+        return TripLegApplyBlock.readOnly;
+      case TripStructureBlock.none:
+        break;
+    }
+    final p = plan.value!;
+    if (draft.legIndex != legIndex || (p.legs.isNotEmpty && p.legAt(legIndex) == null)) return TripLegApplyBlock.readOnly;
+    final current = p.daysOf(legIndex);
+    if (TripLegDraft.signatureOf(current) != draft.baseSignature) return TripLegApplyBlock.stale;
+    if (draft.firstEmptyDay != null) return TripLegApplyBlock.emptyDay;
+    final next = draft.toLegDays();
+    if (!_draftFits(p, legIndex, next)) return TripLegApplyBlock.invalid;
+    final past = _pastDaysOf(legIndex);
+    for (var i = 0; i < past; i++) {
+      if (i >= next.length || TripLegDraft.signatureOf([current[i]]) != TripLegDraft.signatureOf([next[i]])) {
+        return TripLegApplyBlock.readOnly;
+      }
+    }
+    if (next.length > current.length && growthBlockedByBookings(legIndex)) return TripLegApplyBlock.bookings;
+    if (next.length < current.length) {
+      if (next.length < minDaysForLeg(legIndex)) return TripLegApplyBlock.running;
+      if (!legShrinkImpact(legIndex, next.length).isEmpty) return TripLegApplyBlock.bookings;
+    }
+    if (!draft.changed) return TripLegApplyBlock.none;
+    _spotsEdited = true;
+    _applyEdit(_spliceLeg(p, legIndex, next), keepEmptyDays: true);
+    return TripLegApplyBlock.none;
+  }
+
+  static bool _draftFits(TripPlan p, int legIndex, List<TripDay> legDays) {
+    final ids = <String>{
+      for (final d in p.days)
+        if (d.leg != legIndex) ...d.spots.map((s) => s.id),
+    };
+    if (legDays.isEmpty) return false;
+    if (p.days.length - p.legDayCount(legIndex) + legDays.length > TripConstants.maxDaysCap) return false;
+    for (final d in legDays) {
+      if (d.spots.length > TripConstants.maxSpotsPerDay) return false;
+      for (final s in d.spots) {
+        if (!ids.add(s.id)) return false;
+      }
+    }
+    return ids.length <= TripConstants.maxSpots;
   }
 
   bool addSpots(List<TripSpotModel> spots, {int? legIndex, int? day}) {
     final p = plan.value;
-    if (p == null || p.days.isEmpty || isReadOnly) return false;
+    if (p == null || p.days.isEmpty || !_structureOk(day: day, leg: legIndex)) return false;
     final existing = p.spotIds;
     final room = TripConstants.maxSpots - existing.length;
     final fresh = spots.where((s) => !existing.contains(s.id)).toList();
@@ -2885,6 +3025,7 @@ class TripPlanController extends GetxController {
     } else {
       var left = adding;
       for (final d in _addOrder(p, legIndex ?? p.legCount)) {
+        if (isDayPast(d.day)) continue;
         final free = cap - d.spots.length;
         if (free <= 0) continue;
         final take = left.take(free).toList();
@@ -2942,7 +3083,7 @@ class TripPlanController extends GetxController {
 
   TripLegEditBlock canAddLeg(TripCityModel? city) {
     final p = plan.value;
-    if (p == null || isReadOnly || _saveBlocked) return TripLegEditBlock.readOnly;
+    if (p == null || !_structureOk()) return TripLegEditBlock.readOnly;
     if (offline.value) return TripLegEditBlock.offline;
     if (p.legs.length >= TripConstants.maxLegs) return TripLegEditBlock.maxLegs;
     if (p.days.length >= TripConstants.maxDaysCap) return TripLegEditBlock.noDays;
@@ -3103,7 +3244,7 @@ class TripPlanController extends GetxController {
 
   TripLegEditBlock canRemoveLeg(int legIndex) {
     final p = plan.value;
-    if (p == null || isReadOnly || _saveBlocked) return TripLegEditBlock.readOnly;
+    if (p == null || !_structureOk()) return TripLegEditBlock.readOnly;
     if (p.legs.length < 2) return TripLegEditBlock.onlyLeg;
     if (p.legAt(legIndex) == null) return TripLegEditBlock.edge;
     if (legRunning(legIndex)) return TripLegEditBlock.running;
@@ -3166,7 +3307,7 @@ class TripPlanController extends GetxController {
 
   TripLegEditBlock canMoveLeg(int legIndex, bool up) {
     final p = plan.value;
-    if (p == null || isReadOnly || _saveBlocked) return TripLegEditBlock.readOnly;
+    if (p == null || !_structureOk()) return TripLegEditBlock.readOnly;
     final other = up ? legIndex - 1 : legIndex + 1;
     if (p.legAt(legIndex) == null || p.legAt(other) == null) return TripLegEditBlock.edge;
     if (legRunning(legIndex) || legRunning(other)) return TripLegEditBlock.running;
@@ -3239,7 +3380,7 @@ class TripPlanController extends GetxController {
 
   TripLegEditBlock canSetLegDays(int legIndex, int days, {bool keepBookings = false}) {
     final p = plan.value;
-    if (p == null || isReadOnly || _saveBlocked) return TripLegEditBlock.readOnly;
+    if (p == null || !_structureOk()) return TripLegEditBlock.readOnly;
     if (p.legAt(legIndex) == null || days < 1 || days * TripConstants.maxSpotsPerDay < p.legSpotCount(legIndex)) {
       return TripLegEditBlock.edge;
     }
@@ -3259,21 +3400,21 @@ class TripPlanController extends GetxController {
     if (p.legSpotCount(legIndex) > 0 && !legRunning(legIndex) && !offline.value) {
       return _planLegToDays(leg.cityKey, days);
     }
-    _sizeLeg(legIndex, days);
-    return true;
+    return _sizeLeg(legIndex, days);
   }
 
-  void _sizeLeg(int legIndex, int days) {
+  bool _sizeLeg(int legIndex, int days) {
     final p = plan.value;
-    if (p == null || p.legAt(legIndex) == null || days < 1 || days == p.legDayCount(legIndex)) return;
+    if (p == null || p.legAt(legIndex) == null || days < 1) return false;
     final block = p.daysOf(legIndex);
+    if (days == block.length) return true;
     final List<TripDay> sized;
     if (days < block.length) {
-      final keep = block.sublist(0, days);
-      final moved = [for (final d in block.sublist(days)) ...d.spots];
-      sized = moved.isEmpty
-          ? keep
-          : [...keep.sublist(0, days - 1), keep.last.copyWith(spots: [...keep.last.spots, ...moved])];
+      final draft = _draftOf(p, legIndex);
+      while (draft.dayCount > days) {
+        if (draft.deleteDay(draft.dayCount - 1) != TripDraftBlock.none) return false;
+      }
+      sized = draft.toLegDays();
     } else {
       sized = [
         ...block,
@@ -3282,15 +3423,15 @@ class TripPlanController extends GetxController {
     }
     _editSeq++;
     plan.value = p.copyWith(
-      days: _renumber(
-        [...p.days.where((d) => d.leg < legIndex), ...sized, ...p.days.where((d) => d.leg > legIndex)],
-        keepEmptyDays: true,
-        legCount: p.legCount,
-      ),
+      days: _renumber(_spliceLeg(p, legIndex, sized), keepEmptyDays: true, legCount: p.legCount),
     );
     recalculate();
     scheduleSave();
+    return true;
   }
+
+  @visibleForTesting
+  bool sizeLegForTest(int legIndex, int days) => _sizeLeg(legIndex, days);
 
   void clearTravel(int legIndex) {
     final p = plan.value;
@@ -3845,7 +3986,7 @@ class TripPlanController extends GetxController {
 
   Future<SettingsSaveResult> saveSettings(TripSettings next) async {
     final p = plan.value;
-    if (p == null || isReadOnly) return const SettingsSaveResult(saved: false);
+    if (p == null || !_structureOk()) return const SettingsSaveResult(saved: false);
     final old = p.settings;
     final replan = next.dayLimitMinutes != old.dayLimitMinutes || next.startDateIso != old.startDateIso;
     final redo = next.maxDays != old.maxDays;
@@ -4323,6 +4464,10 @@ class TripPlanController extends GetxController {
         needsUpdate.value = true;
         return false;
       }
+      if (type == planLockedErrorType) {
+        _onPlanLocked(e, p);
+        return false;
+      }
       if (type == TripErrorTypes.tripCompleted) {
         _saveTimer?.cancel();
         final t = trip.value;
@@ -4335,6 +4480,78 @@ class TripPlanController extends GetxController {
     } finally {
       isSaving.value = false;
     }
+  }
+
+  void _onPlanLocked(Object e, TripPlan p) {
+    _saveTimer?.cancel();
+    final body = e is DioException ? e.response?.data : null;
+    final lock = TripPlanLock.fromError(body is Map ? body['data'] : null);
+    final t = trip.value;
+    if (t != null) trip.value = t.copyWith(planLock: lock);
+    _rejectedPlan = p;
+    _rejectedTitle = _title;
+    _lastSaveNetworkError = false;
+    _lastSaveMessage = planLockMessage;
+    saveFailed.value = true;
+    _toastSave(planLockMessage, error: true);
+    if (t != null) unawaited(_rereadLock(t.id));
+  }
+
+  Future<void> _rereadLock(String id) async {
+    final flow = _flow;
+    try {
+      final fresh = await _repo.get(id);
+      final t = trip.value;
+      if (flow != _flow || t == null || t.id != fresh.id) return;
+      trip.value = fresh.taxiRequest == null
+          ? t.copyWith(planLock: fresh.planLock, clearTaxiRequest: true)
+          : t.copyWith(planLock: fresh.planLock, taxiRequest: fresh.taxiRequest);
+      final local = plan.value;
+      if (!fresh.planLock.locked || local == null) return;
+      final merged = keepServerStructure(local, fresh.plan);
+      _rejectedPlan = null;
+      _rejectedTitle = null;
+      plan.value = merged;
+      if (jsonEncode(merged.toJson()) == jsonEncode(fresh.plan.toJson())) {
+        saveFailed.value = false;
+        StorageService.clearTripPending(fresh.id);
+      } else {
+        _writeAhead();
+      }
+    } catch (_) {
+      return;
+    }
+  }
+
+  @visibleForTesting
+  static TripPlan keepServerStructure(TripPlan local, TripPlan server) {
+    TripCityLeg? mine(TripCityLeg s) {
+      for (final l in local.legs) {
+        if (l.index == s.index && l.cityKey == s.cityKey) return l;
+      }
+      return null;
+    }
+
+    return server.copyWith(
+      legs: [
+        for (final s in server.legs)
+          if (mine(s) case final m?)
+            s.copyWith(
+              arrival: m.arrival,
+              clearArrival: m.arrival == null,
+              stayMark: m.stayMark,
+              clearStayMark: m.stayMark == null,
+              travelMark: m.travelMark,
+              clearTravelMark: m.travelMark == null,
+            )
+          else
+            s,
+      ],
+      steps: local.steps,
+      dismissedEnquiryIds: local.dismissedEnquiryIds,
+      guide: local.guide,
+      clearGuide: local.guide == null,
+    );
   }
 
   static Map<String, JourneyTripLink> _journeyLinksOf(TripPlan p) {

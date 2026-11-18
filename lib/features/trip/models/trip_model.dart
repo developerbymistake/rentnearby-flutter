@@ -23,6 +23,70 @@ int _legCountOf(Object? raw, List<String>? cities) {
   return n < 1 ? 1 : n;
 }
 
+class TripPlanLockReasons {
+  static const String taxiRequestActive = 'TaxiRequestActive';
+  static const String taxiBookingActive = 'TaxiBookingActive';
+}
+
+class TripPlanLock {
+  final bool locked;
+  final String? reason;
+  final String? requestId;
+
+  const TripPlanLock({this.locked = false, this.reason, this.requestId});
+
+  static const TripPlanLock none = TripPlanLock();
+
+  bool get byBooking => reason == TripPlanLockReasons.taxiBookingActive;
+
+  static TripPlanLock parse(Object? raw) {
+    if (raw is! Map) return none;
+    final reason = raw['reason'];
+    final id = raw['requestId'];
+    return TripPlanLock(
+      locked: raw['locked'] == true,
+      reason: reason is String && reason.isNotEmpty ? reason : null,
+      requestId: id is String && id.isNotEmpty ? id : null,
+    );
+  }
+
+  // The 409 PlanLocked error carries only reason and request id.
+  static TripPlanLock fromError(Object? data) {
+    final m = data is Map ? data : const {};
+    final reason = m['reason'];
+    final id = m['requestId'];
+    return TripPlanLock(
+      locked: true,
+      reason: reason is String && reason.isNotEmpty ? reason : TripPlanLockReasons.taxiRequestActive,
+      requestId: id is String && id.isNotEmpty ? id : null,
+    );
+  }
+}
+
+class TripTaxiRequestRef {
+  final String requestId;
+  final String state;
+  final String view;
+  final int version;
+
+  const TripTaxiRequestRef({required this.requestId, required this.state, required this.view, this.version = 0});
+
+  static TripTaxiRequestRef? tryParse(Object? raw) {
+    if (raw is! Map) return null;
+    final id = raw['requestId'];
+    if (id is! String || id.isEmpty) return null;
+    final state = raw['state'];
+    final view = raw['view'];
+    final version = raw['version'];
+    return TripTaxiRequestRef(
+      requestId: id,
+      state: state is String ? state : '',
+      view: view is String ? view : '',
+      version: version is num ? version.toInt() : 0,
+    );
+  }
+}
+
 class TripModel {
   final String id;
   final String title;
@@ -49,6 +113,9 @@ class TripModel {
   final List<String>? _legCities;
   final Map<String, dynamic>? raw;
   final TripProgress? progress;
+  final TripPlanLock planLock;
+  final TripTaxiRequestRef? taxiRequest;
+  final bool nameChosen;
 
   const TripModel({
     required this.id,
@@ -76,6 +143,9 @@ class TripModel {
     List<String>? legCities,
     this.raw,
     this.progress,
+    this.planLock = TripPlanLock.none,
+    this.taxiRequest,
+    this.nameChosen = false,
   }) : _legCities = legCities;
 
   List<String> get legCities => _legCities ?? [cityName];
@@ -114,6 +184,10 @@ class TripModel {
     String? bookingState,
     List<TripJourney>? journeys,
     bool? journeysKnown,
+    TripPlanLock? planLock,
+    TripTaxiRequestRef? taxiRequest,
+    bool clearTaxiRequest = false,
+    bool? nameChosen,
   }) =>
       TripModel(
         id: id,
@@ -141,6 +215,9 @@ class TripModel {
         legCities: _legCities,
         raw: raw,
         progress: progress,
+        planLock: planLock ?? this.planLock,
+        taxiRequest: clearTaxiRequest ? null : (taxiRequest ?? this.taxiRequest),
+        nameChosen: nameChosen ?? this.nameChosen,
       );
 
   factory TripModel.fromJson(Map<String, dynamic> json) => TripModel(
@@ -176,6 +253,9 @@ class TripModel {
         legCities: _legCitiesOf(json['legCities']),
         raw: json,
         progress: TripProgress.tryParse(json['progress']),
+        planLock: TripPlanLock.parse(json['planLock']),
+        taxiRequest: TripTaxiRequestRef.tryParse(json['taxiRequest']),
+        nameChosen: json['nameChosen'] == true,
       );
 }
 

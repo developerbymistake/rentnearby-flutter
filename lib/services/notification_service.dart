@@ -420,6 +420,17 @@ class NotificationService extends GetxService {
     AppRoutes.stayEnquiries,
     AppRoutes.tripLeads,
     AppRoutes.stayAdvanceDetails,
+    AppRoutes.tripName,
+    AppRoutes.tripCustomize,
+    AppRoutes.tripOverview,
+    AppRoutes.tripTaxiRequest,
+    AppRoutes.tripTaxiStatus,
+    AppRoutes.taxiRequestRing,
+    AppRoutes.taxiRequests,
+    AppRoutes.taxiRequestDetail,
+    AppRoutes.taxiBookings,
+    AppRoutes.taxiRating,
+    AppRoutes.taxiReady,
   };
 
   static const _refreshInPlaceRoutes = {
@@ -431,6 +442,10 @@ class NotificationService extends GetxService {
     AppRoutes.tripPlan,
     AppRoutes.tripReplies,
     AppRoutes.tripTaxiReplies,
+    AppRoutes.tripOverview,
+    AppRoutes.tripTaxiStatus,
+    AppRoutes.taxiRequests,
+    AppRoutes.taxiBookings,
   };
 
   // A gated Stay Owner's stack is rooted at staySetup, so main is not underneath. MainScreen puts
@@ -449,6 +464,12 @@ class NotificationService extends GetxService {
     AppRoutes.stayAdvanceDetails,
     AppRoutes.stayEnquiries,
     AppRoutes.tripLeads,
+    AppRoutes.taxiRequestRing,
+    AppRoutes.taxiRequests,
+    AppRoutes.taxiRequestDetail,
+    AppRoutes.taxiBookings,
+    AppRoutes.taxiRating,
+    AppRoutes.taxiReady,
   };
 
   static const _reportTabKeys = {

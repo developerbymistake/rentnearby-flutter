@@ -15,6 +15,7 @@ import '../trip_strings_fin_a1.dart';
 import '../trip_strings_mca_a3.dart';
 import '../trip_strings_mcc_a1.dart';
 import '../trip_strings_mcc_a2.dart';
+import '../trip_strings_dayplan.dart';
 import 'trip_leg_impact_dialog.dart';
 
 class TripLegMenuSheet {
@@ -25,6 +26,10 @@ class TripLegMenuSheet {
   static Future<void> _open(BuildContext context, int legIndex, bool editDays) async {
     final c = TripPlanController.to;
     if (c.isReadOnly || c.needsUpdate.value || c.plan.value?.legAt(legIndex) == null) return;
+    if (c.isPlanLocked) {
+      AppToast.warning(c.planLockMessage);
+      return;
+    }
     await SheetFrame.show<void>(context, builder: (_) => _LegMenuBody(legIndex: legIndex, editDays: editDays));
   }
 
@@ -90,9 +95,14 @@ class TripLegMenuSheet {
     return null;
   }
 
-  static String? blockText(TripLegEditBlock b, String city, {bool? up}) => switch (b) {
+  static String? blockText(TripLegEditBlock b, String city, {bool? up, bool? locked}) => switch (b) {
         TripLegEditBlock.none => null,
-        TripLegEditBlock.edge => up == true ? TripStringsMcaA3.firstCity : TripStringsMcaA3.lastCity,
+        TripLegEditBlock.edge => switch (up) {
+            true => TripStringsMcaA3.firstCity,
+            false => TripStringsMcaA3.lastCity,
+            null => TripStringsDayplan.tooFewDays,
+          },
+        TripLegEditBlock.readOnly when locked ?? _lockedNow => TripStringsDayplan.lockedShort,
         TripLegEditBlock.bookings => up == null ? TripStringsMcaA3.cancelBookingsFirst(city) : TripStringsMcaA3.bookingsBlock,
         TripLegEditBlock.running => TripStringsMcaA3.runningBlock,
         TripLegEditBlock.readOnly => TripStringsMcaA3.readOnlyBlock,
@@ -101,6 +111,19 @@ class TripLegMenuSheet {
         TripLegEditBlock.offline => TripStringsMcaA3.connectToAddCity,
         TripLegEditBlock.onlyLeg || TripLegEditBlock.duplicate => null,
       };
+
+  static String? applyBlockText(TripLegApplyBlock b, String city) => switch (b) {
+        TripLegApplyBlock.none => null,
+        TripLegApplyBlock.locked => TripStringsDayplan.lockedShort,
+        TripLegApplyBlock.running => TripStringsMcaA3.runningBlock,
+        TripLegApplyBlock.bookings => TripStringsMcaA3.cancelBookingsFirst(city),
+        TripLegApplyBlock.emptyDay => TripStringsDayplan.emptyDayBlock,
+        TripLegApplyBlock.stale => TripStringsDayplan.staleBlock,
+        TripLegApplyBlock.invalid => TripStringsDayplan.tooFewDays,
+        TripLegApplyBlock.readOnly => TripStringsMcaA3.readOnlyBlock,
+      };
+
+  static bool get _lockedNow => Get.isRegistered<TripPlanController>() && TripPlanController.to.isPlanLocked;
 }
 
 class _LegMenuBody extends StatefulWidget {
@@ -397,6 +420,7 @@ class _LegMenuBodyState extends State<_LegMenuBody> {
     final min = _c.minDaysForLeg(_leg) > needed ? _c.minDaysForLeg(_leg) : (needed < 1 ? 1 : needed);
     final current = p.legDayCount(_leg);
     final fewer = _days < current && p.legSpotCount(_leg) > 0;
+    final tooFew = _days < min;
     final blocked = !fewer && _days >= current && _c.growthBlockedByBookings(_leg);
     return Container(
       margin: EdgeInsets.fromLTRB(DS.s(12), 0, DS.s(12), DS.gv(10)),
@@ -420,13 +444,15 @@ class _LegMenuBodyState extends State<_LegMenuBody> {
           ),
           Gap.v(4),
           Text(
-              fewer
-                  ? TripStringsMcaA3.fewerDays
-                  : (blocked ? TripStringsFinA1.growBlocked : TripStringsMcaA3.daysLeftNote(max)),
+              tooFew
+                  ? TripStringsDayplan.tooFewDays
+                  : fewer
+                      ? TripStringsMcaA3.fewerDays
+                      : (blocked ? TripStringsFinA1.growBlocked : TripStringsMcaA3.daysLeftNote(max)),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
-              style: Ink3D.text(12, FontWeight.w500, fewer || blocked ? TripLook.warningText : Ink3D.grey)),
+              style: Ink3D.text(12, FontWeight.w500, tooFew || fewer || blocked ? TripLook.warningText : Ink3D.grey)),
           Gap.v(8),
           GradientPillButton(
             tone: ListingTone.indigo,

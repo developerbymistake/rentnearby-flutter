@@ -107,6 +107,18 @@ void main() {
       expect(AppRoutes.stayOwnerOnly.contains(AppRoutes.stayRooms), isTrue);
       expect(AppRoutes.taxiDriverOnly.contains(AppRoutes.myTaxi), isTrue);
       expect(AppRoutes.taxiDriverOnly.contains(AppRoutes.tripLeads), isTrue);
+      for (final route in [
+        AppRoutes.taxiRequestRing,
+        AppRoutes.taxiRequests,
+        AppRoutes.taxiRequestDetail,
+        AppRoutes.taxiBookings,
+        AppRoutes.taxiRating,
+        AppRoutes.taxiReady,
+      ]) {
+        expect(AppRoutes.taxiDriverOnly.contains(route), isTrue, reason: route);
+        expect(AppRoutes.tabKeyForRoute(route), AppTabKeys.taxi, reason: route);
+      }
+      expect(AppRoutes.tabKeyForRoute(AppRoutes.tripLeads), AppTabKeys.taxi);
     });
 
     test('canOpenRoute refuses unregistered routes and keeps role checks', () {

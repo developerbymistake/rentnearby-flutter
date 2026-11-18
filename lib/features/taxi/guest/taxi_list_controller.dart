@@ -72,6 +72,12 @@ class TaxiListController extends GetxController {
   bool _resetInFlight = false;
   DateTime? _loadedAt;
 
+  static void refreshRegistered() {
+    for (final t in const [tag, pushTag]) {
+      if (Get.isRegistered<TaxiListController>(tag: t)) Get.find<TaxiListController>(tag: t).refreshTrigger.value++;
+    }
+  }
+
   LocationController get _loc => Get.find<LocationController>();
   AuthController get _auth => Get.find<AuthController>();
   bool get _tabActive => !root || _auth.tabIndex.value == AppTabs.taxi;

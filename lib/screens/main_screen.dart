@@ -34,7 +34,7 @@ import '../navigation/tour_keys.dart';
 import '../controllers/tour_controller.dart';
 import '../features/stay/guest/stay_landing_controller.dart';
 import '../features/stay/guest/stay_guest_controller.dart';
-import '../features/taxi/guest/taxi_list_controller.dart';
+import '../features/taxi/taxi_status_sync.dart';
 import '../features/trip/controllers/my_trips_controller.dart';
 import '../features/trip/widgets/trip_bar.dart';
 
@@ -412,9 +412,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     if (index == AppTabs.stays && _auth.tabIndex.value != AppTabs.stays) {
       stays?.exploreRefreshTrigger.value++;
     }
-    if (index == AppTabs.taxi && Get.isRegistered<TaxiListController>(tag: TaxiListController.tag)) {
-      Get.find<TaxiListController>(tag: TaxiListController.tag).refreshIfStale();
-    }
+    if (index == AppTabs.taxi) TaxiStatusSync.onTaxiTabTap();
     if (index == AppTabs.profile && _auth.tabIndex.value != AppTabs.profile) _auth.profileTabTrigger.value++;
     stays?.filterResetTrigger.value++;
     _auth.switchToTab(index);
