@@ -35,7 +35,7 @@ final _constants = <String, String>{
   'taxiReady': AppRoutes.taxiReady,
 };
 
-const _registered = {'/trip-name', '/trip-customize', '/trip-overview', '/trip-taxi-request', '/trip-taxi-status'};
+const _travellerFive = {'/trip-name', '/trip-customize', '/trip-overview', '/trip-taxi-request', '/trip-taxi-status'};
 
 const _driverSix = [
   '/taxi-request-ring',
@@ -85,12 +85,22 @@ void main() {
 
   test('can_open_route_is_false_until_a_page_is_registered', () {
     final auth = AuthController();
-    for (final r in _registered) {
+    expect(_travellerFive.length + _driverSix.length, _contract.length);
+    for (final r in _contract.values) {
       expect(AppRoutes.isRegistered(r), isTrue, reason: r);
+    }
+    for (final r in _travellerFive) {
       expect(auth.canOpenRoute(r), isTrue, reason: r);
     }
-    for (final r in _contract.values.where((r) => !_registered.contains(r))) {
-      expect(AppRoutes.isRegistered(r), isFalse, reason: r);
+    const unregistered = '/taxi-request-unknown';
+    expect(AppRoutes.isRegistered(unregistered), isFalse);
+    expect(auth.canOpenRoute(unregistered), isFalse);
+  });
+
+  test('a_seeker_cannot_open_the_registered_driver_pages', () {
+    final auth = AuthController();
+    expect(auth.canListTaxis.value, isFalse);
+    for (final r in _driverSix) {
       expect(auth.canOpenRoute(r), isFalse, reason: r);
     }
   });

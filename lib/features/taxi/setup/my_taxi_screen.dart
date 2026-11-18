@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -6,12 +8,15 @@ import '../../../design/design.dart';
 import '../../../design/extra/ext_taxi_owner.dart';
 import '../../../models/browse_item.dart';
 import '../../../services/listing_share_service.dart';
+import '../../../services/notification_service.dart';
 import '../../../utils/app_toast.dart';
 import '../../../widgets/notification_off_banner.dart';
 import '../../../widgets/plan_cap_strip.dart';
 import '../../stay/stay_strings_fin_c1.dart';
 import '../leads/trip_leads_controller.dart';
 import '../models/taxi_owner_model.dart';
+import '../requests/controllers/driver_ready_controller.dart';
+import '../requests/controllers/driver_requests_controller.dart';
 import '../taxi_option_sets.dart';
 import 'taxi_owner_card.dart';
 import 'taxi_setup_controller.dart';
@@ -27,6 +32,7 @@ class _MyTaxiScreenState extends State<MyTaxiScreen> with WidgetsBindingObserver
   final _ctrl = TaxiSetupController.ensure();
   final _isSharing = false.obs;
   final _leads = TripLeadsController.ensure();
+  final _requests = DriverRequestsController.to;
   late final AnimationController _anim = SetupKit.controller(this);
   bool _played = false;
 
@@ -43,8 +49,14 @@ class _MyTaxiScreenState extends State<MyTaxiScreen> with WidgetsBindingObserver
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _anim.value = 0;
-    _ctrl.load();
+    unawaited(_loadAll());
     _leads.loadBadge(force: true);
+  }
+
+  Future<void> _loadAll() async {
+    await _ctrl.load();
+    final t = _ctrl.taxi.value;
+    if (mounted && t != null && !t.isDraft) unawaited(_requests.reloadList());
   }
 
   @override
@@ -105,7 +117,7 @@ class _MyTaxiScreenState extends State<MyTaxiScreen> with WidgetsBindingObserver
                 onBack: () => Get.back(),
               ),
               PlanCapStrip(accent: PickKit.taxi, icon: Icons.workspace_premium_rounded, iconAsset: ListingArt.moneyBag, showUsage: false),
-              const NotificationOffBanner(),
+              const NotificationOffBanner(body: NotificationOffBanner.requestsBody),
               Expanded(
                 child: Obx(() {
                   final loading = _ctrl.isLoading.value;
@@ -184,7 +196,24 @@ class _MyTaxiScreenState extends State<MyTaxiScreen> with WidgetsBindingObserver
           if (mounted) _leads.loadBadge(force: true);
         },
         onLocalRate: _openSetup,
+        newRequests: _requests.badge,
+        onRequests: () => _openDriverPage(AppRoutes.taxiRequests),
+        onBookings: () => _openDriverPage(AppRoutes.taxiBookings),
+        onRating: () => _openDriverPage(AppRoutes.taxiRating),
       );
+
+  Future<void> _openDriverPage(String route) async {
+    await Get.toNamed(route);
+    if (mounted) unawaited(_requests.reloadList());
+  }
+
+  static Future<bool> _notificationsDenied() async =>
+      Get.isRegistered<NotificationService>() && await NotificationService.to.isPermissionDenied();
+
+  Future<void> _afterOnline() async {
+    unawaited(DriverReadyController.to.onOnlineSwitchedOn());
+    if (await _notificationsDenied() && mounted) await Get.toNamed(AppRoutes.taxiReady);
+  }
 
   Widget _empty() => TaxiEmptyCard3D(
         tone: _tone,
@@ -214,7 +243,9 @@ class _MyTaxiScreenState extends State<MyTaxiScreen> with WidgetsBindingObserver
 
   Future<void> _setAvailable(bool available) async {
     final ok = await _ctrl.setAvailable(available);
-    if (ok) AppToast.success(available ? 'Available now' : 'Hidden from search');
+    if (!ok) return;
+    AppToast.success(available ? 'Available now' : 'Hidden from search');
+    if (available) await _afterOnline();
   }
 
   Future<void> _editFare(TaxiRouteModel route) async {

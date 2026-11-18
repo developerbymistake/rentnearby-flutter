@@ -12,6 +12,9 @@ import 'package:bakhli/features/taxi/leads/trip_leads_controller.dart';
 import 'package:bakhli/features/taxi/leads/trip_leads_screen.dart';
 import 'package:bakhli/features/taxi/models/taxi_owner_model.dart';
 import 'package:bakhli/features/taxi/models/taxi_vehicle_type_model.dart';
+import 'package:bakhli/features/taxi/requests/controllers/driver_ready_controller.dart';
+import 'package:bakhli/features/taxi/requests/controllers/driver_requests_controller.dart';
+import 'package:bakhli/features/taxi/requests/strings/driver_entry_strings.dart';
 import 'package:bakhli/features/taxi/setup/my_taxi_screen.dart';
 import 'package:bakhli/features/taxi/setup/taxi_routes_screen.dart';
 import 'package:bakhli/features/taxi/setup/taxi_setup_controller.dart';
@@ -31,6 +34,7 @@ import 'package:get/get.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 
 import '../e2e_journeys/nearby/nearby_support.dart';
+import '../features/taxi_driver/driver_wiring_fakes.dart';
 import '../support/real_phone.dart';
 
 class _Auth extends JAuth {
@@ -719,10 +723,28 @@ void main() {
       base();
       Get.put<TaxiSetupController>(_Taxi(m, fail: fail, hang: hang));
       Get.put<TripLeadsController>(_Leads(const {}, news: news), permanent: true);
+      Get.put<DriverRequestsController>(WireRequests(news: news));
+      Get.put<DriverReadyController>(WireReady());
       await snap(t, const MyTaxiScreen(), name, size: size, scale: scale, after: after);
     }
 
     tearDown(() => Get.delete<TripLeadsController>(force: true));
+
+    testWidgets('my_driver_rows', (t) async {
+      await open(t, _live, 'my_driver_rows', news: 3, size: const Size(360, 1500));
+      for (final title in [DriverEntryStrings.requests, DriverEntryStrings.bookings, DriverEntryStrings.rating]) {
+        expect(find.text(title), findsOneWidget, reason: title);
+      }
+      expect(find.text('3 new'), findsNWidgets(2));
+      expect(t.takeException(), isNull);
+    });
+
+    testWidgets('my_draft has no driver rows', (t) async {
+      await open(t, taxiModel(step1: true), 'my_draft_rows', news: 0);
+      expect(find.text(DriverEntryStrings.requests), findsNothing);
+      expect(find.text(DriverEntryStrings.bookings), findsNothing);
+      expect(find.text(DriverEntryStrings.rating), findsNothing);
+    });
 
     for (final cfg in _sizes) {
       testWidgets('my_live${cfg.$3}', (t) async {

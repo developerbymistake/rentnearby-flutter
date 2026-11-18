@@ -84,6 +84,12 @@ void main() {
         AppRoutes.myTrips,
         AppRoutes.plansBilling,
         AppRoutes.chatConversation,
+        AppRoutes.taxiRequestRing,
+        AppRoutes.taxiRequests,
+        AppRoutes.taxiRequestDetail,
+        AppRoutes.taxiBookings,
+        AppRoutes.taxiRating,
+        AppRoutes.taxiReady,
       ]) {
         expect(AppRoutes.isRegistered(route), isTrue, reason: route);
       }
@@ -131,6 +137,16 @@ void main() {
       expect(auth.canOpenRoute(AppRoutes.plansBilling), isFalse);
       expect(auth.canOpenRoute(AppRoutes.myStays), isFalse);
       expect(auth.canOpenRoute(AppRoutes.myTaxi), isFalse);
+      for (final route in [
+        AppRoutes.taxiRequestRing,
+        AppRoutes.taxiRequests,
+        AppRoutes.taxiRequestDetail,
+        AppRoutes.taxiBookings,
+        AppRoutes.taxiRating,
+        AppRoutes.taxiReady,
+      ]) {
+        expect(auth.canOpenRoute(route), isFalse, reason: route);
+      }
     });
   });
 

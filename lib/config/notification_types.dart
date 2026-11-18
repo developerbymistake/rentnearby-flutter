@@ -48,4 +48,38 @@ class NotificationTypeKeys {
   };
 
   static bool isTravellerTaxi(String? type) => type != null && travellerTaxi.contains(type);
+
+  static const String taxiRequestRingWire = 'taxi_request_ring';
+  static const String taxiRequestRingEndedWire = 'taxi_request_ring_ended';
+  static const String taxiSelected = 'TaxiSelected';
+  static const String taxiSelectedWire = 'taxi_selected';
+  static const String taxiNotSelected = 'TaxiNotSelected';
+  static const String taxiNotSelectedWire = 'taxi_not_selected';
+  static const String taxiRequestClosed = 'TaxiRequestClosed';
+  static const String taxiRequestClosedWire = 'taxi_request_closed';
+  static const String taxiBookingCancelled = 'TaxiBookingCancelled';
+  static const String taxiBookingCancelledWire = 'taxi_booking_cancelled';
+  static const String taxiRingsMissed = 'TaxiRingsMissed';
+  static const String taxiRingsMissedWire = 'taxi_rings_missed';
+
+  static const Set<String> driverTaxi = {
+    taxiRequestRingWire,
+    taxiRequestRingEndedWire,
+    taxiSelected,
+    taxiSelectedWire,
+    taxiNotSelected,
+    taxiNotSelectedWire,
+    taxiRequestClosed,
+    taxiRequestClosedWire,
+    taxiBookingCancelled,
+    taxiBookingCancelledWire,
+    taxiRingsMissed,
+    taxiRingsMissedWire,
+    taxiTripEnded,
+    taxiTripEndedWire,
+  };
+
+  static bool isDriverTaxi(String? type) => type != null && driverTaxi.contains(type);
+
+  static bool isRingsMissed(String? type) => type == taxiRingsMissed || type == taxiRingsMissedWire;
 }

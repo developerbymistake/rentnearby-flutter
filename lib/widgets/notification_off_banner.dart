@@ -6,13 +6,15 @@ import '../design/extra/ext_notifications.dart';
 import '../services/notification_service.dart';
 
 class NotificationOffBanner extends StatefulWidget {
-  const NotificationOffBanner({super.key, this.isDenied, this.openSettings});
+  const NotificationOffBanner({super.key, this.isDenied, this.openSettings, this.body = enquiriesBody});
 
   final Future<bool> Function()? isDenied;
   final Future<void> Function()? openSettings;
+  final String body;
 
   static const String title = 'Turn on notifications';
-  static const String body = 'You will miss new enquiries until notifications are on.';
+  static const String enquiriesBody = 'You will miss new enquiries until notifications are on.';
+  static const String requestsBody = 'You will miss new requests until notifications are on.';
   static const String action = 'Open settings';
 
   @override
@@ -66,7 +68,7 @@ class _NotificationOffBannerState extends State<NotificationOffBanner> with Widg
     return NotificationBannerCard3D(
       art: NotificationLook.bell,
       title: NotificationOffBanner.title,
-      body: NotificationOffBanner.body,
+      body: widget.body,
       actionLabel: NotificationOffBanner.action,
       onAction: _open,
     );

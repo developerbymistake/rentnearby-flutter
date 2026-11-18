@@ -4,6 +4,7 @@ import '../../../design/extra/ext_taxi_owner.dart';
 import '../../../models/browse_item.dart';
 import '../../trip/trip_strings.dart';
 import '../models/taxi_owner_model.dart';
+import '../requests/strings/driver_entry_strings.dart';
 import '../taxi_option_sets.dart';
 
 class TaxiOwnerCard extends StatelessWidget {
@@ -19,6 +20,10 @@ class TaxiOwnerCard extends StatelessWidget {
   final VoidCallback? onTripLeads;
   final int newLeads;
   final VoidCallback? onLocalRate;
+  final VoidCallback? onRequests;
+  final int newRequests;
+  final VoidCallback? onBookings;
+  final VoidCallback? onRating;
 
   const TaxiOwnerCard({
     super.key,
@@ -34,6 +39,10 @@ class TaxiOwnerCard extends StatelessWidget {
     this.onTripLeads,
     this.newLeads = 0,
     this.onLocalRate,
+    this.onRequests,
+    this.newRequests = 0,
+    this.onBookings,
+    this.onRating,
   });
 
   @override
@@ -87,6 +96,31 @@ class TaxiOwnerCard extends StatelessWidget {
           ),
       ],
       links: [
+        if (!taxi.isDraft && onRequests != null)
+          TaxiOwnerLink(
+            art: ListingArt.bell,
+            title: DriverEntryStrings.requests,
+            subtitle: DriverEntryStrings.requestsLine,
+            pill: newRequests > 0 ? TripStrings.newCount(newRequests) : DriverEntryStrings.open,
+            red: newRequests > 0,
+            onTap: onRequests,
+          ),
+        if (!taxi.isDraft && onBookings != null)
+          TaxiOwnerLink(
+            art: ListingArt.calendar,
+            title: DriverEntryStrings.bookings,
+            subtitle: DriverEntryStrings.bookingsLine,
+            pill: DriverEntryStrings.open,
+            onTap: onBookings,
+          ),
+        if (!taxi.isDraft && onRating != null)
+          TaxiOwnerLink(
+            art: ListingArt.star,
+            title: DriverEntryStrings.rating,
+            subtitle: DriverEntryStrings.ratingLine,
+            pill: DriverEntryStrings.open,
+            onTap: onRating,
+          ),
         if (!taxi.isDraft && onTripLeads != null)
           TaxiOwnerLink(
             art: ListingArt.compass,

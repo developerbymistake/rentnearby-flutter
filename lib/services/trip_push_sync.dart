@@ -5,6 +5,10 @@ import '../config/notification_types.dart';
 import '../features/stay/enquiries/stay_enquiries_controller.dart';
 import '../features/taxi/journeys/journeys_controller.dart';
 import '../features/taxi/leads/trip_leads_controller.dart';
+import '../features/taxi/requests/controllers/driver_bookings_controller.dart';
+import '../features/taxi/requests/controllers/driver_rating_controller.dart';
+import '../features/taxi/requests/controllers/driver_ready_controller.dart';
+import '../features/taxi/requests/controllers/driver_requests_controller.dart';
 import '../features/trip/controllers/my_trips_controller.dart';
 import '../features/trip/controllers/trip_plan_controller.dart';
 import '../features/trip/controllers/trip_taxi_request_controller.dart';
@@ -32,7 +36,19 @@ class TripPushSync {
 
   static const _taxiRoutes = {AppRoutes.tripTaxiStatus, AppRoutes.tripOverview};
 
+  static const _driverRoutes = {
+    AppRoutes.taxiRequestRing,
+    AppRoutes.taxiRequests,
+    AppRoutes.taxiRequestDetail,
+    AppRoutes.taxiBookings,
+    AppRoutes.taxiRating,
+    AppRoutes.taxiReady,
+  };
+
   static Timer? _debounce;
+  static bool _driver = false;
+  static bool _driverReady = false;
+  static bool _driverRating = false;
   static bool _journeys = false;
   static bool _taxi = false;
   static bool _enquiries = false;
@@ -45,15 +61,20 @@ class TripPushSync {
 
   // Hub and FCM both deliver the same event in foreground; one refresh covers both.
   static void onPush(String? type, String? actionRoute) {
+    final driver = _markDriver(type, actionRoute);
     final taxi = NotificationTypeKeys.isTravellerTaxi(type);
-    if (!taxi && !isTripType(type) && !_tripRoutes.contains(actionRoute)) return;
-    if ((type?.startsWith('Journey') ?? false) || _journeyRoutes.contains(actionRoute)) _journeys = true;
-    _markTaxi(taxi || _taxiRoutes.contains(actionRoute));
+    final trip = taxi || isTripType(type) || _tripRoutes.contains(actionRoute);
+    if (!driver && !trip) return;
+    if (trip) {
+      if ((type?.startsWith('Journey') ?? false) || _journeyRoutes.contains(actionRoute)) _journeys = true;
+      _markTaxi(taxi || _taxiRoutes.contains(actionRoute));
+    }
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 600), _run);
   }
 
   static void refreshNow(String route, {String? enquiryId}) {
+    _markDriver(null, route);
     if (_journeyRoutes.contains(route)) _journeys = true;
     _markTaxi(_taxiRoutes.contains(route));
     if (enquiryId != null && enquiryId.isNotEmpty) {
@@ -62,6 +83,23 @@ class TripPushSync {
     }
     _debounce?.cancel();
     _run();
+  }
+
+  static bool _markDriver(String? type, String? route) {
+    if (!NotificationTypeKeys.isDriverTaxi(type) && !_driverRoutes.contains(route)) return false;
+    _driver = true;
+    if (NotificationTypeKeys.isRingsMissed(type) || route == AppRoutes.taxiReady) _driverReady = true;
+    if (type == NotificationTypeKeys.taxiTripEnded || type == NotificationTypeKeys.taxiTripEndedWire || route == AppRoutes.taxiRating) {
+      _driverRating = true;
+    }
+    return true;
+  }
+
+  static void _refreshDriver({required bool ready, required bool rating}) {
+    DriverRequestsController.onPushIfRegistered();
+    DriverBookingsController.onPushIfRegistered();
+    if (rating && Get.isRegistered<DriverRatingController>()) unawaited(Get.find<DriverRatingController>().load());
+    if (ready && Get.isRegistered<DriverReadyController>()) unawaited(Get.find<DriverReadyController>().loadReadiness());
   }
 
   // A taxi request push re-reads only the taxi state; anything else re-reads the enquiries.
@@ -95,6 +133,14 @@ class TripPushSync {
     final focusId = _focusId;
     _focusRoute = null;
     _focusId = null;
+    final driver = _driver;
+    final driverReady = _driverReady;
+    final driverRating = _driverRating;
+    _driver = false;
+    _driverReady = false;
+    _driverRating = false;
+    if (driver) _refreshDriver(ready: driverReady, rating: driverRating);
+    if (!journeys && !taxi && !enquiries) return;
     final route = Get.currentRoute;
     if (Get.isRegistered<StayEnquiriesController>()) {
       final c = Get.find<StayEnquiriesController>();

@@ -25,6 +25,8 @@ import '../models/conversation_model.dart';
 import '../models/notification_model.dart';
 import '../services/api_service.dart';
 import '../services/storage_service.dart';
+import 'push_token_registrar.dart';
+import 'taxi_ring_service.dart';
 import 'trip_push_sync.dart';
 
 const String _chatChannelId = 'chat_messages';
@@ -35,6 +37,26 @@ const int _maxStackedLines = 8;
 
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  final ring = TaxiRingPush.tryParse(message.data);
+  if (ring != null) {
+    // A visible ring end was already shown with the ring's tag by the system, which replaced the ring.
+    if (ring.kind == TaxiRingKind.end) return;
+    WidgetsFlutterBinding.ensureInitialized();
+    await GetStorage.init();
+    final plugin = FlutterLocalNotificationsPlugin();
+    await plugin.initialize(
+      settings: const InitializationSettings(
+        android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+      ),
+    );
+    await plugin
+        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+        ?.createNotificationChannel(TaxiRingNotification.ringChannel);
+    final result = await TaxiRingService.withPlugin(plugin).handle(message.data);
+    await TaxiRingAckClient.within(result.ack);
+    return;
+  }
+
   final conversationId = message.data['conversation_id'] as String?;
   if (conversationId == null) return; // not a chat push — report/membership/broadcast unaffected
 
@@ -167,12 +189,22 @@ class NotificationService extends GetxService {
   final _localNotifications = FlutterLocalNotificationsPlugin();
   bool _mainReady = false;
   VoidCallback? _pendingTap;
+  late final PushTokenRegistrar _registrar = PushTokenRegistrar(
+    send: (token) async {
+      await ApiService.post(AppConstants.registerTokenPath, {'token': token});
+      if (StorageService.isLoggedIn) await StorageService.saveFcmToken(token);
+    },
+    isLoggedIn: () => StorageService.isLoggedIn,
+    isDriver: () => Get.isRegistered<AuthController>() && Get.find<AuthController>().canListTaxis.value,
+    fetchToken: () => FirebaseMessaging.instance.getToken(),
+  );
 
   // Chat, My Stays, My Taxi, etc. are pushed routes, handled via _routesOnTopOfMain below.
 
   @override
   Future<void> onInit() async {
     super.onInit();
+    _registrar.start();
     await _initFirebase();
   }
 
@@ -209,6 +241,7 @@ class NotificationService extends GetxService {
     // stacked/avatar notification here too, unless the user is already looking at that
     // exact conversation.
     _foregroundMessageSub = FirebaseMessaging.onMessage.listen((message) async {
+      if (await _handleForegroundRing(message.data)) return;
       final conversationId = message.data['conversation_id'] as String?;
       if (conversationId != null) {
         if (Get.currentRoute == AppRoutes.chatConversation &&
@@ -281,6 +314,47 @@ class NotificationService extends GetxService {
     }
   }
 
+  // True when the push was a ring or test ring and needs nothing else; a ring end goes on to the visible path.
+  Future<bool> _handleForegroundRing(Map<String, dynamic> data) async {
+    final result = await TaxiRingService.withPlugin(_localNotifications).handle(data);
+    final push = result.push;
+    if (push == null) return TaxiRingPush.isUnreadableRing(data);
+    switch (result.outcome) {
+      case TaxiRingOutcome.ended:
+        _closeRingScreen(push.offerId);
+        return false;
+      case TaxiRingOutcome.shown:
+        final type = data['notification_type'];
+        TripPushSync.onPush(type is String ? type : null, TaxiRingPush.ringRoute);
+        if (StorageService.isLoggedIn && !_ringScreenOpenFor(push.offerId)) {
+          final route = TaxiRingNotification.routeData(push);
+          _runWhenMainReady(() => _dispatchNotificationRoute(route));
+        }
+        return true;
+      case TaxiRingOutcome.testShown:
+      case TaxiRingOutcome.expired:
+      case TaxiRingOutcome.ignored:
+        return true;
+    }
+  }
+
+  bool _ringScreenOpenFor(String offerId) {
+    final args = Get.arguments;
+    return Get.currentRoute == AppRoutes.taxiRequestRing && args is Map && args['offerId']?.toString() == offerId;
+  }
+
+  void _closeRingScreen(String offerId) {
+    if (_ringScreenOpenFor(offerId)) Get.back();
+  }
+
+  Map<String, dynamic> _ringTapData(Map<String, dynamic> data, String? actionId) {
+    if (!TaxiRingNotification.isRingPayload(data)) return data;
+    unawaited(_localNotifications
+        .cancel(id: TaxiRingNotification.id, tag: data[TaxiRingNotification.tagKey] as String)
+        .catchError((_) {}));
+    return TaxiRingNotification.withAction(data, actionId);
+  }
+
   Future<void> _initLocalNotifications() async {
     await _localNotifications.initialize(
       settings: const InitializationSettings(
@@ -304,6 +378,9 @@ class NotificationService extends GetxService {
       description: 'Status updates and other alerts',
       importance: Importance.high,
     ));
+    await androidPlugin?.createNotificationChannel(TaxiRingNotification.ringChannel);
+    await androidPlugin?.createNotificationChannel(TaxiRingNotification.updatesChannel);
+    unawaited(TaxiRingDevice.refresh());
 
     // Cold start: app was killed and launched by tapping our own local notification — a
     // DIFFERENT signal from FirebaseMessaging.getInitialMessage() above, which only detects
@@ -315,9 +392,10 @@ class NotificationService extends GetxService {
         payload != null &&
         StorageService.isLoggedIn) {
       final decoded = _tryDecodeNotificationPayload(payload);
+      final actionId = launchDetails?.notificationResponse?.actionId;
       _runWhenMainReady(() {
         if (decoded != null) {
-          _dispatchNotificationRoute(decoded);
+          _dispatchNotificationRoute(_ringTapData(decoded, actionId));
         } else {
           _navigateToChatConversation(payload);
         }
@@ -329,6 +407,17 @@ class NotificationService extends GetxService {
   // the onMessage listener above. Deliberately simple (no stacking/avatar) since these are
   // one-off alerts, not a running conversation like chat.
   Future<void> _showGenericForegroundNotification(String title, String body, Map<String, dynamic> data) async {
+    final ring = TaxiRingPush.tryParse(data);
+    if (ring != null && ring.kind == TaxiRingKind.end) {
+      await _localNotifications.show(
+        id: TaxiRingNotification.id,
+        title: title,
+        body: body,
+        notificationDetails: TaxiRingNotification.endDetails(ring),
+        payload: jsonEncode(data),
+      );
+      return;
+    }
     await _localNotifications.show(
       id: jsonEncode(data).hashCode,
       title: title,
@@ -365,7 +454,7 @@ class NotificationService extends GetxService {
     if (payload == null) return;
     final decoded = _tryDecodeNotificationPayload(payload);
     if (decoded != null) {
-      _dispatchNotificationRoute(decoded);
+      _dispatchNotificationRoute(_ringTapData(decoded, response.actionId));
     } else {
       _navigateToChatConversation(payload);
     }
@@ -770,12 +859,7 @@ class NotificationService extends GetxService {
   }
 
   Future<void> _registerToken(String token) async {
-    try {
-      await ApiService.post(AppConstants.registerTokenPath, {'token': token});
-      await StorageService.saveFcmToken(token);
-    } catch (e) {
-      debugPrint('NotificationService: token registration failed: $e');
-    }
+    await _registrar.register(token);
   }
 
   Future<void> registerTokenAfterLogin() async {
@@ -796,6 +880,7 @@ class NotificationService extends GetxService {
 
   // Only a still-valid session can unregister; a revoked one would 401 inside the logout itself.
   Future<void> clearToken({bool unregister = false}) async {
+    _registrar.clear();
     var token = StorageService.getFcmToken();
     StorageService.clearFcmToken();
     if (unregister) {
@@ -885,6 +970,7 @@ class NotificationService extends GetxService {
     _messageOpenedSub?.cancel();
     _tokenRefreshSub?.cancel();
     _foregroundMessageSub?.cancel();
+    _registrar.dispose();
     super.onClose();
   }
 }
