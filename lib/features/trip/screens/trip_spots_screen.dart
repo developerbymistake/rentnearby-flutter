@@ -16,6 +16,7 @@ import '../trip_constants.dart';
 import '../trip_strings.dart';
 import '../trip_strings_v2_create.dart';
 import '../trip_strings_mca_a2.dart';
+import '../trip_strings_pick_draft.dart';
 import '../trip_strings_spots_x.dart';
 import '../utils/trip_spot_picks.dart';
 import '../utils/trip_days_rules.dart';
@@ -39,6 +40,9 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> with TickerProviderSt
   late final List<TripDraftLeg> _draftLegs;
   late final bool _adding;
   late final bool _newLeg;
+  late final bool _pickDraft;
+  late final int _draftDay;
+  late final int _draftCount;
   late final int? _legIndex;
   late final int? _pickDay;
   late final String? _replaceId;
@@ -50,7 +54,7 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> with TickerProviderSt
   bool _starting = false;
   Worker? _draftWorker;
 
-  bool get _intoTrip => _adding || _newLeg;
+  bool get _intoTrip => _adding || _newLeg || _pickDraft;
   bool get _creating => !_intoTrip;
   int get _days {
     final n = TripDaysRules.autoTotal(_visits(), TripPace.relaxed);
@@ -64,8 +68,11 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> with TickerProviderSt
     super.initState();
     final args = Get.arguments as Map;
     _city = args['city'] as TripCityModel;
-    _newLeg = args['newLeg'] == true;
-    _adding = !_newLeg && args['adding'] == true;
+    _pickDraft = args['pickForDraft'] == true;
+    _draftDay = _pickDraft ? (args['dayNumber'] as int? ?? 1) : 0;
+    _draftCount = _pickDraft ? (args['dayCount'] as int? ?? 0) : 0;
+    _newLeg = !_pickDraft && args['newLeg'] == true;
+    _adding = !_pickDraft && !_newLeg && args['adding'] == true;
     _legIndex = args['legIndex'] as int?;
     _pickDay = _adding ? args['pickDay'] as int? : null;
     _replaceId = _pickDay == null ? null : args['replaceSpotId'] as String?;
@@ -86,14 +93,15 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> with TickerProviderSt
       if (legs is List) ...legs.whereType<TripDraftLeg>(),
       if (legs is! List && legacy is List) TripDraftLeg(_city, legacy.whereType<String>().toList()),
     ];
-    final other = _intoTrip ? _plan.spotCount - _existingIds.length : 0;
+    final other = _intoTrip && !_pickDraft ? _plan.spotCount - _existingIds.length : 0;
     final tag = '${_city.cityKey}';
     _ctrl = Get.isRegistered<TripSpotsController>(tag: tag)
         ? Get.find<TripSpotsController>(tag: tag)
         : Get.put(
-            TripSpotsController(_city.cityKey, existingIds: _existingIds, otherSpots: other < 0 ? 0 : other),
+            TripSpotsController(_city.cityKey, existingIds: _pickDraft ? const {} : _existingIds, otherSpots: other < 0 ? 0 : other),
             tag: tag,
           );
+    if (_pickDraft) _ctrl.suggestionsOn = false;
     _enter.forward();
     _plan.openPages++;
     _scroll.addListener(_onScroll);
@@ -125,7 +133,10 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> with TickerProviderSt
 
   void _syncLimit() {
     if (_pickDay != null) return;
-    if (_newLeg) {
+    if (_pickDraft) {
+      final room = TripConstants.maxSpotsPerDay - _draftCount;
+      _ctrl.limit.value = room < 0 ? 0 : room;
+    } else if (_newLeg) {
       _ctrl.limit.value = TripConstants.maxSpotsPerDay;
     } else if (_adding) {
       _ctrl.limit.value = _plan.addCapacity(_legIndex ?? _plan.legCount);
@@ -230,7 +241,7 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> with TickerProviderSt
 
   VoidCallback? _toggleFor(TripSpotModel s) {
     if (_existingIds.contains(s.id)) return null;
-    return _pickDay != null ? () => _pickOne(s) : () => _toggle(s.id);
+    return _pickDay != null && !_pickDraft ? () => _pickOne(s) : () => _toggle(s.id);
   }
 
   Widget _buildOffline() => Obx(() => _ctrl.offline.value && !_ctrl.isLoading.value
@@ -242,7 +253,9 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> with TickerProviderSt
     if (_ctrl.atLimit) AppToast.warning(_limitText);
   }
 
-  String get _limitText => _creating
+  String get _limitText => _pickDraft
+      ? TripStringsPickDraft.dayFull(_draftDay)
+      : _creating
       ? TripStringsV2Create.limitReached
       : _newLeg
           ? TripStringsV2Create.dayFull
@@ -252,6 +265,19 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> with TickerProviderSt
   bool _canContinue(int selected) =>
       selected > 0 ||
       (!_intoTrip && (!_isLast || _chain.any((c) => c.cityKey != _city.cityKey && _idsOf(c).isNotEmpty)));
+
+  Future<void> _confirmDraft() async {
+    if (_starting || _ctrl.selected.isEmpty) return;
+    _starting = true;
+    await _ctrl.ensureSelectedLoaded();
+    if (!mounted) return;
+    final byId = {for (final s in _ctrl.items) s.id: s};
+    final picks = [
+      for (final id in _ctrl.selected)
+        if (byId[id] != null && !_existingIds.contains(id)) byId[id]!,
+    ];
+    Get.back(result: picks);
+  }
 
   Future<void> _planMyDays() async {
     if (_starting) return;
@@ -346,7 +372,17 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> with TickerProviderSt
           onBack: () => Get.back(),
         );
     final Widget body;
-    if (_pickDay case final day?) {
+    if (_pickDraft) {
+      body = Obx(() => PageHeader3D(
+            tone: ListingTone.indigo,
+            title: TripStringsPickDraft.title(_draftDay),
+            subtitle: TripStringsPickDraft.subtitle(_city.name, _draftCount + _ctrl.selected.length),
+            art: ListingArt.roundPushpin,
+            artSize: 64,
+            inlineTitle: true,
+            onBack: () => Get.back(),
+          ));
+    } else if (_pickDay case final day?) {
       body = head(_pickHeading(day));
     } else if (_creating) {
       body = Obx(() => head(_chain.length > 1
@@ -524,7 +560,7 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> with TickerProviderSt
             locked: !existing && !selected.contains(s.id) && (_pickDay != null ? pickFull : atLimit),
             onToggle: existing ? null : (_pickDay != null ? () => _pickOne(s) : () => _toggle(s.id)),
           );
-          if (sug != null && sug.forId == s.id && _pickDay == null) {
+          if (sug != null && sug.forId == s.id && _pickDay == null && !_pickDraft) {
             return _row(heads.length + i, Column(
               children: [
                 card,
@@ -568,6 +604,18 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> with TickerProviderSt
     return Obx(() {
       final n = _ctrl.selected.length;
       if (_ctrl.plannerOff.value) return const SizedBox.shrink();
+      if (_pickDraft) {
+        return _barFrame(context, [
+          Text(
+            n == 0 ? TripStringsPickDraft.pickHint : TripStringsPickDraft.summary(_draftDay, _draftCount + n),
+            style: Ink3D.text(13, FontWeight.w600, Ink3D.grey),
+          ),
+          if (n > 0) ...[
+            Gap.v(12),
+            GradientPillButton(tone: ListingTone.indigo, label: TripStringsPickDraft.add(n), onTap: _confirmDraft),
+          ],
+        ]);
+      }
       if (_pickDay != null) {
         if (!_pickFull) return const SizedBox.shrink();
         return _barFrame(context, [

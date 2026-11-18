@@ -2,6 +2,7 @@ import 'package:bakhli/features/trip/controllers/my_trips_controller.dart';
 import 'package:bakhli/features/trip/models/trip_model.dart';
 import 'package:bakhli/features/trip/models/trip_plan_model.dart';
 import 'package:bakhli/features/trip/screens/my_trips_screen.dart';
+import 'package:bakhli/features/trip/utils/trip_clock.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -127,6 +128,8 @@ void main() {
     tester.view.padding = const FakeViewPadding(top: 44);
     tester.view.viewPadding = const FakeViewPadding(top: 44);
     addTearDown(tester.view.reset);
+    TripClock.clockUtc = () => DateTime.utc(2026, 11, 18, 6, 30);
+    addTearDown(TripClock.resetClock);
     Get.testMode = true;
     Get.put<MyTripsController>(_FakeMyTrips());
     addTearDown(Get.reset);

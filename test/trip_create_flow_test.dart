@@ -1,7 +1,13 @@
+import 'dart:io';
+
 import 'package:bakhli/features/trip/models/trip_city_model.dart';
 import 'package:bakhli/features/trip/models/trip_plan_model.dart';
 import 'package:bakhli/features/trip/utils/trip_days_rules.dart';
+import 'package:bakhli/features/trip/widgets/trip_city_sheet.dart';
+import 'package:bakhli/services/storage_service.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:get_storage/get_storage.dart';
 
 TripSpotRef _spot(String id) => TripSpotRef(id: id, name: id, latitude: 29, longitude: 79, category: 'lake', visitMinutes: 60);
 
@@ -21,6 +27,44 @@ List<List<int>> _v(List<int> counts) => [
     ];
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  group('new trip draft keeps the name', () {
+    final city = TripCityModel(cityKey: 1, name: 'Nainital', stateName: 'Uttarakhand', latitude: 29, longitude: 79);
+
+    setUpAll(() async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(
+          const MethodChannel('plugins.flutter.io/path_provider'),
+          (call) async => Directory.systemTemp.createTempSync('create_flow_gs').path);
+      await GetStorage.init();
+    });
+    setUp(StorageService.clearTripNewDraft);
+
+    test('name is readable before any place is picked', () {
+      TripNewDraft.saveName('  Hill   Days ');
+      expect(TripNewDraft.readName(), 'Hill Days');
+      expect(TripNewDraft.read(), isNull);
+    });
+
+    test('place changes keep the name and clearing the draft drops it', () {
+      TripNewDraft.saveName('Hill Days');
+      TripNewDraft.save([TripDraftLeg(city, const ['a'])], days: 2);
+      TripNewDraft.save([TripDraftLeg(city, const ['a', 'b'])]);
+      final d = TripNewDraft.read()!;
+      expect(d.name, 'Hill Days');
+      expect(d.days, 2);
+      expect(d.legs.single.ids, ['a', 'b']);
+      StorageService.clearTripNewDraft();
+      expect(TripNewDraft.readName(), isNull);
+    });
+
+    test('an invalid name is never stored', () {
+      TripNewDraft.saveName('   ');
+      TripNewDraft.saveName('a' * 61);
+      expect(TripNewDraft.readName(), isNull);
+    });
+  });
+
   group('minDays', () {
     test('never below the city count', () {
       expect(TripDaysRules.minDays(2, const [0, 0]), 2);

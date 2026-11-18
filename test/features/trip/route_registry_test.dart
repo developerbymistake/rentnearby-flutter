@@ -35,6 +35,8 @@ final _constants = <String, String>{
   'taxiReady': AppRoutes.taxiReady,
 };
 
+const _registered = {'/trip-name', '/trip-customize'};
+
 const _driverSix = [
   '/taxi-request-ring',
   '/taxi-requests',
@@ -83,7 +85,11 @@ void main() {
 
   test('can_open_route_is_false_until_a_page_is_registered', () {
     final auth = AuthController();
-    for (final r in _contract.values) {
+    for (final r in _registered) {
+      expect(AppRoutes.isRegistered(r), isTrue, reason: r);
+      expect(auth.canOpenRoute(r), isTrue, reason: r);
+    }
+    for (final r in _contract.values.where((r) => !_registered.contains(r))) {
       expect(AppRoutes.isRegistered(r), isFalse, reason: r);
       expect(auth.canOpenRoute(r), isFalse, reason: r);
     }

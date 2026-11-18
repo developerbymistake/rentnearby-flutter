@@ -16,12 +16,14 @@ import '../utils/trip_days_rules.dart';
 import '../utils/trip_format.dart';
 import 'trip_leg_menu_sheet.dart';
 
-const List<String> _dayArts = [ListingArt.sunrise, ListingArt.mountain, ListingArt.tent, ListingArt.beach, ListingArt.camping];
 
 class TripDaySpotList extends StatelessWidget {
   final int day;
 
   const TripDaySpotList(this.day, {super.key});
+
+  static const Key headerKey = ValueKey('day-header');
+  static const Key chipsKey = ValueKey('day-chips');
 
   static Future<void> replace(TripPlanController c, String spotId, int day) async {
     final legIndex = c.plan.value?.legIndexOf(day) ?? 1;
@@ -41,7 +43,7 @@ class TripDaySpotList extends StatelessWidget {
       c.trip.value;
       final d = plan?.dayAt(day);
       if (plan == null || d == null) return const SizedBox.shrink();
-      final locked = c.isReadOnly || c.needsUpdate.value || c.isDayPast(day);
+      final locked = !c.canEditStructure || c.isDayPast(day);
       final editing = c.editMode.value && !locked;
       final closed = [
         for (final w in c.warningsFor(day))
@@ -49,7 +51,7 @@ class TripDaySpotList extends StatelessWidget {
       ];
       final full = !TripDaysRules.canAddOnDay(plan, day);
       final narrow = MediaQuery.sizeOf(context).width < 340;
-      final artSize = narrow ? 88.0 : 104.0;
+      final artSize = narrow ? 62.0 : 72.0;
       return GestureDetector(
         behavior: HitTestBehavior.opaque,
         onLongPress: locked || c.editMode.value ? null : () => c.editMode.value = true,
@@ -70,7 +72,7 @@ class TripDaySpotList extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      _header(c, plan, d, color, editing, DS.s(narrow ? 104.0 : 120.0)),
+                      _header(c, plan, d, color, editing, DS.s(narrow ? 78.0 : 90.0)),
                       Padding(
                         padding: EdgeInsets.fromLTRB(DS.s(12), DS.s(10), DS.s(12), DS.s(10)),
                         child: Column(
@@ -104,10 +106,10 @@ class TripDaySpotList extends StatelessWidget {
               ),
             ),
             Positioned(
-              left: DS.s(22),
-              top: 0,
+              left: DS.s(26),
+              top: DS.s(40 - artSize * 0.28),
               child: IgnorePointer(
-                child: Art3D(asset: _dayArts[(day - 1) % _dayArts.length], size: artSize, halo: artSize + 4, haloColor: DesignColors.tint(DesignColors.surface, Alpha.v22)),
+                child: Art3D(asset: ListingArt.calendar, size: artSize, halo: artSize + 4, haloColor: DesignColors.tint(DesignColors.surface, Alpha.v22)),
               ),
             ),
           ],
@@ -139,8 +141,9 @@ class TripDaySpotList extends StatelessWidget {
     final title = TripStringsV2Plan.dayHeaderEmpty(day, dateText);
     const white = DesignColors.surface;
     return Container(
-      constraints: BoxConstraints(minHeight: DS.s(96)),
-      padding: EdgeInsets.fromLTRB(artRoom, DS.s(14), DS.s(12), DS.s(12)),
+      key: headerKey,
+      constraints: BoxConstraints(minHeight: DS.s(80)),
+      padding: EdgeInsets.fromLTRB(artRoom, DS.s(12), DS.s(12), DS.s(12)),
       decoration: BoxDecoration(gradient: ListingTone.indigo.gradient),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -164,26 +167,16 @@ class TripDaySpotList extends StatelessWidget {
               ),
             ],
           ),
-          if (d.spots.isNotEmpty)
-            Padding(
-              padding: EdgeInsets.only(top: DS.s(2)),
-              child: Wrap(
-                spacing: DS.gh(6),
-                runSpacing: DS.gv(4),
-                crossAxisAlignment: WrapCrossAlignment.center,
-                children: [
-                  Text(TripFormat.duration(load), style: Ink3D.text(12.5, FontWeight.w600, white)),
-                  if (over) _pill(TripStringsV2Plan.longDay, fill: TripLook.warningSurface, ink: TripLook.warningText),
-                ],
-              ),
-            ),
-          Gap.v(8),
+          Gap.v(6),
           Wrap(
+            key: chipsKey,
             spacing: DS.gh(6),
-            runSpacing: DS.gv(6),
+            runSpacing: DS.gv(4),
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
+              if (d.spots.isNotEmpty) Text(TripFormat.duration(load), style: Ink3D.text(12.5, FontWeight.w600, white)),
               _pill(TripStringsV2Plan.placesCount(d.spots.length)),
-              if (plan.isMultiCity) _pill(c.cityNameOf(day)),
+              if (over) _pill(TripStringsV2Plan.longDay, fill: TripLook.warningSurface, ink: TripLook.warningText),
               if (editing && plan.legDayCount(d.leg) > 1)
                 Tap3D(
                   onTap: () => _removeDay(c),

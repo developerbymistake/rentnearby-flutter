@@ -2,7 +2,9 @@ import 'package:get/get.dart';
 import '../../config/app_routes.dart';
 import '../../design/design.dart';
 import 'screens/my_trips_screen.dart';
+import 'screens/trip_customize_screen.dart';
 import 'screens/trip_map_screen.dart';
+import 'screens/trip_name_screen.dart';
 import 'screens/trip_plan_screen.dart';
 import 'screens/trip_replies_screen.dart';
 import 'screens/trip_spots_screen.dart';
@@ -12,7 +14,35 @@ import 'screens/trip_summary_screen.dart';
 import 'screens/trip_where_screen.dart';
 import 'screens/trip_taxi_screen.dart';
 
+Map<dynamic, dynamic> _args() {
+  final a = Get.arguments;
+  return a is Map ? a : const {};
+}
+
 final List<GetPage> tripPages = [
+  GetPage(
+    name: AppRoutes.tripName,
+    page: () {
+      final a = _args();
+      return TripNameScreen(
+        stateName: a['stateName'] as String? ?? '',
+        cityName: a['cityName'] as String? ?? '',
+        initialName: a['name'] as String?,
+      );
+    },
+    customTransition: TemplateTransition(),
+    transitionDuration: templateTransitionDuration,
+  ),
+  GetPage(
+    name: AppRoutes.tripCustomize,
+    page: () {
+      final a = _args();
+      final leg = a['legIndex'] ?? a['leg'];
+      return TripCustomizeScreen(legIndex: leg is int ? leg : null);
+    },
+    customTransition: TemplateTransition(),
+    transitionDuration: templateTransitionDuration,
+  ),
   GetPage(
     name: AppRoutes.tripWhere,
     page: () => const TripWhereScreen(),

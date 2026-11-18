@@ -60,6 +60,13 @@ const _spotModel = TripSpotModel(
   visitMinutes: 60,
 );
 
+Future<void> _until(bool Function() done) async {
+  final sw = Stopwatch()..start();
+  while (!done() && sw.elapsed < const Duration(seconds: 5)) {
+    await Future<void>.delayed(const Duration(milliseconds: 5));
+  }
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -163,7 +170,7 @@ void main() {
     c.scheduleSave();
     expect(await c.flushPendingSave(), isFalse);
     expect(await c.flushPendingSave(), isFalse);
-    await Future<void>.delayed(const Duration(milliseconds: 10));
+    await _until(() => c.trip.value?.taxiRequest != null && !c.saveFailed.value);
     expect(api.count('PUT', '/trips/t1'), 1);
     expect(api.count('GET', '/trips/t1'), 1);
     expect(c.trip.value!.taxiRequest?.view, 'Collecting');
@@ -185,7 +192,7 @@ void main() {
       plan.days[1].copyWith(spots: const []),
     ]);
     expect(await c.saveNow(), isFalse);
-    await Future<void>.delayed(const Duration(milliseconds: 10));
+    await _until(() => c.trip.value?.taxiRequest != null && !c.saveFailed.value);
     expect(api.count('GET', '/trips/t1'), 1);
     expect(c.isPlanLocked, isTrue);
 

@@ -6,6 +6,7 @@ import 'package:get/get.dart';
 import '../controllers/trip_plan_controller.dart';
 import '../models/trip_plan_model.dart';
 import '../utils/trip_guide_rules.dart';
+import '../trip_strings_dayplan.dart';
 import '../trip_strings_v2_plan.dart';
 import '../utils/trip_easy_rules.dart';
 import '../utils/trip_format.dart';
@@ -154,7 +155,7 @@ class TripPlanHeader extends StatelessWidget {
     final progress = c.stepProgress;
     final step = c.isCompleted ? 2 : c.planStep.value;
     final hint = hintOf(c, rows);
-    final editable = !c.isReadOnly && !c.needsUpdate.value;
+    final editable = c.canEditStructure;
     if (c.guideState.on.value) return _guidedRow(context, c, hint, editable);
     return PressScale(
       scale: 0.98,
@@ -243,7 +244,7 @@ class TripPlanHeader extends StatelessWidget {
   Widget _guideHeader(BuildContext context, TripPlanController c, TripPlan plan, TripGuideStep step) {
     final text = TripGuideHeaderText.of(plan, step.row);
     final shown = _shownHint(hintOf(c, c.easyRows));
-    final editable = !c.isReadOnly && !c.needsUpdate.value;
+    final editable = c.canEditStructure;
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
@@ -397,9 +398,10 @@ class TripPlanHeader extends StatelessWidget {
       onSelected: onMenu,
       itemBuilder: (_) {
         final saved = c.trip.value != null;
-        final editable = !c.isReadOnly && !c.needsUpdate.value;
+        final editable = c.canEditStructure;
+        final canSave = !c.isReadOnly && !c.needsUpdate.value;
         return [
-          if (editable)
+          if (canSave)
             _item(
               TripPlanMenu.saveExit,
               TravelIcon.luggage,
@@ -417,7 +419,7 @@ class TripPlanHeader extends StatelessWidget {
               ListingArt.calendar,
               TripStringsV2Plan.menuEditDates,
             ),
-          if (editable)
+          if (canSave)
             _item(
               TripPlanMenu.rename,
               TravelIcon.pin,
@@ -622,6 +624,9 @@ class _MapAction extends StatelessWidget {
 }
 
 class TripPlanStepCard extends StatelessWidget {
+  static const Key cardKey = ValueKey('plan-top-card');
+  static const Key nameKey = ValueKey('plan-top-name');
+
   final ValueChanged<TripPlanMenu> onMenu;
 
   const TripPlanStepCard({super.key, required this.onMenu});
@@ -644,93 +649,68 @@ class TripPlanStepCard extends StatelessWidget {
       final progress = c.stepProgress;
       final step = c.isCompleted ? 2 : c.planStep.value;
       final hint = TripPlanHeader.hintOf(c, rows);
-      final editable = !c.isReadOnly && !c.needsUpdate.value;
+      final editable = c.canEditStructure;
       final pct = progress.percent.clamp(0, 100).toDouble();
-      final title = step == 1
-          ? TripStringsV2Plan.stepAddPlaces().split(' · ').last
-          : (progress.total == 0 ? TripStringsV2Plan.nothingToArrange : TripStringsV2Plan.arranged(progress.done, progress.total));
-      final narrow = MediaQuery.sizeOf(context).width < 340;
-      final art = narrow ? 92.0 : 112.0;
+      final name = c.title;
+      final sub = step == 2 ? (progress.total == 0 ? TripStringsV2Plan.nothingToArrange : TripStringsV2Plan.arranged(progress.done, progress.total)) : null;
       return Tap3D(
         onTap: () => onMenu(TripPlanMenu.easy),
-        label: '${TripStringsV2Plan.stepLabel(step)}, $title',
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            Padding(
-              padding: EdgeInsets.fromLTRB(DS.s(18), DS.s(36), DS.s(18), DS.gv(6)),
-              child: Container(
-                padding: DS.insets(l: 20, t: 22, r: 16, b: 16),
-                decoration: BoxDecoration(
-                  gradient: tone.gradient,
-                  borderRadius: DS.br(kMealsRadius),
-                  boxShadow: [BoxShadow(color: tone.shadow, offset: DS.shadowOffset(const Offset(1.1, 6)), blurRadius: DS.shadowBlur(14))],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Padding(
-                      padding: EdgeInsets.only(right: DS.s(art - 10)),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(TripStringsV2Plan.stepLabel(step), maxLines: 1, style: Ink3D.text(12.5, FontWeight.w600, DesignColors.tint(white, Alpha.v90))),
-                          Text(title, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(21, FontWeight.w700, white, height: 1.25)),
-                          if (hint != null && step == 2)
-                            Text(hint, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(12, FontWeight.w500, DesignColors.tint(white, Alpha.v90))),
-                        ],
+        label: '${TripStringsDayplan.yourPlan}, $name',
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(DS.s(18), DS.gv(14), DS.s(18), DS.gv(6)),
+          child: Container(
+            key: cardKey,
+            padding: DS.insets(l: 20, t: 18, r: 16, b: 16),
+            decoration: BoxDecoration(
+              gradient: tone.gradient,
+              borderRadius: DS.br(kMealsRadius),
+              boxShadow: [BoxShadow(color: tone.shadow, offset: DS.shadowOffset(const Offset(1.1, 6)), blurRadius: DS.shadowBlur(14))],
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(TripStringsDayplan.yourPlan, maxLines: 1, style: Ink3D.text(12.5, FontWeight.w600, DesignColors.tint(white, Alpha.v90))),
+                      Text(name, key: nameKey, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(21, FontWeight.w700, white, height: 1.25)),
+                      if (sub != null) Text(sub, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(12.5, FontWeight.w600, DesignColors.tint(white, Alpha.v90))),
+                      if (hint != null && step == 2)
+                        Text(hint, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(12, FontWeight.w500, DesignColors.tint(white, Alpha.v90))),
+                      Gap.v(12),
+                      ClipRRect(
+                        borderRadius: DS.circular(4),
+                        child: LinearProgressIndicator(
+                          value: pct / 100,
+                          minHeight: DS.s(4),
+                          color: white,
+                          backgroundColor: DesignColors.tint(white, Alpha.scrim),
+                        ),
                       ),
-                    ),
-                    Gap.v(14),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              ClipRRect(
-                                borderRadius: DS.circular(4),
-                                child: LinearProgressIndicator(
-                                  value: pct / 100,
-                                  minHeight: DS.s(4),
-                                  color: white,
-                                  backgroundColor: DesignColors.tint(white, Alpha.scrim),
-                                ),
-                              ),
-                              Gap.v(12),
-                              _pace(context, c, editable, tone),
-                            ],
-                          ),
-                        ),
-                        Gap.h(12),
-                        TweenAnimationBuilder<double>(
-                          tween: Tween<double>(begin: 0, end: pct),
-                          duration: KitMotion.reduce(context) ? Duration.zero : const Duration(milliseconds: 600),
-                          curve: Curves.fastOutSlowIn,
-                          builder: (_, v, _) => RingBadge(progress: v / 100, fill: tone.g2, size: 58),
-                        ),
-                      ],
-                    ),
-                  ],
+                      Gap.v(12),
+                      _pace(context, c, editable, tone),
+                    ],
+                  ),
                 ),
-              ),
+                Gap.h(12),
+                TweenAnimationBuilder<double>(
+                  tween: Tween<double>(begin: 0, end: pct),
+                  duration: KitMotion.reduce(context) ? Duration.zero : const Duration(milliseconds: 600),
+                  curve: Curves.fastOutSlowIn,
+                  builder: (_, v, _) => RingBadge(progress: v / 100, fill: tone.g2, size: 58),
+                ),
+              ],
             ),
-            Positioned(
-              right: DS.s(26),
-              top: 0,
-              child: IgnorePointer(
-                child: Art3D(asset: ListingArt.luggage, size: art, halo: art + 8, haloColor: DesignColors.tint(white, Alpha.v22)),
-              ),
-            ),
-          ],
+          ),
         ),
       );
     });
   }
 
   Widget _pace(BuildContext context, TripPlanController c, bool editable, ListingTone tone) {
-    final label = c.settings.isRelaxed ? TripStringsV2Plan.paceRelaxed : TripStringsV2Plan.paceNormal;
+    final label = TripStringsDayplan.pace(relaxed: c.settings.isRelaxed);
     return Tap3D(
       onTap: editable
           ? () async {
@@ -748,8 +728,6 @@ class TripPlanStepCard extends StatelessWidget {
           children: [
             Flexible(child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(13, FontWeight.w700, tone.text))),
             if (editable) Icon(Icons.keyboard_arrow_down_rounded, size: DS.s(18), color: tone.text),
-            Gap.h(2),
-            Text(TripStringsV2Plan.paceTitle.toLowerCase(), maxLines: 1, style: Ink3D.text(10.5, FontWeight.w500, Ink3D.grey)),
           ],
         ),
       ),

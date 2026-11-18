@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import '../../../config/app_insets.dart';
+import '../../../config/app_routes.dart';
 import '../../../utils/input_formatters.dart';
 import '../controllers/trip_plan_controller.dart';
 import '../controllers/trip_plan_guide.dart';
@@ -13,6 +14,10 @@ import '../models/trip_plan_model.dart';
 import '../utils/trip_guide_rules.dart';
 import '../trip_navigation.dart';
 import '../trip_strings.dart';
+import '../trip_strings_dayplan.dart';
+import '../trip_strings_name.dart';
+import '../utils/trip_name_rules.dart';
+import '../widgets/trip_leg_fold_state.dart';
 import '../trip_strings_v2_plan.dart';
 import '../widgets/trip_add_city_card.dart';
 import '../widgets/trip_day_spot_list.dart';
@@ -32,6 +37,10 @@ import 'trip_dates_sheet.dart';
 class TripPlanScreen extends StatefulWidget {
   const TripPlanScreen({super.key});
 
+  static const Key lockedBannerKey = ValueKey('plan-locked-banner');
+  static const Key viewButtonKey = ValueKey('plan-view-taxi');
+  static const Key renameFieldKey = ValueKey('plan-rename-field');
+
   @override
   State<TripPlanScreen> createState() => _TripPlanScreenState();
 }
@@ -45,6 +54,7 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
   late final TripPlanController _c;
   final _scroll = ScrollController();
   final Map<int, GlobalKey> _legKeys = {};
+  final TripLegFoldState _fold = TripLegFoldState();
   Worker? _stepWorker;
   bool _stepDone = false;
   bool _fresh = false;
@@ -135,6 +145,7 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
     _stepWorker?.dispose();
     _guideWorker?.dispose();
     _scroll.dispose();
+    _fold.dispose();
     _anim.dispose();
     if (Get.isRegistered<TripPlanController>() && identical(Get.find<TripPlanController>(), _c)) {
       _c.editMode.value = false;
@@ -231,31 +242,22 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
   }
 
   Future<void> _rename() async {
-    final ctrl = TextEditingController(text: _c.title);
+    final current = _c.title;
     final title = await Dialog3D.show<String>(
       context,
-      builder: (ctx) => Dialog3D(
-        tone: ListingTone.indigo,
-        art: ListingArt.pushpin,
-        title: TripStringsV2Plan.renameTitle,
-        minBodyLines: 0,
-        content: PillField(
-          tone: ListingTone.indigo,
-          controller: ctrl,
-          autofocus: true,
-          maxLength: 80,
-          hint: TripStringsV2Plan.tripName,
-          inputFormatters: [...noEmojiInputFormatters, LengthLimitingTextInputFormatter(80)],
-        ),
-        secondaryLabel: TripStringsV2Plan.cancel,
-        onSecondary: () => Navigator.pop(ctx),
-        primaryLabel: TripStringsV2Plan.save,
-        onPrimary: () => Navigator.pop(ctx, ctrl.text.trim()),
-      ),
+      builder: (ctx) => _RenameDialog(initial: current.length > TripNameRules.max ? current.substring(0, TripNameRules.max) : current),
     );
-    ctrl.dispose();
-    if (title == null || title.isEmpty || title == _c.title) return;
+    if (title == null || title == current) return;
     await _c.rename(title);
+  }
+
+  void _openCustomize(int leg) {
+    if (!_c.canEditStructure) return;
+    Get.toNamed(AppRoutes.tripCustomize, arguments: {'tripId': _c.trip.value?.id, 'leg': leg});
+  }
+
+  void _openLockedStatus() {
+    Get.toNamed(AppRoutes.tripTaxiStatus, arguments: {'tripId': _c.trip.value?.id, 'requestId': _c.planLockRequestId});
   }
 
   @override
@@ -272,6 +274,7 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
             child: TripPlanHeader(onMenu: _onMenu),
           ),
           _buildOffline(),
+          _buildLocked(),
           _buildNotSaved(),
           Expanded(
             child: Center(
@@ -340,6 +343,20 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
     });
   }
 
+  Widget _buildLocked() {
+    return Obx(() {
+      _c.trip.value;
+      if (!_c.isPlanLocked || _c.plannerOff.value || _c.plan.value == null) return const SizedBox.shrink();
+      return Banner3D(
+        key: TripPlanScreen.lockedBannerKey,
+        kind: BannerKind.info,
+        art: ListingArt.locked,
+        title: _c.planLockMessage,
+        margin: _bannerMargin(),
+      );
+    });
+  }
+
   Widget _buildNotSaved() {
     return Obx(() {
       if (!_c.saveFailed.value || _c.plannerOff.value || _c.plan.value == null) return const SizedBox.shrink();
@@ -393,42 +410,54 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
       _c.trip.value;
       _c.enquiryList.length;
       _c.result.value;
-      final editing = _c.editMode.value && !_c.isReadOnly && !_c.needsUpdate.value;
-      final editable = !_c.isReadOnly && !_c.needsUpdate.value;
+      final editable = _c.canEditStructure;
+      final editing = _c.editMode.value && editable;
       final step2 = !editing && !_c.isCompleted && _c.planStep.value == 2;
-      var n = 0;
-      Widget w(Widget child) => _in(n++, child);
-      return ListView(
-        controller: _scroll,
-        padding: EdgeInsets.only(bottom: DS.s(24)),
-        children: [
-          if (!editing) w(TripPlanStepCard(onMenu: _onMenu)),
-          MediaQuery.withClampedTextScaling(maxScaleFactor: 1.3, child: _buildLegChips()),
-          if (_c.planFailed.value)
-            w(StateCard.error(
-              title: TripStrings.planFailed,
-              message: _c.planError.value ?? TripStrings.checkConnection,
-              actionLabel: _c.planRetryable.value ? TripStrings.retry : null,
-              onAction: _c.planRetryable.value ? _c.retryPlan : null,
-            )),
-          w(const TripTodayCard()),
-          if (editing) _editBanner(),
-          if (step2) w(_g(const TripEasyCard())),
-          if (!step2) ...[
-          for (final d in plan.days)
-            if (_legFilter == null || plan.legAt(_legFilter!) == null || d.leg == _legFilter) ...[
-            if (plan.isMultiCity && plan.legStart(d.leg) == d.day)
-              w(TripLegHeader(key: ValueKey('trip-leg-${d.leg}'), legIndex: d.leg, anchorKey: _legKey(d.leg))),
-            w(TripDaySpotList(d.day, key: ValueKey('trip-day-${d.day}'))),
-          ],
-          if (plan.spotCount == 0 && !editing && editable) _emptyPlan(),
-          if (editing && _c.canAddDay) _addDayButton(),
-          if (editable && !editing) ...[
-            w(const TripAddCityCard()),
-          ] else
-            Gap.v(8),
-          ],
-        ],
+      return ListenableBuilder(
+        listenable: _fold,
+        builder: (_, _) {
+          var n = 0;
+          Widget w(Widget child) => _in(n++, child);
+          return ListView(
+            controller: _scroll,
+            padding: EdgeInsets.only(bottom: DS.s(24)),
+            children: [
+              if (!editing) w(TripPlanStepCard(onMenu: _onMenu)),
+              MediaQuery.withClampedTextScaling(maxScaleFactor: 1.3, child: _buildLegChips()),
+              if (_c.planFailed.value)
+                w(StateCard.error(
+                  title: TripStrings.planFailed,
+                  message: _c.planError.value ?? TripStrings.checkConnection,
+                  actionLabel: _c.planRetryable.value ? TripStrings.retry : null,
+                  onAction: _c.planRetryable.value ? _c.retryPlan : null,
+                )),
+              w(const TripTodayCard()),
+              if (editing) _editBanner(),
+              if (step2) w(_g(const TripEasyCard())),
+              if (!step2) ...[
+              for (final d in plan.days)
+                if (_legFilter == null || plan.legAt(_legFilter!) == null || d.leg == _legFilter) ...[
+                if (plan.legStart(d.leg) == d.day)
+                  w(TripLegHeader(
+                    key: ValueKey('trip-leg-${d.leg}'),
+                    legIndex: d.leg,
+                    anchorKey: _legKey(d.leg),
+                    folded: _fold.isFolded(d.leg),
+                    onToggle: () => _fold.toggle(d.leg),
+                    onCustomize: () => _openCustomize(d.leg),
+                  )),
+                if (!_fold.isFolded(d.leg)) w(TripDaySpotList(d.day, key: ValueKey('trip-day-${d.day}'))),
+              ],
+              if (plan.spotCount == 0 && !editing && editable) _emptyPlan(),
+              if (editing && _c.canAddDay) _addDayButton(),
+              if (editable && !editing) ...[
+                w(const TripAddCityCard()),
+              ] else
+                Gap.v(8),
+              ],
+            ],
+          );
+        },
       );
     });
   }
@@ -473,6 +502,23 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 640),
             child: _nextButton(spots),
+          ),
+        ),
+      );
+
+  Widget _viewBar(BuildContext context, bool bottomInset) => Container(
+        padding: EdgeInsets.fromLTRB(DS.s(16), DS.s(10), DS.s(16), bottomInset ? AppInsets.bottomViewPadding(context) + DS.s(10) : DS.s(10)),
+        decoration: _barDecoration,
+        child: Center(
+          heightFactor: 1,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 640),
+            child: GradientPillButton(
+              key: TripPlanScreen.viewButtonKey,
+              tone: ListingTone.indigo,
+              label: _c.planLock.byBooking ? TripStringsDayplan.viewBooking : TripStringsDayplan.viewRequest,
+              onTap: _openLockedStatus,
+            ),
           ),
         ),
       );
@@ -584,9 +630,10 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
       final complete = _c.isLastDayOrAfter && _c.canComplete;
       final guided = _c.guideState.on.value;
       final mini = !guided && !_c.editMode.value && _c.easyInProgress != null;
-      final nav = !guided && !_c.editMode.value && !_c.isReadOnly && _c.planStep.value == 2;
-      final nextNav = !guided && !_c.editMode.value && !_c.isReadOnly && _c.planStep.value == 1;
-      if (!complete && !mini && !nav && !nextNav) return const SizedBox.shrink();
+      final nav = !guided && !_c.editMode.value && !_c.isReadOnly && !_c.isPlanLocked && _c.planStep.value == 2;
+      final nextNav = !guided && !_c.editMode.value && !_c.isReadOnly && !_c.isPlanLocked && _c.planStep.value == 1;
+      final locked = _c.isPlanLocked && !_c.editMode.value && !_c.isReadOnly;
+      if (!complete && !mini && !nav && !nextNav && !locked) return const SizedBox.shrink();
       return _BarIn(
         key: ValueKey(_c.planStep.value),
         child: Column(
@@ -604,6 +651,7 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
                 ),
               ),
             ),
+          if (locked) _viewBar(context, !complete),
           if (nav) _stepBar(context, !complete),
           if (nextNav) _nextBar(context, !complete, _c.plan.value!.spotCount),
           if (complete) _completeBar(context),
@@ -640,4 +688,72 @@ class _BarInState extends State<_BarIn> with SingleTickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) => TemplateEntrance(animation: _a, animationController: _c, child: widget.child);
+}
+
+class _RenameDialog extends StatefulWidget {
+  const _RenameDialog({required this.initial});
+  final String initial;
+
+  @override
+  State<_RenameDialog> createState() => _RenameDialogState();
+}
+
+class _RenameDialogState extends State<_RenameDialog> {
+  late final TextEditingController _ctrl = TextEditingController(text: widget.initial);
+  bool _blank = false;
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  void _save() {
+    final name = TripNameRules.clean(_ctrl.text);
+    if (!TripNameRules.isValid(name)) {
+      setState(() => _blank = true);
+      return;
+    }
+    Navigator.pop(context, name);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ctrl = _ctrl;
+    return Dialog3D(
+      tone: ListingTone.indigo,
+      art: ListingArt.pushpin,
+      title: TripStringsV2Plan.renameTitle,
+      minBodyLines: 0,
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          PillField(
+            fieldKey: TripPlanScreen.renameFieldKey,
+            tone: ListingTone.indigo,
+            controller: ctrl,
+            autofocus: true,
+            maxLength: TripNameRules.max,
+            counterText: '',
+            errorRing: _blank,
+            hint: TripStringsV2Plan.tripName,
+            textInputAction: TextInputAction.done,
+            inputFormatters: [...noEmojiInputFormatters, LengthLimitingTextInputFormatter(TripNameRules.max)],
+            onChanged: (_) => setState(() => _blank = false),
+            onSubmitted: (_) => _save(),
+          ),
+          FieldMessage(
+            error: _blank ? TripStringsName.empty : null,
+            counter: TripStringsName.counter(ctrl.text.length),
+            reserve: true,
+          ),
+        ],
+      ),
+      secondaryLabel: TripStringsV2Plan.cancel,
+      onSecondary: () => Navigator.pop(context),
+      primaryLabel: TripStringsV2Plan.save,
+      onPrimary: _save,
+    );
+  }
 }

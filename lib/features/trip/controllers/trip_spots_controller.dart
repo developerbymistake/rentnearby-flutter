@@ -37,6 +37,7 @@ class TripSpotsController extends GetxController {
   final book = TripMinutesBook();
   final _suggested = <String>{};
   final _askedMinutes = <String>{};
+  bool suggestionsOn = true;
   bool _minutesOff = false;
   Worker? _routeWorker;
   String? nextCursor;
@@ -251,7 +252,7 @@ class TripSpotsController extends GetxController {
     }
     selected.add(id);
     suggestion.value = null;
-    _suggestFor(id);
+    if (suggestionsOn) _suggestFor(id);
     return true;
   }
 }

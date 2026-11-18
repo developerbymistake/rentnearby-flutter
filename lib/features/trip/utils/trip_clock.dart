@@ -1,10 +1,20 @@
+import 'package:flutter/foundation.dart';
+
 import 'trip_enquiry_rules.dart';
 
 enum TripCheckInWhen { past, tonight, tomorrow, later }
 
 // The trip's calendar runs on the IST day, as on the server; date maths is done on date-only UTC values.
 class TripClock {
-  static DateTime today([DateTime? nowUtc]) => TripEnquiryRules.todayIst(nowUtc ?? DateTime.now().toUtc());
+  @visibleForTesting
+  static DateTime Function() clockUtc = _systemUtc;
+
+  static DateTime _systemUtc() => DateTime.now().toUtc();
+
+  @visibleForTesting
+  static void resetClock() => clockUtc = _systemUtc;
+
+  static DateTime today([DateTime? nowUtc]) => TripEnquiryRules.todayIst(nowUtc ?? clockUtc());
 
   static DateTime dateOnly(DateTime d) => DateTime(d.year, d.month, d.day);
 

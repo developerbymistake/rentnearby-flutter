@@ -20,6 +20,7 @@ import 'trip_strings_mcb_a1.dart';
 import 'trip_strings_steps_a1.dart';
 import 'trip_strings_steps_k3.dart';
 import 'trip_strings_v2_find.dart';
+import 'utils/trip_name_rules.dart';
 import 'utils/trip_travel_rules.dart';
 import 'widgets/trip_city_sheet.dart';
 import 'widgets/trip_journey_card.dart';
@@ -30,19 +31,35 @@ class TripNavigation {
     if (Get.isRegistered<TripPlanController>()) TripPlanController.to.releaseIfIdle();
   }
 
-  static Future<void>? startWithCities(List<TripCityModel> cities) {
-    if (cities.length == 1) {
-      final draft = TripNewDraft.read();
-      final same = draft?.legs.where((l) => l.city.cityKey == cities.first.cityKey).toList() ?? const <TripDraftLeg>[];
-      if (draft != null && same.isNotEmpty) {
-        if (Get.isRegistered<TripPlanController>()) TripPlanController.to.releaseIfIdle();
-        TripNewDraft.save(same, days: draft.days);
-        return openCreate(cities, draftLegs: same);
-      }
+  static Future<void> startWithCities(List<TripCityModel> cities) async {
+    if (cities.isEmpty || Get.currentRoute == AppRoutes.tripName) return;
+    final draft = cities.length == 1 ? TripNewDraft.read() : null;
+    final same = draft?.legs.where((l) => l.city.cityKey == cities.first.cityKey).toList() ?? const <TripDraftLeg>[];
+    final resume = draft != null && same.isNotEmpty;
+    final name = (resume ? draft.name : null) ?? await _askName(cities.first);
+    if (name == null) return;
+    if (resume) {
+      if (Get.isRegistered<TripPlanController>()) TripPlanController.to.releaseIfIdle();
+      TripNewDraft.save(same, days: draft.days);
+      TripNewDraft.saveName(name);
+      await openCreate(cities, draftLegs: same);
+      return;
     }
     _clearDraftState();
-    return openCreate(cities);
+    TripNewDraft.saveName(name);
+    await openCreate(cities);
   }
+
+  static Future<String?> _askName(TripCityModel city) async {
+    final picked = await Get.toNamed(
+      AppRoutes.tripName,
+      arguments: {'stateName': city.stateName, 'cityName': city.name},
+    );
+    return picked is String && TripNameRules.isValid(picked) ? TripNameRules.clean(picked) : null;
+  }
+
+  static Future<void>? openCustomize(int legIndex) =>
+      Get.toNamed(AppRoutes.tripCustomize, arguments: {'legIndex': legIndex});
 
   static void openTripsTab() {
     Get.until((r) => r.settings.name == AppRoutes.main || r.isFirst);

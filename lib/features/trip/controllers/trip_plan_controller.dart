@@ -40,6 +40,7 @@ import '../trip_strings_dayplan.dart';
 import '../trip_strings_mca_a1.dart';
 import '../trip_strings_mcb_a1.dart';
 import '../trip_strings_mcb_k1.dart';
+import '../trip_strings_rename.dart';
 import '../trip_strings_steps_a3.dart';
 import '../trip_strings_steps_k3.dart';
 import '../trip_strings_v2_create.dart';
@@ -53,10 +54,12 @@ import '../utils/trip_leg_draft.dart';
 import '../utils/trip_enquiry_rules.dart';
 import '../utils/trip_guide_rules.dart';
 import '../utils/trip_map_rules.dart';
+import '../utils/trip_name_rules.dart';
 import '../utils/trip_stay_base.dart';
 import '../utils/trip_step_rules.dart';
 import '../utils/trip_travel_rules.dart';
 import '../utils/trip_whatsapp_text.dart';
+import '../widgets/trip_city_sheet.dart' show TripNewDraft;
 import '../widgets/trip_status.dart';
 import 'my_trips_controller.dart';
 import 'trip_enquiry_controller.dart';
@@ -140,6 +143,7 @@ class TripPlanController extends GetxController {
   final _pendingJourneyIds = <String>{};
 
   String? _title;
+  String? _pendingName;
   String? _clientTripId;
   bool _settingsChangedWhilePlanning = false;
   String? _openingId;
@@ -693,6 +697,17 @@ class TripPlanController extends GetxController {
   void resetMap() {
     selectedMapLeg.value = 0;
     selectedMapDay.value = 1;
+  }
+
+  String mapRedrawSignature(TripPlan p) {
+    final days = p.days.map((d) => '${d.day}:${d.spots.map((s) => s.id).join(',')}').join('|');
+    if (!p.isMultiCity) return days;
+    final legs = [
+      for (final l in p.legs)
+        '${l.cityKey}:${l.latitude}:${l.longitude}:${l.arrival?.journeyId}:${l.arrival?.cars}:'
+            '${l.arrival?.planKey}:${l.index >= 2 ? segmentLine(l.index)?.length : null}',
+    ].join('|');
+    return '$days#$legs';
   }
 
   bool mapShowsDay(int day) => switch (mapFocus) {
@@ -1789,6 +1804,7 @@ class TripPlanController extends GetxController {
     _creating = null;
     _saving = null;
     _title = null;
+    _pendingName = null;
     _clientTripId = null;
     _settingsChangedWhilePlanning = false;
     _recalcAfterAuto = false;
@@ -1900,7 +1916,13 @@ class TripPlanController extends GetxController {
   String? _lastToast;
   DateTime? _lastToastAt;
 
-  bool get _payloadRejected => identical(plan.value, _rejectedPlan) && _title == _rejectedTitle;
+  bool get _payloadRejected => identical(plan.value, _rejectedPlan) && _pendingName == _rejectedTitle;
+
+  String get _createName => _pendingName ?? _title ?? title;
+
+  void _sentName(String? name) {
+    if (name != null && _pendingName == name) _pendingName = null;
+  }
 
   String get notSavedMessage {
     final m = _lastSaveMessage;
@@ -1938,7 +1960,7 @@ class TripPlanController extends GetxController {
     } else {
       if (_status(e) == 400 || _status(e) == 409) {
         _rejectedPlan = p;
-        _rejectedTitle = _title;
+        _rejectedTitle = _pendingName;
       }
       _toastSave(_lastSaveMessage!, error: true);
     }
@@ -1960,7 +1982,8 @@ class TripPlanController extends GetxController {
     if (!dirty || plannerOff.value || p == null) return null;
     final saving = _saving;
     final existing = trip.value;
-    final title = _title;
+    final name = _pendingName;
+    final createName = _createName;
     final clientId = _clientTripId;
     final status = _statusFor(false, p);
     return () async {
@@ -1969,9 +1992,9 @@ class TripPlanController extends GetxController {
         if (saving != null) await saving;
         if (id == null) {
           if (creating != null || saving != null) return;
-          await _repo.create(title: title, status: status, plan: p, clientTripId: clientId);
+          await _repo.create(name: createName, status: status, plan: p, clientTripId: clientId);
         } else {
-          await _update(id, title, status, p);
+          await _update(id, name, status, p);
         }
         if (Get.isRegistered<MyTripsController>()) Get.find<MyTripsController>().load();
       } catch (_) {
@@ -2009,6 +2032,9 @@ class TripPlanController extends GetxController {
       tripDays.add(TripDay(day: n, leg: n, spots: refs));
     }
     picked = selections.first.city;
+    final name = TripNewDraft.readName() ?? TripNameRules.suggest(picked!.stateName, picked!.name);
+    _title = name;
+    _pendingName = name;
     _clientTripId = const Uuid().v4();
     final autoDays = TripDaysRules.autoTotal([for (final d in tripDays) [for (final s in d.spots) s.visitMinutes]], TripPace.relaxed);
     final chosenDays = autoDays.clamp(legs.length, TripConstants.maxDaysCap).toInt();
@@ -2044,10 +2070,12 @@ class TripPlanController extends GetxController {
     if (p == null) return null;
     final flow = _flow;
     isSaving.value = true;
+    final name = _createName;
     try {
-      final created = await _repo.create(title: _title, status: TripStatuses.draft, plan: p, clientTripId: _clientTripId);
+      final created = await _repo.create(name: name, status: TripStatuses.draft, plan: p, clientTripId: _clientTripId);
       StorageService.clearTripNewDraft();
       if (flow != _flow) return created;
+      _sentName(name);
       trip.value = created;
       _adoptDistrict(created);
       saveFailed.value = false;
@@ -4346,8 +4374,14 @@ class TripPlanController extends GetxController {
     _saveTimer = Timer(TripConstants.autosaveDebounce, () => saveNow());
   }
 
-  Future<bool> rename(String title) {
-    _title = title.trim();
+  Future<bool> rename(String raw) {
+    if (!TripNameRules.isValid(raw)) {
+      AppToast.warning(TripStringsRename.invalid);
+      return Future.value(false);
+    }
+    final name = TripNameRules.clean(raw);
+    _title = name;
+    _pendingName = name;
     return saveNow();
   }
 
@@ -4397,10 +4431,12 @@ class TripPlanController extends GetxController {
     isSaving.value = true;
     try {
       final current = trip.value;
+      final name = current == null ? _createName : _pendingName;
       final saved = current == null
-          ? await _repo.create(title: _title, status: _statusFor(markPlanned, p), plan: p, clientTripId: _clientTripId)
-          : await _update(current.id, _title, _statusFor(markPlanned, p), p);
+          ? await _repo.create(name: name!, status: _statusFor(markPlanned, p), plan: p, clientTripId: _clientTripId)
+          : await _update(current.id, name, _statusFor(markPlanned, p), p);
       if (flow != _flow) return false;
+      _sentName(name);
       _saveGen++;
       if (_spotsEdited) {
         _spotsEdited = false;
@@ -4489,7 +4525,7 @@ class TripPlanController extends GetxController {
     final t = trip.value;
     if (t != null) trip.value = t.copyWith(planLock: lock);
     _rejectedPlan = p;
-    _rejectedTitle = _title;
+    _rejectedTitle = _pendingName;
     _lastSaveNetworkError = false;
     _lastSaveMessage = planLockMessage;
     saveFailed.value = true;
@@ -4568,13 +4604,13 @@ class TripPlanController extends GetxController {
     return links;
   }
 
-  Future<TripModel> _update(String id, String? title, String status, TripPlan p) async {
+  Future<TripModel> _update(String id, String? name, String status, TripPlan p) async {
     try {
-      return await _repo.update(id, title: title, status: status, plan: p);
+      return await _repo.update(id, name: name, status: status, plan: p);
     } catch (e) {
       if (DioErrorMapper.errorType(e) == TripErrorTypes.concurrentUpdate) {
         await _repo.get(id);
-        return _repo.update(id, title: title, status: status, plan: p);
+        return _repo.update(id, name: name, status: status, plan: p);
       }
       rethrow;
     }

@@ -211,17 +211,17 @@ class TripRepository {
 
   Future<TripModel> get(String id) async => TripModel.fromJson(_data(await _read(() => ApiService.get('/trips/$id'))));
 
-  Future<TripModel> create({String? title, String? status, required TripPlan plan, String? clientTripId}) async =>
+  Future<TripModel> create({required String name, String? status, required TripPlan plan, String? clientTripId}) async =>
       TripModel.fromJson(_data(await ApiService.post('/trips', {
-        'title': ?title,
+        'name': name,
         'status': ?status,
         'plan': plan.toJson(),
         'clientTripId': ?clientTripId,
       })));
 
-  Future<TripModel> update(String id, {String? title, String? status, required TripPlan plan}) async =>
+  Future<TripModel> update(String id, {String? name, String? status, required TripPlan plan}) async =>
       TripModel.fromJson(_data(await ApiService.put('/trips/$id', {
-        'title': ?title,
+        'name': ?name,
         'status': ?status,
         'plan': plan.toJson(),
       })));
