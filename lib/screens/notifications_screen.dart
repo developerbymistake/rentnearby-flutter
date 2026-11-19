@@ -49,13 +49,13 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   void _openNotification(NotificationModel n) {
     _ctrl.markRead(n.id);
-    final route = n.actionRoute;
-    if (route == null || route == AppRoutes.notifications) return;
-    if (!Get.find<AuthController>().canOpenRoute(route)) {
+    final live = AppRoutes.liveTarget(n.actionRoute, n.actionArguments);
+    if (live == null || live.route == AppRoutes.notifications) return;
+    if (!Get.find<AuthController>().canOpenRoute(live.route)) {
       AppToast.info('This is no longer available.');
       return;
     }
-    NotificationService.to.openActionRoute(route, n.actionArguments);
+    NotificationService.to.openActionRoute(live.route, live.args);
   }
 
   static final ListingTone _tone = ListingTone.indigo;

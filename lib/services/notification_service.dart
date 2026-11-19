@@ -38,10 +38,16 @@ const int _maxStackedLines = 8;
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   final ring = TaxiRingPush.tryParse(message.data);
   if (ring != null) {
-    // A visible ring end was already shown with the ring's tag by the system, which replaced the ring.
-    if (ring.kind == TaxiRingKind.end) return;
     WidgetsFlutterBinding.ensureInitialized();
     await GetStorage.init();
+    // A visible ring end was already shown with the ring's tag by the system, which replaced the ring.
+    if (ring.kind == TaxiRingKind.end) {
+      await TaxiRingEndedLog.record(ring.offerId, DateTime.now());
+      return;
+    }
+    try {
+      await StorageService.init();
+    } catch (_) {}
     final plugin = FlutterLocalNotificationsPlugin();
     await plugin.initialize(
       settings: const InitializationSettings(
@@ -332,6 +338,7 @@ class NotificationService extends GetxService {
         return true;
       case TaxiRingOutcome.testShown:
       case TaxiRingOutcome.expired:
+      case TaxiRingOutcome.alreadyEnded:
       case TaxiRingOutcome.ignored:
         return true;
     }

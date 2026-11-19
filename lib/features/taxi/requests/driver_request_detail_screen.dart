@@ -16,6 +16,7 @@ import 'models/driver_request_models.dart';
 import 'strings/driver_request_detail_strings.dart';
 import 'utils/indian_phone.dart';
 import 'widgets/driver_request_body.dart';
+import 'widgets/driver_withdraw_sheet.dart';
 
 typedef _S = DriverRequestDetailStrings;
 
@@ -104,6 +105,13 @@ class _DriverRequestDetailScreenState extends State<DriverRequestDetailScreen> {
   Future<void> _decline() async {
     final r = await _act(() => _c.decline(_id));
     if (r is TaxiOk<DriverOffer> && mounted) _back();
+  }
+
+  Future<void> _withdraw() async {
+    if (_c.isBusy(DriverRequestAction.withdraw, _id)) return;
+    final chip = await DriverWithdrawSheet.show(context, title: _S.withdrawTitle);
+    if (chip == null || !mounted) return;
+    await _act(() => _c.withdraw(_id, chip));
   }
 
   void _call(String phone) => (widget.onCall ?? ContactLauncher.call)(phone);
@@ -223,6 +231,7 @@ class _DriverRequestDetailScreenState extends State<DriverRequestDetailScreen> {
         OfferState.confirmed => (label: TripStringsTaxiDriver.stateBooked, muted: false, note: null),
         OfferState.missed => (label: TripStringsTaxiDriver.stateMissed, muted: true, note: TripStringsTaxiDriver.missedNote),
         OfferState.notSelected => (label: TripStringsTaxiDriver.stateNotSelected, muted: true, note: TripStringsTaxiDriver.notSelectedNote),
+        OfferState.withdrawn => (label: _S.youWithdrew, muted: true, note: null),
         _ => (label: TripStringsTaxiDriver.stateClosed, muted: true, note: null),
       };
 
@@ -248,14 +257,21 @@ class _DriverRequestDetailScreenState extends State<DriverRequestDetailScreen> {
         ];
       case OfferState.accepted:
         final phone = o.traveller?.phone;
-        if (phone == null) return const [];
         return [
-          GradientPillButton(
-            key: const ValueKey('request_call'),
-            tone: ListingTone.forest,
-            label: TripStringsTaxiDriver.callTraveller,
-            onTap: () => _call(phone),
+          WhitePillButton(
+            key: const ValueKey('request_withdraw'),
+            tone: ListingTone.indigo,
+            label: _S.withdraw,
+            enabled: !_c.isBusy(DriverRequestAction.withdraw, _id),
+            onTap: _withdraw,
           ),
+          if (phone != null)
+            GradientPillButton(
+              key: const ValueKey('request_call'),
+              tone: ListingTone.forest,
+              label: TripStringsTaxiDriver.callTraveller,
+              onTap: () => _call(phone),
+            ),
         ];
       case OfferState.selected:
         return [

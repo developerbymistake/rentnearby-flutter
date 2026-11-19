@@ -84,6 +84,12 @@ class _FakeRepo extends DriverRequestRepository {
   }
 
   @override
+  Future<TaxiResult<DriverOffer>> withdraw(String offerId, ReasonChip chip) async {
+    calls.add('withdraw:${chip.wire}');
+    return result ?? TaxiOk(DriverOffer.fromJson({...json, 'state': 'Withdrawn', 'trip': null}));
+  }
+
+  @override
   Future<TaxiResult<DriverOfferList>> offers({String? cursor}) async => const TaxiOffline();
 }
 
@@ -250,6 +256,62 @@ void main() {
     await tester.pump();
     await _tap(tester, 'request_accept');
     expect(_t('Not possible now.'), findsOneWidget);
+  });
+
+  Map<String, dynamic> accepted() => {..._selected(), 'state': 'Accepted', 'confirmBy': null};
+
+  Future<void> openWithdrawSheet(WidgetTester tester) async {
+    await _tap(tester, 'request_withdraw');
+    await tester.pump(const Duration(milliseconds: 500));
+  }
+
+  testWidgets('accepted shows Withdraw next to Call traveller', (tester) async {
+    await _open(tester, accepted());
+    expect(_t('Withdraw'), findsOneWidget);
+    expect(_t('Call traveller'), findsOneWidget);
+  });
+
+  testWidgets('accepted without a number still offers Withdraw', (tester) async {
+    await _open(tester, {...accepted(), 'traveller': {'name': 'Aarav Sharma', 'phone': null}});
+    expect(_t('Withdraw'), findsOneWidget);
+    expect(find.byKey(const ValueKey('request_call')), findsNothing);
+  });
+
+  testWidgets('withdraw sends the chosen chip, shows You withdrew and keeps the trip body', (tester) async {
+    final rig = await _open(tester, accepted());
+    await openWithdrawSheet(tester);
+    expect(_t('Withdraw from request'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('driver_reason_VehicleIssue')));
+    await tester.pump();
+    await tester.tap(find.byKey(const ValueKey('driver_withdraw_confirm')));
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pump();
+    expect(rig.repo.calls, ['withdraw:VehicleIssue']);
+    expect(_t('You withdrew'), findsOneWidget);
+    expect(find.byKey(const ValueKey('request_withdraw')), findsNothing);
+    expect(find.byKey(const ValueKey('request_call')), findsNothing);
+    expect(_t('Day by day'), findsOneWidget);
+    expect(rig.backs, 0);
+  });
+
+  testWidgets('closing the withdraw sheet sends nothing', (tester) async {
+    final rig = await _open(tester, accepted());
+    await openWithdrawSheet(tester);
+    Navigator.of(tester.element(find.byKey(const ValueKey('driver_withdraw_confirm')))).pop();
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(rig.repo.calls, isEmpty);
+    expect(_t('Request accepted'), findsOneWidget);
+  });
+
+  testWidgets('a refused withdraw shows the server message', (tester) async {
+    final rig = await _open(tester, accepted());
+    rig.repo.result = const TaxiStateInvalid(state: 'Selected', message: 'The traveller already chose a driver.');
+    await openWithdrawSheet(tester);
+    await tester.tap(find.byKey(const ValueKey('driver_withdraw_confirm')));
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pump();
+    expect(rig.repo.calls, ['withdraw:ChangedPlan']);
+    expect(_t('The traveller already chose a driver.'), findsOneWidget);
   });
 
   group('five sizes with a 9 day body', () {

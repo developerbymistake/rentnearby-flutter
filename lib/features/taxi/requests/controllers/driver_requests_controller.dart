@@ -144,7 +144,12 @@ class DriverRequestsController extends GetxController with WidgetsBindingObserve
   void _upsert(DriverOffer o) {
     final i = items.indexWhere((e) => e.offerId == o.offerId);
     if (i >= 0) items[i] = o;
-    if (o.trip != null || details.containsKey(o.offerId)) details[o.offerId] = o;
+    final known = details[o.offerId];
+    if (o.trip != null) {
+      details[o.offerId] = o;
+    } else if (known != null) {
+      details[o.offerId] = known.trip == null ? o : o.copyWith(trip: known.trip);
+    }
     final conflict = o.datesConflict;
     if (conflict != null) {
       conflicts[o.offerId] = conflict;

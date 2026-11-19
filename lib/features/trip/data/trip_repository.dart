@@ -35,6 +35,7 @@ class TripErrorTypes {
   static const String tooManySpotsPerDay = 'TooManySpotsPerDay';
   static const String tooManySpotsForDays = 'TooManySpotsForDays';
   static const String nameInvalid = 'TripNameInvalid';
+  static const String tripChanged = 'TripChanged';
 }
 
 class TripCitySupply {
@@ -220,11 +221,12 @@ class TripRepository {
         'clientTripId': ?clientTripId,
       })));
 
-  Future<TripModel> update(String id, {String? name, String? status, required TripPlan plan}) async =>
+  Future<TripModel> update(String id, {String? name, String? status, required TripPlan plan, DateTime? baseUpdatedAt}) async =>
       TripModel.fromJson(_data(await ApiService.put('/trips/$id', {
         'name': ?name,
         'status': ?status,
         'plan': plan.toJson(),
+        'baseUpdatedAt': ?baseUpdatedAt?.toUtc().toIso8601String(),
       })));
 
   Future<void> delete(String id) => ApiService.delete('/trips/$id');

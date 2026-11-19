@@ -97,7 +97,74 @@ class _FailingAdapter implements HttpClientAdapter {
 }
 
 void main() {
-  setUp(TaxiRingService.resetTestRingMarker);
+  setUp(() {
+    TaxiRingService.resetTestRingMarker();
+    TaxiRingEndedLog.store = _MemoryStore();
+  });
+  tearDown(() => TaxiRingEndedLog.store = const GetStorageTaxiRingDeviceStore());
+
+  group('ring after its end', () {
+    Map<String, dynamic> endData() => Map<String, dynamic>.from(_sample('push_ring_end.json')['data'] as Map);
+
+    test('late_ring_after_end_is_not_shown_and_not_acked', () async {
+      final h = _Harness();
+      expect(endData()['offerId'], _ringData()['offerId']);
+      await h.service.handle(endData());
+      final result = await h.service.handle(_ringData());
+      await result.ack;
+      expect(result.outcome, TaxiRingOutcome.alreadyEnded);
+      expect(h.notifier.shown, isEmpty);
+      expect(h.acks, isEmpty);
+    });
+
+    test('end_recorded_by_another_service_instance_blocks_the_ring', () async {
+      await TaxiRingEndedLog.record('a1b2c3d4-0001-4a00-8000-000000000001', _receivedAt);
+      final h = _Harness();
+      final result = await h.service.handle(_ringData());
+      expect(result.outcome, TaxiRingOutcome.alreadyEnded);
+      expect(h.notifier.shown, isEmpty);
+    });
+
+    test('end_of_another_offer_does_not_block_the_ring', () async {
+      final h = _Harness();
+      await h.service.handle({...endData(), 'offerId': 'other-offer'});
+      final result = await h.service.handle(_ringData());
+      await result.ack;
+      expect(result.outcome, TaxiRingOutcome.shown);
+      expect(h.notifier.shown, hasLength(1));
+      expect(h.acks, hasLength(1));
+    });
+
+    test('record_is_kept_for_an_hour_and_capped', () async {
+      await TaxiRingEndedLog.record('o1', _receivedAt);
+      expect(TaxiRingEndedLog.contains('o1', _receivedAt.add(const Duration(minutes: 59))), isTrue);
+      expect(TaxiRingEndedLog.contains('o1', _receivedAt.add(TaxiRingEndedLog.keepFor)), isFalse);
+      for (var i = 0; i < TaxiRingEndedLog.maxEntries + 10; i++) {
+        await TaxiRingEndedLog.record('n$i', _receivedAt.add(Duration(seconds: i)));
+      }
+      final at = _receivedAt.add(const Duration(minutes: 2));
+      expect(TaxiRingEndedLog.contains('n${TaxiRingEndedLog.maxEntries + 9}', at), isTrue);
+      expect(TaxiRingEndedLog.contains('n10', at), isTrue);
+      expect(TaxiRingEndedLog.contains('n9', at), isFalse);
+      expect(TaxiRingEndedLog.contains('o1', at), isFalse);
+    });
+
+    test('unreadable_store_does_not_block_rings', () async {
+      final store = _MemoryStore()..values['taxi_ring_ended_offers'] = 'not json';
+      TaxiRingEndedLog.store = store;
+      final h = _Harness();
+      final result = await h.service.handle(_ringData());
+      expect(result.outcome, TaxiRingOutcome.shown);
+    });
+
+    test('background_end_is_recorded_before_returning', () {
+      final source = File('lib/services/notification_service.dart').readAsStringSync();
+      final record = source.indexOf('await TaxiRingEndedLog.record(ring.offerId');
+      expect(record, greaterThan(source.indexOf('await GetStorage.init();')));
+      expect(record, lessThan(source.indexOf('final result = await TaxiRingService.withPlugin(plugin).handle')));
+      expect(source, contains('case TaxiRingOutcome.alreadyEnded:'));
+    });
+  });
 
   test('ring_sample_parses', () {
     final push = TaxiRingPush.tryParse(_ringData())!;
@@ -164,7 +231,7 @@ void main() {
 
   test('expired_ring_shows_nothing_and_acks_late', () async {
     final h = _Harness(now: DateTime.utc(2026, 12, 10, 9, 46, 8));
-    final result = await h.service.handle(_ringData());
+    final result = await h.service.handle(_ringData()..remove('sentAt'));
     await result.ack;
     expect(result.outcome, TaxiRingOutcome.expired);
     expect(h.notifier.shown, isEmpty);
@@ -172,6 +239,85 @@ void main() {
     expect(h.acks.single.$1, 'a1b2c3d4-0001-4a00-8000-000000000001');
     expect(h.acks.single.$2['late'], isTrue);
     expect(h.acks.single.$2['shown'], isFalse);
+  });
+
+  group('phone clock is wrong', () {
+    int? timeout(_Harness h) => (h.notifier.shown.single.details.android!).timeoutAfter;
+
+    test('sent_at_is_parsed', () {
+      expect(TaxiRingPush.tryParse(_ringData())!.sentAt, DateTime.utc(2026, 12, 10, 9, 41, 8));
+      expect(TaxiRingPush.tryParse(_ringData()..remove('sentAt')), isNotNull);
+    });
+
+    test('clock_six_minutes_ahead_still_rings_for_the_full_window', () async {
+      final h = _Harness(now: _receivedAt.add(const Duration(minutes: 6)));
+      final result = await h.service.handle(_ringData());
+      await result.ack;
+      expect(result.outcome, TaxiRingOutcome.shown);
+      expect(timeout(h), 299000);
+      expect(h.acks.single.$2['late'], isFalse);
+      expect(h.acks.single.$2['shown'], isTrue);
+    });
+
+    test('clock_ten_minutes_behind_does_not_ring_longer_than_the_window', () async {
+      final h = _Harness(now: _receivedAt.subtract(const Duration(minutes: 10)));
+      final result = await h.service.handle(_ringData());
+      await result.ack;
+      expect(result.outcome, TaxiRingOutcome.shown);
+      expect(timeout(h), 299000);
+      expect(h.acks.single.$2['late'], isFalse);
+    });
+
+    test('time_left_follows_the_corrected_clock_after_receipt', () {
+      final device = _receivedAt.add(const Duration(minutes: 6));
+      final push = TaxiRingPush.tryParse(_ringData())!.receivedAt(device);
+      expect(push.timeLeft(device), const Duration(seconds: 299));
+      expect(push.timeLeft(device.add(const Duration(seconds: 200))), const Duration(seconds: 99));
+      expect(push.isExpired(device.add(const Duration(seconds: 299))), isTrue);
+      expect(TaxiRingNotification.android(push, device.add(const Duration(seconds: 290))).timeoutAfter, 9000);
+    });
+
+    test('ring_sent_after_its_expiry_is_late_whatever_the_clock', () async {
+      final h = _Harness(now: _receivedAt.subtract(const Duration(hours: 1)));
+      final result = await h.service.handle({..._ringData(), 'sentAt': '2026-12-10T09:46:07Z'});
+      await result.ack;
+      expect(result.outcome, TaxiRingOutcome.expired);
+      expect(h.notifier.shown, isEmpty);
+      expect(h.acks.single.$2['late'], isTrue);
+    });
+
+    test('retried_ring_with_fresh_sent_at_rings_only_for_the_time_left', () async {
+      final h = _Harness(now: DateTime.utc(2026, 12, 10, 9, 45, 58));
+      final result = await h.service.handle({..._ringData(), 'sentAt': '2026-12-10T09:45:57Z'});
+      await result.ack;
+      expect(result.outcome, TaxiRingOutcome.shown);
+      expect(timeout(h), 10000);
+      expect(h.acks.single.$2['late'], isFalse);
+      final push = TaxiRingPush.tryParse({..._ringData(), 'sentAt': '2026-12-10T09:45:57Z'})!
+          .receivedAt(DateTime.utc(2026, 12, 10, 9, 45, 58));
+      expect(push.isExpired(DateTime.utc(2026, 12, 10, 9, 46, 8)), isTrue);
+    });
+
+    test('without_sent_at_a_slow_clock_is_capped_at_the_ring_limit', () async {
+      final h = _Harness(now: _receivedAt.subtract(const Duration(minutes: 10)));
+      final result = await h.service.handle(_ringData()..remove('sentAt'));
+      expect(result.outcome, TaxiRingOutcome.shown);
+      expect(timeout(h), TaxiRingPush.maxRing.inMilliseconds);
+    });
+
+    test('test_ring_uses_the_corrected_clock', () async {
+      final h = _Harness(now: _receivedAt.add(const Duration(minutes: 6)));
+      final result = await h.service.handle({
+        ..._ringData(),
+        'kind': 'taxi_ring_test',
+        'offerId': '',
+        'ackToken': '',
+        'sentAt': '2026-12-10T09:41:09Z',
+        'expiresAt': '2026-12-10T09:41:39Z',
+      });
+      expect(result.outcome, TaxiRingOutcome.testShown);
+      expect(timeout(h), 30000);
+    });
   });
 
   test('ack_does_not_block_the_notification', () async {

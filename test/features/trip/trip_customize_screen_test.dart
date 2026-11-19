@@ -330,6 +330,57 @@ void main() {
     await tester.pumpAndSettle(const Duration(seconds: 6));
   });
 
+  testWidgets('double_tap_update_pops_only_customize', (tester) async {
+    final c = _rig(enginePlan([[3, 2]]));
+    var writes = 0;
+    final sub = c.plan.listen((_) => writes++);
+    addTearDown(sub.cancel);
+    const dayPlanKey = ValueKey('stub-day-plan');
+    await pumpPhone(
+      tester,
+      Scaffold(
+        body: Center(
+          child: TextButton(
+            key: const ValueKey('open-day-plan'),
+            onPressed: () => Get.to(() => Scaffold(key: dayPlanKey, body: _host())),
+            child: const Text('day plan'),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.byKey(const ValueKey('open-day-plan')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(_openKey));
+    await tester.pumpAndSettle();
+    await _deleteDay(tester, 1);
+    final onTap = _update(tester).onTap!;
+    onTap();
+    onTap();
+    await tester.pumpAndSettle();
+    expect(find.byType(TripCustomizeScreen), findsNothing);
+    expect(find.byKey(dayPlanKey), findsOneWidget);
+    expect(writes, 1);
+    expect(_toasts, ['ok:${TripStringsCustomize.planUpdated}']);
+    expect(c.plan.value!.legDayCount(1), 1);
+    Get.delete<TripPlanController>(force: true);
+    await tester.pumpAndSettle(const Duration(seconds: 6));
+  });
+
+  testWidgets('blocked_update_can_be_tapped_again', (tester) async {
+    final c = _rig(enginePlan([[3, 2]]));
+    await _open(tester);
+    await _deleteDay(tester, 1);
+    c.trip.value = engineTrip(c.plan.value!, lock: lockedByRequest);
+    await _tapUpdate(tester);
+    expect(_toasts, ['warn:${c.planLockMessage}']);
+    c.trip.value = engineTrip(c.plan.value!);
+    await _tapUpdate(tester);
+    expect(find.byType(TripCustomizeScreen), findsNothing);
+    expect(_toasts, ['warn:${c.planLockMessage}', 'ok:${TripStringsCustomize.planUpdated}']);
+    Get.delete<TripPlanController>(force: true);
+    await tester.pumpAndSettle(const Duration(seconds: 6));
+  });
+
   testWidgets('other_cities_identical_after_update', (tester) async {
     final c = _rig(enginePlan([[2, 1], [2, 2], [1]]));
     final before = c.plan.value!;

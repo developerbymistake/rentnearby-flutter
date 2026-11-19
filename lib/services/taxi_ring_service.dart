@@ -9,6 +9,7 @@ import 'package:get_storage/get_storage.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 import '../config/app_constants.dart';
+import 'taxi_ring_session.dart';
 
 class TripStringsTaxiRing {
   TripStringsTaxiRing._();
@@ -34,8 +35,11 @@ class TaxiRingPush {
     required this.title,
     required this.lines,
     required this.reason,
+    this.sentAt,
+    this.clockOffset = Duration.zero,
   });
 
+  static const Duration maxRing = Duration(seconds: 300);
   static const String ringKind = 'taxi_ring';
   static const String testKind = 'taxi_ring_test';
   static const String endKind = 'taxi_ring_end';
@@ -50,14 +54,35 @@ class TaxiRingPush {
   final String title;
   final List<String> lines;
   final String? reason;
+  final DateTime? sentAt;
+  final Duration clockOffset;
 
   String get tag => kind == TaxiRingKind.test ? 'taxi_ring_test' : TaxiRingNotification.tagFor(offerId);
+
+  // FCM drops a ring after its TTL (time left at send), so arrival means the server clock now is sentAt.
+  TaxiRingPush receivedAt(DateTime deviceNow) {
+    final sent = sentAt;
+    if (sent == null) return this;
+    return TaxiRingPush(
+      kind: kind,
+      offerId: offerId,
+      requestId: requestId,
+      expiresAt: expiresAt,
+      ackToken: ackToken,
+      title: title,
+      lines: lines,
+      reason: reason,
+      sentAt: sent,
+      clockOffset: sent.difference(deviceNow.toUtc()),
+    );
+  }
 
   Duration timeLeft(DateTime now) {
     final at = expiresAt;
     if (at == null) return Duration.zero;
-    final left = at.toUtc().difference(now.toUtc());
-    return left.isNegative ? Duration.zero : left;
+    final left = at.toUtc().difference(now.toUtc().add(clockOffset));
+    if (left.isNegative) return Duration.zero;
+    return left > maxRing ? maxRing : left;
   }
 
   bool isExpired(DateTime now) => timeLeft(now) <= Duration.zero;
@@ -97,6 +122,7 @@ class TaxiRingPush {
           if ((data[key]?.toString() ?? '').isNotEmpty) data[key].toString(),
       ],
       reason: data['reason']?.toString(),
+      sentAt: DateTime.tryParse(data['sentAt']?.toString() ?? '')?.toUtc(),
     );
   }
 }
@@ -242,7 +268,7 @@ class TaxiRingDeviceState {
 typedef TaxiRingDeviceProbe = Future<TaxiRingDeviceState> Function();
 typedef TaxiAckSender = Future<void> Function(String offerId, Map<String, dynamic> body);
 
-enum TaxiRingOutcome { shown, testShown, expired, ended, ignored }
+enum TaxiRingOutcome { shown, testShown, expired, ended, alreadyEnded, ignored }
 
 class TaxiRingResult {
   const TaxiRingResult(this.outcome, this.push, this.ack);
@@ -257,18 +283,31 @@ class TaxiRingService {
     required this.sendAck,
     required this.probe,
     DateTime Function()? clock,
+    this.driverSession,
   }) : _clock = clock ?? DateTime.now;
 
   factory TaxiRingService.withPlugin(FlutterLocalNotificationsPlugin plugin) => TaxiRingService(
         notifier: PluginTaxiRingNotifier(plugin),
         sendAck: TaxiRingAckClient.send,
         probe: () => TaxiRingDevice.read(plugin),
+        driverSession: TaxiRingSession.isDriver,
       );
 
   final TaxiRingNotifier notifier;
   final TaxiAckSender sendAck;
   final TaxiRingDeviceProbe probe;
   final DateTime Function() _clock;
+  final Future<bool> Function()? driverSession;
+
+  Future<bool> _isDriverSession() async {
+    final check = driverSession;
+    if (check == null) return true;
+    try {
+      return await check();
+    } catch (_) {
+      return false;
+    }
+  }
 
   static DateTime? lastTestRingShownAt;
   static Completer<DateTime> _testRing = Completer<DateTime>();
@@ -288,11 +327,15 @@ class TaxiRingService {
   }
 
   Future<TaxiRingResult> handle(Map<String, dynamic> data) async {
-    final push = TaxiRingPush.tryParse(data);
-    if (push == null) return TaxiRingResult(TaxiRingOutcome.ignored, null, Future<void>.value());
     final now = _clock().toUtc();
+    final push = TaxiRingPush.tryParse(data)?.receivedAt(now);
+    if (push == null) return TaxiRingResult(TaxiRingOutcome.ignored, null, Future<void>.value());
+    if (push.kind != TaxiRingKind.end && !await _isDriverSession()) {
+      return TaxiRingResult(TaxiRingOutcome.ignored, push, Future<void>.value());
+    }
     switch (push.kind) {
       case TaxiRingKind.end:
+        await TaxiRingEndedLog.record(push.offerId, now);
         await _safe(() => notifier.cancel(TaxiRingNotification.id, push.tag));
         return TaxiRingResult(TaxiRingOutcome.ended, push, Future<void>.value());
       case TaxiRingKind.test:
@@ -301,6 +344,9 @@ class TaxiRingService {
         if (shown) _markTestRingShown(now);
         return TaxiRingResult(shown ? TaxiRingOutcome.testShown : TaxiRingOutcome.ignored, push, Future<void>.value());
       case TaxiRingKind.ring:
+        if (TaxiRingEndedLog.contains(push.offerId, now)) {
+          return TaxiRingResult(TaxiRingOutcome.alreadyEnded, push, Future<void>.value());
+        }
         if (push.isExpired(now)) {
           return TaxiRingResult(TaxiRingOutcome.expired, push, _ack(push, now, shown: false, late: true));
         }
@@ -375,6 +421,47 @@ class GetStorageTaxiRingDeviceStore implements TaxiRingDeviceStore {
   Future<void> write(String key, Object? value) => GetStorage().write(key, value);
 }
 
+class TaxiRingEndedLog {
+  TaxiRingEndedLog._();
+
+  static const String _key = 'taxi_ring_ended_offers';
+  static const Duration keepFor = Duration(hours: 1);
+  static const int maxEntries = 50;
+
+  static TaxiRingDeviceStore store = const GetStorageTaxiRingDeviceStore();
+
+  static Map<String, int> _read() {
+    try {
+      final decoded = jsonDecode(store.readString(_key) ?? '{}');
+      if (decoded is! Map) return <String, int>{};
+      return {
+        for (final e in decoded.entries)
+          if (e.value is int) e.key.toString(): e.value as int,
+      };
+    } catch (_) {
+      return <String, int>{};
+    }
+  }
+
+  static bool contains(String offerId, DateTime now) {
+    final at = _read()[offerId];
+    return at != null && now.toUtc().millisecondsSinceEpoch - at < keepFor.inMilliseconds;
+  }
+
+  static Future<void> record(String offerId, DateTime now) async {
+    if (offerId.isEmpty) return;
+    final nowMs = now.toUtc().millisecondsSinceEpoch;
+    final kept = _read()
+      ..removeWhere((_, at) => nowMs - at >= keepFor.inMilliseconds)
+      ..remove(offerId);
+    final entries = kept.entries.toList()..sort((a, b) => a.value.compareTo(b.value));
+    final recent = entries.length >= maxEntries ? entries.sublist(entries.length - maxEntries + 1) : entries;
+    try {
+      await store.write(_key, jsonEncode({for (final e in recent) e.key: e.value, offerId: nowMs}));
+    } catch (_) {}
+  }
+}
+
 class TaxiRingDevice {
   TaxiRingDevice._();
 
@@ -429,16 +516,23 @@ class TaxiRingDevice {
     return await refresh() ? stored() : cached;
   }
 
+  // Below high the ring makes no sound and shows no heads-up.
+  static bool ringChannelReady(Iterable<AndroidNotificationChannel> channels) {
+    for (final c in channels) {
+      if (c.id == TaxiRingNotification.ringChannelId) {
+        return c.importance == Importance.high || c.importance == Importance.max;
+      }
+    }
+    return false;
+  }
+
   static Future<TaxiRingDeviceState> read(FlutterLocalNotificationsPlugin plugin) async {
     final android = plugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
     var notificationsOn = false;
     var ringChannelOn = false;
     try {
       notificationsOn = await android?.areNotificationsEnabled() ?? false;
-      final channels = await android?.getNotificationChannels() ?? const <AndroidNotificationChannel>[];
-      for (final c in channels) {
-        if (c.id == TaxiRingNotification.ringChannelId) ringChannelOn = c.importance != Importance.none;
-      }
+      ringChannelOn = ringChannelReady(await android?.getNotificationChannels() ?? const <AndroidNotificationChannel>[]);
     } catch (_) {}
     var appBuild = 0;
     try {

@@ -44,6 +44,7 @@ import '../trip_strings_name.dart';
 import '../trip_strings_rename.dart';
 import '../trip_strings_steps_a3.dart';
 import '../trip_strings_steps_k3.dart';
+import '../trip_strings_sync.dart';
 import '../trip_strings_v2_create.dart';
 import '../trip_strings_v2_plan.dart';
 import '../utils/trip_supply_area.dart';
@@ -85,6 +86,7 @@ class TripPlanController extends GetxController {
           : Get.put(TripPlanController(), permanent: true);
 
   final _repo = const TripRepository();
+  final Map<String, DateTime> _savedAt = {};
 
   static const String planLockedErrorType = 'PlanLocked';
 
@@ -172,6 +174,9 @@ class TripPlanController extends GetxController {
   Worker? _netWorker;
   AppLifecycleListener? _lifecycle;
   TripPlan? _pendingRetry;
+  DateTime? _pendingRetryBase;
+  // Base of an adopted offline copy; saves send it so a newer server plan answers TripChanged.
+  DateTime? _copyBase;
   int _autoJobs = 0;
   bool _recalcAfterAuto = false;
 
@@ -1242,16 +1247,21 @@ class TripPlanController extends GetxController {
     final copy = _pendingRetry;
     if (copy != null && !isReadOnly) {
       _pendingRetry = null;
+      _copyBase = _pendingRetryBase;
+      _pendingRetryBase = null;
       plan.value = copy;
     }
     return saveNow();
   }
 
+  @visibleForTesting
+  String? get lastToast => _lastToast;
+
   void _writeAhead() {
     final t = trip.value;
     final p = plan.value;
     if (t == null || t.raw == null || p == null || _saveBlocked) return;
-    StorageService.saveTripPending(t.id, plan: p.toJson(), baseUpdatedAt: t.updatedAt);
+    StorageService.saveTripPending(t.id, plan: p.toJson(), baseUpdatedAt: _copyBase ?? t.updatedAt);
   }
 
   Future<void> flushForBackground() async {
@@ -1845,6 +1855,8 @@ class TripPlanController extends GetxController {
     enquiriesFailed.value = false;
     startChangedNotes.clear();
     _pendingRetry = null;
+    _pendingRetryBase = null;
+    _copyBase = null;
     offline.value = false;
     picked = null;
     staySupplyByDistrict.clear();
@@ -1997,21 +2009,32 @@ class TripPlanController extends GetxController {
     final createName = _createName;
     final clientId = _clientTripId;
     final status = _statusFor(false, p);
+    final copyBase = _copyBase;
     return () async {
+      String? id;
       try {
-        final id = creating != null ? (await creating)?.id : existing?.id;
+        id = creating != null ? (await creating)?.id : existing?.id;
         if (saving != null) await saving;
         if (id == null) {
           if (creating != null || saving != null) return;
           await _repo.create(name: createName, status: status, plan: p, clientTripId: clientId);
         } else {
-          await _update(id, name, status, p);
+          await _update(id, name, status, p, copyBase ?? _baseFor(id, existing?.id == id ? existing?.updatedAt : null));
+          _clearPendingIf(id, p);
         }
         if (Get.isRegistered<MyTripsController>()) Get.find<MyTripsController>().load();
-      } catch (_) {
-        return;
+      } catch (e) {
+        if (id == null || DioErrorMapper.errorType(e) != TripErrorTypes.tripChanged) return;
+        _clearPendingIf(id, p);
+        _toastSave(TripStringsSync.changedElsewhereNotSaved);
+        if (Get.isRegistered<MyTripsController>()) Get.find<MyTripsController>().load();
       }
     };
+  }
+
+  static void _clearPendingIf(String id, TripPlan sent) {
+    final pending = StorageService.getTripPending(id);
+    if (pending != null && jsonEncode(pending.plan) == jsonEncode(sent.toJson())) StorageService.clearTripPending(id);
   }
 
   Future<void> startFromSelection(TripCityModel city, List<TripSpotModel> chosen) =>
@@ -2085,6 +2108,7 @@ class TripPlanController extends GetxController {
     try {
       final created = await _repo.create(name: name, status: TripStatuses.draft, plan: p, clientTripId: _clientTripId);
       StorageService.clearTripNewDraft();
+      _savedAt[created.id] = created.updatedAt;
       if (flow != _flow) return created;
       _sentName(name);
       trip.value = created;
@@ -2199,6 +2223,7 @@ class TripPlanController extends GetxController {
       return true;
     }
     _pendingRetry = local;
+    _pendingRetryBase = base;
     saveFailed.value = true;
     return false;
   }
@@ -4265,10 +4290,13 @@ class TripPlanController extends GetxController {
       final current = trip.value;
       final createName = _createName;
       name = current == null ? createName : _pendingName;
+      final copyBase = _copyBase;
       final saved = current == null
           ? await _repo.create(name: createName, status: _statusFor(markPlanned, p), plan: p, clientTripId: _clientTripId)
-          : await _update(current.id, name, _statusFor(markPlanned, p), p);
+          : await _update(current.id, name, _statusFor(markPlanned, p), p, copyBase ?? _baseFor(current.id, current.updatedAt));
+      _savedAt[saved.id] = saved.updatedAt;
       if (flow != _flow) return false;
+      if (identical(_copyBase, copyBase)) _copyBase = null;
       _sentName(name);
       _saveGen++;
       if (_spotsEdited) {
@@ -4331,6 +4359,11 @@ class TripPlanController extends GetxController {
       if (type == TripErrorTypes.tripNeedsUpdate) {
         _saveTimer?.cancel();
         needsUpdate.value = true;
+        return false;
+      }
+      if (id != null && type == TripErrorTypes.tripChanged) {
+        _saveTimer?.cancel();
+        unawaited(Future(() => _reloadChanged(id)));
         return false;
       }
       if (type == planLockedErrorType) {
@@ -4474,15 +4507,32 @@ class TripPlanController extends GetxController {
     return links;
   }
 
-  Future<TripModel> _update(String id, String? name, String status, TripPlan p) async {
+  DateTime? _baseFor(String id, DateTime? known) {
+    final saved = _savedAt[id];
+    if (saved == null || known == null) return saved ?? known;
+    return saved.isAfter(known) ? saved : known;
+  }
+
+  // CONCURRENT_UPDATE resends the same base: a plan saved elsewhere then answers TripChanged.
+  Future<TripModel> _update(String id, String? name, String status, TripPlan p, DateTime? base) async {
+    TripModel saved;
     try {
-      return await _repo.update(id, name: name, status: status, plan: p);
+      saved = await _repo.update(id, name: name, status: status, plan: p, baseUpdatedAt: base);
     } catch (e) {
-      if (DioErrorMapper.errorType(e) == TripErrorTypes.concurrentUpdate) {
-        await _repo.get(id);
-        return _repo.update(id, name: name, status: status, plan: p);
-      }
-      rethrow;
+      if (DioErrorMapper.errorType(e) != TripErrorTypes.concurrentUpdate) rethrow;
+      saved = await _repo.update(id, name: name, status: status, plan: p, baseUpdatedAt: base);
+    }
+    _savedAt[id] = saved.updatedAt;
+    return saved;
+  }
+
+  Future<void> _reloadChanged(String id) async {
+    if (trip.value?.id != id) return;
+    _saveTimer?.cancel();
+    StorageService.clearTripPending(id);
+    await open(id, fresh: true);
+    if (trip.value?.id == id && !openFailed.value && !offline.value && !tripGone.value) {
+      _toastSave(TripStringsSync.changedElsewhere);
     }
   }
 

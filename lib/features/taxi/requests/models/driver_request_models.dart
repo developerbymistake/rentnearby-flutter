@@ -287,7 +287,7 @@ class DriverOffer {
 
   DateTime? get toDay => _day(dateTo);
 
-  DriverOffer copyWith({OfferState? state, DriverDatesConflict? datesConflict}) => DriverOffer(
+  DriverOffer copyWith({OfferState? state, DriverDatesConflict? datesConflict, DriverTrip? trip}) => DriverOffer(
         offerId: offerId,
         requestId: requestId,
         bookingId: bookingId,
@@ -308,7 +308,7 @@ class DriverOffer {
         travellers: travellers,
         traveller: traveller,
         datesConflict: datesConflict ?? this.datesConflict,
-        trip: trip,
+        trip: trip ?? this.trip,
       );
 }
 

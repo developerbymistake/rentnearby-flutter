@@ -7,10 +7,12 @@ import '../models/driver_request_models.dart';
 import '../strings/driver_bookings_strings.dart';
 
 class DriverWithdrawSheet extends StatefulWidget {
-  const DriverWithdrawSheet({super.key});
+  const DriverWithdrawSheet({super.key, this.title = DriverBookingsStrings.sheetTitle});
 
-  static Future<ReasonChip?> show(BuildContext context) =>
-      TripSheetFrame.show<ReasonChip>(context, const DriverWithdrawSheet());
+  final String title;
+
+  static Future<ReasonChip?> show(BuildContext context, {String title = DriverBookingsStrings.sheetTitle}) =>
+      TripSheetFrame.show<ReasonChip>(context, DriverWithdrawSheet(title: title));
 
   @override
   State<DriverWithdrawSheet> createState() => _DriverWithdrawSheetState();
@@ -25,7 +27,7 @@ class _DriverWithdrawSheetState extends State<DriverWithdrawSheet> {
     return TripSheetFrame(
       tone: ListingTone.coral,
       art: ListingArt.warning,
-      title: DriverBookingsStrings.sheetTitle,
+      title: widget.title,
       footer: GradientPillButton(
         key: const ValueKey('driver_withdraw_confirm'),
         tone: ListingTone.coral,

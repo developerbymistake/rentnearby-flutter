@@ -52,6 +52,7 @@ class _TripCustomizeScreenState extends State<TripCustomizeScreen> {
   String? _doneText;
   int _version = 0;
   bool _missing = false;
+  bool _closing = false;
 
   @override
   void initState() {
@@ -178,10 +179,11 @@ class _TripCustomizeScreenState extends State<TripCustomizeScreen> {
   }
 
   Future<void> _update() async {
-    if (!_draft.changed) return;
+    if (_closing || !_draft.changed) return;
     final result = _plan.applyLegDraft(_legIndex, _draft);
     switch (result) {
       case TripLegApplyBlock.none:
+        _closing = true;
         final dayCountChanged = _draft.dayCount != _startDayCount;
         Get.back();
         _say(true, TripStringsCustomize.planUpdated);
@@ -189,6 +191,7 @@ class _TripCustomizeScreenState extends State<TripCustomizeScreen> {
       case TripLegApplyBlock.emptyDay:
         setState(() => _errorDay = _draft.firstEmptyDay);
       case TripLegApplyBlock.stale:
+        _closing = true;
         Get.back();
         _say(false, TripStringsCustomize.planChanged);
       case TripLegApplyBlock.locked:

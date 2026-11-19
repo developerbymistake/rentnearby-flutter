@@ -14,6 +14,9 @@ class DriverRequestDetailStrings {
   static const String waitingForTraveller = 'Waiting for traveller to choose';
   static const String openBookings = 'My bookings';
   static const String bookedNote = 'This booking is confirmed.';
+  static const String withdraw = 'Withdraw';
+  static const String withdrawTitle = 'Withdraw from request';
+  static const String youWithdrew = 'You withdrew';
 
   static const String sectionTrip = 'Trip';
   static const String sectionRoute = 'Route';

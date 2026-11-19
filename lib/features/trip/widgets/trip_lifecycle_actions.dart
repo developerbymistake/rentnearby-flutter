@@ -135,8 +135,8 @@ class TripLifecycleActions {
   static Future<bool> saveAndExit(BuildContext context) async {
     final c = TripPlanController.to;
     final ok = await c.flushPendingSave();
-    if (!ok && c.saveFailed.value) {
-      AppToast.error(TripStringsV2Plan.saveFailed);
+    if (!ok) {
+      if (c.saveFailed.value) AppToast.error(TripStringsV2Plan.saveFailed);
       return false;
     }
     if (!context.mounted) return false;
