@@ -17,7 +17,7 @@ class DriverWithdrawSheet extends StatefulWidget {
 }
 
 class _DriverWithdrawSheetState extends State<DriverWithdrawSheet> {
-  ReasonChip? _chip;
+  ReasonChip _chip = TripStringsTaxiDriver.reasonOrder.first;
 
   @override
   Widget build(BuildContext context) {
@@ -31,7 +31,7 @@ class _DriverWithdrawSheetState extends State<DriverWithdrawSheet> {
         tone: ListingTone.coral,
         label: DriverBookingsStrings.confirmWithdraw,
         danger: true,
-        onTap: chip == null ? null : () => Navigator.pop(context, chip),
+        onTap: () => Navigator.pop(context, chip),
       ),
       children: [
         Wrap(

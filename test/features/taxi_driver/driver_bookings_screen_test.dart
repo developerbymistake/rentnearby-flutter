@@ -171,7 +171,20 @@ void main() {
     expect(find.text('18 Dec to 21 Dec'), findsNothing);
   });
 
-  testWidgets('withdraw_needs_chip_and_calls_controller', (tester) async {
+  testWidgets('withdraw_preselects_changed_plan_like_the_mock', (tester) async {
+    final repo = _FakeRepo();
+    final c = _controller(repo);
+    await pumpPhone(tester, _screen(c));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('booking_withdraw_$_bookedId')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('driver_withdraw_confirm')));
+    await tester.pumpAndSettle();
+    expect(repo.withdrawChips, [ReasonChip.changedPlan]);
+    await _drainToast(tester);
+  });
+
+  testWidgets('withdraw_sends_the_chosen_chip_and_calls_controller', (tester) async {
     final repo = _FakeRepo();
     final c = _controller(repo);
     await pumpPhone(tester, _screen(c));
@@ -184,11 +197,6 @@ void main() {
       expect(find.text(t), findsOneWidget);
     }
     final confirm = find.byKey(const ValueKey('driver_withdraw_confirm'));
-    await tester.tap(confirm);
-    await tester.pumpAndSettle();
-    expect(repo.withdrawChips, isEmpty);
-    expect(find.text('Withdraw from booking'), findsOneWidget);
-
     await tester.tap(find.byKey(const ValueKey('driver_reason_VehicleIssue')));
     await tester.pumpAndSettle();
     await tester.tap(confirm);

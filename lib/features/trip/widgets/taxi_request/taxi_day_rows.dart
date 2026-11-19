@@ -5,18 +5,22 @@ import 'package:flutter/material.dart';
 import '../../models/taxi_request_models.dart';
 import '../../models/trip_plan_model.dart';
 import '../../trip_strings_taxi_request.dart';
+import '../../utils/trip_clock.dart';
 
 class TaxiRequestDayRow {
-  const TaxiRequestDayRow({required this.day, required this.leg, required this.city, required this.places, this.km});
+  const TaxiRequestDayRow({required this.day, required this.leg, required this.city, required this.places, this.km, this.past = false});
 
   final int day;
   final int leg;
   final String city;
   final List<String> places;
   final int? km;
+  final bool past;
 
-  static List<TaxiRequestDayRow> fromPlan(TripPlan plan, {List<TaxiDayStat> stats = const []}) {
+  static List<TaxiRequestDayRow> fromPlan(TripPlan plan, {List<TaxiDayStat> stats = const [], DateTime? today}) {
     final kmByDay = {for (final s in stats) s.day: s.km};
+    final start = plan.settings.startDate;
+    final now = today ?? TripClock.today();
     return [
       for (final d in plan.days)
         TaxiRequestDayRow(
@@ -25,6 +29,7 @@ class TaxiRequestDayRow {
           city: _city(plan, d.leg),
           places: [for (final s in d.spots) s.name],
           km: kmByDay[d.day],
+          past: start != null && TripClock.daysBetween(start, now) >= d.day,
         ),
     ];
   }
@@ -39,6 +44,8 @@ class TaxiRequestDayRow {
 
 class TaxiDayRows extends StatelessWidget {
   const TaxiDayRows({super.key, required this.rows, required this.selected, required this.onToggle});
+
+  static Set<int> pastOf(List<TaxiRequestDayRow> rows) => {for (final r in rows) if (r.past) r.day};
 
   final List<TaxiRequestDayRow> rows;
   final Set<int> selected;
@@ -69,7 +76,7 @@ class TaxiDayRows extends StatelessWidget {
           ),
           for (final r in groups[g]) ...[
             Gap.v(10),
-            _DayRow(row: r, on: selected.contains(r.day), onToggle: () => onToggle(r.day)),
+            _DayRow(row: r, on: !r.past && selected.contains(r.day), onToggle: r.past ? null : () => onToggle(r.day)),
           ],
         ],
       ],
@@ -82,12 +89,14 @@ class _DayRow extends StatelessWidget {
 
   final TaxiRequestDayRow row;
   final bool on;
-  final VoidCallback onToggle;
+  final VoidCallback? onToggle;
 
   @override
   Widget build(BuildContext context) {
     final tone = ListingTone.indigo;
-    return Container(
+    return Opacity(
+      opacity: row.past ? 0.55 : 1,
+      child: Container(
       key: ValueKey('taxi_day_${row.day}'),
       padding: DS.sym(h: 12, v: 12),
       decoration: BoxDecoration(color: Colors.white, borderRadius: DS.circular(16), boxShadow: DS.shadows(Ink3D.softShadow)),
@@ -114,7 +123,10 @@ class _DayRow extends StatelessWidget {
                 ),
                 if (row.places.isNotEmpty)
                   Text(row.places.join(', '), maxLines: 3, overflow: TextOverflow.ellipsis, style: Ink3D.text(12.5, FontWeight.w400, Ink3D.sub)),
-                if (row.km != null) Text(TripStringsTaxiRequest.aboutKm(row.km!), style: Ink3D.text(12.5, FontWeight.w400, Ink3D.sub)),
+                if (row.past)
+                  Text(TripStringsTaxiRequest.dayPassed, key: ValueKey('taxi_day_past_${row.day}'), style: Ink3D.text(12.5, FontWeight.w600, Ink3D.sub))
+                else if (row.km != null)
+                  Text(TripStringsTaxiRequest.aboutKm(row.km!), style: Ink3D.text(12.5, FontWeight.w400, Ink3D.sub)),
               ],
             ),
           ),
@@ -125,13 +137,14 @@ class _DayRow extends StatelessWidget {
             child: CupertinoSwitch(
               key: ValueKey('taxi_day_switch_${row.day}'),
               value: on,
-              onChanged: (_) => onToggle(),
+              onChanged: onToggle == null ? null : (_) => onToggle!(),
               activeTrackColor: tone.g2,
               inactiveTrackColor: DesignColors.switchTrackOff,
               thumbColor: DesignColors.switchThumbOff,
             ),
           ),
         ],
+      ),
       ),
     );
   }

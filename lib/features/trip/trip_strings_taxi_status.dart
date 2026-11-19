@@ -27,6 +27,7 @@ class TripStringsTaxiStatus {
   static const String onHold = 'On hold';
   static const String stillAsking = 'Still asking more drivers';
   static const String askMore = 'Ask more drivers';
+  static const String noDriverAgreed = 'No driver agreed yet. Ask more drivers.';
   static const String cancelRequest = 'Cancel request';
 
   static const String booked = 'Booked';

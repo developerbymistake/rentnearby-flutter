@@ -10,6 +10,7 @@ import '../models/taxi_request_models.dart';
 import '../trip_strings_taxi_request.dart';
 import '../utils/taxi_request_form.dart';
 import '../utils/taxi_result.dart';
+import '../utils/taxi_request_errors.dart';
 import '../widgets/taxi_request/taxi_day_rows.dart';
 import '../widgets/taxi_request/taxi_place_dropdown.dart';
 import '../widgets/taxi_request/taxi_seat_chips.dart';
@@ -54,7 +55,12 @@ class _TripTaxiRequestScreenState extends State<TripTaxiRequestScreen> {
   }
 
   Future<void> _load() async {
-    await _c.loadPlaces(widget.tripId, planDays: [for (final r in widget.rows) r.day], dayStats: widget.dayStats);
+    await _c.loadPlaces(
+      widget.tripId,
+      planDays: [for (final r in widget.rows) r.day],
+      dayStats: widget.dayStats,
+      pastDays: TaxiDayRows.pastOf(widget.rows),
+    );
   }
 
   void _edit(TaxiRequestForm Function(TaxiRequestForm f) change) => _c.editForm(change);
@@ -86,6 +92,9 @@ class _TripTaxiRequestScreenState extends State<TripTaxiRequestScreen> {
         AppToast.error(TripStringsTaxiRequest.offline);
       case TaxiPlanLocked<TaxiRequest>(:final message):
         AppToast.error(message ?? TripStringsTaxiRequest.sendFailed);
+      case TaxiRefused<TaxiRequest>(:final type) when TaxiRequestErrors.isDayInPast(type):
+        AppToast.error(TaxiRequestErrors.dayInPastMessage(type));
+        await _load();
       case TaxiRefused<TaxiRequest>(:final message):
         AppToast.error(message ?? TripStringsTaxiRequest.sendFailed);
       case TaxiFailed<TaxiRequest>(:final message):
@@ -182,7 +191,8 @@ class _TripTaxiRequestScreenState extends State<TripTaxiRequestScreen> {
 
   Widget _body(TaxiRequestForm form, TaxiPickupPlaces places) {
     final tone = ListingTone.indigo;
-    return Center(
+    return Align(
+      alignment: Alignment.topCenter,
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: TripTaxiRequestScreen._maxWidth),
         child: SingleChildScrollView(
@@ -226,9 +236,10 @@ class _TripTaxiRequestScreenState extends State<TripTaxiRequestScreen> {
       number: 1,
       art: TravelIcon.place,
       title: TripStringsTaxiRequest.pickupTitle,
-      sub: TripStringsTaxiRequest.pickupSub,
+      sub: form.pickupPast ? TripStringsTaxiRequest.pickupPassed : TripStringsTaxiRequest.pickupSub,
       on: form.pickupOn,
       switchKey: const ValueKey('taxi_pickup_switch'),
+      switchEnabled: !form.pickupPast,
       onChanged: (v) => _edit((f) => f.setPickupOn(v)),
       child: TaxiPlaceDropdown(
         keyPrefix: 'taxi_pickup',
@@ -264,9 +275,10 @@ class _TripTaxiRequestScreenState extends State<TripTaxiRequestScreen> {
       number: 3,
       art: TravelIcon.flag,
       title: TripStringsTaxiRequest.dropTitle,
-      sub: TripStringsTaxiRequest.dropSub,
+      sub: form.dropPast ? TripStringsTaxiRequest.dropPassed : TripStringsTaxiRequest.dropSub,
       on: form.dropOn,
       switchKey: const ValueKey('taxi_drop_switch'),
+      switchEnabled: !form.dropPast,
       onChanged: (v) {
         if (!v) _dropPicking = false;
         _edit((f) => f.setDropOn(v));

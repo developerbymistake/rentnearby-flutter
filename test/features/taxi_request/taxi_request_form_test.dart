@@ -2,6 +2,9 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:bakhli/features/trip/models/taxi_request_models.dart';
+import 'package:bakhli/features/trip/models/trip_plan_model.dart';
+import 'package:bakhli/features/trip/utils/taxi_request_errors.dart';
+import 'package:bakhli/features/trip/widgets/taxi_request/taxi_day_rows.dart';
 import 'package:bakhli/features/trip/utils/taxi_request_form.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -17,6 +20,53 @@ TaxiPickupPlaces _places() => TaxiPickupPlaces.fromJson(_sample('pickup_places.j
 TaxiRequestForm _form() => TaxiRequestForm.initial(places: _places(), planDays: _days6);
 
 void main() {
+  group('past days', () {
+    TaxiRequestForm started() => TaxiRequestForm.initial(places: _places(), planDays: _days6, pastDays: {1, 2});
+
+    test('started_trip_drops_pickup_and_past_days', () {
+      final f = started();
+      expect(f.pickupPast, isTrue);
+      expect(f.pickupOn, isFalse);
+      expect(f.dropOn, isTrue);
+      expect(f.sightseeingDays, [3, 4, 5, 6]);
+      expect(f.setPickupOn(true).pickupOn, isFalse);
+      expect(f.toggleDay(2).sightseeingDays, [3, 4, 5, 6]);
+      expect(f.toggleDay(3).sightseeingDays, [4, 5, 6]);
+      final body = f.toBody('c1', const []);
+      expect(body['pickup'], {'on': false, 'cityKey': null});
+      expect((body['sightseeing'] as Map)['days'], [3, 4, 5, 6]);
+    });
+
+    test('last_day_passed_turns_drop_off', () {
+      final f = TaxiRequestForm.initial(places: _places(), planDays: _days6, pastDays: _days6.toSet());
+      expect(f.pickupOn, isFalse);
+      expect(f.dropOn, isFalse);
+      expect(f.setDropOn(true).dropOn, isFalse);
+      expect(f.canSend, isFalse);
+    });
+
+    test('day_rows_mark_days_before_today_as_past', () {
+      final plan = TripPlan.singleCity(
+        cityKey: 1,
+        cityName: 'Nainital',
+        days: [for (var d = 1; d <= 3; d++) TripDay(day: d, spots: const [])],
+        settings: TripSettings(startDate: DateTime(2026, 12, 18)),
+      );
+      final rows = TaxiRequestDayRow.fromPlan(plan, today: DateTime(2026, 12, 19));
+      expect([for (final r in rows) r.past], [true, false, false]);
+      expect(TaxiDayRows.pastOf(rows), {1});
+      expect(TaxiDayRows.pastOf(TaxiRequestDayRow.fromPlan(plan, today: DateTime(2026, 12, 18))), isEmpty);
+    });
+
+    test('past_day_errors_map_to_copy', () {
+      expect(TaxiRequestErrors.isDayInPast('DayInPast'), isTrue);
+      expect(TaxiRequestErrors.isDayInPast('SightseeingDaysInvalid'), isTrue);
+      expect(TaxiRequestErrors.isDayInPast('PickupNotAvailable'), isFalse);
+      expect(TaxiRequestErrors.dayInPastMessage('DayInPast'), contains('passed'));
+      expect(TaxiRequestErrors.dayInPastMessage('SightseeingDaysInvalid'), contains('passed'));
+    });
+  });
+
   test('frame_21_all_on_summary_and_disabled', () {
     final f = _form();
     expect(f.summary, 'Choose a pickup, 6 sightseeing days, drop same as pickup');

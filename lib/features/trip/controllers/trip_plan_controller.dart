@@ -40,6 +40,7 @@ import '../trip_strings_dayplan.dart';
 import '../trip_strings_mca_a1.dart';
 import '../trip_strings_mcb_a1.dart';
 import '../trip_strings_mcb_k1.dart';
+import '../trip_strings_name.dart';
 import '../trip_strings_rename.dart';
 import '../trip_strings_steps_a3.dart';
 import '../trip_strings_steps_k3.dart';
@@ -4259,11 +4260,13 @@ class TripPlanController extends GetxController {
     if (!identical(p, plan.value)) plan.value = p;
     final flow = _flow;
     isSaving.value = true;
+    String? name;
     try {
       final current = trip.value;
-      final name = current == null ? _createName : _pendingName;
+      final createName = _createName;
+      name = current == null ? createName : _pendingName;
       final saved = current == null
-          ? await _repo.create(name: name!, status: _statusFor(markPlanned, p), plan: p, clientTripId: _clientTripId)
+          ? await _repo.create(name: createName, status: _statusFor(markPlanned, p), plan: p, clientTripId: _clientTripId)
           : await _update(current.id, name, _statusFor(markPlanned, p), p);
       if (flow != _flow) return false;
       _sentName(name);
@@ -4334,6 +4337,10 @@ class TripPlanController extends GetxController {
         _onPlanLocked(e, p);
         return false;
       }
+      if (type == TripErrorTypes.nameInvalid && name != null) {
+        _onNameRejected(name);
+        return false;
+      }
       if (type == TripErrorTypes.tripCompleted) {
         _saveTimer?.cancel();
         final t = trip.value;
@@ -4346,6 +4353,22 @@ class TripPlanController extends GetxController {
     } finally {
       isSaving.value = false;
     }
+  }
+
+  void _onNameRejected(String name) {
+    final stored = trip.value?.title;
+    if (stored != null) {
+      if (_pendingName == name) _pendingName = null;
+      _title = stored;
+    } else {
+      final fallback = TripNameRules.suggest(picked?.stateName ?? '', cityName);
+      _title = fallback;
+      _pendingName = fallback;
+    }
+    _lastSaveNetworkError = false;
+    _lastSaveMessage = TripStringsName.invalid;
+    saveFailed.value = true;
+    _toastSave(TripStringsName.invalid, error: true);
   }
 
   void _onPlanLocked(Object e, TripPlan p) {

@@ -44,6 +44,11 @@ class TripStringsTaxiRequest {
   static const String pickupGone = 'That pickup is no longer available. Please choose again.';
   static const String dropGone = 'That drop is no longer available. Please choose again.';
   static const String dayOn = 'Include this day';
+  static const String dayPassed = 'This day has passed';
+  static const String pickupPassed = 'Day 1 has passed';
+  static const String dropPassed = 'The last day has passed';
+  static const String dayInPast = 'Pickup or drop is on a day that has passed. Turn it off and send again.';
+  static const String pastDaysPicked = 'A picked day has passed. Choose today or a later day.';
 
   static String groupDays(int n) => '$n ${n == 1 ? 'day' : 'days'}';
   static String dayTitle(int day, String city) => 'Day $day · $city';

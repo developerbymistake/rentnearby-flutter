@@ -7,6 +7,7 @@ class TaxiErrorTypes {
   static const String planLocked = 'PlanLocked';
   static const String alreadyActive = 'TaxiRequestAlreadyActive';
   static const String stateInvalid = 'TaxiRequestStateInvalid';
+  static const String offerStateInvalid = 'OfferStateInvalid';
   static const String legacyActive = 'LegacyTaxiActive';
   static const String allDriversBusy = 'AllDriversBusy';
   static const String notFound = 'TaxiRequestNotFound';
@@ -45,6 +46,7 @@ sealed class TaxiResult<T> {
       case TaxiErrorTypes.alreadyActive:
         return TaxiAlreadyActive<T>(requestId: data['requestId'] as String?, message: message);
       case TaxiErrorTypes.stateInvalid:
+      case TaxiErrorTypes.offerStateInvalid:
         return TaxiStateInvalid<T>(
             state: data['state'] as String?, version: (data['version'] as num?)?.toInt(), message: message);
       case TaxiErrorTypes.legacyActive:

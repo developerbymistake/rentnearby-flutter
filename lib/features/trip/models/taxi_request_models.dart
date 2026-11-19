@@ -514,6 +514,11 @@ class TaxiRequest {
 
   DateTime? get waitUntilAt => _instant(waitUntil);
 
+  TaxiBooking? get activeBooking {
+    final b = booking;
+    return b != null && (b.state == BookingState.booked || b.state == BookingState.inProgress) ? b : null;
+  }
+
   TaxiDriverCard? get selectedDriver {
     for (final d in drivers) {
       if (d.state == OfferState.selected || d.state == OfferState.confirmed) return d;

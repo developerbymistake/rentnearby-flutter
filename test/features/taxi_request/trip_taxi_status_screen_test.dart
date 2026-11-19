@@ -219,6 +219,42 @@ void main() {
     expect(h.done, 1);
   });
 
+  testWidgets('reopened_after_driver_withdraw_can_cancel_as_a_plain_request', (tester) async {
+    final h = await _open(tester, _sample('taxi_request_finding.json', {
+      'booking': {
+        'id': 'b0000000-0000-4000-8000-000000000001',
+        'state': 'Cancelled',
+        'dateFrom': '2026-12-18',
+        'dateTo': '2026-12-20',
+        'dayNumber': null,
+        'canCancel': false,
+        'canEnd': false,
+      },
+      'canCancel': true,
+    }));
+    await _tap(tester, 'cancel_request');
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.byKey(const ValueKey('taxi_reason_ChangedPlan')), findsNothing);
+    await _tap(tester, 'taxi_cancel_confirm');
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(h.repo.actions, ['cancel:TravellerCancelled:null']);
+  });
+
+  for (final name in ['taxi_request_finding.json', 'taxi_request_no_reply.json']) {
+    testWidgets('open_with_no_one_ringing_offers_ask_more ($name)', (tester) async {
+      final h = await _open(tester, _sample(name, {'stillAsking': false, 'canAskMore': true}));
+      expect(_t('No driver agreed yet. Ask more drivers.'), findsOneWidget);
+      expect(_t('We asked 3 drivers at Kathgodam'), findsNothing);
+      await _tap(tester, 'status_ask_more');
+      expect(h.repo.actions, ['askMore']);
+    });
+  }
+
+  testWidgets('finding_without_ask_more_hides_the_button', (tester) async {
+    await _open(tester, _sample('taxi_request_finding.json'));
+    expect(find.byKey(const ValueKey('status_ask_more')), findsNothing);
+  });
+
   testWidgets('ended_shows_request_again', (tester) async {
     final h = await _open(tester, _sample('taxi_request_busy.json', {'state': 'Cancelled', 'view': 'Ended'}));
     expect(_t('Request closed'), findsOneWidget);

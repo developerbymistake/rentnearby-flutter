@@ -152,6 +152,35 @@ void main() {
     expect(repo.createBodies.last['seats'], 6);
   });
 
+  test('send_flushes_the_plan_first_and_stops_when_not_saved', () async {
+    final repo = FakeTaxiRepo();
+    final order = <String>[];
+    var saved = false;
+    final c = TripTaxiRequestController(
+      repo: repo,
+      enquiries: FakeEnquiries(),
+      realtime: null,
+      refreshPlan: (_) async => true,
+      onLegacyClosed: () {},
+      newClientId: () => 'client-1',
+      flushPlan: () async {
+        order.add('flush');
+        return saved;
+      },
+    );
+    await c.loadPlaces('t1', planDays: planDays);
+    c.editForm((f) => f.choosePickup(_pickupKey));
+    final r = await c.send();
+    expect(r, isA<TaxiFailed<TaxiRequest>>());
+    expect((r as TaxiFailed<TaxiRequest>).message, 'Not saved to your trip yet');
+    expect(repo.createBodies, isEmpty);
+    saved = true;
+    repo.createAnswers.add(TaxiOk(sampleRequest('taxi_request_finding.json')));
+    expect(await c.send(), isA<TaxiOk<TaxiRequest>>());
+    expect(order, ['flush', 'flush']);
+    expect(repo.createBodies.length, 1);
+  });
+
   test('double_tap_send_posts_once', () async {
     final repo = FakeTaxiRepo();
     final c = await _readyForm(repo);
@@ -338,6 +367,26 @@ void main() {
     expect(c.hasFailed(TaxiAction.select), isTrue);
     expect(repo.getIds, [_requestId]);
     expect(c.request.value!.view, RequestView.collecting);
+  });
+
+  test('offer_state_invalid_answer_reloads_the_request', () async {
+    final req = RequestOptions(path: '/taxi-requests/r/select');
+    final mapped = TaxiResult.fromError<TaxiRequest>(DioException(
+      requestOptions: req,
+      type: DioExceptionType.badResponse,
+      response: Response(requestOptions: req, statusCode: 409, data: {
+        'data': {'state': 'Closed'},
+        'error': {'message': 'This request has changed. Please check again.', 'type': 'OfferStateInvalid'},
+      }),
+    ));
+    expect(mapped, isA<TaxiStateInvalid<TaxiRequest>>());
+    final repo = FakeTaxiRepo();
+    final c = _controller(repo);
+    c.apply(sampleRequest('taxi_request_finding.json'));
+    repo.actionAnswer = mapped;
+    await c.select('o1');
+    await pumpEventQueue();
+    expect(repo.getIds, [_requestId]);
   });
 
   test('no_shared_last_error_fields', () {

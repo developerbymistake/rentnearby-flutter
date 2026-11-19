@@ -38,7 +38,7 @@ class _TripNameScreenState extends State<TripNameScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final blank = TripNameRules.clean(_ctrl.text).isEmpty;
+    final error = TripNameRules.problem(_ctrl.text);
     return Scaffold(
       backgroundColor: DesignColors.surface,
       body: Column(
@@ -61,7 +61,7 @@ class _TripNameScreenState extends State<TripNameScreen> {
                         controller: _ctrl,
                         hint: TripStringsName.hint,
                         autofocus: true,
-                        errorRing: blank,
+                        errorRing: error != null,
                         counterText: '',
                         textCapitalization: TextCapitalization.words,
                         textInputAction: TextInputAction.done,
@@ -70,7 +70,7 @@ class _TripNameScreenState extends State<TripNameScreen> {
                         onSubmitted: (_) => _continue(),
                       ),
                       FieldMessage(
-                        error: blank ? TripStringsName.empty : null,
+                        error: error,
                         counter: TripStringsName.counter(_ctrl.text.length),
                         reserve: true,
                       ),

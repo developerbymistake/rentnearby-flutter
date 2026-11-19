@@ -4,6 +4,7 @@ class TripStringsName {
   static const String label = 'Trip name';
   static const String hint = 'Trip name';
   static const String empty = 'Add a name to continue';
+  static const String invalid = 'Use letters or numbers. No links.';
   static const String next = 'Continue';
   static const List<String> _hillStates = ['uttarakhand', 'himachal pradesh'];
 

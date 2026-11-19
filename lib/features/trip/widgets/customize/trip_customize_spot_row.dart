@@ -53,7 +53,7 @@ class TripCustomizeSpotRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final timeW = timeWidth(context);
-    final drive = driveMinutes;
+    final drive = (driveMinutes ?? 0) > 0 ? driveMinutes : null;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,

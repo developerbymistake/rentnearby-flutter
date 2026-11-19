@@ -1,15 +1,19 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:dio/dio.dart';
+
 import 'package:flutter/widgets.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:get/get.dart';
+import 'package:get/get.dart' hide Response;
 import 'package:bakhli/features/taxi/requests/controllers/driver_bookings_controller.dart';
 import 'package:bakhli/features/taxi/requests/controllers/driver_rating_controller.dart';
 import 'package:bakhli/features/taxi/requests/controllers/driver_requests_controller.dart';
 import 'package:bakhli/features/taxi/requests/data/driver_request_repository.dart';
 import 'package:bakhli/features/taxi/requests/models/driver_request_models.dart';
 import 'package:bakhli/features/trip/utils/taxi_result.dart';
+import 'package:bakhli/services/taxi_ring_service.dart';
 
 Map<String, dynamic> _json(String name) =>
     jsonDecode(File('test/features/taxi_request/samples/$name').readAsStringSync()) as Map<String, dynamic>;
@@ -23,6 +27,8 @@ class _FakeRepo extends DriverRequestRepository {
   final Map<String, String> listStates = {};
   bool listOffline = false;
   TaxiResult<DriverOffer>? acceptResult;
+  TaxiResult<DriverOffer>? declineResult;
+  int offerCalls = 0;
   TaxiResult<DriverOffer>? confirmResult;
   TaxiResult<DriverOffer>? withdrawResult;
   TaxiResult<DriverBookings>? bookingsResult;
@@ -44,11 +50,16 @@ class _FakeRepo extends DriverRequestRepository {
   Map<String, dynamic> detailPatch = {};
 
   @override
-  Future<TaxiResult<DriverOffer>> offer(String offerId) async =>
-      TaxiOk(DriverOffer.fromJson({..._json('driver_offer_detail_ringing.json'), ...detailPatch}));
+  Future<TaxiResult<DriverOffer>> offer(String offerId) async {
+    offerCalls++;
+    return TaxiOk(DriverOffer.fromJson({..._json('driver_offer_detail_ringing.json'), ...detailPatch}));
+  }
 
   @override
   Future<TaxiResult<DriverOffer>> accept(String offerId) async => acceptResult!;
+
+  @override
+  Future<TaxiResult<DriverOffer>> decline(String offerId, {ReasonChip? chip}) async => declineResult!;
 
   @override
   Future<TaxiResult<DriverOffer>> confirm(String offerId) async => confirmResult!;
@@ -64,6 +75,16 @@ class _FakeRepo extends DriverRequestRepository {
 
   @override
   Future<TaxiResult<DriverRating>> rating() async => ratingResult!;
+}
+
+class _FakeRing implements TaxiRingNotifier {
+  final List<(int, String)> cancelled = [];
+
+  @override
+  Future<void> show(int id, String title, String body, NotificationDetails details, String? payload) async {}
+
+  @override
+  Future<void> cancel(int id, String tag) async => cancelled.add((id, tag));
 }
 
 void main() {
@@ -202,6 +223,58 @@ void main() {
     expect(rating.failed.value, isTrue);
   });
 
+  group('ring stops once the driver answers in the app', () {
+    late _FakeRing ring;
+    setUp(() {
+      ring = _FakeRing();
+      c = DriverRequestsController(repo: repo, now: () => deviceNow, ring: ring);
+    });
+
+    DriverOffer accepted() => DriverOffer.fromJson({..._json('driver_offer_detail_ringing.json'), 'state': 'Accepted'});
+    final cases = <String, TaxiResult<DriverOffer> Function()>{
+      'ok': () => TaxiOk(accepted()),
+      'missed': () => const TaxiOfferMissed<DriverOffer>(state: 'Missed'),
+      'state_invalid': () => const TaxiStateInvalid<DriverOffer>(state: 'Closed'),
+    };
+    for (final e in cases.entries) {
+      test('accept ${e.key}', () async {
+        repo.acceptResult = e.value();
+        await c.accept(_ringingId);
+        expect(ring.cancelled, [(TaxiRingNotification.id, 'taxi_ring_$_ringingId')]);
+      });
+      test('decline ${e.key}', () async {
+        repo.declineResult = e.value();
+        await c.decline(_ringingId);
+        expect(ring.cancelled, [(TaxiRingNotification.id, 'taxi_ring_$_ringingId')]);
+      });
+    }
+
+    test('offline keeps ringing', () async {
+      repo.acceptResult = const TaxiOffline<DriverOffer>();
+      await c.accept(_ringingId);
+      expect(ring.cancelled, isEmpty);
+    });
+
+    test('confirm and withdraw do not touch the ring', () async {
+      repo.confirmResult = TaxiOk(accepted());
+      repo.withdrawResult = TaxiOk(accepted());
+      await c.confirm(_ringingId);
+      await c.withdraw(_ringingId, ReasonChip.changedPlan);
+      expect(ring.cancelled, isEmpty);
+    });
+  });
+
+  test('offer_state_invalid_refreshes_the_offer_and_list', () async {
+    await c.load();
+    final before = repo.offersCalls;
+    repo.acceptResult = DriverRequestRepository.mapError<DriverOffer>(_dioError(409, 'OfferStateInvalid', {'state': 'Closed'}));
+    expect(repo.acceptResult, isA<TaxiStateInvalid<DriverOffer>>());
+    await c.accept(_ringingId);
+    await pumpEventQueue();
+    expect(repo.offersCalls, before + 1);
+    expect(repo.offerCalls, 1);
+  });
+
   test('no_shared_last_error_fields', () {
     for (final name in [
       'driver_requests_controller.dart',
@@ -220,4 +293,16 @@ void main() {
   });
 
   tearDown(Get.reset);
+}
+
+DioException _dioError(int status, String type, Map<String, dynamic> data) {
+  final options = RequestOptions(path: '/x');
+  return DioException(
+    requestOptions: options,
+    type: DioExceptionType.badResponse,
+    response: Response(requestOptions: options, statusCode: status, data: {
+      'data': data,
+      'error': {'type': type, 'message': 'This request has changed. Please check again.'},
+    }),
+  );
 }

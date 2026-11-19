@@ -13,6 +13,7 @@ class TaxiSectionCard extends StatelessWidget {
     this.on = true,
     this.onChanged,
     this.switchKey,
+    this.switchEnabled = true,
   });
 
   final String art;
@@ -23,6 +24,7 @@ class TaxiSectionCard extends StatelessWidget {
   final bool on;
   final ValueChanged<bool>? onChanged;
   final Key? switchKey;
+  final bool switchEnabled;
 
   @override
   Widget build(BuildContext context) {
@@ -74,7 +76,7 @@ class TaxiSectionCard extends StatelessWidget {
                       child: CupertinoSwitch(
                         key: switchKey,
                         value: on,
-                        onChanged: onChanged,
+                        onChanged: switchEnabled ? onChanged : null,
                         activeTrackColor: Colors.white,
                         inactiveTrackColor: DesignColors.whiteSoft,
                         thumbColor: on ? tone.text : Colors.white,

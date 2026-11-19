@@ -187,6 +187,37 @@ void main() {
     await t.pump(const Duration(seconds: 5));
   });
 
+  testWidgets('server_name_refusal_drops_the_name_and_keeps_saving_the_plan', (t) async {
+    final refused = installFakeApi([
+      FakeRoute.value('PUT', '/trips/{id}', null, code: 400, errorType: 'TripNameInvalid'),
+    ]);
+    await t.pumpWidget(GetMaterialApp(
+      builder: (context, child) => Stack(
+        fit: StackFit.expand,
+        children: [Positioned.fill(child: child!), Overlay(key: AppToast.overlayKey)],
+      ),
+      home: const Scaffold(body: SizedBox()),
+    ));
+    final c = engineRig(_onePlan());
+    var ok = true;
+    await t.runAsync(() async => ok = await c.rename('Lake Days'));
+    await t.pump();
+    await t.pump(const Duration(milliseconds: 100));
+    await t.pump(const Duration(milliseconds: 600));
+    expect(ok, isFalse);
+    expect(_sent(refused, 'PUT', '/trips/t1')['name'], 'Lake Days');
+    expect(find.text('Use letters or numbers. No links.'), findsOneWidget);
+    expect(c.title, 'Uttarakhand Hills Trip');
+
+    final api = installFakeApi([
+      FakeRoute('PUT', '/trips/{id}', (o) => engineTripJson(TripPlan.fromJson(Map<String, dynamic>.from((o.data as Map)['plan'] as Map)))),
+    ]);
+    await t.runAsync(() async => ok = await c.flushPendingSave());
+    expect(ok, isTrue);
+    expect(_sent(api, 'PUT', '/trips/t1').containsKey('name'), isFalse);
+    await t.pump(const Duration(seconds: 5));
+  });
+
   test('save_without_rename_sends_neither_field', () async {
     final api = installFakeApi([
       FakeRoute('PUT', '/trips/{id}', (o) {

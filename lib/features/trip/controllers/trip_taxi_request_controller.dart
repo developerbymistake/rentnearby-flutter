@@ -8,6 +8,7 @@ import '../../../services/notification_hub_service.dart';
 import '../data/taxi_request_repository.dart';
 import '../data/trip_enquiry_repository.dart';
 import '../models/taxi_request_models.dart';
+import '../trip_strings_steps_k3.dart';
 import '../utils/taxi_request_form.dart';
 import '../utils/taxi_result.dart';
 import 'trip_plan_controller.dart';
@@ -22,7 +23,9 @@ class TripTaxiRequestController extends GetxController with WidgetsBindingObserv
     Future<bool> Function(String tripId)? refreshPlan,
     void Function()? onLegacyClosed,
     String Function()? newClientId,
+    Future<bool> Function()? flushPlan,
   })  : _realtimeOverride = realtime,
+        _flushPlan = flushPlan ?? _flushPlanController,
         _refreshPlan = refreshPlan ?? _refreshPlanController,
         _onLegacyClosed = onLegacyClosed ?? _refreshPlanEnquiries,
         _newClientId = newClientId ?? (() => const Uuid().v4());
@@ -39,6 +42,9 @@ class TripTaxiRequestController extends GetxController with WidgetsBindingObserv
       ? Get.find<TripPlanController>().refreshTaxiState(tripId: tripId)
       : Future.value(false);
 
+  static Future<bool> _flushPlanController() =>
+      Get.isRegistered<TripPlanController>() ? Get.find<TripPlanController>().flushPendingSave() : Future.value(true);
+
   static void _refreshPlanEnquiries() {
     if (Get.isRegistered<TripPlanController>()) unawaited(Get.find<TripPlanController>().refreshEnquiries());
   }
@@ -49,6 +55,7 @@ class TripTaxiRequestController extends GetxController with WidgetsBindingObserv
   final Future<bool> Function(String tripId) _refreshPlan;
   final void Function() _onLegacyClosed;
   final String Function() _newClientId;
+  final Future<bool> Function() _flushPlan;
 
   final places = Rxn<TaxiPickupPlaces>();
   final form = Rxn<TaxiRequestForm>();
@@ -60,6 +67,7 @@ class TripTaxiRequestController extends GetxController with WidgetsBindingObserv
 
   String? _tripId;
   List<int> _planDays = const [];
+  Set<int> _pastDays = const {};
   List<TaxiDayStat> _dayStats = const [];
   String? _clientRequestId;
   String? _attachedId;
@@ -103,7 +111,7 @@ class TripTaxiRequestController extends GetxController with WidgetsBindingObserv
   }
 
   Future<TaxiResult<TaxiPickupPlaces>> loadPlaces(String tripId,
-          {required List<int> planDays, List<TaxiDayStat> dayStats = const []}) =>
+          {required List<int> planDays, List<TaxiDayStat> dayStats = const [], Set<int> pastDays = const {}}) =>
       _run(TaxiAction.places, () async {
         if (_tripId != tripId) {
           places.value = null;
@@ -113,6 +121,7 @@ class TripTaxiRequestController extends GetxController with WidgetsBindingObserv
         }
         _tripId = tripId;
         _planDays = List.unmodifiable(planDays);
+        _pastDays = Set.unmodifiable(pastDays);
         _dayStats = List.unmodifiable(dayStats);
         final r = await _repo.pickupPlaces(tripId);
         if (r case TaxiOk<TaxiPickupPlaces>(:final value)) {
@@ -124,20 +133,21 @@ class TripTaxiRequestController extends GetxController with WidgetsBindingObserv
       });
 
   TaxiRequestForm _formFor(TaxiPickupPlaces value, TaxiRequestForm? old) {
-    final fresh = TaxiRequestForm.initial(places: value, planDays: _planDays);
+    final fresh = TaxiRequestForm.initial(places: value, planDays: _planDays, pastDays: _pastDays);
     if (old == null) return fresh;
-    final days = old.days.where(_planDays.contains).toSet();
+    final days = old.days.where((d) => _planDays.contains(d) && !fresh.isPast(d)).toSet();
     return TaxiRequestForm(
       places: value,
       planDays: _planDays,
-      pickupOn: old.pickupOn,
+      pickupOn: old.pickupOn && !fresh.pickupPast,
       sightseeingOn: old.sightseeingOn,
-      dropOn: old.dropOn,
+      dropOn: old.dropOn && !fresh.dropPast,
       pickupCityKey: value.pickupByKey(old.pickupCityKey)?.cityKey,
       dropSame: old.dropSame,
       dropCityKey: value.dropByKey(old.dropCityKey)?.cityKey,
       days: days,
       seats: old.seats,
+      pastDays: fresh.pastDays,
     );
   }
 
@@ -154,6 +164,7 @@ class TripTaxiRequestController extends GetxController with WidgetsBindingObserv
     final f = form.value;
     final tripId = _tripId;
     if (f == null || tripId == null || !f.canSend) return TaxiFailed(message: f?.summary ?? '');
+    if (!await _flushPlan()) return const TaxiFailed(message: TripStringsStepsK3.notSavedToTrip);
     final cid = _clientRequestId ??= _newClientId();
     final r = await _repo.create(tripId, f.toBody(cid, _dayStats));
     switch (r) {

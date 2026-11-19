@@ -14,6 +14,7 @@ import 'data/driver_request_repository.dart';
 import 'driver_bookings_screen.dart';
 import 'models/driver_request_models.dart';
 import 'strings/driver_request_detail_strings.dart';
+import 'utils/indian_phone.dart';
 import 'widgets/driver_request_body.dart';
 
 typedef _S = DriverRequestDetailStrings;
@@ -300,7 +301,7 @@ class _Hero extends StatelessWidget {
             style: Ink3D.text(22, FontWeight.w700, Ink3D.title)),
         if (phone != null && phone.isNotEmpty) ...[
           Gap.v(4),
-          Text(phone, key: const ValueKey('request_traveller_phone'), textAlign: TextAlign.center, style: Ink3D.text(13, FontWeight.w400, Ink3D.copy)),
+          Text(IndianPhone.display(phone), key: const ValueKey('request_traveller_phone'), textAlign: TextAlign.center, style: Ink3D.text(13, FontWeight.w400, Ink3D.copy)),
         ],
         if (line != null && line!.isNotEmpty) ...[
           Gap.v(6),

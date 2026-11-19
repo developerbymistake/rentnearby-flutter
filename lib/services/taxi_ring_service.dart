@@ -51,7 +51,7 @@ class TaxiRingPush {
   final List<String> lines;
   final String? reason;
 
-  String get tag => kind == TaxiRingKind.test ? 'taxi_ring_test' : 'taxi_ring_$offerId';
+  String get tag => kind == TaxiRingKind.test ? 'taxi_ring_test' : TaxiRingNotification.tagFor(offerId);
 
   Duration timeLeft(DateTime now) {
     final at = expiresAt;
@@ -171,6 +171,14 @@ class TaxiRingNotification {
           tag: push.tag,
         ),
       );
+
+  static String tagFor(String offerId) => 'taxi_ring_$offerId';
+
+  static Future<void> stop(TaxiRingNotifier notifier, String offerId) async {
+    try {
+      await notifier.cancel(id, tagFor(offerId));
+    } catch (_) {}
+  }
 
   static String body(TaxiRingPush push) => push.lines.isEmpty ? '' : push.lines.first;
 

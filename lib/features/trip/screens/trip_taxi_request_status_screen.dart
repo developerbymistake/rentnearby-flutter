@@ -111,7 +111,7 @@ class _TripTaxiRequestStatusScreenState extends State<TripTaxiRequestStatusScree
   }
 
   Future<void> _cancel(TaxiRequest r) async {
-    final choice = await TaxiCancelSheet.show(context, withBooking: r.booking != null);
+    final choice = await TaxiCancelSheet.show(context, withBooking: r.activeBooking != null);
     if (choice == null || !mounted) return;
     await _act(() => _c.cancel(chip: choice.chip));
   }
@@ -145,7 +145,8 @@ class _TripTaxiRequestStatusScreenState extends State<TripTaxiRequestStatusScree
               ),
             ),
             Expanded(
-              child: Center(
+              child: Align(
+                alignment: Alignment.topCenter,
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: _maxWidth),
                   child: SingleChildScrollView(
@@ -210,7 +211,7 @@ class _TripTaxiRequestStatusScreenState extends State<TripTaxiRequestStatusScree
   }
 
   Widget _cancelLink(TaxiRequest r) {
-    if (!r.canCancel || r.booking != null) return const SizedBox.shrink();
+    if (!r.canCancel || r.activeBooking != null) return const SizedBox.shrink();
     return Padding(
       padding: EdgeInsets.only(top: DS.gv(8)),
       child: Tap3D(
@@ -256,10 +257,12 @@ class _TripTaxiRequestStatusScreenState extends State<TripTaxiRequestStatusScree
     }
   }
 
-  _Body _finding(TaxiRequest r, String sub, {bool noReply = false}) => _Body([
+  _Body _finding(TaxiRequest r, String sub, {bool noReply = false}) {
+    final stalled = r.canAskMore && !r.stillAsking;
+    return _Body([
         _hero(r),
         Gap.v(18),
-        TaxiStatusSteps(stage: TaxiStepStage.finding, findingSub: sub),
+        TaxiStatusSteps(stage: TaxiStepStage.finding, findingSub: stalled ? TripStringsTaxiStatus.noDriverAgreed : sub),
         Gap.v(10),
         Text(
           TripStringsTaxiStatus.numberNote,
@@ -276,9 +279,21 @@ class _TripTaxiRequestStatusScreenState extends State<TripTaxiRequestStatusScree
             onTap: _anyBusy ? null : _changePickup,
           ),
         ],
+        if (r.canAskMore) _askMoreButton(),
         _cancelLink(r),
         _failedLine(r),
       ], [_doneButton()]);
+  }
+
+  Widget _askMoreButton() => Padding(
+        padding: EdgeInsets.only(top: DS.gv(12)),
+        child: WhitePillButton(
+          key: const ValueKey('status_ask_more'),
+          tone: ListingTone.indigo,
+          label: TripStringsTaxiStatus.askMore,
+          onTap: _anyBusy ? null : () => _act(_c.askMore),
+        ),
+      );
 
   _Body _choosing(TaxiRequest r) {
     final chosen = r.selectedDriver;
@@ -324,15 +339,7 @@ class _TripTaxiRequestStatusScreenState extends State<TripTaxiRequestStatusScree
           ],
         ),
       ],
-      if (r.canAskMore) ...[
-        Gap.v(12),
-        WhitePillButton(
-          key: const ValueKey('status_ask_more'),
-          tone: ListingTone.indigo,
-          label: TripStringsTaxiStatus.askMore,
-          onTap: _anyBusy ? null : () => _act(_c.askMore),
-        ),
-      ],
+      if (r.canAskMore) _askMoreButton(),
       _cancelLink(r),
       _failedLine(r),
     ], [_doneButton()]);

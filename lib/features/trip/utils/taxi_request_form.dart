@@ -14,6 +14,7 @@ class TaxiRequestForm {
   final int? dropCityKey;
   final Set<int> days;
   final int seats;
+  final Set<int> pastDays;
 
   const TaxiRequestForm({
     required this.places,
@@ -26,20 +27,39 @@ class TaxiRequestForm {
     required this.dropCityKey,
     required this.days,
     required this.seats,
+    this.pastDays = const {},
   });
 
-  factory TaxiRequestForm.initial({required TaxiPickupPlaces places, required List<int> planDays}) => TaxiRequestForm(
-        places: places,
-        planDays: planDays,
-        pickupOn: true,
-        sightseeingOn: true,
-        dropOn: true,
-        pickupCityKey: null,
-        dropSame: true,
-        dropCityKey: null,
-        days: planDays.toSet(),
-        seats: TaxiSeats.snap(places.suggestedSeats),
-      );
+  factory TaxiRequestForm.initial({
+    required TaxiPickupPlaces places,
+    required List<int> planDays,
+    Set<int> pastDays = const {},
+  }) {
+    final past = {for (final d in planDays) if (pastDays.contains(d)) d};
+    return TaxiRequestForm(
+      places: places,
+      planDays: planDays,
+      pickupOn: !_firstPast(planDays, past),
+      sightseeingOn: true,
+      dropOn: !_lastPast(planDays, past),
+      pickupCityKey: null,
+      dropSame: true,
+      dropCityKey: null,
+      days: {for (final d in planDays) if (!past.contains(d)) d},
+      seats: TaxiSeats.snap(places.suggestedSeats),
+      pastDays: past,
+    );
+  }
+
+  static bool _firstPast(List<int> planDays, Set<int> past) => planDays.isNotEmpty && past.contains(planDays.first);
+
+  static bool _lastPast(List<int> planDays, Set<int> past) => planDays.isNotEmpty && past.contains(planDays.last);
+
+  bool get pickupPast => _firstPast(planDays, pastDays);
+
+  bool get dropPast => _lastPast(planDays, pastDays);
+
+  bool isPast(int day) => pastDays.contains(day);
 
   TaxiRequestForm _with({
     bool? pickupOn,
@@ -62,15 +82,16 @@ class TaxiRequestForm {
         dropCityKey: identical(dropCityKey, _keep) ? this.dropCityKey : dropCityKey as int?,
         days: days ?? this.days,
         seats: seats ?? this.seats,
+        pastDays: pastDays,
       );
 
   static const Object _keep = Object();
 
-  TaxiRequestForm setPickupOn(bool on) => _with(pickupOn: on);
+  TaxiRequestForm setPickupOn(bool on) => on && pickupPast ? this : _with(pickupOn: on);
 
   TaxiRequestForm setSightseeingOn(bool on) => _with(sightseeingOn: on);
 
-  TaxiRequestForm setDropOn(bool on) => _with(dropOn: on);
+  TaxiRequestForm setDropOn(bool on) => on && dropPast ? this : _with(dropOn: on);
 
   TaxiRequestForm choosePickup(int cityKey) => _with(pickupCityKey: cityKey);
 
@@ -79,7 +100,7 @@ class TaxiRequestForm {
   TaxiRequestForm chooseDrop(int cityKey) => _with(dropSame: false, dropCityKey: cityKey);
 
   TaxiRequestForm toggleDay(int day) {
-    if (!planDays.contains(day)) return this;
+    if (!planDays.contains(day) || pastDays.contains(day)) return this;
     final next = {...days};
     if (!next.remove(day)) next.add(day);
     return _with(days: next);

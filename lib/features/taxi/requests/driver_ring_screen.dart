@@ -110,6 +110,7 @@ class _DriverRingScreenState extends State<DriverRingScreen> {
   void _settle() {
     final o = _c.offer(_id);
     if (o == null || _finished) return;
+    if (_answered(o) || !_ringing(o)) unawaited(_c.stopRing(_id));
     if (_answered(o)) return _openDetail();
     if (!_ringing(o)) return _showMissed();
     final a = widget.action;

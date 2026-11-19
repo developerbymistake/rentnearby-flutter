@@ -715,7 +715,7 @@ class _RenameDialog extends StatefulWidget {
 
 class _RenameDialogState extends State<_RenameDialog> {
   late final TextEditingController _ctrl = TextEditingController(text: widget.initial);
-  bool _blank = false;
+  String? _error;
 
   @override
   void dispose() {
@@ -725,8 +725,9 @@ class _RenameDialogState extends State<_RenameDialog> {
 
   void _save() {
     final name = TripNameRules.clean(_ctrl.text);
-    if (!TripNameRules.isValid(name)) {
-      setState(() => _blank = true);
+    final error = TripNameRules.problem(name);
+    if (error != null) {
+      setState(() => _error = error);
       return;
     }
     Navigator.pop(context, name);
@@ -751,15 +752,15 @@ class _RenameDialogState extends State<_RenameDialog> {
             autofocus: true,
             maxLength: TripNameRules.max,
             counterText: '',
-            errorRing: _blank,
+            errorRing: _error != null,
             hint: TripStringsV2Plan.tripName,
             textInputAction: TextInputAction.done,
             inputFormatters: [...noEmojiInputFormatters, LengthLimitingTextInputFormatter(TripNameRules.max)],
-            onChanged: (_) => setState(() => _blank = false),
+            onChanged: (_) => setState(() => _error = null),
             onSubmitted: (_) => _save(),
           ),
           FieldMessage(
-            error: _blank ? TripStringsName.empty : null,
+            error: _error,
             counter: TripStringsName.counter(ctrl.text.length),
             reserve: true,
           ),

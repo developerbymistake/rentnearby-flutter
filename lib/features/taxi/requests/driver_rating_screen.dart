@@ -78,7 +78,8 @@ class _DriverRatingScreenState extends State<DriverRatingScreen> {
   }
 
   Widget _content(DriverRating r) {
-    return Center(
+    return Align(
+      alignment: Alignment.topCenter,
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: _maxWidth),
         child: SingleChildScrollView(

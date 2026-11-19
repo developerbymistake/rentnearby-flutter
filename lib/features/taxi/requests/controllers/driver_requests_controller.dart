@@ -1,7 +1,11 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/widgets.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:get/get.dart';
+
+import '../../../../services/taxi_ring_service.dart';
 
 import '../../../trip/utils/taxi_result.dart';
 import '../data/driver_request_repository.dart';
@@ -11,8 +15,9 @@ import '../utils/taxi_countdown.dart';
 enum DriverRequestAction { list, more, detail, accept, decline, confirm, withdraw }
 
 class DriverRequestsController extends GetxController with WidgetsBindingObserver {
-  DriverRequestsController({this._repo = const DriverRequestRepository(), DateTime Function()? now})
-      : _now = now ?? DateTime.now;
+  DriverRequestsController({this._repo = const DriverRequestRepository(), DateTime Function()? now, TaxiRingNotifier? ring})
+      : _now = now ?? DateTime.now,
+        _ring = ring ?? (Platform.isAndroid ? PluginTaxiRingNotifier(FlutterLocalNotificationsPlugin()) : null);
 
   static DriverRequestsController get to => Get.isRegistered<DriverRequestsController>()
       ? Get.find<DriverRequestsController>()
@@ -24,6 +29,7 @@ class DriverRequestsController extends GetxController with WidgetsBindingObserve
 
   final DriverRequestRepository _repo;
   final DateTime Function() _now;
+  final TaxiRingNotifier? _ring;
 
   final items = <DriverOffer>[].obs;
   final details = <String, DriverOffer>{}.obs;
@@ -161,6 +167,9 @@ class DriverRequestsController extends GetxController with WidgetsBindingObserve
   ) =>
       _run(a, offerId, () async {
         final r = await call();
+        if ((a == DriverRequestAction.accept || a == DriverRequestAction.decline) && r is! TaxiOffline<DriverOffer>) {
+          await stopRing(offerId);
+        }
         switch (r) {
           case TaxiOk<DriverOffer>(:final value):
             _upsert(value);
@@ -178,6 +187,11 @@ class DriverRequestsController extends GetxController with WidgetsBindingObserve
         }
         return r;
       });
+
+  Future<void> stopRing(String offerId) async {
+    final ring = _ring;
+    if (ring != null) await TaxiRingNotification.stop(ring, offerId);
+  }
 
   Future<TaxiResult<DriverOffer>> accept(String offerId) =>
       _act(DriverRequestAction.accept, offerId, () => _repo.accept(offerId));

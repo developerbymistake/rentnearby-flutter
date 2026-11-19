@@ -173,8 +173,9 @@ class TripNavigation {
     }
     final ok = await TripDatesSheet.ensure(context, heading: TripStringsV2Find.datesTitle, cta: TripStringsV2Find.showDrivers);
     if (!ok || !c.hasDates) return false;
+    final saved = await c.flushPendingSave();
     final tripId = c.trip.value?.id;
-    if (tripId == null) {
+    if (!saved || tripId == null) {
       AppToast.warning(TripStringsStepsK3.notSavedToTrip);
       return false;
     }

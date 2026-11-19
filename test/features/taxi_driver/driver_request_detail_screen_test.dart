@@ -163,7 +163,7 @@ void main() {
     await _open(tester, {..._sample('driver_offer_detail_selected.json'), 'state': 'Accepted', 'confirmBy': null, 'datesConflict': null});
     expect(_t('Request accepted'), findsOneWidget);
     expect(_t('Aarav Sharma'), findsOneWidget);
-    expect(_t('+919876543210'), findsOneWidget);
+    expect(_t('+91 98765 43210'), findsOneWidget);
     expect(_t('Waiting for traveller to choose'), findsOneWidget);
     expect(_t('Call traveller'), findsOneWidget);
     expect(_t('Accept'), findsNothing);
@@ -194,7 +194,7 @@ void main() {
     await _open(tester, {..._sample('driver_offer_detail_ringing.json'), 'traveller': {'name': 'Aarav Sharma', 'phone': '+919876543210'}});
     expect(_t('Traveller'), findsOneWidget);
     expect(_t('Aarav Sharma'), findsNothing);
-    expect(_t('+919876543210'), findsNothing);
+    expect(_t('+91 98765 43210'), findsNothing);
     expect(find.byKey(const ValueKey('request_traveller_phone')), findsNothing);
   });
 
