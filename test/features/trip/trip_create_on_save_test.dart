@@ -168,6 +168,40 @@ void main() {
     expect(up.calls('POST', '/trips'), hasLength(1));
   });
 
+  test('app_killed_before_create_reply_reuses_client_trip_id_after_reopen', () async {
+    TripNewDraft.save([TripDraftLeg(_nainital, ['a', 'b'])]);
+    final down = installFakeApi([_planRoute(), FakeRoute.value('POST', '/trips', null, code: 500, errorType: 'ServerError')]);
+    final first = await _unsaved();
+    expect(await first.createNew(name: 'Lake Days', adults: 2, kids: 0), TripCreateOutcome.failed);
+    final sentId = _sent(down, 'POST', '/trips')['clientTripId'];
+    expect(TripNewDraft.read()!.clientTripId, sentId);
+
+    Get.reset();
+    TripNewDraft.save([TripDraftLeg(_nainital, ['a', 'b'])]);
+    final up = installFakeApi(_ok());
+    final reopened = await _unsaved();
+    expect(await reopened.createNew(name: 'Lake Days', adults: 2, kids: 0), TripCreateOutcome.ok);
+    expect(_sent(up, 'POST', '/trips')['clientTripId'], sentId);
+  });
+
+  test('changed_places_after_a_lost_save_get_a_new_client_trip_id', () async {
+    TripNewDraft.save([TripDraftLeg(_nainital, ['a', 'b'])]);
+    final down = installFakeApi([_planRoute(), FakeRoute.value('POST', '/trips', null, code: 500, errorType: 'ServerError')]);
+    final first = await _unsaved();
+    await first.createNew(name: 'Lake Days', adults: 2, kids: 0);
+    final sentId = _sent(down, 'POST', '/trips')['clientTripId'];
+
+    TripNewDraft.save([TripDraftLeg(_nainital, ['a', 'b', 'c'])]);
+    expect(TripNewDraft.read()!.clientTripId, isNull);
+    Get.reset();
+    final up = installFakeApi(_ok());
+    final c = TripPlanController();
+    addTearDown(c.onClose);
+    await c.startFromSelection(_nainital, [_spot('a'), _spot('b'), _spot('c')]);
+    expect(await c.createNew(name: 'Lake Days', adults: 2, kids: 0), TripCreateOutcome.ok);
+    expect(_sent(up, 'POST', '/trips')['clientTripId'], isNot(sentId));
+  });
+
   test('after_create_edits_autosave_as_update', () async {
     final api = installFakeApi(_ok());
     final c = await _unsaved();

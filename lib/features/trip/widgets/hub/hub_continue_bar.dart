@@ -9,6 +9,7 @@ import 'hub_dots.dart';
 import 'hub_ring.dart';
 import 'hub_tokens.dart';
 import 'hub_trip_body.dart';
+import '../../utils/trip_parts.dart';
 
 class HubContinueBar extends StatefulWidget {
   const HubContinueBar({super.key, required this.trips, required this.onContinue});
@@ -96,8 +97,8 @@ class _HubContinueBarState extends State<HubContinueBar> {
           child: Row(
             children: [
               HubRing(
-                percent: t.progress.percent,
-                center: Text('${t.progress.percent}%', style: Ink3D.text(12, FontWeight.w700, HubTokens.ink, letterSpacing: 0)),
+                percent: t.parts.percent,
+                center: Text('${t.parts.percent}%', style: Ink3D.text(12, FontWeight.w700, HubTokens.ink, letterSpacing: 0)),
               ),
               Gap.h(12),
               Expanded(

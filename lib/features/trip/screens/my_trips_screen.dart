@@ -14,6 +14,7 @@ import '../trip_strings_a5.dart';
 import '../trip_strings_bar.dart';
 import '../utils/trip_bar_rules.dart';
 import '../utils/trip_format.dart';
+import '../utils/trip_parts.dart';
 import '../utils/trip_summary_source.dart';
 import '../utils/trip_summary_text.dart';
 import '../trip_strings_hub_trips.dart';
@@ -40,6 +41,7 @@ class _MyTripsScreenState extends State<MyTripsScreen> with TickerProviderStateM
   late final AnimationController _anim = AnimationController(duration: const Duration(milliseconds: 600), vsync: this);
   bool _played = false;
   bool _seen = false;
+  bool _completing = false;
 
   void _play() {
     if (KitMotion.reduce(context)) {
@@ -196,7 +198,24 @@ class _MyTripsScreenState extends State<MyTripsScreen> with TickerProviderStateM
         onShare: t.spotCount > 0 ? () => _share(t) : null,
         onDelete: () => _delete(t),
         onMarkComplete: past && !t.isCompleted ? () => TripLifecycleActions.markCompleteFromList(context, t) : null,
+        onCompletePlan: TripBarRules.canCompletePlan(t, past: past) ? () => _completePlan(t) : null,
       );
+
+  Future<void> _completePlan(TripSummaryModel t) async {
+    if (_completing) return;
+    _completing = true;
+    try {
+      final p = t.parts;
+      final ok = await TripLifecycleActions.confirmCompletePlan(
+        context,
+        taxi: p.taxi == TripPartState.open,
+        stay: p.stay == TripPartState.open,
+      );
+      if (ok) await _ctrl.completePlan(t.id);
+    } finally {
+      _completing = false;
+    }
+  }
 
   Widget _pad(Widget child) => Padding(padding: EdgeInsets.fromLTRB(DS.s(18), DS.gv(20), DS.s(18), 0), child: child);
 

@@ -1,3 +1,4 @@
+import 'package:bakhli/features/trip/utils/trip_parts.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:bakhli/features/trip/models/trip_enquiry_model.dart';
 import 'package:bakhli/features/trip/models/trip_model.dart';
@@ -44,13 +45,13 @@ const _stayKey = TripEasyRowKey(TripEasyRowKind.stay, 1);
 const _taxiKey = TripEasyRowKey(TripEasyRowKind.taxi);
 
 void main() {
-  test('single city has four rows in order', () {
+  test('single city has a stay row and the taxi row', () {
     final rows = TripEasyRules.rows(_plan(), const [], const []);
-    expect([for (final r in rows) r.key.id], ['gettingThere', 'stay:1', 'taxi', 'comingBack']);
+    expect([for (final r in rows) r.key.id], ['stay:1', 'taxi']);
     expect(rows.every((r) => r.state == TripRowState.todo), isTrue);
   });
 
-  test('multi city adds between and stay rows', () {
+  test('multi city adds one stay row per city', () {
     final p = TripPlan(
       legs: const [
         TripCityLeg(index: 1, cityKey: 1, cityName: 'A', latitude: 1, longitude: 1),
@@ -59,7 +60,7 @@ void main() {
       days: const [TripDay(day: 1), TripDay(day: 2, leg: 2)],
     );
     final ids = [for (final r in TripEasyRules.rows(p, const [], const []))  r.key.id];
-    expect(ids, ['gettingThere', 'stay:1', 'between:2', 'stay:2', 'taxi', 'comingBack']);
+    expect(ids, ['stay:1', 'stay:2', 'taxi']);
   });
 
   test('marks give own and skipped, own wins over enquiries', () {
@@ -120,20 +121,15 @@ void main() {
     expect(row.taxiRequest, same(ref));
   });
 
-  test('progress excludes skipped and counts done', () {
+  test('skipped taxi and own stay are both handled parts', () {
     final rows = TripEasyRules.rows(
       _plan(stayMark: const TripRowMark.own(), taxiMark: const TripRowMark.skipped()),
       const [],
       const [],
     );
-    final p = TripEasyRules.progress(rows);
-    expect(p.total, 3);
-    expect(p.done, 1);
-    expect(p.percent, 33);
-  });
-
-  test('progress with nothing counted is full', () {
-    expect(TripEasyRules.progress(const []).percent, 100);
+    final p = TripParts.from(hasItinerary: true, rows: [for (final r in rows) (r.kind, r.state)]);
+    expect(p.handled, 3);
+    expect(p.percent, 100);
   });
 
   test('first in progress prefers rows that need you', () {

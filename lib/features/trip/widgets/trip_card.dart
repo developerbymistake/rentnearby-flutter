@@ -8,6 +8,7 @@ import '../trip_strings_v2_plan.dart';
 import '../utils/trip_bar_rules.dart';
 import '../utils/trip_clock.dart';
 import 'trip_status.dart';
+import '../utils/trip_parts.dart';
 
 class TripProgressRing extends StatelessWidget {
   final int percent;
@@ -135,6 +136,7 @@ class TripCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = trip;
     final p = t.progress;
+    final parts = t.parts;
     final ready = !past && TripBarRules.isReady(t);
     final route = routeTitle(t);
     final cities = t.legCities.where((c) => c.isNotEmpty).toList();
@@ -155,12 +157,12 @@ class TripCard extends StatelessWidget {
       title: title,
       subtitle: showRoute ? '$routeText\n$dates' : dates,
       chips: [
-        p.total == 0 ? TripStringsV2Plan.nothingToArrange : TripStringsTab.doneShort(p.done, p.total),
+        TripStringsTab.doneShort(parts.handled, TripParts.total),
         if (showChips && needs > 0) TripStringsV2Plan.needsYou(needs),
         if (showChips && p.inProgress > 0) TripStringsTab.waitingShort(p.inProgress),
       ],
       showPrice: false,
-      progress: p.percent / 100,
+      progress: parts.percent / 100,
       trailing: _menu(),
       trailingWidth: 30,
       actions: [

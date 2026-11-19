@@ -38,6 +38,7 @@ class TaxiRingPush {
     this.slots = const <String>[],
     this.sentAt,
     this.clockOffset = Duration.zero,
+    this.driverUserId,
   });
 
   static const Duration maxRing = Duration(seconds: 300);
@@ -58,6 +59,7 @@ class TaxiRingPush {
   final String? reason;
   final DateTime? sentAt;
   final Duration clockOffset;
+  final String? driverUserId;
 
   String get tag => kind == TaxiRingKind.test ? 'taxi_ring_test' : TaxiRingNotification.tagFor(offerId);
 
@@ -77,6 +79,7 @@ class TaxiRingPush {
       slots: slots,
       sentAt: sent,
       clockOffset: sent.difference(deviceNow.toUtc()),
+      driverUserId: driverUserId,
     );
   }
 
@@ -127,6 +130,7 @@ class TaxiRingPush {
       reason: data['reason']?.toString(),
       slots: [for (final key in const ['line1', 'line2', 'line3']) data[key]?.toString() ?? ''],
       sentAt: DateTime.tryParse(data['sentAt']?.toString() ?? '')?.toUtc(),
+      driverUserId: switch (data['driverUserId']?.toString()) { final String id when id.isNotEmpty => id, _ => null },
     );
   }
 }
@@ -304,7 +308,7 @@ class TaxiRingService {
         notifier: PluginTaxiRingNotifier(plugin),
         sendAck: TaxiRingAckClient.send,
         probe: () => TaxiRingDevice.read(plugin),
-        driverSession: TaxiRingSession.isDriver,
+        driverSession: TaxiRingSession.accepts,
         art: TaxiRingArt.load,
       );
 
@@ -313,13 +317,13 @@ class TaxiRingService {
   final TaxiAckSender sendAck;
   final TaxiRingDeviceProbe probe;
   final DateTime Function() _clock;
-  final Future<bool> Function()? driverSession;
+  final Future<bool> Function(String? driverUserId)? driverSession;
 
-  Future<bool> _isDriverSession() async {
+  Future<bool> _isDriverSession(String? driverUserId) async {
     final check = driverSession;
     if (check == null) return true;
     try {
-      return await check();
+      return await check(driverUserId);
     } catch (_) {
       return false;
     }
@@ -346,7 +350,7 @@ class TaxiRingService {
     final now = _clock().toUtc();
     final push = TaxiRingPush.tryParse(data)?.receivedAt(now);
     if (push == null) return TaxiRingResult(TaxiRingOutcome.ignored, null, Future<void>.value());
-    if (push.kind != TaxiRingKind.end && !await _isDriverSession()) {
+    if (push.kind != TaxiRingKind.end && !await _isDriverSession(push.driverUserId)) {
       return TaxiRingResult(TaxiRingOutcome.ignored, push, Future<void>.value());
     }
     switch (push.kind) {
@@ -361,7 +365,7 @@ class TaxiRingService {
         return TaxiRingResult(shown ? TaxiRingOutcome.testShown : TaxiRingOutcome.ignored, push, Future<void>.value());
       case TaxiRingKind.ring:
         if (TaxiRingEndedLog.contains(push.offerId, now)) {
-          return TaxiRingResult(TaxiRingOutcome.alreadyEnded, push, Future<void>.value());
+          return TaxiRingResult(TaxiRingOutcome.alreadyEnded, push, _ack(push, now, shown: false, late: true));
         }
         if (push.isExpired(now)) {
           return TaxiRingResult(TaxiRingOutcome.expired, push, _ack(push, now, shown: false, late: true));

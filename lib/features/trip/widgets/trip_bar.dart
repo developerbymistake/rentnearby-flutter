@@ -7,6 +7,7 @@ import '../trip_strings_bar.dart';
 import '../utils/trip_bar_rules.dart';
 import 'trip_bar_hide_sheet.dart';
 import 'trip_card.dart';
+import '../utils/trip_parts.dart';
 
 class TripBar extends StatefulWidget {
   const TripBar({super.key});
@@ -134,7 +135,7 @@ class _TripBarState extends State<TripBar> {
         final top = Row(
           children: [
             TripProgressRing(
-              percent: t.progress.percent,
+              percent: t.parts.percent,
               size: 40,
               stroke: 4.5,
               fill: FitnessAppTheme.white,

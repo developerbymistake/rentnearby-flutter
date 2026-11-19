@@ -7,7 +7,6 @@ import '../../../utils/app_toast.dart';
 import '../../../utils/dio_error_mapper.dart';
 import '../../trip/controllers/trip_plan_controller.dart';
 import '../../trip/models/trip_plan_model.dart';
-import '../ways/models/ask_models.dart';
 import '../ways/models/taxi_ways_models.dart';
 import '../ways/taxi_ways_strings.dart';
 import 'journey_local_store.dart';
@@ -441,31 +440,6 @@ class JourneysController extends GetxController {
     }
     c.unlinkSegmentJourney(journeyId);
   }
-
-  void recordAsk(String journeyId, AskResult result) {
-    final j = byId(journeyId);
-    if (j == null) return;
-    final now = DateTime.now();
-    final legs = j.legs.map((l) {
-      final mine = result.items.where((i) => i.legIndex == l.legIndex && i.enquiryId.isNotEmpty);
-      final item = mine.where((i) => i.taxiId == l.driver.taxiId).firstOrNull ?? mine.firstOrNull;
-      if (item == null) return l;
-      return l.copyWith(lastEnquiryId: item.enquiryId, lastKnownStatus: _legStatusOf(item.status), lastKnownAt: now);
-    }).toList();
-    final status = j.status == JourneyStatus.notAsked ? JourneyStatus.ready : j.status;
-    unawaited(_commit(j.copyWith(legs: legs, status: status)));
-    if (Get.isRegistered<TripPlanController>()) {
-      final c = Get.find<TripPlanController>();
-      if (c.trip.value?.journeys.any((x) => x.id == journeyId) ?? false) unawaited(c.refreshEnquiries());
-    }
-  }
-
-  LegStatus _legStatusOf(String status) => switch (status) {
-        'FareSent' || 'BookedByTraveller' || 'ConfirmedByBoth' => LegStatus.free,
-        'NotAvailable' || 'Failed' => LegStatus.notFree,
-        'Expired' || 'Closed' => LegStatus.unknown,
-        _ => LegStatus.noAnswer,
-      };
 
   void _toastSaveError(Object e) {
     final type = DioErrorMapper.errorType(e);

@@ -38,6 +38,7 @@ class TripPlanScreen extends StatefulWidget {
 
   static const Key lockedBannerKey = ValueKey('plan-locked-banner');
   static const Key viewButtonKey = ValueKey('plan-view-taxi');
+  static const Key lockedOverviewKey = ValueKey('plan-locked-overview');
   static const Key renameFieldKey = ValueKey('plan-rename-field');
   static const Key saveTripKey = ValueKey('plan-save-trip');
   static const Key noteKey = ValueKey('plan-note');
@@ -555,12 +556,25 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
           heightFactor: 1,
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 640),
-            child: GradientPillButton(
-              key: TripPlanScreen.viewButtonKey,
-              tone: ListingTone.indigo,
-              label: _c.planLock.byBooking ? TripStringsDayplan.viewBooking : TripStringsDayplan.viewRequest,
-              shadows: TripLook.pillShadow,
-              onTap: _openLockedStatus,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                GradientPillButton(
+                  key: TripPlanScreen.viewButtonKey,
+                  tone: ListingTone.indigo,
+                  label: _c.planLock.byBooking ? TripStringsDayplan.viewBooking : TripStringsDayplan.viewRequest,
+                  shadows: TripLook.pillShadow,
+                  onTap: _openLockedStatus,
+                ),
+                Gap.v(10),
+                WhitePillButton(
+                  key: TripPlanScreen.lockedOverviewKey,
+                  tone: ListingTone.indigo,
+                  label: TripStringsDayplan.backToOverview,
+                  onTap: _saveTrip,
+                ),
+              ],
             ),
           ),
         ),

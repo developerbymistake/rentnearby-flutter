@@ -65,8 +65,9 @@ class TripNewDraft {
   static const _version = 3;
   final List<TripDraftLeg> legs;
   final int? days;
+  final String? clientTripId;
 
-  const TripNewDraft(this.legs, [this.days]);
+  const TripNewDraft(this.legs, [this.days, this.clientTripId]);
 
   TripCityModel get city => legs.first.city;
 
@@ -88,10 +89,20 @@ class TripNewDraft {
       }
       if (legs.isEmpty || legs.every((l) => l.ids.isEmpty)) return null;
       final d = m['days'];
-      return TripNewDraft(legs, d is num ? d.toInt() : null);
+      final id = m['clientTripId'];
+      return TripNewDraft(legs, d is num ? d.toInt() : null, id is String && id.isNotEmpty ? id : null);
     } catch (_) {
       return null;
     }
+  }
+
+  static bool _sameLegs(List<TripDraftLeg> a, List<TripDraftLeg> b) {
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (a[i].city.cityKey != b[i].city.cityKey) return false;
+      if (a[i].ids.join(',') != b[i].ids.join(',')) return false;
+    }
+    return true;
   }
 
   static void save(List<TripDraftLeg> legs, {int? days}) {
@@ -99,13 +110,30 @@ class TripNewDraft {
       StorageService.clearTripNewDraft();
       return;
     }
+    final old = read();
+    final keepId = old != null && _sameLegs(old.legs, legs) ? old.clientTripId : null;
     StorageService.saveTripNewDraft({
       'v': _version,
       'legs': [
         for (final l in legs) {'city': l.city.toJson(), 'ids': l.ids},
       ],
-      'days': ?(days ?? read()?.days),
+      'days': ?(days ?? old?.days),
+      'clientTripId': ?keepId,
     });
+  }
+
+  // A save that died before its reply must reuse the same id, so the server returns the trip it already made.
+  static String? clientIdFor(List<int> cityKeys) {
+    final d = read();
+    if (d == null || d.clientTripId == null) return null;
+    final keys = [for (final l in d.legs) if (l.ids.isNotEmpty) l.city.cityKey];
+    return keys.join(',') == cityKeys.join(',') ? d.clientTripId : null;
+  }
+
+  static void rememberClientId(String id) {
+    final m = StorageService.getTripNewDraft();
+    if (m == null || m['v'] != _version) return;
+    StorageService.saveTripNewDraft({...m, 'clientTripId': id});
   }
 }
 

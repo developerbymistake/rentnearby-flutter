@@ -16,6 +16,8 @@ import '../widgets/trip_update_ask_sheet.dart';
 class TripDatesSheet {
   static const Key nameKey = ValueKey('save-trip-name');
   static const Key ctaKey = ValueKey('save-trip-cta');
+  static const Key startFieldKey = ValueKey('trip-dates-start');
+  static const Key saveNoteKey = ValueKey('save-trip-note');
   static const int _maxAdults = 30;
   static const int _maxKids = 20;
   static const int _daysAhead = 365;
@@ -179,16 +181,28 @@ class _DatesBodyState extends State<_DatesBody> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        PillPickerField(
-          tone: _tone,
-          label: TripStringsV2Find.startDate,
-          raised: true,
-          leadingArt: ListingArt.calendar,
-          value: start == null ? null : _full(start),
-          hint: TripStringsV2Find.startDate,
-          trailing: const SizedBox.shrink(),
-          onTap: _saving ? null : _pickDate,
-        ),
+        if (widget.saveTrip)
+          PillPickerField(
+            key: TripDatesSheet.startFieldKey,
+            tone: _tone,
+            label: TripStringsV2Find.startDateOptional,
+            raised: true,
+            value: start == null ? null : _full(start),
+            hint: TripStringsV2Find.pickDate,
+            onTap: _saving ? null : _pickDate,
+          )
+        else
+          PillPickerField(
+            key: TripDatesSheet.startFieldKey,
+            tone: _tone,
+            label: TripStringsV2Find.startDate,
+            raised: true,
+            leadingArt: ListingArt.calendar,
+            value: start == null ? null : _full(start),
+            hint: TripStringsV2Find.startDate,
+            trailing: const SizedBox.shrink(),
+            onTap: _saving ? null : _pickDate,
+          ),
         Padding(
           padding: EdgeInsets.fromLTRB(DS.s(4), DS.gv(8), DS.s(4), 0),
           child: ConstrainedBox(
@@ -218,7 +232,7 @@ class _DatesBodyState extends State<_DatesBody> {
     final cramped = mq.size.height - SheetInsets.lift(context) - mq.viewPadding.top < DS.s(480);
     return Sheet3D(
       tone: _tone,
-      art: save && cramped ? null : ListingArt.calendar,
+      art: save ? (cramped ? null : ListingArt.luggage) : ListingArt.calendar,
       title: widget.heading,
       subtitle: save ? null : (widget.clearStart ? TripStringsV2Find.datesPassedSub : TripStringsV2Find.datesSub),
       centerTitle: false,
@@ -231,7 +245,7 @@ class _DatesBodyState extends State<_DatesBody> {
         height: 52,
         onTap: save ? (_nameValid ? _create : null) : (_start == null ? null : _save),
       ),
-      footnote: TripStringsV2Find.datesNote,
+      footnote: save ? null : TripStringsV2Find.datesNote,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -253,6 +267,12 @@ class _DatesBodyState extends State<_DatesBody> {
             ],
           ),
           Gap.v(8),
+          if (save)
+            Text(
+              TripStringsV2Find.datesNote,
+              key: TripDatesSheet.saveNoteKey,
+              style: Ink3D.text(12.5, FontWeight.w400, Ink3D.sub),
+            ),
         ],
       ),
     );

@@ -27,6 +27,8 @@ String _jwt(Map<String, dynamic> claims) {
 
 final _driverToken = _jwt({'sub': 'u1', 'role': 'TAXI_DRIVER'});
 final _seekerToken = _jwt({'sub': 'u1', 'role': 'SEEKER'});
+const _me = '9b2f7c1e-0000-4000-8000-0000000000aa';
+final _driverIdToken = _jwt({'nameid': _me, 'role': 'TAXI_DRIVER'});
 
 class _Notifier implements TaxiRingNotifier {
   final shown = <String>[];
@@ -51,7 +53,7 @@ class _MemoryStore implements TaxiRingDeviceStore {
 }
 
 class _Harness {
-  _Harness(Future<bool> Function() session) {
+  _Harness(Future<bool> Function(String? driverUserId) session) {
     service = TaxiRingService(
       notifier: notifier,
       sendAck: (offerId, body) async => acks.add(offerId),
@@ -91,7 +93,7 @@ void main() {
 
   group('ring needs a logged in driver session', () {
     test('logged_out_ring_is_not_shown_and_not_acked', () async {
-      final h = _Harness(() async => false);
+      final h = _Harness((_) async => false);
       final result = await h.service.handle(_data('push_ring.json'));
       await result.ack;
       expect(result.outcome, TaxiRingOutcome.ignored);
@@ -100,7 +102,7 @@ void main() {
     });
 
     test('logged_out_test_ring_is_not_shown', () async {
-      final h = _Harness(() async => false);
+      final h = _Harness((_) async => false);
       final result = await h.service.handle(_testRing());
       expect(result.outcome, TaxiRingOutcome.ignored);
       expect(h.notifier.shown, isEmpty);
@@ -108,21 +110,21 @@ void main() {
     });
 
     test('failing_session_check_shows_nothing', () async {
-      final h = _Harness(() async => throw StateError('no storage'));
+      final h = _Harness((_) async => throw StateError('no storage'));
       final result = await h.service.handle(_data('push_ring.json'));
       expect(result.outcome, TaxiRingOutcome.ignored);
       expect(h.notifier.shown, isEmpty);
     });
 
     test('ring_end_still_cancels_when_logged_out', () async {
-      final h = _Harness(() async => false);
+      final h = _Harness((_) async => false);
       final result = await h.service.handle(_data('push_ring_end.json'));
       expect(result.outcome, TaxiRingOutcome.ended);
       expect(h.notifier.cancelled, hasLength(1));
     });
 
     test('driver_session_ring_is_shown_and_acked', () async {
-      final h = _Harness(() async => true);
+      final h = _Harness((_) async => true);
       final result = await h.service.handle(_data('push_ring.json'));
       await result.ack;
       expect(result.outcome, TaxiRingOutcome.shown);
@@ -174,9 +176,73 @@ void main() {
     });
   });
 
+  group('ring names its driver', () {
+    Map<String, dynamic> ringFor(String id) => {..._data('push_ring.json'), 'driverUserId': id};
+
+    test('ring_for_another_user_is_not_shown_and_not_acked', () async {
+      final h = _Harness((id) async => id == _me);
+      final result = await h.service.handle(ringFor('someone-else'));
+      await result.ack;
+      expect(result.outcome, TaxiRingOutcome.ignored);
+      expect(h.notifier.shown, isEmpty);
+      expect(h.acks, isEmpty);
+    });
+
+    test('ring_for_this_user_is_shown', () async {
+      final h = _Harness((id) async => id == _me);
+      final result = await h.service.handle(ringFor(_me));
+      await result.ack;
+      expect(result.outcome, TaxiRingOutcome.shown);
+      expect(h.acks, hasLength(1));
+    });
+
+    test('test_ring_for_another_user_is_not_shown', () async {
+      final h = _Harness((id) async => id == _me);
+      final result = await h.service.handle({..._testRing(), 'driverUserId': 'someone-else'});
+      expect(result.outcome, TaxiRingOutcome.ignored);
+      expect(h.notifier.shown, isEmpty);
+    });
+
+    test('ring_without_driver_user_id_passes_null_to_the_check', () async {
+      String? seen = 'unset';
+      final h = _Harness((id) async {
+        seen = id;
+        return true;
+      });
+      await h.service.handle(_data('push_ring.json')..remove('driverUserId'));
+      expect(seen, isNull);
+    });
+  });
+
+  group('accepts', () {
+    setUp(() => FlutterSecureStorage.setMockInitialValues({}));
+    tearDown(() async => StorageService.clearToken());
+
+    test('accepts_matches_the_token_user_id_case_insensitive', () async {
+      await StorageService.saveToken(_driverIdToken);
+      expect(await TaxiRingSession.accepts(_me.toUpperCase()), isTrue);
+      expect(await TaxiRingSession.accepts('9b2f7c1e-0000-4000-8000-0000000000bb'), isFalse);
+    });
+
+    test('accepts_without_an_id_falls_back_to_the_role_check', () async {
+      await StorageService.saveToken(_driverIdToken);
+      expect(await TaxiRingSession.accepts(null), isTrue);
+      expect(await TaxiRingSession.accepts(''), isTrue);
+    });
+
+    test('accepts_is_false_for_a_seeker_token', () async {
+      await StorageService.saveToken(_jwt({'nameid': _me, 'role': 'SEEKER'}));
+      expect(await TaxiRingSession.accepts(_me), isFalse);
+    });
+
+    test('accepts_is_false_when_logged_out', () async {
+      expect(await TaxiRingSession.accepts(_me), isFalse);
+    });
+  });
+
   test('real_entry_points_use_the_session_gate', () {
     final ring = File('lib/services/taxi_ring_service.dart').readAsStringSync();
-    expect(ring, contains('driverSession: TaxiRingSession.isDriver,'));
+    expect(ring, contains('driverSession: TaxiRingSession.accepts,'));
     final source = File('lib/services/notification_service.dart').readAsStringSync();
     final init = source.indexOf('await StorageService.init();');
     expect(init, greaterThan(source.indexOf('if (ring.kind == TaxiRingKind.end)')));

@@ -45,7 +45,7 @@ void main() {
     expect(stay.partial, isTrue);
     expect(stay.isDone, isFalse);
     expect(r.stillToDo.map((a) => a.key.id), ['stay:1']);
-    expect(r.percentDone, 50);
+    expect(r.percentDone, 100);
     expect(stay.detailLine, 'Hill View · 2 of 3 nights');
   });
 

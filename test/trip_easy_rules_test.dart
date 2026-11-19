@@ -5,6 +5,7 @@ import 'package:bakhli/features/trip/models/trip_offer_model.dart';
 import 'package:bakhli/features/trip/models/trip_plan_model.dart';
 import 'package:bakhli/features/trip/trip_strings_v2_easy.dart';
 import 'package:bakhli/features/trip/utils/trip_easy_rules.dart';
+import 'package:bakhli/features/trip/utils/trip_parts.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 const _stay1 = TripEasyRowKey(TripEasyRowKind.stay, 1);
@@ -102,9 +103,6 @@ TripEnquiryModel _segmentRow(String id, String status, {String journeyId = 'j1',
       context: TripEnquiryContext(journeyId: journeyId, journeyLegIndex: car),
     );
 
-TripJourney _journey(String id, {List<TripJourneyLeg> legs = const [], DateTime? date}) =>
-    TripJourney(id: id, fromName: 'Delhi', toName: 'Nainital', date: date ?? DateTime(2026, 11, 20), legs: legs);
-
 TripEasyRowInfo _row(List<TripEasyRowInfo> rows, TripEasyRowKey key) => TripEasyRules.rowOf(rows, key)!;
 
 List<TripEasyRowInfo> _rows(TripPlan p, [List<TripEnquiryModel> e = const [], List<TripJourney> j = const []]) =>
@@ -113,23 +111,22 @@ List<TripEasyRowInfo> _rows(TripPlan p, [List<TripEnquiryModel> e = const [], Li
 void main() {
   group('row keys and order', () {
     test('single city', () {
-      expect([for (final k in TripEasyRules.keys(_plan())) k.id], ['gettingThere', 'stay:1', 'taxi', 'comingBack']);
+      expect([for (final k in TripEasyRules.keys(_plan())) k.id], ['stay:1', 'taxi']);
     });
 
-    test('two cities put between before the stay of the next city', () {
-      expect([for (final k in TripEasyRules.keys(_plan(legs: 2))) k.id],
-          ['gettingThere', 'stay:1', 'between:2', 'stay:2', 'taxi', 'comingBack']);
+    test('two cities give one stay row per city, then the taxi', () {
+      expect([for (final k in TripEasyRules.keys(_plan(legs: 2))) k.id], ['stay:1', 'stay:2', 'taxi']);
     });
 
     test('rows come out in key order with titles', () {
       final rows = _rows(_plan(legs: 2));
-      expect([for (final r in rows) r.key.id], ['gettingThere', 'stay:1', 'between:2', 'stay:2', 'taxi', 'comingBack']);
-      expect(_row(rows, _going).title, TripStringsV2Easy.gettingThere);
+      expect([for (final r in rows) r.key.id], ['stay:1', 'stay:2', 'taxi']);
       expect(_row(rows, _stay1).title, 'Stay in Nainital');
-      expect(_row(rows, _between2).title, 'Between cities');
       expect(_row(rows, _stay2).title, 'Stay in Almora');
       expect(_row(rows, _taxi).title, TripStringsV2Easy.localTaxi);
-      expect(_row(rows, _back).title, TripStringsV2Easy.comingBack);
+      expect(TripEasyRules.rowOf(rows, _going), isNull);
+      expect(TripEasyRules.rowOf(rows, _between2), isNull);
+      expect(TripEasyRules.rowOf(rows, _back), isNull);
     });
 
     test('rowOf is null for a key that is not in the list', () {
@@ -322,7 +319,7 @@ void main() {
       const ref = TripTaxiRequestRef(requestId: 'r1', state: 'Collecting', view: 'Collecting', version: 2);
       final rows = TripEasyRules.rows(_plan(legs: 2), const [], const [], taxiRequest: ref);
       expect(_row(rows, _taxi).state, TripRowState.offer);
-      for (final k in [_going, _stay1, _between2, _stay2, _back]) {
+      for (final k in [_stay1, _stay2]) {
         expect(_row(rows, k).state, TripRowState.todo, reason: k.id);
         expect(_row(rows, k).taxiRequest, isNull, reason: k.id);
       }
@@ -332,122 +329,6 @@ void main() {
       const ref = TripTaxiRequestRef(requestId: 'r1', state: 'Expired', view: 'Busy', version: 9);
       final rows = TripEasyRules.rows(_plan(), [_taxiRow('t1', TripEnquiryStatuses.fareSent)], const [], taxiRequest: ref);
       expect(_row(rows, _taxi).state, TripRowState.todo);
-    });
-  });
-
-  group('getting there and coming back', () {
-    test('no step is to do', () {
-      final rows = _rows(_plan());
-      expect(_row(rows, _going).state, TripRowState.todo);
-      expect(_row(rows, _back).state, TripRowState.todo);
-    });
-
-    test('own and skipped steps', () {
-      final p = _plan(
-        steps: const TripSteps(
-          gettingThere: TripStep(status: TripStepStatus.own),
-          comingBack: TripStep(status: TripStepStatus.skipped),
-        ),
-      );
-      final rows = _rows(p);
-      expect(_row(rows, _going).state, TripRowState.own);
-      expect(_row(rows, _back).state, TripRowState.skipped);
-    });
-
-    test('a saved journey nobody asked is saved', () {
-      final p = _plan(steps: const TripSteps(gettingThere: TripStep(status: TripStepStatus.chosen, journeyId: 'j1')));
-      final rows = _rows(p, const [], [_journey('j1')]);
-      final r = _row(rows, _going);
-      expect(r.state, TripRowState.saved);
-      expect(r.journeyId, 'j1');
-      expect(r.state.isDone, isTrue);
-    });
-
-    test('a chosen step whose journey is not loaded is to do', () {
-      final p = _plan(steps: const TripSteps(gettingThere: TripStep(status: TripStepStatus.chosen, journeyId: 'j1')));
-      expect(_row(_rows(p), _going).state, TripRowState.todo);
-    });
-
-    TripJourney askedJourney({String lastKnown = 'Unknown', bool available = true, DateTime? date}) =>
-        _journey('j1', date: date ?? DateTime(2026, 11, 23), legs: [
-          TripJourneyLeg(
-            legIndex: 1,
-            fromName: 'Delhi',
-            toName: 'Nainital',
-            driverName: 'Sunil',
-            lastEnquiryId: 'q1',
-            lastKnownStatus: lastKnown,
-            driverAvailable: available,
-          ),
-        ]);
-
-    final chosen = _plan(steps: const TripSteps(comingBack: TripStep(status: TripStepStatus.booked, journeyId: 'j1')));
-
-    test('a journey on another date than the plan expects is attention', () {
-      final r = _row(_rows(chosen, const [], [askedJourney(date: DateTime(2026, 11, 25))]), _back);
-      expect(r.state, TripRowState.attention);
-    });
-
-    test('an asked car is asked', () {
-      expect(_row(_rows(chosen, const [], [askedJourney()]), _back).state, TripRowState.asked);
-    });
-
-    test('a driver who is free is an offer that needs you', () {
-      final r = _row(_rows(chosen, const [], [askedJourney(lastKnown: 'Free')]), _back);
-      expect(r.state, TripRowState.offer);
-      expect(r.needsYou, isTrue);
-    });
-
-    test('a booked car is booked, a confirmed car is confirmed', () {
-      final booked = _row(_rows(chosen, [_segmentRow('s1', TripEnquiryStatuses.bookedByTraveller)], [askedJourney()]), _back);
-      expect(booked.state, TripRowState.booked);
-      final done = _row(_rows(chosen, [_segmentRow('s1', TripEnquiryStatuses.confirmedByBoth)], [askedJourney()]), _back);
-      expect(done.state, TripRowState.confirmed);
-    });
-
-    test('a driver who is not free or paused needs attention', () {
-      expect(_row(_rows(chosen, const [], [askedJourney(lastKnown: 'NotFree')]), _back).state, TripRowState.attention);
-      expect(_row(_rows(chosen, const [], [askedJourney(available: false)]), _back).state, TripRowState.attention);
-    });
-  });
-
-  group('between cities', () {
-    TripTravel arrival(String id) => TripTravel(fromName: 'Nainital', journeyId: id);
-
-    test('no arrival and no mark is to do', () {
-      expect(_row(_rows(_plan(legs: 2)), _between2).state, TripRowState.todo);
-    });
-
-    test('marks', () {
-      expect(_row(_rows(_plan(legs: 2, travelMark2: const TripRowMark.own())), _between2).state, TripRowState.own);
-      expect(_row(_rows(_plan(legs: 2, travelMark2: const TripRowMark.skipped())), _between2).state, TripRowState.skipped);
-    });
-
-    test('an arrival whose journey is not loaded yet is asked', () {
-      final r = _row(_rows(_plan(legs: 2, arrival2: arrival('j2'))), _between2);
-      expect(r.state, TripRowState.asked);
-      expect(r.journeyId, 'j2');
-    });
-
-    test('a loaded journey nobody asked is saved', () {
-      final r = _row(_rows(_plan(legs: 2, arrival2: arrival('j2')), const [], [_journey('j2', date: DateTime(2026, 11, 22))]), _between2);
-      expect(r.state, TripRowState.saved);
-    });
-
-    test('a confirmed car is confirmed', () {
-      final j = _journey('j2', date: DateTime(2026, 11, 22), legs: const [
-        TripJourneyLeg(legIndex: 1, fromName: 'Nainital', toName: 'Almora', driverName: 'Mohan', lastEnquiryId: 'q'),
-      ]);
-      final rows = _rows(
-        _plan(legs: 2, arrival2: arrival('j2')),
-        [_segmentRow('s1', TripEnquiryStatuses.confirmedByBoth, journeyId: 'j2')],
-        [j],
-      );
-      expect(_row(rows, _between2).state, TripRowState.confirmed);
-    });
-
-    test('a single city plan has no between row', () {
-      expect(TripEasyRules.rowOf(_rows(_plan()), _between2), isNull);
     });
   });
 
@@ -461,7 +342,7 @@ void main() {
       expect(r.isDone, isFalse);
       expect(r.uncoveredDays, [3]);
       expect(r.subtitle, '${TripStringsV2Easy.pillAsked} · 2 of 3 nights');
-      expect(TripEasyRules.progress(rows).done, 0);
+      expect(TripParts.arranged(r.state), isTrue);
     });
 
     test('confirmed two of three nights is confirmed but not done', () {
@@ -495,57 +376,16 @@ void main() {
     TripEasyRowInfo info(TripRowState s, {bool needsYou = false}) =>
         TripEasyRowInfo(key: _taxi, state: s, title: 't', needsYou: needsYou);
 
-    test('done counts own, saved and confirmed; asked and offer are in progress', () {
-      final p = TripEasyRules.progress([
-        info(TripRowState.own),
-        info(TripRowState.saved),
-        info(TripRowState.confirmed),
-        info(TripRowState.asked),
-        info(TripRowState.offer),
-        info(TripRowState.todo),
-      ]);
-      expect((p.done, p.total, p.percent), (3, 6, 50));
+    test('a fresh plan has both parts open', () {
+      final p = TripParts.from(hasItinerary: true, rows: [for (final r in _rows(_plan())) (r.kind, r.state)]);
+      expect((p.handled, p.percent), (1, 33));
+      expect(p.next, TripPart.stay);
     });
 
-    test('skipped rows leave the total', () {
-      final p = TripEasyRules.progress([info(TripRowState.own), info(TripRowState.skipped), info(TripRowState.todo)]);
-      expect((p.done, p.total, p.percent), (1, 2, 50));
-    });
-
-    test('everything skipped or no rows is complete', () {
-      expect(TripEasyRules.progress([info(TripRowState.skipped)]).percent, 100);
-      expect(TripEasyRules.progress(const []).percent, 100);
-    });
-
-    test('attention is not done', () {
-      final p = TripEasyRules.progress([info(TripRowState.attention), info(TripRowState.confirmed)]);
-      expect((p.done, p.total), (1, 2));
-    });
-
-    test('a fresh plan is 0 of 4 and marks move it', () {
-      final fresh = TripEasyRules.progress(_rows(_plan()));
-      expect((fresh.done, fresh.total, fresh.percent), (0, 4, 0));
-      final marked = TripEasyRules.progress(_rows(_plan(
-        stayMark1: const TripRowMark.own(),
-        taxiMark: const TripRowMark.skipped(),
-        steps: const TripSteps(comingBack: TripStep(status: TripStepStatus.skipped)),
-      )));
-      expect((marked.done, marked.total, marked.percent), (1, 2, 50));
-    });
-
-    test('the server numbers win when it sent a progress', () {
-      final rows = _rows(_plan());
-      const server = TripProgress(total: 4, done: 3, percent: 75);
-      final p = TripEasyRules.progressOf(rows, server);
-      expect((p.done, p.total, p.percent), (3, 4, 75));
-      final local = TripEasyRules.progressOf(rows, const TripProgress());
-      expect(local.total, 4);
-      expect(TripEasyRules.progressOf(rows, null).done, 0);
-    });
-
-    test('a booked row counts as done', () {
-      final p = TripEasyRules.progress([info(TripRowState.booked), info(TripRowState.todo)]);
-      expect((p.done, p.total), (1, 2));
+    test('marks count as handled parts', () {
+      final rows = _rows(_plan(stayMark1: const TripRowMark.own(), taxiMark: const TripRowMark.skipped()));
+      final p = TripParts.from(hasItinerary: true, rows: [for (final r in rows) (r.kind, r.state)]);
+      expect((p.handled, p.percent, p.complete), (3, 100, true));
     });
 
     test('allResolved is true with one booked row and the rest skipped', () {
@@ -584,7 +424,7 @@ void main() {
     });
 
     test('the first asked or offer row in order', () {
-      final r = TripEasyRules.firstInProgress([info(_going, TripRowState.todo), info(_stay1, TripRowState.asked), info(_taxi, TripRowState.offer)]);
+      final r = TripEasyRules.firstInProgress([info(_stay1, TripRowState.asked), info(_taxi, TripRowState.offer)]);
       expect(r?.key, _stay1);
     });
 
@@ -624,7 +464,6 @@ void main() {
     test('marks read back through markOf', () {
       final p = _plan(legs: 2, stayMark2: const TripRowMark.own(), travelMark2: const TripRowMark.skipped(), taxiMark: const TripRowMark.own());
       expect(TripEasyRules.markOf(p, _stay2)?.isOwn, isTrue);
-      expect(TripEasyRules.markOf(p, _between2)?.isSkipped, isTrue);
       expect(TripEasyRules.markOf(p, _taxi)?.isOwn, isTrue);
       expect(TripEasyRules.markOf(p, _going), isNull);
       expect(TripEasyRules.markOf(p, _stay1), isNull);

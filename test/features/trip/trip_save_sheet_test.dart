@@ -143,6 +143,25 @@ void main() {
     await _drain(t);
   });
 
+  testWidgets('sheet_matches_the_mock_frame', (t) async {
+    installFakeApi([_planRoute(), FakeRoute('POST', '/trips', _echo)]);
+    await _openSheet(t);
+    expect(find.text(TripStringsV2Find.startDateOptional), findsOneWidget);
+    expect(find.text(TripStringsV2Find.pickDate), findsOneWidget);
+    final field = find.byKey(TripDatesSheet.startFieldKey);
+    expect(find.descendant(of: field, matching: find.byIcon(Icons.arrow_drop_down_rounded)), findsOneWidget);
+    expect(find.descendant(of: field, matching: find.byType(Art3D)), findsNothing);
+    expect(
+      find.byWidgetPredicate((w) => w is Art3D && w.asset == ListingArt.luggage),
+      findsOneWidget,
+    );
+    final note = t.getRect(find.byKey(TripDatesSheet.saveNoteKey));
+    final cta = t.getRect(find.byKey(TripDatesSheet.ctaKey));
+    expect(note.bottom, lessThanOrEqualTo(cta.top));
+    expect(t.widget<Text>(find.byKey(TripDatesSheet.saveNoteKey)).textAlign, isNot(TextAlign.center));
+    await _drain(t);
+  });
+
   testWidgets('no_show_drivers_text', (t) async {
     installFakeApi([_planRoute()]);
     await _openSheet(t);

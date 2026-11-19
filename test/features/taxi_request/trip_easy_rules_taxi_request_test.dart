@@ -3,6 +3,7 @@ import 'package:bakhli/features/trip/models/trip_model.dart';
 import 'package:bakhli/features/trip/models/trip_plan_model.dart';
 import 'package:bakhli/features/trip/trip_strings_dayplan.dart';
 import 'package:bakhli/features/trip/utils/trip_easy_rules.dart';
+import 'package:bakhli/features/trip/utils/trip_parts.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'taxi_request_controller_fakes.dart';
@@ -59,7 +60,7 @@ void main() {
     expect(r.isDone, isFalse);
     expect(r.pill, TripStringsDayplan.pillWaiting);
     expect(r.subtitle, TripStringsDayplan.taxiWaitingConfirm);
-    expect(TripEasyRules.progress([r]).done, 0);
+    expect(TripParts.arranged(r.state), isTrue);
   });
 
   test('only_selected_carries_a_pill_override', () {

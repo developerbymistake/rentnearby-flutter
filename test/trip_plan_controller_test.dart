@@ -283,7 +283,6 @@ void main() {
       expect(c.stepOf(TripStepRole.gettingThere).status, TripStepStatus.own);
       expect(c.stepOf(TripStepRole.gettingThere).journeyId, isNull);
       expect(c.journeys, isEmpty);
-      expect(c.easyRowOf(going)!.state, TripRowState.own);
       c.undoMark(going);
       expect(c.stepOf(TripStepRole.gettingThere).status, TripStepStatus.notStarted);
     });

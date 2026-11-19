@@ -51,4 +51,15 @@ void main() {
       expect(JwtClaims.role('a.%%%.c'), isNull);
     });
   });
+
+  group('JwtClaims.userId', () {
+    test('user_id_reads_nameid_then_sub_then_the_long_claim', () {
+      expect(JwtClaims.userId(_token({'nameid': 'a', 'sub': 'b'})), 'a');
+      expect(JwtClaims.userId(_token({'sub': 'b'})), 'b');
+      expect(JwtClaims.userId(_token({'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier': 'c'})), 'c');
+      expect(JwtClaims.userId(_token({'role': 'SEEKER'})), isNull);
+      expect(JwtClaims.userId(null), isNull);
+      expect(JwtClaims.userId('not.a.jwt'), isNull);
+    });
+  });
 }

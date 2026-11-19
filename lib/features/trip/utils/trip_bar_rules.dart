@@ -3,6 +3,7 @@ import '../models/trip_plan_model.dart';
 import '../trip_strings_bar.dart';
 import '../trip_strings_v2_plan.dart';
 import 'trip_clock.dart';
+import 'trip_parts.dart';
 
 enum TripBarLine { next, today, tomorrow }
 
@@ -35,10 +36,9 @@ class TripBarRules {
     return n > 0 ? n : (p.needsYou ? 1 : 0);
   }
 
-  static bool isReady(TripSummaryModel t) {
-    final p = t.progress;
-    return p.total > 0 && p.done >= p.total;
-  }
+  static bool isReady(TripSummaryModel t) => t.parts.complete;
+
+  static bool canCompletePlan(TripSummaryModel t, {required bool past}) => !past && t.spotCount > 0 && !t.parts.complete;
 
   static DateTime? endOf(TripSummaryModel t) {
     final s = t.startDate;
@@ -131,16 +131,14 @@ class TripBarRules {
   }
 
   static String? nextTitle(TripSummaryModel t) {
-    final p = t.progress;
-    bool simple(TripEasyRowKey? k) => k != null && (k.kind == TripEasyRowKind.stay || k.kind == TripEasyRowKind.taxi);
-    final next = TripEasyRowKey.parse(p.next?.key);
-    final key = simple(next)
-        ? next!
-        : p.rows.where((r) => simple(r.key) && !r.state.isDone && r.state != TripRowState.skipped).firstOrNull?.key;
-    if (key == null) return null;
+    final next = t.parts.next;
+    if (next == null) return null;
+    if (next == TripPart.taxi) return TripStringsV2Plan.rowTaxi;
+    final row = t.progress.rows
+        .where((r) => r.kind == TripEasyRowKind.stay && (r.state == TripRowState.todo || r.state == TripRowState.attention))
+        .firstOrNull;
     final cities = t.legCities;
-    final leg = key.legIndex ?? 0;
-    if (key.kind == TripEasyRowKind.taxi) return TripStringsV2Plan.rowTaxi;
+    final leg = row?.legIndex ?? 0;
     return leg >= 1 && leg <= cities.length ? TripStringsV2Plan.rowStay(cities[leg - 1]) : TripStringsV2Plan.rowStay(t.cityName);
   }
 

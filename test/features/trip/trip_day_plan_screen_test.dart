@@ -17,6 +17,7 @@ import 'package:bakhli/features/trip/trip_strings_name.dart';
 import 'package:bakhli/features/trip/trip_strings_v2_plan.dart';
 import 'package:bakhli/features/trip/utils/trip_name_rules.dart';
 import 'package:bakhli/features/trip/widgets/trip_add_city_card.dart';
+import 'package:bakhli/features/trip/widgets/customize/trip_customize_spot_row.dart' show TripDashBox;
 import 'package:bakhli/features/trip/widgets/trip_day_spot_list.dart';
 import 'package:bakhli/features/trip/widgets/trip_leg_header.dart';
 import 'package:bakhli/features/trip/widgets/trip_plan_header.dart';
@@ -176,10 +177,15 @@ void main() {
     expect(args, isA<Map>().having((m) => m['tripId'], 'tripId', 't1').having((m) => m['leg'], 'leg', 2).having((m) => m['toast'], 'toast', isNotNull));
   });
 
-  testWidgets('add_city_card_is_the_dashed_add_a_city_card', (t) async {
+  testWidgets('add_city_card_looks_like_the_add_day_card', (t) async {
     await pumpDayPlan(t, dayPlanFixture());
     final card = find.byType(TripAddCityCard);
-    expect(find.descendant(of: card, matching: find.text(TripStringsMcaA2.addACity)), findsOneWidget);
+    expect(find.descendant(of: card, matching: find.text(TripStringsMcaA2.addACityRow)), findsOneWidget);
+    expect(find.descendant(of: card, matching: find.byType(Art3D)), findsNothing);
+    final paint = t.widget<CustomPaint>(find.descendant(of: card, matching: find.byWidgetPredicate((w) => w is CustomPaint && w.painter is TripDashBox)));
+    final dash = paint.painter! as TripDashBox;
+    expect(dash.line, DesignColors.addDayLine);
+    expect(dash.fill, DesignColors.addDayFill);
     expect(find.descendant(of: card, matching: find.text(TripStringsMcaA3.nearbyCities(const ['Bhimtal', 'Mukteshwar']))), findsOneWidget);
     expect(find.descendant(of: card, matching: find.text(TripStringsMcaA3.addAnotherCity)), findsNothing);
     expect(find.descendant(of: card, matching: find.byIcon(Icons.add_rounded)), findsNothing);

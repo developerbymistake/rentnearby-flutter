@@ -45,7 +45,8 @@ class WayActions {
   TripPlanController? get trip =>
       Get.isRegistered<TripPlanController>() && TripPlanController.to.trip.value?.id == tripId ? TripPlanController.to : null;
 
-  static void backToPlan() => Get.until((r) => r.settings.name == AppRoutes.tripPlan || r.isFirst);
+  static void backToPlan() => Get.until(
+      (r) => r.settings.name == AppRoutes.tripPlan || r.settings.name == AppRoutes.tripOverview || r.isFirst);
 
   void back() => backToPlan();
 

@@ -181,6 +181,9 @@ class TripRepository {
   Future<TripModel> complete(String id) async =>
       TripModel.fromJson(_data(await ApiService.post('/trips/$id/complete', {})));
 
+  Future<TripModel> completePlan(String id) async =>
+      TripModel.fromJson(_data(await ApiService.post('/trips/$id/complete-plan', {})));
+
   Future<TripModel> mute(String id, {required bool muted}) async =>
       TripModel.fromJson(_data(await ApiService.put('/trips/$id/mute', {'muted': muted})));
 

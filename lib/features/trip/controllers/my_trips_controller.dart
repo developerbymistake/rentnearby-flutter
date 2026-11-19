@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:flutter/widgets.dart' show AppLifecycleListener;
 import 'package:get/get.dart';
@@ -7,9 +8,11 @@ import '../../../utils/dio_error_mapper.dart';
 import '../data/trip_repository.dart';
 import '../models/trip_model.dart';
 import '../trip_strings.dart';
+import '../trip_strings_hub_trips.dart';
 import '../utils/trip_bar_rules.dart';
 import '../utils/trip_clock.dart';
 import '../utils/trip_continue_pick.dart';
+import 'trip_plan_controller.dart';
 
 class MyTripsController extends GetxController {
   static MyTripsController get to => Get.isRegistered<MyTripsController>()
@@ -227,6 +230,21 @@ class MyTripsController extends GetxController {
       return;
     } finally {
       isLoadingMore.value = false;
+    }
+  }
+
+  Future<bool> completePlan(String id) async {
+    final plan = Get.isRegistered<TripPlanController>() ? Get.find<TripPlanController>() : null;
+    final held = plan != null && plan.trip.value?.id == id;
+    try {
+      if (held) await plan.flushPendingSave();
+      await _repo.completePlan(id);
+      await load();
+      if (held) unawaited(plan.reloadFromServer());
+      return true;
+    } catch (e) {
+      AppToast.error(DioErrorMapper.toMessage(e, TripStringsHubTrips.completePlanFailed));
+      return false;
     }
   }
 

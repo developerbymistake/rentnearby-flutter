@@ -83,6 +83,10 @@ TripSummaryModel _trip({String title = ''}) => TripSummaryModel.fromJson({
         'done': 1,
         'percent': 25,
         'next': {'kind': 'taxi', 'key': 'taxi'},
+        'rows': [
+          {'key': 'stay:1', 'state': 'asked'},
+          {'key': 'taxi', 'state': 'todo'},
+        ],
       },
     });
 

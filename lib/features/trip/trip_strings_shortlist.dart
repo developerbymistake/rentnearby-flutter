@@ -12,11 +12,6 @@ class TripStringsShortlist {
   static String centreOf(String city) => '$city centre';
   static const taxiFallback = 'Taxi';
   static const pickFirst = 'Pick up to 3 from the list, or go back and choose another option.';
-  static const emptyTitle = 'No taxis found for this route yet.';
-  static const emptyBody = 'You can arrange it yourself or skip.';
-  static const emptyFull = '$emptyTitle $emptyBody';
-  static const searchAgain = 'Search again';
-  static const loadingTaxis = 'Looking for taxis on this route';
 
   static const tapDone = 'Tap Done to send your enquiry';
   static String pickDrivers(int max) => 'Pick up to $max drivers';
@@ -33,25 +28,7 @@ class TripStringsShortlist {
     return 'We told $n ${n == 1 ? who : '${who}s'}. You will see replies here.';
   }
 
-  static String failedNote(int n, {required bool taxi}) {
-    final who = taxi ? 'driver' : 'host';
-    return n == 1 ? 'One $who could not be reached.' : '$n ${who}s could not be reached.';
-  }
-
-  static String remove(String name) => 'Remove $name';
   static const leadLimit = 'You have reached the daily limit for taxi enquiries on this trip. Try again tomorrow.';
-  static const sendFailedNote = 'Could not send. Please try again.';
-
-  static String reasonLine(String status, {required bool taxi}) {
-    final who = taxi ? 'driver' : 'host';
-    return switch (status) {
-      'NotAvailable' => taxi ? 'This taxi is not available any more' : 'This stay is not available any more',
-      'Blocked' => 'This $who cannot be reached',
-      'LimitReached' => 'You already have 3 open enquiries for these dates',
-      'OpenInAnotherTrip' => 'You already asked this $who for these dates in another trip',
-      _ => 'Could not reach this $who. Try again.',
-    };
-  }
 
   static String startsAt(String place) => 'Starts at $place';
   static String basedIn(String place) => 'Based in $place';
@@ -75,6 +52,4 @@ class TripStringsShortlist {
         'OpenInAnotherTrip' => openInAnotherTrip,
         _ => failed,
       };
-
-  static bool isOk(String status) => status == 'Sent' || status == 'AlreadyOpen' || status == 'Replayed';
 }

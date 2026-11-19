@@ -22,6 +22,7 @@ TripSummaryModel _trip(
   String status = 'Planned',
   String? lastEventAt,
   List<String>? cities,
+  Map<String, String>? rows,
 }) =>
     TripSummaryModel.fromJson({
       'id': id,
@@ -43,10 +44,16 @@ TripSummaryModel _trip(
         'attention': 0,
         'percent': total == 0 ? 100 : done * 100 ~/ total,
         'needsYou': needYou > 0,
-        if (needYou > 0)
-          'rows': [
-            for (var i = 1; i <= needYou; i++) {'key': 'stay:$i', 'state': 'offer', 'needsYou': true, 'askedCount': 1},
+        'rows': [
+          if (rows != null)
+            for (final e in rows.entries) {'key': e.key, 'state': e.value}
+          else if (needYou > 0)
+            for (var i = 1; i <= needYou; i++) {'key': 'stay:$i', 'state': 'offer', 'needsYou': true, 'askedCount': 1}
+          else ...[
+            {'key': 'stay:1', 'state': total > 0 && done >= total ? 'confirmed' : 'todo'},
+            {'key': 'taxi', 'state': total > 0 && done >= total ? 'skipped' : 'todo'},
           ],
+        ],
         if (nextKey != null) 'next': {'kind': nextKey.split(':').first, 'key': nextKey},
         'lastEventAt': ?lastEventAt,
       },
@@ -179,18 +186,16 @@ void main() {
       expect(TripBarRules.actionLabel(_trip('a'), past: true), 'View summary');
     });
 
-    test('next title comes from the row kind, stay and taxi only', () {
-      expect(TripBarRules.nextTitle(_trip('a', nextKey: 'gettingThere')), isNull);
-      expect(TripBarRules.nextTitle(_trip('a', nextKey: 'comingBack')), isNull);
-      expect(TripBarRules.nextTitle(_trip('a', nextKey: 'taxi')), 'Local taxi');
-      expect(TripBarRules.nextTitle(_trip('a', nextKey: 'stay:1')), 'Stay in Nainital');
-      expect(TripBarRules.nextTitle(_trip('a', nextKey: null)), isNull);
+    test('next title comes from the open part, stay before taxi', () {
+      expect(TripBarRules.nextTitle(_trip('a', rows: {'gettingThere': 'todo', 'stay:1': 'todo', 'taxi': 'todo'})), 'Stay in Nainital');
+      expect(TripBarRules.nextTitle(_trip('a', nextKey: 'stay:1', rows: {'stay:1': 'asked', 'taxi': 'todo'})), 'Local taxi');
+      expect(TripBarRules.nextTitle(_trip('a', rows: {'stay:1': 'asked', 'taxi': 'skipped', 'comingBack': 'todo'})), isNull);
     });
 
     test('a city change row never names the card, a later city stay does', () {
-      final t = _trip('a', nextKey: 'between:2', cities: ['Nainital', 'Almora']);
-      expect(TripBarRules.nextTitle(t), isNull);
-      expect(TripBarRules.nextTitle(_trip('a', nextKey: 'stay:2', cities: ['Nainital', 'Almora'])), 'Stay in Almora');
+      final cities = ['Nainital', 'Almora'];
+      final t = _trip('a', nextKey: 'between:2', cities: cities, rows: {'stay:1': 'skipped', 'between:2': 'todo', 'stay:2': 'todo', 'taxi': 'todo'});
+      expect(TripBarRules.nextTitle(t), 'Stay in Almora');
     });
   });
 

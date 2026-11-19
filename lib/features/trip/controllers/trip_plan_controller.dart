@@ -50,6 +50,7 @@ import '../utils/trip_supply_area.dart';
 import '../utils/trip_state_rule.dart';
 import '../utils/trip_clock.dart';
 import '../utils/trip_easy_rules.dart';
+import '../utils/trip_parts.dart';
 import '../utils/trip_days_rules.dart';
 import '../utils/trip_day_load.dart';
 import '../utils/trip_leg_draft.dart';
@@ -61,6 +62,7 @@ import '../utils/trip_step_rules.dart';
 import '../utils/taxi_result.dart';
 import '../utils/trip_travel_rules.dart';
 import '../utils/trip_whatsapp_text.dart';
+import '../widgets/trip_city_sheet.dart' show TripNewDraft;
 import '../widgets/trip_status.dart';
 import 'my_trips_controller.dart';
 import 'trip_enquiry_controller.dart';
@@ -143,6 +145,8 @@ class TripPlanController extends GetxController {
   String? _clientTripId;
   bool _settingsChangedWhilePlanning = false;
   String? _openingId;
+
+  String? get openingId => _openingId;
   bool _newUnsaved = false;
   bool _creatingNew = false;
   bool _nameRejectedNow = false;
@@ -1016,11 +1020,7 @@ class TripPlanController extends GetxController {
     }
   }
 
-  ({int done, int total, int percent}) get stepProgress {
-    final e = easyProgress;
-    final percent = (spotCount > 0 ? 50 : 0) + (50 * e.percent / 100).round();
-    return (done: e.done, total: e.total, percent: percent.clamp(0, 100));
-  }
+  ({int done, int total, int percent}) get stepProgress => easyProgress;
 
   List<TripEasyRowInfo> get easyRows {
     final p = plan.value;
@@ -1037,12 +1037,20 @@ class TripPlanController extends GetxController {
     return req != null && req.id == ref.requestId && req.booking?.canRate == true;
   }
 
-  ({int done, int total, int percent}) get easyProgress {
+  TripParts get parts {
     final server = trip.value?.progress;
-    final rows = easyRows;
-    return enquiriesFailed.value && server != null && server.total > 0
-        ? TripEasyRules.progressOf(const [], server)
-        : TripEasyRules.progress(rows);
+    final useServer = enquiriesFailed.value && server != null && server.rows.isNotEmpty;
+    return TripParts.from(
+      hasItinerary: !isNewUnsaved && spotCount > 0,
+      rows: useServer
+          ? [for (final r in server.rows) (r.kind, r.state)]
+          : [for (final r in easyRows) (r.kind, r.state)],
+    );
+  }
+
+  ({int done, int total, int percent}) get easyProgress {
+    final p = parts;
+    return (done: p.handled, total: TripParts.total, percent: p.percent);
   }
 
   TripEasyRowInfo? get easyInProgress => TripEasyRules.firstInProgress(easyRows);
@@ -1158,6 +1166,19 @@ class TripPlanController extends GetxController {
   }
 
   void unskipRow(TripEasyRowKey key) => undoMark(key);
+
+  void clearSkip(TripEasyRowKey key) {
+    final p = plan.value;
+    if (p != null && TripEasyRules.markOf(p, key)?.isOwn == false) undoMark(key);
+  }
+
+  Future<void> reloadFromServer() async {
+    final id = trip.value?.id;
+    if (id == null) return;
+    _saveTimer?.cancel();
+    StorageService.clearTripPending(id);
+    await open(id, fresh: true);
+  }
 
   Future<bool> _closeOpenOnServer(String step) async {
     final res = await TripShortlistController.to.markBooked(step);
@@ -2045,7 +2066,11 @@ class TripPlanController extends GetxController {
     }
     picked = selections.first.city;
     _newUnsaved = true;
-    _clientTripId = const Uuid().v4();
+    _clientTripId = TripNewDraft.clientIdFor([
+          for (final e in selections)
+            if (e.spots.isNotEmpty) e.city.cityKey,
+        ]) ??
+        const Uuid().v4();
     final autoDays = TripDaysRules.autoTotal([for (final d in tripDays) [for (final s in d.spots) s.visitMinutes]], TripPace.relaxed);
     final chosenDays = autoDays.clamp(legs.length, TripConstants.maxDaysCap).toInt();
     plan.value = TripPlan(
@@ -2069,6 +2094,8 @@ class TripPlanController extends GetxController {
     if (next.startDateIso != p.settings.startDateIso) unawaited(recalculate());
     _creatingNew = true;
     _nameRejectedNow = false;
+    final clientId = _clientTripId;
+    if (clientId != null) TripNewDraft.rememberClientId(clientId);
     var ok = false;
     try {
       ok = await saveNow();

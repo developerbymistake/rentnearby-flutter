@@ -2,13 +2,13 @@ import 'package:bakhli/design/design.dart';
 import 'package:flutter/material.dart';
 import '../../models/trip_model.dart';
 import '../../trip_strings_hub_trips.dart';
-import '../../trip_strings_v2_plan.dart';
 import '../../utils/trip_bar_rules.dart';
 import '../../utils/trip_card_bars.dart';
 import '../../utils/trip_format.dart';
 import 'hub_card_bars.dart';
 import 'hub_ring.dart';
 import 'hub_tokens.dart';
+import '../../utils/trip_parts.dart';
 
 class HubTripBody extends StatelessWidget {
   final TripSummaryModel trip;
@@ -36,10 +36,10 @@ class HubTripBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final p = trip.progress;
+    final parts = trip.parts;
     final ready = !past && TripBarRules.isReady(trip);
     final needs = TripBarRules.needCount(trip);
-    final percent = past ? 100 : p.percent.clamp(0, 100).toInt();
+    final percent = past ? 100 : parts.percent;
     final stripTitle = past
         ? TripStringsHubTrips.tripFinished
         : ready
@@ -62,8 +62,8 @@ class HubTripBody extends StatelessWidget {
                 children: [
                   _Stat(
                     icon: TravelIcon.note,
-                    value: p.total == 0 ? '0' : TripStringsHubTrips.stepsOf(p.done, p.total),
-                    label: p.total == 0 ? TripStringsV2Plan.nothingToArrange : TripStringsHubTrips.stepsDone,
+                    value: TripStringsHubTrips.stepsOf(parts.handled, TripParts.total),
+                    label: TripStringsHubTrips.stepsDone,
                   ),
                   Gap.v(12),
                   if (past)

@@ -67,7 +67,7 @@ List<TripSummaryModel> _fake() {
         guideStep: 'stay:1',
         rows: [
           _row(TripEasyRowKind.stay, TripRowState.asked, leg: 1, needs: true, total: 2, covered: 1),
-          _row(TripEasyRowKind.taxi, TripRowState.confirmed),
+          _row(TripEasyRowKind.taxi, TripRowState.todo),
           _row(TripEasyRowKind.gettingThere, TripRowState.todo),
           _row(TripEasyRowKind.comingBack, TripRowState.todo),
         ],

@@ -37,8 +37,8 @@ class HubCardBars extends StatelessWidget {
           Gap.h(10),
           Expanded(
             child: _Bar(
-              label: TripStringsHubTrips.travel,
-              bar: bars.travel,
+              label: TripStringsHubTrips.plan,
+              bar: bars.plan,
               from: HubTokens.accentLight,
               to: HubTokens.accent,
             ),

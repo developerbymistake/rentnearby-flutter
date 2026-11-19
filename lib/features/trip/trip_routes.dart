@@ -25,6 +25,7 @@ import 'trip_strings.dart';
 import 'utils/taxi_result.dart';
 import 'widgets/taxi_request/taxi_day_rows.dart';
 import 'widgets/trip_exit_confirm.dart';
+import 'widgets/trip_not_found_view.dart';
 
 Map<dynamic, dynamic> _args() {
   final a = Get.arguments;
@@ -152,9 +153,43 @@ mixin _HoldsTrip<T extends StatefulWidget> on State<T> {
     }
   }
 
+  bool get _thisTrip {
+    final id = heldTripId;
+    return id == null || _plan.openingId == id || _plan.trip.value?.id == id;
+  }
+
+  bool get heldGone => _plan.tripGone.value && _thisTrip;
+
   Widget heldOrLoading(Widget Function() child) {
     final id = heldTripId;
+    if (heldGone) {
+      return Scaffold(
+        backgroundColor: DesignColors.surface,
+        body: SafeArea(child: ListView(children: const [TripNotFoundView()])),
+      );
+    }
+    if (_plan.plannerOff.value && _thisTrip) {
+      return Scaffold(
+        backgroundColor: DesignColors.surface,
+        body: Center(
+          child: StateCard(
+            asset: TravelIcon.route,
+            title: TripStrings.plannerOff,
+            message: TripStrings.plannerOffSubtitle,
+            actionLabel: TripStrings.myTripsAction,
+            onAction: TripNavigation.openTripsTab,
+            layout: StateLayout.plain,
+          ),
+        ),
+      );
+    }
     if (_holds(id)) return child();
+    if (id == null && !_plan.isOpening.value) {
+      return Scaffold(
+        backgroundColor: DesignColors.surface,
+        body: SafeArea(child: ListView(children: const [TripNotFoundView()])),
+      );
+    }
     if (_plan.openFailed.value && id != null) {
       return Scaffold(
         backgroundColor: DesignColors.surface,
@@ -220,7 +255,7 @@ class _TripOverviewRouteState extends State<TripOverviewRoute> with _HoldsTrip {
   }
 
   Future<void> _exit() async {
-    if (!_holds(heldTripId)) {
+    if (!_holds(heldTripId) || heldGone || _plan.plannerOff.value) {
       TripNavigation.openTripsTab();
       return;
     }
@@ -256,15 +291,19 @@ class _TripOverviewRouteState extends State<TripOverviewRoute> with _HoldsTrip {
           final paused = Get.isRegistered<TripTaxiRequestController>() && Get.find<TripTaxiRequestController>().paused.value;
           return heldOrLoading(() {
             final t = _plan.trip.value!;
+            final parts = _plan.parts;
+            final showStay = !_plan.stayTabOff.value;
             return TripOverviewScreen(
               trip: t,
+              parts: parts,
+              highlight: TripOverviewScreen.highlightOf(parts, showStay: showStay),
               paused: paused,
               taxiCanRate: _plan.taxiCanRate,
               onBack: () => Navigator.maybePop(context),
               onViewPlan: () => _viewPlan(t.id),
               onTaxi: _taxi,
               stay: TripOverviewStay.of(_plan.enquiryList, cityOf: _cityOf),
-              showStay: !_plan.stayTabOff.value,
+              showStay: showStay,
               onStay: (_) => _stay(),
               onDone: TripNavigation.openTripsTab,
             );

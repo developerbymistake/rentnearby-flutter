@@ -1,7 +1,6 @@
 import 'package:get/get.dart';
 import 'package:bakhli/features/taxi/journeys/journey_models.dart';
 import 'package:bakhli/features/taxi/journeys/journey_way_bridge.dart';
-import 'package:bakhli/features/taxi/ways/models/ask_models.dart';
 import 'package:bakhli/features/taxi/ways/models/taxi_ways_models.dart';
 import 'package:bakhli/features/trip/controllers/trip_plan_controller.dart';
 import 'package:bakhli/features/trip/models/trip_enquiry_model.dart';
@@ -182,21 +181,6 @@ void main() {
       expect(leg.fareWith(a, 10), 18000);
     });
 
-    test('the ask asks every cover car first, then backups', () {
-      final leg = _coverLeg();
-      final plan = WayPlan(planKey: 'p1~hld~ntl', cars: 1, total: 15000, legs: [leg]);
-      final req = AskDriversRequest.fromPlan(
-        plan: plan,
-        chosen: const {},
-        date: DateTime(2026, 11, 20),
-        people: 10,
-        journeyId: 'j1',
-        fromName: 'Haldwani',
-        toName: 'Nainital',
-      )!;
-      expect(req.legs.single.taxiIds, ['c', 'a', 'b']);
-    });
-
     test('cars per asked driver mirror JourneyLegPricing.CarsFor', () {
       expect(WayCover.carsFor('a', 4, 10, 'c', ['a']), 1);
       expect(WayCover.carsFor('c', 7, 10, 'c', ['a']), 1);
@@ -206,7 +190,6 @@ void main() {
       expect(WayCover.carsOfLeg(10, 4, const []), 3);
       expect(WayCover.carsOfLeg(3, null, const []), 1);
       expect(WayCover.distinct(['a', '', 'a', 'b']), ['a', 'b']);
-      expect(WayCover.askIds('c', ['a', 'd', 'e'], ['b'], 3), ['c', 'a', 'd']);
     });
 
     test('a leg without a cover keeps the top driver and his own cars', () {

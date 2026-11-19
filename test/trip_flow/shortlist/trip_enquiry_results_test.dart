@@ -1,4 +1,3 @@
-import 'package:bakhli/features/taxi/ways/models/ask_models.dart';
 import 'package:bakhli/features/trip/models/trip_enquiry_model.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -25,40 +24,5 @@ void main() {
       ],
     });
     expect(b.perRecipient.single.status, 'Blocked');
-  });
-
-  test('ask request carries clientRequestId, stepKey and a single leg of at most the given ids', () {
-    const leg = AskLegRequest(
-      legIndex: 1,
-      legKey: 'k',
-      fromName: 'A',
-      toName: 'B',
-      listedFare: null,
-      taxiIds: ['1', '2', '3', '4'],
-      carOf: 1,
-    );
-    final req = AskDriversRequest(
-      date: DateTime(2026, 12, 1),
-      people: 2,
-      journeyId: 'j',
-      fromName: 'A',
-      toName: 'B',
-      legs: const [leg],
-    ).guided(clientRequestId: 'rid', stepKey: 'gettingThere', taxiIds: ['1', '2']);
-    final json = req.toJson();
-    expect(json['clientRequestId'], 'rid');
-    expect(json['stepKey'], 'gettingThere');
-    expect(((json['legs'] as List).single as Map)['taxiIds'], ['1', '2']);
-  });
-
-  test('ask result parses results with taxiId key', () {
-    final r = AskResult.fromJson({
-      'items': [],
-      'skipped': [],
-      'results': [
-        {'taxiId': 't1', 'status': 'Sent'},
-      ],
-    });
-    expect(r.results.single.listingId, 't1');
   });
 }

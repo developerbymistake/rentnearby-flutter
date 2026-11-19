@@ -9,6 +9,7 @@ import '../../utils/trip_format.dart';
 import '../trip_card.dart';
 import 'hub_tokens.dart';
 import 'hub_trip_body.dart';
+import '../../trip_strings_hub_trips.dart';
 
 class HubTripCard extends StatelessWidget {
   final TripSummaryModel trip;
@@ -18,6 +19,7 @@ class HubTripCard extends StatelessWidget {
   final VoidCallback? onShare;
   final VoidCallback onDelete;
   final VoidCallback? onMarkComplete;
+  final VoidCallback? onCompletePlan;
 
   const HubTripCard({
     super.key,
@@ -28,6 +30,7 @@ class HubTripCard extends StatelessWidget {
     this.onShare,
     required this.onDelete,
     this.onMarkComplete,
+    this.onCompletePlan,
   });
 
   static String titleOf(TripSummaryModel t) {
@@ -55,12 +58,14 @@ class HubTripCard extends StatelessWidget {
   Widget _menu() => PopupMenuButton<String>(
         padding: EdgeInsets.zero,
         constraints: BoxConstraints(minWidth: DS.s(140)),
+        key: const ValueKey('hub-card-menu'),
         icon: Icon(Icons.more_vert_rounded, size: DS.s(22), color: HubTokens.sub),
         color: DesignColors.surface,
         elevation: 8,
         shape: RoundedRectangleBorder(borderRadius: DS.br(CardRadius.tile)),
         onSelected: (v) {
           if (v == 'share') onShare?.call();
+          if (v == 'plan') onCompletePlan?.call();
           if (v == 'complete') onMarkComplete?.call();
           if (v == 'delete') onDelete();
         },
@@ -70,6 +75,13 @@ class HubTripCard extends StatelessWidget {
               value: 'share',
               height: DS.s(44),
               child: Text(TripStringsA5.share, style: TypeTokens.style(14, FontWeight.w500)),
+            ),
+          if (onCompletePlan != null)
+            PopupMenuItem(
+              key: const ValueKey('menu-complete-plan'),
+              value: 'plan',
+              height: DS.s(44),
+              child: Text(TripStringsHubTrips.completePlan, style: TypeTokens.style(14, FontWeight.w500)),
             ),
           if (onMarkComplete != null)
             PopupMenuItem(

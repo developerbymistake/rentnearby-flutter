@@ -10,24 +10,22 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   tearDown(Get.reset);
 
-  test('T4 every row own or skipped: progress N of N, nothing asked', () async {
+  test('T4 every part own or skipped: 3 of 3 handled, nothing asked', () async {
     final c = TripPlanController();
     c.plan.value = journeyPlan([2, 1]);
-    expect(c.easyProgress.total, 6);
-    expect(c.easyProgress.done, 0);
+    expect(c.easyProgress.total, 3);
+    expect(c.easyProgress.done, 1);
+    expect(c.easyProgress.percent, 33);
 
-    expect(await c.markOwn(const TripEasyRowKey(TripEasyRowKind.gettingThere)), isA<TripMarked>());
     expect(await c.markOwn(const TripEasyRowKey(TripEasyRowKind.stay, 1)), isA<TripMarked>());
-    expect(await c.markOwn(const TripEasyRowKey(TripEasyRowKind.between, 2)), isA<TripMarked>());
     expect(await c.markOwn(const TripEasyRowKey(TripEasyRowKind.stay, 2)), isA<TripMarked>());
     c.skipRow(const TripEasyRowKey(TripEasyRowKind.taxi));
-    c.skipRow(const TripEasyRowKey(TripEasyRowKind.comingBack));
 
     final rows = c.easyRows;
-    expect(rows.where((r) => r.state == TripRowState.skipped), hasLength(2));
+    expect(rows.where((r) => r.state == TripRowState.skipped), hasLength(1));
     final progress = c.easyProgress;
-    expect(progress.total, 4);
-    expect(progress.done, 4);
+    expect(progress.total, 3);
+    expect(progress.done, 3);
     expect(progress.percent, 100);
     expect(TripEasyRules.allResolved(rows), isTrue);
     expect(TripEasyRules.hasOwnMark(c.plan.value!), isTrue);
@@ -36,5 +34,11 @@ void main() {
     c.undoMark(const TripEasyRowKey(TripEasyRowKind.stay, 2));
     expect(c.easyRowOf(const TripEasyRowKey(TripEasyRowKind.stay, 2))!.state, TripRowState.todo);
     expect(c.easyProgress.done, 3);
+
+    c.clearSkip(const TripEasyRowKey(TripEasyRowKind.taxi));
+    expect(c.easyRowOf(const TripEasyRowKey(TripEasyRowKind.taxi))!.state, TripRowState.todo);
+    expect(c.easyProgress.done, 2);
+    c.clearSkip(const TripEasyRowKey(TripEasyRowKind.stay, 1));
+    expect(c.easyRowOf(const TripEasyRowKey(TripEasyRowKind.stay, 1))!.state, TripRowState.own);
   });
 }

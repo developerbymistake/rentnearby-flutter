@@ -13,6 +13,8 @@ class TripStringsV2Find {
   static const datesPassedSub = 'Your start date has passed.';
   static const datesNote = 'You can change dates later from the plan.';
   static const startDate = 'Start date';
+  static const startDateOptional = 'Start date (optional)';
+  static const pickDate = 'Pick a date';
   static const adults = 'Adults';
   static const children = 'Children';
   static const showWays = 'Show ways';

@@ -89,11 +89,6 @@ void main() {
       expect(batch.perRecipient.where((r) => r.ok).length, 1);
       expect(c.activeOf('stay:1').map((i) => i.listingId), ['a']);
       expect(c.reasonOf('stay:1', 'a'), 'OpenInAnotherTrip');
-      expect(TripStringsShortlist.reasonLine('OpenInAnotherTrip', taxi: false),
-          'You already asked this host for these dates in another trip');
-      expect(TripStringsShortlist.reasonLine('OpenInAnotherTrip', taxi: true),
-          'You already asked this driver for these dates in another trip');
-      expect(TripStringsShortlist.isOk('OpenInAnotherTrip'), isFalse);
     });
   });
 

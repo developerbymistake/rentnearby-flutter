@@ -29,6 +29,14 @@ class TripStringsOverview {
   static const String exitBody = 'Your trip is saved. Continue any time from Trips.';
   static const String exit = 'Exit';
   static const String keepPlanning = 'Keep planning';
+  static const String progressTitle = 'Plan progress';
+  static const String progressBothOpen = 'Itinerary saved. Taxi and stay are optional.';
+  static const String progressStayOpen = 'Stay not added yet.';
+  static const String progressTaxiOpen = 'Taxi not added yet.';
+  static const String progressAllSet = 'All set.';
+  static const String progressNoPlan = 'Add places to your plan.';
+  static String progressLabel(int percent) => 'Plan progress, $percent percent';
+  static String nextLabel(String title) => '$title, next';
 
   static String _n(int n, String one, String many) => '$n ${n == 1 ? one : many}';
 

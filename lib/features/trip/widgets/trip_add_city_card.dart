@@ -1,4 +1,5 @@
 import 'package:bakhli/design/design.dart';
+import 'package:bakhli/design/extra/trip_customize_look.dart';
 import 'package:bakhli/design/extra/trip_plan_look.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -16,12 +17,6 @@ class TripAddCityCard extends StatefulWidget {
   const TripAddCityCard({super.key});
 
   static const Key cardKey = ValueKey('trip-add-city');
-  static const BorderRadius radius = BorderRadius.only(
-    topLeft: Radius.circular(8),
-    topRight: Radius.circular(40),
-    bottomLeft: Radius.circular(8),
-    bottomRight: Radius.circular(8),
-  );
 
   static String? _disabledText(TripLegEditBlock b) => switch (b) {
         TripLegEditBlock.offline => TripStringsMcaA3.connectToAddCity,
@@ -85,24 +80,18 @@ class _TripAddCityCardState extends State<TripAddCityCard> {
               onTap: enabled ? () => TripNavigation.addCity(context) : null,
               label: TripStringsMcaA2.addACity,
               child: CustomPaint(
-                painter: TripDashBox(TripLook.rail, DS.size, fill: DesignColors.surface, radius: DS.br(TripAddCityCard.radius)),
-                child: Stack(
-                  children: [
-                    Container(
-                      constraints: BoxConstraints(minHeight: DS.s(80)),
-                      padding: EdgeInsets.fromLTRB(DS.s(92), DS.s(16), DS.s(16), DS.s(16)),
-                      alignment: Alignment.centerLeft,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          ExcludeSemantics(child: Text(TripStringsMcaA2.addACity, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(15, FontWeight.w700, TripLook.ink, letterSpacing: 0))),
-                          Text(subtitle, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(12.5, FontWeight.w400, TripLook.mutedText, letterSpacing: 0)),
-                        ],
-                      ),
-                    ),
-                    Positioned(left: DS.s(14), top: DS.s(12), child: const IgnorePointer(child: Art3D(asset: ListingArt.worldMap, size: 62, shadowAlpha: 0))),
-                  ],
+                painter: TripDashBox(DesignColors.addDayLine, DS.s(1), fill: DesignColors.addDayFill, radius: DS.br(TripCustomizeLook.addDayRadius), stroke: 2.5),
+                child: Container(
+                  constraints: BoxConstraints(minHeight: DS.s(80)),
+                  padding: DS.sym(h: 16, v: 20),
+                  alignment: Alignment.center,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      ExcludeSemantics(child: Text(TripStringsMcaA2.addACityRow, maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center, style: Ink3D.text(16, FontWeight.w700, ListingTone.indigo.text))),
+                      Text(subtitle, maxLines: 2, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center, style: Ink3D.text(12.5, FontWeight.w400, TripLook.mutedText)),
+                    ],
+                  ),
                 ),
               ),
             ),

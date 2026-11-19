@@ -8,6 +8,7 @@ import 'trip_enquiry_model.dart';
 import 'trip_journey_model.dart';
 import 'taxi_request_models.dart';
 import 'trip_plan_model.dart';
+import '../utils/trip_parts.dart';
 
 class TripSummaryRoom {
   final String? roomName;
@@ -584,11 +585,7 @@ extension TripSummaryProgress on TripSummaryRecord {
 
   bool get isCompleted => bookingState.toLowerCase() == 'completed' || status.toLowerCase() == 'completed' || isPast;
 
-  int? get percentDone {
-    final rows = shownRows;
-    if (rows.isEmpty) return null;
-    return (rows.where((a) => a.isDone).length * 100 / rows.length).round();
-  }
+  int? get percentDone => isBlank ? null : TripParts.ofRecord(this).percent;
 
   List<TripSummaryNight> get allNights => isMultiCity ? [for (final l in legs) ...l.nights] : nights;
 

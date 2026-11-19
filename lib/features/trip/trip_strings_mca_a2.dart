@@ -8,6 +8,7 @@ class TripStringsMcaA2 {
   static const String routeMeta = '2 cities';
 
   static const String addACity = 'Add a city';
+  static const String addACityRow = '+ Add a city';
   static String afterCity(String city) => 'After $city';
   static String citiesIn(List<String> states) => switch (states.length) {
         1 => 'Cities in ${states[0]}',

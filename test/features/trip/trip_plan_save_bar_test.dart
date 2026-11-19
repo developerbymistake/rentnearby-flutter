@@ -151,4 +151,20 @@ void main() {
     }
     await drainSave(t);
   });
+
+  testWidgets('locked_plan_still_has_back_to_overview', (t) async {
+    final plan = dayPlanFixture();
+    installFakeApi([FakeRoute.value('PUT', '/trips/{id}', engineTripJson(plan))]);
+    await pumpDayPlan(t, plan, size: const Size(360, 800), lock: lockedByRequest, pages: [
+      GetPage(name: AppRoutes.tripOverview, page: () => const Scaffold(body: Text('overview'))),
+    ]);
+    final back = find.byKey(TripPlanScreen.lockedOverviewKey);
+    expect(back, findsOneWidget);
+    expect(t.getRect(back).bottom, lessThanOrEqualTo(800));
+    expect(find.byKey(TripPlanScreen.viewButtonKey), findsOneWidget);
+    await t.tap(back);
+    await t.pumpAndSettle();
+    expect(find.text('overview'), findsOneWidget);
+    await drainSave(t);
+  });
 }

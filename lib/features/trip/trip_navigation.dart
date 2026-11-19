@@ -17,6 +17,7 @@ import 'trip_constants.dart';
 import 'trip_strings.dart';
 import 'trip_strings_mcb_a1.dart';
 import 'trip_strings_steps_a1.dart';
+import 'trip_strings_mca_a3.dart';
 import 'trip_strings_steps_k3.dart';
 import 'trip_strings_v2_find.dart';
 import 'utils/trip_easy_rules.dart';
@@ -156,13 +157,18 @@ class TripNavigation {
 
   static Future<bool> openTaxiRequest(BuildContext context, {bool keepChoices = true, bool replace = false}) async {
     final c = TripPlanController.to;
-    if (c.isReadOnly || c.plan.value == null) return false;
+    if (c.plan.value == null) return false;
+    if (c.isReadOnly) {
+      AppToast.info(TripStringsMcaA3.readOnlyBlock);
+      return false;
+    }
     if (c.netOff) {
       AppToast.warning(TripStringsV2Find.offlineAsk);
       return false;
     }
     final ok = await TripDatesSheet.ensure(context, heading: TripStringsV2Find.datesTitle, cta: TripStringsV2Find.saveDates);
     if (!ok || !c.hasDates) return false;
+    c.clearSkip(const TripEasyRowKey(TripEasyRowKind.taxi));
     final saved = await c.flushPendingSave();
     final tripId = c.trip.value?.id;
     if (!saved || tripId == null) {
@@ -201,7 +207,10 @@ class TripNavigation {
       await openReplies(first);
       return true;
     }
-    if (c.isReadOnly) return false;
+    if (c.isReadOnly) {
+      AppToast.info(TripStringsMcaA3.readOnlyBlock);
+      return false;
+    }
     if (c.netOff) {
       AppToast.warning(TripStringsV2Find.offlineAsk);
       return false;
@@ -213,6 +222,7 @@ class TripNavigation {
       cta: TripStringsV2Find.showStaysIn(c.plan.value!.cityNameOf(first)),
     );
     if (!alive() || !ok || !c.hasDates) return false;
+    c.clearSkip(TripEasyRowKey(TripEasyRowKind.stay, k));
     final saved = await c.flushPendingSave();
     if (!alive()) return false;
     if (!saved || c.trip.value?.id == null) {

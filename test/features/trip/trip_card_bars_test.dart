@@ -19,18 +19,21 @@ TripSummaryModel _trip(List<TripEasyRowModel> rows) => TripSummaryModel(
     );
 
 void main() {
-  test('no rows gives empty bars', () {
+  test('no rows gives open bars and a saved plan', () {
     final b = TripCardBars.of(_trip(const []));
     expect(b.stay.fraction, 0);
-    expect(b.taxi.caption, 'not started');
-    expect(b.travel.caption, 'not started');
+    expect(b.stay.caption, 'not added');
+    expect(b.taxi.caption, 'not added');
+    expect(b.plan.fraction, 1);
+    expect(b.plan.caption, 'saved');
   });
 
-  test('stay uses nights when known', () {
+  test('stay asked for part of the nights is arranged and names the nights', () {
     final b = TripCardBars.of(_trip([
       _row(TripEasyRowKind.stay, TripRowState.asked, leg: 1, total: 3, covered: 2),
     ]));
-    expect(b.stay.fraction, closeTo(2 / 3, 0.001));
+    expect(b.stay.fraction, 1);
+    expect(b.stay.caption, '2 of 3 nights');
   });
 
   test('stay done shows total nights', () {
@@ -41,17 +44,17 @@ void main() {
     expect(b.stay.caption, '3 nights');
   });
 
-  test('skipped rows are ignored and travel groups kinds', () {
+  test('old travel rows are ignored, skipped parts read skipped', () {
     final b = TripCardBars.of(_trip([
       _row(TripEasyRowKind.gettingThere, TripRowState.booked),
-      _row(TripEasyRowKind.comingBack, TripRowState.todo),
       _row(TripEasyRowKind.between, TripRowState.skipped, leg: 2),
+      _row(TripEasyRowKind.stay, TripRowState.skipped, leg: 1),
       _row(TripEasyRowKind.taxi, TripRowState.asked),
     ]));
-    expect(b.travel.fraction, 0.5);
-    expect(b.travel.caption, '1 of 2 done');
-    expect(b.taxi.caption, '0 of 1 done');
-    expect(b.taxi.fraction, 0);
+    expect(b.stay.caption, 'skipped');
+    expect(b.stay.fraction, 1);
+    expect(b.taxi.caption, 'requested');
+    expect(b.taxi.fraction, 1);
   });
 
   test('full taxi reads booked', () {

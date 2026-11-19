@@ -8,6 +8,8 @@ import '../models/trip_enquiry_model.dart';
 import '../models/trip_model.dart';
 import '../trip_strings_mca_a1.dart';
 import '../trip_strings_overview.dart';
+import '../utils/trip_parts.dart';
+import '../widgets/trip_overview_progress.dart';
 import '../widgets/trip_plan_header.dart';
 
 enum TripOverviewTaxiState { optional, requested, booked, completed }
@@ -83,6 +85,8 @@ class TripOverviewScreen extends StatelessWidget {
     this.stay = TripOverviewStay.notAdded,
     this.onStay,
     this.showStay = true,
+    this.parts = TripParts.saved,
+    this.highlight,
   });
 
   final TripModel trip;
@@ -95,8 +99,16 @@ class TripOverviewScreen extends StatelessWidget {
   final TripOverviewStay stay;
   final void Function(TripOverviewStay stay)? onStay;
   final bool showStay;
+  final TripParts parts;
+  final TripPart? highlight;
 
   static const double _maxWidth = 640;
+
+  static TripPart? highlightOf(TripParts parts, {required bool showStay}) {
+    final next = parts.next;
+    if (next == TripPart.stay && !showStay) return parts.taxi == TripPartState.open ? TripPart.taxi : null;
+    return next;
+  }
 
   // Same rule as TripPlanController.title: an unchosen stored default follows the current cities.
   static String displayTitle(TripModel trip) {
@@ -156,6 +168,8 @@ class TripOverviewScreen extends StatelessWidget {
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
+                      TripOverviewProgress(parts: parts),
+                      Gap.v(16),
                       _HeroCard(
                         key: const ValueKey('overview_itinerary_card'),
                         tone: indigo,
@@ -179,6 +193,7 @@ class TripOverviewScreen extends StatelessWidget {
                           line: TripStringsOverview.taxiLine,
                           button: taxi.button,
                           buttonKey: const ValueKey('overview_taxi_button'),
+                          highlight: highlight == TripPart.taxi && !taxiBlocked,
                           onTap: taxiBlocked ? null : () => onTaxi(taxi),
                         ),
                       ),
@@ -202,6 +217,7 @@ class TripOverviewScreen extends StatelessWidget {
                           line: stay.line,
                           button: stay.button,
                           buttonKey: const ValueKey('overview_stay_button'),
+                          highlight: highlight == TripPart.stay,
                           onTap: onStay == null ? null : () => onStay!(stay),
                         ),
                       ],
@@ -345,8 +361,10 @@ class _HeroCard extends StatelessWidget {
     required this.button,
     required this.buttonKey,
     required this.onTap,
+    this.highlight = false,
   });
 
+  final bool highlight;
   final ListingTone tone;
   final String asset;
   final String title;
@@ -361,10 +379,15 @@ class _HeroCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final narrow = MediaQuery.sizeOf(context).width < Form3D.narrow;
-    return Container(
+    final card = Container(
       constraints: BoxConstraints(minHeight: DS.s(140)),
       padding: DS.insets(l: 16, t: 16, r: 20, b: 16),
-      decoration: BoxDecoration(gradient: tone.gradient, borderRadius: DS.br(CardRadius.hero), boxShadow: tone.glow(blur: 14, dy: 6)),
+      decoration: BoxDecoration(
+        gradient: tone.gradient,
+        borderRadius: DS.br(CardRadius.hero),
+        border: highlight ? Border.all(color: DesignColors.surface, width: DS.s(2.5)) : null,
+        boxShadow: highlight ? tone.glow(blur: 22, dy: 8) : tone.glow(blur: 14, dy: 6),
+      ),
       child: Row(
         children: [
           Container(
@@ -421,6 +444,7 @@ class _HeroCard extends StatelessWidget {
         ],
       ),
     );
+    return highlight ? Semantics(label: TripStringsOverview.nextLabel(title), child: card) : card;
   }
 }
 

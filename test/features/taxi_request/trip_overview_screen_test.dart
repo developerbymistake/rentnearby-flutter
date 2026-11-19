@@ -274,7 +274,7 @@ void main() {
   testFiveSizes('skip_bar_touches_the_screen_bottom', () => _screen(_trip()), check: (tester, size) async {
     final bar = tester.getRect(find.ancestor(of: find.byKey(const ValueKey('overview_done_button')), matching: find.byType(DecoratedBox)).first);
     expect(bar.bottom, closeTo(size.height, 0.5));
-    expect(bar.top, greaterThan(tester.getRect(find.byKey(const ValueKey('overview_itinerary_card'))).bottom));
+    expect(bar.top, greaterThan(tester.getRect(find.byKey(const ValueKey('overview_progress_card'))).bottom));
   });
 
   testWidgets('three_cards_scroll_under_a_fixed_bar_on_a_small_phone', (tester) async {

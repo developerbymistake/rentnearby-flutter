@@ -106,7 +106,7 @@ void main() {
   group('ring after its end', () {
     Map<String, dynamic> endData() => Map<String, dynamic>.from(_sample('push_ring_end.json')['data'] as Map);
 
-    test('late_ring_after_end_is_not_shown_and_not_acked', () async {
+    test('late_ring_after_end_is_not_shown_and_acks_shown_false', () async {
       final h = _Harness();
       expect(endData()['offerId'], _ringData()['offerId']);
       await h.service.handle(endData());
@@ -114,7 +114,17 @@ void main() {
       await result.ack;
       expect(result.outcome, TaxiRingOutcome.alreadyEnded);
       expect(h.notifier.shown, isEmpty);
-      expect(h.acks, isEmpty);
+      expect(h.acks.single.$1, _ringData()['offerId']);
+      expect(h.acks.single.$2['shown'], isFalse);
+      expect(h.acks.single.$2['late'], isTrue);
+    });
+
+    test('received_at_keeps_the_driver_user_id', () {
+      final push = TaxiRingPush.tryParse({..._ringData(), 'driverUserId': 'U-1'})!;
+      expect(push.driverUserId, 'U-1');
+      expect(push.receivedAt(_receivedAt).driverUserId, 'U-1');
+      expect(TaxiRingPush.tryParse({..._ringData(), 'driverUserId': ''})!.driverUserId, isNull);
+      expect(TaxiRingPush.tryParse(_ringData()..remove('driverUserId'))!.driverUserId, isNull);
     });
 
     test('end_recorded_by_another_service_instance_blocks_the_ring', () async {

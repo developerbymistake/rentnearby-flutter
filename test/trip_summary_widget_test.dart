@@ -55,7 +55,7 @@ Future<void> pump(WidgetTester t, Widget child, double w, {double scale = 1}) as
 void main() {
   test('percent and todo come from shown rows', () {
     final r = record();
-    expect(r.percentDone, 33);
+    expect(r.percentDone, 67);
     expect(r.stillToDo.map((a) => a.key.id), ['stay:1', 'taxi']);
   });
 

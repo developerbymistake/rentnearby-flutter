@@ -223,8 +223,6 @@ class _StayTaxisSectionState extends State<StayTaxisSection> with SingleTickerPr
       date: _forTrip ? _date : widget.date,
       people: _forTrip ? _people : widget.people,
       fromTrip: _forTrip || widget.date != null || widget.people != null,
-      tripId: _tripId,
-      tripRole: _forTrip ? TripStepRole.gettingThere.name : null,
     );
   }
 

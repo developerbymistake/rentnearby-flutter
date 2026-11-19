@@ -11,6 +11,7 @@ import '../trip_navigation.dart';
 import '../trip_strings.dart';
 import '../trip_strings_a5.dart';
 import '../trip_strings_v2_plan.dart';
+import '../trip_strings_hub_trips.dart';
 
 class TripLifecycleActions {
   static const _repo = TripRepository();
@@ -106,6 +107,25 @@ class TripLifecycleActions {
         onSecondary: () => Navigator.pop(ctx, false),
         primaryLabel: TripStringsV2Plan.delete,
         primaryDanger: true,
+        onPrimary: () => Navigator.pop(ctx, true),
+      ),
+    );
+    return ok == true;
+  }
+
+  static Future<bool> confirmCompletePlan(BuildContext context, {required bool taxi, required bool stay}) async {
+    final ok = await Dialog3D.show<bool>(
+      context,
+      builder: (ctx) => Dialog3D(
+        tone: ListingTone.indigo,
+        art: ListingArt.luggage,
+        title: TripStringsHubTrips.completePlanTitle,
+        body: TripStringsHubTrips.completePlanBody(taxi: taxi, stay: stay),
+        secondaryLabel: TripStringsHubTrips.goBack,
+        secondaryKey: const ValueKey('complete-plan-back'),
+        onSecondary: () => Navigator.pop(ctx, false),
+        primaryLabel: TripStringsHubTrips.completePlan,
+        primaryKey: const ValueKey('complete-plan-yes'),
         onPrimary: () => Navigator.pop(ctx, true),
       ),
     );
