@@ -9,6 +9,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 
+import '../support/five_sizes.dart';
+
 class _Adapter implements HttpClientAdapter {
   _Adapter(this.status, this.body);
   final int status;
@@ -93,7 +95,38 @@ void main() {
       expect((tester.widget<Text>(f)).maxLines, isNull);
       expect((tester.widget<Text>(f)).overflow, isNot(TextOverflow.ellipsis));
     }
+    expect(find.text('OK'), findsOneWidget);
+    expect(find.text('Close'), findsNothing);
     await tester.tap(find.text('OK'));
     expect(closed, 1);
   });
+
+  const longReasons = [
+    'You have an active taxi booking. You can delete your account after it ends.',
+    'You have an active stay booking. You can delete your account after it ends.',
+    'A traveller has chosen you. Confirm or decline the trip first.',
+  ];
+
+  for (final size in fiveSizes) {
+    testWidgets('blocked dialog has one OK button at ${sizeLabel(size)}', (tester) async {
+      var closed = 0;
+      await pumpAtSize(
+        tester,
+        Scaffold(body: AccountDeleteBlockedDialog(reasons: longReasons, onClose: () => closed++)),
+        size,
+      );
+      await tester.pump(const Duration(milliseconds: 600));
+      expect(tester.takeException(), isNull);
+      expect(find.text('OK'), findsOneWidget);
+      expect(find.text('Close'), findsNothing);
+      for (final r in longReasons) {
+        expect(find.text(r, skipOffstage: false), findsOneWidget);
+      }
+      await tester.ensureVisible(find.text('OK'));
+      await tester.pump();
+      await tester.tap(find.text('OK'));
+      expect(closed, 1);
+      expect(tester.takeException(), isNull);
+    });
+  }
 }

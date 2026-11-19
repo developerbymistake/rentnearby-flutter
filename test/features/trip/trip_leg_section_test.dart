@@ -8,11 +8,10 @@ import 'package:flutter_test/flutter_test.dart';
 import '../../support/five_sizes.dart';
 
 class _Harness extends StatefulWidget {
-  const _Harness({this.locked = false, this.onCustomize, this.onMenu, this.rebuilds});
+  const _Harness({this.locked = false, this.onCustomize, this.rebuilds});
 
   final bool locked;
   final VoidCallback? onCustomize;
-  final VoidCallback? onMenu;
   final ValueNotifier<int>? rebuilds;
 
   @override
@@ -43,7 +42,6 @@ class _HarnessState extends State<_Harness> {
             locked: widget.locked,
             onToggle: () => fold.toggle(0),
             onCustomize: widget.onCustomize ?? () {},
-            onMenu: widget.onMenu ?? () {},
           ),
         ),
       ),
@@ -60,13 +58,12 @@ void main() {
     await _pump(tester, const _Harness(), const Size(360, 800));
     expect(find.text('Nainital'), findsOneWidget);
     expect(find.text(TripStringsDayplan.customize), findsOneWidget);
-    expect(find.byKey(TripLegSectionHeader.menuKey), findsOneWidget);
     expect(find.text(TripStringsDayplan.hide), findsOneWidget);
     expect(find.textContaining('12 spots · 3 nights'), findsOneWidget);
     expect(find.textContaining('Tap to open'), findsNothing);
-    final dots = tester.getSize(find.byKey(TripLegSectionHeader.menuKey));
+    final pill = tester.getSize(find.byKey(TripLegSectionHeader.customizeKey));
     final fold = tester.getSize(find.byKey(TripLegSectionHeader.foldKey));
-    expect(fold.height, dots.height);
+    expect(fold.height, pill.height);
   });
 
   testWidgets('folded_shows_summary', (tester) async {
@@ -76,7 +73,6 @@ void main() {
     expect(find.textContaining('3 days · 12 places · Tap to open'), findsOneWidget);
     expect(find.text(TripStringsDayplan.show), findsOneWidget);
     expect(find.text(TripStringsDayplan.customize), findsOneWidget);
-    expect(find.byKey(TripLegSectionHeader.menuKey), findsOneWidget);
     expect(find.textContaining('12 spots'), findsNothing);
   });
 
@@ -144,17 +140,14 @@ void main() {
     expect(tester.getSize(find.byType(TripLegSectionHeader)).height, greaterThan(openH));
   });
 
-  testWidgets('folded_customize_and_dots_still_work', (tester) async {
+  testWidgets('folded_customize_still_works', (tester) async {
     var customized = 0;
-    var menu = 0;
-    await _pump(tester, _Harness(onCustomize: () => customized++, onMenu: () => menu++), const Size(360, 800));
+    await _pump(tester, _Harness(onCustomize: () => customized++), const Size(360, 800));
     await tester.tap(find.byKey(TripLegSectionHeader.foldKey));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(TripLegSectionHeader.customizeKey));
-    await tester.tap(find.byKey(TripLegSectionHeader.menuKey));
     await tester.pumpAndSettle();
     expect(customized, 1);
-    expect(menu, 1);
     expect(find.text(TripStringsDayplan.show), findsOneWidget);
   });
 
@@ -178,32 +171,61 @@ void main() {
     expect(find.text(TripStringsDayplan.show), findsOneWidget);
   });
 
-  testWidgets('unlocked pill and dots fire their callbacks', (tester) async {
+  testWidgets('unlocked pill fires its callback', (tester) async {
     var customized = 0;
-    var menu = 0;
-    await _pump(tester, _Harness(onCustomize: () => customized++, onMenu: () => menu++), const Size(360, 800));
+    await _pump(tester, _Harness(onCustomize: () => customized++), const Size(360, 800));
     await tester.tap(find.byKey(TripLegSectionHeader.customizeKey));
-    await tester.tap(find.byKey(TripLegSectionHeader.menuKey));
     await tester.pumpAndSettle();
     expect(customized, 1);
-    expect(menu, 1);
     expect(find.text(TripStringsDayplan.hide), findsOneWidget);
   });
 
-  testWidgets('customize sits under the text, dots and fold beside the name', (tester) async {
+  testWidgets('no_three_dot', (tester) async {
     await _pump(tester, const _Harness(), const Size(600, 960));
-    final wideTop = tester.getTopLeft(find.byKey(TripLegSectionHeader.customizeKey)).dy;
-    final wideText = tester.getBottomLeft(find.byKey(TripLegSectionHeader.detailKey)).dy;
-    expect(wideTop, greaterThanOrEqualTo(wideText));
-    final wideFold = tester.getTopLeft(find.byKey(TripLegSectionHeader.foldKey)).dy;
-    expect(wideFold, lessThan(tester.getTopLeft(find.byKey(TripLegSectionHeader.detailKey)).dy));
-    final pillW = tester.getSize(find.byKey(TripLegSectionHeader.customizeKey)).width;
-    expect(pillW, lessThan(200));
+    expect(find.byKey(const ValueKey('leg-menu')), findsNothing);
+    expect(find.byTooltip('More'), findsNothing);
+  });
 
+  testWidgets('customize_sits_left_of_hide_in_one_row', (tester) async {
+    await _pump(tester, const _Harness(), const Size(600, 960));
+    final cz = tester.getRect(find.byKey(TripLegSectionHeader.customizeKey));
+    final fold = tester.getRect(find.byKey(TripLegSectionHeader.foldKey));
+    final card = tester.getRect(find.byKey(TripLegSectionHeader.cardKey));
+    final detail = tester.getBottomLeft(find.byKey(TripLegSectionHeader.detailKey)).dy;
+    expect(cz.top, fold.top);
+    expect(cz.right, lessThan(fold.left));
+    expect(card.contains(cz.topLeft) && card.contains(fold.bottomRight), isTrue);
+    expect(cz.bottom, lessThanOrEqualTo(detail + 1));
+  });
+
+  testWidgets('header_is_shorter_when_controls_fit', (tester) async {
+    await _pump(tester, const _Harness(), const Size(600, 960));
+    final wide = tester.getSize(find.byKey(TripLegSectionHeader.cardKey)).height;
     await _pump(tester, const _Harness(), const Size(320, 568));
-    final narrowTop = tester.getTopLeft(find.byKey(TripLegSectionHeader.customizeKey)).dy;
-    final narrowText = tester.getBottomLeft(find.byKey(TripLegSectionHeader.detailKey)).dy;
-    expect(narrowTop, greaterThanOrEqualTo(narrowText));
+    final narrow = tester.getSize(find.byKey(TripLegSectionHeader.cardKey)).height;
+    expect(wide, lessThan(narrow));
+  });
+
+  testWidgets('narrow_stacks_controls_without_overflow', (tester) async {
+    for (final scale in [1.0, 1.3]) {
+      await pumpAtSize(tester, const _Harness(), const Size(320, 568), textScale: scale);
+      expect(tester.takeException(), isNull);
+      final cz = tester.getRect(find.byKey(TripLegSectionHeader.customizeKey));
+      final detail = tester.getBottomLeft(find.byKey(TripLegSectionHeader.detailKey)).dy;
+      expect(cz.top, greaterThanOrEqualTo(detail));
+    }
+  });
+
+  testWidgets('fold_does_not_change_the_layout_tier', (tester) async {
+    for (final size in const [Size(600, 960), Size(320, 568)]) {
+      await _pump(tester, const _Harness(), size);
+      final before = tester.getTopLeft(find.byKey(TripLegSectionHeader.customizeKey));
+      await tester.tap(find.byKey(TripLegSectionHeader.foldKey));
+      await tester.pumpAndSettle();
+      final after = tester.getTopLeft(find.byKey(TripLegSectionHeader.customizeKey));
+      expect(after.dx, before.dx);
+      if (size.width > 400) expect(after.dy, before.dy);
+    }
   });
 
   testWidgets('folded_layer_room_merges_with_the_gap_below', (tester) async {
@@ -217,7 +239,6 @@ void main() {
               folded: true,
               onToggle: () {},
               onCustomize: () {},
-              onMenu: () {},
               gapBelow: gap,
             ),
           ),

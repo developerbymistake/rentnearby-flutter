@@ -509,23 +509,9 @@ void main() {
       expect(c.plan.value!.cityName, 'Badrinath');
     });
 
-    test('the only leg cannot be removed and the edge legs cannot move', () {
+    test('the only leg cannot be removed', () {
       final single = withPlan(_plan(start: DateTime(2030, 11, 1)));
       expect(single.canRemoveLeg(1), TripLegEditBlock.onlyLeg);
-      final c = withPlan(twoLegs());
-      expect(c.canMoveLeg(1, true), TripLegEditBlock.edge);
-      expect(c.canMoveLeg(2, false), TripLegEditBlock.edge);
-      expect(c.canMoveLeg(1, false), TripLegEditBlock.none);
-    });
-
-    test('moveLeg swaps the day blocks and re-indexes', () {
-      final c = withPlan(twoLegs());
-      expect(c.moveLeg(1, false), TripLegEditBlock.none);
-      final p = c.plan.value!;
-      expect(p.legs.first.cityName, 'Badrinath');
-      expect(p.legs.last.cityName, 'Haridwar');
-      expect(p.legs.map((l) => l.index).toList(), [1, 2]);
-      expect(p.cityName, 'Badrinath');
     });
 
     test('setLegDays refuses zero and beyond the trip cap', () async {
@@ -591,7 +577,7 @@ void main() {
       expect(c.canAddPlaces(1), isFalse);
     });
 
-    test('a journey to the old first city needs attention after a city move (#MCA7)', () {
+    test('a journey to the old first city needs attention after the first city is removed (#MCA7)', () {
       final c = withPlan(twoLegs().copyWith(
         steps: const TripSteps(gettingThere: TripStep(status: TripStepStatus.booked, journeyId: 'j1')),
       ));
@@ -608,7 +594,7 @@ void main() {
         ),
       ], journeysKnown: true);
       expect(c.journeyFor(TripStepRole.gettingThere)?.needsAttention, isFalse);
-      expect(c.moveLeg(1, false), TripLegEditBlock.none);
+      expect(c.removeLeg(1), TripLegEditBlock.none);
       expect(c.journeyFor(TripStepRole.gettingThere)?.startChanged, isTrue);
       expect(c.journeyCityChanged(TripStepRole.gettingThere), isTrue);
     });
@@ -1004,13 +990,6 @@ void main() {
       expect(c.plan.value!.legCount, 1);
     });
 
-    test('reorder stays blocked by a dated row', () {
-      final c = ctl(legsPlan(), rows: [stayRow('s2', 2, TripEnquiryStatuses.asked, city: 'Badrinath')]);
-      expect(c.canMoveLeg(1, false), TripLegEditBlock.bookings);
-      expect(c.moveLeg(1, false), TripLegEditBlock.bookings);
-      expect(c.plan.value!.legs.first.cityName, 'Haridwar');
-    });
-
     test('shrink impact counts dropped days only; later legs join when they shift', () async {
       final c = ctl(legsPlan(legOfDay: const [1, 2, 2, 2]), rows: [
         stayRow('kept', 2, TripEnquiryStatuses.confirmedByBoth, city: 'Badrinath'),
@@ -1053,7 +1032,6 @@ void main() {
       expect(c.legRunning(1), isTrue);
       expect(c.legRunning(2), isFalse);
       expect(c.canRemoveLeg(1), TripLegEditBlock.running);
-      expect(c.canMoveLeg(1, false), TripLegEditBlock.running);
       expect(c.minDaysForLeg(1), 2);
       expect(c.minDaysForLeg(2), 1);
       expect(c.canSetLegDays(1, 1), TripLegEditBlock.running);
@@ -1082,7 +1060,6 @@ void main() {
       expect(c.wrongCityForDay(1)?.id, 'h');
       final info = c.wrongCityOf(c.enquiryList.single)!;
       expect(info.cityRemoved, isTrue);
-      expect(c.wrongCityHomeLeg(info), isNull);
     });
 
     test('a kept row of a removed middle city is unknown, never the nearest city', () {
@@ -1146,13 +1123,6 @@ void main() {
       expect(await c.setLegDays(1, 2), isFalse);
       expect(c.plan.value!.legDayCount(1), 1);
       expect(c.plan.value!.legDayCount(2), 2);
-    });
-
-    test('Change days on a wrong-city strip opens the home city', () {
-      final c = ctl(legsPlan(), rows: [stayRow('wrong', 2, TripEnquiryStatuses.confirmedByBoth)]);
-      final info = c.wrongCityOf(c.enquiryList.single)!;
-      expect(info.dayLegIndex, 2);
-      expect(c.wrongCityHomeLeg(info), 1);
     });
 
     test('without a plan the server flags are the fallback', () {

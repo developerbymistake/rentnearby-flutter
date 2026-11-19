@@ -202,7 +202,8 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> with TickerProviderSt
             TripLegEditBlock.noDays ||
             TripLegEditBlock.duplicate ||
             TripLegEditBlock.offline ||
-            TripLegEditBlock.bookings:
+            TripLegEditBlock.bookings ||
+            TripLegEditBlock.otherState:
         break;
       default:
         AppToast.warning(TripStringsMcaA2.cantChangeTrip);

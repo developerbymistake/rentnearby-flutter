@@ -40,7 +40,6 @@ class _Fake {
         },
         currentUserId: () => 'me',
         dial: (p) async => dialed.add(p),
-        createConversation: (type, id) async => null,
         openRoute: (r, a) => routes.add((r, a)),
         info: infos.add,
       );

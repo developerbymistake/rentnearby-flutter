@@ -28,13 +28,6 @@ class TripStringsV2Plan {
 
   static String headerRunning(int day, int days, String date) => 'Day $day of $days · $date';
 
-  static const String paceRelaxed = 'Relaxed';
-  static const String paceNormal = 'Normal';
-  static const String paceRelaxedHint = 'About 5 h a day';
-  static const String paceNormalHint = 'About 7.5 h a day';
-  static const String paceTitle = 'Pace';
-  static const String paceSub = 'How much to fit in a day. Your order stays as it is.';
-  static const String paceFooter = 'Days are recalculated. Nothing is reordered.';
 
   static String arranged(int done, int total) => '$done of $total arranged';
   static const String nothingToArrange = 'Nothing to arrange';

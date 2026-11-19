@@ -186,7 +186,6 @@ void main() {
       },
       currentUserId: () => 'me',
       dial: (_) async {},
-      createConversation: (_, _) async => null,
       openRoute: (r, _) => routes.add(r),
       info: (_) {},
     );

@@ -14,7 +14,7 @@ import '../utils/trip_day_timeline.dart';
 import '../utils/trip_days_rules.dart';
 import '../utils/trip_format.dart';
 import 'trip_leg_header.dart';
-import 'trip_leg_menu_sheet.dart';
+import 'trip_leg_actions.dart';
 
 
 class TripDaySpotList extends StatelessWidget {
@@ -28,7 +28,7 @@ class TripDaySpotList extends StatelessWidget {
 
   static Future<void> replace(TripPlanController c, String spotId, int day) async {
     final legIndex = c.plan.value?.legIndexOf(day) ?? 1;
-    await TripLegMenuSheet.addPlaces(legIndex, pickDay: day, replaceSpotId: spotId);
+    await TripLegActions.addPlaces(legIndex, pickDay: day, replaceSpotId: spotId);
   }
 
   static BorderRadius get _radius => DS.br(kMealsRadius);
@@ -301,7 +301,7 @@ class TripDaySpotList extends StatelessWidget {
               child: _action(
                 ListingArt.roundPushpin,
                 TripStringsV2Plan.addPlace,
-                full ? null : () => TripLegMenuSheet.addPlaces(d.leg, pickDay: day),
+                full ? null : () => TripLegActions.addPlaces(d.leg, pickDay: day),
               ),
             ),
             Gap.h(10),

@@ -36,8 +36,6 @@ class TripStrings {
   static const String people = 'People';
   static const String rooms = 'Rooms';
   static const String pickDate = 'Pick a date';
-  static const String paceNormal = 'Normal pace';
-  static const String paceRelaxed = 'Relaxed pace';
   static const String adults = 'Adults';
   static const String kids = 'Kids';
   static const String addPeople = 'Add people';

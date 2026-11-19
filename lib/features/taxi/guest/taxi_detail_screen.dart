@@ -8,8 +8,10 @@ import '../../../design/extra/ext_details.dart';
 import '../../../models/browse_item.dart';
 import '../../../services/listing_share_service.dart';
 import '../../../utils/app_toast.dart';
+import '../../../utils/contact_message.dart';
 import '../../../utils/dio_error_mapper.dart';
 import '../../../widgets/detail_action_bar.dart';
+import '../../../widgets/listing_contact_actions.dart';
 import '../../../widgets/scroll_reveal_bar.dart';
 import '../../../widgets/report_listing_sheet.dart';
 import '../models/taxi_detail_model.dart';
@@ -330,7 +332,7 @@ class _TaxiDetailScreenState extends State<TaxiDetailScreen> with TickerProvider
       return DetailActionBar(
         ownerPhone: t.hasContact ? t.contactPhone : null,
         whatsAppPhone: t.hasContact ? (t.whatsAppNumber ?? t.contactPhone) : null,
-        whatsAppMessage: _whatsAppMessage,
+        whatsAppMessage: _whatsAppMessage ?? ContactMessage.taxi(vehicle: t.vehicleTypeName, customer: ListingContactActions.customer()),
         isOwner: false,
         showDirections: false,
         reportLabel: 'Report this listing',

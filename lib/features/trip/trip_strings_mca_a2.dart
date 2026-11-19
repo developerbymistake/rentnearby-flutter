@@ -9,6 +9,13 @@ class TripStringsMcaA2 {
 
   static const String addACity = 'Add a city';
   static String afterCity(String city) => 'After $city';
+  static String citiesIn(List<String> states) => switch (states.length) {
+        1 => 'Cities in ${states[0]}',
+        2 => 'Cities in ${states[0]} and ${states[1]}',
+        _ => 'Cities in your trip states',
+      };
+  static String noCityMatchIn(String q, String state) => 'No city in $state matches "$q"';
+  static String otherState(String state) => 'This trip stays in $state';
   static const String popularNextStops = 'Popular next stops';
   static const String inThisTrip = 'In this trip';
   static const String alreadyAdded = 'Already added';

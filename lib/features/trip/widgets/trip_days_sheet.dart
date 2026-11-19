@@ -6,8 +6,8 @@ import '../controllers/trip_plan_controller.dart';
 import '../models/trip_plan_model.dart';
 import '../trip_constants.dart';
 import '../trip_strings_v2_plan.dart';
-import 'trip_leg_menu_sheet.dart';
-import 'trip_pace_sheet.dart';
+import 'trip_leg_actions.dart';
+import 'trip_choice_card.dart';
 
 class TripDaysSheet extends StatefulWidget {
   const TripDaysSheet({super.key});
@@ -99,7 +99,7 @@ class _TripDaysSheetState extends State<TripDaysSheet> {
       final block = _c.canSetLegDays(k, _alloc[i], keepBookings: true);
       final ok = block == TripLegEditBlock.none && await _c.setLegDays(k, _alloc[i], keepBookings: true);
       if (!ok) {
-        final text = TripLegMenuSheet.blockText(block, _plan.legAt(k)?.cityName ?? '');
+        final text = TripLegActions.blockText(block, _plan.legAt(k)?.cityName ?? '');
         AppToast.warning(text ?? TripStringsV2Plan.daysBookings);
         if (mounted) setState(() => _busy = false);
         return;

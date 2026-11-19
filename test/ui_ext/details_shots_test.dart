@@ -237,9 +237,9 @@ void _setup({Future<bool> Function()? reportSubmit, String? me, bool located = t
   ApiService.dio.httpClientAdapter = _Api({'/taxis/ways': (_) => _ways, ...api});
 }
 
-Future<void> _stay(WidgetTester t, {Future<StayDetailModel?> Function()? answer, Size size = phoneSize, double scale = 1}) async {
+Future<void> _stay(WidgetTester t, {Future<StayDetailModel?> Function()? answer, Size size = phoneSize, double scale = 1, Object args = 's1'}) async {
   Get.put<StayGuestController>(_Guest(answer ?? () async => StayDetailModel.fromJson(_stayJson())));
-  await pumpPhone(t, const _Args('s1', StayDetailScreen()), size: size, textScale: scale);
+  await pumpPhone(t, _Args(args, const StayDetailScreen()), size: size, textScale: scale);
   await settlePhone(t);
   await settlePhone(t);
 }
@@ -301,8 +301,8 @@ void main() {
       await _toEnd(t);
       expect(find.text('Directions'), findsOneWidget);
       expect(find.text('Call'), findsOneWidget);
-      expect(find.text('Chat'), findsOneWidget);
-      expect(find.text('WhatsApp'), findsNothing);
+      expect(find.text('WhatsApp'), findsOneWidget);
+      expect(find.text('Chat'), findsNothing);
       expect(find.text('Call Owner'), findsNothing);
       await shot(t, 's_main');
       await scrollShots(t, find.byType(StayDetailScreen), 's_main_scroll', [700, 1400, 2200]);
@@ -339,8 +339,19 @@ void main() {
       expect(find.text('Share'), findsNothing);
       expect(find.text('Directions'), findsOneWidget);
       expect(find.text('Chat'), findsNothing);
+      expect(find.text('WhatsApp'), findsNothing);
       expect(find.text('Report this listing'), findsNothing);
       await shot(t, 's_owner');
+    });
+
+    _tw('s_trip keeps Call and Chat, no WhatsApp', (t) async {
+      _setup();
+      await _stay(t, args: const {'id': 's1', 'fromTrip': true});
+      await _toEnd(t);
+      expect(find.text('Directions'), findsOneWidget);
+      expect(find.text('Call'), findsOneWidget);
+      expect(find.text('Chat'), findsOneWidget);
+      expect(find.text('WhatsApp'), findsNothing);
     });
 
     _tw('s_min', (t) async {
@@ -357,6 +368,7 @@ void main() {
       await _toEnd(t);
       expect(find.text('Call'), findsNothing);
       expect(find.text('Chat'), findsOneWidget);
+      expect(find.text('WhatsApp'), findsNothing);
       await _scrollTo(t, find.text('Facilities'));
       await shot(t, 's_nophone');
     });

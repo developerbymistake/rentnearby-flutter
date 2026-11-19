@@ -8,7 +8,6 @@ class TripStringsMccA2 {
   static const String changeDays = 'Change days';
 
   static String removeQ(String city) => 'Remove $city?';
-  static String changeDaysQ(String city) => 'Change days in $city?';
 
   static String _bookings(int n) => n == 1 ? '1 booking' : '$n bookings';
   static String _enquiries(int n) => n == 1 ? '1 enquiry' : '$n enquiries';
@@ -30,16 +29,11 @@ class TripStringsMccA2 {
     return '';
   }
 
-  static String laterKept(String cities) => 'Bookings in $cities are cancelled too, the days move.';
   static String moreRows(int n) => '+ $n more';
 
   static const String cancelAndRemove = 'Cancel and remove';
-  static const String cancelAndChange = 'Cancel and change';
   static const String removeKeepBookings = 'Remove, keep bookings';
-  static const String changeKeepBookings = 'Change, keep bookings';
   static const String keepCity = 'Keep city';
-  static const String keepDays = 'Keep days';
   static const String connectToCancel = 'Connect to cancel bookings';
   static const String bookingsKept = 'Bookings kept · they show as Old dates';
-  static const String cancelling = 'Cancelling...';
 }

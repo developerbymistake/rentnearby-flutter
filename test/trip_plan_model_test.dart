@@ -368,10 +368,8 @@ void main() {
       expect(s.endDate(3), DateTime(2026, 11, 3));
     });
 
-    test('pace default is relaxed and the flag follows the minutes', () {
+    test('pace default is relaxed and the minutes are kept', () {
       expect(const TripSettings().dayLimitMinutes, TripPace.relaxed);
-      expect(const TripSettings().isRelaxed, isTrue);
-      expect(const TripSettings(dayLimitMinutes: TripPace.normal).isRelaxed, isFalse);
       expect(const TripSettings().copyWith(dayLimitMinutes: TripPace.normal).dayLimitMinutes, 450);
     });
 

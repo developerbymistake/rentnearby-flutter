@@ -25,7 +25,7 @@ import '../widgets/trip_day_chips.dart';
 import '../widgets/trip_days_sheet.dart';
 import '../widgets/trip_exit_confirm.dart';
 import '../widgets/trip_leg_header.dart';
-import '../widgets/trip_leg_menu_sheet.dart';
+import '../widgets/trip_leg_actions.dart';
 import '../widgets/trip_lifecycle_actions.dart';
 import '../widgets/trip_not_found_view.dart';
 import '../widgets/trip_plan_header.dart';
@@ -592,7 +592,7 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
         title: TripStringsV2Plan.noPlanTitle,
         message: TripStringsV2Plan.noPlanSub,
         actionLabel: TripStringsV2Plan.addPlace,
-        onAction: () => TripLegMenuSheet.addPlaces(1, pickDay: 1),
+        onAction: () => TripLegActions.addPlaces(1, pickDay: 1),
       );
 
   Widget _skeletons() => ListView(

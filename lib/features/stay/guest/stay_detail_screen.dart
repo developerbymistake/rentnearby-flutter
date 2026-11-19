@@ -10,7 +10,10 @@ import '../../../controllers/report_controller.dart';
 import '../../../controllers/tab_config_controller.dart';
 import '../../../models/browse_item.dart';
 import '../../../services/listing_share_service.dart';
+import '../../../utils/contact_launcher.dart';
+import '../../../utils/contact_message.dart';
 import '../../../widgets/detail_action_bar.dart';
+import '../../../widgets/listing_contact_actions.dart';
 import '../../../widgets/scroll_reveal_bar.dart';
 import '../../../widgets/report_listing_sheet.dart';
 import '../models/stay_detail_model.dart';
@@ -75,12 +78,14 @@ class _StayDetailScreenState extends State<StayDetailScreen> {
     super.initState();
     final args = Get.arguments;
     _id = args is Map ? args['id'] as String : args as String;
+    _fromTrip = args is Map && args['fromTrip'] == true;
     _scroll.addListener(_onScroll);
     _reveal.attach(_scroll);
     _fetch();
   }
 
   late final String _id;
+  late final bool _fromTrip;
 
   void _fetch() {
     if (!_loading) setState(() => _loading = true);
@@ -353,15 +358,20 @@ class _StayDetailScreenState extends State<StayDetailScreen> {
   Widget _buildActionBar() {
     final s = _stay!;
     final reportCtrl = Get.find<ReportController>();
+    final raw = _isOwner ? null : s.ownerPhone;
+    final phone = raw == null || ContactLauncher.tenDigits(raw).isEmpty ? null : raw;
+    final whatsApp = _fromTrip ? null : phone;
     return Obx(() {
       final reported = reportCtrl.reportedListingIds.contains(s.id) || s.hasReported;
       return DetailActionBar(
           latitude: s.latitude,
           longitude: s.longitude,
-          ownerPhone: _isOwner ? null : s.ownerPhone,
+          ownerPhone: _fromTrip ? raw : phone,
           isOwner: _isOwner,
           onReport: reported ? null : () => ReportListingSheet.show(context, listingId: s.id, listingType: 'Stay', palette: templateModulePalette),
-          onChat: _isOwner ? null : () => _openChat(s),
+          onChat: _isOwner || whatsApp != null ? null : () => _openChat(s),
+          whatsAppPhone: whatsApp,
+          whatsAppMessage: whatsApp == null ? null : ContactMessage.stay(stayName: s.name, customer: ListingContactActions.customer()),
           palette: templateModulePalette,
         );
     });

@@ -2,7 +2,6 @@ import 'package:flutter/foundation.dart' show listEquals;
 import 'package:maplibre_gl/maplibre_gl.dart';
 import '../../../models/place_result_model.dart';
 import '../trip_constants.dart';
-import '../trip_strings.dart';
 import 'trip_city_model.dart';
 import 'trip_enquiry_model.dart';
 import 'trip_spot_model.dart';
@@ -562,7 +561,7 @@ class TripCityLeg {
       };
 }
 
-enum TripLegEditBlock { none, onlyLeg, maxLegs, noDays, duplicate, offline, readOnly, running, bookings, edge }
+enum TripLegEditBlock { none, onlyLeg, maxLegs, noDays, duplicate, offline, readOnly, running, bookings, edge, otherState }
 
 enum TripLegRemoveMode { shift, keepLaterDates }
 
@@ -632,8 +631,6 @@ class TripSettings {
 
   bool get hasPeople => adults != null;
 
-  bool get isRelaxed => dayLimitMinutes <= TripPace.relaxed;
-
   String? get peopleSummary {
     final a = adults;
     if (a == null) return null;
@@ -641,8 +638,6 @@ class TripSettings {
     final adultText = '$a ${a == 1 ? 'adult' : 'adults'}';
     return k == 0 ? adultText : '$adultText, $k ${k == 1 ? 'kid' : 'kids'}';
   }
-
-  String get paceLabel => isRelaxed ? TripStrings.paceRelaxed : TripStrings.paceNormal;
 
   String? get startDateIso {
     final d = startDate;

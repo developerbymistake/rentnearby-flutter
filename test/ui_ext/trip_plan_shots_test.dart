@@ -25,7 +25,6 @@ import 'package:bakhli/features/trip/screens/trip_spots_screen.dart';
 import 'package:bakhli/features/trip/screens/trip_edit_spot_sheet.dart';
 import 'package:bakhli/features/trip/widgets/trip_days_sheet.dart';
 import 'package:bakhli/features/trip/widgets/trip_lifecycle_actions.dart';
-import 'package:bakhli/features/trip/widgets/trip_pace_sheet.dart';
 import 'package:bakhli/features/trip/models/trip_enquiry_model.dart';
 import 'package:bakhli/features/trip/models/trip_plan_model.dart';
 import 'package:bakhli/features/trip/screens/trip_dates_sheet.dart';
@@ -384,12 +383,6 @@ void main() {
       await _settle(t);
     });
   });
-  testWidgets('plan legmenu', (t) async {
-    await _plan(t, 'plan_legmenu', then: (t, c) async {
-      await t.tap(find.byTooltip('More').first);
-      await _settle(t);
-    });
-  });
   testWidgets('plan spotmenu', (t) async {
     await _plan(t, 'plan_spotmenu', then: (t, c) async {
       c.editMode.value = true;
@@ -478,12 +471,6 @@ void main() {
       loader: (_) async => throw DioException(requestOptions: RequestOptions(path: '/x'), type: DioExceptionType.connectionError)));
 
   for (final (s, z) in _sizes) {
-    testWidgets('sheet pace ${_tag(s, z)}', (t) async {
-      await _plan(t, 'sh_pace_${_tag(s, z)}', scale: s, size: z, then: (t, c) async {
-        TripPaceSheet.show(_ctx(t));
-        await _settle(t);
-      });
-    });
     testWidgets('sheet days ${_tag(s, z)}', (t) async {
       await _plan(t, 'sh_days_${_tag(s, z)}', scale: s, size: z, then: (t, c) async {
         TripDaysSheet.show(_ctx(t));
@@ -509,14 +496,6 @@ void main() {
   });
   testWidgets('plan update', (t) async {
     await _plan(t, 'plan_update', setup: (c) => c.needsUpdate.value = true);
-  });
-  testWidgets('plan legremove', (t) async {
-    await _plan(t, 'plan_legremove', then: (t, c) async {
-      await t.tap(find.byTooltip('More').last);
-      await _settle(t);
-      await t.tap(find.text('Remove city').last, warnIfMissed: false);
-      await _settle(t);
-    });
   });
   testWidgets('plan legimpact', (t) async {
     await _plan(t, 'plan_legimpact', then: (t, c) async {

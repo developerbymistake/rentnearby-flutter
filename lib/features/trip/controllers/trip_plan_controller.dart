@@ -36,6 +36,7 @@ import '../trip_constants.dart';
 import '../trip_strings.dart';
 import '../trip_strings_dayplan.dart';
 import '../trip_strings_mca_a1.dart';
+import '../trip_strings_mca_a2.dart';
 import '../trip_strings_mcb_a1.dart';
 import '../trip_strings_mcb_k1.dart';
 import '../trip_strings_name.dart';
@@ -46,6 +47,7 @@ import '../trip_strings_sync.dart';
 import '../trip_strings_v2_create.dart';
 import '../trip_strings_v2_plan.dart';
 import '../utils/trip_supply_area.dart';
+import '../utils/trip_state_rule.dart';
 import '../utils/trip_clock.dart';
 import '../utils/trip_easy_rules.dart';
 import '../utils/trip_days_rules.dart';
@@ -359,8 +361,6 @@ class TripPlanController extends GetxController {
     return segmentRows(legIndex).any(live);
   }
 
-  bool _hasOpenSegmentRows(int legIndex) => segmentRows(legIndex).any((e) => e.isOpen);
-
   bool _laterLegsHaveBookings(int legIndex, [Set<String> except = const {}]) {
     for (var k = legIndex + 1; k <= legCount; k++) {
       if (_legHasBookings(k, except)) return true;
@@ -381,11 +381,6 @@ class TripPlanController extends GetxController {
       homeLegIndex: WrongCityInfo.serverOnlyLeg,
       dayLegIndex: 0,
     );
-  }
-
-  int? wrongCityHomeLeg(WrongCityInfo info) {
-    final k = info.homeLegIndex;
-    return k >= 1 && plan.value?.legAt(k) != null ? k : null;
   }
 
   bool isOutsideTrip(TripEnquiryModel e) {
@@ -2856,14 +2851,6 @@ class TripPlanController extends GetxController {
     if (next != null) _applyEdit(next, keepEmptyDays: keepEmptyDays);
   }
 
-  Future<void> setPace(int minutes) async {
-    final p = plan.value;
-    if (p == null || !_structureOk() || p.settings.dayLimitMinutes == minutes) return;
-    plan.value = p.copyWith(settings: p.settings.copyWith(dayLimitMinutes: minutes));
-    scheduleSave();
-    await recalculate();
-  }
-
   void insertSpotAt(TripSpotRef spot, int day, int index) {
     final p = plan.value;
     final d = p?.dayAt(day);
@@ -3099,9 +3086,21 @@ class TripPlanController extends GetxController {
         AppToast.warning(TripStrings.checkConnection);
       case TripLegEditBlock.bookings:
         AppToast.warning(TripStringsMcaA1.cancelBookingsFirst(city ?? ''));
+      case TripLegEditBlock.otherState:
+        final states = _planStates(TripCityCatalog.to.search(''));
+        if (states.isNotEmpty) AppToast.warning(TripStringsMcaA2.otherState(states.first));
       default:
         return;
     }
+  }
+
+  List<String> _planStates(List<TripCityModel> catalog) =>
+      TripStateRule.statesOf([for (final l in plan.value?.legs ?? const <TripCityLeg>[]) l.cityKey], catalog);
+
+  bool _stateOk(TripCityModel city) {
+    final all = TripCityCatalog.to.search('');
+    final known = all.firstWhereOrNull((c) => c.cityKey == city.cityKey);
+    return known == null || TripStateRule.allows(_planStates(all), known);
   }
 
   TripLegEditBlock canAddLeg(TripCityModel? city) {
@@ -3111,6 +3110,7 @@ class TripPlanController extends GetxController {
     if (p.legs.length >= TripConstants.maxLegs) return TripLegEditBlock.maxLegs;
     if (p.days.length >= TripConstants.maxDaysCap) return TripLegEditBlock.noDays;
     if (city != null && p.legs.any((l) => l.cityKey == city.cityKey)) return TripLegEditBlock.duplicate;
+    if (city != null && !_stateOk(city)) return TripLegEditBlock.otherState;
     return TripLegEditBlock.none;
   }
 
@@ -3241,66 +3241,6 @@ class TripPlanController extends GetxController {
 
   @visibleForTesting
   TripPlan removeLegForTest(TripPlan p, int legIndex, TripLegRemoveMode mode) => _removeLegPlan(p, legIndex, mode);
-
-  TripLegEditBlock canMoveLeg(int legIndex, bool up) {
-    final p = plan.value;
-    if (p == null || !_structureOk()) return TripLegEditBlock.readOnly;
-    final other = up ? legIndex - 1 : legIndex + 1;
-    if (p.legAt(legIndex) == null || p.legAt(other) == null) return TripLegEditBlock.edge;
-    if (legRunning(legIndex) || legRunning(other)) return TripLegEditBlock.running;
-    final below = (legIndex > other ? legIndex : other) + 1;
-    if (_legHasBookings(legIndex) || _legHasBookings(other) || _hasOpenSegmentRows(below)) {
-      return TripLegEditBlock.bookings;
-    }
-    return TripLegEditBlock.none;
-  }
-
-  TripLegEditBlock moveLeg(int legIndex, bool up) {
-    final block = canMoveLeg(legIndex, up);
-    if (block != TripLegEditBlock.none) return block;
-    _applyLegChange(_moveLegPlan(plan.value!, legIndex, up));
-    return TripLegEditBlock.none;
-  }
-
-  TripPlan _moveLegPlan(TripPlan p, int legIndex, bool up) {
-    final a = up ? legIndex - 1 : legIndex;
-    final b = a + 1;
-    if (p.legAt(a) == null || p.legAt(b) == null) return p;
-    final legs = [
-      for (final l in p.legs)
-        if (l.index == a)
-          p.legAt(b)!.copyWith(clearArrival: true)
-        else if (l.index == b)
-          p.legAt(a)!.copyWith(clearArrival: true)
-        else if (l.index == b + 1)
-          l.copyWith(clearArrival: true)
-        else
-          l,
-    ];
-    final days = [
-      for (final d in p.days)
-        if (d.leg < a) d,
-      for (final d in p.days)
-        if (d.leg == b) d.copyWith(leg: a),
-      for (final d in p.days)
-        if (d.leg == a) d.copyWith(leg: b),
-      for (final d in p.days)
-        if (d.leg > b) d,
-    ];
-    return TripPlan(
-      version: p.version,
-      legs: TripPlan.reindex(legs),
-      days: _renumber(days, keepEmptyDays: true, legCount: legs.length),
-      settings: p.settings,
-      steps: p.steps,
-      taxiMark: p.taxiMark,
-      dismissedEnquiryIds: p.dismissedEnquiryIds,
-      guide: p.guide,
-    );
-  }
-
-  @visibleForTesting
-  TripPlan moveLegForTest(TripPlan p, int legIndex, bool up) => _moveLegPlan(p, legIndex, up);
 
   int maxDaysForLeg(int legIndex) {
     final p = plan.value;

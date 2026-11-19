@@ -14,6 +14,7 @@ import '../trip_strings.dart';
 import '../trip_strings_a4.dart';
 import '../trip_strings_mca_a2.dart';
 import '../trip_strings_v2_create.dart';
+import '../utils/trip_state_rule.dart';
 
 class TripCitySupplyCache {
   static const _ttl = Duration(minutes: 10);
@@ -151,6 +152,7 @@ class _TripCitySheetState extends State<TripCitySheet> {
   late final TripCityCatalog _catalog;
 
   List<TripCityModel> _items = const [];
+  List<String> _states = const [];
   String _query = '';
   bool _loading = false;
   _LoadError _error = _LoadError.none;
@@ -194,7 +196,8 @@ class _TripCitySheetState extends State<TripCitySheet> {
     super.initState();
     _catalog = TripCityCatalog.to;
     _catalog.warmFromDisk();
-    _items = _catalog.search('');
+    _syncStates();
+    _items = _find('');
     _loading = _items.isEmpty;
     _load();
   }
@@ -227,13 +230,15 @@ class _TripCitySheetState extends State<TripCitySheet> {
       if (!mounted) return;
       setState(() {
         _loading = false;
-        _items = _catalog.search(_query);
+        _syncStates();
+        _items = _find(_query);
       });
     } catch (e) {
       if (!mounted) return;
       setState(() {
         _loading = false;
-        _items = _catalog.search(_query);
+        _syncStates();
+        _items = _find(_query);
         if (_items.isEmpty) {
           _error = DioErrorMapper.errorType(e) == TripErrorTypes.plannerDisabled
               ? _LoadError.plannerOff
@@ -246,9 +251,13 @@ class _TripCitySheetState extends State<TripCitySheet> {
   void _onSearch(String v) {
     setState(() {
       _query = v;
-      _items = _catalog.search(v);
+      _items = _find(v);
     });
   }
+
+  void _syncStates() => _states = _add ? TripStateRule.statesOf(widget.inTrip, _catalog.search('')) : const [];
+
+  List<TripCityModel> _find(String q) => TripStateRule.filter(_catalog.search(q), _states);
 
   @override
   Widget build(BuildContext context) {
@@ -277,15 +286,36 @@ class _TripCitySheetState extends State<TripCitySheet> {
   }
 
   String get _subtitle {
+    if (!_add) return TripStringsV2Create.citiesHint;
     final after = widget.afterCity?.trim() ?? '';
-    return _add
-        ? (after.isNotEmpty ? TripStringsMcaA2.afterCity(after) : TripStrings.pickCity)
-        : TripStringsV2Create.citiesHint;
+    final line = [
+      if (_states.isNotEmpty) TripStringsMcaA2.citiesIn(_states),
+      if (after.isNotEmpty) TripStringsMcaA2.afterCity(after),
+    ].join(' · ');
+    return line.isEmpty ? TripStrings.pickCity : line;
   }
 
   static final ListingTone _tone = ListingTone.indigo;
 
+  Widget _compactHeader() {
+    final header = Container(
+      width: double.infinity,
+      padding: EdgeInsets.fromLTRB(DS.s(22), DS.gv(14), DS.s(56), DS.gv(14)),
+      decoration: BoxDecoration(gradient: _tone.gradient),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(TripStringsMcaA2.addACity, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(18, FontWeight.w700, DesignColors.textInverse)),
+          Gap.v(2),
+          Text(_subtitle, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(12.5, FontWeight.w500, DesignColors.whiteHigh)),
+        ],
+      ),
+    );
+    return Stack(children: [header, Positioned(top: DS.s(4), right: DS.s(4), child: const SheetCloseButton())]);
+  }
+
   Widget _buildHeader() {
+    if (_add) return _compactHeader();
     final narrow = MediaQuery.sizeOf(context).width < 340;
     final art = narrow ? 84.0 : 104.0;
     final header = Container(
@@ -299,7 +329,7 @@ class _TripCitySheetState extends State<TripCitySheet> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                _add ? TripStringsMcaA2.addACity : TripStrings.planATrip,
+                TripStrings.planATrip,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: Ink3D.text(22, FontWeight.w700, DesignColors.textInverse),
@@ -412,7 +442,7 @@ class _TripCitySheetState extends State<TripCitySheet> {
           break;
       }
       if (_query.trim().isEmpty) return _messageState(TripStrings.noCitiesYet, TripStrings.noCitiesYetSubtitle);
-      return _emptyState(TripStrings.noCityMatch(_query));
+      return _emptyState(_states.length == 1 ? TripStringsMcaA2.noCityMatchIn(_query, _states.first) : TripStrings.noCityMatch(_query));
     }
     final browsing = _query.trim().isEmpty;
     if (!browsing) {

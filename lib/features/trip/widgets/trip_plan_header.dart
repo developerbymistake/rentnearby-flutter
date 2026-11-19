@@ -11,7 +11,6 @@ import '../trip_strings_v2_plan.dart';
 import '../utils/trip_easy_rules.dart';
 import '../utils/trip_format.dart';
 import 'trip_card.dart';
-import 'trip_pace_sheet.dart';
 import 'trip_status.dart';
 
 enum TripPlanMenu {
@@ -158,7 +157,6 @@ class TripPlanHeader extends StatelessWidget {
     final progress = c.stepProgress;
     final step = c.isCompleted ? 2 : 1;
     final hint = hintOf(c, rows);
-    final editable = c.canEditStructure;
     return Padding(
           padding: DS.insets(l: 12, t: 8),
           child: Row(
@@ -226,69 +224,9 @@ class TripPlanHeader extends StatelessWidget {
                   ],
                 ),
               ),
-              Gap.h(8),
-              ConstrainedBox(
-                constraints: BoxConstraints(maxWidth: DS.s(120)),
-                child: _paceChip(context, c, editable),
-              ),
             ],
           ),
         );
-  }
-
-  Widget _paceChip(BuildContext context, TripPlanController c, bool editable) {
-    final label = c.settings.isRelaxed
-        ? TripStringsV2Plan.paceRelaxed
-        : TripStringsV2Plan.paceNormal;
-    return PressScale(
-      enabled: editable,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: editable
-            ? () async {
-                final picked = await TripPaceSheet.show(context);
-                if (picked != null) await c.setPace(picked);
-              }
-            : null,
-        child: ConstrainedBox(
-          constraints: BoxConstraints(minHeight: DS.s(36)),
-          child: Container(
-            alignment: Alignment.center,
-            padding: DS.sym(h: 12, v: 6),
-            decoration: BoxDecoration(
-              color: DesignColors.whiteSoft,
-              borderRadius: DS.br(CardRadius.pill),
-              border: Border.all(
-                color: DesignColors.tint(DesignColors.surface, Alpha.half),
-              ),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Flexible(
-                  child: Text(
-                    label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TypeTokens.style(
-                      12,
-                      FontWeight.w700,
-                      color: DesignColors.textInverse,
-                    ),
-                  ),
-                ),
-                if (editable)
-                  Icon(
-                    Icons.keyboard_arrow_down_rounded,
-                    size: DS.s(16),
-                    color: DesignColors.surface,
-                  ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
   }
 
   Widget _menu(TripPlanController c) {
@@ -571,7 +509,6 @@ class TripPlanStepCard extends StatelessWidget {
       final progress = c.stepProgress;
       final step = c.isCompleted ? 2 : 1;
       final hint = TripPlanHeader.hintOf(c, rows);
-      final editable = c.canEditStructure;
       final pct = progress.percent.clamp(0, 100).toDouble();
       final name = c.title;
       final sub = step == 2 ? (progress.total == 0 ? TripStringsV2Plan.nothingToArrange : TripStringsV2Plan.arranged(progress.done, progress.total)) : null;
@@ -611,8 +548,6 @@ class TripPlanStepCard extends StatelessWidget {
                           backgroundColor: DesignColors.tint(white, Alpha.scrim),
                         ),
                       ),
-                      Gap.v(14),
-                      _pace(context, c, editable, tone),
                     ],
                   ),
                 ),
@@ -629,29 +564,5 @@ class TripPlanStepCard extends StatelessWidget {
         ),
       );
     });
-  }
-
-  Widget _pace(BuildContext context, TripPlanController c, bool editable, ListingTone tone) {
-    final label = TripStringsDayplan.pace(relaxed: c.settings.isRelaxed);
-    const white = DesignColors.surface;
-    return Tap3D(
-      onTap: editable
-          ? () async {
-              final picked = await TripPaceSheet.show(context);
-              if (picked != null) await c.setPace(picked);
-            }
-          : null,
-      label: label,
-      child: Container(
-        height: DS.s(40),
-        padding: DS.sym(h: 16),
-        decoration: BoxDecoration(
-          color: DesignColors.tint(white, Alpha.v22),
-          borderRadius: DS.circular(20),
-          border: Border.all(color: DesignColors.tint(white, Alpha.v55)),
-        ),
-        child: Center(widthFactor: 1, child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(12.5, FontWeight.w700, white, letterSpacing: 0))),
-      ),
-    );
   }
 }

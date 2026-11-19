@@ -83,5 +83,18 @@ void main() {
       expect(body.containsKey('startDate'), isFalse);
       expect(body['dayLimitMinutes'], 300);
     });
+
+    test('a stored pace of 450 is sent back unchanged', () {
+      final c = TripPlanController();
+      addTearDown(c.onClose);
+      final p = TripPlan.singleCity(
+        cityKey: 1,
+        cityName: 'Nainital',
+        centreLatitude: 29.3919,
+        centreLongitude: 79.4542,
+        days: const [TripDay(day: 1, spots: [_spot])],
+      ).copyWith(settings: const TripSettings(dayLimitMinutes: 450));
+      expect(c.planBodyForTest(p, 1, 'recalculate')['dayLimitMinutes'], 450);
+    });
   });
 }

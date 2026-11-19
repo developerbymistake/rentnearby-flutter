@@ -392,6 +392,34 @@ void main() {
       await tester.pump(const Duration(seconds: 5));
     });
 
+    testWidgets('overlap error without a trip name says another trip', (tester) async {
+      final repo = FakeTaxiRepo()..createAnswers.add(const TaxiOverlap(tripId: 't9', tripName: '  ', message: 'x'));
+      final sent = _Sent();
+      await _ready(tester, repo: repo, sent: sent);
+      await _pickKathgodam(tester);
+      await _tapKey(tester, 'taxi_request_send');
+      expect(find.text('You already have a taxi request for these dates in another trip.'), findsOneWidget);
+      expect(sent.requests, isEmpty);
+      expect(_sendEnabled(tester), isTrue);
+      await tester.pump(const Duration(seconds: 5));
+    });
+
+    testWidgets('header menu Try another city calls back once and keeps the form', (tester) async {
+      var tried = 0;
+      final c = _controller(FakeTaxiRepo());
+      await _pump(tester, c, onTryAnotherCity: () => tried++);
+      await _pickKathgodam(tester);
+      final before = c.form.value!.summary;
+      await _tapKey(tester, 'taxi_request_menu');
+      expect(find.text('Try another city'), findsOneWidget);
+      await _tap(tester, find.text('Try another city'));
+      expect(tried, 1);
+      expect(find.text('Try another city'), findsNothing);
+      expect(c.form.value!.summary, before);
+      expect(_summary(tester), before);
+      expect(_sendEnabled(tester), isTrue);
+    });
+
     testWidgets('SeatsTooFew shows the message and reloads places', (tester) async {
       final repo = _CountingRepo()..createAnswers.add(const TaxiRefused(type: 'SeatsTooFew', statusCode: 400, message: 'm'));
       await _ready(tester, repo: repo);

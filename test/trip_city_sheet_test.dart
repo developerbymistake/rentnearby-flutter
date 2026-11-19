@@ -1,3 +1,5 @@
+import 'package:bakhli/design/design.dart';
+import 'package:bakhli/design/extra/sheet_close_button.dart';
 import 'package:bakhli/features/trip/data/trip_city_catalog.dart';
 import 'package:bakhli/features/trip/models/trip_city_model.dart';
 import 'package:bakhli/features/trip/widgets/trip_city_sheet.dart';
@@ -5,12 +7,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 
+import 'support/five_sizes.dart';
 import 'ui_golden/golden_support.dart';
 
-TripCityModel _city(int k, String n, {bool popular = false}) => TripCityModel(
-    cityKey: k, name: n, districtName: 'D$k', stateName: 'Uttarakhand', latitude: 1, longitude: 1, isPopularDestination: popular);
+const _hp = 'Himachal Pradesh';
+const _longState = 'The Very Long Hill State Name Of The North';
+
+TripCityModel _city(int k, String n, {bool popular = false, String state = 'Uttarakhand'}) => TripCityModel(
+    cityKey: k, name: n, districtName: 'D$k', stateName: state, latitude: 1, longitude: 1, isPopularDestination: popular);
 
 class _Catalog extends TripCityCatalog {
+  _Catalog([List<TripCityModel> extra = const []]) {
+    list.addAll(extra);
+  }
   final list = [_city(1, 'Nainital', popular: true), _city(2, 'Almora'), _city(3, 'Mallital')];
   @override
   void warmFromDisk() {}
@@ -106,4 +115,103 @@ void main() {
       });
     }
   }
+
+  group('add a city lists only the trip state', () {
+    final himachal = [_city(10, 'Shimla', state: _hp, popular: true), _city(11, 'Manali', state: _hp)];
+
+    Future<void> pumpAdd(WidgetTester t, Set<int> inTrip, {List<TripCityModel>? extra}) async {
+      Get.put<TripCityCatalog>(_Catalog(extra ?? himachal), permanent: true);
+      setGoldenView(t, const Size(412, 900));
+      await t.pumpWidget(MaterialApp(
+        home: Scaffold(body: TripCitySheet(mode: TripCitySheetMode.add, afterCity: 'Nainital', inTrip: inTrip)),
+      ));
+      await t.pumpAndSettle();
+    }
+
+    bool luggageArt(WidgetTester t) => t.widgetList<Art3D>(find.byType(Art3D)).any((a) => a.asset == ListingArt.luggage);
+
+    testWidgets('one state: only its cities, compact header, in-trip row greyed', (t) async {
+      await pumpAdd(t, {1});
+      expect(find.text('Add a city'), findsOneWidget);
+      expect(find.text('Cities in Uttarakhand · After Nainital'), findsOneWidget);
+      expect(find.text('Shimla'), findsNothing);
+      expect(find.text('Manali'), findsNothing);
+      expect(find.text('Almora'), findsOneWidget);
+      expect(find.text('Nainital'), findsOneWidget);
+      expect(find.text('In this trip'), findsOneWidget);
+      expect(luggageArt(t), isFalse);
+      expect(find.textContaining('another state'), findsNothing);
+      expect(find.textContaining('separate trip'), findsNothing);
+    });
+
+    testWidgets('search inside the state, no match names the state', (t) async {
+      await pumpAdd(t, {1});
+      await t.enterText(find.byType(TextField).first, 'manali');
+      await t.pumpAndSettle();
+      expect(find.text('No city in Uttarakhand matches "manali"'), findsOneWidget);
+      expect(find.text('Manali'), findsNothing);
+      await t.enterText(find.byType(TextField).first, 'alm');
+      await t.pumpAndSettle();
+      expect(find.text('Almora'), findsOneWidget);
+      expect(find.text('Shimla'), findsNothing);
+    });
+
+    testWidgets('old trip with two states lists both', (t) async {
+      await pumpAdd(t, {1, 10});
+      expect(find.text('Cities in Uttarakhand and Himachal Pradesh · After Nainital'), findsOneWidget);
+      expect(find.text('Manali'), findsOneWidget);
+      expect(find.text('Almora'), findsOneWidget);
+      await t.enterText(find.byType(TextField).first, 'goa');
+      await t.pumpAndSettle();
+      expect(find.text('No city matches "goa"'), findsOneWidget);
+    });
+
+    testWidgets('trip city unknown to the catalog lists every state', (t) async {
+      await pumpAdd(t, {99});
+      expect(find.text('After Nainital'), findsOneWidget);
+      expect(find.text('Shimla'), findsOneWidget);
+      expect(find.text('Almora'), findsOneWidget);
+    });
+
+    testWidgets('start mode is not filtered', (t) async {
+      Get.put<TripCityCatalog>(_Catalog(himachal), permanent: true);
+      setGoldenView(t, const Size(412, 900));
+      await t.pumpWidget(const MaterialApp(home: Scaffold(body: TripCitySheet(inTrip: {1}))));
+      await t.pumpAndSettle();
+      expect(find.text('Shimla'), findsOneWidget);
+      expect(luggageArt(t), isTrue);
+    });
+
+    for (final size in fiveSizes) {
+      testWidgets('add sheet at ${sizeLabel(size)}', (t) async {
+        Get.put<TripCityCatalog>(_Catalog([...himachal, _city(20, 'Longtown', state: _longState)]), permanent: true);
+        for (final inTrip in [
+          {1},
+          {20},
+        ]) {
+          await pumpAtSize(t, Scaffold(body: TripCitySheet(mode: TripCitySheetMode.add, afterCity: 'Nainital', inTrip: inTrip)), size);
+          await t.pump(const Duration(milliseconds: 500));
+          expect(t.takeException(), isNull, reason: '${sizeLabel(size)} $inTrip');
+          final sub = find.textContaining('Cities in');
+          expect(sub, findsOneWidget);
+          expect(t.widget<Text>(sub).maxLines, 1);
+          expect(find.text('Shimla'), findsNothing);
+          final title = t.getRect(find.text('Add a city'));
+          final close = t.getRect(find.byType(SheetCloseButton));
+          final sheet = t.getRect(find.byType(TripCitySheet));
+          expect(close.right, closeTo(sheet.right - DS.s(4), 0.5));
+          final band = t.getRect(find.ancestor(of: find.text('Add a city'), matching: find.byType(Container)).first);
+          expect(band.width, closeTo(sheet.width, 0.5), reason: 'header band spans the sheet');
+          expect(close.bottom, lessThanOrEqualTo(band.bottom + 0.5));
+          expect(t.getRect(sub).right, lessThanOrEqualTo(close.left + 0.5));
+          expect(title.right, lessThanOrEqualTo(close.left + 0.5));
+          expect(t.getRect(find.byType(TextField).first).top, greaterThan(t.getRect(sub).bottom));
+          expect(t.getRect(find.byType(TextField).first).top - sheet.top, lessThan(size.height * 0.2), reason: 'compact header');
+          await t.enterText(find.byType(TextField).first, 'manali');
+          await t.pump(const Duration(milliseconds: 500));
+          expect(t.takeException(), isNull, reason: '${sizeLabel(size)} no match');
+        }
+      });
+    }
+  });
 }

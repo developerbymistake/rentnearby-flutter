@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:bakhli/design/design.dart';
-import '../widgets/trip_pace_sheet.dart';
+import '../widgets/trip_choice_card.dart';
 import '../controllers/trip_plan_controller.dart';
 import '../trip_constants.dart';
 import '../trip_strings_v2_plan.dart';

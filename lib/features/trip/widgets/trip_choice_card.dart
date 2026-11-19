@@ -1,49 +1,5 @@
 import 'package:bakhli/design/design.dart';
 import 'package:flutter/material.dart';
-import '../controllers/trip_plan_controller.dart';
-import '../trip_constants.dart';
-import '../trip_strings_v2_plan.dart';
-
-class TripPaceSheet {
-  static Future<int?> show(BuildContext context) {
-    final current = TripPlanController.to.settings.dayLimitMinutes;
-    return SheetFrame.show<int>(
-      context,
-      builder: (ctx) => SheetFrame(
-        tone: ListingTone.indigo,
-        art: ListingArt.sunrise,
-        size: SheetSize.confirm,
-        scrollable: false,
-        padding: DS.insets(b: 20),
-        title: TripStringsV2Plan.paceTitle,
-        subtitle: TripStringsV2Plan.paceSub,
-        footer: Text(
-          TripStringsV2Plan.paceFooter,
-          textAlign: TextAlign.center,
-          style: Ink3D.text(12, FontWeight.w400, Ink3D.grey),
-        ),
-        child: TripSheetFill(
-          children: [
-            TripChoiceCard(
-              art: ListingArt.tent,
-              label: TripStringsV2Plan.paceRelaxed,
-              hint: TripStringsV2Plan.paceRelaxedHint,
-              selected: current <= TripPace.relaxed,
-              onTap: () => Navigator.pop(ctx, current <= TripPace.relaxed ? null : TripPace.relaxed),
-            ),
-            TripChoiceCard(
-              art: ListingArt.backpack,
-              label: TripStringsV2Plan.paceNormal,
-              hint: TripStringsV2Plan.paceNormalHint,
-              selected: current > TripPace.relaxed,
-              onTap: () => Navigator.pop(ctx, current > TripPace.relaxed ? null : TripPace.normal),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
 
 class TripSheetFill extends StatelessWidget {
   const TripSheetFill({super.key, required this.children, this.gap = 12});

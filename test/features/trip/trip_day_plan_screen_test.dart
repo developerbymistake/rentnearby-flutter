@@ -291,11 +291,47 @@ void main() {
     expect(t.widget<TextField>(input).controller!.text, long.substring(0, TripNameRules.max));
   });
 
-  testWidgets('pace_chip_reads_pace_label', (t) async {
-    final c = await pumpDayPlan(t, dayPlanFixture());
+  testWidgets('your_plan_card_has_no_pace_pill', (t) async {
+    await pumpDayPlan(t, dayPlanFixture());
     final card = find.byKey(TripPlanStepCard.cardKey);
-    expect(find.descendant(of: card, matching: find.text(TripStringsDayplan.pace(relaxed: c.settings.isRelaxed))), findsOneWidget);
-    expect(find.descendant(of: card, matching: find.text('pace')), findsNothing);
+    expect(find.descendant(of: card, matching: find.textContaining('Pace')), findsNothing);
+    final ring = t.getCenter(find.descendant(of: card, matching: find.byType(RingBadge))).dy;
+    expect(ring, closeTo(t.getCenter(card).dy, 3));
+  });
+
+  testWidgets('edit_mode_header_has_no_pace_chip', (t) async {
+    final c = await pumpDayPlan(t, dayPlanFixture());
+    c.editMode.value = true;
+    await t.pumpAndSettle();
+    final header = find.byType(TripPlanHeader);
+    expect(find.descendant(of: header, matching: find.text('Relaxed')), findsNothing);
+    expect(find.descendant(of: header, matching: find.text('Normal')), findsNothing);
+  });
+
+  testWidgets('city_header_has_no_menu', (t) async {
+    await pumpDayPlan(t, dayPlanFixture(perLeg: const [[2, 2], [1, 1]]));
+    expect(find.byKey(TripLegSectionHeader.customizeKey), findsWidgets);
+    expect(find.byKey(const ValueKey('leg-menu')), findsNothing);
+  });
+
+  testWidgets('unavailable_city_banner_removes_the_city', (t) async {
+    final c = await pumpDayPlan(t, dayPlanFixture(perLeg: const [[2, 2], [1, 1]]));
+    c.unavailableCities.add(c.plan.value!.legAt(2)!.cityKey);
+    await t.pumpAndSettle();
+    await t.ensureVisible(find.text(TripStringsMcaA3.removeCity));
+    await t.tap(find.text(TripStringsMcaA3.removeCity));
+    await t.pumpAndSettle();
+    await t.tap(find.text(TripStringsMcaA3.remove));
+    await t.pumpAndSettle();
+    expect(c.plan.value!.legCount, 1);
+    await t.pump(const Duration(seconds: 10));
+  });
+
+  testWidgets('unavailable_one_city_plan_has_no_remove_action', (t) async {
+    final c = await pumpDayPlan(t, dayPlanFixture());
+    c.unavailableCities.add(c.plan.value!.legAt(1)!.cityKey);
+    await t.pumpAndSettle();
+    expect(find.text(TripStringsMcaA3.removeCity), findsNothing);
   });
 
   testWidgets('five sizes', (t) async {

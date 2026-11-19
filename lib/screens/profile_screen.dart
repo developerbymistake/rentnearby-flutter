@@ -684,8 +684,6 @@ class AccountDeleteBlockedDialog extends StatelessWidget {
           dialog: true,
           primaryLabel: 'OK',
           onPrimary: onClose,
-          secondaryLabel: 'Close',
-          onSecondary: onClose,
           extra: Padding(
             padding: EdgeInsets.only(top: DS.gv(14)),
             child: Column(
@@ -887,8 +885,8 @@ class _ProfileSheet extends StatelessWidget {
     this.extra,
     required this.primaryLabel,
     required this.onPrimary,
-    required this.secondaryLabel,
-    required this.onSecondary,
+    this.secondaryLabel,
+    this.onSecondary,
     this.dialog = false,
   });
 
@@ -899,8 +897,8 @@ class _ProfileSheet extends StatelessWidget {
   final Widget? extra;
   final String primaryLabel;
   final VoidCallback? onPrimary;
-  final String secondaryLabel;
-  final VoidCallback onSecondary;
+  final String? secondaryLabel;
+  final VoidCallback? onSecondary;
   final bool dialog;
 
   static double get _artRoom => DS.s(56);
@@ -991,7 +989,7 @@ class _ProfileSheet extends StatelessWidget {
                           ),
                         ?extra,
                         _button(primaryLabel, onPrimary, primary: true),
-                        _button(secondaryLabel, onSecondary, primary: false),
+                        if (secondaryLabel != null && onSecondary != null) _button(secondaryLabel!, onSecondary, primary: false),
                       ],
                     ),
                   ),

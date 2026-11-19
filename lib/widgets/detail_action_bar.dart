@@ -4,6 +4,7 @@ import '../config/app_insets.dart';
 import '../config/module_palette.dart';
 import '../design/design.dart';
 import '../utils/contact_launcher.dart';
+import '../utils/contact_message.dart';
 import '../design/extra/ext_details.dart';
 
 class DetailActionBar extends StatelessWidget {
@@ -62,19 +63,20 @@ class DetailActionBar extends StatelessWidget {
     final tone = _tone;
     final hasPhone = ownerPhone != null;
     final showReport = !isOwner;
-    final stacked = showDirections && onChat != null;
+    final stacked = showDirections && (onChat != null || whatsAppPhone != null);
     final buttons = <Widget>[
       if (showDirections) DetailBarButton.primary(tone: tone, label: 'Directions', art: ListingArt.worldMap, onTap: _directions, stacked: stacked),
       if (hasPhone)
-        DetailBarButton.primary(tone: tone, label: 'Call', icon: Icons.call_rounded, onTap: () => ContactLauncher.call(ownerPhone!), stacked: stacked),
+        DetailBarButton.primary(tone: tone, label: ContactMessage.call, icon: Icons.call_rounded, onTap: () => ContactLauncher.call(ownerPhone!), stacked: stacked),
       if (onChat != null)
         DetailBarButton.outline(tone: tone, label: 'Chat', art: ListingArt.speechBalloon, onTap: onChat, stacked: stacked),
       if (whatsAppPhone != null)
         DetailBarButton.outline(
           tone: tone,
-          label: 'WhatsApp',
+          label: ContactMessage.whatsApp,
           icon: Icons.chat_rounded,
           onTap: () => ContactLauncher.whatsApp(whatsAppPhone!, message: whatsAppMessage),
+          stacked: stacked,
         ),
     ];
     return DetailBarShell(

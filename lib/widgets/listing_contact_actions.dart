@@ -3,43 +3,45 @@ import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 import '../config/app_routes.dart';
 import '../controllers/auth_controller.dart';
-import '../controllers/chat_controller.dart';
 import '../features/stay/guest/stay_guest_controller.dart';
 import '../features/taxi/guest/taxi_browse_repository.dart';
-import '../models/conversation_model.dart';
 import '../utils/app_toast.dart';
 import '../utils/contact_launcher.dart';
+import '../utils/contact_message.dart';
 import '../utils/dio_error_mapper.dart';
 
 enum ListingKind { stay, taxi }
 
-enum ContactOutcome { dialed, chatOpened, openedDetail, ignored, failed, whatsAppOpened }
+enum ContactOutcome { dialed, openedDetail, ignored, failed, whatsAppOpened }
 
 class ListingContact {
-  const ListingContact({required this.ownerId, this.phone, this.whatsApp});
+  const ListingContact({required this.ownerId, this.phone, this.whatsApp, this.title});
   final String ownerId;
   final String? phone;
   final String? whatsApp;
+  final String? title;
 }
+
+ContactCustomer? _noCustomer() => null;
 
 class ListingContactDeps {
   const ListingContactDeps({
     required this.fetchContact,
     required this.currentUserId,
     required this.dial,
-    required this.createConversation,
     required this.openRoute,
     required this.info,
     this.openWhatsApp = ContactLauncher.whatsApp,
+    this.customer = _noCustomer,
   });
 
   final Future<ListingContact?> Function(ListingKind kind, String id) fetchContact;
   final String? Function() currentUserId;
   final Future<void> Function(String phone) dial;
-  final Future<ConversationModel?> Function(String listingType, String id) createConversation;
   final void Function(String route, Object? arguments) openRoute;
   final void Function(String message) info;
-  final Future<void> Function(String phone) openWhatsApp;
+  final Future<void> Function(String phone, {String? message}) openWhatsApp;
+  final ContactCustomer? Function() customer;
 }
 
 class ListingContactActions {
@@ -54,14 +56,9 @@ class ListingContactActions {
 
   static const String actionCall = 'call';
   static const String actionWhatsApp = 'whatsapp';
-  static const String actionChat = 'chat';
 
   static bool isBusy(ListingKind kind, String id, {String? action}) =>
       busy.contains(action == null ? keyOf(kind, id) : '${keyOf(kind, id)}|$action');
-
-  static bool supportsChat(ListingKind kind) => kind == ListingKind.stay;
-
-  static String listingType(ListingKind kind) => kind == ListingKind.stay ? 'Stay' : 'Taxi';
 
   static String detailRoute(ListingKind kind) => kind == ListingKind.stay ? AppRoutes.stayDetail : AppRoutes.taxiDetail;
 
@@ -117,41 +114,17 @@ class ListingContactActions {
           _openDetail(deps, kind, id, detailArguments);
           return ContactOutcome.openedDetail;
         }
-        await deps.openWhatsApp(phone);
+        await deps.openWhatsApp(phone, message: messageFor(kind, contact.title, deps.customer()));
         return ContactOutcome.whatsAppOpened;
       });
 
-  static Future<ContactOutcome> chat(
-    BuildContext context, {
-    required ListingKind kind,
-    required String id,
-    Map<String, dynamic>? detailArguments,
-  }) =>
-      _guard(kind, id, actionChat, () async {
-        final deps = _deps;
-        if (!supportsChat(kind)) {
-          _openDetail(deps, kind, id, detailArguments);
-          return ContactOutcome.openedDetail;
-        }
-        final conv = await deps.createConversation(listingType(kind), id);
-        if (!context.mounted) return ContactOutcome.ignored;
-        if (conv == null) return ContactOutcome.failed;
-        deps.openRoute(AppRoutes.chatConversation, chatArguments(conv));
-        return ContactOutcome.chatOpened;
-      });
+  static ContactCustomer? customer() {
+    final u = Get.isRegistered<AuthController>() ? Get.find<AuthController>().user.value : null;
+    return u == null ? null : (name: u.name, phone: u.phoneNumber);
+  }
 
-  static Map<String, dynamic> chatArguments(ConversationModel conv) => {
-        'conversationId': conv.id,
-        'listingType': conv.listingType,
-        'listingId': conv.listingId,
-        'stayTypeId': conv.stayTypeId,
-        'otherPartyId': conv.otherPartyId,
-        'otherPartyName': conv.otherPartyName,
-        'listingTitle': conv.listingTitle,
-        'isOwner': conv.isOwner,
-        'status': conv.status,
-        'isBlockedByMe': conv.isBlockedByMe,
-      };
+  static String messageFor(ListingKind kind, String? title, ContactCustomer? c) =>
+      kind == ListingKind.stay ? ContactMessage.stay(stayName: title, customer: c) : ContactMessage.taxi(vehicle: title, customer: c);
 
   static Future<ContactOutcome> _guard(ListingKind kind, String id, String action, Future<ContactOutcome> Function() run) async {
     final key = keyOf(kind, id);
@@ -172,16 +145,15 @@ class ListingContactActions {
     fetchContact: _fetchContact,
     currentUserId: () => Get.isRegistered<AuthController>() ? Get.find<AuthController>().user.value?.id : null,
     dial: ContactLauncher.call,
-    createConversation: (type, id) async =>
-        Get.isRegistered<ChatController>() ? Get.find<ChatController>().createOrGetConversation(type, id) : null,
     openRoute: (route, args) => Get.toNamed(route, arguments: args),
     info: AppToast.info,
+    customer: customer,
   );
 
   static Future<ListingContact?> _fetchContact(ListingKind kind, String id) async {
     if (kind == ListingKind.stay) {
       final s = await StayGuestController.to.getById(id);
-      return s == null ? null : ListingContact(ownerId: s.userId, phone: s.ownerPhone);
+      return s == null ? null : ListingContact(ownerId: s.userId, phone: s.ownerPhone, title: s.name);
     }
     try {
       final t = await const TaxiBrowseRepository().getById(id);
@@ -189,6 +161,7 @@ class ListingContactActions {
         ownerId: t.userId,
         phone: t.hasContact ? t.contactPhone : null,
         whatsApp: t.hasContact ? (t.whatsAppNumber ?? t.contactPhone) : null,
+        title: t.vehicleTypeName,
       );
     } catch (e) {
       final status = e is DioException ? e.response?.statusCode : null;

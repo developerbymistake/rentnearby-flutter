@@ -118,6 +118,9 @@ Widget _request({FakeTaxiRepo? repo}) => TripTaxiRequestScreen(
       onBack: () {},
     );
 
+FakeTaxiRepo _travellers(int n) =>
+    FakeTaxiRepo()..placesAnswer = TaxiOk(TaxiPickupPlaces.fromJson({..._j('pickup_places.json'), 'travellers': n, 'suggestedSeats': 4}));
+
 Widget _status(Map<String, dynamic> json) {
   final repo = FakeTaxiRepo();
   final req = TaxiRequest.fromJson(json);
@@ -169,6 +172,10 @@ final _frames = <_Frame>[
     ),
     _keys(['taxi_sightseeing_switch', 'taxi_drop_switch']),
   ),
+  _Frame('28a_seats_small_off', () => _request(repo: _travellers(6)), _keys(['taxi_pickup_6377270'])),
+  _Frame('28b_group_above_12', () => _request(repo: _travellers(13)), _keys(['taxi_pickup_6377270'])),
+  _Frame('28e_drop_city_chosen', _request,
+      _keys(['taxi_sightseeing_switch', 'taxi_pickup_6377270', 'taxi_drop_change', 'taxi_drop_2738820', 'taxi_drop_field'])),
   _Frame('29_finding_driver', () => _status(_s('taxi_request_finding.json'))),
   _Frame('30_finding_driver_waiting', () => _status(_s('taxi_request_waiting.json'))),
   _Frame('31_collecting', () => _status(_firstDriverOnly(_s('taxi_request_collecting.json')))),

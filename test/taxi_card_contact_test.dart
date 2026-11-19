@@ -16,8 +16,8 @@ class _Fake {
   final fetched = <(ListingKind, String)>[];
   final dialed = <String>[];
   final whatsApped = <String>[];
+  final messages = <String?>[];
   final routes = <(String, Object?)>[];
-  final created = <(String, String)>[];
   final infos = <String>[];
 
   ListingContactDeps get deps => ListingContactDeps(
@@ -28,11 +28,11 @@ class _Fake {
         },
         currentUserId: () => 'me',
         dial: (p) async => dialed.add(p),
-        openWhatsApp: (p) async => whatsApped.add(p),
-        createConversation: (type, id) async {
-          created.add((type, id));
-          return null;
+        openWhatsApp: (p, {message}) async {
+          whatsApped.add(p);
+          messages.add(message);
         },
+        customer: () => (name: 'Asha', phone: '9876543210'),
         openRoute: (r, a) => routes.add((r, a)),
         info: infos.add,
       );
@@ -117,13 +117,14 @@ void main() {
   });
 
   testWidgets('browse WhatsApp opens WhatsApp with the driver number, not onOpen', (t) async {
-    fake.contact = const ListingContact(ownerId: 'driver', phone: '9876543210', whatsApp: '9811122233');
+    fake.contact = const ListingContact(ownerId: 'driver', phone: '9876543210', whatsApp: '9811122233', title: 'Sedan');
     await _pump(t, TaxiCard(item: _taxi(match: false), onOpen: () => opened++));
     await _tap(t, TaxiCard.whatsAppKey);
     expect(fake.fetched, [(ListingKind.taxi, 't1')]);
     expect(fake.whatsApped, ['9811122233']);
+    expect(fake.messages.single, startsWith('Hello, I found your taxi (Sedan) on Bakhli.'));
+    expect(fake.messages.single, contains('Name: Asha\nPhone: +91 9876543210'));
     expect(fake.dialed, isEmpty);
-    expect(fake.created, isEmpty);
     expect(fake.routes, isEmpty);
     expect(opened, 0);
   });
@@ -171,7 +172,6 @@ void main() {
     await t.tap(find.text('Enquiry'));
     await t.pump();
     expect(enquired, 1);
-    expect(fake.created, isEmpty);
     expect(fake.routes, isEmpty);
   });
 }

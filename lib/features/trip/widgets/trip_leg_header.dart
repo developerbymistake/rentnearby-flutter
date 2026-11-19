@@ -4,13 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:bakhli/design/design.dart';
 import 'package:get/get.dart';
 import '../controllers/trip_plan_controller.dart';
+import '../models/trip_plan_model.dart';
 import '../trip_strings_dayplan.dart';
 import '../trip_strings_mca_a3.dart';
 import '../trip_strings_mca_n2.dart';
 import 'package:bakhli/design/extra/trip_plan_look.dart';
 import '../utils/trip_format.dart';
-import 'trip_leg_menu_sheet.dart';
-import 'trip_plan_header.dart';
+import 'trip_leg_actions.dart';
 
 class TripLegHeader extends StatelessWidget {
   const TripLegHeader({super.key, required this.legIndex, this.anchorKey, this.folded = false, this.onToggle, this.onCustomize, this.body = const [], this.gapBelow = 0});
@@ -39,7 +39,7 @@ class TripLegHeader extends StatelessWidget {
       final to = c.dateOf(b);
       final range = TripStringsDayplan.legRange(a, b, from == null || to == null ? null : TripFormat.compactRange(from, to));
       final nights = TripStringsMcaA3.nights(p.legDayCount(legIndex));
-      final menu = !c.isReadOnly && !c.needsUpdate.value;
+      final canRemove = !c.isReadOnly && !c.needsUpdate.value && c.canRemoveLeg(legIndex) != TripLegEditBlock.onlyLeg;
       final unavailable = c.legUnavailable(legIndex);
       return Column(
         key: anchorKey,
@@ -55,7 +55,6 @@ class TripLegHeader extends StatelessWidget {
             locked: !c.canEditStructure,
             onToggle: onToggle,
             onCustomize: onCustomize,
-            onMenu: menu ? () => TripLegMenuSheet.show(context, legIndex) : null,
             body: body,
             gapBelow: unavailable ? 0 : gapBelow,
           ),
@@ -64,8 +63,8 @@ class TripLegHeader extends StatelessWidget {
               kind: BannerKind.bad,
               art: ListingArt.mountain,
               title: TripStringsMcaN2.cityUnavailable,
-              actionLabel: menu ? TripStringsMcaA3.removeCity : null,
-              onAction: menu ? () => TripLegMenuSheet.show(context, legIndex) : null,
+              actionLabel: canRemove ? TripStringsMcaA3.removeCity : null,
+              onAction: canRemove ? () => TripLegActions.removeCity(context, legIndex) : null,
               margin: DS.gapInsets(l: 18, t: 0, r: 18, b: 6),
             ),
         ],
@@ -85,7 +84,6 @@ class TripLegSectionHeader extends StatelessWidget {
     this.locked = false,
     this.onToggle,
     this.onCustomize,
-    this.onMenu,
     this.body = const [],
     this.gapBelow = 0,
   });
@@ -100,10 +98,8 @@ class TripLegSectionHeader extends StatelessWidget {
   final bool locked;
   final VoidCallback? onToggle;
   final VoidCallback? onCustomize;
-  final VoidCallback? onMenu;
 
   static const Key customizeKey = ValueKey('leg-customize');
-  static const Key menuKey = ValueKey('leg-menu');
   static const Key foldKey = ValueKey('leg-fold');
   static const Key rowKey = ValueKey('leg-row');
   static const Key detailKey = ValueKey('leg-detail');
@@ -147,38 +143,20 @@ class TripLegSectionHeader extends StatelessWidget {
     final labelStyle = Ink3D.text(13, FontWeight.w700, tone.text, letterSpacing: 0);
     final foldStyle = Ink3D.text(12.5, FontWeight.w700, tone.text, letterSpacing: 0);
     final foldLabel = folded ? TripStringsDayplan.show : TripStringsDayplan.hide;
-    final foldW = KitText.widthOf(foldLabel, foldStyle, scaler) + DS.s(14 + 12 + 6 + 18);
-    final hasMenu = onMenu != null;
     final customizeW = onCustomize == null ? 0.0 : KitText.widthOf(TripStringsDayplan.customize, labelStyle, scaler) + pillPad * 2;
-    final ctlW = (hasMenu ? btn + gap : 0) + foldW;
-    final minText = DS.s(96);
+    final foldRoom = math.max(KitText.widthOf(TripStringsDayplan.show, foldStyle, scaler), KitText.widthOf(TripStringsDayplan.hide, foldStyle, scaler)) + DS.s(14 + 12 + 6 + 18);
+    final ctlW = (onCustomize == null ? 0.0 : customizeW + gap) + foldRoom;
+    final minText = DS.s(84);
     final lineStyle = Ink3D.text(12.5, FontWeight.w400, DesignColors.tint(Colors.white, Alpha.v93), height: 1.55, letterSpacing: 0);
 
-    final menuBtn = !hasMenu
-        ? null
-        : Tooltip(
-            message: TripStringsDayplan.more,
-            excludeFromSemantics: true,
-            child: Tap3D(
-              tapKey: menuKey,
-              onTap: onMenu,
-              label: TripStringsDayplan.more,
-              child: Container(
-                width: btn,
-                height: btn,
-                decoration: BoxDecoration(color: DesignColors.surface, shape: BoxShape.circle, boxShadow: DS.shadows(Ink3D.whiteBtn)),
-                alignment: Alignment.center,
-                child: TripMenuDots.glyph(tone.text, size: 20),
-              ),
-            ),
-          );
     final foldBtn = Tap3D(
       tapKey: foldKey,
       onTap: onToggle,
       label: foldLabel,
       child: Container(
         height: btn,
-        padding: EdgeInsets.only(left: DS.s(14), right: DS.s(12)),
+        width: foldRoom,
+        alignment: Alignment.center,
         decoration: BoxDecoration(color: DesignColors.surface, borderRadius: BorderRadius.circular(btn / 2), boxShadow: DS.shadows(Ink3D.whiteBtn)),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -224,7 +202,7 @@ class TripLegSectionHeader extends StatelessWidget {
             ),
           );
 
-    final controls = <Widget>[?menuBtn, foldBtn];
+    final controls = <Widget>[?customizeBtn, foldBtn];
     final titleText = Text(title, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(17, FontWeight.w700, Colors.white, height: 1.3, letterSpacing: 0));
     final rangeText = Text(rangeLine, maxLines: 2, overflow: TextOverflow.ellipsis, style: lineStyle);
     final detailText = Text(folded ? foldedLine : detailLine, key: detailKey, maxLines: 3, overflow: TextOverflow.ellipsis, style: lineStyle);
@@ -255,14 +233,12 @@ class TripLegSectionHeader extends StatelessWidget {
             )
           else ...[titleText, rangeText],
           detailText,
-          if (beside && customizeBtn != null)
-            Padding(padding: EdgeInsets.only(top: DS.s(12)), child: customizeBtn)
-          else if (!beside)
+          if (!beside)
             Padding(
               padding: EdgeInsets.only(top: DS.s(12)),
-              child: room >= customizeW + gap + ctlW
-                  ? Row(children: [?customizeBtn, const Spacer(), ctl(controls)])
-                  : Wrap(spacing: gap, runSpacing: DS.s(10), children: [?customizeBtn, ...controls]),
+              child: room >= ctlW
+                  ? Row(children: [?customizeBtn, const Spacer(), foldBtn])
+                  : Wrap(spacing: gap, runSpacing: DS.s(10), children: [?customizeBtn, foldBtn]),
             ),
         ],
       );

@@ -5,7 +5,8 @@ import '../models/trip_enquiry_model.dart';
 import '../trip_strings_mcc_a2.dart';
 import '../trip_strings_mcc_a3.dart';
 import '../utils/trip_enquiry_rules.dart';
-import '../widgets/trip_leg_menu_sheet.dart';
+import '../../../utils/app_toast.dart';
+import '../widgets/trip_days_sheet.dart';
 import '../widgets/trip_wrong_city_strip.dart';
 import 'trip_dates_sheet.dart';
 
@@ -34,11 +35,22 @@ class TripRepliesLegParts {
       '${TripWrongCityStrip.lineOf(e, info)} · ${TripStringsMccA2.wrongCityNow}',
       actionLabel: live ? TripStringsMccA2.changeDays : null,
       onAction: live
-          ? () => c.isMultiCity
-              ? TripLegMenuSheet.changeDays(context, c.wrongCityHomeLeg(info) ?? c.legIndexOf(info.firstWrongDay))
-              : TripDatesSheet.edit(context)
+          ? () => _changeDays(context, c)
           : null,
     );
+  }
+
+  static void _changeDays(BuildContext context, TripPlanController c) {
+    if (!c.isMultiCity) {
+      TripDatesSheet.edit(context);
+      return;
+    }
+    if (c.needsUpdate.value) return;
+    if (c.isPlanLocked) {
+      AppToast.warning(c.planLockMessage);
+      return;
+    }
+    TripDaysSheet.show(context);
   }
 
   static ReplyNote? oldDatesNote(TripPlanController c, TripEnquiryModel e) {

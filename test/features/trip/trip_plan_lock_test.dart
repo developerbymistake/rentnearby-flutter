@@ -105,9 +105,6 @@ void main() {
         TripLegEditBlock.readOnly);
     expect(c.canRemoveLeg(2), TripLegEditBlock.readOnly);
     expect(c.removeLeg(2), TripLegEditBlock.readOnly);
-    expect(c.canMoveLeg(2, true), TripLegEditBlock.readOnly);
-    expect(c.moveLeg(2, true), TripLegEditBlock.readOnly);
-    await c.setPace(450);
     final r = await c.saveSettings(c.settings.copyWith(startDate: DateTime(2030, 12, 1), adults: 4));
     expect(r.saved, isFalse);
     final p = c.plan.value!;

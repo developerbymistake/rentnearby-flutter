@@ -128,7 +128,7 @@ void main() {
     await shot(t, 'stays_360_top');
     expect(find.bySemanticsLabel('Search a place or area'), findsOneWidget);
     expect(find.text('Call'), findsWidgets);
-    expect(find.text('Enquiry'), findsWidgets);
+    expect(find.text('WhatsApp'), findsWidgets);
     expect(find.text('Map view'), findsOneWidget);
     await _scrollShots(t, 'stays_360');
     expect(t.takeException(), isNull);

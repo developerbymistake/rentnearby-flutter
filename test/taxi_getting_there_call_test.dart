@@ -35,8 +35,7 @@ void main() {
       },
       currentUserId: () => 'me',
       dial: (p) async => dialed.add(p),
-      openWhatsApp: (p) async {},
-      createConversation: (type, id) async => null,
+      openWhatsApp: (p, {message}) async {},
       openRoute: (r, a) => routes.add(r),
       info: (_) {},
     );

@@ -9,6 +9,7 @@ import '../models/trip_plan_model.dart';
 import '../trip_navigation.dart';
 import '../trip_strings_mca_a2.dart';
 import '../trip_strings_mca_a3.dart';
+import '../utils/trip_state_rule.dart';
 import 'customize/trip_customize_spot_row.dart' show TripDashBox;
 
 class TripAddCityCard extends StatefulWidget {
@@ -35,8 +36,9 @@ class TripAddCityCard extends StatefulWidget {
     if (!catalog.hasData || p.legs.isEmpty) return const [];
     final last = p.legs.last;
     final inTrip = {for (final l in p.legs) l.cityKey};
+    final states = TripStateRule.statesOf(inTrip, catalog.search(''));
     final pool = [
-      for (final c in catalog.ready(''))
+      for (final c in TripStateRule.filter(catalog.ready(''), states))
         if (!inTrip.contains(c.cityKey)) c,
     ]..sort((a, b) => GeoDistance.km(last.latitude, last.longitude, a.latitude, a.longitude)
         .compareTo(GeoDistance.km(last.latitude, last.longitude, b.latitude, b.longitude)));
