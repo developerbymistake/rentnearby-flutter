@@ -1,10 +1,8 @@
-import 'package:bakhli/design/design.dart';
 import 'package:bakhli/features/trip/controllers/trip_shortlist_controller.dart';
 import 'package:bakhli/features/trip/models/trip_enquiry_model.dart';
 import 'package:bakhli/features/trip/models/trip_shortlist_model.dart';
 import 'package:bakhli/features/trip/widgets/trip_send_result_sheet.dart';
 import 'package:bakhli/features/trip/widgets/trip_shortlist_bar.dart';
-import 'package:bakhli/features/trip/widgets/trip_shortlist_toggle.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
@@ -29,7 +27,7 @@ void main() {
 
   for (final w in _widths) {
     for (final s in _scales) {
-      testWidgets('toggle and bar fit at $w dp, scale $s', (tester) async {
+      testWidgets('bar fits at $w dp, scale $s', (tester) async {
         final c = TripShortlistController.to;
         c.items.addAll(const [
           ShortlistItem(stepKey: 'stay:1', kind: 'Stay', listingId: 'a', name: 'A'),
@@ -39,11 +37,6 @@ void main() {
           w,
           s,
           Column(mainAxisSize: MainAxisSize.min, children: [
-            Row(children: [
-              Expanded(child: TripShortlistToggle(selected: false, onTap: () {})),
-              const SizedBox(width: 8),
-              Expanded(child: TripShortlistToggle(selected: true, onTap: () {}, tone: KitTone.taxi)),
-            ]),
             TripShortlistBar(step: 'stay:1', onDone: () {}),
           ]),
         ));
@@ -53,13 +46,6 @@ void main() {
       });
     }
   }
-
-  testWidgets('toggle is disabled while busy', (tester) async {
-    var taps = 0;
-    await tester.pumpWidget(_host(360, 1, TripShortlistToggle(selected: false, busy: true, onTap: () => taps++)));
-    await tester.tap(find.byType(TripShortlistToggle));
-    expect(taps, 0);
-  });
 
   testWidgets('bar count follows the controller', (tester) async {
     final c = TripShortlistController.to;

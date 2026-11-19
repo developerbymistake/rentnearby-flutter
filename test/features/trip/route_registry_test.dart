@@ -8,7 +8,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 const _contract = <String, String>{
-  'tripName': '/trip-name',
   'tripCustomize': '/trip-customize',
   'tripOverview': '/trip-overview',
   'tripTaxiRequest': '/trip-taxi-request',
@@ -22,7 +21,6 @@ const _contract = <String, String>{
 };
 
 final _constants = <String, String>{
-  'tripName': AppRoutes.tripName,
   'tripCustomize': AppRoutes.tripCustomize,
   'tripOverview': AppRoutes.tripOverview,
   'tripTaxiRequest': AppRoutes.tripTaxiRequest,
@@ -35,7 +33,7 @@ final _constants = <String, String>{
   'taxiReady': AppRoutes.taxiReady,
 };
 
-const _travellerFive = {'/trip-name', '/trip-customize', '/trip-overview', '/trip-taxi-request', '/trip-taxi-status'};
+const _travellerFour = {'/trip-customize', '/trip-overview', '/trip-taxi-request', '/trip-taxi-status'};
 
 const _driverSix = [
   '/taxi-request-ring',
@@ -49,7 +47,8 @@ const _driverSix = [
 void main() {
   test('every_new_route_constant_has_the_contract_value', () {
     expect(_constants, _contract);
-    expect(_constants.length, 11);
+    expect(_constants.length, 10);
+    expect(AppRoutes.isRegistered('/trip-name'), isFalse);
   });
 
   test('all_six_driver_routes_are_driver_only_and_taxi_tab_keyed', () {
@@ -85,11 +84,11 @@ void main() {
 
   test('can_open_route_is_false_until_a_page_is_registered', () {
     final auth = AuthController();
-    expect(_travellerFive.length + _driverSix.length, _contract.length);
+    expect(_travellerFour.length + _driverSix.length, _contract.length);
     for (final r in _contract.values) {
       expect(AppRoutes.isRegistered(r), isTrue, reason: r);
     }
-    for (final r in _travellerFive) {
+    for (final r in _travellerFour) {
       expect(auth.canOpenRoute(r), isTrue, reason: r);
     }
     const unregistered = '/taxi-request-unknown';

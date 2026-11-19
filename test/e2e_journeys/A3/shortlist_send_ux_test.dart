@@ -1,7 +1,6 @@
 import 'dart:io';
 import 'dart:async';
 
-import 'package:bakhli/design/design.dart';
 import 'package:bakhli/features/trip/controllers/trip_enquiry_controller.dart';
 import 'package:bakhli/features/trip/controllers/trip_shortlist_controller.dart';
 import 'package:bakhli/features/trip/data/trip_enquiry_repository.dart';
@@ -10,7 +9,6 @@ import 'package:bakhli/features/trip/models/trip_enquiry_model.dart';
 import 'package:bakhli/features/trip/models/trip_shortlist_model.dart';
 import 'package:bakhli/features/trip/trip_strings.dart';
 import 'package:bakhli/features/trip/trip_strings_shortlist.dart';
-import 'package:bakhli/features/trip/widgets/guide/trip_guide_shortlist_review.dart';
 import 'package:bakhli/features/trip/widgets/trip_shortlist_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -57,8 +55,6 @@ class _Enquiry extends TripEnquiryController {
 
 ShortlistItem _item(String id, {String step = 'stay:1'}) =>
     ShortlistItem(stepKey: step, kind: 'Stay', listingId: id, name: 'Name $id');
-
-Widget _host(Widget child) => MaterialApp(home: Scaffold(body: SingleChildScrollView(child: child)));
 
 void main() {
   late List<String> toasts;
@@ -121,41 +117,6 @@ void main() {
       expect(repo.removed, ['a']);
     });
 
-    testWidgets('review card shows a remove x and the failure reason line', (tester) async {
-      c.items.addAll([_item('a'), _item('b')]);
-      c.reasons['stay:1|b'] = 'Blocked';
-      await tester.pumpWidget(_host(TripGuideShortlistReview(
-        asset: TravelIcon.stay,
-        names: const ['Name a', 'Name b'],
-        stays: true,
-        sending: false,
-        failed: 1,
-        step: 'stay:1',
-        onSend: () {},
-        onNotNow: () {},
-      )));
-      expect(find.text('This host cannot be reached'), findsOneWidget);
-      expect(find.text('One host could not be reached.'), findsOneWidget);
-      expect(find.byIcon(Icons.close_rounded), findsNWidgets(2));
-      await tester.tap(find.bySemanticsLabel('Remove Name b'));
-      await tester.pump();
-      expect(c.activeOf('stay:1').map((i) => i.listingId), ['a']);
-      expect(find.text('Name b'), findsNothing);
-      expect(repo.removed, ['b']);
-    });
-
-    testWidgets('taxi step says driver', (tester) async {
-      await tester.pumpWidget(_host(TripGuideShortlistReview(
-        asset: TravelIcon.stay,
-        names: const [],
-        stays: false,
-        sending: false,
-        failed: 2,
-        onSend: () {},
-        onNotNow: () {},
-      )));
-      expect(find.text('2 drivers could not be reached.'), findsOneWidget);
-    });
   });
 
   group('SB3 limit message on the bulk path', () {
@@ -180,7 +141,7 @@ void main() {
       final src = File('lib/features/trip/controllers/trip_shortlist_controller.dart').readAsStringSync();
       expect(src.contains('sendTaxis'), isFalse);
       expect(src.contains('sendLead'), isFalse);
-      expect(src.contains('sendCars'), isTrue);
+      expect(src.contains('sendCars'), isFalse);
     });
 
     test('other failures show no limit text', () async {
@@ -190,22 +151,6 @@ void main() {
       expect(toasts, isEmpty);
     });
 
-    testWidgets('429 note is visible on the review card', (tester) async {
-      c.items.add(_item('a'));
-      enquiry.type = TripEnquiryErrorTypes.enquiryLimit;
-      await c.sendStays(step: 'stay:1', day: 1, nights: 1);
-      await tester.pumpWidget(_host(TripGuideShortlistReview(
-        asset: TravelIcon.stay,
-        names: const ['Name a'],
-        stays: true,
-        sending: false,
-        failed: 0,
-        step: 'stay:1',
-        onSend: () {},
-        onNotNow: () {},
-      )));
-      expect(find.textContaining(TripStrings.askLimitTitle), findsOneWidget);
-    });
   });
 
   group('SB8 double Done', () {

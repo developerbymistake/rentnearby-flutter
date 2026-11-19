@@ -6,10 +6,7 @@ import 'package:bakhli/features/trip/controllers/trip_plan_controller.dart';
 import 'package:bakhli/features/trip/models/trip_city_model.dart';
 import 'package:bakhli/features/trip/models/trip_model.dart';
 import 'package:bakhli/features/trip/models/trip_plan_model.dart';
-import 'package:bakhli/features/trip/models/trip_spot_model.dart';
-import 'package:bakhli/features/trip/screens/trip_name_screen.dart';
 import 'package:bakhli/features/trip/trip_navigation.dart';
-import 'package:bakhli/features/trip/trip_routes.dart';
 import 'package:bakhli/features/trip/trip_strings_mca_a1.dart';
 import 'package:bakhli/features/trip/widgets/trip_city_sheet.dart';
 import 'package:bakhli/services/storage_service.dart';
@@ -26,15 +23,6 @@ import 'support/engine_rig.dart';
 const _nainital = TripCityModel(cityKey: 1, name: 'Nainital', stateName: 'Uttarakhand', latitude: 29.4, longitude: 79.4);
 const _almora = TripCityModel(cityKey: 2, name: 'Almora', stateName: 'Uttarakhand', latitude: 29.6, longitude: 79.6);
 
-TripSpotModel _spot(String id) => TripSpotModel.fromJson({
-      'id': id,
-      'name': id,
-      'latitude': 29.4,
-      'longitude': 79.4,
-      'category': 'attraction',
-      'visitMinutes': 60,
-    });
-
 Map<dynamic, dynamic>? _spotsArgs;
 var _spotsOpened = 0;
 
@@ -47,7 +35,6 @@ Future<void> _pumpHome(WidgetTester t) async {
   await t.pumpWidget(GetMaterialApp(
     home: const Scaffold(body: Text('destinations')),
     getPages: [
-      tripPages.firstWhere((p) => p.name == AppRoutes.tripName),
       GetPage(
         name: AppRoutes.tripSpots,
         page: () {
@@ -79,77 +66,44 @@ void main() {
   setUp(StorageService.clearTripNewDraft);
   tearDown(Get.reset);
 
-  testWidgets('destination_then_name_then_places', (t) async {
+  testWidgets('destination_opens_places_directly_no_name_page', (t) async {
     await _pumpHome(t);
     TripNavigation.startWithCities([_nainital]);
-    await t.pumpAndSettle();
-    expect(find.byType(TripNameScreen), findsOneWidget);
-    expect(find.text('Uttarakhand Hills Trip'), findsOneWidget);
-    expect(_spotsOpened, 0);
-
-    await t.tap(find.byType(TripNameContinue));
     await t.pumpAndSettle();
     expect(find.text('places'), findsOneWidget);
-    expect(find.byType(TripNameScreen), findsNothing);
     expect(_spotsOpened, 1);
     expect((_spotsArgs!['city'] as TripCityModel).cityKey, 1);
-    expect(TripNewDraft.readName(), 'Uttarakhand Hills Trip');
+    expect(_spotsArgs!.containsKey('draftLegs'), isFalse);
+    expect(AppRoutes.isRegistered('/trip-name'), isFalse);
   });
 
-  testWidgets('back_from_name_returns_to_the_destination_list', (t) async {
-    TripNewDraft.save([TripDraftLeg(_almora, ['x'])]);
-    final before = StorageService.getTripNewDraft();
+  testWidgets('second_tap_while_places_open_is_ignored', (t) async {
     await _pumpHome(t);
     TripNavigation.startWithCities([_nainital]);
     await t.pumpAndSettle();
-    expect(find.byType(TripNameScreen), findsOneWidget);
-
-    Get.back();
+    TripNavigation.startWithCities([_nainital]);
     await t.pumpAndSettle();
-    expect(find.text('destinations'), findsOneWidget);
-    expect(_spotsOpened, 0);
-    expect(StorageService.getTripNewDraft(), before);
-    expect(TripNewDraft.readName(), isNull);
+    expect(_spotsOpened, 1);
   });
 
-  test('create_body_has_name', () async {
-    final api = installFakeApi([
-      FakeRoute('POST', '/trips/plan', (o) {
-        final body = o.data as Map;
-        final ids = [for (final s in body['spots'] as List) (s as Map)['id'] as String];
-        return {
-          'days': [
-            {'day': 1, 'spotIds': ids, 'visitMinutes': 120, 'totalMinutes': 150},
-          ],
-          'osrmAvailable': true,
-          'dayLimitMinutes': 300,
-        };
-      }),
-      FakeRoute('POST', '/trips', (o) {
-        final body = o.data as Map;
-        return engineTripJson(
-          TripPlan.fromJson(Map<String, dynamic>.from(body['plan'] as Map)),
-          extra: {'title': body['name'], 'nameChosen': true},
-        );
-      }),
-    ]);
-    TripNewDraft.save([TripDraftLeg(_nainital, ['a', 'b'])]);
-    TripNewDraft.saveName('  Family   Hills  ');
-    final c = TripPlanController();
-    addTearDown(c.onClose);
-    await c.startFromSelection(_nainital, [_spot('a'), _spot('b')]);
+  testWidgets('resumed_draft_keeps_its_places', (t) async {
+    TripNewDraft.save([TripDraftLeg(_nainital, ['a', 'b'])], days: 3);
+    await _pumpHome(t);
+    TripNavigation.startWithCities([_nainital]);
+    await t.pumpAndSettle();
+    expect(find.text('places'), findsOneWidget);
+    expect((_spotsArgs!['draftLegs'] as List<TripDraftLeg>).single.ids, ['a', 'b']);
+    expect(TripNewDraft.read()!.days, 3);
+  });
 
-    final body = _sent(api, 'POST', '/trips');
-    expect(body['name'], 'Family Hills');
-    expect(body.containsKey('title'), isFalse);
-    expect(c.title, 'Family Hills');
+  testWidgets('other_city_drops_the_old_draft', (t) async {
+    TripNewDraft.save([TripDraftLeg(_almora, ['x'])]);
+    await _pumpHome(t);
+    TripNavigation.startWithCities([_nainital]);
+    await t.pumpAndSettle();
+    expect(find.text('places'), findsOneWidget);
+    expect(_spotsArgs!.containsKey('draftLegs'), isFalse);
     expect(StorageService.getTripNewDraft(), isNull);
-
-    final fallback = TripPlanController();
-    addTearDown(fallback.onClose);
-    await fallback.startFromSelection(_nainital, [_spot('c')]);
-    expect(_sent(api, 'POST', '/trips')['name'], 'Uttarakhand Hills Trip');
-    expect(_sent(api, 'POST', '/trips').containsKey('title'), isFalse);
   });
 
   testWidgets('rename_over_60_is_refused_with_the_message', (t) async {
@@ -247,42 +201,7 @@ void main() {
     expect(c.title, 'Lake Days');
   });
 
-  testWidgets('resumed_draft_keeps_its_name_and_skips_the_step', (t) async {
-    TripNewDraft.save([TripDraftLeg(_nainital, ['a', 'b'])], days: 3);
-    TripNewDraft.saveName('Kept Name');
-    await _pumpHome(t);
-    TripNavigation.startWithCities([_nainital]);
-    await t.pumpAndSettle();
-    expect(find.byType(TripNameScreen), findsNothing);
-    expect(find.text('places'), findsOneWidget);
-    expect((_spotsArgs!['draftLegs'] as List<TripDraftLeg>).single.ids, ['a', 'b']);
-    final draft = TripNewDraft.read()!;
-    expect(draft.name, 'Kept Name');
-    expect(draft.days, 3);
-
-    TripNewDraft.save([TripDraftLeg(_nainital, ['a', 'b', 'c'])]);
-    expect(TripNewDraft.readName(), 'Kept Name');
-    TripNewDraft.save(const []);
-    expect(TripNewDraft.read(), isNull);
-    expect(TripNewDraft.readName(), 'Kept Name');
-  });
-
-  testWidgets('a draft from an older build without a name gets the step', (t) async {
-    TripNewDraft.save([TripDraftLeg(_nainital, ['a'])]);
-    expect(TripNewDraft.readName(), isNull);
-    await _pumpHome(t);
-    TripNavigation.startWithCities([_nainital]);
-    await t.pumpAndSettle();
-    expect(find.byType(TripNameScreen), findsOneWidget);
-    await t.enterText(find.byType(TextFormField), 'Old Draft Trip');
-    await t.tap(find.byType(TripNameContinue));
-    await t.pumpAndSettle();
-    expect(find.text('places'), findsOneWidget);
-    expect((_spotsArgs!['draftLegs'] as List<TripDraftLeg>).single.ids, ['a']);
-    expect(TripNewDraft.read()!.name, 'Old Draft Trip');
-  });
-
-  test('accepted_suggestion_survives_a_city_change', () async {
+  test('accepted_name_survives_a_city_change', () async {
     final c = TripPlanController();
     addTearDown(c.onClose);
     final one = _onePlan();
@@ -305,52 +224,6 @@ void main() {
     expect(await renamed.rename('Nainital Trip'), isTrue);
     renamed.plan.value = _twoCityPlan();
     expect(renamed.title, 'Nainital Trip');
-  });
-
-  test('suggested_name_from_create_survives_a_city_change', () async {
-    final api = installFakeApi([
-      FakeRoute('POST', '/trips/plan', (o) {
-        final body = o.data as Map;
-        final ids = [for (final s in body['spots'] as List) (s as Map)['id'] as String];
-        return {
-          'days': [
-            {'day': 1, 'spotIds': ids, 'visitMinutes': 120, 'totalMinutes': 150},
-          ],
-          'osrmAvailable': true,
-          'dayLimitMinutes': 300,
-        };
-      }),
-      FakeRoute('POST', '/trips', (o) {
-        final body = o.data as Map;
-        return engineTripJson(
-          TripPlan.fromJson(Map<String, dynamic>.from(body['plan'] as Map)),
-          extra: {'title': body['name'], 'nameChosen': true},
-        );
-      }),
-      FakeRoute('PUT', '/trips/{id}', (o) {
-        final body = o.data as Map;
-        return engineTripJson(
-          TripPlan.fromJson(Map<String, dynamic>.from(body['plan'] as Map)),
-          extra: {'title': body['name'] ?? 'Uttarakhand Hills Trip', 'nameChosen': true},
-        );
-      }),
-    ]);
-    expect(TripNewDraft.readName(), isNull);
-    final c = TripPlanController();
-    addTearDown(c.onClose);
-    await c.startFromSelection(_nainital, [_spot('a'), _spot('b')]);
-    expect(_sent(api, 'POST', '/trips')['name'], 'Uttarakhand Hills Trip');
-    expect(c.title, 'Uttarakhand Hills Trip');
-
-    c.plan.value = _twoCityPlan();
-    expect(c.title, 'Uttarakhand Hills Trip');
-    expect(await c.saveNow(), isTrue);
-    final put = api.calls('PUT', '/trips/{id}'.replaceFirst('{id}', c.trip.value!.id));
-    expect(put, isNotEmpty);
-    final body = Map<String, dynamic>.from(put.last.data as Map);
-    expect(body.containsKey('name'), isFalse);
-    expect(body.containsKey('title'), isFalse);
-    expect(c.title, 'Uttarakhand Hills Trip');
   });
 
   test('chosen_name_is_shown_as_is', () {
@@ -376,11 +249,11 @@ void main() {
     expect(c.title, 'My own old title');
   });
 
-  testWidgets('name_and_customize_pages_are_registered_and_can_open', (t) async {
-    expect(AppRoutes.isRegistered(AppRoutes.tripName), isTrue);
+  testWidgets('customize_page_is_registered_and_old_name_page_is_gone', (t) async {
+    expect(AppRoutes.isRegistered('/trip-name'), isFalse);
     expect(AppRoutes.isRegistered(AppRoutes.tripCustomize), isTrue);
     final auth = AuthController();
-    expect(auth.canOpenRoute(AppRoutes.tripName), isTrue);
+    expect(auth.canOpenRoute('/trip-name'), isFalse);
     expect(auth.canOpenRoute(AppRoutes.tripCustomize), isTrue);
 
     Map<dynamic, dynamic>? args;

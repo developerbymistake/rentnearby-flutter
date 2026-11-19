@@ -29,7 +29,7 @@ List<List<int>> _v(List<int> counts) => [
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  group('new trip draft keeps the name', () {
+  group('new trip draft keeps the places only', () {
     final city = TripCityModel(cityKey: 1, name: 'Nainital', stateName: 'Uttarakhand', latitude: 29, longitude: 79);
 
     setUpAll(() async {
@@ -40,28 +40,20 @@ void main() {
     });
     setUp(StorageService.clearTripNewDraft);
 
-    test('name is readable before any place is picked', () {
-      TripNewDraft.saveName('  Hill   Days ');
-      expect(TripNewDraft.readName(), 'Hill Days');
-      expect(TripNewDraft.read(), isNull);
-    });
-
-    test('place changes keep the name and clearing the draft drops it', () {
-      TripNewDraft.saveName('Hill Days');
+    test('place changes keep the days and store no name', () {
       TripNewDraft.save([TripDraftLeg(city, const ['a'])], days: 2);
       TripNewDraft.save([TripDraftLeg(city, const ['a', 'b'])]);
       final d = TripNewDraft.read()!;
-      expect(d.name, 'Hill Days');
       expect(d.days, 2);
       expect(d.legs.single.ids, ['a', 'b']);
-      StorageService.clearTripNewDraft();
-      expect(TripNewDraft.readName(), isNull);
+      expect(StorageService.getTripNewDraft()!.containsKey('name'), isFalse);
     });
 
-    test('an invalid name is never stored', () {
-      TripNewDraft.saveName('   ');
-      TripNewDraft.saveName('a' * 61);
-      expect(TripNewDraft.readName(), isNull);
+    test('no places clears the draft', () {
+      TripNewDraft.save([TripDraftLeg(city, const ['a'])]);
+      TripNewDraft.save(const []);
+      expect(TripNewDraft.read(), isNull);
+      expect(StorageService.getTripNewDraft(), isNull);
     });
   });
 

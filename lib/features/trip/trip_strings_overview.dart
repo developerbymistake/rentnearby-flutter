@@ -19,6 +19,16 @@ class TripStringsOverview {
   static const String viewPlan = 'View plan';
   static const String moreOptions = 'More options';
   static const String back = 'Back';
+  static const String stay = 'Stay';
+  static const String stayLine = 'Homestays, hostels and hotels';
+  static const String addStay = 'Find a stay';
+  static const String viewStays = 'View stays';
+  static const String added = 'Added';
+  static const String stayCityTitle = 'Stay in which city?';
+  static const String exitTitle = 'Exit trip?';
+  static const String exitBody = 'Your trip is saved. Continue any time from Trips.';
+  static const String exit = 'Exit';
+  static const String keepPlanning = 'Keep planning';
 
   static String _n(int n, String one, String many) => '$n ${n == 1 ? one : many}';
 
@@ -27,6 +37,8 @@ class TripStringsOverview {
         _n(days, 'day', 'days'),
         if (travellers > 0) _n(travellers, 'traveller', 'travellers'),
       ].join(' · ');
+
+  static String staysAsked(int n, String? city) => '${_n(n, 'stay', 'stays')} asked${city == null ? '' : ' in $city'}';
 
   static String planLine(int days, int places) => '${_n(days, 'day', 'days')}, ${_n(places, 'place', 'places')}';
 }

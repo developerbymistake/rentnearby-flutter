@@ -3,8 +3,8 @@ import 'package:bakhli/design/extra/trip_customize_look.dart';
 import 'package:bakhli/design/extra/trip_plan_look.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:get/get.dart';
 import '../../../config/app_insets.dart';
+import '../models/trip_enquiry_model.dart';
 import '../models/trip_model.dart';
 import '../trip_strings_mca_a1.dart';
 import '../trip_strings_overview.dart';
@@ -39,6 +39,37 @@ class TripOverviewTaxi {
       };
 }
 
+enum TripOverviewStayState { notAdded, requested, booked }
+
+class TripOverviewStay {
+  const TripOverviewStay._(this.state, this.chip, this.button, [this.line = TripStringsOverview.stayLine]);
+
+  final TripOverviewStayState state;
+  final String chip;
+  final String button;
+  final String line;
+
+  bool get added => state != TripOverviewStayState.notAdded;
+
+  static const TripOverviewStay notAdded =
+      TripOverviewStay._(TripOverviewStayState.notAdded, TripStringsOverview.optional, TripStringsOverview.addStay);
+  static const TripOverviewStay requested =
+      TripOverviewStay._(TripOverviewStayState.requested, TripStringsOverview.added, TripStringsOverview.viewStays);
+  static const TripOverviewStay booked =
+      TripOverviewStay._(TripOverviewStayState.booked, TripStringsOverview.booked, TripStringsOverview.viewStays);
+
+  // [cityOf] names the city of an enquiry; the line names it only when every asked stay is in one city.
+  static TripOverviewStay of(Iterable<TripEnquiryModel> enquiries, {String? Function(TripEnquiryModel e)? cityOf}) {
+    final stays = [for (final e in enquiries) if (!e.isTaxi && (e.isOpen || e.isConfirmed || e.isBooked)) e];
+    if (stays.isEmpty) return notAdded;
+    final base = stays.any((e) => e.isBooked || e.isConfirmed) ? booked : requested;
+    final cities = cityOf == null ? const <String?>{} : {for (final e in stays) cityOf(e)};
+    final city = cities.length == 1 ? cities.first : null;
+    final n = {for (final e in stays) e.listingId}.length;
+    return TripOverviewStay._(base.state, base.chip, base.button, TripStringsOverview.staysAsked(n, city));
+  }
+}
+
 class TripOverviewScreen extends StatelessWidget {
   const TripOverviewScreen({
     super.key,
@@ -49,6 +80,9 @@ class TripOverviewScreen extends StatelessWidget {
     this.paused = false,
     this.taxiCanRate = false,
     this.onBack,
+    this.stay = TripOverviewStay.notAdded,
+    this.onStay,
+    this.showStay = true,
   });
 
   final TripModel trip;
@@ -58,6 +92,9 @@ class TripOverviewScreen extends StatelessWidget {
   final void Function(TripOverviewTaxi taxi) onTaxi;
   final VoidCallback onDone;
   final VoidCallback? onBack;
+  final TripOverviewStay stay;
+  final void Function(TripOverviewStay stay)? onStay;
+  final bool showStay;
 
   static const double _maxWidth = 640;
 
@@ -100,7 +137,7 @@ class TripOverviewScreen extends StatelessWidget {
           MediaQuery.withClampedTextScaling(
             maxScaleFactor: 1.3,
             child: _OverviewHeader(
-              onBack: onBack ?? () => Get.back(),
+              onBack: onBack ?? () => Navigator.maybePop(context),
               menu: _menu(),
               bottom: _TripLine(trip: trip),
             ),
@@ -154,6 +191,20 @@ class TripOverviewScreen extends StatelessWidget {
                           style: Ink3D.text(13, FontWeight.w600, Ink3D.sub),
                         ),
                       ],
+                      if (showStay) ...[
+                        Gap.v(16),
+                        _HeroCard(
+                          key: const ValueKey('overview_stay_card'),
+                          tone: ListingTone.forest,
+                          asset: TravelIcon.stay,
+                          title: TripStringsOverview.stay,
+                          chip: stay.chip,
+                          line: stay.line,
+                          button: stay.button,
+                          buttonKey: const ValueKey('overview_stay_button'),
+                          onTap: onStay == null ? null : () => onStay!(stay),
+                        ),
+                      ],
                           ],
                         ),
                       ),
@@ -165,7 +216,7 @@ class TripOverviewScreen extends StatelessWidget {
           ),
           // Follows the card: Busy and Ended read Request taxi again, so the label stays Skip.
           _BottomBar(
-            label: taxi.hasRequest ? TripStringsOverview.backToTrips : TripStringsOverview.skip,
+            label: taxi.hasRequest || (showStay && stay.added) ? TripStringsOverview.backToTrips : TripStringsOverview.skip,
             tone: indigo,
             onTap: onDone,
           ),

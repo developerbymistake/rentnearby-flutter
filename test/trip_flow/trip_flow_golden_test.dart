@@ -1,16 +1,9 @@
-import 'package:bakhli/design/design.dart';
 import 'package:bakhli/features/trip/controllers/my_trips_controller.dart';
-import 'package:bakhli/features/trip/controllers/trip_plan_controller.dart';
-import 'package:bakhli/features/trip/controllers/trip_shortlist_controller.dart';
 import 'package:bakhli/features/trip/data/trip_city_catalog.dart';
-import 'package:bakhli/features/trip/data/trip_shortlist_repository.dart';
 import 'package:bakhli/features/trip/models/trip_city_model.dart';
 import 'package:bakhli/features/trip/models/trip_model.dart';
-import 'package:bakhli/features/trip/models/trip_plan_model.dart';
-import 'package:bakhli/features/trip/models/trip_shortlist_model.dart';
 import 'package:bakhli/features/trip/models/trip_summary_model.dart';
 import 'package:bakhli/features/trip/screens/trips_discovery_screen.dart';
-import 'package:bakhli/features/trip/widgets/guide/trip_guide_view.dart';
 import 'package:bakhli/features/trip/widgets/trip_summary_day_card.dart';
 import 'package:bakhli/features/trip/widgets/trip_summary_hero.dart';
 import 'package:bakhli/features/trip/widgets/trip_summary_stats.dart';
@@ -75,43 +68,6 @@ class _Trips extends MyTripsController {
 
 }
 
-class _Repo implements TripShortlistRepository {
-  _Repo(this.items);
-  final List<ShortlistItem> items;
-  @override
-  Future<TripShortlist> list(String tripId) async => TripShortlist(items: items);
-  @override
-  Future<List<ShortlistItem>> add(String tripId, String stepKey, String listingId, ShortlistItem item) async => [item];
-  @override
-  Future<void> remove(String tripId, String stepKey, String listingId) async {}
-  @override
-  Future<void> close(String tripId, String stepKey, {required String reason}) async {}
-  @override
-  Future<MarkBookedResult> markBooked(String tripId, String stepKey, {String? listingId}) async =>
-      const MarkBookedResult(closedEnquiries: 1, closedShortlist: 1);
-}
-
-TripSpotRef _spot(String id) =>
-    TripSpotRef(id: id, name: id, latitude: 29.4, longitude: 79.4, category: 'attraction', visitMinutes: 60);
-
-TripPlan _plan({TripGuide? guide}) => TripPlan(
-      legs: [
-        for (var k = 1; k <= 2; k++)
-          TripCityLeg(index: k, cityKey: k, cityName: k == 1 ? 'Nainital' : 'Almora', latitude: 29.4 + k / 10, longitude: 79.4),
-      ],
-      days: [for (var k = 1; k <= 2; k++) TripDay(day: k, leg: k, spots: [_spot('s$k')])],
-      settings: TripSettings(startDate: DateTime(2030, 11, 1)),
-      guide: guide,
-    );
-
-ShortlistItem _item(String step, String name) => ShortlistItem(
-      stepKey: step,
-      kind: ShortlistKinds.stay,
-      listingId: 'id-$name',
-      name: name,
-      state: ShortlistStates.active,
-    );
-
 Widget _host(double w, double h, Widget child) => GetMaterialApp(
       debugShowCheckedModeBanner: false,
       theme: ThemeData(fontFamily: 'WorkSans'),
@@ -120,32 +76,6 @@ Widget _host(double w, double h, Widget child) => GetMaterialApp(
         child: Scaffold(backgroundColor: goldenBg, body: RepaintBoundary(key: const ValueKey('golden_root'), child: child)),
       ),
     );
-
-Future<void> _guide(WidgetTester t, double w, String name, TripPlan plan, List<ShortlistItem> items) async {
-  final sl = TripShortlistController(repo: _Repo(items), tripId: () async => 't1', offline: () => false, warn: (_) {});
-  Get.put<TripShortlistController>(sl);
-  final c = TripPlanController();
-  c.plan.value = plan;
-  setGoldenView(t, Size(w, 760));
-  await t.pumpWidget(_host(
-    w,
-    760,
-    Column(children: [
-      Container(height: 96, color: ListingTone.indigo.g2),
-      Expanded(child: TripGuideView(controller: c, shortlist: sl)),
-    ]),
-  ));
-  await t.pump();
-  await t.pump(const Duration(milliseconds: 100));
-  await t.runAsync(() async {
-    for (final e in find.byType(Image).evaluate()) {
-      await precacheImage((e.widget as Image).image, e);
-    }
-  });
-  await t.pump(const Duration(milliseconds: 100));
-  await expectLater(find.byKey(const ValueKey('golden_root')), matchesGoldenFile('goldens/$name-${w.toInt()}.png'));
-  c.onClose();
-}
 
 TripSummaryRecord _record() => TripSummaryRecord.fromJson({
       'tripId': 't1',
@@ -199,20 +129,6 @@ void main() {
       await expectLater(find.byKey(const ValueKey('golden_root')), matchesGoldenFile('goldens/trips_tab-${w.toInt()}.png'));
     });
 
-    testWidgets('golden guided step @${w.toInt()}', (t) async {
-      await _guide(t, w, 'guide_step', _plan(), const []);
-    });
-
-    testWidgets('golden after shortlist @${w.toInt()}', (t) async {
-      await _guide(
-        t,
-        w,
-        'guide_review',
-        _plan(guide: const TripGuide(step: 'stay:1', choices: {'gettingThere': TripGuideChoice.skip, 'stay:1': TripGuideChoice.find})),
-        [_item('stay:1', 'Hill View'), _item('stay:1', 'Lake Inn')],
-      );
-    });
-
     testWidgets('golden summary @${w.toInt()}', (t) async {
       final r = _record();
       setGoldenView(t, Size(w, 900));
@@ -228,6 +144,12 @@ void main() {
           ]),
         ),
       ));
+      await t.pump(const Duration(milliseconds: 100));
+      await t.runAsync(() async {
+        for (final e in find.byType(Image).evaluate()) {
+          await precacheImage((e.widget as Image).image, e);
+        }
+      });
       await t.pump(const Duration(milliseconds: 800));
       await expectLater(find.byKey(const ValueKey('golden_root')), matchesGoldenFile('goldens/summary-${w.toInt()}.png'));
     });

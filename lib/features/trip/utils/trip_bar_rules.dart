@@ -132,24 +132,16 @@ class TripBarRules {
 
   static String? nextTitle(TripSummaryModel t) {
     final p = t.progress;
-    final key = TripEasyRowKey.parse(p.guideStep) ?? TripEasyRowKey.parse(p.next?.key);
+    bool simple(TripEasyRowKey? k) => k != null && (k.kind == TripEasyRowKind.stay || k.kind == TripEasyRowKind.taxi);
+    final next = TripEasyRowKey.parse(p.next?.key);
+    final key = simple(next)
+        ? next!
+        : p.rows.where((r) => simple(r.key) && !r.state.isDone && r.state != TripRowState.skipped).firstOrNull?.key;
     if (key == null) return null;
     final cities = t.legCities;
     final leg = key.legIndex ?? 0;
-    switch (key.kind) {
-      case TripEasyRowKind.gettingThere:
-        return TripStringsV2Plan.rowGettingThere;
-      case TripEasyRowKind.comingBack:
-        return TripStringsV2Plan.rowComingBack;
-      case TripEasyRowKind.taxi:
-        return TripStringsV2Plan.rowTaxi;
-      case TripEasyRowKind.between:
-        return leg >= 2 && leg <= cities.length
-            ? TripStringsBar.move(cities[leg - 2], cities[leg - 1])
-            : TripStringsV2Plan.rowCityChange;
-      case TripEasyRowKind.stay:
-        return leg >= 1 && leg <= cities.length ? TripStringsV2Plan.rowStay(cities[leg - 1]) : TripStringsV2Plan.rowStay(t.cityName);
-    }
+    if (key.kind == TripEasyRowKind.taxi) return TripStringsV2Plan.rowTaxi;
+    return leg >= 1 && leg <= cities.length ? TripStringsV2Plan.rowStay(cities[leg - 1]) : TripStringsV2Plan.rowStay(t.cityName);
   }
 
   static String actionLabel(TripSummaryModel t, {bool past = false}) {

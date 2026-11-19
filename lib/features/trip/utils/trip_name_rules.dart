@@ -35,9 +35,4 @@ class TripNameRules {
 
   static bool _emojiPart(int unit) =>
       (unit >= 0xD800 && unit <= 0xDFFF) || unit == 0xFE0F || _symbol.hasMatch(String.fromCharCode(unit));
-
-  static String suggest(String stateName, String cityName) {
-    final s = clean(TripStringsName.suggestion(clean(stateName), clean(cityName)));
-    return s.length <= max ? s : s.substring(0, max).trimRight();
-  }
 }

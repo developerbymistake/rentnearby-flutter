@@ -48,12 +48,9 @@ Future<void> _rig(WidgetTester t, Size size, int days) async {
   TripCityCatalog.to.seedForTest(const [TripCityModel(cityKey: 901, name: 'Bhimtal', stateName: 'Uttarakhand', latitude: 29.35, longitude: 79.56)]);
   final c = TripPlanController();
   c.plan.value = _plan(days);
+  c.markNewUnsavedForTest();
   Get.put<TripPlanController>(c, permanent: true);
-  c.planStep.value = 1;
   await pumpPhone(t, const TripPlanScreen(), size: size);
-  await settlePhone(t);
-  c.guideState.on.value = false;
-  c.planStep.value = 1;
   await settlePhone(t);
 }
 

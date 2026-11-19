@@ -172,8 +172,6 @@ Future<TripPlanController> _plan(WidgetTester t, String name,
   setup?.call(c);
   await pumpPhone(t, const TripPlanScreen(), size: size, textScale: scale);
   await _settle(t);
-  c.planStep.value = 1;
-  await _settle(t);
   if (then != null) await then(t, c);
   await shot(t, name);
   t.takeException();
@@ -494,12 +492,6 @@ void main() {
     });
   }
 
-  testWidgets('plan step2', (t) async {
-    await _plan(t, 'plan_step2', then: (t, c) async {
-      c.planStep.value = 2;
-      await _settle(t);
-    });
-  });
   testWidgets('plan empty', (t) async {
     await _plan(t, 'plan_empty', setup: (c) => c.plan.value = _withSpots(journeyPlan(const [3, 2]), (_) => 0));
   });

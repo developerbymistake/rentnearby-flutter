@@ -4,6 +4,8 @@ import '../taxi_option_sets.dart';
 
 class TaxiWaysStrings {
   static const String title = 'Taxi ways';
+  static const String arrangeMyself = 'I will arrange it myself';
+  static const String skipThis = 'Skip this';
   static String subtitle(String from, String to) => '$from to $to';
   static const String directHeader = 'Taxis for this ride';
   static const String estimateShort = 'estimate';

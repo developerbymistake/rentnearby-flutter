@@ -15,11 +15,9 @@ import '../../../services/api_service.dart';
 import '../../../services/storage_service.dart';
 import '../../../utils/app_toast.dart';
 import '../../../utils/dio_error_mapper.dart';
-import '../../taxi/ways/taxi_ways_controller.dart';
 import '../../taxi/guest/traveller_city.dart';
 import '../../taxi/journeys/journey_models.dart';
 import '../../taxi/journeys/journeys_controller.dart';
-import '../../taxi/ways/models/ask_models.dart';
 import '../../taxi/ways/trip_strings_mcb_a2.dart';
 import '../data/trip_city_catalog.dart';
 import '../data/trip_enquiry_repository.dart';
@@ -54,7 +52,6 @@ import '../utils/trip_days_rules.dart';
 import '../utils/trip_day_load.dart';
 import '../utils/trip_leg_draft.dart';
 import '../utils/trip_enquiry_rules.dart';
-import '../utils/trip_guide_rules.dart';
 import '../utils/trip_map_rules.dart';
 import '../utils/trip_name_rules.dart';
 import '../utils/trip_stay_base.dart';
@@ -62,14 +59,14 @@ import '../utils/trip_step_rules.dart';
 import '../utils/taxi_result.dart';
 import '../utils/trip_travel_rules.dart';
 import '../utils/trip_whatsapp_text.dart';
-import '../widgets/trip_city_sheet.dart' show TripNewDraft;
 import '../widgets/trip_status.dart';
 import 'my_trips_controller.dart';
 import 'trip_enquiry_controller.dart';
-import 'trip_plan_guide.dart';
 import 'trip_shortlist_controller.dart';
 import 'trip_supply_controller.dart';
 import 'trip_taxi_request_controller.dart';
+
+enum TripCreateOutcome { ok, nameRejected, failed }
 
 enum TripDayRemoveBlock { none, lastDay, placesDontFit, readOnly }
 
@@ -119,8 +116,6 @@ class TripPlanController extends GetxController {
   final problemBusy = false.obs;
   final askBusy = false.obs;
   final citiesUnavailable = false.obs;
-  Future<AskResult?> Function(String step, List<String> ids, String requestId)? carSender;
-  Future<TaxiWaysController?> Function(TripEasyRowKey row)? carWays;
   final staySupplyByDistrict = <String, bool>{}.obs;
   final _stayProbing = <String>{};
   final supplyCheckFailed = <int>{}.obs;
@@ -146,14 +141,15 @@ class TripPlanController extends GetxController {
   String? _clientTripId;
   bool _settingsChangedWhilePlanning = false;
   String? _openingId;
-  Future<TripModel?>? _creating;
+  bool _newUnsaved = false;
+  bool _creatingNew = false;
+  bool _nameRejectedNow = false;
   final ownPending = <String>{};
   bool _ownRetrying = false;
 
   @visibleForTesting
   Duration ownRetryDelay = const Duration(seconds: 8);
   Future<bool>? _saving;
-  bool _dirtyDuringCreate = false;
   bool _lastPlanWasAuto = false;
   int _flow = 0;
   int _planSeq = 0;
@@ -238,6 +234,14 @@ class TripPlanController extends GetxController {
     final storedDefault = t == TripStringsMcaA1.defaultTitle(stored.plan.legCities) ||
         t == TripStringsMcaA1.defaultTitle([stored.cityName]);
     return storedDefault ? fallback : t;
+  }
+
+  bool get isNewUnsaved => trip.value == null && _newUnsaved;
+
+  @visibleForTesting
+  void markNewUnsavedForTest() {
+    _newUnsaved = true;
+    _clientTripId ??= const Uuid().v4();
   }
 
   String get cityName => plan.value?.cityName ?? picked?.name ?? '';
@@ -1017,13 +1021,6 @@ class TripPlanController extends GetxController {
     }
   }
 
-  final planStep = 1.obs;
-  final guideState = TripGuideState();
-
-  int get initialStep => pendingStep;
-
-  int get pendingStep => spotCount == 0 ? 1 : 2;
-
   ({int done, int total, int percent}) get stepProgress {
     final e = easyProgress;
     final percent = (spotCount > 0 ? 50 : 0) + (50 * e.percent / 100).round();
@@ -1260,7 +1257,7 @@ class TripPlanController extends GetxController {
   }
 
   Future<void> flushForBackground() async {
-    final dirty = (_saveTimer?.isActive ?? false) || saveFailed.value || _saving != null || _dirtyDuringCreate;
+    final dirty = (_saveTimer?.isActive ?? false) || saveFailed.value || _saving != null;
     if (dirty) _writeAhead();
     await flushPendingSave();
   }
@@ -1824,7 +1821,8 @@ class TripPlanController extends GetxController {
     _flow++;
     _planSeq++;
     _editSeq++;
-    _creating = null;
+    _newUnsaved = false;
+    _nameRejectedNow = false;
     _saving = null;
     _title = null;
     _pendingName = null;
@@ -1832,7 +1830,6 @@ class TripPlanController extends GetxController {
     _settingsChangedWhilePlanning = false;
     _recalcAfterAuto = false;
     _openingId = null;
-    _dirtyDuringCreate = false;
     _lastPlanWasAuto = false;
     trip.value = null;
     plan.value = null;
@@ -1874,12 +1871,9 @@ class TripPlanController extends GetxController {
   }
 
   Future<bool> flushPendingSave() async {
-    if (tripGone.value || needsUpdate.value || plannerOff.value) return false;
-    if (planFailed.value && trip.value == null && _creating == null) return false;
+    if (isNewUnsaved || tripGone.value || needsUpdate.value || plannerOff.value) return false;
+    if (planFailed.value && trip.value == null) return false;
     if (_saveTimer?.isActive ?? false) return saveNow();
-    final creating = _creating;
-    if (creating != null && await creating == null) return false;
-    if (_dirtyDuringCreate || (_saveTimer?.isActive ?? false)) return saveNow();
     final saving = _saving;
     if (saving != null && !await saving) return false;
     if (trip.value == null || saveFailed.value) return _payloadRejected ? false : saveNow();
@@ -1998,31 +1992,22 @@ class TripPlanController extends GetxController {
 
   Future<void> Function()? _detachPendingSave() {
     final p = plan.value;
-    final creating = _creating;
-    final dirty = (_saveTimer?.isActive ?? false) || (creating != null && _dirtyDuringCreate);
-    if (!dirty || plannerOff.value || p == null) return null;
-    final saving = _saving;
     final existing = trip.value;
+    final dirty = _saveTimer?.isActive ?? false;
+    if (!dirty || plannerOff.value || p == null || existing == null) return null;
+    final saving = _saving;
     final name = _pendingName;
-    final createName = _createName;
-    final clientId = _clientTripId;
     final status = _statusFor(false, p);
     final copyBase = _copyBase;
     return () async {
-      String? id;
+      final id = existing.id;
       try {
-        id = creating != null ? (await creating)?.id : existing?.id;
         if (saving != null) await saving;
-        if (id == null) {
-          if (creating != null || saving != null) return;
-          await _repo.create(name: createName, status: status, plan: p, clientTripId: clientId);
-        } else {
-          await _update(id, name, status, p, copyBase ?? _baseFor(id, existing?.id == id ? existing?.updatedAt : null));
-          _clearPendingIf(id, p);
-        }
+        await _update(id, name, status, p, copyBase ?? _baseFor(id, existing.updatedAt));
+        _clearPendingIf(id, p);
         if (Get.isRegistered<MyTripsController>()) Get.find<MyTripsController>().load();
       } catch (e) {
-        if (id == null || DioErrorMapper.errorType(e) != TripErrorTypes.tripChanged) return;
+        if (DioErrorMapper.errorType(e) != TripErrorTypes.tripChanged) return;
         _clearPendingIf(id, p);
         _toastSave(TripStringsSync.changedElsewhereNotSaved);
         if (Get.isRegistered<MyTripsController>()) Get.find<MyTripsController>().load();
@@ -2064,9 +2049,7 @@ class TripPlanController extends GetxController {
       tripDays.add(TripDay(day: n, leg: n, spots: refs));
     }
     picked = selections.first.city;
-    final name = TripNewDraft.readName() ?? TripNameRules.suggest(picked!.stateName, picked!.name);
-    _title = name;
-    _pendingName = name;
+    _newUnsaved = true;
     _clientTripId = const Uuid().v4();
     final autoDays = TripDaysRules.autoTotal([for (final d in tripDays) [for (final s in d.spots) s.visitMinutes]], TripPace.relaxed);
     final chosenDays = autoDays.clamp(legs.length, TripConstants.maxDaysCap).toInt();
@@ -2076,56 +2059,32 @@ class TripPlanController extends GetxController {
       settings: TripSettings(dayLimitMinutes: TripPace.relaxed, maxDays: chosenDays),
     );
     syncTabs();
-    final flow = _flow;
     await autoPlan();
-    if (flow != _flow || plan.value == null) return;
-    if (planFailed.value || plannerOff.value) return;
-    await _createDraft();
   }
 
-  Future<void> _createDraft() {
-    final pending = _creating;
-    if (pending != null) return pending;
-    final f = _runCreate();
-    _creating = f;
-    return f.whenComplete(() {
-      if (identical(_creating, f)) _creating = null;
-      if (_dirtyDuringCreate && trip.value != null) {
-        _dirtyDuringCreate = false;
-        saveNow();
-      }
-    });
-  }
-
-  Future<TripModel?> _runCreate() async {
+  Future<TripCreateOutcome> createNew({required String name, DateTime? startDate, required int adults, required int kids}) async {
     final p = plan.value;
-    if (p == null) return null;
-    final flow = _flow;
-    isSaving.value = true;
-    final name = _createName;
+    if (!isNewUnsaved || p == null || _saveBlocked || _creatingNew) return TripCreateOutcome.failed;
+    if (!TripNameRules.isValid(name)) return TripCreateOutcome.nameRejected;
+    final clean = TripNameRules.clean(name);
+    _title = clean;
+    _pendingName = clean;
+    final next = p.settings.copyWith(startDate: startDate, clearStartDate: startDate == null, adults: adults, kids: kids);
+    plan.value = p.copyWith(settings: next);
+    if (next.startDateIso != p.settings.startDateIso) unawaited(recalculate());
+    _creatingNew = true;
+    _nameRejectedNow = false;
+    var ok = false;
     try {
-      final created = await _repo.create(name: name, status: TripStatuses.draft, plan: p, clientTripId: _clientTripId);
-      StorageService.clearTripNewDraft();
-      _savedAt[created.id] = created.updatedAt;
-      if (flow != _flow) return created;
-      _sentName(name);
-      trip.value = created;
-      _adoptDistrict(created);
-      saveFailed.value = false;
-      lastSavedAt.value = DateTime.now();
-      return created;
-    } catch (e) {
-      if (flow != _flow) return null;
-      _dirtyDuringCreate = false;
-      if (_isPlannerOff(e)) {
-        plannerOff.value = true;
-      } else if (!_isUnauthorized(e)) {
-        _onSaveError(e, p);
-      }
-      return null;
+      ok = await saveNow();
     } finally {
-      isSaving.value = false;
+      _creatingNew = false;
     }
+    if (!ok) return _nameRejectedNow ? TripCreateOutcome.nameRejected : TripCreateOutcome.failed;
+    _newUnsaved = false;
+    StorageService.clearTripNewDraft();
+    if (Get.isRegistered<MyTripsController>()) Get.find<MyTripsController>().load();
+    return TripCreateOutcome.ok;
   }
 
   void _adoptDistrict(TripModel saved) {
@@ -2245,7 +2204,6 @@ class TripPlanController extends GetxController {
   void _markGone(String tripId) {
     _saveTimer?.cancel();
     _recalcTimer?.cancel();
-    _dirtyDuringCreate = false;
     tripGone.value = true;
     openFailed.value = false;
     StorageService.clearTripCache(tripId);
@@ -3184,13 +3142,12 @@ class TripPlanController extends GetxController {
     var next = changed;
     final before = plan.value;
     if (before != null) {
-      final stale = TripGuideRules.staleKeys(before, next);
+      final stale = TripGuide.staleKeys(before, next);
       final g = before.guide;
       if (g != null) {
         final keep = {for (final e in g.choices.entries) if (!stale.contains(e.key)) e.key: e.value};
         next = next.withGuide(TripGuide(step: stale.contains(g.step) ? '' : g.step, choices: keep));
       }
-      guideDropStale(before, next);
     }
     _remapTravelGaps(plan.value, next);
     _editSeq++;
@@ -3200,7 +3157,6 @@ class TripPlanController extends GetxController {
     if (next.legs.isNotEmpty) picked = next.legs.first.city;
     recalculate();
     scheduleSave();
-    guideRefresh();
   }
 
   void _remapTravelGaps(TripPlan? old, TripPlan next) {
@@ -4224,12 +4180,9 @@ class TripPlanController extends GetxController {
   void scheduleSave() {
     if (_saveBlocked || plan.value == null) return;
     if (_payloadRejected) return;
+    if (isNewUnsaved) return;
     if (_hasUnavailableLeg) {
       _saveTimer?.cancel();
-      return;
-    }
-    if (_creating != null) {
-      _dirtyDuringCreate = true;
       return;
     }
     _writeAhead();
@@ -4251,8 +4204,7 @@ class TripPlanController extends GetxController {
   Future<bool> saveNow({bool markPlanned = false}) async {
     _saveTimer?.cancel();
     if (_saveBlocked || plan.value == null) return false;
-    final creating = _creating;
-    if (creating != null) await creating;
+    if (isNewUnsaved && !_creatingNew) return false;
     while (_saving != null) {
       await _saving;
     }
@@ -4376,6 +4328,16 @@ class TripPlanController extends GetxController {
         _onPlanLocked(e, p);
         return false;
       }
+      if (trip.value == null) {
+        if (type == TripErrorTypes.nameInvalid) {
+          _title = null;
+          _pendingName = null;
+          _nameRejectedNow = true;
+        } else {
+          _toastSave(DioErrorMapper.toMessage(e, TripStringsDayplan.saveTripFailed), error: true);
+        }
+        return false;
+      }
       if (type == TripErrorTypes.nameInvalid && name != null) {
         _onNameRejected(name);
         return false;
@@ -4395,15 +4357,8 @@ class TripPlanController extends GetxController {
   }
 
   void _onNameRejected(String name) {
-    final stored = trip.value?.title;
-    if (stored != null) {
-      if (_pendingName == name) _pendingName = null;
-      _title = stored;
-    } else {
-      final fallback = TripNameRules.suggest(picked?.stateName ?? '', cityName);
-      _title = fallback;
-      _pendingName = fallback;
-    }
+    if (_pendingName == name) _pendingName = null;
+    _title = trip.value?.title;
     _lastSaveNetworkError = false;
     _lastSaveMessage = TripStringsName.invalid;
     saveFailed.value = true;

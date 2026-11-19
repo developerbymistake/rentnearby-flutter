@@ -304,7 +304,6 @@ void main() {
 
     test('every trip page of the flow is registered', () {
       for (final route in [
-        AppRoutes.tripName,
         AppRoutes.tripCustomize,
         AppRoutes.tripSpots,
         AppRoutes.tripPlan,
@@ -321,9 +320,10 @@ void main() {
       }
     });
 
-    test('name and customize pages can open for every role', () {
+    test('customize page can open for every role and the old name page is gone', () {
       final auth = AuthController();
-      expect(auth.canOpenRoute(AppRoutes.tripName), isTrue);
+      expect(auth.canOpenRoute('/trip-name'), isFalse);
+      expect(AppRoutes.isRegistered('/trip-name'), isFalse);
       expect(auth.canOpenRoute(AppRoutes.tripCustomize), isTrue);
     });
 

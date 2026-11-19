@@ -16,6 +16,7 @@ class TripStringsDayplan {
 
   static const String saveTrip = 'Save trip';
   static const String saveTripFailed = 'Could not save your trip. Please try again.';
+  static const String backToOverview = 'Back to overview';
   static const String requestTaxi = 'Request taxi';
   static const String taxiFinding = 'Finding a driver';
   static const String taxiChoose = 'Choose your driver';

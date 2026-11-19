@@ -1,6 +1,5 @@
 import 'package:bakhli/features/taxi/ways/taxi_ways_feed_screen.dart';
 import 'package:bakhli/features/taxi/ways/widgets/way_driver_row.dart';
-import 'package:bakhli/features/trip/models/trip_guide_args.dart';
 import 'package:bakhli/models/place_result_model.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -62,19 +61,6 @@ Future<void> _open(WidgetTester t, double w, double scale, Map<String, dynamic> 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   tearDown(Get.reset);
-
-  for (final w in [300.0, 360.0, 412.0]) {
-    for (final s in [1.3, 2.0]) {
-      testWidgets('guided ways list renders and the shortlist bar is docked at $w dp, scale $s', (t) async {
-        await _open(t, w, s, {'tripRole': 'gettingThere', ...const GuideArgs('gettingThere').toArgs()});
-        expect(find.byType(WayDriverRow), findsWidgets);
-        expect(find.textContaining('shortlisted'), findsOneWidget);
-        final bar = t.getRect(find.textContaining('shortlisted'));
-        expect(bar.bottom, greaterThan(760 - 120));
-        expect(t.takeException(), isNull);
-      });
-    }
-  }
 
   testWidgets('plain ways list shows drivers and no shortlist bar', (t) async {
     await _open(t, 360, 1, {});

@@ -10,9 +10,7 @@ import '../../../config/app_routes.dart';
 import '../../../utils/app_toast.dart';
 import '../../../utils/input_formatters.dart';
 import '../controllers/trip_plan_controller.dart';
-import '../controllers/trip_plan_guide.dart';
 import '../models/trip_plan_model.dart';
-import '../utils/trip_guide_rules.dart';
 import '../trip_navigation.dart';
 import '../trip_strings.dart';
 import '../trip_strings_dayplan.dart';
@@ -25,9 +23,7 @@ import '../widgets/trip_add_city_card.dart';
 import '../widgets/trip_day_spot_list.dart';
 import '../widgets/trip_day_chips.dart';
 import '../widgets/trip_days_sheet.dart';
-import '../widgets/trip_easy_card.dart';
-import '../widgets/guide/trip_guide_view.dart';
-import '../widgets/trip_easy_mini_bar.dart';
+import '../widgets/trip_exit_confirm.dart';
 import '../widgets/trip_leg_header.dart';
 import '../widgets/trip_leg_menu_sheet.dart';
 import '../widgets/trip_lifecycle_actions.dart';
@@ -60,21 +56,9 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
   final _scroll = ScrollController();
   final Map<int, GlobalKey> _legKeys = {};
   final TripLegFoldState _fold = TripLegFoldState();
-  Worker? _stepWorker;
-  bool _stepDone = false;
-  bool _fresh = false;
   Worker? _startWorker;
   Worker? _addedWorker;
-  Worker? _rowWorker;
-  Worker? _openWorker;
-  Worker? _guideWorker;
   String? _tripId;
-  String? _row;
-  String? _stepArg;
-  bool _nudge = false;
-  bool _reopen = false;
-  String? _nameArg;
-  bool _rowDone = true;
   int? _legFilter;
   bool _savingTrip = false;
   String? _note;
@@ -96,37 +80,12 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
     final map = args is Map ? args : const {};
     _tripId = map['tripId'] as String?;
     final fresh = map['fresh'] == true;
-    _fresh = fresh;
-    _c.planStep.value = 1;
-    final row = map['row'];
-    _row = row is String && row.isNotEmpty ? row : null;
-    final step = map['step'];
-    _stepArg = step is String && step.isNotEmpty ? step : _row;
-    _nudge = _flag(map['nudge']);
-    _reopen = _flag(map['reopen']);
-    final name = map['name'];
-    _nameArg = name is String && name.isNotEmpty ? name : null;
-    _rowDone = _row == null && _stepArg == null;
     final id = _tripId;
     _startWorker = ever<TripPlan?>(_c.plan, (_) => _checkStartFrom());
     _addedWorker = ever<int?>(_c.lastAddedLeg, _scrollToAdded);
-    _rowWorker = ever<TripPlan?>(_c.plan, (_) => _tryOpenRow());
-    _openWorker = ever<bool>(_c.isOpening, (_) => _tryOpenRow());
-    _guideWorker = everAll(
-      [_c.plan, _c.planStep, _c.editMode, _c.needsUpdate, _c.tripGone, _c.plannerOff, _c.trip],
-      (_) => _c.guideRefresh(),
-    );
-    _stepWorker = ever<int>(_c.planStep, (_) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        if (_scroll.hasClients) _scroll.jumpTo(0);
-        _anim.forward(from: 0);
-      });
-    });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _anim.forward();
       _checkStartFrom();
-      _c.guideRefresh();
     });
     if (id != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -136,10 +95,7 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
         } else {
           await _c.open(id, fresh: fresh);
         }
-        _tryOpenRow();
       });
-    } else {
-      WidgetsBinding.instance.addPostFrameCallback((_) => _tryOpenRow());
     }
   }
 
@@ -148,10 +104,6 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
     WidgetsBinding.instance.removeObserver(this);
     _startWorker?.dispose();
     _addedWorker?.dispose();
-    _rowWorker?.dispose();
-    _openWorker?.dispose();
-    _stepWorker?.dispose();
-    _guideWorker?.dispose();
     _scroll.dispose();
     _fold.dispose();
     _anim.dispose();
@@ -164,27 +116,9 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
     super.dispose();
   }
 
-  static bool _flag(Object? v) => v == true || v == 'true';
-
   void _checkStartFrom() {
     if (!mounted || _c.plan.value == null || _c.startFrom != null || _c.isReadOnly) return;
     unawaited(_c.ensureStartFrom());
-  }
-
-  void _tryOpenRow() {
-    if ((_rowDone && _stepDone) || !mounted) return;
-    final id = _tripId;
-    if (_c.isOpening.value || _c.plan.value == null || (id != null && _c.trip.value?.id != id)) return;
-    if (_c.tripGone.value || _c.plannerOff.value) return;
-    _rowDone = true;
-    if (_stepDone) return;
-    _stepDone = true;
-    final step = _stepArg;
-    if (step != null && TripGuideRules.isStepKey(step)) {
-      _c.guideJumpTo(step, nudge: _nudge, reopen: _reopen, name: _nameArg);
-      return;
-    }
-    _c.planStep.value = _row != null ? 2 : (_fresh ? 1 : _c.initialStep);
   }
 
   void _scrollToAdded(int? legIndex) {
@@ -226,10 +160,7 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
         await TripLifecycleActions.saveAndExit(context);
       case TripPlanMenu.editDays:
         await TripDaysSheet.show(context);
-        if (mounted) {
-          _c.planStep.value = 1;
-          _c.editMode.value = true;
-        }
+        if (mounted) _c.editMode.value = true;
       case TripPlanMenu.editDates:
         await TripDatesSheet.edit(context);
       case TripPlanMenu.rename:
@@ -245,8 +176,6 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
         await TripLifecycleActions.markComplete(context);
       case TripPlanMenu.delete:
         await TripLifecycleActions.deleteFromPlan(context);
-      case TripPlanMenu.easy:
-        _c.planStep.value = _c.pendingStep;
     }
   }
 
@@ -307,8 +236,33 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
     Get.toNamed(AppRoutes.tripTaxiStatus, arguments: {'tripId': _c.trip.value?.id, 'requestId': _c.planLockRequestId});
   }
 
+  bool get _exitGuard => _c.trip.value != null && _c.plan.value != null && !_c.tripGone.value && !_c.plannerOff.value;
+
+  bool _askingExit = false;
+
+  Future<void> _askExit() async {
+    if (_askingExit) return;
+    _askingExit = true;
+    try {
+      if (await TripExitConfirm.ask(context)) TripNavigation.openTripsTab();
+    } finally {
+      _askingExit = false;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final page = _page(context);
+    return Obx(() => PopScope(
+          canPop: !_exitGuard,
+          onPopInvokedWithResult: (didPop, _) {
+            if (!didPop) _askExit();
+          },
+          child: page,
+        ));
+  }
+
+  Widget _page(BuildContext context) {
     return Container(
       color: DesignColors.scaffold,
       child: Scaffold(
@@ -321,7 +275,6 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
             child: TripPlanHeader(onMenu: _onMenu),
           ),
           _buildOffline(),
-          Obx(() => _c.guideState.on.value ? _buildLocked() : const SizedBox.shrink()),
           _buildNotSaved(),
           Expanded(
             child: Center(
@@ -330,7 +283,7 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
-                    Obx(() => _c.guideState.on.value ? const TripGuideView() : _buildBody()),
+                    _buildBody(),
                     _buildNote(),
                   ],
                 ),
@@ -347,7 +300,7 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
   Widget _buildLegChips() {
     return Obx(() {
       final p = _c.plan.value;
-      if (p == null || _c.plannerOff.value || _c.tripGone.value || !p.isMultiCity || _c.guideState.on.value) return const SizedBox.shrink();
+      if (p == null || _c.plannerOff.value || _c.tripGone.value || !p.isMultiCity) return const SizedBox.shrink();
       final filter = _legFilter != null && p.legAt(_legFilter!) != null ? _legFilter : null;
       void pick(int? k) => setState(() => _legFilter = k);
       return Center(
@@ -380,17 +333,7 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
     });
   }
 
-  // While a guide question is open its circle hangs below the header, so banners start to the right of it.
-  EdgeInsets _bannerMargin() {
-    final g = _c.guideState;
-    final onQuestion = g.on.value && g.index.value < g.total.value;
-    if (!onQuestion) return EdgeInsets.fromLTRB(DS.s(18), DS.gv(10), DS.s(18), 0);
-    final left = DS.s(GuideSheetScaffold.circleLeft + GuideSheetScaffold.circleSize + 8);
-    final mq = MediaQuery.of(context);
-    final room = mq.size.width - left - DS.s(18);
-    if (room < DS.s(190) * mq.textScaler.scale(1).clamp(1.0, 2.0)) return EdgeInsets.fromLTRB(DS.s(18), DS.gv(10) + DS.s(GuideSheetScaffold.circleSize / 2), DS.s(18), 0);
-    return EdgeInsets.fromLTRB(left, DS.gv(10), DS.s(18), 0);
-  }
+  EdgeInsets _bannerMargin() => EdgeInsets.fromLTRB(DS.s(18), DS.gv(10), DS.s(18), 0);
 
   Widget _buildOffline() {
     return Obx(() {
@@ -482,7 +425,6 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
       _c.result.value;
       final editable = _c.canEditStructure;
       final editing = _c.editMode.value && editable;
-      final step2 = !editing && !_c.isCompleted && _c.planStep.value == 2;
       final addCity = editable && !editing;
       return ListenableBuilder(
         listenable: _fold,
@@ -509,8 +451,6 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
                 )),
               w(const TripTodayCard()),
               if (editing) _editBanner(),
-              if (step2) w(_g(const TripEasyCard())),
-              if (!step2) ...[
               for (final (i, leg) in shownLegs.indexed)
                   w(TripLegHeader(
                     key: ValueKey('trip-leg-${leg.index}'),
@@ -532,7 +472,6 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
               if (plan.spotCount == 0 && !editing && editable) _emptyPlan(),
               if (editing && _c.canAddDay) _addDayButton(),
               if (addCity) w(const TripAddCityCard()),
-              ],
             ],
           );
         },
@@ -546,12 +485,17 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
     boxShadow: DS.shadows(Ink3D.topEdge),
   );
 
-  Widget _g(Widget child) => Padding(padding: DS.sym(h: 18), child: child);
-
   Future<void> _saveTrip() async {
     if (_savingTrip) return;
+    if (_c.isNewUnsaved) {
+      final ok = await TripDatesSheet.saveTrip(context);
+      final id = _c.trip.value?.id;
+      if (!mounted || !ok || id == null) return;
+      TripNavigation.enterOverview(id);
+      return;
+    }
     setState(() => _savingTrip = true);
-    final ok = await _c.saveNow();
+    final ok = await _c.flushPendingSave();
     if (!mounted) return;
     setState(() => _savingTrip = false);
     final id = _c.trip.value?.id;
@@ -559,7 +503,11 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
       if (!_c.saveFailed.value) AppToast.error(TripStringsDayplan.saveTripFailed);
       return;
     }
-    await TripNavigation.openOverview(tripId: id);
+    if (Get.previousRoute == AppRoutes.tripOverview) {
+      Get.back();
+    } else {
+      await Get.offNamed(AppRoutes.tripOverview, arguments: {'tripId': id});
+    }
   }
 
   Widget _nextButton(int spots) => Column(
@@ -568,7 +516,7 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
           GradientPillButton(
             key: TripPlanScreen.saveTripKey,
             tone: ListingTone.indigo,
-            label: TripStringsDayplan.saveTrip,
+            label: _c.isNewUnsaved ? TripStringsDayplan.saveTrip : TripStringsDayplan.backToOverview,
             loading: _savingTrip,
             shadows: TripLook.pillShadow,
             onTap: spots == 0 ? null : _saveTrip,
@@ -613,33 +561,6 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
               label: _c.planLock.byBooking ? TripStringsDayplan.viewBooking : TripStringsDayplan.viewRequest,
               shadows: TripLook.pillShadow,
               onTap: _openLockedStatus,
-            ),
-          ),
-        ),
-      );
-
-  Widget _stepBar(BuildContext context, bool bottomInset) => Container(
-        padding: _barPadding(context, bottomInset),
-        decoration: _barDecoration,
-        child: Center(
-          heightFactor: 1,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 640),
-            child: Row(
-              children: [
-                Expanded(
-                  child: WhitePillButton(tone: ListingTone.indigo, label: TripStringsV2Plan.previous, onTap: () => _c.planStep.value = 1),
-                ),
-                Gap.h(12),
-                Expanded(
-                  child: GradientPillButton(
-                    tone: ListingTone.indigo,
-                    label: TripStringsV2Plan.done,
-                    shadows: TripLook.pillShadow,
-                    onTap: () => TripLifecycleActions.saveAndExit(context),
-                  ),
-                ),
-              ],
             ),
           ),
         ),
@@ -725,31 +646,15 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
       if (_c.needsUpdate.value) return const _BarIn(child: TripUpdateAppCard());
       if (_c.plannerOff.value || _c.plan.value == null || _c.isCompleted) return const SizedBox.shrink();
       final complete = _c.isLastDayOrAfter && _c.canComplete;
-      final guided = _c.guideState.on.value;
-      final mini = !guided && !_c.editMode.value && _c.easyInProgress != null;
-      final nav = !guided && !_c.editMode.value && !_c.isReadOnly && !_c.isPlanLocked && _c.planStep.value == 2;
-      final nextNav = !guided && !_c.editMode.value && !_c.isReadOnly && !_c.isPlanLocked && _c.planStep.value == 1;
+      final nextNav = !_c.editMode.value && !_c.isReadOnly && !_c.isPlanLocked;
       final locked = _c.isPlanLocked && !_c.editMode.value && !_c.isReadOnly;
-      if (!complete && !mini && !nav && !nextNav && !locked) return const SizedBox.shrink();
+      if (!complete && !nextNav && !locked) return const SizedBox.shrink();
       return _BarIn(
-        key: ValueKey(_c.planStep.value),
         child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (mini)
-            Center(
-              heightFactor: 1,
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 640),
-                child: Padding(
-                  padding: EdgeInsets.fromLTRB(DS.s(16), 0, DS.s(16), complete || nav ? DS.s(8) : AppInsets.bottomViewPadding(context) + DS.s(8)),
-                  child: const TripEasyMiniBar(),
-                ),
-              ),
-            ),
           if (locked) _viewBar(context, !complete),
-          if (nav) _stepBar(context, !complete),
           if (nextNav) _nextBar(context, !complete, _c.plan.value!.spotCount),
           if (complete) _completeBar(context),
         ],
@@ -804,7 +709,7 @@ class _LegChip extends StatelessWidget {
 }
 
 class _BarIn extends StatefulWidget {
-  const _BarIn({super.key, required this.child});
+  const _BarIn({required this.child});
   final Widget child;
 
   @override

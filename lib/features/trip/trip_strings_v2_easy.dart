@@ -11,7 +11,6 @@ class TripStringsV2Easy {
   static const String peekBack = 'Back';
 
   static String taxiDays(int days) => days <= 1 ? 'Day 1 · one driver' : 'Day 1 to Day $days · one driver';
-  static const String helpMeFind = 'Help me find';
   static const String arrangeMyself = "I'll arrange myself";
   static const String skip = 'Skip';
   static const String undo = 'Undo';

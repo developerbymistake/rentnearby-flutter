@@ -15,7 +15,6 @@ class TripStringsV2Find {
   static const startDate = 'Start date';
   static const adults = 'Adults';
   static const children = 'Children';
-  static const showDrivers = 'Show drivers';
   static const showWays = 'Show ways';
   static const saveDates = 'Save';
   static String showStaysIn(String city) => 'Show stays in $city';

@@ -98,33 +98,6 @@ void main() {
     await drainSave(t);
   });
 
-  testWidgets('view_bar_shows_with_the_guide_on_in_step_2', (t) async {
-    Object? args;
-    final c = await pumpDayPlan(t, dayPlanFixture(), size: const Size(360, 800), lock: lockedByRequest, step: 2, guide: true, pages: [
-      GetPage(name: AppRoutes.tripTaxiStatus, page: () {
-        args = Get.arguments;
-        return const Scaffold(body: Text('status'));
-      }),
-    ]);
-    expect(c.guideState.on.value, isTrue);
-    expect(find.byKey(TripPlanScreen.lockedBannerKey), findsOneWidget);
-    expect(find.byKey(TripPlanScreen.viewButtonKey).hitTestable(), findsOneWidget);
-    await t.tap(find.byKey(TripPlanScreen.viewButtonKey));
-    await t.pumpAndSettle();
-    expect(find.text('status'), findsOneWidget);
-    expect(args, {'tripId': 't1', 'requestId': lockedByRequest.requestId});
-  });
-
-  testWidgets('locked_plan_five_sizes_guide_on', (t) async {
-    for (final size in fiveSizes) {
-      await t.pumpWidget(const SizedBox.shrink());
-      Get.reset();
-      await pumpDayPlan(t, dayPlanFixture(perLeg: const [[2, 2], [1, 1]]), size: size, lock: _byBooking, step: 2, guide: true);
-      expect(t.takeException(), isNull, reason: sizeLabel(size));
-      expect(find.byKey(TripPlanScreen.viewButtonKey).hitTestable(), findsOneWidget, reason: sizeLabel(size));
-    }
-  });
-
   testWidgets('locked_plan_five_sizes', (t) async {
     for (final size in fiveSizes) {
       await t.pumpWidget(const SizedBox.shrink());

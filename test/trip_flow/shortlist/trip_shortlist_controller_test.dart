@@ -1,4 +1,3 @@
-import 'package:bakhli/features/taxi/ways/models/ask_models.dart';
 import 'package:bakhli/features/trip/controllers/trip_enquiry_controller.dart';
 import 'package:bakhli/features/trip/controllers/trip_shortlist_controller.dart';
 import 'package:bakhli/features/trip/data/trip_shortlist_repository.dart';
@@ -217,26 +216,6 @@ void main() {
     final res = await c.markBooked('stay:1');
     expect(res?.closedEnquiries, 1);
     expect(c.countOf('stay:1'), 0);
-  });
-
-  group('carBatch', () {
-    test('uses server results and adds NotAvailable for ids the server never mentioned', () {
-      const res = AskResult(items: [], skipped: [], veryShortNotice: false, results: [
-        TripSendResult(listingId: 'x', status: 'Sent'),
-      ]);
-      final batch = TripShortlistController.carBatch(res, ['x', 'y']);
-      expect(batch.perRecipient.map((r) => '${r.listingId}:${r.status}'), ['x:Sent', 'y:NotAvailable']);
-    });
-
-    test('falls back to items and skipped when the server sends no results', () {
-      const res = AskResult(
-        items: [AskItem(legIndex: 1, taxiId: 'x', enquiryId: 'e1', status: 'Asked')],
-        skipped: [AskSkipped(legIndex: 1, taxiId: 'y', reason: 'AlreadyOpen')],
-        veryShortNotice: false,
-      );
-      final batch = TripShortlistController.carBatch(res, ['x', 'y']);
-      expect(batch.perRecipient.map((r) => r.status), ['Sent', 'AlreadyOpen']);
-    });
   });
 
   group('ShortlistOrder', () {

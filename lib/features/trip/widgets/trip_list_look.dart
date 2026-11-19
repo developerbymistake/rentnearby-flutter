@@ -1,27 +1,7 @@
 import 'package:bakhli/design/design.dart';
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
-import '../controllers/trip_plan_controller.dart';
-import '../models/trip_guide_args.dart';
-import '../trip_strings_guide.dart';
 
 ListingTone tripListTone(KitTone tone) => identical(tone, KitTone.taxi) ? ListingTone.coral : ListingTone.forest;
-
-class TripGuideStepInfo {
-  const TripGuideStepInfo(this.name, this.chip);
-
-  final String name;
-  final String chip;
-
-  static TripGuideStepInfo? of(GuideArgs? guide) {
-    if (guide == null || !Get.isRegistered<TripPlanController>() || Get.isPrepared<TripPlanController>()) return null;
-    final g = Get.find<TripPlanController>().guideState;
-    final i = g.steps.indexWhere((s) => s.key == guide.stepKey);
-    final total = g.total.value > 0 ? g.total.value : g.steps.length;
-    if (i < 0 || total <= 0) return null;
-    return TripGuideStepInfo(g.steps[i].name, TripStringsGuide.stepCount(i + 1, total));
-  }
-}
 
 class TripListTopBar extends StatelessWidget {
   const TripListTopBar({
@@ -30,7 +10,6 @@ class TripListTopBar extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.onBack,
-    this.guide,
     this.skipLabel,
     this.onSkip,
   });
@@ -39,13 +18,11 @@ class TripListTopBar extends StatelessWidget {
   final String title;
   final String subtitle;
   final VoidCallback onBack;
-  final GuideArgs? guide;
   final String? skipLabel;
   final VoidCallback? onSkip;
 
   @override
   Widget build(BuildContext context) {
-    final step = TripGuideStepInfo.of(guide);
     final skip = skipLabel;
     return Padding(
       padding: EdgeInsets.only(top: MediaQuery.paddingOf(context).top, bottom: DS.gv(6)),
@@ -53,7 +30,6 @@ class TripListTopBar extends StatelessWidget {
         tone: tone,
         title: title,
         subtitle: subtitle,
-        stepChip: step?.chip,
         onBack: onBack,
         trailing: skip == null ? null : TripSkipPill(label: skip, onTap: onSkip, tone: tone),
       ),

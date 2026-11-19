@@ -3,13 +3,12 @@ import 'dart:io';
 import 'package:bakhli/controllers/tab_config_controller.dart';
 import 'package:bakhli/features/stay/models/stay_nearby_model.dart';
 import 'package:bakhli/features/trip/controllers/trip_plan_controller.dart';
-import 'package:bakhli/features/trip/controllers/trip_plan_guide.dart';
 import 'package:bakhli/features/trip/controllers/trip_shortlist_controller.dart';
 import 'package:bakhli/features/trip/controllers/trip_supply_controller.dart';
 import 'package:bakhli/features/trip/data/trip_shortlist_repository.dart';
 import 'package:bakhli/features/trip/models/trip_shortlist_model.dart';
-import 'package:bakhli/features/trip/models/trip_guide_args.dart';
 import 'package:bakhli/features/trip/screens/trip_stay_screen.dart';
+import 'package:bakhli/features/trip/trip_strings_shortlist.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -90,7 +89,6 @@ void main() {
     Get.put<TabConfigController>(_Tabs());
     final plan = Get.put(TripPlanController());
     plan.plan.value = journeyPlan([2]);
-    plan.guideSync();
     Get.put<TripSupplyController>(_Supply());
     Get.put(TripShortlistController(repo: _Repo(), tripId: () async => 't', offline: () => false, warn: (_) {}));
   }
@@ -103,9 +101,11 @@ void main() {
       _stay('s2', 'Himalayan View Homestay', 9, 1800),
       _stay('s3', 'Pine Ridge Stay', 24, null, type: null),
     ]);
-    await _open(t, const TripStayScreen(), GuideArgs('stay:1').toArgs());
+    await _open(t, const TripStayScreen(), const {'shortlist': true});
     await shot(t, 'real_stay_screen');
-    expect(find.textContaining(RegExp(r'^\d of \d+$')), findsOneWidget);
+    expect(find.textContaining(RegExp(r'^\d of \d+$')), findsNothing);
+    expect(find.text(TripStringsShortlist.barCount(0, 3)), findsOneWidget);
+    expect(find.text(TripStringsShortlist.shortlist), findsWidgets);
     expect(find.text('Stays near'), findsOneWidget);
     expect(find.textContaining(' centre'), findsOneWidget);
     debugDisableShadows = true;

@@ -1,15 +1,8 @@
 import 'package:bakhli/features/trip/controllers/my_trips_controller.dart';
-import 'package:bakhli/features/trip/controllers/trip_plan_controller.dart';
-import 'package:bakhli/features/trip/controllers/trip_shortlist_controller.dart';
 import 'package:bakhli/features/trip/data/trip_city_catalog.dart';
-import 'package:bakhli/features/trip/data/trip_shortlist_repository.dart';
 import 'package:bakhli/features/trip/models/trip_city_model.dart';
 import 'package:bakhli/features/trip/models/trip_model.dart';
-import 'package:bakhli/features/trip/models/trip_plan_model.dart';
-import 'package:bakhli/features/trip/models/trip_shortlist_model.dart';
 import 'package:bakhli/features/trip/screens/trips_discovery_screen.dart';
-import 'package:bakhli/features/trip/widgets/guide/trip_guide_view.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 
@@ -69,37 +62,6 @@ class _Trips extends MyTripsController {
 
 }
 
-class _Repo implements TripShortlistRepository {
-  _Repo(this.items);
-  final List<ShortlistItem> items;
-  @override
-  Future<TripShortlist> list(String tripId) async => TripShortlist(items: items);
-  @override
-  Future<List<ShortlistItem>> add(String tripId, String stepKey, String listingId, ShortlistItem item) async => [item];
-  @override
-  Future<void> remove(String tripId, String stepKey, String listingId) async {}
-  @override
-  Future<void> close(String tripId, String stepKey, {required String reason}) async {}
-  @override
-  Future<MarkBookedResult> markBooked(String tripId, String stepKey, {String? listingId}) async =>
-      const MarkBookedResult(closedEnquiries: 1, closedShortlist: 1);
-}
-
-TripSpotRef _spot(String id) =>
-    TripSpotRef(id: id, name: id, latitude: 29.4, longitude: 79.4, category: 'attraction', visitMinutes: 60);
-
-TripPlan _plan({TripGuide? guide}) => TripPlan(
-      legs: [
-        for (var k = 1; k <= 2; k++)
-          TripCityLeg(index: k, cityKey: k, cityName: k == 1 ? 'Nainital' : 'Almora', latitude: 29.4 + k / 10, longitude: 79.4),
-      ],
-      days: [for (var k = 1; k <= 2; k++) TripDay(day: k, leg: k, spots: [_spot('s$k')])],
-      settings: TripSettings(startDate: DateTime(2030, 11, 1)),
-      guide: guide,
-    );
-
-
-
 void main() {
   setUpAll(loadRealFonts);
   tearDown(Get.reset);
@@ -114,15 +76,4 @@ void main() {
     expect(f.lengthSync(), greaterThan(10000));
   });
 
-  testWidgets('real phone: guide card', (t) async {
-    final sl = TripShortlistController(repo: _Repo(const []), tripId: () async => 't1', offline: () => false, warn: (_) {});
-    Get.put<TripShortlistController>(sl);
-    final c = TripPlanController();
-    c.plan.value = _plan();
-    await pumpPhone(t, Scaffold(body: SafeArea(child: TripGuideView(controller: c, shortlist: sl))));
-    await settlePhone(t);
-    final f = await shot(t, 'proof_guide_card');
-    expect(f.lengthSync(), greaterThan(10000));
-    c.onClose();
-  });
 }

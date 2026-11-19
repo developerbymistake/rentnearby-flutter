@@ -6,12 +6,10 @@ import 'trip_ui.dart';
 import 'package:get/get.dart';
 import '../controllers/trip_plan_controller.dart';
 import '../models/trip_plan_model.dart';
-import '../utils/trip_guide_rules.dart';
 import '../trip_strings_dayplan.dart';
 import '../trip_strings_v2_plan.dart';
 import '../utils/trip_easy_rules.dart';
 import '../utils/trip_format.dart';
-import 'guide/trip_guide_header_text.dart';
 import 'trip_card.dart';
 import 'trip_pace_sheet.dart';
 import 'trip_status.dart';
@@ -26,14 +24,9 @@ enum TripPlanMenu {
   mute,
   complete,
   delete,
-  easy,
 }
 
 class TripPlanHeader extends StatelessWidget {
-  static double get _guideSide => DS.s(16);
-  // Left room kept free for the question circle, less the header side padding.
-  static double get _circleRoom => DS.s(GuideSheetScaffold.circleLeft + GuideSheetScaffold.circleSize) - _guideSide;
-
   final ValueChanged<TripPlanMenu> onMenu;
 
   const TripPlanHeader({super.key, required this.onMenu});
@@ -111,22 +104,12 @@ class TripPlanHeader extends StatelessWidget {
       c.saveFailed.value;
       c.settingsChangedAt.value;
       c.isOpening.value;
-      c.guideState.on.value;
-      c.guideState.index.value;
-      c.guideState.total.value;
       final off = c.plannerOff.value;
       final ready = plan != null && !off;
-      final question = ready && c.guideState.on.value ? c.guideState.stepNow : null;
-      if (question != null && plan != null) {
-        return MediaQuery.withClampedTextScaling(
-          maxScaleFactor: 1.3,
-          child: _guideHeader(context, c, plan, question),
-        );
-      }
       final header = TripFlowHeader(
         title: plan == null ? TripStringsV2Plan.trip : c.title,
         subtitle: ready ? subtitleOf(c) : null,
-        onBack: () => Get.back(),
+        onBack: () => Navigator.maybePop(context),
         trailing: [
           if (ready) ...[
             if (c.editMode.value)
@@ -142,7 +125,7 @@ class TripPlanHeader extends StatelessWidget {
           ],
         ],
       );
-      final bottom = ready && (c.guideState.on.value || c.editMode.value) ? _statusRow(context, c) : null;
+      final bottom = ready && c.editMode.value ? _statusRow(context, c) : null;
       return MediaQuery.withClampedTextScaling(
         maxScaleFactor: 1.3,
         child: bottom == null
@@ -152,7 +135,7 @@ class TripPlanHeader extends StatelessWidget {
                 subtitle: ready ? subtitleOf(c) : null,
                 tone: KitTone.brand,
                 gradient: ListingTone.indigo.gradient,
-                onBack: () => Get.back(),
+                onBack: () => Navigator.maybePop(context),
                 trailing: [
                   if (ready) ...[
                     if (c.editMode.value)
@@ -173,16 +156,10 @@ class TripPlanHeader extends StatelessWidget {
   Widget _statusRow(BuildContext context, TripPlanController c) {
     final rows = c.easyRows;
     final progress = c.stepProgress;
-    final step = c.isCompleted ? 2 : c.planStep.value;
+    final step = c.isCompleted ? 2 : 1;
     final hint = hintOf(c, rows);
     final editable = c.canEditStructure;
-    if (c.guideState.on.value) return _guidedRow(context, c, hint, editable);
-    return PressScale(
-      scale: 0.98,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: () => onMenu(TripPlanMenu.easy),
-        child: Padding(
+    return Padding(
           padding: DS.insets(l: 12, t: 8),
           child: Row(
             children: [
@@ -256,99 +233,7 @@ class TripPlanHeader extends StatelessWidget {
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _guideHeader(BuildContext context, TripPlanController c, TripPlan plan, TripGuideStep step) {
-    final text = TripGuideHeaderText.of(plan, step.row);
-    final shown = _shownHint(hintOf(c, c.easyRows));
-    final editable = c.canEditStructure;
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        gradient: ListingTone.indigo.gradient,
-        borderRadius: DS.br(CardRadius.header),
-        boxShadow: DS.shadows(ShadowTokens.glow(KitTone.brand.glow)),
-      ),
-      padding: EdgeInsets.fromLTRB(_guideSide, MediaQuery.paddingOf(context).top + DS.s(8), _guideSide, DS.s(10)),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(
-            children: [
-              _BackCircle(onTap: () => Get.back()),
-              Gap.h(10),
-              Expanded(child: _GuideTitle(title: text.title, subtitle: text.subtitle)),
-              Gap.h(12),
-              _MapAction(onTap: () => onMenu(TripPlanMenu.map)),
-              Gap.h(12),
-              _menu(c),
-            ],
-          ),
-          Padding(
-            padding: EdgeInsets.only(top: DS.s(6), left: _circleRoom),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                if (shown != null) Flexible(child: _statusPill(shown)),
-                if (shown != null) Gap.h(8),
-                ConstrainedBox(
-                  constraints: BoxConstraints(maxWidth: DS.s(120)),
-                  child: _paceChip(context, c, editable),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  static String? _shownHint(String? hint) => hint == TripStringsV2Plan.hintMakeItEasy ? null : hint;
-
-  Widget _statusPill(String text) => Container(
-        key: const ValueKey('guide_status_pill'),
-        padding: DS.sym(h: 11, v: 5),
-        decoration: BoxDecoration(color: DesignColors.whiteSoft, borderRadius: DS.circular(16)),
-        child: Text(
-          text,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          style: TypeTokens.style(12, FontWeight.w600, color: DesignColors.textInverse),
-        ),
-      );
-
-  Widget _guidedRow(
-    BuildContext context,
-    TripPlanController c,
-    String? hint,
-    bool editable,
-  ) {
-    final shown = _shownHint(hint);
-    return Padding(
-      padding: DS.insets(l: 12, t: 8),
-      child: Row(
-        children: [
-          Expanded(
-            child: shown == null
-                ? const SizedBox.shrink()
-                : Text(
-                    shown,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TypeTokens.style(12, FontWeight.w500, color: DesignColors.whiteHigh),
-                  ),
-          ),
-          Gap.h(8),
-          ConstrainedBox(
-            constraints: BoxConstraints(maxWidth: DS.s(120)),
-            child: _paceChip(context, c, editable),
-          ),
-        ],
-      ),
-    );
+        );
   }
 
   Widget _paceChip(BuildContext context, TripPlanController c, bool editable) {
@@ -418,7 +303,7 @@ class TripPlanHeader extends StatelessWidget {
       itemBuilder: (_) {
         final saved = c.trip.value != null;
         final editable = c.canEditStructure;
-        final canSave = !c.isReadOnly && !c.needsUpdate.value;
+        final canSave = !c.isReadOnly && !c.needsUpdate.value && !c.isNewUnsaved;
         return [
           if (canSave)
             _item(
@@ -639,63 +524,6 @@ class _BackCircle extends StatelessWidget {
   }
 }
 
-// One line at 17, else two lines, else smaller; never an ellipsis.
-class _GuideTitle extends StatelessWidget {
-  const _GuideTitle({required this.title, required this.subtitle});
-
-  final String title;
-  final String subtitle;
-
-  static const List<double> _sizes = [17, 16, 15, 14, 13, 12, 11];
-
-  @override
-  Widget build(BuildContext context) {
-    final scaler = MediaQuery.textScalerOf(context);
-    final dir = Directionality.of(context);
-    return ConstrainedBox(
-      constraints: BoxConstraints(minHeight: DS.s(48)),
-      child: LayoutBuilder(
-        builder: (context, box) {
-          TextStyle styleOf(double size) => TypeTokens.style(size, FontWeight.w700, color: DesignColors.textInverse, letterSpacing: 0.3);
-          bool fits(double size, int lines) {
-            final tp = TextPainter(text: TextSpan(text: title, style: styleOf(size).copyWith(height: 1.15)), textDirection: dir, textScaler: scaler, maxLines: lines)
-              ..layout(maxWidth: box.maxWidth);
-            return !tp.didExceedMaxLines;
-          }
-
-          var size = _sizes.last;
-          var lines = 2;
-          for (final s in _sizes) {
-            if (fits(s, 1)) {
-              size = s;
-              lines = 1;
-              break;
-            }
-            if (s <= 15 && fits(s, 2)) {
-              size = s;
-              break;
-            }
-          }
-          return Column(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(title, key: const ValueKey('guide_title'), maxLines: lines, overflow: TextOverflow.clip, style: styleOf(size).copyWith(height: 1.15)),
-              if (subtitle.isNotEmpty)
-                FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.centerLeft,
-                  child: Text(subtitle, key: const ValueKey('guide_subtitle'), maxLines: 1, style: TypeTokens.style(11.5, FontWeight.w500, color: DesignColors.whiteHigh)),
-                ),
-            ],
-          );
-        },
-      ),
-    );
-  }
-}
-
 class _MapAction extends StatelessWidget {
   const _MapAction({required this.onTap});
   final VoidCallback onTap;
@@ -736,19 +564,19 @@ class TripPlanStepCard extends StatelessWidget {
       c.offline.value;
       c.saveFailed.value;
       c.settingsChangedAt.value;
-      if (plan == null || c.plannerOff.value || c.guideState.on.value) return const SizedBox.shrink();
+      if (plan == null || c.plannerOff.value) return const SizedBox.shrink();
       final tone = ListingTone.indigo;
       const white = DesignColors.surface;
       final rows = c.easyRows;
       final progress = c.stepProgress;
-      final step = c.isCompleted ? 2 : c.planStep.value;
+      final step = c.isCompleted ? 2 : 1;
       final hint = TripPlanHeader.hintOf(c, rows);
       final editable = c.canEditStructure;
       final pct = progress.percent.clamp(0, 100).toDouble();
       final name = c.title;
       final sub = step == 2 ? (progress.total == 0 ? TripStringsV2Plan.nothingToArrange : TripStringsV2Plan.arranged(progress.done, progress.total)) : null;
-      return Tap3D(
-        onTap: () => onMenu(TripPlanMenu.easy),
+      return Semantics(
+        container: true,
         label: '${TripStringsDayplan.yourPlan}, $name',
         child: Padding(
           padding: EdgeInsets.fromLTRB(DS.s(18), DS.gv(36), DS.s(18), DS.gv(8)),

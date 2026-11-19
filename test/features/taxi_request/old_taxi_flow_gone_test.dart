@@ -206,7 +206,7 @@ void main() {
       installFakeApi([]);
       _todayTrip();
       final opened = await _pumpWithRequestPage(t, const Scaffold(body: Text('plan')));
-      TripNavigation.openRepliesForRow(const TripEasyRowKey(TripEasyRowKind.taxi));
+      TripNavigation.openTaxiFlow(Get.context!);
       await t.pumpAndSettle();
       expect(Get.currentRoute, AppRoutes.tripTaxiRequest);
       expect(opened, [

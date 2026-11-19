@@ -11,7 +11,6 @@ import 'package:bakhli/features/trip/models/trip_model.dart';
 import 'package:bakhli/features/trip/models/trip_plan_model.dart';
 import 'package:bakhli/features/trip/models/trip_spot_model.dart';
 import 'package:bakhli/features/trip/screens/trip_customize_screen.dart';
-import 'package:bakhli/features/trip/screens/trip_name_screen.dart';
 import 'package:bakhli/features/trip/screens/trip_overview_screen.dart';
 import 'package:bakhli/features/trip/screens/trip_plan_screen.dart';
 import 'package:bakhli/features/trip/screens/trip_spots_screen.dart';
@@ -161,9 +160,6 @@ Future<TripPlanController> _planWithCustomize(WidgetTester t, TripPlan plan, Siz
     ),
   ));
   await settlePhone(t);
-  c.planStep.value = 1;
-  c.guideState.on.value = false;
-  await settlePhone(t);
   return c;
 }
 
@@ -286,20 +282,6 @@ void main() {
   });
 
   group('render 360x800', () {
-    _tw('01 name filled', (t) async {
-      await pumpPhone(t, const TripNameScreen(stateName: 'Uttarakhand', cityName: 'Nainital'), size: _phone);
-      await t.tap(find.byType(TextFormField));
-      await t.pump(const Duration(milliseconds: 300));
-      await _snap(t, '01_name_your_trip', 'viewport');
-    });
-
-    _tw('02 name empty', (t) async {
-      await pumpPhone(t, const TripNameScreen(stateName: 'Uttarakhand', cityName: 'Nainital'), size: _phone);
-      await t.enterText(find.byType(TextFormField), '');
-      await t.pump(const Duration(milliseconds: 300));
-      await _snap(t, '02_name_empty', 'viewport');
-    });
-
     for (final s in [_phone, _tall]) {
       final v = s == _phone ? 'viewport' : 'full';
       _tw('03 day plan $v', (t) async {
@@ -474,15 +456,6 @@ void main() {
     const sizes = [Size(320, 568), Size(360, 640), Size(411, 891), Size(600, 960)];
     for (final size in sizes) {
       final l = sizeLabel(size);
-      _tw('01/02 name $l', (t) async {
-        await pumpPhone(t, const TripNameScreen(stateName: 'Uttarakhand', cityName: 'Nainital'), size: size);
-        _record('01_name', size, t.takeException());
-        await t.enterText(find.byType(TextFormField), '');
-        await t.pump();
-        _record('02_name_empty', size, t.takeException());
-        await _snap(t, '02_name_empty', l);
-      });
-
       _tw('03/04/06 day plan $l', (t) async {
         await pumpDayPlan(t, _plan([4, 4, 4]), size: size);
         _record('03_day_plan', size, t.takeException());

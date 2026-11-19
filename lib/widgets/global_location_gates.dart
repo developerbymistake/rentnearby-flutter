@@ -47,7 +47,6 @@ class GlobalLocationGates extends StatelessWidget {
     AppRoutes.tripSpots,
     AppRoutes.tripStay,
     AppRoutes.tripReplies,
-    AppRoutes.tripName,
     AppRoutes.tripTaxiRequest,
     AppRoutes.tripTaxiStatus,
     AppRoutes.taxiWays,

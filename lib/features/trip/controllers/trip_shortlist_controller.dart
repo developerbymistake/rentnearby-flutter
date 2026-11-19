@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:get/get.dart';
 import 'package:uuid/uuid.dart';
 import '../../../utils/app_toast.dart';
-import '../../taxi/ways/models/ask_models.dart';
 import '../../../utils/dio_error_mapper.dart';
 import '../data/trip_shortlist_repository.dart';
 import '../models/trip_enquiry_model.dart';
@@ -321,46 +320,6 @@ class TripShortlistController extends GetxController {
     }
     return batch;
   }
-
-  Future<TripEnquiryBatch?> sendCars({
-    required String step,
-    required Future<AskResult?> Function(List<String> ids, String requestId) ask,
-  }) async {
-    final ids = sendIds(step);
-    if (ids.isEmpty) return null;
-    if (_offline()) {
-      _warn(TripStringsV2Find.offlineAsk);
-      return null;
-    }
-    final res = await ask(ids, requestIdFor(step, ids));
-    if (res == null) return null;
-    final batch = carBatch(res, ids);
-    _settle(step, ids, batch);
-    return batch;
-  }
-
-  static TripEnquiryBatch carBatch(AskResult res, List<String> ids) {
-    final results = res.results.isNotEmpty
-        ? [...res.results]
-        : [
-            for (final i in res.items) TripSendResult(listingId: i.taxiId, status: 'Sent', enquiryId: i.enquiryId),
-            for (final k in res.skipped) TripSendResult(listingId: k.taxiId, status: _skipStatus(k.reason), reason: k.reason),
-          ];
-    final seen = {for (final r in results) r.listingId};
-    for (final id in ids) {
-      if (!seen.contains(id)) results.add(TripSendResult(listingId: id, status: 'NotAvailable'));
-    }
-    return TripEnquiryBatch(items: const [], skipped: const [], veryShortNotice: res.veryShortNotice, results: results);
-  }
-
-  static String _skipStatus(String reason) => switch (reason) {
-        TripSkipReasons.alreadyOpen => 'AlreadyOpen',
-        TripSkipReasons.openInAnotherTrip => 'OpenInAnotherTrip',
-        TripSkipReasons.notAvailable => 'NotAvailable',
-        TripSkipReasons.blocked => 'Blocked',
-        TripSkipReasons.limitReached => 'LimitReached',
-        _ => 'Failed',
-      };
 
   void _settle(String step, List<String> ids, TripEnquiryBatch batch) {
     completeRequest(step, ids);

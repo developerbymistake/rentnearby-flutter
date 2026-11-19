@@ -1,7 +1,6 @@
 import 'package:bakhli/features/taxi/ways/taxi_ways_feed_screen.dart';
 import 'package:bakhli/features/taxi/ways/trip_strings_mcb_a2.dart';
-import 'package:bakhli/features/trip/models/trip_guide_args.dart';
-import 'package:bakhli/features/trip/trip_strings_guide.dart';
+import 'package:bakhli/features/taxi/ways/taxi_ways_strings.dart';
 import 'package:bakhli/models/place_result_model.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -84,21 +83,13 @@ void main() {
   for (final role in ['gettingThere', 'comingBack']) {
     testWidgets('gap card for $role shows arrange myself, skip and the nearest place hint', (t) async {
       await _open(t, _waysJson(plan: false), {'tripRole': role});
-      expect(find.text(TripStringsGuide.optOwn), findsWidgets);
-      expect(find.text(TripStringsGuide.optSkip), findsWidgets);
+      expect(find.text(TaxiWaysStrings.arrangeMyself), findsWidgets);
+      expect(find.text(TaxiWaysStrings.skipThis), findsWidgets);
       expect(find.text(TripStringsMcbA2.nobodyListed), findsOneWidget);
       expect(find.textContaining('Munsiyari'), findsWidgets);
       expect(find.byKey(const ValueKey('plan-only-note')), findsNothing);
     });
   }
-
-  testWidgets('guided plan-only result shows the one enquiry per car note and the arrange bar', (t) async {
-    await _open(t, _waysJson(plan: true), {'tripRole': 'gettingThere', ...GuideArgs('gettingThere').toArgs()});
-    expect(find.byKey(const ValueKey('plan-only-note')), findsOneWidget);
-    expect(find.text(TaxiWaysFeedScreen.planOnlyText(2)), findsOneWidget);
-    expect(find.text(TripStringsGuide.optOwn), findsOneWidget);
-    expect(find.text(TripStringsGuide.optSkip), findsOneWidget);
-  });
 
 
 }

@@ -179,17 +179,17 @@ void main() {
       expect(TripBarRules.actionLabel(_trip('a'), past: true), 'View summary');
     });
 
-    test('next title comes from the row kind', () {
-      expect(TripBarRules.nextTitle(_trip('a', nextKey: 'gettingThere')), 'Getting there');
-      expect(TripBarRules.nextTitle(_trip('a', nextKey: 'comingBack')), 'Coming back');
+    test('next title comes from the row kind, stay and taxi only', () {
+      expect(TripBarRules.nextTitle(_trip('a', nextKey: 'gettingThere')), isNull);
+      expect(TripBarRules.nextTitle(_trip('a', nextKey: 'comingBack')), isNull);
       expect(TripBarRules.nextTitle(_trip('a', nextKey: 'taxi')), 'Local taxi');
       expect(TripBarRules.nextTitle(_trip('a', nextKey: 'stay:1')), 'Stay in Nainital');
       expect(TripBarRules.nextTitle(_trip('a', nextKey: null)), isNull);
     });
 
-    test('city change title uses the leg cities', () {
+    test('a city change row never names the card, a later city stay does', () {
       final t = _trip('a', nextKey: 'between:2', cities: ['Nainital', 'Almora']);
-      expect(TripBarRules.nextTitle(t), 'Nainital → Almora');
+      expect(TripBarRules.nextTitle(t), isNull);
       expect(TripBarRules.nextTitle(_trip('a', nextKey: 'stay:2', cities: ['Nainital', 'Almora'])), 'Stay in Almora');
     });
   });

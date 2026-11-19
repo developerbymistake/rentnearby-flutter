@@ -8,20 +8,12 @@ import 'package:bakhli/design/extra/ways_kit.dart';
 import '../../../models/place_result_model.dart';
 import '../../../widgets/listing_contact_actions.dart';
 import '../../trip/controllers/trip_plan_controller.dart';
-import '../../trip/controllers/trip_shortlist_controller.dart';
-import '../../trip/models/trip_guide_args.dart';
-import '../../trip/models/trip_shortlist_model.dart';
-import '../../trip/trip_strings_shortlist.dart';
-import '../../trip/widgets/trip_shortlist_bar.dart';
 import '../../trip/trip_strings_final_aa.dart';
-import '../../trip/trip_strings_guide.dart';
 import '../../trip/widgets/trip_journey_card.dart';
-import '../../trip/widgets/trip_list_look.dart';
 import '../journeys/journey_models.dart';
 import '../journeys/journeys_controller.dart';
 import 'destination_section.dart';
 import 'widgets/journey_driver_card.dart';
-import 'models/ask_models.dart';
 import 'models/taxi_ways_models.dart';
 import 'taxi_ways_controller.dart';
 import 'taxi_ways_navigation.dart';
@@ -34,12 +26,10 @@ import 'widgets/way_plan_ribbon_card.dart';
 import 'widgets/ways_sort_chips.dart';
 
 class TaxiWaysFeedScreen extends StatefulWidget {
-  const TaxiWaysFeedScreen({super.key, this.debugController, this.debugGuide});
+  const TaxiWaysFeedScreen({super.key, this.debugController});
 
   @visibleForTesting
   final TaxiWaysController? debugController;
-  @visibleForTesting
-  final GuideArgs? debugGuide;
 
   static String planOnlyText(int cars) => cars >= 3 ? TaxiWaysStrings.noDirect3 : TaxiWaysStrings.noDirect2;
 
@@ -55,8 +45,6 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen>
   final _scroll = ScrollController();
   final _scrolled = ValueNotifier<bool>(false);
   TaxiWaysController? _c;
-  GuideArgs? _guide;
-  final _noReply = <String>{}.obs;
   String? _tag;
   bool _read = false;
   int _n = 0;
@@ -81,9 +69,6 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen>
     _read = true;
     if (widget.debugController != null) {
       _c = widget.debugController;
-      _guide = widget.debugGuide;
-      final g = _guide;
-      if (g != null) TripShortlistController.to.load();
       return;
     }
     final route = ModalRoute.of(context);
@@ -114,14 +99,6 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen>
         tag: _tag,
       );
       _c = c;
-      final guide = GuideArgs.from(args);
-      if (guide != null && c.inTrip) {
-        _guide = guide;
-        final sc = TripShortlistController.to;
-        sc.load().then((_) {
-          if (mounted) _noReply.assignAll(sc.noReplyIds(guide.stepKey));
-        });
-      }
       JourneysController.ensure().load();
     }
   }
@@ -186,23 +163,7 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen>
     }
     return Scaffold(
       backgroundColor: _page,
-      bottomNavigationBar: _guide != null
-          ? Obx(
-              () => c.result.value == null
-                  ? (c.loadFailed.value && (c.forTrip || c.forSegment)
-                        ? _arrangeBar(context, c)
-                        : const SizedBox.shrink())
-                  : c.result.value!.allTheWay.isEmpty &&
-                        (c.forTrip || c.forSegment)
-                  ? _arrangeBar(context, c)
-                  : TripShortlistBar(
-                      step: _guide!.stepKey,
-                      onDone: () => _done(context, c),
-                      tone: KitTone.taxi,
-                      maxWidth: _maxWidth,
-                    ),
-            )
-          : (c.forTrip || c.forSegment ? _arrangeBar(context, c) : null),
+      bottomNavigationBar: c.forTrip || c.forSegment ? _arrangeBar(context, c) : null,
       body: Stack(
         children: [
           RefreshIndicator(
@@ -277,15 +238,14 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen>
 
   Widget _arrangeBar(BuildContext context, TaxiWaysController c) =>
       WaysArrangeBar(
-        arrangeLabel: TripStringsGuide.optOwn,
-        skipLabel: TripStringsGuide.optSkip,
+        arrangeLabel: TaxiWaysStrings.arrangeMyself,
+        skipLabel: TaxiWaysStrings.skipThis,
         onArrange: () => _arrangeMyself(context, c),
         onSkip: () => _skipTravel(c),
         maxWidth: _maxWidth,
       );
 
   Widget _header(BuildContext context, TaxiWaysController c) {
-    final step = TripGuideStepInfo.of(_guide);
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark,
       child: Padding(
@@ -299,9 +259,8 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen>
               tone: ListingTone.coral,
               title: TaxiWaysStrings.title,
               subtitle: from.isEmpty || to.isEmpty ? '' : TaxiWaysStrings.subtitle(from, to),
-              stepChip: step?.chip,
               onBack: () => Get.back(),
-              trailing: _guide != null ? null : _journeysButton(),
+              trailing: _journeysButton(),
               bottom: Padding(
                 padding: EdgeInsets.fromLTRB(DS.s(18), DS.gv(14), DS.s(18), 0),
                 child: Column(
@@ -661,20 +620,7 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen>
         ),
       );
     }
-    if (!r.hasWays && _guide != null) {
-      children.add(
-        _enter(
-          TripPlanEmpty(
-            key: const ValueKey('list-empty'),
-            image: TravelIcon.route,
-            title: TripStringsShortlist.emptyTitle,
-            subtitle: TripStringsShortlist.emptyBody,
-            onRetry: c.isLoading.value ? null : c.retry,
-            retryLabel: TripStringsShortlist.searchAgain,
-          ),
-        ),
-      );
-    } else if (!r.hasWays && (c.forSegment || c.forTrip)) {
+    if (!r.hasWays && (c.forSegment || c.forTrip)) {
       children.add(
         _enter(
           Padding(
@@ -697,7 +643,7 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen>
         ),
       );
     } else {
-      if (_guide == null && r.allTheWay.isEmpty && r.plans.isNotEmpty) {
+      if (r.allTheWay.isEmpty && r.plans.isNotEmpty) {
         children.add(
           _enter(
             DisclaimerBanner(
@@ -706,18 +652,6 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen>
               text: r.plans.first.legs.length >= 3
                   ? TaxiWaysStrings.noDirect3
                   : TaxiWaysStrings.noDirect2,
-            ),
-          ),
-        );
-      }
-      if (_guide != null && r.allTheWay.isEmpty) {
-        children.add(
-          _enter(
-            DisclaimerBanner(
-              key: const ValueKey('plan-only-note'),
-              art: ListingArt.taxi,
-              margin: _bannerMargin,
-              text: TaxiWaysFeedScreen.planOnlyText(r.plans.isEmpty ? 2 : r.plans.first.legs.length),
             ),
           ),
         );
@@ -786,14 +720,6 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen>
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (_guide != null)
-          Padding(
-            padding: DS.sym(h: 22),
-            child: Text(
-              TripStringsShortlist.loadingTaxis,
-              style: Ink3D.text(13, FontWeight.w500, Ink3D.sub, letterSpacing: 0),
-            ),
-          ),
         const WideCardSkeleton(),
         const WideCardSkeleton(),
         const WideCardSkeleton(),
@@ -836,8 +762,6 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen>
     var bestShown = false;
     var noteShown = false;
     final canUse = c.inTrip;
-    final guide = _guide;
-    final shortlist = TripShortlistController.to;
     final people = c.people.value;
     var driverIndex = 0;
     final hasOnTheWay = rows.any((e) => e is WayDriver && e.isOnTheWay);
@@ -874,17 +798,8 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen>
               ? () => JourneyDriverCard.call(row)
               : () => ListingContactActions.call(context, kind: ListingKind.taxi, id: row.taxiId),
           callBusy: ListingContactActions.isBusy(ListingKind.taxi, row.taxiId),
-          onUse: canUse && guide == null
-              ? () => _useDriver(context, c, r, row)
-              : null,
+          onUse: canUse ? () => _useDriver(context, c, r, row) : null,
           useBusy: c.busyPlans.isNotEmpty,
-          onShortlist: guide == null ? null : () => _toggleCar(guide, row),
-          shortlisted:
-              guide != null && shortlist.has(guide.stepKey, row.taxiId),
-          shortlistBusy:
-              guide != null && shortlist.isBusy(guide.stepKey, row.taxiId),
-          noReply: guide != null && _noReply.contains(row.taxiId),
-          startName: guide != null ? c.from.value.name : null,
         );
         out.add(_enter(Obx(build)));
       } else if (row is WayPlan) {
@@ -960,53 +875,6 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen>
     TaxiWaysNavigation.openPlan(c.openArgs(plan, synthetic: true));
   }
 
-  List<Object> _ordered(List<Object> rows) {
-    final g = _guide;
-    if (g == null) return onTheWayLast(rows);
-    return onTheWayLast(
-      ShortlistOrder.noReplyLast(
-        rows,
-        (r) => r is WayDriver ? r.taxiId : '',
-        _noReply.toSet(),
-      ),
-    );
-  }
+  List<Object> _ordered(List<Object> rows) => onTheWayLast(rows);
 
-  void _toggleCar(GuideArgs g, WayDriver d) =>
-      TripShortlistController.to.toggle(
-        step: g.stepKey,
-        kind: ShortlistKinds.car,
-        listingId: d.taxiId,
-        name: d.driverName,
-      );
-
-  Future<void> _done(BuildContext context, TaxiWaysController c) {
-    final g = _guide!;
-    return TripShortlistFlow.done(
-      context,
-      step: g.stepKey,
-      taxi: true,
-      send: () => TripShortlistController.to.sendCars(
-        step: g.stepKey,
-        ask: (ids, requestId) {
-          final r = c.result.value;
-          final byId = {
-            for (final d in r?.allTheWay ?? const <WayDriver>[]) d.taxiId: d,
-          };
-          final drivers = [for (final id in ids) ?byId[id]];
-          if (drivers.isEmpty)
-            return Future.value(
-              const AskResult(items: [], skipped: [], veryShortNotice: false),
-            );
-          return c.actions.askShortlisted(
-            context,
-            c.singlePlan(drivers),
-            step: g.stepKey,
-            requestId: requestId,
-            taxiIds: [for (final d in drivers) d.taxiId],
-          );
-        },
-      ),
-    );
-  }
 }

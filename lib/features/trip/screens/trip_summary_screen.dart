@@ -107,7 +107,7 @@ class _TripSummaryScreenState extends State<TripSummaryScreen> with TickerProvid
 
   Future<void> _openRow(TripEasyRowKey k) async {
     final open = widget.opener;
-    await (open != null ? open(_tripId, k.id) : TripNavigation.openPlan(tripId: _tripId, row: k.id));
+    await (open != null ? open(_tripId, k.id) : TripNavigation.openOverview(tripId: _tripId));
     if (mounted) await _load();
   }
 

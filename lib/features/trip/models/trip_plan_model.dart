@@ -834,6 +834,23 @@ class TripGuide {
 
   bool get isDefault => step.isEmpty && choices.isEmpty && !overview && notNow.isEmpty;
 
+  // Keys whose city changed; old apps still read the stored guide, so their answers are pruned.
+  static Set<String> staleKeys(TripPlan old, TripPlan next) {
+    final out = <String>{};
+    final n = old.legs.length > next.legs.length ? old.legs.length : next.legs.length;
+    for (var k = 1; k <= n; k++) {
+      final a = old.legAt(k)?.cityKey;
+      final b = next.legAt(k)?.cityKey;
+      if (a != b) out.add(TripEasyRowKey(TripEasyRowKind.stay, k).id);
+      if (k >= 2) {
+        final pa = old.legAt(k - 1)?.cityKey;
+        final pb = next.legAt(k - 1)?.cityKey;
+        if (a != b || pa != pb) out.add(TripEasyRowKey(TripEasyRowKind.between, k).id);
+      }
+    }
+    return out;
+  }
+
   TripGuide copyWith({String? step, Map<String, TripGuideChoice>? choices, bool? overview, List<String>? notNow}) => TripGuide(
         step: step ?? this.step,
         choices: choices ?? this.choices,

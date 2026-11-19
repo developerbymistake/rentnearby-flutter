@@ -84,7 +84,6 @@ class AppRoutes {
   static const String tripSummary = '/trip-summary';
   static const String stayAdvanceDetails = '/stay-advance-details';
 
-  static const String tripName = '/trip-name';
   static const String tripCustomize = '/trip-customize';
   static const String tripOverview = '/trip-overview';
   static const String tripTaxiRequest = '/trip-taxi-request';
@@ -155,11 +154,16 @@ class AppRoutes {
 
   static const Set<String> retiredTripTaxiRoutes = {'/trip-taxi', '/trip-taxi-replies'};
 
-  // Pushes sent before the taxi request flow still name the retired trip taxi pages.
+  static bool _on(Object? v) => v == true || v == 'true';
+
+  // Old pushes name the retired trip taxi pages, or carry a question step into the plan: both land elsewhere.
   static ({String route, Map<String, dynamic>? args})? liveTarget(String? route, [Map<String, dynamic>? args]) {
     if (route == null) return null;
-    if (!retiredTripTaxiRoutes.contains(route)) return (route: route, args: args);
     final tripId = args?['tripId'];
+    if (route == tripPlan && (args?['step'] != null || args?['row'] != null || _on(args?['nudge']) || _on(args?['reopen']))) {
+      return (route: tripOverview, args: {'tripId': ?tripId});
+    }
+    if (!retiredTripTaxiRoutes.contains(route)) return (route: route, args: args);
     return (route: tripPlan, args: {'tripId': ?tripId});
   }
 

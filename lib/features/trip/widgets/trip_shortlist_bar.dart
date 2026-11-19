@@ -1,8 +1,8 @@
+import 'dart:async';
 import 'package:bakhli/design/design.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../controllers/trip_plan_controller.dart';
-import '../controllers/trip_plan_guide.dart';
 import '../controllers/trip_shortlist_controller.dart';
 import '../models/trip_enquiry_model.dart';
 import '../trip_navigation.dart';
@@ -82,19 +82,12 @@ class TripShortlistFlow {
     final yes = await TripShortlistReview.show(context, taxi: taxi, count: n, names: [for (final i in c.activeOf(step)) i.name]);
     if (!yes) {
       TripNavigation.backToPlan();
-      if (Get.isRegistered<TripPlanController>()) {
-        final plan = TripPlanController.to;
-        if (plan.guideState.keyNow == step) {
-          plan.guideDismissSent(step);
-          plan.guideNext();
-        }
-      }
       return;
     }
     final names = c.namesOf(step);
     final batch = await send();
     if (batch == null) return;
-    if (Get.isRegistered<TripPlanController>()) TripPlanController.to.guideRecordSend(step, batch, taxi: taxi);
+    if (Get.isRegistered<TripPlanController>()) unawaited(TripPlanController.to.refreshEnquiries());
     if (!context.mounted) return;
     await TripSendResultSheet.show(
       context,
@@ -103,6 +96,7 @@ class TripShortlistFlow {
       taxi: taxi,
       shortlist: true,
     );
+    TripNavigation.backToPlan();
   }
 }
 

@@ -4,13 +4,9 @@ import 'package:bakhli/design/design.dart';
 import 'package:bakhli/features/stay/models/stay_nearby_model.dart';
 import 'package:bakhli/features/taxi/ways/models/taxi_ways_models.dart';
 import 'package:bakhli/features/taxi/ways/taxi_ways_controller.dart';
-import 'package:bakhli/controllers/tab_config_controller.dart';
 import 'package:bakhli/features/taxi/ways/taxi_ways_feed_screen.dart';
-import 'package:bakhli/features/trip/controllers/trip_plan_controller.dart';
-import 'package:bakhli/features/trip/controllers/trip_plan_guide.dart';
 import 'package:bakhli/features/trip/controllers/trip_shortlist_controller.dart';
 import 'package:bakhli/features/trip/data/trip_shortlist_repository.dart';
-import 'package:bakhli/features/trip/models/trip_guide_args.dart';
 import 'package:bakhli/features/trip/models/trip_shortlist_model.dart';
 import 'package:bakhli/features/trip/widgets/trip_list_look.dart';
 import 'package:bakhli/features/trip/widgets/trip_shortlist_bar.dart';
@@ -22,21 +18,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 
-import '../journeys/fake_api.dart';
 import '../support/real_phone.dart';
-
-class _Tabs extends TabConfigController {
-  @override
-  // ignore: must_call_super
-  void onInit() {}
-}
-
-void _guideSteps() {
-  Get.put<TabConfigController>(_Tabs());
-  final plan = Get.put(TripPlanController());
-  plan.plan.value = journeyPlan([2]);
-  plan.guideSync();
-}
 
 class _Repo extends TripShortlistRepository {
   _Repo(this.pre);
@@ -240,46 +222,6 @@ void main() {
       debugDisableShadows = true;
     });
 
-    testWidgets('ways drivers guide $tag', (t) async {
-      _shortlist([const ShortlistItem(stepKey: 'gettingThere', kind: 'Car', listingId: 'd1', name: 'Pradeep')]);
-      _guideSteps();
-      final c = _Ways(_json(drivers: true, plans: false));
-      Get.put(c, tag: 'ways-test');
-      await pumpPhone(t, TaxiWaysFeedScreen(debugController: c, debugGuide: const GuideArgs('gettingThere')), size: size, textScale: scale);
-      await settlePhone(t);
-      await shot(t, 'ways_drivers_$tag');
-      expect(find.textContaining(RegExp(r'^1 of \d+$')), findsOneWidget);
-      expect(find.bySemanticsLabel('My journeys'), findsNothing);
-      final scroll = t.state<ScrollableState>(find.byType(Scrollable).first);
-      scroll.position.jumpTo(500);
-      await t.pump(const Duration(milliseconds: 200));
-      await shot(t, 'ways_drivers_${tag}_y500');
-      expect(t.takeException(), isNull);
-      debugDisableShadows = true;
-    });
-
-    testWidgets('ways plans guide $tag', (t) async {
-      _shortlist(const []);
-      _guideSteps();
-      final c = _Ways(_json(drivers: false, plans: true));
-      Get.put(c, tag: 'ways-test');
-      await pumpPhone(t, TaxiWaysFeedScreen(debugController: c, debugGuide: const GuideArgs('gettingThere')), size: size, textScale: scale);
-      await settlePhone(t);
-      await shot(t, 'ways_plans_$tag');
-      expect(find.textContaining(RegExp(r'^1 of \d+$')), findsOneWidget);
-      expect(find.text('Save plan', skipOffstage: false), findsNWidgets(2));
-      expect(find.text('Open journey', skipOffstage: false), findsNWidgets(2));
-      expect(find.byKey(const ValueKey('plan-only-note')), findsOneWidget);
-      expect(find.text('I will arrange it myself'), findsWidgets);
-      final scroll = t.state<ScrollableState>(find.byType(Scrollable).first);
-      for (final y in [500.0, 1000.0]) {
-        scroll.position.jumpTo(y.clamp(0, scroll.position.maxScrollExtent));
-        await t.pump(const Duration(milliseconds: 200));
-        await shot(t, 'ways_plans_${tag}_y${y.toInt()}');
-      }
-      expect(t.takeException(), isNull);
-      debugDisableShadows = true;
-    });
   }
 
   testWidgets('ways plans in trip, no guide (Save plan)', (t) async {

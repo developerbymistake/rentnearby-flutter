@@ -66,14 +66,14 @@ void main() {
 
   for (final w in [300.0, 360.0, 412.0, 560.0]) {
     for (final scale in [1.0, 2.0]) {
-      testWidgets('final push deep link opens the stay step with the booking nudge at ${w.toInt()} dp x$scale', (t) async {
+      testWidgets('an old step deep link opens the day plan, never a question, at ${w.toInt()} dp x$scale', (t) async {
         final plan = journeyPlan([2, 2], start: start).withGuide(const TripGuide(choices: {'gettingThere': TripGuideChoice.skip}));
         final c = await _open(t, plan, {'step': 'stay:2', 'nudge': true, 'name': 'Hill View'}, w, scale);
-        expect(c.guideState.keyNow, 'stay:2');
-        expect(c.guideState.nudgeStep.value, 'stay:2');
-        expect(find.text('Did you book Hill View?'), findsOneWidget);
-        expect(find.text('Mark as booked'), findsOneWidget);
-        expect(find.text('Choose new options'), findsOneWidget);
+        expect(c.plan.value!.guide!.choices['gettingThere'], TripGuideChoice.skip);
+        expect(find.text('Did you book Hill View?'), findsNothing);
+        expect(find.text("Let's get you there"), findsNothing);
+        expect(find.text('Help me find'), findsNothing);
+        expect(find.byKey(const ValueKey('trip-leg-1')), findsOneWidget);
         expect(t.takeException(), isNull);
         await t.pump(const Duration(seconds: 5));
         await t.pumpWidget(const SizedBox());

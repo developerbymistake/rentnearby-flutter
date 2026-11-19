@@ -513,7 +513,6 @@ class NotificationService extends GetxService {
     AppRoutes.stayEnquiries,
     AppRoutes.tripLeads,
     AppRoutes.stayAdvanceDetails,
-    AppRoutes.tripName,
     AppRoutes.tripCustomize,
     AppRoutes.tripOverview,
     AppRoutes.tripTaxiRequest,
@@ -592,8 +591,10 @@ class NotificationService extends GetxService {
   // rendered ourselves — chat, or the new generic foreground one). One routing decision, one place.
   static Map<String, dynamic> liveRouteData(Map<String, dynamic> data) {
     final route = data['action_route'];
-    if (route is! String || !AppRoutes.retiredTripTaxiRoutes.contains(route)) return data;
-    final live = AppRoutes.liveTarget(route, NotificationModel.parseArguments(data['action_args_json']))!;
+    if (route is! String) return data;
+    final args = NotificationModel.parseArguments(data['action_args_json']);
+    final live = AppRoutes.liveTarget(route, args)!;
+    if (live.route == route && identical(live.args, args)) return data;
     return {...data, 'action_route': live.route, 'action_args_json': jsonEncode(live.args)};
   }
 
@@ -692,7 +693,7 @@ class NotificationService extends GetxService {
       }
       return;
     }
-    if (route == AppRoutes.tripPlan && args?['step'] == null) args = {...?args, 'fresh': true};
+    if (route == AppRoutes.tripPlan) args = {...?args, 'fresh': true};
     Get.toNamed(route, arguments: args);
   }
 
@@ -713,7 +714,6 @@ class NotificationService extends GetxService {
 
   bool _isOpenScreen(String route, Map<String, dynamic>? args) {
     if (Get.currentRoute != route || !_refreshInPlaceRoutes.contains(route)) return false;
-    if (route == AppRoutes.tripPlan && (args?['row'] != null || args?['step'] != null)) return false;
     final current = Get.arguments;
     final open = current is Map ? current : const <String, dynamic>{};
     for (final key in const ['tripId', 'day', 'journeyId']) {

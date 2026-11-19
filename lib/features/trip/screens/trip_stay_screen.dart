@@ -11,7 +11,6 @@ import '../controllers/trip_plan_controller.dart';
 import '../controllers/trip_shortlist_controller.dart';
 import '../controllers/trip_supply_controller.dart';
 import '../models/trip_enquiry_model.dart';
-import '../models/trip_guide_args.dart';
 import '../models/trip_shortlist_model.dart';
 import '../models/trip_plan_model.dart';
 import '../trip_navigation.dart';
@@ -47,7 +46,7 @@ class _TripStayScreenState extends State<TripStayScreen> with TickerProviderStat
   late final TripPlanController _plan;
   late final TripSupplyController _supply;
   late final int _leg;
-  GuideArgs? _guide;
+  String? _step;
   final _noReply = <String>{}.obs;
   final _split = false.obs;
   final _expanded = <int>{}.obs;
@@ -75,12 +74,13 @@ class _TripStayScreenState extends State<TripStayScreen> with TickerProviderStat
           if (d >= from && d < from + count && !_plan.isDayPast(d)) d,
       ]..sort();
     }
-    _guide = GuideArgs.from(map);
-    _split.value = _guide == null && (_only.isNotEmpty || (map['split'] == true && count != 1));
-    if (_guide != null) {
+    _step = map['shortlist'] == true ? _key.id : null;
+    _split.value = _step == null && (_only.isNotEmpty || (map['split'] == true && count != 1));
+    final step = _step;
+    if (step != null) {
       final c = TripShortlistController.to;
       c.load().then((_) {
-        if (mounted) _noReply.assignAll(c.noReplyIds(_guide!.stepKey));
+        if (mounted) _noReply.assignAll(c.noReplyIds(step));
       });
     }
     _nearYou = map['nearLat'] is num && map['nearLng'] is num;
@@ -162,7 +162,7 @@ class _TripStayScreenState extends State<TripStayScreen> with TickerProviderStat
 
   List<TripFilterChip> _chips() {
     final max = _supply.maxPrice.value;
-    final canSplit = _guide == null && _only.isEmpty && _nights - _pastNights > 1 && !_plan.isReadOnly;
+    final canSplit = _step == null && _only.isEmpty && _nights - _pastNights > 1 && !_plan.isReadOnly;
     return [
       if (canSplit)
         TripFilterChip(
@@ -256,7 +256,17 @@ class _TripStayScreenState extends State<TripStayScreen> with TickerProviderStat
                   textAlign: TextAlign.center,
                   style: TextStyle(
                       fontFamily: FitnessAppTheme.fontName, fontSize: DS.f(14), fontWeight: FontWeight.w500, color: FitnessAppTheme.lightText)),
-              if (!_plan.isReadOnly) ...[
+              if (_step != null) ...[
+                Gap.v(16),
+                TripButton(
+                  key: const ValueKey('stay_back_to_plan'),
+                  onPressed: TripNavigation.backToPlan,
+                  label: TripStringsV2Find.backToPlan,
+                  height: 48,
+                  gradient: KitTone.stay.gradient,
+                  shadowColor: TripUi.stay,
+                ),
+              ] else if (!_plan.isReadOnly) ...[
                 Gap.v(16),
                 TripButton(
                   onPressed: _arrange,
@@ -368,7 +378,7 @@ class _TripStayScreenState extends State<TripStayScreen> with TickerProviderStat
   }
 
   Widget _row(StayNearbyModel s, int day, int nights, TripEnquiryModel? asked, int index) {
-    final guide = _guide;
+    final step = _step;
     final detailArgs = <String, dynamic>{'distanceKm': s.distanceKm};
     TripStayRow build({bool shortlisted = false, bool busy = false, bool noReply = false}) => TripStayRow(
           key: ValueKey('${s.id}-$day'),
@@ -383,10 +393,10 @@ class _TripStayScreenState extends State<TripStayScreen> with TickerProviderStat
           onCall: () => TripStayRow.call(context, s, detailArguments: detailArgs),
           callBusy: ListingContactActions.isBusy(ListingKind.stay, s.id),
           onAsk: () => TripStayEnquirySheet.show(context, stay: s, day: day, nights: nights),
-          onShortlist: guide == null
+          onShortlist: step == null
               ? null
               : () => TripShortlistController.to.toggle(
-                    step: guide.stepKey,
+                    step: step,
                     kind: ShortlistKinds.stay,
                     listingId: s.id,
                     name: s.title,
@@ -399,11 +409,11 @@ class _TripStayScreenState extends State<TripStayScreen> with TickerProviderStat
     return Center(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: _maxWidth),
-        child: guide == null
+        child: step == null
             ? Obx(build)
             : Obx(() => build(
-                  shortlisted: c.has(guide.stepKey, s.id),
-                  busy: c.isBusy(guide.stepKey, s.id),
+                  shortlisted: c.has(step, s.id),
+                  busy: c.isBusy(step, s.id),
                   noReply: _noReply.contains(s.id),
                 )),
       ),
@@ -411,17 +421,16 @@ class _TripStayScreenState extends State<TripStayScreen> with TickerProviderStat
   }
 
   List<StayNearbyModel> _ordered(List<StayNearbyModel> rows) {
-    final g = _guide;
-    if (g == null) return rows;
+    if (_step == null) return rows;
     return ShortlistOrder.noReplyLast(rows, (s) => s.id, _noReply.toSet());
   }
 
   Future<void> _done() => TripShortlistFlow.done(
         context,
-        step: _guide!.stepKey,
+        step: _step!,
         taxi: false,
         send: () => TripShortlistController.to.sendStays(
-          step: _guide!.stepKey,
+          step: _step!,
           day: _firstDay + _pastNights,
           nights: _nights - _pastNights,
         ),
@@ -576,7 +585,7 @@ class _TripStayScreenState extends State<TripStayScreen> with TickerProviderStat
       },
       child: Scaffold(
         backgroundColor: ListingPalette.forest.page,
-        bottomNavigationBar: _guide == null ? null : TripShortlistBar(step: _guide!.stepKey, onDone: _done),
+        bottomNavigationBar: _step == null ? null : TripShortlistBar(step: _step!, onDone: _done),
         body: Column(
           children: [
             FadeTransition(
@@ -584,13 +593,12 @@ class _TripStayScreenState extends State<TripStayScreen> with TickerProviderStat
                   .animate(CurvedAnimation(parent: _anim, curve: const Interval(0, 0.5, curve: Curves.fastOutSlowIn))),
               child: Obx(() {
               _plan.plan.value;
-              final noSkip = _guide != null || _plan.isReadOnly || _only.isNotEmpty || _plan.openRowsOf(_key).isNotEmpty || _plan.confirmedRowOf(_key) != null;
+              final noSkip = _step != null || _plan.isReadOnly || _only.isNotEmpty || _plan.openRowsOf(_key).isNotEmpty || _plan.confirmedRowOf(_key) != null;
               return TripListTopBar(
                 tone: ListingTone.forest,
                 title: TripStringsV2Find.stayIn(_city),
                 subtitle: _subtitle(),
                 onBack: TripNavigation.backToPlan,
-                guide: _guide,
                 skipLabel: noSkip ? null : TripStringsV2Find.skip,
                 onSkip: _skip,
               );

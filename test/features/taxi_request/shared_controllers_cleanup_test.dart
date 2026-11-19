@@ -4,18 +4,14 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:bakhli/controllers/tab_config_controller.dart';
-import 'package:bakhli/features/taxi/ways/models/ask_models.dart';
 import 'package:bakhli/features/trip/controllers/trip_enquiry_controller.dart';
 import 'package:bakhli/features/trip/controllers/trip_plan_controller.dart';
-import 'package:bakhli/features/trip/controllers/trip_shortlist_controller.dart';
 import 'package:bakhli/features/trip/controllers/trip_supply_controller.dart';
 import 'package:bakhli/features/trip/controllers/trip_taxi_request_controller.dart';
-import 'package:bakhli/features/trip/data/trip_shortlist_repository.dart';
 import 'package:bakhli/features/trip/models/taxi_request_models.dart';
 import 'package:bakhli/features/trip/models/trip_enquiry_model.dart';
 import 'package:bakhli/features/trip/models/trip_model.dart';
 import 'package:bakhli/features/trip/models/trip_plan_model.dart';
-import 'package:bakhli/features/trip/models/trip_shortlist_model.dart';
 import 'package:bakhli/features/trip/utils/taxi_result.dart';
 import 'package:bakhli/features/trip/utils/trip_clock.dart';
 import 'package:bakhli/features/trip/widgets/trip_map_day_card.dart';
@@ -59,28 +55,6 @@ ResponseBody _json(int code, Map<String, Object?> body) => ResponseBody.fromStri
         Headers.contentTypeHeader: [Headers.jsonContentType],
       },
     );
-
-class _ShortlistRepo implements TripShortlistRepository {
-  _ShortlistRepo(this.items);
-
-  final List<ShortlistItem> items;
-
-  @override
-  Future<TripShortlist> list(String tripId) async => TripShortlist(items: items);
-
-  @override
-  Future<List<ShortlistItem>> add(String tripId, String stepKey, String listingId, ShortlistItem item) async => [item];
-
-  @override
-  Future<void> remove(String tripId, String stepKey, String listingId) async {}
-
-  @override
-  Future<void> close(String tripId, String stepKey, {required String reason}) async {}
-
-  @override
-  Future<MarkBookedResult> markBooked(String tripId, String stepKey, {String? listingId}) async =>
-      const MarkBookedResult(closedEnquiries: 0, closedShortlist: 0);
-}
 
 TripModel _trip(TripPlan plan, {String id = 't1', TripTaxiRequestRef? taxiRequest}) => TripModel(
       id: id,
@@ -184,7 +158,7 @@ void main() {
     expect(_src('lib/features/trip/controllers/trip_enquiry_controller.dart').contains('sendLead'), isFalse);
     expect(_src('lib/features/trip/data/trip_enquiry_repository.dart').contains('createLead'), isFalse);
     expect(_src('lib/features/trip/controllers/trip_shortlist_controller.dart').contains('sendTaxis'), isFalse);
-    expect(_src('lib/features/trip/controllers/trip_plan_guide.dart').contains('_sendTaxiLegs'), isFalse);
+    expect(File('lib/features/trip/controllers/trip_plan_guide.dart').existsSync(), isFalse);
     expect(_src('lib/features/trip/widgets/trip_update_ask_sheet.dart').contains('sendLead'), isFalse);
   });
 
@@ -221,32 +195,6 @@ void main() {
       expect(s.stayLoading.value, isFalse);
       expect(s.stays, isEmpty);
     });
-  });
-
-  test('journey_car_send_still_works', () async {
-    final items = [
-      const ShortlistItem(stepKey: 'between:2', kind: ShortlistKinds.car, listingId: 'd1', name: 'Driver A'),
-      const ShortlistItem(stepKey: 'between:2', kind: ShortlistKinds.car, listingId: 'd2', name: 'Driver B'),
-    ];
-    final sl = TripShortlistController(repo: _ShortlistRepo(items), tripId: () async => 't1', offline: () => false, warn: (_) {});
-    await sl.load(force: true);
-    final asked = <List<String>>[];
-    final batch = await sl.sendCars(
-      step: 'between:2',
-      ask: (ids, requestId) async {
-        asked.add(ids);
-        return AskResult(
-          items: const [],
-          skipped: const [],
-          veryShortNotice: false,
-          results: [TripSendResult(listingId: ids.first, status: 'Sent', enquiryId: 'e1')],
-        );
-      },
-    );
-    expect(asked.single, ['d1', 'd2']);
-    expect(batch, isNotNull);
-    expect(batch!.perRecipient.map((r) => (r.listingId, r.status)), [('d1', 'Sent'), ('d2', 'NotAvailable')]);
-    expect(sl.activeOf('between:2'), isEmpty);
   });
 
   test('enquiry_controller_keeps_withdraw_cancel_and_book_taxi', () async {

@@ -4,7 +4,6 @@ import 'package:bakhli/features/taxi/ways/taxi_ways_controller.dart';
 import 'package:bakhli/features/taxi/ways/taxi_ways_feed_screen.dart';
 import 'package:bakhli/features/trip/controllers/trip_shortlist_controller.dart';
 import 'package:bakhli/features/trip/data/trip_shortlist_repository.dart';
-import 'package:bakhli/features/trip/models/trip_guide_args.dart';
 import 'package:bakhli/features/trip/models/trip_shortlist_model.dart';
 import 'package:bakhli/models/place_result_model.dart';
 import 'package:flutter/material.dart';
@@ -67,7 +66,7 @@ void main() {
       Get.put(TripShortlistController(repo: const _Repo(), tripId: () async => 't', offline: () => false, warn: (_) {}));
       final c = _Ways(_place('Kamalwaganja'), _place('Almora'));
       Get.put(c, tag: 'ways-test');
-      await pumpPhone(t, TaxiWaysFeedScreen(debugController: c, debugGuide: const GuideArgs('gettingThere')), size: s);
+      await pumpPhone(t, TaxiWaysFeedScreen(debugController: c), size: s);
       await settlePhone(t);
       expect(find.text('Kamalwaganja'), findsWidgets);
       expect(find.text('Haldwani'), findsNothing, reason: 'one origin name');

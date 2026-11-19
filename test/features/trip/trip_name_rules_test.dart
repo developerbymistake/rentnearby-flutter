@@ -17,26 +17,6 @@ void main() {
     expect(TripNameRules.isValid('  ${'a' * 60}  '), isTrue);
   });
 
-  test('suggestion_matches_the_mock_for_an_uttarakhand_city', () {
-    final s = TripNameRules.suggest('Uttarakhand', 'Nainital');
-    expect(s, 'Uttarakhand Hills Trip');
-    expect(s.length, 22);
-    expect(TripNameRules.suggest('Himachal Pradesh', 'Manali'), 'Himachal Pradesh Hills Trip');
-  });
-
-  test('suggestion_for_another_state_and_for_no_state', () {
-    expect(TripNameRules.suggest('Rajasthan', 'Jaipur'), 'Rajasthan Trip');
-    expect(TripNameRules.suggest('', 'Jaipur'), 'Jaipur Trip');
-    expect(TripNameRules.suggest('  ', 'Jaipur'), 'Jaipur Trip');
-  });
-
-  test('suggestion_is_cut_to_60', () {
-    final s = TripNameRules.suggest('A' * 80, 'x');
-    expect(s.length, lessThanOrEqualTo(60));
-    expect(TripNameRules.isValid(s), isTrue);
-    expect(TripNameRules.suggest('', 'B' * 90).length, 60);
-  });
-
   group('same cases as the server TripNameTests', () {
     for (final name in [
       '\u200B',

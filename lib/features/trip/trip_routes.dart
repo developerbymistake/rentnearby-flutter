@@ -6,11 +6,11 @@ import '../../utils/app_toast.dart';
 import 'controllers/trip_plan_controller.dart';
 import 'controllers/trip_taxi_request_controller.dart';
 import 'models/taxi_request_models.dart';
+import 'models/trip_enquiry_model.dart';
 import 'models/trip_plan_result_model.dart';
 import 'screens/my_trips_screen.dart';
 import 'screens/trip_customize_screen.dart';
 import 'screens/trip_map_screen.dart';
-import 'screens/trip_name_screen.dart';
 import 'screens/trip_overview_screen.dart';
 import 'screens/trip_plan_screen.dart';
 import 'screens/trip_taxi_request_screen.dart';
@@ -24,6 +24,7 @@ import 'trip_navigation.dart';
 import 'trip_strings.dart';
 import 'utils/taxi_result.dart';
 import 'widgets/taxi_request/taxi_day_rows.dart';
+import 'widgets/trip_exit_confirm.dart';
 
 Map<dynamic, dynamic> _args() {
   final a = Get.arguments;
@@ -33,19 +34,6 @@ Map<dynamic, dynamic> _args() {
 String? _text(Object? v) => v is String && v.isNotEmpty ? v : null;
 
 final List<GetPage> tripPages = [
-  GetPage(
-    name: AppRoutes.tripName,
-    page: () {
-      final a = _args();
-      return TripNameScreen(
-        stateName: a['stateName'] as String? ?? '',
-        cityName: a['cityName'] as String? ?? '',
-        initialName: a['name'] as String?,
-      );
-    },
-    customTransition: TemplateTransition(),
-    transitionDuration: templateTransitionDuration,
-  ),
   GetPage(
     name: AppRoutes.tripCustomize,
     page: () {
@@ -210,11 +198,38 @@ class _TripOverviewRouteState extends State<TripOverviewRoute> with _HoldsTrip {
     super.dispose();
   }
 
-  void _viewPlan(String tripId) {
-    if (Get.previousRoute == AppRoutes.tripPlan) {
-      Get.back();
-    } else {
-      Get.offNamed(AppRoutes.tripPlan, arguments: {'tripId': tripId});
+  void _viewPlan(String tripId) => Get.toNamed(AppRoutes.tripPlan, arguments: {'tripId': tripId});
+
+  bool _askingExit = false;
+  bool _stayBusy = false;
+
+  Future<void> _stay() async {
+    if (_stayBusy) return;
+    _stayBusy = true;
+    try {
+      await TripNavigation.openStayFlow(context);
+    } finally {
+      _stayBusy = false;
+    }
+  }
+
+  String? _cityOf(TripEnquiryModel e) {
+    final p = _plan.plan.value;
+    final d = e.day;
+    return p == null || d == null ? null : p.cityNameOf(d);
+  }
+
+  Future<void> _exit() async {
+    if (!_holds(heldTripId)) {
+      TripNavigation.openTripsTab();
+      return;
+    }
+    if (_askingExit) return;
+    _askingExit = true;
+    try {
+      if (await TripExitConfirm.ask(context)) TripNavigation.openTripsTab();
+    } finally {
+      _askingExit = false;
     }
   }
 
@@ -230,21 +245,32 @@ class _TripOverviewRouteState extends State<TripOverviewRoute> with _HoldsTrip {
   }
 
   @override
-  Widget build(BuildContext context) => Obx(() {
-        _plan.openFailed.value;
-        final paused = Get.isRegistered<TripTaxiRequestController>() && Get.find<TripTaxiRequestController>().paused.value;
-        return heldOrLoading(() {
-          final t = _plan.trip.value!;
-          return TripOverviewScreen(
-            trip: t,
-            paused: paused,
-            taxiCanRate: _plan.taxiCanRate,
-            onViewPlan: () => _viewPlan(t.id),
-            onTaxi: _taxi,
-            onDone: TripNavigation.openTripsTab,
-          );
-        });
-      });
+  Widget build(BuildContext context) => PopScope(
+        canPop: false,
+        onPopInvokedWithResult: (didPop, _) {
+          if (!didPop) _exit();
+        },
+        child: Obx(() {
+          _plan.openFailed.value;
+          _plan.enquiryList.length;
+          final paused = Get.isRegistered<TripTaxiRequestController>() && Get.find<TripTaxiRequestController>().paused.value;
+          return heldOrLoading(() {
+            final t = _plan.trip.value!;
+            return TripOverviewScreen(
+              trip: t,
+              paused: paused,
+              taxiCanRate: _plan.taxiCanRate,
+              onBack: () => Navigator.maybePop(context),
+              onViewPlan: () => _viewPlan(t.id),
+              onTaxi: _taxi,
+              stay: TripOverviewStay.of(_plan.enquiryList, cityOf: _cityOf),
+              showStay: !_plan.stayTabOff.value,
+              onStay: (_) => _stay(),
+              onDone: TripNavigation.openTripsTab,
+            );
+          });
+        }),
+      );
 }
 
 class TripTaxiRequestRoute extends StatefulWidget {

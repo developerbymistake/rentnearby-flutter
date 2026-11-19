@@ -1,9 +1,12 @@
+import 'package:bakhli/design/design.dart';
+import 'package:bakhli/features/trip/models/trip_enquiry_model.dart';
 import 'package:bakhli/features/trip/models/trip_model.dart';
 import 'package:bakhli/features/trip/models/trip_plan_model.dart';
 import 'package:bakhli/features/trip/screens/trip_overview_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../../journeys/fake_api.dart';
 import '../../support/five_sizes.dart';
 import '../../support/real_phone.dart';
 
@@ -46,9 +49,16 @@ class _Calls {
   int plan = 0;
   int done = 0;
   final taxi = <TripOverviewTaxiState>[];
+  final stay = <TripOverviewStayState>[];
 }
 
-TripOverviewScreen _screen(TripModel trip, {bool paused = false, _Calls? calls}) {
+TripOverviewScreen _screen(
+  TripModel trip, {
+  bool paused = false,
+  _Calls? calls,
+  TripOverviewStay stay = TripOverviewStay.notAdded,
+  bool showStay = true,
+}) {
   final c = calls ?? _Calls();
   return TripOverviewScreen(
     trip: trip,
@@ -57,6 +67,9 @@ TripOverviewScreen _screen(TripModel trip, {bool paused = false, _Calls? calls})
     onTaxi: (t) => c.taxi.add(t.state),
     onDone: () => c.done++,
     onBack: () {},
+    stay: stay,
+    showStay: showStay,
+    onStay: (s) => c.stay.add(s.state),
   );
 }
 
@@ -201,7 +214,84 @@ void main() {
     expect(calls.done, 1);
   });
 
+  group('stay card', () {
+    TripEnquiryModel row(String status, {String kind = TripEnquiryKinds.stay}) => TripEnquiryModel.fromJson(
+        enquiryJson(id: 'e$status$kind', kind: kind, status: status, start: DateTime(2030, 11, 1)));
+
+    test('state follows the stay enquiries only', () {
+      expect(TripOverviewStay.of(const []).state, TripOverviewStayState.notAdded);
+      expect(TripOverviewStay.of([row(TripEnquiryStatuses.asked, kind: TripEnquiryKinds.taxi)]).state, TripOverviewStayState.notAdded);
+      expect(TripOverviewStay.of([row(TripEnquiryStatuses.declined)]).state, TripOverviewStayState.notAdded);
+      expect(TripOverviewStay.of([row(TripEnquiryStatuses.asked)]).state, TripOverviewStayState.requested);
+      expect(TripOverviewStay.of([row(TripEnquiryStatuses.offered)]).state, TripOverviewStayState.requested);
+      expect(TripOverviewStay.of([row(TripEnquiryStatuses.asked), row(TripEnquiryStatuses.confirmedByBoth)]).state,
+          TripOverviewStayState.booked);
+      expect(TripOverviewStay.of([row(TripEnquiryStatuses.bookedByTraveller)]).state, TripOverviewStayState.booked);
+    });
+
+    for (final e in {
+      TripOverviewStay.notAdded: ('Optional', 'Find a stay'),
+      TripOverviewStay.requested: ('Added', 'View stays'),
+      TripOverviewStay.booked: ('Booked', 'View stays'),
+    }.entries) {
+      testWidgets('stay_card_${e.key.state.name}', (tester) async {
+        await pumpAtSize(tester, _screen(_trip(), stay: e.key), phoneSize);
+        expect(_in('overview_stay_card', 'Stay'), findsOneWidget);
+        expect(_in('overview_stay_card', 'Homestays, hostels and hotels'), findsOneWidget);
+        expect(_in('overview_stay_card', e.value.$1), findsOneWidget);
+        expect(_in('overview_stay_card', e.value.$2), findsOneWidget);
+        final arts = find.descendant(of: find.byKey(const ValueKey('overview_stay_card')), matching: find.byType(Art3D));
+        expect(tester.widget<Art3D>(arts.first).asset, TravelIcon.stay);
+      });
+    }
+
+    testWidgets('stay_card_hidden_when_stays_off', (tester) async {
+      await pumpAtSize(tester, _screen(_trip(), showStay: false), phoneSize);
+      expect(find.byKey(const ValueKey('overview_stay_card')), findsNothing);
+    });
+
+    testWidgets('stay_button_calls_onStay', (tester) async {
+      final calls = _Calls();
+      await pumpAtSize(tester, _screen(_trip(), stay: TripOverviewStay.requested, calls: calls), phoneSize);
+      await tester.ensureVisible(find.byKey(const ValueKey('overview_stay_button')));
+      await tester.pump();
+      await tester.tap(find.byKey(const ValueKey('overview_stay_button')));
+      expect(calls.stay, [TripOverviewStayState.requested]);
+    });
+
+    testWidgets('bottom_label_follows_taxi_or_stay', (tester) async {
+      await pumpAtSize(tester, _screen(_trip()), phoneSize);
+      expect(_in('overview_done_button', 'Skip, just keep my plan'), findsOneWidget);
+      await pumpAtSize(tester, _screen(_trip(), stay: TripOverviewStay.requested), phoneSize);
+      expect(_in('overview_done_button', 'Back to my trips'), findsOneWidget);
+      await pumpAtSize(tester, _screen(_trip(view: 'Finding')), phoneSize);
+      expect(_in('overview_done_button', 'Back to my trips'), findsOneWidget);
+      await pumpAtSize(tester, _screen(_trip(), stay: TripOverviewStay.booked, showStay: false), phoneSize);
+      expect(_in('overview_done_button', 'Skip, just keep my plan'), findsOneWidget);
+    });
+  });
+
+  testFiveSizes('skip_bar_touches_the_screen_bottom', () => _screen(_trip()), check: (tester, size) async {
+    final bar = tester.getRect(find.ancestor(of: find.byKey(const ValueKey('overview_done_button')), matching: find.byType(DecoratedBox)).first);
+    expect(bar.bottom, closeTo(size.height, 0.5));
+    expect(bar.top, greaterThan(tester.getRect(find.byKey(const ValueKey('overview_itinerary_card'))).bottom));
+  });
+
+  testWidgets('three_cards_scroll_under_a_fixed_bar_on_a_small_phone', (tester) async {
+    const small = Size(320, 568);
+    await pumpAtSize(tester, _screen(_trip(view: 'Booked'), stay: TripOverviewStay.booked, paused: true), small);
+    final done = find.byKey(const ValueKey('overview_done_button'));
+    final before = tester.getRect(done);
+    expect(before.bottom, lessThanOrEqualTo(small.height));
+    expect(find.ancestor(of: done, matching: find.byType(Scrollable)), findsNothing);
+    await tester.drag(find.byType(SingleChildScrollView), const Offset(0, -400));
+    await tester.pump();
+    expect(tester.getRect(done), before);
+    expect(tester.takeException(), isNull);
+  });
+
   testFiveSizes('five sizes optional', () => _screen(_trip()));
+  testFiveSizes('five sizes three cards booked', () => _screen(_trip(view: 'Booked'), stay: TripOverviewStay.booked));
   testFiveSizes('five sizes booked paused long name', () => _screen(_trip(view: 'Booked', title: 'A very long trip name that goes on and on forever'), paused: true));
   testFiveSizes('five sizes large text', () => _screen(_trip(view: 'Rate')), textScale: 1.5);
 }

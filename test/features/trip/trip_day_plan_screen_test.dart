@@ -3,7 +3,6 @@ import 'package:bakhli/config/app_theme.dart';
 import 'package:bakhli/controllers/tab_config_controller.dart';
 import 'package:bakhli/design/design.dart';
 import 'package:bakhli/features/trip/controllers/trip_plan_controller.dart';
-import 'package:bakhli/features/trip/controllers/trip_plan_guide.dart';
 import 'package:bakhli/features/trip/data/trip_city_catalog.dart';
 import 'package:bakhli/features/trip/models/trip_city_model.dart';
 import 'package:bakhli/features/trip/models/trip_model.dart';
@@ -54,8 +53,6 @@ Future<TripPlanController> pumpDayPlan(
   TripPlanLock lock = TripPlanLock.none,
   double textScale = 1,
   List<GetPage> pages = const [],
-  int step = 1,
-  bool guide = false,
 }) async {
   Get.put<TabConfigController>(_Tabs());
   TripCityCatalog.to.seedForTest(const [
@@ -92,13 +89,6 @@ Future<TripPlanController> pumpDayPlan(
         child: child!,
       ),
     ));
-  }
-  await settlePhone(t);
-  c.planStep.value = step;
-  if (guide) {
-    c.guideRefresh();
-  } else {
-    c.guideState.on.value = false;
   }
   await settlePhone(t);
   return c;
@@ -169,7 +159,7 @@ void main() {
     expect(find.byKey(TripPlanScreen.lockedBannerKey), findsNothing);
     expect(find.byKey(TripPlanScreen.viewButtonKey), findsNothing);
     expect(find.byType(TripAddCityCard), findsOneWidget);
-    expect(find.text(TripStringsDayplan.saveTrip), findsOneWidget);
+    expect(find.text(TripStringsDayplan.backToOverview), findsOneWidget);
   });
 
   testWidgets('customize_opens_the_route_with_the_leg', (t) async {
@@ -317,26 +307,4 @@ void main() {
     }
   });
 
-  testWidgets('five sizes step 2 with the guide on', (t) async {
-    for (final size in fiveSizes) {
-      await t.pumpWidget(const SizedBox.shrink());
-      Get.reset();
-      final c = await pumpDayPlan(t, dayPlanFixture(perLeg: const [[2, 2], [1, 1]]), size: size, step: 2, guide: true);
-      expect(c.guideState.on.value, isTrue, reason: sizeLabel(size));
-      expect(t.takeException(), isNull, reason: sizeLabel(size));
-    }
-  });
-
-  testWidgets('five sizes step 2 arranged line and hint', (t) async {
-    for (final size in fiveSizes) {
-      await t.pumpWidget(const SizedBox.shrink());
-      Get.reset();
-      final c = await pumpDayPlan(t, dayPlanFixture(perLeg: const [[2, 2], [1, 1]]), size: size, step: 2);
-      final progress = c.stepProgress;
-      final card = find.byKey(TripPlanStepCard.cardKey);
-      final line = progress.total == 0 ? TripStringsV2Plan.nothingToArrange : TripStringsV2Plan.arranged(progress.done, progress.total);
-      expect(find.descendant(of: card, matching: find.text(line)), findsOneWidget, reason: sizeLabel(size));
-      expect(t.takeException(), isNull, reason: sizeLabel(size));
-    }
-  });
 }

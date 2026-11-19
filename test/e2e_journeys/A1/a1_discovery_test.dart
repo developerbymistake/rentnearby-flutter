@@ -69,7 +69,7 @@ class _Trips extends MyTripsController {
 
 }
 
-TripSummaryModel _trip({String title = '', String guideStep = 'taxi'}) => TripSummaryModel.fromJson({
+TripSummaryModel _trip({String title = ''}) => TripSummaryModel.fromJson({
       'id': 'trip-1',
       'title': title,
       'status': 'Planned',
@@ -82,8 +82,7 @@ TripSummaryModel _trip({String title = '', String guideStep = 'taxi'}) => TripSu
         'total': 4,
         'done': 1,
         'percent': 25,
-        'next': {'kind': 'gettingThere', 'key': 'gettingThere'},
-        'guideStep': guideStep,
+        'next': {'kind': 'taxi', 'key': 'taxi'},
       },
     });
 
@@ -250,21 +249,12 @@ void main() {
   });
 
   group('tile tap and the draft', () {
-    const chosen = 'Hills with family';
     setUp(StorageService.clearTripNewDraft);
-    Future<(Map?, int)> tapTile(WidgetTester t, TripCityModel city, {String? name = chosen}) async {
+    Future<Map?> tapTile(WidgetTester t, TripCityModel city) async {
       Map? args;
-      var asked = 0;
       await t.pumpWidget(GetMaterialApp(
         home: const Scaffold(body: SizedBox()),
         getPages: [
-          GetPage(
-            name: AppRoutes.tripName,
-            page: () {
-              asked++;
-              return const Scaffold(body: Text('name page'));
-            },
-          ),
           GetPage(
             name: AppRoutes.tripSpots,
             page: () {
@@ -276,50 +266,23 @@ void main() {
       ));
       unawaited(TripNavigation.startWithCities([city]));
       await t.pumpAndSettle();
-      if (find.text('name page').evaluate().isNotEmpty) {
-        Get.back(result: name);
-        await t.pumpAndSettle();
-      }
-      return (args, asked);
+      return args;
     }
 
     testWidgets('same city draft seeds the selection and is kept', (t) async {
       final nainital = _city(1, 'Nainital');
       TripNewDraft.save([TripDraftLeg(nainital, ['a', 'b'])]);
-      final (args, asked) = await tapTile(t, nainital);
-      expect(asked, 1);
+      final args = await tapTile(t, nainital);
       final legs = args!['draftLegs'] as List<TripDraftLeg>;
       expect(legs.single.ids, ['a', 'b']);
       expect(TripNewDraft.read()!.legs.single.ids, ['a', 'b']);
-      expect(TripNewDraft.readName(), chosen);
-    });
-
-    testWidgets('same city draft with a saved name skips the name page', (t) async {
-      final nainital = _city(1, 'Nainital');
-      TripNewDraft.save([TripDraftLeg(nainital, ['a'])]);
-      TripNewDraft.saveName('Lake days');
-      final (args, asked) = await tapTile(t, nainital);
-      expect(asked, 0);
-      expect((args!['draftLegs'] as List<TripDraftLeg>).single.ids, ['a']);
-      expect(TripNewDraft.readName(), 'Lake days');
     });
 
     testWidgets('another city starts clean and clears the old draft', (t) async {
       TripNewDraft.save([TripDraftLeg(_city(1, 'Nainital'), ['a'])]);
-      final (args, asked) = await tapTile(t, _city(2, 'Almora'));
-      expect(asked, 1);
+      final args = await tapTile(t, _city(2, 'Almora'));
       expect(args!.containsKey('draftLegs'), isFalse);
-      expect(TripNewDraft.read()?.legs ?? const <TripDraftLeg>[], isEmpty);
-      expect(TripNewDraft.readName(), chosen);
-    });
-
-    testWidgets('backing out of the name page opens nothing and keeps the draft', (t) async {
-      TripNewDraft.save([TripDraftLeg(_city(1, 'Nainital'), ['a'])]);
-      final (args, asked) = await tapTile(t, _city(2, 'Almora'), name: null);
-      expect(asked, 1);
-      expect(args, isNull);
-      expect(TripNewDraft.read()!.legs.single.ids, ['a']);
-      expect(StorageService.getTripNewDraft(), isNotNull);
+      expect(TripNewDraft.read(), isNull);
     });
   });
 }

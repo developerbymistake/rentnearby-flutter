@@ -14,7 +14,6 @@ import '../trip_strings.dart';
 import '../trip_strings_a4.dart';
 import '../trip_strings_mca_a2.dart';
 import '../trip_strings_v2_create.dart';
-import '../utils/trip_name_rules.dart';
 
 class TripCitySupplyCache {
   static const _ttl = Duration(minutes: 10);
@@ -65,9 +64,8 @@ class TripNewDraft {
   static const _version = 3;
   final List<TripDraftLeg> legs;
   final int? days;
-  final String? name;
 
-  const TripNewDraft(this.legs, [this.days, this.name]);
+  const TripNewDraft(this.legs, [this.days]);
 
   TripCityModel get city => legs.first.city;
 
@@ -89,38 +87,15 @@ class TripNewDraft {
       }
       if (legs.isEmpty || legs.every((l) => l.ids.isEmpty)) return null;
       final d = m['days'];
-      return TripNewDraft(legs, d is num ? d.toInt() : null, _nameOf(m));
+      return TripNewDraft(legs, d is num ? d.toInt() : null);
     } catch (_) {
       return null;
     }
   }
 
-  static String? _nameOf(Map<String, dynamic> m) {
-    final n = m['name'];
-    return n is String && TripNameRules.isValid(n) ? TripNameRules.clean(n) : null;
-  }
-
-  static String? readName() {
-    final m = StorageService.getTripNewDraft();
-    if (m == null || m['v'] != _version) return null;
-    return _nameOf(m);
-  }
-
-  static void saveName(String name) {
-    if (!TripNameRules.isValid(name)) return;
-    final m = StorageService.getTripNewDraft();
-    final keep = m != null && m['v'] == _version ? m : <String, dynamic>{'v': _version, 'legs': const []};
-    StorageService.saveTripNewDraft({...keep, 'name': TripNameRules.clean(name)});
-  }
-
   static void save(List<TripDraftLeg> legs, {int? days}) {
-    final name = readName();
     if (legs.isEmpty || legs.every((l) => l.ids.isEmpty)) {
-      if (name == null) {
-        StorageService.clearTripNewDraft();
-      } else {
-        StorageService.saveTripNewDraft({'v': _version, 'legs': const [], 'name': name});
-      }
+      StorageService.clearTripNewDraft();
       return;
     }
     StorageService.saveTripNewDraft({
@@ -129,7 +104,6 @@ class TripNewDraft {
         for (final l in legs) {'city': l.city.toJson(), 'ids': l.ids},
       ],
       'days': ?(days ?? read()?.days),
-      'name': ?name,
     });
   }
 }

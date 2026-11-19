@@ -570,7 +570,10 @@ class TripSummaryRecord {
 extension TripSummaryProgress on TripSummaryRecord {
   List<TripSummaryArrangement> get shownRows => [for (final a in arrangements) if (a.state != TripRowState.skipped) a];
 
-  List<TripSummaryArrangement> get stillToDo => [for (final a in shownRows) if (!a.isDone) a];
+  List<TripSummaryArrangement> get stillToDo => [
+        for (final a in shownRows)
+          if (!a.isDone && (a.key.kind == TripEasyRowKind.stay || a.key.kind == TripEasyRowKind.taxi)) a,
+      ];
 
   bool get isPast {
     final end = endDate ?? startDate;
