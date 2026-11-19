@@ -1,10 +1,8 @@
 import 'package:bakhli/config/app_routes.dart';
 import 'package:bakhli/design/design.dart';
 import 'package:bakhli/features/stay/models/stay_nearby_model.dart';
-import 'package:bakhli/features/taxi/models/taxi_browse_item.dart';
 import 'package:bakhli/features/taxi/ways/models/taxi_ways_models.dart';
 import 'package:bakhli/features/taxi/ways/widgets/way_driver_row.dart';
-import 'package:bakhli/features/trip/widgets/trip_driver_row.dart';
 import 'package:bakhli/features/trip/widgets/trip_status.dart';
 import 'package:bakhli/features/trip/widgets/trip_stay_row.dart';
 import 'package:bakhli/widgets/listing_contact_actions.dart';
@@ -20,16 +18,6 @@ StayNearbyModel _stay({String? url, String? phone}) => StayNearbyModel(
       isActive: true,
       thumbnailUrl: url,
       ownerPhone: phone,
-    );
-
-TaxiBrowseItem _taxi() => TaxiBrowseItem(
-      id: 't1',
-      driverName: 'Ravi Kumar',
-      vehicleTypeName: 'Sedan',
-      plateDisplay: 'UK07 AB 1234',
-      routeCount: 0,
-      matchReversed: false,
-      createdAt: DateTime(2026, 11, 1),
     );
 
 class _Taps {
@@ -183,48 +171,6 @@ void main() {
       expect(dialed, ['9876543210']);
       expect(fake.fetches, 0);
       expect(fake.routes, isEmpty);
-    });
-  });
-
-  group('trip driver row taps', () {
-    Widget row(_Taps taps, {TripDisplayStatus? status, bool busy = false, VoidCallback? onShortlist}) => _host(TripDriverRow(
-          item: _taxi(),
-          status: status,
-          contactBusy: busy,
-          onOpen: () => taps.open++,
-          onCall: () => taps.call++,
-          onAsk: () => taps.ask++,
-          onMenu: (_) {},
-          onShortlist: onShortlist,
-        ));
-
-    testWidgets('Call and Ask run their own callbacks, never the detail', (t) async {
-      final taps = _Taps();
-      await t.pumpWidget(row(taps));
-      await t.tap(find.byIcon(Icons.call_rounded));
-      await t.tap(find.byIcon(Icons.send_rounded));
-      expect((taps.call, taps.ask, taps.open), (1, 1, 0));
-    });
-
-    testWidgets('asked driver: View status goes to the ask, not the detail', (t) async {
-      final taps = _Taps();
-      await t.pumpWidget(row(taps, status: TripDisplayStatus.asked));
-      await t.tap(find.byIcon(Icons.visibility_outlined));
-      expect((taps.ask, taps.open), (1, 0));
-    });
-
-    testWidgets('Shortlist cell toggles the shortlist', (t) async {
-      final taps = _Taps();
-      await t.pumpWidget(row(taps, onShortlist: () => taps.shortlist++));
-      await t.tap(find.byIcon(Icons.add_rounded));
-      expect((taps.shortlist, taps.open, taps.ask), (1, 0, 0));
-    });
-
-    testWidgets('taxi card shows vehicle art, no photo, and a spinner while the call loads', (t) async {
-      await t.pumpWidget(row(_Taps(), busy: true));
-      expect(find.byType(KitPhoto), findsNothing);
-      expect(t.widget<WideCard>(find.byType(WideCard)).kind, WideKind.halo);
-      expect(find.byType(CircularProgressIndicator), findsOneWidget);
     });
   });
 

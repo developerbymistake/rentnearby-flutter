@@ -26,8 +26,8 @@ class TripUpdateAskSheet {
   static Future<void> show(BuildContext context, SettingsSaveResult res) async {
     final c = TripPlanController.to;
     final open = <TripEnquiryModel>[
-      for (final e in [...res.openAffected, ...res.openTaxiAffected])
-        if (!e.isBooked) e,
+      for (final e in res.openAffected)
+        if (!e.isBooked && !e.isTaxi) e,
     ];
     final confirmed = [for (final e in res.confirmedAffected) if (!e.isTaxi) e];
     final taxis = [for (final e in res.bookedTaxiAffected) if (e.isTaxi) e];
@@ -179,20 +179,8 @@ class _UpdateBodyState extends State<_UpdateBody> {
       final p = _c.plan.value;
       if (p == null) continue;
       final k = _legOf(e);
-      if (e.isTaxi) {
-        final days = _taxiDaysAfter(e);
-        if (days.isEmpty) continue;
-        final batch = await enquiries.sendLead(
-          days: days,
-          taxiIds: [e.listingId],
-          pickupTime: e.context.pickupTime,
-          pickupPlace: e.context.pickupPlace,
-        );
-        if (batch == null) failed = true;
-      } else {
-        final batch = await enquiries.sendEnquiry(day: p.legStart(k), stayIds: [e.listingId], nights: p.legDayCount(k));
-        if (batch == null) failed = true;
-      }
+      final batch = await enquiries.sendEnquiry(day: p.legStart(k), stayIds: [e.listingId], nights: p.legDayCount(k));
+      if (batch == null) failed = true;
     }
     for (final e in widget.confirmedTaxis) {
       if (!await enquiries.updateLead(e.id)) failed = true;

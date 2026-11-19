@@ -164,23 +164,24 @@ void main() {
     final r = _rig(_plan(1));
     await _pump(t, r, 360);
     expect(find.text('0%'), findsOneWidget);
-    expect(find.textContaining('STEP 1 OF 4'), findsOneWidget);
+    expect(find.textContaining('STEP 1 OF 3'), findsOneWidget);
     await _tap(t, 'Skip this');
     await _tap(t, 'Next');
-    expect(find.text('25%'), findsOneWidget);
-    expect(find.textContaining('STEP 2 OF 4'), findsOneWidget);
+    expect(find.text('33%'), findsOneWidget);
+    expect(find.textContaining('STEP 2 OF 3'), findsOneWidget);
     expect(find.textContaining('STAY IN CITY1'), findsOneWidget);
     expect(find.byType(Stepper), findsNothing);
     r.close();
   });
 
-  testWidgets('skipping the sightseeing taxi writes the skipped mark and shows the note', (t) async {
-    final r = _rig(_plan(1, guide: const TripGuide(step: 'taxi')));
+  testWidgets('there is no sightseeing taxi question; an old taxi cursor opens the first open step', (t) async {
+    final r = _rig(_plan(1, guide: const TripGuide(step: 'taxi', choices: {'gettingThere': TripGuideChoice.skip})));
     await _pump(t, r, 360);
-    expect(find.text('See the sights in City1'), findsOneWidget);
+    expect(find.text('See the sights in City1'), findsNothing);
+    expect(find.text('Where will you stay in City1?'), findsOneWidget);
     await _tap(t, 'Skip this');
-    expect(find.text('We will not show taxis for this trip.'), findsOneWidget);
-    expect(r.c.plan.value!.taxiMark?.isSkipped, isTrue);
+    expect(find.text('We will not show taxis for this trip.'), findsNothing);
+    expect(r.c.plan.value!.taxiMark, isNull);
     r.close();
   });
 
@@ -198,14 +199,14 @@ void main() {
   testWidgets('resume opens the exact stored step with answers unchanged', (t) async {
     final r = _rig(_plan(2, guide: const TripGuide(
       step: 'between:2',
-      choices: {'gettingThere': TripGuideChoice.skip, 'stay:1': TripGuideChoice.skip, 'taxi': TripGuideChoice.skip},
+      choices: {'gettingThere': TripGuideChoice.skip, 'stay:1': TripGuideChoice.skip},
     )));
     await _pump(t, r, 360);
     expect(find.text('On to City2'), findsOneWidget);
-    expect(find.textContaining('STEP 4 OF 6'), findsOneWidget);
-    expect(find.text('50%'), findsOneWidget);
+    expect(find.textContaining('STEP 3 OF 5'), findsOneWidget);
+    expect(find.text('40%'), findsOneWidget);
     await _tap(t, 'Previous');
-    expect(find.text('See the sights in City1 & City2'), findsOneWidget);
+    expect(find.text('Where will you stay in City1?'), findsOneWidget);
     expect(r.c.guideState.current.value, TripGuideChoice.skip);
     r.close();
   });
@@ -213,15 +214,15 @@ void main() {
   testWidgets('a plan without a guide (v6) starts at the first unresolved step', (t) async {
     final r = _rig(_plan(1));
     await _pump(t, r, 360);
-    expect(find.textContaining('STEP 1 OF 4'), findsOneWidget);
+    expect(find.textContaining('STEP 1 OF 3'), findsOneWidget);
     r.close();
   });
 
-  testWidgets('a 4 city (10 step) plan walks to the finish card at 300 dp and text scale 2', (t) async {
+  testWidgets('a 4 city (9 step) plan walks to the finish card at 300 dp and text scale 2', (t) async {
     final r = _rig(_plan(4));
     await _pump(t, r, 300, scale: 2, h: 900);
-    expect(find.textContaining('STEP 1 OF 10'), findsOneWidget);
-    for (var i = 0; i < 10; i++) {
+    expect(find.textContaining('STEP 1 OF 9'), findsOneWidget);
+    for (var i = 0; i < 9; i++) {
       await t.ensureVisible(find.text('Skip this'));
       await t.pump();
       await _tap(t, 'Skip this');
@@ -248,7 +249,7 @@ void main() {
     expect(find.text('Send to all'), findsOneWidget);
     expect(_nextEnabled(t), isFalse);
     await _tap(t, 'Not now');
-    expect(find.text('See the sights in City1'), findsOneWidget);
+    expect(find.text('Getting back home'), findsOneWidget);
     expect(r.sl.countOf('stay:1'), 2);
     r.close();
   });
@@ -373,7 +374,7 @@ void main() {
     await t.pumpAndSettle();
     await t.tap(find.descendant(of: find.byType(BottomSheet), matching: find.text('Not now')));
     await t.pumpAndSettle();
-    expect(find.text('See the sights in City1'), findsOneWidget);
+    expect(find.text('Getting back home'), findsOneWidget);
     expect(find.text('Great picks'), findsNothing);
     r.close();
   });
@@ -391,7 +392,7 @@ void main() {
     await t.pump(const Duration(milliseconds: 100));
     expect(r.repo.booked, ['stay:1']);
     expect(r.c.plan.value!.legAt(1)!.stayMark?.isOwn, isTrue);
-    expect(find.text('See the sights in City1'), findsOneWidget);
+    expect(find.text('Getting back home'), findsOneWidget);
     r.close();
   });
 
@@ -427,7 +428,7 @@ void main() {
         );
         await _pump(t, r, w, scale: scale);
         expect(t.takeException(), isNull);
-        r.c.guideState.step = 'taxi';
+        r.c.guideState.step = 'comingBack';
         r.c.guideGoTo(2);
         await t.pump();
         await t.pump(const Duration(milliseconds: 50));

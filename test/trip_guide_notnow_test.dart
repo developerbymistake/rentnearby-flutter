@@ -159,7 +159,7 @@ void main() {
       c.guideNotNow('gettingThere');
       c.guideState.sentOk.add('gettingThere');
       c.guideRefresh();
-      expect(c.guideState.percent.value, 25);
+      expect(c.guideState.percent.value, 33);
       expect(c.guideState.pending.contains('gettingThere'), isFalse);
       c.onClose();
     });
@@ -198,7 +198,7 @@ void main() {
       c.plan.value = plan.withGuide(const TripGuide(step: 'stay:1'));
       await c.saveNow();
       final sent = api.calls('PUT', '/trips/t1').length;
-      c.plan.value = c.plan.value!.withGuide(const TripGuide(step: 'taxi'));
+      c.plan.value = c.plan.value!.withGuide(const TripGuide(step: 'comingBack'));
       await c.flushPendingSave();
       expect(api.calls('PUT', '/trips/t1').length, sent + 1);
       c.onClose();

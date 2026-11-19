@@ -295,6 +295,13 @@ void main() {
       expect(AppRoutes.isRegistered('/trip-step'), isFalse);
     });
 
+    test('the old trip taxi list and replies pages are gone', () {
+      for (final route in AppRoutes.retiredTripTaxiRoutes) {
+        expect(AppRoutes.isRegistered(route), isFalse, reason: route);
+        expect(AuthController().canOpenRoute(route), isFalse, reason: route);
+      }
+    });
+
     test('every trip page of the flow is registered', () {
       for (final route in [
         AppRoutes.tripName,
@@ -302,11 +309,9 @@ void main() {
         AppRoutes.tripSpots,
         AppRoutes.tripPlan,
         AppRoutes.tripStay,
-        AppRoutes.tripTaxi,
         AppRoutes.tripMap,
         AppRoutes.myTrips,
         AppRoutes.tripReplies,
-        AppRoutes.tripTaxiReplies,
         AppRoutes.tripSummary,
         AppRoutes.tripOverview,
         AppRoutes.tripTaxiRequest,

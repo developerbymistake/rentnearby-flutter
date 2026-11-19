@@ -1586,7 +1586,7 @@ void main() {
       expect(TripDaysRules.canAddOnDay(c.plan.value!, 2), isTrue);
     });
   });
-  group('taxi supply check', () {
+  group('tab switches (the old taxi supply check is gone)', () {
     TripPlanController ctl(TripPlan p) {
       final c = TripPlanController();
       addTearDown(c.onClose);
@@ -1595,15 +1595,21 @@ void main() {
       return c;
     }
 
-    test('a plan without a district keeps taxi supply unknown, never "no taxis"', () async {
+    test('syncTabs only reads the tab switches', () {
       final c = ctl(_plan());
-      expect(c.plan.value!.districtId, isNull);
-      c.taxiSupply.value = false;
-      c.taxiSupplyByLeg[1] = false;
-      await c.checkSupply();
-      expect(c.taxiSupply.value, isNull);
-      expect(c.taxiSupplyByLeg[1], isNull);
-      expect(c.cityHasTaxis.value, isNull);
+      c.taxiTabOff.value = true;
+      c.stayTabOff.value = true;
+      c.syncTabs();
+      expect(c.taxiTabOff.value, isFalse);
+      expect(c.stayTabOff.value, isFalse);
+    });
+
+    test('without a plan the switches are left alone', () {
+      final c = TripPlanController();
+      addTearDown(c.onClose);
+      c.taxiTabOff.value = true;
+      c.syncTabs();
+      expect(c.taxiTabOff.value, isTrue);
     });
   });
 
@@ -1629,20 +1635,29 @@ void main() {
 
     tearDown(Get.reset);
 
-    test('an old plan with a done row resolves that step and starts at the first open one', () {
+    test('a taxi mark from an old plan adds no guide step', () {
       final c = ctl(planG(taxi: const TripRowMark.own()));
       c.guideRefresh();
-      expect(c.guideState.choices['taxi'], TripGuideChoice.own);
+      expect(c.guideState.choices.containsKey('taxi'), isFalse);
+      expect([for (final s in c.guideState.steps) s.key], ['gettingThere', 'stay:1', 'comingBack']);
       expect(c.guideState.index.value, 0);
-      expect(c.guideState.total.value, 4);
-      expect(c.guideState.percent.value, 25);
+      expect(c.guideState.total.value, 3);
+      expect(c.guideState.percent.value, 0);
     });
 
     test('the stored cursor wins and answers are unchanged', () {
-      final c = ctl(planG(guide: const TripGuide(step: 'taxi', choices: {'gettingThere': TripGuideChoice.find})));
+      final c = ctl(planG(guide: const TripGuide(step: 'comingBack', choices: {'gettingThere': TripGuideChoice.find})));
       c.guideRefresh();
       expect(c.guideState.index.value, 2);
       expect(c.guideState.choices['gettingThere'], TripGuideChoice.find);
+    });
+
+    test('an old cursor on the removed taxi step starts at the first open step', () {
+      final c = ctl(planG(guide: const TripGuide(step: 'taxi', choices: {'gettingThere': TripGuideChoice.skip})));
+      c.guideRefresh();
+      expect(c.guideState.keyNow, 'stay:1');
+      c.guideJumpTo('taxi');
+      expect(c.guideState.keyNow, 'stay:1');
     });
 
     test('moving writes the cursor into the plan and survives a reload of the plan json', () {

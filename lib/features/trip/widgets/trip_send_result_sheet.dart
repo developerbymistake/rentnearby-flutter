@@ -85,7 +85,7 @@ class _ResultBody extends StatelessWidget {
         ResultRow3D(
           art: ListingArt.star,
           title: e.listingName,
-          subtitle: !taxi && e.checkIn != null && e.checkOut != null ? TripFormat.dayMonthRange(e.checkIn!, e.checkOut!) : null,
+          subtitle: e.checkIn != null && e.checkOut != null ? TripFormat.dayMonthRange(e.checkIn!, e.checkOut!) : null,
           label: TripStrings.sent,
         ),
       for (final s in batch.skipped)
@@ -95,9 +95,9 @@ class _ResultBody extends StatelessWidget {
       tone: _tone,
       art: empty ? ListingArt.clipboard : ListingArt.star,
       size: SheetSize.confirm,
-      title: empty ? TripStringsA5.couldNotSend : (taxi ? TripStringsV2Easy.sentToDrivers(batch.items.length) : TripStringsV2Easy.sentTo(batch.items.length)),
+      title: empty ? TripStringsA5.couldNotSend : TripStringsV2Easy.sentTo(batch.items.length),
       description: empty ? TripStringsA5.couldNotSendSub : TripStringsV2Easy.replyWillShow,
-      footnote: empty ? null : (taxi ? TripStringsV2Easy.driverNotify : TripStringsV2Easy.hostNotify),
+      footnote: empty ? null : TripStringsV2Easy.hostNotify,
       footer: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -105,7 +105,7 @@ class _ResultBody extends StatelessWidget {
           _back(context),
           if (!empty) ...[
             Gap.v(10),
-            WhitePillButton(tone: _tone, label: taxi ? TripStringsV2Easy.askMoreDrivers : TripStringsV2Easy.askMoreStays, onTap: () => Navigator.pop(context)),
+            WhitePillButton(tone: _tone, label: TripStringsV2Easy.askMoreStays, onTap: () => Navigator.pop(context)),
           ],
         ],
       ),

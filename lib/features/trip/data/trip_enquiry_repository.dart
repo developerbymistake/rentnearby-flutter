@@ -69,23 +69,6 @@ class TripEnquiryRepository {
         'nights': nights,
       });
 
-  Future<TripEnquiryBatch> createLead(String tripId,
-          {required List<int> days,
-          required List<String> taxiIds,
-          String? pickupTime,
-          String? pickupPlace,
-          String? clientRequestId,
-          String? stepKey}) =>
-      _batch('/trips/$tripId/enquiries', {
-        'clientRequestId': ?clientRequestId,
-        'stepKey': ?stepKey,
-        'kind': TripEnquiryKinds.taxi,
-        'days': days,
-        'listingIds': taxiIds,
-        'pickupTime': ?pickupTime,
-        'pickupPlace': ?pickupPlace,
-      });
-
   Future<TripEnquiryModel> taxiBooking(String tripId, Map<String, dynamic> body) async =>
       _one(await ApiService.post('/trips/$tripId/taxi-bookings', body));
 

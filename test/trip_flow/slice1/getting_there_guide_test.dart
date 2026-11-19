@@ -193,7 +193,7 @@ void main() {
     expect(r.c.guideState.sent[_step], 1);
     expect(r.c.guideState.failed[_step], 1);
     expect(r.c.guideAnswered(_step), isTrue);
-    _agree(t, r, percent: 25, next: false);
+    _agree(t, r, percent: 33, next: false);
     expect(find.text('Not now'), findsOneWidget);
     r.close();
   });
@@ -243,7 +243,7 @@ void main() {
     await t.pump(const Duration(milliseconds: 100));
     expect(find.text('Where will you stay in Nainital?'), findsOneWidget);
     await _tap(t, 'Previous');
-    _agree(t, r, percent: 25, next: true);
+    _agree(t, r, percent: 33, next: true);
     r.close();
   });
 
@@ -251,19 +251,19 @@ void main() {
     final r = _Rig(_plan());
     await _pump(t, r);
     await _tap(t, 'Skip this');
-    _agree(t, r, percent: 25, next: true);
+    _agree(t, r, percent: 33, next: true);
     await _tap(t, 'Next');
     expect(find.text('Where will you stay in Nainital?'), findsOneWidget);
     r.close();
   });
 
-  testWidgets('bar fill is drawn at 25 percent', (t) async {
+  testWidgets('bar fill is drawn at 33 percent (one of three steps)', (t) async {
     final r = _Rig(_plan());
     await _pump(t, r);
     await _tap(t, 'Skip this');
     await settlePhone(t);
-    _agree(t, r, percent: 25, next: true);
-    await shot(t, 'A_skip25_360x800');
+    _agree(t, r, percent: 33, next: true);
+    await shot(t, 'A_skip33_360x800');
     r.close();
   });
 
@@ -273,7 +273,7 @@ void main() {
     await _tap(t, 'I will arrange it myself');
     await t.pump(const Duration(milliseconds: 200));
     expect(r.c.guideAnswered(_step), isTrue);
-    _agree(t, r, percent: 25, next: true);
+    _agree(t, r, percent: 33, next: true);
     r.close();
   });
 

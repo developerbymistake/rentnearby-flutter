@@ -1,5 +1,4 @@
 import 'package:bakhli/features/trip/controllers/trip_plan_controller.dart';
-import 'package:bakhli/features/trip/data/trip_enquiry_repository.dart';
 import 'package:bakhli/features/trip/models/trip_enquiry_model.dart';
 import 'package:bakhli/features/trip/models/trip_plan_model.dart';
 import 'package:bakhli/features/trip/utils/trip_enquiry_rules.dart';
@@ -12,32 +11,16 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   tearDown(Get.reset);
 
-  test('T5 the same driver gets one row per city and the taxi row counts both asks', () async {
+  test('T5 legacy taxi asks of one driver in two cities count both on the taxi row', () {
     final start = journeyStart();
-    var n = 0;
-    installFakeApi([
-      FakeRoute('POST', '/trips/t1/enquiries', (o) {
-        final days = [for (final d in (o.data as Map)['days'] as List) (d as num).toInt()];
-        n++;
-        final leg = days.first <= 3 ? 1 : 2;
-        return {
-          'items': [
-            enquiryJson(id: 'l$n', kind: TripEnquiryKinds.taxi, status: TripEnquiryStatuses.asked, start: start, days: days, cityLeg: leg),
-          ],
-          'skipped': [],
-          'updated': [],
-          'veryShortNotice': false,
-        };
-      }, code: 201),
-    ]);
-    const repo = TripEnquiryRepository();
     final c = TripPlanController();
     c.plan.value = journeyPlan([3, 2], start: start);
-
-    final first = await repo.createLead('t1', days: [1, 2], taxiIds: ['d1']);
-    final second = await repo.createLead('t1', days: [4], taxiIds: ['d1']);
-    c.applyEnquiries(first.items);
-    c.applyEnquiries(second.items);
+    c.applyEnquiries([
+      TripEnquiryModel.fromJson(
+          enquiryJson(id: 'l1', kind: TripEnquiryKinds.taxi, status: TripEnquiryStatuses.asked, start: start, days: [1, 2], cityLeg: 1)),
+      TripEnquiryModel.fromJson(
+          enquiryJson(id: 'l2', kind: TripEnquiryKinds.taxi, status: TripEnquiryStatuses.asked, start: start, days: [4], cityLeg: 2)),
+    ]);
 
     expect(c.enquiryList.map((e) => e.cityLeg).toSet(), {1, 2});
     final taxi = c.easyRowOf(const TripEasyRowKey(TripEasyRowKind.taxi))!;

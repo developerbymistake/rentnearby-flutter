@@ -157,32 +157,6 @@ class TripEnquiryController extends GetxController {
     return batch;
   }
 
-  Future<TripEnquiryBatch?> sendLead({
-    required List<int> days,
-    required List<String> taxiIds,
-    String? pickupTime,
-    String? pickupPlace,
-    String? clientRequestId,
-    String? stepKey,
-  }) async {
-    final tripId = await _tripId();
-    if (tripId == null) return null;
-    final batch = await _guard(
-      null,
-      () => _repo.createLead(tripId,
-          days: days,
-          taxiIds: taxiIds,
-          pickupTime: pickupTime,
-          pickupPlace: pickupPlace,
-          clientRequestId: clientRequestId,
-          stepKey: stepKey),
-      silent: const {TripEnquiryErrorTypes.enquiryLimit, TripEnquiryErrorTypes.leadLimit},
-    );
-    _readBatch(batch);
-    if (batch != null) _applyToPlan(batch.items);
-    return batch;
-  }
-
   Map<String, dynamic> _taxiBody({
     required String taxiId,
     required List<int> days,

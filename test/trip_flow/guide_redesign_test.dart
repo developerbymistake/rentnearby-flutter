@@ -203,9 +203,8 @@ void main() {
     final cases = <(String, int, String, String, String)>[
       ('Getting there', 0, 'To Nainital', '14 Nov · 2 people', ListingArt.taxi),
       ('Stay', 1, 'Nainital', '2 nights · 14-16 Nov · 2 people', ListingArt.stay),
-      ('Sightseeing taxi', 2, 'Nainital & Mukteshwar', '4 days · 14-17 Nov · 2 people', ListingArt.taxi),
-      ('Between cities', 3, 'Nainital to Mukteshwar', 'On 16 Nov · 2 people', ListingArt.bus),
-      ('Coming back', 5, 'Back home', 'From Mukteshwar · 17 Nov · 2 people', ListingArt.airplane),
+      ('Between cities', 2, 'Nainital to Mukteshwar', 'On 16 Nov · 2 people', ListingArt.bus),
+      ('Coming back', 4, 'Back home', 'From Mukteshwar · 17 Nov · 2 people', ListingArt.airplane),
     ];
     for (final (name, index, title, sub, art) in cases) {
       testWidgets('$name: header text, circle, icon, no scroll', (t) async {

@@ -2,7 +2,6 @@ import 'dart:io';
 
 import 'package:bakhli/design/design.dart';
 import 'package:bakhli/features/stay/models/stay_nearby_model.dart';
-import 'package:bakhli/features/taxi/models/taxi_browse_item.dart';
 import 'package:bakhli/features/taxi/ways/models/taxi_ways_models.dart';
 import 'package:bakhli/features/taxi/ways/taxi_ways_controller.dart';
 import 'package:bakhli/controllers/tab_config_controller.dart';
@@ -13,10 +12,8 @@ import 'package:bakhli/features/trip/controllers/trip_shortlist_controller.dart'
 import 'package:bakhli/features/trip/data/trip_shortlist_repository.dart';
 import 'package:bakhli/features/trip/models/trip_guide_args.dart';
 import 'package:bakhli/features/trip/models/trip_shortlist_model.dart';
-import 'package:bakhli/features/trip/widgets/trip_driver_row.dart';
 import 'package:bakhli/features/trip/widgets/trip_list_look.dart';
 import 'package:bakhli/features/trip/widgets/trip_shortlist_bar.dart';
-import 'package:bakhli/features/trip/widgets/trip_status.dart';
 import 'package:bakhli/features/trip/widgets/trip_stay_row.dart';
 import 'package:bakhli/models/place_result_model.dart';
 import 'package:flutter/material.dart';
@@ -147,21 +144,6 @@ StayNearbyModel _stay(String id, String name, String city, double km, int? price
       districtName: 'Nainital',
     );
 
-TaxiBrowseItem _taxi(String id, String name, String vehicle, int seats, int? rate, {String reply = 'new', bool featured = false}) => TaxiBrowseItem(
-      id: id,
-      driverName: name,
-      vehicleTypeName: vehicle,
-      seats: seats,
-      plateDisplay: 'UK04 TA',
-      cityName: 'Nainital',
-      routeCount: 1,
-      matchReversed: false,
-      createdAt: DateTime(2026, 10, 1),
-      localDayRate: rate,
-      tripReplyLabel: reply,
-      isFeatured: featured,
-    );
-
 void _shortlist(List<ShortlistItem> pre) {
   Get.put(TripShortlistController(repo: _Repo(pre), tripId: () async => 't', offline: () => false, warn: (_) {}));
 }
@@ -254,51 +236,6 @@ void main() {
       await t.pump(const Duration(milliseconds: 200));
       await t.tap(find.text('Shortlist'));
       expect(picks, 1);
-      expect(t.takeException(), isNull);
-      debugDisableShadows = true;
-    });
-
-    testWidgets('driver pick list $tag', (t) async {
-      _shortlist([const ShortlistItem(stepKey: 'taxi', kind: 'Taxi', listingId: 'a', name: 'Pradeep')]);
-      await TripShortlistController.to.load();
-      final taxis = [
-        _taxi('a', 'Pradeep Kumar', 'Dzire', 4, 2600, reply: 'app', featured: true),
-        _taxi('b', 'Rakesh Singh Bisht from Haldwani Taxi Union', 'Innova Crysta', 7, 3100),
-        _taxi('c', 'Mohan Rawat', 'Tempo Traveller', 12, null),
-      ];
-      await pumpPhone(
-        t,
-        _page(
-          tone: ListingTone.coral,
-          title: 'Taxi for sightseeing',
-          sub: 'Nainital + Almora',
-          step: '3 of 5',
-          rows: [
-            for (final (i, x) in taxis.indexed)
-              Obx(() => TripDriverRow(
-                    item: x,
-                    tone: ListingTone.list(ListingTone.coral, i),
-                    days: 2,
-                    status: i == 2 ? TripDisplayStatus.asked : null,
-                    onOpen: () {},
-                    onCall: () {},
-                    onAsk: () {},
-                    onMenu: (_) {},
-                    onShortlist: () {},
-                    shortlisted: TripShortlistController.to.has('taxi', x.id),
-                    contactBusy: i == 1,
-                  )),
-          ],
-          bar: TripShortlistBar(step: 'taxi', onDone: () {}, tone: KitTone.taxi),
-        ),
-        size: size,
-        textScale: scale,
-      );
-      await settlePhone(t);
-      await shot(t, 'driver_list_$tag');
-      await t.drag(find.byType(ListView), const Offset(0, -600));
-      await t.pump(const Duration(milliseconds: 300));
-      await shot(t, 'driver_list_${tag}_y600');
       expect(t.takeException(), isNull);
       debugDisableShadows = true;
     });

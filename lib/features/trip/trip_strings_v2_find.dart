@@ -68,24 +68,11 @@ class TripStringsV2Find {
   static const noMatch = 'No stays match';
   static const clearFilters = 'Clear filters';
 
-  static const taxiTitle = 'Local taxi';
-  static String taxiSubtitle(String cities) => '$cities · one driver';
-  static const taxiDays = 'DAYS YOU NEED A CAR';
-  static const taxiDayNote = 'Untick a day to skip it.';
-  static const noTaxiTitle = 'Taxi not available here';
-  static const noTaxiBody = 'No local taxis listed here yet. Use your own taxi, or come back later.';
-  static const taxisFailed = 'Could not load drivers';
-  static const taxisPaused = 'Taxis are paused right now';
-  static const perDayShort = 'per day';
-  static String forDays(String total, int n) => '$total for $n ${n == 1 ? 'day' : 'days'}';
-  static const pickDay = 'Choose at least one day';
   static const driverOneCity = 'Asked for one city only';
-  static const veryShortNoticeDriver = 'Very short notice. Call the driver too.';
 
   static const offlineAsk = 'Connect to ask hosts and drivers';
   static const showLess = 'Show less';
   static String showAll(int n) => 'Show all $n';
   static const cancelFirstStay = 'Cancel the confirmed stay first.';
   static const cancelFirstTravel = 'Cancel the confirmed ride first.';
-  static const cancelFirstTaxi = 'Cancel the confirmed taxi first.';
 }

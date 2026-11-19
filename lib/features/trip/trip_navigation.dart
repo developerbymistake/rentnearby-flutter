@@ -229,9 +229,8 @@ class TripNavigation {
         final ref = c.trip.value?.taxiRequest;
         final tripId = c.trip.value?.id;
         if (ref != null && tripId != null) return openTaxiStatus(tripId: tripId, requestId: ref.requestId);
-        final asked = c.taxiAskedDays;
-        final day = asked.isNotEmpty ? asked.first : (c.taxiEnquiries.isEmpty ? null : c.firstPlanDayOf(c.taxiEnquiries.first));
-        return openTaxiReplies(day ?? 1);
+        final ctx = Get.context;
+        return ctx == null || !ctx.mounted ? null : openTaxiRequest(ctx);
       case TripEasyRowKind.gettingThere:
         return _openRowJourney(p.steps.gettingThere.journeyId, () => openWays(TripStepRole.gettingThere));
       case TripEasyRowKind.comingBack:
@@ -247,9 +246,6 @@ class TripNavigation {
 
   static void backToList() =>
       Get.until((r) => r.settings.name == AppRoutes.tripPlan || r.settings.name == AppRoutes.main || r.isFirst);
-
-  static Future<void>? openTaxi({List<int>? days, GuideArgs? guide}) =>
-      Get.toNamed(AppRoutes.tripTaxi, arguments: {'days': ?days, if (guide != null) ...guide.toArgs()});
 
   static Future<void>? openStay(
     int legIndex, {
@@ -274,11 +270,6 @@ class TripNavigation {
   static Future<void>? openReplies(int day, {String? enquiryId}) {
     final tripId = TripPlanController.to.trip.value?.id;
     return Get.toNamed(AppRoutes.tripReplies, arguments: {'tripId': tripId, 'day': day, 'enquiryId': enquiryId});
-  }
-
-  static Future<void>? openTaxiReplies(int day, {String? enquiryId}) {
-    final tripId = TripPlanController.to.trip.value?.id;
-    return Get.toNamed(AppRoutes.tripTaxiReplies, arguments: {'tripId': tripId, 'day': day, 'enquiryId': enquiryId});
   }
 
   static Future<void>? openChatForEnquiry(TripEnquiryModel e) {

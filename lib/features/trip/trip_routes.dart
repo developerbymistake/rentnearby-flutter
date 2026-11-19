@@ -18,10 +18,8 @@ import 'screens/trip_taxi_request_status_screen.dart';
 import 'screens/trip_replies_screen.dart';
 import 'screens/trip_spots_screen.dart';
 import 'screens/trip_stay_screen.dart';
-import 'screens/trip_taxi_replies_screen.dart';
 import 'screens/trip_summary_screen.dart';
 import 'screens/trip_where_screen.dart';
-import 'screens/trip_taxi_screen.dart';
 import 'trip_navigation.dart';
 import 'trip_strings.dart';
 import 'utils/taxi_result.dart';
@@ -101,12 +99,6 @@ final List<GetPage> tripPages = [
     transitionDuration: templateTransitionDuration,
   ),
   GetPage(
-    name: AppRoutes.tripTaxi,
-    page: () => const TripTaxiScreen(),
-    customTransition: TemplateTransition(),
-    transitionDuration: templateTransitionDuration,
-  ),
-  GetPage(
     name: AppRoutes.tripStay,
     page: () => const TripStayScreen(),
     customTransition: TemplateTransition(),
@@ -127,12 +119,6 @@ final List<GetPage> tripPages = [
   GetPage(
     name: AppRoutes.tripReplies,
     page: () => const TripRepliesScreen(),
-    customTransition: TemplateTransition(),
-    transitionDuration: templateTransitionDuration,
-  ),
-  GetPage(
-    name: AppRoutes.tripTaxiReplies,
-    page: () => const TripTaxiRepliesScreen(),
     customTransition: TemplateTransition(),
     transitionDuration: templateTransitionDuration,
   ),

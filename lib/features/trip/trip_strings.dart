@@ -41,7 +41,6 @@ class TripStrings {
   static const String adults = 'Adults';
   static const String kids = 'Kids';
   static const String addPeople = 'Add people';
-  static const String addYourDates = 'Add your dates';
   static const String bookedByYou = 'Booked by you';
   static const String iBooked = 'I booked';
   static const String booked = 'Booked';
@@ -61,7 +60,6 @@ class TripStrings {
   static const String replace = 'Replace';
   static const String keep = 'Keep';
   static const String taxiPayLine = 'Pay the driver directly. Bakhli does not take or hold payment.';
-  static const String seeAllTaxis = 'See all taxis';
   static String listed(String monthYear) => 'Listed $monthYear';
   static String night(int n) => 'Night $n';
   static String startsHere(int day) => 'Day $day starts here';
@@ -136,7 +134,6 @@ class TripStrings {
   static const String no = 'No';
   static const String yes = 'Yes';
   static const String amount = 'Amount';
-  static const String editBooking = 'Edit booking';
   static const String bookingUpdated = 'Booking updated';
   static String replaceNight(String d, String name) => '$d has $name · Replace it?';
   static String replaceFor(String name, String d) => 'Replace $name for $d?';
@@ -298,33 +295,15 @@ class TripStrings {
   static const String callGuest = 'Call guest';
   static const String guestMovedOn = 'The guest has booked another stay. Sort the advance with him directly.';
 
-  static const String taxiEnquiry = 'Send taxi enquiry';
-  static const String from = 'From';
-  static const String to = 'To';
   static const String pickup = 'Pickup';
-  static const String itineraryFromPlan = 'Itinerary, filled from your plan';
-  static const String sendEnquiry = 'Send enquiry';
   static const String taxiEnquiryFooter = 'The driver sees the full itinerary and his fare for it. He replies with a fare or says not available. No advance, no chat.';
-  static const String driverSeesPhone = 'The driver sees your name and phone number.';
   static String dayLine(int n, String d, String s) => 'Day $n · $d · $s';
   static const String enquiry = 'Enquiry';
 
-  static const String taxiReplies = 'Taxi replies';
   static const String replied = 'Replied';
-  static String repliedFare(String f, String l) => 'Replied $f · listed $l';
-  static const String listedRate = 'Listed rate';
   static String listedTimes(String r, int n, String t) => '$r × $n days = $t';
-  static const String driversFare = "Driver's fare";
-  static const String noteFromDriver = 'Note from the driver';
-  static String driverReplied(String n) => '$n replied';
   static const String driverReplyFooter = 'Agree the fare on the phone, then tap I booked. Pay the driver directly. Bakhli does not take or hold payment.';
-  static const String noTaxiReplies = 'No replies yet';
-  static const String driversReply = 'Drivers usually call or reply within a few hours.';
   static const String driverSaysNotMe = 'Driver says not me';
-  static String driverAlsoGot(String n) => '$n also got your enquiry';
-  static const String askAnother = 'Ask another';
-  static const String findAnotherTaxi = 'Find another taxi';
-  static String bothFare(String p) => 'Both · $p';
   static String replaceDriver(String d, String n) => '$d already has $n. Replace?';
   static String replaceDriverTold(String n) => '$n is cancelled and told.';
 
@@ -372,7 +351,6 @@ class TripStrings {
   static const String copy = 'Copy';
   static const String cancelAction = 'Cancel';
   static const String today = 'Today';
-  static const String viewLead = 'View lead';
 
   static const String proposePrice = 'Propose a price';
   static const String listedLabel = 'Listed';

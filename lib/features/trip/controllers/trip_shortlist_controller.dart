@@ -322,27 +322,6 @@ class TripShortlistController extends GetxController {
     return batch;
   }
 
-  Future<TripEnquiryBatch?> sendTaxis({required String step, required List<int> days}) async {
-    final ids = sendIds(step);
-    if (ids.isEmpty) return null;
-    if (_offline()) {
-      _warn(TripStringsV2Find.offlineAsk);
-      return null;
-    }
-    final batch = await TripEnquiryController.to.sendLead(
-      days: days,
-      taxiIds: ids,
-      clientRequestId: requestIdFor(step, ids),
-      stepKey: step,
-    );
-    if (batch != null) {
-      _settle(step, ids, batch);
-    } else {
-      _noteFailure(step);
-    }
-    return batch;
-  }
-
   Future<TripEnquiryBatch?> sendCars({
     required String step,
     required Future<AskResult?> Function(List<String> ids, String requestId) ask,

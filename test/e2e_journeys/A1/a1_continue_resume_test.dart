@@ -114,10 +114,11 @@ void main() {
 
   group('quit on a step, Continue reopens that step', () {
     for (final w in [300.0, 360.0, 412.0]) {
-      testWidgets('taxi step @${w.toInt()} large text', (t) async {
+      testWidgets('a saved old taxi step opens the first open step @${w.toInt()} large text', (t) async {
         final c = await _open(t, _plan(guide: const TripGuide(step: 'taxi')), w: w, scale: 2);
-        expect(find.text('See the sights in Nainital'), findsOneWidget);
-        expect(find.text("Let's get you there"), findsNothing);
+        expect(find.text('See the sights in Nainital'), findsNothing);
+        expect(find.text("Let's get you there"), findsOneWidget);
+        expect(t.takeException(), isNull);
         expect(c.plan.value!.guide!.step, 'taxi');
         c.onClose();
       });

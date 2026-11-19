@@ -42,11 +42,10 @@ class TripGuideOption extends StatelessWidget {
 }
 
 class TripGuideOptions extends StatelessWidget {
-  const TripGuideOptions({super.key, required this.choice, required this.onPick, this.skipNote = false});
+  const TripGuideOptions({super.key, required this.choice, required this.onPick});
 
   final TripGuideChoice? choice;
   final ValueChanged<TripGuideChoice> onPick;
-  final bool skipNote;
 
   @override
   Widget build(BuildContext context) {

@@ -14,21 +14,19 @@ class TripGuideStep {
   const TripGuideStep({required this.key, required this.row, required this.name, required this.title, required this.body});
 
   bool get isStay => row.kind == TripEasyRowKind.stay;
-
-  bool get isTaxi => row.kind == TripEasyRowKind.taxi;
 }
 
 class TripGuideRules {
   const TripGuideRules._();
 
-  static bool isStepKey(String? s) => s != null && TripGuide.stepPattern.hasMatch(s);
+  static bool isStepKey(String? s) =>
+      s != null && s != TripEasyRowKind.taxi.name && TripGuide.stepPattern.hasMatch(s);
 
   static List<String> keys(TripPlan p) {
     final n = p.legs.isEmpty ? 1 : p.legs.length;
     return [
       TripEasyRowKind.gettingThere.name,
       TripEasyRowKey(TripEasyRowKind.stay, 1).id,
-      TripEasyRowKind.taxi.name,
       for (var k = 2; k <= n; k++) ...[
         TripEasyRowKey(TripEasyRowKind.between, k).id,
         TripEasyRowKey(TripEasyRowKind.stay, k).id,
@@ -42,21 +40,11 @@ class TripGuideRules {
   static List<TripGuideStep> steps(TripPlan p) {
     return [
       for (final k in keys(p))
-        if (rowKeyOf(k) case final row?) describe(p, row),
+        if (rowKeyOf(k) case final row?) ?describe(p, row),
     ];
   }
 
-  static String cityList(TripPlan p, String fallback) {
-    final names = <String>[];
-    for (final l in p.legs) {
-      final n = l.cityName.trim();
-      if (n.isNotEmpty && !names.contains(n)) names.add(n);
-    }
-    if (names.isEmpty) return fallback;
-    return names.length <= 2 ? names.join(' & ') : '${names.take(2).join(', ')} +${names.length - 2}';
-  }
-
-  static TripGuideStep describe(TripPlan p, TripEasyRowKey row) {
+  static TripGuideStep? describe(TripPlan p, TripEasyRowKey row) {
     final first = p.legAt(1)?.cityName ?? p.cityName;
     final k = row.legIndex ?? 1;
     final city = p.legAt(k)?.cityName ?? first;
@@ -80,13 +68,7 @@ class TripGuideRules {
           body: TripStringsGuide.stayBody(city),
         );
       case TripEasyRowKind.taxi:
-        return TripGuideStep(
-          key: row.id,
-          row: row,
-          name: TripStringsGuide.nameTaxi,
-          title: TripStringsGuide.taxiTitle(cityList(p, first)),
-          body: TripStringsGuide.taxiBody,
-        );
+        return null;
       case TripEasyRowKind.between:
         return TripGuideStep(
           key: row.id,

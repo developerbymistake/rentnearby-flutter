@@ -42,7 +42,6 @@
   "lib/features/taxi/ways/widgets/travel_confirm_sheet.dart": 2,
   "lib/features/taxi/ways/widgets/ways_arrange_bar.dart": 2,
   "lib/features/trip/screens/trip_stay_screen.dart": 1,
-  "lib/features/trip/screens/trip_taxi_screen.dart": 4,
   "lib/features/trip/widgets/guide/trip_guide_finish.dart": 1,
   "lib/features/trip/widgets/hub/hub_card_bars.dart": 1,
   "lib/features/trip/widgets/trip_back_to_plan_bar.dart": 1,

@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:async';
 
 import 'package:bakhli/design/design.dart';
@@ -45,20 +46,6 @@ class _Enquiry extends TripEnquiryController {
     required int day,
     required List<String> stayIds,
     required int nights,
-    String? clientRequestId,
-    String? stepKey,
-  }) async {
-    lastErrorType = type;
-    lastRetryAfterMinutes = minutes;
-    return reply;
-  }
-
-  @override
-  Future<TripEnquiryBatch?> sendLead({
-    required List<int> days,
-    required List<String> taxiIds,
-    String? pickupTime,
-    String? pickupPlace,
     String? clientRequestId,
     String? stepKey,
   }) async {
@@ -182,11 +169,18 @@ void main() {
       expect(c.countOf('stay:1'), 1);
     });
 
-    test('lead limit on sendTaxis shows the lead text', () async {
-      c.items.add(_item('t', step: 'taxi'));
+    test('lead limit on the bulk path shows the lead text', () async {
+      c.items.add(_item('a'));
       enquiry.type = TripEnquiryErrorTypes.leadLimit;
-      expect(await c.sendTaxis(step: 'taxi', days: [1]), isNull);
+      expect(await c.sendStays(step: 'stay:1', day: 1, nights: 1), isNull);
       expect(toasts.single, TripStringsShortlist.leadLimit);
+    });
+
+    test('the shortlist has no local taxi send any more', () {
+      final src = File('lib/features/trip/controllers/trip_shortlist_controller.dart').readAsStringSync();
+      expect(src.contains('sendTaxis'), isFalse);
+      expect(src.contains('sendLead'), isFalse);
+      expect(src.contains('sendCars'), isTrue);
     });
 
     test('other failures show no limit text', () async {

@@ -75,14 +75,12 @@ class AppRoutes {
   static const String tripWhere = '/trip-where';
   static const String tripSpots = '/trip-spots';
   static const String tripPlan = '/trip-plan';
-  static const String tripTaxi = '/trip-taxi';
   static const String tripStay = '/trip-stay';
   static const String tripMap = '/trip-map';
   static const String myTrips = '/my-trips';
   static const String tripReplies = '/trip-replies';
   static const String stayEnquiries = '/stay-enquiries';
   static const String tripLeads = '/trip-leads';
-  static const String tripTaxiReplies = '/trip-taxi-replies';
   static const String tripSummary = '/trip-summary';
   static const String stayAdvanceDetails = '/stay-advance-details';
 
@@ -154,6 +152,16 @@ class AppRoutes {
   static final Set<String> _registeredNames = {for (final p in routes) p.name};
 
   static bool isRegistered(String name) => _registeredNames.contains(name);
+
+  static const Set<String> retiredTripTaxiRoutes = {'/trip-taxi', '/trip-taxi-replies'};
+
+  // Pushes sent before the taxi request flow still name the retired trip taxi pages.
+  static ({String route, Map<String, dynamic>? args})? liveTarget(String? route, [Map<String, dynamic>? args]) {
+    if (route == null) return null;
+    if (!retiredTripTaxiRoutes.contains(route)) return (route: route, args: args);
+    final tripId = args?['tripId'];
+    return (route: tripPlan, args: {'tripId': ?tripId});
+  }
 
   static final routes = [
     GetPage(name: splash, page: () => const SplashScreen()),

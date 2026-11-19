@@ -315,6 +315,21 @@ class TripTodayCard extends StatelessWidget {
   }
 
   List<Widget> _taxiRow(TripPlanController c, int n) {
+    final d = c.requestDriverOn(n);
+    if (d != null) {
+      final phone = _validPhone(d.phone);
+      return [
+        _Row(
+          icon: TravelIcon.taxi,
+          accent: DesignColors.error,
+          surface: TripEntryStyle.roseTint,
+          title: d.name.isEmpty ? TripStrings.driver : d.name,
+          subtitle: [if (d.vehicle.isNotEmpty) d.vehicle, TripStringsV2Plan.confirmedShort].join(' · '),
+          actionLabel: phone == null ? null : TripStrings.call,
+          onAction: phone == null ? null : () => ContactLauncher.call(phone),
+        ),
+      ];
+    }
     final e = c.todayTaxi(n);
     if (e != null) {
       final pickup = e.taxi?.pickupTime;

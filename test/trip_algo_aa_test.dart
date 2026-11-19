@@ -8,7 +8,6 @@ import 'package:bakhli/features/trip/utils/trip_format.dart';
 import 'package:bakhli/features/trip/utils/trip_geo.dart';
 import 'package:bakhli/features/trip/utils/trip_money.dart';
 import 'package:bakhli/features/trip/utils/trip_stay_rank.dart';
-import 'package:bakhli/features/trip/utils/trip_taxi_fit.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 int _sum(List<int> xs) => xs.fold(0, (s, x) => s + x);
@@ -277,20 +276,6 @@ void main() {
       expect(d.fare, 5800);
       expect(d.isEstimate, isTrue);
       expect(d.groupFare(6), 5800);
-    });
-
-    test('local taxi need and fit', () {
-      final need = TripTaxiNeed.of(people: 7, km: 141.2, lat: 29.39, lng: 79.45);
-      expect(need.params, {'people': 7, 'dayKm': 142, 'lat': 29.39, 'lng': 79.45});
-      expect(const TripTaxiNeed().isEmpty, isTrue);
-      expect(const TripTaxiNeed().params, isEmpty);
-      expect(TripTaxiNeed.of(people: 40, km: double.nan).params, {'people': 12});
-      final fit = TripTaxiFit.fromJson({'tripSeatsFit': false, 'tripCars': 2, 'tripDayCost': 5000, 'tripExtraKm': 62});
-      expect(fit.costFor(2500), 5000);
-      expect(fit.extraKm, 62);
-      expect(const TripTaxiFit(cars: 2).costFor(2500), 5000);
-      expect(const TripTaxiFit().costFor(null), isNull);
-      expect(TripTaxiFit.fromJson(const {}).isEmpty, isTrue);
     });
   });
 }

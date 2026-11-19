@@ -12,7 +12,6 @@ import '../trip_navigation.dart';
 import '../trip_strings.dart';
 import '../trip_strings_guide.dart';
 import '../trip_strings_shortlist.dart';
-import '../trip_strings_v2_find.dart';
 import '../utils/trip_guide_rules.dart';
 import '../widgets/trip_arrange_confirm.dart';
 import 'trip_enquiry_controller.dart';
@@ -358,71 +357,6 @@ extension TripPlanGuide on TripPlanController {
         _ => en.lastErrorMessage ?? TripStringsShortlist.sendFailedNote,
       };
 
-  int _firstComingLeg(TripPlan p) {
-    for (final d in p.days) {
-      if (!isDayPast(d.day)) return d.leg;
-    }
-    return p.days.isEmpty ? 1 : p.days.first.leg;
-  }
-
-  Future<({TripEnquiryBatch? batch, int unsent})> _sendTaxiLegs(TripPlan p, String key) async {
-    final sl = TripShortlistController.to;
-    final en = TripEnquiryController.to;
-    final active = sl.activeOf(key).take(sl.max).toList();
-    if (active.isEmpty) return (batch: null, unsent: 0);
-    if (netOff) {
-      AppToast.warning(TripStringsV2Find.offlineAsk);
-      return (batch: null, unsent: 0);
-    }
-    final first = _firstComingLeg(p);
-    final groups = <int, List<String>>{};
-    for (final i in active) {
-      final k = i.legIndex != null && p.legAt(i.legIndex!) != null ? i.legIndex! : first;
-      groups.putIfAbsent(k, () => []).add(i.listingId);
-    }
-    final legs = groups.keys.toList()..sort();
-    final items = <TripEnquiryModel>[];
-    final skipped = <TripSkipped>[];
-    final results = <TripSendResult>[];
-    var short = false;
-    int? left;
-    var processed = 0;
-    var sentAny = false;
-    for (final k in legs) {
-      final ids = groups[k]!;
-      final days = [for (final d in legDays(k)) if (!isDayPast(d)) d];
-      if (days.isEmpty) {
-        for (final id in ids) {
-          results.add(TripSendResult(listingId: id, status: 'Failed'));
-        }
-        processed += ids.length;
-        continue;
-      }
-      final scope = '$key@$k';
-      final b = await en.sendLead(
-        days: days,
-        taxiIds: ids,
-        clientRequestId: sl.requestIdFor(scope, ids),
-        stepKey: key,
-      );
-      if (b == null) break;
-      sl.completeRequest(scope, ids);
-      sl.applyResults(key, b.perRecipient);
-      items.addAll(b.items);
-      skipped.addAll(b.skipped);
-      results.addAll(b.perRecipient);
-      short = short || b.veryShortNotice;
-      left = b.asksLeft ?? left;
-      processed += ids.length;
-      sentAny = true;
-    }
-    unawaited(sl.load(force: true));
-    final batch = sentAny
-        ? TripEnquiryBatch(items: items, skipped: skipped, veryShortNotice: short, asksLeft: left, results: results)
-        : null;
-    return (batch: batch, unsent: active.length - processed);
-  }
-
   Future<AskResult?> _askCars(BuildContext? context, TripEasyRowKey row, String key, List<String> ids, String requestId) async {
     final custom = carSender;
     if (custom != null) return custom(key, ids, requestId);
@@ -468,7 +402,6 @@ extension TripPlanGuide on TripPlanController {
       final sl = TripShortlistController.to;
       final taxi = row.kind != TripEasyRowKind.stay;
       TripEnquiryBatch? batch;
-      var unsent = 0;
       switch (row.kind) {
         case TripEasyRowKind.stay:
           final k = row.legIndex ?? 1;
@@ -479,9 +412,7 @@ extension TripPlanGuide on TripPlanController {
           }
           batch = await sl.sendStays(step: key, day: p.legStart(k) + past, nights: (n < 1 ? 1 : n) - past);
         case TripEasyRowKind.taxi:
-          final r = await _sendTaxiLegs(p, key);
-          batch = r.batch;
-          unsent = r.unsent;
+          return null;
         case TripEasyRowKind.gettingThere || TripEasyRowKind.comingBack || TripEasyRowKind.between:
           batch = await sl.sendCars(step: key, ask: (ids, requestId) => _askCars(context, row, key, ids, requestId));
       }
@@ -489,7 +420,7 @@ extension TripPlanGuide on TripPlanController {
         if (sl.countOf(key) > 0) _g.notes[key] = _failNote(en);
         return null;
       }
-      guideRecordSend(key, batch, taxi: taxi, unsent: unsent);
+      guideRecordSend(key, batch, taxi: taxi);
       unawaited(refreshEnquiries());
       return batch;
     } finally {
@@ -497,11 +428,10 @@ extension TripPlanGuide on TripPlanController {
     }
   }
 
-  void guideRecordSend(String key, TripEnquiryBatch batch, {required bool taxi, int unsent = 0}) {
-    final en = TripEnquiryController.to;
+  void guideRecordSend(String key, TripEnquiryBatch batch, {required bool taxi}) {
     final results = batch.perRecipient;
     final ok = results.where((r) => r.ok).length;
-    final bad = results.length - ok + unsent;
+    final bad = results.length - ok;
     _g.sent[key] = ok;
     if (ok > 0) {
       _g.sentOk.add(key);
@@ -513,8 +443,7 @@ extension TripPlanGuide on TripPlanController {
     if (bad > 0) {
       _g.failed[key] = bad;
       final firstBad = results.where((r) => !r.ok).firstOrNull;
-      _g.notes[key] =
-          unsent > 0 ? _failNote(en) : TripStringsShortlist.reasonLine(firstBad?.status ?? 'Failed', taxi: taxi);
+      _g.notes[key] = TripStringsShortlist.reasonLine(firstBad?.status ?? 'Failed', taxi: taxi);
     } else {
       _g.failed.remove(key);
     }

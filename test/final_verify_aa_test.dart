@@ -6,9 +6,7 @@ import 'package:bakhli/features/taxi/ways/models/taxi_ways_models.dart';
 import 'package:bakhli/features/trip/controllers/trip_plan_controller.dart';
 import 'package:bakhli/features/trip/models/trip_enquiry_model.dart';
 import 'package:bakhli/features/trip/models/trip_plan_model.dart';
-import 'package:bakhli/features/trip/trip_strings_final_aa.dart';
 import 'package:bakhli/features/trip/utils/trip_stay_base.dart';
-import 'package:bakhli/features/trip/utils/trip_taxi_fit.dart';
 import 'package:bakhli/repositories/notification_repository.dart';
 import 'package:bakhli/utils/keyset_page.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -160,21 +158,6 @@ void main() {
       expect(TripStayBase.startOf(multi, 2, one), isNull);
       expect(TripStayBase.of(multi, 2, one), isNull);
       expect(TripStayBase.of(multi, 1, one), (lat: 29.3467, lng: 79.5536));
-    });
-  });
-
-  group('Trip local taxi fit (finding 16)', () {
-    test('7 people, 142 km: the 4-seat driver costs 2 cars and 42 km extra', () {
-      final a = TripTaxiFit.fromJson({'tripSeatsFit': false, 'tripCars': 2, 'tripDayCost': 5000, 'tripExtraKm': 42, 'tripPickupKm': 3.24});
-      expect(a.costFor(2500), 5000);
-      expect(a.carCount, 2);
-      expect(a.extraKm, 42);
-      expect(TripStringsFinalAa.kmAway(a.pickupKm!), '3.2 km away');
-      expect(TripStringsFinalAa.kmAway(12.6), '13 km away');
-      expect(const TripTaxiFit(cars: 2).costFor(2500), 5000);
-      expect(const TripTaxiFit().costFor(null), isNull);
-      final need = TripTaxiNeed.of(people: 7, km: 141.2, lat: 29.39, lng: 79.45);
-      expect(need.params, {'people': 7, 'dayKm': 142, 'lat': 29.39, 'lng': 79.45});
     });
   });
 

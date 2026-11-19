@@ -195,10 +195,10 @@ void main() {
   testWidgets('G step label and percent bar agree', (t) async {
     final r = _Rig(_plan());
     await _pump(t, r);
-    expect(find.text('GETTING THERE · STEP 1 OF 4'), findsOneWidget);
+    expect(find.text('GETTING THERE · STEP 1 OF 3'), findsOneWidget);
     expect(find.text('0%'), findsOneWidget);
     await _tap(t, 'Skip this');
-    expect(find.text('25%'), findsOneWidget);
+    expect(find.text('33%'), findsOneWidget);
     r.close();
   });
 

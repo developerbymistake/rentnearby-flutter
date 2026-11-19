@@ -6,6 +6,7 @@ import '../trip_strings_mca_a3.dart';
 import '../trip_strings_mca_a4.dart';
 import 'trip_enquiry_model.dart';
 import 'trip_journey_model.dart';
+import 'taxi_request_models.dart';
 import 'trip_plan_model.dart';
 
 class TripSummaryRoom {
@@ -124,6 +125,8 @@ class TripSummaryTaxi {
   final String? confirmedBy;
   final DateTime? confirmedAt;
   final String? cancelledBy;
+  final String? bookingId;
+  final String? bookingStatus;
 
   const TripSummaryTaxi({
     this.enquiryId,
@@ -140,6 +143,8 @@ class TripSummaryTaxi {
     this.confirmedBy,
     this.confirmedAt,
     this.cancelledBy,
+    this.bookingId,
+    this.bookingStatus,
   });
 
   factory TripSummaryTaxi.fromJson(Map<String, dynamic> json) => TripSummaryTaxi(
@@ -157,10 +162,14 @@ class TripSummaryTaxi {
         confirmedBy: json['confirmedBy'] as String?,
         confirmedAt: tripInstant(json['confirmedAt']),
         cancelledBy: json['cancelledBy'] as String?,
+        bookingId: json['bookingId'] as String?,
+        bookingStatus: json['bookingStatus'] as String?,
       );
 
   TripDisplayStatus get display => TripDisplayStatus.parse(displayStatus);
-  bool get isCancelled => cancelledBy != null || display == TripDisplayStatus.cancelled;
+  bool get isRequestBooking => bookingId != null && bookingId!.isNotEmpty;
+  bool get isCancelled =>
+      cancelledBy != null || display == TripDisplayStatus.cancelled || BookingState.parse(bookingStatus) == BookingState.cancelled;
   String confirmedLine() => _confirmedLine(confirmedBy, confirmedAt);
 }
 

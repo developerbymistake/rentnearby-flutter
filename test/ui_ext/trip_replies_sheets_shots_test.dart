@@ -6,7 +6,6 @@ import 'package:bakhli/features/stay/enquiries/trip_ask_advance_sheet.dart';
 import 'package:bakhli/features/stay/enquiries/trip_send_offer_sheet.dart';
 import 'package:bakhli/features/stay/models/stay_nearby_model.dart';
 import 'package:bakhli/features/stay/models/stay_owner_model.dart';
-import 'package:bakhli/features/taxi/models/taxi_browse_item.dart';
 import 'package:bakhli/features/trip/controllers/trip_plan_controller.dart';
 import 'package:bakhli/features/trip/controllers/trip_supply_controller.dart';
 import 'package:bakhli/features/trip/models/trip_enquiry_model.dart';
@@ -15,12 +14,10 @@ import 'package:bakhli/features/trip/models/trip_plan_model.dart';
 import 'package:bakhli/features/trip/trip_strings.dart';
 import 'package:bakhli/features/trip/utils/trip_clock.dart';
 import 'package:bakhli/features/trip/screens/trip_stay_enquiry_sheet.dart';
-import 'package:bakhli/features/trip/screens/trip_taxi_enquiry_sheet.dart';
 import 'package:bakhli/features/trip/widgets/trip_accept_sheet.dart';
 import 'package:bakhli/features/trip/widgets/trip_cancel_sheet.dart';
 import 'package:bakhli/features/trip/widgets/trip_change_request_sheet.dart';
 import 'package:bakhli/features/trip/widgets/trip_counter_sheet.dart';
-import 'package:bakhli/features/trip/widgets/trip_driver_reply_sheet.dart';
 import 'package:bakhli/features/trip/widgets/trip_problem_sheet.dart';
 import 'package:bakhli/features/trip/widgets/trip_send_result_sheet.dart';
 import 'package:bakhli/features/trip/widgets/trip_taxi_booking_sheet.dart';
@@ -46,8 +43,6 @@ class _Supply extends TripSupplyController {
   bool get staysOutOfDate => false;
   @override
   Future<void> ensureStays(int legIndex) async => stayLeg.value = legIndex;
-  @override
-  Future<void> ensureTaxis(int legIndex, {int? day}) async => taxiLeg.value = legIndex;
 }
 
 String _iso(DateTime d) => d.toUtc().toIso8601String();
@@ -149,7 +144,6 @@ void main() {
     'sr_withdraw_inline': (c) => TripWithdrawSheet.confirmInline(c),
     'sr_cancel': (c) => TripCancelSheet.show(c, enquiry: confirmed, ownerSide: false),
     'sr_change': (c) => TripChangeRequestSheet.show(c, enquiry: confirmed, checkIn: journeyStart(), checkOut: journeyStart().add(const Duration(days: 2))),
-    'tr_lead': (c) => TripDriverReplySheet.show(c, enquiry: fareSent),
     'tr_booked': (c) => TripTaxiBookingSheet.show(c, taxi: null, day: 1, enquiry: fareSent, initialFare: 4500),
     'tr_cancel': (c) => TripCancelSheet.show(c, enquiry: booked, ownerSide: true),
     'ua_sheet': (c) => TripUpdateAskSheet.show(c, SettingsSaveResult(saved: true, openAffected: [asked], confirmedAffected: [confirmed], openTaxiAffected: [fareSent])),
@@ -176,11 +170,6 @@ void main() {
           stay: StayNearbyModel(id: 'stay-x', name: 'Deodar Cottage', latitude: 29.3, longitude: 79.5, minPricePerNight: 3600, distanceKm: 1, isActive: true),
           day: 1,
           nights: 2,
-        ),
-    'se_taxi': (c) => TripTaxiEnquirySheet.show(
-          c,
-          driver: TaxiBrowseItem(id: 'x1', driverName: 'Ramesh Kumar', vehicleTypeName: 'Sedan', plateDisplay: 'UK 04 AB 1234', routeCount: 2, matchReversed: false, createdAt: DateTime(2026)),
-          days: const [1, 2],
         ),
   };
 

@@ -96,7 +96,6 @@ class TripStringsV2Easy {
   static const String youArrangeIt = "You'll arrange it";
 
   static const String stayHint = 'Homestays and hotels in this city';
-  static const String taxiHint = 'One driver for the days you choose';
   static const String travelHint = 'Cars and drivers for this ride';
   static const String betweenHint = 'The ride from one city to the next';
 
@@ -133,15 +132,11 @@ class TripStringsV2Easy {
 
   static const String sentBack = 'Back to plan';
   static const String askMoreStays = 'Ask more stays';
-  static const String askMoreDrivers = 'Ask more drivers';
   static const String hostNotify = 'Hosts usually reply within a few hours. You get a notification.';
-  static const String driverNotify = 'You get a notification when a driver replies.';
   static const String balanceAtCheckIn = 'Balance at check-in';
   static const String replyWillShow = 'Reply will show on your plan.';
 
   static String sentTo(int n) => n == 1 ? 'Sent to 1 host' : 'Sent to $n hosts';
-
-  static String sentToDrivers(int n) => n == 1 ? 'Sent to 1 driver' : 'Sent to $n drivers';
 
   static String nightsOf(int nights) => '$nights ${nights == 1 ? 'night' : 'nights'}';
 

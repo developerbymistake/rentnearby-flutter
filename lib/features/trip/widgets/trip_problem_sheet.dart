@@ -28,15 +28,16 @@ class TripProblemKinds {
 
 class TripProblemSheet {
   static Future<bool> show(BuildContext context, {required int day}) async {
-    final done = await TripSheetFrame.show<bool>(context, _ProblemBody(day: day));
+    final done = await TripSheetFrame.show<bool>(context, _ProblemBody(day: day, host: context));
     return done == true;
   }
 }
 
 class _ProblemBody extends StatefulWidget {
-  const _ProblemBody({required this.day});
+  const _ProblemBody({required this.day, required this.host});
 
   final int day;
+  final BuildContext host;
 
   @override
   State<_ProblemBody> createState() => _ProblemBodyState();
@@ -194,7 +195,7 @@ class _ProblemBodyState extends State<_ProblemBody> {
           TripNavigation.openMap(day: day);
         }
       case TripProblemKinds.driverNoShow:
-        TripNavigation.openTaxi(days: [day]);
+        if (widget.host.mounted) TripNavigation.openTaxiRequest(widget.host);
       case TripProblemKinds.hostNoRoom:
         TripNavigation.openStay(TripPlanController.to.plan.value?.legIndexOf(day) ?? 0, nearLat: loc?.latitude, nearLng: loc?.longitude);
       default:

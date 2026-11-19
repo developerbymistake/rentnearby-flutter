@@ -63,7 +63,7 @@ void main() {
 
   test('map_pauses_on_every_new_full_page_route', () {
     final observer = MapPauseObserver();
-    for (final name in [..._contract.values, AppRoutes.tripTaxiReplies]) {
+    for (final name in _contract.values) {
       mapShouldPause.value = false;
       final route = MaterialPageRoute<void>(settings: RouteSettings(name: name), builder: (_) => const SizedBox());
       observer.didPush(route, null);

@@ -10,7 +10,6 @@ class TripStringsShortlist {
   static const staysNear = 'Stays near';
   static const yourLocation = 'Your location';
   static String centreOf(String city) => '$city centre';
-  static const sending = 'Sending';
   static const taxiFallback = 'Taxi';
   static const pickFirst = 'Pick up to 3 from the list, or go back and choose another option.';
   static const emptyTitle = 'No taxis found for this route yet.';

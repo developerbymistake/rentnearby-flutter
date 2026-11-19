@@ -310,8 +310,8 @@ void main() {
     await _settle(t);
     expect(find.byType(TaxiWaysFeedScreen), findsNothing);
     expect(r.c.guideAnswered(_step), isTrue, reason: 'a send where at least one recipient succeeded answers the step');
-    expect(find.text('25%'), findsOneWidget);
-    expect(r.c.guideState.percent.value, 25);
+    expect(find.text('33%'), findsOneWidget);
+    expect(r.c.guideState.percent.value, 33);
     expect(_bar(t).canNext, isTrue);
     await shot(t, 'FINAL_07_sent_card');
 
@@ -366,7 +366,7 @@ void main() {
     expect(ids.length, 3);
     expect(find.text('Enquiry sent'), findsOneWidget);
     expect(_bar(t).canNext, isTrue);
-    expect(find.text('25%'), findsOneWidget);
+    expect(find.text('33%'), findsOneWidget);
     await shot(t, 'FINAL_10_sent_card_from_review_card');
     await _tapText(t, 'Next');
     await _settle(t);
@@ -472,7 +472,7 @@ void main() {
     await _pump(t, r);
     await _tapText(t, 'Skip this');
     expect(r.c.guideAnswered(_step), isTrue);
-    expect(find.text('25%'), findsOneWidget);
+    expect(find.text('33%'), findsOneWidget);
     expect(_bar(t).canNext, isTrue);
     await _tapText(t, 'Next');
     await _settle(t);
@@ -486,7 +486,7 @@ void main() {
     await t.pump(const Duration(milliseconds: 300));
     await _settle(t);
     expect(r.c.guideAnswered(_step), isTrue);
-    expect(find.text('25%'), findsOneWidget);
+    expect(find.text('33%'), findsOneWidget);
     expect(_bar(t).canNext, isTrue);
     expect(r.listOpens, 0);
     await shot(t, 'FINAL_13_own_answered');

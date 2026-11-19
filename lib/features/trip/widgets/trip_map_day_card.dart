@@ -407,8 +407,16 @@ class _TripMapDayCardState extends State<TripMapDayCard> {
         pills.add(_Pill(lead: _icon('camping'), label: TripStringsA4.callHost, onTap: () => ContactLauncher.call(phone)));
       }
     }
-    final taxi = c.primaryTaxiEnquiry(day);
-    if (taxi != null && taxi.isBooked) {
+    final driver = c.requestDriverOn(day);
+    final taxi = driver == null ? c.primaryTaxiEnquiry(day) : null;
+    if (driver != null) {
+      if (driver.name.isNotEmpty) parts.add(driver.name);
+      parts.add(TripStringsV2Plan.confirmedShort);
+      final phone = _phone(driver.phone);
+      if (phone != null) {
+        pills.add(_Pill(lead: _icon('taxi'), label: TripStringsA4.callDriver, onTap: () => ContactLauncher.call(phone)));
+      }
+    } else if (taxi != null && taxi.isBooked) {
       final pickup = taxi.taxi?.pickupTime;
       if (pickup != null && pickup.isNotEmpty) parts.add(TripStrings.pickupAt(TripFormat.time12(pickup)));
       parts.add(taxi.isConfirmedByBoth ? TripStringsV2Plan.confirmedShort : TripStringsV2Plan.bookedByYouDriver);

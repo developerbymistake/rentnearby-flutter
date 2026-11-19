@@ -20,7 +20,6 @@ import '../design/design.dart';
 import '../features/stay/stay_status_sync.dart';
 import '../features/taxi/taxi_status_sync.dart';
 import '../features/trip/controllers/trip_plan_controller.dart';
-import '../features/trip/models/trip_enquiry_model.dart';
 import '../models/conversation_model.dart';
 import '../models/notification_model.dart';
 import '../services/api_service.dart';
@@ -499,12 +498,10 @@ class NotificationService extends GetxService {
     AppRoutes.savedJourney,
     AppRoutes.tripSpots,
     AppRoutes.tripPlan,
-    AppRoutes.tripTaxi,
     AppRoutes.tripStay,
     AppRoutes.tripMap,
     AppRoutes.myTrips,
     AppRoutes.tripReplies,
-    AppRoutes.tripTaxiReplies,
     AppRoutes.tripSummary,
     AppRoutes.stayEnquiries,
     AppRoutes.tripLeads,
@@ -530,7 +527,6 @@ class NotificationService extends GetxService {
     AppRoutes.savedJourney,
     AppRoutes.tripPlan,
     AppRoutes.tripReplies,
-    AppRoutes.tripTaxiReplies,
     AppRoutes.tripOverview,
     AppRoutes.tripTaxiStatus,
     AppRoutes.taxiRequests,
@@ -587,7 +583,15 @@ class NotificationService extends GetxService {
   // killed taps on an OS-auto-rendered notification) and our own local-notification tap tracking
   // (_onLocalNotificationTap / cold-start getNotificationAppLaunchDetails, for a notification we
   // rendered ourselves — chat, or the new generic foreground one). One routing decision, one place.
-  void _dispatchNotificationRoute(Map<String, dynamic> data) {
+  static Map<String, dynamic> liveRouteData(Map<String, dynamic> data) {
+    final route = data['action_route'];
+    if (route is! String || !AppRoutes.retiredTripTaxiRoutes.contains(route)) return data;
+    final live = AppRoutes.liveTarget(route, NotificationModel.parseArguments(data['action_args_json']))!;
+    return {...data, 'action_route': live.route, 'action_args_json': jsonEncode(live.args)};
+  }
+
+  void _dispatchNotificationRoute(Map<String, dynamic> pushData) {
+    final data = liveRouteData(pushData);
     if (data['notification_type'] == NotificationTypeKeys.roleRequestApprovedWire) {
       Get.find<AuthController>().forceLogout(reason: LogoutReason.roleChanged);
       return;
@@ -668,7 +672,10 @@ class NotificationService extends GetxService {
   }
 
   // One rule for push tap and inbox tap.
-  void openActionRoute(String route, Map<String, dynamic>? args) {
+  void openActionRoute(String pushRoute, Map<String, dynamic>? pushArgs) {
+    final live = AppRoutes.liveTarget(pushRoute, pushArgs)!;
+    final route = live.route;
+    var args = live.args;
     if (route == AppRoutes.chatConversation && args?['listingType'] == null) {
       final conversationId = args?['conversationId']?.toString();
       if (conversationId == null || conversationId.isEmpty) {
@@ -689,7 +696,8 @@ class NotificationService extends GetxService {
     return id != null && current is Map && current['conversationId']?.toString() == id;
   }
 
-  bool _targetAlreadyOpen(Map<String, dynamic> data) {
+  bool _targetAlreadyOpen(Map<String, dynamic> pushData) {
+    final data = liveRouteData(pushData);
     final route = data['action_route'];
     if (route is! String) return false;
     final args = NotificationModel.parseArguments(data['action_args_json']);
@@ -701,9 +709,7 @@ class NotificationService extends GetxService {
     if (route == AppRoutes.tripPlan && (args?['row'] != null || args?['step'] != null)) return false;
     final current = Get.arguments;
     final open = current is Map ? current : const <String, dynamic>{};
-    final taxiReplies = route == AppRoutes.tripTaxiReplies;
     for (final key in const ['tripId', 'day', 'journeyId']) {
-      if (taxiReplies && key == 'day') continue;
       final want = args?[key];
       if (want == null) continue;
       var have = open[key];
@@ -713,35 +719,7 @@ class NotificationService extends GetxService {
       }
       if (have?.toString() != want.toString()) return false;
     }
-    return !taxiReplies || _leadCoversOpenDay(args, open['day']);
-  }
-
-  bool _leadCoversOpenDay(Map<String, dynamic>? args, Object? openDay) {
-    final want = args?['day'];
-    final day = openDay is int ? openDay : int.tryParse(openDay?.toString() ?? '');
-    if (day == null || !Get.isRegistered<TripPlanController>()) {
-      return want == null || want.toString() == openDay?.toString();
-    }
-    final plan = Get.find<TripPlanController>();
-    final date = plan.dateOf(day);
-    final id = args?['enquiryId']?.toString();
-    TripEnquiryModel? lead;
-    if (id != null) {
-      for (final e in plan.enquiryList) {
-        if (e.id == id) {
-          lead = e;
-          break;
-        }
-      }
-    }
-    if (lead != null) {
-      return date != null && lead.checkIn != null ? lead.coversTaxiDate(date) : lead.days.contains(day);
-    }
-    final pushed = DateTime.tryParse(args?['date']?.toString() ?? '');
-    if (pushed != null && date != null) {
-      return pushed.year == date.year && pushed.month == date.month && pushed.day == date.day;
-    }
-    return want == null || want.toString() == '$day';
+    return true;
   }
 
   // Shared route-state juggling for both trigger sources — FCM's own tap tracking

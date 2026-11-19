@@ -255,6 +255,7 @@ class TripSummaryText {
     final lines = <String>[];
     final title = [
       t.listingName,
+      if (t.isRequestBooking) t.vehicleTypeName ?? '',
       taxiDayNumbers(t),
       statusLabel(t.display, t.cancelledBy, taxi: true),
       fareLine(t),
@@ -265,7 +266,7 @@ class TripSummaryText {
       if (level < 1 && t.pickupPlace != null && t.pickupPlace!.isNotEmpty) t.pickupPlace!,
     ].join(', ');
     if (pickup.isNotEmpty) lines.add('  ${TripStrings.pickup}: $pickup');
-    if (level < 3) lines.add('  ${TripStrings.confirmedLabel}: ${t.confirmedLine()}');
+    if (level < 3 && !t.isRequestBooking) lines.add('  ${TripStrings.confirmedLabel}: ${t.confirmedLine()}');
     return lines;
   }
 

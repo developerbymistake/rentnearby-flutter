@@ -6,7 +6,6 @@ import 'package:bakhli/features/trip/controllers/trip_plan_controller.dart';
 import 'package:bakhli/features/trip/controllers/trip_supply_controller.dart';
 import 'package:bakhli/features/trip/models/trip_enquiry_model.dart';
 import 'package:bakhli/features/trip/screens/trip_replies_screen.dart';
-import 'package:bakhli/features/trip/screens/trip_taxi_replies_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -26,8 +25,6 @@ class _Supply extends TripSupplyController {
   bool get staysOutOfDate => false;
   @override
   Future<void> ensureStays(int legIndex) async => stayLeg.value = legIndex;
-  @override
-  Future<void> ensureTaxis(int legIndex, {int? day}) async => taxiLeg.value = legIndex;
 }
 
 final _configs = <(String, double, double)>[('', 360, 1.0), ('_13', 360, 1.3), ('_300', 300, 1.0)];
@@ -271,69 +268,6 @@ void main() {
     await t.pump(const Duration(milliseconds: 400));
     await _snap(t, 'sr_decline');
     expect(find.text('Decline this offer?'), findsOneWidget);
-    await _leave(t);
-  });
-
-  Map<String, Object?> taxiJson(String id, String name, String display, {String status = 'Asked', int? fare, int? agreed, bool urgent = false, String? note}) {
-    final j = enquiryJson(id: id, kind: 'Taxi', status: status, start: journeyStart(), days: [1], displayStatus: display);
-    return {
-      ...j,
-      'listingName': name,
-      'isUrgent': urgent,
-      'conversationId': 'c$id',
-      'createdAt': _iso(DateTime.now().subtract(const Duration(hours: 1))),
-      'expiresAt': _iso(DateTime.now().add(const Duration(hours: 20))),
-      'owner': {'id': 'd$id', 'name': name, 'phone': '9876543210'},
-      'taxi': {'listedRate': 3000, 'driverFare': ?fare, 'driverNote': ?note, 'agreedFare': ?agreed},
-    };
-  }
-
-  final taxiScenes = <String, List<Map<String, Object?>>>{
-    'tr_list': [
-      taxiJson('t1', 'Ramesh Kumar', 'fareSent', status: 'FareSent', fare: 3200, note: 'AC car, toll included'),
-      taxiJson('t2', 'Suresh Negi', 'asked', urgent: true),
-    ],
-    'tr_done': [
-      taxiJson('t3', 'Ramesh Kumar', 'bookedByYou', status: 'BookedByTraveller', agreed: 3200),
-      taxiJson('t4', 'Suresh Negi', 'confirmedByBoth', status: 'ConfirmedByBoth', agreed: 3000),
-    ],
-    'tr_red': [
-      taxiJson('t5', 'Ramesh Kumar', 'notMe', status: 'Failed'),
-      taxiJson('t6', 'Suresh Negi', 'asked'),
-    ],
-  };
-
-  for (final e in taxiScenes.entries) {
-    for (final (tag, w, s) in _configs) {
-      testWidgets('${e.key}$tag', (t) async {
-        boot(e.value);
-        await _open(t, const TripTaxiRepliesScreen(), w: w, s: s);
-        await _snap(t, '${e.key}$tag');
-        await _leave(t);
-      });
-    }
-  }
-
-  testWidgets('tr_loading', (t) async {
-    final plan = boot(const []);
-    plan.enquiriesLoading.value = true;
-    await _open(t, const TripTaxiRepliesScreen());
-    await _snap(t, 'tr_loading');
-    await _leave(t);
-  });
-
-  testWidgets('tr_empty', (t) async {
-    boot(const []);
-    await _open(t, const TripTaxiRepliesScreen());
-    await _snap(t, 'tr_empty');
-    await _leave(t);
-  });
-
-  testWidgets('tr_error', (t) async {
-    final plan = boot(const []);
-    plan.enquiriesFailed.value = true;
-    await _open(t, const TripTaxiRepliesScreen());
-    await _snap(t, 'tr_error');
     await _leave(t);
   });
 

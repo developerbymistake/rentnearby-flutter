@@ -19,7 +19,6 @@ class TripPushSync {
   static const _tripRoutes = {
     AppRoutes.tripPlan,
     AppRoutes.tripReplies,
-    AppRoutes.tripTaxiReplies,
     AppRoutes.tripOverview,
     AppRoutes.tripTaxiStatus,
     AppRoutes.taxiRequests,
@@ -60,7 +59,8 @@ class TripPushSync {
       (type.startsWith('Trip') || type.startsWith('trip_') || type.startsWith('Journey') || type.startsWith('journey_'));
 
   // Hub and FCM both deliver the same event in foreground; one refresh covers both.
-  static void onPush(String? type, String? actionRoute) {
+  static void onPush(String? type, String? pushRoute) {
+    final actionRoute = AppRoutes.liveTarget(pushRoute)?.route;
     final driver = _markDriver(type, actionRoute);
     final taxi = NotificationTypeKeys.isTravellerTaxi(type);
     final trip = taxi || isTripType(type) || _tripRoutes.contains(actionRoute);

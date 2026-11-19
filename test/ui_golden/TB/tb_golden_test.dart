@@ -1,7 +1,5 @@
 import 'package:bakhli/design/design.dart';
 import 'package:bakhli/features/stay/models/stay_nearby_model.dart';
-import 'package:bakhli/features/taxi/models/taxi_browse_item.dart';
-import 'package:bakhli/features/trip/widgets/trip_driver_row.dart';
 import 'package:bakhli/features/trip/widgets/trip_sheet_frame.dart';
 import 'package:bakhli/features/trip/widgets/trip_stay_row.dart';
 import 'package:bakhli/features/trip/widgets/trip_status.dart';
@@ -28,20 +26,6 @@ StayNearbyModel _stay({bool active = true, bool featured = false}) => StayNearby
       maxGuests: 4,
     );
 
-TaxiBrowseItem _taxi() => TaxiBrowseItem(
-      id: 't',
-      driverName: 'Ramesh Kumar Negi',
-      vehicleTypeName: 'Innova Crysta',
-      seats: 7,
-      plateDisplay: 'UK 04 AB 1234',
-      cityName: 'Nainital',
-      routeCount: 3,
-      matchReversed: false,
-      createdAt: DateTime(2026, 1, 1),
-      localDayRate: 3200,
-      tripReplyLabel: 'app',
-    );
-
 void _golden(String name, Widget Function() build) {
   for (final scale in [1.0, 1.3]) {
     final s = scale == 1.0 ? '1.0' : '1.3';
@@ -62,13 +46,6 @@ void main() {
         TripStayRow(stay: _stay(active: false), onOpen: () {}),
         TripStayRow(stay: _stay(), status: TripDisplayStatus.asked, onOpen: () {}, onCall: () {}, onAsk: () {}),
         const TripStayRowSkeleton(),
-      ]));
-  _golden('driver_row', () => Column(children: [
-        TripDriverRow(item: _taxi(), days: 2, onOpen: () {}, onCall: () {}, onAsk: () {}, onMenu: (_) {}),
-        const SizedBox(height: 12),
-        TripDriverRow(item: _taxi(), status: TripDisplayStatus.asked, onOpen: () {}, onCall: () {}, onAsk: () {}, onMenu: (_) {}),
-        const SizedBox(height: 12),
-        const TripDriverRowSkeleton(),
       ]));
   _golden('kit_bits', () => Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         Container(

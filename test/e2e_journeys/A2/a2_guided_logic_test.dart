@@ -8,6 +8,7 @@ import 'package:bakhli/features/trip/data/trip_shortlist_repository.dart';
 import 'package:bakhli/features/trip/models/trip_enquiry_model.dart';
 import 'package:bakhli/features/trip/models/trip_plan_model.dart';
 import 'package:bakhli/features/trip/models/trip_shortlist_model.dart';
+import 'package:bakhli/features/taxi/ways/models/ask_models.dart';
 import 'package:bakhli/features/trip/trip_strings_guide.dart';
 import 'package:bakhli/features/trip/trip_strings_shortlist.dart';
 import 'package:bakhli/features/trip/utils/trip_clock.dart';
@@ -79,19 +80,6 @@ class _Enq extends TripEnquiryController {
       veryShortNotice: false,
       results: [for (final id in ids) TripSendResult(listingId: id, status: failStatus)],
     );
-  }
-
-  @override
-  Future<TripEnquiryBatch?> sendLead({
-    required List<int> days,
-    required List<String> taxiIds,
-    String? pickupTime,
-    String? pickupPlace,
-    String? clientRequestId,
-    String? stepKey,
-  }) async {
-    calls.add(_Call(taxiIds, days, null, null, clientRequestId));
-    return _answer(taxiIds);
   }
 
   @override
@@ -181,24 +169,21 @@ void main() {
   tearDown(Get.reset);
 
   group('SB3 limit errors are visible on the guided card', () {
-    test('ask limit on a bulk taxi send shows the limit text and keeps the shortlist', () async {
+    test('the guide has no local taxi step and never sends a taxi ask', () async {
       final r = await _rig(_multi([2]), items: [_item('taxi', 'a'), _item('taxi', 'b')]);
-      r.enq
-        ..failType = TripEnquiryErrorTypes.enquiryLimit
-        ..failMinutes = 7;
+      expect(TripGuideRules.keys(r.c.plan.value!), isNot(contains('taxi')));
       expect(await r.c.guideSendAll('taxi'), isNull);
-      final note = r.c.guideState.notes['taxi']!;
-      expect(note, contains('Ask limit reached'));
-      expect(note, contains('7 min'));
+      expect(r.enq.calls, isEmpty);
+      expect(r.c.guideState.notes.containsKey('taxi'), isFalse);
       expect(r.sl.countOf('taxi'), 2);
       r.close();
     });
 
     test('lead limit shows the daily taxi limit text', () async {
-      final r = await _rig(_multi([2]), items: [_item('taxi', 'a')]);
+      final r = await _rig(_multi([2]), items: [_item('stay:1', 'a', kind: ShortlistKinds.stay)]);
       r.enq.failType = TripEnquiryErrorTypes.leadLimit;
-      await r.c.guideSendAll('taxi');
-      expect(r.c.guideState.notes['taxi'], TripStringsShortlist.leadLimit);
+      await r.c.guideSendAll('stay:1');
+      expect(r.c.guideState.notes['stay:1'], TripStringsShortlist.leadLimit);
       r.close();
     });
 
@@ -232,63 +217,39 @@ void main() {
   });
 
   group('SB4 guided send follows the list screen day rules', () {
-    test('multi city sightseeing taxi sends one request per leg with its own request id', () async {
-      final r = await _rig(_multi([2, 2]), items: [_item('taxi', 'a', leg: 1), _item('taxi', 'b', leg: 2)]);
-      final batch = await r.c.guideSendAll('taxi');
-      expect(batch, isNotNull);
-      expect(r.enq.calls.length, 2);
-      expect(r.enq.calls[0].days, [1, 2]);
-      expect(r.enq.calls[0].ids, ['a']);
-      expect(r.enq.calls[1].days, [3, 4]);
-      expect(r.enq.calls[1].ids, ['b']);
-      expect(r.enq.calls[0].requestId, isNot(r.enq.calls[1].requestId));
-      expect(batch!.perRecipient.length, 2);
-      expect(r.c.guideState.sent['taxi'], 2);
-      r.close();
-    });
-
-    test('a shortlist without a stored leg is sent only for the first coming leg, never across cities', () async {
-      final r = await _rig(_multi([2, 2]), items: [_item('taxi', 'a'), _item('taxi', 'b')]);
-      await r.c.guideSendAll('taxi');
-      expect(r.enq.calls.length, 1);
-      expect(r.enq.calls.single.days, [1, 2]);
-      r.close();
-    });
-
-    test('an ongoing trip drops past days for taxis and sends the stay from today night', () async {
+    test('an ongoing trip sends the stay from today night', () async {
       final start = _today().subtract(const Duration(days: 1));
-      final r = await _rig(
-        _multi([3], start: start),
-        items: [_item('taxi', 'a'), _item('stay:1', 's', kind: ShortlistKinds.stay)],
-      );
-      await r.c.guideSendAll('taxi');
-      expect(r.enq.calls.single.days, [2, 3]);
-      r.enq.calls.clear();
+      final r = await _rig(_multi([3], start: start), items: [_item('stay:1', 's', kind: ShortlistKinds.stay)]);
       await r.c.guideSendAll('stay:1');
       expect(r.enq.calls.single.day, 2);
       expect(r.enq.calls.single.nights, 2);
       r.close();
     });
 
-    test('retry after a failed first leg reuses the same request id for that leg', () async {
-      final r = await _rig(_multi([2, 2]), items: [_item('taxi', 'a', leg: 1), _item('taxi', 'b', leg: 2)]);
+    test('retry after a failed stay send reuses the same request id', () async {
+      final r = await _rig(_multi([2]), items: [_item('stay:1', 'a', kind: ShortlistKinds.stay)]);
       r.enq.failType = TripEnquiryErrorTypes.enquiryLimit;
-      await r.c.guideSendAll('taxi');
+      await r.c.guideSendAll('stay:1');
       final first = r.enq.calls.single.requestId;
       r.enq.failType = null;
-      await r.c.guideSendAll('taxi');
-      expect(r.enq.calls.first.requestId, first);
+      await r.c.guideSendAll('stay:1');
+      expect(r.enq.calls.last.requestId, first);
       r.close();
     });
   });
 
   group('SB6 failure and sent copy say why and use the right word', () {
-    test('a driver that is not available gets its own line', () async {
-      final r = await _rig(_multi([2]), items: [_item('taxi', 'a')]);
-      r.enq.failStatus = 'NotAvailable';
-      await r.c.guideSendAll('taxi');
-      expect(r.c.guideState.notes['taxi'], 'This taxi is not available any more');
-      expect(r.c.guideState.failed['taxi'], 1);
+    test('a car driver that is not available gets its own line', () async {
+      final r = await _rig(_multi([2]), items: [_item('gettingThere', 'a', kind: ShortlistKinds.car)]);
+      r.c.carSender = (step, ids, requestId) async => AskResult(
+            items: const [],
+            skipped: const [],
+            veryShortNotice: false,
+            results: [for (final id in ids) TripSendResult(listingId: id, status: 'NotAvailable')],
+          );
+      await r.c.guideSendAll('gettingThere');
+      expect(r.c.guideState.notes['gettingThere'], 'This taxi is not available any more');
+      expect(r.c.guideState.failed['gettingThere'], 1);
       r.close();
     });
 
@@ -325,25 +286,25 @@ void main() {
       r.close();
     });
 
-    test('a city 2 taxi shortlist item carries leg 2', () async {
+    test('a city 2 car shortlist item carries leg 2', () async {
       final r = await _rig(_multi([2, 2]));
-      await r.sl.toggle(step: 'taxi', kind: ShortlistKinds.taxi, listingId: 'd1', name: 'D', legIndex: r.c.plan.value!.legIndexOf(r.c.plan.value!.days.last.day));
-      expect(r.sl.activeOf('taxi').single.legIndex, 2);
+      await r.sl.toggle(step: 'between:2', kind: ShortlistKinds.car, listingId: 'd1', name: 'D', legIndex: r.c.plan.value!.legIndexOf(r.c.plan.value!.days.last.day));
+      expect(r.sl.activeOf('between:2').single.legIndex, 2);
       r.close();
     });
   });
 
   group('RM-1 the saved step is not overwritten by a jump', () {
     test('guideJumpTo without a flag moves the view but keeps the saved cursor', () async {
-      final r = await _rig(_multi([2], guide: const TripGuide(step: 'taxi', choices: {'gettingThere': TripGuideChoice.skip})));
+      final r = await _rig(_multi([2], guide: const TripGuide(step: 'comingBack', choices: {'gettingThere': TripGuideChoice.skip})));
       r.c.guideJumpTo('stay:1');
       expect(r.c.guideState.keyNow, 'stay:1');
-      expect(r.c.plan.value!.guide!.step, 'taxi');
+      expect(r.c.plan.value!.guide!.step, 'comingBack');
       r.close();
     });
 
     test('a nudge jump is saved', () async {
-      final r = await _rig(_multi([2], guide: const TripGuide(step: 'taxi', choices: {'gettingThere': TripGuideChoice.skip})));
+      final r = await _rig(_multi([2], guide: const TripGuide(step: 'comingBack', choices: {'gettingThere': TripGuideChoice.skip})));
       r.c.guideJumpTo('stay:1', nudge: true, name: 'Hill View');
       expect(r.c.plan.value!.guide!.step, 'stay:1');
       r.close();
@@ -358,7 +319,7 @@ void main() {
       expect(r.c.guideState.on.value, isTrue);
       await _pump(t, r, 412, h: 900, top: const TripPlanHeader(onMenu: _noop));
       expect(find.textContaining('%'), findsOneWidget);
-      expect(find.text('25%'), findsOneWidget);
+      expect(find.text('33%'), findsOneWidget);
       expect(find.textContaining('arranged'), findsNothing);
       r.close();
     });
@@ -368,7 +329,6 @@ void main() {
     const all = {
       'gettingThere': TripGuideChoice.skip,
       'stay:1': TripGuideChoice.skip,
-      'taxi': TripGuideChoice.skip,
       'between:2': TripGuideChoice.skip,
       'stay:2': TripGuideChoice.skip,
       'between:3': TripGuideChoice.skip,
@@ -379,7 +339,7 @@ void main() {
       final r = await _rig(_multi([1, 1, 1], guide: const TripGuide(step: 'stay:2', choices: all)));
       expect(r.c.removeLeg(2), TripLegEditBlock.none);
       final g = r.c.plan.value!.guide!;
-      expect(g.choices.keys.toSet(), {'gettingThere', 'stay:1', 'taxi'});
+      expect(g.choices.keys.toSet(), {'gettingThere', 'stay:1'});
       expect(g.step, '');
       expect(r.c.guideState.choices.containsKey('stay:2'), isFalse);
       expect(r.c.guideState.keyNow, 'between:2');
@@ -408,12 +368,11 @@ void main() {
       const answered = {
         'gettingThere': TripGuideChoice.skip,
         'stay:1': TripGuideChoice.skip,
-        'taxi': TripGuideChoice.skip,
         'comingBack': TripGuideChoice.skip,
       };
       final r = await _rig(_multi([2], guide: const TripGuide(choices: answered)));
       r.c.guideRefresh();
-      r.c.guideGoTo(4);
+      r.c.guideGoTo(3);
       expect(r.c.guideState.atFinish, isTrue);
       r.c.plan.value = _multi([2, 2], guide: const TripGuide(choices: answered));
       r.c.guideSync();
@@ -430,13 +389,13 @@ void main() {
       );
       r.c.guideHydrate();
       r.c.guideSync();
-      expect(r.c.guideState.percent.value, 25);
+      expect(r.c.guideState.percent.value, 33);
       r.sl.items.add(_item('stay:1', 'a', kind: ShortlistKinds.stay));
       r.c.guideSync();
-      expect(r.c.guideState.percent.value, 25);
+      expect(r.c.guideState.percent.value, 33);
       r.c.guideState.notNow.add('stay:1');
       r.c.guideSync();
-      expect(r.c.guideState.percent.value, 25);
+      expect(r.c.guideState.percent.value, 33);
       expect(r.c.guideState.pending.contains('stay:1'), isTrue);
       r.close();
     });
@@ -542,13 +501,12 @@ void main() {
       const choices = {
         'gettingThere': TripGuideChoice.find,
         'stay:1': TripGuideChoice.skip,
-        'taxi': TripGuideChoice.skip,
         'comingBack': TripGuideChoice.skip,
       };
       final r = await _rig(_multi([2], guide: const TripGuide(step: 'finish', choices: choices, notNow: ['gettingThere'])));
       r.sl.items.add(_item('gettingThere', 'a'));
       r.c.guideRefresh();
-      r.c.guideGoTo(4);
+      r.c.guideGoTo(3);
       await _pump(t, r, 360);
       expect(find.text('Your plan is saved'), findsOneWidget);
       expect(find.text('See what is still to do'), findsOneWidget);
@@ -560,15 +518,14 @@ void main() {
       const choices = {
         'gettingThere': TripGuideChoice.skip,
         'stay:1': TripGuideChoice.skip,
-        'taxi': TripGuideChoice.skip,
         'comingBack': TripGuideChoice.skip,
       };
       final r = await _rig(_multi([2], guide: const TripGuide(choices: choices)));
-      for (final k in ['gettingThere', 'stay:1', 'taxi', 'comingBack']) {
+      for (final k in ['gettingThere', 'stay:1', 'comingBack']) {
         r.c.skipRow(TripGuideRules.rowKeyOf(k)!);
       }
       r.c.guideRefresh();
-      r.c.guideGoTo(4);
+      r.c.guideGoTo(3);
       await _pump(t, r, 360);
       expect(find.text('Your trip is ready to go'), findsOneWidget);
       r.close();

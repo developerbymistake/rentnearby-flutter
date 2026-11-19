@@ -8,7 +8,6 @@ class TripStringsGuide {
   static const String optSkip = 'Skip this';
   static const String previous = 'Previous';
   static const String next = 'Next';
-  static const String noTaxiNote = 'We will not show taxis for this trip.';
   static const String skipBlocked = 'You already sent an enquiry here. Withdraw it first.';
   static const String ownBlocked = 'This one is already booked.';
   static const String offline = 'Connect to the internet to continue.';
@@ -20,11 +19,9 @@ class TripStringsGuide {
   static const String guideWhyChoose = 'Pick an option to continue';
   static const String guideWhyPick = 'Pick at least one and send your enquiry to continue';
   static const String findTaxis = 'Find taxis';
-  static const String findATaxi = 'Find a taxi';
   static const String findStays = 'Find stays';
 
   static const String nameGettingThere = 'Getting there';
-  static const String nameTaxi = 'Sightseeing taxi';
   static const String nameWayBack = 'Way back';
   static String nameStay(String city) => 'Stay in $city';
   static String nameBetween(String next) => 'To $next';
@@ -33,8 +30,6 @@ class TripStringsGuide {
   static String gettingThereBody(String from, String city) => 'Would you like to see taxis from $from to $city?';
   static String stayTitle(String city) => 'Where will you stay in $city?';
   static String stayBody(String city) => 'Would you like to see stays in $city?';
-  static String taxiTitle(String cities) => 'See the sights in $cities';
-  static const String taxiBody = 'Do you need a taxi to see the sights?';
   static String betweenTitle(String next) => 'On to $next';
   static String betweenBody(String city, String next) => 'Do you need a taxi from $city to $next?';
   static const String backTitle = 'Getting back home';
@@ -74,8 +69,6 @@ class TripStringsGuide {
   static const String findNew = 'Find new options';
 
   static const String skipArranged = 'This is already arranged. Remove it first.';
-  static const String carReviewBody = 'Pick your car and send your enquiry.';
-  static const String chooseAndSend = 'Choose and send';
   static const String changePicks = 'Change my picks';
   static const String finishSavedTitle = 'Your plan is saved';
   static const String finishSavedBody = 'See what is still to do.';

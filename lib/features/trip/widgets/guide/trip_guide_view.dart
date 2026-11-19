@@ -91,7 +91,7 @@ class _TripGuideViewState extends State<TripGuideView> {
     return TripGuideCardKind(card, sent: sent && card == TripGuideCard.question, names: [for (final i in active) i.name]);
   }
 
-  bool _isCar(TripGuideStep s) => s.row.kind != TripEasyRowKind.stay && s.row.kind != TripEasyRowKind.taxi;
+  bool _isCar(TripGuideStep s) => !s.isStay;
 
   Future<void> _send(TripGuideStep step) async {
     final names = [for (final i in _sl.activeOf(step.key)) i.name];
@@ -193,7 +193,6 @@ class _TripGuideViewState extends State<TripGuideView> {
           tone: tone,
           child: TripGuideOptions(
             choice: _g.current.value,
-            skipNote: step.row.kind == TripEasyRowKind.taxi,
             onPick: (c) => _c.guideChoose(context, key, c),
           ),
         );
@@ -233,11 +232,7 @@ class _TripGuideViewState extends State<TripGuideView> {
           } else if (k.card == TripGuideCard.review) {
             label = null;
           } else if (choice == TripGuideChoice.find && !canNext && k.card == TripGuideCard.question) {
-            label = step.isStay
-                ? TripStringsGuide.findStays
-                : step.isTaxi
-                    ? TripStringsGuide.findATaxi
-                    : TripStringsGuide.findTaxis;
+            label = step.isStay ? TripStringsGuide.findStays : TripStringsGuide.findTaxis;
             action = () => _c.guideFind(context, key);
             why = TripStringsGuide.guideWhyPick;
           } else if (canNext) {
@@ -245,9 +240,6 @@ class _TripGuideViewState extends State<TripGuideView> {
           }
           if (k.card == TripGuideCard.nudge || k.card == TripGuideCard.reopened) label = null;
           if (!k.sent && k.card == TripGuideCard.question && choice == null && action == null) why = TripStringsGuide.guideWhyChoose;
-          if (!k.sent && k.card == TripGuideCard.question && choice == TripGuideChoice.skip && step.row.kind == TripEasyRowKind.taxi) {
-            why = TripStringsGuide.noTaxiNote;
-          }
         }
         return TripGuideBar(
           canNext: canNext,
@@ -261,7 +253,7 @@ class _TripGuideViewState extends State<TripGuideView> {
       });
 
   Widget _finish(int total) {
-    final rows = _c.easyRows;
+    final rows = [for (final r in _c.easyRows) if (r.key.kind != TripEasyRowKind.taxi) r];
     final arranged = rows.isNotEmpty && TripEasyRules.allResolved(rows);
     final start = _c.plan.value?.settings.startDate;
     final days = _c.plan.value?.days.length ?? 0;
