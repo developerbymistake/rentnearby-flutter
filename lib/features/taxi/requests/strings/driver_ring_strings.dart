@@ -16,6 +16,7 @@ class DriverRingStrings {
   static const String retry = 'Try again';
   static const String actionFailed = 'Could not send your answer. Try again.';
   static const String paused = 'Taxi requests are paused for now';
+  static const String swipeHint = 'Swipe up to answer';
 
   static const List<String> _months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 

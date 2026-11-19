@@ -6,6 +6,7 @@ import '../../../../config/app_tabs.dart';
 import '../../../../controllers/auth_controller.dart';
 import '../../../../controllers/tab_config_controller.dart';
 import '../../../../navigation/tour_keys.dart';
+import '../../../../widgets/tab_header.dart';
 import '../../../jobs/controllers/my_jobs_controller.dart';
 import '../../../nearby/controllers/nearby_centre_controller.dart';
 import '../../../nearby/nearby_strings.dart';
@@ -66,87 +67,69 @@ class _StayLandingScreenV2State extends State<StayLandingScreenV2> {
 
   @override
   Widget build(BuildContext context) {
-    final bottom = BarMetrics.bodyBottomOf(context);
-    final top = MediaQuery.paddingOf(context).top;
+    final page = _buildPage(BarMetrics.bodyBottomOf(context));
     return TabEntrance(
       tab: AppTabs.stays,
       child: Scaffold(
         backgroundColor: ListingPalette.forest.page,
-        body: KitStatusBar(
-          lightIcons: false,
-          child: StaggerHost(
-            count: _kSections,
-            child: Stack(
-              children: [
-                RefreshIndicator(
-                  color: _page.g2,
-                  edgeOffset: top,
-                  onRefresh: _ctrl.pullRefresh,
-                  child: NotificationListener<ScrollNotification>(
-                    onNotification: (n) {
-                      _ctrl.onScrollMetrics(n.metrics);
-                      return false;
-                    },
-                    child: CustomScrollView(
-                      physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
-                      slivers: [
-                        SliverToBoxAdapter(child: SizedBox(height: top)),
-                        SliverToBoxAdapter(child: _section(0, _buildHeader())),
-                        SliverToBoxAdapter(child: _section(1, _buildReviewStrip())),
-                        SliverToBoxAdapter(child: _section(2, _buildTiles())),
-                        SliverToBoxAdapter(child: _section(3, _buildTypeChips())),
-                        SliverToBoxAdapter(child: _buildListHeader()),
-                        SliverToBoxAdapter(child: _buildFeatured()),
-                        _buildBody(),
-                        SliverToBoxAdapter(child: _buildFooter(bottom)),
-                      ],
-                    ),
-                  ),
-                ),
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  top: 0,
-                  height: top,
-                  child: ColoredBox(color: ListingPalette.forest.page),
-                ),
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  bottom: OverlayInsets.pillBottom(context),
-                  child: Center(
-                    child: EntranceOnce(
-                      index: 3,
-                      offset: 24,
-                      child: MapPill3D(key: TourKeys.staysLandingMapPill, tone: _page, label: 'Map view', onTap: StayNavigation.openMap),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+        body: Obx(
+          () => TabHeaderFrame(
+            title: Get.find<TabConfigController>().displayNameForIndex(AppTabs.stays, 'Stays'),
+            subtitle: (_ctrl.header.value?.farAway ?? false) ? 'Find the nearest stays' : 'Find stays near you',
+            color: ListingPalette.forest.page,
+            child: page,
           ),
         ),
       ),
     );
   }
 
-  Widget _buildHeader() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Obx(
-          () => ModuleTitleBar(
-            tone: _page,
-            art: ListingArt.hotel,
-            title: Get.find<TabConfigController>().displayNameForIndex(AppTabs.stays, 'Stays'),
-            subtitle: (_ctrl.header.value?.farAway ?? false) ? 'Find the nearest stays' : 'Find stays near you',
+  Widget _buildPage(double bottom) {
+    return StaggerHost(
+      count: _kSections,
+      child: Stack(
+        children: [
+          RefreshIndicator(
+            color: _page.g2,
+            onRefresh: _ctrl.pullRefresh,
+            child: NotificationListener<ScrollNotification>(
+              onNotification: (n) {
+                _ctrl.onScrollMetrics(n.metrics);
+                return false;
+              },
+              child: CustomScrollView(
+                physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+                slivers: [
+                  SliverToBoxAdapter(child: _section(0, _buildHeader())),
+                  SliverToBoxAdapter(child: _section(1, _buildReviewStrip())),
+                  SliverToBoxAdapter(child: _section(2, _buildTiles())),
+                  SliverToBoxAdapter(child: _section(3, _buildTypeChips())),
+                  SliverToBoxAdapter(child: _buildListHeader()),
+                  SliverToBoxAdapter(child: _buildFeatured()),
+                  _buildBody(),
+                  SliverToBoxAdapter(child: _buildFooter(bottom)),
+                ],
+              ),
+            ),
           ),
-        ),
-        _buildSearchPill(),
-      ],
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: OverlayInsets.pillBottom(context),
+            child: Center(
+              child: EntranceOnce(
+                index: 3,
+                offset: 24,
+                child: MapPill3D(key: TourKeys.staysLandingMapPill, tone: _page, label: 'Map view', onTap: StayNavigation.openMap),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
+
+  Widget _buildHeader() => _buildSearchPill();
 
   Widget _buildSearchPill() {
     return KeyedSubtree(

@@ -162,7 +162,7 @@ void main() {
       expect(c.request.value?.state, RequestState.open);
       expect(find.byKey(const ValueKey('status_lapse_line')), findsOneWidget);
       expect(find.text(_unavailable), findsOneWidget);
-      expect(find.byKey(const ValueKey('status_number_note')), findsOneWidget);
+      expect(find.byKey(const ValueKey('taxi_step_1')), findsOneWidget);
     });
 
     testWidgets('no backup driver and timed out says did not confirm', (tester) async {

@@ -28,6 +28,7 @@ import 'package:bakhli/features/trip/screens/trips_discovery_screen.dart';
 import 'package:bakhli/features/trip/widgets/hub/hub_header.dart';
 import 'package:bakhli/screens/home_screen.dart';
 import 'package:bakhli/screens/profile_screen.dart';
+import 'package:bakhli/widgets/tab_header.dart';
 import 'package:bakhli/design/extra/ext_jobs.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -240,7 +241,7 @@ void main() {
     expect(t.takeException(), isNull);
   });
 
-  testWidgets('profile header: indigo gradient, scrolls with the page', (t) async {
+  testWidgets('profile header: shared fixed header, indigo card scrolls with the page', (t) async {
     _base();
     Get.put(PlanController());
     await pumpPhone(t, const ProfileScreen());
@@ -252,18 +253,21 @@ void main() {
         (w.decoration as BoxDecoration).gradient == ListingTone.indigo.gradient);
     expect(hero, findsOneWidget);
     final top = t.getTopLeft(hero);
+    final header = t.getRect(find.byType(TabHeader));
     await scrollShots(t, find.byType(ProfileScreen), 'H_profile_scroll', _offsets);
     expect(t.getTopLeft(hero).dy, lessThan(top.dy));
+    expect(t.getRect(find.byType(TabHeader)), header);
     expect(t.takeException(), isNull);
   });
 
-  testWidgets('trips header: hub header, status strip while scrolling', (t) async {
+  testWidgets('trips header: shared fixed header, no hub header', (t) async {
     _base();
     Get.put<TripCityCatalog>(_Catalog(), permanent: true);
     Get.put<MyTripsController>(_Trips(), permanent: true);
     await pumpPhone(t, const TripsDiscoveryScreen());
     await settlePhone(t);
-    expect(find.byType(HubHeader), findsOneWidget);
+    expect(find.byType(HubHeader), findsNothing);
+    expect(find.byType(TabHeader), findsOneWidget);
     expect(find.byType(ModuleTitleBar), findsNothing);
     await shot(t, 'H_trips_top');
     await scrollShots(t, find.byType(TripsDiscoveryScreen), 'H_trips_scroll', _offsets);
@@ -271,7 +275,7 @@ void main() {
     expect(t.takeException(), isNull);
   });
 
-  testWidgets('stays header: 3D title bar, status strip while scrolling', (t) async {
+  testWidgets('stays header: shared fixed header, no 3D title bar', (t) async {
     _base();
     Get.put<StayTypesController>(_Types());
     Get.put(NearbyCentreController());
@@ -279,21 +283,23 @@ void main() {
     c.reload();
     await pumpPhone(t, const StayLandingScreenV2());
     await settlePhone(t);
-    expect(find.byType(ModuleTitleBar), findsOneWidget);
+    expect(find.byType(ModuleTitleBar), findsNothing);
+    expect(find.byType(TabHeader), findsOneWidget);
     await shot(t, 'H_stays_top');
     await scrollShots(t, find.byType(StayLandingScreenV2), 'H_stays_scroll', _offsets);
     expect(find.byType(ModuleScrollFrame), findsNothing);
     expect(t.takeException(), isNull);
   });
 
-  testWidgets('taxi header: 3D title bar, status strip while scrolling', (t) async {
+  testWidgets('taxi header: shared fixed header, no 3D title bar', (t) async {
     _base();
     Get.put(NearbyCentreController());
     final c = Get.put(TaxiListControllerV2(root: true, repo: _TaxiRepo()), tag: TaxiListControllerV2.tag);
     c.retry();
     await pumpPhone(t, const TaxiListScreenV2(root: true));
     await settlePhone(t);
-    expect(find.byType(ModuleTitleBar), findsOneWidget);
+    expect(find.byType(ModuleTitleBar), findsNothing);
+    expect(find.byType(TabHeader), findsOneWidget);
     await shot(t, 'H_taxi_top');
     await scrollShots(t, find.byType(TaxiListScreenV2), 'H_taxi_scroll', _offsets);
     expect(find.byType(ModuleScrollFrame), findsNothing);

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:bakhli/design/design.dart';
 import 'package:get/get.dart';
-import '../../../config/app_routes.dart';
 import '../controllers/my_trips_controller.dart';
 import '../trip_navigation.dart';
 import '../trip_strings_bar.dart';
@@ -27,9 +26,7 @@ class _TripBarState extends State<TripBar> {
     });
   }
 
-  void _continue(TripBarPick pick) {
-    Get.toNamed(AppRoutes.tripPlan, arguments: TripBarRules.continueArgs(pick.trip))?.then((_) => _trips.load());
-  }
+  void _continue(TripBarPick pick) => TripNavigation.continueTrip(pick.trip.id);
 
   Future<void> _hide(TripBarPick pick) async {
     if (await TripBarHideSheet.show(context)) _trips.hideBar(pick.trip);

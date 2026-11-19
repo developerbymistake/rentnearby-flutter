@@ -5,6 +5,7 @@ import 'package:bakhli/features/trip/trip_strings_dayplan.dart';
 import 'package:bakhli/features/trip/trip_strings_v2_plan.dart';
 import 'package:bakhli/features/trip/widgets/trip_add_city_card.dart';
 import 'package:bakhli/features/trip/widgets/trip_leg_header.dart';
+import 'package:bakhli/features/trip/widgets/trip_plan_header.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
@@ -62,7 +63,7 @@ void main() {
     await t.pumpAndSettle();
     expect(c.editMode.value, isFalse);
 
-    await t.tap(find.byIcon(Icons.more_vert_rounded).first);
+    await t.tap(find.byKey(TripMenuDots.boxKey).first);
     await t.pumpAndSettle();
     expect(find.text(TripStringsV2Plan.menuRename), findsOneWidget);
     expect(find.text(TripStringsV2Plan.menuSaveExit), findsOneWidget);

@@ -154,7 +154,7 @@ final _frames = <_Frame>[
   _Frame('24_sightseeing_only', _request,
       _keys(['taxi_pickup_switch', 'taxi_drop_switch', 'taxi_day_switch_3', 'taxi_day_switch_7', 'taxi_day_switch_9'])),
   _Frame('25_drop_only', _request, _keys(['taxi_pickup_switch', 'taxi_sightseeing_switch'])),
-  _Frame('26_pickup_and_drop', _request, _keys(['taxi_sightseeing_switch', 'taxi_pickup_6377270'])),
+  _Frame('26_pickup_and_drop', _request, _keys(['taxi_sightseeing_switch', 'taxi_pickup_6377270', 'taxi_drop_change'])),
   _Frame('27_all_on_ready', _request,
       _keys(['taxi_day_switch_3', 'taxi_day_switch_7', 'taxi_day_switch_9', 'taxi_pickup_6377270'])),
   _Frame(

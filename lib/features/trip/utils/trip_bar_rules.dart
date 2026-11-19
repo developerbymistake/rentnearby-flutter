@@ -152,9 +152,6 @@ class TripBarRules {
     }
   }
 
-  // Continue opens the trip at its saved guide step; row and step go only with push deep links.
-  static Map<String, dynamic> continueArgs(TripSummaryModel t) => {'tripId': t.id};
-
   static String actionLabel(TripSummaryModel t, {bool past = false}) {
     if (past || isReady(t)) return TripStringsV2Plan.myTripsSummary;
     return TripStringsV2Plan.myTripsContinue;

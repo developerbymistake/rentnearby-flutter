@@ -110,7 +110,7 @@ Future<void> drainSave(WidgetTester t) async {
 }
 
 Future<void> openRename(WidgetTester t) async {
-  await t.tap(find.byIcon(Icons.more_vert_rounded).first);
+  await t.tap(find.byKey(TripMenuDots.boxKey).first);
   await t.pumpAndSettle();
   await t.tap(find.text(TripStringsV2Plan.menuRename));
   await t.pumpAndSettle();

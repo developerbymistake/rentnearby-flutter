@@ -19,6 +19,7 @@ import '../utils/trip_format.dart';
 import '../utils/trip_leg_draft.dart';
 import '../widgets/customize/trip_customize_board.dart';
 import '../widgets/customize/trip_customize_spot_row.dart';
+import '../widgets/trip_plan_header.dart';
 import '../widgets/trip_update_ask_sheet.dart';
 
 typedef TripDraftPicker = Future<List<TripSpotModel>?> Function(
@@ -256,7 +257,7 @@ class _TripCustomizeScreenState extends State<TripCustomizeScreen> {
         padding: DS.insets(l: 22, t: 16, r: 22),
         child: Row(
           children: [
-            SizedBox(width: DS.s(24), child: const Center(child: TripGripDots())),
+            SizedBox(width: DS.s(24), child: const Align(alignment: Alignment.centerLeft, child: TripGripDots())),
             Gap.h(12),
             Expanded(child: Text(TripStringsCustomize.hintDrag, style: Ink3D.text(12.5, FontWeight.w400, Ink3D.sub, height: 1.5))),
           ],
@@ -298,11 +299,7 @@ class _TripCustomizeScreenState extends State<TripCustomizeScreen> {
             child: Text(TripStringsCustomize.reset, style: Ink3D.text(13, FontWeight.w600, Ink3D.title)),
           ),
         ],
-        child: SizedBox(
-          width: DS.s(40),
-          height: DS.s(40),
-          child: Icon(Icons.more_vert_rounded, size: DS.s(24), color: DesignColors.surface),
-        ),
+        child: TripMenuDots.box(),
       );
 
   Widget _addDayButton() {
@@ -396,13 +393,10 @@ class _TripCustomizeScreenState extends State<TripCustomizeScreen> {
         backgroundColor: DesignColors.scaffold,
         body: Column(
           children: [
-            ModuleHeader(
+            TripFlowHeader(
               title: TripStringsCustomize.title(_leg.cityName),
               subtitle: _subtitle(),
-              subtitleWidget: Text(_subtitle(), maxLines: 1, overflow: TextOverflow.ellipsis, style: TripCustomizeLook.headerSubtitle),
-              tone: KitTone.trip,
               onBack: _back,
-              titleStyle: TripCustomizeLook.headerTitle,
               trailing: [_headerMenu()],
             ),
             Expanded(

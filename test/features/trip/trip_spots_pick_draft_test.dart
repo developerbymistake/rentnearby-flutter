@@ -80,7 +80,7 @@ Future<Future<Object?>> _open(WidgetTester t, {Size size = phoneSize, Map<String
 }
 
 Future<void> _tapPlus(WidgetTester t, int i) async {
-  final f = find.byIcon(Icons.add_rounded).at(i);
+  final f = find.byIcon(Icons.circle_outlined).at(i);
   await t.ensureVisible(f);
   await t.pump();
   await t.tap(f);

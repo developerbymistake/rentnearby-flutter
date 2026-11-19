@@ -18,6 +18,7 @@ class TripStringsOverview {
   static const String paused = 'Requests are paused right now';
   static const String viewPlan = 'View plan';
   static const String moreOptions = 'More options';
+  static const String back = 'Back';
 
   static String _n(int n, String one, String many) => '$n ${n == 1 ? one : many}';
 

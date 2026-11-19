@@ -192,11 +192,6 @@ void main() {
       expect(TripBarRules.nextTitle(t), 'Nainital → Almora');
       expect(TripBarRules.nextTitle(_trip('a', nextKey: 'stay:2', cities: ['Nainital', 'Almora'])), 'Stay in Almora');
     });
-
-    test('continue opens the saved guide step: only the trip id is sent', () {
-      expect(TripBarRules.continueArgs(_trip('a')), {'tripId': 'a'});
-      expect(TripBarRules.continueArgs(_trip('a', done: 6, nextKey: null)), {'tripId': 'a'});
-    });
   });
 
   group('dates line', () {

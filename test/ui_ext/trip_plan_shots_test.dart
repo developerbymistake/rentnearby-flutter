@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:bakhli/features/trip/data/trip_city_catalog.dart';
 import 'package:bakhli/features/trip/models/trip_summary_model.dart';
+import 'package:bakhli/features/trip/widgets/trip_plan_header.dart';
 import 'package:bakhli/features/trip/widgets/trip_city_sheet.dart';
 import 'package:bakhli/features/trip/widgets/trip_spot_detail_sheet.dart';
 import 'package:bakhli/features/trip/screens/trip_summary_screen.dart';
@@ -381,7 +382,7 @@ void main() {
   });
   testWidgets('plan menu', (t) async {
     await _plan(t, 'plan_menu', then: (t, c) async {
-      await t.tap(find.byIcon(Icons.more_vert_rounded).first);
+      await t.tap(find.byKey(TripMenuDots.boxKey).first);
       await _settle(t);
     });
   });
@@ -413,7 +414,7 @@ void main() {
   });
   testWidgets('plan rename', (t) async {
     await _plan(t, 'plan_rename', then: (t, c) async {
-      await t.tap(find.byIcon(Icons.more_vert_rounded).first);
+      await t.tap(find.byKey(TripMenuDots.boxKey).first);
       await _settle(t);
       await t.tap(find.text('Rename trip'));
       await _settle(t);

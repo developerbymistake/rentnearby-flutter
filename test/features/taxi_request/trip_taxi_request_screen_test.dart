@@ -188,11 +188,15 @@ void main() {
     expect(_summary(tester), 'Pickup at Kathgodam, drop same as pickup');
     expect(_sendEnabled(tester), isTrue);
     await _tapKey(tester, 'taxi_drop_change');
-    expect(find.text('Choose drop'), findsOneWidget);
+    expect(find.byKey(const ValueKey('taxi_drop_same')), findsOneWidget);
+    expect(find.text('Same as pickup'), findsOneWidget);
+    expect(find.text('Choose drop'), findsNothing);
+    expect(find.text('Ramnagar'), findsOneWidget);
+    expect(find.text('Kashipur'), findsOneWidget);
     await _tapKey(tester, 'taxi_drop_1525290');
     expect(_summary(tester), 'Pickup at Kathgodam, drop at Kashipur');
     await _tapKey(tester, 'taxi_drop_field');
-    await _tapKey(tester, 'taxi_drop_same');
+    await _tapKey(tester, 'taxi_drop_same_row');
     expect(_summary(tester), 'Pickup at Kathgodam, drop same as pickup');
     expect(find.byKey(const ValueKey('taxi_drop_same')), findsOneWidget);
   });

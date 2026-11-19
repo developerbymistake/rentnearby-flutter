@@ -14,6 +14,7 @@ import '../models/trip_spot_category.dart';
 import '../models/trip_spot_model.dart';
 import '../trip_constants.dart';
 import '../trip_strings.dart';
+import '../trip_strings_customize.dart';
 import '../trip_strings_v2_create.dart';
 import '../trip_strings_mca_a2.dart';
 import '../trip_strings_pick_draft.dart';
@@ -564,6 +565,9 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> with TickerProviderSt
             selected: existing || selected.contains(s.id),
             locked: !existing && !selected.contains(s.id) && (_pickDay != null ? pickFull : atLimit),
             onToggle: existing ? null : (_pickDay != null ? () => _pickOne(s) : () => _toggle(s.id)),
+            subtitle: _pickDraft ? TripStringsCustomize.spotLine(s.category, s.visitMinutes) : null,
+            dimmed: _pickDraft && existing,
+            draft: _pickDraft,
           );
           if (sug != null && sug.forId == s.id && _pickDay == null && !_pickDraft) {
             return _row(heads.length + i, Column(

@@ -34,7 +34,10 @@ class JourneyTripStrip extends StatelessWidget {
     return JourneyTripCard3D(
       text: text.replaceAll('Day ', 'Day\u00A0'),
       actionLabel: registered ? TripStringsMcbA3.open : TripStringsMcbA3.openTrip,
-      onAction: () => TripNavigation.openPlan(tripId: j.tripId),
+      onAction: () {
+        final id = j.tripId;
+        if (id != null) TripNavigation.continueTrip(id);
+      },
     );
   }
 }

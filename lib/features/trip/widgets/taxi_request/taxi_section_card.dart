@@ -1,6 +1,9 @@
 import 'package:bakhli/design/design.dart';
-import 'package:flutter/cupertino.dart';
+import 'package:bakhli/design/extra/trip_customize_look.dart';
+import 'package:bakhli/design/extra/trip_plan_look.dart';
 import 'package:flutter/material.dart';
+
+import 'taxi_switch.dart';
 
 class TaxiSectionCard extends StatelessWidget {
   const TaxiSectionCard({
@@ -30,21 +33,23 @@ class TaxiSectionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final tone = ListingTone.indigo;
     final open = on || onChanged == null;
+    final radius = DS.br(TripCustomizeLook.addDayRadius);
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: DS.br(CardRadius.hero),
-        boxShadow: DS.shadows(Ink3D.softShadow),
+        color: DesignColors.surface,
+        borderRadius: radius,
+        boxShadow: DS.shadows(TripLook.dayCardShadow),
       ),
       child: ClipRRect(
-        borderRadius: DS.br(CardRadius.hero),
+        borderRadius: radius,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Container(
               decoration: BoxDecoration(gradient: tone.gradient),
-              padding: DS.sym(h: 14, v: 12),
+              constraints: BoxConstraints(minHeight: DS.s(76)),
+              padding: DS.insets(l: 16, t: 14, r: 14, b: 14),
               child: Row(
                 children: [
                   if (number != null) ...[
@@ -52,41 +57,41 @@ class TaxiSectionCard extends StatelessWidget {
                       width: DS.s(28),
                       height: DS.s(28),
                       alignment: Alignment.center,
-                      decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-                      child: Text('$number', style: Ink3D.text(12, FontWeight.w700, tone.text)),
+                      decoration: const BoxDecoration(color: DesignColors.surface, shape: BoxShape.circle),
+                      child: Text('$number', style: Ink3D.text(12.5, FontWeight.w700, tone.g2, letterSpacing: 0)),
                     ),
-                    Gap.h(10),
+                    Gap.h(12),
                   ],
-                  Art3D(asset: art, size: 40, shadowBlur: 4, shadowOffset: const Offset(2, 3)),
+                  Art3D(asset: art, size: 46, shadowBlur: 3, shadowOffset: const Offset(3, 4), shadowAlpha: 0.30),
                   Gap.h(12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(title, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(17, FontWeight.w700, DesignColors.textInverse)),
-                        Text(sub, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(12.5, FontWeight.w400, DesignColors.textInverse)),
+                        Text(title, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(16, FontWeight.w700, DesignColors.textInverse, letterSpacing: 0)),
+                        Text(
+                          sub,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: Ink3D.text(12.5, FontWeight.w400, DesignColors.textInverse, height: 1.4, letterSpacing: 0),
+                        ),
                       ],
                     ),
                   ),
                   if (onChanged != null) ...[
-                    Gap.h(8),
-                    Semantics(
-                      toggled: on,
-                      label: title,
-                      child: CupertinoSwitch(
-                        key: switchKey,
-                        value: on,
-                        onChanged: switchEnabled ? onChanged : null,
-                        activeTrackColor: Colors.white,
-                        inactiveTrackColor: DesignColors.whiteSoft,
-                        thumbColor: on ? tone.text : Colors.white,
-                      ),
+                    Gap.h(12),
+                    TaxiSwitch(
+                      key: switchKey,
+                      value: on,
+                      onGradient: true,
+                      semanticsLabel: title,
+                      onChanged: switchEnabled ? onChanged : null,
                     ),
                   ],
                 ],
               ),
             ),
-            if (open) Padding(padding: DS.sym(h: 14, v: 14), child: child),
+            if (open) Padding(padding: DS.insets(l: 14, t: 6, r: 14, b: 18), child: child),
           ],
         ),
       ),

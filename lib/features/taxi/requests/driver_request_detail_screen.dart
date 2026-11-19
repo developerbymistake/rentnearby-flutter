@@ -1,6 +1,9 @@
 import 'dart:async';
 
 import 'package:bakhli/design/design.dart';
+import 'package:bakhli/design/extra/taxi_status_look.dart';
+import 'package:bakhli/design/extra/trip_customize_look.dart';
+import 'package:bakhli/design/extra/trip_plan_look.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -130,14 +133,20 @@ class _DriverRequestDetailScreenState extends State<DriverRequestDetailScreen> {
               child: ModuleHeader(
                 title: o == null ? _S.titleRinging : _titleOf(o),
                 subtitle: o != null && o.pickupName.isNotEmpty ? TripStringsTaxiDriver.pickupCity(o.pickupName) : null,
+                titleStyle: TripCustomizeLook.headerTitle,
+                subtitleWidget: o != null && o.pickupName.isNotEmpty
+                    ? Text(TripStringsTaxiDriver.pickupCity(o.pickupName), maxLines: 1, overflow: TextOverflow.ellipsis, style: TripCustomizeLook.headerSubtitle)
+                    : null,
                 autoHeight: true,
+                compact: true,
                 tone: KitTone.brand,
                 gradient: ListingTone.indigo.gradient,
                 onBack: _back,
               ),
             ),
             Expanded(
-              child: Center(
+              child: Align(
+                alignment: Alignment.topCenter,
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: _maxWidth),
                   child: SingleChildScrollView(
@@ -192,7 +201,7 @@ class _DriverRequestDetailScreenState extends State<DriverRequestDetailScreen> {
     final detailBusy = _c.isBusy(DriverRequestAction.detail, _id);
     return (
       content: [
-        _Hero(offer: o, line: _heroLine(o), chip: live ? null : _chipOf(o)),
+        _Hero(offer: o, line: showConflict ? null : _heroLine(o), chip: live ? null : _chipOf(o)),
         if (state == OfferState.confirmed) ...[
           Gap.v(10),
           Center(
@@ -204,13 +213,13 @@ class _DriverRequestDetailScreenState extends State<DriverRequestDetailScreen> {
             ),
           ),
         ],
-        if (showConflict) ...[Gap.v(14), _ConflictBanner(from: conflict.from, to: conflict.to)],
+        if (showConflict) ...[Gap.v(20), _ConflictBanner(from: conflict.from, to: conflict.to)],
         if (_error != null) ...[
           Gap.v(14),
           Text(_error!, key: const ValueKey('request_error'), textAlign: TextAlign.center, style: Ink3D.text(13, FontWeight.w700, Form3D.errorText)),
         ],
-        Gap.v(16),
-        DriverRequestBody(offer: o),
+        Gap.v(20),
+        DriverRequestBody(offer: o, compact: showConflict),
         if (o.trip == null && detailBusy) ...[
           Gap.v(16),
           const Center(child: CircularProgressIndicator(color: DesignColors.primary)),
@@ -251,6 +260,7 @@ class _DriverRequestDetailScreenState extends State<DriverRequestDetailScreen> {
             key: const ValueKey('request_accept'),
             tone: ListingTone.forest,
             label: TripStringsTaxiDriver.accept,
+            shadows: TaxiStatusLook.greenPill,
             loading: _c.isBusy(DriverRequestAction.accept, _id),
             onTap: () => _act(() => _c.accept(_id)),
           ),
@@ -270,6 +280,7 @@ class _DriverRequestDetailScreenState extends State<DriverRequestDetailScreen> {
               key: const ValueKey('request_call'),
               tone: ListingTone.forest,
               label: TripStringsTaxiDriver.callTraveller,
+              shadows: TaxiStatusLook.greenPill,
               onTap: () => _call(phone),
             ),
         ];
@@ -280,6 +291,8 @@ class _DriverRequestDetailScreenState extends State<DriverRequestDetailScreen> {
             key: const ValueKey('request_confirm'),
             tone: ListingTone.forest,
             label: TripStringsTaxiDriver.confirmBooking,
+            shadows: TaxiStatusLook.greenPill,
+            offColor: TripLook.disabledFill,
             enabled: !hasConflict,
             loading: _c.isBusy(DriverRequestAction.confirm, _id),
             onTap: () => _act(() => _c.confirm(_id)),
@@ -307,38 +320,40 @@ class _Hero extends StatelessWidget {
     final name = t != null && t.name.isNotEmpty ? t.name : TripStringsTaxiDriver.traveller;
     final phone = t?.phone;
     final c = chip;
-    return Column(
-      children: [
-        const Art3D(asset: ListingArt.profile, size: 84, shadowBlur: 6, shadowOffset: Offset(3, 5)),
-        Gap.v(10),
-        Text(name,
-            key: const ValueKey('request_traveller_name'),
-            textAlign: TextAlign.center,
-            style: Ink3D.text(22, FontWeight.w700, Ink3D.title)),
-        if (phone != null && phone.isNotEmpty) ...[
-          Gap.v(4),
-          Text(IndianPhone.display(phone), key: const ValueKey('request_traveller_phone'), textAlign: TextAlign.center, style: Ink3D.text(13, FontWeight.w400, Ink3D.copy)),
-        ],
-        if (line != null && line!.isNotEmpty) ...[
-          Gap.v(6),
-          Text(
-            line!,
-            key: const ValueKey('request_hero_line'),
-            textAlign: TextAlign.center,
-            style: offer.state == OfferState.ringing
-                ? Ink3D.text(14, FontWeight.w400, Ink3D.copy)
-                : Ink3D.text(13, FontWeight.w700, DesignColors.primary),
-          ),
-        ],
-        if (c != null) ...[
-          Gap.v(8),
-          TaxiStateChip(label: c.label, muted: c.muted, positive: !c.muted),
-          if (c.note != null) ...[
-            Gap.v(6),
-            Text(c.note!, textAlign: TextAlign.center, style: Ink3D.text(13, FontWeight.w400, Ink3D.copy)),
+    final ringing = offer.state == OfferState.ringing;
+    final small = Ink3D.text(13, FontWeight.w400, TripLook.mutedText, height: 1.5, letterSpacing: 0);
+    return Padding(
+      padding: DS.insets(l: 6, t: ringing ? 0 : 10, r: 6),
+      child: Column(
+        children: [
+          const Art3D(asset: TaxiStatusLook.person, size: 100, shadowBlur: 7, shadowOffset: Offset(6, 9)),
+          Gap.v(10),
+          Text(name,
+              key: const ValueKey('request_traveller_name'),
+              textAlign: TextAlign.center,
+              style: Ink3D.text(24, FontWeight.w700, Ink3D.title, letterSpacing: 0)),
+          if (phone != null && phone.isNotEmpty) ...[
+            Gap.v(4),
+            Text(IndianPhone.display(phone), key: const ValueKey('request_traveller_phone'), textAlign: TextAlign.center, style: small),
+          ],
+          if (line != null && line!.isNotEmpty)
+            if (ringing) ...[
+              Gap.v(4),
+              Text(line!, key: const ValueKey('request_hero_line'), textAlign: TextAlign.center, style: small),
+            ] else ...[
+              Gap.v(10),
+              TaxiStateChip(key: const ValueKey('request_hero_line'), label: line!),
+            ],
+          if (c != null) ...[
+            Gap.v(10),
+            TaxiStateChip(label: c.label, muted: c.muted, positive: !c.muted),
+            if (c.note != null) ...[
+              Gap.v(6),
+              Text(c.note!, textAlign: TextAlign.center, style: small),
+            ],
           ],
         ],
-      ],
+      ),
     );
   }
 }
@@ -354,20 +369,19 @@ class _ConflictBanner extends StatelessWidget {
     final a = DateTime.tryParse(from);
     final b = DateTime.tryParse(to);
     final text = _S.datesBooked(a == null ? from : _S.shortDate(a), b == null ? to : _S.shortDate(b));
-    return Container(
+    return Stack(
       key: const ValueKey('request_conflict_banner'),
-      padding: DS.insets(l: 14, t: 12, r: 14, b: 12),
-      decoration: BoxDecoration(
-        color: DesignColors.warning.withValues(alpha: Alpha.v16),
-        borderRadius: DS.br(CardRadius.tile),
-      ),
-      child: Row(
-        children: [
-          const Art3D(asset: ListingArt.warning, size: 36, shadowBlur: 3, shadowOffset: Offset(1, 2)),
-          Gap.h(12),
-          Expanded(child: Text(text, style: Ink3D.text(13, FontWeight.w700, DesignColors.gold))),
-        ],
-      ),
+      clipBehavior: Clip.none,
+      children: [
+        Container(
+          constraints: BoxConstraints(minHeight: DS.s(64)),
+          padding: DS.insets(l: 80, t: 14, r: 16, b: 14),
+          alignment: Alignment.centerLeft,
+          decoration: BoxDecoration(color: TaxiStatusLook.warnFill, borderRadius: DS.br(TaxiStatusLook.bannerRadius)),
+          child: Text(text, style: Ink3D.text(13, FontWeight.w600, TaxiStatusLook.warnText, height: 1.45, letterSpacing: 0)),
+        ),
+        Positioned(left: DS.s(14), top: DS.s(-8), child: const Art3D(asset: ListingArt.warning, size: 52, shadowAlpha: 0)),
+      ],
     );
   }
 }

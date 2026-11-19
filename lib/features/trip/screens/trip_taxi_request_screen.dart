@@ -1,6 +1,9 @@
 import 'dart:async';
 
 import 'package:bakhli/design/design.dart';
+import 'package:bakhli/design/extra/ext_journeys.dart';
+import 'package:bakhli/design/extra/trip_customize_look.dart';
+import 'package:bakhli/design/extra/trip_plan_look.dart';
 import 'package:bakhli/utils/app_toast.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -13,8 +16,10 @@ import '../utils/taxi_result.dart';
 import '../utils/taxi_request_errors.dart';
 import '../widgets/taxi_request/taxi_day_rows.dart';
 import '../widgets/taxi_request/taxi_place_dropdown.dart';
+import '../widgets/taxi_request/taxi_request_look.dart';
 import '../widgets/taxi_request/taxi_seat_chips.dart';
 import '../widgets/taxi_request/taxi_section_card.dart';
+import '../widgets/trip_plan_header.dart';
 
 class TripTaxiRequestScreen extends StatefulWidget {
   const TripTaxiRequestScreen({
@@ -135,18 +140,16 @@ class _TripTaxiRequestScreenState extends State<TripTaxiRequestScreen> {
   Widget build(BuildContext context) {
     final tone = ListingTone.indigo;
     return Scaffold(
-      backgroundColor: DesignColors.surface,
+      backgroundColor: DesignColors.scaffold,
       body: Column(
         children: [
           MediaQuery.withClampedTextScaling(
             maxScaleFactor: 1.3,
-            child: ModuleHeader(
+            child: TripFlowHeader(
               title: TripStringsTaxiRequest.title,
               subtitle: TripStringsTaxiRequest.subtitle,
-              autoHeight: true,
-              tone: KitTone.brand,
-              gradient: tone.gradient,
               onBack: widget.onBack ?? () => Get.back(),
+              trailing: [_menu()],
             ),
           ),
           Expanded(
@@ -166,6 +169,22 @@ class _TripTaxiRequestScreenState extends State<TripTaxiRequestScreen> {
       ),
     );
   }
+
+  Widget _menu() => PopupMenuButton<int>(
+        key: const ValueKey('taxi_request_menu'),
+        tooltip: TripStringsTaxiRequest.moreOptions,
+        padding: EdgeInsets.zero,
+        shape: RoundedRectangleBorder(borderRadius: DS.circular(12)),
+        color: DesignColors.surface,
+        onSelected: (_) => (widget.onTryAnotherCity ?? () => Get.back())(),
+        itemBuilder: (_) => [
+          PopupMenuItem<int>(
+            value: 0,
+            child: Text(TripStringsTaxiRequest.tryAnotherCity, style: Ink3D.text(13, FontWeight.w600, Ink3D.title)),
+          ),
+        ],
+        child: TripMenuDots.box(),
+      );
 
   Widget _loading(ListingTone tone) {
     if (_c.isBusy(TaxiAction.places)) {
@@ -201,7 +220,7 @@ class _TripTaxiRequestScreenState extends State<TripTaxiRequestScreen> {
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: TripTaxiRequestScreen._maxWidth),
         child: SingleChildScrollView(
-          padding: DS.sym(h: 16, v: 12),
+          padding: EdgeInsets.fromLTRB(DS.s(18), DS.gv(14), DS.s(18), DS.gv(20)),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -214,21 +233,23 @@ class _TripTaxiRequestScreenState extends State<TripTaxiRequestScreen> {
                 ),
                 Gap.v(10),
               ],
-              Text(TripStringsTaxiRequest.intro, style: Ink3D.text(13, FontWeight.w400, Ink3D.sub)),
-              Gap.v(12),
+              Padding(
+                padding: DS.sym(h: 4),
+                child: Text(TripStringsTaxiRequest.intro, style: Ink3D.text(12.5, FontWeight.w400, Ink3D.sub, height: 1.5, letterSpacing: 0)),
+              ),
+              Gap.v(24),
               _pickupCard(form, places),
-              Gap.v(16),
+              Gap.v(24),
               _sightseeingCard(form),
-              Gap.v(16),
+              Gap.v(24),
               _dropCard(form, places),
-              Gap.v(16),
+              Gap.v(24),
               TaxiSectionCard(
-                art: TravelIcon.taxi,
+                art: JourneyArt.automobile,
                 title: TripStringsTaxiRequest.carTitle,
                 sub: TripStringsTaxiRequest.setFromTravellers(places.travellers),
                 child: TaxiSeatChips(seats: form.seats, enabledFor: form.seatEnabled, onChanged: (s) => _edit((f) => f.setSeats(s))),
               ),
-              Gap.v(8),
             ],
           ),
         ),
@@ -275,7 +296,8 @@ class _TripTaxiRequestScreenState extends State<TripTaxiRequestScreen> {
   }
 
   Widget _dropCard(TaxiRequestForm form, TaxiPickupPlaces places) {
-    final same = form.dropIsSameAsPickup && !_dropPicking;
+    final same = form.dropIsSameAsPickup;
+    final chosen = form.dropSame ? null : form.dropCityKey;
     return TaxiSectionCard(
       number: 3,
       art: TravelIcon.flag,
@@ -288,24 +310,25 @@ class _TripTaxiRequestScreenState extends State<TripTaxiRequestScreen> {
         if (!v) _dropPicking = false;
         _edit((f) => f.setDropOn(v));
       },
-      child: same
-          ? _SameAsPickup(onChange: () => setState(() => _dropPicking = true))
-          : TaxiPlaceDropdown(
-              keyPrefix: 'taxi_drop',
-              hint: TripStringsTaxiRequest.chooseDropLabel,
-              places: places.drop,
-              selectedKey: form.dropSame ? null : form.dropCityKey,
-              sameOption: form.pickupOn,
-              onSame: () {
-                setState(() => _dropPicking = false);
-                _edit((f) => f.dropSameAsPickup());
-              },
-              onPick: (p) {
-                setState(() => _dropPicking = false);
-                _edit((f) => f.chooseDrop(p.cityKey));
-              },
-              empty: Text(TripStringsTaxiRequest.noDropTitle, textAlign: TextAlign.center, style: Ink3D.text(13, FontWeight.w600, Ink3D.sub)),
-            ),
+      child: TaxiPlaceDropdown(
+        key: ValueKey(same ? 'taxi_drop_same_mode' : 'taxi_drop_pick_mode'),
+        keyPrefix: 'taxi_drop',
+        hint: TripStringsTaxiRequest.chooseDropLabel,
+        places: places.drop,
+        selectedKey: same ? null : chosen,
+        field: same ? _SameAsPickup(onChange: () => setState(() => _dropPicking = !_dropPicking)) : null,
+        open: same ? _dropPicking : null,
+        sameOption: !same && form.pickupOn && chosen != null,
+        onSame: () {
+          setState(() => _dropPicking = false);
+          _edit((f) => f.dropSameAsPickup());
+        },
+        onPick: (p) {
+          setState(() => _dropPicking = false);
+          _edit((f) => f.chooseDrop(p.cityKey));
+        },
+        empty: Text(TripStringsTaxiRequest.noDropTitle, textAlign: TextAlign.center, style: Ink3D.text(13, FontWeight.w600, Ink3D.sub)),
+      ),
     );
   }
 
@@ -313,29 +336,34 @@ class _TripTaxiRequestScreenState extends State<TripTaxiRequestScreen> {
     final sending = _c.isBusy(TaxiAction.send) || _c.isBusy(TaxiAction.cancelLegacy);
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(DS.radius(16))),
+        color: DesignColors.surface,
+        borderRadius: DS.br(TripCustomizeLook.barRadius),
         boxShadow: DS.shadows(Ink3D.topEdge),
       ),
       child: Padding(
-        padding: EdgeInsets.fromLTRB(DS.s(18), DS.s(12), DS.s(18), DS.s(16) + MediaQuery.paddingOf(context).bottom),
+        padding: EdgeInsets.fromLTRB(DS.s(16), DS.s(12), DS.s(16), DS.s(16) + MediaQuery.paddingOf(context).bottom),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(
-              form.summary,
-              key: const ValueKey('taxi_request_summary'),
-              textAlign: TextAlign.center,
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-              style: Ink3D.text(13, FontWeight.w600, Ink3D.sub),
+            Padding(
+              padding: DS.sym(h: 4),
+              child: Text(
+                form.summary,
+                key: const ValueKey('taxi_request_summary'),
+                textAlign: TextAlign.center,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                style: Ink3D.text(12.5, FontWeight.w600, Ink3D.sub, height: 1.4, letterSpacing: 0),
+              ),
             ),
-            Gap.v(10),
+            SizedBox(height: DS.s(10)),
             GradientPillButton(
               key: const ValueKey('taxi_request_send'),
               tone: tone,
               label: TripStringsTaxiRequest.send,
+              shadows: TripLook.pillShadow,
+              offColor: TripLook.disabledFill,
               enabled: form.canSend && !_c.paused.value,
               loading: sending,
               onTap: () => unawaited(_send()),
@@ -357,12 +385,14 @@ class _SameAsPickup extends StatelessWidget {
     final tone = ListingTone.indigo;
     return Container(
       key: const ValueKey('taxi_drop_same'),
-      padding: DS.sym(h: 18, v: 14),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: DS.circular(28), boxShadow: DS.shadows(Ink3D.softShadow)),
+      constraints: TaxiPlaceDropdown.fieldConstraints(),
+      alignment: Alignment.centerLeft,
+      padding: DS.sym(h: 18),
+      decoration: TaxiPlaceDropdown.fieldDecoration(),
       child: Row(
         children: [
           Expanded(
-            child: Text(TripStringsTaxiRequest.sameAsPickup, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(15, FontWeight.w600, Ink3D.title)),
+            child: Text(TripStringsTaxiRequest.sameAsPickup, maxLines: 2, overflow: TextOverflow.ellipsis, style: TaxiPlaceDropdown.valueStyle()),
           ),
           Gap.h(8),
           Tap3D(
@@ -373,7 +403,7 @@ class _SameAsPickup extends StatelessWidget {
               child: Text(
                 TripStringsTaxiRequest.change,
                 key: const ValueKey('taxi_drop_change'),
-                style: Ink3D.text(14, FontWeight.w700, tone.text).copyWith(decoration: TextDecoration.underline),
+                style: Ink3D.text(13, FontWeight.w700, tone.g2, letterSpacing: 0).copyWith(decoration: TextDecoration.underline, decorationColor: tone.g2),
               ),
             ),
           ),
@@ -392,38 +422,44 @@ class _EmptyPickup extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tone = ListingTone.indigo;
     return Column(
       key: const ValueKey('taxi_pickup_empty'),
       mainAxisSize: MainAxisSize.min,
       children: [
-        Art3D(asset: TravelIcon.warning, size: 48, shadowBlur: 4, shadowOffset: const Offset(2, 3)),
-        Gap.v(10),
-        Text(TripStringsTaxiRequest.noDriversTitle, textAlign: TextAlign.center, style: Ink3D.text(15, FontWeight.w700, Ink3D.title)),
+        Image.asset(TravelIcon.warning, width: DS.s(56), height: DS.s(56), fit: BoxFit.contain),
+        Gap.v(8),
+        Text(TripStringsTaxiRequest.noDriversTitle, textAlign: TextAlign.center, style: Ink3D.text(14, FontWeight.w700, Ink3D.title, letterSpacing: 0)),
         Gap.v(4),
-        Text(TripStringsTaxiRequest.pickupNotAvailableFor(city), textAlign: TextAlign.center, style: Ink3D.text(13, FontWeight.w400, Ink3D.sub)),
+        Text(
+          TripStringsTaxiRequest.pickupNotAvailableFor(city),
+          textAlign: TextAlign.center,
+          style: Ink3D.text(12.5, FontWeight.w400, TripLook.mutedText, letterSpacing: 0),
+        ),
         Gap.v(14),
-        PillButtonRow(
+        Wrap(
+          alignment: WrapAlignment.center,
+          spacing: DS.gh(12),
+          runSpacing: DS.gv(12),
           children: [
-            WhitePillButton(
-              key: const ValueKey('taxi_pickup_skip'),
-              tone: tone,
-              label: TripStringsTaxiRequest.skipTaxi,
-              onTap: onSkip,
-              height: 44,
-              fontSize: TripTaxiRequestScreen._buttonFont,
-            ),
-            WhitePillButton(
-              key: const ValueKey('taxi_pickup_try_another'),
-              tone: tone,
-              label: TripStringsTaxiRequest.tryAnotherCity,
-              onTap: onTryAnother,
-              height: 44,
-              fontSize: TripTaxiRequestScreen._buttonFont,
-            ),
+            _pill(const ValueKey('taxi_pickup_skip'), TripStringsTaxiRequest.skipTaxi, onSkip),
+            _pill(const ValueKey('taxi_pickup_try_another'), TripStringsTaxiRequest.tryAnotherCity, onTryAnother),
           ],
         ),
       ],
+    );
+  }
+
+  Widget _pill(Key key, String label, VoidCallback onTap) {
+    return Tap3D(
+      key: key,
+      onTap: onTap,
+      label: label,
+      child: Container(
+        constraints: BoxConstraints(minHeight: DS.s(40)),
+        padding: DS.sym(h: 18),
+        decoration: BoxDecoration(color: DesignColors.surface, borderRadius: DS.circular(20), boxShadow: DS.shadows(TaxiRequestLook.whitePill)),
+        child: Center(widthFactor: 1, child: Text(label, maxLines: 1, style: Ink3D.text(12.5, FontWeight.w700, ListingTone.indigo.text, letterSpacing: 0))),
+      ),
     );
   }
 }

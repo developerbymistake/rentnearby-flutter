@@ -29,12 +29,14 @@ class ModuleHeader extends StatelessWidget {
     this.subtitleWidget,
     this.autoHeight = false,
     this.titleStyle,
+    this.compact = false,
   });
 
   final Widget? leading;
   final Widget? subtitleWidget;
   final bool autoHeight;
   final TextStyle? titleStyle;
+  final bool compact;
 
   final String title;
   final String? subtitle;
@@ -90,6 +92,7 @@ class ModuleHeader extends StatelessWidget {
     final total = heightOf(context,
         hasSubtitle: hasSub, bottomHeight: bottomHeight, subtitleLines: subtitleLines);
     final top = MediaQuery.paddingOf(context).top;
+    final autoHeight = this.autoHeight || compact;
     final header = Container(
       height: autoHeight ? null : total,
       width: double.infinity,
@@ -99,13 +102,13 @@ class ModuleHeader extends StatelessWidget {
         boxShadow: DS.shadows(ShadowTokens.glow(tone.glow)),
       ),
       child: Padding(
-        padding: EdgeInsets.only(top: top + DS.s(paddingTop), left: DS.s(onBack != null ? 14 : 8), right: DS.s(16), bottom: DS.s(paddingBottom)),
+        padding: EdgeInsets.only(top: top + DS.s(compact ? 0 : paddingTop), left: DS.s(onBack != null ? 14 : 8), right: DS.s(compact ? 14 : 16), bottom: DS.s(paddingBottom)),
         child: Column(
           mainAxisSize: autoHeight ? MainAxisSize.min : MainAxisSize.max,
           children: [
             _Slot(
               height: autoHeight ? null : toolbarOf(context) + (hasSub ? subtitleOf(context, subtitleLines) : 0),
-              minHeight: toolbarOf(context),
+              minHeight: compact ? DS.s(44) : toolbarOf(context),
               child: Row(
                 children: [
                   if (onBack != null)
@@ -125,7 +128,7 @@ class ModuleHeader extends StatelessWidget {
                               decoration: const BoxDecoration(
                                   color: DesignColors.whiteSoft, shape: BoxShape.circle),
                               child: Icon(Icons.arrow_back_ios_new_rounded,
-                                  size: DS.s(20), color: DesignColors.textInverse),
+                                  size: DS.s(compact ? 14 : 20), color: DesignColors.textInverse),
                             ),
                           ),
                         ),
@@ -133,7 +136,7 @@ class ModuleHeader extends StatelessWidget {
                     )
                   else
                     SizedBox(width: DS.s(12)),
-                  if (onBack != null) SizedBox(width: DS.s(10)),
+                  if (onBack != null) SizedBox(width: DS.s(compact ? 12 : 10)),
                   if (leading != null) ...[leading!, SizedBox(width: DS.s(10))],
                   if (leadingAsset != null) ...[
                     Container(

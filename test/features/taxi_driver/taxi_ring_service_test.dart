@@ -222,6 +222,47 @@ void main() {
     expect(manifest, contains('android.permission.WAKE_LOCK'));
   });
 
+  test('ring_text_matches_frame_42: two body lines, taxi art as large icon', () async {
+    final push = TaxiRingPush.tryParse(_ringData())!;
+    expect(TaxiRingNotification.bodyLines(push), [
+      '4 days · 3 nights · 18 to 21 Dec',
+      'Kathgodam to Nainital, Ranikhet · 4 seater',
+    ]);
+    final style = TaxiRingNotification.android(push, _receivedAt).styleInformation! as BigTextStyleInformation;
+    expect(style.bigText, '4 days · 3 nights · 18 to 21 Dec\nKathgodam to Nainital, Ranikhet · 4 seater');
+    expect(TaxiRingNotification.body(push), '4 days · 3 nights · 18 to 21 Dec');
+
+    final noLine3 = TaxiRingPush.tryParse({..._ringData()}..remove('line3'))!;
+    expect(TaxiRingNotification.bodyLines(noLine3), ['4 days · 3 nights · 18 to 21 Dec', 'Kathgodam to Nainital, Ranikhet']);
+    final noLine2 = TaxiRingPush.tryParse({..._ringData()}..remove('line2'))!;
+    expect(TaxiRingNotification.bodyLines(noLine2), ['4 days · 3 nights · 18 to 21 Dec', '4 seater']);
+
+    final art = Uint8List.fromList(const [1, 2, 3]);
+    final events = <String>[];
+    final notifier = _Notifier(events);
+    final service = TaxiRingService(
+      notifier: notifier,
+      sendAck: (_, _) async {},
+      probe: () async => _sampleDevice,
+      clock: () => _receivedAt,
+      art: () async => art,
+    );
+    await service.handle(_ringData());
+    final icon = notifier.shown.single.details.android!.largeIcon! as ByteArrayAndroidBitmap;
+    expect(icon.data, art);
+    expect(TaxiRingArt.asset, 'assets/images/design/travel3d/taxi.png');
+    expect(File(TaxiRingArt.asset).existsSync(), isTrue);
+
+    final failing = TaxiRingService(
+      notifier: _Notifier(<String>[]),
+      sendAck: (_, _) async {},
+      probe: () async => _sampleDevice,
+      clock: () => _receivedAt,
+      art: () async => throw StateError('no asset'),
+    );
+    expect((await failing.handle(_ringData())).outcome, TaxiRingOutcome.shown);
+  });
+
   test('timeout_equals_time_left', () {
     final push = TaxiRingPush.tryParse(_ringData())!;
     expect(TaxiRingNotification.android(push, _receivedAt).timeoutAfter, 298000);

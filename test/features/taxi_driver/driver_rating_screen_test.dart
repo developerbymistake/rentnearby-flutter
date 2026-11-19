@@ -57,7 +57,7 @@ void main() {
     for (final d in ['2 Nov', '24 Oct', '12 Oct', '30 Sep']) {
       expect(find.text(d), findsOneWidget);
     }
-    expect(find.byIcon(Icons.star_rounded), findsNWidgets(5 + 4 * 5));
+    expect(find.byIcon(Icons.star), findsNWidgets(5 + 4 * 5));
     expect(find.text('No ratings yet'), findsNothing);
   });
 
@@ -69,7 +69,7 @@ void main() {
     expect(find.text('0'), findsOneWidget);
     expect(find.text('3'), findsOneWidget);
     expect(find.text('Latest ratings'), findsNothing);
-    expect(find.byIcon(Icons.star_rounded), findsNothing);
+    expect(find.byIcon(Icons.star), findsNothing);
   });
 
   testWidgets('no_points_or_rank', (tester) async {

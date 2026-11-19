@@ -59,6 +59,8 @@ class TripLook {
   static const Color headerGlow = Color(0xFF5C5EDD);
   static const Color mapLand = Color(0xFFE7EFDD);
   static const Color mapRouteDay2 = Color(0xFFFF8A3D);
+  static const Color foldNear = Color(0xFFB9C0EE);
+  static const Color foldFar = Color(0xFFD3D8F5);
 
   static const List<BoxShadow> cardShadowSoft = <BoxShadow>[BoxShadow(color: Color(0x383A5160), offset: Offset(1.1, 1.1), blurRadius: 10)];
   static const List<BoxShadow> dayCardShadow = <BoxShadow>[BoxShadow(color: Color(0x403A5160), offset: Offset(1.1, 1.1), blurRadius: 12)];

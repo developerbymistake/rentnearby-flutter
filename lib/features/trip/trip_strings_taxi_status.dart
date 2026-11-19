@@ -9,7 +9,6 @@ class TripStringsTaxiStatus {
   static const String tryAgain = 'Try again';
   static const String neutralTitle = 'Checking your request';
   static const String neutralSub = 'Open the app again in a moment to see the latest.';
-  static const String numberNote = 'Your number is shown only to drivers who accept.';
 
   static const String stepFinding = 'Finding driver';
   static const String stepChoose = 'Choose your driver';

@@ -4,14 +4,13 @@ import 'package:get/get.dart';
 import '../../../config/app_routes.dart';
 import '../../../config/app_tabs.dart';
 import '../../../controllers/auth_controller.dart';
+import '../../../widgets/tab_header.dart';
 import '../controllers/my_trips_controller.dart';
 import '../data/trip_city_catalog.dart';
 import '../models/trip_model.dart';
 import '../trip_navigation.dart';
 import '../trip_strings_hub.dart';
-import '../utils/trip_bar_rules.dart';
 import '../widgets/hub/hub_continue_bar.dart';
-import '../widgets/hub/hub_header.dart';
 import '../widgets/hub/hub_page_background.dart';
 import '../widgets/hub/hub_section_title.dart';
 import '../widgets/hub/hub_tile.dart';
@@ -31,15 +30,11 @@ class _TripsDiscoveryScreenState extends State<TripsDiscoveryScreen> {
   late final MyTripsController _trips;
   Worker? _tabWorker;
   final _scroll = ScrollController();
-  final _scrolled = ValueNotifier<bool>(false);
 
   @override
   void initState() {
     super.initState();
     _trips = MyTripsController.to;
-    _scroll.addListener(
-      () => _scrolled.value = _scroll.hasClients && _scroll.offset > 0,
-    );
     _warmCatalog();
     _trips.ensureLoaded();
     if (Get.isRegistered<AuthController>()) {
@@ -55,7 +50,6 @@ class _TripsDiscoveryScreenState extends State<TripsDiscoveryScreen> {
   void dispose() {
     _tabWorker?.dispose();
     _scroll.dispose();
-    _scrolled.dispose();
     super.dispose();
   }
 
@@ -67,14 +61,7 @@ class _TripsDiscoveryScreenState extends State<TripsDiscoveryScreen> {
     } catch (_) {}
   }
 
-  void _continue(TripSummaryModel t) {
-    Get.toNamed(
-      AppRoutes.tripPlan,
-      arguments: TripBarRules.continueArgs(t),
-    )?.then((_) {
-      if (mounted) _trips.load();
-    });
-  }
+  void _continue(TripSummaryModel t) => TripNavigation.continueTrip(t.id);
 
   void _open(HubTileConfig c) {
     if (c.route == AppRoutes.tripWhere) TripNavigation.openWhereToNext();
@@ -90,46 +77,29 @@ class _TripsDiscoveryScreenState extends State<TripsDiscoveryScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final media = MediaQuery.of(context);
-    final top = media.padding.top;
     final page = Scaffold(
       backgroundColor: HubTokens.statusStrip,
       resizeToAvoidBottomInset: false,
-      body: KitStatusBar(
-        lightIcons: false,
-        child: Stack(
-          children: [
-            RefreshIndicator(
-              color: HubTokens.accent,
-              edgeOffset: top,
-              onRefresh: () async {
-                _trips.load();
-                await _warmCatalog(force: true);
-              },
-              child: LayoutBuilder(
-                builder: (context, box) => SingleChildScrollView(
-                  controller: _scroll,
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  child: HubPageBackground(
-                    minHeight: box.maxHeight,
-                    child: _content(context),
-                  ),
-                ),
+      body: TabHeaderFrame(
+        title: TripStringsHub.title,
+        subtitle: TripStringsHub.headerSub,
+        color: HubTokens.statusStrip,
+        child: RefreshIndicator(
+          color: HubTokens.accent,
+          onRefresh: () async {
+            _trips.load();
+            await _warmCatalog(force: true);
+          },
+          child: LayoutBuilder(
+            builder: (context, box) => SingleChildScrollView(
+              controller: _scroll,
+              physics: const AlwaysScrollableScrollPhysics(),
+              child: HubPageBackground(
+                minHeight: box.maxHeight,
+                child: _content(context),
               ),
             ),
-            Positioned(
-              left: 0,
-              right: 0,
-              top: 0,
-              height: top,
-              child: ValueListenableBuilder<bool>(
-                valueListenable: _scrolled,
-                builder: (_, on, _) => on
-                    ? const ColoredBox(color: HubTokens.statusStrip)
-                    : const SizedBox.shrink(),
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -143,10 +113,6 @@ class _TripsDiscoveryScreenState extends State<TripsDiscoveryScreen> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: [
-          const HubHeader(
-            title: TripStringsHub.title,
-            lead: TripStringsHub.lead,
-          ),
           Obx(() {
             final trips = _trips.continueTrips;
             return trips.isEmpty

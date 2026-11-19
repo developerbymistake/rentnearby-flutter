@@ -95,7 +95,7 @@ void main() {
     expect(find.text('18 Dec to 21 Dec'), findsOneWidget);
     expect(find.text('Kathgodam pickup · Aarav Sharma'), findsOneWidget);
     expect(find.text('2 Nov to 6 Nov'), findsOneWidget);
-    expect(find.text('Kathgodam pickup · Neha Verma'), findsOneWidget);
+    expect(find.text('Kathgodam pickup · Completed'), findsOneWidget);
     expect(find.text('Occupied'), findsOneWidget);
     expect(find.text('Completed'), findsOneWidget);
     expect(find.byKey(const ValueKey('booking_withdraw_$_bookedId')), findsOneWidget);

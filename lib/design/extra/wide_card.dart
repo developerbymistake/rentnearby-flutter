@@ -182,12 +182,13 @@ class WideAction {
 }
 
 class RingBadge extends StatelessWidget {
-  const RingBadge({super.key, required this.progress, required this.fill, this.size = 66, this.label});
+  const RingBadge({super.key, required this.progress, required this.fill, this.size = 66, this.label, this.labelSize = 15});
 
   final double progress;
   final Color fill;
   final double size;
   final String? label;
+  final double labelSize;
 
   @override
   Widget build(BuildContext context) {
@@ -203,7 +204,7 @@ class RingBadge extends StatelessWidget {
             padding: EdgeInsets.all(box * 0.25),
             child: FittedBox(
               fit: BoxFit.scaleDown,
-              child: Text(label ?? '${(p * 100).round()}%', maxLines: 1, style: Ink3D.text(15, FontWeight.w700, Colors.white)),
+              child: Text(label ?? '${(p * 100).round()}%', maxLines: 1, style: Ink3D.text(labelSize, FontWeight.w700, Colors.white)),
             ),
           ),
         ),

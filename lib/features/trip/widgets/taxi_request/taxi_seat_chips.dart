@@ -1,8 +1,10 @@
 import 'package:bakhli/design/design.dart';
+import 'package:bakhli/design/extra/trip_customize_look.dart';
 import 'package:flutter/material.dart';
 
 import '../../models/taxi_request_models.dart';
 import '../../trip_strings_taxi_request.dart';
+import 'taxi_request_look.dart';
 
 class TaxiSeatChips extends StatelessWidget {
   const TaxiSeatChips({super.key, required this.seats, required this.onChanged, this.enabledFor});
@@ -13,13 +15,16 @@ class TaxiSeatChips extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        for (var i = 0; i < TaxiSeats.options.length; i++) ...[
-          if (i > 0) Gap.h(8),
-          Expanded(child: _chip(TaxiSeats.options[i])),
+    return Padding(
+      padding: EdgeInsets.only(top: DS.gv(14)),
+      child: Row(
+        children: [
+          for (var i = 0; i < TaxiSeats.options.length; i++) ...[
+            if (i > 0) Gap.h(10),
+            Expanded(child: _chip(TaxiSeats.options[i])),
+          ],
         ],
-      ],
+      ),
     );
   }
 
@@ -36,19 +41,20 @@ class TaxiSeatChips extends StatelessWidget {
         child: Container(
           key: ValueKey('taxi_seat_$value'),
           alignment: Alignment.center,
-          padding: DS.sym(h: 4, v: 12),
+          constraints: BoxConstraints(minHeight: DS.s(44)),
+          padding: DS.sym(h: 4),
           decoration: BoxDecoration(
             gradient: selected ? tone.gradient : null,
-            color: selected ? null : Colors.white,
-            borderRadius: DS.circular(16),
-            boxShadow: DS.shadows(selected ? Form3D.glow(tone, blur: 10) : Ink3D.softShadow),
+            color: selected ? null : DesignColors.surface,
+            borderRadius: DS.br(TaxiRequestLook.chipRadius),
+            boxShadow: DS.shadows(selected ? TripCustomizeLook.softPill : TaxiRequestLook.chip),
           ),
           child: FittedBox(
             fit: BoxFit.scaleDown,
             child: Text(
               TripStringsTaxiRequest.seatsLabel(value),
               maxLines: 1,
-              style: Ink3D.text(13, FontWeight.w700, selected ? DesignColors.textInverse : Ink3D.sub),
+              style: Ink3D.text(13, FontWeight.w700, selected ? DesignColors.textInverse : Ink3D.sub, letterSpacing: 0),
             ),
           ),
         ),

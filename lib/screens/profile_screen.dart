@@ -10,10 +10,12 @@ import '../config/app_routes.dart';
 import '../config/app_tabs.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/plan_controller.dart';
+import '../controllers/tab_config_controller.dart';
 import '../utils/app_date_format.dart';
 import '../utils/app_toast.dart';
 import '../utils/input_formatters.dart';
 import '../widgets/role_option_card.dart';
+import '../widgets/tab_header.dart';
 import 'privacy_policy_screen.dart';
 import 'terms_of_service_screen.dart';
 
@@ -27,7 +29,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final _auth = Get.find<AuthController>();
 
   static const int _count = 8;
-  static double get _heroOverhang => DS.s(30);
 
   static final ListingTone _tone = ListingTone.indigo;
   static final ListingTone _bad = ListingTone.coral;
@@ -77,77 +78,83 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     var i = 0;
     Widget item(Widget w) => StaggerItem(index: i++, child: w);
+    final body = SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+      child: StaggerHost(
+        count: _count,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _hero(),
+            Gap.v(16),
+            item(Obx(() => _auth.isOwner ? _buildPlansCard() : const SizedBox.shrink())),
+            item(_sectionGroup('ACCOUNT', [
+              _accountPhoneTile(),
+              _accountVisibilityTile(),
+              _accountRoleTile(),
+            ])),
+            item(Obx(() {
+              final rows = <({String art, String title, String route})>[
+                (art: ListingArt.luggage, title: 'My Trips', route: AppRoutes.myTrips),
+                if (_auth.jobsBrowseEnabled) (art: ListingArt.briefcase, title: 'Jobs', route: AppRoutes.jobs),
+                if (_auth.canOpenRoute(AppRoutes.myJourneys))
+                  (art: ListingArt.compass, title: 'My Journeys', route: AppRoutes.myJourneys),
+                (art: ListingArt.warning, title: 'My Reports', route: AppRoutes.myFiledReports),
+              ];
+              return _sectionGroup('ACTIVITY', [
+                for (var r = 0; r < rows.length; r++)
+                  IconRow3D(
+                    art: rows[r].art,
+                    title: rows[r].title,
+                    divider: r > 0,
+                    onTap: () => Get.toNamed(rows[r].route),
+                  ),
+              ]);
+            })),
+            item(_sectionGroup('SUPPORT', [
+              IconRow3D(art: ListingArt.speechBalloon, title: 'Contact Support', onTap: _contactSupport),
+              IconRow3D(art: ListingArt.star, title: 'Rate App', divider: true, onTap: _rateApp),
+              IconRow3D(art: ListingArt.airplane, title: 'Share App', divider: true, onTap: _shareApp),
+            ])),
+            item(_sectionGroup('LEGAL', [
+              IconRow3D(
+                art: ListingArt.clipboard,
+                title: 'Privacy Policy',
+                onTap: () => _openPage(const PrivacyPolicyScreen()),
+              ),
+              IconRow3D(
+                art: ListingArt.clipboard,
+                title: 'Terms of Service',
+                divider: true,
+                onTap: () => _openPage(const TermsOfServiceScreen()),
+              ),
+            ])),
+            item(_logoutButton()),
+            item(Padding(
+              padding: EdgeInsets.fromLTRB(DS.s(18), DS.gv(14), DS.s(18), BarMetrics.bodyBottomOf(context)),
+              child: Center(
+                child: Obx(() => TextLink(
+                      label: 'Delete Account',
+                      onTap: _auth.isLoading.value ? null : _confirmDeleteAccount,
+                    )),
+              ),
+            )),
+          ],
+        ),
+      ),
+    );
     return Scaffold(
       backgroundColor: ListingPalette.indigo.page,
       resizeToAvoidBottomInset: false,
       body: TabEntrance(
         tab: AppTabs.profile,
-        child: KitStatusBar(
-          child: SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
-            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-            child: StaggerHost(
-              count: _count,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _hero(),
-                  SizedBox(height: _heroOverhang),
-                        item(Obx(() => _auth.isOwner ? _buildPlansCard() : const SizedBox.shrink())),
-                        item(_sectionGroup('ACCOUNT', [
-                          _accountPhoneTile(),
-                          _accountVisibilityTile(),
-                          _accountRoleTile(),
-                        ])),
-                        item(Obx(() {
-                          final rows = <({String art, String title, String route})>[
-                            (art: ListingArt.luggage, title: 'My Trips', route: AppRoutes.myTrips),
-                            if (_auth.jobsBrowseEnabled) (art: ListingArt.briefcase, title: 'Jobs', route: AppRoutes.jobs),
-                            if (_auth.canOpenRoute(AppRoutes.myJourneys))
-                              (art: ListingArt.compass, title: 'My Journeys', route: AppRoutes.myJourneys),
-                            (art: ListingArt.warning, title: 'My Reports', route: AppRoutes.myFiledReports),
-                          ];
-                          return _sectionGroup('ACTIVITY', [
-                            for (var r = 0; r < rows.length; r++)
-                              IconRow3D(
-                                art: rows[r].art,
-                                title: rows[r].title,
-                                divider: r > 0,
-                                onTap: () => Get.toNamed(rows[r].route),
-                              ),
-                          ]);
-                        })),
-                        item(_sectionGroup('SUPPORT', [
-                          IconRow3D(art: ListingArt.speechBalloon, title: 'Contact Support', onTap: _contactSupport),
-                          IconRow3D(art: ListingArt.star, title: 'Rate App', divider: true, onTap: _rateApp),
-                          IconRow3D(art: ListingArt.airplane, title: 'Share App', divider: true, onTap: _shareApp),
-                        ])),
-                        item(_sectionGroup('LEGAL', [
-                          IconRow3D(
-                            art: ListingArt.clipboard,
-                            title: 'Privacy Policy',
-                            onTap: () => _openPage(const PrivacyPolicyScreen()),
-                          ),
-                          IconRow3D(
-                            art: ListingArt.clipboard,
-                            title: 'Terms of Service',
-                            divider: true,
-                            onTap: () => _openPage(const TermsOfServiceScreen()),
-                          ),
-                        ])),
-                        item(_logoutButton()),
-                        item(Padding(
-                          padding: EdgeInsets.fromLTRB(DS.s(18), DS.gv(14), DS.s(18), BarMetrics.bodyBottomOf(context)),
-                          child: Center(
-                            child: Obx(() => TextLink(
-                                  label: 'Delete Account',
-                                  onTap: _auth.isLoading.value ? null : _confirmDeleteAccount,
-                                )),
-                          ),
-                        )),
-                ],
-              ),
-            ),
+        child: Obx(
+          () => TabHeaderFrame(
+            title: Get.find<TabConfigController>().displayNameForIndex(AppTabs.profile, 'Profile'),
+            subtitle: 'Your account',
+            color: ListingPalette.indigo.page,
+            child: body,
           ),
         ),
       ),
@@ -164,97 +171,75 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _hero() {
-    final narrow = MediaQuery.sizeOf(context).width < 340;
-    final art = narrow ? 46.0 : 77.0;
-    final halo = narrow ? 50.0 : 82.0;
-    final reserve = DS.s(halo + 16);
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        Container(
-          width: double.infinity,
-          padding: EdgeInsets.fromLTRB(DS.s(20), MediaQuery.paddingOf(context).top + DS.s(28), reserve, DS.s(30)),
-          decoration: BoxDecoration(
-            gradient: _tone.gradient,
-            borderRadius: BorderRadius.vertical(bottom: Radius.circular(DS.radius(32))),
-            boxShadow: [BoxShadow(color: _tone.haloBase.withValues(alpha: Alpha.scrim), offset: DS.shadowOffset(const Offset(0, 8)), blurRadius: DS.shadowBlur(20))],
-          ),
-          child: Obx(() {
-            final name = _auth.profileName.value;
-            return Row(
-              children: [
-                SizedBox(
-                  width: DS.s(72),
-                  height: DS.s(72),
-                  child: Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      _avatar(name),
-                      Positioned(
-                        right: 0,
-                        bottom: 0,
-                        child: Semantics(
-                          button: true,
-                          label: 'Edit name',
-                          excludeSemantics: true,
-                          child: PressScale(
-                            child: GestureDetector(
-                              behavior: HitTestBehavior.opaque,
-                              onTap: _openEditNameSheet,
-                              child: Container(
-                                width: DS.s(28),
-                                height: DS.s(28),
-                                decoration: BoxDecoration(color: DesignColors.onPrimary, shape: BoxShape.circle, boxShadow: DS.shadows(Ink3D.whiteBtn)),
-                                child: Icon(Icons.edit_rounded, size: DS.s(15), color: _tone.g2),
-                              ),
+    return Padding(
+      padding: DS.insets(l: 16, t: 4, r: 16),
+      child: Container(
+        width: double.infinity,
+        padding: DS.insets(l: 20, t: 28, r: 20, b: 30),
+        decoration: BoxDecoration(
+          gradient: _tone.gradient,
+          borderRadius: BorderRadius.circular(DS.radius(32)),
+          boxShadow: [BoxShadow(color: _tone.haloBase.withValues(alpha: Alpha.scrim), offset: DS.shadowOffset(const Offset(0, 8)), blurRadius: DS.shadowBlur(20))],
+        ),
+        child: Obx(() {
+          final name = _auth.profileName.value;
+          return Row(
+            children: [
+              SizedBox(
+                width: DS.s(72),
+                height: DS.s(72),
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    _avatar(name),
+                    Positioned(
+                      right: 0,
+                      bottom: 0,
+                      child: Semantics(
+                        button: true,
+                        label: 'Edit name',
+                        excludeSemantics: true,
+                        child: PressScale(
+                          child: GestureDetector(
+                            behavior: HitTestBehavior.opaque,
+                            onTap: _openEditNameSheet,
+                            child: Container(
+                              width: DS.s(28),
+                              height: DS.s(28),
+                              decoration: BoxDecoration(color: DesignColors.onPrimary, shape: BoxShape.circle, boxShadow: DS.shadows(Ink3D.whiteBtn)),
+                              child: Icon(Icons.edit_rounded, size: DS.s(15), color: _tone.g2),
                             ),
                           ),
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-                Gap.h(12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      _HeroName(name.trim().isNotEmpty ? name.trim() : 'Your Profile'),
-                      Gap.v(4),
-                      Obx(() => FittedBox(
-                            fit: BoxFit.scaleDown,
-                            alignment: Alignment.centerLeft,
-                            child: Text(
-                              '+91 ${_auth.profilePhone.value}',
-                              style: Ink3D.text(14, FontWeight.w400, DesignColors.onPrimary.withValues(alpha: Alpha.v90)),
-                              maxLines: 1,
-                            ),
-                          )),
-                    ],
-                  ),
+              ),
+              Gap.h(12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _HeroName(name.trim().isNotEmpty ? name.trim() : 'Your Profile'),
+                    Gap.v(4),
+                    Obx(() => FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            '+91 ${_auth.profilePhone.value}',
+                            style: Ink3D.text(14, FontWeight.w400, DesignColors.onPrimary.withValues(alpha: Alpha.v90)),
+                            maxLines: 1,
+                          ),
+                        )),
+                  ],
                 ),
-              ],
-            );
-          }),
+              ),
+            ],
+          );
+        }),
         ),
-        Positioned(
-          right: DS.s(8),
-          bottom: -DS.s(34),
-          child: IgnorePointer(
-            child: Container(
-              width: DS.s(halo),
-              height: DS.s(halo),
-              decoration: BoxDecoration(shape: BoxShape.circle, color: DesignColors.onPrimary.withValues(alpha: Alpha.v18)),
-            ),
-          ),
-        ),
-        Positioned(
-          right: DS.s(14),
-          bottom: -DS.s(30),
-          child: IgnorePointer(child: ExcludeSemantics(child: Art3D(asset: ListingArt.profile, size: art, shadowAlpha: 0.3))),
-        ),
-      ],
     );
   }
 

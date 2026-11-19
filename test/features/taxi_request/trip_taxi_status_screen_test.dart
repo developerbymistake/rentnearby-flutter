@@ -2,6 +2,7 @@ import 'package:bakhli/features/trip/controllers/trip_taxi_request_controller.da
 import 'package:bakhli/features/trip/models/taxi_request_models.dart';
 import 'package:bakhli/features/trip/screens/trip_taxi_request_status_screen.dart';
 import 'package:bakhli/features/trip/utils/taxi_result.dart';
+import 'package:bakhli/features/trip/widgets/taxi_status/taxi_status_states.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
@@ -99,7 +100,7 @@ void main() {
     expect(_t('Taxi request'), findsOneWidget);
     expect(_t('Pickup at Kathgodam · 3 sightseeing days · Drop'), findsOneWidget);
     _stepsAre('We asked 3 drivers at Kathgodam');
-    expect(_t('Your number is shown only to drivers who accept.'), findsOneWidget);
+    expect(_t('Your number is shown only to drivers who accept.'), findsNothing);
     expect(_t('Done'), findsOneWidget);
     expect(find.byKey(const ValueKey('status_change_pickup')), findsNothing);
   });
@@ -168,7 +169,7 @@ void main() {
     expect(_t('Day 3 of 4'), findsOneWidget);
     expect(_t('End trip'), findsOneWidget);
     expect(_t('Call'), findsOneWidget);
-    expect(find.byType(LinearProgressIndicator), findsOneWidget);
+    expect(find.byType(TaxiProgressBar), findsOneWidget);
   });
 
   testWidgets('frame_36_rate', (tester) async {
@@ -185,7 +186,7 @@ void main() {
     await _open(tester, _sample('taxi_request_rate.json', {'state': 'Completed', 'view': 'Done', 'rating': {'stars': 4, 'ratedAt': '2026-12-22T10:00:00Z'}}));
     expect(_t('Thank you'), findsOneWidget);
     expect(_t('Ramesh Kumar'), findsOneWidget);
-    expect(find.byIcon(Icons.star_rounded), findsNWidgets(5));
+    expect(find.byIcon(Icons.star), findsNWidgets(5));
     expect(_t('Done'), findsOneWidget);
     expect(_t('Submit'), findsNothing);
   });

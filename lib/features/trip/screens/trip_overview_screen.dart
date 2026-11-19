@@ -2,10 +2,13 @@ import 'package:bakhli/design/design.dart';
 import 'package:bakhli/design/extra/trip_customize_look.dart';
 import 'package:bakhli/design/extra/trip_plan_look.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import '../../../config/app_insets.dart';
 import '../models/trip_model.dart';
 import '../trip_strings_mca_a1.dart';
 import '../trip_strings_overview.dart';
+import '../widgets/trip_plan_header.dart';
 
 enum TripOverviewTaxiState { optional, requested, booked, completed }
 
@@ -81,11 +84,7 @@ class TripOverviewScreen extends StatelessWidget {
             child: Text(TripStringsOverview.viewPlan, style: Ink3D.text(13, FontWeight.w600, Ink3D.title)),
           ),
         ],
-        child: SizedBox(
-          width: DS.s(40),
-          height: DS.s(40),
-          child: Icon(Icons.more_vert_rounded, size: DS.s(24), color: DesignColors.surface),
-        ),
+        child: TripMenuDots.box(),
       );
 
   @override
@@ -96,26 +95,17 @@ class TripOverviewScreen extends StatelessWidget {
     final indigo = ListingTone.indigo;
     return Scaffold(
       backgroundColor: DesignColors.scaffold,
-      body: Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.paddingOf(context).bottom),
-        child: Column(
+      body: Column(
         children: [
           MediaQuery.withClampedTextScaling(
             maxScaleFactor: 1.3,
-            child: ModuleHeader(
-              title: TripStringsOverview.title,
-              subtitle: TripStringsOverview.subtitle,
-              subtitleWidget: Text(TripStringsOverview.subtitle, maxLines: 1, overflow: TextOverflow.ellipsis, style: TripCustomizeLook.headerSubtitle),
-              autoHeight: true,
-              tone: KitTone.brand,
-              gradient: indigo.gradient,
+            child: _OverviewHeader(
               onBack: onBack ?? () => Get.back(),
-              titleStyle: TripCustomizeLook.headerTitle,
-              trailing: [_menu()],
+              menu: _menu(),
               bottom: _TripLine(trip: trip),
             ),
           ),
-          Flexible(
+          Expanded(
             child: SingleChildScrollView(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -180,6 +170,67 @@ class TripOverviewScreen extends StatelessWidget {
             onTap: onDone,
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _OverviewHeader extends StatelessWidget {
+  const _OverviewHeader({required this.onBack, required this.menu, required this.bottom});
+
+  final VoidCallback onBack;
+  final Widget menu;
+  final Widget bottom;
+
+  @override
+  Widget build(BuildContext context) {
+    const white = DesignColors.surface;
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: ModuleHeader.lightIcons,
+      child: Container(
+        width: double.infinity,
+        decoration: BoxDecoration(
+          gradient: ListingTone.indigo.gradient,
+          borderRadius: DS.br(CardRadius.header),
+          boxShadow: DS.shadows(TripLook.headerShadow),
+        ),
+        padding: EdgeInsets.fromLTRB(DS.s(14), MediaQuery.paddingOf(context).top, DS.s(14), DS.s(16)),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ConstrainedBox(
+              constraints: BoxConstraints(minHeight: DS.s(44)),
+              child: Row(
+                children: [
+                  Tap3D(
+                    tapKey: const ValueKey('overview_back'),
+                    onTap: onBack,
+                    label: TripStringsOverview.back,
+                    child: Container(
+                      width: DS.s(44),
+                      height: DS.s(44),
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(color: DesignColors.tint(white, Alpha.v22), shape: BoxShape.circle),
+                      child: Text('‹', textScaler: TextScaler.noScaling, style: Ink3D.text(24, FontWeight.w400, white, height: 1, letterSpacing: 0)),
+                    ),
+                  ),
+                  Gap.h(12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(TripStringsOverview.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(20, FontWeight.w700, white, height: 1.25, letterSpacing: 0)),
+                        Text(TripStringsOverview.subtitle, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(12.5, FontWeight.w400, DesignColors.tint(white, Alpha.v93), letterSpacing: 0)),
+                      ],
+                    ),
+                  ),
+                  menu,
+                ],
+              ),
+            ),
+            bottom,
+          ],
         ),
       ),
     );
@@ -198,8 +249,8 @@ class _TripLine extends StatelessWidget {
     return Padding(
       padding: EdgeInsets.only(top: DS.gv(16)),
       child: Container(
-        padding: DS.sym(h: 16, v: 12),
-        decoration: BoxDecoration(color: DesignColors.whiteSoft, borderRadius: DS.br(CardRadius.hero)),
+        padding: DS.sym(h: 16, v: 14),
+        decoration: BoxDecoration(color: DesignColors.whiteSoft, borderRadius: DS.br(TripCustomizeLook.tripLineRadius)),
         child: Row(
           children: [
             Art3D(asset: ListingArt.mountain, size: narrow ? 52 : 72, shadowBlur: 4, shadowOffset: const Offset(2, 3)),
@@ -254,7 +305,6 @@ class _HeroCard extends StatelessWidget {
   final Key buttonKey;
   final VoidCallback? onTap;
 
-  // Design units: WhitePillButton applies the DS scale itself.
   static const double _buttonFont = 13.5;
 
   @override
@@ -293,21 +343,25 @@ class _HeroCard extends StatelessWidget {
                     Container(
                       padding: DS.sym(h: 12, v: 3),
                       decoration: BoxDecoration(color: DesignColors.tint(DesignColors.surface, Alpha.v30), borderRadius: DS.circular(10)),
-                      child: Text(chip, style: Ink3D.text(12.5, FontWeight.w700, DesignColors.textInverse)),
+                      child: Text(chip, style: Ink3D.text(12.5, FontWeight.w700, DesignColors.textInverse, height: 1.5)),
                     ),
                   ],
                 ),
                 Gap.v(8),
                 Text(line, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(13, FontWeight.w400, DesignColors.textInverse, height: 1.45)),
                 Gap.v(8),
-                WhitePillButton(
-                  key: buttonKey,
-                  tone: tone,
-                  label: button,
+                Tap3D(
+                  tapKey: buttonKey,
                   onTap: onTap,
-                  height: 40,
-                  fontSize: _buttonFont,
-                  expand: false,
+                  child: Container(
+                    constraints: BoxConstraints(minHeight: DS.s(40)),
+                    padding: DS.sym(h: 22),
+                    decoration: BoxDecoration(color: DesignColors.surface, borderRadius: DS.circular(22), boxShadow: DS.shadows(Ink3D.whiteBtn)),
+                    child: Center(
+                      widthFactor: 1,
+                      child: Text(button, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(_buttonFont, FontWeight.w700, onTap == null ? Ink3D.grey : tone.text)),
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -335,7 +389,7 @@ class _BottomBar extends StatelessWidget {
         boxShadow: DS.shadows(TripLook.barShadowUp),
       ),
       child: Padding(
-        padding: EdgeInsets.fromLTRB(DS.s(16), DS.s(12), DS.s(16), DS.s(16)),
+        padding: EdgeInsets.fromLTRB(DS.s(16), DS.s(12), DS.s(16), AppInsets.bottomViewPadding(context) + DS.s(16)),
         child: WhitePillButton(key: const ValueKey('overview_done_button'), tone: tone, label: label, onTap: onTap),
       ),
     );

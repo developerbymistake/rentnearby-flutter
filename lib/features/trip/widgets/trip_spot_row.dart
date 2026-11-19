@@ -11,8 +11,11 @@ class TripSpotRow extends StatelessWidget {
   final bool selected;
   final VoidCallback? onToggle;
   final bool locked;
+  final String? subtitle;
+  final bool dimmed;
+  final bool draft;
 
-  const TripSpotRow({super.key, required this.spot, required this.selected, this.onToggle, this.locked = false});
+  const TripSpotRow({super.key, required this.spot, required this.selected, this.onToggle, this.locked = false, this.subtitle, this.dimmed = false, this.draft = false});
 
   static const String details = 'Details';
 
@@ -38,19 +41,26 @@ class TripSpotRow extends StatelessWidget {
       badge: spot.isFeatured ? '${TripStringsSpotsX.featured} · $cat' : cat,
       tag: cat,
       title: spot.title,
-      subtitle: spot.description ?? '',
+      subtitle: subtitle ?? spot.description ?? '',
       showPrice: false,
       picked: selected,
-      dimmed: off,
+      dimmed: off || dimmed,
       onTap: open,
       actions: [
         WideAction(icon: Icons.info_outline_rounded, label: details, onTap: open),
-        WideAction(
-          icon: selected ? Icons.check_rounded : Icons.add_rounded,
-          label: selected ? TripStringsSpotsX.addedWishlist : TripStringsSpotsX.addWishlist,
-          selected: selected,
-          onTap: onToggle,
-        ),
+        draft
+            ? WideAction(
+                icon: selected ? Icons.check_rounded : Icons.circle_outlined,
+                label: dimmed ? TripStringsSpotsX.addedWishlist : '',
+                selected: selected,
+                onTap: onToggle,
+              )
+            : WideAction(
+                icon: selected ? Icons.check_rounded : Icons.add_rounded,
+                label: selected ? TripStringsSpotsX.addedWishlist : TripStringsSpotsX.addWishlist,
+                selected: selected,
+                onTap: onToggle,
+              ),
       ],
     );
   }

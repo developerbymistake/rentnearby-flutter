@@ -105,7 +105,7 @@ void main() {
     expect(find.text('4 seater · 2 travellers'), findsOneWidget);
     expect(find.text('Decline'), findsOneWidget);
     expect(find.text('Accept'), findsOneWidget);
-    expect(find.textContaining('Swipe'), findsNothing);
+    expect(find.text('Swipe up to answer'), findsOneWidget);
     expect(find.text('3:07'), findsOneWidget);
     h.now = h.now.add(const Duration(seconds: 7));
     await tester.pump(const Duration(seconds: 1));
@@ -187,8 +187,10 @@ void main() {
     final paint = tester.widget<CustomPaint>(find.byKey(const ValueKey('ring_progress')));
     expect((paint.painter as dynamic).progress, closeTo(187 / 300, 0.01));
     expect(find.byWidgetPredicate((w) => w is Art3D && w.asset.endsWith('travel3d/taxi.png')), findsOneWidget);
-    expect(find.byIcon(Icons.close_rounded), findsOneWidget);
+    expect(find.byKey(const ValueKey('ring_decline_x')), findsOneWidget);
+    expect(find.byIcon(Icons.call), findsOneWidget);
     expect(find.byIcon(Icons.call_end_rounded), findsNothing);
+    expect((paint.painter as dynamic).radius, DS.s(92));
   });
 
   testWidgets('answered after a failed accept opens the detail, not stuck on loading', (tester) async {
@@ -250,6 +252,10 @@ void main() {
       await _open(tester, size: size);
       expect(find.text('3:07'), findsOneWidget);
       expect(tester.takeException(), isNull);
+      final hint = tester.getRect(find.text('Swipe up to answer'));
+      expect(hint.bottom, lessThanOrEqualTo(size.height));
+      expect(tester.getRect(find.text('Accept')).bottom, lessThan(hint.top));
+      expect(tester.getRect(find.byKey(const ValueKey('ring_countdown'))).bottom, lessThan(tester.getRect(find.text('Accept')).top));
       final h = await _open(tester, size: size, patch: {'state': 'Missed'});
       expect(find.text('Missed'), findsOneWidget);
       expect(tester.takeException(), isNull);

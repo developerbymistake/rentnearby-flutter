@@ -8,6 +8,7 @@ import '../../services/storage_service.dart';
 import '../../utils/app_toast.dart';
 import '../taxi/ways/taxi_ways_controller.dart';
 import '../taxi/ways/taxi_ways_navigation.dart';
+import 'controllers/my_trips_controller.dart';
 import 'controllers/trip_plan_controller.dart';
 import 'models/trip_city_model.dart';
 import 'models/trip_enquiry_model.dart';
@@ -145,6 +146,12 @@ class TripNavigation {
 
   static Future<void>? openOverview({String? tripId}) =>
       Get.toNamed(AppRoutes.tripOverview, arguments: {'tripId': tripId ?? TripPlanController.to.trip.value?.id});
+
+  static Future<void> continueTrip(String tripId) async {
+    if (tripId.isEmpty) return;
+    await openOverview(tripId: tripId);
+    if (Get.isRegistered<MyTripsController>()) MyTripsController.to.load();
+  }
 
   static Future<void>? openTaxiStatus({required String tripId, required String requestId, bool replace = false}) {
     final args = {'tripId': tripId, 'requestId': requestId};

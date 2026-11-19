@@ -68,28 +68,29 @@ class TripCustomizeSpotRow extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         frozen ? _body(context, timeW, handle: false) : _draggable(context, timeW),
-        if (drive != null)
-          Padding(
-            padding: EdgeInsets.only(left: DS.s(20) + timeW),
-            child: Container(
-              padding: EdgeInsets.only(left: DS.s(18), top: DS.s(3), bottom: DS.s(3)),
-              decoration: BoxDecoration(
-                border: Border(left: BorderSide(color: DesignColors.driveLine, width: DS.s(2))),
-              ),
-              child: Row(
-                children: [
-                  const Art3D(asset: ListingArt.taxi, size: 16, shadowBlur: 0, shadowOffset: Offset.zero, shadowAlpha: 0),
-                  Gap.h(8),
-                  Flexible(
-                    child: Text(TripFormat.duration(drive), maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(12.5, FontWeight.w400, TripLook.mutedText)),
-                  ),
-                ],
-              ),
-            ),
-          ),
+        if (drive != null) driveRow(context, drive),
       ],
     );
   }
+
+  static Widget driveRow(BuildContext context, int minutes) => Padding(
+        padding: EdgeInsets.only(left: DS.s(20) + timeWidth(context)),
+        child: Container(
+          padding: EdgeInsets.only(left: DS.s(18), top: DS.s(3), bottom: DS.s(3)),
+          decoration: BoxDecoration(
+            border: Border(left: BorderSide(color: DesignColors.driveLine, width: DS.s(2))),
+          ),
+          child: Row(
+            children: [
+              const Art3D(asset: ListingArt.taxi, size: 16, shadowBlur: 0, shadowOffset: Offset.zero, shadowAlpha: 0),
+              Gap.h(8),
+              Flexible(
+                child: Text(TripFormat.duration(minutes), maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(12.5, FontWeight.w400, TripLook.mutedText)),
+              ),
+            ],
+          ),
+        ),
+      );
 
   Widget _draggable(BuildContext context, double timeW) {
     return LayoutBuilder(
@@ -102,7 +103,10 @@ class TripCustomizeSpotRow extends StatelessWidget {
         onDragEnd: (_) => onDragEnd?.call(),
         feedback: _HideWhen(
           hidden: liftHidden,
-          child: _Lifted(width: box.maxWidth, scale: 1.03, child: _body(context, timeW, handle: true, lifted: true)),
+          child: Padding(
+            padding: EdgeInsets.only(left: DS.s(12)),
+            child: _Lifted(width: box.maxWidth - DS.s(24), child: _body(context, timeW, handle: true, lifted: true)),
+          ),
         ),
         childWhenDragging: _MovedAway(),
         child: GestureDetector(
@@ -168,16 +172,22 @@ class TripCustomizeSpotRow extends StatelessWidget {
         if (removing)
           Padding(
             padding: DS.insets(l: 8, t: 4, r: 4, b: 4),
-            child: SizedBox(
-              width: DS.s(_removeWidth),
-              child: GradientPillButton(
-                key: ValueKey('customize-remove-${spot.id}'),
-                tone: ListingTone.coral,
-                label: TripStringsCustomize.removeFromTrip,
-                height: 44,
-                fontSize: _removeFont,
-                shadows: TripCustomizeLook.removeShadow,
-                onTap: onRemove,
+            child: Tap3D(
+              tapKey: ValueKey('customize-remove-${spot.id}'),
+              onTap: onRemove,
+              child: Container(
+                width: DS.s(_removeWidth),
+                height: DS.s(44),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  gradient: ListingTone.coral.gradient,
+                  borderRadius: DS.circular(22),
+                  boxShadow: DS.shadows(TripCustomizeLook.removeShadow),
+                ),
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(TripStringsCustomize.removeFromTrip, maxLines: 1, softWrap: false, style: Ink3D.text(_removeFont, FontWeight.w700, DesignColors.surface)),
+                ),
               ),
             ),
           )
@@ -232,27 +242,23 @@ class _HideWhen extends StatelessWidget {
 
 class _Lifted extends StatelessWidget {
   final double? width;
-  final double scale;
   final Widget child;
 
-  const _Lifted({this.width, this.scale = 1, required this.child});
+  const _Lifted({this.width, required this.child});
 
   @override
   Widget build(BuildContext context) {
     return Material(
       type: MaterialType.transparency,
-      child: Transform.scale(
-        scale: scale,
-        child: Container(
-          width: width,
-          decoration: BoxDecoration(
-            color: DesignColors.surface,
-            borderRadius: DS.circular(12),
-            border: Border.all(color: ListingPalette.indigo.line, width: DS.s(1.5)),
-            boxShadow: DS.shadows(TripCustomizeLook.liftShadow),
-          ),
-          child: child,
+      child: Container(
+        width: width,
+        decoration: BoxDecoration(
+          color: DesignColors.surface,
+          borderRadius: DS.circular(12),
+          border: Border.all(color: ListingPalette.indigo.line, width: DS.s(1.5)),
+          boxShadow: DS.shadows(TripCustomizeLook.liftShadow),
         ),
+        child: child,
       ),
     );
   }

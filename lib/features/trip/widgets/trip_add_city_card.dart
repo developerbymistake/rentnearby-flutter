@@ -99,7 +99,7 @@ class _TripAddCityCardState extends State<TripAddCityCard> {
                         ],
                       ),
                     ),
-                    Positioned(left: DS.s(14), top: DS.s(12), child: const IgnorePointer(child: Art3D(asset: ListingArt.worldMap, size: 62))),
+                    Positioned(left: DS.s(14), top: DS.s(12), child: const IgnorePointer(child: Art3D(asset: ListingArt.worldMap, size: 62, shadowAlpha: 0))),
                   ],
                 ),
               ),

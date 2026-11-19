@@ -192,7 +192,7 @@ void main() {
     Get.back();
     await _settle(t);
 
-    await t.tap(find.byIcon(Icons.more_vert_rounded));
+    await t.tap(find.byKey(TripMenuDots.boxKey));
     await _settle(t);
     expect(find.byType(PopupMenuItem<TripPlanMenu>), findsWidgets);
     t.takeException();

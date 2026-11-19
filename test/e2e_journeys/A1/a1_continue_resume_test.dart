@@ -1,4 +1,3 @@
-import 'package:bakhli/features/trip/controllers/my_trips_controller.dart';
 import 'package:bakhli/features/trip/controllers/trip_plan_controller.dart';
 import 'package:bakhli/features/trip/controllers/trip_plan_guide.dart';
 import 'package:bakhli/features/trip/controllers/trip_shortlist_controller.dart';
@@ -82,12 +81,7 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   tearDown(Get.reset);
 
-  group('Continue sends only the trip id', () {
-    test('even when the server next row differs from the guide step', () {
-      final t = _summary(guideStep: 'taxi', next: 'gettingThere');
-      expect(TripBarRules.continueArgs(t), {'tripId': 'trip-1'});
-    });
-
+  group('Continue card title', () {
     test('guide step wins over the next row in the card title', () {
       expect(TripBarRules.nextTitle(_summary(guideStep: 'taxi', next: 'gettingThere')), 'Local taxi');
     });
@@ -136,10 +130,5 @@ void main() {
       expect(c.plan.value!.guide!.step, 'taxi');
       c.onClose();
     });
-  });
-
-  test('MyTripsController is not needed to build Continue args', () {
-    expect(Get.isRegistered<MyTripsController>(), isFalse);
-    expect(TripBarRules.continueArgs(_summary()).keys, ['tripId']);
   });
 }

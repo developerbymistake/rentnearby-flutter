@@ -57,6 +57,7 @@ class _DriverRingScreenState extends State<DriverRingScreen> {
   static const Color _top = Color(0xFF14182A);
   static const Color _mid = Color(0xFF2B2F7E);
   static const Color _bottom = Color(0xFF3B3FA8);
+  static const Color _acceptGreen = Color(0xFF2EA84F);
   static const Color _onDark = Colors.white;
   static const String _art = 'assets/images/design/travel3d/taxi.png';
   static const Duration _ringWindow = Duration(minutes: 5);
@@ -245,7 +246,7 @@ class _DriverRingScreenState extends State<DriverRingScreen> {
 
   Widget _line(String text) => Padding(
         padding: EdgeInsets.only(top: DS.gv(6)),
-        child: Text(text, textAlign: TextAlign.center, style: Ink3D.text(14, FontWeight.w500, _onDark, height: 1.5)),
+        child: Text(text, textAlign: TextAlign.center, style: Ink3D.text(14, FontWeight.w400, _onDark, height: 1.5)),
       );
 
   Widget _ring(DriverOffer o) {
@@ -258,91 +259,98 @@ class _DriverRingScreenState extends State<DriverRingScreen> {
     final box = DS.s(230);
     final disc = DS.s(180);
     final progress = (_c.remaining(o).inMilliseconds / _ringWindow.inMilliseconds).clamp(0.0, 1.0);
-    return Column(
-      children: [
-        Expanded(
-          child: SingleChildScrollView(
-            padding: DS.insets(l: 24, r: 24, t: 40, b: 16),
-            child: SizedBox(
-              width: double.infinity,
-              child: Column(
-                children: [
-                  Text(DriverRingStrings.eyebrow.toUpperCase(), textAlign: TextAlign.center, style: Ink3D.text(12.5, FontWeight.w500, _onDark, letterSpacing: 0.6)),
-                  Gap.v(10),
-                  Text(DriverRingStrings.title, textAlign: TextAlign.center, style: Ink3D.text(28, FontWeight.w700, _onDark, height: 1.25)),
-                  Gap.v(14),
-                  Wrap(
-                    alignment: WrapAlignment.center,
-                    spacing: DS.gh(8),
-                    runSpacing: DS.gv(8),
-                    children: [for (final c in chips) _Chip(c)],
-                  ),
-                  Gap.v(10),
-                  _line(DriverRingStrings.summary(o.dayCount, o.nightCount, o.fromDay, o.toDay)),
-                  _line(o.routeLine),
-                  _line(DriverRingStrings.seats(o.seats, o.travellers)),
-                  Gap.v(44),
-                  SizedBox(
-                    width: box,
-                    height: box,
-                    child: CustomPaint(
-                      key: const ValueKey('ring_progress'),
-                      painter: _RingPainter(
-                        progress: progress,
-                        radius: DS.s(106),
-                        stroke: DS.s(8),
-                        pulseRadius: DS.s(139),
-                        pulseStroke: DS.s(2),
-                      ),
-                      child: Center(
-                        child: Container(
-                          width: disc,
-                          height: disc,
-                          decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withValues(alpha: Alpha.v14)),
-                          alignment: Alignment.center,
-                          child: Art3D(asset: _art, size: 120),
-                        ),
-                      ),
-                    ),
-                  ),
-                  Gap.v(34),
-                  Text(_c.countdownText(o), key: const ValueKey('ring_countdown'), style: Ink3D.text(28, FontWeight.w600, _onDark, letterSpacing: 1)),
-                  if (_actionFailed) ...[
-                    Gap.v(12),
-                    Text(_paused ? DriverRingStrings.paused : DriverRingStrings.actionFailed, textAlign: TextAlign.center, style: Ink3D.text(13, FontWeight.w600, _onDark, height: 1.4)),
-                  ],
-                ],
+    final column = Padding(
+      padding: DS.insets(l: 24, r: 24, t: 40, b: 40),
+      child: Column(
+        children: [
+          Text(DriverRingStrings.eyebrow.toUpperCase(), textAlign: TextAlign.center, style: Ink3D.text(12.5, FontWeight.w400, _onDark.withValues(alpha: Alpha.v80), letterSpacing: 0.6)),
+          Gap.v(10),
+          Text(DriverRingStrings.title, textAlign: TextAlign.center, style: Ink3D.text(28, FontWeight.w700, _onDark, height: 1.25)),
+          Gap.v(14),
+          Wrap(
+            alignment: WrapAlignment.center,
+            spacing: DS.gh(8),
+            runSpacing: DS.gv(8),
+            children: [for (final c in chips) _Chip(c)],
+          ),
+          _line(DriverRingStrings.summary(o.dayCount, o.nightCount, o.fromDay, o.toDay)),
+          _line(o.routeLine),
+          _line(DriverRingStrings.seats(o.seats, o.travellers)),
+          Gap.v(44),
+          SizedBox(
+            width: box,
+            height: box,
+            child: CustomPaint(
+              key: const ValueKey('ring_progress'),
+              painter: _RingPainter(
+                progress: progress,
+                radius: DS.s(92),
+                stroke: DS.s(8),
+                pulseRadius: DS.s(139),
+                pulseStroke: DS.s(2),
+                ringShift: DS.s(15),
+              ),
+              child: Center(
+                child: Container(
+                  width: disc,
+                  height: disc,
+                  decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withValues(alpha: Alpha.v14)),
+                  alignment: Alignment.center,
+                  child: Art3D(asset: _art, size: 120, shadowOffset: const Offset(6, 9), shadowBlur: 8, shadowAlpha: Alpha.scrim),
+                ),
               ),
             ),
           ),
-        ),
-        Padding(
-          padding: DS.insets(l: 24, r: 24, t: 8, b: 16),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          Gap.v(34),
+          Text(_c.countdownText(o), key: const ValueKey('ring_countdown'), style: Ink3D.text(28, FontWeight.w600, _onDark, letterSpacing: 1)),
+          if (_actionFailed) ...[
+            Gap.v(12),
+            Text(_paused ? DriverRingStrings.paused : DriverRingStrings.actionFailed, textAlign: TextAlign.center, style: Ink3D.text(13, FontWeight.w600, _onDark, height: 1.4)),
+          ],
+          const Spacer(),
+          Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              _Round(label: DriverRingStrings.decline, color: DesignColors.error, icon: Icons.close_rounded, onTap: busy ? null : _onDecline),
-              _Round(label: DriverRingStrings.accept, color: DesignColors.success, icon: Icons.call_rounded, onTap: busy ? null : _onAccept),
+              _Round(label: DriverRingStrings.decline, color: DesignColors.error, glyph: const _DeclineX(), onTap: busy ? null : _onDecline),
+              Gap.h(90),
+              _Round(label: DriverRingStrings.accept, color: _acceptGreen, glyph: Icon(Icons.call, color: Colors.white, size: DS.s(30)), onTap: busy ? null : _onAccept),
             ],
           ),
+          Gap.v(28),
+          Text(DriverRingStrings.swipeHint, textAlign: TextAlign.center, style: Ink3D.text(12.5, FontWeight.w400, _onDark.withValues(alpha: Alpha.high))),
+        ],
+      ),
+    );
+    return LayoutBuilder(
+      builder: (context, c) => FittedBox(
+        fit: BoxFit.scaleDown,
+        alignment: Alignment.topCenter,
+        child: SizedBox(
+          width: c.maxWidth,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: c.maxHeight),
+            child: IntrinsicHeight(child: column),
+          ),
         ),
-      ],
+      ),
     );
   }
 }
 
 class _RingPainter extends CustomPainter {
-  _RingPainter({required this.progress, required this.radius, required this.stroke, required this.pulseRadius, required this.pulseStroke});
+  _RingPainter({required this.progress, required this.radius, required this.stroke, required this.pulseRadius, required this.pulseStroke, required this.ringShift});
 
   final double progress;
   final double radius;
   final double stroke;
   final double pulseRadius;
   final double pulseStroke;
+  final double ringShift;
 
   @override
   void paint(Canvas canvas, Size size) {
     final c = size.center(Offset.zero);
+    final rc = c - Offset(ringShift, ringShift);
     canvas.drawCircle(
       c,
       pulseRadius,
@@ -355,14 +363,14 @@ class _RingPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = stroke
       ..strokeCap = StrokeCap.round;
-    canvas.drawCircle(c, radius, arc..color = Colors.white.withValues(alpha: Alpha.v18));
+    canvas.drawCircle(rc, radius, arc..color = Colors.white.withValues(alpha: Alpha.v18));
     if (progress <= 0) return;
-    canvas.drawArc(Rect.fromCircle(center: c, radius: radius), -math.pi / 2, 2 * math.pi * progress, false, arc..color = ListingPalette.sunrise.g1);
+    canvas.drawArc(Rect.fromCircle(center: rc, radius: radius), -math.pi / 2, 2 * math.pi * progress, false, arc..color = ListingPalette.sunrise.g1);
   }
 
   @override
   bool shouldRepaint(_RingPainter old) =>
-      old.progress != progress || old.radius != radius || old.stroke != stroke || old.pulseRadius != pulseRadius || old.pulseStroke != pulseStroke;
+      old.progress != progress || old.radius != radius || old.stroke != stroke || old.pulseRadius != pulseRadius || old.pulseStroke != pulseStroke || old.ringShift != ringShift;
 }
 
 class _Chip extends StatelessWidget {
@@ -373,12 +381,11 @@ class _Chip extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: Alpha.tint),
-        borderRadius: DS.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: Alpha.soft)),
+        color: Colors.white.withValues(alpha: Alpha.v16),
+        borderRadius: DS.circular(14),
       ),
       child: Padding(
-        padding: DS.sym(h: 12, v: 6),
+        padding: DS.sym(h: 14, v: 6),
         child: Text(text, style: Ink3D.text(12.5, FontWeight.w600, Colors.white)),
       ),
     );
@@ -386,10 +393,11 @@ class _Chip extends StatelessWidget {
 }
 
 class _Round extends StatelessWidget {
-  const _Round({required this.label, required this.color, required this.icon, required this.onTap});
+  const _Round({required this.label, required this.color, required this.glyph, required this.onTap});
+  static const List<BoxShadow> _shadow = [BoxShadow(color: Color(0x59000000), offset: Offset(0, 8), blurRadius: 18)];
   final String label;
   final Color color;
-  final IconData icon;
+  final Widget glyph;
   final VoidCallback? onTap;
 
   @override
@@ -407,16 +415,45 @@ class _Round extends StatelessWidget {
             Container(
               width: size,
               height: size,
-              decoration: BoxDecoration(color: color, shape: BoxShape.circle, boxShadow: DS.shadows(Ink3D.whiteBtn)),
-              child: Icon(icon, color: Colors.white, size: DS.s(30)),
+              decoration: BoxDecoration(color: color, shape: BoxShape.circle, boxShadow: DS.shadows(_shadow)),
+              alignment: Alignment.center,
+              child: glyph,
             ),
-            Gap.v(8),
+            Gap.v(10),
             Text(label, style: Ink3D.text(13, FontWeight.w600, Colors.white)),
           ],
         ),
       ),
     );
   }
+}
+
+class _DeclineX extends StatelessWidget {
+  const _DeclineX();
+
+  @override
+  Widget build(BuildContext context) {
+    final side = DS.s(30);
+    return CustomPaint(key: const ValueKey('ring_decline_x'), size: Size.square(side), painter: _XPainter());
+  }
+}
+
+class _XPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final p = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = size.width * 3 / 24
+      ..strokeCap = StrokeCap.round;
+    final a = size.width * 0.25;
+    final b = size.width * 0.75;
+    canvas.drawLine(Offset(a, a), Offset(b, b), p);
+    canvas.drawLine(Offset(b, a), Offset(a, b), p);
+  }
+
+  @override
+  bool shouldRepaint(_XPainter old) => false;
 }
 
 class _PillAction extends StatelessWidget {

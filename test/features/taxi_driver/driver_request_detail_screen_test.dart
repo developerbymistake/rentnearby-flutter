@@ -326,6 +326,12 @@ void main() {
         testWidgets('$name at ${sizeLabel(size)}', (tester) async {
           await _open(tester, json, size: size);
           expect(tester.takeException(), isNull);
+          if (name == 'conflict') {
+            expect(find.byKey(const ValueKey('request_conflict_banner')), findsOneWidget);
+            expect(_t('Day by day'), findsNothing);
+            expect(find.byKey(const ValueKey('request_route_card')), findsNothing);
+            return;
+          }
           expect(_t('Day by day'), findsOneWidget);
           await tester.dragUntilVisible(find.byKey(const ValueKey('request_day_9')), find.byType(SingleChildScrollView), const Offset(0, -300));
           await tester.pump();

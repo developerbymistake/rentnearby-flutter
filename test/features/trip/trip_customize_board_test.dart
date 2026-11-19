@@ -249,7 +249,7 @@ void main() {
 
     await tester.tap(find.byKey(const ValueKey('customize-day-menu-0')));
     await tester.pumpAndSettle();
-    await tester.tap(find.text(TripStringsCustomize.deleteDay).last);
+    await tester.tap(find.widgetWithText(MenuItemButton, TripStringsCustomize.deleteDay));
     await tester.pumpAndSettle();
     expect(calls.deleted, [1, 0]);
   });

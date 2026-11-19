@@ -1,14 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:get/get.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../config/app_constants.dart';
 import '../config/app_routes.dart';
 import '../controllers/plan_controller.dart';
 import '../controllers/auth_controller.dart';
-import '../controllers/chat_controller.dart';
 import '../controllers/home_controller.dart';
-import '../controllers/notification_controller.dart';
 import '../controllers/tab_config_controller.dart';
 import '../design/design.dart';
 import '../config/app_tabs.dart';
@@ -24,8 +21,7 @@ import '../widgets/home_hero_carousel.dart';
 import '../widgets/home_stay_rail_card.dart';
 import '../widgets/home_taxi_rail_card.dart';
 import '../widgets/plan_subscription_card.dart';
-
-const double _headerGap = 0;
+import '../widgets/tab_header.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -38,7 +34,6 @@ class _HomeScreenState extends State<HomeScreen> {
   static const int _sections = 7;
   final ScrollController _scroll = ScrollController();
   final ValueNotifier<int> _replay = ValueNotifier<int>(0);
-  final ValueNotifier<double> _headerHeight = ValueNotifier<double>(0);
 
   final _home = Get.find<HomeController>();
   final _auth = Get.find<AuthController>();
@@ -48,7 +43,6 @@ class _HomeScreenState extends State<HomeScreen> {
   void dispose() {
     _scroll.dispose();
     _replay.dispose();
-    _headerHeight.dispose();
     super.dispose();
   }
 
@@ -75,134 +69,58 @@ class _HomeScreenState extends State<HomeScreen> {
     return BarMetrics.bodyBottomOf(context);
   }
 
-  double _headerEstimate(BuildContext context) {
-    final scaler = MediaQuery.textScalerOf(context);
-    final text = 10 + scaler.scale(28) * 1.25 + 3 + scaler.scale(14) * 1.5 + 14;
-    return MediaQuery.paddingOf(context).top + text;
-  }
-
-  void _onHeaderHeight(double h) {
-    if ((h - _headerHeight.value).abs() > 0.5) _headerHeight.value = h;
-  }
-
   @override
   Widget build(BuildContext context) {
-    final estimate = _headerEstimate(context);
+    final body = _buildBody(context);
     return Scaffold(
       backgroundColor: ListingPalette.sunrise.page,
       body: TabEntrance(
         tab: AppTabs.home,
-        child: ValueListenableBuilder<double>(
-          valueListenable: _headerHeight,
-          builder: (context, measured, _) {
-            final top = (measured > 0 ? measured : estimate) + _headerGap;
-            return Stack(
-              children: [
-                RefreshIndicator(
-                  color: ListingPalette.sunrise.g2,
-                  edgeOffset: top - _headerGap,
-                  onRefresh: _refresh,
-                  child: SingleChildScrollView(
-                    controller: _scroll,
-                    physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
-                    padding: EdgeInsets.only(top: top, bottom: _bottomClear(context)),
-                    child: StaggerHost(
-                      count: _sections,
-                      replay: _replay,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          StaggerItem(
-                            index: 0,
-                            child: KeyedSubtree(
-                              key: TourKeys.homeManageListingsCard,
-                              child: const HomeHeroCarousel(),
-                            ),
-                          ),
-                          StaggerItem(index: 1, child: _buildPlanNudge()),
-                          StaggerItem(index: 2, child: _buildOwnerQuickActions()),
-                          StaggerItem(index: 3, child: const TripPopularRail()),
-                          StaggerItem(index: 4, child: _buildListingsSections()),
-                          StaggerItem(index: 5, child: _buildRecentlyAddedSection()),
-                          StaggerItem(index: 6, child: _buildInstagramCard()),
-                        ],
-                      ),
-                    ),
-                  ),
+        child: Obx(() {
+          final name = _auth.profileName.value.trim();
+          final firstName = name.isNotEmpty ? name.split(' ').first : 'there';
+          return TabHeaderFrame(
+            title: 'Hi, $firstName',
+            subtitle: 'Where to next?',
+            color: ListingPalette.sunrise.page,
+            iconsKey: TourKeys.homeActionMenu,
+            child: body,
+          );
+        }),
+      ),
+    );
+  }
+
+  Widget _buildBody(BuildContext context) {
+    return RefreshIndicator(
+      color: ListingPalette.sunrise.g2,
+      onRefresh: _refresh,
+      child: SingleChildScrollView(
+        controller: _scroll,
+        physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+        padding: EdgeInsets.only(bottom: _bottomClear(context)),
+        child: StaggerHost(
+          count: _sections,
+          replay: _replay,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              StaggerItem(
+                index: 0,
+                child: KeyedSubtree(
+                  key: TourKeys.homeManageListingsCard,
+                  child: const HomeHeroCarousel(),
                 ),
-                Positioned(
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  child: _SizeReport(
-                    onHeight: _onHeaderHeight,
-                    child: EntranceOnce(child: _buildTopBar(context)),
-                  ),
-                ),
-              ],
-            );
-          },
+              ),
+              StaggerItem(index: 1, child: _buildPlanNudge()),
+              StaggerItem(index: 2, child: _buildOwnerQuickActions()),
+              StaggerItem(index: 3, child: const TripPopularRail()),
+              StaggerItem(index: 4, child: _buildListingsSections()),
+              StaggerItem(index: 5, child: _buildRecentlyAddedSection()),
+              StaggerItem(index: 6, child: _buildInstagramCard()),
+            ],
+          ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildTopBar(BuildContext context) {
-    return ColoredBox(
-      color: ListingPalette.sunrise.page,
-      child: Padding(
-        padding: EdgeInsets.only(top: MediaQuery.paddingOf(context).top),
-        child: Obx(() {
-          final name = _auth.profileName.value;
-          final firstName = name.trim().isNotEmpty ? name.trim().split(' ').first : 'there';
-          return _HomeHeader(title: 'Hi, $firstName', subtitle: 'Where to next?', trailing: _buildHeaderIcons());
-        }),
-      ),
-    );
-  }
-
-  Widget _buildHeaderIcons() {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 2),
-      child: Row(
-        key: TourKeys.homeActionMenu,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _headerIconButton(
-            asset: ListingArt.bell,
-            label: 'Notifications',
-            unreadCount: Get.find<NotificationController>().unreadCount,
-            onTap: () => Get.toNamed(AppRoutes.notifications),
-          ),
-          const SizedBox(width: 10),
-          _headerIconButton(
-            asset: ListingArt.speechBalloon,
-            label: 'Chats',
-            unreadCount: Get.find<ChatController>().unreadCount,
-            onTap: () => Get.toNamed(AppRoutes.chatsList),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _headerIconButton({
-    required String asset,
-    required String label,
-    required VoidCallback onTap,
-    required RxInt unreadCount,
-  }) {
-    return RoundIconButton3D(
-      asset: asset,
-      semanticsLabel: label,
-      scaled: false,
-      onTap: onTap,
-      badge: IgnorePointer(
-        child: Obx(() {
-          final count = unreadCount.value;
-          if (count <= 0) return const SizedBox.shrink();
-          return RoundIconButton3D.count(count > 99 ? '99+' : '$count', scaled: false);
-        }),
       ),
     );
   }
@@ -517,45 +435,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-class _HomeHeader extends StatelessWidget {
-  const _HomeHeader({required this.title, required this.subtitle, required this.trailing});
-
-  final String title;
-  final String subtitle;
-  final Widget trailing;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(18, 10, 18, 14),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.centerLeft,
-                  child: Text(title, maxLines: 1, style: Ink3D.text(28, FontWeight.w700, Ink3D.title, height: 1.25, scaled: false)),
-                ),
-                Padding(
-                  padding: const EdgeInsets.only(top: 3),
-                  child: Text(subtitle, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(14, FontWeight.w400, Ink3D.sub, letterSpacing: 0, scaled: false)),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 10),
-          trailing,
-        ],
-      ),
-    );
-  }
-}
-
 class _WhitePill extends StatelessWidget {
   const _WhitePill({required this.label, required this.color});
 
@@ -571,33 +450,5 @@ class _WhitePill extends StatelessWidget {
         child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(13, FontWeight.w700, color)),
       ),
     );
-  }
-}
-
-class _SizeReport extends SingleChildRenderObjectWidget {
-  const _SizeReport({required this.onHeight, super.child});
-
-  final ValueChanged<double> onHeight;
-
-  @override
-  RenderObject createRenderObject(BuildContext context) => _RenderSizeReport(onHeight);
-
-  @override
-  void updateRenderObject(BuildContext context, _RenderSizeReport renderObject) => renderObject.onHeight = onHeight;
-}
-
-class _RenderSizeReport extends RenderProxyBox {
-  _RenderSizeReport(this.onHeight);
-
-  ValueChanged<double> onHeight;
-  double? _last;
-
-  @override
-  void performLayout() {
-    super.performLayout();
-    final h = size.height;
-    if (h == _last) return;
-    _last = h;
-    WidgetsBinding.instance.addPostFrameCallback((_) => onHeight(h));
   }
 }

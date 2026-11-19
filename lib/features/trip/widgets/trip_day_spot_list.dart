@@ -13,6 +13,7 @@ import '../trip_strings_wizard.dart';
 import '../utils/trip_day_timeline.dart';
 import '../utils/trip_days_rules.dart';
 import '../utils/trip_format.dart';
+import 'trip_leg_header.dart';
 import 'trip_leg_menu_sheet.dart';
 
 
@@ -35,13 +36,13 @@ class TripDaySpotList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = TripPlanController.to;
-    final color = TripLook.dayColor(day);
     return Obx(() {
       final plan = c.plan.value;
       c.result.value;
       c.trip.value;
       final d = plan?.dayAt(day);
       if (plan == null || d == null) return const SizedBox.shrink();
+      final color = TripLook.dayColor(day - plan.legStart(plan.legIndexOf(day)) + 1);
       final locked = !c.canEditStructure || c.isDayPast(day);
       final editing = c.editMode.value && !locked;
       final closed = [
@@ -52,7 +53,7 @@ class TripDaySpotList extends StatelessWidget {
       final narrow = MediaQuery.sizeOf(context).width < 340;
       final artSize = narrow ? 56.0 : 63.0;
       final side = inSection ? 0.0 : DS.s(18);
-      final top = DS.s(inSection ? 48 : 40);
+      final top = DS.s(inSection ? TripLegSectionHeader.dayCardTop : 40);
       final bottomPad = inSection ? 0.0 : DS.gv(16);
       return GestureDetector(
         behavior: HitTestBehavior.opaque,
@@ -441,8 +442,7 @@ class _StopItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final drive = driveMinutes;
-    final narrow = MediaQuery.sizeOf(context).width < 340;
-    final timeW = MediaQuery.textScalerOf(context).scale(DS.s(narrow ? 56 : 66));
+    final timeW = MediaQuery.textScalerOf(context).clamp(maxScaleFactor: 1.3).scale(DS.s(66));
     return Material(
       color: DesignColors.surface,
       child: Column(
@@ -467,7 +467,11 @@ class _StopItem extends StatelessWidget {
                       ),
                     SizedBox(
                       width: timeW,
-                      child: Text(time, maxLines: 1, style: Ink3D.text(12.5, FontWeight.w600, Ink3D.sub, letterSpacing: 0)),
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(time, maxLines: 1, softWrap: false, style: Ink3D.text(12.5, FontWeight.w600, Ink3D.sub, letterSpacing: 0)),
+                      ),
                     ),
                     Container(
                       width: DS.s(26),

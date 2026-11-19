@@ -8,6 +8,7 @@ import 'package:bakhli/features/trip/models/trip_plan_model.dart';
 import 'package:bakhli/features/trip/models/trip_spot_model.dart';
 import 'package:bakhli/features/trip/screens/trip_customize_screen.dart';
 import 'package:bakhli/features/trip/trip_strings_customize.dart';
+import 'package:bakhli/features/trip/widgets/trip_plan_header.dart';
 import 'package:bakhli/design/design.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -65,7 +66,7 @@ Future<void> _deleteDay(WidgetTester tester, int index) async {
   await tester.ensureVisible(menu);
   await tester.tap(menu);
   await tester.pumpAndSettle();
-  await tester.tap(find.text(TripStringsCustomize.deleteDay).last);
+  await tester.tap(find.widgetWithText(MenuItemButton, TripStringsCustomize.deleteDay));
   await tester.pumpAndSettle();
 }
 
@@ -290,7 +291,7 @@ void main() {
   testWidgets('header_back_asks_before_discard', (tester) async {
     final c = _rig(enginePlan([[3, 2]]));
     await _open(tester);
-    final back = find.descendant(of: find.byType(ModuleHeader), matching: find.byIcon(Icons.arrow_back_ios_new_rounded));
+    final back = find.descendant(of: find.byType(TripFlowHeader), matching: find.text('‹'));
     await _tapAddDay(tester);
     await tester.tap(back);
     await tester.pumpAndSettle();

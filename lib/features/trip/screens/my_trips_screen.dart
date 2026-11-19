@@ -2,7 +2,6 @@ import 'package:bakhli/design/design.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:share_plus/share_plus.dart';
-import '../../../config/app_routes.dart';
 import '../../../config/app_tabs.dart';
 import '../../../controllers/auth_controller.dart';
 import '../../../utils/app_toast.dart';
@@ -98,7 +97,11 @@ class _MyTripsScreenState extends State<MyTripsScreen> with TickerProviderStateM
     if (p.maxScrollExtent > 0 && p.pixels >= p.maxScrollExtent - 300) _ctrl.loadMore();
   }
 
-  void _openPlan(TripSummaryModel t) {
+  void _open(TripSummaryModel t, {bool past = false}) {
+    if (!past) {
+      TripNavigation.continueTrip(t.id);
+      return;
+    }
     TripNavigation.openPlan(tripId: t.id)?.then((_) {
       if (mounted) _ctrl.load();
     });
@@ -109,9 +112,7 @@ class _MyTripsScreenState extends State<MyTripsScreen> with TickerProviderStateM
       TripNavigation.openSummary(t.id);
       return;
     }
-    Get.toNamed(AppRoutes.tripPlan, arguments: TripBarRules.continueArgs(t))?.then((_) {
-      if (mounted) _ctrl.load();
-    });
+    TripNavigation.continueTrip(t.id);
   }
 
   Future<void> _share(TripSummaryModel t) async {
@@ -190,7 +191,7 @@ class _MyTripsScreenState extends State<MyTripsScreen> with TickerProviderStateM
         key: ValueKey('${past ? 'p' : 'a'}${t.id}'),
         trip: t,
         past: past,
-        onOpen: () => _openPlan(t),
+        onOpen: () => _open(t, past: past),
         onAction: () => _onAction(t, past: past),
         onShare: t.spotCount > 0 ? () => _share(t) : null,
         onDelete: () => _delete(t),

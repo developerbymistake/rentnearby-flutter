@@ -23,6 +23,7 @@ class TripStringsTaxiRequest {
   static const String noDriversTitle = 'No taxi drivers registered near here yet';
   static const String skipTaxi = 'Skip taxi';
   static const String tryAnotherCity = 'Try another city';
+  static const String moreOptions = 'More options';
 
   static const String summaryNoSection = 'Turn on at least one section';
   static const String summaryChoosePickup = 'Choose a pickup';

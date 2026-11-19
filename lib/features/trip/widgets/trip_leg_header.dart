@@ -10,6 +10,7 @@ import '../trip_strings_mca_n2.dart';
 import 'package:bakhli/design/extra/trip_plan_look.dart';
 import '../utils/trip_format.dart';
 import 'trip_leg_menu_sheet.dart';
+import 'trip_plan_header.dart';
 
 class TripLegHeader extends StatelessWidget {
   const TripLegHeader({super.key, required this.legIndex, this.anchorKey, this.folded = false, this.onToggle, this.onCustomize, this.body = const [], this.gapBelow = 0});
@@ -108,6 +109,7 @@ class TripLegSectionHeader extends StatelessWidget {
   static const Key detailKey = ValueKey('leg-detail');
   static const Key cardKey = ValueKey('leg-card');
   static const Key layersKey = ValueKey('leg-fold-layers');
+  static const double dayCardTop = 48;
 
   static const BorderRadius openRadius = BorderRadius.only(topLeft: Radius.circular(6), topRight: Radius.circular(36));
   static const BorderRadius foldedRadius = BorderRadius.only(
@@ -150,7 +152,7 @@ class TripLegSectionHeader extends StatelessWidget {
     final customizeW = onCustomize == null ? 0.0 : KitText.widthOf(TripStringsDayplan.customize, labelStyle, scaler) + pillPad * 2;
     final ctlW = (hasMenu ? btn + gap : 0) + foldW;
     final minText = DS.s(96);
-    final lineStyle = Ink3D.text(12.5, FontWeight.w500, DesignColors.tint(Colors.white, Alpha.v93), height: 1.55, letterSpacing: 0);
+    final lineStyle = Ink3D.text(12.5, FontWeight.w400, DesignColors.tint(Colors.white, Alpha.v93), height: 1.55, letterSpacing: 0);
 
     final menuBtn = !hasMenu
         ? null
@@ -165,7 +167,8 @@ class TripLegSectionHeader extends StatelessWidget {
                 width: btn,
                 height: btn,
                 decoration: BoxDecoration(color: DesignColors.surface, shape: BoxShape.circle, boxShadow: DS.shadows(Ink3D.whiteBtn)),
-                child: Icon(Icons.more_vert_rounded, size: DS.s(20), color: tone.text),
+                alignment: Alignment.center,
+                child: TripMenuDots.glyph(tone.text, size: 20),
               ),
             ),
           );
@@ -182,7 +185,10 @@ class TripLegSectionHeader extends StatelessWidget {
           children: [
             ExcludeSemantics(child: Text(foldLabel, maxLines: 1, style: foldStyle)),
             SizedBox(width: DS.s(6)),
-            Icon(folded ? Icons.keyboard_arrow_down_rounded : Icons.keyboard_arrow_up_rounded, size: DS.s(18), color: tone.text),
+            RotatedBox(
+              quarterTurns: folded ? 2 : 0,
+              child: CustomPaint(size: Size.square(DS.s(18)), painter: _FoldChevron(tone.text)),
+            ),
           ],
         ),
       ),
@@ -276,7 +282,7 @@ class TripLegSectionHeader extends StatelessWidget {
             children: [
               Positioned(
                 left: DS.s(14),
-                top: 0,
+                top: DS.s(dayCardTop),
                 bottom: DS.s(36),
                 width: DS.s(4),
                 child: DecoratedBox(decoration: BoxDecoration(color: TripLook.rail, borderRadius: DS.circular(2))),
@@ -311,30 +317,45 @@ class TripLegSectionHeader extends StatelessWidget {
     final layerH = DS.s(16);
     final layerRoom = folded ? DS.s(34) : 0.0;
     final bottom = math.max(0.0, layerRoom - gapBelow);
+    final layerBox = DS.s(30);
     Widget layer(double inset, double drop, Color color, List<BoxShadow>? shadow) => Positioned(
           left: side + DS.s(inset),
           right: side + DS.s(inset),
-          bottom: bottom - DS.s(drop),
+          bottom: layerBox - DS.s(drop),
           height: layerH,
           child: DecoratedBox(decoration: BoxDecoration(color: color, borderRadius: DS.br(_layerRadius), boxShadow: shadow)),
         );
     return Stack(
       clipBehavior: Clip.none,
       children: [
+        Padding(padding: EdgeInsets.fromLTRB(side, top, side, bottom), child: section),
         if (folded)
-          Positioned.fill(
+          Positioned(
             key: layersKey,
+            left: 0,
+            right: 0,
+            bottom: bottom - layerBox,
+            height: layerBox,
             child: IgnorePointer(
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  layer(28, 22, Color.lerp(palette.line, palette.tint, 0.3)!, null),
-                  layer(14, 12, Color.lerp(palette.line, palette.g2, 0.22)!, DS.shadows([BoxShadow(color: palette.shadow.withValues(alpha: Alpha.v25), offset: const Offset(0, 3), blurRadius: 6)])),
-                ],
+              child: ClipRect(
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    layer(30, 20, TripLook.foldFar, null),
+                    layer(16, 10, TripLook.foldNear, DS.shadows([BoxShadow(color: palette.shadow.withValues(alpha: Alpha.v25), offset: const Offset(0, 3), blurRadius: 6)])),
+                  ],
+                ),
               ),
             ),
           ),
-        Padding(padding: EdgeInsets.fromLTRB(side, top, side, bottom), child: section),
+        if (folded)
+          Positioned(
+            left: side + DS.s(16),
+            right: side + DS.s(16),
+            bottom: bottom,
+            height: DS.s(2),
+            child: const IgnorePointer(child: ColoredBox(color: TripLook.foldNear)),
+          ),
         Positioned(
           left: side + DS.s(14),
           top: top - DS.s(12),
@@ -354,4 +375,31 @@ class TripLegSectionHeader extends StatelessWidget {
       ],
     );
   }
+}
+
+class _FoldChevron extends CustomPainter {
+  const _FoldChevron(this.color);
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final k = size.width / 24;
+    final path = Path()
+      ..moveTo(6 * k, 15 * k)
+      ..lineTo(12 * k, 9 * k)
+      ..lineTo(18 * k, 15 * k);
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = color
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 3.2 * k
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_FoldChevron old) => old.color != color;
 }

@@ -194,13 +194,15 @@ class TripCustomizeDayCard extends StatelessWidget {
     final load = draft.estimateMinutes(dayIndex, without: _holdsDragged ? draggingSpotId : null);
     final full = count >= TripConstants.maxSpotsPerDay;
     return Container(
-      padding: DS.insets(l: 88, t: 14, r: 14, b: 14),
+      padding: DS.insets(l: 88, t: 12, r: 14, b: 14),
       decoration: BoxDecoration(gradient: ListingTone.indigo.gradient),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(
-            child: Column(
+            child: Padding(
+              padding: EdgeInsets.only(top: DS.s(2)),
+              child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -242,6 +244,7 @@ class TripCustomizeDayCard extends StatelessWidget {
                 ),
               ],
             ),
+            ),
           ),
           Gap.h(10),
           if (frozen) SizedBox(width: DS.s(40)) else _menu(),
@@ -251,24 +254,38 @@ class TripCustomizeDayCard extends StatelessWidget {
   }
 
   Widget _menu() {
-    return PopupMenuButton<int>(
-      key: ValueKey('customize-day-menu-$dayIndex'),
-      tooltip: TripStringsCustomize.dayMenu,
-      padding: EdgeInsets.zero,
-      shape: RoundedRectangleBorder(borderRadius: DS.circular(12)),
-      color: DesignColors.surface,
-      onSelected: (_) => onDeleteDay(),
-      itemBuilder: (_) => [
-        PopupMenuItem<int>(
-          value: 0,
+    return MenuAnchor(
+      alignmentOffset: Offset(0, DS.s(6)),
+      style: MenuStyle(
+        padding: const WidgetStatePropertyAll(EdgeInsets.zero),
+        elevation: const WidgetStatePropertyAll(8),
+        backgroundColor: const WidgetStatePropertyAll(DesignColors.surface),
+        surfaceTintColor: const WidgetStatePropertyAll(Colors.transparent),
+        shape: WidgetStatePropertyAll(RoundedRectangleBorder(borderRadius: DS.circular(12))),
+      ),
+      menuChildren: [
+        MenuItemButton(
+          onPressed: onDeleteDay,
+          style: ButtonStyle(
+            minimumSize: WidgetStatePropertyAll(Size(0, DS.s(40))),
+            padding: WidgetStatePropertyAll(DS.sym(h: 20)),
+          ),
           child: Text(TripStringsCustomize.deleteDay, style: Ink3D.text(13, FontWeight.w700, TripLook.badText)),
         ),
       ],
-      child: Container(
-        width: DS.s(40),
-        height: DS.s(40),
-        decoration: BoxDecoration(color: DesignColors.surface, shape: BoxShape.circle, boxShadow: DS.shadows(TripCustomizeLook.dayMenu)),
-        child: Icon(Icons.more_vert_rounded, size: DS.s(20), color: ListingTone.indigo.text),
+      builder: (context, controller, _) => Tooltip(
+        message: TripStringsCustomize.dayMenu,
+        child: GestureDetector(
+          key: ValueKey('customize-day-menu-$dayIndex'),
+          behavior: HitTestBehavior.opaque,
+          onTap: () => controller.isOpen ? controller.close() : controller.open(),
+          child: Container(
+            width: DS.s(40),
+            height: DS.s(40),
+            decoration: BoxDecoration(color: DesignColors.surface, shape: BoxShape.circle, boxShadow: DS.shadows(TripCustomizeLook.dayMenu)),
+            child: Icon(Icons.more_vert_rounded, size: DS.s(18), color: ListingTone.indigo.text),
+          ),
+        ),
       ),
     );
   }
@@ -286,7 +303,7 @@ class TripCustomizeDayCard extends StatelessWidget {
   Widget _empty(bool hover) {
     final rest = draft.days[dayIndex].restDay;
     return Padding(
-      padding: DS.insets(l: 16, t: 20, r: 16, b: 10),
+      padding: DS.insets(l: 16, t: 20, r: 16, b: 18),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
@@ -332,7 +349,7 @@ class TripCustomizeDayCard extends StatelessWidget {
         label: TripStringsCustomize.deleteDay,
         child: Container(
           constraints: BoxConstraints(minHeight: DS.s(40)),
-          padding: DS.sym(h: 18),
+          padding: DS.sym(h: 20),
           decoration: BoxDecoration(
             color: DesignColors.surface,
             borderRadius: DS.circular(20),
@@ -354,7 +371,7 @@ class TripCustomizeDayCard extends StatelessWidget {
       );
 
   Widget _addRow() => Padding(
-        padding: DS.insets(l: 14, t: 12, r: 14, b: 8),
+        padding: DS.insets(l: 14, t: 12, r: 14, b: 16),
         child: Tap3D(
           tapKey: ValueKey('customize-add-$dayIndex'),
           onTap: onAddPlaces,
@@ -381,6 +398,13 @@ class TripCustomizeDayCard extends StatelessWidget {
     final (:roads, :starts) = _timeline(spots);
     final color = TripLook.dayColor(dayNumber);
     final full = _shownCount >= TripConstants.maxSpotsPerDay;
+    int? drive(int i) {
+      if (i < 0 || i + 1 >= spots.length) return null;
+      if (spots[i].id == draggingSpotId || spots[i + 1].id == draggingSpotId) return null;
+      final m = roads[i];
+      return m != null && m > 0 ? m : null;
+    }
+
     Widget row(int i) {
       final s = spots[i];
       final r = TripCustomizeSpotRow(
@@ -389,7 +413,7 @@ class TripCustomizeDayCard extends StatelessWidget {
         index: i,
         color: color,
         time: TripDayTimeline.clock(starts[i]),
-        driveMinutes: s.id == draggingSpotId || (i + 1 < spots.length && spots[i + 1].id == draggingSpotId) ? null : roads[i],
+        driveMinutes: frozen ? drive(i) : null,
         frozen: frozen,
         selected: selectedSpotId == s.id,
         onTap: () => onSelect(s.id),
@@ -410,10 +434,15 @@ class TripCustomizeDayCard extends StatelessWidget {
         },
         builder: (context, cand, rej) {
           final line = cand.any((d) => d != null && d.spotId != s.id);
+          final before = line ? null : drive(i - 1);
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             mainAxisSize: MainAxisSize.min,
-            children: [if (line) ...[const _InsertLine(), _DropZone(child: _preview())], r],
+            children: [
+              if (before != null) TripCustomizeSpotRow.driveRow(context, before),
+              if (line) ...[const _InsertLine(), _DropZone(child: _preview())],
+              r,
+            ],
           );
         },
       );

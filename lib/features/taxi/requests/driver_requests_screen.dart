@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:bakhli/design/design.dart';
+import 'package:bakhli/design/extra/trip_customize_look.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -110,7 +111,10 @@ class _DriverRequestsScreenState extends State<DriverRequestsScreen> {
             child: ModuleHeader(
               title: DriverRequestsStrings.title,
               subtitle: DriverRequestsStrings.subtitle,
+              titleStyle: TripCustomizeLook.headerTitle,
+              subtitleWidget: Text(DriverRequestsStrings.subtitle, maxLines: 1, overflow: TextOverflow.ellipsis, style: TripCustomizeLook.headerSubtitle),
               autoHeight: true,
+              compact: true,
               tone: KitTone.brand,
               gradient: ListingTone.indigo.gradient,
               onBack: _back,
@@ -132,7 +136,7 @@ class _DriverRequestsScreenState extends State<DriverRequestsScreen> {
                   child: Obx(() => ListView(
                         key: const ValueKey('requests_list'),
                         physics: const AlwaysScrollableScrollPhysics(),
-                        padding: DS.insets(l: 18, t: 16, r: 18, b: 28),
+                        padding: DS.insets(l: 18, r: 18, b: 28),
                         children: _children(),
                       )),
                 ),
@@ -175,7 +179,7 @@ class _DriverRequestsScreenState extends State<DriverRequestsScreen> {
       ..._group(DriverRequestsStrings.groupBooked, 'requests_group_booked', booked),
       ..._group(DriverRequestsStrings.groupEarlier, 'requests_group_earlier', earlier),
       if (_c.hasMore) ...[
-        Gap.v(4),
+        Gap.v(16),
         WhitePillButton(
           key: const ValueKey('requests_more'),
           tone: ListingTone.indigo,
@@ -192,12 +196,12 @@ class _DriverRequestsScreenState extends State<DriverRequestsScreen> {
     if (offers.isEmpty) return const [];
     return [
       Padding(
-        padding: EdgeInsets.only(top: DS.gv(8), bottom: DS.gv(10)),
-        child: Text(title, key: ValueKey(key), style: Ink3D.text(20, FontWeight.w700, Ink3D.title)),
+        padding: EdgeInsets.only(top: DS.gv(22)),
+        child: Text(title, key: ValueKey(key), style: Ink3D.text(19, FontWeight.w600, Ink3D.body, letterSpacing: 0)),
       ),
       for (final o in offers)
         Padding(
-          padding: EdgeInsets.only(bottom: DS.gv(14)),
+          padding: EdgeInsets.only(top: DS.gv(16)),
           child: DriverOfferCard(
             offer: o,
             timeLeft: o.state == OfferState.ringing || o.state == OfferState.selected
@@ -214,7 +218,7 @@ class _DriverRequestsScreenState extends State<DriverRequestsScreen> {
   }
 
   Widget _banner(String text, String key) => Padding(
-        padding: EdgeInsets.only(bottom: DS.gv(12)),
+        padding: EdgeInsets.only(top: DS.gv(16)),
         child: Container(
           key: ValueKey(key),
           padding: DS.sym(h: 14, v: 10),

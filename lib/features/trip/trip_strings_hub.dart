@@ -1,6 +1,6 @@
 abstract final class TripStringsHub {
-  static const String lead = 'Plan your';
   static const String title = 'Trips';
+  static const String headerSub = 'Plan your next trip';
   static const String continueTitle = 'Continue your trip';
   static const String nextPrefix = 'Next';
   static const String viewAll = 'View all';

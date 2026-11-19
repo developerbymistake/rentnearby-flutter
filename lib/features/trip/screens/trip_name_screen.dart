@@ -61,6 +61,8 @@ class _TripNameScreenState extends State<TripNameScreen> {
           textInputAction: TextInputAction.done,
           inputFormatters: [...noEmojiInputFormatters, LengthLimitingTextInputFormatter(TripNameRules.max)],
           cursorColor: tone.g2,
+          cursorWidth: DS.s(2),
+          cursorHeight: DS.s(22),
           style: Ink3D.text(16, FontWeight.w600, TripLook.ink, letterSpacing: 0),
           decoration: InputDecoration(
             isDense: true,
@@ -73,7 +75,7 @@ class _TripNameScreenState extends State<TripNameScreen> {
             focusedErrorBorder: InputBorder.none,
             hintText: TripStringsName.hint,
             hintStyle: Ink3D.text(16, FontWeight.w400, TripLook.mutedText, letterSpacing: 0),
-            contentPadding: DS.sym(h: 18, v: 14),
+            contentPadding: DS.sym(h: 20, v: 14),
           ),
           onChanged: (_) => setState(() {}),
           onFieldSubmitted: (_) => _continue(),

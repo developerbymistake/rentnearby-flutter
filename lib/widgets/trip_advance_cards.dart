@@ -3,7 +3,6 @@ import 'package:bakhli/design/design.dart';
 import 'package:bakhli/design/extra/ext_trip_replies.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import '../config/app_routes.dart';
 import '../features/trip/controllers/trip_plan_controller.dart';
 import '../features/trip/models/trip_enquiry_model.dart';
 import '../features/trip/trip_navigation.dart';
@@ -195,7 +194,7 @@ class TripAdvanceCards {
   static VoidCallback? _viewTrip(TripChatCallbacks cb) {
     final tripId = cb.tripId;
     if (tripId == null) return null;
-    return () => Get.toNamed(AppRoutes.tripPlan, arguments: {'tripId': tripId});
+    return () => TripNavigation.continueTrip(tripId);
   }
 
   // guest
@@ -337,7 +336,7 @@ class TripAdvanceCards {
     if (loaded && day != null) {
       TripNavigation.openStay(Get.find<TripPlanController>().legIndexOf(day));
     } else if (tripId != null) {
-      Get.toNamed(AppRoutes.tripPlan, arguments: {'tripId': tripId});
+      TripNavigation.continueTrip(tripId);
     }
   }
 

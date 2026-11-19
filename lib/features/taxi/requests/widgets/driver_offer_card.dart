@@ -1,4 +1,7 @@
 import 'package:bakhli/design/design.dart';
+import 'package:bakhli/design/extra/taxi_status_look.dart';
+import 'package:bakhli/design/extra/trip_customize_look.dart';
+import 'package:bakhli/design/extra/trip_plan_look.dart';
 import 'package:flutter/material.dart';
 
 import '../../../trip/trip_strings_taxi_driver.dart';
@@ -6,8 +9,9 @@ import '../../../trip/widgets/taxi_status/taxi_driver_card.dart';
 import '../models/driver_request_models.dart';
 import '../strings/driver_requests_strings.dart';
 
-const double _buttonFont = 14;
-const double _buttonHeight = 44;
+const double _buttonFont = 13;
+const double _buttonHeight = 48;
+const double _artFade = 0.6;
 
 const ColorFilter _grey = ColorFilter.matrix(<double>[
   0.2126, 0.7152, 0.0722, 0, 0,
@@ -46,43 +50,37 @@ class DriverOfferCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final muted = _earlier && !_active;
     final ringing = offer.state == OfferState.ringing;
-    final bodyColor = muted ? Ink3D.grey : Ink3D.body;
-    final line = Ink3D.text(14, FontWeight.w400, bodyColor);
+    final line = Ink3D.text(13, FontWeight.w400, muted ? TripLook.mutedText : Ink3D.body, height: 1.5, letterSpacing: 0);
     final chip = _chip(muted);
-    final art = Art3D(asset: ListingArt.taxi, size: 48, shadowBlur: 4, shadowOffset: const Offset(2, 3));
+    const art = Art3D(asset: ListingArt.taxi, size: 44, shadowAlpha: 0);
     final card = Container(
       key: ValueKey('request_card_${offer.offerId}'),
-      padding: DS.insets(l: 16, t: 16, r: 16, b: 16),
+      padding: DS.all(16),
       decoration: BoxDecoration(
-        color: muted ? DesignColors.chipBackground.withValues(alpha: Alpha.v55) : DesignColors.surface,
-        borderRadius: DS.br(CardRadius.hero),
-        border: _booked ? Border.all(color: DesignColors.success.withValues(alpha: Alpha.v45), width: DS.s(1.5)) : null,
-        boxShadow: muted ? null : DS.shadows(Ink3D.softShadow),
+        color: muted ? TaxiStatusLook.dimCard : DesignColors.surface,
+        borderRadius: DS.br(TripCustomizeLook.addDayRadius),
+        border: _booked ? Border.all(color: TaxiStatusLook.goodLine, width: DS.s(2)) : null,
+        boxShadow: muted ? null : DS.shadows(TripLook.cardShadowSoft),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              muted ? ColorFiltered(colorFilter: _grey, child: Opacity(opacity: Alpha.strong, child: art)) : art,
-              Gap.h(12),
+              muted ? const ColorFiltered(colorFilter: _grey, child: Opacity(opacity: _artFade, child: art)) : art,
+              Gap.h(14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       DriverRequestsStrings.travellerName(offer),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Ink3D.text(16, FontWeight.w700, muted ? Ink3D.grey : Ink3D.title),
+                      style: Ink3D.text(15, FontWeight.w700, muted ? TripLook.mutedText : Ink3D.title, letterSpacing: 0),
                     ),
                     Text(
                       DriverRequestsStrings.subtitleFor(offer),
                       key: ValueKey('request_subtitle_${offer.offerId}'),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: Ink3D.text(13, FontWeight.w400, Ink3D.copy),
+                      style: Ink3D.text(12.5, FontWeight.w400, TripLook.mutedText, letterSpacing: 0),
                     ),
                   ],
                 ),
@@ -91,13 +89,13 @@ class DriverOfferCard extends StatelessWidget {
             ],
           ),
           if (_active) ...[Gap.v(12), _sections()],
-          Gap.v(12),
+          Gap.v(8),
           Text(DriverRequestsStrings.lengthLine(offer), style: line),
           if (offer.routeLine.isNotEmpty) ...[Gap.v(8), Text(offer.routeLine, style: line)],
           Gap.v(8),
           Text(TripStringsTaxiDriver.seatsLine(offer.seats, offer.travellers), style: line),
           if (ringing) ...[
-            Gap.v(14),
+            Gap.v(16),
             Row(
               children: [
                 Expanded(
@@ -117,6 +115,7 @@ class DriverOfferCard extends StatelessWidget {
                     tone: ListingTone.indigo,
                     label: TripStringsTaxiDriver.accept,
                     onTap: enabled && !expired ? onAccept : null,
+                    shadows: TaxiStatusLook.actionGlow,
                     height: _buttonHeight,
                     fontSize: _buttonFont,
                   ),

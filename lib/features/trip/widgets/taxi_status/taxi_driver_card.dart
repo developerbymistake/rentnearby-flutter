@@ -1,4 +1,7 @@
 import 'package:bakhli/design/design.dart';
+import 'package:bakhli/design/extra/taxi_status_look.dart';
+import 'package:bakhli/design/extra/trip_customize_look.dart';
+import 'package:bakhli/design/extra/trip_plan_look.dart';
 import 'package:flutter/material.dart';
 
 import '../../models/taxi_request_models.dart';
@@ -7,65 +10,71 @@ import '../../trip_strings_taxi_status.dart';
 enum TaxiDriverMode { choose, selected, onHold }
 
 class TaxiStars extends StatelessWidget {
-  const TaxiStars({super.key, required this.filled, this.size = 14});
+  const TaxiStars({super.key, required this.filled, this.size = 14, this.gap = 2});
 
   final int filled;
   final double size;
+  final double gap;
 
   @override
   Widget build(BuildContext context) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        for (var i = 1; i <= 5; i++)
-          Icon(Icons.star_rounded, size: DS.s(size), color: i <= filled ? DesignColors.amber : DesignColors.chipBackground),
+        for (var i = 1; i <= 5; i++) ...[
+          if (i > 1) Gap.h(gap),
+          Icon(Icons.star, size: DS.s(size), color: i <= filled ? TaxiStatusLook.star : TaxiStatusLook.holdFill),
+        ],
       ],
     );
   }
 }
 
 class TaxiDriverIdentity extends StatelessWidget {
-  const TaxiDriverIdentity({super.key, required this.driver, this.showRating = true, this.trailing});
+  const TaxiDriverIdentity({super.key, required this.driver, this.showRating = true, this.trailing, this.centered = false});
 
   final TaxiDriverCard driver;
   final bool showRating;
   final Widget? trailing;
+  final bool centered;
 
   @override
   Widget build(BuildContext context) {
     final avg = driver.ratingAverage;
     final vehicle = TripStringsTaxiStatus.vehicleLine(driver.vehicle, driver.seats);
     final rides = TripStringsTaxiStatus.rides(driver.ridesCompleted);
-    return Row(
+    final line = Ink3D.text(12.5, FontWeight.w400, TripLook.mutedText, height: 1.5, letterSpacing: 0);
+    final text = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
       children: [
-        const Art3D(asset: ListingArt.profile, size: 48, shadowBlur: 4, shadowOffset: Offset(2, 3)),
-        Gap.h(14),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+        Text(driver.name, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(15, FontWeight.w700, Ink3D.title, letterSpacing: 0)),
+        if (showRating && avg != null)
+          Wrap(
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: DS.gh(4),
             children: [
-              Text(driver.name, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(16, FontWeight.w700, Ink3D.title)),
-              if (showRating && avg != null)
-                Wrap(
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  spacing: DS.gh(4),
-                  children: [
-                    TaxiStars(filled: avg.round()),
-                    Text.rich(
-                      TextSpan(
-                        text: avg.toStringAsFixed(1),
-                        style: Ink3D.text(13, FontWeight.w700, Ink3D.title),
-                        children: [TextSpan(text: ' · $rides', style: Ink3D.text(13, FontWeight.w400, Ink3D.copy))],
-                      ),
-                    ),
-                  ],
-                )
-              else if (showRating && driver.ridesCompleted > 0)
-                Text(rides, style: Ink3D.text(13, FontWeight.w400, Ink3D.copy)),
-              if (vehicle.isNotEmpty) Text(vehicle, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(13, FontWeight.w400, Ink3D.copy)),
+              TaxiStars(filled: avg.round()),
+              Text.rich(
+                TextSpan(
+                  text: avg.toStringAsFixed(1),
+                  style: line.copyWith(fontWeight: FontWeight.w700, color: Ink3D.title),
+                  children: [TextSpan(text: ' · $rides', style: line)],
+                ),
+              ),
             ],
-          ),
-        ),
+          )
+        else if (showRating && driver.ridesCompleted > 0)
+          Text(rides, style: line),
+        if (vehicle.isNotEmpty) Text(vehicle, maxLines: 2, overflow: TextOverflow.ellipsis, style: line),
+      ],
+    );
+    return Row(
+      mainAxisSize: centered ? MainAxisSize.min : MainAxisSize.max,
+      children: [
+        const Art3D(asset: TaxiStatusLook.person, size: 48, shadowAlpha: 0),
+        Gap.h(14),
+        if (centered) Flexible(child: text) else Expanded(child: text),
         if (trailing != null) ...[Gap.h(8), trailing!],
       ],
     );
@@ -81,17 +90,47 @@ class TaxiStateChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bg = muted ? DesignColors.chipBackground : (positive ? DesignColors.successSoft : DesignColors.surfaceTint);
-    final fg = muted ? DesignColors.textMuted : (positive ? DesignColors.success : DesignColors.primary);
+    final bg = muted ? TaxiStatusLook.holdFill : (positive ? TaxiStatusLook.goodSoft : ListingPalette.indigo.tint);
+    final fg = muted ? TaxiStatusLook.holdText : (positive ? DesignColors.goodInk : DesignColors.primary);
     return Container(
-      padding: DS.sym(h: 12, v: 6),
-      decoration: BoxDecoration(color: bg, borderRadius: DS.circular(12)),
-      child: Text(label, maxLines: 1, style: Ink3D.text(12, FontWeight.w700, fg)),
+      padding: DS.sym(h: 12, v: 4),
+      decoration: BoxDecoration(color: bg, borderRadius: DS.circular(10)),
+      child: Text(label, maxLines: 1, style: Ink3D.text(12.5, FontWeight.w700, fg, height: 1.5, letterSpacing: 0)),
     );
   }
 }
 
-const double _buttonFont = 14;
+class TaxiNotAgreedLink extends StatelessWidget {
+  const TaxiNotAgreedLink({super.key, required this.label, required this.onTap, this.tapKey});
+
+  final String label;
+  final VoidCallback? onTap;
+  final Key? tapKey;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tap3D(
+      tapKey: tapKey,
+      onTap: onTap,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(minHeight: DS.s(44)),
+        child: Padding(
+          padding: DS.sym(h: 6),
+          child: Center(
+            widthFactor: 1,
+            child: Text(
+              label,
+              maxLines: 1,
+              style: Ink3D.text(12.5, FontWeight.w700, TripLook.mutedText, letterSpacing: 0).copyWith(decoration: TextDecoration.underline),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+const double _buttonFont = 13;
 
 class TaxiDriverCardView extends StatelessWidget {
   const TaxiDriverCardView({
@@ -135,50 +174,36 @@ class TaxiDriverCardView extends StatelessWidget {
             fontSize: _buttonFont,
           );
     return Opacity(
-      opacity: hold ? 0.6 : 1,
+      opacity: hold ? 0.7 : 1,
       child: Container(
         key: ValueKey('driver_card_${driver.offerId}'),
-        padding: DS.insets(l: 16, t: 16, r: 16, b: 14),
+        padding: DS.all(16),
         decoration: BoxDecoration(
-          color: hold ? DesignColors.surfaceAlt : DesignColors.surface,
-          borderRadius: DS.br(CardRadius.hero),
-          border: chosen ? Border.all(color: DesignColors.primary, width: DS.s(2)) : null,
-          boxShadow: hold ? null : DS.shadows(Ink3D.softShadow),
+          color: hold ? TaxiStatusLook.dimCard : DesignColors.surface,
+          borderRadius: DS.br(TripCustomizeLook.addDayRadius),
+          border: Border.all(color: chosen ? DesignColors.lunchEnd : Colors.transparent, width: DS.s(2)),
+          boxShadow: hold ? null : DS.shadows(TripLook.cardShadowSoft),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             TaxiDriverIdentity(driver: driver, trailing: chip),
             if (!hold && (call != null || showSelect)) ...[
-              Gap.v(12),
+              Gap.v(14),
               if (chosen)
                 call!
               else
                 Row(
                   children: [
-                    Flexible(
-                      flex: 3,
-                      child: Tap3D(
-                        tapKey: ValueKey('driver_not_agreed_${driver.offerId}'),
-                        onTap: enabled ? onNotAgreed : null,
-                        child: Padding(
-                          padding: DS.sym(v: 10),
-                          child: FittedBox(
-                            fit: BoxFit.scaleDown,
-                            child: Text(
-                              TripStringsTaxiStatus.notAgreed,
-                              style: Ink3D.text(13, FontWeight.w700, Ink3D.grey).copyWith(decoration: TextDecoration.underline),
-                            ),
-                          ),
-                        ),
-                      ),
+                    TaxiNotAgreedLink(
+                      tapKey: ValueKey('driver_not_agreed_${driver.offerId}'),
+                      label: TripStringsTaxiStatus.notAgreed,
+                      onTap: enabled ? onNotAgreed : null,
                     ),
-                    Gap.h(8),
-                    if (call != null) Expanded(flex: 4, child: call),
-                    if (call != null && showSelect) Gap.h(8),
-                    if (showSelect)
+                    if (call != null) ...[Gap.h(10), Expanded(child: call)],
+                    if (showSelect) ...[
+                      Gap.h(10),
                       Expanded(
-                        flex: 4,
                         child: GradientPillButton(
                           key: ValueKey('driver_select_${driver.offerId}'),
                           tone: ListingTone.indigo,
@@ -186,8 +211,10 @@ class TaxiDriverCardView extends StatelessWidget {
                           onTap: enabled ? onSelect : null,
                           height: 44,
                           fontSize: _buttonFont,
+                          shadows: TaxiStatusLook.actionGlow,
                         ),
                       ),
+                    ],
                   ],
                 ),
             ],

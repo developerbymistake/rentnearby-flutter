@@ -136,7 +136,8 @@ class TripPlanHeader extends StatelessWidget {
                 onTap: () => c.editMode.value = false,
               )
             else
-              Padding(padding: EdgeInsets.only(left: DS.gh(8)), child: _MapAction(onTap: () => onMenu(TripPlanMenu.map))),
+              ...[Gap.h(12), _MapAction(onTap: () => onMenu(TripPlanMenu.map))],
+            Gap.h(12),
             _menu(c),
           ],
         ],
@@ -157,7 +158,8 @@ class TripPlanHeader extends StatelessWidget {
                     if (c.editMode.value)
                       TripHeaderAction(label: TripStringsV2Plan.done, solid: true, onTap: () => c.editMode.value = false)
                     else
-                      Padding(padding: EdgeInsets.only(left: DS.gh(8)), child: _MapAction(onTap: () => onMenu(TripPlanMenu.map))),
+                      ...[Gap.h(12), _MapAction(onTap: () => onMenu(TripPlanMenu.map))],
+                    Gap.h(12),
                     _menu(c),
                   ],
                 ],
@@ -279,8 +281,9 @@ class TripPlanHeader extends StatelessWidget {
               _BackCircle(onTap: () => Get.back()),
               Gap.h(10),
               Expanded(child: _GuideTitle(title: text.title, subtitle: text.subtitle)),
-              Gap.h(8),
+              Gap.h(12),
               _MapAction(onTap: () => onMenu(TripPlanMenu.map)),
+              Gap.h(12),
               _menu(c),
             ],
           ),
@@ -405,9 +408,7 @@ class TripPlanHeader extends StatelessWidget {
 
   Widget _menu(TripPlanController c) {
     return PopupMenuButton<TripPlanMenu>(
-      icon: const Icon(Icons.more_vert_rounded, color: DesignColors.surface),
-      iconSize: DS.s(24),
-      padding: DS.all(8),
+      padding: EdgeInsets.zero,
       color: DesignColors.surface,
       elevation: DS.s(12),
       shadowColor: DesignColors.tint(DesignColors.shadowBase, Alpha.soft),
@@ -466,6 +467,7 @@ class TripPlanHeader extends StatelessWidget {
             ),
         ];
       },
+      child: TripMenuDots.box(),
     );
   }
 
@@ -547,7 +549,7 @@ class TripFlowHeader extends StatelessWidget {
           borderRadius: DS.br(CardRadius.header),
           boxShadow: DS.shadows(TripLook.headerShadow),
         ),
-        padding: EdgeInsets.fromLTRB(DS.s(14), MediaQuery.paddingOf(context).top + DS.s(12), DS.s(14), DS.s(16)),
+        padding: EdgeInsets.fromLTRB(DS.s(14), MediaQuery.paddingOf(context).top, DS.s(14), DS.s(16)),
         child: ConstrainedBox(
           constraints: BoxConstraints(minHeight: DS.s(44)),
           child: Row(
@@ -560,7 +562,7 @@ class TripFlowHeader extends StatelessWidget {
                   children: [
                     Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(20, FontWeight.w700, white, height: 1.25, letterSpacing: 0)),
                     if (sub != null && sub.isNotEmpty)
-                      Text(sub, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(12.5, FontWeight.w500, DesignColors.tint(white, Alpha.v93), letterSpacing: 0)),
+                      Text(sub, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(12.5, FontWeight.w400, DesignColors.tint(white, Alpha.v93), letterSpacing: 0)),
                   ],
                 ),
               ),
@@ -571,6 +573,40 @@ class TripFlowHeader extends StatelessWidget {
       ),
     );
   }
+}
+
+class TripMenuDots {
+  TripMenuDots._();
+
+  static const Key boxKey = ValueKey('trip-menu-dots');
+
+  static Widget box() => SizedBox(
+        key: boxKey,
+        width: DS.s(40),
+        height: DS.s(40),
+        child: Center(child: glyph(DesignColors.surface)),
+      );
+
+  static Widget glyph(Color color, {double size = 22}) => CustomPaint(size: Size(DS.s(size * 0.115), DS.s(size * 0.625)), painter: _DotsPainter(color));
+}
+
+class _DotsPainter extends CustomPainter {
+  const _DotsPainter(this.color);
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final r = size.width / 2;
+    final pitch = (size.height - size.width) / 2;
+    final paint = Paint()..color = color;
+    for (var i = 0; i < 3; i++) {
+      canvas.drawCircle(Offset(r, r + pitch * i), r, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_DotsPainter old) => old.color != color;
 }
 
 class _BackCircle extends StatelessWidget {
@@ -592,8 +628,9 @@ class _BackCircle extends StatelessWidget {
             child: Container(
               width: DS.s(44),
               height: DS.s(44),
-              decoration: const BoxDecoration(color: DesignColors.whiteSoft, shape: BoxShape.circle),
-              child: Icon(Icons.chevron_left_rounded, size: DS.s(16), color: DesignColors.textInverse),
+              decoration: BoxDecoration(color: DesignColors.tint(DesignColors.surface, Alpha.v22), shape: BoxShape.circle),
+              alignment: Alignment.center,
+              child: Text('‹', textScaler: TextScaler.noScaling, style: Ink3D.text(24, FontWeight.w400, DesignColors.textInverse, height: 1, letterSpacing: 0)),
             ),
           ),
         ),
@@ -751,12 +788,12 @@ class TripPlanStepCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                Gap.h(12),
+                SizedBox(width: DS.s(22)),
                 TweenAnimationBuilder<double>(
                   tween: Tween<double>(begin: 0, end: pct),
                   duration: KitMotion.reduce(context) ? Duration.zero : const Duration(milliseconds: 600),
                   curve: Curves.fastOutSlowIn,
-                  builder: (_, v, _) => RingBadge(progress: v / 100, fill: tone.g2, size: 58),
+                  builder: (_, v, _) => RingBadge(progress: v / 100, fill: tone.g2, size: 58, labelSize: 12.5),
                 ),
               ],
             ),

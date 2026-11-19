@@ -35,6 +35,7 @@ class TaxiRingPush {
     required this.title,
     required this.lines,
     required this.reason,
+    this.slots = const <String>[],
     this.sentAt,
     this.clockOffset = Duration.zero,
   });
@@ -53,6 +54,7 @@ class TaxiRingPush {
   final String ackToken;
   final String title;
   final List<String> lines;
+  final List<String> slots;
   final String? reason;
   final DateTime? sentAt;
   final Duration clockOffset;
@@ -72,6 +74,7 @@ class TaxiRingPush {
       title: title,
       lines: lines,
       reason: reason,
+      slots: slots,
       sentAt: sent,
       clockOffset: sent.difference(deviceNow.toUtc()),
     );
@@ -122,6 +125,7 @@ class TaxiRingPush {
           if ((data[key]?.toString() ?? '').isNotEmpty) data[key].toString(),
       ],
       reason: data['reason']?.toString(),
+      slots: [for (final key in const ['line1', 'line2', 'line3']) data[key]?.toString() ?? ''],
       sentAt: DateTime.tryParse(data['sentAt']?.toString() ?? '')?.toUtc(),
     );
   }
@@ -156,8 +160,9 @@ class TaxiRingNotification {
     importance: Importance.defaultImportance,
   );
 
-  static AndroidNotificationDetails android(TaxiRingPush push, DateTime now) {
+  static AndroidNotificationDetails android(TaxiRingPush push, DateTime now, {AndroidBitmap<Object>? largeIcon}) {
     final left = push.timeLeft(now).inMilliseconds;
+    final lines = bodyLines(push);
     return AndroidNotificationDetails(
       ringChannelId,
       TripStringsTaxiRing.ringChannelName,
@@ -174,7 +179,8 @@ class TaxiRingNotification {
       sound: const UriAndroidNotificationSound(ringtoneUri),
       audioAttributesUsage: AudioAttributesUsage.notificationRingtone,
       enableVibration: true,
-      styleInformation: push.lines.isEmpty ? null : BigTextStyleInformation(push.lines.join('\n')),
+      styleInformation: lines.isEmpty ? null : BigTextStyleInformation(lines.join('\n')),
+      largeIcon: largeIcon,
       tag: push.tag,
       actions: const <AndroidNotificationAction>[
         AndroidNotificationAction(declineAction, TripStringsTaxiRing.decline, showsUserInterface: true),
@@ -183,8 +189,15 @@ class TaxiRingNotification {
     );
   }
 
-  static NotificationDetails details(TaxiRingPush push, DateTime now) =>
-      NotificationDetails(android: android(push, now));
+  static NotificationDetails details(TaxiRingPush push, DateTime now, {AndroidBitmap<Object>? largeIcon}) =>
+      NotificationDetails(android: android(push, now, largeIcon: largeIcon));
+
+  static List<String> bodyLines(TaxiRingPush push) {
+    String at(int i) => i < push.slots.length ? push.slots[i] : '';
+    final seats = at(2).split(' · ').first;
+    final second = [if (at(1).isNotEmpty) at(1), if (seats.isNotEmpty) seats].join(' · ');
+    return [if (at(0).isNotEmpty) at(0), if (second.isNotEmpty) second];
+  }
 
   static NotificationDetails endDetails(TaxiRingPush push) => NotificationDetails(
         android: AndroidNotificationDetails(
@@ -284,6 +297,7 @@ class TaxiRingService {
     required this.probe,
     DateTime Function()? clock,
     this.driverSession,
+    this.art,
   }) : _clock = clock ?? DateTime.now;
 
   factory TaxiRingService.withPlugin(FlutterLocalNotificationsPlugin plugin) => TaxiRingService(
@@ -291,9 +305,11 @@ class TaxiRingService {
         sendAck: TaxiRingAckClient.send,
         probe: () => TaxiRingDevice.read(plugin),
         driverSession: TaxiRingSession.isDriver,
+        art: TaxiRingArt.load,
       );
 
   final TaxiRingNotifier notifier;
+  final Future<Uint8List?> Function()? art;
   final TaxiAckSender sendAck;
   final TaxiRingDeviceProbe probe;
   final DateTime Function() _clock;
@@ -355,13 +371,19 @@ class TaxiRingService {
     }
   }
 
-  Future<bool> _show(TaxiRingPush push, DateTime now) => _safe(() => notifier.show(
-        TaxiRingNotification.id,
-        push.title,
-        TaxiRingNotification.body(push),
-        TaxiRingNotification.details(push, now),
-        TaxiRingNotification.payload(push),
-      ));
+  Future<bool> _show(TaxiRingPush push, DateTime now) async {
+    Uint8List? bytes;
+    try {
+      bytes = await art?.call();
+    } catch (_) {}
+    return _safe(() => notifier.show(
+          TaxiRingNotification.id,
+          push.title,
+          TaxiRingNotification.body(push),
+          TaxiRingNotification.details(push, now, largeIcon: bytes == null ? null : ByteArrayAndroidBitmap(bytes)),
+          TaxiRingNotification.payload(push),
+        ));
+  }
 
   Future<void> _ack(TaxiRingPush push, DateTime receivedAt, {required bool shown, required bool late}) async {
     try {
@@ -399,7 +421,25 @@ class TaxiRingService {
   }
 }
 
-typedef TaxiRingIdentity = ({String? manufacturer, int androidSdk});
+class TaxiRingArt {
+  TaxiRingArt._();
+
+  static const String asset = 'assets/images/design/travel3d/taxi.png';
+  static Uint8List? _cached;
+
+  static Future<Uint8List?> load() async {
+    final hit = _cached;
+    if (hit != null) return hit;
+    try {
+      final data = await rootBundle.load(asset);
+      return _cached = data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
+    } catch (_) {
+      return null;
+    }
+  }
+}
+
+typedef TaxiRingIdentity =({String? manufacturer, int androidSdk});
 typedef TaxiRingIdentitySource = Future<TaxiRingIdentity?> Function();
 
 abstract class TaxiRingDeviceStore {

@@ -9,6 +9,7 @@ import '../../../../models/browse_item.dart';
 import '../../../../models/place_result_model.dart';
 import '../../../../utils/app_toast.dart';
 import '../../../../widgets/location_search_sheet.dart';
+import '../../../../widgets/tab_header.dart';
 import '../../../nearby/controllers/nearby_centre_controller.dart';
 import '../../../nearby/nearby_strings.dart';
 import '../../../nearby/widgets/nearby_header_strip.dart';
@@ -91,51 +92,62 @@ class _TaxiListScreenV2State extends State<TaxiListScreenV2> {
   @override
   Widget build(BuildContext context) {
     final bottom = widget.root ? OverlayInsets.list(context) : DS.s(32) + MediaQuery.paddingOf(context).bottom;
-    final body = Scaffold(
-      backgroundColor: ListingPalette.coral.page,
-      body: KitStatusBar(
-        lightIcons: false,
-        child: SafeArea(
-          bottom: false,
-          child: RefreshIndicator(
-            color: _tone.g2,
-            backgroundColor: DesignColors.surface,
-            onRefresh: _ctrl.pullRefresh,
-            child: CustomScrollView(
-              controller: _scroll,
-              physics: const AlwaysScrollableScrollPhysics(),
-              slivers: [
-                SliverToBoxAdapter(child: _buildHeader(context)),
-                SliverToBoxAdapter(child: _in(0, _buildReviewStrip())),
-                SliverToBoxAdapter(child: _in(1, _buildTiles())),
-                SliverToBoxAdapter(child: _buildHeaderStrip()),
-                _buildBody(),
-                SliverToBoxAdapter(child: _buildFooter(bottom)),
-              ],
+    final list = RefreshIndicator(
+      color: _tone.g2,
+      backgroundColor: DesignColors.surface,
+      onRefresh: _ctrl.pullRefresh,
+      child: CustomScrollView(
+        controller: _scroll,
+        physics: const AlwaysScrollableScrollPhysics(),
+        slivers: [
+          SliverToBoxAdapter(child: _buildHeader(context)),
+          SliverToBoxAdapter(child: _in(0, _buildReviewStrip())),
+          SliverToBoxAdapter(child: _in(1, _buildTiles())),
+          SliverToBoxAdapter(child: _buildHeaderStrip()),
+          _buildBody(),
+          SliverToBoxAdapter(child: _buildFooter(bottom)),
+        ],
+      ),
+    );
+    if (widget.root) {
+      return TabEntrance(
+        tab: AppTabs.taxi,
+        child: Scaffold(
+          backgroundColor: ListingPalette.coral.page,
+          body: Obx(
+            () => TabHeaderFrame(
+              title: Get.find<TabConfigController>().displayNameForIndex(AppTabs.taxi, 'Taxi'),
+              subtitle: _subtitle,
+              color: ListingPalette.coral.page,
+              child: list,
             ),
           ),
         ),
+      );
+    }
+    return Scaffold(
+      backgroundColor: ListingPalette.coral.page,
+      body: KitStatusBar(
+        lightIcons: false,
+        child: SafeArea(bottom: false, child: list),
       ),
     );
-    return widget.root ? TabEntrance(tab: AppTabs.taxi, child: body) : body;
+  }
+
+  String get _subtitle {
+    final far = _ctrl.header.value?.farAway ?? false;
+    return _ctrl.to.value != null ? 'Taxis for your route' : (far ? 'Find the nearest taxis' : 'Taxis near you');
   }
 
   Widget _buildHeader(BuildContext context) {
-    return Obx(() {
-      final title = widget.root ? Get.find<TabConfigController>().displayNameForIndex(AppTabs.taxi, 'Taxi') : 'Taxi';
-      final far = _ctrl.header.value?.farAway ?? false;
-      final subtitle = _ctrl.to.value != null ? 'Taxis for your route' : (far ? 'Find the nearest taxis' : 'Taxis near you');
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (widget.root)
-            ModuleTitleBar(tone: _tone, art: ListingArt.taxi, title: title, subtitle: subtitle)
-          else
-            TopBar3D(tone: _tone, title: title, subtitle: subtitle, onBack: () => Get.back()),
-          _buildSelectors(),
-        ],
-      );
-    });
+    if (widget.root) return _buildSelectors();
+    return Obx(() => Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            TopBar3D(tone: _tone, title: 'Taxi', subtitle: _subtitle, onBack: () => Get.back()),
+            _buildSelectors(),
+          ],
+        ));
   }
 
   String _fromText() {

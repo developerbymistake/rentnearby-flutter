@@ -454,13 +454,23 @@ class _TripMapScreenState extends State<TripMapScreen> with TickerProviderStateM
 
   String _sourceId(int day) => 'trip-route-$day';
 
+  TripSpotRef? _nextDayStart(int day) {
+    final own = _spotsOf(day);
+    final next = _spotsOf(day + 1);
+    if (own.isEmpty || next.isEmpty || _plan.legIndexOf(day + 1) != _plan.legIndexOf(day)) return null;
+    return next.first;
+  }
+
   Map<String, dynamic> _source(int day) {
     final route = _plan.routeFor(day);
+    final link = _nextDayStart(day);
+    final own = _spotsOf(day);
     final geometry = route ??
         <String, dynamic>{
           'type': 'LineString',
           'coordinates': [
-            for (final s in _spotsOf(day)) [s.longitude, s.latitude],
+            for (final s in own) [s.longitude, s.latitude],
+            if (link != null) [link.longitude, link.latitude],
           ],
         };
     final coords = geometry['coordinates'];
@@ -469,6 +479,18 @@ class _TripMapScreenState extends State<TripMapScreen> with TickerProviderStateM
       'type': 'FeatureCollection',
       'features': [
         if (valid) {'type': 'Feature', 'properties': <String, dynamic>{}, 'geometry': geometry},
+        if (route != null && link != null)
+          {
+            'type': 'Feature',
+            'properties': <String, dynamic>{},
+            'geometry': {
+              'type': 'LineString',
+              'coordinates': [
+                [own.last.longitude, own.last.latitude],
+                [link.longitude, link.latitude],
+              ],
+            },
+          },
       ],
     };
   }
@@ -483,7 +505,7 @@ class _TripMapScreenState extends State<TripMapScreen> with TickerProviderStateM
     }
     return LineLayerProperties(
       lineColor: color,
-      lineWidth: 5,
+      lineWidth: DS.s(8),
       lineCap: 'round',
       lineJoin: 'round',
       lineOpacity: hidden ? 0 : (selected ? (_lighterDays ? 0.6 : 1) : 0.25),
@@ -753,7 +775,7 @@ class _TripMapScreenState extends State<TripMapScreen> with TickerProviderStateM
         spotDays.add(d);
         circleOpts.add(CircleOptions(
           geometry: at,
-          circleRadius: 14,
+          circleRadius: DS.s(22.5),
           circleColor: color,
           circleOpacity: opacity,
           circleStrokeWidth: 0,
@@ -763,7 +785,7 @@ class _TripMapScreenState extends State<TripMapScreen> with TickerProviderStateM
           geometry: at,
           textField: '$stopNo',
           fontNames: const ['Noto Sans Medium'],
-          textSize: 13,
+          textSize: DS.f(21),
           textColor: _white,
           textOpacity: opacity,
         ));
@@ -972,7 +994,7 @@ class _TripMapScreenState extends State<TripMapScreen> with TickerProviderStateM
               title: TripStringsV2Plan.map,
               subtitle: TripStringsDayplan.mapRouteSub,
               onBack: () => Get.back(),
-              trailing: [if (p != null && p.days.length > 1) _dayMenu(p)],
+              trailing: [if (p != null && p.days.length > 1) ...[Gap.h(12), _dayMenu(p)]],
             ),
           ),
           if (missing)
@@ -987,9 +1009,7 @@ class _TripMapScreenState extends State<TripMapScreen> with TickerProviderStateM
 
   Widget _dayMenu(TripPlan p) {
     return PopupMenuButton<int>(
-      icon: const Icon(Icons.more_vert_rounded, color: DesignColors.surface),
-      iconSize: DS.s(22),
-      padding: DS.all(8),
+      padding: EdgeInsets.zero,
       color: DesignColors.surface,
       shape: RoundedRectangleBorder(borderRadius: DS.circular(20)),
       offset: Offset(0, DS.s(48)),
@@ -1008,6 +1028,7 @@ class _TripMapScreenState extends State<TripMapScreen> with TickerProviderStateM
             ),
           ),
       ],
+      child: TripMenuDots.box(),
     );
   }
 

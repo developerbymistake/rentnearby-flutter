@@ -1,4 +1,6 @@
 import 'package:bakhli/design/design.dart';
+import 'package:bakhli/design/extra/trip_customize_look.dart';
+import 'package:bakhli/design/extra/trip_plan_look.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -139,7 +141,12 @@ class _TripTaxiRequestStatusScreenState extends State<TripTaxiRequestStatusScree
               child: ModuleHeader(
                 title: TripStringsTaxiStatus.title,
                 subtitle: r != null && r.tripName.isNotEmpty ? r.tripName : null,
+                titleStyle: TripCustomizeLook.headerTitle,
+                subtitleWidget: r != null && r.tripName.isNotEmpty
+                    ? Text(r.tripName, maxLines: 1, overflow: TextOverflow.ellipsis, style: TripCustomizeLook.headerSubtitle)
+                    : null,
                 autoHeight: true,
+                compact: true,
                 tone: KitTone.brand,
                 gradient: ListingTone.indigo.gradient,
                 onBack: widget.onBack ?? () => Get.back(),
@@ -188,6 +195,7 @@ class _TripTaxiRequestStatusScreenState extends State<TripTaxiRequestStatusScree
         key: const ValueKey('status_done'),
         tone: ListingTone.indigo,
         label: TripStringsTaxiStatus.done,
+        shadows: TripLook.pillShadow,
         onTap: _done,
       );
 
@@ -195,7 +203,15 @@ class _TripTaxiRequestStatusScreenState extends State<TripTaxiRequestStatusScree
         art: ListingArt.taxi,
         title: TripStringsTaxiStatus.taxiRequest,
         line: TripStringsTaxiStatus.requestLine(r),
+        titleSize: 22,
       );
+
+  Widget _changeButton(String key, String label, VoidCallback? onTap) => Padding(
+        padding: EdgeInsets.only(top: DS.gv(16)),
+        child: WhitePillButton(key: ValueKey(key), tone: ListingTone.indigo, label: label, onTap: onTap, height: 44, fontSize: _chgFont),
+      );
+
+  Widget _note(Widget child) => Padding(padding: EdgeInsets.only(top: DS.gv(18), left: DS.gh(4)), child: child);
 
   Widget _failedLine(TaxiRequest r) {
     final e = _error;
@@ -237,7 +253,7 @@ class _TripTaxiRequestStatusScreenState extends State<TripTaxiRequestStatusScree
           child: Center(
             child: Text(
               TripStringsTaxiStatus.cancelRequest,
-              style: Ink3D.text(13, FontWeight.w700, Ink3D.grey).copyWith(decoration: TextDecoration.underline),
+              style:Ink3D.text(12.5, FontWeight.w700, TripLook.mutedText, letterSpacing: 0).copyWith(decoration: TextDecoration.underline),
             ),
           ),
         ),
@@ -279,40 +295,17 @@ class _TripTaxiRequestStatusScreenState extends State<TripTaxiRequestStatusScree
     final stalled = r.canAskMore && !r.stillAsking;
     return _Body([
         _hero(r),
-        Gap.v(18),
+        Gap.v(20),
         TaxiStatusSteps(stage: TaxiStepStage.finding, findingSub: stalled ? TripStringsTaxiStatus.noDriverAgreed : sub),
         _lapseLine(r),
-        Gap.v(10),
-        Text(
-          TripStringsTaxiStatus.numberNote,
-          key: const ValueKey('status_number_note'),
-          textAlign: TextAlign.center,
-          style: Ink3D.text(12, FontWeight.w400, Ink3D.copy),
-        ),
-        if (noReply) ...[
-          Gap.v(14),
-          WhitePillButton(
-            key: const ValueKey('status_change_pickup'),
-            tone: ListingTone.indigo,
-            label: TripStringsTaxiStatus.changePickup,
-            onTap: _anyBusy ? null : _changePickup,
-          ),
-        ],
+        if (noReply) _changeButton('status_change_pickup', TripStringsTaxiStatus.changePickup, _anyBusy ? null : _changePickup),
         if (r.canAskMore) _askMoreButton(),
         _cancelLink(r),
         _failedLine(r),
       ], [_doneButton()]);
   }
 
-  Widget _askMoreButton() => Padding(
-        padding: EdgeInsets.only(top: DS.gv(12)),
-        child: WhitePillButton(
-          key: const ValueKey('status_ask_more'),
-          tone: ListingTone.indigo,
-          label: TripStringsTaxiStatus.askMore,
-          onTap: _anyBusy ? null : () => _act(_c.askMore),
-        ),
-      );
+  Widget _askMoreButton() => _changeButton('status_ask_more', TripStringsTaxiStatus.askMore, _anyBusy ? null : () => _act(_c.askMore));
 
   _Body _choosing(TaxiRequest r) {
     final chosen = r.selectedDriver;
@@ -322,19 +315,17 @@ class _TripTaxiRequestStatusScreenState extends State<TripTaxiRequestStatusScree
     ]..sort((a, b) => (b.state == OfferState.selected ? 1 : 0).compareTo(a.state == OfferState.selected ? 1 : 0));
     return _Body([
       _hero(r),
-      Gap.v(18),
+      Gap.v(20),
       TaxiStatusSteps(stage: TaxiStepStage.choosing, findingSub: TripStringsTaxiStatus.asked(r.askedCount, r.pickup?.name ?? '')),
       if (chosen == null) _lapseLine(r),
-      if (chosen != null) ...[
-        Gap.v(14),
-        Text(
+      if (chosen != null)
+        _note(Text(
           TripStringsTaxiStatus.waitingFor(chosen.name),
           key: const ValueKey('status_waiting_for'),
-          style: Ink3D.text(14, FontWeight.w700, DesignColors.primary),
-        ),
-      ],
+          style: Ink3D.text(13, FontWeight.w700, DesignColors.primary, letterSpacing: 0),
+        )),
       for (final d in shown) ...[
-        Gap.v(14),
+        Gap.v(16),
         TaxiDriverCardView(
           driver: d,
           mode: d.state == OfferState.selected || d.state == OfferState.confirmed
@@ -348,17 +339,15 @@ class _TripTaxiRequestStatusScreenState extends State<TripTaxiRequestStatusScree
           onNotAgreed: () => _act(() => _c.notAgreed(d.offerId)),
         ),
       ],
-      if (r.stillAsking) ...[
-        Gap.v(14),
-        Row(
+      if (r.stillAsking)
+        _note(Row(
           key: const ValueKey('status_still_asking'),
           children: [
-            Container(width: DS.s(10), height: DS.s(10), decoration: const BoxDecoration(shape: BoxShape.circle, color: DesignColors.statusOffer)),
-            Gap.h(12),
-            Expanded(child: Text(TripStringsTaxiStatus.stillAsking, style: Ink3D.text(14, FontWeight.w400, Ink3D.copy))),
+            Container(width: DS.s(10), height: DS.s(10), decoration: const BoxDecoration(shape: BoxShape.circle, color: DesignColors.lunchEnd)),
+            Gap.h(10),
+            Expanded(child: Text(TripStringsTaxiStatus.stillAsking, style: Ink3D.text(12.5, FontWeight.w400, TripLook.mutedText, letterSpacing: 0))),
           ],
-        ),
-      ],
+        )),
       if (r.canAskMore) _askMoreButton(),
       _cancelLink(r),
       _failedLine(r),
@@ -369,7 +358,7 @@ class _TripTaxiRequestStatusScreenState extends State<TripTaxiRequestStatusScree
     final d = r.selectedDriver;
     return _Body([
       _hero(r),
-      Gap.v(18),
+      Gap.v(20),
       TaxiBookedCard(
         request: r,
         driver: d,
@@ -384,7 +373,7 @@ class _TripTaxiRequestStatusScreenState extends State<TripTaxiRequestStatusScree
 
   _Body _rate(TaxiRequest r) => _Body([
         _hero(r),
-        Gap.v(18),
+        Gap.v(20),
         TaxiRatingCard(driver: r.selectedDriver, stars: _stars, onStar: (s) => setState(() => _stars = s)),
         _failedLine(r),
       ], [
@@ -392,15 +381,17 @@ class _TripTaxiRequestStatusScreenState extends State<TripTaxiRequestStatusScree
           key: const ValueKey('rate_submit'),
           tone: ListingTone.indigo,
           label: TripStringsTaxiStatus.submit,
+          shadows: TripLook.pillShadow,
+          offColor: TripLook.disabledFill,
           enabled: _stars > 0 && !_anyBusy,
           onTap: () => _act(() => _c.rate(_stars)),
         ),
       ]);
 
   _Body _thanks(TaxiRequest r) => _Body([
-        TaxiStatusHero(art: ListingArt.star, title: TripStringsTaxiStatus.thankYou, line: r.selectedDriver?.name),
+        TaxiStatusHero(art: ListingArt.star, title: TripStringsTaxiStatus.thankYou, line: r.selectedDriver?.name, artSize: 100, topGap: 10),
         Gap.v(14),
-        Center(child: TaxiStars(filled: r.rating?.stars ?? 0, size: 32)),
+        Center(child: TaxiStars(filled: r.rating?.stars ?? 0, size: 40, gap: 8)),
       ], [_doneButton()]);
 
   _Body _busy() => _Body([
@@ -409,6 +400,9 @@ class _TripTaxiRequestStatusScreenState extends State<TripTaxiRequestStatusScree
           title: TripStringsTaxiStatus.busyTitle,
           line: TripStringsTaxiStatus.busySub,
           titleSize: 22,
+          artSize: 90,
+          topGap: 20,
+          titleHeight: 1.3,
         ),
       ], [
         WhitePillButton(
@@ -421,6 +415,7 @@ class _TripTaxiRequestStatusScreenState extends State<TripTaxiRequestStatusScree
           key: const ValueKey('busy_try_again'),
           tone: ListingTone.indigo,
           label: TripStringsTaxiStatus.tryAgain,
+          shadows: TripLook.pillShadow,
           onTap: () => _openRequest(true),
         ),
       ]);
@@ -438,6 +433,7 @@ class _TripTaxiRequestStatusScreenState extends State<TripTaxiRequestStatusScree
           key: const ValueKey('ended_request_again'),
           tone: ListingTone.indigo,
           label: TripStringsTaxiStatus.requestAgain,
+          shadows: TripLook.pillShadow,
           onTap: () => _openRequest(false),
         ),
       ]);
@@ -454,6 +450,8 @@ class _TripTaxiRequestStatusScreenState extends State<TripTaxiRequestStatusScree
         ),
       ], [_doneButton()]);
 }
+
+const double _chgFont = 14;
 
 class _Body {
   const _Body(this.content, this.bar);

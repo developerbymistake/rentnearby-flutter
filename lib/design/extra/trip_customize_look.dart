@@ -17,6 +17,12 @@ class TripCustomizeLook {
     bottomLeft: Radius.circular(8),
     bottomRight: Radius.circular(8),
   );
+  static const BorderRadius tripLineRadius = BorderRadius.only(
+    topLeft: Radius.circular(8),
+    topRight: Radius.circular(32),
+    bottomLeft: Radius.circular(8),
+    bottomRight: Radius.circular(8),
+  );
   static const BorderRadius addDayRadius = BorderRadius.only(
     topLeft: Radius.circular(8),
     topRight: Radius.circular(40),
