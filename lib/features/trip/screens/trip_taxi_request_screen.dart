@@ -92,6 +92,11 @@ class _TripTaxiRequestScreenState extends State<TripTaxiRequestScreen> {
         AppToast.error(TripStringsTaxiRequest.offline);
       case TaxiPlanLocked<TaxiRequest>(:final message):
         AppToast.error(message ?? TripStringsTaxiRequest.sendFailed);
+      case TaxiOverlap<TaxiRequest>(:final tripName):
+        AppToast.error(TaxiRequestErrors.overlapMessage(tripName));
+      case TaxiRefused<TaxiRequest>(:final type) when TaxiRequestErrors.isSeatsError(type):
+        AppToast.error(TaxiRequestErrors.seatsMessage(type));
+        await _load();
       case TaxiRefused<TaxiRequest>(:final type) when TaxiRequestErrors.isDayInPast(type):
         AppToast.error(TaxiRequestErrors.dayInPastMessage(type));
         await _load();
@@ -221,7 +226,7 @@ class _TripTaxiRequestScreenState extends State<TripTaxiRequestScreen> {
                 art: TravelIcon.taxi,
                 title: TripStringsTaxiRequest.carTitle,
                 sub: TripStringsTaxiRequest.setFromTravellers(places.travellers),
-                child: TaxiSeatChips(seats: form.seats, onChanged: (s) => _edit((f) => f.setSeats(s))),
+                child: TaxiSeatChips(seats: form.seats, enabledFor: form.seatEnabled, onChanged: (s) => _edit((f) => f.setSeats(s))),
               ),
               Gap.v(8),
             ],

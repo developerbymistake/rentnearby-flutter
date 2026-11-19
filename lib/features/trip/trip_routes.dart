@@ -51,7 +51,8 @@ final List<GetPage> tripPages = [
     page: () {
       final a = _args();
       final leg = a['legIndex'] ?? a['leg'];
-      return TripCustomizeScreen(legIndex: leg is int ? leg : null);
+      final toast = a['toast'];
+      return TripCustomizeScreen(legIndex: leg is int ? leg : null, toast: toast is TripCustomizeToast ? toast : null);
     },
     customTransition: TemplateTransition(),
     transitionDuration: templateTransitionDuration,
@@ -237,6 +238,7 @@ class _TripOverviewRouteState extends State<TripOverviewRoute> with _HoldsTrip {
           return TripOverviewScreen(
             trip: t,
             paused: paused,
+            taxiCanRate: _plan.taxiCanRate,
             onViewPlan: () => _viewPlan(t.id),
             onTaxi: _taxi,
             onDone: TripNavigation.openTripsTab,
@@ -321,7 +323,12 @@ class _TripTaxiStatusRouteState extends State<TripTaxiStatusRoute> {
   Future<void> _resolve() async {
     final tripId = widget.tripId;
     if (tripId != null) {
-      final res = await TripTaxiRequestController.to.loadForTrip(tripId);
+      var res = await TripTaxiRequestController.to.loadForTrip(tripId);
+      if (res case TaxiRefused(rateLimited: true, :final retryAfterSeconds) when mounted) {
+        await Future<void>.delayed(Duration(seconds: retryAfterSeconds ?? 1));
+        if (!mounted) return;
+        res = await TripTaxiRequestController.to.loadForTrip(tripId);
+      }
       if (!mounted) return;
       final r = res.valueOrNull;
       if (r != null && r.tripId == tripId) {

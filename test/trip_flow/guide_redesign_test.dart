@@ -268,7 +268,7 @@ void main() {
           expect(p.didExceedMaxLines, isFalse, reason: 'step $i: ${_text(t, 'guide_title')}');
           expect(t.widget<Text>(title).overflow, isNot(TextOverflow.ellipsis));
           expect(t.getRect(title).bottom, lessThanOrEqualTo(t.getRect(find.byType(TripPlanHeader)).bottom));
-          final map = t.getRect(find.byTooltip('Map'));
+          final map = t.getRect(find.ancestor(of: find.descendant(of: find.byType(TripPlanHeader), matching: find.text('Map')), matching: find.byType(Container)).first);
           expect(t.getRect(title).right, lessThanOrEqualTo(map.left + 0.5), reason: 'title under Map at step $i');
           expect(t.takeException(), isNull);
         }

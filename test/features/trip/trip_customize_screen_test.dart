@@ -105,15 +105,26 @@ void main() {
     expect(find.text(TripStringsCustomize.update), findsOneWidget);
   });
 
-  testWidgets('update_disabled_until_change_and_plan_untouched', (tester) async {
+  testWidgets('update_live_without_error_and_plan_untouched', (tester) async {
     final c = _rig(enginePlan([[3, 2]]));
     final before = legSignature(c.plan.value!, 1);
     await _open(tester);
-    expect(_isLive(_update(tester)), isFalse);
+    expect(_isLive(_update(tester)), isTrue);
     await _tapAddDay(tester);
     expect(_isLive(_update(tester)), isTrue);
     expect(legSignature(c.plan.value!, 1), before);
     expect(c.plan.value!.legDayCount(1), 2);
+  });
+
+  testWidgets('update_unchanged_just_closes', (tester) async {
+    final c = _rig(enginePlan([[3, 2]]));
+    final before = legSignature(c.plan.value!, 1);
+    await _open(tester);
+    await _tapUpdate(tester);
+    await tester.pumpAndSettle();
+    expect(find.byType(TripCustomizeScreen), findsNothing);
+    expect(legSignature(c.plan.value!, 1), before);
+    expect(_toasts, isEmpty);
   });
 
   testWidgets('empty_day_blocks_update_with_inline_text', (tester) async {
@@ -128,7 +139,7 @@ void main() {
     expect(_isLive(_update(tester)), isFalse);
     await _deleteDay(tester, 2);
     expect(find.text(TripStringsCustomize.emptyDayError(3)), findsNothing);
-    expect(_isLive(_update(tester)), isFalse);
+    expect(_isLive(_update(tester)), isTrue);
     await _tapAddDay(tester);
     expect(_isLive(_update(tester)), isTrue);
   });
@@ -172,7 +183,7 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('customize-reset')));
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('customize-day-2')), findsNothing);
-    expect(_isLive(_update(tester)), isFalse);
+    expect(_isLive(_update(tester)), isTrue);
   });
 
   testWidgets('discard_dialog_both_answers', (tester) async {

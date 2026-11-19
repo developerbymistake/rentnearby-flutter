@@ -190,18 +190,50 @@ void main() {
     expect(find.text(TripStringsDayplan.hide), findsOneWidget);
   });
 
-  testWidgets('narrow width moves the pill', (tester) async {
+  testWidgets('customize sits under the text, dots and fold beside the name', (tester) async {
     await _pump(tester, const _Harness(), const Size(600, 960));
     final wideTop = tester.getTopLeft(find.byKey(TripLegSectionHeader.customizeKey)).dy;
     final wideText = tester.getBottomLeft(find.byKey(TripLegSectionHeader.detailKey)).dy;
-    expect(wideTop, lessThan(wideText));
+    expect(wideTop, greaterThanOrEqualTo(wideText));
     final wideFold = tester.getTopLeft(find.byKey(TripLegSectionHeader.foldKey)).dy;
-    expect((wideTop - wideFold).abs(), lessThan(1));
+    expect(wideFold, lessThan(tester.getTopLeft(find.byKey(TripLegSectionHeader.detailKey)).dy));
+    final pillW = tester.getSize(find.byKey(TripLegSectionHeader.customizeKey)).width;
+    expect(pillW, lessThan(200));
 
     await _pump(tester, const _Harness(), const Size(320, 568));
     final narrowTop = tester.getTopLeft(find.byKey(TripLegSectionHeader.customizeKey)).dy;
     final narrowText = tester.getBottomLeft(find.byKey(TripLegSectionHeader.detailKey)).dy;
     expect(narrowTop, greaterThanOrEqualTo(narrowText));
+  });
+
+  testWidgets('folded_layer_room_merges_with_the_gap_below', (tester) async {
+    Widget section(double gap) => Scaffold(
+          body: SingleChildScrollView(
+            child: TripLegSectionHeader(
+              title: 'Nainital',
+              rangeLine: 'Days 1-3 · 18-20 Dec',
+              detailLine: '12 spots · 3 nights',
+              foldedLine: TripStringsDayplan.foldedSummary(3, 12),
+              folded: true,
+              onToggle: () {},
+              onCustomize: () {},
+              onMenu: () {},
+              gapBelow: gap,
+            ),
+          ),
+        );
+    await _pump(tester, section(0), const Size(360, 800));
+    final alone = tester.getSize(find.byType(TripLegSectionHeader)).height;
+    await _pump(tester, section(DS.gv(44)), const Size(360, 800));
+    final merged = tester.getSize(find.byType(TripLegSectionHeader)).height;
+    expect(alone - merged, closeTo(DS.s(34), 0.01));
+    final cardBottom = tester.getBottomLeft(find.byKey(TripLegSectionHeader.cardKey)).dy;
+    final layers = find.descendant(of: find.byKey(TripLegSectionHeader.layersKey), matching: find.byType(DecoratedBox));
+    for (final e in layers.evaluate()) {
+      final r = tester.getRect(find.byWidget(e.widget));
+      expect(r.bottom, greaterThan(cardBottom));
+      expect(r.bottom - cardBottom, lessThan(DS.gv(44)));
+    }
   });
 
   testFiveSizes('leg_section_open_five_sizes', () => const _Harness());

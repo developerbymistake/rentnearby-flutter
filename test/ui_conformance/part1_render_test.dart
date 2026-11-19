@@ -75,10 +75,13 @@ const List<_S> _ranikhet = [
   ('Ranikhet Golf Course', 'park', 90),
 ];
 
+// Spread along a line so the drive rows and clock times show as in the mock.
+double _lat(_S s) => 29.38 + 0.02 * (_nainital.contains(s) ? _nainital.indexOf(s) : _ranikhet.indexOf(s));
+
 TripSpotRef _ref(_S s) => TripSpotRef(
       id: s.$1.toLowerCase().replaceAll(' ', '_'),
       name: s.$1,
-      latitude: 29.38,
+      latitude: _lat(s),
       longitude: 79.45,
       category: s.$2,
       visitMinutes: s.$3,
@@ -232,7 +235,7 @@ Widget _overview({String? view}) =>
 
 List<TripSpotModel> _pickSeed() => [
       for (final s in [..._nainital.take(3), _nainital[12], _nainital[4], _nainital[7], _nainital[8]])
-        TripSpotModel(id: _ref(s).id, source: 'osm', name: s.$1, latitude: 29.38, longitude: 79.45, category: s.$2, visitMinutes: s.$3, rank: 1),
+        TripSpotModel(id: _ref(s).id, source: 'osm', name: s.$1, latitude: _lat(s), longitude: 79.45, category: s.$2, visitMinutes: s.$3, rank: 1),
     ];
 
 Future<void> _openPicker(WidgetTester t, Size size) async {
@@ -256,6 +259,16 @@ void _record(String frame, Size size, Object? e) {
   if (e != null) _overflows.putIfAbsent(frame, () => []).add('${sizeLabel(size)}: $e'.split('\n').first);
 }
 
+// Real blurred shadows in the captures, like on a phone.
+void _tw(String name, WidgetTesterCallback body) => testWidgets(name, (t) async {
+      debugDisableShadows = false;
+      try {
+        await body(t);
+      } finally {
+        debugDisableShadows = true;
+      }
+    });
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -273,14 +286,14 @@ void main() {
   });
 
   group('render 360x800', () {
-    testWidgets('01 name filled', (t) async {
+    _tw('01 name filled', (t) async {
       await pumpPhone(t, const TripNameScreen(stateName: 'Uttarakhand', cityName: 'Nainital'), size: _phone);
       await t.tap(find.byType(TextFormField));
       await t.pump(const Duration(milliseconds: 300));
       await _snap(t, '01_name_your_trip', 'viewport');
     });
 
-    testWidgets('02 name empty', (t) async {
+    _tw('02 name empty', (t) async {
       await pumpPhone(t, const TripNameScreen(stateName: 'Uttarakhand', cityName: 'Nainital'), size: _phone);
       await t.enterText(find.byType(TextFormField), '');
       await t.pump(const Duration(milliseconds: 300));
@@ -289,12 +302,12 @@ void main() {
 
     for (final s in [_phone, _tall]) {
       final v = s == _phone ? 'viewport' : 'full';
-      testWidgets('03 day plan $v', (t) async {
+      _tw('03 day plan $v', (t) async {
         await pumpDayPlan(t, _plan([4, 4, 4]), size: s);
         await _snap(t, '03_day_plan', v);
       });
 
-      testWidgets('04 locked $v', (t) async {
+      _tw('04 locked $v', (t) async {
         await pumpDayPlan(
             t,
             _plan([4, 4, 4]),
@@ -303,12 +316,12 @@ void main() {
         await _snap(t, '04_day_plan_locked', v);
       });
 
-      testWidgets('05 section open $v', (t) async {
+      _tw('05 section open $v', (t) async {
         await pumpDayPlan(t, _plan([4, 4, 4], ranikhet: false), size: s);
         await _snap(t, '05_city_section_open', v);
       });
 
-      testWidgets('06 section folded $v', (t) async {
+      _tw('06 section folded $v', (t) async {
         await pumpDayPlan(t, _plan([4, 4, 4]), size: s);
         await t.tap(find.byKey(TripLegSectionHeader.foldKey).first);
         await t.pumpAndSettle();
@@ -317,13 +330,13 @@ void main() {
         await _snap(t, '06_city_section_folded', v);
       });
 
-      testWidgets('07 customize $v', (t) async {
+      _tw('07 customize $v', (t) async {
         _rig(_plan([6, 6, 0]));
         await _openCustomize(t, s);
         await _snap(t, '07_customize_nainital', v);
       });
 
-      testWidgets('13 delete blocked $v', (t) async {
+      _tw('13 delete blocked $v', (t) async {
         _rig(_plan([5, 4, 4]));
         await _openCustomize(t, s);
         await _deleteDay(t, 2, capMenu: v == 'viewport', frame: '13_delete_day_blocked');
@@ -332,7 +345,7 @@ void main() {
         await _snap(t, '13_delete_day_blocked', v);
       });
 
-      testWidgets('14 delete done $v', (t) async {
+      _tw('14 delete done $v', (t) async {
         _rig(_plan([4, 4, 3]));
         await _openCustomize(t, s);
         await _deleteDay(t, 2);
@@ -342,7 +355,7 @@ void main() {
       });
     }
 
-    testWidgets('08 drag across days', (t) async {
+    _tw('08 drag across days', (t) async {
       _rig(_plan([4, 2, 6]));
       await _openCustomize(t, _phone);
       final row = find.byKey(const ValueKey('customize-row-naina_devi_temple'));
@@ -351,23 +364,24 @@ void main() {
       await g.moveBy(const Offset(0, 4));
       await t.pump();
       final target = find.byKey(const ValueKey('customize-row-tiffin_top'));
-      await g.moveTo(t.getCenter(target) + const Offset(0, 30));
+      final at = t.getCenter(target);
+      await g.moveTo(at);
       await t.pump();
-      await g.moveTo(t.getCenter(target) + const Offset(0, 32));
+      await g.moveTo(at + const Offset(0, 2));
       await t.pump(const Duration(milliseconds: 200));
       await _snap(t, '08_drag_across_days', 'viewport');
       await g.cancel();
       await t.pumpAndSettle();
     });
 
-    testWidgets('09 empty day', (t) async {
+    _tw('09 empty day', (t) async {
       _rig(_plan([6, 6, 0]));
       await _openCustomize(t, _phone);
       await _scrollTo(t, find.byKey(const ValueKey('customize-add-day')));
       await _snap(t, '09_empty_day', 'viewport');
     });
 
-    testWidgets('10 day empty error', (t) async {
+    _tw('10 day empty error', (t) async {
       _rig(_plan([6, 6]));
       await _openCustomize(t, _phone);
       await _scrollTo(t, find.byKey(const ValueKey('customize-add-day')));
@@ -380,7 +394,7 @@ void main() {
       await _snap(t, '10_day_empty_error', 'viewport');
     });
 
-    testWidgets('11 remove place', (t) async {
+    _tw('11 remove place', (t) async {
       _rig(_plan([6, 5, 1]));
       await _openCustomize(t, _phone);
       final row = find.byKey(const ValueKey('customize-row-raj_bhavan'));
@@ -393,11 +407,12 @@ void main() {
       await _snap(t, '11_remove_place', 'sheet');
     });
 
-    testWidgets('12 add places', (t) async {
+    _tw('12 add places', (t) async {
       await _openPicker(t, _phone);
       final c = Get.find<TripSpotsController>(tag: '1');
       c.toggle('eco_cave_gardens');
       c.toggle('tiffin_top');
+      await t.pump(const Duration(milliseconds: 500));
       await t.pump(const Duration(milliseconds: 500));
       await _snap(t, '12_add_places', 'viewport');
       await t.pump(const Duration(seconds: 2));
@@ -410,7 +425,7 @@ void main() {
 
     for (final s in [_phone, _tall]) {
       final v = s == _phone ? 'viewport' : 'full';
-      testWidgets('15/16/18 after update $v', (t) async {
+      _tw('15/16/18 after update $v', (t) async {
         final c = await _planWithCustomize(t, _plan([4, 4, 4]), s);
         await t.tap(find.byKey(TripLegSectionHeader.customizeKey).first);
         await t.pumpAndSettle();
@@ -430,7 +445,7 @@ void main() {
         await t.pump(const Duration(seconds: 6));
       });
 
-      testWidgets('18 after delete $v', (t) async {
+      _tw('18 after delete $v', (t) async {
         await _planWithCustomize(t, _plan([4, 4, 3]), s);
         await t.tap(find.byKey(TripLegSectionHeader.customizeKey).first);
         await t.pumpAndSettle();
@@ -444,12 +459,12 @@ void main() {
       });
     }
 
-    testWidgets('19 overview', (t) async {
+    _tw('19 overview', (t) async {
       await pumpPhone(t, _overview(), size: _phone);
       await _snap(t, '19_trip_overview', 'viewport');
     });
 
-    testWidgets('20 overview booked', (t) async {
+    _tw('20 overview booked', (t) async {
       await pumpPhone(t, _overview(view: 'Booked'), size: _phone);
       await _snap(t, '20_trip_overview_booked', 'viewport');
     });
@@ -459,7 +474,7 @@ void main() {
     const sizes = [Size(320, 568), Size(360, 640), Size(411, 891), Size(600, 960)];
     for (final size in sizes) {
       final l = sizeLabel(size);
-      testWidgets('01/02 name $l', (t) async {
+      _tw('01/02 name $l', (t) async {
         await pumpPhone(t, const TripNameScreen(stateName: 'Uttarakhand', cityName: 'Nainital'), size: size);
         _record('01_name', size, t.takeException());
         await t.enterText(find.byType(TextFormField), '');
@@ -468,7 +483,7 @@ void main() {
         await _snap(t, '02_name_empty', l);
       });
 
-      testWidgets('03/04/06 day plan $l', (t) async {
+      _tw('03/04/06 day plan $l', (t) async {
         await pumpDayPlan(t, _plan([4, 4, 4]), size: size);
         _record('03_day_plan', size, t.takeException());
         await _snap(t, '03_day_plan', l);
@@ -485,7 +500,7 @@ void main() {
         await t.pump(const Duration(seconds: 6));
       });
 
-      testWidgets('07/09/10/13/14 customize $l', (t) async {
+      _tw('07/09/10/13/14 customize $l', (t) async {
         _rig(_plan([6, 6, 0]));
         await _openCustomize(t, size);
         _record('07_customize', size, t.takeException());
@@ -521,17 +536,18 @@ void main() {
         await t.pump(const Duration(seconds: 6));
       });
 
-      testWidgets('12 add places $l', (t) async {
+      _tw('12 add places $l', (t) async {
         await _openPicker(t, size);
         final c = Get.find<TripSpotsController>(tag: '1');
         c.toggle('eco_cave_gardens');
         c.toggle('tiffin_top');
         await t.pump(const Duration(milliseconds: 500));
+        await t.pump(const Duration(milliseconds: 500));
         _record('12_add_places', size, t.takeException());
         await _snap(t, '12_add_places', l);
       });
 
-      testWidgets('19/20 overview $l', (t) async {
+      _tw('19/20 overview $l', (t) async {
         await pumpPhone(t, _overview(), size: size);
         _record('19_overview', size, t.takeException());
         await _snap(t, '19_trip_overview', l);

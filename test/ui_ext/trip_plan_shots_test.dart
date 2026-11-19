@@ -463,10 +463,9 @@ void main() {
       _fakeViews();
       Get.to(() => const TripMapScreen());
       await _settle(t);
-      final chip = find.text('Day 1').first;
-      await t.ensureVisible(chip);
+      await t.tap(find.byType(PopupMenuButton<int>));
       await _settle(t);
-      await t.tap(chip, warnIfMissed: false);
+      await t.tap(find.text('Day 1').last);
       await _settle(t);
       await _settle(t);
     });
@@ -570,10 +569,9 @@ void main() {
       _fakeViews();
       Get.to(() => const TripMapScreen());
       await _settle(t);
-      final chip = find.text('Day 4').first;
-      await t.ensureVisible(chip);
+      await t.tap(find.byType(PopupMenuButton<int>));
       await _settle(t);
-      await t.tap(chip, warnIfMissed: false);
+      await t.tap(find.text('Day 4').last);
       await _settle(t);
       await _settle(t);
     });

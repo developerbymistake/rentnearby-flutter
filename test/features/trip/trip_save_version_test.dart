@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:bakhli/controllers/tab_config_controller.dart';
 import 'package:bakhli/features/trip/controllers/trip_plan_controller.dart';
+import 'package:bakhli/features/trip/data/trip_today_cache.dart';
 import 'package:bakhli/features/trip/models/trip_model.dart';
 import 'package:bakhli/features/trip/models/trip_plan_model.dart';
 import 'package:bakhli/features/trip/trip_strings_sync.dart';
@@ -30,10 +31,11 @@ const _loadedAt = '2026-11-19T10:00:00.123456Z';
 const _otherSaveAt = '2026-11-19T10:05:00.654321Z';
 
 class _VersionApi implements HttpClientAdapter {
-  _VersionApi({required this.serverTrip, this.putErrors = const []});
+  _VersionApi({required this.serverTrip, this.putErrors = const [], this.offline = false});
 
   final Map<String, dynamic> serverTrip;
   final List<String> putErrors;
+  final bool offline;
   final List<RequestOptions> seen = [];
 
   int count(String method) => seen.where((o) => o.method.toUpperCase() == method && o.path == '/trips/t1').length;
@@ -46,6 +48,7 @@ class _VersionApi implements HttpClientAdapter {
   @override
   Future<ResponseBody> fetch(RequestOptions options, Stream<Uint8List>? requestStream, Future<void>? cancelFuture) async {
     seen.add(options);
+    if (offline) throw DioException.connectionError(requestOptions: options, reason: 'offline');
     final json = {Headers.contentTypeHeader: [Headers.jsonContentType]};
     final method = options.method.toUpperCase();
     if (method == 'PUT' && options.path == '/trips/t1') {
@@ -95,7 +98,10 @@ void main() {
         (call) async => Directory.systemTemp.createTempSync('save_version_gs').path);
     await GetStorage.init();
   });
-  setUp(() => StorageService.clearTripPending('t1'));
+  setUp(() {
+    StorageService.clearTripPending('t1');
+    StorageService.clearTripCache('t1');
+  });
   tearDown(Get.reset);
 
   test('save_sends_the_updated_at_it_loaded_and_the_next_save_sends_the_new_one', () async {
@@ -179,54 +185,113 @@ void main() {
     expect(c.plan.value!.days.length, other.days.length);
   });
 
-  test('retry_of_an_offline_copy_sends_the_copy_base_and_a_newer_server_plan_wins', () async {
+  Map<String, dynamic> lockedTrip(TripPlan plan, String updatedAt) => engineTripJson(plan, extra: {
+        'updatedAt': updatedAt,
+        'planLock': {'locked': true, 'reason': lockedByRequest.reason, 'requestId': lockedByRequest.requestId},
+      });
+
+  Future<TripPlanController> openWithPending(_VersionApi api, TripPlan local, TripPlan pending, DateTime? base) async {
+    ApiService.init();
+    ApiService.dio.httpClientAdapter = api;
+    StorageService.saveTripPending('t1', plan: pending.toJson(), baseUpdatedAt: base);
+    final c = engineRig(local);
+    await c.open('t1', fresh: true);
+    return c;
+  }
+
+  String daysOf(TripPlan p) => jsonEncode([for (final d in p.days) d.toJson()]);
+
+  test('an_older_offline_copy_is_never_sent_and_the_newer_server_plan_is_shown', () async {
     final local = enginePlan([[2, 2]]);
     final other = enginePlan([[1], [1], [1]]);
-    ApiService.init();
-    final api = _VersionApi(
-      serverTrip: engineTripJson(other, extra: {'updatedAt': _otherSaveAt}),
-      putErrors: ['TripChanged'],
-    );
-    ApiService.dio.httpClientAdapter = api;
-    StorageService.saveTripPending('t1', plan: _moved(local).toJson(), baseUpdatedAt: DateTime.parse(_loadedAt));
-    final c = engineRig(local);
+    final api = _VersionApi(serverTrip: engineTripJson(other, extra: {'updatedAt': _otherSaveAt}));
+    final c = await openWithPending(api, local, _moved(local), DateTime.parse(_loadedAt));
 
-    await c.open('t1', fresh: true);
-    expect(c.hasPendingCopy, isTrue);
-    expect(c.saveFailed.value, isTrue);
     expect(api.count('PUT'), 0);
-
-    expect(await c.retrySave(), isFalse);
-    expect(api.putBodies.single['baseUpdatedAt'], _loadedAt);
-    await _until(() => api.count('GET') == 2 && !c.isOpening.value && c.lastToast != null);
-
-    expect(api.count('PUT'), 1);
-    expect(c.plan.value!.days.length, other.days.length);
-    expect(c.hasPendingCopy, isFalse);
+    expect(daysOf(c.plan.value!), daysOf(other));
     expect(c.saveFailed.value, isFalse);
     expect(StorageService.getTripPending('t1'), isNull);
-    expect(c.lastToast, TripStringsSync.changedElsewhere);
+    expect(c.lastToast, TripStringsSync.changedElsewhereNotSaved);
 
-    c.plan.value = c.plan.value!.copyWith(days: [c.plan.value!.days[0], c.plan.value!.days[1]]);
-    await c.saveNow();
-    expect(api.putBodies.last['baseUpdatedAt'], _otherSaveAt);
+    expect(await c.retrySave(), isTrue);
+    expect(api.putBodies.single['baseUpdatedAt'], _otherSaveAt);
+    expect(daysOf(TripPlan.fromJson(api.putBodies.single['plan'] as Map<String, dynamic>)), daysOf(other));
   });
 
-  test('an_edit_after_taking_back_the_offline_copy_keeps_the_copy_base_on_the_phone', () async {
+  test('an_offline_copy_without_a_base_is_never_sent', () async {
     final local = enginePlan([[2, 2]]);
-    final other = enginePlan([[1], [1], [1]]);
-    ApiService.init();
-    final api = _VersionApi(serverTrip: engineTripJson(other, extra: {'updatedAt': _otherSaveAt}), putErrors: ['Down']);
-    ApiService.dio.httpClientAdapter = api;
-    StorageService.saveTripPending('t1', plan: _moved(local).toJson(), baseUpdatedAt: DateTime.parse(_loadedAt));
-    final c = engineRig(local);
-    await c.open('t1', fresh: true);
+    final api = _VersionApi(serverTrip: engineTripJson(local, extra: {'updatedAt': _loadedAt}));
+    final c = await openWithPending(api, local, _moved(local), null);
 
-    expect(await c.retrySave(), isFalse);
+    expect(api.count('PUT'), 0);
+    expect(daysOf(c.plan.value!), daysOf(local));
+    expect(c.saveFailed.value, isFalse);
+    expect(StorageService.getTripPending('t1'), isNull);
+    expect(c.lastToast, TripStringsSync.olderEditNotSaved);
+  });
+
+  test('an_offline_copy_on_the_same_version_is_sent_with_its_base', () async {
+    final local = enginePlan([[2, 2]]);
+    final api = _VersionApi(serverTrip: engineTripJson(local, extra: {'updatedAt': _loadedAt}));
+    final c = await openWithPending(api, local, _moved(local), DateTime.parse(_loadedAt));
+    await _until(() => api.count('PUT') == 1 && !c.isSaving.value);
+
     expect(api.putBodies.single['baseUpdatedAt'], _loadedAt);
-    c.plan.value = local;
-    c.scheduleSave();
-    expect(StorageService.getTripPending('t1')!.baseUpdatedAt, DateTime.parse(_loadedAt));
+    expect(daysOf(c.plan.value!), daysOf(_moved(local)));
+    expect(c.lastToast, isNull);
+    expect(StorageService.getTripPending('t1'), isNull);
+  });
+
+  test('a_locked_plan_drops_a_pending_layout_edit_with_one_line_and_no_retry', () async {
+    final local = enginePlan([[2, 2]]);
+    final api = _VersionApi(serverTrip: lockedTrip(local, _loadedAt));
+    final c = await openWithPending(api, local, _moved(local), DateTime.parse(_loadedAt));
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+
+    expect(c.isPlanLocked, isTrue);
+    expect(api.count('PUT'), 0);
+    expect(daysOf(c.plan.value!), daysOf(local));
+    expect(c.saveFailed.value, isFalse);
+    expect(StorageService.getTripPending('t1'), isNull);
+    expect(c.lastToast, TripStringsSync.lockedNotSaved);
+  });
+
+  test('a_locked_plan_drops_an_older_pending_layout_edit_as_locked', () async {
+    final local = enginePlan([[2, 2]]);
+    final api = _VersionApi(serverTrip: lockedTrip(local, _otherSaveAt));
+    final c = await openWithPending(api, local, _moved(local), DateTime.parse(_loadedAt));
+
+    expect(api.count('PUT'), 0);
+    expect(c.saveFailed.value, isFalse);
+    expect(c.lastToast, TripStringsSync.lockedNotSaved);
+  });
+
+  test('a_locked_plan_keeps_a_pending_edit_the_lock_allows', () async {
+    final local = enginePlan([[2, 2]]);
+    final allowed = local.copyWith(dismissedEnquiryIds: const ['e1']);
+    final api = _VersionApi(serverTrip: lockedTrip(local, _loadedAt));
+    final c = await openWithPending(api, local, allowed, DateTime.parse(_loadedAt));
+    await _until(() => api.count('PUT') == 1 && !c.isSaving.value);
+
+    expect(api.putBodies.single['baseUpdatedAt'], _loadedAt);
+    expect(c.plan.value!.dismissedEnquiryIds, ['e1']);
+    expect(c.lastToast, isNull);
+  });
+
+  test('offline_open_shows_a_pending_copy_only_when_the_lock_allows_it', () async {
+    final local = enginePlan([[2, 2]]);
+    final api = _VersionApi(serverTrip: lockedTrip(local, _loadedAt), offline: true);
+    TripTodayCache.saveTrip(TripModel.fromJson(lockedTrip(local, _loadedAt)));
+    final c = await openWithPending(api, local, _moved(local), DateTime.parse(_loadedAt));
+
+    expect(c.offline.value, isTrue);
+    expect(daysOf(c.plan.value!), daysOf(local));
+    expect(StorageService.getTripPending('t1'), isNotNull);
+
+    TripTodayCache.saveTrip(TripModel.fromJson(engineTripJson(local, extra: {'updatedAt': _loadedAt})));
+    await c.open('t1', fresh: true);
+    expect(c.offline.value, isTrue);
+    expect(daysOf(c.plan.value!), daysOf(_moved(local)));
   });
 
   test('a_save_left_behind_on_leave_refused_as_changed_drops_the_copy_and_tells_the_user', () async {

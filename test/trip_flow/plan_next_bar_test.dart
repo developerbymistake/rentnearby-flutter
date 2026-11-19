@@ -1,7 +1,9 @@
 import 'package:bakhli/controllers/tab_config_controller.dart';
 import 'package:bakhli/features/trip/controllers/trip_plan_controller.dart';
 import 'package:bakhli/features/trip/controllers/trip_shortlist_controller.dart';
+import 'package:bakhli/features/trip/data/trip_city_catalog.dart';
 import 'package:bakhli/features/trip/data/trip_shortlist_repository.dart';
+import 'package:bakhli/features/trip/models/trip_city_model.dart';
 import 'package:bakhli/features/trip/models/trip_plan_model.dart';
 import 'package:bakhli/features/trip/models/trip_shortlist_model.dart';
 import 'package:bakhli/features/trip/screens/trip_plan_screen.dart';
@@ -43,6 +45,7 @@ TripPlan _plan(int days) => TripPlan(
 Future<void> _rig(WidgetTester t, Size size, int days) async {
   Get.put<TripShortlistController>(TripShortlistController(repo: _Repo(), tripId: () async => 't1', offline: () => false, warn: (_) {}));
   Get.put<TabConfigController>(_Tabs());
+  TripCityCatalog.to.seedForTest(const [TripCityModel(cityKey: 901, name: 'Bhimtal', stateName: 'Uttarakhand', latitude: 29.35, longitude: 79.56)]);
   final c = TripPlanController();
   c.plan.value = _plan(days);
   Get.put<TripPlanController>(c, permanent: true);

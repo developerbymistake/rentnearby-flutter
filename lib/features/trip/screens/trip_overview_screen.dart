@@ -1,4 +1,6 @@
 import 'package:bakhli/design/design.dart';
+import 'package:bakhli/design/extra/trip_customize_look.dart';
+import 'package:bakhli/design/extra/trip_plan_look.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../models/trip_model.dart';
@@ -26,7 +28,7 @@ class TripOverviewTaxi {
   static const TripOverviewTaxi _completed =
       TripOverviewTaxi._(TripOverviewTaxiState.completed, TripStringsOverview.completed, TripStringsOverview.viewBooking);
 
-  static TripOverviewTaxi of(TripTaxiRequestRef? ref) => switch (ref?.view) {
+  static TripOverviewTaxi of(TripTaxiRequestRef? ref, {bool canRate = false}) => canRate && ref?.view == 'Ended' ? _completed : switch (ref?.view) {
         'Finding' || 'FindingWaiting' || 'NoReply' || 'Collecting' || 'Selected' => _requested,
         'Booked' || 'InProgress' => _booked,
         'Rate' || 'Done' => _completed,
@@ -42,10 +44,12 @@ class TripOverviewScreen extends StatelessWidget {
     required this.onTaxi,
     required this.onDone,
     this.paused = false,
+    this.taxiCanRate = false,
     this.onBack,
   });
 
   final TripModel trip;
+  final bool taxiCanRate;
   final bool paused;
   final VoidCallback onViewPlan;
   final void Function(TripOverviewTaxi taxi) onTaxi;
@@ -64,38 +68,67 @@ class TripOverviewScreen extends StatelessWidget {
     return storedDefault ? fallback : t;
   }
 
+  Widget _menu() => PopupMenuButton<int>(
+        key: const ValueKey('overview_menu'),
+        tooltip: TripStringsOverview.moreOptions,
+        padding: EdgeInsets.zero,
+        shape: RoundedRectangleBorder(borderRadius: DS.circular(12)),
+        color: DesignColors.surface,
+        onSelected: (_) => onViewPlan(),
+        itemBuilder: (_) => [
+          PopupMenuItem<int>(
+            value: 0,
+            child: Text(TripStringsOverview.viewPlan, style: Ink3D.text(13, FontWeight.w600, Ink3D.title)),
+          ),
+        ],
+        child: SizedBox(
+          width: DS.s(40),
+          height: DS.s(40),
+          child: Icon(Icons.more_vert_rounded, size: DS.s(24), color: DesignColors.surface),
+        ),
+      );
+
   @override
   Widget build(BuildContext context) {
-    final taxi = TripOverviewTaxi.of(trip.taxiRequest);
+    final taxi = TripOverviewTaxi.of(trip.taxiRequest, canRate: taxiCanRate);
     // Paused blocks only a new request; an existing request or booking can still be opened.
     final taxiBlocked = paused && !taxi.hasRequest;
     final indigo = ListingTone.indigo;
     return Scaffold(
-      backgroundColor: DesignColors.surface,
-      body: Column(
+      backgroundColor: DesignColors.scaffold,
+      body: Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.paddingOf(context).bottom),
+        child: Column(
         children: [
           MediaQuery.withClampedTextScaling(
             maxScaleFactor: 1.3,
             child: ModuleHeader(
               title: TripStringsOverview.title,
               subtitle: TripStringsOverview.subtitle,
+              subtitleWidget: Text(TripStringsOverview.subtitle, maxLines: 1, overflow: TextOverflow.ellipsis, style: TripCustomizeLook.headerSubtitle),
               autoHeight: true,
               tone: KitTone.brand,
               gradient: indigo.gradient,
               onBack: onBack ?? () => Get.back(),
+              titleStyle: TripCustomizeLook.headerTitle,
+              trailing: [_menu()],
               bottom: _TripLine(trip: trip),
             ),
           ),
-          Expanded(
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: _maxWidth),
-                child: SingleChildScrollView(
-                  padding: DS.sym(h: 18, v: 20),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
+          Flexible(
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: _maxWidth),
+                      child: Padding(
+                        padding: DS.insets(l: 18, t: 20, r: 18, b: 40),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
                       _HeroCard(
                         key: const ValueKey('overview_itinerary_card'),
                         tone: indigo,
@@ -131,9 +164,12 @@ class TripOverviewScreen extends StatelessWidget {
                           style: Ink3D.text(13, FontWeight.w600, Ink3D.sub),
                         ),
                       ],
-                    ],
+                          ],
+                        ),
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ),
             ),
           ),
@@ -144,6 +180,7 @@ class TripOverviewScreen extends StatelessWidget {
             onTap: onDone,
           ),
         ],
+        ),
       ),
     );
   }
@@ -157,14 +194,15 @@ class _TripLine extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final line = TripStringsOverview.tripLine(trip.legCount, trip.dayCount, trip.plan.settings.peopleCount);
+    final narrow = MediaQuery.sizeOf(context).width < Form3D.narrow;
     return Padding(
-      padding: EdgeInsets.only(top: DS.gv(14)),
+      padding: EdgeInsets.only(top: DS.gv(16)),
       child: Container(
         padding: DS.sym(h: 16, v: 12),
         decoration: BoxDecoration(color: DesignColors.whiteSoft, borderRadius: DS.br(CardRadius.hero)),
         child: Row(
           children: [
-            const Art3D(asset: ListingArt.mountain, size: 44, shadowBlur: 4, shadowOffset: Offset(2, 3)),
+            Art3D(asset: ListingArt.mountain, size: narrow ? 52 : 72, shadowBlur: 4, shadowOffset: const Offset(2, 3)),
             Gap.h(14),
             Expanded(
               child: Column(
@@ -175,14 +213,14 @@ class _TripLine extends StatelessWidget {
                     key: const ValueKey('overview_trip_name'),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: Ink3D.text(16, FontWeight.w700, DesignColors.textInverse),
+                    style: Ink3D.text(17, FontWeight.w700, DesignColors.textInverse),
                   ),
                   Text(
                     line,
                     key: const ValueKey('overview_trip_line'),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: Ink3D.text(13, FontWeight.w400, DesignColors.textInverse),
+                    style: Ink3D.text(12.5, FontWeight.w400, DesignColors.textInverse, height: 1.5),
                   ),
                 ],
               ),
@@ -221,38 +259,46 @@ class _HeroCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final narrow = MediaQuery.sizeOf(context).width < Form3D.narrow;
     return Container(
+      constraints: BoxConstraints(minHeight: DS.s(140)),
       padding: DS.insets(l: 16, t: 16, r: 20, b: 16),
       decoration: BoxDecoration(gradient: tone.gradient, borderRadius: DS.br(CardRadius.hero), boxShadow: tone.glow(blur: 14, dy: 6)),
       child: Row(
         children: [
           Container(
-            width: DS.s(84),
-            height: DS.s(84),
+            width: DS.s(narrow ? 84 : 100),
+            height: DS.s(narrow ? 84 : 100),
             alignment: Alignment.center,
             decoration: const BoxDecoration(color: DesignColors.whiteSoft, shape: BoxShape.circle),
-            child: Art3D(asset: asset, size: 52, shadowBlur: 4, shadowOffset: const Offset(3, 4)),
+            child: Art3D(asset: asset, size: narrow ? 52 : 62, shadowBlur: 4, shadowOffset: const Offset(3, 5)),
           ),
-          Gap.h(14),
+          Gap.h(16),
           Expanded(
-            child: Column(
+            child: Padding(
+              padding: EdgeInsets.only(right: DS.s(narrow ? 0 : 24)),
+              child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Wrap(
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  spacing: DS.gh(10),
-                  runSpacing: DS.gv(4),
+                Row(
                   children: [
-                    Text(title, style: Ink3D.text(20, FontWeight.w700, DesignColors.textInverse)),
+                    Flexible(
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(title, maxLines: 1, style: Ink3D.text(21, FontWeight.w700, DesignColors.textInverse, height: 1.2)),
+                      ),
+                    ),
+                    Gap.h(10),
                     Container(
                       padding: DS.sym(h: 12, v: 3),
-                      decoration: BoxDecoration(color: DesignColors.whiteSoft, borderRadius: DS.circular(10)),
-                      child: Text(chip, style: Ink3D.text(12, FontWeight.w700, DesignColors.textInverse)),
+                      decoration: BoxDecoration(color: DesignColors.tint(DesignColors.surface, Alpha.v30), borderRadius: DS.circular(10)),
+                      child: Text(chip, style: Ink3D.text(12.5, FontWeight.w700, DesignColors.textInverse)),
                     ),
                   ],
                 ),
-                Gap.v(6),
-                Text(line, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(13, FontWeight.w400, DesignColors.textInverse)),
+                Gap.v(8),
+                Text(line, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(13, FontWeight.w400, DesignColors.textInverse, height: 1.45)),
                 Gap.v(8),
                 WhitePillButton(
                   key: buttonKey,
@@ -264,6 +310,7 @@ class _HeroCard extends StatelessWidget {
                   expand: false,
                 ),
               ],
+            ),
             ),
           ),
         ],
@@ -283,12 +330,12 @@ class _BottomBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(DS.radius(16))),
-        boxShadow: DS.shadows(Ink3D.topEdge),
+        color: DesignColors.surface,
+        borderRadius: DS.br(TripCustomizeLook.barRadius),
+        boxShadow: DS.shadows(TripLook.barShadowUp),
       ),
       child: Padding(
-        padding: EdgeInsets.fromLTRB(DS.s(18), DS.s(14), DS.s(18), DS.s(20) + MediaQuery.paddingOf(context).bottom),
+        padding: EdgeInsets.fromLTRB(DS.s(16), DS.s(12), DS.s(16), DS.s(16)),
         child: WhitePillButton(key: const ValueKey('overview_done_button'), tone: tone, label: label, onTap: onTap),
       ),
     );

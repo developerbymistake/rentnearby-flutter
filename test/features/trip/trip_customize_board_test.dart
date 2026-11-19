@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:bakhli/features/trip/trip_strings_customize.dart';
 import 'package:bakhli/features/trip/utils/trip_leg_draft.dart';
 import 'package:bakhli/features/trip/widgets/customize/trip_customize_board.dart';
+import 'package:bakhli/features/trip/widgets/customize/trip_customize_spot_row.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -114,6 +115,26 @@ void main() {
     expect(find.text(TripStringsCustomize.placeMovedAway), findsNothing);
   });
 
+  testWidgets('hover_shows_dragged_place_inside_drop_zone_and_hides_floating_copy', (tester) async {
+    final d = _draft([3, 3, 6]);
+    await pumpAtSize(tester, _host(d, _Calls()), _tall);
+    final g = await _lift(tester, 'L1d1s1');
+    Finder floating() => find.byWidgetPredicate((w) => w is Visibility && !w.visible);
+    expect(floating(), findsNothing);
+    await g.moveTo(tester.getCenter(_row('L1d2s1')));
+    await tester.pump();
+    final zone = find.byKey(const ValueKey('customize-drop-zone'));
+    expect(zone, findsOneWidget);
+    expect(find.descendant(of: zone, matching: find.byType(TripCustomizeSpotRow)), findsOneWidget);
+    expect(floating(), findsOneWidget);
+    await g.moveTo(const Offset(2, 2));
+    await tester.pump();
+    expect(zone, findsNothing);
+    expect(floating(), findsNothing);
+    await g.up();
+    await tester.pumpAndSettle();
+  });
+
   testWidgets('drop on a card body below the rows appends to that day', (tester) async {
     final d = _draft([2, 2]);
     final calls = _Calls();
@@ -136,11 +157,13 @@ void main() {
 
     final g = await _lift(tester, 'L1d1s0');
     final hapticsAfterLift = _haptics.length;
-    await g.moveTo(tester.getCenter(_row('L1d3s2')));
-    await tester.pump();
     expect(find.text(TripStringsCustomize.dayFullDrop), findsOneWidget);
+    expect(_row('L1d3s2'), findsNothing);
+    await g.moveTo(tester.getCenter(find.byKey(const ValueKey('customize-day-2'))));
+    await tester.pump();
     await g.up();
     await tester.pumpAndSettle();
+    expect(_row('L1d3s2'), findsOneWidget);
 
     expect(_ids(d), before);
     expect(TripLegDraft.signatureOf(d.days), sig);
@@ -263,14 +286,14 @@ void main() {
     expect(find.text(TripStringsCustomize.emptyDayError(2)), findsNothing);
   });
 
-  testWidgets('chips at 3, 6 and busy', (tester) async {
+  testWidgets('chips at 3 and 6, no busy chip (mock has none)', (tester) async {
     final d = _draft([3, 6, 5]);
     await pumpAtSize(tester, _host(d, _Calls(), dayLimit: 290), _tall);
     expect(find.text(TripStringsCustomize.placesChip(3)), findsOneWidget);
     expect(find.text(TripStringsCustomize.placesChip(6)), findsNothing);
     expect(find.text(TripStringsCustomize.full), findsOneWidget);
     expect(find.text(TripStringsCustomize.placesChip(5)), findsOneWidget);
-    expect(find.text(TripStringsCustomize.busyDay), findsNWidgets(2));
+    expect(find.text(TripStringsCustomize.busyDay), findsNothing);
     expect(find.text(TripStringsCustomize.span(d.estimateMinutes(0))), findsOneWidget);
     expect(find.byKey(const ValueKey('customize-add-1')), findsNothing);
     expect(find.byKey(const ValueKey('customize-add-0')), findsOneWidget);
@@ -297,11 +320,11 @@ void main() {
     await pumpAtSize(tester, _host(d, calls), _tall);
     final card0 = find.byKey(const ValueKey('customize-card-0'));
     final card1 = find.byKey(const ValueKey('customize-card-1'));
-    expect(find.descendant(of: card0, matching: find.byIcon(Icons.drag_indicator_rounded)), findsNothing);
+    expect(find.descendant(of: card0, matching: find.byType(TripGripDots)), findsNothing);
     expect(find.descendant(of: card0, matching: find.byType(LongPressDraggable<Object>)), findsNothing);
     expect(find.byKey(const ValueKey('customize-day-menu-0')), findsNothing);
     expect(find.byKey(const ValueKey('customize-add-0')), findsNothing);
-    expect(find.descendant(of: card1, matching: find.byIcon(Icons.drag_indicator_rounded)), findsNWidgets(2));
+    expect(find.descendant(of: card1, matching: find.byType(TripGripDots)), findsNWidgets(2));
 
     final g = await tester.startGesture(tester.getCenter(_row('L1d1s0')));
     await tester.pump(kLongPressTimeout + const Duration(milliseconds: 100));

@@ -1,7 +1,7 @@
 import '../models/taxi_request_models.dart';
 import '../trip_strings_taxi_request.dart';
 
-enum TaxiFormBlock { none, noSection, pickupUnavailable, pickupMissing, dropUnavailable, dropMissing }
+enum TaxiFormBlock { none, tooManyTravellers, noSection, pickupUnavailable, pickupMissing, dropUnavailable, dropMissing }
 
 class TaxiRequestForm {
   final TaxiPickupPlaces places;
@@ -46,7 +46,7 @@ class TaxiRequestForm {
       dropSame: true,
       dropCityKey: null,
       days: {for (final d in planDays) if (!past.contains(d)) d},
-      seats: TaxiSeats.snap(places.suggestedSeats),
+      seats: TaxiSeats.atLeast(TaxiSeats.snap(places.suggestedSeats), places.travellers),
       pastDays: past,
     );
   }
@@ -106,7 +106,11 @@ class TaxiRequestForm {
     return _with(days: next);
   }
 
-  TaxiRequestForm setSeats(int value) => TaxiSeats.options.contains(value) ? _with(seats: value) : this;
+  bool seatEnabled(int value) => value >= places.travellers;
+
+  bool get tooManyTravellers => places.travellers > TaxiSeats.maxTravellers;
+
+  TaxiRequestForm setSeats(int value) => TaxiSeats.options.contains(value) && seatEnabled(value) ? _with(seats: value) : this;
 
   bool get sightseeingActive => sightseeingOn && sightseeingDays.isNotEmpty;
 
@@ -119,6 +123,7 @@ class TaxiRequestForm {
   TaxiPickupPlace? get dropPlace => places.dropByKey(dropSame ? null : dropCityKey);
 
   TaxiFormBlock get block {
+    if (tooManyTravellers) return TaxiFormBlock.tooManyTravellers;
     if (!pickupOn && !sightseeingActive && !dropOn) return TaxiFormBlock.noSection;
     if (pickupOn) {
       if (places.pickup.isEmpty) return TaxiFormBlock.pickupUnavailable;
@@ -135,6 +140,8 @@ class TaxiRequestForm {
 
   String get summary {
     switch (block) {
+      case TaxiFormBlock.tooManyTravellers:
+        return TripStringsTaxiRequest.groupTooBig;
       case TaxiFormBlock.noSection:
         return TripStringsTaxiRequest.summaryNoSection;
       case TaxiFormBlock.pickupUnavailable:

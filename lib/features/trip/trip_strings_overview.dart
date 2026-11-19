@@ -16,6 +16,8 @@ class TripStringsOverview {
   static const String skip = 'Skip, just keep my plan';
   static const String backToTrips = 'Back to my trips';
   static const String paused = 'Requests are paused right now';
+  static const String viewPlan = 'View plan';
+  static const String moreOptions = 'More options';
 
   static String _n(int n, String one, String many) => '$n ${n == 1 ? one : many}';
 

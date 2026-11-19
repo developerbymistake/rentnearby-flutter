@@ -17,7 +17,8 @@ class TripStringsTaxiRequest {
   static const String carTitle = 'Your car';
   static const String seats4 = '4 seater';
   static const String seats6 = '6 seater';
-  static const String seats7 = '7+ seater';
+  static const String seats7 = '7 seater';
+  static const String seats12 = '12 seater';
 
   static const String noDriversTitle = 'No taxi drivers registered near here yet';
   static const String skipTaxi = 'Skip taxi';
@@ -48,6 +49,9 @@ class TripStringsTaxiRequest {
   static const String pickupPassed = 'Day 1 has passed';
   static const String dropPassed = 'The last day has passed';
   static const String dayInPast = 'Pickup or drop is on a day that has passed. Turn it off and send again.';
+  static const String groupTooBig = 'For groups above 12, please send separate requests.';
+  static const String seatsTooFew = 'Choose a taxi with a seat for everyone.';
+  static const String anotherTrip = 'another trip';
   static const String pastDaysPicked = 'A picked day has passed. Choose today or a later day.';
 
   static String groupDays(int n) => '$n ${n == 1 ? 'day' : 'days'}';
@@ -59,5 +63,6 @@ class TripStringsTaxiRequest {
   static String summaryPickupAt(String city) => 'Pickup at $city';
   static String summaryDropAt(String city) => 'drop at $city';
   static String summaryDays(int n) => '$n sightseeing ${n == 1 ? 'day' : 'days'}';
-  static String seatsLabel(int seats) => seats == 4 ? seats4 : (seats == 6 ? seats6 : seats7);
+  static String seatsLabel(int seats) => switch (seats) { 4 => seats4, 6 => seats6, 12 => seats12, _ => seats7 };
+  static String overlapIn(String tripName) => 'You already have a taxi request for these dates in $tripName.';
 }

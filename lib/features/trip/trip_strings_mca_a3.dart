@@ -3,6 +3,7 @@ import 'utils/trip_format.dart';
 class TripStringsMcaA3 {
   static const String addAnotherCity = 'Add another city';
   static const String upToFourCities = 'Up to 4 cities in one trip';
+  static String nearbyCities(List<String> names) => '${names.join(', ')} and more';
   static const String connectToAddCity = 'Connect to add a city';
   static const String maxCities = '4 cities · the most in one trip';
   static const String noDaysLeft = 'No days left · 14 is the most';

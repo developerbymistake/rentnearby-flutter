@@ -1,5 +1,6 @@
 import 'package:bakhli/design/design.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:bakhli/design/extra/trip_plan_look.dart';
 import 'trip_ui.dart';
 import 'package:get/get.dart';
@@ -57,7 +58,7 @@ class TripPlanHeader extends StatelessWidget {
     }
     return TripStringsV2Plan.headerDated(
       c.dayCount,
-      TripFormat.dayMonthRange(start, end),
+      TripFormat.fullRange(start, end),
       s.peopleSummary,
     );
   }
@@ -122,30 +123,47 @@ class TripPlanHeader extends StatelessWidget {
           child: _guideHeader(context, c, plan, question),
         );
       }
+      final header = TripFlowHeader(
+        title: plan == null ? TripStringsV2Plan.trip : c.title,
+        subtitle: ready ? subtitleOf(c) : null,
+        onBack: () => Get.back(),
+        trailing: [
+          if (ready) ...[
+            if (c.editMode.value)
+              TripHeaderAction(
+                label: TripStringsV2Plan.done,
+                solid: true,
+                onTap: () => c.editMode.value = false,
+              )
+            else
+              Padding(padding: EdgeInsets.only(left: DS.gh(8)), child: _MapAction(onTap: () => onMenu(TripPlanMenu.map))),
+            _menu(c),
+          ],
+        ],
+      );
+      final bottom = ready && (c.guideState.on.value || c.editMode.value) ? _statusRow(context, c) : null;
       return MediaQuery.withClampedTextScaling(
         maxScaleFactor: 1.3,
-        child: ModuleHeader(
-          title: plan == null ? TripStringsV2Plan.trip : c.title,
-          subtitle: ready ? subtitleOf(c) : null,
-          tone: KitTone.brand,
-          gradient: ListingTone.indigo.gradient,
-          onBack: () => Get.back(),
-          trailing: [
-            if (ready) ...[
-              if (c.editMode.value)
-                TripHeaderAction(
-                  label: TripStringsV2Plan.done,
-                  solid: true,
-                  onTap: () => c.editMode.value = false,
-                )
-              else
-                Padding(padding: EdgeInsets.only(left: DS.gh(8)), child: _MapAction(onTap: () => onMenu(TripPlanMenu.map))),
-              _menu(c),
-            ],
-          ],
-          bottom: ready && (c.guideState.on.value || c.editMode.value) ? _statusRow(context, c) : null,
-          autoHeight: true,
-        ),
+        child: bottom == null
+            ? header
+            : ModuleHeader(
+                title: plan == null ? TripStringsV2Plan.trip : c.title,
+                subtitle: ready ? subtitleOf(c) : null,
+                tone: KitTone.brand,
+                gradient: ListingTone.indigo.gradient,
+                onBack: () => Get.back(),
+                trailing: [
+                  if (ready) ...[
+                    if (c.editMode.value)
+                      TripHeaderAction(label: TripStringsV2Plan.done, solid: true, onTap: () => c.editMode.value = false)
+                    else
+                      Padding(padding: EdgeInsets.only(left: DS.gh(8)), child: _MapAction(onTap: () => onMenu(TripPlanMenu.map))),
+                    _menu(c),
+                  ],
+                ],
+                bottom: bottom,
+                autoHeight: true,
+              ),
       );
     });
   }
@@ -508,6 +526,53 @@ class TripPlanHeader extends StatelessWidget {
   }
 }
 
+class TripFlowHeader extends StatelessWidget {
+  const TripFlowHeader({super.key, required this.title, this.subtitle, this.onBack, this.trailing = const []});
+
+  final String title;
+  final String? subtitle;
+  final VoidCallback? onBack;
+  final List<Widget> trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    final sub = subtitle;
+    const white = DesignColors.surface;
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: ModuleHeader.lightIcons,
+      child: Container(
+        width: double.infinity,
+        decoration: BoxDecoration(
+          gradient: ListingTone.indigo.gradient,
+          borderRadius: DS.br(CardRadius.header),
+          boxShadow: DS.shadows(TripLook.headerShadow),
+        ),
+        padding: EdgeInsets.fromLTRB(DS.s(14), MediaQuery.paddingOf(context).top + DS.s(12), DS.s(14), DS.s(16)),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: DS.s(44)),
+          child: Row(
+            children: [
+              if (onBack != null) ...[_BackCircle(onTap: onBack!), Gap.h(12)],
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(20, FontWeight.w700, white, height: 1.25, letterSpacing: 0)),
+                    if (sub != null && sub.isNotEmpty)
+                      Text(sub, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(12.5, FontWeight.w500, DesignColors.tint(white, Alpha.v93), letterSpacing: 0)),
+                  ],
+                ),
+              ),
+              ...trailing,
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _BackCircle extends StatelessWidget {
   const _BackCircle({required this.onTap});
   final VoidCallback onTap;
@@ -528,7 +593,7 @@ class _BackCircle extends StatelessWidget {
               width: DS.s(44),
               height: DS.s(44),
               decoration: const BoxDecoration(color: DesignColors.whiteSoft, shape: BoxShape.circle),
-              child: Icon(Icons.arrow_back_ios_new_rounded, size: DS.s(20), color: DesignColors.textInverse),
+              child: Icon(Icons.chevron_left_rounded, size: DS.s(16), color: DesignColors.textInverse),
             ),
           ),
         ),
@@ -600,24 +665,16 @@ class _MapAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Semantics(
-      button: true,
+    return Tap3D(
+      onTap: onTap,
       label: TripStringsV2Plan.map,
-      child: Tooltip(
-        message: TripStringsV2Plan.map,
-        excludeFromSemantics: true,
-        child: PressScale(
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: onTap,
-            child: Container(
-              width: DS.s(46),
-              height: DS.s(46),
-              decoration: BoxDecoration(color: DesignColors.surface, shape: BoxShape.circle, boxShadow: DS.shadows(Ink3D.whiteBtn)),
-              child: const Center(child: Art3D(asset: ListingArt.worldMap, size: 30, shadowBlur: 2, shadowOffset: Offset(1, 2))),
-            ),
-          ),
-        ),
+      exclude: true,
+      child: Container(
+        height: DS.s(40),
+        padding: DS.sym(h: 16),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(color: DesignColors.tint(DesignColors.surface, Alpha.v25), borderRadius: DS.circular(20)),
+        child: Text(TripStringsV2Plan.map, maxLines: 1, style: Ink3D.text(13, FontWeight.w700, DesignColors.surface, letterSpacing: 0)),
       ),
     );
   }
@@ -657,10 +714,10 @@ class TripPlanStepCard extends StatelessWidget {
         onTap: () => onMenu(TripPlanMenu.easy),
         label: '${TripStringsDayplan.yourPlan}, $name',
         child: Padding(
-          padding: EdgeInsets.fromLTRB(DS.s(18), DS.gv(14), DS.s(18), DS.gv(6)),
+          padding: EdgeInsets.fromLTRB(DS.s(18), DS.gv(36), DS.s(18), DS.gv(8)),
           child: Container(
             key: cardKey,
-            padding: DS.insets(l: 20, t: 18, r: 16, b: 16),
+            padding: DS.insets(l: 20, t: 22, r: 20, b: 18),
             decoration: BoxDecoration(
               gradient: tone.gradient,
               borderRadius: DS.br(kMealsRadius),
@@ -679,7 +736,7 @@ class TripPlanStepCard extends StatelessWidget {
                       if (sub != null) Text(sub, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(12.5, FontWeight.w600, DesignColors.tint(white, Alpha.v90))),
                       if (hint != null && step == 2)
                         Text(hint, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(12, FontWeight.w500, DesignColors.tint(white, Alpha.v90))),
-                      Gap.v(12),
+                      Gap.v(14),
                       ClipRRect(
                         borderRadius: DS.circular(4),
                         child: LinearProgressIndicator(
@@ -689,7 +746,7 @@ class TripPlanStepCard extends StatelessWidget {
                           backgroundColor: DesignColors.tint(white, Alpha.scrim),
                         ),
                       ),
-                      Gap.v(12),
+                      Gap.v(14),
                       _pace(context, c, editable, tone),
                     ],
                   ),
@@ -711,6 +768,7 @@ class TripPlanStepCard extends StatelessWidget {
 
   Widget _pace(BuildContext context, TripPlanController c, bool editable, ListingTone tone) {
     final label = TripStringsDayplan.pace(relaxed: c.settings.isRelaxed);
+    const white = DesignColors.surface;
     return Tap3D(
       onTap: editable
           ? () async {
@@ -720,16 +778,14 @@ class TripPlanStepCard extends StatelessWidget {
           : null,
       label: label,
       child: Container(
-        constraints: BoxConstraints(minHeight: DS.s(36)),
-        padding: DS.sym(h: 14, v: 6),
-        decoration: BoxDecoration(color: DesignColors.surface, borderRadius: DS.br(CardRadius.pill), boxShadow: DS.shadows(Ink3D.whiteBtn)),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Flexible(child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(13, FontWeight.w700, tone.text))),
-            if (editable) Icon(Icons.keyboard_arrow_down_rounded, size: DS.s(18), color: tone.text),
-          ],
+        height: DS.s(40),
+        padding: DS.sym(h: 16),
+        decoration: BoxDecoration(
+          color: DesignColors.tint(white, Alpha.v22),
+          borderRadius: DS.circular(20),
+          border: Border.all(color: DesignColors.tint(white, Alpha.v55)),
         ),
+        child: Center(widthFactor: 1, child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(12.5, FontWeight.w700, white, letterSpacing: 0))),
       ),
     );
   }

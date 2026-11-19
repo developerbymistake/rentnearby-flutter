@@ -12,6 +12,22 @@ class TripFormat {
     return m == 0 ? '$h h' : '$h h $m min';
   }
 
+  static String hm(int minutes) {
+    final h = minutes ~/ 60;
+    final m = minutes % 60;
+    if (h == 0) return '$m m';
+    return m == 0 ? '$h h' : '$h h $m m';
+  }
+
+  static String fullRange(DateTime a, DateTime b) => a == b ? dayMonthNoPad(a) : '${dayMonthNoPad(a)} - ${dayMonthNoPad(b)}';
+
+  static String dayMonthNoPad(DateTime d) => '${d.day} ${_months[d.month - 1]}';
+
+  static String compactRange(DateTime a, DateTime b) {
+    if (a.year == b.year && a.month == b.month) return a.day == b.day ? dayMonthNoPad(a) : '${a.day}-${dayMonthNoPad(b)}';
+    return fullRange(a, b);
+  }
+
   static String km(double value) => '${number(value)} km';
 
   static String visit(int minutes) {

@@ -6,6 +6,7 @@ import 'package:bakhli/features/trip/controllers/trip_enquiry_controller.dart';
 import 'package:bakhli/features/trip/controllers/trip_plan_controller.dart';
 import 'package:bakhli/features/trip/controllers/trip_plan_guide.dart';
 import 'package:bakhli/features/trip/controllers/trip_shortlist_controller.dart';
+import 'package:bakhli/features/trip/data/trip_city_catalog.dart';
 import 'package:bakhli/features/trip/data/trip_shortlist_repository.dart';
 import 'package:bakhli/features/trip/models/trip_plan_model.dart';
 import 'package:bakhli/features/trip/models/trip_shortlist_model.dart';
@@ -53,6 +54,7 @@ Future<TripPlanController> _rig({TripGuide? guide, List<int> legs = const [3]}) 
   Get.put<TripShortlistController>(sl);
   Get.put<TripEnquiryController>(TripEnquiryController());
   Get.put<TabConfigController>(_Tabs());
+  TripCityCatalog.to.seedForTest(const [TripCityModel(cityKey: 901, name: 'Bhimtal', stateName: 'Uttarakhand', latitude: 29.35, longitude: 79.56)]);
   final c = TripPlanController();
   Get.put<TripPlanController>(c);
   final p = journeyPlan(legs, start: DateTime.now().add(const Duration(days: 10)));
@@ -173,7 +175,7 @@ void main() {
     }
     await _shot(t, 'trips_plan_header_scroll_end');
     final title = t.getRect(find.text(c.title).first);
-    final map = t.getRect(find.byTooltip('Map'));
+    final map = t.getRect(find.ancestor(of: find.descendant(of: find.byType(TripPlanHeader), matching: find.text('Map')), matching: find.byType(Container)).first);
     expect(title.right, lessThanOrEqualTo(map.left + 0.5));
   });
 
@@ -184,7 +186,7 @@ void main() {
     c.planStep.value = 2;
     await _settle(t);
 
-    await t.tap(find.byTooltip('Map'));
+    await t.tap(find.descendant(of: find.byType(TripPlanHeader), matching: find.text('Map')).first);
     await _settle(t);
     expect(find.text('map-stub'), findsOneWidget);
     Get.back();

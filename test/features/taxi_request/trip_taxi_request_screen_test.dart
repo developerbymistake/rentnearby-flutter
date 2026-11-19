@@ -129,7 +129,8 @@ void main() {
     expect(find.text('Set from 2 travellers'), findsOneWidget);
     expect(find.text('4 seater'), findsOneWidget);
     expect(find.text('6 seater'), findsOneWidget);
-    expect(find.text('7+ seater'), findsOneWidget);
+    expect(find.text('7 seater'), findsOneWidget);
+    expect(find.text('12 seater'), findsOneWidget);
     expect(_summary(tester), 'Choose a pickup, 6 sightseeing days, drop same as pickup');
     expect(_sendEnabled(tester), isFalse);
   });
@@ -340,6 +341,73 @@ void main() {
         expect(tester.takeException(), isNull, reason: sizeLabel(size));
         await _tapKey(tester, 'taxi_legacy_keep');
         expect(tester.takeException(), isNull, reason: sizeLabel(size));
+      }
+    });
+  });
+
+  group('seats and overlap', () {
+    TripTaxiRequestController withTravellers(FakeTaxiRepo repo, int n) {
+      repo.placesAnswer = TaxiOk(TaxiPickupPlaces.fromJson({...sampleJson('pickup_places.json'), 'travellers': n, 'suggestedSeats': 4}));
+      return _controller(repo);
+    }
+
+    bool seatOn(WidgetTester tester, int s) =>
+        tester.widget<Opacity>(find.ancestor(of: find.byKey(ValueKey('taxi_seat_$s')), matching: find.byType(Opacity)).first).opacity == 1;
+
+    testWidgets('six travellers disable the 4 seater', (tester) async {
+      final repo = FakeTaxiRepo();
+      final c = withTravellers(repo, 6);
+      await _pump(tester, c);
+      expect(seatOn(tester, 4), isFalse);
+      expect(seatOn(tester, 6), isTrue);
+      expect(c.form.value!.seats, 6);
+      await _tapKey(tester, 'taxi_seat_4');
+      expect(c.form.value!.seats, 6);
+      await _tapKey(tester, 'taxi_seat_12');
+      expect(c.form.value!.seats, 12);
+    });
+
+    testWidgets('above 12 travellers send stays off with the group line', (tester) async {
+      final c = withTravellers(FakeTaxiRepo(), 13);
+      await _pump(tester, c);
+      await _pickKathgodam(tester);
+      expect(_sendEnabled(tester), isFalse);
+      expect(_summary(tester), 'For groups above 12, please send separate requests.');
+    });
+
+    testWidgets('overlap error names the other trip and keeps the form', (tester) async {
+      final repo = FakeTaxiRepo()
+        ..createAnswers.add(const TaxiOverlap(tripId: 't9', tripName: 'Goa Trip', message: 'x'));
+      final sent = _Sent();
+      await _ready(tester, repo: repo, sent: sent);
+      await _pickKathgodam(tester);
+      await _tapKey(tester, 'taxi_request_send');
+      expect(find.text('You already have a taxi request for these dates in Goa Trip.'), findsOneWidget);
+      expect(sent.requests, isEmpty);
+      expect(_sendEnabled(tester), isTrue);
+      await tester.pump(const Duration(seconds: 5));
+    });
+
+    testWidgets('SeatsTooFew shows the message and reloads places', (tester) async {
+      final repo = _CountingRepo()..createAnswers.add(const TaxiRefused(type: 'SeatsTooFew', statusCode: 400, message: 'm'));
+      await _ready(tester, repo: repo);
+      await _pickKathgodam(tester);
+      await _tapKey(tester, 'taxi_request_send');
+      expect(repo.placeCalls, 2);
+      expect(find.text('Choose a taxi with a seat for everyone.'), findsOneWidget);
+      await tester.pump(const Duration(seconds: 5));
+    });
+
+    testWidgets('seat states at five sizes', (tester) async {
+      for (final n in [2, 6, 7, 12, 13]) {
+        for (final size in fiveSizes) {
+          final c = withTravellers(FakeTaxiRepo(), n);
+          await _pump(tester, c, size: size);
+          await tester.drag(find.byType(SingleChildScrollView), const Offset(0, -4000));
+          await tester.pump();
+          expect(tester.takeException(), isNull, reason: '${sizeLabel(size)} travellers=$n');
+          expect(find.text('12 seater'), findsOneWidget);
+        }
       }
     });
   });

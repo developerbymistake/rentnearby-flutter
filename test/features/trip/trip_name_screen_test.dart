@@ -1,5 +1,5 @@
-import 'package:bakhli/design/design.dart';
 import 'package:bakhli/features/trip/screens/trip_name_screen.dart';
+import 'package:bakhli/features/trip/widgets/trip_plan_header.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
@@ -9,7 +9,7 @@ import '../../support/real_phone.dart';
 
 Widget _screen({String state = 'Uttarakhand', String city = 'Nainital'}) => TripNameScreen(stateName: state, cityName: city);
 
-PrimaryButton _continue(WidgetTester t) => t.widget<PrimaryButton>(find.byType(PrimaryButton));
+TripNameContinue _continue(WidgetTester t) => t.widget<TripNameContinue>(find.byType(TripNameContinue));
 
 void main() {
   testWidgets('suggestion_shown_and_continue_enabled', (tester) async {
@@ -19,6 +19,15 @@ void main() {
     expect(find.text('Trip name'), findsWidgets);
     expect(_continue(tester).onPressed, isNotNull);
     expect(find.text('Add a name to continue'), findsNothing);
+  });
+
+  testWidgets('continue_bar_sits_right_under_the_counter_like_the_mock', (tester) async {
+    await pumpPhone(tester, _screen());
+    final counter = tester.getRect(find.text('22/60'));
+    final pill = tester.getRect(find.byType(TripNameContinue));
+    expect(pill.top, greaterThan(counter.bottom));
+    expect(pill.top - counter.bottom, lessThan(80));
+    expect(tester.getSize(find.byType(Scaffold)).height - pill.bottom, greaterThan(200));
   });
 
   testWidgets('empty_blocks_continue_with_error_text', (tester) async {
@@ -80,7 +89,7 @@ void main() {
     expect(find.byType(TripNameScreen), findsOneWidget);
     await tester.enterText(find.byType(TextFormField), '  My   big  trip ');
     await tester.pump();
-    await tester.tap(find.byType(PrimaryButton));
+    await tester.tap(find.byType(TripNameContinue));
     await tester.pump(const Duration(milliseconds: 600));
     await tester.pump(const Duration(milliseconds: 600));
     expect(result, 'My big trip');
@@ -104,12 +113,12 @@ void main() {
     addTearDown(tester.view.resetViewInsets);
     await tester.pump();
     expect(tester.takeException(), isNull);
-    final r = tester.getRect(find.byType(PrimaryButton));
+    final r = tester.getRect(find.byType(TripNameContinue));
     final visibleBottom = 568.0 - 260;
     expect(r.bottom, lessThanOrEqualTo(visibleBottom));
     expect(r.top, greaterThanOrEqualTo(0));
     final f = tester.getRect(find.byType(TextFormField));
-    expect(f.top, greaterThanOrEqualTo(tester.getRect(find.byType(ModuleHeader)).bottom));
+    expect(f.top, greaterThanOrEqualTo(tester.getRect(find.byType(TripFlowHeader)).bottom));
     expect(f.bottom, lessThanOrEqualTo(r.top));
   });
 }

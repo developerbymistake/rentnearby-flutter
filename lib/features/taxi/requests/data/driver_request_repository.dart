@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 
 import '../../../../services/api_service.dart';
+import '../../../../services/storage_service.dart';
 import '../../../../utils/network_retry.dart';
 import '../../../trip/utils/taxi_result.dart';
 import '../models/driver_request_models.dart';
@@ -79,10 +80,12 @@ class DriverRequestRepository {
   Future<TaxiResult<DriverOffer>> offer(String offerId) =>
       _offer(() => withRetry(() => ApiService.get('$_base/offers/$offerId')));
 
-  Future<TaxiResult<DriverOffer>> accept(String offerId) => _offer(() => ApiService.post('$_base/offers/$offerId/accept', const {}));
+  // The server ends the ring on the driver's other devices only, never on this one.
+  Future<TaxiResult<DriverOffer>> accept(String offerId) =>
+      _offer(() => ApiService.post('$_base/offers/$offerId/accept', {'deviceToken': StorageService.getFcmToken()}));
 
-  Future<TaxiResult<DriverOffer>> decline(String offerId, {ReasonChip? chip}) =>
-      _offer(() => ApiService.post('$_base/offers/$offerId/decline', {'chip': chip?.wire}));
+  Future<TaxiResult<DriverOffer>> decline(String offerId, {ReasonChip? chip}) => _offer(() =>
+      ApiService.post('$_base/offers/$offerId/decline', {'chip': chip?.wire, 'deviceToken': StorageService.getFcmToken()}));
 
   Future<TaxiResult<DriverOffer>> confirm(String offerId) =>
       _offer(() => ApiService.post('$_base/offers/$offerId/confirm', const {}));

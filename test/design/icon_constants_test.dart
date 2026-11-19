@@ -37,7 +37,7 @@ void main() {
   test('TripSpotLook.assetOf maps every category', () {
     const expected = <String, String>{
       'temple': ListingArt.hinduTemple,
-      'viewpoint': ListingArt.sunriseMountains,
+      'viewpoint': ListingArt.mountain,
       'lake': ListingArt.canoe,
       'attraction': ListingArt.ferrisWheel,
       'historic': ListingArt.classicalBuilding,
@@ -45,14 +45,15 @@ void main() {
       'waterfall': ListingArt.droplet,
       'cave': ListingArt.rock,
       'museum': ListingArt.framedPicture,
-      'zoo': ListingArt.lion,
+      'zoo': ListingArt.paw,
       'bridge': ListingArt.bridge,
       'beach': ListingArt.beach,
       'fort': ListingArt.castle,
       'palace': ListingArt.crown,
       'ghat': ListingArt.diyaLamp,
-      'park': ListingArt.tree,
-      'garden': ListingArt.tulip,
+      'park': ListingArt.seedling,
+      'garden': ListingArt.seedling,
+      'market': ListingArt.potOfFood,
       'other': ListingArt.roundPushpin,
       'unknown_category': ListingArt.roundPushpin,
     };

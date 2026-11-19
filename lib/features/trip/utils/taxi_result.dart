@@ -11,6 +11,9 @@ class TaxiErrorTypes {
   static const String legacyActive = 'LegacyTaxiActive';
   static const String allDriversBusy = 'AllDriversBusy';
   static const String notFound = 'TaxiRequestNotFound';
+  static const String overlapping = 'OverlappingTaxiRequest';
+  static const String seatsTooFew = 'SeatsTooFew';
+  static const String tooManyTravellers = 'TooManyTravellers';
 }
 
 class TaxiLegacyRow {
@@ -63,8 +66,20 @@ sealed class TaxiResult<T> {
         return TaxiAllDriversBusy<T>(message: message);
       case TaxiErrorTypes.notFound:
         return TaxiNotFound<T>(message: message);
+      case TaxiErrorTypes.overlapping:
+        return TaxiOverlap<T>(tripId: data['tripId'] as String?, tripName: data['tripName'] as String?, message: message);
     }
-    return TaxiRefused<T>(type: type, statusCode: status ?? 0, message: message);
+    return TaxiRefused<T>(
+      type: type,
+      statusCode: status ?? 0,
+      message: message,
+      retryAfterSeconds: status == 429 ? _retryAfter(error) : null,
+    );
+  }
+
+  static int _retryAfter(DioException error) {
+    final seconds = int.tryParse(error.response?.headers.value('retry-after')?.trim() ?? '');
+    return seconds == null || seconds < 1 ? 1 : (seconds > 120 ? 120 : seconds);
   }
 }
 
@@ -116,6 +131,14 @@ class TaxiAllDriversBusy<T> extends TaxiResult<T> {
   const TaxiAllDriversBusy({this.message});
 }
 
+class TaxiOverlap<T> extends TaxiResult<T> {
+  final String? tripId;
+  final String? tripName;
+  final String? message;
+
+  const TaxiOverlap({this.tripId, this.tripName, this.message});
+}
+
 class TaxiNotFound<T> extends TaxiResult<T> {
   final String? message;
 
@@ -126,8 +149,11 @@ class TaxiRefused<T> extends TaxiResult<T> {
   final String? type;
   final int statusCode;
   final String? message;
+  final int? retryAfterSeconds;
 
-  const TaxiRefused({required this.type, required this.statusCode, this.message});
+  const TaxiRefused({required this.type, required this.statusCode, this.message, this.retryAfterSeconds});
+
+  bool get rateLimited => statusCode == 429;
 }
 
 class TaxiOffline<T> extends TaxiResult<T> {

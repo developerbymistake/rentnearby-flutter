@@ -28,6 +28,15 @@ class TripStringsDayplan {
 
   static String pace({required bool relaxed}) => relaxed ? 'Pace: Relaxed' : 'Pace: Normal';
 
+  static const String mapRouteSub = 'Route in plan order';
+
+  static String dayLabel(int day) => 'Day $day';
+
+  static String legRange(int a, int b, String? dates) {
+    final days = a == b ? 'Day $a' : 'Day $a-$b';
+    return dates == null ? days : '$days · $dates';
+  }
+
   static String foldedSummary(int days, int places) => '${days == 1 ? '1 day' : '$days days'} · ${places == 1 ? '1 place' : '$places places'} · Tap to open';
 
   static String lockMessage({required bool byBooking}) => byBooking ? lockedByBooking : lockedByRequest;

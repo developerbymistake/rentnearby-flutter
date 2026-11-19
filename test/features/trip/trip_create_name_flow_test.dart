@@ -2,7 +2,6 @@ import 'dart:io';
 
 import 'package:bakhli/config/app_routes.dart';
 import 'package:bakhli/controllers/auth_controller.dart';
-import 'package:bakhli/design/design.dart';
 import 'package:bakhli/features/trip/controllers/trip_plan_controller.dart';
 import 'package:bakhli/features/trip/models/trip_city_model.dart';
 import 'package:bakhli/features/trip/models/trip_model.dart';
@@ -88,7 +87,7 @@ void main() {
     expect(find.text('Uttarakhand Hills Trip'), findsOneWidget);
     expect(_spotsOpened, 0);
 
-    await t.tap(find.byType(PrimaryButton));
+    await t.tap(find.byType(TripNameContinue));
     await t.pumpAndSettle();
     expect(find.text('places'), findsOneWidget);
     expect(find.byType(TripNameScreen), findsNothing);
@@ -276,7 +275,7 @@ void main() {
     await t.pumpAndSettle();
     expect(find.byType(TripNameScreen), findsOneWidget);
     await t.enterText(find.byType(TextFormField), 'Old Draft Trip');
-    await t.tap(find.byType(PrimaryButton));
+    await t.tap(find.byType(TripNameContinue));
     await t.pumpAndSettle();
     expect(find.text('places'), findsOneWidget);
     expect((_spotsArgs!['draftLegs'] as List<TripDraftLeg>).single.ids, ['a']);

@@ -171,6 +171,16 @@ class DesignColors {
   // template pager idle dot
   static const Color idleDot = Color(0xFFE3E4E4);
 
+  // trip day board
+  static const Color dayFullChip = Color(0xFFFDECEE);
+  static const Color gripDot = Color(0xFF8A8F9C);
+  static const Color addRowFill = Color(0xFFF7F8FD);
+  static const Color addDayLine = Color(0xFF9AA3E8);
+  static const Color addDayFill = Color(0xFFF5F6FD);
+  static const Color dangerLine = Color(0xFFF0B7BB);
+  static const Color driveLine = Color(0x4D5C5EDD);
+  static const Color goodInk = Color(0xFF17501B);
+
   static Color tint(Color color, double alpha) => color.withValues(alpha: alpha);
 }
 

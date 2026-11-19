@@ -5,6 +5,7 @@ import 'package:bakhli/features/taxi/requests/models/driver_request_models.dart'
 import 'package:bakhli/features/trip/trip_strings_taxi_driver.dart';
 import 'package:bakhli/features/trip/utils/taxi_result.dart';
 import 'package:bakhli/services/api_service.dart';
+import 'package:bakhli/services/storage_service.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -60,6 +61,18 @@ void main() {
     expect(r.state, 'Missed');
     expect(r.message, 'This request went to the next drivers');
     expect(r, isA<TaxiRefused<DriverOffer>>());
+  });
+
+  test('accept_and_decline_send_this_device_token_so_its_own_ring_end_is_skipped', () async {
+    await StorageService.saveFcmToken('this-phone');
+    final api = _use((_) => (409, '{"data":{"state":"Missed"},"error":{"message":"x","type":"OfferMissed"}}'));
+    await repo.accept('o1');
+    await repo.decline('o1', chip: ReasonChip.other);
+    expect(api.seen[0].data, {'deviceToken': 'this-phone'});
+    expect(api.seen[1].data, {'chip': ReasonChip.other.wire, 'deviceToken': 'this-phone'});
+    StorageService.clearFcmToken();
+    await repo.accept('o1');
+    expect(api.seen[2].data, {'deviceToken': null});
   });
 
   test('dates_already_booked_sample_maps_with_range', () async {
@@ -124,6 +137,7 @@ void main() {
   });
 
   test('actions_hit_the_contract_routes', () async {
+    StorageService.clearFcmToken();
     final api = _use((o) => o.path.endsWith('test-ring') ? (204, '') : (200, _ok('driver_offer_detail_ringing.json')));
     await repo.accept('o1');
     await repo.decline('o1');
@@ -140,8 +154,8 @@ void main() {
       'POST /taxi-requests/driver/offers/o1/withdraw',
       'POST /taxi-requests/driver/test-ring',
     ]);
-    expect(api.seen[1].data, {'chip': null});
-    expect(api.seen[2].data, {'chip': 'VehicleIssue'});
+    expect(api.seen[1].data, {'chip': null, 'deviceToken': null});
+    expect(api.seen[2].data, {'chip': 'VehicleIssue', 'deviceToken': null});
     expect(api.seen[4].data, {'chip': 'ChangedPlan'});
   });
 

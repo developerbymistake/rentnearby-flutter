@@ -1,4 +1,6 @@
 import 'package:bakhli/design/design.dart';
+import 'package:bakhli/design/extra/trip_customize_look.dart';
+import 'package:bakhli/design/extra/trip_plan_look.dart';
 import 'package:flutter/material.dart';
 
 import '../../models/trip_plan_model.dart';
@@ -32,9 +34,9 @@ class TripRemovePlaceSheet extends StatelessWidget {
           ),
           GradientPillButton(
             key: const ValueKey('customize-remove-confirm'),
-            tone: tone,
+            tone: ListingTone.coral,
             label: TripStringsCustomize.removeFromTrip,
-            danger: true,
+            shadows: TripCustomizeLook.removeShadow,
             onTap: () => Navigator.pop(context, true),
           ),
         ],
@@ -60,7 +62,7 @@ class TripRemovePlaceSheet extends StatelessWidget {
                         TripStringsCustomize.spotLine(spot.category, spot.visitMinutes),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: Ink3D.text(11.5, FontWeight.w400, Ink3D.grey),
+                        style: Ink3D.text(12.5, FontWeight.w400, TripLook.mutedText),
                       ),
                     ],
                   ),
@@ -68,8 +70,6 @@ class TripRemovePlaceSheet extends StatelessWidget {
               ],
             ),
           ),
-          Gap.v(12),
-          Text(TripStringsCustomize.removeBody, textAlign: TextAlign.center, style: Ink3D.text(13, FontWeight.w500, Ink3D.sub)),
         ],
       ),
     );

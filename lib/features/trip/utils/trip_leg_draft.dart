@@ -194,9 +194,9 @@ class TripLegDraft {
           ),
       ];
 
-  int estimateMinutes(int dayIndex) {
+  int estimateMinutes(int dayIndex, {String? without}) {
     if (!_valid(dayIndex)) return 0;
-    final spots = _days[dayIndex].spots;
+    final spots = [for (final s in _days[dayIndex].spots) if (s.id != without) s];
     var minutes = 0;
     for (var i = 0; i < spots.length; i++) {
       minutes += spots[i].visitMinutes;

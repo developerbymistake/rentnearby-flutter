@@ -13,6 +13,7 @@ import '../config/user_roles.dart';
 import 'tab_config_controller.dart';
 import 'home_controller.dart';
 import 'location_controller.dart';
+import '../utils/account_delete_message.dart';
 import '../utils/app_toast.dart';
 import '../utils/jwt_claims.dart';
 import '../services/hub_session_manager.dart';
@@ -330,7 +331,8 @@ class AuthController extends GetxController {
     });
   }
 
-  Future<void> deleteAccount() async {
+  /// Returns the blocking reasons when the server refuses with 409 AccountHasActiveItems, else null.
+  Future<List<String>?> deleteAccount() async {
     try {
       isLoading.value = true;
       await ApiService.delete('/account');
@@ -339,11 +341,14 @@ class AuthController extends GetxController {
       // A 401 here means the interceptor has already run forceLogout(sessionExpired) and shown
       // its own toast + redirected — showing "Could not delete account" on top would be a
       // second, contradictory toast on the login screen for the same underlying event.
-      if (e is DioException && e.response?.statusCode == 401) return;
+      if (e is DioException && e.response?.statusCode == 401) return null;
+      final blocked = AccountDeleteMessage.lines(e);
+      if (blocked != null) return blocked;
       AppToast.error(_dioMessage(e, 'Could not delete account. Please try again.'));
     } finally {
       isLoading.value = false;
     }
+    return null;
   }
 
   Future<void> refreshProfile() async {

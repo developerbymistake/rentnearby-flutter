@@ -1,4 +1,6 @@
 import 'package:bakhli/design/design.dart';
+import 'package:bakhli/design/extra/trip_customize_look.dart';
+import 'package:bakhli/design/extra/trip_plan_look.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -16,6 +18,7 @@ import '../trip_strings_pick_draft.dart';
 import '../utils/trip_format.dart';
 import '../utils/trip_leg_draft.dart';
 import '../widgets/customize/trip_customize_board.dart';
+import '../widgets/customize/trip_customize_spot_row.dart';
 import '../widgets/trip_update_ask_sheet.dart';
 
 typedef TripDraftPicker = Future<List<TripSpotModel>?> Function(
@@ -179,7 +182,12 @@ class _TripCustomizeScreenState extends State<TripCustomizeScreen> {
   }
 
   Future<void> _update() async {
-    if (_closing || !_draft.changed) return;
+    if (_closing) return;
+    if (!_draft.changed) {
+      _closing = true;
+      Get.back();
+      return;
+    }
     final result = _plan.applyLegDraft(_legIndex, _draft);
     switch (result) {
       case TripLegApplyBlock.none:
@@ -244,50 +252,83 @@ class _TripCustomizeScreenState extends State<TripCustomizeScreen> {
     );
   }
 
-  Widget _hint(String text) => Padding(
-        padding: DS.insets(l: 4, t: 0, r: 4, b: 4),
-        child: Text(text, style: Ink3D.text(13, FontWeight.w500, Ink3D.sub)),
+  Widget _hintDrag() => Padding(
+        padding: DS.insets(l: 22, t: 16, r: 22),
+        child: Row(
+          children: [
+            SizedBox(width: DS.s(24), child: const Center(child: TripGripDots())),
+            Gap.h(12),
+            Expanded(child: Text(TripStringsCustomize.hintDrag, style: Ink3D.text(12.5, FontWeight.w400, Ink3D.sub, height: 1.5))),
+          ],
+        ),
       );
 
-  Widget _banner(BannerKind kind, String title, {String? subtitle}) => Banner3D(
-        kind: kind,
-        title: title,
-        subtitle: subtitle,
-        compact: true,
-        margin: EdgeInsets.only(bottom: DS.gv(10)),
+  Widget _hintCity() => Padding(
+        padding: DS.insets(l: 22, t: 8, r: 22),
+        child: Text(TripStringsCustomize.hintCity, style: Ink3D.text(12.5, FontWeight.w400, TripLook.mutedText, height: 1.5)),
+      );
+
+  Widget _note(String text, Color ink, {String? detail}) => Padding(
+        padding: DS.insets(l: 22, t: 12, r: 22),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(text, style: Ink3D.text(12.5, FontWeight.w600, ink, height: 1.5)),
+            if (detail != null) Text(detail, style: Ink3D.text(12.5, FontWeight.w400, TripLook.mutedText, height: 1.5)),
+          ],
+        ),
+      );
+
+  Widget _headerMenu() => PopupMenuButton<int>(
+        key: const ValueKey('customize-menu'),
+        tooltip: TripStringsCustomize.moreOptions,
+        padding: EdgeInsets.zero,
+        shape: RoundedRectangleBorder(borderRadius: DS.circular(12)),
+        color: DesignColors.surface,
+        onSelected: (v) => v == 0 ? _addDay() : _reset(),
+        itemBuilder: (_) => [
+          PopupMenuItem<int>(
+            value: 0,
+            enabled: _draft.canAddDay,
+            child: Text(TripStringsCustomize.addDay, style: Ink3D.text(13, FontWeight.w600, Ink3D.title)),
+          ),
+          PopupMenuItem<int>(
+            value: 1,
+            enabled: _draft.changed,
+            child: Text(TripStringsCustomize.reset, style: Ink3D.text(13, FontWeight.w600, Ink3D.title)),
+          ),
+        ],
+        child: SizedBox(
+          width: DS.s(40),
+          height: DS.s(40),
+          child: Icon(Icons.more_vert_rounded, size: DS.s(24), color: DesignColors.surface),
+        ),
       );
 
   Widget _addDayButton() {
     final can = _draft.canAddDay;
-    return Tap3D(
-      tapKey: const ValueKey('customize-add-day'),
-      onTap: can ? _addDay : null,
-      label: TripStringsCustomize.addDay,
-      child: Opacity(
-        opacity: can ? 1 : 0.5,
-        child: Container(
-          padding: DS.sym(h: 16, v: 12),
-          decoration: BoxDecoration(
-            color: DesignColors.surface,
-            borderRadius: DS.circular(20),
-            border: Border.all(color: ListingTone.indigo.g2, width: DS.s(1.5)),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.add_rounded, size: DS.s(20), color: ListingTone.indigo.text),
-              Gap.h(8),
-              Flexible(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(TripStringsCustomize.addDay, style: Ink3D.text(15, FontWeight.w700, ListingTone.indigo.text)),
-                    Text(TripStringsCustomize.newDayEmpty, style: Ink3D.text(12, FontWeight.w500, Ink3D.sub)),
-                  ],
-                ),
+    return Padding(
+      padding: DS.insets(l: 18, t: 48, r: 18, b: 8),
+      child: Tap3D(
+        tapKey: const ValueKey('customize-add-day'),
+        onTap: can ? _addDay : null,
+        label: TripStringsCustomize.addDay,
+        child: Opacity(
+          opacity: can ? 1 : 0.5,
+          child: CustomPaint(
+            painter: TripDashBox(DesignColors.addDayLine, DS.s(1), fill: DesignColors.addDayFill, radius: DS.br(TripCustomizeLook.addDayRadius), stroke: 2.5),
+            child: Container(
+              constraints: BoxConstraints(minHeight: DS.s(80)),
+              padding: DS.sym(h: 16, v: 20),
+              alignment: Alignment.center,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(TripStringsCustomize.addDayRow, textAlign: TextAlign.center, style: Ink3D.text(16, FontWeight.w700, ListingTone.indigo.text)),
+                  Text(TripStringsCustomize.newDayEmpty, textAlign: TextAlign.center, style: Ink3D.text(12.5, FontWeight.w400, TripLook.mutedText)),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),
@@ -295,36 +336,46 @@ class _TripCustomizeScreenState extends State<TripCustomizeScreen> {
   }
 
   Widget _bottomBar(BuildContext context) {
-    final changed = _draft.changed;
-    final canUpdate = changed && _errorDay == null;
+    final canUpdate = _errorDay == null && _blockedTitle == null;
+    final resetInk = canUpdate ? ListingTone.indigo.text : Ink3D.grey;
     return Container(
-      padding: EdgeInsets.fromLTRB(DS.s(16), DS.s(10), DS.s(16), AppInsets.bottomViewPadding(context) + DS.s(10)),
-      decoration: BoxDecoration(color: DesignColors.surface, boxShadow: DS.shadows(TripEntryStyle.topShadow)),
+      padding: EdgeInsets.fromLTRB(DS.s(16), DS.s(12), DS.s(16), AppInsets.bottomViewPadding(context) + DS.s(16)),
+      decoration: BoxDecoration(
+        color: DesignColors.surface,
+        borderRadius: DS.br(TripCustomizeLook.barRadius),
+        boxShadow: DS.shadows(TripLook.barShadowUp),
+      ),
       child: Center(
         heightFactor: 1,
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: _maxWidth),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+          child: Row(
             children: [
-              PillButtonRow(
-                children: [
-                  WhitePillButton(
-                    key: const ValueKey('customize-reset'),
-                    tone: ListingTone.indigo,
-                    label: TripStringsCustomize.reset,
-                    neutral: true,
-                    onTap: changed ? _reset : null,
+              Tap3D(
+                tapKey: const ValueKey('customize-reset'),
+                onTap: canUpdate ? _reset : null,
+                label: TripStringsCustomize.reset,
+                child: Container(
+                  constraints: BoxConstraints(minHeight: DS.s(40)),
+                  padding: DS.sym(h: 10),
+                  alignment: Alignment.center,
+                  child: Text(
+                    TripStringsCustomize.reset,
+                    style: Ink3D.text(14, FontWeight.w700, resetInk).copyWith(decoration: TextDecoration.underline, decorationColor: resetInk),
                   ),
-                  GradientPillButton(
-                    key: const ValueKey('customize-update'),
-                    tone: ListingTone.indigo,
-                    label: TripStringsCustomize.update,
-                    enabled: canUpdate,
-                    onTap: canUpdate ? _update : null,
-                  ),
-                ],
+                ),
+              ),
+              Gap.h(14),
+              Expanded(
+                child: GradientPillButton(
+                  key: const ValueKey('customize-update'),
+                  tone: ListingTone.indigo,
+                  label: TripStringsCustomize.update,
+                  enabled: canUpdate,
+                  offColor: TripLook.disabledFill,
+                  shadows: TripLook.pillShadow,
+                  onTap: canUpdate ? _update : null,
+                ),
               ),
             ],
           ),
@@ -335,37 +386,38 @@ class _TripCustomizeScreenState extends State<TripCustomizeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_missing) return const Scaffold(backgroundColor: DesignColors.surface);
+    if (_missing) return const Scaffold(backgroundColor: DesignColors.scaffold);
     return PopScope(
       canPop: !_draft.changed,
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop) _back();
       },
       child: Scaffold(
-        backgroundColor: DesignColors.surface,
+        backgroundColor: DesignColors.scaffold,
         body: Column(
           children: [
             ModuleHeader(
               title: TripStringsCustomize.title(_leg.cityName),
               subtitle: _subtitle(),
+              subtitleWidget: Text(_subtitle(), maxLines: 1, overflow: TextOverflow.ellipsis, style: TripCustomizeLook.headerSubtitle),
               tone: KitTone.trip,
               onBack: _back,
+              titleStyle: TripCustomizeLook.headerTitle,
+              trailing: [_headerMenu()],
             ),
             Expanded(
               child: SingleChildScrollView(
-                padding: DS.sym(h: 16, v: 14),
+                padding: EdgeInsets.only(bottom: DS.gv(20)),
                 child: Center(
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: _maxWidth),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        _hint(TripStringsCustomize.hintDrag),
-                        _hint(TripStringsCustomize.hintCity),
-                        Gap.v(8),
-                        if (_blockedTitle != null)
-                          _banner(BannerKind.warn, _blockedTitle!, subtitle: _blockedDetail),
-                        if (_doneText != null) _banner(BannerKind.good, _doneText!),
+                        _hintDrag(),
+                        _hintCity(),
+                        if (_blockedTitle != null) _note(_blockedTitle!, TripLook.badText, detail: _blockedDetail),
+                        if (_doneText != null) _note(_doneText!, DesignColors.goodInk),
                         TripCustomizeBoard(
                           key: ValueKey('customize-board-$_version'),
                           draft: _draft,
@@ -376,9 +428,7 @@ class _TripCustomizeScreenState extends State<TripCustomizeScreen> {
                           onAddPlaces: _addPlaces,
                           onDeleteDay: _deleteDay,
                         ),
-                        Gap.v(12),
                         _addDayButton(),
-                        Gap.v(16),
                       ],
                     ),
                   ),

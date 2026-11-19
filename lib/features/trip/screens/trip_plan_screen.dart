@@ -19,9 +19,11 @@ import '../trip_strings_dayplan.dart';
 import '../trip_strings_name.dart';
 import '../utils/trip_name_rules.dart';
 import '../widgets/trip_leg_fold_state.dart';
+import 'package:bakhli/design/extra/trip_plan_look.dart';
 import '../trip_strings_v2_plan.dart';
 import '../widgets/trip_add_city_card.dart';
 import '../widgets/trip_day_spot_list.dart';
+import '../widgets/trip_day_chips.dart';
 import '../widgets/trip_days_sheet.dart';
 import '../widgets/trip_easy_card.dart';
 import '../widgets/guide/trip_guide_view.dart';
@@ -42,6 +44,7 @@ class TripPlanScreen extends StatefulWidget {
   static const Key viewButtonKey = ValueKey('plan-view-taxi');
   static const Key renameFieldKey = ValueKey('plan-rename-field');
   static const Key saveTripKey = ValueKey('plan-save-trip');
+  static const Key noteKey = ValueKey('plan-note');
 
   @override
   State<TripPlanScreen> createState() => _TripPlanScreenState();
@@ -74,6 +77,8 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
   bool _rowDone = true;
   int? _legFilter;
   bool _savingTrip = false;
+  String? _note;
+  Timer? _noteTimer;
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
@@ -150,6 +155,7 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
     _scroll.dispose();
     _fold.dispose();
     _anim.dispose();
+    _noteTimer?.cancel();
     if (Get.isRegistered<TripPlanController>() && identical(Get.find<TripPlanController>(), _c)) {
       _c.editMode.value = false;
       _c.openPages--;
@@ -232,7 +238,7 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
         final id = _c.trip.value?.id;
         if (id != null) TripLifecycleActions.openSummary(id);
       case TripPlanMenu.map:
-        TripNavigation.openMap(day: _c.defaultMapDay, tripId: _c.trip.value?.id);
+        TripNavigation.openMap(day: _c.todayDay == null ? TripDayChips.all : _c.defaultMapDay, tripId: _c.trip.value?.id);
       case TripPlanMenu.mute:
         await TripLifecycleActions.toggleMute(context);
       case TripPlanMenu.complete:
@@ -254,9 +260,47 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
     await _c.rename(title);
   }
 
-  void _openCustomize(int leg) {
+  Future<void> _openCustomize(int leg) async {
     if (!_c.canEditStructure) return;
-    Get.toNamed(AppRoutes.tripCustomize, arguments: {'tripId': _c.trip.value?.id, 'leg': leg});
+    final before = _c.plan.value;
+    await Get.toNamed(AppRoutes.tripCustomize, arguments: {'tripId': _c.trip.value?.id, 'leg': leg, 'toast': _customizeToast});
+    if (!mounted || identical(before, _c.plan.value) || _c.plan.value?.legAt(leg) == null) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _scrollTo(_legKey(leg));
+    });
+  }
+
+  void _customizeToast(bool success, String message) {
+    if (!success || !mounted) {
+      AppToast.warning(message);
+      return;
+    }
+    _noteTimer?.cancel();
+    setState(() => _note = message);
+    _noteTimer = Timer(const Duration(seconds: 3), () {
+      if (mounted) setState(() => _note = null);
+    });
+  }
+
+  Widget _buildNote() {
+    final note = _note;
+    if (note == null) return const SizedBox.shrink();
+    return Positioned(
+      left: DS.s(18),
+      right: DS.s(18),
+      bottom: DS.gv(20),
+      child: Semantics(
+        liveRegion: true,
+        child: Container(
+          key: TripPlanScreen.noteKey,
+          constraints: BoxConstraints(minHeight: DS.s(48)),
+          padding: DS.sym(h: 18, v: 12),
+          alignment: Alignment.centerLeft,
+          decoration: BoxDecoration(color: TripLook.ink, borderRadius: DS.circular(14)),
+          child: Text(note, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(13, FontWeight.w600, DesignColors.surface, letterSpacing: 0)),
+        ),
+      ),
+    );
   }
 
   void _openLockedStatus() {
@@ -277,13 +321,19 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
             child: TripPlanHeader(onMenu: _onMenu),
           ),
           _buildOffline(),
-          _buildLocked(),
+          Obx(() => _c.guideState.on.value ? _buildLocked() : const SizedBox.shrink()),
           _buildNotSaved(),
           Expanded(
             child: Center(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 640),
-                child: Obx(() => _c.guideState.on.value ? const TripGuideView() : _buildBody()),
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Obx(() => _c.guideState.on.value ? const TripGuideView() : _buildBody()),
+                    _buildNote(),
+                  ],
+                ),
               ),
             ),
           ),
@@ -303,19 +353,27 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
       return Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 640),
-          child: ChipCPRow(
-            padding: EdgeInsets.fromLTRB(DS.s(18), DS.gv(8), DS.s(18), 0),
-            children: [
-              ChipCP(tone: ListingTone.indigo, art: ListingArt.worldMap, label: TripStringsV2Plan.allCities, off: filter != null, onTap: () => pick(null)),
-              for (final leg in p.legs)
-                ChipCP(
-                  tone: ListingTone.indigo,
-                  art: ListingArt.mountain,
-                  label: TripStringsV2Plan.legChip(leg.cityName, p.legDayCount(leg.index)),
-                  off: filter != leg.index,
-                  onTap: () => pick(leg.index),
-                ),
-            ],
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            clipBehavior: Clip.none,
+            padding: EdgeInsets.fromLTRB(DS.s(18), DS.gv(14), DS.s(18), DS.s(8)),
+            child: Row(
+              children: [
+                _LegChip(art: ListingArt.worldMap, label: TripStringsV2Plan.allCities, on: filter == null, onTap: () => pick(null)),
+                for (final leg in p.legs) ...[
+                  Gap.h(10),
+                  _LegChip(
+                    art: ListingArt.mountain,
+                    label: TripStringsV2Plan.legChip(leg.cityName, p.legDayCount(leg.index)),
+                    on: filter == leg.index,
+                    onTap: () => pick(leg.index),
+                  ),
+                ],
+              ],
+            ),
+          ),
           ),
         ),
       );
@@ -350,12 +408,21 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
     return Obx(() {
       _c.trip.value;
       if (!_c.isPlanLocked || _c.plannerOff.value || _c.plan.value == null) return const SizedBox.shrink();
-      return Banner3D(
+      final palette = ListingPalette.indigo;
+      return Container(
         key: TripPlanScreen.lockedBannerKey,
-        kind: BannerKind.info,
-        art: ListingArt.locked,
-        title: _c.planLockMessage,
-        margin: _bannerMargin(),
+        margin: EdgeInsets.fromLTRB(DS.s(18), DS.gv(16), DS.s(18), 0),
+        padding: DS.insets(l: 16, t: 12, r: 16, b: 12),
+        decoration: BoxDecoration(color: palette.tint, borderRadius: DS.br(TripLegSectionHeader.lockRadius)),
+        child: Row(
+          children: [
+            const Art3D(asset: ListingArt.locked, size: 34, shadowBlur: 2, shadowOffset: Offset(1, 2)),
+            Gap.h(12),
+            Expanded(
+              child: Text(_c.planLockMessage, maxLines: 3, overflow: TextOverflow.ellipsis, style: Ink3D.text(13, FontWeight.w600, palette.text, height: 1.45, letterSpacing: 0)),
+            ),
+          ],
+        ),
       );
     });
   }
@@ -416,15 +483,21 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
       final editable = _c.canEditStructure;
       final editing = _c.editMode.value && editable;
       final step2 = !editing && !_c.isCompleted && _c.planStep.value == 2;
+      final addCity = editable && !editing;
       return ListenableBuilder(
         listenable: _fold,
         builder: (_, _) {
           var n = 0;
           Widget w(Widget child) => _in(n++, child);
+          final shownLegs = [
+            for (final leg in plan.legs)
+              if (_legFilter == null || plan.legAt(_legFilter!) == null || leg.index == _legFilter) leg,
+          ];
           return ListView(
             controller: _scroll,
             padding: EdgeInsets.only(bottom: DS.s(24)),
             children: [
+              _buildLocked(),
               if (!editing) w(TripPlanStepCard(onMenu: _onMenu)),
               MediaQuery.withClampedTextScaling(maxScaleFactor: 1.3, child: _buildLegChips()),
               if (_c.planFailed.value)
@@ -438,22 +511,27 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
               if (editing) _editBanner(),
               if (step2) w(_g(const TripEasyCard())),
               if (!step2) ...[
-              for (final d in plan.days)
-                if (_legFilter == null || plan.legAt(_legFilter!) == null || d.leg == _legFilter) ...[
-                if (plan.legStart(d.leg) == d.day)
+              for (final (i, leg) in shownLegs.indexed)
                   w(TripLegHeader(
-                    key: ValueKey('trip-leg-${d.leg}'),
-                    legIndex: d.leg,
-                    anchorKey: _legKey(d.leg),
-                    folded: _fold.isFolded(d.leg),
-                    onToggle: () => _fold.toggle(d.leg),
-                    onCustomize: () => _openCustomize(d.leg),
+                    key: ValueKey('trip-leg-${leg.index}'),
+                    legIndex: leg.index,
+                    anchorKey: _legKey(leg.index),
+                    folded: _fold.isFolded(leg.index),
+                    onToggle: () => _fold.toggle(leg.index),
+                    onCustomize: () => _openCustomize(leg.index),
+                    gapBelow: i < shownLegs.length - 1
+                        ? DS.gv(44)
+                        : addCity && plan.spotCount > 0
+                            ? DS.gv(24)
+                            : 0,
+                    body: [
+                      for (final d in plan.days)
+                        if (d.leg == leg.index) TripDaySpotList(d.day, key: ValueKey('trip-day-${d.day}'), inSection: true),
+                    ],
                   )),
-                if (!_fold.isFolded(d.leg)) w(TripDaySpotList(d.day, key: ValueKey('trip-day-${d.day}'))),
-              ],
               if (plan.spotCount == 0 && !editing && editable) _emptyPlan(),
               if (editing && _c.canAddDay) _addDayButton(),
-              if (editable && !editing) ...[
+              if (addCity) ...[
                 w(const TripAddCityCard()),
               ] else
                 Gap.v(8),
@@ -673,6 +751,51 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
         ],
       ));
     });
+  }
+}
+
+class _LegChip extends StatelessWidget {
+  const _LegChip({required this.art, required this.label, required this.on, required this.onTap});
+
+  final String art;
+  final String label;
+  final bool on;
+  final VoidCallback onTap;
+
+  static const BorderRadius _radius = BorderRadius.only(
+    topLeft: Radius.circular(14),
+    topRight: Radius.circular(22),
+    bottomLeft: Radius.circular(14),
+    bottomRight: Radius.circular(14),
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    final tone = ListingTone.indigo;
+    return Tap3D(
+      onTap: onTap,
+      label: label,
+      selected: on,
+      exclude: true,
+      child: Container(
+        height: DS.s(40),
+        padding: DS.sym(h: 14),
+        decoration: BoxDecoration(
+          gradient: on ? tone.gradient : null,
+          color: on ? null : DesignColors.surface,
+          borderRadius: DS.br(_radius),
+          boxShadow: DS.shadows(on ? TripLook.chipOnShadow : TripLook.chipOffShadow),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Art3D(asset: art, size: 24, shadowBlur: 0, shadowAlpha: 0),
+            Gap.h(8),
+            Text(label, maxLines: 1, style: Ink3D.text(12.5, FontWeight.w700, on ? DesignColors.surface : Ink3D.sub, letterSpacing: 0)),
+          ],
+        ),
+      ),
+    );
   }
 }
 

@@ -39,12 +39,15 @@ class _TripCustomizeBoardState extends State<TripCustomizeBoard> {
   EdgeDraggingAutoScroller? _auto;
   Rect? _pointer;
   String? _selected;
+  String? _dragging;
+  final ValueNotifier<bool> _overSlot = ValueNotifier<bool>(false);
 
   TripLegDraft get _draft => widget.draft;
 
   @override
   void dispose() {
     _auto?.stopAutoScroll();
+    _overSlot.dispose();
     super.dispose();
   }
 
@@ -53,12 +56,15 @@ class _TripCustomizeBoardState extends State<TripCustomizeBoard> {
     return d == null ? null : DateTime(d.year, d.month, d.day + i);
   }
 
-  void _dragStarted() {
+  void _dragStarted(String spotId) {
     final scrollable = Scrollable.maybeOf(context);
     _auto = scrollable == null
         ? null
         : EdgeDraggingAutoScroller(scrollable, velocityScalar: _autoScrollVelocity, onScrollViewScrolled: _keepScrolling);
-    if (_selected != null) setState(() => _selected = null);
+    setState(() {
+      _selected = null;
+      _dragging = spotId;
+    });
   }
 
   void _dragUpdate(DragUpdateDetails d) {
@@ -76,6 +82,8 @@ class _TripCustomizeBoardState extends State<TripCustomizeBoard> {
     _auto?.stopAutoScroll();
     _auto = null;
     _pointer = null;
+    _overSlot.value = false;
+    if (mounted && _dragging != null) setState(() => _dragging = null);
   }
 
   void _drop(TripPlaceDrag d, int toDay, int slot) {
@@ -116,6 +124,7 @@ class _TripCustomizeBoardState extends State<TripCustomizeBoard> {
             dayLimitMinutes: widget.dayLimitMinutes,
             flagged: widget.errorDay == i,
             selectedSpotId: _selected,
+            draggingSpotId: _dragging,
             onSelect: (id) => setState(() => _selected = _selected == id ? null : id),
             onRemove: _remove,
             onAddPlaces: () => widget.onAddPlaces(i),
@@ -124,6 +133,7 @@ class _TripCustomizeBoardState extends State<TripCustomizeBoard> {
             onDragStarted: _dragStarted,
             onDragUpdate: _dragUpdate,
             onDragEnd: _dragEnd,
+            overSlot: _overSlot,
           ),
       ],
     );

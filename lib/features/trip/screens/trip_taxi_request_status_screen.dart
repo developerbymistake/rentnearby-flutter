@@ -97,6 +97,7 @@ class _TripTaxiRequestStatusScreenState extends State<TripTaxiRequestStatusScree
         message,
       _ => null,
     };
+    if (r is TaxiRefused<TaxiRequest> && r.rateLimited) return TripStringsTaxiStatus.tooFast;
     if (server != null && server.trim().isNotEmpty) return server.trim();
     return r is TaxiOffline ? TripStringsTaxiStatus.actionOffline : TripStringsTaxiStatus.actionFailed;
   }
@@ -210,6 +211,20 @@ class _TripTaxiRequestStatusScreenState extends State<TripTaxiRequestStatusScree
     );
   }
 
+  Widget _lapseLine(TaxiRequest r) {
+    final l = _c.lapse.value;
+    if (l == null || l.requestId != r.id) return const SizedBox.shrink();
+    return Padding(
+      padding: EdgeInsets.only(top: DS.gv(14)),
+      child: Text(
+        l.unavailable ? TripStringsTaxiStatus.driverUnavailable : TripStringsTaxiStatus.driverDidNotConfirm,
+        key: const ValueKey('status_lapse_line'),
+        textAlign: TextAlign.center,
+        style: Ink3D.text(14, FontWeight.w700, Form3D.errorText),
+      ),
+    );
+  }
+
   Widget _cancelLink(TaxiRequest r) {
     if (!r.canCancel || r.activeBooking != null) return const SizedBox.shrink();
     return Padding(
@@ -251,6 +266,9 @@ class _TripTaxiRequestStatusScreenState extends State<TripTaxiRequestStatusScree
       case RequestView.busy:
         return _busy();
       case RequestView.ended:
+        final b = r.booking;
+        if (b != null && b.canRate) return _rate(r);
+        if (b != null && b.leftDuringTrip && r.rating != null) return _thanks(r);
         return _ended();
       case RequestView.unknown:
         return _neutral();
@@ -263,6 +281,7 @@ class _TripTaxiRequestStatusScreenState extends State<TripTaxiRequestStatusScree
         _hero(r),
         Gap.v(18),
         TaxiStatusSteps(stage: TaxiStepStage.finding, findingSub: stalled ? TripStringsTaxiStatus.noDriverAgreed : sub),
+        _lapseLine(r),
         Gap.v(10),
         Text(
           TripStringsTaxiStatus.numberNote,
@@ -305,6 +324,7 @@ class _TripTaxiRequestStatusScreenState extends State<TripTaxiRequestStatusScree
       _hero(r),
       Gap.v(18),
       TaxiStatusSteps(stage: TaxiStepStage.choosing, findingSub: TripStringsTaxiStatus.asked(r.askedCount, r.pickup?.name ?? '')),
+      if (chosen == null) _lapseLine(r),
       if (chosen != null) ...[
         Gap.v(14),
         Text(

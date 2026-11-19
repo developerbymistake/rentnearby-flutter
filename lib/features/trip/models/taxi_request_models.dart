@@ -119,11 +119,14 @@ enum ReasonChip with WireEnum {
 }
 
 class TaxiSeats {
-  static const List<int> options = [4, 6, 7];
+  static const List<int> options = [4, 6, 7, 12];
+  static const int maxTravellers = 12;
 
-  static int forTravellers(int travellers) => travellers <= 4 ? 4 : (travellers <= 6 ? 6 : 7);
+  static int forTravellers(int travellers) => options.firstWhere((o) => o >= travellers, orElse: () => options.last);
 
   static int snap(int seats) => options.contains(seats) ? seats : forTravellers(seats);
+
+  static int atLeast(int seats, int travellers) => seats >= travellers ? seats : forTravellers(travellers);
 }
 
 int _int(Object? v, [int fallback = 0]) => v is num ? v.toInt() : fallback;
@@ -323,6 +326,8 @@ class TaxiBooking {
   final int? dayNumber;
   final bool canCancel;
   final bool canEnd;
+  final bool? canRateWire;
+  final bool? leftDuringTripWire;
 
   const TaxiBooking({
     required this.id,
@@ -332,6 +337,8 @@ class TaxiBooking {
     required this.dayNumber,
     required this.canCancel,
     required this.canEnd,
+    this.canRateWire,
+    this.leftDuringTripWire,
   });
 
   factory TaxiBooking.fromJson(Map<String, dynamic> j) => TaxiBooking(
@@ -342,6 +349,8 @@ class TaxiBooking {
         dayNumber: j['dayNumber'] is num ? (j['dayNumber'] as num).toInt() : null,
         canCancel: _bool(j['canCancel']),
         canEnd: _bool(j['canEnd']),
+        canRateWire: j['canRate'] is bool ? j['canRate'] as bool : null,
+        leftDuringTripWire: j['leftDuringTrip'] is bool ? j['leftDuringTrip'] as bool : null,
       );
 
   Map<String, dynamic> toJson() => {
@@ -352,7 +361,13 @@ class TaxiBooking {
         'dayNumber': dayNumber,
         'canCancel': canCancel,
         'canEnd': canEnd,
+        if (canRateWire != null) 'canRate': canRateWire,
+        if (leftDuringTripWire != null) 'leftDuringTrip': leftDuringTripWire,
       };
+
+  bool get canRate => canRateWire == true;
+
+  bool get leftDuringTrip => leftDuringTripWire == true;
 
   BookingState get state => BookingState.parse(stateText);
 
@@ -513,6 +528,8 @@ class TaxiRequest {
   DateTime? get to => _day(dateTo);
 
   DateTime? get waitUntilAt => _instant(waitUntil);
+
+  DateTime? get updatedAtAt => _instant(updatedAt);
 
   TaxiBooking? get activeBooking {
     final b = booking;

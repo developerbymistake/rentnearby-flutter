@@ -173,8 +173,6 @@ class TripPlanController extends GetxController {
   int? _dayCountWas;
   Worker? _netWorker;
   AppLifecycleListener? _lifecycle;
-  TripPlan? _pendingRetry;
-  DateTime? _pendingRetryBase;
   // Base of an adopted offline copy; saves send it so a newer server plan answers TripChanged.
   DateTime? _copyBase;
   int _autoJobs = 0;
@@ -1035,7 +1033,16 @@ class TripPlanController extends GetxController {
   List<TripEasyRowInfo> get easyRows {
     final p = plan.value;
     if (p == null) return const [];
-    return TripEasyRules.rows(p, enquiryList.toList(), trip.value?.journeys ?? const []);
+    return TripEasyRules.rows(p, enquiryList.toList(), trip.value?.journeys ?? const [],
+        taxiRequest: trip.value?.taxiRequest, taxiCanRate: taxiCanRate);
+  }
+
+  // O13: a request cancelled during the trip whose booking the server still lets the traveller rate.
+  bool get taxiCanRate {
+    final ref = trip.value?.taxiRequest;
+    if (ref == null || ref.state != 'Cancelled' || !Get.isRegistered<TripTaxiRequestController>()) return false;
+    final req = Get.find<TripTaxiRequestController>().request.value;
+    return req != null && req.id == ref.requestId && req.booking?.canRate == true;
   }
 
   ({int done, int total, int percent}) get easyProgress {
@@ -1231,8 +1238,6 @@ class TripPlanController extends GetxController {
   List<TripEnquiryModel> get undatedBookedRows =>
       hasDates ? const [] : ([for (final e in enquiryList) if (e.isOpen && e.isBooked) e]..sort(_newestFirst));
 
-  bool get hasPendingCopy => _pendingRetry != null;
-
   // Either the last trip call failed on the network or the phone has no signal.
   bool get netOff =>
       offline.value || (Get.isRegistered<LocationController>() && Get.find<LocationController>().isOffline.value);
@@ -1240,19 +1245,9 @@ class TripPlanController extends GetxController {
   Future<void> retryConnection() async {
     if (trip.value == null) return;
     await refreshEnquiries();
-    if (!offline.value && hasPendingCopy) await retrySave();
   }
 
-  Future<bool> retrySave() {
-    final copy = _pendingRetry;
-    if (copy != null && !isReadOnly) {
-      _pendingRetry = null;
-      _copyBase = _pendingRetryBase;
-      _pendingRetryBase = null;
-      plan.value = copy;
-    }
-    return saveNow();
-  }
+  Future<bool> retrySave() => saveNow();
 
   @visibleForTesting
   String? get lastToast => _lastToast;
@@ -1494,7 +1489,7 @@ class TripPlanController extends GetxController {
 
   void _loadBookedTaxi(TripModel? t) {
     final ref = t?.taxiRequest;
-    if (!_bookedView(ref)) return;
+    if (!_bookedView(ref) && ref?.state != 'Cancelled') return;
     final key = '${ref!.requestId}#${ref.version}';
     final have = Get.isRegistered<TripTaxiRequestController>() ? Get.find<TripTaxiRequestController>().request.value : null;
     if (have != null && have.id == ref.requestId && have.version >= ref.version) return;
@@ -1690,9 +1685,14 @@ class TripPlanController extends GetxController {
     trip.value = cached;
     plan.value = cached.plan;
     final pending = StorageService.getTripPending(tripId);
-    if (pending != null) {
+    final base = pending?.baseUpdatedAt;
+    if (pending != null && base != null) {
       try {
-        plan.value = TripPlan.fromJson(pending.plan);
+        final local = TripPlan.fromJson(pending.plan);
+        if (!cached.planLock.locked || _fitsLock(local, cached.plan)) {
+          plan.value = local;
+          _copyBase = base;
+        }
       } catch (_) {}
     }
     enquiryList.assignAll(cached.enquiries);
@@ -1854,8 +1854,6 @@ class TripPlanController extends GetxController {
     enquiriesLoading.value = false;
     enquiriesFailed.value = false;
     startChangedNotes.clear();
-    _pendingRetry = null;
-    _pendingRetryBase = null;
     _copyBase = null;
     offline.value = false;
     picked = null;
@@ -2205,6 +2203,7 @@ class TripPlanController extends GetxController {
 
   bool _adoptPendingCopy(TripModel t) {
     plan.value = t.plan;
+    _copyBase = null;
     final pending = StorageService.getTripPending(t.id);
     if (pending == null) return false;
     TripPlan? local;
@@ -2214,19 +2213,27 @@ class TripPlanController extends GetxController {
       local = null;
     }
     final base = pending.baseUpdatedAt;
-    if (local == null || t.isCompleted) {
+    if (local == null || t.isCompleted || jsonEncode(local.toJson()) == jsonEncode(t.plan.toJson())) {
       StorageService.clearTripPending(t.id);
       return false;
     }
-    if (base != null && base.isAtSameMomentAs(t.updatedAt)) {
+    final lockRefuses = t.planLock.locked && !_fitsLock(local, t.plan);
+    if (!lockRefuses && base != null && base.isAtSameMomentAs(t.updatedAt)) {
       plan.value = local;
+      _copyBase = base;
       return true;
     }
-    _pendingRetry = local;
-    _pendingRetryBase = base;
-    saveFailed.value = true;
+    StorageService.clearTripPending(t.id);
+    _toastSave(lockRefuses
+        ? TripStringsSync.lockedNotSaved
+        : base == null
+            ? TripStringsSync.olderEditNotSaved
+            : TripStringsSync.changedElsewhereNotSaved);
     return false;
   }
+
+  static bool _fitsLock(TripPlan local, TripPlan server) =>
+      jsonEncode(keepServerStructure(local, server).toJson()) == jsonEncode(local.toJson());
 
   bool _isGone(Object e) {
     final type = DioErrorMapper.errorType(e);
@@ -4331,7 +4338,6 @@ class TripPlanController extends GetxController {
       _adoptDistrict(saved);
       unavailableCities.clear();
       saveFailed.value = false;
-      _pendingRetry = null;
       if (identical(plan.value, p) && !(_saveTimer?.isActive ?? false)) {
         StorageService.clearTripPending(saved.id);
       } else {

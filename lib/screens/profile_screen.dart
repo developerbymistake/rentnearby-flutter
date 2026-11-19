@@ -672,8 +672,53 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
       ),
     );
-    await _auth.deleteAccount();
-    if (mounted && Navigator.canPop(context)) Navigator.pop(context);
+    final blocked = await _auth.deleteAccount();
+    if (!mounted) return;
+    if (Navigator.canPop(context)) Navigator.pop(context);
+    if (blocked != null) {
+      showDialog(context: context, builder: (ctx) => AccountDeleteBlockedDialog(reasons: blocked, onClose: () => Navigator.pop(ctx)));
+    }
+  }
+}
+
+class AccountDeleteBlockedDialog extends StatelessWidget {
+  const AccountDeleteBlockedDialog({super.key, required this.reasons, required this.onClose});
+
+  final List<String> reasons;
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    final tone = _ProfileScreenState._bad;
+    return _ProfileScreenState._dialog(
+      RepliesEntrance(
+        child: _ProfileSheet(
+          tone: tone,
+          art: ListingArt.clipboard,
+          title: 'Cannot delete yet',
+          dialog: true,
+          primaryLabel: 'OK',
+          onPrimary: onClose,
+          secondaryLabel: 'Close',
+          onSecondary: onClose,
+          extra: Padding(
+            padding: EdgeInsets.only(top: DS.gv(14)),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                for (final r in reasons)
+                  Container(
+                    margin: EdgeInsets.only(bottom: DS.gv(8)),
+                    padding: DS.sym(h: 16, v: 12),
+                    decoration: BoxDecoration(color: tone.tint, borderRadius: DS.circular(16)),
+                    child: Text(r, style: Ink3D.text(13, FontWeight.w500, tone.text, height: 1.5, letterSpacing: 0)),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 

@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:bakhli/design/design.dart';
 import 'package:get/get.dart';
@@ -5,16 +7,21 @@ import '../controllers/trip_plan_controller.dart';
 import '../trip_strings_dayplan.dart';
 import '../trip_strings_mca_a3.dart';
 import '../trip_strings_mca_n2.dart';
+import 'package:bakhli/design/extra/trip_plan_look.dart';
+import '../utils/trip_format.dart';
 import 'trip_leg_menu_sheet.dart';
 
 class TripLegHeader extends StatelessWidget {
-  const TripLegHeader({super.key, required this.legIndex, this.anchorKey, this.folded = false, this.onToggle, this.onCustomize});
+  const TripLegHeader({super.key, required this.legIndex, this.anchorKey, this.folded = false, this.onToggle, this.onCustomize, this.body = const [], this.gapBelow = 0});
+
+  final List<Widget> body;
 
   final int legIndex;
   final GlobalKey? anchorKey;
   final bool folded;
   final VoidCallback? onToggle;
   final VoidCallback? onCustomize;
+  final double gapBelow;
 
   @override
   Widget build(BuildContext context) {
@@ -27,7 +34,9 @@ class TripLegHeader extends StatelessWidget {
       final a = p.legStart(legIndex);
       final b = p.legEnd(legIndex);
       final spots = p.legSpotCount(legIndex);
-      final range = TripStringsMcaA3.dayRangeWithDates(a, b, c.dateOf(a), c.dateOf(b));
+      final from = c.dateOf(a);
+      final to = c.dateOf(b);
+      final range = TripStringsDayplan.legRange(a, b, from == null || to == null ? null : TripFormat.compactRange(from, to));
       final nights = TripStringsMcaA3.nights(p.legDayCount(legIndex));
       final menu = !c.isReadOnly && !c.needsUpdate.value;
       final unavailable = c.legUnavailable(legIndex);
@@ -46,6 +55,8 @@ class TripLegHeader extends StatelessWidget {
             onToggle: onToggle,
             onCustomize: onCustomize,
             onMenu: menu ? () => TripLegMenuSheet.show(context, legIndex) : null,
+            body: body,
+            gapBelow: unavailable ? 0 : gapBelow,
           ),
           if (unavailable)
             Banner3D(
@@ -74,8 +85,12 @@ class TripLegSectionHeader extends StatelessWidget {
     this.onToggle,
     this.onCustomize,
     this.onMenu,
+    this.body = const [],
+    this.gapBelow = 0,
   });
 
+  final List<Widget> body;
+  final double gapBelow;
   final String title;
   final String rangeLine;
   final String detailLine;
@@ -103,29 +118,39 @@ class TripLegSectionHeader extends StatelessWidget {
   );
   static const BorderRadius _layerRadius = BorderRadius.only(bottomLeft: Radius.circular(18), bottomRight: Radius.circular(18));
 
+  static const BorderRadius lockRadius = BorderRadius.only(
+    topLeft: Radius.circular(8),
+    topRight: Radius.circular(28),
+    bottomLeft: Radius.circular(8),
+    bottomRight: Radius.circular(8),
+  );
+
+  static const BorderRadius sectionRadius = BorderRadius.only(
+    topLeft: Radius.circular(8),
+    topRight: Radius.circular(40),
+    bottomLeft: Radius.circular(8),
+    bottomRight: Radius.circular(8),
+  );
+
   @override
   Widget build(BuildContext context) {
     final tone = ListingTone.indigo;
+    final palette = ListingPalette.indigo;
     final scaler = MediaQuery.textScalerOf(context);
-    final narrow = MediaQuery.sizeOf(context).width < 340;
-    final artSize = narrow ? 68.0 : 76.0;
-    final left = DS.s(narrow ? 88 : 96);
-    final side = DS.s(14);
+    const artSize = 68.0;
+    final side = DS.s(18);
     final btn = DS.s(40);
     final gap = DS.s(10);
     final pillPad = DS.s(18);
-    final labelStyle = Ink3D.text(13, FontWeight.w700, tone.text);
-    final foldStyle = Ink3D.text(12.5, FontWeight.w700, tone.text);
+    final labelStyle = Ink3D.text(13, FontWeight.w700, tone.text, letterSpacing: 0);
+    final foldStyle = Ink3D.text(12.5, FontWeight.w700, tone.text, letterSpacing: 0);
     final foldLabel = folded ? TripStringsDayplan.show : TripStringsDayplan.hide;
     final foldW = KitText.widthOf(foldLabel, foldStyle, scaler) + DS.s(14 + 12 + 6 + 18);
-    final customizeW = KitText.widthOf(TripStringsDayplan.customize, labelStyle, scaler) + pillPad * 2;
-    final hasCustomize = onCustomize != null;
     final hasMenu = onMenu != null;
+    final customizeW = onCustomize == null ? 0.0 : KitText.widthOf(TripStringsDayplan.customize, labelStyle, scaler) + pillPad * 2;
     final ctlW = (hasMenu ? btn + gap : 0) + foldW;
     final minText = DS.s(96);
-
-    final lines = folded ? '$rangeLine\n$foldedLine' : '$rangeLine\n$detailLine';
-    final textStyle = Ink3D.text(12.5, FontWeight.w500, Colors.white.withValues(alpha: Alpha.v92), height: 1.5);
+    final lineStyle = Ink3D.text(12.5, FontWeight.w500, DesignColors.tint(Colors.white, Alpha.v93), height: 1.55, letterSpacing: 0);
 
     final menuBtn = !hasMenu
         ? null
@@ -140,7 +165,7 @@ class TripLegSectionHeader extends StatelessWidget {
                 width: btn,
                 height: btn,
                 decoration: BoxDecoration(color: DesignColors.surface, shape: BoxShape.circle, boxShadow: DS.shadows(Ink3D.whiteBtn)),
-                child: Icon(Icons.more_vert_rounded, color: tone.text),
+                child: Icon(Icons.more_vert_rounded, size: DS.s(20), color: tone.text),
               ),
             ),
           );
@@ -162,45 +187,41 @@ class TripLegSectionHeader extends StatelessWidget {
         ),
       ),
     );
-    final customizeBtn = !hasCustomize
+    final customizeBtn = onCustomize == null
         ? null
         : GestureDetector(
             behavior: HitTestBehavior.opaque,
             onTap: locked ? () {} : null,
             child: Tap3D(
-            tapKey: customizeKey,
-            onTap: locked ? null : onCustomize,
-            label: TripStringsDayplan.customize,
-            child: Container(
-              height: btn,
-              padding: EdgeInsets.symmetric(horizontal: pillPad),
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: locked ? Colors.white.withValues(alpha: Alpha.v40) : DesignColors.surface,
-                borderRadius: BorderRadius.circular(btn / 2),
-                boxShadow: locked ? null : DS.shadows(Ink3D.whiteBtn),
-              ),
-              child: ExcludeSemantics(
-                child: Text(
-                  TripStringsDayplan.customize,
-                  maxLines: 1,
-                  style: locked ? labelStyle.copyWith(color: ListingPalette.indigo.tint) : labelStyle,
+              tapKey: customizeKey,
+              onTap: locked ? null : onCustomize,
+              label: TripStringsDayplan.customize,
+              child: Container(
+                height: btn,
+                padding: EdgeInsets.symmetric(horizontal: pillPad),
+                decoration: BoxDecoration(
+                  color: locked ? DesignColors.tint(Colors.white, Alpha.v40) : DesignColors.surface,
+                  borderRadius: BorderRadius.circular(btn / 2),
+                  boxShadow: locked ? null : DS.shadows(Ink3D.whiteBtn),
+                ),
+                child: Center(
+                  widthFactor: 1,
+                  child: ExcludeSemantics(
+                    child: Text(
+                      TripStringsDayplan.customize,
+                      maxLines: 1,
+                      style: locked ? labelStyle.copyWith(color: palette.tint) : labelStyle,
+                    ),
+                  ),
                 ),
               ),
-            ),
             ),
           );
 
     final controls = <Widget>[?menuBtn, foldBtn];
-    final text = Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(title, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(17, FontWeight.w700, Colors.white, height: 1.2)),
-        SizedBox(height: DS.s(2)),
-        Text(lines, key: detailKey, maxLines: 4, overflow: TextOverflow.ellipsis, style: textStyle),
-      ],
-    );
+    final titleText = Text(title, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(17, FontWeight.w700, Colors.white, height: 1.3, letterSpacing: 0));
+    final rangeText = Text(rangeLine, maxLines: 2, overflow: TextOverflow.ellipsis, style: lineStyle);
+    final detailText = Text(folded ? foldedLine : detailLine, key: detailKey, maxLines: 3, overflow: TextOverflow.ellipsis, style: lineStyle);
 
     Widget ctl(List<Widget> w) => Row(
           mainAxisSize: MainAxisSize.min,
@@ -210,61 +231,86 @@ class TripLegSectionHeader extends StatelessWidget {
         );
 
     Widget row(double room) {
-      final inline = customizeBtn != null && room - customizeW - gap - ctlW - gap >= minText;
       final beside = room - ctlW - gap >= minText;
-      if (inline) {
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(child: text),
-            SizedBox(width: gap),
-            ctl([customizeBtn, ...controls]),
-          ],
-        );
-      }
-      if (beside) {
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(child: text),
-                SizedBox(width: gap),
-                ctl(controls),
-              ],
-            ),
-            if (customizeBtn != null) Padding(padding: EdgeInsets.only(top: DS.s(12)), child: customizeBtn),
-          ],
-        );
-      }
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          text,
-          Padding(
-            padding: EdgeInsets.only(top: DS.s(12)),
-            child: Wrap(spacing: gap, runSpacing: DS.s(10), children: [?customizeBtn, ...controls]),
-          ),
+          if (beside)
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [titleText, rangeText]),
+                ),
+                SizedBox(width: gap),
+                ctl(controls),
+              ],
+            )
+          else ...[titleText, rangeText],
+          detailText,
+          if (beside && customizeBtn != null)
+            Padding(padding: EdgeInsets.only(top: DS.s(12)), child: customizeBtn)
+          else if (!beside)
+            Padding(
+              padding: EdgeInsets.only(top: DS.s(12)),
+              child: room >= customizeW + gap + ctlW
+                  ? Row(children: [?customizeBtn, const Spacer(), ctl(controls)])
+                  : Wrap(spacing: gap, runSpacing: DS.s(10), children: [?customizeBtn, ...controls]),
+            ),
         ],
       );
     }
 
     final card = Container(
       key: cardKey,
-      constraints: BoxConstraints(minHeight: DS.s(narrow ? 76 : 80)),
-      decoration: BoxDecoration(borderRadius: DS.br(folded ? foldedRadius : openRadius), gradient: tone.gradient, boxShadow: tone.glow()),
+      constraints: BoxConstraints(minHeight: DS.s(96)),
+      decoration: BoxDecoration(borderRadius: DS.br(folded ? foldedRadius : openRadius), gradient: tone.gradient),
       child: Padding(
-        padding: EdgeInsets.fromLTRB(left, DS.s(16), DS.s(12), DS.s(16)),
+        padding: EdgeInsets.fromLTRB(DS.s(92), DS.s(14), DS.s(14), DS.s(16)),
         child: LayoutBuilder(builder: (_, box) => row(box.maxWidth)),
       ),
     );
-    final top = DS.s(40);
+    final sectionBody = !folded && body.isNotEmpty
+        ? Stack(
+            children: [
+              Positioned(
+                left: DS.s(14),
+                top: 0,
+                bottom: DS.s(36),
+                width: DS.s(4),
+                child: DecoratedBox(decoration: BoxDecoration(color: TripLook.rail, borderRadius: DS.circular(2))),
+              ),
+              Padding(
+                padding: EdgeInsets.fromLTRB(DS.s(30), 0, DS.s(12), DS.s(24)),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: body),
+              ),
+            ],
+          )
+        : null;
+    final section = DecoratedBox(
+      decoration: BoxDecoration(
+        color: palette.tint,
+        border: Border.all(color: palette.line, width: DS.s(2)),
+        borderRadius: DS.br(sectionRadius),
+        boxShadow: DS.shadows(TripLook.sectionShadow),
+      ),
+      child: Padding(
+        padding: EdgeInsets.all(DS.s(2)),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            GestureDetector(key: rowKey, behavior: HitTestBehavior.opaque, onTap: onToggle, child: card),
+            ?sectionBody,
+          ],
+        ),
+      ),
+    );
+    final top = DS.gv(44);
     final layerH = DS.s(16);
-    final bottom = DS.gv(8) + (folded ? DS.s(26) : 0);
-    final palette = ListingPalette.indigo;
+    final layerRoom = folded ? DS.s(34) : 0.0;
+    final bottom = math.max(0.0, layerRoom - gapBelow);
     Widget layer(double inset, double drop, Color color, List<BoxShadow>? shadow) => Positioned(
           left: side + DS.s(inset),
           right: side + DS.s(inset),
@@ -282,28 +328,25 @@ class TripLegSectionHeader extends StatelessWidget {
               child: Stack(
                 clipBehavior: Clip.none,
                 children: [
-                  layer(28, 22, palette.line, null),
+                  layer(28, 22, Color.lerp(palette.line, palette.tint, 0.3)!, null),
                   layer(14, 12, Color.lerp(palette.line, palette.g2, 0.22)!, DS.shadows([BoxShadow(color: palette.shadow.withValues(alpha: Alpha.v25), offset: const Offset(0, 3), blurRadius: 6)])),
                 ],
               ),
             ),
           ),
-        Padding(
-          padding: EdgeInsets.fromLTRB(side, top, side, bottom),
-          child: GestureDetector(key: rowKey, behavior: HitTestBehavior.opaque, onTap: onToggle, child: card),
-        ),
+        Padding(padding: EdgeInsets.fromLTRB(side, top, side, bottom), child: section),
         Positioned(
-          left: side + DS.s(10),
-          top: top - DS.s(22),
+          left: side + DS.s(14),
+          top: top - DS.s(12),
           child: IgnorePointer(
             child: Stack(
-              alignment: Alignment.center,
+              clipBehavior: Clip.none,
               children: [
                 DecoratedBox(
-                  decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withValues(alpha: Alpha.v24)),
-                  child: SizedBox(width: DS.s(artSize + 6), height: DS.s(artSize + 6)),
+                  decoration: BoxDecoration(shape: BoxShape.circle, color: DesignColors.tint(Colors.white, Alpha.v22)),
+                  child: SizedBox(width: DS.s(66), height: DS.s(66)),
                 ),
-                Art3D(asset: ListingArt.mountain, size: artSize),
+                Positioned(left: -DS.s(2), top: -DS.s(2), child: const Art3D(asset: ListingArt.mountain, size: artSize)),
               ],
             ),
           ),

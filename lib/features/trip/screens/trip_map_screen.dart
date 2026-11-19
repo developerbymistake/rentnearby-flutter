@@ -11,15 +11,15 @@ import '../models/trip_plan_model.dart';
 import '../models/trip_plan_result_model.dart';
 import '../trip_strings.dart';
 import '../utils/trip_easy_rules.dart';
-import '../trip_strings_mca_a4.dart';
-import '../trip_strings_mcd_a2.dart';
 import '../trip_strings_city.dart';
 import '../trip_strings_steps_a3.dart';
 import '../utils/trip_map_geo.dart';
 import '../utils/trip_map_rules.dart';
 import '../widgets/trip_day_chips.dart';
-import '../widgets/trip_map_chips.dart';
-import '../widgets/trip_map_day_card.dart';
+import 'package:bakhli/design/extra/trip_plan_look.dart';
+import '../trip_strings_dayplan.dart';
+import '../trip_strings_v2_plan.dart';
+import '../widgets/trip_plan_header.dart';
 import '../widgets/trip_not_found_view.dart';
 
 class TripMapScreen extends StatefulWidget {
@@ -53,7 +53,8 @@ class _TripMapScreenState extends State<TripMapScreen> with TickerProviderStateM
   final _changeLabels = <int, List<Symbol>>{};
   bool _wideZoom = false;
   final _topKey = GlobalKey();
-  final _cardKey = GlobalKey();
+  static const List<Color> _routeColors = [TripLook.headerGlow, TripLook.mapRouteDay2, TripLook.dayCyan];
+  static Color _routeColor(int day) => _routeColors[(day - 1) % _routeColors.length];
   String? _drawnStaySignature;
   bool _stayPinReady = false;
   bool _carPinReady = false;
@@ -475,15 +476,17 @@ class _TripMapScreenState extends State<TripMapScreen> with TickerProviderStateM
   LineLayerProperties _lineProps(int day, {required bool glow}) {
     final selected = _isSelected(day);
     final hidden = !selected && _hidesOtherLegs;
-    final color = TripKit.hexOf(TripKit.dayColor(day));
+    final color = TripKit.hexOf(_routeColor(day));
     if (glow) {
       return LineLayerProperties(
           lineColor: color, lineWidth: 8, lineOpacity: hidden ? 0 : (selected ? 0.18 : 0.05), lineBlur: 3);
     }
     return LineLayerProperties(
       lineColor: color,
-      lineWidth: 4,
-      lineOpacity: hidden ? 0 : (selected ? (_lighterDays ? 0.6 : 0.9) : 0.25),
+      lineWidth: 5,
+      lineCap: 'round',
+      lineJoin: 'round',
+      lineOpacity: hidden ? 0 : (selected ? (_lighterDays ? 0.6 : 1) : 0.25),
       lineDasharray: _hasRoute[day] == true ? null : [2, 2],
     );
   }
@@ -733,10 +736,11 @@ class _TripMapScreenState extends State<TripMapScreen> with TickerProviderStateM
     final circleOpts = <CircleOptions>[];
     final symbolOpts = <SymbolOptions>[];
     final spotDays = <int>[];
+    var stopNo = 0;
     for (final day in p.days) {
       final d = day.day;
       final opacity = _dayOpacity(d);
-      final color = TripKit.hexOf(TripKit.dayColor(d));
+      final color = TripKit.hexOf(_routeColor(d));
       final route = _plan.routeFor(d);
       _hasRoute[d] = route != null;
       _drawnRoutes[d] = route;
@@ -749,18 +753,17 @@ class _TripMapScreenState extends State<TripMapScreen> with TickerProviderStateM
         spotDays.add(d);
         circleOpts.add(CircleOptions(
           geometry: at,
-          circleRadius: 12,
+          circleRadius: 14,
           circleColor: color,
           circleOpacity: opacity,
-          circleStrokeColor: _white,
-          circleStrokeWidth: 2,
-          circleStrokeOpacity: _ringOpacity(opacity),
+          circleStrokeWidth: 0,
         ));
+        stopNo++;
         symbolOpts.add(SymbolOptions(
           geometry: at,
-          textField: '${i + 1}',
+          textField: '$stopNo',
           fontNames: const ['Noto Sans Medium'],
-          textSize: 11,
+          textSize: 13,
           textColor: _white,
           textOpacity: opacity,
         ));
@@ -853,7 +856,7 @@ class _TripMapScreenState extends State<TripMapScreen> with TickerProviderStateM
     }
     final size = MediaQuery.sizeOf(context);
     var top = _overlayHeight(_topKey, DS.s(120)) + DS.s(24);
-    var bottom = _overlayHeight(_cardKey, DS.s(220)) + DS.s(24);
+    var bottom = DS.s(24);
     final room = size.height - DS.s(120);
     if (top + bottom > room && room > 0) {
       final scale = room / (top + bottom);
@@ -941,7 +944,6 @@ class _TripMapScreenState extends State<TripMapScreen> with TickerProviderStateM
           ),
           Positioned.fill(child: _buildState()),
           Positioned(left: 0, right: 0, top: 0, child: KeyedSubtree(key: _topKey, child: _buildTop(context))),
-          Positioned(left: 0, right: 0, bottom: 0, child: KeyedSubtree(key: _cardKey, child: _buildBottomCard(context))),
         ],
       ),
     );
@@ -950,79 +952,61 @@ class _TripMapScreenState extends State<TripMapScreen> with TickerProviderStateM
   Widget _buildMapPlaceholder() => const SizedBox.expand(child: TemplatePlaceholder(height: double.infinity, radius: 0));
 
   Widget _buildTop(BuildContext context) {
-    final chips = Obx(() {
+    return Obx(() {
       _plan.result.value;
       final p = _plan.plan.value;
-      final count = _plan.dayCount;
       final selected = _selected;
       final leg = _plan.selectedMapLeg.value;
-      final multi = p != null && p.isMultiCity;
       final missing = p != null &&
           !_plan.plannerOff.value &&
           (selected != TripDayChips.all
               ? _dayRouteMissing(selected)
               : p.days.any((d) => (leg == 0 || p.legIndexOf(d.day) == leg) && _dayRouteMissing(d.day)));
-      return TemplateEntrance(
-        animation: templateInterval(_enter, 1, 3),
-        animationController: _enter,
-        child: Padding(
-          padding: EdgeInsets.only(top: DS.gv(2), bottom: DS.gv(2)),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (multi)
-                TripMapChips(
-                  onAll: () => _select(TripDayChips.all),
-                  onLeg: _selectLeg,
-                  onDay: _select,
-                  padding: DS.sym(h: 18),
-                )
-              else if (count > 1)
-                TripDayChips(
-                  dayCount: count,
-                  selected: selected,
-                  onChanged: _select,
-                  includeAll: true,
-                  compact: true,
-                  allFirst: true,
-                  padding: DS.sym(h: 18),
-                ),
-              if (missing)
-                Padding(
-                  padding: EdgeInsets.fromLTRB(DS.s(18), DS.gv(6), DS.s(18), 0),
-                  child: _routeMissingChip(),
-                ),
-            ],
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          MediaQuery.withClampedTextScaling(
+            maxScaleFactor: 1.3,
+            child: TripFlowHeader(
+              title: TripStringsV2Plan.map,
+              subtitle: TripStringsDayplan.mapRouteSub,
+              onBack: () => Get.back(),
+              trailing: [if (p != null && p.days.length > 1) _dayMenu(p)],
+            ),
           ),
-        ),
+          if (missing)
+            Padding(
+              padding: EdgeInsets.fromLTRB(DS.s(18), DS.gv(8), DS.s(18), 0),
+              child: Align(alignment: Alignment.centerLeft, child: _routeMissingChip()),
+            ),
+        ],
       );
     });
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        ColoredBox(color: DesignColors.surface, child: SizedBox(height: MediaQuery.paddingOf(context).top)),
-        Obx(() {
-          final p = _plan.plan.value;
-          final sub = p == null
-              ? null
-              : _plan.isMultiCity
-                  ? TripStringsMcdA2.mapSubtitle(TripStringsMcaA4.routeOf(p.legCities))
-                  : TripStrings.tripMapSubtitle(_plan.cityName);
-          return MediaQuery.withClampedTextScaling(
-            maxScaleFactor: 1.3,
-            child: PageHeader3D(
-              tone: ListingTone.indigo,
-              title: TripStrings.tripMap,
-              subtitle: sub,
-              art: ListingArt.worldMap,
-              artSize: 76,
-              inlineTitle: true,
-              surface: true,
-              onBack: () => Get.back(),
-              bottom: chips,
+  }
+
+  Widget _dayMenu(TripPlan p) {
+    return PopupMenuButton<int>(
+      icon: const Icon(Icons.more_vert_rounded, color: DesignColors.surface),
+      iconSize: DS.s(22),
+      padding: DS.all(8),
+      color: DesignColors.surface,
+      shape: RoundedRectangleBorder(borderRadius: DS.circular(20)),
+      offset: Offset(0, DS.s(48)),
+      onSelected: _select,
+      itemBuilder: (_) => [
+        PopupMenuItem(value: TripDayChips.all, child: Text(TripStringsV2Plan.allCities, style: Ink3D.text(15, FontWeight.w600, Ink3D.title, letterSpacing: 0))),
+        for (final d in p.days)
+          PopupMenuItem(
+            value: d.day,
+            child: Row(
+              children: [
+                Container(width: DS.s(12), height: DS.s(12), decoration: BoxDecoration(color: _routeColor(d.day), shape: BoxShape.circle)),
+                Gap.h(10),
+                Text(TripStringsDayplan.dayLabel(d.day), style: Ink3D.text(15, FontWeight.w600, Ink3D.title, letterSpacing: 0)),
+              ],
             ),
-          );
-        }),
+          ),
       ],
     );
   }
@@ -1050,28 +1034,6 @@ class _TripMapScreenState extends State<TripMapScreen> with TickerProviderStateM
         ],
       ),
     );
-  }
-
-  Widget _buildBottomCard(BuildContext context) {
-    return Obx(() {
-      final p = _plan.plan.value;
-      _plan.trip.value;
-      if (p == null || p.days.isEmpty || _plan.plannerOff.value || _plan.openFailed.value || _plan.tripGone.value) {
-        return const SizedBox.shrink();
-      }
-      if (_waitingForTrip) return const SizedBox.shrink();
-      return TemplateEntrance(
-        animation: templateInterval(_enter, 2, 3),
-        animationController: _enter,
-        child: TripMapDayCard(
-          dayCount: p.days.length,
-          selected: _selected,
-          onDaySelected: _select,
-          selectedLeg: _plan.selectedMapLeg.value,
-          onLegSelected: _selectLeg,
-        ),
-      );
-    });
   }
 
   Widget _buildState() {

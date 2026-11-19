@@ -50,6 +50,9 @@ class TripStringsTaxiStatus {
   static const String endedSub = 'You can send a new taxi request any time.';
   static const String requestAgain = 'Request again';
   static const String actionFailed = 'Something went wrong. Please try again.';
+  static const String driverUnavailable = 'This driver is no longer available. Choose another driver.';
+  static const String driverDidNotConfirm = 'This driver did not confirm. Choose another driver.';
+  static const String tooFast = 'Please wait a moment and try again.';
   static const String actionOffline = 'No connection. Please try again.';
 
   static String asked(int n, String pickup) {

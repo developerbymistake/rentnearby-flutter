@@ -10,7 +10,6 @@ import '../models/trip_spot_category.dart';
 import '../screens/trip_edit_spot_sheet.dart';
 import '../trip_strings_v2_plan.dart';
 import '../trip_strings_wizard.dart';
-import '../utils/trip_day_load.dart';
 import '../utils/trip_day_timeline.dart';
 import '../utils/trip_days_rules.dart';
 import '../utils/trip_format.dart';
@@ -19,8 +18,9 @@ import 'trip_leg_menu_sheet.dart';
 
 class TripDaySpotList extends StatelessWidget {
   final int day;
+  final bool inSection;
 
-  const TripDaySpotList(this.day, {super.key});
+  const TripDaySpotList(this.day, {super.key, this.inSection = false});
 
   static const Key headerKey = ValueKey('day-header');
   static const Key chipsKey = ValueKey('day-chips');
@@ -36,7 +36,6 @@ class TripDaySpotList extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = TripPlanController.to;
     final color = TripLook.dayColor(day);
-    final tone = ListingTone.indigo;
     return Obx(() {
       final plan = c.plan.value;
       c.result.value;
@@ -51,7 +50,10 @@ class TripDaySpotList extends StatelessWidget {
       ];
       final full = !TripDaysRules.canAddOnDay(plan, day);
       final narrow = MediaQuery.sizeOf(context).width < 340;
-      final artSize = narrow ? 62.0 : 72.0;
+      final artSize = narrow ? 56.0 : 63.0;
+      final side = inSection ? 0.0 : DS.s(18);
+      final top = DS.s(inSection ? 48 : 40);
+      final bottomPad = inSection ? 0.0 : DS.gv(16);
       return GestureDetector(
         behavior: HitTestBehavior.opaque,
         onLongPress: locked || c.editMode.value ? null : () => c.editMode.value = true,
@@ -59,12 +61,12 @@ class TripDaySpotList extends StatelessWidget {
           clipBehavior: Clip.none,
           children: [
             Padding(
-              padding: EdgeInsets.fromLTRB(DS.s(18), DS.s(40), DS.s(18), DS.gv(16)),
+              padding: EdgeInsets.fromLTRB(side, top, side, bottomPad),
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   color: DesignColors.surface,
                   borderRadius: _radius,
-                  boxShadow: [BoxShadow(color: tone.shadow, offset: DS.shadowOffset(const Offset(1.1, 6)), blurRadius: DS.shadowBlur(14))],
+                  boxShadow: DS.shadows(TripLook.dayCardShadow),
                 ),
                 child: ClipRRect(
                   borderRadius: _radius,
@@ -72,9 +74,9 @@ class TripDaySpotList extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      _header(c, plan, d, color, editing, DS.s(narrow ? 78.0 : 90.0)),
+                      _header(c, plan, d, color, editing, DS.s(narrow ? 78.0 : 88.0)),
                       Padding(
-                        padding: EdgeInsets.fromLTRB(DS.s(12), DS.s(10), DS.s(12), DS.s(10)),
+                        padding: EdgeInsets.only(bottom: DS.s(8)),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           mainAxisSize: MainAxisSize.min,
@@ -85,7 +87,7 @@ class TripDaySpotList extends StatelessWidget {
                               _spots(context, c, plan, d, color, locked, editing),
                             for (final text in closed)
                               Padding(
-                                padding: EdgeInsets.only(top: DS.gv(8)),
+                                padding: EdgeInsets.fromLTRB(DS.s(12), DS.gv(8), DS.s(12), 0),
                                 child: Row(
                                   children: [
                                     const Art3D(asset: ListingArt.clipboard, size: 20, shadowBlur: 2, shadowOffset: Offset(1, 2)),
@@ -96,7 +98,7 @@ class TripDaySpotList extends StatelessWidget {
                                   ],
                                 ),
                               ),
-                            if (editing) _editFooter(context, c, plan, d, full),
+                            if (editing) Padding(padding: DS.sym(h: 12), child: _editFooter(context, c, plan, d, full)),
                           ],
                         ),
                       ),
@@ -106,10 +108,10 @@ class TripDaySpotList extends StatelessWidget {
               ),
             ),
             Positioned(
-              left: DS.s(26),
-              top: DS.s(40 - artSize * 0.28),
+              left: side + DS.s(10),
+              top: top - DS.s(13),
               child: IgnorePointer(
-                child: Art3D(asset: ListingArt.calendar, size: artSize, halo: artSize + 4, haloColor: DesignColors.tint(DesignColors.surface, Alpha.v22)),
+                child: Art3D(asset: ListingArt.calendar, size: artSize, halo: artSize - 1, haloColor: DesignColors.tint(DesignColors.surface, Alpha.v22)),
               ),
             ),
           ],
@@ -137,13 +139,12 @@ class TripDaySpotList extends StatelessWidget {
     final date = c.dateOf(day);
     final dateText = date == null ? null : TripFormat.shortDate(date);
     final load = c.dayLoadMinutes(day);
-    final over = d.spots.isNotEmpty && TripDayLoad.isOver(load, c.settings.dayLimitMinutes);
     final title = TripStringsV2Plan.dayHeaderEmpty(day, dateText);
     const white = DesignColors.surface;
     return Container(
       key: headerKey,
       constraints: BoxConstraints(minHeight: DS.s(80)),
-      padding: EdgeInsets.fromLTRB(artRoom, DS.s(12), DS.s(12), DS.s(12)),
+      padding: EdgeInsets.fromLTRB(artRoom, DS.s(14), DS.s(14), DS.s(14)),
       decoration: BoxDecoration(gradient: ListingTone.indigo.gradient),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -151,6 +152,7 @@ class TripDaySpotList extends StatelessWidget {
         children: [
           Row(
             children: [
+              SizedBox(height: DS.s(40)),
               Container(
                 width: DS.s(14),
                 height: DS.s(14),
@@ -162,21 +164,20 @@ class TripDaySpotList extends StatelessWidget {
                   title,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: Ink3D.text(17, FontWeight.w700, white, height: 1.25),
+                  style: Ink3D.text(17, FontWeight.w700, white, height: 1.3, letterSpacing: 0),
                 ),
               ),
             ],
           ),
-          Gap.v(6),
+          Gap.v(2),
           Wrap(
             key: chipsKey,
-            spacing: DS.gh(6),
-            runSpacing: DS.gv(4),
+            spacing: DS.gh(10),
+            runSpacing: DS.gv(8),
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              if (d.spots.isNotEmpty) Text(TripFormat.duration(load), style: Ink3D.text(12.5, FontWeight.w600, white)),
+              if (d.spots.isNotEmpty) Text(TripFormat.hm(load), style: Ink3D.text(13, FontWeight.w600, white, letterSpacing: 0)),
               _pill(TripStringsV2Plan.placesCount(d.spots.length)),
-              if (over) _pill(TripStringsV2Plan.longDay, fill: TripLook.warningSurface, ink: TripLook.warningText),
               if (editing && plan.legDayCount(d.leg) > 1)
                 Tap3D(
                   onTap: () => _removeDay(c),
@@ -191,9 +192,10 @@ class TripDaySpotList extends StatelessWidget {
   }
 
   Widget _pill(String text, {Color? fill, Color? ink}) => Container(
-        padding: DS.sym(h: 10, v: 3),
+        height: DS.s(28),
+        padding: DS.sym(h: 10),
         decoration: BoxDecoration(color: fill ?? DesignColors.tint(DesignColors.surface, Alpha.v26), borderRadius: DS.circular(10)),
-        child: Text(text, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(11, FontWeight.w700, ink ?? DesignColors.surface)),
+        child: Center(widthFactor: 1, child: Text(text, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(12.5, FontWeight.w700, ink ?? DesignColors.surface, letterSpacing: 0))),
       );
 
   Widget _spots(
@@ -239,7 +241,7 @@ class TripDaySpotList extends StatelessWidget {
       children: [
         if (travel && prev != null)
           Container(
-            margin: EdgeInsets.only(bottom: DS.gv(6)),
+            margin: EdgeInsets.fromLTRB(DS.s(12), DS.s(8), DS.s(12), DS.gv(6)),
             padding: DS.sym(h: 10, v: 8),
             decoration: BoxDecoration(color: ListingTone.indigo.tint, borderRadius: DS.circular(12)),
             child: Row(
@@ -440,7 +442,7 @@ class _StopItem extends StatelessWidget {
   Widget build(BuildContext context) {
     final drive = driveMinutes;
     final narrow = MediaQuery.sizeOf(context).width < 340;
-    final timeW = MediaQuery.textScalerOf(context).scale(DS.s(narrow ? 52 : 60));
+    final timeW = MediaQuery.textScalerOf(context).scale(DS.s(narrow ? 56 : 66));
     return Material(
       color: DesignColors.surface,
       child: Column(
@@ -450,9 +452,9 @@ class _StopItem extends StatelessWidget {
             onTap: onTap,
             borderRadius: DS.circular(10),
             child: ConstrainedBox(
-              constraints: BoxConstraints(minHeight: DS.s(50)),
+              constraints: BoxConstraints(minHeight: DS.s(60)),
               child: Padding(
-                padding: DS.sym(v: 4),
+                padding: DS.insets(l: 12, t: 8, r: 8, b: 8),
                 child: Row(
                   children: [
                     if (editing)
@@ -465,27 +467,27 @@ class _StopItem extends StatelessWidget {
                       ),
                     SizedBox(
                       width: timeW,
-                      child: Text(time, maxLines: 1, style: Ink3D.text(11.5, FontWeight.w600, Ink3D.sub)),
+                      child: Text(time, maxLines: 1, style: Ink3D.text(12.5, FontWeight.w600, Ink3D.sub, letterSpacing: 0)),
                     ),
                     Container(
                       width: DS.s(26),
                       height: DS.s(26),
                       alignment: Alignment.center,
                       decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-                      child: Text('${index + 1}', style: Ink3D.text(11.5, FontWeight.w700, DesignColors.surface)),
+                      child: Text('${index + 1}', style: Ink3D.text(12.5, FontWeight.w700, DesignColors.surface, letterSpacing: 0)),
                     ),
-                    Gap.h(10),
+                    Gap.h(12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text(spot.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(14, FontWeight.w600, Ink3D.title)),
+                          Text(spot.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(14, FontWeight.w600, Ink3D.title, letterSpacing: 0)),
                           Text(
-                            '${TripSpotCategory.label(spot.category)} · ${TripFormat.visit(spot.visitMinutes)}',
+                            '${TripSpotCategory.label(spot.category)} · ${TripFormat.hm(spot.visitMinutes)}',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: Ink3D.text(11.5, FontWeight.w400, Ink3D.grey),
+                            style: Ink3D.text(12.5, FontWeight.w400, TripLook.mutedText, letterSpacing: 0),
                           ),
                         ],
                       ),
@@ -504,8 +506,8 @@ class _StopItem extends StatelessWidget {
                       )
                     else
                       Padding(
-                        padding: EdgeInsets.only(left: DS.s(6)),
-                        child: Art3D(asset: TripSpotLook.assetOf(spot.category), size: 34, shadowBlur: 2, shadowOffset: const Offset(1, 3)),
+                        padding: EdgeInsets.only(left: DS.s(10)),
+                        child: Art3D(asset: TripSpotLook.assetOf(spot.category), size: 30, shadowBlur: 2, shadowOffset: const Offset(1, 3)),
                       ),
                   ],
                 ),
@@ -514,19 +516,19 @@ class _StopItem extends StatelessWidget {
           ),
           if (showDrive)
             Padding(
-              padding: EdgeInsets.only(left: DS.s(editing ? 24 : 0) + timeW + DS.s(12)),
+              padding: EdgeInsets.only(left: DS.s(editing ? 24 : 0) + timeW + DS.s(20)),
               child: Container(
-                padding: EdgeInsets.only(left: DS.s(19), top: DS.s(2), bottom: DS.s(2)),
+                padding: EdgeInsets.only(left: DS.s(18), top: DS.s(3), bottom: DS.s(3)),
                 decoration: BoxDecoration(
-                  border: Border(left: BorderSide(color: color.withValues(alpha: Alpha.scrim), width: DS.s(2))),
+                  border: Border(left: BorderSide(color: ListingTone.indigo.g2.withValues(alpha: Alpha.v30), width: DS.s(2))),
                 ),
                 child: drive == null
                     ? SizedBox(height: DS.s(14))
                     : Row(
                         children: [
-                          const Art3D(asset: ListingArt.taxi, size: 16, shadowBlur: 0),
-                          Gap.h(6),
-                          Text(TripFormat.duration(drive), style: Ink3D.text(11.5, FontWeight.w500, Ink3D.grey)),
+                          const Art3D(asset: ListingArt.taxi, size: 16, shadowBlur: 0, shadowAlpha: 0),
+                          Gap.h(8),
+                          Text(TripFormat.duration(drive), style: Ink3D.text(12.5, FontWeight.w400, TripLook.mutedText, letterSpacing: 0)),
                         ],
                       ),
               ),

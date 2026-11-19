@@ -75,7 +75,9 @@ void main() {
   test('seats_snap', () {
     expect(TaxiSeats.forTravellers(2), 4);
     expect(TaxiSeats.forTravellers(5), 6);
-    expect(TaxiSeats.forTravellers(9), 7);
+    expect(TaxiSeats.forTravellers(7), 7);
+    expect(TaxiSeats.forTravellers(9), 12);
+    expect(TaxiSeats.forTravellers(40), 12);
     expect(TaxiSeats.snap(6), 6);
     expect(TaxiSeats.snap(5), 6);
   });

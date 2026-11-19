@@ -5,17 +5,18 @@ import '../../models/taxi_request_models.dart';
 import '../../trip_strings_taxi_request.dart';
 
 class TaxiSeatChips extends StatelessWidget {
-  const TaxiSeatChips({super.key, required this.seats, required this.onChanged});
+  const TaxiSeatChips({super.key, required this.seats, required this.onChanged, this.enabledFor});
 
   final int seats;
   final ValueChanged<int> onChanged;
+  final bool Function(int seats)? enabledFor;
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
         for (var i = 0; i < TaxiSeats.options.length; i++) ...[
-          if (i > 0) Gap.h(10),
+          if (i > 0) Gap.h(8),
           Expanded(child: _chip(TaxiSeats.options[i])),
         ],
       ],
@@ -24,26 +25,32 @@ class TaxiSeatChips extends StatelessWidget {
 
   Widget _chip(int value) {
     final tone = ListingTone.indigo;
-    final selected = value == seats;
+    final on = enabledFor?.call(value) ?? true;
+    final selected = value == seats && on;
     return Tap3D(
-      onTap: () => onChanged(value),
+      onTap: on ? () => onChanged(value) : null,
       selected: selected,
       label: TripStringsTaxiRequest.seatsLabel(value),
-      child: Container(
-        key: ValueKey('taxi_seat_$value'),
-        alignment: Alignment.center,
-        padding: DS.sym(h: 4, v: 12),
-        decoration: BoxDecoration(
-          gradient: selected ? tone.gradient : null,
-          color: selected ? null : Colors.white,
-          borderRadius: DS.circular(16),
-          boxShadow: DS.shadows(selected ? Form3D.glow(tone, blur: 10) : Ink3D.softShadow),
-        ),
-        child: Text(
-          TripStringsTaxiRequest.seatsLabel(value),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: Ink3D.text(13, FontWeight.w700, selected ? DesignColors.textInverse : Ink3D.sub),
+      child: Opacity(
+        opacity: on ? 1 : 0.55,
+        child: Container(
+          key: ValueKey('taxi_seat_$value'),
+          alignment: Alignment.center,
+          padding: DS.sym(h: 4, v: 12),
+          decoration: BoxDecoration(
+            gradient: selected ? tone.gradient : null,
+            color: selected ? null : Colors.white,
+            borderRadius: DS.circular(16),
+            boxShadow: DS.shadows(selected ? Form3D.glow(tone, blur: 10) : Ink3D.softShadow),
+          ),
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              TripStringsTaxiRequest.seatsLabel(value),
+              maxLines: 1,
+              style: Ink3D.text(13, FontWeight.w700, selected ? DesignColors.textInverse : Ink3D.sub),
+            ),
+          ),
         ),
       ),
     );

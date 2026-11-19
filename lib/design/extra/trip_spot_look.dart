@@ -40,7 +40,7 @@ class TripSpotLook {
 
   static String assetOf(String category) => switch (category) {
         'temple' => ListingArt.hinduTemple,
-        'viewpoint' => ListingArt.sunriseMountains,
+        'viewpoint' => ListingArt.mountain,
         'lake' => ListingArt.canoe,
         'attraction' => ListingArt.ferrisWheel,
         'historic' => ListingArt.classicalBuilding,
@@ -48,14 +48,14 @@ class TripSpotLook {
         'waterfall' => ListingArt.droplet,
         'cave' => ListingArt.rock,
         'museum' => ListingArt.framedPicture,
-        'zoo' => ListingArt.lion,
+        'zoo' => ListingArt.paw,
         'bridge' => ListingArt.bridge,
         'beach' => ListingArt.beach,
         'fort' => ListingArt.castle,
         'palace' => ListingArt.crown,
         'ghat' => ListingArt.diyaLamp,
-        'park' => ListingArt.tree,
-        'garden' => ListingArt.tulip,
+        'park' || 'garden' => ListingArt.seedling,
+        'market' => ListingArt.potOfFood,
         _ => ListingArt.roundPushpin,
       };
 }

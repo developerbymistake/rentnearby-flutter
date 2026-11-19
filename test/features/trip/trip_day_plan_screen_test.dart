@@ -4,10 +4,16 @@ import 'package:bakhli/controllers/tab_config_controller.dart';
 import 'package:bakhli/design/design.dart';
 import 'package:bakhli/features/trip/controllers/trip_plan_controller.dart';
 import 'package:bakhli/features/trip/controllers/trip_plan_guide.dart';
+import 'package:bakhli/features/trip/data/trip_city_catalog.dart';
+import 'package:bakhli/features/trip/models/trip_city_model.dart';
 import 'package:bakhli/features/trip/models/trip_model.dart';
 import 'package:bakhli/features/trip/models/trip_plan_model.dart';
 import 'package:bakhli/features/trip/screens/trip_plan_screen.dart';
+import 'package:bakhli/design/extra/trip_plan_look.dart';
+import 'package:bakhli/features/trip/trip_strings_customize.dart';
 import 'package:bakhli/features/trip/trip_strings_dayplan.dart';
+import 'package:bakhli/features/trip/trip_strings_mca_a2.dart';
+import 'package:bakhli/features/trip/trip_strings_mca_a3.dart';
 import 'package:bakhli/features/trip/trip_strings_name.dart';
 import 'package:bakhli/features/trip/trip_strings_v2_plan.dart';
 import 'package:bakhli/features/trip/utils/trip_name_rules.dart';
@@ -52,6 +58,11 @@ Future<TripPlanController> pumpDayPlan(
   bool guide = false,
 }) async {
   Get.put<TabConfigController>(_Tabs());
+  TripCityCatalog.to.seedForTest(const [
+    TripCityModel(cityKey: 901, name: 'Bhimtal', stateName: 'Uttarakhand', latitude: 29.35, longitude: 79.56),
+    TripCityModel(cityKey: 902, name: 'Mukteshwar', stateName: 'Uttarakhand', latitude: 29.47, longitude: 79.65),
+    TripCityModel(cityKey: 903, name: 'Shimla', stateName: 'Himachal Pradesh', latitude: 31.10, longitude: 77.17),
+  ]);
   final c = TripPlanController();
   c.plan.value = plan;
   c.trip.value = engineTrip(plan, lock: lock);
@@ -129,7 +140,7 @@ void main() {
     expect(chips, findsOneWidget);
     expect(find.descendant(of: chips, matching: find.text('2 places')), findsOneWidget);
     expect(find.descendant(of: chips, matching: find.byType(Text)), findsNWidgets(2));
-    expect(t.getSize(header).height, closeTo(DS.s(80), DS.s(8)));
+    expect(t.getSize(header).height, greaterThanOrEqualTo(DS.s(90)));
   });
 
   testWidgets('single-city header', (t) async {
@@ -172,7 +183,42 @@ void main() {
     await t.tap(find.byKey(TripLegSectionHeader.customizeKey).last);
     await t.pumpAndSettle();
     expect(find.text('customize'), findsOneWidget);
-    expect(args, {'tripId': 't1', 'leg': 2});
+    expect(args, isA<Map>().having((m) => m['tripId'], 'tripId', 't1').having((m) => m['leg'], 'leg', 2).having((m) => m['toast'], 'toast', isNotNull));
+  });
+
+  testWidgets('add_city_card_is_the_dashed_add_a_city_card', (t) async {
+    await pumpDayPlan(t, dayPlanFixture());
+    final card = find.byType(TripAddCityCard);
+    expect(find.descendant(of: card, matching: find.text(TripStringsMcaA2.addACity)), findsOneWidget);
+    expect(find.descendant(of: card, matching: find.text(TripStringsMcaA3.nearbyCities(const ['Bhimtal', 'Mukteshwar']))), findsOneWidget);
+    expect(find.descendant(of: card, matching: find.text(TripStringsMcaA3.addAnotherCity)), findsNothing);
+    expect(find.descendant(of: card, matching: find.byIcon(Icons.add_rounded)), findsNothing);
+  });
+
+  testWidgets('plan_updated_note_is_a_dark_bar_above_save_trip', (t) async {
+    Object? args;
+    await pumpDayPlan(t, dayPlanFixture(), size: const Size(360, 800), pages: [
+      GetPage(name: AppRoutes.tripCustomize, page: () {
+        args = Get.arguments;
+        return const Scaffold(body: Text('customize'));
+      }),
+    ]);
+    await t.tap(find.byKey(TripLegSectionHeader.customizeKey).first);
+    await t.pumpAndSettle();
+    final toast = (args as Map)['toast'] as void Function(bool, String);
+    Get.back();
+    await t.pumpAndSettle();
+    toast(true, TripStringsCustomize.planUpdated);
+    await t.pump();
+    final note = find.byKey(TripPlanScreen.noteKey);
+    expect(note, findsOneWidget);
+    expect(find.descendant(of: note, matching: find.text(TripStringsCustomize.planUpdated)), findsOneWidget);
+    expect(find.descendant(of: note, matching: find.byType(Icon)), findsNothing);
+    expect(((t.widget<Container>(note).decoration) as BoxDecoration).color, TripLook.ink);
+    expect(t.getRect(note).bottom, lessThanOrEqualTo(t.getRect(find.byKey(TripPlanScreen.saveTripKey)).top));
+    expect(t.getRect(note).top, greaterThan(t.getRect(find.byType(TripPlanHeader)).bottom));
+    await t.pump(const Duration(seconds: 4));
+    expect(note, findsNothing);
   });
 
   testWidgets('day_count_follows_the_plan', (t) async {

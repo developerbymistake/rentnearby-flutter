@@ -444,7 +444,12 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> with TickerProviderSt
         children: [
           _chip(ListingArt.worldMap, TripStrings.allCategories, current == null, () => _ctrl.setFilter(null)),
           for (final cat in cats)
-            _chip(TripSpotLook.assetOf(cat), TripSpotCategory.label(cat), current == cat, () => _ctrl.setFilter(cat)),
+            _chip(
+              TripSpotLook.assetOf(cat),
+              _pickDraft ? TripStringsPickDraft.categoryChip(TripSpotCategory.label(cat)) : TripSpotCategory.label(cat),
+              current == cat,
+              () => _ctrl.setFilter(cat),
+            ),
         ],
       );
     });
@@ -608,10 +613,11 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> with TickerProviderSt
         return _barFrame(context, [
           Text(
             n == 0 ? TripStringsPickDraft.pickHint : TripStringsPickDraft.summary(_draftDay, _draftCount + n),
-            style: Ink3D.text(13, FontWeight.w600, Ink3D.grey),
+            textAlign: TextAlign.center,
+            style: Ink3D.text(12.5, FontWeight.w600, Ink3D.sub, height: 1.4),
           ),
           if (n > 0) ...[
-            Gap.v(12),
+            Gap.v(10),
             GradientPillButton(tone: ListingTone.indigo, label: TripStringsPickDraft.add(n), onTap: _confirmDraft),
           ],
         ]);

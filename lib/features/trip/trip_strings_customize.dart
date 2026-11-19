@@ -8,6 +8,9 @@ class TripStringsCustomize {
   static const String placeMovedAway = 'Place moved away';
   static const String dayFullDrop = 'Day is full. Places cannot be dropped here.';
   static const String addPlaces = 'Add places';
+  static const String addPlacesRow = '+ Add places';
+  static const String addDayRow = '+ Add day';
+  static const String moreOptions = 'More options';
   static const String deleteDay = 'Delete day';
   static const String noPlacesYet = 'No places yet';
   static const String addOrDelete = 'Add places or delete this day.';
@@ -15,7 +18,6 @@ class TripStringsCustomize {
   static const String dayMenu = 'Day options';
   static const String holdToMove = 'Hold to move';
   static const String removeFromTrip = 'Remove from trip';
-  static const String removeBody = 'It leaves this day. You can add it again later.';
   static const String keepIt = 'Keep it';
 
   static const String hintDrag = 'Drag places to reorder or move them to another day.';

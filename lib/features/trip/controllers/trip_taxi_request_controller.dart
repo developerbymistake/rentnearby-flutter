@@ -15,6 +15,13 @@ import 'trip_plan_controller.dart';
 
 enum TaxiAction { places, send, cancelLegacy, load, loadTrip, cancel, changePickup, askMore, select, notAgreed, endTrip, rate }
 
+class TaxiLapse {
+  const TaxiLapse({required this.requestId, required this.unavailable});
+
+  final String requestId;
+  final bool unavailable;
+}
+
 class TripTaxiRequestController extends GetxController with WidgetsBindingObserver {
   TripTaxiRequestController({
     this._repo = const TaxiRequestRepository(),
@@ -24,11 +31,13 @@ class TripTaxiRequestController extends GetxController with WidgetsBindingObserv
     void Function()? onLegacyClosed,
     String Function()? newClientId,
     Future<bool> Function()? flushPlan,
+    DateTime Function()? now,
   })  : _realtimeOverride = realtime,
         _flushPlan = flushPlan ?? _flushPlanController,
         _refreshPlan = refreshPlan ?? _refreshPlanController,
         _onLegacyClosed = onLegacyClosed ?? _refreshPlanEnquiries,
-        _newClientId = newClientId ?? (() => const Uuid().v4());
+        _newClientId = newClientId ?? (() => const Uuid().v4()),
+        _now = now ?? DateTime.now;
 
   static TripTaxiRequestController get to => Get.isRegistered<TripTaxiRequestController>()
       ? Get.find<TripTaxiRequestController>()
@@ -56,6 +65,7 @@ class TripTaxiRequestController extends GetxController with WidgetsBindingObserv
   final void Function() _onLegacyClosed;
   final String Function() _newClientId;
   final Future<bool> Function() _flushPlan;
+  final DateTime Function() _now;
 
   final places = Rxn<TaxiPickupPlaces>();
   final form = Rxn<TaxiRequestForm>();
@@ -64,6 +74,7 @@ class TripTaxiRequestController extends GetxController with WidgetsBindingObserv
   final request = Rxn<TaxiRequest>();
   final busy = <TaxiAction>{}.obs;
   final failed = <TaxiAction>{}.obs;
+  final lapse = Rxn<TaxiLapse>();
 
   String? _tripId;
   List<int> _planDays = const [];
@@ -73,6 +84,8 @@ class TripTaxiRequestController extends GetxController with WidgetsBindingObserv
   String? _attachedId;
   String? _subscribedId;
   bool _observing = false;
+  DateTime? _backoffUntil;
+  Timer? _backoffTimer;
   Future<void>? _getting;
   bool _getAgain = false;
   final Map<TaxiAction, Future<Object>> _inFlight = {};
@@ -85,6 +98,32 @@ class TripTaxiRequestController extends GetxController with WidgetsBindingObserv
   bool hasFailed(TaxiAction a) => failed.contains(a);
 
   bool get isAttached => _attachedId != null;
+
+  bool get backingOff => _backoffUntil != null && _now().isBefore(_backoffUntil!);
+
+  TaxiResult<T> _waiting<T>() => TaxiRefused<T>(
+        type: null,
+        statusCode: 429,
+        retryAfterSeconds: _backoffUntil == null ? 1 : _backoffUntil!.difference(_now()).inSeconds.clamp(1, 120).toInt(),
+      );
+
+  void _noteRateLimit(TaxiResult<Object?> r) {
+    if (r is! TaxiRefused || !r.rateLimited) return;
+    final wait = Duration(seconds: r.retryAfterSeconds ?? 1);
+    final until = _now().add(wait);
+    if (_backoffUntil == null || until.isAfter(_backoffUntil!)) _backoffUntil = until;
+    _armBackoffTimer();
+  }
+
+  void _armBackoffTimer() {
+    final until = _backoffUntil;
+    if (until == null) return;
+    _backoffTimer?.cancel();
+    _backoffTimer = Timer(until.difference(_now()), () {
+      _backoffTimer = null;
+      if (_attachedId != null) unawaited(refreshRequest());
+    });
+  }
 
   @visibleForTesting
   String? get pendingClientRequestId => _clientRequestId;
@@ -103,7 +142,8 @@ class TripTaxiRequestController extends GetxController with WidgetsBindingObserv
     try {
       final r = await body();
       if (r is TaxiPaused<T>) paused.value = true;
-      if (r is! TaxiOk<T> && r is! TaxiAlreadyActive<T>) failed.add(a);
+      final quiet = r is TaxiRefused<T> && r.rateLimited && (a == TaxiAction.load || a == TaxiAction.loadTrip);
+      if (r is! TaxiOk<T> && r is! TaxiAlreadyActive<T> && !quiet) failed.add(a);
       return r;
     } finally {
       busy.remove(a);
@@ -146,7 +186,7 @@ class TripTaxiRequestController extends GetxController with WidgetsBindingObserv
       dropSame: old.dropSame,
       dropCityKey: value.dropByKey(old.dropCityKey)?.cityKey,
       days: days,
-      seats: old.seats,
+      seats: TaxiSeats.atLeast(old.seats, value.travellers),
       pastDays: fresh.pastDays,
     );
   }
@@ -222,6 +262,7 @@ class TripTaxiRequestController extends GetxController with WidgetsBindingObserv
   bool apply(TaxiRequest next) {
     final cur = request.value;
     if (cur != null && cur.id == next.id && next.version <= cur.version) return false;
+    _noteLapse(cur, next);
     request.value = next;
     if (_lockKey(cur) != _lockKey(next)) unawaited(_refreshPlan(next.tripId));
     final ended = !next.state.active && next.state != RequestState.unknown;
@@ -229,8 +270,28 @@ class TripTaxiRequestController extends GetxController with WidgetsBindingObserv
     return true;
   }
 
+  void _noteLapse(TaxiRequest? cur, TaxiRequest next) {
+    if (cur == null || cur.id != next.id) {
+      lapse.value = null;
+      return;
+    }
+    final back = cur.state == RequestState.selected &&
+        (next.state == RequestState.collecting || next.state == RequestState.open) &&
+        !isBusy(TaxiAction.notAgreed) &&
+        !isBusy(TaxiAction.cancel);
+    if (back) {
+      final by = cur.selectedDriver?.confirmByAt;
+      final at = next.updatedAtAt;
+      lapse.value = TaxiLapse(requestId: next.id, unavailable: by == null || at == null || at.isBefore(by));
+    } else if (next.state != RequestState.collecting && next.state != RequestState.open) {
+      lapse.value = null;
+    }
+  }
+
   Future<TaxiResult<TaxiRequest>> _fetch(String requestId) async {
+    if (backingOff) return _waiting();
     final r = await _repo.get(requestId);
+    _noteRateLimit(r);
     if (r case TaxiOk<TaxiRequest>(:final value)) apply(value);
     return r;
   }
@@ -238,7 +299,9 @@ class TripTaxiRequestController extends GetxController with WidgetsBindingObserv
   Future<TaxiResult<TaxiRequest>> load(String requestId) => _run(TaxiAction.load, () => _fetch(requestId));
 
   Future<TaxiResult<TaxiRequest?>> loadForTrip(String tripId) => _run(TaxiAction.loadTrip, () async {
+        if (backingOff) return _waiting();
         final r = await _repo.forTrip(tripId);
+        _noteRateLimit(r);
         if (r case TaxiOk<TaxiRequest?>(:final value?)) apply(value);
         return r;
       });
@@ -260,6 +323,8 @@ class TripTaxiRequestController extends GetxController with WidgetsBindingObserv
       _observing = false;
     }
     _attachedId = null;
+    _backoffTimer?.cancel();
+    _backoffTimer = null;
   }
 
   void _subscribe(String requestId) {
@@ -317,15 +382,22 @@ class TripTaxiRequestController extends GetxController with WidgetsBindingObserv
       _getAgain = false;
       final id = _attachedId ?? request.value?.id;
       if (id == null) return;
+      if (backingOff) {
+        if (_backoffTimer == null) _armBackoffTimer();
+        return;
+      }
       await _run(TaxiAction.load, () => _fetch(id));
-    } while (_getAgain);
+    } while (_getAgain && !backingOff);
   }
 
   Future<TaxiResult<TaxiRequest>> _act(TaxiAction a, Future<TaxiResult<TaxiRequest>> Function(String id) call) =>
       _run(a, () async {
         final id = request.value?.id;
         if (id == null) return const TaxiNotFound<TaxiRequest>();
+        if (backingOff) return _waiting();
+        if (a != TaxiAction.rate && a != TaxiAction.endTrip) lapse.value = null;
         final r = await call(id);
+        _noteRateLimit(r);
         switch (r) {
           case TaxiOk<TaxiRequest>(:final value):
             apply(value);
@@ -357,6 +429,7 @@ class TripTaxiRequestController extends GetxController with WidgetsBindingObserv
 
   @override
   void onClose() {
+    _backoffTimer?.cancel();
     detach();
     super.onClose();
   }

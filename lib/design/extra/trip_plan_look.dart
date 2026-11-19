@@ -4,6 +4,7 @@ import '../tokens/card_tokens.dart';
 import '../tokens/design_colors.dart';
 import '../tokens/design_scale.dart';
 import '../tokens/shadow_tokens.dart';
+import 'art_3d.dart';
 import 'buttons_kit.dart';
 import 'kit_tone.dart';
 import 'travel_icon.dart';
@@ -43,15 +44,31 @@ class TripLook {
   static const Color bookedSurface = DesignColors.bookedSoft;
   static const Color shadow = DesignColors.shadowSoft;
 
-  static const List<Color> dayColors = <Color>[
-    FitnessAppTheme.nearlyBlue,
-    TravelPalette.sunriseStart,
-    TravelPalette.skyStart,
-    TravelPalette.roseStart,
-    TravelPalette.duskStart,
-    FitnessAppTheme.nearlyDarkBlue,
-  ];
+  static const Color dayIndigo = Color(0xFF738AE6);
+  static const Color dayOrange = Color(0xFFFFC371);
+  static const Color dayCyan = Color(0xFF4FC3F7);
+  static const List<Color> dayColors = <Color>[dayIndigo, dayOrange, dayCyan];
   static Color dayColor(int day) => dayColors[(day - 1) % dayColors.length];
+
+  static const Color rail = Color(0xFFB5BBEA);
+  static const Color disabledFill = Color(0xFFC9CDD6);
+  static const Color badText = Color(0xFFB83A40);
+  static const Color mutedText = Color(0xFF6B6B6B);
+  static const Color cardShadowInk = Color(0xFF3A5160);
+  static const Color ink = Color(0xFF17262A);
+  static const Color headerGlow = Color(0xFF5C5EDD);
+  static const Color mapLand = Color(0xFFE7EFDD);
+  static const Color mapRouteDay2 = Color(0xFFFF8A3D);
+
+  static const List<BoxShadow> cardShadowSoft = <BoxShadow>[BoxShadow(color: Color(0x383A5160), offset: Offset(1.1, 1.1), blurRadius: 10)];
+  static const List<BoxShadow> dayCardShadow = <BoxShadow>[BoxShadow(color: Color(0x403A5160), offset: Offset(1.1, 1.1), blurRadius: 12)];
+  static const List<BoxShadow> headerShadow = <BoxShadow>[BoxShadow(color: Color(0x475C5EDD), offset: Offset(0, 8), blurRadius: 18)];
+  static const List<BoxShadow> barShadowUp = Ink3D.topEdge;
+  static const List<BoxShadow> whiteBtnShadow = Ink3D.whiteBtn;
+  static const List<BoxShadow> pillShadow = <BoxShadow>[BoxShadow(color: Color(0x735C5EDD), offset: Offset(1.1, 8), blurRadius: 12)];
+  static const List<BoxShadow> sectionShadow = <BoxShadow>[BoxShadow(color: Color(0x595C5EDD), offset: Offset(1.1, 4), blurRadius: 14)];
+  static const List<BoxShadow> chipOnShadow = <BoxShadow>[BoxShadow(color: Color(0x4D5C5EDD), offset: Offset(0, 4), blurRadius: 8)];
+  static const List<BoxShadow> chipOffShadow = <BoxShadow>[BoxShadow(color: Color(0x1F000000), offset: Offset(0, 2), blurRadius: 6)];
 
   static const BorderRadius cardRadius = CardRadius.tile;
   static const BorderRadius softRadius = CardRadius.tile;

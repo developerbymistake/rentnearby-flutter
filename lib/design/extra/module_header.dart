@@ -28,11 +28,13 @@ class ModuleHeader extends StatelessWidget {
     this.leading,
     this.subtitleWidget,
     this.autoHeight = false,
+    this.titleStyle,
   });
 
   final Widget? leading;
   final Widget? subtitleWidget;
   final bool autoHeight;
+  final TextStyle? titleStyle;
 
   final String title;
   final String? subtitle;
@@ -154,8 +156,9 @@ class ModuleHeader extends StatelessWidget {
                         Text(title,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: TypeTokens.style(22, FontWeight.w700,
-                                color: DesignColors.textInverse, letterSpacing: 1.2)),
+                            style: titleStyle ??
+                                TypeTokens.style(22, FontWeight.w700,
+                                    color: DesignColors.textInverse, letterSpacing: 1.2)),
                         if (hasSub)
                           _Slot(
                             height: autoHeight ? null : subtitleOf(context, subtitleLines),
