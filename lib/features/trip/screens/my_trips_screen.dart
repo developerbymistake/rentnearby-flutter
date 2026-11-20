@@ -24,6 +24,8 @@ import '../widgets/hub/hub_section_title.dart';
 import '../widgets/hub/hub_tokens.dart';
 import '../widgets/hub/hub_trip_card.dart';
 import '../widgets/trip_lifecycle_actions.dart';
+import '../../buddy/offline/widgets/lost_changes_banner.dart';
+import '../../buddy/viewer/widgets/shared_with_me_section.dart';
 
 class MyTripsScreen extends StatefulWidget {
   final bool root;
@@ -167,6 +169,8 @@ class _MyTripsScreenState extends State<MyTripsScreen> with TickerProviderStateM
                   children: [
                     HubHeader(title: TripStrings.myTrips, back: true, minHeight: 96, titleTop: 26, onBack: Get.back),
                     _buildOfflineStrip(context),
+                    const LostChangesBanner(),
+                    const SharedWithMeSection(),
                     _buildBody(context),
                     _buildFooter(),
                   ],

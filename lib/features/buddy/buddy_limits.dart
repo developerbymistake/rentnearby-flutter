@@ -1,0 +1,31 @@
+abstract final class BuddyLimits {
+  static const int findPerHour = 20;
+  static const int requestsPerDay = 10;
+  static const int waitingRequests = 20;
+  static const int requestExpiryDays = 14;
+  static const int resendDays = 30;
+  static const int maxBuddies = 500;
+  static const int maxBlocks = 1000;
+  static const int maxTravellers = 12;
+  static const int maxViewers = 11;
+  static const int invitesPerDay = 30;
+  static const int reinviteAfterDeclineDays = 7;
+  static const int maxAmount = 500000;
+  static const int maxExpenses = 500;
+  static const int maxSharers = 20;
+  static const int titleMax = 60;
+  static const int noteMax = 200;
+  static const int reportNoteMax = 200;
+  static const int shareWithMax = 50;
+  static const int closesAfterDays = 30;
+  static const int maxPaymentAmount = 5000000;
+  static const int requestsPage = 50;
+  static const int buddiesPage = 100;
+  static const int blocksPage = 50;
+  static const int sharedTripsPage = 20;
+  static const int expensesPage = 100;
+  static const int noticesPage = 30;
+  static const int historyMax = 50;
+  static const int usernameDigits = 8;
+  static const String usernamePrefix = 'Bakhli#';
+}

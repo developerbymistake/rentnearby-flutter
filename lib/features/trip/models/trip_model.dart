@@ -1,3 +1,4 @@
+import '../../buddy/sharing/models/sharing_models.dart';
 import '../trip_strings_mca_a4.dart';
 import '../widgets/trip_status.dart';
 import 'trip_enquiry_model.dart';
@@ -155,6 +156,11 @@ class TripModel {
   }) : _legCities = legCities;
 
   List<String> get legCities => _legCities ?? [cityName];
+
+  TripSharingBlock? get sharing {
+    final s = raw?['sharing'];
+    return s is Map<String, dynamic> ? TripSharingBlock.fromJson(s) : null;
+  }
   String get routeLine => legCount > 1 ? TripStringsMcaA4.routeOf(legCities) : cityName;
 
   bool get isPlanned => status == TripStatuses.planned;

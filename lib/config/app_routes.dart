@@ -22,6 +22,7 @@ import '../features/jobs/jobs_routes.dart';
 import '../features/taxi/taxi_routes.dart';
 import '../features/taxi/ways/taxi_ways_routes.dart';
 import '../features/trip/trip_routes.dart';
+import '../features/buddy/buddy_routes.dart';
 
 class AppRoutes {
   static const String splash = '/';
@@ -95,6 +96,20 @@ class AppRoutes {
   static const String taxiRating = '/taxi-rating';
   static const String taxiReady = '/taxi-ready';
 
+  static const String buddies = '/buddies';
+  static const String buddiesBlocked = '/buddies-blocked';
+  static const String buddyScan = '/buddy-scan';
+  static const String tripInvite = '/trip-invite';
+  static const String tripTravellers = '/trip-travellers';
+  static const String tripView = '/trip-view';
+  static const String tripDayPlan = '/trip-day-plan';
+  static const String tripDayMap = '/trip-day-map';
+  static const String tripMyShare = '/trip-my-share';
+  static const String tripExpenses = '/trip-expenses';
+  static const String tripExpense = '/trip-expense';
+  static const String tripSettle = '/trip-settle';
+  static const String tripMoneySummary = '/trip-money-summary';
+
   static const Set<String> ownerOnly = {plansBilling, planHistory};
   static const Set<String> stayOwnerOnly = {staySetup, stayBasicDetails, stayRooms, stayRules, staySubmit, myStays, myJobs, postJob, stayEnquiries, stayAdvanceDetails};
   static const Set<String> taxiDriverOnly = {
@@ -159,6 +174,10 @@ class AppRoutes {
   // Old pushes name the retired trip taxi pages, or carry a question step into the plan: both land elsewhere.
   static ({String route, Map<String, dynamic>? args})? liveTarget(String? route, [Map<String, dynamic>? args]) {
     if (route == null) return null;
+    final deletedTripId = args?['deletedTripId'];
+    if (route == myTrips && deletedTripId is String && deletedTripId.isNotEmpty) {
+      return (route: tripView, args: {'tripId': deletedTripId, 'deleted': true});
+    }
     final tripId = args?['tripId'];
     if (route == tripPlan && (args?['step'] != null || args?['row'] != null || _on(args?['nudge']) || _on(args?['reopen']))) {
       return (route: tripOverview, args: {'tripId': ?tripId});
@@ -270,5 +289,6 @@ class AppRoutes {
     ...taxiPages,
     ...taxiWaysPages,
     ...tripPages,
+    ...buddyPages,
   ];
 }

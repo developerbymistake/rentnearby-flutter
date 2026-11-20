@@ -19,6 +19,7 @@ import '../utils/jwt_claims.dart';
 import '../services/hub_session_manager.dart';
 import '../features/stay/setup/stay_setup_controller.dart';
 import '../features/taxi/setup/taxi_setup_controller.dart';
+import '../features/buddy/buddy_session_hooks.dart';
 
 /// What triggered a logout — decides whether the server-side revoke call fires and which (if
 /// any) toast is shown. Kept as a typed reason rather than booleans so each of the 3 real-world
@@ -275,6 +276,7 @@ class AuthController extends GetxController {
   }
 
   Future<void> _performLogoutCleanup(LogoutReason reason) async {
+    final buddyUserId = user.value?.id;
     // Timeout + catch-all: the redirect below must run even if a cleanup step hangs or throws,
     // or a revoked session leaves the app permanently stuck on the current screen.
     try {
@@ -316,6 +318,9 @@ class AuthController extends GetxController {
         AppToast.info('Role updated. Please log in again.');
       } catch (_) {}
     }
+    try {
+      await BuddySessionHooks.onLogout(reason, buddyUserId);
+    } catch (_) {}
     Get.offAllNamed(AppRoutes.login);
     // Deliberately force:false (the default) — GetX's own delete() bypasses BOTH the permanent
     // check AND the GetxServiceMixin check when force:true, which would delete AuthController

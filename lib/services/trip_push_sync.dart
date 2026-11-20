@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:get/get.dart';
 import '../config/app_routes.dart';
 import '../config/notification_types.dart';
+import '../features/buddy/buddy_live.dart';
 import '../features/stay/enquiries/stay_enquiries_controller.dart';
 import '../features/taxi/journeys/journeys_controller.dart';
 import '../features/taxi/leads/trip_leads_controller.dart';
@@ -59,7 +60,8 @@ class TripPushSync {
       (type.startsWith('Trip') || type.startsWith('trip_') || type.startsWith('Journey') || type.startsWith('journey_'));
 
   // Hub and FCM both deliver the same event in foreground; one refresh covers both.
-  static void onPush(String? type, String? pushRoute) {
+  static void onPush(String? type, String? pushRoute, [Map<String, dynamic>? args]) {
+    BuddyPushSync.onPush(type, pushRoute, args);
     final actionRoute = AppRoutes.liveTarget(pushRoute)?.route;
     final driver = _markDriver(type, actionRoute);
     final taxi = NotificationTypeKeys.isTravellerTaxi(type);

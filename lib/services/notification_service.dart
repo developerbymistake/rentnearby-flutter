@@ -17,6 +17,7 @@ import '../controllers/home_controller.dart';
 import '../controllers/plan_controller.dart';
 import '../controllers/tab_config_controller.dart';
 import '../design/design.dart';
+import '../features/buddy/buddy_live.dart';
 import '../features/stay/stay_status_sync.dart';
 import '../features/taxi/taxi_status_sync.dart';
 import '../features/trip/controllers/trip_plan_controller.dart';
@@ -266,7 +267,8 @@ class NotificationService extends GetxService {
         _onPlanPush(notificationType);
       }
       final pushRoute = message.data['action_route'];
-      TripPushSync.onPush(notificationType is String ? notificationType : null, pushRoute is String ? pushRoute : null);
+      TripPushSync.onPush(notificationType is String ? notificationType : null, pushRoute is String ? pushRoute : null,
+          NotificationModel.parseArguments(message.data['action_args_json']));
       if (notificationType == NotificationTypeKeys.roleRequestApprovedWire) {
         Get.find<AuthController>().forceLogout(reason: LogoutReason.roleChanged);
         return;
@@ -425,7 +427,7 @@ class NotificationService extends GetxService {
       return;
     }
     await _localNotifications.show(
-      id: jsonEncode(data).hashCode,
+      id: BuddyPushSync.isBuddyPush(data) ? BuddyPushSync.localNotificationId(data) : jsonEncode(data).hashCode,
       title: title,
       body: body,
       notificationDetails: const NotificationDetails(
@@ -537,6 +539,10 @@ class NotificationService extends GetxService {
     AppRoutes.tripTaxiStatus,
     AppRoutes.taxiRequests,
     AppRoutes.taxiBookings,
+    AppRoutes.buddies,
+    AppRoutes.tripExpenses,
+    AppRoutes.tripTravellers,
+    AppRoutes.tripView,
   };
 
   // A gated Stay Owner's stack is rooted at staySetup, so main is not underneath. MainScreen puts

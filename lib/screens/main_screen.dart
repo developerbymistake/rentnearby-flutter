@@ -11,6 +11,8 @@ import '../controllers/home_controller.dart';
 import '../controllers/location_controller.dart';
 import '../controllers/notification_controller.dart';
 import '../controllers/report_controller.dart';
+import '../features/buddy/buddy_bindings.dart';
+import '../features/buddy/buddy_live.dart';
 import '../repositories/notification_repository.dart';
 import '../repositories/user_repository.dart';
 import '../repositories/plan_repository.dart';
@@ -83,6 +85,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     // Fetches the Home bell's unread count once per session in its own onInit() — refreshed on
     // resume below, not via a live push.
     Get.put(NotificationController());
+    BuddyBindings.ensure();
     _chatCtrl = Get.put(ChatController());
     Get.put(ChatHubService());
     // Persistent for the whole session (like BannerHubService below) — not scoped to any one
@@ -189,6 +192,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       Get.find<PlanController>().invalidate();
       Get.find<PlanController>().onAppResumed();
       Get.find<NotificationController>().loadUnreadCount();
+      BuddyLive.onResume();
       // Chat badge's app-resume anchor — pushes may have been missed while backgrounded
       // (the hub reconnect above isn't guaranteed to fire if the connection quietly died).
       _chatCtrl.fetchUnreadCount();

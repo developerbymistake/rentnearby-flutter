@@ -7,8 +7,10 @@ import '../config/notification_types.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/notification_controller.dart';
 import '../controllers/plan_controller.dart';
+import '../features/buddy/buddy_live.dart';
 import '../features/stay/stay_status_sync.dart';
 import '../features/taxi/taxi_status_sync.dart';
+import '../models/notification_model.dart';
 import 'hub_connection_shared.dart';
 import 'hub_session_manager.dart';
 import 'notification_service.dart';
@@ -133,7 +135,7 @@ class NotificationHubService extends GetxService with SingleFlightHubConnect imp
         final data = Map<String, dynamic>.from(args[0] as Map);
         Get.find<NotificationController>().applyLiveNotification(data);
         if (Get.isRegistered<PlanController>()) Get.find<PlanController>().onPushNotification(data['type'] as String?);
-        TripPushSync.onPush(data['type'] as String?, data['actionRoute'] as String?);
+        TripPushSync.onPush(data['type'] as String?, data['actionRoute'] as String?, NotificationModel.parseArguments(data['actionArguments']));
         if (data['type'] == NotificationTypeKeys.roleRequestApproved) {
           Get.find<AuthController>().forceLogout(reason: LogoutReason.roleChanged);
         } else if (data['type'] == NotificationTypeKeys.roleRequestRejected) {
@@ -153,6 +155,13 @@ class NotificationHubService extends GetxService with SingleFlightHubConnect imp
       taxiRequests.onEvent(args[0]);
     });
 
+    for (final event in BuddyHubEvents.all) {
+      _connection!.on(event, (args) {
+        if (args == null || args.isEmpty || args[0] is! Map) return;
+        BuddyPushSync.onHubEvent(event, Map<String, dynamic>.from(args[0] as Map));
+      });
+    }
+
     _connection!.onreconnected(({String? connectionId}) => taxiRequests.onConnected());
 
     try {
@@ -168,6 +177,9 @@ class NotificationHubService extends GetxService with SingleFlightHubConnect imp
     try {
       _connection?.off('NotificationReceived');
       _connection?.off(TaxiRequestSubscriptions.changedEvent);
+      for (final event in BuddyHubEvents.all) {
+        _connection?.off(event);
+      }
       await _connection?.stop();
     } catch (_) {}
     _connection = null;

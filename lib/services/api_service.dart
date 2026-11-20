@@ -97,6 +97,14 @@ class ApiService {
     await _dio.delete(path);
   }
 
+  static Future<Map<String, dynamic>> deleteJson(String path, {Map<String, dynamic>? params}) async {
+    final res = await _dio.delete(path, queryParameters: params);
+    return res.data is Map<String, dynamic> ? res.data as Map<String, dynamic> : <String, dynamic>{};
+  }
+
+  static Future<Response> getRaw(String path, {Map<String, dynamic>? params, Map<String, String>? headers}) =>
+      _dio.get(path, queryParameters: params, options: Options(headers: headers, validateStatus: (s) => s == 200 || s == 304));
+
   static Future<Map<String, dynamic>> postFormData(
     String path,
     FormData data, {

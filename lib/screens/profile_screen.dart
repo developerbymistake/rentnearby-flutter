@@ -22,6 +22,8 @@ import '../widgets/role_option_card.dart';
 import '../widgets/tab_header.dart';
 import 'privacy_policy_screen.dart';
 import 'terms_of_service_screen.dart';
+import '../features/buddy/buddies/widgets/profile_buddies_row.dart';
+import '../features/buddy/offline/logout_guard.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -100,7 +102,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             _hero(),
             Gap.v(16),
             item(Obx(() => _auth.isOwner ? _buildPlansCard() : const SizedBox.shrink())),
-            item(_sectionGroup(BuddyStrings.sectionBuddies, [_usernameTile()])),
+            item(_sectionGroup(BuddyStrings.sectionBuddies, [_usernameTile(), const ProfileBuddiesRow()])),
             item(_sectionGroup('ACCOUNT', [
               _accountPhoneTile(),
               _accountVisibilityTile(),
@@ -643,7 +645,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
         child: child,
       );
 
-  void _confirmLogout() {
+  Future<void> _confirmLogout() async {
+    if (!await LogoutGuard.check(context)) return;
+    if (!mounted) return;
     showDialog(
       context: context,
       builder: (ctx) => _dialog(

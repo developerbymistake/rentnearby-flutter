@@ -56,6 +56,9 @@ dependencies:
   # QR code generation (listing share card)
   qr_flutter: ^4.1.0
 
+  # QR scanner (Find a buddy: reads only a Bakhli# username)
+  mobile_scanner: ^7.0.1
+
   # Toast notifications
   toastification: ^3.2.0
 
