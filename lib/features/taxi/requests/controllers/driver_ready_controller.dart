@@ -79,7 +79,7 @@ class DriverReadyController extends GetxController with WidgetsBindingObserver {
 
   Map<DriverReadyItem, bool> get items => {for (final i in DriverReadyItem.values) i: isDone(i)};
 
-  bool get needsFix => missedRings || DriverReadyItem.values.any((i) => !isDone(i));
+  bool get needsFix => missedRings || !isDone(DriverReadyItem.notifications) || !isDone(DriverReadyItem.ringSound);
 
   bool get ready => !needsFix && (readiness.value?.ringReady ?? false);
 

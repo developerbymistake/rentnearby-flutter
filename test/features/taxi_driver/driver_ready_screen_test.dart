@@ -169,19 +169,12 @@ void main() {
     expect(fallbacks, 2);
   });
 
-  testWidgets('strip_shows_only_when_something_needs_a_fix', (tester) async {
+  testWidgets('strip_shows_only_when_notifications_need_a_fix_not_for_battery', (tester) async {
     phone.battery = false;
     final c = Get.put(make());
     var opened = 0;
     await pumpAtSize(tester, Scaffold(body: DriverReadyStrip(controller: c, onOpen: () => opened++)), phoneSize);
     await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
-    await tester.pump();
-    expect(find.text(DriverReadyStrings.stripTitle), findsOneWidget);
-    await tester.tap(find.text(DriverReadyStrings.stripAction));
-    expect(opened, 1);
-
-    phone.battery = true;
-    await tester.runAsync(() => c.report());
     await tester.pump();
     expect(c.needsFix, isFalse);
     expect(find.text(DriverReadyStrings.stripTitle), findsNothing);
@@ -190,6 +183,8 @@ void main() {
     await tester.runAsync(() => c.report());
     await tester.pump();
     expect(find.text(DriverReadyStrings.stripTitle), findsOneWidget);
+    await tester.tap(find.text(DriverReadyStrings.stripAction));
+    expect(opened, 1);
   });
 
   testWidgets('missed_rings_line_and_primary_test_ring', (tester) async {

@@ -34,6 +34,7 @@ import '../navigation/tour_keys.dart';
 import '../controllers/tour_controller.dart';
 import '../features/stay/guest/stay_landing_controller.dart';
 import '../features/stay/guest/stay_guest_controller.dart';
+import '../features/taxi/requests/controllers/driver_ready_controller.dart';
 import '../features/taxi/taxi_status_sync.dart';
 import '../features/trip/controllers/my_trips_controller.dart';
 import '../features/trip/widgets/trip_bar.dart';
@@ -98,6 +99,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     _chatCtrl.loadConversations();
     _bannerCtrl = Get.put(BannerController());
     Get.put(BannerHubService());
+    if (_auth.taxisEnabled) DriverReadyController.to;
     WidgetsBinding.instance.addObserver(this);
     _bannerDistrictWorker = ever(_locationCtrl.selectedDistrict, (district) {
       if (district != null) {
