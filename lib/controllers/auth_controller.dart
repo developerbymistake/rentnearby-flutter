@@ -60,6 +60,12 @@ class AuthController extends GetxController {
   final profilePhone = ''.obs;
   final profilePhoneVerified = false.obs;
   final profilePhoneChangeLocked = false.obs;
+  final signupUsername = RxnString();
+
+  static String? signupUsernameOf(Map<String, dynamic> data) {
+    final user = data['user'];
+    return UserModel.usernameOf(data['username']) ?? (user is Map ? UserModel.usernameOf(user['username']) : null);
+  }
 
   void _syncProfileFields(UserModel? u) {
     profileName.value = u?.name ?? '';
@@ -165,7 +171,10 @@ class AuthController extends GetxController {
       });
       final data = res['data'] as Map<String, dynamic>;
       final needsOnboarding = data['needsOnboarding'] as bool? ?? false;
-      if (needsOnboarding) return 'onboarding';
+      if (needsOnboarding) {
+        signupUsername.value = signupUsernameOf(data);
+        return 'onboarding';
+      }
       await _saveSession(data);
       Get.offAllNamed(postLoginRoute);
       return null;
@@ -247,6 +256,7 @@ class AuthController extends GetxController {
     StorageService.saveUser(userModel);
     user.value = userModel;
     _syncProfileFields(userModel);
+    signupUsername.value = null;
   }
 
   Future<void> _saveSession(Map<String, dynamic> data) async {
@@ -296,6 +306,7 @@ class AuthController extends GetxController {
     canListStays.value = false;
     canListTaxis.value = false;
     _syncProfileFields(null);
+    signupUsername.value = null;
     if (reason == LogoutReason.sessionExpired) {
       try {
         AppToast.info('Session expired. Please log in again.');

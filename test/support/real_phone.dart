@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:bakhli/config/app_theme.dart';
+import 'package:bakhli/utils/app_toast.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
@@ -39,6 +40,7 @@ Future<void> pumpPhone(
   Size size = phoneSize,
   double devicePixelRatio = 3,
   double textScale = 1.0,
+  bool toastHost = false,
 }) async {
   await loadRealFonts();
   final view = tester.view;
@@ -61,7 +63,7 @@ Future<void> pumpPhone(
         scrollBehavior: const AppScrollBehavior(),
         builder: (context, c) => MediaQuery(
           data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(textScale), disableAnimations: true),
-          child: c!,
+          child: toastHost ? Stack(fit: StackFit.expand, children: [Positioned.fill(child: c!), Overlay(key: AppToast.overlayKey)]) : c!,
         ),
         home: child,
       ),

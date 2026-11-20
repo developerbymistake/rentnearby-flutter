@@ -181,6 +181,10 @@ class DesignColors {
   static const Color driveLine = Color(0x4D5C5EDD);
   static const Color goodInk = Color(0xFF17501B);
 
+  // buddy username
+  static const Color tealDeep = Color(0xFF14756B);
+  static const Color cardRing = Color(0xFFE3E5EC);
+
   static Color tint(Color color, double alpha) => color.withValues(alpha: alpha);
 }
 

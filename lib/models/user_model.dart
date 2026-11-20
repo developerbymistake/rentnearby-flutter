@@ -6,6 +6,7 @@ class UserModel {
   final bool isPhoneVerified;
   final bool hasUsedPhoneChange;
   final String? name;
+  final String? username;
   final bool isContactVisible;
   final DateTime createdAt;
   final String role;
@@ -26,6 +27,7 @@ class UserModel {
     this.isPhoneVerified = false,
     this.hasUsedPhoneChange = false,
     this.name,
+    this.username,
     this.isContactVisible = true,
     required this.createdAt,
     this.role = UserRoleKeys.seeker,
@@ -47,6 +49,7 @@ class UserModel {
         isPhoneVerified: json['isPhoneVerified'] ?? false,
         hasUsedPhoneChange: json['hasUsedPhoneChange'] ?? false,
         name: json['name'],
+        username: usernameOf(json['username']),
         isContactVisible: json['isContactVisible'] ?? true,
         createdAt: DateTime.parse(json['createdAt']),
         role: json['role'] ?? UserRoleKeys.seeker,
@@ -68,6 +71,7 @@ class UserModel {
         'isPhoneVerified': isPhoneVerified,
         'hasUsedPhoneChange': hasUsedPhoneChange,
         'name': name,
+        'username': username,
         'isContactVisible': isContactVisible,
         'createdAt': createdAt.toIso8601String(),
         'role': role,
@@ -82,6 +86,11 @@ class UserModel {
         'canCorrectRole': canCorrectRole,
         'roleLocked': roleLocked,
       };
+
+  static String? usernameOf(Object? raw) {
+    final v = raw is String ? raw.trim() : '';
+    return v.isEmpty ? null : v;
+  }
 
   String get displayName => name?.trim().isNotEmpty == true ? name! : '+91 $phoneNumber';
 

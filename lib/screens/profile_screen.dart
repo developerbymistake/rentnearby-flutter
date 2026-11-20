@@ -6,11 +6,15 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:bakhli/design/design.dart';
 import 'package:bakhli/design/extra/replies_kit.dart';
 import 'package:bakhli/design/extra/sheet_close_button.dart';
+import 'package:bakhli/design/extra/ext_buddy.dart';
 import '../config/app_routes.dart';
 import '../config/app_tabs.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/plan_controller.dart';
 import '../controllers/tab_config_controller.dart';
+import '../features/buddy/buddy_strings.dart';
+import '../features/buddy/username_actions.dart';
+import '../features/buddy/widgets/username_qr_sheet.dart';
 import '../utils/app_date_format.dart';
 import '../utils/app_toast.dart';
 import '../utils/input_formatters.dart';
@@ -28,7 +32,14 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   final _auth = Get.find<AuthController>();
 
-  static const int _count = 8;
+  static const int _count = 9;
+
+  @override
+  void initState() {
+    super.initState();
+    final user = _auth.user.value;
+    if (user != null && user.username == null) _auth.refreshProfile();
+  }
 
   static final ListingTone _tone = ListingTone.indigo;
   static final ListingTone _bad = ListingTone.coral;
@@ -89,6 +100,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             _hero(),
             Gap.v(16),
             item(Obx(() => _auth.isOwner ? _buildPlansCard() : const SizedBox.shrink())),
+            item(_sectionGroup(BuddyStrings.sectionBuddies, [_usernameTile()])),
             item(_sectionGroup('ACCOUNT', [
               _accountPhoneTile(),
               _accountVisibilityTile(),
@@ -327,6 +339,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget _row({
     required String art,
     required String title,
+    Widget? titleWidget,
+    Color? titleColor,
+    Color? artTint,
     Widget? below,
     Widget? trailing,
     VoidCallback? onTap,
@@ -334,7 +349,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     bool fitTitle = false,
     bool bold = false,
   }) {
-    final style = Ink3D.text(16, bold ? FontWeight.w700 : FontWeight.w500, Ink3D.title, letterSpacing: 0, height: 1.3);
+    final style = Ink3D.text(16, bold ? FontWeight.w700 : FontWeight.w500, titleColor ?? Ink3D.title, letterSpacing: 0, height: 1.3);
     final row = Container(
       decoration: divider ? const BoxDecoration(border: Border(top: BorderSide(color: Ink3D.line))) : null,
       padding: DS.sym(h: 18, v: 13),
@@ -348,7 +363,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               children: [
                 Positioned.fill(
                   child: DecoratedBox(
-                    decoration: BoxDecoration(color: _tone.haloBase.withValues(alpha: Alpha.v14), borderRadius: DS.circular(16)),
+                    decoration: BoxDecoration(color: artTint ?? _tone.haloBase.withValues(alpha: Alpha.v14), borderRadius: DS.circular(16)),
                   ),
                 ),
                 Positioned(
@@ -367,9 +382,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                fitTitle
+                titleWidget ??
+                (fitTitle
                     ? FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(title, maxLines: 1, style: style))
-                    : Text(title, maxLines: 3, overflow: TextOverflow.ellipsis, style: style),
+                    : Text(title, maxLines: 3, overflow: TextOverflow.ellipsis, style: style)),
                 if (below != null) Padding(padding: EdgeInsets.only(top: DS.s(4)), child: below),
               ],
             ),
@@ -391,6 +407,38 @@ class _ProfileScreenState extends State<ProfileScreen> {
           Flexible(child: Text(text, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(11, FontWeight.w600, color, letterSpacing: 0))),
         ]),
       );
+
+  Widget _usernameTile() {
+    return Obx(() {
+      final username = _auth.user.value?.username;
+      return _row(
+        art: ListingArt.key,
+        title: username ?? BuddyStrings.usernameLoading,
+        titleWidget: username == null ? Semantics(label: BuddyStrings.usernameLoading, child: const BuddySkeletonBar(width: 130, height: 16)) : null,
+        titleColor: DesignColors.tealDeep,
+        artTint: BuddyInk.artTint,
+        fitTitle: true,
+        bold: true,
+        below: Text(BuddyStrings.myUsername, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(13, FontWeight.w400, Ink3D.grey, letterSpacing: 0)),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            BuddyRoundButton(
+              icon: Icons.qr_code_2_rounded,
+              label: BuddyStrings.showQr,
+              onTap: username == null ? null : () => UsernameQrSheet.show(context, username: username, name: _auth.profileName.value),
+            ),
+            Gap.h(6),
+            BuddyRoundButton(
+              icon: Icons.copy_rounded,
+              label: BuddyStrings.copyUsername,
+              onTap: username == null ? null : () => UsernameActions.copy(username),
+            ),
+          ],
+        ),
+      );
+    });
+  }
 
   Widget _accountPhoneTile() {
     return Obx(() {

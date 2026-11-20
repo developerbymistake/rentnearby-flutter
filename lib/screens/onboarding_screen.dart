@@ -3,6 +3,9 @@ import 'package:get/get.dart';
 import '../controllers/auth_controller.dart';
 import '../design/design.dart';
 import '../design/extra/ext_auth.dart';
+import '../design/extra/ext_buddy.dart';
+import '../features/buddy/buddy_strings.dart';
+import '../features/buddy/username_actions.dart';
 import '../utils/app_toast.dart';
 import '../utils/input_formatters.dart';
 
@@ -79,7 +82,23 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
           child: AuthCard(
             children: [
               AuthVerifiedRow(art: ListingArt.key, text: '+91 $_phone'),
-              Gap.v(24),
+              Gap.v(20),
+              const AuthFieldLabel(BuddyStrings.usernameLabel),
+              Obx(() {
+                final username = _auth.signupUsername.value;
+                return UsernameLockedPill(
+                  username: username,
+                  art: ListingArt.key,
+                  copyLabel: BuddyStrings.copyUsername,
+                  loadingLabel: BuddyStrings.usernameLoading,
+                  onCopy: () => UsernameActions.copy(username!),
+                );
+              }),
+              Padding(
+                padding: DS.insets(l: 6, t: 6),
+                child: Text(BuddyStrings.usernameHelper, style: Ink3D.text(12, FontWeight.w400, Ink3D.grey, letterSpacing: 0)),
+              ),
+              Gap.v(18),
               const AuthFieldLabel('Full Name'),
               AuthPillInput(
                 tone: _tone,
