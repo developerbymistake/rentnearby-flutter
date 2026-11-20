@@ -6,9 +6,10 @@ import '../utils/trip_parts.dart';
 import 'trip_card.dart';
 
 class TripOverviewProgress extends StatelessWidget {
-  const TripOverviewProgress({super.key, required this.parts});
+  const TripOverviewProgress({super.key, required this.parts, this.line});
 
   final TripParts parts;
+  final String? line;
 
   static String lineOf(TripParts p) {
     final taxi = p.taxi == TripPartState.open;
@@ -54,7 +55,7 @@ class TripOverviewProgress extends StatelessWidget {
                   ),
                   Gap.v(8),
                   Text(
-                    lineOf(parts),
+                    line ?? lineOf(parts),
                     key: const ValueKey('overview_progress_line'),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,

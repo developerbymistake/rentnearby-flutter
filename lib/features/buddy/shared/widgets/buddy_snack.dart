@@ -6,12 +6,13 @@ import '../../../../design/design.dart';
 import '../buddy_look.dart';
 
 class BuddySnackBar extends StatelessWidget {
-  const BuddySnackBar({super.key, required this.text, this.icon = BuddySnack.tick, this.actionLabel, this.onAction});
+  const BuddySnackBar({super.key, required this.text, this.icon = BuddySnack.tick, this.actionLabel, this.onAction, this.danger = false});
 
   final String text;
   final String icon;
   final String? actionLabel;
   final VoidCallback? onAction;
+  final bool danger;
 
   @override
   Widget build(BuildContext context) => Semantics(
@@ -31,7 +32,7 @@ class BuddySnackBar extends StatelessWidget {
                 width: DS.s(28),
                 height: DS.s(28),
                 alignment: Alignment.center,
-                decoration: BoxDecoration(shape: BoxShape.circle, gradient: BuddyLook.teal.gradient),
+                decoration: BoxDecoration(shape: BoxShape.circle, gradient: (danger ? BuddyLook.danger : BuddyLook.teal).gradient),
                 child: icon == BuddySnack.tick
                     ? Icon(Icons.check_rounded, size: DS.s(16), color: DesignColors.onPrimary)
                     : Text(icon, textScaler: TextScaler.noScaling, style: Ink3D.text(14, FontWeight.w700, DesignColors.onPrimary, letterSpacing: 0)),
@@ -69,7 +70,7 @@ abstract final class BuddySnack {
     _entry = null;
   }
 
-  static void show(BuildContext context, String text, {String icon = tick, String? actionLabel, VoidCallback? onAction, double bottom = 24}) {
+  static void show(BuildContext context, String text, {String icon = tick, String? actionLabel, VoidCallback? onAction, double bottom = 24, bool danger = false}) {
     final overlay = Overlay.maybeOf(context, rootOverlay: true);
     if (overlay == null) return;
     hide();
@@ -83,6 +84,7 @@ abstract final class BuddySnack {
           child: BuddySnackBar(
             text: text,
             icon: icon,
+            danger: danger,
             actionLabel: actionLabel,
             onAction: onAction == null
                 ? null

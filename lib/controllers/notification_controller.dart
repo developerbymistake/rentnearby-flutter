@@ -1,4 +1,6 @@
 import 'package:get/get.dart';
+import '../features/buddy/buddy_live.dart';
+import '../features/buddy/notices/controllers/notices_controller.dart';
 import '../models/notification_model.dart';
 import '../repositories/notification_repository.dart';
 import '../utils/keyset_page.dart';
@@ -25,6 +27,7 @@ class NotificationController extends GetxController {
   // response matching the latest request id is applied.
   int _requestId = 0;
   bool _listLoaded = false;
+  Worker? _noticeTick;
 
   NotificationRepository get _repo => Get.find<NotificationRepository>();
 
@@ -32,6 +35,13 @@ class NotificationController extends GetxController {
   void onInit() {
     super.onInit();
     loadUnreadCount();
+    _noticeTick = ever<int>(BuddyLive.notices, (_) => loadUnreadCount());
+  }
+
+  @override
+  void onClose() {
+    _noticeTick?.dispose();
+    super.onClose();
   }
 
   Future<void> loadUnreadCount() async {
@@ -101,10 +111,12 @@ class NotificationController extends GetxController {
   }
 
   Future<void> markAllRead() async {
-    final hadUnread = notifications.any((n) => !n.isRead);
+    final noticeCtrl = NoticesController.maybe;
+    final hadUnread = notifications.any((n) => !n.isRead) || (noticeCtrl?.notices.any((n) => !n.isRead) ?? false) || unreadCount.value > 0;
     if (!hadUnread) return;
 
     notifications.value = notifications.map((n) => n.copyWith(isRead: true)).toList();
+    noticeCtrl?.markAllReadLocal();
     unreadCount.value = 0;
 
     try {
@@ -122,6 +134,10 @@ class NotificationController extends GetxController {
   /// same as this codebase's other server-anchored counts falling back to "next real fetch picks
   /// up the true value" rather than guessing at a local patch it can't fully reconcile.
   void applyLiveNotification(Map<String, dynamic> data) {
+    if (BuddyPushSync.isBuddyType(data['type'] as String?)) {
+      loadUnreadCount();
+      return;
+    }
     unreadCount.value++;
     if (!_listLoaded || hasMoreNotifications.value) return;
     try {

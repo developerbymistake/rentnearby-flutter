@@ -9,6 +9,8 @@ import '../models/trip_model.dart';
 import '../trip_strings_mca_a1.dart';
 import '../trip_strings_overview.dart';
 import '../utils/trip_parts.dart';
+import '../../buddy/sharing/widgets/owner_overview_seam.dart';
+import '../widgets/trip_hero_card.dart';
 import '../widgets/trip_overview_progress.dart';
 import '../widgets/trip_plan_header.dart';
 
@@ -87,8 +89,22 @@ class TripOverviewScreen extends StatelessWidget {
     this.showStay = true,
     this.parts = TripParts.saved,
     this.highlight,
+    this.subtitle,
+    this.travellerCount,
+    this.extraCards = const [],
+    this.extraMenuItems = const [],
+    this.compactCards = false,
+    this.progressLine,
+    this.showProgress = true,
   });
 
+  final String? subtitle;
+  final int? travellerCount;
+  final List<Widget> extraCards;
+  final List<OverviewMenuItem> extraMenuItems;
+  final bool compactCards;
+  final String? progressLine;
+  final bool showProgress;
   final TripModel trip;
   final bool taxiCanRate;
   final bool paused;
@@ -126,12 +142,18 @@ class TripOverviewScreen extends StatelessWidget {
         padding: EdgeInsets.zero,
         shape: RoundedRectangleBorder(borderRadius: DS.circular(12)),
         color: DesignColors.surface,
-        onSelected: (_) => onViewPlan(),
+        onSelected: (i) => i == 0 ? onViewPlan() : extraMenuItems[i - 1].onTap(),
         itemBuilder: (_) => [
           PopupMenuItem<int>(
             value: 0,
             child: Text(TripStringsOverview.viewPlan, style: Ink3D.text(13, FontWeight.w600, Ink3D.title)),
           ),
+          for (var i = 0; i < extraMenuItems.length; i++)
+            PopupMenuItem<int>(
+              key: ValueKey('overview_menu_extra_$i'),
+              value: i + 1,
+              child: Text(extraMenuItems[i].label, style: Ink3D.text(13, FontWeight.w600, extraMenuItems[i].danger ? DesignColors.error : Ink3D.title)),
+            ),
         ],
         child: TripMenuDots.box(),
       );
@@ -142,6 +164,7 @@ class TripOverviewScreen extends StatelessWidget {
     // Paused blocks only a new request; an existing request or booking can still be opened.
     final taxiBlocked = paused && !taxi.hasRequest;
     final indigo = ListingTone.indigo;
+    final gap = compactCards ? 12.0 : 16.0;
     return Scaffold(
       backgroundColor: DesignColors.scaffold,
       body: Column(
@@ -151,7 +174,8 @@ class TripOverviewScreen extends StatelessWidget {
             child: _OverviewHeader(
               onBack: onBack ?? () => Navigator.maybePop(context),
               menu: _menu(),
-              bottom: _TripLine(trip: trip),
+              subtitle: subtitle,
+              bottom: _TripLine(trip: trip, travellerCount: travellerCount),
             ),
           ),
           Expanded(
@@ -168,9 +192,11 @@ class TripOverviewScreen extends StatelessWidget {
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                      TripOverviewProgress(parts: parts),
-                      Gap.v(16),
-                      _HeroCard(
+                      if (showProgress) ...[
+                        TripOverviewProgress(parts: parts, line: progressLine),
+                        Gap.v(gap),
+                      ],
+                      TripHeroCard(
                         key: const ValueKey('overview_itinerary_card'),
                         tone: indigo,
                         asset: TravelIcon.route,
@@ -180,11 +206,12 @@ class TripOverviewScreen extends StatelessWidget {
                         button: TripStringsOverview.view,
                         buttonKey: const ValueKey('overview_itinerary_button'),
                         onTap: onViewPlan,
+                        compact: compactCards,
                       ),
-                      Gap.v(16),
+                      Gap.v(gap),
                       Opacity(
                         opacity: taxiBlocked ? 0.5 : 1,
-                        child: _HeroCard(
+                        child: TripHeroCard(
                           key: const ValueKey('overview_taxi_card'),
                           tone: ListingTone.sunrise,
                           asset: TravelIcon.taxi,
@@ -195,6 +222,7 @@ class TripOverviewScreen extends StatelessWidget {
                           buttonKey: const ValueKey('overview_taxi_button'),
                           highlight: highlight == TripPart.taxi && !taxiBlocked,
                           onTap: taxiBlocked ? null : () => onTaxi(taxi),
+                          compact: compactCards,
                         ),
                       ),
                       if (paused) ...[
@@ -207,8 +235,8 @@ class TripOverviewScreen extends StatelessWidget {
                         ),
                       ],
                       if (showStay) ...[
-                        Gap.v(16),
-                        _HeroCard(
+                        Gap.v(gap),
+                        TripHeroCard(
                           key: const ValueKey('overview_stay_card'),
                           tone: ListingTone.forest,
                           asset: TravelIcon.stay,
@@ -219,8 +247,10 @@ class TripOverviewScreen extends StatelessWidget {
                           buttonKey: const ValueKey('overview_stay_button'),
                           highlight: highlight == TripPart.stay,
                           onTap: onStay == null ? null : () => onStay!(stay),
+                          compact: compactCards,
                         ),
                       ],
+                      for (final card in extraCards) ...[Gap.v(gap), card],
                           ],
                         ),
                       ),
@@ -243,8 +273,9 @@ class TripOverviewScreen extends StatelessWidget {
 }
 
 class _OverviewHeader extends StatelessWidget {
-  const _OverviewHeader({required this.onBack, required this.menu, required this.bottom});
+  const _OverviewHeader({required this.onBack, required this.menu, required this.bottom, this.subtitle});
 
+  final String? subtitle;
   final VoidCallback onBack;
   final Widget menu;
   final Widget bottom;
@@ -288,7 +319,7 @@ class _OverviewHeader extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(TripStringsOverview.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(20, FontWeight.w700, white, height: 1.25, letterSpacing: 0)),
-                        Text(TripStringsOverview.subtitle, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(12.5, FontWeight.w400, DesignColors.tint(white, Alpha.v93), letterSpacing: 0)),
+                        Text(subtitle ?? TripStringsOverview.subtitle, key: const ValueKey('overview_subtitle'), maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(12.5, FontWeight.w400, DesignColors.tint(white, Alpha.v93), letterSpacing: 0)),
                       ],
                     ),
                   ),
@@ -305,13 +336,14 @@ class _OverviewHeader extends StatelessWidget {
 }
 
 class _TripLine extends StatelessWidget {
-  const _TripLine({required this.trip});
+  const _TripLine({required this.trip, this.travellerCount});
 
   final TripModel trip;
+  final int? travellerCount;
 
   @override
   Widget build(BuildContext context) {
-    final line = TripStringsOverview.tripLine(trip.legCount, trip.dayCount, trip.plan.settings.peopleCount);
+    final line = TripStringsOverview.tripLine(trip.legCount, trip.dayCount, travellerCount ?? trip.plan.settings.peopleCount);
     final narrow = MediaQuery.sizeOf(context).width < Form3D.narrow;
     return Padding(
       padding: EdgeInsets.only(top: DS.gv(16)),
@@ -365,104 +397,6 @@ class _TripLine extends StatelessWidget {
         ),
       ),
     );
-  }
-}
-
-class _HeroCard extends StatelessWidget {
-  const _HeroCard({
-    super.key,
-    required this.tone,
-    required this.asset,
-    required this.title,
-    required this.chip,
-    required this.line,
-    required this.button,
-    required this.buttonKey,
-    required this.onTap,
-    this.highlight = false,
-  });
-
-  final bool highlight;
-  final ListingTone tone;
-  final String asset;
-  final String title;
-  final String chip;
-  final String line;
-  final String button;
-  final Key buttonKey;
-  final VoidCallback? onTap;
-
-  static const double _buttonFont = 13.5;
-
-  @override
-  Widget build(BuildContext context) {
-    final narrow = MediaQuery.sizeOf(context).width < Form3D.narrow;
-    final card = Container(
-      constraints: BoxConstraints(minHeight: DS.s(140)),
-      padding: DS.insets(l: 16, t: 16, r: 20, b: 16),
-      decoration: BoxDecoration(
-        gradient: tone.gradient,
-        borderRadius: DS.br(CardRadius.hero),
-        border: highlight ? Border.all(color: DesignColors.surface, width: DS.s(2.5)) : null,
-        boxShadow: highlight ? tone.glow(blur: 22, dy: 8) : tone.glow(blur: 14, dy: 6),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: DS.s(narrow ? 84 : 100),
-            height: DS.s(narrow ? 84 : 100),
-            alignment: Alignment.center,
-            decoration: const BoxDecoration(color: DesignColors.whiteSoft, shape: BoxShape.circle),
-            child: Art3D(asset: asset, size: narrow ? 52 : 62, shadowBlur: 4, shadowOffset: const Offset(3, 5)),
-          ),
-          Gap.h(16),
-          Expanded(
-            child: Padding(
-              padding: EdgeInsets.only(right: DS.s(narrow ? 0 : 24)),
-              child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Flexible(
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        alignment: Alignment.centerLeft,
-                        child: Text(title, maxLines: 1, style: Ink3D.text(21, FontWeight.w700, DesignColors.textInverse, height: 1.2)),
-                      ),
-                    ),
-                    Gap.h(10),
-                    Container(
-                      padding: DS.sym(h: 12, v: 3),
-                      decoration: BoxDecoration(color: DesignColors.tint(DesignColors.surface, Alpha.v30), borderRadius: DS.circular(10)),
-                      child: Text(chip, style: Ink3D.text(12.5, FontWeight.w700, DesignColors.textInverse, height: 1.5)),
-                    ),
-                  ],
-                ),
-                Gap.v(8),
-                Text(line, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(13, FontWeight.w400, DesignColors.textInverse, height: 1.45)),
-                Gap.v(8),
-                Tap3D(
-                  tapKey: buttonKey,
-                  onTap: onTap,
-                  child: Container(
-                    constraints: BoxConstraints(minHeight: DS.s(40)),
-                    padding: DS.sym(h: 22),
-                    decoration: BoxDecoration(color: DesignColors.surface, borderRadius: DS.circular(22), boxShadow: DS.shadows(Ink3D.whiteBtn)),
-                    child: Center(
-                      widthFactor: 1,
-                      child: Text(button, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(_buttonFont, FontWeight.w700, onTap == null ? Ink3D.grey : tone.text)),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            ),
-          ),
-        ],
-      ),
-    );
-    return highlight ? Semantics(label: TripStringsOverview.nextLabel(title), child: card) : card;
   }
 }
 

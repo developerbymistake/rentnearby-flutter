@@ -20,6 +20,7 @@ import 'screens/trip_spots_screen.dart';
 import 'screens/trip_stay_screen.dart';
 import 'screens/trip_summary_screen.dart';
 import 'screens/trip_where_screen.dart';
+import '../buddy/sharing/widgets/owner_overview_seam.dart';
 import 'trip_navigation.dart';
 import 'trip_strings.dart';
 import 'utils/taxi_result.dart';
@@ -229,6 +230,7 @@ class _TripOverviewRouteState extends State<TripOverviewRoute> with _HoldsTrip {
 
   @override
   void dispose() {
+    OwnerOverviewSeam.release(widget.tripId);
     releaseTrip();
     super.dispose();
   }
@@ -293,9 +295,17 @@ class _TripOverviewRouteState extends State<TripOverviewRoute> with _HoldsTrip {
             final t = _plan.trip.value!;
             final parts = _plan.parts;
             final showStay = !_plan.stayTabOff.value;
+            final extras = OwnerOverviewSeam.of(context, t, progressPercent: parts.percent);
             return TripOverviewScreen(
               trip: t,
               parts: parts,
+              subtitle: extras.subtitle,
+              travellerCount: extras.travellerCount,
+              extraCards: extras.extraCards,
+              extraMenuItems: extras.extraMenuItems,
+              compactCards: extras.compactCards,
+              progressLine: extras.progressLine,
+              showProgress: extras.showProgress,
               highlight: TripOverviewScreen.highlightOf(parts, showStay: showStay),
               paused: paused,
               taxiCanRate: _plan.taxiCanRate,

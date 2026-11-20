@@ -65,6 +65,7 @@ class StorageService {
 
   static const String _tripListCachePrefix = 'trip_list_cache_';
   static const String _tripSummaryCachePrefix = 'trip_summary_cache_';
+  static const String _tripExpensesCachePrefix = 'trip_expenses_cache:';
 
   static void saveTripListCache(String state, Map<String, dynamic> json) =>
       _box.write('$_tripListCachePrefix$state', jsonEncode(json));
@@ -183,7 +184,8 @@ class StorageService {
         k.startsWith(_tripSummaryCachePrefix) ||
         k.startsWith(_tripPendingPrefix) ||
         k.startsWith(_tripBarHiddenPrefix) ||
-        k.startsWith(_tripMilestonesPrefix));
+        k.startsWith(_tripMilestonesPrefix) ||
+        k.startsWith(_tripExpensesCachePrefix));
     for (final k in keys.toList()) {
       _box.remove(k);
     }

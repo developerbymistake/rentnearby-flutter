@@ -20,7 +20,8 @@ class NotificationRepository {
 
   Future<int> getUnreadCount() async {
     final res = await ApiService.get('/notifications/unread-count');
-    return (res['data']?['count'] as num?)?.toInt() ?? 0;
+    final data = res['data'];
+    return (data?['total'] as num?)?.toInt() ?? (data?['count'] as num?)?.toInt() ?? 0;
   }
 
   Future<void> markRead(String id) async {

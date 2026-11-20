@@ -29,6 +29,11 @@ abstract final class BuddyLook {
   static const Color closeX = Color(0xFFE5484D);
   static const Color indigoText = Color(0xFF2633C5);
   static const Color cardShadow = Color(0xFF3A5160);
+  static const Color reasonBg = Color(0xFFFFF1EC);
+  static const Color scanDark = Color(0xFF0E1116);
+  static const Color scanTeal = Color(0xFF5EE0CF);
+  static const Color scanRose = Color(0xFFFF8A8A);
+  static const Color scanAmber = Color(0xFFF5C26B);
 
   static ListingTone get teal => BuddyInk.tone;
 

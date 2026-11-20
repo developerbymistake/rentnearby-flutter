@@ -15,6 +15,7 @@ class TripSummaryBookingCard extends StatelessWidget {
     this.rows = const [],
     this.body,
     this.payLine,
+    this.footer,
   });
 
   final ListingTone tone;
@@ -26,6 +27,7 @@ class TripSummaryBookingCard extends StatelessWidget {
   final List<(String, String)> rows;
   final Widget? body;
   final String? payLine;
+  final Widget? footer;
 
   static double get topRoom => DS.s(40);
 
@@ -111,6 +113,7 @@ class TripSummaryBookingCard extends StatelessWidget {
                     ),
                   ),
                 if (body != null) Padding(padding: DS.insets(l: 14, t: 12, r: 14), child: body),
+                if (footer != null) Padding(padding: DS.insets(l: 14, r: 14), child: footer),
                 Gap.v(14),
                 if ((payLine ?? '').isNotEmpty)
                   Container(

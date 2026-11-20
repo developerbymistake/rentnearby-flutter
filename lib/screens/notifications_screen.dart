@@ -8,6 +8,11 @@ import '../config/app_routes.dart';
 import '../config/notification_strings.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/notification_controller.dart';
+import '../features/buddy/notices/controllers/notices_controller.dart';
+import '../features/buddy/notices/models/notice_models.dart';
+import '../features/buddy/notices/notice_copy.dart';
+import '../features/buddy/notices/widgets/inbox_feed.dart';
+import '../features/buddy/notices/widgets/notice_row.dart';
 import '../models/notification_model.dart';
 import '../services/notification_service.dart';
 import '../utils/app_date_format.dart';
@@ -24,11 +29,13 @@ class NotificationsScreen extends StatefulWidget {
 class _NotificationsScreenState extends State<NotificationsScreen> {
   final _ctrl = Get.find<NotificationController>();
   final _scrollCtrl = ScrollController();
+  final _notices = NoticesController.maybe;
 
   @override
   void initState() {
     super.initState();
     _ctrl.loadNotifications(reset: true);
+    _notices?.refreshFirstPage();
     _scrollCtrl.addListener(_onScroll);
   }
 
@@ -42,10 +49,24 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   void _onScroll() {
     if (_scrollCtrl.position.pixels >= _scrollCtrl.position.maxScrollExtent - 200) {
       _ctrl.loadMoreNotifications();
+      _notices?.loadMore();
     }
   }
 
-  Future<void> _refresh() => _ctrl.loadNotifications(reset: true);
+  Future<void> _refresh() => Future.wait([_ctrl.loadNotifications(reset: true), if (_notices != null) _notices.refreshFirstPage()]);
+
+  void _openNotice(Notice n) {
+    if (!n.isRead && _ctrl.unreadCount.value > 0) _ctrl.unreadCount.value--;
+    _notices?.markRead(n.id);
+    final view = NoticeCopy.of(n);
+    final live = AppRoutes.liveTarget(view?.route, view?.args);
+    if (live == null) return;
+    if (!Get.find<AuthController>().canOpenRoute(live.route)) {
+      AppToast.info('This is no longer available.');
+      return;
+    }
+    NotificationService.to.openActionRoute(live.route, live.args);
+  }
 
   void _openNotification(NotificationModel n) {
     _ctrl.markRead(n.id);
@@ -69,8 +90,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         child: Obx(() {
           final loading = _ctrl.isLoading.value;
           final loadingMore = _ctrl.isLoadingMore.value;
-          final items = _ctrl.notifications;
-          final hasMore = _ctrl.hasMoreNotifications.value;
+          final oldHasMore = _ctrl.hasMoreNotifications.value;
+          final noticeList = _notices?.notices.toList() ?? const <Notice>[];
+          final noticesHasMore = _notices?.nextCursor.value != null;
+          final loadingMore2 = _notices?.isLoadingMore.value ?? false;
+          final hasMore = oldHasMore || noticesHasMore;
+          final items = InboxFeed.merge(_ctrl.notifications.toList(), noticeList, oldHasMore: oldHasMore, noticesHasMore: noticesHasMore);
           if (loading && items.isEmpty) return _withHeader(_buildShimmer());
           if (items.isEmpty && _ctrl.loadFailed.value) {
             return _withHeader(_centred(StateCard3D(
@@ -86,8 +111,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           }
           if (items.isEmpty) return _withHeader(_buildEmpty());
 
-          final cells = groupByDay<NotificationModel>(items, (n) => n.createdAt);
-          final extra = hasMore || loadingMore ? 1 : 0;
+          final cells = groupByDay<InboxItem>(items, (n) => n.time);
+          final extra = hasMore || loadingMore || loadingMore2 ? 1 : 0;
           return RefreshIndicator(
             color: _tone.g2,
             backgroundColor: DesignColors.surface,
@@ -105,15 +130,18 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 if (i == cells.length) return const NotificationMoreSpinner();
                 final cell = cells[i];
                 return switch (cell) {
-                  DayHeaderCell<NotificationModel>() => DayLabel3D(cell.label),
-                  DayItemCell<NotificationModel>(item: final n) => EntranceOnce(
-                      key: ValueKey(n.id),
+                  DayHeaderCell<InboxItem>() => DayLabel3D(cell.label),
+                  DayItemCell<InboxItem>(item: final item) => EntranceOnce(
+                      key: ValueKey(item.key),
                       index: i,
-                      child: _NotificationRow(
-                        notification: n,
-                        dateText: AppDateFormat.time(n.createdAt),
-                        onTap: () => _openNotification(n),
-                      ),
+                      child: switch (item) {
+                        OldRowItem(row: final n) => _NotificationRow(
+                            notification: n,
+                            dateText: AppDateFormat.time(n.createdAt),
+                            onTap: () => _openNotification(n),
+                          ),
+                        NoticeItem(notice: final n) => NoticeRow(notice: n, onTap: () => _openNotice(n)),
+                      },
                     ),
                 };
               },
@@ -132,7 +160,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       title: 'Notifications',
       art: NotificationLook.bell,
       onBack: () => Get.back(),
-      action: Obx(() => _ctrl.notifications.any((n) => !n.isRead)
+      action: Obx(() => _ctrl.notifications.any((n) => !n.isRead) || (_notices?.notices.any((n) => !n.isRead) ?? false) || _ctrl.unreadCount.value > 0
           ? GradientPillButton(
               tone: _tone,
               label: 'Mark all read',

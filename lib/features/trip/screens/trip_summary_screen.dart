@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../buddy/expenses/models/expense_models.dart' show ExpenseLinkKind;
+import '../../buddy/ledger/widgets/booking_expense_line.dart';
 import 'package:bakhli/design/design.dart';
 import 'package:bakhli/design/extra/trip_plan_look.dart';
 import 'package:get/get.dart';
@@ -352,6 +354,7 @@ class _TripSummaryScreenState extends State<TripSummaryScreen> with TickerProvid
         if (n.gstInvoice != null) (TripStrings.gstInvoice, n.gstInvoice! ? TripStrings.yes : TripStrings.no),
         (TripStrings.confirmedLabel, n.confirmedLine()),
       ],
+      footer: (n.enquiryId ?? '').isEmpty ? null : BookingExpenseLine(tripId: _tripId, kind: ExpenseLinkKind.stay, id: n.enquiryId!),
       payLine: TripStrings.stayPayLine,
     );
   }
@@ -377,6 +380,7 @@ class _TripSummaryScreenState extends State<TripSummaryScreen> with TickerProvid
         if (pickup.isNotEmpty) (TripStrings.pickup, pickup),
         (TripStrings.confirmedLabel, t.confirmedLine()),
       ],
+      footer: (t.bookingId ?? t.enquiryId ?? '').isEmpty ? null : BookingExpenseLine(tripId: _tripId, kind: ExpenseLinkKind.taxi, id: (t.bookingId ?? t.enquiryId)!),
       payLine: TripStrings.taxiPayLine,
     );
   }

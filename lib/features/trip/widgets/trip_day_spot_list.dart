@@ -15,6 +15,7 @@ import '../utils/trip_days_rules.dart';
 import '../utils/trip_format.dart';
 import 'trip_leg_header.dart';
 import 'trip_leg_actions.dart';
+import '../../buddy/ledger/widgets/day_spent_chip.dart';
 
 
 class TripDaySpotList extends StatelessWidget {
@@ -179,6 +180,7 @@ class TripDaySpotList extends StatelessWidget {
             children: [
               if (d.spots.isNotEmpty) Text(TripFormat.hm(load), style: Ink3D.text(13, FontWeight.w600, white, letterSpacing: 0)),
               _pill(TripStringsV2Plan.placesCount(d.spots.length)),
+              if (c.trip.value?.sharing?.expenses.hasExpenses ?? false) DaySpentChip(tripId: c.trip.value!.id, day: day),
               if (editing && plan.legDayCount(d.leg) > 1)
                 Tap3D(
                   onTap: () => _removeDay(c),
