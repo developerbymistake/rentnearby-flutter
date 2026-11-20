@@ -44,17 +44,26 @@ abstract final class InboxFeed {
       final t = noticeTime(n);
       if (oldestNotice == null || t.isBefore(oldestNotice)) oldestNotice = t;
     }
-    final items = <InboxItem>[
+    final oldItems = <InboxItem>[
       for (final r in oldRows)
         if (!(noticesHasMore && oldestNotice != null && r.createdAt.isBefore(oldestNotice))) OldRowItem(r),
+    ];
+    final noticeItems = <InboxItem>[
       for (final n in notices)
         if (!(oldHasMore && oldestOld != null && noticeTime(n).isBefore(oldestOld))) NoticeItem(n),
     ];
-    final indexed = [for (var i = 0; i < items.length; i++) (i, items[i])];
-    indexed.sort((a, b) {
-      final c = b.$2.time.compareTo(a.$2.time);
-      return c != 0 ? c : a.$1.compareTo(b.$1);
-    });
-    return [for (final e in indexed) e.$2];
+    final merged = <InboxItem>[];
+    var a = 0;
+    var b = 0;
+    while (a < oldItems.length && b < noticeItems.length) {
+      merged.add(oldItems[a].time.isBefore(noticeItems[b].time) ? noticeItems[b++] : oldItems[a++]);
+    }
+    while (a < oldItems.length) {
+      merged.add(oldItems[a++]);
+    }
+    while (b < noticeItems.length) {
+      merged.add(noticeItems[b++]);
+    }
+    return merged;
   }
 }

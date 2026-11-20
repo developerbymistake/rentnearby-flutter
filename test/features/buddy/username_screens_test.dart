@@ -200,13 +200,13 @@ void main() {
   });
 
   group('profile username row (frame 1.2)', () {
-    testWidgets('BUDDIES label above ACCOUNT with the username row and no Buddies row', (t) async {
+    testWidgets('BUDDIES label above ACCOUNT with the username row and the Buddies row', (t) async {
       _setup();
       await _openProfile(t);
       expect(find.text(BuddyStrings.sectionBuddies), findsOneWidget);
       expect(find.text(_username), findsOneWidget);
       expect(find.text(BuddyStrings.myUsername), findsOneWidget);
-      expect(find.text('Buddies'), findsNothing);
+      expect(find.text('Buddies'), findsOneWidget);
       expect(t.getTopLeft(find.text(BuddyStrings.sectionBuddies)).dy, lessThan(t.getTopLeft(find.text('ACCOUNT')).dy));
       await _finish(t);
     });
