@@ -566,7 +566,8 @@ void main() {
     Get.put<AppVersionController>(_Ver());
     await pumpPhone(t, const ForceUpdateScreen(), size: Size(z.w, 800), textScale: z.s);
     await _wait(t);
-    expect(find.text('Your build 62 · Required build 64'), findsOneWidget);
+    expect(find.text('This app is old. Please update to the new version to continue.'), findsOneWidget);
+    expect(find.textContaining('Required build'), findsNothing);
   });
 
   // List states on the real screens

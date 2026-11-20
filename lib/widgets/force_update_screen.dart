@@ -9,8 +9,7 @@ import 'gradient_button.dart';
 class ForceUpdateScreen extends StatelessWidget {
   const ForceUpdateScreen({super.key});
 
-  static const _defaultMessage =
-      'A new version of Bakhli is required to continue. Please update to keep using the app.';
+  static const _defaultMessage = 'This app is old. Please update to the new version to continue.';
 
   @override
   Widget build(BuildContext context) {
@@ -18,15 +17,11 @@ class ForceUpdateScreen extends StatelessWidget {
     return Obx(() {
       final cfg = ctrl.config.value;
       final checking = ctrl.isChecking.value;
-      final requiredBuild = cfg?.minBuild ?? 0;
       return GateStatusPage(
         tone: ListingTone.indigo,
         asset: TravelIcon.airplane,
         title: 'Update Required',
         body: cfg?.message ?? _defaultMessage,
-        extra: ctrl.installedBuild > 0 && requiredBuild > 0
-            ? Text('Your build ${ctrl.installedBuild} · Required build $requiredBuild', textAlign: TextAlign.center)
-            : null,
         primary: GradientButton(label: 'Update Now', onPressed: ctrl.openStore),
         secondary: checking
             ? BusyWhitePill(tone: ListingTone.indigo, height: 52, semanticsLabel: 'Check Again')

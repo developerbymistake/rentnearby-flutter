@@ -80,7 +80,7 @@ TripPlanController _plan(TripPlan p, {TripModel? trip}) {
   return c;
 }
 
-String _src(String path) => File(path).readAsStringSync();
+String _src(String path) => File(path).readAsStringSync().replaceAll('\r\n', '\n');
 
 String _member(String src, String signature) {
   final start = src.indexOf(signature);
@@ -103,7 +103,7 @@ String _member(String src, String signature) {
 Future<String?> _headSource(String path) async {
   try {
     final r = await Process.run('git', ['show', 'HEAD:$path']);
-    return r.exitCode == 0 ? r.stdout as String : null;
+    return r.exitCode == 0 ? (r.stdout as String).replaceAll('\r\n', '\n') : null;
   } catch (_) {
     return null;
   }
