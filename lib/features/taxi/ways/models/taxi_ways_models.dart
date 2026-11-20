@@ -410,16 +410,6 @@ class WayCover {
 
   static int carsFor(String taxiId, int? seats, int people, String driverTaxiId, List<String> coverOthers) =>
       coverOthers.isNotEmpty && (taxiId == driverTaxiId || coverOthers.contains(taxiId)) ? 1 : WayCars.needed(people, seats);
-
-  // The asked cars of a stretch: the driver and his cover cars first, then backups, at most cap.
-  static List<String> askIds(String driverTaxiId, List<String> coverOthers, Iterable<String> backups, int cap) {
-    final ids = <String>[driverTaxiId];
-    for (final id in [...coverOthers, ...backups]) {
-      if (ids.length >= cap) break;
-      if (id.isNotEmpty && !ids.contains(id)) ids.add(id);
-    }
-    return ids;
-  }
 }
 
 class WayPlan {

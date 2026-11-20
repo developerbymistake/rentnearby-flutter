@@ -222,15 +222,36 @@ class TripNavigation {
       cta: TripStringsV2Find.showStaysIn(c.plan.value!.cityNameOf(first)),
     );
     if (!alive() || !ok || !c.hasDates) return false;
-    c.clearSkip(TripEasyRowKey(TripEasyRowKind.stay, k));
-    final saved = await c.flushPendingSave();
+    return _reopenAndOpen(c, k);
+  }
+
+  // Find another, Ask other stays and the problem sheet reopen the city's step like the Stay card.
+  static Future<bool> reopenStayShortlist(int leg, {double? nearLat, double? nearLng}) async {
+    if (!Get.isRegistered<TripPlanController>()) return false;
+    final c = TripPlanController.to;
+    final p = c.plan.value;
+    if (p == null || c.tripGone.value || c.needsUpdate.value || leg < 1 || leg > p.legCount) return false;
+    if (c.isReadOnly) {
+      AppToast.info(TripStringsMcaA3.readOnlyBlock);
+      return false;
+    }
+    if (c.netOff) {
+      AppToast.warning(TripStringsV2Find.offlineAsk);
+      return false;
+    }
+    return _reopenAndOpen(c, leg, nearLat: nearLat, nearLng: nearLng);
+  }
+
+  static Future<bool> _reopenAndOpen(TripPlanController c, int leg, {double? nearLat, double? nearLng}) async {
+    bool alive() => Get.isRegistered<TripPlanController>() && identical(TripPlanController.to, c);
+    final saved = await c.reopenStayStep(leg);
     if (!alive()) return false;
-    if (!saved || c.trip.value?.id == null) {
+    if (!saved) {
       AppToast.warning(TripStringsStepsK3.notSavedToTrip);
       return false;
     }
-    if (!hasLeg()) return false;
-    await openStay(k, shortlist: true);
+    if (leg > (c.plan.value?.legCount ?? 0)) return false;
+    await openStay(leg, nearLat: nearLat, nearLng: nearLng, shortlist: true);
     return true;
   }
 

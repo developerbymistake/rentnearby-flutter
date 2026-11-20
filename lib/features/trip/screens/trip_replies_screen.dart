@@ -344,11 +344,11 @@ class _TripRepliesScreenState extends State<TripRepliesScreen> with TickerProvid
             art: ListingArt.roundPushpin,
             text: TripStrings.allAsksEnded,
             actionLabel: TripStrings.findAnother,
-            onAction: () => TripNavigation.openStay(_legIndex, shortlist: true),
+            onAction: () => TripNavigation.reopenStayShortlist(_legIndex),
           ),
         for (var i = 0; i < entries.length; i++) _card(entries[i], i),
         if (_canAskAnother(entries))
-          ArtPillButton(tone: _tone, art: ListingArt.hotel, label: TripStringsA5.askAnotherStay, onTap: () => TripNavigation.openStay(_legIndex, shortlist: true)),
+          ArtPillButton(tone: _tone, art: ListingArt.hotel, label: TripStringsA5.askAnotherStay, onTap: () => TripNavigation.reopenStayShortlist(_legIndex)),
       ], 'list');
     });
   }
@@ -514,9 +514,9 @@ class _TripRepliesScreenState extends State<TripRepliesScreen> with TickerProvid
     } else if (status == TripDisplayStatus.offered) {
       primary = ReplyAction(label: TripStringsA2.refresh, onTap: live(() => _c.refreshEnquiries()));
     } else if (status == TripDisplayStatus.holdExpired) {
-      primary = ReplyAction(label: TripStrings.askOtherStays, onTap: live(() => TripNavigation.openStay(_legIndex, shortlist: true)));
+      primary = ReplyAction(label: TripStrings.askOtherStays, onTap: live(() => TripNavigation.reopenStayShortlist(_legIndex)));
     } else if (e != null && e.isRed) {
-      primary = ReplyAction(label: TripStrings.findAnother, onTap: live(() => TripNavigation.openStay(_legIndex, shortlist: true)));
+      primary = ReplyAction(label: TripStrings.findAnother, onTap: live(() => TripNavigation.reopenStayShortlist(_legIndex)));
     } else {
       chatPrimary = true;
       final chat = e?.conversationId != null;

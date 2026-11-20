@@ -26,39 +26,45 @@ int _legCountOf(Object? raw, List<String>? cities) {
 class TripPlanLockReasons {
   static const String taxiRequestActive = 'TaxiRequestActive';
   static const String taxiBookingActive = 'TaxiBookingActive';
+  static const String stayBookingActive = 'StayBookingActive';
 }
+
+String? _text(Object? v) => v is String && v.isNotEmpty ? v : null;
 
 class TripPlanLock {
   final bool locked;
   final String? reason;
   final String? requestId;
+  final String? enquiryId;
+  final String? message;
 
-  const TripPlanLock({this.locked = false, this.reason, this.requestId});
+  const TripPlanLock({this.locked = false, this.reason, this.requestId, this.enquiryId, this.message});
 
   static const TripPlanLock none = TripPlanLock();
 
   bool get byBooking => reason == TripPlanLockReasons.taxiBookingActive;
 
+  bool get byStay => reason == TripPlanLockReasons.stayBookingActive;
+
   static TripPlanLock parse(Object? raw) {
     if (raw is! Map) return none;
-    final reason = raw['reason'];
-    final id = raw['requestId'];
     return TripPlanLock(
       locked: raw['locked'] == true,
-      reason: reason is String && reason.isNotEmpty ? reason : null,
-      requestId: id is String && id.isNotEmpty ? id : null,
+      reason: _text(raw['reason']),
+      requestId: _text(raw['requestId']),
+      enquiryId: _text(raw['enquiryId']),
     );
   }
 
-  // The 409 PlanLocked error carries only reason and request id.
-  static TripPlanLock fromError(Object? data) {
+  // The 409 PlanLocked error carries reason, request or enquiry id, and the server text.
+  static TripPlanLock fromError(Object? data, {String? message}) {
     final m = data is Map ? data : const {};
-    final reason = m['reason'];
-    final id = m['requestId'];
     return TripPlanLock(
       locked: true,
-      reason: reason is String && reason.isNotEmpty ? reason : TripPlanLockReasons.taxiRequestActive,
-      requestId: id is String && id.isNotEmpty ? id : null,
+      reason: _text(m['reason']) ?? TripPlanLockReasons.taxiRequestActive,
+      requestId: _text(m['requestId']),
+      enquiryId: _text(m['enquiryId']),
+      message: _text(message),
     );
   }
 }

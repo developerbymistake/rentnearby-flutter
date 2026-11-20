@@ -28,6 +28,9 @@ class TripStringsShortlist {
     return 'We told $n ${n == 1 ? who : '${who}s'}. You will see replies here.';
   }
 
+  static const loadFailed = 'Could not load your shortlist.';
+  static const sendFailed = 'Could not send. Check your list and try again.';
+
   static const leadLimit = 'You have reached the daily limit for taxi enquiries on this trip. Try again tomorrow.';
 
   static String startsAt(String place) => 'Starts at $place';

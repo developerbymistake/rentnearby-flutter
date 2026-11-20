@@ -38,7 +38,9 @@ void main() {
       'lib/widgets/trip_advance_cards.dart',
     ];
     for (final f in files) {
-      expect(File(f).readAsStringSync(), contains('shortlist: true'), reason: f);
+      final src = File(f).readAsStringSync();
+      expect(src, contains('TripNavigation.reopenStayShortlist('), reason: f);
+      expect(src, isNot(contains('TripNavigation.openStay(')), reason: f);
     }
     final call = RegExp(r'TripNavigation\.openStay\(([^;]*)\);');
     for (final f in Directory('lib').listSync(recursive: true).whereType<File>().where((f) => f.path.endsWith('.dart'))) {

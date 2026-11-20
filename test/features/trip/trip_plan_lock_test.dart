@@ -217,6 +217,41 @@ void main() {
     expect(merged.taxiMark, isNull);
   });
 
+  test('keep_server_structure_keeps_the_local_taxi_mark_under_a_stay_lock', () {
+    final server = enginePlan([[2, 2], [1]]);
+    final local = server
+        .copyWith(days: [server.days[1], server.days[0], server.days[2]])
+        .withTaxiMark(const TripRowMark.skipped());
+    final merged = TripPlanController.keepServerStructure(local, server, keepTaxiMark: true);
+    expect(jsonEncode([for (final d in merged.days) d.toJson()]), jsonEncode([for (final d in server.days) d.toJson()]));
+    expect(merged.taxiMark?.isSkipped, isTrue);
+  });
+
+  test('stay_lock_parses_reason_and_enquiry_id', () {
+    final plan = enginePlan([[1]]);
+    final t = TripModel.fromJson(engineTripJson(plan, extra: {
+      'planLock': {'locked': true, 'reason': 'StayBookingActive', 'requestId': null, 'enquiryId': 'e9'},
+    }));
+    expect(t.planLock.byStay, isTrue);
+    expect(t.planLock.byBooking, isFalse);
+    expect(t.planLock.enquiryId, 'e9');
+    expect(t.planLock.requestId, isNull);
+    final c = engineRig(plan, lock: t.planLock);
+    expect(c.planLockMessage, TripStringsDayplan.lockedByStay);
+    expect(c.planLockEnquiryId, 'e9');
+    expect(c.canMarkRow(const TripEasyRowKey(TripEasyRowKind.taxi)), isTrue);
+
+    final err = TripPlanLock.fromError({'reason': 'StayBookingActive', 'enquiryId': 'e9'}, message: 'From server');
+    expect((err.byStay, err.enquiryId, err.requestId, err.message), (true, 'e9', null, 'From server'));
+    expect(engineRig(plan, lock: err).planLockMessage, 'From server');
+
+    final taxi = TripPlanLock.fromError({'reason': 'TaxiRequestActive', 'requestId': 'r1'});
+    expect((taxi.byStay, taxi.requestId, taxi.enquiryId, taxi.message), (false, 'r1', null, null));
+    final rc = engineRig(plan, lock: taxi);
+    expect(rc.planLockMessage, TripStringsDayplan.lockedByRequest);
+    expect(rc.canMarkRow(const TripEasyRowKey(TripEasyRowKind.taxi)), isFalse);
+  });
+
   test('trip_fields_parse_the_contract_sample', () {
     final plan = enginePlan([[1]]);
     final locked = TripModel.fromJson(engineTripJson(plan, extra: contractSample('trip_taxi_fields.json')));

@@ -234,7 +234,27 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
   }
 
   void _openLockedStatus() {
-    Get.toNamed(AppRoutes.tripTaxiStatus, arguments: {'tripId': _c.trip.value?.id, 'requestId': _c.planLockRequestId});
+    if (_c.planLock.byStay) {
+      _openLockedStay();
+      return;
+    }
+    final tripId = _c.trip.value?.id;
+    final requestId = _c.planLockRequestId;
+    if (tripId == null || requestId == null) {
+      AppToast.info(_c.planLockMessage);
+      return;
+    }
+    TripNavigation.openTaxiStatus(tripId: tripId, requestId: requestId);
+  }
+
+  void _openLockedStay() {
+    final id = _c.planLockEnquiryId;
+    final e = id == null ? null : _c.enquiryList.firstWhereOrNull((x) => x.id == id);
+    if (e != null) {
+      TripNavigation.openReplies(_c.dayOfDate(e.checkIn) ?? e.day ?? 1, enquiryId: e.id);
+      return;
+    }
+    TripNavigation.openStayFlow(context);
   }
 
   bool get _exitGuard => _c.trip.value != null && _c.plan.value != null && !_c.tripGone.value && !_c.plannerOff.value;
@@ -563,7 +583,7 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
                 GradientPillButton(
                   key: TripPlanScreen.viewButtonKey,
                   tone: ListingTone.indigo,
-                  label: _c.planLock.byBooking ? TripStringsDayplan.viewBooking : TripStringsDayplan.viewRequest,
+                  label: TripStringsDayplan.lockButton(byBooking: _c.planLock.byBooking, byStay: _c.planLock.byStay),
                   shadows: TripLook.pillShadow,
                   onTap: _openLockedStatus,
                 ),

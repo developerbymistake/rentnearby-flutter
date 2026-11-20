@@ -147,8 +147,6 @@ class TaxiWaysStrings {
   static String noWaysBody(String to) => 'No driver reaches $to from here yet';
 
   static const String saveFailed = "Couldn't save this journey. Try again.";
-  static const String askFailed = "Couldn't ask drivers. Try again.";
-  static const String askPaused = 'Asking is paused right now';
   static const String taxisOff = 'Taxis are not available right now';
   static const String journeyLimit = 'Up to 20 saved journeys';
 

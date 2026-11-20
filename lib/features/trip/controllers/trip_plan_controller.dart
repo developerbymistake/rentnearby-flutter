@@ -876,7 +876,10 @@ class TripPlanController extends GetxController {
 
   String? get planLockRequestId => isPlanLocked ? planLock.requestId : null;
 
-  String get planLockMessage => TripStringsDayplan.lockMessage(byBooking: planLock.byBooking);
+  String? get planLockEnquiryId => isPlanLocked ? planLock.enquiryId : null;
+
+  String get planLockMessage =>
+      planLock.message ?? TripStringsDayplan.lockMessage(byBooking: planLock.byBooking, byStay: planLock.byStay);
 
   bool get canEditStructure => !isReadOnly && !needsUpdate.value && !isPlanLocked && !_saveBlocked;
 
@@ -1079,7 +1082,7 @@ class TripPlanController extends GetxController {
   bool canMarkRow(TripEasyRowKey key) => !isReadOnly && plan.value != null && !_taxiMarkLocked(key);
 
   // taxiMark is part of the locked structure on the server.
-  bool _taxiMarkLocked(TripEasyRowKey key) => key.kind == TripEasyRowKind.taxi && isPlanLocked;
+  bool _taxiMarkLocked(TripEasyRowKey key) => key.kind == TripEasyRowKind.taxi && isPlanLocked && !planLock.byStay;
 
   Future<TripMarkResult> markOwn(TripEasyRowKey key, {bool withdrawOpen = false, bool serverClosed = false}) async {
     final p = plan.value;
@@ -1170,6 +1173,56 @@ class TripPlanController extends GetxController {
   void clearSkip(TripEasyRowKey key) {
     final p = plan.value;
     if (p != null && TripEasyRules.markOf(p, key)?.isOwn == false) undoMark(key);
+  }
+
+  Future<bool> reopenStayStep(int leg) async {
+    clearSkip(TripEasyRowKey(TripEasyRowKind.stay, leg));
+    final saved = await flushPendingSave();
+    return saved && trip.value?.id != null;
+  }
+
+  // The server clears an own or skipped stay mark when a send names its step; the local plan follows.
+  Future<void> adoptReopenedStay(String step) async {
+    final leg = _stayLegOf(step);
+    final p = plan.value;
+    final t = trip.value;
+    if (leg == null || p == null || t == null || !_stayClosedIn(p, step, leg)) return;
+    final flow = _flow;
+    final TripModel fresh;
+    try {
+      fresh = await _repo.get(t.id);
+    } catch (_) {
+      return;
+    }
+    final local = plan.value;
+    if (flow != _flow || local == null || trip.value?.id != fresh.id || _stayClosedIn(fresh.plan, step, leg)) return;
+    final next = _reopenedStay(local, step, leg);
+    plan.value = next;
+    final idle = _saving == null && !(_saveTimer?.isActive ?? false) && !saveFailed.value;
+    if (idle && jsonEncode(next.toJson()) == jsonEncode(fresh.plan.toJson())) {
+      _savedAt[fresh.id] = fresh.updatedAt;
+      StorageService.clearTripPending(fresh.id);
+    } else {
+      _writeAhead();
+    }
+  }
+
+  static const _stayPrefix = 'stay:';
+
+  static int? _stayLegOf(String step) =>
+      step.startsWith(_stayPrefix) ? int.tryParse(step.substring(_stayPrefix.length)) : null;
+
+  static bool _stayClosedIn(TripPlan p, String step, int leg) {
+    final c = p.guide?.choices[step];
+    return p.legAt(leg)?.stayMark != null || c == TripGuideChoice.own || c == TripGuideChoice.skip;
+  }
+
+  static TripPlan _reopenedStay(TripPlan p, String step, int leg) {
+    var next = p.legAt(leg)?.stayMark == null ? p : p.withStayMark(leg, null);
+    final g = next.guide;
+    final c = g?.choices[step];
+    if (g != null && (c == TripGuideChoice.own || c == TripGuideChoice.skip)) next = next.withGuide(g.withChoice(step, null));
+    return next;
   }
 
   Future<void> reloadFromServer() async {
@@ -1702,7 +1755,7 @@ class TripPlanController extends GetxController {
     if (pending != null && base != null) {
       try {
         final local = TripPlan.fromJson(pending.plan);
-        if (!cached.planLock.locked || _fitsLock(local, cached.plan)) {
+        if (!cached.planLock.locked || _fitsLock(local, cached.plan, cached.planLock)) {
           plan.value = local;
           _copyBase = base;
         }
@@ -2198,7 +2251,7 @@ class TripPlanController extends GetxController {
       StorageService.clearTripPending(t.id);
       return false;
     }
-    final lockRefuses = t.planLock.locked && !_fitsLock(local, t.plan);
+    final lockRefuses = t.planLock.locked && !_fitsLock(local, t.plan, t.planLock);
     if (!lockRefuses && base != null && base.isAtSameMomentAs(t.updatedAt)) {
       plan.value = local;
       _copyBase = base;
@@ -2213,8 +2266,8 @@ class TripPlanController extends GetxController {
     return false;
   }
 
-  static bool _fitsLock(TripPlan local, TripPlan server) =>
-      jsonEncode(keepServerStructure(local, server).toJson()) == jsonEncode(local.toJson());
+  static bool _fitsLock(TripPlan local, TripPlan server, TripPlanLock lock) =>
+      jsonEncode(keepServerStructure(local, server, keepTaxiMark: lock.byStay).toJson()) == jsonEncode(local.toJson());
 
   bool _isGone(Object e) {
     final type = DioErrorMapper.errorType(e);
@@ -4335,7 +4388,8 @@ class TripPlanController extends GetxController {
   void _onPlanLocked(Object e, TripPlan p) {
     _saveTimer?.cancel();
     final body = e is DioException ? e.response?.data : null;
-    final lock = TripPlanLock.fromError(body is Map ? body['data'] : null);
+    final err = body is Map ? body['error'] : null;
+    final lock = TripPlanLock.fromError(body is Map ? body['data'] : null, message: err is Map && err['message'] is String ? err['message'] as String : null);
     final t = trip.value;
     if (t != null) trip.value = t.copyWith(planLock: lock);
     _rejectedPlan = p;
@@ -4356,7 +4410,7 @@ class TripPlanController extends GetxController {
       trip.value = _withTaxiState(t, fresh);
       final local = plan.value;
       if (!fresh.planLock.locked || local == null) return;
-      final merged = keepServerStructure(local, fresh.plan);
+      final merged = keepServerStructure(local, fresh.plan, keepTaxiMark: fresh.planLock.byStay);
       _rejectedPlan = null;
       _rejectedTitle = null;
       plan.value = merged;
@@ -4391,7 +4445,7 @@ class TripPlanController extends GetxController {
   }
 
   @visibleForTesting
-  static TripPlan keepServerStructure(TripPlan local, TripPlan server) {
+  static TripPlan keepServerStructure(TripPlan local, TripPlan server, {bool keepTaxiMark = false}) {
     TripCityLeg? mine(TripCityLeg s) {
       for (final l in local.legs) {
         if (l.index == s.index && l.cityKey == s.cityKey) return l;
@@ -4399,7 +4453,8 @@ class TripPlanController extends GetxController {
       return null;
     }
 
-    return server.copyWith(
+    final base = keepTaxiMark ? server.withTaxiMark(local.taxiMark) : server;
+    return base.copyWith(
       legs: [
         for (final s in server.legs)
           if (mine(s) case final m?)

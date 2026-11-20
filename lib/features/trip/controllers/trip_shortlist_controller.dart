@@ -42,6 +42,8 @@ class TripShortlistController extends GetxController {
   final notes = <String, String>{}.obs;
   final reasons = <String, String>{}.obs;
   final doneHint = <String>{}.obs;
+  final loadFailed = false.obs;
+  final sendFailed = <String>{}.obs;
   int max = 3;
 
   String? _loadedTrip;
@@ -129,6 +131,8 @@ class TripShortlistController extends GetxController {
     notes.clear();
     reasons.clear();
     doneHint.clear();
+    loadFailed.value = false;
+    sendFailed.clear();
   }
 
   void _adopt(String tripId) {
@@ -142,16 +146,28 @@ class TripShortlistController extends GetxController {
   Future<bool> load({bool force = false}) async {
     try {
       final tripId = await _tripIdOf();
-      if (tripId == null) return false;
-      if (!force && _loadedTrip == tripId && items.isNotEmpty) return true;
+      if (tripId == null) {
+        loadFailed.value = true;
+        return false;
+      }
+      if (!force && !loadFailed.value && _loadedTrip == tripId && items.isNotEmpty) return true;
       final res = await _repo.list(tripId);
       _adopt(tripId);
       max = res.max;
       items.assignAll(res.items);
+      loadFailed.value = false;
       return true;
     } catch (_) {
+      loadFailed.value = true;
       return false;
     }
+  }
+
+  bool hasError(String step) => loadFailed.value || sendFailed.contains(step);
+
+  Future<bool> reload(String step) {
+    sendFailed.remove(step);
+    return load(force: true);
   }
 
   void _failToast(Object e) {
@@ -289,12 +305,13 @@ class TripShortlistController extends GetxController {
     return null;
   }
 
-  void _noteFailure(String step) {
+  bool _noteFailure(String step) {
     final e = TripEnquiryController.to;
     final text = limitText(e.lastErrorType, minutes: e.lastRetryAfterMinutes);
-    if (text == null) return;
+    if (text == null) return false;
     notes[step] = text;
     _warn(text);
+    return true;
   }
 
   List<String> sendIds(String step) => [for (final i in activeOf(step).take(max)) i.listingId];
@@ -315,8 +332,11 @@ class TripShortlistController extends GetxController {
     );
     if (batch != null) {
       _settle(step, ids, batch);
+      if ((batch.items.isNotEmpty || batch.updated.isNotEmpty) && Get.isRegistered<TripPlanController>()) {
+        unawaited(TripPlanController.to.adoptReopenedStay(step));
+      }
     } else {
-      _noteFailure(step);
+      if (!_noteFailure(step)) sendFailed.add(step);
     }
     return batch;
   }
@@ -324,6 +344,7 @@ class TripShortlistController extends GetxController {
   void _settle(String step, List<String> ids, TripEnquiryBatch batch) {
     completeRequest(step, ids);
     notes.remove(step);
+    sendFailed.remove(step);
     applyResults(step, batch.perRecipient);
     unawaited(load(force: true));
   }

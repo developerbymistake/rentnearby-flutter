@@ -1,4 +1,5 @@
 import 'package:bakhli/design/design.dart';
+import 'package:bakhli/design/extra/ext_trip_replies.dart';
 import 'package:flutter/material.dart';
 import 'package:bakhli/features/trip/widgets/trip_ui.dart';
 import 'package:get/get.dart';
@@ -79,9 +80,14 @@ class _TripStayScreenState extends State<TripStayScreen> with TickerProviderStat
     final step = _step;
     if (step != null) {
       final c = TripShortlistController.to;
-      c.load().then((_) {
-        if (mounted) _noReply.assignAll(c.noReplyIds(step));
-      });
+      if (c.hasError(step)) {
+        _reloadShortlist();
+      } else {
+        c.load().then((_) {
+          if (mounted) _noReply.assignAll(c.noReplyIds(step));
+        });
+      }
+      _lifecycle = AppLifecycleListener(onResume: _reloadIfFailed);
     }
     _nearYou = map['nearLat'] is num && map['nearLng'] is num;
     _supply.setNear((map['nearLat'] as num?)?.toDouble(), (map['nearLng'] as num?)?.toDouble());
@@ -92,6 +98,7 @@ class _TripStayScreenState extends State<TripStayScreen> with TickerProviderStat
   @override
   void dispose() {
     _planWorker?.dispose();
+    _lifecycle?.dispose();
     _anim.dispose();
     if (Get.isRegistered<TripPlanController>() && identical(Get.find<TripPlanController>(), _plan)) {
       _plan.openPages--;
@@ -101,6 +108,35 @@ class _TripStayScreenState extends State<TripStayScreen> with TickerProviderStat
   }
 
   bool _nearYou = false;
+  AppLifecycleListener? _lifecycle;
+
+  Future<void> _reloadShortlist() async {
+    final step = _step;
+    if (step == null) return;
+    final c = TripShortlistController.to;
+    await c.reload(step);
+    if (mounted) _noReply.assignAll(c.noReplyIds(step));
+  }
+
+  void _reloadIfFailed() {
+    final step = _step;
+    if (step != null && mounted && TripShortlistController.to.hasError(step)) _reloadShortlist();
+  }
+
+  Widget _shortlistError() => Obx(() {
+        final step = _step;
+        final c = TripShortlistController.to;
+        if (step == null || !c.hasError(step)) return const SizedBox.shrink();
+        return RepliesBanner(
+          key: const ValueKey('shortlist-error'),
+          bad: true,
+          art: ListingArt.worldMap,
+          text: c.sendFailed.contains(step) ? TripStringsShortlist.sendFailed : TripStringsShortlist.loadFailed,
+          actionLabel: TripStringsV2Find.retry,
+          onAction: _reloadShortlist,
+          margin: EdgeInsets.fromLTRB(DS.s(16), DS.gv(4), DS.s(16), DS.gv(8)),
+        );
+      });
 
   TripEasyRowKey get _key => TripEasyRowKey(TripEasyRowKind.stay, _leg);
 
@@ -327,6 +363,7 @@ class _TripStayScreenState extends State<TripStayScreen> with TickerProviderStat
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                if (_step != null) _shortlistError(),
                 if (!_noSupply)
                   _enter(_nearPill(), 0),
                 if (showChips)
@@ -389,7 +426,7 @@ class _TripStayScreenState extends State<TripStayScreen> with TickerProviderStat
           statusLine: _askedLine(asked),
           onOpenChat: asked?.conversationId == null ? null : () => TripNavigation.openChatForEnquiry(asked!),
           readOnly: _plan.isReadOnly,
-          onOpen: () => Get.toNamed(AppRoutes.stayDetail, arguments: {'id': s.id, ...detailArgs}),
+          onOpen: () => Get.toNamed(AppRoutes.stayDetail, arguments: {'id': s.id, ...detailArgs})?.then((_) => _reloadIfFailed()),
           onCall: () => TripStayRow.call(context, s, detailArguments: detailArgs),
           callBusy: ListingContactActions.isBusy(ListingKind.stay, s.id),
           onAsk: () => TripStayEnquirySheet.show(context, stay: s, day: day, nights: nights),

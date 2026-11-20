@@ -197,7 +197,7 @@ class _ProblemBodyState extends State<_ProblemBody> {
       case TripProblemKinds.driverNoShow:
         if (widget.host.mounted) TripNavigation.openTaxiRequest(widget.host);
       case TripProblemKinds.hostNoRoom:
-        TripNavigation.openStay(TripPlanController.to.plan.value?.legIndexOf(day) ?? 1, nearLat: loc?.latitude, nearLng: loc?.longitude, shortlist: true);
+        TripNavigation.reopenStayShortlist(TripPlanController.to.plan.value?.legIndexOf(day) ?? 1, nearLat: loc?.latitude, nearLng: loc?.longitude);
       default:
         TripNavigation.openMap(day: day);
     }
