@@ -26,7 +26,6 @@ class TripWhereScreen extends StatefulWidget {
 
 class _TripWhereScreenState extends State<TripWhereScreen> {
   static const double _maxWidth = 640;
-  static const double _tileWidth = 160;
   static const List<Color> _allColors = [Color(0xFF54D3C2), Color(0xFF1FA396)];
   static const List<List<Color>> _stateColors = [
     [Color(0xFF6F72CA), Color(0xFF1E1466)],
@@ -169,14 +168,14 @@ class _TripWhereScreenState extends State<TripWhereScreen> {
       children: [
         MediaQuery.withClampedTextScaling(
           maxScaleFactor: 1.3,
-          child: const HubHeader(title: TripStringsHubWhere.title, lead: TripStringsHubWhere.lead, back: true, minHeight: 94, titleTop: 2),
+          child: const HubHeader(title: TripStringsHubWhere.title, lead: TripStringsHubWhere.lead, back: true, minHeight: 62, titleTop: 2, bottom: 4),
         ),
         _searchBox(),
         _filterRow(),
         HubSectionTitle(
           title: plain ? TripStringsHubWhere.popular : TripStringsHubWhere.cities,
           sub: plain ? TripStringsHubWhere.popularSub : null,
-          top: 24,
+          top: 14,
         ),
       ],
     );
@@ -186,7 +185,7 @@ class _TripWhereScreenState extends State<TripWhereScreen> {
         tone: _page,
         inline: true,
         flat: true,
-        margin: EdgeInsets.fromLTRB(DS.s(18), DS.gv(14), DS.s(18), 0),
+        margin: EdgeInsets.fromLTRB(DS.s(18), DS.gv(12), DS.s(18), 0),
         padding: DS.insets(l: 20, t: 6, r: 12, b: 6),
         value: TripStringsTab.searchHint,
         buttonArt: ListingArt.search,
@@ -249,21 +248,17 @@ class _TripWhereScreenState extends State<TripWhereScreen> {
     );
   }
 
-  double _cell(double screenW) {
-    final col = ((screenW > _maxWidth ? _maxWidth : screenW) - (DS.s(20) + DS.gh(4))) / 2;
-    final tile = DS.s(_tileWidth);
-    return col < tile ? col : tile;
-  }
+  double _cell(double screenW) => ((screenW > _maxWidth ? _maxWidth : screenW) - (DS.s(28) + DS.gh(12))) / 2;
 
-  Widget _slot(Widget? child) => Expanded(child: Center(child: child));
+  Widget _slot(Widget? child) => Expanded(child: child ?? const SizedBox.shrink());
 
-  Widget _pair(double cell, Widget a, Widget? b) => _center(
+  Widget _pair(int row, Widget a, Widget? b) => _center(
         Padding(
-          padding: DS.sym(h: 10),
+          padding: EdgeInsets.fromLTRB(DS.s(14), DS.gv(row == 0 ? 4 : 12), DS.s(14), 0),
           child: IntrinsicHeight(
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [_slot(a), Gap.h(4), _slot(b)],
+              children: [_slot(a), Gap.h(12), _slot(b)],
             ),
           ),
         ),
@@ -275,7 +270,7 @@ class _TripWhereScreenState extends State<TripWhereScreen> {
     final cell = _cell(screenW);
     if (_load == _Load.loading && _cities.isEmpty) {
       return [
-        for (var i = 0; i < 3; i++) _pair(cell, MealsCardSkeleton(width: cell), MealsCardSkeleton(width: cell)),
+        for (var i = 0; i < 3; i++) _pair(i, MealsCardSkeleton(width: cell), MealsCardSkeleton(width: cell)),
       ];
     }
     if (_cities.isEmpty) {
@@ -317,7 +312,7 @@ class _TripWhereScreenState extends State<TripWhereScreen> {
       for (var r = 0; r < (cities.length + 1) ~/ 2; r++)
         KeyedSubtree(
           key: ValueKey(cities[r * 2].cityKey),
-          child: _pair(cell, tile(r * 2), r * 2 + 1 < cities.length ? tile(r * 2 + 1) : null),
+          child: _pair(r, tile(r * 2), r * 2 + 1 < cities.length ? tile(r * 2 + 1) : null),
         ),
     ];
   }

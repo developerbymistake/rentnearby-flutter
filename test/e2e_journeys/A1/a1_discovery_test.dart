@@ -9,6 +9,7 @@ import 'package:bakhli/features/trip/models/trip_model.dart';
 import 'package:bakhli/features/trip/screens/trip_where_screen.dart';
 import 'package:bakhli/features/trip/screens/trips_discovery_screen.dart';
 import 'package:bakhli/features/trip/trip_navigation.dart';
+import 'package:bakhli/features/trip/widgets/hub/hub_state_chip.dart';
 import 'package:bakhli/features/trip/widgets/trip_city_sheet.dart';
 import 'package:bakhli/features/trip/widgets/trip_city_tile.dart';
 import 'package:bakhli/services/storage_service.dart';
@@ -163,7 +164,7 @@ void main() {
     testWidgets('Show all states appears with a state chip on and brings the grid back', (t) async {
       final cities = [_city(1, 'Nainital'), _city(2, 'Shimla', state: 'Himachal Pradesh')];
       await _pump(t, cities, 360, where: true);
-      final chip = find.text('Himachal Pradesh');
+      final chip = find.descendant(of: find.byType(HubStateChip), matching: find.text('Himachal Pradesh'));
       await t.ensureVisible(chip);
       await t.pump();
       await t.tap(chip);

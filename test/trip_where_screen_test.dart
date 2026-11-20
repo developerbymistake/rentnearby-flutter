@@ -109,7 +109,7 @@ void main() {
     expect(find.text('All'), findsOneWidget);
     expect(find.byType(TripCityTile), findsNWidgets(2));
     expect(find.text('Popular'), findsOneWidget);
-    final chip = find.text('Himachal Pradesh');
+    final chip = find.descendant(of: find.byType(HubStateChip), matching: find.text('Himachal Pradesh'));
     await t.ensureVisible(chip);
     await t.pump();
     await t.tap(chip);
@@ -124,7 +124,7 @@ void main() {
 
   testWidgets('a state with no match offers Show all states', (t) async {
     await _pump(t, _Catalog([_city(1), _city(2, state: 'Himachal Pradesh')]), 360, 1);
-    final chip = find.text('Himachal Pradesh');
+    final chip = find.descendant(of: find.byType(HubStateChip), matching: find.text('Himachal Pradesh'));
     await t.ensureVisible(chip);
     await t.tap(chip);
     await t.pump();

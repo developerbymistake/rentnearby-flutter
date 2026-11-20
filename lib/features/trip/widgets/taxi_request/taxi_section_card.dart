@@ -5,6 +5,16 @@ import 'package:flutter/material.dart';
 
 import 'taxi_switch.dart';
 
+class TaxiSectionTones {
+  static ListingTone _of(Color g1, Color g2) =>
+      ListingTone(g1: g1, g2: g2, shadow: g2.withValues(alpha: Alpha.v60), haloBase: g2, text: g2);
+
+  static final ListingTone pickup = ListingTone.teal;
+  static final ListingTone sightseeing = _of(DesignColors.snackStart, DesignColors.snackEnd);
+  static final ListingTone drop = _of(DesignColors.dinnerStart, DesignColors.dinnerEnd);
+  static final ListingTone car = _of(DesignColors.primaryLight, DesignColors.introSky);
+}
+
 class TaxiSectionCard extends StatelessWidget {
   const TaxiSectionCard({
     super.key,
@@ -12,6 +22,7 @@ class TaxiSectionCard extends StatelessWidget {
     required this.title,
     required this.sub,
     required this.child,
+    required this.tone,
     this.number,
     this.on = true,
     this.onChanged,
@@ -23,6 +34,7 @@ class TaxiSectionCard extends StatelessWidget {
   final String title;
   final String sub;
   final Widget child;
+  final ListingTone tone;
   final int? number;
   final bool on;
   final ValueChanged<bool>? onChanged;
@@ -31,7 +43,6 @@ class TaxiSectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tone = ListingTone.indigo;
     final open = on || onChanged == null;
     final radius = DS.br(TripCustomizeLook.addDayRadius);
     return Container(

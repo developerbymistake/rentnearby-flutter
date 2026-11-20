@@ -246,7 +246,8 @@ class _TripTaxiRequestScreenState extends State<TripTaxiRequestScreen> {
               Gap.v(24),
               TaxiSectionCard(
                 art: JourneyArt.automobile,
-                title: TripStringsTaxiRequest.carTitle,
+                tone: TaxiSectionTones.car,
+      title: TripStringsTaxiRequest.carTitle,
                 sub: TripStringsTaxiRequest.setFromTravellers(places.travellers),
                 child: TaxiSeatChips(seats: form.seats, enabledFor: form.seatEnabled, onChanged: (s) => _edit((f) => f.setSeats(s))),
               ),
@@ -261,6 +262,7 @@ class _TripTaxiRequestScreenState extends State<TripTaxiRequestScreen> {
     return TaxiSectionCard(
       number: 1,
       art: TravelIcon.place,
+      tone: TaxiSectionTones.pickup,
       title: TripStringsTaxiRequest.pickupTitle,
       sub: form.pickupPast ? TripStringsTaxiRequest.pickupPassed : TripStringsTaxiRequest.pickupSub,
       on: form.pickupOn,
@@ -286,6 +288,7 @@ class _TripTaxiRequestScreenState extends State<TripTaxiRequestScreen> {
     return TaxiSectionCard(
       number: 2,
       art: TravelIcon.photo,
+      tone: TaxiSectionTones.sightseeing,
       title: TripStringsTaxiRequest.sightseeingTitle,
       sub: TripStringsTaxiRequest.sightseeingSub,
       on: form.sightseeingOn,
@@ -301,6 +304,7 @@ class _TripTaxiRequestScreenState extends State<TripTaxiRequestScreen> {
     return TaxiSectionCard(
       number: 3,
       art: TravelIcon.flag,
+      tone: TaxiSectionTones.drop,
       title: TripStringsTaxiRequest.dropTitle,
       sub: form.dropPast ? TripStringsTaxiRequest.dropPassed : TripStringsTaxiRequest.dropSub,
       on: form.dropOn,

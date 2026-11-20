@@ -317,10 +317,28 @@ class _TripLine extends StatelessWidget {
       padding: EdgeInsets.only(top: DS.gv(16)),
       child: Container(
         padding: DS.sym(h: 16, v: 14),
-        decoration: BoxDecoration(color: DesignColors.whiteSoft, borderRadius: DS.br(TripCustomizeLook.tripLineRadius)),
+        decoration: BoxDecoration(
+          gradient: TripCustomizeLook.tripCardGradient,
+          border: Border.all(color: TripCustomizeLook.tripCardBorder, width: DS.s(1)),
+          borderRadius: DS.br(TripCustomizeLook.tripLineRadius),
+          boxShadow: DS.shadows(TripCustomizeLook.tripCardShadow),
+        ),
         child: Row(
           children: [
-            Art3D(asset: ListingArt.mountain, size: narrow ? 52 : 72, shadowBlur: 4, shadowOffset: const Offset(2, 3)),
+            SizedBox(
+              width: DS.s(narrow ? 52 : 72),
+              height: DS.s(narrow ? 52 : 72),
+              child: Center(
+                child: Art3D(
+                  asset: ListingArt.luggage,
+                  size: narrow ? 38 : 50,
+                  halo: narrow ? 52 : 72,
+                  haloColor: DesignColors.surface,
+                  shadowBlur: 4,
+                  shadowOffset: const Offset(2, 3),
+                ),
+              ),
+            ),
             Gap.h(14),
             Expanded(
               child: Column(
@@ -331,14 +349,14 @@ class _TripLine extends StatelessWidget {
                     key: const ValueKey('overview_trip_name'),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: Ink3D.text(17, FontWeight.w700, DesignColors.textInverse),
+                    style: Ink3D.text(17, FontWeight.w700, TripCustomizeLook.tripCardName),
                   ),
                   Text(
                     line,
                     key: const ValueKey('overview_trip_line'),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: Ink3D.text(12.5, FontWeight.w400, DesignColors.textInverse, height: 1.5),
+                    style: Ink3D.text(12.5, FontWeight.w400, TripCustomizeLook.tripCardSub, height: 1.5),
                   ),
                 ],
               ),

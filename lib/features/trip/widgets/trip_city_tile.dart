@@ -52,20 +52,19 @@ class TripCityTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (hub) return _HubCityCard(tile: this);
     final spots = city.spotCount;
     final scaler = MediaQuery.textScalerOf(context);
     final room = width - MealsCardV.cellPadding.horizontal - DS.s(32);
-    final placed = placeLines(city);
-    final lines = (hub && placed.isNotEmpty ? [placed.last] : placed).map((e) => _fit(e, room, scaler)).toList();
+    final lines = placeLines(city).map((e) => _fit(e, room, scaler)).toList();
     final place = lines.join('\n');
-    final art = hub ? _hubArts[index % _hubArts.length] : artOf(index);
     final cover = city.cover;
     return RepaintBoundary(
       child: MealsCardV(
         tone: _tones[index % _tones.length],
         title: city.name,
         description: place,
-        art: cover == null ? art : null,
+        art: cover == null ? artOf(index) : null,
         photo: cover == null
             ? null
             : KitPhoto(
@@ -82,10 +81,150 @@ class TripCityTile extends StatelessWidget {
         width: width,
         semanticsLabel: city.name,
         titleLines: 2,
-        minCardHeight: hub ? 170 : 194,
-        cellBottom: hub ? 8 : 18,
-        compact: hub,
-        descriptionLines: hub ? 1 : (lines.length < 2 ? 2 : lines.length),
+        minCardHeight: 194,
+        cellBottom: 18,
+        descriptionLines: lines.length < 2 ? 2 : lines.length,
+      ),
+    );
+  }
+}
+
+class _HubCityCard extends StatelessWidget {
+  const _HubCityCard({required this.tile});
+
+  final TripCityTile tile;
+
+  @override
+  Widget build(BuildContext context) {
+    const white = Colors.white;
+    final city = tile.city;
+    final index = tile.index;
+    final tone = TripCityTile._tones[index % TripCityTile._tones.length];
+    final spots = city.spotCount;
+    final placed = TripCityTile.placeLines(city);
+    final state = placed.isEmpty ? '' : placed.last;
+    final cover = city.cover;
+    final shade = [
+      Shadow(
+        color: Colors.black.withValues(alpha: Alpha.soft),
+        offset: DS.shadowOffset(const Offset(0, 1)),
+        blurRadius: DS.shadowBlur(3),
+      ),
+    ];
+    final room = tile.width - DS.s(30) - DS.s(8);
+    final count = spots > 0
+        ? ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: room / 2),
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerRight,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('$spots', maxLines: 1, style: Ink3D.text(30, FontWeight.w600, white, height: 1, letterSpacing: 0).copyWith(shadows: shade)),
+                  Gap.v(3),
+                  Text(
+                    TripStringsTab.cityUnit(spots),
+                    maxLines: 1,
+                    style: Ink3D.text(11, FontWeight.w500, white, height: 1.2, letterSpacing: 0).copyWith(shadows: shade),
+                  ),
+                ],
+              ),
+            ),
+          )
+        : RoundGoButton(color: tone.button);
+    final card = DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: DS.br(kMealsRadius),
+        gradient: tone.gradient,
+        boxShadow: DS.shadows([BoxShadow(color: Colors.black.withValues(alpha: Alpha.v18), offset: const Offset(0, 6), blurRadius: 12)]),
+      ),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(minHeight: DS.s(150)),
+        child: Padding(
+          padding: DS.insets(l: 16, t: 102, r: 14, b: 14),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      city.name,
+                      maxLines: 1,
+                      softWrap: false,
+                      overflow: TextOverflow.ellipsis,
+                      style: Ink3D.text(20, FontWeight.w700, white, height: 1.3, letterSpacing: 0).copyWith(shadows: shade),
+                    ),
+                    if (state.isNotEmpty) ...[
+                      Gap.v(3),
+                      Text(
+                        state,
+                        maxLines: 1,
+                        softWrap: false,
+                        overflow: TextOverflow.ellipsis,
+                        style: Ink3D.text(12, FontWeight.w400, white, height: 1.5, letterSpacing: 0).copyWith(shadows: shade),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              Gap.h(8),
+              count,
+            ],
+          ),
+        ),
+      ),
+    );
+    final circle = Container(
+      width: DS.s(132),
+      height: DS.s(132),
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: white.withValues(alpha: Alpha.v22),
+        border: Border.all(color: white.withValues(alpha: Alpha.scrim), width: DS.s(2)),
+      ),
+      child: cover == null
+          ? Art3D(
+              asset: TripCityTile._hubArts[index % TripCityTile._hubArts.length],
+              size: 118,
+              shadowBlur: 5,
+              shadowOffset: const Offset(4, 6),
+              shadowAlpha: 0.22,
+            )
+          : ClipOval(
+              child: KitPhoto(
+                url: cover,
+                width: DS.s(118),
+                height: DS.s(118),
+                tone: TripCityArt.toneOf(city.cityKey),
+                asset: TravelIcon.map,
+                iconSize: 40,
+              ),
+            ),
+    );
+    return RepaintBoundary(
+      child: Semantics(
+        label: city.name,
+        button: true,
+        container: true,
+        excludeSemantics: true,
+        child: PressScale(
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: tile.onTap,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Padding(padding: EdgeInsets.only(top: DS.s(40)), child: card),
+                Positioned(left: DS.s(10), top: 0, child: circle),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

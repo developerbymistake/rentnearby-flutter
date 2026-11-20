@@ -23,6 +23,15 @@ class TripCustomizeLook {
     bottomLeft: Radius.circular(8),
     bottomRight: Radius.circular(8),
   );
+  static const LinearGradient tripCardGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: <Color>[Color(0xFFF4F5FF), Color(0xFFE6E9FF)],
+  );
+  static const Color tripCardBorder = Color(0x2E2633C5);
+  static const List<BoxShadow> tripCardShadow = <BoxShadow>[BoxShadow(color: Color(0x471E1466), offset: Offset(1.1, 6), blurRadius: 16)];
+  static const Color tripCardName = Color(0xFF1E1466);
+  static const Color tripCardSub = Color(0xFF5A5F9E);
   static const BorderRadius addDayRadius = BorderRadius.only(
     topLeft: Radius.circular(8),
     topRight: Radius.circular(40),

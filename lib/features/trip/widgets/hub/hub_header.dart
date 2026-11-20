@@ -12,6 +12,7 @@ class HubHeader extends StatelessWidget {
     this.onBack,
     this.minHeight = 66,
     this.titleTop = 0,
+    this.bottom = 8,
   });
 
   final String title;
@@ -20,6 +21,7 @@ class HubHeader extends StatelessWidget {
   final VoidCallback? onBack;
   final double minHeight;
   final double titleTop;
+  final double bottom;
 
   @override
   Widget build(BuildContext context) {
@@ -27,7 +29,7 @@ class HubHeader extends StatelessWidget {
     return MediaQuery.withClampedTextScaling(
       maxScaleFactor: 1.3,
       child: Padding(
-        padding: EdgeInsets.only(top: safeTop + DS.s(12), bottom: DS.s(8)),
+        padding: EdgeInsets.only(top: safeTop + DS.s(12), bottom: DS.s(bottom)),
         child: Stack(
           clipBehavior: Clip.none,
           children: [
