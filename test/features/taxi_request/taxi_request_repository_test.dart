@@ -118,6 +118,13 @@ void main() {
     expect(r, isA<TaxiAllDriversBusy<TaxiRequest>>());
   });
 
+  test('no_ready_driver_maps_to_its_own_result', () async {
+    _use((_) => (409, '{"error":{"message":"No driver is ready for this route right now.","type":"NoReadyDriver"}}'));
+    final r = await const TaxiRequestRepository().create('t1', const {});
+    expect(r, isA<TaxiNoReadyDriver<TaxiRequest>>());
+    expect((r as TaxiNoReadyDriver<TaxiRequest>).message, 'No driver is ready for this route right now.');
+  });
+
   test('already_active_and_state_invalid_carry_data', () async {
     _use((_) => (409, '{"data":{"requestId":"r9"},"error":{"message":"m","type":"TaxiRequestAlreadyActive"}}'));
     final a = await const TaxiRequestRepository().create('t1', const {}) as TaxiAlreadyActive<TaxiRequest>;

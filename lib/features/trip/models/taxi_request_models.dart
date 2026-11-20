@@ -59,6 +59,7 @@ enum RequestEndReason with WireEnum {
   adminCancelled('AdminCancelled'),
   accountClosed('AccountClosed'),
   allDriversBusy('AllDriversBusy'),
+  noReadyDriver('NoReadyDriver'),
   notBooked('NotBooked'),
   unknown('');
 

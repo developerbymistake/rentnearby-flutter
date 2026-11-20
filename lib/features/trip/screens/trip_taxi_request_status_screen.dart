@@ -92,6 +92,7 @@ class _TripTaxiRequestStatusScreenState extends State<TripTaxiRequestStatusScree
     final server = switch (r) {
       TaxiStateInvalid(:final message) ||
       TaxiAllDriversBusy(:final message) ||
+      TaxiNoReadyDriver(:final message) ||
       TaxiNotFound(:final message) ||
       TaxiRefused(:final message) ||
       TaxiPlanLocked(:final message) ||
@@ -280,11 +281,12 @@ class _TripTaxiRequestStatusScreenState extends State<TripTaxiRequestStatusScree
       case RequestView.done:
         return _thanks(r);
       case RequestView.busy:
-        return _busy();
+        return _busy(noReady: r.endReason == RequestEndReason.noReadyDriver);
       case RequestView.ended:
         final b = r.booking;
         if (b != null && b.canRate) return _rate(r);
         if (b != null && b.leftDuringTrip && r.rating != null) return _thanks(r);
+        if (r.endReason == RequestEndReason.noReadyDriver) return _busy(noReady: true);
         return _ended();
       case RequestView.unknown:
         return _neutral();
@@ -394,11 +396,12 @@ class _TripTaxiRequestStatusScreenState extends State<TripTaxiRequestStatusScree
         Center(child: TaxiStars(filled: r.rating?.stars ?? 0, size: 40, gap: 8)),
       ], [_doneButton()]);
 
-  _Body _busy() => _Body([
-        const TaxiStatusHero(
+  _Body _busy({bool noReady = false}) => _Body([
+        TaxiStatusHero(
+          key: ValueKey(noReady ? 'status_no_ready' : 'status_busy'),
           art: ListingArt.warning,
-          title: TripStringsTaxiStatus.busyTitle,
-          line: TripStringsTaxiStatus.busySub,
+          title: noReady ? TripStringsTaxiStatus.noReadyTitle : TripStringsTaxiStatus.busyTitle,
+          line: noReady ? TripStringsTaxiStatus.noReadySub : TripStringsTaxiStatus.busySub,
           titleSize: 22,
           artSize: 90,
           topGap: 20,

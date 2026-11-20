@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../tokens/card_tokens.dart';
 import '../tokens/design_scale.dart';
 import '../tokens/listing_palette.dart';
 import 'art_3d.dart';
@@ -279,7 +280,17 @@ class TaxiHeaderButton extends StatelessWidget {
 }
 
 class TaxiRouteCard3D extends StatelessWidget {
-  const TaxiRouteCard3D({super.key, required this.tone, required this.tag, required this.title, required this.subtitle, required this.onEdit, required this.onRemove});
+  const TaxiRouteCard3D({
+    super.key,
+    required this.tone,
+    required this.tag,
+    required this.title,
+    required this.subtitle,
+    required this.onEdit,
+    required this.onRemove,
+    this.note,
+    this.noteOk = true,
+  });
 
   final ListingTone tone;
   final String tag;
@@ -287,6 +298,27 @@ class TaxiRouteCard3D extends StatelessWidget {
   final String subtitle;
   final VoidCallback onEdit;
   final VoidCallback onRemove;
+  final String? note;
+  final bool noteOk;
+
+  Widget _note(String text) {
+    final fg = noteOk ? Colors.white : TaxiOwnerLook.creamText;
+    return Padding(
+      padding: EdgeInsets.only(top: DS.s(6)),
+      child: Container(
+        padding: DS.sym(h: 8, v: 3),
+        decoration: BoxDecoration(color: noteOk ? TaxiOwnerLook.soft : TaxiOwnerLook.cream, borderRadius: DS.br(CardRadius.pill)),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(noteOk ? Icons.check_circle_rounded : Icons.error_outline_rounded, size: DS.s(14), color: fg),
+            SizedBox(width: DS.s(4)),
+            Flexible(child: Text(text, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(11.5, FontWeight.w700, fg, letterSpacing: 0))),
+          ],
+        ),
+      ),
+    );
+  }
 
   Widget _round(IconData icon, String tip, VoidCallback onTap) => Tooltip(
         message: tip,
@@ -324,23 +356,31 @@ class TaxiRouteCard3D extends StatelessWidget {
             constraints: BoxConstraints(minHeight: DS.s(104)),
             padding: EdgeInsets.fromLTRB(DS.s(left), DS.s(14), DS.s(12), DS.s(14)),
             decoration: BoxDecoration(borderRadius: DS.br(TaxiOwnerLook.card), gradient: tone.gradient, boxShadow: tone.glow()),
-            child: Row(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Expanded(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(tag.toUpperCase(), maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(10.5, FontWeight.w700, Colors.white, letterSpacing: 0.7)),
-                      SizedBox(height: DS.s(2)),
-                      Text(title, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(17, FontWeight.w700, Colors.white, height: 1.2)),
-                      SizedBox(height: DS.s(2)),
-                      FitLine3D(text: subtitle, style: Ink3D.text(12.5, FontWeight.w600, Colors.white, letterSpacing: 0), stretch: 1.6),
-                    ],
-                  ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(tag.toUpperCase(), maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(10.5, FontWeight.w700, Colors.white, letterSpacing: 0.7)),
+                          SizedBox(height: DS.s(2)),
+                          Text(title, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(17, FontWeight.w700, Colors.white, height: 1.2)),
+                          SizedBox(height: DS.s(2)),
+                          FitLine3D(text: subtitle, style: Ink3D.text(12.5, FontWeight.w600, Colors.white, letterSpacing: 0), stretch: 1.6),
+                        ],
+                      ),
+                    ),
+                    _round(Icons.edit_rounded, 'Edit route', onEdit),
+                    _round(Icons.close_rounded, 'Remove route', onRemove),
+                  ],
                 ),
-                _round(Icons.edit_rounded, 'Edit route', onEdit),
-                _round(Icons.close_rounded, 'Remove route', onRemove),
+                if (note case final n?) _note(n),
               ],
             ),
           ),

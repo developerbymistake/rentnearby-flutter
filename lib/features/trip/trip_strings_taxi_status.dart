@@ -44,6 +44,8 @@ class TripStringsTaxiStatus {
 
   static const String busyTitle = 'All drivers are busy right now';
   static const String busySub = 'Please try again in a little while.';
+  static const String noReadyTitle = 'No driver is ready for this route right now';
+  static const String noReadySub = 'Please try again in a little while.';
   static const String changePickup = 'Change pickup';
   static const String endedTitle = 'Request closed';
   static const String endedSub = 'You can send a new taxi request any time.';

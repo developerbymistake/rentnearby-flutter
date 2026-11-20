@@ -13,6 +13,11 @@ class TaxiRouteModel {
   final double toLongitude;
   final int fare;
   final String tripType;
+  final int? fromCityKey;
+  final int? toCityKey;
+  final bool fromOtherPlace;
+  final bool toOtherPlace;
+  final bool? serverActive;
 
   const TaxiRouteModel({
     required this.id,
@@ -27,7 +32,16 @@ class TaxiRouteModel {
     required this.toLongitude,
     required this.fare,
     required this.tripType,
+    this.fromCityKey,
+    this.toCityKey,
+    this.fromOtherPlace = false,
+    this.toOtherPlace = false,
+    this.serverActive,
   });
+
+  bool get activeInRequests => serverActive ?? (fromCityKey != null && toCityKey != null);
+
+  static int? _key(Object? v) => v is num && v > 0 ? v.toInt() : null;
 
   factory TaxiRouteModel.fromJson(Map<String, dynamic> json) => TaxiRouteModel(
         id: json['id']?.toString() ?? '',
@@ -42,6 +56,11 @@ class TaxiRouteModel {
         toLongitude: (json['toLongitude'] as num?)?.toDouble() ?? 0,
         fare: (json['fare'] as num?)?.toInt() ?? 0,
         tripType: json['tripType'] as String? ?? 'OneWay',
+        fromCityKey: _key(json['fromCityKey']),
+        toCityKey: _key(json['toCityKey']),
+        fromOtherPlace: json['fromOtherPlace'] == true,
+        toOtherPlace: json['toOtherPlace'] == true,
+        serverActive: json['activeInRequests'] is bool ? json['activeInRequests'] as bool : null,
       );
 }
 

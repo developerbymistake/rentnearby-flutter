@@ -404,6 +404,28 @@ void main() {
       await tester.pump(const Duration(seconds: 5));
     });
 
+    testWidgets('NoReadyDriver on send says no driver is ready and keeps the form', (tester) async {
+      final repo = FakeTaxiRepo()..createAnswers.add(const TaxiNoReadyDriver(message: 'server text'));
+      final sent = _Sent();
+      await _ready(tester, repo: repo, sent: sent);
+      await _pickKathgodam(tester);
+      await _tapKey(tester, 'taxi_request_send');
+      expect(find.text('No driver is ready for this route right now. Please try again in a little while.'), findsOneWidget);
+      expect(find.textContaining('busy'), findsNothing);
+      expect(sent.requests, isEmpty);
+      expect(_sendEnabled(tester), isTrue);
+      await tester.pump(const Duration(seconds: 5));
+    });
+
+    testWidgets('AllDriversBusy on send says all drivers are busy', (tester) async {
+      final repo = FakeTaxiRepo()..createAnswers.add(const TaxiAllDriversBusy(message: 'server text'));
+      await _ready(tester, repo: repo);
+      await _pickKathgodam(tester);
+      await _tapKey(tester, 'taxi_request_send');
+      expect(find.text('All drivers are busy right now. Please try again in a little while.'), findsOneWidget);
+      await tester.pump(const Duration(seconds: 5));
+    });
+
     testWidgets('header menu Try another city calls back once and keeps the form', (tester) async {
       var tried = 0;
       final c = _controller(FakeTaxiRepo());

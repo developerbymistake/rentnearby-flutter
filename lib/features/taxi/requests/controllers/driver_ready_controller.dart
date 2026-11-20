@@ -181,6 +181,7 @@ class DriverReadyController extends GetxController with WidgetsBindingObserver {
         TaxiAlreadyActive(:final requestId, :final message) => TaxiAlreadyActive<T>(requestId: requestId, message: message),
         TaxiLegacyActive(:final rows, :final message) => TaxiLegacyActive<T>(rows: rows, message: message),
         TaxiAllDriversBusy(:final message) => TaxiAllDriversBusy<T>(message: message),
+        TaxiNoReadyDriver(:final message) => TaxiNoReadyDriver<T>(message: message),
         TaxiOverlap(:final tripId, :final tripName, :final message) => TaxiOverlap<T>(tripId: tripId, tripName: tripName, message: message),
       };
 

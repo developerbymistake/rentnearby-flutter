@@ -99,6 +99,10 @@ class _TripTaxiRequestScreenState extends State<TripTaxiRequestScreen> {
         AppToast.error(message ?? TripStringsTaxiRequest.sendFailed);
       case TaxiOverlap<TaxiRequest>(:final tripName):
         AppToast.error(TaxiRequestErrors.overlapMessage(tripName));
+      case TaxiNoReadyDriver<TaxiRequest>():
+        AppToast.error(TripStringsTaxiRequest.noReadyDriver);
+      case TaxiAllDriversBusy<TaxiRequest>():
+        AppToast.error(TripStringsTaxiRequest.allDriversBusy);
       case TaxiRefused<TaxiRequest>(:final type) when TaxiRequestErrors.isSeatsError(type):
         AppToast.error(TaxiRequestErrors.seatsMessage(type));
         await _load();

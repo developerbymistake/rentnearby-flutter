@@ -5,11 +5,16 @@ import '../../../design/design.dart';
 import '../../../design/extra/ext_taxi_owner.dart';
 import '../../../models/browse_item.dart';
 import '../../../utils/app_toast.dart';
+import '../../../utils/search_fold.dart';
 import '../../../widgets/location_switch_sheet.dart';
+import '../../trip/data/trip_city_catalog.dart';
+import '../../trip/models/trip_city_model.dart';
 import '../../trip/trip_strings_a3.dart';
 import '../guest/v2/taxi_rate_strings.dart';
 import '../taxi_option_sets.dart';
 import 'taxi_rate_rules.dart';
+import 'taxi_route_city_sheet.dart';
+import 'taxi_route_strings.dart';
 import 'taxi_setup_controller.dart';
 
 class _Place {
@@ -17,13 +22,26 @@ class _Place {
   final String? label;
   final double lat;
   final double lng;
-  const _Place({required this.name, this.label, required this.lat, required this.lng});
+  final int? cityKey;
+  final bool otherPlace;
+  const _Place({required this.name, this.label, required this.lat, required this.lng, this.cityKey, this.otherPlace = false});
+
+  bool get named => cityKey != null || otherPlace;
 
   factory _Place.fromPicked(PickedPlace p) => _Place(
         name: _cut(p.name.trim(), 80),
         label: p.districtName.trim().isNotEmpty ? _cut(p.districtName.trim(), 160) : null,
         lat: p.latitude,
         lng: p.longitude,
+        otherPlace: true,
+      );
+
+  factory _Place.fromCity(TripCityModel c) => _Place(
+        name: _cut(c.name.trim(), 80),
+        label: c.placeLine.isNotEmpty ? _cut(c.placeLine, 160) : null,
+        lat: c.latitude,
+        lng: c.longitude,
+        cityKey: c.cityKey,
       );
 
   static String _cut(String s, int max) => s.length > max ? s.substring(0, max) : s;
@@ -36,6 +54,28 @@ class _RouteDraft {
   final int fare;
   final String tripType;
   const _RouteDraft({this.id, required this.from, required this.to, required this.fare, required this.tripType});
+
+  bool get active => from.cityKey != null && to.cityKey != null;
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'fromName': from.name,
+        'fromLabel': from.label,
+        'fromLatitude': from.lat,
+        'fromLongitude': from.lng,
+        'toName': to.name,
+        'toLabel': to.label,
+        'toLatitude': to.lat,
+        'toLongitude': to.lng,
+        'fare': fare,
+        'tripType': tripType,
+        if (from.named && to.named) ...{
+          'fromCityKey': from.cityKey,
+          'toCityKey': to.cityKey,
+          'fromOtherPlace': from.cityKey == null,
+          'toOtherPlace': to.cityKey == null,
+        },
+      };
 
   String get key => '${from.lat.toStringAsFixed(3)}|${from.lng.toStringAsFixed(3)}|'
       '${to.lat.toStringAsFixed(3)}|${to.lng.toStringAsFixed(3)}|$tripType';
@@ -79,8 +119,9 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> with TickerProvider
     for (final r in _ctrl.taxi.value?.routes ?? const []) {
       _routes.add(_RouteDraft(
         id: r.id,
-        from: _Place(name: r.fromName, label: r.fromLabel, lat: r.fromLatitude, lng: r.fromLongitude),
-        to: _Place(name: r.toName, label: r.toLabel, lat: r.toLatitude, lng: r.toLongitude),
+        from: _Place(
+            name: r.fromName, label: r.fromLabel, lat: r.fromLatitude, lng: r.fromLongitude, cityKey: r.fromCityKey, otherPlace: r.fromOtherPlace),
+        to: _Place(name: r.toName, label: r.toLabel, lat: r.toLatitude, lng: r.toLongitude, cityKey: r.toCityKey, otherPlace: r.toOtherPlace),
         fare: r.fare,
         tripType: r.tripType,
       ));
@@ -149,12 +190,12 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> with TickerProvider
 
   _Place? get _defaultFrom {
     if (_routes.isNotEmpty) return _routes.last.from;
-    final t = _ctrl.taxi.value;
-    final lat = t?.latitude, lng = t?.longitude;
-    final name = t?.locality ?? '';
-    if (t == null || lat == null || lng == null || name.isEmpty) return null;
-    final label = t.baseLabel;
-    return _Place(name: name, label: label.isNotEmpty && label != name ? label : null, lat: lat, lng: lng);
+    final name = SearchFold.fold(_ctrl.taxi.value?.locality ?? '');
+    if (name.isEmpty || !Get.isRegistered<TripCityCatalog>()) return null;
+    for (final c in Get.find<TripCityCatalog>().search(name)) {
+      if (SearchFold.fold(c.name) == name) return _Place.fromCity(c);
+    }
+    return null;
   }
 
   void _clearForm() {
@@ -171,15 +212,25 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> with TickerProvider
     _picking = true;
     FocusScope.of(context).unfocus();
     try {
-      final picked = await LocationSwitchSheet.pick(context,
-          palette: templateModulePalette, title: isFrom ? 'From city' : 'To city');
-      if (picked == null || !mounted) return;
+      final choice = await TaxiRouteCitySheet.pick(context,
+          title: isFrom ? TaxiRouteStrings.fromCity : TaxiRouteStrings.toCity, selectedKey: (isFrom ? _from : _to)?.cityKey);
+      if (choice == null || !mounted) return;
+      final _Place place;
+      switch (choice) {
+        case TaxiRouteCityPicked(:final city):
+          place = _Place.fromCity(city);
+        case TaxiRouteOtherPlace():
+          final picked = await LocationSwitchSheet.pick(context, palette: templateModulePalette, title: TaxiRouteStrings.otherPlace);
+          if (picked == null || !mounted) return;
+          place = _Place.fromPicked(picked);
+      }
       setState(() {
         if (isFrom) {
-          _from = _Place.fromPicked(picked);
+          _from = place;
         } else {
-          _to = _Place.fromPicked(picked);
+          _to = place;
         }
+        if (_ring == (isFrom ? _Ring.from : _Ring.to)) _ring = null;
         _dirty = true;
       });
     } finally {
@@ -205,6 +256,11 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> with TickerProvider
     if (to == null) {
       AppToast.error('Pick a To place');
       _mark(_Ring.to);
+      return false;
+    }
+    if (!from.named || !to.named) {
+      AppToast.error(from.named ? TaxiRouteStrings.chooseToAgain : TaxiRouteStrings.chooseFromAgain);
+      _mark(from.named ? _Ring.to : _Ring.from);
       return false;
     }
     if (TaxiOptionSets.distanceMeters(from.lat, from.lng, to.lat, to.lng) < TaxiOptionSets.minEndpointDistanceMeters) {
@@ -334,22 +390,7 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> with TickerProvider
       Get.back();
       return;
     }
-    final ok = await _ctrl.saveRoutes([
-      for (final r in _routes)
-        {
-          'id': r.id,
-          'fromName': r.from.name,
-          'fromLabel': r.from.label,
-          'fromLatitude': r.from.lat,
-          'fromLongitude': r.from.lng,
-          'toName': r.to.name,
-          'toLabel': r.to.label,
-          'toLatitude': r.to.lat,
-          'toLongitude': r.to.lng,
-          'fare': r.fare,
-          'tripType': r.tripType,
-        },
-    ]);
+    final ok = await _ctrl.saveRoutes([for (final r in _routes) r.toJson()]);
     if (!ok || !mounted) return;
     Get.back();
     AppToast.success('Routes saved');
@@ -445,6 +486,8 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> with TickerProvider
       tag: '${r.from.name} to',
       title: r.to.name,
       subtitle: '${BrowseItem.inr(r.fare)} · ${TaxiOptionSets.tripLabel(r.tripType)}',
+      note: r.active ? TaxiRouteStrings.activeInRequests : TaxiRouteStrings.notActive,
+      noteOk: r.active,
       onEdit: () => _editRoute(i),
       onRemove: () => _removeRoute(i),
     );
@@ -456,7 +499,8 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> with TickerProvider
         label: label,
         value: place?.name,
         sublabel: place?.label,
-        hint: 'Search a place',
+        hint: TaxiRouteStrings.chooseCity,
+        helperText: place != null && place.cityKey == null ? TaxiRouteStrings.otherPlaceNote : null,
         leadingArt: asset,
         errorRing: ring,
         trailing: Image.asset(ListingArt.pushpin, width: DS.s(26), height: DS.s(26)),

@@ -29,6 +29,7 @@ class TaxiSetupController extends GetxController {
     'TaxiNotApproved',
     'TaxiAlreadyExists',
     'TaxiRouteLimit',
+    'TaxiRouteCityInvalid',
     'TaxiPlateTaken',
     'TaxiBaseOutsideDistrict',
     'TaxiIdentityRequired',

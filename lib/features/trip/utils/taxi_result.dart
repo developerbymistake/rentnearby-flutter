@@ -10,6 +10,7 @@ class TaxiErrorTypes {
   static const String offerStateInvalid = 'OfferStateInvalid';
   static const String legacyActive = 'LegacyTaxiActive';
   static const String allDriversBusy = 'AllDriversBusy';
+  static const String noReadyDriver = 'NoReadyDriver';
   static const String notFound = 'TaxiRequestNotFound';
   static const String overlapping = 'OverlappingTaxiRequest';
   static const String seatsTooFew = 'SeatsTooFew';
@@ -64,6 +65,8 @@ sealed class TaxiResult<T> {
         );
       case TaxiErrorTypes.allDriversBusy:
         return TaxiAllDriversBusy<T>(message: message);
+      case TaxiErrorTypes.noReadyDriver:
+        return TaxiNoReadyDriver<T>(message: message);
       case TaxiErrorTypes.notFound:
         return TaxiNotFound<T>(message: message);
       case TaxiErrorTypes.overlapping:
@@ -129,6 +132,12 @@ class TaxiAllDriversBusy<T> extends TaxiResult<T> {
   final String? message;
 
   const TaxiAllDriversBusy({this.message});
+}
+
+class TaxiNoReadyDriver<T> extends TaxiResult<T> {
+  final String? message;
+
+  const TaxiNoReadyDriver({this.message});
 }
 
 class TaxiOverlap<T> extends TaxiResult<T> {

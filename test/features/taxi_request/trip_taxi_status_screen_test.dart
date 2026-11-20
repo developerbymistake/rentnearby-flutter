@@ -211,6 +211,37 @@ void main() {
     expect(h.opened, [false, true]);
   });
 
+  group('no ready driver', () {
+    test('end reason NoReadyDriver parses', () {
+      expect(RequestEndReason.parse('NoReadyDriver'), RequestEndReason.noReadyDriver);
+    });
+
+    for (final size in fiveSizes) {
+      testWidgets('busy view with NoReadyDriver at ${sizeLabel(size)}', (tester) async {
+        final h = await _open(tester, _sample('taxi_request_busy.json', {'endReason': 'NoReadyDriver'}), size: size);
+        expect(tester.takeException(), isNull);
+        expect(find.byKey(const ValueKey('status_no_ready')), findsOneWidget);
+        expect(_t('No driver is ready for this route right now'), findsOneWidget);
+        expect(_t('Please try again in a little while.'), findsOneWidget);
+        expect(_t('All drivers are busy right now'), findsNothing);
+        await _tap(tester, 'busy_try_again');
+        expect(h.opened, [true]);
+      });
+    }
+
+    testWidgets('ended view with NoReadyDriver shows the same message', (tester) async {
+      await _open(tester, _sample('taxi_request_busy.json', {'endReason': 'NoReadyDriver', 'view': 'Ended'}));
+      expect(find.byKey(const ValueKey('status_no_ready')), findsOneWidget);
+      expect(_t('Request closed'), findsNothing);
+    });
+
+    testWidgets('AllDriversBusy keeps the busy message', (tester) async {
+      await _open(tester, _sample('taxi_request_busy.json'));
+      expect(find.byKey(const ValueKey('status_busy')), findsOneWidget);
+      expect(_t('No driver is ready for this route right now'), findsNothing);
+    });
+  });
+
   testWidgets('frame_40_no_reply', (tester) async {
     final h = await _open(tester, _sample('taxi_request_no_reply.json'));
     _stepsAre('No reply yet. Still asking drivers.');

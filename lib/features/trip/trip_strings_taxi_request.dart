@@ -43,6 +43,8 @@ class TripStringsTaxiRequest {
   static const String retry = 'Try again';
   static const String offline = 'No internet connection. Please try again.';
   static const String sendFailed = 'Could not send your request. Please try again.';
+  static const String noReadyDriver = 'No driver is ready for this route right now. Please try again in a little while.';
+  static const String allDriversBusy = 'All drivers are busy right now. Please try again in a little while.';
   static const String pickupGone = 'That pickup is no longer available. Please choose again.';
   static const String dropGone = 'That drop is no longer available. Please choose again.';
   static const String dayOn = 'Include this day';
