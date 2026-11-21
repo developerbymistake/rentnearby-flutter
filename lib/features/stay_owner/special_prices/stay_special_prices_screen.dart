@@ -233,7 +233,7 @@ class _RuleCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Row(children: [
-              ExcludeSemantics(child: Art3D(asset: r.label == null ? ListingArt.calendar : ListingArt.diyaLamp, size: 34)),
+              ExcludeSemantics(child: Art3D(asset: StayCalArt.rule(r.label), size: 34)),
               Gap.h(10),
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

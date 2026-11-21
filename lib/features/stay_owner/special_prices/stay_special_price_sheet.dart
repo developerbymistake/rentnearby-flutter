@@ -507,7 +507,7 @@ class StaySpecialPriceFormState extends State<StaySpecialPriceForm> {
               child: Row(children: [
                 Expanded(child: Text(room.roomName, style: Ink3D.text(11.5, FontWeight.w500, Ink3D.title, letterSpacing: 0))),
                 Text(Money.exact(room.basePrice),
-                    style: Ink3D.text(10.5, FontWeight.w500, Ink3D.grey, letterSpacing: 0).copyWith(decoration: lower ? null : TextDecoration.lineThrough)),
+                    style: Ink3D.text(10.5, FontWeight.w500, Ink3D.grey, letterSpacing: 0).copyWith(decoration: TextDecoration.lineThrough)),
                 Gap.h(8),
                 Text(Money.exact(SpecialPriceMath.adjust(room.basePrice, lower, percent)), style: Ink3D.text(13, FontWeight.w800, Ink3D.title, letterSpacing: 0)),
               ]),

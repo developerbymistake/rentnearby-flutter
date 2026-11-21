@@ -212,9 +212,9 @@ void main() {
           return const {};
         },
       );
-      final early = c == 'o_st_42' || c == 'o_st_44';
+      final seen = c == 'o_st_43' ? DateTime(2027, 1, 15) : DateTime(2026, 10, 15);
       final sp = Get.put(
-        StaySpecialPricesController(clock: early ? () => DateTime(2026, 10, 15) : calClock, userIdOf: () => 'user-a', listingNameOf: () => 'Deodar Heights'),
+        StaySpecialPricesController(clock: () => seen, userIdOf: () => 'user-a', listingNameOf: () => 'Deodar Heights'),
         tag: StaySpecialPricesController.tag,
       );
       if (c != 'o_st_45') PlanGate.debugPlan = OwnerPlans.plus;

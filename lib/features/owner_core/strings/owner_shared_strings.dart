@@ -1,5 +1,3 @@
-import '../money/money_wire.dart';
-
 abstract final class OwnerSharedStrings {
   static const seePlus = 'See Plus';
   static const notNow = 'Not now';
@@ -38,7 +36,9 @@ abstract final class OwnerSharedStrings {
   static const status = 'Status';
   static const moneyRange = 'Enter an amount between ₹1 and ₹99,00,000.';
   static const finalNeeded = 'Add the final amount first.';
-  static const receivedAboveFinal = MoneyWire.receivedAboveFinalLine;
+  static const receivedAboveFinal = 'Received cannot be more than the final amount.';
+  static const amountOptionalHint = 'Optional';
+  static const amountZeroHint = '0';
   static const noPhone = 'Do not add phone numbers.';
   static const discardTitle = 'Discard changes?';
   static const discard = 'Discard';

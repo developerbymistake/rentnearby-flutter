@@ -249,7 +249,7 @@ abstract final class StayEntryRows {
           padding: DS.sym(h: 14, v: 12),
           child: Row(
             children: [
-              ExcludeSemantics(child: Art3D(asset: r.label == null ? ListingArt.calendar : ListingArt.star, size: 30)),
+              ExcludeSemantics(child: Art3D(asset: StayCalArt.rule(r.label), size: 30)),
               Gap.h(12),
               Expanded(
                 child: Column(

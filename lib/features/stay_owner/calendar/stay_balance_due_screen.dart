@@ -223,7 +223,7 @@ class _StayBalanceDueScreenState extends State<StayBalanceDueScreen> {
     final e = r.entry;
     if (e == null) return const SizedBox.shrink();
     final f = e.dateFrom ?? month;
-    final sub = '${StayEntryText.upcomingSub(e)}${r.paid || e.finalAmount == null ? '' : ' · ${StayCalendarStrings.ofAmount(e.finalAmount ?? 0)}'}';
+    final sub = r.paid || e.finalAmount == null ? StayEntryText.upcomingSub(e) : '${StayEntryText.range(e)} · ${StayCalendarStrings.ofAmount(e.finalAmount ?? 0)}';
     final amount = r.paid ? (e.finalAmount ?? 0) : e.chipAmount;
     return StayCardSegment(
       first: r.first,

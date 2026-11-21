@@ -16,6 +16,14 @@ class PlanLimitSheet extends StatelessWidget {
 
   OwnerLook get _look => spec.taxi ? OwnerLook.taxi : OwnerLook.stay;
 
+  static final KitTone _stayButton = KitTone(
+    accent: ListingTone.forest.g1,
+    accentDark: ListingTone.forest.g2,
+    tint: ListingTone.forest.tint,
+    gradient: ListingTone.forest.gradient,
+    glow: ListingTone.forest.g2,
+  );
+
   Widget _kv(String label, String value, {String? sub, bool highlight = false}) => Padding(
         padding: DS.sym(v: 8),
         child: Row(
@@ -53,7 +61,7 @@ class PlanLimitSheet extends StatelessWidget {
             PrimaryButton(
               key: GateKeys.seePlus,
               label: OwnerSharedStrings.seePlus,
-              tone: _look.kit,
+              tone: spec.taxi ? _look.kit : _stayButton,
               onPressed: () {
                 Navigator.of(context).pop();
                 PlanGate.seePlus();

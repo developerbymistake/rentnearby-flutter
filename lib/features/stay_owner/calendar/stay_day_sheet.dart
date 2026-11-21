@@ -258,7 +258,7 @@ class _RuleRow extends StatelessWidget {
       ),
       child: Row(
         children: [
-          ExcludeSemantics(child: Art3D(asset: ListingArt.diyaLamp, size: 28)),
+          ExcludeSemantics(child: Art3D(asset: StayCalArt.rule(festivalName ?? rule.label), size: 28)),
           Gap.h(10),
           Expanded(
             child: Column(

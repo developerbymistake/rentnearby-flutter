@@ -12,6 +12,13 @@ import '../../widgets/stay_widgets.dart';
 
 enum StayTileKind { app, own, blocked, cancelled }
 
+abstract final class StayCalArt {
+  static String rule(String? label) {
+    if (label == null) return ListingArt.calendar;
+    return label.toLowerCase().contains('diwali') ? ListingArt.diyaLamp : ListingArt.star;
+  }
+}
+
 abstract final class StayCalKit {
   static final KitTone green = KitTone(
     accent: ListingTone.forest.g1,

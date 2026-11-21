@@ -535,7 +535,7 @@ class StayEntryFormState extends State<StayEntryForm> {
           if (blockError == StayBlockError.overlap) StayRedBox(text: StayCalendarStrings.blockOverlap),
           Padding(
             padding: DS.insets(t: 8),
-            child: Text(StayCalendarStrings.blockRule, style: Ink3D.text(10.5, FontWeight.w500, StayLook.indigoText, height: 1.4, letterSpacing: 0)),
+            child: Text(StayCalendarStrings.blockRule, style: Ink3D.text(10.5, FontWeight.w500, Ink3D.grey, height: 1.4, letterSpacing: 0)),
           ),
         ],
         if (!editMode || widget.existingBlock == null) ...[
@@ -554,7 +554,13 @@ class StayEntryFormState extends State<StayEntryForm> {
           Container(
             padding: DS.sym(h: 12, v: 10),
             decoration: BoxDecoration(color: StayLook.amberSoft, borderRadius: DS.circular(12)),
-            child: Text(StayCalendarStrings.travellersSeeFull, style: Ink3D.text(11, FontWeight.w600, StayLook.amberText, letterSpacing: 0)),
+            child: Row(
+              children: [
+                ExcludeSemantics(child: Art3D(asset: ListingArt.warning, size: 18)),
+                Gap.h(8),
+                Expanded(child: Text(StayCalendarStrings.travellersSeeFull, style: Ink3D.text(11, FontWeight.w600, StayLook.amberText, letterSpacing: 0))),
+              ],
+            ),
           ),
         ],
         if (blocks != null && !red) _meterLine(StayCalendarStrings.blocksMeter, blocks, PlanGate.paymentOn ? null : StayCalendarStrings.blocksOff(blocks.used)),
