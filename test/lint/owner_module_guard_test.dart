@@ -126,6 +126,10 @@ void main() {
     'Bookings stay. A ringing request and unanswered trip leads close.': 'o_tx_11',
     'Shown in trip plans as a local day. Leave empty to stay out of local days.': 'o_tx_41 D',
     'You stop getting requests until Bakhli approves the change. Your bookings stay.': 'o_tx_42 A',
+    // A6-taxi-work
+    'Choose which route stays, or get Plus to use all your routes.': 'o_tx_36 E',
+    'The request opens again for other drivers. Your calendar entry stays, marked Cancelled.': 'o_tx_38 B',
+    '\$name’s request opens again for other drivers. Your calendar entry stays, marked Cancelled.': 'o_tx_38 B',
   };
 
   test('5. role words stay in their own module', () {

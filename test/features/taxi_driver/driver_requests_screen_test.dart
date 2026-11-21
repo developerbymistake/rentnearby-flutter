@@ -6,7 +6,7 @@ import 'package:bakhli/features/taxi/requests/data/driver_request_repository.dar
 import 'package:bakhli/features/taxi/requests/driver_requests_screen.dart';
 import 'package:bakhli/features/taxi/requests/models/driver_request_models.dart';
 import 'package:bakhli/features/trip/utils/taxi_result.dart';
-import 'package:bakhli/features/trip/widgets/taxi_status/taxi_driver_card.dart';
+import 'package:bakhli/features/taxi/requests/widgets/driver_state_chip.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -127,7 +127,7 @@ void main() {
     expect(find.text('Sightseeing 3 days'), findsOneWidget);
     expect(_in(_bookedId, find.text('Booked')), findsOneWidget);
     expect(_in(_bookedId, find.text('26 to 28 Dec')), findsOneWidget);
-    expect(tester.widget<TaxiStateChip>(_in(_bookedId, find.byType(TaxiStateChip))).positive, isTrue);
+    expect(tester.widget<DriverStateChip>(_in(_bookedId, find.byType(DriverStateChip))).positive, isTrue);
     expect(_decoration(tester, _bookedId).border, isNotNull);
     expect(find.text('Missed'), findsOneWidget);
     expect(find.text('Went to the next drivers'), findsOneWidget);
@@ -135,7 +135,7 @@ void main() {
     expect(find.text('Traveller chose another driver'), findsOneWidget);
     expect(find.text('Kathgodam pickup'), findsOneWidget);
     expect(find.text('4 days · 3 nights · 18 to 21 Dec'), findsOneWidget);
-    expect(find.text('4 seater · 2 travellers'), findsWidgets);
+    expect(find.text('Kathgodam to Nainital, Ranikhet · 4 seater'), findsWidgets);
     expect(_key('request_accept_$_ringingId'), findsOneWidget);
     expect(_key('request_accept_$_bookedId'), findsNothing);
     expect(_key('request_accept_$_missedId'), findsNothing);
@@ -163,7 +163,7 @@ void main() {
     expect(_in(_endedId, find.text('Booked')), findsNothing);
     expect(_in(_endedId, find.text('Closed')), findsOneWidget);
     expect(_in(_endedId, find.text('This ride has ended')), findsOneWidget);
-    expect(tester.widget<TaxiStateChip>(_in(_endedId, find.byType(TaxiStateChip))).positive, isFalse);
+    expect(tester.widget<DriverStateChip>(_in(_endedId, find.byType(DriverStateChip))).positive, isFalse);
     expect(_decoration(tester, _endedId).border, isNull);
   });
 

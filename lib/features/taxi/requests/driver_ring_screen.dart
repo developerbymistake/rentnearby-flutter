@@ -6,11 +6,17 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../../config/app_routes.dart';
+import '../../../services/taxi_ring_session.dart';
+import '../../owner_core/plan/plan_gate.dart';
+import '../../taxi_driver/strings/taxi_work_strings.dart';
+import '../../taxi_driver/taxi_driver_deps.dart';
 import '../../trip/utils/taxi_result.dart';
 import 'controllers/driver_requests_controller.dart';
 import 'data/driver_request_repository.dart';
 import 'models/driver_request_models.dart';
+import 'models/ring_end.dart';
 import 'strings/driver_ring_strings.dart';
+import 'utils/taxi_countdown.dart';
 
 enum DriverRingAction {
   accept,
@@ -28,24 +34,30 @@ class DriverRingScreen extends StatefulWidget {
     super.key,
     required this.offerId,
     this.action,
+    this.expiresAt,
     this.controller,
     this.onAccepted,
     this.onClose,
+    this.onChooseRoute,
     this.closeDelay = const Duration(seconds: 3),
   });
 
   final String offerId;
   final DriverRingAction? action;
+  final DateTime? expiresAt;
   final DriverRequestsController? controller;
   final void Function(String offerId)? onAccepted;
   final VoidCallback? onClose;
+  final VoidCallback? onChooseRoute;
   final Duration closeDelay;
 
   static DriverRingScreen fromArguments(Object? args) {
     final map = args is Map ? args : const {};
+    final at = map['expiresAt'];
     return DriverRingScreen(
       offerId: map['offerId']?.toString() ?? '',
       action: DriverRingAction.parse(map['action']),
+      expiresAt: at is String ? DateTime.tryParse(at)?.toUtc() : null,
     );
   }
 
@@ -54,23 +66,25 @@ class DriverRingScreen extends StatefulWidget {
 }
 
 class _DriverRingScreenState extends State<DriverRingScreen> {
-  static const Color _top = Color(0xFF14182A);
-  static const Color _mid = Color(0xFF2B2F7E);
-  static const Color _bottom = Color(0xFF3B3FA8);
   static const Color _acceptGreen = Color(0xFF2EA84F);
   static const Color _onDark = Colors.white;
   static const String _art = 'assets/images/design/travel3d/taxi.png';
   static const Duration _ringWindow = Duration(minutes: 5);
+  static final Color _top = Color.lerp(ListingPalette.sunrise.g2, ListingPalette.coral.g1, 0.55)!;
+  static final Color _mid = Color.lerp(ListingPalette.coral.g1, ListingPalette.coral.g2, 0.35)!;
+  static final Color _bottom = ListingPalette.coral.g2;
 
   late final DriverRequestsController _c = widget.controller ?? DriverRequestsController.to;
   Timer? _tick;
   Timer? _closeTimer;
   bool _loadFailed = false;
   bool _actionFailed = false;
-  bool _paused = false;
+  bool _requestsPaused = false;
   bool _actionRan = false;
   bool _finished = false;
   bool _missed = false;
+  bool _loading = false;
+  RingEnd? _pushedEnd;
 
   String get _id => widget.offerId;
 
@@ -80,23 +94,40 @@ class _DriverRingScreenState extends State<DriverRingScreen> {
     _tick = Timer.periodic(const Duration(seconds: 1), (_) {
       if (mounted) setState(() {});
     });
+    TaxiRingSession.ended.addListener(_onRingEnded);
     WidgetsBinding.instance.addPostFrameCallback((_) => _load());
   }
 
   @override
   void dispose() {
+    TaxiRingSession.ended.removeListener(_onRingEnded);
     _tick?.cancel();
     _closeTimer?.cancel();
     super.dispose();
   }
 
+  void _onRingEnded() {
+    final e = TaxiRingSession.ended.value;
+    if (!mounted || e == null || e.offerId != _id || _finished) return;
+    final end = RingEnd.forReason(e.reason, paymentOn: PlanGate.paymentOn);
+    setState(() => _pushedEnd = end);
+    unawaited(_c.stopRing(_id));
+    if (end.kind == RingEndKind.ended) _scheduleClose();
+  }
+
   Future<void> _load() async {
-    if (!mounted) return;
+    if (!mounted || _loading) return;
+    _loading = true;
     setState(() => _loadFailed = false);
     final listed = _c.loaded.value ? Future<void>.value() : _c.load();
     final r = await _c.loadOffer(_id);
     await listed;
+    _loading = false;
     if (!mounted) return;
+    if (r is TaxiPaused<DriverOffer> && _c.offer(_id) == null) {
+      setState(() => _requestsPaused = true);
+      return;
+    }
     if (r is! TaxiOk<DriverOffer> && _c.offer(_id) == null) {
       setState(() => _loadFailed = true);
       return;
@@ -113,7 +144,12 @@ class _DriverRingScreenState extends State<DriverRingScreen> {
     if (o == null || _finished) return;
     if (_answered(o) || !_ringing(o)) unawaited(_c.stopRing(_id));
     if (_answered(o)) return _openDetail();
-    if (!_ringing(o)) return _showMissed();
+    if (!_ringing(o)) {
+      final end = RingEnd.forOffer(o, paymentOn: PlanGate.paymentOn) ?? RingEnd.missed;
+      if (end.kind == RingEndKind.missed || end.kind == RingEndKind.ended) _scheduleClose();
+      if (mounted) setState(() {});
+      return;
+    }
     final a = widget.action;
     if (a != null && !_actionRan) {
       _actionRan = true;
@@ -121,10 +157,15 @@ class _DriverRingScreenState extends State<DriverRingScreen> {
     }
   }
 
-  void _showMissed() {
+  void _scheduleClose() {
     if (_closeTimer != null || _finished) return;
     _tick?.cancel();
     _closeTimer = Timer(widget.closeDelay, _close);
+  }
+
+  void _showMissed() {
+    _missed = true;
+    _scheduleClose();
     if (mounted) setState(() {});
   }
 
@@ -141,6 +182,7 @@ class _DriverRingScreenState extends State<DriverRingScreen> {
     if (_finished) return;
     _finished = true;
     _tick?.cancel();
+    _closeTimer?.cancel();
     final cb = widget.onClose;
     if (cb != null) return cb();
     final nav = Get.key.currentState;
@@ -149,6 +191,13 @@ class _DriverRingScreenState extends State<DriverRingScreen> {
     } else {
       Get.offNamed(AppRoutes.taxiRequests);
     }
+  }
+
+  void _chooseRoute() {
+    final cb = widget.onChooseRoute;
+    if (cb != null) return cb();
+    _close();
+    TaxiDriverDeps.openChooseRoute();
   }
 
   Future<void> _accept() async {
@@ -168,24 +217,24 @@ class _DriverRingScreenState extends State<DriverRingScreen> {
       case TaxiOk<DriverOffer>():
         openOnOk ? _openDetail() : _close();
       case TaxiOfferMissed<DriverOffer>():
-        _missed = true;
         _showMissed();
+      case TaxiPaused<DriverOffer>():
+        setState(() => _requestsPaused = true);
       default:
         final o = _c.offer(_id);
         if (o != null && o.state != OfferState.ringing && o.state != OfferState.accepted) return _settle();
-        setState(() {
-          _actionFailed = true;
-          _paused = r is TaxiPaused<DriverOffer>;
-        });
+        setState(() => _actionFailed = true);
     }
   }
 
   void _onAccept() {
+    if (_c.isBusy(DriverRequestAction.accept, _id) || _c.isBusy(DriverRequestAction.decline, _id)) return;
     setState(() => _actionFailed = false);
     unawaited(_accept());
   }
 
   void _onDecline() {
+    if (_c.isBusy(DriverRequestAction.accept, _id) || _c.isBusy(DriverRequestAction.decline, _id)) return;
     setState(() => _actionFailed = false);
     unawaited(_decline());
   }
@@ -193,54 +242,74 @@ class _DriverRingScreenState extends State<DriverRingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _top,
+      backgroundColor: _bottom,
       body: DecoratedBox(
         position: DecorationPosition.background,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [_top, _mid, _bottom], stops: [0, 0.7, 1]),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [_top, _mid, _bottom], stops: const [0, 0.55, 1]),
         ),
         child: SizedBox.expand(child: SafeArea(child: Obx(_body))),
       ),
     );
   }
 
+  String _leftForFailed() {
+    final at = widget.expiresAt;
+    if (at == null) return '';
+    final left = TaxiCountdown.remaining(at, offset: _c.clockOffset.value, now: DateTime.now());
+    return left > Duration.zero ? TaxiCountdown.text(left) : '';
+  }
+
+  Widget _opening() =>
+      const _RingStateView(key: ValueKey('ring_opening'), eyebrow: TaxiWorkStrings.incomingRequest, spinner: true, title: TaxiWorkStrings.opening, sub: TaxiWorkStrings.oneMoment);
+
   Widget _body() {
     final o = _c.offer(_id);
+    if (_requestsPaused) return _endView(RingEnd.paused);
+    final pushed = _pushedEnd;
+    if (pushed != null) return _endView(pushed);
     if (o == null) {
-      return _loadFailed
-          ? _message(DriverRingStrings.loadFailedTitle, DriverRingStrings.loadFailedNote, action: DriverRingStrings.retry, onTap: _load)
-          : _message(DriverRingStrings.loading, null);
+      if (!_loadFailed) return _opening();
+      final left = _leftForFailed();
+      return _RingStateView(
+        key: const ValueKey('ring_failed'),
+        eyebrow: TaxiWorkStrings.taxiRequest,
+        art: ListingArt.warning,
+        title: TaxiWorkStrings.couldNotOpen,
+        sub: left.isEmpty ? TaxiWorkStrings.couldNotOpenNoTime : TaxiWorkStrings.stillYours(left),
+        primary: TaxiWorkStrings.tryAgain,
+        onPrimary: _load,
+        secondary: TaxiWorkStrings.close,
+        onSecondary: _close,
+      );
     }
     if (!_missed && _ringing(o)) return _ring(o);
     if (_answered(o)) {
       if (!_finished) WidgetsBinding.instance.addPostFrameCallback((_) => _settle());
-      return _message(DriverRingStrings.loading, null);
+      return _opening();
     }
-    if (_closeTimer == null) WidgetsBinding.instance.addPostFrameCallback((_) => _settle());
-    return _message(DriverRingStrings.missed, DriverRingStrings.missedNote, action: DriverRingStrings.close, onTap: _close);
+    if (_closeTimer == null && !_finished) WidgetsBinding.instance.addPostFrameCallback((_) => _settle());
+    if (_missed) return _endView(RingEnd.missed);
+    return _endView(RingEnd.forOffer(o, paymentOn: PlanGate.paymentOn) ?? RingEnd.missed);
   }
 
-  Widget _message(String title, String? note, {String? action, VoidCallback? onTap}) {
-    return Center(
-      child: SingleChildScrollView(
-        padding: DS.sym(h: 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Art3D(asset: _art, size: 96),
-            Gap.v(20),
-            Text(title, textAlign: TextAlign.center, style: Ink3D.text(26, FontWeight.w700, _onDark, height: 1.25)),
-            if (note != null) ...[
-              Gap.v(8),
-              Text(note, textAlign: TextAlign.center, style: Ink3D.text(14, FontWeight.w500, _onDark, height: 1.5)),
-            ],
-            if (action != null) ...[
-              Gap.v(28),
-              _PillAction(label: action, onTap: onTap),
-            ],
-          ],
-        ),
-      ),
+  Widget _endView(RingEnd end) {
+    final art = switch (end.kind) {
+      RingEndKind.missed || RingEndKind.requestsPaused => ListingArt.alarmClock,
+      RingEndKind.pausedOnFree => ListingArt.locked,
+      RingEndKind.ended => ListingArt.taxi,
+    };
+    final paused = end.kind == RingEndKind.pausedOnFree;
+    return _RingStateView(
+      key: ValueKey('ring_end_${end.kind.name}'),
+      eyebrow: TaxiWorkStrings.taxiRequest,
+      art: art,
+      title: end.title,
+      sub: end.sub,
+      primary: paused ? TaxiWorkStrings.chooseYourRoute : TaxiWorkStrings.close,
+      onPrimary: paused ? _chooseRoute : _close,
+      secondary: paused ? TaxiWorkStrings.close : null,
+      onSecondary: paused ? _close : null,
     );
   }
 
@@ -252,20 +321,22 @@ class _DriverRingScreenState extends State<DriverRingScreen> {
   Widget _ring(DriverOffer o) {
     final busy = _c.isBusy(DriverRequestAction.accept, _id) || _c.isBusy(DriverRequestAction.decline, _id);
     final chips = <String>[
-      if (o.sections.pickup) DriverRingStrings.pickup,
-      if (o.sections.sightseeing) DriverRingStrings.sightseeing(o.sightseeingDayCount),
-      if (o.sections.drop) DriverRingStrings.drop,
+      if (o.sections.pickup) TaxiWorkStrings.pickup,
+      if (o.sections.sightseeing) TaxiWorkStrings.sightseeing(o.sightseeingDayCount),
+      if (o.sections.drop) TaxiWorkStrings.drop,
     ];
     final box = DS.s(230);
     final disc = DS.s(180);
-    final progress = (_c.remaining(o).inMilliseconds / _ringWindow.inMilliseconds).clamp(0.0, 1.0);
+    final left = _c.remaining(o);
+    final progress = (left.inMilliseconds / _ringWindow.inMilliseconds).clamp(0.0, 1.0);
+    final spoken = TaxiCountdown.text(Duration(seconds: ((left.inSeconds + 9) ~/ 10) * 10));
     final column = Padding(
       padding: DS.insets(l: 24, r: 24, t: 40, b: 40),
       child: Column(
         children: [
-          Text(DriverRingStrings.eyebrow.toUpperCase(), textAlign: TextAlign.center, style: Ink3D.text(12.5, FontWeight.w400, _onDark.withValues(alpha: Alpha.v80), letterSpacing: 0.6)),
+          Text(TaxiWorkStrings.incomingRequest.toUpperCase(), textAlign: TextAlign.center, style: Ink3D.text(12.5, FontWeight.w400, _onDark.withValues(alpha: Alpha.v80), letterSpacing: 0.6)),
           Gap.v(10),
-          Text(DriverRingStrings.title, textAlign: TextAlign.center, style: Ink3D.text(28, FontWeight.w700, _onDark, height: 1.25)),
+          Text(TaxiWorkStrings.newTaxiRequest, textAlign: TextAlign.center, style: Ink3D.text(28, FontWeight.w700, _onDark, height: 1.25)),
           Gap.v(14),
           Wrap(
             alignment: WrapAlignment.center,
@@ -274,8 +345,8 @@ class _DriverRingScreenState extends State<DriverRingScreen> {
             children: [for (final c in chips) _Chip(c)],
           ),
           _line(DriverRingStrings.summary(o.dayCount, o.nightCount, o.fromDay, o.toDay)),
-          _line(o.routeLine),
-          _line(DriverRingStrings.seats(o.seats, o.travellers)),
+          if (o.routeLine.isNotEmpty) _line(o.routeLine),
+          _line(TaxiWorkStrings.seats(o.seats, o.travellers)),
           Gap.v(44),
           SizedBox(
             width: box,
@@ -302,36 +373,131 @@ class _DriverRingScreenState extends State<DriverRingScreen> {
             ),
           ),
           Gap.v(34),
-          Text(_c.countdownText(o), key: const ValueKey('ring_countdown'), style: Ink3D.text(28, FontWeight.w600, _onDark, letterSpacing: 1)),
+          Semantics(
+            liveRegion: true,
+            label: spoken,
+            child: ExcludeSemantics(
+              child: Text(_c.countdownText(o), key: const ValueKey('ring_countdown'), style: Ink3D.text(28, FontWeight.w600, _onDark, letterSpacing: 1)),
+            ),
+          ),
           if (_actionFailed) ...[
             Gap.v(12),
-            Text(_paused ? DriverRingStrings.paused : DriverRingStrings.actionFailed, textAlign: TextAlign.center, style: Ink3D.text(13, FontWeight.w600, _onDark, height: 1.4)),
+            Text(TaxiWorkStrings.answerFailed, textAlign: TextAlign.center, style: Ink3D.text(13, FontWeight.w600, _onDark, height: 1.4)),
           ],
           const Spacer(),
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              _Round(label: DriverRingStrings.decline, color: DesignColors.error, glyph: const _DeclineX(), onTap: busy ? null : _onDecline),
+              _Round(label: TaxiWorkStrings.decline, color: DesignColors.error, glyph: const _DeclineX(), onTap: busy ? null : _onDecline),
               Gap.h(90),
-              _Round(label: DriverRingStrings.accept, color: _acceptGreen, glyph: Icon(Icons.call, color: Colors.white, size: DS.s(30)), onTap: busy ? null : _onAccept),
+              _Round(label: TaxiWorkStrings.accept, color: _acceptGreen, glyph: Icon(Icons.call, color: Colors.white, size: DS.s(30)), onTap: busy ? null : _onAccept),
             ],
           ),
           Gap.v(28),
-          Text(DriverRingStrings.swipeHint, textAlign: TextAlign.center, style: Ink3D.text(12.5, FontWeight.w400, _onDark.withValues(alpha: Alpha.high))),
+          Text(TaxiWorkStrings.swipeUp, textAlign: TextAlign.center, style: Ink3D.text(12.5, FontWeight.w400, _onDark.withValues(alpha: Alpha.high))),
         ],
       ),
     );
-    return LayoutBuilder(
-      builder: (context, c) => FittedBox(
-        fit: BoxFit.scaleDown,
-        alignment: Alignment.topCenter,
-        child: SizedBox(
-          width: c.maxWidth,
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: c.maxHeight),
-            child: IntrinsicHeight(child: column),
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onVerticalDragEnd: busy
+          ? null
+          : (d) {
+              if ((d.primaryVelocity ?? 0) < -300) _onAccept();
+            },
+      child: LayoutBuilder(
+        builder: (context, c) => FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.topCenter,
+          child: SizedBox(
+            width: c.maxWidth,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: c.maxHeight),
+              child: IntrinsicHeight(child: column),
+            ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _RingStateView extends StatelessWidget {
+  static const double _pillFont = 13;
+
+  const _RingStateView({
+    super.key,
+    required this.eyebrow,
+    this.art,
+    this.spinner = false,
+    required this.title,
+    required this.sub,
+    this.primary,
+    this.onPrimary,
+    this.secondary,
+    this.onSecondary,
+  });
+
+  final String eyebrow;
+  final String? art;
+  final bool spinner;
+  final String title;
+  final String sub;
+  final String? primary;
+  final VoidCallback? onPrimary;
+  final String? secondary;
+  final VoidCallback? onSecondary;
+
+  @override
+  Widget build(BuildContext context) {
+    final a = art;
+    final disc = DS.s(112);
+    final p = primary;
+    final s = secondary;
+    return Padding(
+      padding: DS.insets(l: 18, r: 18, t: 40, b: 48),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
+                children: [
+                  Text(eyebrow.toUpperCase(), textAlign: TextAlign.center, style: Ink3D.text(11, FontWeight.w500, Colors.white.withValues(alpha: Alpha.v80), letterSpacing: 0.6)),
+                  Gap.v(36),
+                  if (spinner)
+                    SizedBox(
+                      width: DS.s(88),
+                      height: DS.s(88),
+                      child: CircularProgressIndicator(
+                        key: const ValueKey('ring_opening_spinner'),
+                        strokeWidth: DS.s(4),
+                        color: ListingPalette.sunrise.g1,
+                        backgroundColor: Colors.white.withValues(alpha: Alpha.v18),
+                      ),
+                    )
+                  else if (a != null)
+                    Container(
+                      width: disc,
+                      height: disc,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withValues(alpha: Alpha.v14)),
+                      child: Art3D(asset: a, size: 72, shadowAlpha: Alpha.scrim),
+                    ),
+                  Gap.v(24),
+                  Text(title, key: const ValueKey('ring_state_title'), textAlign: TextAlign.center, style: Ink3D.text(18, FontWeight.w700, Colors.white, height: 1.3)),
+                  Gap.v(8),
+                  Text(sub, key: const ValueKey('ring_state_sub'), textAlign: TextAlign.center, style: Ink3D.text(11.5, FontWeight.w500, Colors.white, height: 1.5)),
+                ],
+              ),
+            ),
+          ),
+          if (p != null) GradientPillButton(key: const ValueKey('ring_state_primary'), tone: ListingTone.coral, label: p, onTap: onPrimary, height: 44, fontSize: _pillFont),
+          if (s != null) ...[
+            Gap.v(10),
+            WhitePillButton(key: const ValueKey('ring_state_secondary'), tone: ListingTone.coral, label: s, onTap: onSecondary, height: 44, fontSize: _pillFont),
+          ],
+        ],
       ),
     );
   }
@@ -454,25 +620,4 @@ class _XPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_XPainter old) => false;
-}
-
-class _PillAction extends StatelessWidget {
-  const _PillAction({required this.label, required this.onTap});
-  final String label;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Tap3D(
-      onTap: onTap,
-      label: label,
-      child: DecoratedBox(
-        decoration: BoxDecoration(color: Colors.white, borderRadius: DS.circular(24), boxShadow: DS.shadows(Ink3D.whiteBtn)),
-        child: Padding(
-          padding: DS.sym(h: 32, v: 13),
-          child: Text(label, style: Ink3D.text(14, FontWeight.w700, Ink3D.title)),
-        ),
-      ),
-    );
-  }
 }

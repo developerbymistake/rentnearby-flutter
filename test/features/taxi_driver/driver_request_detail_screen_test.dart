@@ -155,7 +155,7 @@ void main() {
     expect(_t('Pickup, 3 sightseeing days, Drop'), findsOneWidget);
     expect(_t('Kathgodam hub · 18 Dec'), findsOneWidget);
     expect(_t('3 nights · 18 to 21 Dec'), findsOneWidget);
-    expect(_t('Same as pickup · Kathgodam hub · 21 Dec'), findsOneWidget);
+    expect(_t('Kathgodam hub · 21 Dec'), findsOneWidget);
     expect(_t('Day 1 · Fri 18 Dec'), findsOneWidget);
     expect(_t('25 km · 6 h 10 m'), findsOneWidget);
     expect(_t('Taxi needed'), findsNWidgets(3));
@@ -215,7 +215,7 @@ void main() {
 
   testWidgets('confirmed shows Booked and opens My bookings', (tester) async {
     final rig = await _open(tester, {..._selected(), 'state': 'Confirmed', 'confirmBy': null});
-    expect(_t('Booked'), findsOneWidget);
+    expect(find.textContaining('Booked · '), findsOneWidget);
     expect(_t('Confirm booking'), findsNothing);
     await _tap(tester, 'request_open_bookings');
     expect(rig.bookings, 1);
@@ -239,7 +239,7 @@ void main() {
     final rig = await _open(tester, _selected());
     await _tap(tester, 'request_confirm');
     expect(rig.repo.calls, ['confirm']);
-    expect(_t('Booked'), findsOneWidget);
+    expect(find.textContaining('Booked · '), findsOneWidget);
   });
 
   testWidgets('call traveller passes the number', (tester) async {
@@ -307,6 +307,8 @@ void main() {
     final rig = await _open(tester, accepted());
     rig.repo.result = const TaxiStateInvalid(state: 'Selected', message: 'The traveller already chose a driver.');
     await openWithdrawSheet(tester);
+    await tester.tap(find.byKey(const ValueKey('driver_reason_ChangedPlan')));
+    await tester.pump();
     await tester.tap(find.byKey(const ValueKey('driver_withdraw_confirm')));
     await tester.pump(const Duration(milliseconds: 500));
     await tester.pump();

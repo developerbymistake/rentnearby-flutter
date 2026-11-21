@@ -228,7 +228,7 @@ class TaxiRingNotification {
   static Map<String, dynamic> routeData(TaxiRingPush push, {String? action}) => {
         'notification_type': 'taxi_request_ring',
         'action_route': TaxiRingPush.ringRoute,
-        'action_args_json': jsonEncode({'offerId': push.offerId, 'action': ?action}),
+        'action_args_json': jsonEncode({'offerId': push.offerId, 'action': ?action, 'expiresAt': ?push.expiresAt?.toIso8601String()}),
         tagKey: push.tag,
       };
 
@@ -355,6 +355,7 @@ class TaxiRingService {
     }
     switch (push.kind) {
       case TaxiRingKind.end:
+        TaxiRingSession.ended.value = TaxiRingEnd(push.offerId, push.reason);
         await TaxiRingEndedLog.record(push.offerId, now);
         await _safe(() => notifier.cancel(TaxiRingNotification.id, push.tag));
         return TaxiRingResult(TaxiRingOutcome.ended, push, Future<void>.value());

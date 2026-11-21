@@ -171,13 +171,18 @@ void main() {
     expect(find.text('18 Dec to 21 Dec'), findsNothing);
   });
 
-  testWidgets('withdraw_preselects_changed_plan_like_the_mock', (tester) async {
+  testWidgets('withdraw_needs_a_chip_o_tx_38', (tester) async {
     final repo = _FakeRepo();
     final c = _controller(repo);
     await pumpPhone(tester, _screen(c));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('booking_withdraw_$_bookedId')));
     await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('driver_withdraw_confirm')));
+    await tester.pumpAndSettle();
+    expect(repo.withdrawChips, isEmpty);
+    await tester.tap(find.byKey(const ValueKey('driver_reason_ChangedPlan')));
+    await tester.pump();
     await tester.tap(find.byKey(const ValueKey('driver_withdraw_confirm')));
     await tester.pumpAndSettle();
     expect(repo.withdrawChips, [ReasonChip.changedPlan]);

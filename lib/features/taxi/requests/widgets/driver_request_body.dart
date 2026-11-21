@@ -130,9 +130,7 @@ class _RouteCard extends StatelessWidget {
       if (offer.sections.drop)
         (
           _S.drop,
-          trip.drop.sameAsPickup
-              ? _S.sameAsPickup(trip.pickup.name, _short(trip.drop.date))
-              : _S.hubDate(trip.drop.name, _short(trip.drop.date)),
+          _S.hubDate(trip.drop.sameAsPickup || trip.drop.name.isEmpty ? trip.pickup.name : trip.drop.name, _short(trip.drop.date)),
         ),
     ];
     return TaxiStatusCard(
@@ -160,7 +158,7 @@ class _RouteStop extends StatelessWidget {
     final dot = DS.s(14);
     final pad = DS.gv(8);
     final dotTop = pad + DS.s(4);
-    final rail = Container(width: DS.s(2), color: TripLook.rail);
+    final rail = Container(width: DS.s(2), color: ListingPalette.coral.line);
     return IntrinsicHeight(
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -170,7 +168,7 @@ class _RouteStop extends StatelessWidget {
             child: Column(
               children: [
                 SizedBox(height: dotTop, child: first ? null : rail),
-                Container(width: dot, height: dot, decoration: const BoxDecoration(color: DesignColors.lunchEnd, shape: BoxShape.circle)),
+                Container(width: dot, height: dot, decoration: BoxDecoration(color: ListingPalette.coral.g2, shape: BoxShape.circle)),
                 Expanded(child: last ? const SizedBox.shrink() : rail),
               ],
             ),
@@ -235,7 +233,7 @@ class DriverDayCard extends StatelessWidget {
             children: [
               Container(
                 padding: DS.insets(l: 88, t: 14, r: 14, b: 14),
-                decoration: BoxDecoration(gradient: ListingTone.indigo.gradient),
+                decoration: BoxDecoration(gradient: ListingTone.coral.gradient),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -323,7 +321,7 @@ class _Chip extends StatelessWidget {
         color: filled ? Colors.white : Colors.white.withValues(alpha: Alpha.v26),
         borderRadius: DS.circular(10),
       ),
-      child: Center(widthFactor: 1, child: Text(label, maxLines: 1, style: Ink3D.text(12.5, FontWeight.w700, filled ? DesignColors.primary : Colors.white, letterSpacing: 0))),
+      child: Center(widthFactor: 1, child: Text(label, maxLines: 1, style: Ink3D.text(12.5, FontWeight.w700, filled ? ListingPalette.coral.text : Colors.white, letterSpacing: 0))),
     );
   }
 }

@@ -136,7 +136,7 @@ void main() {
     await tester.pump();
     await tester.pump();
     expect(find.text('Missed'), findsOneWidget);
-    expect(find.text('Went to the next drivers'), findsOneWidget);
+    expect(find.text('Went to the next drivers.'), findsOneWidget);
     expect(tester.takeException(), isNull);
     await tester.pump(const Duration(seconds: 3));
     expect(h.closed, 1);
@@ -207,7 +207,7 @@ void main() {
   testWidgets('load failed shows retry and retry loads the ring', (tester) async {
     final h = await _open(tester, fail: true);
     expect(find.text('Could not open the request'), findsOneWidget);
-    expect(find.text('Check your connection and try again'), findsOneWidget);
+    expect(find.text('Check your internet and try again.'), findsOneWidget);
     h.repo
       ..listFail = false
       ..detailFail = false;

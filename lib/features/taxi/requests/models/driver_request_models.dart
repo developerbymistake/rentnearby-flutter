@@ -25,6 +25,9 @@ enum OfferEndReason with WireEnum {
   booked('Booked'),
   driverOffline('DriverOffline'),
   listingRemoved('ListingRemoved'),
+  routeRemoved('RouteRemoved'),
+  routePausedByPlan('RoutePausedByPlan'),
+  listingInReview('ListingInReview'),
   unknown('');
 
   const OfferEndReason(this.wire);
@@ -200,6 +203,7 @@ class DriverOffer {
   final DriverTraveller? traveller;
   final DriverDatesConflict? datesConflict;
   final DriverTrip? trip;
+  final List<String> manualTripOn;
 
   const DriverOffer({
     required this.offerId,
@@ -223,6 +227,7 @@ class DriverOffer {
     required this.traveller,
     required this.datesConflict,
     required this.trip,
+    this.manualTripOn = const [],
   });
 
   factory DriverOffer.fromJson(Map<String, dynamic> j) => DriverOffer(
@@ -247,6 +252,7 @@ class DriverOffer {
         traveller: j['traveller'] is Map ? DriverTraveller.fromJson(_map(j['traveller'])) : null,
         datesConflict: j['datesConflict'] is Map ? DriverDatesConflict.fromJson(_map(j['datesConflict'])) : null,
         trip: j['trip'] is Map ? DriverTrip.fromJson(_map(j['trip'])) : null,
+        manualTripOn: [for (final d in (j['manualTripOn'] is List ? j['manualTripOn'] as List : const [])) if (d is String && d.isNotEmpty) d],
       );
 
   Map<String, dynamic> toJson() => {
@@ -271,7 +277,10 @@ class DriverOffer {
         'traveller': traveller?.toJson(),
         'datesConflict': datesConflict?.toJson(),
         'trip': trip?.toJson(),
+        if (manualTripOn.isNotEmpty) 'manualTripOn': manualTripOn,
       };
+
+  List<DateTime> get manualTripDays => [for (final d in manualTripOn) if (_day(d) case final DateTime x) DateTime(x.year, x.month, x.day)]..sort();
 
   OfferState get state => OfferState.parse(stateText);
 
@@ -309,6 +318,7 @@ class DriverOffer {
         traveller: traveller,
         datesConflict: datesConflict ?? this.datesConflict,
         trip: trip ?? this.trip,
+        manualTripOn: manualTripOn,
       );
 }
 
@@ -380,6 +390,8 @@ class DriverBooking {
   final String? travellerPhone;
   final bool canWithdraw;
   final bool canEnd;
+  final int? ratingStars;
+  final String? cancelledBy;
 
   const DriverBooking({
     required this.bookingId,
@@ -393,6 +405,8 @@ class DriverBooking {
     required this.travellerPhone,
     required this.canWithdraw,
     required this.canEnd,
+    this.ratingStars,
+    this.cancelledBy,
   });
 
   factory DriverBooking.fromJson(Map<String, dynamic> j) => DriverBooking(
@@ -407,6 +421,8 @@ class DriverBooking {
         travellerPhone: _strOrNull(j['travellerPhone']),
         canWithdraw: _bool(j['canWithdraw']),
         canEnd: _bool(j['canEnd']),
+        ratingStars: j['ratingStars'] is num && (j['ratingStars'] as num) >= 1 && (j['ratingStars'] as num) <= 5 ? (j['ratingStars'] as num).toInt() : null,
+        cancelledBy: _strOrNull(j['cancelledBy']),
       );
 
   Map<String, dynamic> toJson() => {
@@ -421,6 +437,8 @@ class DriverBooking {
         'travellerPhone': travellerPhone,
         'canWithdraw': canWithdraw,
         'canEnd': canEnd,
+        'ratingStars': ?ratingStars,
+        'cancelledBy': ?cancelledBy,
       };
 
   BookingState get state => BookingState.parse(stateText);

@@ -7,10 +7,13 @@ import 'package:bakhli/design/extra/trip_plan_look.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../../../utils/app_toast.dart';
 import '../../../utils/contact_launcher.dart';
+import '../../taxi_driver/strings/taxi_work_strings.dart';
+import '../../taxi_driver/taxi_driver_deps.dart';
 import '../../trip/trip_strings_taxi_driver.dart';
 import '../../trip/utils/taxi_result.dart';
-import '../../trip/widgets/taxi_status/taxi_driver_card.dart';
+import 'widgets/driver_state_chip.dart';
 import '../../trip/widgets/taxi_status/taxi_status_states.dart';
 import 'controllers/driver_requests_controller.dart';
 import 'data/driver_request_repository.dart';
@@ -85,16 +88,25 @@ class _DriverRequestDetailScreenState extends State<DriverRequestDetailScreen> {
   void _back() => (widget.onBack ?? () => Get.back())();
 
   static String _messageOf(TaxiResult<DriverOffer> r) {
+    switch (r) {
+      case TaxiConfirmWindowPassed<DriverOffer>():
+        return TaxiWorkStrings.timeToConfirmOver;
+      case TaxiOfferMissed<DriverOffer>():
+        return TaxiWorkStrings.wentToNext;
+      case TaxiPaused<DriverOffer>():
+        return TaxiWorkStrings.pausedNow;
+      case TaxiOffline<DriverOffer>():
+        return TaxiWorkStrings.noConnection;
+      case TaxiRefused<DriverOffer>(:final statusCode) when statusCode == 429:
+        return TaxiWorkStrings.tooManyTries;
+      default:
+    }
     final server = switch (r) {
-      TaxiStateInvalid(:final message) ||
-      TaxiNotFound(:final message) ||
-      TaxiRefused(:final message) ||
-      TaxiPaused(:final message) =>
-        message,
+      TaxiStateInvalid(:final message) || TaxiNotFound(:final message) || TaxiRefused(:final message) => message,
       _ => null,
     };
     if (server != null && server.trim().isNotEmpty) return server.trim();
-    return r is TaxiOffline ? _S.actionOffline : _S.actionFailed;
+    return TaxiWorkStrings.didNotWork;
   }
 
   Future<TaxiResult<DriverOffer>> _act(Future<TaxiResult<DriverOffer>> Function() action) async {
@@ -110,19 +122,29 @@ class _DriverRequestDetailScreenState extends State<DriverRequestDetailScreen> {
     if (r is TaxiOk<DriverOffer> && mounted) _back();
   }
 
-  Future<void> _withdraw() async {
+  Future<void> _withdraw(DriverOffer o) async {
     if (_c.isBusy(DriverRequestAction.withdraw, _id)) return;
-    final chip = await DriverWithdrawSheet.show(context, title: _S.withdrawTitle);
+    final booked = o.state == OfferState.confirmed;
+    final name = (o.traveller?.name ?? '').trim().split(' ').first;
+    final chip = await DriverWithdrawSheet.show(
+      context,
+      kind: booked ? DriverWithdrawKind.booking : DriverWithdrawKind.request,
+      travellerName: name,
+      range: TaxiWorkStrings.shortRange(o.fromDay, o.toDay),
+    );
     if (chip == null || !mounted) return;
-    await _act(() => _c.withdraw(_id, chip));
+    final r = await _act(() => _c.withdraw(_id, chip));
+    if (booked && r is TaxiOk<DriverOffer> && mounted) AppToast.success(TaxiWorkStrings.withdrewBooking);
   }
+
+  void _openBookings() => (widget.onOpenBookings ?? () => Get.to(() => const DriverBookingsScreen()))();
 
   void _call(String phone) => (widget.onCall ?? ContactLauncher.call)(phone);
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: DesignColors.scaffold,
+      backgroundColor: ListingPalette.coral.page,
       body: Obx(() {
         final o = _c.offer(_id);
         final content = o == null ? _loading() : _content(o);
@@ -139,8 +161,8 @@ class _DriverRequestDetailScreenState extends State<DriverRequestDetailScreen> {
                     : null,
                 autoHeight: true,
                 compact: true,
-                tone: KitTone.brand,
-                gradient: ListingTone.indigo.gradient,
+                tone: KitTone.taxiDriver,
+                gradient: ListingTone.coral.gradient,
                 onBack: _back,
               ),
             ),
@@ -164,21 +186,33 @@ class _DriverRequestDetailScreenState extends State<DriverRequestDetailScreen> {
   }
 
   static String _titleOf(DriverOffer o) => switch (o.state) {
-        OfferState.ringing => _S.titleRinging,
-        OfferState.accepted => _S.titleAccepted,
-        OfferState.selected => _S.titleSelected,
-        OfferState.confirmed => _S.titleBooked,
-        _ => _S.titleEnded,
+        OfferState.ringing => TaxiWorkStrings.titleRinging,
+        OfferState.accepted => TaxiWorkStrings.titleAccepted,
+        OfferState.selected => TaxiWorkStrings.titleSelected,
+        OfferState.confirmed => TaxiWorkStrings.titleBooked,
+        _ => TaxiWorkStrings.titleEnded,
       };
+
+  List<DateTime> _manualDays(DriverOffer o) {
+    if (o.manualTripOn.isNotEmpty) return o.manualTripDays;
+    final from = o.fromDay;
+    final to = o.toDay;
+    if (from == null || to == null) return const [];
+    try {
+      return TaxiDriverDeps.manualTripDays(from, to);
+    } catch (_) {
+      return const [];
+    }
+  }
 
   ({List<Widget> content, List<Widget> bar}) _loading() {
     final failed = _c.hasFailed(DriverRequestAction.detail, _id) && !_c.isBusy(DriverRequestAction.detail, _id);
     if (failed) {
       return (
         content: [
-          const TaxiStatusHero(art: ListingArt.warning, title: _S.loadFailed, titleSize: 20),
+          const TaxiStatusHero(art: ListingArt.warning, title: TaxiWorkStrings.loadThisFailed, titleSize: 20),
           Gap.v(16),
-          WhitePillButton(key: const ValueKey('request_retry'), tone: ListingTone.indigo, label: _S.tryAgain, onTap: () => _c.loadOffer(_id)),
+          WhitePillButton(key: const ValueKey('request_retry'), tone: ListingTone.coral, label: TaxiWorkStrings.tryAgain, onTap: () => _c.loadOffer(_id)),
         ],
         bar: const [],
       );
@@ -202,18 +236,8 @@ class _DriverRequestDetailScreenState extends State<DriverRequestDetailScreen> {
     return (
       content: [
         _Hero(offer: o, line: showConflict ? null : _heroLine(o), chip: live ? null : _chipOf(o)),
-        if (state == OfferState.confirmed) ...[
-          Gap.v(10),
-          Center(
-            child: Tap3D(
-              tapKey: const ValueKey('request_open_bookings'),
-              onTap: widget.onOpenBookings ?? () => Get.to(() => const DriverBookingsScreen()),
-              child: Text(_S.openBookings,
-                  style: Ink3D.text(14, FontWeight.w700, DesignColors.primary).copyWith(decoration: TextDecoration.underline)),
-            ),
-          ),
-        ],
         if (showConflict) ...[Gap.v(20), _ConflictBanner(from: conflict.from, to: conflict.to)],
+        if (state == OfferState.accepted || state == OfferState.selected) ..._manualLine(o),
         if (_error != null) ...[
           Gap.v(14),
           Text(_error!, key: const ValueKey('request_error'), textAlign: TextAlign.center, style: Ink3D.text(13, FontWeight.w700, Form3D.errorText)),
@@ -229,15 +253,22 @@ class _DriverRequestDetailScreenState extends State<DriverRequestDetailScreen> {
     );
   }
 
+  List<Widget> _manualLine(DriverOffer o) {
+    final days = _manualDays(o);
+    if (days.isEmpty) return const [];
+    return [Gap.v(16), _AmberLine(key: const ValueKey('request_manual_trip'), text: TaxiWorkStrings.manualTrips(days))];
+  }
+
   String? _heroLine(DriverOffer o) => switch (o.state) {
         OfferState.ringing => o.trip?.name,
-        OfferState.accepted => _S.waitingForTraveller,
-        OfferState.selected => _S.selectedCountdown(_c.countdownText(o)),
+        OfferState.accepted => TaxiWorkStrings.waitingNote,
+        OfferState.selected =>
+          _c.remaining(o) == Duration.zero ? TaxiWorkStrings.timeToConfirmOver : TaxiWorkStrings.selectedCountdown(_c.countdownText(o)),
         _ => null,
       };
 
   ({String label, bool muted, String? note}) _chipOf(DriverOffer o) => switch (o.state) {
-        OfferState.confirmed => (label: TripStringsTaxiDriver.stateBooked, muted: false, note: null),
+        OfferState.confirmed => (label: TaxiWorkStrings.bookedChip(TaxiWorkStrings.shortRange(o.fromDay, o.toDay)), muted: false, note: null),
         OfferState.missed => (label: TripStringsTaxiDriver.stateMissed, muted: true, note: TripStringsTaxiDriver.missedNote),
         OfferState.notSelected => (label: TripStringsTaxiDriver.stateNotSelected, muted: true, note: TripStringsTaxiDriver.notSelectedNote),
         OfferState.withdrawn => (label: _S.youWithdrew, muted: true, note: null),
@@ -247,10 +278,27 @@ class _DriverRequestDetailScreenState extends State<DriverRequestDetailScreen> {
   List<Widget> _bar(DriverOffer o, {required bool hasConflict}) {
     final decline = WhitePillButton(
       key: const ValueKey('request_decline'),
-      tone: ListingTone.indigo,
-      label: TripStringsTaxiDriver.decline,
+      tone: ListingTone.coral,
+      label: TaxiWorkStrings.decline,
       enabled: !_c.isBusy(DriverRequestAction.decline, _id),
       onTap: _decline,
+    );
+    final phone = o.traveller?.phone;
+    final call = phone == null || phone.trim().isEmpty
+        ? null
+        : GradientPillButton(
+            key: const ValueKey('request_call'),
+            tone: ListingTone.coral,
+            label: TaxiWorkStrings.callTraveller,
+            shadows: TaxiStatusLook.redPill,
+            onTap: () => _call(phone),
+          );
+    final withdraw = WhitePillButton(
+      key: const ValueKey('request_withdraw'),
+      tone: ListingTone.coral,
+      label: TaxiWorkStrings.withdraw,
+      enabled: !_c.isBusy(DriverRequestAction.withdraw, _id),
+      onTap: () => _withdraw(o),
     );
     switch (o.state) {
       case OfferState.ringing:
@@ -258,44 +306,48 @@ class _DriverRequestDetailScreenState extends State<DriverRequestDetailScreen> {
           decline,
           GradientPillButton(
             key: const ValueKey('request_accept'),
-            tone: ListingTone.forest,
-            label: TripStringsTaxiDriver.accept,
-            shadows: TaxiStatusLook.greenPill,
+            tone: ListingTone.coral,
+            label: TaxiWorkStrings.accept,
+            shadows: TaxiStatusLook.redPill,
             loading: _c.isBusy(DriverRequestAction.accept, _id),
             onTap: () => _act(() => _c.accept(_id)),
           ),
         ];
       case OfferState.accepted:
-        final phone = o.traveller?.phone;
-        return [
-          WhitePillButton(
-            key: const ValueKey('request_withdraw'),
-            tone: ListingTone.indigo,
-            label: _S.withdraw,
-            enabled: !_c.isBusy(DriverRequestAction.withdraw, _id),
-            onTap: _withdraw,
-          ),
-          if (phone != null)
-            GradientPillButton(
-              key: const ValueKey('request_call'),
-              tone: ListingTone.forest,
-              label: TripStringsTaxiDriver.callTraveller,
-              shadows: TaxiStatusLook.greenPill,
-              onTap: () => _call(phone),
-            ),
-        ];
+        return [?call, withdraw];
       case OfferState.selected:
+        final over = _c.remaining(o) == Duration.zero;
         return [
           decline,
           GradientPillButton(
             key: const ValueKey('request_confirm'),
-            tone: ListingTone.forest,
-            label: TripStringsTaxiDriver.confirmBooking,
-            shadows: TaxiStatusLook.greenPill,
+            tone: ListingTone.coral,
+            label: TaxiWorkStrings.confirmBooking,
+            shadows: TaxiStatusLook.redPill,
             offColor: TripLook.disabledFill,
-            enabled: !hasConflict,
+            enabled: !hasConflict && !over,
             loading: _c.isBusy(DriverRequestAction.confirm, _id),
             onTap: () => _act(() => _c.confirm(_id)),
+          ),
+        ];
+      case OfferState.confirmed:
+        return [
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(children: [
+                if (call != null) ...[Expanded(child: call), Gap.h(12)],
+                Expanded(child: withdraw),
+              ]),
+              Gap.v(10),
+              WhitePillButton(
+                key: const ValueKey('request_open_bookings'),
+                tone: ListingTone.coral,
+                label: TaxiWorkStrings.myBookings,
+                onTap: _openBookings,
+              ),
+            ],
           ),
         ];
       default:
@@ -342,11 +394,11 @@ class _Hero extends StatelessWidget {
               Text(line!, key: const ValueKey('request_hero_line'), textAlign: TextAlign.center, style: small),
             ] else ...[
               Gap.v(10),
-              TaxiStateChip(key: const ValueKey('request_hero_line'), label: line!),
+              DriverStateChip(key: const ValueKey('request_hero_line'), label: line!),
             ],
           if (c != null) ...[
             Gap.v(10),
-            TaxiStateChip(label: c.label, muted: c.muted, positive: !c.muted),
+            DriverStateChip(label: c.label, muted: c.muted, positive: !c.muted),
             if (c.note != null) ...[
               Gap.v(6),
               Text(c.note!, textAlign: TextAlign.center, style: small),
@@ -368,7 +420,7 @@ class _ConflictBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     final a = DateTime.tryParse(from);
     final b = DateTime.tryParse(to);
-    final text = _S.datesBooked(a == null ? from : _S.shortDate(a), b == null ? to : _S.shortDate(b));
+    final text = TaxiWorkStrings.datesBooked(a == null ? from : _S.shortDate(a), b == null ? to : _S.shortDate(b));
     return Stack(
       key: const ValueKey('request_conflict_banner'),
       clipBehavior: Clip.none,
@@ -384,4 +436,23 @@ class _ConflictBanner extends StatelessWidget {
       ],
     );
   }
+}
+
+class _AmberLine extends StatelessWidget {
+  const _AmberLine({super.key, required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: DS.sym(h: 14, v: 10),
+        decoration: BoxDecoration(color: TaxiStatusLook.warnFill, borderRadius: DS.circular(12)),
+        child: Row(
+          children: [
+            const Art3D(asset: ListingArt.calendar, size: 26, shadowAlpha: 0),
+            Gap.h(10),
+            Expanded(child: Text(text, style: Ink3D.text(12.5, FontWeight.w600, TaxiStatusLook.warnText, height: 1.45, letterSpacing: 0))),
+          ],
+        ),
+      );
 }

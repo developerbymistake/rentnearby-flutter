@@ -5,6 +5,8 @@ export 'taxi_hub_strings.dart';
 export 'taxi_gate_strings.dart';
 // end A5
 // A6 strings
+export 'taxi_work_strings.dart';
+export 'taxi_gate_strings_work.dart';
 // end A6
 // A7 strings
 // end A7

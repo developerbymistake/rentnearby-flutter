@@ -221,9 +221,9 @@ void main() {
 
     final payload = jsonDecode(TaxiRingNotification.payload(push)!) as Map<String, dynamic>;
     expect(payload['action_route'], '/taxi-request-ring');
-    expect(jsonDecode(payload['action_args_json'] as String), {'offerId': push.offerId});
+    expect(jsonDecode(payload['action_args_json'] as String), {'offerId': push.offerId, 'expiresAt': push.expiresAt!.toIso8601String()});
     final accepted = TaxiRingNotification.withAction(payload, TaxiRingNotification.acceptAction);
-    expect(jsonDecode(accepted['action_args_json'] as String), {'offerId': push.offerId, 'action': 'accept'});
+    expect(jsonDecode(accepted['action_args_json'] as String), {'offerId': push.offerId, 'action': 'accept', 'expiresAt': push.expiresAt!.toIso8601String()});
     expect(TaxiRingNotification.withAction(payload, null), payload);
 
     final manifest = File('android/app/src/main/AndroidManifest.xml').readAsStringSync();

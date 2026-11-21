@@ -4,10 +4,10 @@ import 'package:bakhli/design/extra/trip_customize_look.dart';
 import 'package:bakhli/design/extra/trip_plan_look.dart';
 import 'package:flutter/material.dart';
 
-import '../../../trip/trip_strings_taxi_driver.dart';
-import '../../../trip/widgets/taxi_status/taxi_driver_card.dart';
+import 'driver_state_chip.dart';
 import '../models/driver_request_models.dart';
 import '../strings/driver_requests_strings.dart';
+import '../../../taxi_driver/strings/taxi_work_strings.dart';
 
 const double _buttonFont = 13;
 const double _buttonHeight = 48;
@@ -42,6 +42,8 @@ class DriverOfferCard extends StatelessWidget {
 
   bool get _earlier => offer.bucket == OfferBucket.earlier;
 
+  bool get _named => offer.state == OfferState.accepted || offer.state == OfferState.selected || offer.state == OfferState.confirmed;
+
   bool get _booked => offer.state == OfferState.confirmed && !DriverRequestsStrings.isEndedBooking(offer);
 
   bool get _active => offer.state == OfferState.ringing || offer.state == OfferState.accepted || offer.state == OfferState.selected;
@@ -74,7 +76,7 @@ class DriverOfferCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      DriverRequestsStrings.travellerName(offer),
+                      _named ? DriverRequestsStrings.travellerName(offer) : TaxiWorkStrings.traveller,
                       style: Ink3D.text(15, FontWeight.w700, muted ? TripLook.mutedText : Ink3D.title, letterSpacing: 0),
                     ),
                     Text(
@@ -88,12 +90,16 @@ class DriverOfferCard extends StatelessWidget {
               if (chip != null) ...[Gap.h(8), chip],
             ],
           ),
-          if (_active) ...[Gap.v(12), _sections()],
-          Gap.v(8),
-          Text(DriverRequestsStrings.lengthLine(offer), style: line),
-          if (offer.routeLine.isNotEmpty) ...[Gap.v(8), Text(offer.routeLine, style: line)],
-          Gap.v(8),
-          Text(TripStringsTaxiDriver.seatsLine(offer.seats, offer.travellers), style: line),
+          if (muted) ...[
+            Gap.v(8),
+            Text(_shortLine(), key: ValueKey('request_line_${offer.offerId}'), style: line),
+          ] else ...[
+            Gap.v(10),
+            Text(DriverRequestsStrings.lengthLine(offer), style: line),
+            Gap.v(6),
+            Text(_routeSeats(), key: ValueKey('request_line_${offer.offerId}'), style: line),
+            if (_active) ...[Gap.v(10), _sections()],
+          ],
           if (ringing) ...[
             Gap.v(16),
             Row(
@@ -101,8 +107,8 @@ class DriverOfferCard extends StatelessWidget {
                 Expanded(
                   child: WhitePillButton(
                     key: ValueKey('request_decline_${offer.offerId}'),
-                    tone: ListingTone.indigo,
-                    label: TripStringsTaxiDriver.decline,
+                    tone: ListingTone.coral,
+                    label: TaxiWorkStrings.decline,
                     onTap: enabled && !expired ? onDecline : null,
                     height: _buttonHeight,
                     fontSize: _buttonFont,
@@ -112,10 +118,10 @@ class DriverOfferCard extends StatelessWidget {
                 Expanded(
                   child: GradientPillButton(
                     key: ValueKey('request_accept_${offer.offerId}'),
-                    tone: ListingTone.indigo,
-                    label: TripStringsTaxiDriver.accept,
+                    tone: ListingTone.coral,
+                    label: TaxiWorkStrings.accept,
                     onTap: enabled && !expired ? onAccept : null,
-                    shadows: TaxiStatusLook.actionGlow,
+                    shadows: TaxiStatusLook.redPill,
                     height: _buttonHeight,
                     fontSize: _buttonFont,
                   ),
@@ -129,11 +135,16 @@ class DriverOfferCard extends StatelessWidget {
     return Tap3D(tapKey: ValueKey('request_open_${offer.offerId}'), onTap: onOpen, child: card);
   }
 
+  String _routeSeats() =>
+      [if (offer.routeLine.isNotEmpty) offer.routeLine, if (offer.seats > 0) TaxiWorkStrings.seater(offer.seats)].join(' · ');
+
+  String _shortLine() => [if (offer.dayCount > 0) TaxiWorkStrings.daysShort(offer.dayCount), if (offer.routeLine.isNotEmpty) offer.routeLine].join(' · ');
+
   Widget? _chip(bool muted) {
     final fixed = DriverRequestsStrings.chipFor(offer);
     final label = fixed ?? timeLeft;
     if (label == null) return null;
-    return TaxiStateChip(label: label, muted: muted, positive: _booked);
+    return DriverStateChip(label: label, muted: muted, positive: _booked);
   }
 
   Widget _sections() {
@@ -142,9 +153,9 @@ class DriverOfferCard extends StatelessWidget {
       spacing: DS.gh(8),
       runSpacing: DS.gv(8),
       children: [
-        if (s.pickup) const TaxiStateChip(label: TripStringsTaxiDriver.sectionPickup),
-        if (s.sightseeing) TaxiStateChip(label: TripStringsTaxiDriver.sectionSightseeing(offer.sightseeingDayCount)),
-        if (s.drop) const TaxiStateChip(label: TripStringsTaxiDriver.sectionDrop),
+        if (s.pickup) const DriverStateChip(label: TaxiWorkStrings.pickup),
+        if (s.sightseeing) DriverStateChip(label: TaxiWorkStrings.sightseeing(offer.sightseeingDayCount)),
+        if (s.drop) const DriverStateChip(label: TaxiWorkStrings.drop),
       ],
     );
   }

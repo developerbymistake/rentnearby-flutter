@@ -18,9 +18,16 @@ import 'journey_leg_tag.dart';
 import 'trip_fare_sheet.dart';
 import 'trip_lead_format.dart';
 import 'trip_leads_controller.dart';
+import '../../taxi_driver/strings/taxi_work_strings.dart';
 
 class TripLeadsScreen extends StatefulWidget {
-  const TripLeadsScreen({super.key});
+  const TripLeadsScreen({super.key, this.embedded = false, this.enquiryId, this.bottomPadding = 0});
+
+  static const String focusKey = 'enquiryId';
+
+  final bool embedded;
+  final String? enquiryId;
+  final double bottomPadding;
 
   @override
   State<TripLeadsScreen> createState() => _TripLeadsScreenState();
@@ -53,8 +60,8 @@ class _TripLeadsScreenState extends State<TripLeadsScreen> with WidgetsBindingOb
       if (mounted) _anim.forward(from: 0);
     });
     _scroll.addListener(_onScroll);
-    final args = Get.arguments;
-    _targetId = args is Map ? args['enquiryId']?.toString() : null;
+    final args = widget.embedded ? null : Get.arguments;
+    _targetId = widget.enquiryId ?? (args is Map ? args['enquiryId']?.toString() : null);
     if (!_taxi.hasLoaded.value) _taxi.load();
     _ctrl.focusId.value = null;
     _focusWorker = ever<String?>(_ctrl.focusId, (id) {
@@ -111,8 +118,42 @@ class _TripLeadsScreenState extends State<TripLeadsScreen> with WidgetsBindingOb
 
   static final ListingTone _tone = ListingTone.coral;
 
+  Widget _embedded() => Column(children: [
+        _framePills(),
+        Obx(() => Get.find<AuthController>().taxisEnabled ? const SizedBox.shrink() : _pausedNote()),
+        Expanded(child: Obx(_body)),
+        Padding(
+          padding: EdgeInsets.fromLTRB(DS.s(18), DS.gv(8), DS.s(18), DS.gv(8) + widget.bottomPadding),
+          child: const TripLeadsPayNote(),
+        ),
+      ]);
+
+  Widget _framePills() => Obx(() {
+        final selected = _ctrl.bucket.value;
+        final n = _ctrl.newCount.value;
+        const all = TripLeadBucket.all;
+        final labels = [
+          n > 0 ? TaxiWorkStrings.newCount(n) : TaxiWorkStrings.newLeads,
+          TaxiWorkStrings.replied,
+          TaxiWorkStrings.booked,
+          TaxiWorkStrings.closed,
+        ];
+        return Padding(
+          padding: EdgeInsets.fromLTRB(DS.s(18), DS.gv(10), DS.s(18), DS.gv(6)),
+          child: SegmentPills(
+            key: const ValueKey('leads_buckets'),
+            tone: _tone,
+            labels: labels,
+            selected: all.indexOf(selected),
+            height: 34,
+            onTap: (i) => _ctrl.selectBucket(all[i]),
+          ),
+        );
+      });
+
   @override
   Widget build(BuildContext context) {
+    if (widget.embedded) return _embedded();
     return Scaffold(
       backgroundColor: ListingPalette.coral.page,
       body: KitStatusBar(
@@ -134,7 +175,7 @@ class _TripLeadsScreenState extends State<TripLeadsScreen> with WidgetsBindingOb
           ]),
         ),
       ),
-      bottomNavigationBar: const TaxiPayBar(text: TripStrings.taxiPayLine),
+      bottomNavigationBar: const TaxiPayBar(text: TaxiWorkStrings.payLine),
     );
   }
 
@@ -220,7 +261,7 @@ class _TripLeadsScreenState extends State<TripLeadsScreen> with WidgetsBindingOb
     });
   }
 
-  Widget _pausedNote() => Banner3D(kind: BannerKind.warn, art: ListingArt.calendar, title: TripStrings.pausedTaxiHere);
+  Widget _pausedNote() => Banner3D(kind: BannerKind.warn, art: ListingArt.calendar, title: TaxiWorkStrings.leadsAreaOff);
 
   Widget _column(Widget child) => Align(
         alignment: Alignment.topCenter,
@@ -282,7 +323,7 @@ class _TripLeadsScreenState extends State<TripLeadsScreen> with WidgetsBindingOb
                   tone: _tone,
                   art: ListingArt.speechBalloon,
                   title: _emptyTitle(bucket),
-                  message: TripStrings.noLeadsSub,
+                  message: TaxiWorkStrings.leadsEmpty,
                   layout: layout,
                 );
       return RefreshIndicator(
@@ -313,7 +354,12 @@ class _TripLeadsScreenState extends State<TripLeadsScreen> with WidgetsBindingOb
             _count,
             KeyedSubtree(
               key: _keys.putIfAbsent(e.id, () => GlobalKey()),
-              child: _LeadCard(lead: e, highlighted: highlight == e.id, ctrl: _ctrl),
+              child: e.display == TripDisplayStatus.bookedByYou
+                  ? Column(mainAxisSize: MainAxisSize.min, children: [
+                      _LeadCard(lead: e, highlighted: highlight == e.id, ctrl: _ctrl),
+                      TripLeadsInfoNote(key: ValueKey('lead_change_info_${e.id}')),
+                    ])
+                  : _LeadCard(lead: e, highlighted: highlight == e.id, ctrl: _ctrl),
             ),
           );
         },
@@ -508,4 +554,38 @@ class _LeadCard extends StatelessWidget {
         return const [null, null, null];
     }
   }
+}
+
+class TripLeadsPayNote extends StatelessWidget {
+  const TripLeadsPayNote({super.key});
+
+  @override
+  Widget build(BuildContext context) => Container(
+        key: const ValueKey('leads_pay_note'),
+        padding: DS.sym(h: 14, v: 10),
+        decoration: BoxDecoration(color: ListingPalette.teal.page, borderRadius: DS.circular(14)),
+        child: Row(children: [
+          const Art3D(asset: ListingArt.shield, size: 26, shadowAlpha: 0),
+          Gap.h(10),
+          Expanded(child: Text(TaxiWorkStrings.payLine, style: Ink3D.text(11.5, FontWeight.w600, ListingPalette.teal.text, height: 1.4, letterSpacing: 0))),
+        ]),
+      );
+}
+
+class TripLeadsInfoNote extends StatelessWidget {
+  const TripLeadsInfoNote({super.key});
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: EdgeInsets.fromLTRB(DS.s(18), DS.gv(8), DS.s(18), 0),
+        child: Container(
+          padding: DS.sym(h: 14, v: 10),
+          decoration: BoxDecoration(color: ListingPalette.indigo.page, borderRadius: DS.circular(14)),
+          child: Row(children: [
+            const Art3D(asset: ListingArt.calendar, size: 26, shadowAlpha: 0),
+            Gap.h(10),
+            Expanded(child: Text(TaxiWorkStrings.changeAgainInfo, style: Ink3D.text(11.5, FontWeight.w600, ListingPalette.indigo.text, height: 1.4, letterSpacing: 0))),
+          ]),
+        ),
+      );
 }
