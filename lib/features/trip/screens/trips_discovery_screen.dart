@@ -5,6 +5,7 @@ import '../../../config/app_routes.dart';
 import '../../../config/app_tabs.dart';
 import '../../../controllers/auth_controller.dart';
 import '../../../widgets/tab_header.dart';
+import '../../buddy/buddy_navigation.dart';
 import '../controllers/my_trips_controller.dart';
 import '../data/trip_city_catalog.dart';
 import '../models/trip_model.dart';
@@ -65,6 +66,7 @@ class _TripsDiscoveryScreenState extends State<TripsDiscoveryScreen> {
 
   void _open(HubTileConfig c) {
     if (c.route == AppRoutes.tripWhere) TripNavigation.openWhereToNext();
+    if (c.route == AppRoutes.buddies) BuddyNavigation.openBuddies();
   }
 
   Widget _center(Widget child) => Align(

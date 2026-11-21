@@ -2,14 +2,15 @@ import 'package:bakhli/design/design.dart';
 import 'package:bakhli/features/trip/widgets/hub/hub_tile.dart';
 import 'package:bakhli/features/trip/widgets/hub/hub_tile_config.dart';
 import 'package:flutter/material.dart';
+import 'package:bakhli/config/app_routes.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('hub shows five tiles, only the first is live', () {
+  test('hub shows five tiles in order, where and buddy are live', () {
     final v = HubTiles.visible();
-    expect(v.length, 5);
-    expect(v.first.status, HubTileStatus.live);
-    expect(v.skip(1).every((t) => t.status == HubTileStatus.soon), isTrue);
+    expect(v.map((t) => t.id).toList(), ['where', 'adventures', 'buddy', 'guide', 'rentals']);
+    expect(v.where((t) => t.status == HubTileStatus.live).map((t) => t.id).toList(), ['where', 'buddy']);
+    expect(v.firstWhere((t) => t.id == 'buddy').route, AppRoutes.buddies);
   });
 
   testWidgets('tile is 160 high and its art box is 158 wide', (tester) async {
