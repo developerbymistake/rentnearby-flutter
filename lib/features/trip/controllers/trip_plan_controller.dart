@@ -4104,8 +4104,6 @@ class TripPlanController extends GetxController {
     return best;
   }
 
-  bool get hasOpenAdvance => enquiryList.any((e) => !e.isTaxi && e.isConfirmedByBoth && e.advance.isOpenRequest);
-
   bool isDismissed(String enquiryId) => plan.value?.dismissedEnquiryIds.contains(enquiryId) ?? false;
 
   void dismissProblem(String enquiryId) {

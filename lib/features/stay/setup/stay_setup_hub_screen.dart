@@ -11,6 +11,7 @@ import '../../../utils/app_toast.dart';
 import '../../../widgets/global_location_gates.dart';
 import '../../trip/trip_strings.dart';
 import '../models/stay_owner_model.dart';
+import '../stay_share_strings.dart';
 import 'stay_option_sets.dart';
 import 'stay_setup_controller.dart';
 import 'stay_step_row.dart';
@@ -73,8 +74,8 @@ class _StaySetupHubScreenState extends State<StaySetupHubScreen> {
     if (mounted) _ctrl.load();
   }
 
-  Future<void> _openAdvance() async {
-    await Get.toNamed(AppRoutes.stayAdvanceDetails);
+  Future<void> _openShare() async {
+    await Get.toNamed(AppRoutes.stayShareDetails);
     if (mounted) _ctrl.load();
   }
 
@@ -236,25 +237,25 @@ class _StaySetupHubScreenState extends State<StaySetupHubScreen> {
         state: state(u4, d4),
         onTap: () => _open(AppRoutes.staySubmit),
       ),
-      if (d1 && s != null) ..._advanceRow(s),
+      if (d1 && s != null) ..._shareRow(s),
     ];
   }
 
-  List<Widget> _advanceRow(StayOwnerModel s) {
-    final has = s.hasAdvanceDetails;
+  List<Widget> _shareRow(StayOwnerModel s) {
+    final has = s.hasShareDetails;
     return [
       const SectionCaption3D(TripStrings.optionalLabel),
       StayStepRow(
         number: 0,
         icon: Icons.add_rounded,
-        eyebrow: 'Payment',
-        title: TripStrings.advanceDetails,
-        subtitle: has ? TripStrings.advanceSet : TripStrings.advanceNotSet,
+        eyebrow: StayShareStrings.eyebrow,
+        title: StayShareStrings.title,
+        subtitle: has ? StayShareStrings.isSet : StayShareStrings.notSet,
         accent: PickKit.stay,
         asset: SetupAssets.moneyBag,
         state: has ? StayStepState.done : StayStepState.current,
         trailing: has ? TripStrings.edit : TripStrings.add,
-        onTap: _openAdvance,
+        onTap: _openShare,
       ),
     ];
   }

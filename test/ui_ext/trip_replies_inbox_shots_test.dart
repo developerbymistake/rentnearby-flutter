@@ -75,7 +75,7 @@ Map<String, Object?> _offer(int perNight, int nights, {String kind = 'Offer', St
     };
 
 TripEnquiryModel _e(String id, String guest, String display,
-    {String status = 'Asked', bool urgent = false, int? agreed, Map<String, Object?>? openOffer, Map<String, Object?>? counter, Map<String, Object?>? change, Map<String, Object?>? advance, List<String> spots = const []}) {
+    {String status = 'Asked', bool urgent = false, int? agreed, Map<String, Object?>? openOffer, Map<String, Object?>? counter, Map<String, Object?>? change, List<String> spots = const []}) {
   final j = enquiryJson(id: id, kind: 'Stay', status: status, start: journeyStart(), nights: 2, displayStatus: display, agreedTotal: agreed, contextSpots: spots);
   return TripEnquiryModel.fromJson({
     ...j,
@@ -89,7 +89,6 @@ TripEnquiryModel _e(String id, String guest, String display,
     'openOffer': ?openOffer,
     'pendingCounter': ?counter,
     'pendingChange': ?change,
-    'advance': ?advance,
   });
 }
 
@@ -137,11 +136,7 @@ void main() {
       'confirmed',
       {
         'confirmed': [
-          _e('d', 'Rahul Sharma', 'confirmedByBoth', status: 'ConfirmedByBoth', agreed: 7200, advance: {
-            'status': 'ProofSent',
-            'amount': 2000,
-            'holdUntil': _iso(DateTime.now().add(const Duration(hours: 4))),
-          }),
+          _e('d', 'Rahul Sharma', 'confirmedByBoth', status: 'ConfirmedByBoth', agreed: 7200),
           _e('e', 'Neha Rawat', 'confirmedByBoth', status: 'ConfirmedByBoth', agreed: 5200),
         ],
       }
@@ -150,11 +145,7 @@ void main() {
       'closed',
       {
         'closed': [
-          _e('f', 'Rahul Sharma', 'holdExpired', status: 'ConfirmedByBoth', agreed: 7200, advance: {
-            'status': 'HoldExpired',
-            'amount': 2000,
-            'holdUntil': _iso(DateTime.now().subtract(const Duration(hours: 1))),
-          }),
+          _e('f', 'Rahul Sharma', 'notAvailable', status: 'NotAvailable'),
           _e('g', 'Kavita Bisht', 'declined', status: 'Declined'),
         ],
       }

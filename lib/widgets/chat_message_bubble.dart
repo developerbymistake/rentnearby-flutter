@@ -3,7 +3,9 @@ import 'package:bakhli/design/design.dart';
 import '../models/message_model.dart';
 import '../models/question_template_model.dart';
 import 'trip_chat_cards.dart';
+import 'stay_contact_share_card.dart';
 import 'trip_offer_cards.dart';
+import '../features/stay/stay_share_strings.dart';
 
 class ChatMessageBubble extends StatelessWidget {
   final MessageModel message;
@@ -55,14 +57,15 @@ class ChatMessageBubble extends StatelessWidget {
       case 'trip_enquiry':
       case 'trip_offer':
       case 'trip_offer_response':
-      case 'trip_advance_request':
-      case 'trip_advance_proof_sent':
       case TripOfferCards.counterType:
       case TripOfferCards.revisedType:
       case TripOfferCards.changeType:
         return TripChatCards.build(context, message, isOwner: isOwner, accent: accent, callbacks: trip);
+      case StayContactShareCard.type:
+        return StayContactShareCard(message: message);
       default:
-        return ChatSystemNote(message.payload.safeString('text') ?? '');
+        final text = message.payload.safeString('text');
+        return ChatSystemNote(text == null || text.trim().isEmpty ? StayShareStrings.oldMessage : text);
     }
   }
 

@@ -246,7 +246,7 @@ class TripEasyRules {
     ];
     if (both != null) {
       final others = [for (final e in live) if (e.id != both.id && e.status == TripEnquiryStatuses.offered) e];
-      final needs = both.advance.isPending || both.hasPendingRevised || others.isNotEmpty;
+      final needs = both.hasPendingRevised || others.isNotEmpty;
       return info(TripRowState.confirmed, both.listingName, needsYou: needs);
     }
     final byYou = live.where((e) => e.status == TripEnquiryStatuses.confirmedByTraveller).firstOrNull;

@@ -1,6 +1,5 @@
 import '../../../models/browse_item.dart';
 import '../../taxi/ways/trip_strings_mcb_a2.dart';
-import '../models/trip_enquiry_model.dart';
 import '../models/trip_journey_model.dart';
 import '../models/trip_plan_model.dart';
 import '../models/trip_summary_model.dart';
@@ -116,17 +115,6 @@ class TripSummaryText {
     return r.guests > 0 ? '$name$units · ${TripStrings.peopleText(r.guests)}' : '$name$units';
   }
 
-  static String advanceLine(TripSummaryNight n) {
-    final amount = n.advanceAmount;
-    if (amount == null || amount <= 0) return TripStrings.advanceNone;
-    final p = BrowseItem.inr(amount);
-    return switch (n.advanceStatus) {
-      TripAdvanceStatuses.received => TripStrings.advanceReceivedShort(p),
-      TripAdvanceStatuses.pending || TripAdvanceStatuses.proofSent => TripStrings.advanceAskedShort(p),
-      _ => TripStrings.advanceNone,
-    };
-  }
-
   static String statusLabel(TripDisplayStatus s, String? cancelledBy, {bool taxi = false}) {
     if (cancelledBy != null) {
       return cancelledBy == 'traveller' ? TripStrings.youCancelled : TripStrings.hostCancelled;
@@ -239,7 +227,6 @@ class TripSummaryText {
         lines.add('  ${TripStrings.room}: ${roomLine(room)}');
       }
     }
-    if (level < 2) lines.add('  ${TripStrings.advance}: ${advanceLine(n)}');
     if (level < 1) {
       final c = n.cancellationText;
       if (c != null && c.isNotEmpty) lines.add('  ${TripStrings.cancellationTerms}: $c');

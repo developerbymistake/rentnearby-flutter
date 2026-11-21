@@ -10,12 +10,12 @@ import 'package:bakhli/features/stay/models/stay_owner_model.dart';
 import 'package:bakhli/features/stay/models/stay_registration_type_model.dart';
 import 'package:bakhli/features/stay/models/stay_type_model.dart';
 import 'package:bakhli/features/stay/setup/my_stays_screen.dart';
-import 'package:bakhli/features/stay/setup/stay_advance_details_screen.dart';
 import 'package:bakhli/features/stay/setup/stay_basic_details_screen.dart';
 import 'package:bakhli/features/stay/setup/stay_rooms_screen.dart';
 import 'package:bakhli/features/stay/setup/stay_rules_screen.dart';
 import 'package:bakhli/features/stay/setup/stay_setup_controller.dart';
 import 'package:bakhli/features/stay/setup/stay_setup_hub_screen.dart';
+import 'package:bakhli/features/stay/setup/stay_share_details_screen.dart';
 import 'package:bakhli/features/stay/setup/stay_submit_screen.dart';
 import 'package:bakhli/features/stay/stay_registration_types_controller.dart';
 import 'package:bakhli/features/stay/stay_types_controller.dart';
@@ -90,7 +90,7 @@ class FakeStayCtrl extends StaySetupController {
   @override
   Future<bool> setAccepting(bool accepting) => _busy('accepting');
   @override
-  Future<bool> saveAdvanceDetails({String? upiId, String? whatsAppNumber}) => _busy('advance');
+  Future<bool> saveShareDetails({String? upiId, String? whatsAppNumber}) => _busy('share');
 }
 
 class FakeAuth extends JAuth {
@@ -182,7 +182,7 @@ Map<String, dynamic> stayJson({
   bool s2 = false,
   bool s3 = false,
   bool reg = true,
-  bool advance = false,
+  bool share = false,
   String? reason,
   bool accepting = true,
   int reports = 0,
@@ -211,7 +211,7 @@ Map<String, dynamic> stayJson({
       'acceptingGuests': accepting,
       'rejectedReason': reason,
       'pendingReportCount': reports,
-      'upiId': advance ? 'deodar@okaxis' : null,
+      'upiId': share ? 'deodar@okaxis' : null,
       'createdAt': DateTime.now().subtract(const Duration(days: 2)).toIso8601String(),
       'photos': [for (var i = 0; i < photos; i++) {'id': 'p$i', 'url': ''}],
       'rooms': rooms
@@ -332,10 +332,10 @@ void main() {
     final cases = <String, (Map<String, dynamic>?, LoadMode, bool, double)>{
       'hub_new': (null, LoadMode.ok, true, 800),
       'hub_progress': (stayJson(s1: true, s2: true), LoadMode.ok, false, 1350),
-      'hub_ready': (stayJson(status: StayStatus.rejected, s1: true, s2: true, s3: true, advance: true), LoadMode.ok, false, 1350),
+      'hub_ready': (stayJson(status: StayStatus.rejected, s1: true, s2: true, s3: true, share: true), LoadMode.ok, false, 1350),
       'hub_reg': (stayJson(s1: true, s2: true, s3: true, reg: false), LoadMode.ok, false, 800),
       'hub_pending': (stayJson(status: StayStatus.pendingReview, s1: true, s2: true, s3: true), LoadMode.ok, false, 800),
-      'hub_live': (stayJson(status: StayStatus.approved, s1: true, s2: true, s3: true, advance: true), LoadMode.ok, false, 800),
+      'hub_live': (stayJson(status: StayStatus.approved, s1: true, s2: true, s3: true, share: true), LoadMode.ok, false, 800),
       'hub_rejected': (stayJson(status: StayStatus.rejected, s1: true, s2: true, s3: true, reason: 'Photos are not clear. Add brighter photos.'), LoadMode.ok, false, 800),
       'hub_loading': (null, LoadMode.loading, true, 800),
       'hub_error': (null, LoadMode.error, true, 800),
@@ -569,20 +569,23 @@ void main() {
     });
   });
 
-  group('advance', () {
-    testWidgets('adv', (t) async {
+  group('share details', () {
+    testWidgets('share', (t) async {
       await capture(t, () {
         base();
-        ctrl(stayJson(s1: true, advance: true));
-        return const StayAdvanceDetailsScreen();
-      }, 'adv', height: 900);
+        ctrl(stayJson(s1: true, share: true));
+        return const StayShareDetailsScreen();
+      }, 'share', height: 900);
+      expect(find.text('UPI and WhatsApp'), findsWidgets);
+      expect(find.text('Your WhatsApp number'), findsOneWidget);
+      expect(find.textContaining('dvance'), findsNothing);
     });
-    testWidgets('adv states', (t) async {
+    testWidgets('share states', (t) async {
       await capture(t, () {
         base();
         ctrl(stayJson(s1: true));
-        return const StayAdvanceDetailsScreen();
-      }, 'adv_error', after: () async {
+        return const StayShareDetailsScreen();
+      }, 'share_error', after: () async {
         await t.enterText(find.byType(TextField).first, 'deodar.cottage');
         await t.enterText(find.byType(TextField).last, '98765');
         await tapText(t, 'Save');
@@ -591,18 +594,18 @@ void main() {
       await capture(t, () {
         base();
         ctrl(null, mode: LoadMode.loading);
-        return const StayAdvanceDetailsScreen();
-      }, 'adv_loading', variants: false);
+        return const StayShareDetailsScreen();
+      }, 'share_loading', variants: false);
       await capture(t, () {
         base();
         ctrl(null, mode: LoadMode.error);
-        return const StayAdvanceDetailsScreen();
-      }, 'adv_failed', variants: false);
+        return const StayShareDetailsScreen();
+      }, 'share_failed', variants: false);
       await capture(t, () {
         base();
-        ctrl(stayJson(s1: true, advance: true), hold: true);
-        return const StayAdvanceDetailsScreen();
-      }, 'adv_saving', after: () => tapText(t, 'Save'), height: 900, variants: false);
+        ctrl(stayJson(s1: true, share: true), hold: true);
+        return const StayShareDetailsScreen();
+      }, 'share_saving', after: () => tapText(t, 'Save'), height: 900, variants: false);
     });
   });
 

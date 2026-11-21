@@ -242,45 +242,6 @@ class TripEnquiryController extends GetxController {
     }
   }
 
-  Future<TripEnquiryModel?> askAdvance(
-    String enquiryId, {
-    required int amount,
-    required DateTime holdUntil,
-    required String upiId,
-    required String whatsAppNumber,
-  }) =>
-      _guard(
-        enquiryId,
-        () => _repo.askAdvance(enquiryId, amount: amount, holdUntil: holdUntil, upiId: upiId, whatsAppNumber: whatsAppNumber),
-      );
-
-  Future<bool> proofSent(String enquiryId) async {
-    final e = await _guard(enquiryId, () => _repo.proofSent(enquiryId));
-    if (e != null) {
-      _applyToPlan([e]);
-      AppToast.success(TripStrings.proofSentToast);
-      return true;
-    }
-    if (lastErrorType == TripEnquiryErrorTypes.holdExpired) await refreshOne(enquiryId);
-    return false;
-  }
-
-  Future<bool> markReceived(String enquiryId) async {
-    final e = await _guard(
-      enquiryId,
-      () => _repo.advanceReceived(enquiryId),
-      silent: const {TripEnquiryErrorTypes.travellerMovedOn},
-    );
-    if (e != null) _applyToPlan([e]);
-    return e != null;
-  }
-
-  Future<bool> notYet(String enquiryId) async {
-    final e = await _guard(enquiryId, () => _repo.advanceNotYet(enquiryId));
-    if (e != null) _applyToPlan([e]);
-    return e != null;
-  }
-
   // Saves the plan first: the server rebuilds the driver's lead from the saved plan.
   Future<bool> updateLead(String enquiryId) async {
     final p = _plan;

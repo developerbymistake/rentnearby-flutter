@@ -20,7 +20,7 @@ enum StatusTone3D {
     'confirmedByYou' => you,
     'confirmedByBoth' => both,
     'bookedByYou' || 'own' => booked,
-    'notAvailable' || 'expired' || 'declined' || 'cancelled' || 'notMe' || 'holdExpired' => red,
+    'notAvailable' || 'expired' || 'declined' || 'cancelled' || 'notMe' => red,
     'closed' => closed,
     _ => shortlisted,
   };

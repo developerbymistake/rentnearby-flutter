@@ -121,7 +121,7 @@ class TripStrings {
   static const String openChat = 'Open chat';
   static const String cancelBooking = 'Cancel booking';
   static const String cancelBookingQuestion = 'Cancel this booking?';
-  static const String cancelHostTold = 'The host is told. Any advance and refund are between you and the host: Bakhli does not hold payment.';
+  static const String cancelHostTold = 'The host is told. Any payment and refund are between you and the host: Bakhli does not hold payment.';
   static const String cancelGuestTold = 'The guest is told.';
   static const String keepBooking = 'Keep booking';
   static const String tellHostBeforeLeaving = 'Tell the host before you leave.';
@@ -141,7 +141,6 @@ class TripStrings {
   static const String tellOtherStays = 'Tell the other stays you booked';
   static const String decline = 'Decline';
   static const String total = 'Total';
-  static const String advance = 'Advance';
   static const String offer = 'Offer';
   static String validFor(String t) => 'Valid $t';
   static const String expired = 'Expired';
@@ -207,94 +206,16 @@ class TripStrings {
   static const String accepted = 'Accepted';
   static const String declined = 'Declined';
 
-  static const String advanceDetails = 'Advance details';
-  static const String advanceDetailsSub = 'Used when you ask a guest for an advance';
-  static const String advanceNotSet = 'Not set · used when you ask for an advance';
-  static const String advanceSet = 'UPI ID and WhatsApp set';
   static const String optionalLabel = 'OPTIONAL';
   static const String add = 'Add';
   static const String edit = 'Edit';
   static const String yourUpiId = 'Your UPI ID';
   static const String upiHint = 'name@bank';
   static const String upiInvalid = 'Enter a UPI ID like name@bank';
-  static const String whatsAppForProof = 'WhatsApp for payment proof';
-  static const String advanceDetailsFooter = 'Both are optional. Clear a field and save to remove it.';
-  static const String advanceDetailsSaved = 'Advance details saved';
   static const String staySetupOptional = 'Stay setup · optional';
 
-  static const String askForAdvance = 'Ask for advance';
-  static const String holdRoomUntil = 'Hold room until';
-  static const String upiFromSetup = 'UPI ID · from your stay setup';
-  static const String whatsAppFromSetup = 'Send proof to WhatsApp · from your stay setup';
-  static const String change = 'Change';
-  static const String sendInChat = 'Send in chat';
-  static const String askFooter = 'Sent as a normal message. Changing it here affects only this request.';
-  static const String askFooterEmpty = 'Used for this request only. Add them in stay setup to skip this next time.';
-  static const String holdTooLate = 'Too late to hold a room for this booking.';
-  static String holdRange(String a, String b) => 'Between $a and $b';
-  static String amountMax(String p) => 'Up to $p';
-  static const String advanceSent = 'Advance request sent';
-  static const String guestAccepted = 'Guest accepted your offer';
-
-  static const String payDirectlyToHost = 'Pay directly to host';
-  static String advanceHoldTill(String t) => 'Advance · hold till $t';
-  static const String upiId = 'UPI ID';
-  static const String upiCopied = 'UPI ID copied';
-  static String step1Pay(String p) => 'Pay $p in your own UPI app';
-  static const String step2Screenshot = 'Send the payment screenshot on WhatsApp';
-  static const String step3Host = 'Host confirms here';
-  static String openWhatsAppTo(String n) => 'Open WhatsApp · +91 $n';
-  static const String iSentProof = 'I sent the proof';
-  static String proofWhatsAppText(String p, String stay, String dates) => 'Hi, advance of $p for $stay, $dates. Screenshot attached.';
-  static const String proofSentToast = 'Noted. The host is reminded every hour.';
-
-  static const String waitingForHost = 'Waiting for the host to confirm';
-  static String youSaidProofSent(String t) => 'You said the proof is sent · $t';
-  static const String stepPaymentSent = 'Payment sent from your UPI app';
-  static const String stepScreenshotSent = 'Screenshot sent on WhatsApp';
-  static const String stepHostChecks = 'Host checks and confirms here';
-  static String hostReminded(String t, String n) => 'Host reminded $t · next reminder $n';
-  static String hostRemindedOnly(String t) => 'Host reminded $t';
-  static const String waitingFooter = 'We remind the host every hour. You get a notification the moment he confirms.';
-  static const String openWhatsApp = 'Open WhatsApp';
-  static const String hostNotSeenYet = 'Host has not seen it yet';
-  static String hostChecked(String t) => 'Host checked $t · not seen yet';
-  static String checkBefore(String t) => 'Check with him on WhatsApp before $t.';
-
-  static const String advanceReceived = 'Advance received';
-  static String saysReceived(String stay, String p, String t) => '$stay says $p is received · $t';
-  static String balanceAtCheckIn(String p) => 'Balance $p at check-in';
-  static const String advanceReceivedHostSays = 'Advance received · host says';
-  static String advanceReceivedBar(String p) => 'Advance received · $p | host says';
-  static const String hostDidNotConfirm = 'The host did not confirm in time';
-  static const String roomMayBeReleased = 'The room may have been released';
-  static const String askOtherStays = 'Ask other stays';
-  static const String ifPaidFooter = 'If you already paid, sort it out with the host directly. Bakhli does not hold payment.';
-  static const String holdExpired = 'Hold expired';
-  static String otherStaysReplied(int n, String names) => '$n other stays replied: $names';
-
-  static String saysProofSent(String g) => '$g says the proof is sent';
-  static String checkWhatsApp(String n) => 'Check WhatsApp · +91 $n';
-  static const String checkAmountFirst = 'Check the amount in your own UPI app or bank first. Then mark it here. We remind you every hour until you do.';
-  static const String markAdvanceReceived = 'Mark advance received';
-  static const String notYet = 'Not yet';
-  static String advancePending(String p) => 'Advance pending · $p';
-  static String advancePendingTill(String t) => 'Advance pending · till $t';
-  static String holdTill(String t) => 'Hold till $t';
-  static const String waitingForHostHourly = 'Waiting for host · reminded hourly';
-  static String waitingForHostBar(String p) => 'Waiting for host · $p';
-  static const String askAgain = 'Ask again';
-  static const String notYetNoted = 'Noted. Reminders continue hourly.';
-  static const String replacedByNewer = 'Replaced by a newer request';
-  static const String advanceCancelled = 'Booking cancelled';
-  static const String holdEnded = 'Hold ended';
-  static const String advanceNotMarked = 'Advance not marked';
-  static String canStillMark(String g) => 'If $g paid, you can still mark it until check-in.';
-  static const String callGuest = 'Call guest';
-  static const String guestMovedOn = 'The guest has booked another stay. Sort the advance with him directly.';
-
   static const String pickup = 'Pickup';
-  static const String taxiEnquiryFooter = 'The driver sees the full itinerary and his fare for it. He replies with a fare or says not available. No advance, no chat.';
+  static const String taxiEnquiryFooter = 'The driver sees the full itinerary and his fare for it. He replies with a fare or says not available. No chat.';
   static String dayLine(int n, String d, String s) => 'Day $n · $d · $s';
   static const String enquiry = 'Enquiry';
 
@@ -322,7 +243,7 @@ class TripStrings {
   static String nDays(int n) => '$n day${n == 1 ? '' : 's'}';
   static const String yourFare = 'Your fare for this trip (change it if the plan needs more)';
   static const String sendReply = 'Send reply';
-  static const String fareFooter = 'The traveller sees your listed rate and this fare, then calls you. No advance, no chat.';
+  static const String fareFooter = 'The traveller sees your listed rate and this fare, then calls you. No chat.';
   static const String replySent = 'Reply sent';
   static String changesLeft(int n) => '$n change${n == 1 ? '' : 's'} left';
   static const String fareLimit = 'You can change the fare 3 times.';
@@ -372,7 +293,6 @@ class TripStrings {
   static String keepPrice(String p) => 'Keep $p';
   static const String cancelStay = 'Cancel stay';
   static String priceStaysUntil(String p) => 'Your confirmed price stays $p until you accept this.';
-  static String advanceStays(String p) => 'Advance $p stays as agreed';
   static const String newPriceAccepted = 'New price accepted';
   static String keptPrice(String p) => 'Kept $p';
   static const String sendRevisedOffer = 'Send revised offer';
@@ -442,9 +362,6 @@ class TripStrings {
   static const String agreed = 'Agreed';
   static const String fare = 'Fare';
   static const String tollExtraShort = 'toll extra';
-  static String advanceReceivedShort(String p) => '$p · received, host says';
-  static String advanceAskedShort(String p) => '$p · asked';
-  static const String advanceNone = 'none';
   static const String confirmedLabel = 'Confirmed';
   static String byBothOn(String d) => 'By both on $d';
   static String byYouOn(String d) => 'By you on $d';

@@ -12,7 +12,6 @@ class TripStripAction {
   static const withdraw = 'withdraw';
   static const cancel = 'cancel';
   static const report = 'report';
-  static const callHost = 'callHost';
   static const counter = 'counter';
   static const changeRequest = 'changeRequest';
 
@@ -35,7 +34,6 @@ class TripStripAction {
         ];
       case TripDisplayStatus.confirmedByBoth:
         return [
-          if (e.advance.isPending || e.advance.isProofSent) const TripStripAction(callHost, TripStrings.callHost),
           if (e.canChangeRequest) const TripStripAction(changeRequest, TripStrings.changeRequest),
           const TripStripAction(cancel, TripStrings.cancelBooking, destructive: true),
           reportAction,
@@ -87,44 +85,19 @@ class TripEnquiryStrip extends StatelessWidget {
   String _statusLine() {
     final status = enquiry.display;
     final agreed = enquiry.agreedTotalLocked;
-    if (status == TripDisplayStatus.confirmedByBoth && !enquiry.advance.hasRequest && agreed != null) {
+    if (status == TripDisplayStatus.confirmedByBoth && agreed != null) {
       return '${TripStrings.stayConfirmed} · ${BrowseItem.inr(agreed)}';
     }
     return TripStatusVisuals.label(status, ownerSide: ownerSide);
   }
 
-  (String, Color)? _advanceLine() {
-    final a = enquiry.advance;
-    final status = enquiry.display;
-    if (!a.hasRequest) return null;
-    final money = BrowseItem.inr(a.amount ?? 0);
-    final color = TripStatusVisuals.advanceText(a.status);
-    if (status == TripDisplayStatus.holdExpired) return (TripStrings.holdExpired, color);
-    if (status != TripDisplayStatus.confirmedByBoth) return null;
-    final hold = a.holdUntil;
-    return switch (a.status) {
-      'Pending' => (
-        hold == null
-            ? TripStrings.advancePending(money)
-            : '${TripStrings.advancePending(money)} · ${TripStrings.holdTill(TripFormat.time12Of(hold))}',
-        color
-      ),
-      'ProofSent' => (TripStrings.waitingForHostBar(money), color),
-      'Received' => (TripStrings.advanceReceivedBar(money), color),
-      _ => null,
-    };
-  }
-
   @override
   Widget build(BuildContext context) {
     final status = enquiry.display;
-    final advance = _advanceLine();
     final menu = actions.isNotEmpty && onAction != null;
     final revisedNote = status == TripDisplayStatus.confirmedByBoth && enquiry.hasPendingRevised;
     return ChatStripCard3D(
-      barColor: advance != null && status == TripDisplayStatus.confirmedByBoth
-          ? TripStatusVisuals.advanceBar(enquiry.advance.status)
-          : TripStatusVisuals.bar(status),
+      barColor: TripStatusVisuals.bar(status),
       title: _title(),
       detail: _detail(),
       onTap: onTap,
@@ -134,12 +107,6 @@ class TripEnquiryStrip extends StatelessWidget {
         color: status == TripDisplayStatus.asked ? ChatLook3D.askedPill : null,
         onGradient: false,
       ),
-      extra: advance == null
-          ? null
-          : Padding(
-              padding: EdgeInsets.only(top: DS.s(3)),
-              child: Text(advance.$1, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(11.5, FontWeight.w600, advance.$2)),
-            ),
       onMenu: menu
           ? (rect) => showMenu3D(
                 context,

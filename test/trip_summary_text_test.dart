@@ -20,8 +20,6 @@ void main() {
           {'roomName': 'Family room', 'units': 1, 'guests': 4},
         ],
         'agreedTotal': 3800,
-        'advanceStatus': 'Received',
-        'advanceAmount': 500,
         'cancellationText': cancellation,
         'gstInvoice': true,
         'confirmedBy': 'both',

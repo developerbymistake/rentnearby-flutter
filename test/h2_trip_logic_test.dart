@@ -132,7 +132,6 @@ void main() {
             'listingName': 'Deodar',
             'displayStatus': 'asked',
             'agreedTotal': 0,
-            'advanceAmount': 0,
           },
         ],
         'taxis': [

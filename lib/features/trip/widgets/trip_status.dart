@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:bakhli/design/extra/trip_plan_look.dart';
 import 'package:bakhli/design/template/fitness_app_theme.dart';
-import '../models/trip_enquiry_model.dart';
 import '../trip_colors.dart';
 import '../trip_strings.dart';
-import '../utils/trip_format.dart';
 
 import 'package:bakhli/design/extra/art_3d.dart';
 import 'package:bakhli/design/extra/status_pill.dart';
@@ -25,7 +23,6 @@ enum TripDisplayStatus {
   closed,
   fareSent,
   bookedByYou,
-  holdExpired,
   own;
 
   static TripDisplayStatus parse(String? wire) {
@@ -36,7 +33,7 @@ enum TripDisplayStatus {
     return none;
   }
 
-  bool get isRed => this == notAvailable || this == expired || this == declined || this == cancelled || this == notMe || this == holdExpired;
+  bool get isRed => this == notAvailable || this == expired || this == declined || this == cancelled || this == notMe;
   bool get isGreen => this == confirmedByBoth;
   bool get isOpen => this == asked || this == offered || this == fareSent;
   bool get isBookedByYou => this == bookedByYou;
@@ -90,41 +87,8 @@ class TripStatusVisuals {
         TripDisplayStatus.closed => TripStrings.closed,
         TripDisplayStatus.fareSent => TripStrings.replied,
         TripDisplayStatus.bookedByYou => ownerSide ? TripStrings.byTraveller : TripStrings.bookedByYou,
-        TripDisplayStatus.holdExpired => TripStrings.holdExpired,
         TripDisplayStatus.own => TripStrings.ownBooking,
       };
-
-  static Color advanceBar(String advanceStatus) => switch (advanceStatus) {
-        'Pending' || 'ProofSent' => TripStatusColors.waiting,
-        'Received' => TripStatusColors.advance,
-        'HoldExpired' => TripStatusColors.failed,
-        _ => TripStatusColors.both,
-      };
-
-  static Color advanceSurface(String advanceStatus) => switch (advanceStatus) {
-        'Pending' || 'ProofSent' => TripStatusColors.waitingSurface,
-        'Received' => TripStatusColors.advanceSurface,
-        'HoldExpired' => TripStatusColors.failedSurface,
-        _ => TripStatusColors.bothSurface,
-      };
-
-  static Color advanceText(String advanceStatus) => switch (advanceStatus) {
-        'Pending' || 'ProofSent' => TripLook.warningText,
-        'Received' => TripLook.advance,
-        'HoldExpired' => TripLook.errorText,
-        _ => TripLook.successText,
-      };
-
-  static String advanceLabel(TripAdvanceModel a) {
-    final hold = a.holdUntil;
-    return switch (a.status) {
-      'Pending' => hold == null ? '' : TripStrings.advancePendingTill(TripFormat.time12Of(hold)),
-      'ProofSent' => TripStrings.waitingForHostHourly,
-      'Received' => TripStrings.advanceReceivedHostSays,
-      'HoldExpired' => TripStrings.holdExpired,
-      _ => '',
-    };
-  }
 }
 
 class TripStatusPill extends StatelessWidget {

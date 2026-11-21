@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import '../../../config/app_routes.dart';
 import 'package:bakhli/design/design.dart';
 import 'package:bakhli/design/extra/ext_trip_replies.dart';
 import '../../../utils/app_toast.dart';
 import '../../../models/browse_item.dart';
-import '../../../utils/contact_launcher.dart';
 import '../../../widgets/trip_report_traveller_sheet.dart';
 import '../../trip/models/trip_enquiry_model.dart';
 import '../../trip/models/trip_offer_model.dart';
@@ -13,7 +14,7 @@ import 'stay_enquiry_format.dart';
 import '../../trip/widgets/trip_cancel_sheet.dart';
 import 'stay_enquiries_controller.dart';
 import 'stay_enquiry_strings.dart';
-import 'trip_ask_advance_sheet.dart';
+import '../stay_share_strings.dart';
 import 'trip_send_offer_sheet.dart';
 
 class StayEnquiryActions {
@@ -92,7 +93,7 @@ class StayEnquiryActions {
   static Future<void> reportTraveller(BuildContext context, TripEnquiryModel e) =>
       TripReportTravellerSheet.show(context, enquiry: e);
 
-  static Future<bool> askAdvance(BuildContext context, TripEnquiryModel e) async {
+  static Future<bool> confirmShare(BuildContext context) async {
     if (_opening) return false;
     _opening = true;
     try {
@@ -102,42 +103,32 @@ class StayEnquiryActions {
         AppToast.error(TripStrings.couldNotLoad);
         return false;
       }
-      return await TripAskAdvanceSheet.show(context, enquiry: e, stay: stay);
+      if (!stay.hasShareDetails) {
+        await Get.toNamed(AppRoutes.stayShareDetails);
+        return false;
+      }
+      final upi = stay.upiId ?? '';
+      final wa = stay.whatsAppNumber ?? '';
+      final ok = await Dialog3D.show<bool>(
+        context,
+        builder: (ctx) => Dialog3D(
+          tone: ListingTone.forest,
+          art: ListingArt.speechBalloon,
+          title: StayShareStrings.confirmTitle,
+          lines: [
+            if (upi.isNotEmpty) DialogLine('${StayShareStrings.upiLabel} · $upi', art: ListingArt.moneyBag),
+            if (wa.isNotEmpty) DialogLine('${StayShareStrings.whatsAppLabel} · +91 $wa', art: ListingArt.speechBalloon),
+          ],
+          secondaryLabel: StayShareStrings.cancel,
+          onSecondary: () => Navigator.pop(ctx, false),
+          primaryLabel: StayShareStrings.share,
+          onPrimary: () => Navigator.pop(ctx, true),
+        ),
+      );
+      return ok == true;
     } finally {
       _opening = false;
     }
-  }
-
-  static Future<bool> markReceived(BuildContext context, TripEnquiryModel e) async {
-    final ok = await Dialog3D.show<bool>(
-      context,
-      builder: (ctx) => Dialog3D(
-        tone: ListingTone.forest,
-        art: ListingArt.moneyBag,
-        title: TripStrings.markAdvanceReceived,
-        body: TripStrings.checkAmountFirst,
-        content: _summary(e, e.advance.holdUntil == null ? null : TripStrings.holdTill(TripFormat.time12Of(e.advance.holdUntil!.toLocal())), (e.advance.amount ?? 0) > 0 ? BrowseItem.inr(e.advance.amount!) : null),
-        secondaryLabel: StayEnquiryStrings.cancelAction,
-        onSecondary: () => Navigator.pop(ctx, false),
-        primaryLabel: TripStrings.markAdvanceReceived,
-        primaryDanger: false,
-        onPrimary: () => Navigator.pop(ctx, true),
-      ),
-    );
-    if (ok != true) return false;
-    return StayEnquiriesController.ensure().markReceived(e.id);
-  }
-
-  static Future<bool> notYet(BuildContext context, TripEnquiryModel e) =>
-      StayEnquiriesController.ensure().notYet(e.id);
-
-  static Future<void> callGuest(TripEnquiryModel e) async {
-    final phone = e.traveller.phone;
-    if (phone == null || phone.isEmpty) {
-      AppToast.info(TripStrings.couldNotLoad);
-      return;
-    }
-    await ContactLauncher.call(phone);
   }
 
   static Future<bool> notAvailable(BuildContext context, TripEnquiryModel e) async {

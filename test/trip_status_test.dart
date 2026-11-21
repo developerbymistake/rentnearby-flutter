@@ -20,7 +20,6 @@ void main() {
     'closed': TripDisplayStatus.closed,
     'fareSent': TripDisplayStatus.fareSent,
     'bookedByYou': TripDisplayStatus.bookedByYou,
-    'holdExpired': TripDisplayStatus.holdExpired,
   };
 
   test('parse maps every server displayStatus', () {
@@ -31,6 +30,7 @@ void main() {
     expect(TripDisplayStatus.parse(null), TripDisplayStatus.none);
     expect(TripDisplayStatus.parse(''), TripDisplayStatus.none);
     expect(TripDisplayStatus.parse('somethingNew'), TripDisplayStatus.none);
+    expect(TripDisplayStatus.parse('holdExpired'), TripDisplayStatus.none);
   });
 
   test('red set', () {
@@ -41,7 +41,6 @@ void main() {
       TripDisplayStatus.declined,
       TripDisplayStatus.cancelled,
       TripDisplayStatus.notMe,
-      TripDisplayStatus.holdExpired,
     });
   });
 
@@ -90,42 +89,16 @@ void main() {
     expect(TripStatusVisuals.bar(TripDisplayStatus.bookedByYou), TripStatusColors.booked);
     expect(TripStatusVisuals.surface(TripDisplayStatus.bookedByYou), TripStatusColors.bookedSurface);
     expect(TripStatusVisuals.text(TripDisplayStatus.bookedByYou), AppColors.tripBooked);
-    expect(TripStatusVisuals.bar(TripDisplayStatus.holdExpired), TripStatusColors.failed);
-    expect(TripStatusVisuals.surface(TripDisplayStatus.holdExpired), TripStatusColors.failedSurface);
   });
 
-  test('taxi and hold labels', () {
+  test('taxi labels', () {
     expect(TripStatusVisuals.label(TripDisplayStatus.fareSent), 'Replied');
     expect(TripStatusVisuals.label(TripDisplayStatus.fareSent, ownerSide: true), 'Replied');
     expect(TripStatusVisuals.label(TripDisplayStatus.bookedByYou), 'Booked by you');
     expect(TripStatusVisuals.label(TripDisplayStatus.bookedByYou, ownerSide: true), 'By traveller');
-    expect(TripStatusVisuals.label(TripDisplayStatus.holdExpired), 'Hold expired');
-    expect(TripStatusVisuals.label(TripDisplayStatus.holdExpired, ownerSide: true), 'Hold expired');
     expect(TripStatusVisuals.label(TripDisplayStatus.notMe, taxi: true), 'Driver says not me');
     expect(TripStatusVisuals.label(TripDisplayStatus.notMe), 'Host says not me');
     expect(TripStatusVisuals.label(TripDisplayStatus.notAvailable, taxi: true), 'Not available');
-  });
-
-  test('advance colours follow the sub-state', () {
-    for (final st in ['Pending', 'ProofSent']) {
-      expect(TripStatusVisuals.advanceBar(st), TripStatusColors.waiting);
-      expect(TripStatusVisuals.advanceSurface(st), TripStatusColors.waitingSurface);
-      expect(TripStatusVisuals.advanceText(st), AppColors.warningText);
-    }
-    expect(TripStatusVisuals.advanceBar('Received'), TripStatusColors.advance);
-    expect(TripStatusVisuals.advanceSurface('Received'), TripStatusColors.advanceSurface);
-    expect(TripStatusVisuals.advanceText('Received'), AppColors.tripAdvance);
-    expect(TripStatusVisuals.advanceBar('HoldExpired'), TripStatusColors.failed);
-    expect(TripStatusVisuals.advanceBar('None'), TripStatusColors.both);
-  });
-
-  test('advance label by status', () {
-    final hold = DateTime(2026, 11, 1, 18, 0);
-    expect(TripStatusVisuals.advanceLabel(TripAdvanceModel(status: 'Pending', holdUntil: hold)), 'Advance pending · till 6:00 pm');
-    expect(TripStatusVisuals.advanceLabel(TripAdvanceModel(status: 'ProofSent', holdUntil: hold)), 'Waiting for host · reminded hourly');
-    expect(TripStatusVisuals.advanceLabel(const TripAdvanceModel(status: 'Received')), 'Advance received · host says');
-    expect(TripStatusVisuals.advanceLabel(const TripAdvanceModel(status: 'HoldExpired')), 'Hold expired');
-    expect(TripStatusVisuals.advanceLabel(const TripAdvanceModel()), '');
   });
 
   test('bar colours follow the token table', () {

@@ -132,7 +132,6 @@ class TripStringsV2Easy {
   static const String sentBack = 'Back to plan';
   static const String askMoreStays = 'Ask more stays';
   static const String hostNotify = 'Hosts usually reply within a few hours. You get a notification.';
-  static const String balanceAtCheckIn = 'Balance at check-in';
   static const String replyWillShow = 'Reply will show on your plan.';
 
   static String sentTo(int n) => n == 1 ? 'Sent to 1 host' : 'Sent to $n hosts';

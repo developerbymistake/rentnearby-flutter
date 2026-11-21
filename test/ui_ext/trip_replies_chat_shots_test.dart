@@ -44,9 +44,6 @@ final _dates = {'checkIn': '2026-11-13', 'checkOut': '2026-11-15'};
 TripChatCallbacks _cb({bool owner = false}) => TripChatCallbacks(
       onAccept: (_, _) {},
       onDecline: (_, _) {},
-      onProofSent: (_) {},
-      onMarkReceived: (_) {},
-      onNotYet: (_) {},
       onAcceptPrice: owner ? (_, _) {} : null,
       onSendDifferentOffer: (_, _) {},
       onAcceptNewPrice: (_, _) {},
@@ -84,7 +81,6 @@ final _scenes = <String, List<(MessageModel, bool)>>{
         ..._dates,
         'nights': 2,
         'total': 7200,
-        'advanceAmount': 2000,
         'cancellationText': 'Free till 2 days before',
         'lines': [
           {'roomName': 'Deluxe room', 'units': 1, 'guests': 2, 'pricePerNight': 3600},
@@ -93,58 +89,7 @@ final _scenes = <String, List<(MessageModel, bool)>>{
       false
     ),
   ],
-  'ch_advance': [
-    (
-      _m('3', 'trip_advance_request', false, {
-        'enquiryId': 'e1',
-        'status': 'pending',
-        'amount': 2000,
-        'holdUntil': _iso(DateTime.now().add(const Duration(hours: 4))),
-        'upiId': 'deodar@okaxis',
-        'stayName': 'Deodar Cottage',
-        ..._dates,
-        'agreedTotal': 7200,
-      }),
-      false
-    ),
-    (
-      _m('4', 'trip_advance_request', false, {
-        'enquiryId': 'e1',
-        'status': 'proofSent',
-        'amount': 2000,
-        'holdUntil': _iso(DateTime.now().add(const Duration(hours: 4))),
-        'proofSentAt': _iso(DateTime.now().subtract(const Duration(minutes: 20))),
-        'stayName': 'Deodar Cottage',
-        ..._dates,
-      }),
-      false
-    ),
-  ],
-  'ch_end': [
-    (_m('5', 'trip_advance_request', false, {'enquiryId': 'e1', 'status': 'received', 'amount': 2000, 'stayName': 'Deodar Cottage', ..._dates, 'agreedTotal': 7200}), false),
-    (
-      _m('6', 'trip_advance_request', false, {
-        'enquiryId': 'e1',
-        'status': 'pending',
-        'amount': 2000,
-        'holdUntil': _iso(DateTime.now().subtract(const Duration(hours: 1))),
-        ..._dates,
-      }),
-      false
-    ),
-  ],
   'ch_host': [
-    (
-      _m('7', 'trip_advance_proof_sent', false, {
-        'enquiryId': 'e1',
-        'status': 'proofSent',
-        'amount': 2000,
-        'holdUntil': _iso(DateTime.now().add(const Duration(hours: 4))),
-        'guestPhone': '9876543210',
-        ..._dates,
-      }),
-      true
-    ),
     (_m('8', 'trip_counter', false, {'enquiryId': 'e1', 'offerId': 'k1', 'status': 'pending', 'proposedPerNight': 2200, 'listedPerNight': 2600, 'nights': 2, 'units': 1}), true),
   ],
   'ch_change': [
@@ -156,7 +101,6 @@ final _scenes = <String, List<(MessageModel, bool)>>{
         'oldTotal': 7200,
         'total': 6800,
         'reason': 'one room is under repair',
-        'advanceAgreed': 2000,
         ..._dates,
         'nights': 2,
       }),

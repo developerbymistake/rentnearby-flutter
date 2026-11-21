@@ -82,7 +82,7 @@ class AppRoutes {
   static const String tripReplies = '/trip-replies';
   static const String stayEnquiries = '/stay-enquiries';
   static const String tripLeads = '/trip-leads';
-  static const String stayAdvanceDetails = '/stay-advance-details';
+  static const String stayShareDetails = '/stay-share-details';
 
   static const String tripCustomize = '/trip-customize';
   static const String tripOverview = '/trip-overview';
@@ -110,7 +110,7 @@ class AppRoutes {
   static const String tripMoneySummary = '/trip-money-summary';
 
   static const Set<String> ownerOnly = {plansBilling, planHistory};
-  static const Set<String> stayOwnerOnly = {staySetup, stayBasicDetails, stayRooms, stayRules, staySubmit, myStays, myJobs, postJob, stayEnquiries, stayAdvanceDetails};
+  static const Set<String> stayOwnerOnly = {staySetup, stayBasicDetails, stayRooms, stayRules, staySubmit, myStays, myJobs, postJob, stayEnquiries, stayShareDetails};
   static const Set<String> taxiDriverOnly = {
     taxiSetup,
     taxiVehicle,
@@ -132,7 +132,7 @@ class AppRoutes {
     stayRooms: AppTabKeys.stays,
     stayRules: AppTabKeys.stays,
     staySubmit: AppTabKeys.stays,
-    stayAdvanceDetails: AppTabKeys.stays,
+    stayShareDetails: AppTabKeys.stays,
     myStays: AppTabKeys.stays,
     stayDetail: AppTabKeys.stays,
     jobs: AppTabKeys.jobs,

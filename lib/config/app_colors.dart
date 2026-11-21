@@ -18,5 +18,4 @@ class AppColors {
   static const Color successText = TripLook.successText;
   static const Color tripDark = TripLook.accentDark;
   static const Color tripBooked = TripLook.booked;
-  static const Color tripAdvance = TripLook.advance;
 }

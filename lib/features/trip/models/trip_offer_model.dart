@@ -49,7 +49,6 @@ class TripOfferModel {
   final List<TripOfferLine> lines;
   final int total;
   final String? inclusions;
-  final int? advanceAmount;
   final String? balanceNote;
   final String? cancellationText;
   final bool? gstInvoice;
@@ -76,7 +75,6 @@ class TripOfferModel {
     this.lines = const [],
     this.total = 0,
     this.inclusions,
-    this.advanceAmount,
     this.balanceNote,
     this.cancellationText,
     this.gstInvoice,
@@ -138,7 +136,6 @@ class TripOfferModel {
             .toList(),
         total: (json['total'] as num?)?.toInt() ?? 0,
         inclusions: json['inclusions'] as String?,
-        advanceAmount: (json['advanceAmount'] as num?)?.toInt(),
         balanceNote: json['balanceNote'] as String?,
         cancellationText: json['cancellationText'] as String?,
         gstInvoice: json['gstInvoice'] as bool?,

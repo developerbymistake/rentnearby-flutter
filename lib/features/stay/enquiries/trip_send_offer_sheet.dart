@@ -82,7 +82,6 @@ class _OfferBodyState extends State<_OfferBody> {
   late DateTime _checkIn;
   late DateTime _checkOut;
   final _lines = <_Line>[];
-  final _advance = TextEditingController();
   final _balance = TextEditingController(text: TripStrings.atCheckIn);
   final _cancel = TextEditingController();
   final _inclusions = TextEditingController();
@@ -115,14 +114,12 @@ class _OfferBodyState extends State<_OfferBody> {
       _lines.add(_newLine());
     }
     if (terms != null) {
-      final adv = terms.advanceAmount;
-      if (adv != null) _advance.text = '$adv';
       final bal = terms.balanceNote;
       if (bal != null && bal.isNotEmpty) _balance.text = bal;
       _inclusions.text = terms.inclusions ?? '';
       _gst = terms.gstInvoice ?? false;
     }
-    for (final c in [_advance, _balance, _cancel, _inclusions, _reason]) {
+    for (final c in [_balance, _cancel, _inclusions, _reason]) {
       c.addListener(_refresh);
     }
   }
@@ -132,7 +129,7 @@ class _OfferBodyState extends State<_OfferBody> {
     for (final l in _lines) {
       l.dispose();
     }
-    for (final c in [_advance, _balance, _cancel, _inclusions, _reason]) {
+    for (final c in [_balance, _cancel, _inclusions, _reason]) {
       c.dispose();
     }
     super.dispose();
@@ -284,8 +281,6 @@ class _OfferBodyState extends State<_OfferBody> {
       if (l.price > TripConstants.maxAmount) return TripStringsAD.priceTooHigh(TripConstants.maxAmount);
     }
     if (_total > TripConstants.maxAmount) return TripStringsAD.totalTooHigh(TripConstants.maxAmount);
-    final adv = int.tryParse(_advance.text.trim());
-    if (adv != null && adv > _total) return StayEnquiryStrings.advanceTooHigh;
     if (widget.revised && _reason.text.trim().isEmpty) return StayEnquiryStrings.reasonRequired;
     return null;
   }
@@ -298,7 +293,6 @@ class _OfferBodyState extends State<_OfferBody> {
       AppToast.error(error);
       return;
     }
-    final adv = int.tryParse(_advance.text.trim());
     final balance = _balance.text.trim();
     final cancel = _cancel.text.trim();
     final inclusions = _inclusions.text.trim();
@@ -309,7 +303,6 @@ class _OfferBodyState extends State<_OfferBody> {
         for (final l in _lines)
           TripOfferLine(roomName: l.name, units: l.units, guests: l.guests, pricePerNight: l.price).toJson(),
       ],
-      'advanceAmount': ?adv,
       'balanceNote': balance.isEmpty ? null : balance,
       'cancellationText': cancel.isEmpty ? null : cancel,
       'gstInvoice': _gst,
@@ -410,10 +403,7 @@ class _OfferBodyState extends State<_OfferBody> {
         for (var i = 0; i < _lines.length; i++) _lineCard(i),
         if (revised)
           _field(_reason, TripStrings.reasonLabel, art: ListingArt.clipboard, maxLength: TripConstants.noteMax, lines: 2, hint: TripStrings.reasonHint, error: _tried && _reason.text.trim().isEmpty ? StayEnquiryStrings.reasonRequired : null),
-        _twoUp(
-          _field(_advance, TripStrings.advance, art: ListingArt.moneyBag, digits: true, maxLength: 7, prefix: '₹ ', hint: StayEnquiryStrings.optional),
-          _field(_balance, TripStrings.balanceNote, art: ListingArt.clipboard, maxLength: 120),
-        ),
+        _field(_balance, TripStrings.balanceNote, art: ListingArt.clipboard, maxLength: 120),
         _field(_cancel, TripStrings.cancellationTerms, art: ListingArt.clipboard, maxLength: 300, lines: 2),
         _field(_inclusions, StayEnquiryStrings.inclusions, art: ListingArt.star, maxLength: 200, hint: StayEnquiryStrings.optional),
         Gap.v(12),

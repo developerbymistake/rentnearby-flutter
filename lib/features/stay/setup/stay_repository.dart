@@ -38,8 +38,8 @@ class StayRepository {
   Future<StayOwnerModel?> updateRoomPrice(String roomId, int price) async =>
       _parse(await ApiService.put('/stays/me/rooms/$roomId/price', {'pricePerNight': price}));
 
-  Future<StayOwnerModel?> saveAdvanceDetails({String? upiId, String? whatsAppNumber}) async =>
-      _parse(await ApiService.put('/stays/me/advance-details', {
+  Future<StayOwnerModel?> saveShareDetails({String? upiId, String? whatsAppNumber}) async =>
+      _parse(await ApiService.put('/stays/me/share-details', {
         'upiId': ?upiId,
         'whatsAppNumber': ?whatsAppNumber,
       }));

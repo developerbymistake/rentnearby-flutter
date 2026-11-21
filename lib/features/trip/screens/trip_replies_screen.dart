@@ -15,7 +15,6 @@ import '../trip_strings_a2.dart';
 import '../trip_strings_a5.dart';
 import '../trip_strings_f2.dart';
 import '../trip_strings_rc.dart';
-import '../trip_strings_v2_easy.dart';
 import '../utils/trip_enquiry_rules.dart';
 import '../utils/trip_format.dart';
 import '../utils/trip_report.dart';
@@ -220,10 +219,8 @@ class _TripRepliesScreenState extends State<TripRepliesScreen> with TickerProvid
           : TripStrings.offeredValid(
               _inr(e.openOffer!.total),
               e.openOffer!.validUntil == null ? '' : TripEnquiryRules.closesInLabel(e.openOffer!.validUntil!, now)),
-      TripDisplayStatus.confirmedByBoth when e.advanceLabel != null => e.advanceLabel!,
       TripDisplayStatus.confirmedByYou || TripDisplayStatus.confirmedByBoth =>
         [_dates(e), _inr(e.agreedTotal)].where((s) => s.isNotEmpty).join(' · '),
-      TripDisplayStatus.holdExpired => TripStrings.hostDidNotConfirm,
       _ => _dates(e),
     };
   }
@@ -397,30 +394,11 @@ class _TripRepliesScreenState extends State<TripRepliesScreen> with TickerProvid
     final offer = e.openOffer;
     if (status == TripDisplayStatus.offered && offer != null) {
       final each = offer.lines.fold<int>(0, (sum, l) => sum + l.perNight);
-      final advance = offer.advanceAmount ?? 0;
-      final left = offer.total - advance;
       return [
         ReplyRow(offer.nights > 0 && each > 0 ? '${TripStrings.nights(offer.nights)} · ${_inr(each)} each' : TripStrings.total, _inr(offer.total)),
-        if (advance > 0) ReplyRow(TripStrings.advance, _inr(advance)),
-        if (advance > 0 && left > 0) ReplyRow(TripStringsV2Easy.balanceAtCheckIn, _inr(left)),
       ];
     }
     if (status == TripDisplayStatus.confirmedByBoth) {
-      final adv = e.advance;
-      if (adv.isPending && (adv.amount ?? 0) > 0) {
-        return [
-          ReplyRow(TripStrings.step1Pay(_inr(adv.amount)), '', step: 1),
-          const ReplyRow(TripStrings.step2Screenshot, '', step: 2),
-          const ReplyRow(TripStrings.step3Host, '', step: 3),
-        ];
-      }
-      if (adv.isProofSent || adv.isReceived) {
-        return [
-          const ReplyRow(TripStrings.stepPaymentSent, '', done: true),
-          const ReplyRow(TripStrings.stepScreenshotSent, '', done: true),
-          ReplyRow(TripStrings.stepHostChecks, '', done: adv.isReceived),
-        ];
-      }
       final revised = e.pendingRevised;
       if (revised != null) {
         return [
@@ -439,14 +417,6 @@ class _TripRepliesScreenState extends State<TripRepliesScreen> with TickerProvid
           ReplyRow(TripStrings.total, _inr(change.total)),
         ];
       }
-    }
-    if (status == TripDisplayStatus.holdExpired) {
-      final hold = e.advance.holdUntil;
-      return [
-        ReplyRow(TripStrings.dates, '${_dates(e)} · ${TripStrings.nights(e.nights)}'),
-        if ((e.advance.amount ?? 0) > 0) ReplyRow(TripStringsRc.advanceAsked, _inr(e.advance.amount)),
-        if (hold != null) ReplyRow(TripStrings.holdEnded, TripFormat.time12Of(hold.toLocal())),
-      ];
     }
     final counter = e.pendingCounter;
     if (counter != null && e.display.isOpen && !e.isBooked) {
@@ -479,10 +449,6 @@ class _TripRepliesScreenState extends State<TripRepliesScreen> with TickerProvid
     if (TripRepliesLegParts.oldDatesNote(_c, e) case final o?) add(o.text, ListingArt.calendar);
     if (status == TripDisplayStatus.confirmedByBoth && e.hasPendingRevised) add('${TripStrings.revisedOffer} · ${TripStrings.notAcceptedYet}', ListingArt.clipboard);
     if (status == TripDisplayStatus.confirmedByBoth && e.hasPendingChange) add('${TripStrings.changeRequest} · ${TripStrings.notAcceptedYet}', ListingArt.calendar);
-    if (status == TripDisplayStatus.confirmedByBoth && e.advance.isPending && (e.advance.amount ?? 0) > 0) {
-      add('${TripStrings.payDirectlyToHost} · ${TripStrings.advance} ${_inr(e.advance.amount)}. ${TripStrings.noPaymentTail}', ListingArt.moneyBag);
-    }
-    if (status == TripDisplayStatus.holdExpired) add('${TripStrings.roomMayBeReleased}. ${TripStrings.ifPaidFooter}', ListingArt.roundPushpin);
     if (e.display.isOpen && e.expiresAt != null) add(TripStrings.closesIn(TripEnquiryRules.closesInLabel(e.expiresAt!, DateTime.now())), ListingArt.calendar);
     if (lines.isEmpty) {
       if (e.display == TripDisplayStatus.closed && e.failReason == 'BookedElsewhere') return (TripStringsRc.closedBookedElsewhere, ListingArt.clipboard, null);
@@ -513,8 +479,6 @@ class _TripRepliesScreenState extends State<TripRepliesScreen> with TickerProvid
       );
     } else if (status == TripDisplayStatus.offered) {
       primary = ReplyAction(label: TripStringsA2.refresh, onTap: live(() => _c.refreshEnquiries()));
-    } else if (status == TripDisplayStatus.holdExpired) {
-      primary = ReplyAction(label: TripStrings.askOtherStays, onTap: live(() => TripNavigation.reopenStayShortlist(_legIndex)));
     } else if (e != null && e.isRed) {
       primary = ReplyAction(label: TripStrings.findAnother, onTap: live(() => TripNavigation.reopenStayShortlist(_legIndex)));
     } else {

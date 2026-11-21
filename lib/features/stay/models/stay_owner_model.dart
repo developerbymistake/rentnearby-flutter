@@ -169,7 +169,7 @@ class StayOwnerModel {
   bool get isApproved => status == StayStatus.approved;
   bool get isRejected => status == StayStatus.rejected;
   bool get canEditSetup => isDraft || isRejected;
-  bool get hasAdvanceDetails => (upiId ?? '').isNotEmpty || (whatsAppNumber ?? '').isNotEmpty;
+  bool get hasShareDetails => (upiId ?? '').isNotEmpty || (whatsAppNumber ?? '').isNotEmpty;
   bool get registrationDone => registrationTypeId != null && hasRegistrationNumber;
 
   int get setupPercent {

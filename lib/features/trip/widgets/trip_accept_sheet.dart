@@ -9,7 +9,6 @@ import '../controllers/trip_plan_controller.dart';
 import '../models/trip_enquiry_model.dart';
 import '../models/trip_offer_model.dart';
 import '../trip_strings.dart';
-import '../trip_strings_v2_easy.dart';
 import '../utils/trip_format.dart';
 import 'trip_sheet_frame.dart';
 
@@ -179,14 +178,10 @@ class _TripAcceptSheetState extends State<TripAcceptSheet> {
     final cout = offer.checkOut ?? enq.checkOut;
     final dates = cin == null || cout == null ? null : TripFormat.dayMonthRange(cin, cout);
     final nights = offer.nights;
-    final advance = offer.advanceAmount;
-    final left = advance == null ? 0 : offer.total - advance;
     final rows = <Widget>[
       KeyValueRow(label: TripStrings.stay, value: enq.listingName),
       if (dates != null) KeyValueRow(label: TripStrings.dates, value: nights > 0 ? '$dates · ${TripStrings.nights(nights)}' : dates),
       KeyValueRow(label: TripStrings.total, value: BrowseItem.inr(offer.total), big: true),
-      if (advance != null && advance > 0) KeyValueRow(label: TripStrings.advance, value: BrowseItem.inr(advance)),
-      if (!_revised && advance != null && advance > 0 && left > 0) KeyValueRow(label: TripStringsV2Easy.balanceAtCheckIn, value: BrowseItem.inr(left)),
     ];
     if (_revised) {
       final old = offer.oldTotal ?? enq.agreedTotalLocked;

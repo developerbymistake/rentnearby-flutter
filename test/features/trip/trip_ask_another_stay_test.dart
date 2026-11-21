@@ -35,7 +35,6 @@ void main() {
     final files = [
       'lib/features/trip/screens/trip_replies_screen.dart',
       'lib/features/trip/widgets/trip_problem_sheet.dart',
-      'lib/widgets/trip_advance_cards.dart',
     ];
     for (final f in files) {
       final src = File(f).readAsStringSync();

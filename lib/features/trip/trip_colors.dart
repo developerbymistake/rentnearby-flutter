@@ -10,8 +10,6 @@ class TripStatusColors {
   static const Color confirmedByYouSurface = DesignColors.primarySoft;
   static const Color both = DesignColors.success;
   static const Color bothSurface = DesignColors.successSoft;
-  static const Color advance = DesignColors.statusBooked;
-  static const Color advanceSurface = DesignColors.successSoft;
   static const Color failed = DesignColors.error;
   static const Color failedSurface = DesignColors.errorSoft;
   static const Color booked = DesignColors.statusConfirmed;

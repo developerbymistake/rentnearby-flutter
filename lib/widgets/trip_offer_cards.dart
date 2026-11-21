@@ -122,7 +122,6 @@ class TripOfferCards {
     final lines = _list(p, 'lines').whereType<Map>().toList();
     final nights = _int(p, 'nights');
     final range = _range(p);
-    final advanceAgreed = _num(p, 'advanceAgreed');
     final cancelText = _str(p, 'cancellationText');
     final differs = p['datesDiffer'] == true;
     final canAct = !isOwner && pending && enquiryId != null && offerId != null;
@@ -146,7 +145,6 @@ class TripOfferCards {
         rows: [
           if (total != null)
             ReplyRow(TripStrings.totalArrow(oldTotal == null ? lockedMoney : BrowseItem.inr(oldTotal), BrowseItem.inr(total)), ''),
-          if (advanceAgreed != null && advanceAgreed > 0) ReplyRow(TripStrings.advanceStays(BrowseItem.inr(advanceAgreed)), ''),
           if (when.isNotEmpty) ReplyRow(TripStrings.dates, when),
           if (cancelText != null && cancelText.isNotEmpty) ReplyRow(TripStrings.cancellationTerms, cancelText),
         ],

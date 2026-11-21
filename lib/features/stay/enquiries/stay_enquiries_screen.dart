@@ -302,8 +302,7 @@ class _EnquiryCard extends StatelessWidget {
   }
 
   List<ReplyRow> _rows(TripEnquiryModel e) {
-    final adv = e.advance;
-    if (e.display == TripDisplayStatus.confirmedByBoth || e.display == TripDisplayStatus.holdExpired) {
+    if (e.display == TripDisplayStatus.confirmedByBoth) {
       final change = e.pendingChange;
       if (change != null) {
         final a = change.checkIn;
@@ -311,18 +310,6 @@ class _EnquiryCard extends StatelessWidget {
         return [
           ReplyRow(TripStrings.changeRequest, a != null && b != null ? TripFormat.dayMonthRange(a, b) : TripStrings.notAcceptedYet),
           ReplyRow(TripStrings.total, _inr(change.total)),
-          if (adv.hasRequest) ReplyRow(TripStrings.advance, TripStatusVisuals.advanceLabel(adv)),
-        ];
-      }
-      if (adv.hasRequest) {
-        final hold = adv.holdUntil;
-        return [
-          ReplyRow(TripStringsRc.advanceAsked, _inr(adv.amount)),
-          if (hold != null)
-            hold.isAfter(DateTime.now())
-                ? ReplyRow(TripStrings.holdTill(TripFormat.time12Of(hold.toLocal())), '')
-                : ReplyRow(TripStrings.holdEnded, TripFormat.time12Of(hold.toLocal())),
-          ReplyRow(TripStrings.dates, _dates(e)),
         ];
       }
       return [
@@ -358,11 +345,6 @@ class _EnquiryCard extends StatelessWidget {
     if (e.pendingRevised != null && e.display == TripDisplayStatus.confirmedByBoth) {
       return ('${TripStrings.revisedOffer} · ${TripStrings.notAcceptedYet}', ListingArt.clipboard);
     }
-    if (e.display == TripDisplayStatus.confirmedByBoth && e.advance.hasRequest) {
-      final label = TripStatusVisuals.advanceLabel(e.advance);
-      if (label.isNotEmpty) return (label, ListingArt.moneyBag);
-    }
-    if (e.display == TripDisplayStatus.confirmedByBoth && !e.advance.hasRequest) return (TripStringsRc.askAdvanceNote, ListingArt.moneyBag);
     final offer = e.openOffer;
     if (e.display == TripDisplayStatus.offered && offer != null) return (StayEnquiryStrings.offerPrice(BrowseItem.inr(offer.total)), ListingArt.calendar);
     if (e.display.isOpen && e.expiresAt != null) {
@@ -383,11 +365,8 @@ class _EnquiryCard extends StatelessWidget {
       final chatOk = e.conversationId != null &&
           (e.display == TripDisplayStatus.asked ||
               e.display == TripDisplayStatus.offered ||
-              e.display == TripDisplayStatus.confirmedByBoth ||
-              (e.display == TripDisplayStatus.holdExpired && _checkInOpen(e)));
+              e.display == TripDisplayStatus.confirmedByBoth);
       final chat = ReplyAction(label: TripStrings.chat, onTap: chatOk ? () => _openChat(e) : null);
-      final adv = e.advance;
-      final advOpen = adv.isPending || adv.isProofSent;
       final menu = <MenuItem3D>[];
       ReplyAction? primary;
       ReplyAction second = off(TripStrings.notAvailableAction);
@@ -410,33 +389,19 @@ class _EnquiryCard extends StatelessWidget {
           if (change != null) {
             primary = a(TripStrings.acceptChange, () => StayEnquiryActions.acceptChange(context, e, change.id));
             second = a(TripStrings.revisedOffer, () => StayEnquiryActions.revisedOffer(context, e, changeRequest: change));
-            if (advOpen) {
-              menu.add(MenuItem3D(label: TripStrings.markAdvanceReceived, art: ListingArt.moneyBag, positive: true, onTap: busy ? null : () => StayEnquiryActions.markReceived(context, e)));
-              menu.add(MenuItem3D(label: TripStrings.notYet, art: ListingArt.calendar, onTap: busy ? null : () => StayEnquiryActions.notYet(context, e)));
-            }
-          } else if (advOpen) {
-            primary = a(TripStrings.markAdvanceReceived, () => StayEnquiryActions.markReceived(context, e));
-            second = a(TripStrings.askAgain, () => StayEnquiryActions.askAdvance(context, e));
-            menu.add(MenuItem3D(label: TripStrings.notYet, art: ListingArt.calendar, onTap: busy ? null : () => StayEnquiryActions.notYet(context, e)));
           } else {
-            if (!adv.hasRequest) primary = a(TripStrings.askForAdvance, () => StayEnquiryActions.askAdvance(context, e));
             second = canRevise ? a(TripStrings.revisedOffer, () => StayEnquiryActions.revisedOffer(context, e)) : off(TripStrings.revisedOffer);
           }
           if (!StayEnquiryBucket.hasEnded(e)) {
             menu.add(MenuItem3D(label: TripStrings.cancelBooking, art: ListingArt.calendar, danger: true, onTap: busy ? null : () => StayEnquiryActions.cancel(context, e)));
           }
-        case TripDisplayStatus.holdExpired:
-          final open = _checkInOpen(e);
-          primary = open ? a(TripStrings.markAdvanceReceived, () => StayEnquiryActions.markReceived(context, e)) : off(TripStrings.markAdvanceReceived);
-          final phone = (e.traveller.phone ?? '').isNotEmpty;
-          second = ReplyAction(label: TripStrings.callGuest, onTap: open && phone ? () => StayEnquiryActions.callGuest(e) : null);
         default:
           primary = off(TripStrings.sendOffer);
       }
       if ((e.traveller.id ?? '').isNotEmpty) {
         menu.add(MenuItem3D(label: TripStrings.reportTraveller, art: ListingArt.warning, danger: true, onTap: () => StayEnquiryActions.reportTraveller(context, e)));
       }
-      final ended = e.display != TripDisplayStatus.confirmedByBoth && !e.display.isOpen && e.display != TripDisplayStatus.holdExpired;
+      final ended = e.display != TripDisplayStatus.confirmedByBoth && !e.display.isOpen;
       return Stack(
         children: [
           Positioned.fill(

@@ -38,8 +38,6 @@ class TripLook {
   static const Color success = FitnessAppTheme.nearlyBlue;
   static const Color successText = FitnessAppTheme.nearlyDarkBlue;
   static const Color successSurface = DesignColors.infoSoft;
-  static const Color advance = TravelPalette.duskStart;
-  static const Color advanceSurface = DesignColors.statusOwnSoft;
   static const Color booked = TravelPalette.skyEnd;
   static const Color bookedSurface = DesignColors.bookedSoft;
   static const Color shadow = DesignColors.shadowSoft;

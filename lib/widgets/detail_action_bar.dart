@@ -82,7 +82,7 @@ class DetailActionBar extends StatelessWidget {
     return DetailBarShell(
       tone: tone,
       safetyArt: safetyArt,
-      safety: safetyText ?? 'Bakhli never collects rent or advance. Always meet and visit before paying.',
+      safety: safetyText ?? 'Bakhli never collects payment. Always meet and visit before paying.',
       bottomInset: AppInsets.bottomViewPadding(context),
       children: [
         if (buttons.isNotEmpty) DetailBarRow(children: buttons),

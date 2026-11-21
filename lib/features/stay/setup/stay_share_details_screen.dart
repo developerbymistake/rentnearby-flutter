@@ -10,16 +10,17 @@ import '../../../utils/app_toast.dart';
 import '../../trip/trip_strings.dart';
 import '../enquiries/stay_enquiry_format.dart';
 import '../models/stay_owner_model.dart';
+import '../stay_share_strings.dart';
 import 'stay_setup_controller.dart';
 
-class StayAdvanceDetailsScreen extends StatefulWidget {
-  const StayAdvanceDetailsScreen({super.key});
+class StayShareDetailsScreen extends StatefulWidget {
+  const StayShareDetailsScreen({super.key});
 
   @override
-  State<StayAdvanceDetailsScreen> createState() => _StayAdvanceDetailsScreenState();
+  State<StayShareDetailsScreen> createState() => _StayShareDetailsScreenState();
 }
 
-class _StayAdvanceDetailsScreenState extends State<StayAdvanceDetailsScreen> {
+class _StayShareDetailsScreenState extends State<StayShareDetailsScreen> {
   final _ctrl = StaySetupController.ensure();
   final _upi = TextEditingController();
   final _wa = TextEditingController();
@@ -76,10 +77,10 @@ class _StayAdvanceDetailsScreenState extends State<StayAdvanceDetailsScreen> {
     if (upiError != null || waError != null) return;
     FocusScope.of(context).unfocus();
     setState(() => _saving = true);
-    final ok = await _ctrl.saveAdvanceDetails(upiId: upi, whatsAppNumber: wa);
+    final ok = await _ctrl.saveShareDetails(upiId: upi, whatsAppNumber: wa);
     if (!mounted) return;
     if (ok) {
-      AppToast.success(TripStrings.advanceDetailsSaved);
+      AppToast.success(StayShareStrings.saved);
       Get.back();
     } else {
       setState(() => _saving = false);
@@ -92,7 +93,7 @@ class _StayAdvanceDetailsScreenState extends State<StayAdvanceDetailsScreen> {
       backgroundColor: ListingPalette.forest.page,
       body: Column(children: [
         StayPageHeader(
-          title: TripStrings.advanceDetails,
+          title: StayShareStrings.title,
           subtitle: TripStrings.staySetupOptional,
           onBack: () => Get.back(),
           asset: SetupAssets.moneyBag,
@@ -163,8 +164,8 @@ class _StayAdvanceDetailsScreenState extends State<StayAdvanceDetailsScreen> {
           child: WorkoutCard(
             tone: _tone,
             art: ListingArt.moneyBag,
-            title: TripStrings.advanceDetails,
-            subtitle: TripStrings.advanceDetailsSub,
+            title: StayShareStrings.title,
+            subtitle: StayShareStrings.sub,
             minHeight: DS.s(132),
           ),
         ),
@@ -190,7 +191,7 @@ class _StayAdvanceDetailsScreenState extends State<StayAdvanceDetailsScreen> {
         FormSectionCard(
           tone: _tone,
           art: ListingArt.speechBalloon,
-          title: TripStrings.whatsAppForProof,
+          title: StayShareStrings.yourWhatsApp,
           tag: 'Optional',
           tagMuted: true,
           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -208,7 +209,7 @@ class _StayAdvanceDetailsScreenState extends State<StayAdvanceDetailsScreen> {
             ),
             Padding(
               padding: EdgeInsets.only(top: DS.gv(12)),
-              child: Text(TripStrings.advanceDetailsFooter, style: Ink3D.text(12, FontWeight.w400, Ink3D.grey, height: 1.4)),
+              child: Text(StayShareStrings.footer, style: Ink3D.text(12, FontWeight.w400, Ink3D.grey, height: 1.4)),
             ),
           ]),
         ),

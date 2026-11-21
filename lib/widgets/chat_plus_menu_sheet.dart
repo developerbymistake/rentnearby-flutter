@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:bakhli/design/design.dart';
 import 'package:bakhli/design/extra/ext_chat.dart';
+import '../features/stay/stay_share_strings.dart';
 import '../models/question_template_model.dart';
 
 class ChatPlusMenuSheet extends StatelessWidget {
@@ -8,6 +9,7 @@ class ChatPlusMenuSheet extends StatelessWidget {
   final void Function(QuestionTemplateModel) onAskQuestion;
   final VoidCallback onRequestContact;
   final VoidCallback onScheduleVisit;
+  final VoidCallback? onShareDetails;
   final Color accent;
   final ListingTone? tone;
 
@@ -17,6 +19,7 @@ class ChatPlusMenuSheet extends StatelessWidget {
     required this.onAskQuestion,
     required this.onRequestContact,
     required this.onScheduleVisit,
+    this.onShareDetails,
     this.accent = FitnessAppTheme.nearlyDarkBlue,
     this.tone,
   });
@@ -27,6 +30,7 @@ class ChatPlusMenuSheet extends StatelessWidget {
     required void Function(QuestionTemplateModel) onAskQuestion,
     required VoidCallback onRequestContact,
     required VoidCallback onScheduleVisit,
+    VoidCallback? onShareDetails,
     Color accent = FitnessAppTheme.nearlyDarkBlue,
     ListingTone? tone,
   }) {
@@ -37,6 +41,7 @@ class ChatPlusMenuSheet extends StatelessWidget {
         onAskQuestion: onAskQuestion,
         onRequestContact: onRequestContact,
         onScheduleVisit: onScheduleVisit,
+        onShareDetails: onShareDetails,
         accent: accent,
         tone: tone,
       ),
@@ -71,6 +76,16 @@ class ChatPlusMenuSheet extends StatelessWidget {
           onRequestContact();
         },
       ),
+      if (onShareDetails != null)
+        ChatSheetRow3D(
+          tone: t,
+          art: ListingArt.moneyBag,
+          label: StayShareStrings.shareAction,
+          onTap: () {
+            Navigator.pop(context);
+            onShareDetails!();
+          },
+        ),
       const ChatSheetDivider3D(),
       const ChatSheetLabel3D('Visit'),
       ChatSheetRow3D(

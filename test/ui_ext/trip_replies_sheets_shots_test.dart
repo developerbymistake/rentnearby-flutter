@@ -2,7 +2,6 @@ import 'dart:io';
 
 import 'package:bakhli/controllers/tab_config_controller.dart';
 import 'package:bakhli/features/stay/enquiries/stay_enquiry_actions.dart';
-import 'package:bakhli/features/stay/enquiries/trip_ask_advance_sheet.dart';
 import 'package:bakhli/features/stay/enquiries/trip_send_offer_sheet.dart';
 import 'package:bakhli/features/stay/models/stay_nearby_model.dart';
 import 'package:bakhli/features/stay/models/stay_owner_model.dart';
@@ -47,7 +46,7 @@ class _Supply extends TripSupplyController {
 
 String _iso(DateTime d) => d.toUtc().toIso8601String();
 
-Map<String, Object?> _offer(int perNight, int nights, {int? advance, String kind = 'Offer'}) => {
+Map<String, Object?> _offer(int perNight, int nights, {String kind = 'Offer'}) => {
       'id': 'of$perNight',
       'kind': kind,
       'nights': nights,
@@ -55,14 +54,13 @@ Map<String, Object?> _offer(int perNight, int nights, {int? advance, String kind
         {'roomName': 'Deluxe room', 'units': 1, 'guests': 2, 'pricePerNight': perNight},
       ],
       'total': perNight * nights,
-      'advanceAmount': ?advance,
       'cancellationText': 'Free till 2 days before',
       'validUntil': _iso(DateTime.now().add(const Duration(hours: 23))),
       'status': 'Pending',
     };
 
 TripEnquiryModel _stay(String id, String name, String display,
-    {String status = 'Asked', int? agreed, Map<String, Object?>? openOffer, Map<String, Object?>? change, Map<String, Object?>? advance, DateTime? start}) {
+    {String status = 'Asked', int? agreed, Map<String, Object?>? openOffer, Map<String, Object?>? change, DateTime? start}) {
   final j = enquiryJson(id: id, kind: 'Stay', status: status, start: start ?? journeyStart(), nights: 2, displayStatus: display, agreedTotal: agreed);
   return TripEnquiryModel.fromJson({
     ...j,
@@ -76,7 +74,6 @@ TripEnquiryModel _stay(String id, String name, String display,
     'context': {...(j['context'] as Map<String, Object?>), 'adults': 2, 'rooms': 1},
     'openOffer': ?openOffer,
     'pendingChange': ?change,
-    'advance': ?advance,
   });
 }
 
@@ -121,16 +118,11 @@ void main() {
   });
   tearDown(Get.reset);
 
-  final offered = _stay('a', 'Deodar Cottage', 'offered', status: 'Offered', openOffer: _offer(3600, 2, advance: 2000));
+  final offered = _stay('a', 'Deodar Cottage', 'offered', status: 'Offered', openOffer: _offer(3600, 2));
   final asked = _stay('b', 'Lakeside Rooms', 'asked');
   final confirmed = _stay('d', 'Himalayan View Homestay', 'confirmedByBoth', status: 'ConfirmedByBoth', agreed: 7200);
   final fareSent = _taxi('t1', 'fareSent', fare: 4500);
   final booked = _taxi('t2', 'confirmedByBoth', agreed: 4500, status: 'ConfirmedByBoth');
-  final withAdvance = _stay('e', 'Deodar Cottage', 'confirmedByBoth', status: 'ConfirmedByBoth', agreed: 7200, advance: {
-    'status': 'ProofSent',
-    'amount': 2000,
-    'holdUntil': _iso(DateTime.now().add(const Duration(hours: 4))),
-  });
   final withChange = _stay('f', 'Deodar Cottage', 'confirmedByBoth', status: 'ConfirmedByBoth', agreed: 7200, change: {
     ..._offer(3600, 2, kind: 'ChangeRequest'),
     'id': 'ch1',
@@ -160,9 +152,7 @@ void main() {
         ),
     'hi_offer': (c) => TripSendOfferSheet.show(c, enquiry: asked, stay: _stayOwner),
     'hi_revised': (c) => TripSendOfferSheet.show(c, enquiry: confirmed, stay: _stayOwner, revised: true),
-    'hi_advance': (c) => TripAskAdvanceSheet.show(c, enquiry: confirmed, stay: _stayOwner),
     'hi_na': (c) => StayEnquiryActions.notAvailable(c, asked),
-    'hi_mark': (c) => StayEnquiryActions.markReceived(c, withAdvance),
     'hi_change': (c) => StayEnquiryActions.acceptChange(c, withChange, 'ch1'),
     'rt_sheet': (c) => TripReportTravellerSheet.show(c, enquiry: asked),
     'se_stay': (c) => TripStayEnquirySheet.show(
@@ -235,12 +225,6 @@ void main() {
         await t.drag(find.byType(SingleChildScrollView).last, const Offset(0, -500));
       }
     ),
-    'hi_advance2': (
-      (c) => TripAskAdvanceSheet.show(c, enquiry: confirmed, stay: _stayOwner),
-      (t) async {
-        await t.tap(find.text(TripStrings.sendInChat));
-      }
-    ),
     'pr_other': (
       (c) => TripProblemSheet.show(c, day: 1),
       (t) async {
@@ -305,4 +289,26 @@ void main() {
       debugDisableShadows = true;
     });
   }
+  testWidgets('send offer body carries no advance amount', (t) async {
+    final api = installFakeApi([FakeRoute.value('POST', '/trips/enquiries/{id}/offers', null, code: 400, errorType: 'Stub')]);
+    await pumpPhone(
+      t,
+      Builder(builder: (c) => Scaffold(body: Center(child: TextButton(onPressed: () => TripSendOfferSheet.show(c, enquiry: asked, stay: _stayOwner), child: const Text('go'))))),
+      size: const Size(360, 800),
+      devicePixelRatio: 1.5,
+    );
+    await t.tap(find.text('go'));
+    await t.pump();
+    await settlePhone(t);
+    expect(find.textContaining('dvance'), findsNothing);
+    await t.tap(find.text(TripStrings.sendOffer).last);
+    await t.pump(const Duration(milliseconds: 500));
+    final sent = api.calls('POST', '/trips/enquiries/${asked.id}/offers');
+    expect(sent, hasLength(1));
+    final body = sent.single.data as Map;
+    expect(body.containsKey('advanceAmount'), isFalse);
+    expect(body['lines'], isNotEmpty);
+    await t.pumpWidget(const SizedBox());
+    await t.pump(const Duration(seconds: 5));
+  });
 }

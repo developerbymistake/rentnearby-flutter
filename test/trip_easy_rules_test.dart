@@ -65,7 +65,6 @@ TripEnquiryModel _stay(
   DateTime? checkIn,
   DateTime? checkOut,
   int? day,
-  TripAdvanceModel advance = const TripAdvanceModel(),
   TripOfferModel? revised,
   String name = 'Deodar Homestay',
   DateTime? updatedAt,
@@ -78,7 +77,6 @@ TripEnquiryModel _stay(
       day: day,
       checkIn: checkIn ?? DateTime(2026, 11, 20),
       checkOut: checkOut ?? DateTime(2026, 11, 22),
-      advance: advance,
       pendingRevised: revised,
       updatedAt: updatedAt,
     );
@@ -189,9 +187,7 @@ void main() {
       expect(r.state.isDone, isTrue);
     });
 
-    test('confirmed needs you for a pending advance, a pending revised offer or another live offer', () {
-      final adv = _stay('e1', TripEnquiryStatuses.confirmedByBoth, advance: const TripAdvanceModel(status: TripAdvanceStatuses.pending));
-      expect(_row(_rows(_plan(), [adv]), _stay1).needsYou, isTrue);
+    test('confirmed needs you only for a pending revised offer or another live offer', () {
       final rev = _stay('e1', TripEnquiryStatuses.confirmedByBoth, revised: const TripOfferModel(id: 'o1'));
       expect(_row(_rows(_plan(), [rev]), _stay1).needsYou, isTrue);
       final other = [_stay('e1', TripEnquiryStatuses.confirmedByBoth), _stay('e2', TripEnquiryStatuses.offered)];

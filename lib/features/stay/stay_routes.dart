@@ -4,7 +4,7 @@ import '../../design/design.dart';
 import 'enquiries/stay_enquiries_screen.dart';
 import 'guest/stay_detail_screen.dart';
 import 'setup/my_stays_screen.dart';
-import 'setup/stay_advance_details_screen.dart';
+import 'setup/stay_share_details_screen.dart';
 import 'setup/stay_basic_details_screen.dart';
 import 'setup/stay_rooms_screen.dart';
 import 'setup/stay_rules_screen.dart';
@@ -55,8 +55,8 @@ final List<GetPage> stayPages = [
     transitionDuration: templateTransitionDuration,
   ),
   GetPage(
-    name: AppRoutes.stayAdvanceDetails,
-    page: () => const StayAdvanceDetailsScreen(),
+    name: AppRoutes.stayShareDetails,
+    page: () => const StayShareDetailsScreen(),
     customTransition: TemplateTransition(),
     transitionDuration: templateTransitionDuration,
   ),

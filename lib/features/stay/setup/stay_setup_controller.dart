@@ -63,8 +63,8 @@ class StaySetupController extends GetxController {
   Future<bool> updateRoomPrice(String roomId, int price) =>
       _mutate(() => _repo.updateRoomPrice(roomId, price), 'Could not update the price.');
 
-  Future<bool> saveAdvanceDetails({String? upiId, String? whatsAppNumber}) =>
-      _mutate(() => _repo.saveAdvanceDetails(upiId: upiId, whatsAppNumber: whatsAppNumber), TripStrings.couldNotLoad);
+  Future<bool> saveShareDetails({String? upiId, String? whatsAppNumber}) =>
+      _mutate(() => _repo.saveShareDetails(upiId: upiId, whatsAppNumber: whatsAppNumber), TripStrings.couldNotLoad);
 
   Future<bool> deleteStay() async {
     try {

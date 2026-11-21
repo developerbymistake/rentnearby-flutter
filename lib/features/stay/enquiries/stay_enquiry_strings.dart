@@ -8,7 +8,6 @@ class StayEnquiryStrings {
   static const String roomName = 'Room name';
   static const String removeRoom = 'Remove room';
   static const String enterPrice = 'Enter a price for every room';
-  static const String advanceTooHigh = 'Advance cannot be more than the total';
   static const String datesInvalid = 'Check-out must be after check-in';
   static const String inclusions = 'Inclusions';
   static const String optional = 'Optional';

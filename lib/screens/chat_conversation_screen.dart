@@ -7,11 +7,9 @@ import 'package:bakhli/design/extra/chat_kit.dart';
 import 'package:bakhli/design/extra/ext_chat.dart';
 import '../config/app_routes.dart';
 import '../controllers/chat_controller.dart';
-import '../features/stay/enquiries/stay_enquiries_controller.dart';
 import '../features/stay/enquiries/stay_enquiry_actions.dart';
 import '../features/stay/enquiries/trip_owner_action_bar.dart';
 import '../features/trip/controllers/trip_enquiry_controller.dart';
-import '../features/trip/data/trip_enquiry_repository.dart';
 import '../features/trip/controllers/trip_plan_controller.dart';
 import '../features/trip/models/trip_enquiry_model.dart';
 import '../features/trip/trip_navigation.dart';
@@ -29,11 +27,11 @@ import '../models/question_template_model.dart';
 import '../services/chat_hub_service.dart';
 import '../services/notification_service.dart';
 import '../utils/app_toast.dart';
-import '../utils/contact_launcher.dart';
 import '../widgets/chat_message_bubble.dart';
 import '../widgets/chat_next_slot_bubble.dart';
 import '../widgets/chat_plus_menu_sheet.dart';
 import '../widgets/chat_schedule_picker_sheet.dart';
+import '../widgets/stay_contact_share_card.dart';
 import '../widgets/trip_chat_cards.dart';
 import '../widgets/trip_offer_cards.dart';
 import '../widgets/trip_report_traveller_sheet.dart';
@@ -65,7 +63,6 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> with Wi
   bool _enquiryBusy = false;
   bool _enquiryDirty = false;
   String? _focusEnquiryId;
-  bool _movedOn = false;
   final _status = ''.obs;
   // Only meaningful when _status.value == 'Blocked' — true if the CURRENT user did the
   // blocking. Never inferred from _isOwner (either party can block the other regardless of
@@ -290,9 +287,6 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> with Wi
         if (await TripWithdrawSheet.show(context, enquiry: e)) _refreshEnquiry();
       case TripStripAction.cancel:
         if (await TripCancelSheet.show(context, enquiry: e, ownerSide: false)) _refreshEnquiry();
-      case TripStripAction.callHost:
-        final phone = e.owner.phone;
-        if (phone != null && phone.isNotEmpty) await ContactLauncher.call(phone);
       case TripStripAction.report:
         await _reportHost(e.listingId, enquiryId: e.id);
       case TripStripAction.counter:
@@ -464,39 +458,6 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> with Wi
       if (await TripEnquiryController.to.decline(enquiryId, offerId)) _refreshEnquiry();
     } finally {
       _pendingActionMessageIds.remove(messageId);
-    }
-  }
-
-  Future<void> _proofSent(String enquiryId) async {
-    if (!_pendingActionMessageIds.add('proof:$enquiryId')) return;
-    try {
-      if (await TripEnquiryController.to.proofSent(enquiryId)) _refreshEnquiry();
-    } finally {
-      _pendingActionMessageIds.remove('proof:$enquiryId');
-    }
-  }
-
-  Future<void> _markReceived(String enquiryId) async {
-    if (!_pendingActionMessageIds.add('recv:$enquiryId')) return;
-    try {
-      final ctrl = StayEnquiriesController.ensure();
-      if (await ctrl.markReceived(enquiryId)) {
-        if (mounted) setState(() => _movedOn = false);
-      } else if (ctrl.lastErrorType == TripEnquiryErrorTypes.travellerMovedOn && mounted) {
-        setState(() => _movedOn = true);
-      }
-      _refreshEnquiry();
-    } finally {
-      _pendingActionMessageIds.remove('recv:$enquiryId');
-    }
-  }
-
-  Future<void> _notYet(String enquiryId) async {
-    if (!_pendingActionMessageIds.add('notyet:$enquiryId')) return;
-    try {
-      if (await StayEnquiriesController.ensure().notYet(enquiryId)) _refreshEnquiry();
-    } finally {
-      _pendingActionMessageIds.remove('notyet:$enquiryId');
     }
   }
 
@@ -728,6 +689,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> with Wi
         onAskQuestion: (q) => _send('quick_reply', {'key': q.key, 'text': q.questionText}),
         onRequestContact: () => _send('contact_request', {}),
         onScheduleVisit: _pickAndProposeSchedule,
+        onShareDetails: _canShareDetails ? _shareDetails : null,
         accent: _accent,
         tone: _tone,
       );
@@ -761,6 +723,13 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> with Wi
     } finally {
       if (mounted) _sending.value = false;
     }
+  }
+
+  bool get _canShareDetails => _isOwner && _isStay;
+
+  Future<void> _shareDetails() async {
+    if (!await StayEnquiryActions.confirmShare(context) || !mounted) return;
+    await _send(StayContactShareCard.type, const {});
   }
 
   Future<void> _pickAndProposeSchedule() async {
@@ -977,7 +946,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> with Wi
         items.add(
           KeyedSubtree(
             key: const ValueKey('trip-owner-bar'),
-            child: TripOwnerActionBar(enquiry: enquiry, onChanged: _refreshEnquiry),
+            child: TripOwnerActionBar(enquiry: enquiry, onChanged: _refreshEnquiry, onShare: _canShareDetails ? _shareDetails : null),
           ),
         );
       }
@@ -1023,7 +992,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> with Wi
   // Always visible for both sides; the platform takes no part in off-app payments.
   Widget _buildSafetyStrip() {
     return const ChatSafetyNote3D(
-      text: 'Bakhli never collects rent or advance. Always meet and visit before paying.',
+      text: 'Bakhli never collects payment. Always meet and visit before paying.',
     );
   }
 
@@ -1235,9 +1204,6 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> with Wi
       onAccept: enabled && !_isOwner ? (e, o) => _acceptOffer(m.id, e, o) : null,
       onDecline: enabled && !_isOwner ? (e, o) => _declineOffer(m.id, e, o) : null,
       onAskNewOffer: active && !_isOwner ? _openPlusMenu : null,
-      onProofSent: enabled && !_isOwner ? _proofSent : null,
-      onMarkReceived: enabled && _isOwner ? _markReceived : null,
-      onNotYet: enabled && _isOwner ? _notYet : null,
       onAcceptPrice: enabled && _isOwner ? (e, o) => _hostAcceptPrice(m.id, e, o) : null,
       onSendDifferentOffer: enabled && _isOwner ? (e, o) => _hostDifferentOffer(m.id, e, o) : null,
       onAcceptChange: enabled && _isOwner ? (e, o) => _hostAcceptChange(m.id, e, o) : null,
@@ -1245,13 +1211,11 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> with Wi
       onKeepPrice: enabled && !_isOwner ? (e, o) => _keepPrice(m.id, e, o) : null,
       onCancelStay: enabled && !_isOwner ? (e) => _cancelStay(m.id, e) : null,
       agreedTotal: _enquiry.value?.agreedTotalLocked,
-      advance: _enquiry.value?.advance,
       guestName: _enquiry.value?.traveller.name ?? (_isOwner ? _otherPartyName : null),
       guestPhone: _enquiry.value?.traveller.phone,
       hostPhone: _enquiry.value?.owner.phone,
       tripId: _enquiry.value?.tripId,
       day: _enquiry.value?.day,
-      movedOn: _movedOn,
     );
   }
 

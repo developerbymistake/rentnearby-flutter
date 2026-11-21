@@ -133,7 +133,6 @@ void main() {
       'Trips tab card': 'lib/features/trip/screens/trips_discovery_screen.dart',
       'My trips': 'lib/features/trip/screens/my_trips_screen.dart',
       'saved journey strip': 'lib/features/taxi/journeys/widgets/journey_trip_strip.dart',
-      'chat cards': 'lib/widgets/trip_advance_cards.dart',
     };
     for (final e in entries.entries) {
       test(e.key, () {

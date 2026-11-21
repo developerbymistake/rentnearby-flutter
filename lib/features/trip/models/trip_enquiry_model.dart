@@ -42,19 +42,9 @@ class TripEnquiryStatuses {
   static const List<String> booked = [confirmedByTraveller, confirmedByBoth, bookedByTraveller];
 }
 
-class TripAdvanceStatuses {
-  static const String none = 'None';
-  static const String pending = 'Pending';
-  static const String proofSent = 'ProofSent';
-  static const String received = 'Received';
-  static const String holdExpired = 'HoldExpired';
-  static const String driverPaused = 'DriverPaused';
-}
-
 class TripFailReasons {
   static const String hostDenied = 'HostDenied';
   static const String driverDenied = 'DriverDenied';
-  static const String holdExpired = 'HoldExpired';
   static const String driverPaused = 'DriverPaused';
 }
 
@@ -154,60 +144,6 @@ class TripEnquiryContext {
   }
 }
 
-class TripAdvanceModel {
-  final String status;
-  final int? amount;
-  final DateTime? holdUntil;
-  final DateTime? askedAt;
-  final DateTime? proofSentAt;
-  final DateTime? receivedAt;
-  final DateTime? notYetAt;
-  final DateTime? lastHostReminderAt;
-  final DateTime? nextHostReminderAt;
-  final int reminderCount;
-
-  const TripAdvanceModel({
-    this.status = TripAdvanceStatuses.none,
-    this.amount,
-    this.holdUntil,
-    this.askedAt,
-    this.proofSentAt,
-    this.receivedAt,
-    this.notYetAt,
-    this.lastHostReminderAt,
-    this.nextHostReminderAt,
-    this.reminderCount = 0,
-  });
-
-  bool get isPending => status == TripAdvanceStatuses.pending;
-  bool get isProofSent => status == TripAdvanceStatuses.proofSent;
-  bool get isReceived => status == TripAdvanceStatuses.received;
-  bool get isHoldExpired => status == TripAdvanceStatuses.holdExpired;
-  bool get hasRequest => status != TripAdvanceStatuses.none;
-  bool get isOpenRequest => isPending || isProofSent;
-
-  bool holdPassed(DateTime now) {
-    final h = holdUntil;
-    return h != null && !h.isAfter(now);
-  }
-
-  factory TripAdvanceModel.fromJson(Map<String, dynamic>? json) {
-    if (json == null) return const TripAdvanceModel();
-    return TripAdvanceModel(
-      status: json['status'] as String? ?? TripAdvanceStatuses.none,
-      amount: (json['amount'] as num?)?.toInt(),
-      holdUntil: tripInstant(json['holdUntil']),
-      askedAt: tripInstant(json['askedAt']),
-      proofSentAt: tripInstant(json['proofSentAt']),
-      receivedAt: tripInstant(json['receivedAt']),
-      notYetAt: tripInstant(json['notYetAt']),
-      lastHostReminderAt: tripInstant(json['lastHostReminderAt']),
-      nextHostReminderAt: tripInstant(json['nextHostReminderAt']),
-      reminderCount: (json['reminderCount'] as num?)?.toInt() ?? 0,
-    );
-  }
-}
-
 class TripTaxiModel {
   final int? listedRate;
   final int? listedTotal;
@@ -297,7 +233,6 @@ class TripEnquiryModel {
   final TripOfferModel? openOffer;
   final int offerCount;
   final TripEnquiryContext context;
-  final TripAdvanceModel advance;
   final TripPartyModel traveller;
   final TripPartyModel owner;
   final String? cancelledBy;
@@ -345,7 +280,6 @@ class TripEnquiryModel {
     this.openOffer,
     this.offerCount = 0,
     this.context = const TripEnquiryContext(),
-    this.advance = const TripAdvanceModel(),
     this.traveller = const TripPartyModel(),
     this.owner = const TripPartyModel(),
     this.cancelledBy,
@@ -421,12 +355,6 @@ class TripEnquiryModel {
   bool coversTaxiDate(DateTime d) {
     final x = DateTime(d.year, d.month, d.day);
     return taxiDates.any((t) => t == x);
-  }
-
-  String? get advanceLabel {
-    if (isTaxi || !isConfirmedByBoth || !advance.hasRequest) return null;
-    final label = TripStatusVisuals.advanceLabel(advance);
-    return label.isEmpty ? null : label;
   }
 
   bool get isOpen => TripEnquiryStatuses.open.contains(status);
@@ -522,7 +450,6 @@ class TripEnquiryModel {
       openOffer: offer('openOffer'),
       offerCount: (json['offerCount'] as num?)?.toInt() ?? 0,
       context: TripEnquiryContext.fromJson(json['context'] as Map<String, dynamic>?),
-      advance: TripAdvanceModel.fromJson(json['advance'] as Map<String, dynamic>?),
       traveller: TripPartyModel.fromJson(json['traveller'] as Map<String, dynamic>?),
       owner: TripPartyModel.fromJson(json['owner'] as Map<String, dynamic>?),
       cancelledBy: json['cancelledBy'] as String?,

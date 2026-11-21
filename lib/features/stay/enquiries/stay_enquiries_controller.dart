@@ -215,31 +215,6 @@ class StayEnquiriesController extends GetxController {
   Future<bool> notAvailable(String enquiryId) async =>
       await _act<TripEnquiryModel>(enquiryId, () => _repo.notAvailable(enquiryId), TripStrings.couldNotLoad, (r) => r) != null;
 
-  Future<bool> askAdvance(
-    String id, {
-    required int amount,
-    required DateTime holdUntil,
-    required String upiId,
-    required String whatsAppNumber,
-  }) async =>
-      await _act<TripEnquiryModel>(
-        id,
-        () => _repo.askAdvance(id, amount: amount, holdUntil: holdUntil, upiId: upiId, whatsAppNumber: whatsAppNumber),
-        TripStrings.couldNotLoad,
-        (r) => r,
-        inline: true,
-      ) !=
-      null;
-
-  Future<bool> markReceived(String id) async =>
-      await _act<TripEnquiryModel>(id, () => _repo.advanceReceived(id), TripStrings.couldNotLoad, (r) => r) != null;
-
-  Future<bool> notYet(String id) async {
-    final ok = await _act<TripEnquiryModel>(id, () => _repo.advanceNotYet(id), TripStrings.couldNotLoad, (r) => r) != null;
-    if (ok) AppToast.info(TripStrings.notYetNoted);
-    return ok;
-  }
-
   Future<void> afterExternalChange(String enquiryId) async {
     await refreshOne(enquiryId);
     await loadBadge();
@@ -267,9 +242,7 @@ class StayEnquiriesController extends GetxController {
       lastErrorMessage = DioErrorMapper.serverMessage(e);
       final status = e is DioException ? e.response?.statusCode : null;
       final showInline = inline && lastErrorMessage != null && (status == 400 || status == 409 || status == 422);
-      if (lastErrorType == TripEnquiryErrorTypes.travellerMovedOn) {
-        AppToast.warning(TripStrings.guestMovedOn);
-      } else if (limitMessage != null && lastErrorType == _offerLimit) {
+      if (limitMessage != null && lastErrorType == _offerLimit) {
         AppToast.warning(limitMessage);
       } else if (!showInline) {
         _toastError(e, fallback);

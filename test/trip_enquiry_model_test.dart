@@ -37,7 +37,6 @@ void main() {
           ],
           'total': 3800,
           'inclusions': 'Breakfast',
-          'advanceAmount': 500,
           'balanceNote': 'at check-in',
           'cancellationText': 'Free till 24 h before',
           'gstInvoice': false,
@@ -60,7 +59,6 @@ void main() {
           ],
           'text': 'Hi, trip to Nainital.',
         },
-        'advance': {'status': 'None'},
         'taxi': null,
         'traveller': {'id': 'u1', 'name': 'Rahul', 'phone': null},
         'owner': {'id': 'u2', 'name': 'Ramesh', 'phone': '9876543210', 'whatsApp': null},
@@ -93,7 +91,6 @@ void main() {
     expect(o.total, 3800);
     expect(o.lines.single.roomName, 'Deluxe');
     expect(o.lines.single.pricePerNight, 1900);
-    expect(o.advanceAmount, 500);
     expect(o.status, 'Pending');
     expect(o.datesDiffer, isFalse);
   });
@@ -216,7 +213,6 @@ void main() {
     ..['status'] = 'FareSent'
     ..['displayStatus'] = 'fareSent'
     ..['openOffer'] = null
-    ..['advance'] = {'status': 'None'}
     ..['taxi'] = {
       'listedRate': 1800,
       'listedTotal': 3600,
@@ -277,62 +273,23 @@ void main() {
     expect(e.taxi!.bookedAt, isNotNull);
   });
 
-  test('hold expired and fare sent display statuses', () {
-    final held = TripEnquiryModel.fromJson(full()
+  test('an old holdExpired wire status reads as none and fare sent stays open', () {
+    final old = TripEnquiryModel.fromJson(full()
       ..['status'] = 'Failed'
       ..['displayStatus'] = 'holdExpired');
-    expect(held.display, TripDisplayStatus.holdExpired);
-    expect(held.isRed, isTrue);
+    expect(old.display, TripDisplayStatus.none);
     expect(TripEnquiryModel.fromJson(taxi()).isOpen, isTrue);
   });
 
-  test('advance fields', () {
+  test('an old payload with an advance block and offer advanceAmount still parses', () {
     final j = full()
       ..['status'] = 'ConfirmedByBoth'
       ..['displayStatus'] = 'confirmedByBoth'
-      ..['advance'] = {
-        'status': 'ProofSent',
-        'amount': 500,
-        'holdUntil': '2026-11-01T12:30:00Z',
-        'askedAt': '2026-10-31T06:30:00Z',
-        'proofSentAt': '2026-10-31T08:00:00Z',
-        'receivedAt': null,
-        'notYetAt': '2026-10-31T09:00:00Z',
-        'lastHostReminderAt': '2026-10-31T09:00:00Z',
-        'nextHostReminderAt': '2026-10-31T10:00:00Z',
-        'reminderCount': 3,
-      };
-    final a = TripEnquiryModel.fromJson(j).advance;
-    expect(a.status, 'ProofSent');
-    expect(a.amount, 500);
-    expect(a.holdUntil, DateTime.utc(2026, 11, 1, 12, 30));
-    expect(a.askedAt, DateTime.utc(2026, 10, 31, 6, 30));
-    expect(a.proofSentAt, DateTime.utc(2026, 10, 31, 8));
-    expect(a.receivedAt, isNull);
-    expect(a.notYetAt, DateTime.utc(2026, 10, 31, 9));
-    expect(a.nextHostReminderAt, DateTime.utc(2026, 10, 31, 10));
-    expect(a.reminderCount, 3);
-    expect(a.isProofSent, isTrue);
-    expect(a.isPending, isFalse);
-    expect(a.isReceived, isFalse);
-    expect(a.isHoldExpired, isFalse);
-    expect(a.hasRequest, isTrue);
-  });
-
-  test('advance defaults to none', () {
-    final a = TripEnquiryModel.fromJson({'id': 'e3', 'status': 'ConfirmedByBoth'}).advance;
-    expect(a.status, 'None');
-    expect(a.hasRequest, isFalse);
-    expect(a.isPending, isFalse);
-    expect(a.reminderCount, 0);
-  });
-
-  test('holdPassed compares with now', () {
-    final a = TripAdvanceModel(status: 'Pending', holdUntil: DateTime.utc(2026, 11, 1, 12));
-    expect(a.holdPassed(DateTime.utc(2026, 11, 1, 11, 59)), isFalse);
-    expect(a.holdPassed(DateTime.utc(2026, 11, 1, 12)), isTrue);
-    expect(a.holdPassed(DateTime.utc(2026, 11, 1, 13)), isTrue);
-    expect(const TripAdvanceModel(status: 'Pending').holdPassed(DateTime.utc(2030)), isFalse);
+      ..['advance'] = {'status': 'ProofSent', 'amount': 500, 'holdUntil': '2026-11-01T12:30:00Z'};
+    (j['openOffer'] as Map<String, dynamic>)['advanceAmount'] = 500;
+    final e = TripEnquiryModel.fromJson(j);
+    expect(e.isConfirmedByBoth, isTrue);
+    expect(e.openOffer!.total, 3800);
   });
 
   test('driver lead page parses counts', () {

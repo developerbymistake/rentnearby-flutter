@@ -15,9 +15,6 @@ class TripEnquiryErrorTypes {
   static const String concurrent = 'CONCURRENT_UPDATE';
   static const String notOwner = 'NotEnquiryOwner';
   static const String notTraveller = 'NotEnquiryTraveller';
-  static const String advanceNotAllowed = 'AdvanceNotAllowed';
-  static const String holdExpired = 'HoldExpired';
-  static const String travellerMovedOn = 'TravellerMovedOn';
   static const String fareEditLimit = 'FareEditLimit';
   static const String dayAlreadyBooked = 'DayAlreadyBooked';
   static const String leadLimit = 'LeadLimitReached';
@@ -95,24 +92,6 @@ class TripEnquiryRepository {
         'journeyId': journeyId,
         'journeyLegIndex': journeyLegIndex,
       });
-
-  Future<TripEnquiryModel> askAdvance(String enquiryId,
-          {required int amount, required DateTime holdUntil, required String upiId, required String whatsAppNumber}) async =>
-      _one(await ApiService.post('/trips/enquiries/$enquiryId/advance/ask', {
-        'amount': amount,
-        'holdUntil': holdUntil.toUtc().toIso8601String(),
-        'upiId': upiId,
-        'whatsAppNumber': whatsAppNumber,
-      }));
-
-  Future<TripEnquiryModel> proofSent(String enquiryId) async =>
-      _one(await ApiService.post('/trips/enquiries/$enquiryId/advance/proof-sent', const {}));
-
-  Future<TripEnquiryModel> advanceReceived(String enquiryId) async =>
-      _one(await ApiService.post('/trips/enquiries/$enquiryId/advance/received', const {}));
-
-  Future<TripEnquiryModel> advanceNotYet(String enquiryId) async =>
-      _one(await ApiService.post('/trips/enquiries/$enquiryId/advance/not-yet', const {}));
 
   Future<TripEnquiryModel> updateLead(String enquiryId) async =>
       _one(await ApiService.post('/trips/enquiries/$enquiryId/lead-update', const {}));

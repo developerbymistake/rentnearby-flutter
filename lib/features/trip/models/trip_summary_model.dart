@@ -47,8 +47,6 @@ class TripSummaryNight {
   final String displayStatus;
   final List<TripSummaryRoom> roomLines;
   final int? agreedTotal;
-  final String? advanceStatus;
-  final int? advanceAmount;
   final String? cancellationText;
   final bool? gstInvoice;
   final String? confirmedBy;
@@ -63,8 +61,6 @@ class TripSummaryNight {
     this.displayStatus = 'none',
     this.roomLines = const [],
     this.agreedTotal,
-    this.advanceStatus,
-    this.advanceAmount,
     this.cancellationText,
     this.gstInvoice,
     this.confirmedBy,
@@ -80,8 +76,6 @@ class TripSummaryNight {
         displayStatus: json['displayStatus'] as String? ?? 'none',
         roomLines: _list(json['roomLines'], TripSummaryRoom.fromJson),
         agreedTotal: (json['agreedTotal'] as num?)?.toInt(),
-        advanceStatus: json['advanceStatus'] as String?,
-        advanceAmount: (json['advanceAmount'] as num?)?.toInt(),
         cancellationText: json['cancellationText'] as String?,
         gstInvoice: json['gstInvoice'] as bool?,
         confirmedBy: json['confirmedBy'] as String?,

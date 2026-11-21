@@ -43,7 +43,6 @@ Map<String, Object?> _stayJson(
   bool urgent = false,
   int? agreed,
   Map<String, Object?>? openOffer,
-  Map<String, Object?>? advance,
   Map<String, Object?>? counter,
   Map<String, Object?>? revised,
   String? failReason,
@@ -65,14 +64,13 @@ Map<String, Object?> _stayJson(
       'rooms': 1,
     },
     'openOffer': ?openOffer,
-    'advance': ?advance,
     'pendingCounter': ?counter,
     'pendingRevised': ?revised,
     'failReason': ?failReason,
   };
 }
 
-Map<String, Object?> _offer(int perNight, int nights, {int? advance, String kind = 'Offer'}) => {
+Map<String, Object?> _offer(int perNight, int nights, {String kind = 'Offer'}) => {
       'id': 'of$perNight',
       'kind': kind,
       'nights': nights,
@@ -80,7 +78,6 @@ Map<String, Object?> _offer(int perNight, int nights, {int? advance, String kind
         {'roomName': 'Deluxe room', 'units': 1, 'guests': 2, 'pricePerNight': perNight},
       ],
       'total': perNight * nights,
-      'advanceAmount': ?advance,
       'validUntil': _iso(DateTime.now().add(const Duration(hours: 23))),
       'status': 'Pending',
     };
@@ -152,7 +149,7 @@ void main() {
   }
 
   final listData = [
-    _stayJson('a', 'Deodar Cottage', 'offered', status: 'Offered', openOffer: _offer(3600, 2, advance: 2000)),
+    _stayJson('a', 'Deodar Cottage', 'offered', status: 'Offered', openOffer: _offer(3600, 2)),
     _stayJson('b', 'Lakeside Rooms', 'asked', urgent: true),
   ];
 
@@ -186,12 +183,8 @@ void main() {
 
   testWidgets('sr_conf', (t) async {
     boot([
-      _stayJson('a', 'Deodar Cottage', 'confirmedByBoth', status: 'ConfirmedByBoth', agreed: 7200, advance: {
-        'status': 'Pending',
-        'amount': 2000,
-        'holdUntil': _iso(DateTime.now().add(const Duration(hours: 4))),
-      }),
-      _stayJson('c', 'Pine Ridge Stay', 'confirmedByBoth', status: 'ConfirmedByBoth', agreed: 4800, advance: {'status': 'Received', 'amount': 1500}),
+      _stayJson('a', 'Deodar Cottage', 'confirmedByBoth', status: 'ConfirmedByBoth', agreed: 7200),
+      _stayJson('c', 'Pine Ridge Stay', 'confirmedByBoth', status: 'ConfirmedByBoth', agreed: 4800),
     ]);
     await _open(t, const TripRepliesScreen());
     await _snap(t, 'sr_conf');
@@ -200,11 +193,7 @@ void main() {
 
   testWidgets('sr_ended', (t) async {
     boot([
-      _stayJson('b', 'Lakeside Rooms', 'holdExpired', status: 'ConfirmedByBoth', agreed: 6400, advance: {
-        'status': 'HoldExpired',
-        'amount': 2000,
-        'holdUntil': _iso(DateTime.now().subtract(const Duration(hours: 1))),
-      }),
+      _stayJson('b', 'Lakeside Rooms', 'notAvailable', status: 'NotAvailable'),
       _stayJson('d', 'Himalayan View Homestay', 'notMe', status: 'Failed'),
     ]);
     await _open(t, const TripRepliesScreen());

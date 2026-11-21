@@ -13,7 +13,6 @@ import '../utils/app_toast.dart';
 import '../features/trip/widgets/trip_status.dart';
 import '../models/browse_item.dart';
 import '../models/message_model.dart';
-import 'trip_advance_cards.dart';
 import 'trip_offer_cards.dart';
 
 class TripChatCallbacks {
@@ -21,16 +20,11 @@ class TripChatCallbacks {
   final void Function(String enquiryId, String offerId)? onDecline;
   final VoidCallback? onAskNewOffer;
   final void Function(String phone)? onCall;
-  final void Function(String enquiryId)? onProofSent;
-  final void Function(String enquiryId)? onMarkReceived;
-  final void Function(String enquiryId)? onNotYet;
-  final TripAdvanceModel? advance;
   final String? guestName;
   final String? guestPhone;
   final String? hostPhone;
   final String? tripId;
   final int? day;
-  final bool movedOn;
   final String listingTitle;
   final void Function(String enquiryId, String offerId)? onAcceptPrice;
   final void Function(String enquiryId, String offerId)? onSendDifferentOffer;
@@ -46,16 +40,11 @@ class TripChatCallbacks {
     this.onDecline,
     this.onAskNewOffer,
     this.onCall,
-    this.onProofSent,
-    this.onMarkReceived,
-    this.onNotYet,
-    this.advance,
     this.guestName,
     this.guestPhone,
     this.hostPhone,
     this.tripId,
     this.day,
-    this.movedOn = false,
     this.listingTitle = '',
     this.onAcceptPrice,
     this.onSendDifferentOffer,
@@ -75,8 +64,6 @@ class TripChatCards {
     'trip_enquiry',
     'trip_offer',
     'trip_offer_response',
-    TripAdvanceCards.requestType,
-    TripAdvanceCards.proofType,
     TripOfferCards.counterType,
     TripOfferCards.revisedType,
     TripOfferCards.changeType,
@@ -109,10 +96,6 @@ class TripChatCards {
         return _offer(context, message, p, isOwner, accent, cb);
       case 'trip_offer_response':
         return bubble(message, _offerResponseText(p));
-      case TripAdvanceCards.requestType:
-        return TripAdvanceCards.request(context, message, isOwner: isOwner, accent: accent, callbacks: cb);
-      case TripAdvanceCards.proofType:
-        return TripAdvanceCards.proofSent(context, message, isOwner: isOwner, accent: accent, callbacks: cb);
       case TripOfferCards.counterType:
         return TripOfferCards.counter(context, message, isOwner: isOwner, accent: accent, callbacks: cb);
       case TripOfferCards.revisedType:
@@ -163,7 +146,6 @@ class TripChatCards {
     final total = _num(p, 'total');
     final nights = _int(p, 'nights');
     final range = _range(p);
-    final advance = _num(p, 'advanceAmount');
     final balanceNote = _str(p, 'balanceNote');
     final cancelText = _str(p, 'cancellationText');
     final inclusions = _str(p, 'inclusions');
@@ -199,7 +181,6 @@ class TripChatCards {
         line: [if (nights != null) TripStrings.nights(nights), ?range].join(' · '),
         rows: [
           if (total != null) ReplyRow(TripStrings.total, BrowseItem.inr(total)),
-          if (advance != null && advance > 0) ReplyRow(TripStrings.advance, BrowseItem.inr(advance)),
           if (balanceNote != null && balanceNote.isNotEmpty) ReplyRow(TripStrings.balance, balanceNote),
           if (cancelText != null && cancelText.isNotEmpty) ReplyRow(TripStrings.cancellationTerms, cancelText),
           if (gst) const ReplyRow(TripStrings.gstInvoice, TripStrings.yes),
