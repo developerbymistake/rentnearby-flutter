@@ -5,6 +5,7 @@ import 'package:bakhli/design/extra/trip_plan_look.dart';
 import 'package:flutter/material.dart';
 
 import '../../models/taxi_request_models.dart';
+import '../../trip_strings_dated_price.dart';
 import '../../trip_strings_taxi_status.dart';
 
 enum TaxiDriverMode { choose, selected, onHold }
@@ -49,6 +50,11 @@ class TaxiDriverIdentity extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(driver.name, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(15, FontWeight.w700, Ink3D.title, letterSpacing: 0)),
+        if (driver.isFeatured)
+          Padding(
+            padding: DS.insets(t: 4, b: 2),
+            child: const TaxiStateChip(key: ValueKey('driver_featured'), label: TripStringsDatedPrice.featured, positive: true),
+          ),
         if (showRating && avg != null)
           Wrap(
             crossAxisAlignment: WrapCrossAlignment.center,

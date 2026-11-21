@@ -271,6 +271,7 @@ class TaxiDriverCard {
   final int ridesCompleted;
   final bool canSelect;
   final String? confirmBy;
+  final bool isFeatured;
 
   const TaxiDriverCard({
     required this.offerId,
@@ -284,6 +285,7 @@ class TaxiDriverCard {
     required this.ridesCompleted,
     required this.canSelect,
     required this.confirmBy,
+    this.isFeatured = false,
   });
 
   factory TaxiDriverCard.fromJson(Map<String, dynamic> j) => TaxiDriverCard(
@@ -298,6 +300,7 @@ class TaxiDriverCard {
         ridesCompleted: _int(j['ridesCompleted']),
         canSelect: _bool(j['canSelect']),
         confirmBy: _strOrNull(j['confirmBy']),
+        isFeatured: _bool(j['isFeatured']),
       );
 
   Map<String, dynamic> toJson() => {
@@ -312,6 +315,7 @@ class TaxiDriverCard {
         'ridesCompleted': ridesCompleted,
         'canSelect': canSelect,
         'confirmBy': confirmBy,
+        'isFeatured': isFeatured,
       };
 
   OfferState get state => OfferState.parse(stateText);
