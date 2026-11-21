@@ -27,13 +27,15 @@ Widget _inbox(List<Widget> children) => Scaffold(
       ),
     );
 
-Notice _stored(String kind, {int? amount, String? ref, String actor = 'Rahul', String trip = 'Uttarakhand Hills Trip', int count = 1}) => Notice(
+Notice _stored(String kind, {int? amount, String? ref, String? refTitle, int? travellers, String actor = 'Rahul', String trip = 'Uttarakhand Hills Trip', int count = 1}) => Notice(
       id: 'n',
       kind: kind,
       tripId: 't',
       tripTitle: trip,
       actorName: actor,
       amount: amount,
+      refTitle: refTitle,
+      travellers: travellers,
       refId: ref,
       count: count,
       isRead: false,
@@ -78,7 +80,7 @@ void main() {
   testWidgets('render s2_12', (t) async {
     final screen = _inbox([
       const DayLabel3D('Today'),
-      _row(NoticeCopy.of(_stored(NoticeKinds.tripJoined, actor: 'Aman'), travellers: 2)!, '5', 'min ago', read: false),
+      _row(NoticeCopy.of(_stored(NoticeKinds.tripJoined, actor: 'Aman', travellers: 2))!, '5', 'min ago', read: false),
       _row(NoticeCopy.of(_stored(NoticeKinds.newBuddy, actor: 'Neha'))!, '2', 'h ago'),
       const DayLabel3D('Earlier'),
       _row(NoticeCopy.of(_stored(NoticeKinds.buddyAccepted, actor: 'Aman'))!, '3', 'days ago'),
@@ -106,8 +108,8 @@ void main() {
       const DayLabel3D('Today'),
       _row(settle, '1', 'h ago', read: false),
       const DayLabel3D('Earlier'),
-      _row(NoticeCopy.of(_stored(NoticeKinds.expenseAdded, amount: 6400))!, '4', 'days ago'),
-      _row(NoticeCopy.of(_stored(NoticeKinds.shareChanged, amount: 6166))!, '4', 'days ago'),
+      _row(NoticeCopy.of(_stored(NoticeKinds.expenseAdded, amount: 6400, refTitle: 'Taxi'))!, '4', 'days ago'),
+      _row(NoticeCopy.of(_stored(NoticeKinds.shareChanged, amount: 6166, refTitle: 'Taxi, Suresh (Dzire)'))!, '4', 'days ago'),
     ]);
     await renderFrame(t, '4.11', screen);
     expect(t.takeException(), isNull);

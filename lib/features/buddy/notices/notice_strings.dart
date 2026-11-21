@@ -55,10 +55,10 @@ abstract final class NoticeStrings {
   static String planNoDay(String actor, String trip) => '$actor changed the plan of $trip.';
 
   static const String expenseAddedTitle = 'New expense';
-  static String expenseAddedShare(String share) => 'Your share $share.';
+  static String expenseAddedShare(String? item, String share) => '${item == null ? '' : '$item. '}Your share $share.';
   static String expenseAddedNoAmount(String trip) => 'A new expense was added to $trip.';
 
   static const String shareChangedTitle = 'Your share changed';
-  static String shareChangedNow(String share) => 'Now $share.';
+  static String shareChangedNow(String? item, String share) => '${item == null ? '' : '$item. '}Now $share.';
   static String shareChangedNoAmount(String trip) => 'Your share changed on $trip.';
 }

@@ -19,11 +19,13 @@ class NoticeView {
 }
 
 abstract final class NoticeCopy {
-  static NoticeView? of(Notice n, {int? travellers}) {
+  static NoticeView? of(Notice n) {
     final actor = _text(n.actorName) ?? NoticeStrings.someone;
     final trip = _text(n.tripTitle) ?? NoticeStrings.yourTrip;
     final amount = n.amount;
     final many = n.count > 1;
+    final travellers = n.travellers;
+    final item = _text(n.refTitle);
     final tripArgs = <String, dynamic>{'tripId': ?n.tripId};
     switch (n.kind) {
       case NoticeKinds.buddyRequest:
@@ -105,7 +107,7 @@ abstract final class NoticeCopy {
       case NoticeKinds.planUpdated:
         return NoticeView(
           title: NoticeStrings.planTitle,
-          body: amount == null || amount < 1 ? NoticeStrings.planNoDay(actor, trip) : NoticeStrings.planDay(actor, amount, trip),
+          body: many || amount == null || amount < 1 ? NoticeStrings.planNoDay(actor, trip) : NoticeStrings.planDay(actor, amount, trip),
           tag: NoticeStrings.tagTrip,
           art: BuddyArt.compass,
           tone: NoticeTone.indigo,
@@ -115,14 +117,14 @@ abstract final class NoticeCopy {
       case NoticeKinds.expenseAdded:
         return _money(
           NoticeStrings.expenseAddedTitle,
-          amount == null ? NoticeStrings.expenseAddedNoAmount(trip) : NoticeStrings.expenseAddedShare(BuddyFormat.rupees(amount)),
+          amount == null ? NoticeStrings.expenseAddedNoAmount(trip) : NoticeStrings.expenseAddedShare(item, BuddyFormat.rupees(amount)),
           tripArgs,
           BuddyArt.taxi,
         );
       case NoticeKinds.shareChanged:
         return _money(
           NoticeStrings.shareChangedTitle,
-          amount == null ? NoticeStrings.shareChangedNoAmount(trip) : NoticeStrings.shareChangedNow(BuddyFormat.rupees(amount)),
+          amount == null ? NoticeStrings.shareChangedNoAmount(trip) : NoticeStrings.shareChangedNow(item, BuddyFormat.rupees(amount)),
           tripArgs,
           BuddyArt.hotel,
         );

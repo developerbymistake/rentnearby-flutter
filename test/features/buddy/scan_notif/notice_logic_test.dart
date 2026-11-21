@@ -4,7 +4,7 @@ import 'package:bakhli/features/buddy/notices/widgets/inbox_feed.dart';
 import 'package:bakhli/models/notification_model.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-Notice notice(String kind, {String id = 'n1', String? actor = 'Rahul', String? trip = 'Uttarakhand Hills Trip', int? amount, int count = 1, DateTime? at, String? refId, bool read = false}) => Notice(
+Notice notice(String kind, {String id = 'n1', String? actor = 'Rahul', String? trip = 'Uttarakhand Hills Trip', int? amount, int count = 1, DateTime? at, String? refId, String? refTitle, int? travellers, bool read = false}) => Notice(
       id: id,
       kind: kind,
       tripId: 'trip-1',
@@ -12,6 +12,8 @@ Notice notice(String kind, {String id = 'n1', String? actor = 'Rahul', String? t
       actorName: actor,
       refId: refId,
       amount: amount,
+      refTitle: refTitle,
+      travellers: travellers,
       count: count,
       createdAt: at,
       updatedAt: at,
@@ -94,7 +96,7 @@ void main() {
     });
 
     test('trip joined uses the live traveller count, else a plain line', () {
-      final v = NoticeCopy.of(notice(NoticeKinds.tripJoined, actor: 'Aman'), travellers: 2)!;
+      final v = NoticeCopy.of(notice(NoticeKinds.tripJoined, actor: 'Aman', travellers: 2))!;
       expect((v.title, v.body, v.tag, v.route, v.tone), ('Aman joined your trip', 'Uttarakhand Hills Trip now has 2 travellers.', 'TRIP', '/trip-travellers', NoticeTone.indigo));
       expect(v.args, {'tripId': 'trip-1'});
       expect(NoticeCopy.of(notice(NoticeKinds.tripJoined, actor: 'Aman', count: 3))!.body, 'Uttarakhand Hills Trip has new travellers.');
@@ -106,6 +108,7 @@ void main() {
       expect((v.title, v.body, v.tag, v.route), ('Plan updated', 'Neha changed Day 2 of Goa Beach Weekend.', 'TRIP', '/trip-view'));
       expect(v.args, {'tripId': 'trip-1'});
       expect(NoticeCopy.of(notice(NoticeKinds.planUpdated, actor: 'Neha'))!.body, 'Neha changed the plan of Uttarakhand Hills Trip.');
+      expect(NoticeCopy.of(notice(NoticeKinds.planUpdated, amount: 3, count: 2))!.body, 'Rahul changed the plan of Uttarakhand Hills Trip.');
       expect(NoticeCopy.of(notice(NoticeKinds.planUpdated, amount: 0))!.body, 'Rahul changed the plan of Uttarakhand Hills Trip.');
     });
 
@@ -114,10 +117,18 @@ void main() {
       expect((e.title, e.body, e.tag, e.route, e.tone), ('New expense', 'Your share ₹6,400.', 'EXPENSES', '/trip-expenses', NoticeTone.rose));
       expect(NoticeCopy.of(notice(NoticeKinds.expenseAdded, amount: 123456))!.body, 'Your share ₹1,23,456.');
       expect(NoticeCopy.of(notice(NoticeKinds.expenseAdded))!.body, 'A new expense was added to Uttarakhand Hills Trip.');
+      expect(NoticeCopy.of(notice(NoticeKinds.expenseAdded, amount: 6400, refTitle: 'Taxi'))!.body, 'Taxi. Your share ₹6,400.');
+      expect(NoticeCopy.of(notice(NoticeKinds.shareChanged, amount: 6166, refTitle: 'Taxi, Suresh (Dzire)'))!.body, 'Taxi, Suresh (Dzire). Now ₹6,166.');
+      expect(NoticeCopy.of(notice(NoticeKinds.expenseAdded, amount: 6400, refTitle: ' '))!.body, 'Your share ₹6,400.');
       final s = NoticeCopy.of(notice(NoticeKinds.shareChanged, amount: 6166))!;
       expect((s.title, s.body), ('Your share changed', 'Now ₹6,166.'));
       expect(s.args, {'tripId': 'trip-1'});
       expect(NoticeCopy.of(notice(NoticeKinds.shareChanged))!.body, 'Your share changed on Uttarakhand Hills Trip.');
+    });
+
+    test('notice json carries refTitle and travellers', () {
+      final n = Notice.fromJson({'id': 'n', 'kind': 'TripJoined', 'travellers': 3, 'refTitle': 'Taxi', 'count': 1, 'isRead': false});
+      expect((n.travellers, n.refTitle, n.markedRead().travellers, n.markedRead().refTitle), (3, 'Taxi', 3, 'Taxi'));
     });
 
     test('every new kind is known', () {

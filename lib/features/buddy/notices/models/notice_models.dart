@@ -46,6 +46,8 @@ class Notice {
     this.actorName,
     this.refId,
     this.amount,
+    this.refTitle,
+    this.travellers,
     required this.count,
     this.createdAt,
     this.updatedAt,
@@ -62,6 +64,8 @@ class Notice {
   final String? actorName;
   final String? refId;
   final int? amount;
+  final String? refTitle;
+  final int? travellers;
   final int count;
   final DateTime? createdAt;
   final DateTime? updatedAt;
@@ -80,6 +84,8 @@ class Notice {
         actorName: actorName,
         refId: refId,
         amount: amount,
+        refTitle: refTitle,
+        travellers: travellers,
         count: count,
         createdAt: createdAt,
         updatedAt: updatedAt,
@@ -97,6 +103,8 @@ class Notice {
         actorName: BuddyJson.strOrNull(j['actorName']),
         refId: BuddyJson.strOrNull(j['refId']),
         amount: BuddyJson.intOrNull(j['amount']),
+        refTitle: BuddyJson.strOrNull(j['refTitle']),
+        travellers: BuddyJson.intOrNull(j['travellers']),
         count: BuddyJson.integer(j['count'], 1),
         createdAt: BuddyJson.time(j['createdAt']),
         updatedAt: BuddyJson.time(j['updatedAt']),
