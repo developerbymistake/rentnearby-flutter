@@ -41,6 +41,15 @@ class _Auth extends GetxController implements AuthController {
   void switchToTab(int index) => tabs.add(index);
 
   @override
+  void openPlace(AppPlace place, {bool detail = false}) => tabs.add(switch (place) {
+        AppPlace.home => AppTabs.home,
+        AppPlace.stays => AppTabs.stays,
+        AppPlace.trips => AppTabs.trips,
+        AppPlace.taxi => AppTabs.taxi,
+        AppPlace.profile => AppTabs.profile,
+      });
+
+  @override
   dynamic noSuchMethod(Invocation i) => super.noSuchMethod(i);
 }
 

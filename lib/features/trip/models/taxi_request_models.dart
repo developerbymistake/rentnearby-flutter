@@ -315,7 +315,7 @@ class TaxiDriverCard {
         'ridesCompleted': ridesCompleted,
         'canSelect': canSelect,
         'confirmBy': confirmBy,
-        'isFeatured': isFeatured,
+        if (isFeatured) 'isFeatured': true,
       };
 
   OfferState get state => OfferState.parse(stateText);

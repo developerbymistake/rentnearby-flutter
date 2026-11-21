@@ -95,9 +95,10 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   bool get _firstOpen {
+    final railLoading = _home.anyRailLoading;
     final f = _feed;
     if (f == null || f.feed.value != null) return false;
-    return !_home.hasAnyRail && (_home.anyRailLoading || f.loading.value);
+    return !_home.hasAnyRail && (railLoading || f.loading.value);
   }
 
   Widget _buildBody(BuildContext context) {

@@ -293,7 +293,7 @@ void main() {
     expect(find.text('See all'), findsNWidgets(3));
     expect(find.text('Popular destinations'), findsOneWidget);
     expect(find.text('Recently added stays'), findsOneWidget);
-    expect(find.text('Featured'), findsWidgets);
+    expect(find.byKey(const ValueKey('meals-star-badge')), findsWidgets);
     expect(find.text('2'), findsOneWidget);
     expect(find.text('1'), findsOneWidget);
     final auth = Get.find<AuthController>();

@@ -41,11 +41,11 @@ void main() {
     testWidgets('taxi rail card shows all details at scale $scale', (tester) async {
       var taps = 0;
       await tester.pumpWidget(_host(HomeTaxiRailCard(taxi: _taxi(), onOpen: () => taps++), scale: scale));
-      expect(find.text('TAXI'), findsOneWidget);
+      expect(find.text('INNOVA CRYSTA'), findsOneWidget);
       expect(find.textContaining('FEATURED', findRichText: true), findsNothing);
       expect(find.byKey(const ValueKey('meals-star-badge')), findsOneWidget);
       expect(find.text('Dehradun'), findsOneWidget);
-      expect(find.text('Innova Crysta'), findsOneWidget);
+      expect(find.text('Innova Crysta'), findsNothing);
       expect(find.text('7 seats'), findsNothing);
       expect(find.textContaining('1,800'), findsOneWidget);
       expect(find.text('FARE FROM'), findsOneWidget);
@@ -60,7 +60,7 @@ void main() {
     expect(find.text('Dehradun'), findsOneWidget);
     expect(find.text('Local taxi'), findsOneWidget);
     expect(find.byKey(const ValueKey('meals-star-badge')), findsNothing);
-    expect(find.text('TAXI'), findsOneWidget);
+    expect(find.text('INNOVA CRYSTA'), findsOneWidget);
     expect(find.textContaining('FEATURED'), findsNothing);
     expect(find.text('FARE FROM'), findsNothing);
     expect(tester.takeException(), isNull);
@@ -124,7 +124,7 @@ void main() {
       stay('Naukuchiatal Lake Stay', 'A very long place name that must never wrap', null),
       HomeTaxiRailCard(taxi: _taxi(featured: false), onOpen: () {}),
     ])));
-    expect(find.text('8.7 km away'), findsOneWidget);
+    expect(find.text('Kathgodam · 8.7 km away'), findsOneWidget);
     final cards = find.byType(MealsCardV);
     final h = tester.getSize(cards.at(0)).height;
     expect(tester.getSize(cards.at(1)).height, h);

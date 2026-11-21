@@ -140,8 +140,7 @@ void main() {
       }, w: 360);
       expect(find.text('Stays near you'), findsOneWidget);
       expect(find.text('Taxis near you'), findsOneWidget);
-      expect(find.text('Nainital'), findsOneWidget);
-      expect(find.text('3 km away'), findsOneWidget);
+      expect(find.text('Nainital · 3 km away'), findsOneWidget);
       expect(find.textContaining('About'), findsNothing);
       expect(find.textContaining('Based near'), findsNothing);
     });
@@ -156,8 +155,7 @@ void main() {
       expect(find.text('Nearest taxis'), findsOneWidget);
       expect(find.text('Stays near you'), findsNothing);
       expect(find.text('Taxis near you'), findsNothing);
-      expect(find.text('Haridwar'), findsOneWidget);
-      expect(find.text('210 km away'), findsOneWidget);
+      expect(find.text('Haridwar · 210 km away'), findsOneWidget);
       expect(find.textContaining('Haldwani, Uttarakhand'), findsNothing);
     });
 

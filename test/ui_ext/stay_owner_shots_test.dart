@@ -749,19 +749,23 @@ void main() {
       await t.pump(const Duration(milliseconds: 600));
       await tapText(t, 'Choose from Gallery');
       await t.pump(const Duration(milliseconds: 600));
+      for (var i = 0; i < 3; i++) {
+        await t.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 200)));
+        await t.pump(const Duration(milliseconds: 200));
+      }
       await t.pump(const Duration(milliseconds: 100));
     }
 
     testWidgets('bd_photos', (t) async {
       await capture(t, () => photosScreen(), 'bd_photos', after: () => addThree(t));
-      expect(find.text('3/5 photos added'), findsOneWidget);
+      expect(find.text('2 of 2'), findsOneWidget);
     });
     testWidgets('bd_photos_empty', (t) async {
       await capture(t, () => photosScreen(), 'bd_photos_empty', after: () async {
         await toPhotos(t);
         await tapText(t, 'Save');
       }, variants: false);
-      expect(find.text('0/5 photos added'), findsOneWidget);
+      expect(find.text('0 of 2'), findsOneWidget);
     });
     testWidgets('bd_photo_sheet', (t) async {
       await capture(t, () => photosScreen(), 'bd_photo_sheet', after: () async {
