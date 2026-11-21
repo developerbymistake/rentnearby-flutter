@@ -35,16 +35,33 @@ void main() {
   testWidgets('shows both values with copy and open whatsapp, no amount and no status', (t) async {
     await _pump(t, _m(StayContactShareCard.type, full));
     expect(find.byType(StayContactShareCard), findsOneWidget);
-    expect(find.text('UPI and WhatsApp'), findsOneWidget);
+    expect(find.text('Contact details'), findsOneWidget);
+    expect(find.text('Shared by you'), findsNothing);
     expect(find.text('Deodar Cottage'), findsOneWidget);
     expect(find.text('deodar@okaxis'), findsOneWidget);
-    expect(find.text('+91 9876543210'), findsOneWidget);
+    expect(find.text('+91 98765 43210'), findsOneWidget);
     expect(find.text('Copy'), findsOneWidget);
     expect(find.text('Open WhatsApp'), findsOneWidget);
-    expect(find.text('Bakhli does not take or hold payment.'), findsOneWidget);
+    expect(find.text('Contact details only. The app does not take or track payments.'), findsOneWidget);
     expect(find.textContaining('₹'), findsNothing);
     expect(find.textContaining('dvance'), findsNothing);
     expect(find.textContaining('roof'), findsNothing);
+  });
+
+  testWidgets('o_st_40 sender side reads Shared by you and accepts whatsAppNumber', (t) async {
+    final mine = MessageModel(
+      id: 'm2',
+      conversationId: 'c1',
+      senderId: 'me',
+      isMine: true,
+      type: StayContactShareCard.type,
+      payloadJson: jsonEncode({'stayName': 'Deodar Heights', 'upiId': 'meena.bisht@okaxis', 'whatsAppNumber': '9837041122'}),
+      createdAt: DateTime(2026, 11, 21, 16, 12),
+    );
+    await _pump(t, mine);
+    expect(find.text('Shared by you'), findsOneWidget);
+    expect(find.text('+91 98370 41122'), findsOneWidget);
+    expect(find.textContaining('₹'), findsNothing);
   });
 
   testWidgets('copy puts the upi id on the clipboard', (t) async {

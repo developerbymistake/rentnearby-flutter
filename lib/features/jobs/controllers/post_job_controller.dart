@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
@@ -5,6 +7,8 @@ import '../../../controllers/auth_controller.dart';
 import '../../../utils/app_toast.dart';
 import '../../../utils/dio_error_mapper.dart';
 import '../data/jobs_repository.dart';
+import '../../stay_owner/strings/stay_work_strings.dart';
+import '../models/job_detail_model.dart';
 import '../models/job_lookups_model.dart';
 
 class PostJobController extends GetxController {
@@ -23,6 +27,12 @@ class PostJobController extends GetxController {
 
   static String experienceOptionLabel(int y) => y == 0 ? 'Fresher' : (y == 1 ? '1 year' : '$y years');
 
+  PostJobController({this.editId});
+
+  final String? editId;
+
+  bool get isEdit => editId != null;
+
   final _repo = const JobsRepository();
   final lookups = Rxn<JobLookups>();
   final isLoading = true.obs;
@@ -39,6 +49,8 @@ class PostJobController extends GetxController {
   final shiftTypeId = Rxn<String>();
   final salaryTypeId = Rxn<String>();
   final sameAsPhone = true.obs;
+  final foodAndStay = false.obs;
+  final canUpgrade = false.obs;
 
   final titleCtrl = TextEditingController();
   final minSalaryCtrl = TextEditingController();
@@ -96,9 +108,18 @@ class PostJobController extends GetxController {
       blockMessage.value = null;
       limitReached.value = false;
       lookups.value = await _repo.getLookups();
+      final id = editId;
+      if (id != null) {
+        final job = await _repo.getMineById(id);
+        if (isClosed) return;
+        _prefill(job);
+        return;
+      }
       final mine = await _repo.getMine();
+      if (isClosed) return;
       blockMessage.value = mine.blockMessage;
       limitReached.value = mine.limitReached;
+      canUpgrade.value = mine.canUpgrade;
     } catch (e) {
       loadFailed.value = true;
       _handleError(e, 'Could not load the form.');
@@ -107,7 +128,30 @@ class PostJobController extends GetxController {
     }
   }
 
-  bool get hasChanges =>
+  String _editSnapshot = '';
+
+  void _prefill(JobDetailModel job) {
+    titleCtrl.text = job.title;
+    descCtrl.text = job.description;
+    departmentId.value = job.jobDepartmentId.isEmpty ? null : job.jobDepartmentId;
+    roleId.value = job.jobRoleId.isEmpty ? null : job.jobRoleId;
+    jobTypeId.value = job.jobTypeId.isEmpty ? null : job.jobTypeId;
+    shiftTypeId.value = job.jobShiftTypeId.isEmpty ? null : job.jobShiftTypeId;
+    salaryTypeId.value = job.jobSalaryTypeId.isEmpty ? null : job.jobSalaryTypeId;
+    minExperienceYears.value = job.minimumExperienceYears;
+    minSalaryCtrl.text = job.minSalary > 0 ? '${job.minSalary}' : '';
+    maxSalaryCtrl.text = job.maxSalary > 0 ? '${job.maxSalary}' : '';
+    phoneCtrl.text = _tenDigits(job.contactPhone ?? '');
+    final wa = _tenDigits(job.whatsAppNumber ?? '');
+    sameAsPhone.value = wa.isEmpty || wa == _prefillPhone;
+    whatsAppCtrl.text = sameAsPhone.value ? '' : wa;
+    foodAndStay.value = job.foodAndStay;
+    _editSnapshot = jsonEncode(_body());
+  }
+
+  bool get hasChanges => isEdit ? jsonEncode(_body()) != _editSnapshot : _hasNewChanges;
+
+  bool get _hasNewChanges =>
       titleCtrl.text.isNotEmpty ||
       descCtrl.text.isNotEmpty ||
       minSalaryCtrl.text.isNotEmpty ||
@@ -198,6 +242,7 @@ class PostJobController extends GetxController {
         'maxSalary': maxSalary,
         'contactPhone': contactPhone,
         'whatsAppNumber': whatsAppNumber,
+        'foodAndStay': foodAndStay.value,
       };
 
   Future<bool> submit() async {
@@ -210,6 +255,12 @@ class PostJobController extends GetxController {
     }
     try {
       isSubmitting.value = true;
+      final id = editId;
+      if (id != null) {
+        await _repo.update(id, _body());
+        AppToast.success(StayWorkStrings.jobSaved);
+        return true;
+      }
       await _repo.create(_body());
       AppToast.success('Job posted.');
       return true;

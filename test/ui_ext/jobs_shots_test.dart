@@ -619,7 +619,7 @@ void main() {
     }
 
     Future<void> next(WidgetTester t) async {
-      await _tapv(t, find.textContaining('Next:').last);
+      await _tapv(t, find.text('Next').last);
       await t.pump(const Duration(milliseconds: 600));
     }
 
@@ -724,10 +724,10 @@ void main() {
 
     testWidgets('post_block', (t) async {
       debugDisableShadows = false;
-      await open(t, mine: {'items': [], 'activeCount': 3, 'maxActive': 3, 'stayStatus': 'Approved', 'canPost': false});
+      await open(t, mine: {'items': [], 'activeCount': 3, 'maxActive': 3, 'stayStatus': 'Approved', 'canPost': false, 'canUpgrade': true, 'paymentEnabled': true});
       await _snap(t, 'post_block');
       expect(find.text('Your plan allows 3 active jobs. Close one or upgrade.'), findsOneWidget);
-      expect(find.text('Upgrade'), findsOneWidget);
+      expect(find.text('See Plus'), findsOneWidget);
       debugDisableShadows = true;
     });
 

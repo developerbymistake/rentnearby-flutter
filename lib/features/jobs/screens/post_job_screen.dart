@@ -7,6 +7,8 @@ import '../../../config/app_routes.dart';
 import '../../../controllers/plan_controller.dart';
 import '../../../utils/input_formatters.dart';
 import '../../../widgets/app_loading_overlay.dart';
+import '../../owner_core/strings/owner_shared_strings.dart';
+import '../../stay_owner/strings/stay_work_strings.dart';
 import '../controllers/post_job_controller.dart';
 import '../models/job_lookups_model.dart';
 import '../widgets/jobs_ui.dart';
@@ -24,7 +26,9 @@ class _PostJobScreenState extends State<PostJobScreen> {
   @override
   void initState() {
     super.initState();
-    _ctrl = Get.put(PostJobController());
+    final args = Get.arguments;
+    final id = args is Map ? args['id']?.toString() : null;
+    _ctrl = Get.put(PostJobController(editId: id == null || id.isEmpty ? null : id));
   }
 
   @override
@@ -58,7 +62,7 @@ class _PostJobScreenState extends State<PostJobScreen> {
     if (discard) Get.back();
   }
 
-  static const _steps = ['Basics', 'Details', 'Extras'];
+  static const _steps = StayWorkStrings.jobSteps;
 
   Future<void> _next() async {
     FocusScope.of(context).unfocus();
@@ -107,7 +111,8 @@ class _PostJobScreenState extends State<PostJobScreen> {
           JobsHeader(
             tone: _look,
             art: ListingArt.briefcase,
-            title: 'Post a Job',
+            title: StayWorkStrings.postAJobTitle,
+            subtitle: StayWorkStrings.jobStepLine(_ctrl.step.value),
             onBack: _ctrl.isSubmitting.value ? null : _close,
           ),
           StepProgressHeader(
@@ -124,12 +129,12 @@ class _PostJobScreenState extends State<PostJobScreen> {
   Widget _blockBanner() {
     final message = _ctrl.blockMessage.value;
     if (message == null) return const SizedBox.shrink();
-    final upgrade = _ctrl.limitReached.value && Get.find<PlanController>().paymentEnabled;
+    final upgrade = _ctrl.limitReached.value && _ctrl.canUpgrade.value && Get.find<PlanController>().paymentEnabled;
     return EntranceOnce(
       child: JobsLimitBanner(
         tone: _look,
         message: message,
-        linkLabel: upgrade ? 'Upgrade' : null,
+        linkLabel: upgrade ? OwnerSharedStrings.seePlus : null,
         onLink: upgrade ? () => Get.toNamed(AppRoutes.plansBilling) : null,
       ),
     );
@@ -173,7 +178,7 @@ class _PostJobScreenState extends State<PostJobScreen> {
     return FormFooter(
       tone: _look,
       top: const ToastDock(),
-      primaryLabel: last ? 'Post Job' : 'Next: ${_steps[step + 1]}',
+      primaryLabel: last ? (_ctrl.isEdit ? StayWorkStrings.save : 'Post Job') : StayWorkStrings.next,
       onPrimary: off ? null : _next,
       primaryEnabled: !off,
       primaryLoading: _ctrl.isSubmitting.value,
@@ -362,6 +367,22 @@ class _PostJobScreenState extends State<PostJobScreen> {
             if (i != null) _ctrl.minExperienceYears.value = years[i];
           },
         ),
+      ),
+      Padding(
+        padding: DS.gapInsets(l: 16, t: 12, r: 16),
+        child: Obx(() => ToggleRow(
+              key: const ValueKey('job_food_and_stay'),
+              tone: _look,
+              label: StayWorkStrings.foodAndStay,
+              sublabel: StayWorkStrings.shownOnJobCard,
+              value: _ctrl.foodAndStay.value,
+              filled: true,
+              onChanged: (v) => _ctrl.foodAndStay.value = v,
+            )),
+      ),
+      Padding(
+        padding: DS.gapInsets(l: 22, t: 10, r: 22),
+        child: Text(StayWorkStrings.jobPayHint, style: Ink3D.text(12, FontWeight.w400, Ink3D.grey, height: 1.35, letterSpacing: 0)),
       ),
     ]);
   }

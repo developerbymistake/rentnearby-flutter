@@ -7,11 +7,25 @@ import 'package:get/get.dart';
 import '../../../design/design.dart';
 import '../../../design/extra/ext_stay_owner.dart';
 import '../../../utils/app_toast.dart';
+import '../../owner_core/sheets/owner_confirm.dart';
+import '../../stay_owner/strings/stay_work_strings.dart';
 import '../../trip/trip_strings.dart';
 import '../enquiries/stay_enquiry_format.dart';
 import '../models/stay_owner_model.dart';
 import '../stay_share_strings.dart';
 import 'stay_setup_controller.dart';
+
+abstract final class StayShareDetailsScreenValidators {
+  static final _upiShape = RegExp(r'^[A-Za-z0-9._-]+@[A-Za-z][A-Za-z0-9.-]*$');
+  static final _tenDigits = RegExp(r'^\d{10}$');
+
+  static String? upi(String v) =>
+      v.isEmpty || (v.length >= 5 && v.length <= 60 && _upiShape.hasMatch(v)) ? null : StayWorkStrings.upiInvalid;
+
+  static String? whatsApp(String v) => v.isEmpty || _tenDigits.hasMatch(v) ? null : StayWorkStrings.whatsAppInvalid;
+}
+
+const double _removeFont = 13;
 
 class StayShareDetailsScreen extends StatefulWidget {
   const StayShareDetailsScreen({super.key});
@@ -36,10 +50,10 @@ class _StayShareDetailsScreenState extends State<StayShareDetailsScreen> {
   void initState() {
     super.initState();
     _upiFocus.addListener(() {
-      if (!_upiFocus.hasFocus) setState(() => _upiError = StayEnquiryFormat.upiError(_upi.text.trim()));
+      if (!_upiFocus.hasFocus && mounted) setState(() => _upiError = upiError(_upi.text.trim()));
     });
     _waFocus.addListener(() {
-      if (!_waFocus.hasFocus) setState(() => _waError = StayEnquiryFormat.phoneError(_wa.text.trim()));
+      if (!_waFocus.hasFocus && mounted) setState(() => _waError = whatsAppError(_wa.text.trim()));
     });
     _worker = ever<StayOwnerModel?>(_ctrl.stay, _seed);
     _seed(_ctrl.stay.value);
@@ -56,30 +70,60 @@ class _StayShareDetailsScreenState extends State<StayShareDetailsScreen> {
     super.dispose();
   }
 
+  static String? upiError(String v) => StayShareDetailsScreenValidators.upi(v);
+
+  static String? whatsAppError(String v) => StayShareDetailsScreenValidators.whatsApp(v);
+
+  String _savedUpi = '';
+  String _savedWa = '';
+
+  bool get _dirty => _seeded && (_upi.text.trim() != _savedUpi || _wa.text.trim() != _savedWa);
+
   void _seed(StayOwnerModel? s) {
     if (_seeded || s == null) return;
     _seeded = true;
     _upi.text = s.upiId ?? '';
     final stored = s.whatsAppNumber ?? '';
     _wa.text = stored.isNotEmpty ? stored : StayEnquiryFormat.accountPhone();
+    _savedUpi = _upi.text;
+    _savedWa = _wa.text;
+  }
+
+  Future<void> _remove() async {
+    if (_saving) return;
+    _upi.clear();
+    _wa.clear();
+    setState(() {
+      _upiError = null;
+      _waError = null;
+    });
+    await _save();
+  }
+
+  Future<void> _back() async {
+    if (_saving) return;
+    if (_dirty && !await OwnerConfirm.discard(context)) return;
+    if (mounted) Get.back();
   }
 
   Future<void> _save() async {
     if (_saving) return;
     final upi = _upi.text.trim();
     final wa = _wa.text.trim();
-    final upiError = StayEnquiryFormat.upiError(upi);
-    final waError = StayEnquiryFormat.phoneError(wa);
+    final upiErr = upiError(upi);
+    final waErr = whatsAppError(wa);
     setState(() {
-      _upiError = upiError;
-      _waError = waError;
+      _upiError = upiErr;
+      _waError = waErr;
     });
-    if (upiError != null || waError != null) return;
+    if (upiErr != null || waErr != null) return;
     FocusScope.of(context).unfocus();
     setState(() => _saving = true);
     final ok = await _ctrl.saveShareDetails(upiId: upi, whatsAppNumber: wa);
     if (!mounted) return;
     if (ok) {
+      _savedUpi = upi;
+      _savedWa = wa;
       AppToast.success(StayShareStrings.saved);
       Get.back();
     } else {
@@ -89,13 +133,18 @@ class _StayShareDetailsScreenState extends State<StayShareDetailsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _back();
+      },
+      child: Scaffold(
       backgroundColor: ListingPalette.forest.page,
       body: Column(children: [
         StayPageHeader(
           title: StayShareStrings.title,
-          subtitle: TripStrings.staySetupOptional,
-          onBack: () => Get.back(),
+          subtitle: StayWorkStrings.shareHeaderSub,
+          onBack: _back,
           asset: SetupAssets.moneyBag,
         ),
         Expanded(
@@ -113,11 +162,12 @@ class _StayShareDetailsScreenState extends State<StayShareDetailsScreen> {
         if (stay == null && (_ctrl.loadFailed.value || _ctrl.hasLoaded.value)) return const SizedBox.shrink();
         return FormFooter(
           tone: _tone,
-          primaryLabel: TripStrings.save,
+          primaryLabel: StayWorkStrings.save,
           onPrimary: stay == null || _saving ? null : _save,
           primaryLoading: _saving,
         );
       }),
+    ),
     );
   }
 
@@ -159,42 +209,37 @@ class _StayShareDetailsScreenState extends State<StayShareDetailsScreen> {
       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
       padding: EdgeInsets.only(bottom: bottom),
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Padding(
-          padding: EdgeInsets.only(top: DS.gv(10)),
-          child: WorkoutCard(
-            tone: _tone,
-            art: ListingArt.moneyBag,
-            title: StayShareStrings.title,
-            subtitle: StayShareStrings.sub,
-            minHeight: DS.s(132),
-          ),
-        ),
-        FormSectionCard(
-          tone: _tone,
-          art: ListingArt.moneyBag,
-          title: TripStrings.yourUpiId,
-          tag: 'Optional',
-          tagMuted: true,
-          child: _field(
-            controller: _upi,
-            focus: _upiFocus,
-            art: ListingArt.moneyBag,
-            hint: TripStrings.upiHint,
-            error: _upiError,
-            formatters: StayEnquiryFormat.upiFormatters,
-            keyboard: TextInputType.emailAddress,
-            onChanged: (_) {
-              if (_upiError != null) setState(() => _upiError = null);
-            },
-          ),
-        ),
-        FormSectionCard(
-          tone: _tone,
-          art: ListingArt.speechBalloon,
-          title: StayShareStrings.yourWhatsApp,
-          tag: 'Optional',
-          tagMuted: true,
+        Container(
+          margin: DS.gapInsets(l: 14, t: 14, r: 14),
+          padding: DS.insets(l: 16, t: 16, r: 16, b: 16),
+          decoration: BoxDecoration(color: DesignColors.surface, borderRadius: DS.br(CardRadius.tile), boxShadow: DS.shadows(Ink3D.softShadow)),
           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            Row(children: [
+              ExcludeSemantics(child: Art3D(asset: ListingArt.key, size: 44)),
+              Gap.h(12),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(StayWorkStrings.shareCardTitle, style: Ink3D.text(18, FontWeight.w700, Ink3D.title, letterSpacing: 0)),
+                  Text(StayShareStrings.sub, style: Ink3D.text(12, FontWeight.w500, Ink3D.body, height: 1.35, letterSpacing: 0)),
+                ]),
+              ),
+            ]),
+            Gap.v(14),
+            _label(StayShareStrings.upiLabel),
+            _field(
+              controller: _upi,
+              focus: _upiFocus,
+              art: ListingArt.moneyBag,
+              hint: TripStrings.upiHint,
+              error: _upiError,
+              formatters: StayEnquiryFormat.upiFormatters,
+              keyboard: TextInputType.emailAddress,
+              onChanged: (_) {
+                if (_upiError != null) setState(() => _upiError = null);
+              },
+            ),
+            Gap.v(10),
+            _label(StayShareStrings.whatsAppNumber),
             _field(
               controller: _wa,
               focus: _waFocus,
@@ -207,15 +252,36 @@ class _StayShareDetailsScreenState extends State<StayShareDetailsScreen> {
                 if (_waError != null) setState(() => _waError = null);
               },
             ),
-            Padding(
-              padding: EdgeInsets.only(top: DS.gv(12)),
-              child: Text(StayShareStrings.footer, style: Ink3D.text(12, FontWeight.w400, Ink3D.grey, height: 1.4)),
-            ),
           ]),
+        ),
+        _info(ListingArt.shield, StayWorkStrings.shareLine1, ListingTone.teal),
+        _info(ListingArt.bulb, StayWorkStrings.shareLine2, ListingTone.indigo),
+        Padding(
+          padding: DS.gapInsets(l: 14, t: 18, r: 14),
+          child: WhitePillButton(tone: _tone, label: StayWorkStrings.removeMyDetails, danger: true, height: 46, fontSize: _removeFont, onTap: _saving ? null : _remove),
         ),
       ]),
     ));
   }
+
+  Widget _label(String text) => Padding(
+        padding: EdgeInsets.only(bottom: DS.gv(6)),
+        child: Row(children: [
+          Expanded(child: Text(text, style: Ink3D.text(12, FontWeight.w700, Ink3D.title, letterSpacing: 0))),
+          Text(StayShareStrings.optional, style: Ink3D.text(11.5, FontWeight.w500, Ink3D.grey, letterSpacing: 0)),
+        ]),
+      );
+
+  Widget _info(String art, String text, ListingTone tone) => Container(
+        margin: DS.gapInsets(l: 14, t: 14, r: 14),
+        padding: DS.sym(h: 16, v: 14),
+        decoration: BoxDecoration(color: tone.tint, borderRadius: DS.circular(14)),
+        child: Row(children: [
+          ExcludeSemantics(child: Art3D(asset: art, size: 32)),
+          Gap.h(12),
+          Expanded(child: Text(text, style: Ink3D.text(12, FontWeight.w600, tone.text, height: 1.4, letterSpacing: 0))),
+        ]),
+      );
 
   Widget _field({
     required TextEditingController controller,

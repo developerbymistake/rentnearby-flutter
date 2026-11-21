@@ -142,6 +142,7 @@ abstract final class StayWorkStrings {
   static const postAJob = 'Post a Job';
   static const postAJobTitle = 'Post a job';
   static const foodAndStay = 'Food and stay given';
+  static const shownOnJobCard = 'Shown on the job card';
   static const closeJobTitle = 'Close this job?';
   static const closeJobBody = 'A closed job cannot be opened again. It frees a slot for a new post.';
   static const closeJob = 'Close job';
@@ -155,4 +156,14 @@ abstract final class StayWorkStrings {
   static const next = 'Next';
   static const jobPayHint = 'Salary ₹100 to ₹99,00,000. Experience 0 to 20 years.';
   static String experience(int years) => years <= 0 ? 'Fresher' : '$years+ years';
+  static String ago(DateTime t, DateTime now) {
+    final d = now.difference(t.toLocal());
+    String u(int n, String w) => '$n $w${n == 1 ? '' : 's'} ago';
+    if (d.inMinutes < 60) return u(d.inMinutes < 1 ? 1 : d.inMinutes, 'minute');
+    if (d.inHours < 24) return u(d.inHours, 'hour');
+    if (d.inDays < 7) return u(d.inDays, 'day');
+    if (d.inDays < 30) return u(d.inDays ~/ 7, 'week');
+    if (d.inDays < 365) return u(d.inDays ~/ 30, 'month');
+    return u(d.inDays ~/ 365, 'year');
+  }
 }

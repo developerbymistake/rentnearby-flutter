@@ -15,7 +15,9 @@ import '../../trip/trip_strings_h4.dart';
 import '../../trip/trip_strings_i5.dart';
 import '../../trip/utils/trip_format.dart';
 import '../../trip/widgets/trip_sheet_frame.dart';
+import '../../stay_owner/strings/stay_work_strings.dart';
 import '../models/stay_owner_model.dart';
+import 'stay_enquiry_owner_view.dart';
 import 'stay_enquiries_controller.dart';
 import 'stay_enquiry_format.dart';
 import 'stay_enquiry_strings.dart';
@@ -30,7 +32,8 @@ class TripSendOfferSheet {
     TripOfferModel? changeRequest,
     bool revised = false,
   }) async {
-    final body = _OfferBody(enquiry: enquiry, stay: stay, counter: counter, changeRequest: changeRequest, revised: revised);
+    final view = Get.isRegistered<StayEnquiriesController>() ? StayEnquiriesController.ensure().viewOf(enquiry.id) : StayEnquiryOwnerView.empty;
+    final body = _OfferBody(enquiry: enquiry, stay: stay, counter: counter, changeRequest: changeRequest, revised: revised, view: view);
     final sent = await TripSheetFrame.show<bool>(context, body);
     return sent == true;
   }
@@ -62,7 +65,9 @@ class _Line {
 }
 
 class _OfferBody extends StatefulWidget {
-  const _OfferBody({required this.enquiry, required this.stay, this.counter, this.changeRequest, this.revised = false});
+  const _OfferBody({required this.enquiry, required this.stay, this.counter, this.changeRequest, this.revised = false, this.view = StayEnquiryOwnerView.empty});
+
+  final StayEnquiryOwnerView view;
 
   final TripEnquiryModel enquiry;
   final StayOwnerModel stay;
@@ -350,12 +355,27 @@ class _OfferBodyState extends State<_OfferBody> {
       size: SheetSize.form,
       title: revised ? TripStrings.revisedOffer : TripStrings.sendOffer,
       description: description,
-      footnote: revised ? TripStrings.revisedFooter : TripStrings.sendOfferFooter,
+      footnote: revised ? TripStrings.revisedFooter : StayWorkStrings.offerInfo,
       footer: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           SummaryBar3D(tone: t, label: '${TripStrings.total} · ${TripStrings.nights(_nights < 0 ? 0 : _nights)}', value: BrowseItem.inr(_total)),
+          if (_aboveListed case final listed?)
+            Semantics(
+              liveRegion: true,
+              child: Padding(
+                padding: EdgeInsets.only(top: DS.gv(8)),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Art3D(asset: ListingArt.warning, size: 18),
+                    Gap.h(8),
+                    Expanded(child: Text(StayWorkStrings.aboveListed(BrowseItem.inr(listed)), style: Ink3D.text(12, FontWeight.w600, StatusTone3D.waiting.pillText, height: 1.35, letterSpacing: 0))),
+                  ],
+                ),
+              ),
+            ),
           if (_serverError != null) Padding(padding: EdgeInsets.only(top: DS.gv(8)), child: Text(_serverError!, style: FieldMessage.errorStyle)),
           Gap.v(8),
           GradientPillButton(
@@ -367,6 +387,7 @@ class _OfferBodyState extends State<_OfferBody> {
         ],
       ),
       children: [
+        if (!revised && widget.view.listedStayTotal != null) _listedBox(widget.view),
         if (counter != null && counterPrice != null) _counterSummary(counter, counterPrice),
         Gap.v(4),
         _twoUp(
@@ -415,6 +436,25 @@ class _OfferBodyState extends State<_OfferBody> {
   }
 
   static final ListingTone _look = ListingTone.forest;
+
+  int? get _aboveListed {
+    final listed = widget.view.listedStayTotal;
+    if (widget.revised || listed == null || _total <= listed) return null;
+    return listed;
+  }
+
+  Widget _listedBox(StayEnquiryOwnerView v) {
+    final parts = [
+      for (final p in v.listedBreakdown) StayWorkStrings.breakdownPart(p.nights, BrowseItem.inr(p.perNight * p.units), p.specialLabel),
+    ];
+    return ReplySummaryStrip(
+      tone: _look,
+      title: StayWorkStrings.listedForDates,
+      subtitle: parts.isEmpty ? null : parts.join(' + '),
+      value: BrowseItem.inr(v.listedStayTotal ?? 0),
+      margin: EdgeInsets.only(bottom: DS.gv(8)),
+    );
+  }
 
   Widget _counterSummary(TripOfferModel counter, int price) {
     final nights = counter.nights > 0 ? counter.nights : _nights;

@@ -221,12 +221,13 @@ class _NotificationRow extends StatelessWidget {
     final isRead = notification.isRead;
     final kindName = NotificationVisuals.kind(notification.type, notification.title).name;
     final look = NotificationLook.of(kindName);
-    final kind = NotificationVisuals.listingKind(notification.actionRoute);
+    final kind = NotificationVisuals.listingKind(notification.actionRoute, type: notification.type);
     final route = notification.actionRoute;
+    final owner = NotificationVisuals.ownerLook(notification.type, route);
     final cut = dateText.lastIndexOf(' ');
     return NotificationCard3D(
-      tone: NotificationTone.of(kindName),
-      art: look.asset,
+      tone: owner?.tone ?? NotificationTone.of(kindName),
+      art: owner?.art ?? look.asset,
       title: notification.title,
       body: notification.body,
       time: cut < 0 ? dateText : dateText.substring(0, cut),

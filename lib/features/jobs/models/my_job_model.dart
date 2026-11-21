@@ -1,3 +1,6 @@
+import '../../owner_core/json/owner_json.dart';
+import '../../stay_owner/strings/stay_gate_strings_work.dart';
+import '../../stay_owner/strings/stay_work_strings.dart';
 import 'job_summary_model.dart';
 
 class MyJobModel {
@@ -14,6 +17,7 @@ class MyJobModel {
   final DateTime createdAt;
   final DateTime? updatedAt;
   final DateTime? closedAt;
+  final bool foodAndStay;
 
   const MyJobModel({
     required this.id,
@@ -29,22 +33,24 @@ class MyJobModel {
     required this.createdAt,
     this.updatedAt,
     this.closedAt,
+    this.foodAndStay = false,
   });
 
   factory MyJobModel.fromJson(Map<String, dynamic> json) => MyJobModel(
-        id: json['id'] as String,
-        title: json['title'] as String? ?? '',
-        departmentName: json['departmentName'] as String? ?? '',
-        roleName: json['roleName'] as String? ?? '',
-        minimumExperienceYears: (json['minimumExperienceYears'] as num?)?.toInt() ?? 0,
-        salaryTypeName: json['salaryTypeName'] as String?,
-        stayName: json['stayName'] as String?,
-        minSalary: (json['minSalary'] as num?)?.toInt() ?? 0,
-        maxSalary: (json['maxSalary'] as num?)?.toInt() ?? 0,
-        status: json['status'] as String? ?? 'Active',
-        createdAt: DateTime.tryParse(json['createdAt'] as String? ?? '') ?? DateTime.now(),
-        updatedAt: DateTime.tryParse(json['updatedAt'] as String? ?? ''),
-        closedAt: DateTime.tryParse(json['closedAt'] as String? ?? ''),
+        id: OwnerJson.str(json['id']),
+        title: OwnerJson.str(json['title']),
+        departmentName: OwnerJson.str(json['departmentName']),
+        roleName: OwnerJson.str(json['roleName']),
+        minimumExperienceYears: OwnerJson.integer(json['minimumExperienceYears']),
+        salaryTypeName: OwnerJson.strOrNull(json['salaryTypeName']),
+        stayName: OwnerJson.strOrNull(json['stayName']),
+        minSalary: OwnerJson.integer(json['minSalary']),
+        maxSalary: OwnerJson.integer(json['maxSalary']),
+        status: OwnerJson.str(json['status'], 'Active'),
+        createdAt: OwnerJson.time(json['createdAt']) ?? DateTime.now(),
+        updatedAt: OwnerJson.time(json['updatedAt']),
+        closedAt: OwnerJson.time(json['closedAt']),
+        foodAndStay: OwnerJson.boolean(json['foodAndStay']),
       );
 
   bool get isActive => status == 'Active';
@@ -68,15 +74,21 @@ class MyJobsPage {
   final int maxActive;
   final String? stayStatus;
   final bool canPost;
+  final bool paymentEnabled;
+  final bool canUpgrade;
+  final bool overCap;
 
-  static String limitMessage(int max) => 'Your plan allows $max active jobs. Close one or upgrade.';
+  static String limitMessage(int max, {bool canUpgrade = true}) =>
+      canUpgrade ? StayGateStringsWork.jobsCap(max) : StayWorkStrings.jobsPlusCap(max);
 
   bool get limitReached => !canPost && stayStatus == 'Approved';
 
+  bool get atCap => stayStatus == 'Approved' && activeCount >= maxActive;
+
   String? get blockMessage {
     if (canPost) return null;
-    if (stayStatus != 'Approved') return 'Your stay must be live to post a job.';
-    return limitMessage(maxActive);
+    if (stayStatus != 'Approved') return StayWorkStrings.stayNotLive;
+    return limitMessage(maxActive, canUpgrade: canUpgrade);
   }
 
   const MyJobsPage({
@@ -85,15 +97,24 @@ class MyJobsPage {
     required this.maxActive,
     this.stayStatus,
     required this.canPost,
+    this.paymentEnabled = false,
+    this.canUpgrade = false,
+    this.overCap = false,
   });
 
-  factory MyJobsPage.fromJson(Map<String, dynamic> json) => MyJobsPage(
-        items: (json['items'] as List? ?? const [])
-            .map((e) => MyJobModel.fromJson(e as Map<String, dynamic>))
-            .toList(),
-        activeCount: (json['activeCount'] as num?)?.toInt() ?? 0,
-        maxActive: (json['maxActive'] as num?)?.toInt() ?? 0,
-        stayStatus: json['stayStatus'] as String?,
-        canPost: json['canPost'] as bool? ?? false,
-      );
+  factory MyJobsPage.fromJson(Map<String, dynamic> json) {
+    final active = OwnerJson.integer(json['activeCount']);
+    final max = OwnerJson.integer(json['maxActive'], 1);
+    final payment = OwnerJson.boolean(json['paymentEnabled']);
+    return MyJobsPage(
+      items: OwnerJson.list(json['items'], MyJobModel.fromJson).where((j) => j.id.isNotEmpty).toList(),
+      activeCount: active,
+      maxActive: max,
+      stayStatus: OwnerJson.strOrNull(json['stayStatus']),
+      canPost: OwnerJson.boolean(json['canPost']),
+      paymentEnabled: payment,
+      canUpgrade: OwnerJson.boolOrNull(json['canUpgrade']) ?? payment,
+      overCap: OwnerJson.boolOrNull(json['overCap']) ?? active > max,
+    );
+  }
 }

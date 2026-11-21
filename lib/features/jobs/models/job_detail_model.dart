@@ -13,6 +13,7 @@ class JobDetailModel extends JobSummaryModel {
   final String ownerUserId;
   final bool isOwner;
   final bool hasReportedStay;
+  final bool foodAndStay;
 
   JobDetailModel.fromJson(Map<String, dynamic> json)
       : description = json['description'] as String? ?? '',
@@ -27,6 +28,7 @@ class JobDetailModel extends JobSummaryModel {
         ownerUserId = json['ownerUserId'] as String? ?? '',
         isOwner = json['isOwner'] as bool? ?? false,
         hasReportedStay = json['hasReportedStay'] as bool? ?? false,
+        foodAndStay = json['foodAndStay'] == true,
         super(
           id: json['id'] as String,
           stayListingId: json['stayListingId'] as String? ?? '',

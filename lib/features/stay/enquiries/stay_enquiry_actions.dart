@@ -1,9 +1,17 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:uuid/uuid.dart';
 import 'package:get/get.dart';
 import '../../../config/app_routes.dart';
 import 'package:bakhli/design/design.dart';
 import 'package:bakhli/design/extra/ext_trip_replies.dart';
+import '../../../services/api_service.dart';
 import '../../../utils/app_toast.dart';
+import '../../../utils/contact_launcher.dart';
+import '../../../utils/dio_error_mapper.dart';
+import '../../stay_owner/strings/stay_work_strings.dart';
+import 'stay_cancel_booking_sheet.dart';
 import '../../../models/browse_item.dart';
 import '../../../widgets/trip_report_traveller_sheet.dart';
 import '../../trip/models/trip_enquiry_model.dart';
@@ -11,7 +19,6 @@ import '../../trip/models/trip_offer_model.dart';
 import '../../trip/trip_strings.dart';
 import '../../trip/utils/trip_format.dart';
 import 'stay_enquiry_format.dart';
-import '../../trip/widgets/trip_cancel_sheet.dart';
 import 'stay_enquiries_controller.dart';
 import 'stay_enquiry_strings.dart';
 import '../stay_share_strings.dart';
@@ -87,7 +94,81 @@ class StayEnquiryActions {
       ),
     );
     if (ok != true) return false;
-    return StayEnquiriesController.ensure().acceptChange(e.id, offerId);
+    final ctrl = StayEnquiriesController.ensure();
+    if (await ctrl.acceptChange(e.id, offerId)) return true;
+    if (ctrl.lastErrorType != StayEnquiriesController.changeTouchesBlock || !context.mounted) return false;
+    final again = await Dialog3D.show<bool>(
+      context,
+      builder: (ctx) => Dialog3D(
+        tone: ListingTone.forest,
+        art: ListingArt.calendar,
+        title: StayWorkStrings.blockedAcceptAnyway,
+        secondaryLabel: StayEnquiryStrings.cancelAction,
+        onSecondary: () => Navigator.pop(ctx, false),
+        primaryLabel: StayWorkStrings.acceptAnyway,
+        primaryDanger: false,
+        onPrimary: () => Navigator.pop(ctx, true),
+      ),
+    );
+    if (again != true) return false;
+    return ctrl.acceptChangeConfirmed(e.id, offerId);
+  }
+
+  static Future<bool> sendShareCard(TripEnquiryModel e) async {
+    final id = e.conversationId;
+    if (id == null) return false;
+    try {
+      await ApiService.post('/chat/conversations/$id/messages', {
+        'type': 'stay_contact_share',
+        'payloadJson': jsonEncode(const <String, dynamic>{}),
+        'clientMessageId': const Uuid().v4(),
+      });
+      return true;
+    } catch (err) {
+      if (DioErrorMapper.errorType(err) == shareDetailsNotSet) {
+        await Get.toNamed(AppRoutes.stayShareDetails);
+        return false;
+      }
+      AppToast.error(DioErrorMapper.toMessage(err, StayWorkStrings.shareFailed, showRawMessageForStatusCodes: const {400, 403}));
+      return false;
+    }
+  }
+
+  static const String shareDetailsNotSet = 'ShareDetailsNotSet';
+
+  static bool canCall(TripEnquiryModel e) => ContactLauncher.tenDigits(e.traveller.phone ?? '').isNotEmpty;
+
+  static Future<void> callGuest(TripEnquiryModel e) async {
+    final phone = ContactLauncher.tenDigits(e.traveller.phone ?? '');
+    if (phone.isEmpty) return;
+    await ContactLauncher.call(phone);
+  }
+
+  static Future<bool> block(BuildContext context, TripEnquiryModel e) async {
+    final id = e.traveller.id ?? '';
+    if (id.isEmpty) return false;
+    final ok = await Dialog3D.show<bool>(
+      context,
+      builder: (ctx) => Dialog3D(
+        tone: ListingTone.forest,
+        art: ListingArt.speechBalloon,
+        title: StayWorkStrings.blockTitle,
+        body: StayWorkStrings.blockBody(StayEnquiryFormat.guest(e)),
+        secondaryLabel: StayEnquiryStrings.cancelAction,
+        onSecondary: () => Navigator.pop(ctx, false),
+        primaryLabel: StayWorkStrings.block,
+        primaryDanger: true,
+        onPrimary: () => Navigator.pop(ctx, true),
+      ),
+    );
+    if (ok != true) return false;
+    try {
+      await ApiService.post('/chat/users/$id/block', {});
+      return true;
+    } catch (err) {
+      AppToast.error(DioErrorMapper.toMessage(err, StayWorkStrings.blockFailed, showRawMessageForStatusCodes: const {400, 403}));
+      return false;
+    }
   }
 
   static Future<void> reportTraveller(BuildContext context, TripEnquiryModel e) =>
@@ -152,7 +233,7 @@ class StayEnquiryActions {
   }
 
   static Future<bool> cancel(BuildContext context, TripEnquiryModel e) async {
-    final cancelled = await TripCancelSheet.show(context, enquiry: e, ownerSide: true);
+    final cancelled = await StayCancelBookingSheet.show(context, e);
     if (cancelled) await StayEnquiriesController.ensure().afterExternalChange(e.id);
     return cancelled;
   }

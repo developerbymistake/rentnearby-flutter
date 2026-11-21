@@ -51,4 +51,8 @@ class JobsRepository {
   Future<void> create(Map<String, dynamic> body) => ApiService.post('/stay-jobs/me', body);
 
   Future<void> close(String id) => ApiService.put('/stay-jobs/me/$id/close', {});
+
+  Future<JobDetailModel> getMineById(String id) async => JobDetailModel.fromJson(_data(await ApiService.get('/stay-jobs/me/$id')));
+
+  Future<void> update(String id, Map<String, dynamic> body) => ApiService.put('/stay-jobs/me/$id', body);
 }

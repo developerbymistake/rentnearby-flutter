@@ -577,7 +577,7 @@ void main() {
         return const StayShareDetailsScreen();
       }, 'share', height: 900);
       expect(find.text('UPI and WhatsApp'), findsWidgets);
-      expect(find.text('Your WhatsApp number'), findsOneWidget);
+      expect(find.text('WhatsApp number'), findsOneWidget);
       expect(find.textContaining('dvance'), findsNothing);
     });
     testWidgets('share states', (t) async {
@@ -590,7 +590,7 @@ void main() {
         await t.enterText(find.byType(TextField).last, '98765');
         await tapText(t, 'Save');
       }, height: 900, variants: false);
-      expect(find.text('Enter a UPI ID like name@bank'), findsOneWidget);
+      expect(find.text('Enter a valid UPI ID, like name@bank.'), findsOneWidget);
       await capture(t, () {
         base();
         ctrl(null, mode: LoadMode.loading);

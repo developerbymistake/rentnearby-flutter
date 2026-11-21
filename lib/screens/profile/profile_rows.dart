@@ -11,4 +11,11 @@ abstract final class ProfileRows {
         ShellKind.stayOwner => const StayOwnerProfileRows(),
         ShellKind.taxiDriver => const TaxiDriverProfileRows(),
       };
+
+  static List<Widget> activityRows(ShellKind kind) => switch (kind) {
+        ShellKind.stayOwner => StayOwnerProfileRows.activityRows(),
+        _ => const [],
+      };
+
+  static bool showsJobsFeed(ShellKind kind) => kind == ShellKind.seeker;
 }

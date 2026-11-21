@@ -5,6 +5,7 @@ import 'package:bakhli/design/extra/ext_chat.dart';
 import '../../trip/models/trip_enquiry_model.dart';
 import '../../trip/trip_strings.dart';
 import '../../trip/widgets/trip_status.dart';
+import '../../stay_owner/strings/stay_work_strings.dart';
 import '../stay_share_strings.dart';
 import 'stay_enquiries_controller.dart';
 import 'stay_enquiry_actions.dart';
@@ -105,6 +106,8 @@ class TripOwnerActionBar extends StatelessWidget {
         return [
           if (onShare != null)
             ChatBarButton3D(tone: _tone, label: StayShareStrings.shareAction, kind: ChatBarKind.primary, onTap: onShare),
+          if (StayEnquiryActions.canCall(enquiry))
+            ChatBarButton3D(tone: _tone, label: StayWorkStrings.callGuest, kind: ChatBarKind.plain, onTap: () => StayEnquiryActions.callGuest(enquiry)),
           if (canRevise)
             button(TripStrings.revisedOffer, StayEnquiryButtonKind.plain, () => StayEnquiryActions.revisedOffer(context, enquiry)),
           button(TripStrings.cancelBooking, StayEnquiryButtonKind.negative, () => StayEnquiryActions.cancel(context, enquiry)),

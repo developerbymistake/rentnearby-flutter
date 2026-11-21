@@ -30,10 +30,49 @@ abstract final class NotificationVisuals {
         NotificationKind.other => Iconsax.info_circle,
       };
 
-  /// 'STAY' / 'TAXI' from the route the notification opens; null when it points elsewhere.
-  static String? listingKind(String? actionRoute) => switch (actionRoute) {
-        AppRoutes.myStays => 'STAY',
-        AppRoutes.myTaxi => 'TAXI',
-        _ => null,
+  /// Kind label of the inbox row: from the type when it has its own label, else from the route it opens.
+  static String? listingKind(String? actionRoute, {String? type}) {
+    final byType = _typeLabels[(type ?? '').replaceAll('_', '').toLowerCase()];
+    if (byType != null) return byType;
+    return switch (actionRoute) {
+      AppRoutes.myStays => 'STAY',
+      AppRoutes.myTaxi => 'TAXI',
+      AppRoutes.stayEnquiries => 'ENQUIRY',
+      AppRoutes.staySpecialPrices => 'PRICE',
+      AppRoutes.stayPlanVisible => 'PLAN',
+      AppRoutes.stayCalendar => 'REMINDER',
+      AppRoutes.plansBilling => 'PLAN',
+      _ => null,
+    };
+  }
+
+  static const Map<String, String> _typeLabels = {
+    'tripchangerequest': 'CHANGE REQUEST',
+    'triptravellercancelled': 'BOOKING',
+    'tripproblemreported': 'BOOKING',
+    'rolerequestapproved': 'ROLE',
+    'rolerequestrejected': 'ROLE',
+  };
+
+  /// Art and tone of a stay owner inbox row (o_st_22); null keeps the generic look.
+  static ({String art, ListingTone tone})? ownerLook(String? type, String? actionRoute) {
+    final t = (type ?? '').replaceAll('_', '').toLowerCase();
+    if (actionRoute == AppRoutes.stayEnquiries) {
+      final art = switch (t) {
+        'tripchangerequest' => ListingArt.calendar,
+        'tripofferaccepted' => ListingArt.key,
+        'tripproblemreported' => ListingArt.warning,
+        'triptravellercancelled' || 'triptravellerleft' || 'tripenquiryclosedbyadmin' => ListingArt.clipboard,
+        _ => ListingArt.speechBalloon,
       };
+      return (art: art, tone: ListingTone.teal);
+    }
+    return switch (actionRoute) {
+      AppRoutes.myStays => (art: ListingArt.camping, tone: ListingTone.cB),
+      AppRoutes.staySpecialPrices => (art: ListingArt.diyaLamp, tone: ListingTone.cB),
+      AppRoutes.stayCalendar => (art: ListingArt.alarmClock, tone: ListingTone.cB),
+      AppRoutes.stayPlanVisible || AppRoutes.plansBilling => (art: ListingArt.crown, tone: ListingTone.cB),
+      _ => null,
+    };
+  }
 }

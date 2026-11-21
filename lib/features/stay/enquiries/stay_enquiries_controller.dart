@@ -1,13 +1,18 @@
 import 'package:dio/dio.dart';
 import 'package:get/get.dart';
+import '../../../services/api_service.dart';
 import '../../../utils/app_toast.dart';
 import '../../../utils/dio_error_mapper.dart';
+import '../../../utils/network_retry.dart';
+import '../../owner_core/json/owner_json.dart';
+import '../../stay_owner/home/stay_owner_home_controller.dart';
 import '../../trip/data/trip_enquiry_repository.dart';
 import '../../trip/models/trip_enquiry_model.dart';
 import '../../trip/models/trip_offer_model.dart';
 import '../../trip/trip_strings.dart';
 import '../models/stay_owner_model.dart';
 import '../setup/stay_repository.dart';
+import 'stay_enquiry_owner_view.dart';
 
 class StayEnquiryBucket {
   static const String newOnes = 'new';
@@ -41,6 +46,7 @@ class StayEnquiriesController extends GetxController {
 
   static const int pageSize = 20;
   static const String _offerLimit = 'OfferLimit';
+  static const String changeTouchesBlock = 'ChangeTouchesBlock';
 
   final _repo = const TripEnquiryRepository();
   final bucket = StayEnquiryBucket.newOnes.obs;
@@ -56,11 +62,35 @@ class StayEnquiriesController extends GetxController {
   final executionDisabled = false.obs;
   final busyIds = <String>{}.obs;
   final stay = Rxn<StayOwnerModel>();
+  final views = <String, StayEnquiryOwnerView>{}.obs;
+  final stale = false.obs;
+  final changeRequests = 0.obs;
+
+  static Future<Map<String, dynamic>> Function(String status, int page, int pageSize)? debugFetch;
+
+  StayEnquiryOwnerView viewOf(String id) => views[id] ?? StayEnquiryOwnerView.empty;
+
+  Future<TripOwnerEnquiryPage> _ownerPage(String status, int page) async {
+    final fetch = debugFetch;
+    final res = fetch != null
+        ? await fetch(status, page, pageSize)
+        : await withRetry(() => ApiService.get('/trips/enquiries/owner', params: {'status': status, 'page': page, 'pageSize': pageSize}));
+    final data = OwnerJson.map(res['data']);
+    final parsed = <String, StayEnquiryOwnerView>{};
+    for (final raw in OwnerJson.list(data['items'], (m) => m)) {
+      final id = OwnerJson.str(raw['id']);
+      if (id.isNotEmpty) parsed[id] = StayEnquiryOwnerView.fromJson(raw);
+    }
+    views.addAll(parsed);
+    changeRequests.value = OwnerJson.integer(OwnerJson.map(data['counts'])['changeRequests'], changeRequests.value);
+    return TripOwnerEnquiryPage.fromJson(data);
+  }
 
   int _page = 1;
   int _requestId = 0;
   String? lastErrorType;
   String? lastErrorMessage;
+  int? lastStatus;
 
   void reset() {
     _requestId++;
@@ -75,14 +105,17 @@ class StayEnquiriesController extends GetxController {
     loadingMore.value = false;
     busyIds.clear();
     stay.value = null;
+    views.clear();
+    stale.value = false;
+    changeRequests.value = 0;
     _page = 1;
   }
 
   Future<void> loadBadge() async {
     try {
-      final page = await _repo.ownerList(status: StayEnquiryBucket.newOnes, pageSize: 1);
-      counts.value = page.counts;
-      newCount.value = page.counts.newCount;
+      final page = await _ownerPage(StayEnquiryBucket.newOnes, 1);
+      if (isClosed) return;
+      _setCounts(page.counts);
     } catch (_) {}
   }
 
@@ -100,11 +133,12 @@ class StayEnquiriesController extends GetxController {
     failed.value = false;
     executionDisabled.value = false;
     loadMoreFailed.value = false;
+    stale.value = false;
     items.clear();
     hasMore.value = false;
     try {
-      final page = await _repo.ownerList(status: status, page: 1, pageSize: pageSize);
-      if (id != _requestId) return;
+      final page = await _ownerPage(status, 1);
+      if (id != _requestId || isClosed) return;
       items.assignAll(page.items);
       hasMore.value = page.hasMore;
       _setCounts(page.counts);
@@ -121,9 +155,10 @@ class StayEnquiriesController extends GetxController {
     final id = ++_requestId;
     final status = bucket.value;
     try {
-      final page = await _repo.ownerList(status: status, page: 1, pageSize: pageSize);
-      if (id != _requestId) return;
+      final page = await _ownerPage(status, 1);
+      if (id != _requestId || isClosed) return;
       _page = 1;
+      stale.value = false;
       items.assignAll(page.items);
       hasMore.value = page.hasMore;
       failed.value = false;
@@ -131,7 +166,8 @@ class StayEnquiriesController extends GetxController {
       loadMoreFailed.value = false;
       _setCounts(page.counts);
     } catch (e) {
-      if (id != _requestId) return;
+      if (id != _requestId || isClosed) return;
+      if (items.isNotEmpty) stale.value = true;
       if (items.isEmpty) {
         failed.value = true;
         executionDisabled.value = DioErrorMapper.errorType(e) == TripEnquiryErrorTypes.executionDisabled;
@@ -146,8 +182,8 @@ class StayEnquiriesController extends GetxController {
     loadingMore.value = true;
     loadMoreFailed.value = false;
     try {
-      final page = await _repo.ownerList(status: status, page: _page + 1, pageSize: pageSize);
-      if (id != _requestId) return;
+      final page = await _ownerPage(status, _page + 1);
+      if (id != _requestId || isClosed) return;
       _page++;
       final known = items.map((e) => e.id).toSet();
       items.addAll(page.items.where((e) => !known.contains(e.id)));
@@ -207,8 +243,13 @@ class StayEnquiriesController extends GetxController {
   }
 
   Future<bool> acceptChange(String id, String offerId) async {
-    final result = await _act<TripEnquiryModel>(id, () => _repo.acceptChange(id, offerId), TripStrings.couldNotLoad, (r) => r);
-    if (result != null) AppToast.success(TripStrings.changeAccepted);
+    final result = await _act<TripEnquiryModel>(id, () => _repo.acceptChange(id, offerId), TripStrings.couldNotLoad, (r) => r, inline: true);
+    if (result != null) {
+      AppToast.success(TripStrings.changeAccepted);
+    } else if (lastErrorType != changeTouchesBlock && lastErrorMessage != null && const {400, 409, 422}.contains(lastStatus)) {
+      AppToast.error(lastErrorMessage!);
+      refreshOne(id);
+    }
     return result != null;
   }
 
@@ -231,6 +272,7 @@ class StayEnquiriesController extends GetxController {
     if (busyIds.contains(id)) return null;
     lastErrorType = null;
     lastErrorMessage = null;
+    lastStatus = null;
     busyIds.add(id);
     try {
       final result = await call();
@@ -241,6 +283,7 @@ class StayEnquiriesController extends GetxController {
       lastErrorType = DioErrorMapper.errorType(e);
       lastErrorMessage = DioErrorMapper.serverMessage(e);
       final status = e is DioException ? e.response?.statusCode : null;
+      lastStatus = status;
       final showInline = inline && lastErrorMessage != null && (status == 400 || status == 409 || status == 422);
       if (limitMessage != null && lastErrorType == _offerLimit) {
         AppToast.warning(limitMessage);
@@ -278,5 +321,28 @@ class StayEnquiriesController extends GetxController {
   void _setCounts(TripOwnerCounts c) {
     counts.value = c;
     newCount.value = c.newCount;
+    StayOwnerHomeController.maybe?.centreBadge.value = c.newCount + changeRequests.value;
+  }
+
+  Future<bool> acceptChangeConfirmed(String id, String offerId) async {
+    final result = await _act<TripEnquiryModel>(
+      id,
+      () async => TripEnquiryModel.fromJson(OwnerJson.map((await ApiService.post('/trips/enquiries/$id/change-request/$offerId/accept?confirm=true', const {}))['data'])),
+      TripStrings.couldNotLoad,
+      (r) => r,
+    );
+    if (result != null) AppToast.success(TripStrings.changeAccepted);
+    return result != null;
+  }
+
+  Future<bool> cancelBooking(String id, String reason) async {
+    final result = await _act<TripEnquiryModel>(
+      id,
+      () async => TripEnquiryModel.fromJson(OwnerJson.map((await ApiService.post('/trips/enquiries/$id/cancel', {'reason': reason}))['data'])),
+      TripStrings.couldNotLoad,
+      (r) => r,
+      inline: true,
+    );
+    return result != null;
   }
 }
