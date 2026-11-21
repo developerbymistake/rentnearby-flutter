@@ -1,5 +1,15 @@
 import '../../../config/app_constants.dart';
 import 'stay_owner_model.dart';
+import 'stay_price_chip.dart';
+
+class StayRoomDatedPrice {
+  final int price;
+  final int? base;
+
+  const StayRoomDatedPrice({required this.price, this.base});
+
+  int? get struck => base != null && base! > price ? base : null;
+}
 
 class StayDetailModel {
   final String id;
@@ -27,6 +37,11 @@ class StayDetailModel {
   final String? ownerPhone;
   final bool hasReported;
   final DateTime createdAt;
+  final int? datesFromPerNight;
+  final int? basePerNight;
+  final StayPriceChip? priceChip;
+  final bool fullOnDates;
+  final Map<String, StayRoomDatedPrice> roomDatedPrices;
 
   StayDetailModel({
     required this.id,
@@ -54,7 +69,32 @@ class StayDetailModel {
     this.ownerPhone,
     required this.hasReported,
     required this.createdAt,
+    this.datesFromPerNight,
+    this.basePerNight,
+    this.priceChip,
+    this.fullOnDates = false,
+    this.roomDatedPrices = const {},
   });
+
+  int? get struckBase {
+    final d = datesFromPerNight, b = basePerNight;
+    return d != null && b != null && b > d ? b : null;
+  }
+
+  StayRoomDatedPrice? datedPriceOf(StayRoomModel r) => roomDatedPrices[r.id];
+
+  static Map<String, StayRoomDatedPrice> _roomPrices(Object? rooms) {
+    if (rooms is! List) return const {};
+    final out = <String, StayRoomDatedPrice>{};
+    for (final r in rooms) {
+      if (r is! Map) continue;
+      final id = r['id'];
+      final price = StayPriceChip.money(r['priceForDates']);
+      if (id is! String || id.isEmpty || price == null) continue;
+      out[id] = StayRoomDatedPrice(price: price, base: StayPriceChip.money(r['basePrice']));
+    }
+    return out;
+  }
 
   String get title => (name == null || name!.isEmpty) ? 'Stay' : name!;
 
@@ -106,5 +146,10 @@ class StayDetailModel {
         ownerPhone: j['ownerPhone'] as String?,
         hasReported: j['hasReported'] == true,
         createdAt: DateTime.tryParse(j['createdAt'] as String? ?? '') ?? DateTime.now(),
+        datesFromPerNight: StayPriceChip.money(j['datesFromPerNight']),
+        basePerNight: StayPriceChip.money(j['basePerNight']),
+        priceChip: StayPriceChip.fromJson(j['priceChip']),
+        fullOnDates: j['fullOnDates'] == true,
+        roomDatedPrices: _roomPrices(j['rooms']),
       );
 }

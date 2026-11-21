@@ -79,6 +79,7 @@ class _StayDetailScreenState extends State<StayDetailScreen> {
     final args = Get.arguments;
     _id = args is Map ? args['id'] as String : args as String;
     _fromTrip = args is Map && args['fromTrip'] == true;
+    _dates = StayDetailDates.fromArgs(args);
     _scroll.addListener(_onScroll);
     _reveal.attach(_scroll);
     _fetch();
@@ -86,10 +87,11 @@ class _StayDetailScreenState extends State<StayDetailScreen> {
 
   late final String _id;
   late final bool _fromTrip;
+  late final Map<String, dynamic>? _dates;
 
   void _fetch() {
     if (!_loading) setState(() => _loading = true);
-    StayGuestController.to.getById(_id).then((s) {
+    StayGuestController.to.getById(_id, dates: _dates).then((s) {
       if (mounted) {
         setState(() { _stay = s; _loading = false; });
       }
@@ -252,14 +254,7 @@ class _StayDetailScreenState extends State<StayDetailScreen> {
         SliverToBoxAdapter(
           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             _hero(s),
-            _sec(0, DetailTitleCard(
-              tone: _kTone,
-              eyebrow: 'FOR STAY',
-              title: s.title,
-              caption: 'FROM',
-              value: _price,
-              unit: s.minPricePerNight != null ? '/night' : null,
-            )),
+            _sec(0, _titleCard(s)),
             _sec(1, Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
               if (s.rooms.isNotEmpty) ...[
                 const TitleRow3D(title: 'Rooms'),
@@ -330,17 +325,37 @@ class _StayDetailScreenState extends State<StayDetailScreen> {
     );
   }
 
-  Widget _roomCard(StayRoomModel r, int i) => DetailSlimCard(
-        tone: ListingTone.list(_kTone, i),
-        art: ListingArt.bed,
-        title: r.label,
-        subtitle: [
-          '${StayOptionSets.guestsLabel(r.maxGuests)} guest${r.maxGuests == 1 ? '' : 's'}',
-          StayOptionSets.labelOf(StayOptionSets.meals, r.meals),
-        ].where((e) => e.isNotEmpty).join(' · '),
-        price: BrowseItem.inr(r.pricePerNight),
-        unit: '/night',
-      );
+  Widget _titleCard(StayDetailModel s) {
+    final dated = s.fullOnDates ? null : s.datesFromPerNight;
+    final was = dated == null ? null : s.struckBase;
+    return DetailTitleCard(
+      tone: _kTone,
+      eyebrow: 'FOR STAY',
+      title: s.title,
+      caption: 'FROM',
+      value: dated != null ? BrowseItem.inr(dated) : _price,
+      unit: dated != null || s.minPricePerNight != null ? '/night' : null,
+      was: was == null ? null : BrowseItem.inr(was),
+      chip: was == null ? null : s.priceChip?.text,
+    );
+  }
+
+  Widget _roomCard(StayRoomModel r, int i) {
+    final dated = _stay?.datedPriceOf(r);
+    final was = dated?.struck;
+    return DetailSlimCard(
+      tone: ListingTone.list(_kTone, i),
+      art: ListingArt.bed,
+      title: r.label,
+      subtitle: [
+        '${StayOptionSets.guestsLabel(r.maxGuests)} guest${r.maxGuests == 1 ? '' : 's'}',
+        StayOptionSets.labelOf(StayOptionSets.meals, r.meals),
+      ].where((e) => e.isNotEmpty).join(' · '),
+      price: BrowseItem.inr(dated?.price ?? r.pricePerNight),
+      unit: '/night',
+      was: was == null ? null : BrowseItem.inr(was),
+    );
+  }
 
   static String _yesNo(bool v) => v ? 'Yes' : 'No';
 
@@ -392,5 +407,16 @@ class _StayDetailScreenState extends State<StayDetailScreen> {
       'status': conv.status,
       'isBlockedByMe': conv.isBlockedByMe,
     });
+  }
+}
+
+abstract final class StayDetailDates {
+  static Map<String, dynamic>? fromArgs(Object? args) {
+    if (args is! Map) return null;
+    final checkIn = args['checkIn'];
+    if (checkIn is! String || !RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(checkIn)) return null;
+    final nights = args['nights'];
+    final n = nights is num ? nights.toInt() : (nights is String ? int.tryParse(nights) : null);
+    return {'checkIn': checkIn, if (n != null && n > 0) 'nights': n};
   }
 }

@@ -163,6 +163,8 @@ class _TripRepliesScreenState extends State<TripRepliesScreen> with TickerProvid
   }
 
   int? _listed(_Entry x) {
+    final dated = x.enquiry?.status == TripEnquiryStatuses.asked ? x.enquiry?.listedPerNight : null;
+    if (dated != null) return dated;
     if (!Get.isRegistered<TripSupplyController>()) return null;
     for (final s in Get.find<TripSupplyController>().stays) {
       if (s.id == x.stayId) return s.minPricePerNight;

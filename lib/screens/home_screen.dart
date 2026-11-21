@@ -3,24 +3,24 @@ import 'package:get/get.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../config/app_constants.dart';
 import '../config/app_routes.dart';
-import '../controllers/plan_controller.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/home_controller.dart';
 import '../controllers/tab_config_controller.dart';
 import '../design/design.dart';
 import '../config/app_tabs.dart';
 import '../navigation/tour_keys.dart';
-import '../features/jobs/controllers/my_jobs_controller.dart';
 import '../features/nearby/nearby_strings.dart';
-import '../features/stay/setup/stay_flow.dart';
+import '../features/seeker_home/seeker_feed_controller.dart';
+import '../features/seeker_home/seeker_home_parts.dart';
+import '../features/seeker_home/seeker_quick_actions.dart';
+import '../features/seeker_home/seeker_status_rule.dart';
+import '../features/seeker_home/seeker_tour_steps.dart';
+import '../features/seeker_home/strings/seeker_home_strings.dart';
 import '../features/taxi/models/taxi_browse_item.dart';
-import '../features/taxi/setup/taxi_flow.dart';
 import '../features/trip/widgets/trip_popular_rail.dart';
-import '../utils/app_toast.dart';
 import '../widgets/home_hero_carousel.dart';
 import '../widgets/home_stay_rail_card.dart';
 import '../widgets/home_taxi_rail_card.dart';
-import '../widgets/plan_subscription_card.dart';
 import '../widgets/tab_header.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -31,13 +31,15 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  static const int _sections = 7;
+  static const int _sections = 4;
   final ScrollController _scroll = ScrollController();
   final ValueNotifier<int> _replay = ValueNotifier<int>(0);
 
   final _home = Get.find<HomeController>();
   final _auth = Get.find<AuthController>();
   final _tabs = Get.find<TabConfigController>();
+
+  SeekerFeedController? get _feed => SeekerFeedController.maybe;
 
   @override
   void dispose() {
@@ -47,7 +49,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _refresh() async {
-    await _home.reloadDistrict();
+    final feed = _feed;
+    await Future.wait<void>([_home.reloadDistrict(), if (feed != null) feed.reload()]);
     if (mounted) _replay.value++;
   }
 
@@ -78,10 +81,10 @@ class _HomeScreenState extends State<HomeScreen> {
         tab: AppTabs.home,
         child: Obx(() {
           final name = _auth.profileName.value.trim();
-          final firstName = name.isNotEmpty ? name.split(' ').first : 'there';
+          final firstName = name.isNotEmpty ? name.split(' ').first : SeekerHomeStrings.greetingFallbackName;
           return TabHeaderFrame(
-            title: 'Hi, $firstName',
-            subtitle: 'Where to next?',
+            title: SeekerHomeStrings.greeting(firstName),
+            subtitle: SeekerTripWords.headerSubtitle(_feed?.feed.value),
             color: ListingPalette.sunrise.page,
             iconsKey: TourKeys.homeActionMenu,
             child: body,
@@ -89,6 +92,12 @@ class _HomeScreenState extends State<HomeScreen> {
         }),
       ),
     );
+  }
+
+  bool get _firstOpen {
+    final f = _feed;
+    if (f == null || f.feed.value != null) return false;
+    return !_home.hasAnyRail && (_home.anyRailLoading || f.loading.value);
   }
 
   Widget _buildBody(BuildContext context) {
@@ -99,49 +108,63 @@ class _HomeScreenState extends State<HomeScreen> {
         controller: _scroll,
         physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
         padding: EdgeInsets.only(bottom: _bottomClear(context)),
-        child: StaggerHost(
-          count: _sections,
-          replay: _replay,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              StaggerItem(
-                index: 0,
-                child: KeyedSubtree(
-                  key: TourKeys.homeManageListingsCard,
-                  child: const HomeHeroCarousel(),
+        child: Obx(() {
+          if (_firstOpen) return const SeekerHomeSkeleton();
+          return StaggerHost(
+            count: _sections,
+            replay: _replay,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                StaggerItem(
+                  index: 0,
+                  child: KeyedSubtree(
+                    key: SeekerTourKeys.homeTripCard,
+                    child: const HomeHeroCarousel(),
+                  ),
                 ),
-              ),
-              StaggerItem(index: 1, child: _buildPlanNudge()),
-              StaggerItem(index: 2, child: _buildOwnerQuickActions()),
-              StaggerItem(index: 3, child: const TripPopularRail()),
-              StaggerItem(index: 4, child: _buildListingsSections()),
-              StaggerItem(index: 5, child: _buildRecentlyAddedSection()),
-              StaggerItem(index: 6, child: _buildInstagramCard()),
-            ],
-          ),
-        ),
+                const StaggerItem(index: 1, child: SeekerQuickActions()),
+                StaggerItem(index: 2, child: _buildRailsArea()),
+                StaggerItem(index: 3, child: _buildInstagramCard()),
+              ],
+            ),
+          );
+        }),
       ),
     );
+  }
+
+  Widget _buildRailsArea() {
+    return Obx(() {
+      if (_home.railsFailedNoCopy && !_home.anyRailLoading) {
+        return SeekerRailsErrorCard(onRetry: _home.retryRails);
+      }
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const TripPopularRail(),
+          _buildListingsSections(),
+          _buildRecentlyAddedSection(),
+        ],
+      );
+    });
   }
 
   Widget _buildListingsSections() {
     return Obx(() {
       final far = _home.farAway.value;
       final rails = <Widget>[
-        if (_tabs.isStaysActive)
+        if (_tabs.isStaysActive && (_home.staysLoading.value || _home.stays.isNotEmpty))
           _buildRail(
             title: far ? NearbyStrings.staysNearest : NearbyStrings.staysNear,
             tab: AppTabs.stays,
-            section: HomeSectionKeys.stays,
             loading: _home.staysLoading.value,
             rail: () => _buildStaysRail(_home.stays),
           ),
-        if (_tabs.isTaxiActive)
+        if (_tabs.isTaxiActive && (_home.taxisLoading.value || _home.taxis.isNotEmpty))
           _buildRail(
             title: far ? NearbyStrings.taxisNearest : NearbyStrings.taxisNear,
             tab: AppTabs.taxi,
-            section: HomeSectionKeys.taxis,
             loading: _home.taxisLoading.value,
             rail: () => _buildTaxisRail(_home.taxis),
           ),
@@ -154,9 +177,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildStaysRail(List<HomeStayModel> items) {
-    if (items.isEmpty) {
-      return _emptyRailMessage('No stays listed here yet.', asset: TravelIcon.stay);
-    }
     return MealsRail(
       physics: const BouncingScrollPhysics(),
       children: [for (var i = 0; i < items.length; i++) HomeStayRailCard(stay: items[i], index: i)],
@@ -164,9 +184,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildTaxisRail(List<TaxiBrowseItem> items) {
-    if (items.isEmpty) {
-      return _emptyRailMessage('No taxis listed here yet.', asset: TravelIcon.taxi, tone: KitTone.taxi);
-    }
     return MealsRail(
       physics: const BouncingScrollPhysics(),
       children: [for (var i = 0; i < items.length; i++) HomeTaxiRailCard(taxi: items[i], index: i)],
@@ -176,21 +193,20 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildRail({
     required String title,
     required int tab,
-    required String section,
     required bool loading,
     required Widget Function() rail,
   }) {
-    final failed = _home.failedSections.contains(section);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        TitleRow3D(title: title, action: 'See all', onAction: () => _auth.openPlace(AppPlaces.ofTab(tab))),
+        Semantics(
+          header: true,
+          child: TitleRow3D(title: title, action: SeekerHomeStrings.seeAll, onAction: () => _auth.openPlace(AppPlaces.ofTab(tab))),
+        ),
         SkeletonSwitcher(
           loading: loading,
           skeleton: _buildRailSkeleton(),
-          child: failed
-              ? _railErrorMessage(() => _home.reloadSections({section}))
-              : rail(),
+          child: rail(),
         ),
       ],
     );
@@ -203,215 +219,40 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _emptyRailMessage(String text, {String asset = TravelIcon.stay, KitTone tone = KitTone.stay}) =>
-      _railMessage(
-        child: StateCard(
-          title: 'Nothing here yet',
-          message: text,
-          asset: asset,
-          kit: tone,
-          padding: DS.sym(h: 16, v: 12),
-        ),
-      );
-
-  Widget _railErrorMessage(VoidCallback onRetry) => _railMessage(
-        onTap: onRetry,
-        child: StateCard.error(
-          title: "Couldn't load",
-          message: 'Tap to retry',
-          padding: DS.sym(h: 16, v: 12),
-        ),
-      );
-
-  Widget _railMessage({required Widget child, VoidCallback? onTap}) => Padding(
-        padding: EdgeInsets.fromLTRB(DS.s(18), DS.gv(4), DS.s(18), DS.gv(16)),
-        child: SectionTile(
-          onTap: onTap,
-          padding: EdgeInsets.zero,
-          child: SizedBox(width: double.infinity, child: child),
-        ),
-      );
-
-  Future<void> _postJob() async {
-    if (_auth.user.value?.stayStatus != 'Approved') {
-      AppToast.info('Stay must be live first');
-      return;
-    }
-    final result = await Get.toNamed(AppRoutes.postJob);
-    if (result == true) MyJobsController.invalidateList();
-  }
-
-  Widget _buildPlanNudge() {
-    final plans = Get.find<PlanController>();
-    return Obx(() {
-      final me = plans.myPlan.value;
-      final play = me.play;
-      final days = me.daysLeft;
-      String? message;
-      String action = 'Renew';
-      if (play != null && play.needsFix) {
-        message = PlanStateCopy.status(me);
-        action = PlanStateCopy.action(me);
-      } else if (play != null && play.ownsActivePlan) {
-        final at = play.expiryAt ?? me.endsAt;
-        if (!play.renewsAutomatically && at != null && days != null && days <= 7) {
-          message = 'Ends on ${PlanStateCopy.date(at)}';
-          action = 'Resubscribe';
-        }
-      } else if (me.hasPaidPlan && days != null && days <= 7) {
-        message = days <= 0 ? 'Plan ends today' : 'Plan ends in $days day${days == 1 ? '' : 's'}';
-      }
-      if (!me.paymentEnabled || message == null) return const SizedBox.shrink();
-      final tone = ListingTone.cF;
-      return WideCard(
-        kind: WideKind.slim,
-        tone: tone,
-        art: ListingArt.calendar,
-        title: message,
-        trailing: _WhitePill(label: action, color: tone.button),
-        onTap: () => Get.toNamed(AppRoutes.plansBilling),
-      );
-    });
-  }
-
-  Widget _buildOwnerQuickActions() {
-    return Obx(() {
-      final stays = _auth.staysEnabled;
-      final taxis = _auth.taxisEnabled;
-      final jobs = _auth.jobsEnabled;
-      final tiles = <Widget>[
-        if (stays)
-          KeyedSubtree(
-            key: TourKeys.homeQuickActionAddStay,
-            child: _ownerQuickActionTile(
-              art: ListingArt.stay,
-              tone: ListingTone.forest,
-              plus: true,
-              label: 'Add Stay',
-              description: 'List a new stay',
-              onTap: StayFlow.start,
-            ),
-          ),
-        if (taxis)
-          KeyedSubtree(
-            key: TourKeys.homeQuickActionAddTaxi,
-            child: _ownerQuickActionTile(
-              art: ListingArt.taxi,
-              tone: ListingTone.coral,
-              plus: true,
-              label: 'Add Taxi',
-              description: 'List your taxi',
-              onTap: () => TaxiFlow.start(),
-            ),
-          ),
-        if (stays || taxis)
-          KeyedSubtree(
-            key: TourKeys.homeQuickActionLeads,
-            child: _ownerQuickActionTile(
-              art: ListingArt.clipboard,
-              tone: ListingTone.cC,
-              label: stays ? 'My Stays' : 'My Taxi',
-              description: stays ? 'Manage your stays' : 'Manage your taxi',
-              onTap: () => Get.toNamed(stays ? AppRoutes.myStays : AppRoutes.myTaxi),
-            ),
-          ),
-        if (jobs) ...[
-          _ownerQuickActionTile(
-            art: ListingArt.pushpin,
-            tone: ListingTone.cD,
-            plus: true,
-            label: 'Post Job',
-            description: 'Hire for your stay',
-            onTap: _postJob,
-          ),
-          _ownerQuickActionTile(
-            art: ListingArt.clipboard,
-            tone: ListingTone.cD,
-            label: 'My Jobs',
-            description: 'Your job posts',
-            onTap: () => Get.toNamed(AppRoutes.myJobs),
-          ),
-        ],
-      ];
-      if (tiles.isEmpty) return const SizedBox.shrink();
-      return MealsRail(physics: const BouncingScrollPhysics(), children: tiles);
-    });
-  }
-
-  Widget _ownerQuickActionTile({
-    required String art,
-    required ListingTone tone,
-    required String label,
-    required String description,
-    required VoidCallback? onTap,
-    bool plus = false,
-  }) {
-    return MealsCardV(
-      tone: tone,
-      art: art,
-      title: label,
-      description: description,
-      goIcon: plus ? Icons.add : Icons.arrow_forward,
-      onTap: onTap,
-      semanticsLabel: label,
-    );
-  }
-
   Widget _buildRecentlyAddedSection() {
     return Obx(() {
       if (!_tabs.isStaysActive) return const SizedBox.shrink();
       final loading = _home.recentlyAddedStaysLoading.value;
       final items = loading ? const <HomeRecentItem>[] : _home.recentMixed();
-      final failed = {HomeSectionKeys.recentStays}.where(_home.failedSections.contains).toSet();
-
-      final Widget body;
-      if (items.isEmpty && failed.isNotEmpty) {
-        body = _railErrorMessage(() => _home.reloadSections(failed));
-      } else if (items.isEmpty) {
-        body = _emptyRailMessage('No stays added yet.');
-      } else {
-        body = Column(
-          children: [
-            for (var i = 0; i < items.length; i++) EntranceOnce(index: i, offset: 50, child: _recentRow(items[i], i)),
-          ],
-        );
-      }
+      if (!loading && items.isEmpty) return const SizedBox.shrink();
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const TitleRow3D(title: 'Recently added stays'),
+          Semantics(header: true, child: const TitleRow3D(title: SeekerHomeStrings.recentlyAdded)),
           SkeletonSwitcher(
             loading: loading,
-            skeleton: const Column(children: [WideCardSkeleton(kind: WideKind.photo), WideCardSkeleton(kind: WideKind.photo), WideCardSkeleton(kind: WideKind.photo)]),
-            child: body,
+            skeleton: const Column(children: [WideCardSkeleton(kind: WideKind.slim), WideCardSkeleton(kind: WideKind.slim)]),
+            child: Column(
+              children: [
+                for (var i = 0; i < items.length; i++) EntranceOnce(index: i, offset: 50, child: _recentRow(items[i])),
+              ],
+            ),
           ),
         ],
       );
     });
   }
 
-  static final List<ListingTone> _recentTones = [ListingTone.cE, ListingTone.cF, ListingTone.cB];
-
-  Widget _recentRow(HomeRecentItem item, int index) {
+  Widget _recentRow(HomeRecentItem item) {
     final s = item.stay;
     if (s == null) return const SizedBox.shrink();
-    final url = s.item.thumbnailUrl;
-    void open() => Get.toNamed(AppRoutes.stayDetail, arguments: {'id': s.item.id});
-    return WideCard(
-      kind: WideKind.photo,
-      tone: _recentTones[index % _recentTones.length],
-      photo: url == null || url.isEmpty ? null : SizedBox.expand(child: KitPhoto(url: url, width: double.infinity, height: double.infinity)),
-      sticker: ListingArt.stay,
-      badge: s.item.isFeatured ? 'Featured' : null,
-      tag: s.item.tagLabel,
+    return SeekerRecentRow(
+      key: ValueKey('recent-${s.item.id}'),
       title: s.item.title,
-      subtitle: s.districtName.isNotEmpty ? s.districtName : s.item.locationLabel,
-      reserveChips: false,
-      priceCaption: s.item.priceCaption,
-      number: s.item.priceValue,
-      unit: s.item.priceUnit,
-      onGo: open,
-      onTap: open,
+      subtitle: s.item.locationLabel.isNotEmpty ? s.item.locationLabel : s.districtName,
+      photoUrl: s.item.thumbnailUrl,
+      stayTypeName: s.stayTypeName,
+      onTap: () => Get.toNamed(AppRoutes.stayDetail, arguments: {'id': s.item.id}),
     );
   }
 
@@ -421,7 +262,7 @@ class _HomeScreenState extends State<HomeScreen> {
       child: KeyedSubtree(
         key: TourKeys.homeInstagramCard,
         child: WorkoutCard(
-          tone: ListingTone.cD,
+          tone: ListingTone.cB,
           art: ListingArt.camera,
           eyebrow: 'Instagram',
           title: 'Follow us',
@@ -430,24 +271,6 @@ class _HomeScreenState extends State<HomeScreen> {
           semanticsLabel: 'Follow us on Instagram',
           onTap: _openInstagram,
         ),
-      ),
-    );
-  }
-}
-
-class _WhitePill extends StatelessWidget {
-  const _WhitePill({required this.label, required this.color});
-
-  final String label;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(color: DesignColors.onPrimary, borderRadius: DS.circular(22), boxShadow: DS.shadows(Ink3D.whiteBtn)),
-      child: Padding(
-        padding: DS.sym(h: 14, v: 8),
-        child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(13, FontWeight.w700, color)),
       ),
     );
   }

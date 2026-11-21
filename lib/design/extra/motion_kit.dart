@@ -588,7 +588,7 @@ class KitSwitcher extends StatelessWidget {
       ),
       child: child,
     );
-    if (animateSize) {
+    if (animateSize && d > Duration.zero) {
       w = AnimatedSize(duration: d, curve: Curves.fastOutSlowIn, alignment: Alignment.topCenter, child: w);
     }
     return w;

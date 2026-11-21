@@ -97,9 +97,9 @@ class StayGuestController extends GetxController {
     }
   }
 
-  Future<StayDetailModel?> getById(String id) async {
+  Future<StayDetailModel?> getById(String id, {Map<String, dynamic>? dates}) async {
     try {
-      final res = await ApiService.get('/stays/$id');
+      final res = await ApiService.get('/stays/$id', params: dates == null || dates.isEmpty ? null : dates);
       return StayDetailModel.fromJson(res['data'] as Map<String, dynamic>);
     } catch (e) {
       if (e is DioException) {

@@ -229,6 +229,7 @@ class TripEnquiryModel {
   final DateTime? expiresAt;
   final bool isUrgent;
   final int? agreedTotal;
+  final int? listedPerNight;
   final TripOfferModel? acceptedOffer;
   final TripOfferModel? openOffer;
   final int offerCount;
@@ -276,6 +277,7 @@ class TripEnquiryModel {
     this.expiresAt,
     this.isUrgent = false,
     this.agreedTotal,
+    this.listedPerNight,
     this.acceptedOffer,
     this.openOffer,
     this.offerCount = 0,
@@ -446,6 +448,7 @@ class TripEnquiryModel {
       expiresAt: tripInstant(json['expiresAt']),
       isUrgent: json['isUrgent'] == true,
       agreedTotal: (json['agreedTotal'] as num?)?.toInt(),
+      listedPerNight: json['listedPerNight'] is num && (json['listedPerNight'] as num) > 0 ? (json['listedPerNight'] as num).toInt() : null,
       acceptedOffer: offer('acceptedOffer'),
       openOffer: offer('openOffer'),
       offerCount: (json['offerCount'] as num?)?.toInt() ?? 0,

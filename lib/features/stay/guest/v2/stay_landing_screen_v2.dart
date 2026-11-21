@@ -292,6 +292,7 @@ class _StayLandingScreenV2State extends State<StayLandingScreenV2> {
         tag: b.tagLabel,
         title: b.title,
         subtitle: b.locationLabel,
+        leadChip: s.priceChip?.text,
         chips: [for (final f in b.facts.take(3)) f.label],
         priceCaption: b.priceCaption,
         number: b.priceValue,

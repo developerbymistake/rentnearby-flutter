@@ -1,0 +1,16 @@
+{
+  "tripCard": {
+    "state": "InProgress",
+    "tripId": "trip-1",
+    "title": "Nainital trip",
+    "destinationName": "Nainital",
+    "startDate": "2026-11-26",
+    "endDate": "2026-11-29",
+    "done": 3,
+    "total": 5,
+    "nextStep": { "key": "taxi", "kind": "Taxi", "cityName": null },
+    "today": null
+  },
+  "status": { "kind": "Confirmed", "count": 1, "listingName": "Deodar Heights", "enquiryId": "enq-1", "tripId": "trip-1", "key": "Confirmed:1:enq-1:638900000000000000" },
+  "slots": { "count": 2, "limit": 3, "full": false }
+}

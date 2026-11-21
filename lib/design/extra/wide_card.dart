@@ -301,6 +301,9 @@ class WideCard extends StatelessWidget {
     this.priceCaption,
     this.number,
     this.unit = '',
+    this.wasNumber,
+    this.leadChip,
+    this.leadChipMuted = false,
     this.label,
     this.labelNote,
     this.actions = const [],
@@ -341,6 +344,9 @@ class WideCard extends StatelessWidget {
   final List<WideAction> actions;
   final List<List<WideAction>>? actionRows;
   final VoidCallback? onGo;
+  final String? wasNumber;
+  final String? leadChip;
+  final bool leadChipMuted;
   final IconData goIcon;
   final double? progress;
   final Widget? trailing;
@@ -353,6 +359,23 @@ class WideCard extends StatelessWidget {
   final String? semanticsLabel;
 
   static double get bannerHeight => DS.s(164);
+
+  Widget _pricedWithWas(TextScaler scaler, double room) {
+    final was = wasNumber;
+    if (was == null || was.isEmpty) return _WidePrice(number: number!, unit: unit, caption: priceCaption, room: room);
+    final wasStyle = Ink3D.text(12, FontWeight.w500, Colors.white.withValues(alpha: 0.8), height: 1.25).copyWith(decoration: TextDecoration.lineThrough, decorationColor: Colors.white);
+    final wasW = KitText.widthOf(was, wasStyle, scaler) + DS.s(8);
+    return _WidePrice(
+      number: number!,
+      unit: unit,
+      caption: priceCaption,
+      room: room - wasW,
+      after: Padding(
+        padding: EdgeInsets.only(left: DS.s(6), bottom: DS.s(2)),
+        child: Text(was, maxLines: 1, softWrap: false, style: wasStyle),
+      ),
+    );
+  }
 
   int _slotLines(int i) => subtitleSlots != null && i < subtitleSlots!.length ? subtitleSlots![i] : 2;
 
@@ -489,11 +512,20 @@ class WideCard extends StatelessWidget {
     );
 
     final hasRing = !slim && progress != null;
-    final hasChips = !slim && (chips.isNotEmpty || reserveChips || hasRing);
+    final lead = leadChip;
+    final hasChips = !slim && (chips.isNotEmpty || reserveChips || hasRing || lead != null);
     final chipWrap = Wrap(
       spacing: DS.gh(6),
       runSpacing: DS.gv(6),
       children: [
+        if (lead != null)
+          DecoratedBox(
+            decoration: BoxDecoration(color: leadChipMuted ? Ink3D.title.withValues(alpha: 0.32) : white, borderRadius: DS.circular(10)),
+            child: Padding(
+              padding: DS.sym(h: 10, v: 3),
+              child: Text(lead, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(11, FontWeight.w700, leadChipMuted ? white : ListingPalette.forest.text)),
+            ),
+          ),
         for (final c in chips)
           DecoratedBox(
             decoration: BoxDecoration(color: white.withValues(alpha: 0.26), borderRadius: DS.circular(10)),
@@ -534,7 +566,7 @@ class WideCard extends StatelessWidget {
                 children: [
                   Expanded(
                     child: showPrice && hasNumber
-                        ? _WidePrice(number: number!, unit: unit, caption: priceCaption, room: width - _WideMetrics.sideS * 2 - DS.s(40) - (showGo ? DS.s(52) : 0))
+                        ? _pricedWithWas(scaler, width - _WideMetrics.sideS * 2 - DS.s(40) - (showGo ? DS.s(52) : 0))
                         : const SizedBox.shrink(),
                   ),
                   if (showGo) Padding(padding: EdgeInsets.only(left: DS.s(10)), child: RoundGoButton(color: tone.button, size: 42, icon: goIcon, onTap: onGo)),
@@ -743,8 +775,9 @@ class _Banner extends StatelessWidget {
 }
 
 class _WidePrice extends StatelessWidget {
-  const _WidePrice({required this.number, required this.unit, required this.room, this.caption});
+  const _WidePrice({required this.number, required this.unit, required this.room, this.caption, this.after});
 
+  final Widget? after;
   final String number;
   final String unit;
   final double room;
@@ -813,6 +846,7 @@ class _WidePrice extends StatelessWidget {
               child: Text(unit, maxLines: 2, overflow: TextOverflow.ellipsis, style: unitStyle),
             ),
           ),
+        ?after,
       ],
     );
     if (capInline || cap.isEmpty) return row;

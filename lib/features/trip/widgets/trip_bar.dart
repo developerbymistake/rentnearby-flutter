@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:bakhli/design/design.dart';
 import 'package:get/get.dart';
+import '../../../config/app_tabs.dart';
+import '../../../controllers/auth_controller.dart';
+import '../../seeker_home/seeker_feed_controller.dart';
 import '../controllers/my_trips_controller.dart';
 import '../trip_navigation.dart';
 import '../trip_strings_bar.dart';
@@ -11,6 +14,12 @@ import '../utils/trip_parts.dart';
 
 class TripBar extends StatefulWidget {
   const TripBar({super.key});
+
+  static bool homeCardShows(String tripId) {
+    if (!Get.isRegistered<AuthController>() || Get.find<AuthController>().tabIndex.value != AppTabs.home) return false;
+    final card = SeekerFeedController.maybe?.feed.value?.tripCard;
+    return card != null && card.hasTrip && card.tripId == tripId;
+  }
 
   @override
   State<TripBar> createState() => _TripBarState();
@@ -48,7 +57,8 @@ class _TripBarState extends State<TripBar> {
   @override
   Widget build(BuildContext context) {
     return Obx(() {
-      final pick = _trips.barPick;
+      final raw = _trips.barPick;
+      final pick = raw != null && TripBar.homeCardShows(raw.trip.id) ? null : raw;
       return AnimatedSize(
         duration: const Duration(milliseconds: 220),
         curve: Curves.fastOutSlowIn,

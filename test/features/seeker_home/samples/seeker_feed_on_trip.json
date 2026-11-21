@@ -1,0 +1,16 @@
+{
+  "tripCard": {
+    "state": "OnTrip",
+    "tripId": "trip-1",
+    "title": "Nainital trip",
+    "destinationName": "Nainital",
+    "startDate": "2026-11-26",
+    "endDate": "2026-11-29",
+    "done": 3,
+    "total": 5,
+    "nextStep": null,
+    "today": { "dayNumber": 2, "totalDays": 4, "cityName": "Mukteshwar", "placeCount": 4, "places": [{ "id": "p1", "name": "Mukteshwar Temple" }], "placesSeen": null }
+  },
+  "status": null,
+  "slots": { "count": 1, "limit": 3, "full": false }
+}

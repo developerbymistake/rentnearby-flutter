@@ -120,10 +120,21 @@ class TripSupplyController extends GetxController {
   Map<String, dynamic> _partyParams(int legIndex) {
     final guests = _plan.settings.peopleCount;
     final nights = _plan.plan.value?.legDayCount(legIndex) ?? 1;
+    final checkIn = checkInOf(legIndex);
     return {
       if (guests > 0) 'guests': guests.clamp(1, TripConstants.stayGuestsMax).toInt(),
       if (guests > 0) 'nights': nights < 1 ? 1 : nights,
+      if (guests > 0 && checkIn != null) 'checkIn': checkIn,
     };
+  }
+
+  String? checkInOf(int legIndex) {
+    final p = _plan.plan.value;
+    if (p == null) return null;
+    final d = _plan.settings.dateOf(p.legStart(legIndex));
+    if (d == null) return null;
+    String two(int n) => n.toString().padLeft(2, '0');
+    return '${d.year.toString().padLeft(4, '0')}-${two(d.month)}-${two(d.day)}';
   }
 
   Future<void> loadStays() async {

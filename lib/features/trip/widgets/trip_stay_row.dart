@@ -14,6 +14,7 @@ import '../trip_strings_v2_find.dart';
 import '../utils/trip_format.dart';
 import '../utils/trip_stay_rank.dart';
 import '../trip_strings_shortlist.dart';
+import '../trip_strings_dated_price.dart';
 import 'trip_status.dart';
 
 class TripStayRow extends StatelessWidget {
@@ -137,8 +138,12 @@ class TripStayRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final type = quoteLine(stay, fit);
     final facts = factsLine(stay);
-    final quote = fit?.fits == true ? fit?.quotePerNight : null;
+    final full = stay.fullOnDates && !_paused;
+    final dated = full ? null : stay.datesPerNight;
+    final quote = dated ?? (fit?.fits == true ? fit?.quotePerNight : null);
     final price = quote ?? stay.minPricePerNight;
+    final was = dated == null ? null : stay.struckBase;
+    final offChip = dated == null || was == null ? null : stay.priceChip?.text;
     final nearKm = fit != null && fit!.nearestKm.isFinite ? fit!.nearestKm : stay.distanceKm;
     final noFit = fit?.fits == false && !_paused;
     final st = status;
@@ -164,6 +169,9 @@ class TripStayRow extends StatelessWidget {
               ),
         sticker: hasPhoto ? sticker : null,
         art: hasPhoto ? null : sticker,
+        leadChip: full ? TripStringsDatedPrice.fullOnDates : offChip,
+        leadChipMuted: full,
+        wasNumber: was == null ? null : BrowseItem.inr(was),
         chips: [
           if (_paused) TripStrings.notAvailableNow,
           if (st != null) st == TripDisplayStatus.asked ? TripStringsA2.asked : TripStatusVisuals.label(st),
@@ -177,7 +185,7 @@ class TripStayRow extends StatelessWidget {
         unit: price == null ? '' : _perNight,
         label: km ?? line ?? (stay.locality.isEmpty ? null : 'In ${stay.locality}'),
         labelNote: km != null ? line : null,
-        actions: _actions(),
+        actions: _actions(full),
         picked: shortlisted,
         dimmed: _paused,
         onTap: onOpen,
@@ -185,7 +193,7 @@ class TripStayRow extends StatelessWidget {
     );
   }
 
-  List<WideAction> _actions() {
+  List<WideAction> _actions(bool full) {
     if (_paused || readOnly) return const [];
     final st = status;
     final call = WideAction(icon: Icons.call_rounded, label: TripStringsV2Find.call, onTap: onCall, busy: callBusy);
@@ -194,6 +202,8 @@ class TripStayRow extends StatelessWidget {
       second = WideAction(icon: Icons.chat_bubble_outline_rounded, label: TripStrings.openChat, onTap: onOpenChat);
     } else if (st != null) {
       second = const WideAction(icon: Icons.mark_email_read_outlined, label: TripStringsV2Find.asked);
+    } else if (onShortlist != null && full && !shortlisted) {
+      second = const WideAction(icon: Icons.block_rounded, label: TripStringsDatedPrice.full);
     } else if (onShortlist != null) {
       second = WideAction(
         icon: shortlisted ? Icons.check_rounded : Icons.add_rounded,

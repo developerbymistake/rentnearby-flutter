@@ -416,7 +416,8 @@ class _TripStayScreenState extends State<TripStayScreen> with TickerProviderStat
 
   Widget _row(StayNearbyModel s, int day, int nights, TripEnquiryModel? asked, int index) {
     final step = _step;
-    final detailArgs = <String, dynamic>{'distanceKm': s.distanceKm, 'fromTrip': true};
+    final checkIn = _supply.checkInOf(_supply.stayLeg.value);
+    final detailArgs = <String, dynamic>{'distanceKm': s.distanceKm, 'fromTrip': true, 'checkIn': ?checkIn, if (checkIn != null) 'nights': nights};
     TripStayRow build({bool shortlisted = false, bool busy = false, bool noReply = false}) => TripStayRow(
           key: ValueKey('${s.id}-$day'),
           stay: s,

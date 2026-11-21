@@ -8,7 +8,8 @@ import '../config/user_roles.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/tab_config_controller.dart';
 import '../design/design.dart';
-import '../features/trip/widgets/trip_home_card.dart';
+import '../features/seeker_home/seeker_trip_card.dart';
+import '../features/seeker_home/strings/seeker_home_strings.dart';
 import 'role_option_card.dart';
 
 enum _Slide { trip, stay, taxi }
@@ -43,7 +44,10 @@ class _HomeHeroCarouselState extends State<HomeHeroCarousel>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _workers.add(ever(_auth.tabIndex, (_) => _sync()));
-    _workers.add(ever(tourInProgress, (_) => _sync()));
+    _workers.add(ever<bool>(tourInProgress, (on) {
+      if (on) _showFirstSlide();
+      _sync();
+    }));
   }
 
   @override
@@ -86,6 +90,14 @@ class _HomeHeroCarouselState extends State<HomeHeroCarousel>
         curve: Curves.fastOutSlowIn,
       );
     });
+  }
+
+  void _showFirstSlide() {
+    if (!mounted || _count < 2 || !_controller.hasClients) return;
+    final at = _page - (_page % _count);
+    if (at == _page) return;
+    _page = at;
+    _controller.jumpToPage(at);
   }
 
   void _onCountChanged(int count) {
@@ -158,7 +170,7 @@ class _HomeHeroCarouselState extends State<HomeHeroCarousel>
                       ),
                     ],
                   ),
-                  _Dots(count: n, index: _page % n),
+                  Semantics(label: SeekerHomeStrings.slideOf(_page % n + 1, n), child: _Dots(count: n, index: _page % n)),
                 ],
               ),
       );
@@ -235,7 +247,7 @@ class _HeroSlide extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (slide == _Slide.trip) return TripHomeCard(entrance: false, tone: toneOf(slide));
+    if (slide == _Slide.trip) return const SeekerTripSlide();
     final (seekerBadge, seekerTitle, seekerSubtitle) = seekerCopyOf(slide);
     return WorkoutCard(
       tone: toneOf(slide),

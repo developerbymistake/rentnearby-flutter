@@ -65,6 +65,26 @@ class HomeController extends GetxController {
 
   Set<String> _activeSections() => _tabs.activeSectionKeys.where(_allSections.contains).toSet();
 
+  bool get railsFailedNoCopy {
+    if (failedSections.isEmpty) return false;
+    final hasCopy = stays.isNotEmpty || taxis.isNotEmpty || recentlyAddedStays.isNotEmpty;
+    return !hasCopy;
+  }
+
+  bool get anyRailLoading => staysLoading.value || taxisLoading.value || recentlyAddedStaysLoading.value;
+
+  bool get hasAnyRail => stays.isNotEmpty || taxis.isNotEmpty || recentlyAddedStays.isNotEmpty;
+
+  Future<void>? _retry;
+
+  Future<void> retryRails() {
+    final running = _retry;
+    if (running != null) return running;
+    final f = reloadSections(failedSections.isEmpty ? _activeSections() : failedSections.toSet());
+    _retry = f;
+    return f.whenComplete(() => _retry = null);
+  }
+
   void _onTabsChanged() {
     final now = _activeSections();
     final turnedOn = now.difference(_sections);

@@ -7,13 +7,15 @@ class HomeStayModel {
   final BrowseItem item;
   final String districtName;
   final DateTime? createdAt;
+  final String? stayTypeName;
 
-  const HomeStayModel({required this.item, required this.districtName, this.createdAt});
+  const HomeStayModel({required this.item, required this.districtName, this.createdAt, this.stayTypeName});
 
   factory HomeStayModel.fromJson(Map<String, dynamic> json) => HomeStayModel(
     item: StayBrowseItem.fromJson(json),
     districtName: json['districtName'] as String? ?? '',
     createdAt: DateTime.tryParse(json['createdAt'] as String? ?? ''),
+    stayTypeName: json['stayTypeName'] is String ? json['stayTypeName'] as String : null,
   );
 }
 

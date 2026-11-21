@@ -1,13 +1,15 @@
 import '../../../../models/browse_item.dart';
 import '../../../nearby/models/nearby_models.dart';
 import '../../models/stay_browse_item.dart';
+import '../../models/stay_price_chip.dart';
 
 class StayFeedItem {
   final BrowseItem item;
   final NearbyDistance distance;
   final num? minPrice;
+  final StayPriceChip? priceChip;
 
-  const StayFeedItem({required this.item, required this.distance, this.minPrice});
+  const StayFeedItem({required this.item, required this.distance, this.minPrice, this.priceChip});
 
   String get id => item.id;
 
@@ -15,5 +17,6 @@ class StayFeedItem {
         item: StayBrowseItem.fromJson(j),
         distance: NearbyDistance.fromJson(j) ?? const NearbyDistance(km: 0, label: NearbyLabel.near),
         minPrice: j['minPricePerNight'] as num?,
+        priceChip: StayPriceChip.fromJson(j['priceChip']),
       );
 }

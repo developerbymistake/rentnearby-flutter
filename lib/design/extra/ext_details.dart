@@ -345,6 +345,8 @@ class DetailTitleCard extends StatelessWidget {
     required this.value,
     this.unit,
     this.compact = false,
+    this.was,
+    this.chip,
   });
 
   final ListingTone tone;
@@ -354,6 +356,8 @@ class DetailTitleCard extends StatelessWidget {
   final String value;
   final String? unit;
   final bool compact;
+  final String? was;
+  final String? chip;
 
   static const double topRoom = 26;
 
@@ -400,6 +404,22 @@ class DetailTitleCard extends StatelessWidget {
                       Padding(
                         padding: EdgeInsets.only(bottom: DS.s(3)),
                         child: Text(unit!, style: Ink3D.text(13, FontWeight.w400, Colors.white.withValues(alpha: 0.92))),
+                      ),
+                    if (was != null && was!.isNotEmpty)
+                      Padding(
+                        padding: EdgeInsets.only(bottom: DS.s(3)),
+                        child: Text(was!, style: Ink3D.text(13, FontWeight.w500, Colors.white.withValues(alpha: 0.8)).copyWith(decoration: TextDecoration.lineThrough, decorationColor: Colors.white)),
+                      ),
+                    if (chip != null && chip!.isNotEmpty)
+                      Padding(
+                        padding: EdgeInsets.only(bottom: DS.s(3)),
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(color: Colors.white, borderRadius: DS.circular(10)),
+                          child: Padding(
+                            padding: DS.sym(h: 10, v: 3),
+                            child: Text(chip!, style: Ink3D.text(11, FontWeight.w700, ListingPalette.forest.text)),
+                          ),
+                        ),
                       ),
                   ],
                 ),
@@ -454,7 +474,7 @@ class _FitTitle extends StatelessWidget {
 }
 
 class DetailSlimCard extends StatelessWidget {
-  const DetailSlimCard({super.key, required this.tone, required this.art, required this.title, required this.subtitle, required this.price, this.unit});
+  const DetailSlimCard({super.key, required this.tone, required this.art, required this.title, required this.subtitle, required this.price, this.unit, this.was});
 
   final ListingTone tone;
   final String art;
@@ -462,6 +482,7 @@ class DetailSlimCard extends StatelessWidget {
   final String subtitle;
   final String price;
   final String? unit;
+  final String? was;
 
   @override
   Widget build(BuildContext context) {
@@ -496,6 +517,11 @@ class DetailSlimCard extends StatelessWidget {
                       Padding(
                         padding: EdgeInsets.only(bottom: DS.s(1)),
                         child: Text(unit!, style: Ink3D.text(12, FontWeight.w400, Colors.white.withValues(alpha: 0.92))),
+                      ),
+                    if (was != null && was!.isNotEmpty)
+                      Padding(
+                        padding: EdgeInsets.only(bottom: DS.s(1)),
+                        child: Text(was!, style: Ink3D.text(12, FontWeight.w500, Colors.white.withValues(alpha: 0.8)).copyWith(decoration: TextDecoration.lineThrough, decorationColor: Colors.white)),
                       ),
                   ],
                 ),

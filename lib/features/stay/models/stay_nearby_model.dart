@@ -1,4 +1,5 @@
 import '../../../config/app_constants.dart';
+import 'stay_price_chip.dart';
 
 class StayNearbyModel {
   final String id;
@@ -22,6 +23,11 @@ class StayNearbyModel {
   final int? bestRoomGuests;
   final String? cityName;
   final String? districtName;
+  final int? datesTotal;
+  final int? datesPerNight;
+  final int? basePerNight;
+  final StayPriceChip? priceChip;
+  final bool fullOnDates;
 
   StayNearbyModel({
     required this.id,
@@ -45,7 +51,19 @@ class StayNearbyModel {
     this.bestRoomGuests,
     this.cityName,
     this.districtName,
+    this.datesTotal,
+    this.datesPerNight,
+    this.basePerNight,
+    this.priceChip,
+    this.fullOnDates = false,
   });
+
+  bool get hasDatedPrice => datesPerNight != null;
+
+  int? get struckBase {
+    final d = datesPerNight, b = basePerNight;
+    return d != null && b != null && b > d ? b : null;
+  }
 
   String get locality {
     final parts = <String>[];
@@ -83,5 +101,10 @@ class StayNearbyModel {
         bestRoomGuests: (json['bestRoomGuests'] as num?)?.toInt(),
         cityName: json['cityName'] as String?,
         districtName: json['districtName'] as String?,
+        datesTotal: StayPriceChip.money(json['datesTotal']),
+        datesPerNight: StayPriceChip.money(json['datesPerNight']),
+        basePerNight: StayPriceChip.money(json['basePerNight']),
+        priceChip: StayPriceChip.fromJson(json['priceChip']),
+        fullOnDates: json['fullOnDates'] == true,
       );
 }

@@ -3,11 +3,16 @@ import 'package:bakhli/design/tokens/design_scale.dart';
 
 const Color _kBone = Color(0xFFE8EAF0);
 const Color _kBoneLight = Color(0xFFF5F6F9);
+const Color _kSunBone = Color(0xFFF3E2CB);
+const Color _kSunBoneLight = Color(0xFFFBEFDF);
+
+enum SkeletonTone { bone, sunrise }
 
 class _Shimmer extends StatefulWidget {
-  const _Shimmer({required this.child});
+  const _Shimmer({required this.child, this.tone = SkeletonTone.bone});
 
   final Widget child;
+  final SkeletonTone tone;
 
   @override
   State<_Shimmer> createState() => _ShimmerState();
@@ -43,7 +48,8 @@ class _ShimmerState extends State<_Shimmer> with SingleTickerProviderStateMixin 
           blendMode: BlendMode.srcATop,
           shaderCallback: (rect) {
             final x = -1.5 + 3 * _c.value;
-            return LinearGradient(begin: Alignment(x - 0.6, 0), end: Alignment(x + 0.6, 0), colors: const [_kBone, _kBoneLight, _kBone]).createShader(rect);
+            final sun = widget.tone == SkeletonTone.sunrise;
+            return LinearGradient(begin: Alignment(x - 0.6, 0), end: Alignment(x + 0.6, 0), colors: sun ? const [_kSunBone, _kSunBoneLight, _kSunBone] : const [_kBone, _kBoneLight, _kBone]).createShader(rect);
           },
           child: child,
         ),
@@ -53,19 +59,25 @@ class _ShimmerState extends State<_Shimmer> with SingleTickerProviderStateMixin 
 }
 
 class SkeletonBox extends StatelessWidget {
-  const SkeletonBox({super.key, this.width, this.height, this.radius});
+  const SkeletonBox({super.key, this.width, this.height, this.radius, this.borderRadius, this.tone = SkeletonTone.bone});
 
   final double? width;
   final double? height;
   final double? radius;
+  final BorderRadius? borderRadius;
+  final SkeletonTone tone;
 
   @override
   Widget build(BuildContext context) {
     return _Shimmer(
+      tone: tone,
       child: Container(
         width: width,
         height: height ?? DS.s(14),
-        decoration: BoxDecoration(color: _kBone, borderRadius: BorderRadius.circular(radius ?? DS.radius(7))),
+        decoration: BoxDecoration(
+          color: tone == SkeletonTone.sunrise ? _kSunBone : _kBone,
+          borderRadius: borderRadius ?? BorderRadius.circular(radius ?? DS.radius(7)),
+        ),
       ),
     );
   }
