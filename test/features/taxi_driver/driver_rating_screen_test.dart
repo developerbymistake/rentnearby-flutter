@@ -10,7 +10,10 @@ import 'package:bakhli/features/trip/utils/taxi_result.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:bakhli/design/tokens/design_scale.dart';
+
 import '../../support/five_sizes.dart';
+import '../../support/owner_render.dart';
 import '../../support/real_phone.dart';
 
 Map<String, dynamic> _sample() =>
@@ -42,6 +45,18 @@ Widget _screen(Map<String, dynamic> json) => DriverRatingScreen(controller: Driv
 Map<String, dynamic> _noRatings() => {'average': null, 'ratingCount': 0, 'ridesCompleted': 3, 'latest': <Object>[]};
 
 void main() {
+  group('o_tx_20 render', () {
+    setUp(DS.applyApproved);
+    tearDown(DS.debugReset);
+
+    testWidgets('render o_tx_20 frame strings', (tester) async {
+      await renderOwnerFrame(tester, 'o_tx_20', _screen(_sample()), arrange: (t) => t.pumpAndSettle());
+      for (final s in ['My rating', 'Your driver record', 'Average stars', '4.8', '72', 'Ratings', '86', 'Completed rides', 'Latest ratings', '2 Nov', '24 Oct']) {
+        expect(find.text(s), findsWidgets, reason: s);
+      }
+    });
+  });
+
   testWidgets('sample_values', (tester) async {
     await pumpPhone(tester, _screen(_sample()));
     await tester.pumpAndSettle();

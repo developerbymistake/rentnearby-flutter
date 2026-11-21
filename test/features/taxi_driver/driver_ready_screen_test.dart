@@ -16,7 +16,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 
+import 'package:bakhli/design/tokens/design_scale.dart';
+
 import '../../support/five_sizes.dart';
+import '../../support/owner_render.dart';
 import '../../support/real_phone.dart';
 
 Map<String, dynamic> _readinessJson() =>
@@ -125,6 +128,24 @@ void main() {
     await tester.pump();
     return c;
   }
+
+  group('o_tx_9 render', () {
+    setUp(DS.applyApproved);
+    tearDown(DS.debugReset);
+
+    testWidgets('render o_tx_9 frame strings', (tester) async {
+      phone.notificationsOn = false;
+      final c = Get.put(make());
+      await renderOwnerFrame(tester, 'o_tx_9', DriverReadyScreen(controller: c, settings: settings), arrange: (t) async {
+        await t.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
+        await t.pump();
+      });
+      for (final s in ['Get ready for requests', 'Four quick checks so your phone rings', 'Notifications', 'Ring sound', 'Battery', 'Test ring']) {
+        expect(find.textContaining(s), findsWidgets, reason: s);
+      }
+      expect(tester.takeException(), isNull);
+    });
+  });
 
   testWidgets('row_states_from_fake_probes', (tester) async {
     phone.notificationsOn = false;
