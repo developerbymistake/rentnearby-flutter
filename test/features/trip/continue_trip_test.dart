@@ -144,11 +144,11 @@ void main() {
       });
     }
 
-    test('My trips: card tap of an active trip continues, past trip keeps the plan, button keeps Summary for ready/past', () {
+    test('My trips: card tap of an active trip continues, past trip keeps the plan, button opens the overview for ready/past', () {
       final s = _src('lib/features/trip/screens/my_trips_screen.dart');
       expect(s, contains('onOpen: () => _open(t, past: past)'));
       expect(RegExp(r'void _open\(TripSummaryModel t, \{bool past = false\}\) \{\s+if \(!past\) \{\s+TripNavigation\.continueTrip\(t\.id\);').hasMatch(s), isTrue);
-      expect(RegExp(r'if \(past \|\| TripBarRules\.isReady\(t\)\) \{\s+TripNavigation\.openSummary\(t\.id\);').hasMatch(s), isTrue);
+      expect(RegExp(r'if \(past \|\| TripBarRules\.isReady\(t\)\) \{\s+TripNavigation\.openOverview\(tripId: t\.id\)').hasMatch(s), isTrue);
     });
 
     test('no file under lib opens the plan with a bare trip id outside the allow list', () {

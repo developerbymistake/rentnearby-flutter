@@ -113,7 +113,9 @@ class _MyTripsScreenState extends State<MyTripsScreen> with TickerProviderStateM
 
   void _onAction(TripSummaryModel t, {bool past = false}) {
     if (past || TripBarRules.isReady(t)) {
-      TripNavigation.openSummary(t.id);
+      TripNavigation.openOverview(tripId: t.id)?.then((_) {
+        if (mounted) _ctrl.load();
+      });
       return;
     }
     TripNavigation.continueTrip(t.id);
