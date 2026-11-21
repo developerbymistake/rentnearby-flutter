@@ -1,6 +1,7 @@
 import 'package:bakhli/controllers/auth_controller.dart';
 import 'package:bakhli/controllers/location_controller.dart';
 import 'package:bakhli/controllers/tab_config_controller.dart';
+import 'package:bakhli/features/owner_core/plan/plan_gate.dart';
 import 'package:bakhli/features/taxi/models/taxi_owner_model.dart';
 import 'package:bakhli/features/taxi/setup/taxi_route_city_sheet.dart';
 import 'package:bakhli/features/taxi/setup/taxi_route_strings.dart';
@@ -14,6 +15,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 
 import '../../e2e_journeys/nearby/nearby_support.dart';
+import '../../support/owner_fakes.dart';
 import '../../support/real_phone.dart';
 
 class _Auth extends JAuth {
@@ -110,7 +112,11 @@ Future<void> _clearToasts(WidgetTester t) async {
 }
 
 void main() {
-  tearDown(Get.reset);
+  setUp(() => PlanGate.debugPlan = OwnerPlans.paymentOff);
+  tearDown(() {
+    PlanGate.debugPlan = null;
+    Get.reset();
+  });
 
   group('route model', () {
     test('reads chosen keys, other place flags and the active flag', () {

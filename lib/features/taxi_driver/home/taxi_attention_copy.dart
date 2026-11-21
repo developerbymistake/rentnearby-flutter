@@ -76,7 +76,7 @@ abstract final class TaxiAttentionCopy {
         );
       case TaxiAttentionCodes.noPushToken:
         return TaxiRowData(
-          art: ListingArt.alarmClock,
+          art: ListingArt.calendar,
           title: compact ? TaxiHomeStrings.phoneCannot : TaxiHomeStrings.phoneCannotList,
           sub: compact ? null : TaxiHomeStrings.phoneCannotSub,
           trailing: TaxiPill(label: TaxiHomeStrings.checkNow, kind: TaxiPillKind.white, onTap: h.checkReady),
@@ -99,8 +99,8 @@ abstract final class TaxiAttentionCopy {
         );
       case TaxiAttentionCodes.paymentIssue:
         return TaxiRowData(
-          art: ListingArt.warning,
-          tint: TaxiLook.artTintRed,
+          art: ListingArt.crown,
+          tint: TaxiLook.artTintAmber,
           title: TaxiHomeStrings.paymentIssue,
           sub: TaxiHomeStrings.paymentIssueSub,
           trailing: TaxiPill(label: TaxiHomeStrings.fix, kind: TaxiPillKind.white, onTap: h.fixPayment),

@@ -36,11 +36,10 @@ class TaxiAttentionScreen extends StatelessWidget {
                     final views = TaxiHomeCompose.rowViews(rows, TaxiHomeActions.attention(dto.listing.id), c.now.value, compact: false);
                     return RefreshIndicator(
                       onRefresh: c.reload,
-                      child: ListView.builder(
+                      child: ListView(
                         physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
                         padding: EdgeInsets.only(bottom: DS.s(24) + MediaQuery.viewPaddingOf(context).bottom),
-                        itemCount: views.length,
-                        itemBuilder: (_, i) => TaxiRowsCard(rows: [views[i]]),
+                        children: [TaxiRowsCard(rows: views)],
                       ),
                     );
                   }),

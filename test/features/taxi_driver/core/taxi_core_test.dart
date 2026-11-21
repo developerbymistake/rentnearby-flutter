@@ -11,11 +11,13 @@ import 'package:bakhli/features/taxi_driver/home/taxi_driver_home_screen.dart';
 import 'package:bakhli/features/taxi_driver/home/taxi_home_compose.dart';
 import 'package:bakhli/features/taxi_driver/strings/taxi_home_strings.dart';
 import 'package:bakhli/screens/profile/profile_rows_taxi_driver.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 
 import '../../../support/owner_fakes.dart';
 import '../../../support/owner_sizes.dart';
+import '../../../support/real_phone.dart';
 import 'taxi_fixtures.dart';
 
 OwnerHomeDto dto(Map<String, dynamic> j) => OwnerHomeDto.fromJson(j);
@@ -145,6 +147,45 @@ void main() {
       await Future<void>.delayed(const Duration(milliseconds: 1100));
       expect(h.api.calls, greaterThan(before));
       Get.delete<TaxiDriverHomeController>(force: true);
+    });
+  });
+
+  group('home screen is reactive', () {
+    Future<void> settle(WidgetTester t) async {
+      await t.pump(const Duration(milliseconds: 100));
+      await t.pump(const Duration(milliseconds: 100));
+    }
+
+    Future<void> finish(WidgetTester t) async {
+      await t.pumpWidget(const SizedBox.shrink());
+      Get.delete<TaxiDriverHomeController>(force: true);
+    }
+
+    testWidgets('the Confirm countdown text changes every second', (tester) async {
+      var now = DateTime(2026, 11, 21, 10);
+      final by = now.add(const Duration(minutes: 12, seconds: 40)).toUtc().toIso8601String();
+      final h = TaxiHarness.setUp(homeJson(attention: [att('TravellerChoseYou', 1, {'offerId': 'o', 'confirmBy': by})]), clock: () => now);
+      await pumpPhone(tester, TaxiDriverHomeScreen(controller: h.home), size: const Size(360, 800));
+      await settle(tester);
+      expect(find.text('Traveller chose you. Confirm in 12:40'), findsOneWidget);
+      now = now.add(const Duration(seconds: 1));
+      await tester.pump(const Duration(seconds: 1));
+      expect(find.text('Traveller chose you. Confirm in 12:39'), findsOneWidget);
+      await finish(tester);
+    });
+
+    testWidgets('the switch repaints at once and rolls back', (tester) async {
+      final h = TaxiHarness.setUp(homeJson(switchOn: false, attention: const []));
+      await pumpPhone(tester, TaxiDriverHomeScreen(controller: h.home), size: const Size(360, 800));
+      await settle(tester);
+      expect(find.text('Off'), findsOneWidget);
+      h.home.switchOverride.value = true;
+      await tester.pump();
+      expect(find.text('On'), findsOneWidget);
+      h.home.switchOverride.value = null;
+      await tester.pump();
+      expect(find.text('Off'), findsOneWidget);
+      await finish(tester);
     });
   });
 

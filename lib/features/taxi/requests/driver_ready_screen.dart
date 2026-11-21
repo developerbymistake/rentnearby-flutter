@@ -36,6 +36,12 @@ class _DriverReadyScreenState extends State<DriverReadyScreen> {
     super.initState();
     _makerWorker = ever<DriverDeviceState?>(_ctrl.device, _askMaker);
     _askMaker(_ctrl.device.value);
+    final args = Get.arguments;
+    if (args is Map && args['test'] == true) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _runTest();
+      });
+    }
   }
 
   @override

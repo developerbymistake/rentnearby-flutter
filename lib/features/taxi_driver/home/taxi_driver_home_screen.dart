@@ -189,7 +189,9 @@ class TaxiHomeBody extends StatelessWidget {
   final bool stale;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => Obx(() => _content(context));
+
+  Widget _content(BuildContext context) {
     final l = dto.listing;
     final state = TaxiHomeCompose.stateOf(l);
     final actions = TaxiHomeActions.attention(l.id);
@@ -243,9 +245,6 @@ class TaxiHomeBody extends StatelessWidget {
             ),
           ], margin: DS.insets(l: 18, t: 4, r: 18)));
       default:
-        if (banner != null) {
-          children.add(TaxiStrip(art: ListingArt.roundPushpin, text: banner, fill: TaxiLook.amberSoft, ink: TaxiLook.amberText));
-        }
         children.add(_hero(context, state, l));
         if (state == TaxiHomeState.changesReview) {
           children.add(const TaxiStrip(art: ListingArt.shield, text: TaxiHomeStrings.changesInfo, fill: TaxiLook.accentSoft, ink: TaxiLook.accentText));
@@ -265,6 +264,9 @@ class TaxiHomeBody extends StatelessWidget {
                   : null,
             ))
             ..add(TaxiRowsCard(rows: views.take(2).toList(), margin: DS.insets(l: 18, t: 8, r: 18), fill: TaxiLook.accentSoft));
+        }
+        if (banner != null) {
+          children.add(TaxiStrip(art: ListingArt.roundPushpin, text: banner, fill: TaxiLook.amberSoft, ink: TaxiLook.amberText));
         }
         if (show) {
           children.add(Padding(
