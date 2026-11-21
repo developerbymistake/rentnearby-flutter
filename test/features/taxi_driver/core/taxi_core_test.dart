@@ -145,7 +145,9 @@ void main() {
       final before = h.api.calls;
       now = now.add(const Duration(seconds: 3));
       await Future<void>.delayed(const Duration(milliseconds: 1100));
-      expect(h.api.calls, greaterThan(before));
+      expect(h.api.calls, before + 1);
+      await Future<void>.delayed(const Duration(milliseconds: 2200));
+      expect(h.api.calls, before + 1, reason: 'an expired row the server still sends must not reload every second');
       Get.delete<TaxiDriverHomeController>(force: true);
     });
   });

@@ -108,7 +108,15 @@ class TaxiDriverHomeController extends GetxController with WidgetsBindingObserve
     _syncTicker();
   }
 
-  bool get _hasCountdown => data?.attention.any((a) => a.code == TaxiAttentionCodes.travellerChoseYou && a.args['confirmBy'] != null) ?? false;
+  bool get _hasCountdown {
+    final at = _clock();
+    return data?.attention.any((a) {
+          if (a.code != TaxiAttentionCodes.travellerChoseYou) return false;
+          final left = TaxiAttentionCopy.remaining(a, at);
+          return left != null && !left.isNegative;
+        }) ??
+        false;
+  }
 
   void _syncTicker() {
     if (isClosed) return;
