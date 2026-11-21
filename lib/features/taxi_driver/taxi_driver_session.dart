@@ -10,6 +10,8 @@ import '../../config/notification_types.dart';
 import '../../services/taxi_ring_session.dart';
 import '../taxi/requests/controllers/driver_app_bookings_controller.dart';
 import 'notices/taxi_notice_copy.dart';
+import 'calendar/taxi_calendar_controller.dart';
+import 'calendar/taxi_upcoming_card.dart';
 
 abstract final class TaxiDriverSession {
   static const String name = 'taxi_driver';
@@ -35,6 +37,14 @@ abstract final class TaxiDriverSession {
     });
     // end A6
     // A7 session
+    TaxiDriverDeps.upcomingCard = () => const TaxiUpcomingCard();
+    TaxiDriverDeps.manualTripDays = (from, to) => TaxiCalendarController.maybe?.manualDays(from, to) ?? const [];
+    OwnerSessionHooks.register('${name}_calendar', (_, _) => TaxiCalendarController.resetUsers());
+    OwnerPushSync.register('${name}_calendar', (type, args) => TaxiCalendarController.maybe?.reload());
+    ShellTeardown.register(ShellKind.taxiDriver, () {
+      ShellTeardown.deleteTagged<TaxiCalendarController>(TaxiCalendarController.tag);
+      TaxiCalendarController.resetUsers();
+    });
     // end A7
     // A8 session
     // end A8
