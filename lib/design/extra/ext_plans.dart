@@ -40,6 +40,7 @@ class PlanInk {
   static const Color onCardRing = Color(0xBFFFFFFF);
   static const Color pillFill = Color(0x42FFFFFF);
   static const Color testPill = Color(0x29000000);
+  static const Color newFill = Color(0xFFFDE6E8);
 }
 
 class PlanLook {
@@ -66,6 +67,10 @@ class PlanLook {
 
   static ListingTone get warmTone => ListingTone.cF;
 
+  static const ListingTone endedTone = ListingTone(g1: Color(0xFF9AA3B5), g2: Color(0xFF6B7488), shadow: Color(0x66505A6E), haloBase: Color(0xFF6B7488), text: Color(0xFF4F586B));
+
+  static const ListingTone offTone = ListingTone(g1: Color(0xFF1FA396), g2: Color(0xFF14756B), shadow: Color(0x8014756B), haloBase: Color(0xFF14756B), text: Color(0xFF14756B));
+
   static double narrowness(BuildContext context) => MediaQuery.sizeOf(context).width;
 }
 
@@ -73,7 +78,7 @@ BorderRadius get _barButtonRadius => BorderRadius.only(
     topLeft: Radius.circular(DS.radius(20)), topRight: Radius.circular(DS.radius(20)), bottomRight: Radius.circular(DS.radius(20)), bottomLeft: Radius.circular(DS.radius(8)));
 
 class PlanBarButton extends StatelessWidget {
-  const PlanBarButton({super.key, required this.tone, required this.label, required this.onTap, this.white = false, this.loading = false, this.width});
+  const PlanBarButton({super.key, required this.tone, required this.label, required this.onTap, this.white = false, this.loading = false, this.width, this.mutedWhenOff = false});
 
   final ListingTone tone;
   final String label;
@@ -81,10 +86,27 @@ class PlanBarButton extends StatelessWidget {
   final bool white;
   final bool loading;
   final double? width;
+  final bool mutedWhenOff;
 
   @override
   Widget build(BuildContext context) {
     final on = onTap != null && !loading;
+    if (!on && !loading && mutedWhenOff) {
+      return Semantics(
+        button: true,
+        enabled: false,
+        label: label,
+        excludeSemantics: true,
+        child: Container(
+          width: width == null ? double.infinity : DS.s(width!),
+          constraints: BoxConstraints(minHeight: DS.s(54)),
+          padding: EdgeInsets.symmetric(horizontal: DS.s(16), vertical: DS.s(8)),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(borderRadius: DS.circular(16), color: PlanInk.bone),
+          child: FitLine3D(text: label, style: Ink3D.text(16, FontWeight.w700, PlanInk.muted)),
+        ),
+      );
+    }
     final fg = white ? tone.text : Colors.white;
     final body = Container(
       width: width == null ? double.infinity : DS.s(width!),
@@ -150,8 +172,33 @@ class PlanHeroPill {
   final bool filled;
 }
 
+class PlanHeroLine {
+  const PlanHeroLine(this.text, {this.on = true});
+  final String text;
+  final bool on;
+}
+
+class PlanHeroMeter {
+  const PlanHeroMeter({required this.label, required this.value, required this.fraction, this.notes = const []});
+  final String label;
+  final String value;
+  final double fraction;
+  final List<String> notes;
+}
+
 class PlanHeroCard3D extends StatelessWidget {
-  const PlanHeroCard3D({super.key, required this.tone, required this.art, required this.pills, required this.name, required this.subtitle, this.lines = const [], this.pausedLabel});
+  const PlanHeroCard3D({
+    super.key,
+    required this.tone,
+    required this.art,
+    required this.pills,
+    required this.name,
+    required this.subtitle,
+    this.lines = const [],
+    this.items = const [],
+    this.meter,
+    this.pausedLabel,
+  });
 
   final ListingTone tone;
   final String art;
@@ -159,7 +206,65 @@ class PlanHeroCard3D extends StatelessWidget {
   final String name;
   final String subtitle;
   final List<String> lines;
+  final List<PlanHeroLine> items;
+  final PlanHeroMeter? meter;
   final String? pausedLabel;
+
+  List<PlanHeroLine> get _all => [for (final l in lines) PlanHeroLine(l), ...items];
+
+  Widget _item(PlanHeroLine l) => Padding(
+        padding: EdgeInsets.symmetric(vertical: DS.gv(3)),
+        child: Semantics(
+          label: l.text,
+          excludeSemantics: true,
+          child: Row(children: [
+            Container(
+              width: DS.s(20),
+              height: DS.s(20),
+              decoration: BoxDecoration(color: l.on ? Colors.white : PlanInk.pillFill, shape: BoxShape.circle),
+              alignment: Alignment.center,
+              child: l.on
+                  ? Icon(Icons.check_rounded, size: DS.s(14), color: tone.g2)
+                  : Text('−', style: Ink3D.text(13, FontWeight.w700, Colors.white, height: 1)),
+            ),
+            Gap.h(10),
+            Expanded(child: Text(l.text, style: Ink3D.text(14, FontWeight.w500, l.on ? Colors.white : Colors.white.withValues(alpha: 0.78)))),
+          ]),
+        ),
+      );
+
+  Widget _meter(PlanHeroMeter m) => Container(
+        margin: EdgeInsets.only(top: DS.gv(12)),
+        padding: EdgeInsets.fromLTRB(DS.s(12), DS.s(10), DS.s(12), DS.s(10)),
+        decoration: BoxDecoration(color: PlanInk.pillFill, borderRadius: DS.circular(12)),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Row(children: [
+            Expanded(child: Text(m.label, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(12, FontWeight.w700, Colors.white, letterSpacing: 0))),
+            Text(m.value, maxLines: 1, style: Ink3D.text(12, FontWeight.w700, Colors.white, letterSpacing: 0)),
+          ]),
+          Gap.v(6),
+          ClipRRect(
+            borderRadius: DS.circular(3),
+            child: SizedBox(
+              height: DS.s(5),
+              child: Stack(children: [
+                Positioned.fill(child: ColoredBox(color: PlanInk.onCardFill)),
+                Positioned.fill(
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: FractionallySizedBox(widthFactor: m.fraction.clamp(0.0, 1.0), heightFactor: 1, child: const ColoredBox(color: Colors.white)),
+                  ),
+                ),
+              ]),
+            ),
+          ),
+          for (final n in m.notes)
+            Padding(
+              padding: EdgeInsets.only(top: DS.gv(6)),
+              child: Text(n, style: Ink3D.text(11.5, FontWeight.w500, Colors.white.withValues(alpha: 0.92), height: 1.35, letterSpacing: 0)),
+            ),
+        ]),
+      );
 
   static const double topRoom = 52;
 
@@ -205,23 +310,11 @@ class PlanHeroCard3D extends StatelessWidget {
               padding: EdgeInsets.only(right: clear),
               child: Text(subtitle, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(13, FontWeight.w400, Colors.white.withValues(alpha: 0.92), height: 1.35)),
             ),
-            if (lines.isNotEmpty) ...[
+            if (_all.isNotEmpty) ...[
               Gap.v(12),
-              for (final l in lines)
-                Padding(
-                  padding: EdgeInsets.symmetric(vertical: DS.gv(3)),
-                  child: Row(children: [
-                    Container(
-                      width: DS.s(20),
-                      height: DS.s(20),
-                      decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-                      child: Icon(Icons.check_rounded, size: DS.s(14), color: tone.g2),
-                    ),
-                    Gap.h(10),
-                    Expanded(child: Text(l, style: Ink3D.text(14, FontWeight.w500, Colors.white))),
-                  ]),
-                ),
+              for (final l in _all) _item(l),
             ],
+            if (meter != null) _meter(meter!),
             if (pausedLabel != null)
               Container(
                 margin: EdgeInsets.only(top: DS.gv(10)),
@@ -269,10 +362,12 @@ class PlanCellData {
 }
 
 class PlanRowData {
-  const PlanRowData({required this.label, required this.art, required this.cells});
+  const PlanRowData({required this.label, required this.art, required this.cells, this.tag, this.semantics});
   final String label;
   final String art;
   final List<PlanCellData> cells;
+  final String? tag;
+  final String? semantics;
 }
 
 class PlanCompareCard3D extends StatelessWidget {
@@ -297,6 +392,8 @@ class PlanCompareCard3D extends StatelessWidget {
     );
   }
 
+  Widget _semantic(PlanRowData r, Widget child) => r.semantics == null ? child : Semantics(label: r.semantics, excludeSemantics: true, child: child);
+
   Widget _cell(PlanCellData c, bool paid) => Center(
         child: switch (c.kind) {
           PlanCellKind.yes => Container(
@@ -306,7 +403,7 @@ class PlanCompareCard3D extends StatelessWidget {
               child: Icon(Icons.check_rounded, size: DS.s(15), color: Colors.white),
             ),
           PlanCellKind.no => Text('−', style: Ink3D.text(15, FontWeight.w700, PlanInk.number)),
-          PlanCellKind.number => FitLine3D(text: c.text, style: Ink3D.text(15, FontWeight.w700, paid ? tone.g2 : PlanInk.number)),
+          PlanCellKind.number => FitLine3D(text: c.text, style: Ink3D.text(c.text.length > 3 ? 12.5 : 15, FontWeight.w700, paid ? tone.g2 : PlanInk.number)),
         },
       );
 
@@ -338,14 +435,33 @@ class PlanCompareCard3D extends StatelessWidget {
       child: Column(mainAxisSize: MainAxisSize.min, children: [
         head,
         for (final r in rows)
-          _row([
+          _semantic(r, _row([
             Row(children: [
               Art3D(asset: r.art, size: 34, shadowBlur: 2, shadowOffset: const Offset(2, 3), shadowAlpha: 0.22),
               Gap.h(10),
-              Expanded(child: Text(r.label, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(14, FontWeight.w500, Ink3D.title, height: 1.25))),
+              Expanded(
+                child: r.tag == null
+                    ? Text(r.label, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(14, FontWeight.w500, Ink3D.title, height: 1.25))
+                    : Text.rich(
+                        TextSpan(children: [
+                          TextSpan(text: '${r.label} '),
+                          WidgetSpan(
+                            alignment: PlaceholderAlignment.middle,
+                            child: Container(
+                              padding: EdgeInsets.symmetric(horizontal: DS.s(5), vertical: DS.s(1)),
+                              decoration: BoxDecoration(color: PlanInk.newFill, borderRadius: DS.circular(6)),
+                              child: Text(r.tag!, style: Ink3D.text(8.5, FontWeight.w700, PlanInk.bad, letterSpacing: 0.4, height: 1.2)),
+                            ),
+                          ),
+                        ]),
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                        style: Ink3D.text(14, FontWeight.w500, Ink3D.title, height: 1.25),
+                      ),
+              ),
             ]),
             for (var i = 0; i < r.cells.length; i++) _cell(r.cells[i], i > 0),
-          ], minHeight: 56),
+          ], minHeight: 56)),
       ]),
     );
   }
@@ -759,7 +875,7 @@ class PlanBar3D extends StatelessWidget {
           ]),
         ),
         Gap.v(12),
-        PlanBarButton(tone: tone, label: ctaLabel, onTap: onCta, loading: ctaLoading),
+        PlanBarButton(tone: tone, label: ctaLabel, onTap: onCta, loading: ctaLoading, mutedWhenOff: true),
         if (trialLabel != null) ...[
           Gap.v(10),
           PlanBarButton(tone: tone, label: trialLabel!, onTap: onTrial, white: true),
@@ -787,14 +903,15 @@ class PlanSubscriptionCard3D extends StatelessWidget {
     required this.art,
     required this.eyebrow,
     required this.title,
-    required this.manage,
     required this.footer,
     required this.footerArt,
+    this.manage,
     this.pills = const [],
     this.testPill,
     this.body,
     this.notes = const [],
     this.action,
+    this.secondary,
   });
 
   final ListingTone tone;
@@ -806,7 +923,8 @@ class PlanSubscriptionCard3D extends StatelessWidget {
   final String? body;
   final List<(String, String)> notes;
   final PlanSubAction? action;
-  final PlanSubAction manage;
+  final PlanSubAction? manage;
+  final PlanSubAction? secondary;
   final String footer;
   final String footerArt;
 
@@ -842,6 +960,8 @@ class PlanSubscriptionCard3D extends StatelessWidget {
     final artSize = narrow ? 92.0 : 116.0;
     final left = DS.s(narrow ? 104.0 : 130.0);
     final a = action;
+    final second = secondary ?? (a == null ? null : manage);
+    final only = a ?? manage;
     return Padding(
       padding: EdgeInsets.fromLTRB(DS.s(18), DS.s(topRoom), DS.s(18), 0),
       child: Stack(clipBehavior: Clip.none, children: [
@@ -887,15 +1007,17 @@ class PlanSubscriptionCard3D extends StatelessWidget {
             ),
             Padding(
               padding: EdgeInsets.fromLTRB(DS.s(14), DS.s(4), DS.s(14), 0),
-              child: a == null
-                  ? _button(manage, primary: false)
-                  : IntrinsicHeight(
+              child: a != null && second != null
+                  ? IntrinsicHeight(
                       child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                      Expanded(child: _button(a, primary: true, size: 11.5)),
-                      Gap.h(8),
-                      Expanded(child: _button(manage, primary: false, size: 11.5)),
-                    ]),
-                    ),
+                        Expanded(child: _button(a, primary: true, size: 11.5)),
+                        Gap.h(8),
+                        Expanded(child: _button(second, primary: false, size: 11.5)),
+                      ]),
+                    )
+                  : only == null
+                      ? const SizedBox.shrink()
+                      : _button(only, primary: a != null),
             ),
             Container(
               margin: EdgeInsets.only(top: DS.gv(14)),
@@ -1380,6 +1502,120 @@ class LegalCompactBar3D extends StatelessWidget {
         ),
         Gap.h(12),
         Expanded(child: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(19, FontWeight.w700, Ink3D.title))),
+      ]),
+    );
+  }
+}
+
+class PlanWeekCard3D extends StatelessWidget {
+  const PlanWeekCard3D({super.key, required this.tone, required this.cells});
+
+  final ListingTone tone;
+  final List<(String, String)> cells;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: EdgeInsets.symmetric(horizontal: DS.s(18)),
+      padding: EdgeInsets.symmetric(vertical: DS.s(14)),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.only(topLeft: Radius.circular(DS.radius(8)), topRight: Radius.circular(DS.radius(24)), bottomLeft: Radius.circular(DS.radius(8)), bottomRight: Radius.circular(DS.radius(8))),
+        boxShadow: PlanInk.cardSoft,
+      ),
+      child: Row(children: [
+          for (var i = 0; i < cells.length; i++) ...[
+            if (i > 0) Container(width: DS.s(1), height: DS.s(40), color: PlanInk.line),
+            Expanded(
+              child: Semantics(
+                label: '${cells[i].$1} ${cells[i].$2}',
+                excludeSemantics: true,
+                child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  FitLine3D(text: cells[i].$1, style: Ink3D.text(20, FontWeight.w700, tone.g2)),
+                  Gap.v(4),
+                  Text(cells[i].$2, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(11.5, FontWeight.w400, PlanInk.muted, letterSpacing: 0)),
+                ]),
+              ),
+            ),
+          ],
+        ]),
+    );
+  }
+}
+
+class PlanHomeCard3D extends StatelessWidget {
+  const PlanHomeCard3D({super.key, required this.tone, required this.art, required this.title, this.pill, this.line, this.actionLabel, this.onAction, this.actionKey});
+
+  final ListingTone tone;
+  final String art;
+  final String title;
+  final String? pill;
+  final String? line;
+  final String? actionLabel;
+  final VoidCallback? onAction;
+  final Key? actionKey;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = line;
+    final a = actionLabel;
+    return Container(
+      margin: EdgeInsets.fromLTRB(DS.s(18), DS.gv(16), DS.s(18), 0),
+      padding: EdgeInsets.fromLTRB(DS.s(12), DS.s(16), DS.s(18), DS.s(16)),
+      decoration: BoxDecoration(
+        gradient: tone.gradient,
+        borderRadius: BorderRadius.only(topLeft: Radius.circular(DS.radius(8)), topRight: Radius.circular(DS.radius(54)), bottomLeft: Radius.circular(DS.radius(8)), bottomRight: Radius.circular(DS.radius(8))),
+        boxShadow: tone.glow(),
+      ),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+        ExcludeSemantics(
+          child: Container(
+            width: DS.s(64),
+            height: DS.s(64),
+            alignment: Alignment.center,
+            decoration: BoxDecoration(color: PlanInk.pillFill, shape: BoxShape.circle),
+            child: Art3D(asset: art, size: 40, shadowBlur: 3, shadowOffset: const Offset(2, 3), shadowAlpha: 0.3),
+          ),
+        ),
+        Gap.h(14),
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+            MergeSemantics(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+                Wrap(spacing: DS.gh(8), runSpacing: DS.gv(4), crossAxisAlignment: WrapCrossAlignment.center, children: [
+                  Text(title, style: Ink3D.text(16, FontWeight.w700, Colors.white, height: 1.25)),
+                  if (pill != null)
+                    Container(
+                      padding: EdgeInsets.symmetric(horizontal: DS.s(9), vertical: DS.s(2)),
+                      decoration: BoxDecoration(color: PlanInk.pillFill, borderRadius: DS.circular(10)),
+                      child: Text(pill!, style: Ink3D.text(10.5, FontWeight.w700, Colors.white)),
+                    ),
+                ]),
+                if (l != null && l.isNotEmpty)
+                  Padding(
+                    padding: EdgeInsets.only(top: DS.gv(4)),
+                    child: Text(l, style: Ink3D.text(12, FontWeight.w500, Colors.white.withValues(alpha: 0.95), height: 1.4, letterSpacing: 0)),
+                  ),
+              ]),
+            ),
+            if (a != null)
+              Padding(
+                padding: EdgeInsets.only(top: DS.gv(10)),
+                child: Tap3D(
+                  key: actionKey,
+                  onTap: onAction,
+                  label: a,
+                  exclude: true,
+                  child: Container(
+                    constraints: BoxConstraints(minHeight: DS.s(34), minWidth: DS.s(48)),
+                    padding: EdgeInsets.symmetric(horizontal: DS.s(14), vertical: DS.s(7)),
+                    decoration: BoxDecoration(color: Colors.white, borderRadius: DS.circular(18), boxShadow: PlanInk.onCardButton),
+                    child: Text(a, maxLines: 1, style: Ink3D.text(12, FontWeight.w700, tone.text)),
+                  ),
+                ),
+              ),
+          ]),
+        ),
       ]),
     );
   }

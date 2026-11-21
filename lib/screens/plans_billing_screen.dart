@@ -7,6 +7,9 @@ import '../config/app_insets.dart';
 import '../config/app_routes.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/plan_controller.dart';
+import '../features/owner_core/data/owner_cache.dart';
+import '../features/owner_core/home/owner_home_models.dart';
+import '../features/owner_core/plan/plan_card_state.dart';
 import '../models/browse_item.dart';
 import '../models/my_plan_model.dart';
 import '../models/plan_model.dart';
@@ -17,6 +20,7 @@ import '../utils/input_formatters.dart';
 import '../widgets/plan_compare_table.dart';
 import '../widgets/plan_cycle_option.dart';
 import '../widgets/plan_subscription_card.dart';
+import '../widgets/plan_words.dart';
 import '../widgets/purchase_status_sheet.dart';
 
 class PlansBillingScreen extends StatefulWidget {
@@ -37,12 +41,14 @@ class _PlansBillingScreenState extends State<PlansBillingScreen> {
   final _showCoupon = false.obs;
   int _quoteSeq = 0;
   bool _sheetOpen = false;
+  OwnerWeekly? _weekly;
   Worker? _purchaseWorker;
   Worker? _catalogWorker;
 
   @override
   void initState() {
     super.initState();
+    _weekly = _readWeekly();
     _load().then((_) => _autoSelect());
     _catalogWorker = ever<PlanCatalogModel?>(_plans.catalog, (_) => _autoSelect());
     _purchaseWorker = ever<PurchaseStatus?>(_plans.activePurchase, (v) {
@@ -61,6 +67,13 @@ class _PlansBillingScreenState extends State<PlansBillingScreen> {
     _catalogWorker?.dispose();
     _couponCtrl.dispose();
     super.dispose();
+  }
+
+  static OwnerWeekly? _readWeekly() {
+    if (!Get.isRegistered<AuthController>()) return null;
+    final raw = OwnerCache.read(Get.find<AuthController>().user.value?.id, OwnerCacheKeys.home);
+    if (raw == null) return null;
+    return OwnerHomeDto.fromJson(raw).planCard?.weekly;
   }
 
   Future<void> _load({bool force = false}) => Future.wait([
@@ -207,19 +220,7 @@ class _PlansBillingScreenState extends State<PlansBillingScreen> {
     return pct > 0 ? pct : 0;
   }
 
-  static String _subtitleFor(String? featureKey) => switch (featureKey) {
-        'Stay' => 'Stay plan',
-        'Taxi' => 'Taxi plan',
-        _ => '',
-      };
-
-  static String _comingLine(String? featureKey) => switch (featureKey) {
-        'Stay' => 'Featured, shown first and more job posts. Not open yet.',
-        'Taxi' => 'Featured and shown first. Not open yet.',
-        _ => '',
-      };
-
-  static String _cycleTitle(int m) => m == 1 ? '1 month' : '$m months';
+  static String _cycleTitle(int m) => PlanWords.cycle(m);
 
   static String _billedText(int m, String formatted) => switch (m) {
         1 => 'Billed monthly',
@@ -229,46 +230,6 @@ class _PlansBillingScreenState extends State<PlansBillingScreen> {
       };
 
   String _perMonth(StorePrice sp, int m) => '${_symbol(sp)}${(sp.raw / m).round()}';
-
-  static String _plural(int n, String word) => '$n $word${n == 1 ? '' : 's'}';
-
-  List<String> _includedLines(PlanLimitsModel l, String? featureKey) {
-    return [
-      if (l.priority > 0) 'Shown first in search',
-      if (l.featured) 'Featured badge',
-      if (featureKey == 'Stay') _plural(l.jobsPosts, 'job post'),
-    ];
-  }
-
-  List<CompareRow> _featureRows(List<PlanModel> plans, List<PlanModel> paidPlans, MyPlanModel me) {
-    final featureKey = me.featureKey;
-    final free = plans.firstWhereOrNull((p) => p.isDefault);
-    final l = me.limits;
-    int freeValue(String key) {
-      if (free != null) return free.feature(key);
-      return switch (key) {
-        PlanFeatureKeys.listingLimit => l.listingLimit,
-        PlanFeatureKeys.priority => l.priority,
-        PlanFeatureKeys.featured => l.featured ? 1 : 0,
-        PlanFeatureKeys.jobsPosts => l.jobsPosts,
-        _ => 0,
-      };
-    }
-
-    List<int> values(String key) => [freeValue(key), for (final p in paidPlans) p.feature(key)];
-
-    CompareRow? row(String key, String label, {required bool number}) {
-      final v = values(key);
-      if (!v.any((x) => x > 0)) return null;
-      return CompareRow(label, [for (final x in v) number ? CompareCell.number(x) : CompareCell.flag(x > 0)]);
-    }
-
-    return [
-      row(PlanFeatureKeys.priority, 'Shown first', number: false),
-      row(PlanFeatureKeys.featured, 'Featured badge', number: false),
-      if (featureKey == 'Stay') row(PlanFeatureKeys.jobsPosts, 'Job posts', number: true),
-    ].whereType<CompareRow>().toList();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -308,8 +269,8 @@ class _PlansBillingScreenState extends State<PlansBillingScreen> {
 
   Widget _header(ListingTone tone, String? key) => PageHeader3D(
         tone: tone,
-        title: 'Plans & Billing',
-        subtitle: key == null ? null : _subtitleFor(key),
+        title: PlanWords.title,
+        subtitle: key == null ? null : PlanCopies.of(key)?.subtitle,
         art: ListingArt.moneyBag,
         artSize: MediaQuery.sizeOf(context).width < 380 ? 108 : 128,
         onBack: () => Get.back(),
@@ -322,7 +283,12 @@ class _PlansBillingScreenState extends State<PlansBillingScreen> {
     final catalogLoading = _plans.isLoadingCatalog.value;
     final paidPlans = _plans.plans.where((p) => !p.isDefault && p.prices.isNotEmpty).toList();
     final accent = PlanAccent.of(me.featureKey);
-    final barVisible = me.featureKey != null && me.paymentEnabled && paidPlans.isNotEmpty;
+    final state = PlanCardStates.ofPlan(me);
+    final copy = PlanCopies.of(me.featureKey);
+    final values = PlanValues.fromCatalog(_plans.plans);
+    final barVisible = me.featureKey != null && me.paymentEnabled && paidPlans.isNotEmpty && PlanCardStates.showsCycles(state);
+    final weekly = _weekly;
+    final week = copy != null && copy.showsWeek && state == PlanCardState.plus && weekly != null ? copy.weekCells(weekly) : const <(String, String)>[];
     final List<Widget> children;
     var settled = true;
     if (me.featureKey == null && !loading && _plans.planLoadFailed.value) {
@@ -332,17 +298,31 @@ class _PlansBillingScreenState extends State<PlansBillingScreen> {
       children = loading ? _loadingBlocks() : [_emptyState(tone)];
     } else {
       children = [
-        _currentPlanCard(me, tone),
+        _currentPlanCard(me, tone, state, copy, values),
         if (me.play != null)
-          PlanSubscriptionCard(me: me, accent: accent, onResubscribe: () => _resubscribe(me, paidPlans)),
+          PlanSubscriptionCard(
+            me: me,
+            accent: accent,
+            state: state,
+            note: state == PlanCardState.grace ? PlanWords.plusKeepsWorking : copy?.subNote(state, me, values),
+            onHoldBody: copy?.onHoldBody,
+            chooseLabel: copy?.chooseLabel,
+            onChoose: copy == null || (me.hidden.total == 0 && me.pausedByPlanCount == 0) ? null : copy.openChoose,
+            onSubscribeAgain: () => _subscribeAgain(paidPlans),
+          ),
+        if (week.isNotEmpty)
+          Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            const PlanSectionTitle(title: PlanWords.thisWeek, subtitle: PlanWords.whatPlusDid),
+            PlanWeekCard3D(tone: tone, cells: week),
+          ]),
         if (!me.paymentEnabled)
-          _comingSoon(me.featureKey, tone)
-        else ...[
+          _comingSoon(copy, tone)
+        else if (PlanCardStates.showsCycles(state) || PlanCardStates.showsCompare(state)) ...[
           if (paidPlans.isEmpty)
             _plansPlaceholder(catalogLoading, tone)
           else
-            ..._purchaseSection(me, paidPlans, accent, tone),
-          if (_plans.isPlay) _restoreButton(tone),
+            ..._purchaseSection(me, paidPlans, accent, tone, state, copy, values),
+          if (_plans.isPlay && PlanCardStates.showsCompare(state)) _restoreButton(tone),
         ],
       ];
     }
@@ -364,7 +344,7 @@ class _PlansBillingScreenState extends State<PlansBillingScreen> {
 
   List<Widget> _loadingBlocks() => const [PlanSkeleton3D()];
 
-  List<Widget> _purchaseSection(MyPlanModel me, List<PlanModel> paidPlans, Color accent, ListingTone tone) {
+  List<Widget> _purchaseSection(MyPlanModel me, List<PlanModel> paidPlans, Color accent, ListingTone tone, PlanCardState state, PlanRoleCopy? copy, PlanValues values) {
     final isPlay = _plans.isPlay;
     final owns = me.play?.ownsActivePlan == true;
     final selectedId = _selectedPlanId.value;
@@ -378,22 +358,26 @@ class _PlansBillingScreenState extends State<PlansBillingScreen> {
       final price = selected.priceFor(cycle) ?? selected.prices.first;
       final notConfigured = isPlay && (selected.playProductId == null || price.playBasePlanId == null);
       final ownedCycle = isPlay && _isOwnedCycle(selected, cycle);
-      showCoupon = !notConfigured && !ownedCycle;
+      showCoupon = !notConfigured && !ownedCycle && !owns;
     }
+    final rows = copy?.compareRows(values) ?? const <PlanRowData>[];
     return [
-      Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        PlanSectionTitle(title: 'What you get', subtitle: 'Free vs ${paidPlans.map((p) => p.name).join(' vs ')}'),
-        PlanCompareTable(
-          rows: _featureRows(_plans.plans, paidPlans, me),
-          paidNames: [for (final p in paidPlans) p.name],
-          accent: accent,
-          featureKey: me.featureKey,
-        ),
-      ]),
-      Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      if (PlanCardStates.showsCompare(state) && rows.isNotEmpty)
+        Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          PlanSectionTitle(title: PlanWords.whatYouGet, subtitle: paidPlans.length == 1 ? PlanWords.freeVsPlus : 'Free vs ${paidPlans.map((p) => p.name).join(' vs ')}'),
+          PlanCompareTable(
+            rows: const [],
+            planRows: rows,
+            paidNames: [for (final p in paidPlans) p.name],
+            accent: accent,
+            featureKey: me.featureKey,
+          ),
+        ]),
+      if (PlanCardStates.showsCycles(state))
+        Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         owns
-            ? const PlanSectionTitle(title: 'Change duration', subtitle: 'Takes effect at your next renewal')
-            : PlanSectionTitle(title: 'Pick how long', subtitle: isPlay ? 'Auto-renews. Cancel anytime in Google Play.' : 'Prepaid. Pick how long.'),
+            ? const PlanSectionTitle(title: PlanWords.changeDuration, subtitle: PlanWords.nextRenewal)
+            : PlanSectionTitle(title: PlanWords.pickHowLong, subtitle: isPlay ? PlanWords.autoRenews : 'Prepaid. Pick how long.'),
         for (final plan in paidPlans) ...[
           if (paidPlans.length > 1) _planChipRow(plan, tone),
           ..._cycleRows(plan, accent, me.featureKey),
@@ -479,11 +463,11 @@ class _PlansBillingScreenState extends State<PlansBillingScreen> {
     return _couponRow(tone);
   }
 
-  Widget _comingSoon(String? featureKey, ListingTone tone) => PlanStateCard3D(
+  Widget _comingSoon(PlanRoleCopy? copy, ListingTone tone) => PlanStateCard3D(
         tone: tone,
         art: ListingArt.star,
-        title: 'Paid plans are coming',
-        message: _comingLine(featureKey),
+        title: PlanWords.paidPlansComing,
+        message: copy?.offLine,
       );
 
   Widget _stickyBar() {
@@ -491,7 +475,8 @@ class _PlansBillingScreenState extends State<PlansBillingScreen> {
     final paidPlans = _plans.plans.where((p) => !p.isDefault && p.prices.isNotEmpty).toList();
     final selectedId = _selectedPlanId.value;
     final appliedCoupon = _appliedCoupon.value;
-    if (me.featureKey == null || !me.paymentEnabled || paidPlans.isEmpty) return const SizedBox.shrink();
+    final state = PlanCardStates.ofPlan(me);
+    if (me.featureKey == null || !me.paymentEnabled || paidPlans.isEmpty || !PlanCardStates.showsCycles(state)) return const SizedBox.shrink();
     final plan = paidPlans.firstWhereOrNull((p) => p.id == selectedId) ?? paidPlans.first;
     final selected = selectedId == plan.id;
     final cycle = _cycles[plan.id] ?? plan.prices.first.cycleMonths;
@@ -510,9 +495,11 @@ class _PlansBillingScreenState extends State<PlansBillingScreen> {
     final ownedCycle = isPlay && _isOwnedCycle(plan, cycle);
     final holdBlocked = isPlay && PlanStateCopy.blocksPurchase(me);
     final trialOffer = isPlay ? _plans.trialOfferFor(plan) : null;
-    final canTrial = isPlay
-        ? me.trialAvailable && trialOffer != null && !me.hasPaidPlan && !holdBlocked && !notConfigured
-        : me.trialAvailable && plan.trialDays > 0;
+    final canTrial = cycle == 1 &&
+        state == PlanCardState.free &&
+        (isPlay
+            ? me.trialAvailable && trialOffer != null && !me.hasPaidPlan && !holdBlocked && !notConfigured
+            : me.trialAvailable && plan.trialDays > 0);
     final ctaDisabled =
         purchasing || quoteLoading || notConfigured || storeLoading || priceUnavailable || holdBlocked || ownedCycle;
 
@@ -544,7 +531,7 @@ class _PlansBillingScreenState extends State<PlansBillingScreen> {
       note = quoteError;
       noteKind = PlanNoteKind.bad;
     } else if (holdBlocked) {
-      note = 'Fix the payment in Google Play first.';
+      note = PlanWords.fixFirst;
       noteKind = PlanNoteKind.warn;
     } else if (quote != null && quote.storePriceRequired) {
       if (quote.isTrial && quoteSp != null) {
@@ -567,22 +554,22 @@ class _PlansBillingScreenState extends State<PlansBillingScreen> {
     }
 
     final label = quoteLoading && quote == null && !ownedCycle && !notConfigured
-        ? 'Continue with ${plan.name}'
-        : _ctaLabel(plan, me, selected, quote, ownedCycle: ownedCycle, notConfigured: notConfigured);
+        ? _buyLabel(plan, state)
+        : _ctaLabel(plan, state, selected, quote, ownedCycle: ownedCycle, notConfigured: notConfigured, holdBlocked: holdBlocked);
 
     final tone = PlanLook.toneOf(me.featureKey);
     final trialDays = isPlay ? (trialOffer?.trialDays ?? plan.trialDays) : plan.trialDays;
     final monthly = isPlay ? _plans.storePriceFor(plan, 1) : null;
     return PlanBar3D(
       tone: tone,
-      left: '${plan.name} · ${_cycleTitle(cycle)}',
+      left: PlanWords.planCycle(plan.name, cycle),
       right: right,
       note: note,
       noteKind: noteKind,
       ctaLabel: label,
       ctaLoading: purchasing && selected,
       onCta: ctaDisabled ? null : () => _onCta(plan, selected),
-      trialLabel: canTrial ? 'Try free for $trialDays days' : null,
+      trialLabel: canTrial ? PlanWords.tryFree(trialDays) : null,
       onTrial: purchasing ? null : () => _startTrial(plan),
       trialNote: canTrial && monthly != null ? 'Then ${monthly.formatted}/month. Cancel anytime in Google Play.' : null,
     );
@@ -598,8 +585,8 @@ class _PlansBillingScreenState extends State<PlansBillingScreen> {
     );
   }
 
-  void _resubscribe(MyPlanModel me, List<PlanModel> paidPlans) {
-    final id = me.play?.productId;
+  void _subscribeAgain(List<PlanModel> paidPlans) {
+    final id = _plans.myPlan.value.play?.productId;
     final plan = paidPlans.firstWhereOrNull((p) => p.playProductId == id) ?? (paidPlans.isNotEmpty ? paidPlans.first : null);
     if (plan == null) return;
     if (_selectedPlanId.value == plan.id) {
@@ -637,25 +624,24 @@ class _PlansBillingScreenState extends State<PlansBillingScreen> {
 
   static String _date(DateTime d) => PlanStateCopy.date(d);
 
-  Widget _currentPlanCard(MyPlanModel me, ListingTone tone) {
-    final l = me.limits;
+  Widget _currentPlanCard(MyPlanModel me, ListingTone tone, PlanCardState state, PlanRoleCopy? copy, PlanValues values) {
     final key = me.featureKey;
-    final subtitle = me.play?.ownsActivePlan == true
-        ? 'Billed by Google Play'
-        : me.hasPaidPlan && me.endsAt != null
-            ? 'Ends ${_date(me.endsAt!)}${me.daysLeft != null ? ' · ${me.daysLeft} days left' : ''}'
-            : (me.paymentEnabled ? 'No end date' : 'Free for now');
+    final grantEnd = state == PlanCardState.adminGrant && me.endsAt != null
+        ? 'Ends ${_date(me.endsAt!)}${me.daysLeft != null ? ' · ${me.daysLeft} days left' : ''}'
+        : null;
+    final subtitle = grantEnd ?? copy?.heroSubtitle(state, me) ?? (me.paymentEnabled ? PlanWords.noEndDate : PlanWords.freeForNow);
+    final active = PlanCardStates.plusValues(state);
     return PlanHeroCard3D(
       tone: tone,
       art: PlanAccent.iconAsset(key),
       pills: [
-        if (me.isTrial || (me.play?.inTrial ?? false)) const PlanHeroPill('Trial'),
-        me.hasPaidPlan ? const PlanHeroPill('Active', filled: true) : const PlanHeroPill('Your plan'),
+        if (state == PlanCardState.trial) const PlanHeroPill(PlanWords.trial),
+        active ? const PlanHeroPill(PlanWords.active, filled: true) : const PlanHeroPill(PlanWords.yourPlan, filled: true),
       ],
-      name: me.planName,
+      name: active || (state == PlanCardState.onHold && me.hasPaidPlan) ? me.planName : PlanWords.free,
       subtitle: subtitle,
-      lines: _includedLines(l, key),
-      pausedLabel: me.pausedByPlanCount > 0 ? '${me.pausedByPlanCount} paused by plan' : null,
+      items: copy?.heroLines(state, me, values) ?? const [],
+      meter: copy?.heroMeter(state, me, values),
     );
   }
 
@@ -671,19 +657,18 @@ class _PlansBillingScreenState extends State<PlansBillingScreen> {
     _buy(plan);
   }
 
-  String _ctaLabel(PlanModel plan, MyPlanModel me, bool selected, PlanQuote? quote,
-      {required bool ownedCycle, required bool notConfigured}) {
+  static String _buyLabel(PlanModel plan, PlanCardState state) =>
+      state == PlanCardState.ended ? PlanWords.subscribeAgain : 'Continue with ${plan.name}';
+
+  String _ctaLabel(PlanModel plan, PlanCardState state, bool selected, PlanQuote? quote,
+      {required bool ownedCycle, required bool notConfigured, required bool holdBlocked}) {
     if (notConfigured) return 'Not available';
-    if (ownedCycle) return 'Current plan';
+    if (ownedCycle) return PlanWords.currentPlan;
+    if (holdBlocked) return _buyLabel(plan, state);
     if (!selected) return 'Select';
     if (quote == null) return 'Retry';
     if (!quote.requiresPayment) return 'Activate';
-    final resub = me.play != null && !me.play!.ownsActivePlan && me.play!.ended;
-    return switch (quote.intent) {
-      'Renew' => 'Renew',
-      'Switch' => 'Switch',
-      _ => resub ? 'Resubscribe' : 'Continue with ${plan.name}',
-    };
+    return quote.intent == 'Switch' ? 'Switch' : _buyLabel(plan, state);
   }
 
   Widget _couponRow(ListingTone tone) {

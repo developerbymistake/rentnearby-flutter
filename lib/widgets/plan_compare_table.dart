@@ -69,8 +69,9 @@ class PlanCompareTable extends StatelessWidget {
   final List<String> paidNames;
   final Color accent;
   final String? featureKey;
+  final List<PlanRowData> planRows;
 
-  const PlanCompareTable({super.key, required this.rows, required this.paidNames, required this.accent, this.featureKey});
+  const PlanCompareTable({super.key, required this.rows, required this.paidNames, required this.accent, this.featureKey, this.planRows = const []});
 
   bool get _showBest => paidNames.length == 1;
 
@@ -100,6 +101,7 @@ class PlanCompareTable extends StatelessWidget {
       paidNames: paidNames,
       showBest: _showBest,
       rows: [
+        ...planRows,
         for (final r in rows) PlanRowData(label: r.label, art: artFor(r.label), cells: [for (final c in r.cells) _cell(c)]),
       ],
     );

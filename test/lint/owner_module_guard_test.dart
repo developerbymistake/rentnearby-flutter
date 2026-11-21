@@ -121,6 +121,8 @@ void main() {
 
   // Words a frame draws in the other role's module; each needs the frame id.
   const roleWordExceptions = <String, String>{
+    // A8-money
+    'Your first route stays. Extra routes are hidden, not deleted.': 'o_pl_8',
     // A5-taxi-core
     'Bakhli is checking your new licence details. Your bookings stay.': 'o_tx_42 B',
     'Bookings stay. A ringing request and unanswered trip leads close.': 'o_tx_11',

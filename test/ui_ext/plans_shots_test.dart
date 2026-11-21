@@ -557,7 +557,7 @@ void main() {
   Widget cards(List<MyPlanModel> list) => Scaffold(
         backgroundColor: ListingPalette.forest.page,
         body: ListView(padding: const EdgeInsets.only(top: 20, bottom: 40), children: [
-          for (final me in list) PlanSubscriptionCard(me: me, accent: PlanAccent.of('Stay'), onResubscribe: () {}),
+          for (final me in list) PlanSubscriptionCard(me: me, accent: PlanAccent.of('Stay'), onSubscribeAgain: () {}),
         ]),
       );
   MyPlanModel paidStay(PlaySubInfo p, {int carry = 0}) =>
@@ -602,11 +602,11 @@ void main() {
           PlanSubscriptionCard(
               me: _stayFree(play: _playSub(state: 'SUBSCRIPTION_STATE_EXPIRED', owns: false)),
               accent: PlanAccent.of('Stay'),
-              onResubscribe: () => resub++),
+              onSubscribeAgain: () => resub++),
         ])));
-    await _tapText(t, 'Resubscribe');
+    await _tapText(t, 'Subscribe again');
     expect(resub, 1);
-    expect(find.text('Manage in Google Play'), findsOneWidget);
+    expect(find.text('Manage in Google Play'), findsNothing);
     expect(find.text('Use the Google account you subscribed with.'), findsOneWidget);
     debugDisableShadows = true;
   });

@@ -1,5 +1,8 @@
 import 'package:get/get.dart';
 
+import '../owner_core/plan/plan_card_state.dart';
+import 'plan/taxi_home_plan_card.dart';
+import 'plan/taxi_plan_copy.dart';
 import 'home/taxi_driver_home_controller.dart';
 import 'taxi_driver_session.dart';
 import '../taxi/requests/widgets/driver_bookings_section.dart';
@@ -17,6 +20,8 @@ abstract final class TaxiDriverBindings {
     // A7 bindings
     // end A7
     // A8 bindings
+    PlanCopies.taxi = const TaxiPlanCopy();
+    TaxiDriverDeps.planCard = () => const TaxiHomePlanCard();
     // end A8
   }
 }
