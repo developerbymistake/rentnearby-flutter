@@ -322,7 +322,7 @@ class _PlansBillingScreenState extends State<PlansBillingScreen> {
             _plansPlaceholder(catalogLoading, tone)
           else
             ..._purchaseSection(me, paidPlans, accent, tone, state, copy, values),
-          if (_plans.isPlay && PlanCardStates.showsCompare(state)) _restoreButton(tone),
+          if (paidPlans.isEmpty && _plans.isPlay && PlanCardStates.showsCompare(state)) PlanLinkChips(chips: [_restoreChip()]),
         ],
       ];
     }
@@ -388,7 +388,11 @@ class _PlansBillingScreenState extends State<PlansBillingScreen> {
             child: Text('Subscribed on another Bakhli account',
                 style: TypeTokens.style(12.5, FontWeight.w500, color: TypeTokens.secondary)),
           ),
-        if (showCoupon) _couponLink(tone),
+        if (showCoupon && _couponOpen) _couponRow(tone),
+      ]),
+      PlanLinkChips(chips: [
+        if (showCoupon && !_couponOpen && PlanCardStates.showsCycles(state)) ('Have a coupon?', () => _showCoupon.value = true),
+        if (isPlay && PlanCardStates.showsCompare(state)) _restoreChip(),
       ]),
     ];
   }
@@ -456,12 +460,7 @@ class _PlansBillingScreenState extends State<PlansBillingScreen> {
     ];
   }
 
-  Widget _couponLink(ListingTone tone) {
-    if (!_showCoupon.value && _appliedCoupon.value == null) {
-      return PlanLinkText(tone: tone, label: 'Have a coupon?', onTap: () => _showCoupon.value = true);
-    }
-    return _couponRow(tone);
-  }
+  bool get _couponOpen => _showCoupon.value || _appliedCoupon.value != null;
 
   Widget _comingSoon(PlanRoleCopy? copy, ListingTone tone) => PlanStateCard3D(
         tone: tone,
@@ -575,13 +574,11 @@ class _PlansBillingScreenState extends State<PlansBillingScreen> {
     );
   }
 
-  Widget _restoreButton(ListingTone tone) {
+  (String, VoidCallback?) _restoreChip() {
     final busy = _plans.isRestoring.value || _plans.isPurchasing.value;
-    return PlanLinkText(
-      tone: tone,
-      secondary: true,
-      label: _plans.isRestoring.value ? 'Restoring...' : 'Restore purchases',
-      onTap: busy ? null : () => _plans.restorePurchases(force: true, userInitiated: true),
+    return (
+      _plans.isRestoring.value ? 'Restoring...' : 'Restore purchases',
+      busy ? null : () => _plans.restorePurchases(force: true, userInitiated: true),
     );
   }
 

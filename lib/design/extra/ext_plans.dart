@@ -39,6 +39,8 @@ class PlanInk {
   static const Color onCardFill = Color(0x33FFFFFF);
   static const Color onCardRing = Color(0xBFFFFFFF);
   static const Color pillFill = Color(0x42FFFFFF);
+  static const Color chipRing = Color(0xFF5C5EDD);
+  static const Color chipText = Color(0xFF2633C5);
   static const Color testPill = Color(0x29000000);
   static const Color newFill = Color(0xFFFDE6E8);
 }
@@ -702,31 +704,39 @@ double _textWidth(String text, TextStyle style, TextScaler scaler) {
   return w;
 }
 
-class PlanLinkText extends StatelessWidget {
-  const PlanLinkText({super.key, required this.tone, required this.label, required this.onTap, this.secondary = false});
+/// The outlined chips under the cycle cards (o_pl_1, o_pl_2): "Have a coupon?" and "Restore purchases".
+class PlanLinkChips extends StatelessWidget {
+  const PlanLinkChips({super.key, required this.chips});
 
-  final ListingTone tone;
-  final String label;
-  final VoidCallback? onTap;
-  final bool secondary;
+  final List<(String, VoidCallback?)> chips;
 
   @override
   Widget build(BuildContext context) {
+    if (chips.isEmpty) return const SizedBox.shrink();
     return Padding(
-      padding: EdgeInsets.only(top: secondary ? DS.gv(16) : DS.gv(20)),
-      child: Center(
-        child: Tap3D(
-          onTap: onTap,
-          label: label,
-          exclude: true,
-          child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: DS.s(12), vertical: DS.s(4)),
-            child: Text(label,
-                style: secondary
-                    ? Ink3D.text(14, FontWeight.w600, PlanInk.muted, letterSpacing: 0)
-                    : Ink3D.text(15, FontWeight.w700, tone.text, letterSpacing: 0)),
-          ),
-        ),
+      padding: EdgeInsets.fromLTRB(DS.s(18), DS.gv(20), DS.s(18), 0),
+      child: Wrap(
+        alignment: WrapAlignment.center,
+        spacing: DS.s(10),
+        runSpacing: DS.s(8),
+        children: [
+          for (final c in chips)
+            Tap3D(
+              onTap: c.$2,
+              label: c.$1,
+              exclude: true,
+              child: Container(
+                constraints: BoxConstraints(minHeight: DS.s(32)),
+                padding: EdgeInsets.symmetric(horizontal: DS.s(14), vertical: DS.s(6)),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: DS.circular(16),
+                  border: Border.all(color: PlanInk.chipRing, width: DS.s(1.5)),
+                ),
+                child: Text(c.$1, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(12.5, FontWeight.w700, PlanInk.chipText, letterSpacing: 0)),
+              ),
+            ),
+        ],
       ),
     );
   }

@@ -24,6 +24,8 @@ import 'privacy_policy_screen.dart';
 import 'terms_of_service_screen.dart';
 import '../features/buddy/buddies/widgets/profile_buddies_row.dart';
 import '../features/buddy/offline/logout_guard.dart';
+import '../features/owner_core/plan/plan_card_state.dart';
+import '../features/owner_core/plan/profile_plan_card.dart';
 import '../widgets/account_blockers_sheet.dart';
 import 'profile/profile_rows.dart';
 
@@ -315,12 +317,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
       child: Obx(() {
         final me = plans.myPlan.value;
         final name = me.planName.toLowerCase().contains('plan') ? me.planName : '${me.planName} plan';
+        final copy = me.paymentEnabled ? PlanCopies.of(me.featureKey) : null;
+        final role = copy == null ? null : ProfilePlanCard.lineFor(copy, me);
+        final line = role == null || role == me.planName ? name : role;
         return _row(
           art: ListingArt.moneyBag,
           title: 'Plans & Billing',
           fitTitle: true,
           bold: true,
-          below: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(13, FontWeight.w400, Ink3D.grey, letterSpacing: 0)),
+          below: Text(line, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(13, FontWeight.w400, Ink3D.grey, letterSpacing: 0)),
           onTap: () => Get.toNamed(AppRoutes.plansBilling),
           trailing: me.paymentEnabled && !compact
               ? _planPill(me.hasPaidPlan ? 'Manage' : 'Upgrade', () => Get.toNamed(AppRoutes.plansBilling))

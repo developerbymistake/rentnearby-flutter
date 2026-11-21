@@ -120,7 +120,7 @@ class PlanSubscriptionCard extends StatelessWidget {
       title: view.$1,
       body: view.$2,
       notes: [
-        if (n != null && n.isNotEmpty) (ListingArt.worldMap, n),
+        if (n != null && n.isNotEmpty) (s == PlanCardState.grace ? ListingArt.star : ListingArt.worldMap, n),
         if (scheduled != null) (ListingArt.calendar, scheduled),
         if (me.carryOverDays > 0 && s != PlanCardState.onHold) (ListingArt.moneyBag, '+${me.carryOverDays} days after subscription'),
       ],
