@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
 import '../../../design/design.dart';
 import '../../owner_core/calendar/models/calendar_models.dart';
@@ -20,6 +21,7 @@ class TaxiPagedSections extends StatefulWidget {
     required this.sectionLabel,
     this.footer,
     this.byLastDay = false,
+    this.saving,
   });
 
   final TaxiPageLoader load;
@@ -27,6 +29,7 @@ class TaxiPagedSections extends StatefulWidget {
   final String Function(DateTime month) sectionLabel;
   final List<Widget> Function(BuildContext context, bool hasMore)? footer;
   final bool byLastDay;
+  final RxBool? saving;
 
   @override
   State<TaxiPagedSections> createState() => TaxiPagedSectionsState();
@@ -58,15 +61,23 @@ class TaxiPagedSectionsState extends State<TaxiPagedSections> {
   bool _more = false;
   bool _failed = false;
   bool _stale = false;
+  Worker? _afterWrite;
 
   @override
   void initState() {
     super.initState();
+    final saving = widget.saving;
+    if (saving != null) {
+      _afterWrite = ever<bool>(saving, (busy) {
+        if (!busy && mounted) refresh();
+      });
+    }
     refresh();
   }
 
   @override
   void dispose() {
+    _afterWrite?.dispose();
     _latest.cancel();
     super.dispose();
   }

@@ -359,8 +359,8 @@ class TaxiFootLine extends StatelessWidget {
       );
 }
 
-class TaxiPageHeader extends StatelessWidget {
-  const TaxiPageHeader({super.key, required this.title, this.subtitle, this.plusPill = false});
+class TaxiCalPageHeader extends StatelessWidget {
+  const TaxiCalPageHeader({super.key, required this.title, this.subtitle, this.plusPill = false});
 
   final String title;
   final String? subtitle;

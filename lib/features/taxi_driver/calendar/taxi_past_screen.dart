@@ -55,12 +55,13 @@ class _TaxiPastScreenState extends State<TaxiPastScreen> {
       backgroundColor: TaxiCal.page,
       body: Column(
         children: [
-          TaxiPageHeader(
+          TaxiCalPageHeader(
             title: TaxiCalendarStrings.past3Months,
             subtitle: TaxiCalendarStrings.pastSub(_plate, OwnerDates.addDays(today, -91), OwnerDates.addDays(today, -1)),
           ),
           Expanded(
             child: TaxiPagedSections(
+              saving: _c.saving,
               load: (cursor) => _c.past(cursor: cursor),
               byLastDay: true,
               sectionLabel: TaxiCalendarStrings.sectionMonthOnly,

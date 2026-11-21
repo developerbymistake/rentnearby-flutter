@@ -454,6 +454,25 @@ void main() {
       expect(find.text('Show more'), findsNothing);
     });
 
+    testWidgets('upcoming reloads its list after a calendar write', (tester) async {
+      final fake = CalFake(upcoming: {
+        null: {
+          'items': [tripJson('m25', from: '2026-11-25', time: '09:30', label: 'Mehra family')],
+        },
+      });
+      final c = calSetUp(fake, plan: OwnerPlans.plus);
+      await pumpPhone(tester, TaxiUpcomingScreen(controller: c, windowEnd: DateTime(2027, 5, 21)));
+      await settle(tester);
+      expect(find.text('Mehra family'), findsOneWidget);
+      fake.upcoming = {
+        null: {'items': const <Map<String, dynamic>>[]},
+      };
+      await tester.runAsync(() => c.delete('m25'));
+      await settle(tester);
+      expect(fake.count('DELETE'), 1);
+      expect(find.text('Mehra family'), findsNothing);
+    });
+
     testWidgets('upcoming on Free shows the after-window lock line', (tester) async {
       final fake = CalFake(upcoming: {
         null: {

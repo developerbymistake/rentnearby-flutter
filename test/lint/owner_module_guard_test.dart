@@ -130,6 +130,10 @@ void main() {
     'Choose which route stays, or get Plus to use all your routes.': 'o_tx_36 E',
     'The request opens again for other drivers. Your calendar entry stays, marked Cancelled.': 'o_tx_38 B',
     '\$name’s request opens again for other drivers. Your calendar entry stays, marked Cancelled.': 'o_tx_38 B',
+    // A7-taxi-calendar
+    'Amounts stay free': 'o_tx_31',
+    'Plus adds up the amounts you write on each booking. Writing them stays free.': 'o_tx_24',
+    'Your dates are free again. Notes stay until \${OwnerSharedStrings.dayMonth(until)}.': 'o_tx_46 C',
   };
 
   test('5. role words stay in their own module', () {

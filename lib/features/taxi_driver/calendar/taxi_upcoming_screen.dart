@@ -83,13 +83,14 @@ class _TaxiUpcomingScreenState extends State<TaxiUpcomingScreen> {
       backgroundColor: TaxiCal.page,
       body: Column(
         children: [
-          TaxiPageHeader(
+          TaxiCalPageHeader(
             title: TaxiCalendarStrings.upcoming,
             subtitle: end == null ? window : TaxiCalendarStrings.until(window, end),
             plusPill: true,
           ),
           Expanded(
             child: TaxiPagedSections(
+              saving: _c.saving,
               load: _load,
               sectionLabel: TaxiCalendarStrings.sectionMonth,
               row: (context, e) => TaxiTripRow(

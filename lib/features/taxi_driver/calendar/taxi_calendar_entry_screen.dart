@@ -151,7 +151,7 @@ class _TaxiCalendarEntryScreenState extends State<TaxiCalendarEntryScreen> {
       backgroundColor: TaxiCal.page,
       body: Column(
         children: [
-          TaxiPageHeader(
+          TaxiCalPageHeader(
             title: manual ? TaxiCalendarStrings.trip : TaxiCalendarStrings.booking,
             subtitle: e == null
                 ? null

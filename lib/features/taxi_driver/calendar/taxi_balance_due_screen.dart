@@ -96,7 +96,7 @@ class _TaxiBalanceDueScreenState extends State<TaxiBalanceDueScreen> {
           Obx(() {
             final s = _c.summary.value.valueOrNull;
             final toCollect = s?.toCollect ?? TaxiCalendarController.sumToCollect(_c.view.value.monthRows);
-            return TaxiPageHeader(
+            return TaxiCalPageHeader(
               title: TaxiCalendarStrings.balanceDue,
               subtitle: TaxiCalendarStrings.balanceDueSub(_c.month.value, toCollect),
               plusPill: true,
