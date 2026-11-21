@@ -25,7 +25,6 @@ class TripPushSync {
     AppRoutes.taxiRequests,
     AppRoutes.taxiBookings,
     AppRoutes.myTrips,
-    AppRoutes.tripSummary,
     AppRoutes.stayEnquiries,
     AppRoutes.tripLeads,
     AppRoutes.myJourneys,

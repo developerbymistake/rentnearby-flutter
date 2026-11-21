@@ -311,7 +311,6 @@ void main() {
         AppRoutes.tripMap,
         AppRoutes.myTrips,
         AppRoutes.tripReplies,
-        AppRoutes.tripSummary,
         AppRoutes.tripOverview,
         AppRoutes.tripTaxiRequest,
         AppRoutes.tripTaxiStatus,

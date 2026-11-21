@@ -511,7 +511,6 @@ class NotificationService extends GetxService {
     AppRoutes.tripMap,
     AppRoutes.myTrips,
     AppRoutes.tripReplies,
-    AppRoutes.tripSummary,
     AppRoutes.stayEnquiries,
     AppRoutes.tripLeads,
     AppRoutes.stayAdvanceDetails,

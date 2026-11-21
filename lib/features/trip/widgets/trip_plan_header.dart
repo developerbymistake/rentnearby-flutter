@@ -18,7 +18,6 @@ enum TripPlanMenu {
   editDays,
   editDates,
   rename,
-  summary,
   map,
   mute,
   complete,
@@ -266,12 +265,6 @@ class TripPlanHeader extends StatelessWidget {
               TripPlanMenu.rename,
               TravelIcon.pin,
               TripStringsV2Plan.menuRename,
-            ),
-          if (saved)
-            _item(
-              TripPlanMenu.summary,
-              TravelIcon.note,
-              TripStringsV2Plan.menuSummary,
             ),
           _item(TripPlanMenu.map, TravelIcon.map, TripStringsV2Plan.menuMap),
           if (saved) _muteItem(c),

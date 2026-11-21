@@ -36,7 +36,6 @@ class GlobalLocationGates extends StatelessWidget {
   static const Set<String> _offlineRoutes = {
     AppRoutes.myTrips,
     AppRoutes.tripPlan,
-    AppRoutes.tripSummary,
     AppRoutes.tripMap,
     AppRoutes.tripCustomize,
     AppRoutes.tripOverview,

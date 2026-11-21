@@ -69,7 +69,6 @@ const _baselineBeforeTaxiRequest = <String, int>{
   'lib/features/trip/widgets/trip_problem_sheet.dart': 1,
   'lib/features/trip/widgets/trip_route_strip.dart': 1,
   'lib/features/trip/widgets/trip_spots_extras.dart': 1,
-  'lib/features/trip/widgets/trip_summary_hero.dart': 1,
   'lib/features/trip/widgets/trip_today_card.dart': 2,
   'lib/features/trip/widgets/trip_ui.dart': 6,
   'lib/screens/home_screen.dart': 5,

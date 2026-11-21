@@ -176,6 +176,4 @@ class TripLifecycleActions {
     if (leave == true) TripNavigation.replaceWithMyTrips();
     return leave == true;
   }
-
-  static Future<void>? openSummary(String tripId) => TripNavigation.openSummary(tripId);
 }

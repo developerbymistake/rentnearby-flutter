@@ -2,13 +2,10 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:bakhli/features/trip/data/trip_city_catalog.dart';
-import 'package:bakhli/features/trip/models/trip_summary_model.dart';
 import 'package:bakhli/features/trip/widgets/trip_plan_header.dart';
 import 'package:bakhli/features/trip/widgets/trip_city_sheet.dart';
 import 'package:bakhli/features/trip/widgets/trip_spot_detail_sheet.dart';
-import 'package:bakhli/features/trip/screens/trip_summary_screen.dart';
 import 'package:bakhli/features/trip/screens/trip_map_screen.dart';
-import 'package:bakhli/features/trip/utils/trip_summary_source.dart';
 import 'package:dio/dio.dart';
 
 import 'package:bakhli/controllers/tab_config_controller.dart';
@@ -230,80 +227,6 @@ Future<void> _city(WidgetTester t, String name,
   debugDisableShadows = true;
 }
 
-TripSummaryRecord _sumRecord({bool done = false}) => TripSummaryRecord.fromJson({
-      'tripId': 't1',
-      'title': 'Nainital to Almora',
-      'city': 'Nainital',
-      'legCities': ['Nainital', 'Almora'],
-      'startDate': '2026-11-13',
-      'endDate': '2026-11-17',
-      'adults': 2,
-      'agreedTotal': 9400,
-      if (done) 'status': 'completed',
-      'days': [
-        {'day': 1, 'date': '2026-11-13', 'city': 'Nainital', 'spots': ['Naini Lake', 'Naina Devi', 'Snow View'], 'minutes': 310},
-        {'day': 2, 'date': '2026-11-14', 'city': 'Nainital', 'spots': ['Tiffin Top', 'Raj Bhavan', 'Sat Tal'], 'minutes': 460},
-        {'day': 4, 'date': '2026-11-16', 'city': 'Almora', 'spots': ['Kasar Devi', 'Bright End Corner'], 'minutes': 240},
-      ],
-      'nights': [
-        {
-          'night': 1,
-          'date': '2026-11-13',
-          'listingName': 'Lakeside Rooms',
-          'displayStatus': 'confirmedByBoth',
-          'agreedTotal': 6600,
-          'roomLines': [
-            {'roomName': 'Deluxe', 'units': 1, 'guests': 2}
-          ],
-          'advanceStatus': 'received',
-          'advanceAmount': 1000,
-          'confirmedBy': 'both',
-          'confirmedAt': '2026-11-10T10:00:00Z',
-        },
-      ],
-      'taxis': [
-        {
-          'listingName': 'Pradeep Kumar',
-          'vehicleTypeName': 'Dzire',
-          'days': [1, 2, 3],
-          'displayStatus': 'bookedByYou',
-          'agreedFare': 2800,
-          'tollExtra': true,
-          'pickupTime': '09:00',
-          'pickupPlace': 'Mall Road',
-          'confirmedBy': 'you',
-          'confirmedAt': '2026-11-11T10:00:00Z',
-        },
-      ],
-      'arrangements': [
-        {'key': 'gettingThere', 'title': 'Getting there', 'state': 'todo', 'detail': 'Haldwani to Nainital · 13 Nov'},
-        {'key': 'stay:1', 'title': 'Stay in Nainital', 'state': 'confirmed', 'detail': 'Lakeside Rooms · 3 nights'},
-        {'key': 'stay:2', 'title': 'Stay in Almora', 'state': 'asked', 'detail': 'Asked · 1 night'},
-        {'key': 'taxi', 'title': 'Local taxi', 'state': 'booked', 'detail': 'Days 1-3 · Dzire'},
-        {'key': 'comingBack', 'title': 'Coming back', 'state': 'todo', 'detail': 'Almora to Haldwani · 17 Nov'},
-      ],
-    });
-
-Future<void> _sum(WidgetTester t, String name,
-    {double scale = 1, Size size = phoneSize, Future<TripSummarySnapshot> Function(String)? loader, double scroll = 0}) async {
-  shotsDir = _dir;
-  debugDisableShadows = false;
-  await pumpPhone(
-    t,
-    TripSummaryScreen(tripId: 't1', loader: loader ?? (_) async => TripSummarySnapshot(_sumRecord()), isGone: (_) => false),
-    size: size,
-    textScale: scale,
-  );
-  await _settle(t);
-  if (scroll > 0) {
-    await t.drag(find.byType(Scrollable).first, Offset(0, -scroll));
-    await _settle(t);
-  }
-  await shot(t, name);
-  expect(t.takeException(), isNull);
-  debugDisableShadows = true;
-}
-
 String _tag(double s, Size z) => '${s.toString().replaceAll('.', '')}_${z.width.toInt()}';
 
 const _sizes = [(1.0, Size(360, 800)), (1.3, Size(360, 800)), (1.0, Size(300, 700))];
@@ -412,10 +335,6 @@ void main() {
     });
   });
   for (final (s, z) in _sizes) {
-    testWidgets('summary main ${_tag(s, z)}', (t) async => _sum(t, 'sum_main_${_tag(s, z)}', scale: s, size: z));
-    testWidgets('summary more ${_tag(s, z)}', (t) async => _sum(t, 'sum_more_${_tag(s, z)}', scale: s, size: z, scroll: 2900));
-  }
-  for (final (s, z) in _sizes) {
     testWidgets('city main ${_tag(s, z)}', (t) async => _city(t, 'city_main_${_tag(s, z)}', scale: s, size: z, then: (t) async {
           await t.tap(find.text('Nainital').last);
           await t.tap(find.text('Almora').last);
@@ -462,13 +381,6 @@ void main() {
       await _settle(t);
     });
   });
-  testWidgets('summary itinerary', (t) async => _sum(t, 'sum_days', scroll: 800));
-  testWidgets('summary done', (t) async => _sum(t, 'sum_done', loader: (_) async => TripSummarySnapshot(_sumRecord(done: true))));
-  testWidgets('summary loading', (t) async => _sum(t, 'sum_loading', loader: (_) => Completer<TripSummarySnapshot>().future));
-  testWidgets('summary empty', (t) async =>
-      _sum(t, 'sum_empty', loader: (_) async => TripSummarySnapshot(TripSummaryRecord.fromJson({'tripId': 't1', 'city': 'Nainital'}))));
-  testWidgets('summary error', (t) async => _sum(t, 'sum_error',
-      loader: (_) async => throw DioException(requestOptions: RequestOptions(path: '/x'), type: DioExceptionType.connectionError)));
 
   for (final (s, z) in _sizes) {
     testWidgets('sheet days ${_tag(s, z)}', (t) async {

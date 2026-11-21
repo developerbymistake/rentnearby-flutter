@@ -18,7 +18,6 @@ import 'screens/trip_taxi_request_status_screen.dart';
 import 'screens/trip_replies_screen.dart';
 import 'screens/trip_spots_screen.dart';
 import 'screens/trip_stay_screen.dart';
-import 'screens/trip_summary_screen.dart';
 import 'screens/trip_where_screen.dart';
 import '../buddy/sharing/widgets/owner_overview_seam.dart';
 import 'trip_navigation.dart';
@@ -110,12 +109,6 @@ final List<GetPage> tripPages = [
   GetPage(
     name: AppRoutes.tripReplies,
     page: () => const TripRepliesScreen(),
-    customTransition: TemplateTransition(),
-    transitionDuration: templateTransitionDuration,
-  ),
-  GetPage(
-    name: AppRoutes.tripSummary,
-    page: () => const TripSummaryScreen(),
     customTransition: TemplateTransition(),
     transitionDuration: templateTransitionDuration,
   ),

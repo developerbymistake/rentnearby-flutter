@@ -65,7 +65,6 @@ class TripStringsV2Plan {
   static const String menuEditDays = 'Edit days';
   static const String menuEditDates = 'Edit dates and people';
   static const String menuRename = 'Rename trip';
-  static const String menuSummary = 'Trip summary';
   static const String menuMap = 'Map of trip';
   static const String menuMute = 'Mute reminders';
   static const String menuMuteSub = 'Event alerts still come';

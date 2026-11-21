@@ -404,8 +404,6 @@ class TripNavigation {
     if (Get.isRegistered<TripPlanController>()) unawaited(TripPlanController.to.refreshEnquiries());
   }
 
-  static Future<void>? openSummary(String tripId) => Get.toNamed(AppRoutes.tripSummary, arguments: {'tripId': tripId});
-
   static Future<void> openWhereToNext() async {
     if (!await TripLimitGate.ensureSlot()) return;
     await Get.toNamed(AppRoutes.tripWhere);

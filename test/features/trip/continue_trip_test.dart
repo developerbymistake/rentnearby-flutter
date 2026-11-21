@@ -156,7 +156,6 @@ void main() {
         'trip_navigation.dart',
         'trip_routes.dart',
         'trip_spots_screen.dart',
-        'trip_summary_screen.dart',
         'notification_service.dart',
         'my_trips_screen.dart',
       };

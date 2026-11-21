@@ -82,7 +82,6 @@ class AppRoutes {
   static const String tripReplies = '/trip-replies';
   static const String stayEnquiries = '/stay-enquiries';
   static const String tripLeads = '/trip-leads';
-  static const String tripSummary = '/trip-summary';
   static const String stayAdvanceDetails = '/stay-advance-details';
 
   static const String tripCustomize = '/trip-customize';

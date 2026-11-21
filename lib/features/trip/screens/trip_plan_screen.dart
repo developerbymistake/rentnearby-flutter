@@ -166,9 +166,6 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
         await TripDatesSheet.edit(context);
       case TripPlanMenu.rename:
         await _rename();
-      case TripPlanMenu.summary:
-        final id = _c.trip.value?.id;
-        if (id != null) TripLifecycleActions.openSummary(id);
       case TripPlanMenu.map:
         TripNavigation.openMap(day: _c.todayDay == null ? TripDayChips.all : _c.defaultMapDay, tripId: _c.trip.value?.id);
       case TripPlanMenu.mute:

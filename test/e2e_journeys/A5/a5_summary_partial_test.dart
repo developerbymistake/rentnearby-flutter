@@ -1,6 +1,5 @@
 import 'package:bakhli/features/trip/models/trip_plan_model.dart';
 import 'package:bakhli/features/trip/models/trip_summary_model.dart';
-import 'package:bakhli/features/trip/widgets/trip_summary_day_card.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 Map<String, dynamic> base({
@@ -66,28 +65,6 @@ void main() {
     expect(r.arrangements.first.isDone, isTrue);
     expect(r.arrangements.first.detailLine, isNull);
     expect(r.stillToDo.map((a) => a.key.id), ['taxi']);
-  });
-
-  test('uncovered night shows To do, covered night keeps its status', () {
-    final r = TripSummaryRecord.fromJson(base(
-      arrangements: [
-        {'key': 'stay:1', 'title': 'Stay', 'state': 'confirmed', 'partial': true, 'nightsCovered': 1, 'nightsTotal': 2},
-      ],
-      nights: [
-        {'night': 1, 'listingName': 'Hill View', 'displayStatus': 'confirmedByBoth'},
-      ],
-    ));
-    expect(TripDayChips.stay(r, r.days[0])!.label, contains('Confirmed'));
-    expect(TripDayChips.stay(r, r.days[1])!.label, 'Stay: To do');
-  });
-
-  test('taxi row with empty days still shows its chip on the first itinerary day only', () {
-    final r = TripSummaryRecord.fromJson(base(taxis: [
-      {'listingName': 'Ramesh', 'days': <int>[], 'displayStatus': 'asked'},
-    ]));
-    expect(TripDayChips.taxi(r, r.days[0])!.label, startsWith('Taxi:'));
-    expect(TripDayChips.taxi(r, r.days[1]), isNull);
-    expect(TripDayChips.taxi(r, r.days[2]), isNull);
   });
 
   test('past or completed trips are completed; future ones are not', () {
