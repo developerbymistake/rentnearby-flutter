@@ -16,6 +16,10 @@ import 'jobs_tab/stay_jobs_tab.dart';
 import 'notices/stay_notice_copy.dart';
 import 'reminder/stay_reminder_row.dart';
 import 'hub/stay_hub_controller.dart';
+import 'calendar/stay_calendar_controller.dart';
+import 'calendar/stay_upcoming_card.dart';
+import 'plan_visible/stay_plan_visible_screen.dart';
+import 'special_prices/stay_special_prices_controller.dart';
 
 abstract final class StayOwnerSession {
   static const String name = 'stay_owner';
@@ -47,6 +51,19 @@ abstract final class StayOwnerSession {
     });
     // end A3
     // A4 session
+    StayOwnerDeps.upcomingCard = StayUpcomingCard.fromHome;
+    OwnerSessionHooks.register('${name}_calendar', (_, _) => StaySpecialPriceMemory.reset());
+    OwnerPushSync.register('${name}_calendar', (type, args) {
+      StayCalendarController.maybe?.reload();
+      if (Get.isRegistered<StaySpecialPricesController>(tag: StaySpecialPricesController.tag)) {
+        Get.find<StaySpecialPricesController>(tag: StaySpecialPricesController.tag).fetch();
+      }
+    });
+    ShellTeardown.register(ShellKind.stayOwner, () {
+      ShellTeardown.deleteTagged<StayCalendarController>(StayCalendarController.tag);
+      ShellTeardown.deleteTagged<StaySpecialPricesController>(StaySpecialPricesController.tag);
+      ShellTeardown.deleteTagged<StayPlanVisibleController>(StayPlanVisibleController.tag);
+    });
     // end A4
     // A8 session
     // end A8
