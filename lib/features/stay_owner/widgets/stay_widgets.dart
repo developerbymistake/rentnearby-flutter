@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../../../design/design.dart';
+import '../../owner_core/plan/gate_keys.dart';
+import '../../owner_core/plan/plan_gate.dart';
+import '../../owner_core/plan/soft_lock.dart';
+import '../../owner_core/strings/owner_shared_strings.dart';
 
 abstract final class StayLook {
   static const Color greyG1 = Color(0xFF9AA3B5);
@@ -327,8 +331,9 @@ class StaySectionTitle extends StatelessWidget {
 }
 
 class StayStrip extends StatelessWidget {
-  const StayStrip({super.key, required this.art, required this.text, required this.fill, required this.ink, this.action, this.onAction, this.margin});
+  const StayStrip({super.key, required this.art, required this.text, required this.fill, required this.ink, this.action, this.onAction, this.margin, this.actionKind = StayPillKind.white});
 
+  final StayPillKind actionKind;
   final String art;
   final String text;
   final Color fill;
@@ -352,7 +357,7 @@ class StayStrip extends StatelessWidget {
                   ExcludeSemantics(child: Art3D(asset: art, size: 32, shadowBlur: 3, shadowOffset: const Offset(2, 3))),
                   Gap.h(12),
                   Expanded(child: Text(text, style: Ink3D.text(12.5, FontWeight.w600, ink, height: 1.35, letterSpacing: 0))),
-                  if (action != null) ...[Gap.h(8), StayPill(label: action!, kind: StayPillKind.white, onTap: onAction)],
+                  if (action != null) ...[Gap.h(8), StayPill(label: action!, kind: actionKind, onTap: onAction)],
                 ],
               ),
             ),
@@ -475,4 +480,77 @@ class StayErrorCard extends StatelessWidget {
           ),
         ),
       );
+}
+
+class StayLockedAddRow extends StatelessWidget {
+  const StayLockedAddRow({super.key, required this.label, required this.onTap, this.margin});
+
+  final String label;
+  final VoidCallback onTap;
+  final EdgeInsets? margin;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!PlanGate.canUpgrade) return const SizedBox.shrink();
+    return Padding(
+      padding: margin ?? DS.insets(l: 18, t: 20, r: 18),
+      child: Semantics(
+        button: true,
+        label: '$label, needs Plus',
+        excludeSemantics: true,
+        child: InkWell(
+          key: GateKeys.softRow,
+          onTap: onTap,
+          borderRadius: DS.circular(26),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: DS.s(48)),
+            child: DecoratedBox(
+              decoration: BoxDecoration(color: Colors.white, borderRadius: DS.circular(26), border: Border.all(color: DesignColors.primary, width: DS.s(1.5))),
+              child: Center(
+                child: Padding(
+                  padding: DS.sym(h: 16, v: 10),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Art3D(asset: ListingArt.locked, size: 22),
+                      Gap.h(8),
+                      Flexible(child: Text(label, style: Ink3D.text(14, FontWeight.w700, StayLook.indigoText, letterSpacing: 0))),
+                      Gap.h(8),
+                      const PlusChip(),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class StayPlusBanner extends StatelessWidget {
+  const StayPlusBanner({super.key, required this.text, required this.onTap, this.margin});
+
+  final String text;
+  final VoidCallback onTap;
+  final EdgeInsets? margin;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!PlanGate.canUpgrade) return const SizedBox.shrink();
+    return KeyedSubtree(
+      key: GateKeys.softCard,
+      child: StayStrip(
+        art: ListingArt.locked,
+        text: text,
+        fill: StayLook.indigoSoft,
+        ink: StayLook.indigoText,
+        action: OwnerSharedStrings.seePlus,
+        actionKind: StayPillKind.indigo,
+        onAction: onTap,
+        margin: margin ?? DS.insets(l: 18, t: 12, r: 18),
+      ),
+    );
+  }
 }

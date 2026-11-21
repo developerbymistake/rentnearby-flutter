@@ -7,7 +7,8 @@ import '../../../controllers/auth_controller.dart';
 import '../../../design/design.dart';
 import '../../../utils/app_toast.dart';
 import '../../../widgets/onboarding_closed_dialog.dart';
-import 'stay_option_sets.dart';
+import '../../../utils/money_format.dart';
+import '../../stay_owner/strings/stay_setup_strings.dart';
 import 'stay_setup_controller.dart';
 
 class StaySubmitScreen extends StatefulWidget {
@@ -34,11 +35,12 @@ class _StaySubmitScreenState extends State<StaySubmitScreen> {
     }
     final ok = await _ctrl.submit();
     if (!ok) {
-      if (mounted && _ctrl.lastErrorType == 'OnboardingClosed') {
+      if (mounted && (_ctrl.lastErrorType == 'OnboardingClosed' || _ctrl.lastErrorType == 'StayOutsideDistrict')) {
         final st = _ctrl.stay.value;
         final canCorrect = (st == null || st.isDraft) && (Get.find<AuthController>().user.value?.canCorrectRole ?? false);
         final percent = st?.setupPercent ?? 0;
         OnboardingClosedDialog.show(context,
+            body: StaySetupStrings.notOpenBody,
             onChangeRole: canCorrect
                 ? () => Get.toNamed(AppRoutes.roleSelect, arguments: {'correction': true, 'percent': percent})
                 : null);
@@ -47,7 +49,7 @@ class _StaySubmitScreenState extends State<StaySubmitScreen> {
     }
     if (!mounted) return;
     final auth = Get.find<AuthController>();
-    AppToast.success('Submitted for review');
+    AppToast.success(StaySetupStrings.submittedToast);
     if (_ctrl.mainBelow) {
       Get.until((r) => r.settings.name == AppRoutes.main);
       auth.switchToTab(AppTabs.home);
@@ -63,7 +65,7 @@ class _StaySubmitScreenState extends State<StaySubmitScreen> {
       Scaffold(
         backgroundColor: ListingPalette.forest.page,
         body: Column(children: [
-          StayPageHeader(title: 'Final Submit', subtitle: 'Review and submit', onBack: () => Get.back(), asset: SetupAssets.key),
+          StayPageHeader(title: StaySetupStrings.submitTitle, subtitle: StaySetupStrings.submitStep, onBack: () => Get.back(), asset: SetupAssets.key),
           Expanded(
             child: Obx(() {
               final s = _ctrl.stay.value;
@@ -73,14 +75,15 @@ class _StaySubmitScreenState extends State<StaySubmitScreen> {
                   FormSectionCard(
                     tone: _tone,
                     art: ListingArt.key,
-                    title: 'Check your stay',
+                    title: StaySetupStrings.checkYourStay,
+                    hint: StaySetupStrings.almostDone,
                     child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                       if (s != null) ...[
-                        _summaryRow('Basic details', s.registrationDone ? StayOptionSets.basicSummary(s) : 'Add registration details',
+                        _summaryRow('Basic details', s.registrationDone ? StaySetupStrings.basicSummary(s.name ?? 'Stay', s.stayTypeName ?? 'Stay', s.photos.length) : 'Add registration details',
                             AppRoutes.stayBasicDetails, SetupAssets.hotel,
                             bad: !s.registrationDone),
-                        _summaryRow('Rooms', StayOptionSets.roomsSummary(s), AppRoutes.stayRooms, SetupAssets.bed),
-                        _summaryRow('Rules', StayOptionSets.rulesSummary(s), AppRoutes.stayRules, SetupAssets.clipboard),
+                        _summaryRow('Rooms', StaySetupStrings.roomsSummary([for (final r in s.rooms) (r.label, Money.exact(r.pricePerNight))]), AppRoutes.stayRooms, SetupAssets.bed),
+                        _summaryRow('Rules', s.rules == null ? '' : StaySetupStrings.rulesSummary(s.rules!.checkInTime, s.rules!.checkOutTime, s.rules!.cancellationPolicy), AppRoutes.stayRules, SetupAssets.clipboard),
                       ],
                     ]),
                   ),
@@ -91,10 +94,10 @@ class _StaySubmitScreenState extends State<StaySubmitScreen> {
         ]),
         bottomNavigationBar: Obx(() => FormFooter(
               tone: _tone,
-              primaryLabel: 'Submit',
+              primaryLabel: StaySetupStrings.submit,
               onPrimary: _ctrl.isSaving.value || _ctrl.stay.value == null ? null : _submit,
               primaryLoading: _ctrl.isSaving.value,
-              note: 'Dashboard opens after submit',
+              note: StaySetupStrings.dashboardOpens,
             )),
       ),
       Obx(() => _ctrl.isSaving.value ? const StayBusy(message: 'Submitting...', art: SetupAssets.key) : const SizedBox.shrink()),

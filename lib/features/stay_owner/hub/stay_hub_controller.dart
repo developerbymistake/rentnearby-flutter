@@ -44,7 +44,11 @@ class StayHubController extends GetxController with WidgetsBindingObserver {
   Worker? _tabWorker;
   Worker? _intentWorker;
 
+  static const Duration resultWindow = Duration(days: 7);
+
   StayOwnerModel? get stay => load.value.valueOrNull;
+
+  DateTime now() => _clock();
 
   String? get _uid => _userId != null ? _userId() : (Get.isRegistered<AuthController>() ? Get.find<AuthController>().user.value?.id : null);
 

@@ -7,7 +7,6 @@ import 'package:animations/animations.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:maplibre_gl/maplibre_gl.dart' show LatLng;
 import 'package:permission_handler/permission_handler.dart';
-import '../../../config/app_constants.dart';
 import '../../../config/app_routes.dart';
 import '../../../controllers/auth_controller.dart';
 import '../../../models/city_model.dart';
@@ -22,6 +21,14 @@ import '../models/stay_owner_model.dart';
 import '../models/stay_registration_type_model.dart';
 import '../stay_registration_types_controller.dart';
 import '../stay_types_controller.dart';
+import '../../owner_core/look/owner_look.dart';
+import '../../owner_core/plan/gate_keys.dart';
+import '../../owner_core/plan/plan_gate.dart';
+import '../../owner_core/plan/plan_keys.dart';
+import '../../owner_core/plan/soft_lock.dart';
+import '../../stay_owner/widgets/stay_widgets.dart';
+import '../../stay_owner/strings/stay_gate_strings.dart';
+import '../../stay_owner/strings/stay_setup_strings.dart';
 import 'stay_option_sets.dart';
 import 'stay_registration_validators.dart';
 import 'stay_setup_controller.dart';
@@ -34,7 +41,9 @@ class _PhotoEntry {
 }
 
 class StayBasicDetailsScreen extends StatefulWidget {
-  const StayBasicDetailsScreen({super.key});
+  const StayBasicDetailsScreen({super.key, this.photosOnly = false});
+
+  final bool photosOnly;
   @override
   State<StayBasicDetailsScreen> createState() => _StayBasicDetailsScreenState();
 }
@@ -77,6 +86,11 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
   int _uploadTotal = 0;
   double _uploadProgress = 0.0;
   int _step = 0;
+  bool _photosOnly = false;
+  String? _photoError;
+  static const int _maxBytes = 10 * 1024 * 1024;
+  static const _okExt = ['jpg', 'jpeg', 'png', 'webp'];
+  int get _maxPhotos => PlanGate.limit(PlanKey.photos);
   static final _tone = ListingTone.forest;
 
   static final _locationStyle = LocationStepStyle(
@@ -89,7 +103,7 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
     pinHintNoun: 'stay',
   );
 
-  bool get _hasChanges => _dirty || _step > 0;
+  bool get _hasChanges => _dirty || (!_photosOnly && _step > 0);
 
   @override
   void initState() {
@@ -102,6 +116,13 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
     );
     _types.ensureLoaded();
     _regTypes.ensureLoaded();
+    final args = Get.arguments;
+    if (widget.photosOnly || (args is Map && args['section'] == 'photos')) {
+      _photosOnly = true;
+      _step = 3;
+    } else if (args is Map && args['section'] == 'location') {
+      _step = 1;
+    }
     final s = _ctrl.stay.value;
     if (s != null) {
       _nameCtrl.text = s.name ?? '';
@@ -262,6 +283,7 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
     final canCorrect = (s == null || s.isDraft) && (Get.find<AuthController>().user.value?.canCorrectRole ?? false);
     final percent = s?.setupPercent ?? 0;
     OnboardingClosedDialog.show(context,
+        body: StaySetupStrings.notOpenBody,
         onChangeRole: canCorrect
             ? () => Get.toNamed(AppRoutes.roleSelect, arguments: {'correction': true, 'percent': percent})
             : null);
@@ -311,7 +333,7 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
   }
 
   Future<void> _pickPhoto() async {
-    if (_photos.length >= AppConstants.maxPhotos) return;
+    if (_photos.length >= _maxPhotos) return;
     final source = await Sheet3D.show<ImageSource>(
       context,
       builder: (sheetCtx) => Sheet3D(
@@ -338,15 +360,19 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
         return;
       }
       final picked = await _picker.pickImage(source: source, imageQuality: 85, maxWidth: 1280);
-      if (picked != null && mounted) {
+      if (picked != null && mounted && await _acceptPhoto(File(picked.path))) {
         setState(() => _photos.add(_PhotoEntry.local(File(picked.path))));
         _dirty = true;
       }
     } else {
-      final remaining = AppConstants.maxPhotos - _photos.length;
+      final remaining = _maxPhotos - _photos.length;
       final picked = await _picker.pickMultiImage(imageQuality: 85, maxWidth: 1280, limit: remaining);
       if (picked.isNotEmpty && mounted) {
-        final allowed = picked.take(remaining).map((f) => _PhotoEntry.local(File(f.path))).toList();
+        final allowed = <_PhotoEntry>[];
+        for (final f in picked.take(remaining)) {
+          if (await _acceptPhoto(File(f.path))) allowed.add(_PhotoEntry.local(File(f.path)));
+        }
+        if (!mounted) return;
         setState(() => _photos.addAll(allowed));
         _dirty = true;
         if (allowed.length < picked.length) {
@@ -354,6 +380,21 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
         }
       }
     }
+  }
+
+  Future<bool> _acceptPhoto(File f) async {
+    final ext = f.path.split('.').last.toLowerCase();
+    if (!_okExt.contains(ext)) {
+      if (mounted) setState(() => _photoError = StaySetupStrings.photoWrongType);
+      return false;
+    }
+    final size = await f.length();
+    if (size > _maxBytes) {
+      AppToast.error(StaySetupStrings.photoTooLarge);
+      return false;
+    }
+    if (_photoError != null && mounted) setState(() => _photoError = null);
+    return true;
   }
 
   void _removePhoto(int i) {
@@ -427,6 +468,10 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
   }
 
   Future<void> _save() async {
+    if (_photosOnly && _ctrl.stay.value != null) {
+      await _finishPhotos();
+      return;
+    }
     final pin = pinnedOrLiveLocation;
     final districtId = selectedDistrictId;
     if (pin == null || districtId == null) {
@@ -468,7 +513,7 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
     });
     if (!mounted) return;
     if (!ok) {
-      if (_ctrl.lastErrorType == 'OnboardingClosed') {
+      if (_ctrl.lastErrorType == 'OnboardingClosed' || _ctrl.lastErrorType == 'StayOutsideDistrict') {
         setState(() => _step = 1);
         _showOnboardingClosed();
         return;
@@ -476,7 +521,10 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
       _showServerRegistrationError();
       return;
     }
+    await _finishPhotos();
+  }
 
+  Future<void> _finishPhotos() async {
     setState(() => _isFinalizing = true);
     for (final id in _removedPhotoIds) {
       await _ctrl.deletePhoto(id);
@@ -558,7 +606,11 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
 
     if (mounted) setState(() => _isUploading = false);
     if (failed.isNotEmpty) {
-      AppToast.error('${failed.length} photo${failed.length > 1 ? 's' : ''} could not be uploaded.');
+      if (_ctrl.lastErrorType == 'PlanPhotoLimit' && mounted) {
+        PlanGate.showLimit(context, StayGateStrings.photoGate());
+      } else {
+        AppToast.error(StaySetupStrings.photoUploadFailed);
+      }
     }
     return [for (final i in failed) files[i]];
   }
@@ -589,6 +641,7 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
           body: Column(children: [
             StayPageHeader(
               title: 'Basic Details',
+              subtitle: 'Step 1 of 4',
               onBack: _isUploading ? null : _handleBack,
               asset: SetupAssets.hotel,
             ),
@@ -631,8 +684,8 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
                           : 'Save',
               onPrimary: disabled ? null : _handleNext,
               primaryLoading: saving || _isFinalizing || (_isUploading && !_askingRetry),
-              secondaryLabel: _step > 0 ? 'Back' : null,
-              onSecondary: _step > 0
+              secondaryLabel: _step > 0 && !_photosOnly ? 'Back' : null,
+              onSecondary: _step > 0 && !_photosOnly
                   ? () {
                       if (_step == 1) setLocationStepActive(false);
                       setState(() => _step--);
@@ -913,24 +966,28 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
             placeholder: (_, _) => const TemplatePlaceholder(radius: 0, height: double.infinity),
             errorWidget: (_, _, _) => const TemplatePlaceholder(radius: 0, height: double.infinity),
           );
-    return PhotoTile3D(key: ObjectKey(p), image: image, coverLabel: i == 0 ? 'Cover' : null, onRemove: () => _removePhoto(i));
+    return PhotoTile3D(key: ObjectKey(p), image: image, coverLabel: i == 0 ? StaySetupStrings.cover : null, onRemove: () => _removePhoto(i));
   }
 
   Widget _photosStep() {
-    const max = AppConstants.maxPhotos;
+    final max = _maxPhotos;
     final left = max - _photos.length;
+    final locked = left <= 0 && PlanGate.canUpgrade;
+    final plus = PlanKeys.plusSeed[PlanKey.photos] ?? max;
+    final tiles = <Widget>[
+      for (var i = 0; i < _photos.length; i++) _photoTile(i),
+      if (locked) _lockedPhotoTile() else if (left > 0) PhotoAddTile3D(tone: _tone, label: StaySetupStrings.addPhoto, onTap: _pickPhoto),
+    ];
     return SingleChildScrollView(
       key: const ValueKey(3),
       padding: EdgeInsets.only(bottom: DS.s(24)),
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         _card(
           art: ListingArt.camera,
-          title: 'Stay Photos',
+          title: StaySetupStrings.photosTitle,
           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            Text('${_photos.length}/$max photos added', style: Ink3D.text(13, FontWeight.w400, Ink3D.sub)),
-            Gap.v(4),
-            Text('Good photos get 3x more responses', style: Ink3D.text(12.5, FontWeight.w600, _tone.text)),
-            Gap.v(14),
+            Align(alignment: Alignment.centerRight, child: Text(StaySetupStrings.photoMeter(_photos.length, max), style: Ink3D.text(13, FontWeight.w700, _tone.text))),
+            Gap.v(10),
             if (_photos.isEmpty)
               PhotoDropZone3D(tone: _tone, title: 'Add Stay Photos', subtitle: 'Camera or Gallery', onTap: _pickPhoto)
             else
@@ -940,20 +997,44 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
                 padding: EdgeInsets.zero,
                 clipBehavior: Clip.none,
                 gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 3, crossAxisSpacing: DS.gh(10), mainAxisSpacing: DS.gv(10)),
-                itemCount: _photos.length + (left > 0 ? 1 : 0),
-                itemBuilder: (_, i) => i == _photos.length ? PhotoAddTile3D(tone: _tone, label: 'Add', onTap: _pickPhoto) : _photoTile(i),
+                itemCount: tiles.length,
+                itemBuilder: (_, i) => tiles[i],
               ),
-            if (_photos.isNotEmpty && left > 0)
-              LinkLine3D(
-                center: true,
-                color: _tone.text,
-                padding: EdgeInsets.only(top: DS.gv(8)),
-                text: '+ Add $left more photo${left == 1 ? '' : 's'}',
-                onTap: _pickPhoto,
+            if (_photoError != null)
+              Padding(
+                padding: EdgeInsets.only(top: DS.gv(6)),
+                child: Semantics(liveRegion: true, child: Text(_photoError!, style: Ink3D.text(12, FontWeight.w600, DesignColors.error))),
               ),
+            Gap.v(8),
+            Text(StayGateStrings.photoHint, style: Ink3D.text(12, FontWeight.w400, Ink3D.grey)),
           ]),
         ),
+        if (locked) StayPlusBanner(text: StayGateStrings.photoBanner(max, plus), onTap: () => PlanGate.showLimit(context, StayGateStrings.photoGate())),
       ]),
     );
   }
+
+  Widget _lockedPhotoTile() => Semantics(
+        button: true,
+        label: '${StaySetupStrings.addPhoto}, needs Plus',
+        excludeSemantics: true,
+        child: InkWell(
+          key: GateKeys.softRow,
+          onTap: () => PlanGate.showLimit(context, StayGateStrings.photoGate()),
+          borderRadius: DS.circular(14),
+          child: DecoratedBox(
+            decoration: BoxDecoration(color: OwnerLook.stay.lockFill, borderRadius: DS.circular(14), border: Border.all(color: OwnerLook.stay.lockLine, width: DS.s(1.5))),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Art3D(asset: ListingArt.locked, size: 26),
+                Gap.v(4),
+                Text(StaySetupStrings.addPhoto, textAlign: TextAlign.center, style: Ink3D.text(11, FontWeight.w700, OwnerLook.stay.lockText, letterSpacing: 0)),
+                Gap.v(2),
+                const PlusChip(),
+              ],
+            ),
+          ),
+        ),
+      );
 }

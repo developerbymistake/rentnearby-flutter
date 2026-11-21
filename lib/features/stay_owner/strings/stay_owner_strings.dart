@@ -3,6 +3,7 @@ export 'stay_shell_strings.dart';
 export 'stay_gate_strings.dart';
 export 'stay_home_strings.dart';
 export 'stay_hub_strings.dart';
+export 'stay_live_edit_strings.dart';
 export 'stay_setup_strings.dart';
 // end A2
 // A3 strings

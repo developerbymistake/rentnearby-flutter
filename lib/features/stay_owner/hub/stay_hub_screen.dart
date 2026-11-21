@@ -249,6 +249,8 @@ class _StayHubScreenState extends State<StayHubScreen> {
     }
     final result = s.lastEditResult;
     if (result == null) return null;
+    final at = result.at;
+    if (at != null && _c.now().difference(at) > StayHubController.resultWindow) return null;
     if (result.approved) {
       final nameOnly = result.fieldsChanged.length == 1 && result.fieldsChanged.first == 'name';
       return StayStrip(art: ListingArt.stay, text: StayHubStrings.approvedStrip(nameOnly ? s.name : null), fill: StayLook.greenSoft, ink: StayLook.greenText);

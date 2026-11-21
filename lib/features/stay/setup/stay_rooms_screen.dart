@@ -6,6 +6,11 @@ import '../../../models/browse_item.dart';
 import '../../../utils/app_toast.dart';
 import '../../../design/design.dart';
 import '../../../design/extra/ext_stay_owner.dart';
+import '../../owner_core/plan/plan_gate.dart';
+import '../../owner_core/plan/plan_keys.dart';
+import '../../stay_owner/strings/stay_gate_strings.dart';
+import '../../stay_owner/strings/stay_setup_strings.dart';
+import '../../stay_owner/widgets/stay_widgets.dart';
 import 'stay_option_sets.dart';
 import 'stay_setup_controller.dart';
 
@@ -39,7 +44,7 @@ class _StayRoomsScreenState extends State<StayRoomsScreen> {
   String? _meals;
   bool _dirty = false;
 
-  static const _max = StayOptionSets.maxRooms;
+  int get _max => PlanGate.limit(PlanKey.roomTypes);
 
   @override
   void initState() {
@@ -178,7 +183,11 @@ class _StayRoomsScreenState extends State<StayRoomsScreen> {
       for (final r in _rooms)
         {'id': r.id, 'roomName': r.name, 'pricePerNight': r.price, 'maxGuests': r.guests, 'meals': r.meals},
     ]);
-    if (!ok || !mounted) return;
+    if (!mounted) return;
+    if (!ok) {
+      if (_ctrl.lastErrorType == 'PlanRoomTypeLimit') await PlanGate.showLimit(context, StayGateStrings.roomGate());
+      return;
+    }
     Get.back();
     AppToast.success('Rooms saved');
   }
@@ -224,7 +233,7 @@ class _StayRoomsScreenState extends State<StayRoomsScreen> {
             backgroundColor: ListingPalette.forest.page,
             body: Column(
               children: [
-                StayPageHeader(title: 'Rooms', subtitle: 'Add rooms, up to 2', onBack: _onBack, asset: SetupAssets.bed),
+                StayPageHeader(title: 'Rooms', subtitle: StaySetupStrings.roomsSubtitle, onBack: _onBack, asset: SetupAssets.bed),
                 Expanded(
                   child: ListView(
                     padding: EdgeInsets.only(bottom: DS.s(24)),
@@ -317,6 +326,15 @@ class _StayRoomsScreenState extends State<StayRoomsScreen> {
 
   Widget _addRow() {
     final full = _count >= _max;
+    if (full && PlanGate.canUpgrade) {
+      final plus = PlanKeys.plusSeed[PlanKey.roomTypes] ?? _max;
+      return Column(
+        children: [
+          StayLockedAddRow(label: StayGateStrings.addRoomType, onTap: () => PlanGate.showLimit(context, StayGateStrings.roomGate())),
+          StayPlusBanner(text: StayGateStrings.roomBanner(_max, plus), onTap: () => PlanGate.showLimit(context, StayGateStrings.roomGate())),
+        ],
+      );
+    }
     return DashedAddRow3D(
       tone: _tone,
       label: 'Add another room',
@@ -330,7 +348,7 @@ class _StayRoomsScreenState extends State<StayRoomsScreen> {
     FocusScope.of(context).unfocus();
     final options = [
       for (final o in StayOptionSets.roomNames)
-        if (o.value == _roomName || !_rooms.any((r) => r.name == o.value)) o,
+        if (o.value == _roomName || (!_rooms.any((r) => r.name == o.value) && !(_ctrl.stay.value?.hiddenRooms.any((h) => h.roomName == o.value) ?? false))) o,
     ];
     final picked = await Sheet3D.show<String>(
       context,

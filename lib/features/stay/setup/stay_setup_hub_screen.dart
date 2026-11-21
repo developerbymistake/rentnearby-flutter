@@ -12,12 +12,17 @@ import '../../../widgets/global_location_gates.dart';
 import '../../trip/trip_strings.dart';
 import '../models/stay_owner_model.dart';
 import '../stay_share_strings.dart';
-import 'stay_option_sets.dart';
+import '../../stay_owner/strings/stay_setup_strings.dart';
+import '../../stay_owner/widgets/stay_widgets.dart';
+import '../../owner_core/strings/owner_shared_strings.dart';
+import 'stay_page_header.dart';
 import 'stay_setup_controller.dart';
 import 'stay_step_row.dart';
 
 class StaySetupHubScreen extends StatefulWidget {
-  const StaySetupHubScreen({super.key});
+  const StaySetupHubScreen({super.key, this.fromMyStays = false});
+
+  final bool fromMyStays;
   @override
   State<StaySetupHubScreen> createState() => _StaySetupHubScreenState();
 }
@@ -32,7 +37,7 @@ class _StaySetupHubScreenState extends State<StaySetupHubScreen> {
   void initState() {
     super.initState();
     final args = Get.arguments;
-    _fromMyStays = args is Map && args['fromMyStays'] == true;
+    _fromMyStays = widget.fromMyStays || (args is Map && args['fromMyStays'] == true);
     _ctrl.mainBelow = _fromMyStays;
     // Gated owners never build MainScreen; permanent so its later Get.put reuses this instance.
     if (!Get.isRegistered<LocationController>()) {
@@ -66,8 +71,8 @@ class _StaySetupHubScreenState extends State<StaySetupHubScreen> {
 
   Future<void> _open(String route) async {
     final s = _ctrl.stay.value;
-    if (s != null && !s.canEditSetup) {
-      AppToast.info(s.isPendingReview ? 'Your stay is under review' : 'Your stay is live');
+    if (s != null && s.isPendingReview) {
+      AppToast.info(StaySetupStrings.stayUnderReview);
       return;
     }
     await Get.toNamed(route);
@@ -85,8 +90,8 @@ class _StaySetupHubScreenState extends State<StaySetupHubScreen> {
       context,
       anchor: Rect.fromLTWH(18, top, PageHeader3D.buttonSize, PageHeader3D.buttonSize),
       items: [
-        if (!canCorrect) MenuItem3D(label: 'Change role', onTap: () => Get.toNamed(AppRoutes.roleChange)),
-        MenuItem3D(label: 'Log out', danger: true, onTap: _auth.logout),
+        if (!canCorrect) MenuItem3D(label: StaySetupStrings.menuChangeRole, onTap: () => Get.toNamed(AppRoutes.roleChange)),
+        MenuItem3D(label: StaySetupStrings.menuLogOut, danger: true, onTap: _auth.logout),
       ],
     );
   }
@@ -105,18 +110,19 @@ class _StaySetupHubScreenState extends State<StaySetupHubScreen> {
         canPop: !gated,
         child: Scaffold(
           backgroundColor: ListingPalette.forest.page,
+          bottomNavigationBar: showSkeleton || failed ? null : _footer(stay, gated),
           body: Column(children: [
             SafeArea(
               bottom: false,
               child: PageHeader3D(
                 tone: _tone,
-                title: 'Set up your stay',
+                title: StaySetupStrings.hubTitle,
                 art: SetupAssets.hotel,
                 artSize: 65,
                 onBack: gated ? null : () => Get.back(),
                 leadingIcon: gated ? Icons.more_vert_rounded : null,
                 onLeading: gated ? () => _openMenu(canCorrect) : null,
-                leadingSemantics: 'Menu',
+                leadingSemantics: StaySetupStrings.menuLabel,
               ),
             ),
             Expanded(
@@ -169,41 +175,44 @@ class _StaySetupHubScreenState extends State<StaySetupHubScreen> {
   List<Widget> _content(StayOwnerModel? s, bool gated) {
     final d1 = s?.step1Done ?? false;
     final regMissing = d1 && (s?.canEditSetup ?? true) && !(s?.registrationDone ?? false);
+    final photosMissing = d1 && (s?.canEditSetup ?? true) && (s?.photos.isEmpty ?? false);
     final u2 = d1;
     final d2 = u2 && (s?.roomsDone ?? false);
     final u3 = d2;
     final d3 = u3 && (s?.rulesDone ?? false);
-    final u4 = d3 && !regMissing;
-    final d4 = u4 && (s != null && (s.isPendingReview || s.isApproved));
+    final wasSubmitted = s != null && s.isRejected && (s.submittedAt != null || s.everApproved);
+    final u4 = d3 && (!regMissing || wasSubmitted);
+    final d4 = u4 && (s != null && (s.isPendingReview || s.isApproved || (s.isRejected && (s.submittedAt != null || s.everApproved))));
     final percent = s?.setupPercent ?? 0;
     final canCorrect = gated && (s == null || s.isDraft) && (_auth.user.value?.canCorrectRole ?? false);
 
     StayStepState state(bool unlocked, bool done) =>
         !unlocked ? StayStepState.locked : (done ? StayStepState.done : StayStepState.current);
 
+    final fix = regMissing || photosMissing;
+    final submitted = s?.submittedAt;
     return [
       if (s != null && s.isRejected) _rejectedStrip(s),
       if (s != null && s.isPendingReview) _pendingStrip(),
       if (regMissing) _registrationStrip(),
-      _scoreCard(percent),
-      if (canCorrect) _wrongRoleLink(percent),
+      _scoreCard(percent, s),
       StayStepRow(
         number: 1,
-        title: 'Basic details',
-        subtitle: regMissing
-            ? 'Add registration details'
+        title: StaySetupStrings.step1,
+        subtitle: fix
+            ? StaySetupStrings.fixThis(photosMissing, regMissing)
             : d1
-                ? StayOptionSets.basicSummary(s!)
-                : 'Details, registration, location, photos',
+                ? StaySetupStrings.saved
+                : StaySetupStrings.step1Sub,
         accent: PickKit.stay,
         asset: SetupAssets.hotel,
-        state: state(true, d1 && !regMissing),
+        state: state(true, d1 && !fix),
         onTap: () => _open(AppRoutes.stayBasicDetails),
       ),
       StayStepRow(
         number: 2,
-        title: 'Rooms',
-        subtitle: !u2 ? 'Complete step 1 first' : d2 ? StayOptionSets.roomsSummary(s!) : 'Add rooms, up to 2',
+        title: StaySetupStrings.step2,
+        subtitle: d2 ? StaySetupStrings.saved : (d1 && !d2 && percent > 0 ? StaySetupStrings.step2Continue : StaySetupStrings.step2Sub),
         accent: PickKit.stay,
         asset: SetupAssets.bed,
         state: state(u2, d2),
@@ -211,12 +220,8 @@ class _StaySetupHubScreenState extends State<StaySetupHubScreen> {
       ),
       StayStepRow(
         number: 3,
-        title: 'Rules',
-        subtitle: !u3
-            ? 'Complete step 2 first'
-            : d3
-                ? StayOptionSets.rulesSummary(s!)
-                : 'Check-in, house rules, cancellation',
+        title: StaySetupStrings.step3,
+        subtitle: d3 ? StaySetupStrings.saved : StaySetupStrings.step3Sub,
         accent: PickKit.stay,
         asset: SetupAssets.clipboard,
         state: state(u3, d3),
@@ -224,21 +229,44 @@ class _StaySetupHubScreenState extends State<StaySetupHubScreen> {
       ),
       StayStepRow(
         number: 4,
-        title: 'Final submit',
+        title: StaySetupStrings.step4,
         subtitle: !u4
-            ? (d3 ? 'Complete step 1 first' : 'Complete step 3 first')
+            ? (d3 ? 'Complete step 1 first' : StaySetupStrings.step4Sub)
             : s!.isApproved
                 ? 'Your stay is live'
                 : d4
-                    ? 'Submitted for review'
-                    : 'Review and submit',
+                    ? (submitted != null ? StaySetupStrings.submittedOn(OwnerSharedStrings.dayMonth(submitted.toLocal())) : 'Submitted for review')
+                    : StaySetupStrings.step4Sub,
         accent: PickKit.stay,
         asset: SetupAssets.key,
         state: state(u4, d4),
         onTap: () => _open(AppRoutes.staySubmit),
       ),
       if (d1 && s != null) ..._shareRow(s),
+      if (canCorrect) _wrongRoleLink(percent),
     ];
+  }
+
+  Widget? _footer(StayOwnerModel? s, bool gated) {
+    if (s != null && !s.canEditSetup) return null;
+    final d1 = s?.step1Done ?? false;
+    final regMissing = d1 && !(s?.registrationDone ?? false);
+    final d2 = d1 && (s?.roomsDone ?? false);
+    final d3 = d2 && (s?.rulesDone ?? false);
+    final resubmit = s != null && s.isRejected && (s.submittedAt != null || s.everApproved);
+    final String label;
+    final String route;
+    if (resubmit) {
+      label = StaySetupStrings.resubmit;
+      route = regMissing || (s.photos.isEmpty) ? AppRoutes.stayBasicDetails : AppRoutes.staySubmit;
+    } else if (!d1) {
+      label = (s?.setupPercent ?? 0) == 0 ? StaySetupStrings.start : StaySetupStrings.continueLabel;
+      route = AppRoutes.stayBasicDetails;
+    } else {
+      label = StaySetupStrings.continueLabel;
+      route = !d2 ? AppRoutes.stayRooms : (!d3 ? AppRoutes.stayRules : (regMissing ? AppRoutes.stayBasicDetails : AppRoutes.staySubmit));
+    }
+    return StayFooter(child: GradientPillButton(tone: _tone, label: label, onTap: () => _open(route)));
   }
 
   List<Widget> _shareRow(StayOwnerModel s) {
@@ -268,19 +296,22 @@ class _StaySetupHubScreenState extends State<StaySetupHubScreen> {
         onTap: () => Get.toNamed(AppRoutes.roleSelect, arguments: {'correction': true, 'percent': percent}),
       );
 
-  Widget _scoreCard(int percent) {
-    final caption = switch (percent) {
-      0 => 'Finish 4 steps to open your dashboard',
-      90 => '100% after submit',
-      _ => '',
-    };
+  Widget _scoreCard(int percent, StayOwnerModel? s) {
+    final fixing = s != null && s.isRejected && percent == 100;
+    final caption = fixing
+        ? StaySetupStrings.hubFixItems
+        : switch (percent) {
+            90 => '100% after submit',
+            100 => '',
+            _ => StaySetupStrings.hubFinish,
+          };
     return Padding(
       padding: EdgeInsets.only(top: DS.gv(10)),
       child: WorkoutCard(
         tone: _tone,
         art: ListingArt.star,
-        eyebrow: 'Your stay',
-        title: 'Profile $percent% complete',
+        eyebrow: StaySetupStrings.hubEyebrow,
+        title: StaySetupStrings.profilePercent(percent),
         subtitle: caption,
         trailing: WorkoutTrailing.ring,
         progress: percent / 100,
@@ -289,20 +320,23 @@ class _StaySetupHubScreenState extends State<StaySetupHubScreen> {
     );
   }
 
-  Widget _rejectedStrip(StayOwnerModel s) => Banner3D(
-        kind: BannerKind.bad,
+  Widget _rejectedStrip(StayOwnerModel s) => StayStrip(
         art: ListingArt.warning,
-        title: 'Not approved',
-        subtitle: (s.rejectedReason?.isNotEmpty ?? false) ? s.rejectedReason : null,
-        tone: _tone,
+        text: StaySetupStrings.notApproved(s.rejectedReason),
+        fill: StayLook.redSoft,
+        ink: StayLook.redText,
+        margin: DS.insets(l: 18, t: 14, r: 18),
       );
 
-  Widget _registrationStrip() => Banner3D(
-        kind: BannerKind.warn,
+  Widget _registrationStrip() => StayStrip(
         art: SetupAssets.clipboard,
-        title: 'Registration details needed',
-        subtitle: 'Add them in Basic details',
-        tone: _tone,
+        text: StaySetupStrings.registrationNeeded,
+        fill: StayLook.amberSoft,
+        ink: StayLook.amberText,
+        action: StaySetupStrings.add,
+        actionKind: StayPillKind.indigo,
+        onAction: () => _open(AppRoutes.stayBasicDetails),
+        margin: DS.insets(l: 18, t: 10, r: 18),
       );
 
   Widget _pendingStrip() => Banner3D(

@@ -3,6 +3,9 @@ import 'package:bakhli/controllers/tab_config_controller.dart';
 import 'package:bakhli/features/owner_core/data/owner_result.dart';
 import 'package:bakhli/features/owner_core/home/owner_home_api.dart';
 import 'package:bakhli/features/owner_core/home/owner_home_models.dart';
+import 'package:bakhli/features/owner_core/plan/plan_gate.dart';
+import 'package:bakhli/features/stay_owner/hub/stay_hub_controller.dart';
+import 'package:bakhli/models/my_plan_model.dart';
 import 'package:bakhli/features/stay_owner/home/stay_owner_home_controller.dart';
 import 'package:get/get.dart';
 
@@ -146,6 +149,11 @@ Map<String, dynamic> stayJson({
   };
 }
 
+class StayFakeAuth extends FakeAuth {
+  @override
+  Future<void> refreshProfile() async {}
+}
+
 class StayHarness {
   StayHarness._(this.auth, this.home, this.api);
 
@@ -157,7 +165,7 @@ class StayHarness {
     Get.reset();
     Get.testMode = true;
     Get.put<TabConfigController>(FakeTabs());
-    final auth = FakeAuth();
+    final auth = StayFakeAuth();
     Get.put<AuthController>(auth);
     auth.signIn(role: 'STAY_OWNER', stayStatus: 'Approved');
     auth.profileName.value = name;
@@ -166,4 +174,15 @@ class StayHarness {
     if (registerHome) Get.put<StayOwnerHomeController>(home);
     return StayHarness._(auth, home, api);
   }
+}
+
+StayHubController hubHarness(Map<String, dynamic>? stay, {MyPlanModel plan = OwnerPlans.free, Future<Map<String, dynamic>> Function()? fetch}) {
+  Get.reset();
+  Get.testMode = true;
+  Get.put<TabConfigController>(FakeTabs());
+  final auth = StayFakeAuth();
+  Get.put<AuthController>(auth);
+  auth.signIn(role: 'STAY_OWNER', stayStatus: 'Approved');
+  PlanGate.debugPlan = plan;
+  return Get.put(StayHubController(userId: () => 'user-a', fetch: fetch ?? () async => {'data': stay}), tag: StayHubController.tag);
 }

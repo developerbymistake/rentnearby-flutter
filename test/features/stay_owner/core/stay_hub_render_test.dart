@@ -5,7 +5,6 @@ import 'package:bakhli/features/owner_core/plan/plan_gate.dart';
 import 'package:bakhli/features/stay_owner/hub/stay_hub_controller.dart';
 import 'package:bakhli/features/stay_owner/hub/stay_hub_screen.dart';
 import 'package:bakhli/models/my_plan_model.dart';
-import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 
@@ -17,7 +16,7 @@ StayHubController hubFor(Map<String, dynamic>? stay, {MyPlanModel plan = OwnerPl
   Get.reset();
   Get.testMode = true;
   Get.put<TabConfigController>(FakeTabs());
-  final auth = FakeAuth();
+  final auth = StayFakeAuth();
   Get.put<AuthController>(auth);
   auth.signIn(role: 'STAY_OWNER', stayStatus: 'Approved');
   PlanGate.debugPlan = plan;

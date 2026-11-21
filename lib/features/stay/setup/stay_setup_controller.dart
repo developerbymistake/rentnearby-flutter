@@ -4,6 +4,8 @@ import '../../../controllers/auth_controller.dart';
 import '../../../utils/app_toast.dart';
 import '../../../utils/dio_error_mapper.dart';
 import '../../trip/trip_strings.dart';
+import '../../owner_core/plan/plan_gate.dart';
+import '../../stay_owner/strings/stay_setup_strings.dart';
 import '../guest/stay_landing_controller.dart';
 import '../guest/v2/stay_landing_controller_v2.dart';
 import '../models/stay_owner_model.dart';
@@ -13,7 +15,9 @@ class StaySetupController extends GetxController {
   static StaySetupController ensure() =>
       Get.isRegistered<StaySetupController>() ? Get.find<StaySetupController>() : Get.put(StaySetupController());
 
-  final _repo = const StayRepository();
+  StaySetupController({StayRepository? repo}) : _repo = repo ?? const StayRepository();
+
+  final StayRepository _repo;
   final stay = Rxn<StayOwnerModel>();
   final isLoading = false.obs;
   final hasLoaded = false.obs;
@@ -143,7 +147,16 @@ class StaySetupController extends GetxController {
     lastErrorType = DioErrorMapper.errorType(e);
     lastErrorMessage = DioErrorMapper.serverMessage(e);
     if (e is DioException && e.response?.statusCode == 401) return;
-    if (lastErrorType == 'OnboardingClosed') return;
+    if (DioErrorMapper.isNetworkError(e)) {
+      AppToast.error(StaySetupStrings.noConnection);
+      return;
+    }
+    if (lastErrorType == 'OnboardingClosed' || lastErrorType == 'StayOutsideDistrict') return;
+    if ((lastErrorType == 'PlanRoomTypeLimit' || lastErrorType == 'PlanPhotoLimit') && PlanGate.canUpgrade) return;
+    if (lastErrorType == 'StayNeedsPhoto') {
+      AppToast.warning(StaySetupStrings.keepOnePhoto);
+      return;
+    }
     if (_stayErrorTypes.contains(lastErrorType)) {
       AppToast.warning(DioErrorMapper.toMessage(e, fallback));
       return;
