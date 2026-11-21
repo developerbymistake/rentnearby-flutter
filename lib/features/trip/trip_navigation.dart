@@ -6,6 +6,7 @@ import '../../config/app_tabs.dart';
 import '../../controllers/auth_controller.dart';
 import '../../services/storage_service.dart';
 import '../../utils/app_toast.dart';
+import '../buddy/triplimit/trip_limit_gate.dart';
 import '../taxi/ways/taxi_ways_navigation.dart';
 import 'controllers/my_trips_controller.dart';
 import 'controllers/trip_plan_controller.dart';
@@ -34,6 +35,7 @@ class TripNavigation {
 
   static Future<void> startWithCities(List<TripCityModel> cities) async {
     if (cities.isEmpty || Get.currentRoute == AppRoutes.tripSpots) return;
+    if (!await TripLimitGate.ensureSlot()) return;
     final draft = cities.length == 1 ? TripNewDraft.read() : null;
     final same = draft?.legs.where((l) => l.city.cityKey == cities.first.cityKey).toList() ?? const <TripDraftLeg>[];
     if (draft != null && same.isNotEmpty) {
@@ -404,7 +406,10 @@ class TripNavigation {
 
   static Future<void>? openSummary(String tripId) => Get.toNamed(AppRoutes.tripSummary, arguments: {'tripId': tripId});
 
-  static Future<void>? openWhereToNext() => Get.toNamed(AppRoutes.tripWhere);
+  static Future<void> openWhereToNext() async {
+    if (!await TripLimitGate.ensureSlot()) return;
+    await Get.toNamed(AppRoutes.tripWhere);
+  }
 
   static Future<void>? openMyTrips() => Get.toNamed(AppRoutes.myTrips);
 

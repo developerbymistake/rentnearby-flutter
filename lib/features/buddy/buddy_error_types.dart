@@ -51,6 +51,7 @@ abstract final class BuddyErrorTypes {
   static const String badRequest = 'BadRequest';
   static const String tripPlannerDisabled = 'TripPlannerDisabled';
   static const String accountHasActiveItems = 'AccountHasActiveItems';
+  static const String tripLimitReached = 'TripLimitReached';
 
   static const List<String> all = [
     selfRequest, personNotFound, alreadyBuddies, tryLater, waitingLimit, buddyLimit, cannotAddNow, buddyRequestsOnHold,
@@ -60,6 +61,6 @@ abstract final class BuddyErrorTypes {
     tripExpensesFrozen, paymentsNotAcknowledged, sharesDoNotAddUp, sharerNotTraveller, payerNotTraveller, linkNotInTrip,
     tooManySharers, notEqualSplit, alreadySharing, notTraveller, balancesChanged, nothingToPay, paymentNotFound,
     paymentStateChanged, notYourDebt, reminderAlreadySent, sharedTripOpenBalance, tooManyRequests, badRequest,
-    tripPlannerDisabled, accountHasActiveItems,
+    tripPlannerDisabled, accountHasActiveItems, tripLimitReached,
   ];
 }

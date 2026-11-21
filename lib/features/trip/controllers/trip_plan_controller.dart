@@ -15,6 +15,8 @@ import '../../../services/api_service.dart';
 import '../../../services/storage_service.dart';
 import '../../../utils/app_toast.dart';
 import '../../../utils/dio_error_mapper.dart';
+import '../../buddy/buddy_error_types.dart';
+import '../../buddy/triplimit/trip_limit_models.dart';
 import '../../taxi/guest/traveller_city.dart';
 import '../../taxi/journeys/journey_models.dart';
 import '../../taxi/journeys/journeys_controller.dart';
@@ -70,7 +72,7 @@ import 'trip_shortlist_controller.dart';
 import 'trip_supply_controller.dart';
 import 'trip_taxi_request_controller.dart';
 
-enum TripCreateOutcome { ok, nameRejected, failed }
+enum TripCreateOutcome { ok, nameRejected, failed, limitReached }
 
 enum TripDayRemoveBlock { none, lastDay, placesDontFit, readOnly }
 
@@ -143,6 +145,7 @@ class TripPlanController extends GetxController {
   String? _title;
   String? _pendingName;
   String? _clientTripId;
+  TripSlots? limitSlots;
   bool _settingsChangedWhilePlanning = false;
   String? _openingId;
 
@@ -2147,6 +2150,7 @@ class TripPlanController extends GetxController {
     if (next.startDateIso != p.settings.startDateIso) unawaited(recalculate());
     _creatingNew = true;
     _nameRejectedNow = false;
+    limitSlots = null;
     final clientId = _clientTripId;
     if (clientId != null) TripNewDraft.rememberClientId(clientId);
     var ok = false;
@@ -2155,6 +2159,8 @@ class TripPlanController extends GetxController {
     } finally {
       _creatingNew = false;
     }
+    final limit = limitSlots;
+    if (!ok && limit != null) return TripCreateOutcome.limitReached;
     if (!ok) return _nameRejectedNow ? TripCreateOutcome.nameRejected : TripCreateOutcome.failed;
     _newUnsaved = false;
     StorageService.clearTripNewDraft();
@@ -4353,6 +4359,8 @@ class TripPlanController extends GetxController {
           _title = null;
           _pendingName = null;
           _nameRejectedNow = true;
+        } else if (type == BuddyErrorTypes.tripLimitReached && _creatingNew) {
+          limitSlots = TripSlots.fromRefusal(_refusalData(e));
         } else {
           _toastSave(DioErrorMapper.toMessage(e, TripStringsDayplan.saveTripFailed), error: true);
         }
@@ -4374,6 +4382,12 @@ class TripPlanController extends GetxController {
     } finally {
       isSaving.value = false;
     }
+  }
+
+  static Map<String, dynamic> _refusalData(Object e) {
+    final body = e is DioException ? e.response?.data : null;
+    final data = body is Map ? body['data'] : null;
+    return data is Map ? Map<String, dynamic>.from(data) : const {};
   }
 
   void _onNameRejected(String name) {

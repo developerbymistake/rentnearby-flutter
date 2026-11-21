@@ -6,6 +6,8 @@ import '../../buddy_live.dart';
 import '../../buddy_navigation.dart';
 import '../../shared/buddy_result.dart';
 import '../../shared/strings_shared.dart';
+import '../../triplimit/trip_limit_gate.dart';
+import '../../triplimit/trip_limit_models.dart';
 import '../data/trip_viewer_api.dart';
 import '../models/viewer_models.dart';
 import '../viewer_deps.dart';
@@ -15,10 +17,13 @@ import '../widgets/joined_snack.dart';
 enum TripInviteState { loading, ready, ended, failed }
 
 class TripInviteController extends GetxController {
-  TripInviteController(this.memberId, {TripViewerApi? api}) : _api = api ?? ViewerDeps.viewer;
+  TripInviteController(this.memberId, {TripViewerApi? api, Future<bool> Function(TripSlots slots)? limitPrompt})
+      : _api = api ?? ViewerDeps.viewer,
+        _limitPrompt = limitPrompt ?? TripLimitGate.promptInvite;
 
   final String memberId;
   final TripViewerApi _api;
+  final Future<bool> Function(TripSlots slots) _limitPrompt;
 
   final state = TripInviteState.loading.obs;
   final preview = Rxn<InvitePreview>();
@@ -70,6 +75,7 @@ class TripInviteController extends GetxController {
   Future<void> join() async {
     if (busy) return;
     joining.value = true;
+    var retry = false;
     try {
       final r = await _api.acceptInvite(memberId);
       if (isClosed) return;
@@ -83,6 +89,8 @@ class TripInviteController extends GetxController {
             full.value = true;
             ended.value = InviteEnded(reason: 'Full', title: preview.value?.title, ownerName: preview.value?.owner.name);
             state.value = TripInviteState.ended;
+          } else if (refused.type == BuddyErrorTypes.tripLimitReached) {
+            retry = await _limitPrompt(TripSlots.fromRefusal(refused.data));
           } else if (refused.type == BuddyErrorTypes.inviteEnded || refused.statusCode == 404) {
             ended.value = TripViewerApi.inviteEndedOf(refused.cast<Object?>()) ?? const InviteEnded(reason: 'Unknown');
             state.value = TripInviteState.ended;
@@ -95,6 +103,7 @@ class TripInviteController extends GetxController {
     } finally {
       if (!isClosed) joining.value = false;
     }
+    if (retry && !isClosed) await join();
   }
 
   Future<void> decline() async {

@@ -2,6 +2,8 @@ import 'package:bakhli/design/design.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../utils/input_formatters.dart';
+import '../../buddy/triplimit/trip_limit_sheet.dart';
+import '../../buddy/triplimit/trip_limit_strings.dart';
 import '../controllers/trip_plan_controller.dart';
 import '../models/trip_plan_model.dart';
 import '../trip_strings_name.dart';
@@ -115,6 +117,13 @@ class _DatesBodyState extends State<_DatesBody> {
     if (!mounted) return;
     if (r == TripCreateOutcome.ok) {
       Navigator.pop(context, true);
+      return;
+    }
+    final slots = _c.limitSlots;
+    if (r == TripCreateOutcome.limitReached && slots != null) {
+      setState(() => _saving = false);
+      final freed = await TripLimitSheet.show(context, slots, reason: TripLimitReason.plan);
+      if (freed && mounted) await _create();
       return;
     }
     setState(() {

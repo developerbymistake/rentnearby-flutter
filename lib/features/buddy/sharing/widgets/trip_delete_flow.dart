@@ -16,6 +16,7 @@ import '../../shared/buddy_result.dart';
 import '../../shared/models/person_models.dart';
 import '../../shared/strings_shared.dart';
 import '../../shared/widgets/buddy_confirm_box.dart';
+import '../controllers/owner_sharing_controller.dart';
 import '../models/sharing_models.dart';
 import '../sharing_deps.dart';
 import '../sharing_strings.dart';
@@ -91,16 +92,71 @@ abstract final class TripDeleteFlow {
     if (open) BuddyNavigation.openExpenses(tripId, tab: 'balances');
   }
 
-  static Future<void> confirm(BuildContext context, String tripId) async {
+  static Future<bool> startById(BuildContext context, String tripId) async {
+    if (_busy) return false;
+    _busy = true;
+    try {
+      final fetched = await OwnerSharingController.fetchSharing(tripId);
+      if (!context.mounted) return false;
+      if (fetched is! BuddyOk<TripSharingBlock?>) {
+        SharingDeps.toastError(fetched);
+        return false;
+      }
+      final sharing = fetched.value;
+      if (usesPlainDelete(sharing)) return await _deletePlain(context, tripId);
+      if (sharing!.expenses.openPayments > 0) {
+        final r = await SharingDeps.ledger.balances(tripId);
+        if (!context.mounted) return false;
+        if (r is! BuddyOk<TripBalances>) {
+          SharingDeps.toastError(r);
+          return false;
+        }
+        final lines = openLinesOf(r.value);
+        if (lines.isNotEmpty) {
+          await settleFirst(context, tripId, lines);
+          return false;
+        }
+      }
+      return await confirm(context, tripId, leaveScreen: false);
+    } finally {
+      _busy = false;
+    }
+  }
+
+  static Future<bool> _deletePlain(BuildContext context, String tripId) async {
+    if (!await TripLifecycleActions.confirmDelete(context, open: 0, confirmed: 0)) return false;
+    if (Get.isRegistered<MyTripsController>()) {
+      final done = await MyTripsController.to.delete(tripId);
+      if (done) AppToast.success(SharingStrings.tripDeleted);
+      return done;
+    }
+    final r = await SharingDeps.members.deleteTrip(tripId);
+    if (r is BuddyOk<void>) {
+      AppToast.success(SharingStrings.tripDeleted);
+      return true;
+    }
+    if (r is BuddyRefused<void> && r.type == BuddyErrorTypes.tripHasOpenBalances && context.mounted) {
+      await settleFirst(context, tripId, OpenPaymentLine.fromRefusal(r.data));
+      return false;
+    }
+    SharingDeps.toastError(r);
+    return false;
+  }
+
+  static Future<bool> confirm(BuildContext context, String tripId, {bool leaveScreen = true}) async {
     final result = await Dialog3D.show<_DeleteOutcome>(context, builder: (_) => _DeleteBox(tripId: tripId));
-    if (!context.mounted || result == null) return;
+    if (!context.mounted || result == null) return false;
     switch (result) {
       case _Deleted():
-        (debugOpenTrips ?? TripNavigation.openTripsTab)();
-        if (Get.isRegistered<MyTripsController>()) MyTripsController.to.load();
+        if (leaveScreen) (debugOpenTrips ?? TripNavigation.openTripsTab)();
+        if (Get.isRegistered<MyTripsController>()) {
+          leaveScreen ? MyTripsController.to.load() : MyTripsController.to.removeLocal(tripId);
+        }
         AppToast.success(SharingStrings.tripDeleted);
+        return true;
       case _OpenBalances(:final lines):
         await settleFirst(context, tripId, lines);
+        return false;
     }
   }
 }
