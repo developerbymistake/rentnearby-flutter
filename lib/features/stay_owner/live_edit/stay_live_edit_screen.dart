@@ -290,7 +290,7 @@ class _StayLiveEditScreenState extends State<StayLiveEditScreen> {
       if (!mounted) return;
       if (!ok) {
         if (_ctrl.lastErrorType == 'OnboardingClosed' || _ctrl.lastErrorType == 'StayOutsideDistrict') {
-          OnboardingClosedDialog.show(context, body: StaySetupStrings.notOpenBody);
+          OnboardingClosedDialog.show(context, body: StaySetupStrings.notOpenBodyFor(_ctrl.lastErrorType, _ctrl.lastErrorMessage));
         }
         return;
       }

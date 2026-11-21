@@ -237,7 +237,7 @@ class StayHomeBody extends StatelessWidget {
     }
     children.add(Padding(padding: DS.insets(l: 18, t: 16, r: 18), child: NumbersRow(tiles: tiles)));
     if (live || state == StayHomeState.takenDown) children.add(StayOwnerDeps.upcomingCard());
-    final planOk = state == StayHomeState.live || state == StayHomeState.paused;
+    final planOk = (state == StayHomeState.live || state == StayHomeState.paused) && !l.plannerOff;
     if (planOk) children.add(StayOwnerDeps.planCard());
     if (state == StayHomeState.live || state == StayHomeState.areaPaused) {
       children.add(const StaySectionTitle(title: StayHomeStrings.quickActions));

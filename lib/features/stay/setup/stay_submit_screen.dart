@@ -40,7 +40,7 @@ class _StaySubmitScreenState extends State<StaySubmitScreen> {
         final canCorrect = (st == null || st.isDraft) && (Get.find<AuthController>().user.value?.canCorrectRole ?? false);
         final percent = st?.setupPercent ?? 0;
         OnboardingClosedDialog.show(context,
-            body: StaySetupStrings.notOpenBody,
+            body: StaySetupStrings.notOpenBodyFor(_ctrl.lastErrorType, _ctrl.lastErrorMessage),
             onChangeRole: canCorrect
                 ? () => Get.toNamed(AppRoutes.roleSelect, arguments: {'correction': true, 'percent': percent})
                 : null);

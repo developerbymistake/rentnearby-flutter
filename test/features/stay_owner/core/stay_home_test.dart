@@ -212,6 +212,14 @@ void main() {
       expect(find.text('Quick actions'), findsOneWidget);
     });
 
+    testWidgets('UC-S-43 planner off: no plan card on a live stay', (t) async {
+      StayOwnerDeps.planCard = () => const Text('PLAN-SEAM');
+      await _pump(t, homeJson(plannerOff: true));
+      expect(find.text('LIVE'), findsOneWidget);
+      expect(find.text('PLAN-SEAM'), findsNothing);
+      expect(find.text('Quick actions'), findsOneWidget);
+    });
+
     testWidgets('o_st_12 plus: featured chip and first-in-trip-plans line, no See Plus', (t) async {
       await _pump(t, homeJson(featured: true, statusLine: {'code': 'Featured', 'args': {'city': 'Mukteshwar'}}));
       expect(find.text('LIVE · ★ Featured'), findsOneWidget);

@@ -50,6 +50,13 @@ abstract final class StaySetupStrings {
   static const noConnection = 'No connection. Please try again.';
   static const notOpenTitle = 'Not open here yet';
   static const notOpenBody = 'We are not taking new stays in this area yet. We will tell you when it opens.';
+  static const outsideDistrictBody = 'Pin your stay inside the selected district.';
+
+  static String notOpenBodyFor(String? errorType, String? serverMessage) {
+    if (errorType != 'StayOutsideDistrict') return notOpenBody;
+    final m = serverMessage?.trim() ?? '';
+    return m.isEmpty ? outsideDistrictBody : m;
+  }
   static const ok = 'OK';
 
   static const submitTitle = 'Final Submit';

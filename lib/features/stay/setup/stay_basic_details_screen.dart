@@ -277,13 +277,13 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
     _showOnboardingClosed();
   }
 
-  void _showOnboardingClosed() {
+  void _showOnboardingClosed({String? errorType, String? serverMessage}) {
     if (!mounted) return;
     final s = _ctrl.stay.value;
     final canCorrect = (s == null || s.isDraft) && (Get.find<AuthController>().user.value?.canCorrectRole ?? false);
     final percent = s?.setupPercent ?? 0;
     OnboardingClosedDialog.show(context,
-        body: StaySetupStrings.notOpenBody,
+        body: StaySetupStrings.notOpenBodyFor(errorType, serverMessage),
         onChangeRole: canCorrect
             ? () => Get.toNamed(AppRoutes.roleSelect, arguments: {'correction': true, 'percent': percent})
             : null);
@@ -515,7 +515,7 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
     if (!ok) {
       if (_ctrl.lastErrorType == 'OnboardingClosed' || _ctrl.lastErrorType == 'StayOutsideDistrict') {
         setState(() => _step = 1);
-        _showOnboardingClosed();
+        _showOnboardingClosed(errorType: _ctrl.lastErrorType, serverMessage: _ctrl.lastErrorMessage);
         return;
       }
       _showServerRegistrationError();

@@ -222,5 +222,13 @@ void main() {
       expect(StaySetupStrings.fixThis(true, true), 'Fix this: photos and registration');
       expect(StaySetupStrings.fixThis(false, true), 'Fix this: registration');
     });
+
+    test('o_st_65_c_outsideDistrict uses its own server text, closed area keeps the frame text', () {
+      expect(StaySetupStrings.notOpenBodyFor('OnboardingClosed', 'x'), 'We are not taking new stays in this area yet. We will tell you when it opens.');
+      expect(StaySetupStrings.notOpenBodyFor(null, null), StaySetupStrings.notOpenBody);
+      expect(StaySetupStrings.notOpenBodyFor('StayOutsideDistrict', 'Pin your stay inside the selected district'), 'Pin your stay inside the selected district');
+      expect(StaySetupStrings.notOpenBodyFor('StayOutsideDistrict', '  '), 'Pin your stay inside the selected district.');
+      expect(StaySetupStrings.notOpenBodyFor('StayOutsideDistrict', null), 'Pin your stay inside the selected district.');
+    });
   });
 }
