@@ -1,6 +1,10 @@
 import 'package:bakhli/features/taxi/setup/taxi_routes_screen.dart';
 import 'package:bakhli/features/taxi/setup/taxi_setup_hub_screen.dart';
+import 'package:bakhli/features/taxi/models/taxi_vehicle_type_model.dart';
 import 'package:bakhli/features/taxi/setup/taxi_submit_screen.dart';
+import 'package:bakhli/features/taxi/setup/taxi_vehicle_screen.dart';
+import 'package:bakhli/features/taxi/taxi_vehicle_types_controller.dart';
+import 'package:get/get.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -9,6 +13,17 @@ import '../../../support/owner_render.dart';
 import '../../../support/owner_sizes.dart';
 import '../../../support/real_phone.dart';
 import 'taxi_setup_fixtures.dart';
+
+class _Types extends TaxiVehicleTypesController {
+  @override
+  // ignore: must_call_super
+  void onInit() {
+    types.value = const [TaxiVehicleTypeModel(id: 'v3', name: 'Maruti Ertiga', category: 'MUV', defaultSeats: 7, sortOrder: 1)];
+  }
+
+  @override
+  Future<void> load() async {}
+}
 
 final _route1 = setupRoute('r1', 'Haldwani', 'Nainital', 1800);
 final _step1 = setupTaxi(percent: 40, step1: true, identity: true);
@@ -90,6 +105,17 @@ void main() {
     await _settle(t);
     expect(find.text('Add your licence and date of birth.'), findsOneWidget);
     await t.pump(const Duration(seconds: 8));
+  });
+
+  testWidgets('render o_tx_35 A vehicle step', (t) async {
+    setUpTaxiSetup(_step1);
+    Get.put<TaxiVehicleTypesController>(_Types());
+    await renderOwnerFrame(t, 'o_tx_35', const TaxiVehicleScreen(), part: 'A', arrange: _settle);
+    for (final s in ['Vehicle and contact', 'Step 1 of 3 · Vehicle', 'Vehicle type', 'Maruti Ertiga', 'Seats', 'Plate number', 'Vehicle photo', 'Plate must be visible', 'Next']) {
+      expect(find.textContaining(s, findRichText: true), findsWidgets, reason: s);
+    }
+    await t.pumpWidget(const SizedBox());
+    await t.pump(const Duration(seconds: 11));
   });
 
   testWidgets('render o_tx_1 step 1 done', (t) async {

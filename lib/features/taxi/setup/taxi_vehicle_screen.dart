@@ -671,7 +671,7 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
         _section(
           ring: _Ring.type,
           art: TaxiOwnerArt.car,
-          title: 'Vehicle Type',
+          title: TaxiSetupStrings.vehicleType,
           child: PillPickerField(
             tone: _tone,
             value: _vehicleTypeId == null ? null : (_vehicleTypeName ?? _types.nameOf(_vehicleTypeId)),
@@ -700,7 +700,7 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
         _section(
           ring: _Ring.plate,
           art: ListingArt.key,
-          title: 'Number Plate',
+          title: TaxiSetupStrings.plateNumber,
           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             TextFormField(
               controller: _plateCtrl,
@@ -724,8 +724,8 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
         _section(
           ring: _Ring.photo,
           art: ListingArt.camera,
-          title: 'Vehicle Photo',
-          hint: 'Number plate must be clearly visible in the photo',
+          title: TaxiSetupStrings.vehiclePhoto,
+          hint: TaxiSetupStrings.plateMustShow,
           child: _photoBlock(),
         ),
       ]);
@@ -797,9 +797,9 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
         tone: _tone,
         art: ListingArt.clipboard,
         artSide: FormArtSide.right,
-        title: 'Driving Licence',
+        title: TaxiSetupStrings.licenceNumber,
         requiredMark: true,
-        hint: 'Only Bakhli admin sees this',
+        hint: TaxiSetupStrings.adminOnly,
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           TextFormField(
             controller: _dlCtrl,
@@ -828,8 +828,9 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
         tone: _tone,
         art: ListingArt.calendar,
         artSide: FormArtSide.right,
-        title: 'Date of Birth',
+        title: TaxiSetupStrings.dateOfBirth,
         requiredMark: true,
+        hint: TaxiSetupStrings.keptForChecks,
         child: PillPickerField(
           tone: _tone,
           value: _dob != null
@@ -850,7 +851,7 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           PillField(
             tone: _tone,
-            label: 'Phone Number',
+            label: TaxiSetupStrings.phone,
             controller: _phoneCtrl,
             focusNode: _phoneFocus,
             keyboardType: TextInputType.phone,
@@ -921,7 +922,8 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
           tone: _tone,
           art: ListingArt.roundPushpin,
           artSide: FormArtSide.right,
-          title: 'District and City',
+          title: TaxiSetupStrings.base,
+          hint: TaxiSetupStrings.pinNear,
           child: Container(
             constraints: BoxConstraints(minHeight: DS.s(52)),
             padding: DS.insets(l: 4, t: 8, r: 18, b: 8),

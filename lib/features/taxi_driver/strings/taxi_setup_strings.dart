@@ -5,7 +5,16 @@ abstract final class TaxiSetupStrings {
   static const step1Vehicle = 'Step 1 of 3 · Vehicle';
   static const step1Licence = 'Step 1 of 3 · Licence';
   static const step1Contact = 'Step 1 of 3 · Contact and base';
-  static const progressLabels = ['Vehicle', 'Licence', 'Contact and base'];
+  static const progressLabels = ['Vehicle', 'Licence', 'Contact'];
+  static const vehicleType = 'Vehicle type';
+  static const plateNumber = 'Plate number';
+  static const vehiclePhoto = 'Vehicle photo';
+  static const plateMustShow = 'Plate must be visible';
+  static const licenceNumber = 'Driving licence number';
+  static const adminOnly = 'Only Bakhli admin sees this.';
+  static const dateOfBirth = 'Date of birth';
+  static const keptForChecks = 'Kept for checks only. Removed 180 days after you leave.';
+  static const pinNear = 'Pin within 500 m of where you are now.';
   static const next = 'Next';
   static const save = 'Save';
 
