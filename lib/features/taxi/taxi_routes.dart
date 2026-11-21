@@ -11,7 +11,7 @@ import 'requests/driver_ready_screen.dart';
 import 'requests/driver_request_detail_screen.dart';
 import 'requests/driver_requests_screen.dart';
 import 'requests/driver_ring_screen.dart';
-import 'setup/my_taxi_screen.dart';
+import '../taxi_driver/hub/taxi_hub_screen.dart';
 import 'setup/taxi_routes_screen.dart';
 import 'setup/taxi_setup_hub_screen.dart';
 import 'setup/taxi_submit_screen.dart';
@@ -93,7 +93,7 @@ final List<GetPage> taxiPages = [
   ),
   GetPage(
     name: AppRoutes.myTaxi,
-    page: () => const MyTaxiScreen(),
+    page: () => const TaxiHubScreen(),
     customTransition: TemplateTransition(),
     transitionDuration: templateTransitionDuration,
   ),

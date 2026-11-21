@@ -7,6 +7,10 @@ import '../../../models/browse_item.dart';
 import '../../../utils/app_toast.dart';
 import '../../../utils/search_fold.dart';
 import '../../../widgets/location_switch_sheet.dart';
+import '../../owner_core/plan/gate_keys.dart';
+import '../../owner_core/plan/plan_gate.dart';
+import '../../owner_core/plan/plan_keys.dart';
+import '../../taxi_driver/strings/taxi_gate_strings.dart';
 import '../../trip/data/trip_city_catalog.dart';
 import '../../trip/models/trip_city_model.dart';
 import '../../trip/trip_strings_a3.dart';
@@ -112,6 +116,23 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> with TickerProvider
   bool _picking = false;
 
   static const _max = TaxiOptionSets.maxRoutes;
+
+  int get _planMax {
+    final l = PlanGate.limit(PlanKey.routes);
+    return l <= 0 ? 1 : (l > _max ? _max : l);
+  }
+
+  bool get _planFull => _routes.length >= _planMax;
+
+  Future<bool> _planAllowsSave() async {
+    if (_routes.length <= _planMax) return true;
+    if (PlanGate.canUpgrade) {
+      await PlanGate.showLimit(context, TaxiGateStrings.routeGate());
+    } else {
+      AppToast.warning('You can add up to $_planMax routes');
+    }
+    return false;
+  }
 
   @override
   void initState() {
@@ -390,8 +411,13 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> with TickerProvider
       Get.back();
       return;
     }
+    if (!await _planAllowsSave() || !mounted) return;
     final ok = await _ctrl.saveRoutes([for (final r in _routes) r.toJson()]);
-    if (!ok || !mounted) return;
+    if (!mounted) return;
+    if (!ok) {
+      if (_ctrl.lastErrorType == 'TaxiRouteLimit' && PlanGate.canUpgrade) await PlanGate.showLimit(context, TaxiGateStrings.routeGate());
+      return;
+    }
     Get.back();
     AppToast.success('Routes saved');
   }
@@ -604,15 +630,29 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> with TickerProvider
   Widget _addRow() {
     final n = _count;
     final enabled = n < _max;
-    return Opacity(
-      opacity: enabled ? 1 : 0.5,
-      child: DashedAddRow3D(
-        tone: _tone,
-        label: 'Add another route',
-        trailing: enabled ? '$n of $_max' : 'Limit reached',
-        onTap: _addAnother,
+    final soft = PlanGate.canUpgrade && _planFull && !_formOpen;
+    return Column(children: [
+      if (PlanGate.canUpgrade && _planFull)
+        Padding(
+          padding: EdgeInsets.fromLTRB(DS.s(18), DS.gv(8), DS.s(18), 0),
+          child: KeyedSubtree(
+            key: GateKeys.softCard,
+            child: Text(TaxiGateStrings.freePlanTip(_planMax, TaxiGateStrings.plusRoutes), style: FieldMessage.helperStyle.copyWith(fontSize: DS.f(12))),
+          ),
+        ),
+      Opacity(
+        opacity: enabled ? 1 : 0.5,
+        child: KeyedSubtree(
+          key: soft ? GateKeys.softRow : null,
+          child: DashedAddRow3D(
+            tone: _tone,
+            label: TaxiGateStrings.addAnother,
+            trailing: !enabled ? 'Limit reached' : (soft ? 'Plus' : '$n of $_planMax'),
+            onTap: soft ? () => PlanGate.showLimit(context, TaxiGateStrings.routeGate()) : _addAnother,
+          ),
+        ),
       ),
-    );
+    ]);
   }
 }
 

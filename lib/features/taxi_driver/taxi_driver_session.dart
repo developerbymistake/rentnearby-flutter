@@ -18,6 +18,7 @@ abstract final class TaxiDriverSession {
       if (Get.isRegistered<TaxiDriverHomeController>()) Get.delete<TaxiDriverHomeController>(force: true);
     });
     // A5 session
+    TaxiDriverDeps.refreshHome = () async => await TaxiDriverHomeController.maybe?.reload();
     // end A5
     // A6 session
     // end A6

@@ -16,6 +16,7 @@ import '../../../screens/add_listing_location_mixin.dart';
 import '../../../utils/app_toast.dart';
 import '../../../widgets/onboarding_closed_dialog.dart';
 import '../taxi_option_sets.dart';
+import '../../taxi_driver/hub/taxi_hub_sheets.dart';
 import '../taxi_vehicle_types_controller.dart';
 import 'taxi_identity_validators.dart';
 import 'taxi_setup_controller.dart';
@@ -492,6 +493,8 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
       return;
     }
     if (!_validateBase()) return;
+    if (_wasApproved && (_dlTyped.isNotEmpty || _dob != null || _localPhoto != null) && !await TaxiReviewSheet.ask(context)) return;
+    if (!mounted) return;
     final pin = pinnedOrLiveLocation!;
     _busy = true;
     try {

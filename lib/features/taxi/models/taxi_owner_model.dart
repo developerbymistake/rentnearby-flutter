@@ -1,4 +1,18 @@
+import '../../owner_core/calendar/models/calendar_models.dart';
+import '../../owner_core/json/owner_json.dart';
 import '../taxi_option_sets.dart';
+
+class TaxiRoutePlace {
+  final String name;
+  final String? label;
+  final double lat;
+  final double lng;
+  final int? cityKey;
+  final bool other;
+  const TaxiRoutePlace({required this.name, this.label, required this.lat, required this.lng, this.cityKey, this.other = false});
+
+  bool get named => cityKey != null || other;
+}
 
 class TaxiRouteModel {
   final String id;
@@ -39,28 +53,54 @@ class TaxiRouteModel {
     this.serverActive,
   });
 
+  bool get roundTrip => tripType.toLowerCase().contains('round');
+
+  Map<String, dynamic> toPayload({int? fare, String? tripType, TaxiRoutePlace? from, TaxiRoutePlace? to}) {
+    final f = from ?? TaxiRoutePlace(name: fromName, label: fromLabel, lat: fromLatitude, lng: fromLongitude, cityKey: fromCityKey, other: fromOtherPlace);
+    final t = to ?? TaxiRoutePlace(name: toName, label: toLabel, lat: toLatitude, lng: toLongitude, cityKey: toCityKey, other: toOtherPlace);
+    return {
+      'id': id,
+      'fromName': f.name,
+      'fromLabel': f.label,
+      'fromLatitude': f.lat,
+      'fromLongitude': f.lng,
+      'toName': t.name,
+      'toLabel': t.label,
+      'toLatitude': t.lat,
+      'toLongitude': t.lng,
+      'fare': fare ?? this.fare,
+      'tripType': tripType ?? this.tripType,
+      if (f.named && t.named) ...{
+        'fromCityKey': f.cityKey,
+        'toCityKey': t.cityKey,
+        'fromOtherPlace': f.cityKey == null,
+        'toOtherPlace': t.cityKey == null,
+      },
+    };
+  }
+
   bool get activeInRequests => serverActive ?? (fromCityKey != null && toCityKey != null);
 
   static int? _key(Object? v) => v is num && v > 0 ? v.toInt() : null;
 
   factory TaxiRouteModel.fromJson(Map<String, dynamic> json) => TaxiRouteModel(
         id: json['id']?.toString() ?? '',
-        routeIndex: (json['routeIndex'] as num?)?.toInt() ?? 1,
-        fromName: json['fromName'] as String? ?? '',
-        fromLabel: json['fromLabel'] as String?,
-        fromLatitude: (json['fromLatitude'] as num?)?.toDouble() ?? 0,
-        fromLongitude: (json['fromLongitude'] as num?)?.toDouble() ?? 0,
-        toName: json['toName'] as String? ?? '',
-        toLabel: json['toLabel'] as String?,
-        toLatitude: (json['toLatitude'] as num?)?.toDouble() ?? 0,
-        toLongitude: (json['toLongitude'] as num?)?.toDouble() ?? 0,
-        fare: (json['fare'] as num?)?.toInt() ?? 0,
-        tripType: json['tripType'] as String? ?? 'OneWay',
+        routeIndex: OwnerJson.integer(json['routeIndex'], 1),
+        fromName: OwnerJson.str(json['fromName'], ''),
+        fromLabel: OwnerJson.strOrNull(json['fromLabel']),
+        fromLatitude: (OwnerJson.doubleOrNull(json['fromLatitude']) ?? 0),
+        fromLongitude: (OwnerJson.doubleOrNull(json['fromLongitude']) ?? 0),
+        toName: OwnerJson.str(json['toName'], ''),
+        toLabel: OwnerJson.strOrNull(json['toLabel']),
+        toLatitude: (OwnerJson.doubleOrNull(json['toLatitude']) ?? 0),
+        toLongitude: (OwnerJson.doubleOrNull(json['toLongitude']) ?? 0),
+        fare: OwnerJson.integer(json['fare'], 0),
+        tripType: OwnerJson.str(json['tripType'], 'OneWay'),
         fromCityKey: _key(json['fromCityKey']),
         toCityKey: _key(json['toCityKey']),
         fromOtherPlace: json['fromOtherPlace'] == true,
         toOtherPlace: json['toOtherPlace'] == true,
-        serverActive: json['activeInRequests'] is bool ? json['activeInRequests'] as bool : null,
+        serverActive: OwnerJson.boolOrNull(json['activeInRequests']),
       );
 }
 
@@ -100,6 +140,16 @@ class TaxiOwnerModel {
   final bool everApproved;
   final int? localDayRate;
   final int? localDayKm;
+  final List<TaxiRouteModel> hiddenRoutes;
+  final List<Meter> meters;
+  final int activeBookingCount;
+  final int? ringWeight;
+  final bool? remindersOn;
+  final int reportCount;
+  final bool isFeatured;
+  final Meter? routesMeter;
+  final bool? paymentEnabled;
+  final bool? canUpgrade;
 
   const TaxiOwnerModel({
     required this.id,
@@ -137,7 +187,21 @@ class TaxiOwnerModel {
     this.everApproved = false,
     this.localDayRate,
     this.localDayKm,
+    this.hiddenRoutes = const [],
+    this.meters = const [],
+    this.activeBookingCount = 0,
+    this.ringWeight,
+    this.remindersOn,
+    this.reportCount = 0,
+    this.isFeatured = false,
+    this.routesMeter,
+    this.paymentEnabled,
+    this.canUpgrade,
   });
+
+  Meter? meter(String key) => Meter.find(meters, key);
+  int get shownReportCount => reportCount > 0 ? reportCount : pendingReportCount;
+  bool get hasDeclaredRate => localDayRate != null && localDayKm != null;
 
   bool get isDraft => status == TaxiStatus.draft;
   bool get isPendingReview => status == TaxiStatus.pendingReview;
@@ -153,46 +217,54 @@ class TaxiOwnerModel {
       [cityName, districtName].where((e) => e != null && e.isNotEmpty).toSet().join(', ');
 
   factory TaxiOwnerModel.fromJson(Map<String, dynamic> json) {
-    final routes = (json['routes'] as List? ?? [])
-        .map((e) => TaxiRouteModel.fromJson(e as Map<String, dynamic>))
-        .toList()
-      ..sort((a, b) => a.routeIndex.compareTo(b.routeIndex));
+    final routes = OwnerJson.list(json['routes'], TaxiRouteModel.fromJson)..sort((a, b) => a.routeIndex.compareTo(b.routeIndex));
+    final hidden = OwnerJson.list(json['hiddenRoutes'], TaxiRouteModel.fromJson)..sort((a, b) => a.routeIndex.compareTo(b.routeIndex));
     return TaxiOwnerModel(
       id: json['id']?.toString() ?? '',
-      status: json['status'] as String? ?? TaxiStatus.draft,
-      percent: (json['percent'] as num?)?.toInt() ?? 0,
+      status: OwnerJson.str(json['status'], TaxiStatus.draft),
+      percent: OwnerJson.integer(json['percent'], 0),
       step1Done: json['step1Done'] == true,
       routesDone: json['routesDone'] == true,
       submitted: json['submitted'] == true,
       vehicleTypeId: json['vehicleTypeId']?.toString(),
-      vehicleTypeName: json['vehicleTypeName'] as String?,
-      vehicleCategory: json['vehicleCategory'] as String?,
-      seats: (json['seats'] as num?)?.toInt(),
-      numberPlate: json['numberPlate'] as String?,
-      plateDisplay: json['plateDisplay'] as String?,
-      platePhotoUrl: json['platePhotoUrl'] as String?,
-      contactPhone: json['contactPhone'] as String?,
-      whatsAppNumber: json['whatsAppNumber'] as String?,
-      latitude: (json['latitude'] as num?)?.toDouble(),
-      longitude: (json['longitude'] as num?)?.toDouble(),
+      vehicleTypeName: OwnerJson.strOrNull(json['vehicleTypeName']),
+      vehicleCategory: OwnerJson.strOrNull(json['vehicleCategory']),
+      seats: OwnerJson.intOrNull(json['seats']),
+      numberPlate: OwnerJson.strOrNull(json['numberPlate']),
+      plateDisplay: OwnerJson.strOrNull(json['plateDisplay']),
+      platePhotoUrl: OwnerJson.strOrNull(json['platePhotoUrl']),
+      contactPhone: OwnerJson.strOrNull(json['contactPhone']),
+      whatsAppNumber: OwnerJson.strOrNull(json['whatsAppNumber']),
+      latitude: OwnerJson.doubleOrNull(json['latitude']),
+      longitude: OwnerJson.doubleOrNull(json['longitude']),
       districtId: json['districtId']?.toString(),
-      districtName: json['districtName'] as String?,
+      districtName: OwnerJson.strOrNull(json['districtName']),
       cityId: json['cityId']?.toString(),
-      cityName: json['cityName'] as String?,
+      cityName: OwnerJson.strOrNull(json['cityName']),
       routes: routes,
-      isAvailable: json['isAvailable'] as bool? ?? true,
-      rejectedReason: json['rejectedReason'] as String?,
-      minFare: (json['minFare'] as num?)?.toInt(),
-      slug: json['slug'] as String?,
+      isAvailable: OwnerJson.boolOrNull(json['isAvailable']) ?? true,
+      rejectedReason: OwnerJson.strOrNull(json['rejectedReason']),
+      minFare: OwnerJson.intOrNull(json['minFare']),
+      slug: OwnerJson.strOrNull(json['slug']),
       submittedAt: json['submittedAt'] != null ? DateTime.tryParse(json['submittedAt'].toString()) : null,
       createdAt: DateTime.tryParse(json['createdAt']?.toString() ?? '') ?? DateTime.now(),
       updatedAt: json['updatedAt'] != null ? DateTime.tryParse(json['updatedAt'].toString()) : null,
-      pendingReportCount: (json['pendingReportCount'] as num?)?.toInt() ?? 0,
+      pendingReportCount: OwnerJson.integer(json['pendingReportCount'], 0),
       hasDrivingLicence: json['hasDrivingLicence'] == true,
       hasDateOfBirth: json['hasDateOfBirth'] == true,
       everApproved: json['everApproved'] == true,
-      localDayRate: (json['localDayRate'] as num?)?.toInt(),
-      localDayKm: (json['localDayKm'] as num?)?.toInt(),
+      localDayRate: OwnerJson.intOrNull(json['localDayRate']),
+      localDayKm: OwnerJson.intOrNull(json['localDayKm']),
+      hiddenRoutes: hidden,
+      meters: Meter.listOf(json['meters']),
+      activeBookingCount: OwnerJson.integer(json['activeBookingCount']),
+      ringWeight: OwnerJson.intOrNull(json['ringWeight']),
+      remindersOn: OwnerJson.boolOrNull(json['remindersOn']),
+      reportCount: OwnerJson.integer(json['reportCount']),
+      isFeatured: OwnerJson.boolean(json['isFeatured']),
+      routesMeter: Meter.maybe(json['routesMeter']),
+      paymentEnabled: OwnerJson.boolOrNull(json['paymentEnabled']),
+      canUpgrade: OwnerJson.boolOrNull(json['canUpgrade']),
     );
   }
 }

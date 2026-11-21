@@ -121,8 +121,8 @@ class _TaxiSetupHubScreenState extends State<TaxiSetupHubScreen> with TickerProv
                 PageHeader3D(
                   tone: _tone,
                   title: 'Set up your taxi',
+                  subtitle: 'Your taxi in 3 steps',
                   art: ListingArt.taxi,
-                  inlineTitle: true,
                   onBack: gated ? null : () => Get.back(),
                   trailing: gated ? _menu(canCorrect) : null,
                 ),

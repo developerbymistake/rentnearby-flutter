@@ -120,7 +120,13 @@ void main() {
   });
 
   // Words a frame draws in the other role's module; each needs the frame id.
-  const roleWordExceptions = <String, String>{};
+  const roleWordExceptions = <String, String>{
+    // A5-taxi-core
+    'Bakhli is checking your new licence details. Your bookings stay.': 'o_tx_42 B',
+    'Bookings stay. A ringing request and unanswered trip leads close.': 'o_tx_11',
+    'Shown in trip plans as a local day. Leave empty to stay out of local days.': 'o_tx_41 D',
+    'You stop getting requests until Bakhli approves the change. Your bookings stay.': 'o_tx_42 A',
+  };
 
   test('5. role words stay in their own module', () {
     final bad = <String>[];

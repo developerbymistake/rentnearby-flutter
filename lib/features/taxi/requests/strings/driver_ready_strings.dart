@@ -25,9 +25,9 @@ class DriverReadyStrings {
   static const String runTest = 'Run test ring';
   static const String runTestAgain = 'Test again';
   static const String running = 'Ringing your phone...';
-  static const String testShown = 'Your phone rang. You are ready for requests.';
-  static const String testNotShown = 'We did not see the ring. Check the rows above and try again.';
-  static const String testFailed = 'Could not send the test ring. Try again.';
+  static const String testShown = 'Your phone rang.';
+  static const String testNotShown = 'We did not see the ring.';
+  static const String testFailed = 'Could not send the test ring.';
   static const String testNotSaved = 'Your phone rang, but we could not save it. Test again.';
 
   static const String probeFailedTitle = 'Could not check your phone';
