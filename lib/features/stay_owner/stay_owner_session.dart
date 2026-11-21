@@ -1,11 +1,21 @@
 import 'package:get/get.dart';
 
+import '../../config/app_tabs.dart';
+import '../../controllers/auth_controller.dart';
+
 import '../../config/shell_kind.dart';
 import '../owner_core/session/owner_push_sync.dart';
 import '../owner_core/session/owner_session_hooks.dart';
 import '../owner_core/session/shell_teardown.dart';
 import 'stay_owner_deps.dart';
 import 'home/stay_owner_home_controller.dart';
+import '../jobs/controllers/my_jobs_controller.dart';
+import '../stay/enquiries/stay_enquiries_controller.dart';
+import 'enquiries_tab/stay_quiet_week_banner.dart';
+import 'jobs_tab/stay_jobs_tab.dart';
+import 'notices/stay_notice_copy.dart';
+import 'reminder/stay_reminder_row.dart';
+import 'hub/stay_hub_controller.dart';
 
 abstract final class StayOwnerSession {
   static const String name = 'stay_owner';
@@ -18,8 +28,23 @@ abstract final class StayOwnerSession {
       if (Get.isRegistered<StayOwnerHomeController>()) Get.delete<StayOwnerHomeController>(force: true);
     });
     // A2 session
+    ShellTeardown.register(ShellKind.stayOwner, () => ShellTeardown.deleteTagged<StayHubController>(StayHubController.tag));
+    OwnerPushSync.register('${name}_hub', (type, args) => StayHubController.maybe?.reload());
+    StayOwnerDeps.refreshHome = () async => StayOwnerHomeController.maybe?.reload();
+    StayOwnerDeps.openEditPrices = () {
+      if (Get.isRegistered<AuthController>()) Get.find<AuthController>().openTab(AppTabs.hub, intent: const {'section': 'rooms'});
+    };
+    OwnerPushSync.register('${name}_home', (type, args) => StayOwnerHomeController.maybe?.reload());
     // end A2
     // A3 session
+    StayOwnerDeps.reminderRow = () => const StayReminderRow();
+    StayOwnerDeps.quietWeekBanner = () => const StayQuietWeekBanner();
+    StayNoticeCopy.register();
+    OwnerSessionHooks.register('${name}_work', (_, _) => StayReminderState.reset());
+    ShellTeardown.register(ShellKind.stayOwner, () {
+      ShellTeardown.deleteTagged<MyJobsController>(StayJobsTab.tag);
+      if (Get.isRegistered<StayEnquiriesController>()) Get.delete<StayEnquiriesController>(force: true);
+    });
     // end A3
     // A4 session
     // end A4

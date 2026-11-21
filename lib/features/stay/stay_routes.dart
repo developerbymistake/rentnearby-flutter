@@ -3,7 +3,7 @@ import '../../config/app_routes.dart';
 import '../../design/design.dart';
 import 'enquiries/stay_enquiries_screen.dart';
 import 'guest/stay_detail_screen.dart';
-import 'setup/my_stays_screen.dart';
+import '../stay_owner/hub/stay_hub_screen.dart';
 import 'setup/stay_share_details_screen.dart';
 import 'setup/stay_basic_details_screen.dart';
 import 'setup/stay_rooms_screen.dart';
@@ -44,7 +44,7 @@ final List<GetPage> stayPages = [
   ),
   GetPage(
     name: AppRoutes.myStays,
-    page: () => const MyStaysScreen(),
+    page: () => const StayHubScreen(),
     customTransition: TemplateTransition(),
     transitionDuration: templateTransitionDuration,
   ),
