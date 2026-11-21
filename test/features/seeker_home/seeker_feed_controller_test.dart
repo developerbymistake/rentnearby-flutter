@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:bakhli/controllers/auth_controller.dart';
 import 'package:bakhli/features/owner_core/data/owner_cache.dart';
 import 'package:bakhli/features/owner_core/data/owner_result.dart';
 import 'package:bakhli/features/seeker_home/seeker_feed_controller.dart';
@@ -144,5 +145,24 @@ void main() {
     final b = make(ScriptedFeedApi(() => Completer<OwnerResult<SeekerFeed>>().future), user: 'user-b');
     expect(b.feed.value, isNull);
     expect(b.showSkeleton, isTrue);
+  });
+
+  test('a user change during a load starts a new load for the new user', () async {
+    final auth = FakeAuth();
+    Get.put<AuthController>(auth);
+    auth.signIn(role: 'SEEKER', id: 'user-a');
+    final first = Completer<OwnerResult<SeekerFeed>>();
+    final api = ScriptedFeedApi(() => first.future);
+    final c = Get.put(SeekerFeedController(api: api));
+    expect(api.calls, 1);
+    api.next = () async => OwnerOk(feedWith('b-trip'));
+    auth.signIn(role: 'SEEKER', id: 'user-b');
+    await pumpEventQueue();
+    expect(api.calls, 2);
+    expect(c.feed.value?.tripCard.tripId, 'b-trip');
+    first.complete(OwnerOk(feedWith('a-trip')));
+    await pumpEventQueue();
+    expect(c.feed.value?.tripCard.tripId, 'b-trip');
+    expect(c.loading.value, isFalse);
   });
 }

@@ -51,6 +51,7 @@ class AuthController extends GetxController {
   // reacting to it. Drives the Profile screen's non-dismissible "Logging
   // out..." overlay and blocks MainScreen's root back-handling while true.
   final isLoggingOut = false.obs;
+  final cleaningUp = false.obs;
   final user = Rxn<UserModel>();
   final roleKey = UserRoleKeys.seeker.obs;
   final canListStays = false.obs;
@@ -364,7 +365,18 @@ class AuthController extends GetxController {
     return ApiService.runExclusiveLogout(() => _performLogoutCleanup(reason));
   }
 
+  bool get blocksShellSwitch => isLoggingOut.value || cleaningUp.value;
+
   Future<void> _performLogoutCleanup(LogoutReason reason) async {
+    cleaningUp.value = true;
+    try {
+      await _cleanupSession(reason);
+    } finally {
+      cleaningUp.value = false;
+    }
+  }
+
+  Future<void> _cleanupSession(LogoutReason reason) async {
     final buddyUserId = user.value?.id;
     // Timeout + catch-all: the redirect below must run even if a cleanup step hangs or throws,
     // or a revoked session leaves the app permanently stuck on the current screen.

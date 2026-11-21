@@ -21,6 +21,7 @@ import '../taxi_vehicle_types_controller.dart';
 import 'taxi_identity_validators.dart';
 import 'taxi_setup_controller.dart';
 import 'taxi_vehicle_type_picker_sheet.dart';
+import '../../taxi_driver/strings/taxi_setup_strings.dart';
 
 class TaxiVehicleScreen extends StatefulWidget {
   const TaxiVehicleScreen({super.key});
@@ -591,12 +592,13 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
               child: Column(children: [
                 PageHeader3D(
                   tone: _tone,
-                  title: const ['Vehicle', 'Driver', 'Base'][_step],
+                  title: TaxiSetupStrings.step1Title,
+                  subtitle: const [TaxiSetupStrings.step1Vehicle, TaxiSetupStrings.step1Licence, TaxiSetupStrings.step1Contact][_step],
                   art: ListingArt.taxi,
                   inlineTitle: true,
                   onBack: _onBack,
                 ),
-                StepProgressHeader(tone: _tone, labels: const ['Vehicle', 'Driver', 'Base'], current: _step),
+                StepProgressHeader(tone: _tone, labels: TaxiSetupStrings.progressLabels, current: _step),
                 Expanded(
                   child: PageTransitionSwitcher(
                     duration: templateTransitionDuration,
@@ -635,11 +637,7 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
         return FormFooter(
           tone: _tone,
           top: const ToastDock(),
-          primaryLabel: _step == 0
-              ? 'Next: Driver'
-              : _step == 1
-                  ? 'Next: Base'
-                  : 'Save',
+          primaryLabel: _step < 2 ? TaxiSetupStrings.next : TaxiSetupStrings.save,
           onPrimary: disabled ? null : _handleNext,
           primaryLoading: saving || _isFinalizing,
           secondaryLabel: _step > 0 ? 'Back' : null,

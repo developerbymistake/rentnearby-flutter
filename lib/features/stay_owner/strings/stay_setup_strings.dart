@@ -34,7 +34,7 @@ abstract final class StaySetupStrings {
   static const stayUnderReview = 'Your stay is under review.';
 
   static const roomsTitle = 'Rooms';
-  static const roomsSubtitle = 'Add your rooms';
+  static const roomsSubtitle = 'Step 2 of 4';
   static const addRoomType = 'Add room type';
   static String duplicateRoom(String name) => 'You already have a $name room. Pick another type.';
 

@@ -86,7 +86,8 @@ class SeekerFeedController extends GetxController with WidgetsBindingObserver {
     if (id == _loadedFor) return;
     feed.value = null;
     _paintCopy();
-    reload();
+    _latest.cancel();
+    if (id != null) _load();
   }
 
   void _paintCopy() {

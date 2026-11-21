@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -38,7 +40,9 @@ class StayEnquiriesTab extends StatefulWidget {
 class _StayEnquiriesTabState extends State<StayEnquiriesTab> with WidgetsBindingObserver {
   final _ctrl = StayEnquiriesController.ensure();
   final _scroll = ScrollController();
-  final _keys = <String, GlobalKey>{};
+  final _flashKey = GlobalKey();
+  final _flashTarget = RxnString();
+  Timer? _flashTimer;
   final _highlight = RxnString();
   final _expanded = RxnString();
   Worker? _intentWorker;
@@ -70,6 +74,7 @@ class _StayEnquiriesTabState extends State<StayEnquiriesTab> with WidgetsBinding
   void dispose() {
     _intentWorker?.dispose();
     _focusWorker?.dispose();
+    _flashTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     _scroll.dispose();
     super.dispose();
@@ -95,14 +100,28 @@ class _StayEnquiriesTabState extends State<StayEnquiriesTab> with WidgetsBinding
   }
 
   void _flash(String id) {
+    _flashTarget.value = id;
     _highlight.value = id;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final ctx = _keys[id]?.currentContext;
-      if (ctx != null) Scrollable.ensureVisible(ctx, alignment: 0.1, duration: const Duration(milliseconds: 300));
-    });
-    Future.delayed(const Duration(seconds: 3), () {
+    WidgetsBinding.instance.addPostFrameCallback((_) => _reveal(id, 3));
+    _flashTimer?.cancel();
+    _flashTimer = Timer(const Duration(seconds: 3), () {
       if (mounted && _highlight.value == id) _highlight.value = null;
     });
+  }
+
+  void _reveal(String id, int tries) {
+    if (!mounted || _flashTarget.value != id) return;
+    final ctx = _flashKey.currentContext;
+    if (ctx != null) {
+      Scrollable.ensureVisible(ctx, alignment: 0.1, duration: const Duration(milliseconds: 300));
+      return;
+    }
+    final index = _ctrl.items.indexWhere((e) => e.id == id);
+    if (index < 0 || tries <= 0 || !_scroll.hasClients) return;
+    final p = _scroll.position;
+    final perRow = (p.maxScrollExtent + p.viewportDimension) / _ctrl.items.length;
+    _scroll.jumpTo((index * perRow).clamp(0.0, p.maxScrollExtent));
+    WidgetsBinding.instance.addPostFrameCallback((_) => _reveal(id, tries - 1));
   }
 
   void _onScroll() {
@@ -177,9 +196,8 @@ class _StayEnquiriesTabState extends State<StayEnquiriesTab> with WidgetsBinding
     final loading = _ctrl.loading.value;
     final failed = _ctrl.failed.value;
     final bucket = _ctrl.bucket.value;
-    final highlight = _highlight.value;
-    final expanded = _expanded.value;
     final views = _ctrl.views;
+    final flashTarget = _flashTarget.value;
     final bottom = AppInsets.bottomViewPadding(context) + DS.s(16);
 
     if (loading && items.isEmpty) return const SingleChildScrollView(physics: NeverScrollableScrollPhysics(), child: OwnerSkeletonList(rows: 3));
@@ -216,16 +234,17 @@ class _StayEnquiriesTabState extends State<StayEnquiriesTab> with WidgetsBinding
         itemBuilder: (_, i) {
           if (i >= items.length) return _footer();
           final e = items[i];
+          final view = views[e.id] ?? _ctrl.viewOf(e.id);
           return KeyedSubtree(
-            key: _keys.putIfAbsent(e.id, () => GlobalKey()),
-            child: StayOwnerEnquiryCard(
-              key: ValueKey('${bucket}_${e.id}'),
-              enquiry: e,
-              view: views[e.id] ?? _ctrl.viewOf(e.id),
-              ctrl: _ctrl,
-              highlighted: highlight == e.id,
-              expanded: expanded == e.id,
-            ),
+            key: e.id == flashTarget ? _flashKey : ValueKey('row_${e.id}'),
+            child: Obx(() => StayOwnerEnquiryCard(
+                  key: ValueKey('${bucket}_${e.id}'),
+                  enquiry: e,
+                  view: view,
+                  ctrl: _ctrl,
+                  highlighted: _highlight.value == e.id,
+                  expanded: _expanded.value == e.id,
+                )),
           );
         },
       ),

@@ -102,7 +102,8 @@ Future<void> _tapText(WidgetTester t, String text) async {
 }
 
 Future<void> _save(WidgetTester t) async {
-  await t.tap(find.text('Save').last);
+  final route = find.text('Save route');
+  await t.tap((route.evaluate().isEmpty ? find.text('Save') : route).last);
   await t.pump(const Duration(milliseconds: 700));
 }
 
@@ -209,8 +210,9 @@ void main() {
       await settlePhone(t);
       await t.tap(find.text('Nainital').last);
       await settlePhone(t);
-      await t.enterText(find.byType(EditableText).at(2), '1800');
       await _tapText(t, 'One way');
+      await t.enterText(find.byType(EditableText).first, '1800');
+      await t.pump();
       await _save(t);
       expect(c.saved, hasLength(1));
       final body = c.saved.single.single;
@@ -255,7 +257,7 @@ void main() {
       await t.tap(find.byTooltip('Edit route').first);
       await t.pump(const Duration(milliseconds: 500));
       expect(find.text(TaxiRouteStrings.otherPlaceNote), findsOneWidget);
-      await t.tap(find.text('Save').last);
+      await _save(t);
       await t.pump();
       await t.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
       await t.pump(const Duration(milliseconds: 100));

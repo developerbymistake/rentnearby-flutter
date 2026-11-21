@@ -13,6 +13,7 @@ import '../../trip/models/trip_city_model.dart';
 import '../strings/taxi_hub_strings.dart';
 import '../widgets/taxi_widgets.dart';
 import 'taxi_hub_controller.dart';
+import '../../owner_core/sheets/sheet_disposables.dart';
 
 abstract final class TaxiRules {
   static const int minFare = 100;
@@ -66,7 +67,7 @@ abstract final class TaxiEditFareSheet {
       art: ListingArt.moneyBag,
       size: SheetSize.hug,
       dirty: () => TaxiRules.parse(text.text) != route.fare,
-      child: (c) => ValueListenableBuilder<String>(
+      child: (c) => SheetDisposables(notifiers: [text, value], child: ValueListenableBuilder<String>(
         valueListenable: value,
         builder: (_, t, _) {
           final err = t.trim().isEmpty ? null : TaxiRules.fareError(t);
@@ -95,7 +96,7 @@ abstract final class TaxiEditFareSheet {
             ],
           );
         },
-      ),
+      )),
       footer: (c) => ValueListenableBuilder<String>(
         valueListenable: value,
         builder: (_, t, _) => Obx(
@@ -117,10 +118,7 @@ abstract final class TaxiEditFareSheet {
           ),
         ),
       ),
-    ).whenComplete(() {
-      text.dispose();
-      value.dispose();
-    });
+    );
   }
 }
 
@@ -146,7 +144,7 @@ abstract final class TaxiLocalRateSheet {
       art: ListingArt.mountain,
       size: SheetSize.hug,
       dirty: () => rate.text != (taxi.localDayRate == null ? '' : Money.group(taxi.localDayRate ?? 0)) || km.text != (taxi.localDayKm?.toString() ?? ''),
-      child: (c) => ValueListenableBuilder<int>(
+      child: (c) => SheetDisposables(notifiers: [rate, km, tick], child: ValueListenableBuilder<int>(
         valueListenable: tick,
         builder: (_, _, _) {
           final r = TaxiRules.parse(rate.text);
@@ -177,7 +175,7 @@ abstract final class TaxiLocalRateSheet {
             ],
           );
         },
-      ),
+      )),
       footer: (c) => ValueListenableBuilder<int>(
         valueListenable: tick,
         builder: (_, _, _) => Obx(() {
@@ -197,11 +195,7 @@ abstract final class TaxiLocalRateSheet {
           );
         }),
       ),
-    ).whenComplete(() {
-      rate.dispose();
-      km.dispose();
-      tick.dispose();
-    });
+    );
   }
 
   static Widget _label(String t) => Padding(
@@ -269,7 +263,7 @@ abstract final class TaxiEditRouteSheet {
           draft.to.name != route.toName ||
           draft.roundTrip != route.roundTrip ||
           TaxiRules.parse(fare.text) != route.fare,
-      child: (c) => ValueListenableBuilder<int>(
+      child: (c) => SheetDisposables(notifiers: [fare, tick], child: ValueListenableBuilder<int>(
         valueListenable: tick,
         builder: (_, _, _) {
           final fareErr = fare.text.trim().isEmpty ? null : TaxiRules.fareError(fare.text);
@@ -376,7 +370,7 @@ abstract final class TaxiEditRouteSheet {
             ],
           );
         },
-      ),
+      )),
       footer: (c) => ValueListenableBuilder<int>(
         valueListenable: tick,
         builder: (_, _, _) => Obx(() {
@@ -405,10 +399,7 @@ abstract final class TaxiEditRouteSheet {
           );
         }),
       ),
-    ).whenComplete(() {
-      fare.dispose();
-      tick.dispose();
-    });
+    );
   }
 }
 

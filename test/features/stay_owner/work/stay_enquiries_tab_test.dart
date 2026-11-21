@@ -2,6 +2,7 @@ import 'package:bakhli/features/owner_core/plan/gate_keys.dart';
 import 'package:dio/dio.dart';
 import 'package:bakhli/features/stay/enquiries/stay_enquiries_controller.dart';
 import 'package:bakhli/features/stay_owner/enquiries_tab/stay_enquiries_tab.dart';
+import 'package:bakhli/features/stay_owner/enquiries_tab/stay_owner_enquiry_card.dart';
 import 'package:bakhli/features/stay_owner/enquiries_tab/stay_quiet_week_banner.dart';
 import 'package:bakhli/models/my_plan_model.dart';
 import 'package:flutter/material.dart';
@@ -137,6 +138,22 @@ void main() {
       expect(find.text('Call guest'), findsNWidgets(2));
       expect(find.text('Not available'), findsNWidgets(2));
       expect(find.textContaining('dvance'), findsNothing);
+    });
+
+    testWidgets('o_st_17_pushFocus_scrollsToAndHighlightsTheCard', (t) async {
+      final many = [for (var i = 0; i < 12; i++) enquiryJson(id: 'f$i', name: 'Guest $i')];
+      final c = setUpEnquiries({StayEnquiryBucket.newOnes: pageJson(many, newCount: 12)});
+      await pumpPhone(t, const StayEnquiriesTab());
+      await _settle(t);
+      expect(find.text('Guest 11'), findsNothing);
+      c.focusId.value = 'f11';
+      await t.pump();
+      await t.pump(const Duration(milliseconds: 400));
+      await _settle(t);
+      expect(find.text('Guest 11').hitTestable(), findsOneWidget);
+      final card = t.widget<StayOwnerEnquiryCard>(find.ancestor(of: find.text('Guest 11'), matching: find.byType(StayOwnerEnquiryCard)));
+      expect(card.highlighted, isTrue);
+      expect(t.widget<StayOwnerEnquiryCard>(find.byType(StayOwnerEnquiryCard).first).highlighted, isFalse);
     });
 
     testWidgets('o_st_17_listedMissing_partDropped and callHiddenWithoutPhone', (t) async {

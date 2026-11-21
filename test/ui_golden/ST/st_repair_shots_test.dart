@@ -96,7 +96,7 @@ Future<void> _pump(WidgetTester t, double w, double s) async {
 
 class _Guest extends StayGuestController {
   @override
-  Future<StayDetailModel?> getById(String id) async => StayDetailModel.fromJson({
+  Future<StayDetailModel?> getById(String id, {Map<String, dynamic>? dates}) async => StayDetailModel.fromJson({
         'id': 's1',
         'userId': 'o',
         'slug': 'riverside',

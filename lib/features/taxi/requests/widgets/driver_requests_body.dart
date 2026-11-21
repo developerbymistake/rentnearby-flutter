@@ -112,6 +112,7 @@ class _DriverRequestsBodyState extends State<DriverRequestsBody> with AutomaticK
   late final DriverRequestsController _c = widget.controller ?? DriverRequestsController.to;
   final Set<String> _expiredSeen = {};
   Timer? _timer;
+  final ValueNotifier<int> _ticks = ValueNotifier(0);
   Worker? _countWorker;
   String? _notice;
 
@@ -132,6 +133,7 @@ class _DriverRequestsBodyState extends State<DriverRequestsBody> with AutomaticK
   @override
   void dispose() {
     _timer?.cancel();
+    _ticks.dispose();
     _countWorker?.dispose();
     super.dispose();
   }
@@ -146,7 +148,7 @@ class _DriverRequestsBodyState extends State<DriverRequestsBody> with AutomaticK
       if (_c.remaining(o) == Duration.zero && _expiredSeen.add('${o.offerId}:${o.state.wire}')) reload = true;
     }
     if (reload) unawaited(_c.reloadList());
-    if (counting) setState(() {});
+    if (counting) _ticks.value++;
   }
 
   bool _enabled(DriverOffer o) =>
@@ -256,6 +258,18 @@ class _DriverRequestsBodyState extends State<DriverRequestsBody> with AutomaticK
     return out;
   }
 
+  Widget _offerCard(DriverOffer offer) => DriverOfferCard(
+        offer: offer,
+        timeLeft: offer.state == OfferState.ringing || offer.state == OfferState.selected
+            ? TaxiWorkStrings.timeLeft(_c.countdownText(offer))
+            : null,
+        expired: offer.state == OfferState.ringing && _c.remaining(offer) == Duration.zero,
+        enabled: _enabled(offer),
+        onOpen: widget.onOpenOffer == null ? null : () => _open(offer.offerId),
+        onAccept: () => _act(() => _c.accept(offer.offerId)),
+        onDecline: () => _act(() => _c.decline(offer.offerId)),
+      );
+
   Widget _build(Object row) {
     return switch (row) {
       _StateKind.skeleton => const _Skeleton(),
@@ -295,17 +309,9 @@ class _DriverRequestsBodyState extends State<DriverRequestsBody> with AutomaticK
         ),
       _Card(:final offer) => Padding(
           padding: EdgeInsets.only(top: DS.gv(14)),
-          child: DriverOfferCard(
-            offer: offer,
-            timeLeft: offer.state == OfferState.ringing || offer.state == OfferState.selected
-                ? TaxiWorkStrings.timeLeft(_c.countdownText(offer))
-                : null,
-            expired: offer.state == OfferState.ringing && _c.remaining(offer) == Duration.zero,
-            enabled: _enabled(offer),
-            onOpen: widget.onOpenOffer == null ? null : () => _open(offer.offerId),
-            onAccept: () => _act(() => _c.accept(offer.offerId)),
-            onDecline: () => _act(() => _c.decline(offer.offerId)),
-          ),
+          child: offer.state == OfferState.ringing || offer.state == OfferState.selected
+              ? ValueListenableBuilder<int>(valueListenable: _ticks, builder: (_, _, _) => _offerCard(offer))
+              : _offerCard(offer),
         ),
       _Note(:final text, :final key) => Padding(
           padding: EdgeInsets.only(top: DS.gv(14)),

@@ -1,5 +1,7 @@
 import '../../../controllers/auth_controller.dart';
 import '../data/owner_cache.dart';
+import 'owner_push_sync.dart';
+import 'shell_teardown.dart';
 
 typedef OwnerLogoutHook = void Function(LogoutReason reason, String? userId);
 
@@ -24,5 +26,7 @@ abstract final class OwnerSessionHooks {
         h(reason, userId);
       } catch (_) {}
     }
+    ShellTeardown.reset();
+    OwnerPushSync.reset();
   }
 }

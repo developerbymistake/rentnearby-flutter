@@ -23,6 +23,7 @@ import '../strings/taxi_calendar_strings.dart';
 import '../strings/taxi_gate_strings_calendar.dart';
 import 'taxi_calendar_controller.dart';
 import 'taxi_calendar_widgets.dart';
+import '../../owner_core/sheets/sheet_disposables.dart';
 
 enum TaxiTripField { label, date, from, to, note }
 
@@ -152,23 +153,19 @@ class TaxiTripForm extends ChangeNotifier {
 abstract final class TaxiTripSheet {
   static Future<bool> show(BuildContext context, {required TaxiCalendarController controller, DateTime? date, CalendarEntry? editing}) async {
     final form = TaxiTripForm(controller: controller, date: date, editing: editing);
-    try {
-      final saved = await OwnerSheet.show<bool>(
-        context,
-        look: TaxiCal.look,
-        title: editing == null ? TaxiCalendarStrings.addTripTitle : TaxiCalendarStrings.editTripTitle,
-        subtitle: TaxiCalendarStrings.addTripSub,
-        dirty: () => form.dirty,
-        child: (_) => TaxiTripFields(form: form),
-        footer: (c) => SingleFlightButton(
-          onPressed: () => save(c, form),
-          builder: (c, onPressed, busy) => PrimaryButton(label: TaxiCalendarStrings.saveTrip, tone: TaxiCal.kit, loading: busy, onPressed: onPressed),
-        ),
-      );
-      return saved == true;
-    } finally {
-      WidgetsBinding.instance.addPostFrameCallback((_) => form.dispose());
-    }
+    final saved = await OwnerSheet.show<bool>(
+      context,
+      look: TaxiCal.look,
+      title: editing == null ? TaxiCalendarStrings.addTripTitle : TaxiCalendarStrings.editTripTitle,
+      subtitle: TaxiCalendarStrings.addTripSub,
+      dirty: () => form.dirty,
+      child: (_) => SheetDisposables(notifiers: [form], child: TaxiTripFields(form: form)),
+      footer: (c) => SingleFlightButton(
+        onPressed: () => save(c, form),
+        builder: (c, onPressed, busy) => PrimaryButton(label: TaxiCalendarStrings.saveTrip, tone: TaxiCal.kit, loading: busy, onPressed: onPressed),
+      ),
+    );
+    return saved == true;
   }
 
   static Future<void> save(BuildContext context, TaxiTripForm form) async {

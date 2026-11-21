@@ -223,6 +223,7 @@ class _StayDetailScreenState extends State<StayDetailScreen> {
                     itemBuilder: (_, i) => CachedNetworkImage(
                       imageUrl: s.photos[i],
                       fit: BoxFit.cover,
+                      memCacheWidth: (MediaQuery.sizeOf(context).width * MediaQuery.devicePixelRatioOf(context)).round(),
                       placeholder: (ctx, url) => const TemplatePlaceholder(height: double.infinity, radius: 0),
                       errorWidget: (ctx, url, err) => DetailHeroArt(tone: _kTone, art: ListingArt.hotel),
                     ),

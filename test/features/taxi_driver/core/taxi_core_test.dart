@@ -1,6 +1,7 @@
 import 'package:bakhli/features/owner_core/data/owner_cache.dart';
 import 'package:bakhli/features/owner_core/data/owner_result.dart';
 import 'package:bakhli/features/owner_core/home/owner_home_models.dart';
+import 'package:bakhli/features/owner_core/home/numbers_row.dart';
 import 'package:bakhli/features/owner_core/plan/plan_gate.dart';
 import 'package:bakhli/features/taxi/models/taxi_owner_model.dart';
 import 'package:bakhli/features/taxi_driver/hub/taxi_hub_screen.dart';
@@ -150,6 +151,23 @@ void main() {
       expect(h.api.calls, before + 1, reason: 'an expired row the server still sends must not reload every second');
       Get.delete<TaxiDriverHomeController>(force: true);
     });
+
+    test('countdown ticker stops while the app is in the background and restarts on resume', () async {
+      var now = DateTime(2026, 11, 21, 10);
+      final by = now.add(const Duration(seconds: 2)).toUtc().toIso8601String();
+      final h = TaxiHarness.setUp(homeJson(attention: [att('TravellerChoseYou', 1, {'offerId': 'o', 'confirmBy': by})]), registerHome: false, clock: () => now);
+      Get.put<TaxiDriverHomeController>(h.home);
+      await h.home.reload();
+      final before = h.api.calls;
+      h.home.didChangeAppLifecycleState(AppLifecycleState.paused);
+      now = now.add(const Duration(seconds: 3));
+      await Future<void>.delayed(const Duration(milliseconds: 1300));
+      expect(h.api.calls, before, reason: 'no tick in the background');
+      h.home.didChangeAppLifecycleState(AppLifecycleState.resumed);
+      await Future<void>.delayed(const Duration(milliseconds: 1300));
+      expect(h.api.calls, greaterThan(before));
+      Get.delete<TaxiDriverHomeController>(force: true);
+    });
   });
 
   group('home screen is reactive', () {
@@ -173,6 +191,20 @@ void main() {
       now = now.add(const Duration(seconds: 1));
       await tester.pump(const Duration(seconds: 1));
       expect(find.text('Traveller chose you. Confirm in 12:39'), findsOneWidget);
+      await finish(tester);
+    });
+
+    testWidgets('a countdown tick rebuilds only the attention card', (tester) async {
+      var now = DateTime(2026, 11, 21, 10);
+      final by = now.add(const Duration(minutes: 12, seconds: 40)).toUtc().toIso8601String();
+      final h = TaxiHarness.setUp(homeJson(attention: [att('TravellerChoseYou', 1, {'offerId': 'o', 'confirmBy': by})]), clock: () => now);
+      await pumpPhone(tester, TaxiDriverHomeScreen(controller: h.home), size: const Size(360, 800));
+      await settle(tester);
+      final numbers = tester.widget(find.byType(NumbersRow));
+      now = now.add(const Duration(seconds: 1));
+      await tester.pump(const Duration(seconds: 1));
+      expect(find.text('Traveller chose you. Confirm in 12:39'), findsOneWidget);
+      expect(identical(tester.widget(find.byType(NumbersRow)), numbers), isTrue);
       await finish(tester);
     });
 

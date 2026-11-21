@@ -61,38 +61,3 @@ class MonthPager extends StatelessWidget {
     );
   }
 }
-
-class MonthChips extends StatelessWidget {
-  const MonthChips({super.key, required this.month, required this.window, required this.today, required this.onMonth});
-
-  final DateTime month;
-  final CalendarWindow window;
-  final DateTime today;
-  final ValueChanged<DateTime> onMonth;
-
-  @override
-  Widget build(BuildContext context) {
-    final months = window.months(today);
-    if (months.length < 2) return const SizedBox.shrink();
-    return SizedBox(
-      height: DS.s(36),
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        padding: DS.sym(h: 18),
-        itemCount: months.length,
-        itemBuilder: (context, i) {
-          final m = months[i];
-          final on = m.year == month.year && m.month == month.month;
-          return Padding(
-            padding: EdgeInsets.only(right: DS.gh(8)),
-            child: ChoiceChip(
-              selected: on,
-              label: Text(OwnerSharedStrings.monthsShort[m.month - 1]),
-              onSelected: (_) => onMonth(m),
-            ),
-          );
-        },
-      ),
-    );
-  }
-}

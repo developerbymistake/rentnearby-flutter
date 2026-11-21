@@ -69,6 +69,27 @@ void main() {
     });
   }
 
+  testWidgets('render o_st_48', (tester) async {
+    final h = StayHarness.setUp(homeJson(
+      statusLine: {'code': 'NewNeedReply', 'args': {'count': 2}},
+      badge: 2,
+      stay: {'newEnquiries': 2, 'offersWaiting': 1, 'confirmed': 3},
+      attention: [
+        ...busy,
+        att('Festival', 10, {'name': 'Diwali week', 'dateFrom': '2026-11-06', 'dateTo': '2026-11-12', 'festivalId': 'f1'}),
+        att('ShareListing', 11, {'slug': 'x'}),
+      ],
+    ));
+    await renderOwnerFrame(tester, 'o_st_48', const StayOwnerHomeScreen(), arrange: (t) async {
+      await t.runAsync(() => h.home.checkNotifications());
+      await t.pump(const Duration(milliseconds: 100));
+    });
+    for (final s in ['Needs attention', '2 enquiries waiting', 'Diwali week starts 6 Nov', 'Set your price for those days.', 'Set price', 'See all (3)']) {
+      expect(find.text(s), findsWidgets, reason: s);
+    }
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('render o_st_67 A', (tester) async {
     final h = StayHarness.setUp(homeJson(), offline: true);
     await renderOwnerFrame(tester, 'o_st_67', const StayOwnerHomeScreen(), part: 'A', arrange: (t) async {

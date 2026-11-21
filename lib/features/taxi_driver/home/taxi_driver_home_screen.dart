@@ -197,8 +197,7 @@ class TaxiHomeBody extends StatelessWidget {
     final actions = TaxiHomeActions.attention(l.id);
     final denied = controller.notificationsDenied.value;
     final rows = TaxiHomeCompose.attention(dto, denied: denied);
-    final now = controller.now.value;
-    final views = TaxiHomeCompose.rowViews(rows, actions, now);
+    final views = TaxiHomeCompose.rowViews(rows, actions, controller.nowUntracked);
     final total = TaxiHomeCompose.attentionCount(dto, rows, denied: denied);
     final banner = TaxiHomeCompose.banner(state, l);
     final n = dto.numbers;
@@ -263,7 +262,11 @@ class TaxiHomeBody extends StatelessWidget {
                     )
                   : null,
             ))
-            ..add(TaxiRowsCard(rows: views.take(2).toList(), margin: DS.insets(l: 18, t: 8, r: 18), fill: TaxiLook.accentSoft));
+            ..add(Obx(() => TaxiRowsCard(
+                  rows: TaxiHomeCompose.rowViews(rows, actions, controller.now.value).take(2).toList(),
+                  margin: DS.insets(l: 18, t: 8, r: 18),
+                  fill: TaxiLook.accentSoft,
+                )));
         }
         if (banner != null) {
           children.add(TaxiStrip(art: ListingArt.roundPushpin, text: banner, fill: TaxiLook.amberSoft, ink: TaxiLook.amberText));

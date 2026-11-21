@@ -368,8 +368,10 @@ class TaxiRouteCard3D extends StatelessWidget {
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(tag.toUpperCase(), maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(10.5, FontWeight.w700, Colors.white, letterSpacing: 0.7)),
-                          SizedBox(height: DS.s(2)),
+                          if (tag.isNotEmpty) ...[
+                            Text(tag.toUpperCase(), maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(10.5, FontWeight.w700, Colors.white, letterSpacing: 0.7)),
+                            SizedBox(height: DS.s(2)),
+                          ],
                           Text(title, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(17, FontWeight.w700, Colors.white, height: 1.2)),
                           SizedBox(height: DS.s(2)),
                           FitLine3D(text: subtitle, style: Ink3D.text(12.5, FontWeight.w600, Colors.white, letterSpacing: 0), stretch: 1.6),

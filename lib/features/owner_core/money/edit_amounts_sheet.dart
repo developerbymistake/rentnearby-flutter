@@ -5,6 +5,7 @@ import '../data/owner_result.dart';
 import '../data/single_flight.dart';
 import '../look/owner_look.dart';
 import '../sheets/owner_sheet.dart';
+import '../sheets/sheet_disposables.dart';
 import '../strings/owner_shared_strings.dart';
 import '../../../utils/app_toast.dart';
 import 'money_note_math.dart';
@@ -36,39 +37,35 @@ abstract final class EditAmountsSheet {
       return n.finalAmount != initial.finalAmount || n.receivedSoFar != initial.receivedSoFar || n.paidInFull != initial.paidInFull;
     }
 
-    try {
-      final saved = await OwnerSheet.show<bool>(
-        context,
-        look: look,
-        title: words.title,
-        dirty: dirty,
-        child: (_) => MoneyNotesFields(controller: controller, look: look, finalHint: words.finalHint),
-        footer: (c) => ListenableBuilder(
-          listenable: controller,
-          builder: (c, _) => SingleFlightButton(
-            onPressed: controller.error != null
-                ? null
-                : () async {
-                    final r = await save(controller.note);
-                    if (!c.mounted) return;
-                    switch (r) {
-                      case OwnerOk():
-                        Navigator.of(c).pop(true);
-                      case OwnerOffline():
-                        AppToast.error(OwnerSharedStrings.noConnection);
-                      case OwnerRefused(:final message):
-                        AppToast.error(message ?? OwnerSharedStrings.noConnection);
-                      case OwnerFailed():
-                        AppToast.error(OwnerSharedStrings.noConnection);
-                    }
-                  },
-            builder: (c, onPressed, busy) => PrimaryButton(label: words.save, tone: look.kit, loading: busy, onPressed: onPressed),
-          ),
+    final saved = await OwnerSheet.show<bool>(
+      context,
+      look: look,
+      title: words.title,
+      dirty: dirty,
+      child: (_) => SheetDisposables(notifiers: [controller], child: MoneyNotesFields(controller: controller, look: look, finalHint: words.finalHint)),
+      footer: (c) => ListenableBuilder(
+        listenable: controller,
+        builder: (c, _) => SingleFlightButton(
+          onPressed: controller.error != null
+              ? null
+              : () async {
+                  final r = await save(controller.note);
+                  if (!c.mounted) return;
+                  switch (r) {
+                    case OwnerOk():
+                      Navigator.of(c).pop(true);
+                    case OwnerOffline():
+                      AppToast.error(OwnerSharedStrings.noConnection);
+                    case OwnerRefused(:final message):
+                      AppToast.error(message ?? OwnerSharedStrings.noConnection);
+                    case OwnerFailed():
+                      AppToast.error(OwnerSharedStrings.noConnection);
+                  }
+                },
+          builder: (c, onPressed, busy) => PrimaryButton(label: words.save, tone: look.kit, loading: busy, onPressed: onPressed),
         ),
-      );
-      return saved == true;
-    } finally {
-      WidgetsBinding.instance.addPostFrameCallback((_) => controller.dispose());
-    }
+      ),
+    );
+    return saved == true;
   }
 }

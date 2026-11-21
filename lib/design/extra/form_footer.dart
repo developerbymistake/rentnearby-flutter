@@ -17,6 +17,7 @@ class FormFooter extends StatelessWidget {
     this.onSecondary,
     this.note,
     this.top,
+    this.bottom,
     this.primaryKey,
     this.secondaryKey,
   });
@@ -31,6 +32,7 @@ class FormFooter extends StatelessWidget {
   final VoidCallback? onSecondary;
   final String? note;
   final Widget? top;
+  final Widget? bottom;
   final Key? primaryKey;
   final Key? secondaryKey;
 
@@ -57,6 +59,7 @@ class FormFooter extends StatelessWidget {
                 padding: EdgeInsets.only(top: DS.s(8)),
                 child: Text(n, maxLines: 3, textAlign: TextAlign.center, overflow: TextOverflow.ellipsis, style: Ink3D.text(12, FontWeight.w400, Form3D.muted, letterSpacing: 0)),
               ),
+            ?bottom,
           ],
         ),
       ),

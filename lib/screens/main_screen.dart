@@ -183,7 +183,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   }
 
   void _onShellChanged(ShellKind next) {
-    if (next == _shellKind || !mounted || _auth.isLoggingOut.value) return;
+    if (next == _shellKind || !mounted || _auth.blocksShellSwitch) return;
     final old = _shellKind;
     _shellKind = next;
     for (final key in tabKeys) {

@@ -3,14 +3,15 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import '../../../design/design.dart';
 import '../../../design/extra/ext_taxi_owner.dart';
-import '../../../models/browse_item.dart';
 import '../../../utils/app_toast.dart';
 import '../../../utils/search_fold.dart';
 import '../../../widgets/location_switch_sheet.dart';
 import '../../owner_core/plan/gate_keys.dart';
 import '../../owner_core/plan/plan_gate.dart';
 import '../../owner_core/plan/plan_keys.dart';
+import '../../owner_core/plan/soft_lock.dart';
 import '../../taxi_driver/strings/taxi_gate_strings.dart';
+import '../../taxi_driver/strings/taxi_setup_strings.dart';
 import '../../trip/data/trip_city_catalog.dart';
 import '../../trip/models/trip_city_model.dart';
 import '../../trip/trip_strings_a3.dart';
@@ -147,7 +148,7 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> with TickerProvider
         tripType: r.tripType,
       ));
     }
-    _formOpen = _routes.length < _max;
+    _formOpen = _routes.length < _max && !(PlanGate.canUpgrade && _routes.isNotEmpty && _planFull);
     _from = _defaultFrom;
     _syncRateFields();
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -461,7 +462,8 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> with TickerProvider
               child: Column(children: [
                 PageHeader3D(
                   tone: _tone,
-                  title: 'Routes and fares',
+                  title: TaxiSetupStrings.routesTitle,
+                  subtitle: TaxiSetupStrings.routesStep,
                   art: ListingArt.compass,
                   inlineTitle: true,
                   onBack: _onBack,
@@ -470,20 +472,21 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> with TickerProvider
                   child: ListView(
                     padding: EdgeInsets.only(bottom: DS.s(24)),
                     children: [
-                      SetupEntrance(controller: _anim, index: 0, count: 4, child: _localRateCard()),
+                      SetupEntrance(controller: _anim, index: 0, count: 5, child: _meterCard()),
                       SetupEntrance(
                         controller: _anim,
                         index: 1,
-                        count: 4,
+                        count: 5,
                         child: Column(children: [for (var i = 0; i < _routes.length; i++) _summaryCard(i)]),
                       ),
                       SetupEntrance(
                         controller: _anim,
                         index: 2,
-                        count: 4,
+                        count: 5,
                         child: Column(children: [if (_formOpen) _form()]),
                       ),
-                      SetupEntrance(controller: _anim, index: 3, count: 4, child: _addRow()),
+                      SetupEntrance(controller: _anim, index: 3, count: 5, child: _tipRow()),
+                      SetupEntrance(controller: _anim, index: 4, count: 5, child: _localRateCard()),
                     ],
                   ),
                 ),
@@ -492,10 +495,23 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> with TickerProvider
           ),
           bottomNavigationBar: Obx(() => FormFooter(
                 tone: _tone,
-                top: const ToastDock(),
-                primaryLabel: 'Save',
+                top: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                  const ToastDock(),
+                  if (_formOpen)
+                    Padding(
+                      padding: EdgeInsets.only(bottom: DS.gv(8)),
+                      child: Text(
+                        TaxiSetupStrings.footerMeter(_routes.length, _planMax, free: PlanGate.canUpgrade),
+                        key: const ValueKey('routes_footer_meter'),
+                        textAlign: TextAlign.center,
+                        style: Ink3D.text(12, FontWeight.w600, Form3D.muted, letterSpacing: 0),
+                      ),
+                    ),
+                ]),
+                primaryLabel: _formOpen ? TaxiSetupStrings.saveRoute : TaxiSetupStrings.save,
                 primaryLoading: _ctrl.isSaving.value,
                 onPrimary: _ctrl.isSaving.value ? null : _save,
+                bottom: _formOpen ? null : _addRow(),
               )),
         ),
         Obx(() => _ctrl.isSaving.value
@@ -509,9 +525,9 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> with TickerProvider
     final r = _routes[i];
     return TaxiRouteCard3D(
       tone: _tone,
-      tag: '${r.from.name} to',
-      title: r.to.name,
-      subtitle: '${BrowseItem.inr(r.fare)} · ${TaxiOptionSets.tripLabel(r.tripType)}',
+      tag: '',
+      title: TaxiSetupStrings.routeTitle(r.from.name, r.to.name),
+      subtitle: TaxiSetupStrings.routeLine(i + 1, TaxiOptionSets.tripLabel(r.tripType), r.fare),
       note: r.active ? TaxiRouteStrings.activeInRequests : TaxiRouteStrings.notActive,
       noteOk: r.active,
       onEdit: () => _editRoute(i),
@@ -540,7 +556,8 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> with TickerProvider
       tone: _tone,
       art: ListingArt.compass,
       artSide: FormArtSide.right,
-      title: 'Route $number',
+      title: TaxiSetupStrings.routeNumber(number),
+      hint: _editingIndex == null ? TaxiSetupStrings.newRoute : TaxiSetupStrings.editRoute,
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         _placeField(
             label: 'From *', first: true, asset: ListingArt.roundPushpin, place: _from, ring: _ring == _Ring.from, onTap: () => _pickPlace(true)),
@@ -627,32 +644,79 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> with TickerProvider
     );
   }
 
+  Widget _meterCard() {
+    final used = _routes.length;
+    final limit = _planMax;
+    final free = PlanGate.canUpgrade;
+    final full = free && _planFull;
+    final p = ListingPalette.coral;
+    return FormSectionCard(
+      tone: _tone,
+      art: ListingArt.flag,
+      title: TaxiSetupStrings.routes,
+      trailing: Container(
+        key: const ValueKey('routes_meter_chip'),
+        padding: DS.sym(h: 9, v: 3),
+        decoration: BoxDecoration(color: p.tint, borderRadius: DS.br(CardRadius.pill)),
+        child: Text(TaxiSetupStrings.meterChip(used, limit, free: free), style: Ink3D.text(11, FontWeight.w700, p.text, letterSpacing: 0)),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        ClipRRect(
+          borderRadius: DS.br(CardRadius.pill),
+          child: LinearProgressIndicator(
+            value: limit <= 0 ? 0 : (used / limit).clamp(0.0, 1.0),
+            minHeight: DS.s(6),
+            backgroundColor: p.page,
+            valueColor: AlwaysStoppedAnimation(p.g2),
+          ),
+        ),
+        Gap.v(10),
+        Row(children: [
+          Expanded(
+            child: Text(
+              full && _formOpen ? TaxiGateStrings.lineFree(limit, TaxiGateStrings.plusRoutes) : TaxiSetupStrings.savedLine(used, limit, free: free),
+              key: const ValueKey('routes_meter_line'),
+              style: FieldMessage.helperStyle.copyWith(fontSize: DS.f(12)),
+            ),
+          ),
+          if (full && _formOpen) ...[Gap.h(8), SeePlusButton(taxi: true, onPressed: () => PlanGate.showLimit(context, TaxiGateStrings.routeGate()))],
+        ]),
+      ]),
+    );
+  }
+
+  Widget _tipRow() {
+    if (!PlanGate.canUpgrade || !_planFull || _formOpen) return const SizedBox.shrink();
+    return Padding(
+      padding: EdgeInsets.fromLTRB(DS.s(18), DS.gv(20), DS.s(18), 0),
+      child: KeyedSubtree(
+        key: GateKeys.softCard,
+        child: SoftLock.row(
+          text: TaxiGateStrings.freePlanTip(_planMax, TaxiGateStrings.plusRoutes),
+          taxi: true,
+          onTap: () => PlanGate.showLimit(context, TaxiGateStrings.routeGate()),
+        ),
+      ),
+    );
+  }
+
   Widget _addRow() {
     final n = _count;
     final enabled = n < _max;
     final soft = PlanGate.canUpgrade && _planFull && !_formOpen;
-    return Column(children: [
-      if (PlanGate.canUpgrade && _planFull)
-        Padding(
-          padding: EdgeInsets.fromLTRB(DS.s(18), DS.gv(8), DS.s(18), 0),
-          child: KeyedSubtree(
-            key: GateKeys.softCard,
-            child: Text(TaxiGateStrings.freePlanTip(_planMax, TaxiGateStrings.plusRoutes), style: FieldMessage.helperStyle.copyWith(fontSize: DS.f(12))),
-          ),
-        ),
-      Opacity(
-        opacity: enabled ? 1 : 0.5,
-        child: KeyedSubtree(
-          key: soft ? GateKeys.softRow : null,
-          child: DashedAddRow3D(
-            tone: _tone,
-            label: TaxiGateStrings.addAnother,
-            trailing: !enabled ? 'Limit reached' : (soft ? 'Plus' : '$n of $_planMax'),
-            onTap: soft ? () => PlanGate.showLimit(context, TaxiGateStrings.routeGate()) : _addAnother,
-          ),
+    return Opacity(
+      opacity: enabled ? 1 : 0.5,
+      child: KeyedSubtree(
+        key: soft ? const ValueKey('routes_add_locked') : null,
+        child: DashedAddRow3D(
+          tone: _tone,
+          label: TaxiGateStrings.addAnother,
+          margin: EdgeInsets.only(top: DS.gv(10)),
+          trailing: !enabled ? 'Limit reached' : (soft ? TaxiSetupStrings.plus : '$n of $_planMax'),
+          onTap: _addAnother,
         ),
       ),
-    ]);
+    );
   }
 }
 

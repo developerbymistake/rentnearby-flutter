@@ -14,6 +14,7 @@ import '../strings/stay_format.dart';
 import '../strings/stay_hub_strings.dart';
 import '../widgets/stay_widgets.dart';
 import 'stay_hub_controller.dart';
+import '../../owner_core/sheets/sheet_disposables.dart';
 
 abstract final class StayEditPriceSheet {
   static int? parse(String text) => int.tryParse(text.replaceAll(',', '').trim());
@@ -47,7 +48,7 @@ abstract final class StayEditPriceSheet {
       art: ListingArt.moneyBag,
       size: SheetSize.hug,
       dirty: () => parse(text.text) != room.pricePerNight,
-      child: (c) => ValueListenableBuilder<String>(
+      child: (c) => SheetDisposables(notifiers: [text, value], child: ValueListenableBuilder<String>(
         valueListenable: value,
         builder: (_, t, _) {
           final v = parse(t);
@@ -83,7 +84,7 @@ abstract final class StayEditPriceSheet {
             ],
           );
         },
-      ),
+      )),
       footer: (c) => ValueListenableBuilder<String>(
         valueListenable: value,
         builder: (_, t, _) => Obx(
@@ -105,10 +106,7 @@ abstract final class StayEditPriceSheet {
           ),
         ),
       ),
-    ).whenComplete(() {
-      text.dispose();
-      value.dispose();
-    });
+    );
   }
 }
 

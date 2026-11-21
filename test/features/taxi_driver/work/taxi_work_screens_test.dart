@@ -9,6 +9,7 @@ import 'package:bakhli/features/taxi/requests/driver_request_detail_screen.dart'
 import 'package:bakhli/features/taxi/requests/driver_ring_screen.dart';
 import 'package:bakhli/features/taxi/requests/models/driver_request_models.dart';
 import 'package:bakhli/features/taxi/requests/widgets/driver_bookings_section.dart';
+import 'package:bakhli/features/taxi/requests/widgets/driver_offer_card.dart';
 import 'package:bakhli/features/taxi/requests/widgets/driver_requests_body.dart';
 import 'package:bakhli/features/taxi/requests/widgets/driver_withdraw_sheet.dart';
 import 'package:bakhli/features/taxi_driver/requests_tab/taxi_requests_segments.dart';
@@ -302,6 +303,16 @@ void main() {
       expect(find.textContaining(' left'), findsNWidgets(3));
       await t.pump(const Duration(seconds: 1));
       expect(t.takeException(), isNull);
+    });
+
+    testWidgets('tick_rebuilds_only_counting_cards', (t) async {
+      await open(t, [fresh, missed]);
+      DriverOfferCard card(String route) => t.widget<DriverOfferCard>(find.ancestor(of: find.textContaining(route), matching: find.byType(DriverOfferCard)).first);
+      final missedBefore = card('Kathgodam to Nainital +3');
+      final freshBefore = card('Ranikhet +2');
+      await t.pump(const Duration(seconds: 1));
+      expect(identical(card('Kathgodam to Nainital +3'), missedBefore), isTrue);
+      expect(identical(card('Ranikhet +2'), freshBefore), isFalse);
     });
 
     for (final rows in [0, 1, 20]) {

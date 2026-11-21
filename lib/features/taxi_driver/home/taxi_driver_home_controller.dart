@@ -48,6 +48,14 @@ class TaxiDriverHomeController extends GetxController with WidgetsBindingObserve
   final switchBusy = false.obs;
   final switchOverride = Rxn<bool>();
   final now = Rx<DateTime>(DateTime.now());
+  DateTime _nowPlain = DateTime.now();
+
+  DateTime get nowUntracked => _nowPlain;
+
+  void _setNow(DateTime t) {
+    _nowPlain = t;
+    now.value = t;
+  }
 
   final _latest = LatestOnly();
   final _flight = SingleFlight<void>();
@@ -55,6 +63,7 @@ class TaxiDriverHomeController extends GetxController with WidgetsBindingObserve
   Worker? _tabWorker;
   Timer? _ticker;
   bool _tabCurrent = true;
+  bool _paused = false;
 
   OwnerHomeDto? get data => load.value.valueOrNull;
 
@@ -94,8 +103,17 @@ class TaxiDriverHomeController extends GetxController with WidgetsBindingObserve
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      refreshIfStale();
+      _paused = false;
+      if (_countdownExpired(_clock())) {
+        reload();
+      } else {
+        _syncTicker();
+        refreshIfStale();
+      }
       checkNotifications();
+    } else if (state == AppLifecycleState.paused) {
+      _paused = true;
+      _stopTicker();
     }
   }
 
@@ -120,7 +138,7 @@ class TaxiDriverHomeController extends GetxController with WidgetsBindingObserve
 
   void _syncTicker() {
     if (isClosed) return;
-    if (!_hasCountdown || !_tabCurrent) {
+    if (!_hasCountdown || !_tabCurrent || _paused) {
       _stopTicker();
       return;
     }
@@ -132,9 +150,17 @@ class TaxiDriverHomeController extends GetxController with WidgetsBindingObserve
     _ticker = null;
   }
 
+  bool _countdownExpired(DateTime at) =>
+      data?.attention.any((a) {
+        if (a.code != TaxiAttentionCodes.travellerChoseYou) return false;
+        final left = TaxiAttentionCopy.remaining(a, at);
+        return left != null && left.isNegative;
+      }) ??
+      false;
+
   void _tick() {
     if (isClosed) return;
-    now.value = _clock();
+    _setNow(_clock());
     final expired = data?.attention.any((a) {
           if (a.code != TaxiAttentionCodes.travellerChoseYou) return false;
           final left = TaxiAttentionCopy.remaining(a, now.value);
@@ -184,7 +210,7 @@ class TaxiDriverHomeController extends GetxController with WidgetsBindingObserve
         load.value = OwnerLoadData<OwnerHomeDto>(value);
         centreBadge.value = value.numbers.centreBadge;
         switchOverride.value = null;
-        now.value = _clock();
+        _setNow(_clock());
         OwnerCache.write(_uid, OwnerCacheKeys.home, value.raw);
       case OwnerRefused<OwnerHomeDto>(:final statusCode) when statusCode == 429:
         AppToast.info(TaxiHomeStrings.tooManyTries);

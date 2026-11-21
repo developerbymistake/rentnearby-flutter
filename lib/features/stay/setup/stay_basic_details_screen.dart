@@ -956,13 +956,15 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
 
   Widget _photoTile(int i) {
     final p = _photos[i];
+    final decode = (MediaQuery.sizeOf(context).width / 3 * MediaQuery.devicePixelRatioOf(context)).round().clamp(1, KitPhoto.maxDecodePx);
     final image = p.local != null
-        ? Image.file(p.local!, fit: BoxFit.cover, width: double.infinity, height: double.infinity)
+        ? Image.file(p.local!, fit: BoxFit.cover, width: double.infinity, height: double.infinity, cacheWidth: decode)
         : CachedNetworkImage(
             imageUrl: p.remote!.url,
             fit: BoxFit.cover,
             width: double.infinity,
             height: double.infinity,
+            memCacheWidth: decode,
             placeholder: (_, _) => const TemplatePlaceholder(radius: 0, height: double.infinity),
             errorWidget: (_, _, _) => const TemplatePlaceholder(radius: 0, height: double.infinity),
           );

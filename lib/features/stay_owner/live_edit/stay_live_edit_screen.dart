@@ -22,6 +22,7 @@ import '../stay_owner_deps.dart';
 import '../strings/stay_live_edit_strings.dart';
 import '../strings/stay_setup_strings.dart';
 import '../widgets/stay_widgets.dart';
+import '../../owner_core/sheets/sheet_disposables.dart';
 
 class StayLiveEditScreen extends StatefulWidget {
   const StayLiveEditScreen({super.key, this.setup});
@@ -92,13 +93,13 @@ class _StayLiveEditScreenState extends State<StayLiveEditScreen> {
       context,
       look: OwnerLook.stay,
       title: title,
-      child: (c) => ValueListenableBuilder<String?>(
+      child: (c) => SheetDisposables(notifiers: [ctrl, err], child: ValueListenableBuilder<String?>(
         valueListenable: err,
         builder: (_, e, _) => Padding(
           padding: EdgeInsets.only(top: DS.gv(6)),
           child: PillField(tone: _tone, controller: ctrl, autofocus: true, inputFormatters: noEmojiInputFormatters, errorText: e),
         ),
-      ),
+      )),
       footer: (c) => GradientPillButton(
         tone: _tone,
         label: StayLiveEditStrings.done,
@@ -111,10 +112,7 @@ class _StayLiveEditScreenState extends State<StayLiveEditScreen> {
           Navigator.of(c).pop(ctrl.text.trim());
         },
       ),
-    ).whenComplete(() {
-      ctrl.dispose();
-      err.dispose();
-    });
+    );
   }
 
   Future<void> _editType(StayOwnerModel s) async {
@@ -190,7 +188,7 @@ class _StayLiveEditScreenState extends State<StayLiveEditScreen> {
       context,
       look: OwnerLook.stay,
       title: StayLiveEditStrings.registrationNumber,
-      child: (c) => StatefulBuilder(
+      child: (c) => SheetDisposables(notifiers: [other, number, gstin], child: StatefulBuilder(
         builder: (c, set) {
           final t = typeOf(typeId);
           return Column(
@@ -223,7 +221,7 @@ class _StayLiveEditScreenState extends State<StayLiveEditScreen> {
             ],
           );
         },
-      ),
+      )),
       footer: (c) => GradientPillButton(
         tone: _tone,
         label: StayLiveEditStrings.done,
@@ -254,9 +252,6 @@ class _StayLiveEditScreenState extends State<StayLiveEditScreen> {
         _gstin = gstin.text.trim().isEmpty ? null : gstin.text.trim();
       });
     }
-    other.dispose();
-    number.dispose();
-    gstin.dispose();
   }
 
   Future<void> _editLocation() async {

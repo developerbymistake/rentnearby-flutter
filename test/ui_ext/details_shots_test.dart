@@ -119,7 +119,7 @@ class _Guest extends StayGuestController {
   _Guest(this.answer);
   final Future<StayDetailModel?> Function() answer;
   @override
-  Future<StayDetailModel?> getById(String id) => answer();
+  Future<StayDetailModel?> getById(String id, {Map<String, dynamic>? dates}) => answer();
 }
 
 class _Reports extends ReportController {

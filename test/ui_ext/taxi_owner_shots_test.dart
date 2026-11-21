@@ -451,7 +451,7 @@ void main() {
       };
       for (final c in cases.entries) {
         await open(t, c.value.$1, c.key, after: () async {
-          await t.tap(find.text('Next: Driver'));
+          await t.tap(find.text('Next'));
           await t.pump(const Duration(milliseconds: 600));
         });
         expect(t.takeException(), isNull);
@@ -511,10 +511,10 @@ void main() {
       };
       for (final c in cases.entries) {
         await open(t, c.value.$1, c.key, after: () async {
-          await t.tap(find.text('Next: Driver'));
+          await t.tap(find.text('Next'));
           await t.pump(const Duration(milliseconds: 700));
           if (c.value.$2) {
-            await t.tap(find.text('Next: Base'));
+            await t.tap(find.text('Next'));
             await t.pump(const Duration(milliseconds: 700));
           }
         });
@@ -526,7 +526,7 @@ void main() {
 
     testWidgets('veh_driver typed', (t) async {
       await open(t, taxiModel(step1: true), 'veh_driver', after: () async {
-        await t.tap(find.text('Next: Driver'));
+        await t.tap(find.text('Next'));
         await t.pump(const Duration(milliseconds: 700));
         await t.enterText(find.byType(TextFormField).first, 'UK0720150012345');
         await t.pump(const Duration(milliseconds: 300));
@@ -537,7 +537,7 @@ void main() {
 
     testWidgets('dob_picker', (t) async {
       await open(t, taxiModel(step1: true), 'dob_picker', after: () async {
-        await t.tap(find.text('Next: Driver'));
+        await t.tap(find.text('Next'));
         await t.pump(const Duration(milliseconds: 700));
         await t.tap(find.text('Select date'));
         await t.pump(const Duration(milliseconds: 700));
@@ -601,7 +601,7 @@ void main() {
     final withRoutes = taxiModel(step1: true, routes: true, rate: 2500);
     for (final cfg in _sizes) {
       testWidgets('routes_main${cfg.$3}', (t) async {
-        await open(t, withRoutes, 'routes_main${cfg.$3}', size: Size(cfg.$2, 800), scale: cfg.$1, after: () => scrollTo(t, 'Nainital'));
+        await open(t, withRoutes, 'routes_main${cfg.$3}', size: Size(cfg.$2, 800), scale: cfg.$1, after: () => scrollTo(t, 'Haldwani to Nainital'));
         expect(t.takeException(), isNull);
       });
     }
@@ -621,7 +621,8 @@ void main() {
       Future<void> err(String name, TaxiOwnerModel m, Future<void> Function() act, String toast) async {
         await open(t, m, name, after: () async {
           await act();
-          await t.tap(find.text('Save').last);
+          final route = find.text('Save route');
+          await t.tap((route.evaluate().isEmpty ? find.text('Save') : route).last);
           await t.pump(const Duration(milliseconds: 700));
         });
         expect(t.takeException(), isNull);
@@ -633,6 +634,8 @@ void main() {
       await err('routes_rate', taxiModel(step1: true, routes: true), () async {}, 'Add your day rate');
       await err('routes_km', taxiModel(step1: true, routes: true, rate: 2500, km: 1500), () async {}, 'Km per day must be between 1 and 1000');
       await err('routes_noto', withRoutes, () async {
+        await t.tap(find.text('Add another route'));
+        await t.pump(const Duration(milliseconds: 300));
         await t.scrollUntilVisible(find.text('One way'), 300, scrollable: find.byType(Scrollable).first);
         await tapText(t, 'One way');
       }, 'Pick a To place');
@@ -677,7 +680,7 @@ void main() {
       Get.put<TaxiSetupController>(_Taxi(m)).taxi.value = m;
       await snap(t, const TaxiSubmitScreen(), name, size: size, scale: scale, after: tap
           ? () async {
-              await t.tap(find.text('Submit'));
+              await t.tap(find.text('Submit for review'));
               await t.pump(const Duration(milliseconds: 600));
             }
           : null);

@@ -29,7 +29,8 @@ abstract class CalendarCoreController extends GetxController {
 
   final Map<String, CalendarMonth> _months = {};
   final Map<String, LatestOnly> _latest = {};
-  final SingleFlight<OwnerResult<EntryWriteResult>> _write = SingleFlight();
+  final Map<String, SingleFlight<OwnerResult<EntryWriteResult>>> _writes = {};
+  int _writing = 0;
   final SingleFlight<OwnerResult<void>> _delete = SingleFlight();
 
   CalendarMonth? get current => _months[OwnerDates.monthKey(month.value)];
@@ -107,12 +108,12 @@ abstract class CalendarCoreController extends GetxController {
     return MonthGridData.entriesOn(day, data.entries, stayNights: stayNights);
   }
 
-  Future<OwnerResult<EntryWriteResult>> create(CalendarEntryDraft draft) => _runWrite(() => api.create(draft));
+  Future<OwnerResult<EntryWriteResult>> create(CalendarEntryDraft draft) => _runWrite('create', () => api.create(draft));
 
-  Future<OwnerResult<EntryWriteResult>> edit(CalendarEntryDraft draft) => _runWrite(() => api.update(draft));
+  Future<OwnerResult<EntryWriteResult>> edit(CalendarEntryDraft draft) => _runWrite('edit:${draft.id}', () => api.update(draft));
 
   Future<OwnerResult<EntryWriteResult>> saveMoney(CalendarEntry e, {int? finalAmount, int? receivedSoFar, required bool paidInFull}) =>
-      _runWrite(() => api.money(e.id, finalAmount: finalAmount, receivedSoFar: receivedSoFar, paidInFull: paidInFull, version: e.version));
+      _runWrite('money:${e.id}', () => api.money(e.id, finalAmount: finalAmount, receivedSoFar: receivedSoFar, paidInFull: paidInFull, version: e.version));
 
   Future<OwnerResult<void>> delete(String id) async {
     saving.value = true;
@@ -125,11 +126,12 @@ abstract class CalendarCoreController extends GetxController {
     }
   }
 
-  Future<OwnerResult<EntryWriteResult>> _runWrite(Future<OwnerResult<EntryWriteResult>> Function() call) async {
+  Future<OwnerResult<EntryWriteResult>> _runWrite(String op, Future<OwnerResult<EntryWriteResult>> Function() call) async {
+    _writing++;
     saving.value = true;
     staleLine.value = false;
     try {
-      final r = await _write.run(call);
+      final r = await (_writes[op] ??= SingleFlight()).run(call);
       if (isClosed) return r;
       if (r is OwnerOk<EntryWriteResult>) {
         await afterWrite();
@@ -139,7 +141,8 @@ abstract class CalendarCoreController extends GetxController {
       }
       return r;
     } finally {
-      if (!isClosed) saving.value = false;
+      _writing--;
+      if (!isClosed) saving.value = _writing > 0;
     }
   }
 

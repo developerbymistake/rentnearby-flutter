@@ -211,7 +211,7 @@ class _TaxiSetupHubScreenState extends State<TaxiSetupHubScreen> with TickerProv
     return [
       if (t != null && t.isRejected) _in(0, _rejectedStrip(t)),
       if (t != null && t.isPendingReview) _in(0, _pendingStrip()),
-      if (t != null && (t.isDraft || t.isRejected) && !t.identityDone) _in(0, _identityStrip()),
+      if (t != null && (t.isRejected || (t.isDraft && t.step1Done)) && !t.identityDone) _in(0, _identityStrip()),
       if (rateMissing)
         _in(
           1,

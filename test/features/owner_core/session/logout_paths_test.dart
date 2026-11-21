@@ -104,6 +104,38 @@ void main() {
     expect(OwnerCache.read('b', OwnerCacheKeys.home), isNull);
   });
 
+  test('forced logout from an owner shell blocks the seeker shell switch until cleanup ends', () async {
+    for (final reason in [LogoutReason.sessionExpired, LogoutReason.roleChanged, LogoutReason.accountDeleted]) {
+      final auth = FakeAuth();
+      Get.put<AuthController>(auth, permanent: true);
+      Get.put<TabConfigController>(FakeTabs());
+      auth.signIn(role: UserRoleKeys.taxiDriver, taxiStatus: 'Approved', id: 'a');
+      expect(auth.shellKind.value, ShellKind.taxiDriver, reason: '$reason');
+      final blockedAtFlip = <bool>[];
+      final w = ever<ShellKind>(auth.shellKind, (_) => blockedAtFlip.add(auth.blocksShellSwitch));
+      await auth.forceLogout(reason: reason);
+      w.dispose();
+      expect(blockedAtFlip, [true], reason: '$reason');
+      expect(auth.blocksShellSwitch, isFalse, reason: '$reason');
+      expect(auth.shellKind.value, ShellKind.seeker, reason: '$reason');
+      Get.delete<AuthController>(force: true);
+      // ApiService joins logouts that start within 3 seconds of the last one.
+      await Future<void>.delayed(const Duration(milliseconds: 3100));
+    }
+  }, timeout: const Timeout(Duration(seconds: 30)));
+
+  test('logout clears shell teardown steps and push handlers', () async {
+    var n = 0;
+    ShellTeardown.register(ShellKind.taxiDriver, () => n++);
+    var pushed = 0;
+    OwnerPushSync.register('t', (_, _) => pushed++);
+    await OwnerSessionHooks.onLogout(LogoutReason.explicitLogout, 'a');
+    ShellTeardown.run(ShellKind.taxiDriver);
+    OwnerPushSync.onPush('festival_reminder', null, null);
+    expect(n, 0);
+    expect(pushed, 0);
+  });
+
   test('a throwing hook never stops the others', () async {
     var ran = false;
     OwnerSessionHooks.register('boom', (_, _) => throw StateError('x'));
