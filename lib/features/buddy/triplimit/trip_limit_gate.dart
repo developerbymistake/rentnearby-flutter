@@ -10,14 +10,25 @@ import 'trip_limit_strings.dart';
 abstract final class TripLimitGate {
   static TripLimitApi api = const TripLimitApi();
 
-  static void debugReset() => api = const TripLimitApi();
+  static bool _checking = false;
+
+  static void debugReset() {
+    api = const TripLimitApi();
+    _checking = false;
+  }
 
   static Future<bool> ensureSlot([BuildContext? context]) async {
-    final r = await api.slots();
-    if (r is! BuddyOk<TripSlots> || !r.value.isFull) return true;
-    final ctx = context ?? Get.context;
-    if (ctx == null || !ctx.mounted) return true;
-    return TripLimitSheet.show(ctx, r.value, reason: TripLimitReason.plan);
+    if (_checking) return false;
+    _checking = true;
+    try {
+      final r = await api.slots();
+      if (r is! BuddyOk<TripSlots> || !r.value.isFull) return true;
+      final ctx = context ?? Get.context;
+      if (ctx == null || !ctx.mounted) return true;
+      return await TripLimitSheet.show(ctx, r.value, reason: TripLimitReason.plan);
+    } finally {
+      _checking = false;
+    }
   }
 
   static Future<bool> promptInvite(TripSlots slots, [BuildContext? context]) async {

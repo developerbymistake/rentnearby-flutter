@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bakhli/features/buddy/buddy_live.dart';
 import 'package:bakhli/features/buddy/shared/buddy_result.dart';
 import 'package:bakhli/features/buddy/triplimit/trip_limit_actions.dart';
@@ -71,6 +73,15 @@ class _FakeLimitApi extends TripLimitApi {
 
   @override
   Future<BuddyResult<TripSlots>> slots() async => result;
+}
+
+class _SlowLimitApi extends TripLimitApi {
+  const _SlowLimitApi(this.result);
+
+  final Future<BuddyResult<TripSlots>> result;
+
+  @override
+  Future<BuddyResult<TripSlots>> slots() => result;
 }
 
 bool? _closed;
@@ -294,6 +305,16 @@ void main() {
         TripLimitGate.api = _FakeLimitApi(r);
         expect(await TripLimitGate.ensureSlot(), isTrue);
       }
+    });
+
+    test('a second tap while a check runs is dropped', () async {
+      final gate = Completer<BuddyResult<TripSlots>>();
+      TripLimitGate.api = _SlowLimitApi(gate.future);
+      final first = TripLimitGate.ensureSlot();
+      expect(await TripLimitGate.ensureSlot(), isFalse);
+      gate.complete(const BuddyOk(TripSlots(limit: 3, count: 1, trips: [])));
+      expect(await first, isTrue);
+      expect(await TripLimitGate.ensureSlot(), isTrue);
     });
 
     testWidgets('full: shows the sheet and Not now blocks the caller', (t) async {
