@@ -332,7 +332,6 @@ class NotificationService extends GetxService {
     if (push == null) return TaxiRingPush.isUnreadableRing(data);
     switch (result.outcome) {
       case TaxiRingOutcome.ended:
-        _closeRingScreen(push.offerId);
         return false;
       case TaxiRingOutcome.shown:
         final type = data['notification_type'];
@@ -353,10 +352,6 @@ class NotificationService extends GetxService {
   bool _ringScreenOpenFor(String offerId) {
     final args = Get.arguments;
     return Get.currentRoute == AppRoutes.taxiRequestRing && args is Map && args['offerId']?.toString() == offerId;
-  }
-
-  void _closeRingScreen(String offerId) {
-    if (_ringScreenOpenFor(offerId)) Get.back();
   }
 
   Map<String, dynamic> _ringTapData(Map<String, dynamic> data, String? actionId) {
