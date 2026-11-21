@@ -122,6 +122,7 @@ Future<(_Repo, _Api, _Auth, List<Object?>)> _open(WidgetTester t, {List<Notifica
       page(AppRoutes.tripInvite),
       page(AppRoutes.tripExpenses),
       page(AppRoutes.tripView),
+      page(AppRoutes.tripTravellers),
     ],
   ));
   await t.pump();
@@ -191,6 +192,22 @@ void main() {
     await t.pumpAndSettle();
     expect(opened, ['/trip-expenses {tripId: trip-1, tab: balances}']);
   });
+
+  for (final (kind, title, route) in [
+    (NoticeKinds.buddyAccepted, 'Request accepted', '/buddies {}'),
+    (NoticeKinds.newBuddy, 'New buddy', '/buddies {}'),
+    (NoticeKinds.tripJoined, 'Rahul joined your trip', '/trip-travellers {tripId: trip-1}'),
+    (NoticeKinds.planUpdated, 'Plan updated', '/trip-view {tripId: trip-1}'),
+    (NoticeKinds.expenseAdded, 'New expense', '/trip-expenses {tripId: trip-1}'),
+    (NoticeKinds.shareChanged, 'Your share changed', '/trip-expenses {tripId: trip-1}'),
+  ]) {
+    testWidgets('$kind row opens $route', (t) async {
+      final (_, _, _, opened) = await _open(t, notices: [_n(kind, 'a', amount: 500)]);
+      await t.tap(find.text(title));
+      await t.pumpAndSettle();
+      expect(opened, [route]);
+    });
+  }
 
   testWidgets('trip deleted opens the trip view with deleted true', (t) async {
     final (_, _, _, opened) = await _open(t, notices: [_n(NoticeKinds.tripDeleted, 'a')]);

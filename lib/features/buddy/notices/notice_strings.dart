@@ -37,4 +37,28 @@ abstract final class NoticeStrings {
   static const String deletedTitle = 'Trip deleted';
   static String deletedBody(String actor) => '$actor deleted a trip you were on.';
   static const String deletedNoActor = 'A trip you were on was deleted.';
+
+  static const String acceptedTitle = 'Request accepted';
+  static String acceptedOne(String actor) => '$actor is now your buddy.';
+  static String acceptedMany(String actor, int others) => '$actor and $others others are now your buddies.';
+
+  static const String newBuddyTitle = 'New buddy';
+  static String newBuddyOne(String actor) => 'You and $actor are buddies now.';
+  static String newBuddyMany(int count) => 'You and $count new buddies.';
+
+  static String joinedTitle(String actor) => '$actor joined your trip';
+  static String joinedBody(String trip, int travellers) => '$trip now has $travellers travellers.';
+  static String joinedNoCount(String trip) => '$trip has new travellers.';
+
+  static const String planTitle = 'Plan updated';
+  static String planDay(String actor, int day, String trip) => '$actor changed Day $day of $trip.';
+  static String planNoDay(String actor, String trip) => '$actor changed the plan of $trip.';
+
+  static const String expenseAddedTitle = 'New expense';
+  static String expenseAddedShare(String share) => 'Your share $share.';
+  static String expenseAddedNoAmount(String trip) => 'A new expense was added to $trip.';
+
+  static const String shareChangedTitle = 'Your share changed';
+  static String shareChangedNow(String share) => 'Now $share.';
+  static String shareChangedNoAmount(String trip) => 'Your share changed on $trip.';
 }

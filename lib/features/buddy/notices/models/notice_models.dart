@@ -9,6 +9,12 @@ abstract final class NoticeKinds {
   static const String expensesChanged = 'ExpensesChanged';
   static const String tripRemoved = 'TripRemoved';
   static const String tripDeleted = 'TripDeleted';
+  static const String buddyAccepted = 'BuddyAccepted';
+  static const String newBuddy = 'NewBuddy';
+  static const String tripJoined = 'TripJoined';
+  static const String planUpdated = 'PlanUpdated';
+  static const String expenseAdded = 'ExpenseAdded';
+  static const String shareChanged = 'ShareChanged';
 
   static const List<String> all = [
     buddyRequest,
@@ -19,6 +25,12 @@ abstract final class NoticeKinds {
     expensesChanged,
     tripRemoved,
     tripDeleted,
+    buddyAccepted,
+    newBuddy,
+    tripJoined,
+    planUpdated,
+    expenseAdded,
+    shareChanged,
   ];
 
   static bool known(String kind) => all.contains(kind);

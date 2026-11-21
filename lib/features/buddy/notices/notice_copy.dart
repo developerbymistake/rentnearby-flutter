@@ -19,7 +19,7 @@ class NoticeView {
 }
 
 abstract final class NoticeCopy {
-  static NoticeView? of(Notice n) {
+  static NoticeView? of(Notice n, {int? travellers}) {
     final actor = _text(n.actorName) ?? NoticeStrings.someone;
     final trip = _text(n.tripTitle) ?? NoticeStrings.yourTrip;
     final amount = n.amount;
@@ -88,15 +88,63 @@ abstract final class NoticeCopy {
           route: AppRoutes.tripView,
           args: {...tripArgs, 'deleted': true},
         );
+      case NoticeKinds.buddyAccepted:
+        return _buddies(NoticeStrings.acceptedTitle, many ? NoticeStrings.acceptedMany(actor, n.count - 1) : NoticeStrings.acceptedOne(actor));
+      case NoticeKinds.newBuddy:
+        return _buddies(NoticeStrings.newBuddyTitle, many ? NoticeStrings.newBuddyMany(n.count) : NoticeStrings.newBuddyOne(actor));
+      case NoticeKinds.tripJoined:
+        return NoticeView(
+          title: NoticeStrings.joinedTitle(actor),
+          body: travellers == null || travellers < 2 ? NoticeStrings.joinedNoCount(trip) : NoticeStrings.joinedBody(trip, travellers),
+          tag: NoticeStrings.tagTrip,
+          art: BuddyArt.luggage,
+          tone: NoticeTone.indigo,
+          route: AppRoutes.tripTravellers,
+          args: tripArgs,
+        );
+      case NoticeKinds.planUpdated:
+        return NoticeView(
+          title: NoticeStrings.planTitle,
+          body: amount == null || amount < 1 ? NoticeStrings.planNoDay(actor, trip) : NoticeStrings.planDay(actor, amount, trip),
+          tag: NoticeStrings.tagTrip,
+          art: BuddyArt.compass,
+          tone: NoticeTone.indigo,
+          route: AppRoutes.tripView,
+          args: tripArgs,
+        );
+      case NoticeKinds.expenseAdded:
+        return _money(
+          NoticeStrings.expenseAddedTitle,
+          amount == null ? NoticeStrings.expenseAddedNoAmount(trip) : NoticeStrings.expenseAddedShare(BuddyFormat.rupees(amount)),
+          tripArgs,
+          BuddyArt.taxi,
+        );
+      case NoticeKinds.shareChanged:
+        return _money(
+          NoticeStrings.shareChangedTitle,
+          amount == null ? NoticeStrings.shareChangedNoAmount(trip) : NoticeStrings.shareChangedNow(BuddyFormat.rupees(amount)),
+          tripArgs,
+          BuddyArt.hotel,
+        );
     }
     return null;
   }
 
-  static NoticeView _money(String title, String body, Map<String, dynamic> args) => NoticeView(
+  static NoticeView _buddies(String title, String body) => NoticeView(
+        title: title,
+        body: body,
+        tag: NoticeStrings.tagBuddies,
+        art: BuddyArt.panda,
+        tone: NoticeTone.teal,
+        route: AppRoutes.buddies,
+        args: const {},
+      );
+
+  static NoticeView _money(String title, String body, Map<String, dynamic> args, [String art = BuddyArt.moneyBag]) => NoticeView(
         title: title,
         body: body,
         tag: NoticeStrings.tagExpenses,
-        art: BuddyArt.moneyBag,
+        art: art,
         tone: NoticeTone.rose,
         route: AppRoutes.tripExpenses,
         args: args,

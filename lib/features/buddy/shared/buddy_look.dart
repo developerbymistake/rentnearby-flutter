@@ -126,4 +126,7 @@ abstract final class BuddyArt {
   static const String worldMap = '${dir}world_map.png';
   static const String key = '${dir}key.png';
   static const String alarm = '${dir}alarm_clock.png';
+  static const String taxi = '${dir}taxi.png';
+  static const String hotel = '${dir}hotel.png';
+  static const String compass = '${dir}compass.png';
 }
