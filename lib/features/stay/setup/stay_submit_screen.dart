@@ -50,11 +50,11 @@ class _StaySubmitScreenState extends State<StaySubmitScreen> {
     AppToast.success('Submitted for review');
     if (_ctrl.mainBelow) {
       Get.until((r) => r.settings.name == AppRoutes.main);
-      auth.switchToTab(AppTabs.stays);
+      auth.switchToTab(AppTabs.home);
       return;
     }
     Get.offAllNamed(AppRoutes.main);
-    WidgetsBinding.instance.addPostFrameCallback((_) => auth.switchToTab(AppTabs.stays));
+    WidgetsBinding.instance.addPostFrameCallback((_) => auth.switchToTab(AppTabs.home));
   }
 
   @override

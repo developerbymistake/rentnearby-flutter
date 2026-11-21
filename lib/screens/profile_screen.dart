@@ -24,6 +24,8 @@ import 'privacy_policy_screen.dart';
 import 'terms_of_service_screen.dart';
 import '../features/buddy/buddies/widgets/profile_buddies_row.dart';
 import '../features/buddy/offline/logout_guard.dart';
+import '../widgets/account_blockers_sheet.dart';
+import 'profile/profile_rows.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -102,6 +104,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             _hero(),
             Gap.v(16),
             item(Obx(() => _auth.isOwner ? _buildPlansCard() : const SizedBox.shrink())),
+            Obx(() => ProfileRows.forShell(_auth.shellKind.value)),
             item(_sectionGroup(BuddyStrings.sectionBuddies, [_usernameTile(), const ProfileBuddiesRow()])),
             item(_sectionGroup('ACCOUNT', [
               _accountPhoneTile(),
@@ -709,12 +712,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
       ),
     );
-    final blocked = await _auth.deleteAccount();
+    final blocked = await _auth.deleteAccountBlocks();
     if (!mounted) return;
     if (Navigator.canPop(context)) Navigator.pop(context);
-    if (blocked != null) {
-      showDialog(context: context, builder: (ctx) => AccountDeleteBlockedDialog(reasons: blocked, onClose: () => Navigator.pop(ctx)));
-    }
+    if (blocked != null && blocked.isNotEmpty) AccountBlockersSheet.show(context, blocked);
   }
 }
 

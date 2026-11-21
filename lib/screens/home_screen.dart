@@ -184,7 +184,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        TitleRow3D(title: title, action: 'See all', onAction: () => _auth.switchToTab(tab)),
+        TitleRow3D(title: title, action: 'See all', onAction: () => _auth.openPlace(AppPlaces.ofTab(tab))),
         SkeletonSwitcher(
           loading: loading,
           skeleton: _buildRailSkeleton(),

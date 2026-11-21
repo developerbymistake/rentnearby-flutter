@@ -3,6 +3,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:get_storage/get_storage.dart';
 import '../config/app_constants.dart';
 import '../models/user_model.dart';
+import '../features/owner_core/data/owner_cache.dart';
 
 class StorageService {
   static const _secureStorage = FlutterSecureStorage(
@@ -49,7 +50,10 @@ class StorageService {
     clearFcmToken();
     clearAllChatStackedLines();
     clearAllTripCaches();
+    clearAllOwnerCaches();
   }
+
+  static void clearAllOwnerCaches() => OwnerCache.clearAll();
 
   static void saveTripCache(String tripId, Map<String, dynamic> json) =>
       _box.write('${AppConstants.tripTodayCacheKeyPrefix}$tripId', jsonEncode(json));

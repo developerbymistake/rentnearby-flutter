@@ -3,7 +3,11 @@ import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/tab_config_controller.dart';
+import '../features/seeker_home/seeker_tour_steps.dart';
 import '../features/stay/guest/stay_tour_steps.dart';
+import '../features/stay_owner/home/stay_owner_tour_steps.dart';
+import '../features/taxi_driver/home/taxi_driver_tour_steps.dart';
+import 'shell_kind.dart';
 import '../navigation/tour_keys.dart';
 import 'app_constants.dart';
 import 'app_tabs.dart';
@@ -47,9 +51,11 @@ class TourDefinition {
   final List<TourStep> Function() stepsBuilder;
   final TourDialogContent? introContent;
   final TourDialogContent Function()? outroBuilder;
+  final ShellKind? shell;
 
   const TourDefinition({
     required this.tabIndex,
+    this.shell,
     required this.storageKey,
     required this.label,
     required this.stepsBuilder,
@@ -98,7 +104,13 @@ TourDialogContent _buildHomeOutro() {
   );
 }
 
-List<TourStep> _buildHomeSteps() {
+List<TourStep> _buildHomeSteps() => switch (Get.find<AuthController>().shellKind.value) {
+      ShellKind.seeker => seekerHomeTourSteps(),
+      ShellKind.stayOwner => stayOwnerHomeTourSteps(),
+      ShellKind.taxiDriver => taxiDriverHomeTourSteps(),
+    };
+
+List<TourStep> todayHomeTourSteps() {
   final auth = Get.find<AuthController>();
   final canStays = auth.staysEnabled;
   final canTaxis = auth.taxisEnabled;
@@ -188,6 +200,7 @@ final Map<int, TourDefinition> tourRegistry = {
   ),
   AppTabs.stays: TourDefinition(
     tabIndex: AppTabs.stays,
+    shell: ShellKind.seeker,
     storageKey: AppConstants.tourStaysSeenKey,
     label: 'Stays Tour',
     stepsBuilder: buildStayLandingSteps,

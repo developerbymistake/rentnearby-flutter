@@ -23,6 +23,8 @@ import '../features/taxi/taxi_routes.dart';
 import '../features/taxi/ways/taxi_ways_routes.dart';
 import '../features/trip/trip_routes.dart';
 import '../features/buddy/buddy_routes.dart';
+import '../features/stay_owner/stay_owner_routes.dart';
+import '../features/taxi_driver/taxi_driver_routes.dart';
 
 class AppRoutes {
   static const String splash = '/';
@@ -109,8 +111,48 @@ class AppRoutes {
   static const String tripSettle = '/trip-settle';
   static const String tripMoneySummary = '/trip-money-summary';
 
+  static const String stayCalendar = '/stay-calendar';
+  static const String stayCalendarEntry = '/stay-calendar-entry';
+  static const String stayUpcoming = '/stay-upcoming';
+  static const String stayPast = '/stay-past';
+  static const String stayMoneySummary = '/stay-money-summary';
+  static const String stayBalanceDue = '/stay-balance-due';
+  static const String staySpecialPrices = '/stay-special-prices';
+  static const String stayPlanVisible = '/stay-plan-visible';
+  static const String stayAttention = '/stay-attention';
+  static const String stayLiveEdit = '/stay-live-edit';
+  static const String taxiCalendarEntry = '/taxi-calendar-entry';
+  static const String taxiUpcoming = '/taxi-upcoming';
+  static const String taxiPast = '/taxi-past';
+  static const String taxiMoneySummary = '/taxi-money-summary';
+  static const String taxiBalanceDue = '/taxi-balance-due';
+  static const String taxiPlanVisible = '/taxi-plan-visible';
+  static const String taxiAttention = '/taxi-attention';
+
+  static const Set<String> stayOwnerNewRoutes = {
+    stayCalendar,
+    stayCalendarEntry,
+    stayUpcoming,
+    stayPast,
+    stayMoneySummary,
+    stayBalanceDue,
+    staySpecialPrices,
+    stayPlanVisible,
+    stayAttention,
+    stayLiveEdit,
+  };
+  static const Set<String> taxiDriverNewRoutes = {
+    taxiCalendarEntry,
+    taxiUpcoming,
+    taxiPast,
+    taxiMoneySummary,
+    taxiBalanceDue,
+    taxiPlanVisible,
+    taxiAttention,
+  };
+
   static const Set<String> ownerOnly = {plansBilling, planHistory};
-  static const Set<String> stayOwnerOnly = {staySetup, stayBasicDetails, stayRooms, stayRules, staySubmit, myStays, myJobs, postJob, stayEnquiries, stayShareDetails};
+  static const Set<String> stayOwnerOnly = {staySetup, stayBasicDetails, stayRooms, stayRules, staySubmit, myStays, myJobs, postJob, stayEnquiries, stayShareDetails, ...stayOwnerNewRoutes};
   static const Set<String> taxiDriverOnly = {
     taxiSetup,
     taxiVehicle,
@@ -124,6 +166,7 @@ class AppRoutes {
     taxiBookings,
     taxiRating,
     taxiReady,
+    ...taxiDriverNewRoutes,
   };
 
   static const Map<String, String> _routeTabKeys = {
@@ -289,5 +332,7 @@ class AppRoutes {
     ...taxiWaysPages,
     ...tripPages,
     ...buddyPages,
+    ...stayOwnerPages,
+    ...taxiDriverPages,
   ];
 }

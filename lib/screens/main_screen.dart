@@ -5,6 +5,7 @@ import '../design/design.dart';
 import '../design/extra/template_nav.dart';
 import '../config/app_routes.dart';
 import '../config/app_tabs.dart';
+import '../config/tab_shell.dart';
 import '../controllers/app_version_controller.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/home_controller.dart';
@@ -13,6 +14,7 @@ import '../controllers/notification_controller.dart';
 import '../controllers/report_controller.dart';
 import '../features/buddy/buddy_bindings.dart';
 import '../features/buddy/buddy_live.dart';
+import '../features/owner_core/session/shell_teardown.dart';
 import '../repositories/notification_repository.dart';
 import '../repositories/user_repository.dart';
 import '../repositories/plan_repository.dart';
@@ -32,12 +34,9 @@ import '../widgets/global_location_gates.dart';
 import '../navigation/app_bottom_dock.dart';
 import '../navigation/tab_router.dart';
 import '../navigation/tab_keys.dart';
-import '../navigation/tour_keys.dart';
 import '../controllers/tour_controller.dart';
-import '../features/stay/guest/stay_landing_controller.dart';
 import '../features/stay/guest/stay_guest_controller.dart';
 import '../features/taxi/requests/controllers/driver_ready_controller.dart';
-import '../features/taxi/taxi_status_sync.dart';
 import '../features/trip/controllers/my_trips_controller.dart';
 import '../features/trip/widgets/trip_bar.dart';
 
@@ -57,7 +56,9 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   Worker? _digestTopicWorker;
   Worker? _tabLeaveWorker;
   Worker? _tabConfigWorker;
+  Worker? _shellWorker;
   int _previousTabIndex = AppTabs.home;
+  late ShellKind _shellKind;
 
   final _screens = const [
     TabNavigator(tabId: AppTabs.home),
@@ -86,6 +87,8 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     // resume below, not via a live push.
     Get.put(NotificationController());
     BuddyBindings.ensure();
+    _shellKind = _auth.shellKind.value;
+    OwnerShellBindings.ensure(_shellKind);
     _chatCtrl = Get.put(ChatController());
     Get.put(ChatHubService());
     // Persistent for the whole session (like BannerHubService below) — not scoped to any one
@@ -136,7 +139,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     // later.
     _tabLeaveWorker = ever<int>(_auth.tabIndex, (newIndex) {
       if (newIndex != _previousTabIndex) {
-        if (_previousTabIndex == AppTabs.stays) _locationCtrl.resetBrowsing();
+        TabShell.slots(_auth.shellKind.value)[_previousTabIndex].onLeave?.call();
         final navState = tabKeys[_previousTabIndex].currentState;
         if (navState != null && navState.canPop()) {
           navState.popUntil((route) => route.isFirst);
@@ -145,13 +148,14 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       _previousTabIndex = newIndex;
     });
     _tabConfigWorker = ever<int>(_tabConfigCtrl.version, (_) {
-      if (!_tabConfigCtrl.isActiveForIndex(_auth.tabIndex.value)) _auth.switchToTab(AppTabs.home);
+      if (!TabShell.isActive(_auth.shellKind.value, _auth.tabIndex.value)) _auth.switchToTab(AppTabs.home);
       final route = Get.currentRoute;
       if (AppRoutes.tabKeyForRoute(route) != null && !_auth.canOpenRoute(route)) {
         Get.until((r) => r.settings.name == AppRoutes.main);
       }
     });
-    if (!_tabConfigCtrl.isActiveForIndex(_auth.tabIndex.value)) _auth.switchToTab(AppTabs.home);
+    if (!TabShell.isActive(_auth.shellKind.value, _auth.tabIndex.value)) _auth.switchToTab(AppTabs.home);
+    _shellWorker = ever<ShellKind>(_auth.shellKind, _onShellChanged);
     _auth.refreshProfile();
     // Last, deliberately — needs every controller any tour could reference
     // (LocationController, AuthController) already registered above.
@@ -172,9 +176,25 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     _digestTopicWorker?.dispose();
     _tabLeaveWorker?.dispose();
     _tabConfigWorker?.dispose();
+    _shellWorker?.dispose();
     // Permanent for the session (trip bar, Home card); the next login must not see these trips.
     if (Get.isRegistered<MyTripsController>()) Get.delete<MyTripsController>(force: true);
     super.dispose();
+  }
+
+  void _onShellChanged(ShellKind next) {
+    if (next == _shellKind || !mounted || _auth.isLoggingOut.value) return;
+    final old = _shellKind;
+    _shellKind = next;
+    for (final key in tabKeys) {
+      final nav = key.currentState;
+      if (nav != null && nav.canPop()) nav.popUntil((r) => r.isFirst);
+    }
+    _previousTabIndex = AppTabs.home;
+    _auth.tabIntent.value = null;
+    _auth.switchToTab(AppTabs.home);
+    ShellTeardown.run(old);
+    OwnerShellBindings.ensure(next);
   }
 
   @override
@@ -314,7 +334,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
               )),
             ),
             bottomNavigationBar: AppBottomDock(
-              banner: Obx(() => _locationCtrl.hasActiveGate || _auth.isLoggingOut.value
+              banner: Obx(() => _locationCtrl.hasActiveGate || _auth.isLoggingOut.value || _auth.isOwnerShell
                   ? const SizedBox.shrink()
                   : const TripBar()),
               nav: Obx(() => _buildBottomNav()),
@@ -373,54 +393,33 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
 
   Widget _buildBottomNav() {
     final bottomInset = MediaQuery.of(context).viewPadding.bottom;
-    const t3d = 'assets/images/design/travel3d/';
+    _tabConfigCtrl.version.value;
+    final slots = TabShell.slots(_auth.shellKind.value);
     return TemplateBottomBar(
       bottomInset: bottomInset,
       selectedIndex: _auth.tabIndex.value,
       onTap: _onNavTap,
       items: [
-        TemplateNavItem(
-            index: AppTabs.home,
-            image: '${t3d}compass.png',
-            label: _tabConfigCtrl.displayNameForIndex(AppTabs.home, 'Home')),
-        if (_tabConfigCtrl.isActive(AppTabKeys.stays))
-          TemplateNavItem(
-              index: AppTabs.stays,
-              image: '${t3d}camping.png',
-              activeColor: ListingPalette.forest.text,
-              itemKey: TourKeys.homeStaysNavIcon,
-              label: _tabConfigCtrl.displayNameForIndex(AppTabs.stays, 'Stays')),
-        TemplateNavItem(
-            index: AppTabs.trips,
-            image: '${t3d}luggage.png',
-            center: true,
-            label: _tabConfigCtrl.displayNameForIndex(AppTabs.trips, 'Trips')),
-        if (_tabConfigCtrl.isActive(AppTabKeys.taxi))
-          TemplateNavItem(
-              index: AppTabs.taxi,
-              image: '${t3d}taxi.png',
-              activeColor: ListingPalette.coral.text,
-              itemKey: TourKeys.homeTaxiNavIcon,
-              label: _tabConfigCtrl.displayNameForIndex(AppTabs.taxi, 'Taxi')),
-        TemplateNavItem(
-            index: AppTabs.profile,
-            image: '${t3d}fox.png',
-            itemKey: TourKeys.homeProfileNavIcon,
-            label: _tabConfigCtrl.displayNameForIndex(AppTabs.profile, 'Profile')),
+        for (final slot in slots)
+          if (slot.active())
+            TemplateNavItem(
+              index: slot.index,
+              image: slot.image,
+              label: slot.label,
+              center: slot.center,
+              activeColor: slot.activeColor,
+              itemKey: slot.itemKey,
+              badge: slot.badge?.call(),
+              badgeColor: slot.badgeColor,
+            ),
       ],
     );
   }
 
   void _onNavTap(int index) {
-    final stays = Get.isRegistered<StayLandingController>(tag: 'stays')
-        ? Get.find<StayLandingController>(tag: 'stays')
-        : null;
-    if (index == AppTabs.stays && _auth.tabIndex.value != AppTabs.stays) {
-      stays?.exploreRefreshTrigger.value++;
-    }
-    if (index == AppTabs.taxi) TaxiStatusSync.onTaxiTabTap();
-    if (index == AppTabs.profile && _auth.tabIndex.value != AppTabs.profile) _auth.profileTabTrigger.value++;
-    stays?.filterResetTrigger.value++;
+    final slots = TabShell.slots(_auth.shellKind.value);
+    if (index < 0 || index >= slots.length) return;
+    slots[index].onTap?.call(_auth.tabIndex.value == index);
     _auth.switchToTab(index);
   }
 }

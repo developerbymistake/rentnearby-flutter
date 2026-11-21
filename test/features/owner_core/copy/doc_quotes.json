@@ -1,0 +1,4475 @@
+[
+ {
+  "section": "3.2",
+  "line": 186,
+  "text": "This month",
+  "norm": "this month",
+  "placeholder": false
+ },
+ {
+  "section": "3.2",
+  "line": 190,
+  "text": "Travellers asked for these dates",
+  "norm": "travellers asked for these dates",
+  "placeholder": false
+ },
+ {
+  "section": "3.3",
+  "line": 198,
+  "text": "See Plus",
+  "norm": "see plus",
+  "placeholder": false
+ },
+ {
+  "section": "3.3",
+  "line": 198,
+  "text": "Not now",
+  "norm": "not now",
+  "placeholder": false
+ },
+ {
+  "section": "3.3",
+  "line": 198,
+  "text": "Rs 150 / month",
+  "norm": "₹000 / month",
+  "placeholder": false
+ },
+ {
+  "section": "3.3",
+  "line": 198,
+  "text": "Rs 400 / month",
+  "norm": "₹000 / month",
+  "placeholder": false
+ },
+ {
+  "section": "3.3",
+  "line": 198,
+  "text": "· 7 days free",
+  "norm": "· 0 days free",
+  "placeholder": false
+ },
+ {
+  "section": "3.3",
+  "line": 202,
+  "text": "1 route on Free",
+  "norm": "0 route on free",
+  "placeholder": false
+ },
+ {
+  "section": "3.3",
+  "line": 202,
+  "text": "Get Plus to add up to 5 routes.",
+  "norm": "get plus to add up to 0 routes.",
+  "placeholder": false
+ },
+ {
+  "section": "3.3",
+  "line": 203,
+  "text": "4 more routes",
+  "norm": "0 more routes",
+  "placeholder": false
+ },
+ {
+  "section": "3.3",
+  "line": 203,
+  "text": "Add up to 5 routes with Plus.",
+  "norm": "add up to 0 routes with plus.",
+  "placeholder": false
+ },
+ {
+  "section": "3.3",
+  "line": 204,
+  "text": "Plus drivers get their turn 2x as often.",
+  "norm": "plus drivers get their turn 0x as often.",
+  "placeholder": false
+ },
+ {
+  "section": "3.3",
+  "line": 205,
+  "text": "9 requests this week were for cities you have no route to.",
+  "norm": "0 requests this week were for cities you have no route to.",
+  "placeholder": false
+ },
+ {
+  "section": "3.3",
+  "line": 205,
+  "text": "More routes, more requests.",
+  "norm": "more routes, more requests.",
+  "placeholder": false
+ },
+ {
+  "section": "3.3",
+  "line": 206,
+  "text": "Free plan allows 2 photos",
+  "norm": "free plan allows 0 photos",
+  "placeholder": false
+ },
+ {
+  "section": "3.3",
+  "line": 206,
+  "text": "Plus stays can show 8 photos.",
+  "norm": "plus stays can show 0 photos.",
+  "placeholder": false
+ },
+ {
+  "section": "3.3",
+  "line": 207,
+  "text": "Add room type",
+  "norm": "add room type",
+  "placeholder": false
+ },
+ {
+  "section": "3.3",
+  "line": 207,
+  "text": "2 room types on Free",
+  "norm": "0 room types on free",
+  "placeholder": false
+ },
+ {
+  "section": "3.3",
+  "line": 207,
+  "text": "Get Plus to list up to 6.",
+  "norm": "get plus to list up to 0.",
+  "placeholder": false
+ },
+ {
+  "section": "3.3",
+  "line": 208,
+  "text": "Your plan allows 1 active job. Close one or upgrade.",
+  "norm": "your plan allows 0 active job. close one or upgrade.",
+  "placeholder": false
+ },
+ {
+  "section": "3.3",
+  "line": 209,
+  "text": "Shown 140 times",
+  "norm": "shown 000 times",
+  "placeholder": false
+ },
+ {
+  "section": "3.3",
+  "line": 209,
+  "text": "Plus stays come first when travellers plan a trip to Mukteshwar.",
+  "norm": "plus stays come first when travellers plan a trip to mukteshwar.",
+  "placeholder": false
+ },
+ {
+  "section": "3.3",
+  "line": 210,
+  "text": "Quiet week? Plus puts your stay first in trip plans.",
+  "norm": "quiet week? plus puts your stay first in trip plans.",
+  "placeholder": false
+ },
+ {
+  "section": "3.3",
+  "line": 211,
+  "text": "You have 4 active entries",
+  "norm": "you have 0 active entries",
+  "placeholder": false
+ },
+ {
+  "section": "3.3",
+  "line": 211,
+  "text": "Free keeps 4 bookings you add yourself. Plus keeps 50.",
+  "norm": "free keeps 0 bookings you add yourself. plus keeps 00.",
+  "placeholder": false
+ },
+ {
+  "section": "3.3",
+  "line": 211,
+  "text": "Free keeps 4 trips you add yourself. Plus keeps 50.",
+  "norm": "free keeps 0 trips you add yourself. plus keeps 00.",
+  "placeholder": false
+ },
+ {
+  "section": "3.3",
+  "line": 211,
+  "text": "A slot frees up when a booking date passes, or delete one you do not need.",
+  "norm": "a slot frees up when a booking date passes, or delete one you do not need.",
+  "placeholder": false
+ },
+ {
+  "section": "3.3",
+  "line": 211,
+  "text": "A slot frees up when a trip date passes, or delete one you do not need.",
+  "norm": "a slot frees up when a trip date passes, or delete one you do not need.",
+  "placeholder": false
+ },
+ {
+  "section": "3.3",
+  "line": 212,
+  "text": "Block these days",
+  "norm": "block these days",
+  "placeholder": false
+ },
+ {
+  "section": "3.3",
+  "line": 212,
+  "text": "Free allows 1 blocked range",
+  "norm": "free allows 0 blocked range",
+  "placeholder": false
+ },
+ {
+  "section": "3.3",
+  "line": 212,
+  "text": "Plus lets you block up to 10. You can change or remove your current block at any time.",
+  "norm": "plus lets you block up to 00. you can change or remove your current block at any time.",
+  "placeholder": false
+ },
+ {
+  "section": "3.3",
+  "line": 213,
+  "text": "1 special price on Free",
+  "norm": "0 special price on free",
+  "placeholder": false
+ },
+ {
+  "section": "3.3",
+  "line": 213,
+  "text": "Plus keeps 5 at a time. Your current one ends on 12 Nov. You can change or remove it now.",
+  "norm": "plus keeps 0 at a time. your current one ends on 00 nov. you can change or remove it now.",
+  "placeholder": false
+ },
+ {
+  "section": "3.3",
+  "line": 217,
+  "text": "After 6 Dec: 1 booking from the app (see Enquiries). Plus shows 6 months ahead.",
+  "norm": "after 0 dec: 0 booking from the app (see enquiries). plus shows 0 months ahead.",
+  "placeholder": false
+ },
+ {
+  "section": "3.3",
+  "line": 217,
+  "text": "(see Bookings)",
+  "norm": "(see bookings)",
+  "placeholder": false
+ },
+ {
+  "section": "3.3",
+  "line": 218,
+  "text": "This month",
+  "norm": "this month",
+  "placeholder": false
+ },
+ {
+  "section": "3.3",
+  "line": 221,
+  "text": "8 more bookings are hidden. See Plus",
+  "norm": "0 more bookings are hidden. see plus",
+  "placeholder": false
+ },
+ {
+  "section": "3.4",
+  "line": 229,
+  "text": "Try free for 7 days",
+  "norm": "try free for 0 days",
+  "placeholder": false
+ },
+ {
+  "section": "3.4",
+  "line": 229,
+  "text": "See Plus",
+  "norm": "see plus",
+  "placeholder": false
+ },
+ {
+  "section": "3.4",
+  "line": 230,
+  "text": "Free until 28 Nov",
+  "norm": "free until 00 nov",
+  "placeholder": false
+ },
+ {
+  "section": "3.4",
+  "line": 230,
+  "text": "Up to 5 routes are open now.",
+  "norm": "up to 0 routes are open now.",
+  "placeholder": false
+ },
+ {
+  "section": "3.4",
+  "line": 230,
+  "text": "8 photos and 6 room types are open now.",
+  "norm": "0 photos and 0 room types are open now.",
+  "placeholder": false
+ },
+ {
+  "section": "3.4",
+  "line": 231,
+  "text": "Renews on 21 Dec 2026",
+  "norm": "renews on 00 dec 0000",
+  "placeholder": false
+ },
+ {
+  "section": "3.4",
+  "line": 231,
+  "text": "Manage in Google Play",
+  "norm": "manage in google play",
+  "placeholder": false
+ },
+ {
+  "section": "3.4",
+  "line": 232,
+  "text": "Plus till 21 Dec 2026",
+  "norm": "plus till 00 dec 0000",
+  "placeholder": false
+ },
+ {
+  "section": "3.4",
+  "line": 232,
+  "text": "After that, you keep 1 route.",
+  "norm": "after that, you keep 0 route.",
+  "placeholder": false
+ },
+ {
+  "section": "3.4",
+  "line": 232,
+  "text": "After that, you keep 2 photos and 2 room types.",
+  "norm": "after that, you keep 0 photos and 0 room types.",
+  "placeholder": false
+ },
+ {
+  "section": "3.4",
+  "line": 233,
+  "text": "Payment issue",
+  "norm": "payment issue",
+  "placeholder": false
+ },
+ {
+  "section": "3.4",
+  "line": 233,
+  "text": "Plus keeps working for now.",
+  "norm": "plus keeps working for now.",
+  "placeholder": false
+ },
+ {
+  "section": "3.4",
+  "line": 234,
+  "text": "Payment on hold",
+  "norm": "payment on hold",
+  "placeholder": false
+ },
+ {
+  "section": "3.4",
+  "line": 234,
+  "text": "Fix the payment in Google Play first.",
+  "norm": "fix the payment in google play first.",
+  "placeholder": false
+ },
+ {
+  "section": "3.4",
+  "line": 235,
+  "text": "Subscription ended",
+  "norm": "subscription ended",
+  "placeholder": false
+ },
+ {
+  "section": "3.4",
+  "line": 235,
+  "text": "Extra routes are hidden. Nothing is deleted.",
+  "norm": "extra routes are hidden. nothing is deleted.",
+  "placeholder": false
+ },
+ {
+  "section": "3.4",
+  "line": 235,
+  "text": "Up to 6 photos and 4 room types are hidden. Nothing is deleted.",
+  "norm": "up to 0 photos and 0 room types are hidden. nothing is deleted.",
+  "placeholder": false
+ },
+ {
+  "section": "3.4",
+  "line": 235,
+  "text": "Subscribe again",
+  "norm": "subscribe again",
+  "placeholder": false
+ },
+ {
+  "section": "3.4",
+  "line": 235,
+  "text": "Choose what stays",
+  "norm": "choose what stays",
+  "placeholder": false
+ },
+ {
+  "section": "3.4",
+  "line": 235,
+  "text": "Choose your route",
+  "norm": "choose your route",
+  "placeholder": false
+ },
+ {
+  "section": "3.4",
+  "line": 236,
+  "text": "Billed by Google Play",
+  "norm": "billed by google play",
+  "placeholder": false
+ },
+ {
+  "section": "3.4",
+  "line": 237,
+  "text": "Paid plans are coming",
+  "norm": "paid plans are coming",
+  "placeholder": false
+ },
+ {
+  "section": "3.4",
+  "line": 237,
+  "text": "Featured in taxi lists and your turn 2x as often. Not open yet.",
+  "norm": "featured in taxi lists and your turn 0x as often. not open yet.",
+  "placeholder": false
+ },
+ {
+  "section": "3.4",
+  "line": 237,
+  "text": "Plus will put your stay first in trip plans. Not open yet.",
+  "norm": "plus will put your stay first in trip plans. not open yet.",
+  "placeholder": false
+ },
+ {
+  "section": "3.4",
+  "line": 243,
+  "text": "Plans & Billing",
+  "norm": "plans & billing",
+  "placeholder": false
+ },
+ {
+  "section": "3.4",
+  "line": 243,
+  "text": "Free · 2 of 2 photos",
+  "norm": "free · 0 of 0 photos",
+  "placeholder": false
+ },
+ {
+  "section": "3.4",
+  "line": 243,
+  "text": "Plus · 6 of 8 photos",
+  "norm": "plus · 0 of 0 photos",
+  "placeholder": false
+ },
+ {
+  "section": "3.4",
+  "line": 243,
+  "text": "Free · 1 of 1 route",
+  "norm": "free · 0 of 0 route",
+  "placeholder": false
+ },
+ {
+  "section": "3.4",
+  "line": 243,
+  "text": "Plus · 3 of 5 routes",
+  "norm": "plus · 0 of 0 routes",
+  "placeholder": false
+ },
+ {
+  "section": "4.1",
+  "line": 257,
+  "text": "Wrong role? Change it",
+  "norm": "wrong role? change it",
+  "placeholder": false
+ },
+ {
+  "section": "4.1",
+  "line": 257,
+  "text": "Delete draft and change role?",
+  "norm": "delete draft and change role?",
+  "placeholder": false
+ },
+ {
+  "section": "4.1",
+  "line": 258,
+  "text": "Profile N% complete",
+  "norm": "profile n% complete",
+  "placeholder": false
+ },
+ {
+  "section": "4.1",
+  "line": 258,
+  "text": "Add your rooms",
+  "norm": "add your rooms",
+  "placeholder": false
+ },
+ {
+  "section": "4.1",
+  "line": 258,
+  "text": "Not approved: {reason}",
+  "norm": "not approved: {}",
+  "placeholder": true
+ },
+ {
+  "section": "4.1",
+  "line": 258,
+  "text": "Registration details needed",
+  "norm": "registration details needed",
+  "placeholder": false
+ },
+ {
+  "section": "4.1",
+  "line": 259,
+  "text": "Not open here yet",
+  "norm": "not open here yet",
+  "placeholder": false
+ },
+ {
+  "section": "4.1",
+  "line": 260,
+  "text": "Photo is too large. Use one under 10 MB.",
+  "norm": "photo is too large. use one under 00 mb.",
+  "placeholder": false
+ },
+ {
+  "section": "4.1",
+  "line": 260,
+  "text": "Use a JPG, PNG or WebP photo.",
+  "norm": "use a jpg, png or webp photo.",
+  "placeholder": false
+ },
+ {
+  "section": "4.1",
+  "line": 260,
+  "text": "Upload failed. Try again.",
+  "norm": "upload failed. try again.",
+  "placeholder": false
+ },
+ {
+  "section": "4.1",
+  "line": 261,
+  "text": "You already have a Deluxe room. Pick another type.",
+  "norm": "you already have a deluxe room. pick another type.",
+  "placeholder": false
+ },
+ {
+  "section": "4.1",
+  "line": 261,
+  "text": "Add room type",
+  "norm": "add room type",
+  "placeholder": false
+ },
+ {
+  "section": "4.1",
+  "line": 263,
+  "text": "Check your stay",
+  "norm": "check your stay",
+  "placeholder": false
+ },
+ {
+  "section": "4.1",
+  "line": 263,
+  "text": "Submit for review",
+  "norm": "submit for review",
+  "placeholder": false
+ },
+ {
+  "section": "4.1",
+  "line": 263,
+  "text": "Submitted for review",
+  "norm": "submitted for review",
+  "placeholder": false
+ },
+ {
+  "section": "4.1",
+  "line": 263,
+  "text": "No connection. Please try again.",
+  "norm": "no connection. please try again.",
+  "placeholder": false
+ },
+ {
+  "section": "4.1",
+  "line": 264,
+  "text": "Discard changes?",
+  "norm": "discard changes?",
+  "placeholder": false
+ },
+ {
+  "section": "4.1",
+  "line": 265,
+  "text": "Remove my details",
+  "norm": "remove my details",
+  "placeholder": false
+ },
+ {
+  "section": "4.1",
+  "line": 265,
+  "text": "Shared with a guest only when you choose",
+  "norm": "shared with a guest only when you choose",
+  "placeholder": false
+ },
+ {
+  "section": "4.1",
+  "line": 265,
+  "text": "The app does not take, hold or track payments. Settle money with the guest directly.",
+  "norm": "the app does not take, hold or track payments. settle money with the guest directly.",
+  "placeholder": false
+ },
+ {
+  "section": "4.1",
+  "line": 265,
+  "text": "Contact details",
+  "norm": "contact details",
+  "placeholder": false
+ },
+ {
+  "section": "4.1",
+  "line": 265,
+  "text": "Enter a UPI ID like name@bank",
+  "norm": "enter a upi id like name@bank",
+  "placeholder": false
+ },
+ {
+  "section": "4.2",
+  "line": 271,
+  "text": "UNDER REVIEW / We will notify you",
+  "norm": "under review / we will notify you",
+  "placeholder": false
+ },
+ {
+  "section": "4.2",
+  "line": 271,
+  "text": "While you wait",
+  "norm": "while you wait",
+  "placeholder": false
+ },
+ {
+  "section": "4.2",
+  "line": 271,
+  "text": "Your stay is under review.",
+  "norm": "your stay is under review.",
+  "placeholder": false
+ },
+ {
+  "section": "4.2",
+  "line": 272,
+  "text": "Your stay is live",
+  "norm": "your stay is live",
+  "placeholder": false
+ },
+ {
+  "section": "4.2",
+  "line": 272,
+  "text": "Share your stay",
+  "norm": "share your stay",
+  "placeholder": false
+ },
+ {
+  "section": "4.2",
+  "line": 273,
+  "text": "REJECTED: {reason}",
+  "norm": "rejected: {}",
+  "placeholder": true
+ },
+ {
+  "section": "4.2",
+  "line": 273,
+  "text": "Fix and resubmit",
+  "norm": "fix and resubmit",
+  "placeholder": false
+ },
+ {
+  "section": "4.2",
+  "line": 273,
+  "text": "Need help? Contact Support",
+  "norm": "need help? contact support",
+  "placeholder": false
+ },
+ {
+  "section": "4.2",
+  "line": 274,
+  "text": "Taken down by Bakhli: {reason}",
+  "norm": "taken down by bakhli: {}",
+  "placeholder": true
+ },
+ {
+  "section": "4.2",
+  "line": 274,
+  "text": "Your confirmed bookings still stand.",
+  "norm": "your confirmed bookings still stand.",
+  "placeholder": false
+ },
+ {
+  "section": "4.2",
+  "line": 275,
+  "text": "New enquiries are paused in your area.",
+  "norm": "new enquiries are paused in your area.",
+  "placeholder": false
+ },
+ {
+  "section": "4.2",
+  "line": 276,
+  "text": "You are offline",
+  "norm": "you are offline",
+  "placeholder": false
+ },
+ {
+  "section": "4.2",
+  "line": 277,
+  "text": "Current role Stay Owner",
+  "norm": "current role stay owner",
+  "placeholder": false
+ },
+ {
+  "section": "4.2",
+  "line": 277,
+  "text": "A stay that was approved or is under review blocks this role change.",
+  "norm": "a stay that was approved or is under review blocks this role change.",
+  "placeholder": false
+ },
+ {
+  "section": "4.2",
+  "line": 278,
+  "text": "Delete stay",
+  "norm": "delete stay",
+  "placeholder": false
+ },
+ {
+  "section": "4.2",
+  "line": 278,
+  "text": "Delete stay?",
+  "norm": "delete stay?",
+  "placeholder": false
+ },
+ {
+  "section": "4.2",
+  "line": 278,
+  "text": "Your stay, photos, calendar, money notes, special prices and jobs will be deleted.",
+  "norm": "your stay, photos, calendar, money notes, special prices and jobs will be deleted.",
+  "placeholder": false
+ },
+ {
+  "section": "4.2",
+  "line": 278,
+  "text": "2 confirmed bookings will be cancelled and the guests told.",
+  "norm": "0 confirmed bookings will be cancelled and the guests told.",
+  "placeholder": false
+ },
+ {
+  "section": "4.2",
+  "line": 278,
+  "text": "Stay deleted.",
+  "norm": "stay deleted.",
+  "placeholder": false
+ },
+ {
+  "section": "4.2",
+  "line": 278,
+  "text": "No stay yet / Set up your stay",
+  "norm": "no stay yet / set up your stay",
+  "placeholder": false
+ },
+ {
+  "section": "4.2",
+  "line": 279,
+  "text": "Delete Account",
+  "norm": "delete account",
+  "placeholder": false
+ },
+ {
+  "section": "4.2",
+  "line": 279,
+  "text": "Your stay, jobs, calendar and money notes will be deleted.",
+  "norm": "your stay, jobs, calendar and money notes will be deleted.",
+  "placeholder": false
+ },
+ {
+  "section": "4.2",
+  "line": 279,
+  "text": "Cannot delete yet",
+  "norm": "cannot delete yet",
+  "placeholder": false
+ },
+ {
+  "section": "4.2",
+  "line": 279,
+  "text": "You have an active stay booking. You can delete your account after it ends.",
+  "norm": "you have an active stay booking. you can delete your account after it ends.",
+  "placeholder": false
+ },
+ {
+  "section": "4.2",
+  "line": 279,
+  "text": "You have an open stay enquiry. Close it first.",
+  "norm": "you have an open stay enquiry. close it first.",
+  "placeholder": false
+ },
+ {
+  "section": "4.2",
+  "line": 279,
+  "text": "Take your listing offline first.",
+  "norm": "take your listing offline first.",
+  "placeholder": false
+ },
+ {
+  "section": "4.2",
+  "line": 279,
+  "text": "You have money to settle on {trip}.",
+  "norm": "you have money to settle on {}.",
+  "placeholder": true
+ },
+ {
+  "section": "4.2",
+  "line": 279,
+  "text": "Traveller removed",
+  "norm": "traveller removed",
+  "placeholder": false
+ },
+ {
+  "section": "4.2",
+  "line": 280,
+  "text": "Accepting guests",
+  "norm": "accepting guests",
+  "placeholder": false
+ },
+ {
+  "section": "4.2",
+  "line": 280,
+  "text": "Not taking guests",
+  "norm": "not taking guests",
+  "placeholder": false
+ },
+ {
+  "section": "4.2",
+  "line": 280,
+  "text": "Guests cannot send new enquiries.",
+  "norm": "guests cannot send new enquiries.",
+  "placeholder": false
+ },
+ {
+  "section": "4.2",
+  "line": 280,
+  "text": "Your stay is not live yet.",
+  "norm": "your stay is not live yet.",
+  "placeholder": false
+ },
+ {
+  "section": "4.2",
+  "line": 281,
+  "text": "Stay details",
+  "norm": "stay details",
+  "placeholder": false
+ },
+ {
+  "section": "4.2",
+  "line": 281,
+  "text": "Your stay is live / Name, registration and location changes go for review. Your stay stays live meanwhile.",
+  "norm": "your stay is live / name, registration and location changes go for review. your stay stays live meanwhile.",
+  "placeholder": false
+ },
+ {
+  "section": "4.2",
+  "line": 281,
+  "text": "Goes for review",
+  "norm": "goes for review",
+  "placeholder": false
+ },
+ {
+  "section": "4.2",
+  "line": 281,
+  "text": "Price, photos, rooms and rules change right away.",
+  "norm": "price, photos, rooms and rules change right away.",
+  "placeholder": false
+ },
+ {
+  "section": "4.2",
+  "line": 281,
+  "text": "Save changes",
+  "norm": "save changes",
+  "placeholder": false
+ },
+ {
+  "section": "4.2",
+  "line": 281,
+  "text": "Name change sent for review. Travellers still see Deodar Heights Homestay.",
+  "norm": "name change sent for review. travellers still see deodar heights homestay.",
+  "placeholder": false
+ },
+ {
+  "section": "4.2",
+  "line": 281,
+  "text": "Change waiting for review",
+  "norm": "change waiting for review",
+  "placeholder": false
+ },
+ {
+  "section": "4.2",
+  "line": 281,
+  "text": "Your change is live. Name updated to {name}.",
+  "norm": "your change is live. name updated to {}.",
+  "placeholder": true
+ },
+ {
+  "section": "4.2",
+  "line": 281,
+  "text": "Change not approved: {reason}. Your stay stays live.",
+  "norm": "change not approved: {}. your stay stays live.",
+  "placeholder": true
+ },
+ {
+  "section": "4.2",
+  "line": 281,
+  "text": "Edit again",
+  "norm": "edit again",
+  "placeholder": false
+ },
+ {
+  "section": "4.2",
+  "line": 281,
+  "text": "Keep at least one photo.",
+  "norm": "keep at least one photo.",
+  "placeholder": false
+ },
+ {
+  "section": "4.2",
+  "line": 282,
+  "text": "Edit price",
+  "norm": "edit price",
+  "placeholder": false
+ },
+ {
+  "section": "4.2",
+  "line": 282,
+  "text": "Edit prices",
+  "norm": "edit prices",
+  "placeholder": false
+ },
+ {
+  "section": "4.2",
+  "line": 282,
+  "text": "Price updated",
+  "norm": "price updated",
+  "placeholder": false
+ },
+ {
+  "section": "4.2",
+  "line": 282,
+  "text": "With today's special price: Rs 3,600",
+  "norm": "with today's special price: ₹0,000",
+  "placeholder": false
+ },
+ {
+  "section": "4.2",
+  "line": 282,
+  "text": "Listed when asked",
+  "norm": "listed when asked",
+  "placeholder": false
+ },
+ {
+  "section": "4.2",
+  "line": 283,
+  "text": "Share my stay",
+  "norm": "share my stay",
+  "placeholder": false
+ },
+ {
+  "section": "4.2",
+  "line": 284,
+  "text": "1 report on this stay",
+  "norm": "0 report on this stay",
+  "placeholder": false
+ },
+ {
+  "section": "4.3",
+  "line": 290,
+  "text": "Listed when asked Rs X",
+  "norm": "listed when asked ₹x",
+  "placeholder": false
+ },
+ {
+  "section": "4.3",
+  "line": 290,
+  "text": "2 enquiries waiting. Reply before 6:40 pm",
+  "norm": "0 enquiries waiting. reply before 0:00 pm",
+  "placeholder": false
+ },
+ {
+  "section": "4.3",
+  "line": 291,
+  "text": "Send offer",
+  "norm": "send offer",
+  "placeholder": false
+ },
+ {
+  "section": "4.3",
+  "line": 291,
+  "text": "Listed when asked",
+  "norm": "listed when asked",
+  "placeholder": false
+ },
+ {
+  "section": "4.3",
+  "line": 291,
+  "text": "Your offer is above the listed price for these dates.",
+  "norm": "your offer is above the listed price for these dates.",
+  "placeholder": false
+ },
+ {
+  "section": "4.3",
+  "line": 291,
+  "text": "Too many actions. Try again in a few minutes.",
+  "norm": "too many actions. try again in a few minutes.",
+  "placeholder": false
+ },
+ {
+  "section": "4.3",
+  "line": 292,
+  "text": "Valid until 6:40 pm",
+  "norm": "valid until 0:00 pm",
+  "placeholder": false
+ },
+ {
+  "section": "4.3",
+  "line": 292,
+  "text": "Send new offer",
+  "norm": "send new offer",
+  "placeholder": false
+ },
+ {
+  "section": "4.3",
+  "line": 293,
+  "text": "New price",
+  "norm": "new price",
+  "placeholder": false
+ },
+ {
+  "section": "4.3",
+  "line": 293,
+  "text": "Rohit asks Rs 2,700 / night",
+  "norm": "rohit asks ₹0,000 / night",
+  "placeholder": false
+ },
+ {
+  "section": "4.3",
+  "line": 293,
+  "text": "Total at his price",
+  "norm": "total at his price",
+  "placeholder": false
+ },
+ {
+  "section": "4.3",
+  "line": 293,
+  "text": "Counter 1 of 3",
+  "norm": "counter 0 of 0",
+  "placeholder": false
+ },
+ {
+  "section": "4.3",
+  "line": 293,
+  "text": "Answer within",
+  "norm": "answer within",
+  "placeholder": false
+ },
+ {
+  "section": "4.3",
+  "line": 293,
+  "text": "Accept price",
+  "norm": "accept price",
+  "placeholder": false
+ },
+ {
+  "section": "4.3",
+  "line": 293,
+  "text": "Send a different offer",
+  "norm": "send a different offer",
+  "placeholder": false
+ },
+ {
+  "section": "4.3",
+  "line": 293,
+  "text": "Not available",
+  "norm": "not available",
+  "placeholder": false
+ },
+ {
+  "section": "4.3",
+  "line": 293,
+  "text": "Accept price sends him an offer at Rs 2,700 a night.",
+  "norm": "accept price sends him an offer at ₹0,000 a night.",
+  "placeholder": false
+ },
+ {
+  "section": "4.3",
+  "line": 294,
+  "text": "Mark as not available?",
+  "norm": "mark as not available?",
+  "placeholder": false
+ },
+ {
+  "section": "4.3",
+  "line": 295,
+  "text": "Call guest",
+  "norm": "call guest",
+  "placeholder": false
+ },
+ {
+  "section": "4.3",
+  "line": 296,
+  "text": "Share UPI and WhatsApp",
+  "norm": "share upi and whatsapp",
+  "placeholder": false
+ },
+ {
+  "section": "4.3",
+  "line": 296,
+  "text": "Open chat",
+  "norm": "open chat",
+  "placeholder": false
+ },
+ {
+  "section": "4.3",
+  "line": 296,
+  "text": "Rohit accepted your offer",
+  "norm": "rohit accepted your offer",
+  "placeholder": false
+ },
+ {
+  "section": "4.3",
+  "line": 296,
+  "text": "From app",
+  "norm": "from app",
+  "placeholder": false
+ },
+ {
+  "section": "4.3",
+  "line": 297,
+  "text": "Offer declined",
+  "norm": "offer declined",
+  "placeholder": false
+ },
+ {
+  "section": "4.3",
+  "line": 297,
+  "text": "Offer expired",
+  "norm": "offer expired",
+  "placeholder": false
+ },
+ {
+  "section": "4.3",
+  "line": 298,
+  "text": "Send a revised offer",
+  "norm": "send a revised offer",
+  "placeholder": false
+ },
+ {
+  "section": "4.3",
+  "line": 298,
+  "text": "Revised offer · Not accepted yet",
+  "norm": "revised offer · not accepted yet",
+  "placeholder": false
+ },
+ {
+  "section": "4.3",
+  "line": 299,
+  "text": "Accept change",
+  "norm": "accept change",
+  "placeholder": false
+ },
+ {
+  "section": "4.3",
+  "line": 299,
+  "text": "Cancel booking",
+  "norm": "cancel booking",
+  "placeholder": false
+ },
+ {
+  "section": "4.3",
+  "line": 299,
+  "text": "These dates are no longer free.",
+  "norm": "these dates are no longer free.",
+  "placeholder": false
+ },
+ {
+  "section": "4.3",
+  "line": 299,
+  "text": "Your calendar moves only when you accept. Money notes stay as they are.",
+  "norm": "your calendar moves only when you accept. money notes stay as they are.",
+  "placeholder": false
+ },
+ {
+  "section": "4.3",
+  "line": 299,
+  "text": "These days are blocked by you. Accept anyway?",
+  "norm": "these days are blocked by you. accept anyway?",
+  "placeholder": false
+ },
+ {
+  "section": "4.3",
+  "line": 301,
+  "text": "Cancelled by guest",
+  "norm": "cancelled by guest",
+  "placeholder": false
+ },
+ {
+  "section": "4.3",
+  "line": 302,
+  "text": "Traveller left",
+  "norm": "traveller left",
+  "placeholder": false
+ },
+ {
+  "section": "4.3",
+  "line": 302,
+  "text": "Booked elsewhere",
+  "norm": "booked elsewhere",
+  "placeholder": false
+ },
+ {
+  "section": "4.3",
+  "line": 302,
+  "text": "Trip dates changed",
+  "norm": "trip dates changed",
+  "placeholder": false
+ },
+ {
+  "section": "4.3",
+  "line": 302,
+  "text": "Trip deleted",
+  "norm": "trip deleted",
+  "placeholder": false
+ },
+ {
+  "section": "4.3",
+  "line": 303,
+  "text": "No reply from Deodar Heights",
+  "norm": "no reply from deodar heights",
+  "placeholder": false
+ },
+ {
+  "section": "4.3",
+  "line": 304,
+  "text": "Booked by you",
+  "norm": "booked by you",
+  "placeholder": false
+ },
+ {
+  "section": "4.3",
+  "line": 305,
+  "text": "Closed by Bakhli",
+  "norm": "closed by bakhli",
+  "placeholder": false
+ },
+ {
+  "section": "4.3",
+  "line": 306,
+  "text": "host could not give the room",
+  "norm": "host could not give the room",
+  "placeholder": false
+ },
+ {
+  "section": "4.3",
+  "line": 306,
+  "text": "The guest reported a problem.",
+  "norm": "the guest reported a problem.",
+  "placeholder": false
+ },
+ {
+  "section": "4.3",
+  "line": 307,
+  "text": "Report traveller",
+  "norm": "report traveller",
+  "placeholder": false
+ },
+ {
+  "section": "4.3",
+  "line": 309,
+  "text": "Not available right now / New enquiries will come back soon.",
+  "norm": "not available right now / new enquiries will come back soon.",
+  "placeholder": false
+ },
+ {
+  "section": "4.4",
+  "line": 315,
+  "text": "Open chat",
+  "norm": "open chat",
+  "placeholder": false
+ },
+ {
+  "section": "4.4",
+  "line": 315,
+  "text": "Booking confirmed by both",
+  "norm": "booking confirmed by both",
+  "placeholder": false
+ },
+ {
+  "section": "4.4",
+  "line": 315,
+  "text": "You can't message this user",
+  "norm": "you can't message this user",
+  "placeholder": false
+ },
+ {
+  "section": "4.4",
+  "line": 316,
+  "text": "menu: dialog lists what will be shared;",
+  "norm": "menu: dialog lists what will be shared;",
+  "placeholder": false
+ },
+ {
+  "section": "4.4",
+  "line": 316,
+  "text": "; one card in the chat with UPI ID (Copy) and WhatsApp (Open WhatsApp) | No details saved: opens o_st_38 first (server 400",
+  "norm": "; one card in the chat with upi id (copy) and whatsapp (open whatsapp) | no details saved: opens o_st_00 first (server 000",
+  "placeholder": false
+ },
+ {
+  "section": "4.5",
+  "line": 323,
+  "text": "Post a job",
+  "norm": "post a job",
+  "placeholder": false
+ },
+ {
+  "section": "4.5",
+  "line": 323,
+  "text": "Your stay must be live to post a job.",
+  "norm": "your stay must be live to post a job.",
+  "placeholder": false
+ },
+ {
+  "section": "4.5",
+  "line": 325,
+  "text": "Close this job?",
+  "norm": "close this job?",
+  "placeholder": false
+ },
+ {
+  "section": "4.5",
+  "line": 326,
+  "text": "Applicants call or WhatsApp you.",
+  "norm": "applicants call or whatsapp you.",
+  "placeholder": false
+ },
+ {
+  "section": "4.5",
+  "line": 329,
+  "text": "3 active jobs. Free allows 1. Close 2 to post a new one.",
+  "norm": "0 active jobs. free allows 0. close 0 to post a new one.",
+  "placeholder": false
+ },
+ {
+  "section": "4.6",
+  "line": 337,
+  "text": "Booking / From the app",
+  "norm": "booking / from the app",
+  "placeholder": false
+ },
+ {
+  "section": "4.6",
+  "line": 337,
+  "text": "Listed when asked",
+  "norm": "listed when asked",
+  "placeholder": false
+ },
+ {
+  "section": "4.6",
+  "line": 337,
+  "text": "Edit amounts",
+  "norm": "edit amounts",
+  "placeholder": false
+ },
+ {
+  "section": "4.6",
+  "line": 337,
+  "text": "Open enquiry",
+  "norm": "open enquiry",
+  "placeholder": false
+ },
+ {
+  "section": "4.6",
+  "line": 337,
+  "text": "Removed automatically 90 days after this date.",
+  "norm": "removed automatically 00 days after this date.",
+  "placeholder": false
+ },
+ {
+  "section": "4.6",
+  "line": 337,
+  "text": "This enquiry is no longer available.",
+  "norm": "this enquiry is no longer available.",
+  "placeholder": false
+ },
+ {
+  "section": "4.6",
+  "line": 339,
+  "text": "+ Add booking",
+  "norm": "+ add booking",
+  "placeholder": false
+ },
+ {
+  "section": "4.6",
+  "line": 339,
+  "text": "Add booking / For bookings by phone or WhatsApp",
+  "norm": "add booking / for bookings by phone or whatsapp",
+  "placeholder": false
+ },
+ {
+  "section": "4.6",
+  "line": 339,
+  "text": "Only you see this booking and its amounts. They are your own notes, never sent to the guest. Do not add phone numbers.",
+  "norm": "only you see this booking and its amounts. they are your own notes, never sent to the guest. do not add phone numbers.",
+  "placeholder": false
+ },
+ {
+  "section": "4.6",
+  "line": 339,
+  "text": "Bookings you added 3 of 4 on Free",
+  "norm": "bookings you added 0 of 0 on free",
+  "placeholder": false
+ },
+ {
+  "section": "4.6",
+  "line": 339,
+  "text": "Save booking",
+  "norm": "save booking",
+  "placeholder": false
+ },
+ {
+  "section": "4.6",
+  "line": 339,
+  "text": "Add a name for this booking.",
+  "norm": "add a name for this booking.",
+  "placeholder": false
+ },
+ {
+  "section": "4.6",
+  "line": 339,
+  "text": "Do not add phone numbers.",
+  "norm": "do not add phone numbers.",
+  "placeholder": false
+ },
+ {
+  "section": "4.6",
+  "line": 340,
+  "text": "Added by you",
+  "norm": "added by you",
+  "placeholder": false
+ },
+ {
+  "section": "4.6",
+  "line": 340,
+  "text": "Delete this booking?",
+  "norm": "delete this booking?",
+  "placeholder": false
+ },
+ {
+  "section": "4.6",
+  "line": 341,
+  "text": "You already have 1 booking on these days.",
+  "norm": "you already have 0 booking on these days.",
+  "placeholder": false
+ },
+ {
+  "section": "4.6",
+  "line": 341,
+  "text": "These days are blocked by you.",
+  "norm": "these days are blocked by you.",
+  "placeholder": false
+ },
+ {
+  "section": "4.6",
+  "line": 342,
+  "text": "Block these days",
+  "norm": "block these days",
+  "placeholder": false
+ },
+ {
+  "section": "4.6",
+  "line": 342,
+  "text": "No booking, just days off",
+  "norm": "no booking, just days off",
+  "placeholder": false
+ },
+ {
+  "section": "4.6",
+  "line": 342,
+  "text": "Block days / Days you are not taking guests",
+  "norm": "block days / days you are not taking guests",
+  "placeholder": false
+ },
+ {
+  "section": "4.6",
+  "line": 342,
+  "text": "Only you see it",
+  "norm": "only you see it",
+  "placeholder": false
+ },
+ {
+  "section": "4.6",
+  "line": 342,
+  "text": "Travellers see your stay as full on these days.",
+  "norm": "travellers see your stay as full on these days.",
+  "placeholder": false
+ },
+ {
+  "section": "4.6",
+  "line": 342,
+  "text": "Blocked ranges 0 of 1 on Free",
+  "norm": "blocked ranges 0 of 0 on free",
+  "placeholder": false
+ },
+ {
+  "section": "4.6",
+  "line": 342,
+  "text": "Guests see Full on your dates",
+  "norm": "guests see full on your dates",
+  "placeholder": false
+ },
+ {
+  "section": "4.6",
+  "line": 342,
+  "text": "Guests cannot ask for these days. Open enquiries are not closed.",
+  "norm": "guests cannot ask for these days. open enquiries are not closed.",
+  "placeholder": false
+ },
+ {
+  "section": "4.6",
+  "line": 342,
+  "text": "Removed automatically 90 days after it ends.",
+  "norm": "removed automatically 00 days after it ends.",
+  "placeholder": false
+ },
+ {
+  "section": "4.6",
+  "line": 342,
+  "text": "Remove block",
+  "norm": "remove block",
+  "placeholder": false
+ },
+ {
+  "section": "4.6",
+  "line": 342,
+  "text": "These days are already blocked.",
+  "norm": "these days are already blocked.",
+  "placeholder": false
+ },
+ {
+  "section": "4.6",
+  "line": 342,
+  "text": "1 confirmed booking is inside these days. It stays confirmed.",
+  "norm": "0 confirmed booking is inside these days. it stays confirmed.",
+  "placeholder": false
+ },
+ {
+  "section": "4.6",
+  "line": 342,
+  "text": "2 open enquiries are for these days.",
+  "norm": "0 open enquiries are for these days.",
+  "placeholder": false
+ },
+ {
+  "section": "4.6",
+  "line": 343,
+  "text": "+ Add booking on this day",
+  "norm": "+ add booking on this day",
+  "placeholder": false
+ },
+ {
+  "section": "4.6",
+  "line": 343,
+  "text": "Set a price for these days",
+  "norm": "set a price for these days",
+  "placeholder": false
+ },
+ {
+  "section": "4.6",
+  "line": 344,
+  "text": "View calendar",
+  "norm": "view calendar",
+  "placeholder": false
+ },
+ {
+  "section": "4.6",
+  "line": 345,
+  "text": "Older entries are removed automatically after 3 months.",
+  "norm": "older entries are removed automatically after 0 months.",
+  "placeholder": false
+ },
+ {
+  "section": "4.6",
+  "line": 346,
+  "text": "8 more bookings are hidden. See Plus",
+  "norm": "0 more bookings are hidden. see plus",
+  "placeholder": false
+ },
+ {
+  "section": "4.6",
+  "line": 347,
+  "text": "Morning reminder",
+  "norm": "morning reminder",
+  "placeholder": false
+ },
+ {
+  "section": "4.6",
+  "line": 347,
+  "text": "2 check-ins today / Neha Joshi, Gupta ji 2 rooms",
+  "norm": "0 check-ins today / neha joshi, gupta ji 0 rooms",
+  "placeholder": false
+ },
+ {
+  "section": "4.6",
+  "line": 347,
+  "text": "Needs notifications on this phone.",
+  "norm": "needs notifications on this phone.",
+  "placeholder": false
+ },
+ {
+  "section": "4.6",
+  "line": 347,
+  "text": "Plus sends it at 8:00 am",
+  "norm": "plus sends it at 0:00 am",
+  "placeholder": false
+ },
+ {
+  "section": "4.7",
+  "line": 354,
+  "text": "Rs 6,000 to collect",
+  "norm": "₹0,000 to collect",
+  "placeholder": false
+ },
+ {
+  "section": "4.7",
+  "line": 354,
+  "text": "Paid in full",
+  "norm": "paid in full",
+  "placeholder": false
+ },
+ {
+  "section": "4.7",
+  "line": 354,
+  "text": "Rs 2,000 received",
+  "norm": "₹0,000 received",
+  "placeholder": false
+ },
+ {
+  "section": "4.7",
+  "line": 355,
+  "text": "This month",
+  "norm": "this month",
+  "placeholder": false
+ },
+ {
+  "section": "4.7",
+  "line": 355,
+  "text": "To collect",
+  "norm": "to collect",
+  "placeholder": false
+ },
+ {
+  "section": "4.7",
+  "line": 356,
+  "text": "Mark paid",
+  "norm": "mark paid",
+  "placeholder": false
+ },
+ {
+  "section": "4.7",
+  "line": 356,
+  "text": "Mark as paid in full?",
+  "norm": "mark as paid in full?",
+  "placeholder": false
+ },
+ {
+  "section": "4.8",
+  "line": 364,
+  "text": "Special prices",
+  "norm": "special prices",
+  "placeholder": false
+ },
+ {
+  "section": "4.8",
+  "line": 364,
+  "text": "Set a price for these days",
+  "norm": "set a price for these days",
+  "placeholder": false
+ },
+ {
+  "section": "4.8",
+  "line": 364,
+  "text": "Pick dates",
+  "norm": "pick dates",
+  "placeholder": false
+ },
+ {
+  "section": "4.8",
+  "line": 364,
+  "text": "Lower price",
+  "norm": "lower price",
+  "placeholder": false
+ },
+ {
+  "section": "4.8",
+  "line": 364,
+  "text": "Higher price",
+  "norm": "higher price",
+  "placeholder": false
+ },
+ {
+  "section": "4.8",
+  "line": 364,
+  "text": "Applies to all your rooms. Bookings and offers already sent do not change.",
+  "norm": "applies to all your rooms. bookings and offers already sent do not change.",
+  "placeholder": false
+ },
+ {
+  "section": "4.8",
+  "line": 365,
+  "text": "These dates already have a special price.",
+  "norm": "these dates already have a special price.",
+  "placeholder": false
+ },
+ {
+  "section": "4.8",
+  "line": 365,
+  "text": "Diwali week (6 to 12 Nov) covers part of these dates. Change the dates, or edit that price.",
+  "norm": "diwali week (0 to 00 nov) covers part of these dates. change the dates, or edit that price.",
+  "placeholder": false
+ },
+ {
+  "section": "4.8",
+  "line": 365,
+  "text": "Edit Diwali week",
+  "norm": "edit diwali week",
+  "placeholder": false
+ },
+ {
+  "section": "4.8",
+  "line": 365,
+  "text": "You can change special prices 3 times a day. Try again tomorrow.",
+  "norm": "you can change special prices 0 times a day. try again tomorrow.",
+  "placeholder": false
+ },
+ {
+  "section": "4.8",
+  "line": 365,
+  "text": "A special price can cover up to 60 nights.",
+  "norm": "a special price can cover up to 00 nights.",
+  "placeholder": false
+ },
+ {
+  "section": "4.8",
+  "line": 365,
+  "text": "Start date must be within 180 days.",
+  "norm": "start date must be within 000 days.",
+  "placeholder": false
+ },
+ {
+  "section": "4.8",
+  "line": 366,
+  "text": "Delete this special price?",
+  "norm": "delete this special price?",
+  "placeholder": false
+ },
+ {
+  "section": "4.8",
+  "line": 366,
+  "text": "Listed when asked",
+  "norm": "listed when asked",
+  "placeholder": false
+ },
+ {
+  "section": "4.8",
+  "line": 368,
+  "text": "Paused on Free",
+  "norm": "paused on free",
+  "placeholder": false
+ },
+ {
+  "section": "4.8",
+  "line": 369,
+  "text": "Diwali is in 3 weeks. Set your price?",
+  "norm": "diwali is in 0 weeks. set your price?",
+  "placeholder": false
+ },
+ {
+  "section": "4.8",
+  "line": 369,
+  "text": "6 to 12 Nov · no special price yet",
+  "norm": "0 to 00 nov · no special price yet",
+  "placeholder": false
+ },
+ {
+  "section": "4.8",
+  "line": 369,
+  "text": "Diwali is in 3 weeks / Set your price for 6 to 12 Nov?",
+  "norm": "diwali is in 0 weeks / set your price for 0 to 00 nov?",
+  "placeholder": false
+ },
+ {
+  "section": "4.8",
+  "line": 373,
+  "text": "14 travellers asked for stays in Mukteshwar for these dates.",
+  "norm": "00 travellers asked for stays in mukteshwar for these dates.",
+  "placeholder": false
+ },
+ {
+  "section": "4.9",
+  "line": 379,
+  "text": "Hi, Meena",
+  "norm": "hi, meena",
+  "placeholder": false
+ },
+ {
+  "section": "4.9",
+  "line": 379,
+  "text": "See all (N)",
+  "norm": "see all (n)",
+  "placeholder": false
+ },
+ {
+  "section": "4.9",
+  "line": 379,
+  "text": "List your stay",
+  "norm": "list your stay",
+  "placeholder": false
+ },
+ {
+  "section": "4.9",
+  "line": 379,
+  "text": "2 enquiries need a reply.",
+  "norm": "0 enquiries need a reply.",
+  "placeholder": false
+ },
+ {
+  "section": "4.9",
+  "line": 379,
+  "text": "Guests cannot send new enquiries.",
+  "norm": "guests cannot send new enquiries.",
+  "placeholder": false
+ },
+ {
+  "section": "4.9",
+  "line": 379,
+  "text": "First in trip plans for Mukteshwar.",
+  "norm": "first in trip plans for mukteshwar.",
+  "placeholder": false
+ },
+ {
+  "section": "4.9",
+  "line": 379,
+  "text": "Plans started today.",
+  "norm": "plans started today.",
+  "placeholder": false
+ },
+ {
+  "section": "4.9",
+  "line": 379,
+  "text": "3 more in the next 15 days",
+  "norm": "0 more in the next 00 days",
+  "placeholder": false
+ },
+ {
+  "section": "4.9",
+  "line": 379,
+  "text": "Shown N times",
+  "norm": "shown n times",
+  "placeholder": false
+ },
+ {
+  "section": "4.9",
+  "line": 380,
+  "text": "From Rs 3,000/night",
+  "norm": "from ₹0,000/night",
+  "placeholder": false
+ },
+ {
+  "section": "4.9",
+  "line": 380,
+  "text": "Rooms and prices",
+  "norm": "rooms and prices",
+  "placeholder": false
+ },
+ {
+  "section": "4.9",
+  "line": 380,
+  "text": "Special prices",
+  "norm": "special prices",
+  "placeholder": false
+ },
+ {
+  "section": "4.9",
+  "line": 380,
+  "text": "Stay details",
+  "norm": "stay details",
+  "placeholder": false
+ },
+ {
+  "section": "4.9",
+  "line": 380,
+  "text": "UPI and WhatsApp",
+  "norm": "upi and whatsapp",
+  "placeholder": false
+ },
+ {
+  "section": "4.9",
+  "line": 380,
+  "text": "Delete stay",
+  "norm": "delete stay",
+  "placeholder": false
+ },
+ {
+  "section": "4.9",
+  "line": 380,
+  "text": "Hidden on Free",
+  "norm": "hidden on free",
+  "placeholder": false
+ },
+ {
+  "section": "4.9",
+  "line": 380,
+  "text": "3 bookings this month",
+  "norm": "0 bookings this month",
+  "placeholder": false
+ },
+ {
+  "section": "4.9",
+  "line": 380,
+  "text": "Next: 22 Nov, Neha Joshi",
+  "norm": "next: 00 nov, neha joshi",
+  "placeholder": false
+ },
+ {
+  "section": "4.9",
+  "line": 381,
+  "text": "Plan a trip",
+  "norm": "plan a trip",
+  "placeholder": false
+ },
+ {
+  "section": "4.9",
+  "line": 381,
+  "text": "My Trips",
+  "norm": "my trips",
+  "placeholder": false
+ },
+ {
+  "section": "4.9",
+  "line": 381,
+  "text": "My Journeys",
+  "norm": "my journeys",
+  "placeholder": false
+ },
+ {
+  "section": "4.9",
+  "line": 381,
+  "text": "My Reports",
+  "norm": "my reports",
+  "placeholder": false
+ },
+ {
+  "section": "4.9",
+  "line": 382,
+  "text": "This is no longer available.",
+  "norm": "this is no longer available.",
+  "placeholder": false
+ },
+ {
+  "section": "4.9",
+  "line": 382,
+  "text": "180 days",
+  "norm": "000 days",
+  "placeholder": false
+ },
+ {
+  "section": "4.9",
+  "line": 383,
+  "text": "Turn on notifications / You will miss new enquiries",
+  "norm": "turn on notifications / you will miss new enquiries",
+  "placeholder": false
+ },
+ {
+  "section": "4.9",
+  "line": 385,
+  "text": "Plus ended. 4 photos and 2 room types are hidden.",
+  "norm": "plus ended. 0 photos and 0 room types are hidden.",
+  "placeholder": false
+ },
+ {
+  "section": "4.9",
+  "line": 385,
+  "text": "Choose what stays",
+  "norm": "choose what stays",
+  "placeholder": false
+ },
+ {
+  "section": "4.9",
+  "line": 385,
+  "text": "You can change this 3 times a day.",
+  "norm": "you can change this 0 times a day.",
+  "placeholder": false
+ },
+ {
+  "section": "4.9",
+  "line": 386,
+  "text": "Could not refresh. Showing your last list.",
+  "norm": "could not refresh. showing your last list.",
+  "placeholder": false
+ },
+ {
+  "section": "4.9",
+  "line": 386,
+  "text": "No connection. Please try again.",
+  "norm": "no connection. please try again.",
+  "placeholder": false
+ },
+ {
+  "section": "4.9",
+  "line": 387,
+  "text": "Couldn't load",
+  "norm": "couldn't load",
+  "placeholder": false
+ },
+ {
+  "section": "4.9",
+  "line": 387,
+  "text": "Try again",
+  "norm": "try again",
+  "placeholder": false
+ },
+ {
+  "section": "4.9",
+  "line": 388,
+  "text": "This changed on another phone. Pull to refresh.",
+  "norm": "this changed on another phone. pull to refresh.",
+  "placeholder": false
+ },
+ {
+  "section": "5.1",
+  "line": 427,
+  "text": "Wrong role? Change it",
+  "norm": "wrong role? change it",
+  "placeholder": false
+ },
+ {
+  "section": "5.1",
+  "line": 428,
+  "text": "Set up your taxi",
+  "norm": "set up your taxi",
+  "placeholder": false
+ },
+ {
+  "section": "5.1",
+  "line": 428,
+  "text": "Profile 0% complete",
+  "norm": "profile 0% complete",
+  "placeholder": false
+ },
+ {
+  "section": "5.1",
+  "line": 429,
+  "text": "e.g. UK 07 TA 1234",
+  "norm": "e.g. uk 00 ta 0000",
+  "placeholder": false
+ },
+ {
+  "section": "5.1",
+  "line": 429,
+  "text": "Upload failed. Try again.",
+  "norm": "upload failed. try again.",
+  "placeholder": false
+ },
+ {
+  "section": "5.1",
+  "line": 429,
+  "text": "Discard changes?",
+  "norm": "discard changes?",
+  "placeholder": false
+ },
+ {
+  "section": "5.1",
+  "line": 430,
+  "text": "Only Bakhli admin sees this",
+  "norm": "only bakhli admin sees this",
+  "placeholder": false
+ },
+ {
+  "section": "5.1",
+  "line": 430,
+  "text": "Licence capture is temporarily unavailable",
+  "norm": "licence capture is temporarily unavailable",
+  "placeholder": false
+ },
+ {
+  "section": "5.1",
+  "line": 431,
+  "text": "Same as my login number",
+  "norm": "same as my login number",
+  "placeholder": false
+ },
+ {
+  "section": "5.1",
+  "line": 431,
+  "text": "Not open here yet",
+  "norm": "not open here yet",
+  "placeholder": false
+ },
+ {
+  "section": "5.1",
+  "line": 432,
+  "text": "Active in requests",
+  "norm": "active in requests",
+  "placeholder": false
+ },
+ {
+  "section": "5.1",
+  "line": 432,
+  "text": "Not active",
+  "norm": "not active",
+  "placeholder": false
+ },
+ {
+  "section": "5.1",
+  "line": 432,
+  "text": "Other place",
+  "norm": "other place",
+  "placeholder": false
+ },
+ {
+  "section": "5.1",
+  "line": 432,
+  "text": "Add at least one route",
+  "norm": "add at least one route",
+  "placeholder": false
+ },
+ {
+  "section": "5.1",
+  "line": 432,
+  "text": "1 of 1 on Free",
+  "norm": "0 of 0 on free",
+  "placeholder": false
+ },
+ {
+  "section": "5.1",
+  "line": 432,
+  "text": "1 of 5",
+  "norm": "0 of 0",
+  "placeholder": false
+ },
+ {
+  "section": "5.1",
+  "line": 433,
+  "text": "Not now",
+  "norm": "not now",
+  "placeholder": false
+ },
+ {
+  "section": "5.1",
+  "line": 433,
+  "text": "1 route on Free.",
+  "norm": "0 route on free.",
+  "placeholder": false
+ },
+ {
+  "section": "5.1",
+  "line": 434,
+  "text": "Km included per day",
+  "norm": "km included per day",
+  "placeholder": false
+ },
+ {
+  "section": "5.1",
+  "line": 434,
+  "text": "Add your day rate and km before you submit",
+  "norm": "add your day rate and km before you submit",
+  "placeholder": false
+ },
+ {
+  "section": "5.1",
+  "line": 435,
+  "text": "Submit for review",
+  "norm": "submit for review",
+  "placeholder": false
+ },
+ {
+  "section": "5.1",
+  "line": 435,
+  "text": "Complete step 1 first.",
+  "norm": "complete step 0 first.",
+  "placeholder": false
+ },
+ {
+  "section": "5.1",
+  "line": 435,
+  "text": "Add your licence and date of birth.",
+  "norm": "add your licence and date of birth.",
+  "placeholder": false
+ },
+ {
+  "section": "5.1",
+  "line": 435,
+  "text": "Complete step 2 first.",
+  "norm": "complete step 0 first.",
+  "placeholder": false
+ },
+ {
+  "section": "5.1",
+  "line": 437,
+  "text": "Not approved: {reason}",
+  "norm": "not approved: {}",
+  "placeholder": true
+ },
+ {
+  "section": "5.1",
+  "line": 437,
+  "text": "Licence details needed",
+  "norm": "licence details needed",
+  "placeholder": false
+ },
+ {
+  "section": "5.1",
+  "line": 438,
+  "text": "Change role",
+  "norm": "change role",
+  "placeholder": false
+ },
+ {
+  "section": "5.2",
+  "line": 444,
+  "text": "UNDER REVIEW / We will notify you when your taxi is live.",
+  "norm": "under review / we will notify you when your taxi is live.",
+  "placeholder": false
+ },
+ {
+  "section": "5.2",
+  "line": 444,
+  "text": "While you wait: Get ready for requests",
+  "norm": "while you wait: get ready for requests",
+  "placeholder": false
+ },
+ {
+  "section": "5.2",
+  "line": 444,
+  "text": "Your taxi is under review",
+  "norm": "your taxi is under review",
+  "placeholder": false
+ },
+ {
+  "section": "5.2",
+  "line": 445,
+  "text": "You are offline",
+  "norm": "you are offline",
+  "placeholder": false
+ },
+ {
+  "section": "5.2",
+  "line": 445,
+  "text": "Get ready for requests",
+  "norm": "get ready for requests",
+  "placeholder": false
+ },
+ {
+  "section": "5.2",
+  "line": 445,
+  "text": "Share my taxi",
+  "norm": "share my taxi",
+  "placeholder": false
+ },
+ {
+  "section": "5.2",
+  "line": 446,
+  "text": "REJECTED: {reason}",
+  "norm": "rejected: {}",
+  "placeholder": true
+ },
+ {
+  "section": "5.2",
+  "line": 446,
+  "text": "Fix and resubmit",
+  "norm": "fix and resubmit",
+  "placeholder": false
+ },
+ {
+  "section": "5.2",
+  "line": 446,
+  "text": "Need help? Contact Support",
+  "norm": "need help? contact support",
+  "placeholder": false
+ },
+ {
+  "section": "5.2",
+  "line": 447,
+  "text": "Taken down by Bakhli: {reason}",
+  "norm": "taken down by bakhli: {}",
+  "placeholder": true
+ },
+ {
+  "section": "5.2",
+  "line": 447,
+  "text": "Your confirmed bookings still stand.",
+  "norm": "your confirmed bookings still stand.",
+  "placeholder": false
+ },
+ {
+  "section": "5.2",
+  "line": 448,
+  "text": "Vehicle and contact",
+  "norm": "vehicle and contact",
+  "placeholder": false
+ },
+ {
+  "section": "5.2",
+  "line": 448,
+  "text": "Send for review?",
+  "norm": "send for review?",
+  "placeholder": false
+ },
+ {
+  "section": "5.2",
+  "line": 448,
+  "text": "You stop getting requests until Bakhli approves the change. Your bookings stay.",
+  "norm": "you stop getting requests until bakhli approves the change. your bookings stay.",
+  "placeholder": false
+ },
+ {
+  "section": "5.2",
+  "line": 448,
+  "text": "Send for review",
+  "norm": "send for review",
+  "placeholder": false
+ },
+ {
+  "section": "5.2",
+  "line": 448,
+  "text": "Sent back for review",
+  "norm": "sent back for review",
+  "placeholder": false
+ },
+ {
+  "section": "5.2",
+  "line": 448,
+  "text": "Changes under review",
+  "norm": "changes under review",
+  "placeholder": false
+ },
+ {
+  "section": "5.2",
+  "line": 448,
+  "text": "This request is closed",
+  "norm": "this request is closed",
+  "placeholder": false
+ },
+ {
+  "section": "5.2",
+  "line": 448,
+  "text": "UNDER REVIEW · not getting requests",
+  "norm": "under review · not getting requests",
+  "placeholder": false
+ },
+ {
+  "section": "5.2",
+  "line": 448,
+  "text": "UNDER REVIEW",
+  "norm": "under review",
+  "placeholder": false
+ },
+ {
+  "section": "5.2",
+  "line": 449,
+  "text": "1 report on this taxi",
+  "norm": "0 report on this taxi",
+  "placeholder": false
+ },
+ {
+  "section": "5.2",
+  "line": 450,
+  "text": "New leads are paused in your area.",
+  "norm": "new leads are paused in your area.",
+  "placeholder": false
+ },
+ {
+  "section": "5.2",
+  "line": 451,
+  "text": "Requests are paused right now",
+  "norm": "requests are paused right now",
+  "placeholder": false
+ },
+ {
+  "section": "5.2",
+  "line": 451,
+  "text": "Requests are paused right now / New requests will come back soon. Pull down to check again.",
+  "norm": "requests are paused right now / new requests will come back soon. pull down to check again.",
+  "placeholder": false
+ },
+ {
+  "section": "5.2",
+  "line": 451,
+  "text": "Taxi requests are paused for now",
+  "norm": "taxi requests are paused for now",
+  "placeholder": false
+ },
+ {
+  "section": "5.2",
+  "line": 452,
+  "text": "Current role Taxi Driver",
+  "norm": "current role taxi driver",
+  "placeholder": false
+ },
+ {
+  "section": "5.2",
+  "line": 452,
+  "text": "A taxi that was approved or is under review blocks this role change.",
+  "norm": "a taxi that was approved or is under review blocks this role change.",
+  "placeholder": false
+ },
+ {
+  "section": "5.2",
+  "line": 453,
+  "text": "Delete taxi",
+  "norm": "delete taxi",
+  "placeholder": false
+ },
+ {
+  "section": "5.2",
+  "line": 453,
+  "text": "Delete taxi?",
+  "norm": "delete taxi?",
+  "placeholder": false
+ },
+ {
+  "section": "5.2",
+  "line": 453,
+  "text": "Your taxi, routes, plate photo, calendar and money notes will be deleted.",
+  "norm": "your taxi, routes, plate photo, calendar and money notes will be deleted.",
+  "placeholder": false
+ },
+ {
+  "section": "5.2",
+  "line": 453,
+  "text": "1 booking will be cancelled and the traveller told.",
+  "norm": "0 booking will be cancelled and the traveller told.",
+  "placeholder": false
+ },
+ {
+  "section": "5.2",
+  "line": 453,
+  "text": "Taxi deleted.",
+  "norm": "taxi deleted.",
+  "placeholder": false
+ },
+ {
+  "section": "5.2",
+  "line": 453,
+  "text": "No taxi yet / Set up your taxi",
+  "norm": "no taxi yet / set up your taxi",
+  "placeholder": false
+ },
+ {
+  "section": "5.2",
+  "line": 454,
+  "text": "Delete Account",
+  "norm": "delete account",
+  "placeholder": false
+ },
+ {
+  "section": "5.2",
+  "line": 454,
+  "text": "Cannot delete yet",
+  "norm": "cannot delete yet",
+  "placeholder": false
+ },
+ {
+  "section": "5.2",
+  "line": 454,
+  "text": "You have an active taxi booking. You can delete your account after it ends.",
+  "norm": "you have an active taxi booking. you can delete your account after it ends.",
+  "placeholder": false
+ },
+ {
+  "section": "5.2",
+  "line": 454,
+  "text": "A traveller has chosen you. Confirm or decline the trip first.",
+  "norm": "a traveller has chosen you. confirm or decline the trip first.",
+  "placeholder": false
+ },
+ {
+  "section": "5.2",
+  "line": 454,
+  "text": "You have an open taxi request. Cancel it first.",
+  "norm": "you have an open taxi request. cancel it first.",
+  "placeholder": false
+ },
+ {
+  "section": "5.2",
+  "line": 454,
+  "text": "Take your listing offline first.",
+  "norm": "take your listing offline first.",
+  "placeholder": false
+ },
+ {
+  "section": "5.2",
+  "line": 454,
+  "text": "You have money to settle on {trip}.",
+  "norm": "you have money to settle on {}.",
+  "placeholder": true
+ },
+ {
+  "section": "5.2",
+  "line": 454,
+  "text": "Available now",
+  "norm": "available now",
+  "placeholder": false
+ },
+ {
+  "section": "5.3",
+  "line": 461,
+  "text": "Hi, Ramesh",
+  "norm": "hi, ramesh",
+  "placeholder": false
+ },
+ {
+  "section": "5.3",
+  "line": 461,
+  "text": "You are online",
+  "norm": "you are online",
+  "placeholder": false
+ },
+ {
+  "section": "5.3",
+  "line": 461,
+  "text": "You are offline",
+  "norm": "you are offline",
+  "placeholder": false
+ },
+ {
+  "section": "5.3",
+  "line": 461,
+  "text": "On trip until 26 Dec",
+  "norm": "on trip until 00 dec",
+  "placeholder": false
+ },
+ {
+  "section": "5.3",
+  "line": 461,
+  "text": "Available now",
+  "norm": "available now",
+  "placeholder": false
+ },
+ {
+  "section": "5.3",
+  "line": 461,
+  "text": "See all (N)",
+  "norm": "see all (n)",
+  "placeholder": false
+ },
+ {
+  "section": "5.3",
+  "line": 461,
+  "text": ". One call (`GET /owner/home`, shape 8.4b): `onTripUntil`, `ringReady`, `routesMeter` (",
+  "norm": ". one call (`get /owner/home`, shape 0.0b): `ontripuntil`, `ringready`, `routesmeter` (",
+  "placeholder": false
+ },
+ {
+  "section": "5.3",
+  "line": 461,
+  "text": "), `isFeatured` (",
+  "norm": "), `isfeatured` (",
+  "placeholder": false
+ },
+ {
+  "section": "5.3",
+  "line": 462,
+  "text": "Your taxi is under review",
+  "norm": "your taxi is under review",
+  "placeholder": false
+ },
+ {
+  "section": "5.3",
+  "line": 462,
+  "text": "Your taxi is not live yet.",
+  "norm": "your taxi is not live yet.",
+  "placeholder": false
+ },
+ {
+  "section": "5.3",
+  "line": 462,
+  "text": "Could not update your taxi.",
+  "norm": "could not update your taxi.",
+  "placeholder": false
+ },
+ {
+  "section": "5.3",
+  "line": 463,
+  "text": "Bookings stay. A ringing request and unanswered trip leads close.",
+  "norm": "bookings stay. a ringing request and unanswered trip leads close.",
+  "placeholder": false
+ },
+ {
+  "section": "5.3",
+  "line": 463,
+  "text": "Hidden from search",
+  "norm": "hidden from search",
+  "placeholder": false
+ },
+ {
+  "section": "5.3",
+  "line": 464,
+  "text": "Could not check your phone",
+  "norm": "could not check your phone",
+  "placeholder": false
+ },
+ {
+  "section": "5.3",
+  "line": 464,
+  "text": "Your phone rang.",
+  "norm": "your phone rang.",
+  "placeholder": false
+ },
+ {
+  "section": "5.3",
+  "line": 464,
+  "text": "We did not see the ring.",
+  "norm": "we did not see the ring.",
+  "placeholder": false
+ },
+ {
+  "section": "5.3",
+  "line": 464,
+  "text": "Could not send the test ring.",
+  "norm": "could not send the test ring.",
+  "placeholder": false
+ },
+ {
+  "section": "5.3",
+  "line": 465,
+  "text": "Turn on notifications / Requests cannot ring on this phone.",
+  "norm": "turn on notifications / requests cannot ring on this phone.",
+  "placeholder": false
+ },
+ {
+  "section": "5.3",
+  "line": 467,
+  "text": "You missed 3 requests. Run a test ring.",
+  "norm": "you missed 0 requests. run a test ring.",
+  "placeholder": false
+ },
+ {
+  "section": "5.3",
+  "line": 467,
+  "text": "Get ready for requests / Your phone may not ring.",
+  "norm": "get ready for requests / your phone may not ring.",
+  "placeholder": false
+ },
+ {
+  "section": "5.3",
+  "line": 468,
+  "text": "This phone cannot get requests. Open Get ready to fix it.",
+  "norm": "this phone cannot get requests. open get ready to fix it.",
+  "placeholder": false
+ },
+ {
+  "section": "5.4",
+  "line": 477,
+  "text": "Incoming request / New taxi request",
+  "norm": "incoming request / new taxi request",
+  "placeholder": false
+ },
+ {
+  "section": "5.4",
+  "line": 477,
+  "text": "Getting the request",
+  "norm": "getting the request",
+  "placeholder": false
+ },
+ {
+  "section": "5.4",
+  "line": 477,
+  "text": "Could not open the request",
+  "norm": "could not open the request",
+  "placeholder": false
+ },
+ {
+  "section": "5.4",
+  "line": 477,
+  "text": "Check your internet. The request is still yours for 4:10.",
+  "norm": "check your internet. the request is still yours for 0:00.",
+  "placeholder": false
+ },
+ {
+  "section": "5.4",
+  "line": 477,
+  "text": "This route is paused on Free.",
+  "norm": "this route is paused on free.",
+  "placeholder": false
+ },
+ {
+  "section": "5.4",
+  "line": 478,
+  "text": "Request accepted / Waiting for traveller to choose",
+  "norm": "request accepted / waiting for traveller to choose",
+  "placeholder": false
+ },
+ {
+  "section": "5.4",
+  "line": 478,
+  "text": "This request went to the next drivers.",
+  "norm": "this request went to the next drivers.",
+  "placeholder": false
+ },
+ {
+  "section": "5.4",
+  "line": 478,
+  "text": "Requests are paused right now.",
+  "norm": "requests are paused right now.",
+  "placeholder": false
+ },
+ {
+  "section": "5.4",
+  "line": 478,
+  "text": "You added a trip on 25 Nov.",
+  "norm": "you added a trip on 00 nov.",
+  "placeholder": false
+ },
+ {
+  "section": "5.4",
+  "line": 480,
+  "text": "Missed / Went to the next drivers",
+  "norm": "missed / went to the next drivers",
+  "placeholder": false
+ },
+ {
+  "section": "5.4",
+  "line": 481,
+  "text": "Taken by another driver",
+  "norm": "taken by another driver",
+  "placeholder": false
+ },
+ {
+  "section": "5.4",
+  "line": 481,
+  "text": "The traveller cancelled the request",
+  "norm": "the traveller cancelled the request",
+  "placeholder": false
+ },
+ {
+  "section": "5.4",
+  "line": 481,
+  "text": "This request is closed",
+  "norm": "this request is closed",
+  "placeholder": false
+ },
+ {
+  "section": "5.4",
+  "line": 481,
+  "text": "You are offline",
+  "norm": "you are offline",
+  "placeholder": false
+ },
+ {
+  "section": "5.4",
+  "line": 481,
+  "text": "You removed this route",
+  "norm": "you removed this route",
+  "placeholder": false
+ },
+ {
+  "section": "5.4",
+  "line": 481,
+  "text": "Choose which route stays, or get Plus to use all your routes.",
+  "norm": "choose which route stays, or get plus to use all your routes.",
+  "placeholder": false
+ },
+ {
+  "section": "5.4",
+  "line": 481,
+  "text": "Choose your route",
+  "norm": "choose your route",
+  "placeholder": false
+ },
+ {
+  "section": "5.4",
+  "line": 481,
+  "text": "You accepted this request",
+  "norm": "you accepted this request",
+  "placeholder": false
+ },
+ {
+  "section": "5.4",
+  "line": 481,
+  "text": "You declined this request",
+  "norm": "you declined this request",
+  "placeholder": false
+ },
+ {
+  "section": "5.4",
+  "line": 481,
+  "text": "This does not count as a miss.",
+  "norm": "this does not count as a miss.",
+  "placeholder": false
+ },
+ {
+  "section": "5.4",
+  "line": 482,
+  "text": "Traveller chose you. Confirm in 12:40",
+  "norm": "traveller chose you. confirm in 00:00",
+  "placeholder": false
+ },
+ {
+  "section": "5.4",
+  "line": 482,
+  "text": "Booking request",
+  "norm": "booking request",
+  "placeholder": false
+ },
+ {
+  "section": "5.4",
+  "line": 482,
+  "text": "Time to confirm is over",
+  "norm": "time to confirm is over",
+  "placeholder": false
+ },
+ {
+  "section": "5.4",
+  "line": 482,
+  "text": "Dates already booked. You have another booking from 18 Dec to 26 Dec.",
+  "norm": "dates already booked. you have another booking from 00 dec to 00 dec.",
+  "placeholder": false
+ },
+ {
+  "section": "5.4",
+  "line": 483,
+  "text": "Confirm booking",
+  "norm": "confirm booking",
+  "placeholder": false
+ },
+ {
+  "section": "5.4",
+  "line": 483,
+  "text": "From app",
+  "norm": "from app",
+  "placeholder": false
+ },
+ {
+  "section": "5.4",
+  "line": 484,
+  "text": "Driver did not confirm",
+  "norm": "driver did not confirm",
+  "placeholder": false
+ },
+ {
+  "section": "5.4",
+  "line": 485,
+  "text": "Not selected",
+  "norm": "not selected",
+  "placeholder": false
+ },
+ {
+  "section": "5.4",
+  "line": 485,
+  "text": "Price not agreed",
+  "norm": "price not agreed",
+  "placeholder": false
+ },
+ {
+  "section": "5.4",
+  "line": 486,
+  "text": "Withdraw from request",
+  "norm": "withdraw from request",
+  "placeholder": false
+ },
+ {
+  "section": "5.5",
+  "line": 492,
+  "text": "Show more",
+  "norm": "show more",
+  "placeholder": false
+ },
+ {
+  "section": "5.5",
+  "line": 492,
+  "text": "No requests yet",
+  "norm": "no requests yet",
+  "placeholder": false
+ },
+ {
+  "section": "5.5",
+  "line": 492,
+  "text": "Could not load requests",
+  "norm": "could not load requests",
+  "placeholder": false
+ },
+ {
+  "section": "5.5",
+  "line": 492,
+  "text": "Could not refresh. Showing your last list.",
+  "norm": "could not refresh. showing your last list.",
+  "placeholder": false
+ },
+ {
+  "section": "5.5",
+  "line": 494,
+  "text": "Own plan",
+  "norm": "own plan",
+  "placeholder": false
+ },
+ {
+  "section": "5.5",
+  "line": 494,
+  "text": "Could not load this request.",
+  "norm": "could not load this request.",
+  "placeholder": false
+ },
+ {
+  "section": "5.5",
+  "line": 495,
+  "text": "Get ready for requests / Your phone may not ring.",
+  "norm": "get ready for requests / your phone may not ring.",
+  "placeholder": false
+ },
+ {
+  "section": "5.6",
+  "line": 501,
+  "text": "From the app",
+  "norm": "from the app",
+  "placeholder": false
+ },
+ {
+  "section": "5.6",
+  "line": 501,
+  "text": "Kathgodam pickup · Aarav Sharma",
+  "norm": "kathgodam pickup · aarav sharma",
+  "placeholder": false
+ },
+ {
+  "section": "5.6",
+  "line": 502,
+  "text": "On trip until 26 Dec",
+  "norm": "on trip until 00 dec",
+  "placeholder": false
+ },
+ {
+  "section": "5.6",
+  "line": 502,
+  "text": "On trip",
+  "norm": "on trip",
+  "placeholder": false
+ },
+ {
+  "section": "5.6",
+  "line": 503,
+  "text": "End trip",
+  "norm": "end trip",
+  "placeholder": false
+ },
+ {
+  "section": "5.6",
+  "line": 503,
+  "text": "End this trip?",
+  "norm": "end this trip?",
+  "placeholder": false
+ },
+ {
+  "section": "5.6",
+  "line": 503,
+  "text": "Trip ended",
+  "norm": "trip ended",
+  "placeholder": false
+ },
+ {
+  "section": "5.6",
+  "line": 503,
+  "text": "This booking has already changed",
+  "norm": "this booking has already changed",
+  "placeholder": false
+ },
+ {
+  "section": "5.6",
+  "line": 506,
+  "text": "Withdraw from booking",
+  "norm": "withdraw from booking",
+  "placeholder": false
+ },
+ {
+  "section": "5.6",
+  "line": 506,
+  "text": "Confirm withdraw",
+  "norm": "confirm withdraw",
+  "placeholder": false
+ },
+ {
+  "section": "5.6",
+  "line": 506,
+  "text": "You withdrew from this booking",
+  "norm": "you withdrew from this booking",
+  "placeholder": false
+ },
+ {
+  "section": "5.6",
+  "line": 508,
+  "text": "Your dates are free again",
+  "norm": "your dates are free again",
+  "placeholder": false
+ },
+ {
+  "section": "5.6",
+  "line": 510,
+  "text": "Not reachable",
+  "norm": "not reachable",
+  "placeholder": false
+ },
+ {
+  "section": "5.6",
+  "line": 511,
+  "text": "No ratings yet",
+  "norm": "no ratings yet",
+  "placeholder": false
+ },
+ {
+  "section": "5.7",
+  "line": 518,
+  "text": "Travellers planning a trip send them here.",
+  "norm": "travellers planning a trip send them here.",
+  "placeholder": false
+ },
+ {
+  "section": "5.7",
+  "line": 518,
+  "text": "New leads are paused in your area.",
+  "norm": "new leads are paused in your area.",
+  "placeholder": false
+ },
+ {
+  "section": "5.7",
+  "line": 518,
+  "text": "Pay the driver directly. Bakhli does not take or hold payment.",
+  "norm": "pay the driver directly. bakhli does not take or hold payment.",
+  "placeholder": false
+ },
+ {
+  "section": "5.7",
+  "line": 519,
+  "text": "Confirm fare",
+  "norm": "confirm fare",
+  "placeholder": false
+ },
+ {
+  "section": "5.7",
+  "line": 519,
+  "text": "You can change the fare 3 times.",
+  "norm": "you can change the fare 0 times.",
+  "placeholder": false
+ },
+ {
+  "section": "5.7",
+  "line": 520,
+  "text": "Not available",
+  "norm": "not available",
+  "placeholder": false
+ },
+ {
+  "section": "5.7",
+  "line": 521,
+  "text": "Yes confirm",
+  "norm": "yes confirm",
+  "placeholder": false
+ },
+ {
+  "section": "5.7",
+  "line": 521,
+  "text": "Not me",
+  "norm": "not me",
+  "placeholder": false
+ },
+ {
+  "section": "5.7",
+  "line": 521,
+  "text": "From app",
+  "norm": "from app",
+  "placeholder": false
+ },
+ {
+  "section": "5.7",
+  "line": 521,
+  "text": "Confirm again in Trip leads",
+  "norm": "confirm again in trip leads",
+  "placeholder": false
+ },
+ {
+  "section": "5.7",
+  "line": 522,
+  "text": "Report traveller",
+  "norm": "report traveller",
+  "placeholder": false
+ },
+ {
+  "section": "5.8",
+  "line": 529,
+  "text": "FROM Rs 1,800",
+  "norm": "from ₹0,000",
+  "placeholder": false
+ },
+ {
+  "section": "5.8",
+  "line": 529,
+  "text": "Routes and fares",
+  "norm": "routes and fares",
+  "placeholder": false
+ },
+ {
+  "section": "5.8",
+  "line": 529,
+  "text": "Local sightseeing",
+  "norm": "local sightseeing",
+  "placeholder": false
+ },
+ {
+  "section": "5.8",
+  "line": 529,
+  "text": "Vehicle and contact",
+  "norm": "vehicle and contact",
+  "placeholder": false
+ },
+ {
+  "section": "5.8",
+  "line": 529,
+  "text": "Delete taxi",
+  "norm": "delete taxi",
+  "placeholder": false
+ },
+ {
+  "section": "5.8",
+  "line": 529,
+  "text": "Hidden on Free",
+  "norm": "hidden on free",
+  "placeholder": false
+ },
+ {
+  "section": "5.8",
+  "line": 529,
+  "text": "1 of 1 route",
+  "norm": "0 of 0 route",
+  "placeholder": false
+ },
+ {
+  "section": "5.8",
+  "line": 529,
+  "text": "3 of 5 routes",
+  "norm": "0 of 0 routes",
+  "placeholder": false
+ },
+ {
+  "section": "5.8",
+  "line": 529,
+  "text": "5 of 5 · Full",
+  "norm": "0 of 0 · full",
+  "placeholder": false
+ },
+ {
+  "section": "5.8",
+  "line": 530,
+  "text": "Edit fare",
+  "norm": "edit fare",
+  "placeholder": false
+ },
+ {
+  "section": "5.8",
+  "line": 530,
+  "text": "Edit fares",
+  "norm": "edit fares",
+  "placeholder": false
+ },
+ {
+  "section": "5.8",
+  "line": 530,
+  "text": "Fare updated",
+  "norm": "fare updated",
+  "placeholder": false
+ },
+ {
+  "section": "5.8",
+  "line": 530,
+  "text": "Enter the fare",
+  "norm": "enter the fare",
+  "placeholder": false
+ },
+ {
+  "section": "5.8",
+  "line": 530,
+  "text": "Fare must be between Rs 100 and Rs 99,00,000",
+  "norm": "fare must be between ₹000 and ₹00,00,000",
+  "placeholder": false
+ },
+ {
+  "section": "5.8",
+  "line": 531,
+  "text": "Add route",
+  "norm": "add route",
+  "placeholder": false
+ },
+ {
+  "section": "5.8",
+  "line": 531,
+  "text": "All 5 used",
+  "norm": "all 0 used",
+  "placeholder": false
+ },
+ {
+  "section": "5.8",
+  "line": 532,
+  "text": "Edit route",
+  "norm": "edit route",
+  "placeholder": false
+ },
+ {
+  "section": "5.8",
+  "line": 532,
+  "text": "Open requests on the old route will close.",
+  "norm": "open requests on the old route will close.",
+  "placeholder": false
+ },
+ {
+  "section": "5.8",
+  "line": 532,
+  "text": "You removed this route",
+  "norm": "you removed this route",
+  "placeholder": false
+ },
+ {
+  "section": "5.8",
+  "line": 533,
+  "text": "Delete route",
+  "norm": "delete route",
+  "placeholder": false
+ },
+ {
+  "section": "5.8",
+  "line": 533,
+  "text": "Delete this route?",
+  "norm": "delete this route?",
+  "placeholder": false
+ },
+ {
+  "section": "5.8",
+  "line": 533,
+  "text": "Open requests on this route will close.",
+  "norm": "open requests on this route will close.",
+  "placeholder": false
+ },
+ {
+  "section": "5.8",
+  "line": 533,
+  "text": "Add at least one route",
+  "norm": "add at least one route",
+  "placeholder": false
+ },
+ {
+  "section": "5.8",
+  "line": 534,
+  "text": "Add your local day rate / Not in trip planning yet",
+  "norm": "add your local day rate / not in trip planning yet",
+  "placeholder": false
+ },
+ {
+  "section": "5.8",
+  "line": 537,
+  "text": "Add popular routes",
+  "norm": "add popular routes",
+  "placeholder": false
+ },
+ {
+  "section": "5.8",
+  "line": 537,
+  "text": "Get more calls / Add popular routes like Haldwani to Badrinath",
+  "norm": "get more calls / add popular routes like haldwani to badrinath",
+  "placeholder": false
+ },
+ {
+  "section": "5.9",
+  "line": 545,
+  "text": "Booking / From the app",
+  "norm": "booking / from the app",
+  "placeholder": false
+ },
+ {
+  "section": "5.9",
+  "line": 545,
+  "text": "18 to 26 Dec · 9 days",
+  "norm": "00 to 00 dec · 0 days",
+  "placeholder": false
+ },
+ {
+  "section": "5.9",
+  "line": 545,
+  "text": "Edit amounts",
+  "norm": "edit amounts",
+  "placeholder": false
+ },
+ {
+  "section": "5.9",
+  "line": 545,
+  "text": "Open booking",
+  "norm": "open booking",
+  "placeholder": false
+ },
+ {
+  "section": "5.9",
+  "line": 545,
+  "text": "Removed automatically 90 days after this date.",
+  "norm": "removed automatically 00 days after this date.",
+  "placeholder": false
+ },
+ {
+  "section": "5.9",
+  "line": 548,
+  "text": "+ Add trip",
+  "norm": "+ add trip",
+  "placeholder": false
+ },
+ {
+  "section": "5.9",
+  "line": 548,
+  "text": "Add trip / For trips booked by phone or WhatsApp",
+  "norm": "add trip / for trips booked by phone or whatsapp",
+  "placeholder": false
+ },
+ {
+  "section": "5.9",
+  "line": 548,
+  "text": "Only you see this trip and its amounts. They are your own notes, never sent to the guest. Do not add phone numbers.",
+  "norm": "only you see this trip and its amounts. they are your own notes, never sent to the guest. do not add phone numbers.",
+  "placeholder": false
+ },
+ {
+  "section": "5.9",
+  "line": 548,
+  "text": "Trips you added 3 of 4 on Free",
+  "norm": "trips you added 0 of 0 on free",
+  "placeholder": false
+ },
+ {
+  "section": "5.9",
+  "line": 548,
+  "text": "Save trip",
+  "norm": "save trip",
+  "placeholder": false
+ },
+ {
+  "section": "5.9",
+  "line": 548,
+  "text": "Add a name for this trip.",
+  "norm": "add a name for this trip.",
+  "placeholder": false
+ },
+ {
+  "section": "5.9",
+  "line": 549,
+  "text": "Not now",
+  "norm": "not now",
+  "placeholder": false
+ },
+ {
+  "section": "5.9",
+  "line": 550,
+  "text": "Trip / Added by you",
+  "norm": "trip / added by you",
+  "placeholder": false
+ },
+ {
+  "section": "5.9",
+  "line": 550,
+  "text": "Delete this trip?",
+  "norm": "delete this trip?",
+  "placeholder": false
+ },
+ {
+  "section": "5.9",
+  "line": 551,
+  "text": "You already have 1 booking on this day.",
+  "norm": "you already have 0 booking on this day.",
+  "placeholder": false
+ },
+ {
+  "section": "5.9",
+  "line": 553,
+  "text": "All day",
+  "norm": "all day",
+  "placeholder": false
+ },
+ {
+  "section": "5.9",
+  "line": 553,
+  "text": "+ Add trip on this day",
+  "norm": "+ add trip on this day",
+  "placeholder": false
+ },
+ {
+  "section": "5.9",
+  "line": 553,
+  "text": "Nothing on this day.",
+  "norm": "nothing on this day.",
+  "placeholder": false
+ },
+ {
+  "section": "5.9",
+  "line": 555,
+  "text": "After 6 Dec: 1 booking from the app (see Bookings). Plus shows 6 months ahead.",
+  "norm": "after 0 dec: 0 booking from the app (see bookings). plus shows 0 months ahead.",
+  "placeholder": false
+ },
+ {
+  "section": "5.9",
+  "line": 556,
+  "text": "From the app",
+  "norm": "from the app",
+  "placeholder": false
+ },
+ {
+  "section": "5.9",
+  "line": 557,
+  "text": "3 trips today / Kathgodam pickup (all day), Corbett day trip 9:00 am, ...",
+  "norm": "0 trips today / kathgodam pickup (all day), corbett day trip 0:00 am, ...",
+  "placeholder": false
+ },
+ {
+  "section": "5.9",
+  "line": 557,
+  "text": "Morning reminder / Today's trips at 7:00 am",
+  "norm": "morning reminder / today's trips at 0:00 am",
+  "placeholder": false
+ },
+ {
+  "section": "5.9",
+  "line": 558,
+  "text": "6 more trips are hidden. See Plus",
+  "norm": "0 more trips are hidden. see plus",
+  "placeholder": false
+ },
+ {
+  "section": "5.10",
+  "line": 566,
+  "text": "This month",
+  "norm": "this month",
+  "placeholder": false
+ },
+ {
+  "section": "5.10",
+  "line": 567,
+  "text": "Mark paid",
+  "norm": "mark paid",
+  "placeholder": false
+ },
+ {
+  "section": "5.11",
+  "line": 574,
+  "text": "Diwali week starts 6 Nov. Go online and check your fares.",
+  "norm": "diwali week starts 0 nov. go online and check your fares.",
+  "placeholder": false
+ },
+ {
+  "section": "5.11",
+  "line": 575,
+  "text": "Festival in Uttarakhand · fares unchanged",
+  "norm": "festival in uttarakhand · fares unchanged",
+  "placeholder": false
+ },
+ {
+  "section": "5.11",
+  "line": 578,
+  "text": "Plus ended. 3 routes are hidden.",
+  "norm": "plus ended. 0 routes are hidden.",
+  "placeholder": false
+ },
+ {
+  "section": "5.11",
+  "line": 578,
+  "text": "Choose your route",
+  "norm": "choose your route",
+  "placeholder": false
+ },
+ {
+  "section": "5.11",
+  "line": 578,
+  "text": "This route is paused on Free.",
+  "norm": "this route is paused on free.",
+  "placeholder": false
+ },
+ {
+  "section": "5.11",
+  "line": 579,
+  "text": "Plans start on 1 Feb / Free keeps 1 route. Try Plus free for 7 days.",
+  "norm": "plans start on 0 feb / free keeps 0 route. try plus free for 0 days.",
+  "placeholder": false
+ },
+ {
+  "section": "5.11",
+  "line": 579,
+  "text": "Plans have started / 3 routes are hidden on Free. Nothing is deleted.",
+  "norm": "plans have started / 0 routes are hidden on free. nothing is deleted.",
+  "placeholder": false
+ },
+ {
+  "section": "5.11",
+  "line": 579,
+  "text": "Plans started today.",
+  "norm": "plans started today.",
+  "placeholder": false
+ },
+ {
+  "section": "5.11",
+  "line": 581,
+  "text": "Couldn't load your taxi",
+  "norm": "couldn't load your taxi",
+  "placeholder": false
+ },
+ {
+  "section": "5.11",
+  "line": 581,
+  "text": "Could not load bookings",
+  "norm": "could not load bookings",
+  "placeholder": false
+ },
+ {
+  "section": "5.11",
+  "line": 581,
+  "text": "Could not refresh. Showing your last list.",
+  "norm": "could not refresh. showing your last list.",
+  "placeholder": false
+ },
+ {
+  "section": "5.11",
+  "line": 581,
+  "text": "No connection. Please try again.",
+  "norm": "no connection. please try again.",
+  "placeholder": false
+ },
+ {
+  "section": "5.11",
+  "line": 582,
+  "text": "Too many tries. Wait a minute.",
+  "norm": "too many tries. wait a minute.",
+  "placeholder": false
+ },
+ {
+  "section": "5.11",
+  "line": 583,
+  "text": "This changed on another phone. Pull to refresh.",
+  "norm": "this changed on another phone. pull to refresh.",
+  "placeholder": false
+ },
+ {
+  "section": "6.1",
+  "line": 591,
+  "text": "From app",
+  "norm": "from app",
+  "placeholder": false
+ },
+ {
+  "section": "6.1",
+  "line": 591,
+  "text": "Added by you",
+  "norm": "added by you",
+  "placeholder": false
+ },
+ {
+  "section": "6.1",
+  "line": 593,
+  "text": "Do not add phone numbers.",
+  "norm": "do not add phone numbers.",
+  "placeholder": false
+ },
+ {
+  "section": "6.1",
+  "line": 594,
+  "text": "Pick a date inside your calendar.",
+  "norm": "pick a date inside your calendar.",
+  "placeholder": false
+ },
+ {
+  "section": "6.1",
+  "line": 598,
+  "text": "Full on your dates",
+  "norm": "full on your dates",
+  "placeholder": false
+ },
+ {
+  "section": "6.1",
+  "line": 598,
+  "text": "Enquiry sent",
+  "norm": "enquiry sent",
+  "placeholder": false
+ },
+ {
+  "section": "6.1",
+  "line": 598,
+  "text": "Not available",
+  "norm": "not available",
+  "placeholder": false
+ },
+ {
+  "section": "6.1",
+  "line": 600,
+  "text": "8 more bookings are hidden. See Plus",
+  "norm": "0 more bookings are hidden. see plus",
+  "placeholder": false
+ },
+ {
+  "section": "6.1",
+  "line": 603,
+  "text": "} · {guests} guests",
+  "norm": "} · {} guests",
+  "placeholder": true
+ },
+ {
+  "section": "6.1",
+  "line": 603,
+  "text": "Family Room · 2 guests",
+  "norm": "family room · 0 guests",
+  "placeholder": false
+ },
+ {
+  "section": "6.1",
+  "line": 605,
+  "text": "Traveller removed",
+  "norm": "traveller removed",
+  "placeholder": false
+ },
+ {
+  "section": "6.1",
+  "line": 606,
+  "text": "You already have 1 booking on these days.",
+  "norm": "you already have 0 booking on these days.",
+  "placeholder": false
+ },
+ {
+  "section": "6.2",
+  "line": 614,
+  "text": "Advance cannot be more than the final amount.",
+  "norm": "advance cannot be more than the final amount.",
+  "placeholder": false
+ },
+ {
+  "section": "6.2",
+  "line": 615,
+  "text": "Add the final amount first.",
+  "norm": "add the final amount first.",
+  "placeholder": false
+ },
+ {
+  "section": "6.2",
+  "line": 619,
+  "text": "Rs X to collect",
+  "norm": "₹x to collect",
+  "placeholder": false
+ },
+ {
+  "section": "6.2",
+  "line": 619,
+  "text": "Paid in full",
+  "norm": "paid in full",
+  "placeholder": false
+ },
+ {
+  "section": "6.2",
+  "line": 619,
+  "text": "Rs X received",
+  "norm": "₹x received",
+  "placeholder": false
+ },
+ {
+  "section": "6.2",
+  "line": 622,
+  "text": "Mark paid",
+  "norm": "mark paid",
+  "placeholder": false
+ },
+ {
+  "section": "6.2",
+  "line": 623,
+  "text": "Cancelled · Rs 2,000 received",
+  "norm": "cancelled · ₹0,000 received",
+  "placeholder": false
+ },
+ {
+  "section": "6.3",
+  "line": 637,
+  "text": "15% off",
+  "norm": "00% off",
+  "placeholder": false
+ },
+ {
+  "section": "6.3",
+  "line": 637,
+  "text": "Season price",
+  "norm": "season price",
+  "placeholder": false
+ },
+ {
+  "section": "6.3",
+  "line": 649,
+  "text": "Full on your dates",
+  "norm": "full on your dates",
+  "placeholder": false
+ },
+ {
+  "section": "6.3",
+  "line": 654,
+  "text": "Listed when asked Rs 6,000",
+  "norm": "listed when asked ₹0,000",
+  "placeholder": false
+ },
+ {
+  "section": "6.3",
+  "line": 654,
+  "text": "Listed for these dates Rs 9,600 / 2 nights x Rs 3,000 + 1 night x Rs 3,600 (Diwali price)",
+  "norm": "listed for these dates ₹0,000 / 0 nights x ₹0,000 + 0 night x ₹0,000 (diwali price)",
+  "placeholder": false
+ },
+ {
+  "section": "6.3",
+  "line": 654,
+  "text": "Listed when asked",
+  "norm": "listed when asked",
+  "placeholder": false
+ },
+ {
+  "section": "6.3",
+  "line": 655,
+  "text": "With today's special price: Rs 3,600",
+  "norm": "with today's special price: ₹0,000",
+  "placeholder": false
+ },
+ {
+  "section": "6.3",
+  "line": 660,
+  "text": "Diwali price",
+  "norm": "diwali price",
+  "placeholder": false
+ },
+ {
+  "section": "6.3",
+  "line": 671,
+  "text": "N nights · Rs X each",
+  "norm": "n nights · ₹x each",
+  "placeholder": false
+ },
+ {
+  "section": "6.3",
+  "line": 675,
+  "text": "Prices by date",
+  "norm": "prices by date",
+  "placeholder": false
+ },
+ {
+  "section": "6.3",
+  "line": 680,
+  "text": "Paused on Free",
+  "norm": "paused on free",
+  "placeholder": false
+ },
+ {
+  "section": "6.4",
+  "line": 698,
+  "text": "Removed automatically 90 days after this date.",
+  "norm": "removed automatically 00 days after this date.",
+  "placeholder": false
+ },
+ {
+  "section": "6.4",
+  "line": 700,
+  "text": "Open enquiry",
+  "norm": "open enquiry",
+  "placeholder": false
+ },
+ {
+  "section": "6.4",
+  "line": 700,
+  "text": "Open booking",
+  "norm": "open booking",
+  "placeholder": false
+ },
+ {
+  "section": "6.4",
+  "line": 700,
+  "text": "This enquiry is no longer available.",
+  "norm": "this enquiry is no longer available.",
+  "placeholder": false
+ },
+ {
+  "section": "6.4",
+  "line": 700,
+  "text": "This booking is no longer available.",
+  "norm": "this booking is no longer available.",
+  "placeholder": false
+ },
+ {
+  "section": "6.5",
+  "line": 707,
+  "text": "15% off",
+  "norm": "00% off",
+  "placeholder": false
+ },
+ {
+  "section": "6.5",
+  "line": 707,
+  "text": "Full on your dates",
+  "norm": "full on your dates",
+  "placeholder": false
+ },
+ {
+  "section": "6.6",
+  "line": 718,
+  "text": "Choose what stays",
+  "norm": "choose what stays",
+  "placeholder": false
+ },
+ {
+  "section": "6.6",
+  "line": 722,
+  "text": "Hidden on Free",
+  "norm": "hidden on free",
+  "placeholder": false
+ },
+ {
+  "section": "6.6",
+  "line": 724,
+  "text": "This route is paused on Free.",
+  "norm": "this route is paused on free.",
+  "placeholder": false
+ },
+ {
+  "section": "6.7",
+  "line": 734,
+  "text": "See Plus",
+  "norm": "see plus",
+  "placeholder": false
+ },
+ {
+  "section": "6.7",
+  "line": 734,
+  "text": "1 of 5 routes",
+  "norm": "0 of 0 routes",
+  "placeholder": false
+ },
+ {
+  "section": "6.7",
+  "line": 734,
+  "text": "Paid plans are coming",
+  "norm": "paid plans are coming",
+  "placeholder": false
+ },
+ {
+  "section": "6.7",
+  "line": 740,
+  "text": "Plans have started / 3 routes are hidden on Free. Nothing is deleted.",
+  "norm": "plans have started / 0 routes are hidden on free. nothing is deleted.",
+  "placeholder": false
+ },
+ {
+  "section": "6.7",
+  "line": 740,
+  "text": "4 photos and 2 room types are hidden on Free. Nothing is deleted.",
+  "norm": "0 photos and 0 room types are hidden on free. nothing is deleted.",
+  "placeholder": false
+ },
+ {
+  "section": "6.7",
+  "line": 742,
+  "text": "banner tool",
+  "norm": "banner tool",
+  "placeholder": false
+ },
+ {
+  "section": "6.7",
+  "line": 742,
+  "text": "Announce date",
+  "norm": "announce date",
+  "placeholder": false
+ },
+ {
+  "section": "6.7",
+  "line": 742,
+  "text": "Pick a date at least 7 days ahead.",
+  "norm": "pick a date at least 0 days ahead.",
+  "placeholder": false
+ },
+ {
+  "section": "6.7",
+  "line": 742,
+  "text": "Plans start on {d MMM}",
+  "norm": "plans start on {}",
+  "placeholder": true
+ },
+ {
+  "section": "6.7",
+  "line": 742,
+  "text": "Free keeps 2 photos and 2 room types. Try Plus free for 7 days.",
+  "norm": "free keeps 0 photos and 0 room types. try plus free for 0 days.",
+  "placeholder": false
+ },
+ {
+  "section": "6.7",
+  "line": 742,
+  "text": "Free keeps 1 route. Try Plus free for 7 days.",
+  "norm": "free keeps 0 route. try plus free for 0 days.",
+  "placeholder": false
+ },
+ {
+  "section": "6.7",
+  "line": 743,
+  "text": "Plans started today.",
+  "norm": "plans started today.",
+  "placeholder": false
+ },
+ {
+  "section": "6.8",
+  "line": 748,
+  "text": "Advance proof sent",
+  "norm": "advance proof sent",
+  "placeholder": false
+ },
+ {
+  "section": "6.8",
+  "line": 749,
+  "text": "Pay the driver directly. Bakhli does not take or hold payment.",
+  "norm": "pay the driver directly. bakhli does not take or hold payment.",
+  "placeholder": false
+ },
+ {
+  "section": "6.9",
+  "line": 754,
+  "text": "See all (N)",
+  "norm": "see all (n)",
+  "placeholder": false
+ },
+ {
+  "section": "6.9",
+  "line": 758,
+  "text": "2 enquiries waiting. Reply before 6:40 pm",
+  "norm": "0 enquiries waiting. reply before 0:00 pm",
+  "placeholder": false
+ },
+ {
+  "section": "6.9",
+  "line": 758,
+  "text": "Traveller chose you. Confirm in 12:40",
+  "norm": "traveller chose you. confirm in 00:00",
+  "placeholder": false
+ },
+ {
+  "section": "6.9",
+  "line": 759,
+  "text": "Rohit asked to change his booking.",
+  "norm": "rohit asked to change his booking.",
+  "placeholder": false
+ },
+ {
+  "section": "6.9",
+  "line": 759,
+  "text": "Rohit sent a new price.",
+  "norm": "rohit sent a new price.",
+  "placeholder": false
+ },
+ {
+  "section": "6.9",
+  "line": 759,
+  "text": "This phone cannot get requests.",
+  "norm": "this phone cannot get requests.",
+  "placeholder": false
+ },
+ {
+  "section": "6.9",
+  "line": 760,
+  "text": "Rohit accepted your offer.",
+  "norm": "rohit accepted your offer.",
+  "placeholder": false
+ },
+ {
+  "section": "6.9",
+  "line": 760,
+  "text": "Turn on notifications",
+  "norm": "turn on notifications",
+  "placeholder": false
+ },
+ {
+  "section": "6.9",
+  "line": 761,
+  "text": "Payment issue",
+  "norm": "payment issue",
+  "placeholder": false
+ },
+ {
+  "section": "6.9",
+  "line": 761,
+  "text": "You missed 3 requests. Run a test ring.",
+  "norm": "you missed 0 requests. run a test ring.",
+  "placeholder": false
+ },
+ {
+  "section": "6.9",
+  "line": 762,
+  "text": "Turn on notifications / You will miss new enquiries",
+  "norm": "turn on notifications / you will miss new enquiries",
+  "placeholder": false
+ },
+ {
+  "section": "6.9",
+  "line": 763,
+  "text": "Plus ended. 4 photos and 2 room types are hidden.",
+  "norm": "plus ended. 0 photos and 0 room types are hidden.",
+  "placeholder": false
+ },
+ {
+  "section": "6.9",
+  "line": 763,
+  "text": "Nothing is deleted.",
+  "norm": "nothing is deleted.",
+  "placeholder": false
+ },
+ {
+  "section": "6.9",
+  "line": 763,
+  "text": "Plans have started. 4 photos and 2 room types are hidden.",
+  "norm": "plans have started. 0 photos and 0 room types are hidden.",
+  "placeholder": false
+ },
+ {
+  "section": "6.9",
+  "line": 763,
+  "text": "Plus ended. 3 routes are hidden.",
+  "norm": "plus ended. 0 routes are hidden.",
+  "placeholder": false
+ },
+ {
+  "section": "6.9",
+  "line": 763,
+  "text": "Plans have started. 3 routes are hidden.",
+  "norm": "plans have started. 0 routes are hidden.",
+  "placeholder": false
+ },
+ {
+  "section": "6.9",
+  "line": 764,
+  "text": "1 report on this stay",
+  "norm": "0 report on this stay",
+  "placeholder": false
+ },
+ {
+  "section": "6.9",
+  "line": 764,
+  "text": "1 report on this taxi",
+  "norm": "0 report on this taxi",
+  "placeholder": false
+ },
+ {
+  "section": "6.9",
+  "line": 765,
+  "text": "Change not approved: {reason}",
+  "norm": "change not approved: {}",
+  "placeholder": true
+ },
+ {
+  "section": "6.9",
+  "line": 765,
+  "text": "Get ready for requests",
+  "norm": "get ready for requests",
+  "placeholder": false
+ },
+ {
+  "section": "6.9",
+  "line": 766,
+  "text": "Diwali is in 3 weeks. Set your price?",
+  "norm": "diwali is in 0 weeks. set your price?",
+  "placeholder": false
+ },
+ {
+  "section": "6.9",
+  "line": 766,
+  "text": "6 to 12 Nov · no special price yet",
+  "norm": "0 to 00 nov · no special price yet",
+  "placeholder": false
+ },
+ {
+  "section": "6.9",
+  "line": 766,
+  "text": "Add your local day rate",
+  "norm": "add your local day rate",
+  "placeholder": false
+ },
+ {
+  "section": "6.9",
+  "line": 767,
+  "text": "Add UPI and WhatsApp",
+  "norm": "add upi and whatsapp",
+  "placeholder": false
+ },
+ {
+  "section": "6.9",
+  "line": 767,
+  "text": "Diwali week starts 6 Nov. Go online and check your fares.",
+  "norm": "diwali week starts 0 nov. go online and check your fares.",
+  "placeholder": false
+ },
+ {
+  "section": "6.9",
+  "line": 768,
+  "text": "Share your stay",
+  "norm": "share your stay",
+  "placeholder": false
+ },
+ {
+  "section": "6.9",
+  "line": 768,
+  "text": "Send your link to past guests to get first enquiries.",
+  "norm": "send your link to past guests to get first enquiries.",
+  "placeholder": false
+ },
+ {
+  "section": "6.9",
+  "line": 768,
+  "text": "Get more calls / Add popular routes like Haldwani to Badrinath",
+  "norm": "get more calls / add popular routes like haldwani to badrinath",
+  "placeholder": false
+ },
+ {
+  "section": "6.9",
+  "line": 794,
+  "text": "Plans have started",
+  "norm": "plans have started",
+  "placeholder": false
+ },
+ {
+  "section": "6.10",
+  "line": 798,
+  "text": "This week",
+  "norm": "this week",
+  "placeholder": false
+ },
+ {
+  "section": "6.10",
+  "line": 804,
+  "text": "Shown N times",
+  "norm": "shown n times",
+  "placeholder": false
+ },
+ {
+  "section": "6.10",
+  "line": 804,
+  "text": "shown 412 times",
+  "norm": "shown 000 times",
+  "placeholder": false
+ },
+ {
+  "section": "6.10",
+  "line": 806,
+  "text": "9 enquiries",
+  "norm": "0 enquiries",
+  "placeholder": false
+ },
+ {
+  "section": "6.10",
+  "line": 807,
+  "text": "9 requests this week were for cities you have no route to",
+  "norm": "0 requests this week were for cities you have no route to",
+  "placeholder": false
+ },
+ {
+  "section": "6.10",
+  "line": 808,
+  "text": "Requests on your routes 14",
+  "norm": "requests on your routes 00",
+  "placeholder": false
+ },
+ {
+  "section": "6.10",
+  "line": 809,
+  "text": "You accepted 6",
+  "norm": "you accepted 0",
+  "placeholder": false
+ },
+ {
+  "section": "6.10",
+  "line": 810,
+  "text": "Your turn 2x as often",
+  "norm": "your turn 0x as often",
+  "placeholder": false
+ },
+ {
+  "section": "6.11",
+  "line": 819,
+  "text": "Featured near you",
+  "norm": "featured near you",
+  "placeholder": false
+ },
+ {
+  "section": "6.11",
+  "line": 823,
+  "text": "choose your driver",
+  "norm": "choose your driver",
+  "placeholder": false
+ },
+ {
+  "section": "6.11",
+  "line": 825,
+  "text": "LIVE · Featured",
+  "norm": "live · featured",
+  "placeholder": false
+ },
+ {
+  "section": "7",
+  "line": 832,
+  "text": "This is no longer available.",
+  "norm": "this is no longer available.",
+  "placeholder": false
+ },
+ {
+  "section": "7.1",
+  "line": 838,
+  "text": "Your stay is now live",
+  "norm": "your stay is now live",
+  "placeholder": false
+ },
+ {
+  "section": "7.1",
+  "line": 839,
+  "text": "Stay not approved: {reason}",
+  "norm": "stay not approved: {}",
+  "placeholder": true
+ },
+ {
+  "section": "7.1",
+  "line": 839,
+  "text": "Your stay was taken down: {reason}",
+  "norm": "your stay was taken down: {}",
+  "placeholder": true
+ },
+ {
+  "section": "7.1",
+  "line": 840,
+  "text": "Your change is live / Name updated to Deodar Heights Mountain Homestay",
+  "norm": "your change is live / name updated to deodar heights mountain homestay",
+  "placeholder": false
+ },
+ {
+  "section": "7.1",
+  "line": 841,
+  "text": "Change not approved / {reason}",
+  "norm": "change not approved / {}",
+  "placeholder": true
+ },
+ {
+  "section": "7.1",
+  "line": 842,
+  "text": "New trip enquiry / Rohit wants 24 to 26 Nov, 3 guests.",
+  "norm": "new trip enquiry / rohit wants 00 to 00 nov, 0 guests.",
+  "placeholder": false
+ },
+ {
+  "section": "7.1",
+  "line": 842,
+  "text": "Urgent:",
+  "norm": "urgent:",
+  "placeholder": false
+ },
+ {
+  "section": "7.1",
+  "line": 843,
+  "text": "New price from Rohit / Rs 2,700 per room per night",
+  "norm": "new price from rohit / ₹0,000 per room per night",
+  "placeholder": false
+ },
+ {
+  "section": "7.1",
+  "line": 844,
+  "text": "Offer accepted / Rohit confirmed 27 to 29 Nov.",
+  "norm": "offer accepted / rohit confirmed 00 to 00 nov.",
+  "placeholder": false
+ },
+ {
+  "section": "7.1",
+  "line": 845,
+  "text": "Offer declined",
+  "norm": "offer declined",
+  "placeholder": false
+ },
+ {
+  "section": "7.1",
+  "line": 845,
+  "text": "Offer expired: the guest did not answer",
+  "norm": "offer expired: the guest did not answer",
+  "placeholder": false
+ },
+ {
+  "section": "7.1",
+  "line": 846,
+  "text": "Rohit changed his dates / Open to accept or send a different offer.",
+  "norm": "rohit changed his dates / open to accept or send a different offer.",
+  "placeholder": false
+ },
+ {
+  "section": "7.1",
+  "line": 847,
+  "text": "Rohit kept the earlier offer",
+  "norm": "rohit kept the earlier offer",
+  "placeholder": false
+ },
+ {
+  "section": "7.1",
+  "line": 848,
+  "text": "Booking cancelled / Rohit cancelled 27 to 29 Nov.",
+  "norm": "booking cancelled / rohit cancelled 00 to 00 nov.",
+  "placeholder": false
+ },
+ {
+  "section": "7.1",
+  "line": 849,
+  "text": "Rohit cancelled the trip",
+  "norm": "rohit cancelled the trip",
+  "placeholder": false
+ },
+ {
+  "section": "7.1",
+  "line": 850,
+  "text": "Enquiry closed by Bakhli",
+  "norm": "enquiry closed by bakhli",
+  "placeholder": false
+ },
+ {
+  "section": "7.1",
+  "line": 851,
+  "text": "The guest reported a problem",
+  "norm": "the guest reported a problem",
+  "placeholder": false
+ },
+ {
+  "section": "7.1",
+  "line": 852,
+  "text": "Diwali is in 3 weeks / Set your price for 6 to 12 Nov?",
+  "norm": "diwali is in 0 weeks / set your price for 0 to 00 nov?",
+  "placeholder": false
+ },
+ {
+  "section": "7.1",
+  "line": 853,
+  "text": "2 check-ins today / Neha Joshi, Gupta ji 2 rooms",
+  "norm": "0 check-ins today / neha joshi, gupta ji 0 rooms",
+  "placeholder": false
+ },
+ {
+  "section": "7.1",
+  "line": 854,
+  "text": "Plans have started / 4 photos and 2 room types are hidden on Free. Nothing is deleted.",
+  "norm": "plans have started / 0 photos and 0 room types are hidden on free. nothing is deleted.",
+  "placeholder": false
+ },
+ {
+  "section": "7.1",
+  "line": 855,
+  "text": "Plans start on {d MMM} / Free keeps 2 photos and 2 room types. Try Plus free for 7 days.",
+  "norm": "plans start on {} / free keeps 0 photos and 0 room types. try plus free for 0 days.",
+  "placeholder": true
+ },
+ {
+  "section": "7.1",
+  "line": 856,
+  "text": "Plus ends on 21 Dec 2026",
+  "norm": "plus ends on 00 dec 0000",
+  "placeholder": false
+ },
+ {
+  "section": "7.2",
+  "line": 864,
+  "text": "Your taxi is now live",
+  "norm": "your taxi is now live",
+  "placeholder": false
+ },
+ {
+  "section": "7.2",
+  "line": 865,
+  "text": "Taxi not approved: {reason}",
+  "norm": "taxi not approved: {}",
+  "placeholder": true
+ },
+ {
+  "section": "7.2",
+  "line": 865,
+  "text": "Your taxi was taken down: {reason}",
+  "norm": "your taxi was taken down: {}",
+  "placeholder": true
+ },
+ {
+  "section": "7.2",
+  "line": 868,
+  "text": "Traveller selected you / Confirm within 15 minutes",
+  "norm": "traveller selected you / confirm within 00 minutes",
+  "placeholder": false
+ },
+ {
+  "section": "7.2",
+  "line": 869,
+  "text": "Not selected / The traveller chose another driver",
+  "norm": "not selected / the traveller chose another driver",
+  "placeholder": false
+ },
+ {
+  "section": "7.2",
+  "line": 870,
+  "text": "Request closed / The traveller cancelled the request",
+  "norm": "request closed / the traveller cancelled the request",
+  "placeholder": false
+ },
+ {
+  "section": "7.2",
+  "line": 871,
+  "text": "Booking cancelled / Your dates are free again",
+  "norm": "booking cancelled / your dates are free again",
+  "placeholder": false
+ },
+ {
+  "section": "7.2",
+  "line": 872,
+  "text": "Trip ended / Aarav ended the trip",
+  "norm": "trip ended / aarav ended the trip",
+  "placeholder": false
+ },
+ {
+  "section": "7.2",
+  "line": 873,
+  "text": "You are missing requests / Open Get ready for requests to fix your phone",
+  "norm": "you are missing requests / open get ready for requests to fix your phone",
+  "placeholder": false
+ },
+ {
+  "section": "7.2",
+  "line": 874,
+  "text": "New trip lead",
+  "norm": "new trip lead",
+  "placeholder": false
+ },
+ {
+  "section": "7.2",
+  "line": 875,
+  "text": "A traveller booked you / Confirm in Trip leads",
+  "norm": "a traveller booked you / confirm in trip leads",
+  "placeholder": false
+ },
+ {
+  "section": "7.2",
+  "line": 876,
+  "text": "Trip changed / Confirm again in Trip leads",
+  "norm": "trip changed / confirm again in trip leads",
+  "placeholder": false
+ },
+ {
+  "section": "7.2",
+  "line": 878,
+  "text": "Diwali week starts 6 Nov / Go online and check your fares.",
+  "norm": "diwali week starts 0 nov / go online and check your fares.",
+  "placeholder": false
+ },
+ {
+  "section": "7.2",
+  "line": 879,
+  "text": "3 trips today / Kathgodam pickup, Corbett day trip 9:00 am",
+  "norm": "0 trips today / kathgodam pickup, corbett day trip 0:00 am",
+  "placeholder": false
+ },
+ {
+  "section": "7.2",
+  "line": 880,
+  "text": "Plans have started / 3 routes are hidden on Free. Nothing is deleted.",
+  "norm": "plans have started / 0 routes are hidden on free. nothing is deleted.",
+  "placeholder": false
+ },
+ {
+  "section": "7.2",
+  "line": 881,
+  "text": "Plans start on 1 Feb / Free keeps 1 route. Try Plus free for 7 days.",
+  "norm": "plans start on 0 feb / free keeps 0 route. try plus free for 0 days.",
+  "placeholder": false
+ }
+]

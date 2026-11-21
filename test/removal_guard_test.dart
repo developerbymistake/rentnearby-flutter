@@ -194,8 +194,8 @@ void main() {
     });
 
     test('deletion lines for kept owner roles', () {
-      expect(RoleCapabilities.of(UserRoleKeys.stayOwner).deletionLine, 'Your stay and jobs will be deleted.');
-      expect(RoleCapabilities.of(UserRoleKeys.taxiDriver).deletionLine, 'Your taxi will be deleted.');
+      expect(RoleCapabilities.of(UserRoleKeys.stayOwner).deletionLine, 'Your stay, jobs, calendar and money notes will be deleted.');
+      expect(RoleCapabilities.of(UserRoleKeys.taxiDriver).deletionLine, 'Your taxi, calendar and money notes will be deleted.');
     });
   });
 

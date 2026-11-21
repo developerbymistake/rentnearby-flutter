@@ -1,0 +1,66 @@
+{
+  "status": "409",
+  "error": {
+    "type": "AccountHasActiveItems",
+    "message": "You have an active stay booking."
+  },
+  "data": {
+    "reasons": [
+      {
+        "code": "ActiveStayBooking",
+        "message": "You have an active stay booking. You can delete your account after it ends.",
+        "action": "OpenEnquiry",
+        "targetId": "q1",
+        "side": "Host",
+        "reasonKey": "deleteBlock.ActiveStayBooking",
+        "route": "/stay-enquiries",
+        "args": {
+          "enquiryId": "q1",
+          "bucket": "Confirmed",
+          "count": 1
+        },
+        "title": null
+      },
+      {
+        "code": "OpenStayEnquiry",
+        "message": "You have an open stay enquiry. Close it first.",
+        "action": "OpenEnquiry",
+        "targetId": "q2",
+        "side": "Host",
+        "reasonKey": "deleteBlock.OpenStayEnquiry",
+        "route": "/stay-enquiries",
+        "args": {
+          "enquiryId": "q2",
+          "bucket": "New",
+          "count": 1
+        }
+      },
+      {
+        "code": "LiveListing",
+        "message": "Take your listing offline first.",
+        "action": "GoOffline",
+        "targetId": "s1",
+        "side": "Host",
+        "reasonKey": "deleteBlock.LiveListing",
+        "route": "/main",
+        "args": {
+          "tab": "home",
+          "listingKind": "Stay"
+        }
+      },
+      {
+        "code": "SharedTripOpenBalance",
+        "message": "You have money to settle on Nainital trip.",
+        "action": "SettleUp",
+        "targetId": "t1",
+        "side": "Traveller",
+        "reasonKey": "deleteBlock.SharedTripOpenBalance",
+        "route": "/trip-settle",
+        "args": {
+          "tripId": "t1"
+        },
+        "title": "Nainital trip"
+      }
+    ]
+  }
+}

@@ -20,6 +20,7 @@ class UserModel {
   final bool roleCorrectionUsed;
   final bool canCorrectRole;
   final bool roleLocked;
+  final bool listingDeleted;
 
   UserModel({
     required this.id,
@@ -41,6 +42,7 @@ class UserModel {
     this.roleCorrectionUsed = false,
     this.canCorrectRole = false,
     this.roleLocked = false,
+    this.listingDeleted = false,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) => UserModel(
@@ -63,6 +65,7 @@ class UserModel {
         roleCorrectionUsed: json['roleCorrectionUsed'] as bool? ?? false,
         canCorrectRole: json['canCorrectRole'] as bool? ?? false,
         roleLocked: json['roleLocked'] as bool? ?? false,
+        listingDeleted: json['listingDeleted'] == true,
       );
 
   Map<String, dynamic> toJson() => {
@@ -85,6 +88,7 @@ class UserModel {
         'roleCorrectionUsed': roleCorrectionUsed,
         'canCorrectRole': canCorrectRole,
         'roleLocked': roleLocked,
+        'listingDeleted': listingDeleted,
       };
 
   static String? usernameOf(Object? raw) {

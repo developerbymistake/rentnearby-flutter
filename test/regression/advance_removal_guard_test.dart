@@ -5,6 +5,8 @@ import 'package:flutter_test/flutter_test.dart';
 const _allowedFiles = [
   'lib/features/buddy/',
   'lib/screens/terms_of_service_screen.dart',
+  // The private money note's server field and doc 6.2 line only (owner roles, REVIEW point 1); no payment flow.
+  'lib/features/owner_core/money/money_wire.dart',
 ];
 
 final _word = RegExp(r'advance|proofsent|proof sent|holduntil|holdexpired', caseSensitive: false);

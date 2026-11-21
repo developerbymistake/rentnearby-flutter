@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../template/fitness_app_theme.dart';
 import '../tokens/bar_metrics.dart';
+import '../tokens/design_colors.dart';
 import '../tokens/listing_palette.dart';
 import 'art_3d.dart';
 import 'motion_kit.dart';
@@ -112,6 +113,8 @@ class TemplateNavItem {
     this.itemKey,
     this.center = false,
     this.activeColor,
+    this.badge,
+    this.badgeColor,
   }) : selectedImage = selectedImage ?? image;
 
   final int index;
@@ -121,6 +124,32 @@ class TemplateNavItem {
   final Key? itemKey;
   final bool center;
   final Color? activeColor;
+  final int? badge;
+  final Color? badgeColor;
+}
+
+class NavBadge extends StatelessWidget {
+  const NavBadge({super.key, required this.count, this.color});
+
+  final int count;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      key: const ValueKey('nav_badge'),
+      constraints: const BoxConstraints(minWidth: 22, minHeight: 22),
+      padding: const EdgeInsets.symmetric(horizontal: 6),
+      decoration: BoxDecoration(color: color ?? DesignColors.error, borderRadius: BorderRadius.circular(11)),
+      alignment: Alignment.center,
+      child: Text(
+        '$count',
+        maxLines: 1,
+        textScaler: TextScaler.noScaling,
+        style: const TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white, height: 1.1),
+      ),
+    );
+  }
 }
 
 class TemplateBottomBar extends StatefulWidget {
@@ -399,6 +428,8 @@ class _NavTabState extends State<_NavTab>
                 Positioned(top: 2, left: 8, child: _dot(8, 0.2, 1.0)),
                 Positioned(top: 0, left: 8, bottom: 8, child: _dot(4, 0.5, 0.8)),
                 Positioned(top: 6, right: 8, bottom: 0, child: _dot(6, 0.5, 0.6)),
+                if ((widget.item.badge ?? 0) > 0)
+                  Positioned(top: -4, right: -6, child: NavBadge(count: widget.item.badge!, color: widget.item.badgeColor)),
               ],
             ),
           ),
@@ -463,7 +494,14 @@ class _CenterButtonState extends State<_CenterButton>
             focusColor: Colors.transparent,
             onTap: widget.onTap,
             child: Center(
-              child: Art3D(asset: widget.item.image, size: 46, shadowBlur: 3, shadowOffset: const Offset(2, 4), shadowAlpha: 0.3, scaled: false),
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Art3D(asset: widget.item.image, size: 46, shadowBlur: 3, shadowOffset: const Offset(2, 4), shadowAlpha: 0.3, scaled: false),
+                  if ((widget.item.badge ?? 0) > 0)
+                    Positioned(top: -6, right: -10, child: NavBadge(count: widget.item.badge!, color: widget.item.badgeColor)),
+                ],
+              ),
             ),
           ),
         ),

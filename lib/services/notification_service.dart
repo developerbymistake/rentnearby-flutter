@@ -11,6 +11,7 @@ import '../config/app_constants.dart';
 import '../config/app_routes.dart';
 import '../config/app_tabs.dart';
 import '../config/notification_types.dart';
+import '../config/tab_shell.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/chat_controller.dart';
 import '../controllers/home_controller.dart';
@@ -18,6 +19,7 @@ import '../controllers/plan_controller.dart';
 import '../controllers/tab_config_controller.dart';
 import '../design/design.dart';
 import '../features/buddy/buddy_live.dart';
+import '../features/owner_core/session/owner_push_sync.dart';
 import '../features/stay/stay_status_sync.dart';
 import '../features/taxi/taxi_status_sync.dart';
 import '../features/trip/controllers/trip_plan_controller.dart';
@@ -263,12 +265,14 @@ class NotificationService extends GetxService {
       }
 
       final notificationType = message.data['notification_type'];
-      if (notificationType is String && notificationType.startsWith('plan_')) {
+      if (notificationType is String &&
+          (notificationType.startsWith('plan_') || NotificationTypeKeys.invalidatesPlan.contains(notificationType))) {
         _onPlanPush(notificationType);
       }
       final pushRoute = message.data['action_route'];
-      TripPushSync.onPush(notificationType is String ? notificationType : null, pushRoute is String ? pushRoute : null,
-          NotificationModel.parseArguments(message.data['action_args_json']));
+      final pushArgs = NotificationModel.parseArguments(message.data['action_args_json']);
+      TripPushSync.onPush(notificationType is String ? notificationType : null, pushRoute is String ? pushRoute : null, pushArgs);
+      OwnerPushSync.onPush(notificationType is String ? notificationType : null, pushRoute is String ? pushRoute : null, pushArgs);
       if (notificationType == NotificationTypeKeys.roleRequestApprovedWire) {
         Get.find<AuthController>().forceLogout(reason: LogoutReason.roleChanged);
         return;
@@ -524,6 +528,23 @@ class NotificationService extends GetxService {
     AppRoutes.taxiBookings,
     AppRoutes.taxiRating,
     AppRoutes.taxiReady,
+    AppRoutes.stayCalendar,
+    AppRoutes.stayCalendarEntry,
+    AppRoutes.stayUpcoming,
+    AppRoutes.stayPast,
+    AppRoutes.stayMoneySummary,
+    AppRoutes.stayBalanceDue,
+    AppRoutes.staySpecialPrices,
+    AppRoutes.stayPlanVisible,
+    AppRoutes.stayAttention,
+    AppRoutes.stayLiveEdit,
+    AppRoutes.taxiCalendarEntry,
+    AppRoutes.taxiUpcoming,
+    AppRoutes.taxiPast,
+    AppRoutes.taxiMoneySummary,
+    AppRoutes.taxiBalanceDue,
+    AppRoutes.taxiPlanVisible,
+    AppRoutes.taxiAttention,
   };
 
   static const _refreshInPlaceRoutes = {
@@ -542,6 +563,10 @@ class NotificationService extends GetxService {
     AppRoutes.tripExpenses,
     AppRoutes.tripTravellers,
     AppRoutes.tripView,
+    AppRoutes.stayCalendar,
+    AppRoutes.staySpecialPrices,
+    AppRoutes.stayPlanVisible,
+    AppRoutes.taxiPlanVisible,
   };
 
   // A gated Stay Owner's stack is rooted at staySetup, so main is not underneath. MainScreen puts
@@ -662,7 +687,8 @@ class NotificationService extends GetxService {
         Get.toNamed(AppRoutes.notifications);
         return;
       }
-      openActionRoute(actionRoute, NotificationModel.parseArguments(data['action_args_json']));
+      openActionRouteFor(notificationType is String ? notificationType : null, actionRoute,
+          NotificationModel.parseArguments(data['action_args_json']));
       return;
     }
 
@@ -685,10 +711,26 @@ class NotificationService extends GetxService {
   }
 
   // One rule for push tap and inbox tap.
+  /// Inbox and push taps that know the notification type: approved / rejected listing types open the owner Home.
+  void openActionRouteFor(String? type, String pushRoute, Map<String, dynamic>? pushArgs) {
+    if (ShellState.isOwner && type != null && NotificationTypeKeys.opensOwnerHome.contains(type) && Get.isRegistered<AuthController>()) {
+      Get.find<AuthController>().openTab(AppTabs.home);
+      return;
+    }
+    openActionRoute(pushRoute, pushArgs);
+  }
+
   void openActionRoute(String pushRoute, Map<String, dynamic>? pushArgs) {
     final live = AppRoutes.liveTarget(pushRoute, pushArgs)!;
     final route = live.route;
     var args = live.args;
+    if (ShellState.isOwner && Get.isRegistered<AuthController>()) {
+      final tab = TabShell.tabForRoute(ShellState.current.value, route, args);
+      if (tab != null) {
+        Get.find<AuthController>().openTab(tab, intent: {...?args, 'route': route});
+        return;
+      }
+    }
     if (route == AppRoutes.chatConversation && args?['listingType'] == null) {
       final conversationId = args?['conversationId']?.toString();
       if (conversationId == null || conversationId.isEmpty) {

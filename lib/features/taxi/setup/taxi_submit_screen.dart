@@ -74,11 +74,11 @@ class _TaxiSubmitScreenState extends State<TaxiSubmitScreen> with TickerProvider
     AppToast.success('Submitted for review');
     if (_ctrl.mainBelow) {
       Get.until((r) => r.settings.name == AppRoutes.main);
-      auth.switchToTab(AppTabs.taxi);
+      auth.switchToTab(AppTabs.home);
       return;
     }
     Get.offAllNamed(AppRoutes.main);
-    WidgetsBinding.instance.addPostFrameCallback((_) => auth.switchToTab(AppTabs.taxi));
+    WidgetsBinding.instance.addPostFrameCallback((_) => auth.switchToTab(AppTabs.home));
   }
 
   @override

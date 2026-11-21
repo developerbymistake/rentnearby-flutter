@@ -9,6 +9,7 @@ import '../services/notification_service.dart';
 import '../services/storage_service.dart';
 import '../config/app_routes.dart';
 import '../config/app_tabs.dart';
+import '../config/tab_shell.dart';
 import '../config/user_roles.dart';
 import 'tab_config_controller.dart';
 import 'home_controller.dart';
@@ -20,6 +21,8 @@ import '../services/hub_session_manager.dart';
 import '../features/stay/setup/stay_setup_controller.dart';
 import '../features/taxi/setup/taxi_setup_controller.dart';
 import '../features/buddy/buddy_session_hooks.dart';
+import '../features/owner_core/data/owner_cache.dart';
+import '../features/owner_core/session/owner_session_hooks.dart';
 
 /// What triggered a logout — decides whether the server-side revoke call fires and which (if
 /// any) toast is shown. Kept as a typed reason rather than booleans so each of the 3 real-world
@@ -27,6 +30,18 @@ import '../features/buddy/buddy_session_hooks.dart';
 enum LogoutReason { explicitLogout, accountDeleted, sessionExpired, roleChanged }
 
 enum RoleActionResult { success, unavailable, failed }
+
+enum AppPlace { home, stays, trips, taxi, profile }
+
+abstract final class AppPlaces {
+  static AppPlace ofTab(int index) => switch (index) {
+        AppTabs.stays => AppPlace.stays,
+        AppTabs.trips => AppPlace.trips,
+        AppTabs.taxi => AppPlace.taxi,
+        AppTabs.profile => AppPlace.profile,
+        _ => AppPlace.home,
+      };
+}
 
 class AuthController extends GetxController {
   final isLoading = false.obs;
@@ -42,6 +57,10 @@ class AuthController extends GetxController {
   final canListTaxis = false.obs;
   final tabIndex = AppTabs.home.obs;
   final profileTabTrigger = 0.obs;
+  final shellKind = ShellKind.seeker.obs;
+  final ownerShellEmpty = false.obs;
+  final tabIntent = Rxn<TabIntent>();
+  int _intentSeq = 0;
 
   /// Every tabIndex-setting call site (bottom nav tap, Home CTA, deep link, notification tap)
   /// should route through this rather than assigning tabIndex directly — falls back to Home if
@@ -49,11 +68,73 @@ class AuthController extends GetxController {
   /// can never land the user on a tab whose entire API surface is now server-rejected.
   /// Home/Profile are always active so they're never redirected.
   void switchToTab(int index) {
-    if (!TabConfigController.to.isActiveForIndex(index)) {
+    if (!TabShell.isActive(shellKind.value, index)) {
       tabIndex.value = AppTabs.home;
       return;
     }
     tabIndex.value = index;
+  }
+
+  void openTab(int index, {Map<String, dynamic>? intent}) {
+    if (Get.currentRoute != AppRoutes.main && Get.isRegistered<HomeController>()) {
+      Get.until((r) => r.settings.name == AppRoutes.main);
+    }
+    switchToTab(index);
+    if (tabIndex.value != index) return;
+    tabIntent.value = TabIntent(index: index, args: intent ?? const {}, seq: ++_intentSeq);
+  }
+
+  TabIntent? takeIntent(int index) {
+    final i = tabIntent.value;
+    if (i == null || i.index != index) return null;
+    tabIntent.value = null;
+    return i;
+  }
+
+  /// [detail]: a detail screen is pushed next, so an owner shell does not push the list first.
+  void openPlace(AppPlace place, {bool detail = false}) {
+    if (shellKind.value == ShellKind.seeker) {
+      switchToTab(switch (place) {
+        AppPlace.home => AppTabs.home,
+        AppPlace.stays => AppTabs.stays,
+        AppPlace.trips => AppTabs.trips,
+        AppPlace.taxi => AppTabs.taxi,
+        AppPlace.profile => AppTabs.profile,
+      });
+      return;
+    }
+    switch (place) {
+      case AppPlace.home:
+        openTab(AppTabs.home);
+      case AppPlace.profile:
+        openTab(AppTabs.profile);
+      case AppPlace.trips:
+        Get.toNamed(AppRoutes.tripWhere);
+      case AppPlace.taxi:
+        if (!detail && _tabs.isTaxiActive) Get.toNamed(AppRoutes.taxiList);
+      case AppPlace.stays:
+        break;
+    }
+  }
+
+  bool get isOwnerShell => shellKind.value != ShellKind.seeker;
+
+  void syncShell() {
+    final u = user.value;
+    final empty = (u?.listingDeleted ?? false) || OwnerCache.shellEmpty(u?.id);
+    ownerShellEmpty.value = empty;
+    shellKind.value = TabShell.kindFor(
+      roleKey: roleKey.value,
+      stayStatus: u?.stayStatus,
+      taxiStatus: u?.taxiStatus,
+      emptyShell: empty,
+    );
+    ShellState.current.value = shellKind.value;
+  }
+
+  void setOwnerShellEmpty(bool value) {
+    OwnerCache.setShellEmpty(user.value?.id, value);
+    syncShell();
   }
 
   // Granular profile observables — each fires only when its specific field changes
@@ -101,6 +182,9 @@ class AuthController extends GetxController {
     if (AppRoutes.ownerOnly.contains(route) && !isOwner) return false;
     if (AppRoutes.stayOwnerOnly.contains(route) && !canListStays.value) return false;
     if (AppRoutes.taxiDriverOnly.contains(route) && !canListTaxis.value) return false;
+    final tab = TabShell.tabForRoute(shellKind.value, route, null);
+    if (tab != null) return TabShell.isActive(shellKind.value, tab);
+    if (AppRoutes.stayOwnerNewRoutes.contains(route) || AppRoutes.taxiDriverNewRoutes.contains(route)) return true;
     final tabKey = AppRoutes.tabKeyForRoute(route);
     if (tabKey == null) return true;
     if (tabKey == AppTabKeys.jobs) return _tabs.isJobsActive && _tabs.isStaysActive;
@@ -113,6 +197,7 @@ class AuthController extends GetxController {
     final c = RoleCapabilities.of(key);
     canListStays.value = c.canListStays;
     canListTaxis.value = c.canListTaxis;
+    syncShell();
   }
 
   static bool _setupPending(String? status) => status == null || status == 'Draft';
@@ -125,6 +210,7 @@ class AuthController extends GetxController {
 
   String get postLoginRoute {
     if (!(user.value?.roleConfirmed ?? false)) return AppRoutes.roleSelect;
+    if (ownerShellEmpty.value && isOwner) return AppRoutes.main;
     if (staysEnabled && _setupPending(user.value?.stayStatus)) return AppRoutes.staySetup;
     if (taxisEnabled && _setupPending(user.value?.taxiStatus)) return AppRoutes.taxiSetup;
     return AppRoutes.main;
@@ -136,6 +222,9 @@ class AuthController extends GetxController {
     _syncRoleFromToken(StorageService.getToken());
     user.value = StorageService.getUser();
     _syncProfileFields(user.value);
+    syncShell();
+    ever<UserModel?>(user, (_) => syncShell());
+    ever<String>(roleKey, (_) => syncShell());
     ever<int>(_tabs.version, (_) => leaveOffTabRoute());
   }
 
@@ -307,6 +396,10 @@ class AuthController extends GetxController {
     roleKey.value = UserRoleKeys.seeker;
     canListStays.value = false;
     canListTaxis.value = false;
+    shellKind.value = ShellKind.seeker;
+    ShellState.current.value = ShellKind.seeker;
+    ownerShellEmpty.value = false;
+    tabIntent.value = null;
     _syncProfileFields(null);
     signupUsername.value = null;
     if (reason == LogoutReason.sessionExpired) {
@@ -320,6 +413,7 @@ class AuthController extends GetxController {
     }
     try {
       await BuddySessionHooks.onLogout(reason, buddyUserId);
+      await OwnerSessionHooks.onLogout(reason, buddyUserId);
     } catch (_) {}
     Get.offAllNamed(AppRoutes.login);
     // Deliberately force:false (the default) — GetX's own delete() bypasses BOTH the permanent
@@ -365,6 +459,24 @@ class AuthController extends GetxController {
       isLoading.value = false;
     }
     return null;
+  }
+
+  /// Null on success or a 401; the blocks of a 409 AccountHasActiveItems; an empty list after any other failure.
+  Future<List<AccountDeleteBlock>?> deleteAccountBlocks() async {
+    try {
+      isLoading.value = true;
+      await ApiService.delete('/account');
+      await forceLogout(reason: LogoutReason.accountDeleted);
+      return null;
+    } catch (e) {
+      if (e is DioException && e.response?.statusCode == 401) return null;
+      final blocks = AccountDeleteMessage.blocks(e);
+      if (blocks != null) return blocks;
+      AppToast.error(_dioMessage(e, 'Could not delete account. Please try again.'));
+      return const [];
+    } finally {
+      isLoading.value = false;
+    }
   }
 
   Future<void> refreshProfile() async {

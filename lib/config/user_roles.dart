@@ -35,9 +35,9 @@ class RoleCapabilities {
   bool get isOwner => canListStays || canListTaxis;
 
   String? get deletionLine => canListStays
-      ? 'Your stay and jobs will be deleted.'
+      ? 'Your stay, jobs, calendar and money notes will be deleted.'
       : canListTaxis
-          ? 'Your taxi will be deleted.'
+          ? 'Your taxi, calendar and money notes will be deleted.'
           : null;
 }
 

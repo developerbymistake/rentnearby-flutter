@@ -158,6 +158,7 @@ class TourController extends GetxController {
     if (tourInProgress.value) return;
     final tour = tourRegistry[_auth.tabIndex.value];
     if (tour == null) return;
+    if (tour.shell != null && tour.shell != _auth.shellKind.value) return;
     if (StorageService.getTourSeen(tour.storageKey)) return;
     if (_isGated) return;
     // TourHost is mounted above the ENTIRE routed app (main.dart), not just

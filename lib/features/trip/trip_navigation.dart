@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 import '../../config/app_routes.dart';
-import '../../config/app_tabs.dart';
 import '../../controllers/auth_controller.dart';
 import '../../services/storage_service.dart';
 import '../../utils/app_toast.dart';
@@ -67,7 +66,7 @@ class TripNavigation {
 
   static void openTripsTab() {
     Get.until((r) => r.settings.name == AppRoutes.main || r.isFirst);
-    Get.find<AuthController>().switchToTab(AppTabs.trips);
+    Get.find<AuthController>().openPlace(AppPlace.trips);
   }
 
   static Future<void>? openSpots(

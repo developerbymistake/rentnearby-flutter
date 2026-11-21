@@ -5,6 +5,7 @@ import '../../../../design/extra/ext_notifications.dart';
 import '../../shared/buddy_format.dart';
 import '../../shared/buddy_look.dart';
 import '../models/notice_models.dart';
+import '../../../owner_core/session/owner_notice_registry.dart';
 import '../notice_copy.dart';
 
 class NoticeRow extends StatelessWidget {
@@ -16,7 +17,7 @@ class NoticeRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final view = NoticeCopy.of(notice);
+    final view = OwnerNoticeRegistry.viewOf(notice);
     if (view == null) return const SizedBox.shrink();
     final (time, unit) = BuddyFormat.agoParts(notice.updatedAt ?? notice.createdAt, now: now);
     return NoticeCard(view: view, time: time, unit: unit, isRead: notice.isRead, onTap: onTap);

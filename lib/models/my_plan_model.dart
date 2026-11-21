@@ -1,3 +1,5 @@
+import '../features/buddy/shared/buddy_json.dart';
+
 class PlanLimitsModel {
   final int listingLimit;
   final int used;
@@ -5,6 +7,17 @@ class PlanLimitsModel {
   final int priority;
   final bool featured;
   final int jobsPosts;
+  final int photos;
+  final int roomTypes;
+  final int routes;
+  final int ringWeight;
+  final int calendarEntries;
+  final int blockedRanges;
+  final int upcomingDays;
+  final int monthsAhead;
+  final bool monthSummary;
+  final bool reminders;
+  final int specialPrices;
 
   const PlanLimitsModel({
     this.listingLimit = 1,
@@ -13,15 +26,71 @@ class PlanLimitsModel {
     this.priority = 0,
     this.featured = false,
     this.jobsPosts = 0,
+    this.photos = 2,
+    this.roomTypes = 2,
+    this.routes = 1,
+    this.ringWeight = 1,
+    this.calendarEntries = 4,
+    this.blockedRanges = 1,
+    this.upcomingDays = 15,
+    this.monthsAhead = 0,
+    this.monthSummary = false,
+    this.reminders = false,
+    this.specialPrices = 1,
   });
 
+  static bool _switch(Object? v) => v == true || (v is num && v > 0) || v == 'true';
+
   factory PlanLimitsModel.fromJson(Map<String, dynamic> j) => PlanLimitsModel(
-        listingLimit: (j['listingLimit'] as num?)?.toInt() ?? 1,
-        used: (j['used'] as num?)?.toInt() ?? 0,
-        live: (j['live'] as num?)?.toInt() ?? 0,
-        priority: (j['priority'] as num?)?.toInt() ?? 0,
-        featured: j['featured'] == true,
-        jobsPosts: (j['jobsPosts'] as num?)?.toInt() ?? 0,
+        listingLimit: BuddyJson.integer(j['listingLimit'], 1),
+        used: BuddyJson.integer(j['used']),
+        live: BuddyJson.integer(j['live']),
+        priority: BuddyJson.integer(j['priority']),
+        featured: _switch(j['featured']),
+        jobsPosts: BuddyJson.integer(j['jobsPosts']),
+        photos: BuddyJson.integer(j['photos'], 2),
+        roomTypes: BuddyJson.integer(j['roomTypes'], 2),
+        routes: BuddyJson.integer(j['routes'], 1),
+        ringWeight: BuddyJson.integer(j['ringWeight'], 1),
+        calendarEntries: BuddyJson.integer(j['calendarEntries'], 4),
+        blockedRanges: BuddyJson.integer(j['blockedRanges'], 1),
+        upcomingDays: BuddyJson.integer(j['upcomingDays'], 15),
+        monthsAhead: BuddyJson.integer(j['monthsAhead']),
+        monthSummary: _switch(j['monthSummary']),
+        reminders: _switch(j['reminders']),
+        specialPrices: BuddyJson.integer(j['specialPrices'], 1),
+      );
+}
+
+class PlanHiddenModel {
+  final int photos;
+  final int roomTypes;
+  final int routes;
+  final int specialPrices;
+
+  const PlanHiddenModel({this.photos = 0, this.roomTypes = 0, this.routes = 0, this.specialPrices = 0});
+
+  int get total => photos + roomTypes + routes + specialPrices;
+
+  factory PlanHiddenModel.fromJson(Map<String, dynamic> j) => PlanHiddenModel(
+        photos: BuddyJson.integer(j['photos']),
+        roomTypes: BuddyJson.integer(j['roomTypes']),
+        routes: BuddyJson.integer(j['routes']),
+        specialPrices: BuddyJson.integer(j['specialPrices']),
+      );
+}
+
+class PlanUsageModel {
+  final int? photos;
+  final int? roomTypes;
+  final int? routes;
+
+  const PlanUsageModel({this.photos, this.roomTypes, this.routes});
+
+  factory PlanUsageModel.fromJson(Map<String, dynamic> j) => PlanUsageModel(
+        photos: BuddyJson.intOrNull(j['photos']),
+        roomTypes: BuddyJson.intOrNull(j['roomTypes']),
+        routes: BuddyJson.intOrNull(j['routes']),
       );
 }
 
@@ -72,19 +141,19 @@ class PlaySubInfo {
   static DateTime? _date(dynamic v) => v is String ? DateTime.tryParse(v)?.toLocal() : null;
 
   factory PlaySubInfo.fromJson(Map<String, dynamic> j) => PlaySubInfo(
-        state: j['state'] as String? ?? '',
+        state: BuddyJson.str(j['state']),
         autoRenewEnabled: j['autoRenewEnabled'] == true,
         expiryAt: _date(j['expiryAt']),
         trialEndsAt: _date(j['trialEndsAt']),
-        productId: j['productId'] as String? ?? '',
-        basePlanId: j['basePlanId'] as String?,
-        offerId: j['offerId'] as String?,
-        scheduledPlanName: j['scheduledPlanName'] as String?,
+        productId: BuddyJson.str(j['productId']),
+        basePlanId: BuddyJson.strOrNull(j['basePlanId']),
+        offerId: BuddyJson.strOrNull(j['offerId']),
+        scheduledPlanName: BuddyJson.strOrNull(j['scheduledPlanName']),
         scheduledAt: _date(j['scheduledAt']),
         isTest: j['isTest'] == true,
         acknowledged: j['acknowledged'] == true,
         pausedAutoResumeAt: _date(j['pausedAutoResumeAt']),
-        cancelReason: j['cancelReason'] as String?,
+        cancelReason: BuddyJson.strOrNull(j['cancelReason']),
         ownsActivePlan: j['ownsActivePlan'] == true,
       );
 }
@@ -110,6 +179,11 @@ class MyPlanModel {
   final int carryOverDays;
   final String? manageUrl;
   final PlaySubInfo? play;
+  final PlanHiddenModel hidden;
+  final PlanUsageModel usage;
+  final bool? canUpgradeField;
+  final DateTime? paymentStartsOn;
+  final bool plansStartedToday;
 
   const MyPlanModel({
     this.paymentEnabled = false,
@@ -132,34 +206,47 @@ class MyPlanModel {
     this.carryOverDays = 0,
     this.manageUrl,
     this.play,
+    this.hidden = const PlanHiddenModel(),
+    this.usage = const PlanUsageModel(),
+    this.canUpgradeField,
+    this.paymentStartsOn,
+    this.plansStartedToday = false,
   });
+
+  bool get canUpgrade => canUpgradeField ?? (paymentEnabled && !isPaid);
 
   bool get isTrial => source == 'Trial';
   bool get hasPaidPlan => isPaid && !isDefault;
 
   factory MyPlanModel.fromJson(Map<String, dynamic> j) {
-    final plan = j['plan'] as Map<String, dynamic>?;
+    final plan = BuddyJson.mapOrNull(j['plan']);
+    final play = BuddyJson.mapOrNull(j['play']);
     return MyPlanModel(
       paymentEnabled: j['paymentEnabled'] == true,
-      freeDays: (j['freeDays'] as num?)?.toInt() ?? 30,
-      featureKey: j['featureKey'] as String?,
-      planId: plan?['id'] as String?,
-      planName: plan?['name'] as String? ?? 'Free',
+      freeDays: BuddyJson.integer(j['freeDays'], 30),
+      featureKey: BuddyJson.strOrNull(j['featureKey']),
+      planId: BuddyJson.strOrNull(plan?['id']),
+      planName: BuddyJson.strOrNull(plan?['name']) ?? 'Free',
       isDefault: plan?['isDefault'] != false,
       isPaid: j['isPaid'] == true,
-      source: j['source'] as String?,
-      status: j['status'] as String?,
-      startsAt: j['startsAt'] != null ? DateTime.tryParse(j['startsAt'] as String)?.toLocal() : null,
-      endsAt: j['endsAt'] != null ? DateTime.tryParse(j['endsAt'] as String)?.toLocal() : null,
-      daysLeft: (j['daysLeft'] as num?)?.toInt(),
-      limits: PlanLimitsModel.fromJson((j['limits'] as Map<String, dynamic>?) ?? const {}),
+      source: BuddyJson.strOrNull(j['source']),
+      status: BuddyJson.strOrNull(j['status']),
+      startsAt: BuddyJson.time(j['startsAt'])?.toLocal(),
+      endsAt: BuddyJson.time(j['endsAt'])?.toLocal(),
+      daysLeft: BuddyJson.intOrNull(j['daysLeft']),
+      limits: PlanLimitsModel.fromJson(BuddyJson.map(j['limits'])),
       trialAvailable: j['trialAvailable'] == true,
-      openPurchaseId: j['openPurchaseId'] as String?,
-      pausedByPlanCount: (j['pausedByPlanCount'] as num?)?.toInt() ?? 0,
-      paymentProvider: j['paymentProvider'] as String? ?? 'Play',
-      carryOverDays: (j['carryOverDays'] as num?)?.toInt() ?? 0,
-      manageUrl: j['manageUrl'] as String?,
-      play: j['play'] is Map<String, dynamic> ? PlaySubInfo.fromJson(j['play'] as Map<String, dynamic>) : null,
+      openPurchaseId: BuddyJson.strOrNull(j['openPurchaseId']),
+      pausedByPlanCount: BuddyJson.integer(j['pausedByPlanCount']),
+      paymentProvider: BuddyJson.strOrNull(j['paymentProvider']) ?? 'Play',
+      carryOverDays: BuddyJson.integer(j['carryOverDays']),
+      manageUrl: BuddyJson.strOrNull(j['manageUrl']),
+      play: play == null ? null : PlaySubInfo.fromJson(play),
+      hidden: PlanHiddenModel.fromJson(BuddyJson.map(j['hidden'])),
+      usage: PlanUsageModel.fromJson(BuddyJson.map(j['usage'])),
+      canUpgradeField: j['canUpgrade'] is bool ? j['canUpgrade'] as bool : null,
+      paymentStartsOn: BuddyJson.date(j['paymentStartsOn']),
+      plansStartedToday: j['plansStartedToday'] == true,
     );
   }
 }

@@ -1,0 +1,114 @@
+{
+  "entries": [
+    {
+      "id": "e1",
+      "kind": "Auto",
+      "sourceType": "StayEnquiry",
+      "sourceId": "q1",
+      "sourceAvailable": true,
+      "travellerRemoved": false,
+      "dateFrom": "2026-11-22",
+      "dateTo": "2026-11-23",
+      "timeOfDay": null,
+      "fromPlace": null,
+      "toPlace": null,
+      "label": "Neha Joshi",
+      "detail": "Family Room · 2 guests",
+      "note": null,
+      "listedTotal": 4500,
+      "agreedTotal": 4500,
+      "finalAmount": 4500,
+      "advanceReceived": 1000,
+      "paidInFull": false,
+      "received": 1000,
+      "balance": 3500,
+      "chip": "ToCollect",
+      "chipAmount": 3500,
+      "cancelled": false,
+      "version": 3,
+      "guests": 2,
+      "seats": null,
+      "roomNames": "Family Room",
+      "places": [],
+      "cancelledBy": null,
+      "cancelledOn": null
+    },
+    {
+      "id": "e2",
+      "kind": "Manual",
+      "dateFrom": "2026-11-25",
+      "dateTo": "2026-11-27",
+      "label": "Gupta ji, 2 rooms",
+      "note": "Family room + deluxe, 4 guests",
+      "finalAmount": 9000,
+      "advanceReceived": 3000,
+      "paidInFull": false,
+      "received": 3000,
+      "balance": 6000,
+      "chip": "ToCollect",
+      "chipAmount": 6000,
+      "cancelled": false,
+      "version": 1
+    }
+  ],
+  "blocks": [
+    {
+      "id": "b1",
+      "dateFrom": "2026-11-30",
+      "dateTo": "2026-11-30",
+      "reason": "Family visit",
+      "version": 1
+    }
+  ],
+  "specialPrices": [
+    {
+      "id": "p1",
+      "dateFrom": "2026-11-06",
+      "dateTo": "2026-11-12",
+      "nights": 7,
+      "direction": "Higher",
+      "percent": 20,
+      "label": "Diwali week",
+      "isPaused": false,
+      "pausedByPlan": false,
+      "live": true,
+      "version": 2
+    }
+  ],
+  "festivals": [
+    {
+      "id": "f1",
+      "name": "Diwali week",
+      "dateFrom": "2026-11-06",
+      "dateTo": "2026-11-12"
+    }
+  ],
+  "meters": [
+    {
+      "key": "CalendarEntries",
+      "used": 3,
+      "limit": 4
+    },
+    {
+      "key": "BlockedRanges",
+      "used": 1,
+      "limit": 1
+    }
+  ],
+  "window": {
+    "upcomingTo": "2026-12-06",
+    "monthFrom": "2026-11-01",
+    "monthTo": "2026-11-30",
+    "manualFrom": "2026-11-14",
+    "manualTo": "2026-12-06",
+    "locked": true
+  },
+  "hiddenCount": 0,
+  "reminder": {
+    "allowed": false,
+    "on": false
+  },
+  "summaryAllowed": false,
+  "paymentEnabled": true,
+  "today": "2026-11-21"
+}

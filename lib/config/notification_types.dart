@@ -82,4 +82,48 @@ class NotificationTypeKeys {
   static bool isDriverTaxi(String? type) => type != null && driverTaxi.contains(type);
 
   static bool isRingsMissed(String? type) => type == taxiRingsMissed || type == taxiRingsMissedWire;
+
+  static const String stayEditApprovedWire = 'stay_edit_approved';
+  static const String stayEditRejectedWire = 'stay_edit_rejected';
+  static const String festivalReminderWire = 'festival_reminder';
+  static const String planLimitsChangedWire = 'plan_limits_changed';
+  static const String ownerMorningReminderWire = 'owner_morning_reminder';
+  static const String plansStartingWire = 'plans_starting';
+
+  static const Set<String> ownerShared = {
+    festivalReminderWire,
+    planLimitsChangedWire,
+    ownerMorningReminderWire,
+    plansStartingWire,
+  };
+
+  static const Set<String> ownerStay = {
+    ...ownerShared,
+    stayEditApprovedWire,
+    stayEditRejectedWire,
+    stayApprovedWire,
+    stayRejectedWire,
+  };
+
+  static const Set<String> ownerTaxi = {
+    ...ownerShared,
+    taxiApprovedWire,
+    taxiRejectedWire,
+    ...driverTaxi,
+  };
+
+  static const Set<String> opensOwnerHome = {
+    stayApprovedWire,
+    stayRejectedWire,
+    taxiApprovedWire,
+    taxiRejectedWire,
+    stayApproved,
+    stayRejected,
+    taxiApproved,
+    taxiRejected,
+  };
+
+  static const Set<String> invalidatesPlan = {planLimitsChangedWire, plansStartingWire};
+
+  static bool isOwnerWork(String? type) => type != null && (ownerStay.contains(type) || ownerTaxi.contains(type));
 }

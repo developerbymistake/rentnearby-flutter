@@ -1,0 +1,54 @@
+{
+  "paymentEnabled": true,
+  "featureKey": "Stay",
+  "plan": {
+    "id": "pl1",
+    "name": "Free",
+    "isDefault": true
+  },
+  "isPaid": false,
+  "source": null,
+  "status": null,
+  "limits": {
+    "listingLimit": 1,
+    "used": 1,
+    "live": 1,
+    "priority": 0,
+    "featured": false,
+    "jobsPosts": 1,
+    "photos": 2,
+    "roomTypes": 2,
+    "routes": 1,
+    "ringWeight": 1,
+    "calendarEntries": 4,
+    "blockedRanges": 1,
+    "upcomingDays": 15,
+    "monthsAhead": 0,
+    "monthSummary": false,
+    "reminders": false,
+    "specialPrices": 1
+  },
+  "hidden": {
+    "photos": 1,
+    "roomTypes": 0,
+    "routes": 0,
+    "specialPrices": 0
+  },
+  "usage": {
+    "photos": 2,
+    "roomTypes": 2,
+    "routes": null
+  },
+  "canUpgrade": true,
+  "paymentStartsOn": "2027-02-01",
+  "plansStartedToday": false,
+  "trialAvailable": true,
+  "pausedByPlanCount": 1,
+  "paymentProvider": "Play",
+  "carryOverDays": 0,
+  "play": {
+    "state": "SUBSCRIPTION_STATE_ACTIVE",
+    "autoRenewEnabled": true,
+    "productId": "stay_plus"
+  }
+}

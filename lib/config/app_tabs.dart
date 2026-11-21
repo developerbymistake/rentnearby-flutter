@@ -8,6 +8,11 @@ class AppTabs {
   static const int profile = 4;
   static const int count = 5;
 
+  // Owner shells name the slots by place, never by the Seeker meaning.
+  static const int hub = 1;
+  static const int centre = 2;
+  static const int fourth = 3;
+
   // String keys matching the backend's master table (RentNearBy.Core.Models.AppTabKeys) —
   // TabConfigController reads active/rename state keyed by these, not by int index.
   // Trips is not in the master table, so it is always active (like Home).

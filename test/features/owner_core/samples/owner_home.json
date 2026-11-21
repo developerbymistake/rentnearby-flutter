@@ -1,0 +1,172 @@
+{
+  "role": "STAY_OWNER",
+  "today": "2026-11-21",
+  "paymentEnabled": true,
+  "listing": {
+    "id": "s1",
+    "kind": "Stay",
+    "status": "Approved",
+    "everApproved": true,
+    "name": "Deodar Heights Homestay",
+    "sub": "Mukteshwar",
+    "cityName": "Mukteshwar",
+    "plate": null,
+    "switchOn": true,
+    "isFeatured": false,
+    "takenDown": false,
+    "rejectedReason": null,
+    "areaPaused": false,
+    "tabOff": false,
+    "plannerOff": false,
+    "pendingEdit": false,
+    "ringReady": null,
+    "onTripUntil": null,
+    "routesMeter": null,
+    "statusLine": {
+      "code": "CheckInsThisWeek",
+      "args": {
+        "count": 2
+      }
+    }
+  },
+  "attention": [
+    {
+      "code": "ShareListing",
+      "priority": 10,
+      "args": {
+        "slug": "deodar-heights"
+      }
+    },
+    {
+      "code": "EnquiriesWaiting",
+      "priority": 1,
+      "args": {
+        "count": 2,
+        "replyBy": "2026-11-21T13:10:00Z",
+        "urgent": true
+      }
+    },
+    {
+      "code": "AddShareDetails",
+      "priority": 11,
+      "args": {}
+    }
+  ],
+  "attentionCount": 3,
+  "numbers": {
+    "stay": {
+      "newEnquiries": 2,
+      "offersWaiting": 1,
+      "confirmed": 3
+    },
+    "taxi": {
+      "newRequests": null,
+      "nextBookingDate": null,
+      "ratingAvg": null,
+      "ratingCount": null
+    },
+    "centreBadge": 2
+  },
+  "upcoming": {
+    "rows": [
+      {
+        "id": "e1",
+        "kind": "Auto",
+        "sourceType": "StayEnquiry",
+        "sourceId": "q1",
+        "sourceAvailable": true,
+        "travellerRemoved": false,
+        "dateFrom": "2026-11-22",
+        "dateTo": "2026-11-23",
+        "timeOfDay": null,
+        "fromPlace": null,
+        "toPlace": null,
+        "label": "Neha Joshi",
+        "detail": "Family Room · 2 guests",
+        "note": null,
+        "listedTotal": 4500,
+        "agreedTotal": 4500,
+        "finalAmount": 4500,
+        "advanceReceived": 1000,
+        "paidInFull": false,
+        "received": 1000,
+        "balance": 3500,
+        "chip": "ToCollect",
+        "chipAmount": 3500,
+        "cancelled": false,
+        "version": 3,
+        "guests": 2,
+        "seats": null,
+        "roomNames": "Family Room",
+        "places": [],
+        "cancelledBy": null,
+        "cancelledOn": null
+      },
+      {
+        "id": "e2",
+        "kind": "Manual",
+        "dateFrom": "2026-11-25",
+        "dateTo": "2026-11-27",
+        "label": "Gupta ji, 2 rooms",
+        "note": "Family room + deluxe, 4 guests",
+        "finalAmount": 9000,
+        "advanceReceived": 3000,
+        "paidInFull": false,
+        "received": 3000,
+        "balance": 6000,
+        "chip": "ToCollect",
+        "chipAmount": 6000,
+        "cancelled": false,
+        "version": 1
+      }
+    ],
+    "moreInWindowCount": 3,
+    "windowLabelDays": 15,
+    "beyondWindowAppCount": 1,
+    "beyondWindowFirstDate": "2026-12-07",
+    "window": {
+      "upcomingTo": "2026-12-06",
+      "monthFrom": "2026-11-01",
+      "monthTo": "2026-11-30",
+      "manualFrom": "2026-11-14",
+      "manualTo": "2026-12-06",
+      "locked": true
+    }
+  },
+  "planCard": {
+    "state": "Free",
+    "paymentEnabled": true,
+    "isPaid": false,
+    "source": null,
+    "endsAt": null,
+    "renewsOn": null,
+    "trialAvailable": true,
+    "limits": {
+      "photos": 2
+    },
+    "hidden": {
+      "photos": 0,
+      "roomTypes": 0,
+      "routes": 0,
+      "specialPrices": 0
+    },
+    "ringWeight": null,
+    "paymentStartsOn": null,
+    "plansStartedToday": false,
+    "weekly": {
+      "shown": 140,
+      "enquiries": 6,
+      "requestsNoRoute": null,
+      "requestsOnRoutes": null,
+      "accepted": null
+    }
+  },
+  "festival": {
+    "id": "f2",
+    "name": "Christmas",
+    "dateFrom": "2026-12-24",
+    "dateTo": "2026-12-26",
+    "stateName": "Uttarakhand",
+    "daysAway": 33
+  }
+}

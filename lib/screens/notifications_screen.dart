@@ -5,14 +5,17 @@ import 'package:bakhli/design/extra/chat_kit.dart';
 import 'package:bakhli/design/extra/ext_notifications.dart';
 import '../config/app_insets.dart';
 import '../config/app_routes.dart';
+import '../config/app_tabs.dart';
+import '../config/notification_types.dart';
+import '../config/shell_kind.dart';
 import '../config/notification_strings.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/notification_controller.dart';
 import '../features/buddy/notices/controllers/notices_controller.dart';
 import '../features/buddy/notices/models/notice_models.dart';
-import '../features/buddy/notices/notice_copy.dart';
 import '../features/buddy/notices/widgets/inbox_feed.dart';
 import '../features/buddy/notices/widgets/notice_row.dart';
+import '../features/owner_core/session/owner_notice_registry.dart';
 import '../models/notification_model.dart';
 import '../services/notification_service.dart';
 import '../utils/app_date_format.dart';
@@ -58,7 +61,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   void _openNotice(Notice n) {
     if (!n.isRead && _ctrl.unreadCount.value > 0) _ctrl.unreadCount.value--;
     _notices?.markRead(n.id);
-    final view = NoticeCopy.of(n);
+    final view = OwnerNoticeRegistry.viewOf(n);
     final live = AppRoutes.liveTarget(view?.route, view?.args);
     if (live == null) return;
     if (!Get.find<AuthController>().canOpenRoute(live.route)) {
@@ -74,6 +77,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     if (live == null || live.route == AppRoutes.notifications) return;
     if (!Get.find<AuthController>().canOpenRoute(live.route)) {
       AppToast.info('This is no longer available.');
+      return;
+    }
+    if (ShellState.isOwner && NotificationTypeKeys.opensOwnerHome.contains(n.type)) {
+      Get.find<AuthController>().openTab(AppTabs.home);
       return;
     }
     NotificationService.to.openActionRoute(live.route, live.args);

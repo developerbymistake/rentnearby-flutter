@@ -1,24 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../config/app_tabs.dart';
+import '../config/tab_shell.dart';
+import '../controllers/auth_controller.dart';
 import '../controllers/tab_config_controller.dart';
-import '../screens/home_screen.dart';
-import '../screens/profile_screen.dart';
-import '../features/stay/guest/v2/stay_landing_screen_v2.dart';
-import '../features/trip/screens/trips_discovery_screen.dart';
-import '../features/taxi/guest/v2/taxi_list_screen_v2.dart';
 import 'tab_keys.dart';
-
-Widget _rootScreen(int tabId) {
-  switch (tabId) {
-    case AppTabs.home: return const HomeScreen();
-    case AppTabs.stays: return const StayLandingScreenV2();
-    case AppTabs.trips: return const TripsDiscoveryScreen();
-    case AppTabs.taxi: return const TaxiListScreenV2(root: true);
-    case AppTabs.profile: return const ProfileScreen();
-    default: return const SizedBox.shrink();
-  }
-}
 
 /// Wraps each bottom tab in its own Navigator.
 /// Each tab gets a separate widget subtree — keyboard events, layout changes
@@ -35,9 +20,15 @@ class TabNavigator extends StatelessWidget {
       key: tabKeys[tabId],
       onGenerateRoute: (_) => PageRouteBuilder(
         // An inactive tab's root is never built, so it makes no API call and puts no controller.
-        pageBuilder: (_, __, ___) => Obx(
-          () => TabConfigController.to.isActiveForIndex(tabId) ? _rootScreen(tabId) : const SizedBox.shrink(),
-        ),
+        pageBuilder: (_, _, _) => Obx(() {
+          TabConfigController.to.version.value;
+          final kind = Get.find<AuthController>().shellKind.value;
+          final slot = TabShell.slots(kind)[tabId];
+          return KeyedSubtree(
+            key: ValueKey('${kind.name}-$tabId'),
+            child: slot.active() ? slot.root() : const SizedBox.shrink(),
+          );
+        }),
         transitionDuration: Duration.zero,
         reverseTransitionDuration: Duration.zero,
       ),

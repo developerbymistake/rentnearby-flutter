@@ -247,7 +247,7 @@ class _HeroSlide extends StatelessWidget {
       semanticsLabel: isOwner ? ownerTitleOf(slide) : seekerTitle,
       onTap: isOwner
           ? () => Get.toNamed(ownerRouteOf(slide))
-          : () => Get.find<AuthController>().switchToTab(tabOf(slide)),
+          : () => Get.find<AuthController>().openPlace(AppPlaces.ofTab(tabOf(slide))),
     );
   }
 }

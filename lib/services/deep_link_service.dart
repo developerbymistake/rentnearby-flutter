@@ -191,18 +191,17 @@ class DeepLinkService extends GetxService {
       final data = res['data'];
       if (data is! Map) return;
 
-      final tabIndex = config.tabIndex;
       if (type == 't') {
         final id = data['id'];
         if (id is! String) return;
-        Get.find<AuthController>().switchToTab(tabIndex);
+        Get.find<AuthController>().openPlace(AppPlace.taxi, detail: true);
         unawaited(Get.toNamed(AppRoutes.taxiDetail, arguments: {'id': id}));
         return;
       }
       if (type != 's') return;
 
       // Switch to the Stays tab, then push its map so the shared pin is visible.
-      Get.find<AuthController>().switchToTab(tabIndex);
+      Get.find<AuthController>().openPlace(AppPlace.stays, detail: true);
       final lat = (data['latitude'] as num?)?.toDouble();
       final lng = (data['longitude'] as num?)?.toDouble();
       if (lat != null && lng != null) {
