@@ -73,6 +73,8 @@ abstract final class TaxiCalendarStrings {
   static const saveTrip = 'Save trip';
   static const labelEmpty = 'Add a name for this trip.';
   static const outsideWindow = 'Pick a date inside your calendar.';
+  static const entryEndedType = 'EntryEnded';
+  static const entryEnded = 'This trip has ended. You can still change the amounts.';
   static String overlap(int n) => n == 1 ? 'You already have 1 booking on this day.' : 'You already have $n bookings on this day.';
 
   // Entry detail (o_tx_27, o_tx_46 B, C, D)

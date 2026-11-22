@@ -7,10 +7,12 @@ import 'package:get/get.dart';
 import '../../../config/app_routes.dart';
 import '../../../config/app_tabs.dart';
 import '../../../controllers/auth_controller.dart';
+import '../../../controllers/plan_controller.dart';
 import '../../../services/notification_service.dart';
 import '../../../utils/app_toast.dart';
 import '../../owner_core/data/owner_api.dart';
 import '../../owner_core/data/owner_cache.dart';
+import '../../owner_core/data/owner_error_types.dart';
 import '../../owner_core/data/owner_result.dart';
 import '../../owner_core/data/single_flight.dart';
 import '../../owner_core/home/owner_home_api.dart';
@@ -67,6 +69,11 @@ class TaxiDriverHomeController extends GetxController with WidgetsBindingObserve
 
   OwnerHomeDto? get data => load.value.valueOrNull;
 
+  DateTime? get loadedAt => _loadedAt;
+
+  final planChangedAt = Rxn<DateTime>();
+  Worker? _planWorker;
+
   String? get _uid => _userId != null ? _userId() : (Get.isRegistered<AuthController>() ? Get.find<AuthController>().user.value?.id : null);
 
   @override
@@ -87,6 +94,9 @@ class TaxiDriverHomeController extends GetxController with WidgetsBindingObserve
         }
       });
     }
+    if (Get.isRegistered<PlanController>()) {
+      _planWorker = ever<int>(Get.find<PlanController>().planVersion, (_) => planChangedAt.value = _clock());
+    }
     reload();
     checkNotifications();
   }
@@ -95,6 +105,7 @@ class TaxiDriverHomeController extends GetxController with WidgetsBindingObserve
   void onClose() {
     WidgetsBinding.instance.removeObserver(this);
     _tabWorker?.dispose();
+    _planWorker?.dispose();
     _stopTicker();
     _latest.cancel();
     super.onClose();
@@ -190,7 +201,20 @@ class TaxiDriverHomeController extends GetxController with WidgetsBindingObserve
     await reload();
   }
 
-  Future<void> reload() => _flight.run(_refresh);
+  Future<void>? _queued;
+
+  Future<void> reload({bool force = false}) {
+    if (!force || !_flight.busy) return _flight.run(_refresh);
+    return _queued ??= _reloadAfterCurrent();
+  }
+
+  Future<void> _reloadAfterCurrent() async {
+    try {
+      await _flight.run(_refresh);
+    } catch (_) {}
+    _queued = null;
+    if (!isClosed) await _flight.run(_refresh);
+  }
 
   Future<void> _refresh() async {
     final id = _latest.next();
@@ -212,6 +236,11 @@ class TaxiDriverHomeController extends GetxController with WidgetsBindingObserve
         switchOverride.value = null;
         _setNow(_clock());
         OwnerCache.write(_uid, OwnerCacheKeys.home, value.raw);
+      case OwnerRefused<OwnerHomeDto>(:final type, :final statusCode) when statusCode == 404 && type == OwnerErrorTypes.listingNotFound:
+        load.value = const OwnerLoadEmpty<OwnerHomeDto>();
+        centreBadge.value = 0;
+        switchOverride.value = null;
+        OwnerCache.remove(_uid, OwnerCacheKeys.home);
       case OwnerRefused<OwnerHomeDto>(:final statusCode) when statusCode == 429:
         AppToast.info(TaxiHomeStrings.tooManyTries);
         load.value = saved != null ? OwnerLoadData<OwnerHomeDto>(saved, stale: true) : const OwnerLoadError<OwnerHomeDto>();

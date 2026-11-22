@@ -62,8 +62,13 @@ class _FakeRepo extends DriverRequestRepository {
   final List<String> calls = [];
   TaxiResult<DriverOffer>? result;
 
+  int detailCalls = 0;
+
   @override
-  Future<TaxiResult<DriverOffer>> offer(String offerId) async => TaxiOk(DriverOffer.fromJson(json));
+  Future<TaxiResult<DriverOffer>> offer(String offerId) async {
+    detailCalls++;
+    return TaxiOk(DriverOffer.fromJson(json));
+  }
 
   @override
   Future<TaxiResult<DriverOffer>> accept(String offerId) async {
@@ -186,6 +191,61 @@ void main() {
     expect(find.byKey(const ValueKey('request_conflict_banner')), findsNothing);
     await tester.pump(const Duration(seconds: 1));
     expect(_t('Selected you · confirm in 15:00'), findsOneWidget);
+  });
+
+  group('FT-17 countdown ticker', () {
+    bool running(WidgetTester t) => (t.state(find.byType(DriverRequestDetailScreen)) as dynamic).tickerRunning as bool;
+
+    testWidgets('no deadline: no ticker', (tester) async {
+      await _open(tester, {..._sample('driver_offer_detail_selected.json'), 'state': 'Accepted', 'confirmBy': null, 'datesConflict': null});
+      expect(running(tester), isFalse);
+      await _open(tester, {..._sample('driver_offer_detail_selected.json'), 'state': 'Confirmed', 'confirmBy': null, 'datesConflict': null});
+      expect(running(tester), isFalse);
+    });
+
+    testWidgets('live countdown ticks only the hero; paused stops, resumed restarts', (tester) async {
+      var now = DateTime.utc(2026, 12, 10, 9, 46, 0);
+      final repo = _FakeRepo(_selected());
+      final c = DriverRequestsController(repo: repo, now: () => now);
+      await pumpAtSize(tester, DriverRequestDetailScreen(offerId: _id, controller: c, onBack: () {}), phoneSize);
+      await tester.pump();
+      await tester.pump();
+      expect(running(tester), isTrue);
+      final rebuilt = <String>[];
+      final prev = debugOnRebuildDirtyWidget;
+      debugOnRebuildDirtyWidget = (e, _) => rebuilt.add(e.widget.runtimeType.toString());
+      now = now.add(const Duration(seconds: 1));
+      await tester.pump(const Duration(seconds: 1));
+      debugOnRebuildDirtyWidget = prev;
+      expect(_t('Selected you · confirm in 14:59'), findsOneWidget);
+      expect(rebuilt.contains('DriverRequestDetailScreen'), isFalse);
+      expect(rebuilt.contains('DriverRequestBody'), isFalse);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+      expect(running(tester), isFalse);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      expect(running(tester), isTrue);
+    });
+
+    testWidgets('at zero: one reload, then the ticker stops', (tester) async {
+      var now = DateTime.utc(2026, 12, 10, 10, 0, 58);
+      final repo = _FakeRepo(_selected());
+      final c = DriverRequestsController(repo: repo, now: () => now);
+      await pumpAtSize(tester, DriverRequestDetailScreen(offerId: _id, controller: c, onBack: () {}), phoneSize);
+      await tester.pump();
+      await tester.pump();
+      final d0 = repo.detailCalls;
+      now = now.add(const Duration(seconds: 5));
+      await tester.pump(const Duration(seconds: 1));
+      await tester.pump();
+      expect(repo.detailCalls - d0, 1);
+      expect(running(tester), isFalse);
+      await tester.pump(const Duration(seconds: 3));
+      expect(repo.detailCalls - d0, 1);
+    });
   });
 
   testWidgets('frame_47_dates_already_booked_disables_confirm', (tester) async {

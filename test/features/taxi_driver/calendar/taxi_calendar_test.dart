@@ -529,7 +529,7 @@ void main() {
 
     testWidgets('money summary nothing to collect', (tester) async {
       final c = calSetUp(
-        CalFake(months: {'2026-11': monthJson(entries: [tripJson('p', from: '2026-11-25', label: 'X', finalAmount: 100, paid: true)], plus: true)}, summary: const {'booked': 0, 'received': 0, 'toCollect': 0}),
+        CalFake(months: {'2026-11': monthJson(entries: [tripJson('p', from: '2026-11-25', label: 'X', finalAmount: 100, paid: true)], plus: true)}, summary: const {'month': '2026-11', 'finalTotal': 0, 'receivedTotal': 0, 'balanceTotal': 0, 'entryCount': 1, 'dueCount': 0, 'topBalances': [], 'paymentEnabled': true}),
         plan: OwnerPlans.plus,
       );
       await pumpPhone(tester, TaxiMoneySummaryScreen(controller: c));

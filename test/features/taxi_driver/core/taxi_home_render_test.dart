@@ -2,12 +2,15 @@ import 'package:bakhli/features/owner_core/data/owner_cache.dart';
 import 'package:bakhli/features/taxi_driver/home/taxi_attention_screen.dart';
 import 'package:bakhli/features/taxi_driver/home/taxi_driver_home_screen.dart';
 import 'package:bakhli/features/taxi_driver/home/taxi_driver_home_controller.dart';
-import 'package:flutter/widgets.dart';
+import 'package:bakhli/features/taxi_driver/plan/taxi_home_plan_card.dart';
+import 'package:bakhli/features/taxi_driver/taxi_driver_deps.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 
 import '../../../support/owner_fakes.dart';
 import '../../../support/owner_render.dart';
+import '../../../support/real_phone.dart';
 import 'taxi_fixtures.dart';
 
 void main() {
@@ -30,6 +33,14 @@ void main() {
   ];
   final nums = {'newRequests': 2, 'nextBookingDate': '2026-11-25', 'ratingAvg': 4.8, 'ratingCount': 72};
   final numsDec = {...nums, 'nextBookingDate': '2026-12-18'};
+  const plusCard = {
+    'state': 'Plus',
+    'paymentEnabled': true,
+    'isPaid': true,
+    'renewsOn': '2026-12-21',
+    'ringWeight': 2,
+    'limits': {'routes': 5},
+  };
 
   Future<void> settle(WidgetTester t) async {
     await t.runAsync(() async {
@@ -50,7 +61,7 @@ void main() {
     'o_tx_8': (homeJson(switchOn: false, attention: [att('GetReady', 8)]), false, null),
     'o_tx_10': (homeJson(badge: 2, taxi: nums, attention: [chose]), false, null),
     'o_tx_11': (homeJson(areaPaused: true, taxi: {...nums, 'newRequests': 0}, attention: [att('MissedRings', 4, {'count': 3})]), false, null),
-    'o_tx_12': (homeJson(featured: true, badge: 3, taxi: {...nums, 'newRequests': 3}, routesMeter: {'key': 'Routes', 'used': 5, 'limit': 5}), false, null),
+    'o_tx_12': (homeJson(featured: true, badge: 3, taxi: {...nums, 'newRequests': 3}, routesMeter: {'key': 'Routes', 'used': 5, 'limit': 5}, planCard: plusCard), false, null),
     'o_tx_42_b': (homeJson(status: 'PendingReview', taxi: numsDec, badge: 2), false, 'B'),
     'o_tx_43_a': (homeJson(badge: 2, taxi: nums, attention: [chose, noToken], attentionCount: 8), false, 'A'),
     'o_tx_43_c': (homeJson(status: 'Rejected', takenDown: true, reason: 'travellers reported a different car.', taxi: nums), false, 'C'),
@@ -62,9 +73,28 @@ void main() {
     testWidgets('render ${e.key}', (tester) async {
       final h = TaxiHarness.setUp(e.value.$1, denied: e.value.$2);
       TaxiHarnessProbe.home = h.home;
+      TaxiDriverDeps.planCard = () => const TaxiHomePlanCard();
+      addTearDown(TaxiDriverDeps.debugReset);
       final id = e.key.split('_').take(3).join('_');
       await renderOwnerFrame(tester, id, const TaxiDriverHomeScreen(), part: e.value.$3, arrange: settle);
       expect(tester.takeException(), isNull);
+      await finish(tester);
+    });
+  }
+
+  for (final width in const [320.0, 430.0]) {
+    testWidgets('o_tx_12 Plus card at ${width.toInt()} wide and text scale 1.3 (FT-09)', (tester) async {
+      final h = TaxiHarness.setUp(homeJson(featured: true, taxi: {...nums, 'newRequests': 3}, routesMeter: {'key': 'Routes', 'used': 5, 'limit': 5}, planCard: plusCard));
+      TaxiHarnessProbe.home = h.home;
+      TaxiDriverDeps.planCard = () => const TaxiHomePlanCard();
+      addTearDown(TaxiDriverDeps.debugReset);
+      for (final scale in const [1.0, 1.3]) {
+        await pumpPhone(tester, const TaxiDriverHomeScreen(), size: Size(width, 900), textScale: scale);
+        await settle(tester);
+        await tester.scrollUntilVisible(find.text('Renews on 21 Dec 2026. Up to 5 routes are open now. Your turn 2x as often.'), 200, scrollable: find.byType(Scrollable).first);
+        expect(tester.takeException(), isNull);
+        expect(find.text('Manage in Google Play'), findsOneWidget);
+      }
       await finish(tester);
     });
   }

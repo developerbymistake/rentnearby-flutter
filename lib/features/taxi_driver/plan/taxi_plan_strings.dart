@@ -34,5 +34,9 @@ abstract final class TaxiPlanStrings {
   static String acceptedRenews(int n, String date) => 'You accepted $n. Renews on $date.';
   static String accepted(int n) => 'You accepted $n.';
   static String renews(String date) => 'Renews on $date.';
+  static const weekRequests = 'Requests on your routes';
+  static const weekAccepted = 'You accepted';
+  static const weekTurn = 'Your turn';
+  static String turnValue(int w) => '${w}x as often';
   static String profileLine(String plan, int used, int limit) => '$plan · $used of ${routesCount(limit)}';
 }

@@ -1,6 +1,8 @@
 import 'package:get/get.dart';
 
 import '../../../controllers/auth_controller.dart';
+import '../../../controllers/plan_controller.dart';
+import '../../owner_core/calendar/models/calendar_models.dart';
 import '../../owner_core/data/owner_api.dart';
 import '../../owner_core/data/owner_cache.dart';
 import '../../owner_core/data/owner_error_types.dart';
@@ -13,23 +15,37 @@ import '../../owner_core/sheets/owner_states.dart';
 import '../../taxi/models/taxi_owner_model.dart';
 
 class ChooseRouteState {
-  const ChooseRouteState({required this.routes, required this.visibleIds, required this.limit});
+  const ChooseRouteState({required this.routes, required this.visibleIds, required this.limit, this.paymentEnabled = true, this.limitFromServer = false});
+
+  static const String routesKey = 'Routes';
 
   final List<TaxiRouteModel> routes;
   final List<String> visibleIds;
   final int limit;
+  final bool paymentEnabled;
+  final bool limitFromServer;
 
   int get target => routes.length < limit ? routes.length : limit;
   bool get somethingHidden => routes.length > visibleIds.length;
 
-  factory ChooseRouteState.fromJson(Map<String, dynamic> j, {required int limit}) {
+  // The answer carries the plan meters (doc 6.6 rule 4); the local plan is only a fallback for an old server.
+  factory ChooseRouteState.fromJson(Map<String, dynamic> j, {required int limit, bool paymentOn = true}) {
+    final served = Meter.maybe(j['routesMeter'])?.limit ?? Meter.find(Meter.listOf(j['meters']), routesKey)?.limit;
+    final payment = OwnerJson.boolOrNull(j['paymentEnabled']) ?? paymentOn;
+    final l = served ?? limit;
     final visible = OwnerJson.list(j['routes'], TaxiRouteModel.fromJson).where((r) => r.id.isNotEmpty).toList()
       ..sort((a, b) => a.routeIndex.compareTo(b.routeIndex));
     final hidden = OwnerJson.list(j['hiddenRoutes'], TaxiRouteModel.fromJson).where((r) => r.id.isNotEmpty).toList()
       ..sort((a, b) => a.routeIndex.compareTo(b.routeIndex));
     final seen = <String>{};
     final all = [for (final r in [...visible, ...hidden]) if (seen.add(r.id)) r];
-    return ChooseRouteState(routes: all, visibleIds: [for (final r in visible) r.id], limit: limit < 1 ? 1 : limit);
+    return ChooseRouteState(
+      routes: all,
+      visibleIds: [for (final r in visible) r.id],
+      limit: l < 1 ? 1 : l,
+      paymentEnabled: payment,
+      limitFromServer: served != null,
+    );
   }
 }
 
@@ -53,6 +69,7 @@ class ChooseRouteController extends GetxController {
   final load = Rx<OwnerLoad<ChooseRouteState>>(const OwnerLoadLoading());
   final selected = <String>[].obs;
   final limitLine = RxnString();
+  bool paymentOff = false;
   final LatestOnly _latest = LatestOnly();
   final SingleFlight<OwnerResult<Map<String, dynamic>>> _save = SingleFlight();
   List<String> _start = const [];
@@ -80,11 +97,13 @@ class ChooseRouteController extends GetxController {
     if (isClosed || !_latest.isLatest(id)) return;
     if (r is OwnerOk<Map<String, dynamic>>) {
       OwnerCache.write(_uid, OwnerCacheKeys.listing, r.value);
-      _apply(ChooseRouteState.fromJson(r.value, limit: _limit));
+      final s = ChooseRouteState.fromJson(r.value, limit: _limit, paymentOn: PlanGate.paymentOn);
+      if (s.limitFromServer && s.limit != _limit && Get.isRegistered<PlanController>()) Get.find<PlanController>().invalidate().ignore();
+      _apply(s);
       return;
     }
     final raw = OwnerCache.read(_uid, OwnerCacheKeys.listing);
-    final saved = raw == null ? null : ChooseRouteState.fromJson(raw, limit: _limit);
+    final saved = raw == null ? null : ChooseRouteState.fromJson(raw, limit: _limit, paymentOn: PlanGate.paymentOn);
     if (saved != null && saved.somethingHidden && r is OwnerOffline<Map<String, dynamic>>) {
       _start = _ordered(saved, saved.visibleIds);
       selected.assignAll(_start);
@@ -100,7 +119,8 @@ class ChooseRouteController extends GetxController {
   }
 
   void _apply(ChooseRouteState s) {
-    if (!s.somethingHidden || !PlanGate.paymentOn) {
+    paymentOff = !s.paymentEnabled;
+    if (!s.somethingHidden || paymentOff) {
       load.value = const OwnerLoadEmpty();
       return;
     }
@@ -138,7 +158,7 @@ class ChooseRouteController extends GetxController {
     switch (r) {
       case OwnerOk<Map<String, dynamic>>(:final value):
         if (value.containsKey('routes') || value.containsKey('hiddenRoutes')) {
-          final next = ChooseRouteState.fromJson(value, limit: _limit);
+          final next = ChooseRouteState.fromJson(value, limit: s.limit, paymentOn: s.paymentEnabled);
           _start = _ordered(next, next.visibleIds);
           selected.assignAll(_start);
           load.value = OwnerLoadData(next);

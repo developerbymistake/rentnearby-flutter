@@ -40,12 +40,8 @@ class _TaxiPlanVisibleScreenState extends State<TaxiPlanVisibleScreen> {
     super.initState();
     _owns = widget.controller == null;
     c = widget.controller ?? Get.put(ChooseRouteController(), tag: ChooseRouteController.tag);
-    if (!PlanGate.paymentOn) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => _leave(toHub: true));
-      return;
-    }
     _emptyWorker = ever<OwnerLoad<ChooseRouteState>>(c.load, (v) {
-      if (v is OwnerLoadEmpty<ChooseRouteState>) _leave();
+      if (v is OwnerLoadEmpty<ChooseRouteState>) _leave(toHub: c.paymentOff);
     });
     c.fetch();
   }
@@ -90,8 +86,9 @@ class _TaxiPlanVisibleScreenState extends State<TaxiPlanVisibleScreen> {
         AppToast.error(OwnerSharedStrings.noConnection);
       case ChooseRouteSave.rateLimited:
         AppToast.info(OwnerSharedStrings.tooManyTries);
-      case ChooseRouteSave.limit:
       case ChooseRouteSave.invalid:
+        AppToast.info(OwnerSharedStrings.staleEdit);
+      case ChooseRouteSave.limit:
       case ChooseRouteSave.notNeeded:
         break;
     }

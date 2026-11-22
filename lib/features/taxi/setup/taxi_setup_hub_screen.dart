@@ -7,6 +7,7 @@ import '../../../design/design.dart';
 import '../../../design/extra/ext_taxi_owner.dart';
 import '../../../utils/app_toast.dart';
 import '../../../widgets/global_location_gates.dart';
+import '../../owner_core/plan/plan_bindings.dart';
 import '../../trip/trip_strings.dart';
 import '../models/taxi_owner_model.dart';
 import '../taxi_option_sets.dart';
@@ -40,6 +41,7 @@ class _TaxiSetupHubScreenState extends State<TaxiSetupHubScreen> with TickerProv
       Get.put(LocationController(), permanent: true);
       GlobalLocationGates.notifyReady();
     }
+    PlanBindings.ensure();
     _load();
   }
 

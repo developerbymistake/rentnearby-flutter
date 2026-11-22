@@ -46,43 +46,80 @@ class DriverRequestDetailScreen extends StatefulWidget {
   State<DriverRequestDetailScreen> createState() => _DriverRequestDetailScreenState();
 }
 
-class _DriverRequestDetailScreenState extends State<DriverRequestDetailScreen> {
+class _DriverRequestDetailScreenState extends State<DriverRequestDetailScreen> with WidgetsBindingObserver {
   static const double _maxWidth = 640;
 
   late final DriverRequestsController _c = widget.controller ?? DriverRequestsController.to;
+  final ValueNotifier<int> _ticks = ValueNotifier(0);
   Timer? _ticker;
   String? _error;
   bool _reloadedAtZero = false;
+  bool _paused = false;
 
   String get _id => widget.offerId;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _c.loadOffer(_id);
     });
-    _ticker = Timer.periodic(const Duration(seconds: 1), (_) => _tick());
   }
 
   @override
   void dispose() {
-    _ticker?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    _stopTicker();
+    _ticks.dispose();
     super.dispose();
   }
 
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused) {
+      _paused = true;
+      _stopTicker();
+    } else if (state == AppLifecycleState.resumed) {
+      _paused = false;
+      _ticks.value++;
+      _syncTicker(_c.offer(_id));
+    }
+  }
+
+  bool get tickerRunning => _ticker != null;
+
+  // Runs only while a countdown is live; only the hero line listens to it.
+  void _syncTicker(DriverOffer? o) {
+    final live = !_paused && o != null && _c.deadlineOf(o) != null && _c.remaining(o) > Duration.zero;
+    if (!live) {
+      _stopTicker();
+      return;
+    }
+    _reloadedAtZero = false;
+    _ticker ??= Timer.periodic(const Duration(seconds: 1), (_) => _tick());
+  }
+
+  void _stopTicker() {
+    _ticker?.cancel();
+    _ticker = null;
+  }
+
   void _tick() {
+    if (!mounted) return;
     final o = _c.offer(_id);
-    if (!mounted || o == null || _c.deadlineOf(o) == null) return;
+    if (o == null || _c.deadlineOf(o) == null) {
+      _stopTicker();
+      return;
+    }
+    _ticks.value++;
     if (_c.remaining(o) == Duration.zero) {
+      _stopTicker();
       if (!_reloadedAtZero) {
         _reloadedAtZero = true;
         _c.loadOffer(_id);
       }
-    } else {
-      _reloadedAtZero = false;
     }
-    setState(() {});
   }
 
   void _back() => (widget.onBack ?? () => Get.back())();
@@ -147,6 +184,7 @@ class _DriverRequestDetailScreenState extends State<DriverRequestDetailScreen> {
       backgroundColor: ListingPalette.coral.page,
       body: Obx(() {
         final o = _c.offer(_id);
+        _syncTicker(o);
         final content = o == null ? _loading() : _content(o);
         return Column(
           children: [
@@ -235,7 +273,10 @@ class _DriverRequestDetailScreenState extends State<DriverRequestDetailScreen> {
     final detailBusy = _c.isBusy(DriverRequestAction.detail, _id);
     return (
       content: [
-        _Hero(offer: o, line: showConflict ? null : _heroLine(o), chip: live ? null : _chipOf(o)),
+        if (state == OfferState.selected && !showConflict)
+          ValueListenableBuilder<int>(valueListenable: _ticks, builder: (context, _, _) => _Hero(offer: o, line: _heroLine(o), chip: null))
+        else
+          _Hero(offer: o, line: showConflict ? null : _heroLine(o), chip: live ? null : _chipOf(o)),
         if (showConflict) ...[Gap.v(20), _ConflictBanner(from: conflict.from, to: conflict.to)],
         if (state == OfferState.accepted || state == OfferState.selected) ..._manualLine(o),
         if (_error != null) ...[

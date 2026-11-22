@@ -6,9 +6,11 @@ import 'package:bakhli/features/taxi/requests/data/driver_request_repository.dar
 import 'package:bakhli/features/taxi/requests/driver_requests_screen.dart';
 import 'package:bakhli/features/taxi/requests/models/driver_request_models.dart';
 import 'package:bakhli/features/trip/utils/taxi_result.dart';
+import 'package:bakhli/features/taxi/requests/widgets/driver_requests_body.dart';
 import 'package:bakhli/features/taxi/requests/widgets/driver_state_chip.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:get/get.dart';
 
 import '../../support/five_sizes.dart';
 import '../../support/real_phone.dart';
@@ -184,9 +186,28 @@ void main() {
 
   testWidgets('tap_opens_the_offer', (tester) async {
     final rig = await _open(tester);
+    await tester.ensureVisible(_key('request_open_$_bookedId'));
+    await tester.pump();
     await tester.tap(_key('request_open_$_bookedId'));
     await tester.pump();
     expect(rig.opened, [_bookedId]);
+  });
+
+  testWidgets('FT-18: the timer runs only while a row counts down and stops on pause', (tester) async {
+    final rig = await _open(tester);
+    bool running() => (tester.state(find.byType(DriverRequestsBody)) as dynamic).timerRunning as bool;
+    expect(running(), isTrue);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+    expect(running(), isFalse);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    expect(running(), isTrue);
+    rig.controller.items.assignAll([for (final o in rig.controller.items) if (o.state != OfferState.ringing && o.state != OfferState.selected) o]);
+    await tester.pump();
+    expect(running(), isFalse);
   });
 
   testWidgets('countdown', (tester) async {

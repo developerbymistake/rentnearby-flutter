@@ -184,6 +184,12 @@ abstract final class TaxiTripSheet {
       case OwnerOk():
         Navigator.of(context).pop(true);
       case OwnerRefused():
+        if (r.type == TaxiCalendarStrings.entryEndedType) {
+          AppToast.info(TaxiCalendarStrings.entryEnded);
+          c.reload().ignore();
+          Navigator.of(context).pop(false);
+          return;
+        }
         if (await PlanGate.handleRefusal(context, r, TaxiGateStringsCalendar.fromRefusal)) return;
         if (r.statusCode == 429) {
           AppToast.error(OwnerSharedStrings.tooManyTries);

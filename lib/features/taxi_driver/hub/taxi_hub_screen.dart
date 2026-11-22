@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../../config/app_routes.dart';
-import '../../../controllers/auth_controller.dart';
 import '../../../design/design.dart';
 import '../../../design/extra/ext_details.dart';
 import '../../../utils/app_toast.dart';
@@ -116,7 +115,7 @@ class _TaxiHubScreenState extends State<TaxiHubScreen> {
           title: TaxiHubStrings.noTaxiYet,
           message: TaxiHubStrings.noTaxiBody,
           action: TaxiHubStrings.setUpTaxi,
-          onAction: _setUp,
+          onAction: TaxiHomeActions.startSetup,
           margin: DS.insets(l: 18, t: 28, r: 18),
         ),
       OwnerLoadData<TaxiOwnerModel>(:final value, :final stale) => _content(context, value, stale),
@@ -131,15 +130,10 @@ class _TaxiHubScreenState extends State<TaxiHubScreen> {
     };
   }
 
-  void _setUp() {
-    if (Get.isRegistered<AuthController>()) Get.find<AuthController>().setOwnerShellEmpty(false);
-    Get.offAllNamed(AppRoutes.taxiSetup);
-  }
-
   Widget _content(BuildContext context, TaxiOwnerModel t, bool stale) {
     final limit = t.routesMeter?.limit ?? t.meter('Routes')?.limit ?? PlanGate.limit(PlanKey.routes);
     final used = t.routes.length;
-    final locked = PlanGate.locks(PlanKey.routes, used);
+    final locked = PlanGate.canUpgrade && used >= limit;
     final off = !PlanGate.paymentOn;
     final children = <Widget>[];
     if (stale || _c.staleNotice.value) children.add(const OwnerStaleLine(text: TaxiHubStrings.showingLast));
@@ -173,18 +167,19 @@ class _TaxiHubScreenState extends State<TaxiHubScreen> {
         ),
     ];
     if (!t.isPendingReview) {
-      final more = (PlanKeys.plusSeed[PlanKey.routes] ?? limit) - limit;
+      final plus = TaxiGateStrings.plusRoutes;
+      final more = plus - limit;
       if (locked) {
         rows.add(TaxiRowData(
           art: ListingArt.locked,
           tint: TaxiLook.artTintAmber,
           locked: true,
           title: TaxiGateStrings.moreRoutes(more < 1 ? 1 : more),
-          sub: TaxiGateStrings.addUpTo(TaxiGateStrings.plusRoutes),
-          onTap: () => PlanGate.showLimit(context, TaxiGateStrings.routeGate()),
-          trailing: KeyedSubtree(key: GateKeys.softRow, child: TaxiPill(label: TaxiHubStrings.seePlus, kind: TaxiPillKind.coral, onTap: () => PlanGate.showLimit(context, TaxiGateStrings.routeGate()))),
+          sub: TaxiGateStrings.addUpTo(plus),
+          onTap: PlanGate.seePlus,
+          trailing: KeyedSubtree(key: GateKeys.softRow, child: TaxiPill(label: TaxiHubStrings.seePlus, kind: TaxiPillKind.coral, onTap: PlanGate.seePlus)),
         ));
-      } else if (used >= limit && PlanGate.canUpgrade == false && used > 0) {
+      } else if (used >= limit && used > 0) {
         rows.add(TaxiRowData(
           art: ListingArt.compass,
           title: TaxiHubStrings.addRoute,

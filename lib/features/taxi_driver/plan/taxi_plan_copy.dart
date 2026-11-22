@@ -5,6 +5,7 @@ import '../../../models/plan_model.dart';
 import '../../../widgets/plan_words.dart';
 import '../../owner_core/home/owner_home_models.dart';
 import '../../owner_core/plan/plan_card_state.dart';
+import '../../owner_core/plan/plan_gate.dart';
 import '../../owner_core/plan/plan_keys.dart';
 import '../taxi_driver_deps.dart';
 import 'taxi_plan_strings.dart';
@@ -25,7 +26,7 @@ class TaxiPlanCopy extends PlanRoleCopy {
   @override
   String get onHoldBody => PlanWords.fixToContinue;
   @override
-  bool get showsWeek => false;
+  bool get showsWeek => true;
   @override
   String? get chooseLabel => TaxiPlanStrings.chooseYourRoute;
   @override
@@ -121,7 +122,27 @@ class TaxiPlanCopy extends PlanRoleCopy {
   }
 
   @override
-  List<(String, String)> weekCells(OwnerWeekly w) => const [];
+  List<(String, String)> weekCells(OwnerWeekly w) {
+    final on = w.requestsOnRoutes;
+    final acc = w.accepted;
+    if (on == null || acc == null) return const [];
+    final weight = PlanGate.limit(PlanKey.ringWeight);
+    return [
+      ('$on', TaxiPlanStrings.weekRequests),
+      ('$acc', TaxiPlanStrings.weekAccepted),
+      if (weight > 1) (TaxiPlanStrings.turnValue(weight), TaxiPlanStrings.weekTurn),
+    ];
+  }
+
+  static String? plusLine({int? accepted, String? renewDate, required int routes, int? ringWeight, required bool hasNumbers}) {
+    if (hasNumbers && accepted != null) return renewDate != null ? TaxiPlanStrings.acceptedRenews(accepted, renewDate) : TaxiPlanStrings.accepted(accepted);
+    final parts = <String>[
+      if (renewDate != null) TaxiPlanStrings.renews(renewDate),
+      TaxiPlanStrings.routesOpenNow(routes),
+      if ((ringWeight ?? 1) > 1) '${TaxiPlanStrings.turnAsOften(ringWeight!)}.',
+    ];
+    return parts.join(' ');
+  }
 
   @override
   PlanHomeView homeCard(OwnerPlanCard? card, {String? city, PlanValues v = const PlanValues()}) {
@@ -154,18 +175,11 @@ class TaxiPlanCopy extends PlanRoleCopy {
         final acc = w?.accepted;
         final grant = s == PlanCardState.adminGrant;
         final date = renew == null || grant ? null : PlanWords.date(renew);
-        String? line;
-        if (acc != null && date != null) {
-          line = TaxiPlanStrings.acceptedRenews(acc, date);
-        } else if (acc != null) {
-          line = TaxiPlanStrings.accepted(acc);
-        } else if (date != null) {
-          line = TaxiPlanStrings.renews(date);
-        }
+        final line = plusLine(accepted: acc, renewDate: date, routes: routes, ringWeight: card?.ringWeight, hasNumbers: on != null);
         return PlanHomeView(
           state: s,
-          title: on != null ? TaxiPlanStrings.requestsOnRoutes(on) : PlanWords.plus,
-          pill: on != null ? PlanWords.plus : null,
+          title: on != null ? TaxiPlanStrings.requestsOnRoutes(on) : PlanWords.yourPlan,
+          pill: PlanWords.plus,
           line: line,
           action: grant ? PlanHomeAction.none : PlanHomeAction.manage,
         );

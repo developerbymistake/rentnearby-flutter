@@ -20,6 +20,14 @@ import 'taxi_calendar_widgets.dart';
 import 'taxi_trip_sheet.dart';
 import 'taxi_trip_text.dart';
 
+// D-07: a trip whose last day is before today is read-only except money notes and Delete.
+abstract final class TaxiTripEnded {
+  static bool of(CalendarEntry e, DateTime today) {
+    final last = e.lastDay;
+    return last != null && OwnerDates.only(last).isBefore(OwnerDates.only(today));
+  }
+}
+
 class TaxiCalendarEntryScreen extends StatefulWidget {
   const TaxiCalendarEntryScreen({super.key, this.args = const {}, this.controller});
 
@@ -180,7 +188,14 @@ class _TaxiCalendarEntryScreenState extends State<TaxiCalendarEntryScreen> {
             TaxiBottomActions(
               children: manual
                   ? [
-                      SecondaryButton(label: TaxiCalendarStrings.edit, tone: TaxiCal.kit, onPressed: () => _edit(e)),
+                      if (TaxiTripEnded.of(e, _c.serverToday))
+                        SecondaryButton(
+                          label: _hasMoney(e) ? TaxiCalendarStrings.editAmounts : TaxiCalendarStrings.addAmounts,
+                          tone: TaxiCal.kit,
+                          onPressed: () => _editAmounts(e),
+                        )
+                      else
+                        SecondaryButton(label: TaxiCalendarStrings.edit, tone: TaxiCal.kit, onPressed: () => _edit(e)),
                       SecondaryButton(label: TaxiCalendarStrings.delete, tone: TaxiCal.kit, onPressed: () => _delete(e)),
                     ]
                   : [

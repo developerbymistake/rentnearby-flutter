@@ -204,6 +204,24 @@ void main() {
     expect(h.opened, [_id]);
   });
 
+  testWidgets('FT-12: a tick repaints the arc and the countdown only, the page and the art are not rebuilt', (tester) async {
+    final h = await _open(tester);
+    final rebuilt = <String>[];
+    final prev = debugOnRebuildDirtyWidget;
+    debugOnRebuildDirtyWidget = (e, _) => rebuilt.add(e.widget.runtimeType.toString());
+    addTearDown(() => debugOnRebuildDirtyWidget = prev);
+    for (var i = 0; i < 3; i++) {
+      h.now = h.now.add(const Duration(seconds: 1));
+      await tester.pump(const Duration(seconds: 1));
+    }
+    debugOnRebuildDirtyWidget = prev;
+    expect(find.text('3:04'), findsOneWidget);
+    expect(rebuilt.where((n) => n == 'DriverRingScreen' || n == 'Art3D' || n == 'Wrap' || n == '_Chip' || n == '_Round'), isEmpty, reason: rebuilt.toSet().join(', '));
+    expect(rebuilt.where((n) => n.startsWith('ValueListenableBuilder')).length, 3);
+    final paint = tester.widget<CustomPaint>(find.byKey(const ValueKey('ring_progress')));
+    expect((paint.painter as dynamic).progress, closeTo(184 / 300, 0.01));
+  });
+
   testWidgets('load failed shows retry and retry loads the ring', (tester) async {
     final h = await _open(tester, fail: true);
     expect(find.text('Could not open the request'), findsOneWidget);

@@ -22,6 +22,15 @@ import 'taxi_identity_validators.dart';
 import 'taxi_setup_controller.dart';
 import 'taxi_vehicle_type_picker_sheet.dart';
 import '../../taxi_driver/strings/taxi_setup_strings.dart';
+import '../../taxi_driver/taxi_driver_deps.dart';
+
+abstract final class TaxiPlateDecode {
+  static int width(double width, double dpr) => (width * dpr).round().clamp(1, KitPhoto.maxDecodePx);
+
+  // Plate, plate photo, licence or date of birth on a once-approved taxi go back to review.
+  static bool needsReview({required String plate, required String initialPlate, required bool newPhoto, required bool licenceTyped, required bool dobPicked}) =>
+      TaxiOptionSets.normalizePlate(plate) != initialPlate || newPhoto || licenceTyped || dobPicked;
+}
 
 class TaxiVehicleScreen extends StatefulWidget {
   const TaxiVehicleScreen({super.key});
@@ -184,6 +193,14 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
     return pin != null &&
         ((pin.latitude - init.latitude).abs() > 1e-6 || (pin.longitude - init.longitude).abs() > 1e-6);
   }
+
+  bool get _needsReview => TaxiPlateDecode.needsReview(
+        plate: _plateCtrl.text,
+        initialPlate: _initPlate,
+        newPhoto: _localPhoto != null,
+        licenceTyped: _dlTyped.isNotEmpty,
+        dobPicked: _dob != null,
+      );
 
   bool get _blocked => _isUploading || _isFinalizing || _busy || _ctrl.isSaving.value;
 
@@ -494,7 +511,8 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
       return;
     }
     if (!_validateBase()) return;
-    if (_wasApproved && (_dlTyped.isNotEmpty || _dob != null || _localPhoto != null) && !await TaxiReviewSheet.ask(context)) return;
+    final review = _wasApproved && _needsReview;
+    if (review && !await TaxiReviewSheet.ask(context)) return;
     if (!mounted) return;
     final pin = pinnedOrLiveLocation!;
     _busy = true;
@@ -555,8 +573,9 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
       if (!mounted) return;
       setState(() => _isFinalizing = false);
       final status = _ctrl.taxi.value?.status ?? _uploadedStatus;
+      TaxiDriverDeps.refreshHome().ignore();
       Get.back();
-      if (_wasApproved && status == TaxiStatus.pendingReview) {
+      if (review && status == TaxiStatus.pendingReview) {
         AppToast.info('Sent back for review');
       } else {
         AppToast.success('Taxi details saved');
@@ -748,10 +767,16 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
     return TaxiPlateTile(
       tone: _tone,
       onRemove: _blocked ? null : _removePhoto,
-      photo: local != null
-          ? Image.file(local, fit: BoxFit.cover)
+      photo: LayoutBuilder(builder: (context, box) {
+        final w = box.maxWidth.isFinite ? box.maxWidth : MediaQuery.sizeOf(context).width / 3;
+        final decode = TaxiPlateDecode.width(w, MediaQuery.devicePixelRatioOf(context));
+        return local != null
+          ? Image.file(local, fit: BoxFit.cover, cacheWidth: decode, width: double.infinity, height: double.infinity)
           : CachedNetworkImage(
               imageUrl: _remotePhotoUrl!,
+              memCacheWidth: decode,
+              width: double.infinity,
+              height: double.infinity,
               fit: BoxFit.cover,
               placeholder: (_, _) => ColoredBox(color: _tone.tint),
               errorWidget: (_, _, _) => Container(
@@ -759,7 +784,8 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
                 padding: DS.all(16),
                 child: Image.asset(ListingArt.taxi),
               ),
-            ),
+            );
+      }),
     );
   }
 

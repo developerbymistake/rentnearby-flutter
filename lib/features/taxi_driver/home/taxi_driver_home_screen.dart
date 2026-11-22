@@ -17,6 +17,7 @@ import '../../owner_core/home/owner_home_models.dart';
 import '../../owner_core/sheets/owner_states.dart';
 import '../../taxi/setup/taxi_setup_controller.dart';
 import '../strings/taxi_home_strings.dart';
+import '../strings/taxi_hub_strings.dart';
 import '../taxi_driver_deps.dart';
 import '../widgets/taxi_widgets.dart';
 import 'taxi_attention_copy.dart';
@@ -34,6 +35,11 @@ class TaxiHomeActions {
   }
 
   static void openSetup() => Get.toNamed(AppRoutes.taxiSetup);
+
+  static void startSetup() {
+    _auth?.setOwnerShellEmpty(false);
+    Get.offAllNamed(AppRoutes.taxiSetup);
+  }
 
   static Future<void> share(BuildContext context) async {
     final ctrl = TaxiSetupController.ensure();
@@ -151,6 +157,14 @@ class _TaxiDriverHomeScreenState extends State<TaxiDriverHomeScreen> {
     return switch (load) {
       OwnerLoadLoading<OwnerHomeDto>() => const _HomeSkeleton(),
       OwnerLoadData<OwnerHomeDto>(:final value, :final stale) => TaxiHomeBody(dto: value, controller: _c, stale: stale),
+      OwnerLoadEmpty<OwnerHomeDto>() => TaxiErrorCard(
+          art: ListingArt.taxi,
+          title: TaxiHubStrings.noTaxiYet,
+          message: TaxiHubStrings.noTaxiBody,
+          action: TaxiHubStrings.setUpTaxi,
+          onAction: TaxiHomeActions.startSetup,
+          margin: DS.insets(l: 18, t: 44, r: 18),
+        ),
       _ => TaxiErrorCard(
           art: ListingArt.warning,
           title: TaxiHomeStrings.couldNotLoad,

@@ -4,9 +4,11 @@ import '../../../config/app_routes.dart';
 import '../../../controllers/plan_controller.dart';
 import '../../../design/design.dart';
 import '../../../models/my_plan_model.dart';
+import '../../../models/plan_model.dart';
 import '../../buddy/notices/models/notice_models.dart';
 import '../../buddy/notices/notice_copy.dart';
 import '../../owner_core/json/owner_json.dart';
+import '../../owner_core/plan/plan_card_state.dart';
 import '../../owner_core/plan/plan_keys.dart';
 import '../../owner_core/session/owner_notice_registry.dart';
 import '../strings/taxi_work_strings.dart';
@@ -21,6 +23,19 @@ abstract final class TaxiNoticeKinds {
 
 abstract final class TaxiNoticeCopy {
   static MyPlanModel? debugPlan;
+  static List<PlanModel>? debugCatalog;
+
+  static List<PlanModel> get _catalog =>
+      debugCatalog ?? (Get.isRegistered<PlanController>() ? Get.find<PlanController>().plans.toList() : const <PlanModel>[]);
+
+  static int freeRoutes(List<PlanModel> catalog) => PlanValues.fromCatalog(catalog).free(PlanKey.routes);
+
+  static int trialDays(List<PlanModel> catalog) {
+    for (final p in catalog) {
+      if (!p.isDefault && p.trialDays > 0) return p.trialDays;
+    }
+    return 0;
+  }
 
   static MyPlanModel get _plan =>
       debugPlan ?? (Get.isRegistered<PlanController>() ? Get.find<PlanController>().myPlan.value : const MyPlanModel());
@@ -75,7 +90,7 @@ abstract final class TaxiNoticeCopy {
         if (on == null) return null;
         return NoticeView(
           title: TaxiWorkStrings.plansStartTitle(TaxiWorkStrings.day(on)),
-          body: TaxiWorkStrings.freeKeeps(PlanKeys.freeSeed[PlanKey.routes] ?? 1, trial: plan.trialAvailable),
+          body: TaxiWorkStrings.freeKeeps(freeRoutes(_catalog), trialDays: plan.trialAvailable ? trialDays(_catalog) : 0),
           tag: TaxiWorkStrings.tagPlan,
           art: ListingArt.crown,
           tone: NoticeTone.rose,

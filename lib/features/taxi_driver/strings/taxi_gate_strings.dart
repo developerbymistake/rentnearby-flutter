@@ -1,4 +1,9 @@
+import 'package:get/get.dart';
+
+import '../../../controllers/plan_controller.dart';
 import '../../../design/design.dart';
+import '../../../models/plan_model.dart';
+import '../../owner_core/plan/plan_card_state.dart';
 import '../../owner_core/plan/plan_gate.dart';
 import '../../owner_core/plan/plan_keys.dart';
 import '../../owner_core/strings/owner_shared_strings.dart';
@@ -15,12 +20,16 @@ abstract final class TaxiGateStrings {
   static const now = 'Now';
   static String chipPlus(int plus) => '$plus routes';
   static const addAnother = 'Add another route';
+  static String upTo(int n) => 'You can add up to ${routesCount(n)}.';
 
   static int get freeRoutes => PlanGate.limit(PlanKey.routes);
-  static int get plusRoutes => PlanKeys.plusSeed[PlanKey.routes] ?? freeRoutes;
+  static int get plusRoutes {
+    final plans = PlanGate.debugPlan == null && Get.isRegistered<PlanController>() ? Get.find<PlanController>().plans.toList() : const <PlanModel>[];
+    return PlanValues.fromCatalog(plans).plus(PlanKey.routes);
+  }
 
-  static GateSpec routeGate() {
-    final free = freeRoutes;
+  static GateSpec routeGate({int? free}) {
+    free ??= freeRoutes;
     final plus = plusRoutes;
     return GateSpec(
       id: 'G1',
@@ -35,5 +44,5 @@ abstract final class TaxiGateStrings {
     );
   }
 
-  static GateSpec fromRefusal(String key, int limit) => routeGate();
+  static GateSpec fromRefusal(String key, int limit) => routeGate(free: limit);
 }

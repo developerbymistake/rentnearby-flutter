@@ -20,9 +20,17 @@ class TaxiHomePlanCard extends StatelessWidget {
     return Obx(() {
       final dto = home?.load.value.valueOrNull;
       final me = plans?.myPlan.value;
-      final card = dto?.planCard ?? (me == null ? null : PlanCardStates.fromPlan(me));
+      final card = feedCardFresh(home?.loadedAt, dto != null, home?.planChangedAt.value)
+          ? (dto?.planCard ?? (me == null ? null : PlanCardStates.fromPlan(me)))
+          : (me == null ? dto?.planCard : PlanCardStates.fromPlan(me));
       return _card(card, dto?.listing.cityName, plans?.plans.toList() ?? const []);
     });
+  }
+
+  static bool feedCardFresh(DateTime? homeAt, bool hasFeed, DateTime? planChangedAt) {
+    if (!hasFeed) return false;
+    if (planChangedAt == null) return true;
+    return homeAt != null && !homeAt.isBefore(planChangedAt);
   }
 
   static Widget _card(OwnerPlanCard? card, String? city, List<PlanModel> catalog) => HomePlanCard(

@@ -75,6 +75,7 @@ class _DriverRingScreenState extends State<DriverRingScreen> {
   static final Color _bottom = ListingPalette.coral.g2;
 
   late final DriverRequestsController _c = widget.controller ?? DriverRequestsController.to;
+  final ValueNotifier<int> _ticks = ValueNotifier(0);
   Timer? _tick;
   Timer? _closeTimer;
   bool _loadFailed = false;
@@ -91,9 +92,7 @@ class _DriverRingScreenState extends State<DriverRingScreen> {
   @override
   void initState() {
     super.initState();
-    _tick = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (mounted) setState(() {});
-    });
+    _tick = Timer.periodic(const Duration(seconds: 1), (_) => _onTick());
     TaxiRingSession.ended.addListener(_onRingEnded);
     WidgetsBinding.instance.addPostFrameCallback((_) => _load());
   }
@@ -103,7 +102,18 @@ class _DriverRingScreenState extends State<DriverRingScreen> {
     TaxiRingSession.ended.removeListener(_onRingEnded);
     _tick?.cancel();
     _closeTimer?.cancel();
+    _ticks.dispose();
     super.dispose();
+  }
+
+  // Only the countdown and the arc listen to the tick; the page rebuilds on a real state change.
+  void _onTick() {
+    if (!mounted) return;
+    _ticks.value++;
+    final o = _c.offer(_id);
+    final expired = o != null && !_missed && o.state == OfferState.ringing && _c.remaining(o) <= Duration.zero;
+    final failedWithTime = o == null && _loadFailed && widget.expiresAt != null;
+    if (expired || failedWithTime) setState(() {});
   }
 
   void _onRingEnded() {
@@ -327,9 +337,6 @@ class _DriverRingScreenState extends State<DriverRingScreen> {
     ];
     final box = DS.s(230);
     final disc = DS.s(180);
-    final left = _c.remaining(o);
-    final progress = (left.inMilliseconds / _ringWindow.inMilliseconds).clamp(0.0, 1.0);
-    final spoken = TaxiCountdown.text(Duration(seconds: ((left.inSeconds + 9) ~/ 10) * 10));
     final column = Padding(
       padding: DS.insets(l: 24, r: 24, t: 40, b: 40),
       child: Column(
@@ -351,34 +358,51 @@ class _DriverRingScreenState extends State<DriverRingScreen> {
           SizedBox(
             width: box,
             height: box,
-            child: CustomPaint(
-              key: const ValueKey('ring_progress'),
-              painter: _RingPainter(
-                progress: progress,
-                radius: DS.s(92),
-                stroke: DS.s(8),
-                pulseRadius: DS.s(139),
-                pulseStroke: DS.s(2),
-                ringShift: DS.s(15),
-              ),
-              child: Center(
-                child: Container(
-                  width: disc,
-                  height: disc,
-                  decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withValues(alpha: Alpha.v14)),
-                  alignment: Alignment.center,
-                  child: Art3D(asset: _art, size: 120, shadowOffset: const Offset(6, 9), shadowBlur: 8, shadowAlpha: Alpha.scrim),
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                Positioned.fill(
+                  child: RepaintBoundary(
+                    child: CustomPaint(
+                      key: const ValueKey('ring_progress'),
+                      painter: _RingPainter(
+                        progressOf: () => (_c.remaining(o).inMilliseconds / _ringWindow.inMilliseconds).clamp(0.0, 1.0),
+                        repaint: _ticks,
+                        radius: DS.s(92),
+                        stroke: DS.s(8),
+                        pulseRadius: DS.s(139),
+                        pulseStroke: DS.s(2),
+                        ringShift: DS.s(15),
+                      ),
+                    ),
+                  ),
                 ),
-              ),
+                RepaintBoundary(
+                  child: Container(
+                    width: disc,
+                    height: disc,
+                    decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withValues(alpha: Alpha.v14)),
+                    alignment: Alignment.center,
+                    child: Art3D(asset: _art, size: 120, shadowOffset: const Offset(6, 9), shadowBlur: 8, shadowAlpha: Alpha.scrim),
+                  ),
+                ),
+              ],
             ),
           ),
           Gap.v(34),
-          Semantics(
-            liveRegion: true,
-            label: spoken,
-            child: ExcludeSemantics(
-              child: Text(_c.countdownText(o), key: const ValueKey('ring_countdown'), style: Ink3D.text(28, FontWeight.w600, _onDark, letterSpacing: 1)),
-            ),
+          ValueListenableBuilder<int>(
+            valueListenable: _ticks,
+            builder: (context, _, _) {
+              final left = _c.remaining(o);
+              final spoken = TaxiCountdown.text(Duration(seconds: ((left.inSeconds + 9) ~/ 10) * 10));
+              return Semantics(
+                liveRegion: true,
+                label: spoken,
+                child: ExcludeSemantics(
+                  child: Text(TaxiCountdown.text(left), key: const ValueKey('ring_countdown'), style: Ink3D.text(28, FontWeight.w600, _onDark, letterSpacing: 1)),
+                ),
+              );
+            },
           ),
           if (_actionFailed) ...[
             Gap.v(12),
@@ -504,17 +528,28 @@ class _RingStateView extends StatelessWidget {
 }
 
 class _RingPainter extends CustomPainter {
-  _RingPainter({required this.progress, required this.radius, required this.stroke, required this.pulseRadius, required this.pulseStroke, required this.ringShift});
+  _RingPainter({
+    required this.progressOf,
+    required Listenable repaint,
+    required this.radius,
+    required this.stroke,
+    required this.pulseRadius,
+    required this.pulseStroke,
+    required this.ringShift,
+  }) : super(repaint: repaint);
 
-  final double progress;
+  final double Function() progressOf;
   final double radius;
   final double stroke;
   final double pulseRadius;
   final double pulseStroke;
   final double ringShift;
 
+  double get progress => progressOf();
+
   @override
   void paint(Canvas canvas, Size size) {
+    final progress = this.progress;
     final c = size.center(Offset.zero);
     final rc = c - Offset(ringShift, ringShift);
     canvas.drawCircle(
@@ -536,7 +571,7 @@ class _RingPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_RingPainter old) =>
-      old.progress != progress || old.radius != radius || old.stroke != stroke || old.pulseRadius != pulseRadius || old.pulseStroke != pulseStroke || old.ringShift != ringShift;
+      old.progressOf != progressOf || old.radius != radius || old.stroke != stroke || old.pulseRadius != pulseRadius || old.pulseStroke != pulseStroke || old.ringShift != ringShift;
 }
 
 class _Chip extends StatelessWidget {

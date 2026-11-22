@@ -7,10 +7,35 @@ import 'package:bakhli/features/taxi/requests/widgets/driver_bookings_section.da
 import 'package:bakhli/features/taxi_driver/notices/taxi_notice_copy.dart';
 import 'package:bakhli/features/taxi_driver/strings/taxi_work_strings.dart';
 import 'package:bakhli/models/my_plan_model.dart';
+import 'package:bakhli/models/plan_model.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../../support/owner_fakes.dart';
 import 'work_fixtures.dart';
+
+PlanModel _paidTaxi({required int trialDays}) => PlanModel(
+      id: 'taxi_plus',
+      featureKey: 'Taxi',
+      code: 'PLUS',
+      name: 'Plus',
+      tagline: null,
+      isDefault: false,
+      trialDays: trialDays,
+      features: const {'Routes': 5},
+      prices: const [],
+    );
+
+PlanModel _freeTaxi({required int routes}) => PlanModel(
+      id: 'taxi_free',
+      featureKey: 'Taxi',
+      code: 'FREE',
+      name: 'Free',
+      tagline: null,
+      isDefault: true,
+      trialDays: 0,
+      features: {'Routes': routes},
+      prices: const [],
+    );
 
 Map<String, dynamic> _booking(String id, String state, {String from = '2026-12-18', String to = '2026-12-26', Object? stars, String? by}) => {
       'bookingId': id,
@@ -140,8 +165,9 @@ void main() {
       expect(TaxiWorkStrings.yourFare('₹1,900', 3), 'Your fare ₹1,900 · 3 travellers');
       expect(TaxiWorkStrings.inCalendar('₹1,900'), 'Your fare ₹1,900 · in your calendar as From app');
       expect(TaxiWorkStrings.routesHidden(3), '3 routes are hidden on Free. Nothing is deleted.');
-      expect(TaxiWorkStrings.freeKeeps(1, trial: true), 'Free keeps 1 route. Try Plus free for 7 days.');
-      expect(TaxiWorkStrings.freeKeeps(1, trial: false), 'Free keeps 1 route.');
+      expect(TaxiWorkStrings.freeKeeps(1, trialDays: 7), 'Free keeps 1 route. Try Plus free for 7 days.');
+      expect(TaxiWorkStrings.freeKeeps(1), 'Free keeps 1 route.');
+      expect(TaxiWorkStrings.freeKeeps(2, trialDays: 14), 'Free keeps 2 routes. Try Plus free for 14 days.');
     });
   });
 
@@ -211,6 +237,7 @@ void main() {
 
     test('plansStarting_row_text', () {
       TaxiNoticeCopy.debugPlan = MyPlanModel(paymentEnabled: false, trialAvailable: true, paymentStartsOn: DateTime(2027, 2, 1));
+      TaxiNoticeCopy.debugCatalog = [_paidTaxi(trialDays: 7)];
       final v = OwnerNoticeRegistry.of(_notice('PlansStarting'))!;
       expect(v.title, 'Plans start on 1 Feb');
       expect(v.body, 'Free keeps 1 route. Try Plus free for 7 days.');
@@ -219,7 +246,20 @@ void main() {
 
     test('plansStarting_noTrial_noTrialSentence', () {
       TaxiNoticeCopy.debugPlan = MyPlanModel(paymentStartsOn: DateTime(2027, 2, 1));
+      TaxiNoticeCopy.debugCatalog = [_paidTaxi(trialDays: 0)];
       expect(OwnerNoticeRegistry.of(_notice('PlansStarting'))!.body, 'Free keeps 1 route.');
+    });
+
+    test('plansStarting_catalogNumbers_FT21', () {
+      TaxiNoticeCopy.debugPlan = MyPlanModel(paymentStartsOn: DateTime(2027, 2, 1), trialAvailable: true);
+      TaxiNoticeCopy.debugCatalog = [_freeTaxi(routes: 2), _paidTaxi(trialDays: 14)];
+      expect(OwnerNoticeRegistry.of(_notice('PlansStarting'))!.body, 'Free keeps 2 routes. Try Plus free for 14 days.');
+      TaxiNoticeCopy.debugPlan = MyPlanModel(paymentStartsOn: DateTime(2027, 2, 1));
+      expect(OwnerNoticeRegistry.of(_notice('PlansStarting'))!.body, 'Free keeps 2 routes.', reason: 'trial already used');
+      TaxiNoticeCopy.debugPlan = MyPlanModel(paymentStartsOn: DateTime(2027, 2, 1), trialAvailable: true);
+      TaxiNoticeCopy.debugCatalog = const [];
+      expect(OwnerNoticeRegistry.of(_notice('PlansStarting'))!.body, 'Free keeps 1 route.');
+      TaxiNoticeCopy.debugCatalog = null;
     });
 
     test('plansStarting_missingDate_rowHidden', () {

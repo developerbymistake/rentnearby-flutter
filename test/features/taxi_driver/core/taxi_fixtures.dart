@@ -46,6 +46,7 @@ Map<String, dynamic> homeJson({
   int badge = 0,
   Map<String, dynamic>? routesMeter = const {'key': 'Routes', 'used': 1, 'limit': 1},
   String plate = 'UK 04 TA 2231',
+  Map<String, dynamic>? planCard,
 }) =>
     {
       'role': 'TAXI_DRIVER',
@@ -69,6 +70,7 @@ Map<String, dynamic> homeJson({
       'attention': attention,
       'attentionCount': attentionCount ?? attention.length,
       'numbers': {'taxi': taxi ?? {'newRequests': 0}, 'centreBadge': badge},
+      'planCard': ?planCard,
     };
 
 Map<String, dynamic> taxiJson({

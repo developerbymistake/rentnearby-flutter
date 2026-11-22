@@ -4,6 +4,7 @@ import 'package:bakhli/design/design.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../../../../controllers/auth_controller.dart';
 import '../../../owner_core/plan/gate_keys.dart';
 import '../../../owner_core/plan/plan_gate.dart';
 import '../../../owner_core/plan/plan_keys.dart';
@@ -92,7 +93,11 @@ class DriverRequestsBody extends StatefulWidget {
     this.onBadge,
     this.bottomPadding = 28,
     this.tick = const Duration(seconds: 1),
+    this.tabIndex,
   });
+
+  /// The shell tab this body lives in; the countdown timer stops while another tab is shown.
+  final int? tabIndex;
 
   final DriverRequestsController? controller;
   final DriverReadyController? ready;
@@ -106,7 +111,7 @@ class DriverRequestsBody extends StatefulWidget {
   State<DriverRequestsBody> createState() => _DriverRequestsBodyState();
 }
 
-class _DriverRequestsBodyState extends State<DriverRequestsBody> with AutomaticKeepAliveClientMixin {
+class _DriverRequestsBodyState extends State<DriverRequestsBody> with AutomaticKeepAliveClientMixin, WidgetsBindingObserver {
   static const double _maxWidth = 640;
 
   late final DriverRequestsController _c = widget.controller ?? DriverRequestsController.to;
@@ -114,6 +119,10 @@ class _DriverRequestsBodyState extends State<DriverRequestsBody> with AutomaticK
   Timer? _timer;
   final ValueNotifier<int> _ticks = ValueNotifier(0);
   Worker? _countWorker;
+  Worker? _itemsWorker;
+  Worker? _tabWorker;
+  bool _visible = true;
+  bool _paused = false;
   String? _notice;
 
   @override
@@ -122,7 +131,19 @@ class _DriverRequestsBodyState extends State<DriverRequestsBody> with AutomaticK
   @override
   void initState() {
     super.initState();
-    _timer = Timer.periodic(widget.tick, (_) => _onTick());
+    WidgetsBinding.instance.addObserver(this);
+    _itemsWorker = ever<List<DriverOffer>>(_c.items, (_) => _syncTimer());
+    final tab = widget.tabIndex;
+    if (tab != null && Get.isRegistered<AuthController>()) {
+      final auth = Get.find<AuthController>();
+      _visible = auth.tabIndex.value == tab;
+      _tabWorker = ever<int>(auth.tabIndex, (i) {
+        _visible = i == tab;
+        if (_visible) _ticks.value++;
+        _syncTimer();
+      });
+    }
+    _syncTimer();
     final onBadge = widget.onBadge;
     if (onBadge != null) _countWorker = ever<DriverOfferCounts?>(_c.counts, (c) => onBadge(c?.newCount ?? 0));
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -132,10 +153,40 @@ class _DriverRequestsBodyState extends State<DriverRequestsBody> with AutomaticK
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _timer?.cancel();
     _ticks.dispose();
     _countWorker?.dispose();
+    _itemsWorker?.dispose();
+    _tabWorker?.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused) {
+      _paused = true;
+      _syncTimer();
+    } else if (state == AppLifecycleState.resumed) {
+      _paused = false;
+      _ticks.value++;
+      _syncTimer();
+    }
+  }
+
+  bool get timerRunning => _timer != null;
+
+  bool get _hasCountdown => _c.items.any((o) =>
+      (o.state == OfferState.ringing || o.state == OfferState.selected) && !_expiredSeen.contains('${o.offerId}:${o.state.wire}'));
+
+  void _syncTimer() {
+    final run = mounted && _visible && !_paused && _hasCountdown;
+    if (!run) {
+      _timer?.cancel();
+      _timer = null;
+      return;
+    }
+    _timer ??= Timer.periodic(widget.tick, (_) => _onTick());
   }
 
   void _onTick() {
@@ -149,6 +200,7 @@ class _DriverRequestsBodyState extends State<DriverRequestsBody> with AutomaticK
     }
     if (reload) unawaited(_c.reloadList());
     if (counting) _ticks.value++;
+    _syncTimer();
   }
 
   bool _enabled(DriverOffer o) =>

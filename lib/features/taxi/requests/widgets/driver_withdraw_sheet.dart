@@ -45,6 +45,8 @@ class DriverWithdrawSheet extends StatefulWidget {
   }) =>
       TaxiReasonSheet.show<ReasonChip>(context, DriverWithdrawSheet(kind: kind, travellerName: travellerName, range: range));
 
+  static const double maxWidth = 560;
+
   @override
   State<DriverWithdrawSheet> createState() => _DriverWithdrawSheetState();
 }
@@ -61,15 +63,20 @@ class _DriverWithdrawSheetState extends State<DriverWithdrawSheet> {
     final reasons = _booking ? DriverWithdrawSheet.bookingReasons : DriverWithdrawSheet.requestReasons;
     final picked = _picked;
     final small = Ink3D.text(12, FontWeight.w400, TripLook.mutedText, height: 1.5, letterSpacing: 0);
+    final mq = MediaQuery.of(context);
+    final maxHeight = (mq.size.height - mq.padding.top - mq.viewInsets.bottom - DS.s(60)).clamp(DS.s(200), double.infinity);
     final panel = Container(
       width: double.infinity,
-      padding: DS.insets(l: 16, t: 58, r: 16).copyWith(bottom: DS.s(18) + MediaQuery.paddingOf(context).bottom),
+      constraints: BoxConstraints(maxHeight: maxHeight),
       decoration: BoxDecoration(
         color: DesignColors.surface,
         borderRadius: DS.br(TaxiStatusLook.sheetRadius),
         boxShadow: DS.shadows(TaxiStatusLook.sheetShadow),
       ),
-      child: Column(
+      child: SingleChildScrollView(
+        key: const ValueKey('driver_withdraw_scroll'),
+        padding: DS.insets(l: 16, t: 58, r: 16).copyWith(bottom: DS.s(18) + mq.padding.bottom),
+        child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -148,9 +155,9 @@ class _DriverWithdrawSheetState extends State<DriverWithdrawSheet> {
             onTap: () => Navigator.pop(context),
           ),
         ],
-      ),
+      )),
     );
-    return Stack(
+    final sheet = Stack(
       clipBehavior: Clip.none,
       children: [
         panel,
@@ -162,6 +169,11 @@ class _DriverWithdrawSheetState extends State<DriverWithdrawSheet> {
         ),
         Positioned(right: DS.s(12), top: DS.s(12), child: const SheetCloseButton()),
       ],
+    );
+    return Align(
+      alignment: Alignment.bottomCenter,
+      heightFactor: 1,
+      child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: DriverWithdrawSheet.maxWidth), child: sheet),
     );
   }
 }

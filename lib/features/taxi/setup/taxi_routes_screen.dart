@@ -7,7 +7,10 @@ import '../../../utils/app_toast.dart';
 import '../../../utils/search_fold.dart';
 import '../../../widgets/location_switch_sheet.dart';
 import '../../owner_core/plan/gate_keys.dart';
+import '../../../controllers/plan_controller.dart';
+import '../../owner_core/plan/plan_bindings.dart';
 import '../../owner_core/plan/plan_gate.dart';
+import '../../owner_core/plan/plan_limit_sheet.dart';
 import '../../owner_core/plan/plan_keys.dart';
 import '../../owner_core/plan/soft_lock.dart';
 import '../../taxi_driver/strings/taxi_gate_strings.dart';
@@ -125,14 +128,39 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> with TickerProvider
 
   bool get _planFull => _routes.length >= _planMax;
 
+  // Mirrors the server rule: adding above the plan value is refused, keeping an over-limit set passes.
   Future<bool> _planAllowsSave() async {
+    if (!PlanGate.loaded) return true;
     if (_routes.length <= _planMax) return true;
+    if (_routes.length <= (_ctrl.taxi.value?.routes.length ?? 0)) return true;
     if (PlanGate.canUpgrade) {
       await PlanGate.showLimit(context, TaxiGateStrings.routeGate());
     } else {
-      AppToast.warning('You can add up to $_planMax routes');
+      AppToast.info(TaxiGateStrings.upTo(_planMax));
     }
     return false;
+  }
+
+  Future<void> _routeLimitRefused() async {
+    final data = _ctrl.lastErrorData;
+    if (data['canUpgrade'] == true) {
+      final limit = data['limit'];
+      await PlanLimitSheet.show(context, TaxiGateStrings.routeGate(free: limit is int ? limit : null));
+      return;
+    }
+    final msg = _ctrl.lastErrorMessage;
+    AppToast.info(msg != null && msg.isNotEmpty ? msg : TaxiGateStrings.upTo(_planMax));
+  }
+
+  Worker? _planWorker;
+
+  void _watchPlan() {
+    PlanBindings.ensure();
+    if (!Get.isRegistered<PlanController>()) return;
+    final pc = Get.find<PlanController>();
+    _planWorker = everAll([pc.loaded, pc.myPlan], (_) {
+      if (mounted) setState(() {});
+    });
   }
 
   @override
@@ -148,6 +176,7 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> with TickerProvider
         tripType: r.tripType,
       ));
     }
+    _watchPlan();
     _formOpen = _routes.length < _max && !(PlanGate.canUpgrade && _routes.isNotEmpty && _planFull);
     _from = _defaultFrom;
     _syncRateFields();
@@ -158,6 +187,7 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> with TickerProvider
 
   @override
   void dispose() {
+    _planWorker?.dispose();
     _anim.dispose();
     _fareCtrl.dispose();
     _fareFocusNode.dispose();
@@ -413,10 +443,10 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> with TickerProvider
       return;
     }
     if (!await _planAllowsSave() || !mounted) return;
-    final ok = await _ctrl.saveRoutes([for (final r in _routes) r.toJson()]);
+    final ok = await _ctrl.saveRoutes([for (final r in _routes) r.toJson()], quietLimit: true);
     if (!mounted) return;
     if (!ok) {
-      if (_ctrl.lastErrorType == 'TaxiRouteLimit' && PlanGate.canUpgrade) await PlanGate.showLimit(context, TaxiGateStrings.routeGate());
+      if (_ctrl.lastErrorType == TaxiSetupController.routeLimitType) await _routeLimitRefused();
       return;
     }
     Get.back();
@@ -497,7 +527,7 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> with TickerProvider
                 tone: _tone,
                 top: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                   const ToastDock(),
-                  if (_formOpen)
+                  if (_formOpen && PlanGate.loaded)
                     Padding(
                       padding: EdgeInsets.only(bottom: DS.gv(8)),
                       child: Text(
@@ -645,6 +675,19 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> with TickerProvider
   }
 
   Widget _meterCard() {
+    if (!PlanGate.loaded) {
+      return FormSectionCard(
+        key: const ValueKey('routes_meter_skeleton'),
+        tone: _tone,
+        art: ListingArt.flag,
+        title: TaxiSetupStrings.routes,
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          SkeletonBox(height: DS.s(6), radius: DS.radius(6)),
+          Gap.v(10),
+          SkeletonBox(height: DS.s(12), width: DS.s(160), radius: DS.radius(6)),
+        ]),
+      );
+    }
     final used = _routes.length;
     final limit = _planMax;
     final free = PlanGate.canUpgrade;
@@ -712,7 +755,7 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> with TickerProvider
           tone: _tone,
           label: TaxiGateStrings.addAnother,
           margin: EdgeInsets.only(top: DS.gv(10)),
-          trailing: !enabled ? 'Limit reached' : (soft ? TaxiSetupStrings.plus : '$n of $_planMax'),
+          trailing: !enabled ? 'Limit reached' : (soft ? TaxiSetupStrings.plus : (PlanGate.loaded ? '$n of $_planMax' : null)),
           onTap: _addAnother,
         ),
       ),

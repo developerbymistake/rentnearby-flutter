@@ -10,10 +10,12 @@ import '../../owner_core/data/owner_cache.dart';
 import '../../owner_core/data/owner_result.dart';
 import '../../owner_core/data/single_flight.dart';
 import '../../owner_core/json/owner_json.dart';
+import '../../owner_core/session/owner_session_hooks.dart';
 import '../../owner_core/sheets/owner_states.dart';
 import '../../taxi/models/taxi_owner_model.dart';
 import '../../taxi/setup/taxi_setup_controller.dart';
 import '../strings/taxi_hub_strings.dart';
+import '../calendar/taxi_calendar_controller.dart';
 import '../taxi_driver_deps.dart';
 
 class TaxiHubController extends GetxController with WidgetsBindingObserver {
@@ -98,7 +100,20 @@ class TaxiHubController extends GetxController with WidgetsBindingObserver {
     await reload();
   }
 
-  Future<void> reload() => _flight.run(_reload);
+  Future<void>? _queued;
+
+  Future<void> reload({bool force = false}) {
+    if (!force || !_flight.busy) return _flight.run(_reload);
+    return _queued ??= _reloadAfterCurrent();
+  }
+
+  Future<void> _reloadAfterCurrent() async {
+    try {
+      await _flight.run(_reload);
+    } catch (_) {}
+    _queued = null;
+    if (!isClosed) await _flight.run(_reload);
+  }
 
   Future<OwnerResult<Map<String, dynamic>>> _fetch() => OwnerApi.run(() => OwnerApi.read(() async {
         final o = _fetchOverride;
@@ -184,6 +199,8 @@ class TaxiHubController extends GetxController with WidgetsBindingObserver {
           OwnerCache.removeListingScoped(uid);
           if (Get.isRegistered<TaxiSetupController>()) Get.find<TaxiSetupController>().clear();
           load.value = const OwnerLoadEmpty<TaxiOwnerModel>();
+          OwnerSessionHooks.refreshHome().ignore();
+          TaxiCalendarController.maybe?.reload();
           if (Get.isRegistered<AuthController>()) await Get.find<AuthController>().refreshProfile();
           AppToast.success(TaxiHubStrings.taxiDeleted);
           return true;
@@ -191,8 +208,8 @@ class TaxiHubController extends GetxController with WidgetsBindingObserver {
           AppToast.warning(message ?? TaxiHubStrings.noConnection);
         case OwnerOffline<void>():
           AppToast.error(TaxiHubStrings.noConnection);
-        case OwnerFailed<void>(:final message):
-          AppToast.error(message);
+        case OwnerFailed<void>():
+          AppToast.error(TaxiHubStrings.somethingWrong);
       }
       return false;
     } finally {

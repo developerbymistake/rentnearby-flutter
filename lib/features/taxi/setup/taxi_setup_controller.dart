@@ -11,7 +11,10 @@ class TaxiSetupController extends GetxController {
   static TaxiSetupController ensure() =>
       Get.isRegistered<TaxiSetupController>() ? Get.find<TaxiSetupController>() : Get.put(TaxiSetupController());
 
-  final _repo = const TaxiRepository();
+  // ignore: prefer_initializing_formals
+  TaxiSetupController({TaxiRepository repo = const TaxiRepository()}) : _repo = repo;
+
+  final TaxiRepository _repo;
   final taxi = Rxn<TaxiOwnerModel>();
   final isLoading = false.obs;
   final hasLoaded = false.obs;
@@ -20,6 +23,8 @@ class TaxiSetupController extends GetxController {
   bool mainBelow = false;
   String? lastErrorType;
   String? lastErrorMessage;
+  Map<String, dynamic> lastErrorData = const {};
+  static const routeLimitType = 'TaxiRouteLimit';
 
   static const cipherUnavailableMessage = 'Licence details cannot be saved right now. Try again later.';
 
@@ -60,8 +65,8 @@ class TaxiSetupController extends GetxController {
   Future<bool> saveBasic(Map<String, dynamic> body) =>
       _mutate(() => _repo.saveBasic(body), 'Could not save details.');
 
-  Future<bool> saveRoutes(List<Map<String, dynamic>> routes) =>
-      _mutate(() => _repo.saveRoutes(routes), 'Could not save routes.');
+  Future<bool> saveRoutes(List<Map<String, dynamic>> routes, {bool quietLimit = false}) =>
+      _mutate(() => _repo.saveRoutes(routes), 'Could not save routes.', quietTypes: quietLimit ? const {routeLimitType} : const {});
 
   Future<bool> updateFare(String routeId, int fare) =>
       _mutate(() => _repo.updateFare(routeId, fare), 'Could not update the fare.');
@@ -109,10 +114,11 @@ class TaxiSetupController extends GetxController {
     return null;
   }
 
-  Future<bool> _mutate(Future<TaxiOwnerModel?> Function() call, String fallback, {bool awaitProfile = false}) async {
+  Future<bool> _mutate(Future<TaxiOwnerModel?> Function() call, String fallback, {bool awaitProfile = false, Set<String> quietTypes = const {}}) async {
     if (isSaving.value) return false;
     lastErrorType = null;
     lastErrorMessage = null;
+    lastErrorData = const {};
     try {
       isSaving.value = true;
       final updated = await call();
@@ -120,7 +126,7 @@ class TaxiSetupController extends GetxController {
       await _afterChange(awaitProfile: awaitProfile);
       return true;
     } catch (e) {
-      _handleError(e, fallback);
+      _handleError(e, fallback, quietTypes: quietTypes);
       return false;
     } finally {
       isSaving.value = false;
@@ -133,10 +139,14 @@ class TaxiSetupController extends GetxController {
     TaxiStatusSync.refreshLists();
   }
 
-  void _handleError(dynamic e, String fallback) {
+  void _handleError(dynamic e, String fallback, {Set<String> quietTypes = const {}}) {
     lastErrorType = DioErrorMapper.errorType(e);
     lastErrorMessage = DioErrorMapper.serverMessage(e);
+    final body = e is DioException ? e.response?.data : null;
+    final data = body is Map ? body['data'] : null;
+    lastErrorData = data is Map<String, dynamic> ? data : const {};
     if (e is DioException && e.response?.statusCode == 401) return;
+    if (quietTypes.contains(lastErrorType)) return;
     if (lastErrorType == 'OnboardingClosed') return;
     if (lastErrorType == 'IdentityCipherNotConfigured') {
       AppToast.warning(cipherUnavailableMessage);

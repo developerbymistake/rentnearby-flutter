@@ -209,7 +209,7 @@ abstract final class TaxiWorkStrings {
   static const plansStartedTitle = 'Plans have started';
   static String routesHidden(int n) => '$n ${n == 1 ? 'route is' : 'routes are'} hidden on Free. Nothing is deleted.';
   static String plansStartTitle(String date) => 'Plans start on $date';
-  static String freeKeeps(int routes, {required bool trial}) =>
-      'Free keeps $routes ${routes == 1 ? 'route' : 'routes'}.${trial ? ' Try Plus free for 7 days.' : ''}';
+  static String freeKeeps(int routes, {int trialDays = 0}) =>
+      'Free keeps $routes ${routes == 1 ? 'route' : 'routes'}.${trialDays > 0 ? ' Try Plus free for $trialDays ${trialDays == 1 ? 'day' : 'days'}.' : ''}';
   static const noLongerAvailable = 'This is no longer available.';
 }

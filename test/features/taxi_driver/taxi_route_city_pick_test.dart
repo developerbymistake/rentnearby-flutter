@@ -36,7 +36,7 @@ class _Taxi extends TaxiSetupController {
   Future<bool> load() async => true;
 
   @override
-  Future<bool> saveRoutes(List<Map<String, dynamic>> routes) async {
+  Future<bool> saveRoutes(List<Map<String, dynamic>> routes, {bool quietLimit = false}) async {
     saved.add(routes);
     return true;
   }

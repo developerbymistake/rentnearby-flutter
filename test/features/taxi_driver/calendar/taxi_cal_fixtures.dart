@@ -114,7 +114,21 @@ Map<String, dynamic> monthJson({
       'today': '2026-11-21',
     };
 
-const summaryJson = {'month': '2026-11', 'booked': 17100, 'received': 11100, 'toCollect': 6000, 'top': []};
+// Server shape of TaxiMoneySummaryDto (camelCase API JSON).
+final Map<String, dynamic> summaryJson = {
+  'month': '2026-11',
+  'finalTotal': 17100,
+  'receivedTotal': 11100,
+  'balanceTotal': 6000,
+  'entryCount': 9,
+  'dueCount': 3,
+  'topBalances': [
+    tripJson('m25', from: '2026-11-25', time: '09:30', fromPlace: 'Haldwani', toPlace: 'Mukteshwar', label: 'Mehra family', finalAmount: 2200, received: 0),
+    tripJson('m30', from: '2026-11-30', fromPlace: 'Haldwani', toPlace: 'Ranikhet', label: 'Sharma family, Ranikhet', finalAmount: 2600, received: 1000),
+    tripJson('a28', kind: 'Auto', from: '2026-11-28', fromPlace: 'Pantnagar airport', toPlace: 'Haldwani', label: 'Vikram Singh', finalAmount: 1200, received: 0),
+  ],
+  'paymentEnabled': true,
+};
 
 class CalFake {
   CalFake({
@@ -122,12 +136,12 @@ class CalFake {
     this.upcoming = const {},
     this.past = const {},
     this.entries = const {},
-    this.summary = summaryJson,
+    Map<String, dynamic>? summary,
     this.offline = false,
     this.writeOffline = false,
     this.writeRefusal,
     this.hang = false,
-  });
+  }) : summary = summary ?? summaryJson;
 
   Map<String, Map<String, dynamic>> months;
   Map<String?, Map<String, dynamic>> upcoming;
@@ -184,7 +198,20 @@ class CalFake {
       );
     }
     if (method == 'DELETE') return const {'data': null};
-    if (p == '/reminder') return {'data': {'allowed': true, 'on': body?['on'] == true}};
+    if (p == '/reminder') {
+      return {
+        'data': {
+          'reminder': {'allowed': true, 'on': body?['on'] == true},
+        },
+      };
+    }
+    if (p.endsWith('/money')) {
+      final id = p.substring('/entries/'.length, p.length - '/money'.length);
+      final base = entries[id] ?? tripJson(id, from: '2026-11-25');
+      return {
+        'data': {...base, ...?body, 'version': ((base['version'] as int?) ?? 1) + 1},
+      };
+    }
     return {
       'data': {
         'entry': body == null ? null : {...body, 'kind': 'Manual'},

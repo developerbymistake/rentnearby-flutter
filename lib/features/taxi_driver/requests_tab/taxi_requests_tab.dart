@@ -122,6 +122,7 @@ class _TaxiRequestsTabState extends State<TaxiRequestsTab> {
                     onOpenOffer: TaxiRequestsTab.openOffer,
                     onOpenReady: () => Get.toNamed(AppRoutes.taxiReady),
                     bottomPadding: bottom + 12,
+                    tabIndex: AppTabs.centre,
                   ),
                   widget.leadsBody ?? TripLeadsScreen(embedded: true, enquiryId: _leadFocus, bottomPadding: bottom),
                 ],

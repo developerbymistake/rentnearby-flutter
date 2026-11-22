@@ -10,6 +10,7 @@ abstract final class TaxiHubStrings {
   static const tryAgain = OwnerSharedStrings.tryAgain;
   static const noConnection = OwnerSharedStrings.noConnection;
   static const tooManyTries = OwnerSharedStrings.tooManyTries;
+  static const somethingWrong = 'Something went wrong. Please try again.';
   static const underReview = 'Your taxi is under review';
   static const showingLast = OwnerSharedStrings.showingLast;
   static const taxiFallback = 'Taxi';

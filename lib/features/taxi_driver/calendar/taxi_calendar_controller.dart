@@ -1,5 +1,7 @@
+import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 
+import '../../../config/app_tabs.dart';
 import '../../../controllers/auth_controller.dart';
 import '../../owner_core/calendar/calendar_api.dart';
 import '../../owner_core/calendar/calendar_core_controller.dart';
@@ -20,11 +22,15 @@ abstract final class TaxiMeterKeys {
   static const entries = 'CalendarEntries';
 }
 
-class TaxiCalendarController extends CalendarCoreController {
-  TaxiCalendarController({CalendarApi? api, super.clock, String? Function()? userIdOf})
+class TaxiCalendarController extends CalendarCoreController with WidgetsBindingObserver {
+  // ignore: use_super_parameters
+  TaxiCalendarController({CalendarApi? api, DateTime Function()? clock, String? Function()? userIdOf})
       // ignore: prefer_initializing_formals
       : _userIdOf = userIdOf,
-        super(api: api ?? const CalendarApi(CalendarApi.taxiPrefix));
+        _now = clock ?? DateTime.now,
+        super(api: api ?? const CalendarApi(CalendarApi.taxiPrefix), clock: clock);
+
+  static const Duration staleAfter = Duration(seconds: 30);
 
   static const String tag = 'taxi-calendar';
   static int _users = 0;
@@ -50,12 +56,19 @@ class TaxiCalendarController extends CalendarCoreController {
   static void resetUsers() => _users = 0;
 
   final String? Function()? _userIdOf;
+  final DateTime Function() _now;
+  DateTime? _loadedAt;
+  Worker? _tabWorker;
+  bool _tabCurrent = true;
+  final SingleFlight<void> _all = SingleFlight();
+  Future<void>? _queuedAll;
 
   final summary = Rx<OwnerLoad<MoneySummary>>(const OwnerLoadLoading());
   final reminderOn = Rxn<bool>();
   final reminderBusy = false.obs;
   final view = Rx<TaxiMonthView>(TaxiMonthView.empty);
 
+  bool? _reminderConfirmed;
   final LatestOnly _summaryLatest = LatestOnly();
   final SingleFlight<OwnerResult<CalendarReminder>> _reminder = SingleFlight();
   Worker? _loadWorker;
@@ -74,6 +87,51 @@ class TaxiCalendarController extends CalendarCoreController {
   void onInit() {
     super.onInit();
     _loadWorker = ever<OwnerLoad<CalendarMonth>>(load, (_) => _rebuildView());
+    WidgetsBinding.instance.addObserver(this);
+    if (Get.isRegistered<AuthController>()) {
+      final auth = Get.find<AuthController>();
+      _tabCurrent = auth.tabIndex.value == AppTabs.fourth;
+      _tabWorker = ever<int>(auth.tabIndex, (i) {
+        _tabCurrent = i == AppTabs.fourth;
+        if (_tabCurrent) refreshIfStale();
+      });
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && _tabCurrent) refreshIfStale();
+  }
+
+  @override
+  Future<void> open(DateTime m, {bool force = false}) {
+    _loadedAt = _now();
+    return super.open(m, force: force);
+  }
+
+  Future<void> refreshIfStale() async {
+    final at = _loadedAt;
+    if (at != null && _now().difference(at) < staleAfter) return;
+    await refreshAll();
+  }
+
+  Future<void> refreshAll({bool force = false}) {
+    if (!force || !_all.busy) return _all.run(_reloadAll);
+    return _queuedAll ??= _refreshAfterCurrent();
+  }
+
+  Future<void> _refreshAfterCurrent() async {
+    try {
+      await _all.run(_reloadAll);
+    } catch (_) {}
+    _queuedAll = null;
+    if (!isClosed) await _all.run(_reloadAll);
+  }
+
+  Future<void> _reloadAll() async {
+    await reload();
+    if (isClosed) return;
+    await loadSummary();
   }
 
   DateTime get serverToday => current?.today ?? today;
@@ -82,7 +140,7 @@ class TaxiCalendarController extends CalendarCoreController {
     final data = load.value.valueOrNull;
     view.value = data == null ? TaxiMonthView.empty : TaxiMonthView.build(month.value, data, today: serverToday);
     final r = data?.reminder;
-    if (r != null && !reminderBusy.value) reminderOn.value = r.on;
+    if (r != null && !reminderBusy.value) reminderOn.value = _reminderConfirmed ?? r.on;
   }
 
   bool get summaryLocked {
@@ -160,17 +218,10 @@ class TaxiCalendarController extends CalendarCoreController {
     final r = await api.summary(m);
     if (isClosed || !_summaryLatest.isLatest(id)) return;
     if (r is OwnerOk<MoneySummary>) {
-      OwnerCache.write(userId, OwnerCacheKeys.summary(key), _summaryJson(r.value));
+      OwnerCache.write(userId, OwnerCacheKeys.summary(key), r.value.raw);
     }
     summary.value = OwnerLoads.from<MoneySummary>(r, saved: savedValue);
   }
-
-  static Map<String, dynamic> _summaryJson(MoneySummary s) => {
-        'month': s.month == null ? null : OwnerDates.monthKey(s.month!),
-        'booked': s.booked,
-        'received': s.received,
-        'toCollect': s.toCollect,
-      };
 
   Future<OwnerResult<CalendarReminder>?> setReminder(bool on) async {
     if (reminderBusy.value) return null;
@@ -181,6 +232,7 @@ class TaxiCalendarController extends CalendarCoreController {
       final r = await _reminder.run(() => api.reminder(on));
       if (isClosed) return r;
       if (r is OwnerOk<CalendarReminder>) {
+        _reminderConfirmed = r.value.on;
         reminderOn.value = r.value.on;
       } else {
         reminderOn.value = before;
@@ -222,6 +274,8 @@ class TaxiCalendarController extends CalendarCoreController {
 
   @override
   void onClose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _tabWorker?.dispose();
     _loadWorker?.dispose();
     _summaryLatest.cancel();
     super.onClose();
