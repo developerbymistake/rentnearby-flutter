@@ -9,6 +9,7 @@ import '../tokens/listing_palette.dart';
 import 'art_3d.dart';
 import 'motion_kit.dart';
 import 'pill_buttons_3d.dart';
+import '../tokens/alpha_tokens.dart';
 import '../tokens/design_scale.dart';
 
 abstract final class AuthInk {
@@ -402,6 +403,7 @@ class AuthPillInput extends StatefulWidget {
     this.prefix,
     this.leadingArt,
     this.bad = false,
+    this.locked = false,
   });
 
   final ListingTone tone;
@@ -410,6 +412,7 @@ class AuthPillInput extends StatefulWidget {
   final Widget? prefix;
   final String? leadingArt;
   final bool bad;
+  final bool locked;
 
   static TextStyle get textStyle => Ink3D.text(17, FontWeight.w600, AuthInk.input, letterSpacing: 0.6);
   static TextStyle get nameStyle => Ink3D.text(17, FontWeight.w600, AuthInk.input, letterSpacing: 0);
@@ -463,22 +466,28 @@ class _AuthPillInputState extends State<AuthPillInput> {
   @override
   Widget build(BuildContext context) {
     final focus = widget.focusNode.hasFocus;
-    final ring = widget.bad ? AuthInk.ringBad : (focus ? widget.tone.g1 : null);
+    final ring = widget.bad ? AuthInk.ringBad : (focus && !widget.locked ? widget.tone.g1 : null);
     final art = widget.leadingArt;
+    final edge = ring ?? (widget.locked ? AuthInk.bone : Colors.transparent);
     return Container(
       constraints: BoxConstraints(minHeight: DS.s(58)),
       padding: EdgeInsets.fromLTRB(DS.s(8), DS.s(6), DS.s(18), DS.s(6)),
       decoration: BoxDecoration(
         color: ring != null ? Colors.white : AuthInk.page,
         borderRadius: DS.circular(30),
-        border: Border.all(color: ring ?? Colors.transparent, width: DS.s(2)),
+        border: Border.all(color: edge, width: DS.s(2)),
         boxShadow: ring != null ? AuthInk.focusShadow(widget.bad ? AuthInk.ringBad : widget.tone.haloBase) : null,
       ),
       child: Row(
         children: [
           if (widget.prefix != null) ...[widget.prefix!, Gap.h(10)],
           if (art != null) ...[
-            ExcludeSemantics(child: Art3D(asset: art, size: 42, shadowBlur: 3, shadowOffset: const Offset(2, 4))),
+            ExcludeSemantics(
+              child: Opacity(
+                opacity: widget.locked ? Alpha.v60 : Alpha.full,
+                child: Art3D(asset: art, size: 42, shadowBlur: 3, shadowOffset: const Offset(2, 4)),
+              ),
+            ),
             Gap.h(10),
           ],
           Expanded(child: widget.child),

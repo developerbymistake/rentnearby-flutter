@@ -26,7 +26,7 @@ abstract final class ProfilePhotoPick {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             SheetOptionCard(tone: tone, art: ListingArt.camera, title: 'Take Photo', subtitle: 'Use camera to capture now', onTap: () => Navigator.pop(sheetCtx, ImageSource.camera)),
-            SheetOptionCard(tone: tone, art: ListingArt.sunrise, title: 'Choose from Gallery', subtitle: 'Pick an existing photo', onTap: () => Navigator.pop(sheetCtx, ImageSource.gallery)),
+            SheetOptionCard(tone: tone, art: ListingArt.sunrise, title: 'Choose from Gallery', subtitle: 'Pick existing photos', onTap: () => Navigator.pop(sheetCtx, ImageSource.gallery)),
             Gap.v(8),
           ],
         ),
@@ -42,14 +42,26 @@ abstract final class ProfilePhotoPick {
     }
     final picked = await AppPhotoPick.pickOne(source, onFailed: () => AppToast.error(StaySetupStrings.photoPickFailed));
     if (picked == null) return null;
-    final cropped = await ProfilePhotoCrop.crop(picked.path);
+    File? cropped;
+    try {
+      cropped = await ProfilePhotoCrop.crop(picked.path);
+    } finally {
+      if (cropped?.path != picked.path) await _drop(File(picked.path));
+    }
     if (cropped == null) return null;
     final reject = await AppPhotoPick.accept(cropped);
     if (reject != null) {
+      await _drop(cropped);
       AppToast.error(reject == PhotoReject.tooLarge ? StaySetupStrings.photoTooLarge : StaySetupStrings.photoWrongType);
       return null;
     }
     return cropped;
+  }
+
+  static Future<void> _drop(File f) async {
+    try {
+      if (await f.exists()) await f.delete();
+    } catch (_) {}
   }
 
   static Future<void> _showPermissionDeniedDialog(BuildContext context, String type) async {

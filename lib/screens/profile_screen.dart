@@ -232,7 +232,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               child: SizedBox(
                                 width: KitMetrics.touch,
                                 height: DS.s(28),
-                                child: Center(child: ProfileRoundButton(icon: Icons.edit_rounded, color: _tone.g2)),
+                                child: Padding(
+                                  padding: EdgeInsets.only(left: DS.gh(8)),
+                                  child: Align(alignment: Alignment.centerLeft, child: ProfileRoundButton(icon: Icons.edit_rounded, color: _tone.g2)),
+                                ),
                               ),
                             ),
                           ),
@@ -290,6 +293,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       failed: failed,
                       ringColor: DesignColors.onPrimary.withValues(alpha: Alpha.v60),
                       ringWidth: DS.s(3),
+                      failColor: ListingTone.coral.g1,
                       fallback: _avatar(name),
                     ),
                   ),

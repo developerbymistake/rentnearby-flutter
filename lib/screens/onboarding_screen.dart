@@ -145,6 +145,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
                 tone: _tone,
                 focusNode: _nameFocus,
                 bad: _nameBad,
+                locked: _created,
                 leadingArt: ListingArt.profile,
                 child: TextFormField(
                   controller: _nameCtrl,
@@ -153,7 +154,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
                   textCapitalization: TextCapitalization.words,
                   maxLength: 100,
                   inputFormatters: noEmojiInputFormatters,
-                  style: AuthPillInput.nameStyle,
+                  style: _created ? AuthPillInput.nameStyle.copyWith(color: Ink3D.sub) : AuthPillInput.nameStyle,
                   cursorColor: _tone.g2,
                   decoration: AuthPillInput.decoration('Your full name'),
                   onChanged: (_) {

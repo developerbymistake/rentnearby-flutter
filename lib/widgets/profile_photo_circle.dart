@@ -25,6 +25,7 @@ class ProfilePhotoCircle extends StatelessWidget {
     this.ring = true,
     this.ringColor,
     this.ringWidth,
+    this.failColor,
   });
 
   final double size;
@@ -38,6 +39,7 @@ class ProfilePhotoCircle extends StatelessWidget {
   final bool ring;
   final Color? ringColor;
   final double? ringWidth;
+  final Color? failColor;
 
   static const Key imageKey = ValueKey('profile-photo-image');
   static const Key localKey = ValueKey('profile-photo-local');
@@ -81,7 +83,7 @@ class ProfilePhotoCircle extends StatelessWidget {
       content = fallback;
     }
     final width = ringWidth ?? DS.s(2);
-    final edge = failed ? ListingTone.coral.g2 : (ringColor ?? AuthInk.bone);
+    final edge = failed ? (failColor ?? ListingTone.coral.g2) : (ringColor ?? AuthInk.bone);
     final spin = busy && progress == null;
     return SizedBox.square(
       dimension: size,
@@ -203,7 +205,9 @@ class ProfilePhotoBlock extends StatelessWidget {
                           localPath: local,
                           busy: busy,
                           progress: busy ? controller.progress.value : null,
-                          failed: failed || ringBad,
+                          failed: failed,
+                          ringColor: ringBad ? AuthInk.ringBad : null,
+                          ringWidth: failed ? DS.s(3) : null,
                           fallback: _fallback(ringBad),
                         ),
                       ),

@@ -23,10 +23,12 @@ class _Adapter implements HttpClientAdapter {
   final int status;
   final Map<String, dynamic> body;
   final paths = <String>[];
+  final sent = <Object?>[];
 
   @override
   Future<ResponseBody> fetch(RequestOptions options, Stream<Uint8List>? requestStream, Future<void>? cancelFuture) async {
     paths.add('${options.method} ${options.path}');
+    sent.add(options.data);
     return ResponseBody.fromString(jsonEncode(body), status, headers: {
       Headers.contentTypeHeader: [Headers.jsonContentType],
     });
@@ -171,11 +173,13 @@ void main() {
       Get.offAllNamed(AppRoutes.onboarding);
       await t.pumpAndSettle();
       final a = Get.put<AuthController>(AuthController());
+      a.signupUsername.value = 'Bakhli#48291736';
       final adapter = _Adapter(200, {'data': {'token': _token(UserRoleKeys.seeker), 'user': _user(url: null, roleConfirmed: false)}});
       ApiService.dio.httpClientAdapter = adapter;
       expect(await t.runAsync(() => a.createOnboardingAccount(phone: '9876543210', name: 'Rahul')), isTrue);
       await t.pumpAndSettle();
       expect(adapter.paths, ['POST /auth/phone/complete-onboarding']);
+      expect(adapter.sent.single, {'phoneNumber': '9876543210', 'name': 'Rahul', 'username': 'Bakhli#48291736'});
       expect(Get.currentRoute, AppRoutes.onboarding);
       expect(StorageService.isLoggedIn, isTrue);
       expect(a.user.value!.needsProfilePhoto, isTrue);

@@ -317,9 +317,11 @@ class AuthController extends GetxController {
   }) async {
     try {
       isLoading.value = true;
+      final username = signupUsername.value;
       final res = await ApiService.post('/auth/phone/complete-onboarding', {
         'phoneNumber': phone,
         'name': name,
+        if (username != null && username.isNotEmpty) 'username': username,
       });
       await _saveSession(res['data'] as Map<String, dynamic>);
       return true;

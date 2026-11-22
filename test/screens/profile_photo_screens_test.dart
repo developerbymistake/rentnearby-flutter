@@ -8,6 +8,7 @@ import 'package:bakhli/controllers/auth_controller.dart';
 import 'package:bakhli/controllers/plan_controller.dart';
 import 'package:bakhli/controllers/profile_photo_controller.dart';
 import 'package:bakhli/controllers/tab_config_controller.dart';
+import 'package:bakhli/design/design.dart';
 import 'package:bakhli/design/extra/ext_auth.dart';
 import 'package:bakhli/features/taxi_driver/home/taxi_driver_home_controller.dart';
 import 'package:bakhli/models/my_plan_model.dart';
@@ -211,7 +212,8 @@ void main() {
       expect(_auth.created, isEmpty);
       expect(p.sent, isEmpty);
       final circle = t.widget<ProfilePhotoCircle>(find.byType(ProfilePhotoCircle));
-      expect(circle.failed, isTrue);
+      expect(circle.failed, isFalse);
+      expect(circle.ringColor, AuthInk.ringBad);
       await _drain(t);
     });
 
@@ -243,6 +245,10 @@ void main() {
       expect(find.text(ProfilePhotoStrings.tryAgain), findsOneWidget);
       expect(find.byKey(ProfilePhotoCircle.retryKey), findsOneWidget);
       expect(t.widget<TextField>(find.byType(TextField)).readOnly, isTrue);
+      final failedCircle = t.widget<ProfilePhotoCircle>(find.byType(ProfilePhotoCircle));
+      expect((failedCircle.failed, failedCircle.ringWidth), (true, DS.s(3)));
+      expect(t.widget<AuthPillInput>(find.byType(AuthPillInput).last).locked, isTrue);
+      expect(t.widget<TextField>(find.byType(TextField)).style!.color, Ink3D.sub);
 
       p.fail = false;
       await _tap(t, find.text(ProfilePhotoStrings.tryAgain));
@@ -398,6 +404,7 @@ void main() {
       expect(find.text(ProfilePhotoStrings.updateFailed), findsOneWidget);
       expect(find.bySemanticsLabel(ProfilePhotoStrings.semRetryUpload), findsOneWidget);
       expect(t.widget<ProfilePhotoCircle>(find.byType(ProfilePhotoCircle)).failed, isTrue);
+      expect(t.widget<ProfilePhotoCircle>(find.byType(ProfilePhotoCircle)).failColor, ListingTone.coral.g1);
       expect(_auth.profileName.value, 'Rahul Mehra');
       await _drain(t);
 
