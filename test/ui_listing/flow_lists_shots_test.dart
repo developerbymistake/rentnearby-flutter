@@ -214,6 +214,10 @@ void main() {
       await t.drag(find.byType(ListView), const Offset(0, -600));
       await t.pump(const Duration(milliseconds: 300));
       await shot(t, 'stay_list_${tag}_y600');
+      if (find.text('Shortlist').evaluate().isEmpty) {
+        await t.drag(find.byType(ListView), const Offset(0, 600));
+        await t.pump(const Duration(milliseconds: 300));
+      }
       await t.ensureVisible(find.text('Shortlist'));
       await t.pump(const Duration(milliseconds: 200));
       await t.tap(find.text('Shortlist'));
