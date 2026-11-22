@@ -11,4 +11,13 @@ class TripStringsSpotsX {
   static String fewPlaces(int n) => 'Only $n ${n == 1 ? 'place' : 'places'} here so far.';
   static String noneIn(String chip) => 'No places in $chip';
   static const String showAll = 'Show all';
+  static const String remove = 'Remove';
+  static const String readMore = 'Read more';
+  static const String showLess = 'Show less';
+  static const String gallery = 'Gallery';
+  static String photoCount(int n) => n == 1 ? '1 photo' : '$n photos';
+  static String morePhotos(int n) => '+$n more';
+  static const String galleryError = "Couldn't load photos";
+  static const String galleryErrorBody = 'Check your connection and try again';
+  static String photoOf(String title, int i, int n) => '$title, photo $i of $n';
 }
