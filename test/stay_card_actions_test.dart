@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:bakhli/config/app_routes.dart';
 import 'package:bakhli/design/design.dart';
+import 'package:bakhli/design/extra/stay_photo_card.dart';
 import 'package:bakhli/features/stay/guest/v2/stay_card_actions.dart';
 import 'package:bakhli/utils/contact_message.dart';
 import 'package:bakhli/widgets/listing_contact_actions.dart';
@@ -54,11 +55,11 @@ void main() {
           body: SingleChildScrollView(
             child: Builder(
               builder: (context) => Obx(
-                () => WideCard(
-                  tone: ListingTone.forest,
-                  kind: WideKind.photo,
+                () => StayPhotoCard(
+                  palette: ListingPalette.forest,
                   title: 'Pine Stay',
-                  subtitle: 'Manali',
+                  place: 'Manali',
+                  price: '₹1,200',
                   actions: stayContactActions(context, 's1'),
                   onTap: () => cardTaps++,
                 ),

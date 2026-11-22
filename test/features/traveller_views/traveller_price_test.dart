@@ -173,19 +173,21 @@ void main() {
       expect(find.text('₹1,530'), findsOneWidget);
       final was = t.widget<Text>(find.text('₹1,800'));
       expect(was.style?.decoration, TextDecoration.lineThrough);
-      expect(find.text('YOUR GROUP'), findsOneWidget);
-    });
-
-    testWidgets('FX-11 a stay that does not fit the party keeps the FROM caption with the dated number', (t) async {
-      await t.pumpWidget(MaterialApp(home: _rows([_lakeview], fits: {'s1': false})));
-      expect(find.text('₹1,530'), findsOneWidget);
-      expect(find.text('FROM'), findsOneWidget);
+      expect(find.descendant(of: find.byType(CalmPriceBlock), matching: find.text('15% off')), findsOneWidget);
+      expect(find.text('From'), findsOneWidget);
       expect(find.text('YOUR GROUP'), findsNothing);
     });
 
-    testWidgets('FX-11 no party fit known: FROM', (t) async {
+    testWidgets('FX-11 a stay that does not fit the party keeps the From caption with the dated number', (t) async {
+      await t.pumpWidget(MaterialApp(home: _rows([_lakeview], fits: {'s1': false})));
+      expect(find.text('₹1,530'), findsOneWidget);
+      expect(find.text('From'), findsOneWidget);
+      expect(find.text('YOUR GROUP'), findsNothing);
+    });
+
+    testWidgets('FX-11 no party fit known: From', (t) async {
       await t.pumpWidget(MaterialApp(home: _rows([_lakeview])));
-      expect(find.text('FROM'), findsOneWidget);
+      expect(find.text('From'), findsOneWidget);
       expect(find.text('YOUR GROUP'), findsNothing);
     });
 
@@ -204,7 +206,7 @@ void main() {
       await t.pumpWidget(MaterialApp(home: _rows([_lakeview, _pineNest, _hillCrest], taps: taps, fits: {'s1': true, 's2': true, 's3': true})));
       expect(find.text('Full on your dates'), findsOneWidget);
       expect(find.text('Full'), findsOneWidget);
-      expect(find.text('FROM'), findsOneWidget);
+      expect(find.text('From'), findsNWidgets(3));
       expect(find.text('₹650'), findsOneWidget);
       await t.tap(find.text('Full'));
       await t.pump();
@@ -221,7 +223,7 @@ void main() {
     testWidgets('o_tr_1_noCheckIn_todaysCard', (t) async {
       await t.pumpWidget(MaterialApp(home: _rows([_plain])));
       expect(find.text('₹1,800'), findsOneWidget);
-      expect(find.text('FROM'), findsOneWidget);
+      expect(find.text('From'), findsOneWidget);
       expect(find.textContaining('% off'), findsNothing);
       expect(find.text('Full on your dates'), findsNothing);
     });

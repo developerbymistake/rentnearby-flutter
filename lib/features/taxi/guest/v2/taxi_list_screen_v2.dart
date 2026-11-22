@@ -240,7 +240,6 @@ class _TaxiListScreenV2State extends State<TaxiListScreenV2> {
         child: TaxiCard(
           item: f.item,
           onOpen: () => _open(f),
-          tone: ListingTone.list(_tone, index),
           distance: f.distance,
         ),
       );

@@ -1,3 +1,4 @@
+import 'package:bakhli/design/extra/calm_card_kit.dart';
 import 'package:bakhli/features/taxi/ways/models/taxi_ways_models.dart';
 import 'package:bakhli/features/taxi/ways/widgets/way_driver_row.dart';
 import 'package:flutter/material.dart';
@@ -73,7 +74,8 @@ void main() {
     expect(find.textContaining('Based in Haldwani'), findsOneWidget);
     expect(find.textContaining('to Nainital · 2 cars'), findsOneWidget);
     await _height(t, _d(), noReply: true);
-    expect(find.textContaining('NO REPLY', findRichText: true), findsOneWidget);
+    expect(find.descendant(of: find.byType(CalmChip), matching: find.text('No reply')), findsOneWidget);
+    expect(find.text('TAXI'), findsOneWidget);
     await _height(t, _d(section: 'onTheWay', routeFrom: 'Delhi', routeTo: 'Nainital'));
     expect(find.textContaining('Going Delhi to Nainital, passes through your stretch'), findsOneWidget);
   });

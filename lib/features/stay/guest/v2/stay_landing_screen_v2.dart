@@ -1,6 +1,8 @@
 import 'package:bakhli/design/design.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import '../../../../design/extra/stay_photo_card.dart';
+import '../../../../models/browse_item.dart';
 import '../../../../config/app_routes.dart';
 import '../../../../config/app_tabs.dart';
 import '../../../../controllers/auth_controller.dart';
@@ -8,11 +10,11 @@ import '../../../../controllers/tab_config_controller.dart';
 import '../../../../navigation/tour_keys.dart';
 import '../../../../widgets/tab_header.dart';
 import '../../../jobs/controllers/my_jobs_controller.dart';
+import '../../../nearby/card_strings.dart';
 import '../../../nearby/controllers/nearby_centre_controller.dart';
 import '../../../nearby/nearby_strings.dart';
 import '../../../nearby/widgets/nearby_featured_slot.dart';
 import '../../../nearby/widgets/nearby_header_strip.dart';
-import '../../../nearby/widgets/nearby_label_text.dart';
 import '../../../nearby/widgets/nearby_state_views.dart';
 import '../../../nearby/widgets/place_search_bar.dart';
 import '../../setup/stay_flow.dart';
@@ -24,7 +26,6 @@ import 'stay_feed_item.dart';
 import 'stay_landing_controller_v2.dart';
 
 const _kSections = 4;
-// WideCard price row overflows past this scale on 300 dp phones.
 const _kCardMaxScale = 1.6;
 const _kTone = KitTone.stay;
 
@@ -273,32 +274,26 @@ class _StayLandingScreenV2State extends State<StayLandingScreenV2> {
     );
   }
 
-  Widget _card(StayFeedItem s, ListingTone tone, int index) {
+  Widget _card(StayFeedItem s, int index) {
     final b = s.item;
-    final url = b.thumbnailUrl;
+    final offer = s.offer;
+    final pct = offer?.percent;
     return MediaQuery.withClampedTextScaling(
       key: ValueKey(b.id),
       maxScaleFactor: _kCardMaxScale,
-      child: Obx(() => WideCard(
-        tone: tone,
-        kind: WideKind.photo,
-        photo: url == null || url.isEmpty
-            ? null
-            : SizedBox.expand(
-                child: KitPhoto(url: url, width: double.infinity, height: double.infinity),
-              ),
-        sticker: ListingArt.stay,
-        badge: b.isFeatured ? 'Featured' : null,
-        tag: b.tagLabel,
+      child: Obx(() => StayPhotoCard(
+        palette: CalmCard.stayAt(index),
+        photoUrl: b.thumbnailUrl,
+        featured: b.isFeatured,
         title: b.title,
-        subtitle: b.locationLabel,
-        leadChip: s.priceChip?.text,
+        place: b.locationLabel,
         chips: [for (final f in b.facts.take(3)) f.label],
-        priceCaption: b.priceCaption,
-        number: b.priceValue,
+        price: offer != null ? BrowseItem.inr(offer.offerPerNight) : b.priceValue,
         unit: b.priceUnit,
-        label: NearbyLabelText.textFor(s.distance),
-        labelNote: s.distance.isFar ? NearbyStrings.byRoad : null,
+        caption: b.priceUnit.isEmpty ? null : CardStrings.from,
+        was: offer != null ? BrowseItem.inr(offer.oldPerNight) : null,
+        offTag: s.priceChip?.text ?? (pct != null ? CardStrings.percentOff(pct) : null),
+        address: CardStrings.addressFor(s.distance),
         actions: stayContactActions(context, s.id),
         onTap: () => _viewDetails(s),
       )),
@@ -308,7 +303,7 @@ class _StayLandingScreenV2State extends State<StayLandingScreenV2> {
   Widget _buildFeatured() {
     return Obx(() {
       final f = _ctrl.featured.toList();
-      return NearbyFeaturedSlot<StayFeedItem>(items: f, builder: (context, s) => _card(s, _page, f.indexOf(s)));
+      return NearbyFeaturedSlot<StayFeedItem>(items: f, builder: (context, s) => _card(s, 0));
     });
   }
 
@@ -342,7 +337,7 @@ class _StayLandingScreenV2State extends State<StayLandingScreenV2> {
       return SliverList(
         delegate: SliverChildBuilderDelegate(
           (_, i) {
-            final card = _card(items[i], ListingTone.list(_page, i), i);
+            final card = _card(items[i], i);
             return i == 0 ? KeyedSubtree(key: TourKeys.staysLandingList, child: card) : card;
           },
           childCount: items.length,

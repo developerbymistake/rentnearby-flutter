@@ -1,5 +1,6 @@
 import 'package:bakhli/config/app_routes.dart';
 import 'package:bakhli/design/design.dart';
+import 'package:bakhli/design/extra/stay_photo_card.dart';
 import 'package:bakhli/features/stay/models/stay_nearby_model.dart';
 import 'package:bakhli/features/taxi/ways/models/taxi_ways_models.dart';
 import 'package:bakhli/features/taxi/ways/widgets/way_driver_row.dart';
@@ -110,14 +111,15 @@ void main() {
       await t.pumpWidget(_host(TripStayRow(stay: _stay(url: url), onOpen: () {})));
       final photo = t.widget<KitPhoto>(find.byType(KitPhoto));
       expect(photo.url, url);
-      expect(t.widget<WideCard>(find.byType(WideCard)).kind, WideKind.photo);
+      expect(find.byType(StayPhotoCard), findsOneWidget);
+      expect(find.byKey(StayPhotoCard.bannerArtKey), findsNothing);
     });
 
     testWidgets('no url shows the halo art, not a blank band', (t) async {
       for (final url in [null, '']) {
         await t.pumpWidget(_host(TripStayRow(key: ValueKey('$url'), stay: _stay(url: url), onOpen: () {})));
         expect(find.byType(KitPhoto), findsNothing);
-        expect(t.widget<WideCard>(find.byType(WideCard)).kind, WideKind.halo);
+        expect(find.byKey(StayPhotoCard.bannerArtKey), findsOneWidget);
         expect(t.widgetList<Art3D>(find.byType(Art3D)).where((a) => a.asset == ListingArt.stay), isNotEmpty);
       }
     });

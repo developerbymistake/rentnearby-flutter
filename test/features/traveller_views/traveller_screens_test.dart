@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:bakhli/controllers/auth_controller.dart';
 import 'package:bakhli/controllers/location_controller.dart';
 import 'package:bakhli/controllers/tab_config_controller.dart';
+import 'package:bakhli/design/extra/calm_card_kit.dart';
 import 'package:bakhli/features/nearby/controllers/nearby_centre_controller.dart';
 import 'package:bakhli/features/nearby/models/nearby_models.dart';
 import 'package:bakhli/features/stay/guest/v2/stay_feed_item.dart';
@@ -413,7 +414,7 @@ void main() {
   });
 
   group('o_tr_5 stays tab card', () {
-    testWidgets('o_tr_5_lowerRuleWithin30Days_showsChipFirstInRow, o_tr_5_priceIsBaseFrom, o_tr_5_noChip_whenFieldMissing', (t) async {
+    testWidgets('o_tr_5_lowerRuleWithin30Days_showsTagUnderPrice, o_tr_5_priceIsBaseFrom, o_tr_5_noChip_whenFieldMissing', (t) async {
       await _bootStaysTab(_feedRows);
       await pumpPhone(t, const StayLandingScreenV2(), size: const Size(392, 1200));
       await _settleFeed(t);
@@ -421,10 +422,9 @@ void main() {
       expect(find.text('₹1,800'), findsOneWidget);
       expect(find.text('₹1,530'), findsNothing);
       expect(find.textContaining('% off'), findsOneWidget);
-      final chip = t.getTopLeft(find.text('15% off'));
-      final type = t.getTopLeft(find.text('Homestay').last);
-      expect(chip.dy, closeTo(type.dy, 6));
-      expect(chip.dx, lessThan(type.dx));
+      expect(find.descendant(of: find.byType(CalmPriceBlock), matching: find.text('15% off')), findsOneWidget);
+      expect(find.descendant(of: find.byType(Wrap), matching: find.text('15% off')), findsNothing);
+      expect(t.widget<Text>(find.text('₹1,800')).style?.decoration, isNot(TextDecoration.lineThrough));
       await _leave(t);
     });
 

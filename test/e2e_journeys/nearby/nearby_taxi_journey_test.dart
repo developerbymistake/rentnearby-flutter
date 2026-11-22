@@ -96,8 +96,9 @@ void main() {
     _repo.page = NearbyPage(items: [_fi('a', km: 5), _fi('b', km: 25, label: 'far', city: 'Nainital')]);
     await _open(t);
     expect(find.text('Taxis near you'), findsNWidgets(2));
-    expect(find.text('Based near Haldwani. About 5 km away'), findsOneWidget);
-    expect(find.textContaining('Nainital, Uttarakhand. About 25 km away'), findsOneWidget);
+    expect(find.text('Haldwani. About 5 km'), findsOneWidget);
+    expect(find.text('Nainital. About 25 km'), findsOneWidget);
+    expect(find.textContaining('By road it can take longer.'), findsNothing);
     expect(find.textContaining('Ask for a price'), findsNothing);
     expect(t.takeException(), isNull);
   });
@@ -110,7 +111,7 @@ void main() {
     );
     await _open(t);
     expect(find.text('Nearest taxis'), findsOneWidget);
-    expect(find.textContaining('Haridwar, Uttarakhand. About 210 km away'), findsOneWidget);
+    expect(find.text('Haridwar. About 210 km'), findsOneWidget);
     expect(find.textContaining('near you'), findsNothing);
   });
 

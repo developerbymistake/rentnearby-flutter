@@ -1,5 +1,7 @@
 import 'package:bakhli/design/design.dart';
 import 'package:flutter/material.dart';
+import '../../../design/extra/stay_photo_card.dart';
+import '../../nearby/card_strings.dart';
 import '../../../models/browse_item.dart';
 import '../../../utils/contact_launcher.dart';
 import '../../../widgets/listing_contact_actions.dart';
@@ -129,11 +131,6 @@ class TripStayRow extends StatelessWidget {
 
   bool get _paused => !stay.isActive;
 
-  static const String _tag = 'For stay';
-  static const String _from = 'FROM';
-  static const String _group = 'YOUR GROUP';
-  static const String _perNight = '/night';
-
   @override
   Widget build(BuildContext context) {
     final type = quoteLine(stay, fit);
@@ -147,32 +144,19 @@ class TripStayRow extends StatelessWidget {
     final nearKm = fit != null && fit!.nearestKm.isFinite ? fit!.nearestKm : stay.distanceKm;
     final noFit = fit?.fits == false && !_paused;
     final st = status;
-    final url = stay.thumbnailUrl;
-    final hasPhoto = url != null && url.isNotEmpty;
-    const sticker = ListingArt.stay;
     final line = _paused ? null : statusLine;
     final km = nearKm > 0 ? TripStringsFinalAa.kmAway(nearKm) : null;
+    final locality = stay.locality.trim();
     return EntranceOnce(
-      child: WideCard(
-        kind: hasPhoto ? WideKind.photo : WideKind.halo,
-        tone: tone ?? ListingTone.list(ListingTone.forest, index),
-        tag: stay.isFeatured && !_paused ? '$_tag · ${TripStringsA2.featured}' : _tag,
+      child: StayPhotoCard(
+        palette: CalmCard.stayAt(index),
+        photoUrl: stay.thumbnailUrl,
+        featured: stay.isFeatured && !_paused,
         title: stay.title,
-        subtitle: [
-          if (_paused) TripStrings.stayPaused,
-          if (stay.locality.isNotEmpty) stay.locality,
-        ].join('\n'),
-        photo: !hasPhoto
-            ? null
-            : SizedBox.expand(
-                child: KitPhoto(url: url, width: double.infinity, height: double.infinity),
-              ),
-        sticker: hasPhoto ? sticker : null,
-        art: hasPhoto ? null : sticker,
-        leadChip: full ? TripStringsDatedPrice.fullOnDates : offChip,
-        leadChipMuted: full,
-        wasNumber: was == null ? null : BrowseItem.inr(was),
+        place: locality,
+        leadChip: full ? TripStringsDatedPrice.fullOnDates : null,
         chips: [
+          if (_paused) TripStrings.stayPaused,
           if (_paused) TripStrings.notAvailableNow,
           if (st != null) st == TripDisplayStatus.asked ? TripStringsA2.asked : TripStatusVisuals.label(st),
           if (noFit) TripStringsAlgoAa.doesNotFit,
@@ -180,11 +164,13 @@ class TripStayRow extends StatelessWidget {
           if (!_paused && type != null) ...type.split(' · '),
           if (facts != null && !_paused && line == null) ...facts.split(' · '),
         ],
-        priceCaption: price == null ? null : (quote != null && fit?.fits == true ? _group : _from),
-        number: price == null ? TripStringsA2.priceOnRequest : BrowseItem.inr(price),
-        unit: price == null ? '' : _perNight,
-        label: km ?? line ?? (stay.locality.isEmpty ? null : 'In ${stay.locality}'),
-        labelNote: km != null ? line : null,
+        caption: price == null ? null : CardStrings.from,
+        price: price == null ? TripStringsA2.priceOnRequest : BrowseItem.inr(price),
+        unit: price == null ? '' : CardStrings.perNight,
+        was: was == null ? null : BrowseItem.inr(was),
+        offTag: offChip,
+        address: km ?? line ?? (locality.isEmpty ? null : CardStrings.inPlace(locality)),
+        note: km != null ? line : null,
         actions: _actions(full),
         picked: shortlisted,
         dimmed: _paused,
@@ -193,27 +179,27 @@ class TripStayRow extends StatelessWidget {
     );
   }
 
-  List<WideAction> _actions(bool full) {
+  List<CalmAction> _actions(bool full) {
     if (_paused || readOnly) return const [];
     final st = status;
-    final call = WideAction(icon: Icons.call_rounded, label: TripStringsV2Find.call, onTap: onCall, busy: callBusy);
-    final WideAction second;
+    final call = CalmAction(kind: CalmActionKind.call, label: TripStringsV2Find.call, onTap: onCall, busy: callBusy);
+    final CalmAction second;
     if (st != null && onOpenChat != null) {
-      second = WideAction(icon: Icons.chat_bubble_outline_rounded, label: TripStrings.openChat, onTap: onOpenChat);
+      second = CalmAction(kind: CalmActionKind.plain, icon: Icons.chat_bubble_outline_rounded, label: TripStrings.openChat, onTap: onOpenChat);
     } else if (st != null) {
-      second = const WideAction(icon: Icons.mark_email_read_outlined, label: TripStringsV2Find.asked);
+      second = const CalmAction(kind: CalmActionKind.disabled, label: TripStringsV2Find.asked);
     } else if (onShortlist != null && full && !shortlisted) {
-      second = const WideAction(icon: Icons.block_rounded, label: TripStringsDatedPrice.full);
+      second = const CalmAction(kind: CalmActionKind.disabled, label: TripStringsDatedPrice.full);
     } else if (onShortlist != null) {
-      second = WideAction(
-        icon: shortlisted ? Icons.check_rounded : Icons.add_rounded,
+      second = CalmAction(
+        kind: CalmActionKind.primary,
         label: shortlisted ? TripStringsShortlist.shortlisted : TripStringsShortlist.shortlist,
         onTap: onShortlist,
         selected: shortlisted,
         busy: shortlistBusy,
       );
     } else {
-      second = WideAction(icon: Icons.send_rounded, label: TripStringsV2Find.ask, onTap: onAsk);
+      second = CalmAction(kind: CalmActionKind.plain, icon: Icons.send_rounded, label: TripStringsV2Find.ask, onTap: onAsk);
     }
     return [call, second];
   }

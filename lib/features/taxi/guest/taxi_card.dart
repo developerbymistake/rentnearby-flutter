@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../design/design.dart';
+import '../../../design/extra/taxi_calm_card.dart';
 import '../../../widgets/listing_contact_actions.dart';
 import '../../../models/browse_item.dart';
+import '../../nearby/card_strings.dart';
 import '../../nearby/models/nearby_models.dart';
 import '../../nearby/nearby_strings.dart';
 import '../../nearby/widgets/nearby_label_text.dart';
@@ -76,30 +78,23 @@ class TaxiCard extends StatelessWidget {
       return Obx(() => _card(context, t, vehicle, chips, fareValue, fareUnit, d, _browseRow(context)));
     }
     return _card(context, t, vehicle, chips, fareValue, fareUnit, d,
-        inLabel != null ? const [] : _enquiryRow());
+        inLabel != null ? [_goCall(context)] : _enquiryRow());
   }
 
   Widget _card(BuildContext context, TaxiBrowseItem t, String vehicle, List<String> chips, String? fareValue,
-      String? fareUnit, NearbyDistance? d, List<WideAction> actions) {
-    return WideCard(
-      tone: tone ?? ListingTone.cA,
-      art: TaxiVehicleIcon.assetFor(t.vehicleTypeName),
-      tag: 'Taxi',
-      starBadge: t.isFeatured,
+      String? fareUnit, NearbyDistance? d, List<CalmAction> actions) {
+    return TaxiCalmCard(
       title: t.driverName,
-      subtitle: [vehicle, t.locality].where((e) => e.isNotEmpty).join('\n'),
+      lines: [vehicle, t.locality].where((e) => e.isNotEmpty).toList(),
+      photoUrl: t.displayPhotoUrl,
+      art: TaxiVehicleIcon.assetFor(t.vehicleTypeName),
+      featured: t.isFeatured,
       chips: chips,
-      number: fareValue ?? 'Ask for fare',
+      price: fareValue ?? CardStrings.askForFare,
       unit: fareUnit ?? '',
-      label: d == null ? inLabel : labelFor(d),
-      labelNote: d != null && d.isFar ? NearbyStrings.byRoad : null,
+      address: d != null ? CardStrings.addressFor(d) : inLabel,
       actions: actions,
-      onGo: inLabel != null
-          ? () => ListingContactActions.call(context,
-              kind: ListingKind.taxi, id: item.id, detailArguments: _detailArguments)
-          : null,
-      goIcon: Icons.call_rounded,
-      actionRows: _tripMode ? [_pickRow()] : null,
+      moreActions: _tripMode ? _pickRow() : const [],
       picked: selected || booked,
       onTap: onOpen,
     );
@@ -115,18 +110,26 @@ class TaxiCard extends StatelessWidget {
       ? {'matchedFare': ?item.matchedFare, 'matchedToName': ?item.matchedToName}
       : null;
 
-  List<WideAction> _browseRow(BuildContext context) => [
-        WideAction(
-          icon: Icons.call_rounded,
-          label: 'Call',
+  CalmAction _goCall(BuildContext context) => CalmAction(
+        kind: CalmActionKind.call,
+        label: CardStrings.call,
+        itemKey: callKey,
+        onTap: () => ListingContactActions.call(context,
+            kind: ListingKind.taxi, id: item.id, detailArguments: _detailArguments),
+      );
+
+  List<CalmAction> _browseRow(BuildContext context) => [
+        CalmAction(
+          kind: CalmActionKind.call,
+          label: CardStrings.call,
           busy: ListingContactActions.isBusy(ListingKind.taxi, item.id, action: ListingContactActions.actionCall),
           itemKey: callKey,
           onTap: () => ListingContactActions.call(context,
               kind: ListingKind.taxi, id: item.id, detailArguments: _detailArguments),
         ),
-        WideAction(
-          icon: Icons.chat_rounded,
-          label: 'WhatsApp',
+        CalmAction(
+          kind: CalmActionKind.whatsApp,
+          label: CardStrings.whatsApp,
           busy: ListingContactActions.isBusy(ListingKind.taxi, item.id, action: ListingContactActions.actionWhatsApp),
           itemKey: whatsAppKey,
           onTap: () => ListingContactActions.whatsApp(context,
@@ -134,12 +137,13 @@ class TaxiCard extends StatelessWidget {
         ),
       ];
 
-  List<WideAction> _enquiryRow() {
+  List<CalmAction> _enquiryRow() {
     final status = enquiryStatus;
     return [
-      WideAction(icon: Icons.call_rounded, label: 'Call', onTap: onOpen),
+      CalmAction(kind: CalmActionKind.call, label: CardStrings.call, onTap: onOpen),
       if (onEnquire != null)
-        WideAction(
+        CalmAction(
+          kind: CalmActionKind.plain,
           icon: Icons.mail_rounded,
           label: TripStrings.enquiry,
           onTap: onEnquire,
@@ -154,19 +158,22 @@ class TaxiCard extends StatelessWidget {
         child: Text(
           TripStatusVisuals.label(status, taxi: true),
           maxLines: 1,
-          style: Ink3D.text(14, FontWeight.w700, DesignColors.onPrimary),
+          style: TypeTokens.style(11.5, FontWeight.w700, color: ListingPalette.coral.text),
         ),
       );
 
-  List<WideAction> _pickRow() => [
+  List<CalmAction> _pickRow() => [
         if (onSelect != null)
-          WideAction(
-            icon: selected ? Icons.check_rounded : Icons.add_rounded,
+          CalmAction(
+            kind: CalmActionKind.primary,
+            selected: selected,
             label: selected ? TripStrings.selected : TripStrings.select,
             onTap: onSelect,
           ),
         if (onBook != null)
-          WideAction(
+          CalmAction(
+            kind: CalmActionKind.primary,
+            selected: booked,
             icon: booked ? Icons.check_rounded : Icons.event_available_rounded,
             label: booked ? TripStrings.booked : TripStrings.iBooked,
             onTap: onBook,

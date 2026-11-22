@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:bakhli/design/design.dart';
+import 'package:bakhli/design/extra/taxi_calm_card.dart';
+import '../../../nearby/card_strings.dart';
 import '../../../../models/browse_item.dart';
 import '../../taxi_option_sets.dart';
 import '../models/taxi_ways_models.dart';
@@ -54,13 +56,14 @@ class WayDriverRow extends StatelessWidget {
     final routeFrom = (d.routeFromName ?? '').isNotEmpty ? d.routeFromName! : d.fromName;
     final routeTo = (d.routeToName ?? '').isNotEmpty ? d.routeToName! : d.toName;
     final base = d.basedHere ? _basedHere : TripStringsShortlist.basedIn((d.cityName ?? '').isNotEmpty ? d.cityName! : routeFrom);
-    return WideCard(
-      tone: tone ?? ListingTone.cA,
+    return TaxiCalmCard(
+      tag: CardStrings.taxi,
+      featured: d.isFeatured,
+      photoUrl: d.displayPhotoUrl,
       art: ListingArt.forVehicle(vehicle),
-      tag: [_tag, if (noReply) TripStringsShortlist.noReply, if (best) TaxiWaysStrings.bestWay, if (d.isFeatured) _featured].map((e) => e.replaceAll(' ', ' ')).join(' · '),
       title: d.driverName,
-      subtitleSlots: const [2, 2],
-      subtitle: [
+      lineMax: 2,
+      lines: [
         d.isOnTheWay ? TaxiWaysStrings.going(routeFrom, routeTo) : TaxiWaysStrings.subtitle(from, to),
         [
           vehicle,
@@ -68,29 +71,31 @@ class WayDriverRow extends StatelessWidget {
           base,
           if (d.meetAtName != null && d.meetAtName!.isNotEmpty) TripStringsShortlist.startsAt(d.meetAtName!),
         ].join(' · '),
-      ].join('\n'),
-      number: price,
+      ],
+      chips: [
+        if (noReply) TripStringsShortlist.noReply,
+        if (best) TaxiWaysStrings.bestWay,
+      ],
+      price: price,
       unit: [TaxiWaysStrings.toPlace(to), if (d.isEstimate) TaxiWaysStrings.estimateShort, if (cars > 1) TripStringsAlgoAa.cars(cars)].where((e) => e.isNotEmpty).join(' · '),
-      label: bestReason,
+      address: bestReason,
       actions: [
-        if (onCall != null) WideAction(icon: Icons.call_rounded, label: TaxiWaysStrings.call, onTap: onCall, busy: callBusy),
+        if (onCall != null) CalmAction(kind: CalmActionKind.call, label: TaxiWaysStrings.call, onTap: onCall, busy: callBusy),
         if (onShortlist != null)
-          WideAction(
-            icon: shortlisted ? Icons.check_rounded : Icons.add_rounded,
+          CalmAction(
+            kind: CalmActionKind.primary,
             label: shortlisted ? TripStringsShortlist.shortlisted : TripStringsShortlist.shortlist,
             onTap: onShortlist,
             selected: shortlisted,
             busy: shortlistBusy,
           )
         else if (onUse != null)
-          WideAction(icon: Icons.bookmark_add_outlined, label: TripStringsStepsA3.useForMyTrip, onTap: onUse, busy: useBusy),
+          CalmAction(kind: CalmActionKind.plain, icon: Icons.bookmark_add_outlined, label: TripStringsStepsA3.useForMyTrip, onTap: onUse, busy: useBusy),
       ],
       picked: shortlisted,
       onTap: onTap,
     );
   }
 
-  static const String _tag = 'Taxi';
   static const String _basedHere = 'Based here';
-  static const String _featured = 'Featured';
 }

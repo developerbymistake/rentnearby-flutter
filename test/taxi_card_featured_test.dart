@@ -32,14 +32,14 @@ Future<void> _pump(WidgetTester t, bool featured) async {
 void main() {
   testWidgets('a featured taxi shows only a star badge, the tag stays plain Taxi', (t) async {
     await _pump(t, true);
-    expect(find.byKey(const ValueKey('meals-star-badge')), findsOneWidget);
+    expect(find.byKey(const ValueKey('photo-circle-star')), findsOneWidget);
     expect(find.textContaining('Featured'), findsNothing);
     expect(find.text('TAXI'), findsOneWidget);
   });
 
   testWidgets('a taxi that is not featured has no star badge', (t) async {
     await _pump(t, false);
-    expect(find.byKey(const ValueKey('meals-star-badge')), findsNothing);
+    expect(find.byKey(const ValueKey('photo-circle-star')), findsNothing);
     expect(find.text('TAXI'), findsOneWidget);
   });
 }

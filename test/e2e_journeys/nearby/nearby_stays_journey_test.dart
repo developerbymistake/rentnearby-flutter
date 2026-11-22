@@ -91,7 +91,7 @@ void main() {
     await _open(t);
     expect(find.text('Stays near you'), findsOneWidget);
     expect(find.text('In Haldwani'), findsOneWidget);
-    expect(find.text('Kathgodam. About 12 km away'), findsOneWidget);
+    expect(find.text('Kathgodam. About 12 km'), findsOneWidget);
     expect(find.textContaining('We are live in'), findsNothing);
     expect(t.takeException(), isNull);
   });
@@ -110,7 +110,7 @@ void main() {
     expect(find.text('Search any place'), findsNothing);
     expect(find.text('Nearest town: Nainital, about 12 km'), findsOneWidget);
     expect(find.text('Stays near Satkhol village'), findsOneWidget);
-    expect(find.text('Bhimtal. About 9 km away'), findsOneWidget);
+    expect(find.text('Bhimtal. About 9 km'), findsOneWidget);
   });
 
   testWidgets('Delhi: far label, live-in line, never near you', (t) async {
@@ -121,9 +121,10 @@ void main() {
         );
     await _open(t);
     expect(find.text('Nearest stays'), findsOneWidget);
-    expect(find.textContaining('Haridwar, Uttarakhand. About 210 km away'), findsOneWidget);
-    expect(find.textContaining('Haldwani, Uttarakhand. About 420 km away'), findsOneWidget);
-    expect(find.textContaining('By road it can take longer.'), findsNWidgets(2));
+    expect(find.text('Find the nearest stays'), findsOneWidget);
+    expect(find.text('Haridwar. About 210 km'), findsOneWidget);
+    expect(find.text('Haldwani. About 420 km'), findsOneWidget);
+    expect(find.textContaining('By road it can take longer.'), findsNothing);
     expect(find.text('Using my location'), findsNothing);
     expect(find.text('Stays near you'), findsNothing);
     expect(find.text('Showing near you'), findsNothing);
