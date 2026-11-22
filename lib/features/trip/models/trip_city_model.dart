@@ -110,7 +110,7 @@ class TripCityVersion {
   final bool stale;
   final bool mapDiscovery;
   final List<MapPackRef> packs;
-  final bool? _packsKnown;
+  final bool? declaredPacksKnown;
 
   const TripCityVersion({
     required this.version,
@@ -118,10 +118,10 @@ class TripCityVersion {
     required this.stale,
     this.mapDiscovery = false,
     this.packs = const [],
-    bool? packsKnown,
-  }) : _packsKnown = packsKnown;
+    this.declaredPacksKnown,
+  });
 
-  bool get packsKnown => _packsKnown ?? packs.isNotEmpty;
+  bool get packsKnown => declaredPacksKnown ?? packs.isNotEmpty;
 
   factory TripCityVersion.fromJson(Map<String, dynamic> json) => TripCityVersion(
         version: json['version'] as String? ?? '',
@@ -129,7 +129,7 @@ class TripCityVersion {
         stale: json['stale'] == true,
         mapDiscovery: MapPackParser.flag(json),
         packs: MapPackParser.refs(json),
-        packsKnown: json['packsKnown'] is bool ? json['packsKnown'] as bool : null,
+        declaredPacksKnown: json['packsKnown'] is bool ? json['packsKnown'] as bool : null,
       );
 }
 

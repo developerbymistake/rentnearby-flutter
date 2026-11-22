@@ -77,7 +77,7 @@ MapPackRef ref(String stateId, {String version = 'v1', String? name, List<double
     );
 
 TripCityVersion ver({bool flag = true, List<MapPackRef> packs = const [], bool? packsKnown}) =>
-    TripCityVersion(version: 'c1', count: 1, stale: false, mapDiscovery: flag, packs: packs, packsKnown: packsKnown);
+    TripCityVersion(version: 'c1', count: 1, stale: false, mapDiscovery: flag, packs: packs, declaredPacksKnown: packsKnown);
 
 String packBody({String state = 's1', String version = 'v1', int rows = 20, int seed = 1, double lat = 30, double lon = 78}) =>
     MapPackSynthetic.body(rows: rows, seed: seed, withThumb: rows ~/ 2, state: state, version: version, centerLat: lat, centerLon: lon, spreadDeg: 0.2);
