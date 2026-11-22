@@ -8,12 +8,16 @@ import 'package:flutter_test/flutter_test.dart';
 class _FakePort implements LabMapPort {
   final List<String> calls = [];
   final bool stringIdWorks;
-  _FakePort({this.stringIdWorks = true});
+  final double units;
+  final List<Rect> rects = [];
+  _FakePort({this.stringIdWorks = true, this.units = 1.0});
 
   @override
   Size get viewport => const Size(360, 400);
   @override
   double get devicePixelRatio => 2.75;
+  @override
+  double get unitsPerDp => units;
   @override
   Future<void> reset() async => calls.add('reset');
   @override
@@ -58,6 +62,7 @@ class _FakePort implements LabMapPort {
 
   @override
   Future<List<Object?>> queryRect(Rect rect, List<String> layerIds) async {
+    rects.add(rect);
     if (layerIds.contains('lab-s6-c')) return rect.contains(const Offset(180, 200)) ? [<String, dynamic>{}] : [];
     if (layerIds.contains('lab-s2-y')) {
       return [
@@ -172,6 +177,16 @@ void main() {
       expect(double.parse(r.numbers['rect 44 query reach']!.split(' ').first), closeTo(22, 0.6));
       spikes.noteTap('dot', 'lab-s6-c', 180, 210);
       expect(logs.single, contains('distance from dot 10.0'));
+    });
+
+    test('android query units: rects and reach scale by units per dp', () async {
+      final p2 = _FakePort(units: 2);
+      final s2 = MapLabSpikes(p2, (a) async => _frames([]), logs.add, tempDir: Directory.systemTemp.createTempSync('lab'));
+      final r = await s2.tapBox();
+      expect(double.parse(r.numbers['rect 44 query reach']!.split(' ').first), closeTo(22, 0.6));
+      expect(p2.rects.first.width, 88);
+      await s2.declutter();
+      expect(p2.rects.last.size, const Size(720, 800));
     });
 
     test('file source', () async {

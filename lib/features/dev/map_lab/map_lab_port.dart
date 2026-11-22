@@ -1,7 +1,6 @@
 import 'dart:math';
-import 'dart:typed_data';
-import 'dart:ui' show Rect, Size;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 
@@ -21,6 +20,9 @@ class MapLibreLabPort implements LabMapPort {
 
   @override
   double get devicePixelRatio => ratioOf();
+
+  @override
+  double get unitsPerDp => defaultTargetPlatform == TargetPlatform.android ? ratioOf() : 1.0;
 
   @override
   Future<void> reset() async {

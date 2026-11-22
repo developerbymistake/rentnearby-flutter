@@ -27,6 +27,7 @@ abstract class LabMapPort {
   Future<void> clear();
   Size get viewport;
   double get devicePixelRatio;
+  double get unitsPerDp;
 }
 
 class LabResult {
@@ -245,8 +246,7 @@ class MapLabSpikes {
     await port.addGeoJson('lab-s2', LabPoints.collection(feats));
     await port.addSymbols('lab-s2', 'lab-s2-y', iconImage: ['get', 'img'], sortKey: ['get', 'rank']);
     await port.settle();
-    final v = port.viewport;
-    final hits = LabFeatureRef.parse(await port.queryRect(Rect.fromLTWH(0, 0, v.width, v.height), ['lab-s2-y']));
+    final hits = LabFeatureRef.parse(await port.queryRect(_screenRect(), ['lab-s2-y']));
     final ranks = hits.map((h) => h.rank).whereType<num>().map((e) => e.toInt()).toSet().toList()..sort();
     if (ranks.isEmpty) {
       return const LabResult('2 Rank declutter', false, 'No symbol was rendered or the query returned nothing.');
@@ -278,14 +278,15 @@ class MapLabSpikes {
     await port.addGeoJson('lab-s3-sym', LabPoints.collection([LabPoints.feature('sym', LabCentre.lat, symLon, {})]));
     await port.addGeoJson('lab-s3-circ', LabPoints.collection([LabPoints.feature('circ', LabCentre.lat, circLon, {})]));
     await port.addSymbols('lab-s3-sym', 'lab-s3-y', iconImage: 'lab-sq-100', overlap: true);
-    await port.addCircles('lab-s3-circ', 'lab-s3-c', radius: 50);
+    await port.addCircles('lab-s3-circ', 'lab-s3-c', radius: 49);
     await port.settle();
     final sym = await port.toScreen(LabCentre.lat, symLon);
     final circ = await port.toScreen(LabCentre.lat, circLon);
     Future<bool> symHit(double d) async => (await port.queryPoint(sym.x + d, sym.y, ['lab-s3-y'])).isNotEmpty;
     Future<bool> circHit(double d) async => (await port.queryPoint(circ.x + d, circ.y, ['lab-s3-c'])).isNotEmpty;
-    final s = await LabSearch.maxHit(symHit);
-    final c = await LabSearch.maxHit(circHit);
+    final u = port.unitsPerDp;
+    final s = await LabSearch.maxHit(symHit, hi: 200 * u);
+    final c = await LabSearch.maxHit(circHit, hi: 200 * u);
     if (s == null || c == null || c == 0) {
       return LabResult('3 Pixel density', false, 'The query did not find the test shapes (symbol: $s, circle reference: $c).');
     }
@@ -293,7 +294,7 @@ class MapLabSpikes {
     return LabResult(
       '3 Pixel density',
       null,
-      'A 100 px image was measured against a circle of radius 50 (diameter 100 map px). '
+      'A 100 px image was measured against a circle of radius 49 plus a 1 dp stroke (diameter 100 dp). '
           'Set DiscTuning.pxPerDp to 1 / ratio (1.00 means 1 image px = 1 dp, as the stay pin).',
       {
         'symbol half width (query units)': s.toStringAsFixed(1),
@@ -301,6 +302,7 @@ class MapLabSpikes {
         'ratio symbol / circle': ratio.toStringAsFixed(2),
         'suggested pxPerDp': (1 / ratio).toStringAsFixed(2),
         'device pixel ratio': port.devicePixelRatio.toStringAsFixed(2),
+        'query units per dp (assumed / measured)': '${u.toStringAsFixed(2)} / ${(c / 50).toStringAsFixed(2)}',
         'eye check': 'the indigo square on the left and the 100 dp frame in the centre use the same dp',
       },
     );
@@ -387,23 +389,27 @@ class MapLabSpikes {
     await port.addCircles('lab-s6', 'lab-s6-c', radius: 4.5);
     await port.settle();
     final p = await port.toScreen(LabCentre.lat, LabCentre.lon);
+    final u = port.unitsPerDp;
     _tapTarget = Point(p.x, p.y);
     Future<bool> pointHit(double d) async => (await port.queryPoint(p.x + d, p.y, ['lab-s6-c'])).isNotEmpty;
     Future<bool> rectHit(double d) async =>
-        (await port.queryRect(Rect.fromCenter(center: Offset(p.x + d, p.y), width: 44, height: 44), ['lab-s6-c'])).isNotEmpty;
-    final pt = await LabSearch.maxHit(pointHit, hi: 80);
-    final rc = await LabSearch.maxHit(rectHit, hi: 80);
+        (await port.queryRect(Rect.fromCenter(center: Offset(p.x + d, p.y), width: 44 * u, height: 44 * u), ['lab-s6-c'])).isNotEmpty;
+    final ptUnits = await LabSearch.maxHit(pointHit, hi: 80 * u);
+    final rcUnits = await LabSearch.maxHit(rectHit, hi: 80 * u);
+    final pt = ptUnits == null ? null : ptUnits / u;
+    final rc = rcUnits == null ? null : rcUnits / u;
     return LabResult(
       '6 Tap box on a 9 dp dot',
       rc == null ? false : null,
       rc == null
           ? 'The 44 dp rect query did not find the dot.'
-          : 'Largest distance from the dot centre that still hits. Ideal rect hit = 22 + 4.5 = 26.5. '
+          : 'Largest distance from the dot centre that still hits. Ideal rect hit = 22 + 4.5 radius + 1 stroke = 27.5 dp. '
               'Then tap the dot by hand: each tap writes its distance to the log.',
       {
-        'point query reach': pt == null ? 'no hit at centre' : '${pt.toStringAsFixed(1)} units',
-        'rect 44 query reach': rc == null ? 'no hit' : '${rc.toStringAsFixed(1)} units',
-        'dot centre on screen': '${p.x.toStringAsFixed(0)}, ${p.y.toStringAsFixed(0)}',
+        'point query reach': pt == null ? 'no hit at centre' : '${pt.toStringAsFixed(1)} dp',
+        'rect 44 query reach': rc == null ? 'no hit' : '${rc.toStringAsFixed(1)} dp',
+        'dot centre on screen (query units)': '${p.x.toStringAsFixed(0)}, ${p.y.toStringAsFixed(0)}',
+        'query units per dp': u.toStringAsFixed(2),
       },
     );
   }
@@ -417,8 +423,7 @@ class MapLabSpikes {
     await port.addFileSource('lab-s7', url);
     await port.addCircles('lab-s7', 'lab-s7-c', radius: 6, interactive: false);
     await port.settle(const Duration(milliseconds: 2500));
-    final v = port.viewport;
-    final hits = await port.queryRect(Rect.fromLTWH(0, 0, v.width, v.height), ['lab-s7-c']);
+    final hits = await port.queryRect(_screenRect(), ['lab-s7-c']);
     final ok = hits.isNotEmpty;
     return LabResult(
       '7 Local file GeoJSON source',
@@ -428,6 +433,11 @@ class MapLabSpikes {
           : 'Nothing rendered from the file url; the layer must use inline data.',
       {'url': url, 'features rendered': '${hits.length} of 50'},
     );
+  }
+
+  Rect _screenRect() {
+    final v = port.viewport * port.unitsPerDp;
+    return Rect.fromLTWH(0, 0, v.width, v.height);
   }
 
   void noteTap(String id, String layerId, double x, double y) {
