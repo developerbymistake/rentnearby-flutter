@@ -12,7 +12,7 @@ class SpotPhotoViewer extends StatefulWidget {
   final int initialIndex;
   final String title;
   final String fallbackAsset;
-  final SpotPhotoSize placeholderSize;
+  final SpotPhotoSize Function(int index) placeholderSizeOf;
 
   const SpotPhotoViewer({
     super.key,
@@ -20,8 +20,10 @@ class SpotPhotoViewer extends StatefulWidget {
     this.initialIndex = 0,
     required this.title,
     required this.fallbackAsset,
-    this.placeholderSize = SpotPhotoSize.hero,
+    this.placeholderSizeOf = _hero,
   });
+
+  static SpotPhotoSize _hero(int _) => SpotPhotoSize.hero;
 
   static const Key pagerKey = ValueKey('spot-photo-viewer-pager');
   static const double closeDragDistance = 120;
@@ -32,7 +34,7 @@ class SpotPhotoViewer extends StatefulWidget {
     int initialIndex = 0,
     required String title,
     required String fallbackAsset,
-    SpotPhotoSize placeholderSize = SpotPhotoSize.hero,
+    SpotPhotoSize Function(int index) placeholderSizeOf = _hero,
   }) async {
     if (urls.isEmpty) return;
     final reduce = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
@@ -47,7 +49,7 @@ class SpotPhotoViewer extends StatefulWidget {
           initialIndex: initialIndex.clamp(0, urls.length - 1),
           title: title,
           fallbackAsset: fallbackAsset,
-          placeholderSize: placeholderSize,
+          placeholderSizeOf: placeholderSizeOf,
         ),
         transitionsBuilder: (_, animation, _, child) => FadeTransition(opacity: animation, child: child),
       ),
@@ -134,7 +136,7 @@ class _SpotPhotoViewerState extends State<SpotPhotoViewer> {
         url: widget.urls[i],
         decodeWidth: width,
         fallbackAsset: widget.fallbackAsset,
-        placeholderSize: widget.placeholderSize,
+        placeholderSize: widget.placeholderSizeOf(i),
         semanticsLabel: TripStringsSpotsX.photoOf(widget.title, i + 1, _count),
         onZoomChanged: i == _index ? _onZoom : null,
       ),
@@ -323,11 +325,11 @@ class _SmallerCopyState extends State<_SmallerCopy> {
   @override
   Widget build(BuildContext context) {
     final file = _file;
-    if (file == null) return const TemplatePlaceholder(height: double.infinity, radius: 0);
+    if (file == null) return const SizedBox.expand();
     return Image.file(
       file,
       fit: BoxFit.contain,
-      errorBuilder: (_, _, _) => const TemplatePlaceholder(height: double.infinity, radius: 0),
+      errorBuilder: (_, _, _) => const SizedBox.expand(),
     );
   }
 }

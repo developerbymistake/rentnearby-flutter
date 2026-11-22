@@ -7,6 +7,7 @@ import 'trip_spots_cache.dart';
 
 abstract final class SpotGalleryCache {
   static const int maxMemory = 50;
+  static const int maxDisk = 100;
   static const Duration ttl = TripSpotsCache.ttl;
   static const String _prefix = 'g:';
 
@@ -34,13 +35,36 @@ abstract final class SpotGalleryCache {
     _remember(id, version, at, detail);
     if (version.isEmpty) return;
     try {
-      TripSpotsCache.box?.write('$_prefix$id', jsonEncode({
+      final box = TripSpotsCache.box;
+      if (box == null) return;
+      box.write('$_prefix$id', jsonEncode({
         't': at.millisecondsSinceEpoch,
         'v': version,
         'urls': detail.gallery,
         if (detail.spot != null) 'spot': detail.spot!.toJson(),
       })).ignore();
+      _trimDisk();
     } catch (_) {}
+  }
+
+  static void _trimDisk() {
+    final box = TripSpotsCache.box;
+    if (box == null) return;
+    final keys = box.getKeys<Iterable<dynamic>>().whereType<String>().where((k) => k.startsWith(_prefix)).toList();
+    if (keys.length <= maxDisk) return;
+    int savedAt(String k) {
+      try {
+        final raw = box.read<Object?>(k);
+        final t = raw is String ? (jsonDecode(raw) as Map)['t'] : null;
+        return t is num ? t.toInt() : 0;
+      } catch (_) {
+        return 0;
+      }
+    }
+    final aged = [for (final k in keys) (k: k, t: savedAt(k))]..sort((a, b) => a.t.compareTo(b.t));
+    for (final e in aged.take(keys.length - maxDisk)) {
+      box.remove(e.k);
+    }
   }
 
   static void clear() {
@@ -74,15 +98,18 @@ abstract final class SpotGalleryCache {
   }
 
   static ({DateTime at, SpotDetail detail})? _readDisk(String id, String version, DateTime now) {
+    final key = '$_prefix$id';
     try {
-      final raw = TripSpotsCache.box?.read<Object?>('$_prefix$id');
+      final box = TripSpotsCache.box;
+      final raw = box?.read<Object?>(key);
       if (raw is! String) return null;
       final map = jsonDecode(raw);
-      if (map is! Map || map['v'] != version) return null;
-      final t = map['t'];
-      if (t is! num) return null;
+      final t = map is Map ? map['t'] : null;
+      if (map is! Map || map['v'] != version || t is! num || !_fresh(DateTime.fromMillisecondsSinceEpoch(t.toInt()), now)) {
+        box?.remove(key);
+        return null;
+      }
       final at = DateTime.fromMillisecondsSinceEpoch(t.toInt());
-      if (!_fresh(at, now)) return null;
       return (
         at: at,
         detail: SpotDetail(

@@ -26,6 +26,13 @@ class SpotGalleryCollage extends StatelessWidget {
     return (w >= wideFrom && n >= 4) ? w * 0.46 : w * 0.58;
   }
 
+  static SpotPhotoSize sizeOf(int i, double w, int n) {
+    if (n == 1) return SpotPhotoSize.card;
+    if (n == 2) return SpotPhotoSize.square;
+    if (w >= wideFrom && n >= 4) return i <= 1 ? SpotPhotoSize.card : SpotPhotoSize.square;
+    return i == 0 ? SpotPhotoSize.card : SpotPhotoSize.square;
+  }
+
   @override
   Widget build(BuildContext context) {
     final n = urls.length;

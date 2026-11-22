@@ -26,7 +26,7 @@ abstract final class SpotPhotoUrl {
   static String? of(String? url, SpotPhotoSize size) {
     if (url == null || url.isEmpty) return url;
     final host = Uri.tryParse(url)?.host ?? '';
-    if (!host.endsWith('cloudinary.com')) return url;
+    if (host != 'res.cloudinary.com' && !host.endsWith('.cloudinary.com')) return url;
     final i = url.indexOf(_marker);
     if (i < 0) return url;
     final at = i + _marker.length;

@@ -160,17 +160,20 @@ class _TripSpotDetailSheetState extends State<TripSpotDetailSheet>
         initialIndex: i,
         title: _spot.title,
         fallbackAsset: TripSpotLook.assetOf(_spot.category),
-        placeholderSize: SpotPhotoSize.hero,
       );
 
-  void _openGallery(int i) => SpotPhotoViewer.open(
-        context,
-        urls: _urls,
-        initialIndex: i,
-        title: _spot.title,
-        fallbackAsset: TripSpotLook.assetOf(_spot.category),
-        placeholderSize: i == 0 ? SpotPhotoSize.card : SpotPhotoSize.square,
-      );
+  void _openGallery(int i) {
+    final urls = _urls;
+    final w = (context.size?.width ?? MediaQuery.sizeOf(context).width) - 2 * DS.s(20);
+    SpotPhotoViewer.open(
+      context,
+      urls: urls,
+      initialIndex: i,
+      title: _spot.title,
+      fallbackAsset: TripSpotLook.assetOf(_spot.category),
+      placeholderSizeOf: (j) => SpotGalleryCollage.sizeOf(j, w, urls.length),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {

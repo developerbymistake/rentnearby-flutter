@@ -46,6 +46,44 @@ void main() {
     expect(SpotGalleryCache.get(1, 's', 'v1', now: now.add(const Duration(hours: 25))), isNull);
   });
 
+  test('disk keeps at most 100 galleries, oldest out', () async {
+    final now = DateTime.now();
+    for (var i = 0; i < 120; i++) {
+      SpotGalleryCache.put(1, 's$i', 'v1', _d(['https://a/$i']), now: now.add(Duration(seconds: i)));
+    }
+    await _settle();
+    final box = GetStorage(TripSpotsCache.container);
+    final keys = box.getKeys<Iterable<dynamic>>().whereType<String>().where((k) => k.startsWith('g:')).toList();
+    expect(keys.length, lessThanOrEqualTo(SpotGalleryCache.maxDisk));
+    expect(box.hasData('g:1:s119'), isTrue);
+    expect(box.hasData('g:1:s0'), isFalse);
+  });
+
+  test('an expired or other-version disk entry is removed on read', () async {
+    final now = DateTime.now();
+    SpotGalleryCache.put(1, 's', 'v1', _d(['https://a/1']), now: now);
+    await _settle();
+    SpotGalleryCache.debugForgetMemory();
+    expect(SpotGalleryCache.get(1, 's', 'v1', now: now.add(const Duration(hours: 25))), isNull);
+    expect(GetStorage(TripSpotsCache.container).hasData('g:1:s'), isFalse);
+  });
+
+  test('dropExpired removes old c: and g: entries only', () async {
+    final box = GetStorage(TripSpotsCache.container);
+    final now = DateTime.now();
+    final old = now.subtract(const Duration(hours: 30)).millisecondsSinceEpoch;
+    final fresh = now.millisecondsSinceEpoch;
+    await box.write('c:1', '{"t":$old,"v":"x","items":[]}');
+    await box.write('g:1:a', '{"t":$old,"v":"x"}');
+    await box.write('g:1:b', '{"t":$fresh,"v":"x"}');
+    await box.write('other', 'keep');
+    TripSpotsCache.dropExpired(box, now);
+    expect(box.hasData('c:1'), isFalse);
+    expect(box.hasData('g:1:a'), isFalse);
+    expect(box.hasData('g:1:b'), isTrue);
+    expect(box.hasData('other'), isTrue);
+  });
+
   test('empty version is a memory copy only', () async {
     SpotGalleryCache.put(1, 's', '', _d(['https://a/1']));
     await _settle();

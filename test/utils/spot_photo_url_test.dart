@@ -20,6 +20,11 @@ void main() {
     }
   });
 
+  test('foreign host that only ends with cloudinary.com is returned unchanged', () {
+    const u = 'https://evilcloudinary.com/image/upload/a.jpg';
+    expect(SpotPhotoUrl.of(u, SpotPhotoSize.card), u);
+  });
+
   test('pixel widths are fixed', () {
     expect(SpotPhotoSize.values.map(SpotPhotoUrl.pixelWidth).toList(), [96, 320, 720, 1080, 1280]);
   });

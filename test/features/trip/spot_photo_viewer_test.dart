@@ -1,6 +1,8 @@
 import 'package:bakhli/design/design.dart';
 import 'package:bakhli/design/extra/sheet_close_button.dart';
+import 'package:bakhli/features/trip/widgets/spot_gallery_collage.dart';
 import 'package:bakhli/features/trip/widgets/spot_photo_viewer.dart';
+import 'package:bakhli/utils/spot_photo_url.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -120,6 +122,20 @@ void main() {
     await t.drag(find.byKey(SpotPhotoViewer.pagerKey), const Offset(0, 260));
     await _settle(t);
     expect(find.byType(SpotPhotoViewer), findsNothing);
+  });
+
+  testWidgets('loading an uncached photo keeps the dark viewer, no light placeholder', (t) async {
+    await _open(t, _urls(3));
+    expect(find.descendant(of: find.byType(SpotPhotoViewer), matching: find.byType(TemplatePlaceholder)), findsNothing);
+  });
+
+  test('gallery placeholder size follows the collage tile', () {
+    expect(SpotGalleryCollage.sizeOf(0, 320, 1), SpotPhotoSize.card);
+    expect(SpotGalleryCollage.sizeOf(1, 320, 2), SpotPhotoSize.square);
+    expect(SpotGalleryCollage.sizeOf(0, 320, 5), SpotPhotoSize.card);
+    expect(SpotGalleryCollage.sizeOf(1, 320, 5), SpotPhotoSize.square);
+    expect(SpotGalleryCollage.sizeOf(1, 600, 5), SpotPhotoSize.card);
+    expect(SpotGalleryCollage.sizeOf(4, 600, 5), SpotPhotoSize.square);
   });
 
   testWidgets('a broken url shows the category art on the indigo gradient', (t) async {

@@ -19,12 +19,29 @@ class TripSpotsCache {
     try {
       await GetStorage.init(container);
       _box = GetStorage(container);
+      dropExpired(_box!, DateTime.now());
       _dropLegacy(GetStorage());
     } catch (_) {}
   }
 
   @visibleForTesting
   static void debugUseBox(GetStorage? box) => _box = box;
+
+  @visibleForTesting
+  static void dropExpired(GetStorage box, DateTime now) {
+    try {
+      final keys = box.getKeys<Iterable<dynamic>>().whereType<String>().where((k) => k.startsWith('c:') || k.startsWith('g:')).toList();
+      for (final k in keys) {
+        final raw = box.read<Object?>(k);
+        Object? t;
+        try {
+          t = raw is String ? (jsonDecode(raw) as Map)['t'] : null;
+        } catch (_) {}
+        final age = t is num ? now.difference(DateTime.fromMillisecondsSinceEpoch(t.toInt())) : null;
+        if (age == null || age.isNegative || age > ttl) box.remove(k);
+      }
+    } catch (_) {}
+  }
 
   static void _dropLegacy(GetStorage legacy) {
     try {
