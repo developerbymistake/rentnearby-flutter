@@ -61,6 +61,8 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
   Worker? _addedWorker;
   String? _tripId;
   int? _legFilter;
+  int? _focusDay;
+  final _dayKeys = <int, GlobalKey>{};
   bool _savingTrip = false;
   String? _note;
   Timer? _noteTimer;
@@ -81,6 +83,8 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
     final map = args is Map ? args : const {};
     _tripId = map['tripId'] as String?;
     final fresh = map['fresh'] == true;
+    final day = map['day'];
+    _focusDay = day is int && day > 0 ? day : null;
     final id = _tripId;
     _startWorker = ever<TripPlan?>(_c.plan, (_) => _checkStartFrom());
     _addedWorker = ever<int?>(_c.lastAddedLeg, _scrollToAdded);
@@ -96,6 +100,7 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
         } else {
           await _c.open(id, fresh: fresh);
         }
+        _showFocusDay();
       });
     }
   }
@@ -133,6 +138,26 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
   }
 
   GlobalKey _legKey(int legIndex) => _legKeys.putIfAbsent(legIndex, () => GlobalKey());
+
+  GlobalKey _dayKey(int day) => _dayKeys.putIfAbsent(day, () => GlobalKey());
+
+  // Home "Today's plan" opens the plan on that day: unfold its city and scroll to it.
+  void _showFocusDay() {
+    final day = _focusDay;
+    final p = _c.plan.value;
+    if (!mounted || day == null || p == null) return;
+    _focusDay = null;
+    int? leg;
+    for (final d in p.days) {
+      if (d.day == day) leg = d.leg;
+    }
+    if (leg == null) return;
+    if (_fold.isFolded(leg)) _fold.toggle(leg);
+    if (_legFilter != null && _legFilter != leg) setState(() => _legFilter = null);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _scrollTo(_dayKey(day));
+    });
+  }
 
   Future<void> _scrollTo(GlobalKey key) async {
     if (key.currentContext == null && _scroll.hasClients) {
@@ -484,7 +509,8 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
                             : 0,
                     body: [
                       for (final d in plan.days)
-                        if (d.leg == leg.index) TripDaySpotList(d.day, key: ValueKey('trip-day-${d.day}'), inSection: true),
+                        if (d.leg == leg.index)
+                          KeyedSubtree(key: _dayKey(d.day), child: TripDaySpotList(d.day, key: ValueKey('trip-day-${d.day}'), inSection: true)),
                     ],
                   )),
               if (plan.spotCount == 0 && !editing && editable) _emptyPlan(),

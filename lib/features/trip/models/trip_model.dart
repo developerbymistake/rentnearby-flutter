@@ -123,6 +123,7 @@ class TripModel {
   final TripPlanLock planLock;
   final TripTaxiRequestRef? taxiRequest;
   final bool nameChosen;
+  final TripSharingBlock? sharing;
 
   const TripModel({
     required this.id,
@@ -153,13 +154,19 @@ class TripModel {
     this.planLock = TripPlanLock.none,
     this.taxiRequest,
     this.nameChosen = false,
+    this.sharing,
   }) : _legCities = legCities;
 
   List<String> get legCities => _legCities ?? [cityName];
 
-  TripSharingBlock? get sharing {
-    final s = raw?['sharing'];
-    return s is Map<String, dynamic> ? TripSharingBlock.fromJson(s) : null;
+  static TripSharingBlock? _sharingOf(Object? s) => s is Map<String, dynamic> ? TripSharingBlock.fromJson(s) : null;
+
+  // The offline copy: the server JSON with the sharing block this model holds put back.
+  Map<String, dynamic>? get rawWithSharing {
+    final r = raw;
+    final s = sharing;
+    if (r == null || s == null) return r;
+    return {...r, 'sharing': s.toJson()};
   }
   String get routeLine => legCount > 1 ? TripStringsMcaA4.routeOf(legCities) : cityName;
 
@@ -200,6 +207,7 @@ class TripModel {
     TripTaxiRequestRef? taxiRequest,
     bool clearTaxiRequest = false,
     bool? nameChosen,
+    TripSharingBlock? sharing,
   }) =>
       TripModel(
         id: id,
@@ -230,6 +238,7 @@ class TripModel {
         planLock: planLock ?? this.planLock,
         taxiRequest: clearTaxiRequest ? null : (taxiRequest ?? this.taxiRequest),
         nameChosen: nameChosen ?? this.nameChosen,
+        sharing: sharing ?? this.sharing,
       );
 
   factory TripModel.fromJson(Map<String, dynamic> json) => TripModel(
@@ -268,6 +277,7 @@ class TripModel {
         planLock: TripPlanLock.parse(json['planLock']),
         taxiRequest: TripTaxiRequestRef.tryParse(json['taxiRequest']),
         nameChosen: json['nameChosen'] == true,
+        sharing: _sharingOf(json['sharing']),
       );
 }
 

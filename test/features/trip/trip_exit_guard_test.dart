@@ -4,6 +4,7 @@ import 'package:bakhli/config/app_routes.dart';
 import 'package:bakhli/config/app_tabs.dart';
 import 'package:bakhli/config/app_theme.dart';
 import 'package:bakhli/controllers/auth_controller.dart';
+import 'package:bakhli/models/user_model.dart';
 import 'package:bakhli/controllers/tab_config_controller.dart';
 import 'package:bakhli/features/trip/controllers/trip_plan_controller.dart';
 import 'package:bakhli/features/trip/data/trip_city_catalog.dart';
@@ -36,6 +37,9 @@ class _Tabs extends TabConfigController {
 
 class _Auth extends GetxController implements AuthController {
   final tabs = <int>[];
+
+  @override
+  final user = Rxn<UserModel>();
 
   @override
   void switchToTab(int index) => tabs.add(index);

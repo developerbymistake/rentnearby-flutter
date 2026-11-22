@@ -49,6 +49,7 @@ TripModel trip({TripSharingBlock? sharing, int spotCount = 18, DateTime? endDate
       createdAt: DateTime(2026, 5, 1),
       updatedAt: DateTime(2026, 5, 1),
       raw: sharing == null ? null : {'sharing': sharing.toJson()},
+      sharing: sharing,
     );
 
 const allArranged = TripParts(itinerary: TripPartState.arranged, taxi: TripPartState.arranged, stay: TripPartState.arranged);

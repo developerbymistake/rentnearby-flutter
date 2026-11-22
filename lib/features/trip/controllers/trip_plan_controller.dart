@@ -4151,6 +4151,7 @@ class TripPlanController extends GetxController {
       if (!stale) TripTodayCache.saveTrip(t);
       enquiryList.assignAll(t.enquiries);
       trip.value = (trip.value ?? t).copyWith(
+        sharing: t.sharing,
         enquiries: t.enquiries,
         journeys: _mergedJourneys(t),
         journeysKnown: t.journeysKnown || (trip.value?.journeysKnown ?? false),
@@ -4304,6 +4305,7 @@ class TripPlanController extends GetxController {
         }
       }
       trip.value = saved.copyWith(
+        sharing: saved.sharing ?? current?.sharing,
         enquiries: enquiryList.toList(),
         journeys: _mergedJourneys(saved, keepLinked: false),
         journeysKnown: saved.journeysKnown || (current?.journeysKnown ?? false),
@@ -4438,8 +4440,8 @@ class TripPlanController extends GetxController {
   }
 
   static TripModel _withTaxiState(TripModel t, TripModel fresh) => fresh.taxiRequest == null
-      ? t.copyWith(planLock: fresh.planLock, clearTaxiRequest: true)
-      : t.copyWith(planLock: fresh.planLock, taxiRequest: fresh.taxiRequest);
+      ? t.copyWith(planLock: fresh.planLock, clearTaxiRequest: true, sharing: fresh.sharing)
+      : t.copyWith(planLock: fresh.planLock, taxiRequest: fresh.taxiRequest, sharing: fresh.sharing);
 
   Future<bool> refreshTaxiState({String? tripId}) async {
     final t = trip.value;

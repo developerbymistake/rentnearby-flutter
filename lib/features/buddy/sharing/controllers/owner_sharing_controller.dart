@@ -19,6 +19,11 @@ class OwnerSharingController extends GetxController {
   final SharingFetch _fetch;
   final List<Worker> _workers = [];
   Future<void>? _loading;
+  bool _fetchedOnce = false;
+
+  // The server answered the trip without any sharing key (older than the sharing feature):
+  // the cards would lead to routes it does not have.
+  final unsupported = false.obs;
 
   static SharingFetch? debugFetch;
 
@@ -58,10 +63,26 @@ class OwnerSharingController extends GetxController {
 
   Future<void> reload() => _loading ??= _load().whenComplete(() => _loading = null);
 
+  // One background fetch per screen entry while no real block is known; a failed fetch is not
+  // retried on rebuilds (next entry or pull to refresh retries).
+  void fetchOnceIfMissing() {
+    if (_fetchedOnce || sharing.value != null) return;
+    _fetchedOnce = true;
+    reload();
+  }
+
   Future<void> _load() async {
+    _fetchedOnce = true;
     final r = await _fetch(tripId);
     if (isClosed) return;
-    if (r is BuddyOk<TripSharingBlock?> && r.value != null) sharing.value = r.value;
+    if (r is! BuddyOk<TripSharingBlock?>) return;
+    final v = r.value;
+    if (v != null) {
+      sharing.value = v;
+      unsupported.value = false;
+    } else if (sharing.value == null) {
+      unsupported.value = true;
+    }
   }
 
   Future<T?> afterReturn<T>(Future<T?>? push) async {

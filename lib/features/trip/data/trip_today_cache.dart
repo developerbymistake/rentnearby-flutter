@@ -5,7 +5,7 @@ import '../models/trip_plan_result_model.dart';
 
 class TripTodayCache {
   static void saveTrip(TripModel t) {
-    final raw = t.raw;
+    final raw = t.rawWithSharing;
     if (raw != null) StorageService.saveTripCache(t.id, raw);
   }
 
@@ -13,8 +13,10 @@ class TripTodayCache {
     final cached = StorageService.getTripCache(t.id);
     final base = cached ?? t.raw;
     if (base == null) return;
+    final sharing = t.sharing;
     StorageService.saveTripCache(t.id, {
       ...base,
+      if (sharing != null) 'sharing': sharing.toJson(),
       'plan': plan.toJson(),
       'legCount': plan.legs.length,
       'legCities': plan.legs.map((l) => l.cityName).toList(),

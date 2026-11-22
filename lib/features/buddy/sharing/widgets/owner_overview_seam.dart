@@ -1,5 +1,7 @@
 import 'package:flutter/widgets.dart';
+import 'package:get/get.dart';
 
+import '../../../../controllers/auth_controller.dart';
 import '../../../../utils/app_toast.dart';
 import '../../../trip/models/trip_model.dart';
 import '../../buddy_navigation.dart';
@@ -50,12 +52,22 @@ abstract final class OwnerOverviewSeam {
     return DateTime(end.year, end.month, end.day).isBefore(DateTime(n.year, n.month, n.day));
   }
 
+  // Only the owner overview calls this. The cards never depend on the write answers carrying
+  // the block (D-02): real block, else the trip's block, else "owner alone" with one fetch.
   static OwnerOverviewExtras of(BuildContext context, TripModel trip, {int? progressPercent}) {
-    final initial = trip.sharing;
-    if (initial == null) return OwnerOverviewExtras.none;
-    final c = OwnerSharingController.ensure(trip.id, initial);
-    final s = c.sharing.value ?? initial;
+    final c = OwnerSharingController.ensure(trip.id, trip.sharing);
+    final known = c.sharing.value ?? trip.sharing;
+    if (known == null) {
+      c.fetchOnceIfMissing();
+      if (c.unsupported.value) return OwnerOverviewExtras.none;
+    }
+    final s = known ?? _ownerAlone();
     return build(context, trip, s, progressPercent: progressPercent, controller: c);
+  }
+
+  static TripSharingBlock _ownerAlone() {
+    final user = Get.isRegistered<AuthController>() ? Get.find<AuthController>().user.value : null;
+    return TripSharingBlock.ownerAlone(userId: user?.id ?? '', ownerName: user?.name ?? user?.username ?? '');
   }
 
   static OwnerOverviewExtras build(BuildContext context, TripModel trip, TripSharingBlock s,

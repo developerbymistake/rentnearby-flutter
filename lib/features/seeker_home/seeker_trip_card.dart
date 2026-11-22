@@ -1,9 +1,14 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../config/app_routes.dart';
 import '../../design/design.dart';
 import '../../design/tokens/owner_tokens.dart';
+import '../buddy/buddy_navigation.dart';
+import '../trip/controllers/trip_plan_controller.dart';
+import '../trip/models/trip_plan_model.dart';
 import '../trip/trip_navigation.dart';
 import 'seeker_feed_controller.dart';
 import 'seeker_feed_model.dart';
@@ -15,23 +20,93 @@ abstract final class SeekerTripActions {
 
   static void openMyTrips() => Get.toNamed(AppRoutes.myTrips);
 
-  static void continueTrip(SeekerTripCard card) {
+  // Owner: the overview, then the step named by nextStep on top of it (D-18), so Back is the overview.
+  // Viewer: the read-only trip view; the owner routes answer 404 for a joined trip.
+  static Future<void> continueTrip(SeekerTripCard card) async {
     SeekerFeedController.maybe?.markStatusOpened();
     final id = card.tripId;
     if (id == null || id.isEmpty) return;
-    TripNavigation.continueTrip(id);
+    if (card.isViewer) {
+      await BuddyNavigation.openTripView(id);
+      return;
+    }
+    final step = card.nextStep;
+    final overview = TripNavigation.continueTrip(id);
+    if (step != null) unawaited(openStepWhenReady(id, step));
+    await overview;
+  }
+
+  static const Duration stepWait = Duration(seconds: 10);
+
+  @visibleForTesting
+  static Future<bool> openStepWhenReady(String tripId, SeekerNextStep step, {Duration timeout = stepWait}) async {
+    final kind = step.kind;
+    if (kind == SeekerStepKind.journey || kind == SeekerStepKind.unknown) return false;
+    if (!await _overviewReady(tripId, timeout)) return false;
+    final context = Get.context;
+    if (context == null || !context.mounted) return false;
+    switch (kind) {
+      case SeekerStepKind.stay:
+        return TripNavigation.openStayFlow(context, leg: TripEasyRowKey.parse(step.key)?.legIndex);
+      case SeekerStepKind.taxi:
+        return TripNavigation.openTaxiFlow(context);
+      case SeekerStepKind.plan:
+        await TripNavigation.openPlan(tripId: tripId);
+        return true;
+      case SeekerStepKind.journey:
+      case SeekerStepKind.unknown:
+        return false;
+    }
+  }
+
+  static Future<bool> _overviewReady(String tripId, Duration timeout) async {
+    bool ready() {
+      if (!Get.isRegistered<TripPlanController>()) return false;
+      final c = TripPlanController.to;
+      return c.trip.value?.id == tripId && c.plan.value != null && !c.tripGone.value;
+    }
+
+    bool onOverview() => Get.currentRoute == AppRoutes.tripOverview;
+    if (ready() && onOverview()) return true;
+    if (!Get.isRegistered<TripPlanController>()) return false;
+    final c = TripPlanController.to;
+    final done = Completer<bool>();
+    void check(Object? _) {
+      if (done.isCompleted) return;
+      if (c.tripGone.value) {
+        done.complete(false);
+      } else if (ready()) {
+        done.complete(true);
+      }
+    }
+
+    final workers = [ever(c.trip, check), ever(c.plan, check), ever(c.tripGone, check)];
+    check(null);
+    try {
+      final ok = await done.future.timeout(timeout, onTimeout: () => false);
+      return ok && onOverview();
+    } finally {
+      for (final w in workers) {
+        w.dispose();
+      }
+    }
   }
 
   static void openToday(SeekerTripCard card) {
     final id = card.tripId;
     if (id == null || id.isEmpty) return;
-    Get.toNamed(AppRoutes.tripDayPlan, arguments: {'tripId': id, 'day': card.today?.dayNumber});
+    final day = card.today?.dayNumber;
+    if (card.isViewer) {
+      BuddyNavigation.openDayPlan(id, day: day);
+    } else {
+      TripNavigation.openPlan(tripId: id, day: day);
+    }
   }
 
   static void openStatus(SeekerStatus status, SeekerTripCard card) {
     SeekerFeedController.maybe?.markStatusOpened();
     final tripId = status.tripId ?? card.tripId;
-    if (tripId == null || tripId.isEmpty) return;
+    if (tripId == null || tripId.isEmpty || card.isViewer) return;
     if (status.kind == SeekerStatusKind.reply) {
       Get.toNamed(AppRoutes.tripReplies, arguments: {'tripId': tripId, 'enquiryId': status.enquiryId});
     } else {
@@ -124,12 +199,17 @@ class SeekerTripCardView extends StatelessWidget {
       final count = today?.placeCount ?? 0;
       body = count > 0 ? SeekerHomeStrings.placesToday(count) : null;
       final seen = today?.placesSeen;
-      if (seen != null && count > 0) {
+      if (seen != null && count > 0 && !card.isViewer) {
         progress = SeekerHomeStrings.placesSeen(seen.clamp(0, count), count);
         fraction = (seen / count).clamp(0.0, 1.0);
       }
       action = SeekerHomeStrings.todayPlan;
       onAction = onToday ?? () => SeekerTripActions.openToday(card);
+    } else if (card.isViewer) {
+      eyebrow = SeekerTripWords.eyebrow(card);
+      title = SeekerHomeStrings.viewerTitle;
+      action = SeekerHomeStrings.openTrip;
+      onAction = onContinue ?? () => SeekerTripActions.continueTrip(card);
     } else {
       eyebrow = SeekerTripWords.eyebrow(card);
       title = SeekerHomeStrings.continueTitle;
@@ -142,7 +222,7 @@ class SeekerTripCardView extends StatelessWidget {
       action = SeekerHomeStrings.continueAction;
       onAction = onContinue ?? () => SeekerTripActions.continueTrip(card);
     }
-    final s = hasTrip ? status : null;
+    final s = hasTrip && !card.isViewer ? status : null;
     final statusLine = SeekerStatusRule.line(s);
     final slots = feed.slots;
     final full = slots != null && slots.full;

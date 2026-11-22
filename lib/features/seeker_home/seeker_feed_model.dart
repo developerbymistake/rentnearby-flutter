@@ -104,6 +104,8 @@ class SeekerTripCard {
   final int total;
   final SeekerNextStep? nextStep;
   final SeekerToday? today;
+  // Viewer = a trip the user joined (FB-02 sends role); unknown or missing = Owner.
+  final bool isViewer;
 
   const SeekerTripCard({
     this.state = SeekerTripState.none,
@@ -116,6 +118,7 @@ class SeekerTripCard {
     this.total = 0,
     this.nextStep,
     this.today,
+    this.isViewer = false,
   });
 
   static const SeekerTripCard empty = SeekerTripCard();
@@ -144,6 +147,7 @@ class SeekerTripCard {
       total: total < 0 ? 0 : total,
       nextStep: SeekerNextStep.fromJson(j['nextStep']),
       today: onTrip ? today : null,
+      isViewer: j['role'] == 'Viewer',
     );
   }
 
@@ -169,6 +173,7 @@ class SeekerTripCard {
         'total': total,
         'nextStep': nextStep?.toJson(),
         'today': today?.toJson(),
+        'role': isViewer ? 'Viewer' : 'Owner',
       };
 }
 

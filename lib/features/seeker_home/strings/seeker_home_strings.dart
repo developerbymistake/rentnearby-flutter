@@ -10,6 +10,8 @@ abstract final class SeekerHomeStrings {
 
   static const String continueTitle = 'Continue your trip';
   static const String continueAction = 'Continue';
+  static const String viewerTitle = 'Shared with me';
+  static const String openTrip = 'Open trip';
   static String eyebrow(String title, String? dates) => dates == null ? title : '$title · $dates';
   static String subtitle(String title, String? dates) => dates == null ? title : '$title, $dates';
   static String progress(int done, int total) => '$done of $total done';

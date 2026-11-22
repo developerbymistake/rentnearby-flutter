@@ -256,6 +256,18 @@ class TripSharingBlock {
 
   bool get isShared => viewerCount > 0;
 
+  // Safe default for a trip the user owns while the server block is unknown (D-02).
+  factory TripSharingBlock.ownerAlone({required String userId, required String ownerName}) {
+    final name = ownerName.trim();
+    return TripSharingBlock(
+      travellerCount: 1,
+      viewerCount: 0,
+      pendingInvites: 0,
+      firstTravellers: [TravellerDot(userId: userId, initial: name.isEmpty ? '' : name.substring(0, 1).toUpperCase(), name: name)],
+      expenses: TripExpenseCard.none,
+    );
+  }
+
   factory TripSharingBlock.fromJson(Map<String, dynamic> j) => TripSharingBlock(
         travellerCount: BuddyJson.integer(j['travellerCount'], 1),
         viewerCount: BuddyJson.integer(j['viewerCount']),
