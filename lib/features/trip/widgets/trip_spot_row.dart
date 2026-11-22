@@ -1,6 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:bakhli/design/design.dart';
+import 'package:bakhli/utils/spot_photo_url.dart';
 import '../models/trip_spot_category.dart';
 import '../models/trip_spot_model.dart';
 import '../trip_strings_spots_x.dart';
@@ -14,17 +15,19 @@ class TripSpotRow extends StatelessWidget {
   final String? subtitle;
   final bool dimmed;
   final bool draft;
+  final int? cityKey;
+  final String? version;
 
-  const TripSpotRow({super.key, required this.spot, required this.selected, this.onToggle, this.locked = false, this.subtitle, this.dimmed = false, this.draft = false});
+  const TripSpotRow({super.key, required this.spot, required this.selected, this.onToggle, this.locked = false, this.subtitle, this.dimmed = false, this.draft = false, this.cityKey, this.version});
 
   static const String details = 'Details';
 
   @override
   Widget build(BuildContext context) {
-    final extra = spot.gallery.length - 1;
+    final extra = spot.photos.length - 1;
     final cat = TripSpotCategory.label(spot.category);
     final off = locked && !selected;
-    void open() => TripSpotDetailSheet.show(context, spot: spot, selected: selected, locked: locked, onToggle: onToggle);
+    void open() => TripSpotDetailSheet.show(context, spot: spot, selected: selected, locked: locked, onToggle: onToggle, cityKey: cityKey, version: version);
     return WideCard(
       tone: ListingTone.indigo,
       kind: WideKind.photo,
@@ -32,7 +35,7 @@ class TripSpotRow extends StatelessWidget {
           ? Stack(
               fit: StackFit.expand,
               children: [
-                TripSpotMedia(spot: spot),
+                TripSpotMedia(spot: spot, size: SpotPhotoSize.card),
                 if (extra > 0) Positioned(right: DS.s(12), top: DS.s(12), child: TripPhotoCount(count: extra)),
               ],
             )
@@ -154,23 +157,36 @@ class TripSpotAddButton extends StatelessWidget {
 class TripSpotMedia extends StatelessWidget {
   final TripSpotModel spot;
   final String? url;
+  final SpotPhotoSize size;
 
-  const TripSpotMedia({super.key, required this.spot, this.url});
+  const TripSpotMedia({super.key, required this.spot, required this.size, this.url});
+
+  @visibleForTesting
+  static Widget Function(String url, BoxFit fit, Widget fallback)? debugImageBuilder;
 
   @override
-  Widget build(BuildContext context) {
-    final src = url ?? (spot.hasPhoto ? spot.gallery.first : null);
-    if (src == null || src.isEmpty) return _fallback();
-    return CachedNetworkImage(
-      imageUrl: src,
-      fit: BoxFit.cover,
-      placeholder: (_, _) => const TemplatePlaceholder(height: double.infinity, radius: 0),
-      errorWidget: (_, _, _) => _fallback(),
+  Widget build(BuildContext context) => photo(url ?? (spot.hasPhoto ? spot.photos.first : null), size, fallback(spot));
+
+  static Widget photo(String? src, SpotPhotoSize size, Widget fallback) {
+    final sized = SpotPhotoUrl.of(src, size);
+    if (sized == null || sized.isEmpty) return fallback;
+    final test = debugImageBuilder;
+    if (test != null) return test(sized, BoxFit.cover, fallback);
+    return LayoutBuilder(
+      builder: (context, c) => CachedNetworkImage(
+        imageUrl: sized,
+        fit: BoxFit.cover,
+        memCacheWidth: SpotPhotoUrl.cacheWidth(context, c.maxWidth, size),
+        placeholder: (_, _) => const TemplatePlaceholder(height: double.infinity, radius: 0),
+        errorWidget: (_, _, _) => fallback,
+      ),
     );
   }
 
-  Widget _fallback() => DecoratedBox(
+  static Widget fallback(TripSpotModel spot) => fallbackArt(TripSpotLook.assetOf(spot.category));
+
+  static Widget fallbackArt(String asset) => DecoratedBox(
         decoration: BoxDecoration(gradient: ListingTone.indigo.gradient),
-        child: Center(child: Art3D(asset: TripSpotLook.assetOf(spot.category), size: 84)),
+        child: Center(child: Art3D(asset: asset, size: 84)),
       );
 }

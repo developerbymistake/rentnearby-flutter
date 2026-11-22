@@ -22,6 +22,7 @@ import 'services/tour_dismiss_observer.dart';
 import 'utils/app_toast.dart';
 import 'config/app_frame.dart';
 import 'features/owner_core/data/owner_cache.dart';
+import 'features/trip/utils/trip_spots_cache.dart';
 import 'widgets/global_location_gates.dart';
 import 'widgets/soft_update_dialog.dart';
 import 'widgets/tour_host.dart';
@@ -34,6 +35,7 @@ Future<void> main() async {
     ..maximumSize = 300;
   await GetStorage.init();
   await OwnerCache.init();
+  await TripSpotsCache.init();
   await StorageService.init();
   ApiService.init();
   await Firebase.initializeApp();

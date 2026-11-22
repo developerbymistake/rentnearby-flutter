@@ -1,3 +1,5 @@
+import '../../../utils/photo_url.dart';
+
 class TripSpotStatus {
   static const String ready = 'Ready';
   static const String notReady = 'NotReady';
@@ -5,6 +7,9 @@ class TripSpotStatus {
 }
 
 class TripSpotModel {
+  static const int maxPhotos = 3;
+  static const int maxGallery = 10;
+
   final String id;
   final String source;
   final String name;
@@ -19,6 +24,7 @@ class TripSpotModel {
   final int rank;
   final String? imageUrl;
   final List<String> images;
+  final int galleryCount;
 
   const TripSpotModel({
     required this.id,
@@ -35,17 +41,18 @@ class TripSpotModel {
     this.rank = 0,
     this.imageUrl,
     this.images = const [],
+    this.galleryCount = 0,
   });
 
   String get title => (displayName == null || displayName!.isEmpty) ? name : displayName!;
 
-  List<String> get gallery {
-    if (images.isNotEmpty) return images;
+  List<String> get photos {
+    if (images.isNotEmpty) return images.length <= maxPhotos ? images : images.sublist(0, maxPhotos);
     final u = imageUrl;
     return u == null || u.isEmpty ? const [] : [u];
   }
 
-  bool get hasPhoto => gallery.isNotEmpty;
+  bool get hasPhoto => photos.isNotEmpty;
 
   static List<TripSpotModel> photoFirst(List<TripSpotModel> spots) {
     final out = <TripSpotModel>[];
@@ -64,22 +71,74 @@ class TripSpotModel {
     return out;
   }
 
-  factory TripSpotModel.fromJson(Map<String, dynamic> json) => TripSpotModel(
-        id: json['id'] as String,
-        source: json['source'] as String? ?? '',
-        name: json['name'] as String? ?? '',
-        displayName: json['displayName'] as String?,
-        description: json['description'] as String?,
-        latitude: (json['latitude'] as num).toDouble(),
-        longitude: (json['longitude'] as num).toDouble(),
-        category: json['category'] as String? ?? 'attraction',
-        area: json['area'] as String?,
-        visitMinutes: (json['visitMinutes'] as num?)?.toInt() ?? 60,
-        isFeatured: json['isFeatured'] == true,
-        rank: (json['rank'] as num?)?.toInt() ?? 0,
-        imageUrl: json['imageUrl'] as String?,
-        images: ((json['images'] as List?) ?? const []).whereType<String>().where((e) => e.isNotEmpty).toList(),
-      );
+  static List<String> cleanUrls(Object? raw, int max) {
+    if (raw is! List) return const [];
+    final seen = <String>{};
+    final out = <String>[];
+    for (final e in raw) {
+      final u = PhotoUrl.parse(e);
+      if (u == null || !seen.add(u)) continue;
+      out.add(u);
+      if (out.length >= max) break;
+    }
+    return out;
+  }
+
+  static String? _str(Object? v) => v is String ? v : null;
+
+  static double _num(Object? v) => v is num ? v.toDouble() : double.nan;
+
+  static int _int(Object? v, int fallback) => v is num && v.isFinite ? v.toInt() : fallback;
+
+  factory TripSpotModel.fromJson(Map<String, dynamic> json) {
+    final id = json['id'];
+    return TripSpotModel(
+      id: id is String ? id : (id == null ? '' : '$id'),
+      source: _str(json['source']) ?? '',
+      name: _str(json['name']) ?? '',
+      displayName: _str(json['displayName']),
+      description: _str(json['description']),
+      latitude: _num(json['latitude']),
+      longitude: _num(json['longitude']),
+      category: _str(json['category']) ?? 'attraction',
+      area: _str(json['area']),
+      visitMinutes: _int(json['visitMinutes'], 60),
+      isFeatured: json['isFeatured'] == true,
+      rank: _int(json['rank'], 0),
+      imageUrl: PhotoUrl.parse(json['imageUrl']),
+      images: cleanUrls(json['images'], maxPhotos),
+      galleryCount: _int(json['galleryCount'], 0).clamp(0, maxGallery),
+    );
+  }
+
+  static TripSpotModel? tryFromJson(Object? json) {
+    if (json is! Map) return null;
+    try {
+      final m = TripSpotModel.fromJson(Map<String, dynamic>.from(json));
+      if (m.id.isEmpty || !m.latitude.isFinite || !m.longitude.isFinite) return null;
+      return m;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'source': source,
+        'name': name,
+        'displayName': displayName,
+        'description': description,
+        'latitude': latitude,
+        'longitude': longitude,
+        'category': category,
+        'area': area,
+        'visitMinutes': visitMinutes,
+        'isFeatured': isFeatured,
+        'rank': rank,
+        'imageUrl': imageUrl,
+        'images': images,
+        'galleryCount': galleryCount,
+      };
 }
 
 class TripSpotsPage {
@@ -105,10 +164,13 @@ class TripSpotsPage {
 
   bool get isNotReady => status == TripSpotStatus.notReady;
 
+  String get version => generatedAt?.toIso8601String() ?? '';
+
   factory TripSpotsPage.fromJson(Map<String, dynamic> json) => TripSpotsPage(
-        items: ((json['items'] as List?) ?? const [])
-            .map((e) => TripSpotModel.fromJson(e as Map<String, dynamic>))
-            .toList(),
+        items: [
+          for (final e in (json['items'] is List ? json['items'] as List : const []))
+            ?TripSpotModel.tryFromJson(e),
+        ],
         hasMore: json['hasMore'] == true,
         nextCursor: json['nextCursor'] as String?,
         status: json['status'] as String? ?? TripSpotStatus.notReady,

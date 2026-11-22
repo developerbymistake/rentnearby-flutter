@@ -41,6 +41,7 @@ class TripSpotsController extends GetxController {
   bool _minutesOff = false;
   Worker? _routeWorker;
   String? nextCursor;
+  String version = '';
   int _seq = 0;
   bool _loadingAll = false;
   bool _moreInFlight = false;
@@ -130,6 +131,7 @@ class TripSpotsController extends GetxController {
     try {
       final page = await _repo.spots(cityKey);
       if (seq != _seq) return;
+      version = page.version;
       items.assignAll(page.items);
       offline.value = false;
       _saveCache(page);
@@ -159,18 +161,34 @@ class TripSpotsController extends GetxController {
   void _saveCache(TripSpotsPage page) {
     if (page.isNotReady || page.items.isEmpty) return;
     try {
-      TripSpotsCache.save(cityKey, page.items);
+      TripSpotsCache.save(cityKey, items.toList(), version);
+    } catch (_) {}
+  }
+
+  void _saveMore(TripSpotsPage page) {
+    if (page.isNotReady || page.items.isEmpty) return;
+    try {
+      final v = page.version;
+      if (v == version) {
+        TripSpotsCache.save(cityKey, items.toList(), version);
+      } else {
+        version = v;
+        TripSpotsCache.save(cityKey, page.items, v);
+      }
     } catch (_) {}
   }
 
   bool _useCache() {
     List<TripSpotModel>? cached;
+    String? cachedVersion;
     try {
       cached = TripSpotsCache.load(cityKey);
+      cachedVersion = TripSpotsCache.versionOf(cityKey);
     } catch (_) {
       return false;
     }
     if (cached == null || cached.isEmpty) return false;
+    version = cachedVersion ?? '';
     items.assignAll(cached);
     status.value = TripSpotStatus.ready;
     total.value = cached.length;
@@ -189,6 +207,7 @@ class TripSpotsController extends GetxController {
       if (seq != _seq) return false;
       final known = items.map((s) => s.id).toSet();
       items.addAll(page.items.where((s) => known.add(s.id)));
+      _saveMore(page);
       status.value = page.status;
       total.value = page.total;
       hasMore.value = page.hasMore;

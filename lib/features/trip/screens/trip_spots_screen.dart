@@ -537,6 +537,8 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> with TickerProviderSt
             selected: {...selected, ..._existingIds},
             lockedOf: (s) => !_existingIds.contains(s.id) && !selected.contains(s.id) && (_pickDay != null ? pickFull : atLimit),
             toggleOf: _toggleFor,
+            cityKey: _ctrl.cityKey,
+            version: _ctrl.version,
           ),
       ];
       return ListView.builder(
@@ -563,6 +565,8 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> with TickerProviderSt
           final card = TripSpotRow(
             key: ValueKey(s.id),
             spot: s,
+            cityKey: _ctrl.cityKey,
+            version: _ctrl.version,
             selected: existing || selected.contains(s.id),
             locked: !existing && !selected.contains(s.id) && (_pickDay != null ? pickFull : atLimit),
             onToggle: existing ? null : (_pickDay != null ? () => _pickOne(s) : () => _toggle(s.id)),

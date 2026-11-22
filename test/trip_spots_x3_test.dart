@@ -24,7 +24,7 @@ void main() {
       final back = TripSpotsCache.decode(raw, now.add(const Duration(hours: 1)))!;
       expect(back.single.id, '1');
       expect(back.single.rank, 3);
-      expect(back.single.gallery, ['http://i/1.jpg']);
+      expect(back.single.photos, ['http://i/1.jpg']);
       expect(back.single.visitMinutes, 60);
     });
 

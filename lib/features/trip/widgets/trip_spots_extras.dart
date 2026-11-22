@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:bakhli/design/design.dart';
+import 'package:bakhli/utils/spot_photo_url.dart';
 import '../models/trip_spot_category.dart';
 import '../models/trip_spot_model.dart';
 import '../trip_strings_spots_x.dart';
@@ -26,6 +27,8 @@ class TripMustSeeRail extends StatelessWidget {
   final Set<String> selected;
   final bool Function(TripSpotModel) lockedOf;
   final VoidCallback? Function(TripSpotModel) toggleOf;
+  final int? cityKey;
+  final String? version;
 
   const TripMustSeeRail({
     super.key,
@@ -34,6 +37,8 @@ class TripMustSeeRail extends StatelessWidget {
     required this.selected,
     required this.lockedOf,
     required this.toggleOf,
+    this.cityKey,
+    this.version,
   });
 
   @override
@@ -62,11 +67,11 @@ class TripMustSeeRail extends StatelessWidget {
             width: DS.s(168),
             title: s.title,
             description: '${TripSpotCategory.label(s.category)}\n~${TripFormat.visit(s.visitMinutes)}',
-            photo: s.hasPhoto ? TripSpotMedia(spot: s) : null,
+            photo: s.hasPhoto ? TripSpotMedia(spot: s, size: SpotPhotoSize.square) : null,
             sticker: s.hasPhoto ? art : null,
             art: s.hasPhoto ? null : art,
             goIcon: on ? Icons.check_rounded : Icons.add_rounded,
-            onTap: () => TripSpotDetailSheet.show(context, spot: s, selected: on, locked: locked, onToggle: toggle),
+            onTap: () => TripSpotDetailSheet.show(context, spot: s, selected: on, locked: locked, onToggle: toggle, cityKey: cityKey, version: version),
           ),
           Positioned(
             left: DS.s(18),

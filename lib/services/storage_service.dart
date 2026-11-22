@@ -5,6 +5,8 @@ import '../config/app_constants.dart';
 import '../models/user_model.dart';
 import '../features/owner_core/data/owner_cache.dart';
 import '../features/map_discovery/data/map_pack_service.dart';
+import '../features/trip/utils/spot_gallery_cache.dart';
+import '../features/trip/utils/trip_spots_cache.dart';
 
 class StorageService {
   static const _secureStorage = FlutterSecureStorage(
@@ -51,6 +53,7 @@ class StorageService {
     clearFcmToken();
     clearAllChatStackedLines();
     clearAllTripCaches();
+    TripSpotsCache.clear(); SpotGalleryCache.clear();
     clearAllOwnerCaches();
     MapPackService.clearAll().ignore();
   }
