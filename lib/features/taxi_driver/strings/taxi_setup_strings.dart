@@ -8,7 +8,6 @@ abstract final class TaxiSetupStrings {
   static const progressLabels = ['Vehicle', 'Licence', 'Contact'];
   static const vehicleType = 'Vehicle type';
   static const plateNumber = 'Plate number';
-  static const vehiclePhoto = 'Vehicle photo';
   static const plateMustShow = 'Plate must be visible';
   static const licenceNumber = 'Driving licence number';
   static const adminOnly = 'Only Bakhli admin sees this.';

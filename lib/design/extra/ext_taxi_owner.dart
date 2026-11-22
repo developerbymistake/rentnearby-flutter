@@ -8,6 +8,7 @@ import '../tokens/listing_palette.dart';
 import 'art_3d.dart';
 import 'dialog_3d.dart';
 import 'list_rows_3d.dart';
+import 'photo_circle.dart';
 import 'pill_buttons_3d.dart';
 import 'toast_3d.dart';
 import 'toggle_row.dart';
@@ -394,11 +395,13 @@ class TaxiRouteCard3D extends StatelessWidget {
 }
 
 class TaxiPlateTile extends StatelessWidget {
-  const TaxiPlateTile({super.key, required this.tone, required this.photo, required this.onRemove});
+  const TaxiPlateTile({super.key, required this.tone, required this.photo, required this.onRemove, this.label = 'Plate', this.verified = false});
 
   final ListingTone tone;
   final Widget photo;
   final VoidCallback? onRemove;
+  final String label;
+  final bool verified;
 
   @override
   Widget build(BuildContext context) => Stack(
@@ -411,10 +414,11 @@ class TaxiPlateTile extends StatelessWidget {
             child: Container(
               padding: DS.sym(v: 4),
               decoration: BoxDecoration(gradient: tone.gradient, borderRadius: DS.br(const BorderRadius.vertical(bottom: Radius.circular(18)))),
-              child: Text('Plate', textAlign: TextAlign.center, maxLines: 1, style: Ink3D.text(11, FontWeight.w700, Colors.white)),
+              child: Text(label, textAlign: TextAlign.center, maxLines: 1, style: Ink3D.text(11, FontWeight.w700, Colors.white)),
             ),
           ),
-          Positioned(
+          if (!verified)
+            Positioned(
             top: 0,
             right: 0,
             child: Tooltip(
@@ -441,16 +445,17 @@ class TaxiPlateTile extends StatelessWidget {
 }
 
 class TaxiAddPhotoTile extends StatelessWidget {
-  const TaxiAddPhotoTile({super.key, required this.tone, required this.onTap, this.error = false});
+  const TaxiAddPhotoTile({super.key, required this.tone, required this.onTap, this.error = false, this.label = 'Add'});
 
   final ListingTone tone;
   final VoidCallback? onTap;
   final bool error;
+  final String label;
 
   @override
   Widget build(BuildContext context) => Tap3D(
         onTap: onTap,
-        label: 'Add photo',
+        label: '$label photo',
         exclude: true,
         child: Container(
           decoration: BoxDecoration(
@@ -463,7 +468,7 @@ class TaxiAddPhotoTile extends StatelessWidget {
             children: [
               Image.asset(ListingArt.camera, width: DS.s(40), height: DS.s(40)),
               SizedBox(height: DS.s(4)),
-              Text('Add', maxLines: 1, style: Ink3D.text(12, FontWeight.w700, error ? Form3D.errorText : tone.text)),
+              Text(label, maxLines: 1, style: Ink3D.text(12, FontWeight.w700, error ? Form3D.errorText : tone.text)),
             ],
           ),
         ),
@@ -923,6 +928,7 @@ class TaxiOwnerCard3D extends StatelessWidget {
     this.strip,
     this.stripAction,
     this.onStrip,
+    this.photoUrl,
   });
 
   final ListingTone tone;
@@ -945,6 +951,23 @@ class TaxiOwnerCard3D extends StatelessWidget {
   final String? strip;
   final String? stripAction;
   final VoidCallback? onStrip;
+  final String? photoUrl;
+
+  Widget _picture(double artSize) {
+    final url = photoUrl;
+    if (url == null) return Art3D(asset: ListingArt.taxi, size: artSize, halo: artSize + 4, haloColor: TaxiOwnerLook.soft, haloDy: 4);
+    return SizedBox.square(
+      dimension: DS.s(artSize),
+      child: OverflowBox(
+        maxWidth: DS.s(artSize + 4),
+        maxHeight: DS.s(artSize + 4),
+        child: Transform.translate(
+          offset: Offset(0, DS.s(4)),
+          child: PhotoCircle(url: url, art: ListingArt.taxi, size: artSize + 4, artSize: artSize, haloColor: TaxiOwnerLook.soft),
+        ),
+      ),
+    );
+  }
 
   Widget _panel(Widget child) => Container(
         margin: EdgeInsets.fromLTRB(DS.s(14), DS.gv(10), DS.s(14), 0),
@@ -1184,7 +1207,7 @@ class TaxiOwnerCard3D extends StatelessWidget {
         clipBehavior: Clip.none,
         children: [
           card,
-          Positioned(left: DS.s(4), top: -DS.s(44), child: IgnorePointer(child: ExcludeSemantics(child: Art3D(asset: ListingArt.taxi, size: artSize, halo: artSize + 4, haloColor: TaxiOwnerLook.soft, haloDy: 4)))),
+          Positioned(left: DS.s(4), top: -DS.s(44), child: IgnorePointer(child: ExcludeSemantics(child: _picture(artSize)))),
         ],
       ),
     );

@@ -83,6 +83,10 @@ TaxiOwnerModel setupTaxi({
   List<TaxiRouteModel> routes = const [],
   int? rate,
   int? km,
+  String? plateUrl,
+  String? displayUrl,
+  bool everApproved = false,
+  bool platePhotoLocked = false,
 }) =>
     TaxiOwnerModel(
       id: 'o1',
@@ -94,7 +98,10 @@ TaxiOwnerModel setupTaxi({
       vehicleTypeName: step1 ? 'Maruti Ertiga' : null,
       seats: step1 ? 6 : null,
       plateDisplay: step1 ? 'UK 04 TA 2231' : null,
-      platePhotoUrl: null,
+      platePhotoUrl: plateUrl,
+      displayPhotoUrl: displayUrl,
+      platePhotoLocked: platePhotoLocked,
+      everApproved: everApproved,
       contactPhone: step1 ? '9876511223' : null,
       latitude: 29.22,
       longitude: 79.51,

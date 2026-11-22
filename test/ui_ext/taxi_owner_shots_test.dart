@@ -461,7 +461,7 @@ void main() {
     });
 
     testWidgets('veh_live', (t) async {
-      await open(t, _live, 'veh_live', after: () => scrollTo(t, 'Changing the plate or photo sends your taxi back to review.'));
+      await open(t, _live, 'veh_live', after: () => scrollTo(t, 'Changing the plate number sends your taxi back to review.'));
       expect(t.takeException(), isNull);
     });
 

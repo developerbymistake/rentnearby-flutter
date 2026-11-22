@@ -21,6 +21,19 @@ class TaxiPreviewCard extends StatelessWidget {
     return taxi.isAvailable ? TaxiHubStrings.live : TaxiHubStrings.statusOffline;
   }
 
+  Widget _picture() {
+    final url = taxi.displayPhotoUrl;
+    if (url == null) return Art3D(asset: ListingArt.taxi, size: 56, halo: 72, haloColor: Colors.white.withValues(alpha: Alpha.v22));
+    return SizedBox.square(
+      dimension: DS.s(56),
+      child: OverflowBox(
+        maxWidth: DS.s(72),
+        maxHeight: DS.s(72),
+        child: PhotoCircle(url: url, art: ListingArt.taxi, size: 72, photoSize: 56, artSize: 56),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     const white = Colors.white;
@@ -41,7 +54,7 @@ class TaxiPreviewCard extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  ExcludeSemantics(child: Art3D(asset: ListingArt.taxi, size: 56, halo: 72, haloColor: white.withValues(alpha: Alpha.v22))),
+                  ExcludeSemantics(child: _picture()),
                   Gap.h(14),
                   Expanded(
                     child: Column(

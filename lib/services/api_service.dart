@@ -130,4 +130,13 @@ class ApiService {
     final res = await _dio.post(path, data: data, onSendProgress: onSendProgress);
     return res.data is Map<String, dynamic> ? res.data as Map<String, dynamic> : <String, dynamic>{};
   }
+
+  static Future<Map<String, dynamic>> putFormData(
+    String path,
+    FormData data, {
+    void Function(int sent, int total)? onSendProgress,
+  }) async {
+    final res = await _dio.put(path, data: data, onSendProgress: onSendProgress);
+    return res.data is Map<String, dynamic> ? res.data as Map<String, dynamic> : <String, dynamic>{};
+  }
 }

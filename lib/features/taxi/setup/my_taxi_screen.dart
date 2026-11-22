@@ -17,6 +17,7 @@ import '../leads/trip_leads_controller.dart';
 import '../models/taxi_owner_model.dart';
 import '../requests/controllers/driver_ready_controller.dart';
 import '../requests/controllers/driver_requests_controller.dart';
+import '../../taxi_driver/strings/taxi_photo_strings.dart';
 import '../taxi_option_sets.dart';
 import 'taxi_owner_card.dart';
 import 'taxi_setup_controller.dart';
@@ -88,7 +89,7 @@ class _MyTaxiScreenState extends State<MyTaxiScreen> with WidgetsBindingObserver
         context: ctx,
         type: 't',
         slug: t.slug!,
-        photoUrl: t.platePhotoUrl,
+        photoUrl: t.displayPhotoUrl,
         priceOrArea: 'From ${BrowseItem.inr(t.minFare ?? 0)}',
         typeLabel: t.vehicleTypeName ?? 'Taxi',
         locality: t.locality,
@@ -319,7 +320,7 @@ class _MyTaxiScreenState extends State<MyTaxiScreen> with WidgetsBindingObserver
       context,
       art: ListingArt.taxi,
       title: 'Delete taxi?',
-      body: 'Your taxi, routes and plate photo will be deleted.',
+      body: TaxiPhotoStrings.deleteBody,
       cancelLabel: 'Cancel',
       confirmLabel: 'Delete',
       destructive: true,

@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import '../../../services/api_service.dart';
+import '../../../utils/photo_url.dart';
 import '../models/taxi_owner_model.dart';
 
 class TaxiPhotoResult {
@@ -29,6 +30,18 @@ class TaxiRepository {
     final data = res['data'];
     if (data is Map<String, dynamic>) {
       return TaxiPhotoResult(photoUrl: data['photoUrl'] as String?, status: data['status'] as String?);
+    }
+    return const TaxiPhotoResult();
+  }
+
+  Future<TaxiPhotoResult> uploadDisplayPhoto(String filePath, {void Function(int, int)? onProgress}) async {
+    final formData = FormData.fromMap({
+      'photo': await MultipartFile.fromFile(filePath, filename: filePath.split('/').last),
+    });
+    final res = await ApiService.postFormData('/taxis/me/display-photo', formData, onSendProgress: onProgress);
+    final data = res['data'];
+    if (data is Map<String, dynamic>) {
+      return TaxiPhotoResult(photoUrl: PhotoUrl.parse(data['displayPhotoUrl']) ?? PhotoUrl.parse(data['photoUrl']));
     }
     return const TaxiPhotoResult();
   }

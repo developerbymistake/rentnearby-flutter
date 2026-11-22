@@ -629,12 +629,14 @@ class PlanStrip3D extends StatelessWidget {
 }
 
 class PhotoTile3D extends StatelessWidget {
-  const PhotoTile3D({super.key, required this.image, this.coverLabel, this.onRemove, this.removeTooltip = 'Remove photo'});
+  const PhotoTile3D({super.key, required this.image, this.coverLabel, this.onRemove, this.removeTooltip = 'Remove photo', this.onChange, this.changeLabel = 'Change'});
 
   final Widget image;
   final String? coverLabel;
   final VoidCallback? onRemove;
   final String removeTooltip;
+  final VoidCallback? onChange;
+  final String changeLabel;
 
   @override
   Widget build(BuildContext context) => DecoratedBox(
@@ -655,6 +657,28 @@ class PhotoTile3D extends StatelessWidget {
                     gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.black.withValues(alpha: 0), Colors.black.withValues(alpha: 0.55)]),
                   ),
                   child: Text(coverLabel!, textAlign: TextAlign.center, maxLines: 1, style: Ink3D.text(11, FontWeight.w700, Colors.white)),
+                ),
+              ),
+            if (onChange != null)
+              Positioned(
+                top: DS.s(4),
+                left: DS.s(4),
+                right: DS.s(34),
+                child: Align(
+                  alignment: Alignment.topLeft,
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.topLeft,
+                    child: Tap3D(
+                      onTap: onChange,
+                      label: '$changeLabel photo',
+                      child: Container(
+                        padding: DS.sym(h: 6, v: 3),
+                        decoration: BoxDecoration(color: Colors.white, borderRadius: DS.circular(8), boxShadow: DS.shadows(StayOwnerInk.tileShadow)),
+                        child: Text(changeLabel, maxLines: 1, style: Ink3D.text(10, FontWeight.w700, ListingPalette.forest.text)),
+                      ),
+                    ),
+                  ),
                 ),
               ),
             Positioned(

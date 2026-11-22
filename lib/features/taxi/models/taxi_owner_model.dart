@@ -1,3 +1,4 @@
+import '../../../utils/photo_url.dart';
 import '../../owner_core/calendar/models/calendar_models.dart';
 import '../../owner_core/json/owner_json.dart';
 import '../taxi_option_sets.dart';
@@ -118,6 +119,8 @@ class TaxiOwnerModel {
   final String? numberPlate;
   final String? plateDisplay;
   final String? platePhotoUrl;
+  final String? displayPhotoUrl;
+  final bool platePhotoLocked;
   final String? contactPhone;
   final String? whatsAppNumber;
   final double? latitude;
@@ -165,6 +168,8 @@ class TaxiOwnerModel {
     this.numberPlate,
     this.plateDisplay,
     this.platePhotoUrl,
+    this.displayPhotoUrl,
+    this.platePhotoLocked = false,
     this.contactPhone,
     this.whatsAppNumber,
     this.latitude,
@@ -201,6 +206,8 @@ class TaxiOwnerModel {
 
   Meter? meter(String key) => Meter.find(meters, key);
   int get shownReportCount => reportCount > 0 ? reportCount : pendingReportCount;
+  bool get proofLocked => platePhotoLocked || everApproved;
+  bool get hasDisplayPhoto => displayPhotoUrl != null;
   bool get hasDeclaredRate => localDayRate != null && localDayKm != null;
 
   bool get isDraft => status == TaxiStatus.draft;
@@ -233,6 +240,8 @@ class TaxiOwnerModel {
       numberPlate: OwnerJson.strOrNull(json['numberPlate']),
       plateDisplay: OwnerJson.strOrNull(json['plateDisplay']),
       platePhotoUrl: OwnerJson.strOrNull(json['platePhotoUrl']),
+      displayPhotoUrl: PhotoUrl.parse(json['displayPhotoUrl']),
+      platePhotoLocked: json['platePhotoLocked'] == true,
       contactPhone: OwnerJson.strOrNull(json['contactPhone']),
       whatsAppNumber: OwnerJson.strOrNull(json['whatsAppNumber']),
       latitude: OwnerJson.doubleOrNull(json['latitude']),

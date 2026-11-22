@@ -111,7 +111,7 @@ void main() {
     setUpTaxiSetup(_step1);
     Get.put<TaxiVehicleTypesController>(_Types());
     await renderOwnerFrame(t, 'o_tx_35', const TaxiVehicleScreen(), part: 'A', arrange: _settle);
-    for (final s in ['Vehicle and contact', 'Step 1 of 3 · Vehicle', 'Vehicle type', 'Maruti Ertiga', 'Seats', 'Plate number', 'Vehicle photo', 'Plate must be visible', 'Next']) {
+    for (final s in ['Vehicle and contact', 'Step 1 of 3 · Vehicle', 'Vehicle type', 'Maruti Ertiga', 'Seats', 'Plate number', 'Number plate photo', 'Plate must be visible', 'Next']) {
       expect(find.textContaining(s, findRichText: true), findsWidgets, reason: s);
     }
     await t.pumpWidget(const SizedBox());

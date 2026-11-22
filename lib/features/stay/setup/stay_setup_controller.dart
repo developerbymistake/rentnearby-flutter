@@ -110,6 +110,26 @@ class StaySetupController extends GetxController {
     return false;
   }
 
+  Future<bool> replacePhoto(String photoId, String filePath, {void Function(int, int)? onProgress}) async {
+    _resetError();
+    const maxAttempts = 3;
+    var attempt = 0;
+    dynamic lastError;
+    while (attempt < maxAttempts) {
+      attempt++;
+      try {
+        await _repo.replacePhoto(photoId, filePath, onProgress: onProgress);
+        return true;
+      } catch (e) {
+        lastError = e;
+        if (!DioErrorMapper.isNetworkError(e)) break;
+        if (attempt < maxAttempts) await Future.delayed(Duration(seconds: attempt));
+      }
+    }
+    _readError(lastError);
+    return false;
+  }
+
   // A plan limit refusal: the limit sheet when the server says Plus would help, else its one line.
   Future<void> showLimitRefusal(BuildContext context, GateSpec Function() gate) async {
     if (lastCanUpgrade && PlanGate.canUpgrade) {

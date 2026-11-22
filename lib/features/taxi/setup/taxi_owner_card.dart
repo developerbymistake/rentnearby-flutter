@@ -74,6 +74,7 @@ class TaxiOwnerCard extends StatelessWidget {
 
     return TaxiOwnerCard3D(
       tone: ListingTone.coral,
+      photoUrl: taxi.displayPhotoUrl,
       status: status,
       title: taxi.plateDisplay ?? 'My Taxi',
       ago: _timeAgo(taxi.createdAt),

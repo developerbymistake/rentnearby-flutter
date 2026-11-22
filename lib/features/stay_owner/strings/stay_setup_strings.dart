@@ -27,6 +27,8 @@ abstract final class StaySetupStrings {
   static String notApproved(String? reason) => reason == null ? 'Not approved' : 'Not approved: $reason';
   static const registrationNeeded = 'Registration details needed';
   static const add = 'Add';
+  static const changePhoto = 'Change';
+  static const changePhotoTitle = 'Change Photo';
   static const wrongRole = 'Wrong role? Change it';
   static const menuChangeRole = 'Change role';
   static const menuLogOut = 'Log out';

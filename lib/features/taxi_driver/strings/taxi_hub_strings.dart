@@ -55,7 +55,7 @@ abstract final class TaxiHubStrings {
   static const localNotSetSub = 'Not in trip planning yet';
 
   static const vehicleHeader = 'VEHICLE AND CONTACT';
-  static const vehicleHint = 'Licence, date of birth or photo changes go for review';
+  static const vehicleHint = 'Licence or date of birth changes go for review';
   static String reports(int n) => n == 1 ? '1 report on this taxi' : '$n reports on this taxi';
 
   static const deleteTaxi = 'Delete taxi';

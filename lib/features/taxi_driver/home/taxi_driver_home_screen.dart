@@ -56,7 +56,7 @@ class TaxiHomeActions {
       context: context,
       type: 't',
       slug: t.slug ?? '',
-      photoUrl: t.platePhotoUrl,
+      photoUrl: t.displayPhotoUrl,
       priceOrArea: 'From ${BrowseItem.inr(t.minFare ?? 0)}',
       typeLabel: t.vehicleTypeName ?? 'Taxi',
       locality: t.locality,

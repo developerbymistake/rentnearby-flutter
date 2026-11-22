@@ -1,0 +1,29 @@
+abstract final class TaxiPhotoStrings {
+  static const plateTitle = 'Number plate photo';
+  static const plateHint = 'Verification, only we see it';
+  static const displayTitle = 'Taxi photo';
+  static const displayHint = 'Travellers see this';
+  static const plateBand = 'Plate';
+  static const verifiedBand = 'Verified';
+  static const taxiBand = 'Taxi';
+  static const add = 'Add';
+  static const change = 'Change';
+  static const plateLockedNote = 'Verified. This photo cannot be changed.';
+  static const plateReviewNote = 'Changing the plate number sends your taxi back to review.';
+  static const plateLockedToast = 'Your number plate photo is verified and cannot be changed.';
+  static const displayNote = 'You can change this photo any time. No review needed.';
+  static const uploadingPhoto = 'Uploading photo';
+  static const uploadFailedTitle = 'Upload Failed';
+  static const plateUploadFailedBody = 'The plate photo could not be uploaded. Retry?';
+  static const displayUploadFailedBody = 'The taxi photo could not be uploaded. Retry?';
+  static const skip = 'Skip';
+  static const retry = 'Retry';
+  static const displayUpdated = 'Taxi photo updated';
+  static const photoTooLarge = 'Photo is too large. Use one under 10 MB.';
+  static const photoWrongType = 'Use a JPG, PNG or WebP photo.';
+  static const hubRowTitle = 'Taxi photo';
+  static const hubRowSubNone = 'Add a photo travellers will see';
+  static const hubRowSubSet = 'Travellers see this';
+  static const couldNotUpload = 'Could not upload photo.';
+  static const deleteBody = 'Your taxi, routes and photos will be deleted.';
+}

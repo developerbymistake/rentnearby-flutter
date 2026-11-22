@@ -25,6 +25,13 @@ class StayRepository {
     await ApiService.postFormData('/stays/me/photos', formData, onSendProgress: onProgress);
   }
 
+  Future<void> replacePhoto(String photoId, String filePath, {void Function(int, int)? onProgress}) async {
+    final formData = FormData.fromMap({
+      'photo': await MultipartFile.fromFile(filePath, filename: filePath.split('/').last),
+    });
+    await ApiService.putFormData('/stays/me/photos/$photoId', formData, onSendProgress: onProgress);
+  }
+
   Future<void> deletePhoto(String photoId) => ApiService.delete('/stays/me/photos/$photoId');
 
   Future<StayOwnerModel?> saveRooms(List<Map<String, dynamic>> rooms) async =>

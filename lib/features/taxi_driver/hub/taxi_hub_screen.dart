@@ -13,11 +13,14 @@ import '../../owner_core/plan/plan_gate.dart';
 import '../../owner_core/plan/plan_keys.dart';
 import '../../owner_core/sheets/owner_states.dart';
 import '../../taxi/models/taxi_owner_model.dart';
+import '../../taxi/setup/taxi_setup_controller.dart';
 import '../home/taxi_driver_home_screen.dart';
 import '../strings/taxi_gate_strings.dart';
 import '../strings/taxi_hub_strings.dart';
+import '../strings/taxi_photo_strings.dart';
 import '../taxi_driver_deps.dart';
 import '../widgets/taxi_widgets.dart';
+import 'taxi_display_photo_action.dart';
 import 'taxi_hub_controller.dart';
 import 'taxi_hub_sheets.dart';
 import 'taxi_preview_card.dart';
@@ -34,6 +37,7 @@ class TaxiHubScreen extends StatefulWidget {
 
 class _TaxiHubScreenState extends State<TaxiHubScreen> {
   late final TaxiHubController _c;
+  late final TaxiSetupController _setup;
   bool _owns = false;
   final _scroll = ScrollController();
   final _routesKey = GlobalKey();
@@ -43,6 +47,7 @@ class _TaxiHubScreenState extends State<TaxiHubScreen> {
   @override
   void initState() {
     super.initState();
+    _setup = TaxiSetupController.ensure();
     final given = widget.controller ?? TaxiHubController.maybe;
     if (given != null) {
       _c = given;
@@ -210,6 +215,19 @@ class _TaxiHubScreenState extends State<TaxiHubScreen> {
         sub: TaxiHubStrings.vehicleHint,
         trailing: TaxiPill(label: TaxiHubStrings.edit, kind: TaxiPillKind.outline, onTap: () => _editVehicle(t)),
         onTap: () => _editVehicle(t),
+      ),
+      TaxiRowData(
+        art: ListingArt.camera,
+        tint: TaxiLook.artTintRed,
+        title: TaxiPhotoStrings.hubRowTitle,
+        sub: t.hasDisplayPhoto ? TaxiPhotoStrings.hubRowSubSet : TaxiPhotoStrings.hubRowSubNone,
+        trailing: Obx(() => TaxiPill(
+              label: t.hasDisplayPhoto ? TaxiPhotoStrings.change : TaxiPhotoStrings.add,
+              kind: TaxiPillKind.outline,
+              busy: _setup.displayUploading.value,
+              onTap: () => TaxiDisplayPhotoAction.change(context),
+            )),
+        onTap: () => TaxiDisplayPhotoAction.change(context),
       ),
     ]));
 

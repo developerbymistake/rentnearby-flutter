@@ -19,8 +19,10 @@ import '../taxi_option_sets.dart';
 import '../../taxi_driver/hub/taxi_hub_sheets.dart';
 import '../taxi_vehicle_types_controller.dart';
 import 'taxi_identity_validators.dart';
+import 'taxi_photo_pick.dart';
 import 'taxi_setup_controller.dart';
 import 'taxi_vehicle_type_picker_sheet.dart';
+import '../../taxi_driver/strings/taxi_photo_strings.dart';
 import '../../taxi_driver/strings/taxi_setup_strings.dart';
 import '../../taxi_driver/taxi_driver_deps.dart';
 
@@ -61,6 +63,9 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
   int? _seats;
   String? _remotePhotoUrl;
   File? _localPhoto;
+  String? _remoteDisplayUrl;
+  File? _localDisplay;
+  String? _initDisplayUrl;
   bool _same = true;
   int _step = 0;
   int _prevStep = 0;
@@ -113,6 +118,7 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
       _seats = t.seats;
       _plateCtrl.text = t.plateDisplay ?? t.numberPlate ?? '';
       _remotePhotoUrl = t.platePhotoUrl;
+      _remoteDisplayUrl = t.displayPhotoUrl;
       final phone = t.contactPhone ?? '';
       _phoneCtrl.text = phone.isNotEmpty ? phone : loginPhone;
       final wa = t.whatsAppNumber ?? '';
@@ -130,6 +136,7 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
     _initSeats = _seats;
     _initPlate = TaxiOptionSets.normalizePlate(_plateCtrl.text);
     _initPhotoUrl = _remotePhotoUrl;
+    _initDisplayUrl = _remoteDisplayUrl;
     _initPhone = _phoneCtrl.text;
     _initWhatsApp = _effectiveWhatsApp;
   }
@@ -180,12 +187,14 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
   }
 
   bool get _isApproved => _ctrl.taxi.value?.isApproved ?? false;
+  bool get _proofLocked => _ctrl.taxi.value?.proofLocked ?? false;
   late final bool _wasApproved;
 
   bool get _hasChanges {
     if (_vehicleTypeId != _initTypeId || _seats != _initSeats) return true;
     if (TaxiOptionSets.normalizePlate(_plateCtrl.text) != _initPlate) return true;
     if (_localPhoto != null || _remotePhotoUrl != _initPhotoUrl) return true;
+    if (_localDisplay != null || _remoteDisplayUrl != _initDisplayUrl) return true;
     if (_phone != _initPhone || _effectiveWhatsApp != _initWhatsApp) return true;
     if (_dlTyped.isNotEmpty || _dob != null) return true;
     final pin = selectedLocation, init = _initPin;
@@ -300,47 +309,29 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
   }
 
   Future<void> _pickPhoto() async {
-    final source = await Sheet3D.show<ImageSource>(
-      context,
-      builder: (sheetCtx) => Sheet3D(
-        tone: _tone,
-        art: ListingArt.camera,
-        title: 'Add Photo',
-        centerTitle: false,
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          SheetOptionCard(
-            tone: _tone,
-            art: ListingArt.camera,
-            title: 'Take Photo',
-            subtitle: 'Use camera to capture now',
-            onTap: () => Navigator.pop(sheetCtx, ImageSource.camera),
-          ),
-          SheetOptionCard(
-            tone: ListingTone.indigo,
-            art: ListingArt.sunrise,
-            title: 'Choose from Gallery',
-            subtitle: 'Pick an existing photo',
-            onTap: () => Navigator.pop(sheetCtx, ImageSource.gallery),
-          ),
-        ]),
-      ),
-    );
-    if (source == null) return;
-    if (source == ImageSource.camera) {
-      final status = await Permission.camera.request();
-      if (!status.isGranted) {
-        if (status.isPermanentlyDenied && mounted) _showPermissionDeniedDialog('Camera');
-        return;
-      }
-    }
-    final picked = await _picker.pickImage(source: source, imageQuality: 85, maxWidth: 1600);
-    if (picked != null && mounted) {
+    if (_proofLocked) return;
+    final file = await TaxiPhotoPick.pick(context, picker: _picker, onDenied: _showPermissionDeniedDialog);
+    if (file != null && mounted) {
       setState(() {
-        _localPhoto = File(picked.path);
+        _localPhoto = file;
         _unmark(_Ring.photo);
       });
     }
   }
+
+  Future<void> _pickDisplay() async {
+    final file = await TaxiPhotoPick.pick(context, picker: _picker, onDenied: _showPermissionDeniedDialog);
+    if (file == null || !mounted) return;
+    final bad = await TaxiPhotoPick.reject(file);
+    if (!mounted) return;
+    if (bad != null) {
+      AppToast.error(bad);
+      return;
+    }
+    setState(() => _localDisplay = file);
+  }
+
+  void _removeLocalDisplay() => setState(() => _localDisplay = null);
 
   void _removePhoto() => setState(() {
         if (_localPhoto != null) {
@@ -388,7 +379,7 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
       _plateFocus.requestFocus();
       return false;
     }
-    if (!_hasPhoto) {
+    if (!_proofLocked && !_hasPhoto) {
       AppToast.error('Add a photo that shows the plate');
       _mark(_Ring.photo);
       return false;
@@ -484,18 +475,55 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
         _uploadedStatus = res.status ?? _uploadedStatus;
         return true;
       }
+      if (_ctrl.lastErrorType == TaxiSetupController.proofLockedType) {
+        setState(() => _localPhoto = null);
+        AppToast.info(TaxiPhotoStrings.plateLockedToast);
+        return true;
+      }
       final retry = await showTaxiOwnerDialog(
         context,
         art: ListingArt.camera,
-        title: 'Upload Failed',
-        body: 'The plate photo could not be uploaded. Retry?',
-        cancelLabel: 'Skip',
-        confirmLabel: 'Retry',
+        title: TaxiPhotoStrings.uploadFailedTitle,
+        body: TaxiPhotoStrings.plateUploadFailedBody,
+        cancelLabel: TaxiPhotoStrings.skip,
+        confirmLabel: TaxiPhotoStrings.retry,
         barrierDismissible: false,
       );
       if (retry != true || !mounted) {
         if (mounted) _goTo(0);
         return false;
+      }
+    }
+  }
+
+  Future<bool> _uploadPendingDisplay() async {
+    while (true) {
+      final file = _localDisplay;
+      if (file == null) return true;
+      setState(() => _isUploading = true);
+      final res = await _ctrl.uploadDisplayPhoto(file.path, reload: false);
+      if (!mounted) return false;
+      setState(() => _isUploading = false);
+      if (res != null) {
+        setState(() {
+          _localDisplay = null;
+          _remoteDisplayUrl = res.photoUrl ?? _remoteDisplayUrl;
+        });
+        return true;
+      }
+      final retry = await showTaxiOwnerDialog(
+        context,
+        art: ListingArt.camera,
+        title: TaxiPhotoStrings.uploadFailedTitle,
+        body: TaxiPhotoStrings.displayUploadFailedBody,
+        cancelLabel: TaxiPhotoStrings.skip,
+        confirmLabel: TaxiPhotoStrings.retry,
+        barrierDismissible: false,
+      );
+      if (!mounted) return false;
+      if (retry != true) {
+        setState(() => _localDisplay = null);
+        return true;
       }
     }
   }
@@ -567,6 +595,7 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
         _savedBasicKey = key;
       }
       if (_localPhoto != null && !await _uploadPendingPhoto()) return;
+      if (_localDisplay != null && !await _uploadPendingDisplay()) return;
 
       setState(() => _isFinalizing = true);
       await _ctrl.load();
@@ -641,7 +670,7 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
           ),
           bottomNavigationBar: _footer(),
         ),
-        if (_isUploading) const SetupBusy(message: 'Uploading photo', tone: KitTone.taxi, art: ListingArt.camera),
+        if (_isUploading) const SetupBusy(message: TaxiPhotoStrings.uploadingPhoto, tone: KitTone.taxi, art: ListingArt.camera),
         Obx(() => _ctrl.isSaving.value
             ? const SetupBusy(message: 'Saving your taxi...', tone: KitTone.taxi, art: ListingArt.taxi)
             : const SizedBox.shrink()),
@@ -664,13 +693,13 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
         );
       });
 
-  Widget _section({required _Ring? ring, required String art, required String title, String? hint, required Widget child}) => FormSectionCard(
+  Widget _section({required _Ring? ring, required String art, required String title, String? hint, bool required = true, required Widget child}) => FormSectionCard(
         key: ring == null ? null : _cardKeys[ring],
         tone: _tone,
         art: art,
         artSide: FormArtSide.right,
         title: title,
-        requiredMark: true,
+        requiredMark: required,
         hint: hint,
         child: child,
       );
@@ -737,57 +766,91 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
                   ? PillField.decoration(tone: _tone, hint: 'e.g. UK 07 TA 1234').copyWith(error: const SizedBox.shrink())
                   : PillField.decoration(tone: _tone, hint: 'e.g. UK 07 TA 1234'),
             ),
-            if (_isApproved) _note('Changing the plate or photo sends your taxi back to review.', accent: true),
+            if (_isApproved) _note(TaxiPhotoStrings.plateReviewNote, accent: true),
           ]),
         ),
         _section(
           ring: _Ring.photo,
           art: ListingArt.camera,
-          title: TaxiSetupStrings.vehiclePhoto,
-          hint: TaxiSetupStrings.plateMustShow,
-          child: _photoBlock(),
+          title: TaxiPhotoStrings.plateTitle,
+          hint: TaxiPhotoStrings.plateHint,
+          child: _proofBlock(),
+        ),
+        _section(
+          ring: null,
+          art: ListingArt.taxi,
+          title: TaxiPhotoStrings.displayTitle,
+          hint: TaxiPhotoStrings.displayHint,
+          required: false,
+          child: _displayBlock(),
         ),
       ]);
 
-  Widget _photoBlock() => GridView.count(
+  Widget _grid(List<Widget> tiles) => GridView.count(
         crossAxisCount: 3,
         crossAxisSpacing: DS.gh(10),
         mainAxisSpacing: DS.gv(10),
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
         padding: EdgeInsets.zero,
-        children: [
-          if (_hasPhoto) _plateTile(),
-          TaxiAddPhotoTile(tone: _tone, error: _ring == _Ring.photo, onTap: _blocked ? null : _pickPhoto),
-        ],
+        children: tiles,
       );
 
-  Widget _plateTile() {
-    final local = _localPhoto;
-    return TaxiPlateTile(
-      tone: _tone,
-      onRemove: _blocked ? null : _removePhoto,
-      photo: LayoutBuilder(builder: (context, box) {
+  Widget _proofBlock() {
+    final locked = _proofLocked;
+    final remote = _remotePhotoUrl;
+    final tiles = <Widget>[
+      if (locked) ...[
+        if (remote != null && remote.isNotEmpty)
+          TaxiPlateTile(tone: _tone, label: TaxiPhotoStrings.verifiedBand, verified: true, onRemove: null, photo: _photoTile(url: remote)),
+      ] else ...[
+        if (_hasPhoto)
+          TaxiPlateTile(tone: _tone, label: TaxiPhotoStrings.plateBand, onRemove: _blocked ? null : _removePhoto, photo: _photoTile(local: _localPhoto, url: remote)),
+        TaxiAddPhotoTile(tone: _tone, label: TaxiPhotoStrings.add, error: _ring == _Ring.photo, onTap: _blocked ? null : _pickPhoto),
+      ],
+    ];
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      if (tiles.isNotEmpty) _grid(tiles),
+      locked ? _note(TaxiPhotoStrings.plateLockedNote, accent: true) : _note(TaxiSetupStrings.plateMustShow),
+    ]);
+  }
+
+  Widget _displayBlock() {
+    final local = _localDisplay;
+    final remote = _remoteDisplayUrl;
+    final has = local != null || remote != null;
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      _grid([
+        if (has)
+          TaxiPlateTile(
+            tone: _tone,
+            label: TaxiPhotoStrings.taxiBand,
+            verified: local == null,
+            onRemove: local != null && !_blocked ? _removeLocalDisplay : null,
+            photo: _photoTile(local: local, url: remote),
+          ),
+        TaxiAddPhotoTile(tone: _tone, label: has ? TaxiPhotoStrings.change : TaxiPhotoStrings.add, onTap: _blocked ? null : _pickDisplay),
+      ]),
+      _note(TaxiPhotoStrings.displayNote),
+    ]);
+  }
+
+  Widget _photoTile({File? local, String? url}) => LayoutBuilder(builder: (context, box) {
         final w = box.maxWidth.isFinite ? box.maxWidth : MediaQuery.sizeOf(context).width / 3;
         final decode = TaxiPlateDecode.width(w, MediaQuery.devicePixelRatioOf(context));
-        return local != null
-          ? Image.file(local, fit: BoxFit.cover, cacheWidth: decode, width: double.infinity, height: double.infinity)
-          : CachedNetworkImage(
-              imageUrl: _remotePhotoUrl!,
-              memCacheWidth: decode,
-              width: double.infinity,
-              height: double.infinity,
-              fit: BoxFit.cover,
-              placeholder: (_, _) => ColoredBox(color: _tone.tint),
-              errorWidget: (_, _, _) => Container(
-                color: _tone.tint,
-                padding: DS.all(16),
-                child: Image.asset(ListingArt.taxi),
-              ),
-            );
-      }),
-    );
-  }
+        final fallback = Container(color: _tone.tint, padding: DS.all(16), child: Image.asset(ListingArt.taxi));
+        if (local != null) return Image.file(local, fit: BoxFit.cover, cacheWidth: decode, width: double.infinity, height: double.infinity);
+        if (url == null || url.isEmpty) return fallback;
+        return CachedNetworkImage(
+          imageUrl: url,
+          memCacheWidth: decode,
+          width: double.infinity,
+          height: double.infinity,
+          fit: BoxFit.cover,
+          placeholder: (_, _) => ColoredBox(color: _tone.tint),
+          errorWidget: (_, _, _) => fallback,
+        );
+      });
 
   Future<void> _pickDob() async {
     FocusScope.of(context).unfocus();

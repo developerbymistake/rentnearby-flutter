@@ -1,8 +1,10 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:dio/dio.dart';
 import 'package:get/get.dart';
 import '../../../controllers/auth_controller.dart';
 import '../../../utils/app_toast.dart';
 import '../../../utils/dio_error_mapper.dart';
+import '../../taxi_driver/strings/taxi_photo_strings.dart';
 import '../models/taxi_owner_model.dart';
 import '../taxi_status_sync.dart';
 import 'taxi_repository.dart';
@@ -20,11 +22,13 @@ class TaxiSetupController extends GetxController {
   final hasLoaded = false.obs;
   final loadFailed = false.obs;
   final isSaving = false.obs;
+  final displayUploading = false.obs;
   bool mainBelow = false;
   String? lastErrorType;
   String? lastErrorMessage;
   Map<String, dynamic> lastErrorData = const {};
   static const routeLimitType = 'TaxiRouteLimit';
+  static const proofLockedType = 'TaxiProofLocked';
 
   static const cipherUnavailableMessage = 'Licence details cannot be saved right now. Try again later.';
 
@@ -44,6 +48,7 @@ class TaxiSetupController extends GetxController {
   void clear() {
     taxi.value = null;
     hasLoaded.value = false;
+    displayUploading.value = false;
   }
 
   Future<bool> load() async {
@@ -110,8 +115,45 @@ class TaxiSetupController extends GetxController {
         if (attempt < maxAttempts) await Future.delayed(Duration(seconds: attempt));
       }
     }
-    _handleError(lastError, 'Could not upload photo.');
+    _handleError(lastError, TaxiPhotoStrings.couldNotUpload, quietTypes: const {proofLockedType});
     return null;
+  }
+
+  Future<TaxiPhotoResult?> uploadDisplayPhoto(String filePath, {void Function(int, int)? onProgress, bool reload = true}) async {
+    if (displayUploading.value) return null;
+    displayUploading.value = true;
+    try {
+      final old = taxi.value?.displayPhotoUrl;
+      const maxAttempts = 3;
+      var attempt = 0;
+      dynamic lastError;
+      TaxiPhotoResult? result;
+      while (attempt < maxAttempts) {
+        attempt++;
+        try {
+          result = await _repo.uploadDisplayPhoto(filePath, onProgress: onProgress);
+          break;
+        } catch (e) {
+          lastError = e;
+          if (!DioErrorMapper.isNetworkError(e)) break;
+          if (attempt < maxAttempts) await Future.delayed(Duration(seconds: attempt));
+        }
+      }
+      if (result == null) {
+        _handleError(lastError, TaxiPhotoStrings.couldNotUpload);
+        return null;
+      }
+      if (reload) await load();
+      if (old != null && old != result.photoUrl) _evict(old);
+      TaxiStatusSync.refreshLists();
+      return result;
+    } finally {
+      displayUploading.value = false;
+    }
+  }
+
+  static void _evict(String url) {
+    CachedNetworkImage.evictFromCache(url).catchError((_) => false);
   }
 
   Future<bool> _mutate(Future<TaxiOwnerModel?> Function() call, String fallback, {bool awaitProfile = false, Set<String> quietTypes = const {}}) async {

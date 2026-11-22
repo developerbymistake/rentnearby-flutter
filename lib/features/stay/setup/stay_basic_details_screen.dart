@@ -42,7 +42,12 @@ class _PhotoEntry {
   final File? local;
   const _PhotoEntry.remote(StayPhotoModel this.remote) : local = null;
   const _PhotoEntry.local(File this.local) : remote = null;
+  const _PhotoEntry.replacing(StayPhotoModel this.remote, File this.local);
+
+  bool get isReplace => remote != null && local != null;
 }
+
+typedef _PhotoJob = ({File file, String? replaceId, String? oldUrl});
 
 class StayBasicDetailsScreen extends StatefulWidget {
   const StayBasicDetailsScreen({super.key, this.photosOnly = false});
@@ -425,6 +430,50 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
     return true;
   }
 
+  Future<void> _changePhoto(int i) async {
+    final current = _photos[i].remote;
+    if (current == null) return;
+    final source = await Sheet3D.show<ImageSource>(
+      context,
+      builder: (sheetCtx) => Sheet3D(
+        tone: _tone,
+        art: ListingArt.camera,
+        title: StaySetupStrings.changePhotoTitle,
+        subtitle: 'Camera or Gallery',
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            SheetOptionCard(tone: _tone, art: ListingArt.camera, title: 'Take Photo', subtitle: 'Use camera to capture now', onTap: () => Navigator.pop(sheetCtx, ImageSource.camera)),
+            SheetOptionCard(tone: _tone, art: ListingArt.sunrise, title: 'Choose from Gallery', subtitle: 'Pick existing photos', onTap: () => Navigator.pop(sheetCtx, ImageSource.gallery)),
+            Gap.v(8),
+          ],
+        ),
+      ),
+    );
+    if (source == null) return;
+    if (source == ImageSource.camera) {
+      final status = await Permission.camera.request();
+      if (!status.isGranted) {
+        if (status.isPermanentlyDenied && mounted) _showPermissionDeniedDialog('Camera');
+        return;
+      }
+    }
+    final XFile? picked;
+    try {
+      picked = await _picker.pickImage(source: source, imageQuality: 85, maxWidth: 1280);
+    } catch (_) {
+      AppToast.error(StaySetupStrings.photoPickFailed);
+      return;
+    }
+    final shot = picked;
+    if (shot == null || !mounted) return;
+    final file = File(shot.path);
+    if (!await _acceptPhoto(file) || !mounted) return;
+    if (i >= _photos.length || _photos[i].remote?.id != current.id) return;
+    setState(() => _photos[i] = _PhotoEntry.replacing(current, file));
+    _dirty = true;
+  }
+
   void _removePhoto(int i) {
     final remote = _photos[i].remote;
     if (remote != null) _removedPhotoIds.add(remote.id);
@@ -560,25 +609,44 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
     _removedPhotoIds.clear();
     if (mounted) setState(() => _isFinalizing = false);
 
-    final files = [for (final p in _photos) if (p.local != null) p.local!];
-    final failedFiles = files.isNotEmpty && mounted ? await _uploadAll(files) : const <File>[];
+    final jobs = <_PhotoJob>[
+      for (final p in _photos)
+        if (p.local != null) (file: p.local!, replaceId: p.remote?.id, oldUrl: p.remote?.url),
+    ];
+    final failed = jobs.isNotEmpty && mounted ? await _uploadAll(jobs) : const <_PhotoJob>[];
+    for (final j in jobs) {
+      final old = j.oldUrl;
+      if (j.replaceId != null && old != null && !failed.contains(j)) {
+        CachedNetworkImage.evictFromCache(old).catchError((_) => false);
+      }
+    }
 
     if (mounted) setState(() => _isFinalizing = true);
     final loaded = await _ctrl.load();
     if (!mounted) return;
     final serverPhotos = loaded ? _ctrl.stay.value?.photos : null;
-    if (failedFiles.isNotEmpty || (serverPhotos != null && serverPhotos.isEmpty)) {
+    if (failed.isNotEmpty || (serverPhotos != null && serverPhotos.isEmpty)) {
       final kept = serverPhotos != null
           ? serverPhotos.map(_PhotoEntry.remote).toList()
-          : _photos.where((p) => p.remote != null).toList();
+          : [for (final p in _photos) if (p.remote != null) _PhotoEntry.remote(p.remote!)];
+      final added = <_PhotoEntry>[];
+      for (final j in failed) {
+        final id = j.replaceId;
+        if (id == null) {
+          added.add(_PhotoEntry.local(j.file));
+          continue;
+        }
+        final at = kept.indexWhere((e) => e.remote?.id == id);
+        if (at >= 0) kept[at] = _PhotoEntry.replacing(kept[at].remote!, j.file);
+      }
       setState(() {
         _isFinalizing = false;
         _photos
           ..clear()
           ..addAll(kept)
-          ..addAll(failedFiles.map(_PhotoEntry.local));
+          ..addAll(added);
       });
-      if (failedFiles.isEmpty) AppToast.error('Please add at least 1 photo of your stay');
+      if (failed.isEmpty) AppToast.error('Please add at least 1 photo of your stay');
       return;
     }
     setState(() => _isFinalizing = false);
@@ -586,7 +654,7 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
     AppToast.success('Basic details saved');
   }
 
-  Future<List<File>> _uploadAll(List<File> files) async {
+  Future<List<_PhotoJob>> _uploadAll(List<_PhotoJob> files) async {
     setState(() {
       _isUploading = true;
       _uploadTotal = files.length;
@@ -597,11 +665,17 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
     final results = List<bool>.filled(files.length, false);
 
     Future<void> uploadOne(int i) async {
-      final ok = await _ctrl.uploadPhoto(files[i].path, onProgress: (sent, total) {
+      void onProgress(int sent, int total) {
         if (!mounted) return;
         progresses[i] = total > 0 ? sent / total : 0.0;
         setState(() => _uploadProgress = progresses.fold(0.0, (a, b) => a + b) / files.length);
-      });
+      }
+
+      final job = files[i];
+      final id = job.replaceId;
+      final ok = id != null
+          ? await _ctrl.replacePhoto(id, job.file.path, onProgress: onProgress)
+          : await _ctrl.uploadPhoto(job.file.path, onProgress: onProgress);
       results[i] = ok;
       if (ok && mounted) setState(() => _uploadDone.add(i));
     }
@@ -996,7 +1070,14 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
             placeholder: (_, _) => const TemplatePlaceholder(radius: 0, height: double.infinity),
             errorWidget: (_, _, _) => const TemplatePlaceholder(radius: 0, height: double.infinity),
           );
-    return PhotoTile3D(key: ObjectKey(p), image: image, coverLabel: i == 0 ? StaySetupStrings.cover : null, onRemove: () => _removePhoto(i));
+    return PhotoTile3D(
+      key: ObjectKey(p),
+      image: image,
+      coverLabel: i == 0 ? StaySetupStrings.cover : null,
+      onRemove: () => _removePhoto(i),
+      onChange: p.remote != null ? () => _changePhoto(i) : null,
+      changeLabel: StaySetupStrings.changePhoto,
+    );
   }
 
   Widget _photosStep() {
