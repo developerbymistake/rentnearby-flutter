@@ -15,12 +15,23 @@ abstract final class AppFrame {
   static List<DeviceOrientation> orientationsFor(double shortestSide) =>
       shortestSide < tabletShortestSide ? const [DeviceOrientation.portraitUp] : const [];
 
-  static Future<void> applyOrientation() {
+  // Null while the engine has not sent the first view size (it can be 0x0 at start).
+  static double? shortestSideOf(Size physicalSize, double devicePixelRatio) {
+    if (physicalSize.isEmpty || devicePixelRatio <= 0) return null;
+    return (physicalSize / devicePixelRatio).shortestSide;
+  }
+
+  static double? _currentShortestSide() {
     final views = WidgetsBinding.instance.platformDispatcher.views;
-    if (views.isEmpty) return SystemChrome.setPreferredOrientations(const []);
-    final view = views.first;
-    final logical = view.physicalSize / view.devicePixelRatio;
-    return SystemChrome.setPreferredOrientations(orientationsFor(logical.shortestSide));
+    if (views.isEmpty) return null;
+    return shortestSideOf(views.first.physicalSize, views.first.devicePixelRatio);
+  }
+
+  // A size not known yet is decided at the first metrics, so a tablet is never locked as a phone.
+  static Future<void> applyOrientation() async {
+    final side = _currentShortestSide();
+    if (side != null) return SystemChrome.setPreferredOrientations(orientationsFor(side));
+    WidgetsBinding.instance.addObserver(_FirstMetrics());
   }
 
   static Widget capWidth(BuildContext context, Widget child) {
@@ -33,5 +44,15 @@ abstract final class AppFrame {
         child: MediaQuery(data: mq.copyWith(size: Size(width, mq.size.height)), child: child),
       ),
     );
+  }
+}
+
+class _FirstMetrics with WidgetsBindingObserver {
+  @override
+  void didChangeMetrics() {
+    final side = AppFrame._currentShortestSide();
+    if (side == null) return;
+    WidgetsBinding.instance.removeObserver(this);
+    SystemChrome.setPreferredOrientations(AppFrame.orientationsFor(side));
   }
 }

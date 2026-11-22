@@ -910,6 +910,8 @@ class NotificationService extends GetxService {
     );
     if (settings.authorizationStatus == AuthorizationStatus.denied) return;
 
+    final pending = _remoteClear;
+    if (pending != null) await pending;
     final token = await FirebaseMessaging.instance.getToken();
     if (token != null) await _registerToken(token);
   }
@@ -921,15 +923,23 @@ class NotificationService extends GetxService {
     _registrar.clear();
     final token = StorageService.getFcmToken();
     StorageService.clearFcmToken();
-    unawaited(_clearTokenRemote(token, unregister ? bearer : null));
+    final run = _clearTokenRemote(token, unregister ? bearer : null);
+    _remoteClear = run;
+    unawaited(run.whenComplete(() {
+      if (identical(_remoteClear, run)) _remoteClear = null;
+    }));
   }
+
+  // The next login waits for it, so a late Firebase delete never kills the new session's token.
+  Future<void>? _remoteClear;
 
   Future<void> _clearTokenRemote(String? stored, String? bearer) async {
     if (bearer != null) {
       try {
         final token = stored ?? await FirebaseMessaging.instance.getToken().timeout(const Duration(seconds: 2));
         if (token != null) {
-          await ApiService.sendAs('DELETE', '${AppConstants.registerTokenPath}?token=${Uri.encodeQueryComponent(token)}', bearer: bearer);
+          await ApiService.sendAs('DELETE', '${AppConstants.registerTokenPath}?token=${Uri.encodeQueryComponent(token)}', bearer: bearer)
+              .timeout(const Duration(seconds: 5));
         }
       } catch (_) {}
     }

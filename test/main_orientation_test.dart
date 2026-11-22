@@ -12,6 +12,13 @@ void main() {
     expect(AppFrame.orientationsFor(820), isEmpty);
   });
 
+  test('FX-22 a view size not known yet (0x0 at start) is not read as a phone', () {
+    expect(AppFrame.shortestSideOf(Size.zero, 3), isNull);
+    expect(AppFrame.shortestSideOf(const Size(1080, 2400), 0), isNull);
+    expect(AppFrame.shortestSideOf(const Size(1080, 2400), 3), 360);
+    expect(AppFrame.shortestSideOf(const Size(2560, 1600), 2), 800);
+  });
+
   Future<Size> contentSize(WidgetTester t, Size screen) async {
     t.view.devicePixelRatio = 1;
     t.view.physicalSize = screen;
