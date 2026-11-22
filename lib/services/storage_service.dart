@@ -7,6 +7,7 @@ import '../features/owner_core/data/owner_cache.dart';
 import '../features/map_discovery/data/map_pack_service.dart';
 import '../features/trip/utils/spot_gallery_cache.dart';
 import '../features/trip/utils/trip_spots_cache.dart';
+import '../features/trip/map/trip_marker_images.dart';
 
 class StorageService {
   static const _secureStorage = FlutterSecureStorage(
@@ -56,6 +57,7 @@ class StorageService {
     TripSpotsCache.clear(); SpotGalleryCache.clear();
     clearAllOwnerCaches();
     MapPackService.clearAll().ignore();
+    TripMarkerImages.clearDisk().ignore();
   }
 
   static void clearAllOwnerCaches() => OwnerCache.clearAll();
