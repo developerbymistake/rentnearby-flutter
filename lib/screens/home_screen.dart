@@ -98,9 +98,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // The feed is read first: once it is shown, rail loading flags no longer rebuild the whole body (FX-29).
   bool get _firstOpen {
+    final noRail = !_home.hasAnyRail;
+    final railLoading = _home.anyRailLoading;
     final f = _feed;
     if (f == null || f.feed.value != null) return false;
-    return !_home.hasAnyRail && (_home.anyRailLoading || f.loading.value);
+    return noRail && (railLoading || f.loading.value);
   }
 
   Widget _buildBody(BuildContext context) {
