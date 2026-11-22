@@ -20,4 +20,6 @@
         <item name="android:windowBackground">?android:colorBackground</item>
         <item name="android:windowDrawsSystemBarBackgrounds">true</item>
     </style>
+    <!-- Profile photo crop screen (image_cropper / uCrop needs an AppCompat theme). -->
+    <style name="UCropTheme" parent="Theme.AppCompat.Light.NoActionBar"/>
 </resources>

@@ -59,3 +59,8 @@
 # runs R8, so this was invisible until a real release build was tested).
 -keep class com.baseflow.geolocator.** { *; }
 -dontwarn com.baseflow.geolocator.**
+
+# image_cropper (uCrop) — profile photo crop activity
+-dontwarn com.yalantis.ucrop**
+-keep class com.yalantis.ucrop** { *; }
+-keep interface com.yalantis.ucrop** { *; }

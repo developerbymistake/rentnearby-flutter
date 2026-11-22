@@ -30,6 +30,7 @@ dependencies:
 
   # Image picker
   image_picker: ^1.1.2
+  image_cropper: ^12.2.1
 
   # Animations
   animate_do: ^5.1.0
