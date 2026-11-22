@@ -1,3 +1,4 @@
+import '../../../utils/photo_url.dart';
 import 'taxi_owner_model.dart';
 
 class TaxiDetailModel {
@@ -10,7 +11,7 @@ class TaxiDetailModel {
   final int? seats;
   final String? numberPlate;
   final String plateDisplay;
-  final String? platePhotoUrl;
+  final String? displayPhotoUrl;
   final double? latitude;
   final double? longitude;
   final String? districtName;
@@ -35,7 +36,7 @@ class TaxiDetailModel {
         seats = (json['seats'] as num?)?.toInt(),
         numberPlate = json['numberPlate'] as String?,
         plateDisplay = json['plateDisplay'] as String? ?? '',
-        platePhotoUrl = json['platePhotoUrl'] as String?,
+        displayPhotoUrl = PhotoUrl.parse(json['displayPhotoUrl']),
         latitude = (json['latitude'] as num?)?.toDouble(),
         longitude = (json['longitude'] as num?)?.toDouble(),
         districtName = json['districtName'] as String?,

@@ -108,6 +108,22 @@ void main() {
       expect(page.header.farAway, true);
       expect(page.nextToken, 't');
     });
+
+    test('offer fields: all three parse, missing or wrong type or offer >= base means no offer', () {
+      final o = StayFeedItem.fromJson({..._stay('a'), 'oldPricePerNight': 1500, 'offerPricePerNight': 1275, 'offerPercent': 15}).offer!;
+      expect((o.oldPerNight, o.offerPerNight, o.percent), (1500, 1275, 15));
+      final str = StayFeedItem.fromJson({..._stay('a'), 'oldPricePerNight': '1500', 'offerPricePerNight': '1275', 'offerPercent': '15'}).offer!;
+      expect(str.offerPerNight, 1275);
+      expect(StayFeedItem.fromJson(_stay('a')).offer, isNull);
+      expect(StayFeedItem.fromJson({..._stay('a'), 'oldPricePerNight': null, 'offerPricePerNight': null, 'offerPercent': null}).offer, isNull);
+      expect(StayFeedItem.fromJson({..._stay('a'), 'oldPricePerNight': true, 'offerPricePerNight': [1], 'offerPercent': {}}).offer, isNull);
+      expect(StayFeedItem.fromJson({..._stay('a'), 'oldPricePerNight': 1200, 'offerPricePerNight': 1200}).offer, isNull);
+      expect(StayFeedItem.fromJson({..._stay('a'), 'oldPricePerNight': 1200, 'offerPricePerNight': 1400, 'offerPercent': 10}).offer, isNull);
+      expect(StayFeedItem.fromJson({..._stay('a'), 'oldPricePerNight': 1500, 'offerPricePerNight': 1275, 'offerPercent': 150}).offer!.percent, isNull);
+      final chipOnly = StayFeedItem.fromJson({..._stay('a'), 'priceChip': {'kind': 'Off', 'text': '15% off'}});
+      expect(chipOnly.offer, isNull);
+      expect(chipOnly.priceChip!.text, '15% off');
+    });
   });
 
   group('home mapping', () {

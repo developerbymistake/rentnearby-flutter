@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:bakhli/features/nearby/models/nearby_models.dart';
 import 'package:bakhli/features/taxi/guest/v2/taxi_feed_repository.dart';
+import 'package:bakhli/features/taxi/models/taxi_browse_item.dart';
 
 Map<String, dynamic> item(String id, {int? km, String label = 'near', bool route = false}) => {
       'id': id,
@@ -80,5 +81,20 @@ void main() {
   test('a far label never reads as near', () {
     final f = TaxiFeedItem.fromJson(item('z', km: 25, label: 'near'));
     expect(f.distance!.label, NearbyLabel.far);
+  });
+
+  test('display photo and distance parse defensively; plate photo is never read', () {
+    final f = TaxiFeedItem.fromJson({...item('p', km: 5), 'displayPhotoUrl': 'https://res.cloudinary.com/x/d.jpg', 'platePhotoUrl': 'https://x/plate.jpg'});
+    expect(f.item.displayPhotoUrl, 'https://res.cloudinary.com/x/d.jpg');
+    expect(f.item.distanceKm, 5);
+    expect(TaxiFeedItem.fromJson({...item('r'), 'displayPhotoUrl': '/uploads/t.jpg'}).item.displayPhotoUrl, endsWith('/uploads/t.jpg'));
+    for (final bad in [null, '', '  ', 'abc', 'ftp://x/y.jpg', 42, true]) {
+      expect(TaxiFeedItem.fromJson({...item('q'), 'displayPhotoUrl': bad}).item.displayPhotoUrl, isNull, reason: '$bad');
+    }
+    expect(TaxiFeedItem.fromJson(item('m')).item.displayPhotoUrl, isNull);
+    expect(TaxiBrowseItem.fromJson({...item('s'), 'distanceKm': '7.5'}).distanceKm, 7.5);
+    for (final bad in [null, -1, 'x', double.nan, double.infinity, true]) {
+      expect(TaxiBrowseItem.fromJson({...item('s'), 'distanceKm': bad}).distanceKm, isNull, reason: '$bad');
+    }
   });
 }

@@ -1,3 +1,5 @@
+import '../../../utils/photo_url.dart';
+
 class TaxiBrowseItem {
   final String id;
   final String driverName;
@@ -21,6 +23,8 @@ class TaxiBrowseItem {
   final int? localDayRate;
   final int? localDayKm;
   final String tripReplyLabel;
+  final String? displayPhotoUrl;
+  final double? distanceKm;
 
   const TaxiBrowseItem({
     required this.id,
@@ -45,6 +49,8 @@ class TaxiBrowseItem {
     this.localDayRate,
     this.localDayKm,
     this.tripReplyLabel = 'new',
+    this.displayPhotoUrl,
+    this.distanceKm,
   });
 
   factory TaxiBrowseItem.fromJson(Map<String, dynamic> json) => TaxiBrowseItem(
@@ -70,7 +76,14 @@ class TaxiBrowseItem {
         localDayRate: (json['localDayRate'] as num?)?.toInt(),
         localDayKm: (json['localDayKm'] as num?)?.toInt(),
         tripReplyLabel: json['tripReplyLabel'] as String? ?? 'new',
+        displayPhotoUrl: PhotoUrl.parse(json['displayPhotoUrl']),
+        distanceKm: _km(json['distanceKm']),
       );
+
+  static double? _km(Object? v) {
+    final d = v is num ? v.toDouble() : (v is String ? double.tryParse(v.trim()) : null);
+    return d == null || !d.isFinite || d < 0 ? null : d;
+  }
 
   bool get isMatch => matchedFare != null;
 

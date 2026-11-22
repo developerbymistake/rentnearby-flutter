@@ -1,5 +1,6 @@
 import '../../../stay/models/stay_nearby_model.dart';
 import '../../models/taxi_browse_item.dart';
+import '../../../../utils/photo_url.dart';
 
 typedef LatLngPair = ({double lat, double lng});
 
@@ -149,6 +150,7 @@ class WayDriver {
   final String? phone;
   final String? whatsApp;
   final String? meetAtName;
+  final String? displayPhotoUrl;
 
   const WayDriver({
     required this.taxiId,
@@ -178,6 +180,7 @@ class WayDriver {
     this.phone,
     this.whatsApp,
     this.meetAtName,
+    this.displayPhotoUrl,
   });
 
   factory WayDriver.fromJson(Map<String, dynamic> json) => WayDriver(
@@ -208,6 +211,7 @@ class WayDriver {
         phone: _sn(json['phone']),
         whatsApp: _sn(json['whatsApp']),
         meetAtName: _sn(json['meetAtName']),
+        displayPhotoUrl: PhotoUrl.parse(json['displayPhotoUrl']),
       );
 
   static const String sectionDirect = 'direct';
