@@ -28,6 +28,13 @@ class ApiService {
     });
   }
 
+  // D-34: a revoked session says why (FB-42); anything else reads as an expired session.
+  static LogoutReason reasonFor401(Object? data) => switch (_errorType(data)) {
+        'SessionRoleChanged' => LogoutReason.roleChanged,
+        'AccountSuspended' => LogoutReason.accountSuspended,
+        _ => LogoutReason.sessionExpired,
+      };
+
   static void init() {
     _dio = Dio(BaseOptions(
       baseUrl: AppConstants.baseUrl,
@@ -47,8 +54,9 @@ class ApiService {
       onError: (error, handler) async {
         final status = error.response?.statusCode;
         if (status == 401 && error.requestOptions.extra[skipAuthExtra] != true) {
+          final reason = reasonFor401(error.response?.data);
           await runExclusiveLogout(
-            () => Get.find<AuthController>().forceLogout(reason: LogoutReason.sessionExpired),
+            () => Get.find<AuthController>().forceLogout(reason: reason),
           );
         } else if (status == 403 && _errorType(error.response?.data) == tabInactiveType &&
             Get.isRegistered<TabConfigController>()) {
@@ -91,6 +99,15 @@ class ApiService {
   static Future<Map<String, dynamic>> put(String path, Map<String, dynamic> data) async {
     final res = await _dio.put(path, data: data);
     return res.data is Map<String, dynamic> ? res.data as Map<String, dynamic> : <String, dynamic>{};
+  }
+
+  // A call made with a token the caller captured (logout): the interceptor neither replaces it nor logs out on 401.
+  static Future<void> sendAs(String method, String path, {required String bearer, Map<String, dynamic>? data}) async {
+    await _dio.request<dynamic>(
+      path,
+      data: data,
+      options: Options(method: method, headers: {'Authorization': 'Bearer $bearer'}, extra: {skipAuthExtra: true}),
+    );
   }
 
   static Future<void> delete(String path) async {

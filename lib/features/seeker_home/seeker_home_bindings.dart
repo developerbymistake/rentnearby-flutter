@@ -9,7 +9,8 @@ abstract final class SeekerHomeBindings {
     SeekerSession.register();
     // A1 bindings
     if (!Get.isRegistered<SeekerFeedController>()) {
-      Get.put(SeekerFeedController()).attachTripsList(MyTripsController.to.active);
+      final trips = MyTripsController.to;
+      Get.put(SeekerFeedController()).attachTripsList(trips.active, offlineCopyAt: trips.offlineCopyAt);
     }
     // end A1
   }

@@ -8,6 +8,7 @@ import 'package:bakhli/features/stay/models/stay_detail_model.dart';
 import 'package:bakhli/features/stay/models/stay_nearby_model.dart';
 import 'package:bakhli/features/stay/models/stay_price_chip.dart';
 import 'package:bakhli/features/trip/models/trip_enquiry_model.dart';
+import 'package:bakhli/features/trip/utils/trip_stay_rank.dart';
 import 'package:bakhli/features/trip/widgets/trip_stay_row.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -41,7 +42,7 @@ final _hillCrest = StayNearbyModel.fromJson(nearbyJson('s2', 'Hill Crest Resort'
 final _pineNest = StayNearbyModel.fromJson(nearbyJson('s3', 'Pine Nest Hostel', 'Hostel', 'Tallital', 1.2, 650, full: true, room: 'Dorm bed'));
 final _plain = StayNearbyModel.fromJson(nearbyJson('s4', 'Plain Stay', 'Homestay', 'Mallital', 2, 1800));
 
-Widget _rows(List<StayNearbyModel> stays, {Set<String> shortlisted = const {}, List<String>? taps}) => Scaffold(
+Widget _rows(List<StayNearbyModel> stays, {Set<String> shortlisted = const {}, List<String>? taps, Map<String, bool>? fits}) => Scaffold(
       backgroundColor: ListingPalette.forest.page,
       body: ListView(
         children: [
@@ -54,6 +55,9 @@ Widget _rows(List<StayNearbyModel> stays, {Set<String> shortlisted = const {}, L
               onCall: () {},
               shortlisted: shortlisted.contains(stays[i].id),
               onShortlist: () => taps?.add(stays[i].id),
+              fit: fits == null || !fits.containsKey(stays[i].id)
+                  ? null
+                  : TripStayFit(id: stays[i].id, fits: fits[stays[i].id], nearestKm: 0.4, detourKm: 0),
             ),
         ],
       ),
@@ -164,12 +168,25 @@ void main() {
 
   group('o_tr_1 trip stay row price slot', () {
     testWidgets('o_tr_1_lowerPrice_showsNewOldStrikeAndChip', (t) async {
-      await t.pumpWidget(MaterialApp(home: _rows([_lakeview])));
+      await t.pumpWidget(MaterialApp(home: _rows([_lakeview], fits: {'s1': true})));
       expect(find.text('15% off'), findsOneWidget);
       expect(find.text('₹1,530'), findsOneWidget);
       final was = t.widget<Text>(find.text('₹1,800'));
       expect(was.style?.decoration, TextDecoration.lineThrough);
       expect(find.text('YOUR GROUP'), findsOneWidget);
+    });
+
+    testWidgets('FX-11 a stay that does not fit the party keeps the FROM caption with the dated number', (t) async {
+      await t.pumpWidget(MaterialApp(home: _rows([_lakeview], fits: {'s1': false})));
+      expect(find.text('₹1,530'), findsOneWidget);
+      expect(find.text('FROM'), findsOneWidget);
+      expect(find.text('YOUR GROUP'), findsNothing);
+    });
+
+    testWidgets('FX-11 no party fit known: FROM', (t) async {
+      await t.pumpWidget(MaterialApp(home: _rows([_lakeview])));
+      expect(find.text('FROM'), findsOneWidget);
+      expect(find.text('YOUR GROUP'), findsNothing);
     });
 
     testWidgets('o_tr_1_higherPrice_showsPriceOnly', (t) async {
@@ -184,7 +201,7 @@ void main() {
       t.view.devicePixelRatio = 1;
       t.view.physicalSize = const Size(392, 2400);
       addTearDown(t.view.reset);
-      await t.pumpWidget(MaterialApp(home: _rows([_lakeview, _pineNest, _hillCrest], taps: taps)));
+      await t.pumpWidget(MaterialApp(home: _rows([_lakeview, _pineNest, _hillCrest], taps: taps, fits: {'s1': true, 's2': true, 's3': true})));
       expect(find.text('Full on your dates'), findsOneWidget);
       expect(find.text('Full'), findsOneWidget);
       expect(find.text('FROM'), findsOneWidget);

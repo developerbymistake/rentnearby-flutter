@@ -159,7 +159,7 @@ abstract final class SessionEndedNotice {
     switch (reason) {
       case LogoutReason.accountDeleted:
         await queue.clearAccount(userId);
-      case LogoutReason.sessionExpired || LogoutReason.roleChanged:
+      case LogoutReason.sessionExpired || LogoutReason.roleChanged || LogoutReason.accountSuspended:
         final n = queue.storedCount(userId);
         if (n == 0) return;
         final ctx = Get.overlayContext ?? Get.context;

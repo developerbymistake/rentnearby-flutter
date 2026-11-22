@@ -306,8 +306,8 @@ class _PlansBillingScreenState extends State<PlansBillingScreen> {
             state: state,
             note: state == PlanCardState.grace ? PlanWords.plusKeepsWorking : copy?.subNote(state, me, values),
             onHoldBody: copy?.onHoldBody,
-            chooseLabel: copy?.chooseLabel,
-            onChoose: copy == null || (me.hidden.total == 0 && me.pausedByPlanCount == 0) ? null : copy.openChoose,
+            chooseLabel: copy?.chooseLabelFor(me),
+            onChoose: copy == null || !copy.canChoose(me) ? null : () => copy.openChooseFor(me),
             onSubscribeAgain: () => _subscribeAgain(paidPlans),
           ),
         if (week.isNotEmpty)
@@ -315,7 +315,11 @@ class _PlansBillingScreenState extends State<PlansBillingScreen> {
             const PlanSectionTitle(title: PlanWords.thisWeek, subtitle: PlanWords.whatPlusDid),
             PlanWeekCard3D(tone: tone, cells: week),
           ]),
-        if (!me.paymentEnabled)
+        if (me.play == null && copy != null && copy.canChoose(me) && copy.chooseLabelFor(me) != null)
+          PlanLinkChips(chips: [(copy.chooseLabelFor(me)!, () => copy.openChooseFor(me))]),
+        if (state == PlanCardState.adminGrant && !me.paymentEnabled)
+          const SizedBox.shrink()
+        else if (!me.paymentEnabled)
           _comingSoon(copy, tone)
         else if (PlanCardStates.showsCycles(state) || PlanCardStates.showsCompare(state)) ...[
           if (paidPlans.isEmpty)

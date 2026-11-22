@@ -20,6 +20,8 @@ import 'services/storage_service.dart';
 import 'services/top_route_observer.dart';
 import 'services/tour_dismiss_observer.dart';
 import 'utils/app_toast.dart';
+import 'config/app_frame.dart';
+import 'features/owner_core/data/owner_cache.dart';
 import 'widgets/global_location_gates.dart';
 import 'widgets/soft_update_dialog.dart';
 import 'widgets/tour_host.dart';
@@ -31,6 +33,7 @@ Future<void> main() async {
     ..maximumSizeBytes = 100 << 20
     ..maximumSize = 300;
   await GetStorage.init();
+  await OwnerCache.init();
   await StorageService.init();
   ApiService.init();
   await Firebase.initializeApp();
@@ -44,10 +47,7 @@ Future<void> main() async {
     systemNavigationBarIconBrightness: Brightness.dark,
     systemNavigationBarContrastEnforced: false,
   ));
-  // Empty list = no restriction (Android 16+ ignores orientation locks on large
-  // screens anyway; this app has no responsive/tablet layouts yet, so landscape
-  // will render at phone-like proportions rather than a tailored layout).
-  SystemChrome.setPreferredOrientations([]);
+  await AppFrame.applyOrientation();
 
   Get.put(ConfigRepository(), permanent: true);
   Get.put(TabConfigController(), permanent: true);
@@ -89,7 +89,7 @@ class BakhliApp extends StatelessWidget {
               GlobalLocationGates(
                 child: Stack(
                   children: [
-                    Positioned.fill(child: child!),
+                    Positioned.fill(child: Builder(builder: (context) => AppFrame.capWidth(context, child!))),
                     const TourHost(),
                   ],
                 ),

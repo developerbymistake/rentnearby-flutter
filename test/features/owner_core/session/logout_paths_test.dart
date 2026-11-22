@@ -6,11 +6,22 @@ import 'package:bakhli/features/owner_core/data/owner_cache.dart';
 import 'package:bakhli/features/owner_core/session/owner_push_sync.dart';
 import 'package:bakhli/features/owner_core/session/owner_session_hooks.dart';
 import 'package:bakhli/features/owner_core/session/shell_teardown.dart';
+import 'dart:async';
+
+import 'package:bakhli/config/app_constants.dart';
+import 'package:bakhli/services/banner_hub_service.dart';
+import 'package:bakhli/services/storage_service.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 
 import '../../../support/owner_fakes.dart';
+
+class _HangingBanner extends BannerHubService {
+  @override
+  Future<void> disconnect() => Completer<void>().future;
+}
 
 void _seed(String user) {
   for (final k in [
@@ -32,8 +43,8 @@ void _seed(String user) {
   OwnerCache.setShellEmpty(user, true);
 }
 
-bool _anyOwnerKey() => GetStorage().getKeys<Iterable<dynamic>>().whereType<String>().any((k) =>
-    k.startsWith(OwnerCache.cachePrefix) || k.startsWith(OwnerCache.statusSeenPrefix) || k.startsWith(OwnerCache.shellEmptyPrefix));
+bool _anyOwnerKey() => [GetStorage(), GetStorage(OwnerCache.container)].any((box) => box.getKeys<Iterable<dynamic>>().whereType<String>().any((k) =>
+    k.startsWith(OwnerCache.cachePrefix) || k.startsWith(OwnerCache.statusSeenPrefix) || k.startsWith(OwnerCache.shellEmptyPrefix)));
 
 void main() {
   setUpAll(() => initTestStorage('owner_logout'));
@@ -53,7 +64,7 @@ void main() {
   });
 
   test('a broken saved value reads as null', () {
-    GetStorage().write('${OwnerCache.cachePrefix}a:home', '{not json');
+    GetStorage(OwnerCache.container).write('${OwnerCache.cachePrefix}a:home', '{not json');
     expect(OwnerCache.read('a', OwnerCacheKeys.home), isNull);
     OwnerCache.clearAll();
   });
@@ -165,4 +176,45 @@ void main() {
     ShellTeardown.run(ShellKind.stayOwner);
     expect(n, 1);
   });
+
+  test('FX-18 owner keys live in their own box; two equal writes are one box write; legacy keys are dropped', () async {
+    final box = GetStorage(OwnerCache.container);
+    var writes = 0;
+    final listener = box.listen(() => writes++);
+    OwnerCache.write('a', OwnerCacheKeys.home, {'x': 1});
+    OwnerCache.write('a', OwnerCacheKeys.home, {'x': 1});
+    listener();
+    expect(writes, 1);
+    expect(GetStorage().hasData('${OwnerCache.cachePrefix}a:home'), isFalse);
+    GetStorage().write('${OwnerCache.cachePrefix}old:home', '{}');
+    GetStorage().write('${OwnerCache.statusSeenPrefix}old', 'k');
+    await OwnerCache.init();
+    expect(GetStorage().hasData('${OwnerCache.cachePrefix}old:home'), isFalse);
+    expect(GetStorage().hasData('${OwnerCache.statusSeenPrefix}old'), isFalse);
+    OwnerCache.clearAll();
+    expect(box.getKeys<Iterable<dynamic>>(), isEmpty);
+  });
+
+  test('FX-26 a hub disconnect that never completes still ends with no token and no owner key, and never touches the next session', () async {
+    FlutterSecureStorage.setMockInitialValues({AppConstants.tokenKey: 'old'});
+    await StorageService.init();
+    expect(StorageService.getToken(), 'old');
+    Get.put<BannerHubService>(_HangingBanner(), permanent: true);
+    final auth = FakeAuth();
+    Get.put<AuthController>(auth, permanent: true);
+    Get.put<TabConfigController>(FakeTabs());
+    auth.signIn(role: UserRoleKeys.stayOwner, stayStatus: 'Approved', id: 'a');
+    _seed('a');
+    final sw = Stopwatch()..start();
+    await auth.forceLogout(reason: LogoutReason.sessionExpired);
+    expect(sw.elapsed, lessThan(const Duration(seconds: 4)));
+    expect(StorageService.getToken(), isNull);
+    expect(_anyOwnerKey(), isFalse);
+    await StorageService.saveToken('next');
+    await Future<void>.delayed(const Duration(seconds: 3));
+    expect(StorageService.getToken(), 'next', reason: 'no late cleanup step runs after the redirect');
+    await StorageService.clearToken();
+    Get.delete<AuthController>(force: true);
+    Get.delete<BannerHubService>(force: true);
+  }, timeout: const Timeout(Duration(seconds: 20)));
 }

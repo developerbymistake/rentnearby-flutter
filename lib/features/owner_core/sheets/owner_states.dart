@@ -63,8 +63,9 @@ abstract final class OwnerLoads {
         final locked = OwnerRefusal.lockedKey(r);
         if (locked != null) return OwnerLoadLocked<T>(locked);
         return saved != null ? OwnerLoadData<T>(saved, stale: true) : OwnerLoadError<T>(message: r.message);
-      case OwnerFailed<T>(:final message):
-        return saved != null ? OwnerLoadData<T>(saved, stale: true) : OwnerLoadError<T>(message: message);
+      // A failure's text can be an exception string; the screen shows its own words instead (FX-28).
+      case OwnerFailed<T>():
+        return saved != null ? OwnerLoadData<T>(saved, stale: true) : OwnerLoadError<T>();
     }
   }
 }

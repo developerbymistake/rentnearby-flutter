@@ -110,7 +110,7 @@ class PlanSubscriptionCard extends StatelessWidget {
       PlanCardState.ended => PlanSubAction(PlanWords.subscribeAgain, onSubscribeAgain),
       _ => manage,
     };
-    final choose = s == PlanCardState.ended && chooseLabel != null && onChoose != null ? PlanSubAction(chooseLabel!, onChoose) : null;
+    final choose = chooseLabel != null && onChoose != null ? PlanSubAction(chooseLabel!, onChoose) : null;
     return PlanSubscriptionCard3D(
       tone: warn ? PlanLook.warmTone : PlanLook.toneOf(me.featureKey),
       art: _art(s),

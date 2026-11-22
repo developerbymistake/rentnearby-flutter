@@ -124,7 +124,11 @@ class SeekerTripSlide extends StatelessWidget {
     if (c == null) return const SeekerTripCardView(feed: SeekerFeed.empty);
     return Obx(() {
       final feed = c.feed.value;
-      if (feed == null) return const SeekerTripCardSkeleton();
+      final failed = c.failed.value;
+      if (feed == null) {
+        if (failed && !c.loading.value) return SeekerTripCardView(feed: SeekerFeed.empty, failed: true, onRetry: c.reload);
+        return const SeekerTripCardSkeleton();
+      }
       return SeekerTripCardView(feed: feed, status: c.visibleStatus);
     });
   }
@@ -140,7 +144,12 @@ class SeekerTripCardView extends StatelessWidget {
     this.onToday,
     this.onMyTrips,
     this.onStatus,
+    this.failed = false,
+    this.onRetry,
   });
+
+  final bool failed;
+  final VoidCallback? onRetry;
 
   final SeekerFeed feed;
   final SeekerStatus? status;
@@ -186,7 +195,13 @@ class SeekerTripCardView extends StatelessWidget {
     String? next;
     final String action;
     final VoidCallback? onAction;
-    if (!hasTrip) {
+    if (!hasTrip && failed) {
+      eyebrow = SeekerHomeStrings.tripEyebrow;
+      title = SeekerHomeStrings.failedTitle;
+      body = SeekerHomeStrings.railsErrorBody;
+      action = SeekerHomeStrings.retry;
+      onAction = onRetry;
+    } else if (!hasTrip) {
       eyebrow = SeekerHomeStrings.tripEyebrow;
       title = SeekerHomeStrings.noTripTitle;
       body = SeekerHomeStrings.noTripBody;

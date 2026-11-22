@@ -95,11 +95,15 @@ class AccountBlockersSheet extends StatefulWidget {
 
 class _AccountBlockersSheetState extends State<AccountBlockersSheet> {
   late final List<AccountDeleteBlock> _rows = List.of(widget.blocks);
-  final Set<int> _busy = {};
+  // Keyed by the block, not the row index: removing a row never moves a spinner (FX-27).
+  final Set<String> _busy = {};
 
-  Future<void> _turnOff(int i, AccountDeleteBlock b) async {
-    if (_busy.contains(i)) return;
-    setState(() => _busy.add(i));
+  static String _keyOf(AccountDeleteBlock b) => '${b.code}:${b.targetId ?? ''}:${b.args['listingKind'] ?? ''}';
+
+  Future<void> _turnOff(AccountDeleteBlock b) async {
+    final key = _keyOf(b);
+    if (_busy.contains(key)) return;
+    setState(() => _busy.add(key));
     final taxi = b.args['listingKind'] == 'Taxi';
     final r = await OwnerApi.put<void>(
       taxi ? '/taxis/me/availability' : '/stays/me/accepting',
@@ -107,7 +111,7 @@ class _AccountBlockersSheetState extends State<AccountBlockersSheet> {
       (_) {},
     );
     if (!mounted) return;
-    setState(() => _busy.remove(i));
+    setState(() => _busy.remove(key));
     if (r is OwnerOk<void>) {
       setState(() => _rows.remove(b));
       try {
@@ -159,10 +163,10 @@ class _AccountBlockersSheetState extends State<AccountBlockersSheet> {
                   if (i > 0) Divider(height: 1, thickness: 1, indent: DS.s(14), endIndent: DS.s(14), color: Ink3D.line),
                   _BlockRow(
                     block: _rows[i],
-                    busy: _busy.contains(i),
+                    busy: _busy.contains(_keyOf(_rows[i])),
                     onPressed: AccountBlockerActions.buttonOf(_rows[i]) == null
                         ? null
-                        : () => _rows[i].action == AccountBlockerActions.goOffline ? _turnOff(i, _rows[i]) : _open(_rows[i]),
+                        : () => _rows[i].action == AccountBlockerActions.goOffline ? _turnOff(_rows[i]) : _open(_rows[i]),
                   ),
                 ],
               ],

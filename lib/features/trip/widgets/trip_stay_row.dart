@@ -180,7 +180,7 @@ class TripStayRow extends StatelessWidget {
           if (!_paused && type != null) ...type.split(' · '),
           if (facts != null && !_paused && line == null) ...facts.split(' · '),
         ],
-        priceCaption: price == null ? null : (quote != null ? _group : _from),
+        priceCaption: price == null ? null : (quote != null && fit?.fits == true ? _group : _from),
         number: price == null ? TripStringsA2.priceOnRequest : BrowseItem.inr(price),
         unit: price == null ? '' : _perNight,
         label: km ?? line ?? (stay.locality.isEmpty ? null : 'In ${stay.locality}'),

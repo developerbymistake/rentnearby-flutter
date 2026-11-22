@@ -54,6 +54,8 @@ class _HomeScreenState extends State<HomeScreen> {
     if (mounted) _replay.value++;
   }
 
+  Future<void> _retryRails() => Future.wait<void>([_home.retryRails(), if (_feed case final f?) f.reload()]);
+
   Future<void> _openInstagram() async {
     final appUri = Uri.parse(
       'instagram://user?username=${AppConstants.instagramUsername}',
@@ -138,7 +140,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildRailsArea() {
     return Obx(() {
       if (_home.railsFailedNoCopy && !_home.anyRailLoading) {
-        return SeekerRailsErrorCard(onRetry: _home.retryRails);
+        return SeekerRailsErrorCard(onRetry: _retryRails);
       }
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,

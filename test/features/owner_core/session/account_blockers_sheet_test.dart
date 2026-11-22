@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -5,6 +6,7 @@ import 'package:bakhli/config/app_tabs.dart';
 import 'package:bakhli/config/user_roles.dart';
 import 'package:bakhli/controllers/auth_controller.dart';
 import 'package:bakhli/controllers/tab_config_controller.dart';
+import 'package:bakhli/design/extra/buttons_kit.dart';
 import 'package:bakhli/features/owner_core/data/owner_api.dart';
 import 'package:bakhli/features/owner_core/session/owner_session_hooks.dart';
 import 'package:bakhli/services/api_service.dart';
@@ -137,6 +139,31 @@ void main() {
     expect(find.text('Accepting guests is on'), findsNothing);
     expect(find.text('Cannot delete yet'), findsOneWidget);
     expect(refreshed, 1);
+  });
+
+  testWidgets('FX-27 the busy spinner follows its row when another row is removed', (tester) async {
+    final hang = Completer<Map<String, dynamic>>();
+    OwnerApi.transport = FakeTransport((m, p, b) => p == '/taxis/me/availability' ? hang.future : Future.value({'data': {}}));
+    OwnerSessionHooks.refreshHome = () async {};
+    const rows = [
+      AccountDeleteBlock(code: 'LiveListing', message: 'm', action: 'GoOffline', targetId: 's1', args: {'listingKind': 'Stay'}),
+      AccountDeleteBlock(code: 'LiveListing', message: 'm', action: 'GoOffline', targetId: 't1', args: {'listingKind': 'Taxi'}),
+    ];
+    await tester.pumpWidget(GetMaterialApp(home: _host(rows)));
+    await _open(tester);
+    await tester.tap(find.text('Turn off').last);
+    await tester.pump();
+    bool loading(PrimaryButton b) => b.loading;
+    expect(find.byWidgetPredicate((w) => w is PrimaryButton && loading(w)), findsOneWidget);
+    await tester.tap(find.text('Turn off').first);
+    for (var i = 0; i < 5; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    expect(find.text('Accepting guests is on'), findsNothing);
+    expect(find.text('Available now is on'), findsOneWidget);
+    expect(find.byWidgetPredicate((w) => w is PrimaryButton && loading(w)), findsOneWidget, reason: 'the taxi row is still busy');
+    hang.complete({'data': {}});
+    await tester.pumpAndSettle();
   });
 
   testWidgets('Close only closes', (tester) async {

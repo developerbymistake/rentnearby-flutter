@@ -24,8 +24,27 @@ abstract final class OwnerCache {
   static const statusSeenPrefix = 'seeker_status_seen:';
   static const shellEmptyPrefix = 'owner_shell_empty:';
 
+  // Own container (FX-18): owner writes never rewrite the default box, and logout erases it in one step.
+  static const container = 'owner_cache';
+
   static GetStorage? _boxOverride;
-  static GetStorage get _box => _boxOverride ?? GetStorage();
+  static GetStorage get _box => _boxOverride ?? GetStorage(container);
+
+  static Future<void> init() async {
+    await GetStorage.init(container);
+    _dropLegacyKeys(GetStorage());
+  }
+
+  static bool _isOwnerKey(String k) => k.startsWith(cachePrefix) || k.startsWith(statusSeenPrefix) || k.startsWith(shellEmptyPrefix);
+
+  static void _dropLegacyKeys(GetStorage legacy) {
+    try {
+      final keys = legacy.getKeys<Iterable<dynamic>>().whereType<String>().where(_isOwnerKey).toList();
+      for (final k in keys) {
+        legacy.remove(k);
+      }
+    } catch (_) {}
+  }
 
   static void debugUseBox(GetStorage? box) => _boxOverride = box;
 
@@ -46,7 +65,10 @@ abstract final class OwnerCache {
   static void write(String? userId, String key, Map<String, dynamic> json) {
     if (userId == null || userId.isEmpty) return;
     try {
-      _box.write(_key(userId, key), jsonEncode(json));
+      final k = _key(userId, key);
+      final encoded = jsonEncode(json);
+      if (_box.read<Object?>(k) == encoded) return;
+      _box.write(k, encoded);
     } catch (_) {}
   }
 
@@ -103,8 +125,11 @@ abstract final class OwnerCache {
     } catch (_) {}
   }
 
-  static void clearAll() =>
-      _removeWhere((k) => k.startsWith(cachePrefix) || k.startsWith(statusSeenPrefix) || k.startsWith(shellEmptyPrefix));
+  static void clearAll() {
+    try {
+      _box.erase();
+    } catch (_) {}
+  }
 
   static void _removeWhere(bool Function(String key) test) {
     try {

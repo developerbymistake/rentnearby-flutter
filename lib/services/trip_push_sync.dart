@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import '../config/app_routes.dart';
 import '../config/notification_types.dart';
 import '../features/buddy/buddy_live.dart';
+import '../features/owner_core/session/owner_session_hooks.dart';
 import '../features/stay/enquiries/stay_enquiries_controller.dart';
 import '../features/taxi/journeys/journeys_controller.dart';
 import '../features/taxi/leads/trip_leads_controller.dart';
@@ -141,6 +142,7 @@ class TripPushSync {
     _driverReady = false;
     _driverRating = false;
     if (driver) _refreshDriver(ready: driverReady, rating: driverRating);
+    if (driver || enquiries) unawaited(OwnerSessionHooks.refreshHome());
     if (!journeys && !taxi && !enquiries) return;
     final route = Get.currentRoute;
     if (Get.isRegistered<StayEnquiriesController>()) {

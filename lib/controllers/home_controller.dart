@@ -3,6 +3,8 @@ import '../features/taxi/models/taxi_browse_item.dart';
 import '../models/home_feed_model.dart';
 import '../features/nearby/controllers/nearby_centre_controller.dart';
 import '../repositories/home_repository_v2.dart';
+import '../config/shell_kind.dart';
+import 'auth_controller.dart';
 import 'location_controller.dart';
 import 'tab_config_controller.dart';
 
@@ -49,6 +51,14 @@ class HomeController extends GetxController {
     }));
 
     _workers.add(ever(_tabs.version, (_) => _onTabsChanged()));
+    if (Get.isRegistered<AuthController>()) {
+      _workers.add(ever<ShellKind>(Get.find<AuthController>().shellKind, (k) {
+        if (k != ShellKind.seeker) return;
+        _loadedDistrictId = null;
+        final district = _loc.effectiveDistrict;
+        if (district != null) loadHomeData(district.id);
+      }));
+    }
     _workers.add(ever(NearbyCentreController.to.centreVersion, (_) => reloadDistrict()));
 
     final current = _loc.effectiveDistrict;
@@ -151,8 +161,12 @@ class HomeController extends GetxController {
     await _fetch(district.id, _activeSections());
   }
 
+  // Owners never see the Seeker rails (FX-17).
+  static bool get _ownerShell => Get.isRegistered<AuthController>() && Get.find<AuthController>().isOwnerShell;
+
   Future<bool> _fetch(String districtId, Set<String> keys) async {
     if (keys.isEmpty) return true;
+    if (_ownerShell) return false;
     final tickets = <String, int>{};
     for (final k in keys) {
       tickets[k] = _gen[k] = (_gen[k] ?? 0) + 1;

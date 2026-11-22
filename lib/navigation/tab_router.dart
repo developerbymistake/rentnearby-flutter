@@ -14,19 +14,25 @@ class TabNavigator extends StatelessWidget {
   final int tabId;
   const TabNavigator({required this.tabId, super.key});
 
+  @visibleForTesting
+  static Widget Function(int tabId)? debugRoot;
+
   @override
   Widget build(BuildContext context) {
     return Navigator(
       key: tabKeys[tabId],
       onGenerateRoute: (_) => PageRouteBuilder(
         // An inactive tab's root is never built, so it makes no API call and puts no controller.
+        // A tab not visited yet is not built either (FX-06): no call until the user opens it.
         pageBuilder: (_, _, _) => Obx(() {
           TabConfigController.to.version.value;
-          final kind = Get.find<AuthController>().shellKind.value;
+          final auth = Get.find<AuthController>();
+          final kind = auth.shellKind.value;
+          final visited = auth.tabIndex.value == tabId || auth.visitedTabs.contains(tabId);
           final slot = TabShell.slots(kind)[tabId];
           return KeyedSubtree(
             key: ValueKey('${kind.name}-$tabId'),
-            child: slot.active() ? slot.root() : const SizedBox.shrink(),
+            child: visited && slot.active() ? (debugRoot?.call(tabId) ?? slot.root()) : const SizedBox.shrink(),
           );
         }),
         transitionDuration: Duration.zero,

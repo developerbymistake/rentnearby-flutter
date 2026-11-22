@@ -27,6 +27,7 @@ import '../models/conversation_model.dart';
 import '../models/notification_model.dart';
 import '../services/api_service.dart';
 import '../services/storage_service.dart';
+import '../features/owner_core/plan/plan_expired_tap.dart';
 import 'push_token_registrar.dart';
 import 'taxi_ring_service.dart';
 import 'trip_push_sync.dart';
@@ -675,6 +676,10 @@ class NotificationService extends GetxService {
     // future notification category built on that system. Checked first; falls through to the
     // legacy per-type branches below only for pushes that predate this system (chat, reports,
     // broadcast).
+    if (PlanExpiredTap.handles(notificationType)) {
+      PlanExpiredTap.open();
+      return;
+    }
     final auth = Get.find<AuthController>();
     final actionRoute = data['action_route'];
     if (actionRoute != null) {
@@ -708,6 +713,10 @@ class NotificationService extends GetxService {
   // One rule for push tap and inbox tap.
   /// Inbox and push taps that know the notification type: approved / rejected listing types open the owner Home.
   void openActionRouteFor(String? type, String pushRoute, Map<String, dynamic>? pushArgs) {
+    if (PlanExpiredTap.handles(type)) {
+      PlanExpiredTap.open();
+      return;
+    }
     if (ShellState.isOwner && type != null && NotificationTypeKeys.opensOwnerHome.contains(type) && Get.isRegistered<AuthController>()) {
       Get.find<AuthController>().openTab(AppTabs.home);
       return;
@@ -906,15 +915,21 @@ class NotificationService extends GetxService {
   }
 
   // Only a still-valid session can unregister; a revoked one would 401 inside the logout itself.
-  Future<void> clearToken({bool unregister = false}) async {
+  // Local part runs now; the server unregister (with the captured bearer) and the Firebase delete run behind,
+  // so a slow network never holds logout and never touches the next session.
+  void clearToken({bool unregister = false, String? bearer}) {
     _registrar.clear();
-    var token = StorageService.getFcmToken();
+    final token = StorageService.getFcmToken();
     StorageService.clearFcmToken();
-    if (unregister) {
+    unawaited(_clearTokenRemote(token, unregister ? bearer : null));
+  }
+
+  Future<void> _clearTokenRemote(String? stored, String? bearer) async {
+    if (bearer != null) {
       try {
-        token ??= await FirebaseMessaging.instance.getToken().timeout(const Duration(seconds: 2));
+        final token = stored ?? await FirebaseMessaging.instance.getToken().timeout(const Duration(seconds: 2));
         if (token != null) {
-          await ApiService.delete('${AppConstants.registerTokenPath}?token=${Uri.encodeQueryComponent(token)}');
+          await ApiService.sendAs('DELETE', '${AppConstants.registerTokenPath}?token=${Uri.encodeQueryComponent(token)}', bearer: bearer);
         }
       } catch (_) {}
     }
@@ -986,10 +1001,10 @@ class NotificationService extends GetxService {
   Future<void> clearDistrictTopic() async {
     final topic = StorageService.getSubscribedDistrictTopic();
     if (topic == null) return;
+    StorageService.clearSubscribedDistrictTopic();
     try {
       await FirebaseMessaging.instance.unsubscribeFromTopic(topic);
     } catch (_) {}
-    StorageService.clearSubscribedDistrictTopic();
   }
 
   @override

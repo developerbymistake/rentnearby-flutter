@@ -18,5 +18,13 @@ abstract final class OwnerArgs {
     return v is num ? v.toInt() : (v is String ? int.tryParse(v) : null);
   }
 
+  static final RegExp _guid = RegExp(r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$');
+
+  // Route and push ids are GUIDs; anything else (a path, a script, an empty string) is treated as missing.
+  static String? id(Map<String, dynamic> a, String key) {
+    final v = text(a, key)?.trim();
+    return v != null && _guid.hasMatch(v) ? v : null;
+  }
+
   static bool flag(Map<String, dynamic> a, String key) => a[key] == true || a[key] == 'true';
 }

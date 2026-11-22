@@ -1,4 +1,5 @@
 abstract final class OwnerSharedStrings {
+  static const String somethingWrong = 'Something went wrong. Please try again.';
   static const seePlus = 'See Plus';
   static const notNow = 'Not now';
   static const plus = 'Plus';

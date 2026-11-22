@@ -5,6 +5,7 @@ import 'package:bakhli/features/owner_core/data/owner_cache.dart';
 import 'package:bakhli/features/owner_core/data/owner_result.dart';
 import 'package:bakhli/features/seeker_home/seeker_feed_controller.dart';
 import 'package:bakhli/features/seeker_home/seeker_feed_model.dart';
+import 'package:bakhli/features/trip/models/trip_model.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
@@ -56,7 +57,7 @@ void main() {
     expect(c.showSkeleton, isFalse);
   });
 
-  test('o_sk_5_skeletonEndsOnError: offline, refused, failed and a throw end the skeleton with the no-trip card', () async {
+  test('o_sk_5_skeletonEndsOnError: offline, refused, failed and a throw end the skeleton with the failed state (FX-10)', () async {
     final results = <Future<OwnerResult<SeekerFeed>> Function()>[
       () async => const OwnerOffline<SeekerFeed>(),
       () async => const OwnerRefused<SeekerFeed>(type: 'X', statusCode: 400),
@@ -68,8 +69,48 @@ void main() {
       final c = make(ScriptedFeedApi(r));
       await pumpEventQueue();
       expect(c.loading.value, isFalse);
-      expect(c.feed.value?.tripCard.hasTrip, isFalse);
+      expect(c.showSkeleton, isFalse);
+      expect(c.feed.value, isNull, reason: 'no fake "first trip" card on a failure');
+      expect(c.failed.value, isTrue);
     }
+  });
+
+  test('FX-10 a failed answer does not start the 30 s gap: the next refresh loads again', () async {
+    var fail = true;
+    final api = ScriptedFeedApi(() async => fail ? const OwnerOffline<SeekerFeed>() : OwnerOk(feedWith('t1')));
+    final c = make(api);
+    await pumpEventQueue();
+    expect(c.failed.value, isTrue);
+    fail = false;
+    await c.refreshIfStale();
+    expect(api.calls, 2);
+    expect(c.failed.value, isFalse);
+    expect(c.feed.value?.tripCard.tripId, 't1');
+  });
+
+  test('FX-12 trips list: identical lists do not refetch; a real change refetches once', () async {
+    TripSummaryModel trip(String id, {String? start}) => TripSummaryModel.fromJson({'id': id, 'startDate': start});
+    final list = <TripSummaryModel>[].obs;
+    final offline = Rxn<DateTime>();
+    final api = ScriptedFeedApi(() async => OwnerOk(feedWith('t1')));
+    final c = make(api)..attachTripsList(list, offlineCopyAt: offline);
+    await pumpEventQueue();
+    expect(api.calls, 1);
+    list.assignAll(const []);
+    list.assignAll(const []);
+    await Future<void>.delayed(const Duration(milliseconds: 350));
+    expect(api.calls, 1);
+    list.addAll([trip('a', start: '2026-12-01')]);
+    await Future<void>.delayed(const Duration(milliseconds: 350));
+    expect(api.calls, 2);
+    list.assignAll([trip('a', start: '2026-12-01')]);
+    await Future<void>.delayed(const Duration(milliseconds: 350));
+    expect(api.calls, 2);
+    offline.value = DateTime(2026);
+    list.addAll([trip('b')]);
+    await Future<void>.delayed(const Duration(milliseconds: 350));
+    expect(api.calls, 2, reason: 'an offline copy of My trips never refetches the feed');
+    expect(c.isClosed, isFalse);
   });
 
   test('o_sk_2 refresh error keeps the saved copy', () async {

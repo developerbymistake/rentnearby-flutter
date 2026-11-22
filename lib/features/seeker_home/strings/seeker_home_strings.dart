@@ -5,6 +5,7 @@ abstract final class SeekerHomeStrings {
 
   static const String tripEyebrow = 'Travel Planner';
   static const String noTripTitle = 'Plan your first trip';
+  static const String failedTitle = 'Your trips';
   static const String noTripBody = 'Places, days, stay and taxi in one plan.';
   static const String planTrip = 'Plan a trip';
 

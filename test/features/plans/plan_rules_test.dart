@@ -65,6 +65,45 @@ void main() {
       expect(PlanCardStates.blocksPurchase(PlanCardState.onHold), isTrue);
     });
 
+    test('FX-13 admin grant while payment is OFF reads as AdminGrant (D-09), by source not isPaid', () {
+      final grantOff = MyPlanModel(
+        paymentEnabled: false,
+        featureKey: 'Stay',
+        isDefault: false,
+        isPaid: false,
+        source: 'AdminGrant',
+        endsAt: DateTime(2027, 1, 1),
+      );
+      expect(PlanCardStates.ofPlan(grantOff), PlanCardState.adminGrant);
+      expect(PlanCardStates.ofPlan(Fx.off('Stay')), PlanCardState.paymentOff);
+      final defaultGrant = MyPlanModel(paymentEnabled: false, featureKey: 'Stay', source: 'AdminGrant', endsAt: DateTime(2027));
+      expect(PlanCardStates.ofPlan(defaultGrant), PlanCardState.paymentOff, reason: 'a default plan is never a grant');
+    });
+
+    test('FX-15 the server state wins; an unknown or missing state falls back unchanged', () {
+      expect(PlanCardStates.ofPlan(MyPlanModel.fromJson({'paymentEnabled': true, 'state': 'Ended'})), PlanCardState.ended);
+      expect(PlanCardStates.ofPlan(MyPlanModel.fromJson({'paymentEnabled': true, 'state': 'Cancelled'})), PlanCardState.cancelled);
+      expect(PlanCardStates.ofPlan(MyPlanModel.fromJson({'paymentEnabled': true, 'state': 'Weird'})), PlanCardState.free);
+      expect(PlanCardStates.ofPlan(MyPlanModel.fromJson({'paymentEnabled': false})), PlanCardState.paymentOff);
+    });
+
+    test('FX-15 canChoose and the choose target per role', () {
+      final stay = const StayPlanCopy();
+      final taxi = const TaxiPlanCopy();
+      final photos = MyPlanModel.fromJson({'featureKey': 'Stay', 'hidden': {'photos': 2}});
+      final pricesOnly = MyPlanModel.fromJson({'featureKey': 'Stay', 'hidden': {'specialPrices': 3}});
+      final nothing = MyPlanModel.fromJson({'featureKey': 'Stay'});
+      final routes = MyPlanModel.fromJson({'featureKey': 'Taxi', 'hidden': {'routes': 2}});
+      expect(stay.canChoose(photos), isTrue);
+      expect(stay.chooseLabelFor(photos), stay.chooseLabel);
+      expect(stay.canChoose(pricesOnly), isTrue);
+      expect(stay.chooseLabelFor(pricesOnly), 'Special prices');
+      expect(stay.canChoose(nothing), isFalse);
+      expect(taxi.canChoose(routes), isTrue);
+      expect(taxi.canChoose(MyPlanModel.fromJson({'featureKey': 'Taxi', 'hidden': {'photos': 4}})), isFalse);
+      expect(taxi.chooseLabelFor(routes), taxi.chooseLabel);
+    });
+
     test('unknown wire state parses to unknown', () {
       expect(PlanCardStates.parse('Paused'), PlanCardState.unknown);
       expect(PlanCardStates.parse(7), PlanCardState.unknown);
@@ -203,6 +242,8 @@ void main() {
       expect(a.body, '3 routes are hidden on Free. Nothing is deleted.');
       expect(a.route, '/taxi-plan-visible');
       TaxiNoticeCopy.debugPlan = MyPlanModel(paymentEnabled: false, trialAvailable: true, paymentStartsOn: DateTime(2027, 2, 1));
+      TaxiNoticeCopy.debugCatalog = [freePlan('Taxi'), plusPlan('Taxi')];
+      addTearDown(() => TaxiNoticeCopy.debugCatalog = null);
       final b = TaxiNoticeCopy.of(_notice('PlansStarting'))!;
       expect(b.title, 'Plans start on 1 Feb');
       expect(b.body, 'Free keeps 1 route. Try Plus free for 7 days.');

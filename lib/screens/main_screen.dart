@@ -192,6 +192,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     _previousTabIndex = AppTabs.home;
     _auth.tabIntent.value = null;
     _auth.switchToTab(AppTabs.home);
+    _auth.resetVisitedTabs();
     ShellTeardown.run(old);
     OwnerShellBindings.ensure(next);
   }

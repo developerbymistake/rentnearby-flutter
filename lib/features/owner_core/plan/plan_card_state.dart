@@ -1,3 +1,6 @@
+import 'package:get/get.dart';
+
+import '../../../config/app_routes.dart';
 import '../../../design/design.dart';
 import '../../../design/extra/ext_plans.dart';
 import '../../../models/my_plan_model.dart';
@@ -26,18 +29,21 @@ abstract final class PlanCardStates {
 
   static const int endedWindowDays = 30;
 
-  /// The Plans page state from /plans/me. A cancelled trial reads as Cancelled (o_pl_3); on hold wins over carried-over days (o_pl_7).
+  /// The Plans page state: the server `state` when sent, else D-09 order (AdminGrant, PaymentOff, Grace, Cancelled,
+  /// Trial, OnHold / Ended, Plus, Free). A cancelled trial reads as Cancelled; on hold wins over carried-over days.
   static PlanCardState ofPlan(MyPlanModel me, {DateTime? now}) {
+    final server = parse(me.state);
+    if (server != PlanCardState.unknown) return server;
+    if (me.source == 'AdminGrant' && me.endsAt != null && !me.isDefault) return PlanCardState.adminGrant;
     if (!me.paymentEnabled) return PlanCardState.paymentOff;
     final p = me.play;
-    if (me.hasPaidPlan && me.source == 'AdminGrant') return PlanCardState.adminGrant;
-    if (p != null && (p.onHold || p.paused)) return PlanCardState.onHold;
     if (p != null && p.inGrace) return PlanCardState.grace;
     if (me.hasPaidPlan) {
       if (p != null && p.ownsActivePlan && !p.renewsAutomatically) return PlanCardState.cancelled;
       if (me.isTrial || (p?.inTrial ?? false)) return PlanCardState.trial;
-      return PlanCardState.plus;
     }
+    if (p != null && (p.onHold || p.paused)) return PlanCardState.onHold;
+    if (me.hasPaidPlan) return PlanCardState.plus;
     if (p != null && p.ended) {
       final at = p.expiryAt ?? me.endsAt;
       final today = now ?? DateTime.now();
@@ -143,6 +149,20 @@ abstract class PlanRoleCopy {
   String? get chooseLabel;
   void openChoose();
 
+  bool specialPricesOnly(MyPlanModel me) =>
+      featureKey == 'Stay' && me.hidden.photos + me.hidden.roomTypes == 0 && (me.hidden.specialPrices > 0 || me.pausedByPlanCount > 0);
+
+  // Something hidden by the plan can be chosen back (FX-15, D-27).
+  bool canChoose(MyPlanModel me) => switch (featureKey) {
+        'Stay' => me.hidden.photos + me.hidden.roomTypes > 0 || specialPricesOnly(me),
+        'Taxi' => me.hidden.routes > 0,
+        _ => false,
+      };
+
+  String? chooseLabelFor(MyPlanModel me) => specialPricesOnly(me) ? PlanChooseWords.specialPrices : chooseLabel;
+
+  void openChooseFor(MyPlanModel me) => specialPricesOnly(me) ? Get.toNamed(AppRoutes.staySpecialPrices) : openChoose();
+
   String heroSubtitle(PlanCardState s, MyPlanModel me);
   List<PlanHeroLine> heroLines(PlanCardState s, MyPlanModel me, PlanValues v);
   PlanHeroMeter? heroMeter(PlanCardState s, MyPlanModel me, PlanValues v);
@@ -151,6 +171,10 @@ abstract class PlanRoleCopy {
   List<(String, String)> weekCells(OwnerWeekly w);
   PlanHomeView homeCard(OwnerPlanCard? card, {String? city, PlanValues v = const PlanValues()});
   String profileLine(MyPlanModel me);
+}
+
+abstract final class PlanChooseWords {
+  static const String specialPrices = 'Special prices';
 }
 
 abstract final class PlanCopies {

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
@@ -28,7 +29,7 @@ import '../features/owner_core/session/owner_session_hooks.dart';
 /// What triggered a logout — decides whether the server-side revoke call fires and which (if
 /// any) toast is shown. Kept as a typed reason rather than booleans so each of the 3 real-world
 /// triggers (explicit tap, account deletion, a server-forced 401) is unambiguous at the call site.
-enum LogoutReason { explicitLogout, accountDeleted, sessionExpired, roleChanged }
+enum LogoutReason { explicitLogout, accountDeleted, sessionExpired, roleChanged, accountSuspended }
 
 enum RoleActionResult { success, unavailable, failed }
 
@@ -58,6 +59,16 @@ class AuthController extends GetxController {
   final canListStays = false.obs;
   final canListTaxis = false.obs;
   final tabIndex = AppTabs.home.obs;
+  // A tab root is built on its first visit only (FX-06); every tabIndex change counts as a visit.
+  final visitedTabs = <int>{AppTabs.home}.obs;
+
+  void markVisited(int index) {
+    if (!visitedTabs.contains(index)) visitedTabs.add(index);
+  }
+
+  void resetVisitedTabs() {
+    visitedTabs.assignAll({AppTabs.home, tabIndex.value});
+  }
   final profileTabTrigger = 0.obs;
   final shellKind = ShellKind.seeker.obs;
   final ownerShellEmpty = false.obs;
@@ -228,6 +239,8 @@ class AuthController extends GetxController {
     ever<UserModel?>(user, (_) => syncShell());
     ever<String>(roleKey, (_) => syncShell());
     ever<int>(_tabs.version, (_) => leaveOffTabRoute());
+    markVisited(tabIndex.value);
+    ever<int>(tabIndex, markVisited);
   }
 
   /// Gated setup screens have no MainScreen underneath; MainScreen's own worker covers the rest.
@@ -368,6 +381,8 @@ class AuthController extends GetxController {
 
   bool get blocksShellSwitch => isLoggingOut.value || cleaningUp.value;
 
+  static const Duration hubDisconnectTimeout = Duration(seconds: 2);
+
   Future<void> _performLogoutCleanup(LogoutReason reason) async {
     cleaningUp.value = true;
     try {
@@ -377,33 +392,29 @@ class AuthController extends GetxController {
     }
   }
 
+  // Local steps first and awaited; server calls run behind with the captured token, so a slow network
+  // never delays the redirect and no late step can touch the next session (FX-26).
   Future<void> _cleanupSession(LogoutReason reason) async {
     final buddyUserId = user.value?.id;
-    // Timeout + catch-all: the redirect below must run even if a cleanup step hangs or throws,
-    // or a revoked session leaves the app permanently stuck on the current screen.
+    final bearer = StorageService.getToken();
+    final explicit = reason == LogoutReason.explicitLogout;
     try {
-      await Future(() async {
-        try {
-          await NotificationService.to.clearToken(unregister: reason == LogoutReason.explicitLogout);
-        } catch (_) {}
-        if (reason == LogoutReason.explicitLogout) {
-          // Fire-and-forget, same pattern as _saveSession's FCM registration below — best-effort
-          // server-side revoke that must never block or fail local cleanup. Not awaited: by the
-          // time this runs, ApiService.runExclusiveLogout has ALREADY claimed the single-flight
-          // slot (that claim happens synchronously, several stack frames earlier in logout(),
-          // before this deferred Future's computation even starts) — so if this POST itself
-          // 401s, the interceptor's onError finds _logoutInFlight already non-null and just
-          // awaits it, never re-entering with a different reason/toast. Holds by call-stack
-          // causality, not by any assumption about microtask/macrotask scheduling order.
-          ApiService.post('/auth/logout', {}).catchError((_) => <String, dynamic>{});
-        }
-        try {
-          await NotificationService.to.clearDistrictTopic();
-        } catch (_) {}
-        await disconnectAllHubs();
-        await NotificationService.to.cancelAllChatNotifications();
-        await StorageService.clearAll();
-      }).timeout(const Duration(seconds: 5));
+      NotificationService.to.clearToken(unregister: explicit, bearer: bearer);
+    } catch (_) {}
+    if (explicit && bearer != null) {
+      unawaited(ApiService.sendAs('POST', '/auth/logout', bearer: bearer, data: const {}).catchError((_) {}));
+    }
+    try {
+      unawaited(NotificationService.to.clearDistrictTopic().catchError((_) {}));
+    } catch (_) {}
+    try {
+      await StorageService.clearAll();
+    } catch (_) {}
+    try {
+      await NotificationService.to.cancelAllChatNotifications();
+    } catch (_) {}
+    try {
+      await disconnectAllHubs().timeout(hubDisconnectTimeout);
     } catch (_) {}
     user.value = null;
     roleKey.value = UserRoleKeys.seeker;
@@ -413,6 +424,7 @@ class AuthController extends GetxController {
     ShellState.current.value = ShellKind.seeker;
     ownerShellEmpty.value = false;
     tabIntent.value = null;
+    visitedTabs.assignAll({AppTabs.home});
     _syncProfileFields(null);
     signupUsername.value = null;
     if (reason == LogoutReason.sessionExpired) {
@@ -422,6 +434,10 @@ class AuthController extends GetxController {
     } else if (reason == LogoutReason.roleChanged) {
       try {
         AppToast.info('Role updated. Please log in again.');
+      } catch (_) {}
+    } else if (reason == LogoutReason.accountSuspended) {
+      try {
+        AppToast.info('Your account is paused.');
       } catch (_) {}
     }
     try {

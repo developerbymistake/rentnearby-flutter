@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:bakhli/controllers/auth_controller.dart';
 import 'package:bakhli/controllers/tab_config_controller.dart';
 import 'package:bakhli/features/owner_core/data/owner_api.dart';
+import 'package:bakhli/features/owner_core/data/owner_cache.dart';
 import 'package:bakhli/models/my_plan_model.dart';
 import 'package:bakhli/models/user_model.dart';
 import 'package:bakhli/repositories/plan_repository.dart';
@@ -120,6 +121,7 @@ Future<void> initTestStorage(String name) async {
     (call) async => Directory.systemTemp.createTempSync(name).path,
   );
   await GetStorage.init();
+  await GetStorage.init(OwnerCache.container);
 }
 
 Map<String, dynamic> loadSample(String name) =>

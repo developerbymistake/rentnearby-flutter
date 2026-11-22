@@ -184,6 +184,8 @@ class MyPlanModel {
   final bool? canUpgradeField;
   final DateTime? paymentStartsOn;
   final bool plansStartedToday;
+  // Server plan card state (FB-50); null on an older server.
+  final String? state;
 
   const MyPlanModel({
     this.paymentEnabled = false,
@@ -211,6 +213,7 @@ class MyPlanModel {
     this.canUpgradeField,
     this.paymentStartsOn,
     this.plansStartedToday = false,
+    this.state,
   });
 
   bool get canUpgrade => canUpgradeField ?? (paymentEnabled && !isPaid);
@@ -247,6 +250,7 @@ class MyPlanModel {
       canUpgradeField: j['canUpgrade'] is bool ? j['canUpgrade'] as bool : null,
       paymentStartsOn: BuddyJson.date(j['paymentStartsOn']),
       plansStartedToday: j['plansStartedToday'] == true,
+      state: BuddyJson.strOrNull(j['state']),
     );
   }
 }

@@ -18,6 +18,7 @@ import '../features/buddy/notices/widgets/notice_row.dart';
 import '../features/owner_core/session/owner_notice_registry.dart';
 import '../models/notification_model.dart';
 import '../services/notification_service.dart';
+import '../features/owner_core/plan/plan_expired_tap.dart';
 import '../utils/app_date_format.dart';
 import '../utils/app_toast.dart';
 import '../utils/notification_visuals.dart';
@@ -73,6 +74,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   void _openNotification(NotificationModel n) {
     _ctrl.markRead(n.id);
+    if (PlanExpiredTap.handles(n.type)) {
+      PlanExpiredTap.open();
+      return;
+    }
     final live = AppRoutes.liveTarget(n.actionRoute, n.actionArguments);
     if (live == null || live.route == AppRoutes.notifications) return;
     if (!Get.find<AuthController>().canOpenRoute(live.route)) {
