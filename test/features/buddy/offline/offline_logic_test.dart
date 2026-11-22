@@ -11,6 +11,7 @@ import 'package:bakhli/features/buddy/offline/offline_strings.dart';
 import 'package:bakhli/features/buddy/offline/queue_rules.dart';
 import 'package:bakhli/features/buddy/offline/queued_expense_gateway.dart';
 import 'package:bakhli/features/buddy/shared/models/person_models.dart';
+import 'package:bakhli/features/owner_core/data/owner_cache.dart';
 import 'package:bakhli/services/storage_service.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -160,6 +161,7 @@ void main() {
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(const MethodChannel('plugins.flutter.io/path_provider'), (call) async => dir.path);
       await GetStorage.init();
+      await OwnerCache.init();
       final s = ExpenseQueueStore();
       await s.init();
       expect(GetStorageQueueBox.name, 'buddy_expense_queue_v1');

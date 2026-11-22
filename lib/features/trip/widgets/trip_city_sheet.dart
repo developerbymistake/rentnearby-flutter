@@ -178,6 +178,8 @@ class _SheetText {
 }
 
 class _TripCitySheetState extends State<TripCitySheet> {
+  static const _compactButtonHeight = 44.0;
+  static const _compactButtonFont = 15.0;
   final _searchCtrl = TextEditingController();
   late final TripCityCatalog _catalog;
 
@@ -437,7 +439,7 @@ class _TripCitySheetState extends State<TripCitySheet> {
       padding: EdgeInsets.fromLTRB(DS.s(18), DS.s(compact ? 6 : 12), DS.s(18), 0),
       decoration: BoxDecoration(color: DesignColors.surface, boxShadow: DS.shadows(Ink3D.topEdge)),
       child: compact
-          ? GradientPillButton(tone: _tone, height: 44, fontSize: 15, label: _SheetText.continueCities(_picked.length), onTap: _continue)
+          ? GradientPillButton(tone: _tone, height: _compactButtonHeight, fontSize: _compactButtonFont, label: _SheetText.continueCities(_picked.length), onTap: _continue)
           : GradientPillButton(tone: _tone, label: _SheetText.continueCities(_picked.length), onTap: _continue),
     );
   }

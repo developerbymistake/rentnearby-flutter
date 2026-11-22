@@ -51,7 +51,7 @@ abstract final class SeekerTripActions {
       case SeekerStepKind.taxi:
         return TripNavigation.openTaxiFlow(context);
       case SeekerStepKind.plan:
-        await TripNavigation.openPlan(tripId: tripId);
+        await TripNavigation.openDayPlan(tripId);
         return true;
       case SeekerStepKind.journey:
       case SeekerStepKind.unknown:
@@ -99,7 +99,7 @@ abstract final class SeekerTripActions {
     if (card.isViewer) {
       BuddyNavigation.openDayPlan(id, day: day);
     } else {
-      TripNavigation.openPlan(tripId: id, day: day);
+      TripNavigation.openDayPlan(id, day: day);
     }
   }
 

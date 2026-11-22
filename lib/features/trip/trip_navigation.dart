@@ -129,6 +129,8 @@ class TripNavigation {
   static Future<void>? openPlan({String? tripId, bool fresh = false, int? day}) =>
       Get.toNamed(AppRoutes.tripPlan, arguments: {'tripId': tripId, 'fresh': fresh, 'day': ?day});
 
+  static Future<void>? openDayPlan(String tripId, {int? day}) => openPlan(tripId: tripId, day: day);
+
   static Future<void>? openOverview({String? tripId}) =>
       Get.toNamed(AppRoutes.tripOverview, arguments: {'tripId': tripId ?? TripPlanController.to.trip.value?.id});
 
