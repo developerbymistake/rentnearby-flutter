@@ -1,0 +1,305 @@
+import 'dart:async';
+import 'dart:io';
+import 'dart:typed_data';
+import 'dart:ui' as ui;
+
+import 'package:bakhli/design/design.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/material.dart';
+
+import '../../../utils/spot_photo_url.dart';
+import '../models/trip_spot_category.dart';
+import 'discovery_api.dart';
+
+typedef MarkerFetch = Future<Uint8List?> Function(String url);
+
+abstract class MarkerDiskStore {
+  Future<Uint8List?> read(String key);
+  Future<void> write(String key, Uint8List bytes);
+  Future<int> count();
+  Future<void> clear();
+}
+
+class DiscMarkerFolderStore implements MarkerDiskStore {
+  static const String folder = 'disc_markers';
+  final Directory Function() _root;
+
+  DiscMarkerFolderStore({Directory Function()? root}) : _root = root ?? _systemCache;
+
+  static Directory _systemCache() => Directory.systemTemp;
+
+  Directory get _dir => Directory('${_root().path}${Platform.pathSeparator}$folder');
+
+  File _file(String key) => File('${_dir.path}${Platform.pathSeparator}$key.png');
+
+  @override
+  Future<Uint8List?> read(String key) async {
+    try {
+      final f = _file(key);
+      if (!await f.exists()) return null;
+      return await f.readAsBytes();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  @override
+  Future<void> write(String key, Uint8List bytes) async {
+    try {
+      final dir = _dir;
+      if (!await dir.exists()) await dir.create(recursive: true);
+      await _file(key).writeAsBytes(bytes);
+    } catch (_) {}
+  }
+
+  @override
+  Future<int> count() async {
+    try {
+      final dir = _dir;
+      if (!await dir.exists()) return 0;
+      return await dir.list().length;
+    } catch (_) {
+      return 0;
+    }
+  }
+
+  @override
+  Future<void> clear() async {
+    try {
+      final dir = _dir;
+      if (await dir.exists()) await dir.delete(recursive: true);
+    } catch (_) {}
+  }
+}
+
+abstract class MarkerPainter {
+  Future<Uint8List> badge(String category, DiscTuning t);
+  Future<Uint8List?> photo(Uint8List thumb, DiscTuning t);
+  Future<bool> valid(Uint8List png);
+}
+
+class CanvasMarkerPainter implements MarkerPainter {
+  const CanvasMarkerPainter();
+
+  static const double _ringBadge = 1.5;
+  static const double _ringPhoto = 2;
+  static const double _shadowPad = 3;
+  static const double _glyphRatio = 0.58;
+
+  static double canvasDp(double markerDp) => markerDp + _shadowPad * 2;
+
+  @override
+  Future<Uint8List> badge(String category, DiscTuning t) async {
+    final size = t.px(canvasDp(t.badgeDp)).toDouble();
+    final r = t.badgeDp * t.pxPerDp / 2;
+    final c = Offset(size / 2, size / 2);
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder, Rect.fromLTWH(0, 0, size, size));
+    _shadow(canvas, c, r, t);
+    canvas.drawCircle(c, r, Paint()..color = TripSpotCategory.colorOf(category));
+    canvas.drawCircle(
+      c,
+      r - _ringBadge * t.pxPerDp / 2,
+      Paint()
+        ..color = FitnessAppTheme.white
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = _ringBadge * t.pxPerDp,
+    );
+    final icon = TripSpotCategory.iconOf(category);
+    final tp = TextPainter(
+      textDirection: TextDirection.ltr,
+      text: TextSpan(
+        text: String.fromCharCode(icon.codePoint),
+        style: TextStyle(
+          fontFamily: icon.fontFamily,
+          package: icon.fontPackage,
+          fontSize: r * 2 * _glyphRatio,
+          color: FitnessAppTheme.white,
+          height: 1,
+        ),
+      ),
+    )..layout();
+    tp.paint(canvas, c - Offset(tp.width / 2, tp.height / 2));
+    tp.dispose();
+    return _png(recorder, size);
+  }
+
+  @override
+  Future<Uint8List?> photo(Uint8List thumb, DiscTuning t) async {
+    ui.Image? src;
+    try {
+      final codec = await ui.instantiateImageCodec(thumb);
+      src = (await codec.getNextFrame()).image;
+      codec.dispose();
+    } catch (_) {
+      return null;
+    }
+    try {
+      final size = t.px(canvasDp(t.photoDp)).toDouble();
+      final r = t.photoDp * t.pxPerDp / 2;
+      final ring = _ringPhoto * t.pxPerDp;
+      final c = Offset(size / 2, size / 2);
+      final recorder = ui.PictureRecorder();
+      final canvas = Canvas(recorder, Rect.fromLTWH(0, 0, size, size));
+      _shadow(canvas, c, r, t);
+      canvas.drawCircle(c, r, Paint()..color = FitnessAppTheme.white);
+      final side = src.width < src.height ? src.width : src.height;
+      final from = Rect.fromLTWH((src.width - side) / 2, (src.height - side) / 2, side.toDouble(), side.toDouble());
+      canvas.save();
+      canvas.clipPath(Path()..addOval(Rect.fromCircle(center: c, radius: r - ring)));
+      canvas.drawImageRect(src, from, Rect.fromCircle(center: c, radius: r - ring), Paint()..filterQuality = FilterQuality.high);
+      canvas.restore();
+      return await _png(recorder, size);
+    } catch (_) {
+      return null;
+    } finally {
+      src.dispose();
+    }
+  }
+
+  @override
+  Future<bool> valid(Uint8List png) async {
+    if (png.length < 8 || png[0] != 0x89 || png[1] != 0x50 || png[2] != 0x4E || png[3] != 0x47) return false;
+    try {
+      final codec = await ui.instantiateImageCodec(png);
+      final frame = await codec.getNextFrame();
+      final ok = frame.image.width > 0 && frame.image.height > 0;
+      frame.image.dispose();
+      codec.dispose();
+      return ok;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  static void _shadow(Canvas canvas, Offset c, double r, DiscTuning t) {
+    canvas.drawCircle(
+      c + Offset(0, t.pxPerDp),
+      r,
+      Paint()
+        ..color = FitnessAppTheme.grey.withValues(alpha: Alpha.scrim)
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, 2 * t.pxPerDp),
+    );
+  }
+
+  static Future<Uint8List> _png(ui.PictureRecorder recorder, double size) async {
+    final img = await recorder.endRecording().toImage(size.round(), size.round());
+    try {
+      final bytes = await img.toByteData(format: ui.ImageByteFormat.png);
+      return bytes!.buffer.asUint8List();
+    } finally {
+      img.dispose();
+    }
+  }
+}
+
+class TripMarkerImages {
+  final MarkerFetch _fetch;
+  final MarkerDiskStore _disk;
+  final MarkerPainter _painter;
+
+  TripMarkerImages({MarkerFetch? fetch, MarkerDiskStore? disk, MarkerPainter? painter})
+      : _fetch = fetch ?? _defaultFetch,
+        _disk = disk ?? DiscMarkerFolderStore(),
+        _painter = painter ?? const CanvasMarkerPainter();
+
+  static Future<void> clearDisk() => DiscMarkerFolderStore().clear();
+
+  static Future<Uint8List?> _defaultFetch(String url) async {
+    try {
+      final file = await CachedNetworkImageProvider.defaultCacheManager.getSingleFile(url);
+      return await file.readAsBytes();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static String thumbHash(String url) {
+    var h = 0x811c9dc5;
+    for (final c in url.codeUnits) {
+      h ^= c;
+      h = (h * 0x01000193) & 0xFFFFFFFF;
+    }
+    return h.toRadixString(16).padLeft(8, '0');
+  }
+
+  static String cacheKey(String spotId, String thumbUrl, DiscTuning t) {
+    final safe = spotId.replaceAll(RegExp(r'[^A-Za-z0-9_-]'), '_');
+    final dpr = t.pxPerDp.toStringAsFixed(2).replaceAll('.', 'p');
+    return '${safe}_${t.photoDp.round()}_${dpr}_${thumbHash(thumbUrl)}';
+  }
+
+  static String? markerUrl(DiscoverySpot s) => s.hasThumb ? SpotPhotoUrl.of(s.thumbUrl, SpotPhotoSize.marker) : null;
+
+  Future<Uint8List> badge(String category, DiscTuning t) => _painter.badge(category, t);
+
+  Future<Uint8List?> photoFor(DiscoverySpot s, DiscTuning t) async {
+    final url = markerUrl(s);
+    if (url == null || url.isEmpty) return null;
+    final key = cacheKey(s.id, url, t);
+    final cached = await _disk.read(key);
+    if (cached != null && await _painter.valid(cached)) return cached;
+    final thumb = await _fetch(url);
+    if (thumb == null || thumb.isEmpty) return null;
+    final png = await _painter.photo(thumb, t);
+    if (png == null) return null;
+    await _disk.write(key, png);
+    return png;
+  }
+
+  Future<void> trimDisk(DiscTuning t) async {
+    if (await _disk.count() > t.markerCacheMax) await _disk.clear();
+  }
+
+  Future<Set<String>> register({
+    required List<DiscoverySpot> spots,
+    required DiscTuning tuning,
+    required Set<String> already,
+    required Future<void> Function(String name, Uint8List bytes) addImage,
+    required Future<void> Function(Set<String> registered) onBatch,
+    required bool Function() alive,
+  }) async {
+    final registered = {...already};
+    final todo = [for (final s in spots) if (s.hasThumb && !registered.contains(s.id)) s];
+    if (todo.isEmpty) return registered;
+    await trimDisk(tuning);
+    final step = tuning.batch < 1 ? 1 : tuning.batch;
+    for (var i = 0; i < todo.length; i += step) {
+      if (!alive()) return registered;
+      final chunk = todo.sublist(i, i + step > todo.length ? todo.length : i + step);
+      final images = await _pool(chunk, tuning.maxDownloads, (s) => photoFor(s, tuning));
+      var added = false;
+      for (var k = 0; k < chunk.length; k++) {
+        final png = images[k];
+        if (png == null) continue;
+        if (!alive()) return registered;
+        try {
+          await addImage(DiscIds.photoImage(chunk[k].id), png);
+          registered.add(chunk[k].id);
+          added = true;
+        } catch (_) {}
+      }
+      if (!alive()) return registered;
+      if (added) await onBatch({...registered});
+    }
+    return registered;
+  }
+
+  static Future<List<R?>> _pool<T, R>(List<T> items, int width, Future<R?> Function(T) run) async {
+    final out = List<R?>.filled(items.length, null);
+    var next = 0;
+    Future<void> worker() async {
+      while (next < items.length) {
+        final i = next++;
+        try {
+          out[i] = await run(items[i]);
+        } catch (_) {
+          out[i] = null;
+        }
+      }
+    }
+
+    await Future.wait([for (var w = 0; w < (width < 1 ? 1 : width) && w < items.length; w++) worker()]);
+    return out;
+  }
+}

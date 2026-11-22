@@ -6,6 +6,7 @@ import 'package:bakhli/design/design.dart';
 import 'package:get/get.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 import '../../../config/app_constants.dart';
+import '../../map_discovery/data/map_pack_service.dart';
 import '../controllers/trip_plan_controller.dart';
 import '../models/trip_plan_model.dart';
 import '../models/trip_plan_result_model.dart';
@@ -21,6 +22,8 @@ import '../trip_strings_dayplan.dart';
 import '../trip_strings_v2_plan.dart';
 import '../widgets/trip_plan_header.dart';
 import '../widgets/trip_not_found_view.dart';
+import '../map/discovery_api.dart';
+import '../map/trip_discovery_layer.dart';
 
 class TripMapScreen extends StatefulWidget {
   const TripMapScreen({super.key});
@@ -61,6 +64,11 @@ class _TripMapScreenState extends State<TripMapScreen> with TickerProviderStateM
   bool _dayPicked = false;
   bool _awaitingDefaultDay = false;
   String? _waitingTripId;
+  TripDiscoveryLayer? _disc;
+  bool _discBusy = false;
+  bool _forceRedraw = false;
+  String? _discKeys;
+  static const double _discCardBand = 150;
 
   bool get _waitingForTrip {
     final id = _waitingTripId;
@@ -109,8 +117,12 @@ class _TripMapScreenState extends State<TripMapScreen> with TickerProviderStateM
     }
     _workers.add(ever(_plan.plan, (_) {
       _applyDefaultDay();
+      _ensureDiscData();
       _sync();
     }));
+    _workers.add(ever(_discSource.state, (_) => _onDiscChanged()));
+    _workers.add(ever(MapPackService.to.revision, (_) => _onDiscChanged()));
+    _ensureDiscData();
     _workers.add(ever(_plan.result, (_) => _sync()));
     _workers.add(ever(_plan.enquiryList, (_) => _sync()));
     _workers.add(ever(_plan.isPlanning, (_) => _sync()));
@@ -133,6 +145,7 @@ class _TripMapScreenState extends State<TripMapScreen> with TickerProviderStateM
     _enter.dispose();
     _map?.onSymbolTapped.remove(_onSymbolTapped);
     _map?.onCircleTapped.remove(_onCircleTapped);
+    _disc?.dispose();
     for (final w in _workers) {
       w.dispose();
     }
@@ -203,8 +216,79 @@ class _TripMapScreenState extends State<TripMapScreen> with TickerProviderStateM
     }
     if (!mounted) return;
     setState(() => _styleLoaded = true);
+    await _attachDisc();
     await _sync();
     _recalculateIfRouteMissing();
+  }
+
+  DiscoveryDataSource get _discSource => MapPackService.to.source;
+
+  Set<int> _legKeys() => {
+        for (final l in _plan.plan.value?.legs ?? const <TripCityLeg>[])
+          if (l.cityKey > 0) l.cityKey,
+      };
+
+  DiscoveryHost _discHost() => DiscoveryHost(
+        anchorLayerId: () => _map?.circleManager?.layerIds.first,
+        plannedDayOf: (id) => _plan.plan.value?.dayOfSpot(id),
+        topInset: () => _overlayHeight(_topKey, DS.s(120)),
+        bottomInset: () => MediaQuery.paddingOf(context).bottom,
+      );
+
+  void _ensureDiscData() {
+    final keys = _legKeys();
+    final sig = (keys.toList()..sort()).join(',');
+    if (keys.isEmpty || sig == _discKeys) return;
+    _discKeys = sig;
+    _discSource.ensureForCities(keys).ignore();
+    _disc?.refreshData().ignore();
+  }
+
+  Future<void> _attachDisc({bool late = false}) async {
+    final map = _map;
+    if (_discBusy || _disc != null || map == null || !_styleLoaded) return;
+    _discBusy = true;
+    try {
+      final layer = await DiscoveryAttach.maybe(
+        map,
+        mode: DiscoveryMode.full,
+        host: _discHost(),
+        source: _discSource,
+        tuning: DiscTuning.trip,
+        dataOf: (s) => s.forCities(_legKeys()),
+        viewSize: () => MediaQuery.sizeOf(context),
+        unitsPerDp: () => DiscoveryAttach.unitsPerDp(context),
+        cardHeight: () => DS.s(_discCardBand),
+      );
+      if (layer == null) return;
+      if (!mounted) {
+        layer.dispose();
+        return;
+      }
+      setState(() => _disc = layer);
+      if (late) {
+        _forceRedraw = true;
+        await _sync();
+      }
+    } finally {
+      _discBusy = false;
+    }
+  }
+
+  Future<void> _onDiscChanged() async {
+    if (!mounted || !_styleLoaded) return;
+    final d = _disc;
+    if (d == null) {
+      await _attachDisc(late: true);
+      return;
+    }
+    if (DiscoveryAttach.wanted(_discSource)) return;
+    setState(() => _disc = null);
+    await d.detach();
+    d.dispose();
+    if (!mounted) return;
+    _forceRedraw = true;
+    await _sync();
   }
 
   void _recalculateIfRouteMissing() {
@@ -247,13 +331,20 @@ class _TripMapScreenState extends State<TripMapScreen> with TickerProviderStateM
     }
     final signature = _signature(p);
     final staySignature = _staySignature(p);
-    if (signature != _drawnSignature) {
+    final forced = _forceRedraw;
+    _forceRedraw = false;
+    if (signature != _drawnSignature || forced) {
       final edited = _drawnSignature != null;
+      final moved = signature != _drawnSignature;
       await _redraw(map, p);
       _drawnSignature = signature;
       _drawnStaySignature = staySignature;
-      await _fitCamera();
-      if (edited) _recalculateIfRouteMissing();
+      if (moved) {
+        await _fitCamera();
+      } else {
+        await _applySelection();
+      }
+      if (edited && moved) _recalculateIfRouteMissing();
     } else {
       for (final d in _drawnDays) {
         final route = _plan.routeFor(d);
@@ -395,6 +486,13 @@ class _TripMapScreenState extends State<TripMapScreen> with TickerProviderStateM
         return;
       }
     }
+    for (final e in _symbols.entries) {
+      final i = e.value.indexWhere((x) => _same(x, symbol));
+      if (i >= 0) {
+        _openPlanned(e.key, i);
+        return;
+      }
+    }
   }
 
   void _onCircleTapped(Circle circle) {
@@ -404,6 +502,36 @@ class _TripMapScreenState extends State<TripMapScreen> with TickerProviderStateM
         return;
       }
     }
+    for (final e in _circles.entries) {
+      final i = e.value.indexWhere((x) => x == circle || x.id == circle.id);
+      if (i >= 0) {
+        _openPlanned(e.key, i);
+        return;
+      }
+    }
+  }
+
+  void _openPlanned(int day, int index) {
+    final disc = _disc;
+    final spots = _spotsOf(day);
+    if (disc == null || !disc.isAttached || index >= spots.length || _dayOpacity(day) <= 0) return;
+    final s = spots[index];
+    disc
+        .select(
+          s.id,
+          planned: true,
+          spot: DiscoverySpot(
+            id: s.id,
+            lat: s.latitude,
+            lon: s.longitude,
+            category: s.category,
+            rank: 0,
+            name: s.name,
+            cityKey: _plan.plan.value?.legAt(_plan.legIndexOf(day))?.cityKey,
+            thumbUrl: s.imageUrl,
+          ),
+        )
+        .ignore();
   }
 
   static Future<Uint8List> _buildStayPinImage() =>
@@ -687,7 +815,7 @@ class _TripMapScreenState extends State<TripMapScreen> with TickerProviderStateM
   }
 
   Future<void> _addLine(MapLibreMapController map, String source, String id, LineLayerProperties props, String? below) async {
-    await map.addLineLayer(source, id, props, belowLayerId: below);
+    await map.addLineLayer(source, id, props, belowLayerId: below, enableInteraction: false);
     _lineKeys[id] = _lineKey(props);
   }
 
@@ -754,7 +882,7 @@ class _TripMapScreenState extends State<TripMapScreen> with TickerProviderStateM
     _stayPins.clear();
     await map.clearCircles();
     await map.clearSymbols();
-    final below = map.circleManager?.layerIds.first;
+    final below = _disc?.isAttached == true ? DiscIds.layerPhoto : map.circleManager?.layerIds.first;
     final circleOpts = <CircleOptions>[];
     final symbolOpts = <SymbolOptions>[];
     final spotDays = <int>[];
@@ -804,6 +932,7 @@ class _TripMapScreenState extends State<TripMapScreen> with TickerProviderStateM
     }
     if (p.isMultiCity) await _drawLegs(map, p, below);
     await _drawStayPins(map, p);
+    await _disc?.setPlannedIds({for (final s in p.allSpots) s.id});
   }
 
   Future<void> _applySelection() async {
@@ -938,7 +1067,12 @@ class _TripMapScreenState extends State<TripMapScreen> with TickerProviderStateM
                 rotateGesturesEnabled: false,
                 tiltGesturesEnabled: false,
                 myLocationEnabled: false,
-                trackCameraPosition: true,
+                trackCameraPosition: false,
+                dragEnabled: false,
+                scaleControlEnabled: _disc != null,
+                scaleControlPosition: ScaleControlPosition.bottomRight,
+                scaleControlUnit: ScaleControlUnit.metric,
+                onMapClick: (point, _) => _disc?.onMapTap(point.x, point.y),
                 attributionButtonMargins: const Point(-200.0, 0.0),
                 annotationOrder: const [AnnotationType.circle, AnnotationType.symbol],
                 onMapCreated: (MapLibreMapController ctrl) {
