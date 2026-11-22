@@ -753,7 +753,7 @@ void main() {
       await t.pump(const Duration(milliseconds: 600));
       await tapText(t, 'Choose from Gallery');
       await t.pump(const Duration(milliseconds: 600));
-      for (var i = 0; i < 3; i++) {
+      for (var i = 0; i < 12; i++) {
         await t.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 200)));
         await t.pump(const Duration(milliseconds: 200));
       }
