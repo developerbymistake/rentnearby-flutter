@@ -107,7 +107,10 @@ Future<void> _changeSecond(WidgetTester t) async {
   expect(find.text('Change Photo'), findsOneWidget);
   await t.tap(find.text('Choose from Gallery'));
   await _settle(t);
-  await t.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 300)));
+  for (var i = 0; i < 6; i++) {
+    await t.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
+    await t.pump(const Duration(milliseconds: 50));
+  }
   await _settle(t);
 }
 

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../../../design/design.dart';
 import '../../../design/extra/ext_taxi_owner.dart';
@@ -12,12 +11,10 @@ import '../widgets/taxi_widgets.dart';
 import 'taxi_hub_controller.dart';
 
 abstract final class TaxiDisplayPhotoAction {
-  static final ImagePicker _picker = ImagePicker();
-
   static Future<void> change(BuildContext context) async {
     final setup = TaxiSetupController.ensure();
     if (setup.displayUploading.value) return;
-    final file = await TaxiPhotoPick.pick(context, picker: _picker, onDenied: (type) => _denied(context, type));
+    final file = await TaxiPhotoPick.pick(context, onDenied: (type) => _denied(context, type));
     if (file == null || !context.mounted) return;
     final bad = await TaxiPhotoPick.reject(file);
     if (bad != null) {

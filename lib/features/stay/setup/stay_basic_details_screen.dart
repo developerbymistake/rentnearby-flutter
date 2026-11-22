@@ -15,6 +15,7 @@ import '../../../screens/add_listing_location_mixin.dart';
 import '../../../utils/app_toast.dart';
 import '../../../utils/concurrency.dart';
 import '../../../utils/input_formatters.dart';
+import '../../../utils/photo_upload/app_photo_pick.dart';
 import '../../../design/design.dart';
 import '../../../design/extra/ext_stay_owner.dart';
 import '../../../widgets/onboarding_closed_dialog.dart';
@@ -34,7 +35,6 @@ import '../../stay_owner/strings/stay_gate_strings.dart';
 import '../../stay_owner/strings/stay_setup_strings.dart';
 import 'stay_option_sets.dart';
 import 'stay_registration_validators.dart';
-import 'stay_photo_pick.dart';
 import 'stay_setup_controller.dart';
 
 class _PhotoEntry {
@@ -86,7 +86,6 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
   final Set<String> _facilities = {};
   final List<_PhotoEntry> _photos = [];
   final List<String> _removedPhotoIds = [];
-  final _picker = ImagePicker();
   bool _dirty = false;
   bool _isUploading = false;
   bool _askingRetry = false;
@@ -97,8 +96,6 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
   int _step = 0;
   bool _photosOnly = false;
   String? _photoError;
-  static const int _maxBytes = 10 * 1024 * 1024;
-  static const _okExt = ['jpg', 'jpeg', 'png', 'webp'];
   static void _planTick() {
     if (Get.isRegistered<PlanController>()) Get.find<PlanController>().myPlan.value;
   }
@@ -379,27 +376,14 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
         if (status.isPermanentlyDenied && mounted) _showPermissionDeniedDialog('Camera');
         return;
       }
-      final XFile? picked;
-      try {
-        picked = await _picker.pickImage(source: source, imageQuality: 85, maxWidth: 1280);
-      } catch (_) {
-        AppToast.error(StaySetupStrings.photoPickFailed);
-        return;
-      }
-      final shot = picked;
+      final shot = await AppPhotoPick.pickOne(source, onFailed: _pickFailed);
       if (shot != null && mounted && await _acceptPhoto(File(shot.path))) {
         setState(() => _photos.add(_PhotoEntry.local(File(shot.path))));
         _dirty = true;
       }
     } else {
       final remaining = _maxPhotos - _photos.length;
-      final List<XFile> picked;
-      try {
-        picked = await StayPhotoPick.gallery(_picker, remaining);
-      } catch (_) {
-        AppToast.error(StaySetupStrings.photoPickFailed);
-        return;
-      }
+      final picked = await AppPhotoPick.pickGallery(remaining, onFailed: _pickFailed);
       if (picked.isNotEmpty && mounted) {
         final allowed = <_PhotoEntry>[];
         for (final f in picked.take(remaining)) {
@@ -415,16 +399,18 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
     }
   }
 
+  static void _pickFailed() => AppToast.error(StaySetupStrings.photoPickFailed);
+
   Future<bool> _acceptPhoto(File f) async {
-    final ext = f.path.split('.').last.toLowerCase();
-    if (!_okExt.contains(ext)) {
-      if (mounted) setState(() => _photoError = StaySetupStrings.photoWrongType);
-      return false;
-    }
-    final size = await f.length();
-    if (size > _maxBytes) {
-      AppToast.error(StaySetupStrings.photoTooLarge);
-      return false;
+    switch (await AppPhotoPick.accept(f)) {
+      case PhotoReject.wrongType:
+        if (mounted) setState(() => _photoError = StaySetupStrings.photoWrongType);
+        return false;
+      case PhotoReject.tooLarge:
+        AppToast.error(StaySetupStrings.photoTooLarge);
+        return false;
+      case null:
+        break;
     }
     if (_photoError != null && mounted) setState(() => _photoError = null);
     return true;
@@ -458,14 +444,7 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
         return;
       }
     }
-    final XFile? picked;
-    try {
-      picked = await _picker.pickImage(source: source, imageQuality: 85, maxWidth: 1280);
-    } catch (_) {
-      AppToast.error(StaySetupStrings.photoPickFailed);
-      return;
-    }
-    final shot = picked;
+    final shot = await AppPhotoPick.pickOne(source, onFailed: _pickFailed);
     if (shot == null || !mounted) return;
     final file = File(shot.path);
     if (!await _acceptPhoto(file) || !mounted) return;

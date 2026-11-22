@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import '../../../services/api_service.dart';
+import '../../../utils/photo_upload/app_photo_pick.dart';
 import '../../owner_core/data/single_flight.dart';
 import '../models/stay_owner_model.dart';
 
@@ -20,14 +21,14 @@ class StayRepository {
 
   Future<void> uploadPhoto(String filePath, {void Function(int, int)? onProgress}) async {
     final formData = FormData.fromMap({
-      'photo': await MultipartFile.fromFile(filePath, filename: filePath.split('/').last),
+      'photo': await AppPhotoPick.multipart(filePath),
     });
     await ApiService.postFormData('/stays/me/photos', formData, onSendProgress: onProgress);
   }
 
   Future<void> replacePhoto(String photoId, String filePath, {void Function(int, int)? onProgress}) async {
     final formData = FormData.fromMap({
-      'photo': await MultipartFile.fromFile(filePath, filename: filePath.split('/').last),
+      'photo': await AppPhotoPick.multipart(filePath),
     });
     await ApiService.putFormData('/stays/me/photos/$photoId', formData, onSendProgress: onProgress);
   }

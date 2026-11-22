@@ -13,7 +13,6 @@ import 'package:bakhli/features/owner_core/plan/plan_gate.dart';
 import 'package:bakhli/features/owner_core/session/owner_plan_sync.dart';
 import 'package:bakhli/features/owner_core/sheets/owner_states.dart';
 import 'package:bakhli/features/stay/models/stay_owner_model.dart';
-import 'package:bakhli/features/stay/setup/stay_photo_pick.dart';
 import 'package:bakhli/features/stay_owner/calendar/models/stay_calendar_models.dart';
 import 'package:bakhli/features/stay_owner/calendar/stay_balance_due_screen.dart';
 import 'package:bakhli/features/stay_owner/calendar/stay_calendar_entry_screen.dart';
@@ -25,10 +24,12 @@ import 'package:bakhli/features/stay_owner/stay_owner_deps.dart';
 import 'package:bakhli/features/stay_owner/stay_owner_session.dart';
 import 'package:bakhli/features/stay_owner/strings/stay_home_strings.dart';
 import 'package:bakhli/features/stay_owner/strings/stay_hub_strings.dart';
+import 'package:bakhli/utils/photo_upload/app_photo_pick.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
-import 'package:image_picker/image_picker.dart';
+// ignore: depend_on_referenced_packages
+import 'package:image_picker_platform_interface/image_picker_platform_interface.dart';
 
 import '../../support/owner_fakes.dart';
 import '../../support/real_phone.dart';
@@ -48,36 +49,22 @@ class _FakeJobsRepo extends JobsRepository {
   }
 }
 
-class _FakePicker extends ImagePicker {
+class _FakePicker extends ImagePickerPlatform {
   int single = 0;
   int multi = 0;
   int? lastLimit;
 
   @override
-  Future<XFile?> pickImage({
-    required ImageSource source,
-    double? maxWidth,
-    double? maxHeight,
-    int? imageQuality,
-    CameraDevice preferredCameraDevice = CameraDevice.rear,
-    bool requestFullMetadata = true,
-  }) async {
+  Future<XFile?> getImageFromSource({required ImageSource source, ImagePickerOptions options = const ImagePickerOptions()}) async {
     single++;
     return XFile('a.jpg');
   }
 
   @override
-  Future<List<XFile>> pickMultiImage({
-    double? maxWidth,
-    double? maxHeight,
-    int? imageQuality,
-    int? limit,
-    bool requestFullMetadata = true,
-  }) async {
-    if (limit != null && limit < 2) throw ArgumentError('limit < 2');
+  Future<List<XFile>> getMultiImageWithOptions({MultiImagePickerOptions options = const MultiImagePickerOptions()}) async {
     multi++;
-    lastLimit = limit;
-    return [XFile('a.jpg'), XFile('b.jpg')];
+    lastLimit = options.limit;
+    return [for (var i = 0; i < (options.limit ?? 2); i++) XFile('m$i.jpg')];
   }
 }
 
@@ -230,14 +217,17 @@ void main() {
 
   group('FS-03 last photo slot', () {
     test('one slot left uses a single pick, two or more a multi pick', () async {
+      final before = ImagePickerPlatform.instance;
+      addTearDown(() => ImagePickerPlatform.instance = before);
       final p = _FakePicker();
-      expect(await StayPhotoPick.gallery(p, 1), hasLength(1));
+      ImagePickerPlatform.instance = p;
+      expect(await AppPhotoPick.pickGallery(1), hasLength(1));
       expect(p.single, 1);
       expect(p.multi, 0);
-      expect(await StayPhotoPick.gallery(p, 2), hasLength(2));
+      expect(await AppPhotoPick.pickGallery(2), hasLength(2));
       expect(p.multi, 1);
       expect(p.lastLimit, 2);
-      expect(await StayPhotoPick.gallery(p, 0), isEmpty);
+      expect(await AppPhotoPick.pickGallery(0), isEmpty);
     });
   });
 

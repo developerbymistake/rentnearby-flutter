@@ -22,6 +22,7 @@ abstract final class TaxiPhotoStrings {
   static const displayUpdated = 'Taxi photo updated';
   static const photoTooLarge = 'Photo is too large. Use one under 10 MB.';
   static const photoWrongType = 'Use a JPG, PNG or WebP photo.';
+  static const photoPickFailed = 'Could not open your photos. Try again.';
   static const hubRowTitle = 'Taxi photo';
   static const hubRowSubNone = 'Add a photo travellers will see';
   static const hubRowSubSet = 'Travellers see this';

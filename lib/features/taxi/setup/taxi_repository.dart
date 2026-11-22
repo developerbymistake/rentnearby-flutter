@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import '../../../services/api_service.dart';
+import '../../../utils/photo_upload/app_photo_pick.dart';
 import '../../../utils/photo_url.dart';
 import '../models/taxi_owner_model.dart';
 
@@ -24,7 +25,7 @@ class TaxiRepository {
 
   Future<TaxiPhotoResult> uploadPlatePhoto(String filePath, {void Function(int, int)? onProgress}) async {
     final formData = FormData.fromMap({
-      'photo': await MultipartFile.fromFile(filePath, filename: filePath.split('/').last),
+      'photo': await AppPhotoPick.multipart(filePath),
     });
     final res = await ApiService.postFormData('/taxis/me/plate-photo', formData, onSendProgress: onProgress);
     final data = res['data'];
@@ -36,7 +37,7 @@ class TaxiRepository {
 
   Future<TaxiPhotoResult> uploadDisplayPhoto(String filePath, {void Function(int, int)? onProgress}) async {
     final formData = FormData.fromMap({
-      'photo': await MultipartFile.fromFile(filePath, filename: filePath.split('/').last),
+      'photo': await AppPhotoPick.multipart(filePath),
     });
     final res = await ApiService.postFormData('/taxis/me/display-photo', formData, onSendProgress: onProgress);
     final data = res['data'];

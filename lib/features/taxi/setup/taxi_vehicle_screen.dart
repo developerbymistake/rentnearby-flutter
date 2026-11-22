@@ -3,7 +3,6 @@ import 'package:animations/animations.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:maplibre_gl/maplibre_gl.dart' show LatLng;
 import 'package:permission_handler/permission_handler.dart';
 import '../../../config/app_routes.dart';
@@ -54,7 +53,6 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
   final _whatsAppFocus = FocusNode();
   final _dlCtrl = TextEditingController();
   final _dlFocus = FocusNode();
-  final _picker = ImagePicker();
   final _cardKeys = {for (final r in _Ring.values) r: GlobalKey()};
   final _dlKey = GlobalKey();
 
@@ -311,17 +309,22 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
 
   Future<void> _pickPhoto() async {
     if (_proofFrozen) return;
-    final file = await TaxiPhotoPick.pick(context, picker: _picker, onDenied: _showPermissionDeniedDialog);
-    if (file != null && mounted) {
-      setState(() {
-        _localPhoto = file;
-        _unmark(_Ring.photo);
-      });
+    final file = await TaxiPhotoPick.pick(context, onDenied: _showPermissionDeniedDialog);
+    if (file == null || !mounted) return;
+    final bad = await TaxiPhotoPick.reject(file);
+    if (!mounted) return;
+    if (bad != null) {
+      AppToast.error(bad);
+      return;
     }
+    setState(() {
+      _localPhoto = file;
+      _unmark(_Ring.photo);
+    });
   }
 
   Future<void> _pickDisplay() async {
-    final file = await TaxiPhotoPick.pick(context, picker: _picker, onDenied: _showPermissionDeniedDialog);
+    final file = await TaxiPhotoPick.pick(context, onDenied: _showPermissionDeniedDialog);
     if (file == null || !mounted) return;
     final bad = await TaxiPhotoPick.reject(file);
     if (!mounted) return;

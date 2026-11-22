@@ -3,13 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../../../design/design.dart';
+import '../../../utils/app_toast.dart';
+import '../../../utils/photo_upload/app_photo_pick.dart';
 import '../../taxi_driver/strings/taxi_photo_strings.dart';
 
 abstract final class TaxiPhotoPick {
-  static const maxBytes = 10 * 1024 * 1024;
-  static const okExt = {'jpg', 'jpeg', 'png', 'webp'};
-
-  static Future<File?> pick(BuildContext context, {required ImagePicker picker, required Future<void> Function(String type) onDenied}) async {
+  static Future<File?> pick(BuildContext context, {required Future<void> Function(String type) onDenied}) async {
     final tone = ListingTone.coral;
     final source = await Sheet3D.show<ImageSource>(
       context,
@@ -44,21 +43,14 @@ abstract final class TaxiPhotoPick {
         return null;
       }
     }
-    final picked = await picker.pickImage(source: source, imageQuality: 85, maxWidth: 1600);
+    final picked = await AppPhotoPick.pickOne(source, onFailed: () => AppToast.error(TaxiPhotoStrings.photoPickFailed));
     if (picked == null) return null;
     return File(picked.path);
   }
 
-  static Future<String?> reject(File f) async {
-    final name = f.path.toLowerCase();
-    final dot = name.lastIndexOf('.');
-    final ext = dot < 0 ? '' : name.substring(dot + 1);
-    if (!okExt.contains(ext)) return TaxiPhotoStrings.photoWrongType;
-    try {
-      if (await f.length() > maxBytes) return TaxiPhotoStrings.photoTooLarge;
-    } catch (_) {
-      return TaxiPhotoStrings.photoWrongType;
-    }
-    return null;
-  }
+  static Future<String?> reject(File f) async => switch (await AppPhotoPick.accept(f)) {
+        PhotoReject.wrongType => TaxiPhotoStrings.photoWrongType,
+        PhotoReject.tooLarge => TaxiPhotoStrings.photoTooLarge,
+        null => null,
+      };
 }
