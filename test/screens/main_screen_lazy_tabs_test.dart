@@ -1,4 +1,5 @@
 import 'package:bakhli/config/app_tabs.dart';
+import 'package:bakhli/config/shell_kind.dart';
 import 'package:bakhli/controllers/auth_controller.dart';
 import 'package:bakhli/controllers/tab_config_controller.dart';
 import 'package:bakhli/navigation/tab_router.dart';
@@ -88,5 +89,21 @@ void main() {
     await t.pump();
     expect(auth.visitedTabs.toSet(), {AppTabs.home});
     expect(find.text('root ${AppTabs.profile}', skipOffstage: false), findsNothing);
+  });
+
+  testWidgets('FX-30 a logout flips the session shell, but the tabs keep the shell MainScreen shows', (t) async {
+    final auth = _Auth();
+    Get.put<AuthController>(auth);
+    auth.shellKind.value = ShellKind.stayOwner;
+    final shown = ShellKind.stayOwner.obs;
+    await t.pumpWidget(MaterialApp(home: TabNavigator(tabId: AppTabs.home, shell: shown)));
+    expect(find.byKey(const ValueKey('stayOwner-0')), findsOneWidget);
+    auth.shellKind.value = ShellKind.seeker;
+    await t.pump();
+    expect(find.byKey(const ValueKey('seeker-0')), findsNothing, reason: 'no Seeker root behind the logout overlay');
+    expect(find.byKey(const ValueKey('stayOwner-0')), findsOneWidget);
+    shown.value = ShellKind.seeker;
+    await t.pump();
+    expect(find.byKey(const ValueKey('seeker-0')), findsOneWidget);
   });
 }

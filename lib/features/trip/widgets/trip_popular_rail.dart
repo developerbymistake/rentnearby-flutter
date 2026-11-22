@@ -34,7 +34,20 @@ class _TripPopularRailState extends State<TripPopularRail> {
     if (mounted) setState(() {});
   }
 
+  Object? _memoData;
+  String? _memoState;
+  List<TripCityModel> _memo = const [];
+
+  // Sorted once per (state, catalog list), not on every build (FX-31).
   List<TripCityModel> _ordered(String? stateName) {
+    final data = _catalog.dataKey;
+    if (data != null && identical(data, _memoData) && stateName == _memoState) return _memo;
+    _memoData = data;
+    _memoState = stateName;
+    return _memo = _sorted(stateName);
+  }
+
+  List<TripCityModel> _sorted(String? stateName) {
     final all = _catalog.popular();
     final state = stateName?.trim().toLowerCase() ?? '';
     if (state.isEmpty) return all;
@@ -66,20 +79,21 @@ class _TripPopularRailState extends State<TripPopularRail> {
         ),
         LayoutBuilder(builder: (context, box) {
           final width = ((box.maxWidth - DS.s(18) * 2 - DS.gh(12) * 2) / 3).clamp(DS.s(96), DS.s(160)).toDouble();
-          return SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            physics: const BouncingScrollPhysics(),
-            clipBehavior: Clip.none,
-            padding: DS.insets(l: 18, t: 4, r: 18, b: 4),
-            child: IntrinsicHeight(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  for (var i = 0; i < cities.length; i++) ...[
-                    if (i > 0) Gap.h(12),
-                    PopularCityCard(key: ValueKey('popular-${cities[i].cityKey}'), city: cities[i], width: width, art: _arts[cities[i].cityKey.abs() % _arts.length]),
-                  ],
-                ],
+          final pad = DS.insets(l: 18, t: 4, r: 18, b: 4);
+          return SizedBox(
+            height: PopularCityCard.heightOf(context) + pad.vertical,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              physics: const BouncingScrollPhysics(),
+              clipBehavior: Clip.none,
+              padding: pad,
+              itemCount: cities.length,
+              separatorBuilder: (_, _) => Gap.h(12),
+              itemBuilder: (_, i) => PopularCityCard(
+                key: ValueKey('popular-${cities[i].cityKey}'),
+                city: cities[i],
+                width: width,
+                art: _arts[cities[i].cityKey.abs() % _arts.length],
               ),
             ),
           );
@@ -95,6 +109,14 @@ class PopularCityCard extends StatelessWidget {
   final TripCityModel city;
   final double width;
   final String art;
+
+  // Fixed card height: circle, two title lines and the place line at the current text scale.
+  static double heightOf(BuildContext context) {
+    final t = MediaQuery.textScalerOf(context);
+    final title = t.scale(DS.s(14)) * 1.6 * 2;
+    final place = t.scale(DS.s(11.5)) * 1.6 + DS.s(2);
+    return DS.s(12) + DS.s(64) + DS.s(6) + title + place + DS.s(12) + DS.s(4);
+  }
 
   static const BorderRadius radius = BorderRadius.only(
     topLeft: Radius.circular(8),
@@ -117,6 +139,7 @@ class PopularCityCard extends StatelessWidget {
         onTap: () => TripNavigation.startWithCities([city]),
         child: Container(
           width: width,
+          height: heightOf(context),
           padding: DS.insets(l: 10, t: 12, r: 10, b: 12),
           decoration: BoxDecoration(color: DesignColors.onPrimary, borderRadius: DS.br(radius), boxShadow: DS.shadows(Ink3D.softShadow)),
           child: Column(

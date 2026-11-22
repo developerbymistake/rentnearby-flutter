@@ -206,4 +206,22 @@ void main() {
     expect(c.feed.value?.tripCard.tripId, 'b-trip');
     expect(c.loading.value, isFalse);
   });
+
+  test('FX-29 an equal answer is not assigned again (no Home rebuild); a changed one is', () async {
+    var answer = feedWith('t1');
+    final api = ScriptedFeedApi(() async => OwnerOk(answer));
+    final c = make(api);
+    await pumpEventQueue();
+    var changes = 0;
+    final w = ever(c.feed, (_) => changes++);
+    await c.reload();
+    await c.reload();
+    expect(api.calls, 3);
+    expect(changes, 0);
+    answer = feedWith('t2');
+    await c.reload();
+    expect(changes, 1);
+    expect(c.feed.value?.tripCard.tripId, 't2');
+    w.dispose();
+  });
 }

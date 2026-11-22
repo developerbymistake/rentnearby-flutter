@@ -91,7 +91,7 @@ class _TripStayScreenState extends State<TripStayScreen> with TickerProviderStat
     }
     _nearYou = map['nearLat'] is num && map['nearLng'] is num;
     _supply.setNear((map['nearLat'] as num?)?.toDouble(), (map['nearLng'] as num?)?.toDouble());
-    _supply.ensureStays(_leg);
+    _supply.ensureStays(_leg, onlyDays: _only);
     _planWorker = ever(_plan.plan, (_) => _supply.ensureStays(_leg));
   }
 

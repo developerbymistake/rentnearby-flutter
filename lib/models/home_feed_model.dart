@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import '../features/nearby/models/nearby_models.dart';
 import '../features/stay/models/stay_browse_item.dart';
 import '../features/taxi/models/taxi_browse_item.dart';
@@ -33,9 +35,12 @@ class HomeFeedModel {
   final List<HomeStayModel>? recentStays;
   final Map<String, bool> tabs;
   final NearbyHeader header;
+  // Encoded section JSON: an equal answer is not assigned again (FX-29).
+  final Map<String, String> signatures;
 
   const HomeFeedModel({
     this.tabs = const {},
+    this.signatures = const {},
     this.header = NearbyHeader.empty,
     this.stays,
     this.taxis,
@@ -55,6 +60,10 @@ class HomeFeedModel {
     tabs: {
       for (final e in (json['tabs'] as Map? ?? const {}).entries)
         if (e.value is bool) e.key.toString(): e.value as bool,
+    },
+    signatures: {
+      for (final k in const ['stays', 'taxis', 'recentStays'])
+        if (json[k] is List) k: jsonEncode(json[k]),
     },
     stays: _list(json['stays'], HomeStayModel.fromJson),
     taxis: _list(json['taxis'], TaxiBrowseItem.fromJson),

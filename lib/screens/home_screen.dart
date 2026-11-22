@@ -96,11 +96,11 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  // The feed is read first: once it is shown, rail loading flags no longer rebuild the whole body (FX-29).
   bool get _firstOpen {
-    final railLoading = _home.anyRailLoading;
     final f = _feed;
     if (f == null || f.feed.value != null) return false;
-    return !_home.hasAnyRail && (railLoading || f.loading.value);
+    return !_home.hasAnyRail && (_home.anyRailLoading || f.loading.value);
   }
 
   Widget _buildBody(BuildContext context) {
@@ -137,17 +137,20 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  // The popular rail stays mounted across the error switch (hidden, not rebuilt or re-sorted; FX-31); o_sk_6 shows one error card.
   Widget _buildRailsArea() {
     return Obx(() {
-      if (_home.railsFailedNoCopy && !_home.anyRailLoading) {
-        return SeekerRailsErrorCard(onRetry: _retryRails);
-      }
+      final failed = _home.railsFailedNoCopy && !_home.anyRailLoading;
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const TripPopularRail(),
-          _buildListingsSections(),
-          _buildRecentlyAddedSection(),
+          Visibility(visible: !failed, maintainState: true, child: const TripPopularRail()),
+          if (failed)
+            SeekerRailsErrorCard(onRetry: _retryRails)
+          else ...[
+            _buildListingsSections(),
+            _buildRecentlyAddedSection(),
+          ],
         ],
       );
     });

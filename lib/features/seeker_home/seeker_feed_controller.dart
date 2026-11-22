@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
@@ -36,6 +37,8 @@ class SeekerFeedController extends GetxController with WidgetsBindingObserver {
   DateTime? _lastLoad;
   String? _loadedFor;
   String? _tripsSig;
+  // An equal answer is not assigned again, so Home does not rebuild on every refresh (FX-29).
+  String? _shownJson;
   bool _firstDone = false;
 
   static const Duration tripsDebounce = Duration(milliseconds: 300);
@@ -114,6 +117,7 @@ class SeekerFeedController extends GetxController with WidgetsBindingObserver {
     _loadedFor = id;
     seenKey.value = OwnerCache.statusSeen(id);
     final saved = OwnerCache.read(id, OwnerCacheKeys.seekerFeed);
+    _shownJson = saved == null ? null : jsonEncode(saved);
     if (saved != null) feed.value = SeekerFeed.fromJson(saved);
   }
 
@@ -135,8 +139,13 @@ class SeekerFeedController extends GetxController with WidgetsBindingObserver {
       if (res case OwnerOk<SeekerFeed>(:final value)) {
         _lastLoad = _clock();
         failed.value = false;
-        feed.value = value;
-        OwnerCache.write(id, OwnerCacheKeys.seekerFeed, value.toJson());
+        final json = value.toJson();
+        final encoded = jsonEncode(json);
+        if (encoded != _shownJson || feed.value == null) {
+          _shownJson = encoded;
+          feed.value = value;
+          OwnerCache.write(id, OwnerCacheKeys.seekerFeed, json);
+        }
       } else {
         failed.value = true;
       }
@@ -160,6 +169,7 @@ class SeekerFeedController extends GetxController with WidgetsBindingObserver {
   void reset() {
     _latest.cancel();
     feed.value = null;
+    _shownJson = null;
     seenKey.value = null;
     loading.value = false;
     failed.value = false;

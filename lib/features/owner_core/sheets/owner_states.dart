@@ -133,20 +133,35 @@ class OwnerSkeletonList extends StatelessWidget {
 
   final int rows;
 
+  // Rows that fit a short body (FX-32): never more than [rows], at least one.
+  static int fitRows(double maxHeight, int rows) {
+    if (!maxHeight.isFinite) return rows;
+    final row = DS.s(72) + DS.s(12);
+    final fit = ((maxHeight - DS.s(24)) / row).floor();
+    return fit.clamp(1, rows);
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: DS.sym(h: 18, v: 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          for (var i = 0; i < rows; i++) ...[
-            SkeletonBox(height: DS.s(72), radius: DS.radius(16)),
-            Gap.v(12),
-          ],
-        ],
-      ),
-    );
+    return LayoutBuilder(builder: (context, c) {
+      final n = fitRows(c.maxHeight, rows);
+      return SingleChildScrollView(
+        physics: const NeverScrollableScrollPhysics(),
+        child: Padding(
+          padding: DS.sym(h: 18, v: 12),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (var i = 0; i < n; i++) ...[
+                if (i > 0) Gap.v(12),
+                SkeletonBox(height: DS.s(72), radius: DS.radius(16)),
+              ],
+            ],
+          ),
+        ),
+      );
+    });
   }
 }
 

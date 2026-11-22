@@ -81,6 +81,9 @@ class TripCityCatalog {
 
   bool get hasData => _mem != null;
 
+  // Changes identity whenever the city list is replaced; callers memoise derived lists on it.
+  Object? get dataKey => _mem;
+
   List<TripCityModel> popular({String? stateName}) {
     final state = stateName?.trim().toLowerCase();
     return [

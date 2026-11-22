@@ -141,6 +141,7 @@ class HomeController extends GetxController {
     failedSections.removeAll(keys);
     for (final k in keys) {
       _gen[k] = (_gen[k] ?? 0) + 1;
+      _shownSig.remove(k);
       switch (k) {
         case HomeSectionKeys.stays:
           stays.clear();
@@ -176,7 +177,7 @@ class HomeController extends GetxController {
     bool current(String k) => _gen[k] == tickets[k];
     try {
       final feed = await _repo.fetchFeed(districtId: districtId, sections: keys);
-      farAway.value = feed.header.farAway;
+      if (farAway.value != feed.header.farAway) farAway.value = feed.header.farAway;
       for (final k in keys) {
         if (current(k)) _apply(k, feed);
       }
@@ -192,8 +193,17 @@ class HomeController extends GetxController {
     }
   }
 
+  final _shownSig = <String, String>{};
+
   void _apply(String key, HomeFeedModel feed) {
     failedSections.remove(key);
+    final sig = feed.signatures[key];
+    if (sig != null && _shownSig[key] == sig) return;
+    if (sig == null) {
+      _shownSig.remove(key);
+    } else {
+      _shownSig[key] = sig;
+    }
     switch (key) {
       case HomeSectionKeys.stays:
         stays.assignAll(feed.stays ?? const []);

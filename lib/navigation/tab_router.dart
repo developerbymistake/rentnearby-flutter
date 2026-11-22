@@ -12,7 +12,9 @@ import 'tab_keys.dart';
 /// still goes through the global GetX navigator as before.
 class TabNavigator extends StatelessWidget {
   final int tabId;
-  const TabNavigator({required this.tabId, super.key});
+  // The shell MainScreen shows; null reads the session shell (tests).
+  final Rx<ShellKind>? shell;
+  const TabNavigator({required this.tabId, this.shell, super.key});
 
   @visibleForTesting
   static Widget Function(int tabId)? debugRoot;
@@ -27,7 +29,7 @@ class TabNavigator extends StatelessWidget {
         pageBuilder: (_, _, _) => Obx(() {
           TabConfigController.to.version.value;
           final auth = Get.find<AuthController>();
-          final kind = auth.shellKind.value;
+          final kind = (shell ?? auth.shellKind).value;
           final visited = auth.tabIndex.value == tabId || auth.visitedTabs.contains(tabId);
           final slot = TabShell.slots(kind)[tabId];
           return KeyedSubtree(

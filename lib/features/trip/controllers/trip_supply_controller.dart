@@ -95,7 +95,11 @@ class TripSupplyController extends GetxController {
 
   bool get staysOutOfDate => stayCityKey != null && (_staysLeg != stayLeg.value || _staysCity != stayCityKey);
 
-  Future<void> ensureStays(int legIndex) async {
+  List<int> _askedDays = const [];
+
+  // FX-24: the screen's asked nights (onlyDays) drive the quote window; empty = the whole leg.
+  Future<void> ensureStays(int legIndex, {List<int>? onlyDays}) async {
+    if (onlyDays != null) _askedDays = List.unmodifiable(onlyDays);
     stayLeg.value = legIndex;
     if (_staysLeg != legIndex || _staysCity != stayCityKey || _staysWhere != _loadKey(legIndex)) {
       await loadStays();
@@ -117,9 +121,20 @@ class TripSupplyController extends GetxController {
     return '${c.lat.toStringAsFixed(5)},${c.lng.toStringAsFixed(5)}#${_partyParams(legIndex)}';
   }
 
+  static ({int firstDay, int nights}) partyWindow(int legStart, int legCount, List<int> askedDays) {
+    final asked = [for (final d in askedDays) if (d >= legStart && d < legStart + legCount) d]..sort();
+    if (asked.isEmpty) return (firstDay: legStart, nights: legCount < 1 ? 1 : legCount);
+    return (firstDay: asked.first, nights: asked.toSet().length);
+  }
+
+  ({int firstDay, int nights}) _window(int legIndex) {
+    final p = _plan.plan.value;
+    return partyWindow(p?.legStart(legIndex) ?? 1, p?.legDayCount(legIndex) ?? 1, _askedDays);
+  }
+
   Map<String, dynamic> _partyParams(int legIndex) {
     final guests = _plan.settings.peopleCount;
-    final nights = _plan.plan.value?.legDayCount(legIndex) ?? 1;
+    final nights = _window(legIndex).nights;
     final checkIn = checkInOf(legIndex);
     return {
       if (guests > 0) 'guests': guests.clamp(1, TripConstants.stayGuestsMax).toInt(),
@@ -131,7 +146,7 @@ class TripSupplyController extends GetxController {
   String? checkInOf(int legIndex) {
     final p = _plan.plan.value;
     if (p == null) return null;
-    final d = _plan.settings.dateOf(p.legStart(legIndex));
+    final d = _plan.settings.dateOf(_window(legIndex).firstDay);
     if (d == null) return null;
     String two(int n) => n.toString().padLeft(2, '0');
     return '${d.year.toString().padLeft(4, '0')}-${two(d.month)}-${two(d.day)}';

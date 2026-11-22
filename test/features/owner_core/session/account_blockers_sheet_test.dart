@@ -133,6 +133,8 @@ void main() {
     OwnerSessionHooks.refreshHome = () async => refreshed++;
     await tester.pumpWidget(GetMaterialApp(home: _host(_parsed())));
     await _open(tester);
+    await tester.ensureVisible(find.text('Turn off'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Turn off'));
     await tester.pumpAndSettle();
     expect(t.calls, ['PUT /stays/me/accepting']);

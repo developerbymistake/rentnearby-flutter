@@ -78,10 +78,30 @@ class Sheet3D extends StatelessWidget {
     builder: (c) => DockLift(child: builder(c)),
   );
 
-  // Height of the white panel (the art room above it is extra).
-  static double heightFor(SheetSize size, BuildContext context) {
+  static bool keyboardOpen(BuildContext context) => SheetInsets.lift(context) > SheetInsets.dock(context);
+
+  // Room above the dock or keyboard for the whole sheet, art included.
+  static double roomFor(BuildContext context) {
     final mq = MediaQuery.of(context);
-    final cap = math.max(DS.s(240), mq.size.height - mq.viewPadding.top - DS.s(60) - SheetInsets.lift(context));
+    return mq.size.height - mq.viewPadding.top - DS.s(60) - SheetInsets.lift(context);
+  }
+
+  static double get minBody => DS.s(140);
+
+  // FX-07: when the body would get less than [minBody], the sheet drops art and subtitle and scrolls its footer with the body.
+  bool compactFor(BuildContext context) {
+    if (art == null && subtitle == null && footer == null) return false;
+    final header = (title != null || onBack != null || headerAction != null ? DS.s(56) : 0) + (subtitle != null ? DS.s(26) : 0);
+    final top = art != null ? artRoom + DS.s(centerTitle ? 80 : 70) : DS.s(26);
+    final bottom = footer != null ? DS.s(90) : DS.s(18);
+    return roomFor(context) - top - header - bottom < minBody;
+  }
+
+  // Height of the white panel; the art room above it is taken out of the same cap.
+  static double heightFor(SheetSize size, BuildContext context, {bool withArt = false}) {
+    final mq = MediaQuery.of(context);
+    final room = roomFor(context) - (withArt ? artRoom : 0);
+    final cap = keyboardOpen(context) ? math.max(0.0, room) : math.max(DS.s(240), room);
     final base = switch (size) {
       SheetSize.hug => cap,
       SheetSize.short => DS.s(350),
@@ -92,7 +112,9 @@ class Sheet3D extends StatelessWidget {
     return math.min(size == SheetSize.hug ? base : base + mq.viewPadding.bottom, cap);
   }
 
-  Widget _header(BuildContext context) {
+  Widget _header(BuildContext context, {bool compact = false}) {
+    final subtitle = compact ? null : this.subtitle;
+    final art = compact ? null : this.art;
     final sideRoom = showClose && art == null ? closeRoom : 0.0;
     if (centerTitle) {
       return Padding(
@@ -110,7 +132,7 @@ class Sheet3D extends StatelessWidget {
             if (subtitle != null)
               Padding(
                 padding: EdgeInsets.only(top: DS.s(6)),
-                child: Text(subtitle!, textAlign: TextAlign.center, style: Ink3D.text(14, FontWeight.w400, Ink3D.copy, height: 1.45)),
+                child: Text(subtitle, textAlign: TextAlign.center, style: Ink3D.text(14, FontWeight.w400, Ink3D.copy, height: 1.45)),
               ),
           ],
         ),
@@ -154,7 +176,7 @@ class Sheet3D extends StatelessWidget {
                     ),
                   ),
                 ),
-                if (subtitle != null) Text(subtitle!, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(13, FontWeight.w400, Ink3D.sub)),
+                if (subtitle != null) Text(subtitle, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(13, FontWeight.w400, Ink3D.sub)),
               ],
             ),
           ),
@@ -194,20 +216,31 @@ class Sheet3D extends StatelessWidget {
 
   Widget _panel(BuildContext context) {
     final mq = MediaQuery.of(context);
-    final a = art;
+    final compact = compactFor(context);
+    final a = compact ? null : art;
     final hug = size == SheetSize.hug;
-    final h = heightFor(size, context);
+    final h = heightFor(size, context, withArt: a != null);
     final hasHeader = title != null || subtitle != null || onBack != null || headerAction != null;
     final pad = padding ?? DS.insets(l: 22, r: 22);
+    final scrollFooter = compact && scrollable && footer != null;
+    final footerBox = footer == null
+        ? null
+        : Padding(padding: EdgeInsets.fromLTRB(DS.s(22), DS.s(12), DS.s(22), footnote == null ? DS.s(26) + mq.viewPadding.bottom : 0), child: footer);
     final body = scrollable
-        ? SingleChildScrollView(keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag, padding: pad, child: child)
+        ? SingleChildScrollView(
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+            padding: scrollFooter ? null : pad,
+            child: scrollFooter
+                ? Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [Padding(padding: pad, child: child), footerBox!])
+                : child,
+          )
         : Padding(padding: pad, child: child);
     final note = footnote;
     final panel = Container(
       width: double.infinity,
       height: hug ? null : h,
       constraints: hug ? BoxConstraints(maxHeight: h) : null,
-      padding: EdgeInsets.only(top: DS.s(artRight ? 34 : a != null ? (centerTitle ? 80 : 70) : 26)),
+      padding: EdgeInsets.only(top: DS.s(artRight && a != null ? 34 : a != null ? (centerTitle ? 80 : 70) : 26)),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: radius,
@@ -217,9 +250,9 @@ class Sheet3D extends StatelessWidget {
         mainAxisSize: hug ? MainAxisSize.min : MainAxisSize.max,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (hasHeader) _header(context),
+          if (hasHeader) _header(context, compact: compact),
           if (hug) Flexible(child: body) else Expanded(child: body),
-          if (footer != null) Padding(padding: EdgeInsets.fromLTRB(DS.s(22), DS.s(12), DS.s(22), note == null ? DS.s(26) + mq.viewPadding.bottom : 0), child: footer),
+          if (footerBox != null && !scrollFooter) footerBox,
           if (note != null)
             Container(
               constraints: BoxConstraints(minHeight: DS.s(size == SheetSize.confirm ? 52 : 40) + mq.viewPadding.bottom),

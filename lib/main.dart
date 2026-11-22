@@ -82,7 +82,7 @@ class BakhliApp extends StatelessWidget {
       navigatorObservers: [MapPauseObserver(), TourDismissObserver(), TopRouteObserver()],
       builder: (context, child) => ToastificationWrapper(
         child: MediaQuery(
-          data: MediaQuery.of(context).copyWith(textScaler: TextScaler.noScaling),
+          data: MediaQuery.of(context).copyWith(textScaler: AppFrame.textScalerFor(MediaQuery.textScalerOf(context))),
           child: Stack(
             fit: StackFit.expand,
             children: [

@@ -15,6 +15,7 @@ import 'package:bakhli/features/seeker_home/seeker_trip_card.dart';
 import 'package:bakhli/navigation/tour_keys.dart';
 import 'package:bakhli/screens/home_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:bakhli/features/owner_core/data/owner_cache.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
@@ -51,6 +52,7 @@ void main() {
   });
   setUp(() async {
     await box.erase();
+    await GetStorage(OwnerCache.container).erase();
   });
   tearDown(Get.reset);
 
@@ -135,7 +137,7 @@ void main() {
       await _settle(t);
       await t.tap(find.text('Travel together'));
       await _settle(t);
-      expect(visitedRoutes, [AppRoutes.myTrips, AppRoutes.myTrips, AppRoutes.buddies]);
+      expect(visitedRoutes, [AppRoutes.myTrips, AppRoutes.buddies], reason: 'Add expense with no open trip toasts and opens the Trips tab (D-21), no route');
     });
 
     testWidgets('add expense with a trip opens Trip Expenses of that trip', (t) async {

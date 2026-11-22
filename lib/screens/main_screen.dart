@@ -58,14 +58,14 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   Worker? _tabConfigWorker;
   Worker? _shellWorker;
   int _previousTabIndex = AppTabs.home;
-  late ShellKind _shellKind;
+  // The shell on screen: set only in initState and _onShellChanged, so a logout never builds the Seeker roots
+  // behind its overlay (FX-30).
+  late final Rx<ShellKind> _shown = _auth.shellKind.value.obs;
 
-  final _screens = const [
-    TabNavigator(tabId: AppTabs.home),
-    TabNavigator(tabId: AppTabs.stays),
-    TabNavigator(tabId: AppTabs.trips),
-    TabNavigator(tabId: AppTabs.taxi),
-    TabNavigator(tabId: AppTabs.profile),
+  ShellKind get _shellKind => _shown.value;
+
+  late final List<Widget> _screens = [
+    for (final id in const [AppTabs.home, AppTabs.stays, AppTabs.trips, AppTabs.taxi, AppTabs.profile]) TabNavigator(tabId: id, shell: _shown),
   ];
 
   @override
@@ -86,7 +86,6 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     // resume below, not via a live push.
     Get.put(NotificationController());
     BuddyBindings.ensure();
-    _shellKind = _auth.shellKind.value;
     OwnerShellBindings.ensure(_shellKind);
     _chatCtrl = Get.put(ChatController());
     Get.put(ChatHubService());
@@ -138,7 +137,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     // later.
     _tabLeaveWorker = ever<int>(_auth.tabIndex, (newIndex) {
       if (newIndex != _previousTabIndex) {
-        TabShell.slots(_auth.shellKind.value)[_previousTabIndex].onLeave?.call();
+        TabShell.slots(_shellKind)[_previousTabIndex].onLeave?.call();
         final navState = tabKeys[_previousTabIndex].currentState;
         if (navState != null && navState.canPop()) {
           navState.popUntil((route) => route.isFirst);
@@ -147,13 +146,13 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       _previousTabIndex = newIndex;
     });
     _tabConfigWorker = ever<int>(_tabConfigCtrl.version, (_) {
-      if (!TabShell.isActive(_auth.shellKind.value, _auth.tabIndex.value)) _auth.switchToTab(AppTabs.home);
+      if (!TabShell.isActive(_shellKind, _auth.tabIndex.value)) _auth.switchToTab(AppTabs.home);
       final route = Get.currentRoute;
       if (AppRoutes.tabKeyForRoute(route) != null && !_auth.canOpenRoute(route)) {
         Get.until((r) => r.settings.name == AppRoutes.main);
       }
     });
-    if (!TabShell.isActive(_auth.shellKind.value, _auth.tabIndex.value)) _auth.switchToTab(AppTabs.home);
+    if (!TabShell.isActive(_shellKind, _auth.tabIndex.value)) _auth.switchToTab(AppTabs.home);
     _shellWorker = ever<ShellKind>(_auth.shellKind, _onShellChanged);
     _auth.refreshProfile();
     // Last, deliberately — needs every controller any tour could reference
@@ -184,7 +183,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   void _onShellChanged(ShellKind next) {
     if (next == _shellKind || !mounted || _auth.blocksShellSwitch) return;
     final old = _shellKind;
-    _shellKind = next;
+    _shown.value = next;
     for (final key in tabKeys) {
       final nav = key.currentState;
       if (nav != null && nav.canPop()) nav.popUntil((r) => r.isFirst);
@@ -394,7 +393,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   Widget _buildBottomNav() {
     final bottomInset = MediaQuery.of(context).viewPadding.bottom;
     _tabConfigCtrl.version.value;
-    final slots = TabShell.slots(_auth.shellKind.value);
+    final slots = TabShell.slots(_shellKind);
     return TemplateBottomBar(
       bottomInset: bottomInset,
       selectedIndex: _auth.tabIndex.value,
@@ -417,7 +416,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   }
 
   void _onNavTap(int index) {
-    final slots = TabShell.slots(_auth.shellKind.value);
+    final slots = TabShell.slots(_shellKind);
     if (index < 0 || index >= slots.length) return;
     slots[index].onTap?.call(_auth.tabIndex.value == index);
     _auth.switchToTab(index);

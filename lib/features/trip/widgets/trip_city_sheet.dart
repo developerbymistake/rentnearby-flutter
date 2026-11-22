@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:bakhli/design/design.dart';
 import 'package:bakhli/design/extra/sheet_close_button.dart';
 import 'package:flutter/material.dart';
@@ -189,9 +191,6 @@ class _TripCitySheetState extends State<TripCitySheet> {
   final _supply = <int, TripCitySupply>{};
   final _supplyFailed = <int>{};
 
-  double? _baseHeight;
-  double? _baseTopPadding;
-
   bool get _add => widget.mode == TripCitySheetMode.add;
 
   bool _isPicked(TripCityModel c) => _picked.any((p) => p.cityKey == c.cityKey);
@@ -228,14 +227,6 @@ class _TripCitySheetState extends State<TripCitySheet> {
     _items = _find('');
     _loading = _items.isEmpty;
     _load();
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final media = MediaQuery.of(context);
-    _baseHeight ??= media.size.height;
-    _baseTopPadding ??= media.padding.top;
   }
 
   @override
@@ -287,26 +278,43 @@ class _TripCitySheetState extends State<TripCitySheet> {
 
   List<TripCityModel> _find(String q) => TripStateRule.filter(_catalog.search(q), _states);
 
+  // FX-08: one scroll view (header, search, picked row, cities); only Continue stays pinned. Sizes are read live.
   @override
   Widget build(BuildContext context) {
     final media = MediaQuery.of(context);
-    final baseHeight = _baseHeight ?? media.size.height;
-    final baseTopPadding = _baseTopPadding ?? media.padding.top;
-    final maxHeight = (baseHeight - baseTopPadding) * 0.94;
-    final sheetHeight = (baseHeight * 0.94).clamp(0.0, maxHeight);
+    final lift = SheetInsets.lift(context);
+    final keyboard = lift > SheetInsets.dock(context);
+    final room = media.size.height - lift;
+    final sheetHeight = math.max(0.0, math.min(media.size.height * 0.94, room));
+    final topInset = math.max(0.0, media.padding.top - (room - sheetHeight));
+    final compact = _add || keyboard || sheetHeight < DS.s(560);
+    final bare = sheetHeight < DS.s(420);
+    final picking = !_add && _picked.isNotEmpty;
     return SizedBox(
       height: sheetHeight,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          TemplateEntranceOnce(duration: const Duration(milliseconds: 300), child: _buildHeader()),
-          _buildSearchBox(),
-          if (!_add && _picked.isNotEmpty) _pickedRow(),
-          Expanded(child: _buildBody()),
-          if (!_add && _picked.isNotEmpty) _continueBar(),
+          Expanded(
+            child: CustomScrollView(
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              slivers: [
+                SliverToBoxAdapter(
+                  child: TemplateEntranceOnce(
+                    duration: const Duration(milliseconds: 300),
+                    child: compact ? _compactHeader(topInset: topInset, subtitle: !bare) : _buildHeader(topInset: topInset),
+                  ),
+                ),
+                SliverToBoxAdapter(child: _buildSearchBox()),
+                if (picking) SliverToBoxAdapter(child: _pickedRow()),
+                ..._buildBody(),
+              ],
+            ),
+          ),
+          if (picking) _continueBar(compact: keyboard || bare),
           ColoredBox(
-            color: !_add && _picked.isNotEmpty ? DesignColors.surface : DesignColors.scaffold,
-            child: SizedBox(height: DS.s(14) + AppInsets.bottomViewPadding(context)),
+            color: picking ? DesignColors.surface : DesignColors.scaffold,
+            child: SizedBox(height: (keyboard ? DS.s(8) : DS.s(14)) + AppInsets.bottomViewPadding(context)),
           ),
         ],
       ),
@@ -325,30 +333,32 @@ class _TripCitySheetState extends State<TripCitySheet> {
 
   static final ListingTone _tone = ListingTone.indigo;
 
-  Widget _compactHeader() {
+  Widget _compactHeader({double topInset = 0, bool subtitle = true}) {
     final header = Container(
       width: double.infinity,
-      padding: EdgeInsets.fromLTRB(DS.s(22), DS.gv(14), DS.s(56), DS.gv(14)),
+      padding: EdgeInsets.fromLTRB(DS.s(22), DS.gv(14) + topInset, DS.s(56), DS.gv(14)),
       decoration: BoxDecoration(gradient: _tone.gradient),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(TripStringsMcaA2.addACity, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(18, FontWeight.w700, DesignColors.textInverse)),
-          Gap.v(2),
-          Text(_subtitle, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(12.5, FontWeight.w500, DesignColors.whiteHigh)),
+          Text(_add ? TripStringsMcaA2.addACity : TripStrings.planATrip,
+              maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(18, FontWeight.w700, DesignColors.textInverse)),
+          if (subtitle) ...[
+            Gap.v(2),
+            Text(_subtitle, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(12.5, FontWeight.w500, DesignColors.whiteHigh)),
+          ],
         ],
       ),
     );
-    return Stack(children: [header, Positioned(top: DS.s(4), right: DS.s(4), child: const SheetCloseButton())]);
+    return Stack(children: [header, Positioned(top: DS.s(4) + topInset, right: DS.s(4), child: const SheetCloseButton())]);
   }
 
-  Widget _buildHeader() {
-    if (_add) return _compactHeader();
+  Widget _buildHeader({double topInset = 0}) {
     final narrow = MediaQuery.sizeOf(context).width < 340;
     final art = narrow ? 84.0 : 104.0;
     final header = Container(
       constraints: BoxConstraints(minHeight: DS.s(112)),
-      padding: EdgeInsets.fromLTRB(DS.s(22), DS.s(22), DS.s(art + 66), DS.s(18)),
+      padding: EdgeInsets.fromLTRB(DS.s(22), DS.s(22) + topInset, DS.s(art + 66), DS.s(18)),
       decoration: BoxDecoration(gradient: _tone.gradient),
       child: Stack(
         clipBehavior: Clip.none,
@@ -376,7 +386,7 @@ class _TripCitySheetState extends State<TripCitySheet> {
         ],
       ),
     );
-    return Stack(children: [header, Positioned(top: DS.s(4), right: DS.s(4), child: const SheetCloseButton())]);
+    return Stack(children: [header, Positioned(top: DS.s(4) + topInset, right: DS.s(4), child: const SheetCloseButton())]);
   }
 
   Widget _pickedRow() {
@@ -422,11 +432,13 @@ class _TripCitySheetState extends State<TripCitySheet> {
     );
   }
 
-  Widget _continueBar() {
+  Widget _continueBar({bool compact = false}) {
     return Container(
-      padding: EdgeInsets.fromLTRB(DS.s(18), DS.s(12), DS.s(18), 0),
+      padding: EdgeInsets.fromLTRB(DS.s(18), DS.s(compact ? 6 : 12), DS.s(18), 0),
       decoration: BoxDecoration(color: DesignColors.surface, boxShadow: DS.shadows(Ink3D.topEdge)),
-      child: GradientPillButton(tone: _tone, label: _SheetText.continueCities(_picked.length), onTap: _continue),
+      child: compact
+          ? GradientPillButton(tone: _tone, height: 44, fontSize: 15, label: _SheetText.continueCities(_picked.length), onTap: _continue)
+          : GradientPillButton(tone: _tone, label: _SheetText.continueCities(_picked.length), onTap: _continue),
     );
   }
 
@@ -458,7 +470,7 @@ class _TripCitySheetState extends State<TripCitySheet> {
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: rows),
       );
 
-  Widget _buildBody() {
+  List<Widget> _buildBody() {
     if (_items.isEmpty) {
       if (_loading) return _loadingIndicator();
       switch (_error) {
@@ -474,16 +486,14 @@ class _TripCitySheetState extends State<TripCitySheet> {
     }
     final browsing = _query.trim().isEmpty;
     if (!browsing) {
-      return ListView(
-        padding: EdgeInsets.only(top: DS.gv(8), bottom: DS.gv(8)),
-        children: [_group([for (var i = 0; i < _items.length; i++) _cityRow(_items[i], divider: i > 0)])],
-      );
+      return _rows(EdgeInsets.only(top: DS.gv(8), bottom: DS.gv(8)), [_group([for (var i = 0; i < _items.length; i++) _cityRow(_items[i], divider: i > 0)])]);
     }
-    return ListView(
-      padding: EdgeInsets.only(bottom: DS.gv(8)),
-      children: _stag(_sectionedRows(_items)),
-    );
+    return _rows(EdgeInsets.only(bottom: DS.gv(8)), _stag(_sectionedRows(_items)));
   }
+
+  static List<Widget> _rows(EdgeInsets padding, List<Widget> children) => [
+        SliverPadding(padding: padding, sliver: SliverList(delegate: SliverChildListDelegate(children))),
+      ];
 
   List<Widget> _stag(List<Widget> rows) => [
         for (var i = 0; i < rows.length; i++)
@@ -657,20 +667,19 @@ class _TripCitySheetState extends State<TripCitySheet> {
     );
   }
 
-  Widget _loadingIndicator() => ListView(
-        padding: EdgeInsets.only(top: DS.gv(14)),
-        physics: const NeverScrollableScrollPhysics(),
-        children: [_group([for (var i = 0; i < 5; i++) const SkeletonListRow()])],
+  List<Widget> _loadingIndicator() => _rows(
+        EdgeInsets.only(top: DS.gv(14)),
+        [_group([for (var i = 0; i < 5; i++) const SkeletonListRow()])],
       );
 
-  Widget _emptyState(String message) => ListView(
-        padding: EdgeInsets.fromLTRB(0, DS.gv(20), 0, DS.gv(20)),
-        children: [StateCard3D(tone: _tone, art: ListingArt.compass, layout: StateLayout.plain, title: message)],
+  List<Widget> _emptyState(String message) => _rows(
+        EdgeInsets.fromLTRB(0, DS.gv(20), 0, DS.gv(20)),
+        [StateCard3D(tone: _tone, art: ListingArt.compass, layout: StateLayout.plain, title: message)],
       );
 
-  Widget _messageState(String title, String subtitle, {VoidCallback? onRetry}) => ListView(
-        padding: EdgeInsets.fromLTRB(0, DS.gv(20), 0, DS.gv(20)),
-        children: [
+  List<Widget> _messageState(String title, String subtitle, {VoidCallback? onRetry}) => _rows(
+        EdgeInsets.fromLTRB(0, DS.gv(20), 0, DS.gv(20)),
+        [
           StateCard3D(
             tone: _tone,
             art: onRetry != null ? ListingArt.worldMap : ListingArt.luggage,

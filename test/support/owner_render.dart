@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'owner_sizes.dart';
 import 'real_phone.dart';
 
 const String ownerRenderDir = r'F:\Dhasu\Buddy_resume\owner_render';
@@ -79,4 +80,22 @@ Future<ui.Image> _capture(WidgetTester tester, RenderRepaintBoundary boundary) a
     return layer.toImage(Offset.zero & (view.size * tester.view.devicePixelRatio), pixelRatio: 1);
   }
   return boundary.toImage(pixelRatio: tester.view.devicePixelRatio);
+}
+
+/// FX-34: renders `owner_render/<frameId>.png` for the render compare, then runs the full device matrix
+/// (sizes x text scale, plus the keyboard variant when [keyboard]) on the same screen.
+void renderOwnerFrameMatrix(
+  String frameId,
+  Widget Function() builder, {
+  String? part,
+  bool keyboard = false,
+  Future<void> Function(WidgetTester tester)? arrange,
+  void Function()? setUpEach,
+}) {
+  testWidgets('render $frameId${part == null ? '' : ' $part'}', (tester) async {
+    setUpEach?.call();
+    final f = await renderOwnerFrame(tester, frameId, builder(), part: part, arrange: arrange);
+    expect(f.existsSync(), isTrue);
+  });
+  testOwnerMatrix('$frameId matrix', builder, keyboard: keyboard, arrange: arrange, setUpEach: setUpEach);
 }

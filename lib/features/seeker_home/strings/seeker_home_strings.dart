@@ -46,6 +46,8 @@ abstract final class SeekerHomeStrings {
   static const String tileExpenseBody = 'Split with friends';
   static const String tileBuddyTitle = 'Find a buddy';
   static const String tileBuddyBody = 'Travel together';
+  static const String planTripFirst = 'Plan a trip first';
+  static const String expensePickTitle = 'Add expense to';
 
   static const String railsErrorTitle = 'Couldn’t load';
   static const String railsErrorBody = 'Check your internet and try again.';
