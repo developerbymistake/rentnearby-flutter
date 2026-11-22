@@ -1,3 +1,5 @@
+import '../../nearby/nearby_strings.dart';
+
 abstract final class SeekerHomeStrings {
   static String greeting(String firstName) => 'Hi, $firstName';
   static const String greetingFallbackName = 'there';
@@ -64,4 +66,13 @@ abstract final class SeekerHomeStrings {
   static const String localTaxi = 'Local taxi';
   static const String stayTag = 'FOR STAY';
   static const String taxiTag = 'TAXI';
+  static const String from = 'FROM';
+
+  static String kmShort(String? label) {
+    var s = label?.trim() ?? '';
+    if (s.endsWith(' away')) s = s.substring(0, s.length - 5).trim();
+    return s;
+  }
+
+  static String kmOf(double km) => '${NearbyStrings.kmText(km)} km';
 }

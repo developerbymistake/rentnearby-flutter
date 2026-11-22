@@ -1,13 +1,22 @@
 import 'package:bakhli/design/tokens/design_scale.dart';
 import 'package:flutter/material.dart';
 
+import '../../utils/photo_url.dart';
+import '../tokens/alpha_tokens.dart';
+import '../tokens/card_tokens.dart';
+import '../tokens/design_colors.dart';
 import '../tokens/listing_palette.dart';
+import '../tokens/shadow_tokens.dart';
 import 'art_3d.dart';
+import 'calm_card_kit.dart';
+import 'photo_circle.dart';
 import 'pill_buttons_3d.dart';
 import 'skeleton_3d.dart';
+import 'whatsapp_glyph.dart';
 
 abstract final class DetailArt {
   static const String automobile = 'assets/images/design/travel3d/automobile.png';
+  static const String droplet = 'assets/images/design/travel3d/droplet.png';
 }
 
 abstract final class DetailLook {
@@ -101,6 +110,18 @@ abstract final class DetailLook {
   ));
 
   static bool narrow(BuildContext context) => MediaQuery.sizeOf(context).width < 340;
+
+  static BoxDecoration calmCard(ListingPalette p, {BorderRadius? radius}) => CalmCard.box(p, radius: radius);
+
+  static ListingPalette paletteOf(ListingTone t) {
+    if (identical(t, ListingTone.coral)) return ListingPalette.coral;
+    if (identical(t, ListingTone.indigo)) return ListingPalette.indigo;
+    return ListingPalette.forest;
+  }
+
+  static Color get secondary => DesignColors.textSecondaryHigh;
+
+  static TextStyle calmText(double size, FontWeight weight, Color color, {double? height}) => Ink3D.text(size, weight, color, height: height, letterSpacing: 0);
 }
 
 class DetailGlassButton extends StatelessWidget {
@@ -170,21 +191,25 @@ class DetailSharePill extends StatelessWidget {
 TextScaler _capScale(BuildContext context, double max) => MediaQuery.textScalerOf(context).clamp(maxScaleFactor: max);
 
 class DetailHeroArt extends StatelessWidget {
-  const DetailHeroArt({super.key, required this.tone, required this.art});
+  const DetailHeroArt({super.key, required this.tone, required this.art, this.photoUrl});
 
   final ListingTone tone;
   final String art;
+  final String? photoUrl;
 
   @override
   Widget build(BuildContext context) {
+    final url = PhotoUrl.parse(photoUrl);
     return DecoratedBox(
       decoration: BoxDecoration(gradient: tone.gradient),
       child: Padding(
         padding: EdgeInsets.only(top: DS.s(20)),
         child: Center(
-          child: ExcludeSemantics(
-            child: Art3D(asset: art, size: 168, halo: 196, haloColor: DetailLook.heroHalo, shadowBlur: 10, shadowOffset: const Offset(8, 12), shadowAlpha: 0.3),
-          ),
+          child: url == null
+              ? ExcludeSemantics(
+                  child: Art3D(asset: art, size: 168, halo: 196, haloColor: DetailLook.heroHalo, shadowBlur: 10, shadowOffset: const Offset(8, 12), shadowAlpha: 0.3),
+                )
+              : PhotoCircle(url: url, art: art, size: 172, photoSize: 148, artSize: 168),
         ),
       ),
     );
@@ -347,6 +372,7 @@ class DetailTitleCard extends StatelessWidget {
     this.compact = false,
     this.was,
     this.chip,
+    this.place,
   });
 
   final ListingTone tone;
@@ -358,16 +384,19 @@ class DetailTitleCard extends StatelessWidget {
   final bool compact;
   final String? was;
   final String? chip;
+  final String? place;
 
   static const double topRoom = 26;
+  static const double priceShare = 0.45;
 
   @override
   Widget build(BuildContext context) {
-    final w = MediaQuery.sizeOf(context).width;
-    final narrow = w < 340;
-    final art = narrow ? 96.0 : (w < 380 ? 112.0 : 130.0);
-    final clear = DS.s(art - (compact ? 14 : 20));
-    final numeric = value.contains(RegExp(r'[0-9]'));
+    final p = DetailLook.paletteOf(tone);
+    final sub = DetailLook.secondary;
+    final where = place?.trim() ?? '';
+    final u = unit ?? '';
+    final w = was ?? '';
+    final c = chip ?? '';
     return Padding(
       padding: DS.insets(l: 18, t: topRoom, r: 18),
       child: Stack(
@@ -375,71 +404,80 @@ class DetailTitleCard extends StatelessWidget {
         children: [
           Container(
             width: double.infinity,
-            constraints: BoxConstraints(minHeight: DS.s(152)),
-            padding: DS.insets(l: 22, t: 20, r: 22, b: 20),
-            decoration: BoxDecoration(borderRadius: DetailLook.r68, gradient: tone.gradient, boxShadow: tone.glow()),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Padding(
-                  padding: EdgeInsets.only(right: clear),
-                  child: Text(eyebrow, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(12, FontWeight.w700, Colors.white, letterSpacing: 0.8)),
-                ),
-                SizedBox(height: DS.s(6)),
-                Padding(
-                  padding: EdgeInsets.only(right: clear),
-                  child: _FitTitle(title: title, style: Ink3D.text(compact ? 18 : 22, FontWeight.w700, Colors.white, height: 1.15)),
-                ),
-                SizedBox(height: DS.s(14)),
-                Wrap(
-                  crossAxisAlignment: WrapCrossAlignment.end,
-                  spacing: DS.gh(6),
+            padding: DS.insets(l: 18, t: 16, r: 0, b: 16),
+            decoration: DetailLook.calmCard(p, radius: DS.br(CardRadius.hero)),
+            child: LayoutBuilder(
+              builder: (context, box) {
+                final maxPrice = box.maxWidth * priceShare;
+                final minPrice = DS.s(120) < maxPrice ? DS.s(120) : maxPrice;
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    Padding(
-                      padding: EdgeInsets.only(bottom: DS.s(6)),
-                      child: Text(caption, style: Ink3D.text(11, FontWeight.w700, Colors.white.withValues(alpha: 0.9), letterSpacing: 0.6)),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          CalmChip(eyebrow, palette: p, kind: CalmChipKind.tag, fg: p.text),
+                          Gap.v(6),
+                          _FitTitle(title: title, style: DetailLook.calmText(compact ? 18 : 22, FontWeight.w700, DesignColors.textStrong, height: 1.15)),
+                          if (where.isNotEmpty) ...[
+                            Gap.v(3),
+                            Row(
+                              children: [
+                                const ExcludeSemantics(child: Art3D(asset: ListingArt.roundPushpin, size: 17, shadowBlur: 0, shadowAlpha: 0)),
+                                Gap.h(5),
+                                Flexible(
+                                  child: Text(where, maxLines: 1, softWrap: false, overflow: TextOverflow.ellipsis, style: DetailLook.calmText(12, FontWeight.w500, sub)),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ],
+                      ),
                     ),
-                    Text(value, style: Ink3D.text(30, FontWeight.w500, Colors.white, height: 1, letterSpacing: numeric ? 0.2 : 0)),
-                    if (unit != null && unit!.isNotEmpty)
-                      Padding(
-                        padding: EdgeInsets.only(bottom: DS.s(3)),
-                        child: Text(unit!, style: Ink3D.text(13, FontWeight.w400, Colors.white.withValues(alpha: 0.92))),
-                      ),
-                    if (was != null && was!.isNotEmpty)
-                      Padding(
-                        padding: EdgeInsets.only(bottom: DS.s(3)),
-                        child: Text(was!, style: Ink3D.text(13, FontWeight.w500, Colors.white.withValues(alpha: 0.8)).copyWith(decoration: TextDecoration.lineThrough, decorationColor: Colors.white)),
-                      ),
-                    if (chip != null && chip!.isNotEmpty)
-                      Padding(
-                        padding: EdgeInsets.only(bottom: DS.s(3)),
-                        child: DecoratedBox(
-                          decoration: BoxDecoration(color: Colors.white, borderRadius: DS.circular(10)),
-                          child: Padding(
-                            padding: DS.sym(h: 10, v: 3),
-                            child: Text(chip!, style: Ink3D.text(11, FontWeight.w700, ListingPalette.forest.text)),
-                          ),
+                    Gap.h(12),
+                    ConstrainedBox(
+                      constraints: BoxConstraints(minWidth: minPrice, maxWidth: maxPrice),
+                      child: Container(
+                        decoration: BoxDecoration(border: Border(left: BorderSide(color: p.line))),
+                        padding: DS.sym(h: 16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(caption, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(11, FontWeight.w700, sub, letterSpacing: 0.6)),
+                            FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerLeft,
+                              child: Text(value, maxLines: 1, softWrap: false, style: DetailLook.calmText(30, FontWeight.w500, p.text, height: 1.1)),
+                            ),
+                            if (u.isNotEmpty) Text(u, maxLines: 1, overflow: TextOverflow.ellipsis, style: DetailLook.calmText(13, FontWeight.w400, sub)),
+                            if (w.isNotEmpty)
+                              Text(
+                                w,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: DetailLook.calmText(13, FontWeight.w500, sub).copyWith(decoration: TextDecoration.lineThrough),
+                              ),
+                            if (c.isNotEmpty) ...[
+                              Gap.v(4),
+                              CalmChip(c, palette: p, kind: CalmChipKind.solid),
+                            ],
+                          ],
                         ),
                       ),
+                    ),
                   ],
-                ),
-              ],
+                );
+              },
             ),
           ),
           Positioned(
-            right: DS.s(14),
-            top: DS.s(narrow ? -28 : (art < 120 ? -36 : -44)),
-            child: ExcludeSemantics(
-              child: Art3D(
-                asset: ListingArt.moneyBag,
-                size: art,
-                halo: art + 6,
-                haloColor: DetailLook.cardHalo,
-                haloDy: 4,
-                shadowBlur: 6,
-                shadowOffset: const Offset(5, 8),
-                shadowAlpha: 0.3,
-              ),
+            right: DS.s(12),
+            top: DS.s(-30),
+            child: const ExcludeSemantics(
+              child: Art3D(asset: ListingArt.moneyBag, size: 60, shadowBlur: 4, shadowOffset: Offset(3, 5), shadowAlpha: 0.2),
             ),
           ),
         ],
@@ -474,77 +512,105 @@ class _FitTitle extends StatelessWidget {
 }
 
 class DetailSlimCard extends StatelessWidget {
-  const DetailSlimCard({super.key, required this.tone, required this.art, required this.title, required this.subtitle, required this.price, this.unit, this.was});
+  const DetailSlimCard({
+    super.key,
+    required this.tone,
+    required this.art,
+    required this.title,
+    this.subtitle,
+    required this.price,
+    this.unit,
+    this.was,
+    this.tag,
+    this.highlight = false,
+  });
 
   final ListingTone tone;
   final String art;
   final String title;
-  final String subtitle;
+  final String? subtitle;
   final String price;
   final String? unit;
   final String? was;
+  final String? tag;
+  final bool highlight;
+
+  static const double priceMax = 104;
 
   @override
   Widget build(BuildContext context) {
-    final t = DetailLook.card(tone);
-    final narrow = DetailLook.narrow(context);
-    final artSize = narrow ? 84.0 : 100.0;
-    final left = DS.s(narrow ? 108.0 : 136.0);
+    final p = DetailLook.paletteOf(tone);
+    final sub = DetailLook.secondary;
+    final st = subtitle?.trim() ?? '';
+    final tg = tag?.trim() ?? '';
+    final u = unit ?? '';
+    final w = was ?? '';
+    final small = tg.isNotEmpty;
+    final circle = DS.s(small ? 58 : 66);
+    final base = DetailLook.calmCard(p);
     return Padding(
-      padding: DS.insets(l: 14, t: 38, r: 14),
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Container(
-            width: double.infinity,
-            constraints: BoxConstraints(minHeight: DS.s(104)),
-            padding: EdgeInsets.fromLTRB(left, DS.s(16), DS.s(20), DS.s(16)),
-            decoration: BoxDecoration(borderRadius: DetailLook.r54, gradient: t.gradient, boxShadow: t.glow()),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(title, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(16, FontWeight.w700, Colors.white, height: 1.2)),
-                SizedBox(height: DS.s(2)),
-                Text(subtitle, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(13, FontWeight.w500, Colors.white, height: 1.4)),
-                SizedBox(height: DS.s(6)),
-                Wrap(
-                  crossAxisAlignment: WrapCrossAlignment.end,
-                  spacing: DS.gh(5),
-                  children: [
-                    Text(price, style: Ink3D.text(22, FontWeight.w600, Colors.white, height: 1)),
-                    if (unit != null && unit!.isNotEmpty)
-                      Padding(
-                        padding: EdgeInsets.only(bottom: DS.s(1)),
-                        child: Text(unit!, style: Ink3D.text(12, FontWeight.w400, Colors.white.withValues(alpha: 0.92))),
-                      ),
-                    if (was != null && was!.isNotEmpty)
-                      Padding(
-                        padding: EdgeInsets.only(bottom: DS.s(1)),
-                        child: Text(was!, style: Ink3D.text(12, FontWeight.w500, Colors.white.withValues(alpha: 0.8)).copyWith(decoration: TextDecoration.lineThrough, decorationColor: Colors.white)),
-                      ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          Positioned(
-            left: DS.s(narrow ? 8 : 12),
-            top: DS.s(-26),
-            child: ExcludeSemantics(
-              child: Art3D(
-                asset: art,
-                size: artSize,
-                halo: artSize + 8,
-                haloColor: DetailLook.slimHalo,
-                haloDy: 4,
-                shadowBlur: 6,
-                shadowOffset: const Offset(5, 8),
-                shadowAlpha: 0.25,
+      padding: DS.insets(l: 18, t: 14, r: 18),
+      child: Container(
+        width: double.infinity,
+        padding: DS.insets(l: 16, t: 14, r: 16, b: 14),
+        decoration: highlight ? base.copyWith(border: Border.all(color: p.g2, width: DS.s(1.5))) : base,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            ExcludeSemantics(
+              child: Container(
+                width: circle,
+                height: circle,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(shape: BoxShape.circle, color: DesignColors.tint(p.g2, Alpha.tint)),
+                child: Art3D(asset: art, size: small ? 40 : 48),
               ),
             ),
-          ),
-        ],
+            Gap.h(14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(title, maxLines: 2, overflow: TextOverflow.ellipsis, style: DetailLook.calmText(16, FontWeight.w700, DesignColors.textStrong, height: 1.2)),
+                  if (st.isNotEmpty) ...[
+                    Gap.v(2),
+                    Text(st, maxLines: 2, overflow: TextOverflow.ellipsis, style: DetailLook.calmText(13, FontWeight.w500, sub, height: 1.4)),
+                  ],
+                  if (tg.isNotEmpty) ...[
+                    Gap.v(5),
+                    CalmChip(tg, palette: p, kind: CalmChipKind.tag, fg: p.text),
+                  ],
+                ],
+              ),
+            ),
+            Gap.h(12),
+            Container(
+              constraints: BoxConstraints(maxWidth: DS.s(priceMax)),
+              decoration: BoxDecoration(border: Border(left: BorderSide(color: p.line))),
+              padding: EdgeInsets.only(left: DS.s(14)),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerRight,
+                    child: Text(price, maxLines: 1, softWrap: false, style: DetailLook.calmText(22, FontWeight.w600, p.text, height: 1.1)),
+                  ),
+                  if (u.isNotEmpty) Text(u, maxLines: 1, softWrap: false, style: DetailLook.calmText(12, FontWeight.w400, sub)),
+                  if (w.isNotEmpty)
+                    Text(
+                      w,
+                      maxLines: 1,
+                      softWrap: false,
+                      style: DetailLook.calmText(12, FontWeight.w500, sub).copyWith(decoration: TextDecoration.lineThrough),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -567,32 +633,35 @@ class DetailInfoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = DetailLook.paletteOf(tone);
+    final sub = DetailLook.secondary;
     return Container(
       margin: EdgeInsets.fromLTRB(DS.s(18), DS.gv(top), DS.s(18), 0),
-      padding: DS.sym(v: 6),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: DetailLook.r40, boxShadow: DetailLook.whiteCard),
+      clipBehavior: Clip.antiAlias,
+      decoration: DetailLook.calmCard(p),
       child: Column(
         children: [
           for (var i = 0; i < rows.length; i++)
             Container(
-              padding: DS.insets(l: 18, t: 13, r: 18, b: 13),
+              padding: DS.insets(l: 16, t: 12, r: 16, b: 12),
               decoration: BoxDecoration(
-                border: i == 0 ? null : const Border(top: BorderSide(color: Ink3D.line)),
+                border: i == 0 ? null : Border(top: BorderSide(color: p.line)),
               ),
               child: MergeSemantics(
                 child: Row(
                   children: [
-                    _ArtTile(tone: tone, art: rows[i].art),
-                    SizedBox(width: DS.s(14)),
+                    ExcludeSemantics(
+                      child: Art3D(asset: rows[i].art, size: 46, shadowBlur: 3, shadowOffset: const Offset(2, 4), shadowAlpha: 0.2),
+                    ),
+                    Gap.h(14),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(rows[i].label, style: Ink3D.text(11.5, FontWeight.w500, Ink3D.grey, letterSpacing: 0)),
-                          SizedBox(height: DS.s(1)),
+                          Text(rows[i].label, style: DetailLook.calmText(11.5, FontWeight.w500, sub)),
                           Text(
                             rows[i].value.isEmpty ? '-' : rows[i].value,
-                            style: Ink3D.text(15.5, FontWeight.w500, Ink3D.title, height: 1.3, letterSpacing: 0),
+                            style: DetailLook.calmText(15.5, FontWeight.w500, DesignColors.textStrong, height: 1.3),
                           ),
                         ],
                       ),
@@ -607,70 +676,38 @@ class DetailInfoCard extends StatelessWidget {
   }
 }
 
-class _ArtTile extends StatelessWidget {
-  const _ArtTile({required this.tone, required this.art, this.fill});
-
-  final ListingTone tone;
-  final String art;
-  final Color? fill;
-
-  @override
-  Widget build(BuildContext context) {
-    return ExcludeSemantics(
-      child: SizedBox(
-        width: DS.s(56),
-        height: DS.s(56),
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            Positioned.fill(
-              child: DecoratedBox(
-                decoration: BoxDecoration(color: fill ?? DetailLook.wash(tone, 0.14), borderRadius: DS.circular(16)),
-              ),
-            ),
-            Positioned(
-              left: DS.s(-4),
-              top: DS.s(-10),
-              child: Art3D(asset: art, size: 66, shadowBlur: 4, shadowOffset: const Offset(3, 5), shadowAlpha: 0.28),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 class DetailChipItem {
-  const DetailChipItem({required this.tone, required this.art, required this.label, this.value});
+  const DetailChipItem({required this.art, required this.label, this.value});
 
-  final ListingTone tone;
   final String art;
   final String label;
   final String? value;
 }
 
 class DetailChipGrid extends StatelessWidget {
-  const DetailChipGrid({super.key, required this.items, this.rules = false});
+  const DetailChipGrid({super.key, required this.tone, required this.items, this.rules = false});
 
+  final ListingTone tone;
   final List<DetailChipItem> items;
   final bool rules;
 
   @override
   Widget build(BuildContext context) {
     final scale = MediaQuery.textScalerOf(context).scale(1);
+    final p = DetailLook.paletteOf(tone);
     return LayoutBuilder(
       builder: (context, box) {
         final inner = box.maxWidth - DS.s(36);
         final col = (inner - DS.gh(12)) / 2;
-        final textRoom = col - DS.s(rules ? 86 : 80);
+        final textRoom = col - DS.s(rules ? 78 : 64);
         final cols = textRoom < DS.s(rules ? 64 : 60) * scale ? 1 : 2;
-        final cells = [for (final it in items) rules ? _RuleTile(item: it) : _FacilityChip(item: it)];
+        final cells = [for (final it in items) rules ? _RuleTile(item: it, palette: p) : _FacilityChip(item: it, palette: p)];
         final rows = <Widget>[];
         for (var i = 0; i < cells.length; i += cols) {
           final slice = cells.sublist(i, (i + cols).clamp(0, cells.length));
           rows.add(
             Padding(
-              padding: EdgeInsets.only(top: DS.gv(rules ? 34 : 30)),
+              padding: EdgeInsets.only(top: DS.gv(i == 0 ? 0 : 12)),
               child: IntrinsicHeight(
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -695,107 +732,95 @@ class DetailChipGrid extends StatelessWidget {
 }
 
 class _FacilityChip extends StatelessWidget {
-  const _FacilityChip({required this.item});
+  const _FacilityChip({required this.item, required this.palette});
 
   final DetailChipItem item;
+  final ListingPalette palette;
 
   @override
   Widget build(BuildContext context) {
-    final t = DetailLook.card(item.tone);
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        Container(
-          constraints: BoxConstraints(minHeight: DS.s(44)),
-          alignment: Alignment.centerLeft,
-          padding: DS.insets(l: 64, t: 10, r: 10, b: 10),
-          decoration: BoxDecoration(borderRadius: DetailLook.r24, gradient: t.gradient, boxShadow: t.glow(blur: 8)),
-          child: FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.centerLeft,
-            child: Text(
-              item.label,
-              maxLines: 1,
-              style: Ink3D.text(13.5, FontWeight.w700, Colors.white, letterSpacing: 0, height: 1.25),
+    return Container(
+      constraints: BoxConstraints(minHeight: DS.s(44)),
+      alignment: Alignment.centerLeft,
+      padding: DS.insets(l: 12, t: 10, r: 12, b: 10),
+      decoration: DetailLook.calmCard(palette, radius: DS.circular(14)),
+      child: Row(
+        children: [
+          ExcludeSemantics(
+            child: Art3D(asset: item.art, size: 32, shadowBlur: 2, shadowOffset: const Offset(2, 3), shadowAlpha: 0.2),
+          ),
+          Gap.h(8),
+          Expanded(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(item.label, maxLines: 1, style: DetailLook.calmText(13.5, FontWeight.w700, DesignColors.textStrong, height: 1.25)),
             ),
           ),
-        ),
-        Positioned(
-          left: DS.s(6),
-          top: DS.s(-20),
-          child: ExcludeSemantics(
-            child: Art3D(asset: item.art, size: 58, shadowBlur: 4, shadowOffset: const Offset(3, 5), shadowAlpha: 0.28),
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
 
 class _RuleTile extends StatelessWidget {
-  const _RuleTile({required this.item});
+  const _RuleTile({required this.item, required this.palette});
 
   final DetailChipItem item;
+  final ListingPalette palette;
 
   @override
   Widget build(BuildContext context) {
-    final t = DetailLook.card(item.tone);
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        Container(
-          constraints: BoxConstraints(minHeight: DS.s(80)),
-          alignment: Alignment.centerLeft,
-          padding: DS.insets(l: 74, t: 12, r: 12, b: 12),
-          decoration: BoxDecoration(borderRadius: DetailLook.r30, gradient: t.gradient, boxShadow: t.glow(blur: 8)),
-          child: MergeSemantics(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    item.label,
-                    maxLines: 1,
-                    style: Ink3D.text(11.5, FontWeight.w500, Colors.white.withValues(alpha: 0.92), letterSpacing: 0),
+    final v = item.value ?? '';
+    return Container(
+      constraints: BoxConstraints(minHeight: DS.s(64)),
+      alignment: Alignment.centerLeft,
+      padding: DS.insets(l: 14, t: 12, r: 14, b: 12),
+      decoration: DetailLook.calmCard(palette),
+      child: Row(
+        children: [
+          ExcludeSemantics(child: Art3D(asset: item.art, size: 40)),
+          Gap.h(10),
+          Expanded(
+            child: MergeSemantics(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(item.label, maxLines: 1, style: DetailLook.calmText(11.5, FontWeight.w500, DetailLook.secondary)),
                   ),
-                ),
-                Text(
-                  (item.value ?? '').isEmpty ? '-' : item.value!,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: Ink3D.text(16, FontWeight.w700, Colors.white, letterSpacing: 0, height: 1.25),
-                ),
-              ],
+                  Text(
+                    v.isEmpty ? '-' : v,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: DetailLook.calmText(16, FontWeight.w700, DesignColors.textStrong, height: 1.25),
+                  ),
+                ],
+              ),
             ),
           ),
-        ),
-        Positioned(
-          left: DS.s(4),
-          top: DS.s(-22),
-          child: ExcludeSemantics(
-            child: Art3D(asset: item.art, size: 66, shadowBlur: 4, shadowOffset: const Offset(3, 5), shadowAlpha: 0.28),
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
 
 class DetailAboutCard extends StatelessWidget {
-  const DetailAboutCard({super.key, required this.text});
+  const DetailAboutCard({super.key, required this.text, this.tone});
 
   final String text;
+  final ListingTone? tone;
 
   @override
   Widget build(BuildContext context) => Container(
     width: double.infinity,
     margin: DS.sym(h: 18),
-    padding: DS.insets(l: 20, t: 16, r: 20, b: 16),
-    decoration: BoxDecoration(color: Colors.white, borderRadius: DetailLook.r32, boxShadow: DetailLook.whiteCard),
-    child: Text(text, style: Ink3D.text(14, FontWeight.w400, Ink3D.sub, height: 1.6, letterSpacing: 0)),
+    padding: DS.insets(l: 18, t: 16, r: 18, b: 16),
+    decoration: DetailLook.calmCard(DetailLook.paletteOf(tone ?? ListingTone.forest)),
+    child: Text(text, style: DetailLook.calmText(14, FontWeight.w400, Ink3D.sub, height: 1.6)),
   );
 }
 
@@ -948,18 +973,18 @@ class GettingThereHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       margin: DS.sym(h: 18),
-      padding: DS.insets(l: 18, t: 19, r: 18, b: 19),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: DetailLook.r32, boxShadow: DetailLook.whiteCard),
+      padding: DS.insets(l: 16, t: 14, r: 16, b: 14),
+      decoration: DetailLook.calmCard(ListingPalette.forest),
       child: Row(
         children: [
-          _ArtTile(tone: ListingTone.coral, art: ListingArt.taxi, fill: DetailLook.wash(ListingTone.coral, 0.2)),
-          SizedBox(width: DS.s(14)),
+          const ExcludeSemantics(child: Art3D(asset: ListingArt.taxi, size: 52)),
+          Gap.h(14),
           Expanded(
             child: Text(
               label,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: Ink3D.text(14.5, FontWeight.w600, Ink3D.title, letterSpacing: 0, height: 1.35),
+              style: DetailLook.calmText(14.5, FontWeight.w600, DesignColors.textStrong, height: 1.35),
             ),
           ),
           if (onSeeAll != null) ...[
@@ -1010,11 +1035,11 @@ class GettingThereNote extends StatelessWidget {
       margin: EdgeInsets.fromLTRB(DS.s(18), DS.gv(16), DS.s(18), 0),
       constraints: BoxConstraints(minHeight: DS.s(112)),
       padding: DS.insets(l: 16, t: 14, r: 16, b: 14),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: DetailLook.r24, boxShadow: DetailLook.noteCard),
+      decoration: DetailLook.calmCard(ListingPalette.forest),
       child: Row(
         children: [
-          _ArtTile(tone: tone, art: art),
-          SizedBox(width: DS.s(14)),
+          ExcludeSemantics(child: Art3D(asset: art, size: 52)),
+          Gap.h(14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1028,7 +1053,7 @@ class GettingThereNote extends StatelessWidget {
                       text,
                       maxLines: 4,
                       overflow: TextOverflow.ellipsis,
-                      style: Ink3D.text(13, FontWeight.w400, Ink3D.sub, height: 1.45, letterSpacing: 0),
+                      style: DetailLook.calmText(13, FontWeight.w400, Ink3D.sub, height: 1.45),
                     ),
                   ),
                 ),
@@ -1049,16 +1074,41 @@ class GettingThereNote extends StatelessWidget {
 }
 
 class DetailBarShell extends StatelessWidget {
-  const DetailBarShell({super.key, required this.tone, required this.safety, required this.children, required this.bottomInset, this.safetyArt});
+  const DetailBarShell({super.key, required this.tone, required this.safety, required this.children, required this.bottomInset, this.safetyArt, this.calm = false});
 
   final String? safetyArt;
   final ListingTone tone;
   final String safety;
   final List<Widget> children;
   final double bottomInset;
+  final bool calm;
+
+  Widget _calm() {
+    final line = safety.trim();
+    return Container(
+      padding: EdgeInsets.fromLTRB(DS.s(16), DS.s(12), DS.s(16), DS.s(16) + bottomInset),
+      decoration: BoxDecoration(
+        color: DesignColors.surface,
+        borderRadius: DS.br(const BorderRadius.vertical(top: Radius.circular(24))),
+        boxShadow: DetailLook.barShadow,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (line.isNotEmpty) ...[
+            Text(line, textAlign: TextAlign.center, style: DetailLook.calmText(11, FontWeight.w400, DetailLook.secondary, height: 1.4)),
+            Gap.v(10),
+          ],
+          for (var i = 0; i < children.length; i++) ...[if (i > 0) Gap.v(10), children[i]],
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (calm) return _calm();
     return Container(
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
@@ -1120,16 +1170,86 @@ class DetailBarShell extends StatelessWidget {
 }
 
 class DetailBarRow extends StatelessWidget {
-  const DetailBarRow({super.key, required this.children});
+  const DetailBarRow({super.key, required this.children, this.calm = false});
 
   final List<Widget> children;
+  final bool calm;
 
   @override
   Widget build(BuildContext context) => Row(
         children: [
-          for (var i = 0; i < children.length; i++) ...[if (i > 0) Gap.h(8), Expanded(child: children[i])],
+          for (var i = 0; i < children.length; i++) ...[if (i > 0) Gap.h(calm ? 10 : 8), Expanded(child: children[i])],
         ],
       );
+}
+
+enum DetailCalmKind { tint, whatsApp, report, reported }
+
+class DetailCalmButton extends StatelessWidget {
+  const DetailCalmButton({super.key, required this.kind, required this.palette, required this.label, this.onTap, this.icon, this.iconColor});
+
+  final DetailCalmKind kind;
+  final ListingPalette palette;
+  final String label;
+  final VoidCallback? onTap;
+  final IconData? icon;
+  final Color? iconColor;
+
+  static const double height = 44;
+  static const double reportHeight = 42;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = palette;
+    final Color ink;
+    final BoxDecoration deco;
+    final report = kind == DetailCalmKind.report || kind == DetailCalmKind.reported;
+    final radius = DS.circular(22);
+    switch (kind) {
+      case DetailCalmKind.tint:
+        ink = p.text;
+        deco = BoxDecoration(color: p.button, borderRadius: radius);
+      case DetailCalmKind.whatsApp:
+        ink = DesignColors.onPrimary;
+        deco = BoxDecoration(gradient: p.gradient, borderRadius: radius, boxShadow: DS.shadows(ShadowTokens.tight(p.shadow)));
+      case DetailCalmKind.report:
+        ink = p.text;
+        deco = BoxDecoration(color: DesignColors.surface, borderRadius: radius, border: Border.all(color: p.line, width: DS.s(1.5)));
+      case DetailCalmKind.reported:
+        ink = DetailLook.reportedText;
+        deco = BoxDecoration(color: DetailLook.reportedFill, borderRadius: radius, border: Border.all(color: DetailLook.reportedLine, width: DS.s(1.5)));
+    }
+    final Widget? lead = switch (kind) {
+      DetailCalmKind.whatsApp => WhatsAppGlyph(size: 18, color: DesignColors.onPrimary, onColor: p.g2),
+      DetailCalmKind.report || DetailCalmKind.reported => Icon(Icons.flag_rounded, size: DS.s(16), color: ink),
+      DetailCalmKind.tint => icon == null ? null : Icon(icon, size: DS.s(18), color: iconColor ?? ink),
+    };
+    final body = Container(
+      height: DS.s(report ? reportHeight : height),
+      decoration: deco,
+      padding: DS.sym(h: 12),
+      alignment: Alignment.center,
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (lead != null) ...[ExcludeSemantics(child: lead), Gap.h(7)],
+            Text(label, maxLines: 1, style: DetailLook.calmText(15, FontWeight.w700, ink)),
+          ],
+        ),
+      ),
+    );
+    if (kind == DetailCalmKind.reported) {
+      return Semantics(button: true, enabled: false, label: label, excludeSemantics: true, child: body);
+    }
+    return Tap3D(
+      onTap: onTap,
+      label: label,
+      exclude: true,
+      child: onTap == null ? Opacity(opacity: Alpha.v60, child: body) : body,
+    );
+  }
 }
 
 enum _BarKind { primary, outline, report, reported }

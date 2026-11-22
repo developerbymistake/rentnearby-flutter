@@ -21,6 +21,8 @@ class DetailActionBar extends StatelessWidget {
   final String reportLabel;
   final String? safetyText;
   final String? safetyArt;
+  final bool calm;
+  final bool showSafety;
   const DetailActionBar({
     super.key,
     this.latitude,
@@ -36,7 +38,11 @@ class DetailActionBar extends StatelessWidget {
     this.reportLabel = 'Report this listing',
     this.safetyText,
     this.safetyArt,
+    this.calm = false,
+    this.showSafety = true,
   });
+
+  static const String defaultSafety = 'Bakhli never collects payment. Always meet and visit before paying.';
 
 
   void _directions() async {
@@ -58,9 +64,49 @@ class DetailActionBar extends StatelessWidget {
     return ListingTone.indigo;
   }
 
+  Widget _calm(BuildContext context, ListingTone tone) {
+    final p = DetailLook.paletteOf(tone);
+    final buttons = <Widget>[
+      if (showDirections)
+        DetailCalmButton(kind: DetailCalmKind.tint, palette: p, label: 'Directions', icon: Icons.directions_outlined, onTap: _directions),
+      if (ownerPhone != null)
+        DetailCalmButton(
+          kind: DetailCalmKind.tint,
+          palette: p,
+          label: ContactMessage.call,
+          icon: Icons.call_rounded,
+          iconColor: Ink3D.title,
+          onTap: () => ContactLauncher.call(ownerPhone!),
+        ),
+      if (onChat != null)
+        DetailCalmButton(kind: DetailCalmKind.tint, palette: p, label: 'Chat', icon: Icons.chat_bubble_outline_rounded, onTap: onChat),
+      if (whatsAppPhone != null)
+        DetailCalmButton(
+          kind: DetailCalmKind.whatsApp,
+          palette: p,
+          label: ContactMessage.whatsApp,
+          onTap: () => ContactLauncher.whatsApp(whatsAppPhone!, message: whatsAppMessage),
+        ),
+    ];
+    return DetailBarShell(
+      calm: true,
+      tone: tone,
+      safety: showSafety ? (safetyText ?? defaultSafety) : '',
+      bottomInset: AppInsets.bottomViewPadding(context),
+      children: [
+        if (buttons.isNotEmpty) DetailBarRow(calm: true, children: buttons),
+        if (!isOwner)
+          onReport == null
+              ? DetailCalmButton(kind: DetailCalmKind.reported, palette: p, label: 'Reported')
+              : DetailCalmButton(kind: DetailCalmKind.report, palette: p, label: reportLabel, onTap: onReport),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final tone = _tone;
+    if (calm) return _calm(context, tone);
     final hasPhone = ownerPhone != null;
     final showReport = !isOwner;
     final stacked = showDirections && (onChat != null || whatsAppPhone != null);
@@ -82,7 +128,7 @@ class DetailActionBar extends StatelessWidget {
     return DetailBarShell(
       tone: tone,
       safetyArt: safetyArt,
-      safety: safetyText ?? 'Bakhli never collects payment. Always meet and visit before paying.',
+      safety: safetyText ?? defaultSafety,
       bottomInset: AppInsets.bottomViewPadding(context),
       children: [
         if (buttons.isNotEmpty) DetailBarRow(children: buttons),

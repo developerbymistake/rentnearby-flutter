@@ -2,9 +2,14 @@ import 'package:bakhli/design/tokens/design_scale.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 
+import '../../utils/photo_url.dart';
+import '../tokens/alpha_tokens.dart';
+import '../tokens/card_tokens.dart';
 import '../tokens/design_colors.dart';
+import '../tokens/listing_palette.dart';
 import 'art_3d.dart';
 import 'motion_kit.dart';
+import 'photo_circle.dart';
 import 'template_motion.dart';
 import 'wide_card.dart';
 
@@ -181,6 +186,8 @@ class MealsCardV extends StatelessWidget {
     this.starBadge = false,
     this.cellBottom = 18,
     this.compact = false,
+    this.rail = false,
+    this.photoUrl,
   });
 
   final ListingTone tone;
@@ -206,13 +213,171 @@ class MealsCardV extends StatelessWidget {
   final bool starBadge;
   final double cellBottom;
   final bool compact;
+  final bool rail;
+  final String? photoUrl;
 
   static double get slotGap => DS.s(16);
 
   static EdgeInsets get cellPadding => DS.insets(l: 8, t: 46, r: 8, b: 18);
 
+  static EdgeInsets get railCellPadding => DS.insets(l: 8, t: 16, r: 8, b: 18);
+
+  static const double railArtTop = 108;
+  static const double railPad = 14;
+  static const double railTitleHeight = 1.2;
+  static const double railPlaceHeight = 1.5;
+  static const double railTagHeight = 1.3;
+  static const double railCaptionHeight = 1.4;
+  static final RegExp _digit = RegExp(r'\d');
+
+  static double railMinHeight(TextScaler scaler, {int titleLines = 2, bool digits = true}) {
+    double line(double size, double height) => scaler.scale(DS.f(size)) * height;
+    final price = digits ? line(26, 1) : line(17, 1);
+    final go = DS.s(38);
+    return DS.s(railArtTop + railPad) +
+        line(10.5, railTagHeight) +
+        DS.s(6) +
+        DS.s(6) +
+        line(17, railTitleHeight) * titleLines +
+        DS.s(2) +
+        line(12, railPlaceHeight) +
+        DS.s(12) +
+        DS.s(1) +
+        DS.s(8) +
+        line(10.5, railCaptionHeight) +
+        (price > go ? price : go);
+  }
+
+  Widget _wrap(Widget body) {
+    if (onTap != null) {
+      body = PressScale(
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: onTap,
+          child: body,
+        ),
+      );
+    }
+    if (semanticsLabel == null) return body;
+    return Semantics(
+      label: semanticsLabel,
+      button: onTap != null,
+      container: true,
+      excludeSemantics: true,
+      child: body,
+    );
+  }
+
+  Widget _railBody(BuildContext context) {
+    final scaler = MediaQuery.textScalerOf(context);
+    const white = Colors.white;
+    final width = this.width ?? DS.s(160);
+    final inner = width - railCellPadding.horizontal - DS.s(railPad * 2);
+    final value = number ?? '';
+    final hasNumber = value.isNotEmpty;
+    final digits = _digit.hasMatch(value);
+    final cap = caption ?? '';
+    final place = description?.trim() ?? '';
+    final label = tag?.trim() ?? '';
+    final titleStyle = Ink3D.text(17, FontWeight.w700, white, height: railTitleHeight);
+    final card = DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: DS.br(kMealsRadius),
+        gradient: tone.gradient,
+        boxShadow: tone.glow(blur: 8),
+      ),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(minHeight: railMinHeight(scaler, titleLines: titleLines, digits: digits || !hasNumber)),
+        child: Padding(
+          padding: DS.insets(l: railPad, t: railArtTop, r: railPad, b: railPad),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (label.isNotEmpty)
+                    Container(
+                      padding: DS.sym(h: 8, v: 3),
+                      decoration: BoxDecoration(color: white.withValues(alpha: Alpha.v22), borderRadius: DS.br(CardRadius.chip)),
+                      child: Text(
+                        label.toUpperCase(),
+                        maxLines: 1,
+                        softWrap: false,
+                        overflow: TextOverflow.ellipsis,
+                        style: Ink3D.text(10.5, FontWeight.w700, white, letterSpacing: 0.5, height: railTagHeight),
+                      ),
+                    ),
+                  Gap.v(6),
+                  Text(
+                    KitText.fitWords(title, titleStyle, scaler, inner - 1, titleLines),
+                    maxLines: titleLines,
+                    overflow: TextOverflow.ellipsis,
+                    style: titleStyle,
+                  ),
+                  if (place.isNotEmpty) ...[
+                    Gap.v(2),
+                    Text(
+                      place,
+                      maxLines: 1,
+                      softWrap: false,
+                      overflow: TextOverflow.ellipsis,
+                      style: Ink3D.text(12, FontWeight.w500, white, height: railPlaceHeight),
+                    ),
+                  ],
+                  Gap.v(12),
+                ],
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(height: DS.s(1), width: double.infinity, color: white.withValues(alpha: Alpha.scrim)),
+                  Gap.v(8),
+                  if (cap.isNotEmpty && hasNumber)
+                    Text(
+                      cap,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Ink3D.text(10.5, FontWeight.w700, white.withValues(alpha: Alpha.v90), letterSpacing: 0.6, height: railCaptionHeight),
+                    ),
+                  if (hasNumber)
+                    PriceLine(number: value, unit: unit, numberSize: digits ? 26 : 17)
+                  else
+                    RoundGoButton(color: tone.button, icon: goIcon),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    final url = PhotoUrl.parse(photoUrl);
+    final pictureArt = art ?? (url != null ? ListingArt.stay : null);
+    return _FixedWidth(
+      width: width,
+      child: Stack(
+        clipBehavior: Clip.none,
+        fit: StackFit.passthrough,
+        children: [
+          Padding(padding: railCellPadding.copyWith(bottom: DS.s(cellBottom)), child: card),
+          if (pictureArt != null)
+            Positioned(
+              left: DS.s(6),
+              top: 0,
+              child: PhotoCircle(url: url, art: pictureArt, size: 112, photoSize: 100, artSize: 110),
+            ),
+          if (starBadge && pictureArt != null) Positioned(left: DS.s(90), top: DS.s(-8), child: const StarBadge()),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (rail) return _wrap(_railBody(context));
     final scaler = MediaQuery.textScalerOf(context);
     const white = Colors.white;
     final width = this.width ?? DS.s(160);
@@ -378,7 +543,7 @@ class MealsCardV extends StatelessWidget {
       ),
       child: SizedBox(width: DS.s(112), height: DS.s(112)),
     );
-    Widget body = _FixedWidth(
+    final body = _FixedWidth(
       width: width,
       child: Stack(
         clipBehavior: Clip.none,
@@ -417,23 +582,7 @@ class MealsCardV extends StatelessWidget {
         ],
       ),
     );
-    if (onTap != null) {
-      body = PressScale(
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: onTap,
-          child: body,
-        ),
-      );
-    }
-    if (semanticsLabel == null) return body;
-    return Semantics(
-      label: semanticsLabel,
-      button: onTap != null,
-      container: true,
-      excludeSemantics: true,
-      child: body,
-    );
+    return _wrap(body);
   }
 }
 

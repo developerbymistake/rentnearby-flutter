@@ -21,19 +21,20 @@ import '../models/stay_owner_model.dart';
 import '../../taxi/guest/stay_taxis_section.dart';
 import '../../taxi/guest/taxi_detail_screen.dart' show DetailSharingOverlay;
 import '../setup/stay_option_sets.dart';
+import 'stay_detail_strings.dart';
 import 'stay_guest_controller.dart';
 
 final _kTone = ListingTone.forest;
 final _kPage = ListingPalette.forest.page;
 const _kSections = 7;
 
-const _kFacilityLook = <String, (int, String)>{
-  'HotWater': (4, ListingArt.hotSprings),
-  'Heater': (0, ListingArt.hotSprings),
-  'WiFi': (1, ListingArt.antenna),
-  'Parking': (2, DetailArt.automobile),
-  'HomeFood': (5, ListingArt.potOfFood),
-  'MountainView': (3, ListingArt.mountain),
+const _kFacilityLook = <String, String>{
+  'HotWater': ListingArt.hotSprings,
+  'Heater': DetailArt.droplet,
+  'WiFi': ListingArt.antenna,
+  'Parking': DetailArt.automobile,
+  'HomeFood': ListingArt.potOfFood,
+  'MountainView': ListingArt.mountain,
 };
 
 class StayDetailScreen extends StatefulWidget {
@@ -286,17 +287,16 @@ class _StayDetailScreenState extends State<StayDetailScreen> {
             if (s.facilities.isNotEmpty)
               _sec(3, Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                 const TitleRow3D(title: 'Facilities'),
-                DetailChipGrid(items: [for (var i = 0; i < s.facilities.length; i++) _facility(s.facilities[i], i)]),
+                DetailChipGrid(tone: _kTone, items: [for (final f in s.facilities) _facility(f)]),
               ])),
             if (rules != null)
               _sec(4, Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                 const TitleRow3D(title: 'House rules'),
-                DetailChipGrid(rules: true, items: [
-                  DetailChipItem(tone: ListingTone.cE, art: ListingArt.key, label: 'Check-in', value: StayOptionSets.time12(rules.checkInTime)),
-                  DetailChipItem(tone: ListingTone.cB, art: ListingArt.luggage, label: 'Check-out', value: StayOptionSets.time12(rules.checkOutTime)),
-                  DetailChipItem(tone: ListingTone.cA, art: ListingArt.paw, label: 'Pets', value: _yesNo(rules.petsAllowed)),
+                DetailChipGrid(tone: _kTone, rules: true, items: [
+                  DetailChipItem(art: ListingArt.key, label: 'Check-in', value: StayOptionSets.time12(rules.checkInTime)),
+                  DetailChipItem(art: ListingArt.luggage, label: 'Check-out', value: StayOptionSets.time12(rules.checkOutTime)),
+                  DetailChipItem(art: ListingArt.paw, label: 'Pets', value: _yesNo(rules.petsAllowed)),
                   DetailChipItem(
-                    tone: ListingTone.cF,
                     art: ListingArt.clipboard,
                     label: 'Cancellation',
                     value: StayOptionSets.labelOf(StayOptionSets.cancellation, rules.cancellationPolicy),
@@ -317,11 +317,9 @@ class _StayDetailScreenState extends State<StayDetailScreen> {
     ));
   }
 
-  DetailChipItem _facility(String f, int i) {
-    final look = _kFacilityLook[f];
+  DetailChipItem _facility(String f) {
     return DetailChipItem(
-      tone: f == 'HotWater' ? ListingTone.teal : ListingTone.at(look?.$1 ?? i),
-      art: look?.$2 ?? ListingArt.star,
+      art: _kFacilityLook[f] ?? ListingArt.star,
       label: StayOptionSets.labelOf(StayOptionSets.facilities, f),
     );
   }
@@ -331,11 +329,12 @@ class _StayDetailScreenState extends State<StayDetailScreen> {
     final was = dated == null ? null : s.struckBase;
     return DetailTitleCard(
       tone: _kTone,
-      eyebrow: 'FOR STAY',
+      eyebrow: StayDetailStrings.tag,
       title: s.title,
-      caption: 'FROM',
+      caption: StayDetailStrings.from,
+      place: s.locality,
       value: dated != null ? BrowseItem.inr(dated) : _price,
-      unit: dated != null || s.minPricePerNight != null ? '/night' : null,
+      unit: dated != null || s.minPricePerNight != null ? StayDetailStrings.perNight : null,
       was: was == null ? null : BrowseItem.inr(was),
       chip: was == null ? null : s.priceChip?.text,
     );
@@ -345,7 +344,7 @@ class _StayDetailScreenState extends State<StayDetailScreen> {
     final dated = _stay?.datedPriceOf(r);
     final was = dated?.struck;
     return DetailSlimCard(
-      tone: ListingTone.list(_kTone, i),
+      tone: _kTone,
       art: ListingArt.bed,
       title: r.label,
       subtitle: [
@@ -353,7 +352,7 @@ class _StayDetailScreenState extends State<StayDetailScreen> {
         StayOptionSets.labelOf(StayOptionSets.meals, r.meals),
       ].where((e) => e.isNotEmpty).join(' · '),
       price: BrowseItem.inr(dated?.price ?? r.pricePerNight),
-      unit: '/night',
+      unit: StayDetailStrings.perNight,
       was: was == null ? null : BrowseItem.inr(was),
     );
   }
@@ -389,6 +388,8 @@ class _StayDetailScreenState extends State<StayDetailScreen> {
           whatsAppPhone: whatsApp,
           whatsAppMessage: whatsApp == null ? null : ContactMessage.stay(stayName: s.name, customer: ListingContactActions.customer()),
           palette: templateModulePalette,
+          calm: true,
+          showSafety: false,
         );
     });
   }

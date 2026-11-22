@@ -9,6 +9,9 @@ import 'package:bakhli/features/owner_core/plan/gate_keys.dart';
 import 'package:bakhli/features/seeker_home/seeker_feed_controller.dart';
 import 'package:bakhli/features/seeker_home/seeker_feed_model.dart';
 import 'package:bakhli/features/seeker_home/seeker_home_parts.dart';
+import 'package:bakhli/features/seeker_home/strings/seeker_home_strings.dart';
+import 'package:bakhli/design/design.dart';
+import 'package:bakhli/design/extra/instagram_look.dart';
 import 'package:bakhli/features/seeker_home/seeker_tour_steps.dart';
 import 'package:bakhli/features/seeker_home/seeker_trip_card.dart';
 
@@ -298,6 +301,25 @@ void main() {
       final ig = t.getTopLeft(find.text('Follow us')).dy;
       final recent = t.getTopLeft(find.text('River Bend Stay')).dy;
       expect(ig, greaterThan(recent));
+    });
+
+    testWidgets('Instagram card keeps its shape with the Instagram gradient and magenta Follow', (t) async {
+      _tall(t, h: 2600);
+      registerHome(feed: fixtureNoTrip());
+      await t.pumpWidget(_app(homeHost()));
+      await _settle(t);
+      final ig = t.widget<WorkoutCard>(find.ancestor(of: find.text('Follow us'), matching: find.byType(WorkoutCard)));
+      expect(ig.gradient, InstagramLook.gradient);
+      expect(ig.tone.button, InstagramLook.magenta);
+      expect(ig.art, ListingArt.camera);
+      expect(ig.ctaLabel, 'Follow');
+    });
+
+    test('kmShort drops the word away', () {
+      expect(SeekerHomeStrings.kmShort('2.1 km away'), '2.1 km');
+      expect(SeekerHomeStrings.kmShort('2.1 km'), '2.1 km');
+      expect(SeekerHomeStrings.kmShort(''), '');
+      expect(SeekerHomeStrings.kmShort(null), '');
     });
 
     test('o_sk_9_tourStep1_targetsTripCard and o_sk_9_tourHasNoOwnerTileSteps', () {

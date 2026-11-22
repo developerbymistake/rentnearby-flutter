@@ -1,12 +1,13 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:typed_data';
+import 'dart:io';
 
 import 'package:bakhli/controllers/auth_controller.dart';
 import 'package:bakhli/controllers/location_controller.dart';
 import 'package:bakhli/controllers/report_controller.dart';
 import 'package:bakhli/controllers/tab_config_controller.dart';
 import 'package:bakhli/design/design.dart';
+import 'package:bakhli/design/extra/ext_details.dart';
 import 'package:bakhli/features/stay/guest/stay_detail_screen.dart';
 import 'package:bakhli/features/stay/guest/stay_guest_controller.dart';
 import 'package:bakhli/features/stay/models/stay_detail_model.dart';
@@ -18,6 +19,7 @@ import 'package:bakhli/services/api_service.dart';
 import 'package:bakhli/widgets/detail_action_bar.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
@@ -521,7 +523,7 @@ void main() {
     _tw('t_matched + t_scroll', (t) async {
       _setup(api: api(_taxiJson()));
       await _taxi(t, args: {'id': 't1', 'matchedFare': 2400, 'matchedToName': 'Nainital'});
-      expect(find.text('TO NAINITAL'), findsOneWidget);
+      expect(find.text('To Nainital'), findsOneWidget);
       await shot(t, 't_matched');
       await _scrollTo(t, find.text('Routes and fares'));
       await shot(t, 't_scroll');
@@ -626,5 +628,78 @@ void main() {
     expect(find.text('Call'), findsOneWidget);
     expect(find.text('Call Owner'), findsNothing);
     expect(find.text('WhatsApp'), findsNothing);
+  });
+
+  group('A3 photo heroes and block order', () {
+    const photo = 'https://res.cloudinary.com/demo/image/upload/a.jpg';
+    Map<String, _Answer> api(Map<String, dynamic> j) => {'/taxis/': (_) => j};
+    const channel = MethodChannel('plugins.flutter.io/path_provider');
+    late Directory tmp;
+    setUp(() {
+      tmp = Directory.systemTemp.createTempSync('a3_cache');
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(channel, (_) async => tmp.path);
+    });
+    tearDown(() {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(channel, null);
+    });
+
+    _tw('s_photo: gallery with dots, s_main keeps the art hero', (t) async {
+      _setup();
+      await _stay(t, answer: () async => StayDetailModel.fromJson(_stayJson(photos: [photo, '$photo?2'])));
+      expect(find.byType(PageView), findsOneWidget);
+      expect(find.byType(DetailPhotoDots), findsOneWidget);
+      expect(t.takeException(), isNull);
+      Get.reset();
+      _setup();
+      await _stay(t);
+      expect(find.byType(PageView), findsNothing);
+      expect(find.byType(DetailHeroArt), findsOneWidget);
+      await t.pumpWidget(const SizedBox());
+      await t.pump(const Duration(seconds: 30));
+    });
+
+    _tw('t_photo: display photo in the hero circle, t_main keeps the vehicle art', (t) async {
+      _setup(api: api({..._taxiJson(), 'displayPhotoUrl': photo}));
+      await _taxi(t);
+      final circle = t.widget<PhotoCircle>(find.descendant(of: find.byType(DetailHeroArt), matching: find.byType(PhotoCircle)));
+      expect(circle.url, photo);
+      expect(t.takeException(), isNull);
+      Get.reset();
+      _setup(api: api(_taxiJson()));
+      await _taxi(t);
+      expect(find.descendant(of: find.byType(DetailHeroArt), matching: find.byType(PhotoCircle)), findsNothing);
+      expect(find.descendant(of: find.byType(DetailHeroArt), matching: find.byType(Art3D)), findsOneWidget);
+    });
+
+    _tw('t_photo: unknown photo values never throw', (t) async {
+      for (final v in [42, '', 'not a url', null]) {
+        Get.reset();
+        _setup(api: api({..._taxiJson(), 'displayPhotoUrl': v}));
+        await _taxi(t);
+        expect(t.takeException(), isNull);
+        expect(find.descendant(of: find.byType(DetailHeroArt), matching: find.byType(PhotoCircle)), findsNothing);
+      }
+    });
+
+    _tw('stay blocks keep the mock order', (t) async {
+      _setup();
+      await _stay(t, size: const Size(360, 4000));
+      final ys = [
+        for (final f in [
+          find.text('Deodar Cottage Homestay').first,
+          find.text('Rooms'),
+          find.text('Stay type'),
+          find.text('Getting there').first,
+          find.text('Facilities'),
+          find.text('House rules'),
+          find.text('About this stay'),
+          find.textContaining('Posted'),
+        ])
+          t.getTopLeft(f.first).dy,
+      ];
+      for (var i = 1; i < ys.length; i++) {
+        expect(ys[i], greaterThan(ys[i - 1]), reason: 'block $i');
+      }
+    });
   });
 }

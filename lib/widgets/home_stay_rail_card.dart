@@ -25,28 +25,26 @@ class HomeStayRailCard extends StatelessWidget {
   static String placeLine(HomeStayModel stay) {
     final item = stay.item;
     final place = (item.placeName ?? item.locationLabel).trim();
-    final km = item.distanceLabel?.trim() ?? '';
+    final km = SeekerHomeStrings.kmShort(item.distanceLabel);
     return [if (place.isNotEmpty) place, if (km.isNotEmpty) km].join(' · ');
   }
 
   @override
   Widget build(BuildContext context) {
     final item = stay.item;
-    final url = item.thumbnailUrl;
-    final hasPhoto = url != null && url.isNotEmpty;
     return MealsCardV(
+      rail: true,
       tone: toneAt(index),
       tag: tagOf(stay),
       title: item.title,
       description: placeLine(stay),
-      photo: hasPhoto ? KitPhoto(url: url, width: DS.s(100), height: DS.s(100), asset: TravelIcon.stay, iconSize: 40) : null,
-      sticker: hasPhoto ? SeekerRailArt.forStay(stay.stayTypeName) : null,
-      art: hasPhoto ? null : SeekerRailArt.forStay(stay.stayTypeName),
+      photoUrl: item.thumbnailUrl,
+      art: SeekerRailArt.forStay(stay.stayTypeName),
+      caption: SeekerHomeStrings.from,
       number: item.priceValue.isEmpty ? null : item.priceValue,
       unit: item.priceUnit,
       width: cellWidth,
       titleLines: 2,
-      uniformSlots: true,
       onTap: onOpen ?? () => Get.toNamed(AppRoutes.stayDetail, arguments: {'id': item.id}),
     );
   }

@@ -26,6 +26,7 @@ class WorkoutCard extends StatelessWidget {
     this.margin = const EdgeInsets.symmetric(horizontal: 18),
     this.minHeight = 138,
     this.semanticsLabel,
+    this.gradient,
   });
 
   final ListingTone tone;
@@ -43,6 +44,7 @@ class WorkoutCard extends StatelessWidget {
   final EdgeInsets margin;
   final double minHeight;
   final String? semanticsLabel;
+  final Gradient? gradient;
 
   static double get overhang => DS.s(30);
 
@@ -85,7 +87,7 @@ class WorkoutCard extends StatelessWidget {
     final subStyle = KitText.wholeWords(subtitle, subBase, inner - subRight, scaler);
 
     final card = DecoratedBox(
-      decoration: BoxDecoration(borderRadius: DS.br(radius), gradient: tone.gradient, boxShadow: tone.glow()),
+      decoration: BoxDecoration(borderRadius: DS.br(radius), gradient: gradient ?? tone.gradient, boxShadow: tone.glow()),
       child: ConstrainedBox(
         constraints: BoxConstraints(minHeight: minHeight > floor ? minHeight : floor),
         child: Padding(

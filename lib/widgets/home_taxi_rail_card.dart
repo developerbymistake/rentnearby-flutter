@@ -29,24 +29,30 @@ class HomeTaxiRailCard extends StatelessWidget {
     return (caption: '', number: SeekerHomeStrings.localTaxi, unit: '');
   }
 
+  static String placeLine(TaxiBrowseItem t) {
+    final base = (t.baseCityName ?? t.cityName)?.trim() ?? '';
+    final km = t.distanceKm;
+    return [if (base.isNotEmpty) base, if (km != null) SeekerHomeStrings.kmOf(km)].join(' · ');
+  }
+
   @override
   Widget build(BuildContext context) {
     final t = taxi;
-    final base = (t.baseCityName ?? t.cityName)?.trim() ?? '';
     final price = priceOf(t);
     return MealsCardV(
+      rail: true,
       tone: toneAt(index),
+      photoUrl: t.displayPhotoUrl,
       art: SeekerRailArt.forVehicle(t.vehicleTypeName),
       tag: tagOf(t),
       starBadge: t.isFeatured,
       title: t.driverName,
-      description: base,
+      description: placeLine(t),
       caption: price.caption,
       number: price.number,
       unit: price.unit,
       width: HomeStayRailCard.cellWidth,
       titleLines: 2,
-      uniformSlots: true,
       onTap: onOpen ?? () => TaxiNavigation.openDetail(t.id),
     );
   }

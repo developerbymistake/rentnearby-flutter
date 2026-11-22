@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../design/design.dart';
+import '../../utils/photo_url.dart';
 import '../owner_core/data/single_flight.dart';
 import 'seeker_rail_art.dart';
 import 'seeker_trip_card.dart';
@@ -118,18 +119,13 @@ class SeekerRecentRow extends StatelessWidget {
   final String? photoUrl;
   final VoidCallback onTap;
 
-  static const BorderRadius radius = BorderRadius.only(
-    topLeft: Radius.circular(8),
-    topRight: Radius.circular(30),
-    bottomLeft: Radius.circular(8),
-    bottomRight: Radius.circular(8),
-  );
+  static const Key thumbKey = ValueKey('seeker-recent-thumb');
 
   @override
   Widget build(BuildContext context) {
-    final url = photoUrl;
-    final hasPhoto = url != null && url.isNotEmpty;
-    final tint = ListingPalette.forest;
+    final url = PhotoUrl.parse(photoUrl);
+    final p = ListingPalette.forest;
+    final thumb = DS.s(64);
     return Padding(
       padding: DS.insets(l: 18, t: 12, r: 18),
       child: Semantics(
@@ -141,22 +137,23 @@ class SeekerRecentRow extends StatelessWidget {
           onTap: onTap,
           child: Container(
             constraints: const BoxConstraints(minHeight: kMinInteractiveDimension),
-            padding: DS.insets(l: 10, t: 10, r: 14, b: 10),
-            decoration: BoxDecoration(color: DesignColors.onPrimary, borderRadius: DS.br(radius), boxShadow: DS.shadows(Ink3D.softShadow)),
+            padding: DS.insets(l: 12, t: 12, r: 14, b: 12),
+            decoration: BoxDecoration(color: DesignColors.onPrimary, borderRadius: DS.circular(16), boxShadow: DS.shadows(ShadowTokens.elev1)),
             child: Row(
               children: [
-                ClipRRect(
-                  borderRadius: DS.circular(12),
-                  child: SizedBox(
-                    width: DS.s(76),
-                    height: DS.s(60),
-                    child: hasPhoto
-                        ? KitPhoto(url: url, width: DS.s(76), height: DS.s(60), asset: TravelIcon.stay, iconSize: 32)
-                        : DecoratedBox(
-                            decoration: BoxDecoration(color: tint.line),
-                            child: Center(child: Art3D(asset: SeekerRailArt.forStay(stayTypeName), size: 40)),
-                          ),
+                Container(
+                  key: thumbKey,
+                  width: thumb,
+                  height: thumb,
+                  clipBehavior: Clip.antiAlias,
+                  decoration: BoxDecoration(
+                    color: p.button,
+                    borderRadius: DS.circular(16),
+                    boxShadow: DS.shadows(ShadowTokens.elev1),
                   ),
+                  child: url != null
+                      ? KitPhoto(url: url, width: thumb, height: thumb, asset: TravelIcon.stay, iconSize: 32)
+                      : const Center(child: Art3D(asset: SeekerRailArt.house, size: 48)),
                 ),
                 Gap.h(12),
                 Expanded(
@@ -164,14 +161,14 @@ class SeekerRecentRow extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(14.5, FontWeight.w700, Ink3D.title)),
+                      Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(14.5, FontWeight.w700, DesignColors.textStrong)),
                       if (subtitle.isNotEmpty)
-                        Text(subtitle, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(12, FontWeight.w400, Ink3D.grey)),
+                        Text(subtitle, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(12, FontWeight.w400, DesignColors.textSecondaryHigh)),
                     ],
                   ),
                 ),
                 Gap.h(8),
-                Text(SeekerHomeStrings.rowArrow, style: Ink3D.text(24, FontWeight.w500, ListingPalette.indigo.g2)),
+                Text(SeekerHomeStrings.rowArrow, style: Ink3D.text(24, FontWeight.w500, p.g2)),
               ],
             ),
           ),

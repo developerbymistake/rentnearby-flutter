@@ -18,10 +18,10 @@ import '../models/taxi_detail_model.dart';
 import '../models/taxi_owner_model.dart';
 import '../taxi_option_sets.dart';
 import 'taxi_browse_repository.dart';
+import 'taxi_detail_strings.dart';
 
 final _kTone = ListingTone.coral;
 final _kPage = ListingPalette.coral.page;
-final _kRouteTones = [ListingTone.cB, ListingTone.cD, ListingTone.cC];
 
 class TaxiDetailScreen extends StatefulWidget {
   const TaxiDetailScreen({super.key});
@@ -211,9 +211,10 @@ class _TaxiDetailScreenState extends State<TaxiDetailScreen> with TickerProvider
       if (_isOwner && !t.isAvailable) const DetailHiddenBanner(text: 'Hidden from search'),
       DetailTitleCard(
         tone: _kTone,
-        eyebrow: 'TAXI',
+        eyebrow: TaxiDetailStrings.tag,
+        place: _baseCity(t),
         title: '${t.driverName} · $kind',
-        caption: matched ? 'TO ${_matchedToName!.toUpperCase()}' : 'FROM',
+        caption: matched ? TaxiDetailStrings.to(_matchedToName!) : TaxiDetailStrings.from,
         value: matched ? BrowseItem.inr(_matchedFare!) : (t.minFare != null ? BrowseItem.inr(t.minFare!) : 'On request'),
         compact: true,
       ),
@@ -267,7 +268,7 @@ class _TaxiDetailScreenState extends State<TaxiDetailScreen> with TickerProvider
   Widget _hero(TaxiDetailModel t) => SizedBox(
         height: _heroHeight(context),
         child: Stack(clipBehavior: Clip.none, children: [
-          Positioned.fill(child: DetailHeroArt(tone: _kTone, art: TaxiVehicleIcon.assetFor(t.vehicleTypeName))),
+          Positioned.fill(child: DetailHeroArt(tone: _kTone, art: TaxiVehicleIcon.assetFor(t.vehicleTypeName), photoUrl: t.displayPhotoUrl)),
           Positioned(left: 0, right: 0, bottom: -1, child: DetailEdge(page: _kPage)),
         ]),
       );
@@ -302,11 +303,12 @@ class _TaxiDetailScreenState extends State<TaxiDetailScreen> with TickerProvider
     return [
       for (var i = 0; i < t.routes.length; i++)
         DetailSlimCard(
-          tone: i == matchIndex ? ListingTone.cA : _kRouteTones[i % _kRouteTones.length],
+          tone: _kTone,
           art: ListingArt.roundPushpin,
           title: '${t.routes[i].fromName} to ${t.routes[i].toName}',
-          subtitle: TaxiOptionSets.tripLabel(t.routes[i].tripType),
+          tag: TaxiOptionSets.tripLabel(t.routes[i].tripType),
           price: BrowseItem.inr(t.routes[i].fare),
+          highlight: i == matchIndex,
         ),
     ];
   }
@@ -341,6 +343,7 @@ class _TaxiDetailScreenState extends State<TaxiDetailScreen> with TickerProvider
             ? null
             : () => ReportListingSheet.show(context, listingId: t.id, listingType: 'Taxi', palette: templateTaxiPalette),
         palette: templateTaxiPalette,
+        calm: true,
       );
     });
   }

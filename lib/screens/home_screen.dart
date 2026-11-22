@@ -7,6 +7,7 @@ import '../controllers/auth_controller.dart';
 import '../controllers/home_controller.dart';
 import '../controllers/tab_config_controller.dart';
 import '../design/design.dart';
+import '../design/extra/instagram_look.dart';
 import '../config/app_tabs.dart';
 import '../navigation/tour_keys.dart';
 import '../features/nearby/nearby_strings.dart';
@@ -270,7 +271,8 @@ class _HomeScreenState extends State<HomeScreen> {
       child: KeyedSubtree(
         key: TourKeys.homeInstagramCard,
         child: WorkoutCard(
-          tone: ListingTone.cB,
+          tone: InstagramLook.tone,
+          gradient: InstagramLook.gradient,
           art: ListingArt.camera,
           eyebrow: 'Instagram',
           title: 'Follow us',
