@@ -16,8 +16,17 @@ import '../../../config/app_tabs.dart';
 import '../../../controllers/auth_controller.dart';
 import '../../../controllers/location_controller.dart';
 import '../../../models/browse_item.dart';
+import '../../map_discovery/data/map_pack_service.dart';
 import '../../nearby/controllers/nearby_centre_controller.dart';
 import '../../nearby/widgets/place_search_bar.dart';
+import '../../trip/data/trip_city_catalog.dart';
+import '../../trip/map/discovery_api.dart';
+import '../../trip/map/discovery_overlay.dart';
+import '../../trip/map/trip_discovery_layer.dart';
+import '../../trip/widgets/trip_map_controls.dart';
+import '../../trip/models/trip_spot_model.dart';
+import '../../trip/utils/trip_spots_cache.dart';
+import '../../trip/widgets/trip_spot_detail_sheet.dart';
 import '../../../utils/map_clustering.dart';
 import '../../../utils/money_format.dart';
 import '../../../widgets/empty_radius_hint.dart';
@@ -100,6 +109,23 @@ class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateM
   late final AnimationController _nearestCircleController;
   Animation<double>? _nearestCircleAnim;
   LatLng? _nearestCircleCenter;
+
+  TripDiscoveryLayer? _disc;
+  bool _discBusy = false;
+  String? _discPoint;
+  bool _sheetOpen = false;
+  Map<int, String>? _cityNames;
+  Object? _cityNamesKey;
+  final _topKey = GlobalKey();
+  static const double _discCardBand = 150;
+
+  double get _discTopInset {
+    final box = _topKey.currentContext?.findRenderObject();
+    return box is RenderBox && box.hasSize ? box.size.height : DS.s(220);
+  }
+
+  double get _discBottomInset =>
+      BarMetrics.bodyBottomOf(context) - BarMetrics.bodyGap + DS.s(24) + DS.s(KitMetrics.touch + 2);
 
   bool get _onStaysTab => _auth.tabIndex.value == AppTabs.stays;
 
@@ -224,6 +250,7 @@ class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateM
     _mapPauseWorker = ever(mapShouldPause, (bool paused) {
       if (!mounted) return;
       if (paused) {
+        _dropDisc();
         setState(() {
           _mapActive = false;
           _styleLoaded = false;
@@ -261,6 +288,7 @@ class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateM
       ever(_guest.nearestActive, (bool active) {
       if (!mounted) return;
       if (active) {
+        _disc?.clearSelection().ignore();
         _updateNearestFocus();
         _playTing();
       } else {
@@ -282,6 +310,9 @@ class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateM
       }),
     );
 
+    _workers.add(ever(_discSource.state, (_) => _onDiscChanged()));
+    _workers.add(ever(MapPackService.to.revision, (_) => _onDiscChanged()));
+
     _mapActive = !mapShouldPause.value;
     if (_hasPin) {
       _preSearchRadius = _radius;
@@ -302,6 +333,7 @@ class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateM
       w.dispose();
     }
     _mapPauseWorker?.dispose();
+    _dropDisc();
     if (_guest.nearestActive.value) _guest.nearestActive.value = false;
     _guest.clearNearest();
     _audioPlayer.dispose();
@@ -335,6 +367,115 @@ class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateM
     _precomputeCircleCache();
     _animateTo(center, _zoomForRadius(_radius, center.latitude));
     _updateNativeRadiusCircle();
+    _syncDiscArea();
+  }
+
+  DiscoveryDataSource get _discSource => MapPackService.to.source;
+
+  void _syncDiscArea() {
+    final c = _searchCenter;
+    final point = '${c.latitude},${c.longitude}';
+    if (point != _discPoint) {
+      _discPoint = point;
+      _discSource.ensureForPoint(c.latitude, c.longitude).ignore();
+    }
+    _disc?.setPhotoArea(c.latitude, c.longitude, _radius * 2).ignore();
+  }
+
+  DiscoveryHost _discHost() => DiscoveryHost.readOnly(
+        topInset: () => _discTopInset,
+        bottomInset: () => _discBottomInset,
+        onDetails: _openSpotDetails,
+        lineFor: _spotLine,
+      );
+
+  Future<void> _attachDisc() async {
+    final map = _mapController;
+    if (_discBusy || _disc != null || map == null || !_mapReady) return;
+    _discBusy = true;
+    try {
+      final layer = await DiscoveryAttach.maybe(
+        map,
+        mode: DiscoveryMode.readOnly,
+        host: _discHost(),
+        source: _discSource,
+        tuning: DiscTuning.stay,
+        viewSize: () => _screenSize,
+        unitsPerDp: () => DiscoveryAttach.unitsPerDp(context),
+        cardHeight: () => DS.s(_discCardBand),
+        tapsBlocked: () => _sheetOpen || _guest.nearestActive.value,
+      );
+      if (layer == null) return;
+      if (!mounted || !identical(map, _mapController)) {
+        layer.dispose();
+        return;
+      }
+      final c = _searchCenter;
+      await layer.setPhotoArea(c.latitude, c.longitude, _radius * 2);
+      if (!mounted || !identical(map, _mapController)) {
+        layer.dispose();
+        return;
+      }
+      setState(() => _disc = layer);
+    } finally {
+      _discBusy = false;
+    }
+  }
+
+  Future<void> _onDiscChanged() async {
+    if (!mounted || !_mapReady) return;
+    final d = _disc;
+    if (d == null) {
+      await _attachDisc();
+      return;
+    }
+    if (DiscoveryAttach.wanted(_discSource)) {
+      d.refreshData().ignore();
+      return;
+    }
+    setState(() => _disc = null);
+    await d.detach();
+    d.dispose();
+  }
+
+  void _dropDisc() {
+    final d = _disc;
+    _disc = null;
+    d?.dispose();
+  }
+
+  String? _spotLine(DiscoverySpot s) {
+    final key = s.cityKey;
+    if (key == null) return null;
+    final catalog = TripCityCatalog.to..warmFromDisk();
+    if (_cityNames == null || !identical(_cityNamesKey, catalog.dataKey)) {
+      _cityNamesKey = catalog.dataKey;
+      _cityNames = {for (final c in catalog.search('')) c.cityKey: c.name};
+    }
+    final name = _cityNames?[key];
+    return name == null || name.isEmpty ? null : name;
+  }
+
+  void _openSpotDetails(DiscoverySpot s) {
+    final key = s.cityKey;
+    TripSpotDetailSheet.show(
+      context,
+      spot: TripSpotModel.fromJson({
+        'id': s.id,
+        'name': s.name,
+        'latitude': s.lat,
+        'longitude': s.lon,
+        'category': s.category,
+        'rank': s.rank,
+        'imageUrl': s.thumbUrl,
+      }),
+      selected: false,
+      locked: false,
+      cityKey: key,
+      version: key == null ? null : TripSpotsCache.versionOf(key) ?? '',
+      partial: true,
+      showAction: false,
+    );
   }
 
   void _animateNearestCircle(double targetKm, LatLng center) {
@@ -429,6 +570,8 @@ class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateM
     } else {
       _fitToRadius();
     }
+    _syncDiscArea();
+    await _attachDisc();
   }
 
   void _onCameraIdle() {
@@ -729,7 +872,17 @@ class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateM
   void _showDetail(String id) {
     final stay = _guest.nearbyStays.firstWhereOrNull((l) => l.id == id);
     if (stay == null) return;
-    SheetFrame.show(context, builder: (_) => StayBottomSheet(stay: stay));
+    _showStaySheet((_) => StayBottomSheet(stay: stay));
+  }
+
+  Future<void> _showStaySheet(WidgetBuilder builder) async {
+    _disc?.clearSelection().ignore();
+    _sheetOpen = true;
+    try {
+      await SheetFrame.show(context, builder: builder);
+    } finally {
+      _sheetOpen = false;
+    }
   }
 
   @override
@@ -752,7 +905,9 @@ class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateM
                     rotateGesturesEnabled: false,
                     tiltGesturesEnabled: false,
                     myLocationEnabled: false,
+                    dragEnabled: false,
                     trackCameraPosition: true,
+                    onMapClick: (point, _) => _disc?.onMapTap(point.x, point.y),
                     attributionButtonMargins: const Point(-200.0, 0.0),
                     onMapCreated: (MapLibreMapController ctrl) {
                       _mapController = ctrl;
@@ -832,6 +987,7 @@ class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateM
                 left: 0,
                 right: 0,
                 child: Column(
+                  key: _topKey,
                   children: [
                     TemplateEntrance(
                       animation: templateInterval(_chromeController, 0, 3),
@@ -862,19 +1018,25 @@ class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateM
                     ),
                     Padding(
                       padding: EdgeInsets.only(top: DS.gv(12), left: DS.s(20), right: DS.s(20)),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          ScaleTransition(
-                            scale: CurvedAnimation(parent: _chromeController, curve: Curves.fastOutSlowIn),
-                            child: _buildLocationFab(),
-                          ),
-                        ],
+                      child: StayMapTopControls(
+                        layer: _disc,
+                        entrance: CurvedAnimation(parent: _chromeController, curve: Curves.fastOutSlowIn),
+                        fab: _buildLocationFab(),
+                        map: () => _mapController,
+                        onLocate: _onLocateTap,
                       ),
                     ),
                   ],
                 ),
               ),
+              if (_disc != null)
+                DiscoveryOverlay(
+                  layer: _disc!,
+                  placement: DiscoveryPlacement.bottom,
+                  map: () => _mapController,
+                  palette: ListingPalette.forest,
+                  side: StayMapTopControls.side,
+                ),
               Obx(() {
                 if (!_guest.nearestActive.value) {
                   return Positioned(
@@ -996,16 +1158,18 @@ class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateM
     );
   }
 
+  void _onLocateTap() {
+    _locationCtrl.resetBrowsing();
+    if (_hasPin) PlaceSearchBar.clear(_centre);
+    _precomputeCircleCache();
+    _loadNearby();
+    if (_mapReady) _fitToRadius();
+  }
+
   Widget _buildLocationFab() {
     return PressScale(
       child: GestureDetector(
-      onTap: () {
-        _locationCtrl.resetBrowsing();
-        if (_hasPin) PlaceSearchBar.clear(_centre);
-        _precomputeCircleCache();
-        _loadNearby();
-        if (_mapReady) _fitToRadius();
-      },
+      onTap: _onLocateTap,
       child: Container(
         width: DS.s(KitMetrics.touch + 2),
         height: DS.s(KitMetrics.touch + 2),
@@ -1079,9 +1243,8 @@ class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateM
   }
 
   void _showListSheet() {
-    SheetFrame.show(
-      context,
-      builder: (_) => DraggableScrollableSheet(
+    _showStaySheet(
+      (_) => DraggableScrollableSheet(
         initialChildSize: 0.6,
         minChildSize: 0.4,
         maxChildSize: 0.9,
@@ -1095,6 +1258,51 @@ class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateM
 
   Widget _buildMapSkeleton() {
     return TemplatePlaceholder(height: _screenSize.height, radius: 0);
+  }
+}
+
+class StayMapTopControls extends StatelessWidget {
+  final DiscoveryLayerApi? layer;
+  final Animation<double> entrance;
+  final Widget fab;
+  final MapLibreMapController? Function() map;
+  final VoidCallback onLocate;
+
+  static const double side = 20;
+
+  const StayMapTopControls({
+    super.key,
+    required this.layer,
+    required this.fab,
+    required this.map,
+    required this.onLocate,
+    this.entrance = kAlwaysCompleteAnimation,
+  });
+
+  Widget _old() => Row(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [ScaleTransition(scale: entrance, child: fab)],
+      );
+
+  @override
+  Widget build(BuildContext context) {
+    final l = layer;
+    if (l == null) return _old();
+    return Obx(() {
+      if (!l.attached.value) return _old();
+      final loading = l.dataState.value == DiscoveryDataState.loading;
+      return ScaleTransition(
+        scale: entrance,
+        child: TripMapControls.row(
+          showEye: loading || l.hasSpotsHere.value,
+          eyeOn: l.eyeOn.value,
+          loading: loading,
+          onEye: (on) => l.setEye(on),
+          map: map,
+          onLocate: onLocate,
+        ),
+      );
+    });
   }
 }
 
