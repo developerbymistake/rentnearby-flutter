@@ -22,6 +22,7 @@ import '../features/stay/setup/stay_setup_controller.dart';
 import '../features/taxi/setup/taxi_setup_controller.dart';
 import '../features/buddy/buddy_session_hooks.dart';
 import '../features/owner_core/data/owner_cache.dart';
+import '../features/owner_core/plan/plan_bindings.dart';
 import '../features/owner_core/session/owner_session_hooks.dart';
 
 /// What triggered a logout — decides whether the server-side revoke call fires and which (if
@@ -438,6 +439,7 @@ class AuthController extends GetxController {
     // state, without having to remember to hand-add a reset call per controller.
     // The stay and taxi setup hubs register LocationController as permanent.
     if (Get.isRegistered<LocationController>()) Get.delete<LocationController>(force: true);
+    PlanBindings.dispose();
     Get.deleteAll();
   }
 

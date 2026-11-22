@@ -125,5 +125,18 @@ class NotificationTypeKeys {
 
   static const Set<String> invalidatesPlan = {planLimitsChangedWire, plansStartingWire};
 
+  // Hub events carry the PascalCase constant, FCM the snake wire value; owner seams speak wire.
+  static String? toWire(String? type) {
+    if (type == null || type.isEmpty || type.contains('_')) return type;
+    final b = StringBuffer();
+    for (var i = 0; i < type.length; i++) {
+      final ch = type[i];
+      final lower = ch.toLowerCase();
+      if (ch != lower && i > 0) b.write('_');
+      b.write(lower);
+    }
+    return b.toString();
+  }
+
   static bool isOwnerWork(String? type) => type != null && (ownerStay.contains(type) || ownerTaxi.contains(type));
 }

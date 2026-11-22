@@ -1,5 +1,6 @@
 import '../../../controllers/auth_controller.dart';
 import '../data/owner_cache.dart';
+import 'owner_plan_sync.dart';
 import 'owner_push_sync.dart';
 import 'shell_teardown.dart';
 
@@ -28,5 +29,6 @@ abstract final class OwnerSessionHooks {
     }
     ShellTeardown.reset();
     OwnerPushSync.reset();
+    OwnerPlanSync.reset();
   }
 }

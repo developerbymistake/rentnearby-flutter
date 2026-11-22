@@ -53,6 +53,10 @@ abstract final class PlanGate {
     return Get.isRegistered<PlanController>() ? Get.find<PlanController>().myPlan.value : const MyPlanModel();
   }
 
+  // Callers that refuse locally must check this first: before the first /plans/me answer the
+  // limits are the model defaults, not the owner's plan.
+  static bool get loaded => debugPlan != null || (Get.isRegistered<PlanController>() && Get.find<PlanController>().loaded.value);
+
   static bool get paymentOn => _plan.paymentEnabled;
 
   static bool get canUpgrade => _plan.paymentEnabled && _plan.canUpgrade;

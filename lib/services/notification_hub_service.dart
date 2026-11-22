@@ -8,6 +8,7 @@ import '../controllers/auth_controller.dart';
 import '../controllers/notification_controller.dart';
 import '../controllers/plan_controller.dart';
 import '../features/buddy/buddy_live.dart';
+import '../features/owner_core/session/owner_push_sync.dart';
 import '../features/stay/stay_status_sync.dart';
 import '../features/taxi/taxi_status_sync.dart';
 import '../models/notification_model.dart';
@@ -135,7 +136,9 @@ class NotificationHubService extends GetxService with SingleFlightHubConnect imp
         final data = Map<String, dynamic>.from(args[0] as Map);
         Get.find<NotificationController>().applyLiveNotification(data);
         if (Get.isRegistered<PlanController>()) Get.find<PlanController>().onPushNotification(data['type'] as String?);
-        TripPushSync.onPush(data['type'] as String?, data['actionRoute'] as String?, NotificationModel.parseArguments(data['actionArguments']));
+        final hubArgs = NotificationModel.parseArguments(data['actionArguments']);
+        TripPushSync.onPush(data['type'] as String?, data['actionRoute'] as String?, hubArgs);
+        OwnerPushSync.onPush(NotificationTypeKeys.toWire(data['type'] as String?), data['actionRoute'] as String?, hubArgs);
         if (data['type'] == NotificationTypeKeys.roleRequestApproved) {
           Get.find<AuthController>().forceLogout(reason: LogoutReason.roleChanged);
         } else if (data['type'] == NotificationTypeKeys.roleRequestRejected) {

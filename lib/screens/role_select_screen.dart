@@ -5,6 +5,7 @@ import '../controllers/auth_controller.dart';
 import '../design/design.dart';
 import '../design/extra/ext_auth.dart';
 import '../controllers/location_controller.dart';
+import '../features/owner_core/plan/plan_bindings.dart';
 import '../models/role_model.dart';
 import '../widgets/global_location_gates.dart';
 import '../widgets/role_correction_dialog.dart';
@@ -61,6 +62,7 @@ class _RoleSelectScreenState extends State<RoleSelectScreen> {
     final result = _correction
         ? await _auth.correctRole(_selectedKey)
         : await _auth.chooseRole(_selectedKey);
+    if (result == RoleActionResult.success) PlanBindings.ensure(fresh: true);
     if (result == RoleActionResult.unavailable && mounted) _retry();
   }
 

@@ -6,6 +6,7 @@ import 'package:bakhli/controllers/tab_config_controller.dart';
 import 'package:bakhli/features/owner_core/data/owner_api.dart';
 import 'package:bakhli/models/my_plan_model.dart';
 import 'package:bakhli/models/user_model.dart';
+import 'package:bakhli/repositories/plan_repository.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
@@ -159,4 +160,27 @@ List<T> rows<T>(int n, T Function(int i) build) => [for (var i = 0; i < n; i++) 
 void resetOwnerTestState() {
   OwnerApi.debugReset();
   Get.reset();
+}
+
+/// `/plans/me` from a queue of server bodies; the last body repeats. Counts the calls.
+class FakePlanRepository extends PlanRepository {
+  FakePlanRepository([List<Map<String, dynamic>>? bodies]) : bodies = bodies ?? [<String, dynamic>{}];
+
+  final List<Map<String, dynamic>> bodies;
+  int meCalls = 0;
+  Object? failWith;
+
+  void push(Map<String, dynamic> body) => bodies.add(body);
+
+  @override
+  Future<MyPlanModel> getMe({bool forceRefresh = false}) async {
+    meCalls++;
+    final f = failWith;
+    if (f != null) throw f;
+    final body = bodies.length > 1 ? bodies.removeAt(0) : bodies.first;
+    return MyPlanModel.fromJson(body);
+  }
+
+  @override
+  void invalidateMe() {}
 }

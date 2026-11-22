@@ -42,6 +42,9 @@ class PlanController extends GetxController {
   final activePurchase = Rxn<PurchaseStatus>();
   final pollTimedOut = false.obs;
   final planLoadFailed = false.obs;
+  final loaded = false.obs;
+  final planVersion = 0.obs;
+  DateTime? loadedAt;
 
   final storeState = StoreState.idle.obs;
   final storeProducts = <String, StoreProduct>{}.obs;
@@ -51,7 +54,9 @@ class PlanController extends GetxController {
   final isRestoring = false.obs;
 
   bool _polling = false;
-  bool _loaded = false;
+  String? _fingerprint;
+  Future<void>? _invalidateFlight;
+  bool _invalidateAgain = false;
   int _planSeq = 0;
   int _pollSeq = 0;
   bool _disposed = false;
@@ -77,7 +82,7 @@ class PlanController extends GetxController {
   PlanLimitsModel get limits => myPlan.value.limits;
   bool get paymentEnabled => myPlan.value.paymentEnabled;
   bool get hasPlanFeature => myPlan.value.featureKey != null;
-  bool get isLoaded => _loaded;
+  bool get isLoaded => loaded.value;
 
   String get paymentProvider => _providerKey(myPlan.value.paymentProvider);
   bool get isPlay => paymentProvider == 'Play';
@@ -107,9 +112,7 @@ class PlanController extends GetxController {
     try {
       final me = await _repo.getMe(forceRefresh: force);
       if (seq != _planSeq) return;
-      myPlan.value = me;
-      _loaded = true;
-      planLoadFailed.value = false;
+      _store(me);
       _syncGateway(me);
       final open = me.openPurchaseId;
       final active = activePurchase.value;
@@ -127,12 +130,31 @@ class PlanController extends GetxController {
   }
 
   Future<void> ensureLoaded() async {
-    if (!_loaded) await refreshPlan();
+    if (!loaded.value) await refreshPlan();
   }
 
-  void invalidate() {
-    _repo.invalidateMe();
-    refreshPlan(force: true);
+  // Single-flight: a burst of plan pushes (FCM + hub for the same event) costs one /plans/me,
+  // plus one more only when a signal arrived while the first was in flight.
+  Future<void> invalidate() {
+    final current = _invalidateFlight;
+    if (current != null) {
+      _invalidateAgain = true;
+      return current;
+    }
+    late final Future<void> run;
+    run = _runInvalidate().whenComplete(() {
+      if (identical(_invalidateFlight, run)) _invalidateFlight = null;
+    });
+    _invalidateFlight = run;
+    return run;
+  }
+
+  Future<void> _runInvalidate() async {
+    do {
+      _invalidateAgain = false;
+      _repo.invalidateMe();
+      await refreshPlan(force: true);
+    } while (_invalidateAgain && !_disposed);
   }
 
   void onPushNotification(String? type) {
@@ -145,10 +167,52 @@ class PlanController extends GetxController {
     if (_disposed) return;
     _planSeq++;
     isLoadingPlan.value = false;
-    myPlan.value = me;
-    _loaded = true;
-    planLoadFailed.value = false;
+    _store(me);
     _syncGateway(me);
+  }
+
+  void _store(MyPlanModel me) {
+    myPlan.value = me;
+    loadedAt = DateTime.now();
+    planLoadFailed.value = false;
+    final next = fingerprintOf(me);
+    final previous = _fingerprint;
+    _fingerprint = next;
+    loaded.value = true;
+    if (previous != null && previous != next) planVersion.value++;
+  }
+
+  static String fingerprintOf(MyPlanModel me) {
+    final l = me.limits;
+    final h = me.hidden;
+    final p = me.play;
+    return [
+      me.planId,
+      me.isPaid,
+      me.source,
+      me.endsAt?.toUtc().toIso8601String(),
+      p?.state,
+      p?.autoRenewEnabled,
+      me.paymentEnabled,
+      h.photos,
+      h.roomTypes,
+      h.routes,
+      h.specialPrices,
+      me.pausedByPlanCount,
+      l.photos,
+      l.roomTypes,
+      l.routes,
+      l.jobsPosts,
+      l.calendarEntries,
+      l.blockedRanges,
+      l.specialPrices,
+      l.upcomingDays,
+      l.monthsAhead,
+      l.monthSummary,
+      l.reminders,
+      l.ringWeight,
+      l.featured,
+    ].join('|');
   }
 
   void clear() {
@@ -166,7 +230,9 @@ class PlanController extends GetxController {
     _skipOpenIds.clear();
     _strayTokens.clear();
     _lastRestoreAt = null;
-    _loaded = false;
+    _fingerprint = null;
+    loadedAt = null;
+    loaded.value = false;
   }
 
   @override

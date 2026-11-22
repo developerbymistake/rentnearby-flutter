@@ -17,10 +17,10 @@ import '../features/buddy/buddy_live.dart';
 import '../features/owner_core/session/shell_teardown.dart';
 import '../repositories/notification_repository.dart';
 import '../repositories/user_repository.dart';
-import '../repositories/plan_repository.dart';
 import '../controllers/config_controller.dart';
 import '../controllers/tab_config_controller.dart';
 import '../controllers/plan_controller.dart';
+import '../features/owner_core/plan/plan_bindings.dart';
 import '../controllers/banner_controller.dart';
 import '../controllers/chat_controller.dart';
 import '../services/banner_hub_service.dart';
@@ -73,8 +73,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     super.initState();
     _tabConfigCtrl = TabConfigController.to;
     Get.put(ConfigController());
-    Get.put(PlanRepository());
-    Get.put(PlanController());
+    PlanBindings.ensure();
     _locationCtrl = Get.put(LocationController());
     // GlobalLocationGates (main.dart's builder:) sits above the Navigator and
     // only re-evaluates Get.isRegistered<LocationController>() when nudged —
