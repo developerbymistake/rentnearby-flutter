@@ -24,6 +24,8 @@ import '../widgets/trip_plan_header.dart';
 import '../widgets/trip_not_found_view.dart';
 import '../map/discovery_api.dart';
 import '../map/trip_discovery_layer.dart';
+import '../map/discovery_overlay.dart';
+import '../map/trip_map_spot_actions.dart';
 
 class TripMapScreen extends StatefulWidget {
   const TripMapScreen({super.key});
@@ -69,6 +71,7 @@ class _TripMapScreenState extends State<TripMapScreen> with TickerProviderStateM
   bool _forceRedraw = false;
   String? _discKeys;
   static const double _discCardBand = 150;
+  late final TripMapSpotActions _spotActions = TripMapSpotActions.of(_plan, context: () => context);
 
   bool get _waitingForTrip {
     final id = _waitingTripId;
@@ -233,6 +236,11 @@ class _TripMapScreenState extends State<TripMapScreen> with TickerProviderStateM
         plannedDayOf: (id) => _plan.plan.value?.dayOfSpot(id),
         topInset: () => _overlayHeight(_topKey, DS.s(120)),
         bottomInset: () => MediaQuery.paddingOf(context).bottom,
+        targetDayFor: _spotActions.targetDayFor,
+        onAdd: _spotActions.add,
+        onRemove: _spotActions.remove,
+        onDetails: _spotActions.details,
+        lineFor: _spotActions.lineFor,
       );
 
   void _ensureDiscData() {
@@ -1099,6 +1107,7 @@ class _TripMapScreenState extends State<TripMapScreen> with TickerProviderStateM
             }),
           ),
           Positioned.fill(child: _buildState()),
+          if (_disc != null) DiscoveryOverlay(layer: _disc!, mode: DiscoveryMode.full, map: () => _map, onLocate: () => DiscoveryCamera.toUser(_map, limits: _wideZoom ? _multiCityZoom : _oneCityZoom(context)), notice: () => _plan.offline.value ? TripStringsV2Plan.offlineBanner : null, dayColorOf: _routeColor),
           Positioned(left: 0, right: 0, top: 0, child: KeyedSubtree(key: _topKey, child: _buildTop(context))),
         ],
       ),
