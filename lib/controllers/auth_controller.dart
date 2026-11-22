@@ -224,6 +224,7 @@ class AuthController extends GetxController {
           (canListTaxis.value && _setupPending(user.value?.taxiStatus)));
 
   String get postLoginRoute {
+    if (user.value?.needsProfilePhoto ?? false) return AppRoutes.profilePhoto;
     if (!(user.value?.roleConfirmed ?? false)) return AppRoutes.roleSelect;
     if (ownerShellEmpty.value && isOwner) return AppRoutes.main;
     if (staysEnabled && _setupPending(user.value?.stayStatus)) return AppRoutes.staySetup;
@@ -243,6 +244,23 @@ class AuthController extends GetxController {
     ever<int>(_tabs.version, (_) => leaveOffTabRoute());
     markVisited(tabIndex.value);
     ever<int>(tabIndex, markVisited);
+    ever<UserModel?>(user, gateProfilePhoto);
+  }
+
+  // These pages navigate through postLoginRoute themselves, so the worker stays silent there.
+  static const Set<String> _photoGateQuiet = {
+    AppRoutes.splash,
+    AppRoutes.login,
+    AppRoutes.phoneVerify,
+    AppRoutes.otp,
+    AppRoutes.onboarding,
+    AppRoutes.profilePhoto,
+  };
+
+  void gateProfilePhoto(UserModel? u) {
+    if (u == null || !u.needsProfilePhoto || !StorageService.isLoggedIn) return;
+    if (_photoGateQuiet.contains(Get.currentRoute)) return;
+    Get.offAllNamed(AppRoutes.profilePhoto);
   }
 
   /// Gated setup screens have no MainScreen underneath; MainScreen's own worker covers the rest.
@@ -292,7 +310,8 @@ class AuthController extends GetxController {
     }
   }
 
-  Future<void> completePhoneOnboarding({
+  /// Session saved, no navigation (the picture upload follows); false = the error is already shown.
+  Future<bool> createOnboardingAccount({
     required String phone,
     required String name,
   }) async {
@@ -303,13 +322,21 @@ class AuthController extends GetxController {
         'name': name,
       });
       await _saveSession(res['data'] as Map<String, dynamic>);
-      Get.offAllNamed(postLoginRoute);
+      return true;
     } catch (e) {
+      if (_errorType(e) == otpRequiredType) {
+        AppToast.error(_errorMessage(e) ?? 'Please verify your phone number again.');
+        Get.offAllNamed(AppRoutes.login);
+        return false;
+      }
       AppToast.error(_onboardingError(e));
+      return false;
     } finally {
       isLoading.value = false;
     }
   }
+
+  static const String otpRequiredType = 'OtpRequired';
 
   // ── Phone Verification (profile — change number) ──────────────────────────
 
@@ -542,21 +569,30 @@ class AuthController extends GetxController {
   // independent endpoints — deliberately not one combined "update profile" call, so editing your
   // name never has to know or care about the visibility toggle's state and vice versa.
   Future<bool> updateName(String name) async {
+    final error = await saveName(name);
+    if (error != null) AppToast.error(error);
+    return error == null;
+  }
+
+  /// Null = saved, else the message to show; no toast.
+  Future<String?> saveName(String name) async {
     try {
       isLoading.value = true;
       final res = await ApiService.put('/users/profile/name', {'name': name});
-      final updated = UserModel.fromJson(res['data'] as Map<String, dynamic>);
-      StorageService.saveUser(updated);
-      user.value = updated;
-      _syncProfileFields(updated);
-      Get.find<UserRepository>().invalidate();
-      return true;
+      applyUser(UserModel.fromJson(res['data'] as Map<String, dynamic>));
+      return null;
     } catch (e) {
-      AppToast.error(_dioMessage(e, 'Could not update name.'));
-      return false;
+      return _dioMessage(e, 'Could not update name.');
     } finally {
       isLoading.value = false;
     }
+  }
+
+  void applyUser(UserModel u) {
+    StorageService.saveUser(u);
+    user.value = u;
+    _syncProfileFields(u);
+    if (Get.isRegistered<UserRepository>()) Get.find<UserRepository>().invalidate();
   }
 
   Future<bool> updateContactVisibility(bool isContactVisible) async {
@@ -693,6 +729,21 @@ class AuthController extends GetxController {
 
   // The ApiService interceptor already logged out and toasted on a 401.
   static bool _isUnauthorized(dynamic e) => e is DioException && e.response?.statusCode == 401;
+
+  static Object? _errorType(dynamic e) {
+    if (e is! DioException) return null;
+    final data = e.response?.data;
+    final error = data is Map ? data['error'] : null;
+    return error is Map ? error['type'] : null;
+  }
+
+  static String? _errorMessage(dynamic e) {
+    if (e is! DioException) return null;
+    final data = e.response?.data;
+    final error = data is Map ? data['error'] : null;
+    final message = error is Map ? error['message'] : null;
+    return message is String && message.trim().isNotEmpty ? message : null;
+  }
 
   static bool _isRoleUnavailable(dynamic e) {
     if (e is! DioException || e.response?.statusCode != 400) return false;

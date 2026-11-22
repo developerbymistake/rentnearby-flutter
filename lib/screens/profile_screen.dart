@@ -9,7 +9,9 @@ import 'package:bakhli/design/extra/sheet_close_button.dart';
 import 'package:bakhli/design/extra/ext_buddy.dart';
 import '../config/app_routes.dart';
 import '../config/app_tabs.dart';
+import '../config/profile_photo_strings.dart';
 import '../controllers/auth_controller.dart';
+import '../controllers/profile_photo_controller.dart';
 import '../controllers/plan_controller.dart';
 import '../controllers/tab_config_controller.dart';
 import '../features/buddy/buddy_strings.dart';
@@ -18,6 +20,7 @@ import '../features/buddy/widgets/username_qr_sheet.dart';
 import '../utils/app_date_format.dart';
 import '../utils/app_toast.dart';
 import '../utils/input_formatters.dart';
+import '../widgets/profile_photo_circle.dart';
 import '../widgets/role_option_card.dart';
 import '../widgets/tab_header.dart';
 import 'privacy_policy_screen.dart';
@@ -37,6 +40,7 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   final _auth = Get.find<AuthController>();
+  final _photo = ProfilePhotoController.ensure();
 
   static const int _count = 9;
 
@@ -206,44 +210,35 @@ class _ProfileScreenState extends State<ProfileScreen> {
           final name = _auth.profileName.value;
           return Row(
             children: [
-              SizedBox(
-                width: DS.s(72),
-                height: DS.s(72),
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    _avatar(name),
-                    Positioned(
-                      right: 0,
-                      bottom: 0,
-                      child: Semantics(
-                        button: true,
-                        label: 'Edit name',
-                        excludeSemantics: true,
-                        child: PressScale(
-                          child: GestureDetector(
-                            behavior: HitTestBehavior.opaque,
-                            onTap: _openEditNameSheet,
-                            child: Container(
-                              width: DS.s(28),
-                              height: DS.s(28),
-                              decoration: BoxDecoration(color: DesignColors.onPrimary, shape: BoxShape.circle, boxShadow: DS.shadows(Ink3D.whiteBtn)),
-                              child: Icon(Icons.edit_rounded, size: DS.s(15), color: _tone.g2),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              _photoButton(name),
               Gap.h(12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    _HeroName(name.trim().isNotEmpty ? name.trim() : 'Your Profile'),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Flexible(child: _HeroName(name.trim().isNotEmpty ? name.trim() : 'Your Profile')),
+                        Semantics(
+                          button: true,
+                          label: ProfilePhotoStrings.semEditName,
+                          excludeSemantics: true,
+                          child: PressScale(
+                            child: GestureDetector(
+                              behavior: HitTestBehavior.opaque,
+                              onTap: _openEditNameSheet,
+                              child: SizedBox(
+                                width: KitMetrics.touch,
+                                height: DS.s(28),
+                                child: Center(child: ProfileRoundButton(icon: Icons.edit_rounded, color: _tone.g2)),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                     Gap.v(4),
                     Obx(() => FittedBox(
                           fit: BoxFit.scaleDown,
@@ -264,16 +259,79 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  Widget _photoButton(String name) {
+    return Obx(() {
+      final busy = _photo.busy.value;
+      final failed = _photo.failed.value && _photo.localPath.value != null;
+      return SizedBox(
+        width: DS.s(72),
+        height: DS.s(72),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Positioned.fill(
+              child: Semantics(
+                container: true,
+                button: true,
+                enabled: !busy,
+                label: ProfilePhotoStrings.semChangePhoto,
+                excludeSemantics: true,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: busy ? null : () => _photo.change(context),
+                  child: Align(
+                    alignment: Alignment.topLeft,
+                    child: ProfilePhotoCircle(
+                      size: DS.s(66),
+                      url: _auth.user.value?.profilePhotoUrl,
+                      localPath: busy ? _photo.localPath.value : null,
+                      placeholderPath: _photo.placeholderPath,
+                      busy: busy,
+                      failed: failed,
+                      ringColor: DesignColors.onPrimary.withValues(alpha: Alpha.v60),
+                      ringWidth: DS.s(3),
+                      fallback: _avatar(name),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              right: 0,
+              bottom: 0,
+              child: failed
+                  ? Semantics(
+                      container: true,
+                      button: true,
+                      label: ProfilePhotoStrings.semRetryUpload,
+                      excludeSemantics: true,
+                      child: PressScale(
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: _photo.retryChange,
+                          child: ProfileRoundButton(icon: Icons.refresh_rounded, color: _bad.g2),
+                        ),
+                      ),
+                    )
+                  : IgnorePointer(
+                      child: ExcludeSemantics(
+                        child: Opacity(
+                          opacity: busy ? Alpha.v45 : 1,
+                          child: ProfileRoundButton(icon: Icons.edit_rounded, color: _tone.g2),
+                        ),
+                      ),
+                    ),
+            ),
+          ],
+        ),
+      );
+    });
+  }
+
   Widget _avatar(String name) {
     final initials = _initials(name);
-    return Container(
-      width: DS.s(66),
-      height: DS.s(66),
-      decoration: BoxDecoration(
-        color: DesignColors.onPrimary.withValues(alpha: Alpha.v25),
-        shape: BoxShape.circle,
-        border: Border.all(color: DesignColors.onPrimary.withValues(alpha: Alpha.v60), width: DS.s(3)),
-      ),
+    return ColoredBox(
+      color: DesignColors.onPrimary.withValues(alpha: Alpha.v25),
       child: Center(
         child: initials.isNotEmpty
             ? Text(initials, maxLines: 1, style: Ink3D.text(28, FontWeight.w700, DesignColors.onPrimary, letterSpacing: 0))
@@ -583,9 +641,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
         tone: _tone,
         initialName: _auth.profileName.value.trim(),
         onSave: (name) async {
-          Navigator.pop(sheetCtx);
-          final ok = await _auth.updateName(name);
-          if (ok && mounted) AppToast.success('Profile updated');
+          final error = await _auth.saveName(name);
+          if (error == null) {
+            if (sheetCtx.mounted && (ModalRoute.of(sheetCtx)?.isCurrent ?? false)) Navigator.pop(sheetCtx);
+            if (mounted) AppToast.success('Profile updated');
+          }
+          return error;
         },
         onCancel: () => Navigator.pop(sheetCtx),
       ),
@@ -775,7 +836,7 @@ class _EditNameSheet extends StatefulWidget {
 
   final ListingTone tone;
   final String initialName;
-  final ValueChanged<String> onSave;
+  final Future<String?> Function(String) onSave;
   final VoidCallback onCancel;
 
   @override
@@ -784,6 +845,8 @@ class _EditNameSheet extends StatefulWidget {
 
 class _EditNameSheetState extends State<_EditNameSheet> {
   late final TextEditingController _ctrl = TextEditingController(text: widget.initialName);
+  bool _saving = false;
+  String? _error;
 
   @override
   void dispose() {
@@ -791,38 +854,70 @@ class _EditNameSheetState extends State<_EditNameSheet> {
     super.dispose();
   }
 
+  Future<void> _save() async {
+    if (_saving) return;
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
+    final error = await widget.onSave(_ctrl.text.trim());
+    if (!mounted) return;
+    setState(() {
+      _saving = false;
+      _error = error;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final canSave = _ctrl.text.trim().isNotEmpty;
-    return RepliesEntrance(
-      child: _ProfileSheet(
-        tone: widget.tone,
-        art: ListingArt.profile,
-        title: 'Edit name',
-        primaryLabel: 'Save',
-        onPrimary: canSave ? () => widget.onSave(_ctrl.text.trim()) : null,
-        secondaryLabel: 'Cancel',
-        onSecondary: widget.onCancel,
-        extra: Padding(
-          padding: EdgeInsets.only(top: DS.gv(18)),
-          child: _ProfileScreenState._fieldBox(TextFormField(
-            controller: _ctrl,
-            autofocus: true,
-            maxLength: 100,
-            inputFormatters: noEmojiInputFormatters,
-            style: Ink3D.text(16, FontWeight.w500, Ink3D.title, letterSpacing: 0),
-            decoration: InputDecoration(
-              hintText: 'Enter your full name',
-              hintStyle: Ink3D.text(16, FontWeight.w400, Ink3D.hint, letterSpacing: 0),
-              counterText: '',
-              border: InputBorder.none,
-              enabledBorder: InputBorder.none,
-              focusedBorder: InputBorder.none,
-              filled: false,
-              contentPadding: DS.sym(h: 22, v: 16),
+    final error = _error;
+    return PopScope(
+      canPop: !_saving,
+      child: RepliesEntrance(
+        child: _ProfileSheet(
+          tone: widget.tone,
+          art: ListingArt.profile,
+          title: 'Edit name',
+          primaryLabel: 'Save',
+          primaryLoading: _saving,
+          onPrimary: canSave && !_saving ? _save : null,
+          secondaryLabel: 'Cancel',
+          onSecondary: _saving ? null : widget.onCancel,
+          closeEnabled: !_saving,
+          extra: Padding(
+            padding: EdgeInsets.only(top: DS.gv(18)),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _ProfileScreenState._fieldBox(TextFormField(
+                  controller: _ctrl,
+                  autofocus: true,
+                  readOnly: _saving,
+                  maxLength: 100,
+                  inputFormatters: noEmojiInputFormatters,
+                  style: Ink3D.text(16, FontWeight.w500, Ink3D.title, letterSpacing: 0),
+                  decoration: InputDecoration(
+                    hintText: 'Enter your full name',
+                    hintStyle: Ink3D.text(16, FontWeight.w400, Ink3D.hint, letterSpacing: 0),
+                    counterText: '',
+                    border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
+                    filled: false,
+                    contentPadding: DS.sym(h: 22, v: 16),
+                  ),
+                  onChanged: (_) => setState(() => _error = null),
+                )),
+                if (error != null)
+                  Padding(
+                    padding: EdgeInsets.fromLTRB(DS.s(6), DS.gv(8), DS.s(6), 0),
+                    child: Text(error, maxLines: 3, overflow: TextOverflow.ellipsis, style: Ink3D.text(13, FontWeight.w600, Form3D.errorText, letterSpacing: 0)),
+                  ),
+              ],
             ),
-            onChanged: (_) => setState(() {}),
-          )),
+          ),
         ),
       ),
     );
@@ -948,6 +1043,8 @@ class _ProfileSheet extends StatelessWidget {
     this.secondaryLabel,
     this.onSecondary,
     this.dialog = false,
+    this.primaryLoading = false,
+    this.closeEnabled = true,
   });
 
   final ListingTone tone;
@@ -960,12 +1057,14 @@ class _ProfileSheet extends StatelessWidget {
   final String? secondaryLabel;
   final VoidCallback? onSecondary;
   final bool dialog;
+  final bool primaryLoading;
+  final bool closeEnabled;
 
   static double get _artRoom => DS.s(56);
   static const BorderRadius _primaryRadius =
       BorderRadius.only(topLeft: Radius.circular(20), topRight: Radius.circular(20), bottomRight: Radius.circular(20), bottomLeft: Radius.circular(8));
 
-  Widget _button(String label, VoidCallback? onTap, {required bool primary}) {
+  Widget _button(String label, VoidCallback? onTap, {required bool primary, bool loading = false}) {
     return Padding(
       padding: EdgeInsets.only(top: DS.gv(primary ? 22 : 12)),
       child: Semantics(
@@ -974,7 +1073,7 @@ class _ProfileSheet extends StatelessWidget {
         label: label,
         excludeSemantics: true,
         child: Opacity(
-          opacity: onTap == null ? 0.5 : 1,
+          opacity: onTap == null && !loading ? 0.5 : 1,
           child: PressScale(
             enabled: onTap != null,
             child: GestureDetector(
@@ -988,15 +1087,20 @@ class _ProfileSheet extends StatelessWidget {
                     ? BoxDecoration(
                         borderRadius: DS.br(_primaryRadius),
                         gradient: tone.gradient,
-                        boxShadow: onTap == null
+                        boxShadow: onTap == null && !loading
                             ? null
                             : [BoxShadow(color: tone.haloBase.withValues(alpha: Alpha.half), offset: DS.shadowOffset(const Offset(1.1, 6)), blurRadius: DS.shadowBlur(14))],
                       )
                     : BoxDecoration(color: DesignColors.onPrimary, borderRadius: DS.circular(18), boxShadow: DS.shadows(Ink3D.softShadow)),
-                child: Text(label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Ink3D.text(primary ? 17 : 16, FontWeight.w700, primary ? DesignColors.onPrimary : tone.text)),
+                child: loading
+                    ? SizedBox.square(
+                        dimension: DS.s(22),
+                        child: const CircularProgressIndicator(strokeWidth: 2.5, color: DesignColors.onPrimary),
+                      )
+                    : Text(label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Ink3D.text(primary ? 17 : 16, FontWeight.w700, primary ? DesignColors.onPrimary : tone.text)),
               ),
             ),
           ),
@@ -1048,8 +1152,8 @@ class _ProfileSheet extends StatelessWidget {
                                 style: Ink3D.text(15, FontWeight.w400, Ink3D.copy, height: 1.45, letterSpacing: 0)),
                           ),
                         ?extra,
-                        _button(primaryLabel, onPrimary, primary: true),
-                        if (secondaryLabel != null && onSecondary != null) _button(secondaryLabel!, onSecondary, primary: false),
+                        _button(primaryLabel, onPrimary, primary: true, loading: primaryLoading),
+                        if (secondaryLabel != null) _button(secondaryLabel!, onSecondary, primary: false),
                       ],
                     ),
                   ),
@@ -1066,7 +1170,7 @@ class _ProfileSheet extends StatelessWidget {
             ),
           ),
         ),
-        if (!dialog) Positioned(top: _artRoom + DS.s(12), right: DS.s(12), child: const SheetCloseButton()),
+        if (!dialog) Positioned(top: _artRoom + DS.s(12), right: DS.s(12), child: SheetCloseButton(enabled: closeEnabled)),
       ],
     );
   }

@@ -2,6 +2,7 @@ import 'dart:ui' as ui;
 
 import 'package:bakhli/controllers/auth_controller.dart';
 import 'package:bakhli/controllers/plan_controller.dart';
+import 'package:bakhli/controllers/profile_photo_controller.dart';
 import 'package:bakhli/controllers/tab_config_controller.dart';
 import 'package:bakhli/design/extra/ext_buddy.dart';
 import 'package:bakhli/features/buddy/buddy_strings.dart';
@@ -42,7 +43,10 @@ class _Auth extends AuthController {
   }
 
   @override
-  Future<void> completePhoneOnboarding({required String phone, required String name}) async => submitted.add(name);
+  Future<bool> createOnboardingAccount({required String phone, required String name}) async {
+    submitted.add(name);
+    return false;
+  }
 
   int refreshes = 0;
   String? serverUsername;
@@ -181,6 +185,7 @@ void main() {
 
     testWidgets('missing username shows a quiet loading look, Copy off, Get Started still works', (t) async {
       final a = _setup(username: null);
+      Get.put(ProfilePhotoController(offline: () async => false));
       final copied = _clipboard(t);
       await _openOnboarding(t);
       expect(find.text(_username), findsNothing);
@@ -189,6 +194,10 @@ void main() {
       await t.pump();
       expect(copied, isEmpty);
       await t.enterText(find.byType(TextFormField), 'Rahul Mehra');
+      Get.find<ProfilePhotoController>().localPath.value = 'missing_photo.jpg';
+      await t.pump();
+      await t.ensureVisible(find.text('Get Started'));
+      await t.pump();
       await t.tap(find.text('Get Started'));
       await t.pump();
       expect(a.submitted, ['Rahul Mehra']);

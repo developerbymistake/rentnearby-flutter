@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:bakhli/config/user_roles.dart';
 import 'package:bakhli/controllers/auth_controller.dart';
 import 'package:bakhli/controllers/location_controller.dart';
+import 'package:bakhli/controllers/profile_photo_controller.dart';
 import 'package:bakhli/controllers/tab_config_controller.dart';
 import 'package:bakhli/design/design.dart';
 import 'package:bakhli/models/role_model.dart';
@@ -61,7 +62,7 @@ class _Auth extends AuthController {
   }
 
   @override
-  Future<void> completePhoneOnboarding({required String phone, required String name}) async {}
+  Future<bool> createOnboardingAccount({required String phone, required String name}) async => false;
 
   @override
   Future<String?> sendPhoneOtp(String phone) async {
@@ -258,6 +259,10 @@ void main() {
     testWidgets('states', (t) async {
       _base();
       await _open(t, const OnboardingScreen(), args: {'phone': '9876543210'});
+      await _tapText(t, 'Get Started');
+      await _snap(t, 'onb_photo_err');
+      await t.pump(const Duration(seconds: 5));
+      Get.find<ProfilePhotoController>().localPath.value = 'missing_photo.jpg';
       await _tapText(t, 'Get Started');
       await _snap(t, 'onb_err');
       await t.pump(const Duration(seconds: 5));

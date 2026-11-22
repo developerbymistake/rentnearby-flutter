@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import '../config/profile_photo_strings.dart';
 import '../controllers/auth_controller.dart';
+import '../controllers/profile_photo_controller.dart';
 import '../design/design.dart';
 import '../design/extra/ext_auth.dart';
 import '../design/extra/ext_buddy.dart';
@@ -8,6 +10,7 @@ import '../features/buddy/buddy_strings.dart';
 import '../features/buddy/username_actions.dart';
 import '../utils/app_toast.dart';
 import '../utils/input_formatters.dart';
+import '../widgets/profile_photo_circle.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -17,10 +20,14 @@ class OnboardingScreen extends StatefulWidget {
 
 class _OnboardingScreenState extends State<OnboardingScreen> with TickerProviderStateMixin {
   final _auth = Get.find<AuthController>();
+  final _photo = ProfilePhotoController.ensure();
   final _nameCtrl = TextEditingController();
   final _nameFocus = FocusNode();
   static final ListingTone _tone = ListingTone.indigo;
   bool _nameBad = false;
+  bool _photoBad = false;
+  bool _created = false;
+  bool _uploadFailed = false;
   late final String _phone;
   late final AnimationController _enter =
       AnimationController(duration: const Duration(milliseconds: 600), vsync: this);
@@ -50,8 +57,26 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
     super.dispose();
   }
 
+  Future<void> _pickPhoto() async {
+    if (_created && _photo.failed.value && _photo.localPath.value != null) {
+      await _submit();
+      return;
+    }
+    if (await _photo.choose(context) && mounted) setState(() => _photoBad = false);
+  }
+
   Future<void> _submit() async {
+    if (_auth.isLoading.value || _photo.active) return;
     FocusScope.of(context).unfocus();
+    if (_created) {
+      if (await _photo.online()) await _upload();
+      return;
+    }
+    if (_photo.localPath.value == null) {
+      setState(() => _photoBad = true);
+      AppToast.error(ProfilePhotoStrings.addTitle);
+      return;
+    }
     final name = _nameCtrl.text.trim();
     if (name.isEmpty) {
       setState(() => _nameBad = true);
@@ -63,7 +88,21 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
       AppToast.error('Name cannot exceed 100 characters');
       return;
     }
-    await _auth.completePhoneOnboarding(phone: _phone, name: name);
+    if (!await _photo.online()) return;
+    final ok = await _auth.createOnboardingAccount(phone: _phone, name: name);
+    if (!ok || !mounted) return;
+    setState(() => _created = true);
+    await _upload();
+  }
+
+  Future<void> _upload() async {
+    final ok = await _photo.upload();
+    if (!mounted) return;
+    if (ok) {
+      Get.offAllNamed(_auth.postLoginRoute);
+    } else if (!_uploadFailed) {
+      setState(() => _uploadFailed = true);
+    }
   }
 
   @override
@@ -81,6 +120,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
           animationController: _enter,
           child: AuthCard(
             children: [
+              ProfilePhotoBlock(controller: _photo, bad: _photoBad, onTap: _pickPhoto),
+              Gap.v(20),
               AuthVerifiedRow(art: ListingArt.key, text: '+91 $_phone'),
               Gap.v(20),
               const AuthFieldLabel(BuddyStrings.usernameLabel),
@@ -108,6 +149,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
                 child: TextFormField(
                   controller: _nameCtrl,
                   focusNode: _nameFocus,
+                  readOnly: _created,
                   textCapitalization: TextCapitalization.words,
                   maxLength: 100,
                   inputFormatters: noEmojiInputFormatters,
@@ -121,11 +163,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
                 ),
               ),
               Gap.v(28),
-              Obx(() => GradientPillButton(
+              Obx(() => ProfilePhotoSubmitButton(
                     tone: _tone,
-                    label: 'Get Started',
-                    onTap: _auth.isLoading.value ? null : _submit,
-                    loading: _auth.isLoading.value,
+                    label: _uploadFailed ? ProfilePhotoStrings.tryAgain : 'Get Started',
+                    ready: _created || _photo.localPath.value != null,
+                    loading: _auth.isLoading.value || _photo.busy.value,
+                    onTap: _submit,
                   )),
             ],
           ),

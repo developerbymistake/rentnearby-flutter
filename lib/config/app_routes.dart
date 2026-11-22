@@ -4,6 +4,7 @@ import '../controllers/tab_config_controller.dart' show AppTabKeys;
 import '../screens/splash_screen.dart';
 import '../screens/login_screen.dart';
 import '../screens/onboarding_screen.dart';
+import '../screens/profile_photo_screen.dart';
 import '../screens/app_intro_screen.dart';
 import '../screens/phone_verify_screen.dart';
 import '../screens/main_screen.dart';
@@ -246,6 +247,12 @@ class AppRoutes {
     GetPage(
       name: onboarding,
       page: () => const OnboardingScreen(),
+      customTransition: TemplateTransition(),
+      transitionDuration: templateTransitionDuration,
+    ),
+    GetPage(
+      name: profilePhoto,
+      page: () => const ProfilePhotoScreen(),
       customTransition: TemplateTransition(),
       transitionDuration: templateTransitionDuration,
     ),
