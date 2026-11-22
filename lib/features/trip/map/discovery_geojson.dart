@@ -25,12 +25,12 @@ class DiscGeoJson {
     ]);
   }
 
-  static Map<String, dynamic> photo(Iterable<MapPackSpot> spots, Set<String> registeredIds, {Map<String, int>? tiers}) {
+  static Map<String, dynamic> photo(Iterable<MapPackSpot> spots, Set<String> registeredIds, {Map<String, int>? tiers, String Function(String id)? imgOf}) {
     final seen = <String>{};
     return _collection([
       for (final s in spots)
         if (registeredIds.contains(s.id) && seen.add(s.id))
-          _feature(s, tier: tiers?[s.id] ?? DiscTiers.photo, img: DiscIds.photoImage(s.id)),
+          _feature(s, tier: tiers?[s.id] ?? DiscTiers.photo, img: imgOf?.call(s.id) ?? DiscIds.photoImage(s.id)),
     ]);
   }
 

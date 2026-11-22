@@ -271,6 +271,23 @@ void main() {
     expect(api.calls.map((c) => c.stateId), ['c', 'a']);
   });
 
+  test('L-09: a point outside every bbox downloads nothing', () async {
+    version.answer(ver(packs: [ref('a', bbox: [76, 31, 78, 33]), ref('c', bbox: [78, 29, 81, 31])]));
+    api.fallback = (r, _) => (notModified: false, body: packBody(state: r.stateId, rows: 2));
+    final s = make();
+    await s.ensureForPoint(12.9, 77.6);
+    expect(api.count, 0);
+  });
+
+  test('L-12: a body of another version or state is refused, nothing stored', () async {
+    version.answer(ver(packs: [ref('s1', name: 'State One', version: 'v2')]));
+    api.body('s1', packBody(version: 'v9'));
+    final s = make();
+    await s.ensureForCities([1]);
+    expect(s.index, isNull);
+    expect(MapPackStore.readVersion('s1'), isNull);
+  });
+
   test('T12: a ref path on another host is never fetched, the state is missing', () async {
     version.answer(ver(packs: [ref('s1', name: 'State One', path: 'https://evil.example.com/p')]));
     api.fallback = (_, _) => (notModified: false, body: packBody());

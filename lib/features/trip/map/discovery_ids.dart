@@ -30,6 +30,8 @@ class DiscIds {
 
   static String photoImage(String spotId) => '$photoPrefix$spotId';
 
+  static String photoSlot(int i) => '${photoPrefix}slot-$i';
+
   static bool isPhotoImage(String name) => name.startsWith(photoPrefix);
 
   static String? spotIdOfPhotoImage(String name) =>

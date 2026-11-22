@@ -98,7 +98,7 @@ class MapPackService {
       _metaLoaded = true;
       final flagChanged = v.mapDiscovery != _flag;
       _flag = v.mapDiscovery;
-      _refs = v.packs;
+      if (v.packsKnown) _refs = v.packs;
       _refsAt = _now();
       if (!_flag) _dropMemory();
       if (flagChanged) revision.value++;
@@ -124,7 +124,7 @@ class MapPackService {
       if (!lat.isFinite || !lon.isFinite) return;
       if (!await _prepare()) return;
       final hit = [for (final r in _refs) if (r.contains(lat, lon)) r];
-      await _loadPicked(hit.isNotEmpty ? hit : _fallback());
+      await _loadPicked(hit.isNotEmpty ? hit : [for (final r in _refs) if (r.bbox == null) r].take(MapPackConstants.fallbackRefs).toList());
     } catch (_) {
       _updateStatus();
     }
@@ -184,7 +184,7 @@ class MapPackService {
     final failed = _versionFailedAt;
     if (failed != null && now.difference(failed) < MapPackConstants.retryAfter) return false;
     final at = _refsAt;
-    return _refs.isEmpty || at == null || now.difference(at) >= AppConstants.tripCitiesRevalidateAfter;
+    return at == null || now.difference(at) >= AppConstants.tripCitiesRevalidateAfter;
   }
 
   Future<void> _refreshRefs() {
@@ -244,7 +244,7 @@ class MapPackService {
     await _ready();
     if (gen != _gen) return;
     _persistMeta();
-    if (!_flag) return;
+    if (!_flag || _refs.isEmpty) return;
     final byId = {for (final r in _refs) r.stateId: r};
     var removed = false;
     for (final s in {...MapPackStore.storedStates(), ..._packs.keys}) {
@@ -339,6 +339,7 @@ class MapPackService {
       final p = await _parse(body);
       if (gen != _gen) return;
       if (p == null) return _fail(id);
+      if ((p.version.isNotEmpty && p.version != ref.version) || (p.stateId.isNotEmpty && p.stateId != id)) return _fail(id);
       _failedAt.remove(id);
       _swap(id, ref.version, p);
       if (gen != _gen) return;

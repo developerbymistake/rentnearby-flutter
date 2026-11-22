@@ -117,6 +117,8 @@ class MemDisk implements MarkerDiskStore {
   Future<Uint8List?> read(String key) async => files[key];
   @override
   Future<void> write(String key, Uint8List bytes) async => files[key] = bytes;
+  @override
+  Future<void> trimTo(int keep) async {}
 }
 
 DiscoverySpot spot(String id, {int rank = 1, bool thumb = false, int city = 7, double lat = 30.5, double lon = 78.2}) =>
@@ -219,7 +221,7 @@ void main() {
     final port = FakePort();
     await l.attach(port);
     await settle();
-    expect(port.calls.contains('image:disc-p-a'), isFalse);
+    expect(port.count('image:disc-p-'), 1);
     expect(features(port.geo['disc-photo']).map((f) => f['id']), ['b']);
     expect(features(port.geo['disc-all']).firstWhere((f) => f['id'] == 'a')['properties']['tier'], 1);
   });
@@ -475,8 +477,8 @@ void main() {
     expect(port.count('image:disc-p-'), 0);
     await l.setPhotoArea(30.5, 78.2, 10);
     await settle();
-    expect(port.calls.contains('image:disc-p-near'), isTrue);
-    expect(port.calls.contains('image:disc-p-far'), isFalse);
+    expect(port.count('image:disc-p-'), 1);
+    expect(features(port.geo['disc-photo']).map((f) => f['id']), ['near']);
     expect(l.hasSpotsHere.value, isTrue);
     await l.setPhotoArea(10, 10, 5);
     expect(l.hasSpotsHere.value, isFalse);
@@ -504,6 +506,46 @@ void main() {
     expect(await l.attach(port), isTrue);
     await settle();
     expect(port.count('source:'), 3);
-    expect(port.calls.contains('image:disc-p-a'), isTrue);
+    expect(port.calls.contains('image:${DiscIds.photoSlot(0)}'), isTrue);
+    expect(features(port.geo['disc-photo']).single['properties']['img'], DiscIds.photoSlot(0));
+  });
+
+  test('L-08: photo area moves 20 times: distinct image names stay at or below photoMax', () async {
+    final spots = [
+      for (var i = 0; i < 60; i++) spot('s$i', rank: i + 1, thumb: true, lat: 30 + i * 0.05, lon: 78),
+    ];
+    final l = TripDiscoveryLayer(
+      mode: DiscoveryMode.readOnly,
+      host: const DiscoveryHost.readOnly(),
+      source: FakeSource(spots),
+      images: images(),
+    );
+    await l.refreshData();
+    final port = FakePort();
+    await l.attach(port);
+    for (var k = 0; k < 20; k++) {
+      await l.setPhotoArea(30 + k * 0.15, 78, 3);
+      await settle();
+    }
+    final names = {for (final c in port.calls) if (c.startsWith('image:disc-p-')) c};
+    expect(names.length, lessThanOrEqualTo(l.tuning.photoMax));
+    expect(port.count('image:disc-p-'), greaterThan(l.tuning.photoMax));
+    final shown = features(port.geo['disc-photo']);
+    expect({for (final f in shown) f['properties']['img']}.length, shown.length, reason: 'no two shown spots share a slot');
+  });
+
+  test('L-14: disk trim keeps the newest files instead of wiping the folder', () async {
+    final dir = Directory.systemTemp.createTempSync('disc_trim');
+    addTearDown(() => dir.deleteSync(recursive: true));
+    final store = DiscMarkerFolderStore(root: () => dir);
+    final base = DateTime(2026, 1, 1);
+    for (var i = 0; i < 301; i++) {
+      await store.write('k$i', Uint8List.fromList([1]));
+      File('${dir.path}${Platform.pathSeparator}${DiscMarkerFolderStore.folder}${Platform.pathSeparator}k$i.png').setLastModifiedSync(base.add(Duration(minutes: i)));
+    }
+    await TripMarkerImages(disk: store).trimDisk(DiscTuning.trip);
+    expect(await store.count(), 200);
+    expect(await store.read('k300'), isNotNull);
+    expect(await store.read('k0'), isNull);
   });
 }

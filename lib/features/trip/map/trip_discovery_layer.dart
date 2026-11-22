@@ -195,6 +195,8 @@ class TripDiscoveryLayer implements DiscoveryLayerApi {
   Map<String, int> _tiers = const {};
   List<DiscoverySpot> _top = const [];
   Set<String> _registered = {};
+  final Map<String, String> _slots = {};
+  final List<String> _freeSlots = [];
   Set<String> _planned = {};
   DiscArea? _area;
   int? _dataSig;
@@ -254,6 +256,8 @@ class TripDiscoveryLayer implements DiscoveryLayerApi {
     final gen = ++_gen;
     _port = port;
     _registered = {};
+    _slots.clear();
+    _freeSlots.clear();
     _photoSig = null;
     try {
       final below = host.anchorLayerId();
@@ -419,7 +423,14 @@ class TripDiscoveryLayer implements DiscoveryLayerApi {
       final sig = Object.hashAll([for (final s in top) if (reg.contains(s.id)) s.id]).toString();
       if (sig == _photoSig) return;
       _photoSig = sig;
-      await port.setGeoJson(DiscIds.srcPhoto, DiscGeoJson.photo(top, reg, tiers: tiers));
+      await port.setGeoJson(DiscIds.srcPhoto, DiscGeoJson.photo(top, reg, tiers: tiers, imgOf: _slotName));
+    }
+
+    final keep = {for (final s in top) s.id};
+    for (final id in [..._slots.keys]) {
+      if (keep.contains(id)) continue;
+      _freeSlots.add(_slots.remove(id)!);
+      _registered = {..._registered}..remove(id);
     }
 
     () async {
@@ -431,6 +442,7 @@ class TripDiscoveryLayer implements DiscoveryLayerApi {
           tuning: tuning,
           already: _registered,
           addImage: port.addImage,
+          nameOf: (s) => _slots[s.id] ??= _freeSlots.isNotEmpty ? _freeSlots.removeLast() : DiscIds.photoSlot(_slots.length),
           onBatch: (reg) async {
             if (!alive()) return;
             _registered = reg;
@@ -441,6 +453,8 @@ class TripDiscoveryLayer implements DiscoveryLayerApi {
       } catch (_) {}
     }();
   }
+
+  String _slotName(String id) => _slots[id] ?? DiscIds.photoImage(id);
 
   DiscSelKind _naturalKind(DiscoverySpot s) {
     if (_registered.contains(s.id) && _tiers[s.id] == DiscTiers.photo) return DiscSelKind.photo;
@@ -464,7 +478,7 @@ class TripDiscoveryLayer implements DiscoveryLayerApi {
     selectedPlannedDay.value = host.plannedDayOf(s.id);
     selected.value = s;
     try {
-      await port.setGeoJson(DiscIds.srcSel, DiscGeoJson.sel(s, kind, tier: _tiers[s.id]));
+      await port.setGeoJson(DiscIds.srcSel, DiscGeoJson.sel(s, kind, tier: _tiers[s.id], img: kind == DiscSelKind.photo ? _slotName(s.id) : null));
       if (lift && gen == _gen) await _lift(port, s);
     } catch (_) {}
   }

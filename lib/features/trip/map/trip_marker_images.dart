@@ -18,6 +18,7 @@ abstract class MarkerDiskStore {
   Future<void> write(String key, Uint8List bytes);
   Future<int> count();
   Future<void> clear();
+  Future<void> trimTo(int keep);
 }
 
 class DiscMarkerFolderStore implements MarkerDiskStore {
@@ -68,6 +69,23 @@ class DiscMarkerFolderStore implements MarkerDiskStore {
     try {
       final dir = _dir;
       if (await dir.exists()) await dir.delete(recursive: true);
+    } catch (_) {}
+  }
+
+  @override
+  Future<void> trimTo(int keep) async {
+    try {
+      final dir = _dir;
+      if (!await dir.exists()) return;
+      final files = [
+        for (final e in await dir.list().toList())
+          if (e is File) (f: e, at: (await e.stat()).modified),
+      ]..sort((a, b) => b.at.compareTo(a.at));
+      for (final x in files.skip(keep < 0 ? 0 : keep)) {
+        try {
+          await x.f.delete();
+        } catch (_) {}
+      }
     } catch (_) {}
   }
 }
@@ -128,7 +146,7 @@ class CanvasMarkerPainter implements MarkerPainter {
   Future<Uint8List?> photo(Uint8List thumb, DiscTuning t) async {
     ui.Image? src;
     try {
-      final codec = await ui.instantiateImageCodec(thumb);
+      final codec = await ui.instantiateImageCodec(thumb, targetWidth: t.thumbPx * 2, allowUpscaling: false);
       src = (await codec.getNextFrame()).image;
       codec.dispose();
     } catch (_) {
@@ -248,7 +266,7 @@ class TripMarkerImages {
   }
 
   Future<void> trimDisk(DiscTuning t) async {
-    if (await _disk.count() > t.markerCacheMax) await _disk.clear();
+    if (await _disk.count() > t.markerCacheMax) await _disk.trimTo(t.markerCacheMax * 2 ~/ 3);
   }
 
   Future<Set<String>> register({
@@ -258,6 +276,7 @@ class TripMarkerImages {
     required Future<void> Function(String name, Uint8List bytes) addImage,
     required Future<void> Function(Set<String> registered) onBatch,
     required bool Function() alive,
+    String Function(DiscoverySpot s)? nameOf,
   }) async {
     final registered = {...already};
     final todo = [for (final s in spots) if (s.hasThumb && !registered.contains(s.id)) s];
@@ -274,7 +293,7 @@ class TripMarkerImages {
         if (png == null) continue;
         if (!alive()) return registered;
         try {
-          await addImage(DiscIds.photoImage(chunk[k].id), png);
+          await addImage(nameOf?.call(chunk[k]) ?? DiscIds.photoImage(chunk[k].id), png);
           registered.add(chunk[k].id);
           added = true;
         } catch (_) {}

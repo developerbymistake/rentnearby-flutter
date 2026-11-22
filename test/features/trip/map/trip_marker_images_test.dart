@@ -22,6 +22,9 @@ class MemDisk implements MarkerDiskStore {
   Future<Uint8List?> read(String key) async => files[key];
   @override
   Future<void> write(String key, Uint8List bytes) async => files[key] = bytes;
+  int? trimmedTo;
+  @override
+  Future<void> trimTo(int keep) async => trimmedTo = keep;
 }
 
 DiscoverySpot spot(String id, {int rank = 1, String? thumb}) => DiscoverySpot(
@@ -168,13 +171,14 @@ void main() {
     expect(added2.length, 3);
   });
 
-  test('disk folder is wiped when it passes the cap', () async {
+  test('disk folder is trimmed to the newest 200 when it passes the cap', () async {
     final disk = MemDisk();
     for (var i = 0; i < 301; i++) {
       disk.files['k$i'] = Uint8List(1);
     }
     await TripMarkerImages(disk: disk, painter: _Painter(), fetch: (_) async => null).trimDisk(DiscTuning.trip);
-    expect(disk.clears, 1);
+    expect(disk.clears, 0);
+    expect(disk.trimmedTo, 200);
   });
 
   test('folder store: writes <root>/disc_markers/<key>.png, counts, clears', () async {

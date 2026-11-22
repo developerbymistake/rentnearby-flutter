@@ -74,6 +74,8 @@ class _Disk implements MarkerDiskStore {
   Future<Uint8List?> read(String key) async => null;
   @override
   Future<void> write(String key, Uint8List bytes) async {}
+  @override
+  Future<void> trimTo(int keep) async {}
 }
 
 const _centre = (lat: 31.10, lon: 77.17);

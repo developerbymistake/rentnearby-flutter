@@ -82,6 +82,33 @@ void main() {
     expect(version.calls, 2);
   });
 
+  test('L-01: an empty packs list the server does not know yet keeps stored packs', () async {
+    final s = await loaded();
+    s.onVersion(ver(packs: const []));
+    await s.settle();
+    expect(MapPackStore.readBody('s1'), isNotNull);
+    expect(s.index, isNotNull);
+    s.onVersion(ver(packs: const [], packsKnown: true));
+    await s.settle();
+    expect(MapPackStore.readBody('s1'), isNotNull, reason: 'stored packs are never dropped while refs are empty');
+  });
+
+  test('L-01: packsKnown parsed; missing = true only when packs is non-empty', () {
+    expect(TripCityVersion.fromJson({'packsKnown': false, 'packs': []}).packsKnown, isFalse);
+    expect(TripCityVersion.fromJson({'packs': []}).packsKnown, isFalse);
+    expect(TripCityVersion.fromJson({'packsKnown': true}).packsKnown, isTrue);
+  });
+
+  test('L-03: empty refs: one version call for four ensures inside 10 minutes', () async {
+    version.answer(ver(packs: const []));
+    final s = make();
+    await s.ensureForCities([1]);
+    await s.ensureForCities([1]);
+    await s.ensureForPoint(30, 78);
+    await s.ensureForPoint(30, 78);
+    expect(version.calls, 1);
+  });
+
   test('a version answer handed in by the catalog stamps refsAt, so ensure skips its own call', () async {
     final s = make();
     s.onVersion(ver(packs: [ref('s1', name: 'State One')]));
