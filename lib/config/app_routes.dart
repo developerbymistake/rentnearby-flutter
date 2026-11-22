@@ -31,6 +31,7 @@ class AppRoutes {
   static const String login = '/login';
   static const String intro = '/intro';
   static const String onboarding = '/onboarding';
+  static const String profilePhoto = '/profile-photo';
   static const String phoneVerify = '/phone-verify';
   // keep /otp as alias for phone-verify (backward compat for any deep links)
   static const String otp = '/otp';

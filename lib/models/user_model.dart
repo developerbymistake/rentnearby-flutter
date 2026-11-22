@@ -21,6 +21,9 @@ class UserModel {
   final bool canCorrectRole;
   final bool roleLocked;
   final bool listingDeleted;
+  final String? profilePhotoUrl;
+  final bool photoKnown;
+  final bool profilePhotoRemoved;
 
   UserModel({
     required this.id,
@@ -43,6 +46,9 @@ class UserModel {
     this.canCorrectRole = false,
     this.roleLocked = false,
     this.listingDeleted = false,
+    this.profilePhotoUrl,
+    this.photoKnown = false,
+    this.profilePhotoRemoved = false,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) => UserModel(
@@ -66,6 +72,9 @@ class UserModel {
         canCorrectRole: json['canCorrectRole'] as bool? ?? false,
         roleLocked: json['roleLocked'] as bool? ?? false,
         listingDeleted: json['listingDeleted'] == true,
+        profilePhotoUrl: usernameOf(json['profilePhotoUrl']),
+        photoKnown: json.containsKey('profilePhotoUrl'),
+        profilePhotoRemoved: json['profilePhotoRemoved'] == true,
       );
 
   Map<String, dynamic> toJson() => {
@@ -89,6 +98,8 @@ class UserModel {
         'canCorrectRole': canCorrectRole,
         'roleLocked': roleLocked,
         'listingDeleted': listingDeleted,
+        if (photoKnown) 'profilePhotoUrl': profilePhotoUrl,
+        'profilePhotoRemoved': profilePhotoRemoved,
       };
 
   static String? usernameOf(Object? raw) {
@@ -97,6 +108,8 @@ class UserModel {
   }
 
   String get displayName => name?.trim().isNotEmpty == true ? name! : '+91 $phoneNumber';
+
+  bool get needsProfilePhoto => photoKnown && profilePhotoUrl == null;
 
   bool get hasPendingRoleRequest => roleRequestStatus == RoleRequestStatus.pending;
 
