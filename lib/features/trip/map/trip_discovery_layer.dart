@@ -183,6 +183,8 @@ class TripDiscoveryLayer implements DiscoveryLayerApi {
   final Rxn<DiscoverySpot> selected = Rxn<DiscoverySpot>();
   @override
   final RxnInt selectedPlannedDay = RxnInt();
+  @override
+  final RxnDouble selectedScreenX = RxnDouble();
   final Rxn<DiscSelKind> selectedKind = Rxn<DiscSelKind>();
 
   DiscoveryMapPort? _port;
@@ -457,6 +459,7 @@ class TripDiscoveryLayer implements DiscoveryLayerApi {
     final port = _port;
     if (!isAttached || port == null) return;
     final gen = _gen;
+    if (lift || selected.value?.id != s.id) selectedScreenX.value = null;
     selectedKind.value = kind;
     selectedPlannedDay.value = host.plannedDayOf(s.id);
     selected.value = s;
@@ -481,6 +484,7 @@ class TripDiscoveryLayer implements DiscoveryLayerApi {
     final perLon = (pts[2].x - pts[0].x) / _probeDeg / u;
     if (!(perLat > 0) || !(perLon > 0) || !perLat.isFinite || !perLon.isFinite) return;
     final x = pts[0].x / u, y = pts[0].y / u;
+    if (selected.value?.id == s.id) selectedScreenX.value = x;
     final halo = tuning.haloPhotoDp / 2;
     double? target;
     if (mode == DiscoveryMode.full) {
@@ -511,6 +515,7 @@ class TripDiscoveryLayer implements DiscoveryLayerApi {
     selected.value = null;
     selectedKind.value = null;
     selectedPlannedDay.value = null;
+    selectedScreenX.value = null;
   }
 
   @override

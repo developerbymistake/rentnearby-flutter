@@ -70,7 +70,7 @@ class _TripMapScreenState extends State<TripMapScreen> with TickerProviderStateM
   bool _discBusy = false;
   bool _forceRedraw = false;
   String? _discKeys;
-  static const double _discCardBand = 150;
+  static const double _discCardBand = 140;
   late final TripMapSpotActions _spotActions = TripMapSpotActions.of(_plan, context: () => context);
 
   bool get _waitingForTrip {
@@ -266,7 +266,7 @@ class _TripMapScreenState extends State<TripMapScreen> with TickerProviderStateM
         dataOf: (s) => s.forCities(_legKeys()),
         viewSize: () => MediaQuery.sizeOf(context),
         unitsPerDp: () => DiscoveryAttach.unitsPerDp(context),
-        cardHeight: () => DS.s(_discCardBand),
+        cardHeight: () => DS.s(_discCardBand) + DS.gv(DiscoveryOverlay.cardGapTop),
       );
       if (layer == null) return;
       if (!mounted) {

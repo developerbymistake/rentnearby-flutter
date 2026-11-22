@@ -23,8 +23,10 @@ class DiscoveryOverlay extends StatelessWidget {
 
   static const double controlsY = 0.14;
   static const double controlsRight = 12;
-  static const double chipGap = 8;
-  static const double cardGapTop = 16;
+  static const double chipGapTop = 36;
+  static const double chipGapBottomPlacement = 10;
+  static const double chipLeftTop = 18;
+  static const double cardGapTop = 52;
   static const double cardGapBottom = 12;
 
   const DiscoveryOverlay({
@@ -57,6 +59,11 @@ class DiscoveryOverlay extends StatelessWidget {
       final chip = loading ? TripMapDiscStrings.loadingPlaces : note;
       final top = host.topInset();
       final s = DS.s(side);
+      final isTop = placement == DiscoveryPlacement.top;
+      final tipX = isTop ? layer.selectedScreenX.value : null;
+      final band = MediaQuery.sizeOf(context).width - 2 * s;
+      final cardMax = DS.s(TripMapSpotCard.maxWidth);
+      final cardShift = band > cardMax ? (band - cardMax) / 2 : 0.0;
       return Stack(
         fit: StackFit.expand,
         children: [
@@ -77,9 +84,9 @@ class DiscoveryOverlay extends StatelessWidget {
             ),
           if (chip != null && sel == null)
             Positioned(
-              left: s,
+              left: isTop ? DS.s(chipLeftTop) : s,
               right: s,
-              top: top + DS.gv(chipGap),
+              top: top + DS.gv(isTop ? chipGapTop : chipGapBottomPlacement),
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: TripMapLoadingChip(key: const ValueKey('disc-chip'), text: chip, loading: loading, palette: palette),
@@ -89,19 +96,26 @@ class DiscoveryOverlay extends StatelessWidget {
             Positioned(
               left: s,
               right: s,
-              top: placement == DiscoveryPlacement.top ? top + DS.gv(cardGapTop) : null,
-              bottom: placement == DiscoveryPlacement.bottom ? host.bottomInset() + DS.gv(cardGapBottom) : null,
-              child: TripMapSpotCard(
-                spot: sel,
-                mode: m,
-                plannedDay: m == DiscoveryMode.full ? plannedDay : null,
-                targetDay: m == DiscoveryMode.full ? host.targetDayFor?.call(sel) : null,
-                line: host.lineFor?.call(sel),
-                onAdd: host.onAdd == null ? null : () => host.onAdd!(sel),
-                onRemove: host.onRemove == null ? null : () => host.onRemove!(sel),
-                onDetails: host.onDetails == null ? null : () => host.onDetails!(sel),
-                onClose: () => layer.clearSelection(),
-                dayColorOf: dayColorOf,
+              top: isTop ? top + DS.gv(cardGapTop) : null,
+              bottom: isTop ? null : host.bottomInset() + DS.gv(cardGapBottom),
+              child: Align(
+                alignment: isTop ? Alignment.topCenter : Alignment.bottomCenter,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(maxWidth: cardMax),
+                  child: TripMapSpotCard(
+                    spot: sel,
+                    mode: m,
+                    plannedDay: m == DiscoveryMode.full ? plannedDay : null,
+                    targetDay: m == DiscoveryMode.full ? host.targetDayFor?.call(sel) : null,
+                    line: host.lineFor?.call(sel),
+                    onAdd: host.onAdd == null ? null : () => host.onAdd!(sel),
+                    onRemove: host.onRemove == null ? null : () => host.onRemove!(sel),
+                    onDetails: host.onDetails == null ? null : () => host.onDetails!(sel),
+                    onClose: () => layer.clearSelection(),
+                    dayColorOf: dayColorOf,
+                    tipX: tipX == null ? null : tipX - s - cardShift,
+                  ),
+                ),
               ),
             ),
         ],

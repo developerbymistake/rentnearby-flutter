@@ -89,6 +89,7 @@ abstract class DiscoveryLayerApi {
   Rx<DiscoveryDataState> get dataState;
   Rxn<DiscoverySpot> get selected;
   RxnInt get selectedPlannedDay;
+  RxnDouble get selectedScreenX;
 
   Future<bool> attach(DiscoveryMapPort port);
   Future<void> detach();

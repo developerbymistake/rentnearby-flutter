@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:bakhli/design/design.dart';
 import 'package:bakhli/design/extra/trip_plan_look.dart';
 import 'package:bakhli/utils/spot_photo_url.dart';
@@ -21,8 +23,10 @@ class TripMapSpotCard extends StatelessWidget {
   final VoidCallback? onDetails;
   final VoidCallback? onClose;
   final Color Function(int day)? dayColorOf;
+  final double? tipX;
 
   static const double photo = 84;
+  static const double maxWidth = 420;
 
   const TripMapSpotCard({
     super.key,
@@ -36,12 +40,14 @@ class TripMapSpotCard extends StatelessWidget {
     this.onDetails,
     this.onClose,
     this.dayColorOf,
+    this.tipX,
   });
 
   bool get _planned => mode == DiscoveryMode.full && plannedDay != null;
 
   static TextStyle get titleStyle => Ink3D.text(14, FontWeight.w600, Ink3D.title, letterSpacing: 0, height: 1.3);
   static TextStyle get lineStyle => Ink3D.text(12.5, FontWeight.w400, TripLook.mutedText, letterSpacing: 0);
+  static TextStyle get categoryStyle => TypeTokens.style(11, FontWeight.w500, color: TypeTokens.secondary);
 
   List<Widget> _buttons() {
     final details = _CardButton(key: const ValueKey('disc-card-details'), kind: TripMapCardButton.soft, label: TripMapDiscStrings.details, onTap: onDetails);
@@ -50,12 +56,13 @@ class TripMapSpotCard extends StatelessWidget {
       return [details, _CardButton(key: const ValueKey('disc-card-remove'), kind: TripMapCardButton.danger, label: TripMapDiscStrings.removeFromDay, onTap: onRemove)];
     }
     final day = targetDay;
+    if (day == null) return [details];
     return [
       _CardButton(
         key: const ValueKey('disc-card-add'),
         kind: TripMapCardButton.primary,
-        label: TripMapDiscStrings.addToDay(day ?? 1),
-        onTap: day == null ? null : onAdd,
+        label: TripMapDiscStrings.addToDay(day),
+        onTap: onAdd,
       ),
       details,
     ];
@@ -69,7 +76,7 @@ class TripMapSpotCard extends StatelessWidget {
         key: const ValueKey('disc-card-inday'),
         padding: DS.sym(h: 9, v: 2),
         decoration: BoxDecoration(color: DesignColors.tint(c, Alpha.tint), borderRadius: DS.br(CardRadius.pill)),
-        child: Text(TripMapDiscStrings.inDay(day), maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(12, FontWeight.w600, c)),
+        child: Text(TripMapDiscStrings.inDay(day), maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(11, FontWeight.w600, c)),
       );
     }
     return Row(
@@ -78,7 +85,7 @@ class TripMapSpotCard extends StatelessWidget {
       children: [
         Container(width: DS.s(8), height: DS.s(8), decoration: BoxDecoration(color: TripSpotCategory.colorOf(spot.category), shape: BoxShape.circle)),
         Gap.h(5),
-        Flexible(child: Text(TripSpotCategory.label(spot.category), maxLines: 1, overflow: TextOverflow.ellipsis, style: lineStyle)),
+        Flexible(child: Text(TripSpotCategory.label(spot.category), maxLines: 1, overflow: TextOverflow.ellipsis, style: categoryStyle)),
       ],
     );
   }
@@ -87,6 +94,35 @@ class TripMapSpotCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final text = line?.trim() ?? '';
     final buttons = _buttons();
+    final card = _card(text, buttons);
+    final tip = tipX;
+    if (tip == null) return card;
+    return LayoutBuilder(builder: (context, c) {
+      final size = DS.s(16);
+      final hi = c.maxWidth.isFinite ? math.max(DS.s(20), c.maxWidth - DS.s(36)) : tip;
+      return Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Positioned(
+            key: const ValueKey('disc-card-tip'),
+            bottom: -DS.s(7),
+            left: tip.clamp(DS.s(20), hi) - size / 2,
+            child: Transform.rotate(
+              angle: math.pi / 4,
+              child: Container(
+                width: size,
+                height: size,
+                decoration: BoxDecoration(color: DesignColors.surface, borderRadius: DS.circular(3), boxShadow: DS.shadows(TripLook.dayCardShadow)),
+              ),
+            ),
+          ),
+          card,
+        ],
+      );
+    });
+  }
+
+  Widget _card(String text, List<Widget> buttons) {
     return Container(
       key: const ValueKey('disc-card'),
       decoration: BoxDecoration(color: DesignColors.surface, borderRadius: DS.circular(20), boxShadow: DS.shadows(TripLook.dayCardShadow)),
@@ -133,10 +169,13 @@ class TripMapSpotCard extends StatelessWidget {
                   ],
                 ),
                 Gap.v(10),
-                Row(
-                  children: [
-                    for (var i = 0; i < buttons.length; i++) ...[if (i > 0) Gap.h(8), Expanded(child: buttons[i])],
-                  ],
+                IntrinsicHeight(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      for (var i = 0; i < buttons.length; i++) ...[if (i > 0) Gap.h(8), Expanded(child: buttons[i])],
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -180,7 +219,7 @@ class _CardButton extends StatelessWidget {
     };
     final live = onTap != null;
     final body = ConstrainedBox(
-      constraints: BoxConstraints(minHeight: DS.s(40)),
+      constraints: BoxConstraints(minHeight: DS.s(KitMetrics.touch)),
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: fill,
@@ -193,10 +232,7 @@ class _CardButton extends StatelessWidget {
           padding: DS.sym(h: 8, v: 6),
           child: Center(
             widthFactor: 1,
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Text(label, maxLines: 1, softWrap: false, style: Ink3D.text(13, FontWeight.w700, fg)),
-            ),
+            child: Text(label, maxLines: 2, textAlign: TextAlign.center, overflow: TextOverflow.ellipsis, style: Ink3D.text(13, FontWeight.w700, fg)),
           ),
         ),
       ),

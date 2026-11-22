@@ -3,7 +3,9 @@ import 'package:bakhli/features/trip/map/discovery_overlay.dart';
 import 'package:bakhli/features/trip/trip_strings_map_disc.dart';
 import 'package:bakhli/features/trip/widgets/trip_map_spot_card.dart';
 import 'package:bakhli/features/trip/widgets/trip_spot_row.dart';
+import 'package:bakhli/design/design.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 
@@ -37,6 +39,8 @@ class _FakeLayer implements DiscoveryLayerApi {
   final Rxn<DiscoverySpot> selected = Rxn<DiscoverySpot>();
   @override
   final RxnInt selectedPlannedDay = RxnInt();
+  @override
+  final RxnDouble selectedScreenX = RxnDouble();
   final eyeCalls = <bool>[];
   int clears = 0;
 
@@ -141,12 +145,36 @@ void main() {
     }
   }
 
-  testWidgets('no target day disables Add to Day', (tester) async {
-    var added = 0;
-    await _pump(tester, TripMapSpotCard(spot: _dot, mode: DiscoveryMode.full, onAdd: () => added++), 360, 1);
-    await tester.tap(find.byKey(const ValueKey('disc-card-add')), warnIfMissed: false);
-    expect(added, 0);
-    expect(find.descendant(of: find.byKey(const ValueKey('disc-card-add')), matching: find.byType(Opacity)), findsOneWidget);
+  testWidgets('no target day: only Details, no invented day number', (tester) async {
+    await _pump(tester, TripMapSpotCard(spot: _dot, mode: DiscoveryMode.full, onAdd: () {}, onDetails: () {}), 360, 1);
+    expect(find.byKey(const ValueKey('disc-card-add')), findsNothing);
+    expect(find.textContaining('Day'), findsNothing);
+    expect(find.byKey(const ValueKey('disc-card-details')), findsOneWidget);
+  });
+
+  testWidgets('320 @ 1.3: both button labels keep one size (wrap, no shrink)', (tester) async {
+    await _pump(tester, TripMapSpotCard(spot: _photo, mode: DiscoveryMode.full, plannedDay: 2, line: _line, onRemove: () {}, onDetails: () {}), 320, 1.3);
+    expect(tester.takeException(), isNull);
+    expect(find.byType(FittedBox), findsNothing);
+    final a = tester.renderObject<RenderParagraph>(find.text(TripMapDiscStrings.removeFromDay));
+    final b = tester.renderObject<RenderParagraph>(find.text(TripMapDiscStrings.details));
+    expect(a.text.style!.fontSize, b.text.style!.fontSize);
+    expect(a.textScaler, b.textScaler);
+  });
+
+  testWidgets('button min height is the touch token', (tester) async {
+    await _pump(tester, TripMapSpotCard(spot: _photo, mode: DiscoveryMode.full, targetDay: 1, onAdd: () {}, onDetails: () {}), 360, 1);
+    expect(tester.getSize(find.byKey(const ValueKey('disc-card-details'))).height, greaterThanOrEqualTo(DS.s(KitMetrics.touch) - 0.5));
+  });
+
+  testWidgets('tip: drawn under the card when tipX is given, absent otherwise', (tester) async {
+    await _pump(tester, const TripMapSpotCard(spot: _dot, mode: DiscoveryMode.readOnly), 360, 1);
+    expect(find.byKey(const ValueKey('disc-card-tip')), findsNothing);
+    await _pump(tester, const TripMapSpotCard(spot: _dot, mode: DiscoveryMode.readOnly, tipX: 100), 360, 1);
+    final card = tester.getRect(find.byKey(const ValueKey('disc-card')));
+    final tip = tester.getRect(find.byKey(const ValueKey('disc-card-tip')));
+    expect(tip.bottom, greaterThan(card.bottom));
+    expect(tip.center.dx, closeTo(card.left + 100, 1.5));
   });
 
   group('DiscoveryOverlay', () {
@@ -193,8 +221,7 @@ void main() {
       layer.selected.value = _photo;
       await tester.pump();
       final card = tester.getRect(find.byKey(const ValueKey('disc-card')));
-      expect(card.top, greaterThan(120));
-      expect(card.top, lessThan(150));
+      expect(card.top, closeTo(120 + DS.gv(DiscoveryOverlay.cardGapTop), 0.5));
       await tester.tap(find.text('Add to Day 2'));
       expect(added.single.id, 's1');
       await tester.tap(find.byKey(const ValueKey('disc-card-close')));
@@ -225,6 +252,41 @@ void main() {
       expect(find.byKey(const ValueKey('disc-chip')), findsNothing);
       expect(find.byKey(const ValueKey('disc-eye')), findsNothing);
       expect(find.byKey(const ValueKey('disc-zoom-in')), findsOneWidget);
+    });
+
+    testWidgets('trip chip sits 36 under the header at left 18', (tester) async {
+      final layer = _FakeLayer(DiscoveryMode.full, host())..dataState.value = DiscoveryDataState.loading;
+      await pumpOverlay(tester, layer);
+      final chip = tester.getRect(find.byKey(const ValueKey('disc-chip')));
+      expect(chip.top, closeTo(120 + DS.gv(DiscoveryOverlay.chipGapTop), 0.5));
+      expect(chip.left, closeTo(DS.s(DiscoveryOverlay.chipLeftTop), 0.5));
+    });
+
+    testWidgets('selected screen x gives the card a tip; 820 wide card is capped and centred', (tester) async {
+      final layer = _FakeLayer(DiscoveryMode.full, host())..selected.value = _photo;
+      layer.selectedScreenX.value = 400;
+      await pumpPhone(
+        tester,
+        Scaffold(body: Stack(children: [DiscoveryOverlay(layer: layer)])),
+        size: const Size(820, 760),
+      );
+      expect(tester.takeException(), isNull);
+      final card = tester.getRect(find.byKey(const ValueKey('disc-card')));
+      expect(card.width, lessThanOrEqualTo(DS.s(TripMapSpotCard.maxWidth) + 0.5));
+      expect(card.center.dx, closeTo(410, 1));
+      expect(tester.getRect(find.byKey(const ValueKey('disc-card-tip'))).center.dx, closeTo(400, 1.5));
+    });
+
+    testWidgets('offline chip at 320 @ 1.3 shows the whole sentence', (tester) async {
+      final layer = _FakeLayer(DiscoveryMode.full, host());
+      await pumpPhone(
+        tester,
+        Scaffold(body: Stack(children: [DiscoveryOverlay(layer: layer, notice: () => 'Offline. Your plan is saved on this phone.')])),
+        size: const Size(320, 640),
+        textScale: 1.3,
+      );
+      final p = tester.renderObject<RenderParagraph>(find.text('Offline. Your plan is saved on this phone.'));
+      expect(p.didExceedMaxLines, isFalse);
     });
 
     testWidgets('offline notice shows the existing offline text', (tester) async {
