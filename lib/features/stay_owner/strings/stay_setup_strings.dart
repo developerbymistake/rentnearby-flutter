@@ -45,6 +45,7 @@ abstract final class StaySetupStrings {
   static const photoTooLarge = 'Photo is too large. Use one under 10 MB.';
   static const photoWrongType = 'Use a JPG, PNG or WebP photo.';
   static const photoUploadFailed = 'Upload failed. Try again.';
+  static const photoPickFailed = 'Could not open your photos. Try again.';
   static const keepOnePhoto = 'Keep at least one photo.';
 
   static const noConnection = 'No connection. Please try again.';

@@ -126,12 +126,15 @@ Map<String, dynamic> decMonthJson() => monthJson(
       ],
     );
 
-Map<String, dynamic> summaryJson({int booked = 29500, int received = 14800, int toCollect = 14700, bool top = true}) => {
+Map<String, dynamic> summaryJson({int booked = 29500, int received = 14800, int toCollect = 14700, bool top = true, int? dueCount}) => {
       'month': '2026-11',
-      'booked': booked,
-      'received': received,
-      'toCollect': toCollect,
-      'top': top
+      'finalTotal': booked,
+      'receivedTotal': received,
+      'balanceTotal': toCollect,
+      'entryCount': 6,
+      'dueCount': dueCount ?? (top ? 3 : 0),
+      'paymentEnabled': true,
+      'topBalances': top
           ? [
               entryJson('gupta', '2026-11-25', '2026-11-27', 'Gupta ji, 2 rooms', finalAmount: 9000, received: 3000),
               entryJson('rohit', '2026-11-27', '2026-11-29', 'Rohit Verma', auto: true, finalAmount: 7200, received: 2000),

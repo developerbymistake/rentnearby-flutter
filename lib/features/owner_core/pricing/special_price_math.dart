@@ -52,19 +52,20 @@ abstract final class SpecialPriceMath {
   }
 
   static int? lowerPercentFor(int base, DateTime checkIn, int nights, List<PriceRule> rules) {
-    if (nights <= 0) return null;
-    PriceRule? lowerRule;
+    var signed = 0;
+    int? best;
     for (final n in nightsOf(checkIn, nights)) {
       for (final r in rules) {
-        if (r.lower && r.covers(n)) {
-          lowerRule = r;
-          break;
+        if (!r.covers(n)) continue;
+        if (r.lower) {
+          signed -= r.percent;
+          if (best == null || r.percent > best) best = r.percent;
+        } else {
+          signed += r.percent;
         }
       }
-      if (lowerRule != null) break;
     }
-    if (lowerRule == null) return null;
-    return total(base, checkIn, nights, rules) < base * nights ? lowerRule.percent : null;
+    return best != null && signed < 0 ? best : null;
   }
 
   static bool touchesBlock(DateTime checkIn, int nights, List<DateRange> blocks) {

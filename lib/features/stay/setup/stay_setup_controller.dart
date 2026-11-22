@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 import '../../../controllers/auth_controller.dart';
 import '../../../utils/app_toast.dart';
@@ -26,6 +27,8 @@ class StaySetupController extends GetxController {
   bool mainBelow = false;
   String? lastErrorType;
   String? lastErrorMessage;
+  bool lastCanUpgrade = false;
+  bool lastNetwork = false;
 
   static const _stayErrorTypes = {'StayStepLocked', 'StayLocked', 'StayNotApproved', 'StayAlreadyExists', 'StayRoomLimit', 'StayRegistrationRequired', 'StayOutsideDistrict'};
 
@@ -86,7 +89,9 @@ class StaySetupController extends GetxController {
     }
   }
 
+  // Silent: the screen shows one line for the whole batch (G5, the server line, or no connection).
   Future<bool> uploadPhoto(String filePath, {void Function(int, int)? onProgress}) async {
+    _resetError();
     const maxAttempts = 3;
     var attempt = 0;
     dynamic lastError;
@@ -101,10 +106,34 @@ class StaySetupController extends GetxController {
         if (attempt < maxAttempts) await Future.delayed(Duration(seconds: attempt));
       }
     }
-    if (!(lastError is DioException && lastError.response?.statusCode == 401)) {
-      AppToast.error(DioErrorMapper.toMessage(lastError, 'Could not upload photo.'));
-    }
+    _readError(lastError);
     return false;
+  }
+
+  // A plan limit refusal: the limit sheet when the server says Plus would help, else its one line.
+  Future<void> showLimitRefusal(BuildContext context, GateSpec Function() gate) async {
+    if (lastCanUpgrade && PlanGate.canUpgrade) {
+      await PlanGate.showLimit(context, gate());
+      return;
+    }
+    final m = lastErrorMessage;
+    if (m != null && m.isNotEmpty) AppToast.info(m);
+  }
+
+  void _resetError() {
+    lastErrorType = null;
+    lastErrorMessage = null;
+    lastCanUpgrade = false;
+    lastNetwork = false;
+  }
+
+  void _readError(dynamic e) {
+    lastErrorType = DioErrorMapper.errorType(e);
+    lastErrorMessage = DioErrorMapper.serverMessage(e);
+    lastNetwork = DioErrorMapper.isNetworkError(e);
+    final body = e is DioException ? e.response?.data : null;
+    final data = body is Map<String, dynamic> ? body['data'] : null;
+    lastCanUpgrade = data is Map && data['canUpgrade'] == true;
   }
 
   Future<bool> deletePhoto(String photoId) async {
@@ -118,12 +147,12 @@ class StaySetupController extends GetxController {
   }
 
   Future<bool> _mutate(Future<StayOwnerModel?> Function() call, String fallback, {bool awaitProfile = false}) async {
-    lastErrorType = null;
-    lastErrorMessage = null;
+    _resetError();
     try {
       isSaving.value = true;
       final updated = await call();
-      stay.value = updated ?? await _repo.getMine();
+      final current = stay.value;
+      stay.value = updated == null ? await _repo.getMine() : (current == null ? updated : current.mergeFrom(updated));
       await _afterChange(awaitProfile: awaitProfile);
       return true;
     } catch (e) {
@@ -144,15 +173,14 @@ class StaySetupController extends GetxController {
   }
 
   void _handleError(dynamic e, String fallback) {
-    lastErrorType = DioErrorMapper.errorType(e);
-    lastErrorMessage = DioErrorMapper.serverMessage(e);
+    _readError(e);
     if (e is DioException && e.response?.statusCode == 401) return;
     if (DioErrorMapper.isNetworkError(e)) {
       AppToast.error(StaySetupStrings.noConnection);
       return;
     }
     if (lastErrorType == 'OnboardingClosed' || lastErrorType == 'StayOutsideDistrict') return;
-    if ((lastErrorType == 'PlanRoomTypeLimit' || lastErrorType == 'PlanPhotoLimit') && PlanGate.canUpgrade) return;
+    if (lastErrorType == 'PlanRoomTypeLimit' || lastErrorType == 'PlanPhotoLimit') return;
     if (lastErrorType == 'StayNeedsPhoto') {
       AppToast.warning(StaySetupStrings.keepOnePhoto);
       return;

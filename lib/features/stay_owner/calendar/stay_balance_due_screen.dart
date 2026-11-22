@@ -137,8 +137,7 @@ class _StayBalanceDueScreenState extends State<StayBalanceDueScreen> {
         _paid.insert(0, updated);
         final s = _summary.valueOrNull;
         if (s != null) {
-          final bal = e.chipAmount;
-          _summary = OwnerLoadData(MoneySummary(month: s.month, booked: s.booked, received: s.received + bal, toCollect: s.toCollect - bal, top: s.top));
+          _summary = OwnerLoadData(s.paid(e.chipAmount));
         }
       }
     });
@@ -155,24 +154,22 @@ class _StayBalanceDueScreenState extends State<StayBalanceDueScreen> {
     final s = _summary.valueOrNull;
     final sub = s == null ? OwnerSharedStrings.monthTitle(month) : StayCalendarStrings.balanceDueSub(month, s.toCollect);
     final locked = _list is OwnerLoadLocked<bool> || _summary is OwnerLoadLocked<MoneySummary>;
-    return Scaffold(
-      backgroundColor: OwnerLook.stay.page,
-      body: Column(
-        children: [
-          StayCalHeader(title: StayCalendarStrings.balanceDue, subtitle: sub, trailing: PlanGate.paymentOn && !PlanGate.canUpgrade ? const StayPlusTag() : null),
-          Expanded(child: locked ? _locked() : _body()),
-          StayCalBar(primary: StayCalendarStrings.viewCalendar, onPrimary: () => Get.toNamed(AppRoutes.stayCalendar)),
-        ],
-      ),
+    return StayCalScaffold(
+      header: (compact) => StayCalHeader(title: StayCalendarStrings.balanceDue, subtitle: sub, compact: compact, trailing: PlanGate.paymentOn && !PlanGate.canUpgrade ? const StayPlusTag() : null),
+      bar: StayCalBar(primary: StayCalendarStrings.viewCalendar, onPrimary: () => Get.toNamed(AppRoutes.stayCalendar)),
+      body: (context, inlineBar) => locked ? _locked(inlineBar) : _body(inlineBar),
     );
   }
 
-  Widget _locked() => Padding(
+  Widget _locked(Widget? inlineBar) => ListView(
         padding: DS.all(18),
-        child: PlanGate.canUpgrade ? const StayLockedSummary() : const SizedBox.shrink(),
+        children: [
+          if (PlanGate.canUpgrade) const StayLockedSummary(),
+          ?inlineBar,
+        ],
       );
 
-  Widget _body() {
+  Widget _body(Widget? inlineBar) {
     return OwnerStateView<bool>(
       load: _list,
       look: OwnerLook.stay,
@@ -210,6 +207,7 @@ class _StayBalanceDueScreenState extends State<StayBalanceDueScreen> {
                 ),
               const SliverToBoxAdapter(child: StaySmallLine(text: StayCalendarStrings.ownListNote)),
               SliverToBoxAdapter(child: Gap.v(24)),
+              if (inlineBar != null) SliverToBoxAdapter(child: inlineBar),
             ],
           ),
         );

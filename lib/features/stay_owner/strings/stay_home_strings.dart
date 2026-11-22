@@ -104,6 +104,7 @@ abstract final class StayHomeStrings {
   static const tryAgain = 'Try again';
   static const showingLast = 'Could not refresh. Showing your last list.';
   static const noConnection = 'No connection. Please try again.';
+  static const somethingWrong = 'Something went wrong. Try again.';
 
   static const attentionPageTitle = 'Needs attention';
   static const supportMail = 'supportbakhli@gmail.com';

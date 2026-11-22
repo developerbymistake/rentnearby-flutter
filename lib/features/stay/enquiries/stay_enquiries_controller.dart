@@ -70,7 +70,7 @@ class StayEnquiriesController extends GetxController {
 
   StayEnquiryOwnerView viewOf(String id) => views[id] ?? StayEnquiryOwnerView.empty;
 
-  Future<TripOwnerEnquiryPage> _ownerPage(String status, int page) async {
+  Future<({TripOwnerEnquiryPage page, Map<String, StayEnquiryOwnerView> views})> _ownerPage(String status, int page) async {
     final fetch = debugFetch;
     final res = fetch != null
         ? await fetch(status, page, pageSize)
@@ -81,9 +81,16 @@ class StayEnquiriesController extends GetxController {
       final id = OwnerJson.str(raw['id']);
       if (id.isNotEmpty) parsed[id] = StayEnquiryOwnerView.fromJson(raw);
     }
-    views.addAll(parsed);
     changeRequests.value = OwnerJson.integer(OwnerJson.map(data['counts'])['changeRequests'], changeRequests.value);
-    return TripOwnerEnquiryPage.fromJson(data);
+    return (page: TripOwnerEnquiryPage.fromJson(data), views: parsed);
+  }
+
+  static const Duration staleAfter = Duration(seconds: 30);
+  DateTime? _loadedAt;
+
+  bool get stale30s {
+    final at = _loadedAt;
+    return at == null || DateTime.now().difference(at) >= staleAfter;
   }
 
   int _page = 1;
@@ -113,9 +120,9 @@ class StayEnquiriesController extends GetxController {
 
   Future<void> loadBadge() async {
     try {
-      final page = await _ownerPage(StayEnquiryBucket.newOnes, 1);
+      final r = await _ownerPage(StayEnquiryBucket.newOnes, 1);
       if (isClosed) return;
-      _setCounts(page.counts);
+      _setCounts(r.page.counts);
     } catch (_) {}
   }
 
@@ -137,10 +144,13 @@ class StayEnquiriesController extends GetxController {
     items.clear();
     hasMore.value = false;
     try {
-      final page = await _ownerPage(status, 1);
+      final r = await _ownerPage(status, 1);
       if (id != _requestId || isClosed) return;
+      final page = r.page;
+      views.assignAll(r.views);
       items.assignAll(page.items);
       hasMore.value = page.hasMore;
+      _loadedAt = DateTime.now();
       _setCounts(page.counts);
     } catch (e) {
       if (id != _requestId) return;
@@ -155,10 +165,13 @@ class StayEnquiriesController extends GetxController {
     final id = ++_requestId;
     final status = bucket.value;
     try {
-      final page = await _ownerPage(status, 1);
+      final r = await _ownerPage(status, 1);
       if (id != _requestId || isClosed) return;
+      final page = r.page;
       _page = 1;
       stale.value = false;
+      views.assignAll(r.views);
+      _loadedAt = DateTime.now();
       items.assignAll(page.items);
       hasMore.value = page.hasMore;
       failed.value = false;
@@ -182,8 +195,10 @@ class StayEnquiriesController extends GetxController {
     loadingMore.value = true;
     loadMoreFailed.value = false;
     try {
-      final page = await _ownerPage(status, _page + 1);
+      final r = await _ownerPage(status, _page + 1);
       if (id != _requestId || isClosed) return;
+      final page = r.page;
+      views.addAll(r.views);
       _page++;
       final known = items.map((e) => e.id).toSet();
       items.addAll(page.items.where((e) => !known.contains(e.id)));

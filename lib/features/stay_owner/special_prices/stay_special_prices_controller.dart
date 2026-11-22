@@ -93,7 +93,7 @@ class StaySpecialPricesController extends GetxController {
     if (r is OwnerOk<StaySpecialPricesPage>) {
       load.value = OwnerLoadData(r.value);
       OwnerCache.write(userId, OwnerCacheKeys.specialPrices, r.value.raw);
-      _festivals(r.value.stateName);
+      await _festivals(r.value.stateName);
       return;
     }
     load.value = OwnerLoads.from<StaySpecialPricesPage>(r, saved: page);
@@ -135,8 +135,7 @@ class StaySpecialPricesController extends GetxController {
     if (isClosed) return r;
     if (r is OwnerOk<Map<String, dynamic>>) {
       StaySpecialPriceMemory.lastPercent = d.percent;
-      await fetch();
-      StayOwnerDeps.refreshHome();
+      await _afterChange();
     }
     return r;
   }
@@ -147,7 +146,11 @@ class StaySpecialPricesController extends GetxController {
     try {
       final res = r.pausedByPlan ? await api.live(r.id, version: r.version) : await api.pause(r.id, paused: !r.isPaused, version: r.version);
       if (isClosed) return res;
-      await fetch();
+      if (res is OwnerOk) {
+        await _afterChange();
+      } else {
+        await fetch();
+      }
       return res;
     } finally {
       if (!isClosed) busyIds.remove(r.id);
@@ -159,14 +162,17 @@ class StaySpecialPricesController extends GetxController {
     try {
       final res = await api.delete(r.id);
       if (isClosed) return res;
-      if (res is OwnerOk<void>) {
-        await fetch();
-        StayOwnerDeps.refreshHome();
-      }
+      if (res is OwnerOk<void>) await _afterChange();
       return res;
     } finally {
       if (!isClosed) busyIds.remove(r.id);
     }
+  }
+
+  Future<void> _afterChange() async {
+    await fetch();
+    StayOwnerDeps.refreshHome();
+    StayOwnerDeps.refreshCalendar();
   }
 
   @override

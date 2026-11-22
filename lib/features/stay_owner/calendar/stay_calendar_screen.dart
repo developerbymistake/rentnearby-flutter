@@ -10,7 +10,6 @@ import '../../owner_core/calendar/models/calendar_models.dart';
 import '../../owner_core/data/owner_args.dart';
 import '../../owner_core/json/owner_dates.dart';
 import '../../owner_core/look/owner_look.dart';
-import '../../owner_core/money/money_note_math.dart';
 import '../../owner_core/money/money_summary_card.dart';
 import '../../owner_core/plan/gate_keys.dart';
 import '../../owner_core/plan/plan_gate.dart';
@@ -204,7 +203,7 @@ class _Body extends StatelessWidget {
           child: StayCardSegment(
             first: own.isEmpty,
             last: true,
-            child: Padding(padding: DS.all(8), child: StayAmberRow(text: StayCalendarStrings.hiddenMore(d.hiddenCount))),
+            child: Padding(padding: DS.all(8), child: StayAmberRow(text: StayCalendarStrings.hiddenMore(d.hiddenCount), onSeePlus: PlanGate.seePlus)),
           ),
         ),
       if (blocks.isNotEmpty) ...[
@@ -462,7 +461,6 @@ class _Summary extends StatelessWidget {
               month: m,
               load: load,
               plus: c.plusPill,
-              dueCount: c.monthRows.where((e) => e.chip == MoneyChip.toCollect).length,
               onRetry: c.loadSummary,
             ),
             if (c.plusPill) StaySmallLine(text: StayCalendarStrings.plusWindowFooter, margin: DS.insets(t: 8)),
@@ -474,12 +472,11 @@ class _Summary extends StatelessWidget {
 }
 
 class StayOpenSummary extends StatelessWidget {
-  const StayOpenSummary({super.key, required this.month, required this.load, required this.plus, required this.dueCount, this.onRetry, this.showTop = true});
+  const StayOpenSummary({super.key, required this.month, required this.load, required this.plus, this.onRetry, this.showTop = true});
 
   final DateTime month;
   final OwnerLoad<MoneySummary> load;
   final bool plus;
-  final int dueCount;
   final VoidCallback? onRetry;
   final bool showTop;
 
@@ -490,7 +487,7 @@ class StayOpenSummary extends StatelessWidget {
     final s = load.valueOrNull;
     final failed = load is OwnerLoadError<MoneySummary> || load is OwnerLoadOffline<MoneySummary>;
     final top = s?.top ?? const <CalendarEntry>[];
-    final due = top.isNotEmpty ? (dueCount > top.length ? dueCount : top.length) : dueCount;
+    final due = s?.dueCount ?? 0;
     return Container(
       padding: DS.all(14),
       decoration: BoxDecoration(color: DesignColors.surface, borderRadius: StayLook.cardRadius(34), boxShadow: DS.shadows(ShadowTokens.elev1)),

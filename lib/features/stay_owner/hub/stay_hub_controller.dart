@@ -152,10 +152,11 @@ class StayHubController extends GetxController with WidgetsBindingObserver {
       if (isClosed) return false;
       switch (r) {
         case OwnerOk<Map<String, dynamic>>(:final value):
-          final m = StayOwnerModel.fromJson(value);
+          final merged = StayOwnerModel.mergeJson(stay?.raw, value);
+          final m = StayOwnerModel.fromJson(merged);
           if (m.id.isNotEmpty) {
             load.value = OwnerLoadData<StayOwnerModel>(m);
-            OwnerCache.write(_uid, OwnerCacheKeys.listing, value);
+            OwnerCache.write(_uid, OwnerCacheKeys.listing, merged);
             StaySetupController.ensure().stay.value = m;
           } else {
             await reload();
@@ -167,8 +168,8 @@ class StayHubController extends GetxController with WidgetsBindingObserver {
           AppToast.warning(message ?? StayHubStrings.noConnection);
         case OwnerOffline<Map<String, dynamic>>():
           AppToast.error(StayHubStrings.noConnection);
-        case OwnerFailed<Map<String, dynamic>>(:final message):
-          AppToast.error(message);
+        case OwnerFailed<Map<String, dynamic>>():
+          AppToast.error(StayHubStrings.somethingWrong);
       }
       return false;
     } finally {
@@ -189,6 +190,7 @@ class StayHubController extends GetxController with WidgetsBindingObserver {
           OwnerCache.removeListingScoped(uid);
           if (Get.isRegistered<StaySetupController>()) Get.find<StaySetupController>().clear();
           load.value = const OwnerLoadEmpty<StayOwnerModel>();
+          StayOwnerDeps.afterStayDeleted();
           if (Get.isRegistered<AuthController>()) await Get.find<AuthController>().refreshProfile();
           AppToast.success(StayHubStrings.stayDeleted);
           return true;
@@ -196,8 +198,8 @@ class StayHubController extends GetxController with WidgetsBindingObserver {
           AppToast.warning(message ?? StayHubStrings.noConnection);
         case OwnerOffline<void>():
           AppToast.error(StayHubStrings.noConnection);
-        case OwnerFailed<void>(:final message):
-          AppToast.error(message);
+        case OwnerFailed<void>():
+          AppToast.error(StayHubStrings.somethingWrong);
       }
       return false;
     } finally {

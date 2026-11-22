@@ -2,6 +2,10 @@ import '../../../owner_core/calendar/models/calendar_models.dart';
 import '../../../owner_core/json/owner_dates.dart';
 import '../../../owner_core/json/owner_json.dart';
 
+abstract final class StayCalendarErrors {
+  static const entryEnded = 'EntryEnded';
+}
+
 class StayBlockWrite {
   const StayBlockWrite({this.block, this.confirmedInside = 0, this.openEnquiriesInside = 0, this.meters = const []});
 
@@ -202,20 +206,29 @@ class StayPlanVisibleState {
     this.rooms = const [],
     this.visiblePhotoIds = const [],
     this.visibleRoomIds = const [],
+    this.hiddenPhotoIds = const [],
+    this.hiddenRoomIds = const [],
     this.photoLimit = 2,
     this.roomLimit = 2,
+    this.limitsFromServer = false,
   });
 
   final List<PlanVisiblePhoto> photos;
   final List<PlanVisibleRoom> rooms;
   final List<String> visiblePhotoIds;
   final List<String> visibleRoomIds;
+  final List<String> hiddenPhotoIds;
+  final List<String> hiddenRoomIds;
   final int photoLimit;
   final int roomLimit;
+  final bool limitsFromServer;
 
   int get photoTarget => photos.length < photoLimit ? photos.length : photoLimit;
   int get roomTarget => rooms.length < roomLimit ? rooms.length : roomLimit;
-  bool get somethingHidden => photos.length > photoLimit || rooms.length > roomLimit;
+
+  // Mirror of the server's choice rule: stored hidden rows, or rows over the plan limit.
+  bool get somethingHidden =>
+      hiddenPhotoIds.isNotEmpty || hiddenRoomIds.isNotEmpty || photos.length > photoLimit || rooms.length > roomLimit;
 
   factory StayPlanVisibleState.fromJson(Map<String, dynamic> j, {required int photoLimit, required int roomLimit}) {
     final shownPhotos = PlanVisiblePhoto.listOf(j['photos'])..sort((a, b) => a.order.compareTo(b.order));
@@ -230,8 +243,11 @@ class StayPlanVisibleState {
       rooms: [...shownRooms, ...hiddenRooms],
       visiblePhotoIds: [for (final p in shownPhotos) p.id],
       visibleRoomIds: [for (final r in shownRooms) r.id],
+      hiddenPhotoIds: [for (final p in hiddenPhotos) p.id],
+      hiddenRoomIds: [for (final r in hiddenRooms) r.id],
       photoLimit: pm != null && pm.limit > 0 ? pm.limit : photoLimit,
       roomLimit: rm != null && rm.limit > 0 ? rm.limit : roomLimit,
+      limitsFromServer: (pm != null && pm.limit > 0) || (rm != null && rm.limit > 0),
     );
   }
 }

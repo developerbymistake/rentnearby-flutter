@@ -151,8 +151,9 @@ class StayCalendarRow {
   final int thisMonthCount;
   final DateTime? nextDate;
   final String? nextLabel;
+  final bool nextTravellerRemoved;
 
-  const StayCalendarRow({this.thisMonthCount = 0, this.nextDate, this.nextLabel});
+  const StayCalendarRow({this.thisMonthCount = 0, this.nextDate, this.nextLabel, this.nextTravellerRemoved = false});
 
   static StayCalendarRow? maybe(Object? raw) {
     final j = OwnerJson.mapOrNull(raw);
@@ -162,6 +163,7 @@ class StayCalendarRow {
       thisMonthCount: OwnerJson.integer(j['thisMonthCount']),
       nextDate: OwnerDates.day(next['date']),
       nextLabel: OwnerJson.strOrNull(next['label']),
+      nextTravellerRemoved: OwnerJson.boolean(next['travellerRemoved']),
     );
   }
 }
@@ -258,6 +260,7 @@ class StayOwnerModel {
   final bool remindersOn;
   final StayCalendarRow? calendarRow;
   final StaySpecialPricesRow? specialPricesRow;
+  final Map<String, dynamic> raw;
 
   const StayOwnerModel({
     required this.id,
@@ -308,6 +311,7 @@ class StayOwnerModel {
     this.remindersOn = false,
     this.calendarRow,
     this.specialPricesRow,
+    this.raw = const {},
   });
 
   bool get isDraft => status == StayStatus.draft;
@@ -385,6 +389,22 @@ class StayOwnerModel {
       remindersOn: OwnerJson.boolean(json['remindersOn']),
       calendarRow: StayCalendarRow.maybe(json['calendarRow']),
       specialPricesRow: StaySpecialPricesRow.maybe(json['specialPricesRow']),
+      raw: json,
     );
   }
+
+  static const List<String> planScopedKeys = ['hiddenRooms', 'hiddenPhotos', 'meters', 'calendarRow', 'specialPricesRow'];
+
+  // A write answer that lacks the plan rows keeps the ones already shown (older server shapes).
+  static Map<String, dynamic> mergeJson(Map<String, dynamic>? current, Map<String, dynamic> body) {
+    if (current == null || current.isEmpty) return body;
+    return {
+      ...body,
+      for (final k in planScopedKeys)
+        if (!body.containsKey(k) && current.containsKey(k)) k: current[k],
+    };
+  }
+
+  StayOwnerModel mergeFrom(StayOwnerModel updated) =>
+      updated.raw.isEmpty || updated.id != id ? updated : StayOwnerModel.fromJson(mergeJson(raw, updated.raw));
 }

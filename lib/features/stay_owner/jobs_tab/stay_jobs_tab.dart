@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../../config/app_insets.dart';
 import '../../../config/app_routes.dart';
+import '../../../config/app_tabs.dart';
 import '../../../design/design.dart';
 import '../../../utils/app_toast.dart';
 import '../../../widgets/tab_header.dart';
@@ -39,7 +39,7 @@ class _StayJobsTabState extends State<StayJobsTab> {
     super.initState();
     _ctrl = Get.isRegistered<MyJobsController>(tag: StayJobsTab.tag)
         ? Get.find<MyJobsController>(tag: StayJobsTab.tag)
-        : Get.put(MyJobsController(), tag: StayJobsTab.tag);
+        : Get.put(MyJobsController(refreshOnTab: AppTabs.fourth), tag: StayJobsTab.tag);
   }
 
   @override
@@ -184,7 +184,7 @@ class _StayJobsTabState extends State<StayJobsTab> {
   Widget _postBar(MyJobsPage? page) {
     final enabled = page != null && page.canPost;
     return Container(
-      padding: EdgeInsets.fromLTRB(DS.s(14), DS.gv(10), DS.s(14), DS.gv(10) + AppInsets.bottomViewPadding(context)),
+      padding: EdgeInsets.fromLTRB(DS.s(14), DS.gv(10), DS.s(14), DS.gv(10) + BarMetrics.bodyBottomOf(context)),
       decoration: BoxDecoration(color: DesignColors.surface, borderRadius: DS.br(CardRadius.heroTop), boxShadow: DS.shadows(Ink3D.topEdge)),
       child: enabled
           ? GradientPillButton(tone: OwnerLook.stay.tone, label: StayWorkStrings.postAJob, height: 48, fontSize: _postFont, onTap: _post)

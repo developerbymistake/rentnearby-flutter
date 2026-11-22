@@ -19,6 +19,7 @@ import '../../stay/setup/stay_setup_controller.dart';
 import '../stay_owner_deps.dart';
 import '../stay_owner_tabs.dart';
 import '../strings/stay_home_strings.dart';
+import '../strings/stay_hub_strings.dart';
 import '../widgets/stay_widgets.dart';
 import 'stay_attention_copy.dart';
 import 'stay_home_compose.dart';
@@ -145,10 +146,23 @@ class _StayOwnerHomeScreenState extends State<StayOwnerHomeScreen> {
     );
   }
 
+  void _setUp() {
+    if (Get.isRegistered<AuthController>()) Get.find<AuthController>().setOwnerShellEmpty(false);
+    Get.offAllNamed(AppRoutes.staySetup);
+  }
+
   Widget _body(OwnerLoad<OwnerHomeDto> load) {
     return switch (load) {
       OwnerLoadLoading<OwnerHomeDto>() => const _HomeSkeleton(),
       OwnerLoadData<OwnerHomeDto>(:final value) => StayHomeBody(dto: value, controller: _c),
+      OwnerLoadEmpty<OwnerHomeDto>() => StayErrorCard(
+          art: ListingArt.stay,
+          title: StayHubStrings.noStayYet,
+          message: StayHubStrings.noStayBody,
+          action: StayHubStrings.setUpStay,
+          onAction: _setUp,
+          margin: DS.insets(l: 18, t: 44, r: 18),
+        ),
       _ => StayErrorCard(
           art: ListingArt.warning,
           title: StayHomeStrings.couldNotLoad,
@@ -186,7 +200,9 @@ class StayHomeBody extends StatelessWidget {
   final StayOwnerHomeController controller;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => Obx(() => _content(context));
+
+  Widget _content(BuildContext context) {
     final l = dto.listing;
     final state = StayHomeCompose.stateOf(l);
     final actions = StayHomeActions.attention(context, l.id, l.name);

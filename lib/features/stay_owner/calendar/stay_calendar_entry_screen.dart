@@ -116,11 +116,15 @@ class _StayCalendarEntryScreenState extends State<StayCalendarEntryScreen> {
       };
 
   OwnerLoad<StayEntryView> _blockView(StayBlockList list, String id) {
+    final meter = Meter.find(list.meters, StayMeterKeys.blocks) ?? c.meter(StayMeterKeys.blocks);
     for (final b in list.items) {
-      if (b.id == id) return OwnerLoadData(StayEntryViewBlock(b, Meter.find(list.meters, StayMeterKeys.blocks) ?? c.meter(StayMeterKeys.blocks)));
+      if (b.id == id) return OwnerLoadData(StayEntryViewBlock(b, meter));
     }
-    return const OwnerLoadError();
+    final known = c.knownBlock(id);
+    return known == null ? const OwnerLoadError() : OwnerLoadData(StayEntryViewBlock(known, meter));
   }
+
+  bool _ended(DateTime? lastDay) => lastDay != null && lastDay.isBefore(c.today);
 
   @override
   Widget build(BuildContext context) {
@@ -135,13 +139,11 @@ class _StayCalendarEntryScreenState extends State<StayCalendarEntryScreen> {
             : entry.isAuto
                 ? (entry.cancelled ? StayCalendarStrings.fromTheAppCancelled : StayCalendarStrings.fromTheApp)
                 : StayCalendarStrings.addedByYou;
-    return Scaffold(
-      backgroundColor: OwnerLook.stay.page,
-      body: Column(
-        children: [
-          StayCalHeader(title: title, subtitle: sub),
-          Expanded(
-            child: OwnerStateView<StayEntryView>(
+    final bar = entry != null ? _entryBar(entry) : (block != null && !_ended(block.dateTo) ? _blockBar(block) : null);
+    return StayCalScaffold(
+      header: (compact) => StayCalHeader(title: title, subtitle: sub, compact: compact),
+      bar: bar,
+      body: (context, inlineBar) => OwnerStateView<StayEntryView>(
               load: _load,
               look: OwnerLook.stay,
               words: const OwnerStateWords(),
@@ -157,15 +159,11 @@ class _StayCalendarEntryScreenState extends State<StayCalendarEntryScreen> {
                       StayEntryViewEntry(:final entry) => _entryBody(entry),
                       StayEntryViewBlock(:final block, :final meter) => _blockBody(block, meter),
                     },
+                    ?inlineBar,
                   ],
                 ),
               ),
             ),
-          ),
-          if (entry != null) _entryBar(entry),
-          if (block != null) _blockBar(block),
-        ],
-      ),
     );
   }
 
@@ -283,6 +281,15 @@ class _StayCalendarEntryScreenState extends State<StayCalendarEntryScreen> {
         onSecondary: () => _editAmounts(e),
       );
     }
+    if (_ended(e.dateTo)) {
+      return StayCalBar(
+        primary: StayCalendarStrings.editAmounts,
+        secondary: StayCalendarStrings.delete,
+        secondaryDanger: true,
+        onPrimary: () => _editAmounts(e),
+        onSecondary: () => _delete(e),
+      );
+    }
     return StayCalBar(
       primary: StayCalendarStrings.editBooking,
       secondary: StayCalendarStrings.delete,
@@ -301,7 +308,7 @@ class _StayCalendarEntryScreenState extends State<StayCalendarEntryScreen> {
       look: OwnerLook.stay,
       words: const EditAmountsWords(title: StayCalendarStrings.editAmounts, finalHint: StayCalendarStrings.wholeStay, save: StayCalendarStrings.save),
       initial: e.money,
-      save: (n) => c.saveMoney(e, finalAmount: n.finalAmount, receivedSoFar: n.paidInFull ? null : n.receivedSoFar, paidInFull: n.paidInFull),
+      save: (n) => c.saveMoney(e, finalAmount: n.finalAmount, receivedSoFar: n.receivedSoFar, paidInFull: n.paidInFull),
     );
     if (mounted && (saved || c.staleLine.value)) _fetch();
   }
@@ -351,7 +358,10 @@ class _StayCalendarEntryScreenState extends State<StayCalendarEntryScreen> {
             const Align(alignment: Alignment.centerLeft, child: StayKindChip.blocked),
             Gap.v(6),
             if ((b.reason ?? '').isNotEmpty) StayKv(label: StayCalendarStrings.reason, value: b.reason ?? ''),
-            const StayKv(label: StayCalendarStrings.guestsSee, value: StayCalendarStrings.fullOnYourDates),
+            if (_ended(b.dateTo))
+              const StayKv(label: StayCalendarStrings.status, value: StayCalendarStrings.blockEnded)
+            else
+              const StayKv(label: StayCalendarStrings.guestsSee, value: StayCalendarStrings.fullOnYourDates),
             if (meter != null)
               StayKv(
                 label: PlanGate.canUpgrade ? StayCalendarStrings.blocksOnFree : StayCalendarStrings.blocksMeter,

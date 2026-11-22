@@ -9,6 +9,7 @@ import 'package:maplibre_gl/maplibre_gl.dart' show LatLng;
 import 'package:permission_handler/permission_handler.dart';
 import '../../../config/app_routes.dart';
 import '../../../controllers/auth_controller.dart';
+import '../../../controllers/plan_controller.dart';
 import '../../../models/city_model.dart';
 import '../../../screens/add_listing_location_mixin.dart';
 import '../../../utils/app_toast.dart';
@@ -21,8 +22,10 @@ import '../models/stay_owner_model.dart';
 import '../models/stay_registration_type_model.dart';
 import '../stay_registration_types_controller.dart';
 import '../stay_types_controller.dart';
+import '../../owner_core/data/owner_error_types.dart';
 import '../../owner_core/look/owner_look.dart';
 import '../../owner_core/plan/gate_keys.dart';
+import '../../owner_core/plan/plan_bindings.dart';
 import '../../owner_core/plan/plan_gate.dart';
 import '../../owner_core/plan/plan_keys.dart';
 import '../../owner_core/plan/soft_lock.dart';
@@ -31,6 +34,7 @@ import '../../stay_owner/strings/stay_gate_strings.dart';
 import '../../stay_owner/strings/stay_setup_strings.dart';
 import 'stay_option_sets.dart';
 import 'stay_registration_validators.dart';
+import 'stay_photo_pick.dart';
 import 'stay_setup_controller.dart';
 
 class _PhotoEntry {
@@ -90,7 +94,16 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
   String? _photoError;
   static const int _maxBytes = 10 * 1024 * 1024;
   static const _okExt = ['jpg', 'jpeg', 'png', 'webp'];
-  int get _maxPhotos => PlanGate.limit(PlanKey.photos);
+  static void _planTick() {
+    if (Get.isRegistered<PlanController>()) Get.find<PlanController>().myPlan.value;
+  }
+
+  int get _maxPhotos {
+    final m = _ctrl.stay.value?.meter('Photos')?.limit;
+    if (m != null && m > 0) return m;
+    if (!PlanGate.loaded) return PlanKeys.plusSeed[PlanKey.photos] ?? PlanGate.limit(PlanKey.photos);
+    return PlanGate.limit(PlanKey.photos);
+  }
   static final _tone = ListingTone.forest;
 
   static final _locationStyle = LocationStepStyle(
@@ -108,6 +121,8 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
   @override
   void initState() {
     super.initState();
+    // Reached from /stay-setup before MainScreen: the plan must exist before its limits are read.
+    PlanBindings.ensure();
     initLocationTracking(
       style: _locationStyle,
       onLocationStale: _handleLocationStale,
@@ -359,14 +374,27 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
         if (status.isPermanentlyDenied && mounted) _showPermissionDeniedDialog('Camera');
         return;
       }
-      final picked = await _picker.pickImage(source: source, imageQuality: 85, maxWidth: 1280);
-      if (picked != null && mounted && await _acceptPhoto(File(picked.path))) {
-        setState(() => _photos.add(_PhotoEntry.local(File(picked.path))));
+      final XFile? picked;
+      try {
+        picked = await _picker.pickImage(source: source, imageQuality: 85, maxWidth: 1280);
+      } catch (_) {
+        AppToast.error(StaySetupStrings.photoPickFailed);
+        return;
+      }
+      final shot = picked;
+      if (shot != null && mounted && await _acceptPhoto(File(shot.path))) {
+        setState(() => _photos.add(_PhotoEntry.local(File(shot.path))));
         _dirty = true;
       }
     } else {
       final remaining = _maxPhotos - _photos.length;
-      final picked = await _picker.pickMultiImage(imageQuality: 85, maxWidth: 1280, limit: remaining);
+      final List<XFile> picked;
+      try {
+        picked = await StayPhotoPick.gallery(_picker, remaining);
+      } catch (_) {
+        AppToast.error(StaySetupStrings.photoPickFailed);
+        return;
+      }
       if (picked.isNotEmpty && mounted) {
         final allowed = <_PhotoEntry>[];
         for (final f in picked.take(remaining)) {
@@ -605,11 +633,11 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
     }
 
     if (mounted) setState(() => _isUploading = false);
-    if (failed.isNotEmpty) {
-      if (_ctrl.lastErrorType == 'PlanPhotoLimit' && mounted) {
-        PlanGate.showLimit(context, StayGateStrings.photoGate());
+    if (failed.isNotEmpty && mounted) {
+      if (_ctrl.lastErrorType == OwnerErrorTypes.planPhotoLimit) {
+        await _ctrl.showLimitRefusal(context, StayGateStrings.photoGate);
       } else {
-        AppToast.error(StaySetupStrings.photoUploadFailed);
+        AppToast.error(_ctrl.lastNetwork ? StaySetupStrings.noConnection : StaySetupStrings.photoUploadFailed);
       }
     }
     return [for (final i in failed) files[i]];
@@ -664,7 +692,7 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
                         ? SingleChildScrollView(key: const ValueKey(1), padding: EdgeInsets.only(bottom: DS.s(24)), child: locationStepWidget())
                         : _step == 2
                             ? addressStepWidget()
-                            : _photosStep(),
+                            : Obx(key: const ValueKey(3), () => _photosStep()),
               ),
             ),
           ]),
@@ -972,16 +1000,17 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
   }
 
   Widget _photosStep() {
+    _ctrl.stay.value;
+    _planTick();
     final max = _maxPhotos;
     final left = max - _photos.length;
-    final locked = left <= 0 && PlanGate.canUpgrade;
+    final locked = left <= 0 && PlanGate.loaded && PlanGate.canUpgrade;
     final plus = PlanKeys.plusSeed[PlanKey.photos] ?? max;
     final tiles = <Widget>[
       for (var i = 0; i < _photos.length; i++) _photoTile(i),
       if (locked) _lockedPhotoTile() else if (left > 0) PhotoAddTile3D(tone: _tone, label: StaySetupStrings.addPhoto, onTap: _pickPhoto),
     ];
     return SingleChildScrollView(
-      key: const ValueKey(3),
       padding: EdgeInsets.only(bottom: DS.s(24)),
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         _card(
@@ -1026,15 +1055,21 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
           borderRadius: DS.circular(14),
           child: DecoratedBox(
             decoration: BoxDecoration(color: OwnerLook.stay.lockFill, borderRadius: DS.circular(14), border: Border.all(color: OwnerLook.stay.lockLine, width: DS.s(1.5))),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Art3D(asset: ListingArt.locked, size: 26),
-                Gap.v(4),
-                Text(StaySetupStrings.addPhoto, textAlign: TextAlign.center, style: Ink3D.text(11, FontWeight.w700, OwnerLook.stay.lockText, letterSpacing: 0)),
-                Gap.v(2),
-                const PlusChip(),
-              ],
+            child: Padding(
+              padding: DS.all(4),
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Art3D(asset: ListingArt.locked, size: 26),
+                    Gap.v(4),
+                    Text(StaySetupStrings.addPhoto, textAlign: TextAlign.center, style: Ink3D.text(11, FontWeight.w700, OwnerLook.stay.lockText, letterSpacing: 0)),
+                    Gap.v(2),
+                    const PlusChip(),
+                  ],
+                ),
+              ),
             ),
           ),
         ),

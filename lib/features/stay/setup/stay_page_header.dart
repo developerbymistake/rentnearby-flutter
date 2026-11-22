@@ -23,14 +23,15 @@ class StayPageHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final keyboard = MediaQuery.viewInsetsOf(context).bottom > 0;
     return SafeArea(
       bottom: false,
       child: PageHeader3D(
         tone: ListingTone.forest,
         title: title,
-        subtitle: subtitle,
+        subtitle: keyboard ? null : subtitle,
         art: asset,
-        artSize: 65,
+        artSize: keyboard ? 40 : 65,
         onBack: showBack ? (onBack ?? () => Navigator.maybePop(context)) : null,
         trailing: trailing,
       ),

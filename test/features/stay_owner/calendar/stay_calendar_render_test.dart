@@ -1,3 +1,4 @@
+import 'package:bakhli/design/design.dart';
 import 'package:bakhli/features/owner_core/data/owner_cache.dart';
 import 'package:bakhli/features/owner_core/home/owner_home_models.dart';
 import 'package:bakhli/features/owner_core/look/owner_look.dart';
@@ -188,7 +189,7 @@ void main() {
 
   testWidgets('render o_st_37', (tester) async {
     CalendarHarness.setUp(plan: OwnerPlans.plus, month: monthJson(plus: true), extra: (p) {
-      if (p.endsWith('/balance-due')) return {'items': (summaryJson()['top'] as List), 'nextCursor': null};
+      if (p.endsWith('/balance-due')) return {'items': (summaryJson()['topBalances'] as List), 'nextCursor': null};
       return null;
     });
     await renderOwnerFrame(tester, 'o_st_37', StayBalanceDueScreen(clock: calClock, args: const {'month': '2026-11'}), arrange: settle);
@@ -315,7 +316,8 @@ void main() {
         await t.ensureVisible(find.text('Block these days').first);
         await t.tap(find.text('Block these days').first);
         await settle(t);
-        await t.tap(find.text('Save block'));
+        // FS-24: a new block reads the o_st_28 words; its save button is "Block these days".
+        await t.tap(find.descendant(of: find.byType(PrimaryButton), matching: find.text('Block these days')));
         await settle(t);
       });
     });
@@ -392,16 +394,31 @@ void main() {
         {'id': 'sp3', 'dateFrom': '2027-01-25', 'dateTo': '2027-01-27', 'direction': 'Higher', 'percent': 10, 'pausedByPlan': true, 'version': 1},
         {'id': 'sp4', 'dateFrom': '2027-02-08', 'dateTo': '2027-02-18', 'direction': 'Lower', 'percent': 15, 'pausedByPlan': true, 'version': 1},
       ]),
-      extra: (p) => p == '/stays/me/blocked-ranges'
-          ? {
-              'items': [
-                {'id': 'b1', 'dateFrom': '2026-11-30', 'dateTo': '2026-12-02', 'reason': 'Water tank repair', 'version': 1},
-                {'id': 'b2', 'dateFrom': '2026-12-18', 'dateTo': '2026-12-20', 'reason': 'Family visit', 'version': 1},
-              ],
-            }
-          : null,
+      extra: (p) => switch (p) {
+        '/stays/me/blocked-ranges' => {
+            'items': [
+              {'id': 'b1', 'dateFrom': '2026-11-30', 'dateTo': '2026-12-02', 'reason': 'Water tank repair', 'version': 1},
+              {'id': 'b2', 'dateFrom': '2026-12-18', 'dateTo': '2026-12-20', 'reason': 'Family visit', 'version': 1},
+            ],
+          },
+        // FS-15: after Plus the visible own bookings come from the upcoming read (date order, across months).
+        '/stays/me/calendar/upcoming' => {
+            'items': [
+              entryJson('neha', '2026-11-22', '2026-11-23', 'Neha Joshi', auto: true),
+              entryJson('kapoor', '2026-11-24', '2026-11-25', 'Kapoor couple', finalAmount: 2800, received: 800),
+              entryJson('gupta', '2026-11-25', '2026-11-27', 'Gupta ji, 2 rooms', finalAmount: 9000, received: 3000),
+              entryJson('rohit', '2026-11-27', '2026-11-29', 'Rohit Verma', auto: true),
+              entryJson('office', '2026-12-02', '2026-12-04', 'Office group'),
+              entryJson('bisht', '2026-12-05', '2026-12-06', 'Bisht family'),
+            ],
+            'hiddenCount': 8,
+          },
+        _ => null,
+      },
     );
     await renderOwnerFrame(tester, 'o_st_62', StayCalendarScreen(controller: h.calendar), arrange: settle);
+    expect(find.text('Office group'), findsOneWidget);
+    expect(find.text('Bisht family'), findsOneWidget);
   });
 
   testWidgets('render o_st_67 D', (tester) async {

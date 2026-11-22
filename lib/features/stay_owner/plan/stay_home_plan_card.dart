@@ -20,7 +20,8 @@ class StayHomePlanCard extends StatelessWidget {
     return Obx(() {
       final dto = home?.load.value.valueOrNull;
       final me = plans?.myPlan.value;
-      final card = dto?.planCard ?? (me == null ? null : PlanCardStates.fromPlan(me));
+      final fresh = plans == null || (home?.planVersionAtLoad ?? 0) == plans.planVersion.value;
+      final card = (fresh ? dto?.planCard : null) ?? (me == null ? null : PlanCardStates.fromPlan(me));
       return _card(card, dto?.listing.cityName, plans?.plans.toList() ?? const []);
     });
   }

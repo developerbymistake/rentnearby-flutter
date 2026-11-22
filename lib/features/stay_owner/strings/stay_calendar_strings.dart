@@ -106,6 +106,8 @@ abstract final class StayCalendarStrings {
   static const saveBooking = 'Save booking';
   static const nameNeeded = 'Add a name for this booking.';
   static const receivedAboveFinal = 'Received cannot be more than the final amount.';
+  static const entryEnded = 'This booking has ended. You can still edit the amounts.';
+  static const blockEnded = 'This block has ended.';
   static const finalNeeded = OwnerSharedStrings.finalNeeded;
   static const moneyRange = OwnerSharedStrings.moneyRange;
   static const noPhone = OwnerSharedStrings.noPhone;

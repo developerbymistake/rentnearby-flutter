@@ -726,6 +726,10 @@ void main() {
         ..uploadAt = uploadAt;
       Get.put<StayTypesController>(FakeTypes());
       Get.put<StayRegistrationTypesController>(FakeRegTypes());
+      // FS-10: the photos step reads the loaded plan (Free, 2 photos), never the model default.
+      final plan = Get.put<PlanController>(FakePlan(), permanent: true);
+      plan.myPlan.value = MyPlanModel.fromJson({'paymentEnabled': true, 'featureKey': 'stay', 'limits': {'photos': 2, 'roomTypes': 2}});
+      plan.loaded.value = true;
       return const StayBasicDetailsScreen();
     }
 

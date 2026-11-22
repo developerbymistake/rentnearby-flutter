@@ -134,6 +134,7 @@ class StayCalendarController extends CalendarCoreController {
     if (summaryOpen) loadSummary();
     if (afterPlusSections) {
       loadSections();
+      loadOwnUpcoming();
     } else if (priceRooms.isEmpty && d.specialPrices.any((b) => b.active)) {
       loadRooms();
     }
@@ -163,15 +164,23 @@ class StayCalendarController extends CalendarCoreController {
     if (isClosed || !_summaryLatest.isLatest(id)) return;
     if (r is OwnerOk<MoneySummary>) {
       summary.value = OwnerLoadData(r.value);
-      OwnerCache.write(userId, key, {
-        'month': OwnerDates.monthKey(m),
-        'booked': r.value.booked,
-        'received': r.value.received,
-        'toCollect': r.value.toCollect,
-      });
+      OwnerCache.write(userId, key, r.value.raw);
       return;
     }
     summary.value = OwnerLoads.from<MoneySummary>(r, saved: saved);
+  }
+
+  final LatestOnly _ownLatest = LatestOnly();
+
+  // After Plus the visible own bookings span months; the upcoming read is that set in date order.
+  Future<void> loadOwnUpcoming() async {
+    final id = _ownLatest.next();
+    final r = await api.upcoming();
+    if (isClosed || !_ownLatest.isLatest(id)) return;
+    if (r is OwnerOk<UpcomingPage>) {
+      final t = today;
+      ownActive.assignAll(r.value.items.where((e) => e.isManual && !e.cancelled && !(e.lastDay ?? t).isBefore(t)));
+    }
   }
 
   Future<void> loadSections() async {
@@ -216,6 +225,13 @@ class StayCalendarController extends CalendarCoreController {
     final d = monthOf(day) ?? current;
     if (d == null) return const [];
     return MonthGridData.entriesOn(day, d.entries, stayNights: true);
+  }
+
+  CalendarBlock? knownBlock(String id) {
+    for (final b in [...activeBlocks, ...?data?.blocks]) {
+      if (b.id == id) return b;
+    }
+    return null;
   }
 
   CalendarBlock? blockOn(DateTime day) {
@@ -322,6 +338,7 @@ class StayCalendarController extends CalendarCoreController {
   void onClose() {
     _loadWorker?.dispose();
     _summaryLatest.cancel();
+    _ownLatest.cancel();
     super.onClose();
   }
 }

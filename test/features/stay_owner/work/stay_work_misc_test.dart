@@ -13,6 +13,8 @@ import 'package:bakhli/features/stay_owner/notices/stay_notice_copy.dart';
 import 'package:bakhli/features/stay_owner/reminder/stay_reminder_row.dart';
 import 'package:bakhli/features/trip/models/trip_enquiry_model.dart';
 import 'package:bakhli/models/my_plan_model.dart';
+import 'package:bakhli/models/plan_model.dart';
+import 'package:bakhli/features/owner_core/plan/plan_keys.dart';
 import 'package:bakhli/config/shell_kind.dart';
 import 'package:bakhli/screens/profile/profile_rows.dart';
 import 'package:bakhli/utils/notification_visuals.dart';
@@ -47,6 +49,18 @@ class _FakeSetup extends StaySetupController {
   }
 }
 
+PlanModel _plan({required bool isDefault, int trialDays = 0, int photos = 2, int roomTypes = 2}) => PlanModel(
+      id: isDefault ? 'free' : 'plus',
+      featureKey: 'Stay',
+      code: isDefault ? 'FREE' : 'PLUS',
+      name: isDefault ? 'Free' : 'Plus',
+      tagline: null,
+      isDefault: isDefault,
+      trialDays: trialDays,
+      features: isDefault ? {PlanKey.photos.wire: photos, PlanKey.roomTypes.wire: roomTypes} : const {},
+      prices: const [],
+    );
+
 Notice _n(String kind, {String? refTitle, String? refId, Map<String, dynamic> args = const {}}) =>
     Notice(id: 'n1', kind: kind, count: 1, isRead: false, refTitle: refTitle, refId: refId, args: args);
 
@@ -57,6 +71,7 @@ void main() {
   tearDown(() {
     PlanGate.debugPlan = null;
     StayNoticeCopy.debugPlan = null;
+    StayNoticeCopy.debugCatalog = null;
     StayReminderState.reset();
     OwnerNoticeRegistry.reset();
     OwnerApi.debugReset();
@@ -131,6 +146,7 @@ void main() {
     });
 
     test('PlansStarting copy, trial sentence only while trialAvailable', () {
+      StayNoticeCopy.debugCatalog = [_plan(isDefault: true), _plan(isDefault: false, trialDays: 7)];
       StayNoticeCopy.debugPlan = MyPlanModel(paymentEnabled: false, trialAvailable: true, paymentStartsOn: DateTime(2027, 2, 1));
       final s = StayNoticeCopy.of(_n('PlansStarting'))!;
       expect(s.title, 'Plans start on 1 Feb');
@@ -138,6 +154,21 @@ void main() {
       expect(s.route, '/plans');
       StayNoticeCopy.debugPlan = MyPlanModel(paymentEnabled: false, paymentStartsOn: DateTime(2027, 2, 1));
       expect(StayNoticeCopy.of(_n('PlansStarting'))!.body, 'Free keeps 2 photos and 2 room types.');
+    });
+
+    test('FS-18 PlansStarting numbers come from the catalog; no paid trial plan, no trial sentence', () {
+      StayNoticeCopy.debugCatalog = [_plan(isDefault: true, photos: 3, roomTypes: 1), _plan(isDefault: false, trialDays: 14)];
+      StayNoticeCopy.debugPlan = MyPlanModel(paymentEnabled: false, trialAvailable: true, paymentStartsOn: DateTime(2027, 2, 1));
+      expect(StayNoticeCopy.of(_n('PlansStarting'))!.body, 'Free keeps 3 photos and 1 room type. Try Plus free for 14 days.');
+      StayNoticeCopy.debugCatalog = [_plan(isDefault: true, photos: 3, roomTypes: 1), _plan(isDefault: false)];
+      expect(StayNoticeCopy.of(_n('PlansStarting'))!.body, 'Free keeps 3 photos and 1 room type.');
+    });
+
+    test('FS-18 PlanLimitsChanged with only paused special prices opens the Special prices list', () {
+      StayNoticeCopy.debugPlan = const MyPlanModel(paymentEnabled: true, hidden: PlanHiddenModel(specialPrices: 2));
+      final p = StayNoticeCopy.of(_n('PlanLimitsChanged'))!;
+      expect(p.body, '2 special prices are paused on Free. Nothing is deleted.');
+      expect(p.route, '/stay-special-prices');
     });
 
     test('registry: registered kinds render, unknown kind hidden, no money or calendar edit kinds', () {
@@ -189,6 +220,23 @@ void main() {
       expect(find.byType(Switch), findsOneWidget);
       expect(find.byWidgetPredicate((w) => w.key is GateKey), findsNothing);
       expect(find.textContaining('Plus'), findsNothing);
+    });
+
+    testWidgets('FS-02 tap on with the real server body: the switch stays on', (t) async {
+      PlanGate.debugPlan = OwnerPlans.plus;
+      StayReminderState.value.value = const CalendarReminder(allowed: true, on: false);
+      OwnerApi.transport = FakeTransport((m, p, b) async => {
+            'data': {
+              'reminder': {'allowed': true, 'on': b?['on'] == true},
+            },
+          });
+      StayReminderState.api = const CalendarApi('/stays/me/calendar');
+      await pumpPhone(t, _rowHost(), toastHost: true);
+      await t.tap(find.byType(Switch));
+      await t.pump();
+      await t.pump(const Duration(milliseconds: 200));
+      expect(StayReminderState.value.value?.on, isTrue);
+      expect(t.widget<Switch>(find.byType(Switch)).value, isTrue);
     });
 
     testWidgets('o_st_66_a_toggleOptimisticRollback on refusal', (t) async {

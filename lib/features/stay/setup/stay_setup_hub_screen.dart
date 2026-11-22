@@ -9,6 +9,7 @@ import '../../../design/design.dart';
 import '../../../design/extra/ext_stay_owner.dart';
 import '../../../utils/app_toast.dart';
 import '../../../widgets/global_location_gates.dart';
+import '../../owner_core/plan/plan_bindings.dart';
 import '../../trip/trip_strings.dart';
 import '../models/stay_owner_model.dart';
 import '../stay_share_strings.dart';
@@ -39,6 +40,7 @@ class _StaySetupHubScreenState extends State<StaySetupHubScreen> {
     final args = Get.arguments;
     _fromMyStays = widget.fromMyStays || (args is Map && args['fromMyStays'] == true);
     _ctrl.mainBelow = _fromMyStays;
+    PlanBindings.ensure();
     // Gated owners never build MainScreen; permanent so its later Get.put reuses this instance.
     if (!Get.isRegistered<LocationController>()) {
       Get.put(LocationController(), permanent: true);

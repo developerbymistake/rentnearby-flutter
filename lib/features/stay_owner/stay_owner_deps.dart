@@ -20,6 +20,10 @@ abstract final class StayOwnerDeps {
   static void Function(String enquiryId) openEnquiry = _openEnquiry;
   static void Function() openEditPrices = _openEditPrices;
   static Future<void> Function() refreshHome = _noRefresh;
+  static Future<void> Function() refreshCalendar = _noRefresh;
+  static void Function() afterStayDeleted = _nothing;
+
+  static void _nothing() {}
 
   static void _openSpecialPrice({String? dateFrom, String? dateTo, String? festivalId}) =>
       Get.toNamed(AppRoutes.staySpecialPrices, arguments: {'dateFrom': ?dateFrom, 'dateTo': ?dateTo, 'festivalId': ?festivalId});
@@ -48,5 +52,7 @@ abstract final class StayOwnerDeps {
     openEnquiry = _openEnquiry;
     openEditPrices = _openEditPrices;
     refreshHome = _noRefresh;
+    refreshCalendar = _noRefresh;
+    afterStayDeleted = _nothing;
   }
 }

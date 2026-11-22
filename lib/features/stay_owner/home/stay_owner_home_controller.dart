@@ -4,10 +4,12 @@ import 'package:get/get.dart';
 
 import '../../../config/app_tabs.dart';
 import '../../../controllers/auth_controller.dart';
+import '../../../controllers/plan_controller.dart';
 import '../../../services/notification_service.dart';
 import '../../../utils/app_toast.dart';
 import '../../owner_core/data/owner_api.dart';
 import '../../owner_core/data/owner_cache.dart';
+import '../../owner_core/data/owner_error_types.dart';
 import '../../owner_core/data/owner_result.dart';
 import '../../owner_core/data/single_flight.dart';
 import '../../owner_core/home/owner_home_api.dart';
@@ -40,7 +42,12 @@ class StayOwnerHomeController extends GetxController with WidgetsBindingObserver
   final _latest = LatestOnly();
   final _flight = SingleFlight<void>();
   DateTime? _loadedAt;
+  int _planVersionAtLoad = 0;
   Worker? _tabWorker;
+
+  int get planVersionAtLoad => _planVersionAtLoad;
+
+  static int get _planVersion => Get.isRegistered<PlanController>() ? Get.find<PlanController>().planVersion.value : 0;
 
   OwnerHomeDto? get data => load.value.valueOrNull;
 
@@ -106,6 +113,7 @@ class StayOwnerHomeController extends GetxController with WidgetsBindingObserver
   Future<void> _refresh() async {
     final id = _latest.next();
     final saved = data;
+    final version = _planVersion;
     final OwnerResult<OwnerHomeDto> r;
     try {
       r = await _api.load();
@@ -118,10 +126,15 @@ class StayOwnerHomeController extends GetxController with WidgetsBindingObserver
     _loadedAt = _clock();
     switch (r) {
       case OwnerOk<OwnerHomeDto>(:final value):
+        _planVersionAtLoad = version;
         load.value = OwnerLoadData<OwnerHomeDto>(value);
         centreBadge.value = value.numbers.centreBadge;
         switchOverride.value = null;
         OwnerCache.write(_uid, OwnerCacheKeys.home, value.raw);
+      case OwnerRefused<OwnerHomeDto>(:final type) when type == OwnerErrorTypes.listingNotFound:
+        load.value = const OwnerLoadEmpty<OwnerHomeDto>();
+        centreBadge.value = 0;
+        OwnerCache.remove(_uid, OwnerCacheKeys.home);
       case OwnerRefused<OwnerHomeDto>(:final statusCode) when statusCode == 429:
         AppToast.info('Too many tries. Wait a minute.');
         load.value = saved != null ? OwnerLoadData<OwnerHomeDto>(saved, stale: true) : const OwnerLoadError<OwnerHomeDto>();
@@ -150,9 +163,9 @@ class StayOwnerHomeController extends GetxController with WidgetsBindingObserver
         case OwnerOffline<void>():
           switchOverride.value = null;
           AppToast.error(StayHomeStrings.noConnection);
-        case OwnerFailed<void>(:final message):
+        case OwnerFailed<void>():
           switchOverride.value = null;
-          AppToast.error(message);
+          AppToast.error(StayHomeStrings.somethingWrong);
       }
     } catch (_) {
       if (!isClosed) {

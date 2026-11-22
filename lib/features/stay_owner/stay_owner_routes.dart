@@ -1,3 +1,4 @@
+import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 
 import '../../config/app_routes.dart';
@@ -17,6 +18,13 @@ import 'special_prices/stay_special_prices_screen.dart';
 GetPage<dynamic> _page(String name, GetPageBuilder page) =>
     GetPage(name: name, page: page, customTransition: TemplateTransition(), transitionDuration: templateTransitionDuration);
 
+// Route and push ids are GUIDs; anything else is treated as missing and lands on the calendar.
+Widget stayEntryPage(Map<String, dynamic> args) {
+  final id = OwnerArgs.id(args, 'id');
+  if (id == null) return const StayCalendarScreen();
+  return StayCalendarEntryScreen(args: {...args, 'id': id});
+}
+
 final List<GetPage<dynamic>> stayOwnerPages = [
   // A2 pages
   _page(AppRoutes.stayAttention, () => const StayAttentionScreen()),
@@ -24,7 +32,7 @@ final List<GetPage<dynamic>> stayOwnerPages = [
   // end A2
   // A4 pages
   _page(AppRoutes.stayCalendar, () => StayCalendarScreen(args: OwnerArgs.current)),
-  _page(AppRoutes.stayCalendarEntry, () => StayCalendarEntryScreen(args: OwnerArgs.current)),
+  _page(AppRoutes.stayCalendarEntry, () => stayEntryPage(OwnerArgs.current)),
   _page(AppRoutes.stayUpcoming, () => StayUpcomingScreen(args: OwnerArgs.current)),
   _page(AppRoutes.stayPast, () => StayPastScreen(args: OwnerArgs.current)),
   _page(AppRoutes.stayMoneySummary, () => StayMoneySummaryScreen(args: OwnerArgs.current)),

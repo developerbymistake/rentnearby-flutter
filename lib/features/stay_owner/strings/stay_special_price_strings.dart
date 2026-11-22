@@ -57,6 +57,7 @@ abstract final class StaySpecialPriceStrings {
   static const savesLimit = 'You can change special prices 3 times a day. Try again tomorrow.';
   static const tooManyNights = 'A special price can cover up to 60 nights.';
   static const startTooFar = 'Start date must be within 180 days.';
+  static const startPast = 'Start date must be today or later.';
   static const percentLowerRange = 'Pick a percent between 5 and 50.';
   static const percentHigherRange = 'Pick a percent between 5 and 100.';
 

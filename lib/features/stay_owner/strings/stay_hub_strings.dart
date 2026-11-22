@@ -48,6 +48,7 @@ abstract final class StayHubStrings {
   static const bookingsCalendar = 'Bookings calendar';
   static String nextBooking(String date, String label) => 'Next: $date, $label';
   static String nextBookingDateOnly(String date) => 'Next: $date';
+  static String nextTravellerRemoved(String date) => 'Next: $date · Traveller removed';
 
   static const stayDetails = 'Stay details';
   static const basicDetails = 'Basic details';
@@ -96,5 +97,6 @@ abstract final class StayHubStrings {
   static const tryAgain = 'Try again';
   static const showingLast = 'Could not refresh. Showing your last list.';
   static const noConnection = 'No connection. Please try again.';
+  static const somethingWrong = 'Something went wrong. Try again.';
   static const keepOnePhoto = 'Keep at least one photo.';
 }

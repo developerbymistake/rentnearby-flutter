@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../../../controllers/plan_controller.dart';
 import '../../../design/design.dart';
 import '../../../utils/app_toast.dart';
 import '../../owner_core/data/owner_error_types.dart';
@@ -16,12 +17,17 @@ import '../../stay/setup/stay_setup_controller.dart';
 import '../calendar/data/stay_calendar_apis.dart';
 import '../calendar/models/stay_calendar_models.dart';
 import '../calendar/widgets/stay_calendar_widgets.dart';
+import '../hub/stay_hub_controller.dart';
 import '../stay_owner_deps.dart';
 import '../strings/stay_special_price_strings.dart';
 import '../widgets/stay_widgets.dart';
 
 class StayPlanVisibleController extends GetxController {
-  StayPlanVisibleController({this.api = const StayPlanVisibleApi()});
+  StayPlanVisibleController({this.api = const StayPlanVisibleApi(), void Function()? refreshPlan}) : refreshPlan = refreshPlan ?? _invalidatePlan;
+
+  static void _invalidatePlan() {
+    if (Get.isRegistered<PlanController>()) Get.find<PlanController>().invalidate();
+  }
 
   static const String tag = 'stay-plan-visible';
 
@@ -30,6 +36,7 @@ class StayPlanVisibleController extends GetxController {
   final photoIds = <String>[].obs;
   final roomIds = <String>[].obs;
   final errorLine = RxnString();
+  final void Function() refreshPlan;
   final LatestOnly _latest = LatestOnly();
   final SingleFlight<OwnerResult<Map<String, dynamic>>> _save = SingleFlight();
   List<String> _startPhotos = const [];
@@ -51,6 +58,9 @@ class StayPlanVisibleController extends GetxController {
     if (isClosed || !_latest.isLatest(id)) return;
     if (r is OwnerOk<Map<String, dynamic>>) {
       final s = StayPlanVisibleState.fromJson(r.value, photoLimit: PlanGate.limit(PlanKey.photos), roomLimit: PlanGate.limit(PlanKey.roomTypes));
+      if (s.limitsFromServer && (s.photoLimit != PlanGate.limit(PlanKey.photos) || s.roomLimit != PlanGate.limit(PlanKey.roomTypes))) {
+        refreshPlan();
+      }
       if (!s.somethingHidden || !PlanGate.paymentOn) {
         load.value = const OwnerLoadEmpty();
         return;
@@ -98,9 +108,12 @@ class StayPlanVisibleController extends GetxController {
     errorLine.value = null;
     final r = await _save.run(() => api.save(photoIds: photoIds.toList(), roomIds: roomIds.toList()));
     if (isClosed) return r;
+    if (r is OwnerRefused<Map<String, dynamic>> && r.type == OwnerErrorTypes.planVisibleInvalid) {
+      await fetch();
+      return r;
+    }
     if (r is OwnerRefused<Map<String, dynamic>>) {
       errorLine.value = switch (r.type) {
-        OwnerErrorTypes.planVisibleInvalid => StayPlanVisibleStrings.invalid,
         OwnerErrorTypes.planVisibleLimit => StayPlanVisibleStrings.threeADay,
         OwnerErrorTypes.planVisibleNotNeeded => StayPlanVisibleStrings.notNeeded,
         _ => r.message ?? OwnerSharedStrings.noConnection,
@@ -161,13 +174,18 @@ class _StayPlanVisibleScreenState extends State<StayPlanVisibleScreen> {
     switch (r) {
       case OwnerOk():
         StayOwnerDeps.refreshHome();
+        StayHubController.maybe?.reload();
         if (Get.isRegistered<StaySetupController>()) Get.find<StaySetupController>().load();
         Navigator.of(context).pop();
       case OwnerOffline():
       case OwnerFailed():
         AppToast.error(OwnerSharedStrings.noConnection);
       case OwnerRefused():
-        if (r.rateLimited) AppToast.info(OwnerSharedStrings.tooManyTries);
+        if (r.rateLimited) {
+          AppToast.info(OwnerSharedStrings.tooManyTries);
+        } else if (r.type == OwnerErrorTypes.planVisibleInvalid) {
+          AppToast.info(OwnerSharedStrings.staleEdit);
+        }
     }
   }
 
@@ -178,34 +196,35 @@ class _StayPlanVisibleScreenState extends State<StayPlanVisibleScreen> {
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop) _back();
       },
-      child: Scaffold(
-        backgroundColor: OwnerLook.stay.page,
-        body: Column(
-          children: [
-            Obx(() {
-              c.load.value;
-              return StayCalHeader(
-                title: StayPlanVisibleStrings.title,
-                subtitle: StayPlanVisibleStrings.sub(PlanGate.limit(PlanKey.photos), PlanGate.limit(PlanKey.roomTypes)),
-                onBack: _back,
-              );
-            }),
-            Expanded(
-              child: Obx(() {
-                final load = c.load.value;
-                c.photoIds.length;
-                c.roomIds.length;
-                c.errorLine.value;
-                return OwnerStateView<StayPlanVisibleState>(
-                  load: load,
-                  look: OwnerLook.stay,
-                  words: const OwnerStateWords(emptyTitle: StayPlanVisibleStrings.notNeeded),
-                  onRetry: c.fetch,
-                  data: (context, s, stale) => _body(s),
-                );
-              }),
-            ),
-            Obx(() {
+      child: StayCalScaffold(
+        header: (compact) => Obx(() {
+          final s = c.load.value.valueOrNull;
+          return StayCalHeader(
+            title: StayPlanVisibleStrings.title,
+            subtitle: StayPlanVisibleStrings.sub(s?.photoLimit ?? PlanGate.limit(PlanKey.photos), s?.roomLimit ?? PlanGate.limit(PlanKey.roomTypes)),
+            onBack: _back,
+            compact: compact,
+          );
+        }),
+        bar: _bar(),
+        body: (context, inlineBar) => Obx(() {
+          final load = c.load.value;
+          c.photoIds.length;
+          c.roomIds.length;
+          c.errorLine.value;
+          return OwnerStateView<StayPlanVisibleState>(
+            load: load,
+            look: OwnerLook.stay,
+            words: const OwnerStateWords(emptyTitle: StayPlanVisibleStrings.notNeeded),
+            onRetry: c.fetch,
+            data: (context, s, stale) => _body(s, inlineBar),
+          );
+        }),
+      ),
+    );
+  }
+
+  Widget _bar() => Obx(() {
               c.photoIds.length;
               c.roomIds.length;
               final show = c.state != null;
@@ -228,14 +247,9 @@ class _StayPlanVisibleScreenState extends State<StayPlanVisibleScreen> {
                   ],
                 ]),
               );
-            }),
-          ],
-        ),
-      ),
-    );
-  }
+            });
 
-  Widget _body(StayPlanVisibleState s) {
+  Widget _body(StayPlanVisibleState s, Widget? inlineBar) {
     final cover = c.photoIds.isEmpty ? null : c.photoIds.first;
     return CustomScrollView(
       slivers: [
@@ -297,6 +311,7 @@ class _StayPlanVisibleScreenState extends State<StayPlanVisibleScreen> {
             ),
           ),
         SliverToBoxAdapter(child: Gap.v(24)),
+        if (inlineBar != null) SliverToBoxAdapter(child: inlineBar),
       ],
     );
   }

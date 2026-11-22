@@ -1,16 +1,19 @@
 import 'package:dio/dio.dart';
 import '../../../services/api_service.dart';
+import '../../owner_core/data/single_flight.dart';
 import '../models/stay_owner_model.dart';
 
 class StayRepository {
   const StayRepository();
+
+  static final SingleFlight<StayOwnerModel?> _mine = SingleFlight();
 
   StayOwnerModel? _parse(Map<String, dynamic> res) {
     final data = res['data'];
     return data is Map<String, dynamic> ? StayOwnerModel.fromJson(data) : null;
   }
 
-  Future<StayOwnerModel?> getMine() async => _parse(await ApiService.get('/stays/me'));
+  Future<StayOwnerModel?> getMine() => _mine.run(() async => _parse(await ApiService.get('/stays/me')));
 
   Future<StayOwnerModel?> saveBasic(Map<String, dynamic> body) async =>
       _parse(await ApiService.put('/stays/me/basic', body));

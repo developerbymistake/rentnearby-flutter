@@ -34,7 +34,8 @@ abstract final class SpecialPriceRules {
 
   static int nights(DateTime from, DateTime to) => OwnerDates.daysBetween(from, to) + 1;
 
-  static String? datesError(DateTime from, DateTime to, DateTime today) {
+  static String? datesError(DateTime from, DateTime to, DateTime today, {DateTime? keptStart}) {
+    if (from.isBefore(today) && !(keptStart != null && OwnerDates.sameDay(keptStart, from))) return StaySpecialPriceStrings.startPast;
     if (from.isAfter(OwnerDates.addDays(today, startDays))) return StaySpecialPriceStrings.startTooFar;
     if (nights(from, to) > maxNights) return StaySpecialPriceStrings.tooManyNights;
     return null;
@@ -109,9 +110,9 @@ class StaySpecialPriceFormState extends State<StaySpecialPriceForm> {
       picking = f == null;
     } else {
       final fest = widget.festivalId == null ? null : _festivalById(widget.festivalId);
-      from = fest?.dateFrom ?? widget.from;
+      from = _notPast(fest?.dateFrom ?? widget.from);
       to = fest?.dateTo ?? widget.to;
-      festivalId = fest?.id ?? _festivalFor(from, to)?.id;
+      festivalId = fest?.id ?? _festivalFor(fest?.dateFrom ?? widget.from, to)?.id ?? (widget.from != null ? widget.festivalId : null);
       picking = festivalId == null && from != null;
       percent = StaySpecialPriceMemory.lastPercent ?? 20;
     }
@@ -150,7 +151,7 @@ class StaySpecialPriceFormState extends State<StaySpecialPriceForm> {
     final f = from;
     final t = to;
     if (f == null || t == null) return null;
-    return SpecialPriceRules.datesError(f, t, c.today);
+    return SpecialPriceRules.datesError(f, t, c.today, keptStart: widget.rule?.dateFrom);
   }
 
   bool get canSave {
@@ -161,10 +162,12 @@ class StaySpecialPriceFormState extends State<StaySpecialPriceForm> {
     return c.page?.rooms.isNotEmpty ?? false;
   }
 
+  DateTime? _notPast(DateTime? d) => d != null && d.isBefore(c.today) ? c.today : d;
+
   void _pickFestival(FestivalRow f) => setState(() {
         festivalId = f.id;
         picking = false;
-        from = f.dateFrom;
+        from = _notPast(f.dateFrom);
         to = f.dateTo;
         serverLine = null;
       });
@@ -256,6 +259,7 @@ class StaySpecialPriceFormState extends State<StaySpecialPriceForm> {
 
   String _invalidLine(String? message) {
     final m = (message ?? '').toLowerCase();
+    if (m.contains('today or later')) return StaySpecialPriceStrings.startPast;
     if (m.contains('60')) return StaySpecialPriceStrings.tooManyNights;
     if (m.contains('180')) return StaySpecialPriceStrings.startTooFar;
     if (m.contains('percent')) return lower ? StaySpecialPriceStrings.percentLowerRange : StaySpecialPriceStrings.percentHigherRange;

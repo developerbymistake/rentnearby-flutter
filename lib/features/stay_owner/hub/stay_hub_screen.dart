@@ -135,8 +135,8 @@ class _StayHubScreenState extends State<StayHubScreen> {
   Widget _content(BuildContext context, StayOwnerModel s) {
     final roomLimit = s.meter('RoomTypes')?.limit ?? PlanGate.limit(PlanKey.roomTypes);
     final photoLimit = s.meter('Photos')?.limit ?? PlanGate.limit(PlanKey.photos);
-    final roomsLocked = PlanGate.locks(PlanKey.roomTypes, s.rooms.length);
-    final photosLocked = PlanGate.locks(PlanKey.photos, s.photos.length);
+    final roomsLocked = PlanGate.canUpgrade && s.rooms.length >= roomLimit;
+    final photosLocked = PlanGate.canUpgrade && s.photos.length >= photoLimit;
     final children = <Widget>[];
 
     final strip = _strip(s);
@@ -174,6 +174,7 @@ class _StayHubScreenState extends State<StayHubScreen> {
           locked: true,
           title: r.label,
           sub: StayHubStrings.hiddenOnFree,
+          onTap: s.isPendingReview ? null : _chooseVisible,
         ),
     ];
     if (!s.isPendingReview) {
@@ -309,7 +310,9 @@ class _StayHubScreenState extends State<StayHubScreen> {
     String? sub;
     if (date != null) {
       final label = row?.nextLabel;
-      sub = label == null ? StayHubStrings.nextBookingDateOnly(StayFormat.day(date)) : StayHubStrings.nextBooking(StayFormat.day(date), label);
+      sub = row?.nextTravellerRemoved == true
+          ? StayHubStrings.nextTravellerRemoved(StayFormat.day(date))
+          : (label == null ? StayHubStrings.nextBookingDateOnly(StayFormat.day(date)) : StayHubStrings.nextBooking(StayFormat.day(date), label));
     }
     void tap() => _push(AppRoutes.stayCalendar);
     return StayRowData(
@@ -324,7 +327,7 @@ class _StayHubScreenState extends State<StayHubScreen> {
   Widget _photosCard(BuildContext context, StayOwnerModel s, int limit, bool locked) {
     final tiles = <Widget>[
       for (final p in s.photos) _PhotoTile(url: p.url),
-      for (final p in s.hiddenPhotos) _PhotoTile(url: p.url, hidden: true),
+      for (final p in s.hiddenPhotos) _PhotoTile(url: p.url, hidden: true, onTap: s.isPendingReview ? null : _chooseVisible),
     ];
     if (!s.isPendingReview) {
       if (locked) {
@@ -363,6 +366,8 @@ class _StayHubScreenState extends State<StayHubScreen> {
       ),
     );
   }
+
+  void _chooseVisible() => _push(AppRoutes.stayPlanVisible);
 
   void _managePhotos(StayOwnerModel s) {
     if (_locked(s)) return;
@@ -426,13 +431,21 @@ class _HubSkeleton extends StatelessWidget {
 }
 
 class _PhotoTile extends StatelessWidget {
-  const _PhotoTile({required this.url, this.hidden = false});
+  const _PhotoTile({required this.url, this.hidden = false, this.onTap});
 
   final String url;
   final bool hidden;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
+    final tile = _tile();
+    final tap = onTap;
+    if (tap == null) return tile;
+    return Semantics(button: true, label: StayHubStrings.hiddenOnFree, child: InkWell(onTap: tap, borderRadius: DS.circular(14), child: tile));
+  }
+
+  Widget _tile() {
     return LayoutBuilder(
       builder: (context, box) => DecoratedBox(
         decoration: BoxDecoration(

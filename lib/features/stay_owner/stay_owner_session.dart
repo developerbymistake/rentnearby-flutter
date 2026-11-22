@@ -3,7 +3,10 @@ import 'package:get/get.dart';
 import '../../config/app_tabs.dart';
 import '../../controllers/auth_controller.dart';
 
+import '../../config/notification_types.dart';
 import '../../config/shell_kind.dart';
+import '../owner_core/data/owner_cache.dart';
+import '../owner_core/session/owner_plan_sync.dart';
 import '../owner_core/session/owner_push_sync.dart';
 import '../owner_core/session/owner_session_hooks.dart';
 import '../owner_core/session/shell_teardown.dart';
@@ -24,6 +27,43 @@ import 'special_prices/stay_special_prices_controller.dart';
 abstract final class StayOwnerSession {
   static const String name = 'stay_owner';
 
+  static const Set<String> hubPushTypes = {
+    NotificationTypeKeys.stayEditApprovedWire,
+    NotificationTypeKeys.stayEditRejectedWire,
+    NotificationTypeKeys.stayApprovedWire,
+    NotificationTypeKeys.stayRejectedWire,
+    NotificationTypeKeys.planLimitsChangedWire,
+  };
+
+  static String? _uid() => Get.isRegistered<AuthController>() ? Get.find<AuthController>().user.value?.id : null;
+
+  static void onStayDeleted() {
+    ShellTeardown.deleteTagged<StayCalendarController>(StayCalendarController.tag);
+    ShellTeardown.deleteTagged<StaySpecialPricesController>(StaySpecialPricesController.tag);
+    ShellTeardown.deleteTagged<StayPlanVisibleController>(StayPlanVisibleController.tag);
+    StayReminderState.reset();
+    OwnerSessionHooks.refreshHome();
+  }
+
+  // Plan-scoped reads (limits, hidden rows, calendar window, summary) follow the new plan at once.
+  static void onPlanChanged() {
+    OwnerCache.removeListingScoped(_uid());
+    StayOwnerHomeController.maybe?.reload();
+    StayHubController.maybe?.reload();
+    final cal = StayCalendarController.maybe;
+    if (cal != null) {
+      cal.clearCache();
+      cal.reload();
+    }
+    if (Get.isRegistered<StaySpecialPricesController>(tag: StaySpecialPricesController.tag)) {
+      Get.find<StaySpecialPricesController>(tag: StaySpecialPricesController.tag).fetch();
+    }
+    if (Get.isRegistered<StayPlanVisibleController>(tag: StayPlanVisibleController.tag)) {
+      Get.find<StayPlanVisibleController>(tag: StayPlanVisibleController.tag).fetch();
+    }
+    if (Get.isRegistered<MyJobsController>(tag: StayJobsTab.tag)) Get.find<MyJobsController>(tag: StayJobsTab.tag).load();
+  }
+
   static void register() {
     OwnerSessionHooks.register(name, (_, _) => StayOwnerDeps.debugReset());
     OwnerSessionHooks.refreshHome = () => StayOwnerDeps.refreshHome();
@@ -33,8 +73,13 @@ abstract final class StayOwnerSession {
     });
     // A2 session
     ShellTeardown.register(ShellKind.stayOwner, () => ShellTeardown.deleteTagged<StayHubController>(StayHubController.tag));
-    OwnerPushSync.register('${name}_hub', (type, args) => StayHubController.maybe?.reload());
+    OwnerPushSync.register('${name}_hub', (type, args) {
+      if (hubPushTypes.contains(type)) StayHubController.maybe?.reload();
+    });
     StayOwnerDeps.refreshHome = () async => StayOwnerHomeController.maybe?.reload();
+    StayOwnerDeps.refreshCalendar = () async => StayCalendarController.maybe?.reload();
+    OwnerPlanSync.register(name, onPlanChanged);
+    StayOwnerDeps.afterStayDeleted = onStayDeleted;
     StayOwnerDeps.openEditPrices = () {
       if (Get.isRegistered<AuthController>()) Get.find<AuthController>().openTab(AppTabs.hub, intent: const {'section': 'rooms'});
     };

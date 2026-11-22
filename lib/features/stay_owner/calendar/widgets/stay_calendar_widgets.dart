@@ -29,25 +29,59 @@ abstract final class StayCalKit {
   );
 }
 
+// Pushed calendar pages: below a short window (split screen, tablet landscape) the header drops
+// its subtitle and the bottom bar scrolls as the last item of the body.
+class StayCalScaffold extends StatelessWidget {
+  const StayCalScaffold({super.key, required this.header, required this.body, this.bar, this.background});
+
+  static double get shortBelow => DS.s(480);
+
+  final Widget Function(bool compact) header;
+  final Widget Function(BuildContext context, Widget? inlineBar) body;
+  final Widget? bar;
+  final Color? background;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: background ?? OwnerLook.stay.page,
+      body: LayoutBuilder(
+        builder: (context, box) {
+          final short = box.maxHeight < shortBelow;
+          final b = bar;
+          return Column(
+            children: [
+              header(short),
+              Expanded(child: body(context, short ? b : null)),
+              if (!short && b != null) b,
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
 class StayCalHeader extends StatelessWidget {
-  const StayCalHeader({super.key, required this.title, this.subtitle, this.trailing, this.onBack});
+  const StayCalHeader({super.key, required this.title, this.subtitle, this.trailing, this.onBack, this.compact = false});
 
   final String title;
   final String? subtitle;
   final Widget? trailing;
   final VoidCallback? onBack;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
     const white = Colors.white;
-    final sub = subtitle;
+    final sub = compact ? null : subtitle;
     return Container(
       decoration: BoxDecoration(
         gradient: ListingTone.forest.gradient,
         borderRadius: BorderRadius.vertical(bottom: Radius.circular(DS.radius(4))),
         boxShadow: ListingTone.forest.glow(),
       ),
-      padding: EdgeInsets.fromLTRB(DS.s(12), MediaQuery.viewPaddingOf(context).top + DS.s(14), DS.s(12), DS.s(14)),
+      padding: EdgeInsets.fromLTRB(DS.s(12), MediaQuery.viewPaddingOf(context).top + DS.s(compact ? 6 : 14), DS.s(12), DS.s(compact ? 6 : 14)),
       child: Row(
         children: [
           Semantics(

@@ -16,7 +16,10 @@ import '../../owner_core/strings/owner_shared_strings.dart';
 import '../calendar/models/stay_calendar_models.dart';
 import '../calendar/stay_entry_rows.dart';
 import '../calendar/widgets/stay_calendar_widgets.dart';
+import '../home/stay_owner_home_controller.dart';
+import '../hub/stay_hub_controller.dart';
 import '../strings/stay_gate_strings_calendar.dart';
+import '../strings/stay_hub_strings.dart';
 import '../strings/stay_special_price_strings.dart';
 import '../widgets/stay_widgets.dart';
 import 'stay_special_price_sheet.dart';
@@ -57,8 +60,9 @@ class _StaySpecialPricesScreenState extends State<StaySpecialPricesScreen> {
     if (!mounted || c.page == null) return;
     final from = OwnerDates.day(OwnerArgs.text(widget.args, 'dateFrom'));
     final to = OwnerDates.day(OwnerArgs.text(widget.args, 'dateTo')) ?? from;
-    final festival = OwnerArgs.text(widget.args, 'festivalId');
+    final festival = OwnerArgs.id(widget.args, 'festivalId');
     if (from == null && festival == null) return;
+    if (_reviewBlocks()) return;
     if (from != null && to != null) {
       final exact = c.ruleFor(from, to);
       if (exact != null) {
@@ -71,7 +75,20 @@ class _StaySpecialPricesScreenState extends State<StaySpecialPricesScreen> {
     await StaySpecialPriceSheet.open(context, c, from: from, to: to, festivalId: festival);
   }
 
-  Future<void> _add() => StaySpecialPriceSheet.open(context, c);
+  Future<void> _add() async {
+    if (_reviewBlocks()) return;
+    await StaySpecialPriceSheet.open(context, c);
+  }
+
+  static const String _stayLocked = 'StayLocked';
+
+  bool get _underReview => StayHubController.maybe?.stay?.isPendingReview ?? StayOwnerHomeController.maybe?.data?.listing.underReview ?? false;
+
+  bool _reviewBlocks() {
+    if (!_underReview) return false;
+    AppToast.info(StayHubStrings.underReview);
+    return true;
+  }
 
   Future<void> _delete(SpecialPriceBand r) async {
     final ok = await OwnerConfirm.ask(
@@ -85,13 +102,19 @@ class _StaySpecialPricesScreenState extends State<StaySpecialPricesScreen> {
     );
     if (!ok || !mounted) return;
     final res = await c.delete(r);
-    if (res is! OwnerOk<void>) AppToast.error(OwnerSharedStrings.noConnection);
+    if (res is OwnerRefused<void> && res.type == _stayLocked) {
+      AppToast.info(res.message ?? StayHubStrings.underReview);
+    } else if (res is! OwnerOk<void>) {
+      AppToast.error(OwnerSharedStrings.noConnection);
+    }
   }
 
   Future<void> _toggle(SpecialPriceBand r) async {
     final res = await c.toggle(r);
     if (!mounted || res is OwnerOk) return;
-    if (res is OwnerRefused && res.type == 'SpecialPriceSavesLimit') {
+    if (res is OwnerRefused && res.type == _stayLocked) {
+      AppToast.info(res.message ?? StayHubStrings.underReview);
+    } else if (res is OwnerRefused && res.type == 'SpecialPriceSavesLimit') {
       AppToast.info(StaySpecialPriceStrings.savesLimit);
     } else if (res is OwnerRefused && res.rateLimited) {
       AppToast.info(OwnerSharedStrings.tooManyTries);
@@ -146,6 +169,7 @@ class _StaySpecialPricesScreenState extends State<StaySpecialPricesScreen> {
               rule: rules[i],
               rooms: page.rooms,
               busy: c.busyIds.contains(rules[i].id),
+              locked: _underReview,
               onToggle: () => _toggle(rules[i]),
               onEdit: () => StaySpecialPriceSheet.open(context, c, rule: rules[i]),
               onDelete: () => _delete(rules[i]),
@@ -202,7 +226,9 @@ class _StaySpecialPricesScreenState extends State<StaySpecialPricesScreen> {
 }
 
 class _RuleCard extends StatelessWidget {
-  const _RuleCard({required this.rule, required this.rooms, required this.busy, required this.onToggle, required this.onEdit, required this.onDelete});
+  const _RuleCard({required this.rule, required this.rooms, required this.busy, required this.onToggle, required this.onEdit, required this.onDelete, this.locked = false});
+
+  final bool locked;
 
   final SpecialPriceBand rule;
   final List<StayPriceRoom> rooms;
@@ -257,6 +283,9 @@ class _RuleCard extends StatelessWidget {
               ),
             ],
             Gap.v(8),
+            if (locked)
+              Text(StayHubStrings.underReview, style: Ink3D.text(11, FontWeight.w600, Ink3D.grey, letterSpacing: 0))
+            else
             Row(children: [
               Semantics(
                 label: StaySpecialPriceStrings.a11ySwitch(name, live),

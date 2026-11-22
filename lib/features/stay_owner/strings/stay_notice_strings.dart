@@ -20,6 +20,11 @@ abstract final class StayNoticeStrings {
   }
 
   static String plansStartOn(String date) => 'Plans start on $date';
-  static String freeKeeps({required bool trial}) =>
-      trial ? 'Free keeps 2 photos and 2 room types. Try Plus free for 7 days.' : 'Free keeps 2 photos and 2 room types.';
+  static String freeKeeps(int photos, int roomTypes, int trialDays) {
+    final keeps = 'Free keeps ${photos == 1 ? '1 photo' : '$photos photos'} and ${roomTypes == 1 ? '1 room type' : '$roomTypes room types'}.';
+    return trialDays > 0 ? '$keeps Try Plus free for ${trialDays == 1 ? '1 day' : '$trialDays days'}.' : keeps;
+  }
+
+  static const specialPricesPausedTitle = 'Special prices paused';
+  static String specialPricesPaused(int n) => '${n == 1 ? '1 special price is' : '$n special prices are'} paused on Free. Nothing is deleted.';
 }

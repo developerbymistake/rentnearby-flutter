@@ -115,13 +115,14 @@ class _PostJobScreenState extends State<PostJobScreen> {
             subtitle: StayWorkStrings.jobStepLine(_ctrl.step.value),
             onBack: _ctrl.isSubmitting.value ? null : _close,
           ),
-          StepProgressHeader(
-            tone: _look,
-            labels: _steps,
-            current: _ctrl.step.value,
-            activeLabelColor: Ink3D.title,
-            margin: EdgeInsets.fromLTRB(DS.s(18), DS.gv(16), DS.s(18), 0),
-          ),
+          if (MediaQuery.viewInsetsOf(context).bottom <= 0)
+            StepProgressHeader(
+              tone: _look,
+              labels: _steps,
+              current: _ctrl.step.value,
+              activeLabelColor: Ink3D.title,
+              margin: EdgeInsets.fromLTRB(DS.s(18), DS.gv(16), DS.s(18), 0),
+            ),
           _blockBanner(),
         ],
       );

@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../../config/app_insets.dart';
 import '../../../config/app_tabs.dart';
 import '../../../config/tab_slot.dart';
 import '../../../controllers/auth_controller.dart';
@@ -11,10 +10,13 @@ import '../../../design/design.dart';
 import '../../../design/extra/ext_trip_replies.dart';
 import '../../../widgets/notification_off_banner.dart';
 import '../../../widgets/tab_header.dart';
+import '../../owner_core/data/owner_cache.dart';
 import '../../owner_core/look/owner_look.dart';
 import '../../owner_core/sheets/owner_states.dart';
 import '../../owner_core/strings/owner_shared_strings.dart';
 import '../../stay/enquiries/stay_enquiries_controller.dart';
+import '../../stay/models/stay_owner_model.dart';
+import '../hub/stay_hub_controller.dart';
 import '../../trip/trip_strings.dart';
 import '../strings/stay_work_strings.dart';
 import 'stay_owner_enquiry_card.dart';
@@ -55,7 +57,14 @@ class _StayEnquiriesTabState extends State<StayEnquiriesTab> with WidgetsBinding
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _scroll.addListener(_onScroll);
-    if (_ctrl.stay.value == null) _ctrl.ensureStay();
+    if (_ctrl.stay.value == null) {
+      final known = StayHubController.maybe?.stay ?? _cachedStay();
+      if (known != null) {
+        _ctrl.stay.value = known;
+      } else {
+        _ctrl.ensureStay();
+      }
+    }
     final auth = _auth;
     if (auth != null) {
       _intentWorker = ever<TabIntent?>(auth.tabIntent, (i) {
@@ -82,7 +91,14 @@ class _StayEnquiriesTabState extends State<StayEnquiriesTab> with WidgetsBinding
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) _ctrl.refreshList();
+    if (state == AppLifecycleState.resumed && _auth?.tabIndex.value == AppTabs.centre && _ctrl.stale30s) _ctrl.refreshList();
+  }
+
+  StayOwnerModel? _cachedStay() {
+    final raw = OwnerCache.read(_auth?.user.value?.id, OwnerCacheKeys.listing);
+    if (raw == null) return null;
+    final m = StayOwnerModel.fromJson(raw);
+    return m.id.isEmpty ? null : m;
   }
 
   Future<void> _apply(TabIntent? intent) async {
@@ -198,7 +214,7 @@ class _StayEnquiriesTabState extends State<StayEnquiriesTab> with WidgetsBinding
     final bucket = _ctrl.bucket.value;
     final views = _ctrl.views;
     final flashTarget = _flashTarget.value;
-    final bottom = AppInsets.bottomViewPadding(context) + DS.s(16);
+    final bottom = BarMetrics.bodyBottomOf(context);
 
     if (loading && items.isEmpty) return const SingleChildScrollView(physics: NeverScrollableScrollPhysics(), child: OwnerSkeletonList(rows: 3));
     if (items.isEmpty) {

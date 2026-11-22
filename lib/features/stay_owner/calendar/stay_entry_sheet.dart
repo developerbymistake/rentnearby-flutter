@@ -211,7 +211,15 @@ class StayEntryFormState extends State<StayEntryForm> {
   int get overlapBookings => blockMode ? 0 : c.overlapCount(from, to, exceptId: widget.entry?.id);
   bool get overlapBlocked => !blockMode && c.blockedBetween(from, to);
 
-  DateTime get _first => blockMode ? c.today : (c.window.manualFrom ?? OwnerDates.addDays(c.today, -7));
+  DateTime get firstPickable {
+    if (blockMode) {
+      final b = widget.existingBlock?.dateFrom;
+      return b != null && b.isBefore(c.today) ? b : c.today;
+    }
+    final w = c.window.manualFrom ?? OwnerDates.addDays(c.today, -7);
+    final own = widget.entry?.dateFrom;
+    return own != null && own.isBefore(w) ? own : w;
+  }
   DateTime get _last {
     if (blockMode) return OwnerDates.addDays(c.today, StayEntryRules.blockStartDays + StayEntryRules.blockMaxNights);
     final m = c.window.manualTo;
@@ -222,7 +230,7 @@ class StayEntryFormState extends State<StayEntryForm> {
   }
 
   Future<void> _pick(bool isFrom) async {
-    final first = _first;
+    final first = firstPickable;
     final last = _last;
     final initial = isFrom ? from : to;
     final picked = await TemplateCalendarPopup.pickDate(
@@ -251,7 +259,7 @@ class StayEntryFormState extends State<StayEntryForm> {
   }
 
   Future<void> _toggleBlock(bool on) async {
-    if (on && !editing && c.needsG11) {
+    if (on && widget.existingBlock == null && c.needsG11) {
       await PlanGate.showLimit(context, StayGateStringsCalendar.g11());
       return;
     }
@@ -285,7 +293,7 @@ class StayEntryFormState extends State<StayEntryForm> {
       dateTo: to,
       note: note.text.trim().isEmpty ? null : note.text.trim(),
       finalAmount: money.finalAmount,
-      receivedSoFar: money.paidInFull ? null : money.receivedSoFar,
+      receivedSoFar: money.receivedSoFar,
       paidInFull: money.paidInFull,
       version: widget.entry?.version,
     );
@@ -296,6 +304,10 @@ class StayEntryFormState extends State<StayEntryForm> {
 
   Future<void> _saveBlock({bool confirm = false}) async {
     if (!canSave) return;
+    if (widget.existingBlock == null && !confirm && c.needsG11) {
+      await PlanGate.showLimit(context, StayGateStringsCalendar.g11());
+      return;
+    }
     final draft = StayBlockDraft(
       id: blockId,
       dateFrom: from,
@@ -351,7 +363,8 @@ class StayEntryFormState extends State<StayEntryForm> {
         final line = switch (r.type) {
           OwnerErrorTypes.calendarOutsideWindow => StayCalendarStrings.outsideWindow,
           OwnerErrorTypes.phoneNotAllowed => StayCalendarStrings.noPhone,
-          OwnerErrorTypes.moneyNoteInvalid => StayCalendarStrings.receivedAboveFinal,
+          OwnerErrorTypes.moneyNoteInvalid => r.message ?? StayCalendarStrings.receivedAboveFinal,
+          StayCalendarErrors.entryEnded => StayCalendarStrings.entryEnded,
           OwnerErrorTypes.entryNotManual => StayCalendarStrings.notManual,
           OwnerErrorTypes.staleEdit => OwnerSharedStrings.staleEdit,
           _ => r.message ?? OwnerSharedStrings.noConnection,
@@ -371,18 +384,18 @@ class StayEntryFormState extends State<StayEntryForm> {
   }
 
   String get _title {
-    if (blockMode) return widget.existingBlock != null || (!widget.startBlock) ? StayCalendarStrings.blockEditTitle : StayCalendarStrings.blockTitle;
+    if (blockMode) return widget.existingBlock != null ? StayCalendarStrings.blockEditTitle : StayCalendarStrings.blockTitle;
     return widget.entry != null ? StayCalendarStrings.editTitle : StayCalendarStrings.addTitle;
   }
 
   String get _sub {
-    if (blockMode) return widget.existingBlock != null || (!widget.startBlock) ? StayCalendarStrings.blockEditSub : StayCalendarStrings.blockSub;
+    if (blockMode) return widget.existingBlock != null ? StayCalendarStrings.blockEditSub : StayCalendarStrings.blockSub;
     return StayCalendarStrings.addSub;
   }
 
   String get _saveLabel {
     if (!blockMode) return StayCalendarStrings.saveBooking;
-    return widget.startBlock && widget.existingBlock == null ? StayCalendarStrings.blockSave : StayCalendarStrings.blockSaveEdit;
+    return widget.existingBlock == null ? StayCalendarStrings.blockSave : StayCalendarStrings.blockSaveEdit;
   }
 
   @override
@@ -475,15 +488,17 @@ class StayEntryFormState extends State<StayEntryForm> {
           errorText: notePhone ? StayCalendarStrings.noPhone : null,
           textCapitalization: TextCapitalization.sentences,
         ),
-        Gap.v(10),
-        ToggleRow(
-          tone: ListingTone.forest,
-          label: StayCalendarStrings.blockToggle,
-          sublabel: StayCalendarStrings.blockToggleSub,
-          value: false,
-          filled: true,
-          onChanged: _toggleBlock,
-        ),
+        if (widget.entry == null) ...[
+          Gap.v(10),
+          ToggleRow(
+            tone: ListingTone.forest,
+            label: StayCalendarStrings.blockToggle,
+            sublabel: StayCalendarStrings.blockToggleSub,
+            value: false,
+            filled: true,
+            onChanged: _toggleBlock,
+          ),
+        ],
         Gap.v(10),
         StayPrivacyBox(text: StayCalendarStrings.privacyLine),
         if (entries != null) _meterLine(StayCalendarStrings.bookingsYouAdded, entries, PlanGate.paymentOn ? null : StayCalendarStrings.bookingsAddedOff(entries.used)),
@@ -516,7 +531,7 @@ class StayEntryFormState extends State<StayEntryForm> {
   Widget _blockBody() {
     final red = blockError != StayBlockError.none && !datesChangedSinceError;
     final blocks = c.meter(StayMeterKeys.blocks);
-    final editMode = widget.existingBlock != null || !widget.startBlock;
+    final editMode = widget.existingBlock != null;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -538,7 +553,7 @@ class StayEntryFormState extends State<StayEntryForm> {
             child: Text(StayCalendarStrings.blockRule, style: Ink3D.text(10.5, FontWeight.w500, Ink3D.grey, height: 1.4, letterSpacing: 0)),
           ),
         ],
-        if (!editMode || widget.existingBlock == null) ...[
+        if (!editMode) ...[
           Gap.v(10),
           ToggleRow(
             tone: ListingTone.forest,

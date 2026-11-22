@@ -363,20 +363,46 @@ class UpcomingPage {
 }
 
 class MoneySummary {
-  const MoneySummary({this.month, this.booked = 0, this.received = 0, this.toCollect = 0, this.top = const []});
+  const MoneySummary({
+    this.month,
+    this.booked = 0,
+    this.received = 0,
+    this.toCollect = 0,
+    this.entryCount = 0,
+    this.dueCount = 0,
+    this.top = const [],
+    this.raw = const {},
+  });
+
+  final Map<String, dynamic> raw;
 
   final DateTime? month;
   final int booked;
   final int received;
   final int toCollect;
+  final int entryCount;
+  final int dueCount;
   final List<CalendarEntry> top;
 
   factory MoneySummary.fromJson(Map<String, dynamic> j) => MoneySummary(
         month: OwnerDates.month(j['month']),
-        booked: OwnerJson.integer(j['booked']),
-        received: OwnerJson.integer(j['received']),
-        toCollect: OwnerJson.integer(j['toCollect']),
-        top: CalendarEntry.listOf(j['top']),
+        booked: OwnerJson.integer(j['finalTotal']),
+        received: OwnerJson.integer(j['receivedTotal']),
+        toCollect: OwnerJson.integer(j['balanceTotal']),
+        entryCount: OwnerJson.integer(j['entryCount']),
+        dueCount: OwnerJson.integer(j['dueCount']),
+        top: CalendarEntry.listOf(j['topBalances']),
+        raw: j,
+      );
+
+  MoneySummary paid(int amount) => MoneySummary(
+        month: month,
+        booked: booked,
+        received: received + amount,
+        toCollect: toCollect - amount,
+        entryCount: entryCount,
+        dueCount: dueCount > 0 ? dueCount - 1 : 0,
+        top: top,
       );
 }
 
@@ -396,6 +422,8 @@ class EntryWriteResult {
   final CalendarEntry? entry;
   final List<Meter> meters;
   final EntryOverlap overlap;
+
+  factory EntryWriteResult.ofEntry(CalendarEntry e) => EntryWriteResult(entry: e.valid ? e : null);
 
   factory EntryWriteResult.fromJson(Map<String, dynamic> j) {
     final raw = OwnerJson.mapOrNull(j['entry']);

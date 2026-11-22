@@ -139,6 +139,25 @@ void main() {
     );
   });
 
+  group('chip', () {
+    for (final c in (v['chip'] as List).cast<Map<String, dynamic>>()) {
+      test('${c['name']}', () {
+        expect(
+          SpecialPriceMath.lowerPercentFor(3000, OwnerDates.day(c['checkIn'])!, (c['nights'] as num).toInt(), _rules(c['rules'])),
+          c['expectedPercent'],
+        );
+      });
+    }
+  });
+
+  test('two Lower rules: the biggest percent wins (server rule)', () {
+    final r = [
+      PriceRule(from: DateTime(2026, 11, 5), to: DateTime(2026, 11, 5), lower: true, percent: 10),
+      PriceRule(from: DateTime(2026, 11, 6), to: DateTime(2026, 11, 7), lower: true, percent: 25),
+    ];
+    expect(SpecialPriceMath.lowerPercentFor(3000, DateTime(2026, 11, 5), 3, r), 25);
+  });
+
   test('check-out day is not a night for blocks', () {
     final b = [DateRange(DateTime(2026, 11, 10), DateTime(2026, 11, 12))];
     expect(SpecialPriceMath.touchesBlock(DateTime(2026, 11, 8), 2, b), isFalse);

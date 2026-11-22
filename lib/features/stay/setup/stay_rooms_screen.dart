@@ -2,10 +2,12 @@ import 'stay_page_header.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import '../../../controllers/plan_controller.dart';
 import '../../../models/browse_item.dart';
 import '../../../utils/app_toast.dart';
 import '../../../design/design.dart';
 import '../../../design/extra/ext_stay_owner.dart';
+import '../../owner_core/plan/plan_bindings.dart';
 import '../../owner_core/plan/plan_gate.dart';
 import '../../owner_core/plan/plan_keys.dart';
 import '../../stay_owner/strings/stay_gate_strings.dart';
@@ -44,19 +46,38 @@ class _StayRoomsScreenState extends State<StayRoomsScreen> {
   String? _meals;
   bool _dirty = false;
 
-  int get _max => PlanGate.limit(PlanKey.roomTypes);
+  int get _max {
+    final m = _ctrl.stay.value?.meter('RoomTypes')?.limit;
+    if (m != null && m > 0) return m;
+    if (!PlanGate.loaded) return PlanKeys.plusSeed[PlanKey.roomTypes] ?? PlanGate.limit(PlanKey.roomTypes);
+    return PlanGate.limit(PlanKey.roomTypes);
+  }
 
   @override
   void initState() {
     super.initState();
+    // Reached from /stay-setup before MainScreen: the plan must exist before its limits are read.
+    PlanBindings.ensure();
     for (final r in _ctrl.stay.value?.rooms ?? const []) {
       _rooms.add(_RoomDraft(id: r.id, name: r.roomName, price: r.pricePerNight, guests: r.maxGuests, meals: r.meals));
     }
     _formOpen = _rooms.length < _max;
+    if (!PlanGate.loaded && Get.isRegistered<PlanController>()) {
+      _planWorker = once<bool>(Get.find<PlanController>().loaded, (_) => _afterPlan());
+    }
+  }
+
+  Worker? _planWorker;
+
+  // The blank extra form was opened on the pre-plan limit; close it once the real limit says full.
+  void _afterPlan() {
+    if (!mounted || !_formOpen || _editingIndex != null || !_formBlank || _rooms.length < _max) return;
+    setState(() => _formOpen = false);
   }
 
   @override
   void dispose() {
+    _planWorker?.dispose();
     _priceCtrl.dispose();
     _priceFocusNode.dispose();
     super.dispose();
@@ -185,7 +206,7 @@ class _StayRoomsScreenState extends State<StayRoomsScreen> {
     ]);
     if (!mounted) return;
     if (!ok) {
-      if (_ctrl.lastErrorType == 'PlanRoomTypeLimit') await PlanGate.showLimit(context, StayGateStrings.roomGate());
+      if (_ctrl.lastErrorType == 'PlanRoomTypeLimit') await _ctrl.showLimitRefusal(context, StayGateStrings.roomGate);
       return;
     }
     Get.back();
@@ -324,9 +345,15 @@ class _StayRoomsScreenState extends State<StayRoomsScreen> {
     );
   }
 
-  Widget _addRow() {
+  Widget _addRow() => Obx(() {
+        _ctrl.stay.value;
+        if (Get.isRegistered<PlanController>()) Get.find<PlanController>().myPlan.value;
+        return _addRowNow();
+      });
+
+  Widget _addRowNow() {
     final full = _count >= _max;
-    if (full && PlanGate.canUpgrade) {
+    if (full && PlanGate.loaded && PlanGate.canUpgrade) {
       final plus = PlanKeys.plusSeed[PlanKey.roomTypes] ?? _max;
       return Column(
         children: [

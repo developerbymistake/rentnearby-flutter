@@ -107,6 +107,8 @@ void main() {
       expect(SpecialPriceRules.datesError(t, OwnerDates.addDays(t, 60), t), StaySpecialPriceStrings.tooManyNights);
       expect(SpecialPriceRules.datesError(OwnerDates.addDays(t, 180), OwnerDates.addDays(t, 180), t), isNull);
       expect(SpecialPriceRules.datesError(OwnerDates.addDays(t, 181), OwnerDates.addDays(t, 181), t), StaySpecialPriceStrings.startTooFar);
+      expect(SpecialPriceRules.datesError(OwnerDates.addDays(t, -2), t, t), StaySpecialPriceStrings.startPast);
+      expect(SpecialPriceRules.datesError(OwnerDates.addDays(t, -2), t, t, keptStart: OwnerDates.addDays(t, -2)), isNull);
     });
     test('preview numbers of the frames', () {
       expect(SpecialPriceMath.adjust(3000, false, 20), 3600);

@@ -2,6 +2,7 @@ import '../data/owner_api.dart';
 import '../data/owner_page.dart';
 import '../data/owner_result.dart';
 import '../json/owner_dates.dart';
+import '../json/owner_json.dart';
 import '../money/money_wire.dart';
 import 'models/calendar_models.dart';
 
@@ -87,7 +88,7 @@ class CalendarApi {
       OwnerApi.put(
         '$prefix/entries/$id/money',
         {'finalAmount': finalAmount, MoneyWire.receivedKey: receivedSoFar, 'paidInFull': paidInFull, 'version': version},
-        EntryWriteResult.fromJson,
+        (d) => EntryWriteResult.ofEntry(CalendarEntry.fromJson(d)),
       );
 
   Future<OwnerResult<MoneySummary>> summary(DateTime month) =>
@@ -100,5 +101,5 @@ class CalendarApi {
       );
 
   Future<OwnerResult<CalendarReminder>> reminder(bool on) =>
-      OwnerApi.put('$prefix/reminder', {'on': on}, CalendarReminder.fromJson);
+      OwnerApi.put('$prefix/reminder', {'on': on}, (d) => CalendarReminder.fromJson(OwnerJson.map(d['reminder'])));
 }

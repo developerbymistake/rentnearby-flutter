@@ -53,6 +53,12 @@ void main() {
       expect(PhoneGuard.hasPhone('98765 43210'), isTrue);
       expect(PhoneGuard.hasPhone('(987) 654-32.10'), isTrue);
     });
+    test('slash, plus and underscore are separators (server rule)', () {
+      expect(PhoneGuard.hasPhone('98765/43210'), isTrue);
+      expect(PhoneGuard.hasPhone('+91_98765_43210'), isTrue);
+    });
+    test('any script digits count', () => expect(PhoneGuard.hasPhone('٩८७६५४३२१०'), isTrue));
+    test('Rs 25,000 is not a phone', () => expect(PhoneGuard.hasPhone('Rs 25,000 and 25,000'), isFalse));
     test('9 digits is not a phone', () => expect(PhoneGuard.hasPhone('Room 123456789'), isFalse));
     test('empty and null are not a phone', () {
       expect(PhoneGuard.hasPhone(''), isFalse);
