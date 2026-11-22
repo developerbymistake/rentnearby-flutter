@@ -493,9 +493,9 @@ void main() {
 
     testWidgets('photo_sheet', (t) async {
       await open(t, full, 'photo_sheet', after: () async {
-        await t.ensureVisible(find.text('Add'));
+        await t.ensureVisible(find.text('Add').first);
         await t.pump();
-        await t.tap(find.text('Add'));
+        await t.tap(find.text('Add').first);
         await t.pump(const Duration(milliseconds: 600));
       });
       expect(find.text('Take Photo'), findsOneWidget);
