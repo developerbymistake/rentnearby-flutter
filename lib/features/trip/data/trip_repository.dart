@@ -95,8 +95,35 @@ class TripRepository {
     return data is Map<String, dynamic> ? data : const {};
   }
 
-  Future<TripCityVersion> citiesVersion({bool once = false}) async =>
-      TripCityVersion.fromJson(_data(await withRetry(() => ApiService.get('/trips/cities/version'), once: once)));
+  static String? _versionTag;
+  static Map<String, dynamic>? _versionData;
+
+  // Conditional GET: a 304 reuses the last answer of this process.
+  Future<TripCityVersion> citiesVersion({bool once = false}) async {
+    final tag = _versionTag;
+    final last = _versionData;
+    final res = await withRetry(
+        () => ApiService.getRaw('/trips/cities/version', headers: tag != null && last != null ? {'If-None-Match': tag} : null),
+        once: once);
+    if (res.statusCode == 304 && last != null) return TripCityVersion.fromJson(last);
+    final data = _data(_body(res.data));
+    final etag = res.headers.value('etag');
+    if (etag != null && etag.isNotEmpty && data.isNotEmpty) {
+      _versionTag = etag;
+      _versionData = data;
+    }
+    return TripCityVersion.fromJson(data);
+  }
+
+  // First page of the unfiltered city list; null page = 304 (the list behind [etag] is unchanged).
+  Future<({TripCityPage? page, String? etag})> citiesFirstPage({required String? etag, int pageSize = TripConstants.citiesPageSize}) async {
+    final res = await ApiService.getRaw('/trips/cities',
+        params: {'page': 1, 'pageSize': pageSize}, headers: etag == null || etag.isEmpty ? null : {'If-None-Match': etag});
+    if (res.statusCode == 304) return (page: null, etag: etag);
+    return (page: TripCityPage.fromJson(_data(_body(res.data))), etag: res.headers.value('etag'));
+  }
+
+  static Map<String, dynamic> _body(Object? data) => data is Map<String, dynamic> ? data : const {};
 
   Future<TripCityPage> cities({int page = 1, int pageSize = TripConstants.citiesPageSize, String? q, bool once = false}) async =>
       TripCityPage.fromJson(_data(await withRetry(() => ApiService.get('/trips/cities', params: {

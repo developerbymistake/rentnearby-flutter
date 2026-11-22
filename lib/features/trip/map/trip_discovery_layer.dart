@@ -325,11 +325,18 @@ class TripDiscoveryLayer implements DiscoveryLayerApi {
   @override
   Future<void> setData(List<DiscoverySpot> spots) async {
     if (_disposed) return;
-    final sig = Object.hash(spots.length, Object.hashAll(spots.map((s) => s.id)), Object.hashAll(spots.map((s) => s.thumbUrl)));
+    final sig = Object.hashAll([
+      spots.length,
+      for (final s in spots) Object.hash(s.id, s.lat, s.lon, s.name, s.category, s.rank, s.cityKey, s.thumbUrl, s.nPhotos),
+    ]);
     if (sig == _dataSig) return;
     _dataSig = sig;
+    final before = _byId;
     _spots = DiscTiers.sorted(spots);
     _byId = {for (final s in _spots) s.id: s};
+    // A new cover is composed again under the same slot.
+    final newCover = {for (final s in _spots) if (before[s.id] case final o? when o.thumbUrl != s.thumbUrl) s.id};
+    if (newCover.isNotEmpty) _registered = {..._registered}..removeAll(newCover);
     _retier();
     final sel = selected.value;
     if (sel != null && selectedKind.value != DiscSelKind.planned && !_byId.containsKey(sel.id)) await clearSelection();
@@ -339,7 +346,14 @@ class TripDiscoveryLayer implements DiscoveryLayerApi {
     try {
       await port.setGeoJson(DiscIds.srcAll, DiscGeoJson.all(_spots, _tiers));
     } catch (_) {}
-    if (gen == _gen) _startPhotos();
+    if (gen != _gen) return;
+    final open = selected.value;
+    final row = open == null ? null : _byId[open.id];
+    if (row != null && !identical(row, open)) {
+      await _show(row, selectedKind.value == DiscSelKind.planned ? DiscSelKind.planned : _naturalKind(row), lift: false);
+      if (gen != _gen) return;
+    }
+    _startPhotos();
   }
 
   void _retier() {

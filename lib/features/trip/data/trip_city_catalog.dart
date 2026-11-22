@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import '../../../config/app_constants.dart';
 import '../../../services/storage_service.dart';
 import '../../../utils/dio_error_mapper.dart';
+import '../../../utils/network_retry.dart';
 import '../../map_discovery/data/map_pack_service.dart';
 import '../models/trip_city_model.dart';
 import '../trip_constants.dart';
@@ -16,6 +17,7 @@ class TripCityCatalog {
 
   List<TripCityModel>? _mem;
   String? _version;
+  String? _firstPageTag;
   DateTime? _checkedAt;
   Future<List<TripCityModel>>? _loading;
 
@@ -124,12 +126,36 @@ class TripCityCatalog {
   Future<List<TripCityModel>> _fetchAll() async {
     final once = _mem == null;
     try {
+      final mem = _mem;
+      final tag = _firstPageTag;
+      TripCityPage? first;
+      String? firstTag;
+      if (mem != null && tag != null) {
+        final r = await withRetry(() => _repo.citiesFirstPage(etag: tag), once: once);
+        if (r.page == null) {
+          _checkedAt = DateTime.now();
+          await StorageService.touchTripCitiesCache();
+          return mem;
+        }
+        first = r.page;
+        firstTag = r.etag;
+      }
       final items = <TripCityModel>[];
       var version = '';
       var page = 1;
       var restarted = false;
       while (true) {
-        final p = await _repo.cities(page: page, pageSize: TripConstants.citiesPageSize, once: once);
+        final TripCityPage p;
+        if (page == 1 && first != null) {
+          p = first;
+          first = null;
+        } else if (page == 1) {
+          final r = await withRetry(() => _repo.citiesFirstPage(etag: null), once: once);
+          p = r.page!;
+          firstTag = r.etag;
+        } else {
+          p = await _repo.cities(page: page, pageSize: TripConstants.citiesPageSize, once: once);
+        }
         if (page > 1 && p.version != version && !restarted) {
           restarted = true;
           items.clear();
@@ -144,6 +170,7 @@ class TripCityCatalog {
       final list = TripCitySearch.dedupe(items);
       _mem = list;
       _version = version;
+      _firstPageTag = firstTag;
       _checkedAt = DateTime.now();
       await StorageService.saveTripCitiesCache(list.map((c) => c.toJson()).toList(), version);
       return list;

@@ -13,6 +13,8 @@ class NotificationTypeKeys {
   static const String taxiApprovedWire = 'taxi_approved';
   static const String taxiRejected = 'TaxiRejected';
   static const String taxiRejectedWire = 'taxi_rejected';
+  static const String profilePhotoRemoved = 'ProfilePhotoRemoved';
+  static const String profilePhotoRemovedWire = 'profile_photo_removed';
 
   static const String taxiDriverAccepted = 'TaxiDriverAccepted';
   static const String taxiDriverAcceptedWire = 'taxi_driver_accepted';

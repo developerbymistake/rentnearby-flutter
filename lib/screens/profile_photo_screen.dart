@@ -27,9 +27,20 @@ class _ProfilePhotoScreenState extends State<ProfilePhotoScreen> with TickerProv
   void initState() {
     super.initState();
     if (_auth.user.value?.profilePhotoUrl != null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) Get.offAllNamed(_auth.postLoginRoute);
-      });
+      WidgetsBinding.instance.addPostFrameCallback((_) => _leaveIfStillSet());
+    }
+  }
+
+  // The stored user may be stale (admin removed the picture): decide on a fresh profile.
+  Future<void> _leaveIfStillSet() async {
+    try {
+      await _auth.refreshProfile();
+    } catch (_) {}
+    if (!mounted) return;
+    if (_auth.user.value?.profilePhotoUrl != null) {
+      Get.offAllNamed(_auth.postLoginRoute);
+    } else {
+      setState(() {});
     }
   }
 

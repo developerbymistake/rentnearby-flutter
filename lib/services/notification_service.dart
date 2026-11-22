@@ -280,6 +280,8 @@ class NotificationService extends GetxService {
       }
       if (notificationType == NotificationTypeKeys.roleRequestRejectedWire) {
         Get.find<AuthController>().refreshProfile();
+      } else if (notificationType == NotificationTypeKeys.profilePhotoRemovedWire) {
+        Get.find<AuthController>().refreshProfile();
       } else if (notificationType == NotificationTypeKeys.stayApprovedWire ||
           notificationType == NotificationTypeKeys.stayRejectedWire) {
         StayStatusSync.onReviewResult();

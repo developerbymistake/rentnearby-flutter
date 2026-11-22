@@ -28,6 +28,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
   bool _photoBad = false;
   bool _created = false;
   bool _uploadFailed = false;
+  bool _submitting = false;
   late final String _phone;
   late final AnimationController _enter =
       AnimationController(duration: const Duration(milliseconds: 600), vsync: this);
@@ -66,7 +67,16 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
   }
 
   Future<void> _submit() async {
-    if (_auth.isLoading.value || _photo.active) return;
+    if (_submitting || _auth.isLoading.value || _photo.active) return;
+    _submitting = true;
+    try {
+      await _submitOnce();
+    } finally {
+      _submitting = false;
+    }
+  }
+
+  Future<void> _submitOnce() async {
     FocusScope.of(context).unfocus();
     if (_created) {
       if (await _photo.online()) await _upload();

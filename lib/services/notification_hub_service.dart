@@ -143,6 +143,8 @@ class NotificationHubService extends GetxService with SingleFlightHubConnect imp
           Get.find<AuthController>().forceLogout(reason: LogoutReason.roleChanged);
         } else if (data['type'] == NotificationTypeKeys.roleRequestRejected) {
           Get.find<AuthController>().refreshProfile();
+        } else if (data['type'] == NotificationTypeKeys.profilePhotoRemoved) {
+          Get.find<AuthController>().refreshProfile();
         } else if (data['type'] == NotificationTypeKeys.stayApproved ||
             data['type'] == NotificationTypeKeys.stayRejected) {
           StayStatusSync.onReviewResult();

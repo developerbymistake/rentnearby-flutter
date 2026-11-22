@@ -65,4 +65,17 @@ void main() {
     await s.ensureForCities([1]);
     expect(s.index?.length, 20, reason: 'a failure of the old version must not block the new version for 60 s');
   });
+
+  test('CF-journey D-2: a known but empty pack list drops the stored packs', () async {
+    version.answer(ver(packs: [ref('s1', name: 'State One')]));
+    api.body('s1', packBody());
+    final s = make();
+    await s.ensureForCities([1]);
+    expect(s.index?.length, 20);
+
+    s.onVersion(ver(packs: const [], packsKnown: true));
+    await s.settle();
+    expect(MapPackStore.readBody('s1'), isNull);
+    expect(s.index, isNull);
+  });
 }

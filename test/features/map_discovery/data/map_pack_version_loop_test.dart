@@ -90,7 +90,7 @@ void main() {
     expect(s.index, isNotNull);
     s.onVersion(ver(packs: const [], packsKnown: true));
     await s.settle();
-    expect(MapPackStore.readBody('s1'), isNotNull, reason: 'stored packs are never dropped while refs are empty');
+    expect(MapPackStore.readBody('s1'), isNull, reason: 'a known empty list drops the stored packs (CF-journey D-2)');
   });
 
   test('L-01: packsKnown parsed; missing = true only when packs is non-empty', () {

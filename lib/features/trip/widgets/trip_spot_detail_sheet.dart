@@ -79,6 +79,7 @@ class _TripSpotDetailSheetState extends State<TripSpotDetailSheet>
     with TickerProviderStateMixin {
   static double get _overlap => DS.s(24);
   static const int _descriptionLines = 4;
+  static const double _readMoreFont = 13;
 
   final _page = PageController();
   late final AnimationController _enter = AnimationController(
@@ -391,7 +392,7 @@ class _TripSpotDetailSheetState extends State<TripSpotDetailSheet>
               label: _expanded ? TripStringsSpotsX.showLess : TripStringsSpotsX.readMore,
               onTap: () => setState(() => _expanded = !_expanded),
               height: 34,
-              fontSize: 13,
+              fontSize: _readMoreFont,
               expand: false,
             ),
           ],

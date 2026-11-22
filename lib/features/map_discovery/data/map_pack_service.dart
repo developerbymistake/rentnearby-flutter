@@ -73,6 +73,8 @@ class MapPackService {
   List<MapPackRef> _refs = const [];
   DateTime? _refsAt;
   bool _metaLoaded = false;
+  bool _diskRead = false;
+  bool _refsFromServer = false;
   String? _persistedKey;
   Future<void>? _readyF;
   Future<void>? _versionF;
@@ -82,6 +84,7 @@ class MapPackService {
   final Map<String, MapPack> _packs = {};
   final Map<String, String> _ver = {};
   final Map<String, Future<void>> _inflight = {};
+  final Map<String, String> _inflightVer = {};
   final Map<String, DateTime> _failedAt = {};
   Set<String> _picked = const {};
   MapPackIndex? _index;
@@ -98,7 +101,10 @@ class MapPackService {
       _metaLoaded = true;
       final flagChanged = v.mapDiscovery != _flag;
       _flag = v.mapDiscovery;
-      if (v.packsKnown) _refs = v.packs;
+      if (v.packsKnown) {
+        _refs = v.packs;
+        _refsFromServer = true;
+      }
       _refsAt = _now();
       if (!_flag) _dropMemory();
       if (flagChanged) revision.value++;
@@ -134,12 +140,15 @@ class MapPackService {
     _gen++;
     _dropMemory();
     _inflight.clear();
+    _inflightVer.clear();
     _failedAt.clear();
     _picked = const {};
     _flag = false;
     _refs = const [];
     _refsAt = null;
     _metaLoaded = false;
+    _diskRead = false;
+    _refsFromServer = false;
     _persistedKey = null;
     _readyF = null;
     _versionF = null;
@@ -213,12 +222,23 @@ class MapPackService {
 
   Future<void> _initAndLoad() async {
     await MapPackStore.init();
-    if (_metaLoaded) return;
-    _metaLoaded = true;
+    if (_diskRead) return;
+    _diskRead = true;
     final m = MapPackStore.readMeta();
+    if (_metaLoaded) {
+      // A version answer came first: it wins, but an unknown pack list keeps the stored refs.
+      final storedRefs = m == null ? const <MapPackRef>[] : MapPackParser.refs(m['refs']);
+      if (!_refsFromServer && _refs.isEmpty && storedRefs.isNotEmpty) {
+        _refs = storedRefs;
+        _updateStatus();
+      }
+      return;
+    }
+    _metaLoaded = true;
     if (m == null) return;
+    final storedRefs = MapPackParser.refs(m['refs']);
     _flag = MapPackParser.flag({'mapDiscovery': m['flag']});
-    _refs = MapPackParser.refs(m['refs']);
+    _refs = storedRefs;
     final ms = m['refsAtMs'];
     _refsAt = ms is int ? DateTime.fromMillisecondsSinceEpoch(ms) : null;
     _persistedKey = _metaKey();
@@ -244,7 +264,7 @@ class MapPackService {
     await _ready();
     if (gen != _gen) return;
     _persistMeta();
-    if (!_flag || _refs.isEmpty) return;
+    if (!_flag || (_refs.isEmpty && !_refsFromServer)) return;
     final byId = {for (final r in _refs) r.stateId: r};
     var removed = false;
     for (final s in {...MapPackStore.storedStates(), ..._packs.keys}) {
@@ -291,15 +311,23 @@ class MapPackService {
   Future<void> _loadState(MapPackRef ref) {
     final id = ref.stateId;
     final pending = _inflight[id];
-    if (pending != null) return pending;
+    if (pending != null) {
+      if (_inflightVer[id] == ref.version) return pending;
+      final gen = _gen;
+      return pending.then((_) => gen == _gen ? _loadState(ref) : null);
+    }
     if (_packs.containsKey(id) && _ver[id] == ref.version) return Future.value();
     final gen = _gen;
     late final Future<void> f;
     f = _doLoad(ref, gen).catchError((_) {}).whenComplete(() {
-      if (identical(_inflight[id], f)) _inflight.remove(id);
+      if (identical(_inflight[id], f)) {
+        _inflight.remove(id);
+        _inflightVer.remove(id);
+      }
       _updateStatus();
     });
     _inflight[id] = f;
+    _inflightVer[id] = ref.version;
     _updateStatus();
     return f;
   }
@@ -320,7 +348,8 @@ class MapPackService {
       }
     }
     if (_packs.containsKey(id) && _ver[id] == ref.version) return;
-    final failed = _failedAt[id];
+    final failKey = _failKey(ref);
+    final failed = _failedAt[failKey];
     if (failed != null && _now().difference(failed) < MapPackConstants.retryAfter) return;
 
     final hasBody = MapPackStore.readBody(id) != null;
@@ -328,28 +357,31 @@ class MapPackService {
       final r = await _api.fetch(ref, etag: hasBody ? MapPackStore.readVersion(id) : null);
       if (gen != _gen) return;
       if (r.notModified) {
-        if (!hasBody) return _fail(id);
+        if (!hasBody) return _fail(failKey);
         MapPackStore.stampVersion(id, ref.version);
         if (_packs.containsKey(id)) _ver[id] = ref.version;
-        _failedAt.remove(id);
+        _failedAt.remove(failKey);
         return;
       }
       final body = r.body;
-      if (body == null) return _fail(id);
+      if (body == null) return _fail(failKey);
       final p = await _parse(body);
       if (gen != _gen) return;
-      if (p == null) return _fail(id);
-      if ((p.version.isNotEmpty && p.version != ref.version) || (p.stateId.isNotEmpty && p.stateId != id)) return _fail(id);
-      _failedAt.remove(id);
+      if (p == null) return _fail(failKey);
+      if ((p.version.isNotEmpty && p.version != ref.version) || (p.stateId.isNotEmpty && p.stateId != id)) return _fail(failKey);
+      _failedAt.remove(failKey);
       _swap(id, ref.version, p);
       if (gen != _gen) return;
       MapPackStore.save(id, ref.version, body);
     } catch (_) {
-      if (gen == _gen) _fail(id);
+      if (gen == _gen) _fail(failKey);
     }
   }
 
-  void _fail(String id) => _failedAt[id] = _now();
+  // Back-off per (state, version): a failure of an old version never blocks the new one.
+  static String _failKey(MapPackRef ref) => '${ref.stateId}@${ref.version}';
+
+  void _fail(String key) => _failedAt[key] = _now();
 
   void _swap(String id, String version, MapPack p) {
     if (!_flag) return;
