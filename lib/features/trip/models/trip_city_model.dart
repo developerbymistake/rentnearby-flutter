@@ -1,5 +1,7 @@
 import '../../../utils/city_search_rank.dart';
 import '../../../utils/cloudinary_thumb.dart';
+import '../../map_discovery/pack/map_pack_models.dart';
+import '../../map_discovery/pack/map_pack_parser.dart';
 import '../trip_strings_tab.dart';
 
 class TripCityStatus {
@@ -106,13 +108,23 @@ class TripCityVersion {
   final String version;
   final int count;
   final bool stale;
+  final bool mapDiscovery;
+  final List<MapPackRef> packs;
 
-  const TripCityVersion({required this.version, required this.count, required this.stale});
+  const TripCityVersion({
+    required this.version,
+    required this.count,
+    required this.stale,
+    this.mapDiscovery = false,
+    this.packs = const [],
+  });
 
   factory TripCityVersion.fromJson(Map<String, dynamic> json) => TripCityVersion(
         version: json['version'] as String? ?? '',
         count: (json['count'] as num?)?.toInt() ?? 0,
         stale: json['stale'] == true,
+        mapDiscovery: MapPackParser.flag(json),
+        packs: MapPackParser.refs(json),
       );
 }
 

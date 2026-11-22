@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import '../../../config/app_constants.dart';
 import '../../../services/storage_service.dart';
 import '../../../utils/dio_error_mapper.dart';
+import '../../map_discovery/data/map_pack_service.dart';
 import '../models/trip_city_model.dart';
 import '../trip_constants.dart';
 import 'trip_repository.dart';
@@ -105,6 +106,7 @@ class TripCityCatalog {
     if (fresh && !force) {
       try {
         final v = await _repo.citiesVersion(once: true);
+        MapPackService.to.onVersion(v);
         if (v.version == _version) {
           _checkedAt = DateTime.now();
           await StorageService.touchTripCitiesCache();

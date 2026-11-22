@@ -119,8 +119,10 @@ class ApiService {
     return res.data is Map<String, dynamic> ? res.data as Map<String, dynamic> : <String, dynamic>{};
   }
 
-  static Future<Response> getRaw(String path, {Map<String, dynamic>? params, Map<String, String>? headers}) =>
-      _dio.get(path, queryParameters: params, options: Options(headers: headers, validateStatus: (s) => s == 200 || s == 304));
+  static Future<Response> getRaw(String path, {Map<String, dynamic>? params, Map<String, String>? headers, ResponseType? responseType}) =>
+      _dio.get(path,
+          queryParameters: params,
+          options: Options(headers: headers, responseType: responseType, validateStatus: (s) => s == 200 || s == 304));
 
   static Future<Map<String, dynamic>> postFormData(
     String path,

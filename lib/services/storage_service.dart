@@ -4,6 +4,7 @@ import 'package:get_storage/get_storage.dart';
 import '../config/app_constants.dart';
 import '../models/user_model.dart';
 import '../features/owner_core/data/owner_cache.dart';
+import '../features/map_discovery/data/map_pack_service.dart';
 
 class StorageService {
   static const _secureStorage = FlutterSecureStorage(
@@ -51,6 +52,7 @@ class StorageService {
     clearAllChatStackedLines();
     clearAllTripCaches();
     clearAllOwnerCaches();
+    MapPackService.clearAll().ignore();
   }
 
   static void clearAllOwnerCaches() => OwnerCache.clearAll();
