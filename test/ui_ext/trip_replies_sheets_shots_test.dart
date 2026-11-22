@@ -41,7 +41,7 @@ class _Supply extends TripSupplyController {
   @override
   bool get staysOutOfDate => false;
   @override
-  Future<void> ensureStays(int legIndex) async => stayLeg.value = legIndex;
+  Future<void> ensureStays(int legIndex, {List<int>? onlyDays}) async => stayLeg.value = legIndex;
 }
 
 String _iso(DateTime d) => d.toUtc().toIso8601String();

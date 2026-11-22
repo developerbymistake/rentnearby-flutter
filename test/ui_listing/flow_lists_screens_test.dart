@@ -32,7 +32,7 @@ class _Supply extends TripSupplyController {
   @override
   bool get staysOutOfDate => false;
   @override
-  Future<void> ensureStays(int legIndex) async => stayLeg.value = legIndex;
+  Future<void> ensureStays(int legIndex, {List<int>? onlyDays}) async => stayLeg.value = legIndex;
 }
 
 StayNearbyModel _stay(String id, String name, double km, int? price, {String? type = 'Homestay', String? meals}) => StayNearbyModel(

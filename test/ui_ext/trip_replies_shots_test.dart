@@ -24,7 +24,7 @@ class _Supply extends TripSupplyController {
   @override
   bool get staysOutOfDate => false;
   @override
-  Future<void> ensureStays(int legIndex) async => stayLeg.value = legIndex;
+  Future<void> ensureStays(int legIndex, {List<int>? onlyDays}) async => stayLeg.value = legIndex;
 }
 
 final _configs = <(String, double, double)>[('', 360, 1.0), ('_13', 360, 1.3), ('_300', 300, 1.0)];
