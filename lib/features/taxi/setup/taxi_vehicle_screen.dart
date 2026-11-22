@@ -188,6 +188,7 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
 
   bool get _isApproved => _ctrl.taxi.value?.isApproved ?? false;
   bool get _proofLocked => _ctrl.taxi.value?.proofLocked ?? false;
+  bool get _proofFrozen => _ctrl.taxi.value?.proofFrozen ?? false;
   late final bool _wasApproved;
 
   bool get _hasChanges {
@@ -309,7 +310,7 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
   }
 
   Future<void> _pickPhoto() async {
-    if (_proofLocked) return;
+    if (_proofFrozen) return;
     final file = await TaxiPhotoPick.pick(context, picker: _picker, onDenied: _showPermissionDeniedDialog);
     if (file != null && mounted) {
       setState(() {
@@ -379,7 +380,7 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
       _plateFocus.requestFocus();
       return false;
     }
-    if (!_proofLocked && !_hasPhoto) {
+    if (!_proofFrozen && !_hasPhoto) {
       AppToast.error('Add a photo that shows the plate');
       _mark(_Ring.photo);
       return false;
@@ -753,6 +754,7 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
             TextFormField(
               controller: _plateCtrl,
               focusNode: _plateFocus,
+              readOnly: _proofLocked,
               cursorColor: _tone.g2,
               inputFormatters: TaxiOptionSets.plateInputFormatters,
               textCapitalization: TextCapitalization.characters,
@@ -766,7 +768,10 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
                   ? PillField.decoration(tone: _tone, hint: 'e.g. UK 07 TA 1234').copyWith(error: const SizedBox.shrink())
                   : PillField.decoration(tone: _tone, hint: 'e.g. UK 07 TA 1234'),
             ),
-            if (_isApproved) _note(TaxiPhotoStrings.plateReviewNote, accent: true),
+            if (_proofLocked)
+              _note(TaxiPhotoStrings.plateNumberLockedNote, accent: true)
+            else if (_isApproved)
+              _note(TaxiPhotoStrings.plateReviewNote, accent: true),
           ]),
         ),
         _section(
@@ -798,14 +803,21 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
 
   Widget _proofBlock() {
     final locked = _proofLocked;
+    final frozen = _proofFrozen;
     final remote = _remotePhotoUrl;
     final tiles = <Widget>[
-      if (locked) ...[
+      if (frozen) ...[
         if (remote != null && remote.isNotEmpty)
-          TaxiPlateTile(tone: _tone, label: TaxiPhotoStrings.verifiedBand, verified: true, onRemove: null, photo: _photoTile(url: remote)),
+          TaxiPlateTile(
+            tone: _tone,
+            label: locked ? TaxiPhotoStrings.verifiedBand : TaxiPhotoStrings.plateBand,
+            verified: true,
+            onRemove: null,
+            photo: _photoTile(url: remote, memoryOnly: true),
+          ),
       ] else ...[
         if (_hasPhoto)
-          TaxiPlateTile(tone: _tone, label: TaxiPhotoStrings.plateBand, onRemove: _blocked ? null : _removePhoto, photo: _photoTile(local: _localPhoto, url: remote)),
+          TaxiPlateTile(tone: _tone, label: TaxiPhotoStrings.plateBand, onRemove: _blocked ? null : _removePhoto, photo: _photoTile(local: _localPhoto, url: remote, memoryOnly: true)),
         TaxiAddPhotoTile(tone: _tone, label: TaxiPhotoStrings.add, error: _ring == _Ring.photo, onTap: _blocked ? null : _pickPhoto),
       ],
     ];
@@ -835,12 +847,23 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
     ]);
   }
 
-  Widget _photoTile({File? local, String? url}) => LayoutBuilder(builder: (context, box) {
+  Widget _photoTile({File? local, String? url, bool memoryOnly = false}) => LayoutBuilder(builder: (context, box) {
         final w = box.maxWidth.isFinite ? box.maxWidth : MediaQuery.sizeOf(context).width / 3;
         final decode = TaxiPlateDecode.width(w, MediaQuery.devicePixelRatioOf(context));
         final fallback = Container(color: _tone.tint, padding: DS.all(16), child: Image.asset(ListingArt.taxi));
         if (local != null) return Image.file(local, fit: BoxFit.cover, cacheWidth: decode, width: double.infinity, height: double.infinity);
         if (url == null || url.isEmpty) return fallback;
+        if (memoryOnly) {
+          return Image.network(
+            url,
+            cacheWidth: decode,
+            width: double.infinity,
+            height: double.infinity,
+            fit: BoxFit.cover,
+            loadingBuilder: (_, child, progress) => progress == null ? child : ColoredBox(color: _tone.tint),
+            errorBuilder: (_, _, _) => fallback,
+          );
+        }
         return CachedNetworkImage(
           imageUrl: url,
           memCacheWidth: decode,

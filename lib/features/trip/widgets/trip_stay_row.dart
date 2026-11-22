@@ -172,7 +172,6 @@ class TripStayRow extends StatelessWidget {
         address: km ?? line ?? (locality.isEmpty ? null : CardStrings.inPlace(locality)),
         note: km != null ? line : null,
         actions: _actions(full),
-        picked: shortlisted,
         dimmed: _paused,
         onTap: onOpen,
       ),

@@ -48,7 +48,7 @@ void main() {
     expect(d.borderRadius, DS.circular(16));
     final thumb = t.widget<Container>(find.byKey(SeekerRecentRow.thumbKey)).decoration! as BoxDecoration;
     expect(thumb.borderRadius, DS.circular(16));
-    expect(t.getSize(find.byKey(SeekerRecentRow.thumbKey)), Size.square(DS.s(64)));
+    expect(t.getSize(find.byKey(SeekerRecentRow.thumbKey)), Size.square(DS.s(58)));
     expect(t.widget<Text>(find.text(SeekerHomeStrings.rowArrow)).style?.color, ListingPalette.forest.g2);
   });
 

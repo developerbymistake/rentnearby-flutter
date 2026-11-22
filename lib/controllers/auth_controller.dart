@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'package:cached_network_image/cached_network_image.dart' show CachedNetworkImageProvider;
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/painting.dart' show PaintingBinding;
 import 'package:get/get.dart';
 import '../models/role_model.dart';
 import '../models/user_model.dart';
@@ -410,11 +412,15 @@ class AuthController extends GetxController {
     try {
       await StorageService.clearAll();
     } catch (_) {}
+    final imageDisk = _clearImageCaches();
     try {
       await NotificationService.to.cancelAllChatNotifications();
     } catch (_) {}
     try {
       await disconnectAllHubs().timeout(hubDisconnectTimeout);
+    } catch (_) {}
+    try {
+      await imageDisk.timeout(hubDisconnectTimeout);
     } catch (_) {}
     user.value = null;
     roleKey.value = UserRoleKeys.seeker;
@@ -457,6 +463,17 @@ class AuthController extends GetxController {
     if (Get.isRegistered<LocationController>()) Get.delete<LocationController>(force: true);
     PlanBindings.dispose();
     Get.deleteAll();
+  }
+
+  static Future<void> _clearImageCaches() async {
+    try {
+      PaintingBinding.instance.imageCache
+        ..clear()
+        ..clearLiveImages();
+    } catch (_) {}
+    try {
+      await CachedNetworkImageProvider.defaultCacheManager.emptyCache();
+    } catch (_) {}
   }
 
   Future<void> logout() {

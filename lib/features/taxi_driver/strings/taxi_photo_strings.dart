@@ -9,6 +9,7 @@ abstract final class TaxiPhotoStrings {
   static const add = 'Add';
   static const change = 'Change';
   static const plateLockedNote = 'Verified. This photo cannot be changed.';
+  static const plateNumberLockedNote = 'Verified. The plate number cannot be changed.';
   static const plateReviewNote = 'Changing the plate number sends your taxi back to review.';
   static const plateLockedToast = 'Your number plate photo is verified and cannot be changed.';
   static const displayNote = 'You can change this photo any time. No review needed.';

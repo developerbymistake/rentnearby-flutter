@@ -207,6 +207,7 @@ class TaxiOwnerModel {
   Meter? meter(String key) => Meter.find(meters, key);
   int get shownReportCount => reportCount > 0 ? reportCount : pendingReportCount;
   bool get proofLocked => platePhotoLocked || everApproved;
+  bool get proofFrozen => proofLocked || isPendingReview;
   bool get hasDisplayPhoto => displayPhotoUrl != null;
   bool get hasDeclaredRate => localDayRate != null && localDayKm != null;
 

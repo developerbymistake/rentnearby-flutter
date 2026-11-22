@@ -189,10 +189,11 @@ class CalmAction {
 }
 
 class CalmPillButton extends StatelessWidget {
-  const CalmPillButton({super.key, required this.action, required this.palette});
+  const CalmPillButton({super.key, required this.action, required this.palette, this.callShadow = false});
 
   final CalmAction action;
   final ListingPalette palette;
+  final bool callShadow;
 
   static const double height = 32;
   static const double minTouch = 44;
@@ -220,7 +221,13 @@ class CalmPillButton extends StatelessWidget {
           width: DS.s(22),
           height: DS.s(22),
           alignment: Alignment.center,
-          decoration: const BoxDecoration(shape: BoxShape.circle, color: DesignColors.surface),
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: DesignColors.surface,
+            boxShadow: callShadow
+                ? DS.shadows([BoxShadow(color: Colors.black.withValues(alpha: Alpha.soft), offset: const Offset(0, 2), blurRadius: 4)])
+                : null,
+          ),
           child: action.busy ? _spinner(13, Ink3D.title) : Icon(Icons.call_rounded, size: DS.s(13), color: Ink3D.title),
         );
       case CalmActionKind.whatsApp:
@@ -286,13 +293,22 @@ class CalmPillButton extends StatelessWidget {
 }
 
 class CalmBottomRow extends StatelessWidget {
-  const CalmBottomRow({super.key, required this.palette, this.address, this.note, required this.actions, this.padding});
+  const CalmBottomRow({
+    super.key,
+    required this.palette,
+    this.address,
+    this.note,
+    required this.actions,
+    this.padding,
+    this.callShadow = false,
+  });
 
   final ListingPalette palette;
   final String? address;
   final String? note;
   final List<CalmAction> actions;
   final EdgeInsets? padding;
+  final bool callShadow;
 
   @override
   Widget build(BuildContext context) {
@@ -306,17 +322,32 @@ class CalmBottomRow extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(border: Border(top: BorderSide(color: palette.line))),
       padding: EdgeInsets.fromLTRB(base.left, math.max(0.0, base.top - pad), base.right, math.max(0.0, base.bottom - pad)),
-      child: LayoutBuilder(builder: (context, box) => _row(a, n, hasAddress, style, box.maxWidth)),
+      child: LayoutBuilder(builder: (context, box) => _row(context, a, n, hasAddress, style, box.maxWidth)),
     );
   }
 
-  Widget _row(String? a, String? n, bool hasAddress, TextStyle style, double width) {
+  double _buttonsMax(BuildContext context, String? a, bool hasAddress, TextStyle style, double width) {
+    if (!width.isFinite) return double.infinity;
+    final cap = width * maxButtonsShare;
+    if (!hasAddress) return cap;
+    final painter = TextPainter(
+      text: TextSpan(text: a!.trim(), style: DefaultTextStyle.of(context).style.merge(style)),
+      maxLines: 1,
+      textDirection: TextDirection.ltr,
+      textScaler: MediaQuery.textScalerOf(context),
+    )..layout();
+    final reserve = painter.width + DS.s(16) + DS.gh(6) + DS.gh(5);
+    painter.dispose();
+    return math.max(width * minButtonsShare, math.min(cap, width - reserve));
+  }
+
+  Widget _row(BuildContext context, String? a, String? n, bool hasAddress, TextStyle style, double width) {
     final buttons = Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         for (final action in actions) ...[
           Gap.h(5),
-          CalmPillButton(action: action, palette: palette),
+          CalmPillButton(action: action, palette: palette, callShadow: callShadow),
         ],
       ],
     );
@@ -341,7 +372,7 @@ class CalmBottomRow extends StatelessWidget {
           const Spacer(),
         if (actions.isNotEmpty)
           ConstrainedBox(
-            constraints: BoxConstraints(maxWidth: width.isFinite ? width * maxButtonsShare : double.infinity),
+            constraints: BoxConstraints(maxWidth: _buttonsMax(context, a, hasAddress, style, width)),
             child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerRight, child: buttons),
           ),
       ],
@@ -349,4 +380,5 @@ class CalmBottomRow extends StatelessWidget {
   }
 
   static const double maxButtonsShare = 0.72;
+  static const double minButtonsShare = 0.38;
 }

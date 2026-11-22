@@ -61,4 +61,17 @@ void main() {
       }
     }
   });
+
+  test('proofFrozen adds the first review to the lock', () {
+    for (final status in ['Draft', 'PendingReview', 'Approved', 'Rejected']) {
+      for (final ever in [true, false]) {
+        final json = taxiJson()
+          ..['status'] = status
+          ..['everApproved'] = ever
+          ..['platePhotoLocked'] = false;
+        final m = TaxiOwnerModel.fromJson(json);
+        expect(m.proofFrozen, ever || status == 'PendingReview', reason: '$status / $ever');
+      }
+    }
+  });
 }

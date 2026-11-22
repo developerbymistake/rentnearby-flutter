@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../../features/nearby/card_strings.dart';
@@ -64,6 +66,7 @@ class StayPhotoCard extends StatelessWidget {
 
   static const double bannerHeight = 116;
   static const double artSize = 96;
+  static const double artInk = 0.75;
   static const double featuredStar = 13;
   static const int maxChips = 3;
   static const double priceShare = 0.45;
@@ -83,61 +86,70 @@ class StayPhotoCard extends StatelessWidget {
     final p = place.trim();
     return SizedBox(
       height: DS.s(bannerHeight),
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          if (src == null)
-            _artArea()
-          else
-            KitPhoto(url: src, width: double.infinity, height: DS.s(bannerHeight), tone: palette.tone, asset: art, iconSize: artSize),
-          if (p.isNotEmpty)
-            Positioned(
-              left: DS.s(8),
-              top: DS.s(8),
-              right: DS.s(8),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Container(
-                  padding: DS.sym(h: 9, v: 4),
-                  decoration: BoxDecoration(
-                    color: ListingPalette.forest.text.withValues(alpha: Alpha.v80),
-                    borderRadius: DS.br(CardRadius.chip),
-                  ),
-                  child: Text(
-                    p,
-                    maxLines: 1,
-                    softWrap: false,
-                    overflow: TextOverflow.ellipsis,
-                    style: TypeTokens.style(9.5, FontWeight.w600, color: DesignColors.onPrimary, chip: true),
-                  ),
-                ),
-              ),
-            ),
-          if (featured)
-            Positioned(
-              right: DS.s(10),
-              bottom: DS.s(10),
-              child: Container(
-                key: featuredKey,
-                padding: DS.sym(h: 9, v: 4),
-                decoration: BoxDecoration(color: ListingPalette.forest.g2, borderRadius: DS.br(CardRadius.chip)),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const TravelIcon(TravelIcon.star, size: featuredStar),
-                    Gap.h(4),
-                    Text(
-                      CardStrings.featured,
-                      maxLines: 1,
-                      style: TypeTokens.style(10, FontWeight.w700, color: DesignColors.onPrimary, chip: true),
+      child: LayoutBuilder(
+        builder: (context, box) => Stack(
+          fit: StackFit.expand,
+          children: [
+            if (src == null)
+              _artArea()
+            else
+              KitPhoto(url: src, width: double.infinity, height: DS.s(bannerHeight), tone: palette.tone, asset: art, iconSize: artSize),
+            if (p.isNotEmpty)
+              Positioned(
+                left: DS.s(8),
+                top: DS.s(8),
+                right: DS.s(8),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Container(
+                    constraints: BoxConstraints(maxWidth: _pillMax(box.maxWidth, src == null)),
+                    padding: DS.sym(h: 9, v: 4),
+                    decoration: BoxDecoration(
+                      color: ListingPalette.forest.text.withValues(alpha: Alpha.v80),
+                      borderRadius: DS.br(CardRadius.chip),
                     ),
-                  ],
+                    child: Text(
+                      p,
+                      maxLines: 1,
+                      softWrap: false,
+                      overflow: TextOverflow.ellipsis,
+                      style: TypeTokens.style(9.5, FontWeight.w600, color: DesignColors.onPrimary, chip: true),
+                    ),
+                  ),
                 ),
               ),
-            ),
-        ],
+            if (featured)
+              Positioned(
+                right: DS.s(10),
+                bottom: DS.s(10),
+                child: Container(
+                  key: featuredKey,
+                  padding: DS.sym(h: 9, v: 4),
+                  decoration: BoxDecoration(color: ListingPalette.forest.g2, borderRadius: DS.br(CardRadius.chip)),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const TravelIcon(TravelIcon.star, size: featuredStar),
+                      Gap.h(4),
+                      Text(
+                        CardStrings.featured,
+                        maxLines: 1,
+                        style: TypeTokens.style(10, FontWeight.w700, color: DesignColors.onPrimary, chip: true),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
+  }
+
+  static double _pillMax(double width, bool artShown) {
+    if (!width.isFinite) return double.infinity;
+    final free = artShown ? (width - DS.s(artSize) * artInk) / 2 - DS.s(12) : width - DS.s(16);
+    return math.max(DS.s(48), free);
   }
 
   Widget _body() {
@@ -163,7 +175,7 @@ class StayPhotoCard extends StatelessWidget {
                     style: TypeTokens.style(16, FontWeight.w700, color: DesignColors.textStrong, height: 1.2),
                   ),
                   if (p.isNotEmpty) ...[
-                    Gap.v(3),
+                    Gap.v(7),
                     Text(
                       p,
                       maxLines: 1,
@@ -237,7 +249,7 @@ class StayPhotoCard extends StatelessWidget {
             ?chipRow,
             if (_hasBottom) ...[
               Gap.v(8),
-              CalmBottomRow(palette: palette, address: address, note: note, actions: actions),
+              CalmBottomRow(palette: palette, address: address, note: note, actions: actions, callShadow: true),
             ] else
               Gap.v(12),
           ],

@@ -125,7 +125,7 @@ class SeekerRecentRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final url = PhotoUrl.parse(photoUrl);
     final p = ListingPalette.forest;
-    final thumb = DS.s(64);
+    final thumb = DS.s(58);
     return Padding(
       padding: DS.insets(l: 18, t: 12, r: 18),
       child: Semantics(
@@ -137,7 +137,7 @@ class SeekerRecentRow extends StatelessWidget {
           onTap: onTap,
           child: Container(
             constraints: const BoxConstraints(minHeight: kMinInteractiveDimension),
-            padding: DS.insets(l: 12, t: 12, r: 14, b: 12),
+            padding: DS.insets(l: 12, t: 10, r: 12, b: 10),
             decoration: BoxDecoration(color: DesignColors.onPrimary, borderRadius: DS.circular(16), boxShadow: DS.shadows(ShadowTokens.elev1)),
             child: Row(
               children: [
@@ -153,7 +153,7 @@ class SeekerRecentRow extends StatelessWidget {
                   ),
                   child: url != null
                       ? KitPhoto(url: url, width: thumb, height: thumb, asset: TravelIcon.stay, iconSize: 32)
-                      : const Center(child: Art3D(asset: SeekerRailArt.house, size: 48)),
+                      : const Center(child: Art3D(asset: SeekerRailArt.house, size: 44)),
                 ),
                 Gap.h(12),
                 Expanded(

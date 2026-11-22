@@ -1,4 +1,5 @@
 import 'package:bakhli/design/design.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:bakhli/features/taxi/models/taxi_owner_model.dart';
 import 'package:bakhli/features/taxi/models/taxi_vehicle_type_model.dart';
 import 'package:bakhli/features/taxi/setup/taxi_vehicle_screen.dart';
@@ -103,7 +104,21 @@ void main() {
         expect(_inSection('Number plate photo', 'Change'), findsNothing);
         expect(_text('Verified. This photo cannot be changed.'), findsOneWidget);
         expect(_text('Plate must be visible'), findsNothing);
-        expect(_text('Changing the plate number sends your taxi back to review.'), findsOneWidget);
+        expect(_text('Verified. The plate number cannot be changed.'), findsOneWidget);
+        expect(_text('Changing the plate number sends your taxi back to review.'), findsNothing);
+        final plate = t.widget<EditableText>(find.descendant(of: _section('Plate number'), matching: find.byType(EditableText)));
+        expect(plate.readOnly, isTrue);
+        await _close(t);
+      });
+
+      testWidgets('under first review: Plate band, no remove, no Add, no Verified, plate memory only', (t) async {
+        await _open(t, setupTaxi(status: TaxiStatus.pendingReview, percent: 100, step1: true, identity: true, plateUrl: _plate));
+        expect(_inSection('Number plate photo', 'Plate'), findsOneWidget);
+        expect(_removeIn('Number plate photo'), findsNothing);
+        expect(_inSection('Number plate photo', 'Add'), findsNothing);
+        expect(_text('Verified'), findsNothing);
+        expect(_text('Verified. This photo cannot be changed.'), findsNothing);
+        expect(find.descendant(of: _section('Number plate photo'), matching: find.byType(CachedNetworkImage)), findsNothing);
         await _close(t);
       });
 
