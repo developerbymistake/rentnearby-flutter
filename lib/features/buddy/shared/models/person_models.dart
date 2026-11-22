@@ -1,21 +1,23 @@
 import '../buddy_json.dart';
 
 class BuddyPerson {
-  const BuddyPerson({required this.userId, required this.name, required this.username, required this.initial});
+  const BuddyPerson({required this.userId, required this.name, required this.username, required this.initial, this.photoUrl});
 
   final String userId;
   final String name;
   final String? username;
   final String initial;
+  final String? photoUrl;
 
   factory BuddyPerson.fromJson(Map<String, dynamic> j) => BuddyPerson(
         userId: BuddyJson.str(j['userId']),
         name: BuddyJson.str(j['name']),
         username: BuddyJson.strOrNull(j['username']),
         initial: BuddyJson.str(j['initial']),
+        photoUrl: BuddyJson.photo(j['photoUrl']),
       );
 
-  Map<String, dynamic> toJson() => {'userId': userId, 'name': name, 'username': username, 'initial': initial};
+  Map<String, dynamic> toJson() => {'userId': userId, 'name': name, 'username': username, 'initial': initial, 'photoUrl': photoUrl};
 }
 
 abstract final class MoneyPersonStatus {
@@ -27,12 +29,13 @@ abstract final class MoneyPersonStatus {
 }
 
 class MoneyPerson {
-  const MoneyPerson({required this.userId, required this.name, required this.last4, required this.initial, required this.isMe, required this.status});
+  const MoneyPerson({required this.userId, required this.name, required this.last4, required this.initial, required this.isMe, required this.status, this.photoUrl});
 
   final String userId;
   final String name;
   final String last4;
   final String initial;
+  final String? photoUrl;
   final bool isMe;
   final String status;
 
@@ -47,9 +50,10 @@ class MoneyPerson {
         initial: BuddyJson.str(j['initial']),
         isMe: BuddyJson.boolean(j['isMe']),
         status: BuddyJson.str(j['status'], MoneyPersonStatus.joined),
+        photoUrl: BuddyJson.photo(j['photoUrl']),
       );
 
-  Map<String, dynamic> toJson() => {'userId': userId, 'name': name, 'last4': last4, 'initial': initial, 'isMe': isMe, 'status': status};
+  Map<String, dynamic> toJson() => {'userId': userId, 'name': name, 'last4': last4, 'initial': initial, 'isMe': isMe, 'status': status, 'photoUrl': photoUrl};
 }
 
 class BuddyCursorPage<T> {

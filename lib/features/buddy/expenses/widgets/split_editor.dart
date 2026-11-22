@@ -122,7 +122,7 @@ class SplitEditor extends StatelessWidget {
         decoration: BoxDecoration(color: DesignColors.surface, borderRadius: ExpenseShape.corner(16)),
         child: Row(
           children: [
-            BuddyAvatar(initial: p.initial, seed: p.userId, size: BuddyAvatarSize.sm),
+            BuddyAvatar(initial: p.initial, seed: p.userId, size: BuddyAvatarSize.sm, photoUrl: p.photoUrl),
             Gap.h(8),
             Expanded(
               child: Column(
@@ -176,7 +176,7 @@ class SplitEditor extends StatelessWidget {
       decoration: BoxDecoration(border: first ? null : Border(top: BorderSide(color: BuddyLook.hairline, width: DS.s(1)))),
       child: Row(
         children: [
-          BuddyAvatar(initial: p.initial, seed: p.userId, size: BuddyAvatarSize.sm),
+          BuddyAvatar(initial: p.initial, seed: p.userId, size: BuddyAvatarSize.sm, photoUrl: p.photoUrl),
           Gap.h(12),
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [_nameText(p), ?sub])),
           Gap.h(12),
@@ -229,7 +229,7 @@ class SplitEditor extends StatelessWidget {
       padding: DS.sym(v: 6),
       decoration: BoxDecoration(border: first ? null : Border(top: BorderSide(color: BuddyLook.hairline, width: DS.s(1)))),
       child: Row(children: [
-        BuddyAvatar(initial: p.initial, seed: p.userId, size: BuddyAvatarSize.sm),
+        BuddyAvatar(initial: p.initial, seed: p.userId, size: BuddyAvatarSize.sm, photoUrl: p.photoUrl),
         Gap.h(12),
         Expanded(child: _nameText(p)),
         Gap.h(12),

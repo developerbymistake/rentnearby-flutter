@@ -113,7 +113,7 @@ Widget _moneyPage() => BuddyPage(
             ]),
           ),
           Center(
-            child: BuddyAvatarStack(people: const [(initial: 'R', seed: _rahul), (initial: 'A', seed: _aman), (initial: 'P', seed: 'p')], extra: 2),
+            child: BuddyAvatarStack(people: const [(initial: 'R', seed: _rahul, photoUrl: null), (initial: 'A', seed: _aman, photoUrl: null), (initial: 'P', seed: 'p', photoUrl: null)], extra: 2),
           ),
         ],
       ),

@@ -96,7 +96,7 @@ class MyBuddiesTab extends StatelessWidget {
                 for (final b in c.items)
                   PersonRow(
                     key: ValueKey('buddy-${b.userId}'),
-                    avatar: BuddyAvatar(initial: b.initial, seed: b.userId),
+                    avatar: BuddyAvatar(initial: b.initial, seed: b.userId, photoUrl: b.photoUrl),
                     title: b.name,
                     titleBadge: b.isNew ? const BuddyBadge(BuddiesStrings.badgeNew, tone: BuddyBadgeTone.teal) : null,
                     subtitle: b.username,

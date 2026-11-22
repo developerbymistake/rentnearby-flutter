@@ -345,10 +345,11 @@ class TripPlanHeader extends StatelessWidget {
 }
 
 class TripFlowHeader extends StatelessWidget {
-  const TripFlowHeader({super.key, required this.title, this.subtitle, this.onBack, this.trailing = const []});
+  const TripFlowHeader({super.key, required this.title, this.subtitle, this.onBack, this.trailing = const [], this.subtitleLeading});
 
   final String title;
   final String? subtitle;
+  final Widget? subtitleLeading;
   final VoidCallback? onBack;
   final List<Widget> trailing;
 
@@ -377,8 +378,7 @@ class TripFlowHeader extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(20, FontWeight.w700, white, height: 1.25, letterSpacing: 0)),
-                    if (sub != null && sub.isNotEmpty)
-                      Text(sub, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(12.5, FontWeight.w400, DesignColors.tint(white, Alpha.v93), letterSpacing: 0)),
+                    if (sub != null && sub.isNotEmpty) _subtitle(sub, white),
                   ],
                 ),
               ),
@@ -387,6 +387,16 @@ class TripFlowHeader extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _subtitle(String sub, Color white) {
+    final text = Text(sub, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(12.5, FontWeight.w400, DesignColors.tint(white, Alpha.v93), letterSpacing: 0));
+    final lead = subtitleLeading;
+    if (lead == null) return text;
+    return Padding(
+      padding: EdgeInsets.only(top: DS.s(2)),
+      child: Row(children: [lead, Gap.h(6), Expanded(child: text)]),
     );
   }
 }

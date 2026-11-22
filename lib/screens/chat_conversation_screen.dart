@@ -22,6 +22,7 @@ import '../features/trip/widgets/trip_counter_sheet.dart';
 import '../features/trip/widgets/trip_enquiry_strip.dart';
 import '../features/trip/widgets/trip_withdraw_sheet.dart';
 import '../models/browse_item.dart';
+import '../models/conversation_model.dart';
 import '../models/message_model.dart';
 import '../models/question_template_model.dart';
 import '../services/chat_hub_service.dart';
@@ -53,6 +54,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> with Wi
   late final String? _stayTypeId;
   late final String _otherPartyId;
   late final String _otherPartyName;
+  late final String? _otherPartyPhotoUrl;
   late final String _listingTitle;
   late final String? _area;
   late final bool _isOwner;
@@ -128,6 +130,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> with Wi
     _stayTypeId = text('stayTypeId') ?? known?.stayTypeId;
     _otherPartyId = text('otherPartyId') ?? known?.otherPartyId ?? '';
     _otherPartyName = text('otherPartyName') ?? known?.otherPartyName ?? 'User';
+    _otherPartyPhotoUrl = ConversationModel.photo(text('otherPartyPhotoUrl')) ?? known?.otherPartyPhotoUrl;
     _listingTitle = text('listingTitle') ?? known?.listingTitle ?? '';
     _area = text('area') ?? known?.area;
     _isOwner = flag('isOwner') ?? known?.isOwner ?? false;
@@ -1006,6 +1009,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> with Wi
       art: ChatLook3D.artFor(_listingType),
       onBack: () => Get.back(),
       onMore: _openMoreMenu,
+      photoUrl: _otherPartyPhotoUrl,
     );
   }
 

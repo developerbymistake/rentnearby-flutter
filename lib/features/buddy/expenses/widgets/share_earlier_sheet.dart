@@ -204,7 +204,7 @@ class _ShareEarlierSheetState extends State<ShareEarlierSheet> {
                 padding: DS.sym(v: 6),
                 child: Row(
                   children: [
-                    BuddyAvatar(initial: r.person.initial, seed: r.person.userId, size: BuddyAvatarSize.sm),
+                    BuddyAvatar(initial: r.person.initial, seed: r.person.userId, size: BuddyAvatarSize.sm, photoUrl: r.person.photoUrl),
                     Gap.h(10),
                     Expanded(child: Text(r.person.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(13.5, FontWeight.w600, Ink3D.title, letterSpacing: 0))),
                     Text(BuddyFormat.rupees(r.before),

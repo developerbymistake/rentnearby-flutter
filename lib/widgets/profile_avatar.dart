@@ -39,8 +39,8 @@ class ProfileAvatar extends StatelessWidget {
           fit: BoxFit.cover,
           memCacheWidth: decodeWidth(size, dpr),
           fadeInDuration: fadeIn,
-          placeholder: (_, _) => fallback,
-          errorWidget: (_, _, _) => fallback,
+          placeholder: (_, _) => Center(child: fallback),
+          errorWidget: (_, _, _) => Center(child: fallback),
         ),
       ),
     );

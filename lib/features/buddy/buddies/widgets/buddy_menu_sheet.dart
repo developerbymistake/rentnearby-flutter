@@ -17,7 +17,7 @@ class BuddyMenuSheet extends StatelessWidget {
 
   static Future<BuddyMenuAction?> show(BuildContext context, BuddyPerson person) => BuddySheet.show<BuddyMenuAction>(
         context,
-        avatar: BuddyAvatar(initial: person.initial, seed: person.userId, size: BuddyAvatarSize.lg, ring: true),
+        avatar: BuddyAvatar(initial: person.initial, seed: person.userId, size: BuddyAvatarSize.lg, ring: true, photoUrl: person.photoUrl),
         title: person.name,
         subtitle: person.username,
         builder: (c) => BuddyMenuSheet(person: person),

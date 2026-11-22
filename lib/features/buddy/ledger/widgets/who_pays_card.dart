@@ -71,11 +71,11 @@ class WhoPaysCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              BuddyAvatar(initial: from.initial, seed: from.userId, size: BuddyAvatarSize.sm),
+              BuddyAvatar(initial: from.initial, seed: from.userId, size: BuddyAvatarSize.sm, photoUrl: from.photoUrl),
               Gap.h(10),
               Text(WhoPaysRowFrame.arrow, style: Ink3D.text(18, FontWeight.w700, BuddyLook.roseEnd, letterSpacing: 0)),
               Gap.h(10),
-              BuddyAvatar(initial: to.initial, seed: to.userId, size: BuddyAvatarSize.sm),
+              BuddyAvatar(initial: to.initial, seed: to.userId, size: BuddyAvatarSize.sm, photoUrl: to.photoUrl),
               Gap.h(10),
               Expanded(
                 child: Column(

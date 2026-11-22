@@ -136,7 +136,7 @@ class _ExpenseSheetState extends State<ExpenseSheet> {
           for (final p in people)
             CheckLine(
               key: ValueKey('payer_${p.userId}'),
-              leading: BuddyAvatar(initial: p.initial, seed: p.userId, size: BuddyAvatarSize.sm),
+              leading: BuddyAvatar(initial: p.initial, seed: p.userId, size: BuddyAvatarSize.sm, photoUrl: p.photoUrl),
               title: p.name,
               titleWidget: MoneyName(person: p, style: Ink3D.text(14, FontWeight.w700, Ink3D.title, letterSpacing: 0)),
               checked: p.userId == c.payer.value,
@@ -444,7 +444,7 @@ class _ExpenseSheetState extends State<ExpenseSheet> {
       onTap: _pickPayer,
       child: Row(
         children: [
-          if (p != null) ...[BuddyAvatar(initial: p.initial, seed: p.userId, size: BuddyAvatarSize.sm), Gap.h(10)],
+          if (p != null) ...[BuddyAvatar(initial: p.initial, seed: p.userId, size: BuddyAvatarSize.sm, photoUrl: p.photoUrl), Gap.h(10)],
           Expanded(
             child: Text(p == null ? '' : (p.isMe ? ExpenseStrings.you(p.name) : p.name),
                 maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(15, FontWeight.w600, Ink3D.title, letterSpacing: 0)),

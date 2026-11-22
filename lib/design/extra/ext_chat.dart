@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../widgets/profile_avatar.dart';
 import '../tokens/listing_palette.dart';
 import 'art_3d.dart';
 import 'pill_buttons_3d.dart';
@@ -144,6 +145,7 @@ class ChatThreadCard extends StatelessWidget {
     this.unread = '',
     this.dimmed = false,
     this.onTap,
+    this.photoUrl,
   }) : skeleton = false;
 
   const ChatThreadCard.skeleton({super.key})
@@ -158,6 +160,7 @@ class ChatThreadCard extends StatelessWidget {
       unread = '',
       dimmed = false,
       onTap = null,
+      photoUrl = null,
       skeleton = true;
 
   final ListingTone? tone;
@@ -171,6 +174,7 @@ class ChatThreadCard extends StatelessWidget {
   final String unread;
   final bool dimmed;
   final VoidCallback? onTap;
+  final String? photoUrl;
   final bool skeleton;
 
   static const double topRoom = 44;
@@ -314,7 +318,11 @@ class ChatThreadCard extends StatelessWidget {
                 ),
                 child: skeleton
                     ? null
-                    : Text(initial, textScaler: TextScaler.noScaling, style: Ink3D.text(narrow ? 31 : 38, FontWeight.w700, Colors.white, letterSpacing: 0)),
+                    : ProfileAvatar(
+                        photoUrl: photoUrl,
+                        size: av - 2 * DS.s(4),
+                        fallback: Text(initial, textScaler: TextScaler.noScaling, style: Ink3D.text(narrow ? 31 : 38, FontWeight.w700, Colors.white, letterSpacing: 0)),
+                      ),
               ),
             ),
           ),
@@ -411,10 +419,12 @@ class ChatHeader3D extends StatelessWidget {
     required this.onBack,
     required this.onMore,
     this.moreKey,
+    this.photoUrl,
   });
 
   final ListingTone tone;
   final String initial;
+  final String? photoUrl;
   final String name;
   final String subtitle;
   final String sticker;
@@ -481,7 +491,11 @@ class ChatHeader3D extends StatelessWidget {
                         color: ChatLook3D.avatarFill,
                         border: Border.all(color: ChatLook3D.avatarRing, width: DS.s(3)),
                       ),
-                      child: Text(initial, textScaler: TextScaler.noScaling, style: Ink3D.text(23, FontWeight.w700, Colors.white, letterSpacing: 0)),
+                      child: ProfileAvatar(
+                        photoUrl: photoUrl,
+                        size: DS.s(54) - 2 * DS.s(3),
+                        fallback: Text(initial, textScaler: TextScaler.noScaling, style: Ink3D.text(23, FontWeight.w700, Colors.white, letterSpacing: 0)),
+                      ),
                     ),
                     Gap.h(12),
                     Expanded(

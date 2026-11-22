@@ -109,7 +109,7 @@ class _TravellersOwnerScreenState extends State<TravellersOwnerScreen> {
 
   Widget _countCard(TripMembers m) {
     final shown = m.isFull ? m.maxTravellers : m.travellerCount;
-    final people = [for (final j in m.joined) (initial: j.initial, seed: j.userId)];
+    final people = [for (final j in m.joined) (initial: j.initial, seed: j.userId, photoUrl: j.photoUrl)];
     return Container(
       key: const ValueKey('travellers_count_card'),
       margin: DS.insets(l: 18, t: 20, r: 18),
@@ -145,7 +145,7 @@ class _TravellersOwnerScreenState extends State<TravellersOwnerScreen> {
     final when = j.joinedAt;
     return PersonRow(
       key: ValueKey('traveller_row_${j.userId}'),
-      avatar: BuddyAvatar(initial: j.initial, seed: j.userId),
+      avatar: BuddyAvatar(initial: j.initial, seed: j.userId, photoUrl: j.photoUrl),
       title: j.isMe ? SharingStrings.you(j.name) : j.name,
       subtitle: owner
           ? SharingStrings.dotLine(j.username, SharingStrings.createdTheTrip)
@@ -173,7 +173,7 @@ class _TravellersOwnerScreenState extends State<TravellersOwnerScreen> {
 
   Widget _invitedRow(InvitedMember i) => PersonRow(
         key: ValueKey('invited_row_${i.userId}'),
-        avatar: BuddyAvatar(initial: i.initial, seed: i.userId),
+        avatar: BuddyAvatar(initial: i.initial, seed: i.userId, photoUrl: i.photoUrl),
         title: i.name,
         subtitle: SharingStrings.dotLine(i.username, SharingStrings.inviteWaitingRow),
         trailing: Obx(() => SmallPill(
@@ -232,7 +232,7 @@ class _TravellersOwnerScreenState extends State<TravellersOwnerScreen> {
 class CountStack extends StatelessWidget {
   const CountStack({super.key, required this.people, this.extra = 0});
 
-  final List<({String initial, String seed})> people;
+  final List<({String initial, String seed, String? photoUrl})> people;
   final int extra;
 
   @override
@@ -240,7 +240,7 @@ class CountStack extends StatelessWidget {
     final box = DS.s(BuddyAvatarSize.xs.box);
     final step = box - DS.s(10);
     final items = <Widget>[
-      for (final p in people) BuddyAvatar(initial: p.initial, seed: p.seed, size: BuddyAvatarSize.xs, ring: true),
+      for (final p in people) BuddyAvatar(initial: p.initial, seed: p.seed, size: BuddyAvatarSize.xs, ring: true, photoUrl: p.photoUrl),
       if (extra > 0)
         Container(
           key: const ValueKey('travellers_count_more'),

@@ -63,7 +63,7 @@ class RequestsTab extends StatelessWidget {
                   for (final s in c.sent)
                     PersonRow(
                       key: ValueKey('sent-${s.requestId}'),
-                      avatar: BuddyAvatar(initial: s.person.initial, seed: s.person.userId),
+                      avatar: BuddyAvatar(initial: s.person.initial, seed: s.person.userId, photoUrl: s.person.photoUrl),
                       title: s.person.name,
                       subtitle: s.person.username,
                       line2: s.waiting ? BuddyFormat.expiresIn(s.expiresAt) : BuddiesStrings.sendAgainLater,
@@ -111,7 +111,7 @@ class ReceivedRequestCard extends StatelessWidget {
             constraints: BoxConstraints(minHeight: DS.s(56)),
             child: Row(
               children: [
-                BuddyAvatar(initial: p.initial, seed: p.userId),
+                BuddyAvatar(initial: p.initial, seed: p.userId, photoUrl: p.photoUrl),
                 Gap.h(12),
                 Expanded(
                   child: Column(

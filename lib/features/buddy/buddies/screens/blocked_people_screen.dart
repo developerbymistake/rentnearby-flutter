@@ -62,7 +62,7 @@ class _BlockedPeopleScreenState extends State<BlockedPeopleScreen> {
                         for (final p in _c.items)
                           PersonRow(
                             key: ValueKey('blocked-${p.userId}'),
-                            avatar: BuddyAvatar(initial: p.initial, seed: p.userId),
+                            avatar: BuddyAvatar(initial: p.initial, seed: p.userId, photoUrl: p.photoUrl),
                             title: p.name,
                             subtitle: BuddiesStrings.blockedLine(p.username ?? '', p.blockedAt == null ? '' : BuddyFormat.dayMonth(p.blockedAt!.toLocal())),
                             trailing: SmallPill(label: BuddiesStrings.unblock, busy: _c.busy.contains(p.userId), onTap: () => _c.unblock(p.userId)),

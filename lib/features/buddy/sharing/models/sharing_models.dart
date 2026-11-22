@@ -17,6 +17,7 @@ class JoinedMember {
     required this.role,
     required this.isMe,
     this.joinedAt,
+    this.photoUrl,
   });
 
   final String userId;
@@ -27,6 +28,7 @@ class JoinedMember {
   final String role;
   final bool isMe;
   final DateTime? joinedAt;
+  final String? photoUrl;
 
   bool get isOwner => role == TripRoles.owner;
 
@@ -39,11 +41,12 @@ class JoinedMember {
         role: BuddyJson.str(j['role'], TripRoles.viewer),
         isMe: BuddyJson.boolean(j['isMe']),
         joinedAt: BuddyJson.time(j['joinedAt']),
+        photoUrl: BuddyJson.photo(j['photoUrl']),
       );
 }
 
 class InvitedMember {
-  const InvitedMember({required this.memberId, required this.userId, required this.name, this.username, required this.initial, this.invitedAt, this.expiresAt});
+  const InvitedMember({required this.memberId, required this.userId, required this.name, this.username, required this.initial, this.invitedAt, this.expiresAt, this.photoUrl});
 
   final String memberId;
   final String userId;
@@ -52,6 +55,7 @@ class InvitedMember {
   final String initial;
   final DateTime? invitedAt;
   final DateTime? expiresAt;
+  final String? photoUrl;
 
   factory InvitedMember.fromJson(Map<String, dynamic> j) => InvitedMember(
         memberId: BuddyJson.str(j['memberId']),
@@ -61,6 +65,7 @@ class InvitedMember {
         initial: BuddyJson.str(j['initial']),
         invitedAt: BuddyJson.time(j['invitedAt']),
         expiresAt: BuddyJson.time(j['expiresAt']),
+        photoUrl: BuddyJson.photo(j['photoUrl']),
       );
 }
 
@@ -196,16 +201,21 @@ class InviteOption {
 }
 
 class TravellerDot {
-  const TravellerDot({required this.userId, required this.initial, required this.name});
+  const TravellerDot({required this.userId, required this.initial, required this.name, this.photoUrl});
 
   final String userId;
   final String initial;
   final String name;
+  final String? photoUrl;
 
-  factory TravellerDot.fromJson(Map<String, dynamic> j) =>
-      TravellerDot(userId: BuddyJson.str(j['userId']), initial: BuddyJson.str(j['initial']), name: BuddyJson.str(j['name']));
+  factory TravellerDot.fromJson(Map<String, dynamic> j) => TravellerDot(
+        userId: BuddyJson.str(j['userId']),
+        initial: BuddyJson.str(j['initial']),
+        name: BuddyJson.str(j['name']),
+        photoUrl: BuddyJson.photo(j['photoUrl']),
+      );
 
-  Map<String, dynamic> toJson() => {'userId': userId, 'initial': initial, 'name': name};
+  Map<String, dynamic> toJson() => {'userId': userId, 'initial': initial, 'name': name, 'photoUrl': photoUrl};
 }
 
 class TripExpenseCard {

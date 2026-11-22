@@ -87,7 +87,7 @@ class FindResultCard extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Center(child: BuddyAvatar(initial: person.initial, seed: person.userId, size: BuddyAvatarSize.lg)),
+          Center(child: BuddyAvatar(initial: person.initial, seed: person.userId, size: BuddyAvatarSize.lg, photoUrl: person.photoUrl)),
           Gap.v(12),
           Text(person.name, textAlign: TextAlign.center, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(20, FontWeight.w700, Ink3D.title, letterSpacing: 0)),
           Padding(

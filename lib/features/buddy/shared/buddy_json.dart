@@ -8,6 +8,12 @@ abstract final class BuddyJson {
 
   static String? strOrNull(Object? v) => v is String ? v : null;
 
+  static String? photo(Object? raw) {
+    if (raw is! String) return null;
+    final t = raw.trim();
+    return t.isEmpty ? null : t;
+  }
+
   static int integer(Object? v, [int fallback = 0]) => v is num ? v.toInt() : (v is String ? int.tryParse(v) ?? fallback : fallback);
 
   static int? intOrNull(Object? v) => v is num ? v.toInt() : (v is String ? int.tryParse(v) : null);

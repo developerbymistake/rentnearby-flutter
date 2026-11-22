@@ -11,6 +11,7 @@ class ConversationModel {
   final String? listingThumbnailUrl;
   final String otherPartyId;
   final String otherPartyName;
+  final String? otherPartyPhotoUrl;
   final bool isOwner;
   final String status; // "Active" | "Blocked" | "ListingRemoved" | "ListingInactive"
   // Only meaningful when status == 'Blocked' — true if the CURRENT user did the blocking,
@@ -33,6 +34,7 @@ class ConversationModel {
     this.listingThumbnailUrl,
     required this.otherPartyId,
     required this.otherPartyName,
+    this.otherPartyPhotoUrl,
     required this.isOwner,
     required this.status,
     this.isBlockedByMe = false,
@@ -44,6 +46,12 @@ class ConversationModel {
 
   bool get isActive => status == 'Active';
 
+  static String? photo(Object? raw) {
+    if (raw is! String) return null;
+    final t = raw.trim();
+    return t.isEmpty ? null : t;
+  }
+
   factory ConversationModel.fromJson(Map<String, dynamic> json) => ConversationModel(
         id: json['id'] as String,
         listingType: json['listingType'] as String,
@@ -54,6 +62,7 @@ class ConversationModel {
         listingThumbnailUrl: json['listingThumbnailUrl'] as String?,
         otherPartyId: json['otherPartyId'] as String,
         otherPartyName: json['otherPartyName'] as String? ?? 'User',
+        otherPartyPhotoUrl: photo(json['otherPartyPhotoUrl']),
         isOwner: json['isOwner'] as bool? ?? false,
         status: json['status'] as String? ?? 'Active',
         isBlockedByMe: json['isBlockedByMe'] as bool? ?? false,

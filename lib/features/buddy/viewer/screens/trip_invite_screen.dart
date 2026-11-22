@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../../../design/design.dart';
+import '../../../../widgets/profile_avatar.dart';
 import '../../../trip/widgets/trip_plan_header.dart';
+import '../../buddy_strings.dart';
 import '../../shared/buddy_format.dart';
 import '../../shared/buddy_look.dart';
 import '../../shared/strings_shared.dart';
 import '../../shared/widgets/buddy_bottom_bar.dart';
+import '../../shared/widgets/buddy_avatar.dart';
 import '../../shared/widgets/buddy_page.dart';
 import '../controllers/trip_invite_controller.dart';
 import '../data/trip_viewer_api.dart';
@@ -21,6 +24,19 @@ class TripInviteScreen extends StatefulWidget {
 
   final String memberId;
   final TripViewerApi? api;
+
+  static const Key inviterPhotoKey = ValueKey('invite_inviter_photo');
+
+  static Widget? inviterPhoto(TripOwnerRef owner) => ProfileAvatar.usable(owner.photoUrl) == null
+      ? null
+      : BuddyAvatar(
+          key: inviterPhotoKey,
+          initial: BuddyStrings.initialOf(owner.name),
+          seed: owner.username ?? owner.name,
+          size: BuddyAvatarSize.sm,
+          ring: true,
+          photoUrl: owner.photoUrl,
+        );
 
   static String endedReason(String reason) => switch (reason) {
         'Cancelled' => ViewerStrings.reasonCancelled,
@@ -97,6 +113,7 @@ class _TripInviteScreenState extends State<TripInviteScreen> {
     return BuddyPage(
       title: ViewerStrings.inviteTitle,
       subtitle: ViewerStrings.fromOwner(p.owner.name, p.owner.username),
+      subtitleLeading: TripInviteScreen.inviterPhoto(p.owner),
       onBack: _back,
       trailing: [_menu()],
       body: Column(

@@ -23,6 +23,7 @@ class FoundPerson extends BuddyPerson {
     required super.name,
     required super.username,
     required super.initial,
+    super.photoUrl,
     required this.relation,
     this.requestId,
     this.expiresAt,
@@ -37,6 +38,7 @@ class FoundPerson extends BuddyPerson {
         name: BuddyJson.str(j['name']),
         username: BuddyJson.strOrNull(j['username']),
         initial: BuddyJson.str(j['initial']),
+        photoUrl: BuddyJson.photo(j['photoUrl']),
         relation: _relation(j['relation']),
         requestId: BuddyJson.strOrNull(j['requestId']),
         expiresAt: BuddyJson.time(j['expiresAt']),
@@ -47,6 +49,7 @@ class FoundPerson extends BuddyPerson {
         name: name,
         username: username,
         initial: initial,
+        photoUrl: photoUrl,
         relation: relation ?? this.relation,
         requestId: requestId ?? this.requestId,
         expiresAt: expiresAt ?? this.expiresAt,
@@ -130,17 +133,18 @@ abstract final class BuddyTripState {
 }
 
 class BuddyItem {
-  const BuddyItem({required this.userId, required this.name, required this.username, required this.initial, required this.isNew, this.since, this.tripState});
+  const BuddyItem({required this.userId, required this.name, required this.username, required this.initial, required this.isNew, this.since, this.tripState, this.photoUrl});
 
   final String userId;
   final String name;
   final String? username;
   final String initial;
+  final String? photoUrl;
   final bool isNew;
   final DateTime? since;
   final String? tripState;
 
-  BuddyPerson get person => BuddyPerson(userId: userId, name: name, username: username, initial: initial);
+  BuddyPerson get person => BuddyPerson(userId: userId, name: name, username: username, initial: initial, photoUrl: photoUrl);
 
   factory BuddyItem.fromJson(Map<String, dynamic> j) => BuddyItem(
         userId: BuddyJson.str(j['userId']),
@@ -150,6 +154,7 @@ class BuddyItem {
         isNew: BuddyJson.boolean(j['isNew']),
         since: BuddyJson.time(j['since']),
         tripState: BuddyJson.strOrNull(j['tripState']),
+        photoUrl: BuddyJson.photo(j['photoUrl']),
       );
 }
 
@@ -186,12 +191,13 @@ class BuddySummary {
 }
 
 class BlockedPerson {
-  const BlockedPerson({required this.userId, required this.name, required this.username, required this.initial, this.blockedAt});
+  const BlockedPerson({required this.userId, required this.name, required this.username, required this.initial, this.blockedAt, this.photoUrl});
 
   final String userId;
   final String name;
   final String? username;
   final String initial;
+  final String? photoUrl;
   final DateTime? blockedAt;
 
   factory BlockedPerson.fromJson(Map<String, dynamic> j) => BlockedPerson(
@@ -200,6 +206,7 @@ class BlockedPerson {
         username: BuddyJson.strOrNull(j['username']),
         initial: BuddyJson.str(j['initial']),
         blockedAt: BuddyJson.time(j['blockedAt']),
+        photoUrl: BuddyJson.photo(j['photoUrl']),
       );
 }
 

@@ -170,7 +170,7 @@ class _InviteSheetState extends State<InviteSheet> {
     final dim = !taken && !ticked && _ticked.length >= _seats;
     final line = CheckLine(
       key: ValueKey('invite_row_${b.userId}'),
-      leading: BuddyAvatar(initial: b.initial, seed: b.userId),
+      leading: BuddyAvatar(initial: b.initial, seed: b.userId, photoUrl: b.photoUrl),
       title: b.name,
       subtitle: b.username,
       checked: ticked,

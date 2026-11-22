@@ -27,7 +27,7 @@ class UsernameCard extends StatelessWidget {
       decoration: BoxDecoration(color: DesignColors.surface, borderRadius: radius, boxShadow: BuddyLook.cardShadows(DS.size)),
       child: Row(
         children: [
-          BuddyAvatar(initial: me.initial, seed: me.userId),
+          BuddyAvatar(initial: me.initial, seed: me.userId, photoUrl: me.photoUrl),
           Gap.h(14),
           Expanded(
             child: Column(

@@ -82,6 +82,7 @@ class _ChatsListScreenState extends State<ChatsListScreen>
         'stayTypeId': c.stayTypeId,
         'otherPartyId': c.otherPartyId,
         'otherPartyName': c.otherPartyName,
+        'otherPartyPhotoUrl': c.otherPartyPhotoUrl,
         'listingTitle': c.listingTitle,
         'area': c.area,
         'isOwner': c.isOwner,
@@ -259,6 +260,7 @@ class _ChatsListScreenState extends State<ChatsListScreen>
       preview: c.lastMessagePreview ?? 'Say hi',
       dimmed: !c.isActive,
       onTap: () => _openConversation(c),
+      photoUrl: c.otherPartyPhotoUrl,
     );
   }
 

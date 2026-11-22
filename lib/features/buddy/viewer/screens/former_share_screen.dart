@@ -226,7 +226,7 @@ class _FormerShareScreenState extends State<FormerShareScreen> {
   }
 
   static Widget _avatar(MoneyPerson? p, String id) =>
-      BuddyAvatar(initial: p?.initial ?? '', seed: id, size: BuddyAvatarSize.xs);
+      BuddyAvatar(initial: p?.initial ?? '', seed: id, size: BuddyAvatarSize.xs, photoUrl: p?.photoUrl);
 }
 
 class _GoneBanner extends StatelessWidget {

@@ -233,7 +233,7 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
             _line(
               Row(
                 children: [
-                  BuddyAvatar(initial: c.person(s.userId)?.initial ?? '?', seed: s.userId, size: BuddyAvatarSize.sm),
+                  BuddyAvatar(initial: c.person(s.userId)?.initial ?? '?', seed: s.userId, size: BuddyAvatarSize.sm, photoUrl: c.person(s.userId)?.photoUrl),
                   Gap.h(10),
                   Expanded(child: _personName(c.person(s.userId), rowName)),
                   Text(BuddyFormat.rupees(s.share), style: Ink3D.text(14, FontWeight.w700, Ink3D.title, letterSpacing: 0)),

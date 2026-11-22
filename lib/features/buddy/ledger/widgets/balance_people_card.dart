@@ -43,7 +43,7 @@ class BalancePeopleCard extends StatelessWidget {
       decoration: first ? null : BoxDecoration(border: Border(top: BorderSide(color: LedgerLook.line, width: DS.s(1)))),
       child: Row(
         children: [
-          BuddyAvatar(initial: p.person.initial, seed: p.person.userId),
+          BuddyAvatar(initial: p.person.initial, seed: p.person.userId, photoUrl: p.person.photoUrl),
           Gap.h(12),
           Expanded(
             child: Column(

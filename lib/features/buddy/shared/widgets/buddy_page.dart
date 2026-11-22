@@ -8,6 +8,7 @@ class BuddyPage extends StatelessWidget {
     super.key,
     required this.title,
     this.subtitle,
+    this.subtitleLeading,
     this.onBack,
     this.trailing = const [],
     this.header,
@@ -21,6 +22,7 @@ class BuddyPage extends StatelessWidget {
 
   final String title;
   final String? subtitle;
+  final Widget? subtitleLeading;
   final VoidCallback? onBack;
   final List<Widget> trailing;
   final Widget? header;
@@ -46,7 +48,7 @@ class BuddyPage extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              header ?? TripFlowHeader(title: title, subtitle: subtitle, onBack: onBack ?? () => Navigator.of(context).maybePop(), trailing: trailing),
+              header ?? TripFlowHeader(title: title, subtitle: subtitle, subtitleLeading: subtitleLeading, onBack: onBack ?? () => Navigator.of(context).maybePop(), trailing: trailing),
               ?top,
               Expanded(child: MediaQuery.removePadding(context: context, removeTop: true, child: content)),
               ?bottomBar,

@@ -13,7 +13,7 @@ enum TravellerAction { remove }
 abstract final class TravellerMenu {
   static Future<TravellerAction?> show(BuildContext context, JoinedMember member) => BuddySheet.show<TravellerAction>(
         context,
-        avatar: BuddyAvatar(initial: member.initial, seed: member.userId, size: BuddyAvatarSize.lg),
+        avatar: BuddyAvatar(initial: member.initial, seed: member.userId, size: BuddyAvatarSize.lg, photoUrl: member.photoUrl),
         title: member.name,
         subtitle: member.username,
         builder: (c) => Padding(

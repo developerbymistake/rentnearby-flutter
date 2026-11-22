@@ -70,7 +70,7 @@ class _TravellersViewerScreenState extends State<TravellersViewerScreen> {
     final joined = when == null ? null : ViewerStrings.joinedOn(BuddyFormat.dayMonth(when.toLocal()));
     return PersonRow(
       key: ValueKey('viewer_traveller_${j.userId}'),
-      avatar: BuddyAvatar(initial: j.initial, seed: j.userId),
+      avatar: BuddyAvatar(initial: j.initial, seed: j.userId, photoUrl: j.photoUrl),
       title: j.isMe ? ViewerStrings.you(j.name) : j.name,
       subtitle: j.isOwner ? ViewerStrings.dot(j.username, ViewerStrings.createdTheTrip) : (joined == null ? j.username : ViewerStrings.dot(j.username, joined)),
       trailing: j.isOwner ? const BuddyBadge(ViewerStrings.owner, tone: BuddyBadgeTone.owner) : const BuddyBadge(ViewerStrings.viewer, tone: BuddyBadgeTone.view),
@@ -99,7 +99,7 @@ class _TravellersViewerScreenState extends State<TravellersViewerScreen> {
             child: Row(
               children: [
                 CountStack(
-                  people: [for (final j in m.joined.take(3)) (initial: j.initial, seed: j.userId)],
+                  people: [for (final j in m.joined.take(3)) (initial: j.initial, seed: j.userId, photoUrl: j.photoUrl)],
                   extra: m.travellerCount - (m.joined.length < 3 ? m.joined.length : 3),
                 ),
                 Gap.h(14),

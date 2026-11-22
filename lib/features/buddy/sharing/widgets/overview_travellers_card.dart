@@ -47,7 +47,7 @@ class TravellerDots extends StatelessWidget {
         for (var i = 0; i < shown.length; i++)
           Transform.translate(
             offset: Offset(-DS.s(8) * i, 0),
-            child: BuddyAvatar(initial: shown[i].initial, seed: shown[i].userId, size: BuddyAvatarSize.sm, ring: true),
+            child: BuddyAvatar(initial: shown[i].initial, seed: shown[i].userId, size: BuddyAvatarSize.sm, ring: true, photoUrl: shown[i].photoUrl),
           ),
       ],
     );

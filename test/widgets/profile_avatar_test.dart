@@ -31,8 +31,8 @@ void main() {
       expect(find.byType(ClipOval), findsOneWidget);
       expect(t.getSize(find.byType(ProfileAvatar)), Size(size, size));
       final ctx = t.element(find.byKey(ProfileAvatar.imageKey));
-      expect((img.placeholder!(ctx, img.imageUrl) as Text).key, _fallbackKey);
-      expect((img.errorWidget!(ctx, img.imageUrl, Exception('404')) as Text).key, _fallbackKey);
+      expect(((img.placeholder!(ctx, img.imageUrl) as Center).child! as Text).key, _fallbackKey);
+      expect(((img.errorWidget!(ctx, img.imageUrl, Exception('404')) as Center).child! as Text).key, _fallbackKey);
       expect(t.takeException(), isNull);
     }
   });

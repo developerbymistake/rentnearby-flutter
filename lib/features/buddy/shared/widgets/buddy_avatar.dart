@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../design/design.dart';
+import '../../../../widgets/profile_avatar.dart';
 import '../buddy_look.dart';
 
 enum BuddyAvatarSize {
@@ -16,12 +17,13 @@ enum BuddyAvatarSize {
 }
 
 class BuddyAvatar extends StatelessWidget {
-  const BuddyAvatar({super.key, required this.initial, required this.seed, this.size = BuddyAvatarSize.md, this.ring = false});
+  const BuddyAvatar({super.key, required this.initial, required this.seed, this.size = BuddyAvatarSize.md, this.ring = false, this.photoUrl});
 
   final String initial;
   final String seed;
   final BuddyAvatarSize size;
   final bool ring;
+  final String? photoUrl;
 
   @override
   Widget build(BuildContext context) {
@@ -38,22 +40,29 @@ class BuddyAvatar extends StatelessWidget {
             ? null
             : [BoxShadow(color: DesignColors.textStrong.withValues(alpha: Alpha.v18), offset: DS.shadowOffset(const Offset(2, 4)), blurRadius: DS.shadowBlur(8))],
       ),
-      child: Text(
-        initial.isEmpty ? '?' : initial,
-        maxLines: 1,
-        textScaler: TextScaler.noScaling,
-        style: Ink3D.text(size.font, FontWeight.w700, DesignColors.onPrimary, letterSpacing: 0).copyWith(
-          shadows: [Shadow(color: DesignColors.textStrong.withValues(alpha: Alpha.soft), offset: DS.shadowOffset(const Offset(0, 1)), blurRadius: DS.shadowBlur(2))],
-        ),
+      child: _face(box),
+    );
+  }
+
+  Widget _face(double box) {
+    final letter = Text(
+      initial.isEmpty ? '?' : initial,
+      maxLines: 1,
+      textScaler: TextScaler.noScaling,
+      style: Ink3D.text(size.font, FontWeight.w700, DesignColors.onPrimary, letterSpacing: 0).copyWith(
+        shadows: [Shadow(color: DesignColors.textStrong.withValues(alpha: Alpha.soft), offset: DS.shadowOffset(const Offset(0, 1)), blurRadius: DS.shadowBlur(2))],
       ),
     );
+    if (ProfileAvatar.usable(photoUrl) == null) return letter;
+    final inner = ring ? box - 2 * DS.s(2.5) : box;
+    return ProfileAvatar(photoUrl: photoUrl, size: inner, fallback: letter);
   }
 }
 
 class BuddyAvatarStack extends StatelessWidget {
   const BuddyAvatarStack({super.key, required this.people, this.max = 3, this.extra = 0, this.size = BuddyAvatarSize.xs});
 
-  final List<({String initial, String seed})> people;
+  final List<({String initial, String seed, String? photoUrl})> people;
   final int max;
   final int extra;
   final BuddyAvatarSize size;
@@ -63,7 +72,7 @@ class BuddyAvatarStack extends StatelessWidget {
     final shown = people.take(max).toList();
     final more = extra + (people.length - shown.length);
     final children = <Widget>[
-      for (final p in shown) BuddyAvatar(initial: p.initial, seed: p.seed, size: size, ring: true),
+      for (final p in shown) BuddyAvatar(initial: p.initial, seed: p.seed, size: size, ring: true, photoUrl: p.photoUrl),
       if (more > 0) _MoreDot(count: more, size: size),
     ];
     return Row(

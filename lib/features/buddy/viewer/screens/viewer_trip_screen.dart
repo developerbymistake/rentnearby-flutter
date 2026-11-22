@@ -120,7 +120,7 @@ class _ViewerTripScreenState extends State<ViewerTripScreen> {
         title: ViewerStrings.travellers,
         chipWidget: t.firstTravellers.isEmpty
             ? null
-            : BuddyAvatarStack(people: [for (final p in t.firstTravellers) (initial: p.initial, seed: p.userId)], extra: t.travellerCount - t.firstTravellers.length),
+            : BuddyAvatarStack(people: [for (final p in t.firstTravellers) (initial: p.initial, seed: p.userId, photoUrl: p.photoUrl)], extra: t.travellerCount - t.firstTravellers.length),
         line: ViewerStrings.joined(t.travellerCount),
         button: ViewerStrings.seeAll,
         buttonKey: const ValueKey('viewer_travellers_button'),

@@ -2,14 +2,16 @@ import '../../shared/buddy_json.dart';
 import '../../sharing/models/sharing_models.dart';
 
 class TripOwnerRef {
-  const TripOwnerRef({required this.name, this.username});
+  const TripOwnerRef({required this.name, this.username, this.photoUrl});
 
   final String name;
   final String? username;
+  final String? photoUrl;
 
-  factory TripOwnerRef.fromJson(Map<String, dynamic> j) => TripOwnerRef(name: BuddyJson.str(j['name']), username: BuddyJson.strOrNull(j['username']));
+  factory TripOwnerRef.fromJson(Map<String, dynamic> j) =>
+      TripOwnerRef(name: BuddyJson.str(j['name']), username: BuddyJson.strOrNull(j['username']), photoUrl: BuddyJson.photo(j['photoUrl']));
 
-  Map<String, dynamic> toJson() => {'name': name, 'username': username};
+  Map<String, dynamic> toJson() => {'name': name, 'username': username, 'photoUrl': photoUrl};
 }
 
 class InvitePreview {

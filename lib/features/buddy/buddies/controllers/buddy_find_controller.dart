@@ -140,6 +140,7 @@ class BuddyFindController extends GetxController {
       name: p.name,
       username: p.username,
       initial: p.initial,
+      photoUrl: p.photoUrl,
       relation: relation,
       requestId: requestId,
       expiresAt: relation == BuddyRelation.requestedByMe ? p.expiresAt : null,
