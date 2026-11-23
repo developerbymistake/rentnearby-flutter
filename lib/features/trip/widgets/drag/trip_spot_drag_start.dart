@@ -2,9 +2,10 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/widgets.dart';
 
 typedef TripDragCallback = void Function(TripTrackedDrag drag);
+typedef TripDropDecision = VoidCallback? Function(TripTrackedDrag drag);
 
 class TripTrackedDrag implements Drag {
-  TripTrackedDrag(this.inner, this.list, this.index, Offset start, this._onMove, this._onRelease, this._onCancel)
+  TripTrackedDrag(this.inner, this.list, this.index, Offset start, this._onMove, this._onRelease, this._onCancel, [this._onDrop])
       : _position = start;
 
   final Drag inner;
@@ -13,6 +14,7 @@ class TripTrackedDrag implements Drag {
   final TripDragCallback? _onMove;
   final TripDragCallback? _onRelease;
   final TripDragCallback? _onCancel;
+  final TripDropDecision? _onDrop;
   Offset _position;
   double dy = 0;
 
@@ -28,6 +30,13 @@ class TripTrackedDrag implements Drag {
 
   @override
   void end(DragEndDetails details) {
+    final apply = _onDrop?.call(this);
+    if (apply != null) {
+      inner.cancel();
+      _onCancel?.call(this);
+      apply();
+      return;
+    }
     inner.end(details);
     _onRelease?.call(this);
   }
@@ -54,6 +63,7 @@ class TripSpotDragStart extends StatelessWidget {
     this.onMove,
     this.onRelease,
     this.onCancel,
+    this.onDrop,
   });
 
   final int index;
@@ -65,6 +75,7 @@ class TripSpotDragStart extends StatelessWidget {
   final TripDragCallback? onMove;
   final TripDragCallback? onRelease;
   final TripDragCallback? onCancel;
+  final TripDropDecision? onDrop;
 
   static int? _handlePointer;
 
@@ -94,7 +105,7 @@ class TripSpotDragStart extends StatelessWidget {
     recognizer.onStart = (position) {
       final inner = sdkStart(position);
       if (inner == null) return null;
-      final drag = TripTrackedDrag(inner, list, index, position, onMove, onRelease, onCancel);
+      final drag = TripTrackedDrag(inner, list, index, position, onMove, onRelease, onCancel, onDrop);
       onLift?.call(drag);
       return drag;
     };
