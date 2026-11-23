@@ -79,7 +79,8 @@ class MainActivity : FlutterActivity() {
         return try {
             val payload = JSONObject(intent.getStringExtra(PAYLOAD) ?: return null)
             val tag = payload.opt(RING_TAG) as? String
-            if (payload.optString("notification_type") == RING_TYPE && !tag.isNullOrEmpty()) tag else null
+            val ring = payload.optString("notification_type") == RING_TYPE && payload.optString("action_route") == RING_ROUTE
+            if (ring && !tag.isNullOrEmpty()) tag else null
         } catch (e: Exception) {
             null
         }
@@ -180,6 +181,7 @@ class MainActivity : FlutterActivity() {
         private const val SELECT_NOTIFICATION = "SELECT_NOTIFICATION"
         private const val PAYLOAD = "payload"
         private const val RING_TYPE = "taxi_request_ring"
+        private const val RING_ROUTE = "/taxi-request-ring"
         private const val RING_TAG = "ring_tag"
         private const val CLAIM_MS = 30_000L
         private const val MAX_RING_MS = 300_000L
