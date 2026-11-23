@@ -6,6 +6,8 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../../config/app_routes.dart';
+import '../../../services/system_settings_channel.dart';
+import '../../../services/taxi_ring_service.dart';
 import '../../../services/taxi_ring_session.dart';
 import '../../owner_core/plan/plan_gate.dart';
 import '../../taxi_driver/strings/taxi_work_strings.dart';
@@ -40,6 +42,7 @@ class DriverRingScreen extends StatefulWidget {
     this.onClose,
     this.onChooseRoute,
     this.closeDelay = const Duration(seconds: 3),
+    this.alert,
   });
 
   final String offerId;
@@ -50,6 +53,7 @@ class DriverRingScreen extends StatefulWidget {
   final VoidCallback? onClose;
   final VoidCallback? onChooseRoute;
   final Duration closeDelay;
+  final RingAlertControl? alert;
 
   static DriverRingScreen fromArguments(Object? args) {
     final map = args is Map ? args : const {};
@@ -75,6 +79,8 @@ class _DriverRingScreenState extends State<DriverRingScreen> {
   static final Color _bottom = ListingPalette.coral.g2;
 
   late final DriverRequestsController _c = widget.controller ?? DriverRequestsController.to;
+  late final RingAlertControl _alert = widget.alert ?? SystemSettingsChannel.instance;
+  late final String _tag = TaxiRingNotification.tagFor(widget.offerId);
   final ValueNotifier<int> _ticks = ValueNotifier(0);
   Timer? _tick;
   Timer? _closeTimer;
@@ -85,6 +91,8 @@ class _DriverRingScreenState extends State<DriverRingScreen> {
   bool _finished = false;
   bool _missed = false;
   bool _loading = false;
+  bool _claimed = false;
+  Animation<double>? _routeAnimation;
   RingEnd? _pushedEnd;
 
   String get _id => widget.offerId;
@@ -94,16 +102,59 @@ class _DriverRingScreenState extends State<DriverRingScreen> {
     super.initState();
     _tick = Timer.periodic(const Duration(seconds: 1), (_) => _onTick());
     TaxiRingSession.ended.addListener(_onRingEnded);
-    WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _claim();
+      _load();
+    });
   }
 
   @override
   void dispose() {
+    _routeAnimation?.removeStatusListener(_onRouteAnimation);
+    unawaited(_alert.ringAlertEnd(_tag).catchError((_) => false));
     TaxiRingSession.ended.removeListener(_onRingEnded);
     _tick?.cancel();
     _closeTimer?.cancel();
     _ticks.dispose();
     super.dispose();
+  }
+
+  // The native cover over the lock screen lifts at the first hold, so it waits until this page is fully on top.
+  void _claim() {
+    if (_claimed || _finished || !mounted) return;
+    final route = ModalRoute.of(context);
+    if (route != null && !route.isCurrent) return;
+    final animation = route?.animation;
+    if (animation != null && animation.status != AnimationStatus.completed) {
+      if (_routeAnimation == null) {
+        _routeAnimation = animation;
+        animation.addStatusListener(_onRouteAnimation);
+      }
+      return;
+    }
+    _claimed = true;
+    _hold();
+  }
+
+  void _onRouteAnimation(AnimationStatus status) {
+    if (status == AnimationStatus.completed) _claim();
+  }
+
+  void _hold() {
+    final o = _c.offer(_id);
+    final at = widget.expiresAt;
+    final left = o != null
+        ? _c.remaining(o)
+        : at != null
+            ? TaxiCountdown.remaining(at, offset: _c.clockOffset.value, now: DateTime.now())
+            : TaxiRingPush.maxRing;
+    unawaited(_alert.ringAlertHold(_tag, left).catchError((_) => false));
+  }
+
+  Future<void> _endAlert({bool unlock = false}) async {
+    try {
+      await _alert.ringAlertEnd(_tag, unlock: unlock);
+    } catch (_) {}
   }
 
   // Only the countdown and the arc listen to the tick; the page rebuilds on a real state change.
@@ -153,13 +204,17 @@ class _DriverRingScreenState extends State<DriverRingScreen> {
     final o = _c.offer(_id);
     if (o == null || _finished) return;
     if (_answered(o) || !_ringing(o)) unawaited(_c.stopRing(_id));
-    if (_answered(o)) return _openDetail();
+    if (_answered(o)) {
+      unawaited(_openDetail());
+      return;
+    }
     if (!_ringing(o)) {
       final end = RingEnd.forOffer(o, paymentOn: PlanGate.paymentOn) ?? RingEnd.missed;
       if (end.kind == RingEndKind.missed || end.kind == RingEndKind.ended) _scheduleClose();
       if (mounted) setState(() {});
       return;
     }
+    _claimed ? _hold() : _claim();
     final a = widget.action;
     if (a != null && !_actionRan) {
       _actionRan = true;
@@ -179,20 +234,24 @@ class _DriverRingScreenState extends State<DriverRingScreen> {
     if (mounted) setState(() {});
   }
 
-  void _openDetail() {
+  Future<void> _openDetail() async {
     if (_finished) return;
     _finished = true;
     _tick?.cancel();
+    await _endAlert(unlock: true);
+    if (!mounted) return;
     final cb = widget.onAccepted;
     if (cb != null) return cb(_id);
     Get.offNamed(AppRoutes.taxiRequestDetail, arguments: {'offerId': _id});
   }
 
-  void _close() {
+  Future<void> _close() async {
     if (_finished) return;
     _finished = true;
     _tick?.cancel();
     _closeTimer?.cancel();
+    await _endAlert();
+    if (!mounted) return;
     final cb = widget.onClose;
     if (cb != null) return cb();
     final nav = Get.key.currentState;
@@ -203,10 +262,11 @@ class _DriverRingScreenState extends State<DriverRingScreen> {
     }
   }
 
-  void _chooseRoute() {
+  Future<void> _chooseRoute() async {
     final cb = widget.onChooseRoute;
     if (cb != null) return cb();
-    _close();
+    await _endAlert(unlock: true);
+    await _close();
     TaxiDriverDeps.openChooseRoute();
   }
 
@@ -225,7 +285,7 @@ class _DriverRingScreenState extends State<DriverRingScreen> {
   void _afterAnswer(TaxiResult<DriverOffer> r, {required bool openOnOk}) {
     switch (r) {
       case TaxiOk<DriverOffer>():
-        openOnOk ? _openDetail() : _close();
+        unawaited(openOnOk ? _openDetail() : _close());
       case TaxiOfferMissed<DriverOffer>():
         _showMissed();
       case TaxiPaused<DriverOffer>():
@@ -251,14 +311,20 @@ class _DriverRingScreenState extends State<DriverRingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: _bottom,
-      body: DecoratedBox(
-        position: DecorationPosition.background,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [_top, _mid, _bottom], stops: const [0, 0.55, 1]),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) unawaited(_close());
+      },
+      child: Scaffold(
+        backgroundColor: _bottom,
+        body: DecoratedBox(
+          position: DecorationPosition.background,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [_top, _mid, _bottom], stops: const [0, 0.55, 1]),
+          ),
+          child: SizedBox.expand(child: SafeArea(child: Obx(_body))),
         ),
-        child: SizedBox.expand(child: SafeArea(child: Obx(_body))),
       ),
     );
   }

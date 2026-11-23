@@ -7,6 +7,7 @@ import 'package:bakhli/features/taxi/requests/data/driver_request_repository.dar
 import 'package:bakhli/features/taxi/requests/driver_ring_screen.dart';
 import 'package:bakhli/features/taxi/requests/models/driver_request_models.dart';
 import 'package:bakhli/features/trip/utils/taxi_result.dart';
+import 'package:bakhli/services/system_settings_channel.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
@@ -49,14 +50,34 @@ class _FakeRepo extends DriverRequestRepository {
   }
 }
 
+class _FakeAlert implements RingAlertControl {
+  _FakeAlert(this.log);
+  final List<String> log;
+
+  @override
+  Future<bool> ringAlertHold(String tag, Duration left) async {
+    log.add('hold:$tag:${left.inSeconds}');
+    return true;
+  }
+
+  @override
+  Future<bool> ringAlertEnd(String tag, {bool unlock = false}) async {
+    log.add('end:$tag:$unlock');
+    return true;
+  }
+}
+
 class _Harness {
   _Harness() {
     controller = DriverRequestsController(repo: repo, now: () => now);
+    alert = _FakeAlert(log);
   }
 
   final repo = _FakeRepo();
   DateTime now = DateTime.utc(2026, 12, 10, 9, 40);
   late final DriverRequestsController controller;
+  late final _FakeAlert alert;
+  final log = <String>[];
   final opened = <String>[];
   int closed = 0;
 
@@ -64,10 +85,19 @@ class _Harness {
         offerId: _id,
         action: action,
         controller: controller,
-        onAccepted: opened.add,
-        onClose: () => closed++,
+        alert: alert,
+        onAccepted: (id) {
+          log.add('opened');
+          opened.add(id);
+        },
+        onClose: () {
+          log.add('closed');
+          closed++;
+        },
       );
 }
+
+const _tag = 'taxi_ring_$_id';
 
 DriverOffer _offer(String state) => DriverOffer.fromJson({..._json('driver_offer_detail_ringing.json'), 'state': state});
 
@@ -281,4 +311,81 @@ void main() {
       expect(h.closed, 1);
     });
   }
+
+  group('lock screen alert', () {
+    testWidgets('T7 no hold before the push transition completes, first hold after it', (tester) async {
+      final h = _Harness()
+        ..repo.acceptResult = TaxiOk(_offer('Accepted'))
+        ..repo.declineResult = TaxiOk(_offer('Declined'));
+      await pumpAtSize(tester, Builder(builder: (_) => const Scaffold(body: SizedBox.expand())), phoneSize);
+      Get.to<void>(() => h.screen(), transition: Transition.rightToLeft, duration: const Duration(milliseconds: 300));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump();
+      expect(h.log.where((e) => e.startsWith('hold')), isEmpty);
+      await tester.pump(const Duration(milliseconds: 250));
+      await tester.pump();
+      await tester.pump();
+      expect(h.log.where((e) => e.startsWith('hold')), isNotEmpty);
+      expect(h.log.first, startsWith('hold:$_tag:'));
+    });
+
+    testWidgets('T7 hold carries the time left of the ringing offer', (tester) async {
+      final h = await _open(tester);
+      expect(h.log, contains('hold:$_tag:187'));
+      expect(h.log.where((e) => e.startsWith('end')), isEmpty);
+    });
+
+    testWidgets('T8 accept ends the alert with unlock before the detail opens', (tester) async {
+      final h = await _open(tester);
+      h.log.clear();
+      await tester.tap(find.text('Accept'));
+      await tester.pump();
+      await tester.pump();
+      expect(h.log, ['end:$_tag:true', 'opened']);
+    });
+
+    testWidgets('T9 decline ends the alert without unlock before close', (tester) async {
+      final h = await _open(tester);
+      h.log.clear();
+      await tester.tap(find.text('Decline'));
+      await tester.pump();
+      await tester.pump();
+      expect(h.log, ['end:$_tag:false', 'closed']);
+    });
+
+    testWidgets('T9 missed and Close end the alert without unlock', (tester) async {
+      final h = await _open(tester);
+      h.now = h.now.add(const Duration(minutes: 4));
+      await tester.pump(const Duration(seconds: 1));
+      await tester.pump();
+      h.log.clear();
+      await tester.tap(find.text('Close'));
+      await tester.pump();
+      expect(h.log, ['end:$_tag:false', 'closed']);
+    });
+
+    testWidgets('T9 missed on open closes itself with end first', (tester) async {
+      final h = await _open(tester, patch: {'state': 'Missed'});
+      await tester.pump(const Duration(seconds: 3));
+      await tester.pump();
+      expect(h.log.where((e) => !e.startsWith('hold')), ['end:$_tag:false', 'closed']);
+    });
+
+    testWidgets('T9 system back ends the alert then closes', (tester) async {
+      final h = await _open(tester);
+      h.log.clear();
+      await tester.binding.handlePopRoute();
+      await tester.pump();
+      await tester.pump();
+      expect(h.log, ['end:$_tag:false', 'closed']);
+    });
+
+    testWidgets('T10 dispose ends the alert', (tester) async {
+      final h = await _open(tester);
+      h.log.clear();
+      await tester.pumpWidget(const SizedBox.shrink());
+      expect(h.log, ['end:$_tag:false']);
+    });
+  });
 }
