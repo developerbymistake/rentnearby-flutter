@@ -60,6 +60,7 @@ abstract final class TaxiHomeStrings {
   static String attentionPageSub(int n) => n == 1 ? '1 thing, most urgent first' : '$n things, most urgent first';
 
   static const newRequests = 'New requests';
+  static const missedRequests = 'Missed';
   static const nextBooking = 'Next booking';
   static const rating = 'Rating';
   static const none = '-';

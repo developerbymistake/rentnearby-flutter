@@ -116,6 +116,7 @@ class OwnerNumbers {
     this.offersWaiting,
     this.confirmed,
     this.newRequests,
+    this.missedRequests,
     this.nextBookingDate,
     this.ratingAvg,
     this.ratingCount,
@@ -126,6 +127,7 @@ class OwnerNumbers {
   final int? offersWaiting;
   final int? confirmed;
   final int? newRequests;
+  final int? missedRequests;
   final DateTime? nextBookingDate;
   final double? ratingAvg;
   final int? ratingCount;
@@ -140,6 +142,7 @@ class OwnerNumbers {
       offersWaiting: pick('offersWaiting', stay),
       confirmed: pick('confirmed', stay),
       newRequests: pick('newRequests', taxi),
+      missedRequests: pick('missedRequests', taxi),
       nextBookingDate: OwnerDates.day(taxi['nextBookingDate'] ?? j['nextBookingDate']),
       ratingAvg: OwnerJson.doubleOrNull(taxi['ratingAvg'] ?? j['ratingAvg']),
       ratingCount: pick('ratingCount', taxi),

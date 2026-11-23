@@ -40,6 +40,8 @@ class DriverOfferCard extends StatelessWidget {
   final VoidCallback onAccept;
   final VoidCallback onDecline;
 
+  bool get _ended => offer.state == OfferState.missed || offer.state == OfferState.declined;
+
   bool get _earlier => offer.bucket == OfferBucket.earlier;
 
   bool get _named => offer.state == OfferState.accepted || offer.state == OfferState.selected || offer.state == OfferState.confirmed;
@@ -132,7 +134,7 @@ class DriverOfferCard extends StatelessWidget {
         ],
       ),
     );
-    return Tap3D(tapKey: ValueKey('request_open_${offer.offerId}'), onTap: onOpen, child: card);
+    return Tap3D(tapKey: ValueKey('request_open_${offer.offerId}'), onTap: _ended ? null : onOpen, child: card);
   }
 
   String _routeSeats() =>

@@ -92,7 +92,7 @@ void main() {
           if (pill.top < details.bottom) expect(details.right, lessThan(pill.left));
           final added = t.getRect(find.text(TripStringsSpotsX.addedToTrip));
           final cardB = t.getRect(find.byType(TripSpotCard).at(1));
-          expect(added.right, lessThanOrEqualTo(cardB.right - DS.s(14) - DS.s(16)));
+          expect(added.right, lessThanOrEqualTo(cardB.right - DS.s(14) - DS.s(18)));
           for (final e in find.text(TripSpotRow.details).evaluate()) {
             expect((e.renderObject! as RenderParagraph).didExceedMaxLines, isFalse);
           }

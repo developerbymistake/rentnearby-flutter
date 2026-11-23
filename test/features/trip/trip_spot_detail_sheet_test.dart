@@ -447,6 +447,37 @@ void main() {
       }
     });
 
+    for (final w in [320.0, 360.0]) {
+      for (final s in [1.0, 1.3]) {
+        for (final long in [false, true]) {
+          testWidgets('opens tall at $w x $s (${long ? 'long' : 'short'}): 92% below the status bar, white card to the bottom, action pinned', (t) async {
+            if (long) _repo.answer = SpotDetail(gallery: [for (var i = 0; i < 10; i++) _u('g$i')]);
+            await _open(t, long ? _spot(gallery: 10, description: _long) : _spot(description: null), size: Size(w, 800), scale: s);
+            await _settle(t);
+            expect(t.takeException(), isNull);
+            final sheet = t.getRect(find.byType(TripSpotDetailSheet));
+            final mq = MediaQuery.of(_ctx);
+            expect(sheet.height, closeTo(800 - TripSpotDetailSheet.topGap(mq), 0.5));
+            expect(sheet.height, greaterThanOrEqualTo((800 - mq.padding.top) * 0.9));
+            expect(sheet.bottom, closeTo(800, 0.5));
+            final pill = t.getRect(find.byType(GradientPillButton));
+            expect(pill.bottom, greaterThan(sheet.bottom - DS.s(100)));
+            final card = t.getRect(find.descendant(of: find.byType(TripSpotDetailSheet), matching: find.byWidgetPredicate((x) => x is Container && x.constraints != null && x.constraints!.minHeight > DS.s(100))).first);
+            expect(card.bottom, greaterThanOrEqualTo(pill.top - DS.gv(12) - 0.5));
+            await t.tap(find.byType(GradientPillButton));
+            await t.pump();
+            await t.pump(const Duration(milliseconds: 700));
+            expect(find.byType(TripSpotDetailSheet), findsNothing);
+          });
+        }
+      }
+    }
+
+    test('topGap leaves 8% of the screen below the status bar', () {
+      const mq = MediaQueryData(size: Size(360, 800), padding: EdgeInsets.only(top: 24));
+      expect(TripSpotDetailSheet.topGap(mq), closeTo(24 + 776 * 0.08, 0.01));
+    });
+
     for (final w in [320.0, 360.0, 411.0, 820.0]) {
       for (final s in [1.0, 1.3]) {
         testWidgets('no exception at $w x $s with a long title and full gallery', (t) async {

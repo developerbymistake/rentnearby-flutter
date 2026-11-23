@@ -79,7 +79,7 @@ void main() {
         TripSpotRow(spot: _w('lake', 'Naini Lake'), selected: false, draft: true, subtitle: 'Lake · 1 h 30 min', onToggle: () {}),
         TripSpotRow(spot: _w('ridge', 'Snow View Point'), selected: true, draft: true, subtitle: 'Lake · 1 h 30 min', onToggle: () {}),
         TripSpotRow(spot: _w('forest', 'Eco Cave Gardens'), selected: true, draft: true, dimmed: true, subtitle: 'Lake · 1 h 30 min'),
-      ]), view: const Size(360, 2700));
+      ]), view: const Size(360, 3400));
   _golden('trip_home_card', () => const TripHomeCard());
   _golden('trip_spots_extras', () => Column(children: [
         TripSpotRow(spot: _w('ridge', 'Snow View Point', photos: 3), selected: true, onToggle: () {}),

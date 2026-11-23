@@ -295,6 +295,11 @@ class TaxiHomeBody extends StatelessWidget {
                 onTap: () => TaxiHomeActions.openTab(AppTabs.centre),
               ),
               NumberTile(
+                value: state == TaxiHomeState.changesReview || state == TaxiHomeState.takenDown ? TaxiHomeStrings.dash : NumberTile.of(n.missedRequests ?? 0),
+                label: TaxiHomeStrings.missedRequests,
+                onTap: () => TaxiHomeActions.openTab(AppTabs.centre),
+              ),
+              NumberTile(
                 value: n.nextBookingDate == null ? NumberTile.missing : TaxiHomeFormat.day(n.nextBookingDate!),
                 label: TaxiHomeStrings.nextBooking,
                 onTap: () => TaxiHomeActions.openTab(AppTabs.fourth),
