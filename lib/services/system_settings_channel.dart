@@ -8,7 +8,13 @@ class DeviceMaker {
   const DeviceMaker({required this.manufacturer, required this.sdk});
 }
 
-class SystemSettingsChannel {
+abstract interface class RingAlertControl {
+  Future<bool> ringAlertHold(String tag, Duration left);
+
+  Future<bool> ringAlertEnd(String tag, {bool unlock = false});
+}
+
+class SystemSettingsChannel implements RingAlertControl {
   SystemSettingsChannel({MethodChannel? channel, Future<void> Function()? fallback})
       : _channel = channel ?? const MethodChannel(channelName),
         _fallback = fallback ?? _openAppSettings;
@@ -18,6 +24,8 @@ class SystemSettingsChannel {
   static const String _ring = 'openRingChannelSettings';
   static const String _notifications = 'openNotificationSettings';
   static const String _info = 'deviceInfo';
+  static const String _hold = 'ringAlertHold';
+  static const String _end = 'ringAlertEnd';
 
   static final SystemSettingsChannel instance = SystemSettingsChannel();
 
@@ -43,6 +51,22 @@ class SystemSettingsChannel {
       return null;
     } on PlatformException {
       return null;
+    }
+  }
+
+  @override
+  Future<bool> ringAlertHold(String tag, Duration left) => _ask(_hold, {'tag': tag, 'ms': left.inMilliseconds});
+
+  @override
+  Future<bool> ringAlertEnd(String tag, {bool unlock = false}) => _ask(_end, {'tag': tag, 'unlock': unlock});
+
+  Future<bool> _ask(String method, Map<String, Object?> args) async {
+    try {
+      return await _channel.invokeMethod<bool>(method, args) == true;
+    } on MissingPluginException {
+      return false;
+    } on PlatformException {
+      return false;
     }
   }
 

@@ -179,7 +179,7 @@ class TaxiRingNotification {
       timeoutAfter: left < 1 ? 1 : left,
       additionalFlags: Int32List.fromList(const <int>[flagInsistent]),
       visibility: NotificationVisibility.public,
-      fullScreenIntent: false,
+      fullScreenIntent: push.kind == TaxiRingKind.ring,
       sound: const UriAndroidNotificationSound(ringtoneUri),
       audioAttributesUsage: AudioAttributesUsage.notificationRingtone,
       enableVibration: true,
@@ -233,6 +233,8 @@ class TaxiRingNotification {
       };
 
   static String? payload(TaxiRingPush push) => push.kind == TaxiRingKind.test ? null : jsonEncode(routeData(push));
+
+  static bool stopsOnTap(String? actionId) => actionId == declineAction || actionId == acceptAction;
 
   static bool isRingPayload(Map<String, dynamic> data) =>
       data['action_route'] == TaxiRingPush.ringRoute && data[tagKey] is String;

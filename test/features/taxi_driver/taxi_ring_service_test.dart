@@ -192,7 +192,7 @@ void main() {
     expect(push.tag, 'taxi_ring_a1b2c3d4-0001-4a00-8000-000000000001');
   });
 
-  test('details_are_max_importance_insistent_and_not_full_screen', () {
+  test('details_are_max_importance_insistent_and_full_screen', () {
     final push = TaxiRingPush.tryParse(_ringData())!;
     final a = TaxiRingNotification.android(push, _receivedAt);
     expect(TaxiRingNotification.id, 0);
@@ -202,7 +202,7 @@ void main() {
     expect(a.category, AndroidNotificationCategory.call);
     expect(a.ongoing, isTrue);
     expect(a.autoCancel, isFalse);
-    expect(a.fullScreenIntent, isFalse);
+    expect(a.fullScreenIntent, isTrue);
     expect(a.additionalFlags, contains(TaxiRingNotification.flagInsistent));
     expect(TaxiRingNotification.flagInsistent, 4);
     expect(a.visibility, NotificationVisibility.public);
@@ -227,7 +227,9 @@ void main() {
     expect(TaxiRingNotification.withAction(payload, null), payload);
 
     final manifest = File('android/app/src/main/AndroidManifest.xml').readAsStringSync();
-    expect(manifest.contains('USE_FULL_SCREEN_INTENT'), isFalse);
+    expect(manifest, contains('android.permission.USE_FULL_SCREEN_INTENT'));
+    expect(manifest.contains('showWhenLocked'), isFalse);
+    expect(manifest.contains('turnScreenOn'), isFalse);
     expect(manifest, contains('android.permission.VIBRATE'));
     expect(manifest, contains('android.permission.WAKE_LOCK'));
   });
@@ -542,5 +544,58 @@ void main() {
     }
     expect(TaxiRingPush.isUnreadableRing({..._ringData(), 'v': '2'}), isTrue);
     expect(h.events, isEmpty);
+  });
+
+  test('test_ring_has_no_full_screen_launch_and_no_payload', () {
+    final push = TaxiRingPush.tryParse({..._ringData(), 'kind': TaxiRingPush.testKind})!;
+    expect(push.kind, TaxiRingKind.test);
+    expect(TaxiRingNotification.android(push, _receivedAt).fullScreenIntent, isFalse);
+    expect(TaxiRingNotification.payload(push), isNull);
+  });
+
+  test('only_action_taps_stop_the_ring', () {
+    expect(TaxiRingNotification.stopsOnTap(TaxiRingNotification.acceptAction), isTrue);
+    expect(TaxiRingNotification.stopsOnTap(TaxiRingNotification.declineAction), isTrue);
+    expect(TaxiRingNotification.stopsOnTap(null), isFalse);
+    expect(TaxiRingNotification.stopsOnTap('other'), isFalse);
+    final src = File('lib/services/notification_service.dart').readAsStringSync();
+    final start = src.indexOf('Map<String, dynamic> _ringTapData(');
+    final body = src.substring(start, src.indexOf('\n  }\n', start));
+    expect(body, contains('TaxiRingNotification.stopsOnTap(actionId)'));
+  });
+
+  test('lock_flags_only_for_a_ring_launch', () {
+    final kt = File('android/app/src/main/kotlin/com/rentnearby/rentnearby/MainActivity.kt').readAsStringSync().replaceAll(String.fromCharCode(13), '');
+    for (final s in ['SELECT_NOTIFICATION', 'FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY', 'JSONObject', 'requestDismissKeyguard', 'ringAlertHold', 'ringAlertEnd', 'launch_background', 'override fun onNewIntent']) {
+      expect(kt, contains(s), reason: s);
+    }
+    expect(kt, contains('== RING_TYPE'));
+    expect(kt, contains('"taxi_request_ring"'));
+    expect(kt.contains('.contains(RING_TYPE)'), isFalse);
+    expect(kt.contains('contains("taxi_request_ring")'), isFalse);
+    final fnStart = kt.indexOf('private fun setRingAlert(');
+    expect(fnStart, greaterThan(0));
+    final fnEnd = kt.indexOf('\n    }\n', fnStart);
+    final outside = kt.substring(0, fnStart) + kt.substring(fnEnd);
+    expect(outside.contains('setShowWhenLocked('), isFalse);
+    expect(outside.contains('setTurnScreenOn('), isFalse);
+    final nStart = kt.indexOf('override fun onNewIntent');
+    final onNew = kt.substring(nStart, kt.indexOf('\n    }\n', nStart));
+    expect(onNew, contains('setRingAlert(false)'));
+    expect(onNew.indexOf('armRingAlert(intent)'), lessThan(onNew.indexOf('super.onNewIntent(intent)')));
+  });
+
+  test('no_full_screen_permission_prompt_anywhere', () {
+    var fullScreen = 0;
+    for (final dir in ['lib', 'android/app/src']) {
+      for (final f in Directory(dir).listSync(recursive: true).whereType<File>()) {
+        if (!(f.path.endsWith('.dart') || f.path.endsWith('.kt') || f.path.endsWith('.xml') || f.path.endsWith('.java'))) continue;
+        final src = f.readAsStringSync();
+        expect(src.contains('requestFullScreenIntentPermission'), isFalse, reason: f.path);
+        expect(src.contains('MANAGE_APP_USE_FULL_SCREEN_INTENT'), isFalse, reason: f.path);
+        if (dir == 'lib') fullScreen += 'fullScreenIntent:'.allMatches(src).length;
+      }
+    }
+    expect(fullScreen, 1);
   });
 }

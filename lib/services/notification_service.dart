@@ -29,6 +29,7 @@ import '../services/api_service.dart';
 import '../services/storage_service.dart';
 import '../features/owner_core/plan/plan_expired_tap.dart';
 import 'push_token_registrar.dart';
+import 'system_settings_channel.dart';
 import 'taxi_ring_service.dart';
 import 'trip_push_sync.dart';
 
@@ -359,10 +360,28 @@ class NotificationService extends GetxService {
 
   Map<String, dynamic> _ringTapData(Map<String, dynamic> data, String? actionId) {
     if (!TaxiRingNotification.isRingPayload(data)) return data;
-    unawaited(_localNotifications
-        .cancel(id: TaxiRingNotification.id, tag: data[TaxiRingNotification.tagKey] as String)
-        .catchError((_) {}));
+    if (TaxiRingNotification.stopsOnTap(actionId)) {
+      unawaited(_localNotifications
+          .cancel(id: TaxiRingNotification.id, tag: data[TaxiRingNotification.tagKey] as String)
+          .catchError((_) {}));
+    }
     return TaxiRingNotification.withAction(data, actionId);
+  }
+
+  // A ring tap or full-screen launch opens the ring screen once; without a driver session it only ends the lock screen alert.
+  void _openRingTap(Map<String, dynamic> data, String? actionId) {
+    final tag = data[TaxiRingNotification.tagKey] as String;
+    final auth = Get.isRegistered<AuthController>() ? Get.find<AuthController>() : null;
+    if (!StorageService.isLoggedIn ||
+        auth == null ||
+        auth.postLoginRoute != AppRoutes.main ||
+        !auth.canOpenRoute(TaxiRingPush.ringRoute)) {
+      unawaited(SystemSettingsChannel.instance.ringAlertEnd(tag));
+      return;
+    }
+    final offerId = NotificationModel.parseArguments(data['action_args_json'])?['offerId']?.toString() ?? '';
+    if (actionId == null && _ringScreenOpenFor(offerId)) return;
+    _dispatchNotificationRoute(_ringTapData(data, actionId));
   }
 
   Future<void> _initLocalNotifications() async {
@@ -398,7 +417,17 @@ class NotificationService extends GetxService {
     // at all, since chat pushes are data-only).
     final launchDetails = await _localNotifications.getNotificationAppLaunchDetails();
     final payload = launchDetails?.notificationResponse?.payload;
+    final launchRing = payload == null ? null : _tryDecodeNotificationPayload(payload);
     if (launchDetails?.didNotificationLaunchApp == true &&
+        launchRing != null &&
+        TaxiRingNotification.isRingPayload(launchRing)) {
+      final actionId = launchDetails?.notificationResponse?.actionId;
+      if (StorageService.isLoggedIn) {
+        _runWhenMainReady(() => _openRingTap(launchRing, actionId));
+      } else {
+        _openRingTap(launchRing, actionId);
+      }
+    } else if (launchDetails?.didNotificationLaunchApp == true &&
         payload != null &&
         StorageService.isLoggedIn) {
       final decoded = _tryDecodeNotificationPayload(payload);
@@ -459,10 +488,11 @@ class NotificationService extends GetxService {
   }
 
   void _onLocalNotificationTap(NotificationResponse response) {
-    if (!StorageService.isLoggedIn) return;
     final payload = response.payload;
+    final decoded = payload == null ? null : _tryDecodeNotificationPayload(payload);
+    if (decoded != null && TaxiRingNotification.isRingPayload(decoded)) return _openRingTap(decoded, response.actionId);
+    if (!StorageService.isLoggedIn) return;
     if (payload == null) return;
-    final decoded = _tryDecodeNotificationPayload(payload);
     if (decoded != null) {
       _dispatchNotificationRoute(_ringTapData(decoded, response.actionId));
     } else {
