@@ -17,6 +17,7 @@ abstract final class IntroStoryColors {
 
   static const Color white = Color(0xFFFFFFFF);
   static const Color clear = Color(0x00FFFFFF);
+  static const Color clearBlack = Color(0x00000000);
   static const Color white25 = Color(0x40FFFFFF);
   static const Color white28 = Color(0x47FFFFFF);
   static const Color white35 = Color(0x59FFFFFF);

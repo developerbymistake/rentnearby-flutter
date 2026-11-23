@@ -35,6 +35,7 @@ class IntroActorsPainter extends CustomPainter {
       if (i == CastFrame.fire) continue;
       _actor(canvas, i, cast.actors[i]);
     }
+    if (cast.canopy > IntroGlider.minCanopy) IntroGlider.paint(canvas, cast);
     canvas.restore();
   }
 
@@ -68,4 +69,58 @@ class IntroActorsPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant IntroActorsPainter old) => old.geo != geo || old.state != state;
+}
+
+abstract final class IntroGlider {
+  static const double minCanopy = .02, minScale = .01, size = 1.15, lift = 8;
+
+  static final Path dome = Path()
+    ..moveTo(-46, -74)
+    ..quadraticBezierTo(0, -128, 46, -74)
+    ..quadraticBezierTo(31, -81, 15, -74)
+    ..quadraticBezierTo(0, -81, -15, -74)
+    ..quadraticBezierTo(-31, -81, -46, -74)
+    ..close();
+
+  static ui.Picture? _picture;
+
+  static void paint(Canvas canvas, CastFrame cast) {
+    canvas.save();
+    canvas.translate(cast.canopyX, cast.canopyY - lift);
+    canvas.rotate(cast.canopyTilt * math.pi / 180);
+    final k = math.max(minScale, cast.canopy) * size;
+    canvas.scale(k, k);
+    canvas.drawPicture(_picture ??= _record());
+    canvas.restore();
+  }
+
+  static ui.Picture _record() {
+    final rec = ui.PictureRecorder();
+    final c = Canvas(rec);
+    final p = Paint()..isAntiAlias = true;
+    const colors = IntroStoryColors.canopy;
+    for (var k = 0; k < colors.length; k++) {
+      p.color = colors[k];
+      final stripe = Path()..addRect(Rect.fromLTWH(-46 + k * 15.34, -130, 15.4, 60));
+      c.drawPath(Path.combine(PathOperation.intersect, stripe, dome), p);
+    }
+    p.shader = ui.Gradient.linear(
+      const Offset(0, -130),
+      const Offset(0, -70),
+      const [IntroStoryColors.domeLight, IntroStoryColors.clear, IntroStoryColors.clearBlack, IntroStoryColors.domeDark],
+      const [0, .5, .5, 1],
+    );
+    c.drawPath(dome, p);
+    final line = Paint()
+      ..isAntiAlias = true
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.1
+      ..color = IntroStoryColors.canopyLine;
+    c.drawLine(const Offset(-44, -74), const Offset(-7, -50), line);
+    c.drawLine(const Offset(-22, -74), const Offset(-4, -52), line);
+    c.drawLine(const Offset(0, -76), const Offset(0, -54), line);
+    c.drawLine(const Offset(22, -74), const Offset(4, -52), line);
+    c.drawLine(const Offset(44, -74), const Offset(7, -50), line);
+    return rec.endRecording();
+  }
 }
