@@ -15,8 +15,15 @@ class _Frame {
 }
 
 const _frames = [
+  _Frame('f01_p0_t1.0', 0, 1.0),
+  _Frame('f02_p0_t4.5', 0, 4.5),
+  _Frame('f03_p0_t6.0', 0, 6.0),
   _Frame('f04_p0.5_t1.3', .5, 1.3),
   _Frame('f05_p1_arr0', 1, 1.0, arr: 0),
+  _Frame('f06_p1_arr1.8', 1, 1.0, arr: 1.8),
+  _Frame('f07_p1_arr3.6', 1, 4.0, arr: 3.6),
+  _Frame('f08_p1.2_t1.0', 1.2, 1.0),
+  _Frame('f09_p1.5_t1.0', 1.5, 1.0),
   _Frame('f10_p2_t1.3', 2, 1.3),
   _Frame('f15_p4_t1.0', 4, 1.0),
   _Frame('f19_p4.6_t1.0', 4.6, 1.0),

@@ -3,12 +3,13 @@ import 'package:bakhli/screens/intro/intro_widgets.dart';
 import 'package:bakhli/screens/intro/story/intro_story_cast.dart';
 import 'package:bakhli/screens/intro/story/intro_story_math.dart';
 import 'package:bakhli/screens/intro/story/intro_story_state.dart';
+import 'package:bakhli/screens/intro/story/paint_table.dart';
 import 'package:flutter/painting.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-CastFrame _cast(double q, {double t = 1.0}) {
+CastFrame _cast(double q, {double t = 1.0, double excited = 0}) {
   final f = CastFrame();
-  solveCast(f, q: q, t: t, s: storyS(q), tl: List<double>.of(IntroStory.trailRestart), excited: 0);
+  solveCast(f, q: q, t: t, s: storyS(q), tl: List<double>.of(IntroStory.trailRestart), excited: excited);
   return f;
 }
 
@@ -66,6 +67,77 @@ void main() {
       expect(beamOf(4), closeTo(0, 1e-9));
       expect(sunX(0), 30);
       expect(sunY(2), closeTo(90, 1e-9));
+    });
+  });
+
+  group('table loop (chapter 1)', () {
+    test('loop time wraps every 7.6 s', () {
+      expect(IntroTablePainter.loopTime(8.6), closeTo(1.0, 1e-9));
+      expect(IntroTablePainter.loopTime(-1), closeTo(6.6, 1e-9));
+    });
+
+    test('places drop at .5 / 1.7 / 2.9 s', () {
+      expect(IntroTablePainter.dropOf(1.0, 0), closeTo(.5 / .55, 1e-9));
+      expect(IntroTablePainter.dropOf(1.0, 1), 0);
+      expect(IntroTablePainter.dropOf(1.0, 2), 0);
+      expect([for (var i = 0; i < 3; i++) IntroTablePainter.dropOf(4.5, i)], [1, 1, 1]);
+    });
+
+    test('route draws 3.5..5.5 s, mini taxi rides it until 6.9 s, all fades 6.5..7.3 s', () {
+      expect(IntroTablePainter.routeOf(3.5), 0);
+      expect(IntroTablePainter.routeOf(4.5), closeTo(.5, 1e-9));
+      expect(IntroTablePainter.routeOf(6.0), 1);
+      expect(IntroTablePainter.miniTaxiOn(1.0), isFalse);
+      expect(IntroTablePainter.miniTaxiOn(6.0), isTrue);
+      expect(IntroTablePainter.miniTaxiOn(7.0), isFalse);
+      expect(IntroTablePainter.fadeOf(6.0), 1);
+      expect(IntroTablePainter.fadeOf(7.3), 0);
+    });
+  });
+
+  group('pickup and boarding (chapter 2)', () {
+    test('waiting friends glance left before the taxi, cheer after it parks', () {
+      final calm = _cast(0, t: 2.0);
+      expect(calm.actors.every((a) => a.tilt < 0), isTrue);
+      final cheer = _cast(0, t: 2.0, excited: 1);
+      expect(cheer.actors.any((a) => a.hop > 0), isTrue);
+      expect(cheer.actors.every((a) => a.waiting), isTrue);
+    });
+
+    test('board stagger: panda in at q .25, fox at .33, lion at .37', () {
+      expect([for (final a in _cast(.25).actors) a.inside], [true, false, false]);
+      expect([for (final a in _cast(.33).actors) a.inside], [true, true, false]);
+      expect([for (final a in _cast(.37).actors) a.inside], [true, true, true]);
+    });
+
+    test('frame 8 (P 1.2): panda in the air, fox and lion walking to the door', () {
+      final f = _cast(.2);
+      expect(f.actors[0].airborne, isTrue);
+      expect(f.actors[0].sc, lessThan(1));
+      expect(f.actors[1].walking, isTrue);
+      expect(f.actors[1].x, lessThan(IntroStory.startX[1]));
+      expect(f.actors[2].walking, isTrue);
+      expect(f.actors[2].x, greaterThan(f.actors[1].x));
+    });
+
+    test('arrival: speed and lean while moving, parked and still at 3.6 s, slides off after P 1.05', () {
+      final mid = IntroArrival.at(2.7, 1);
+      expect(mid.speed, greaterThan(0));
+      expect(mid.lean, greaterThan(0));
+      final parked = IntroArrival.at(3.6, 1);
+      expect(parked.dx, 0);
+      expect(parked.lean, 0);
+      expect(parked.excited, 1);
+      expect(IntroArrival.at(0, 1.2).dx, 0);
+      expect(IntroArrival.at(0, 1.2).excited, 0);
+    });
+
+    test('state: window heads follow the inside flags', () {
+      final s = IntroStoryState()..setProgress(1.5);
+      expect(s.cast.actors.every((a) => a.inside), isTrue);
+      s.setProgress(1.0);
+      expect(s.cast.actors.any((a) => a.inside), isFalse);
+      s.dispose();
     });
   });
 
