@@ -159,6 +159,7 @@ abstract final class ListingArt {
   static const String droplet = '${_dir}droplet.png';
   static const String rock = '${_dir}rock.png';
   static const String framedPicture = '${_dir}framed_picture.png';
+  static const String houseWithGarden = '${_dir}house_with_garden.png';
   static const String lion = '${_dir}lion.png';
   static const String bridge = '${_dir}bridge_at_night.png';
   static const String castle = '${_dir}castle.png';
