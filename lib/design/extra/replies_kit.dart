@@ -3,11 +3,8 @@ import 'package:bakhli/design/template/fitness_app_theme.dart';
 import '../tokens/alpha_tokens.dart';
 import '../tokens/card_tokens.dart';
 import '../tokens/design_colors.dart';
-import '../tokens/shadow_tokens.dart';
 import '../tokens/type_tokens.dart';
 import 'buttons_kit.dart';
-import 'kit_tone.dart';
-import 'module_header.dart';
 import 'motion_kit.dart';
 import 'template_motion.dart';
 import 'travel_icon.dart';
@@ -103,56 +100,6 @@ class RepliesEmpty extends StatelessWidget {
         subtitle: subtitle,
         actionLabel: onRetry != null ? retryLabel : null,
         onAction: onRetry,
-      ),
-    );
-  }
-}
-
-class RepliesHeader extends StatelessWidget {
-  const RepliesHeader({super.key, required this.onBack, required this.child, this.iconAsset = 'assets/images/design/fitness_app/runner.png'});
-  final VoidCallback onBack;
-  final Widget child;
-  final String iconAsset;
-
-  @override
-  Widget build(BuildContext context) {
-    final top = MediaQuery.paddingOf(context).top;
-    return AnnotatedRegion(
-      value: ModuleHeader.lightIcons,
-      child: Container(
-        decoration: BoxDecoration(
-          gradient: KitTone.trip.gradient,
-          borderRadius: DS.br(CardRadius.header),
-          boxShadow: DS.shadows(ShadowTokens.glow(KitTone.trip.glow)),
-        ),
-        margin: EdgeInsets.only(bottom: DS.gv(4)),
-        padding: EdgeInsets.fromLTRB(DS.s(8), top + DS.s(ModuleHeader.paddingTop), DS.s(16), DS.s(ModuleHeader.paddingBottom)),
-        child: Row(
-          children: [
-            PressScale(
-              child: SizedBox(
-                width: DS.s(KitMetrics.touch),
-                height: DS.s(KitMetrics.touch),
-                child: InkWell(
-                  customBorder: const CircleBorder(),
-                  splashColor: DesignColors.whiteSoft,
-                  highlightColor: Colors.transparent,
-                  onTap: onBack,
-                  child: Icon(Icons.arrow_back_ios_new_rounded, size: DS.s(20), color: DesignColors.textInverse),
-                ),
-              ),
-            ),
-            Gap.h(2),
-            Expanded(child: child),
-            Gap.h(8),
-            Container(
-              width: DS.s(56),
-              height: DS.s(56),
-              decoration: BoxDecoration(color: DesignColors.tint(DesignColors.surfaceAlt, Alpha.soft), shape: BoxShape.circle),
-              child: Padding(padding: DS.all(8), child: Image.asset(iconAsset)),
-            ),
-          ],
-        ),
       ),
     );
   }

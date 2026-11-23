@@ -115,8 +115,6 @@ flutter:
     - assets/images/design/fitness_app/
     - assets/images/design/hotel/
     - assets/images/design/images/
-    - assets/images/design/design_course/
-    - assets/images/design/introduction_animation/
     - assets/images/design/travel3d/
     - assets/images/design/hub/
     - assets/map_style.json

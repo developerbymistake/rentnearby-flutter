@@ -84,7 +84,6 @@ class ArtLift {
     'world_map': 0.09,
     'tent': 0.11,
     'beach_with_umbrella': 0.09,
-    'locomotive': 0.06,
     'mountain': 0.06,
   };
 
