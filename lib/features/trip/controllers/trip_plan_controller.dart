@@ -2940,10 +2940,7 @@ class TripPlanController extends GetxController {
   List<TripDay> snapshotDays(List<int> days) {
     final p = plan.value;
     if (p == null) return const [];
-    return [
-      for (final n in days)
-        if (p.dayAt(n) case final d?) d,
-    ];
+    return [for (final n in days) ?p.dayAt(n)];
   }
 
   bool restoreDays(List<TripDay> snapshot) {
