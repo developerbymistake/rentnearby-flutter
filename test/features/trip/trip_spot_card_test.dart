@@ -71,7 +71,7 @@ void main() {
       expect(find.text('Mall Road'), findsNothing);
       expect(find.textContaining('min'), findsNothing);
       expect(t.getTopLeft(find.text('LAKE')).dy, lessThan(t.getTopLeft(find.text('Naini Lake')).dy));
-      expect(find.text(TripStringsSpotsX.addToWishlist), findsOneWidget);
+      expect(find.text(TripStringsSpotsX.addToTrip), findsOneWidget);
       expect(find.text(TripSpotRow.details), findsOneWidget);
       expect(find.byType(TripSpotCard), findsOneWidget);
       expect(find.byType(WideCard), findsNothing);
@@ -87,7 +87,7 @@ void main() {
     testWidgets('pill tap calls onToggle', (t) async {
       var n = 0;
       await _host(t, TripSpotRow(spot: _spot(), selected: false, onToggle: () => n++));
-      await t.tap(find.text(TripStringsSpotsX.addToWishlist));
+      await t.tap(find.text(TripStringsSpotsX.addToTrip));
       await t.pump(const Duration(milliseconds: 300));
       expect(n, 1);
       expect(find.byType(TripSpotDetailSheet), findsNothing);
@@ -98,17 +98,17 @@ void main() {
       final h = t.ensureSemantics();
       await _host(t, TripSpotRow(spot: _spot(photos: 3), selected: true, onToggle: () => n++));
       expect(find.text('+2'), findsOneWidget);
-      expect(find.text(TripStringsSpotsX.addedWishlist), findsOneWidget);
+      expect(find.text(TripStringsSpotsX.addedToTrip), findsOneWidget);
       expect(find.byIcon(Icons.check_rounded), findsOneWidget);
-      expect(find.text(TripStringsSpotsX.addToWishlist), findsNothing);
+      expect(find.text(TripStringsSpotsX.addToTrip), findsNothing);
       final ring = t.widget<Container>(find.descendant(of: find.byType(TripSpotCard), matching: find.byWidgetPredicate((w) => w is Container && w.foregroundDecoration != null)));
       final border = (ring.foregroundDecoration! as BoxDecoration).border! as Border;
       expect(border.top.color, ListingTone.indigo.g2);
       expect(border.top.width, DS.s(2.5));
-      await t.tap(find.text(TripStringsSpotsX.addedWishlist));
+      await t.tap(find.text(TripStringsSpotsX.addedToTrip));
       await t.pump(const Duration(milliseconds: 300));
       expect(n, 1);
-      expect(t.getSemantics(find.bySemanticsLabel(TripStringsSpotsX.addedWishlist)), isSemantics(isSelected: true, isButton: true));
+      expect(t.getSemantics(find.bySemanticsLabel(TripStringsSpotsX.addedToTrip)), isSemantics(isSelected: true, isButton: true));
       h.dispose();
     });
 
@@ -136,7 +136,7 @@ void main() {
       await _host(t, TripSpotRow(spot: _spot(), selected: false, locked: true, onToggle: () => n++));
       final o = t.widget<Opacity>(find.descendant(of: find.byType(TripSpotCard), matching: find.byType(Opacity)).first);
       expect(o.opacity, Alpha.v60);
-      await t.tap(find.text(TripStringsSpotsX.addToWishlist));
+      await t.tap(find.text(TripStringsSpotsX.addToTrip));
       await t.pump(const Duration(milliseconds: 300));
       expect(n, 1);
       await t.tap(find.text(TripSpotRow.details));
@@ -152,10 +152,10 @@ void main() {
     testWidgets('existing id without toggle: soft Added, not tappable, no fade', (t) async {
       final h = t.ensureSemantics();
       await _host(t, TripSpotRow(spot: _spot(), selected: true));
-      expect(find.text(TripStringsSpotsX.addedWishlist), findsOneWidget);
-      expect(t.getSemantics(find.bySemanticsLabel(TripStringsSpotsX.addedWishlist)), isSemantics(isEnabled: false));
+      expect(find.text(TripStringsSpotsX.addedToTrip), findsOneWidget);
+      expect(t.getSemantics(find.bySemanticsLabel(TripStringsSpotsX.addedToTrip)), isSemantics(isEnabled: false));
       h.dispose();
-      await t.tap(find.text(TripStringsSpotsX.addedWishlist));
+      await t.tap(find.text(TripStringsSpotsX.addedToTrip));
       await _settle(t);
       expect(find.byType(TripSpotDetailSheet), findsNothing);
     });
@@ -189,21 +189,21 @@ void main() {
       expect(t.getSize(find.byType(GradientPillButton)).height, DS.s(38));
     });
 
-    testWidgets('semantics: Details button and Add to wishlist button', (t) async {
+    testWidgets('semantics: Details button and Add to trip button', (t) async {
       final h = t.ensureSemantics();
       await _host(t, TripSpotRow(spot: _spot(), selected: false, onToggle: () {}));
       expect(find.bySemanticsLabel(TripSpotRow.details), findsOneWidget);
-      expect(find.bySemanticsLabel(TripStringsSpotsX.addToWishlist), findsOneWidget);
+      expect(find.bySemanticsLabel(TripStringsSpotsX.addToTrip), findsOneWidget);
       h.dispose();
     });
   });
 
   group('draft', () {
-    testWidgets('unselected: circle toggle, no wishlist label, tap calls onToggle', (t) async {
+    testWidgets('unselected: circle toggle, no add to trip label, tap calls onToggle', (t) async {
       var n = 0;
       await _host(t, TripSpotRow(spot: _spot(), selected: false, draft: true, subtitle: 'Lake · 1 h 30 min', onToggle: () => n++));
       expect(find.byIcon(Icons.circle_outlined), findsOneWidget);
-      expect(find.text(TripStringsSpotsX.addToWishlist), findsNothing);
+      expect(find.text(TripStringsSpotsX.addToTrip), findsNothing);
       expect(find.text('Lake · 1 h 30 min'), findsOneWidget);
       await t.tap(find.byIcon(Icons.circle_outlined));
       await t.pump(const Duration(milliseconds: 300));
@@ -214,16 +214,16 @@ void main() {
     testWidgets('selected: check circle and ring', (t) async {
       await _host(t, TripSpotRow(spot: _spot(), selected: true, draft: true, onToggle: () {}));
       expect(find.byIcon(Icons.check_rounded), findsOneWidget);
-      expect(find.text(TripStringsSpotsX.addedWishlist), findsNothing);
+      expect(find.text(TripStringsSpotsX.addedToTrip), findsNothing);
       expect(find.descendant(of: find.byType(TripSpotCard), matching: find.byWidgetPredicate((w) => w is Container && w.foregroundDecoration != null)), findsOneWidget);
     });
 
     testWidgets('dimmed existing: Added, faded, tap does nothing', (t) async {
       var n = 0;
       await _host(t, TripSpotRow(spot: _spot(), selected: true, draft: true, dimmed: true, onToggle: () => n++));
-      expect(find.text(TripStringsSpotsX.addedWishlist), findsOneWidget);
+      expect(find.text(TripStringsSpotsX.addedToTrip), findsOneWidget);
       expect(find.descendant(of: find.byType(TripSpotCard), matching: find.byWidgetPredicate((w) => w is Opacity && w.opacity == Alpha.v60)), findsOneWidget);
-      await t.tap(find.text(TripStringsSpotsX.addedWishlist));
+      await t.tap(find.text(TripStringsSpotsX.addedToTrip));
       await _settle(t);
       expect(n, 0);
       expect(find.byType(TripSpotDetailSheet), findsNothing);
@@ -245,7 +245,7 @@ void main() {
             scale: s,
           );
           expect(t.takeException(), isNull);
-          expect(find.text(TripStringsSpotsX.addToWishlist), findsOneWidget);
+          expect(find.text(TripStringsSpotsX.addToTrip), findsOneWidget);
           expect(t.getSize(find.byType(GradientPillButton)).height, DS.s(38));
           final pill = t.getRect(find.byType(GradientPillButton));
           final card = t.getRect(find.byType(TripSpotCard).first);

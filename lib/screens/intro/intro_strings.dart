@@ -16,7 +16,7 @@ class IntroStrings {
     IntroSlideCopy(
       eyebrow: 'EXPLORE AND PLAN',
       headline: 'Dream it. Plan it together.',
-      sub: 'Explore places, save your wishlist and shape every day with your buddies.',
+      sub: 'Explore places, add them to your trip and shape every day with your buddies.',
     ),
     IntroSlideCopy(
       eyebrow: 'BOOK YOUR RIDE',

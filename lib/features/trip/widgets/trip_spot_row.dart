@@ -88,7 +88,7 @@ class TripSpotAddButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final off = locked && !selected;
     final tone = ListingTone.indigo;
-    final label = selected ? TripStringsSpotsX.addedWishlist : TripStringsSpotsX.addWishlist;
+    final label = selected ? TripStringsSpotsX.addedToTrip : TripStringsSpotsX.addToTrip;
     return Opacity(
       opacity: off ? Alpha.v45 : 1,
       child: Tooltip(

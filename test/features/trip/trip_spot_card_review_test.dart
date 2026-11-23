@@ -90,7 +90,7 @@ void main() {
           final details = t.getRect(find.text(TripSpotRow.details).first);
           final pill = t.getRect(find.byType(GradientPillButton));
           if (pill.top < details.bottom) expect(details.right, lessThan(pill.left));
-          final added = t.getRect(find.text(TripStringsSpotsX.addedWishlist));
+          final added = t.getRect(find.text(TripStringsSpotsX.addedToTrip));
           final cardB = t.getRect(find.byType(TripSpotCard).at(1));
           expect(added.right, lessThanOrEqualTo(cardB.right - DS.s(14) - DS.s(16)));
           for (final e in find.text(TripSpotRow.details).evaluate()) {
@@ -137,7 +137,7 @@ void main() {
       expect(t.takeException(), isNull);
     });
 
-    testWidgets('draft toggle and wishlist pill never open the place page', (t) async {
+    testWidgets('draft toggle and add to trip pill never open the place page', (t) async {
       var n = 0;
       await _host(
         t,
@@ -148,7 +148,7 @@ void main() {
         size: const Size(360, 1200),
       );
       await t.tap(find.byIcon(Icons.circle_outlined));
-      await t.tap(find.text(TripStringsSpotsX.addToWishlist));
+      await t.tap(find.text(TripStringsSpotsX.addToTrip));
       await t.pump(const Duration(milliseconds: 400));
       expect(n, 2);
       expect(find.byType(TripSpotDetailSheet), findsNothing);

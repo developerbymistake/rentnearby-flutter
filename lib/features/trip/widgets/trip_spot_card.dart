@@ -237,7 +237,7 @@ class _ActionBar extends StatelessWidget {
     final scaler = MediaQuery.textScalerOf(context);
     final circle = draft && !dimmed;
     final soft = selected && !circle;
-    final label = soft ? TripStringsSpotsX.addedWishlist : TripStringsSpotsX.addToWishlist;
+    final label = soft ? TripStringsSpotsX.addedToTrip : TripStringsSpotsX.addToTrip;
     final rightW = circle ? DS.s(KitMetrics.touch) : _pillW(label, scaler);
     final detailsW = DS.s(26) + DS.s(8) + KitText.widthOf(TripSpotRow.details, _label, scaler);
     final stacked = detailsW + DS.s(12) + rightW > width;
@@ -246,7 +246,7 @@ class _ActionBar extends StatelessWidget {
         ? _CircleToggle(selected: selected, onTap: toggle)
         : soft
             ? _SoftPill(onTap: toggle)
-            : _hit(GradientPillButton(tone: _tone, label: TripStringsSpotsX.addToWishlist, icon: Icons.add_rounded, height: 38, fontSize: _pillFont, expand: false, onTap: toggle), toggle);
+            : _hit(GradientPillButton(tone: _tone, label: TripStringsSpotsX.addToTrip, icon: Icons.add_rounded, height: 38, fontSize: _pillFont, expand: false, onTap: toggle), toggle);
     final details = _Details(onTap: onDetails);
     final edge = (DS.s(KitMetrics.touch) - DS.s(38)) / 2;
     return Padding(
@@ -319,7 +319,7 @@ class _SoftPill extends StatelessWidget {
     return _hit(
       Tap3D(
         onTap: onTap,
-        label: TripStringsSpotsX.addedWishlist,
+        label: TripStringsSpotsX.addedToTrip,
         selected: true,
         exclude: true,
         child: DecoratedBox(
@@ -333,7 +333,7 @@ class _SoftPill extends StatelessWidget {
                 children: [
                   Icon(Icons.check_rounded, size: DS.s(18), color: _tone.text),
                   SizedBox(width: DS.s(8)),
-                  Text(TripStringsSpotsX.addedWishlist, maxLines: 1, softWrap: false, style: _ActionBar._label),
+                  Text(TripStringsSpotsX.addedToTrip, maxLines: 1, softWrap: false, style: _ActionBar._label),
                 ],
               ),
             ),
@@ -354,7 +354,7 @@ class _CircleToggle extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Tap3D(
         onTap: onTap,
-        label: selected ? TripStringsSpotsX.addedWishlist : TripStringsSpotsX.addToWishlist,
+        label: selected ? TripStringsSpotsX.addedToTrip : TripStringsSpotsX.addToTrip,
         selected: selected,
         exclude: true,
         child: SizedBox(

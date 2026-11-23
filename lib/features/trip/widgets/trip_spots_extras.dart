@@ -58,7 +58,7 @@ class TripMustSeeRail extends StatelessWidget {
     final toggle = toggleOf(s);
     final art = TripSpotLook.assetOf(s.category);
     final off = locked && !on;
-    final label = on ? TripStringsSpotsX.addedWishlist : TripStringsSpotsX.addWishlist;
+    final label = on ? TripStringsSpotsX.addedToTrip : TripStringsSpotsX.addToTrip;
     return Opacity(
       opacity: off ? Alpha.v60 : 1,
       child: Stack(

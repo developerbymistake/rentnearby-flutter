@@ -68,7 +68,7 @@ void main() {
     for (final s in [1.0, 1.3]) {
       for (final e in _frames.entries) {
         if (w != 360 && e.key != 'S1' && e.key != 'S5') continue;
-        testWidgets('wishlist shot ${e.key} ${w.toInt()} x $s', (t) async {
+        testWidgets('add to trip shot ${e.key} ${w.toInt()} x $s', (t) async {
           debugDisableShadows = false;
           try {
             await pumpPhone(

@@ -3,9 +3,8 @@ class TripStringsSpotsX {
   static const String featuredFirst = 'Featured first';
   static const String featured = 'Featured';
   static const String add = 'Add';
-  static const String addWishlist = 'Wishlist';
-  static const String addedWishlist = 'Added';
-  static const String addToWishlist = 'Add to wishlist';
+  static const String addToTrip = 'Add to trip';
+  static const String addedToTrip = 'Added';
   static const String dismiss = 'No thanks';
   static String away(String d) => '$d away';
   static String aboutKmAway(String km) => 'about $km km away';

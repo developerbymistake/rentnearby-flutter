@@ -406,9 +406,9 @@ void main() {
   });
 
   group('action', () {
-    testWidgets('Add to wishlist', (t) async {
+    testWidgets('Add to trip', (t) async {
       await _open(t, _spot());
-      expect(find.text('Add to wishlist'), findsOneWidget);
+      expect(find.text('Add to trip'), findsOneWidget);
     });
 
     testWidgets('Remove comes from the strings class as a white pill', (t) async {
@@ -429,7 +429,7 @@ void main() {
 
     testWidgets('showAction false: no button at all', (t) async {
       await _open(t, _spot(), showAction: false);
-      expect(find.text('Add to wishlist'), findsNothing);
+      expect(find.text('Add to trip'), findsNothing);
       expect(find.byType(GradientPillButton), findsNothing);
     });
   });

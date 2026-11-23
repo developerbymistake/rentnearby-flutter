@@ -426,8 +426,8 @@ class _TripSpotDetailSheetState extends State<TripSpotDetailSheet>
     final enabled = widget.onToggle != null;
     final outlined = widget.selected && enabled;
     final label = widget.selected
-        ? (widget.onToggle == null ? TripStringsSpotsX.addedWishlist : TripStringsSpotsX.remove)
-        : TripStringsSpotsX.addToWishlist;
+        ? (widget.onToggle == null ? TripStringsSpotsX.addedToTrip : TripStringsSpotsX.remove)
+        : TripStringsSpotsX.addToTrip;
     final onTap = enabled
         ? () {
             Navigator.of(context).pop();
