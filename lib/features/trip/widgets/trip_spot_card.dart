@@ -8,6 +8,7 @@ import 'trip_spot_detail_sheet.dart';
 import 'trip_spot_row.dart';
 
 final _tone = ListingTone.indigo;
+const double _pillFont = 14;
 
 double _side() => DS.s(14);
 
@@ -227,7 +228,7 @@ class _ActionBar extends StatelessWidget {
 
   const _ActionBar({required this.width, required this.selected, required this.draft, required this.dimmed, required this.onToggle, required this.onDetails});
 
-  static TextStyle get _label => Ink3D.text(14, FontWeight.w700, _tone.text);
+  static TextStyle get _label => Ink3D.text(_pillFont, FontWeight.w700, _tone.text);
 
   static double _pillW(String text, TextScaler scaler) => DS.s(18) * 2 + DS.s(18) + DS.s(8) + KitText.widthOf(text, _label, scaler);
 
@@ -245,7 +246,7 @@ class _ActionBar extends StatelessWidget {
         ? _CircleToggle(selected: selected, onTap: toggle)
         : soft
             ? _SoftPill(onTap: toggle)
-            : _hit(GradientPillButton(tone: _tone, label: TripStringsSpotsX.addToWishlist, icon: Icons.add_rounded, height: 38, fontSize: 14, expand: false, onTap: toggle), toggle);
+            : _hit(GradientPillButton(tone: _tone, label: TripStringsSpotsX.addToWishlist, icon: Icons.add_rounded, height: 38, fontSize: _pillFont, expand: false, onTap: toggle), toggle);
     final details = _Details(onTap: onDetails);
     final edge = (DS.s(KitMetrics.touch) - DS.s(38)) / 2;
     return Padding(
