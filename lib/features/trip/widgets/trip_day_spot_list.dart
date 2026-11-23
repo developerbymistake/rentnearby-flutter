@@ -473,6 +473,8 @@ class _DaySpotsState extends State<_DaySpots> with AutomaticKeepAliveClientMixin
 
   TripPlanController get _c => TripPlanController.to;
 
+  bool get _reduceMotion => MediaQuery.disableAnimationsOf(context);
+
   @override
   bool get wantKeepAlive => _drag != null;
 
@@ -606,7 +608,12 @@ class _DaySpotsState extends State<_DaySpots> with AutomaticKeepAliveClientMixin
     if (d != _drag) return;
     final from = d.index;
     final to = TripDragSlots.position(_endInsert, from);
-    _endSession(keepNumbers: to != from);
+    final reduce = _reduceMotion;
+    _endSession(keepNumbers: !reduce && to != from);
+    if (reduce) {
+      d.list.cancelReorder();
+      _commit(from, to);
+    }
   }
 
   void _cancel(TripTrackedDrag d) {
@@ -632,7 +639,18 @@ class _DaySpotsState extends State<_DaySpots> with AutomaticKeepAliveClientMixin
 
   void _commit(int from, int to) {
     if (from == to) return;
-    _c.reorderTo(widget.day, from, to);
+    final c = _c;
+    final snap = c.snapshotDays([widget.day]);
+    if (!c.reorderTo(widget.day, from, to)) return;
+    final m = ScaffoldMessenger.maybeOf(context);
+    m?.hideCurrentSnackBar();
+    m?.showSnackBar(
+      SnackBar(
+        content: const Text(TripStringsV2Plan.orderChanged, style: TextStyle(fontFamily: FitnessAppTheme.fontName)),
+        duration: const Duration(seconds: 5),
+        action: SnackBarAction(label: TripStringsV2Plan.undo, onPressed: () => c.restoreDays(snap)),
+      ),
+    );
   }
 
   Widget _proxy(Widget child, int index, Animation<double> animation) {
@@ -640,6 +658,7 @@ class _DaySpotsState extends State<_DaySpots> with AutomaticKeepAliveClientMixin
       decoration: BoxDecoration(borderRadius: DS.circular(10), boxShadow: DS.shadows(TripLook.dayCardShadow)),
       child: ClipRRect(borderRadius: DS.circular(10), child: child),
     );
+    if (_reduceMotion) return lifted;
     return AnimatedBuilder(
       animation: animation,
       builder: (_, c) => Transform.scale(scale: 1 + TripConstants.dragLiftScale * Curves.easeOut.transform(animation.value), child: c),
