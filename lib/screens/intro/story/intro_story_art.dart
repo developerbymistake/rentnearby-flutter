@@ -31,6 +31,7 @@ class IntroStoryArt {
   final ValueNotifier<bool> ready = ValueNotifier<bool>(false);
   Future<void>? _loading;
   double _scale = 0;
+  int _generation = 0;
 
   ui.Image? operator [](IntroArt a) => _infos[a.index]?.image;
 
@@ -47,29 +48,33 @@ class IntroStoryArt {
     final pending = _loading;
     if (pending != null && scale <= _scale) return pending;
     _scale = scale;
-    final future = _loadAll(scale);
+    final future = _loadAll(scale, ++_generation);
     _loading = future;
     return future;
   }
 
-  Future<void> _loadAll(double scale) async {
+  Future<void> _loadAll(double scale, int generation) async {
     final jobs = <Future<void>>[];
     for (final a in IntroArt.values) {
       final (path, size) = _spec[a]!;
-      jobs.add(_resolve(a, path, (size * scale).ceil()));
+      jobs.add(_resolve(a, path, (size * scale).ceil(), generation));
     }
     await Future.wait(jobs);
-    if (_scale == scale) ready.value = true;
+    if (generation == _generation) ready.value = true;
   }
 
-  Future<void> _resolve(IntroArt a, String path, int width) {
+  Future<void> _resolve(IntroArt a, String path, int width, int generation) {
     final done = Completer<void>();
     final stream = ResizeImage(AssetImage(path), width: width).resolve(ImageConfiguration.empty);
     late final ImageStreamListener listener;
     listener = ImageStreamListener((info, _) {
-      _infos[a.index]?.dispose();
-      _infos[a.index] = info;
       stream.removeListener(listener);
+      if (generation != _generation) {
+        info.dispose();
+      } else {
+        _infos[a.index]?.dispose();
+        _infos[a.index] = info;
+      }
       if (!done.isCompleted) done.complete();
     }, onError: (_, _) {
       stream.removeListener(listener);
@@ -86,6 +91,7 @@ class IntroStoryArt {
     }
     _loading = null;
     _scale = 0;
+    _generation++;
     ready.value = false;
   }
 }

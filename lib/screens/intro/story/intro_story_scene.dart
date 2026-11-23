@@ -64,7 +64,10 @@ class _WorldSlide extends StatelessWidget {
   Widget build(BuildContext context) => ValueListenableBuilder<double>(
         valueListenable: progress,
         child: child,
-        builder: (context, p, child) => Transform.translate(offset: Offset((1 - smooth(clamp01(p))) * geo.slidePx, 0), child: child),
+        builder: (context, p, child) => Offstage(
+          offstage: p <= 0,
+          child: Transform.translate(offset: Offset((1 - smooth(clamp01(p))) * geo.slidePx, 0), child: child),
+        ),
       );
 }
 

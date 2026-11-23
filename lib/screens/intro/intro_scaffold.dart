@@ -49,6 +49,9 @@ class _IntroScaffoldState extends State<IntroScaffold> with TickerProviderStateM
   bool _initialised = false;
   bool _foreground = true;
   double _artScale = 0;
+  (double, double, double, TextScaler)? _metricsKey;
+  IntroPanelMetrics? _metrics;
+  IntroStoryScene? _scene;
 
   @override
   void initState() {
@@ -217,6 +220,21 @@ class _IntroScaffoldState extends State<IntroScaffold> with TickerProviderStateM
     Get.offAllNamed(AppRoutes.login);
   }
 
+  IntroPanelMetrics _metricsFor(double width, double height, double bottomInset, TextScaler scaler) {
+    final key = (width, height, bottomInset, scaler);
+    if (key != _metricsKey || _metrics == null) {
+      _metricsKey = key;
+      _metrics = IntroPanelMetrics.measure(width: width, screenHeight: height, bottomInset: bottomInset, scaler: scaler);
+    }
+    return _metrics!;
+  }
+
+  IntroStoryScene _sceneFor(double panelTop) {
+    final scene = _scene;
+    if (scene != null && scene.panelTop == panelTop) return scene;
+    return _scene = IntroStoryScene(state: _story, progress: _progress, panelTop: panelTop);
+  }
+
   Widget _skip() {
     return ValueListenableBuilder<double>(
       valueListenable: _progress,
@@ -260,17 +278,12 @@ class _IntroScaffoldState extends State<IntroScaffold> with TickerProviderStateM
           body: LayoutBuilder(builder: (context, c) {
             final pad = MediaQuery.viewPaddingOf(context);
             final size = c.biggest;
-            final metrics = IntroPanelMetrics.measure(
-              width: size.width,
-              screenHeight: size.height,
-              bottomInset: pad.bottom,
-              scaler: MediaQuery.textScalerOf(context),
-            );
+            final metrics = _metricsFor(size.width, size.height, pad.bottom, MediaQuery.textScalerOf(context));
             final panelTop = size.height - metrics.height;
             final ctaBottom = IntroPanelMetrics.ctaBottom + pad.bottom;
             return Stack(
               children: [
-                Positioned.fill(child: IntroStoryScene(state: _story, progress: _progress, panelTop: panelTop)),
+                Positioned.fill(child: _sceneFor(panelTop)),
                 Positioned(left: 0, right: 0, top: panelTop, bottom: 0, child: const IgnorePointer(child: IntroPanel())),
                 Positioned.fill(
                   child: NotificationListener<ScrollNotification>(
