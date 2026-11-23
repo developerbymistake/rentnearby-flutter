@@ -36,7 +36,6 @@ class DesignColors {
   static const Color borderStrong = Color(0x663A5160);
 
   // intro chapters
-  static const Color introPlum = Color(0xFF7C2D5B);
   static const Color introSky = Color(0xFF0369A1);
 
   // brand

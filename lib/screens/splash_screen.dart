@@ -10,6 +10,7 @@ import '../controllers/tab_config_controller.dart';
 import '../design/design.dart';
 import '../services/storage_service.dart';
 import '../utils/update_decision.dart';
+import 'intro/story/intro_story_art.dart';
 import 'splash/splash_hero.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -98,6 +99,7 @@ class _SplashScreenState extends State<SplashScreen> with WidgetsBindingObserver
       }
       Get.offAllNamed(auth.postLoginRoute);
     } else if (!StorageService.getTourSeen(AppConstants.introCarouselSeenKey)) {
+      IntroStoryArt.warm();
       Get.offAllNamed(AppRoutes.intro);
     } else {
       Get.offAllNamed(AppRoutes.login);

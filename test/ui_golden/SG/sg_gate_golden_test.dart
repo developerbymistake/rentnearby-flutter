@@ -1,7 +1,4 @@
 import 'package:bakhli/design/design.dart';
-import 'package:bakhli/screens/intro/intro_slide_a.dart';
-import 'package:bakhli/screens/intro/intro_slide_b.dart';
-import 'package:bakhli/screens/intro/intro_widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -83,60 +80,5 @@ void main() {
       await expectLater(find.byKey(const ValueKey('golden_root')),
           matchesGoldenFile('goldens/legal_section_$scale.png'));
     });
-
-    testWidgets('intro scenes $scale', (t) async {
-      setGoldenView(t);
-      await t.pumpWidget(goldenHost(
-        Column(children: [
-          SizedBox(
-            width: 280,
-            height: 240,
-            child: IntroSlidePick(isActive: true, progress: ValueNotifier<double>(0)),
-          ),
-          SizedBox(
-            width: 280,
-            height: 240,
-            child: IntroSlidePlan(isActive: true, progress: ValueNotifier<double>(1)),
-          ),
-          SizedBox(
-            width: 280,
-            height: 240,
-            child: IntroSlideStart(isActive: true, progress: ValueNotifier<double>(5)),
-          ),
-        ]),
-        scale: scale,
-      ));
-      await settleGolden(t);
-      expect(t.takeException(), isNull);
-      await expectLater(find.byKey(const ValueKey('golden_root')),
-          matchesGoldenFile('goldens/intro_scenes_$scale.png'));
-    });
   }
-
-  testWidgets('stage loop stops when inactive and respects reduce motion', (t) async {
-    setGoldenView(t);
-    late Animation<double> loop;
-    Widget host(bool active, bool reduce) => MaterialApp(
-          home: MediaQuery(
-            data: MediaQueryData(size: goldenSize, disableAnimations: reduce),
-            child: IntroStage(
-              isActive: active,
-              builder: (context, enter) {
-                loop = IntroStageScope.loopOf(context);
-                return const SizedBox();
-              },
-            ),
-          ),
-        );
-    await t.pumpWidget(host(true, false));
-    await t.pump(const Duration(milliseconds: 900));
-    expect(loop.value, greaterThan(0));
-    await t.pumpWidget(host(false, false));
-    final frozen = loop.value;
-    await t.pump(const Duration(milliseconds: 900));
-    expect(loop.value, frozen);
-    await t.pumpWidget(host(true, true));
-    await t.pump(const Duration(milliseconds: 900));
-    expect(loop.value, 0);
-  });
 }

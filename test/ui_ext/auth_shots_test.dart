@@ -484,43 +484,10 @@ void main() {
         await _open(t, IntroScaffold(onFinish: () {}, autoplay: false), w: w, s: s);
         for (var k = 0; k < IntroScaffold.pageCount; k++) {
           if (k > 0) {
-            await t.tap(find.byKey(Key('intro_stop_$k')));
+            t.widget<PageView>(find.byType(PageView)).controller!.jumpToPage(k);
             await t.pump(const Duration(seconds: 1));
           }
           if (w == 360 && s == 1.0 || k == 0 || k == 3) await _snap(t, 'intro_${k + 1}_${_tag(w, s)}');
-          if (k == 1) {
-            await t.tap(find.text('Day 2 · 2 stops'));
-            await t.pump(const Duration(milliseconds: 400));
-            expect(find.text('Day 2 · 2 stops'), findsNWidgets(2));
-            expect(find.text('Day 1 · 3 stops'), findsOneWidget);
-            await _snap(t, 'intro_2_day2_${_tag(w, s)}');
-            await t.tap(find.text('Day 2 · 2 stops').last);
-            await t.pump(const Duration(milliseconds: 400));
-            expect(find.text('Day 1 · 3 stops'), findsOneWidget);
-            expect(find.text('Day 2 · 2 stops'), findsOneWidget);
-            await t.tap(find.text('Day 2 · 2 stops'));
-            await t.pump(const Duration(milliseconds: 400));
-            await t.tap(find.text('Day 1 · 3 stops').last);
-            await t.pump(const Duration(milliseconds: 400));
-            expect(find.text('Day 1 · 3 stops'), findsNWidgets(2));
-            await _snap(t, 'intro_2_day1_${_tag(w, s)}');
-            await t.tap(find.text('Day 1 · 3 stops').last);
-            await t.pump(const Duration(milliseconds: 400));
-            expect(find.text('Day 1 · 3 stops'), findsOneWidget);
-            expect(find.text('Day 2 · 2 stops'), findsOneWidget);
-          }
-          if (k == 2 && w == 360 && s == 1.0) {
-            await t.tap(find.byKey(const ValueKey('reserve')));
-            await t.pump(const Duration(milliseconds: 400));
-            await _snap(t, 'intro_3b_${_tag(w, s)}');
-            expect(find.text('Host replies soon'), findsOneWidget);
-          }
-          if (k == 4 && w == 360 && s == 1.0) {
-            await t.tap(find.text('Check in'));
-            await t.pump(const Duration(milliseconds: 400));
-            await _snap(t, 'intro_5b_${_tag(w, s)}');
-            expect(find.text('All done today'), findsOneWidget);
-          }
         }
         await _done(t);
       });
