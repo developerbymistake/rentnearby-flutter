@@ -30,8 +30,14 @@ const _frames = [
   _Frame('f13_p3.2_t2.0', 3.2, 2.0),
   _Frame('f14_p3.5_t1.0', 3.5, 1.0),
   _Frame('f15_p4_t1.0', 4, 1.0),
+  _Frame('f16_p4_t2.55', 4, 2.55),
+  _Frame('f17_p4_t3.0', 4, 3.0),
+  _Frame('f18_p4.2_t1.0', 4.2, 1.0),
   _Frame('f19_p4.6_t1.0', 4.6, 1.0),
+  _Frame('f20_p4.9_t1.0', 4.9, 1.0),
   _Frame('f21_p5_t1.0', 5, 1.0),
+  _Frame('f21b_p5_t3.0', 5, 3.0),
+  _Frame('f21c_p5_t5.2', 5, 5.2),
 ];
 
 Future<void> _pumpFrame(WidgetTester t, _Frame f, double scale) async {

@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:bakhli/design/tokens/intro_story_colors.dart';
 import 'package:bakhli/screens/intro/intro_widgets.dart';
 import 'package:bakhli/screens/intro/story/intro_story_cast.dart';
@@ -317,6 +319,134 @@ void main() {
       expect(b.right, lessThanOrEqualTo(1206 + 1));
       expect(b.top, greaterThanOrEqualTo(244 - 1));
       expect(b.bottom, lessThanOrEqualTo(390 + 1));
+    });
+  });
+
+  group('river stop and camp (chapters 5 and 6)', () {
+    test('drive 2 (q 2.36..2.72) keeps all three inside, S reaches the river at 1900', () {
+      for (final q in [2.4, 2.55, 2.7]) {
+        final f = _cast(q);
+        expect(f.actors.every((a) => a.inside && a.alpha == 0), isTrue, reason: 'q $q');
+      }
+      expect(storyS(2.74), 1900);
+      expect(IntroRiver.x0 - storyS(3), lessThan(0));
+      expect(IntroRiver.x1 - storyS(3), greaterThan(IntroStory.sceneW));
+    });
+
+    test('river stop boundaries: jump out from q 2.74, pose by q 3.0, back in by q 3.32', () {
+      final out = _cast(2.78);
+      expect(out.actors[0].airborne, isTrue);
+      expect(out.actors[0].inside, isFalse);
+      final pose = _cast(3.0);
+      for (var i = 0; i < 3; i++) {
+        expect(pose.actors[i].pose, isTrue);
+        expect(pose.actors[i].x, closeTo(IntroStory.poseX[i], 6.01));
+      }
+      final walk = _cast(3.15);
+      expect(walk.actors[0].walking, isTrue);
+      expect(walk.hasPandaPose, isFalse);
+      final back = _cast(3.315);
+      expect(back.actors.every((a) => a.inside), isTrue);
+      expect(_cast(3.4).actors.every((a) => a.inside && a.alpha == 0), isTrue);
+    });
+
+    test('selfie rig fades in at q 2.95..2.99, holds, fades out at 3.08..3.12', () {
+      expect(IntroSelfieDrawer.rigAlpha(2.94), 0);
+      expect(IntroSelfieDrawer.rigAlpha(3.0), closeTo(1, 1e-9));
+      expect(IntroSelfieDrawer.rigAlpha(3.05), closeTo(1, 1e-9));
+      expect(IntroSelfieDrawer.rigAlpha(3.12), 0);
+    });
+
+    test('selfie loop 3.4 s: squeeze before the flash, hop during it, photo pops from 2.55', () {
+      expect(IntroSelfieDrawer.cycleTime(3.4 + 1), closeTo(1, 1e-9));
+      expect(IntroSelfieDrawer.cycleTime(-1), closeTo(2.4, 1e-9));
+      final squeeze = _cast(3.0, t: 2.2);
+      expect(squeeze.actors[0].x, closeTo(IntroStory.poseX[0] + 6, 1e-6));
+      expect(squeeze.actors[2].x, closeTo(IntroStory.poseX[2] - 6, 1e-6));
+      expect(squeeze.actors[0].hop, 0);
+      final flash = _cast(3.0, t: 2.675);
+      expect(flash.actors[1].hop, closeTo(9, 1e-6));
+      expect(IntroSelfieDrawer.popScale(.35), closeTo(1, 1e-9));
+      expect(IntroSelfieDrawer.popScale(.1), lessThan(1));
+      expect(IntroSelfieDrawer.popScale(1.5), closeTo(0, 1e-9));
+    });
+
+    test('frame 15 (q 3, t 1): panda pose anchors the rig, beam and lamp on, no fire yet', () {
+      final f = _cast(3.0);
+      expect(f.hasPandaPose, isTrue);
+      expect(f.pandaY, IntroStory.groundY);
+      expect(beamOf(3.0), greaterThan(.5));
+      expect(lampOf(3.0), closeTo(1, 1e-9));
+      expect(smokeGainOf(3.0), closeTo(1, 1e-9));
+      expect(fireOnOf(3.0), 0);
+    });
+
+    test('drive 3 headlights switch off as the taxi parks at the camp', () {
+      expect(beamOf(3.6), greaterThan(.9));
+      expect(beamOf(3.8), 0);
+      expect(storyS(3.78), closeTo(3000, 1e-9));
+    });
+
+    test('frame 20 (q 3.9): out of the taxi one by one, panda nearest the fire, flames up, no confetti', () {
+      expect(_cast(3.85).actors[2].airborne, isTrue);
+      final f = _cast(3.9);
+      expect(f.actors.every((a) => a.walking && !a.inside), isTrue);
+      expect(f.actors[0].x, greaterThan(f.actors[1].x));
+      expect(f.actors[1].x, greaterThan(f.actors[2].x));
+      expect(fireOnOf(3.9), closeTo(1, 1e-9));
+      expect(confettiOf(3.9), 0);
+    });
+
+    test('frame 21 (q 4): panda and fox dance on the orbit, lion arriving, front bigger than back', () {
+      for (final t in [1.0, 3.0, 5.2]) {
+        final f = _cast(4, t: t);
+        expect(f.actors[2].walking, isTrue);
+        for (var i = 0; i < 2; i++) {
+          final a = f.actors[i];
+          final ang = t * .8 + i * 2.094 + .3;
+          expect(a.cel, isTrue);
+          expect(a.x, closeTo(262 + math.cos(ang) * 62, 1e-6));
+          expect(a.y, closeTo(432 + math.sin(ang) * 15, 1e-6));
+          expect(a.sc, closeTo(1.12 + .12 * math.sin(ang), 1e-6));
+        }
+        final front = f.actors[0].y > f.actors[1].y ? f.actors[0] : f.actors[1];
+        final back = identical(front, f.actors[0]) ? f.actors[1] : f.actors[0];
+        expect(front.sc, greaterThan(back.sc));
+      }
+      expect(confettiOf(4), closeTo(1, 1e-9));
+    });
+
+    test('depth order: dancers behind the fire (y < 426) come before it, the rest after', () {
+      for (final t in [1.0, 2.0, 3.0, 5.2]) {
+        final f = _cast(4, t: t);
+        final firePos = f.order.indexOf(CastFrame.fire);
+        for (var i = 0; i < 3; i++) {
+          final pos = f.order.indexOf(i);
+          expect(pos < firePos, f.actors[i].y + .2 < IntroStory.groundY, reason: 't $t actor $i');
+        }
+      }
+    });
+
+    test('river edge mask fades 12% at both ends', () {
+      expect(IntroRiver.edge(IntroRiver.x0), 0);
+      expect(IntroRiver.edge(IntroRiver.x0 + 640 * .06), closeTo(.5, 1e-9));
+      expect(IntroRiver.edge(2100), 1);
+      expect(IntroRiver.edge(IntroRiver.x1 - 640 * .06), closeTo(.5, 1e-9));
+      expect(IntroRiver.edge(IntroRiver.x1 + 1), 0);
+    });
+
+    test('camp is in view only at the end, fire sits at screen x 262 at rest', () {
+      expect(IntroStory.fireWorldX - storyS(4), 262);
+      expect(IntroCamp.lakeX0 - storyS(3), greaterThan(IntroStory.sceneW));
+      expect(IntroCamp.tentAt.dx - storyS(4), 340);
+    });
+
+    test('reduce motion: chapter 6 uses the fixed rest time, dancers at rest', () {
+      final s = IntroStoryState()..reduce = true;
+      s.setProgress(5);
+      expect(s.time, 3);
+      expect(s.cast.actors[0].cel && s.cast.actors[1].cel, isTrue);
+      s.dispose();
     });
   });
 
