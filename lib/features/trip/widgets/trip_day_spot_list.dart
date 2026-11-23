@@ -34,6 +34,9 @@ class TripDaySpotList extends StatelessWidget {
   static const Key headerKey = ValueKey('day-header');
   static const Key chipsKey = ValueKey('day-chips');
   static const Key handleKey = ValueKey('spot-drag-handle');
+  static const Key dropKey = ValueKey('day-drop');
+  static const Key dropHighlightKey = ValueKey('day-drop-highlight');
+  static const Key dropLineKey = ValueKey('day-drop-line');
 
   static Future<void> replace(TripPlanController c, String spotId, int day) async {
     final legIndex = c.plan.value?.legIndexOf(day) ?? 1;
@@ -79,47 +82,53 @@ class TripDaySpotList extends StatelessWidget {
           children: [
             Padding(
               padding: EdgeInsets.fromLTRB(side, top, side, bottomPad),
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: DesignColors.surface,
-                  borderRadius: _radius,
-                  boxShadow: DS.shadows(TripLook.dayCardShadow),
-                ),
-                child: ClipRRect(
-                  borderRadius: _radius,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      _header(c, plan, d, color, editing, DS.s(narrow ? 78.0 : 88.0)),
-                      Padding(
-                        padding: EdgeInsets.only(bottom: DS.s(8)),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            if (d.spots.isEmpty)
-                              _emptyBody(d)
-                            else
-                              _spots(context, c, plan, d, color, locked, editing),
-                            for (final text in closed)
-                              Padding(
-                                padding: EdgeInsets.fromLTRB(DS.s(12), DS.gv(8), DS.s(12), 0),
-                                child: Row(
-                                  children: [
-                                    const Art3D(asset: ListingArt.clipboard, size: 20, shadowBlur: 2, shadowOffset: Offset(1, 2)),
-                                    Gap.h(8),
-                                    Expanded(
-                                      child: Text(text, style: Ink3D.text(12, FontWeight.w600, TripLook.warningText)),
-                                    ),
-                                  ],
+              child: _DayDropTarget(
+                day: day,
+                leg: plan.legIndexOf(day),
+                editing: editing,
+                color: color,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: DesignColors.surface,
+                    borderRadius: _radius,
+                    boxShadow: DS.shadows(TripLook.dayCardShadow),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: _radius,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _header(c, plan, d, color, editing, DS.s(narrow ? 78.0 : 88.0)),
+                        Padding(
+                          padding: EdgeInsets.only(bottom: DS.s(8)),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (d.spots.isEmpty)
+                                _emptyBody(d)
+                              else
+                                _spots(context, c, plan, d, color, locked, editing),
+                              for (final text in closed)
+                                Padding(
+                                  padding: EdgeInsets.fromLTRB(DS.s(12), DS.gv(8), DS.s(12), 0),
+                                  child: Row(
+                                    children: [
+                                      const Art3D(asset: ListingArt.clipboard, size: 20, shadowBlur: 2, shadowOffset: Offset(1, 2)),
+                                      Gap.h(8),
+                                      Expanded(
+                                        child: Text(text, style: Ink3D.text(12, FontWeight.w600, TripLook.warningText)),
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                              ),
-                            if (editing) Padding(padding: DS.sym(h: 12), child: _editFooter(context, c, plan, d, full)),
-                          ],
+                              if (editing) Padding(padding: DS.sym(h: 12), child: _editFooter(context, c, plan, d, full)),
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -274,6 +283,8 @@ class TripDaySpotList extends StatelessWidget {
           spots: spots,
           color: color,
           editing: editing,
+          prevDay: editing ? _neighbour(c, plan, day - 1) : null,
+          nextDay: editing ? _neighbour(c, plan, day + 1) : null,
           times: [for (final t in starts) TripDayTimeline.clock(t)],
           drives: drives,
           onRemove: (id) => _removeById(context, c, id),
@@ -285,6 +296,9 @@ class TripDaySpotList extends StatelessWidget {
       ],
     );
   }
+
+  int? _neighbour(TripPlanController c, TripPlan plan, int n) =>
+      plan.dayAt(n) != null && plan.legIndexOf(n) == plan.legIndexOf(day) && c.canEditDay(n) ? n : null;
 
   void _removeById(BuildContext context, TripPlanController c, String id) {
     final d = c.plan.value?.dayAt(day);
@@ -433,13 +447,15 @@ class TripDaySpotList extends StatelessWidget {
 }
 
 
-typedef _RowFields = (TripSpotRef, int, String, int?, bool, bool, Color);
+typedef _RowFields = (TripSpotRef, int, String, int?, bool, bool, Color, int?, int?);
 
 class _DaySpots extends StatefulWidget {
   final int day;
   final List<TripSpotRef> spots;
   final Color color;
   final bool editing;
+  final int? prevDay;
+  final int? nextDay;
   final List<String> times;
   final List<int?> drives;
   final ValueChanged<String> onRemove;
@@ -450,6 +466,8 @@ class _DaySpots extends StatefulWidget {
     required this.spots,
     required this.color,
     required this.editing,
+    this.prevDay,
+    this.nextDay,
     required this.times,
     required this.drives,
     required this.onRemove,
@@ -467,6 +485,7 @@ class _DaySpotsState extends State<_DaySpots> with AutomaticKeepAliveClientMixin
   TripTrackedDrag? _drag;
   List<Rect> _rows = const [];
   double _liftTop = 0;
+  double _liftLeft = 0;
   int _insert = 0;
   int _endInsert = 0;
 
@@ -499,7 +518,7 @@ class _DaySpotsState extends State<_DaySpots> with AutomaticKeepAliveClientMixin
   _StopItem _row(int i) {
     final s = widget.spots[i];
     final last = i == widget.spots.length - 1;
-    final fields = (s, i, widget.times[i], widget.drives[i], !last, widget.editing, widget.color);
+    final fields = (s, i, widget.times[i], widget.drives[i], !last, widget.editing, widget.color, widget.prevDay, widget.nextDay);
     final hit = _cache[s.id];
     if (hit != null && hit.$1 == fields) return hit.$2;
     final row = _StopItem(
@@ -512,14 +531,18 @@ class _DaySpotsState extends State<_DaySpots> with AutomaticKeepAliveClientMixin
       driveMinutes: widget.drives[i],
       showDrive: !last,
       editing: widget.editing,
+      prevDay: widget.prevDay,
+      nextDay: widget.nextDay,
       drag: _notifier,
       onRemove: widget.onRemove,
       onOpen: widget.editing ? widget.onOpen : null,
       onMoveBy: _moveBy,
+      onMoveToDay: _moveToNeighbour,
       onLift: _lift,
       onMove: _move,
       onRelease: _release,
       onCancel: _cancel,
+      onDrop: _drop,
     );
     _cache[s.id] = (fields, row);
     return row;
@@ -535,11 +558,19 @@ class _DaySpotsState extends State<_DaySpots> with AutomaticKeepAliveClientMixin
     if (box == null) return;
     _drag = d;
     updateKeepAlive();
-    _liftTop = box.localToGlobal(Offset.zero).dy;
+    final origin = box.localToGlobal(Offset.zero);
+    _liftTop = origin.dy;
+    _liftLeft = origin.dx;
     _rows = _rowRects(box);
     _insert = d.index;
     _endInsert = d.index;
-    _notifier.value = TripDragState(day: widget.day, from: d.index, slot: d.index);
+    final scope = _scope;
+    final id = widget.spots[d.index].id;
+    if (scope != null) {
+      scope.begin(day: widget.day, from: d.index, canDrop: (to) => _c.canDropOn(id, to));
+    } else {
+      _notifier.value = TripDragState(day: widget.day, from: d.index, slot: d.index);
+    }
     TripDragHaptics.lift();
     final scrollable = Scrollable.maybeOf(context);
     if (scrollable != null) _scope?.startAutoScroll(scrollable, _refeed);
@@ -583,21 +614,66 @@ class _DaySpotsState extends State<_DaySpots> with AutomaticKeepAliveClientMixin
     if (d == null || box == null || _rows.isEmpty) return;
     final shift = box.localToGlobal(Offset.zero).dy - _liftTop;
     final next = TripDragSlots.next(rows: _rows, from: d.index, insert: _insert, proxyTop: _rows[d.index].top + d.dy - shift);
-    if (next == _insert) return;
     final before = TripDragSlots.position(_insert, d.index);
     _insert = next;
     final slot = TripDragSlots.position(next, d.index);
+    final scope = _scope;
+    final proxy = _proxyRect();
+    if (scope != null && proxy != null) {
+      scope.update(slot: slot, proxy: proxy);
+      return;
+    }
     if (slot == before) return;
     TripDragHaptics.slot();
     _notifier.value = TripDragState(day: widget.day, from: d.index, slot: slot);
   }
 
-  void _feedScroller() {
+  Rect? _proxyRect() {
     final d = _drag;
-    final box = _box;
-    if (d == null || box == null || _rows.isEmpty) return;
+    if (d == null || _rows.isEmpty) return null;
     final r = _rows[d.index];
-    _scope?.feed(Rect.fromLTWH(box.localToGlobal(Offset.zero).dx + r.left, _liftTop + r.top + d.dy, r.width, r.height));
+    return Rect.fromLTWH(_liftLeft + r.left, _liftTop + r.top + d.dy, r.width, r.height);
+  }
+
+  void _feedScroller() {
+    final proxy = _proxyRect();
+    if (proxy != null) _scope?.feed(proxy);
+  }
+
+  VoidCallback? _drop(TripTrackedDrag d) {
+    final scope = _scope;
+    if (d != _drag || scope == null) return null;
+    final s = scope.drag.value;
+    switch (scope.dropKind) {
+      case TripDropKind.source:
+        return null;
+      case TripDropKind.outside:
+        return () {};
+      case TripDropKind.target:
+        final to = s?.targetDay;
+        if (s == null || to == null || d.index >= widget.spots.length) return () {};
+        final id = widget.spots[d.index].id;
+        final index = s.refused ? null : s.targetIndex;
+        return () => _moveTo(id, to, index);
+    }
+  }
+
+  void _moveToNeighbour(String id, int to) {
+    final n = _c.plan.value?.dayAt(to)?.spots.length ?? 0;
+    _moveTo(id, to, _c.canDropOn(id, to) ? (to < widget.day ? n : 0) : null);
+  }
+
+  void _moveTo(String id, int to, int? index) {
+    final c = _c;
+    if (index == null) {
+      c.moveSpot(id, to);
+      return;
+    }
+    final m = ScaffoldMessenger.maybeOf(context);
+    final snap = c.snapshotDays([widget.day, to]);
+    if (!c.moveSpot(id, to, index: index)) return;
+    TripDragHaptics.drop();
+    _showUndo(m, TripStringsV2Plan.movedToDay(to), snap);
   }
 
   void _onReorderEnd(int insert) {
@@ -624,6 +700,7 @@ class _DaySpotsState extends State<_DaySpots> with AutomaticKeepAliveClientMixin
 
   void _endSession({bool keepNumbers = false}) {
     _scope?.stopAutoScroll();
+    _scope?.end();
     _drag = null;
     _rows = const [];
     if (!keepNumbers) _clearNumbers();
@@ -649,11 +726,15 @@ class _DaySpotsState extends State<_DaySpots> with AutomaticKeepAliveClientMixin
     final c = _c;
     final snap = c.snapshotDays([widget.day]);
     if (!c.reorderTo(widget.day, from, to)) return;
-    final m = ScaffoldMessenger.maybeOf(context);
+    _showUndo(ScaffoldMessenger.maybeOf(context), TripStringsV2Plan.orderChanged, snap);
+  }
+
+  void _showUndo(ScaffoldMessengerState? m, String text, List<TripDay> snap) {
+    final c = _c;
     m?.hideCurrentSnackBar();
     m?.showSnackBar(
       SnackBar(
-        content: const Text(TripStringsV2Plan.orderChanged, style: TextStyle(fontFamily: FitnessAppTheme.fontName)),
+        content: Text(text, style: const TextStyle(fontFamily: FitnessAppTheme.fontName)),
         duration: const Duration(seconds: 5),
         action: SnackBarAction(label: TripStringsV2Plan.undo, onPressed: () => c.restoreDays(snap)),
       ),
@@ -706,14 +787,18 @@ class _StopItem extends StatelessWidget {
   final int? driveMinutes;
   final bool showDrive;
   final bool editing;
+  final int? prevDay;
+  final int? nextDay;
   final ValueListenable<TripDragState?> drag;
   final ValueChanged<String> onRemove;
   final ValueChanged<String>? onOpen;
   final void Function(String id, int delta) onMoveBy;
+  final void Function(String id, int day) onMoveToDay;
   final TripDragCallback onLift;
   final TripDragCallback onMove;
   final TripDragCallback onRelease;
   final TripDragCallback onCancel;
+  final TripDropDecision onDrop;
 
   const _StopItem({
     super.key,
@@ -725,14 +810,18 @@ class _StopItem extends StatelessWidget {
     required this.driveMinutes,
     required this.showDrive,
     required this.editing,
+    required this.prevDay,
+    required this.nextDay,
     required this.drag,
     required this.onRemove,
     required this.onOpen,
     required this.onMoveBy,
+    required this.onMoveToDay,
     required this.onLift,
     required this.onMove,
     required this.onRelease,
     required this.onCancel,
+    required this.onDrop,
   });
 
   Widget _dragStart({required bool delayed, required Widget child, HitTestBehavior behavior = HitTestBehavior.deferToChild}) =>
@@ -745,6 +834,7 @@ class _StopItem extends StatelessWidget {
         onMove: onMove,
         onRelease: onRelease,
         onCancel: onCancel,
+        onDrop: onDrop,
         child: child,
       );
 
@@ -878,8 +968,186 @@ class _StopItem extends StatelessWidget {
       customSemanticsActions: {
         if (index > 0) const CustomSemanticsAction(label: TripStringsV2Plan.moveUp): () => onMoveBy(spot.id, -1),
         if (showDrive) const CustomSemanticsAction(label: TripStringsV2Plan.moveDown): () => onMoveBy(spot.id, 1),
+        if (prevDay case final p?) const CustomSemanticsAction(label: TripStringsV2Plan.moveToPreviousDay): () => onMoveToDay(spot.id, p),
+        if (nextDay case final n?) const CustomSemanticsAction(label: TripStringsV2Plan.moveToNextDay): () => onMoveToDay(spot.id, n),
       },
       child: _dragStart(delayed: true, child: body),
+    );
+  }
+}
+
+class _DayDropTarget extends StatefulWidget {
+  final int day;
+  final int leg;
+  final bool editing;
+  final Color color;
+  final Widget child;
+
+  const _DayDropTarget({required this.day, required this.leg, required this.editing, required this.color, required this.child});
+
+  @override
+  State<_DayDropTarget> createState() => _DayDropTargetState();
+}
+
+class _DayDropTargetState extends State<_DayDropTarget> implements TripDayDropTarget {
+  TripSpotDragScopeState? _scope;
+  int? _registered;
+  (bool, int)? _look;
+  List<Rect>? _rows;
+  double? _headerBottom;
+
+  @override
+  int get day => widget.day;
+
+  @override
+  int get leg => widget.leg;
+
+  RenderBox? get _box {
+    final b = context.findRenderObject();
+    return b is RenderBox && b.attached && b.hasSize ? b : null;
+  }
+
+  @override
+  Rect? get globalRect {
+    final box = _box;
+    if (box == null) return null;
+    final m = box.getTransformTo(null);
+    // A kept-alive card scrolled out of the list gets a zero transform.
+    if (m.determinant() == 0) return null;
+    return MatrixUtils.transformRect(m, Offset.zero & box.size);
+  }
+
+  @override
+  List<Rect> rowRects() {
+    final box = _box;
+    if (box == null) return const [];
+    final origin = box.localToGlobal(Offset.zero);
+    return [for (final r in _localRows(box)) r.shift(origin)];
+  }
+
+  List<Rect> _localRows(RenderBox card) {
+    final cached = _rows;
+    if (cached != null) return cached;
+    final rows = <int, Rect>{};
+    void visit(Element e) {
+      final w = e.widget;
+      if (w is _StopItem) {
+        final r = e.renderObject;
+        if (r is RenderBox && r.attached && r.hasSize) rows[w.index] = card.globalToLocal(r.localToGlobal(Offset.zero)) & r.size;
+        return;
+      }
+      if (w.key == TripDaySpotList.headerKey) {
+        final r = e.renderObject;
+        if (r is RenderBox && r.attached && r.hasSize) _headerBottom = card.globalToLocal(r.localToGlobal(Offset(0, r.size.height))).dy;
+      }
+      e.visitChildren(visit);
+    }
+
+    context.visitChildElements(visit);
+    final list = [for (final k in rows.keys.toList()..sort()) rows[k]!];
+    _rows = list;
+    return list;
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _scope = TripSpotDragScope.maybeOf(context);
+    _sync();
+  }
+
+  @override
+  void didUpdateWidget(_DayDropTarget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.day != widget.day || oldWidget.editing != widget.editing) _sync();
+  }
+
+  void _sync() {
+    final scope = _scope;
+    final want = scope != null && widget.editing ? widget.day : null;
+    if (want == _registered) return;
+    _unregister();
+    if (want != null && scope != null) {
+      scope.register(want, this);
+      scope.drag.addListener(_onDrag);
+      _registered = want;
+    }
+  }
+
+  void _unregister() {
+    final r = _registered;
+    if (r == null) return;
+    _scope?.unregister(r, this);
+    _scope?.drag.removeListener(_onDrag);
+    _registered = null;
+    _rows = null;
+    _look = null;
+  }
+
+  void _onDrag() {
+    final s = _scope?.drag.value;
+    if (s == null) {
+      _rows = null;
+      _headerBottom = null;
+    }
+    final look = s != null && s.isTarget(widget.day) ? (s.refused, s.targetIndex) : null;
+    if (look == _look) return;
+    setState(() => _look = look);
+  }
+
+  @override
+  void dispose() {
+    _unregister();
+    super.dispose();
+  }
+
+  double? _lineY() {
+    final look = _look;
+    final box = _box;
+    if (look == null || look.$1 || box == null) return null;
+    final rows = _localRows(box);
+    if (rows.isEmpty) return _headerBottom == null ? null : _headerBottom! + DS.gv(6);
+    return look.$2 < rows.length ? rows[look.$2].top : rows.last.bottom;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final look = _look;
+    final y = _lineY();
+    final line = DS.s(3);
+    return Stack(
+      key: TripDaySpotList.dropKey,
+      fit: StackFit.passthrough,
+      children: [
+        widget.child,
+        Positioned.fill(
+          child: IgnorePointer(
+            child: look == null
+                ? const SizedBox.shrink()
+                : Stack(
+                    children: [
+                      Positioned.fill(
+                        child: DecoratedBox(
+                          key: TripDaySpotList.dropHighlightKey,
+                          decoration: BoxDecoration(
+                            borderRadius: TripDaySpotList._radius,
+                            border: Border.all(color: look.$1 ? TripLook.error : ListingPalette.indigo.line, width: DS.s(2)),
+                          ),
+                        ),
+                      ),
+                      if (y != null)
+                        Positioned(
+                          left: DS.s(12),
+                          right: DS.s(12),
+                          top: y - line / 2,
+                          height: line,
+                          child: DecoratedBox(key: TripDaySpotList.dropLineKey, decoration: BoxDecoration(color: widget.color, borderRadius: DS.circular(2))),
+                        ),
+                    ],
+                  ),
+          ),
+        ),
+      ],
     );
   }
 }
