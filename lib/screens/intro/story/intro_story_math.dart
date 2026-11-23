@@ -41,7 +41,6 @@ abstract final class IntroStory {
   static const double slotY = 358;
   static const List<double> trailRestart = [0, .1, .42];
   static const double fireWorldX = 3262;
-  static const double worldEnd = 3000;
 }
 
 double storyS(double q) {

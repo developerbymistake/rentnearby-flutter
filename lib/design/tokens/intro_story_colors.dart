@@ -21,8 +21,6 @@ abstract final class IntroStoryColors {
   static const Color white25 = Color(0x40FFFFFF);
   static const Color white28 = Color(0x47FFFFFF);
   static const Color white35 = Color(0x59FFFFFF);
-  static const Color white45 = Color(0x73FFFFFF);
-  static const Color white60 = Color(0x99FFFFFF);
   static const Color white62 = Color(0x9EFFFFFF);
   static const Color white85 = Color(0xD9FFFFFF);
 
@@ -39,11 +37,9 @@ abstract final class IntroStoryColors {
   static const Color sunCore = Color(0xFFFFF6D0);
   static const Color sunMid = Color(0xFFFFD98A);
   static const Color sunEdge = Color(0x00FFC878);
-  static const Color sunGlow = Color(0xFFFFD68C);
   static const Color moonCore = Color(0xFFFFFFFF);
   static const Color moonMid = Color(0xFFDCE3FF);
   static const Color moonEdge = Color(0xFF9FAAF0);
-  static const Color moonGlow = Color(0xFFB4BEFF);
 
   static const List<Color> sunGlowColors = [Color(0x73FFD68C), Color(0x73FFD68C), Color(0x73FFD68C), Color(0x60FFD68C), Color(0x4DFFD68C), Color(0x38FFD68C), Color(0x27FFD68C), Color(0x18FFD68C), Color(0x0AFFD68C), Color(0x04FFD68C), Color(0x00FFD68C)];
   static const List<double> sunGlowStops = [0, .2857, .2857, .361, .436, .511, .586, .662, .774, .887, 1];
