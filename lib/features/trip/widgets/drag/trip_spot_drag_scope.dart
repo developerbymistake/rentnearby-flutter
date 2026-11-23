@@ -1,3 +1,4 @@
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
@@ -42,8 +43,23 @@ class TripDragState {
 }
 
 class TripDragHaptics {
-  static void lift() => HapticFeedback.selectionClick();
-  static void slot() => HapticFeedback.selectionClick();
+  static Duration? _last;
+
+  static Duration get _now => SchedulerBinding.instance.currentSystemFrameTimeStamp;
+
+  static void lift() {
+    _last = null;
+    HapticFeedback.selectionClick();
+  }
+
+  static void slot() {
+    final now = _now;
+    final last = _last;
+    if (last != null && now >= last && now - last < TripConstants.dragHapticGap) return;
+    _last = now;
+    HapticFeedback.selectionClick();
+  }
+
   static void drop() => HapticFeedback.lightImpact();
 }
 
@@ -76,9 +92,12 @@ class TripSpotDragScopeState extends State<TripSpotDragScope> {
   VoidCallback? _onScrolled;
   bool Function(int day)? _canDrop;
   int? _sourceLeg;
+  Object? _owner;
   TripDropKind _kind = TripDropKind.source;
 
   TripDropKind get dropKind => _kind;
+
+  bool get active => _owner != null;
 
   void register(int day, TripDayDropTarget t) => _targets[day] = t;
 
@@ -86,7 +105,8 @@ class TripSpotDragScopeState extends State<TripSpotDragScope> {
     if (identical(_targets[day], t)) _targets.remove(day);
   }
 
-  void begin({required int day, required int from, required bool Function(int day) canDrop}) {
+  void begin({required int day, required int from, required bool Function(int day) canDrop, Object? owner}) {
+    _owner = owner ?? this;
     _canDrop = canDrop;
     _allowed.clear();
     _sourceLeg = _targets[day]?.leg;
@@ -135,6 +155,7 @@ class TripSpotDragScopeState extends State<TripSpotDragScope> {
   }
 
   void end() {
+    _owner = null;
     _canDrop = null;
     _allowed.clear();
     _sourceLeg = null;

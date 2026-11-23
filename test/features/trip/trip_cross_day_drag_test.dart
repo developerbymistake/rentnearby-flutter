@@ -1,4 +1,5 @@
 import 'package:bakhli/design/extra/trip_plan_look.dart';
+import 'package:bakhli/features/trip/trip_constants.dart';
 import 'package:bakhli/features/trip/trip_strings_mca_a1.dart';
 import 'package:bakhli/features/trip/trip_strings_v2_plan.dart';
 import 'package:bakhli/features/trip/widgets/drag/trip_spot_drag_scope.dart';
@@ -206,6 +207,7 @@ void main() {
     expect(dragState(t)?.targetDay, 2);
     expect(dragState(t)?.targetIndex, 0);
     final atEntry = calls.length;
+    await t.pump(TripConstants.dragHapticGap);
     await g.moveBy(Offset(0, t.getRect(row('L1d2s0')).height));
     await t.pump(const Duration(milliseconds: 16));
     expect(dragState(t)?.targetIndex, 1);

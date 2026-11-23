@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
@@ -449,6 +451,16 @@ class TripDaySpotList extends StatelessWidget {
 
 typedef _RowFields = (TripSpotRef, int, String, int?, bool, bool, Color, int?, int?);
 
+typedef _PendingDrop = ({
+  TripPlanController controller,
+  SliverReorderableListState list,
+  ScaffoldMessengerState? messenger,
+  List<TripSpotRef> spots,
+  int day,
+  int from,
+  int to,
+});
+
 class _DaySpots extends StatefulWidget {
   final int day;
   final List<TripSpotRef> spots;
@@ -488,6 +500,8 @@ class _DaySpotsState extends State<_DaySpots> with AutomaticKeepAliveClientMixin
   double _liftLeft = 0;
   int _insert = 0;
   int _endInsert = 0;
+  Timer? _settling;
+  _PendingDrop? _dropping;
 
   ValueNotifier<TripDragState?> get _notifier => _scope?.drag ?? _ownDrag;
 
@@ -497,6 +511,8 @@ class _DaySpotsState extends State<_DaySpots> with AutomaticKeepAliveClientMixin
 
   @override
   bool get wantKeepAlive => _drag != null;
+
+  bool _canStart() => _drag == null && _settling == null && !(_scope?.active ?? false);
 
   @override
   void didChangeDependencies() {
@@ -509,8 +525,45 @@ class _DaySpotsState extends State<_DaySpots> with AutomaticKeepAliveClientMixin
   }
 
   @override
+  void didUpdateWidget(_DaySpots old) {
+    super.didUpdateWidget(old);
+    final held = _drag;
+    final drop = _dropping;
+    if (held == null && drop == null) return;
+    final sameOrder = _sameOrder(old.spots, widget.spots);
+    if (sameOrder && old.editing == widget.editing) return;
+    _drag = null;
+    _dropping = null;
+    _rows = const [];
+    _settling?.cancel();
+    _settling = null;
+    final list = held?.list ?? drop?.list;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (list != null && list.mounted) list.cancelReorder();
+      if (mounted) {
+        if (held != null) {
+          _scope?.stopAutoScroll();
+          _scope?.end();
+        }
+        _clearNumbers();
+        updateKeepAlive();
+      }
+      if (drop != null && sameOrder) _finishDrop(drop);
+    });
+  }
+
+  @override
   void dispose() {
+    final drop = _dropping;
+    if (drop != null) {
+      final scope = _scope;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (scope != null && scope.mounted && scope.drag.value?.day == drop.day) scope.drag.value = null;
+        _finishDrop(drop);
+      });
+    }
     if (_drag != null) _endSession();
+    _settling?.cancel();
     _ownDrag.dispose();
     super.dispose();
   }
@@ -543,6 +596,7 @@ class _DaySpotsState extends State<_DaySpots> with AutomaticKeepAliveClientMixin
       onRelease: _release,
       onCancel: _cancel,
       onDrop: _drop,
+      canStart: _canStart,
     );
     _cache[s.id] = (fields, row);
     return row;
@@ -567,7 +621,7 @@ class _DaySpotsState extends State<_DaySpots> with AutomaticKeepAliveClientMixin
     final scope = _scope;
     final id = widget.spots[d.index].id;
     if (scope != null) {
-      scope.begin(day: widget.day, from: d.index, canDrop: (to) => _c.canDropOn(id, to));
+      scope.begin(day: widget.day, from: d.index, canDrop: (to) => _c.canDropOn(id, to), owner: this);
     } else {
       _notifier.value = TripDragState(day: widget.day, from: d.index, slot: d.index);
     }
@@ -688,9 +742,27 @@ class _DaySpotsState extends State<_DaySpots> with AutomaticKeepAliveClientMixin
     final to = TripDragSlots.position(_endInsert, from);
     final reduce = _reduceMotion;
     _endSession(keepNumbers: !reduce && to != from);
+    if (!reduce && to != from) {
+      _settling?.cancel();
+      _settling = Timer(TripConstants.dragSettleGuard, () {
+        _settling = null;
+        _dropping = null;
+        if (mounted && _drag == null) _clearNumbers();
+      });
+    }
     if (reduce) {
       d.list.cancelReorder();
       _commit(from, to);
+    } else if (to != from) {
+      _dropping = (
+        controller: _c,
+        list: d.list,
+        messenger: ScaffoldMessenger.maybeOf(context),
+        spots: widget.spots,
+        day: widget.day,
+        from: from,
+        to: to,
+      );
     }
   }
 
@@ -711,7 +783,14 @@ class _DaySpotsState extends State<_DaySpots> with AutomaticKeepAliveClientMixin
     if (_notifier.value?.day == widget.day) _notifier.value = null;
   }
 
+  void _settled() {
+    _settling?.cancel();
+    _settling = null;
+  }
+
   void _onReorderItem(int from, int to) {
+    _settled();
+    _dropping = null;
     _clearNumbers();
     _commit(from, to);
   }
@@ -727,6 +806,34 @@ class _DaySpotsState extends State<_DaySpots> with AutomaticKeepAliveClientMixin
     final snap = c.snapshotDays([widget.day]);
     if (!c.reorderTo(widget.day, from, to)) return;
     _showUndo(ScaffoldMessenger.maybeOf(context), TripStringsV2Plan.orderChanged, snap);
+  }
+
+  static bool _sameOrder(List<TripSpotRef> a, List<TripSpotRef> b) {
+    if (identical(a, b)) return true;
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (a[i].id != b[i].id) return false;
+    }
+    return true;
+  }
+
+  // The list went away or changed before the drop settled; the indexes are only valid on the order they were taken from.
+  static void _finishDrop(_PendingDrop p) {
+    final c = p.controller;
+    final now = c.isClosed ? null : c.plan.value?.dayAt(p.day)?.spots;
+    if (now == null || !_sameOrder(now, p.spots)) return;
+    final snap = c.snapshotDays([p.day]);
+    if (!c.reorderTo(p.day, p.from, p.to)) return;
+    final m = p.messenger;
+    if (m == null || !m.mounted) return;
+    m.hideCurrentSnackBar();
+    m.showSnackBar(
+      SnackBar(
+        content: const Text(TripStringsV2Plan.orderChanged, style: TextStyle(fontFamily: FitnessAppTheme.fontName)),
+        duration: const Duration(seconds: 5),
+        action: SnackBarAction(label: TripStringsV2Plan.undo, onPressed: () => c.restoreDays(snap)),
+      ),
+    );
   }
 
   void _showUndo(ScaffoldMessengerState? m, String text, List<TripDay> snap) {
@@ -799,6 +906,7 @@ class _StopItem extends StatelessWidget {
   final TripDragCallback onRelease;
   final TripDragCallback onCancel;
   final TripDropDecision onDrop;
+  final bool Function() canStart;
 
   const _StopItem({
     super.key,
@@ -822,6 +930,7 @@ class _StopItem extends StatelessWidget {
     required this.onRelease,
     required this.onCancel,
     required this.onDrop,
+    required this.canStart,
   });
 
   Widget _dragStart({required bool delayed, required Widget child, HitTestBehavior behavior = HitTestBehavior.deferToChild}) =>
@@ -835,6 +944,7 @@ class _StopItem extends StatelessWidget {
         onRelease: onRelease,
         onCancel: onCancel,
         onDrop: onDrop,
+        canStart: canStart,
         child: child,
       );
 
@@ -870,13 +980,7 @@ class _StopItem extends StatelessWidget {
                 height: DS.s(26),
                 alignment: Alignment.center,
                 decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-                child: ValueListenableBuilder<TripDragState?>(
-                  valueListenable: drag,
-                  builder: (_, s, _) {
-                    final n = s == null || s.day != day ? index : TripDragSlots.displayIndex(index, s.from, s.slot);
-                    return Text('${n + 1}', style: Ink3D.text(12.5, FontWeight.w700, DesignColors.surface, letterSpacing: 0));
-                  },
-                ),
+                child: _StopBadge(day: day, index: index, drag: drag),
               ),
               Gap.h(12),
               Expanded(
@@ -974,6 +1078,57 @@ class _StopItem extends StatelessWidget {
       child: _dragStart(delayed: true, child: body),
     );
   }
+}
+
+class _StopBadge extends StatefulWidget {
+  final int day;
+  final int index;
+  final ValueListenable<TripDragState?> drag;
+
+  const _StopBadge({required this.day, required this.index, required this.drag});
+
+  @override
+  State<_StopBadge> createState() => _StopBadgeState();
+}
+
+class _StopBadgeState extends State<_StopBadge> {
+  late int _n = _number();
+
+  int _number() {
+    final s = widget.drag.value;
+    return s == null || s.day != widget.day ? widget.index : TripDragSlots.displayIndex(widget.index, s.from, s.slot);
+  }
+
+  void _onDrag() {
+    final n = _number();
+    if (n != _n) setState(() => _n = n);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    widget.drag.addListener(_onDrag);
+  }
+
+  @override
+  void didUpdateWidget(_StopBadge old) {
+    super.didUpdateWidget(old);
+    if (old.drag != widget.drag) {
+      old.drag.removeListener(_onDrag);
+      widget.drag.addListener(_onDrag);
+    }
+    _n = _number();
+  }
+
+  @override
+  void dispose() {
+    widget.drag.removeListener(_onDrag);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) =>
+      Text('${_n + 1}', style: Ink3D.text(12.5, FontWeight.w700, DesignColors.surface, letterSpacing: 0));
 }
 
 class _DayDropTarget extends StatefulWidget {

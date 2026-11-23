@@ -17,6 +17,8 @@ class TripConstants {
   static const Duration dragHoldDelay = Duration(milliseconds: 300);
   static const double dragAutoScrollVelocity = 50;
   static const double dragLiftScale = 0.03;
+  static const Duration dragHapticGap = Duration(milliseconds: 60);
+  static const Duration dragSettleGuard = Duration(milliseconds: 800);
   static const int maxAdults = 30;
   static const int maxKids = 20;
   static const int maxStartDaysAhead = 365;

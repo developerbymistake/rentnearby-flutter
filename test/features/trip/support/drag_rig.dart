@@ -32,6 +32,7 @@ Future<TripPlanController> pumpDragPlan(
   bool edit = true,
   TripPlanLock lock = TripPlanLock.none,
   bool toasts = false,
+  double textScale = 1,
 }) async {
   Get.put<TabConfigController>(_Tabs());
   TripCityCatalog.to.seedForTest(const [
@@ -59,7 +60,9 @@ Future<TripPlanController> pumpDragPlan(
     theme: AppTheme.theme,
     scrollBehavior: const AppScrollBehavior(),
     builder: (context, child) => MediaQuery(
-      data: MediaQuery.of(context).copyWith(disableAnimations: reduceMotion),
+      data: textScale == 1
+          ? MediaQuery.of(context).copyWith(disableAnimations: reduceMotion)
+          : MediaQuery.of(context).copyWith(disableAnimations: reduceMotion, textScaler: TextScaler.linear(textScale)),
       child: toasts ? Stack(fit: StackFit.expand, children: [Positioned.fill(child: child!), Overlay(key: AppToast.overlayKey)]) : child!,
     ),
     home: const TripPlanScreen(),
@@ -95,7 +98,7 @@ double pageOffset(WidgetTester t) => t.state<ScrollableState>(pageScrollable).po
 
 bool isRow(Widget w) => w.runtimeType.toString() == '_StopItem';
 
-Finder get badges => find.byWidgetPredicate((w) => w is ValueListenableBuilder<TripDragState?>);
+Finder get badges => find.byWidgetPredicate((w) => w.runtimeType.toString() == '_StopBadge');
 
 List<String> pageBadgeTexts(WidgetTester t, int day) {
   final inDay = find.descendant(of: find.byKey(ValueKey('trip-day-$day')), matching: badges);

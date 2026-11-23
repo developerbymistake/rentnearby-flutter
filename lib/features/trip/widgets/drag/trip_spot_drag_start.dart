@@ -64,6 +64,7 @@ class TripSpotDragStart extends StatelessWidget {
     this.onRelease,
     this.onCancel,
     this.onDrop,
+    this.canStart,
   });
 
   final int index;
@@ -76,6 +77,7 @@ class TripSpotDragStart extends StatelessWidget {
   final TripDragCallback? onRelease;
   final TripDragCallback? onCancel;
   final TripDropDecision? onDrop;
+  final bool Function()? canStart;
 
   static int? _handlePointer;
 
@@ -93,6 +95,8 @@ class TripSpotDragStart extends StatelessWidget {
     } else if (_handlePointer == event.pointer) {
       return;
     }
+    // A new pointer on the list cancels a drag or a drop still settling, and that drop would be lost.
+    if (canStart?.call() == false) return;
     final list = SliverReorderableList.maybeOf(context);
     if (list == null) return;
     final MultiDragGestureRecognizer recognizer = delayed
@@ -103,6 +107,7 @@ class TripSpotDragStart extends StatelessWidget {
     final sdkStart = recognizer.onStart;
     if (sdkStart == null) return;
     recognizer.onStart = (position) {
+      if (canStart?.call() == false) return null;
       final inner = sdkStart(position);
       if (inner == null) return null;
       final drag = TripTrackedDrag(inner, list, index, position, onMove, onRelease, onCancel, onDrop);
