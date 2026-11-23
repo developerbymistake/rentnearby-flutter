@@ -15,7 +15,6 @@ class TabSlot {
     required this.rootTag,
     this.center = false,
     this.activeColor,
-    this.itemKey,
     this.badge,
     this.badgeColor,
     this.onTap,
@@ -27,7 +26,6 @@ class TabSlot {
   final String image;
   final bool center;
   final Color? activeColor;
-  final Key? itemKey;
   final String rootTag;
   final Widget Function() root;
   final bool Function() active;

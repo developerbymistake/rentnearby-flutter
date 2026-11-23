@@ -98,6 +98,8 @@ class _TourOverlayState extends State<TourOverlay>
     with SingleTickerProviderStateMixin {
   late final AnimationController _pulseController;
   bool _pulseDecided = false;
+  Rect? _shownRect;
+  bool _watching = false;
 
   @override
   void initState() {
@@ -131,12 +133,33 @@ class _TourOverlayState extends State<TourOverlay>
     super.dispose();
   }
 
+  Rect? _measure() {
+    if (!isTourTargetReady(widget.step.key)) return null;
+    final renderBox = widget.step.key.currentContext!.findRenderObject() as RenderBox;
+    return (renderBox.localToGlobal(Offset.zero) & renderBox.size).inflate(DS.s(8));
+  }
+
+  // The target can move after this build (a late row above it): re-measure after each frame.
+  void _watchTarget() {
+    if (_watching) return;
+    _watching = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _watching = false;
+      if (!mounted) return;
+      if (_measure() != _shownRect) {
+        setState(() {});
+      } else {
+        _watchTarget();
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    if (!isTourTargetReady(widget.step.key)) return const SizedBox.shrink();
-    final renderBox = widget.step.key.currentContext!.findRenderObject() as RenderBox;
-    final targetRect =
-        (renderBox.localToGlobal(Offset.zero) & renderBox.size).inflate(DS.s(8));
+    final targetRect = _measure();
+    _shownRect = targetRect;
+    _watchTarget();
+    if (targetRect == null) return const SizedBox.shrink();
     final screenSize = MediaQuery.of(context).size;
     final viewPadding = MediaQuery.of(context).viewPadding;
     final isLast = widget.index == widget.total - 1;
@@ -181,22 +204,25 @@ class _TourOverlayState extends State<TourOverlay>
                 ),
               ),
             ),
-            Positioned(
-              left: DS.s(20),
-              right: DS.s(20),
-              top: showBelow ? targetRect.bottom + DS.gv(16) : null,
-              bottom: showBelow
-                  ? null
-                  : (screenSize.height - targetRect.top + DS.gv(16)),
-              child: _TourCard(
-                key: ValueKey('tour-card-${widget.index}'),
-                step: widget.step,
-                index: widget.index,
-                total: widget.total,
-                tourLabel: widget.tourLabel,
-                isLast: isLast,
-                onNext: widget.onNext,
-                onSkip: widget.onSkip,
+            Positioned.fill(
+              child: CustomSingleChildLayout(
+                delegate: _CardLayout(
+                  target: targetRect,
+                  below: showBelow,
+                  gap: DS.gv(16),
+                  side: DS.s(20),
+                  safe: viewPadding,
+                ),
+                child: _TourCard(
+                  key: ValueKey('tour-card-${widget.index}'),
+                  step: widget.step,
+                  index: widget.index,
+                  total: widget.total,
+                  tourLabel: widget.tourLabel,
+                  isLast: isLast,
+                  onNext: widget.onNext,
+                  onSkip: widget.onSkip,
+                ),
               ),
             ),
           ],
@@ -204,6 +230,41 @@ class _TourOverlayState extends State<TourOverlay>
       ),
     );
   }
+}
+
+// Card beside the target, kept inside the safe screen so Skip and Next stay reachable.
+class _CardLayout extends SingleChildLayoutDelegate {
+  _CardLayout({
+    required this.target,
+    required this.below,
+    required this.gap,
+    required this.side,
+    required this.safe,
+  });
+
+  final Rect target;
+  final bool below;
+  final double gap;
+  final double side;
+  final EdgeInsets safe;
+
+  @override
+  BoxConstraints getConstraintsForChild(BoxConstraints constraints) {
+    final width = (constraints.maxWidth - side * 2).clamp(0.0, double.infinity).toDouble();
+    return BoxConstraints(minWidth: width, maxWidth: width);
+  }
+
+  @override
+  Offset getPositionForChild(Size size, Size childSize) {
+    final wanted = below ? target.bottom + gap : target.top - gap - childSize.height;
+    final lowest = size.height - safe.bottom - childSize.height;
+    final top = lowest < safe.top ? safe.top : wanted.clamp(safe.top, lowest).toDouble();
+    return Offset(side, top);
+  }
+
+  @override
+  bool shouldRelayout(covariant _CardLayout old) =>
+      old.target != target || old.below != below || old.gap != gap || old.side != side || old.safe != safe;
 }
 
 class _TourCard extends StatefulWidget {

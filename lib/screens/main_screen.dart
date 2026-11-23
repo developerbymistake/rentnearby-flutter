@@ -407,7 +407,6 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
               label: slot.label,
               center: slot.center,
               activeColor: slot.activeColor,
-              itemKey: slot.itemKey,
               badge: slot.badge?.call(),
               badgeColor: slot.badgeColor,
             ),
