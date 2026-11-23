@@ -4,6 +4,7 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:bakhli/design/design.dart';
 import 'package:bakhli/design/extra/sheet_close_button.dart';
 import 'package:bakhli/design/extra/stay_grid_card.dart';
+import 'package:bakhli/design/extra/tone_segment_control.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
@@ -1042,7 +1043,6 @@ class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateM
                       child: StayMapTopControls(
                         layer: _disc,
                         entrance: CurvedAnimation(parent: _chromeController, curve: Curves.fastOutSlowIn),
-                        fab: _buildLocationFab(),
                         map: () => _mapController,
                         onLocate: _onLocateTap,
                       ),
@@ -1133,49 +1133,22 @@ class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateM
     );
   }
 
+  static const double _chipHeight = 54;
+
   Widget _buildRadiusChips() {
     final radii = AppConstants.radiusOptions;
-    return Container(
-      padding: DS.all(3),
-      decoration: BoxDecoration(color: DesignColors.surface, borderRadius: DS.circular(24), boxShadow: DS.shadows(ShadowTokens.elev2)),
-      child: Row(
-        children: radii.asMap().entries.map((entry) {
-          final i = entry.key;
-          final r = entry.value;
-          final active = _radius == r;
-          return Expanded(
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: () {
-                setState(() => _radius = r);
-                _loadNearby();
-                if (_mapReady) _fitToRadius();
-              },
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 250),
-                height: DS.s(38),
-                margin: EdgeInsets.only(right: i < radii.length - 1 ? DS.gh(4) : 0),
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  gradient: active ? _forest.gradient : null,
-                  borderRadius: DS.circular(24),
-                  boxShadow: active ? DS.shadows(ShadowTokens.elev1) : null,
-                ),
-                child: Text(
-                  '${r.toInt()} km',
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                    fontFamily: TypeTokens.family,
-                    fontSize: DS.f(12),
-                      fontWeight: FontWeight.w600,
-                    color: active ? DesignColors.onPrimary : DesignColors.textSecondary,
-                  ),
-                ),
-              ),
-            ),
-          );
-        }).toList(),
-      ),
+    return ToneSegmentControl(
+      key: const ValueKey('stay-radius-chips'),
+      labels: [for (final r in radii) '${r.toInt()} km'],
+      semanticLabels: [for (final r in radii) '${r.toInt()} kilometres'],
+      selected: radii.indexOf(_radius),
+      tone: ListingTone.forest,
+      cellHeight: _chipHeight,
+      onTap: (i) {
+        setState(() => _radius = radii[i]);
+        _loadNearby();
+        if (_mapReady) _fitToRadius();
+      },
     );
   }
 
@@ -1185,20 +1158,6 @@ class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateM
     _precomputeCircleCache();
     _loadNearby();
     if (_mapReady) _fitToRadius();
-  }
-
-  Widget _buildLocationFab() {
-    return PressScale(
-      child: GestureDetector(
-      onTap: _onLocateTap,
-      child: Container(
-        width: DS.s(KitMetrics.touch + 2),
-        height: DS.s(KitMetrics.touch + 2),
-          decoration: BoxDecoration(color: DesignColors.surface, shape: BoxShape.circle, boxShadow: DS.shadows(ShadowTokens.elev2)),
-          child: Icon(Icons.my_location_rounded, color: _forest.accentDark, size: DS.s(22)),
-        ),
-      ),
-    );
   }
 
   Widget _buildNearestPreviewCard() {
@@ -1285,7 +1244,6 @@ class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateM
 class StayMapTopControls extends StatelessWidget {
   final DiscoveryLayerApi? layer;
   final Animation<double> entrance;
-  final Widget fab;
   final MapLibreMapController? Function() map;
   final VoidCallback onLocate;
 
@@ -1294,34 +1252,38 @@ class StayMapTopControls extends StatelessWidget {
   const StayMapTopControls({
     super.key,
     required this.layer,
-    required this.fab,
     required this.map,
     required this.onLocate,
     this.entrance = kAlwaysCompleteAnimation,
   });
 
-  Widget _old() => Row(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [ScaleTransition(scale: entrance, child: fab)],
+  Widget _row({bool showEye = false, bool eyeOn = true, bool loading = false, bool eyeEnabled = true, ValueChanged<bool>? onEye}) => ScaleTransition(
+        scale: entrance,
+        child: TripMapControls.row(
+          showEye: showEye,
+          eyeOn: eyeOn,
+          loading: loading,
+          eyeEnabled: eyeEnabled,
+          onEye: onEye,
+          map: map,
+          onLocate: onLocate,
+        ),
       );
 
   @override
   Widget build(BuildContext context) {
     final l = layer;
-    if (l == null) return _old();
+    if (l == null) return _row();
     return Obx(() {
-      if (!l.attached.value) return _old();
-      final loading = l.dataState.value == DiscoveryDataState.loading;
-      return ScaleTransition(
-        scale: entrance,
-        child: TripMapControls.row(
-          showEye: loading || l.hasSpotsHere.value,
-          eyeOn: l.eyeOn.value,
-          loading: loading,
-          onEye: (on) => l.setEye(on),
-          map: map,
-          onLocate: onLocate,
-        ),
+      final attached = l.attached.value;
+      final loading = !attached || l.dataState.value == DiscoveryDataState.loading;
+      final here = l.hasSpotsHere.value;
+      return _row(
+        showEye: true,
+        eyeOn: l.eyeOn.value,
+        loading: loading,
+        eyeEnabled: attached && here,
+        onEye: (on) => l.setEye(on),
       );
     });
   }

@@ -1,6 +1,7 @@
 abstract final class ProfilePhotoStrings {
   static const label = 'Profile photo';
   static const helper = 'A clear photo of your face';
+  static const optionalHint = 'Optional. You can add it later.';
   static const addTitle = 'Add your profile photo';
   static const uploadFailed = 'Upload failed. Try again.';
   static const tryAgain = 'Try again';

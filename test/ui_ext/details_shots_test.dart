@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -658,11 +659,13 @@ void main() {
       await t.pump(const Duration(seconds: 30));
     });
 
-    _tw('t_photo: display photo in the hero circle, t_main keeps the vehicle art', (t) async {
+    _tw('t_photo: display photo fills the hero, t_main keeps the vehicle art', (t) async {
       _setup(api: api({..._taxiJson(), 'displayPhotoUrl': photo}));
       await _taxi(t);
-      final circle = t.widget<PhotoCircle>(find.descendant(of: find.byType(DetailHeroArt), matching: find.byType(PhotoCircle)));
-      expect(circle.url, photo);
+      final img = t.widget<CachedNetworkImage>(find.descendant(of: find.byType(DetailHeroArt), matching: find.byType(CachedNetworkImage)));
+      expect(img.imageUrl, photo);
+      expect(img.fit, BoxFit.cover);
+      expect(find.descendant(of: find.byType(DetailHeroArt), matching: find.byType(PhotoCircle)), findsNothing);
       expect(t.takeException(), isNull);
       Get.reset();
       _setup(api: api(_taxiJson()));

@@ -10,8 +10,6 @@ import 'package:bakhli/features/stay/guest/stay_detail_screen.dart';
 import 'package:bakhli/features/stay/guest/stay_guest_controller.dart';
 import 'package:bakhli/features/stay/models/stay_detail_model.dart';
 import 'package:bakhli/features/taxi/guest/taxi_detail_screen.dart';
-import 'package:bakhli/features/taxi/models/taxi_browse_item.dart';
-import 'package:bakhli/models/home_feed_model.dart';
 import 'package:bakhli/services/api_service.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
@@ -132,28 +130,6 @@ Future<void> _flush(WidgetTester t) async {
   await t.pump(const Duration(seconds: 30));
 }
 
-void _homeWithPhotos() {
-  final home = registerHome(feed: fixtureNoTrip());
-  final s = home.stays.toList();
-  home.stays[0] = HomeStayModel(item: HomeStayModel.fromJson({'id': 's1', 'name': s[0].item.title, 'cityName': 'Kausani', 'thumbnailUrl': _photo, 'minPricePerNight': 1500}).item.withPlace(placeName: 'Kausani', distanceLabel: '1.4 km away'), districtName: '');
-  final t = home.taxis.first;
-  home.taxis[0] = TaxiBrowseItem(
-    id: t.id,
-    driverName: 'Pradeep',
-    vehicleTypeName: 'Sedan',
-    plateDisplay: 'UK04',
-    cityName: 'Nainital',
-    minFare: 1200,
-    routeCount: 1,
-    matchReversed: false,
-    createdAt: DateTime(2026, 11, 1),
-    isFeatured: true,
-    displayPhotoUrl: _photo,
-    distanceKm: 5,
-  );
-  home.recentlyAddedStays[0] = HomeStayModel.fromJson({'id': 'r1', 'name': 'Snow Peak Cottage', 'cityName': 'Manali', 'thumbnailUrl': _photo, 'createdAt': '2026-11-20T10:00:00Z'});
-}
-
 void main() {
   const channel = MethodChannel('plugins.flutter.io/path_provider');
   late GetStorage box;
@@ -200,9 +176,9 @@ void main() {
   }
 
   testOwnerSizes(
-    'Home loaded, photos mixed',
+    'Home loaded',
     () => homeHost(),
-    setUpEach: _homeWithPhotos,
+    setUpEach: () => registerHome(feed: fixtureNoTrip()),
     arrange: _settle,
     check: (t, _, _) async {
       expect(find.text('Follow us'), findsOneWidget);

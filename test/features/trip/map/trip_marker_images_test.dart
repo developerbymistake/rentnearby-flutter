@@ -55,7 +55,7 @@ void main() {
     expect(a, startsWith('w_12_${DiscTuning.trip.photoDp.round()}_1p00_'));
     expect(a.split('_').last.length, 8);
     expect(TripMarkerImages.cacheKey('w/12', 'https://a/y.jpg', DiscTuning.trip), isNot(a));
-    expect(TripMarkerImages.cacheKey('w/12', 'https://a/x.jpg', DiscTuning.stay), startsWith('w_12_32_'));
+    expect(TripMarkerImages.cacheKey('w/12', 'https://a/x.jpg', DiscTuning.stay), startsWith('w_12_${DiscTuning.stay.photoDp.round()}_'));
     expect(TripMarkerImages.thumbHash('abc'), TripMarkerImages.thumbHash('abc'));
   });
 
@@ -83,7 +83,7 @@ void main() {
       expect(bytes.getUint8((c * img.width + ringX) * 4), greaterThan(200));
       expect(await painter.valid(png), isTrue);
       final stay = await decode((await painter.photo(thumb, DiscTuning.stay))!);
-      expect(stay.width, DiscTuning.stay.px(CanvasMarkerPainter.canvasDp(32)));
+      expect(stay.width, DiscTuning.stay.px(CanvasMarkerPainter.canvasDp(DiscTuning.stay.photoDp)));
       final badge = await decode(await painter.badge('temple', DiscTuning.trip));
       expect(badge.width, trip.px(CanvasMarkerPainter.canvasDp(trip.badgeDp)));
     });

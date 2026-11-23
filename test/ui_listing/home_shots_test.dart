@@ -9,8 +9,6 @@ import 'package:bakhli/controllers/notification_controller.dart';
 import 'package:bakhli/controllers/plan_controller.dart';
 import 'package:bakhli/controllers/tab_config_controller.dart';
 import 'package:bakhli/design/design.dart';
-import 'package:bakhli/features/stay/models/stay_browse_item.dart';
-import 'package:bakhli/features/taxi/models/taxi_browse_item.dart';
 import 'package:bakhli/features/trip/data/trip_city_catalog.dart';
 import 'package:bakhli/features/trip/models/trip_city_model.dart';
 import 'package:bakhli/models/my_plan_model.dart';
@@ -59,7 +57,7 @@ class _Home extends HomeController {
   // ignore: must_call_super
   void onInit() {}
   @override
-  Future<void> reloadDistrict() async {}
+  Future<void> reload() async {}
 }
 
 class _Notif extends NotificationController {
@@ -114,37 +112,7 @@ class _Catalog extends TripCityCatalog {
   List<TripCityModel> popular({String? stateName}) => list;
 }
 
-TaxiBrowseItem _taxi(String id, String name, String vehicle, int seats, {bool featured = false, int? fare = 2400}) => TaxiBrowseItem(
-      id: id,
-      driverName: name,
-      vehicleTypeName: vehicle,
-      seats: seats,
-      plateDisplay: 'UK07 AB 1234',
-      cityName: 'Nainital',
-      minFare: fare,
-      routeCount: 2,
-      matchReversed: false,
-      createdAt: DateTime(2026, 1, 1),
-      isFeatured: featured,
-    );
-
-HomeStayModel _stay(String id, String name, String city, int price, {bool featured = false, String district = 'Nainital'}) => HomeStayModel(
-      item: StayBrowseItem.fromJson({
-        'id': id,
-        'name': name,
-        'cityName': city,
-        'districtName': district,
-        'stayTypeName': 'Homestay',
-        'mealsChip': 'breakfast',
-        'roomNameChip': 'Deluxe room',
-        'minPricePerNight': price,
-        'isFeatured': featured,
-      }),
-      districtName: district,
-      createdAt: DateTime(2026, 5, 1),
-    );
-
-void _register({bool owner = false, bool long = false, bool empty = false}) {
+void _register({bool owner = false, bool long = false}) {
   Get.reset();
   Get.put<TripCityCatalog>(_Catalog(), permanent: true);
   Get.put<TabConfigController>(_Tabs());
@@ -159,26 +127,6 @@ void _register({bool owner = false, bool long = false, bool empty = false}) {
   if (owner) {
     plan.myPlan.value = const MyPlanModel(paymentEnabled: true, isPaid: true, isDefault: false, daysLeft: 3, planName: 'Pro');
   }
-  final home = Get.find<HomeController>();
-  if (!empty) {
-    home.stays.assignAll([
-      _stay('s1', long ? 'Deodar Valley Riverside Heritage Homestay' : 'Deodar Cottage', 'Kausani', 1500, featured: true),
-      _stay('s2', 'Pine Ridge', 'Mukteshwar', 2400),
-      _stay('s3', 'Lakeside', 'Nainital', 3200),
-    ]);
-    home.taxis.assignAll([
-      _taxi('t1', long ? 'Pradeep Kumar Singh Bisht' : 'Pradeep', 'Dzire', 4, featured: true),
-      _taxi('t2', 'Rakesh', 'Innova', 7, fare: 1600),
-      _taxi('t3', 'Sunil', 'Tempo Traveller', 12, fare: null),
-    ]);
-    home.recentlyAddedStays.assignAll([
-      _stay('r1', long ? 'Lakeside Rooms and Family Suites by the Naini Lake' : 'Lakeside Rooms', 'Nainital', 3200),
-      _stay('r2', 'Himalayan View', 'Bhimtal', 1800, featured: true, district: 'Bhimtal'),
-    ]);
-  }
-  home.staysLoading.value = false;
-  home.taxisLoading.value = false;
-  home.recentlyAddedStaysLoading.value = false;
 }
 
 // SkeletonSwitcher (motion_kit) asserts under reduce motion; the shots run with motion on.
@@ -219,13 +167,12 @@ void main() {
     ('long_300_1.3', 300, 1.3, false, true, false),
     ('owner_360_1.0', 360, 1.0, true, false, false),
     ('owner_300_1.3', 300, 1.3, true, true, false),
-    ('empty_360_1.0', 360, 1.0, false, false, true),
   ];
 
   for (final c in cases) {
     testWidgets('home ${c.$1}', (t) async {
       debugDisableShadows = false;
-      _register(owner: c.$4, long: c.$5, empty: c.$6);
+      _register(owner: c.$4, long: c.$5);
       await pumpPhone(t, _app(), size: Size(c.$2, 3000), textScale: c.$3);
       await _settle(t);
       expect(t.takeException(), isNull);
@@ -290,16 +237,12 @@ void main() {
     await _settle(t);
     expect(find.text('Hi, Rahul'), findsOneWidget);
     expect(find.text('Where to next?'), findsOneWidget);
-    expect(find.text('See all'), findsNWidgets(3));
+    expect(find.text('See all'), findsOneWidget);
     expect(find.text('Popular destinations'), findsOneWidget);
-    expect(find.text('Recently added stays'), findsOneWidget);
-    expect(find.byKey(const ValueKey('meals-star-badge')), findsWidgets);
+    expect(find.text('Recently added stays'), findsNothing);
     expect(find.text('2'), findsOneWidget);
     expect(find.text('1'), findsOneWidget);
     final auth = Get.find<AuthController>();
-    await t.tap(find.text('See all').at(1));
-    await t.pump();
-    expect(auth.tabIndex.value, AppTabs.stays);
     await t.tap(find.text('See all').first);
     await t.pump();
     expect(auth.tabIndex.value, AppTabs.trips);

@@ -25,7 +25,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
   final _nameFocus = FocusNode();
   static final ListingTone _tone = ListingTone.indigo;
   bool _nameBad = false;
-  bool _photoBad = false;
   bool _created = false;
   bool _uploadFailed = false;
   bool _submitting = false;
@@ -63,7 +62,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
       await _submit();
       return;
     }
-    if (await _photo.choose(context) && mounted) setState(() => _photoBad = false);
+    await _photo.choose(context);
   }
 
   Future<void> _submit() async {
@@ -78,13 +77,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
 
   Future<void> _submitOnce() async {
     FocusScope.of(context).unfocus();
-    if (_photo.localPath.value == null) {
-      setState(() => _photoBad = true);
-      AppToast.error(ProfilePhotoStrings.addTitle);
-      return;
-    }
     if (_created) {
-      if (await _photo.online()) await _upload();
+      if (_photo.localPath.value == null) {
+        Get.offAllNamed(_auth.postLoginRoute);
+      } else if (await _photo.online()) {
+        await _upload();
+      }
       return;
     }
     final name = _nameCtrl.text.trim();
@@ -98,11 +96,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
       AppToast.error('Name cannot exceed 100 characters');
       return;
     }
-    if (!await _photo.online()) return;
+    if (_photo.localPath.value != null && !await _photo.online()) return;
     final ok = await _auth.createOnboardingAccount(phone: _phone, name: name);
     if (!ok || !mounted) return;
     setState(() => _created = true);
-    await _upload();
+    if (_photo.localPath.value == null) {
+      Get.offAllNamed(_auth.postLoginRoute);
+    } else {
+      await _upload();
+    }
   }
 
   Future<void> _upload() async {
@@ -130,7 +132,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
           animationController: _enter,
           child: AuthCard(
             children: [
-              ProfilePhotoBlock(controller: _photo, bad: _photoBad, onTap: _pickPhoto),
+              ProfilePhotoBlock(controller: _photo, bad: false, onTap: _pickPhoto, optional: true),
               Gap.v(20),
               AuthVerifiedRow(art: ListingArt.key, text: '+91 $_phone'),
               Gap.v(20),
@@ -174,13 +176,19 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
                 ),
               ),
               Gap.v(28),
-              Obx(() => ProfilePhotoSubmitButton(
-                    tone: _tone,
-                    label: _uploadFailed ? ProfilePhotoStrings.tryAgain : 'Get Started',
-                    ready: _created || _photo.localPath.value != null,
-                    loading: _auth.isLoading.value || _photo.busy.value,
-                    onTap: _submit,
-                  )),
+              ValueListenableBuilder<TextEditingValue>(
+                valueListenable: _nameCtrl,
+                builder: (_, v, _) {
+                  final name = v.text.trim();
+                  return Obx(() => ProfilePhotoSubmitButton(
+                        tone: _tone,
+                        label: _uploadFailed ? ProfilePhotoStrings.tryAgain : 'Get Started',
+                        ready: _created || (name.isNotEmpty && name.length <= 100),
+                        loading: _auth.isLoading.value || _photo.busy.value,
+                        onTap: _submit,
+                      ));
+                },
+              ),
             ],
           ),
         ),

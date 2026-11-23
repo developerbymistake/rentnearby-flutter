@@ -16,11 +16,12 @@ import 'find_result_card.dart';
 import 'username_card.dart';
 
 class FindTab extends StatelessWidget {
-  const FindTab({super.key, required this.controller, required this.me, required this.onScan, required this.onMyQr, required this.onOpenBuddy});
+  const FindTab({super.key, required this.controller, required this.me, required this.onScan, required this.onCopy, required this.onMyQr, required this.onOpenBuddy});
 
   final BuddyFindController controller;
   final BuddyMe me;
   final VoidCallback onScan;
+  final VoidCallback onCopy;
   final VoidCallback onMyQr;
   final void Function(FoundPerson person) onOpenBuddy;
 
@@ -42,7 +43,7 @@ class FindTab extends StatelessWidget {
               FindState.idle || FindState.searching || FindState.self => [
                   NoteBanner(art: ListingArt.bulb, text: BuddiesStrings.findHint, tone: NoteTone.teal),
                   SectionLabel(BuddiesStrings.orShowYours, padding: DS.insets(l: 22, t: 24, r: 22, b: 10)),
-                  UsernameCard(me: me, actionLabel: BuddiesStrings.myQr, onAction: onMyQr, margin: DS.insets(l: 18, r: 18)),
+                  UsernameCard(me: me, actionLabel: BuddiesStrings.myQr, onAction: onMyQr, extraLabel: BuddiesStrings.copy, onExtra: onCopy, margin: DS.insets(l: 18, r: 18)),
                 ],
               FindState.found when p != null => [
                   SectionLabel(BuddiesStrings.onePersonFound, padding: DS.insets(l: 22, t: 24, r: 22, b: 10)),

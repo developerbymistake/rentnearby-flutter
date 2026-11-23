@@ -101,7 +101,7 @@ abstract final class OwnerOverviewSeam {
           expenses: s.expenses,
           tripEnded: ended,
           onAdd: () async {
-            await BuddyNavigation.openExpenses(trip.id, add: true);
+            await BuddyNavigation.openExpenses(trip.id);
             reload();
           },
           onView: () async {

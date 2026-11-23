@@ -14,6 +14,7 @@ import '../controllers/notification_controller.dart';
 import '../controllers/report_controller.dart';
 import '../features/buddy/buddy_bindings.dart';
 import '../features/buddy/buddy_live.dart';
+import '../features/map_discovery/data/map_pack_warmup.dart';
 import '../features/owner_core/session/shell_teardown.dart';
 import '../repositories/notification_repository.dart';
 import '../repositories/user_repository.dart';
@@ -56,6 +57,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   Worker? _digestTopicWorker;
   Worker? _tabLeaveWorker;
   Worker? _tabConfigWorker;
+  final _packWarmup = MapPackWarmup();
   Worker? _shellWorker;
   int _previousTabIndex = AppTabs.home;
   // The shell on screen: set only in initState and _onShellChanged, so a logout never builds the Seeker roots
@@ -104,6 +106,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     _bannerCtrl = Get.put(BannerController());
     Get.put(BannerHubService());
     if (_auth.taxisEnabled) DriverReadyController.to;
+    _packWarmup.start(userLocation: _locationCtrl.userLocation, trips: MyTripsController.to.active);
     WidgetsBinding.instance.addObserver(this);
     _bannerDistrictWorker = ever(_locationCtrl.selectedDistrict, (district) {
       if (district != null) {
@@ -175,6 +178,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     _tabLeaveWorker?.dispose();
     _tabConfigWorker?.dispose();
     _shellWorker?.dispose();
+    _packWarmup.dispose();
     // Permanent for the session (trip bar, Home card); the next login must not see these trips.
     if (Get.isRegistered<MyTripsController>()) Get.delete<MyTripsController>(force: true);
     super.dispose();

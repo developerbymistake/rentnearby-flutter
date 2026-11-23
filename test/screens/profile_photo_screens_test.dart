@@ -218,21 +218,18 @@ void main() {
       expect(card.children.first, isA<ProfilePhotoBlock>());
       expect(t.getTopLeft(find.byType(ProfilePhotoBlock)).dy, lessThan(t.getTopLeft(find.byType(AuthVerifiedRow)).dy));
       expect(find.text(ProfilePhotoStrings.label), findsOneWidget);
-      expect(find.text(ProfilePhotoStrings.helper), findsOneWidget);
+      expect(find.text(ProfilePhotoStrings.optionalHint), findsOneWidget);
     });
 
-    testWidgets('Get Started without a photo: red ring + toast, no API call', (t) async {
+    testWidgets('Get Started without a photo: account created, no upload, no red ring', (t) async {
       _setup();
       final p = _Photo()..put();
       await _openOnboarding(t);
       await t.enterText(find.byType(TextFormField), 'Rahul Mehra');
       await _tap(t, find.text('Get Started'));
-      expect(find.text(ProfilePhotoStrings.addTitle), findsOneWidget);
-      expect(_auth.created, isEmpty);
+      expect(_auth.created, ['Rahul Mehra']);
       expect(p.sent, isEmpty);
-      final circle = t.widget<ProfilePhotoCircle>(find.byType(ProfilePhotoCircle));
-      expect(circle.failed, isFalse);
-      expect(circle.ringColor, AuthInk.ringBad);
+      expect(find.text('done page'), findsOneWidget);
       await _drain(t);
     });
 
@@ -288,10 +285,6 @@ void main() {
       await _tap(t, find.text('Get Started'));
       expect(p.sent, hasLength(1));
       expect(find.byKey(ProfilePhotoCircle.retryKey), findsNothing);
-      await _drain(t);
-      await _tap(t, find.text(ProfilePhotoStrings.tryAgain));
-      expect(p.sent, hasLength(1));
-      expect(find.text(ProfilePhotoStrings.addTitle), findsOneWidget);
       await _drain(t);
       p.error = null;
       await _tap(t, find.bySemanticsLabel(ProfilePhotoStrings.semProfilePhoto));

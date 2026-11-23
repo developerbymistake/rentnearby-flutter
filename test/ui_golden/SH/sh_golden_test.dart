@@ -9,12 +9,8 @@ import 'package:bakhli/controllers/notification_controller.dart';
 import 'package:bakhli/controllers/plan_controller.dart';
 import 'package:bakhli/controllers/tab_config_controller.dart';
 import 'package:bakhli/design/design.dart';
-import 'package:bakhli/features/stay/models/stay_browse_item.dart';
-import 'package:bakhli/features/taxi/models/taxi_browse_item.dart';
 import 'package:bakhli/screens/home_screen.dart';
 import 'package:bakhli/widgets/home_hero_carousel.dart';
-import 'package:bakhli/widgets/home_stay_rail_card.dart';
-import 'package:bakhli/widgets/home_taxi_rail_card.dart';
 import 'package:bakhli/widgets/nearby_item_row.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -23,35 +19,6 @@ import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 
 import '../golden_support.dart';
-
-TaxiBrowseItem _taxi({bool featured = true, int? fare = 1800}) => TaxiBrowseItem(
-      id: 't1',
-      driverName: 'Ramesh Kumar Negi',
-      vehicleTypeName: 'Innova Crysta',
-      seats: 7,
-      plateDisplay: 'UK07 AB 1234',
-      cityName: 'Dehradun',
-      minFare: fare,
-      routeCount: 2,
-      matchReversed: false,
-      createdAt: DateTime(2026, 1, 1),
-      isFeatured: featured,
-    );
-
-HomeStayModel _stay(String id, String name, {bool featured = false}) => HomeStayModel(
-      item: StayBrowseItem.fromJson({
-        'id': id,
-        'name': name,
-        'cityName': 'Mussoorie',
-        'districtName': 'Dehradun',
-        'stayTypeName': 'Homestay',
-        'mealsChip': null,
-        'minPricePerNight': 1800,
-        'isFeatured': featured,
-      }),
-      districtName: 'Dehradun',
-      createdAt: DateTime(2026, 5, 1),
-    );
 
 class _Tabs extends TabConfigController {
   @override
@@ -70,7 +37,7 @@ class _Home extends HomeController {
   // ignore: must_call_super
   void onInit() {}
   @override
-  Future<void> reloadDistrict() async {}
+  Future<void> reload() async {}
 }
 
 class _Notif extends NotificationController {
@@ -146,22 +113,6 @@ void main() {
     await GetStorage.init();
     await loadGoldenFonts();
   });
-
-  _golden(
-    'rail_cards',
-    () => MealsRail(
-      children: [
-        HomeStayRailCard(stay: _stay('s1', 'Deodar Valley Homestay', featured: true), onOpen: () {}),
-        const SizedBox(width: 12),
-        HomeTaxiRailCard(taxi: _taxi(), onOpen: () {}),
-      ],
-    ),
-  );
-
-  _golden(
-    'taxi_rail_no_fare',
-    () => MealsRail(children: [HomeTaxiRailCard(taxi: _taxi(featured: false, fare: null), onOpen: () {})]),
-  );
 
   _golden(
     'nearby_rows',
@@ -261,13 +212,6 @@ void main() {
 
       testWidgets('SH golden home_loaded @${_s(scale)}', (t) async {
         setGoldenView(t, const Size(360, 1500));
-        final home = Get.find<HomeController>();
-        home.stays.assignAll([_stay('s1', 'Deodar Valley Homestay', featured: true), _stay('s2', 'Lake View')]);
-        home.taxis.assignAll([_taxi(), _taxi(featured: false, fare: null)]);
-        home.recentlyAddedStays.assignAll([_stay('s3', 'Pine Cottage'), _stay('s4', 'River Camp', featured: true)]);
-        home.staysLoading.value = false;
-        home.taxisLoading.value = false;
-        home.recentlyAddedStaysLoading.value = false;
         await t.pumpWidget(_homeHost(scale));
         await settleGolden(t);
         expect(t.takeException(), isNull);

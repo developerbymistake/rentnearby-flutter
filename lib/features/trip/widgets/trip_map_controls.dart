@@ -13,14 +13,17 @@ class TripMapControls extends StatelessWidget {
   final bool showEye;
   final bool eyeOn;
   final bool loading;
+  final bool eyeEnabled;
+  final double glyphSize;
   final ValueChanged<bool>? onEye;
   final MapLibreMapController? Function()? map;
   final VoidCallback? onLocate;
 
   static const double columnSize = 44;
-  static const double rowSize = 46;
+  static const double rowSize = 56;
   static const double columnGap = 10;
-  static const double glyphSize = 22;
+  static const double columnGlyph = 22;
+  static const double rowGlyph = 28;
 
   TripMapControls.column({
     super.key,
@@ -31,7 +34,9 @@ class TripMapControls extends StatelessWidget {
     this.map,
     this.onLocate,
   })  : axis = Axis.vertical,
+        eyeEnabled = true,
         size = columnSize,
+        glyphSize = columnGlyph,
         glyph = ListingPalette.indigo.text,
         shadow = TripLook.cardShadowSoft;
 
@@ -40,12 +45,14 @@ class TripMapControls extends StatelessWidget {
     this.showEye = true,
     this.eyeOn = true,
     this.loading = false,
+    this.eyeEnabled = true,
     this.onEye,
     this.map,
     this.onLocate,
   })  : axis = Axis.horizontal,
         size = rowSize,
-        glyph = ListingPalette.forest.g2,
+        glyphSize = rowGlyph,
+        glyph = ListingPalette.forest.text,
         shadow = ShadowTokens.elev2;
 
   Future<void> _zoom(CameraUpdate update) async {
@@ -67,8 +74,8 @@ class TripMapControls extends StatelessWidget {
           label: eyeOn ? TripMapDiscStrings.semHidePlaces : TripMapDiscStrings.semShowPlaces,
           toggled: eyeOn,
           ring: loading ? glyph : null,
-          onTap: onEye == null ? null : () => onEye!(!eyeOn),
-          child: Icon(eyeOn ? Icons.visibility_outlined : Icons.visibility_off_outlined, size: DS.s(glyphSize), color: eyeOn ? glyph : Ink3D.grey),
+          onTap: onEye == null || !eyeEnabled ? null : () => onEye!(!eyeOn),
+          child: Icon(eyeOn ? Icons.visibility_outlined : Icons.visibility_off_outlined, size: DS.s(glyphSize), color: eyeOn && eyeEnabled ? glyph : Ink3D.grey),
         ),
       _MapCircle(
         key: const ValueKey('disc-zoom-in'),

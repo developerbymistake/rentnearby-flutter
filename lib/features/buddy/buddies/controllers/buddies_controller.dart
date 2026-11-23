@@ -11,8 +11,14 @@ import 'buddy_summary_controller.dart';
 
 enum BuddyListState { loading, ready, failed }
 
+abstract final class BuddiesTab {
+  static const int find = 0;
+  static const int buddies = 1;
+  static const int requests = 2;
+}
+
 class BuddiesController extends GetxController {
-  BuddiesController({this.api = const BuddiesApi(), int initialTab = 0}) : tab = initialTab.obs;
+  BuddiesController({this.api = const BuddiesApi(), int initialTab = BuddiesTab.buddies}) : tab = initialTab.obs;
 
   static const Duration seenDelay = Duration(seconds: 2);
 
@@ -77,7 +83,7 @@ class BuddiesController extends GetxController {
     for (final b in list) {
       if (b.isNew && !_seenSent.contains(b.userId)) _pendingSeen.add(b.userId);
     }
-    if (_pendingSeen.isEmpty || tab.value != 0) return;
+    if (_pendingSeen.isEmpty || tab.value != BuddiesTab.buddies) return;
     _seenTimer?.cancel();
     _seenTimer = Timer(seenDelay, flushSeen);
   }

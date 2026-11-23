@@ -37,20 +37,6 @@ abstract final class SeekerTripWords {
     };
   }
 
-  static String headerSubtitle(SeekerFeed? feed) {
-    final card = feed?.tripCard;
-    if (card == null || !card.hasTrip) return SeekerHomeStrings.whereToNext;
-    final title = card.displayTitle;
-    final today = card.today;
-    if (card.state == SeekerTripState.onTrip && today != null) {
-      final dest = card.destinationName?.trim() ?? '';
-      final where = dest.isNotEmpty ? dest : (today.cityName ?? title);
-      if (today.dayNumber > 0 && where.isNotEmpty) return SeekerHomeStrings.dayIn(today.dayNumber, where);
-    }
-    if (title.isEmpty) return SeekerHomeStrings.whereToNext;
-    return SeekerHomeStrings.subtitle(title, dates(card.startDate, card.endDate));
-  }
-
   static String eyebrow(SeekerTripCard card) {
     final today = card.today;
     if (card.state == SeekerTripState.onTrip && today != null && today.dayNumber > 0 && today.totalDays > 0) {

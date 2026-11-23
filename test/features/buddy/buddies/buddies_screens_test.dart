@@ -12,7 +12,9 @@ import 'package:bakhli/features/buddy/buddies/widgets/trip_pick_sheet.dart';
 import 'package:bakhli/features/buddy/buddy_error_types.dart';
 import 'package:bakhli/features/buddy/shared/buddy_result.dart';
 import 'package:bakhli/features/buddy/shared/models/person_models.dart';
+import 'package:bakhli/features/buddy/shared/buddy_look.dart';
 import 'package:bakhli/features/buddy/shared/widgets/buddy_snack.dart';
+import 'package:bakhli/features/buddy/shared/widgets/segment_tabs.dart';
 import 'package:bakhli/features/buddy/sharing/models/sharing_models.dart';
 import 'package:bakhli/utils/app_toast.dart';
 import 'package:flutter/material.dart';
@@ -92,7 +94,8 @@ void main() {
     testWidgets('2.9 list: count label, New badge, seen marked after 2 s', (t) async {
       api.buddiesResult = BuddyOk(BuddyList(items: [item(aman), item(neha, isNew: true)], count: 2));
       await pump(t, screen());
-      expect(find.text('My buddies 2'), findsOneWidget);
+      expect(find.text('My buddies'), findsOneWidget);
+      expect(find.bySemanticsLabel('My buddies, 2'), findsOneWidget);
       expect(find.text('2 BUDDIES'), findsOneWidget);
       expect(find.text('New'), findsOneWidget);
       expect(api.seen, isNull);
@@ -185,6 +188,29 @@ void main() {
   });
 
   group('Find', () {
+    testWidgets('Change 11 + 12: tabs read Find, My buddies, Requests; count is a pink badge; Find card has Copy and My QR', (t) async {
+      api.buddiesResult = BuddyOk(BuddyList(items: [item(aman), item(neha)], count: 2));
+      await pump(t, screen());
+      final tabs = find.byType(SegmentTabs);
+      double x(String s) => t.getCenter(find.descendant(of: tabs, matching: find.text(s))).dx;
+      expect(x('Find'), lessThan(x('My buddies')));
+      expect(x('My buddies'), lessThan(x('Requests')));
+      expect(find.text('2 BUDDIES'), findsOneWidget, reason: 'plain open still lands on My buddies');
+      final badge = t.widget<Container>(find.ancestor(of: find.descendant(of: tabs, matching: find.text('2')), matching: find.byType(Container)).first);
+      expect((badge.decoration! as BoxDecoration).color, BuddyLook.countBadge, reason: 'pink badge also on the selected tab');
+      await t.tap(find.descendant(of: tabs, matching: find.text('Find')));
+      await settle(t);
+      expect(find.text('OR SHOW YOURS'), findsOneWidget);
+      expect(find.text('My QR'), findsOneWidget);
+      await tapText(t, 'Copy');
+      expect(find.text('Username copied'), findsOneWidget);
+      await t.tap(find.descendant(of: tabs, matching: find.text('Requests')));
+      await settle(t);
+      expect(find.text('OR SHOW YOURS'), findsNothing);
+      expect(find.text('Find a buddy'), findsNothing);
+      await finish(t);
+    });
+
     testWidgets('2.2 idle, 2.4 bad text without a server call, prefix fixed', (t) async {
       await pump(t, screen(tab: 'find'));
       expect(find.text('Ask your friend for their username, or scan their QR'), findsOneWidget);

@@ -114,6 +114,12 @@ class DiscTuning {
   final double photoAreaFactor;
   final int markerCacheMax;
   final int thumbPx;
+  final double? photoMinDp;
+  final double? badgeMinDp;
+  final double? dotMinDp;
+
+  static const double zoomOut = 10;
+  static const double zoomIn = 14;
 
   const DiscTuning({
     required this.photoMax,
@@ -132,6 +138,9 @@ class DiscTuning {
     this.photoAreaFactor = 2,
     this.markerCacheMax = 300,
     this.thumbPx = 96,
+    this.photoMinDp,
+    this.badgeMinDp,
+    this.dotMinDp,
   });
 
   // Trip mock was drawn unscaled: marker sizes follow DS (D5); the 44 dp tap box stays raw.
@@ -144,7 +153,28 @@ class DiscTuning {
         haloPhotoDp: DS.s(72),
         haloDotDp: DS.s(36),
       );
-  static const DiscTuning stay = DiscTuning(photoMax: 12, photoDp: 32);
+  // Owner sizes 2026-11-23: photo 44, badge 28, dot 12; smaller zoomed out, never below the minimums.
+  static DiscTuning get stay => DiscTuning(
+        photoMax: 24,
+        photoDp: DS.s(44),
+        photoMinDp: DS.s(36),
+        badgeDp: DS.s(28),
+        badgeMinDp: DS.s(24),
+        dotDp: DS.s(12),
+        dotMinDp: DS.s(10),
+        selDotDp: DS.s(16),
+        haloPhotoDp: DS.s(72),
+        haloDotDp: DS.s(36),
+      );
 
   int px(double dp) => (dp * pxPerDp).round();
+
+  static Object _byZoom(double? low, double high) =>
+      low == null || low >= high ? high : ['interpolate', ['linear'], ['zoom'], zoomOut, low, zoomIn, high];
+
+  Object get photoIconSize => _byZoom(photoMinDp == null ? null : photoMinDp! / photoDp, 1.0);
+
+  Object get badgeIconSize => _byZoom(badgeMinDp == null ? null : badgeMinDp! / badgeDp, 1.0);
+
+  Object dotRadius(double ring) => _byZoom(dotMinDp == null ? null : dotMinDp! / 2 - ring, dotDp / 2 - ring);
 }

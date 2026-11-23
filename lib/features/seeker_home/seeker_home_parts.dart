@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
 
 import '../../design/design.dart';
-import '../../utils/photo_url.dart';
 import '../owner_core/data/single_flight.dart';
-import 'seeker_rail_art.dart';
 import 'seeker_trip_card.dart';
 import 'strings/seeker_home_strings.dart';
 
 class SeekerHomeSkeleton extends StatelessWidget {
-  const SeekerHomeSkeleton({super.key, this.rows = 3});
+  const SeekerHomeSkeleton({super.key, this.rows = 2});
 
   final int rows;
 
@@ -101,74 +99,6 @@ class SeekerRailsErrorCard extends StatelessWidget {
                     ),
                   ),
                 ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class SeekerRecentRow extends StatelessWidget {
-  const SeekerRecentRow({super.key, required this.title, required this.subtitle, required this.onTap, this.photoUrl, this.stayTypeName});
-
-  final String? stayTypeName;
-  final String title;
-  final String subtitle;
-  final String? photoUrl;
-  final VoidCallback onTap;
-
-  static const Key thumbKey = ValueKey('seeker-recent-thumb');
-
-  @override
-  Widget build(BuildContext context) {
-    final url = PhotoUrl.parse(photoUrl);
-    final p = ListingPalette.forest;
-    final thumb = DS.s(58);
-    return Padding(
-      padding: DS.insets(l: 18, t: 12, r: 18),
-      child: Semantics(
-        button: true,
-        label: subtitle.isEmpty ? title : '$title, $subtitle',
-        excludeSemantics: true,
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: onTap,
-          child: Container(
-            constraints: const BoxConstraints(minHeight: kMinInteractiveDimension),
-            padding: DS.insets(l: 12, t: 10, r: 12, b: 10),
-            decoration: BoxDecoration(color: DesignColors.onPrimary, borderRadius: DS.circular(16), boxShadow: DS.shadows(ShadowTokens.elev1)),
-            child: Row(
-              children: [
-                Container(
-                  key: thumbKey,
-                  width: thumb,
-                  height: thumb,
-                  clipBehavior: Clip.antiAlias,
-                  decoration: BoxDecoration(
-                    color: p.button,
-                    borderRadius: DS.circular(16),
-                    boxShadow: DS.shadows(ShadowTokens.elev1),
-                  ),
-                  child: url != null
-                      ? KitPhoto(url: url, width: thumb, height: thumb, asset: TravelIcon.stay, iconSize: 32)
-                      : const Center(child: Art3D(asset: SeekerRailArt.house, size: 44)),
-                ),
-                Gap.h(12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(14.5, FontWeight.w700, DesignColors.textStrong)),
-                      if (subtitle.isNotEmpty)
-                        Text(subtitle, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(12, FontWeight.w400, DesignColors.textSecondaryHigh)),
-                    ],
-                  ),
-                ),
-                Gap.h(8),
-                Text(SeekerHomeStrings.rowArrow, style: Ink3D.text(24, FontWeight.w500, p.g2)),
               ],
             ),
           ),

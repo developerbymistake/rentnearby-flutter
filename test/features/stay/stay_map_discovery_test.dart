@@ -7,6 +7,7 @@ import 'package:bakhli/features/trip/map/discovery_api.dart';
 import 'package:bakhli/features/trip/map/discovery_overlay.dart';
 import 'package:bakhli/features/trip/map/trip_discovery_layer.dart';
 import 'package:bakhli/features/trip/map/trip_marker_images.dart';
+import 'package:bakhli/features/trip/widgets/trip_map_controls.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
@@ -133,8 +134,6 @@ Future<TripDiscoveryLayer> _attached(List<DiscoverySpot> spots, {DiscoveryDataSt
   return l;
 }
 
-const _fab = SizedBox(key: ValueKey('old-fab'), width: 46, height: 46);
-
 Future<void> _pump(WidgetTester tester, Widget child, {double width = 360, double textScale = 1.0}) async {
   tester.view.physicalSize = Size(width, 760);
   tester.view.devicePixelRatio = 1;
@@ -154,7 +153,7 @@ Widget _row(DiscoveryLayerApi? layer) => Align(
       alignment: Alignment.topCenter,
       child: Padding(
         padding: EdgeInsets.only(top: DS.gv(12), left: DS.s(StayMapTopControls.side), right: DS.s(StayMapTopControls.side)),
-        child: StayMapTopControls(layer: layer, fab: _fab, map: () => null, onLocate: () {}),
+        child: StayMapTopControls(layer: layer, map: () => null, onLocate: () {}),
       ),
     );
 
@@ -181,22 +180,52 @@ const _three = ['disc-zoom-in', 'disc-zoom-out', 'disc-locate'];
 void main() {
   tearDown(Get.reset);
 
-  testWidgets('no layer (flag off or no pack): the old FAB stays at the right edge and nothing new shows', (tester) async {
+  testWidgets('Bug 2: no layer (flag off or no pack yet): +, - and locate are always drawn, no eye', (tester) async {
     await _pump(tester, _row(null));
-    expect(find.byKey(const ValueKey('old-fab')), findsOneWidget);
-    expect(tester.getRect(find.byKey(const ValueKey('old-fab'))).right, closeTo(360 - DS.s(StayMapTopControls.side), 0.01));
-    for (final k in _four) {
-      expect(find.byKey(ValueKey(k)), findsNothing);
-    }
+    expect(find.byKey(const ValueKey('disc-eye')), findsNothing);
+    _expectEqualGaps(tester, _three, 360);
+    expect(tester.getSize(find.byKey(const ValueKey('disc-zoom-in'))).width, closeTo(DS.s(TripMapControls.rowSize), 0.01));
   });
 
-  testWidgets('layer created but not attached: old FAB, no overlay content', (tester) async {
+  testWidgets('Bug 2: layer created but not attached: all 4 buttons, the eye shows loading and cannot be tapped, no overlay content', (tester) async {
     final l = _layer([_spot('a')]);
     await _pump(tester, Stack(children: [_row(l), DiscoveryOverlay(layer: l, placement: DiscoveryPlacement.bottom)]));
-    expect(find.byKey(const ValueKey('old-fab')), findsOneWidget);
-    expect(find.byKey(const ValueKey('disc-eye')), findsNothing);
+    _expectEqualGaps(tester, _four, 360);
+    expect(find.byKey(const ValueKey('disc-eye-ring')), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('disc-eye')));
+    await tester.pump();
+    expect(l.eyeOn.value, isTrue);
     expect(find.byKey(const ValueKey('disc-card')), findsNothing);
     expect(find.byKey(const ValueKey('disc-chip')), findsNothing);
+    l.dispose();
+  });
+
+  testWidgets('Part A: the pack arrives after the map is ready: the row switches from loading to a working eye', (tester) async {
+    final source = _Source(<DiscoverySpot>[], DiscoveryDataState.loading);
+    final l = TripDiscoveryLayer(
+      mode: DiscoveryMode.readOnly,
+      host: DiscoveryHost.readOnly(lineFor: (_) => 'Shimla'),
+      source: source,
+      tuning: DiscTuning.stay,
+      images: TripMarkerImages(fetch: (_) async => null, disk: _Disk(), painter: _Painter()),
+    );
+    await tester.runAsync(() async {
+      await l.refreshData();
+      await l.attach(_Port());
+      await l.setPhotoArea(_centre.lat, _centre.lon, 2);
+    });
+    await _pump(tester, _row(l));
+    expect(find.byKey(const ValueKey('disc-eye-ring')), findsOneWidget);
+    source.spots.add(_spot('a'));
+    source.state.value = DiscoveryDataState.ready;
+    await tester.runAsync(l.refreshData);
+    await tester.pump();
+    expect(l.hasSpotsHere.value, isTrue);
+    expect(find.byKey(const ValueKey('disc-eye-ring')), findsNothing);
+    await tester.tap(find.byKey(const ValueKey('disc-eye')));
+    await tester.pump();
+    expect(l.eyeOn.value, isFalse);
+    await tester.tap(find.byKey(const ValueKey('disc-eye')));
     l.dispose();
   });
 
@@ -204,20 +233,22 @@ void main() {
     testWidgets('spots here: eye, +, -, locate with equal gaps at $width', (tester) async {
       final l = await tester.runAsync(() => _attached([_spot('a')]));
       await _pump(tester, _row(l), width: width);
-      expect(find.byKey(const ValueKey('old-fab')), findsNothing);
       final xs = [for (final k in _four) tester.getRect(find.byKey(ValueKey(k))).left];
       expect([...xs]..sort(), xs);
       _expectEqualGaps(tester, _four, width);
-      expect(tester.getSize(find.byKey(const ValueKey('disc-locate'))).width, closeTo(DS.s(46), 0.01));
+      expect(tester.getSize(find.byKey(const ValueKey('disc-locate'))).width, closeTo(DS.s(TripMapControls.rowSize), 0.01));
       l!.dispose();
     });
 
-    testWidgets('no spots in this area: 3 buttons, no eye, equal gaps at $width', (tester) async {
+    testWidgets('no spots in this area: the eye stays, greyed and not tappable, equal gaps at $width', (tester) async {
       final l = await tester.runAsync(() => _attached([_spot('far', lat: 32.7, lon: 74.8)]));
       expect(l!.hasSpotsHere.value, isFalse);
       await _pump(tester, _row(l), width: width);
-      expect(find.byKey(const ValueKey('disc-eye')), findsNothing);
-      _expectEqualGaps(tester, _three, width);
+      _expectEqualGaps(tester, _four, width);
+      expect(tester.widget<Icon>(find.descendant(of: find.byKey(const ValueKey('disc-eye')), matching: find.byType(Icon))).color, Ink3D.grey);
+      await tester.tap(find.byKey(const ValueKey('disc-eye')));
+      await tester.pump();
+      expect(l.eyeOn.value, isTrue);
       l.dispose();
     });
   }

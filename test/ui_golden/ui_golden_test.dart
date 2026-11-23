@@ -22,7 +22,6 @@ import 'package:bakhli/features/trip/widgets/trip_status_card.dart';
 import 'package:bakhli/models/card_fact.dart';
 import 'package:bakhli/models/role_model.dart';
 import 'package:bakhli/screens/home_screen.dart';
-import 'package:bakhli/widgets/home_taxi_rail_card.dart';
 import 'package:bakhli/widgets/nearby_item_row.dart';
 import 'package:bakhli/widgets/role_option_card.dart';
 import 'dart:io';
@@ -69,7 +68,7 @@ class _Home extends HomeController {
   // ignore: must_call_super
   void onInit() {}
   @override
-  Future<void> reloadDistrict() async {}
+  Future<void> reload() async {}
 }
 
 class _Notif extends NotificationController {
@@ -171,11 +170,6 @@ void main() {
         onViewDetails: () {},
       ),
     ),
-  );
-
-  _golden(
-    'home_taxi_rail_card',
-    () => MealsRail(children: [HomeTaxiRailCard(taxi: _taxi(), onOpen: () {})]),
   );
 
   _golden(

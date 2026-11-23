@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:bakhli/design/design.dart';
 import 'package:bakhli/features/trip/map/discovery_api.dart';
 import 'package:bakhli/features/trip/map/discovery_geojson.dart';
 import 'package:bakhli/features/trip/map/trip_discovery_layer.dart';
@@ -200,7 +201,7 @@ void main() {
     final port = FakePort();
     await l.attach(port);
     expect(port.calls.where((x) => x.startsWith('layer:')).every((x) => x.endsWith(':null')), isTrue);
-    expect(l.tuning.photoDp, 32);
+    expect(l.tuning.photoDp, DS.s(44));
   });
 
   test('photos: tier-1 spots with a thumb registered in batches of 8, one disc-photo set per batch', () async {
@@ -511,7 +512,7 @@ void main() {
     expect(features(port.geo['disc-photo']).single['properties']['img'], DiscIds.photoSlot(0));
   });
 
-  test('L-08: photo area moves 20 times: distinct image names stay at or below photoMax', () async {
+  test('L-08: photo area moves 40 times: distinct image names stay at or below photoMax', () async {
     final spots = [
       for (var i = 0; i < 60; i++) spot('s$i', rank: i + 1, thumb: true, lat: 30 + i * 0.05, lon: 78),
     ];
@@ -524,8 +525,8 @@ void main() {
     await l.refreshData();
     final port = FakePort();
     await l.attach(port);
-    for (var k = 0; k < 20; k++) {
-      await l.setPhotoArea(30 + k * 0.15, 78, 3);
+    for (var k = 0; k < 40; k++) {
+      await l.setPhotoArea(30 + k * 0.075, 78, 3);
       await settle();
     }
     final names = {for (final c in port.calls) if (c.startsWith('image:disc-p-')) c};

@@ -8,11 +8,7 @@ import 'package:bakhli/design/template/models/meals_list_data.dart';
 import 'package:bakhli/design/template/my_diary/meals_list_view.dart';
 import 'package:bakhli/features/taxi/guest/taxi_card.dart';
 import 'package:bakhli/features/taxi/models/taxi_browse_item.dart';
-import 'package:bakhli/models/browse_item.dart';
 import 'package:bakhli/models/card_fact.dart';
-import 'package:bakhli/models/home_feed_model.dart';
-import 'package:bakhli/widgets/home_stay_rail_card.dart';
-import 'package:bakhli/widgets/home_taxi_rail_card.dart';
 import 'package:bakhli/widgets/nearby_item_row.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -36,22 +32,6 @@ TaxiBrowseItem _taxi({bool match = true}) => TaxiBrowseItem(
       minFare: 1800,
       matchReversed: false,
       createdAt: DateTime(2030, 1, 1),
-    );
-
-HomeStayModel _stayModel() => HomeStayModel(
-      districtName: 'Nainital',
-      item: BrowseItem(
-        id: 's1',
-        userId: 'u',
-        thumbnailUrl: null,
-        tagLabel: 'FOR STAY',
-        title: 'Hotel Himalayan View',
-        locationLabel: 'Nainital, Nainital',
-        facts: const [CardFact('Hotel'), CardFact('Breakfast')],
-        priceCaption: 'FROM',
-        priceValue: 'Rs 2,400',
-        priceUnit: '/night',
-      ),
     );
 
 Widget _gridCards(BuildContext context) => Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -184,14 +164,6 @@ void main() {
               ),
             ),
             const SizedBox(height: 12),
-            MealsRail(
-              children: [
-                HomeStayRailCard(key: const ValueKey('hsr'), stay: _stayModel(), onOpen: () {}),
-                HomeTaxiRailCard(key: const ValueKey('htr'), taxi: _taxi(), onOpen: () {}),
-                HomeTaxiRailCard(taxi: _taxi(match: false), onOpen: () {}),
-              ],
-            ),
-            const SizedBox(height: 12),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: KitMetrics.gutter),
               child: NearbyItemRow(
@@ -216,10 +188,6 @@ void main() {
     expect(t.takeException(), isNull);
     await shot(t, 'K_rails_vs_template');
     expect(find.byType(MealsView), findsWidgets);
-    final ours = t.getRect(find.descendant(of: find.byKey(const ValueKey('hsr')), matching: find.byType(MealsCardV)));
-    final oursTaxi = t.getRect(find.descendant(of: find.byKey(const ValueKey('htr')), matching: find.byType(MealsCardV)));
-    expect(oursTaxi.height, ours.height);
-    expect(ours.width, HomeStayRailCard.cellWidth);
   });
 
   _tw('taxi card is compact and keeps every action', (t) async {
@@ -258,10 +226,6 @@ void main() {
             child: SingleChildScrollView(
               child: Column(children: [
                 TaxiCard(item: _taxi(), onOpen: () {}, onSelect: () {}, onEnquire: () {}),
-                MealsRail(children: [
-                  HomeStayRailCard(stay: _stayModel(), onOpen: () {}),
-                  HomeTaxiRailCard(taxi: _taxi(), onOpen: () {}),
-                ]),
                 Padding(
                   padding: const EdgeInsets.all(16),
                   child: Builder(builder: (c) => _gridCards(c)),

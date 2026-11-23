@@ -29,7 +29,7 @@ class _Home extends HomeController {
   // ignore: must_call_super
   void onInit() {}
   @override
-  Future<void> reloadDistrict() async {}
+  Future<void> reload() async {}
 }
 
 class _Notif extends NotificationController {

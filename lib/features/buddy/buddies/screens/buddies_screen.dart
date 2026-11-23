@@ -41,9 +41,9 @@ class BuddiesScreen extends StatefulWidget {
   final TripMembersApi tripApi;
 
   static int tabIndex(String tab) => switch (tab) {
-        'requests' => 1,
-        'find' => 2,
-        _ => 0,
+        'requests' => BuddiesTab.requests,
+        'find' => BuddiesTab.find,
+        _ => BuddiesTab.buddies,
       };
 
   @override
@@ -60,7 +60,7 @@ class _BuddiesScreenState extends State<BuddiesScreen> {
   void initState() {
     super.initState();
     final q = widget.query;
-    final start = q != null && q.isNotEmpty ? 2 : BuddiesScreen.tabIndex(widget.tab);
+    final start = q != null && q.isNotEmpty ? BuddiesTab.find : BuddiesScreen.tabIndex(widget.tab);
     _buddies = Get.put(BuddiesController(api: widget.api, initialTab: start), tag: _tag);
     _requests = Get.put(BuddyRequestsController(api: widget.api), tag: _tag);
     _find = Get.put(BuddyFindController(api: widget.api), tag: _tag);
@@ -83,17 +83,17 @@ class _BuddiesScreenState extends State<BuddiesScreen> {
 
   void _snack(String text, {bool danger = false}) {
     if (!mounted) return;
-    BuddySnack.show(context, text, icon: danger ? BuddiesStrings.alertMark : BuddySnack.tick, danger: danger, bottom: _buddies.tab.value == 0 ? 104 : 24);
+    BuddySnack.show(context, text, icon: danger ? BuddiesStrings.alertMark : BuddySnack.tick, danger: danger, bottom: _buddies.tab.value == BuddiesTab.buddies ? 104 : 24);
   }
 
   void _accepted(BuddyPerson p) {
-    _buddies.tab.value = 0;
+    _buddies.tab.value = BuddiesTab.buddies;
     _buddies.load();
     _snack(BuddiesStrings.nowYourBuddy(p.name));
   }
 
   void _goFind() {
-    _buddies.tab.value = 2;
+    _buddies.tab.value = BuddiesTab.find;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted && _find.boxEnabled) _find.focus.requestFocus();
     });
@@ -181,9 +181,9 @@ class _BuddiesScreenState extends State<BuddiesScreen> {
   bool _onScroll(ScrollNotification n) {
     if (n.metrics.axis != Axis.vertical || n.metrics.extentAfter > 200) return false;
     switch (_buddies.tab.value) {
-      case 0:
+      case BuddiesTab.buddies:
         _buddies.loadMore();
-      case 1:
+      case BuddiesTab.requests:
         _requests.loadMore();
     }
     return false;
@@ -205,18 +205,19 @@ class _BuddiesScreenState extends State<BuddiesScreen> {
           onBack: Get.back,
           trailing: [BuddiesHeaderMenu(blockedCount: () => summary?.summary.value.blocked ?? 0, onBlocked: BuddyNavigation.openBlocked)],
           top: SegmentTabs(
-            labels: [BuddiesStrings.myBuddiesCount(count), BuddiesStrings.tabRequests, BuddiesStrings.tabFind],
+            labels: [BuddiesStrings.tabFind, BuddiesStrings.tabBuddies, BuddiesStrings.tabRequests],
             selected: tab,
             tone: BuddyLook.teal,
-            counts: {1: s.receivedPending},
+            counts: {BuddiesTab.buddies: count, BuddiesTab.requests: s.receivedPending},
             onTap: (i) => _buddies.tab.value = i,
           ),
           body: switch (tab) {
-            1 => RequestsTab(controller: _requests, onMenu: _openRequestMenu),
-            2 => FindTab(
+            BuddiesTab.requests => RequestsTab(controller: _requests, onMenu: _openRequestMenu),
+            BuddiesTab.find => FindTab(
                 controller: _find,
                 me: me,
                 onScan: _scan,
+                onCopy: () => UsernameActions.copy(me.username ?? ''),
                 onMyQr: () => UsernameQrSheet.show(context, username: me.username ?? '', name: me.name),
                 onOpenBuddy: _openBuddy,
               ),
@@ -227,7 +228,7 @@ class _BuddiesScreenState extends State<BuddiesScreen> {
                 onOpenBuddy: (b) => _openBuddy(b.person),
               ),
           },
-          bottomBar: tab == 0
+          bottomBar: tab == BuddiesTab.buddies
               ? BuddyBottomBar(children: [GradientPillButton(tone: BuddyLook.teal, label: BuddiesStrings.findABuddy, onTap: _goFind)])
               : null,
         );

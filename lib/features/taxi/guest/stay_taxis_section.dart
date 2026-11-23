@@ -267,6 +267,8 @@ class _StayTaxisSectionState extends State<StayTaxisSection> with SingleTickerPr
         });
       }
     }
+    final withHeader = local || from == null;
+    _caption = withHeader ? null : label;
     final body = switch (_phase) {
       _Phase.hidden => const <Widget>[],
       _Phase.locating => [_note(ListingArt.compass, 'Finding your city...')],
@@ -313,7 +315,7 @@ class _StayTaxisSectionState extends State<StayTaxisSection> with SingleTickerPr
         ],
     };
     final animate = _phase != _Phase.loading && _phase != _Phase.locating;
-    final count = (1 + body.length).clamp(1, 4);
+    final count = ((withHeader ? 1 : 0) + body.length).clamp(1, 4);
     Widget wrap(int i, Widget child) => animate
         ? TemplateEntrance(
             animation: templateInterval(_anim, i.clamp(0, count - 1), count),
@@ -322,14 +324,15 @@ class _StayTaxisSectionState extends State<StayTaxisSection> with SingleTickerPr
           )
         : child;
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      wrap(0, _header(label: label, seeAll: local || from == null)),
-      for (var i = 0; i < body.length; i++) wrap(i + 1, body[i]),
+      if (withHeader) wrap(0, _header(label: label)),
+      for (var i = 0; i < body.length; i++) wrap(i + (withHeader ? 1 : 0), body[i]),
     ]);
   }
 
-  Widget _note(String art, String text, {String? action, VoidCallback? onTap}) =>
-      GettingThereNote(tone: ListingTone.forest, art: art, text: text, actionLabel: action, onAction: onTap);
+  String? _caption;
 
-  Widget _header({required String label, required bool seeAll}) =>
-      GettingThereHeader(tone: ListingTone.forest, label: label, onSeeAll: seeAll ? _seeAll : null);
+  Widget _note(String art, String text, {String? action, VoidCallback? onTap}) =>
+      GettingThereNote(tone: ListingTone.forest, art: art, text: text, caption: _caption, actionLabel: action, onAction: onTap);
+
+  Widget _header({required String label}) => GettingThereHeader(tone: ListingTone.forest, label: label, onSeeAll: _seeAll);
 }

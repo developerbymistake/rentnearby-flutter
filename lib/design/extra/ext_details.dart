@@ -1,4 +1,5 @@
 import 'package:bakhli/design/tokens/design_scale.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 import '../../utils/photo_url.dart';
@@ -9,9 +10,9 @@ import '../tokens/listing_palette.dart';
 import '../tokens/shadow_tokens.dart';
 import 'art_3d.dart';
 import 'calm_card_kit.dart';
-import 'photo_circle.dart';
 import 'pill_buttons_3d.dart';
 import 'skeleton_3d.dart';
+import 'template_motion.dart';
 import 'whatsapp_glyph.dart';
 
 abstract final class DetailArt {
@@ -197,21 +198,34 @@ class DetailHeroArt extends StatelessWidget {
   final String art;
   final String? photoUrl;
 
+  Widget _art() => DecoratedBox(
+    decoration: BoxDecoration(gradient: tone.gradient),
+    child: Padding(
+      padding: EdgeInsets.only(top: DS.s(20)),
+      child: Center(
+        child: ExcludeSemantics(
+          child: Art3D(asset: art, size: 168, halo: 196, haloColor: DetailLook.heroHalo, shadowBlur: 10, shadowOffset: const Offset(8, 12), shadowAlpha: 0.3),
+        ),
+      ),
+    ),
+  );
+
   @override
   Widget build(BuildContext context) {
     final url = PhotoUrl.parse(photoUrl);
-    return DecoratedBox(
-      decoration: BoxDecoration(gradient: tone.gradient),
-      child: Padding(
-        padding: EdgeInsets.only(top: DS.s(20)),
-        child: Center(
-          child: url == null
-              ? ExcludeSemantics(
-                  child: Art3D(asset: art, size: 168, halo: 196, haloColor: DetailLook.heroHalo, shadowBlur: 10, shadowOffset: const Offset(8, 12), shadowAlpha: 0.3),
-                )
-              : PhotoCircle(url: url, art: art, size: 172, photoSize: 148, artSize: 168),
+    if (url == null) return _art();
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        CachedNetworkImage(
+          imageUrl: url,
+          fit: BoxFit.cover,
+          memCacheWidth: (MediaQuery.sizeOf(context).width * MediaQuery.devicePixelRatioOf(context)).round(),
+          placeholder: (ctx, u) => const TemplatePlaceholder(height: double.infinity, radius: 0),
+          errorWidget: (ctx, u, err) => _art(),
         ),
-      ),
+        const Positioned(top: 0, left: 0, right: 0, child: DetailTopScrim()),
+      ],
     );
   }
 }
@@ -1006,11 +1020,12 @@ class GettingThereHeader extends StatelessWidget {
 }
 
 class GettingThereNote extends StatelessWidget {
-  const GettingThereNote({super.key, required this.tone, required this.art, required this.text, this.actionLabel, this.onAction});
+  const GettingThereNote({super.key, required this.tone, required this.art, required this.text, this.caption, this.actionLabel, this.onAction});
 
   final ListingTone tone;
   final String art;
   final String text;
+  final String? caption;
   final String? actionLabel;
   final VoidCallback? onAction;
 
@@ -1045,6 +1060,11 @@ class GettingThereNote extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
+                if (caption != null)
+                  Padding(
+                    padding: EdgeInsets.only(bottom: DS.gv(4)),
+                    child: Text(caption!, maxLines: 2, overflow: TextOverflow.ellipsis, style: DetailLook.calmText(13, FontWeight.w600, DesignColors.textStrong, height: 1.35)),
+                  ),
                 ConstrainedBox(
                   constraints: BoxConstraints(minHeight: DS.s(38)),
                   child: Align(

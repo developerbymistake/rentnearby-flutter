@@ -91,8 +91,8 @@ void main() {
   test('tuning: trip and stay values', () {
     expect(DiscTuning.trip.photoMax, 40);
     expect(DiscTuning.trip.photoDp, DS.s(44));
-    expect(DiscTuning.stay.photoMax, 12);
-    expect(DiscTuning.stay.photoDp, 32);
+    expect(DiscTuning.stay.photoMax, 24);
+    expect(DiscTuning.stay.photoDp, DS.s(44));
     expect(DiscTuning.trip.px(44), 44);
   });
 }

@@ -143,6 +143,28 @@ class MapPackService {
     }
   }
 
+  // Background download to disk; never changes the packs a map screen picked.
+  Future<void> warm({double? lat, double? lon, Iterable<int> cityKeys = const []}) async {
+    try {
+      if (!await _prepare()) return;
+      final out = <MapPackRef>[];
+      void add(MapPackRef r) {
+        if (!out.any((o) => o.stateId == r.stateId)) out.add(r);
+      }
+
+      if (lat != null && lon != null && lat.isFinite && lon.isFinite) {
+        for (final r in _refs) {
+          if (r.contains(lat, lon)) add(r);
+        }
+      }
+      final keys = cityKeys.toSet();
+      if (keys.isNotEmpty) _refsForCities(keys).forEach(add);
+      await Future.wait(out.map(_loadState));
+    } catch (_) {
+      _updateStatus();
+    }
+  }
+
   Future<void> wipe() async {
     _gen++;
     _dropMemory();
@@ -297,6 +319,11 @@ class MapPackService {
   static String _fold(String s) => s.toLowerCase().replaceAll(RegExp(r'\s+'), '');
 
   List<MapPackRef> _pickForCities(Set<int> keys) {
+    final out = _refsForCities(keys);
+    return out.isNotEmpty ? out : _fallback();
+  }
+
+  List<MapPackRef> _refsForCities(Set<int> keys) {
     final cities = _citiesOf(keys).toList();
     final out = <MapPackRef>[];
     void add(MapPackRef r) {
@@ -309,7 +336,7 @@ class MapPackService {
       final ref = byName ?? _refs.firstWhereOrNull((r) => r.contains(c.latitude, c.longitude));
       if (ref != null) add(ref);
     }
-    return out.isNotEmpty ? out : _fallback();
+    return out;
   }
 
   Future<void> _loadPicked(List<MapPackRef> picked) async {

@@ -3,16 +3,18 @@ import 'dart:ui' as ui;
 
 import 'package:bakhli/design/design.dart';
 import 'package:bakhli/features/trip/map/discovery_ids.dart';
+import 'package:bakhli/features/trip/map/trip_discovery_layer.dart';
 import 'package:bakhli/features/trip/map/trip_marker_images.dart';
 import 'package:flutter/painting.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:maplibre_gl/maplibre_gl.dart';
 
-// APP-5 (D5): trip markers follow DS like the rest of the trip map; stay markers stay raw (mock at real sizes).
+// APP-5 (D5): trip markers follow DS; stay markers follow the owner sizes of 2026-11-23 through DS.
 void main() {
   final restore = (size: DS.size, font: DS.font, gap: DS.gapRel, floor: DS.fontFloor);
   tearDown(() => DS.debugSet(size: restore.size, font: restore.font, gapRel: restore.gap, fontFloor: restore.floor));
 
-  test('approved scale: trip 35.2 / 19.2 / 7.2 / 11.2 / halos 57.6 and 28.8, tap box 44; stay unchanged', () {
+  test('approved scale: trip 35.2 / 19.2 / 7.2 / 11.2 / halos 57.6 and 28.8, tap box 44', () {
     DS.applyApproved();
     final t = DiscTuning.trip;
     expect(t.photoDp, closeTo(35.2, 1e-9));
@@ -23,8 +25,40 @@ void main() {
     expect(t.haloDotDp, closeTo(28.8, 1e-9));
     expect(t.hitDp, 44);
     expect(t.photoMax, 40);
+  });
+
+  test('stay: photo 44, badge 28, dot 12 through DS, never smaller than 36 / 24 / 10 zoomed out', () {
+    DS.debugReset();
     final s = DiscTuning.stay;
-    expect((s.photoDp, s.badgeDp, s.dotDp, s.hitDp), (32, 24, 9, 44));
+    expect((s.photoDp, s.badgeDp, s.dotDp, s.hitDp, s.photoMax), (44, 28, 12, 44, 24));
+    expect(s.photoIconSize, ['interpolate', ['linear'], ['zoom'], DiscTuning.zoomOut, 36 / 44, DiscTuning.zoomIn, 1.0]);
+    expect(s.badgeIconSize, ['interpolate', ['linear'], ['zoom'], DiscTuning.zoomOut, 24 / 28, DiscTuning.zoomIn, 1.0]);
+    expect(s.dotRadius(1), ['interpolate', ['linear'], ['zoom'], DiscTuning.zoomOut, 4.0, DiscTuning.zoomIn, 5.0]);
+    DS.applyApproved();
+    final a = DiscTuning.stay;
+    expect(a.photoDp, closeTo(DS.s(44), 1e-9));
+    expect(a.photoDp, greaterThan(DiscTuning.trip.photoDp - 1e-9));
+    expect(a.dotMinDp, closeTo(DS.s(10), 1e-9));
+  });
+
+  test('trip: no zoom expression, sizes stay plain numbers', () {
+    DS.applyApproved();
+    final t = DiscTuning.trip;
+    expect(t.photoIconSize, 1.0);
+    expect(t.badgeIconSize, 1.0);
+    expect(t.dotRadius(1), t.dotDp / 2 - 1);
+  });
+
+  test('the stay layers paint with the zoom expressions', () {
+    DS.debugReset();
+    final s = DiscTuning.stay;
+    final specs = {for (final x in DiscLayers.specs(s)) x.id: x};
+    final dots = DiscPaint.of(specs[DiscIds.layerDots]!, s) as CircleLayerProperties;
+    final photo = DiscPaint.of(specs[DiscIds.layerPhoto]!, s) as SymbolLayerProperties;
+    final badge = DiscPaint.of(specs[DiscIds.layerBadge]!, s) as SymbolLayerProperties;
+    expect(dots.circleRadius, s.dotRadius(1));
+    expect(photo.iconSize, s.photoIconSize);
+    expect(badge.iconSize, s.badgeIconSize);
   });
 
   test('identity scale: trip = the mock numbers (44 / 24 / 9)', () {

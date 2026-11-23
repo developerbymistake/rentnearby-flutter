@@ -123,22 +123,7 @@ class CanvasMarkerPainter implements MarkerPainter {
         ..style = PaintingStyle.stroke
         ..strokeWidth = _ringBadge * t.pxPerDp,
     );
-    final icon = TripSpotCategory.iconOf(category);
-    final tp = TextPainter(
-      textDirection: TextDirection.ltr,
-      text: TextSpan(
-        text: String.fromCharCode(icon.codePoint),
-        style: TextStyle(
-          fontFamily: icon.fontFamily,
-          package: icon.fontPackage,
-          fontSize: r * 2 * _glyphRatio,
-          color: FitnessAppTheme.white,
-          height: 1,
-        ),
-      ),
-    )..layout();
-    tp.paint(canvas, c - Offset(tp.width / 2, tp.height / 2));
-    tp.dispose();
+    _glyph(canvas, c, TripSpotCategory.iconOf(category), r * 2 * _glyphRatio);
     return _png(recorder, size);
   }
 
@@ -173,6 +158,88 @@ class CanvasMarkerPainter implements MarkerPainter {
     } finally {
       src.dispose();
     }
+  }
+
+  static double stopRingDp() => DS.s(3);
+  static double stopBadgeDp() => DS.s(20);
+
+  static double stopCanvasDp(DiscTuning t) {
+    final outer = t.photoDp / 2 + stopRingDp();
+    final corner = outer * _corner + stopBadgeDp() / 2 + _ringBadge;
+    return 2 * (corner > outer + _shadowPad ? corner : outer + _shadowPad);
+  }
+
+  static const double _corner = 0.7071;
+
+  // Route stop: the spot photo (or its category icon) in the white ring, the day colour ring outside, the order badge on the corner.
+  Future<Uint8List> stop({Uint8List? thumb, required String category, required Color ring, required int number, required DiscTuning t}) async {
+    ui.Image? src;
+    if (thumb != null) {
+      try {
+        final codec = await ui.instantiateImageCodec(thumb, targetWidth: t.thumbPx * 2, allowUpscaling: false);
+        src = (await codec.getNextFrame()).image;
+        codec.dispose();
+      } catch (_) {
+        src = null;
+      }
+    }
+    try {
+      final p = t.pxPerDp;
+      final size = t.px(stopCanvasDp(t)).toDouble();
+      final r = t.photoDp * p / 2;
+      final outer = r + stopRingDp() * p;
+      final c = Offset(size / 2, size / 2);
+      final recorder = ui.PictureRecorder();
+      final canvas = Canvas(recorder, Rect.fromLTWH(0, 0, size, size));
+      _shadow(canvas, c, outer, t);
+      canvas.drawCircle(c, outer, Paint()..color = ring);
+      canvas.drawCircle(c, r, Paint()..color = FitnessAppTheme.white);
+      final inner = Rect.fromCircle(center: c, radius: r - _ringPhoto * p);
+      final image = src;
+      if (image != null) {
+        final side = image.width < image.height ? image.width : image.height;
+        final from = Rect.fromLTWH((image.width - side) / 2, (image.height - side) / 2, side.toDouble(), side.toDouble());
+        canvas.save();
+        canvas.clipPath(Path()..addOval(inner));
+        canvas.drawImageRect(image, from, inner, Paint()..filterQuality = FilterQuality.high);
+        canvas.restore();
+      } else {
+        canvas.drawCircle(c, inner.width / 2, Paint()..color = TripSpotCategory.colorOf(category));
+        _glyph(canvas, c, TripSpotCategory.iconOf(category), inner.width * _glyphRatio);
+      }
+      final b = stopBadgeDp() * p / 2;
+      final at = c + Offset(outer * _corner, -outer * _corner);
+      canvas.drawCircle(at, b, Paint()..color = ring);
+      canvas.drawCircle(
+        at,
+        b - _ringBadge * p / 2,
+        Paint()
+          ..color = FitnessAppTheme.white
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = _ringBadge * p,
+      );
+      final tp = TextPainter(
+        textDirection: TextDirection.ltr,
+        text: TextSpan(text: '$number', style: TypeTokens.caption.copyWith(color: FitnessAppTheme.white, height: 1)),
+      )..layout();
+      tp.paint(canvas, at - Offset(tp.width / 2, tp.height / 2));
+      tp.dispose();
+      return await _png(recorder, size);
+    } finally {
+      src?.dispose();
+    }
+  }
+
+  static void _glyph(Canvas canvas, Offset c, IconData icon, double size) {
+    final tp = TextPainter(
+      textDirection: TextDirection.ltr,
+      text: TextSpan(
+        text: String.fromCharCode(icon.codePoint),
+        style: TextStyle(fontFamily: icon.fontFamily, package: icon.fontPackage, fontSize: size, color: FitnessAppTheme.white, height: 1),
+      ),
+    )..layout();
+    tp.paint(canvas, c - Offset(tp.width / 2, tp.height / 2));
+    tp.dispose();
   }
 
   @override
@@ -250,6 +317,13 @@ class TripMarkerImages {
   static String? markerUrl(DiscoverySpot s) => s.hasThumb ? SpotPhotoUrl.of(s.thumbUrl, SpotPhotoSize.marker) : null;
 
   Future<Uint8List> badge(String category, DiscTuning t) => _painter.badge(category, t);
+
+  Future<Uint8List?> thumb(DiscoverySpot s) async {
+    final url = markerUrl(s);
+    if (url == null || url.isEmpty) return null;
+    final bytes = await _fetch(url);
+    return bytes == null || bytes.isEmpty ? null : bytes;
+  }
 
   Future<Uint8List?> photoFor(DiscoverySpot s, DiscTuning t) async {
     final url = markerUrl(s);

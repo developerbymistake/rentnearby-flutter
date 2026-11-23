@@ -81,13 +81,13 @@ abstract final class SeekerQuickActionTargets {
       return;
     }
     if (trips.length == 1) {
-      BuddyNavigation.openExpenses(trips.single.id, add: true);
+      BuddyNavigation.openExpenses(trips.single.id);
       return;
     }
     final ctx = context ?? Get.context;
     if (ctx == null) return;
     final id = await ExpenseTripPicker.show(ctx, trips);
-    if (id != null) BuddyNavigation.openExpenses(id, add: true);
+    if (id != null) BuddyNavigation.openExpenses(id);
   }
 
   static void findBuddy() => Get.toNamed(AppRoutes.buddies);
@@ -199,7 +199,7 @@ class SeekerQuickActions extends StatelessWidget {
                     tone: a.tone,
                     art: a.art,
                     title: a.title,
-                    description: a.body,
+                    minCardHeight: 0,
                     goIcon: a.add ? Icons.add : Icons.arrow_forward,
                     onTap: a.onTap,
                     semanticsLabel: '${a.title}, ${a.body}',

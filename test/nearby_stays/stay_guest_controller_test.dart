@@ -23,7 +23,7 @@ void main() {
 
   test('radius options and default', () {
     expect(AppConstants.radiusOptions, [1.0, 6.0, 12.0, 20.0]);
-    expect(AppConstants.defaultRadiusKm, 12.0);
+    expect(AppConstants.defaultRadiusKm, 20.0);
   });
 
   test('nearby sends only latitude, longitude and radius', () async {

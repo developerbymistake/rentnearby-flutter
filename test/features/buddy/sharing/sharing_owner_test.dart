@@ -119,11 +119,11 @@ void main() {
       expect(find.text('Aman'), findsOneWidget);
     });
 
-    testWidgets('Add expense opens the expenses page with add', (t) async {
+    testWidgets('Add expense opens the expenses page without opening the sheet', (t) async {
       await _pump(t, overview(trip(sharing: aloneBlock()), aloneBlock()));
       await _tapText(t, 'Add expense');
       expect(opened.last.$1, AppRoutes.tripExpenses);
-      expect(opened.last.$2, {'tripId': tripId, 'add': true});
+      expect(opened.last.$2, {'tripId': tripId});
     });
 
     testWidgets('an old server without sharing keeps the screen as today', (t) async {

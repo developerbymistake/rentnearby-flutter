@@ -115,16 +115,9 @@ void main() {
       expect(SeekerTripWords.dates(null, DateTime(2026, 12, 2)), isNull);
     });
 
-    test('o_sk_2_headerSubtitleFollowsTrip and o_sk_3_subtitleDayNInCity', () {
-      expect(SeekerTripWords.headerSubtitle(null), 'Where to next?');
-      expect(SeekerTripWords.headerSubtitle(SeekerFeed.fromJson(_sample('seeker_feed'))), 'Nainital trip, 26 to 29 Nov');
-      expect(SeekerTripWords.headerSubtitle(SeekerFeed.fromJson(_sample('seeker_feed_on_trip'))), 'Day 2 in Nainital');
-    });
-
     test('o_sk_2 variant f: trip without dates shows the title only', () {
       final j = _sample('seeker_feed');
       final f = SeekerFeed.fromJson({...j, 'tripCard': {...j['tripCard'] as Map<String, dynamic>, 'startDate': null, 'endDate': null}});
-      expect(SeekerTripWords.headerSubtitle(f), 'Nainital trip');
       expect(SeekerTripWords.eyebrow(f.tripCard), 'Nainital trip');
     });
 

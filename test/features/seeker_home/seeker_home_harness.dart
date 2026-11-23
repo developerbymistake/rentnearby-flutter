@@ -12,7 +12,6 @@ import 'package:bakhli/design/extra/template_nav.dart';
 import 'package:bakhli/features/owner_core/data/owner_result.dart';
 import 'package:bakhli/features/seeker_home/seeker_feed_controller.dart';
 import 'package:bakhli/features/seeker_home/seeker_feed_model.dart';
-import 'package:bakhli/features/taxi/models/taxi_browse_item.dart';
 import 'package:bakhli/features/trip/data/trip_city_catalog.dart';
 import 'package:bakhli/features/trip/models/trip_city_model.dart';
 import 'package:bakhli/screens/home_screen.dart';
@@ -41,9 +40,7 @@ class HHome extends HomeController {
   // ignore: must_call_super
   void onInit() {}
   @override
-  Future<void> reloadDistrict() async {}
-  @override
-  Future<void> reloadSections(Set<String> keys) async {
+  Future<void> reload() async {
     retries++;
     await onRetry?.call();
   }
@@ -72,58 +69,6 @@ class HLoc extends LocationController {
   // ignore: must_call_super
   void onInit() {}
 }
-
-HomeStayModel fixtureStay(String id, String name, String type, String city, String district, {String? km, int price = 3000}) {
-  final m = HomeStayModel.fromJson({
-    'id': id,
-    'name': name,
-    'cityName': city,
-    'districtName': district,
-    'stayTypeName': type,
-    'minPricePerNight': price,
-    'createdAt': '2026-11-01T10:00:00Z',
-  });
-  return HomeStayModel(
-    item: km == null ? m.item : m.item.withPlace(placeName: city, distanceLabel: km),
-    districtName: m.districtName,
-    createdAt: m.createdAt,
-    stayTypeName: m.stayTypeName,
-  );
-}
-
-TaxiBrowseItem fixtureTaxi(String id, String name, String type, String city, int dayRate) => TaxiBrowseItem(
-      id: id,
-      driverName: name,
-      vehicleTypeName: type,
-      seats: 4,
-      plateDisplay: 'UK 04 TA 2231',
-      cityName: city,
-      minFare: dayRate,
-      localDayRate: dayRate,
-      routeCount: 1,
-      matchReversed: false,
-      createdAt: DateTime(2026, 11, 1),
-      isFeatured: false,
-    );
-
-List<HomeStayModel> fixtureStays(int n) => [
-      fixtureStay('s1', 'Deodar Heights', 'Homestay', 'Mukteshwar', 'Nainital', km: '2.1 km', price: 3000),
-      fixtureStay('s2', 'Lake View Inn', 'Guest House', 'Bhimtal', 'Nainital', km: '5.8 km', price: 1400),
-      fixtureStay('s3', 'Pine Crest', 'Cottage', 'Satkhol', 'Nainital', price: 2400),
-      for (var i = 3; i < n; i++) fixtureStay('sx$i', 'Stay number $i', 'Homestay', 'Nainital', 'Nainital', km: '$i.0 km'),
-    ].take(n).toList();
-
-List<TaxiBrowseItem> fixtureTaxis(int n) => [
-      fixtureTaxi('t1', 'Ramesh Negi', 'Sedan', 'Nainital', 900),
-      fixtureTaxi('t2', 'Mahesh Adhikari', 'Tempo Traveller', 'Haldwani', 2500),
-      fixtureTaxi('t3', 'Kiran Bisht', 'SUV', 'Bhimtal', 1800),
-      for (var i = 3; i < n; i++) fixtureTaxi('tx$i', 'Driver $i', 'Sedan', 'Nainital', 1000),
-    ].take(n).toList();
-
-List<HomeStayModel> fixtureRecent() => [
-      HomeStayModel.fromJson({'id': 'r1', 'name': 'Snow Peak Cottage', 'cityName': 'Manali', 'districtName': 'Himachal', 'createdAt': '2026-11-20T10:00:00Z'}),
-      HomeStayModel.fromJson({'id': 'r2', 'name': 'River Bend Stay', 'cityName': 'Rishikesh', 'districtName': 'Uttarakhand', 'createdAt': '2026-11-19T10:00:00Z'}),
-    ];
 
 const List<TripCityModel> fixtureCities = [
   TripCityModel(cityKey: 0, name: 'Nainital', stateName: 'Uttarakhand', latitude: 29.39, longitude: 79.45, isPopularDestination: true),
@@ -166,14 +111,11 @@ SeekerFeed fixtureOnTrip() => SeekerFeed(
 
 final List<String> visitedRoutes = <String>[];
 
-/// Registers the Home controllers with fixture rails. [feed] null = the feed call never completes (first open).
+/// Registers the Home controllers with fixture popular cities. [feed] null = the feed call never completes (first open).
 HHome registerHome({
   SeekerFeed? feed,
   bool railsLoading = false,
   bool railsFailed = false,
-  int stays = 3,
-  int taxis = 3,
-  bool recent = true,
   bool cities = true,
 }) {
   Get.reset();
@@ -186,17 +128,9 @@ HHome registerHome({
   Get.put<NotificationController>(HNotif());
   Get.put<ChatController>(HChat());
   Get.put<PlanController>(HPlan());
-  TripCityCatalog.to.seedForTest(cities ? fixtureCities : const []);
-  if (!railsFailed) {
-    home.stays.assignAll(fixtureStays(stays));
-    home.taxis.assignAll(fixtureTaxis(taxis));
-    if (recent) home.recentlyAddedStays.assignAll(fixtureRecent());
-  } else {
-    home.failedSections.addAll({HomeSectionKeys.stays, HomeSectionKeys.taxis, HomeSectionKeys.recentStays});
-  }
-  home.staysLoading.value = railsLoading;
-  home.taxisLoading.value = railsLoading;
-  home.recentlyAddedStaysLoading.value = railsLoading;
+  TripCityCatalog.to.seedForTest(cities && !railsFailed && !railsLoading ? fixtureCities : const []);
+  home.popularFailed.value = railsFailed;
+  home.popularLoading.value = railsLoading;
   final api = ScriptedFeedApi(() => feed == null ? Completer<OwnerResult<SeekerFeed>>().future : Future.value(OwnerOk<SeekerFeed>(feed)));
   Get.put(SeekerFeedController(api: api, userIdOf: () => 'user-a'));
   return home;

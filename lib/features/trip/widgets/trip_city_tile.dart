@@ -22,6 +22,16 @@ class TripCityTile extends StatelessWidget {
 
   static String artOf(int index) => _arts[index % _arts.length];
 
+  // Tallest hub card at the current text scale (name, state line and spot count), for fixed-height rails.
+  static double hubHeightOf(BuildContext context) {
+    final t = MediaQuery.textScalerOf(context);
+    final text = t.scale(DS.f(20)) * 1.3 + DS.gv(3) + t.scale(DS.f(12)) * 1.5;
+    final count = t.scale(DS.f(30)) + DS.gv(3) + t.scale(DS.f(11)) * 1.2;
+    final content = [text, count, DS.s(38)].reduce((a, b) => a > b ? a : b);
+    final card = DS.s(102) + DS.s(14) + content;
+    return DS.s(40) + (card > DS.s(150) ? card : DS.s(150));
+  }
+
   static List<String> placeLines(TripCityModel city) {
     final state = city.stateName;
     final district = city.districtName == city.name || city.districtName == state ? '' : city.districtName;

@@ -33,8 +33,8 @@ abstract final class BuddyNavigation {
 
   static Future<dynamic>? openMyShare(String tripId, {bool replace = false}) => _go(AppRoutes.tripMyShare, {'tripId': tripId}, replace: replace);
 
-  static Future<dynamic>? openExpenses(String tripId, {String? tab, int? day, bool add = false, bool replace = false}) =>
-      _go(AppRoutes.tripExpenses, {'tripId': tripId, 'tab': ?tab, 'day': ?day, if (add) 'add': true}, replace: replace);
+  static Future<dynamic>? openExpenses(String tripId, {String? tab, int? day, bool replace = false}) =>
+      _go(AppRoutes.tripExpenses, {'tripId': tripId, 'tab': ?tab, 'day': ?day}, replace: replace);
 
   static Future<dynamic>? openExpense(String tripId, String expenseId) => _go(AppRoutes.tripExpense, {'tripId': tripId, 'expenseId': expenseId});
 

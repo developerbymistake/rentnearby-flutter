@@ -1,8 +1,6 @@
 import 'package:bakhli/controllers/report_controller.dart';
 import 'package:bakhli/design/design.dart';
-import 'package:bakhli/features/taxi/models/taxi_browse_item.dart';
 import 'package:bakhli/screens/intro/intro_widgets.dart';
-import 'package:bakhli/widgets/home_taxi_rail_card.dart';
 import 'package:bakhli/widgets/nearby_item_row.dart';
 import 'package:bakhli/widgets/report_listing_sheet.dart';
 import 'package:flutter/material.dart';
@@ -18,20 +16,6 @@ class _Reports extends ReportController {
   @override
   Future<void> loadReportReasons() async {}
 }
-
-TaxiBrowseItem _taxi(int? fare) => TaxiBrowseItem(
-      id: 't1',
-      driverName: 'Ramesh Kumar Negi With A Long Name',
-      vehicleTypeName: 'Innova Crysta',
-      seats: 7,
-      plateDisplay: 'UK07 AB 1234',
-      cityName: 'Dehradun',
-      minFare: fare,
-      routeCount: 2,
-      matchReversed: false,
-      createdAt: DateTime(2026, 1, 1),
-      isFeatured: true,
-    );
 
 Widget _host(Widget child, double width, double scale) => MaterialApp(
       theme: ThemeData(fontFamily: 'WorkSans'),
@@ -49,19 +33,6 @@ void main() {
 
   for (final w in widths) {
     for (final s in scales) {
-      testWidgets('HomeTaxiRailCard intrinsic height w$w s$s', (t) async {
-        setGoldenView(t, Size(w, 760));
-        for (final fare in [1800, null]) {
-          await t.pumpWidget(_host(
-            Align(alignment: Alignment.topLeft, child: MealsRail(children: [HomeTaxiRailCard(taxi: _taxi(fare))])),
-            w,
-            s,
-          ));
-          await t.pump(const Duration(seconds: 1));
-          expect(t.takeException(), isNull);
-        }
-      });
-
       testWidgets('NearbyItemRow w$w s$s', (t) async {
         setGoldenView(t, Size(w, 760));
         await t.pumpWidget(_host(

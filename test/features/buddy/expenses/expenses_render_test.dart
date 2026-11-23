@@ -60,6 +60,16 @@ void main() {
     await _render(t, '4.1', TripExpensesScreen(tripId: tripId, initial: emptyList()));
   });
 
+  testWidgets('4.1b the add sheet stays closed until the Add button is tapped', (t) async {
+    registerFakes(list: BuddyOk(sheetList(dayToday: 3)));
+    await _render(t, '4.1b', TripExpensesScreen(tripId: tripId, initial: sheetList(dayToday: 3)), arrange: (t) async {
+      await _settle(t);
+      expect(find.byType(ExpenseSheet), findsNothing);
+      await _openAdd(t);
+      expect(find.byType(ExpenseSheet), findsOneWidget);
+    });
+  });
+
   testWidgets('4.2 add expense', (t) async {
     registerFakes(list: BuddyOk(sheetList(dayToday: 3)));
     await _render(t, '4.2', TripExpensesScreen(tripId: tripId, initial: sheetList(dayToday: 3)), arrange: (t) async {

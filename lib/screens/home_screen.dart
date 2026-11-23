@@ -2,24 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../config/app_constants.dart';
-import '../config/app_routes.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/home_controller.dart';
-import '../controllers/tab_config_controller.dart';
 import '../design/design.dart';
 import '../design/extra/instagram_look.dart';
 import '../config/app_tabs.dart';
-import '../features/nearby/nearby_strings.dart';
 import '../features/seeker_home/seeker_feed_controller.dart';
 import '../features/seeker_home/seeker_home_parts.dart';
 import '../features/seeker_home/seeker_quick_actions.dart';
-import '../features/seeker_home/seeker_status_rule.dart';
 import '../features/seeker_home/strings/seeker_home_strings.dart';
-import '../features/taxi/models/taxi_browse_item.dart';
 import '../features/trip/widgets/trip_popular_rail.dart';
 import '../widgets/home_hero_carousel.dart';
-import '../widgets/home_stay_rail_card.dart';
-import '../widgets/home_taxi_rail_card.dart';
 import '../widgets/tab_header.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -36,7 +29,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   final _home = Get.find<HomeController>();
   final _auth = Get.find<AuthController>();
-  final _tabs = Get.find<TabConfigController>();
 
   SeekerFeedController? get _feed => SeekerFeedController.maybe;
 
@@ -49,11 +41,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _refresh() async {
     final feed = _feed;
-    await Future.wait<void>([_home.reloadDistrict(), if (feed != null) feed.reload()]);
+    await Future.wait<void>([_home.reload(), if (feed != null) feed.reload()]);
     if (mounted) _replay.value++;
   }
 
-  Future<void> _retryRails() => Future.wait<void>([_home.retryRails(), if (_feed case final f?) f.reload()]);
+  Future<void> _retryRails() => Future.wait<void>([_home.reload(), if (_feed case final f?) f.reload()]);
 
   Future<void> _openInstagram() async {
     final appUri = Uri.parse(
@@ -85,7 +77,7 @@ class _HomeScreenState extends State<HomeScreen> {
           final firstName = name.isNotEmpty ? name.split(' ').first : SeekerHomeStrings.greetingFallbackName;
           return TabHeaderFrame(
             title: SeekerHomeStrings.greeting(firstName),
-            subtitle: SeekerTripWords.headerSubtitle(_feed?.feed.value),
+            subtitle: SeekerHomeStrings.whereToNext,
             color: ListingPalette.sunrise.page,
             child: body,
           );
@@ -134,126 +126,16 @@ class _HomeScreenState extends State<HomeScreen> {
   // The popular rail stays mounted across the error switch (hidden, not rebuilt or re-sorted; FX-31); o_sk_6 shows one error card.
   Widget _buildRailsArea() {
     return Obx(() {
+      final revision = _home.popularVersion.value;
       final failed = _home.railsFailedNoCopy && !_home.anyRailLoading;
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Visibility(visible: !failed, maintainState: true, child: const TripPopularRail()),
-          if (failed)
-            SeekerRailsErrorCard(onRetry: _retryRails)
-          else ...[
-            _buildListingsSections(),
-            _buildRecentlyAddedSection(),
-          ],
+          Visibility(visible: !failed, maintainState: true, child: TripPopularRail(revision: revision)),
+          if (failed) SeekerRailsErrorCard(onRetry: _retryRails),
         ],
       );
     });
-  }
-
-  Widget _buildListingsSections() {
-    return Obx(() {
-      final far = _home.farAway.value;
-      final rails = <Widget>[
-        if (_tabs.isStaysActive && (_home.staysLoading.value || _home.stays.isNotEmpty))
-          _buildRail(
-            title: far ? NearbyStrings.staysNearest : NearbyStrings.staysNear,
-            tab: AppTabs.stays,
-            loading: _home.staysLoading.value,
-            rail: () => _buildStaysRail(_home.stays),
-          ),
-        if (_tabs.isTaxiActive && (_home.taxisLoading.value || _home.taxis.isNotEmpty))
-          _buildRail(
-            title: far ? NearbyStrings.taxisNearest : NearbyStrings.taxisNear,
-            tab: AppTabs.taxi,
-            loading: _home.taxisLoading.value,
-            rail: () => _buildTaxisRail(_home.taxis),
-          ),
-      ];
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: rails,
-      );
-    });
-  }
-
-  Widget _buildStaysRail(List<HomeStayModel> items) {
-    return MealsRail(
-      physics: const BouncingScrollPhysics(),
-      children: [for (var i = 0; i < items.length; i++) HomeStayRailCard(stay: items[i], index: i)],
-    );
-  }
-
-  Widget _buildTaxisRail(List<TaxiBrowseItem> items) {
-    return MealsRail(
-      physics: const BouncingScrollPhysics(),
-      children: [for (var i = 0; i < items.length; i++) HomeTaxiRailCard(taxi: items[i], index: i)],
-    );
-  }
-
-  Widget _buildRail({
-    required String title,
-    required int tab,
-    required bool loading,
-    required Widget Function() rail,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Semantics(
-          header: true,
-          child: TitleRow3D(title: title, action: SeekerHomeStrings.seeAll, onAction: () => _auth.openPlace(AppPlaces.ofTab(tab))),
-        ),
-        SkeletonSwitcher(
-          loading: loading,
-          skeleton: _buildRailSkeleton(),
-          child: rail(),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildRailSkeleton() {
-    return const MealsRail(
-      physics: NeverScrollableScrollPhysics(),
-      children: [MealsCardSkeleton(), MealsCardSkeleton(), MealsCardSkeleton()],
-    );
-  }
-
-  Widget _buildRecentlyAddedSection() {
-    return Obx(() {
-      if (!_tabs.isStaysActive) return const SizedBox.shrink();
-      final loading = _home.recentlyAddedStaysLoading.value;
-      final items = loading ? const <HomeRecentItem>[] : _home.recentMixed();
-      if (!loading && items.isEmpty) return const SizedBox.shrink();
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Semantics(header: true, child: const TitleRow3D(title: SeekerHomeStrings.recentlyAdded)),
-          SkeletonSwitcher(
-            loading: loading,
-            skeleton: const Column(children: [WideCardSkeleton(kind: WideKind.slim), WideCardSkeleton(kind: WideKind.slim)]),
-            child: Column(
-              children: [
-                for (var i = 0; i < items.length; i++) EntranceOnce(index: i, offset: 50, child: _recentRow(items[i])),
-              ],
-            ),
-          ),
-        ],
-      );
-    });
-  }
-
-  Widget _recentRow(HomeRecentItem item) {
-    final s = item.stay;
-    if (s == null) return const SizedBox.shrink();
-    return SeekerRecentRow(
-      key: ValueKey('recent-${s.item.id}'),
-      title: s.item.title,
-      subtitle: s.item.locationLabel.isNotEmpty ? s.item.locationLabel : s.districtName,
-      photoUrl: s.item.thumbnailUrl,
-      stayTypeName: s.stayTypeName,
-      onTap: () => Get.toNamed(AppRoutes.stayDetail, arguments: {'id': s.item.id}),
-    );
   }
 
   Widget _buildInstagramCard() {

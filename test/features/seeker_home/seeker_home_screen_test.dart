@@ -3,12 +3,12 @@ import 'dart:io';
 import 'package:bakhli/config/app_routes.dart';
 import 'package:bakhli/config/app_theme.dart';
 import 'package:bakhli/controllers/notification_controller.dart';
-import 'package:bakhli/controllers/tab_config_controller.dart';
 import 'package:bakhli/features/owner_core/plan/gate_keys.dart';
 import 'package:bakhli/features/seeker_home/seeker_feed_controller.dart';
 import 'package:bakhli/features/seeker_home/seeker_feed_model.dart';
 import 'package:bakhli/features/seeker_home/seeker_home_parts.dart';
-import 'package:bakhli/features/seeker_home/strings/seeker_home_strings.dart';
+import 'package:bakhli/features/trip/data/trip_city_catalog.dart';
+import 'package:bakhli/features/trip/widgets/trip_city_tile.dart';
 import 'package:bakhli/design/design.dart';
 import 'package:bakhli/design/extra/instagram_look.dart';
 import 'package:bakhli/features/seeker_home/seeker_trip_card.dart';
@@ -68,9 +68,6 @@ void main() {
         'Plan your first trip',
         'Quick actions',
         'Popular destinations',
-        'Stays near you',
-        'Taxis near you',
-        'Recently added stays',
         'Follow us',
       ];
       double last = -1;
@@ -95,6 +92,33 @@ void main() {
       expect(find.text('Find a taxi', skipOffstage: false), findsWidgets);
     });
 
+    for (final (name, feed) in [('no trip', fixtureNoTrip), ('in progress', fixtureInProgress), ('on trip', fixtureOnTrip)]) {
+      for (final w in [360.0, 412.0]) {
+        testWidgets('Bug 5: hero cards share one height and the arrow stays inside ($name, $w)', (t) async {
+          t.view.devicePixelRatio = 1;
+          t.view.physicalSize = Size(w, 1600);
+          addTearDown(t.view.reset);
+          registerHome(feed: feed());
+          await t.pumpWidget(_app(homeHost()));
+          await _settle(t);
+          final pager = find.byType(PageView);
+          Rect cardIn(Finder owner) => t.getRect(find.descendant(of: owner, matching: find.byType(DecoratedBox)).first);
+          final trip = cardIn(find.descendant(of: pager, matching: find.byType(SeekerTripCardView)).first);
+          await t.drag(pager, Offset(-w * 0.8, 0));
+          await _settle(t);
+          final stayOwner = find.ancestor(of: find.descendant(of: pager, matching: find.text('Find your stay')), matching: find.byType(WorkoutCard)).first;
+          final stay = cardIn(stayOwner);
+          final arrow = t.getRect(find.descendant(of: stayOwner, matching: find.byType(RoundGoButton)));
+          // Same page slot: bottoms line up; the Stay card top sits lower only by the art overhang.
+          expect(stay.bottom, moreOrLessEquals(trip.bottom, epsilon: 1));
+          expect(stay.height, greaterThan(trip.height - WorkoutCard.overhang));
+          expect(arrow.bottom, lessThanOrEqualTo(stay.bottom));
+          expect(arrow.top, greaterThanOrEqualTo(stay.top));
+          expect(t.takeException(), isNull);
+        });
+      }
+    }
+
     testWidgets('o_sk_1_quickActions_fourTilesInOrder_fourthPeeks', (t) async {
       t.view.devicePixelRatio = 1;
       t.view.physicalSize = const Size(392, 1600);
@@ -114,10 +138,22 @@ void main() {
       final peek = t.getTopLeft(find.byKey(const ValueKey('seeker-qa-Find a buddy'))).dx;
       expect(peek, lessThan(392));
       expect(peek + 100, greaterThan(392));
-      expect(find.text('Pick a city and go'), findsOneWidget);
-      expect(find.text('Continue or review'), findsOneWidget);
-      expect(find.text('Split with friends'), findsOneWidget);
-      expect(find.text('Travel together', skipOffstage: false), findsOneWidget);
+      for (final body in ['Pick a city and go', 'Continue or review', 'Split with friends', 'Travel together']) {
+        expect(find.text(body, skipOffstage: false), findsNothing, reason: 'Change 8: no small description ($body)');
+      }
+    });
+
+    testWidgets('Change 8: tiles shrink to their content (no empty band)', (t) async {
+      _tall(t, h: 1600);
+      registerHome(feed: fixtureNoTrip());
+      await t.pumpWidget(_app(homeHost()));
+      await _settle(t);
+      final tile = find.byKey(const ValueKey('seeker-qa-Plan a trip'));
+      final title = find.descendant(of: tile, matching: find.text('Plan a trip'));
+      final go = find.descendant(of: tile, matching: find.byType(RoundGoButton));
+      final tileRect = t.getRect(tile);
+      expect(t.getRect(go).top, greaterThan(t.getRect(title).bottom));
+      expect(tileRect.bottom - t.getRect(go).bottom, lessThan(DS.s(40)));
     });
 
     testWidgets('o_sk_1_tapMyTrips_pushesMyTrips, o_sk_1_tapAddExpense_noTrip_opensMyTrips, o_sk_1_tapFindABuddy_pushesBuddies', (t) async {
@@ -125,17 +161,17 @@ void main() {
       registerHome(feed: fixtureNoTrip());
       await t.pumpWidget(_app(homeHost()));
       await _settle(t);
-      await t.tap(find.text('Continue or review'));
+      await t.tap(find.byKey(const ValueKey('seeker-qa-My trips')));
       await _settle(t);
       Get.back();
       await _settle(t);
-      await t.tap(find.text('Split with friends'));
+      await t.tap(find.byKey(const ValueKey('seeker-qa-Add expense')));
       await _settle(t);
       Get.back();
       await _settle(t);
-      await t.drag(find.text('Split with friends'), const Offset(-300, 0));
+      await t.drag(find.byKey(const ValueKey('seeker-qa-Add expense')), const Offset(-300, 0));
       await _settle(t);
-      await t.tap(find.text('Travel together'));
+      await t.tap(find.byKey(const ValueKey('seeker-qa-Find a buddy')));
       await _settle(t);
       expect(visitedRoutes, [AppRoutes.myTrips, AppRoutes.buddies], reason: 'Add expense with no open trip toasts and opens the Trips tab (D-21), no route');
     });
@@ -145,7 +181,7 @@ void main() {
       registerHome(feed: fixtureInProgress());
       await t.pumpWidget(_app(homeHost()));
       await _settle(t);
-      await t.tap(find.text('Split with friends'));
+      await t.tap(find.byKey(const ValueKey('seeker-qa-Add expense')));
       await _settle(t);
       expect(visitedRoutes.last, AppRoutes.tripExpenses);
     });
@@ -161,34 +197,47 @@ void main() {
       expect(find.byWidgetPredicate((w) => w.key is GateKey), findsNothing);
     });
 
-    testWidgets('empty rails are not drawn (no header without cards)', (t) async {
+    testWidgets('Change 7: no stays, taxis or recently added section on Home', (t) async {
       _tall(t, h: 2600);
-      registerHome(feed: fixtureNoTrip(), stays: 0, taxis: 0, recent: false);
+      registerHome(feed: fixtureNoTrip());
       await t.pumpWidget(_app(homeHost()));
       await _settle(t);
-      expect(find.text('Stays near you'), findsNothing);
-      expect(find.text('Taxis near you'), findsNothing);
-      expect(find.text('Recently added stays'), findsNothing);
+      for (final s in ['Stays near you', 'Taxis near you', 'Nearest stays', 'Nearest taxis', 'Recently added stays']) {
+        expect(find.text(s), findsNothing, reason: s);
+      }
+      expect(find.text('Popular destinations'), findsOneWidget);
+      expect(find.text('Follow us'), findsOneWidget);
+    });
+
+    testWidgets('no popular cities: no rail header without cards', (t) async {
+      _tall(t, h: 2600);
+      registerHome(feed: fixtureNoTrip(), cities: false);
+      await t.pumpWidget(_app(homeHost()));
+      await _settle(t);
+      expect(find.text('Popular destinations'), findsNothing);
+      expect(find.byType(SeekerRailsErrorCard), findsNothing);
       expect(find.text('Follow us'), findsOneWidget);
     });
   });
 
   group('o_sk_2..4 trip states on Home', () {
-    testWidgets('o_sk_2_headerSubtitleFollowsTrip', (t) async {
+    testWidgets('Bug 6: header line stays Where to next? with a trip in progress', (t) async {
       _tall(t);
       registerHome(feed: fixtureInProgress(status: const SeekerStatus(kind: SeekerStatusKind.confirmed, listingName: 'Deodar Heights', key: 'k1')));
       await t.pumpWidget(_app(homeHost()));
       await _settle(t);
-      expect(find.text('Nainital trip, 26 to 29 Nov'), findsOneWidget);
+      expect(find.text('Where to next?'), findsOneWidget);
+      expect(find.text('Nainital trip, 26 to 29 Nov'), findsNothing);
       expect(find.text('Deodar Heights confirmed your stay'), findsWidgets);
     });
 
-    testWidgets('o_sk_3 subtitle Day 2 in Nainital', (t) async {
+    testWidgets('Bug 6: header line stays Where to next? while on the trip', (t) async {
       _tall(t);
       registerHome(feed: fixtureOnTrip());
       await t.pumpWidget(_app(homeHost()));
       await _settle(t);
-      expect(find.text('Day 2 in Nainital'), findsOneWidget);
+      expect(find.text('Where to next?'), findsOneWidget);
+      expect(find.text('Day 2 in Nainital'), findsNothing);
       expect(find.text('Today in Mukteshwar'), findsWidgets);
     });
 
@@ -209,7 +258,7 @@ void main() {
   group('o_sk_5 loading', () {
     testWidgets('o_sk_5_firstOpenNoCopy_showsSkeletonUnderLiveHeader', (t) async {
       _tall(t, h: 1200);
-      registerHome(feed: null, railsLoading: true, stays: 0, taxis: 0, recent: false);
+      registerHome(feed: null, railsLoading: true);
       await t.pumpWidget(_app(homeHost()));
       await t.pump(const Duration(milliseconds: 300));
       expect(find.text('Hi, Rohit'), findsOneWidget);
@@ -220,7 +269,7 @@ void main() {
 
     testWidgets('o_sk_5_savedCopyExists_noSkeletonAtAll', (t) async {
       _tall(t, h: 1200);
-      registerHome(feed: fixtureNoTrip(), railsLoading: true, stays: 0, taxis: 0, recent: false);
+      registerHome(feed: fixtureNoTrip(), railsLoading: true);
       await t.pumpWidget(_app(homeHost()));
       await _settle(t);
       expect(find.byType(SeekerHomeSkeleton), findsNothing);
@@ -248,11 +297,11 @@ void main() {
     testWidgets('o_sk_6_feedFailsWithCopy_keepsCopyNoErrorCard', (t) async {
       _tall(t, h: 2600);
       final home = registerHome(feed: fixtureNoTrip());
-      home.failedSections.addAll({HomeSectionKeys.stays});
+      home.popularFailed.value = true;
       await t.pumpWidget(_app(homeHost()));
       await _settle(t);
       expect(find.byType(SeekerRailsErrorCard), findsNothing);
-      expect(find.textContaining('Deodar'), findsWidgets);
+      expect(find.text('Nainital'), findsWidgets);
     });
 
     testWidgets('o_sk_6_retrySingleFlight and o_sk_6_retrySuccess_replacesCardWithRails', (t) async {
@@ -260,8 +309,9 @@ void main() {
       final home = registerHome(feed: fixtureNoTrip(), railsFailed: true);
       home.onRetry = () async {
         await Future<void>.delayed(const Duration(milliseconds: 200));
-        home.failedSections.clear();
-        home.stays.assignAll(fixtureStays(3));
+        TripCityCatalog.to.seedForTest(fixtureCities);
+        home.popularFailed.value = false;
+        home.popularVersion.value++;
       };
       await t.pumpWidget(_app(homeHost()));
       await _settle(t);
@@ -272,32 +322,21 @@ void main() {
       await _settle(t);
       expect(home.retries, 1);
       expect(find.byType(SeekerRailsErrorCard), findsNothing);
-      expect(find.text('Stays near you'), findsOneWidget);
+      expect(find.text('Popular destinations'), findsOneWidget);
+      expect(find.text('Nainital'), findsWidgets);
     });
   });
 
   group('o_sk_9 board checks', () {
-    testWidgets('o_sk_9_stays_typeDistancePricePerNight and o_sk_9_taxis_vehicleTypePricePerDay', (t) async {
+    testWidgets('Change 9: popular destinations use the trip picker hub card; Instagram is the last block', (t) async {
       _tall(t, h: 2600);
       registerHome(feed: fixtureNoTrip());
       await t.pumpWidget(_app(homeHost()));
       await _settle(t);
-      for (final s in ['HOMESTAY', 'GUEST HOUSE', 'COTTAGE', 'Mukteshwar · 2.1 km', 'SEDAN', 'TEMPO TRAVELLER', 'SUV', '/day', '/night']) {
-        expect(find.textContaining(s), findsWidgets, reason: s);
-      }
-    });
-
-    testWidgets('o_sk_9_popular_cardShowsStateName and o_sk_9_recentlyAdded_rowWithArrow and o_sk_9_instagram_lastBlock', (t) async {
-      _tall(t, h: 2600);
-      registerHome(feed: fixtureNoTrip());
-      await t.pumpWidget(_app(homeHost()));
-      await _settle(t);
-      expect(find.text('Uttarakhand'), findsNWidgets(3));
-      expect(find.byType(SeekerRecentRow), findsNWidgets(2));
-      expect(find.text('›'), findsNWidgets(2));
-      final ig = t.getTopLeft(find.text('Follow us')).dy;
-      final recent = t.getTopLeft(find.text('River Bend Stay')).dy;
-      expect(ig, greaterThan(recent));
+      final tiles = find.byWidgetPredicate((w) => w is TripCityTile && w.hub);
+      expect(tiles, findsWidgets);
+      expect(find.text('Uttarakhand'), findsWidgets);
+      expect(t.getTopLeft(find.text('Follow us')).dy, greaterThan(t.getBottomLeft(tiles.first).dy));
     });
 
     testWidgets('Instagram card keeps its shape with the Instagram gradient and magenta Follow', (t) async {
@@ -312,12 +351,6 @@ void main() {
       expect(ig.ctaLabel, 'Follow');
     });
 
-    test('kmShort drops the word away', () {
-      expect(SeekerHomeStrings.kmShort('2.1 km away'), '2.1 km');
-      expect(SeekerHomeStrings.kmShort('2.1 km'), '2.1 km');
-      expect(SeekerHomeStrings.kmShort(''), '');
-      expect(SeekerHomeStrings.kmShort(null), '');
-    });
   });
 
   group('sizes (S-STD)', () {
@@ -325,11 +358,11 @@ void main() {
       testOwnerSizes('Home $variant', () => homeHost(), setUpEach: () {
         switch (variant) {
           case 'noTrip':
-            registerHome(feed: fixtureNoTrip(), stays: 12, taxis: 12);
+            registerHome(feed: fixtureNoTrip());
           case 'inProgress':
             registerHome(feed: fixtureInProgress(status: const SeekerStatus(kind: SeekerStatusKind.confirmed, listingName: 'Deodar Heights', key: 'k')));
           case 'onTrip':
-            registerHome(feed: fixtureOnTrip(), stays: 1, taxis: 1);
+            registerHome(feed: fixtureOnTrip());
           case 'full':
             registerHome(feed: fixtureInProgress(full: true));
           default:
@@ -374,7 +407,7 @@ void main() {
       await render(t, 'o_sk_4');
     });
     testWidgets('render o_sk_5', (t) async {
-      registerHome(feed: null, railsLoading: true, stays: 0, taxis: 0, recent: false);
+      registerHome(feed: null, railsLoading: true);
       await renderOwnerFrame(t, 'o_sk_5', homeHost(bar: true), arrange: (t) => t.pump(const Duration(milliseconds: 300)));
     });
     testWidgets('render o_sk_6', (t) async {
@@ -388,8 +421,6 @@ void main() {
       'lib/screens/home_screen.dart',
       'lib/controllers/home_controller.dart',
       'lib/widgets/home_hero_carousel.dart',
-      'lib/widgets/home_stay_rail_card.dart',
-      'lib/widgets/home_taxi_rail_card.dart',
       'lib/features/trip/widgets/trip_popular_rail.dart',
       'lib/features/trip/widgets/trip_bar.dart',
       'lib/features/trip/widgets/trip_stay_row.dart',

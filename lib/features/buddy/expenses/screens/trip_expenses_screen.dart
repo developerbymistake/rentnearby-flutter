@@ -33,7 +33,7 @@ import '../widgets/late_joiner_sheet.dart';
 import '../widgets/share_earlier_sheet.dart';
 
 class TripExpensesScreen extends StatefulWidget {
-  const TripExpensesScreen({super.key, required this.tripId, this.tab, this.day, this.add = false, this.initial});
+  const TripExpensesScreen({super.key, required this.tripId, this.tab, this.day, this.initial});
 
   static const Key addKey = ValueKey('expenses_add');
   static const Key menuKey = ValueKey('expenses_menu');
@@ -42,7 +42,6 @@ class TripExpensesScreen extends StatefulWidget {
   final String tripId;
   final String? tab;
   final int? day;
-  final bool add;
   final ExpenseList? initial;
 
   @override
@@ -52,7 +51,6 @@ class TripExpensesScreen extends StatefulWidget {
 class _TripExpensesScreenState extends State<TripExpensesScreen> {
   late final TripExpensesController c;
   Worker? _ready;
-  bool _addHandled = false;
 
   @override
   void initState() {
@@ -77,11 +75,6 @@ class _TripExpensesScreenState extends State<TripExpensesScreen> {
     if (l.isFormer && !c.formerHandled) {
       c.formerHandled = true;
       ExpenseDeps.openMyShare(widget.tripId);
-      return;
-    }
-    if (widget.add && !_addHandled && c.canAdd && !l.limitReached) {
-      _addHandled = true;
-      await _openAdd(day: widget.day);
       return;
     }
     final late = l.latePrompt;
@@ -279,7 +272,7 @@ class _TripExpensesScreenState extends State<TripExpensesScreen> {
       label: ExpenseStrings.addExpense,
       enabled: !l.limitReached,
       offColor: ExpenseLook.pillDisabled,
-      onTap: () => _openAdd(),
+      onTap: () => _openAdd(day: widget.day),
     );
     if (!l.limitReached) return BuddyBottomBar(children: [pill]);
     return BuddyBottomBar(children: [

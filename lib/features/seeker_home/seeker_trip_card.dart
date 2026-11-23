@@ -295,6 +295,7 @@ class SeekerTripCardView extends StatelessWidget {
         container: true,
         label: semantics,
         child: Stack(
+          fit: StackFit.passthrough,
           children: [
             DecoratedBox(
               decoration: BoxDecoration(borderRadius: DS.br(radius), gradient: tone.gradient, boxShadow: tone.glow()),
@@ -302,7 +303,7 @@ class SeekerTripCardView extends StatelessWidget {
                 constraints: BoxConstraints(minHeight: DS.s(big ? 230 : 0), minWidth: double.infinity),
                 child: Padding(
                   padding: DS.all(20),
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: children),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, mainAxisAlignment: MainAxisAlignment.center, children: children),
                 ),
               ),
             ),

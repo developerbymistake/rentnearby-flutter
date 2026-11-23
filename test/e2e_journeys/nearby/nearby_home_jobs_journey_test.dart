@@ -22,7 +22,7 @@ class _Home extends HomeController {
   // ignore: must_call_super
   void onInit() {}
   @override
-  Future<void> reloadDistrict() async {}
+  Future<void> reload() async {}
 }
 
 class _Notif extends NotificationController {
@@ -72,35 +72,15 @@ Map<String, dynamic> _stay(String id, double km, String label, String city) => {
       'labelKey': label,
     };
 
-Map<String, dynamic> _taxi(String id, double km, String label, String city) => {
-      'id': id,
-      'driverName': 'Driver $id',
-      'vehicleTypeName': 'Sedan',
-      'plateDisplay': 'UK04',
-      'routeCount': 2,
-      'createdAt': '2026-11-01T00:00:00Z',
-      'cityName': city,
-      'stateName': 'Uttarakhand',
-      'distanceKm': km,
-      'labelKey': label,
-    };
-
-Future<_Home> _openHome(WidgetTester t, Map<String, dynamic> feedJson, {required double w, double s = 1}) async {
+Future<void> _openHome(WidgetTester t, {required double w, double s = 1}) async {
   Get.reset();
   Get.put<TabConfigController>(_Tabs());
   Get.put<AuthController>(_Auth());
   Get.put<LocationController>(JLoc());
-  final home = Get.put<HomeController>(_Home()) as _Home;
+  Get.put<HomeController>(_Home());
   Get.put<NotificationController>(_Notif());
   Get.put<ChatController>(_Chat());
   Get.put<PlanController>(_Plan());
-  final feed = HomeFeedModelV2.fromJson(feedJson);
-  home.farAway.value = feed.header.farAway;
-  home.stays.assignAll(feed.stays ?? const []);
-  home.taxis.assignAll(feed.taxis ?? const []);
-  home.staysLoading.value = false;
-  home.taxisLoading.value = false;
-  home.recentlyAddedStaysLoading.value = false;
   setGoldenView(t, Size(w, 2600));
   await t.pumpWidget(GetMaterialApp(
     theme: AppTheme.theme,
@@ -112,7 +92,6 @@ Future<_Home> _openHome(WidgetTester t, Map<String, dynamic> feedJson, {required
   ));
   await t.pump(const Duration(seconds: 1));
   await t.pump(const Duration(seconds: 1));
-  return home;
 }
 
 void main() {
@@ -132,42 +111,13 @@ void main() {
       expect(HomeFeedModelV2.fromJson(const {}).header.farAway, false);
     });
 
-    testWidgets('near user: rails say near you with distance labels', (t) async {
-      await _openHome(t, {
-        'header': {'farAway': false},
-        'stays': [_stay('a', 3, 'near', 'Nainital')],
-        'taxis': [_taxi('t', 5, 'near', 'Haldwani')],
-      }, w: 360);
-      expect(find.text('Stays near you'), findsOneWidget);
-      expect(find.text('Taxis near you'), findsOneWidget);
-      expect(find.text('Nainital · 3 km'), findsOneWidget);
-      expect(find.textContaining('About'), findsNothing);
-      expect(find.textContaining('Based near'), findsNothing);
-    });
-
-    testWidgets('far user: rails are honest, no near you, far label on cards', (t) async {
-      await _openHome(t, {
-        'header': {'farAway': true},
-        'stays': [_stay('a', 210, 'far', 'Haridwar')],
-        'taxis': [_taxi('t', 420, 'far', 'Haldwani')],
-      }, w: 360);
-      expect(find.text('Nearest stays'), findsOneWidget);
-      expect(find.text('Nearest taxis'), findsOneWidget);
-      expect(find.text('Stays near you'), findsNothing);
-      expect(find.text('Taxis near you'), findsNothing);
-      expect(find.text('Haridwar · 210 km'), findsOneWidget);
-      expect(find.textContaining('Haldwani, Uttarakhand'), findsNothing);
-    });
-
     for (final w in journeyWidths) {
       for (final s in journeyScales) {
-        testWidgets('far rails fit at ${w.toInt()} dp, text scale $s', (t) async {
-          await _openHome(t, {
-            'header': {'farAway': true},
-            'stays': [for (var i = 0; i < 4; i++) _stay('a$i', 210.0 + i, 'far', 'Haridwar')],
-            'taxis': [for (var i = 0; i < 4; i++) _taxi('t$i', 420.0 + i, 'far', 'Haldwani')],
-          }, w: w, s: s);
-          expect(find.text('Nearest stays'), findsOneWidget);
+        testWidgets('Change 7: Home shows no stays or taxi rail at ${w.toInt()} dp, text scale $s', (t) async {
+          await _openHome(t, w: w, s: s);
+          for (final title in ['Stays near you', 'Taxis near you', 'Nearest stays', 'Nearest taxis', 'Recently added stays']) {
+            expect(find.text(title), findsNothing, reason: title);
+          }
           expect(t.takeException(), isNull);
         });
       }

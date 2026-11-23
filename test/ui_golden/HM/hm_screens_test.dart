@@ -11,9 +11,6 @@ import 'package:bakhli/controllers/notification_controller.dart';
 import 'package:bakhli/controllers/plan_controller.dart';
 import 'package:bakhli/controllers/tab_config_controller.dart';
 import 'package:bakhli/design/design.dart';
-import 'package:bakhli/features/stay/models/stay_browse_item.dart';
-import 'package:bakhli/features/taxi/models/taxi_browse_item.dart';
-import 'package:bakhli/models/home_feed_model.dart';
 import 'package:bakhli/screens/home_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -43,7 +40,7 @@ class _Home extends HomeController {
   // ignore: must_call_super
   void onInit() {}
   @override
-  Future<void> reloadDistrict() async {}
+  Future<void> reload() async {}
 }
 
 class _Notif extends NotificationController {
@@ -70,36 +67,6 @@ class _Loc extends LocationController {
   void onInit() {}
 }
 
-TaxiBrowseItem _taxi({bool featured = true, int? fare = 1800}) => TaxiBrowseItem(
-      id: 't1',
-      driverName: 'Ramesh Kumar Negi',
-      vehicleTypeName: 'Innova Crysta',
-      seats: 7,
-      plateDisplay: 'UK07 AB 1234',
-      cityName: 'Dehradun',
-      minFare: fare,
-      routeCount: 2,
-      matchReversed: false,
-      createdAt: DateTime(2026, 1, 1),
-      isFeatured: featured,
-    );
-
-HomeStayModel _stay(String id, String name, {bool featured = false}) => HomeStayModel(
-      item: StayBrowseItem.fromJson({
-        'id': id,
-        'name': name,
-        'cityName': 'Mussoorie',
-        'districtName': 'Dehradun',
-        'stayTypeName': 'Homestay',
-        'mealsChip': 'breakfast',
-        'roomNameChip': 'Deluxe room',
-        'minPricePerNight': 1800,
-        'isFeatured': featured,
-      }),
-      districtName: 'Dehradun',
-      createdAt: DateTime(2026, 5, 1),
-    );
-
 void _register() {
   Get.reset();
   Get.put<TabConfigController>(_Tabs());
@@ -109,13 +76,6 @@ void _register() {
   Get.put<NotificationController>(_Notif());
   Get.put<ChatController>(_Chat());
   Get.put<PlanController>(_Plan());
-  final home = Get.find<HomeController>();
-  home.stays.assignAll([_stay('s1', 'Deodar Valley Homestay', featured: true), _stay('s2', 'Lake View')]);
-  home.taxis.assignAll([_taxi(), _taxi(featured: false, fare: null)]);
-  home.recentlyAddedStays.assignAll([_stay('s3', 'Pine Cottage'), _stay('s4', 'River Camp', featured: true)]);
-  home.staysLoading.value = false;
-  home.taxisLoading.value = false;
-  home.recentlyAddedStaysLoading.value = false;
 }
 
 final List<String> _visited = <String>[];
@@ -195,7 +155,7 @@ void main() {
     await _settle(t);
     await _shot(t, 'home_bottom_1.3');
     expect(pos.pixels, pos.maxScrollExtent);
-    final lastRow = find.text('River Camp');
+    final lastRow = find.text('Follow us');
     expect(lastRow, findsOneWidget);
     final barTop = 780.0 - (BarMetrics.boxHeight + 20);
     expect(t.getBottomLeft(lastRow).dy, lessThanOrEqualTo(barTop));
@@ -211,31 +171,25 @@ void main() {
     await t.pumpWidget(const SizedBox());
   });
 
-  testWidgets('HM rails keep the main stay and taxi fields and drop seats, stay tags and the taxi description', (t) async {
+  testWidgets('HM shows the trip blocks only, no stay or taxi rails (Change 7)', (t) async {
     setGoldenView(t, const Size(360, 1700));
     await t.pumpWidget(_host(1.0));
     await _settle(t);
     for (final s in [
       'Hi, there',
       'Where to next?',
-      'See all',
-      'Deodar Valley Homestay',
-      'Homestay',
-      'FOR STAY',
-      'Ramesh Kumar Negi',
-      'INNOVA CRYSTA',
-      'FROM',
-      'Local taxi',
-      'Recently added stays',
+      'Quick actions',
       'Follow us',
     ]) {
       expect(find.textContaining(s), findsWidgets, reason: s);
     }
-    expect(find.textContaining('7 seats'), findsNothing);
+    for (final s in ['Deodar Valley Homestay', 'Ramesh Kumar Negi', 'Recently added stays', 'Stays near you', 'Taxis near you']) {
+      expect(find.textContaining(s), findsNothing, reason: s);
+    }
     await t.pumpWidget(const SizedBox());
   });
 
-  testWidgets('HM bell, chat and rail card taps navigate', (t) async {
+  testWidgets('HM bell and chat taps navigate', (t) async {
     setGoldenView(t, const Size(360, 1700));
     await t.pumpWidget(_host(1.0));
     await _settle(t);
@@ -248,9 +202,6 @@ void main() {
       await t.pump(const Duration(seconds: 1));
     }
     expect(_visited, [AppRoutes.notifications, AppRoutes.chatsList]);
-    await t.tap(find.text('Lake View'));
-    await t.pump(const Duration(seconds: 1));
-    expect(_visited.last, AppRoutes.stayDetail);
     await t.pumpWidget(const SizedBox());
   });
 }

@@ -36,21 +36,21 @@ class DiscPaint {
 
   static LayerProperties of(DiscLayerSpec spec, DiscTuning t) => switch (spec.id) {
         DiscIds.layerDots => CircleLayerProperties(
-            circleRadius: t.dotDp / 2 - _dotRing,
+            circleRadius: t.dotRadius(_dotRing),
             circleColor: groupColor,
             circleStrokeColor: _white,
             circleStrokeWidth: _dotRing,
           ),
         DiscIds.layerBadge => SymbolLayerProperties(
             iconImage: DiscLayers.iconImageBadge,
-            iconSize: 1,
+            iconSize: t.badgeIconSize,
             iconAllowOverlap: false,
             iconIgnorePlacement: false,
             symbolSortKey: DiscLayers.sortKey,
           ),
         DiscIds.layerPhoto => SymbolLayerProperties(
             iconImage: DiscLayers.iconImagePhoto,
-            iconSize: 1,
+            iconSize: t.photoIconSize,
             iconAllowOverlap: false,
             iconIgnorePlacement: false,
             symbolSortKey: DiscLayers.sortKey,

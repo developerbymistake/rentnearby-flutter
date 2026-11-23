@@ -71,7 +71,6 @@ final List<GetPage<dynamic>> buddyPages = [
       tripId: BuddyArgs.text(a, 'tripId'),
       tab: BuddyArgs.textOrNull(a, 'tab'),
       day: BuddyArgs.number(a, 'day'),
-      add: BuddyArgs.flag(a, 'add'),
     );
   }),
   _page(AppRoutes.tripExpense, () {

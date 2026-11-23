@@ -122,6 +122,9 @@ class _ViewerMapState extends State<_ViewerMap> {
     return LatLng(p.map((e) => e.latitude).reduce((a, b) => a + b) / p.length, p.map((e) => e.longitude).reduce((a, b) => a + b) / p.length);
   }
 
+  // No road line from the server (OSRM down or past the day cap): the straight line is drawn dashed, not as a road.
+  static const List<double> _noRoadDash = [2, 2];
+
   Future<void> _draw() async {
     final map = _map;
     if (map == null) return;
@@ -149,7 +152,7 @@ class _ViewerMapState extends State<_ViewerMap> {
         });
       }
       if (geo is Map<String, dynamic> || pts.length > 1) {
-        await map.addLineLayer('viewer-day-${d.day}', 'viewer-line-${d.day}', LineLayerProperties(lineColor: color, lineWidth: DS.s(4), lineOpacity: Alpha.v80));
+        await map.addLineLayer('viewer-day-${d.day}', 'viewer-line-${d.day}', LineLayerProperties(lineColor: color, lineWidth: DS.s(4), lineOpacity: Alpha.v80, lineDasharray: geo is Map<String, dynamic> ? null : _noRoadDash));
       }
       for (var i = 0; i < pts.length; i++) {
         circles.add(CircleOptions(geometry: pts[i], circleRadius: DS.s(14), circleColor: color, circleStrokeColor: _hex(DesignColors.surface), circleStrokeWidth: DS.s(2)));

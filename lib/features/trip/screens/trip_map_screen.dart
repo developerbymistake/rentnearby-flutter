@@ -28,6 +28,7 @@ import '../map/discovery_api.dart';
 import '../map/trip_discovery_layer.dart';
 import '../map/discovery_overlay.dart';
 import '../map/trip_map_spot_actions.dart';
+import '../map/trip_route_stops.dart';
 
 class TripMapScreen extends StatefulWidget {
   const TripMapScreen({super.key});
@@ -46,8 +47,7 @@ class _TripMapScreenState extends State<TripMapScreen> with TickerProviderStateM
   bool _again = false;
   String? _drawnSignature;
   final _drawnDays = <int>[];
-  final _circles = <int, List<Circle>>{};
-  final _symbols = <int, List<Symbol>>{};
+  final _stops = TripRouteStops();
   final _hasRoute = <int, bool>{};
   final _drawnRoutes = <int, Map<String, dynamic>?>{};
   final _lineKeys = <String, String>{};
@@ -159,6 +159,8 @@ class _TripMapScreenState extends State<TripMapScreen> with TickerProviderStateM
     _enter.dispose();
     _map?.onSymbolTapped.remove(_onSymbolTapped);
     _map?.onCircleTapped.remove(_onCircleTapped);
+    _map?.onFeatureTapped.remove(_onFeatureTapped);
+    _stops.dispose();
     _disc?.dispose();
     _packRetry?.dispose();
     _metersPerDp.dispose();
@@ -471,8 +473,6 @@ class _TripMapScreenState extends State<TripMapScreen> with TickerProviderStateM
 
   double _segOpacity(int legIndex) => _dimOrHide(_plan.mapShowsSegment(legIndex));
 
-  double? _ringOpacity(double opacity) => _plan.isMultiCity ? (opacity == 0 ? 0 : 1) : null;
-
   Future<void> _drawStayPins(MapLibreMapController map, TripPlan p) async {
     if (_stayPins.isNotEmpty) {
       final old = _stayPins.values.toList();
@@ -531,26 +531,18 @@ class _TripMapScreenState extends State<TripMapScreen> with TickerProviderStateM
         return;
       }
     }
-    for (final e in _symbols.entries) {
-      final i = e.value.indexWhere((x) => _same(x, symbol));
-      if (i >= 0) {
-        _openPlanned(e.key, i);
-        return;
-      }
-    }
+  }
+
+  void _onFeatureTapped(Point<double> point, LatLng at, String id, String layerId, Annotation? annotation) {
+    if (annotation != null || layerId != TripRouteStops.layerId) return;
+    final s = _stops.at(id);
+    if (s != null) _openPlanned(s.day, s.index);
   }
 
   void _onCircleTapped(Circle circle) {
     for (final e in _cityDots.entries) {
       if (e.value == circle || e.value.id == circle.id) {
         _selectLeg(e.key);
-        return;
-      }
-    }
-    for (final e in _circles.entries) {
-      final i = e.value.indexWhere((x) => x == circle || x.id == circle.id);
-      if (i >= 0) {
-        _openPlanned(e.key, i);
         return;
       }
     }
@@ -561,23 +553,21 @@ class _TripMapScreenState extends State<TripMapScreen> with TickerProviderStateM
     final spots = _spotsOf(day);
     if (disc == null || !disc.isAttached || index >= spots.length || _dayOpacity(day) <= 0) return;
     final s = spots[index];
-    disc
-        .select(
-          s.id,
-          planned: true,
-          spot: DiscoverySpot(
-            id: s.id,
-            lat: s.latitude,
-            lon: s.longitude,
-            category: s.category,
-            rank: 0,
-            name: s.name,
-            cityKey: _plan.plan.value?.legAt(_plan.legIndexOf(day))?.cityKey,
-            thumbUrl: s.imageUrl,
-          ),
-        )
-        .ignore();
+    disc.select(s.id, planned: true, spot: _plannedSpot(day, s)).ignore();
   }
+
+  DiscoverySpot _plannedSpot(int day, TripSpotRef s) => DiscoverySpot(
+        id: s.id,
+        lat: s.latitude,
+        lon: s.longitude,
+        category: s.category,
+        rank: 0,
+        name: s.name,
+        cityKey: _plan.plan.value?.legAt(_plan.legIndexOf(day))?.cityKey,
+        thumbUrl: s.imageUrl,
+      );
+
+  List<double> _stopOpacity() => [for (final s in _stops.stops) _dayOpacity(s.day)];
 
   static Future<Uint8List> _buildStayPinImage() =>
       _buildPinImage(TravelPalette.sunriseStart, 'camping', size: 48, radius: 19, glyphSize: 22);
@@ -919,24 +909,17 @@ class _TripMapScreenState extends State<TripMapScreen> with TickerProviderStateM
     _badges.clear();
     _changeDots.clear();
     _changeLabels.clear();
-    _circles.clear();
-    _symbols.clear();
     _hasRoute.clear();
     _drawnRoutes.clear();
     _lineKeys.clear();
     _stayPins.clear();
     await map.clearCircles();
     await map.clearSymbols();
-    // Routes above place markers, below the open selection and the numbered stops (D6).
+    // Routes above place markers, below the open selection and the route stops (D6).
     final below = _disc?.isAttached == true ? DiscIds.layerSelHalo : map.circleManager?.layerIds.first;
-    final circleOpts = <CircleOptions>[];
-    final symbolOpts = <SymbolOptions>[];
-    final spotDays = <int>[];
-    var stopNo = 0;
+    final stops = <RouteStop>[];
     for (final day in p.days) {
       final d = day.day;
-      final opacity = _dayOpacity(d);
-      final color = TripKit.hexOf(_routeColor(d));
       final route = _plan.routeFor(d);
       _hasRoute[d] = route != null;
       _drawnRoutes[d] = route;
@@ -944,38 +927,11 @@ class _TripMapScreenState extends State<TripMapScreen> with TickerProviderStateM
       await _addLine(map, _sourceId(d), '${_sourceId(d)}-glow', _lineProps(d, glow: true), below);
       await _addLine(map, _sourceId(d), '${_sourceId(d)}-line', _lineProps(d, glow: false), below);
       for (var i = 0; i < day.spots.length; i++) {
-        final s = day.spots[i];
-        final at = LatLng(s.latitude, s.longitude);
-        spotDays.add(d);
-        circleOpts.add(CircleOptions(
-          geometry: at,
-          circleRadius: DS.s(22.5),
-          circleColor: color,
-          circleOpacity: opacity,
-          circleStrokeWidth: 0,
-        ));
-        stopNo++;
-        symbolOpts.add(SymbolOptions(
-          geometry: at,
-          textField: '$stopNo',
-          fontNames: const ['Noto Sans Medium'],
-          textSize: DS.f(21),
-          textColor: _white,
-          textOpacity: opacity,
-        ));
+        stops.add(RouteStop(day: d, index: i, number: stops.length + 1, spot: _plannedSpot(d, day.spots[i]), ring: _routeColor(d)));
       }
-      _circles[d] = <Circle>[];
-      _symbols[d] = <Symbol>[];
       _drawnDays.add(d);
     }
-    if (circleOpts.isNotEmpty) {
-      final circles = await map.addCircles(circleOpts);
-      final symbols = await map.addSymbols(symbolOpts);
-      for (var i = 0; i < spotDays.length; i++) {
-        _circles[spotDays[i]]!.add(circles[i]);
-        _symbols[spotDays[i]]!.add(symbols[i]);
-      }
-    }
+    await _stops.draw(map, stops, [for (final s in stops) _dayOpacity(s.day)], below: map.circleManager?.layerIds.first);
     if (p.isMultiCity) await _drawLegs(map, p, below);
     await _drawStayPins(map, p);
     await _disc?.setPlannedIds({for (final s in p.allSpots) s.id});
@@ -987,16 +943,10 @@ class _TripMapScreenState extends State<TripMapScreen> with TickerProviderStateM
     final circles = <(Circle, CircleOptions)>[];
     final symbols = <(Symbol, SymbolOptions)>[];
     for (final d in _drawnDays) {
-      final opacity = _dayOpacity(d);
       await _setLine(map, '${_sourceId(d)}-glow', _lineProps(d, glow: true));
       await _setLine(map, '${_sourceId(d)}-line', _lineProps(d, glow: false));
-      for (final c in _circles[d] ?? const <Circle>[]) {
-        circles.add((c, CircleOptions(circleOpacity: opacity, circleStrokeOpacity: _ringOpacity(opacity))));
-      }
-      for (final s in _symbols[d] ?? const <Symbol>[]) {
-        symbols.add((s, SymbolOptions(textOpacity: opacity)));
-      }
     }
+    await _stops.setOpacity(map, _stopOpacity());
     final p = _plan.plan.value;
     for (final e in _stayPins.entries) {
       final opacity = _stayPinOpacity(e.key);
@@ -1123,6 +1073,7 @@ class _TripMapScreenState extends State<TripMapScreen> with TickerProviderStateM
                   _map = ctrl;
                   ctrl.onSymbolTapped.add(_onSymbolTapped);
                   ctrl.onCircleTapped.add(_onCircleTapped);
+                  ctrl.onFeatureTapped.add(_onFeatureTapped);
                 },
                 onStyleLoadedCallback: _onStyleLoaded,
               ),

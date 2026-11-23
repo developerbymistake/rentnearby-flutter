@@ -95,6 +95,7 @@ class WorkoutCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               if (eyebrow.isNotEmpty)
                 Padding(
@@ -162,6 +163,7 @@ class WorkoutCard extends StatelessWidget {
       padding: margin.copyWith(top: margin.top + overhang),
       child: Stack(
         clipBehavior: Clip.none,
+        fit: StackFit.passthrough,
         children: [
           SizedBox(width: double.infinity, child: card),
           Positioned(

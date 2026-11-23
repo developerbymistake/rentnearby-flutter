@@ -6,17 +6,19 @@ import '../data/trip_city_catalog.dart';
 import '../models/trip_city_model.dart';
 import '../trip_navigation.dart';
 import '../trip_strings.dart';
+import 'trip_city_tile.dart';
 
 class TripPopularRail extends StatefulWidget {
-  const TripPopularRail({super.key});
+  const TripPopularRail({super.key, this.revision = 0});
+
+  /// Bumped by the host after it reloads the catalog, so the rail rebuilds without being recreated.
+  final int revision;
 
   @override
   State<TripPopularRail> createState() => _TripPopularRailState();
 }
 
 class _TripPopularRailState extends State<TripPopularRail> {
-  static const List<String> _arts = [ListingArt.mountain, ListingArt.hinduTemple, ListingArt.canoe, ListingArt.camping, ListingArt.tent, ListingArt.beach, ListingArt.sunrise];
-
   late final TripCityCatalog _catalog;
 
   @override
@@ -78,10 +80,10 @@ class _TripPopularRailState extends State<TripPopularRail> {
           ),
         ),
         LayoutBuilder(builder: (context, box) {
-          final width = ((box.maxWidth - DS.s(18) * 2 - DS.gh(12) * 2) / 3).clamp(DS.s(96), DS.s(160)).toDouble();
-          final pad = DS.insets(l: 18, t: 4, r: 18, b: 4);
+          final width = (box.maxWidth - DS.s(28) - DS.gh(12)) / 2;
+          final pad = DS.insets(l: 14, t: 4, r: 14, b: 4);
           return SizedBox(
-            height: PopularCityCard.heightOf(context) + pad.vertical,
+            height: TripCityTile.hubHeightOf(context) + pad.vertical,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               physics: const BouncingScrollPhysics(),
@@ -89,85 +91,21 @@ class _TripPopularRailState extends State<TripPopularRail> {
               padding: pad,
               itemCount: cities.length,
               separatorBuilder: (_, _) => Gap.h(12),
-              itemBuilder: (_, i) => PopularCityCard(
-                key: ValueKey('popular-${cities[i].cityKey}'),
-                city: cities[i],
+              itemBuilder: (_, i) => SizedBox(
                 width: width,
-                art: _arts[cities[i].cityKey.abs() % _arts.length],
+                child: TripCityTile(
+                  key: ValueKey('popular-${cities[i].cityKey}'),
+                  city: cities[i],
+                  index: i,
+                  width: width,
+                  hub: true,
+                  onTap: () => TripNavigation.startWithCities([cities[i]]),
+                ),
               ),
             ),
           );
         }),
       ],
-    );
-  }
-}
-
-class PopularCityCard extends StatelessWidget {
-  const PopularCityCard({super.key, required this.city, required this.width, required this.art});
-
-  final TripCityModel city;
-  final double width;
-  final String art;
-
-  // Fixed card height: circle, two title lines and the place line at the current text scale.
-  static double heightOf(BuildContext context) {
-    final t = MediaQuery.textScalerOf(context);
-    final title = t.scale(DS.s(14)) * 1.6 * 2;
-    final place = t.scale(DS.s(11.5)) * 1.6 + DS.s(2);
-    return DS.s(12) + DS.s(64) + DS.s(6) + title + place + DS.s(12) + DS.s(4);
-  }
-
-  static const BorderRadius radius = BorderRadius.only(
-    topLeft: Radius.circular(8),
-    topRight: Radius.circular(30),
-    bottomLeft: Radius.circular(8),
-    bottomRight: Radius.circular(8),
-  );
-
-  @override
-  Widget build(BuildContext context) {
-    final place = city.stateName.isNotEmpty ? city.stateName : city.districtName;
-    final cover = city.cover;
-    final circle = DS.s(64);
-    return Semantics(
-      button: true,
-      label: place.isEmpty ? city.name : '${city.name}, $place',
-      excludeSemantics: true,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: () => TripNavigation.startWithCities([city]),
-        child: Container(
-          width: width,
-          height: heightOf(context),
-          padding: DS.insets(l: 10, t: 12, r: 10, b: 12),
-          decoration: BoxDecoration(color: DesignColors.onPrimary, borderRadius: DS.br(radius), boxShadow: DS.shadows(Ink3D.softShadow)),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ClipOval(
-                child: SizedBox(
-                  width: circle,
-                  height: circle,
-                  child: cover == null
-                      ? DecoratedBox(
-                          decoration: BoxDecoration(color: ListingPalette.sunrise.tint),
-                          child: Center(child: Art3D(asset: art, size: 46)),
-                        )
-                      : KitPhoto(url: cover, width: circle, height: circle, asset: TravelIcon.map, iconSize: 32),
-                ),
-              ),
-              Gap.v(6),
-              Text(city.name, maxLines: 2, textAlign: TextAlign.center, overflow: TextOverflow.ellipsis, style: Ink3D.text(14, FontWeight.w700, Ink3D.title)),
-              if (place.isNotEmpty)
-                Padding(
-                  padding: EdgeInsets.only(top: DS.s(2)),
-                  child: Text(place, maxLines: 1, textAlign: TextAlign.center, overflow: TextOverflow.ellipsis, style: Ink3D.text(11.5, FontWeight.w400, Ink3D.grey)),
-                ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }

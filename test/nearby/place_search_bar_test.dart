@@ -18,9 +18,9 @@ Future<void> _pump(WidgetTester t, double w, double scale, Widget child) async {
 }
 
 void main() {
-  test('radius chips are 1, 6, 12, 20 and default is 12', () {
+  test('radius chips are 1, 6, 12, 20 and default is 20', () {
     expect(AppConstants.radiusOptions, [1.0, 6.0, 12.0, 20.0]);
-    expect(AppConstants.defaultRadiusKm, 12.0);
+    expect(AppConstants.defaultRadiusKm, 20.0);
     expect(AppConstants.radiusOptions.contains(AppConstants.defaultRadiusKm), isTrue);
   });
 

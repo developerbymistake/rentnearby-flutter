@@ -1,68 +1,29 @@
 import 'package:get/get.dart';
-import '../features/taxi/models/taxi_browse_item.dart';
-import '../models/home_feed_model.dart';
-import '../features/nearby/controllers/nearby_centre_controller.dart';
-import '../repositories/home_repository_v2.dart';
 import '../config/shell_kind.dart';
+import '../features/trip/data/trip_city_catalog.dart';
 import 'auth_controller.dart';
-import 'location_controller.dart';
-import 'tab_config_controller.dart';
 
-export '../models/home_feed_model.dart';
-
-/// Home tab's data source: one GET /home/feed per load, limited to the sections of active tabs.
+/// Home tab's data source: the popular destinations rail (trip city catalog).
 class HomeController extends GetxController {
-  final stays = <HomeStayModel>[].obs;
-  final taxis = <TaxiBrowseItem>[].obs;
+  final popularLoading = false.obs;
+  final popularFailed = false.obs;
+  final popularVersion = 0.obs;
 
-  final recentlyAddedStays = <HomeStayModel>[].obs;
-
-  final farAway = false.obs;
-
-  final staysLoading = true.obs;
-  final taxisLoading = true.obs;
-  final recentlyAddedStaysLoading = true.obs;
-  final failedSections = <String>{}.obs;
-
-  static const _allSections = {
-    HomeSectionKeys.stays,
-    HomeSectionKeys.taxis,
-    HomeSectionKeys.recentStays,
-  };
-
-  final _repo = const HomeRepositoryV2();
-  final _gen = <String, int>{};
   final _workers = <Worker>[];
-  late final LocationController _loc;
-  late final TabConfigController _tabs;
-  late Set<String> _sections;
-  String? _loadedDistrictId;
+  Future<void>? _running;
+
+  TripCityCatalog get _catalog => TripCityCatalog.to;
 
   @override
   void onInit() {
     super.onInit();
-    _loc = Get.find<LocationController>();
-    _tabs = Get.find<TabConfigController>();
-    _sections = _activeSections();
-
-    _workers.add(everAll([_loc.selectedDistrict, _loc.browsingDistrict], (_) {
-      final district = _loc.effectiveDistrict;
-      if (district != null) loadHomeData(district.id);
-    }));
-
-    _workers.add(ever(_tabs.version, (_) => _onTabsChanged()));
+    _catalog.warmFromDisk();
     if (Get.isRegistered<AuthController>()) {
       _workers.add(ever<ShellKind>(Get.find<AuthController>().shellKind, (k) {
-        if (k != ShellKind.seeker) return;
-        _loadedDistrictId = null;
-        final district = _loc.effectiveDistrict;
-        if (district != null) loadHomeData(district.id);
+        if (k == ShellKind.seeker) reload();
       }));
     }
-    _workers.add(ever(NearbyCentreController.to.centreVersion, (_) => reloadDistrict()));
-
-    final current = _loc.effectiveDistrict;
-    if (current != null) loadHomeData(current.id);
+    reload();
   }
 
   @override
@@ -73,151 +34,38 @@ class HomeController extends GetxController {
     super.onClose();
   }
 
-  Set<String> _activeSections() => _tabs.activeSectionKeys.where(_allSections.contains).toSet();
-
-  bool get railsFailedNoCopy {
-    if (failedSections.isEmpty) return false;
-    final hasCopy = stays.isNotEmpty || taxis.isNotEmpty || recentlyAddedStays.isNotEmpty;
-    return !hasCopy;
+  bool get hasAnyRail {
+    popularVersion.value;
+    return _catalog.popular().isNotEmpty;
   }
 
-  bool get anyRailLoading => staysLoading.value || taxisLoading.value || recentlyAddedStaysLoading.value;
+  bool get anyRailLoading => popularLoading.value;
 
-  bool get hasAnyRail => stays.isNotEmpty || taxis.isNotEmpty || recentlyAddedStays.isNotEmpty;
-
-  Future<void>? _retry;
-
-  Future<void> retryRails() {
-    final running = _retry;
-    if (running != null) return running;
-    final f = reloadSections(failedSections.isEmpty ? _activeSections() : failedSections.toSet());
-    _retry = f;
-    return f.whenComplete(() => _retry = null);
-  }
-
-  void _onTabsChanged() {
-    final now = _activeSections();
-    final turnedOn = now.difference(_sections);
-    final turnedOff = _sections.difference(now);
-    _sections = now;
-    if (turnedOff.isNotEmpty) clearSections(turnedOff);
-    if (turnedOn.isNotEmpty) reloadSections(turnedOn);
-  }
-
-  List<HomeRecentItem> recentMixed({
-    bool stays = true,
-    int count = 6,
-  }) {
-    final all = <HomeRecentItem>[
-      if (stays) ...recentlyAddedStays.map(HomeRecentItem.stay),
-    ];
-    all.sort((a, b) {
-      final x = a.createdAt, y = b.createdAt;
-      if (x == null && y == null) return 0;
-      if (x == null) return 1;
-      if (y == null) return -1;
-      return y.compareTo(x);
-    });
-    return all.take(count).toList();
-  }
-
-  Future<void> loadHomeData(String districtId) async {
-    if (_loadedDistrictId == districtId) return;
-    _loadedDistrictId = districtId;
-    final active = _activeSections();
-    clearSections(_allSections.difference(active));
-    final ok = await _fetch(districtId, active);
-    if (!ok && _loadedDistrictId == districtId) _loadedDistrictId = null;
-  }
-
-  /// Fetches only [keys] that are active, ignoring the per-district memo.
-  Future<void> reloadSections(Set<String> keys) async {
-    final district = _loc.effectiveDistrict;
-    if (district == null) return;
-    await _fetch(district.id, keys.intersection(_activeSections()));
-  }
-
-  void clearSections(Set<String> keys) {
-    failedSections.removeAll(keys);
-    for (final k in keys) {
-      _gen[k] = (_gen[k] ?? 0) + 1;
-      _shownSig.remove(k);
-      switch (k) {
-        case HomeSectionKeys.stays:
-          stays.clear();
-        case HomeSectionKeys.taxis:
-          taxis.clear();
-        case HomeSectionKeys.recentStays:
-          recentlyAddedStays.clear();
-      }
-      _loadingOf(k)?.value = false;
-    }
-  }
-
-  /// Pull-to-refresh. (Not named refresh: GetxController.refresh() is synchronous.)
-  Future<void> reloadDistrict() async {
-    final district = _loc.effectiveDistrict;
-    if (district == null) return;
-    _loadedDistrictId = district.id;
-    await _fetch(district.id, _activeSections());
-  }
+  bool get railsFailedNoCopy => popularFailed.value && !hasAnyRail;
 
   // Owners never see the Seeker rails (FX-17).
   static bool get _ownerShell => Get.isRegistered<AuthController>() && Get.find<AuthController>().isOwnerShell;
 
-  Future<bool> _fetch(String districtId, Set<String> keys) async {
-    if (keys.isEmpty) return true;
-    if (_ownerShell) return false;
-    final tickets = <String, int>{};
-    for (final k in keys) {
-      tickets[k] = _gen[k] = (_gen[k] ?? 0) + 1;
-      _loadingOf(k)?.value = true;
-    }
-    failedSections.removeAll(keys);
-    bool current(String k) => _gen[k] == tickets[k];
+  /// Pull-to-refresh and retry; single flight.
+  Future<void> reload() {
+    final running = _running;
+    if (running != null) return running;
+    if (_ownerShell) return Future.value();
+    final f = _load();
+    _running = f;
+    return f.whenComplete(() => _running = null);
+  }
+
+  Future<void> _load() async {
+    popularLoading.value = true;
     try {
-      final feed = await _repo.fetchFeed(districtId: districtId, sections: keys);
-      if (farAway.value != feed.header.farAway) farAway.value = feed.header.farAway;
-      for (final k in keys) {
-        if (current(k)) _apply(k, feed);
-      }
-      if (keys.any(feed.isSectionTabOff)) _tabs.load(forceRefresh: true);
-      return true;
+      await _catalog.load();
+      popularFailed.value = false;
     } catch (_) {
-      failedSections.addAll(keys.where(current));
-      return false;
+      popularFailed.value = true;
     } finally {
-      for (final k in keys) {
-        if (current(k)) _loadingOf(k)?.value = false;
-      }
+      popularLoading.value = false;
+      popularVersion.value++;
     }
   }
-
-  final _shownSig = <String, String>{};
-
-  void _apply(String key, HomeFeedModel feed) {
-    failedSections.remove(key);
-    final sig = feed.signatures[key];
-    if (sig != null && _shownSig[key] == sig) return;
-    if (sig == null) {
-      _shownSig.remove(key);
-    } else {
-      _shownSig[key] = sig;
-    }
-    switch (key) {
-      case HomeSectionKeys.stays:
-        stays.assignAll(feed.stays ?? const []);
-      case HomeSectionKeys.taxis:
-        taxis.assignAll(feed.taxis ?? const []);
-      case HomeSectionKeys.recentStays:
-        recentlyAddedStays.assignAll(feed.recentStays ?? const []);
-    }
-  }
-
-  RxBool? _loadingOf(String key) => switch (key) {
-        HomeSectionKeys.stays => staysLoading,
-        HomeSectionKeys.taxis => taxisLoading,
-        HomeSectionKeys.recentStays => recentlyAddedStaysLoading,
-        _ => null,
-      };
 }

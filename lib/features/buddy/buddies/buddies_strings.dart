@@ -21,8 +21,6 @@ abstract final class BuddiesStrings {
   static const String dots = '⋮';
   static const String alertMark = '!';
 
-  static String myBuddiesCount(int n) => n > 0 ? '$tabBuddies $n' : tabBuddies;
-
   static const String yourUsername = 'Your username';
   static const String copy = 'Copy';
   static const String myQr = 'My QR';

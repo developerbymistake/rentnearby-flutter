@@ -161,13 +161,14 @@ class ProfileRoundButton extends StatelessWidget {
 
 // Onboarding and gate page: circle 96 + label + helper (or the upload error line). Tap = [onTap].
 class ProfilePhotoBlock extends StatelessWidget {
-  const ProfilePhotoBlock({super.key, required this.controller, required this.bad, required this.onTap, this.tapRetries = true});
+  const ProfilePhotoBlock({super.key, required this.controller, required this.bad, required this.onTap, this.tapRetries = true, this.optional = false});
 
   final ProfilePhotoController controller;
   final bool bad;
   final VoidCallback onTap;
   // False: a tap after a failed upload opens the picker (gate page), so the circle keeps its camera badge.
   final bool tapRetries;
+  final bool optional;
 
   static final ListingTone _tone = ListingTone.indigo;
 
@@ -228,7 +229,7 @@ class ProfilePhotoBlock extends StatelessWidget {
           final failed = controller.failed.value && controller.localPath.value != null;
           return failed
               ? Text(ProfilePhotoStrings.uploadFailed, textAlign: TextAlign.center, style: Ink3D.text(13, FontWeight.w600, AuthInk.badText, height: 1.5))
-              : Text(ProfilePhotoStrings.helper, textAlign: TextAlign.center, style: Ink3D.text(12, FontWeight.w400, Ink3D.grey, letterSpacing: 0));
+              : Text(optional ? ProfilePhotoStrings.optionalHint : ProfilePhotoStrings.helper, textAlign: TextAlign.center, style: Ink3D.text(12, FontWeight.w400, Ink3D.grey, letterSpacing: 0));
         }),
       ],
     );
