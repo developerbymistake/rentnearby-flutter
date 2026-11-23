@@ -3,8 +3,11 @@ import 'package:flutter/widgets.dart';
 
 import 'intro_story_math.dart';
 import 'intro_story_state.dart';
+import 'paint_cast.dart';
 import 'paint_ground.dart';
 import 'paint_sky.dart';
+import 'paint_table.dart';
+import 'paint_world.dart';
 
 class IntroStoryScene extends StatelessWidget {
   const IntroStoryScene({super.key, required this.state, required this.progress, required this.panelTop});
@@ -12,6 +15,8 @@ class IntroStoryScene extends StatelessWidget {
   final IntroStoryState state;
   final ValueListenable<double> progress;
   final double panelTop;
+
+  static Widget _layer(CustomPainter painter) => RepaintBoundary(child: CustomPaint(painter: painter));
 
   @override
   Widget build(BuildContext context) {
@@ -22,13 +27,22 @@ class IntroStoryScene extends StatelessWidget {
           return Stack(
             fit: StackFit.expand,
             children: [
-              RepaintBoundary(child: CustomPaint(painter: IntroSkyPainter(state, geo))),
-              RepaintBoundary(child: CustomPaint(painter: IntroHillsPainter(state, geo))),
+              _layer(IntroSkyPainter(state, geo)),
+              _layer(IntroHillsPainter(state, geo)),
               _WorldSlide(
                 progress: progress,
                 geo: geo,
-                child: RepaintBoundary(child: CustomPaint(painter: IntroGroundPainter(state, geo))),
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    _layer(IntroGroundPainter(state, geo, IntroGroundPart.trees)),
+                    _layer(IntroWorldPainter(state, geo)),
+                    _layer(IntroGroundPainter(state, geo, IntroGroundPart.road)),
+                    _layer(IntroActorsPainter(state, geo)),
+                  ],
+                ),
               ),
+              _TableSlide(progress: progress, geo: geo, child: _layer(IntroTablePainter(state, geo))),
             ],
           );
         }),
@@ -49,5 +63,22 @@ class _WorldSlide extends StatelessWidget {
         valueListenable: progress,
         child: child,
         builder: (context, p, child) => Transform.translate(offset: Offset((1 - smooth(clamp01(p))) * geo.slidePx, 0), child: child),
+      );
+}
+
+class _TableSlide extends StatelessWidget {
+  const _TableSlide({required this.progress, required this.geo, required this.child});
+
+  final ValueListenable<double> progress;
+  final IntroStoryGeo geo;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => ValueListenableBuilder<double>(
+        valueListenable: progress,
+        child: child,
+        builder: (context, p, child) => p >= 1
+            ? const SizedBox.shrink()
+            : Transform.translate(offset: Offset(-smooth(clamp01(p)) * geo.slidePx, 0), child: child),
       );
 }

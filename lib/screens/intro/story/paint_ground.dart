@@ -5,11 +5,14 @@ import 'intro_story_art.dart';
 import 'intro_story_math.dart';
 import 'intro_story_state.dart';
 
+enum IntroGroundPart { trees, road }
+
 class IntroGroundPainter extends CustomPainter {
-  IntroGroundPainter(this.state, this.geo) : super(repaint: state.scroll);
+  IntroGroundPainter(this.state, this.geo, this.part) : super(repaint: state.scroll);
 
   final IntroStoryState state;
   final IntroStoryGeo geo;
+  final IntroGroundPart part;
 
   static const double _treeTile = 540;
   static const double _treeBase = 396;
@@ -47,7 +50,11 @@ class IntroGroundPainter extends CustomPainter {
     canvas.save();
     canvas.translate(geo.ox, geo.oy);
     canvas.scale(geo.k);
-    _treesLayer(canvas, d);
+    if (part == IntroGroundPart.trees) {
+      _treesLayer(canvas, d);
+      canvas.restore();
+      return;
+    }
     _fill.color = IntroStoryColors.curb;
     canvas.drawRect(Rect.fromLTRB(x0, 392, x1, 397), _fill);
     _fill.color = pal.r;
@@ -89,5 +96,5 @@ class IntroGroundPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant IntroGroundPainter old) => old.geo != geo || old.state != state;
+  bool shouldRepaint(covariant IntroGroundPainter old) => old.geo != geo || old.state != state || old.part != part;
 }
