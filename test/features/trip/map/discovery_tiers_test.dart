@@ -92,7 +92,7 @@ void main() {
     expect(DiscTuning.trip.photoMax, 40);
     expect(DiscTuning.trip.photoDp, DS.s(44));
     expect(DiscTuning.stay.photoMax, 24);
-    expect(DiscTuning.stay.photoDp, DS.s(44));
+    expect(DiscTuning.stay.photoDp, DS.s(54));
     expect(DiscTuning.trip.px(44), 44);
   });
 }

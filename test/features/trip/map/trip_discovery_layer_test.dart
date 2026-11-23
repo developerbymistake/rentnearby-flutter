@@ -201,7 +201,7 @@ void main() {
     final port = FakePort();
     await l.attach(port);
     expect(port.calls.where((x) => x.startsWith('layer:')).every((x) => x.endsWith(':null')), isTrue);
-    expect(l.tuning.photoDp, DS.s(44));
+    expect(l.tuning.photoDp, DS.s(54));
   });
 
   test('photos: tier-1 spots with a thumb registered in batches of 8, one disc-photo set per batch', () async {

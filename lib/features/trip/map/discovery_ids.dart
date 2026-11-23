@@ -153,18 +153,19 @@ class DiscTuning {
         haloPhotoDp: DS.s(72),
         haloDotDp: DS.s(36),
       );
-  // Owner sizes 2026-11-23: photo 44, badge 28, dot 12; smaller zoomed out, never below the minimums.
+  // Owner order 2026-11-24 (markers were too small to read): these are design units that DS scales to 80%, so the
+  // phone gets about photo 43, badge 29, dot 13 dp; smaller zoomed out, never below the minimums.
   static DiscTuning get stay => DiscTuning(
         photoMax: 24,
-        photoDp: DS.s(44),
-        photoMinDp: DS.s(36),
-        badgeDp: DS.s(28),
-        badgeMinDp: DS.s(24),
-        dotDp: DS.s(12),
-        dotMinDp: DS.s(10),
-        selDotDp: DS.s(16),
-        haloPhotoDp: DS.s(72),
-        haloDotDp: DS.s(36),
+        photoDp: DS.s(54),
+        photoMinDp: DS.s(46),
+        badgeDp: DS.s(36),
+        badgeMinDp: DS.s(30),
+        dotDp: DS.s(16),
+        dotMinDp: DS.s(13),
+        selDotDp: DS.s(20),
+        haloPhotoDp: DS.s(84),
+        haloDotDp: DS.s(42),
       );
 
   int px(double dp) => (dp * pxPerDp).round();

@@ -27,18 +27,18 @@ void main() {
     expect(t.photoMax, 40);
   });
 
-  test('stay: photo 44, badge 28, dot 12 through DS, never smaller than 36 / 24 / 10 zoomed out', () {
+  test('stay: photo 54, badge 36, dot 16 through DS, never smaller than 46 / 30 / 13 zoomed out', () {
     DS.debugReset();
     final s = DiscTuning.stay;
-    expect((s.photoDp, s.badgeDp, s.dotDp, s.hitDp, s.photoMax), (44, 28, 12, 44, 24));
-    expect(s.photoIconSize, ['interpolate', ['linear'], ['zoom'], DiscTuning.zoomOut, 36 / 44, DiscTuning.zoomIn, 1.0]);
-    expect(s.badgeIconSize, ['interpolate', ['linear'], ['zoom'], DiscTuning.zoomOut, 24 / 28, DiscTuning.zoomIn, 1.0]);
-    expect(s.dotRadius(1), ['interpolate', ['linear'], ['zoom'], DiscTuning.zoomOut, 4.0, DiscTuning.zoomIn, 5.0]);
+    expect((s.photoDp, s.badgeDp, s.dotDp, s.hitDp, s.photoMax), (54, 36, 16, 44, 24));
+    expect(s.photoIconSize, ['interpolate', ['linear'], ['zoom'], DiscTuning.zoomOut, 46 / 54, DiscTuning.zoomIn, 1.0]);
+    expect(s.badgeIconSize, ['interpolate', ['linear'], ['zoom'], DiscTuning.zoomOut, 30 / 36, DiscTuning.zoomIn, 1.0]);
+    expect(s.dotRadius(1), ['interpolate', ['linear'], ['zoom'], DiscTuning.zoomOut, 5.5, DiscTuning.zoomIn, 7.0]);
     DS.applyApproved();
     final a = DiscTuning.stay;
-    expect(a.photoDp, closeTo(DS.s(44), 1e-9));
+    expect(a.photoDp, closeTo(DS.s(54), 1e-9));
     expect(a.photoDp, greaterThan(DiscTuning.trip.photoDp - 1e-9));
-    expect(a.dotMinDp, closeTo(DS.s(10), 1e-9));
+    expect(a.dotMinDp, closeTo(DS.s(13), 1e-9));
   });
 
   test('trip: no zoom expression, sizes stay plain numbers', () {
