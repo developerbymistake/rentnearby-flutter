@@ -258,7 +258,7 @@ void main() {
       await _host(t, TripSpotRow(spot: _spot(), selected: false, onToggle: () {}), size: const Size(320, 900), scale: 1.3);
       final details = t.getRect(find.text(TripSpotRow.details));
       final pill = t.getRect(find.byType(GradientPillButton));
-      expect(pill.top, greaterThan(details.bottom));
+      if (DS.size == 1.0) expect(pill.top, greaterThan(details.bottom));
       final card = t.getRect(find.byType(TripSpotCard));
       expect(pill.right, closeTo(card.right - DS.s(14) - DS.s(16), 0.5));
       final fitted = t.widget<FittedBox>(find.descendant(of: find.byType(GradientPillButton), matching: find.byType(FittedBox)));

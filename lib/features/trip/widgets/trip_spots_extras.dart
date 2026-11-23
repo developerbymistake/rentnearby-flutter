@@ -113,7 +113,7 @@ class TripSuggestionCard extends StatelessWidget {
       children: [
         Text(spot.title, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(13, FontWeight.w600, Ink3D.title, height: 1.25)),
         SizedBox(height: DS.s(2)),
-        Text(away, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(12.5, FontWeight.w500, Ink3D.body.withValues(alpha: Alpha.high))),
+        Text(away, maxLines: 3, overflow: TextOverflow.ellipsis, style: Ink3D.text(12.5, FontWeight.w500, Ink3D.body.withValues(alpha: Alpha.high))),
       ],
     );
     return TemplateEntranceOnce(
