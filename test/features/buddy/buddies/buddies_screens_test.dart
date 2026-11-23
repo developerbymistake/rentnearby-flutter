@@ -211,6 +211,33 @@ void main() {
       await finish(t);
     });
 
+    testWidgets('Find card: Copy and My QR fit a 320 dp phone at text scale 1.3 without overflow', (t) async {
+      t.view.devicePixelRatio = 2;
+      t.view.physicalSize = const Size(320 * 2, 700 * 2);
+      t.platformDispatcher.textScaleFactorTestValue = 1.3;
+      addTearDown(t.view.reset);
+      addTearDown(t.platformDispatcher.clearTextScaleFactorTestValue);
+      await t.pumpWidget(GetMaterialApp(
+        home: screen(tab: 'find'),
+        builder: (c, child) => Stack(fit: StackFit.expand, children: [Positioned.fill(child: child!), Overlay(key: AppToast.overlayKey)]),
+      ));
+      await t.pump();
+      await t.pump(const Duration(milliseconds: 300));
+      expect(find.text('Copy'), findsOneWidget);
+      expect(find.text('My QR'), findsOneWidget);
+      expect(t.takeException(), isNull, reason: 'no RenderFlex overflow');
+      await finish(t);
+    });
+
+    testWidgets('Requests badge keeps the old look: white with the tab colour while its tab is selected', (t) async {
+      api.buddiesResult = BuddyOk(BuddyList(items: [item(aman)], count: 1));
+      await pump(t, screen(tab: 'requests'));
+      final tabs = find.byType(SegmentTabs);
+      final plain = find.descendant(of: tabs, matching: find.text('Requests'));
+      expect(plain, findsOneWidget);
+      await finish(t);
+    });
+
     testWidgets('2.2 idle, 2.4 bad text without a server call, prefix fixed', (t) async {
       await pump(t, screen(tab: 'find'));
       expect(find.text('Ask your friend for their username, or scan their QR'), findsOneWidget);

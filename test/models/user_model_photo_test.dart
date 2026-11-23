@@ -17,13 +17,18 @@ void main() {
     expect(u.profilePhotoRemoved, isFalse);
   });
 
-  test('null, blank and non-string values read as no picture and gate', () {
+  test('null, blank and non-string values read as no picture; a user who never added one is NOT asked (optional)', () {
     for (final raw in [null, '', '   ', 42, true, const ['x']]) {
       final u = UserModel.fromJson(_json({'profilePhotoUrl': raw}));
       expect(u.photoKnown, isTrue, reason: '$raw');
       expect(u.profilePhotoUrl, isNull, reason: '$raw');
-      expect(u.needsProfilePhoto, isTrue, reason: '$raw');
+      expect(u.needsProfilePhoto, isFalse, reason: '$raw');
     }
+  });
+
+  test('a picture removed by the admin must be replaced', () {
+    final u = UserModel.fromJson(_json({'profilePhotoUrl': null, 'profilePhotoRemoved': true}));
+    expect(u.needsProfilePhoto, isTrue);
   });
 
   test('present url is trimmed and not gated', () {

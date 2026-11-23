@@ -209,6 +209,7 @@ class _BuddiesScreenState extends State<BuddiesScreen> {
             selected: tab,
             tone: BuddyLook.teal,
             counts: {BuddiesTab.buddies: count, BuddiesTab.requests: s.receivedPending},
+            solidBadges: {BuddiesTab.buddies},
             onTap: (i) => _buddies.tab.value = i,
           ),
           body: switch (tab) {

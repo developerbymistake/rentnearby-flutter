@@ -4,13 +4,14 @@ import '../../../../design/design.dart';
 import '../buddy_look.dart';
 
 class SegmentTabs extends StatelessWidget {
-  const SegmentTabs({super.key, required this.labels, required this.selected, required this.onTap, required this.tone, this.counts = const {}, this.margin});
+  const SegmentTabs({super.key, required this.labels, required this.selected, required this.onTap, required this.tone, this.counts = const {}, this.solidBadges = const {}, this.margin});
 
   final List<String> labels;
   final int selected;
   final ValueChanged<int> onTap;
   final ListingTone tone;
   final Map<int, int> counts;
+  final Set<int> solidBadges;
   final EdgeInsets? margin;
 
   @override
@@ -25,18 +26,19 @@ class SegmentTabs extends StatelessWidget {
         child: Row(
           children: [
             for (var i = 0; i < labels.length; i++)
-              Expanded(child: _Cell(label: labels[i], on: i == selected, count: counts[i] ?? 0, tone: tone, onTap: () => onTap(i))),
+              Expanded(child: _Cell(label: labels[i], on: i == selected, count: counts[i] ?? 0, solidBadge: solidBadges.contains(i), tone: tone, onTap: () => onTap(i))),
           ],
         ),
       );
 }
 
 class _Cell extends StatelessWidget {
-  const _Cell({required this.label, required this.on, required this.count, required this.tone, required this.onTap});
+  const _Cell({required this.label, required this.on, required this.count, required this.solidBadge, required this.tone, required this.onTap});
 
   final String label;
   final bool on;
   final int count;
+  final bool solidBadge;
   final ListingTone tone;
   final VoidCallback onTap;
 
@@ -69,9 +71,9 @@ class _Cell extends StatelessWidget {
                 constraints: BoxConstraints(minWidth: DS.s(20), minHeight: DS.s(20)),
                 padding: DS.sym(h: 6),
                 alignment: Alignment.center,
-                decoration: BoxDecoration(color: BuddyLook.countBadge, borderRadius: DS.circular(10)),
+                decoration: BoxDecoration(color: solidBadge || !on ? BuddyLook.countBadge : DesignColors.surface, borderRadius: DS.circular(10)),
                 child: Text('$count',
-                    maxLines: 1, textScaler: TextScaler.noScaling, style: Ink3D.text(11, FontWeight.w700, DesignColors.onPrimary, letterSpacing: 0)),
+                    maxLines: 1, textScaler: TextScaler.noScaling, style: Ink3D.text(11, FontWeight.w700, solidBadge || !on ? DesignColors.onPrimary : tone.g2, letterSpacing: 0)),
               ),
             ],
           ],

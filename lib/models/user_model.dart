@@ -109,7 +109,8 @@ class UserModel {
 
   String get displayName => name?.trim().isNotEmpty == true ? name! : '+91 $phoneNumber';
 
-  bool get needsProfilePhoto => photoKnown && profilePhotoUrl == null;
+  // Only a picture the admin removed must be replaced; a new user who never added one is not asked (optional since 2026-11-24).
+  bool get needsProfilePhoto => photoKnown && profilePhotoUrl == null && profilePhotoRemoved;
 
   bool get hasPendingRoleRequest => roleRequestStatus == RoleRequestStatus.pending;
 

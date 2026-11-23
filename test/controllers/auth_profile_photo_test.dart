@@ -103,12 +103,20 @@ void main() {
   });
 
   group('postLoginRoute', () {
-    test('known and no picture goes to the photo page before every other rule', () {
+    test('a picture removed by the admin goes to the photo page before every other rule', () {
       final a = _Quiet();
       for (final confirmed in [false, true]) {
-        a.user.value = UserModel.fromJson(_user(url: null, roleConfirmed: confirmed));
+        a.user.value = UserModel.fromJson(_user(url: null, roleConfirmed: confirmed, removed: true));
         expect(a.postLoginRoute, AppRoutes.profilePhoto);
       }
+    });
+
+    test('a user who never added a picture is not sent to the photo page (optional)', () {
+      final a = _Quiet();
+      a.user.value = UserModel.fromJson(_user(url: null, roleConfirmed: false));
+      expect(a.postLoginRoute, AppRoutes.roleSelect);
+      a.user.value = UserModel.fromJson(_user(url: null));
+      expect(a.postLoginRoute, AppRoutes.main);
     });
 
     test('unknown picture keeps the old order', () {
@@ -152,7 +160,7 @@ void main() {
         await t.pumpAndSettle();
         Get.offAllNamed(quiet);
         await t.pumpAndSettle();
-        a.user.value = UserModel.fromJson(_user(url: null));
+        a.user.value = UserModel.fromJson(_user(url: null, removed: true));
         await t.pumpAndSettle();
         expect(Get.currentRoute, quiet);
       });
@@ -203,8 +211,8 @@ void main() {
       expect(adapter.sent.single, {'phoneNumber': '9876543210', 'name': 'Rahul', 'username': 'Bakhli#48291736'});
       expect(Get.currentRoute, AppRoutes.onboarding);
       expect(StorageService.isLoggedIn, isTrue);
-      expect(a.user.value!.needsProfilePhoto, isTrue);
-      expect(a.postLoginRoute, AppRoutes.profilePhoto);
+      expect(a.user.value!.needsProfilePhoto, isFalse, reason: 'the picture is optional at onboarding');
+      expect(a.postLoginRoute, AppRoutes.roleSelect);
       expect(a.isLoading.value, isFalse);
     });
 
