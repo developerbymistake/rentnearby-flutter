@@ -1,3 +1,4 @@
+import '../../trip/trip_strings_city.dart';
 import '../shared/buddy_format.dart';
 
 abstract final class ViewerStrings {
@@ -133,6 +134,9 @@ abstract final class ViewerStrings {
   static String spentOnDay(int amount) => 'Spent ${BuddyFormat.rupees(amount)} on this day';
   static const String noPlacesYet = 'No places on this day yet';
   static const String noRouteYet = 'No places to show on the map yet.';
+  static String mapSubtitle(String owner, int days, int spots) => [if (owner.isNotEmpty) sharedBy(owner), dayCount(days), if (spots > 0) places(spots)].join(' · ');
+  static String stopLine(int day, int stop, String? stay) => stay == null ? 'Day $day · Stop $stop' : 'Day $day · Stop $stop · About $stay here';
+  static const String noRoadLine = TripStringsCity.roadLineMissing;
 
   static const String joinedSection = 'JOINED';
   static String you(String name) => '$name (You)';

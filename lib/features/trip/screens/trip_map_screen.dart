@@ -672,9 +672,12 @@ class _TripMapScreenState extends State<TripMapScreen> with TickerProviderStateM
       lineCap: 'round',
       lineJoin: 'round',
       lineOpacity: hidden ? 0 : (selected ? (_lighterDays ? 0.6 : 1) : 0.25),
-      lineDasharray: _hasRoute[day] == true ? null : [2, 2],
+      lineDasharray: _hasRoute[day] == true ? null : _noRoadDots,
     );
   }
+
+  // No road line for this day: round dots with wide gaps (the old [2, 2] with round caps read as a solid road).
+  static const List<double> _noRoadDots = [0, 2.5];
 
   String _segId(int legIndex) => 'trip-seg-$legIndex';
 

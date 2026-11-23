@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../design/extra/trip_plan_look.dart';
+
 abstract final class ViewerLook {
   static const String automobileArt = 'assets/images/design/travel3d/automobile.png';
   static const Color ink = Color(0xFF17262A);
@@ -42,6 +44,11 @@ abstract final class ViewerLook {
   static const List<Color> dayColors = [dayIndigo, dayOrange, dayCyan];
 
   static Color dayColor(int indexInLeg) => dayColors[(indexInLeg - 1) % dayColors.length];
+
+  // Same route colours as the owner trip map (TripMapScreen._routeColors).
+  static const List<Color> routeColors = [TripLook.headerGlow, TripLook.mapRouteDay2, TripLook.dayCyan];
+
+  static Color routeColor(int day) => routeColors[(day - 1) % routeColors.length];
 
   static const List<BoxShadow> card = [BoxShadow(color: Color(0x383A5160), offset: Offset(1.1, 1.1), blurRadius: 10)];
   static const List<BoxShadow> tealStrip = [BoxShadow(color: Color(0x401FA396), offset: Offset(0, 6), blurRadius: 14)];

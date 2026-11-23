@@ -12,17 +12,28 @@ class ViewOnlyChip extends StatelessWidget {
   final String label;
 
   @override
-  Widget build(BuildContext context) => Container(
-        height: DS.s(30),
-        padding: DS.sym(h: 12),
-        decoration: BoxDecoration(color: DesignColors.surface.withValues(alpha: Alpha.v25), borderRadius: DS.circular(14)),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ExcludeSemantics(child: Image.asset(art, width: DS.s(18), height: DS.s(18), fit: BoxFit.contain)),
-            Gap.h(6),
-            Text(label, maxLines: 1, style: Ink3D.text(12, FontWeight.w700, DesignColors.onPrimary, letterSpacing: 0)),
-          ],
+  Widget build(BuildContext context) {
+    final iconOnly = MediaQuery.sizeOf(context).width < 360;
+    return Semantics(
+      label: label,
+      container: true,
+      child: ExcludeSemantics(
+        child: Container(
+          height: DS.s(30),
+          padding: DS.sym(h: iconOnly ? 8 : 12),
+          decoration: BoxDecoration(color: DesignColors.surface.withValues(alpha: Alpha.v25), borderRadius: DS.circular(14)),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Image.asset(art, width: DS.s(18), height: DS.s(18), fit: BoxFit.contain),
+              if (!iconOnly) ...[
+                Gap.h(6),
+                Text(label, maxLines: 1, style: Ink3D.text(12, FontWeight.w700, DesignColors.onPrimary, letterSpacing: 0)),
+              ],
+            ],
+          ),
         ),
-      );
+      ),
+    );
+  }
 }
