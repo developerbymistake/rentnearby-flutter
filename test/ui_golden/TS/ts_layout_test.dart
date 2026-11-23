@@ -20,7 +20,7 @@ import 'package:get/get.dart';
 import '../golden_support.dart';
 
 const _roles = [
-  RoleModel(key: UserRoleKeys.seeker, name: 'Seeker', description: 'Plan trips, find stays and book local taxis.', sortOrder: 1),
+  RoleModel(key: UserRoleKeys.seeker, name: 'Traveller', description: 'Plan trips, find stays and book local taxis.', sortOrder: 1),
   RoleModel(
       key: UserRoleKeys.stayOwner,
       name: 'Stay Owner',

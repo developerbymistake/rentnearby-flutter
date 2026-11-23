@@ -67,7 +67,7 @@ class RoleVisuals {
   static String displayName(String key) => switch (key) {
         UserRoleKeys.stayOwner => 'Stay Owner',
         UserRoleKeys.taxiDriver => 'Taxi Driver',
-        _ => 'Seeker',
+        _ => 'Traveller',
       };
 }
 

@@ -34,7 +34,7 @@ class _Auth extends AuthController {
   String? phoneSendResult;
   bool phoneVerifyOk = false;
   List<RoleModel> roles = const [
-    RoleModel(key: 'SEEKER', name: 'Seeker', description: 'Plan trips, find stays and taxis', sortOrder: 1),
+    RoleModel(key: 'SEEKER', name: 'Traveller', description: 'Plan trips, find stays and taxis', sortOrder: 1),
     RoleModel(key: 'STAY_OWNER', name: 'Stay Owner', description: 'List your stay', sortOrder: 2),
     RoleModel(key: 'TAXI_DRIVER', name: 'Taxi Driver', description: 'List your taxi', sortOrder: 3),
   ];
@@ -433,7 +433,7 @@ void main() {
         _user(role: UserRoleKeys.stayOwner),
         UserRoleKeys.stayOwner,
         const [
-          RoleModel(key: 'SEEKER', name: 'Seeker', description: 'Plan trips, find stays and taxis', sortOrder: 1),
+          RoleModel(key: 'SEEKER', name: 'Traveller', description: 'Plan trips, find stays and taxis', sortOrder: 1),
           RoleModel(key: 'TAXI_DRIVER', name: 'Taxi Driver', description: 'List your taxi', sortOrder: 3),
         ]
       ),
@@ -445,7 +445,7 @@ void main() {
       ),
       'rc_block': (_user(next: DateTime.now().add(const Duration(days: 3))), UserRoleKeys.seeker, null),
       'rc_err': (_user(), UserRoleKeys.seeker, const []),
-      'rc_none': (_user(), UserRoleKeys.seeker, const [RoleModel(key: 'SEEKER', name: 'Seeker', description: 'Plan trips, find stays and taxis', sortOrder: 1)]),
+      'rc_none': (_user(), UserRoleKeys.seeker, const [RoleModel(key: 'SEEKER', name: 'Traveller', description: 'Plan trips, find stays and taxis', sortOrder: 1)]),
     };
     for (final e in cases.entries) {
       testWidgets(e.key, (t) async {

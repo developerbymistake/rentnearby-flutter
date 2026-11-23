@@ -15,7 +15,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
       caption: '© 2026 Bakhli. All rights reserved.',
       sections: [
           _sp('Information We Collect', [
-            'Account details — your mobile number, your name and the role you choose in the app (Seeker, Stay Owner or Taxi Driver).',
+            'Account details — your mobile number, your name and the role you choose in the app (Traveller, Stay Owner or Taxi Driver).',
             'Location — your device\'s precise or approximate location, used while you use the app. Locations you set for a stay, a taxi route or a trip, or share with a report, may be stored.',
             'Photos and content — photos, descriptions and other content you upload for a stay, a taxi or a job post.',
             'Stay, taxi and job details — information you enter, such as prices, rules, vehicle details, routes and fares, and the contact numbers you add to a post.',

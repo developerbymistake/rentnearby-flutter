@@ -178,7 +178,7 @@ void main() {
         expect(identical(RoleCapabilities.of(key), RoleCapabilities.none), isTrue, reason: key);
         expect(RoleCapabilities.of(key).isOwner, isFalse, reason: key);
         expect(RoleCapabilities.of(key).deletionLine, isNull, reason: key);
-        expect(RoleVisuals.displayName(key), 'Seeker', reason: key);
+        expect(RoleVisuals.displayName(key), 'Traveller', reason: key);
         expect(RoleVisuals.displayName(key), RoleVisuals.displayName(UserRoleKeys.seeker), reason: key);
         expect(RoleVisuals.icon(key), RoleVisuals.icon(UserRoleKeys.seeker), reason: key);
         expect(UserRoleKeys.tabKeyOf(key), isNull, reason: key);

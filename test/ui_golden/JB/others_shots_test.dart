@@ -74,7 +74,7 @@ class _FakeAuth extends AuthController {
   Future<void> refreshProfile() async {}
   @override
   Future<List<RoleModel>> fetchRoles() async => [
-        RoleModel(key: 'SEEKER', name: 'Seeker', description: 'Plan trips and find stays', sortOrder: 1),
+        RoleModel(key: 'SEEKER', name: 'Traveller', description: 'Plan trips and find stays', sortOrder: 1),
         RoleModel(key: 'STAY_OWNER', name: 'Stay Owner', description: 'List your stay', sortOrder: 2),
         RoleModel(key: 'TAXI_DRIVER', name: 'Taxi Driver', description: 'Offer rides', sortOrder: 3),
       ];

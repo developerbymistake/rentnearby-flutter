@@ -458,7 +458,7 @@ class _PostJobScreenState extends State<PostJobScreen> {
       Padding(
         padding: EdgeInsets.fromLTRB(DS.s(24), DS.gv(18), DS.s(24), 0),
         child: Text(
-          'Your job goes live right after you post. Seekers call or WhatsApp you from the job.',
+          'Your job goes live right after you post. Job seekers call or WhatsApp you from the job.',
           style: Ink3D.text(12.5, FontWeight.w400, Ink3D.grey, letterSpacing: 0, height: 1.45),
         ),
       ),
