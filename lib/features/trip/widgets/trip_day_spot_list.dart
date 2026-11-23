@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:bakhli/design/design.dart';
 import 'package:bakhli/design/extra/trip_plan_look.dart';
 import 'trip_update_ask_sheet.dart';
@@ -514,6 +515,7 @@ class _DaySpotsState extends State<_DaySpots> with AutomaticKeepAliveClientMixin
       drag: _notifier,
       onRemove: widget.onRemove,
       onOpen: widget.editing ? widget.onOpen : null,
+      onMoveBy: _moveBy,
       onLift: _lift,
       onMove: _move,
       onRelease: _release,
@@ -637,6 +639,11 @@ class _DaySpotsState extends State<_DaySpots> with AutomaticKeepAliveClientMixin
     _commit(from, to);
   }
 
+  void _moveBy(String id, int delta) {
+    final i = _c.plan.value?.dayAt(widget.day)?.spots.indexWhere((s) => s.id == id) ?? -1;
+    if (i >= 0) _commit(i, i + delta);
+  }
+
   void _commit(int from, int to) {
     if (from == to) return;
     final c = _c;
@@ -702,6 +709,7 @@ class _StopItem extends StatelessWidget {
   final ValueListenable<TripDragState?> drag;
   final ValueChanged<String> onRemove;
   final ValueChanged<String>? onOpen;
+  final void Function(String id, int delta) onMoveBy;
   final TripDragCallback onLift;
   final TripDragCallback onMove;
   final TripDragCallback onRelease;
@@ -720,6 +728,7 @@ class _StopItem extends StatelessWidget {
     required this.drag,
     required this.onRemove,
     required this.onOpen,
+    required this.onMoveBy,
     required this.onLift,
     required this.onMove,
     required this.onRelease,
@@ -833,7 +842,10 @@ class _StopItem extends StatelessWidget {
                   top: 0,
                   bottom: 0,
                   width: DS.s(44, scaled: false),
-                  child: _dragStart(delayed: false, behavior: HitTestBehavior.translucent, child: const SizedBox.expand()),
+                  child: Semantics(
+                    label: TripStringsV2Plan.dragHandle,
+                    child: _dragStart(delayed: false, behavior: HitTestBehavior.translucent, child: const SizedBox.expand()),
+                  ),
                 ),
               ],
             )
@@ -862,6 +874,12 @@ class _StopItem extends StatelessWidget {
       ),
     );
     if (!editing) return body;
-    return _dragStart(delayed: true, child: body);
+    return Semantics(
+      customSemanticsActions: {
+        if (index > 0) const CustomSemanticsAction(label: TripStringsV2Plan.moveUp): () => onMoveBy(spot.id, -1),
+        if (showDrive) const CustomSemanticsAction(label: TripStringsV2Plan.moveDown): () => onMoveBy(spot.id, 1),
+      },
+      child: _dragStart(delayed: true, child: body),
+    );
   }
 }
