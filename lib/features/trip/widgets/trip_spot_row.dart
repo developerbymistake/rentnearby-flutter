@@ -2,10 +2,9 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:bakhli/design/design.dart';
 import 'package:bakhli/utils/spot_photo_url.dart';
-import '../models/trip_spot_category.dart';
 import '../models/trip_spot_model.dart';
 import '../trip_strings_spots_x.dart';
-import 'trip_spot_detail_sheet.dart';
+import 'trip_spot_card.dart';
 
 class TripSpotRow extends StatelessWidget {
   final TripSpotModel spot;
@@ -23,50 +22,17 @@ class TripSpotRow extends StatelessWidget {
   static const String details = 'Details';
 
   @override
-  Widget build(BuildContext context) {
-    final extra = spot.photos.length - 1;
-    final cat = TripSpotCategory.label(spot.category);
-    final off = locked && !selected;
-    void open() => TripSpotDetailSheet.show(context, spot: spot, selected: selected, locked: locked, onToggle: onToggle, cityKey: cityKey, version: version);
-    return WideCard(
-      tone: ListingTone.indigo,
-      kind: WideKind.photo,
-      photo: spot.hasPhoto
-          ? Stack(
-              fit: StackFit.expand,
-              children: [
-                TripSpotMedia(spot: spot, size: SpotPhotoSize.card),
-                if (extra > 0) Positioned(right: DS.s(12), top: DS.s(12), child: TripPhotoCount(count: extra)),
-              ],
-            )
-          : null,
-      sticker: TripSpotLook.assetOf(spot.category),
-      badge: spot.isFeatured ? '${TripStringsSpotsX.featured} · $cat' : cat,
-      tag: cat,
-      title: spot.title,
-      subtitle: subtitle ?? spot.description ?? '',
-      showPrice: false,
-      picked: selected,
-      dimmed: off || dimmed,
-      onTap: open,
-      actions: [
-        WideAction(icon: Icons.info_outline_rounded, label: details, onTap: open),
-        draft
-            ? WideAction(
-                icon: selected ? Icons.check_rounded : Icons.circle_outlined,
-                label: dimmed ? TripStringsSpotsX.addedWishlist : '',
-                selected: selected,
-                onTap: onToggle,
-              )
-            : WideAction(
-                icon: selected ? Icons.check_rounded : Icons.add_rounded,
-                label: selected ? TripStringsSpotsX.addedWishlist : TripStringsSpotsX.addWishlist,
-                selected: selected,
-                onTap: onToggle,
-              ),
-      ],
-    );
-  }
+  Widget build(BuildContext context) => TripSpotCard(
+        spot: spot,
+        selected: selected,
+        onToggle: onToggle,
+        locked: locked,
+        subtitle: subtitle,
+        dimmed: dimmed,
+        draft: draft,
+        cityKey: cityKey,
+        version: version,
+      );
 }
 
 class TripPhotoCount extends StatelessWidget {
