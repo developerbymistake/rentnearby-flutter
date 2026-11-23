@@ -206,8 +206,8 @@ role cannot open lands on the notifications screen instead (same guard in `notif
   `role_request_approved` push or hub event calls `forceLogout(reason: LogoutReason.roleChanged)`.
 - Gating (hide the entry point AND guard the choke point): Home banner shows both slides (Stay, Taxi) to a Seeker and only the
   own-kind slide to an owner; the Home leads tile (stays: My Stays, taxis: My Taxi) renders only for an
-  owner and only for the kind they list; `tour_registry.dart` skips
-  owner steps. All of these use the effective (role AND tab) getters, see "Tab gating".
+  owner and only for the kind they list. All of these use the effective (role AND tab) getters, see "Tab gating".
+- Coach-mark guide: only on the Trips tab of the seeker shell, 2 steps (Where to next?, Find a buddy; `tour_registry.dart` + `trips_tour_steps.dart`), once per install under key `tour_trips_seen_v1`; no guide on Home, Stays or any owner tab (guard `test/regression/guide_only_trips_guard_test.dart`).
 
 **Plans (replace the coin/credit economy, 2026-10-30)**: coins, the wallet and credit packs are gone. Owners (Stay, Taxi) have a free default plan per feature and may buy a paid plan (auto-renewing Google Play subscription, 1 / 3 / 12 month base plans); Seeker has no plans. Spec: `F:\Dhasu\PLAN_PAYMENT_MODEL.md` sections 19 and 22, contract `F:\Dhasu\PLAY_BILLING_CONTRACT.md`.
 
@@ -270,7 +270,7 @@ client snapshot: seeded from storage, fetched once in `onInit`, `ready` (splash 
 `isActiveForIndex` (Jobs needs JOBS and STAYS), `activeSectionKeys` for `/home/feed`. `AuthController` exposes
 effective capabilities `staysEnabled`/`taxisEnabled`/`jobsEnabled`/`effectiveIsOwner`
 (role AND tab) and `roleTabActive`; `postLoginRoute`, `canOpenRoute` (also checks `AppRoutes.tabKeyForRoute`), add
-flows, tiles, tours and my-list loads use them, raw `canListX` stay for role change and contact visibility.
+flows, tiles and my-list loads use them, raw `canListX` stay for role change and contact visibility.
 `StayTypesController` loads from `StayLandingController.refreshIfNeeded`.
 `MainScreen` has one `ever(version)` worker that leaves an inactive current tab for Home. The `ApiService` error
 interceptor calls `TabConfigController.load(forceRefresh: true)` on a 403 `TabInactive`. Deep links check the tab
