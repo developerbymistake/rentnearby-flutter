@@ -18,9 +18,10 @@ import 'package:bakhli/screens/profile_photo_screen.dart';
 import 'package:bakhli/screens/profile_screen.dart';
 import 'package:bakhli/utils/app_toast.dart';
 import 'package:bakhli/widgets/profile_photo_circle.dart';
+import 'package:dio/dio.dart' show DioException, DioExceptionType, RequestOptions, Response;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:get/get.dart';
+import 'package:get/get.dart' hide Response;
 
 import '../support/owner_fakes.dart';
 import '../support/real_phone.dart';
@@ -57,8 +58,15 @@ class _Auth extends AuthController {
   @override
   Future<void> logout() async => logouts++;
 
+  Map<String, dynamic>? serverUser;
+  int refreshes = 0;
+
   @override
-  Future<void> refreshProfile() async {}
+  Future<void> refreshProfile() async {
+    refreshes++;
+    final u = serverUser;
+    if (u != null) applyUser(UserModel.fromJson(u));
+  }
 
   @override
   Future<String?> saveName(String name) async {
@@ -79,6 +87,7 @@ class _Home extends TaxiDriverHomeController {
 class _Photo {
   final sent = <String>[];
   bool fail = false;
+  Object? error;
   bool offline = false;
   String? url = 'https://x/new.jpg';
   int picks = 0;
@@ -97,6 +106,8 @@ class _Photo {
           sent.add(path);
           final h = hold;
           if (h != null) return h.future;
+          final e = error;
+          if (e != null) throw e;
           if (fail) throw Exception('upload failed');
           return {
             'data': {'id': 'u1', 'phoneNumber': '9876543210', 'createdAt': '2026-11-22T10:00:00Z', 'roleConfirmed': true, 'name': 'Applied Name', 'profilePhotoUrl': url},
@@ -107,6 +118,14 @@ class _Photo {
 }
 
 late _Auth _auth;
+
+DioException _refused(int status) => DioException(
+      requestOptions: RequestOptions(path: ProfilePhotoController.path),
+      response: Response(requestOptions: RequestOptions(path: ProfilePhotoController.path), statusCode: status, data: const {}),
+    );
+
+DioException _timeout() =>
+    DioException(requestOptions: RequestOptions(path: ProfilePhotoController.path), type: DioExceptionType.sendTimeout);
 
 _Auth _setup({ShellKind kind = ShellKind.seeker, String? url, bool removed = false}) {
   Get.testMode = true;
@@ -258,6 +277,51 @@ void main() {
       expect(find.text('done page'), findsOneWidget);
     });
 
+    testWidgets('create ok + server refuses the file (415): the circle opens the picker again', (t) async {
+      _setup();
+      final p = _Photo()
+        ..error = _refused(415)
+        ..put();
+      await _openOnboarding(t);
+      await _tap(t, find.bySemanticsLabel(ProfilePhotoStrings.semProfilePhoto));
+      await t.enterText(find.byType(TextFormField), 'Rahul Mehra');
+      await _tap(t, find.text('Get Started'));
+      expect(p.sent, hasLength(1));
+      expect(find.byKey(ProfilePhotoCircle.retryKey), findsNothing);
+      await _drain(t);
+      await _tap(t, find.text(ProfilePhotoStrings.tryAgain));
+      expect(p.sent, hasLength(1));
+      expect(find.text(ProfilePhotoStrings.addTitle), findsOneWidget);
+      await _drain(t);
+      p.error = null;
+      await _tap(t, find.bySemanticsLabel(ProfilePhotoStrings.semProfilePhoto));
+      expect(p.picks, 2);
+      expect(p.sent, hasLength(1));
+      await _tap(t, find.text(ProfilePhotoStrings.tryAgain));
+      await t.pumpAndSettle();
+      expect(_auth.created, ['Rahul Mehra']);
+      expect(p.sent, hasLength(2));
+      expect(find.text('done page'), findsOneWidget);
+    });
+
+    testWidgets('create ok + time-out: the circle retries the same file (no picker)', (t) async {
+      _setup();
+      final p = _Photo()
+        ..error = _timeout()
+        ..put();
+      await _openOnboarding(t);
+      await _tap(t, find.bySemanticsLabel(ProfilePhotoStrings.semProfilePhoto));
+      await t.enterText(find.byType(TextFormField), 'Rahul Mehra');
+      await _tap(t, find.text('Get Started'));
+      expect(find.byKey(ProfilePhotoCircle.retryKey), findsOneWidget);
+      p.error = null;
+      await _tap(t, find.bySemanticsLabel(ProfilePhotoStrings.semRetryUpload));
+      await t.pumpAndSettle();
+      expect(p.picks, 1);
+      expect(p.sent, hasLength(2));
+      expect(find.text('done page'), findsOneWidget);
+    });
+
     testWidgets('create fails: no upload, still on the page', (t) async {
       _setup().createOk = false;
       final p = _Photo()..put();
@@ -351,6 +415,52 @@ void main() {
       expect(find.byType(ProfilePhotoScreen), findsOneWidget);
       await _tap(t, find.text(ProfilePhotoStrings.logOut));
       expect(_auth.logouts, 1);
+    });
+
+    testWidgets('after a failed upload a tap on the circle opens the picker; Continue is the retry', (t) async {
+      _setup(url: null);
+      final p = _Photo()
+        ..error = _timeout()
+        ..put();
+      await _openPage(t, () => const ProfilePhotoScreen());
+      await _tap(t, find.bySemanticsLabel(ProfilePhotoStrings.semProfilePhoto));
+      await _tap(t, find.text(ProfilePhotoStrings.continueLabel));
+      expect(p.sent, hasLength(1));
+      expect(find.bySemanticsLabel(ProfilePhotoStrings.semRetryUpload), findsNothing, reason: 'mock E5: no retry-only circle on the gate page');
+      await _drain(t);
+      await _tap(t, find.bySemanticsLabel(ProfilePhotoStrings.semProfilePhoto));
+      expect(p.picks, 2);
+      expect(p.sent, hasLength(1));
+      p.error = null;
+      await _tap(t, find.text(ProfilePhotoStrings.continueLabel));
+      await t.pumpAndSettle();
+      expect(p.sent, hasLength(2));
+      expect(find.text('done page'), findsOneWidget);
+    });
+
+    testWidgets('stored user without a picture but the server has one: leaves without an upload', (t) async {
+      _setup(url: null).serverUser = {
+        'id': 'u1',
+        'phoneNumber': '9876543210',
+        'createdAt': '2026-11-22T10:00:00Z',
+        'roleConfirmed': true,
+        'profilePhotoUrl': 'https://x/stored-on-server.jpg',
+      };
+      final p = _Photo()..put();
+      await _openPage(t, () => const ProfilePhotoScreen());
+      await t.pumpAndSettle();
+      expect(_auth.refreshes, 1);
+      expect(p.sent, isEmpty);
+      expect(find.text('done page'), findsOneWidget);
+    });
+
+    testWidgets('stored and server user without a picture: refresh runs once, page stays', (t) async {
+      _setup(url: null);
+      _Photo().put();
+      await _openPage(t, () => const ProfilePhotoScreen());
+      await t.pumpAndSettle();
+      expect(_auth.refreshes, 1);
+      expect(find.byType(ProfilePhotoScreen), findsOneWidget);
     });
 
     testWidgets('opened while a picture exists: leaves at once', (t) async {

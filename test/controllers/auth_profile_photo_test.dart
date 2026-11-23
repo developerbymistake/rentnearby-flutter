@@ -10,10 +10,12 @@ import 'package:bakhli/models/user_model.dart';
 import 'package:bakhli/services/api_service.dart';
 import 'package:bakhli/services/notification_service.dart';
 import 'package:bakhli/services/storage_service.dart';
+import 'package:bakhli/utils/app_toast.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:toastification/toastification.dart';
 import 'package:get/get.dart';
 
 import '../support/owner_fakes.dart';
@@ -69,10 +71,13 @@ Map<String, dynamic> _user({String id = 'u1', Object? url = 'absent', bool roleC
       'profilePhotoRemoved': removed,
     };
 
-Widget _app() => GetMaterialApp(
+Widget _app({List<String> extra = const [], bool toasts = false}) => GetMaterialApp(
+      builder: toasts
+          ? (context, c) => Stack(fit: StackFit.expand, children: [Positioned.fill(child: c!), Overlay(key: AppToast.overlayKey)])
+          : null,
       initialRoute: AppRoutes.main,
       getPages: [
-        for (final r in [AppRoutes.main, AppRoutes.login, AppRoutes.onboarding, AppRoutes.profilePhoto, AppRoutes.roleSelect])
+        for (final r in [AppRoutes.main, AppRoutes.login, AppRoutes.onboarding, AppRoutes.profilePhoto, AppRoutes.roleSelect, ...extra])
           GetPage(name: r, page: () => Scaffold(body: Text('page $r'))),
       ],
     );
@@ -84,6 +89,7 @@ void main() {
   });
 
   setUp(() {
+    toastification.managers.clear();
     Get.testMode = true;
     ApiService.init();
     Get.put<TabConfigController>(FakeTabs());
@@ -152,6 +158,21 @@ void main() {
       });
     }
 
+    for (final changeNumber in [AppRoutes.phoneVerify, AppRoutes.otp]) {
+      testWidgets('interrupts the in-session change-number page $changeNumber', (t) async {
+        await StorageService.saveToken(_token(UserRoleKeys.seeker));
+        final a = Get.put<AuthController>(AuthController());
+        a.user.value = UserModel.fromJson(_user(url: 'https://x/a.jpg'));
+        await t.pumpWidget(_app(extra: [changeNumber]));
+        await t.pumpAndSettle();
+        Get.toNamed(changeNumber);
+        await t.pumpAndSettle();
+        a.user.value = UserModel.fromJson(_user(url: null, removed: true));
+        await t.pumpAndSettle();
+        expect(Get.currentRoute, AppRoutes.profilePhoto);
+      });
+    }
+
     testWidgets('logged out or unknown picture never navigates', (t) async {
       final a = Get.put<AuthController>(AuthController());
       await t.pumpWidget(_app());
@@ -187,6 +208,24 @@ void main() {
       expect(a.isLoading.value, isFalse);
     });
 
+    testWidgets('PhoneExists (account created, answer lost) sends the user to login with the server message', (t) async {
+      await t.pumpWidget(_app(toasts: true));
+      await t.pumpAndSettle();
+      Get.offAllNamed(AppRoutes.onboarding);
+      await t.pumpAndSettle();
+      final a = Get.put<AuthController>(_Quiet());
+      ApiService.dio.httpClientAdapter = _Adapter(409, {
+        'error': {'type': 'PhoneExists', 'message': 'This phone number is already registered. Please sign in.'},
+      });
+      expect(await t.runAsync(() => a.createOnboardingAccount(phone: '9876543210', name: 'Rahul')), isFalse);
+      await t.pumpAndSettle();
+      expect(Get.currentRoute, AppRoutes.login);
+      await t.pump(const Duration(milliseconds: 600));
+      expect(find.text('This phone number is already registered. Please sign in.'), findsOneWidget);
+      expect(a.isLoading.value, isFalse);
+      await t.pump(const Duration(seconds: 5));
+    });
+
     testWidgets('OtpRequired sends the user back to login', (t) async {
       await t.pumpWidget(_app());
       await t.pumpAndSettle();
@@ -209,8 +248,8 @@ void main() {
       Get.offAllNamed(AppRoutes.onboarding);
       await t.pumpAndSettle();
       final a = Get.put<AuthController>(_Quiet());
-      ApiService.dio.httpClientAdapter = _Adapter(409, {
-        'error': {'type': 'PhoneExists', 'message': 'This phone number is not available.'},
+      ApiService.dio.httpClientAdapter = _Adapter(400, {
+        'error': {'type': 'Validation', 'message': 'Name is too short.'},
       });
       expect(await t.runAsync(() => a.createOnboardingAccount(phone: '9876543210', name: 'Rahul')), isFalse);
       await t.pumpAndSettle();

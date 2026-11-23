@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:dio/dio.dart' show FormData;
+import 'package:dio/dio.dart' show DioException, FormData;
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart' hide FormData;
 
@@ -11,6 +11,7 @@ import '../models/user_model.dart';
 import '../services/api_service.dart';
 import '../utils/app_toast.dart';
 import '../utils/photo_upload/app_photo_pick.dart';
+import '../utils/photo_upload/photo_pick_strings.dart';
 import '../utils/photo_upload/profile_photo_pick.dart';
 import 'auth_controller.dart';
 
@@ -24,8 +25,13 @@ class ProfilePhotoController extends GetxController {
         _send = send ?? _put,
         _offline = offline ?? _connectivityOffline;
 
-  static ProfilePhotoController ensure() =>
-      Get.isRegistered<ProfilePhotoController>() ? Get.find<ProfilePhotoController>() : Get.put(ProfilePhotoController());
+  @visibleForTesting
+  static ProfilePhotoController Function() create = ProfilePhotoController.new;
+
+  // Session-scoped: a route-bound instance is closed when offAllNamed disposes its first route.
+  static ProfilePhotoController ensure() => Get.isRegistered<ProfilePhotoController>()
+      ? Get.find<ProfilePhotoController>()
+      : Get.put(create(), permanent: true);
 
   static const String path = '/users/me/photo';
 
@@ -74,6 +80,10 @@ class ProfilePhotoController extends GetxController {
   Future<bool> upload() async {
     final file = localPath.value;
     if (file == null || busy.value || isClosed) return false;
+    if (!File(file).existsSync()) {
+      _forget(PhotoPickStrings.pickFailed);
+      return false;
+    }
     final auth = Get.find<AuthController>();
     final userId = auth.user.value?.id;
     final my = ++_seq;
@@ -96,8 +106,14 @@ class ProfilePhotoController extends GetxController {
       localPath.value = null;
       progress.value = 1;
       return true;
-    } catch (_) {
-      if (my == _seq) failed.value = true;
+    } catch (e) {
+      if (my != _seq) return false;
+      final refused = _refusal(e);
+      if (refused != null) {
+        _forget(refused);
+      } else {
+        failed.value = true;
+      }
       return false;
     } finally {
       if (my == _seq) busy.value = false;
@@ -105,6 +121,24 @@ class ProfilePhotoController extends GetxController {
   }
 
   Future<bool> retry() => upload();
+
+  // The file cannot be sent again (gone or refused by the server): back to the picker.
+  void _forget(String message) {
+    _dropTemp(localPath.value);
+    localPath.value = null;
+    failed.value = false;
+    AppToast.error(message);
+  }
+
+  static String? _refusal(Object e) {
+    if (e is! DioException) return null;
+    final status = e.response?.statusCode;
+    if (status != 400 && status != 413 && status != 415) return null;
+    final data = e.response?.data;
+    final message = data is Map ? (data['error'] is Map ? data['error']['message'] : null) : null;
+    if (message is String && message.isNotEmpty) return message;
+    return status == 413 ? PhotoPickStrings.tooLarge : PhotoPickStrings.wrongType;
+  }
 
   Future<void> change(BuildContext context) async {
     if (!await choose(context)) return;

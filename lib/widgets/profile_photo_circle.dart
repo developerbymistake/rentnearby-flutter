@@ -161,11 +161,13 @@ class ProfileRoundButton extends StatelessWidget {
 
 // Onboarding and gate page: circle 96 + label + helper (or the upload error line). Tap = [onTap].
 class ProfilePhotoBlock extends StatelessWidget {
-  const ProfilePhotoBlock({super.key, required this.controller, required this.bad, required this.onTap});
+  const ProfilePhotoBlock({super.key, required this.controller, required this.bad, required this.onTap, this.tapRetries = true});
 
   final ProfilePhotoController controller;
   final bool bad;
   final VoidCallback onTap;
+  // False: a tap after a failed upload opens the picker (gate page), so the circle keeps its camera badge.
+  final bool tapRetries;
 
   static final ListingTone _tone = ListingTone.indigo;
 
@@ -188,7 +190,7 @@ class ProfilePhotoBlock extends StatelessWidget {
             child: Semantics(
               button: true,
               enabled: !busy,
-              label: failed ? ProfilePhotoStrings.semRetryUpload : ProfilePhotoStrings.semProfilePhoto,
+              label: failed && tapRetries ? ProfilePhotoStrings.semRetryUpload : ProfilePhotoStrings.semProfilePhoto,
               excludeSemantics: true,
               child: GestureDetector(
                 behavior: HitTestBehavior.opaque,
@@ -211,7 +213,7 @@ class ProfilePhotoBlock extends StatelessWidget {
                           fallback: _fallback(ringBad),
                         ),
                       ),
-                      if (!busy && !failed)
+                      if (!busy && !(failed && tapRetries))
                         Positioned(right: -DS.s(2), bottom: -DS.s(2), child: ProfileRoundButton(icon: Icons.photo_camera_rounded, color: _tone.g2)),
                     ],
                   ),

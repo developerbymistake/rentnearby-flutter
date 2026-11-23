@@ -26,9 +26,7 @@ class _ProfilePhotoScreenState extends State<ProfilePhotoScreen> with TickerProv
   @override
   void initState() {
     super.initState();
-    if (_auth.user.value?.profilePhotoUrl != null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => _leaveIfStillSet());
-    }
+    WidgetsBinding.instance.addPostFrameCallback((_) => _leaveIfStillSet());
   }
 
   // The stored user may be stale (admin removed the picture): decide on a fresh profile.
@@ -36,7 +34,7 @@ class _ProfilePhotoScreenState extends State<ProfilePhotoScreen> with TickerProv
     try {
       await _auth.refreshProfile();
     } catch (_) {}
-    if (!mounted) return;
+    if (!mounted || _photo.busy.value) return;
     if (_auth.user.value?.profilePhotoUrl != null) {
       Get.offAllNamed(_auth.postLoginRoute);
     } else {
@@ -61,10 +59,6 @@ class _ProfilePhotoScreenState extends State<ProfilePhotoScreen> with TickerProv
   }
 
   Future<void> _pickPhoto() async {
-    if (_photo.failed.value && _photo.localPath.value != null) {
-      await _continue();
-      return;
-    }
     if (await _photo.choose(context) && mounted) setState(() => _photoBad = false);
   }
 
@@ -102,7 +96,7 @@ class _ProfilePhotoScreenState extends State<ProfilePhotoScreen> with TickerProv
           animationController: _enter,
           child: AuthCard(
             children: [
-              ProfilePhotoBlock(controller: _photo, bad: _photoBad, onTap: _pickPhoto),
+              ProfilePhotoBlock(controller: _photo, bad: _photoBad, onTap: _pickPhoto, tapRetries: false),
               Gap.v(20),
               Obx(() => ProfilePhotoSubmitButton(
                     tone: _tone,

@@ -78,13 +78,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
 
   Future<void> _submitOnce() async {
     FocusScope.of(context).unfocus();
-    if (_created) {
-      if (await _photo.online()) await _upload();
-      return;
-    }
     if (_photo.localPath.value == null) {
       setState(() => _photoBad = true);
       AppToast.error(ProfilePhotoStrings.addTitle);
+      return;
+    }
+    if (_created) {
+      if (await _photo.online()) await _upload();
       return;
     }
     final name = _nameCtrl.text.trim();

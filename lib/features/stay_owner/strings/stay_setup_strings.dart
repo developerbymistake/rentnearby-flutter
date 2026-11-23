@@ -1,3 +1,5 @@
+import '../../../utils/photo_upload/photo_pick_strings.dart';
+
 abstract final class StaySetupStrings {
   static const hubTitle = 'Set up your stay';
   static const hubEyebrow = 'Your stay';
@@ -44,10 +46,10 @@ abstract final class StaySetupStrings {
   static String photoMeter(int used, int limit) => '$used of $limit';
   static const cover = 'Cover';
   static const addPhoto = 'Add photo';
-  static const photoTooLarge = 'Photo is too large. Use one under 10 MB.';
-  static const photoWrongType = 'Use a JPG, PNG or WebP photo.';
+  static const photoTooLarge = PhotoPickStrings.tooLarge;
+  static const photoWrongType = PhotoPickStrings.wrongType;
   static const photoUploadFailed = 'Upload failed. Try again.';
-  static const photoPickFailed = 'Could not open your photos. Try again.';
+  static const photoPickFailed = PhotoPickStrings.pickFailed;
   static const keepOnePhoto = 'Keep at least one photo.';
 
   static const noConnection = 'No connection. Please try again.';

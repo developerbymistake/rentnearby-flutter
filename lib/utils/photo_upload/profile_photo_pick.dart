@@ -6,9 +6,9 @@ import 'package:permission_handler/permission_handler.dart';
 
 import '../../design/design.dart';
 import '../../design/extra/ext_taxi_owner.dart';
-import '../../features/stay_owner/strings/stay_setup_strings.dart';
 import '../app_toast.dart';
 import 'app_photo_pick.dart';
+import 'photo_pick_strings.dart';
 import 'profile_photo_crop.dart';
 
 abstract final class ProfilePhotoPick {
@@ -20,13 +20,13 @@ abstract final class ProfilePhotoPick {
       builder: (sheetCtx) => Sheet3D(
         tone: tone,
         art: ListingArt.camera,
-        title: 'Add Photo',
-        subtitle: 'Camera or Gallery',
+        title: PhotoPickStrings.sheetTitle,
+        subtitle: PhotoPickStrings.sheetSubtitle,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            SheetOptionCard(tone: tone, art: ListingArt.camera, title: 'Take Photo', subtitle: 'Use camera to capture now', onTap: () => Navigator.pop(sheetCtx, ImageSource.camera)),
-            SheetOptionCard(tone: tone, art: ListingArt.sunrise, title: 'Choose from Gallery', subtitle: 'Pick existing photos', onTap: () => Navigator.pop(sheetCtx, ImageSource.gallery)),
+            SheetOptionCard(tone: tone, art: ListingArt.camera, title: PhotoPickStrings.cameraTitle, subtitle: PhotoPickStrings.cameraSubtitle, onTap: () => Navigator.pop(sheetCtx, ImageSource.camera)),
+            SheetOptionCard(tone: tone, art: ListingArt.sunrise, title: PhotoPickStrings.galleryTitle, subtitle: PhotoPickStrings.gallerySubtitle, onTap: () => Navigator.pop(sheetCtx, ImageSource.gallery)),
             Gap.v(8),
           ],
         ),
@@ -36,11 +36,11 @@ abstract final class ProfilePhotoPick {
     if (source == ImageSource.camera) {
       final status = await Permission.camera.request();
       if (!status.isGranted) {
-        if (status.isPermanentlyDenied && context.mounted) await _showPermissionDeniedDialog(context, 'Camera');
+        if (status.isPermanentlyDenied && context.mounted) await _showPermissionDeniedDialog(context, PhotoPickStrings.camera);
         return null;
       }
     }
-    final picked = await AppPhotoPick.pickOne(source, onFailed: () => AppToast.error(StaySetupStrings.photoPickFailed));
+    final picked = await AppPhotoPick.pickOne(source, onFailed: () => AppToast.error(PhotoPickStrings.pickFailed));
     if (picked == null) return null;
     File? cropped;
     try {
@@ -52,7 +52,7 @@ abstract final class ProfilePhotoPick {
     final reject = await AppPhotoPick.accept(cropped);
     if (reject != null) {
       await _drop(cropped);
-      AppToast.error(reject == PhotoReject.tooLarge ? StaySetupStrings.photoTooLarge : StaySetupStrings.photoWrongType);
+      AppToast.error(reject == PhotoReject.tooLarge ? PhotoPickStrings.tooLarge : PhotoPickStrings.wrongType);
       return null;
     }
     return cropped;
@@ -68,10 +68,10 @@ abstract final class ProfilePhotoPick {
     final ok = await showTaxiOwnerDialog(
       context,
       art: ListingArt.camera,
-      title: '$type Permission Required',
-      body: 'Please enable $type access in your device Settings to add photos.',
-      cancelLabel: 'Cancel',
-      confirmLabel: 'Open Settings',
+      title: PhotoPickStrings.permissionTitle(type),
+      body: PhotoPickStrings.permissionBody(type),
+      cancelLabel: PhotoPickStrings.permissionCancel,
+      confirmLabel: PhotoPickStrings.permissionOpenSettings,
     );
     if (ok == true) openAppSettings();
   }

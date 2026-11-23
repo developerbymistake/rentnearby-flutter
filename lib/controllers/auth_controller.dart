@@ -17,6 +17,7 @@ import '../config/user_roles.dart';
 import 'tab_config_controller.dart';
 import 'home_controller.dart';
 import 'location_controller.dart';
+import 'profile_photo_controller.dart';
 import '../utils/account_delete_message.dart';
 import '../utils/app_toast.dart';
 import '../utils/jwt_claims.dart';
@@ -251,8 +252,6 @@ class AuthController extends GetxController {
   static const Set<String> _photoGateQuiet = {
     AppRoutes.splash,
     AppRoutes.login,
-    AppRoutes.phoneVerify,
-    AppRoutes.otp,
     AppRoutes.onboarding,
     AppRoutes.profilePhoto,
   };
@@ -326,8 +325,11 @@ class AuthController extends GetxController {
       await _saveSession(res['data'] as Map<String, dynamic>);
       return true;
     } catch (e) {
-      if (_errorType(e) == otpRequiredType) {
-        AppToast.error(_errorMessage(e) ?? 'Please verify your phone number again.');
+      final type = _errorType(e);
+      if (type == otpRequiredType || type == phoneExistsType) {
+        AppToast.error(type == otpRequiredType
+            ? _errorMessage(e) ?? 'Please verify your phone number again.'
+            : _onboardingError(e));
         Get.offAllNamed(AppRoutes.login);
         return false;
       }
@@ -339,6 +341,7 @@ class AuthController extends GetxController {
   }
 
   static const String otpRequiredType = 'OtpRequired';
+  static const String phoneExistsType = 'PhoneExists';
 
   // ── Phone Verification (profile — change number) ──────────────────────────
 
@@ -490,6 +493,7 @@ class AuthController extends GetxController {
     // state, without having to remember to hand-add a reset call per controller.
     // The stay and taxi setup hubs register LocationController as permanent.
     if (Get.isRegistered<LocationController>()) Get.delete<LocationController>(force: true);
+    if (Get.isRegistered<ProfilePhotoController>()) Get.delete<ProfilePhotoController>(force: true);
     PlanBindings.dispose();
     Get.deleteAll();
   }
