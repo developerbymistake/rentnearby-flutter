@@ -168,6 +168,7 @@ void main() {
   test('the app copy equals the source vector file', () {
     final src = File(_source);
     if (!src.existsSync()) return;
-    expect(File(_copy).readAsBytesSync(), src.readAsBytesSync());
+    String norm(File f) => f.readAsStringSync().replaceAll('\r\n', '\n');
+    expect(norm(File(_copy)), norm(src));
   });
 }
