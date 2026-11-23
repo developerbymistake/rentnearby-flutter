@@ -85,6 +85,7 @@ class DriverRequestsStrings {
         OfferState.confirmed => isEndedBooking(o) ? TripStringsTaxiDriver.stateClosed : TripStringsTaxiDriver.stateBooked,
         OfferState.missed => TripStringsTaxiDriver.stateMissed,
         OfferState.notSelected => TripStringsTaxiDriver.stateNotSelected,
+        OfferState.declined => youDeclined,
         OfferState.ringing || OfferState.selected => null,
         _ => TripStringsTaxiDriver.stateClosed,
       };

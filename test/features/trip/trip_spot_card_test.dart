@@ -120,7 +120,7 @@ void main() {
       final arts = t.widgetList<Art3D>(find.descendant(of: find.byType(TripSpotCard), matching: find.byType(Art3D))).toList();
       expect(arts.map((a) => a.size), [104]);
       final card = t.getTopLeft(find.byType(TripSpotCard));
-      expect(t.getTopLeft(find.text('LAKE')).dx - card.dx, closeTo(DS.s(14) + DS.s(16), 0.5));
+      expect(t.getTopLeft(find.text('LAKE')).dx - card.dx, closeTo(DS.s(14) + DS.s(18), 0.5));
     });
 
     testWidgets('photo card: sticker 72 and title indented past it', (t) async {
@@ -128,7 +128,7 @@ void main() {
       final arts = t.widgetList<Art3D>(find.descendant(of: find.byType(TripSpotCard), matching: find.byType(Art3D))).toList();
       expect(arts.map((a) => a.size), [72]);
       final card = t.getTopLeft(find.byType(TripSpotCard));
-      expect(t.getTopLeft(find.text('LAKE')).dx - card.dx, closeTo(DS.s(14) + DS.s(96), 0.5));
+      expect(t.getTopLeft(find.text('LAKE')).dx - card.dx, closeTo(DS.s(14) + DS.s(100), 0.5));
     });
 
     testWidgets('S4 locked: faded 0.6, pill still calls onToggle, Details still opens', (t) async {
@@ -186,7 +186,29 @@ void main() {
       expect(t.getSize(details).height, greaterThanOrEqualTo(DS.s(KitMetrics.touch)));
       final pill = find.ancestor(of: find.byType(GradientPillButton), matching: find.byType(ConstrainedBox)).first;
       expect(t.getSize(pill).height, greaterThanOrEqualTo(DS.s(KitMetrics.touch)));
-      expect(t.getSize(find.byType(GradientPillButton)).height, DS.s(38));
+      expect(t.getSize(find.byType(GradientPillButton)).height, DS.s(KitMetrics.touch));
+    });
+
+    testWidgets('Proposal B: photo 180, Details outline pill 44, 16 below the pill, 16 gap after the card', (t) async {
+      await _host(t, TripSpotRow(spot: _spot(), selected: false, onToggle: () {}));
+      final media = find.descendant(of: find.byType(TripSpotCard), matching: find.byWidgetPredicate((w) => w is SizedBox && w.height == TripSpotCard.mediaHeight));
+      expect(media, findsOneWidget);
+      expect(TripSpotCard.mediaHeight, DS.s(180));
+      final details = find.ancestor(of: find.text(TripSpotRow.details), matching: find.byType(Container)).first;
+      expect(t.getSize(details).height, DS.s(KitMetrics.touch));
+      final deco = t.widget<Container>(details).decoration! as BoxDecoration;
+      expect(deco.border, isNotNull);
+      final pill = t.getRect(find.byType(GradientPillButton));
+      final box = t.getRect(find.descendant(of: find.byType(TripSpotCard), matching: find.byWidgetPredicate((w) => w is Container && w.decoration is BoxDecoration && (w.decoration! as BoxDecoration).boxShadow != null)).first);
+      expect(box.bottom - pill.bottom, closeTo(DS.s(16), 0.5));
+      final card = t.getRect(find.byType(TripSpotCard));
+      expect(card.bottom - box.bottom, closeTo(DS.gv(16), 0.5));
+    });
+
+    testWidgets('Added soft pill is 44 high', (t) async {
+      await _host(t, TripSpotRow(spot: _spot(), selected: true, onToggle: () {}));
+      final soft = find.ancestor(of: find.text(TripStringsSpotsX.addedToTrip), matching: find.byType(SizedBox)).first;
+      expect(t.getSize(soft).height, DS.s(KitMetrics.touch));
     });
 
     testWidgets('semantics: Details button and Add to trip button', (t) async {
@@ -246,10 +268,10 @@ void main() {
           );
           expect(t.takeException(), isNull);
           expect(find.text(TripStringsSpotsX.addToTrip), findsOneWidget);
-          expect(t.getSize(find.byType(GradientPillButton)).height, DS.s(38));
+          expect(t.getSize(find.byType(GradientPillButton)).height, DS.s(KitMetrics.touch));
           final pill = t.getRect(find.byType(GradientPillButton));
           final card = t.getRect(find.byType(TripSpotCard).first);
-          expect(pill.right, lessThanOrEqualTo(card.right - DS.s(14) - DS.s(16) + 0.5));
+          expect(pill.right, lessThanOrEqualTo(card.right - DS.s(14) - DS.s(18) + 0.5));
         });
       }
     }
@@ -260,7 +282,7 @@ void main() {
       final pill = t.getRect(find.byType(GradientPillButton));
       if (DS.size == 1.0) expect(pill.top, greaterThan(details.bottom));
       final card = t.getRect(find.byType(TripSpotCard));
-      expect(pill.right, closeTo(card.right - DS.s(14) - DS.s(16), 0.5));
+      expect(pill.right, closeTo(card.right - DS.s(14) - DS.s(18), 0.5));
       final fitted = t.widget<FittedBox>(find.descendant(of: find.byType(GradientPillButton), matching: find.byType(FittedBox)));
       expect(fitted.fit, BoxFit.scaleDown);
       final row = find.descendant(of: find.byType(FittedBox), matching: find.byType(Row)).first;
@@ -276,11 +298,11 @@ void main() {
   });
 
   group('skeleton', () {
-    testWidgets('media 132 placeholder and pill placeholder', (t) async {
+    testWidgets('media 180 placeholder and 44 pill placeholder', (t) async {
       await _host(t, const TripSpotCardSkeleton());
       final ph = t.widgetList<TemplatePlaceholder>(find.byType(TemplatePlaceholder)).toList();
-      expect(ph.first.height, DS.s(132));
-      expect(ph.last.height, DS.s(38));
+      expect(ph.first.height, DS.s(180));
+      expect(ph.last.height, DS.s(KitMetrics.touch));
       expect(t.takeException(), isNull);
     });
   });
@@ -317,6 +339,32 @@ void main() {
       expect(art.size, 44);
       expect(art.asset, TripSpotLook.assetOf('temple'));
       expect(find.text('about 1 km away'), findsOneWidget);
+    });
+
+    testWidgets('mock S5: thumb 54 r14, name and distance roles, Add tap area 44, card radius 20', (t) async {
+      await _host(t, sug());
+      await t.pump(const Duration(milliseconds: 800));
+      final thumb = find.descendant(of: find.byType(TripSuggestionCard), matching: find.byType(ClipRRect)).first;
+      expect(t.getSize(thumb), Size(DS.s(54), DS.s(54)));
+      expect(t.widget<ClipRRect>(thumb).borderRadius, DS.circular(14));
+      final name = t.widget<Text>(find.text('Mall Road Ridge'));
+      expect(name.style!.fontSize, DS.f(13));
+      expect(name.style!.fontWeight, FontWeight.w600);
+      final away = t.widget<Text>(find.text('20 min away'));
+      expect(away.style!.fontSize, DS.f(12.5));
+      expect(t.getSize(find.byType(GradientPillButton)).height, DS.s(34));
+      final hit = find.ancestor(of: find.byType(GradientPillButton), matching: find.byType(ConstrainedBox)).first;
+      expect(t.getSize(hit).height, greaterThanOrEqualTo(DS.s(KitMetrics.touch)));
+      final box = t.widget<DecoratedBox>(find.descendant(of: find.byType(TripSuggestionCard), matching: find.byType(DecoratedBox)).first);
+      expect((box.decoration as BoxDecoration).borderRadius, DS.circular(20));
+    });
+
+    testWidgets('sits right under the added card: gap 20 like the mock', (t) async {
+      await _host(t, Column(children: [TripSpotRow(spot: _spot(photos: 3), selected: true, onToggle: () {}), sug()]));
+      await t.pump(const Duration(milliseconds: 800));
+      final card = t.getRect(find.descendant(of: find.byType(TripSpotCard), matching: find.byWidgetPredicate((w) => w is Container && w.foregroundDecoration != null)).first);
+      final box = t.getRect(find.descendant(of: find.byType(TripSuggestionCard), matching: find.byType(DecoratedBox)).first);
+      expect(box.top - card.bottom, closeTo(DS.gv(16) + DS.gv(4), 0.5));
     });
 
     testWidgets('dismiss target is at least 44 dp', (t) async {

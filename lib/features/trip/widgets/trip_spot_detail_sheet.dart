@@ -51,27 +51,37 @@ class TripSpotDetailSheet extends StatefulWidget {
     bool showAction = true,
     bool revalidate = false,
   }) {
+    final gap = topGap(MediaQuery.of(context));
     return showDockSheet<void>(
       context,
       backgroundColor: DesignColors.surface,
       barrierColor: DesignColors.scrim,
       elevation: 0,
       shape: RoundedRectangleBorder(borderRadius: DS.br(CardRadius.sheet)),
-      builder: (_) => SafeArea(
-        bottom: false,
-        child: TripSpotDetailSheet(
-          spot: spot,
-          selected: selected,
-          locked: locked,
-          onToggle: onToggle,
-          cityKey: cityKey,
-          version: version,
-          partial: partial,
-          showAction: showAction,
-          revalidate: revalidate,
+      builder: (_) => LayoutBuilder(
+        builder: (_, c) => SizedBox(
+          height: math.max(0, c.maxHeight - gap),
+          child: TripSpotDetailSheet(
+            spot: spot,
+            selected: selected,
+            locked: locked,
+            onToggle: onToggle,
+            cityKey: cityKey,
+            version: version,
+            partial: partial,
+            showAction: showAction,
+            revalidate: revalidate,
+          ),
         ),
       ),
     );
+  }
+
+  static const double heightShare = 0.92;
+
+  static double topGap(MediaQueryData mq) {
+    final top = mq.padding.top;
+    return top + (mq.size.height - top) * (1 - heightShare);
   }
 
   static double heroHeight(double width) => math.max(DS.s(200), math.min(DS.s(248), width * 0.62));
@@ -206,7 +216,6 @@ class _TripSpotDetailSheetState extends State<TripSpotDetailSheet>
     final hasDescription = description != null && description.isNotEmpty;
     final showGallery = _showGallery;
     final count = 2 + (hasDescription ? 1 : 0) + (showGallery ? 1 : 0) + (widget.showAction ? 1 : 0);
-    var slot = 1;
     Widget wrap(int i, Widget child) => TemplateEntrance(
       animation: templateInterval(_enter, i, count),
       animationController: _enter,
@@ -216,7 +225,9 @@ class _TripSpotDetailSheetState extends State<TripSpotDetailSheet>
       top: false,
       child: LayoutBuilder(builder: (context, c) {
         final heroH = TripSpotDetailSheet.heroHeight(c.maxWidth.isFinite ? c.maxWidth : MediaQuery.sizeOf(context).width);
-        return SingleChildScrollView(
+        final scroll = LayoutBuilder(builder: (context, v) {
+          var slot = 1;
+          return SingleChildScrollView(
           child: Stack(
             children: [
               Positioned(
@@ -305,6 +316,7 @@ class _TripSpotDetailSheetState extends State<TripSpotDetailSheet>
                 padding: EdgeInsets.only(top: heroH - _overlap),
                 child: Container(
                   width: double.infinity,
+                  constraints: BoxConstraints(minHeight: v.maxHeight.isFinite ? math.max(0, v.maxHeight - heroH + _overlap) : 0),
                   decoration: BoxDecoration(
                     color: DesignColors.surface,
                     borderRadius: DS.br(CardRadius.sheet),
@@ -369,10 +381,6 @@ class _TripSpotDetailSheetState extends State<TripSpotDetailSheet>
                           ),
                         ),
                       ],
-                      if (widget.showAction) ...[
-                        Gap.v(16),
-                        wrap(slot++, _action()),
-                      ],
                     ],
                   ),
                 ),
@@ -380,6 +388,20 @@ class _TripSpotDetailSheetState extends State<TripSpotDetailSheet>
               Positioned(top: DS.s(12), right: DS.s(12), child: const SheetCloseButton()),
             ],
           ),
+        );
+        });
+        if (!widget.showAction) return scroll;
+        return Column(
+          children: [
+            Expanded(child: scroll),
+            ColoredBox(
+              color: DesignColors.surface,
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(DS.s(20), DS.gv(12), DS.s(20), DS.gv(16)),
+                child: wrap(count - 1, _action()),
+              ),
+            ),
+          ],
         );
       }),
     );

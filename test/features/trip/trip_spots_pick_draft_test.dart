@@ -80,6 +80,10 @@ Future<Future<Object?>> _open(WidgetTester t, {Size size = phoneSize, Map<String
 }
 
 Future<void> _tapPlus(WidgetTester t, int i) async {
+  for (var n = 0; n < 10 && find.byIcon(Icons.circle_outlined).evaluate().length <= i; n++) {
+    await t.drag(find.byType(ListView).first, const Offset(0, -200));
+    await t.pump();
+  }
   final f = find.byIcon(Icons.circle_outlined).at(i);
   await t.ensureVisible(f);
   await t.pump();

@@ -10,9 +10,11 @@ import 'trip_spot_row.dart';
 final _tone = ListingTone.indigo;
 const double _pillFont = 14;
 
+const double _padX = 18;
+
 double _side() => DS.s(14);
 
-EdgeInsets _outer() => EdgeInsets.fromLTRB(_side(), DS.s(28), _side(), DS.gv(8));
+EdgeInsets _outer() => EdgeInsets.fromLTRB(_side(), DS.s(28), _side(), DS.gv(16));
 
 class TripSpotCard extends StatelessWidget {
   final TripSpotModel spot;
@@ -27,7 +29,7 @@ class TripSpotCard extends StatelessWidget {
 
   const TripSpotCard({super.key, required this.spot, required this.selected, this.onToggle, this.locked = false, this.subtitle, this.dimmed = false, this.draft = false, this.cityKey, this.version});
 
-  static double get mediaHeight => DS.s(132);
+  static double get mediaHeight => DS.s(180);
 
   @override
   Widget build(BuildContext context) {
@@ -46,8 +48,8 @@ class TripSpotCard extends StatelessWidget {
     final narrow = MediaQuery.sizeOf(context).width < Form3D.narrow;
     final photo = spot.hasPhoto;
     final art = TripSpotLook.assetOf(spot.category);
-    final headLeft = DS.s(photo ? 96 : 16);
-    final titleW = cardW - headLeft - DS.s(16);
+    final headLeft = DS.s(photo ? 100 : _padX);
+    final titleW = cardW - headLeft - DS.s(_padX);
     final titleStyle = KitText.wholeWords(spot.title, Ink3D.text(narrow ? 18 : 20, FontWeight.w700, Ink3D.title, height: 1.2), titleW, scaler);
     final sub = subtitle ?? spot.description ?? '';
     final content = Column(
@@ -56,7 +58,7 @@ class TripSpotCard extends StatelessWidget {
       children: [
         SizedBox(height: mediaHeight, child: photo ? _PhotoMedia(spot: spot) : _ArtMedia(asset: art, featured: spot.isFeatured)),
         Padding(
-          padding: DS.insets(l: photo ? 96 : 16, t: 10, r: 16, b: 4),
+          padding: DS.insets(l: photo ? 100 : _padX, t: 12, r: _padX, b: 4),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
@@ -76,11 +78,11 @@ class TripSpotCard extends StatelessWidget {
         ),
         if (sub.isNotEmpty)
           Padding(
-            padding: DS.insets(l: 16, t: 6, r: 16, b: 4),
+            padding: DS.insets(l: _padX, t: 6, r: _padX, b: 4),
             child: Text(sub, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(12.5, FontWeight.w500, Ink3D.body.withValues(alpha: Alpha.high), height: 1.5)),
           ),
         _ActionBar(
-          width: cardW - DS.s(32),
+          width: cardW - DS.s(_padX * 2),
           selected: selected,
           draft: draft,
           dimmed: dimmed,
@@ -105,8 +107,8 @@ class TripSpotCard extends StatelessWidget {
             content,
             if (photo)
               Positioned(
-                left: DS.s(16),
-                top: DS.s(96),
+                left: DS.s(_padX),
+                top: mediaHeight - DS.s(36),
                 child: IgnorePointer(
                   child: ExcludeSemantics(child: Art3D(asset: art, size: 72, shadowBlur: 3, shadowOffset: const Offset(2, 4), shadowAlpha: 0.3)),
                 ),
@@ -168,7 +170,7 @@ class _ArtMedia extends StatelessWidget {
           children: [
             Positioned(
               left: DS.s(20),
-              top: DS.s(10),
+              top: DS.s(34),
               width: DS.s(112),
               height: DS.s(112),
               child: IgnorePointer(
@@ -177,7 +179,7 @@ class _ArtMedia extends StatelessWidget {
             ),
             Positioned(
               left: DS.s(24),
-              top: DS.s(14),
+              top: DS.s(38),
               child: IgnorePointer(child: ExcludeSemantics(child: Art3D(asset: asset, size: 104))),
             ),
             if (featured) const _FeaturedSlot(),
@@ -232,6 +234,8 @@ class _ActionBar extends StatelessWidget {
 
   static double _pillW(String text, TextScaler scaler) => DS.s(18) * 2 + DS.s(18) + DS.s(8) + KitText.widthOf(text, _label, scaler);
 
+  static double _detailsW(TextScaler scaler) => DS.s(12) + DS.s(24) + DS.s(8) + KitText.widthOf(TripSpotRow.details, _label, scaler) + DS.s(16);
+
   @override
   Widget build(BuildContext context) {
     final scaler = MediaQuery.textScalerOf(context);
@@ -239,18 +243,17 @@ class _ActionBar extends StatelessWidget {
     final soft = selected && !circle;
     final label = soft ? TripStringsSpotsX.addedToTrip : TripStringsSpotsX.addToTrip;
     final rightW = circle ? DS.s(KitMetrics.touch) : _pillW(label, scaler);
-    final detailsW = DS.s(26) + DS.s(8) + KitText.widthOf(TripSpotRow.details, _label, scaler);
+    final detailsW = _detailsW(scaler);
     final stacked = detailsW + DS.s(12) + rightW > width;
     final toggle = draft && dimmed ? null : onToggle;
     final right = circle
         ? _CircleToggle(selected: selected, onTap: toggle)
         : soft
             ? _SoftPill(onTap: toggle)
-            : _hit(GradientPillButton(tone: _tone, label: TripStringsSpotsX.addToTrip, icon: Icons.add_rounded, height: 38, fontSize: _pillFont, expand: false, onTap: toggle), toggle);
+            : _hit(GradientPillButton(tone: _tone, label: TripStringsSpotsX.addToTrip, icon: Icons.add_rounded, height: KitMetrics.touch, fontSize: _pillFont, expand: false, onTap: toggle), toggle);
     final details = _Details(onTap: onDetails);
-    final edge = (DS.s(KitMetrics.touch) - DS.s(38)) / 2;
     return Padding(
-      padding: EdgeInsets.fromLTRB(DS.s(16), DS.s(8) - edge, DS.s(16), DS.s(12) - edge),
+      padding: DS.insets(l: _padX, t: 14, r: _padX, b: 16),
       child: stacked
           ? Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -285,27 +288,36 @@ class _Details extends StatelessWidget {
   const _Details({required this.onTap});
 
   @override
-  Widget build(BuildContext context) => Tap3D(
-        onTap: onTap,
-        child: ConstrainedBox(
-          constraints: BoxConstraints(minHeight: DS.s(KitMetrics.touch)),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              DecoratedBox(
-                decoration: BoxDecoration(color: _tone.tint, shape: BoxShape.circle),
-                child: SizedBox(
-                  width: DS.s(26),
-                  height: DS.s(26),
-                  child: Icon(Icons.info_outline_rounded, size: DS.s(14), color: _tone.text),
-                ),
-              ),
-              SizedBox(width: DS.s(8)),
-              Text(TripSpotRow.details, maxLines: 1, softWrap: false, style: _ActionBar._label),
-            ],
-          ),
+  Widget build(BuildContext context) {
+    final h = DS.s(KitMetrics.touch);
+    return Tap3D(
+      onTap: onTap,
+      child: Container(
+        height: h,
+        padding: DS.insets(l: 12, r: 16),
+        decoration: BoxDecoration(
+          color: DesignColors.surface,
+          borderRadius: BorderRadius.circular(h / 2),
+          border: Border.all(color: _tone.haloBase.withValues(alpha: Alpha.v24), width: DS.s(1.5)),
         ),
-      );
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            DecoratedBox(
+              decoration: BoxDecoration(color: _tone.tint, shape: BoxShape.circle),
+              child: SizedBox(
+                width: DS.s(24),
+                height: DS.s(24),
+                child: Icon(Icons.info_outline_rounded, size: DS.s(13), color: _tone.text),
+              ),
+            ),
+            SizedBox(width: DS.s(8)),
+            Text(TripSpotRow.details, maxLines: 1, softWrap: false, style: _ActionBar._label),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _SoftPill extends StatelessWidget {
@@ -315,7 +327,7 @@ class _SoftPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final h = DS.s(38);
+    final h = DS.s(KitMetrics.touch);
     return _hit(
       Tap3D(
         onTap: onTap,
@@ -392,7 +404,7 @@ class TripSpotCardSkeleton extends StatelessWidget {
           children: [
             TemplatePlaceholder(height: TripSpotCard.mediaHeight, radius: 0),
             Padding(
-              padding: DS.insets(l: 16, t: 14, r: 16, b: 12),
+              padding: DS.insets(l: _padX, t: 14, r: _padX, b: 16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
@@ -405,7 +417,7 @@ class TripSpotCardSkeleton extends StatelessWidget {
                   SizedBox(height: DS.s(14)),
                   Align(
                     alignment: Alignment.centerRight,
-                    child: TemplatePlaceholder(height: DS.s(38), width: DS.s(150), radius: DS.radius(19)),
+                    child: TemplatePlaceholder(height: DS.s(KitMetrics.touch), width: DS.s(150), radius: DS.radius(KitMetrics.touch / 2)),
                   ),
                 ],
               ),

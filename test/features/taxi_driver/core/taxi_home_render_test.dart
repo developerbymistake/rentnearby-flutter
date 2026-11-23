@@ -82,6 +82,17 @@ void main() {
     });
   }
 
+  testWidgets('home shows the Missed tile with its count at 320 wide, text scale 1.3', (tester) async {
+    final h = TaxiHarness.setUp(homeJson(taxi: {...nums, 'missedRequests': 7}));
+    TaxiHarnessProbe.home = h.home;
+    await pumpPhone(tester, const TaxiDriverHomeScreen(), size: const Size(320, 900), textScale: 1.3);
+    await settle(tester);
+    expect(find.text('Missed'), findsOneWidget);
+    expect(find.text('7'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await finish(tester);
+  });
+
   for (final width in const [320.0, 430.0]) {
     testWidgets('o_tx_12 Plus card at ${width.toInt()} wide and text scale 1.3 (FT-09)', (tester) async {
       final h = TaxiHarness.setUp(homeJson(featured: true, taxi: {...nums, 'newRequests': 3}, routesMeter: {'key': 'Routes', 'used': 5, 'limit': 5}, planCard: plusCard));

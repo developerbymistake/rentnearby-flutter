@@ -118,12 +118,12 @@ class TripSuggestionCard extends StatelessWidget {
     );
     return TemplateEntranceOnce(
       child: Padding(
-        padding: EdgeInsets.fromLTRB(DS.s(14), DS.gv(12), DS.s(14), DS.gv(14)),
+        padding: EdgeInsets.fromLTRB(DS.s(14), DS.gv(4), DS.s(14), DS.gv(14)),
         child: Stack(
           clipBehavior: Clip.none,
           children: [
             DecoratedBox(
-              decoration: BoxDecoration(color: DesignColors.surface, borderRadius: DS.br(Banner3D.radius), boxShadow: DS.shadows(Ink3D.softShadow)),
+              decoration: BoxDecoration(color: DesignColors.surface, borderRadius: DS.circular(20), boxShadow: DS.shadows(Ink3D.softShadow)),
               child: Padding(
                 padding: DS.insets(l: 12, t: 12, r: 4, b: 12),
                 child: Row(
@@ -132,7 +132,15 @@ class TripSuggestionCard extends StatelessWidget {
                     Gap.h(12),
                     Expanded(child: Semantics(container: true, label: semanticsLabel, excludeSemantics: semanticsLabel != null, child: text)),
                     Gap.h(12),
-                    GradientPillButton(tone: _tone, label: TripStringsSpotsX.add, onTap: onAdd, height: 34, fontSize: 13, expand: false),
+                    GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      excludeFromSemantics: true,
+                      onTap: onAdd,
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(minHeight: DS.s(KitMetrics.touch)),
+                        child: Center(widthFactor: 1, child: GradientPillButton(tone: _tone, label: TripStringsSpotsX.add, onTap: onAdd, height: 34, fontSize: 13, expand: false)),
+                      ),
+                    ),
                     Gap.h(12),
                     IconButton(
                       onPressed: onDismiss,
@@ -154,7 +162,11 @@ class TripSuggestionCard extends StatelessWidget {
                     child: Container(
                       width: notch,
                       height: notch,
-                      decoration: BoxDecoration(color: DesignColors.surface, borderRadius: BorderRadius.only(topLeft: Radius.circular(DS.s(3)))),
+                      decoration: BoxDecoration(
+                        color: DesignColors.surface,
+                        borderRadius: BorderRadius.only(topLeft: Radius.circular(DS.s(3))),
+                        boxShadow: DS.shadows([BoxShadow(color: Ink3D.title.withValues(alpha: Alpha.v04), offset: const Offset(-2, -2), blurRadius: 4)]),
+                      ),
                     ),
                   ),
                 ),
