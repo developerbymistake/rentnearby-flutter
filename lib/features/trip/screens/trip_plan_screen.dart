@@ -28,6 +28,7 @@ import '../widgets/trip_leg_header.dart';
 import '../widgets/trip_leg_actions.dart';
 import '../widgets/trip_lifecycle_actions.dart';
 import '../widgets/trip_not_found_view.dart';
+import '../widgets/drag/trip_spot_drag_scope.dart';
 import '../widgets/trip_plan_header.dart';
 import '../widgets/trip_today_card.dart';
 import '../widgets/trip_update_app_card.dart';
@@ -478,45 +479,47 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
             for (final leg in plan.legs)
               if (_legFilter == null || plan.legAt(_legFilter!) == null || leg.index == _legFilter) leg,
           ];
-          return ListView(
-            controller: _scroll,
-            padding: EdgeInsets.only(bottom: _note == null ? DS.s(20) : DS.gv(40) + DS.s(48)),
-            children: [
-              _buildLocked(),
-              if (!editing) w(TripPlanStepCard(onMenu: _onMenu)),
-              MediaQuery.withClampedTextScaling(maxScaleFactor: 1.3, child: _buildLegChips()),
-              if (_c.planFailed.value)
-                w(StateCard.error(
-                  title: TripStrings.planFailed,
-                  message: _c.planError.value ?? TripStrings.checkConnection,
-                  actionLabel: _c.planRetryable.value ? TripStrings.retry : null,
-                  onAction: _c.planRetryable.value ? _c.retryPlan : null,
-                )),
-              w(const TripTodayCard()),
-              if (editing) _editBanner(),
-              for (final (i, leg) in shownLegs.indexed)
-                  w(TripLegHeader(
-                    key: ValueKey('trip-leg-${leg.index}'),
-                    legIndex: leg.index,
-                    anchorKey: _legKey(leg.index),
-                    folded: _fold.isFolded(leg.index),
-                    onToggle: () => _fold.toggle(leg.index),
-                    onCustomize: () => _openCustomize(leg.index),
-                    gapBelow: i < shownLegs.length - 1
-                        ? DS.gv(44)
-                        : addCity && plan.spotCount > 0
-                            ? DS.gv(24)
-                            : 0,
-                    body: [
-                      for (final d in plan.days)
-                        if (d.leg == leg.index)
-                          KeyedSubtree(key: _dayKey(d.day), child: TripDaySpotList(d.day, key: ValueKey('trip-day-${d.day}'), inSection: true)),
-                    ],
+          return TripSpotDragScope(
+            child: ListView(
+              controller: _scroll,
+              padding: EdgeInsets.only(bottom: _note == null ? DS.s(20) : DS.gv(40) + DS.s(48)),
+              children: [
+                _buildLocked(),
+                if (!editing) w(TripPlanStepCard(onMenu: _onMenu)),
+                MediaQuery.withClampedTextScaling(maxScaleFactor: 1.3, child: _buildLegChips()),
+                if (_c.planFailed.value)
+                  w(StateCard.error(
+                    title: TripStrings.planFailed,
+                    message: _c.planError.value ?? TripStrings.checkConnection,
+                    actionLabel: _c.planRetryable.value ? TripStrings.retry : null,
+                    onAction: _c.planRetryable.value ? _c.retryPlan : null,
                   )),
-              if (plan.spotCount == 0 && !editing && editable) _emptyPlan(),
-              if (editing && _c.canAddDay) _addDayButton(),
-              if (addCity) w(const TripAddCityCard()),
-            ],
+                w(const TripTodayCard()),
+                if (editing) _editBanner(),
+                for (final (i, leg) in shownLegs.indexed)
+                    w(TripLegHeader(
+                      key: ValueKey('trip-leg-${leg.index}'),
+                      legIndex: leg.index,
+                      anchorKey: _legKey(leg.index),
+                      folded: _fold.isFolded(leg.index),
+                      onToggle: () => _fold.toggle(leg.index),
+                      onCustomize: () => _openCustomize(leg.index),
+                      gapBelow: i < shownLegs.length - 1
+                          ? DS.gv(44)
+                          : addCity && plan.spotCount > 0
+                              ? DS.gv(24)
+                              : 0,
+                      body: [
+                        for (final d in plan.days)
+                          if (d.leg == leg.index)
+                            KeyedSubtree(key: _dayKey(d.day), child: TripDaySpotList(d.day, key: ValueKey('trip-day-${d.day}'), inSection: true)),
+                      ],
+                    )),
+                if (plan.spotCount == 0 && !editing && editable) _emptyPlan(),
+                if (editing && _c.canAddDay) _addDayButton(),
+                if (addCity) w(const TripAddCityCard()),
+              ],
+            ),
           );
         },
       );
