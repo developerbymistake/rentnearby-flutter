@@ -102,6 +102,7 @@ class _DriverRingScreenState extends State<DriverRingScreen> {
     super.initState();
     _tick = Timer.periodic(const Duration(seconds: 1), (_) => _onTick());
     TaxiRingSession.ended.addListener(_onRingEnded);
+    TaxiRingSession.relaunched.addListener(_onRelaunched);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _claim();
       _load();
@@ -113,6 +114,7 @@ class _DriverRingScreenState extends State<DriverRingScreen> {
     _routeAnimation?.removeStatusListener(_onRouteAnimation);
     unawaited(_alert.ringAlertEnd(_tag).catchError((_) => false));
     TaxiRingSession.ended.removeListener(_onRingEnded);
+    TaxiRingSession.relaunched.removeListener(_onRelaunched);
     _tick?.cancel();
     _closeTimer?.cancel();
     _ticks.dispose();
@@ -133,6 +135,12 @@ class _DriverRingScreenState extends State<DriverRingScreen> {
       return;
     }
     _claimed = true;
+    _hold();
+  }
+
+  void _onRelaunched() {
+    final r = TaxiRingSession.relaunched.value;
+    if (!mounted || r == null || r.offerId != _id || _finished || !_claimed) return;
     _hold();
   }
 

@@ -31,6 +31,7 @@ import '../features/owner_core/plan/plan_expired_tap.dart';
 import 'push_token_registrar.dart';
 import 'system_settings_channel.dart';
 import 'taxi_ring_service.dart';
+import 'taxi_ring_session.dart';
 import 'trip_push_sync.dart';
 
 const String _chatChannelId = 'chat_messages';
@@ -380,7 +381,10 @@ class NotificationService extends GetxService {
       return;
     }
     final offerId = NotificationModel.parseArguments(data['action_args_json'])?['offerId']?.toString() ?? '';
-    if (actionId == null && _ringScreenOpenFor(offerId)) return;
+    if (actionId == null && _ringScreenOpenFor(offerId)) {
+      TaxiRingSession.relaunched.value = TaxiRingRelaunch(offerId);
+      return;
+    }
     _dispatchNotificationRoute(_ringTapData(data, actionId));
   }
 

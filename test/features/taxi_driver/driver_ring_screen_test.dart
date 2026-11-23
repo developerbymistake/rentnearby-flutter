@@ -8,6 +8,7 @@ import 'package:bakhli/features/taxi/requests/driver_ring_screen.dart';
 import 'package:bakhli/features/taxi/requests/models/driver_request_models.dart';
 import 'package:bakhli/features/trip/utils/taxi_result.dart';
 import 'package:bakhli/services/system_settings_channel.dart';
+import 'package:bakhli/services/taxi_ring_session.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
@@ -379,6 +380,21 @@ void main() {
       await tester.pump();
       await tester.pump();
       expect(h.log, ['end:$_tag:false', 'closed']);
+    });
+
+    testWidgets('T12 a ring launch for the open offer holds again so the cover lifts', (tester) async {
+      final h = await _open(tester);
+      h.log.clear();
+      TaxiRingSession.relaunched.value = TaxiRingRelaunch('other-offer');
+      await tester.pump();
+      expect(h.log, isEmpty);
+      TaxiRingSession.relaunched.value = TaxiRingRelaunch(_id);
+      await tester.pump();
+      expect(h.log, ['hold:$_tag:187']);
+      TaxiRingSession.relaunched.value = TaxiRingRelaunch(_id);
+      await tester.pump();
+      expect(h.log, ['hold:$_tag:187', 'hold:$_tag:187']);
+      TaxiRingSession.relaunched.value = null;
     });
 
     testWidgets('T10 dispose ends the alert', (tester) async {

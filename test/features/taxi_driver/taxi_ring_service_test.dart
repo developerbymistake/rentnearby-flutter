@@ -585,6 +585,30 @@ void main() {
     expect(onNew.indexOf('armRingAlert(intent)'), lessThan(onNew.indexOf('super.onNewIntent(intent)')));
   });
 
+  test('ring_tap_routing_ends_or_reclaims_the_alert', () {
+    final src = File('lib/services/notification_service.dart').readAsStringSync().replaceAll(String.fromCharCode(13), '');
+    String body(String head) {
+      final start = src.indexOf(head);
+      expect(start, greaterThan(0), reason: head);
+      return src.substring(start, src.indexOf('\n  }\n', start));
+    }
+
+    final open = body('void _openRingTap(');
+    final noDriver = open.substring(open.indexOf('if (!StorageService.isLoggedIn'), open.indexOf('return;'));
+    expect(noDriver, contains('ringAlertEnd(tag)'));
+    final guard = open.substring(open.indexOf('_ringScreenOpenFor(offerId)'));
+    expect(guard, contains('TaxiRingSession.relaunched.value = TaxiRingRelaunch(offerId)'));
+    expect(guard.indexOf('TaxiRingSession.relaunched.value = TaxiRingRelaunch(offerId)'), lessThan(guard.indexOf('return')));
+    expect(guard.indexOf('return'), lessThan(guard.indexOf('_dispatchNotificationRoute')));
+
+    final tap = body('void _onLocalNotificationTap(');
+    expect(tap.indexOf('_openRingTap(decoded'), greaterThan(0));
+    expect(tap.indexOf('_openRingTap(decoded'), lessThan(tap.indexOf('if (!StorageService.isLoggedIn) return;')));
+
+    final cold = src.substring(src.indexOf('getNotificationAppLaunchDetails()'));
+    expect(cold.indexOf('_openRingTap(launchRing, actionId)'), lessThan(cold.indexOf('_ringTapData(decoded, actionId)')));
+  });
+
   test('no_full_screen_permission_prompt_anywhere', () {
     var fullScreen = 0;
     for (final dir in ['lib', 'android/app/src']) {

@@ -11,12 +11,24 @@ class TaxiRingEnd {
   final String? reason;
 }
 
+class TaxiRingRelaunch {
+  TaxiRingRelaunch(this.offerId);
+
+  final String offerId;
+}
+
 class TaxiRingSession {
   TaxiRingSession._();
 
   static final ValueNotifier<TaxiRingEnd?> ended = ValueNotifier<TaxiRingEnd?>(null);
 
-  static void reset() => ended.value = null;
+  // A ring launch for the offer whose ring screen is already open; the screen holds again so the native cover lifts.
+  static final ValueNotifier<TaxiRingRelaunch?> relaunched = ValueNotifier<TaxiRingRelaunch?>(null);
+
+  static void reset() {
+    ended.value = null;
+    relaunched.value = null;
+  }
 
   static bool isDriverToken(String? token) => JwtClaims.role(token) == UserRoleKeys.taxiDriver;
 
