@@ -69,12 +69,11 @@ class _TabHeaderIcon extends StatelessWidget {
 }
 
 class TabHeader extends StatelessWidget {
-  const TabHeader({super.key, required this.title, required this.subtitle, required this.color, this.iconsKey});
+  const TabHeader({super.key, required this.title, required this.subtitle, required this.color});
 
   final String title;
   final String subtitle;
   final Color color;
-  final Key? iconsKey;
 
   @override
   Widget build(BuildContext context) {
@@ -108,7 +107,7 @@ class TabHeader extends StatelessWidget {
                 ),
               ),
               SizedBox(width: _u(10)),
-              TabHeaderIcons(key: iconsKey),
+              const TabHeaderIcons(),
             ],
           ),
         ),
@@ -124,14 +123,12 @@ class TabHeaderFrame extends StatelessWidget {
     required this.subtitle,
     required this.color,
     required this.child,
-    this.iconsKey,
   });
 
   final String title;
   final String subtitle;
   final Color color;
   final Widget child;
-  final Key? iconsKey;
 
   @override
   Widget build(BuildContext context) {
@@ -139,7 +136,7 @@ class TabHeaderFrame extends StatelessWidget {
       lightIcons: false,
       child: Column(
         children: [
-          TabHeader(title: title, subtitle: subtitle, color: color, iconsKey: iconsKey),
+          TabHeader(title: title, subtitle: subtitle, color: color),
           Expanded(child: MediaQuery.removePadding(context: context, removeTop: true, child: child)),
         ],
       ),

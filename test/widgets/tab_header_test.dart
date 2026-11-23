@@ -1,7 +1,6 @@
 import 'package:bakhli/config/app_routes.dart';
 import 'package:bakhli/controllers/chat_controller.dart';
 import 'package:bakhli/controllers/notification_controller.dart';
-import 'package:bakhli/navigation/tour_keys.dart';
 import 'package:bakhli/widgets/tab_header.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -21,7 +20,7 @@ class _Chat extends ChatController {
 
 const _sizes = [Size(320, 568), Size(360, 640), Size(360, 800), Size(411, 891), Size(600, 960)];
 
-Widget _frame({String title = 'Stays', String subtitle = 'Find stays near you', double textScale = 1, Key? iconsKey}) => GetMaterialApp(
+Widget _frame({String title = 'Stays', String subtitle = 'Find stays near you', double textScale = 1}) => GetMaterialApp(
       getPages: [
         GetPage(name: '/', page: () => const SizedBox()),
         GetPage(name: AppRoutes.notifications, page: () => const Scaffold(body: Text('notifications page'))),
@@ -36,7 +35,6 @@ Widget _frame({String title = 'Stays', String subtitle = 'Find stays near you', 
           title: title,
           subtitle: subtitle,
           color: Colors.white,
-          iconsKey: iconsKey,
           child: ListView(children: [for (var i = 0; i < 60; i++) SizedBox(height: 40, child: Text('row $i'))]),
         ),
       ),
@@ -116,28 +114,6 @@ void main() {
     expect(t.getTopLeft(find.byType(TabHeader)).dy, 0);
     final headerBottom = t.getBottomLeft(find.byType(TabHeader)).dy;
     expect(t.getTopLeft(find.text('row 0')).dy, headerBottom);
-  });
-
-  testWidgets('five tabs in one IndexedStack: only Home carries the tour key', (t) async {
-    await _pump(
-      t,
-      MaterialApp(
-        home: Scaffold(
-          body: IndexedStack(children: [
-            for (var i = 0; i < 5; i++)
-              TabHeaderFrame(
-                title: 'Tab $i',
-                subtitle: 'Sub $i',
-                color: Colors.white,
-                iconsKey: i == 0 ? TourKeys.homeActionMenu : null,
-                child: const SizedBox.expand(),
-              ),
-          ]),
-        ),
-      ),
-    );
-    expect(t.takeException(), isNull);
-    expect(find.byKey(TourKeys.homeActionMenu), findsOneWidget);
   });
 
   for (final size in _sizes) {

@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../config/app_routes.dart';
 import '../config/app_tabs.dart';
-import '../config/app_tour_state.dart';
 import '../config/user_roles.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/tab_config_controller.dart';
@@ -44,10 +43,6 @@ class _HomeHeroCarouselState extends State<HomeHeroCarousel>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _workers.add(ever(_auth.tabIndex, (_) => _sync()));
-    _workers.add(ever<bool>(tourInProgress, (on) {
-      if (on) _showFirstSlide();
-      _sync();
-    }));
   }
 
   @override
@@ -71,7 +66,6 @@ class _HomeHeroCarouselState extends State<HomeHeroCarousel>
       _count > 1 &&
       _appResumed &&
       !_userDragging &&
-      !tourInProgress.value &&
       _auth.tabIndex.value == AppTabs.home;
 
   void _sync() {
@@ -90,14 +84,6 @@ class _HomeHeroCarouselState extends State<HomeHeroCarousel>
         curve: Curves.fastOutSlowIn,
       );
     });
-  }
-
-  void _showFirstSlide() {
-    if (!mounted || _count < 2 || !_controller.hasClients) return;
-    final at = _page - (_page % _count);
-    if (at == _page) return;
-    _page = at;
-    _controller.jumpToPage(at);
   }
 
   void _onCountChanged(int count) {

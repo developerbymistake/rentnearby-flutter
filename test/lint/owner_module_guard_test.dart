@@ -19,7 +19,6 @@ const _coreForbidden = [
 const _bothAllowed = {
   'lib/config/tab_shell.dart',
   'lib/config/app_routes.dart',
-  'lib/config/tour_registry.dart',
   'lib/screens/main_screen.dart',
   'lib/screens/profile/profile_rows.dart',
 };

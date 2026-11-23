@@ -13,17 +13,14 @@ import '../utils/rx_safe_call.dart';
 import '../utils/tour_target_ready.dart';
 import '../utils/update_decision.dart';
 
-/// Coach-mark tour engine — one persistent singleton driving 4 independent,
-/// one-time, first-visit tours (see tour_registry.dart). Purely a decision
-/// engine: it decides WHEN a step (or, for Home, an intro/outro dialog) should
-/// show and mutates the bare top-level Rx vars in app_tour_state.dart
-/// (currentTourStep/tourStepIndex/tourTotalSteps/tourDialogContent/
-/// tourInProgress). Rendering is entirely someone else's job — TourHost
-/// (lib/widgets/tour_host.dart), permanently mounted in main.dart's builder,
-/// reacts to those vars. This controller never touches an Overlay or
-/// Navigator (deliberately: TourDismissObserver dismisses on any root-
-/// Navigator push, so a real Dialog/showDialog would self-destruct the
-/// instant it opened — see _showDialog).
+/// Coach-mark tour engine — one persistent singleton driving the one-time,
+/// first-visit Trips tour (see tour_registry.dart). Purely a decision
+/// engine: it decides WHEN a step should show and mutates the bare top-level
+/// Rx vars in app_tour_state.dart (currentTourStep/tourStepIndex/
+/// tourTotalSteps/tourInProgress). Rendering is entirely someone else's job —
+/// TourHost (lib/widgets/tour_host.dart), permanently mounted in main.dart's
+/// builder, reacts to those vars. This controller never touches an Overlay or
+/// Navigator (TourDismissObserver dismisses on any root-Navigator push).
 ///
 /// Every ever() worker here goes through rxSafe(): GetX's stream dispatch
 /// (get_rx/rx_stream/mini_stream.dart, FastList._notifyData) has no
@@ -67,6 +64,7 @@ class TourController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    StorageService.dropLegacyTourKeys();
     _auth = Get.find<AuthController>();
     _locationCtrl = Get.find<LocationController>();
 
@@ -123,7 +121,7 @@ class TourController extends GetxController {
   ///    the whole session's only attempt, with nothing ever re-triggering it.
   /// Deliberately never calls attemptShowTourForCurrentTab() while
   /// tourInProgress is true — the first branch owns that state exclusively,
-  /// so a tour actively showing a step or dialog never has its generation
+  /// so a tour actively showing a step never has its generation
   /// bumped by this path.
   void _reconcile() {
     if (tourInProgress.value) {
@@ -156,9 +154,8 @@ class TourController extends GetxController {
     _retryAttempt = 0;
 
     if (tourInProgress.value) return;
-    final tour = tourRegistry[_auth.tabIndex.value];
+    final tour = tourForTab(_auth.tabIndex.value, _auth.shellKind.value);
     if (tour == null) return;
-    if (tour.shell != null && tour.shell != _auth.shellKind.value) return;
     if (StorageService.getTourSeen(tour.storageKey)) return;
     if (_isGated) return;
     // TourHost is mounted above the ENTIRE routed app (main.dart), not just
@@ -179,11 +176,11 @@ class TourController extends GetxController {
   // The single re-validation checkpoint after _preTourPause — up to half a
   // second has passed since attemptShowTourForCurrentTab's own checks, so
   // every one of them is re-checked here, plus one more: attemptShow's early
-  // return for a tab with no registry entry (Explore/Profile) never bumps
-  // _generation, so switching to such a tab during the pause wouldn't
-  // otherwise invalidate this pending closure — IndexedStack keeps Home
-  // mounted underneath, so without this check its dialog/spotlight could pop
-  // up half a second later while the user is looking at a different tab.
+  // return for a tab with no registry entry never bumps _generation, so
+  // switching to such a tab during the pause wouldn't otherwise invalidate
+  // this pending closure — IndexedStack keeps Trips mounted underneath, so
+  // without this check its spotlight could pop up half a second later while
+  // the user is looking at a different tab.
   void _beginTourAttempt(TourDefinition tour, int generation) {
     if (generation != _generation) return;
     if (tourInProgress.value) return;
@@ -198,30 +195,7 @@ class TourController extends GetxController {
 
     _activeTour = tour;
     _plan = [];
-    final intro = tour.introContent;
-    if (intro != null) {
-      _showDialog(intro);
-      return;
-    }
     _searchForReadyStep(0, generation);
-  }
-
-  /// The intro dialog's "Start Tour" — resumes into the exact same
-  /// step-picking entry point _beginTourAttempt uses when there's no intro.
-  void startTourFromIntro() {
-    final tour = _activeTour;
-    if (tour == null || tourDialogContent.value == null) return;
-    tourDialogContent.value = null;
-    _retryAttempt = 0;
-    _generation++;
-    _searchForReadyStep(0, _generation);
-  }
-
-  /// The outro dialog's "Start Exploring" — the actual markSeen:true moment
-  /// for a tour that has an outro (deferred from next()'s final-step branch).
-  void finishTour() {
-    if (_activeTour == null || tourDialogContent.value == null) return;
-    _teardown(markSeen: true);
   }
 
   void next() {
@@ -229,11 +203,6 @@ class TourController extends GetxController {
     if (tour == null) return;
     if (_plan.isEmpty || tourStepIndex.value >= _plan.length - 1) {
       // Already on the physically final step — this is the user finishing.
-      final outro = tour.outroContent;
-      if (outro != null) {
-        _showDialog(outro);
-        return;
-      }
       _teardown(markSeen: true);
       return;
     }
@@ -243,12 +212,6 @@ class TourController extends GetxController {
   }
 
   void skip() => _teardown(markSeen: true);
-
-  void _showDialog(TourDialogContent content) {
-    currentTourStep.value = null; // dialog and spotlight are mutually exclusive
-    tourDialogContent.value = content;
-    tourInProgress.value = true;
-  }
 
   // [generation] pins a retry chain to the specific attempt that scheduled
   // it. Re-reading _activeTour instead of comparing generations would be
@@ -295,9 +258,8 @@ class TourController extends GetxController {
       _teardown(markSeen: false);
       return;
     }
-    // The Stays map is pushed on the tab's own Navigator, which the
-    // route check above can't see — the landing targets stay mounted (stale)
-    // underneath it.
+    // A screen pushed on the tab's own Navigator is invisible to the route
+    // check above — the tab's targets stay mounted (stale) underneath it.
     if (tabKeys[tour.tabIndex].currentState?.canPop() ?? false) {
       _teardown(markSeen: false);
       return;
@@ -354,7 +316,6 @@ class TourController extends GetxController {
     void apply() {
       if (generation != _generation || _activeTour != tour) return;
       if (_auth.tabIndex.value != tour.tabIndex) return;
-      tourDialogContent.value = null; // dialog and spotlight are mutually exclusive
       tourStepIndex.value = idx;
       currentTourStep.value = step;
       tourInProgress.value = true;
@@ -384,7 +345,6 @@ class TourController extends GetxController {
       tourStepIndex.value = 0;
       tourTotalSteps.value = 0;
       currentTourLabel.value = '';
-      tourDialogContent.value = null;
       tourInProgress.value = false;
     } catch (e) {
       AppToast.error('Tour: teardown state reset threw: $e');

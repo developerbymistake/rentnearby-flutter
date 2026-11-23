@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../config/app_tour_state.dart';
-import '../config/tour_registry.dart';
 import '../controllers/tour_controller.dart';
-import 'tour_info_dialog.dart';
 import 'tour_overlay.dart';
 
 /// Permanently-mounted, purely reactive host for the coach-mark tour —
@@ -35,23 +33,6 @@ class TourHost extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Obx(() {
-      // Checked first: dialog and spotlight step are mutually exclusive by
-      // construction in TourController, but checking this one first means
-      // even a future bug that briefly leaves both non-null fails safe
-      // (shows the dialog, not a spotlight underneath a dialog).
-      final dialog = tourDialogContent.value;
-      if (dialog != null) {
-        return TourInfoDialog(
-          key: ValueKey('dialog-${dialog.phase}'),
-          content: dialog,
-          onPrimary: () => dialog.phase == TourDialogPhase.intro
-              ? Get.find<TourController>().startTourFromIntro()
-              : Get.find<TourController>().finishTour(),
-          onSecondary: dialog.secondaryLabel == null
-              ? null
-              : () => Get.find<TourController>().skip(),
-        );
-      }
       final step = currentTourStep.value;
       if (step == null) return const SizedBox.shrink();
       return TourOverlay(

@@ -1,9 +1,7 @@
 import 'package:animations/animations.dart';
 import 'package:bakhli/design/design.dart';
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 import '../../../config/app_tabs.dart';
-import '../../../controllers/tour_controller.dart';
 import '../../../navigation/tab_keys.dart';
 import 'stay_map_screen.dart';
 
@@ -13,7 +11,6 @@ class StayNavigation {
   static Future<void> openMap() async {
     final nav = tabKeys[AppTabs.stays].currentState;
     if (nav == null) return;
-    if (Get.isRegistered<TourController>()) Get.find<TourController>().forceDismissForNavigation();
     Route<dynamic>? top;
     nav.popUntil((route) {
       top = route;

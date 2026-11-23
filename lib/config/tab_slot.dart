@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../controllers/auth_controller.dart';
-import '../navigation/tour_keys.dart';
 import '../screens/profile_screen.dart';
 import 'app_tabs.dart';
 
@@ -53,7 +52,6 @@ abstract final class TabSlots {
         index: AppTabs.profile,
         label: label,
         image: '${art}fox.png',
-        itemKey: TourKeys.homeProfileNavIcon,
         rootTag: 'profile',
         root: () => const ProfileScreen(),
         active: active ?? () => true,

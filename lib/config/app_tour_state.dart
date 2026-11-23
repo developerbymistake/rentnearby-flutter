@@ -16,14 +16,8 @@ final Rxn<TourStep> currentTourStep = Rxn<TourStep>();
 final RxInt tourStepIndex = 0.obs;
 final RxInt tourTotalSteps = 0.obs;
 
-/// The active tour's display name (e.g. 'Home Tour'), used only to render
-/// the "HOME TOUR · 1 OF 5" eyebrow label above each step's title — the
+/// The active tour's display name (e.g. 'Trips Tour'), used only to render
+/// the "TRIPS TOUR · 1 OF 2" eyebrow label above each step's title — the
 /// "N OF M" part is computed at render time from tourStepIndex/tourTotalSteps
 /// above, never hand-authored per step.
 final RxString currentTourLabel = ''.obs;
-
-/// Non-null exactly while the active tour's intro or outro dialog is
-/// showing — mutually exclusive with currentTourStep by construction
-/// (TourController never sets both; TourHost checks this one first). Bare
-/// top-level like currentTourStep above, same rationale.
-final Rxn<TourDialogContent> tourDialogContent = Rxn<TourDialogContent>();

@@ -9,13 +9,11 @@ import '../controllers/tab_config_controller.dart';
 import '../design/design.dart';
 import '../design/extra/instagram_look.dart';
 import '../config/app_tabs.dart';
-import '../navigation/tour_keys.dart';
 import '../features/nearby/nearby_strings.dart';
 import '../features/seeker_home/seeker_feed_controller.dart';
 import '../features/seeker_home/seeker_home_parts.dart';
 import '../features/seeker_home/seeker_quick_actions.dart';
 import '../features/seeker_home/seeker_status_rule.dart';
-import '../features/seeker_home/seeker_tour_steps.dart';
 import '../features/seeker_home/strings/seeker_home_strings.dart';
 import '../features/taxi/models/taxi_browse_item.dart';
 import '../features/trip/widgets/trip_popular_rail.dart';
@@ -89,7 +87,6 @@ class _HomeScreenState extends State<HomeScreen> {
             title: SeekerHomeStrings.greeting(firstName),
             subtitle: SeekerTripWords.headerSubtitle(_feed?.feed.value),
             color: ListingPalette.sunrise.page,
-            iconsKey: TourKeys.homeActionMenu,
             child: body,
           );
         }),
@@ -122,13 +119,7 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                StaggerItem(
-                  index: 0,
-                  child: KeyedSubtree(
-                    key: SeekerTourKeys.homeTripCard,
-                    child: const HomeHeroCarousel(),
-                  ),
-                ),
+                const StaggerItem(index: 0, child: HomeHeroCarousel()),
                 const StaggerItem(index: 1, child: SeekerQuickActions()),
                 StaggerItem(index: 2, child: _buildRailsArea()),
                 StaggerItem(index: 3, child: _buildInstagramCard()),
@@ -268,19 +259,16 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildInstagramCard() {
     return Padding(
       padding: EdgeInsets.only(top: DS.gv(14)),
-      child: KeyedSubtree(
-        key: TourKeys.homeInstagramCard,
-        child: WorkoutCard(
-          tone: InstagramLook.tone,
-          gradient: InstagramLook.gradient,
-          art: ListingArt.camera,
-          eyebrow: 'Instagram',
-          title: 'Follow us',
-          ctaLabel: 'Follow',
-          minHeight: 112,
-          semanticsLabel: 'Follow us on Instagram',
-          onTap: _openInstagram,
-        ),
+      child: WorkoutCard(
+        tone: InstagramLook.tone,
+        gradient: InstagramLook.gradient,
+        art: ListingArt.camera,
+        eyebrow: 'Instagram',
+        title: 'Follow us',
+        ctaLabel: 'Follow',
+        minHeight: 112,
+        semanticsLabel: 'Follow us on Instagram',
+        onTap: _openInstagram,
       ),
     );
   }

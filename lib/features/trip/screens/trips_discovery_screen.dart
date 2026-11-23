@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import '../../../config/app_routes.dart';
 import '../../../config/app_tabs.dart';
 import '../../../controllers/auth_controller.dart';
+import '../../../navigation/tour_keys.dart';
 import '../../../widgets/tab_header.dart';
 import '../../buddy/buddy_navigation.dart';
 import '../controllers/my_trips_controller.dart';
@@ -129,10 +130,13 @@ class _TripsDiscoveryScreenState extends State<TripsDiscoveryScreen> {
           for (final (i, t) in tiles.indexed)
             Padding(
               padding: EdgeInsets.fromLTRB(DS.s(16), DS.gv(i == 0 ? 20 : 34), DS.s(16), 0),
-              child: HubTile(
-                key: ValueKey('hub-tile-${t.id}'),
-                config: t,
-                onTap: () => _open(t),
+              child: _tourTarget(
+                t.id,
+                HubTile(
+                  key: ValueKey('hub-tile-${t.id}'),
+                  config: t,
+                  onTap: () => _open(t),
+                ),
               ),
             ),
           SizedBox(height: BarMetrics.bodyBottomOf(context)),
@@ -140,4 +144,10 @@ class _TripsDiscoveryScreenState extends State<TripsDiscoveryScreen> {
       ),
     );
   }
+
+  Widget _tourTarget(String id, Widget tile) => switch (id) {
+        'where' => KeyedSubtree(key: TourKeys.tripsWhereTile, child: tile),
+        'buddy' => KeyedSubtree(key: TourKeys.tripsBuddyTile, child: tile),
+        _ => tile,
+      };
 }

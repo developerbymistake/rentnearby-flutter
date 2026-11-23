@@ -277,8 +277,9 @@ class AppVersionController extends GetxController with WidgetsBindingObserver {
     if (!Get.isRegistered<TourController>() || !Get.isRegistered<LocationController>()) return false;
     if (Get.find<LocationController>().hasActiveGate) return false;
     if (tourInProgress.value) return false;
-    final tabIndex = Get.find<AuthController>().tabIndex.value;
-    final tour = tourRegistry[tabIndex];
+    final auth = Get.find<AuthController>();
+    final tabIndex = auth.tabIndex.value;
+    final tour = tourForTab(tabIndex, auth.shellKind.value);
     if (tour != null && !StorageService.getTourSeen(tour.storageKey)) return false;
     if (Get.isRegistered<BannerController>() && Get.find<BannerController>().activeBanner.value != null) {
       return false;

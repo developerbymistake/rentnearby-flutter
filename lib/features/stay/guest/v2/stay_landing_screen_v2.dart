@@ -7,7 +7,6 @@ import '../../../../config/app_routes.dart';
 import '../../../../config/app_tabs.dart';
 import '../../../../controllers/auth_controller.dart';
 import '../../../../controllers/tab_config_controller.dart';
-import '../../../../navigation/tour_keys.dart';
 import '../../../../widgets/tab_header.dart';
 import '../../../jobs/controllers/my_jobs_controller.dart';
 import '../../../nearby/card_strings.dart';
@@ -121,7 +120,7 @@ class _StayLandingScreenV2State extends State<StayLandingScreenV2> {
               child: EntranceOnce(
                 index: 3,
                 offset: 24,
-                child: MapPill3D(key: TourKeys.staysLandingMapPill, tone: _page, label: 'Map view', onTap: StayNavigation.openMap),
+                child: MapPill3D(tone: _page, label: 'Map view', onTap: StayNavigation.openMap),
               ),
             ),
           ),
@@ -133,10 +132,7 @@ class _StayLandingScreenV2State extends State<StayLandingScreenV2> {
   Widget _buildHeader() => _buildSearchPill();
 
   Widget _buildSearchPill() {
-    return KeyedSubtree(
-      key: TourKeys.staysLandingLocation,
-      child: PlaceSearchBar(key: TourKeys.staysLandingSearch, margin: EdgeInsets.symmetric(horizontal: DS.s(16), vertical: DS.gv(10))),
-    );
+    return PlaceSearchBar(margin: EdgeInsets.symmetric(horizontal: DS.s(16), vertical: DS.gv(10)));
   }
 
   Widget _buildReviewStrip() {
@@ -185,37 +181,31 @@ class _StayLandingScreenV2State extends State<StayLandingScreenV2> {
       }
       return Padding(
         padding: EdgeInsets.only(top: DS.gv(4)),
-        child: KeyedSubtree(
-          key: TourKeys.staysLandingTiles,
-          child: MealsRail(children: tiles),
-        ),
+        child: MealsRail(children: tiles),
       );
     });
   }
 
   Widget _buildTypeChips() {
-    return KeyedSubtree(
-      key: TourKeys.staysLandingFilters,
-      child: Obx(() {
-        final types = _types.types;
-        final selected = _ctrl.selectedStayTypeId.value;
-        return ChipCPRow(
-          children: [
-            for (var i = 0; i <= types.length; i++)
-              () {
-                final String? id = i == 0 ? null : types[i - 1].id;
-                return ChipCP(
-                  tone: i == 0 ? ListingTone.cE : _typeTones[(i - 1) % _typeTones.length],
-                  art: i == 0 ? ListingArt.sunrise : ListingArt.stay,
-                  label: i == 0 ? 'All' : types[i - 1].name,
-                  off: selected != id,
-                  onTap: () => _ctrl.setStayType(id),
-                );
-              }(),
-          ],
-        );
-      }),
-    );
+    return Obx(() {
+      final types = _types.types;
+      final selected = _ctrl.selectedStayTypeId.value;
+      return ChipCPRow(
+        children: [
+          for (var i = 0; i <= types.length; i++)
+            () {
+              final String? id = i == 0 ? null : types[i - 1].id;
+              return ChipCP(
+                tone: i == 0 ? ListingTone.cE : _typeTones[(i - 1) % _typeTones.length],
+                art: i == 0 ? ListingArt.sunrise : ListingArt.stay,
+                label: i == 0 ? 'All' : types[i - 1].name,
+                off: selected != id,
+                onTap: () => _ctrl.setStayType(id),
+              );
+            }(),
+        ],
+      );
+    });
   }
 
   Widget _buildListHeader() {
@@ -259,19 +249,16 @@ class _StayLandingScreenV2State extends State<StayLandingScreenV2> {
   }
 
   Widget _buildFilterButton() {
-    return KeyedSubtree(
-      key: TourKeys.staysLandingSort,
-      child: Obx(() {
-        final active = _ctrl.selectedMeals.value != null || _ctrl.selectedStayTypeId.value != null || _ctrl.sortBy.value != StayLandingControllerV2.defaultSort;
-        return ListingFilterChip(
-          tone: _page,
-          label: 'Filter & Sort',
-          icon: Icons.sort_rounded,
-          dot: active,
-          onTap: () => StayFilterSortSheet.show(context, controller: _ctrl),
-        );
-      }),
-    );
+    return Obx(() {
+      final active = _ctrl.selectedMeals.value != null || _ctrl.selectedStayTypeId.value != null || _ctrl.sortBy.value != StayLandingControllerV2.defaultSort;
+      return ListingFilterChip(
+        tone: _page,
+        label: 'Filter & Sort',
+        icon: Icons.sort_rounded,
+        dot: active,
+        onTap: () => StayFilterSortSheet.show(context, controller: _ctrl),
+      );
+    });
   }
 
   Widget _card(StayFeedItem s, int index) {
@@ -316,30 +303,21 @@ class _StayLandingScreenV2State extends State<StayLandingScreenV2> {
         if (_ctrl.isLoading.value) return _buildSkeleton();
         if (_ctrl.loadFailed.value) {
           return SliverToBoxAdapter(
-            child: KeyedSubtree(
-              key: TourKeys.staysLandingList,
-              child: NearbyError(onRetry: _ctrl.retry, tone: ListingTone.forest),
-            ),
+            child: NearbyError(onRetry: _ctrl.retry, tone: ListingTone.forest),
           );
         }
         if (_ctrl.featured.isEmpty) {
           return SliverToBoxAdapter(
-            child: KeyedSubtree(
-              key: TourKeys.staysLandingList,
-              child: _filtered
-                  ? NearbyEmpty(title: 'No stays found', body: 'Try other filters or a different location', tone: ListingTone.forest)
-                  : NearbyEmpty(title: NearbyStrings.staysEmptyTitle, body: NearbyStrings.staysEmptyBody, tone: ListingTone.forest),
-            ),
+            child: _filtered
+                ? NearbyEmpty(title: 'No stays found', body: 'Try other filters or a different location', tone: ListingTone.forest)
+                : NearbyEmpty(title: NearbyStrings.staysEmptyTitle, body: NearbyStrings.staysEmptyBody, tone: ListingTone.forest),
           );
         }
         return const SliverToBoxAdapter(child: SizedBox.shrink());
       }
       return SliverList(
         delegate: SliverChildBuilderDelegate(
-          (_, i) {
-            final card = _card(items[i], i);
-            return i == 0 ? KeyedSubtree(key: TourKeys.staysLandingList, child: card) : card;
-          },
+          (_, i) => _card(items[i], i),
           childCount: items.length,
           addAutomaticKeepAlives: false,
         ),
@@ -349,10 +327,7 @@ class _StayLandingScreenV2State extends State<StayLandingScreenV2> {
 
   Widget _buildSkeleton() {
     return SliverList(
-      delegate: SliverChildBuilderDelegate((_, i) {
-        const cell = WideCardSkeleton(kind: WideKind.photo);
-        return i == 0 ? KeyedSubtree(key: TourKeys.staysLandingList, child: cell) : cell;
-      }, childCount: 4),
+      delegate: SliverChildBuilderDelegate((_, i) => const WideCardSkeleton(kind: WideKind.photo), childCount: 4),
     );
   }
 

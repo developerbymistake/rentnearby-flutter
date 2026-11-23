@@ -2,7 +2,6 @@ import 'dart:io';
 
 import 'package:bakhli/config/app_routes.dart';
 import 'package:bakhli/config/app_theme.dart';
-import 'package:bakhli/config/tour_registry.dart';
 import 'package:bakhli/controllers/notification_controller.dart';
 import 'package:bakhli/controllers/tab_config_controller.dart';
 import 'package:bakhli/features/owner_core/plan/gate_keys.dart';
@@ -12,10 +11,8 @@ import 'package:bakhli/features/seeker_home/seeker_home_parts.dart';
 import 'package:bakhli/features/seeker_home/strings/seeker_home_strings.dart';
 import 'package:bakhli/design/design.dart';
 import 'package:bakhli/design/extra/instagram_look.dart';
-import 'package:bakhli/features/seeker_home/seeker_tour_steps.dart';
 import 'package:bakhli/features/seeker_home/seeker_trip_card.dart';
 
-import 'package:bakhli/navigation/tour_keys.dart';
 import 'package:bakhli/screens/home_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:bakhli/features/owner_core/data/owner_cache.dart';
@@ -320,17 +317,6 @@ void main() {
       expect(SeekerHomeStrings.kmShort('2.1 km'), '2.1 km');
       expect(SeekerHomeStrings.kmShort(''), '');
       expect(SeekerHomeStrings.kmShort(null), '');
-    });
-
-    test('o_sk_9_tourStep1_targetsTripCard and o_sk_9_tourHasNoOwnerTileSteps', () {
-      final keys = [TourKeys.homeManageListingsCard, TourKeys.homeQuickActionAddStay, TourKeys.homeQuickActionAddTaxi, TourKeys.homeQuickActionLeads, TourKeys.homeInstagramCard];
-      final steps = seekerStepsFrom([
-        for (final k in keys) TourStep(key: k, title: 'Plan your trip', body: 'b', icon: Icons.add),
-      ]);
-      expect(steps.first.key, SeekerTourKeys.homeTripCard);
-      expect(steps.map((s) => s.key), isNot(contains(TourKeys.homeQuickActionAddStay)));
-      expect(steps.map((s) => s.key), isNot(contains(TourKeys.homeQuickActionLeads)));
-      expect(steps.length, 2);
     });
   });
 

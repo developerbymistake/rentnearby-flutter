@@ -13,7 +13,6 @@ import '../features/taxi/taxi_status_sync.dart';
 import '../features/taxi_driver/taxi_driver_bindings.dart';
 import '../features/taxi_driver/taxi_driver_tabs.dart';
 import '../features/trip/screens/trips_discovery_screen.dart';
-import '../navigation/tour_keys.dart';
 import '../screens/home_screen.dart';
 import 'app_tabs.dart';
 import 'shell_kind.dart';
@@ -74,7 +73,6 @@ abstract final class TabShell {
           label: _tabs.displayNameForIndex(AppTabs.stays, 'Stays'),
           image: '${_t3d}camping.png',
           activeColor: ListingPalette.forest.text,
-          itemKey: TourKeys.homeStaysNavIcon,
           rootTag: 'stays',
           root: () => const StayLandingScreenV2(),
           active: () => _tabs.isActiveForIndex(AppTabs.stays),
@@ -101,7 +99,6 @@ abstract final class TabShell {
           label: _tabs.displayNameForIndex(AppTabs.taxi, 'Taxi'),
           image: '${_t3d}taxi.png',
           activeColor: ListingPalette.coral.text,
-          itemKey: TourKeys.homeTaxiNavIcon,
           rootTag: 'taxi',
           root: () => const TaxiListScreenV2(root: true),
           active: () => _tabs.isActiveForIndex(AppTabs.taxi),

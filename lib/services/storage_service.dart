@@ -242,12 +242,16 @@ class StorageService {
   static bool getInstallReferrerConsumed() =>
       _box.read<bool>(AppConstants.installReferrerConsumedKey) ?? false;
 
-  // Generic pair, not one method per tour — tour_registry.dart already carries
-  // each tour's storage key as data, so a hand-written getter/setter per tour
-  // here would just relocate that duplication rather than remove it.
+  // Generic pair keyed by data: tour_registry.dart carries the Trips tour key,
+  // the welcome intro uses introCarouselSeenKey.
   static bool getTourSeen(String key) => _box.read<bool>(key) ?? false;
 
   static void saveTourSeen(String key) => _box.write(key, true);
+
+  static void dropLegacyTourKeys() {
+    _box.remove('tour_home_seen_v2');
+    _box.remove('tour_stays_seen_v1');
+  }
 
   static Future<void> saveSubscribedDistrictTopic(String topic) async =>
       _box.write(AppConstants.subscribedDistrictTopicKey, topic);
