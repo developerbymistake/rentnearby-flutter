@@ -320,7 +320,7 @@ class _StayRoomsScreenState extends State<StayRoomsScreen> {
             tone: _tone,
             columns: 4,
             items: [
-              for (final g in StayOptionSets.maxGuests) OptionTileItem(label: 'guests', art: ListingArt.guests, big: StayOptionSets.guestsLabel(g)),
+              for (final g in StayOptionSets.maxGuests) OptionTileItem(label: 'guests', art: ListingArt.panda, big: StayOptionSets.guestsLabel(g)),
             ],
             isSelected: (i) => _guests == StayOptionSets.maxGuests[i],
             onTap: (i) => setState(() {

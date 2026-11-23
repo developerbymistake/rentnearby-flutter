@@ -33,6 +33,4 @@ class TaxiStatusLook {
     bottomRight: Radius.circular(8),
   );
   static const BorderRadius sheetRadius = BorderRadius.vertical(top: Radius.circular(32));
-
-  static const String person = 'assets/images/design/travel3d/bust_in_silhouette.png';
 }

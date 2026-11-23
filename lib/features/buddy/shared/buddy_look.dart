@@ -117,8 +117,6 @@ abstract final class BuddyArt {
   static const String magnifier = '${dir}magnifying_glass_tilted_left.png';
   static const String camera = '${dir}camera.png';
   static const String bell = '${dir}bell.png';
-  static const String busts = '${dir}busts_in_silhouette.png';
-  static const String bust = '${dir}bust_in_silhouette.png';
   static const String memo = '${dir}memo.png';
   static const String calendar = '${dir}calendar.png';
   static const String clipboard = '${dir}clipboard.png';

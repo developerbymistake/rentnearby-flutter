@@ -28,7 +28,7 @@ class BuddyMenuSheet extends StatelessWidget {
     void pick(BuddyMenuAction a) => Navigator.of(context).pop(a);
     final rows = [
       MenuRow(art: BuddyArt.luggage, title: BuddiesStrings.inviteToTrip, subtitle: BuddiesStrings.pickTrip, onTap: () => pick(BuddyMenuAction.invite)),
-      MenuRow(art: BuddyArt.bust, title: BuddiesStrings.removeBuddy, subtitle: BuddiesStrings.tripsStay, grey: true, onTap: () => pick(BuddyMenuAction.remove)),
+      MenuRow(art: BuddyArt.panda, title: BuddiesStrings.removeBuddy, subtitle: BuddiesStrings.tripsStay, grey: true, onTap: () => pick(BuddyMenuAction.remove)),
       MenuRow(art: BuddyArt.shield, title: BuddiesStrings.block, danger: true, onTap: () => pick(BuddyMenuAction.block)),
       MenuRow(art: BuddyArt.warning, title: BuddiesStrings.report, danger: true, onTap: () => pick(BuddyMenuAction.report)),
     ];

@@ -568,7 +568,7 @@ class _OfferBodyState extends State<_OfferBody> {
         Gap.v(12),
         StepperField(tone: t, filled: true, leadingArt: ListingArt.bed, label: TripStrings.units, value: l.units, min: 1, max: 10, onChanged: (v) => setState(() => l.units = v)),
         Gap.v(12),
-        StepperField(tone: t, filled: true, leadingArt: ListingArt.guests, label: TripStrings.guests, value: l.guests, min: 1, max: 40, onChanged: (v) => setState(() => l.guests = v)),
+        StepperField(tone: t, filled: true, leadingArt: ListingArt.panda, label: TripStrings.guests, value: l.guests, min: 1, max: 40, onChanged: (v) => setState(() => l.guests = v)),
         _field(l.priceCtrl, TripStrings.pricePerNight, art: ListingArt.moneyBag, digits: true, maxLength: 7, prefix: '₹ ', ring: _tried && l.price < 1),
       ],
     );

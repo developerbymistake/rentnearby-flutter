@@ -252,7 +252,7 @@ class _ChangeBodyState extends State<_ChangeBody> {
               : Column(children: [dates[0], Gap.v(10), dates[1]]),
         ),
         Gap.v(12),
-        StepperField(tone: _tone, filled: true, leadingArt: ListingArt.guests, label: TripStrings.adults, value: _adults, min: 1, max: TripConstants.maxAdults, onChanged: _busy ? null : (v) => setState(() => _adults = v)),
+        StepperField(tone: _tone, filled: true, leadingArt: ListingArt.panda, label: TripStrings.adults, value: _adults, min: 1, max: TripConstants.maxAdults, onChanged: _busy ? null : (v) => setState(() => _adults = v)),
         Gap.v(12),
         StepperField(tone: _tone, filled: true, leadingArt: ListingArt.star, label: TripStrings.kids, value: _kids, min: 0, max: TripConstants.maxKids, onChanged: _busy ? null : (v) => setState(() => _kids = v)),
         Gap.v(12),

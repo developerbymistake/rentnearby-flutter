@@ -134,7 +134,7 @@ class _EnquiryBodyState extends State<_EnquiryBody> {
             sublabel: TripStrings.people,
             value: s.peopleSummary,
             hint: TripStrings.addPeople,
-            leadingArt: ListingArt.guests,
+            leadingArt: ListingArt.panda,
             onTap: () => TripDatesSheet.edit(context),
           ),
           if (nights > 1) KeyValueRow(label: TripStringsV2Find.nightsLabel, value: TripStringsV2Find.nightsText(nights), divider: false),

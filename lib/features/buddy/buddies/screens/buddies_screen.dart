@@ -139,7 +139,7 @@ class _BuddiesScreenState extends State<BuddiesScreen> {
       case BuddyMenuAction.remove:
         final ok = await BuddyConfirmBox.ask(
           context,
-          art: BuddyArt.bust,
+          art: BuddyArt.panda,
           title: BuddiesStrings.removeTitle(p.name),
           body: BuddiesStrings.removeBody,
           confirmLabel: BuddiesStrings.remove,

@@ -78,7 +78,7 @@ class TaxiDriverIdentity extends StatelessWidget {
     return Row(
       mainAxisSize: centered ? MainAxisSize.min : MainAxisSize.max,
       children: [
-        const Art3D(asset: TaxiStatusLook.person, size: 48, shadowAlpha: 0),
+        const Art3D(asset: ListingArt.panda, size: 48, shadowAlpha: 0),
         Gap.h(14),
         if (centered) Flexible(child: text) else Expanded(child: text),
         if (trailing != null) ...[Gap.h(8), trailing!],

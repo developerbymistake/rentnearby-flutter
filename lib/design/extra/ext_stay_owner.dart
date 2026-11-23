@@ -13,7 +13,7 @@ abstract final class StayOwnerArt {
     if (n.contains('resort')) return ListingArt.beach;
     if (n.contains('camp') || n.contains('tent')) return ListingArt.tent;
     if (n.contains('cottage') || n.contains('farm')) return ListingArt.mountain;
-    if (n.contains('hostel') || n.contains('dorm')) return ListingArt.guests;
+    if (n.contains('hostel') || n.contains('dorm')) return ListingArt.panda;
     return ListingArt.stay;
   }
 

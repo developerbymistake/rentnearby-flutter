@@ -419,7 +419,7 @@ class _Hero extends StatelessWidget {
       padding: DS.insets(l: 6, t: ringing ? 0 : 10, r: 6),
       child: Column(
         children: [
-          const Art3D(asset: TaxiStatusLook.person, size: 100, shadowBlur: 7, shadowOffset: Offset(6, 9)),
+          const Art3D(asset: ListingArt.panda, size: 100, shadowBlur: 7, shadowOffset: Offset(6, 9)),
           Gap.v(10),
           Text(name,
               key: const ValueKey('request_traveller_name'),

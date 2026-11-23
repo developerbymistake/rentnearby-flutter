@@ -161,7 +161,7 @@ class SeekerQuickActions extends StatelessWidget {
       onTap: SeekerQuickActionTargets.addExpense,
     ),
     SeekerQuickAction(
-      art: ListingArt.guests,
+      art: ListingArt.panda,
       tone: ListingTone.cB,
       title: SeekerHomeStrings.tileBuddyTitle,
       body: SeekerHomeStrings.tileBuddyBody,

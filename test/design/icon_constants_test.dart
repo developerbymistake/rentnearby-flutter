@@ -9,7 +9,7 @@ void main() {
   test('every ListingArt and TravelIcon constant points to an existing file', () {
     const all = <String>[
       ListingArt.taxi, ListingArt.bus, ListingArt.stay, ListingArt.hotel, ListingArt.hotelBuilding,
-      ListingArt.search, ListingArt.profile, ListingArt.guests, ListingArt.briefcase, ListingArt.flag,
+      ListingArt.search, ListingArt.profile, ListingArt.panda, ListingArt.briefcase, ListingArt.flag,
       ListingArt.warning, ListingArt.bulb, ListingArt.antenna, ListingArt.paw, ListingArt.hotSprings,
       ListingArt.potOfFood, ListingArt.bed, ListingArt.key, ListingArt.luggage, ListingArt.compass,
       ListingArt.backpack, ListingArt.airplane, ListingArt.mountain, ListingArt.camping, ListingArt.fox,

@@ -192,7 +192,7 @@ class _InviteSheetState extends State<InviteSheet> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Art3D(asset: BuddyArt.bust, size: 72, shadowBlur: 4, shadowOffset: Offset(2, 4)),
+            const Art3D(asset: BuddyArt.panda, size: 72, shadowBlur: 4, shadowOffset: Offset(2, 4)),
             Gap.v(10),
             Text(SharingStrings.noBuddiesYet, textAlign: TextAlign.center, style: Ink3D.text(16, FontWeight.w700, Ink3D.title, letterSpacing: 0)),
             Gap.v(4),

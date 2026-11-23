@@ -126,7 +126,6 @@ abstract final class ListingArt {
   static const String hotelBuilding = '${_dir}hotel.png';
   static const String search = '${_dir}magnifying_glass_tilted_left.png';
   static const String profile = '${_dir}fox.png';
-  static const String guests = '${_dir}busts_in_silhouette.png';
   static const String briefcase = '${_dir}briefcase.png';
   static const String flag = '${_dir}chequered_flag.png';
   static const String warning = '${_dir}warning.png';
