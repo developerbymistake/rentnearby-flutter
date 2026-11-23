@@ -427,6 +427,8 @@ void main() {
       await _tap(t, find.text(ProfilePhotoStrings.continueLabel));
       expect(p.sent, hasLength(1));
       expect(find.bySemanticsLabel(ProfilePhotoStrings.semRetryUpload), findsNothing, reason: 'mock E5: no retry-only circle on the gate page');
+      expect(find.byKey(ProfilePhotoCircle.retryKey), findsNothing);
+      expect(find.text(ProfilePhotoStrings.uploadFailed), findsOneWidget);
       await _drain(t);
       await _tap(t, find.bySemanticsLabel(ProfilePhotoStrings.semProfilePhoto));
       expect(p.picks, 2);
