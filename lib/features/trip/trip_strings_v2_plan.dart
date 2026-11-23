@@ -93,6 +93,13 @@ class TripStringsV2Plan {
   static const String makeRestDay = 'Make it a rest day';
   static const String undoRestDay = 'Add places again';
   static const String placeRemoved = 'Place removed';
+  static const String orderChanged = 'Order changed';
+  static String movedToDay(int n) => 'Moved to Day $n';
+  static const String moveUp = 'Move up';
+  static const String moveDown = 'Move down';
+  static const String moveToPreviousDay = 'Move to previous day';
+  static const String moveToNextDay = 'Move to next day';
+  static const String dragHandle = 'Drag to reorder';
   static const String removePlace = 'Remove place';
   static const String dayFull = 'This day has 6 places. Move one to another day or add a day.';
   static const String removePlacesFirst = 'Remove places first';

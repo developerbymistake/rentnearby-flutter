@@ -82,6 +82,8 @@ enum TripStructureBlock { none, readOnly, locked, pastDay }
 
 enum TripLegApplyBlock { none, readOnly, locked, stale, emptyDay, bookings, running, invalid }
 
+enum _MoveBlock { none, refused, differentCity, dayFull }
+
 class TripPlanController extends GetxController {
   static TripPlanController get to =>
       Get.isRegistered<TripPlanController>()
@@ -2874,14 +2876,14 @@ class TripPlanController extends GetxController {
     };
   }
 
-  List<TripDay>? _movedDays(String id, int toDay) {
+  List<TripDay>? _movedDays(String id, int toDay, {int? index}) {
     final p = plan.value;
     if (p == null) return null;
     final fromDay = p.dayOfSpot(id);
     final spot = p.spotById(id);
     if (fromDay == null || spot == null || fromDay == toDay || p.dayAt(toDay) == null) return null;
     if (p.legIndexOf(fromDay) != p.legIndexOf(toDay)) return null;
-    final at = _insertion(id, toDay)?.index;
+    final at = index ?? _insertion(id, toDay)?.index;
     return [
       for (final d in p.days)
         if (d.day == fromDay)
@@ -2899,37 +2901,85 @@ class TripPlanController extends GetxController {
     return [for (final d in p.days) d.copyWith(spots: d.spots.where((s) => s.id != id).toList())];
   }
 
-  bool moveSpot(String id, int toDay, {bool keepEmptyDays = true}) {
-    final p = plan.value;
-    final fromDay = p?.dayOfSpot(id);
-    if (p == null || !_structureOk(day: toDay) || (fromDay != null && !_structureOk(day: fromDay))) return false;
-    if (fromDay != null && p.dayAt(toDay) != null && p.legIndexOf(fromDay) != p.legIndexOf(toDay)) {
-      AppToast.warning(TripStringsMcaA1.differentCity);
-      return false;
+  bool moveSpot(String id, int toDay, {int? index, bool keepEmptyDays = true}) {
+    switch (_moveBlock(id, toDay)) {
+      case _MoveBlock.differentCity:
+        AppToast.warning(TripStringsMcaA1.differentCity);
+        return false;
+      case _MoveBlock.dayFull:
+        AppToast.warning(TripStringsV2Plan.dayFull);
+        return false;
+      case _MoveBlock.refused:
+        return false;
+      case _MoveBlock.none:
+        break;
     }
-    if (fromDay != null && fromDay != toDay && !TripDaysRules.canAddOnDay(p, toDay)) {
-      AppToast.warning(TripStringsV2Plan.dayFull);
-      return false;
-    }
-    final next = _movedDays(id, toDay);
+    final next = _movedDays(id, toDay, index: index);
     if (next == null) return false;
     _applyEdit(next, keepEmptyDays: keepEmptyDays);
     return true;
   }
 
+  bool canDropOn(String id, int toDay) => _moveBlock(id, toDay) == _MoveBlock.none && _movedDays(id, toDay, index: 0) != null;
+
+  _MoveBlock _moveBlock(String id, int toDay) {
+    final p = plan.value;
+    final fromDay = p?.dayOfSpot(id);
+    if (p == null || !_structureOk(day: toDay) || (fromDay != null && !_structureOk(day: fromDay))) return _MoveBlock.refused;
+    if (fromDay != null && p.dayAt(toDay) != null && p.legIndexOf(fromDay) != p.legIndexOf(toDay)) return _MoveBlock.differentCity;
+    if (fromDay != null && fromDay != toDay && !TripDaysRules.canAddOnDay(p, toDay)) return _MoveBlock.dayFull;
+    return _MoveBlock.none;
+  }
+
   void reorder(int day, int oldIndex, int newIndex) {
-    if (!_structureOk(day: day)) return;
+    final d = plan.value?.dayAt(day);
+    if (d == null || oldIndex < 0 || oldIndex >= d.spots.length) return;
+    if (newIndex > oldIndex) newIndex -= 1;
+    reorderTo(day, oldIndex, newIndex.clamp(0, d.spots.length - 1));
+  }
+
+  bool reorderTo(int day, int from, int to) {
+    if (!_structureOk(day: day)) return false;
     final p = plan.value;
     final d = p?.dayAt(day);
-    if (p == null || d == null || oldIndex < 0 || oldIndex >= d.spots.length) return;
-    if (newIndex > oldIndex) newIndex -= 1;
-    newIndex = newIndex.clamp(0, d.spots.length - 1);
-    if (newIndex == oldIndex) return;
+    if (p == null || d == null) return false;
+    final n = d.spots.length;
+    if (from < 0 || from >= n || to < 0 || to >= n || from == to) return false;
     final spots = [...d.spots];
-    final s = spots.removeAt(oldIndex);
-    spots.insert(newIndex, s);
+    spots.insert(to, spots.removeAt(from));
     _applyEdit([for (final x in p.days) x.day == day ? x.copyWith(spots: spots) : x], keepEmptyDays: true);
+    return true;
   }
+
+  List<TripDay> snapshotDays(List<int> days) {
+    final p = plan.value;
+    if (p == null) return const [];
+    return [for (final n in days) ?p.dayAt(n)];
+  }
+
+  bool restoreDays(List<TripDay> snapshot) {
+    final p = plan.value;
+    if (p == null || snapshot.isEmpty) return false;
+    final byDay = {for (final s in snapshot) s.day: s};
+    final before = <String>{};
+    final now = <String>{};
+    var changed = false;
+    for (final s in snapshot) {
+      final d = p.dayAt(s.day);
+      if (d == null || d.leg != s.leg || !_structureOk(day: s.day)) return false;
+      before.addAll(s.spots.map((x) => x.id));
+      now.addAll(d.spots.map((x) => x.id));
+      if (d.restDay != s.restDay || !listEquals([for (final x in d.spots) x.id], [for (final x in s.spots) x.id])) changed = true;
+    }
+    if (!changed || before.length != now.length || !before.containsAll(now)) return false;
+    _applyEdit([for (final x in p.days) byDay[x.day] ?? x], keepEmptyDays: true);
+    return true;
+  }
+
+  int roadMinutesBetween(int day, TripSpotRef a, TripSpotRef b) => _legMinutes(result.value?.dayAt(day), a, b);
+
+  bool roadKnown(int day, TripSpotRef a, TripSpotRef b) =>
+      result.value?.dayAt(day)?.legs.any((l) => l.fromId == a.id && l.toId == b.id) ?? false;
 
   void removeSpot(String id, {bool keepEmptyDays = false}) {
     if (!_structureOk(day: plan.value?.dayOfSpot(id))) return;
