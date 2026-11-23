@@ -161,7 +161,7 @@ class _TripSpotDetailSheetState extends State<TripSpotDetailSheet>
     } catch (_) {
       if (!mounted) return;
       if (_gallery == SpotGalleryState.ready) return;
-      if (widget.revalidate && !widget.partial) {
+      if (widget.revalidate && !widget.partial && !_expectsGallery) {
         setState(() => _gallery = null);
         return;
       }

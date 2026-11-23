@@ -287,10 +287,25 @@ void main() {
 
       testWidgets('full model + failed call: no error card, the row stays', (t) async {
         _repo.error = Exception('down');
-        await _open(t, _spot(gallery: 3, description: 'Local copy.'), revalidate: true);
+        await _open(t, _spot(gallery: 0, description: 'Local copy.'), revalidate: true);
         await _settle(t);
         expect(find.text('Local copy.'), findsOneWidget);
         expect(find.text(TripStringsSpotsX.galleryError), findsNothing);
+      });
+
+      testWidgets('full model with a gallery + failed call: the gallery error card with Retry, as on the list', (t) async {
+        _repo.error = Exception('down');
+        await _open(t, _spot(gallery: 3, description: 'Local copy.'), revalidate: true);
+        await _settle(t);
+        expect(find.text('Local copy.'), findsOneWidget);
+        expect(find.text(TripStringsSpotsX.galleryError), findsOneWidget);
+        _repo.error = null;
+        _repo.answer = fresh;
+        await t.ensureVisible(find.text('Retry'));
+        await t.tap(find.text('Retry'));
+        await _settle(t);
+        expect(_repo.calls, 2);
+        expect(find.text('2 photos'), findsOneWidget);
       });
 
       testWidgets('partial + failed call: error card with Retry', (t) async {
