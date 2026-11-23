@@ -124,4 +124,28 @@ void main() {
       expect(TripSpotMinutes.fromJson({'available': true, 'ids': ['a', 'b'], 'minutes': [[0, 1]]}), isNull);
     });
   });
+
+  group('awayText', () {
+    final spot = _s('b', 'lake', 2);
+
+    test('road minutes', () {
+      expect(TripSpotPicks.awayText(TripNearby(spot, 20, 3.2)), '20 min away');
+      expect(TripSpotPicks.awayText(TripNearby(spot, 70, 30)), '1 h 10 min away');
+    });
+
+    test('km under 1 reads about 1 km, never minutes', () {
+      expect(TripSpotPicks.awayText(TripNearby(spot, null, 0.4)), 'about 1 km away');
+    });
+
+    test('km of 10 or more is rounded', () {
+      expect(TripSpotPicks.awayText(TripNearby(spot, null, 12.6)), 'about 13 km away');
+    });
+
+    test('same numbers as nearbyText', () {
+      final from = _s('a', 'lake', 1);
+      final n = TripNearby(spot, null, 2.5);
+      expect(TripSpotPicks.nearbyText(from, n), contains('about 2.5 km'));
+      expect(TripSpotPicks.awayText(n), 'about 2.5 km away');
+    });
+  });
 }

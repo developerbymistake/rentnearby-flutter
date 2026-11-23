@@ -7,6 +7,8 @@ class TripStringsSpotsX {
   static const String addedWishlist = 'Added';
   static const String addToWishlist = 'Add to wishlist';
   static const String dismiss = 'No thanks';
+  static String away(String d) => '$d away';
+  static String aboutKmAway(String km) => 'about $km km away';
   static const String offline = 'Offline. Showing your saved list.';
   static String fewPlaces(int n) => 'Only $n ${n == 1 ? 'place' : 'places'} here so far.';
   static String noneIn(String chip) => 'No places in $chip';

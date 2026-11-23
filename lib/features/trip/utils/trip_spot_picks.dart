@@ -1,4 +1,5 @@
 import '../models/trip_spot_model.dart';
+import '../trip_strings_spots_x.dart';
 import 'trip_format.dart';
 import 'trip_geo.dart';
 
@@ -141,6 +142,11 @@ class TripSpotPicks {
     return m != null
         ? '$lead · about ${TripFormat.duration(m)} of driving'
         : '$lead · about ${r.km < 1 ? '1' : TripFormat.number(r.km)} km';
+  }
+
+  static String awayText(TripNearby n) {
+    final m = n.minutes;
+    return m != null ? TripStringsSpotsX.away(TripFormat.duration(m)) : TripStringsSpotsX.aboutKmAway(n.km < 1 ? '1' : TripFormat.number(n.km));
   }
 
   static String nearbyText(TripSpotModel added, TripNearby n) {

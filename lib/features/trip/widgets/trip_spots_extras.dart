@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:bakhli/design/design.dart';
 import 'package:bakhli/utils/spot_photo_url.dart';
@@ -94,46 +96,94 @@ class TripMustSeeRail extends StatelessWidget {
 }
 
 class TripSuggestionCard extends StatelessWidget {
-  final String text;
+  final TripSpotModel spot;
+  final String away;
+  final String? semanticsLabel;
   final VoidCallback onAdd;
   final VoidCallback onDismiss;
 
-  const TripSuggestionCard({super.key, required this.text, required this.onAdd, required this.onDismiss});
+  const TripSuggestionCard({super.key, required this.spot, required this.away, this.semanticsLabel, required this.onAdd, required this.onDismiss});
 
   @override
-  Widget build(BuildContext context) => TemplateEntranceOnce(
-        child: Container(
-          margin: EdgeInsets.fromLTRB(DS.s(18), 0, DS.s(18), DS.gv(14)),
-          constraints: BoxConstraints(minHeight: DS.s(68)),
-          padding: DS.insets(l: 12, t: 10, r: 4, b: 10),
-          decoration: BoxDecoration(color: DesignColors.surface, borderRadius: DS.br(Banner3D.radius), boxShadow: DS.shadows(Ink3D.softShadow)),
-          child: Row(
-            children: [
-              Container(
-                width: DS.s(46),
-                height: DS.s(46),
-                decoration: BoxDecoration(color: _tone.tint, borderRadius: DS.circular(14)),
-                child: const Center(child: Art3D(asset: ListingArt.compass, size: 40, shadowBlur: 3, shadowOffset: Offset(2, 3))),
-              ),
-              Gap.h(12),
-              Expanded(
-                child: Text(
-                  text,
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
-                  style: Ink3D.text(13, FontWeight.w600, Ink3D.title),
+  Widget build(BuildContext context) {
+    final notch = DS.s(14);
+    final text = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(spot.title, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(13, FontWeight.w600, Ink3D.title, height: 1.25)),
+        SizedBox(height: DS.s(2)),
+        Text(away, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(12.5, FontWeight.w500, Ink3D.body.withValues(alpha: Alpha.high))),
+      ],
+    );
+    return TemplateEntranceOnce(
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(DS.s(14), DS.gv(12), DS.s(14), DS.gv(14)),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            DecoratedBox(
+              decoration: BoxDecoration(color: DesignColors.surface, borderRadius: DS.br(Banner3D.radius), boxShadow: DS.shadows(Ink3D.softShadow)),
+              child: Padding(
+                padding: DS.insets(l: 12, t: 12, r: 4, b: 12),
+                child: Row(
+                  children: [
+                    _SuggestionThumb(spot: spot),
+                    Gap.h(12),
+                    Expanded(child: Semantics(container: true, label: semanticsLabel, excludeSemantics: semanticsLabel != null, child: text)),
+                    Gap.h(12),
+                    GradientPillButton(tone: _tone, label: TripStringsSpotsX.add, onTap: onAdd, height: 34, fontSize: 13, expand: false),
+                    Gap.h(12),
+                    IconButton(
+                      onPressed: onDismiss,
+                      tooltip: TripStringsSpotsX.dismiss,
+                      constraints: BoxConstraints(minWidth: DS.s(KitMetrics.touch), minHeight: DS.s(KitMetrics.touch)),
+                      icon: Icon(Icons.close_rounded, size: DS.s(20), color: Ink3D.grey),
+                    ),
+                  ],
                 ),
               ),
-              Gap.h(8),
-              GradientPillButton(tone: _tone, label: TripStringsSpotsX.add, onTap: onAdd, height: 34, fontSize: 13, expand: false),
-              IconButton(
-                onPressed: onDismiss,
-                tooltip: TripStringsSpotsX.dismiss,
-                constraints: BoxConstraints(minWidth: DS.s(KitMetrics.touch), minHeight: DS.s(KitMetrics.touch)),
-                icon: Icon(Icons.close_rounded, size: DS.s(20), color: Ink3D.grey),
+            ),
+            Positioned(
+              left: DS.s(44),
+              top: -DS.s(7),
+              child: IgnorePointer(
+                child: ExcludeSemantics(
+                  child: Transform.rotate(
+                    angle: math.pi / 4,
+                    child: Container(
+                      width: notch,
+                      height: notch,
+                      decoration: BoxDecoration(color: DesignColors.surface, borderRadius: BorderRadius.only(topLeft: Radius.circular(DS.s(3)))),
+                    ),
+                  ),
+                ),
               ),
-            ],
-          ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SuggestionThumb extends StatelessWidget {
+  final TripSpotModel spot;
+
+  const _SuggestionThumb({required this.spot});
+
+  @override
+  Widget build(BuildContext context) => ClipRRect(
+        borderRadius: DS.circular(14),
+        child: SizedBox(
+          width: DS.s(54),
+          height: DS.s(54),
+          child: spot.hasPhoto
+              ? TripSpotMedia(spot: spot, size: SpotPhotoSize.square)
+              : ColoredBox(
+                  color: _tone.tint,
+                  child: Center(child: Art3D(asset: TripSpotLook.assetOf(spot.category), size: 44, shadowBlur: 3, shadowOffset: const Offset(2, 3))),
+                ),
         ),
       );
 }

@@ -22,6 +22,7 @@ import '../trip_strings_spots_x.dart';
 import '../utils/trip_spot_picks.dart';
 import '../utils/trip_days_rules.dart';
 import '../widgets/trip_city_sheet.dart';
+import '../widgets/trip_spot_card.dart';
 import '../widgets/trip_spot_row.dart';
 import '../widgets/trip_spots_extras.dart';
 
@@ -579,7 +580,9 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> with TickerProviderSt
               children: [
                 card,
                 TripSuggestionCard(
-                  text: TripSpotPicks.nearbyText(s, sug.nearby),
+                  spot: sug.nearby.spot,
+                  away: TripSpotPicks.awayText(sug.nearby),
+                  semanticsLabel: TripSpotPicks.nearbyText(s, sug.nearby),
                   onAdd: () {
                     _ctrl.dismissSuggestion();
                     _toggle(sug.nearby.spot.id);
@@ -610,7 +613,7 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> with TickerProviderSt
         physics: const NeverScrollableScrollPhysics(),
         padding: EdgeInsets.only(bottom: DS.s(16)),
         itemCount: 4,
-        itemBuilder: (_, _) => const WideCardSkeleton(kind: WideKind.photo),
+        itemBuilder: (_, _) => const TripSpotCardSkeleton(),
       );
 
 
