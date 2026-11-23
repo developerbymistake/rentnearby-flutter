@@ -13,6 +13,7 @@ import '../pack/map_pack_index.dart';
 import '../pack/map_pack_models.dart';
 import '../pack/map_pack_parser.dart';
 import 'map_pack_api.dart';
+import 'map_pack_bundle.dart';
 import 'map_pack_discovery_source.dart';
 import 'map_pack_store.dart';
 
@@ -268,7 +269,10 @@ class MapPackService {
       return;
     }
     _metaLoaded = true;
-    if (m == null) return;
+    if (m == null) {
+      await _seedBundled();
+      return;
+    }
     final storedRefs = MapPackParser.refs(m['refs']);
     _flag = MapPackParser.flag({'mapDiscovery': m['flag']});
     _refs = storedRefs;
@@ -276,6 +280,18 @@ class MapPackService {
     _refsAt = ms is int ? DateTime.fromMillisecondsSinceEpoch(ms) : null;
     _persistedKey = _metaKey();
     if (_flag) revision.value++;
+    _updateStatus();
+  }
+
+  // Fresh install (nothing stored yet): start from the packs shipped in the app; the version check refreshes them.
+  Future<void> _seedBundled() async {
+    final refs = await MapPackBundle.seed();
+    if (refs.isEmpty) return;
+    _flag = true;
+    _refs = refs;
+    _refsAt = _now();
+    _persistMeta();
+    revision.value++;
     _updateStatus();
   }
 

@@ -118,6 +118,7 @@ flutter:
     - assets/images/design/travel3d/
     - assets/images/design/hub/
     - assets/map_style.json
+    - assets/map_packs/
     - assets/sprites/
     - assets/sounds/
   fonts:

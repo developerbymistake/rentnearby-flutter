@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:bakhli/design/design.dart';
+import 'package:bakhli/features/map_discovery/data/map_pack_bundle.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class _ApprovedScaleComparator extends GoldenFileComparator {
@@ -12,6 +13,7 @@ class _ApprovedScaleComparator extends GoldenFileComparator {
 }
 
 Future<void> testExecutable(FutureOr<void> Function() testMain) async {
+  MapPackBundle.disabled = true;
   const mode = String.fromEnvironment('UI_SCALE');
   if (mode == 'approved') {
     DS.applyApproved();
