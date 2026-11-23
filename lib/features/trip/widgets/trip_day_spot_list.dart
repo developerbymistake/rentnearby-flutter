@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:bakhli/design/design.dart';
 import 'package:bakhli/design/extra/trip_plan_look.dart';
@@ -8,11 +9,15 @@ import '../models/trip_plan_model.dart';
 import '../models/trip_plan_result_model.dart';
 import '../models/trip_spot_category.dart';
 import '../screens/trip_edit_spot_sheet.dart';
+import '../trip_constants.dart';
 import '../trip_strings_v2_plan.dart';
 import '../trip_strings_wizard.dart';
 import '../utils/trip_day_timeline.dart';
 import '../utils/trip_days_rules.dart';
+import '../utils/trip_drag_slots.dart';
 import '../utils/trip_format.dart';
+import 'drag/trip_spot_drag_scope.dart';
+import 'drag/trip_spot_drag_start.dart';
 import 'trip_leg_header.dart';
 import 'trip_leg_actions.dart';
 import '../../buddy/ledger/widgets/day_spent_chip.dart';
@@ -27,6 +32,7 @@ class TripDaySpotList extends StatelessWidget {
 
   static const Key headerKey = ValueKey('day-header');
   static const Key chipsKey = ValueKey('day-chips');
+  static const Key handleKey = ValueKey('spot-drag-handle');
 
   static Future<void> replace(TripPlanController c, String spotId, int day) async {
     final legIndex = c.plan.value?.legIndexOf(day) ?? 1;
@@ -218,33 +224,25 @@ class TripDaySpotList extends StatelessWidget {
     bool locked,
     bool editing,
   ) {
+    final spots = d.spots;
+    final known = c.result.value?.dayAt(day) != null;
     final roads = <int?>[
-      for (var i = 0; i < d.spots.length; i++) i == d.spots.length - 1 ? null : c.legFrom(day, d.spots[i].id)?.minutes,
+      for (var i = 0; i < spots.length; i++)
+        i == spots.length - 1 || !known ? null : c.roadMinutesBetween(day, spots[i], spots[i + 1]),
+    ];
+    final drives = <int?>[
+      for (var i = 0; i < roads.length; i++)
+        roads[i] != null && c.roadKnown(day, spots[i], spots[i + 1]) ? roads[i] : null,
     ];
     final reserved = c.dayReservedMinutes(day);
     final starts = TripDayTimeline.starts(
-      visits: [for (final s in d.spots) s.visitMinutes],
+      visits: [for (final s in spots) s.visitMinutes],
       roads: roads,
       reserved: reserved,
     );
     final travel = reserved > 0 && plan.legIndexOf(day) >= 2 && plan.legStart(plan.legIndexOf(day)) == day;
     final k = plan.legIndexOf(day);
     final prev = travel ? plan.legAt(k - 1)?.cityName : null;
-    Widget item(int i) {
-      final s = d.spots[i];
-      return _StopItem(
-        key: ValueKey(s.id),
-        index: i,
-        spot: s,
-        color: color,
-        time: TripDayTimeline.clock(starts[i]),
-        driveMinutes: roads[i],
-        showDrive: i != d.spots.length - 1,
-        editing: editing,
-        onRemove: () => _remove(context, c, d, i),
-        onTap: editing ? () => _spotMenu(context, c, s) : null,
-      );
-    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -270,19 +268,27 @@ class TripDaySpotList extends StatelessWidget {
               ],
             ),
           ),
-        if (editing)
-          ReorderableListView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            buildDefaultDragHandles: false,
-            itemCount: d.spots.length,
-            onReorder: (o, n) => c.reorder(day, o, n),
-            itemBuilder: (_, i) => item(i),
-          )
-        else
-          for (var i = 0; i < d.spots.length; i++) item(i),
+        _DaySpots(
+          day: day,
+          spots: spots,
+          color: color,
+          editing: editing,
+          times: [for (final t in starts) TripDayTimeline.clock(t)],
+          drives: drives,
+          onRemove: (id) => _removeById(context, c, id),
+          onOpen: (id) {
+            final s = c.plan.value?.spotById(id);
+            if (s != null) _spotMenu(context, c, s);
+          },
+        ),
       ],
     );
+  }
+
+  void _removeById(BuildContext context, TripPlanController c, String id) {
+    final d = c.plan.value?.dayAt(day);
+    final i = d?.spots.indexWhere((x) => x.id == id) ?? -1;
+    if (d != null && i >= 0) _remove(context, c, d, i);
   }
 
   void _remove(BuildContext context, TripPlanController c, TripDay d, int index) {
@@ -425,7 +431,248 @@ class TripDaySpotList extends StatelessWidget {
   }
 }
 
+
+typedef _RowFields = (TripSpotRef, int, String, int?, bool, bool, Color);
+
+class _DaySpots extends StatefulWidget {
+  final int day;
+  final List<TripSpotRef> spots;
+  final Color color;
+  final bool editing;
+  final List<String> times;
+  final List<int?> drives;
+  final ValueChanged<String> onRemove;
+  final ValueChanged<String> onOpen;
+
+  const _DaySpots({
+    required this.day,
+    required this.spots,
+    required this.color,
+    required this.editing,
+    required this.times,
+    required this.drives,
+    required this.onRemove,
+    required this.onOpen,
+  });
+
+  @override
+  State<_DaySpots> createState() => _DaySpotsState();
+}
+
+class _DaySpotsState extends State<_DaySpots> with AutomaticKeepAliveClientMixin {
+  final Map<String, (_RowFields, _StopItem)> _cache = {};
+  final ValueNotifier<TripDragState?> _ownDrag = ValueNotifier(null);
+  TripSpotDragScopeState? _scope;
+  TripTrackedDrag? _drag;
+  List<Rect> _rows = const [];
+  double _liftTop = 0;
+  int _insert = 0;
+  int _endInsert = 0;
+
+  ValueNotifier<TripDragState?> get _notifier => _scope?.drag ?? _ownDrag;
+
+  TripPlanController get _c => TripPlanController.to;
+
+  @override
+  bool get wantKeepAlive => _drag != null;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final scope = TripSpotDragScope.maybeOf(context);
+    if (scope != _scope) {
+      _scope = scope;
+      _cache.clear();
+    }
+  }
+
+  @override
+  void dispose() {
+    if (_drag != null) _endSession();
+    _ownDrag.dispose();
+    super.dispose();
+  }
+
+  _StopItem _row(int i) {
+    final s = widget.spots[i];
+    final last = i == widget.spots.length - 1;
+    final fields = (s, i, widget.times[i], widget.drives[i], !last, widget.editing, widget.color);
+    final hit = _cache[s.id];
+    if (hit != null && hit.$1 == fields) return hit.$2;
+    final row = _StopItem(
+      key: ValueKey(s.id),
+      day: widget.day,
+      index: i,
+      spot: s,
+      color: widget.color,
+      time: widget.times[i],
+      driveMinutes: widget.drives[i],
+      showDrive: !last,
+      editing: widget.editing,
+      drag: _notifier,
+      onRemove: widget.onRemove,
+      onOpen: widget.editing ? widget.onOpen : null,
+      onLift: _lift,
+      onMove: _move,
+      onRelease: _release,
+      onCancel: _cancel,
+    );
+    _cache[s.id] = (fields, row);
+    return row;
+  }
+
+  RenderBox? get _box {
+    final b = context.findRenderObject();
+    return b is RenderBox && b.attached && b.hasSize ? b : null;
+  }
+
+  void _lift(TripTrackedDrag d) {
+    final box = _box;
+    if (box == null) return;
+    _drag = d;
+    updateKeepAlive();
+    _liftTop = box.localToGlobal(Offset.zero).dy;
+    _rows = _rowRects(box);
+    _insert = d.index;
+    _endInsert = d.index;
+    _notifier.value = TripDragState(day: widget.day, from: d.index, slot: d.index);
+    TripDragHaptics.lift();
+    final scrollable = Scrollable.maybeOf(context);
+    if (scrollable != null) _scope?.startAutoScroll(scrollable, _refeed);
+  }
+
+  List<Rect> _rowRects(RenderBox list) {
+    final rects = List<Rect>.filled(widget.spots.length, Rect.zero);
+    void visit(Element e) {
+      final w = e.widget;
+      if (w is _StopItem) {
+        final r = e.renderObject;
+        if (r is RenderBox && r.hasSize && w.index < rects.length) {
+          rects[w.index] = list.globalToLocal(r.localToGlobal(Offset.zero)) & r.size;
+        }
+        return;
+      }
+      e.visitChildren(visit);
+    }
+
+    context.visitChildElements(visit);
+    return rects;
+  }
+
+  void _move(TripTrackedDrag d) {
+    if (d != _drag) return;
+    _recompute();
+    _feedScroller();
+  }
+
+  void _refeed() {
+    final d = _drag;
+    if (d == null) return;
+    d.refeed();
+    _recompute();
+    _feedScroller();
+  }
+
+  void _recompute() {
+    final d = _drag;
+    final box = _box;
+    if (d == null || box == null || _rows.isEmpty) return;
+    final shift = box.localToGlobal(Offset.zero).dy - _liftTop;
+    final next = TripDragSlots.next(rows: _rows, from: d.index, insert: _insert, proxyTop: _rows[d.index].top + d.dy - shift);
+    if (next == _insert) return;
+    final before = TripDragSlots.position(_insert, d.index);
+    _insert = next;
+    final slot = TripDragSlots.position(next, d.index);
+    if (slot == before) return;
+    TripDragHaptics.slot();
+    _notifier.value = TripDragState(day: widget.day, from: d.index, slot: slot);
+  }
+
+  void _feedScroller() {
+    final d = _drag;
+    final box = _box;
+    if (d == null || box == null || _rows.isEmpty) return;
+    final r = _rows[d.index];
+    _scope?.feed(Rect.fromLTWH(box.localToGlobal(Offset.zero).dx + r.left, _liftTop + r.top + d.dy, r.width, r.height));
+  }
+
+  void _onReorderEnd(int insert) {
+    _endInsert = insert;
+    final from = _drag?.index;
+    if (from != null && TripDragSlots.position(insert, from) != from) TripDragHaptics.drop();
+  }
+
+  void _release(TripTrackedDrag d) {
+    if (d != _drag) return;
+    final from = d.index;
+    final to = TripDragSlots.position(_endInsert, from);
+    _endSession(keepNumbers: to != from);
+  }
+
+  void _cancel(TripTrackedDrag d) {
+    if (d == _drag) _endSession();
+  }
+
+  void _endSession({bool keepNumbers = false}) {
+    _scope?.stopAutoScroll();
+    _drag = null;
+    _rows = const [];
+    if (!keepNumbers) _clearNumbers();
+    if (mounted) updateKeepAlive();
+  }
+
+  void _clearNumbers() {
+    if (_notifier.value?.day == widget.day) _notifier.value = null;
+  }
+
+  void _onReorderItem(int from, int to) {
+    _clearNumbers();
+    _commit(from, to);
+  }
+
+  void _commit(int from, int to) {
+    if (from == to) return;
+    _c.reorderTo(widget.day, from, to);
+  }
+
+  Widget _proxy(Widget child, int index, Animation<double> animation) {
+    final lifted = DecoratedBox(
+      decoration: BoxDecoration(borderRadius: DS.circular(10), boxShadow: DS.shadows(TripLook.dayCardShadow)),
+      child: ClipRRect(borderRadius: DS.circular(10), child: child),
+    );
+    return AnimatedBuilder(
+      animation: animation,
+      builder: (_, c) => Transform.scale(scale: 1 + TripConstants.dragLiftScale * Curves.easeOut.transform(animation.value), child: c),
+      child: lifted,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+    final ids = {for (final s in widget.spots) s.id};
+    _cache.removeWhere((id, _) => !ids.contains(id));
+    if (!widget.editing) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [for (var i = 0; i < widget.spots.length; i++) _row(i)],
+      );
+    }
+    return ReorderableList(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: widget.spots.length,
+      itemBuilder: (_, i) => _row(i),
+      onReorderItem: _onReorderItem,
+      onReorderEnd: _onReorderEnd,
+      proxyDecorator: _proxy,
+    );
+  }
+}
+
 class _StopItem extends StatelessWidget {
+  final int day;
   final int index;
   final TripSpotRef spot;
   final Color color;
@@ -433,11 +680,17 @@ class _StopItem extends StatelessWidget {
   final int? driveMinutes;
   final bool showDrive;
   final bool editing;
-  final VoidCallback onRemove;
-  final VoidCallback? onTap;
+  final ValueListenable<TripDragState?> drag;
+  final ValueChanged<String> onRemove;
+  final ValueChanged<String>? onOpen;
+  final TripDragCallback onLift;
+  final TripDragCallback onMove;
+  final TripDragCallback onRelease;
+  final TripDragCallback onCancel;
 
   const _StopItem({
     super.key,
+    required this.day,
     required this.index,
     required this.spot,
     required this.color,
@@ -445,89 +698,128 @@ class _StopItem extends StatelessWidget {
     required this.driveMinutes,
     required this.showDrive,
     required this.editing,
+    required this.drag,
     required this.onRemove,
-    required this.onTap,
+    required this.onOpen,
+    required this.onLift,
+    required this.onMove,
+    required this.onRelease,
+    required this.onCancel,
   });
+
+  Widget _dragStart({required bool delayed, required Widget child, HitTestBehavior behavior = HitTestBehavior.deferToChild}) =>
+      TripSpotDragStart(
+        index: index,
+        delayed: delayed,
+        delay: TripConstants.dragHoldDelay,
+        behavior: behavior,
+        onLift: onLift,
+        onMove: onMove,
+        onRelease: onRelease,
+        onCancel: onCancel,
+        child: child,
+      );
 
   @override
   Widget build(BuildContext context) {
     final drive = driveMinutes;
+    final open = onOpen;
     final timeW = MediaQuery.textScalerOf(context).clamp(maxScaleFactor: 1.3).scale(DS.s(66));
-    return Material(
+    final Widget row = InkWell(
+      onTap: open == null ? null : () => open(spot.id),
+      borderRadius: DS.circular(10),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(minHeight: DS.s(60)),
+        child: Padding(
+          padding: DS.insets(l: 12, t: 8, r: 8, b: 8),
+          child: Row(
+            children: [
+              if (editing)
+                Padding(
+                  padding: EdgeInsets.only(right: DS.s(4)),
+                  child: Icon(Icons.drag_indicator_rounded, size: DS.s(20), color: TripLook.textHint),
+                ),
+              SizedBox(
+                width: timeW,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(time, maxLines: 1, softWrap: false, style: Ink3D.text(12.5, FontWeight.w600, Ink3D.sub, letterSpacing: 0)),
+                ),
+              ),
+              Container(
+                width: DS.s(26),
+                height: DS.s(26),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+                child: ValueListenableBuilder<TripDragState?>(
+                  valueListenable: drag,
+                  builder: (_, s, _) {
+                    final n = s == null || s.day != day ? index : TripDragSlots.displayIndex(index, s.from, s.slot);
+                    return Text('${n + 1}', style: Ink3D.text(12.5, FontWeight.w700, DesignColors.surface, letterSpacing: 0));
+                  },
+                ),
+              ),
+              Gap.h(12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(spot.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(14, FontWeight.w600, Ink3D.title, letterSpacing: 0)),
+                    Text(
+                      '${TripSpotCategory.label(spot.category)} · ${TripFormat.hm(spot.visitMinutes)}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Ink3D.text(12.5, FontWeight.w400, TripLook.mutedText, letterSpacing: 0),
+                    ),
+                  ],
+                ),
+              ),
+              if (editing)
+                IconButton(
+                  onPressed: () => onRemove(spot.id),
+                  tooltip: TripStringsV2Plan.removePlace,
+                  constraints: BoxConstraints(minWidth: DS.s(44), minHeight: DS.s(44)),
+                  icon: Container(
+                    width: DS.s(32),
+                    height: DS.s(32),
+                    decoration: BoxDecoration(color: TripLook.errorSurface, shape: BoxShape.circle),
+                    child: Icon(Icons.close_rounded, size: DS.s(18), color: TripLook.error),
+                  ),
+                )
+              else
+                Padding(
+                  padding: EdgeInsets.only(left: DS.s(10)),
+                  child: Art3D(asset: TripSpotLook.assetOf(spot.category), size: 30, shadowBlur: 2, shadowOffset: const Offset(1, 3)),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+    final body = Material(
       color: DesignColors.surface,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          InkWell(
-            onTap: onTap,
-            borderRadius: DS.circular(10),
-            child: ConstrainedBox(
-              constraints: BoxConstraints(minHeight: DS.s(60)),
-              child: Padding(
-                padding: DS.insets(l: 12, t: 8, r: 8, b: 8),
-                child: Row(
-                  children: [
-                    if (editing)
-                      ReorderableDelayedDragStartListener(
-                        index: index,
-                        child: Padding(
-                          padding: EdgeInsets.only(right: DS.s(4)),
-                          child: Icon(Icons.drag_indicator_rounded, size: DS.s(20), color: TripLook.textHint),
-                        ),
-                      ),
-                    SizedBox(
-                      width: timeW,
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        alignment: Alignment.centerLeft,
-                        child: Text(time, maxLines: 1, softWrap: false, style: Ink3D.text(12.5, FontWeight.w600, Ink3D.sub, letterSpacing: 0)),
-                      ),
-                    ),
-                    Container(
-                      width: DS.s(26),
-                      height: DS.s(26),
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-                      child: Text('${index + 1}', style: Ink3D.text(12.5, FontWeight.w700, DesignColors.surface, letterSpacing: 0)),
-                    ),
-                    Gap.h(12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(spot.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(14, FontWeight.w600, Ink3D.title, letterSpacing: 0)),
-                          Text(
-                            '${TripSpotCategory.label(spot.category)} · ${TripFormat.hm(spot.visitMinutes)}',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: Ink3D.text(12.5, FontWeight.w400, TripLook.mutedText, letterSpacing: 0),
-                          ),
-                        ],
-                      ),
-                    ),
-                    if (editing)
-                      IconButton(
-                        onPressed: onRemove,
-                        tooltip: TripStringsV2Plan.removePlace,
-                        constraints: BoxConstraints(minWidth: DS.s(44), minHeight: DS.s(44)),
-                        icon: Container(
-                          width: DS.s(32),
-                          height: DS.s(32),
-                          decoration: BoxDecoration(color: TripLook.errorSurface, shape: BoxShape.circle),
-                          child: Icon(Icons.close_rounded, size: DS.s(18), color: TripLook.error),
-                        ),
-                      )
-                    else
-                      Padding(
-                        padding: EdgeInsets.only(left: DS.s(10)),
-                        child: Art3D(asset: TripSpotLook.assetOf(spot.category), size: 30, shadowBlur: 2, shadowOffset: const Offset(1, 3)),
-                      ),
-                  ],
+          if (editing)
+            Stack(
+              fit: StackFit.passthrough,
+              children: [
+                row,
+                Positioned(
+                  key: TripDaySpotList.handleKey,
+                  left: 0,
+                  top: 0,
+                  bottom: 0,
+                  width: DS.s(44, scaled: false),
+                  child: _dragStart(delayed: false, behavior: HitTestBehavior.translucent, child: const SizedBox.expand()),
                 ),
-              ),
-            ),
-          ),
+              ],
+            )
+          else
+            row,
           if (showDrive)
             Padding(
               padding: EdgeInsets.only(left: DS.s(editing ? 24 : 0) + timeW + DS.s(20)),
@@ -550,5 +842,7 @@ class _StopItem extends StatelessWidget {
         ],
       ),
     );
+    if (!editing) return body;
+    return _dragStart(delayed: true, child: body);
   }
 }
