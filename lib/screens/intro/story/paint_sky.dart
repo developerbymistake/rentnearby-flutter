@@ -21,11 +21,18 @@ class IntroSkyPainter extends CustomPainter {
   static final ui.Gradient _moonFill = ui.Gradient.radial(const Offset(-.15 * 76, -.15 * 76), .65 * 76 * math.sqrt2, const [IntroStoryColors.moonCore, IntroStoryColors.moonMid, IntroStoryColors.moonEdge], const [0, .6, 1]);
   static final ui.Gradient _sunGlow = ui.Gradient.radial(Offset.zero, IntroStoryColors.sunGlowRadius, IntroStoryColors.sunGlowColors, IntroStoryColors.sunGlowStops);
   static final ui.Gradient _moonGlow = ui.Gradient.radial(Offset.zero, IntroStoryColors.moonGlowRadius, IntroStoryColors.moonGlowColors, IntroStoryColors.moonGlowStops);
+  static final Path _sunHalo = _halo(IntroStoryColors.sunGlowRadius);
+  static final Path _moonHalo = _halo(IntroStoryColors.moonGlowRadius);
 
   final Paint _fill = Paint()..isAntiAlias = true;
   final Paint _cloud = Paint()..maskFilter = const MaskFilter.blur(BlurStyle.normal, 1.5);
   ui.Gradient? _skyShader;
   Color? _skyT, _skyB;
+
+  static Path _halo(double r) => Path()
+    ..fillType = PathFillType.evenOdd
+    ..addOval(Rect.fromCircle(center: Offset.zero, radius: r))
+    ..addOval(Rect.fromCircle(center: Offset.zero, radius: _sunR));
 
   static Path _cloudPath(double w) => Path()
     ..addRRect(RRect.fromRectAndRadius(Rect.fromLTWH(0, w * .1, w * .5, w * .24), Radius.circular(w * .12)))
@@ -74,7 +81,7 @@ class IntroSkyPainter extends CustomPainter {
     _fill
       ..color = IntroStoryColors.white
       ..shader = moon ? _moonGlow : _sunGlow;
-    canvas.drawCircle(Offset.zero, moon ? IntroStoryColors.moonGlowRadius : IntroStoryColors.sunGlowRadius, _fill);
+    canvas.drawPath(moon ? _moonHalo : _sunHalo, _fill);
     _fill.shader = moon ? _moonFill : _sunFill;
     canvas.drawCircle(Offset.zero, _sunR, _fill);
     _fill.shader = null;
