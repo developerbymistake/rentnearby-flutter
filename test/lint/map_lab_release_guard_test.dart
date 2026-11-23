@@ -1,5 +1,8 @@
 import 'dart:io';
 
+import 'package:bakhli/config/app_map_state.dart';
+import 'package:bakhli/services/map_pause_observer.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 const _labDir = 'lib/features/dev/map_lab/';
@@ -71,5 +74,18 @@ void main() {
     final text = File(_entry).readAsStringSync();
     final open = text.substring(text.indexOf('static void open'));
     expect(open.indexOf('kDebugMode'), lessThan(open.indexOf('MapLabScreen')));
+  });
+
+  test('APP-14: the lab opens under its own route name and that route pauses the list maps', () {
+    final entry = File(_entry).readAsStringSync();
+    expect(entry.contains("static const String routeName = '/map-lab';"), isTrue);
+    expect(entry.contains('routeName: routeName'), isTrue);
+    final observer = MapPauseObserver();
+    mapShouldPause.value = false;
+    final route = MaterialPageRoute<void>(settings: const RouteSettings(name: '/map-lab'), builder: (_) => const SizedBox());
+    observer.didPush(route, null);
+    expect(mapShouldPause.value, isTrue);
+    observer.didPop(route, null);
+    expect(mapShouldPause.value, isFalse);
   });
 }

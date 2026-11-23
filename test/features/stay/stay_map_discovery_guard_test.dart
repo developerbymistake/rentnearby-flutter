@@ -111,4 +111,15 @@ void main() {
     expect(src.contains('placement: DiscoveryPlacement.bottom'), isTrue);
     expect(src.contains('              if (_disc != null)\n                DiscoveryOverlay('), isTrue);
   });
+
+  test('APP-3: every native layer the stay map adds itself is non-interactive (taps reach onMapClick)', () {
+    final calls = RegExp(r'\.add(Fill|Line|Circle|Symbol)Layer\(').allMatches(src).toList();
+    expect(calls, hasLength(3));
+    for (final m in calls) {
+      final end = src.indexOf(');', m.start);
+      expect(src.substring(m.start, end), contains('enableInteraction: false'), reason: src.substring(m.start, end));
+    }
+    expect(src, contains('annotationConsumeTapEvents: const [AnnotationType.symbol]'), reason: 'the user dot circle annotation must not consume taps');
+    expect(RegExp(r'\.addSymbol\(').hasMatch(src), isFalse, reason: 'symbol annotations would be interactive');
+  });
 }

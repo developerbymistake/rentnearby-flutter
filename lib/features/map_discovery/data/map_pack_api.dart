@@ -8,7 +8,8 @@ import '../pack/map_pack_models.dart';
 
 typedef MapPackGet = Future<Response<dynamic>> Function(String path, Map<String, String>? headers);
 
-typedef MapPackFetchResult = ({bool notModified, String? body});
+// gone: the versioned URL answered 404 (the server only serves the current version).
+typedef MapPackFetchResult = ({bool notModified, String? body, bool gone});
 
 class MapPackApi {
   final MapPackGet _get;
@@ -20,17 +21,25 @@ class MapPackApi {
   static Future<Response<dynamic>> _defaultGet(String path, Map<String, String>? headers) =>
       ApiService.getRaw(path, headers: headers, responseType: ResponseType.plain);
 
-  static const MapPackFetchResult failed = (notModified: false, body: null);
+  static const MapPackFetchResult failed = (notModified: false, body: null, gone: false);
+  static const MapPackFetchResult goneResult = (notModified: false, body: null, gone: true);
 
   Future<MapPackFetchResult> fetch(MapPackRef ref, {String? etag}) async {
     final path = requestPath(ref.path, baseUrl);
     if (path == null) return failed;
     final tag = etag?.trim() ?? '';
-    final res = await _get(path, tag.isEmpty ? null : {'If-None-Match': '"$tag"'});
-    if (res.statusCode == 304) return (notModified: true, body: null);
+    final Response<dynamic> res;
+    try {
+      res = await _get(path, tag.isEmpty ? null : {'If-None-Match': '"$tag"'});
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 404) return goneResult;
+      rethrow;
+    }
+    if (res.statusCode == 304) return (notModified: true, body: null, gone: false);
+    if (res.statusCode == 404) return goneResult;
     if (res.statusCode != 200) return failed;
     final body = bodyOf(res.data);
-    return body == null ? failed : (notModified: false, body: body);
+    return body == null ? failed : (notModified: false, body: body, gone: false);
   }
 
   static String? bodyOf(Object? data) {

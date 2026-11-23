@@ -26,9 +26,11 @@ class FakeMapPackApi extends MapPackApi {
 
   void enqueue(String stateId, FakeAnswer answer) => (_script[stateId] ??= []).add(answer);
 
-  void body(String stateId, String raw) => enqueue(stateId, (_, _) => (notModified: false, body: raw));
+  void body(String stateId, String raw) => enqueue(stateId, (_, _) => (notModified: false, body: raw, gone: false));
 
-  void notModified(String stateId) => enqueue(stateId, (_, _) => (notModified: true, body: null));
+  void notModified(String stateId) => enqueue(stateId, (_, _) => (notModified: true, body: null, gone: false));
+
+  void gone(String stateId) => enqueue(stateId, (_, _) => MapPackApi.goneResult);
 
   void fail(String stateId, [Object error = const SocketException('offline')]) => enqueue(stateId, (_, _) => throw error);
 

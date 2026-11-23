@@ -16,6 +16,7 @@ abstract final class SpotGalleryCache {
   static String _id(int cityKey, String spotId) => '$cityKey:$spotId';
 
   static SpotDetail? get(int cityKey, String spotId, String version, {DateTime? now}) {
+    if (version.isEmpty) return null;
     final at = now ?? DateTime.now();
     final id = _id(cityKey, spotId);
     final m = _memory.remove(id);
@@ -23,17 +24,16 @@ abstract final class SpotGalleryCache {
       _memory[id] = m;
       return m.detail;
     }
-    if (version.isEmpty) return null;
     final disk = _readDisk(id, version, at);
     if (disk != null) _remember(id, version, disk.at, disk.detail);
     return disk?.detail;
   }
 
   static void put(int cityKey, String spotId, String version, SpotDetail detail, {DateTime? now}) {
+    if (version.isEmpty) return;
     final at = now ?? DateTime.now();
     final id = _id(cityKey, spotId);
     _remember(id, version, at, detail);
-    if (version.isEmpty) return;
     try {
       final box = TripSpotsCache.box;
       if (box == null) return;

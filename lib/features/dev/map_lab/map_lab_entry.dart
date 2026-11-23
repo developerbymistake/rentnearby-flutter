@@ -5,9 +5,11 @@ import 'package:get/get.dart';
 import 'map_lab_screen.dart';
 
 class MapLabEntry {
+  static const String routeName = '/map-lab';
+
   static void open() {
     if (kDebugMode) {
-      Get.to(() => const MapLabScreen());
+      Get.to(() => const MapLabScreen(), routeName: routeName);
     }
   }
 

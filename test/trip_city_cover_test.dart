@@ -1,4 +1,5 @@
 import 'package:bakhli/features/trip/models/trip_city_model.dart';
+import 'package:bakhli/utils/cloudinary_host.dart';
 import 'package:bakhli/utils/cloudinary_thumb.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -39,6 +40,15 @@ void main() {
       expect(CloudinaryThumb.of(transformed), transformed);
       expect(CloudinaryThumb.of(null), isNull);
       expect(CloudinaryThumb.of(''), '');
+    });
+
+    test('APP-21: a foreign host that only ends with cloudinary.com is returned unchanged; real hosts transform', () {
+      expect(CloudinaryThumb.of('https://evilcloudinary.com/x/image/upload/a.jpg'), 'https://evilcloudinary.com/x/image/upload/a.jpg');
+      expect(CloudinaryThumb.of('https://res.cloudinary.com/x/image/upload/a.jpg'), 'https://res.cloudinary.com/x/image/upload/c_fill,w_480,h_360,q_auto,f_auto/a.jpg');
+      expect(isCloudinaryHost('https://res.cloudinary.com/a'), isTrue);
+      expect(isCloudinaryHost('https://media.cloudinary.com/a'), isTrue);
+      expect(isCloudinaryHost('https://evilcloudinary.com/a'), isFalse);
+      expect(isCloudinaryHost('https://cloudinary.com.evil.net/a'), isFalse);
     });
   });
 }

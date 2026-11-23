@@ -54,6 +54,17 @@ void main() {
     expect(GetStorage().getKeys<Iterable<dynamic>>().whereType<String>().any((k) => k.startsWith('c:')), isFalse);
   });
 
+  test('remove drops one city entry only', () async {
+    TripSpotsCache.save(1, [_s('a')], 'v1');
+    TripSpotsCache.save(2, [_s('b')], 'v2');
+    await _settle();
+    TripSpotsCache.remove(1);
+    await _settle();
+    expect(TripSpotsCache.load(1), isNull);
+    expect(TripSpotsCache.versionOf(1), isNull);
+    expect(TripSpotsCache.versionOf(2), 'v2');
+  });
+
   test('versionOf is null when nothing is stored', () {
     expect(TripSpotsCache.versionOf(42), isNull);
     expect(TripSpotsCache.load(42), isNull);

@@ -1,3 +1,5 @@
+import 'package:bakhli/design/design.dart';
+
 class DiscIds {
   static const String srcAll = 'disc-all';
   static const String srcPhoto = 'disc-photo';
@@ -132,7 +134,16 @@ class DiscTuning {
     this.thumbPx = 96,
   });
 
-  static const DiscTuning trip = DiscTuning(photoMax: 40, photoDp: 44);
+  // Trip mock was drawn unscaled: marker sizes follow DS (D5); the 44 dp tap box stays raw.
+  static DiscTuning get trip => DiscTuning(
+        photoMax: 40,
+        photoDp: DS.s(44),
+        dotDp: DS.s(9),
+        selDotDp: DS.s(14),
+        badgeDp: DS.s(24),
+        haloPhotoDp: DS.s(72),
+        haloDotDp: DS.s(36),
+      );
   static const DiscTuning stay = DiscTuning(photoMax: 12, photoDp: 32);
 
   int px(double dp) => (dp * pxPerDp).round();

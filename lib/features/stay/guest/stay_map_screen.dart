@@ -17,6 +17,7 @@ import '../../../controllers/auth_controller.dart';
 import '../../../controllers/location_controller.dart';
 import '../../../models/browse_item.dart';
 import '../../map_discovery/data/map_pack_service.dart';
+import '../../map_discovery/data/pack_retry.dart';
 import '../../nearby/controllers/nearby_centre_controller.dart';
 import '../../nearby/widgets/place_search_bar.dart';
 import '../../trip/data/trip_city_catalog.dart';
@@ -79,6 +80,7 @@ class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateM
   final _auth = Get.find<AuthController>();
   final _centre = NearbyCentreController.to;
   final _workers = <Worker>[];
+  PackRetry? _packRetry;
   bool get _stale => _loader.stale;
   set _stale(bool v) => _loader.stale = v;
   late final StayNearbyLoader _loader = StayNearbyLoader(
@@ -312,6 +314,12 @@ class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateM
 
     _workers.add(ever(_discSource.state, (_) => _onDiscChanged()));
     _workers.add(ever(MapPackService.to.revision, (_) => _onDiscChanged()));
+    _packRetry = PackRetry(
+      source: _discSource,
+      ensure: _retryDiscArea,
+      retryPhotos: () => _disc?.retryPhotos(),
+      offline: _locationCtrl.isOffline,
+    );
 
     _mapActive = !mapShouldPause.value;
     if (_hasPin) {
@@ -333,6 +341,7 @@ class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateM
       w.dispose();
     }
     _mapPauseWorker?.dispose();
+    _packRetry?.dispose();
     _dropDisc();
     if (_guest.nearestActive.value) _guest.nearestActive.value = false;
     _guest.clearNearest();
@@ -375,14 +384,21 @@ class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateM
   void _syncDiscArea() {
     final c = _searchCenter;
     final point = '${c.latitude},${c.longitude}';
-    if (point != _discPoint) {
+    if (point != _discPoint || _discSource.state.value == DiscoveryDataState.none) {
       _discPoint = point;
       _discSource.ensureForPoint(c.latitude, c.longitude).ignore();
     }
     _disc?.setPhotoArea(c.latitude, c.longitude, _radius * 2).ignore();
   }
 
+  void _retryDiscArea() {
+    if (!mounted) return;
+    final c = _searchCenter;
+    _discSource.ensureForPoint(c.latitude, c.longitude).ignore();
+  }
+
   DiscoveryHost _discHost() => DiscoveryHost.readOnly(
+        anchorLayerId: () => _mapController?.circleManager?.layerIds.first,
         topInset: () => _discTopInset,
         bottomInset: () => _discBottomInset,
         onDetails: _openSpotDetails,
@@ -475,6 +491,7 @@ class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateM
       version: key == null ? null : TripSpotsCache.versionOf(key) ?? '',
       partial: true,
       showAction: false,
+      revalidate: true,
     );
   }
 
@@ -513,9 +530,12 @@ class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateM
     if (ctrl == null || !mounted) return;
     _precomputeCircleCache();
     await ctrl.addGeoJsonSource('radius-source', _circleCache[_radius]!);
-    await ctrl.addFillLayer('radius-source', 'radius-fill', FillLayerProperties(fillColor: _forestHex, fillOpacity: 0.06));
-    await ctrl.addLineLayer('radius-source', 'radius-glow', LineLayerProperties(lineColor: _forestHex, lineWidth: 6.0, lineOpacity: 0.15, lineBlur: 3.0));
-    await ctrl.addLineLayer('radius-source', 'radius-border', LineLayerProperties(lineColor: _forestHex, lineWidth: 1.8, lineOpacity: 0.65));
+    // Non-interactive: an interactive feature under a tap swallows onMapClick (spot dot taps, tap-to-close).
+    await ctrl.addFillLayer('radius-source', 'radius-fill', FillLayerProperties(fillColor: _forestHex, fillOpacity: 0.06), enableInteraction: false);
+    await ctrl.addLineLayer('radius-source', 'radius-glow', LineLayerProperties(lineColor: _forestHex, lineWidth: 6.0, lineOpacity: 0.15, lineBlur: 3.0),
+        enableInteraction: false);
+    await ctrl.addLineLayer('radius-source', 'radius-border', LineLayerProperties(lineColor: _forestHex, lineWidth: 1.8, lineOpacity: 0.65),
+        enableInteraction: false);
   }
 
   void _updateNativeRadiusCircle() {
@@ -907,6 +927,7 @@ class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateM
                     myLocationEnabled: false,
                     dragEnabled: false,
                     trackCameraPosition: true,
+                    annotationConsumeTapEvents: const [AnnotationType.symbol],
                     onMapClick: (point, _) => _disc?.onMapTap(point.x, point.y),
                     attributionButtonMargins: const Point(-200.0, 0.0),
                     onMapCreated: (MapLibreMapController ctrl) {

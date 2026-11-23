@@ -16,5 +16,6 @@ class MapPackConstants {
   static const String colCityKey = 'cityKey';
   static const String colThumb = 'thumb';
   static const String colNPhotos = 'nPhotos';
+  static const String colVm = 'vm';
   static const List<String> requiredColumns = [colId, colLat, colLon, colName];
 }

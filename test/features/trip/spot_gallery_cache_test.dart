@@ -84,20 +84,22 @@ void main() {
     expect(box.hasData('other'), isTrue);
   });
 
-  test('empty version is a memory copy only', () async {
+  test('empty version: never stored and never a hit (no 24 h unversioned copy, D12)', () async {
     SpotGalleryCache.put(1, 's', '', _d(['https://a/1']));
     await _settle();
-    expect(SpotGalleryCache.get(1, 's', '')!.gallery, ['https://a/1']);
+    expect(SpotGalleryCache.get(1, 's', ''), isNull);
+    expect(SpotGalleryCache.memoryLength, 0);
     expect(GetStorage(TripSpotsCache.container).hasData('g:1:s'), isFalse);
+    SpotGalleryCache.put(1, 's', 'v1', _d(['https://a/1']));
+    expect(SpotGalleryCache.get(1, 's', ''), isNull, reason: 'a versioned entry is not served for an empty version');
   });
 
   test('memory LRU keeps the 50 most recent spots', () {
     for (var i = 0; i < 55; i++) {
-      SpotGalleryCache.put(1, 's$i', '', _d(['https://a/$i']));
+      SpotGalleryCache.put(1, 's$i', 'v', _d(['https://a/$i']));
     }
     expect(SpotGalleryCache.memoryLength, SpotGalleryCache.maxMemory);
-    expect(SpotGalleryCache.get(1, 's0', ''), isNull);
-    expect(SpotGalleryCache.get(1, 's54', ''), isNotNull);
+    expect(SpotGalleryCache.get(1, 's54', 'v'), isNotNull);
   });
 
   test('clear wipes memory and disk', () async {

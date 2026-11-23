@@ -13,13 +13,14 @@ class _Repo extends TripRepository {
   int calls = 0;
   Completer<SpotDetail>? gate;
   Object? error;
+  String version = '';
 
   @override
   Future<SpotDetail> spotDetail(int cityKey, String spotId) async {
     calls++;
     if (gate != null) return gate!.future;
     if (error != null) throw error!;
-    return SpotDetail(gallery: ['https://a/$spotId']);
+    return SpotDetail(gallery: ['https://a/$spotId'], version: version);
   }
 }
 
@@ -41,6 +42,40 @@ void main() {
     SpotGalleryCache.clear();
     repo = _Repo();
     SpotGalleryLoader.repository = repo;
+  });
+
+  group('revalidate (map Details, D12)', () {
+    test('skips a cached entry, asks once and stores the answer under the answer version', () async {
+      await SpotGalleryLoader.load(1, 's', 'v1');
+      repo.version = '2026-11-23T10:00:00.000Z';
+      final d = await SpotGalleryLoader.load(1, 's', 'v1', revalidate: true);
+      expect(repo.calls, 2);
+      expect(d.version, '2026-11-23T10:00:00.000Z');
+      expect(SpotGalleryCache.get(1, 's', '2026-11-23T10:00:00.000Z'), isNotNull);
+      await SpotGalleryLoader.load(1, 's', '2026-11-23T10:00:00.000Z');
+      expect(repo.calls, 2);
+    });
+
+    test('two parallel revalidate calls = one request, whatever version they carry', () async {
+      repo.gate = Completer<SpotDetail>();
+      final a = SpotGalleryLoader.load(1, 's', 'v1', revalidate: true);
+      final b = SpotGalleryLoader.load(1, 's', '', revalidate: true);
+      repo.gate!.complete(const SpotDetail(gallery: ['https://a/x'], version: 'v9'));
+      expect((await a).gallery, ['https://a/x']);
+      expect((await b).gallery, ['https://a/x']);
+      expect(repo.calls, 1);
+    });
+
+    test('an answer without a version is not stored', () async {
+      await SpotGalleryLoader.load(1, 's', '', revalidate: true);
+      expect(SpotGalleryCache.memoryLength, 0);
+    });
+
+    test('SpotDetail.version uses the TripSpotsPage normalisation of generatedAt', () {
+      expect(SpotDetail.fromJson({'generatedAt': '2026-11-23T10:00:00Z'}).version, DateTime.parse('2026-11-23T10:00:00Z').toIso8601String());
+      expect(SpotDetail.fromJson({}).version, '');
+      expect(SpotDetail.fromJson({'generatedAt': 'x'}).version, '');
+    });
   });
 
   test('second load of the same version is a cache hit', () async {

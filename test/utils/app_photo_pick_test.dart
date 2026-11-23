@@ -57,6 +57,13 @@ void main() {
       expect(await AppPhotoPick.accept(File('${dir.path}/missing.jpg')), PhotoReject.wrongType);
     });
 
+    test('APP-21: PNG needs the full 8-byte signature', () async {
+      expect(AppPhotoPick.isImage(_png), isTrue);
+      expect(AppPhotoPick.isImage([0x89, 0x50, 0x4E, 0x47, 0, 0, 0, 0, 0, 0, 0, 0]), isFalse);
+      expect(AppPhotoPick.isImage([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x00, 0, 0, 0, 0]), isFalse);
+      expect(await AppPhotoPick.accept(write('fake.png', [0x89, 0x50, 0x4E, 0x47, 0x41, 0x41, 0x41, 0x41, 0, 0, 0, 0])), PhotoReject.wrongType);
+    });
+
     test('over 10 MB is too large, exactly 10 MB passes', () async {
       final big = List<int>.filled(PhotoPickSpec.maxBytes + 1, 0)..setRange(0, _jpeg.length, _jpeg);
       expect(await AppPhotoPick.accept(write('big.jpg', big)), PhotoReject.tooLarge);

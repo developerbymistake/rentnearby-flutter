@@ -53,6 +53,40 @@ void main() {
     expect(s.source.state.value, DiscoveryDataState.ready);
   });
 
+  group('APP-7 a 404 of the versioned URL (newer pack on the server)', () {
+    test('404 on v1: exactly one version call and one request for v2, then the index is ready', () async {
+      version.answer(ver(packs: [ref('s1', name: 'State One')]));
+      version.answer(ver(packs: [ref('s1', name: 'State One', version: 'v2')]));
+      api.gone('s1');
+      api.body('s1', packBody(version: 'v2'));
+      final s = make();
+      await s.ensureForCities([1]);
+      await s.settle();
+      expect(version.calls, 2, reason: 'the first version call plus ONE refresh after the 404');
+      expect(api.calls.map((c) => c.path), ['/trips/map-packs/s1/v1', '/trips/map-packs/s1/v2']);
+      expect(s.status.value, MapPackStatus.ready);
+      expect(s.index!.length, 20);
+      expect(MapPackStore.readVersion('s1'), 'v2');
+    });
+
+    test('404 with an unchanged ref: one refresh, then the back-off holds (100 ensure calls inside 60 s = 0 requests)', () async {
+      version.answer(ver(packs: [ref('s1', name: 'State One')]));
+      api.gone('s1');
+      final s = make();
+      await s.ensureForCities([1]);
+      await s.settle();
+      expect(version.calls, 2);
+      expect(api.count, 1);
+      for (var i = 0; i < 100; i++) {
+        clock.advance(const Duration(milliseconds: 500));
+        await s.ensureForCities([1]);
+      }
+      expect(api.count, 1);
+      expect(version.calls, 2);
+      expect(s.status.value, isNot(MapPackStatus.ready));
+    });
+  });
+
   test('T3: corrupt bodies are refused; the old pack stays in memory and on disk', () async {
     version.answer(ver(packs: [ref('s1', name: 'State One')]));
     api.body('s1', packBody());
@@ -155,7 +189,7 @@ void main() {
     final body = packBody();
     api.enqueue('s1', (_, _) async {
       await gate.future;
-      return (notModified: false, body: body);
+      return (notModified: false, body: body, gone: false);
     });
     final s = make();
     final a = s.ensureForCities([1]);
@@ -199,7 +233,7 @@ void main() {
     final body = packBody();
     api.enqueue('s1', (_, _) async {
       await gate.future;
-      return (notModified: false, body: body);
+      return (notModified: false, body: body, gone: false);
     });
     final s = make();
     final f = s.ensureForCities([1]);
@@ -250,7 +284,7 @@ void main() {
       ref('e'),
     ];
     version.answer(ver(packs: refs));
-    api.fallback = (r, _) => (notModified: false, body: packBody(state: r.stateId, rows: 2, seed: r.stateId.codeUnitAt(0)));
+    api.fallback = (r, _) => (notModified: false, body: packBody(state: r.stateId, rows: 2, seed: r.stateId.codeUnitAt(0)), gone: false);
     final s = make();
     await s.ensureForCities([1]);
     expect(api.calls.map((c) => c.stateId), ['b']);
@@ -263,7 +297,7 @@ void main() {
 
   test('T14: ensureForPoint picks by bbox, else the first refs', () async {
     version.answer(ver(packs: [ref('a'), ref('c', bbox: [76, 31, 78, 33])]));
-    api.fallback = (r, _) => (notModified: false, body: packBody(state: r.stateId, rows: 2));
+    api.fallback = (r, _) => (notModified: false, body: packBody(state: r.stateId, rows: 2), gone: false);
     final s = make();
     await s.ensureForPoint(32, 77);
     expect(api.calls.map((c) => c.stateId), ['c']);
@@ -273,7 +307,7 @@ void main() {
 
   test('L-09: a point outside every bbox downloads nothing', () async {
     version.answer(ver(packs: [ref('a', bbox: [76, 31, 78, 33]), ref('c', bbox: [78, 29, 81, 31])]));
-    api.fallback = (r, _) => (notModified: false, body: packBody(state: r.stateId, rows: 2));
+    api.fallback = (r, _) => (notModified: false, body: packBody(state: r.stateId, rows: 2), gone: false);
     final s = make();
     await s.ensureForPoint(12.9, 77.6);
     expect(api.count, 0);
@@ -290,7 +324,7 @@ void main() {
 
   test('T12: a ref path on another host is never fetched, the state is missing', () async {
     version.answer(ver(packs: [ref('s1', name: 'State One', path: 'https://evil.example.com/p')]));
-    api.fallback = (_, _) => (notModified: false, body: packBody());
+    api.fallback = (_, _) => (notModified: false, body: packBody(), gone: false);
     final s = make();
     await s.ensureForCities([1]);
     expect(s.index, isNull);

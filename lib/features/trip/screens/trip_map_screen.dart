@@ -6,7 +6,9 @@ import 'package:bakhli/design/design.dart';
 import 'package:get/get.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 import '../../../config/app_constants.dart';
+import '../../../controllers/location_controller.dart';
 import '../../map_discovery/data/map_pack_service.dart';
+import '../../map_discovery/data/pack_retry.dart';
 import '../controllers/trip_plan_controller.dart';
 import '../models/trip_plan_model.dart';
 import '../models/trip_plan_result_model.dart';
@@ -70,6 +72,9 @@ class _TripMapScreenState extends State<TripMapScreen> with TickerProviderStateM
   bool _discBusy = false;
   bool _forceRedraw = false;
   String? _discKeys;
+  PackRetry? _packRetry;
+  final _metersPerDp = ValueNotifier<double?>(null);
+  int _idleSeq = 0;
   static const double _discCardBand = 140;
   late final TripMapSpotActions _spotActions = TripMapSpotActions.of(_plan, context: () => context);
 
@@ -125,6 +130,12 @@ class _TripMapScreenState extends State<TripMapScreen> with TickerProviderStateM
     }));
     _workers.add(ever(_discSource.state, (_) => _onDiscChanged()));
     _workers.add(ever(MapPackService.to.revision, (_) => _onDiscChanged()));
+    _packRetry = PackRetry(
+      source: _discSource,
+      ensure: _retryDiscData,
+      retryPhotos: () => _disc?.retryPhotos(),
+      offline: Get.isRegistered<LocationController>() ? Get.find<LocationController>().isOffline : null,
+    );
     _ensureDiscData();
     _workers.add(ever(_plan.result, (_) => _sync()));
     _workers.add(ever(_plan.enquiryList, (_) => _sync()));
@@ -149,6 +160,8 @@ class _TripMapScreenState extends State<TripMapScreen> with TickerProviderStateM
     _map?.onSymbolTapped.remove(_onSymbolTapped);
     _map?.onCircleTapped.remove(_onCircleTapped);
     _disc?.dispose();
+    _packRetry?.dispose();
+    _metersPerDp.dispose();
     for (final w in _workers) {
       w.dispose();
     }
@@ -222,6 +235,20 @@ class _TripMapScreenState extends State<TripMapScreen> with TickerProviderStateM
     await _attachDisc();
     await _sync();
     _recalculateIfRouteMissing();
+    await _onCameraIdle();
+  }
+
+  // Scale bar only: two local map calls once a gesture ends, no network and no discovery call.
+  Future<void> _onCameraIdle() async {
+    final map = _map;
+    if (map == null || _disc == null || !mounted) return;
+    final seq = ++_idleSeq;
+    try {
+      final r = await map.getVisibleRegion();
+      final mpp = await map.getMetersPerPixelAtLatitude((r.northeast.latitude + r.southwest.latitude) / 2);
+      if (seq != _idleSeq || !mounted) return;
+      _metersPerDp.value = mpp * DiscoveryAttach.unitsPerDp(context);
+    } catch (_) {}
   }
 
   DiscoveryDataSource get _discSource => MapPackService.to.source;
@@ -246,10 +273,16 @@ class _TripMapScreenState extends State<TripMapScreen> with TickerProviderStateM
   void _ensureDiscData() {
     final keys = _legKeys();
     final sig = (keys.toList()..sort()).join(',');
-    if (keys.isEmpty || sig == _discKeys) return;
+    if (keys.isEmpty || (sig == _discKeys && _discSource.state.value != DiscoveryDataState.none)) return;
     _discKeys = sig;
     _discSource.ensureForCities(keys).ignore();
     _disc?.refreshData().ignore();
+  }
+
+  void _retryDiscData() {
+    final keys = _legKeys();
+    if (!mounted || keys.isEmpty) return;
+    _discSource.ensureForCities(keys).ignore();
   }
 
   Future<void> _attachDisc({bool late = false}) async {
@@ -277,6 +310,7 @@ class _TripMapScreenState extends State<TripMapScreen> with TickerProviderStateM
       if (late) {
         _forceRedraw = true;
         await _sync();
+        await _onCameraIdle();
       }
     } finally {
       _discBusy = false;
@@ -290,7 +324,10 @@ class _TripMapScreenState extends State<TripMapScreen> with TickerProviderStateM
       await _attachDisc(late: true);
       return;
     }
-    if (DiscoveryAttach.wanted(_discSource)) return;
+    if (DiscoveryAttach.wanted(_discSource)) {
+      d.refreshData().ignore();
+      return;
+    }
     setState(() => _disc = null);
     await d.detach();
     d.dispose();
@@ -890,7 +927,8 @@ class _TripMapScreenState extends State<TripMapScreen> with TickerProviderStateM
     _stayPins.clear();
     await map.clearCircles();
     await map.clearSymbols();
-    final below = _disc?.isAttached == true ? DiscIds.layerPhoto : map.circleManager?.layerIds.first;
+    // Routes above place markers, below the open selection and the numbered stops (D6).
+    final below = _disc?.isAttached == true ? DiscIds.layerSelHalo : map.circleManager?.layerIds.first;
     final circleOpts = <CircleOptions>[];
     final symbolOpts = <SymbolOptions>[];
     final spotDays = <int>[];
@@ -1077,9 +1115,7 @@ class _TripMapScreenState extends State<TripMapScreen> with TickerProviderStateM
                 myLocationEnabled: false,
                 trackCameraPosition: false,
                 dragEnabled: false,
-                scaleControlEnabled: _disc != null,
-                scaleControlPosition: ScaleControlPosition.bottomRight,
-                scaleControlUnit: ScaleControlUnit.metric,
+                onCameraIdle: _onCameraIdle,
                 onMapClick: (point, _) => _disc?.onMapTap(point.x, point.y),
                 attributionButtonMargins: const Point(-200.0, 0.0),
                 annotationOrder: const [AnnotationType.circle, AnnotationType.symbol],
@@ -1107,7 +1143,7 @@ class _TripMapScreenState extends State<TripMapScreen> with TickerProviderStateM
             }),
           ),
           Positioned.fill(child: _buildState()),
-          if (_disc != null) DiscoveryOverlay(layer: _disc!, mode: DiscoveryMode.full, map: () => _map, onLocate: () => DiscoveryCamera.toUser(_map, limits: _wideZoom ? _multiCityZoom : _oneCityZoom(context)), notice: () => _plan.offline.value ? TripStringsV2Plan.offlineBanner : null, dayColorOf: _routeColor),
+          if (_disc != null) DiscoveryOverlay(layer: _disc!, mode: DiscoveryMode.full, metersPerDp: _metersPerDp, map: () => _map, onLocate: () => DiscoveryCamera.toUser(_map, limits: _wideZoom ? _multiCityZoom : _oneCityZoom(context)), notice: () => _plan.offline.value ? TripStringsV2Plan.offlineBanner : null, dayColorOf: _routeColor),
           Positioned(left: 0, right: 0, top: 0, child: KeyedSubtree(key: _topKey, child: _buildTop(context))),
         ],
       ),

@@ -1,12 +1,15 @@
 import 'dart:math' as math;
 import 'dart:async';
+import 'dart:io';
 
 import 'package:bakhli/design/design.dart';
 import 'package:bakhli/design/extra/sheet_close_button.dart';
 import 'package:bakhli/features/trip/data/spot_gallery_loader.dart';
 import 'package:bakhli/features/trip/data/trip_repository.dart';
 import 'package:bakhli/features/trip/models/trip_spot_model.dart';
+import 'package:bakhli/features/trip/trip_strings_spots_x.dart';
 import 'package:bakhli/features/trip/utils/spot_gallery_cache.dart';
+import 'package:bakhli/features/trip/utils/trip_spots_cache.dart';
 import 'package:bakhli/features/trip/widgets/spot_photo_viewer.dart';
 import 'package:bakhli/features/trip/widgets/trip_spot_detail_sheet.dart';
 import 'package:bakhli/features/trip/widgets/trip_spot_row.dart';
@@ -14,6 +17,8 @@ import 'package:bakhli/features/trip/widgets/trip_spots_extras.dart';
 import 'package:bakhli/utils/spot_photo_url.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:get_storage/get_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/real_phone.dart';
@@ -69,6 +74,7 @@ Future<void> _open(
   bool noToggle = false,
   bool partial = false,
   bool showAction = true,
+  bool revalidate = false,
   Size size = const Size(360, 800),
   double scale = 1.0,
 }) async {
@@ -90,7 +96,8 @@ Future<void> _open(
       cityKey: cityKey,
       version: version,
       partial: partial,
-      showAction: showAction);
+      showAction: showAction,
+      revalidate: revalidate);
   await t.pump();
   await t.pump(const Duration(milliseconds: 700));
 }
@@ -103,6 +110,15 @@ Future<void> _settle(WidgetTester t) async {
 Finder get _gallery => find.text('Gallery');
 
 void main() {
+  setUpAll(() async {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(
+      const MethodChannel('plugins.flutter.io/path_provider'),
+      (call) async => Directory.systemTemp.createTempSync('spot_sheet').path,
+    );
+    await GetStorage.init();
+    await TripSpotsCache.init();
+  });
+
   setUp(() {
     _shown.clear();
     SpotGalleryLoader.debugReset();
@@ -212,12 +228,100 @@ void main() {
       expect(find.text('2 photos'), findsOneWidget);
     });
 
-    testWidgets('partial failure keeps what it has, no error card when no gallery was expected', (t) async {
+    testWidgets('partial failure keeps what it has and shows the error card with Retry; Retry asks again', (t) async {
       _repo.error = Exception('down');
       await _open(t, _spot(gallery: 0, description: 'Local copy.'), partial: true);
       await _settle(t);
       expect(find.text('Local copy.'), findsOneWidget);
-      expect(find.text("Couldn't load photos"), findsNothing);
+      expect(find.text(TripStringsSpotsX.galleryError), findsOneWidget);
+      expect(find.text(TripStringsSpotsX.galleryErrorBody), findsOneWidget);
+      _repo.error = null;
+      await t.ensureVisible(find.text('Retry'));
+      await t.tap(find.text('Retry'));
+      await _settle(t);
+      expect(_repo.calls, 2);
+      expect(find.text(TripStringsSpotsX.galleryError), findsNothing);
+    });
+
+    group('revalidate (map Details, D12)', () {
+      setUp(() async {
+        await GetStorage(TripSpotsCache.container).erase();
+      });
+
+      final fresh = SpotDetail(
+        spot: TripSpotModel.fromJson({
+          'id': 'naini',
+          'name': 'Naini Lake',
+          'latitude': 29.38,
+          'longitude': 79.45,
+          'category': 'lake',
+          'description': 'Edited by the admin.',
+          'images': [_u('fresh')],
+          'galleryCount': 2,
+        }),
+        gallery: [_u('ga'), _u('gb')],
+        version: 'v2',
+      );
+
+      testWidgets('full model: one request, the answer photos and text replace the cached row', (t) async {
+        _repo.answer = fresh;
+        await _open(t, _spot(gallery: 0, photos: 1, description: 'Old text.'), revalidate: true);
+        await _settle(t);
+        expect(_repo.calls, 1);
+        expect(find.text('Edited by the admin.'), findsOneWidget);
+        expect(find.text('Old text.'), findsNothing);
+        expect(_shown.any((u) => u.contains('fresh')), isTrue);
+        expect(find.text('2 photos'), findsOneWidget);
+      });
+
+      testWidgets('a cache hit is shown at once and still asked once', (t) async {
+        SpotGalleryCache.put(1, 'naini', 'v1', SpotDetail(gallery: [_u('a')]));
+        _repo.gate = Completer<SpotDetail>();
+        await _open(t, _spot(gallery: 1), revalidate: true);
+        expect(find.text('1 photo'), findsOneWidget);
+        expect(_repo.calls, 1);
+        _repo.gate!.complete(fresh);
+        await _settle(t);
+        expect(find.text('2 photos'), findsOneWidget);
+      });
+
+      testWidgets('full model + failed call: no error card, the row stays', (t) async {
+        _repo.error = Exception('down');
+        await _open(t, _spot(gallery: 3, description: 'Local copy.'), revalidate: true);
+        await _settle(t);
+        expect(find.text('Local copy.'), findsOneWidget);
+        expect(find.text(TripStringsSpotsX.galleryError), findsNothing);
+      });
+
+      testWidgets('partial + failed call: error card with Retry', (t) async {
+        _repo.error = Exception('down');
+        await _open(t, _spot(gallery: 0, photos: 1), partial: true, revalidate: true);
+        await _settle(t);
+        expect(find.text(TripStringsSpotsX.galleryError), findsOneWidget);
+        _repo.error = null;
+        _repo.answer = fresh;
+        await t.ensureVisible(find.text('Retry'));
+        await t.tap(find.text('Retry'));
+        await _settle(t);
+        expect(_repo.calls, 2);
+        expect(find.text('Edited by the admin.'), findsOneWidget);
+      });
+
+      testWidgets('a newer answer version removes the stored city list; the same version keeps it', (t) async {
+        TripSpotsCache.save(1, [_spot()], 'v1');
+        await t.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 20)));
+        _repo.answer = SpotDetail(gallery: const [], version: 'v1');
+        await _open(t, _spot(), revalidate: true);
+        await _settle(t);
+        expect(TripSpotsCache.versionOf(1), 'v1');
+        Navigator.of(_ctx).pop();
+        await t.pump(const Duration(milliseconds: 700));
+        _repo.answer = fresh;
+        await _open(t, _spot(), revalidate: true);
+        await _settle(t);
+        await t.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 20)));
+        expect(TripSpotsCache.versionOf(1), isNull);
+      });
     });
 
     testWidgets('gallery tile opens the viewer over the gallery list', (t) async {

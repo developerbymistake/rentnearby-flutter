@@ -107,10 +107,12 @@ Future<void> _changeSecond(WidgetTester t) async {
   expect(find.text('Change Photo'), findsOneWidget);
   await t.tap(find.text('Choose from Gallery'));
   await _settle(t);
-  for (var i = 0; i < 6; i++) {
+  bool picked() => t.widgetList<PhotoTile3D>(find.byType(PhotoTile3D)).elementAtOrNull(1)?.image is Image;
+  for (var i = 0; i < 40 && !picked(); i++) {
     await t.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
     await t.pump(const Duration(milliseconds: 50));
   }
+  expect(picked(), isTrue, reason: 'the picked photo reaches the second tile');
   await _settle(t);
 }
 

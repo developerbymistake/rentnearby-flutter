@@ -47,6 +47,7 @@ class MapPackParser {
     final iCity = col[MapPackConstants.colCityKey];
     final iThumb = col[MapPackConstants.colThumb];
     final iPhotos = col[MapPackConstants.colNPhotos];
+    final iVm = col[MapPackConstants.colVm];
 
     final seen = <String>{};
     final spots = <MapPackSpot>[];
@@ -64,6 +65,7 @@ class MapPackParser {
       if (name.isEmpty) continue;
       seen.add(id);
       final rank = _int(at(iRank));
+      final vm = _int(at(iVm));
       spots.add(MapPackSpot(
         id: id,
         lat: lat,
@@ -75,6 +77,7 @@ class MapPackParser {
         thumbUrl: thumbUrl(img, at(iThumb)),
         nPhotos: (_int(at(iPhotos)) ?? 0).clamp(0, 1 << 30),
         stateId: stateId,
+        visitMinutes: vm != null && vm > 0 ? vm : null,
       ));
     }
     return MapPack(version: version, stateId: stateId, spots: List.unmodifiable(spots));

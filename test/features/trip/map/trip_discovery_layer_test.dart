@@ -451,8 +451,9 @@ void main() {
     port.calls.clear();
     await l.onFeatureTap(DiscIds.layerBadge, 'a');
     expect(port.calls, ['set:disc-sel', 'screen:3', 'animate']);
-    // centre was 30.474 (marker 260 px above it); marker must land at 100 + 150 + 72 = 322 px
-    expect(port.animated!.lat, closeTo(30.5 - (380 - 322) / 10000, 1e-9));
+    // centre was 30.474 (marker 260 px above it); marker must land at top 100 + card 150 + photo halo (72 x DS)
+    final target = 100 + 150 + DiscTuning.trip.haloPhotoDp;
+    expect(port.animated!.lat, closeTo(30.5 - (380 - target) / 10000, 1e-9));
     expect(port.animated!.lon, closeTo(78.2, 1e-9));
     port
       ..calls.clear()
@@ -547,5 +548,120 @@ void main() {
     expect(await store.count(), 200);
     expect(await store.read('k300'), isNotNull);
     expect(await store.read('k0'), isNull);
+  });
+
+  group('APP-8 retryPhotos', () {
+    test('fetch fails for 3 spots: retryPhotos registers them; a second call makes zero fetches', () async {
+      final fail = {'/p1.jpg', '/p2.jpg', '/p3.jpg'};
+      final spots = [for (var i = 1; i <= 5; i++) spot('p$i', rank: i, thumb: true)];
+      final l = layer(source: FakeSource(spots), fail: fail);
+      await l.refreshData();
+      final port = FakePort();
+      await l.attach(port);
+      await l.setPhotoArea(30.5, 78.2, 5);
+      await settle();
+      expect(port.count('image:disc-p-'), 2);
+      fail.clear();
+      l.retryPhotos();
+      await settle();
+      expect(port.count('image:disc-p-'), 5);
+      final before = port.calls.length;
+      l.retryPhotos();
+      await settle();
+      expect(port.calls.length, before, reason: 'every top photo is registered: no work');
+      l.dispose();
+    });
+
+    test('detached: retryPhotos does nothing', () async {
+      final l = layer(source: FakeSource([spot('p1', thumb: true)]), fail: {'/p1.jpg'});
+      await l.refreshData();
+      l.retryPhotos();
+      await settle();
+      l.dispose();
+    });
+  });
+
+  group('APP-9 the open card follows its row when the top list changes', () {
+    test('a selected photo spot dropped from the top falls back to a badge or dot, never a slot image', () async {
+      final spots = [for (var i = 1; i <= 3; i++) spot('p$i', rank: i, thumb: true)];
+      final l = layer(source: FakeSource(spots));
+      await l.refreshData();
+      final port = FakePort();
+      await l.attach(port);
+      await l.setPhotoArea(30.5, 78.2, 5);
+      await settle();
+      await l.select('p1');
+      final first = features(port.geo['disc-sel']).single['properties'] as Map;
+      expect(first['kind'], 'photo');
+      expect('${first['img']}', startsWith('disc-p-'));
+      await l.setPhotoArea(10.0, 10.0, 1);
+      await settle();
+      final after = features(port.geo['disc-sel']).single['properties'] as Map;
+      expect(after['kind'], isNot('photo'));
+      expect('${after['img']}', isNot(startsWith('disc-p-')));
+      expect(l.selected.value?.id, 'p1');
+      l.dispose();
+    });
+
+    test('a selected spot that keeps its slot causes no extra setGeoJson of the selection', () async {
+      final spots = [for (var i = 1; i <= 3; i++) spot('p$i', rank: i, thumb: true)];
+      final l = layer(source: FakeSource(spots));
+      await l.refreshData();
+      final port = FakePort();
+      await l.attach(port);
+      await l.setPhotoArea(30.5, 78.2, 5);
+      await settle();
+      await l.select('p1');
+      final sels = port.count('set:disc-sel');
+      await l.setPhotoArea(30.5, 78.2, 6);
+      await settle();
+      expect(port.count('set:disc-sel'), sels);
+      l.dispose();
+    });
+
+    test('a selected spot that leaves the data closes the card', () async {
+      final source = FakeSource([spot('p1', thumb: true), spot('p2', rank: 2)]);
+      final l = layer(source: source);
+      await l.refreshData();
+      final port = FakePort();
+      await l.attach(port);
+      await l.select('p2');
+      await l.setData([spot('p1', thumb: true)]);
+      await settle();
+      expect(l.selected.value, isNull);
+      l.dispose();
+    });
+  });
+
+  test('APP-16: the trip map refreshes the layer data when the pack changes while it is attached', () {
+    final src = File('lib/features/trip/screens/trip_map_screen.dart').readAsStringSync().replaceAll('\r\n', '\n');
+    expect(src.contains('    if (DiscoveryAttach.wanted(_discSource)) {\n      d.refreshData().ignore();\n      return;\n    }'), isTrue);
+  });
+
+  test('APP-16: new rows after a revision are set once; unchanged rows cause no setGeoJson', () async {
+    final source = FakeSource([spot('a'), spot('b')]);
+    final l = layer(source: source);
+    await l.refreshData();
+    final port = FakePort();
+    await l.attach(port);
+    final sets = port.count('set:disc-all');
+    await l.refreshData();
+    expect(port.count('set:disc-all'), sets);
+    source.spots = [spot('a'), spot('b'), spot('c')];
+    source.version++;
+    await l.refreshData();
+    expect(port.count('set:disc-all'), sets + 1);
+    expect(features(port.geo['disc-all']).length, 3);
+    l.dispose();
+  });
+
+  test('APP-8 guard: no ensure call inside a camera callback of either screen', () {
+    for (final f in ['lib/features/trip/screens/trip_map_screen.dart', 'lib/features/stay/guest/stay_map_screen.dart']) {
+      final src = File(f).readAsStringSync().replaceAll('\r\n', '\n');
+      final idle = RegExp(r'void _onCameraIdle\(\)[\s\S]*?\n  \}|Future<void> _onCameraIdle\(\) async \{[\s\S]*?\n  \}').firstMatch(src)?.group(0) ?? '';
+      expect(idle.contains('ensure'), isFalse, reason: f);
+      final move = RegExp(r'onCameraMove: \(CameraPosition pos\) \{[\s\S]*?\n\s*\},').firstMatch(src)?.group(0) ?? '';
+      expect(move.contains('ensure'), isFalse, reason: f);
+    }
   });
 }

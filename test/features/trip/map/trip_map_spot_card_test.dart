@@ -162,6 +162,13 @@ void main() {
     expect(a.textScaler, b.textScaler);
   });
 
+  test('APP-18: the card title follows the mock 15 (w600) through the role style', () {
+    final s = TripMapSpotCard.titleStyle;
+    expect(s.fontSize, DS.f(15));
+    expect(s.fontWeight, FontWeight.w600);
+    expect(s.fontFamily, Ink3D.text(15, FontWeight.w600, Ink3D.title).fontFamily);
+  });
+
   testWidgets('button min height is the touch token', (tester) async {
     await _pump(tester, TripMapSpotCard(spot: _photo, mode: DiscoveryMode.full, targetDay: 1, onAdd: () {}, onDetails: () {}), 360, 1);
     expect(tester.getSize(find.byKey(const ValueKey('disc-card-details'))).height, greaterThanOrEqualTo(DS.s(KitMetrics.touch) - 0.5));

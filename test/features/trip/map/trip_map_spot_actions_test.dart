@@ -34,7 +34,7 @@ class _Rig {
   final added = <({List<TripSpotModel> spots, int? leg, int? day})>[];
   final removed = <String>[];
   final inserted = <({TripSpotRef ref, int day, int index})>[];
-  final sheets = <({TripSpotModel spot, bool selected, bool locked, bool hasToggle, int? cityKey, String? version, bool partial})>[];
+  final sheets = <({TripSpotModel spot, bool selected, bool locked, bool hasToggle, int? cityKey, String? version, bool partial, bool revalidate})>[];
   bool addResult = true;
   bool removeSticks = false;
   Map<int, List<TripSpotModel>> cache = {};
@@ -60,8 +60,8 @@ class _Rig {
         cachedSpots: (k) => cache[k],
         cachedVersion: (k) => cache.containsKey(k) ? 'v$k' : null,
         cityName: (k) => k == 10 ? 'Shimla' : null,
-        sheet: (context, spot, {required selected, required locked, onToggle, cityKey, version, required partial}) =>
-            sheets.add((spot: spot, selected: selected, locked: locked, hasToggle: onToggle != null, cityKey: cityKey, version: version, partial: partial)),
+        sheet: (context, spot, {required selected, required locked, onToggle, cityKey, version, required partial, required revalidate}) =>
+            sheets.add((spot: spot, selected: selected, locked: locked, hasToggle: onToggle != null, cityKey: cityKey, version: version, partial: partial, revalidate: revalidate)),
       );
 }
 
@@ -196,6 +196,28 @@ void main() {
     expect(r.sheets[1].cityKey, 10);
     expect(r.sheets[1].version, '');
     expect(r.sheets[0].spot.visitMinutes, 45, reason: 'a planned spot keeps its plan visit minutes');
+    expect(r.sheets.every((s) => s.revalidate), isTrue, reason: 'Details from the map always asks the server once (D12)');
+  });
+
+  test('add from a pack row: the pack visit minutes reach the plan; without vm and without a plan copy the model default applies', () {
+    final r = _Rig(_plan());
+    final a = r.build();
+    const withVm = DiscoverySpot(id: 'v1', lat: 31.1, lon: 77.17, category: 'temple', rank: 4, name: 'Long Walk', cityKey: 10, visitMinutes: 120);
+    expect(a.add(withVm), isTrue);
+    expect(r.added.last.spots.single.visitMinutes, 120);
+    expect(a.add(_hill), isTrue);
+    expect(r.added.last.spots.single.visitMinutes, TripSpotModel.fromJson({'id': 'x', 'name': 'x', 'latitude': 1, 'longitude': 1, 'category': 'temple'}).visitMinutes);
+  });
+
+  test('details: a cached full row is passed non-partial with revalidate; after the city entry is removed modelFor is partial', () {
+    final r = _Rig(_plan());
+    r.ctx = _NoContext();
+    r.cache[10] = [TripSpotModel.fromJson({'id': 'n1', 'name': 'Jakhoo Temple', 'latitude': 31.1, 'longitude': 77.17, 'category': 'temple', 'rank': 4, 'imageUrl': 'https://x/old.jpg'})];
+    final a = r.build();
+    a.details(_hill);
+    expect((r.sheets.single.partial, r.sheets.single.revalidate, r.sheets.single.version), (false, true, 'v10'));
+    r.cache.remove(10);
+    expect(a.modelFor(_hill).partial, isTrue);
   });
 }
 

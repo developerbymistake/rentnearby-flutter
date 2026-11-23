@@ -45,6 +45,7 @@ class TripSpotsController extends GetxController {
   int _seq = 0;
   bool _loadingAll = false;
   bool _moreInFlight = false;
+  bool _restarted = false;
 
   @override
   void onInit() {
@@ -168,13 +169,7 @@ class TripSpotsController extends GetxController {
   void _saveMore(TripSpotsPage page) {
     if (page.isNotReady || page.items.isEmpty) return;
     try {
-      final v = page.version;
-      if (v == version) {
-        TripSpotsCache.save(cityKey, items.toList(), version);
-      } else {
-        version = v;
-        TripSpotsCache.save(cityKey, page.items, v);
-      }
+      if (page.version == version) TripSpotsCache.save(cityKey, items.toList(), version);
     } catch (_) {}
   }
 
@@ -205,6 +200,12 @@ class TripSpotsController extends GetxController {
     try {
       final page = await _repo.spots(cityKey, cursor: nextCursor);
       if (seq != _seq) return false;
+      // The list moved to a new version between pages: start again from page 1 once, so one version is shown and stored.
+      if (!page.isNotReady && page.version != version && !_restarted) {
+        _restarted = true;
+        await load();
+        return !loadFailed.value && !offline.value;
+      }
       final known = items.map((s) => s.id).toSet();
       items.addAll(page.items.where((s) => known.add(s.id)));
       _saveMore(page);

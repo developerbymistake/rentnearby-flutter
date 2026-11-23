@@ -201,6 +201,7 @@ class TripDiscoveryLayer implements DiscoveryLayerApi {
   DiscArea? _area;
   int? _dataSig;
   String? _photoSig;
+  String? _selImg;
   Worker? _stateWorker;
   VoidCallback? _unhook;
   bool _disposed = false;
@@ -354,6 +355,7 @@ class TripDiscoveryLayer implements DiscoveryLayerApi {
       if (gen != _gen) return;
     }
     _startPhotos();
+    await _refreshSelection();
   }
 
   void _retier() {
@@ -422,7 +424,32 @@ class TripDiscoveryLayer implements DiscoveryLayerApi {
         await port.setGeoJson(DiscIds.srcAll, DiscGeoJson.all(_spots, _tiers));
       } catch (_) {}
     }
-    if (gen == _gen) _startPhotos();
+    if (gen != _gen) return;
+    _startPhotos();
+    await _refreshSelection();
+  }
+
+  /// Retries marker photos that failed to load (connection back); no work when every top photo is registered.
+  void retryPhotos() {
+    if (!isAttached || _disposed) return;
+    if (_top.every((s) => !s.hasThumb || _registered.contains(s.id))) return;
+    _startPhotos();
+  }
+
+  // The open card follows its row: a freed or reused slot must never show another place's photo.
+  Future<void> _refreshSelection() async {
+    final sel = selected.value;
+    final kind = selectedKind.value;
+    if (sel == null || kind == null || kind == DiscSelKind.planned || !isAttached) return;
+    final row = _byId[sel.id];
+    if (row == null) {
+      await clearSelection();
+      return;
+    }
+    final natural = _naturalKind(row);
+    final img = natural == DiscSelKind.photo ? _slotName(row.id) : null;
+    if (natural == kind && img == _selImg) return;
+    await _show(row, natural, lift: false);
   }
 
   void _startPhotos() {
@@ -449,6 +476,8 @@ class TripDiscoveryLayer implements DiscoveryLayerApi {
 
     () async {
       try {
+        await _refreshSelection();
+        if (!alive()) return;
         if (_registered.isNotEmpty || _photoSig != null) await publish(_registered);
         if (!alive()) return;
         await _images.register(
@@ -461,6 +490,7 @@ class TripDiscoveryLayer implements DiscoveryLayerApi {
             if (!alive()) return;
             _registered = reg;
             await publish(reg);
+            if (alive()) await _refreshSelection();
           },
           alive: alive,
         );
@@ -491,8 +521,10 @@ class TripDiscoveryLayer implements DiscoveryLayerApi {
     selectedKind.value = kind;
     selectedPlannedDay.value = host.plannedDayOf(s.id);
     selected.value = s;
+    final img = kind == DiscSelKind.photo ? _slotName(s.id) : null;
+    _selImg = img;
     try {
-      await port.setGeoJson(DiscIds.srcSel, DiscGeoJson.sel(s, kind, tier: _tiers[s.id], img: kind == DiscSelKind.photo ? _slotName(s.id) : null));
+      await port.setGeoJson(DiscIds.srcSel, DiscGeoJson.sel(s, kind, tier: _tiers[s.id], img: img));
       if (lift && gen == _gen) await _lift(port, s);
     } catch (_) {}
   }
@@ -540,6 +572,7 @@ class TripDiscoveryLayer implements DiscoveryLayerApi {
   }
 
   void _clearSelectionState() {
+    _selImg = null;
     selected.value = null;
     selectedKind.value = null;
     selectedPlannedDay.value = null;

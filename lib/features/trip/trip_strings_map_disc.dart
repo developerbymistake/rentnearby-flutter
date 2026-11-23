@@ -6,6 +6,8 @@ class TripMapDiscStrings {
   static String inDay(int n) => 'In Day $n';
   static const String removeFromDay = 'Remove from day';
   static const String loadingPlaces = 'Loading places';
+  static String scaleMeters(int m) => '$m m';
+  static String scaleKm(num km) => '${km % 1 == 0 ? km.toInt() : km} km';
 
   static const String semShowPlaces = 'Show places';
   static const String semHidePlaces = 'Hide places';

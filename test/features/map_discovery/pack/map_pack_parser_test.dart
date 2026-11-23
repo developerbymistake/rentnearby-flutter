@@ -42,6 +42,25 @@ void main() {
       expect(s.stateId, 'st-1');
     });
 
+    test('vm (visit minutes, optional last column): positive int kept, missing or bad cell = null', () {
+      final p = MapPackParser.parse(_body(
+        ['id', 'lat', 'lon', 'name', 'vm'],
+        [
+          ['a', 30.1, 78.1, 'A', 120],
+          ['b', 30.1, 78.1, 'B', 0],
+          ['c', 30.1, 78.1, 'C', 'x'],
+          ['d', 30.1, 78.1, 'D', -5],
+          ['e', 30.1, 78.1, 'E', 90.0],
+          ['f', 30.1, 78.1, 'F'],
+        ],
+      ))!;
+      expect([for (final s in p.spots) s.visitMinutes], [120, null, null, null, 90, null]);
+      expect(p.spots.first.withStateId('other').visitMinutes, 120);
+      expect(MapPackConstants.requiredColumns.contains(MapPackConstants.colVm), isFalse);
+      final old = MapPackParser.parse(_body(['id', 'lat', 'lon', 'name'], [['a', 30.1, 78.1, 'A']]))!;
+      expect(old.spots.single.visitMinutes, isNull);
+    });
+
     test('state and version numbers are stringified', () {
       final p = MapPackParser.parse(_body(['id', 'lat', 'lon', 'name'], [], v: 7, state: 12))!;
       expect(p.version, '7');

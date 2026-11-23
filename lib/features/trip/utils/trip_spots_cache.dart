@@ -66,6 +66,12 @@ class TripSpotsCache {
 
   static String? versionOf(int cityKey) => _read(cityKey)?.version;
 
+  static void remove(int cityKey) {
+    try {
+      _box?.remove(_key(cityKey));
+    } catch (_) {}
+  }
+
   static ({List<TripSpotModel> items, String version})? _read(int cityKey) {
     try {
       final raw = _box?.read<Object?>(_key(cityKey));

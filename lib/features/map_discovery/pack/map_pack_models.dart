@@ -11,6 +11,7 @@ class MapPackSpot {
   final String? thumbUrl;
   final int nPhotos;
   final String stateId;
+  final int? visitMinutes;
 
   const MapPackSpot({
     required this.id,
@@ -23,6 +24,7 @@ class MapPackSpot {
     this.thumbUrl,
     this.nPhotos = 0,
     this.stateId = '',
+    this.visitMinutes,
   });
 
   bool get hasThumb => thumbUrl != null && thumbUrl!.isNotEmpty;
@@ -40,6 +42,7 @@ class MapPackSpot {
           thumbUrl: thumbUrl,
           nPhotos: nPhotos,
           stateId: value,
+          visitMinutes: visitMinutes,
         );
 }
 

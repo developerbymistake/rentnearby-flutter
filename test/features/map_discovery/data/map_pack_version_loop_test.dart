@@ -1,7 +1,16 @@
+import 'dart:async';
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:bakhli/features/map_discovery/data/map_pack_service.dart';
 import 'package:bakhli/features/map_discovery/data/map_pack_store.dart';
 import 'package:bakhli/features/map_discovery/pack/map_pack_models.dart';
+import 'package:bakhli/features/trip/data/trip_city_catalog.dart';
+import 'package:bakhli/features/trip/data/trip_repository.dart';
 import 'package:bakhli/features/trip/models/trip_city_model.dart';
+import 'package:bakhli/services/api_service.dart';
+import 'package:bakhli/services/storage_service.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 
@@ -209,4 +218,71 @@ void main() {
       expect(v.packs, const <MapPackRef>[]);
     });
   });
+
+  group('APP-19 one version call per 10 minutes across the map pack and the city catalog', () {
+    late _VersionAdapter adapter;
+    setUp(() {
+      ApiService.init();
+      adapter = _VersionAdapter();
+      ApiService.dio.httpClientAdapter = adapter;
+      Get.delete<TripCityCatalog>(force: true);
+    });
+
+    test('two parallel callers = one request', () async {
+      adapter.hold = Completer<void>();
+      final a = const TripRepository().citiesVersion(once: true);
+      final b = const TripRepository().citiesVersion();
+      adapter.hold!.complete();
+      expect((await a).version, 'c1');
+      expect((await b).version, 'c1');
+      expect(adapter.count, 1);
+    });
+
+    test('service version call, then a catalog load inside 10 minutes = one request', () async {
+      final city = TripCityModel(
+        cityKey: 1,
+        name: 'City 1',
+        districtName: 'D',
+        stateName: 'State One',
+        latitude: 30,
+        longitude: 78,
+        status: TripCityStatus.ready,
+        spotCount: 1,
+        isPopularDestination: false,
+      );
+      await StorageService.saveTripCitiesCache([city.toJson()], 'c1');
+      final s = MapPackService(api: api, citiesOf: (keys) => [for (final k in keys) city.cityKey == k ? city : null].nonNulls);
+      Get.put(s, permanent: true);
+      await s.ensureForCities([1]);
+      expect(adapter.count, 1);
+      final list = await TripCityCatalog.to.load();
+      expect(list.single.cityKey, 1);
+      expect(adapter.count, 1, reason: 'the catalog reuses the fresh version answer of the service');
+      Get.delete<MapPackService>(force: true);
+    });
+  });
+}
+
+class _VersionAdapter implements HttpClientAdapter {
+  int count = 0;
+  Completer<void>? hold;
+
+  @override
+  Future<ResponseBody> fetch(RequestOptions options, Stream<Uint8List>? requestStream, Future<void>? cancelFuture) async {
+    if (options.path.endsWith('/trips/cities/version')) count++;
+    final h = hold;
+    if (h != null) await h.future;
+    return ResponseBody.fromString(
+      jsonEncode({
+        'data': {'version': 'c1', 'count': 1, 'stale': false, 'mapDiscovery': false},
+      }),
+      200,
+      headers: {
+        Headers.contentTypeHeader: [Headers.jsonContentType],
+      },
+    );
+  }
+
+  @override
+  void close({bool force = false}) {}
 }

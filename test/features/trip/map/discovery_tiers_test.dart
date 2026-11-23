@@ -1,3 +1,4 @@
+import 'package:bakhli/design/design.dart';
 import 'package:bakhli/features/map_discovery/pack/map_pack_models.dart';
 import 'package:bakhli/features/map_discovery/pack/map_pack_parser.dart';
 import 'package:bakhli/features/map_discovery/pack/map_pack_synthetic.dart';
@@ -89,7 +90,7 @@ void main() {
 
   test('tuning: trip and stay values', () {
     expect(DiscTuning.trip.photoMax, 40);
-    expect(DiscTuning.trip.photoDp, 44);
+    expect(DiscTuning.trip.photoDp, DS.s(44));
     expect(DiscTuning.stay.photoMax, 12);
     expect(DiscTuning.stay.photoDp, 32);
     expect(DiscTuning.trip.px(44), 44);

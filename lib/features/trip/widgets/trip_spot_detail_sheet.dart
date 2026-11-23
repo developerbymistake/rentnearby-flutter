@@ -10,6 +10,7 @@ import '../models/trip_spot_model.dart';
 import '../trip_strings_spots_x.dart';
 import '../utils/spot_gallery_cache.dart';
 import '../utils/trip_format.dart';
+import '../utils/trip_spots_cache.dart';
 import 'spot_gallery_collage.dart';
 import 'spot_photo_viewer.dart';
 import 'trip_spot_row.dart';
@@ -23,6 +24,7 @@ class TripSpotDetailSheet extends StatefulWidget {
   final String? version;
   final bool partial;
   final bool showAction;
+  final bool revalidate;
 
   const TripSpotDetailSheet({
     super.key,
@@ -34,6 +36,7 @@ class TripSpotDetailSheet extends StatefulWidget {
     this.version,
     this.partial = false,
     this.showAction = true,
+    this.revalidate = false,
   });
 
   static Future<void> show(
@@ -46,6 +49,7 @@ class TripSpotDetailSheet extends StatefulWidget {
     String? version,
     bool partial = false,
     bool showAction = true,
+    bool revalidate = false,
   }) {
     return showDockSheet<void>(
       context,
@@ -64,6 +68,7 @@ class TripSpotDetailSheet extends StatefulWidget {
           version: version,
           partial: partial,
           showAction: showAction,
+          revalidate: revalidate,
         ),
       ),
     );
@@ -101,12 +106,11 @@ class _TripSpotDetailSheetState extends State<TripSpotDetailSheet>
     super.initState();
     _enter.forward();
     final cityKey = widget.cityKey;
-    if (cityKey == null || !(widget.partial || widget.spot.galleryCount > 0)) return;
+    if (cityKey == null || !(widget.revalidate || widget.partial || widget.spot.galleryCount > 0)) return;
     final hit = SpotGalleryCache.get(cityKey, widget.spot.id, _version);
-    if (hit != null) {
-      _apply(hit);
-    } else {
-      _gallery = SpotGalleryState.loading;
+    if (hit != null) _apply(hit);
+    if (hit == null || widget.revalidate) {
+      if (hit == null) _gallery = SpotGalleryState.loading;
       _fetch();
     }
   }
@@ -126,9 +130,19 @@ class _TripSpotDetailSheetState extends State<TripSpotDetailSheet>
 
   void _apply(SpotDetail d) {
     final s = d.spot;
-    if (widget.partial && s != null) _spot = s;
+    if ((widget.partial || widget.revalidate) && s != null) {
+      _spot = s;
+      if (_index >= math.max(1, s.photos.length)) _index = 0;
+    }
     _urls = d.gallery;
     _gallery = SpotGalleryState.ready;
+  }
+
+  // A newer server answer means the stored city list is stale: drop it so the map memo and list reload.
+  static void _dropStaleList(int cityKey, String answerVersion) {
+    if (answerVersion.isEmpty) return;
+    final listed = TripSpotsCache.versionOf(cityKey);
+    if (listed != null && listed != answerVersion) TripSpotsCache.remove(cityKey);
   }
 
   void _retry() {
@@ -140,18 +154,25 @@ class _TripSpotDetailSheetState extends State<TripSpotDetailSheet>
     final cityKey = widget.cityKey;
     if (cityKey == null) return;
     try {
-      final d = await SpotGalleryLoader.load(cityKey, widget.spot.id, _version);
+      final d = await SpotGalleryLoader.load(cityKey, widget.spot.id, _version, revalidate: widget.revalidate);
+      if (widget.revalidate) _dropStaleList(cityKey, d.version);
       if (!mounted) return;
       setState(() => _apply(d));
     } catch (_) {
       if (!mounted) return;
+      if (_gallery == SpotGalleryState.ready) return;
+      if (widget.revalidate && !widget.partial) {
+        setState(() => _gallery = null);
+        return;
+      }
       setState(() => _gallery = SpotGalleryState.error);
     }
   }
 
   bool get _showGallery => switch (_gallery) {
         SpotGalleryState.ready => _urls.isNotEmpty,
-        SpotGalleryState.loading || SpotGalleryState.error => _expectsGallery,
+        SpotGalleryState.loading => _expectsGallery,
+        SpotGalleryState.error => _expectsGallery || widget.partial,
         null => false,
       };
 

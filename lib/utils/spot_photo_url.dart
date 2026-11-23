@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/widgets.dart';
+import 'cloudinary_host.dart';
 
 enum SpotPhotoSize { marker, square, card, hero, full }
 
@@ -25,8 +26,7 @@ abstract final class SpotPhotoUrl {
 
   static String? of(String? url, SpotPhotoSize size) {
     if (url == null || url.isEmpty) return url;
-    final host = Uri.tryParse(url)?.host ?? '';
-    if (host != 'res.cloudinary.com' && !host.endsWith('.cloudinary.com')) return url;
+    if (!isCloudinaryHost(url)) return url;
     final i = url.indexOf(_marker);
     if (i < 0) return url;
     final at = i + _marker.length;

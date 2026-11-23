@@ -58,7 +58,7 @@ abstract final class AppPhotoPick {
 
   static bool isImage(List<int> h) {
     if (h.length >= 3 && h[0] == 0xFF && h[1] == 0xD8 && h[2] == 0xFF) return true;
-    if (h.length >= 8 && h[0] == 0x89 && h[1] == 0x50 && h[2] == 0x4E && h[3] == 0x47) return true;
+    if (h.length >= 8 && h[0] == 0x89 && h[1] == 0x50 && h[2] == 0x4E && h[3] == 0x47 && h[4] == 0x0D && h[5] == 0x0A && h[6] == 0x1A && h[7] == 0x0A) return true;
     return h.length >= 12 &&
         h[0] == 0x52 && h[1] == 0x49 && h[2] == 0x46 && h[3] == 0x46 &&
         h[8] == 0x57 && h[9] == 0x45 && h[10] == 0x42 && h[11] == 0x50;

@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:bakhli/design/design.dart';
@@ -78,6 +79,27 @@ class _Disk implements MarkerDiskStore {
   Future<void> trimTo(int keep) async {}
 }
 
+class _RecPort extends _Port {
+  final below = <String, String?>{};
+  ({double x, double y})? dotAt;
+
+  @override
+  Future<void> addLayer(DiscLayerSpec spec, DiscTuning tuning, {String? belowLayerId}) async => below[spec.id] = belowLayerId;
+
+  @override
+  Future<List<Object?>> queryRect(double left, double top, double right, double bottom, List<String> layerIds) async {
+    final d = dotAt;
+    if (d == null || d.x < left || d.x > right || d.y < top || d.y > bottom) return const [];
+    return [
+      {
+        'id': 'a',
+        'properties': {'id': 'a'},
+        'geometry': {'type': 'Point', 'coordinates': [77.171, 31.101]},
+      },
+    ];
+  }
+}
+
 const _centre = (lat: 31.10, lon: 77.17);
 
 DiscoverySpot _spot(String id, {double lat = 31.101, double lon = 77.171}) => DiscoverySpot(
@@ -90,10 +112,13 @@ DiscoverySpot _spot(String id, {double lat = 31.101, double lon = 77.171}) => Di
       cityKey: 7,
     );
 
-TripDiscoveryLayer _layer(List<DiscoverySpot> spots, {DiscoveryDataState state = DiscoveryDataState.ready, bool Function()? blocked, void Function(DiscoverySpot)? onDetails}) =>
+String? _noAnchor() => null;
+
+TripDiscoveryLayer _layer(List<DiscoverySpot> spots,
+        {DiscoveryDataState state = DiscoveryDataState.ready, bool Function()? blocked, void Function(DiscoverySpot)? onDetails, String? Function() anchor = _noAnchor}) =>
     TripDiscoveryLayer(
       mode: DiscoveryMode.readOnly,
-      host: DiscoveryHost.readOnly(onDetails: onDetails, lineFor: (_) => 'Shimla', bottomInset: () => 120, topInset: () => 180),
+      host: DiscoveryHost.readOnly(anchorLayerId: anchor, onDetails: onDetails, lineFor: (_) => 'Shimla', bottomInset: () => 120, topInset: () => 180),
       source: _Source(spots, state),
       tuning: DiscTuning.stay,
       images: TripMarkerImages(fetch: (_) async => null, disk: _Disk(), painter: _Painter()),
@@ -274,6 +299,33 @@ void main() {
     blocked = false;
     expect(await l.onFeatureTap('disc-badge', 'a'), isTrue);
     expect(l.selected.value?.id, 'a');
+    l.dispose();
+  });
+
+  test('APP-17: with an anchor every disc layer is added below it (user dot stays on top)', () async {
+    final port = _RecPort();
+    final l = _layer([_spot('a')], anchor: () => 'circle-anchor');
+    await l.refreshData();
+    await l.attach(port);
+    expect(port.below, isNotEmpty);
+    expect(port.below.values.toSet(), {'circle-anchor'});
+    l.dispose();
+  });
+
+  test('APP-17: the stay map passes the circle manager layer as the anchor', () {
+    final src = File('lib/features/stay/guest/stay_map_screen.dart').readAsStringSync();
+    expect(src, contains('anchorLayerId: () => _mapController?.circleManager?.layerIds.first'));
+  });
+
+  test('APP-3 journey: a map tap on a dot opens the read-only card, a tap on empty map closes it', () async {
+    final port = _RecPort()..dotAt = (x: 100, y: 100);
+    final l = _layer([_spot('a')]);
+    await l.refreshData();
+    await l.attach(port);
+    expect(await l.onMapTap(102, 98), isTrue);
+    expect(l.selected.value?.id, 'a');
+    expect(await l.onMapTap(300, 500), isFalse);
+    expect(l.selected.value, isNull);
     l.dispose();
   });
 }

@@ -1,10 +1,12 @@
 import 'package:bakhli/design/design.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 
 import '../trip_strings_map_disc.dart';
 import '../widgets/trip_map_controls.dart';
+import '../widgets/trip_map_scale_bar.dart';
 import '../widgets/trip_map_spot_card.dart';
 import 'discovery_api.dart';
 
@@ -20,6 +22,7 @@ class DiscoveryOverlay extends StatelessWidget {
   final Color Function(int day)? dayColorOf;
   final ListingPalette palette;
   final double side;
+  final ValueListenable<double?>? metersPerDp;
 
   static const double controlsY = 0.14;
   static const double controlsRight = 12;
@@ -28,6 +31,8 @@ class DiscoveryOverlay extends StatelessWidget {
   static const double chipLeftTop = 18;
   static const double cardGapTop = 52;
   static const double cardGapBottom = 12;
+  static const double scaleRight = 14;
+  static const double scaleBottom = 20;
 
   const DiscoveryOverlay({
     super.key,
@@ -40,6 +45,7 @@ class DiscoveryOverlay extends StatelessWidget {
     this.dayColorOf,
     this.palette = ListingPalette.indigo,
     this.side = 12,
+    this.metersPerDp,
   });
 
   @override
@@ -80,6 +86,15 @@ class DiscoveryOverlay extends StatelessWidget {
                   map: map,
                   onLocate: onLocate,
                 ),
+              ),
+            ),
+          if (m == DiscoveryMode.full && metersPerDp != null)
+            Positioned(
+              right: DS.s(scaleRight),
+              bottom: host.bottomInset() + DS.s(scaleBottom),
+              child: ValueListenableBuilder<double?>(
+                valueListenable: metersPerDp!,
+                builder: (_, v, _) => TripMapScaleBar(metersPerDp: v),
               ),
             ),
           if (chip != null && sel == null)

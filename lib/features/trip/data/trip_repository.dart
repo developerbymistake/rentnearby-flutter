@@ -99,7 +99,20 @@ class TripRepository {
   static Map<String, dynamic>? _versionData;
 
   // Conditional GET: a 304 reuses the last answer of this process.
-  Future<TripCityVersion> citiesVersion({bool once = false}) async {
+  static Future<TripCityVersion>? _versionInFlight;
+
+  // Single flight: the map pack service and the city catalog share one call.
+  Future<TripCityVersion> citiesVersion({bool once = false}) {
+    final pending = _versionInFlight;
+    if (pending != null) return pending;
+    final f = _citiesVersion(once);
+    _versionInFlight = f;
+    return f.whenComplete(() {
+      if (identical(_versionInFlight, f)) _versionInFlight = null;
+    });
+  }
+
+  Future<TripCityVersion> _citiesVersion(bool once) async {
     final tag = _versionTag;
     final last = _versionData;
     final res = await withRetry(

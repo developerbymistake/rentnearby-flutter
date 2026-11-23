@@ -184,7 +184,7 @@ class TripMapLoadingChip extends StatelessWidget {
               text,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontSize: DS.f(11), fontWeight: FontWeight.w600, color: FitnessAppTheme.darkText),
+              style: Ink3D.text(11, FontWeight.w600, FitnessAppTheme.darkText, letterSpacing: 0),
             ),
           ),
         ],

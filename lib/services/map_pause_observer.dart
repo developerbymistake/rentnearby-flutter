@@ -27,6 +27,7 @@ const _pauseRoutes = {
   '/trip-plan',
   '/trip-stay',
   '/trip-map',
+  '/map-lab',
   '/my-trips',
   '/trip-name',
   '/trip-customize',

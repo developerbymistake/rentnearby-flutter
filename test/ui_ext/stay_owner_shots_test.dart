@@ -753,10 +753,12 @@ void main() {
       await t.pump(const Duration(milliseconds: 600));
       await tapText(t, 'Choose from Gallery');
       await t.pump(const Duration(milliseconds: 600));
-      for (var i = 0; i < 12; i++) {
-        await t.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 200)));
-        await t.pump(const Duration(milliseconds: 200));
+      final done = find.text('2 of 2');
+      for (var i = 0; i < 40 && done.evaluate().isEmpty; i++) {
+        await t.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
+        await t.pump(const Duration(milliseconds: 50));
       }
+      expect(done, findsOneWidget);
       await t.pump(const Duration(milliseconds: 100));
     }
 

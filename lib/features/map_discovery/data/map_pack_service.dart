@@ -19,6 +19,7 @@ import 'map_pack_store.dart';
 typedef MapPackVersionCall = Future<TripCityVersion> Function();
 typedef MapPackCitiesOf = Iterable<TripCityModel> Function(Iterable<int> cityKeys);
 typedef MapPackParse = Future<MapPack?> Function(String raw);
+typedef MapPackNoteVersion = void Function(TripCityVersion v);
 
 class MapPackService {
   static MapPackService get to =>
@@ -35,6 +36,7 @@ class MapPackService {
   final MapPackCitiesOf _citiesOf;
   final DateTime Function() _now;
   final MapPackParse _parse;
+  final MapPackNoteVersion _noteVersion;
 
   MapPackService({
     MapPackApi? api,
@@ -42,11 +44,15 @@ class MapPackService {
     MapPackCitiesOf? citiesOf,
     DateTime Function()? now,
     MapPackParse? parse,
+    MapPackNoteVersion? noteVersion,
   })  : _api = api ?? MapPackApi(),
         _versionCall = versionCall ?? _defaultVersionCall,
         _citiesOf = citiesOf ?? _defaultCitiesOf,
         _now = now ?? DateTime.now,
-        _parse = parse ?? parseOffFrame;
+        _parse = parse ?? parseOffFrame,
+        _noteVersion = noteVersion ?? _defaultNoteVersion;
+
+  static void _defaultNoteVersion(TripCityVersion v) => TripCityCatalog.to.noteVersion(v);
 
   static Future<TripCityVersion> _defaultVersionCall() => const TripRepository().citiesVersion(once: true);
 
@@ -79,6 +85,7 @@ class MapPackService {
   Future<void>? _readyF;
   Future<void>? _versionF;
   DateTime? _versionFailedAt;
+  DateTime? _goneRefreshAt;
   Future<void> _applied = Future.value();
 
   final Map<String, MapPack> _packs = {};
@@ -153,6 +160,7 @@ class MapPackService {
     _readyF = null;
     _versionF = null;
     _versionFailedAt = null;
+    _goneRefreshAt = null;
     status.value = MapPackStatus.none;
     source.sync(MapPackStatus.none);
     revision.value++;
@@ -207,6 +215,9 @@ class MapPackService {
         if (gen != _gen) return;
         _versionFailedAt = null;
         onVersion(v);
+        try {
+          _noteVersion(v);
+        } catch (_) {}
       } catch (_) {
         if (gen == _gen) _versionFailedAt = _now();
       }
@@ -356,6 +367,7 @@ class MapPackService {
     try {
       final r = await _api.fetch(ref, etag: hasBody ? MapPackStore.readVersion(id) : null);
       if (gen != _gen) return;
+      if (r.gone) return _onGone(ref, failKey, gen);
       if (r.notModified) {
         if (!hasBody) return _fail(failKey);
         MapPackStore.stampVersion(id, ref.version);
@@ -376,6 +388,26 @@ class MapPackService {
     } catch (_) {
       if (gen == _gen) _fail(failKey);
     }
+  }
+
+  // The versioned URL is gone (a newer pack exists): ask for the refs at once (at most once a minute), then load the new version.
+  Future<void> _onGone(MapPackRef ref, String failKey, int gen) async {
+    final now = _now();
+    final failed = _versionFailedAt;
+    final last = _goneRefreshAt;
+    final mayAsk = (failed == null || now.difference(failed) >= MapPackConstants.retryAfter) &&
+        (last == null || now.difference(last) >= MapPackConstants.retryAfter);
+    if (mayAsk) {
+      _goneRefreshAt = now;
+      await _refreshRefs();
+      if (gen != _gen) return;
+    }
+    final next = _refs.firstWhereOrNull((r) => r.stateId == ref.stateId);
+    if (next != null && next.version != ref.version) {
+      _loadState(next).ignore();
+      return;
+    }
+    _fail(failKey);
   }
 
   // Back-off per (state, version): a failure of an old version never blocks the new one.

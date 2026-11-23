@@ -42,6 +42,16 @@ class TripCityCatalog {
     }
   }
 
+  // A version answer fetched elsewhere (map pack service) also counts as this catalog's 10 minute check.
+  void noteVersion(TripCityVersion v) {
+    warmFromDisk();
+    final savedAt = StorageService.getTripCitiesCacheSavedAt();
+    final now = DateTime.now();
+    if (_mem == null || v.version != _version || savedAt == null || now.difference(savedAt) >= AppConstants.tripCitiesCacheTtl) return;
+    _checkedAt = now;
+    StorageService.touchTripCitiesCache().ignore();
+  }
+
   Future<List<TripCityModel>> load({bool force = false}) {
     final pending = _loading;
     if (pending != null) return pending;

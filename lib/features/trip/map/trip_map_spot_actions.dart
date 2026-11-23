@@ -1,4 +1,3 @@
-import 'package:bakhli/design/design.dart';
 import 'package:flutter/material.dart';
 
 import '../../../utils/app_toast.dart';
@@ -18,7 +17,7 @@ import 'discovery_api.dart';
 typedef TripAddSpots = bool Function(List<TripSpotModel> spots, {int? legIndex, int? day});
 typedef TripRemoveSpot = void Function(String id, {bool keepEmptyDays});
 typedef TripInsertSpot = void Function(TripSpotRef spot, int day, int index);
-typedef TripSpotSheet = void Function(BuildContext context, TripSpotModel spot, {required bool selected, required bool locked, VoidCallback? onToggle, int? cityKey, String? version, required bool partial});
+typedef TripSpotSheet = void Function(BuildContext context, TripSpotModel spot, {required bool selected, required bool locked, VoidCallback? onToggle, int? cityKey, String? version, required bool partial, required bool revalidate});
 
 class TripMapSpotActions {
   final TripPlan? Function() plan;
@@ -66,8 +65,9 @@ class TripMapSpotActions {
   }
 
   static void _showSheet(BuildContext context, TripSpotModel spot,
-          {required bool selected, required bool locked, VoidCallback? onToggle, int? cityKey, String? version, required bool partial}) =>
-      TripSpotDetailSheet.show(context, spot: spot, selected: selected, locked: locked, onToggle: onToggle, cityKey: cityKey, version: version, partial: partial);
+          {required bool selected, required bool locked, VoidCallback? onToggle, int? cityKey, String? version, required bool partial, required bool revalidate}) =>
+      TripSpotDetailSheet.show(context,
+          spot: spot, selected: selected, locked: locked, onToggle: onToggle, cityKey: cityKey, version: version, partial: partial, revalidate: revalidate);
 
   int? _legOf(TripPlan p, DiscoverySpot s) {
     final key = s.cityKey;
@@ -101,7 +101,7 @@ class TripMapSpotActions {
         'category': s.category,
         'rank': s.rank,
         'imageUrl': s.thumbUrl ?? ref?.imageUrl,
-        if (ref != null) 'visitMinutes': ref.visitMinutes,
+        'visitMinutes': ?(s.visitMinutes ?? ref?.visitMinutes),
       }),
       partial: true,
     );
@@ -177,6 +177,7 @@ class TripMapSpotActions {
       cityKey: key,
       version: key == null ? null : cachedVersion(key) ?? '',
       partial: m.partial,
+      revalidate: true,
     );
   }
 
@@ -185,7 +186,7 @@ class TripMapSpotActions {
     m?.hideCurrentSnackBar();
     m?.showSnackBar(
       SnackBar(
-        content: const Text(TripStringsV2Plan.placeRemoved, style: TextStyle(fontFamily: FitnessAppTheme.fontName)),
+        content: const Text(TripStringsV2Plan.placeRemoved),
         duration: const Duration(seconds: 5),
         action: SnackBarAction(label: TripStringsV2Plan.undo, onPressed: undo),
       ),

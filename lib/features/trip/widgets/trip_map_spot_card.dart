@@ -45,7 +45,7 @@ class TripMapSpotCard extends StatelessWidget {
 
   bool get _planned => mode == DiscoveryMode.full && plannedDay != null;
 
-  static TextStyle get titleStyle => Ink3D.text(14, FontWeight.w600, Ink3D.title, letterSpacing: 0, height: 1.3);
+  static TextStyle get titleStyle => Ink3D.text(15, FontWeight.w600, Ink3D.title, letterSpacing: 0, height: 1.3);
   static TextStyle get lineStyle => Ink3D.text(12.5, FontWeight.w400, TripLook.mutedText, letterSpacing: 0);
   static TextStyle get categoryStyle => TypeTokens.style(11, FontWeight.w500, color: TypeTokens.secondary);
 
