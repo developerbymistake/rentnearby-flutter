@@ -558,7 +558,7 @@ void main() {
     expect(TaxiRingNotification.stopsOnTap(TaxiRingNotification.declineAction), isTrue);
     expect(TaxiRingNotification.stopsOnTap(null), isFalse);
     expect(TaxiRingNotification.stopsOnTap('other'), isFalse);
-    final src = File('lib/services/notification_service.dart').readAsStringSync();
+    final src = File('lib/services/notification_service.dart').readAsStringSync().replaceAll(String.fromCharCode(13), '');
     final start = src.indexOf('Map<String, dynamic> _ringTapData(');
     final body = src.substring(start, src.indexOf('\n  }\n', start));
     expect(body, contains('TaxiRingNotification.stopsOnTap(actionId)'));
