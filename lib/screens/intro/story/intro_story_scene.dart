@@ -8,6 +8,7 @@ import 'paint_ground.dart';
 import 'paint_sky.dart';
 import 'paint_table.dart';
 import 'paint_world.dart';
+import 'paint_world_fx.dart';
 
 class IntroStoryScene extends StatelessWidget {
   const IntroStoryScene({super.key, required this.state, required this.progress, required this.panelTop});
@@ -37,6 +38,7 @@ class IntroStoryScene extends StatelessWidget {
                   children: [
                     _layer(IntroGroundPainter(state, geo, IntroGroundPart.trees)),
                     _layer(IntroWorldPainter(state, geo)),
+                    _layer(IntroWorldFxPainter(state, geo)),
                     _layer(IntroGroundPainter(state, geo, IntroGroundPart.road)),
                     _layer(IntroActorsPainter(state, geo)),
                   ],

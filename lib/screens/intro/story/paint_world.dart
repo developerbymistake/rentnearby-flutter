@@ -29,6 +29,39 @@ class IntroWorldPainter extends CustomPainter {
     canvas.translate(-s, 0);
     if (_visible(signAt.dx - 20, signAt.dx + 20, s)) _sign(canvas);
     if (_visible(IntroMountain.x0, IntroMountain.x1, s)) IntroMountain.paint(canvas, state, _fill);
+    if (_visible(IntroRiver.x0, IntroRiver.x1, s)) canvas.drawPicture(IntroRiver.picture);
+    if (_visible(IntroCamp.lakeX0, IntroCamp.grassX1, s)) _camp(canvas);
+    canvas.restore();
+  }
+
+  Color? _grassG;
+  ui.Gradient? _grassShader;
+
+  void _camp(Canvas canvas) {
+    _fill.color = IntroStoryColors.lake;
+    canvas.drawOval(IntroCamp.lake, _fill);
+    final g = state.palette.g;
+    if (_grassG != g) {
+      _grassG = g;
+      _grassShader = ui.Gradient.linear(
+        const Offset(IntroCamp.grassX0, 0),
+        const Offset(IntroCamp.grassX1, 0),
+        [g.withValues(alpha: IntroCamp.none), g, g],
+        IntroCamp.grassStops,
+      );
+    }
+    _fill
+      ..shader = _grassShader
+      ..color = IntroStoryColors.white;
+    canvas.drawRect(IntroCamp.grass, _fill);
+    _fill.shader = null;
+    canvas.save();
+    canvas.translate(IntroCamp.tentAt.dx, IntroCamp.tentAt.dy);
+    final a = state.artIn;
+    _fill.color = IntroStoryColors.shadow20.withValues(alpha: IntroStoryColors.shadow20.a * a);
+    canvas.drawOval(Rect.fromCenter(center: Offset.zero, width: 92, height: 10), _fill);
+    final img = IntroStoryArt.instance[IntroArt.camping];
+    if (img != null && a > 0) _drawImage(canvas, img, const Rect.fromLTWH(-46, -88, 92, 92), a);
     canvas.restore();
   }
 
@@ -56,6 +89,53 @@ class IntroWorldPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant IntroWorldPainter old) => old.geo != geo || old.state != state;
+}
+
+abstract final class IntroRiver {
+  static const double x0 = 1780, x1 = 2420, top = 344, bottom = 390;
+  static const List<double> edgeStops = [0, .12, .88, 1];
+
+  static double edge(double x) {
+    final u = (x - x0) / (x1 - x0);
+    if (u <= 0 || u >= 1) return 0;
+    if (u < .12) return u / .12;
+    if (u > .88) return (1 - u) / .12;
+    return 1;
+  }
+
+  static ui.Picture? _picture;
+
+  static ui.Picture get picture => _picture ??= _record();
+
+  static ui.Gradient _fade(Color c) {
+    final none = c.withValues(alpha: IntroCamp.none);
+    return ui.Gradient.linear(const Offset(x0, 0), const Offset(x1, 0), [none, c, c, none], edgeStops);
+  }
+
+  static ui.Picture _record() {
+    final rec = ui.PictureRecorder();
+    final c = Canvas(rec);
+    final p = Paint()..isAntiAlias = false;
+    const rows = bottom - top;
+    for (var y = top; y < bottom; y++) {
+      p.shader = _fade(Color.lerp(IntroStoryColors.riverTop, IntroStoryColors.riverBottom, (y + .5 - top) / rows)!);
+      c.drawRect(Rect.fromLTRB(x0, y, x1, y + 1), p);
+    }
+    p.shader = _fade(IntroStoryColors.riverBank);
+    c.drawRect(const Rect.fromLTRB(x0, 340, x1, 346), p);
+    p.shader = _fade(IntroStoryColors.riverShade);
+    c.drawRect(const Rect.fromLTRB(x0, 384, x1, bottom), p);
+    return rec.endRecording();
+  }
+}
+
+abstract final class IntroCamp {
+  static const double none = 0;
+  static const double lakeX0 = 3102, grassX0 = 3170, grassX1 = 3970;
+  static const List<double> grassStops = [0, .08, 1];
+  static const Rect lake = Rect.fromLTRB(3102, 362, 3402, 394);
+  static const Rect grass = Rect.fromLTRB(grassX0, 390, grassX1, 490);
+  static const Offset tentAt = Offset(3340, 394);
 }
 
 abstract final class IntroMountain {
