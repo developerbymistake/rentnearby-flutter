@@ -1,3 +1,4 @@
+import 'package:bakhli/features/trip/controllers/trip_plan_controller.dart';
 import 'package:bakhli/features/trip/models/trip_model.dart';
 import 'package:bakhli/features/trip/models/trip_plan_model.dart';
 import 'package:bakhli/features/trip/models/trip_plan_result_model.dart';
@@ -132,6 +133,109 @@ void main() {
       expect(ids(c.plan.value!, 1), ['L1d1s0', 'L1d1s1', 'L1d1s2']);
       expect(c.restoreDays(c.snapshotDays([1])), isFalse);
       expect(changes, 2);
+    });
+  });
+
+  group('cross-day', () {
+    test('moveSpot with an index inserts at the clamped index and leaves the source day', () {
+      for (final (index, at) in [(0, 0), (1, 1), (2, 2), (99, 2), (-3, 0)]) {
+        final c = engineRig(enginePlan([[3, 2]]));
+        expect(c.moveSpot('L1d1s1', 2, index: index), isTrue, reason: 'index $index');
+        expect(ids(c.plan.value!, 1), ['L1d1s0', 'L1d1s2']);
+        expect(ids(c.plan.value!, 2).indexOf('L1d1s1'), at, reason: 'index $index');
+        expect(ids(c.plan.value!, 2).length, 3);
+      }
+    });
+
+    test('moveSpot without an index keeps the cheapest insertion', () {
+      final a = engineRig(enginePlan([[3, 3]]));
+      final expected = a.moveLoadMinutes('L1d1s0', 2);
+      expect(a.moveSpot('L1d1s0', 2), isTrue);
+      expect(ids(a.plan.value!, 2), contains('L1d1s0'));
+      expect(a.dayLoadMinutes(2), lessThanOrEqualTo(expected + 1));
+    });
+
+    test('different leg, full day, past days and locked plan refuse and change nothing', () {
+      final city = engineRig(enginePlan([[2], [1]]));
+      final before = city.plan.value;
+      expect(city.moveSpot('L1d1s0', 2, index: 0), isFalse);
+      expect(identical(city.plan.value, before), isTrue);
+
+      final full = engineRig(enginePlan([[1, 6]]));
+      final b2 = full.plan.value;
+      expect(full.moveSpot('L1d1s0', 2, index: 0), isFalse);
+      expect(identical(full.plan.value, b2), isTrue);
+
+      final past = engineRig(enginePlan([[2, 2, 2, 2]], start: daysFromToday(-1)));
+      expect(past.moveSpot('L1d3s0', 1, index: 0), isFalse);
+      expect(past.moveSpot('L1d1s0', 3, index: 0), isFalse);
+
+      final locked = engineRig(enginePlan([[2, 2]]), lock: lockedByRequest);
+      expect(locked.moveSpot('L1d1s0', 2, index: 0), isFalse);
+      expect(ids(locked.plan.value!, 1), ['L1d1s0', 'L1d1s1']);
+    });
+
+    test('empty and rest day accept at 0, rest flag cleared, emptied source day stays', () {
+      final c = engineRig(enginePlan([[1, 0, 2]]));
+      expect(c.moveSpot('L1d1s0', 2, index: 0), isTrue);
+      final p = c.plan.value!;
+      expect(p.days.length, 3);
+      expect(p.dayAt(1)!.spots, isEmpty);
+      expect(ids(p, 2), ['L1d1s0']);
+      expect(ids(p, 3), ['L1d3s0', 'L1d3s1']);
+
+      final r = engineRig(enginePlan([[2, 0]], restDays: {2}));
+      expect(r.plan.value!.dayAt(2)!.restDay, isTrue);
+      expect(r.moveSpot('L1d1s1', 2, index: 0), isTrue);
+      expect(r.plan.value!.dayAt(2)!.restDay, isFalse);
+      expect(ids(r.plan.value!, 2), ['L1d1s1']);
+    });
+
+    test('multi-city: a move inside leg 1 keeps the empty days of both legs', () {
+      final c = engineRig(enginePlan([[2, 1, 0], [1, 0, 0]]));
+      final before = c.plan.value!;
+      expect(c.moveSpot('L1d1s0', 2, index: 1), isTrue);
+      final p = c.plan.value!;
+      expect(p.days.length, before.days.length);
+      expect(p.legDayCount(1), 3);
+      expect(p.legDayCount(2), 3);
+      expect(identical(p.dayAt(4)!.spots, before.dayAt(4)!.spots), isTrue);
+    });
+
+    test('canDropOn answers like moveSpot and shows no toast', () {
+      final cases = <(TripPlanController Function(), String, int)>[
+        (() => engineRig(enginePlan([[2], [1]])), 'L1d1s0', 2),
+        (() => engineRig(enginePlan([[1, 6]])), 'L1d1s0', 2),
+        (() => engineRig(enginePlan([[2, 2, 2, 2]], start: daysFromToday(-1))), 'L1d3s0', 1),
+        (() => engineRig(enginePlan([[2, 2, 2, 2]], start: daysFromToday(-1))), 'L1d1s0', 3),
+        (() => engineRig(enginePlan([[2, 2]]), lock: lockedByRequest), 'L1d1s0', 2),
+        (() => engineRig(enginePlan([[1, 0, 2]])), 'L1d1s0', 2),
+        (() => engineRig(enginePlan([[2, 0]], restDays: {2})), 'L1d1s1', 2),
+        (() => engineRig(enginePlan([[2, 2]])), 'L1d1s0', 1),
+        (() => engineRig(enginePlan([[2, 2]])), 'L1d1s0', 9),
+      ];
+      for (final (make, id, to) in cases) {
+        final a = make();
+        final before = a.plan.value;
+        final can = a.canDropOn(id, to);
+        expect(identical(a.plan.value, before), isTrue);
+        Get.reset();
+        final b = make();
+        expect(b.moveSpot(id, to, index: 0), can, reason: '$id -> $to');
+        Get.reset();
+      }
+    });
+
+    test('undo of two days restores both exactly, rest flag included', () {
+      final c = engineRig(enginePlan([[3, 0, 1]], restDays: {2}));
+      final snap = c.snapshotDays([1, 2]);
+      expect(c.moveSpot('L1d1s1', 2, index: 0), isTrue);
+      expect(c.restoreDays(snap), isTrue);
+      final p = c.plan.value!;
+      expect(ids(p, 1), ['L1d1s0', 'L1d1s1', 'L1d1s2']);
+      expect(p.dayAt(2)!.spots, isEmpty);
+      expect(p.dayAt(2)!.restDay, isTrue);
+      expect(ids(p, 3), ['L1d3s0']);
     });
   });
 

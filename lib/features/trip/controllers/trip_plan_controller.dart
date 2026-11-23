@@ -82,6 +82,8 @@ enum TripStructureBlock { none, readOnly, locked, pastDay }
 
 enum TripLegApplyBlock { none, readOnly, locked, stale, emptyDay, bookings, running, invalid }
 
+enum _MoveBlock { none, refused, differentCity, dayFull }
+
 class TripPlanController extends GetxController {
   static TripPlanController get to =>
       Get.isRegistered<TripPlanController>()
@@ -2874,14 +2876,14 @@ class TripPlanController extends GetxController {
     };
   }
 
-  List<TripDay>? _movedDays(String id, int toDay) {
+  List<TripDay>? _movedDays(String id, int toDay, {int? index}) {
     final p = plan.value;
     if (p == null) return null;
     final fromDay = p.dayOfSpot(id);
     final spot = p.spotById(id);
     if (fromDay == null || spot == null || fromDay == toDay || p.dayAt(toDay) == null) return null;
     if (p.legIndexOf(fromDay) != p.legIndexOf(toDay)) return null;
-    final at = _insertion(id, toDay)?.index;
+    final at = index ?? _insertion(id, toDay)?.index;
     return [
       for (final d in p.days)
         if (d.day == fromDay)
@@ -2899,22 +2901,34 @@ class TripPlanController extends GetxController {
     return [for (final d in p.days) d.copyWith(spots: d.spots.where((s) => s.id != id).toList())];
   }
 
-  bool moveSpot(String id, int toDay, {bool keepEmptyDays = true}) {
-    final p = plan.value;
-    final fromDay = p?.dayOfSpot(id);
-    if (p == null || !_structureOk(day: toDay) || (fromDay != null && !_structureOk(day: fromDay))) return false;
-    if (fromDay != null && p.dayAt(toDay) != null && p.legIndexOf(fromDay) != p.legIndexOf(toDay)) {
-      AppToast.warning(TripStringsMcaA1.differentCity);
-      return false;
+  bool moveSpot(String id, int toDay, {int? index, bool keepEmptyDays = true}) {
+    switch (_moveBlock(id, toDay)) {
+      case _MoveBlock.differentCity:
+        AppToast.warning(TripStringsMcaA1.differentCity);
+        return false;
+      case _MoveBlock.dayFull:
+        AppToast.warning(TripStringsV2Plan.dayFull);
+        return false;
+      case _MoveBlock.refused:
+        return false;
+      case _MoveBlock.none:
+        break;
     }
-    if (fromDay != null && fromDay != toDay && !TripDaysRules.canAddOnDay(p, toDay)) {
-      AppToast.warning(TripStringsV2Plan.dayFull);
-      return false;
-    }
-    final next = _movedDays(id, toDay);
+    final next = _movedDays(id, toDay, index: index);
     if (next == null) return false;
     _applyEdit(next, keepEmptyDays: keepEmptyDays);
     return true;
+  }
+
+  bool canDropOn(String id, int toDay) => _moveBlock(id, toDay) == _MoveBlock.none && _movedDays(id, toDay, index: 0) != null;
+
+  _MoveBlock _moveBlock(String id, int toDay) {
+    final p = plan.value;
+    final fromDay = p?.dayOfSpot(id);
+    if (p == null || !_structureOk(day: toDay) || (fromDay != null && !_structureOk(day: fromDay))) return _MoveBlock.refused;
+    if (fromDay != null && p.dayAt(toDay) != null && p.legIndexOf(fromDay) != p.legIndexOf(toDay)) return _MoveBlock.differentCity;
+    if (fromDay != null && fromDay != toDay && !TripDaysRules.canAddOnDay(p, toDay)) return _MoveBlock.dayFull;
+    return _MoveBlock.none;
   }
 
   void reorder(int day, int oldIndex, int newIndex) {
