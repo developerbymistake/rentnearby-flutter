@@ -3,7 +3,9 @@ import 'package:bakhli/screens/intro/intro_widgets.dart';
 import 'package:bakhli/screens/intro/story/intro_story_cast.dart';
 import 'package:bakhli/screens/intro/story/intro_story_math.dart';
 import 'package:bakhli/screens/intro/story/intro_story_state.dart';
+import 'package:bakhli/screens/intro/story/paint_cast.dart';
 import 'package:bakhli/screens/intro/story/paint_table.dart';
+import 'package:bakhli/screens/intro/story/paint_world.dart';
 import 'package:flutter/painting.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -195,6 +197,126 @@ void main() {
     test('depth order puts the fire between back and front dancers', () {
       final f = _cast(4, t: 0);
       expect(f.order.toSet(), {0, 1, 2, CastFrame.fire});
+    });
+  });
+
+  group('drive and adventure (chapters 3 and 4)', () {
+    CastFrame cast(double q, double t, List<double> tl) {
+      final f = CastFrame();
+      solveCast(f, q: q, t: t, s: storyS(q), tl: tl, excited: 0);
+      return f;
+    }
+
+    test('drive 1 (q .4..1.6) keeps all three inside, world scrolls to the mountain', () {
+      for (final q in [.4, 1.0, 1.6]) {
+        expect(_cast(q).actors.every((a) => a.inside && a.alpha == 0), isTrue);
+      }
+      expect(storyS(1.6), 900);
+      expect(storyS(1.62), 900);
+    });
+
+    test('leave boundary q 1.62: all jump out of the window slots', () {
+      final f = _cast(1.62);
+      for (var i = 0; i < 3; i++) {
+        final a = f.actors[i];
+        expect(a.inside, isFalse);
+        expect(a.airborne, isTrue);
+        expect(a.x, closeTo(IntroStory.slotX[i], 1e-9));
+        expect(a.sc, closeTo(.6, 1e-9));
+      }
+    });
+
+    test('frame 11 (q 1.8): canopy opening over the panda, trekkers on the way', () {
+      final f = _cast(1.8, t: 2);
+      expect(f.canopy, greaterThan(IntroGlider.minCanopy));
+      expect(f.canopyX, f.actors[0].x);
+      expect(f.actors[0].shadow, 0);
+      expect(f.actors[1].walking && f.actors[2].walking, isTrue);
+    });
+
+    test('frame 12 (q 2): panda at the glide point, fox and lion on the trail at .1 / .42', () {
+      const t = 2.0;
+      final f = cast(2, t, List<double>.of(IntroStory.trailRestart));
+      final p = f.actors[0];
+      expect(p.fly, isTrue);
+      expect(f.canopy, 1);
+      expect(p.x, closeTo(190 + 70 * 0.7833269096274834, 1e-9));
+      expect(p.y, closeTo(208 + 14 * 0.9995736030415051 + 8, 1e-9));
+      expect(f.canopyX, p.x);
+      expect(f.canopyY, p.y);
+      for (final i in [1, 2]) {
+        final tu = IntroStory.trailRestart[i];
+        final pt = IntroTrail.instance.at(tu);
+        expect(f.actors[i].x, closeTo(pt.dx - 900, 1e-9));
+        expect(f.actors[i].y, closeTo(pt.dy, 1e-9));
+        expect(f.actors[i].sc, closeTo(.62 + (.42 - .62) * tu, 1e-9));
+      }
+      expect(f.actors.any((a) => a.inside), isFalse);
+    });
+
+    test('trail loop: trekkers fade near the top and wrap', () {
+      final f = cast(2, 1, [0, .95, 1.2]);
+      expect(f.actors[1].alpha, closeTo(.5, 1e-9));
+      expect(f.actors[2].y, closeTo(IntroTrail.instance.at(.2).dy, 1e-9));
+    });
+
+    test('return: panda glides down, trekkers walk back, then all jump in by q 2.36', () {
+      final f = _cast(2.05, t: 2);
+      expect(f.actors[0].fly, isTrue);
+      expect(f.canopy, 1);
+      final g = _cast(2.2, t: 2);
+      expect(g.actors[0].y, greaterThan(f.actors[0].y));
+      expect(g.actors[1].y, IntroStory.groundY);
+      expect(g.actors[1].sc, inExclusiveRange(.62, 1));
+      expect(g.canopy, lessThan(IntroGlider.minCanopy));
+      final h = _cast(2.36);
+      expect(h.actors.every((a) => a.inside && a.alpha == 0), isTrue);
+      expect(h.canopy, 0);
+    });
+
+    test('state: trail loop advances .07 per second on the adventure chapter only', () {
+      final s = IntroStoryState()..setProgress(3);
+      s.tick(.05);
+      s.tick(.05);
+      expect(s.tl[1], closeTo(.1 + .007, 1e-9));
+      expect(s.tl[2], closeTo(.42 + .007, 1e-9));
+      s.setProgress(3.2);
+      final before = s.tl[1];
+      s.tick(.05);
+      expect(s.tl[1], before);
+      s.dispose();
+    });
+
+    test('state: pitch stays within 3.5 deg while the world speeds up and settles at rest', () {
+      final s = IntroStoryState()..setProgress(1.4);
+      for (var i = 0; i < 4; i++) {
+        s.setProgress(1.4 + i * .05);
+        s.tick(.016);
+        expect(s.pitch - s.arrival.lean, closeTo(s.pit.clamp(-3.5, 3.5), 1e-9));
+        expect((s.pitch - s.arrival.lean).abs(), lessThanOrEqualTo(3.5));
+      }
+      s.setProgress(2);
+      for (var i = 0; i < 200; i++) {
+        s.tick(.016);
+      }
+      expect(s.pit.abs(), lessThan(.01));
+      s.dispose();
+    });
+
+    test('mountain is in view only around the adventure chapter', () {
+      bool inView(double s) => IntroMountain.x1 - s >= 0 && IntroMountain.x0 - s <= IntroStory.sceneW;
+      expect(inView(storyS(1)), isFalse);
+      expect(inView(storyS(2)), isTrue);
+      expect(IntroMountain.cx - storyS(2), 300);
+      expect(inView(storyS(2.72)), isFalse);
+    });
+
+    test('trail dots follow the dotted trail', () {
+      final b = IntroMountain.trailDots().getBounds();
+      expect(b.left, greaterThanOrEqualTo(1128 - 1));
+      expect(b.right, lessThanOrEqualTo(1206 + 1));
+      expect(b.top, greaterThanOrEqualTo(244 - 1));
+      expect(b.bottom, lessThanOrEqualTo(390 + 1));
     });
   });
 
