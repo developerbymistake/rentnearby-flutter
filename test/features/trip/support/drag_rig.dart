@@ -9,6 +9,7 @@ import 'package:bakhli/features/trip/models/trip_plan_model.dart';
 import 'package:bakhli/features/trip/screens/trip_plan_screen.dart';
 import 'package:bakhli/features/trip/widgets/drag/trip_spot_drag_scope.dart';
 import 'package:bakhli/features/trip/widgets/trip_day_spot_list.dart';
+import 'package:bakhli/utils/app_toast.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -30,6 +31,7 @@ Future<TripPlanController> pumpDragPlan(
   bool reduceMotion = false,
   bool edit = true,
   TripPlanLock lock = TripPlanLock.none,
+  bool toasts = false,
 }) async {
   Get.put<TabConfigController>(_Tabs());
   TripCityCatalog.to.seedForTest(const [
@@ -58,7 +60,7 @@ Future<TripPlanController> pumpDragPlan(
     scrollBehavior: const AppScrollBehavior(),
     builder: (context, child) => MediaQuery(
       data: MediaQuery.of(context).copyWith(disableAnimations: reduceMotion),
-      child: child!,
+      child: toasts ? Stack(fit: StackFit.expand, children: [Positioned.fill(child: child!), Overlay(key: AppToast.overlayKey)]) : child!,
     ),
     home: const TripPlanScreen(),
   ));

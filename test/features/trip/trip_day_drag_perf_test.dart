@@ -159,4 +159,75 @@ void main() {
       await drainDrag(t);
     });
   }
+
+  // Day 2 keeps room for one more place so the cross-day drop is allowed.
+  final crossFixtures = <String, List<int>>{
+    '3x12': [12, 5, 12],
+    '6x8': [8, 5, 8, 8, 8, 8],
+    '14x6': [6, 5, ...List.filled(12, 6)],
+  };
+  for (final MapEntry(key: name, value: perDay) in crossFixtures.entries) {
+    testWidgets('cross-day drag: target change rebuilds at most 2 day cards and no row, drop only the two days ($name)', (t) async {
+      final c = await pumpDragPlan(t, enginePlan([perDay]), reduceMotion: true);
+      final rowsBefore = _snapshot();
+      final start = t.getCenter(handleOf('L1d1s0'));
+      final rowCentre = t.getCenter(row('L1d1s0'));
+      final d2 = [for (var i = 0; i < perDay[1]; i++) t.getRect(row('L1d2s$i'))];
+      final d3Top = t.getRect(row('L1d3s0')).top;
+      final g = await t.startGesture(start);
+      await g.moveBy(const Offset(0, 20));
+      await t.pump(const Duration(milliseconds: 16));
+      var worstCards = 0;
+      var worstRows = 0;
+      var worstMs = 0.0;
+      final stops = [
+        d2.first.top - 30,
+        for (final r in d2) r.center.dy + 4,
+        d3Top + 4,
+        d2.last.center.dy + 4,
+      ];
+      for (final y in stops) {
+        final cards = _cards();
+        final rows = _snapshot();
+        await g.moveTo(start + Offset(0, y - rowCentre.dy));
+        final sw = Stopwatch()..start();
+        await t.pump(const Duration(milliseconds: 16));
+        sw.stop();
+        final changed = _cardsRebuilt(cards);
+        if (changed > worstCards) worstCards = changed;
+        final r = _rebuilt(rows).values.fold(0, (a, b) => a + b);
+        if (r > worstRows) worstRows = r;
+        if (sw.elapsedMicroseconds / 1000 > worstMs) worstMs = sw.elapsedMicroseconds / 1000;
+      }
+      expect(worstCards, lessThanOrEqualTo(2));
+      expect(worstRows, 0);
+      final s = t.state<TripSpotDragScopeState>(dragScope).drag.value;
+      expect(s?.targetDay, 2);
+      expect(s?.refused, isFalse);
+      final sw = Stopwatch()..start();
+      await g.up();
+      await t.pump();
+      sw.stop();
+      expect(dayIds(c, 2).contains('L1d1s0'), isTrue);
+      final r = _rebuilt(rowsBefore);
+      expect(r.keys.where((d) => d != 1 && d != 2), isEmpty, reason: '$r');
+      expect((r[1] ?? 0) + (r[2] ?? 0), lessThanOrEqualTo(perDay[0] + perDay[1]));
+      _report.add('cross $name: target change worst $worstCards cards, $worstRows rows, worst move frame ${worstMs.toStringAsFixed(1)} ms; '
+          'drop rebuilt day1 ${r[1] ?? 0} of ${perDay[0]}, day2 ${r[2] ?? 0} of ${perDay[1] + 1}, other days 0, drop frame ${(sw.elapsedMicroseconds / 1000).toStringAsFixed(1)} ms');
+      await drainDrag(t);
+    });
+  }
+}
+
+Finder get _cardFinder => find.byKey(TripDaySpotList.dropKey);
+
+Map<Element, Widget> _cards() => {for (final e in _cardFinder.evaluate()) e: e.widget};
+
+int _cardsRebuilt(Map<Element, Widget> before) {
+  var n = 0;
+  for (final e in _cardFinder.evaluate()) {
+    final old = before[e];
+    if (old == null || !identical(old, e.widget)) n++;
+  }
+  return n;
 }

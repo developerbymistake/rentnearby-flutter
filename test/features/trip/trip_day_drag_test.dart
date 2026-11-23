@@ -298,7 +298,8 @@ void main() {
       await g.moveTo(Offset(start.dx, start.dy + (bottom - start.dy) * i / 10));
       await t.pump(const Duration(milliseconds: 16));
     }
-    for (var i = 0; i < 40; i++) {
+    // Stop while the lifted card is still over day 1; past it the drop belongs to day 2 (cross-day).
+    for (var i = 0; i < 40 && pageOffset(t) <= before + 50; i++) {
       await t.pump(const Duration(milliseconds: 50));
     }
     expect(pageOffset(t), greaterThan(before + 50));
