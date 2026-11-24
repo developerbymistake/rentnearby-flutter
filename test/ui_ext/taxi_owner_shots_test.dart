@@ -634,6 +634,7 @@ void main() {
       await err('routes_rate', taxiModel(step1: true, routes: true), () async {}, 'Add your day rate');
       await err('routes_km', taxiModel(step1: true, routes: true, rate: 2500, km: 1500), () async {}, 'Km per day must be between 1 and 1000');
       await err('routes_noto', withRoutes, () async {
+        await t.scrollUntilVisible(find.text('Add another route'), 300, scrollable: find.byType(Scrollable).first);
         await t.tap(find.text('Add another route'));
         await t.pump(const Duration(milliseconds: 300));
         await t.scrollUntilVisible(find.text('One way'), 300, scrollable: find.byType(Scrollable).first);

@@ -313,17 +313,15 @@ class _BadgeRow extends StatelessWidget {
               ),
               if (spot.isFeatured) ...[
                 SizedBox(width: DS.s(6)),
-                Flexible(
-                  child: _Badge(
-                    padding: DS.insets(l: 10, t: 4, r: 12, b: 4),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.star_rounded, size: DS.s(14), color: Ink3D.title),
-                        SizedBox(width: DS.s(4)),
-                        Flexible(child: Text(TripStringsSpotsX.featured, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(12, FontWeight.w700, Ink3D.title))),
-                      ],
-                    ),
+                _Badge(
+                  padding: DS.insets(l: 10, t: 4, r: 12, b: 4),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.star_rounded, size: DS.s(14), color: Ink3D.title),
+                      SizedBox(width: DS.s(4)),
+                      Text(TripStringsSpotsX.featured, maxLines: 1, style: Ink3D.text(12, FontWeight.w700, Ink3D.title)),
+                    ],
                   ),
                 ),
               ],
