@@ -1,10 +1,11 @@
 abstract final class SharingStrings {
   static const String travellersTitle = 'Travellers';
-  static const String expensesTitle = 'Expenses';
+  static const String buddyInviteTitle = 'Buddy invite';
+  static const String expensesTitle = 'Trip expenses';
   static const String deleteTrip = 'Delete trip';
   static const String inviteBuddies = 'Invite buddies';
 
-  static const String onlyYou = 'Only you';
+  static const String inviteFriendsLine = 'Invite your friends on this trip';
   static const String invite = 'Invite';
   static const String manage = 'Manage';
   static const String noExpensesYet = 'No expenses yet';

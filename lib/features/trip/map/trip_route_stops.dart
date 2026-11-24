@@ -25,8 +25,6 @@ class TripRouteStops {
   static const String sourceId = 'trip-stops';
   static const String layerId = 'trip-stops-icons';
   static const String imagePrefix = 'trip-stop-';
-  static const double smallZoom = 10;
-  static const double fullZoom = 14;
   static const double minScale = 36 / 44;
   static const int _cacheMax = 120;
 
@@ -45,9 +43,9 @@ class TripRouteStops {
 
   List<RouteStop> get stops => _stops;
 
-  static List<Object> get iconSize => ['interpolate', ['linear'], ['zoom'], smallZoom, minScale, fullZoom, 1];
+  Object get iconSize => tuning.stopIconSize(minScale);
 
-  static SymbolLayerProperties get layerProps => SymbolLayerProperties(
+  SymbolLayerProperties get layerProps => SymbolLayerProperties(
         iconImage: ['get', 'img'],
         iconSize: iconSize,
         iconOpacity: ['get', 'op'],

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../tokens/card_tokens.dart';
 import '../tokens/design_colors.dart';
 import '../tokens/design_scale.dart';
+import '../tokens/listing_palette.dart';
 import '../tokens/shadow_tokens.dart';
 import 'art_3d.dart';
 import 'buttons_kit.dart';
@@ -47,6 +48,10 @@ class TripLook {
   static const Color dayCyan = Color(0xFF4FC3F7);
   static const List<Color> dayColors = <Color>[dayIndigo, dayOrange, dayCyan];
   static Color dayColor(int day) => dayColors[(day - 1) % dayColors.length];
+
+  static final ListingTone cityTone = ListingTone.cA;
+  static final Color cityInk = ListingPalette.coral.g2;
+  static final ListingTone dayTone = ListingTone.cE;
 
   static const Color rail = Color(0xFFB5BBEA);
   static const Color disabledFill = Color(0xFFC9CDD6);

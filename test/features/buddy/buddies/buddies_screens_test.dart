@@ -1,4 +1,5 @@
 import 'package:bakhli/config/app_routes.dart';
+import 'package:bakhli/features/buddy/buddies/controllers/buddies_controller.dart';
 import 'package:bakhli/features/buddy/buddies/controllers/buddy_find_controller.dart';
 import 'package:bakhli/features/buddy/buddies/controllers/buddy_summary_controller.dart';
 import 'package:bakhli/features/buddy/buddies/models/buddy_models.dart';
@@ -9,10 +10,12 @@ import 'package:bakhli/features/buddy/buddies/widgets/my_buddies_tab.dart';
 import 'package:bakhli/features/buddy/buddies/widgets/find_tab.dart';
 import 'package:bakhli/features/buddy/buddies/widgets/profile_buddies_row.dart';
 import 'package:bakhli/features/buddy/buddies/widgets/trip_pick_sheet.dart';
+import 'package:bakhli/features/buddy/buddies/widgets/username_card.dart';
 import 'package:bakhli/features/buddy/buddy_error_types.dart';
 import 'package:bakhli/features/buddy/shared/buddy_result.dart';
 import 'package:bakhli/features/buddy/shared/models/person_models.dart';
 import 'package:bakhli/features/buddy/shared/buddy_look.dart';
+import 'package:bakhli/features/buddy/shared/widgets/buddy_avatar.dart';
 import 'package:bakhli/features/buddy/shared/widgets/buddy_snack.dart';
 import 'package:bakhli/features/buddy/shared/widgets/segment_tabs.dart';
 import 'package:bakhli/features/buddy/sharing/models/sharing_models.dart';
@@ -188,6 +191,75 @@ void main() {
   });
 
   group('Find', () {
+    test('Bug 8: tab fallback is Find; explicit tabs keep their tab', () {
+      expect(BuddiesScreen.tabIndex('find'), BuddiesTab.find);
+      expect(BuddiesScreen.tabIndex('buddies'), BuddiesTab.buddies);
+      expect(BuddiesScreen.tabIndex('requests'), BuddiesTab.requests);
+      expect(BuddiesScreen.tabIndex(''), BuddiesTab.find);
+      expect(BuddiesScreen.tabIndex('other'), BuddiesTab.find);
+      expect(BuddiesController().tab.value, BuddiesTab.find);
+    });
+
+    testWidgets('Bug 8: a plain open lands on Find', (t) async {
+      api.buddiesResult = BuddyOk(BuddyList(items: [item(aman)], count: 1));
+      await pump(t, BuddiesScreen(api: api, tripApi: tripApi));
+      expect(find.text('OR SHOW YOURS'), findsOneWidget);
+      expect(find.text('1 BUDDY'), findsNothing);
+      expect(find.text('Find a buddy'), findsNothing);
+      await finish(t);
+    });
+
+    testWidgets('Bug 8: new buddies are not marked seen from Find, Requests or Back; only after My buddies shows them', (t) async {
+      api.buddiesResult = BuddyOk(BuddyList(items: [item(aman), item(neha, isNew: true)], count: 2));
+      await pump(t, BuddiesScreen(api: api, tripApi: tripApi));
+      await t.pump(const Duration(seconds: 3));
+      expect(api.seen, isNull, reason: 'Find does not show the New badge');
+      final tabs = find.byType(SegmentTabs);
+      await t.tap(find.descendant(of: tabs, matching: find.text('Requests')));
+      await settle(t);
+      await t.pump(const Duration(seconds: 3));
+      expect(api.seen, isNull, reason: 'Find to Requests never showed My buddies');
+      await t.tap(find.descendant(of: tabs, matching: find.text('My buddies')));
+      await settle(t);
+      expect(find.text('New'), findsOneWidget);
+      expect(api.seen, isNull);
+      await t.pump(const Duration(seconds: 3));
+      expect(api.seen, [nehaId]);
+      await finish(t);
+    });
+
+    testWidgets('Bug 8: plain open then Back does not mark new buddies seen', (t) async {
+      api.buddiesResult = BuddyOk(BuddyList(items: [item(neha, isNew: true)], count: 1));
+      await pump(t, BuddiesScreen(api: api, tripApi: tripApi));
+      expect(find.text('OR SHOW YOURS'), findsOneWidget);
+      await t.pumpWidget(const SizedBox());
+      await t.pump(const Duration(seconds: 3));
+      expect(api.seen, isNull);
+      BuddySnack.hide();
+    });
+
+    testWidgets('Bug 8 part 2 guard (cause still open): the avatar initial is built once, inside the username card, also after a tab switch', (t) async {
+      api.buddiesResult = BuddyOk(BuddyList(items: [item(aman)], count: 1));
+      await pump(t, BuddiesScreen(api: api, tripApi: tripApi));
+      void onlyInsideCard() {
+        final letters = find.text('R', skipOffstage: false);
+        expect(letters, findsOneWidget);
+        final card = t.getRect(find.byType(UsernameCard));
+        final letter = t.getRect(letters);
+        expect(find.descendant(of: find.byType(BuddyAvatar), matching: letters), findsOneWidget);
+        expect(card.contains(letter.topLeft) && card.contains(letter.bottomRight), isTrue, reason: 'letter $letter outside card $card');
+      }
+
+      onlyInsideCard();
+      final tabs = find.byType(SegmentTabs);
+      await t.tap(find.descendant(of: tabs, matching: find.text('Requests')));
+      await settle(t);
+      await t.tap(find.descendant(of: tabs, matching: find.text('Find')));
+      await settle(t);
+      onlyInsideCard();
+      await finish(t);
+    });
+
     testWidgets('Change 11 + 12: tabs read Find, My buddies, Requests; count is a pink badge; Find card has Copy and My QR', (t) async {
       api.buddiesResult = BuddyOk(BuddyList(items: [item(aman), item(neha)], count: 2));
       await pump(t, screen());
@@ -195,7 +267,7 @@ void main() {
       double x(String s) => t.getCenter(find.descendant(of: tabs, matching: find.text(s))).dx;
       expect(x('Find'), lessThan(x('My buddies')));
       expect(x('My buddies'), lessThan(x('Requests')));
-      expect(find.text('2 BUDDIES'), findsOneWidget, reason: 'plain open still lands on My buddies');
+      expect(find.text('2 BUDDIES'), findsOneWidget, reason: 'an explicit buddies tab still lands on My buddies');
       final badge = t.widget<Container>(find.ancestor(of: find.descendant(of: tabs, matching: find.text('2')), matching: find.byType(Container)).first);
       expect((badge.decoration! as BoxDecoration).color, BuddyLook.countBadge, reason: 'pink badge also on the selected tab');
       await t.tap(find.descendant(of: tabs, matching: find.text('Find')));
@@ -649,6 +721,20 @@ void main() {
       await t.tap(find.text('Buddies'));
       await t.pumpAndSettle();
       expect(args?['tab'], 'requests');
+    });
+
+    testWidgets('Bug 8: row with no pending request still opens My buddies, not the new Find default', (t) async {
+      Get.put(BuddySummaryController(api: api..summaryResult = const BuddyOk(BuddySummary(buddies: 2))), permanent: true);
+      Map<dynamic, dynamic>? args;
+      await pump(t, const Scaffold(body: Column(children: [ProfileBuddiesRow()])), pages: [
+        GetPage(name: AppRoutes.buddies, page: () {
+          args = Get.arguments as Map?;
+          return const Scaffold();
+        }),
+      ]);
+      await t.tap(find.text('Buddies'));
+      await t.pumpAndSettle();
+      expect(args?['tab'], 'buddies');
     });
 
     testWidgets('Requests tab count from the summary', (t) async {

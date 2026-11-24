@@ -18,6 +18,7 @@ import 'package:get/get.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 
 import '../e2e_journeys/nearby/nearby_support.dart';
+import '../nearby_taxi/fake_ways_repo.dart';
 import '../support/real_phone.dart';
 import '../ui_golden/golden_support.dart';
 
@@ -153,7 +154,7 @@ void main() {
     debugDisableShadows = false;
     _base();
     Get.find<AuthController>().tabIndex.value = 3;
-    final c = Get.put(TaxiListControllerV2(root: true, repo: _Repo()), tag: TaxiListControllerV2.tag);
+    final c = Get.put(TaxiListControllerV2(root: true, repo: _Repo(), waysRepo: FakeWaysRepo()), tag: TaxiListControllerV2.tag);
     await pumpPhone(t, const TaxiListScreenV2(root: true), size: const Size(360, 2000));
     await _settle(t);
     c.setTo(PlaceResult(name: 'Almora', subtitle: '', latLng: const LatLng(29.6, 79.66)));

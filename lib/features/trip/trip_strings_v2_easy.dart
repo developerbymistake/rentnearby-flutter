@@ -94,7 +94,7 @@ class TripStringsV2Easy {
   static const String youArrangeTravel = "You'll arrange your travel";
   static const String youArrangeIt = "You'll arrange it";
 
-  static const String stayHint = 'Homestays and hotels in this city';
+  static const String stayHint = 'Homestays and resorts in this city';
   static const String travelHint = 'Cars and drivers for this ride';
   static const String betweenHint = 'The ride from one city to the next';
 

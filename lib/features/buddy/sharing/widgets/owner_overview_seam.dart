@@ -27,7 +27,6 @@ class OwnerOverviewExtras {
     this.travellerCount,
     this.extraCards = const [],
     this.extraMenuItems = const [],
-    this.compactCards = false,
     this.progressLine,
     this.showProgress = true,
   });
@@ -38,7 +37,6 @@ class OwnerOverviewExtras {
   final int? travellerCount;
   final List<Widget> extraCards;
   final List<OverviewMenuItem> extraMenuItems;
-  final bool compactCards;
   final String? progressLine;
   final bool showProgress;
 }
@@ -79,7 +77,6 @@ abstract final class OwnerOverviewSeam {
     return OwnerOverviewExtras(
       subtitle: shared ? SharingStrings.sharedWith(s.viewerCount) : null,
       travellerCount: s.travellerCount,
-      compactCards: true,
       showProgress: !shared,
       progressLine: alone && progressPercent == 100 ? SharingStrings.allSetInvite : null,
       extraCards: [

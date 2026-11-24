@@ -50,7 +50,7 @@ void main() {
       buddies: FakeBuddiesApi(bigBuddies),
     );
     await _render(t, '3.2', overview(trip(sharing: alone), alone), arrange: (t) async {
-      await _tap(t, find.byKey(const ValueKey('overview_travellers_button')));
+      await _tap(t, find.byKey(const ValueKey('overview_travellers_card')));
       await _tap(t, find.text('Aman'));
     });
   });
@@ -59,7 +59,7 @@ void main() {
     final alone = aloneBlock();
     registerFakes(members: FakeMembersApi(membersResult: BuddyOk(membersSample())), buddies: FakeBuddiesApi({}));
     await _render(t, '3.4', overview(trip(sharing: alone), alone), arrange: (t) async {
-      await _tap(t, find.byKey(const ValueKey('overview_travellers_button')));
+      await _tap(t, find.byKey(const ValueKey('overview_travellers_card')));
     });
   });
 

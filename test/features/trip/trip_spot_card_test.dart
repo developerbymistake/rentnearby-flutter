@@ -10,6 +10,7 @@ import 'package:bakhli/features/trip/widgets/trip_spot_detail_sheet.dart';
 import 'package:bakhli/features/trip/widgets/trip_spot_row.dart';
 import 'package:bakhli/features/trip/widgets/trip_spots_extras.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get_storage/get_storage.dart';
@@ -62,7 +63,7 @@ void main() {
   tearDown(() => TripSpotMedia.debugImageBuilder = null);
 
   group('card states', () {
-    testWidgets('S1 one photo, featured: tag reads exactly Featured, no +N, label above title, no chips', (t) async {
+    testWidgets('S1 one photo, featured: tag reads exactly Featured, no +N, category badge on the photo beside Featured', (t) async {
       await _host(t, TripSpotRow(spot: _spot(featured: true), selected: false, onToggle: () {}));
       expect(find.text(TripStringsSpotsX.featured), findsOneWidget);
       expect(find.textContaining('Featured ·'), findsNothing);
@@ -71,6 +72,9 @@ void main() {
       expect(find.text('Mall Road'), findsNothing);
       expect(find.textContaining('min'), findsNothing);
       expect(t.getTopLeft(find.text('LAKE')).dy, lessThan(t.getTopLeft(find.text('Naini Lake')).dy));
+      expect(t.getBottomLeft(find.text('LAKE')).dy, lessThan(t.getTopLeft(find.byType(TripSpotCard)).dy + DS.s(28) + TripSpotCard.mediaHeight));
+      expect((t.getCenter(find.text('LAKE')).dy - t.getCenter(find.text(TripStringsSpotsX.featured)).dy).abs(), lessThan(1));
+      expect(t.getTopRight(find.text('LAKE')).dx, lessThan(t.getTopLeft(find.text(TripStringsSpotsX.featured)).dx));
       expect(find.text(TripStringsSpotsX.addToTrip), findsOneWidget);
       expect(find.text(TripSpotRow.details), findsOneWidget);
       expect(find.byType(TripSpotCard), findsOneWidget);
@@ -103,8 +107,17 @@ void main() {
       expect(find.text(TripStringsSpotsX.addToTrip), findsNothing);
       final ring = t.widget<Container>(find.descendant(of: find.byType(TripSpotCard), matching: find.byWidgetPredicate((w) => w is Container && w.foregroundDecoration != null)));
       final border = (ring.foregroundDecoration! as BoxDecoration).border! as Border;
-      expect(border.top.color, ListingTone.indigo.g2);
+      expect(border.top.color, ListingPalette.coral.text);
+      expect(border.top.color, isNot(ListingTone.cA.g1));
+      expect(border.top.color, isNot(ListingTone.cA.g2));
       expect(border.top.width, DS.s(2.5));
+      final inner = t
+          .widgetList<DecoratedBox>(find.descendant(of: find.byType(TripSpotCard), matching: find.byType(DecoratedBox)))
+          .map((d) => d.decoration)
+          .whereType<BoxDecoration>()
+          .where((d) => d.border is Border && (d.border! as Border).top.color == DesignColors.surface && d.borderRadius == DS.br(kMealsRadius));
+      expect(inner.length, 1);
+      expect((inner.single.border! as Border).top.width, DS.s(2));
       await t.tap(find.text(TripStringsSpotsX.addedToTrip));
       await t.pump(const Duration(milliseconds: 300));
       expect(n, 1);
@@ -120,15 +133,102 @@ void main() {
       final arts = t.widgetList<Art3D>(find.descendant(of: find.byType(TripSpotCard), matching: find.byType(Art3D))).toList();
       expect(arts.map((a) => a.size), [104]);
       final card = t.getTopLeft(find.byType(TripSpotCard));
-      expect(t.getTopLeft(find.text('LAKE')).dx - card.dx, closeTo(DS.s(14) + DS.s(18), 0.5));
+      expect(t.getTopLeft(find.text('LAKE')).dx - card.dx, closeTo(DS.s(14) + DS.s(14) + DS.s(12), 0.5));
+      expect(t.getTopLeft(find.text('Naina Devi Temple')).dx - card.dx, closeTo(DS.s(14) + DS.s(18), 0.5));
     });
 
-    testWidgets('photo card: sticker 72 and title indented past it', (t) async {
+    testWidgets('photo card: sticker 72, title indented past it and level with the 36 band under the photo', (t) async {
       await _host(t, TripSpotRow(spot: _spot(), selected: false, onToggle: () {}));
       final arts = t.widgetList<Art3D>(find.descendant(of: find.byType(TripSpotCard), matching: find.byType(Art3D))).toList();
       expect(arts.map((a) => a.size), [72]);
       final card = t.getTopLeft(find.byType(TripSpotCard));
-      expect(t.getTopLeft(find.text('LAKE')).dx - card.dx, closeTo(DS.s(14) + DS.s(100), 0.5));
+      final title = t.getRect(find.text('Naini Lake'));
+      expect(title.left - card.dx, closeTo(DS.s(14) + DS.s(100), 0.5));
+      final band = card.dy + DS.s(28) + TripSpotCard.mediaHeight;
+      expect(title.center.dy, closeTo(band + DS.s(18), 0.5));
+      final sticker = t.getRect(find.descendant(of: find.byType(TripSpotCard), matching: find.byType(Art3D)));
+      expect(sticker.bottom, closeTo(band + DS.s(36), 0.5));
+    });
+
+    testWidgets('card colors cycle cA, cB, cC, cE by index like the city tiles, text white', (t) async {
+      final tones = [ListingTone.cA, ListingTone.cB, ListingTone.cC, ListingTone.cE, ListingTone.cA];
+      await _host(
+        t,
+        Column(children: [for (var i = 0; i < tones.length; i++) TripSpotRow(spot: _spot(id: 's$i', name: 'Spot $i'), selected: false, index: i, onToggle: () {})]),
+        size: const Size(360, 2600),
+      );
+      final boxes = t
+          .widgetList<Container>(find.descendant(of: find.byType(TripSpotCard), matching: find.byWidgetPredicate((w) => w is Container && w.decoration is BoxDecoration && (w.decoration! as BoxDecoration).gradient != null)))
+          .toList();
+      expect(boxes.length, tones.length);
+      for (var i = 0; i < tones.length; i++) {
+        final deco = boxes[i].decoration! as BoxDecoration;
+        expect((deco.gradient! as LinearGradient).colors, [tones[i].g1, tones[i].g2]);
+        expect(TripSpotCard.toneOf(i).g1, tones[i].g1);
+      }
+      expect(t.widget<Text>(find.text('Spot 0')).style!.color, DesignColors.surface);
+      final pill = t.widgetList<WhitePillButton>(find.byType(WhitePillButton)).toList();
+      expect(pill[1].tone.g1, ListingTone.cB.g1);
+      expect(pill[1].onGradient, isTrue);
+      final inks = [ListingPalette.coral.text, ListingPalette.indigo.text, DesignColors.roseDeepStart, ListingTone.cE.text, ListingPalette.coral.text];
+      final details = t.widgetList<Text>(find.text(TripSpotRow.details)).toList();
+      for (var i = 0; i < tones.length; i++) {
+        expect(TripSpotCard.inkOf(i), inks[i]);
+        expect(pill[i].tone.button, inks[i]);
+        expect(details[i].style!.color, inks[i]);
+      }
+    });
+
+    testWidgets('no photo: art sits on the card gradient, no second gradient box under it', (t) async {
+      await _host(t, TripSpotRow(spot: _spot(photos: 0), selected: false, index: 0, onToggle: () {}));
+      final grads = t
+          .widgetList<DecoratedBox>(find.descendant(of: find.byType(TripSpotCard), matching: find.byType(DecoratedBox)))
+          .map((d) => d.decoration)
+          .whereType<BoxDecoration>()
+          .where((d) => d.gradient != null)
+          .toList();
+      expect(grads.length, 1);
+      expect((grads.single.gradient! as LinearGradient).colors, [ListingTone.cA.g1, ListingTone.cA.g2]);
+    });
+
+    testWidgets('bold text setting: description still ends in a whole more on line two', (t) async {
+      await _host(
+        t,
+        Builder(builder: (c) => MediaQuery(data: MediaQuery.of(c).copyWith(boldText: true), child: TripSpotRow(spot: _spot(), selected: false, onToggle: () {}))),
+      );
+      final rich = find.byWidgetPredicate((w) => w is RichText && w.text.toPlainText().endsWith('… ${TripStringsSpotsX.more}'));
+      expect(rich, findsOneWidget);
+      final para = t.renderObject<RenderParagraph>(rich);
+      expect(para.didExceedMaxLines, isFalse);
+      final plain = para.text.toPlainText();
+      final n = TripStringsSpotsX.more.length;
+      final boxes = para.getBoxesForSelection(TextSelection(baseOffset: plain.length - n, extentOffset: plain.length));
+      final line = para.getBoxesForSelection(const TextSelection(baseOffset: 0, extentOffset: 1)).first.toRect();
+      expect(boxes.length, 1);
+      expect(boxes.single.toRect().top, greaterThan(line.bottom - 1));
+    });
+
+    testWidgets('long description: two lines ending in a bold more that opens the place page', (t) async {
+      await _host(t, TripSpotRow(spot: _spot(), selected: false, onToggle: () {}));
+      final rich = find.byWidgetPredicate((w) => w is RichText && w.text.toPlainText().endsWith('… ${TripStringsSpotsX.more}'));
+      expect(rich, findsOneWidget);
+      final para = t.renderObject<RenderParagraph>(rich);
+      expect(para.didExceedMaxLines, isFalse);
+      final plain = para.text.toPlainText();
+      expect(_desc.startsWith(plain.substring(0, plain.length - '… ${TripStringsSpotsX.more}'.length)), isTrue);
+      final n = TripStringsSpotsX.more.length;
+      final box = para.getBoxesForSelection(TextSelection(baseOffset: plain.length - n, extentOffset: plain.length)).first.toRect();
+      final line = para.getBoxesForSelection(const TextSelection(baseOffset: 0, extentOffset: 1)).first.toRect();
+      expect(box.top, greaterThan(line.bottom - 1));
+      await t.tapAt(para.localToGlobal(box.center));
+      await _settle(t);
+      expect(find.byType(TripSpotDetailSheet), findsOneWidget);
+    });
+
+    testWidgets('short description: plain text, no more', (t) async {
+      await _host(t, TripSpotRow(spot: _spot(description: 'A calm lake.'), selected: false, onToggle: () {}));
+      expect(find.text('A calm lake.'), findsOneWidget);
+      expect(find.textContaining(TripStringsSpotsX.more, findRichText: true), findsNothing);
     });
 
     testWidgets('S4 locked: faded 0.6, pill still calls onToggle, Details still opens', (t) async {
@@ -184,9 +284,9 @@ void main() {
       await _host(t, TripSpotRow(spot: _spot(), selected: false, onToggle: () {}));
       final details = find.ancestor(of: find.text(TripSpotRow.details), matching: find.byType(ConstrainedBox)).first;
       expect(t.getSize(details).height, greaterThanOrEqualTo(DS.s(KitMetrics.touch)));
-      final pill = find.ancestor(of: find.byType(GradientPillButton), matching: find.byType(ConstrainedBox)).first;
+      final pill = find.ancestor(of: find.byType(WhitePillButton), matching: find.byType(ConstrainedBox)).first;
       expect(t.getSize(pill).height, greaterThanOrEqualTo(DS.s(KitMetrics.touch)));
-      expect(t.getSize(find.byType(GradientPillButton)).height, DS.s(KitMetrics.touch));
+      expect(t.getSize(find.byType(WhitePillButton)).height, DS.s(KitMetrics.touch));
     });
 
     testWidgets('Proposal B: photo 180, Details outline pill 44, 16 below the pill, 16 gap after the card', (t) async {
@@ -198,7 +298,7 @@ void main() {
       expect(t.getSize(details).height, DS.s(KitMetrics.touch));
       final deco = t.widget<Container>(details).decoration! as BoxDecoration;
       expect(deco.border, isNotNull);
-      final pill = t.getRect(find.byType(GradientPillButton));
+      final pill = t.getRect(find.byType(WhitePillButton));
       final box = t.getRect(find.descendant(of: find.byType(TripSpotCard), matching: find.byWidgetPredicate((w) => w is Container && w.decoration is BoxDecoration && (w.decoration! as BoxDecoration).boxShadow != null)).first);
       expect(box.bottom - pill.bottom, closeTo(DS.s(16), 0.5));
       final card = t.getRect(find.byType(TripSpotCard));
@@ -225,6 +325,9 @@ void main() {
       var n = 0;
       await _host(t, TripSpotRow(spot: _spot(), selected: false, draft: true, subtitle: 'Lake · 1 h 30 min', onToggle: () => n++));
       expect(find.byIcon(Icons.circle_outlined), findsOneWidget);
+      expect(t.widget<Icon>(find.byIcon(Icons.circle_outlined)).color, TripSpotCard.inkOf(0));
+      final dot = t.widget<DecoratedBox>(find.ancestor(of: find.byIcon(Icons.circle_outlined), matching: find.byType(DecoratedBox)).first);
+      expect((dot.decoration as BoxDecoration).color, DesignColors.surface);
       expect(find.text(TripStringsSpotsX.addToTrip), findsNothing);
       expect(find.text('Lake · 1 h 30 min'), findsOneWidget);
       await t.tap(find.byIcon(Icons.circle_outlined));
@@ -236,6 +339,10 @@ void main() {
     testWidgets('selected: check circle and ring', (t) async {
       await _host(t, TripSpotRow(spot: _spot(), selected: true, draft: true, onToggle: () {}));
       expect(find.byIcon(Icons.check_rounded), findsOneWidget);
+      expect(t.widget<Icon>(find.byIcon(Icons.check_rounded)).color, DesignColors.surface);
+      final dot = t.widget<DecoratedBox>(find.ancestor(of: find.byIcon(Icons.check_rounded), matching: find.byType(DecoratedBox)).first);
+      expect((dot.decoration as BoxDecoration).color, TripSpotCard.inkOf(0));
+      expect(((dot.decoration as BoxDecoration).border! as Border).top.color, DesignColors.surface);
       expect(find.text(TripStringsSpotsX.addedToTrip), findsNothing);
       expect(find.descendant(of: find.byType(TripSpotCard), matching: find.byWidgetPredicate((w) => w is Container && w.foregroundDecoration != null)), findsOneWidget);
     });
@@ -268,8 +375,8 @@ void main() {
           );
           expect(t.takeException(), isNull);
           expect(find.text(TripStringsSpotsX.addToTrip), findsOneWidget);
-          expect(t.getSize(find.byType(GradientPillButton)).height, DS.s(KitMetrics.touch));
-          final pill = t.getRect(find.byType(GradientPillButton));
+          expect(t.getSize(find.byType(WhitePillButton)).height, DS.s(KitMetrics.touch));
+          final pill = t.getRect(find.byType(WhitePillButton));
           final card = t.getRect(find.byType(TripSpotCard).first);
           expect(pill.right, lessThanOrEqualTo(card.right - DS.s(14) - DS.s(18) + 0.5));
         });
@@ -279,11 +386,11 @@ void main() {
     testWidgets('1.3 at 320: pill wraps under Details on the right, never shrinks', (t) async {
       await _host(t, TripSpotRow(spot: _spot(), selected: false, onToggle: () {}), size: const Size(320, 900), scale: 1.3);
       final details = t.getRect(find.text(TripSpotRow.details));
-      final pill = t.getRect(find.byType(GradientPillButton));
+      final pill = t.getRect(find.byType(WhitePillButton));
       if (DS.size == 1.0) expect(pill.top, greaterThan(details.bottom));
       final card = t.getRect(find.byType(TripSpotCard));
       expect(pill.right, closeTo(card.right - DS.s(14) - DS.s(18), 0.5));
-      final fitted = t.widget<FittedBox>(find.descendant(of: find.byType(GradientPillButton), matching: find.byType(FittedBox)));
+      final fitted = t.widget<FittedBox>(find.descendant(of: find.byType(WhitePillButton), matching: find.byType(FittedBox)));
       expect(fitted.fit, BoxFit.scaleDown);
       final row = find.descendant(of: find.byType(FittedBox), matching: find.byType(Row)).first;
       expect(t.getSize(row).width, lessThanOrEqualTo(t.getSize(find.byType(FittedBox)).width + 0.5));
@@ -292,7 +399,7 @@ void main() {
     testWidgets('1.0 at 360: Details and pill share one line', (t) async {
       await _host(t, TripSpotRow(spot: _spot(), selected: false, onToggle: () {}));
       final details = t.getRect(find.text(TripSpotRow.details));
-      final pill = t.getRect(find.byType(GradientPillButton));
+      final pill = t.getRect(find.byType(WhitePillButton));
       expect((details.center.dy - pill.center.dy).abs(), lessThan(1));
     });
   });

@@ -73,11 +73,101 @@ void main() {
     expect(t.widget<PhotoCircle>(find.byType(PhotoCircle)).art, 'assets/images/design/travel3d/bus.png');
   });
 
-  testWidgets('featured: one star badge, tag TAXI, no Featured text', (t) async {
+  testWidgets('featured: one star badge, no TAXI tag, no Featured text', (t) async {
     await _pump(t, TaxiCard(item: _taxi(featured: true), onOpen: () {}));
     expect(find.byKey(PhotoCircle.starKey), findsOneWidget);
-    expect(find.text('TAXI'), findsOneWidget);
+    expect(find.text('TAXI'), findsNothing);
     expect(find.textContaining('Featured'), findsNothing);
+  });
+
+  testWidgets('header: name first at 14, chips under the vehicle line, no Local taxi chip', (t) async {
+    await _pump(t, TaxiCard(item: _taxi(dayRate: 2500, dayKm: 30), distance: _near(NearbyLabel.inCity, 1, 'Haldwani'), onOpen: () {}));
+    expect(find.text('Local taxi'), findsNothing);
+    final name = find.text('Rakesh Singh');
+    expect(t.widget<Text>(name).style?.fontSize, TypeTokens.style(14, FontWeight.w700).fontSize);
+    final cardTop = t.getTopLeft(find.byType(ClipRRect).first).dy;
+    expect(t.getTopLeft(name).dy - cardTop, closeTo(DS.s(TaxiCalmCard.cardTopPad), 1.0));
+    final vehicle = find.text('Innova · 7 seats');
+    final chip = find.ancestor(of: find.text('30 km/day'), matching: find.byType(CalmChip));
+    expect(t.getTopLeft(chip).dy, greaterThan(t.getBottomLeft(vehicle).dy));
+    expect(t.getTopLeft(chip).dx, closeTo(t.getTopLeft(name).dx, 1.0));
+    expect(t.widget<CalmChip>(chip).textSize, TaxiCalmCard.listingChipText);
+    final chipSize = t.widget<Text>(find.text('30 km/day')).style!.fontSize!;
+    expect(chipSize, TypeTokens.style(13, FontWeight.w700, chip: true).fontSize);
+    expect(chipSize, greaterThan(TypeTokens.style(10, FontWeight.w700, chip: true).fontSize!));
+    expect(t.getTopLeft(find.text('₹2,500')).dy, greaterThan(t.getBottomLeft(chip).dy));
+  });
+
+  testWidgets('price is one line with a short top rule, no side divider', (t) async {
+    await _pump(t, TaxiCard(item: _taxi(dayRate: 2500, dayKm: 30), onOpen: () {}));
+    expect(t.getCenter(find.text('/day local')).dx, greaterThan(t.getCenter(find.text('₹2,500')).dx));
+    final value = t.getRect(find.text('₹2,500'));
+    final unitY = t.getCenter(find.text('/day local')).dy;
+    expect(unitY, inInclusiveRange(value.top, value.bottom));
+    final block = find.byType(CalmPriceBlock);
+    expect(t.widget<CalmPriceBlock>(block).oneLine, isTrue);
+    final rule = t
+        .widgetList<Container>(find.descendant(of: block, matching: find.byType(Container)))
+        .map((c) => c.decoration)
+        .whereType<BoxDecoration>()
+        .firstWhere((d) => d.border != null)
+        .border! as Border;
+    expect(rule.top.style, BorderStyle.solid);
+    expect(rule.left, BorderSide.none);
+    expect(t.getSize(block).width, lessThan(t.getSize(find.byType(ClipRRect).first).width / 2));
+  });
+
+  testWidgets('locality shows once: header keeps it only when the bottom row has no address', (t) async {
+    await _pump(t, TaxiCard(item: _taxi(), distance: _near(NearbyLabel.inCity, 1, 'Haldwani'), onOpen: () {}));
+    expect(find.text('In Haldwani'), findsOneWidget);
+    expect(find.text('Haldwani'), findsNothing);
+    await _pump(t, TaxiCard(item: _taxi(), inLabel: 'In Bhimtal', onOpen: () {}));
+    expect(find.text('Haldwani'), findsNothing);
+    await _pump(t, TaxiCard(item: _taxi(), onOpen: () {}, onSelect: () {}, onEnquire: () {}));
+    expect(find.text('Haldwani'), findsOneWidget);
+  });
+
+  _sized('circle and its ring stay above the address row line', (t, w, s) async {
+    await _pump(t, TaxiCard(item: _taxi(dayRate: 2500, dayKm: 30), distance: _near(NearbyLabel.inCity, 1, 'Haldwani'), onOpen: () {}),
+        width: w, scale: s);
+    final circle = t.getRect(find.byType(PhotoCircle));
+    final line = t.getTopLeft(find.byType(CalmBottomRow)).dy;
+    expect(circle.bottom + DS.s(PhotoCircle.ring), lessThanOrEqualTo(line + 0.5));
+  });
+
+  _sized('long name, many chips and long fare unit fit the listing header', (t, w, s) async {
+    await _pump(
+      t,
+      TaxiCalmCard(
+        layout: TaxiCalmLayout.listing,
+        tag: null,
+        title: 'Sunil Kumar Negi Bhandari Tour and Travels Almora',
+        lines: const ['Tempo Traveller · 12+ seats'],
+        art: 'assets/images/design/travel3d/bus.png',
+        featured: true,
+        chips: const ['Round trip', '12+ seats', 'Reverse', 'Listed Jan 2030'],
+        price: '₹12,600',
+        unit: 'to Pithoragarh Cantonment',
+        address: 'Almora Cantonment Area. About 210 km',
+        actions: [
+          CalmAction(kind: CalmActionKind.call, label: 'Call', onTap: () {}),
+          CalmAction(kind: CalmActionKind.whatsApp, label: 'WhatsApp', onTap: () {}),
+        ],
+      ),
+      width: w,
+      scale: s,
+    );
+    expect(find.text('TAXI'), findsNothing);
+  });
+
+  testWidgets('one TalkBack button for the whole tappable card', (t) async {
+    final handle = t.ensureSemantics();
+    await _pump(t, TaxiCard(item: _taxi(dayRate: 2500, dayKm: 30), onOpen: () {}));
+    expect(
+      find.byWidgetPredicate((w) => w is Semantics && w.properties.button == true && w.properties.label == 'Rakesh Singh'),
+      findsOneWidget,
+    );
+    handle.dispose();
   });
 
   testWidgets('fare: route match, local day rate, ask for fare', (t) async {

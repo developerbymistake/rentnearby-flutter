@@ -49,19 +49,39 @@ void main() {
     expect(last['properties'], {'img': TripRouteStops.imageOf(2), 'op': 0.35, 'n': 3});
   });
 
-  test('size follows the zoom: small zoomed out, full photo size zoomed in, never below the minimum', () {
-    final e = TripRouteStops.iconSize;
+  test('size follows the trip photo zoom sizes: 44 / 60 / 72 dp at zoom 10 / 14 / 17', () {
+    DS.applyApproved();
+    addTearDown(DS.debugReset);
+    final stops = TripRouteStops();
+    final e = stops.iconSize as List;
     expect(e.take(3).toList(), [
       'interpolate',
       ['linear'],
       ['zoom'],
     ]);
-    expect(e.sublist(3), [TripRouteStops.smallZoom, TripRouteStops.minScale, TripRouteStops.fullZoom, 1]);
-    expect(DiscTuning.trip.photoDp * TripRouteStops.minScale, greaterThan(DS.s(12)));
-    final p = TripRouteStops.layerProps.toJson();
+    final t = DiscTuning.trip;
+    expect(e[3], DiscTuning.zoomOut);
+    expect((e[4] as double) * t.photoDp, closeTo(44, 1e-9));
+    expect(e[5], DiscTuning.zoomMid);
+    expect((e[6] as double) * t.photoDp, closeTo(60, 1e-9));
+    expect(e[7], DiscTuning.zoomIn);
+    expect(e[8], 1.0);
+    expect(CanvasMarkerPainter.stopBadgeDp(t) * (e[6] as double), closeTo(36, 1e-9), reason: 'order badge about 36 dp at zoom 14');
+    final number = CanvasMarkerPainter.stopNumberStyle(t);
+    final caption = TypeTokens.caption;
+    expect(number.fontSize! * (e[6] as double), closeTo(caption.fontSize!, 1e-9), reason: 'order number shows at caption size at zoom 14');
+    expect(number.fontFamily, caption.fontFamily);
+    expect(number.fontWeight, caption.fontWeight);
+    expect(number.height, 1);
+    final p = stops.layerProps.toJson();
     expect(p['icon-size'], e);
     expect(p['icon-opacity'], ['get', 'op']);
     expect(p['icon-allow-overlap'], isTrue);
+  });
+
+  test('stop marker paints the order number with the zoom-14 caption style', () {
+    final src = File('lib/features/trip/map/trip_marker_images.dart').readAsStringSync();
+    expect(src.contains("TextSpan(text: '\$number', style: stopNumberStyle(t))"), isTrue);
   });
 
   test('an unknown feature id gives no stop', () {
@@ -89,7 +109,7 @@ void main() {
       expect(ring[2], lessThan(120));
       final outer = rad + CanvasMarkerPainter.stopRingDp();
       final badge = Offset(c + outer * 0.7071, c - outer * 0.7071);
-      final b = CanvasMarkerPainter.stopBadgeDp() / 2;
+      final b = CanvasMarkerPainter.stopBadgeDp(t) / 2;
       final column = [for (var dy = -b; dy <= -1; dy++) _rgb(r, badge.dx, badge.dy + dy)];
       expect(column.any((p) => p[0] > 200 && p[2] < 120), isTrue, reason: 'badge filled with the route colour');
       expect(_rgb(r, 0, side - 1.0)[3], 0, reason: 'transparent corner');

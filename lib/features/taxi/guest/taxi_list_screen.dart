@@ -8,6 +8,7 @@ import '../../../design/design.dart';
 import '../../../utils/app_toast.dart';
 import '../../../widgets/location_switch_sheet.dart';
 import '../models/taxi_browse_item.dart';
+import '../ways/taxi_ways_availability.dart';
 import '../ways/widgets/taxi_ways_entry_card.dart';
 import 'taxi_card.dart';
 import 'taxi_list_controller.dart';
@@ -296,7 +297,9 @@ class _TaxiListScreenState extends State<TaxiListScreen> {
     return Obx(() {
       final f = _ctrl.from.value;
       final t = _ctrl.to.value;
-      if (!_ctrl.isSearch || _ctrl.items.isEmpty || f == null || t == null) return const SizedBox.shrink();
+      if (!_ctrl.waysCheck.isAvailable || !_ctrl.isSearch || _ctrl.items.isEmpty || f == null || t == null) {
+        return const SizedBox.shrink();
+      }
       return TaxiWaysEntryCard(from: f, to: t, fromMyLocation: _ctrl.fromIsCurrent.value);
     });
   }
@@ -322,6 +325,7 @@ class _TaxiListScreenState extends State<TaxiListScreen> {
   Widget _buildBody() {
     return Obx(() {
       final items = _ctrl.items;
+      final ways = _ctrl.waysCheck.state.value;
       if (items.isEmpty) {
         if (_ctrl.isLoading.value) return _buildSkeleton();
         if (_ctrl.from.value == null) {
@@ -330,7 +334,8 @@ class _TaxiListScreenState extends State<TaxiListScreen> {
         final failed = _ctrl.loadFailed.value;
         final f = _ctrl.from.value;
         final t = _ctrl.to.value;
-        if (_ctrl.isSearch && !failed && !_ctrl.isLoading.value && f != null && t != null) {
+        if (_ctrl.isSearch && !failed && ways == WaysAvailability.loading) return _buildSkeleton();
+        if (ways == WaysAvailability.available && _ctrl.isSearch && !failed && f != null && t != null) {
           return SliverToBoxAdapter(
             child: TaxiWaysEntryCard(from: f, to: t, empty: true, fromMyLocation: _ctrl.fromIsCurrent.value),
           );

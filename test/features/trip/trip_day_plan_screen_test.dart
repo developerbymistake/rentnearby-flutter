@@ -22,6 +22,7 @@ import 'package:bakhli/features/trip/widgets/trip_day_spot_list.dart';
 import 'package:bakhli/features/trip/widgets/trip_leg_header.dart';
 import 'package:bakhli/features/trip/widgets/trip_plan_header.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 
@@ -111,21 +112,67 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   tearDown(Get.reset);
 
-  testWidgets('name_on_top_card_and_header', (t) async {
+  testWidgets('no_progress_card_name_only_in_header', (t) async {
     await pumpDayPlan(t, dayPlanFixture());
-    final card = find.byKey(TripPlanStepCard.cardKey);
     expect(find.descendant(of: find.byType(TripPlanHeader), matching: find.text('Uttarakhand Hills Trip')), findsOneWidget);
-    expect(find.descendant(of: card, matching: find.text(TripStringsDayplan.yourPlan)), findsOneWidget);
-    expect(find.descendant(of: card, matching: find.text('Uttarakhand Hills Trip')), findsOneWidget);
-    final arts = find.descendant(of: card, matching: find.byType(Art3D));
-    expect(arts.evaluate().any((e) => (e.widget as Art3D).asset == ListingArt.luggage), isFalse);
-    expect(t.getCenter(find.byType(RingBadge)).dy, closeTo(t.getRect(card).center.dy, 2));
+    expect(find.text('Uttarakhand Hills Trip'), findsOneWidget);
+    expect(find.text('Your plan'), findsNothing);
+    expect(find.byKey(const ValueKey('plan-top-card')), findsNothing);
+    final cardTop = t.getRect(find.byKey(TripLegSectionHeader.cardKey).first).top;
+    expect(cardTop - t.getRect(find.byType(TripPlanHeader)).bottom, closeTo(TripLegSectionHeader.gapAbove + DS.s(2), 1));
+  });
+
+  testWidgets('city_and_day_art_sit_inside_their_headers', (t) async {
+    await pumpDayPlan(t, dayPlanFixture());
+    final card = find.byKey(TripLegSectionHeader.cardKey).first;
+    final cardRect = t.getRect(card);
+    final luggage = find.descendant(of: card, matching: find.byWidgetPredicate((w) => w is Art3D && w.asset == ListingArt.luggage));
+    expect(luggage, findsOneWidget);
+    expect(find.byWidgetPredicate((w) => w is Art3D && w.asset == ListingArt.mountain), findsNothing);
+    final luggageRect = t.getRect(luggage);
+    expect(luggageRect.top, greaterThanOrEqualTo(cardRect.top));
+    expect(luggageRect.left, greaterThanOrEqualTo(cardRect.left));
+    expect(luggageRect.right, lessThanOrEqualTo(t.getRect(find.descendant(of: card, matching: find.text('Nainital'))).left));
+    final detail = t.renderObject<RenderParagraph>(find.byKey(TripLegSectionHeader.detailKey).first);
+    final boxes = detail.getBoxesForSelection(TextSelection(baseOffset: 0, extentOffset: detail.text.toPlainText().length));
+    expect({for (final b in boxes) b.top.round()}.length, 1);
+
+    final header = find.byKey(TripDaySpotList.headerKey).first;
+    final headerRect = t.getRect(header);
+    final calendar = find.descendant(of: header, matching: find.byWidgetPredicate((w) => w is Art3D && w.asset == ListingArt.calendar));
+    expect(calendar, findsOneWidget);
+    final calendarRect = t.getRect(calendar);
+    expect(calendarRect.top, greaterThanOrEqualTo(headerRect.top));
+    expect(calendarRect.bottom, lessThanOrEqualTo(headerRect.bottom));
+  });
+
+  testWidgets('city_is_coral_day_is_green_and_no_dot_before_day', (t) async {
+    await pumpDayPlan(t, dayPlanFixture(perLeg: const [[2, 2], [1, 1]]));
+    Gradient? gradientOf(Finder f) => ((t.widget<Container>(f).decoration) as BoxDecoration).gradient;
+    for (final e in find.byKey(TripLegSectionHeader.cardKey).evaluate()) {
+      expect(gradientOf(find.byWidget(e.widget)), TripLook.cityTone.gradient);
+    }
+    final headers = find.byKey(TripDaySpotList.headerKey);
+    expect(headers, findsWidgets);
+    for (final e in headers.evaluate()) {
+      final header = find.byWidget(e.widget);
+      expect(gradientOf(header), TripLook.dayTone.gradient);
+      final dot = find.descendant(
+        of: header,
+        matching: find.byWidgetPredicate((w) => w is Container && w.decoration is BoxDecoration && (w.decoration! as BoxDecoration).shape == BoxShape.circle && (w.decoration! as BoxDecoration).border != null),
+      );
+      expect(dot, findsNothing);
+    }
+    final pill = t.widget<Text>(find.text(TripStringsDayplan.customize).first);
+    expect(pill.style!.color, TripLook.cityInk);
+    final fold = t.widget<Text>(find.text(TripStringsDayplan.hide).first);
+    expect(fold.style!.color, TripLook.cityInk);
   });
 
   testWidgets('day_header_chips', (t) async {
     await pumpDayPlan(t, dayPlanFixture());
     final header = find.byKey(TripDaySpotList.headerKey).first;
-    final art = find.descendant(of: find.byType(TripDaySpotList).first, matching: find.byType(Art3D));
+    final art = find.descendant(of: header, matching: find.byType(Art3D));
     expect(art.evaluate().any((e) => (e.widget as Art3D).asset == ListingArt.calendar), isTrue);
     final chips = find.descendant(of: header, matching: find.byKey(TripDaySpotList.chipsKey));
     expect(chips, findsOneWidget);
@@ -295,14 +342,6 @@ void main() {
     await openRename(t);
     final input = find.descendant(of: find.byKey(TripPlanScreen.renameFieldKey), matching: find.byType(TextField));
     expect(t.widget<TextField>(input).controller!.text, long.substring(0, TripNameRules.max));
-  });
-
-  testWidgets('your_plan_card_has_no_pace_pill', (t) async {
-    await pumpDayPlan(t, dayPlanFixture());
-    final card = find.byKey(TripPlanStepCard.cardKey);
-    expect(find.descendant(of: card, matching: find.textContaining('Pace')), findsNothing);
-    final ring = t.getCenter(find.descendant(of: card, matching: find.byType(RingBadge))).dy;
-    expect(ring, closeTo(t.getCenter(card).dy, 3));
   });
 
   testWidgets('edit_mode_header_has_no_pace_chip', (t) async {

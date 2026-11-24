@@ -382,8 +382,8 @@ class _TaxiListScreenV2State extends State<TaxiListScreenV2> {
 
   Widget _routeBody() {
     final r = _ctrl.route.value;
-    final f = _ctrl.from.value ?? PlaceResult(name: 'Near you', subtitle: '', latLng: _ctrl.origin);
     final to = _ctrl.to.value;
+    final waysAvailable = _ctrl.waysCheck.isAvailable;
     if (r == null) return SliverList.list(children: [_title(_localTitle()), _stateBox(error: _ctrl.loadFailed.value)]);
     final children = <Widget>[];
     final shown = [for (final t in r.tiers) if (t.items.isNotEmpty) t];
@@ -409,12 +409,12 @@ class _TaxiListScreenV2State extends State<TaxiListScreenV2> {
       }
       if ((t.collapsed && !open) || (open && t.hasMore)) children.add(_showMore(t));
     }
-    if (to != null) {
+    if (to != null && waysAvailable) {
       children.add(TaxiWaysEntryCard(
-        from: f,
+        from: _ctrl.routeFrom,
         to: to,
-        empty: shown.isEmpty,
-        fromMyLocation: _ctrl.from.value == null && !NearbyCentreController.to.hasPin,
+        empty: !r.hasRouteDrivers,
+        fromMyLocation: _ctrl.fromMyLocation,
       ));
     }
     return SliverList.list(children: children);

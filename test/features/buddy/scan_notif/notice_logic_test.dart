@@ -88,9 +88,11 @@ void main() {
     test('buddy accepted and new buddy, one and many', () {
       final a = NoticeCopy.of(notice(NoticeKinds.buddyAccepted, actor: 'Aman'))!;
       expect((a.title, a.body, a.tag, a.route, a.tone), ('Request accepted', 'Aman is now your buddy.', 'BUDDIES', '/buddies', NoticeTone.teal));
+      expect(a.args, {'tab': 'buddies'});
       expect(NoticeCopy.of(notice(NoticeKinds.buddyAccepted, actor: 'Aman', count: 3))!.body, 'Aman and 2 others are now your buddies.');
       final b = NoticeCopy.of(notice(NoticeKinds.newBuddy, actor: 'Neha'))!;
       expect((b.title, b.body, b.tag, b.route), ('New buddy', 'You and Neha are buddies now.', 'BUDDIES', '/buddies'));
+      expect(b.args, {'tab': 'buddies'});
       expect(NoticeCopy.of(notice(NoticeKinds.newBuddy, count: 4))!.body, 'You and 4 new buddies.');
       expect(NoticeCopy.of(notice(NoticeKinds.newBuddy, actor: null))!.body, 'You and Someone are buddies now.');
     });

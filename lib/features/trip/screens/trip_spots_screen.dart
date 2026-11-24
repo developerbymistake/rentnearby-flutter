@@ -574,6 +574,7 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> with TickerProviderSt
             subtitle: _pickDraft ? TripStringsCustomize.spotLine(s.category, s.visitMinutes) : null,
             dimmed: _pickDraft && existing,
             draft: _pickDraft,
+            index: i,
           );
           if (sug != null && sug.forId == s.id && _pickDay == null && !_pickDraft) {
             return _row(heads.length + i, Column(

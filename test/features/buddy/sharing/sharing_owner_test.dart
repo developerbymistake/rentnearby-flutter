@@ -80,24 +80,49 @@ void main() {
   });
 
   group('owner overview 3.1', () {
-    testWidgets('alone: header, trip line, progress line and the two new cards', (t) async {
+    testWidgets('alone: header, trip line, progress status and the two new cards', (t) async {
       await _pump(t, overview(trip(sharing: aloneBlock()), aloneBlock()));
       expect(find.text('Your plan is saved'), findsOneWidget);
       expect(find.text('3 cities · 7 days · 1 traveller'), findsOneWidget);
-      expect(find.text('All set. Invite your friends.'), findsOneWidget);
-      expect(find.text('Travellers'), findsOneWidget);
-      expect(find.text('Only you'), findsOneWidget);
+      expect(find.bySemanticsLabel(RegExp(r'^Plan progress, 100 percent\. All set\. Invite your friends\.')), findsOneWidget);
+      expect(find.text('Buddy invite'), findsOneWidget);
+      expect(find.text('Invite your friends on this trip'), findsOneWidget);
       expect(find.text('Invite'), findsOneWidget);
-      expect(find.text('Expenses'), findsOneWidget);
+      expect(find.text('Trip expenses'), findsOneWidget);
       expect(find.text('No expenses yet'), findsOneWidget);
       expect(find.text('Add expense'), findsOneWidget);
-      expect(find.byKey(const ValueKey('overview_traveller_dots')), findsOneWidget);
-      expect(find.text('R'), findsOneWidget);
+      expect(find.byKey(const ValueKey('overview_traveller_dots')), findsNothing);
+      expect(find.bySemanticsLabel('Buddy invite, Invite'), findsOneWidget);
+      expect(find.bySemanticsLabel('Trip expenses, Add expense'), findsOneWidget);
     });
 
-    testWidgets('progress line stays the old one below 100 percent', (t) async {
+    testWidgets('progress status stays the old one below 100 percent', (t) async {
       await _pump(t, overview(trip(sharing: aloneBlock()), aloneBlock(), parts: TripParts.saved));
-      expect(find.text('All set. Invite your friends.'), findsNothing);
+      expect(find.bySemanticsLabel(RegExp('All set. Invite your friends.')), findsNothing);
+    });
+
+    for (final size in const [Size(360, 800), Size(392, 800), Size(412, 915)]) {
+      testWidgets('the trip card and five cards fill the screen down to the bottom button at $size', (t) async {
+        t.view.devicePixelRatio = 2;
+        t.view.physicalSize = size * 2;
+        addTearDown(t.view.reset);
+        await t.pumpWidget(app(overview(trip(sharing: aloneBlock()), aloneBlock())));
+        await t.pump();
+        await t.pump(const Duration(milliseconds: 300));
+        final last = t.getRect(find.byKey(const ValueKey('overview_expenses_card')));
+        final bar = t.getRect(find.ancestor(of: find.byKey(const ValueKey('overview_done_button')), matching: find.byType(DecoratedBox)).first);
+        expect(last.height, greaterThanOrEqualTo(DS.s(100) - 0.5));
+        if (size.height > 900) expect(last.height, greaterThan(DS.s(100) + 0.5));
+        if (last.height > DS.s(100) + 0.5) expect(bar.top - last.bottom, closeTo(DS.s(16), 1));
+      });
+    }
+
+    testWidgets('Invite tap anywhere on the card opens the flow', (t) async {
+      await _pump(t, overview(trip(sharing: aloneBlock(), spotCount: 0), aloneBlock()));
+      await t.tap(find.byKey(const ValueKey('overview_travellers_card')));
+      await _settle(t);
+      expect(find.text('Add places to the plan first.'), findsOneWidget);
+      await _drain(t);
     });
 
     testWidgets('Invite on a trip without places shows the toast', (t) async {
@@ -128,8 +153,8 @@ void main() {
 
     testWidgets('an old server without sharing keeps the screen as today', (t) async {
       await _pump(t, overview(trip(), null));
-      expect(find.text('Travellers'), findsNothing);
-      expect(find.text('Expenses'), findsNothing);
+      expect(find.text('Buddy invite'), findsNothing);
+      expect(find.text('Trip expenses'), findsNothing);
       await _openMenu(t);
       expect(find.text('View plan'), findsOneWidget);
       expect(find.text('Delete trip'), findsNothing);
@@ -150,6 +175,9 @@ void main() {
       expect(find.text('Shared with 2 people'), findsOneWidget);
       expect(find.text('3 cities · 7 days · 3 travellers'), findsOneWidget);
       expect(find.byKey(const ValueKey('overview_progress_card')), findsNothing);
+      expect(find.byKey(const ValueKey('overview_trip_name')), findsOneWidget);
+      expect(find.text('Buddy invite'), findsOneWidget);
+      expect(find.byKey(const ValueKey('overview_traveller_dots')), findsOneWidget);
       expect(find.text('3 joined · 1 invite waiting'), findsOneWidget);
       expect(find.text('Manage'), findsOneWidget);
       expect(find.text('Day 4'), findsOneWidget);
@@ -165,7 +193,7 @@ void main() {
       expect(opened.last.$2, {'tripId': tripId});
       Get.back();
       await _settle(t);
-      await t.tap(find.byKey(const ValueKey('overview_expenses_button')));
+      await t.tap(find.byKey(const ValueKey('overview_expenses_card')));
       await _settle(t);
       expect(opened.last.$1, AppRoutes.tripExpenses);
     });
@@ -175,7 +203,7 @@ void main() {
       final open = sharedBlock(expenses: const TripExpenseCard(hasExpenses: true, spent: 32300, myShare: 11618, openPayments: 1, settled: false));
       await _pump(t, overview(trip(sharing: open, endDate: ended), open));
       expect(find.text('Spent ₹32,300 · 1 payment open'), findsOneWidget);
-      await t.tap(find.byKey(const ValueKey('overview_expenses_button')));
+      await t.tap(find.byKey(const ValueKey('overview_expenses_card')));
       await _settle(t);
       expect(opened.last.$1, AppRoutes.tripSettle);
       Get.back();
@@ -185,7 +213,7 @@ void main() {
       expect(find.text('Settled'), findsOneWidget);
       expect(find.text('Spent ₹32,300 · All settled'), findsOneWidget);
       expect(find.text('3 joined'), findsOneWidget);
-      await t.tap(find.byKey(const ValueKey('overview_expenses_button')));
+      await t.tap(find.byKey(const ValueKey('overview_expenses_card')));
       await _settle(t);
       expect(opened.last.$1, AppRoutes.tripMoneySummary);
     });

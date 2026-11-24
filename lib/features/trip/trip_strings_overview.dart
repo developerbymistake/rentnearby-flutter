@@ -5,6 +5,7 @@ class TripStringsOverview {
   static const String saved = 'Saved';
   static const String view = 'View';
   static const String taxi = 'Taxi';
+  static const String findTaxi = 'Find taxi';
   static const String taxiLine = 'Pickup, sightseeing, drop';
   static const String optional = 'Optional';
   static const String requested = 'Requested';
@@ -20,7 +21,8 @@ class TripStringsOverview {
   static const String moreOptions = 'More options';
   static const String back = 'Back';
   static const String stay = 'Stay';
-  static const String stayLine = 'Homestays, hostels and hotels';
+  static const String bookYourStay = 'Book your stay';
+  static const String stayLine = 'Homestays and resorts';
   static const String addStay = 'Find a stay';
   static const String viewStays = 'View stays';
   static const String added = 'Added';
@@ -29,14 +31,14 @@ class TripStringsOverview {
   static const String exitBody = 'Your trip is saved. Continue any time from Trips.';
   static const String exit = 'Exit';
   static const String keepPlanning = 'Keep planning';
-  static const String progressTitle = 'Plan progress';
   static const String progressBothOpen = 'Itinerary saved. Taxi and stay are optional.';
   static const String progressStayOpen = 'Stay not added yet.';
   static const String progressTaxiOpen = 'Taxi not added yet.';
   static const String progressAllSet = 'All set.';
   static const String progressNoPlan = 'Add places to your plan.';
-  static String progressLabel(int percent) => 'Plan progress, $percent percent';
+  static String progressLabel(int percent, String status) => 'Plan progress, $percent percent. $status';
   static String nextLabel(String title) => '$title, next';
+  static String cardLabel(String title, String action) => '$title, $action';
 
   static String _n(int n, String one, String many) => '$n ${n == 1 ? one : many}';
 

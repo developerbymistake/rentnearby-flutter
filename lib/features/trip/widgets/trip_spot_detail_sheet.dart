@@ -93,8 +93,6 @@ class TripSpotDetailSheet extends StatefulWidget {
 class _TripSpotDetailSheetState extends State<TripSpotDetailSheet>
     with TickerProviderStateMixin {
   static double get _overlap => DS.s(24);
-  static const int _descriptionLines = 4;
-  static const double _readMoreFont = 13;
 
   final _page = PageController();
   late final AnimationController _enter = AnimationController(
@@ -102,7 +100,6 @@ class _TripSpotDetailSheetState extends State<TripSpotDetailSheet>
     vsync: this,
   );
   int _index = 0;
-  bool _expanded = false;
   late TripSpotModel _spot = widget.spot;
   SpotGalleryState? _gallery;
   List<String> _urls = const [];
@@ -407,42 +404,10 @@ class _TripSpotDetailSheetState extends State<TripSpotDetailSheet>
     );
   }
 
-  Widget _description(String text) {
-    final style = TypeTokens.style(14, FontWeight.w400, color: TypeTokens.secondary, height: 1.45);
-    return LayoutBuilder(builder: (context, c) {
-      final painter = TextPainter(
-        text: TextSpan(text: text, style: style),
-        maxLines: _descriptionLines,
-        textDirection: Directionality.of(context),
-        textScaler: MediaQuery.textScalerOf(context),
-      )..layout(maxWidth: c.maxWidth);
-      final overflows = painter.didExceedMaxLines;
-      painter.dispose();
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            text,
-            maxLines: _expanded ? null : _descriptionLines,
-            overflow: _expanded ? null : TextOverflow.ellipsis,
-            style: style,
-          ),
-          if (overflows) ...[
-            Gap.v(10),
-            WhitePillButton(
-              tone: ListingTone.indigo,
-              label: _expanded ? TripStringsSpotsX.showLess : TripStringsSpotsX.readMore,
-              onTap: () => setState(() => _expanded = !_expanded),
-              height: 34,
-              fontSize: _readMoreFont,
-              expand: false,
-            ),
-          ],
-        ],
+  Widget _description(String text) => Text(
+        text,
+        style: TypeTokens.style(14, FontWeight.w400, color: TypeTokens.secondary, height: 1.45),
       );
-    });
-  }
 
   Widget _action() {
     final enabled = widget.onToggle != null;

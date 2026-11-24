@@ -201,7 +201,8 @@ void main() {
     final port = FakePort();
     await l.attach(port);
     expect(port.calls.where((x) => x.startsWith('layer:')).every((x) => x.endsWith(':null')), isTrue);
-    expect(l.tuning.photoDp, DS.s(54));
+    expect(l.tuning.photoDp, DS.s(90));
+    expect(l.tuning.photoMax, DiscTuning.stay.photoMax);
   });
 
   test('photos: tier-1 spots with a thumb registered in batches of 8, one disc-photo set per batch', () async {
@@ -452,7 +453,7 @@ void main() {
     port.calls.clear();
     await l.onFeatureTap(DiscIds.layerBadge, 'a');
     expect(port.calls, ['set:disc-sel', 'screen:3', 'animate']);
-    // centre was 30.474 (marker 260 px above it); marker must land at top 100 + card 150 + photo halo (72 x DS)
+    // centre was 30.474 (marker 260 px above it); marker must land at top 100 + card 150 + photo halo
     final target = 100 + 150 + DiscTuning.trip.haloPhotoDp;
     expect(port.animated!.lat, closeTo(30.5 - (380 - target) / 10000, 1e-9));
     expect(port.animated!.lon, closeTo(78.2, 1e-9));

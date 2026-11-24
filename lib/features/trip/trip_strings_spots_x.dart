@@ -13,8 +13,7 @@ class TripStringsSpotsX {
   static String noneIn(String chip) => 'No places in $chip';
   static const String showAll = 'Show all';
   static const String remove = 'Remove';
-  static const String readMore = 'Read more';
-  static const String showLess = 'Show less';
+  static const String more = 'more';
   static const String gallery = 'Gallery';
   static String photoCount(int n) => n == 1 ? '1 photo' : '$n photos';
   static String morePhotos(int n) => '+$n more';

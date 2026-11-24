@@ -31,13 +31,24 @@ abstract final class CalmCard {
 }
 
 class CalmChip extends StatelessWidget {
-  const CalmChip(this.label, {super.key, required this.palette, this.kind = CalmChipKind.fact, this.fg, this.leading});
+  const CalmChip(
+    this.label, {
+    super.key,
+    required this.palette,
+    this.kind = CalmChipKind.fact,
+    this.fg,
+    this.leading,
+    this.textSize = 10,
+    this.padding,
+  });
 
   final String label;
   final ListingPalette palette;
   final CalmChipKind kind;
   final Color? fg;
   final Widget? leading;
+  final double textSize;
+  final EdgeInsets? padding;
 
   Color get background => switch (kind) {
         CalmChipKind.tag || CalmChipKind.fact => DesignColors.tint(palette.g2, Alpha.tint),
@@ -60,10 +71,10 @@ class CalmChip extends StatelessWidget {
       maxLines: 1,
       softWrap: false,
       overflow: TextOverflow.ellipsis,
-      style: TypeTokens.style(10, FontWeight.w700, color: foreground, chip: true, letterSpacing: spaced ? 0.4 : null),
+      style: TypeTokens.style(textSize, FontWeight.w700, color: foreground, chip: true, letterSpacing: spaced ? 0.4 : null),
     );
     return Container(
-      padding: DS.sym(h: spaced ? 8 : 6, v: 3),
+      padding: padding ?? DS.sym(h: spaced ? 8 : 6, v: 3),
       decoration: BoxDecoration(color: background, borderRadius: DS.br(CardRadius.chip)),
       child: leading == null
           ? text
@@ -84,6 +95,7 @@ class CalmPriceBlock extends StatelessWidget {
     this.valueColor,
     this.minWidth = 84,
     this.unitAlign = TextAlign.right,
+    this.oneLine = false,
   });
 
   final ListingPalette palette;
@@ -95,15 +107,54 @@ class CalmPriceBlock extends StatelessWidget {
   final Color? valueColor;
   final double minWidth;
   final TextAlign unitAlign;
+  final bool oneLine;
 
   static final RegExp _digit = RegExp(r'\d');
 
   static bool isNumeric(String v) => _digit.hasMatch(v);
 
+  Widget _oneLine(Color color, TextStyle small) {
+    final numeric = isNumeric(value);
+    final big = TypeTokens.style(18, FontWeight.w800, color: color, height: 1.15);
+    final Widget shown = !numeric
+        ? Flexible(child: Text(value, maxLines: 2, overflow: TextOverflow.ellipsis, style: TypeTokens.style(12, FontWeight.w700, color: color, height: 1.2)))
+        : unit.isEmpty
+            ? Flexible(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(value, maxLines: 1, softWrap: false, style: big),
+                ),
+              )
+            : Text(value, maxLines: 1, softWrap: false, style: big);
+    return Container(
+      decoration: BoxDecoration(border: Border(top: BorderSide(color: palette.line))),
+      padding: EdgeInsets.only(top: DS.s(6)),
+      child: IntrinsicWidth(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minWidth: DS.s(minWidth)),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: [
+              shown,
+              if (unit.isNotEmpty) ...[
+                Gap.h(6),
+                Flexible(child: Text(unit, maxLines: 1, softWrap: false, overflow: TextOverflow.ellipsis, style: small)),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final color = valueColor ?? palette.g2;
     final small = TypeTokens.style(11, FontWeight.w500, color: CalmText.secondary);
+    if (oneLine) return _oneLine(color, small);
     final cap = caption;
     final struck = was;
     final tag = offTag;

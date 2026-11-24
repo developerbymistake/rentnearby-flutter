@@ -11,6 +11,8 @@ import 'calm_card_kit.dart';
 import 'motion_kit.dart';
 import 'photo_circle.dart';
 
+enum TaxiCalmLayout { classic, listing }
+
 class TaxiCalmCard extends StatelessWidget {
   const TaxiCalmCard({
     super.key,
@@ -18,6 +20,7 @@ class TaxiCalmCard extends StatelessWidget {
     this.lines = const [],
     this.lineMax = 1,
     this.tag = CardStrings.taxi,
+    this.layout = TaxiCalmLayout.classic,
     this.photoUrl,
     required this.art,
     this.featured = false,
@@ -36,7 +39,8 @@ class TaxiCalmCard extends StatelessWidget {
   final String title;
   final List<String> lines;
   final int lineMax;
-  final String tag;
+  final String? tag;
+  final TaxiCalmLayout layout;
   final String? photoUrl;
   final String art;
   final bool featured;
@@ -55,39 +59,90 @@ class TaxiCalmCard extends StatelessWidget {
   static const double stickOut = 0.10;
   static const double topSpace = 30;
 
-  static double circleFor(double cardWidth) => cardWidth < 300 ? 104 : cardWidth < 340 ? 120 : 136;
+  static double classicCircleFor(double cardWidth) => cardWidth < 300 ? 104 : cardWidth < 340 ? 120 : 136;
+
+  static const double listingGrow = 154 / 120;
+  static const double ringGap = 6;
+  static const double cardTopPad = 12;
+  static const double listingChipText = 13;
+
+  static double circleFor(double cardWidth) => classicCircleFor(cardWidth) * listingGrow;
+
+  static double listingBlockMin(double c) => DS.s(c * (1 - stickOut) + PhotoCircle.ring + ringGap - cardTopPad);
+
+  bool get _listing => layout == TaxiCalmLayout.listing;
+
+  List<String> get _shownChips => [for (final c in chips) if (c.trim().isNotEmpty) c.trim()];
 
   Widget _header(double c) {
     final shown = [for (final l in lines) if (l.trim().isNotEmpty) l.trim()];
     final secondary = TypeTokens.style(12, FontWeight.w500, color: CalmText.secondary);
-    return ConstrainedBox(
-      constraints: BoxConstraints(minHeight: DS.s(c - 24)),
-      child: Padding(
-        padding: EdgeInsets.only(left: DS.s(c + 22), right: DS.s(18)),
-        child: Align(
-          alignment: Alignment.centerLeft,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
+    final t = tag;
+    final hasTag = t != null && t.trim().isNotEmpty;
+    final chipsShown = _listing ? _shownChips : const <String>[];
+    final column = Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (hasTag) ...[
+          CalmChip(t, palette: palette, kind: CalmChipKind.tag, fg: palette.text),
+          Gap.v(5),
+        ],
+        Text(
+          title,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: TypeTokens.style(_listing ? 14 : 16, FontWeight.w700, color: DesignColors.textStrong, height: 1.2),
+        ),
+        for (var i = 0; i < shown.length; i++) ...[
+          if (i == 0) Gap.v(2),
+          _line(shown[i], secondary),
+        ],
+        if (chipsShown.isNotEmpty) ...[
+          Gap.v(8),
+          Wrap(
+            spacing: DS.gh(6),
+            runSpacing: DS.gv(6),
             children: [
-              CalmChip(tag, palette: palette, kind: CalmChipKind.tag, fg: palette.text),
-              Gap.v(5),
-              Text(
-                title,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: TypeTokens.style(16, FontWeight.w700, color: DesignColors.textStrong, height: 1.2),
-              ),
-              for (var i = 0; i < shown.length; i++) ...[
-                if (i == 0) Gap.v(2),
-                _line(shown[i], secondary),
-              ],
+              for (final c in chipsShown)
+                CalmChip(c, palette: palette, textSize: listingChipText, padding: DS.sym(h: 8, v: 5)),
             ],
           ),
-        ),
-      ),
+        ],
+      ],
     );
+    final padded = Padding(
+      padding: EdgeInsets.only(left: DS.s(c + 22), right: DS.s(18)),
+      child: _listing ? column : Align(alignment: Alignment.centerLeft, child: column),
+    );
+    if (_listing) return padded;
+    return ConstrainedBox(constraints: BoxConstraints(minHeight: DS.s(c - 24)), child: padded);
   }
+
+  Widget _listingTop(double c) => ConstrainedBox(
+        constraints: BoxConstraints(minHeight: listingBlockMin(c)),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [_header(c), _priceRow(c)],
+        ),
+      );
+
+  Widget _priceRow(double c) => Padding(
+        padding: EdgeInsets.fromLTRB(DS.s(c + 22), DS.s(6), DS.s(16), DS.s(8)),
+        child: Align(
+          alignment: Alignment.centerRight,
+          child: CalmPriceBlock(
+            palette: palette,
+            value: price,
+            unit: unit,
+            valueColor: palette.text,
+            minWidth: 92,
+            oneLine: true,
+          ),
+        ),
+      );
 
   Widget _line(String text, TextStyle style) {
     final line = Text(text, maxLines: lineMax, overflow: TextOverflow.ellipsis, style: style);
@@ -101,7 +156,7 @@ class TaxiCalmCard extends StatelessWidget {
   }
 
   Widget _mid() {
-    final shown = [for (final c in chips) if (c.trim().isNotEmpty) c.trim()];
+    final shown = _shownChips;
     return Padding(
       padding: DS.insets(l: 16, t: 8, r: 16, b: 10),
       child: LayoutBuilder(
@@ -159,7 +214,7 @@ class TaxiCalmCard extends StatelessWidget {
     return Padding(
       padding: DS.insets(l: 14, r: 14, t: topSpace),
       child: LayoutBuilder(builder: (context, box) {
-        final c = circleFor(box.maxWidth);
+        final c = _listing ? circleFor(box.maxWidth) : classicCircleFor(box.maxWidth);
         final hasBottom = actions.isNotEmpty || (address != null && address!.trim().isNotEmpty);
         Widget card = Container(
           decoration: CalmCard.box(palette, radius: radius),
@@ -172,13 +227,12 @@ class TaxiCalmCard extends StatelessWidget {
           child: ClipRRect(
             borderRadius: radius,
             child: Padding(
-              padding: EdgeInsets.only(top: DS.s(12)),
+              padding: EdgeInsets.only(top: DS.s(cardTopPad)),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  _header(c),
-                  _mid(),
+                  if (_listing) _listingTop(c) else ...[_header(c), _mid()],
                   if (hasBottom)
                     CalmBottomRow(
                       palette: palette,

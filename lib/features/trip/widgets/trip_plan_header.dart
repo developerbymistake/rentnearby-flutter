@@ -6,7 +6,6 @@ import 'trip_ui.dart';
 import 'package:get/get.dart';
 import '../controllers/trip_plan_controller.dart';
 import '../models/trip_plan_model.dart';
-import '../trip_strings_dayplan.dart';
 import '../trip_strings_v2_plan.dart';
 import '../utils/trip_easy_rules.dart';
 import '../utils/trip_format.dart';
@@ -483,89 +482,5 @@ class _MapAction extends StatelessWidget {
         child: Text(TripStringsV2Plan.map, maxLines: 1, style: Ink3D.text(13, FontWeight.w700, DesignColors.surface, letterSpacing: 0)),
       ),
     );
-  }
-}
-
-class TripPlanStepCard extends StatelessWidget {
-  static const Key cardKey = ValueKey('plan-top-card');
-  static const Key nameKey = ValueKey('plan-top-name');
-
-  final ValueChanged<TripPlanMenu> onMenu;
-
-  const TripPlanStepCard({super.key, required this.onMenu});
-
-  @override
-  Widget build(BuildContext context) {
-    final c = TripPlanController.to;
-    return Obx(() {
-      final plan = c.plan.value;
-      c.trip.value;
-      c.result.value;
-      c.enquiryList.length;
-      c.offline.value;
-      c.saveFailed.value;
-      c.settingsChangedAt.value;
-      if (plan == null || c.plannerOff.value) return const SizedBox.shrink();
-      final tone = ListingTone.indigo;
-      const white = DesignColors.surface;
-      final rows = c.easyRows;
-      final progress = c.stepProgress;
-      final step = c.isCompleted ? 2 : 1;
-      final hint = TripPlanHeader.hintOf(c, rows);
-      final pct = progress.percent.clamp(0, 100).toDouble();
-      final name = c.title;
-      final sub = step == 2 ? (progress.total == 0 ? TripStringsV2Plan.nothingToArrange : TripStringsV2Plan.arranged(progress.done, progress.total)) : null;
-      return Semantics(
-        container: true,
-        label: '${TripStringsDayplan.yourPlan}, $name',
-        child: Padding(
-          padding: EdgeInsets.fromLTRB(DS.s(18), DS.gv(36), DS.s(18), DS.gv(8)),
-          child: Container(
-            key: cardKey,
-            padding: DS.insets(l: 20, t: 22, r: 20, b: 18),
-            decoration: BoxDecoration(
-              gradient: tone.gradient,
-              borderRadius: DS.br(kMealsRadius),
-              boxShadow: [BoxShadow(color: tone.shadow, offset: DS.shadowOffset(const Offset(1.1, 6)), blurRadius: DS.shadowBlur(14))],
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(TripStringsDayplan.yourPlan, maxLines: 1, style: Ink3D.text(12.5, FontWeight.w600, DesignColors.tint(white, Alpha.v90))),
-                      Text(name, key: nameKey, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(21, FontWeight.w700, white, height: 1.25)),
-                      if (sub != null) Text(sub, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(12.5, FontWeight.w600, DesignColors.tint(white, Alpha.v90))),
-                      if (hint != null && step == 2)
-                        Text(hint, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(12, FontWeight.w500, DesignColors.tint(white, Alpha.v90))),
-                      Gap.v(14),
-                      ClipRRect(
-                        borderRadius: DS.circular(4),
-                        child: LinearProgressIndicator(
-                          value: pct / 100,
-                          minHeight: DS.s(4),
-                          color: white,
-                          backgroundColor: DesignColors.tint(white, Alpha.scrim),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                SizedBox(width: DS.s(22)),
-                TweenAnimationBuilder<double>(
-                  tween: Tween<double>(begin: 0, end: pct),
-                  duration: KitMotion.reduce(context) ? Duration.zero : const Duration(milliseconds: 600),
-                  curve: Curves.fastOutSlowIn,
-                  builder: (_, v, _) => RingBadge(progress: v / 100, fill: tone.g2, size: 58, labelSize: 12.5),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-    });
   }
 }

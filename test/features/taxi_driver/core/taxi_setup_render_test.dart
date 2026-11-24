@@ -57,13 +57,37 @@ void main() {
     expect(find.text('Route 2'), findsNothing);
   });
 
-  testWidgets('o_tx_3 save of route 2 on Free opens G1 and Not now keeps route 1 only', (t) async {
+  testWidgets('o_tx_3 add route on Free opens G1 at the tap and no Route 2 form', (t) async {
     setUpTaxiSetup(_saved);
     await pumpPhone(t, const TaxiRoutesScreen(), size: const Size(360, 800));
     await _settle(t);
+    expect(find.text('Routes: 1 of 1 on Free'), findsOneWidget);
+    await t.ensureVisible(find.text('Add another route'));
+    await t.pump();
     await t.tap(find.text('Add another route'));
     await _settle(t);
+    expect(find.text('Not now'), findsOneWidget);
+    expect(find.text('1 route on Free'), findsOneWidget);
+    expect(find.text('Route 2'), findsNothing);
+  });
+
+  testWidgets('add route row sits under the routes, above Local sightseeing', (t) async {
+    setUpTaxiSetup(_saved);
+    await pumpPhone(t, const TaxiRoutesScreen(), size: const Size(360, 1500));
+    await _settle(t);
+    final add = t.getTopLeft(find.text('Add another route')).dy;
+    expect(add, greaterThan(t.getTopLeft(find.text('Haldwani to Nainital')).dy));
+    expect(add, lessThan(t.getTopLeft(find.text('Local sightseeing')).dy));
+  });
+
+  testWidgets('Plus: the next route form is open in place with the add row below it', (t) async {
+    setUpTaxiSetup(_saved, plan: OwnerPlans.plus);
+    await pumpPhone(t, const TaxiRoutesScreen(), size: const Size(360, 1500));
+    await _settle(t);
     expect(find.text('Route 2'), findsOneWidget);
+    expect(find.text('2 of 5'), findsOneWidget);
+    expect(find.text('Not now'), findsNothing);
+    expect(t.getTopLeft(find.text('Add another route')).dy, greaterThan(t.getTopLeft(find.text('Route 2')).dy));
   });
 
   testWidgets('payment off: no plan words, meter reads N of 5', (t) async {
@@ -76,13 +100,9 @@ void main() {
   });
 
   testWidgets('render o_tx_2', (t) async {
-    setUpTaxiSetup(_saved);
-    await renderOwnerFrame(t, 'o_tx_2', const TaxiRoutesScreen(), arrange: (t) async {
-      await _settle(t);
-      await t.tap(find.text('Add another route'));
-      await _settle(t);
-    });
-    for (final s in ['Routes and fares', 'Step 2 of 3', 'Routes', '1 of 1 on Free', 'Free plan: 1 route. Plus allows up to 5 routes.', 'See Plus', 'Haldwani to Nainital', 'Route 1 · One way · ₹1,800', 'Route 2', 'New route', 'One way', 'Round trip', 'Routes: 1 of 1 on Free', 'Save route']) {
+    setUpTaxiSetup(_saved, plan: OwnerPlans.plus);
+    await renderOwnerFrame(t, 'o_tx_2', const TaxiRoutesScreen(), arrange: _settle);
+    for (final s in ['Routes and fares', 'Step 2 of 3', 'Routes', '1 of 5', 'Haldwani to Nainital', 'Route 1 · One way · ₹1,800', 'Route 2', 'New route', 'One way', 'Round trip', 'Add another route', '2 of 5', 'Routes: 1 of 5', 'Save route']) {
       expect(find.text(s), findsWidgets, reason: s);
     }
   });

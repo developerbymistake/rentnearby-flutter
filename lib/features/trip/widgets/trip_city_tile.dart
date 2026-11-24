@@ -22,6 +22,8 @@ class TripCityTile extends StatelessWidget {
 
   static String artOf(int index) => _arts[index % _arts.length];
 
+  static ListingTone toneOf(int index) => _tones[index % _tones.length];
+
   // Tallest hub card at the current text scale (name, state line and spot count), for fixed-height rails.
   static double hubHeightOf(BuildContext context) {
     final t = MediaQuery.textScalerOf(context);

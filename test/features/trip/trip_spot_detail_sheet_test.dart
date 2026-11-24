@@ -394,14 +394,12 @@ void main() {
       expect(find.text('Read more'), findsNothing);
     });
 
-    testWidgets('long description: Read more, then Show less', (t) async {
+    testWidgets('long description: shown in full, no Read more or Show less', (t) async {
       await _open(t, _spot(description: _long));
-      expect(t.widget<Text>(find.text(_long)).maxLines, 4);
-      await t.ensureVisible(find.text('Read more'));
-      await t.tap(find.text('Read more'));
-      await t.pump();
-      expect(find.text('Show less'), findsOneWidget);
       expect(t.widget<Text>(find.text(_long)).maxLines, isNull);
+      expect(t.widget<Text>(find.text(_long)).overflow, isNull);
+      expect(find.text('Read more'), findsNothing);
+      expect(find.text('Show less'), findsNothing);
     });
   });
 

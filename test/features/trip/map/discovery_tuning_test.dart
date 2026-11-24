@@ -9,62 +9,91 @@ import 'package:flutter/painting.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 
-// APP-5 (D5): trip markers follow DS; stay markers follow the owner sizes of 2026-11-23 through DS.
+// Bug 3 (2026-11-24): one zoom-following size set for trip and stay; final dp under the approved DS scale.
 void main() {
   final restore = (size: DS.size, font: DS.font, gap: DS.gapRel, floor: DS.fontFloor);
   tearDown(() => DS.debugSet(size: restore.size, font: restore.font, gapRel: restore.gap, fontFloor: restore.floor));
 
-  test('approved scale: trip 35.2 / 19.2 / 7.2 / 11.2 / halos 57.6 and 28.8, tap box 44', () {
+  List<double> stops(Object e) {
+    final l = e as List;
+    expect(l.take(3).toList(), ['interpolate', ['linear'], ['zoom']]);
+    expect([l[3], l[5], l[7]], [DiscTuning.zoomOut, DiscTuning.zoomMid, DiscTuning.zoomIn]);
+    return [l[4] as double, l[6] as double, l[8] as double];
+  }
+
+  void near(List<double> got, List<double> want) {
+    for (var i = 0; i < want.length; i++) {
+      expect(got[i], closeTo(want[i], 1e-9));
+    }
+  }
+
+  test('approved scale: zoom 10 / 14 / 17 = photo 44 / 60 / 72, badge 30 / 40 / 48, dot 18 / 28 / 34, selected 26 / 36 / 43', () {
     DS.applyApproved();
-    final t = DiscTuning.trip;
-    expect(t.photoDp, closeTo(35.2, 1e-9));
-    expect(t.badgeDp, closeTo(19.2, 1e-9));
-    expect(t.dotDp, closeTo(7.2, 1e-9));
-    expect(t.selDotDp, closeTo(11.2, 1e-9));
-    expect(t.haloPhotoDp, closeTo(57.6, 1e-9));
-    expect(t.haloDotDp, closeTo(28.8, 1e-9));
-    expect(t.hitDp, 44);
-    expect(t.photoMax, 40);
+    for (final t in [DiscTuning.trip, DiscTuning.stay]) {
+      near(stops(t.photoIconSize).map((f) => f * t.photoDp).toList(), [44, 60, 72]);
+      near(stops(t.badgeIconSize).map((f) => f * t.badgeDp).toList(), [30, 40, 48]);
+      near(stops(t.dotRadius(1)).map((r) => (r + 1) * 2).toList(), [18, 28, 34]);
+      near(stops(t.selDotRadius(2)).map((r) => (r + 2) * 2).toList(), [26, 36, 43]);
+      expect(t.hitDp, 44);
+    }
+    expect(DiscTuning.trip.photoMax, 40);
+    expect(DiscTuning.stay.photoMax, 24);
   });
 
-  test('stay: photo 54, badge 36, dot 16 through DS, never smaller than 46 / 30 / 13 zoomed out', () {
-    DS.debugReset();
-    final s = DiscTuning.stay;
-    expect((s.photoDp, s.badgeDp, s.dotDp, s.hitDp, s.photoMax), (54, 36, 16, 44, 24));
-    expect(s.photoIconSize, ['interpolate', ['linear'], ['zoom'], DiscTuning.zoomOut, 46 / 54, DiscTuning.zoomIn, 1.0]);
-    expect(s.badgeIconSize, ['interpolate', ['linear'], ['zoom'], DiscTuning.zoomOut, 30 / 36, DiscTuning.zoomIn, 1.0]);
-    expect(s.dotRadius(1), ['interpolate', ['linear'], ['zoom'], DiscTuning.zoomOut, 5.5, DiscTuning.zoomIn, 7.0]);
-    DS.applyApproved();
-    final a = DiscTuning.stay;
-    expect(a.photoDp, closeTo(DS.s(54), 1e-9));
-    expect(a.photoDp, greaterThan(DiscTuning.trip.photoDp - 1e-9));
-    expect(a.dotMinDp, closeTo(DS.s(13), 1e-9));
-  });
-
-  test('trip: no zoom expression, sizes stay plain numbers', () {
+  test('markers are drawn at the zoomed-in size, so the zoom only scales them down', () {
     DS.applyApproved();
     final t = DiscTuning.trip;
+    expect(t.photoDp, closeTo(72, 1e-9));
+    expect(t.badgeDp, closeTo(48, 1e-9));
+    for (final f in [...stops(t.photoIconSize), ...stops(t.badgeIconSize)]) {
+      expect(f, lessThanOrEqualTo(1.0));
+    }
+  });
+
+  test('selected icon and halo grow with the zoom too', () {
+    DS.applyApproved();
+    final t = DiscTuning.trip;
+    final sel = (t.selIconSize(DiscPaint.selIconScale) as List);
+    expect((sel[6] as double) * t.photoDp, closeTo(72, 1e-9), reason: 'normal zoom: photo and badge share one scale');
+    expect((sel[6] as double) * t.badgeDp, closeTo(48, 1e-9));
+    final out = sel[4] as List;
+    expect(out.take(3).toList(), ['match', ['get', 'kind'], 'badge']);
+    expect((out[3] as double) * t.badgeDp, closeTo(36, 1e-9));
+    expect((out[4] as double) * t.photoDp, closeTo(52.8, 1e-9));
+    final halo = t.haloRadius('dot', DiscPaint.selIconScale) as List;
+    final small = halo[4] as List, full = halo[8] as List;
+    expect(full[3], closeTo(t.haloDotDp / 2, 1e-9));
+    expect(full[4], closeTo(t.haloPhotoDp / 2, 1e-9));
+    expect(small[3] as double, lessThan(full[3] as double));
+    expect((small[4] as double) * 2, greaterThan(44 * DiscPaint.selIconScale));
+  });
+
+  test('a tuning without zoom sizes keeps plain numbers', () {
+    DS.applyApproved();
+    final t = DiscTuning(photoMax: 40, photoDp: DS.s(54));
     expect(t.photoIconSize, 1.0);
     expect(t.badgeIconSize, 1.0);
     expect(t.dotRadius(1), t.dotDp / 2 - 1);
+    expect(t.selIconSize(DiscPaint.selIconScale), DiscPaint.selIconScale);
   });
 
-  test('the stay layers paint with the zoom expressions', () {
+  test('the trip and stay layers paint with the zoom expressions', () {
     DS.debugReset();
-    final s = DiscTuning.stay;
-    final specs = {for (final x in DiscLayers.specs(s)) x.id: x};
-    final dots = DiscPaint.of(specs[DiscIds.layerDots]!, s) as CircleLayerProperties;
-    final photo = DiscPaint.of(specs[DiscIds.layerPhoto]!, s) as SymbolLayerProperties;
-    final badge = DiscPaint.of(specs[DiscIds.layerBadge]!, s) as SymbolLayerProperties;
-    expect(dots.circleRadius, s.dotRadius(1));
-    expect(photo.iconSize, s.photoIconSize);
-    expect(badge.iconSize, s.badgeIconSize);
-  });
-
-  test('identity scale: trip = the mock numbers (44 / 24 / 9)', () {
-    DS.debugReset();
-    final t = DiscTuning.trip;
-    expect((t.photoDp, t.badgeDp, t.dotDp, t.selDotDp, t.haloPhotoDp, t.haloDotDp), (44, 24, 9, 14, 72, 36));
+    for (final s in [DiscTuning.trip, DiscTuning.stay]) {
+      final specs = {for (final x in DiscLayers.specs(s)) x.id: x};
+      final dots = DiscPaint.of(specs[DiscIds.layerDots]!, s) as CircleLayerProperties;
+      final photo = DiscPaint.of(specs[DiscIds.layerPhoto]!, s) as SymbolLayerProperties;
+      final badge = DiscPaint.of(specs[DiscIds.layerBadge]!, s) as SymbolLayerProperties;
+      final selDot = DiscPaint.of(specs[DiscIds.layerSelDot]!, s) as CircleLayerProperties;
+      final selIcon = DiscPaint.of(specs[DiscIds.layerSelIcon]!, s) as SymbolLayerProperties;
+      final halo = DiscPaint.of(specs[DiscIds.layerSelHalo]!, s) as CircleLayerProperties;
+      expect(dots.circleRadius, s.dotRadius(1));
+      expect(photo.iconSize, s.photoIconSize);
+      expect(badge.iconSize, s.badgeIconSize);
+      expect(selDot.circleRadius, s.selDotRadius(2));
+      expect(selIcon.iconSize, s.selIconSize(DiscPaint.selIconScale));
+      expect(halo.circleRadius, s.haloRadius('dot', DiscPaint.selIconScale));
+    }
   });
 
   test('the photo marker disk cache key follows the marker size, so old PNGs of another size are not reused', () {
@@ -73,7 +102,7 @@ void main() {
     DS.applyApproved();
     final scaled = TripMarkerImages.cacheKey('w/12', 'https://a/x.jpg', DiscTuning.trip);
     expect(scaled, isNot(raw));
-    expect(scaled, startsWith('w_12_35_'));
+    expect(scaled, startsWith('w_12_72_'));
   });
 
   testWidgets('compose: the trip photo marker canvas follows px(photoDp) under the approved scale', (tester) async {

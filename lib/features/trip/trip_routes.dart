@@ -296,7 +296,6 @@ class _TripOverviewRouteState extends State<TripOverviewRoute> with _HoldsTrip {
               travellerCount: extras.travellerCount,
               extraCards: extras.extraCards,
               extraMenuItems: extras.extraMenuItems,
-              compactCards: extras.compactCards,
               progressLine: extras.progressLine,
               showProgress: extras.showProgress,
               highlight: TripOverviewScreen.highlightOf(parts, showStay: showStay),

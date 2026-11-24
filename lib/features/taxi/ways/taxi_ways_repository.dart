@@ -35,6 +35,26 @@ class TaxiWaysRepository {
         'toName': ?toName,
       })));
 
+  Future<bool> available({
+    required double fromLat,
+    required double fromLng,
+    required double toLat,
+    required double toLng,
+    required DateTime date,
+    required int people,
+    bool fromMyLocation = false,
+  }) async =>
+      _data(await ApiService.get('/taxis/ways/available', params: {
+        'fromLat': fromLat,
+        'fromLng': fromLng,
+        'toLat': toLat,
+        'toLng': toLng,
+        'date': _date(date),
+        'people': people,
+        'fromMyLocation': ?(fromMyLocation ? 'true' : null),
+      }))['available'] ==
+      true;
+
   Future<WayPlanDetail> plan(
     String planKey, {
     required int people,

@@ -162,7 +162,7 @@ void main() {
     expect(find.text('No notifications yet'), findsOneWidget);
   });
 
-  testWidgets('buddy request row marks read and opens My buddies requests', (t) async {
+  testWidgets('buddy request row marks read and opens Requests', (t) async {
     final (_, api, auth, opened) = await _open(t, notices: [_n(NoticeKinds.buddyRequest, 'b')]);
     await t.tap(find.text('New buddy request'));
     await t.pumpAndSettle();
@@ -194,8 +194,8 @@ void main() {
   });
 
   for (final (kind, title, route) in [
-    (NoticeKinds.buddyAccepted, 'Request accepted', '/buddies {}'),
-    (NoticeKinds.newBuddy, 'New buddy', '/buddies {}'),
+    (NoticeKinds.buddyAccepted, 'Request accepted', '/buddies {tab: buddies}'),
+    (NoticeKinds.newBuddy, 'New buddy', '/buddies {tab: buddies}'),
     (NoticeKinds.tripJoined, 'Rahul joined your trip', '/trip-travellers {tripId: trip-1}'),
     (NoticeKinds.planUpdated, 'Plan updated', '/trip-view {tripId: trip-1}'),
     (NoticeKinds.expenseAdded, 'New expense', '/trip-expenses {tripId: trip-1}'),

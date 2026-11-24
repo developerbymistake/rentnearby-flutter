@@ -25,6 +25,7 @@ abstract final class TaxiTierKey {
   static const basedNearFrom = 'basedNearFrom';
   static const inTo = 'inTo';
   static const order = [onRoute, passing, basedNearFrom, inTo];
+  static const routeDrivers = [onRoute, passing];
 }
 
 class TaxiTier {
@@ -80,6 +81,8 @@ class TaxiRouteFeed {
   const TaxiRouteFeed({this.header = NearbyHeader.empty, this.tiers = const []});
 
   bool get isEmpty => tiers.every((t) => t.isEmpty);
+
+  bool get hasRouteDrivers => tiers.any((t) => TaxiTierKey.routeDrivers.contains(t.key) && t.items.isNotEmpty);
 
   TaxiTier? tier(String key) {
     for (final t in tiers) {

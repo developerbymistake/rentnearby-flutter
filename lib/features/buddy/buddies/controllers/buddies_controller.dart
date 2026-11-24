@@ -18,7 +18,7 @@ abstract final class BuddiesTab {
 }
 
 class BuddiesController extends GetxController {
-  BuddiesController({this.api = const BuddiesApi(), int initialTab = BuddiesTab.buddies}) : tab = initialTab.obs;
+  BuddiesController({this.api = const BuddiesApi(), int initialTab = BuddiesTab.find}) : tab = initialTab.obs;
 
   static const Duration seenDelay = Duration(seconds: 2);
 
@@ -44,7 +44,11 @@ class BuddiesController extends GetxController {
     super.onInit();
     _live = ever<int>(BuddyLive.buddies, (_) => load());
     _tabWorker = ever<int>(tab, (t) {
-      if (t != 0) flushSeen();
+      if (t == BuddiesTab.buddies) {
+        _noteNew(items);
+      } else {
+        flushSeen();
+      }
     });
     load();
   }
@@ -80,10 +84,11 @@ class BuddiesController extends GetxController {
   }
 
   void _noteNew(List<BuddyItem> list) {
+    if (tab.value != BuddiesTab.buddies) return;
     for (final b in list) {
       if (b.isNew && !_seenSent.contains(b.userId)) _pendingSeen.add(b.userId);
     }
-    if (_pendingSeen.isEmpty || tab.value != BuddiesTab.buddies) return;
+    if (_pendingSeen.isEmpty) return;
     _seenTimer?.cancel();
     _seenTimer = Timer(seenDelay, flushSeen);
   }

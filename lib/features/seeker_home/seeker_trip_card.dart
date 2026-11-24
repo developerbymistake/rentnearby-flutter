@@ -172,20 +172,14 @@ class SeekerTripCardView extends StatelessWidget {
     bottomRight: Radius.circular(8),
   );
 
+  static const double minHeight = 156;
+
   @override
   Widget build(BuildContext context) {
     final card = feed.tripCard;
-    final tone = ListingTone.indigo;
     final hasTrip = card.hasTrip;
     final onTrip = hasTrip && card.state == SeekerTripState.onTrip && card.today != null;
-    final big = !hasTrip;
-    final narrow = MediaQuery.sizeOf(context).width < 340;
-    final artBox = big ? (narrow ? 104.0 : 132.0) : (narrow ? 84.0 : 104.0);
-    final textRight = DS.s(artBox + 20);
     final white = DesignColors.onPrimary;
-    final eyebrowStyle = Ink3D.text(13, FontWeight.w600, white.withValues(alpha: Alpha.high));
-    final titleStyle = Ink3D.text(big ? 26 : 24, FontWeight.w700, white, height: 1.25);
-    final bodyStyle = Ink3D.text(13.5, FontWeight.w400, white.withValues(alpha: Alpha.high), height: 1.45);
 
     final String eyebrow;
     final String title;
@@ -196,7 +190,7 @@ class SeekerTripCardView extends StatelessWidget {
     final String action;
     final VoidCallback? onAction;
     if (!hasTrip && failed) {
-      eyebrow = SeekerHomeStrings.tripEyebrow;
+      eyebrow = SeekerHomeStrings.failedEyebrow;
       title = SeekerHomeStrings.failedTitle;
       body = SeekerHomeStrings.railsErrorBody;
       action = SeekerHomeStrings.retry;
@@ -242,29 +236,16 @@ class SeekerTripCardView extends StatelessWidget {
     final slots = feed.slots;
     final full = slots != null && slots.full;
 
-    final children = <Widget>[
-      Padding(
-        padding: EdgeInsets.only(right: textRight),
-        child: Text(eyebrow, maxLines: 1, overflow: TextOverflow.ellipsis, style: eyebrowStyle),
-      ),
-      Padding(
-        padding: EdgeInsets.only(top: DS.s(4), right: textRight),
-        child: Text(title, maxLines: 2, overflow: TextOverflow.ellipsis, style: titleStyle),
-      ),
-      if (body != null)
-        Padding(
-          padding: EdgeInsets.only(top: DS.s(6), right: textRight),
-          child: Text(body, maxLines: 3, overflow: TextOverflow.ellipsis, style: bodyStyle),
-        ),
+    final extra = <Widget>[
       if (progress != null && fraction != null)
         Padding(
-          padding: EdgeInsets.only(top: DS.s(16), right: DS.s(artBox + 16)),
+          padding: EdgeInsets.only(top: DS.s(14)),
           child: _ProgressLine(fraction: fraction, label: progress),
         ),
       if (next != null)
         Padding(
           padding: EdgeInsets.only(top: DS.s(10)),
-          child: Text(next, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(14.5, FontWeight.w700, white)),
+          child: ExcludeSemantics(child: Text(next, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(14.5, FontWeight.w700, white))),
         ),
       if (statusLine != null && s != null)
         Padding(
@@ -276,54 +257,28 @@ class SeekerTripCardView extends StatelessWidget {
           padding: EdgeInsets.only(top: DS.s(14)),
           child: _LimitStrip(text: SeekerHomeStrings.plansFull(slots.count, slots.limit), onTap: onMyTrips ?? SeekerTripActions.openMyTrips),
         ),
-      Padding(
-        padding: EdgeInsets.only(top: DS.s(18)),
-        child: Align(alignment: Alignment.centerLeft, child: SeekerPillButton(label: action, onTap: onAction)),
-      ),
     ];
 
-    final semantics = [
-      title,
-      if (hasTrip) card.displayTitle,
-      ?progress,
-      ?next,
-    ].join(', ');
+    final semantics = !hasTrip && failed
+        ? '$title. $body $action'
+        : [
+            title,
+            if (hasTrip) card.displayTitle,
+            ?progress,
+            ?next,
+          ].join(', ');
 
-    return Padding(
-      padding: DS.insets(l: 18, t: 20, r: 18),
-      child: Semantics(
-        container: true,
-        label: semantics,
-        child: Stack(
-          fit: StackFit.passthrough,
-          children: [
-            DecoratedBox(
-              decoration: BoxDecoration(borderRadius: DS.br(radius), gradient: tone.gradient, boxShadow: tone.glow()),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(minHeight: DS.s(big ? 230 : 0), minWidth: double.infinity),
-                child: Padding(
-                  padding: DS.all(20),
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, mainAxisAlignment: MainAxisAlignment.center, children: children),
-                ),
-              ),
-            ),
-            Positioned(
-              right: DS.s(16),
-              top: DS.s(big ? 22 : 16),
-              child: ExcludeSemantics(
-                child: SizedBox(
-                  width: DS.s(artBox),
-                  height: DS.s(artBox),
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(shape: BoxShape.circle, color: white.withValues(alpha: Alpha.v22)),
-                    child: Center(child: Art3D(asset: onTrip ? ListingArt.compass : ListingArt.luggage, size: artBox * 0.76)),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
+    return WorkoutCard(
+      tone: ListingTone.indigo,
+      art: onTrip ? ListingArt.compass : ListingArt.luggage,
+      eyebrow: eyebrow,
+      title: title,
+      subtitle: body ?? '',
+      actionLabel: action,
+      extra: extra,
+      minHeight: minHeight,
+      semanticsLabel: semantics,
+      onTap: onAction,
     );
   }
 }
@@ -376,6 +331,7 @@ class _StatusPill extends StatelessWidget {
     final bg = reply ? OwnerTokens.amberSoft : ListingPalette.forest.tint;
     final fg = reply ? OwnerTokens.amber : ListingPalette.forest.text;
     return Semantics(
+      container: true,
       button: true,
       label: text,
       excludeSemantics: true,
@@ -449,6 +405,7 @@ class SeekerPillButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final tone = ListingTone.indigo;
     return Semantics(
+      container: true,
       button: true,
       label: label,
       excludeSemantics: true,
@@ -494,10 +451,17 @@ class SeekerTripCardSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: DS.insets(l: 18, t: 20, r: 18),
+        padding: EdgeInsets.only(left: DS.s(18), top: WorkoutCard.overhang, right: DS.s(18)),
         child: Semantics(
           label: SeekerHomeStrings.loading,
-          child: ExcludeSemantics(child: SkeletonBox(width: double.infinity, height: DS.s(230), borderRadius: DS.br(SeekerTripCardView.radius), tone: SkeletonTone.sunrise)),
+          child: ExcludeSemantics(
+            child: SkeletonBox(
+              width: double.infinity,
+              height: DS.s(SeekerTripCardView.minHeight),
+              borderRadius: DS.br(WorkoutCard.radius),
+              tone: SkeletonTone.sunrise,
+            ),
+          ),
         ),
       );
 }

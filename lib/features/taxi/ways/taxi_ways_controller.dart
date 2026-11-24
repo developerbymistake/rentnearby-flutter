@@ -10,6 +10,7 @@ import 'way_actions.dart';
 class TaxiWaysController extends GetxController {
   static const maxPeople = 12;
   static const maxDaysAhead = 365;
+  static const defaultPeople = 2;
 
   TaxiWaysController({
     required PlaceResult from,
@@ -25,8 +26,8 @@ class TaxiWaysController extends GetxController {
         to = Rx<PlaceResult>(to),
         fromMyLocation = (tripLegIndex == null && fromMyLocation).obs,
         datePassed = date != null,
-        date = Rx<DateTime>(_clampDate(date ?? _today().add(const Duration(days: 1)))),
-        people = (people ?? 2).clamp(1, maxPeople).toInt().obs;
+        date = Rx<DateTime>(_clampDate(date ?? defaultDate())),
+        people = (people ?? defaultPeople).clamp(1, maxPeople).toInt().obs;
 
   final Rx<PlaceResult> from;
   final Rx<PlaceResult> to;
@@ -87,6 +88,8 @@ class TaxiWaysController extends GetxController {
     final n = DateTime.now();
     return DateTime(n.year, n.month, n.day);
   }
+
+  static DateTime defaultDate() => _today().add(const Duration(days: 1));
 
   static DateTime firstDate() => _today();
   static DateTime lastDate() => _today().add(const Duration(days: maxDaysAhead));

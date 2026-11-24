@@ -9,11 +9,14 @@ import 'package:bakhli/features/taxi/guest/v2/taxi_feed_repository.dart';
 import 'package:bakhli/features/taxi/guest/v2/taxi_list_controller_v2.dart';
 import 'package:bakhli/features/taxi/guest/v2/taxi_list_screen_v2.dart';
 import 'package:bakhli/features/taxi/setup/taxi_rate_rules.dart';
+import 'package:bakhli/features/taxi/ways/taxi_ways_strings.dart';
+import 'package:bakhli/features/taxi/ways/widgets/taxi_ways_entry_card.dart';
 import 'package:bakhli/models/place_result_model.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 
+import '../../nearby_taxi/fake_ways_repo.dart';
 import '../../ui_golden/golden_support.dart';
 import 'nearby_support.dart';
 
@@ -60,10 +63,11 @@ class _Repo extends TaxiFeedRepository {
 PlaceResult _place(String n, double lat, double lng) => PlaceResult(name: n, subtitle: '', latLng: LatLng(lat, lng));
 
 late _Repo _repo;
+late FakeWaysRepo _ways;
 late TaxiListControllerV2 _ctrl;
 late JLoc _loc;
 
-void _setUpApp({LatLng gps = const LatLng(29.2, 79.5)}) {
+void _setUpApp({LatLng gps = const LatLng(29.2, 79.5), bool waysAvailable = false}) {
   Get.reset();
   _loc = Get.put<LocationController>(JLoc()) as JLoc;
   _loc.userLocation.value = gps;
@@ -71,7 +75,8 @@ void _setUpApp({LatLng gps = const LatLng(29.2, 79.5)}) {
   Get.put<TabConfigController>(JTabs());
   Get.put(NearbyCentreController());
   _repo = _Repo();
-  _ctrl = Get.put(TaxiListControllerV2(root: false, repo: _repo), tag: TaxiListControllerV2.tag);
+  _ways = FakeWaysRepo(answer: waysAvailable);
+  _ctrl = Get.put(TaxiListControllerV2(root: false, repo: _repo, waysRepo: _ways), tag: TaxiListControllerV2.tag);
 }
 
 Future<void> _open(WidgetTester t, {double w = 360, double s = 1}) {
@@ -161,6 +166,114 @@ void main() {
     expect(find.text('Try another place or check again soon.'), findsOneWidget);
     expect(find.text('Drivers on this route'), findsNothing);
     expect(t.takeException(), isNull);
+  });
+
+  group('ways entry card', () {
+    TaxiRouteFeed routeAndLocal() => TaxiRouteFeed(tiers: [
+          _tier(TaxiTierKey.onRoute, [_fi('r', route: true)]),
+          _tier(TaxiTierKey.basedNearFrom, [_fi('f', km: 5)], city: 'Haldwani'),
+        ]);
+    TaxiRouteFeed localOnly() => TaxiRouteFeed(tiers: [
+          _tier(TaxiTierKey.onRoute, const []),
+          _tier(TaxiTierKey.passing, const []),
+          _tier(TaxiTierKey.basedNearFrom, [_fi('f', km: 5)], city: 'Haldwani'),
+          _tier(TaxiTierKey.inTo, [_fi('i', km: 15, label: 'far', city: 'Almora')], city: 'Almora'),
+        ]);
+
+    testWidgets('shown when a way exists, with route drivers it is the normal card, builds never refetch', (t) async {
+      _setUpApp(waysAvailable: true);
+      _repo.feed = routeAndLocal();
+      await _open(t);
+      _ctrl.setTo(_place('Almora', 29.6, 79.66));
+      await _settle(t);
+      expect(find.byType(TaxiWaysEntryCard), findsOneWidget);
+      expect(t.widget<TaxiWaysEntryCard>(find.byType(TaxiWaysEntryCard)).empty, isFalse);
+      expect(find.text(TaxiWaysStrings.entryTitle), findsOneWidget);
+      await _settle(t);
+      await _settle(t);
+      expect(_ways.calls, hasLength(1));
+      expect(t.takeException(), isNull);
+    });
+
+    testWidgets('local taxis are not route drivers: a way exists gives the empty variant', (t) async {
+      _setUpApp(waysAvailable: true);
+      _repo.feed = localOnly();
+      await _open(t);
+      _ctrl.setTo(_place('Almora', 29.6, 79.66));
+      await _settle(t);
+      expect(find.text('More drivers nearby'), findsOneWidget);
+      expect(t.widget<TaxiWaysEntryCard>(find.byType(TaxiWaysEntryCard)).empty, isTrue);
+      expect(find.text(TaxiWaysStrings.entryEmptyTitle), findsOneWidget);
+      expect(find.text(TaxiWaysStrings.entryTitle), findsNothing);
+    });
+
+    testWidgets('hidden when no way exists, even with local taxis listed', (t) async {
+      _setUpApp(waysAvailable: false);
+      _repo.feed = localOnly();
+      await _open(t);
+      _ctrl.setTo(_place('Almora', 29.6, 79.66));
+      await _settle(t);
+      expect(find.text('More drivers nearby'), findsOneWidget);
+      expect(find.byType(TaxiWaysEntryCard), findsNothing);
+      expect(find.text(TaxiWaysStrings.entryTitle), findsNothing);
+    });
+
+    testWidgets('hidden when the check fails', (t) async {
+      _setUpApp(waysAvailable: true);
+      _ways.error = StateError('503');
+      _repo.feed = routeAndLocal();
+      await _open(t);
+      _ctrl.setTo(_place('Almora', 29.6, 79.66));
+      await _settle(t);
+      expect(find.text('Drivers on this route'), findsOneWidget);
+      expect(find.byType(TaxiWaysEntryCard), findsNothing);
+    });
+
+    testWidgets('nothing while the check is loading, then the card simply appears', (t) async {
+      _setUpApp(waysAvailable: true);
+      _ways.manual = true;
+      _repo.feed = routeAndLocal();
+      await _open(t);
+      _ctrl.setTo(_place('Almora', 29.6, 79.66));
+      await _settle(t);
+      expect(find.text('Drivers on this route'), findsOneWidget);
+      expect(find.byType(TaxiWaysEntryCard), findsNothing);
+      _ways.pending.last.complete(true);
+      await _settle(t);
+      expect(find.byType(TaxiWaysEntryCard), findsOneWidget);
+      expect(t.takeException(), isNull);
+    });
+
+    testWidgets('a new search never shows the old answer', (t) async {
+      _setUpApp(waysAvailable: true);
+      _repo.feed = routeAndLocal();
+      await _open(t);
+      _ctrl.setTo(_place('Almora', 29.6, 79.66));
+      await _settle(t);
+      expect(find.byType(TaxiWaysEntryCard), findsOneWidget);
+      _ways.manual = true;
+      _ctrl.setTo(_place('Nainital', 29.4, 79.45));
+      await _settle(t);
+      expect(find.byType(TaxiWaysEntryCard), findsNothing);
+      _ways.pending.last.complete(false);
+      await _settle(t);
+      expect(find.byType(TaxiWaysEntryCard), findsNothing);
+      expect(_ways.calls.last.toLat, 29.4);
+    });
+
+    for (final w in journeyWidths) {
+      for (final s in journeyScales) {
+        testWidgets('card fits at ${w.toInt()} dp, text scale $s', (t) async {
+          _setUpApp(waysAvailable: true);
+          _repo.feed = localOnly();
+          await _open(t, w: w, s: s);
+          _ctrl.setTo(_place('Another very long destination name', 29.6, 79.66));
+          await _settle(t);
+          expect(find.byType(TaxiWaysEntryCard), findsOneWidget);
+          expect(t.takeException(), isNull);
+        });
+      }
+    }
   });
 
   testWidgets('Photon pin moves the local list centre', (t) async {

@@ -88,7 +88,8 @@ TaxiOwnerModel _taxi(List<Map<String, dynamic>> routes) => TaxiOwnerModel.fromJs
       'routes': routes,
     });
 
-Future<(TaxiSetupController, _Repo, FakePlanRepository)> _setup({required Map<String, dynamic> me, bool planFails = false, Map<String, dynamic>? refuse}) async {
+Future<(TaxiSetupController, _Repo, FakePlanRepository)> _setup(
+    {required Map<String, dynamic> me, bool planFails = false, Map<String, dynamic>? refuse, int routes = 1}) async {
   Get.reset();
   PlanGate.debugPlan = null;
   final plans = FakePlanRepository([me]);
@@ -101,8 +102,23 @@ Future<(TaxiSetupController, _Repo, FakePlanRepository)> _setup({required Map<St
   Get.put<TripCityCatalog>(TripCityCatalog()..seedForTest(const [_haldwani, _nainital, _almora]), permanent: true);
   final repo = _Repo(refuse: refuse);
   final c = Get.put<TaxiSetupController>(TaxiSetupController(repo: repo));
-  c.taxi.value = _taxi([_route('r1', 'Nainital', 210109088)]);
+  c.taxi.value = _taxi([
+    _route('r1', 'Nainital', 210109088),
+    for (var i = 2; i <= routes; i++) _route('r$i', 'City $i', 1000 + i),
+  ]);
   return (c, repo, plans);
+}
+
+const _plus = {'paymentEnabled': true, 'isPaid': true, 'canUpgrade': false, 'limits': {'routes': 5}};
+
+Future<void> _fillAlmora(WidgetTester t) async {
+  await _tapText(t, TaxiRouteStrings.chooseCity);
+  await settlePhone(t);
+  await t.tap(find.text('Almora').last);
+  await settlePhone(t);
+  await _tapText(t, 'One way');
+  await t.enterText(find.byType(EditableText).first, '2400');
+  await t.pump();
 }
 
 Future<void> _tapText(WidgetTester t, String text) async {
@@ -143,13 +159,16 @@ void main() {
     Get.reset();
   });
 
-  testWidgets('Free, payment ON: saving route 2 opens G1 (See Plus / Not now), nothing is sent', (t) async {
+  testWidgets('Free, payment ON: tapping Add another route opens G1 (See Plus / Not now) at once, no form, nothing is sent', (t) async {
     final (_, repo, plans) = await _setup(me: {'paymentEnabled': true, 'limits': {'routes': 1}});
     await _open(t);
     expect(plans.meCalls, 1, reason: 'the routes screen registers the plan without MainScreen');
     expect(Get.isRegistered<PlanController>(), isTrue);
     expect(PlanGate.loaded, isTrue);
-    await _addSecondRoute(t);
+    expect(find.text(TaxiRouteStrings.chooseCity), findsNothing, reason: 'the blank extra form closes once the plan says full');
+    await _tapText(t, 'Add another route');
+    await settlePhone(t);
+    expect(find.text(TaxiRouteStrings.chooseCity), findsNothing);
     expect(find.text('See Plus'), findsWidgets);
     expect(find.text('Not now'), findsOneWidget);
     expect(find.text('1 route on Free'), findsOneWidget);
@@ -168,6 +187,70 @@ void main() {
     expect(find.text('2 of 5'), findsWidgets);
     await _clear(t);
   });
+
+  testWidgets('Plus: Add another route commits the filled form and opens the next one in place, row below it', (t) async {
+    final (_, repo, _) = await _setup(me: _plus);
+    await _open(t);
+    expect(find.text('Route 2'), findsOneWidget);
+    await _fillAlmora(t);
+    await _tapText(t, 'Add another route');
+    await settlePhone(t);
+    expect(find.text('Route 3'), findsOneWidget);
+    expect(find.text('Haldwani to Almora'), findsOneWidget);
+    expect(find.text('3 of 5'), findsOneWidget);
+    expect(find.text('Routes: 2 of 5'), findsOneWidget);
+    expect(find.text('Not now'), findsNothing);
+    expect(t.getTopLeft(find.text('Add another route')).dy, greaterThan(t.getTopLeft(find.text('Route 3')).dy));
+    expect(t.getTopLeft(find.text('Add another route')).dy, lessThan(t.getTopLeft(find.text('Local sightseeing')).dy));
+    expect(repo.saved, isEmpty);
+    await _clear(t);
+  });
+
+  testWidgets('Plus with 4 saved: the 5th form is open, the row reads 5 of 5 and is disabled, Save saves with no limit refusal', (t) async {
+    final (_, repo, _) = await _setup(me: _plus, routes: 4);
+    await _open(t);
+    expect(find.text('Route 5'), findsOneWidget);
+    expect(find.text('5 of 5'), findsOneWidget);
+    await _tapText(t, 'Add another route');
+    await settlePhone(t);
+    expect(find.text('Route 6'), findsNothing);
+    expect(find.text('Not now'), findsNothing);
+    expect(find.text('Fill this route first'), findsNothing);
+    await _fillAlmora(t);
+    await t.tap(find.text('Save route').last);
+    await t.pump(const Duration(milliseconds: 700));
+    await settlePhone(t);
+    expect(repo.saved, hasLength(1));
+    expect(repo.saved.single, hasLength(5));
+    expect(find.textContaining('You can add up to'), findsNothing);
+    expect(find.text('Not now'), findsNothing);
+    await _clear(t);
+  });
+
+  for (final (name, me) in [
+    ('Plus', _plus),
+    ('payment OFF', {'paymentEnabled': false, 'limits': {'routes': 5}}),
+  ]) {
+    testWidgets('$name with 5 saved: no Route 6 form, row 5 of 5 disabled, Save saves with no limit refusal', (t) async {
+      final (_, repo, _) = await _setup(me: me, routes: 5);
+      await _open(t);
+      expect(find.text(TaxiRouteStrings.chooseCity), findsNothing, reason: 'no blank form above the plan limit');
+      expect(find.text('Route 6'), findsNothing);
+      expect(find.text('6 of 5'), findsNothing);
+      expect(find.text('5 of 5'), findsWidgets);
+      expect(find.text('Routes: 5 of 5'), findsOneWidget);
+      await _tapText(t, 'Add another route');
+      await settlePhone(t);
+      expect(find.text(TaxiRouteStrings.chooseCity), findsNothing);
+      expect(find.text('Not now'), findsNothing);
+      await _tapText(t, 'Save');
+      await settlePhone(t);
+      expect(repo.saved, hasLength(1));
+      expect(repo.saved.single, hasLength(5));
+      expect(find.textContaining('You can add up to'), findsNothing);
+      await _clear(t);
+    });
+  }
 
   testWidgets('plan not loaded: meter skeleton, no local refusal; server 409 opens G1 from the refusal body', (t) async {
     final (_, repo, _) = await _setup(

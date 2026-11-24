@@ -139,7 +139,7 @@ abstract final class NoticeCopy {
         art: BuddyArt.panda,
         tone: NoticeTone.teal,
         route: AppRoutes.buddies,
-        args: const {},
+        args: const {'tab': 'buddies'},
       );
 
   static NoticeView _money(String title, String body, Map<String, dynamic> args, [String art = BuddyArt.moneyBag]) => NoticeView(

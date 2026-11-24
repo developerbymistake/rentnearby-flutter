@@ -105,7 +105,8 @@ class TripLegSectionHeader extends StatelessWidget {
   static const Key detailKey = ValueKey('leg-detail');
   static const Key cardKey = ValueKey('leg-card');
   static const Key layersKey = ValueKey('leg-fold-layers');
-  static const double dayCardTop = 48;
+  static const double dayCardTop = 16;
+  static double get gapAbove => DS.gv(20);
 
   static const BorderRadius openRadius = BorderRadius.only(topLeft: Radius.circular(6), topRight: Radius.circular(36));
   static const BorderRadius foldedRadius = BorderRadius.only(
@@ -132,16 +133,16 @@ class TripLegSectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tone = ListingTone.indigo;
-    final palette = ListingPalette.indigo;
+    final tone = TripLook.cityTone;
     final scaler = MediaQuery.textScalerOf(context);
     const artSize = 68.0;
     final side = DS.s(18);
     final btn = DS.s(40);
     final gap = DS.s(10);
     final pillPad = DS.s(18);
-    final labelStyle = Ink3D.text(13, FontWeight.w700, tone.text, letterSpacing: 0);
-    final foldStyle = Ink3D.text(12.5, FontWeight.w700, tone.text, letterSpacing: 0);
+    final ink = TripLook.cityInk;
+    final labelStyle = Ink3D.text(13, FontWeight.w700, ink, letterSpacing: 0);
+    final foldStyle = Ink3D.text(12.5, FontWeight.w700, ink, letterSpacing: 0);
     final foldLabel = folded ? TripStringsDayplan.show : TripStringsDayplan.hide;
     final customizeW = onCustomize == null ? 0.0 : KitText.widthOf(TripStringsDayplan.customize, labelStyle, scaler) + pillPad * 2;
     final foldRoom = math.max(KitText.widthOf(TripStringsDayplan.show, foldStyle, scaler), KitText.widthOf(TripStringsDayplan.hide, foldStyle, scaler)) + DS.s(14 + 12 + 6 + 18);
@@ -165,7 +166,7 @@ class TripLegSectionHeader extends StatelessWidget {
             SizedBox(width: DS.s(6)),
             RotatedBox(
               quarterTurns: folded ? 2 : 0,
-              child: CustomPaint(size: Size.square(DS.s(18)), painter: _FoldChevron(tone.text)),
+              child: CustomPaint(size: Size.square(DS.s(18)), painter: _FoldChevron(ink)),
             ),
           ],
         ),
@@ -184,7 +185,7 @@ class TripLegSectionHeader extends StatelessWidget {
                 height: btn,
                 padding: EdgeInsets.symmetric(horizontal: pillPad),
                 decoration: BoxDecoration(
-                  color: locked ? DesignColors.tint(Colors.white, Alpha.v40) : DesignColors.surface,
+                  color: locked ? DesignColors.tint(Colors.white, Alpha.v72) : DesignColors.surface,
                   borderRadius: BorderRadius.circular(btn / 2),
                   boxShadow: locked ? null : DS.shadows(Ink3D.whiteBtn),
                 ),
@@ -194,7 +195,7 @@ class TripLegSectionHeader extends StatelessWidget {
                     child: Text(
                       TripStringsDayplan.customize,
                       maxLines: 1,
-                      style: locked ? labelStyle.copyWith(color: palette.tint) : labelStyle,
+                      style: labelStyle,
                     ),
                   ),
                 ),
@@ -248,9 +249,29 @@ class TripLegSectionHeader extends StatelessWidget {
       key: cardKey,
       constraints: BoxConstraints(minHeight: DS.s(96)),
       decoration: BoxDecoration(borderRadius: DS.br(folded ? foldedRadius : openRadius), gradient: tone.gradient),
-      child: Padding(
-        padding: EdgeInsets.fromLTRB(DS.s(92), DS.s(14), DS.s(14), DS.s(16)),
-        child: LayoutBuilder(builder: (_, box) => row(box.maxWidth)),
+      child: Stack(
+        children: [
+          Padding(
+            padding: EdgeInsets.fromLTRB(DS.s(92), DS.s(14), DS.s(14), DS.s(16)),
+            child: LayoutBuilder(builder: (_, box) => row(box.maxWidth)),
+          ),
+          Positioned(
+            left: DS.s(10),
+            top: DS.s(14),
+            child: IgnorePointer(
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  DecoratedBox(
+                    decoration: BoxDecoration(shape: BoxShape.circle, color: DesignColors.tint(Colors.white, Alpha.v22)),
+                    child: SizedBox(width: DS.s(66), height: DS.s(66)),
+                  ),
+                  Positioned(left: -DS.s(2), top: -DS.s(2), child: const Art3D(asset: ListingArt.luggage, size: artSize)),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
     final sectionBody = !folded && body.isNotEmpty
@@ -261,7 +282,7 @@ class TripLegSectionHeader extends StatelessWidget {
                 top: DS.s(dayCardTop),
                 bottom: DS.s(36),
                 width: DS.s(4),
-                child: DecoratedBox(decoration: BoxDecoration(color: TripLook.rail, borderRadius: DS.circular(2))),
+                child: DecoratedBox(decoration: BoxDecoration(color: DesignColors.tint(tone.g1, Alpha.v40), borderRadius: DS.circular(2))),
               ),
               Padding(
                 padding: EdgeInsets.fromLTRB(DS.s(30), 0, DS.s(12), DS.s(24)),
@@ -272,10 +293,10 @@ class TripLegSectionHeader extends StatelessWidget {
         : null;
     final section = DecoratedBox(
       decoration: BoxDecoration(
-        color: palette.tint,
-        border: Border.all(color: palette.line, width: DS.s(2)),
+        color: tone.tint,
+        border: Border.all(color: DesignColors.tint(tone.haloBase, Alpha.v25), width: DS.s(2)),
         borderRadius: DS.br(sectionRadius),
-        boxShadow: DS.shadows(TripLook.sectionShadow),
+        boxShadow: tone.glow(blur: 14),
       ),
       child: Padding(
         padding: EdgeInsets.all(DS.s(2)),
@@ -289,7 +310,9 @@ class TripLegSectionHeader extends StatelessWidget {
         ),
       ),
     );
-    final top = DS.gv(44);
+    final top = gapAbove;
+    final foldNear = Color.alphaBlend(DesignColors.tint(tone.haloBase, Alpha.v40), DesignColors.surface);
+    final foldFar = Color.alphaBlend(DesignColors.tint(tone.haloBase, Alpha.v25), DesignColors.surface);
     final layerH = DS.s(16);
     final layerRoom = folded ? DS.s(34) : 0.0;
     final bottom = math.max(0.0, layerRoom - gapBelow);
@@ -317,8 +340,8 @@ class TripLegSectionHeader extends StatelessWidget {
                 child: Stack(
                   clipBehavior: Clip.none,
                   children: [
-                    layer(30, 20, TripLook.foldFar, null),
-                    layer(16, 10, TripLook.foldNear, DS.shadows([BoxShadow(color: palette.shadow.withValues(alpha: Alpha.v25), offset: const Offset(0, 3), blurRadius: 6)])),
+                    layer(30, 20, foldFar, null),
+                    layer(16, 10, foldNear, DS.shadows([BoxShadow(color: tone.haloBase.withValues(alpha: Alpha.v25), offset: const Offset(0, 3), blurRadius: 6)])),
                   ],
                 ),
               ),
@@ -330,24 +353,8 @@ class TripLegSectionHeader extends StatelessWidget {
             right: side + DS.s(16),
             bottom: bottom,
             height: DS.s(2),
-            child: const IgnorePointer(child: ColoredBox(color: TripLook.foldNear)),
+            child: IgnorePointer(child: ColoredBox(color: foldNear)),
           ),
-        Positioned(
-          left: side + DS.s(14),
-          top: top - DS.s(12),
-          child: IgnorePointer(
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                DecoratedBox(
-                  decoration: BoxDecoration(shape: BoxShape.circle, color: DesignColors.tint(Colors.white, Alpha.v22)),
-                  child: SizedBox(width: DS.s(66), height: DS.s(66)),
-                ),
-                Positioned(left: -DS.s(2), top: -DS.s(2), child: const Art3D(asset: ListingArt.mountain, size: artSize)),
-              ],
-            ),
-          ),
-        ),
       ],
     );
   }

@@ -101,7 +101,7 @@ class TripDaySpotList extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        _header(c, plan, d, color, editing, DS.s(narrow ? 78.0 : 88.0)),
+                        _header(c, plan, d, editing, DS.s(narrow ? 78.0 : 88.0), artSize),
                         Padding(
                           padding: EdgeInsets.only(bottom: DS.s(8)),
                           child: Column(
@@ -135,13 +135,6 @@ class TripDaySpotList extends StatelessWidget {
                 ),
               ),
             ),
-            Positioned(
-              left: side + DS.s(10),
-              top: top - DS.s(13),
-              child: IgnorePointer(
-                child: Art3D(asset: ListingArt.calendar, size: artSize, halo: artSize - 1, haloColor: DesignColors.tint(DesignColors.surface, Alpha.v22)),
-              ),
-            ),
           ],
         ),
       );
@@ -163,7 +156,7 @@ class TripDaySpotList extends StatelessWidget {
         ),
       );
 
-  Widget _header(TripPlanController c, TripPlan plan, TripDay d, Color color, bool editing, double artRoom) {
+  Widget _header(TripPlanController c, TripPlan plan, TripDay d, bool editing, double artRoom, double artSize) {
     final date = c.dateOf(day);
     final dateText = date == null ? null : TripFormat.shortDate(date);
     final load = c.dayLoadMinutes(day);
@@ -172,48 +165,57 @@ class TripDaySpotList extends StatelessWidget {
     return Container(
       key: headerKey,
       constraints: BoxConstraints(minHeight: DS.s(80)),
-      padding: EdgeInsets.fromLTRB(artRoom, DS.s(14), DS.s(14), DS.s(14)),
-      decoration: BoxDecoration(gradient: ListingTone.indigo.gradient),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
+      padding: EdgeInsets.fromLTRB(DS.s(10), DS.s(14), DS.s(14), DS.s(14)),
+      decoration: BoxDecoration(gradient: TripLook.dayTone.gradient),
+      child: Row(
         children: [
-          Row(
-            children: [
-              SizedBox(height: DS.s(40)),
-              Container(
-                width: DS.s(14),
-                height: DS.s(14),
-                decoration: BoxDecoration(color: color, shape: BoxShape.circle, border: Border.all(color: white, width: DS.s(2.5))),
+          SizedBox(
+            width: artRoom - DS.s(10),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: IgnorePointer(
+                child: Art3D(asset: ListingArt.calendar, size: artSize, halo: artSize - 1, haloColor: DesignColors.tint(DesignColors.surface, Alpha.v22)),
               ),
-              Gap.h(8),
-              Expanded(
-                child: Text(
-                  title,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: Ink3D.text(17, FontWeight.w700, white, height: 1.3, letterSpacing: 0),
-                ),
-              ),
-            ],
+            ),
           ),
-          Gap.v(2),
-          Wrap(
-            key: chipsKey,
-            spacing: DS.gh(10),
-            runSpacing: DS.gv(8),
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              if (d.spots.isNotEmpty) Text(TripFormat.hm(load), style: Ink3D.text(13, FontWeight.w600, white, letterSpacing: 0)),
-              _pill(TripStringsV2Plan.placesCount(d.spots.length)),
-              if (_hasExpenses(c)) DaySpentChip(tripId: c.trip.value!.id, day: day),
-              if (editing && plan.legDayCount(d.leg) > 1)
-                Tap3D(
-                  onTap: () => _removeDay(c),
-                  label: TripStringsV2Plan.removeDay,
-                  child: _pill(TripStringsV2Plan.removeDay, fill: white, ink: TripLook.errorText),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    SizedBox(height: DS.s(40)),
+                    Expanded(
+                      child: Text(
+                        title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: Ink3D.text(17, FontWeight.w700, white, height: 1.3, letterSpacing: 0),
+                      ),
+                    ),
+                  ],
                 ),
-            ],
+                Gap.v(2),
+                Wrap(
+                  key: chipsKey,
+                  spacing: DS.gh(10),
+                  runSpacing: DS.gv(8),
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    if (d.spots.isNotEmpty) Text(TripFormat.hm(load), style: Ink3D.text(13, FontWeight.w600, white, letterSpacing: 0)),
+                    _pill(TripStringsV2Plan.placesCount(d.spots.length)),
+                    if (_hasExpenses(c)) DaySpentChip(tripId: c.trip.value!.id, day: day),
+                    if (editing && plan.legDayCount(d.leg) > 1)
+                      Tap3D(
+                        onTap: () => _removeDay(c),
+                        label: TripStringsV2Plan.removeDay,
+                        child: _pill(TripStringsV2Plan.removeDay, fill: white, ink: TripLook.errorText),
+                      ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ],
       ),

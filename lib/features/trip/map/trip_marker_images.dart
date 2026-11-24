@@ -161,15 +161,22 @@ class CanvasMarkerPainter implements MarkerPainter {
   }
 
   static double stopRingDp() => DS.s(3);
-  static double stopBadgeDp() => DS.s(20);
+  static double stopBadgeDp(DiscTuning t) => t.stopBadgeDp ?? DS.s(20);
 
   static double stopCanvasDp(DiscTuning t) {
     final outer = t.photoDp / 2 + stopRingDp();
-    final corner = outer * _corner + stopBadgeDp() / 2 + _ringBadge;
+    final corner = outer * _corner + stopBadgeDp(t) / 2 + _ringBadge;
     return 2 * (corner > outer + _shadowPad ? corner : outer + _shadowPad);
   }
 
   static const double _corner = 0.7071;
+
+  // The image is drawn at the zoom-17 size and scaled down, so the number shows at caption size at zoom 14.
+  static TextStyle stopNumberStyle(DiscTuning t) {
+    final base = TypeTokens.caption;
+    final grow = t.photoDp / (t.photoMidDp ?? t.photoDp);
+    return base.copyWith(color: FitnessAppTheme.white, height: 1, fontSize: base.fontSize! * grow * t.pxPerDp);
+  }
 
   // Route stop: the spot photo (or its category icon) in the white ring, the day colour ring outside, the order badge on the corner.
   Future<Uint8List> stop({Uint8List? thumb, required String category, required Color ring, required int number, required DiscTuning t}) async {
@@ -207,7 +214,7 @@ class CanvasMarkerPainter implements MarkerPainter {
         canvas.drawCircle(c, inner.width / 2, Paint()..color = TripSpotCategory.colorOf(category));
         _glyph(canvas, c, TripSpotCategory.iconOf(category), inner.width * _glyphRatio);
       }
-      final b = stopBadgeDp() * p / 2;
+      final b = stopBadgeDp(t) * p / 2;
       final at = c + Offset(outer * _corner, -outer * _corner);
       canvas.drawCircle(at, b, Paint()..color = ring);
       canvas.drawCircle(
@@ -220,7 +227,7 @@ class CanvasMarkerPainter implements MarkerPainter {
       );
       final tp = TextPainter(
         textDirection: TextDirection.ltr,
-        text: TextSpan(text: '$number', style: TypeTokens.caption.copyWith(color: FitnessAppTheme.white, height: 1)),
+        text: TextSpan(text: '$number', style: stopNumberStyle(t)),
       )..layout();
       tp.paint(canvas, at - Offset(tp.width / 2, tp.height / 2));
       tp.dispose();

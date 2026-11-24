@@ -134,20 +134,21 @@ void main() {
     expect(find.text('Requests are paused right now'), findsOneWidget);
     final dim = tester.widget<Opacity>(find.ancestor(of: find.byKey(const ValueKey('overview_taxi_card')), matching: find.byType(Opacity)).first);
     expect(dim.opacity, 1);
-    await tester.tap(find.byKey(const ValueKey('overview_taxi_button')));
+    await tester.tap(find.byKey(const ValueKey('overview_taxi_card')));
     expect(calls.taxi, [TripOverviewTaxiState.booked]);
   });
 
   testWidgets('paused_blocks_request_again_after_busy', (tester) async {
     final calls = _Calls();
     await _pump(tester, _trip(view: 'Busy'), paused: true, calls: calls);
-    await tester.tap(find.byKey(const ValueKey('overview_taxi_button')), warnIfMissed: false);
+    await tester.tap(find.byKey(const ValueKey('overview_taxi_card')), warnIfMissed: false);
     expect(calls.taxi, isEmpty);
   });
 
-  testWidgets('taxi_card_optional', (tester) async {
+  testWidgets('taxi_card_open', (tester) async {
     await _pump(tester, _trip());
-    expect(_in('overview_taxi_card', 'Optional'), findsOneWidget);
+    expect(find.text('Optional'), findsNothing);
+    expect(_in('overview_taxi_card', 'Find taxi'), findsOneWidget);
     expect(_in('overview_taxi_card', 'Request taxi'), findsOneWidget);
     expect(find.text('Skip, just keep my plan'), findsOneWidget);
     expect(find.text('Back to my trips'), findsNothing);
@@ -155,6 +156,7 @@ void main() {
 
   testWidgets('taxi_card_requested_and_booked_from_trip_fields', (tester) async {
     await _pump(tester, _trip(view: 'Collecting'));
+    expect(_in('overview_taxi_card', 'Taxi'), findsOneWidget);
     expect(_in('overview_taxi_card', 'Requested'), findsOneWidget);
     expect(_in('overview_taxi_card', 'View request'), findsOneWidget);
     expect(find.text('Back to my trips'), findsOneWidget);
@@ -166,26 +168,30 @@ void main() {
   });
 
   group('taxi_card_follows_the_contract_view_table', () {
-    const table = <String?, (String, String)>{
-      null: ('Optional', 'Request taxi'),
-      'Busy': ('Optional', 'Request taxi'),
-      'Ended': ('Optional', 'Request taxi'),
-      'Something': ('Optional', 'Request taxi'),
-      'Finding': ('Requested', 'View request'),
-      'FindingWaiting': ('Requested', 'View request'),
-      'NoReply': ('Requested', 'View request'),
-      'Collecting': ('Requested', 'View request'),
-      'Selected': ('Requested', 'View request'),
-      'Booked': ('Booked', 'View booking'),
-      'InProgress': ('Booked', 'View booking'),
-      'Rate': ('Completed', 'View booking'),
-      'Done': ('Completed', 'View booking'),
+    const table = <String?, (String, String?, String)>{
+      null: ('Find taxi', null, 'Request taxi'),
+      'Busy': ('Find taxi', null, 'Request taxi'),
+      'Ended': ('Find taxi', null, 'Request taxi'),
+      'Something': ('Find taxi', null, 'Request taxi'),
+      'Finding': ('Taxi', 'Requested', 'View request'),
+      'FindingWaiting': ('Taxi', 'Requested', 'View request'),
+      'NoReply': ('Taxi', 'Requested', 'View request'),
+      'Collecting': ('Taxi', 'Requested', 'View request'),
+      'Selected': ('Taxi', 'Requested', 'View request'),
+      'Booked': ('Taxi', 'Booked', 'View booking'),
+      'InProgress': ('Taxi', 'Booked', 'View booking'),
+      'Rate': ('Taxi', 'Completed', 'View booking'),
+      'Done': ('Taxi', 'Completed', 'View booking'),
     };
     for (final e in table.entries) {
       testWidgets('view ${e.key}', (tester) async {
         await _pump(tester, _trip(view: e.key));
-        expect(_in('overview_taxi_card', e.value.$1), findsOneWidget);
-        expect(_in('overview_taxi_card', e.value.$2), findsOneWidget);
+        final (title, chip, action) = e.value;
+        expect(_in('overview_taxi_card', title), findsOneWidget);
+        if (chip != null) expect(_in('overview_taxi_card', chip), findsOneWidget);
+        expect(_in('overview_taxi_card', 'Optional'), findsNothing);
+        expect(_in('overview_taxi_card', action), findsOneWidget);
+        expect(find.bySemanticsLabel('$title, $action'), findsOneWidget);
       });
     }
   });
@@ -196,18 +202,18 @@ void main() {
     expect(find.text('Requests are paused right now'), findsOneWidget);
     final dim = tester.widget<Opacity>(find.ancestor(of: find.byKey(const ValueKey('overview_taxi_card')), matching: find.byType(Opacity)).first);
     expect(dim.opacity, lessThan(1));
-    await tester.tap(find.byKey(const ValueKey('overview_taxi_button')), warnIfMissed: false);
+    await tester.tap(find.byKey(const ValueKey('overview_taxi_card')), warnIfMissed: false);
     expect(calls.taxi, isEmpty);
 
     await _pump(tester, _trip());
     expect(find.text('Requests are paused right now'), findsNothing);
   });
 
-  testWidgets('buttons call their routes', (tester) async {
+  testWidgets('cards call their routes', (tester) async {
     final calls = _Calls();
     await _pump(tester, _trip(view: 'Booked'), calls: calls);
-    await tester.tap(find.byKey(const ValueKey('overview_itinerary_button')));
-    await tester.tap(find.byKey(const ValueKey('overview_taxi_button')));
+    await tester.tap(find.byKey(const ValueKey('overview_itinerary_card')));
+    await tester.tap(find.byKey(const ValueKey('overview_taxi_card')));
     await tester.tap(find.byKey(const ValueKey('overview_done_button')));
     expect(calls.plan, 1);
     expect(calls.taxi, [TripOverviewTaxiState.booked]);
@@ -230,16 +236,18 @@ void main() {
     });
 
     for (final e in {
-      TripOverviewStay.notAdded: ('Optional', 'Find a stay'),
-      TripOverviewStay.requested: ('Added', 'View stays'),
-      TripOverviewStay.booked: ('Booked', 'View stays'),
+      TripOverviewStay.notAdded: ('Book your stay', null, 'Find a stay'),
+      TripOverviewStay.requested: ('Stay', 'Added', 'View stays'),
+      TripOverviewStay.booked: ('Stay', 'Booked', 'View stays'),
     }.entries) {
       testWidgets('stay_card_${e.key.state.name}', (tester) async {
         await pumpAtSize(tester, _screen(_trip(), stay: e.key), phoneSize);
-        expect(_in('overview_stay_card', 'Stay'), findsOneWidget);
-        expect(_in('overview_stay_card', 'Homestays, hostels and hotels'), findsOneWidget);
-        expect(_in('overview_stay_card', e.value.$1), findsOneWidget);
-        expect(_in('overview_stay_card', e.value.$2), findsOneWidget);
+        final (title, chip, action) = e.value;
+        expect(_in('overview_stay_card', title), findsOneWidget);
+        expect(_in('overview_stay_card', 'Homestays and resorts'), findsOneWidget);
+        if (chip != null) expect(_in('overview_stay_card', chip), findsOneWidget);
+        expect(_in('overview_stay_card', 'Optional'), findsNothing);
+        expect(_in('overview_stay_card', action), findsOneWidget);
         final arts = find.descendant(of: find.byKey(const ValueKey('overview_stay_card')), matching: find.byType(Art3D));
         expect(tester.widget<Art3D>(arts.first).asset, TravelIcon.stay);
       });
@@ -250,12 +258,12 @@ void main() {
       expect(find.byKey(const ValueKey('overview_stay_card')), findsNothing);
     });
 
-    testWidgets('stay_button_calls_onStay', (tester) async {
+    testWidgets('stay_card_tap_calls_onStay', (tester) async {
       final calls = _Calls();
       await pumpAtSize(tester, _screen(_trip(), stay: TripOverviewStay.requested, calls: calls), phoneSize);
-      await tester.ensureVisible(find.byKey(const ValueKey('overview_stay_button')));
+      await tester.ensureVisible(find.byKey(const ValueKey('overview_stay_card')));
       await tester.pump();
-      await tester.tap(find.byKey(const ValueKey('overview_stay_button')));
+      await tester.tap(find.byKey(const ValueKey('overview_stay_card')));
       expect(calls.stay, [TripOverviewStayState.requested]);
     });
 

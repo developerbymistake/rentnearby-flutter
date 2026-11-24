@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:get/get.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 import '../../../config/app_tabs.dart';
@@ -7,6 +8,8 @@ import '../../../models/place_result_model.dart';
 import '../../../widgets/location_switch_sheet.dart';
 import '../models/taxi_browse_item.dart';
 import '../taxi_option_sets.dart';
+import '../ways/taxi_ways_availability.dart';
+import '../ways/taxi_ways_repository.dart';
 import 'taxi_browse_repository.dart';
 import 'traveller_city.dart';
 
@@ -51,8 +54,16 @@ class TaxiListController extends GetxController {
 
   final bool root;
   final TaxiPreset? _preset;
+  final TaxiWaysAvailabilityCheck waysCheck;
 
-  TaxiListController({this.root = false, TaxiPreset? preset}) : _preset = preset;
+  TaxiListController({
+    this.root = false,
+    TaxiPreset? preset,
+    TaxiWaysRepository waysRepo = const TaxiWaysRepository(),
+    TaxiBrowseRepository browseRepo = const TaxiBrowseRepository(),
+  })  : _preset = preset,
+        _repo = browseRepo,
+        waysCheck = TaxiWaysAvailabilityCheck(repo: waysRepo);
 
   final items = <TaxiBrowseItem>[].obs;
   final isLoading = true.obs;
@@ -65,7 +76,7 @@ class TaxiListController extends GetxController {
   final fromIsCurrent = false.obs;
   final refreshTrigger = 0.obs;
 
-  final _repo = const TaxiBrowseRepository();
+  final TaxiBrowseRepository _repo;
   final _workers = <Worker>[];
   int _page = 1;
   int _gen = 0;
@@ -119,6 +130,7 @@ class TaxiListController extends GetxController {
     for (final w in _workers) {
       w.dispose();
     }
+    waysCheck.reset();
     super.onClose();
   }
 
@@ -231,6 +243,7 @@ class TaxiListController extends GetxController {
     isLoadingMore.value = false;
     isLoading.value = true;
     items.clear();
+    waysCheck.reset();
     if (_tabActive) _fetch(reset: true);
   }
 
@@ -247,6 +260,8 @@ class TaxiListController extends GetxController {
     }
 
     final myGen = ++_gen;
+    final target = to.value;
+    if (reset && target != null) unawaited(waysCheck.check(from: f, to: target, fromMyLocation: fromIsCurrent.value));
     if (reset) {
       _resetInFlight = true;
       loadFailed.value = false;

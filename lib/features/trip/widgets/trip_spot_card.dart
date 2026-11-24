@@ -1,13 +1,14 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:bakhli/design/design.dart';
 import 'package:bakhli/utils/spot_photo_url.dart';
 import '../models/trip_spot_category.dart';
 import '../models/trip_spot_model.dart';
 import '../trip_strings_spots_x.dart';
+import 'trip_city_tile.dart';
 import 'trip_spot_detail_sheet.dart';
 import 'trip_spot_row.dart';
 
-final _tone = ListingTone.indigo;
 const double _pillFont = 14;
 
 const double _padX = 18;
@@ -15,6 +16,15 @@ const double _padX = 18;
 double _side() => DS.s(14);
 
 EdgeInsets _outer() => EdgeInsets.fromLTRB(_side(), DS.s(28), _side(), DS.gv(16));
+
+List<Shadow> _shade() => [Shadow(color: Colors.black.withValues(alpha: Alpha.soft), offset: DS.shadowOffset(const Offset(0, 1)), blurRadius: DS.shadowBlur(3))];
+
+Color _inkOf(ListingTone t) {
+  if (identical(t, ListingTone.cA)) return ListingPalette.coral.text;
+  if (identical(t, ListingTone.cB)) return ListingPalette.indigo.text;
+  if (identical(t, ListingTone.cC)) return DesignColors.roseDeepStart;
+  return t.text;
+}
 
 class TripSpotCard extends StatelessWidget {
   final TripSpotModel spot;
@@ -26,10 +36,15 @@ class TripSpotCard extends StatelessWidget {
   final bool draft;
   final int? cityKey;
   final String? version;
+  final int index;
 
-  const TripSpotCard({super.key, required this.spot, required this.selected, this.onToggle, this.locked = false, this.subtitle, this.dimmed = false, this.draft = false, this.cityKey, this.version});
+  const TripSpotCard({super.key, required this.spot, required this.selected, this.onToggle, this.locked = false, this.subtitle, this.dimmed = false, this.draft = false, this.cityKey, this.version, this.index = 0});
 
   static double get mediaHeight => DS.s(180);
+
+  static ListingTone toneOf(int index) => TripCityTile.toneOf(index);
+
+  static Color inkOf(int index) => _inkOf(toneOf(index));
 
   @override
   Widget build(BuildContext context) {
@@ -44,44 +59,45 @@ class TripSpotCard extends StatelessWidget {
   }
 
   Widget _box(BuildContext context, double cardW, VoidCallback open) {
+    final tone = toneOf(index);
+    final ink = _inkOf(tone);
+    final pill = ListingTone(g1: tone.g1, g2: tone.g2, shadow: tone.shadow, haloBase: tone.haloBase, text: ink, button: ink);
+    final shade = _shade();
     final scaler = MediaQuery.textScalerOf(context);
     final narrow = MediaQuery.sizeOf(context).width < Form3D.narrow;
     final photo = spot.hasPhoto;
     final art = TripSpotLook.assetOf(spot.category);
     final headLeft = DS.s(photo ? 100 : _padX);
     final titleW = cardW - headLeft - DS.s(_padX);
-    final titleStyle = KitText.wholeWords(spot.title, Ink3D.text(narrow ? 18 : 20, FontWeight.w700, Ink3D.title, height: 1.2), titleW, scaler);
+    final titleStyle = KitText.wholeWords(spot.title, Ink3D.text(narrow ? 18 : 20, FontWeight.w700, DesignColors.surface, height: 1.2).copyWith(shadows: shade), titleW, scaler);
     final sub = subtitle ?? spot.description ?? '';
     final content = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: [
-        SizedBox(height: mediaHeight, child: photo ? _PhotoMedia(spot: spot) : _ArtMedia(asset: art, featured: spot.isFeatured)),
+        SizedBox(height: mediaHeight, child: photo ? _PhotoMedia(spot: spot) : _ArtMedia(asset: art, spot: spot)),
         Padding(
-          padding: DS.insets(l: photo ? 100 : _padX, t: 12, r: _padX, b: 4),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Padding(
-                padding: EdgeInsets.only(bottom: DS.s(2)),
-                child: Text(
-                  TripSpotCategory.label(spot.category).toUpperCase(),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Ink3D.text(10.5, FontWeight.w700, _tone.text, letterSpacing: 0.6),
-                ),
-              ),
-              Text(KitText.fitWords(spot.title, titleStyle, scaler, titleW - 1, 2), maxLines: 2, overflow: TextOverflow.ellipsis, style: titleStyle),
-            ],
+          padding: DS.insets(l: photo ? 100 : _padX, r: _padX),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: DS.s(36)),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text(KitText.fitWords(spot.title, titleStyle, scaler, titleW - 1, 2), maxLines: 2, overflow: TextOverflow.ellipsis, style: titleStyle),
+            ),
           ),
         ),
         if (sub.isNotEmpty)
           Padding(
-            padding: DS.insets(l: _padX, t: 6, r: _padX, b: 4),
-            child: Text(sub, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(12.5, FontWeight.w500, Ink3D.body.withValues(alpha: Alpha.high), height: 1.5)),
+            padding: DS.insets(l: _padX, t: 2, r: _padX, b: 4),
+            child: _Blurb(
+              text: sub,
+              style: Ink3D.text(12.5, FontWeight.w500, DesignColors.surface.withValues(alpha: Alpha.v92), height: 1.5).copyWith(shadows: shade),
+              moreStyle: Ink3D.text(12.5, FontWeight.w700, DesignColors.surface, height: 1.5).copyWith(shadows: shade),
+              onMore: open,
+            ),
           ),
         _ActionBar(
+          tone: pill,
           width: cardW - DS.s(_padX * 2),
           selected: selected,
           draft: draft,
@@ -93,18 +109,24 @@ class TripSpotCard extends StatelessWidget {
     );
     return Container(
       decoration: BoxDecoration(
-        color: DesignColors.surface,
+        gradient: tone.gradient,
         borderRadius: DS.br(kMealsRadius),
-        boxShadow: DS.shadows([BoxShadow(color: _tone.shadow.withValues(alpha: selected ? Alpha.v30 : Alpha.v22), offset: const Offset(0, 6), blurRadius: 16)]),
+        boxShadow: DS.shadows([BoxShadow(color: tone.shadow.withValues(alpha: selected ? Alpha.v30 : Alpha.v22), offset: const Offset(0, 6), blurRadius: 16)]),
       ),
       foregroundDecoration: selected
-          ? BoxDecoration(borderRadius: DS.br(kMealsRadius), border: Border.all(color: _tone.g2, width: DS.s(2.5), strokeAlign: BorderSide.strokeAlignOutside))
+          ? BoxDecoration(borderRadius: DS.br(kMealsRadius), border: Border.all(color: ink, width: DS.s(2.5), strokeAlign: BorderSide.strokeAlignOutside))
           : null,
       child: ClipRRect(
         borderRadius: DS.br(kMealsRadius),
         child: Stack(
           children: [
             content,
+            if (selected)
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: DecoratedBox(decoration: BoxDecoration(borderRadius: DS.br(kMealsRadius), border: Border.all(color: DesignColors.surface, width: DS.s(2)))),
+                ),
+              ),
             if (photo)
               Positioned(
                 left: DS.s(_padX),
@@ -117,6 +139,84 @@ class TripSpotCard extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class _Blurb extends StatefulWidget {
+  final String text;
+  final TextStyle style;
+  final TextStyle moreStyle;
+  final VoidCallback onMore;
+
+  const _Blurb({required this.text, required this.style, required this.moreStyle, required this.onMore});
+
+  static const int lines = 2;
+
+  @override
+  State<_Blurb> createState() => _BlurbState();
+}
+
+class _BlurbState extends State<_Blurb> {
+  late final TapGestureRecognizer _tap = TapGestureRecognizer()..onTap = () => widget.onMore();
+  Object? _key;
+  String? _cut;
+
+  @override
+  void dispose() {
+    _tap.dispose();
+    super.dispose();
+  }
+
+  bool _fits(InlineSpan span, double width, TextScaler scaler, TextDirection dir) {
+    final p = TextPainter(text: span, maxLines: _Blurb.lines, textDirection: dir, textScaler: scaler)..layout(maxWidth: width);
+    final ok = !p.didExceedMaxLines;
+    p.dispose();
+    return ok;
+  }
+
+  InlineSpan _span(String head, TextStyle base) => TextSpan(style: base, children: [TextSpan(text: '$head… '), TextSpan(text: TripStringsSpotsX.more, style: widget.moreStyle)]);
+
+  String? _measure(TextStyle base, double width, TextScaler scaler, TextDirection dir) {
+    final text = widget.text;
+    if (_fits(TextSpan(text: text, style: base), width, scaler, dir)) return null;
+    var lo = 0, hi = text.length;
+    while (lo < hi) {
+      final mid = (lo + hi + 1) ~/ 2;
+      if (_fits(_span(text.substring(0, mid).trimRight(), base), width, scaler, dir)) {
+        lo = mid;
+      } else {
+        hi = mid - 1;
+      }
+    }
+    var head = text.substring(0, lo);
+    if (lo < text.length && text[lo].trim().isNotEmpty) {
+      final space = head.lastIndexOf(' ');
+      if (space > 0) head = head.substring(0, space);
+    }
+    return head.trimRight();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scaler = MediaQuery.textScalerOf(context);
+    final dir = Directionality.of(context);
+    var base = DefaultTextStyle.of(context).style.merge(widget.style);
+    if (MediaQuery.boldTextOf(context)) base = base.merge(const TextStyle(fontWeight: FontWeight.bold));
+    return LayoutBuilder(builder: (context, c) {
+      final key = (widget.text, base, widget.moreStyle, c.maxWidth, scaler, dir);
+      if (key != _key) {
+        _key = key;
+        _cut = _measure(base, c.maxWidth, scaler, dir);
+      }
+      final cut = _cut;
+      if (cut == null) return Text(widget.text, maxLines: _Blurb.lines, overflow: TextOverflow.ellipsis, style: widget.style);
+      return Text.rich(
+        TextSpan(children: [TextSpan(text: '$cut… '), TextSpan(text: TripStringsSpotsX.more, style: widget.moreStyle, recognizer: _tap)]),
+        maxLines: _Blurb.lines,
+        overflow: TextOverflow.ellipsis,
+        style: widget.style,
+      );
+    });
   }
 }
 
@@ -150,7 +250,7 @@ class _PhotoMedia extends StatelessWidget {
           ),
         ),
         if (extra > 0) Positioned(right: DS.s(12), top: DS.s(12), child: TripPhotoCount(count: extra)),
-        if (spot.isFeatured) const _FeaturedSlot(),
+        _BadgeRow(spot: spot),
       ],
     );
   }
@@ -158,38 +258,37 @@ class _PhotoMedia extends StatelessWidget {
 
 class _ArtMedia extends StatelessWidget {
   final String asset;
-  final bool featured;
+  final TripSpotModel spot;
 
-  const _ArtMedia({required this.asset, required this.featured});
+  const _ArtMedia({required this.asset, required this.spot});
 
   @override
-  Widget build(BuildContext context) => DecoratedBox(
-        decoration: BoxDecoration(gradient: _tone.gradient),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            Positioned(
-              left: DS.s(20),
-              top: DS.s(34),
-              width: DS.s(112),
-              height: DS.s(112),
-              child: IgnorePointer(
-                child: DecoratedBox(decoration: BoxDecoration(shape: BoxShape.circle, color: DesignColors.surface.withValues(alpha: Alpha.v24))),
-              ),
+  Widget build(BuildContext context) => Stack(
+        fit: StackFit.expand,
+        children: [
+          Positioned(
+            left: DS.s(20),
+            top: DS.s(34),
+            width: DS.s(112),
+            height: DS.s(112),
+            child: IgnorePointer(
+              child: DecoratedBox(decoration: BoxDecoration(shape: BoxShape.circle, color: DesignColors.surface.withValues(alpha: Alpha.v24))),
             ),
-            Positioned(
-              left: DS.s(24),
-              top: DS.s(38),
-              child: IgnorePointer(child: ExcludeSemantics(child: Art3D(asset: asset, size: 104))),
-            ),
-            if (featured) const _FeaturedSlot(),
-          ],
-        ),
+          ),
+          Positioned(
+            left: DS.s(24),
+            top: DS.s(38),
+            child: IgnorePointer(child: ExcludeSemantics(child: Art3D(asset: asset, size: 104))),
+          ),
+          _BadgeRow(spot: spot),
+        ],
       );
 }
 
-class _FeaturedSlot extends StatelessWidget {
-  const _FeaturedSlot();
+class _BadgeRow extends StatelessWidget {
+  final TripSpotModel spot;
+
+  const _BadgeRow({required this.spot});
 
   @override
   Widget build(BuildContext context) => Positioned(
@@ -198,29 +297,61 @@ class _FeaturedSlot extends StatelessWidget {
         right: DS.s(60),
         child: Align(
           alignment: Alignment.centerLeft,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: DesignColors.surface.withValues(alpha: Alpha.v92),
-              borderRadius: DS.circular(14),
-              boxShadow: DS.shadows([BoxShadow(color: Colors.black.withValues(alpha: Alpha.soft), offset: const Offset(0, 2), blurRadius: 8)]),
-            ),
-            child: Padding(
-              padding: DS.insets(l: 10, t: 4, r: 12, b: 4),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.star_rounded, size: DS.s(14), color: Ink3D.title),
-                  SizedBox(width: DS.s(4)),
-                  Flexible(child: Text(TripStringsSpotsX.featured, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(12, FontWeight.w700, Ink3D.title))),
-                ],
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Flexible(
+                child: _Badge(
+                  padding: DS.insets(l: 12, t: 4, r: 12, b: 4),
+                  child: Text(
+                    TripSpotCategory.label(spot.category).toUpperCase(),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Ink3D.text(10.5, FontWeight.w700, Ink3D.title, letterSpacing: 0.6),
+                  ),
+                ),
               ),
-            ),
+              if (spot.isFeatured) ...[
+                SizedBox(width: DS.s(6)),
+                Flexible(
+                  child: _Badge(
+                    padding: DS.insets(l: 10, t: 4, r: 12, b: 4),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.star_rounded, size: DS.s(14), color: Ink3D.title),
+                        SizedBox(width: DS.s(4)),
+                        Flexible(child: Text(TripStringsSpotsX.featured, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(12, FontWeight.w700, Ink3D.title))),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ],
           ),
         ),
       );
 }
 
+class _Badge extends StatelessWidget {
+  final EdgeInsets padding;
+  final Widget child;
+
+  const _Badge({required this.padding, required this.child});
+
+  @override
+  Widget build(BuildContext context) => DecoratedBox(
+        decoration: BoxDecoration(
+          color: DesignColors.surface.withValues(alpha: Alpha.v92),
+          borderRadius: DS.circular(14),
+          boxShadow: DS.shadows([BoxShadow(color: Colors.black.withValues(alpha: Alpha.soft), offset: const Offset(0, 2), blurRadius: 8)]),
+        ),
+        child: Padding(padding: padding, child: child),
+      );
+}
+
 class _ActionBar extends StatelessWidget {
+  final ListingTone tone;
   final double width;
   final bool selected;
   final bool draft;
@@ -228,30 +359,31 @@ class _ActionBar extends StatelessWidget {
   final VoidCallback? onToggle;
   final VoidCallback onDetails;
 
-  const _ActionBar({required this.width, required this.selected, required this.draft, required this.dimmed, required this.onToggle, required this.onDetails});
+  const _ActionBar({required this.tone, required this.width, required this.selected, required this.draft, required this.dimmed, required this.onToggle, required this.onDetails});
 
-  static TextStyle get _label => Ink3D.text(_pillFont, FontWeight.w700, _tone.text);
+  static TextStyle label(ListingTone tone) => Ink3D.text(_pillFont, FontWeight.w700, tone.text);
 
-  static double _pillW(String text, TextScaler scaler) => DS.s(18) * 2 + DS.s(18) + DS.s(8) + KitText.widthOf(text, _label, scaler);
+  static double _pillW(String text, TextStyle style, TextScaler scaler) => DS.s(18) * 2 + DS.s(18) + DS.s(8) + KitText.widthOf(text, style, scaler);
 
-  static double _detailsW(TextScaler scaler) => DS.s(12) + DS.s(24) + DS.s(8) + KitText.widthOf(TripSpotRow.details, _label, scaler) + DS.s(16);
+  static double _detailsW(TextStyle style, TextScaler scaler) => DS.s(12) + DS.s(24) + DS.s(8) + KitText.widthOf(TripSpotRow.details, style, scaler) + DS.s(16);
 
   @override
   Widget build(BuildContext context) {
     final scaler = MediaQuery.textScalerOf(context);
+    final style = label(tone);
     final circle = draft && !dimmed;
     final soft = selected && !circle;
-    final label = soft ? TripStringsSpotsX.addedToTrip : TripStringsSpotsX.addToTrip;
-    final rightW = circle ? DS.s(KitMetrics.touch) : _pillW(label, scaler);
-    final detailsW = _detailsW(scaler);
+    final text = soft ? TripStringsSpotsX.addedToTrip : TripStringsSpotsX.addToTrip;
+    final rightW = circle ? DS.s(KitMetrics.touch) : _pillW(text, style, scaler);
+    final detailsW = _detailsW(style, scaler);
     final stacked = detailsW + DS.s(12) + rightW > width;
     final toggle = draft && dimmed ? null : onToggle;
     final right = circle
-        ? _CircleToggle(selected: selected, onTap: toggle)
+        ? _CircleToggle(tone: tone, selected: selected, onTap: toggle)
         : soft
-            ? _SoftPill(onTap: toggle)
-            : _hit(GradientPillButton(tone: _tone, label: TripStringsSpotsX.addToTrip, icon: Icons.add_rounded, height: KitMetrics.touch, fontSize: _pillFont, expand: false, onTap: toggle), toggle);
-    final details = _Details(onTap: onDetails);
+            ? _SoftPill(tone: tone, onTap: toggle)
+            : _hit(WhitePillButton(tone: tone, label: TripStringsSpotsX.addToTrip, icon: Icons.add_rounded, height: KitMetrics.touch, fontSize: _pillFont, expand: false, onGradient: true, onTap: toggle), toggle);
+    final details = _Details(tone: tone, onTap: onDetails);
     return Padding(
       padding: DS.insets(l: _padX, t: 14, r: _padX, b: 16),
       child: stacked
@@ -283,9 +415,10 @@ Widget _hit(Widget child, VoidCallback? onTap) => GestureDetector(
     );
 
 class _Details extends StatelessWidget {
+  final ListingTone tone;
   final VoidCallback onTap;
 
-  const _Details({required this.onTap});
+  const _Details({required this.tone, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -298,21 +431,21 @@ class _Details extends StatelessWidget {
         decoration: BoxDecoration(
           color: DesignColors.surface,
           borderRadius: BorderRadius.circular(h / 2),
-          border: Border.all(color: _tone.haloBase.withValues(alpha: Alpha.v24), width: DS.s(1.5)),
+          border: Border.all(color: tone.haloBase.withValues(alpha: Alpha.v24), width: DS.s(1.5)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             DecoratedBox(
-              decoration: BoxDecoration(color: _tone.tint, shape: BoxShape.circle),
+              decoration: BoxDecoration(color: tone.tint, shape: BoxShape.circle),
               child: SizedBox(
                 width: DS.s(24),
                 height: DS.s(24),
-                child: Icon(Icons.info_outline_rounded, size: DS.s(13), color: _tone.text),
+                child: Icon(Icons.info_outline_rounded, size: DS.s(13), color: tone.text),
               ),
             ),
             SizedBox(width: DS.s(8)),
-            Text(TripSpotRow.details, maxLines: 1, softWrap: false, style: _ActionBar._label),
+            Text(TripSpotRow.details, maxLines: 1, softWrap: false, style: _ActionBar.label(tone)),
           ],
         ),
       ),
@@ -321,9 +454,10 @@ class _Details extends StatelessWidget {
 }
 
 class _SoftPill extends StatelessWidget {
+  final ListingTone tone;
   final VoidCallback? onTap;
 
-  const _SoftPill({this.onTap});
+  const _SoftPill({required this.tone, this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -335,7 +469,7 @@ class _SoftPill extends StatelessWidget {
         selected: true,
         exclude: true,
         child: DecoratedBox(
-          decoration: BoxDecoration(color: _tone.tint, borderRadius: BorderRadius.circular(h / 2)),
+          decoration: BoxDecoration(color: DesignColors.surface.withValues(alpha: Alpha.v92), borderRadius: BorderRadius.circular(h / 2)),
           child: SizedBox(
             height: h,
             child: Padding(
@@ -343,9 +477,9 @@ class _SoftPill extends StatelessWidget {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.check_rounded, size: DS.s(18), color: _tone.text),
+                  Icon(Icons.check_rounded, size: DS.s(18), color: tone.text),
                   SizedBox(width: DS.s(8)),
-                  Text(TripStringsSpotsX.addedToTrip, maxLines: 1, softWrap: false, style: _ActionBar._label),
+                  Text(TripStringsSpotsX.addedToTrip, maxLines: 1, softWrap: false, style: _ActionBar.label(tone)),
                 ],
               ),
             ),
@@ -358,10 +492,11 @@ class _SoftPill extends StatelessWidget {
 }
 
 class _CircleToggle extends StatelessWidget {
+  final ListingTone tone;
   final bool selected;
   final VoidCallback? onTap;
 
-  const _CircleToggle({required this.selected, this.onTap});
+  const _CircleToggle({required this.tone, required this.selected, this.onTap});
 
   @override
   Widget build(BuildContext context) => Tap3D(
@@ -374,11 +509,11 @@ class _CircleToggle extends StatelessWidget {
           height: DS.s(KitMetrics.touch),
           child: Center(
             child: DecoratedBox(
-              decoration: BoxDecoration(color: selected ? _tone.button : _tone.tint, shape: BoxShape.circle),
+              decoration: BoxDecoration(color: selected ? tone.text : DesignColors.surface, shape: BoxShape.circle, border: selected ? Border.all(color: DesignColors.surface, width: DS.s(2)) : null),
               child: SizedBox(
                 width: DS.s(26),
                 height: DS.s(26),
-                child: Icon(selected ? Icons.check_rounded : Icons.circle_outlined, size: DS.s(14), color: selected ? DesignColors.surface : _tone.text),
+                child: Icon(selected ? Icons.check_rounded : Icons.circle_outlined, size: DS.s(14), color: selected ? DesignColors.surface : tone.text),
               ),
             ),
           ),

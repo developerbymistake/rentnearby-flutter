@@ -21,13 +21,12 @@ class OverviewTravellersCard extends StatelessWidget {
         key: const ValueKey('overview_travellers_card'),
         tone: BuddyLook.teal,
         asset: BuddyArt.panda,
-        title: SharingStrings.travellersTitle,
-        chipWidget: TravellerDots(people: sharing.firstTravellers),
-        line: alone ? SharingStrings.onlyYou : SharingStrings.joinedLine(sharing.travellerCount, sharing.pendingInvites),
+        title: SharingStrings.buddyInviteTitle,
+        chipWidget: alone ? null : TravellerDots(people: sharing.firstTravellers),
+        line: alone ? SharingStrings.inviteFriendsLine : SharingStrings.joinedLine(sharing.travellerCount, sharing.pendingInvites),
         button: alone ? SharingStrings.invite : SharingStrings.manage,
-        buttonKey: const ValueKey('overview_travellers_button'),
         onTap: alone ? onInvite : onManage,
-        compact: true,
+        wholeCard: true,
       );
 }
 

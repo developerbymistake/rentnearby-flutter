@@ -128,6 +128,8 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> with TickerProvider
 
   bool get _planFull => _routes.length >= _planMax;
 
+  bool get _extraBlocked => PlanGate.loaded && _routes.isNotEmpty && _planFull;
+
   // Mirrors the server rule: adding above the plan value is refused, keeping an over-limit set passes.
   Future<bool> _planAllowsSave() async {
     if (!PlanGate.loaded) return true;
@@ -159,7 +161,11 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> with TickerProvider
     if (!Get.isRegistered<PlanController>()) return;
     final pc = Get.find<PlanController>();
     _planWorker = everAll([pc.loaded, pc.myPlan], (_) {
-      if (mounted) setState(() {});
+      if (!mounted) return;
+      // The blank extra form was opened on the pre-plan limit; close it once the real limit says full.
+      setState(() {
+        if (_formOpen && _editingIndex == null && _formBlank && _extraBlocked) _formOpen = false;
+      });
     });
   }
 
@@ -177,7 +183,7 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> with TickerProvider
       ));
     }
     _watchPlan();
-    _formOpen = _routes.length < _max && !(PlanGate.canUpgrade && _routes.isNotEmpty && _planFull);
+    _formOpen = _routes.length < _max && !_extraBlocked;
     _from = _defaultFrom;
     _syncRateFields();
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -377,6 +383,10 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> with TickerProvider
   }
 
   void _addAnother() {
+    if (_addPlanFull) {
+      if (PlanGate.canUpgrade) PlanGate.showLimit(context, TaxiGateStrings.routeGate());
+      return;
+    }
     if (_count >= _max) {
       AppToast.warning('You can add up to 10 routes');
       return;
@@ -513,7 +523,7 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> with TickerProvider
                         controller: _anim,
                         index: 2,
                         count: 5,
-                        child: Column(children: [if (_formOpen) _form()]),
+                        child: Column(children: [if (_formOpen) _form(), _addRow()]),
                       ),
                       SetupEntrance(controller: _anim, index: 3, count: 5, child: _tipRow()),
                       SetupEntrance(controller: _anim, index: 4, count: 5, child: _localRateCard()),
@@ -527,7 +537,7 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> with TickerProvider
                 tone: _tone,
                 top: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                   const ToastDock(),
-                  if (_formOpen && PlanGate.loaded)
+                  if (PlanGate.loaded)
                     Padding(
                       padding: EdgeInsets.only(bottom: DS.gv(8)),
                       child: Text(
@@ -541,7 +551,6 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> with TickerProvider
                 primaryLabel: _formOpen ? TaxiSetupStrings.saveRoute : TaxiSetupStrings.save,
                 primaryLoading: _ctrl.isSaving.value,
                 onPrimary: _ctrl.isSaving.value ? null : _save,
-                bottom: _formOpen ? null : _addRow(),
               )),
         ),
         Obx(() => _ctrl.isSaving.value
@@ -743,21 +752,20 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> with TickerProvider
     );
   }
 
+  bool get _addPlanFull => PlanGate.loaded && _count >= _planMax;
+
   Widget _addRow() {
     final n = _count;
-    final enabled = n < _max;
-    final soft = PlanGate.canUpgrade && _planFull && !_formOpen;
-    return Opacity(
-      opacity: enabled ? 1 : 0.5,
-      child: KeyedSubtree(
-        key: soft ? const ValueKey('routes_add_locked') : null,
-        child: DashedAddRow3D(
-          tone: _tone,
-          label: TaxiGateStrings.addAnother,
-          margin: EdgeInsets.only(top: DS.gv(10)),
-          trailing: !enabled ? 'Limit reached' : (soft ? TaxiSetupStrings.plus : (PlanGate.loaded ? '$n of $_planMax' : null)),
-          onTap: _addAnother,
-        ),
+    final soft = _addPlanFull && PlanGate.canUpgrade;
+    final enabled = soft || (!_addPlanFull && n < _max);
+    return KeyedSubtree(
+      key: soft ? const ValueKey('routes_add_locked') : null,
+      child: DashedAddRow3D(
+        tone: _tone,
+        label: TaxiGateStrings.addAnother,
+        trailing: soft ? TaxiSetupStrings.plus : (PlanGate.loaded ? '$n of $_planMax' : (n >= _max ? 'Limit reached' : null)),
+        enabled: enabled,
+        onTap: _addAnother,
       ),
     );
   }

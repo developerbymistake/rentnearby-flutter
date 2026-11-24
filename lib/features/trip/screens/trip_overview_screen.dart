@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:bakhli/design/design.dart';
 import 'package:bakhli/design/extra/trip_customize_look.dart';
 import 'package:bakhli/design/extra/trip_plan_look.dart';
@@ -93,7 +95,6 @@ class TripOverviewScreen extends StatelessWidget {
     this.travellerCount,
     this.extraCards = const [],
     this.extraMenuItems = const [],
-    this.compactCards = false,
     this.progressLine,
     this.showProgress = true,
   });
@@ -102,7 +103,6 @@ class TripOverviewScreen extends StatelessWidget {
   final int? travellerCount;
   final List<Widget> extraCards;
   final List<OverviewMenuItem> extraMenuItems;
-  final bool compactCards;
   final String? progressLine;
   final bool showProgress;
   final TripModel trip;
@@ -119,6 +119,24 @@ class TripOverviewScreen extends StatelessWidget {
   final TripPart? highlight;
 
   static const double _maxWidth = 640;
+  static const double _pad = 16;
+
+  double _cardHeight(BuildContext context, BoxConstraints box, double gap) {
+    final n = 2 + (showStay ? 1 : 0) + extraCards.length;
+    final t = MediaQuery.textScalerOf(context);
+    final narrow = MediaQuery.sizeOf(context).width < Form3D.narrow;
+    final line = TripStringsOverview.tripLine(trip.legCount, trip.dayCount, travellerCount ?? trip.plan.settings.peopleCount);
+    final column = math.min(box.maxWidth, _maxWidth) - DS.s(18 * 2);
+    final inner = column - DS.s(12 + 16) - DS.s(1) * 2 - DS.s(narrow ? 48 : 58) - DS.gh(12) - (showProgress ? DS.gh(12) + DS.s(50) : 0);
+    final base = DefaultTextStyle.of(context).style;
+    final title = KitText.heightOf(displayTitle(trip), base.merge(Ink3D.text(17, FontWeight.w700, TripCustomizeLook.tripCardName)), t, inner, 2);
+    final sub = KitText.heightOf(line, base.merge(Ink3D.text(12.5, FontWeight.w400, TripCustomizeLook.tripCardSub, height: 1.5)), t, inner, 2);
+    final tripText = title + sub + (showProgress ? DS.gv(8) + DS.s(10) + DS.gv(6) : 0);
+    final tripCard = DS.s(12 + 12) + DS.s(1) * 2 + math.max(DS.s(narrow ? 48 : 58), tripText);
+    final pausedLine = paused ? DS.gv(10) + KitText.heightOf(TripStringsOverview.paused, Ink3D.text(13, FontWeight.w600, Ink3D.sub), t, column, 6) : 0.0;
+    final free = box.maxHeight - DS.s(_pad * 2) - tripCard - DS.gv(gap) * n - pausedLine;
+    return math.max(free / n, DS.s(100));
+  }
 
   static TripPart? highlightOf(TripParts parts, {required bool showStay}) {
     final next = parts.next;
@@ -164,7 +182,7 @@ class TripOverviewScreen extends StatelessWidget {
     // Paused blocks only a new request; an existing request or booking can still be opened.
     final taxiBlocked = paused && !taxi.hasRequest;
     final indigo = ListingTone.indigo;
-    final gap = compactCards ? 12.0 : 16.0;
+    const gap = 12.0;
     return Scaffold(
       backgroundColor: DesignColors.scaffold,
       body: Column(
@@ -175,88 +193,94 @@ class TripOverviewScreen extends StatelessWidget {
               onBack: onBack ?? () => Navigator.maybePop(context),
               menu: _menu(),
               subtitle: subtitle,
-              bottom: _TripLine(trip: trip, travellerCount: travellerCount),
             ),
           ),
           Expanded(
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Center(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: _maxWidth),
-                      child: Padding(
-                        padding: DS.insets(l: 18, t: 20, r: 18, b: 40),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                      if (showProgress) ...[
-                        TripOverviewProgress(parts: parts, line: progressLine),
-                        Gap.v(gap),
-                      ],
-                      TripHeroCard(
-                        key: const ValueKey('overview_itinerary_card'),
-                        tone: indigo,
-                        asset: TravelIcon.route,
-                        title: TripStringsOverview.itinerary,
-                        chip: TripStringsOverview.saved,
-                        line: TripStringsOverview.planLine(trip.dayCount, trip.spotCount),
-                        button: TripStringsOverview.view,
-                        buttonKey: const ValueKey('overview_itinerary_button'),
-                        onTap: onViewPlan,
-                        compact: compactCards,
-                      ),
-                      Gap.v(gap),
-                      Opacity(
-                        opacity: taxiBlocked ? 0.5 : 1,
-                        child: TripHeroCard(
-                          key: const ValueKey('overview_taxi_card'),
-                          tone: ListingTone.sunrise,
-                          asset: TravelIcon.taxi,
-                          title: TripStringsOverview.taxi,
-                          chip: taxi.chip,
-                          line: TripStringsOverview.taxiLine,
-                          button: taxi.button,
-                          buttonKey: const ValueKey('overview_taxi_button'),
-                          highlight: highlight == TripPart.taxi && !taxiBlocked,
-                          onTap: taxiBlocked ? null : () => onTaxi(taxi),
-                          compact: compactCards,
-                        ),
-                      ),
-                      if (paused) ...[
-                        Gap.v(10),
-                        Text(
-                          TripStringsOverview.paused,
-                          key: const ValueKey('overview_paused_line'),
-                          textAlign: TextAlign.center,
-                          style: Ink3D.text(13, FontWeight.w600, Ink3D.sub),
-                        ),
-                      ],
-                      if (showStay) ...[
-                        Gap.v(gap),
-                        TripHeroCard(
-                          key: const ValueKey('overview_stay_card'),
-                          tone: ListingTone.forest,
-                          asset: TravelIcon.stay,
-                          title: TripStringsOverview.stay,
-                          chip: stay.chip,
-                          line: stay.line,
-                          button: stay.button,
-                          buttonKey: const ValueKey('overview_stay_button'),
-                          highlight: highlight == TripPart.stay,
-                          onTap: onStay == null ? null : () => onStay!(stay),
-                          compact: compactCards,
-                        ),
-                      ],
-                      for (final card in extraCards) ...[Gap.v(gap), card],
+            child: LayoutBuilder(
+              builder: (context, box) => TripHeroCardHeight(
+                minHeight: _cardHeight(context, box, gap),
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Center(
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: _maxWidth),
+                          child: Padding(
+                            padding: DS.insets(l: 18, t: _pad, r: 18, b: _pad),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                          TripOverviewProgress(
+                            key: const ValueKey('overview_trip_card'),
+                            parts: parts,
+                            title: displayTitle(trip),
+                            line: TripStringsOverview.tripLine(trip.legCount, trip.dayCount, travellerCount ?? trip.plan.settings.peopleCount),
+                            status: progressLine,
+                            showProgress: showProgress,
+                          ),
+                          Gap.v(gap),
+                          TripHeroCard(
+                            key: const ValueKey('overview_itinerary_card'),
+                            tone: indigo,
+                            asset: TravelIcon.route,
+                            title: TripStringsOverview.itinerary,
+                            chip: TripStringsOverview.saved,
+                            line: TripStringsOverview.planLine(trip.dayCount, trip.spotCount),
+                            button: TripStringsOverview.view,
+                            onTap: onViewPlan,
+                            wholeCard: true,
+                          ),
+                          Gap.v(gap),
+                          Opacity(
+                            opacity: taxiBlocked ? 0.5 : 1,
+                            child: TripHeroCard(
+                              key: const ValueKey('overview_taxi_card'),
+                              tone: ListingTone.sunrise,
+                              asset: TravelIcon.taxi,
+                              title: taxi.hasRequest ? TripStringsOverview.taxi : TripStringsOverview.findTaxi,
+                              chip: taxi.hasRequest ? taxi.chip : null,
+                              line: TripStringsOverview.taxiLine,
+                              button: taxi.button,
+                              highlight: highlight == TripPart.taxi && !taxiBlocked,
+                              onTap: taxiBlocked ? null : () => onTaxi(taxi),
+                              wholeCard: true,
+                            ),
+                          ),
+                          if (paused) ...[
+                            Gap.v(10),
+                            Text(
+                              TripStringsOverview.paused,
+                              key: const ValueKey('overview_paused_line'),
+                              textAlign: TextAlign.center,
+                              style: Ink3D.text(13, FontWeight.w600, Ink3D.sub),
+                            ),
                           ],
+                          if (showStay) ...[
+                            Gap.v(gap),
+                            TripHeroCard(
+                              key: const ValueKey('overview_stay_card'),
+                              tone: ListingTone.forest,
+                              asset: TravelIcon.stay,
+                              title: stay.added ? TripStringsOverview.stay : TripStringsOverview.bookYourStay,
+                              chip: stay.added ? stay.chip : null,
+                              line: stay.line,
+                              button: stay.button,
+                              highlight: highlight == TripPart.stay,
+                              onTap: onStay == null ? null : () => onStay!(stay),
+                              wholeCard: true,
+                            ),
+                          ],
+                          for (final card in extraCards) ...[Gap.v(gap), card],
+                              ],
+                            ),
+                          ),
                         ),
                       ),
-                    ),
+                    ],
                   ),
-                ],
+                ),
               ),
             ),
           ),
@@ -273,12 +297,11 @@ class TripOverviewScreen extends StatelessWidget {
 }
 
 class _OverviewHeader extends StatelessWidget {
-  const _OverviewHeader({required this.onBack, required this.menu, required this.bottom, this.subtitle});
+  const _OverviewHeader({required this.onBack, required this.menu, this.subtitle});
 
   final String? subtitle;
   final VoidCallback onBack;
   final Widget menu;
-  final Widget bottom;
 
   @override
   Widget build(BuildContext context) {
@@ -324,72 +347,6 @@ class _OverviewHeader extends StatelessWidget {
                     ),
                   ),
                   menu,
-                ],
-              ),
-            ),
-            bottom,
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _TripLine extends StatelessWidget {
-  const _TripLine({required this.trip, this.travellerCount});
-
-  final TripModel trip;
-  final int? travellerCount;
-
-  @override
-  Widget build(BuildContext context) {
-    final line = TripStringsOverview.tripLine(trip.legCount, trip.dayCount, travellerCount ?? trip.plan.settings.peopleCount);
-    final narrow = MediaQuery.sizeOf(context).width < Form3D.narrow;
-    return Padding(
-      padding: EdgeInsets.only(top: DS.gv(16)),
-      child: Container(
-        padding: DS.sym(h: 16, v: 14),
-        decoration: BoxDecoration(
-          gradient: TripCustomizeLook.tripCardGradient,
-          border: Border.all(color: TripCustomizeLook.tripCardBorder, width: DS.s(1)),
-          borderRadius: DS.br(TripCustomizeLook.tripLineRadius),
-          boxShadow: DS.shadows(TripCustomizeLook.tripCardShadow),
-        ),
-        child: Row(
-          children: [
-            SizedBox(
-              width: DS.s(narrow ? 52 : 72),
-              height: DS.s(narrow ? 52 : 72),
-              child: Center(
-                child: Art3D(
-                  asset: ListingArt.luggage,
-                  size: narrow ? 38 : 50,
-                  halo: narrow ? 52 : 72,
-                  haloColor: DesignColors.surface,
-                  shadowBlur: 4,
-                  shadowOffset: const Offset(2, 3),
-                ),
-              ),
-            ),
-            Gap.h(14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    TripOverviewScreen.displayTitle(trip),
-                    key: const ValueKey('overview_trip_name'),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: Ink3D.text(17, FontWeight.w700, TripCustomizeLook.tripCardName),
-                  ),
-                  Text(
-                    line,
-                    key: const ValueKey('overview_trip_line'),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: Ink3D.text(12.5, FontWeight.w400, TripCustomizeLook.tripCardSub, height: 1.5),
-                  ),
                 ],
               ),
             ),

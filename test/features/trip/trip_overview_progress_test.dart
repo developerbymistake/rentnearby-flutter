@@ -48,9 +48,12 @@ Widget _screen(TripParts parts, {bool showStay = true}) => TripOverviewScreen(
       onStay: (_) {},
     );
 
-Widget _card(TripParts parts) => Scaffold(body: Padding(padding: const EdgeInsets.all(16), child: TripOverviewProgress(parts: parts)));
-
-String _line(WidgetTester t) => t.widget<Text>(find.byKey(const ValueKey('overview_progress_line'))).data!;
+Widget _card(TripParts parts, {bool showProgress = true}) => Scaffold(
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: TripOverviewProgress(parts: parts, title: 'Hills', line: '1 city · 3 days · 2 travellers', showProgress: showProgress),
+      ),
+    );
 
 bool _highlighted(WidgetTester t, String card) => find
     .descendant(
@@ -75,10 +78,12 @@ void main() {
       testWidgets(e.key, (t) async {
         final (parts, pct, line, ticks) = e.value;
         await pumpAtSize(t, _card(parts), phoneSize);
-        expect(_line(t), line);
         expect(find.text('$pct%'), findsOneWidget);
         expect(find.byKey(const ValueKey('overview_progress_tick')), findsNWidgets(ticks));
-        expect(find.bySemanticsLabel(RegExp('^Plan progress, $pct percent')), findsOneWidget);
+        expect(find.bySemanticsLabel(RegExp('^${RegExp.escape('Plan progress, $pct percent. $line')}')), findsOneWidget);
+        expect(find.text('Hills'), findsOneWidget);
+        expect(find.text('1 city · 3 days · 2 travellers'), findsOneWidget);
+        expect(find.text(line), findsNothing);
       });
     }
   });
@@ -91,6 +96,15 @@ void main() {
   });
 
   testFiveSizes('progress card fits at text scale 1.3', () => _card(_parts(_o, _o)), textScale: 1.3);
+
+  testWidgets('shared trip keeps the name and line without bars and ring', (t) async {
+    await pumpAtSize(t, _card(_parts(_o, _o), showProgress: false), phoneSize);
+    expect(find.text('Hills'), findsOneWidget);
+    expect(find.text('1 city · 3 days · 2 travellers'), findsOneWidget);
+    expect(find.byKey(const ValueKey('overview_progress_card')), findsNothing);
+    expect(find.byKey(const ValueKey('overview_progress_seg_taxi')), findsNothing);
+    expect(find.byKey(const ValueKey('overview_progress_percent')), findsNothing);
+  });
 
   testFiveSizes('overview puts the card above the itinerary and keeps the bottom button', () => _screen(_parts(_o, _o)),
       check: (t, _) async {

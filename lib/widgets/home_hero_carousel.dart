@@ -204,7 +204,7 @@ class _HeroSlide extends StatelessWidget {
   const _HeroSlide({required this.slide, required this.isOwner});
 
   static ListingTone toneOf(_Slide slide) => switch (slide) {
-    _Slide.trip => ListingTone.sunrise,
+    _Slide.trip => ListingTone.indigo,
     _Slide.stay => ListingTone.forest,
     _Slide.taxi => ListingTone.coral,
   };
@@ -225,6 +225,8 @@ class _HeroSlide extends StatelessWidget {
     _ => ('Need a taxi?', 'Find a taxi', 'Local taxis near you'),
   };
 
+  static String seekerActionOf(_Slide slide) => slide == _Slide.stay ? SeekerHomeStrings.browseStays : SeekerHomeStrings.seeTaxis;
+
   static String ownerTitleOf(_Slide slide) => slide == _Slide.stay ? 'List your stay' : 'List your taxi';
 
   static String ownerRouteOf(_Slide slide) => slide == _Slide.stay ? AppRoutes.myStays : AppRoutes.myTaxi;
@@ -242,6 +244,8 @@ class _HeroSlide extends StatelessWidget {
       title: isOwner ? ownerTitleOf(slide) : seekerTitle,
       subtitle: isOwner ? 'Grow your reach' : seekerSubtitle,
       trailing: WorkoutTrailing.arrow,
+      actionLabel: isOwner ? null : seekerActionOf(slide),
+      minHeight: SeekerTripCardView.minHeight,
       semanticsLabel: isOwner ? ownerTitleOf(slide) : seekerTitle,
       onTap: isOwner
           ? () => Get.toNamed(ownerRouteOf(slide))

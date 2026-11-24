@@ -47,7 +47,6 @@ class _HostState extends State<_Host> {
           travellerCount: x.travellerCount,
           extraCards: x.extraCards,
           extraMenuItems: x.extraMenuItems,
-          compactCards: x.compactCards,
           progressLine: x.progressLine,
           showProgress: x.showProgress,
         );
@@ -88,7 +87,7 @@ void main() {
     await _pump(t, trip());
     expect(find.byKey(_travellers), findsOneWidget);
     expect(find.byKey(_expenses), findsOneWidget);
-    expect(find.text(SharingStrings.onlyYou), findsOneWidget);
+    expect(find.text(SharingStrings.inviteFriendsLine), findsOneWidget);
     expect(calls, 1);
     await t.tap(find.byKey(const ValueKey('overview_menu')));
     await t.pump(const Duration(milliseconds: 400));
@@ -103,7 +102,7 @@ void main() {
     await t.pump();
 
     expect(identical(before, t.element(find.byKey(_travellers))), isTrue);
-    expect(find.text(SharingStrings.onlyYou), findsNothing);
+    expect(find.text(SharingStrings.inviteFriendsLine), findsNothing);
     t.state<_HostState>(find.byType(_Host)).rebuild();
     await t.pump();
     expect(calls, 1);

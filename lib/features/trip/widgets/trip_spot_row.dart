@@ -16,8 +16,9 @@ class TripSpotRow extends StatelessWidget {
   final bool draft;
   final int? cityKey;
   final String? version;
+  final int index;
 
-  const TripSpotRow({super.key, required this.spot, required this.selected, this.onToggle, this.locked = false, this.subtitle, this.dimmed = false, this.draft = false, this.cityKey, this.version});
+  const TripSpotRow({super.key, required this.spot, required this.selected, this.onToggle, this.locked = false, this.subtitle, this.dimmed = false, this.draft = false, this.cityKey, this.version, this.index = 0});
 
   static const String details = 'Details';
 
@@ -32,6 +33,7 @@ class TripSpotRow extends StatelessWidget {
         draft: draft,
         cityKey: cityKey,
         version: version,
+        index: index,
       );
 }
 

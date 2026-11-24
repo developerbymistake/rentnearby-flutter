@@ -32,7 +32,7 @@ import '../widgets/requests_tab.dart';
 import '../widgets/trip_pick_sheet.dart';
 
 class BuddiesScreen extends StatefulWidget {
-  const BuddiesScreen({super.key, this.tab = 'buddies', this.query, this.source, this.api = const BuddiesApi(), this.tripApi = const TripMembersApi()});
+  const BuddiesScreen({super.key, this.tab = 'find', this.query, this.source, this.api = const BuddiesApi(), this.tripApi = const TripMembersApi()});
 
   final String tab;
   final String? query;
@@ -42,8 +42,8 @@ class BuddiesScreen extends StatefulWidget {
 
   static int tabIndex(String tab) => switch (tab) {
         'requests' => BuddiesTab.requests,
-        'find' => BuddiesTab.find,
-        _ => BuddiesTab.buddies,
+        'buddies' => BuddiesTab.buddies,
+        _ => BuddiesTab.find,
       };
 
   @override

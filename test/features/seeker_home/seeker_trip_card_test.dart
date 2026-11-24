@@ -1,3 +1,4 @@
+import 'package:bakhli/design/design.dart';
 import 'package:bakhli/features/seeker_home/seeker_feed_model.dart';
 import 'package:bakhli/features/seeker_home/seeker_trip_card.dart';
 import 'package:flutter/material.dart';
@@ -57,10 +58,12 @@ Widget _host(SeekerFeed feed, {SeekerStatus? status, List<String>? taps}) => Sca
 
 void main() {
   testOwnerSizes('o_sk_1 no trip card', () => _host(_noTrip), check: (t, _, _) async {
-    expect(find.text('Travel Planner'), findsOneWidget);
-    expect(find.text('Plan your first trip'), findsOneWidget);
-    expect(find.text('Places, days, stay and taxi in one plan.'), findsOneWidget);
+    expect(find.text('Find your next destination?'), findsOneWidget);
+    expect(find.text('Plan your trip'), findsOneWidget);
+    expect(find.text('Make your itinerary.'), findsOneWidget);
     expect(find.text('Plan a trip'), findsOneWidget);
+    expect(find.text('Travel Planner'), findsNothing);
+    expect(find.byType(WorkoutActionPill), findsOneWidget);
   });
 
   testOwnerSizes('o_sk_2 in progress card with status', () => _host(_inProgress, status: _confirmed), check: (t, _, _) async {
@@ -177,8 +180,101 @@ void main() {
 
   testWidgets('o_sk_4 no trip and full: the strip shows under the no-trip card', (t) async {
     await t.pumpWidget(MaterialApp(home: _host(const SeekerFeed(slots: SeekerSlots(count: 3, limit: 3, full: true)))));
-    expect(find.text('Plan your first trip'), findsOneWidget);
+    expect(find.text('Plan your trip'), findsOneWidget);
     expect(find.text('3 of 3 plans used. Delete one to plan more.'), findsOneWidget);
+  });
+
+  Rect cardRect(WidgetTester t) => t.getRect(find.descendant(of: find.byType(WorkoutCard), matching: find.byType(DecoratedBox)).first);
+
+  testOwnerSizes('Bug 10: no-trip card is the banner base with the pill at the bottom right', () => _host(_noTrip), check: (t, _, _) async {
+    final card = cardRect(t);
+    final pill = t.getRect(find.byType(WorkoutActionPill));
+    expect(card.height, greaterThanOrEqualTo(DS.s(SeekerTripCardView.minHeight) - 0.5));
+    expect(card.right - pill.right, moreOrLessEquals(DS.s(20), epsilon: 0.5));
+    expect(card.bottom - pill.bottom, moreOrLessEquals(DS.s(20), epsilon: 0.5));
+    expect(pill.height, moreOrLessEquals(DS.s(46), epsilon: 0.5));
+    expect(pill.left, greaterThanOrEqualTo(card.left));
+    for (final s in ['Find your next destination?', 'Plan your trip', 'Make your itinerary.']) {
+      expect(pill.overlaps(t.getRect(find.text(s))), isFalse, reason: s);
+    }
+    final art = t.getRect(find.byType(Art3D));
+    expect(art.top, lessThan(card.top), reason: 'art sticks out above the card');
+    expect(pill.top, greaterThanOrEqualTo(art.bottom), reason: 'pill stays below the art');
+  });
+
+  for (final (name, feed, status) in [
+    ('in progress', _inProgress, _confirmed),
+    ('on trip', _onTrip(seen: 2), null),
+    ('full', _withSlots(_inProgress, const SeekerSlots(count: 3, limit: 3, full: true)), _reply),
+  ]) {
+    testOwnerSizes('Bug 10: $name card keeps the pill under its extra rows', () => _host(feed, status: status), check: (t, _, _) async {
+      final card = cardRect(t);
+      final pill = t.getRect(find.byType(WorkoutActionPill));
+      expect(card.right - pill.right, moreOrLessEquals(DS.s(20), epsilon: 0.5));
+      expect(card.bottom - pill.bottom, moreOrLessEquals(DS.s(20), epsilon: 0.5));
+      for (final text in find.descendant(of: find.byType(WorkoutCard), matching: find.byType(Text)).evaluate()) {
+        final w = text.widget as Text;
+        if (find.descendant(of: find.byType(WorkoutActionPill), matching: find.byWidget(w)).evaluate().isNotEmpty) continue;
+        expect(pill.overlaps(t.getRect(find.byWidget(w))), isFalse, reason: w.data);
+      }
+    });
+  }
+
+  testWidgets('Bug 10: card uses the indigo tone, the banner corner and the briefcase art', (t) async {
+    await t.pumpWidget(MaterialApp(home: _host(_noTrip)));
+    final card = t.widget<WorkoutCard>(find.byType(WorkoutCard));
+    expect(card.tone, ListingTone.indigo);
+    expect(card.art, ListingArt.luggage);
+    expect(card.actionLabel, 'Plan a trip');
+    expect(card.minHeight, 156);
+    final box = t.widget<DecoratedBox>(find.descendant(of: find.byType(WorkoutCard), matching: find.byType(DecoratedBox)).first);
+    expect((box.decoration as BoxDecoration).borderRadius, DS.br(WorkoutCard.radius));
+  });
+
+  testWidgets('Bug 10: the whole card is one TalkBack button and a tap anywhere opens the action', (t) async {
+    final handle = t.ensureSemantics();
+    final taps = <String>[];
+    await t.pumpWidget(MaterialApp(home: _host(_noTrip, taps: taps)));
+    expect(
+      find.byWidgetPredicate((w) => w is Semantics && w.properties.button == true && w.properties.label == 'Plan your trip'),
+      findsOneWidget,
+    );
+    await t.tap(find.text('Make your itinerary.'));
+    expect(taps, ['plan']);
+    handle.dispose();
+  });
+
+  testWidgets('Bug 10: status and My trips stay their own buttons inside the tappable card', (t) async {
+    final taps = <String>[];
+    await t.pumpWidget(MaterialApp(home: _host(_withSlots(_inProgress, const SeekerSlots(count: 3, limit: 3, full: true)), status: _reply, taps: taps)));
+    await t.tap(find.text('2 stays replied. Pick one.'));
+    await t.tap(find.text('My trips'));
+    await t.tap(find.text('Continue your trip'));
+    expect(taps, ['status', 'myTrips', 'continue']);
+  });
+
+  testWidgets('Bug 10: error card keeps Travel Planner, Your trips and Retry on the same base', (t) async {
+    var retried = 0;
+    await t.pumpWidget(MaterialApp(home: Scaffold(body: SeekerTripCardView(feed: SeekerFeed.empty, failed: true, onRetry: () => retried++))));
+    expect(find.text('Travel Planner'), findsOneWidget);
+    expect(find.text('Your trips'), findsOneWidget);
+    expect(find.descendant(of: find.byType(WorkoutActionPill), matching: find.text('Retry')), findsOneWidget);
+    await t.tap(find.text('Retry'));
+    expect(retried, 1);
+  });
+
+  testWidgets('Bug 10: error card is one TalkBack button that says it failed and that a tap retries', (t) async {
+    final handle = t.ensureSemantics();
+    var retried = 0;
+    await t.pumpWidget(MaterialApp(home: Scaffold(body: SeekerTripCardView(feed: SeekerFeed.empty, failed: true, onRetry: () => retried++))));
+    expect(
+      find.byWidgetPredicate((w) =>
+          w is Semantics && w.properties.button == true && w.properties.label == 'Your trips. Check your internet and try again. Retry'),
+      findsOneWidget,
+    );
+    await t.tap(find.text('Check your internet and try again.'));
+    expect(retried, 1);
+    handle.dispose();
   });
 
   testWidgets('buttons are at least 48 dp tall at text scale 1.3', (t) async {

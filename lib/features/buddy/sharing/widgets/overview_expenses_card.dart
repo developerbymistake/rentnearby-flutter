@@ -42,9 +42,8 @@ class OverviewExpensesCard extends StatelessWidget {
       chip: chipOf(expenses, tripEnded: tripEnded),
       line: lineOf(expenses, tripEnded: tripEnded),
       button: has ? SharingStrings.view : SharingStrings.addExpense,
-      buttonKey: const ValueKey('overview_expenses_button'),
       onTap: has ? onView : onAdd,
-      compact: true,
+      wholeCard: true,
     );
   }
 }

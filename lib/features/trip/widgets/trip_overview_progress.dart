@@ -1,15 +1,18 @@
 import 'package:bakhli/design/design.dart';
-import 'package:bakhli/design/extra/trip_plan_look.dart';
+import 'package:bakhli/design/extra/trip_customize_look.dart';
 import 'package:flutter/material.dart';
 import '../trip_strings_overview.dart';
 import '../utils/trip_parts.dart';
 import 'trip_card.dart';
 
 class TripOverviewProgress extends StatelessWidget {
-  const TripOverviewProgress({super.key, required this.parts, this.line});
+  const TripOverviewProgress({super.key, required this.parts, required this.title, required this.line, this.status, this.showProgress = true});
 
   final TripParts parts;
-  final String? line;
+  final String title;
+  final String line;
+  final String? status;
+  final bool showProgress;
 
   static String lineOf(TripParts p) {
     final taxi = p.taxi == TripPartState.open;
@@ -24,26 +27,47 @@ class TripOverviewProgress extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final indigo = ListingTone.indigo;
-    return Semantics(
-      container: true,
-      label: TripStringsOverview.progressLabel(parts.percent),
-      child: Container(
-        key: const ValueKey('overview_progress_card'),
-        padding: DS.insets(l: 16, t: 14, r: 16, b: 14),
-        decoration: BoxDecoration(
-          color: DesignColors.surface,
-          borderRadius: DS.br(CardRadius.hero),
-          boxShadow: DS.shadows(TripLook.cardShadowSoft),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(TripStringsOverview.progressTitle, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(15, FontWeight.w700, Ink3D.title)),
-                  Gap.v(10),
+    final narrow = MediaQuery.sizeOf(context).width < Form3D.narrow;
+    final card = Container(
+      key: showProgress ? const ValueKey('overview_progress_card') : null,
+      padding: DS.insets(l: 12, t: 12, r: 16, b: 12),
+      decoration: BoxDecoration(
+        gradient: TripCustomizeLook.tripCardGradient,
+        border: Border.all(color: TripCustomizeLook.tripCardBorder, width: DS.s(1)),
+        borderRadius: DS.br(CardRadius.hero),
+        boxShadow: DS.shadows(TripCustomizeLook.tripCardShadow),
+      ),
+      child: Row(
+        children: [
+          SizedBox(
+            width: DS.s(narrow ? 48 : 58),
+            height: DS.s(narrow ? 48 : 58),
+            child: Center(
+              child: Art3D(
+                asset: ListingArt.luggage,
+                size: narrow ? 34 : 40,
+                halo: narrow ? 48 : 58,
+                haloColor: DesignColors.tint(indigo.g2, Alpha.tint),
+                shadowBlur: 4,
+                shadowOffset: const Offset(2, 3),
+              ),
+            ),
+          ),
+          Gap.h(12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  title,
+                  key: const ValueKey('overview_trip_name'),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: Ink3D.text(17, FontWeight.w700, TripCustomizeLook.tripCardName),
+                ),
+                if (showProgress) ...[
+                  Gap.v(8),
                   Row(
                     children: [
                       _Segment(key: const ValueKey('overview_progress_seg_itinerary'), tone: indigo, state: parts.itinerary),
@@ -53,31 +77,35 @@ class TripOverviewProgress extends StatelessWidget {
                       _Segment(key: const ValueKey('overview_progress_seg_stay'), tone: ListingTone.forest, state: parts.stay),
                     ],
                   ),
-                  Gap.v(8),
-                  Text(
-                    line ?? lineOf(parts),
-                    key: const ValueKey('overview_progress_line'),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: Ink3D.text(12.5, FontWeight.w400, Ink3D.sub),
-                  ),
+                  Gap.v(6),
                 ],
-              ),
+                Text(
+                  line,
+                  key: const ValueKey('overview_trip_line'),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: Ink3D.text(12.5, FontWeight.w400, TripCustomizeLook.tripCardSub, height: 1.5),
+                ),
+              ],
             ),
-            Gap.h(14),
+          ),
+          if (showProgress) ...[
+            Gap.h(12),
             ExcludeSemantics(
               child: TripProgressRing(
                 key: const ValueKey('overview_progress_percent'),
                 percent: parts.percent,
-                size: 58,
+                size: 50,
                 color: indigo.g2,
                 textColor: indigo.text,
               ),
             ),
           ],
-        ),
+        ],
       ),
     );
+    if (!showProgress) return card;
+    return Semantics(container: true, label: TripStringsOverview.progressLabel(parts.percent, status ?? lineOf(parts)), child: card);
   }
 }
 

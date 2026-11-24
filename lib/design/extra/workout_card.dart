@@ -27,6 +27,8 @@ class WorkoutCard extends StatelessWidget {
     this.minHeight = 138,
     this.semanticsLabel,
     this.gradient,
+    this.actionLabel,
+    this.extra = const [],
   });
 
   final ListingTone tone;
@@ -45,6 +47,8 @@ class WorkoutCard extends StatelessWidget {
   final double minHeight;
   final String? semanticsLabel;
   final Gradient? gradient;
+  final String? actionLabel;
+  final List<Widget> extra;
 
   static double get overhang => DS.s(30);
 
@@ -64,13 +68,19 @@ class WorkoutCard extends StatelessWidget {
     final artRaw = narrow ? 88.0 : 104.0;
     final artSize = DS.s(artRaw);
     final textRight = artSize - DS.s(8);
-    final hasArrow = trailing == WorkoutTrailing.arrow;
+    final action = actionLabel;
+    final hasAction = action != null;
+    final keepInner = extra.isNotEmpty;
+    final edge = hasAction ? DS.s(2) : 0.0;
+    final hasArrow = trailing == WorkoutTrailing.arrow && !hasAction;
     final hasRing = trailing == WorkoutTrailing.ring;
     final hasDots = trailing == WorkoutTrailing.dots && dotCount > 1;
     final dotsWidth = hasDots ? DS.s(18) + (dotCount - 1) * (DS.s(7) + DS.gh(5)) : 0.0;
     final rowRight = hasArrow || hasRing ? DS.s(80) : (hasDots ? dotsWidth + DS.s(12) : 0.0);
     final artBottom = artSize - overhang;
-    final floor = hasRing ? artBottom + DS.s(4 + 64 + 18) : (hasArrow ? artBottom + DS.s(46 + 18 - 12) : 0.0);
+    final floor = hasRing
+        ? artBottom + DS.s(4 + 64 + 18)
+        : (hasArrow ? artBottom + DS.s(46 + 18 - 12) : (hasAction ? artBottom + DS.s(8 + WorkoutActionPill.height + 20) : 0.0));
     final scaler = MediaQuery.textScalerOf(context);
     final inner = MediaQuery.sizeOf(context).width - margin.horizontal - DS.s(44);
     final eyebrowStyle = Ink3D.text(13, FontWeight.w500, white.withValues(alpha: 0.88));
@@ -85,31 +95,47 @@ class WorkoutCard extends StatelessWidget {
     y += KitText.heightOf(title, titleStyle, scaler, inner - titleRight, 3);
     final subRight = rightAt(y + DS.s(6), hasRing || (ctaLabel == null && chips.isEmpty) ? rowRight : 0);
     final subStyle = KitText.wholeWords(subtitle, subBase, inner - subRight, scaler);
+    if (subtitle.isNotEmpty) y += DS.s(6) + KitText.heightOf(subtitle, subStyle, scaler, inner - subRight, 8);
+    final extraRight = rightAt(y + DS.s(10), 0) + edge;
+    final subInRow = hasAction && !keepInner;
+    Widget quiet(Widget w) => keepInner ? ExcludeSemantics(child: w) : w;
 
     final card = DecoratedBox(
       decoration: BoxDecoration(borderRadius: DS.br(radius), gradient: gradient ?? tone.gradient, boxShadow: tone.glow()),
       child: ConstrainedBox(
         constraints: BoxConstraints(minHeight: minHeight > floor ? minHeight : floor),
         child: Padding(
-          padding: DS.insets(l: 22, t: 20, r: 22, b: 20),
+          padding: DS.insets(l: 22, t: 20, r: hasAction ? 20 : 22, b: 20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisAlignment: hasAction ? MainAxisAlignment.end : MainAxisAlignment.center,
             children: [
               if (eyebrow.isNotEmpty)
                 Padding(
-                  padding: EdgeInsets.only(right: eyebrowRight, bottom: DS.s(6)),
-                  child: StarText(eyebrow, maxLines: 2, style: eyebrowStyle),
+                  padding: EdgeInsets.only(right: eyebrowRight + edge, bottom: DS.s(6)),
+                  child: quiet(StarText(eyebrow, maxLines: 2, style: eyebrowStyle)),
                 ),
               Padding(
-                padding: EdgeInsets.only(right: titleRight),
-                child: Text(title, maxLines: 3, overflow: TextOverflow.ellipsis, style: titleStyle),
+                padding: EdgeInsets.only(right: titleRight + edge),
+                child: quiet(Text(title, maxLines: 3, overflow: TextOverflow.ellipsis, style: titleStyle)),
               ),
-              if (subtitle.isNotEmpty)
+              if (subtitle.isNotEmpty && !subInRow)
                 Padding(
-                  padding: EdgeInsets.only(top: DS.s(6), right: subRight),
-                  child: Text(subtitle, maxLines: 8, overflow: TextOverflow.ellipsis, style: subStyle),
+                  padding: EdgeInsets.only(top: DS.s(6), right: subRight + edge),
+                  child: quiet(Text(subtitle, maxLines: 8, overflow: TextOverflow.ellipsis, style: subStyle)),
+                ),
+              for (final row in extra) Padding(padding: EdgeInsets.only(right: extraRight), child: row),
+              if (hasAction)
+                Padding(
+                  padding: EdgeInsets.only(top: DS.s(keepInner ? 14 : 6)),
+                  child: quiet(_ActionRow(
+                    subtitle: subInRow ? subtitle : '',
+                    subStyle: subStyle,
+                    subRight: subRight + edge,
+                    label: action,
+                    tone: tone,
+                  )),
                 ),
               if (chips.isNotEmpty)
                 Padding(
@@ -170,7 +196,7 @@ class WorkoutCard extends StatelessWidget {
             right: DS.s(14),
             top: -overhang,
             child: IgnorePointer(
-              child: Art3D(asset: art, size: artRaw, halo: artRaw + 6, haloColor: white.withValues(alpha: 0.2), haloDy: 6, shadowAlpha: 0.3),
+              child: quiet(Art3D(asset: art, size: artRaw, halo: artRaw + 6, haloColor: white.withValues(alpha: 0.2), haloDy: 6, shadowAlpha: 0.3)),
             ),
           ),
           if (hasArrow) Positioned(right: DS.s(20), bottom: DS.s(18), child: RoundGoButton(color: tone.button, size: 46)),
@@ -202,6 +228,95 @@ class WorkoutCard extends StatelessWidget {
       body = PressScale(child: GestureDetector(behavior: HitTestBehavior.opaque, onTap: onTap, child: body));
     }
     if (semanticsLabel == null) return body;
-    return Semantics(label: semanticsLabel, button: onTap != null, container: true, excludeSemantics: true, child: body);
+    return Semantics(label: semanticsLabel, button: onTap != null, container: true, excludeSemantics: !keepInner, child: body);
+  }
+}
+
+class WorkoutActionPill extends StatelessWidget {
+  const WorkoutActionPill({super.key, required this.label, required this.tone});
+
+  final String label;
+  final ListingTone tone;
+
+  static const double height = 46;
+  static const double _left = 22;
+  static const double _gap = 14;
+  static const double _go = 36;
+  static const double _right = 5;
+
+  static TextStyle styleOf(ListingTone tone) => Ink3D.text(14, FontWeight.w700, tone.button);
+
+  static double widthOf(BuildContext context, String label, ListingTone tone) =>
+      DS.s(_left + _gap + _go + _right) +
+      KitText.widthOf(label, DefaultTextStyle.of(context).style.merge(styleOf(tone)), MediaQuery.textScalerOf(context));
+
+  @override
+  Widget build(BuildContext context) {
+    const white = Colors.white;
+    return Container(
+      constraints: BoxConstraints(minHeight: DS.s(height)),
+      padding: DS.insets(l: _left, r: _right),
+      decoration: BoxDecoration(color: white, borderRadius: DS.circular(height / 2), boxShadow: DS.shadows(Ink3D.whiteBtn)),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Flexible(child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: styleOf(tone))),
+          SizedBox(width: DS.s(_gap)),
+          Container(
+            width: DS.s(_go),
+            height: DS.s(_go),
+            decoration: BoxDecoration(color: tone.button, shape: BoxShape.circle),
+            child: Icon(Icons.arrow_forward, color: white, size: DS.s(20)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ActionRow extends StatelessWidget {
+  const _ActionRow({required this.subtitle, required this.subStyle, required this.subRight, required this.label, required this.tone});
+
+  final String subtitle;
+  final TextStyle subStyle;
+  final double subRight;
+  final String label;
+  final ListingTone tone;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, c) {
+        final pill = WorkoutActionPill(label: label, tone: tone);
+        final atRight = Align(
+          alignment: Alignment.centerRight,
+          child: ConstrainedBox(constraints: BoxConstraints(maxWidth: c.maxWidth), child: pill),
+        );
+        if (subtitle.isEmpty) return atRight;
+        final gap = DS.s(12);
+        final subWidth = KitText.widthOf(subtitle, DefaultTextStyle.of(context).style.merge(subStyle), MediaQuery.textScalerOf(context));
+        if (subWidth + gap + WorkoutActionPill.widthOf(context, label, tone) <= c.maxWidth) {
+          return Row(
+            children: [
+              Expanded(child: Text(subtitle, maxLines: 1, overflow: TextOverflow.ellipsis, style: subStyle)),
+              SizedBox(width: gap),
+              pill,
+            ],
+          );
+        }
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: EdgeInsets.only(right: subRight),
+              child: Text(subtitle, maxLines: 8, overflow: TextOverflow.ellipsis, style: subStyle),
+            ),
+            SizedBox(height: gap),
+            atRight,
+          ],
+        );
+      },
+    );
   }
 }

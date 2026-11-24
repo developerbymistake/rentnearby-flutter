@@ -19,7 +19,6 @@ import 'package:bakhli/features/trip/trip_strings_dayplan.dart';
 import 'package:bakhli/features/trip/trip_strings_overview.dart';
 import 'package:bakhli/features/trip/trip_strings_v2_find.dart';
 import 'package:bakhli/features/trip/utils/taxi_result.dart';
-import 'package:bakhli/features/trip/widgets/trip_plan_header.dart';
 import 'package:bakhli/services/trip_push_sync.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -162,7 +161,7 @@ void main() {
   testWidgets('taxi_card_opens_request_page_without_a_request', (t) async {
     await _pump(t);
     await _tap(t, find.byKey(TripPlanScreen.saveTripKey));
-    await _tap(t, find.byKey(const ValueKey('overview_taxi_button')));
+    await _tap(t, find.byKey(const ValueKey('overview_taxi_card')));
     expect(find.byType(TripTaxiRequestScreen), findsOneWidget);
     expect(Get.currentRoute, AppRoutes.tripTaxiRequest);
     await _drain(t);
@@ -173,7 +172,7 @@ void main() {
     TripNavigation.openOverview(tripId: 't1');
     await _settle(t);
     expect(find.text(TripOverviewTaxi.of(_ref('Collecting', 'Collecting')).button), findsOneWidget);
-    await _tap(t, find.byKey(const ValueKey('overview_taxi_button')));
+    await _tap(t, find.byKey(const ValueKey('overview_taxi_card')));
     expect(find.byType(TripTaxiRequestStatusScreen), findsOneWidget);
     expect((Get.arguments as Map)['requestId'], _requestId);
     await _drain(t);
@@ -182,7 +181,7 @@ void main() {
   testWidgets('no_dates_opens_the_dates_sheet_first', (t) async {
     await _pump(t, dates: false);
     await _tap(t, find.byKey(TripPlanScreen.saveTripKey));
-    await _tap(t, find.byKey(const ValueKey('overview_taxi_button')));
+    await _tap(t, find.byKey(const ValueKey('overview_taxi_card')));
     expect(find.text(TripStringsV2Find.datesTitle), findsOneWidget);
     expect(find.byType(TripTaxiRequestScreen), findsNothing);
     await _drain(t);
@@ -208,7 +207,7 @@ void main() {
   testWidgets('send_opens_status_and_plan_shows_locked_banner', (t) async {
     final rig = await _pump(t);
     await _tap(t, find.byKey(TripPlanScreen.saveTripKey));
-    await _tap(t, find.byKey(const ValueKey('overview_taxi_button')));
+    await _tap(t, find.byKey(const ValueKey('overview_taxi_card')));
     await _tap(t, find.byKey(const ValueKey('taxi_pickup_6377270')));
     await _tap(t, find.byKey(const ValueKey('taxi_request_send')));
     expect(rig.repo.createBodies, hasLength(1));
@@ -221,7 +220,7 @@ void main() {
 
     await _tap(t, find.byKey(const ValueKey('status_done')));
     expect(Get.currentRoute, AppRoutes.tripOverview);
-    await _tap(t, find.byKey(const ValueKey('overview_itinerary_button')));
+    await _tap(t, find.byKey(const ValueKey('overview_itinerary_card')));
     expect(Get.currentRoute, AppRoutes.tripPlan);
     expect(find.byKey(TripPlanScreen.lockedBannerKey), findsOneWidget);
     expect(find.text(TripStringsDayplan.lockedByRequest), findsOneWidget);
@@ -279,9 +278,9 @@ void main() {
         },
       );
 
-  testWidgets('the_plan_top_card_opens_no_question_step', (t) async {
+  testWidgets('the_plan_has_no_top_card_and_no_question_step', (t) async {
     await _pump(t);
-    await _tap(t, find.byType(TripPlanStepCard));
+    expect(find.byKey(const ValueKey('plan-top-card')), findsNothing);
     expect(Get.currentRoute, AppRoutes.tripPlan);
     expect(find.text("Let's get you there"), findsNothing);
     expect(find.text('Help me find'), findsNothing);
@@ -294,7 +293,7 @@ void main() {
     await _pump(t, extra: [stayStub(opened)]);
     await _tap(t, find.byKey(TripPlanScreen.saveTripKey));
     expect(find.text(TripStringsOverview.addStay), findsOneWidget);
-    await _tap(t, find.byKey(const ValueKey('overview_stay_button')));
+    await _tap(t, find.byKey(const ValueKey('overview_stay_card')));
     expect(Get.currentRoute, AppRoutes.tripStay);
     expect(opened.single['shortlist'], isTrue);
     expect(opened.single['legIndex'], 1);
@@ -309,7 +308,7 @@ void main() {
     final opened = <Map>[];
     await _pump(t, extra: [stayStub(opened)]);
     await _tap(t, find.byKey(TripPlanScreen.saveTripKey));
-    final button = find.byKey(const ValueKey('overview_stay_button'));
+    final button = find.byKey(const ValueKey('overview_stay_card'));
     await t.ensureVisible(button);
     await t.pump();
     await t.tap(button);
@@ -323,7 +322,7 @@ void main() {
     final opened = <Map>[];
     await _pump(t, extra: [stayStub(opened)], shape: const [[2, 2], [2, 2]]);
     await _tap(t, find.byKey(TripPlanScreen.saveTripKey));
-    await _tap(t, find.byKey(const ValueKey('overview_stay_button')));
+    await _tap(t, find.byKey(const ValueKey('overview_stay_card')));
     expect(find.text(TripStringsOverview.stayCityTitle), findsOneWidget);
     expect(opened, isEmpty);
     await _tap(t, find.byKey(const ValueKey('stay_city_2')));
@@ -336,7 +335,7 @@ void main() {
     final opened = <Map>[];
     await _pump(t, extra: [stayStub(opened)], dates: false);
     await _tap(t, find.byKey(TripPlanScreen.saveTripKey));
-    await _tap(t, find.byKey(const ValueKey('overview_stay_button')));
+    await _tap(t, find.byKey(const ValueKey('overview_stay_card')));
     expect(find.text(TripStringsV2Find.datesTitle), findsOneWidget);
     Navigator.of(t.element(find.text(TripStringsV2Find.datesTitle))).pop();
     await _settle(t);
@@ -368,7 +367,7 @@ void main() {
     await _settle(t);
     expect(find.text(TripStringsOverview.added), findsOneWidget);
     expect(find.text(TripStringsOverview.staysAsked(1, rig.plan.plan.value!.cityNameOf(1))), findsOneWidget);
-    await _tap(t, find.byKey(const ValueKey('overview_stay_button')));
+    await _tap(t, find.byKey(const ValueKey('overview_stay_card')));
     expect(opened, [
       {'replies': 1}
     ]);

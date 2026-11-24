@@ -65,7 +65,6 @@ class TaxiCard extends StatelessWidget {
     final (fareValue, fareUnit) = _fare();
     final reply = _tripMode ? TaxiOptionSets.tripReplyLabelText(t.tripReplyLabel) : '';
     final chips = <String>[
-      if (!t.isMatch) 'Local taxi',
       if (t.isMatch && t.matchedTripType == 'RoundTrip') 'Round trip',
       ?seatsChip,
       if (reply.isNotEmpty) reply,
@@ -83,16 +82,20 @@ class TaxiCard extends StatelessWidget {
 
   Widget _card(BuildContext context, TaxiBrowseItem t, String vehicle, List<String> chips, String? fareValue,
       String? fareUnit, NearbyDistance? d, List<CalmAction> actions) {
+    final address = d != null ? CardStrings.addressFor(d) : inLabel;
+    final hasAddress = address != null && address.trim().isNotEmpty;
     return TaxiCalmCard(
+      layout: TaxiCalmLayout.listing,
+      tag: null,
       title: t.driverName,
-      lines: [vehicle, t.locality].where((e) => e.isNotEmpty).toList(),
+      lines: [vehicle, if (!hasAddress) t.locality].where((e) => e.isNotEmpty).toList(),
       photoUrl: t.displayPhotoUrl,
       art: TaxiVehicleIcon.assetFor(t.vehicleTypeName),
       featured: t.isFeatured,
       chips: chips,
       price: fareValue ?? CardStrings.askForFare,
       unit: fareUnit ?? '',
-      address: d != null ? CardStrings.addressFor(d) : inLabel,
+      address: address,
       actions: actions,
       moreActions: _tripMode ? _pickRow() : const [],
       picked: selected || booked,

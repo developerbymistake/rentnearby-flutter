@@ -7,6 +7,8 @@ import '../../../../models/place_result_model.dart';
 import '../../../nearby/controllers/nearby_centre_controller.dart';
 import '../../../nearby/models/nearby_models.dart';
 import '../../taxi_option_sets.dart';
+import '../../ways/taxi_ways_availability.dart';
+import '../../ways/taxi_ways_repository.dart';
 import 'taxi_feed_repository.dart';
 
 class TaxiListControllerV2 extends GetxController {
@@ -18,17 +20,20 @@ class TaxiListControllerV2 extends GetxController {
   final LatLng Function()? _centreOf;
   final RxInt? _centreVersion;
   final RxInt? _tabIndex;
+  final TaxiWaysAvailabilityCheck waysCheck;
 
   TaxiListControllerV2({
     this.root = true,
     TaxiFeedRepository repo = const TaxiFeedRepository(),
+    TaxiWaysRepository waysRepo = const TaxiWaysRepository(),
     LatLng Function()? centre,
     RxInt? centreVersion,
     RxInt? tabIndex,
   })  : _repo = repo,
         _centreOf = centre,
         _centreVersion = centreVersion,
-        _tabIndex = tabIndex;
+        _tabIndex = tabIndex,
+        waysCheck = TaxiWaysAvailabilityCheck(repo: waysRepo);
 
   final items = <TaxiFeedItem>[].obs;
   final featured = <TaxiFeedItem>[].obs;
@@ -58,6 +63,10 @@ class TaxiListControllerV2 extends GetxController {
 
   LatLng get origin => from.value?.latLng ?? centre;
 
+  bool get fromMyLocation => from.value == null && !(_centreOf == null && NearbyCentreController.to.hasPin);
+
+  PlaceResult get routeFrom => from.value ?? PlaceResult(name: 'Near you', subtitle: '', latLng: origin);
+
   @override
   void onInit() {
     super.onInit();
@@ -81,6 +90,7 @@ class TaxiListControllerV2 extends GetxController {
     for (final w in _workers) {
       w.dispose();
     }
+    waysCheck.reset();
     super.onClose();
   }
 
@@ -126,6 +136,7 @@ class TaxiListControllerV2 extends GetxController {
     from.value = null;
     _gen++;
     _loadedAt = null;
+    waysCheck.reset();
   }
 
   void refreshIfStale() {
@@ -158,6 +169,7 @@ class TaxiListControllerV2 extends GetxController {
     loadMoreFailed.value = false;
     isLoadingMore.value = false;
     isLoading.value = true;
+    waysCheck.reset();
     if (_tabActive) _load(silent: false);
   }
 
@@ -169,6 +181,7 @@ class TaxiListControllerV2 extends GetxController {
     if (!silent) isLoading.value = true;
     final o = origin;
     final t = to.value;
+    if (t != null) unawaited(waysCheck.check(from: routeFrom, to: t, fromMyLocation: fromMyLocation));
     try {
       if (t != null) {
         final res = await _repo.route(

@@ -6,7 +6,10 @@ import 'package:bakhli/features/nearby/models/nearby_models.dart';
 import 'package:bakhli/features/taxi/guest/v2/taxi_feed_repository.dart';
 import 'package:bakhli/features/taxi/guest/v2/taxi_list_controller_v2.dart';
 import 'package:bakhli/features/taxi/models/taxi_browse_item.dart';
+import 'package:bakhli/features/taxi/ways/taxi_ways_availability.dart';
 import 'package:bakhli/models/place_result_model.dart';
+
+import 'fake_ways_repo.dart';
 
 TaxiFeedItem fi(String id) => TaxiFeedItem(
       item: TaxiBrowseItem(
@@ -85,6 +88,7 @@ Future<void> settle() async {
 
 void main() {
   late FakeRepo repo;
+  late FakeWaysRepo ways;
   late RxInt version;
   late LatLng pin;
   late TaxiListControllerV2 c;
@@ -92,9 +96,10 @@ void main() {
   setUp(() {
     Get.reset();
     repo = FakeRepo();
+    ways = FakeWaysRepo();
     version = 0.obs;
     pin = const LatLng(29.2, 79.5);
-    c = Get.put(TaxiListControllerV2(root: false, repo: repo, centre: () => pin, centreVersion: version));
+    c = Get.put(TaxiListControllerV2(root: false, repo: repo, waysRepo: ways, centre: () => pin, centreVersion: version));
   });
 
   tearDown(Get.reset);
@@ -188,9 +193,67 @@ void main() {
     await settle();
     Get.reset();
     final bad = FakeRepo()..localPage = (_) => throw StateError('x');
-    final c2 = Get.put(TaxiListControllerV2(root: false, repo: bad, centre: () => pin, centreVersion: version));
+    final c2 = Get.put(TaxiListControllerV2(root: false, repo: bad, waysRepo: ways, centre: () => pin, centreVersion: version));
     await settle();
     expect(c2.loadFailed.value, isTrue);
     expect(c2.isLoading.value, isFalse);
+  });
+
+  group('ways entry check', () {
+    test('local mode never asks', () async {
+      await settle();
+      expect(ways.calls, isEmpty);
+      expect(c.waysCheck.state.value, WaysAvailability.idle);
+    });
+
+    test('picking To asks once for the same From and To as the route list', () async {
+      await settle();
+      c.setTo(place('Almora', 29.6));
+      await settle();
+      expect(ways.calls.single.fromLat, 29.2);
+      expect(ways.calls.single.toLat, 29.6);
+      expect(c.waysCheck.isAvailable, isTrue);
+    });
+
+    test('false and failed answers leave the card off', () async {
+      await settle();
+      ways.answer = false;
+      c.setTo(place('Almora', 29.6));
+      await settle();
+      expect(c.waysCheck.state.value, WaysAvailability.unavailable);
+      ways.error = StateError('503');
+      c.setTo(place('Nainital', 29.4));
+      await settle();
+      expect(c.waysCheck.state.value, WaysAvailability.failed);
+      expect(c.waysCheck.isAvailable, isFalse);
+    });
+
+    test('a new search resets to loading and drops the old answer', () async {
+      await settle();
+      ways.manual = true;
+      c.setTo(place('Almora', 29.6));
+      await settle();
+      c.setFrom(place('Delhi', 28.6));
+      await settle();
+      expect(c.waysCheck.state.value, WaysAvailability.loading);
+      ways.pending.first.complete(true);
+      await settle();
+      expect(c.waysCheck.isAvailable, isFalse);
+      ways.pending.last.complete(true);
+      await settle();
+      expect(ways.calls.last.fromLat, 28.6);
+      expect(c.waysCheck.isAvailable, isTrue);
+    });
+
+    test('clearing To resets the check', () async {
+      await settle();
+      c.setTo(place('Almora', 29.6));
+      await settle();
+      expect(c.waysCheck.isAvailable, isTrue);
+      c.clearTo();
+      await settle();
+      expect(c.waysCheck.state.value, WaysAvailability.idle);
+      expect(ways.calls, hasLength(1));
+    });
   });
 }

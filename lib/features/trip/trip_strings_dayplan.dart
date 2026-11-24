@@ -10,7 +10,6 @@ class TripStringsDayplan {
   static const String customize = 'Customize';
   static const String hide = 'Hide';
   static const String show = 'Show';
-  static const String yourPlan = 'Your plan';
   static const String viewRequest = 'View request';
   static const String viewBooking = 'View booking';
   static const String viewStay = 'View stay';

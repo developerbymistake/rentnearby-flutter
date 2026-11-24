@@ -90,7 +90,6 @@ Widget overview(TripModel t, TripSharingBlock? s, {TripParts parts = allArranged
           travellerCount: x.travellerCount,
           extraCards: x.extraCards,
           extraMenuItems: x.extraMenuItems,
-          compactCards: x.compactCards,
           progressLine: x.progressLine,
           showProgress: x.showProgress,
         );

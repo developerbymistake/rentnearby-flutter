@@ -1,4 +1,5 @@
 import 'package:bakhli/design/design.dart';
+import 'package:bakhli/design/extra/trip_plan_look.dart';
 import 'package:bakhli/features/trip/trip_strings_dayplan.dart';
 import 'package:bakhli/features/trip/widgets/trip_leg_fold_state.dart';
 import 'package:bakhli/features/trip/widgets/trip_leg_header.dart';
@@ -156,7 +157,11 @@ void main() {
     final handle = tester.ensureSemantics();
     await _pump(tester, _Harness(locked: true, onCustomize: () => customized++), const Size(360, 800));
     final label = tester.widget<Text>(find.text(TripStringsDayplan.customize));
-    expect(label.style!.color, ListingPalette.indigo.tint);
+    expect(label.style!.color, TripLook.cityInk);
+    final lockedPill = tester.widget<Container>(find.descendant(of: find.byKey(TripLegSectionHeader.customizeKey), matching: find.byType(Container)).first);
+    final lockedDeco = lockedPill.decoration! as BoxDecoration;
+    expect(lockedDeco.color, DesignColors.tint(Colors.white, Alpha.v72));
+    expect(lockedDeco.boxShadow, isNull);
     expect(
       tester.getSemantics(find.byKey(TripLegSectionHeader.customizeKey)),
       isSemantics(label: TripStringsDayplan.customize, isButton: true, hasEnabledState: true, isEnabled: false),

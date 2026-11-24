@@ -46,7 +46,7 @@ GetPage<dynamic> _page(String name, GetPageBuilder page) =>
 final List<GetPage<dynamic>> buddyPages = [
   _page(AppRoutes.buddies, () {
     final a = BuddyArgs.current;
-    return BuddiesScreen(tab: BuddyArgs.textOrNull(a, 'tab') ?? 'buddies', query: BuddyArgs.textOrNull(a, 'query'), source: BuddyArgs.textOrNull(a, 'source'));
+    return BuddiesScreen(tab: BuddyArgs.textOrNull(a, 'tab') ?? 'find', query: BuddyArgs.textOrNull(a, 'query'), source: BuddyArgs.textOrNull(a, 'source'));
   }),
   _page(AppRoutes.buddiesBlocked, () => const BlockedPeopleScreen()),
   _page(AppRoutes.buddyScan, () => const ScanQrScreen()),

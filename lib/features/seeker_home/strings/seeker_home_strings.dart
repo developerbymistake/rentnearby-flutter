@@ -3,11 +3,14 @@ abstract final class SeekerHomeStrings {
   static const String greetingFallbackName = 'there';
   static const String whereToNext = 'Where to next?';
 
-  static const String tripEyebrow = 'Travel Planner';
-  static const String noTripTitle = 'Plan your first trip';
+  static const String tripEyebrow = 'Find your next destination?';
+  static const String noTripTitle = 'Plan your trip';
+  static const String failedEyebrow = 'Travel Planner';
   static const String failedTitle = 'Your trips';
-  static const String noTripBody = 'Places, days, stay and taxi in one plan.';
+  static const String noTripBody = 'Make your itinerary.';
   static const String planTrip = 'Plan a trip';
+  static const String browseStays = 'Browse stays';
+  static const String seeTaxis = 'See taxis';
 
   static const String continueTitle = 'Continue your trip';
   static const String continueAction = 'Continue';
@@ -40,12 +43,8 @@ abstract final class SeekerHomeStrings {
   static const String tilePlanBody = 'Pick a city and go';
   static const String tileTripsTitle = 'My trips';
   static const String tileTripsBody = 'Continue or review';
-  static const String tileExpenseTitle = 'Add expense';
-  static const String tileExpenseBody = 'Split with friends';
   static const String tileBuddyTitle = 'Find a buddy';
   static const String tileBuddyBody = 'Travel together';
-  static const String planTripFirst = 'Plan a trip first';
-  static const String expensePickTitle = 'Add expense to';
 
   static const String railsErrorTitle = 'Couldn’t load';
   static const String railsErrorBody = 'Check your internet and try again.';

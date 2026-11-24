@@ -7,7 +7,7 @@ abstract final class BuddyNavigation {
   static Future<dynamic>? _go(String route, Map<String, dynamic> args, {bool replace = false}) =>
       replace ? Get.offNamed(route, arguments: args) : Get.toNamed(route, arguments: args);
 
-  static Future<dynamic>? openBuddies({String tab = 'buddies', String? query, String? source}) =>
+  static Future<dynamic>? openBuddies({String tab = 'find', String? query, String? source}) =>
       _go(AppRoutes.buddies, {'tab': tab, 'query': ?query, 'source': ?source});
 
   static Future<dynamic>? openBlocked() => Get.toNamed(AppRoutes.buddiesBlocked);

@@ -56,25 +56,19 @@ class DiscPaint {
             symbolSortKey: DiscLayers.sortKey,
           ),
         DiscIds.layerSelHalo => CircleLayerProperties(
-            circleRadius: [
-              'match',
-              ['get', 'kind'],
-              DiscSelKind.dot.name,
-              t.haloDotDp / 2,
-              t.haloPhotoDp / 2,
-            ],
+            circleRadius: t.haloRadius(DiscSelKind.dot.name, selIconScale),
             circleColor: TripKit.hexOf(DesignColors.textPrimary),
             circleOpacity: Alpha.v18,
           ),
         DiscIds.layerSelDot => CircleLayerProperties(
-            circleRadius: t.selDotDp / 2 - _selDotRing,
+            circleRadius: t.selDotRadius(_selDotRing),
             circleColor: groupColor,
             circleStrokeColor: _white,
             circleStrokeWidth: _selDotRing,
           ),
         _ => SymbolLayerProperties(
             iconImage: DiscLayers.iconImagePhoto,
-            iconSize: selIconScale,
+            iconSize: t.selIconSize(selIconScale),
             iconAllowOverlap: true,
             iconIgnorePlacement: true,
           ),

@@ -84,11 +84,11 @@ void main() {
             scale: s,
           );
           expect(t.takeException(), isNull);
-          final fitted = find.descendant(of: find.byType(GradientPillButton), matching: find.byType(FittedBox));
+          final fitted = find.descendant(of: find.byType(WhitePillButton), matching: find.byType(FittedBox));
           final row = find.descendant(of: fitted, matching: find.byType(Row)).first;
           expect(t.getSize(row).width, lessThanOrEqualTo(t.getSize(fitted).width + 0.5));
           final details = t.getRect(find.text(TripSpotRow.details).first);
-          final pill = t.getRect(find.byType(GradientPillButton));
+          final pill = t.getRect(find.byType(WhitePillButton));
           if (pill.top < details.bottom) expect(details.right, lessThan(pill.left));
           final added = t.getRect(find.text(TripStringsSpotsX.addedToTrip));
           final cardB = t.getRect(find.byType(TripSpotCard).at(1));

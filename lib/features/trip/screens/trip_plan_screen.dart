@@ -485,7 +485,6 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
               padding: EdgeInsets.only(bottom: _note == null ? DS.s(20) : DS.gv(40) + DS.s(48)),
               children: [
                 _buildLocked(),
-                if (!editing) w(TripPlanStepCard(onMenu: _onMenu)),
                 MediaQuery.withClampedTextScaling(maxScaleFactor: 1.3, child: _buildLegChips()),
                 if (_c.planFailed.value)
                   w(StateCard.error(
@@ -505,7 +504,7 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
                       onToggle: () => _fold.toggle(leg.index),
                       onCustomize: () => _openCustomize(leg.index),
                       gapBelow: i < shownLegs.length - 1
-                          ? DS.gv(44)
+                          ? TripLegSectionHeader.gapAbove
                           : addCity && plan.spotCount > 0
                               ? DS.gv(24)
                               : 0,

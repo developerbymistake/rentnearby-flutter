@@ -64,7 +64,6 @@ Widget _overview(TripPlanController c) => fx.app(Builder(
           onStay: (_) {},
           extraCards: x.extraCards,
           extraMenuItems: x.extraMenuItems,
-          compactCards: x.compactCards,
           travellerCount: x.travellerCount,
         );
       }),
