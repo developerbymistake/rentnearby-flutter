@@ -2,7 +2,6 @@ import 'package:bakhli/design/design.dart';
 import 'package:bakhli/features/owner_core/data/owner_cache.dart';
 import 'package:bakhli/features/owner_core/plan/plan_gate.dart';
 import 'package:bakhli/features/taxi/models/taxi_owner_model.dart';
-import 'package:bakhli/features/taxi/setup/taxi_owner_card.dart';
 import 'package:bakhli/features/taxi_driver/hub/taxi_hub_screen.dart';
 import 'package:bakhli/features/taxi_driver/hub/taxi_preview_card.dart';
 import 'package:bakhli/features/taxi_driver/strings/taxi_hub_strings.dart';
@@ -107,17 +106,6 @@ void main() {
         await _pumpCard(t, TaxiPreviewCard(taxi: TaxiOwnerModel.fromJson(_json())));
         expect(find.byType(PhotoCircle), findsNothing);
         expect(_taxiArt(), findsOneWidget);
-        expect(t.takeException(), isNull);
-        await _close(t);
-      });
-
-      testWidgets('My Taxi card: PhotoCircle with a url, taxi Art3D without', (t) async {
-        hubFor(null);
-        await _pumpCard(t, TaxiOwnerCard(taxi: TaxiOwnerModel.fromJson(_json(display: _display))));
-        expect(find.byType(PhotoCircle), findsOneWidget);
-        await _pumpCard(t, TaxiOwnerCard(taxi: TaxiOwnerModel.fromJson(_json())));
-        expect(find.byType(PhotoCircle), findsNothing);
-        expect(_taxiArt(), findsWidgets);
         expect(t.takeException(), isNull);
         await _close(t);
       });

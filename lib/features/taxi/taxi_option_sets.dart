@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../design/design.dart';
 import '../../models/browse_item.dart';
-import 'models/taxi_owner_model.dart';
 
 class TaxiColors {
   static const Color accent = DesignColors.breakfastStart;
@@ -112,17 +111,6 @@ class TaxiOptionSets {
         math.cos(rad(lat1)) * math.cos(rad(lat2)) * math.sin(dLng / 2) * math.sin(dLng / 2);
     return 2 * r * math.asin(math.min(1.0, math.sqrt(a)));
   }
-
-  static String vehicleLabel(TaxiOwnerModel t) {
-    final c = t.vehicleCategory;
-    if (c != null && c.isNotEmpty) return categoryLabel(c);
-    return t.vehicleTypeName ?? 'Vehicle';
-  }
-
-  static String vehicleSummary(TaxiOwnerModel t) => [
-        vehicleLabel(t),
-        if (t.seats != null) '${seatsLabel(t.seats!)} seats',
-      ].join(' · ');
 
   static String localRateLabel(int rate) => '${BrowseItem.inr(rate)} / day local';
 

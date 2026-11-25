@@ -3,8 +3,6 @@ import 'dart:ui' as ui;
 import 'package:bakhli/design/design.dart';
 import 'package:bakhli/features/taxi/guest/taxi_card.dart';
 import 'package:bakhli/features/taxi/models/taxi_browse_item.dart';
-import 'package:bakhli/features/taxi/models/taxi_owner_model.dart';
-import 'package:bakhli/features/taxi/setup/taxi_owner_card.dart';
 import 'package:bakhli/features/taxi/ways/models/taxi_ways_models.dart';
 import 'package:bakhli/features/taxi/ways/widgets/local_taxi_rail_card.dart';
 import 'package:bakhli/features/taxi/ways/widgets/way_driver_row.dart';
@@ -47,22 +45,6 @@ const _driver = WayDriver(
   basedHere: true,
 );
 
-TaxiOwnerModel _owner() => TaxiOwnerModel.fromJson({
-      'id': 'o1',
-      'status': 'Approved',
-      'plateDisplay': 'UK07 AB 1234',
-      'vehicleTypeName': 'Innova Crysta',
-      'seats': 7,
-      'cityName': 'Dehradun',
-      'minFare': 1800,
-      'localDayRate': 2500,
-      'localDayKm': 80,
-      'routes': [
-        {'id': 'r1', 'routeIndex': 1, 'fromName': 'Dehradun', 'toName': 'Mussoorie', 'fare': 1800, 'tripType': 'OneWay'}
-      ],
-      'createdAt': '2026-01-01T00:00:00Z',
-    });
-
 Future<void> _shot(WidgetTester t, String name) async {
   final ro = t.renderObject<RenderRepaintBoundary>(find.byKey(const ValueKey('shot_root')));
   await t.runAsync(() async {
@@ -102,7 +84,6 @@ void main() {
             TaxiCard(item: _taxi(), onOpen: () {}),
             TaxiCard(item: _taxi(rate: 2500), onOpen: () {}, onSelect: () {}, selected: true, onBook: () {}, onEnquire: () {}),
             WayDriverRow(driver: _driver, onTap: () {}, bestReason: 'Lowest fare', onCall: () {}, onUse: () {}),
-            Padding(padding: const EdgeInsets.all(12), child: TaxiOwnerCard(taxi: _owner(), onPreview: () {}, onShare: () {}, onDelete: () {}, onEditFare: (_) {}, onLocalRate: () {}, onTripLeads: () {})),
           ]),
           w,
           s,

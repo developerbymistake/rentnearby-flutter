@@ -224,7 +224,6 @@ class TripStrings {
   static String replaceDriverTold(String n) => '$n is cancelled and told.';
 
   static const String tripLeads = 'Trip leads';
-  static const String tripLeadsRow = 'Trip leads · travellers planning a trip';
   static const String repliedChip = 'Replied';
   static const String bookedChip = 'Booked';
   static const String noLeads = 'No trip leads yet';
@@ -256,8 +255,6 @@ class TripStrings {
   static const String notYourBooking = 'Not your booking?';
   static String notYourBookingBody(String g) => '$g is told and the day turns red for them.';
   static const String pausedTaxiHere = 'New leads are paused in your area.';
-  static const String localSightseeing = 'Local sightseeing';
-  static const String addLocalRate = 'Add local rate';
 
   static const String driver = 'Driver';
   static const String copy = 'Copy';

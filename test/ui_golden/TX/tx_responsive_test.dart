@@ -1,7 +1,4 @@
-import 'package:bakhli/features/taxi/taxi_option_sets.dart' show TaxiStatus;
 import 'package:bakhli/features/taxi/models/taxi_browse_item.dart';
-import 'package:bakhli/features/taxi/models/taxi_owner_model.dart';
-import 'package:bakhli/features/taxi/setup/taxi_owner_card.dart';
 import 'package:bakhli/features/taxi/ways/models/taxi_ways_models.dart';
 import 'package:bakhli/features/taxi/ways/widgets/journey_driver_card.dart';
 import 'package:bakhli/features/taxi/ways/widgets/local_taxi_rail_card.dart';
@@ -35,33 +32,6 @@ WayLeg _leg(int i, WayPlace f, WayPlace t) => WayLeg(
       driverCount: 3,
     );
 
-TaxiOwnerModel _owner(String status) => TaxiOwnerModel(
-      id: 'o1',
-      status: status,
-      step1Done: true,
-      routesDone: true,
-      vehicleTypeName: 'Innova Crysta',
-      seats: 7,
-      plateDisplay: 'UK07 AB 1234',
-      minFare: 1800,
-      pendingReportCount: 1,
-      localDayRate: 3000,
-      createdAt: DateTime(2026, 1, 1),
-      routes: const [
-        TaxiRouteModel(
-            id: 'r1',
-            routeIndex: 0,
-            fromName: 'Dehradun',
-            fromLatitude: 30,
-            fromLongitude: 78,
-            toName: 'Mussoorie Library Chowk',
-            toLatitude: 30.4,
-            toLongitude: 78.07,
-            fare: 1800,
-            tripType: 'ONE_WAY'),
-      ],
-    );
-
 void main() {
   for (final w in [300.0, 360.0, 412.0, 560.0]) {
     for (final scale in [1.0, 1.3]) {
@@ -93,17 +63,6 @@ void main() {
                   JourneyDriverCard(
                       driver: _driver, otherCount: 3, onChange: () {}, onTap: () {}, selected: true, seatsNote: 'Seats 7, you need 9'),
                   WayPlanRibbonCard(plan: plan2, planIndex: 0, bestReason: 'Lowest fare', onOpen: () {}, onUse: () {}),
-                  TaxiOwnerCard(
-                    taxi: _owner(TaxiStatus.rejected),
-                    onEditFare: (_) {},
-                    onPreview: () {},
-                    onShare: () {},
-                    onDelete: () {},
-                    onTripLeads: () {},
-                    onLocalRate: () {},
-                    newLeads: 2,
-                    onOpenSetup: () {},
-                  ),
                   SizedBox(height: 300, child: ListView(scrollDirection: Axis.horizontal, children: [LocalTaxiRailCard(item: taxi)])),
                 ]),
               ),
