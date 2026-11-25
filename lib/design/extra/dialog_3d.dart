@@ -273,7 +273,7 @@ class BusyOverlay3D extends StatelessWidget {
   final double? progress;
   final String? caption;
 
-  static BorderRadius get radius => DS.br(const BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(54), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8)));
+  static BorderRadius get radius => DS.br(const BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(36), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8)));
 
   @override
   Widget build(BuildContext context) {

@@ -102,7 +102,10 @@ class StaySetupController extends GetxController {
         return true;
       } catch (e) {
         lastError = e;
-        if (!DioErrorMapper.isNetworkError(e)) break;
+        // Not idempotent: retry only when the request never reached the server.
+        final unsent = e is DioException &&
+            (e.type == DioExceptionType.connectionError || e.type == DioExceptionType.connectionTimeout);
+        if (!unsent) break;
         if (attempt < maxAttempts) await Future.delayed(Duration(seconds: attempt));
       }
     }

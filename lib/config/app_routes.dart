@@ -55,7 +55,6 @@ class AppRoutes {
   static const String stayBasicDetails = '/stay-basic-details';
   static const String stayRooms = '/stay-rooms';
   static const String stayRules = '/stay-rules';
-  static const String staySubmit = '/stay-submit';
   static const String myStays = '/my-stays';
   static const String stayDetail = '/stay-detail';
 
@@ -67,7 +66,6 @@ class AppRoutes {
   static const String taxiSetup = '/taxi-setup';
   static const String taxiVehicle = '/taxi-vehicle';
   static const String taxiRoutes = '/taxi-routes';
-  static const String taxiSubmit = '/taxi-submit';
   static const String myTaxi = '/my-taxi';
   static const String taxiDetail = '/taxi-detail';
   static const String taxiList = '/taxi-list';
@@ -155,12 +153,11 @@ class AppRoutes {
   };
 
   static const Set<String> ownerOnly = {plansBilling, planHistory};
-  static const Set<String> stayOwnerOnly = {staySetup, stayBasicDetails, stayRooms, stayRules, staySubmit, myStays, myJobs, postJob, stayEnquiries, stayShareDetails, ...stayOwnerNewRoutes};
+  static const Set<String> stayOwnerOnly = {staySetup, stayBasicDetails, stayRooms, stayRules, myStays, myJobs, postJob, stayEnquiries, stayShareDetails, ...stayOwnerNewRoutes};
   static const Set<String> taxiDriverOnly = {
     taxiSetup,
     taxiVehicle,
     taxiRoutes,
-    taxiSubmit,
     myTaxi,
     tripLeads,
     taxiRequestRing,
@@ -177,7 +174,6 @@ class AppRoutes {
     stayBasicDetails: AppTabKeys.stays,
     stayRooms: AppTabKeys.stays,
     stayRules: AppTabKeys.stays,
-    staySubmit: AppTabKeys.stays,
     stayShareDetails: AppTabKeys.stays,
     myStays: AppTabKeys.stays,
     stayDetail: AppTabKeys.stays,
@@ -188,7 +184,6 @@ class AppRoutes {
     taxiSetup: AppTabKeys.taxi,
     taxiVehicle: AppTabKeys.taxi,
     taxiRoutes: AppTabKeys.taxi,
-    taxiSubmit: AppTabKeys.taxi,
     myTaxi: AppTabKeys.taxi,
     taxiDetail: AppTabKeys.taxi,
     taxiList: AppTabKeys.taxi,

@@ -14,9 +14,7 @@ import 'package:bakhli/features/stay/setup/stay_basic_details_screen.dart';
 import 'package:bakhli/features/stay/setup/stay_rooms_screen.dart';
 import 'package:bakhli/features/stay/setup/stay_rules_screen.dart';
 import 'package:bakhli/features/stay/setup/stay_setup_controller.dart';
-import 'package:bakhli/features/stay/setup/stay_setup_hub_screen.dart';
 import 'package:bakhli/features/stay/setup/stay_share_details_screen.dart';
-import 'package:bakhli/features/stay/setup/stay_submit_screen.dart';
 import 'package:bakhli/features/stay/stay_registration_types_controller.dart';
 import 'package:bakhli/features/stay/stay_types_controller.dart';
 import 'package:bakhli/models/city_model.dart';
@@ -32,7 +30,6 @@ import 'package:image_picker_platform_interface/image_picker_platform_interface.
 import 'package:maplibre_gl/maplibre_gl.dart';
 // ignore: depend_on_referenced_packages
 import 'package:permission_handler_platform_interface/permission_handler_platform_interface.dart';
-import 'package:bakhli/utils/app_toast.dart';
 import 'package:toastification/toastification.dart';
 
 import '../e2e_journeys/nearby/nearby_support.dart';
@@ -328,54 +325,6 @@ void main() {
   setUpAll(() => shotsDir = r'F:\Dhasu\UI_Template_resume\Mock_Final\shots\stay-owner');
   tearDown(Get.reset);
 
-  group('hub', () {
-    final cases = <String, (Map<String, dynamic>?, LoadMode, bool, double)>{
-      'hub_new': (null, LoadMode.ok, true, 800),
-      'hub_progress': (stayJson(s1: true, s2: true), LoadMode.ok, false, 1350),
-      'hub_ready': (stayJson(status: StayStatus.rejected, s1: true, s2: true, s3: true, share: true), LoadMode.ok, false, 1350),
-      'hub_reg': (stayJson(s1: true, s2: true, s3: true, reg: false), LoadMode.ok, false, 800),
-      'hub_pending': (stayJson(status: StayStatus.pendingReview, s1: true, s2: true, s3: true), LoadMode.ok, false, 800),
-      'hub_live': (stayJson(status: StayStatus.approved, s1: true, s2: true, s3: true, share: true), LoadMode.ok, false, 800),
-      'hub_rejected': (stayJson(status: StayStatus.rejected, s1: true, s2: true, s3: true, reason: 'Photos are not clear. Add brighter photos.'), LoadMode.ok, false, 800),
-      'hub_loading': (null, LoadMode.loading, true, 800),
-      'hub_error': (null, LoadMode.error, true, 800),
-    };
-    for (final e in cases.entries) {
-      testWidgets(e.key, (t) async {
-        await capture(t, () {
-          base(canCorrect: e.value.$3);
-          ctrl(e.value.$1, mode: e.value.$2);
-          final draft = e.key != 'hub_progress' && (e.value.$1 == null || e.value.$1!['status'] == StayStatus.draft);
-          return draft ? const StaySetupHubScreen() : const Launch(StaySetupHubScreen(), args: {'fromMyStays': true});
-        }, e.key, height: e.value.$4, variants: e.key == 'hub_new' || e.key == 'hub_progress');
-      });
-    }
-
-    testWidgets('hub_menu', (t) async {
-      await capture(t, () {
-        base();
-        ctrl(null);
-        return const StaySetupHubScreen();
-      }, 'hub_menu', after: () async {
-        await t.tap(find.byTooltip('Menu'));
-        await t.pump(const Duration(milliseconds: 300));
-      }, variants: false);
-      expect(find.text('Change role'), findsOneWidget);
-      expect(find.text('Log out'), findsOneWidget);
-    });
-
-    testWidgets('hub_pending toast', (t) async {
-      await capture(t, () {
-        base();
-        ctrl(stayJson(status: StayStatus.pendingReview, s1: true, s2: true, s3: true));
-        return const Launch(StaySetupHubScreen(), args: {'fromMyStays': true});
-      }, 'hub_pending_toast', after: () async {
-        await t.tap(find.text('Basic details'));
-        await t.pump(const Duration(milliseconds: 600));
-      }, variants: false);
-    });
-  });
-
   group('basic details', () {
     testWidgets('bd_details', (t) async {
       await capture(t, () => basicScreen(stay: stayJson(s1: true)), 'bd_details', height: 1250);
@@ -546,29 +495,6 @@ void main() {
     });
   });
 
-  group('submit', () {
-    testWidgets('submit', (t) async {
-      await capture(t, () {
-        base();
-        ctrl(stayJson(s1: true, s2: true, s3: true));
-        return const StaySubmitScreen();
-      }, 'submit');
-    });
-    testWidgets('submit_reg and busy', (t) async {
-      await capture(t, () {
-        base();
-        ctrl(stayJson(s1: true, s2: true, s3: true, reg: false));
-        return const StaySubmitScreen();
-      }, 'submit_reg', after: () => tapText(t, 'Submit'), variants: false);
-      await capture(t, () {
-        base();
-        ctrl(stayJson(s1: true, s2: true, s3: true), hold: true);
-        return const StaySubmitScreen();
-      }, 'submit_busy', after: () => tapText(t, 'Submit'), variants: false);
-      expect(find.text('Submitting...'), findsOneWidget);
-    });
-  });
-
   group('share details', () {
     testWidgets('share', (t) async {
       await capture(t, () {
@@ -703,14 +629,6 @@ void main() {
         return const StayRoomsScreen();
       }, 'rooms_fill', after: () => tapText(t, 'Add another room'), height: 1300, variants: false);
     });
-
-    testWidgets('submit_closed shots base', (t) async {
-      await capture(t, () {
-        base();
-        ctrl(stayJson(s1: true, s2: true, s3: true), hold: true);
-        return const StaySubmitScreen();
-      }, 'submit_busy2', after: () => tapText(t, 'Submit'), variants: false);
-    });
   });
 
   group('photos step', () {
@@ -812,14 +730,6 @@ void main() {
   });
 
   group('toasts and coverage', () {
-    testWidgets('hub_bd_saved', (t) async {
-      await capture(t, () {
-        base();
-        ctrl(stayJson(s1: true));
-        return const StaySetupHubScreen();
-      }, 'hub_bd_saved', after: () async => AppToast.success('Basic details saved'), height: 1350, variants: false, expectText: 'Basic details saved');
-    });
-
     final bdToasts = <String, (Map<String, dynamic>, String, double)>{
       'bd_t_name': (stayJson(s1: true)..['name'] = 'D', 'Stay name must be 2 to 80 characters', 0),
       'bd_t_type': (stayJson(s1: true)..['stayTypeId'] = null, 'Please select a stay type', 0),

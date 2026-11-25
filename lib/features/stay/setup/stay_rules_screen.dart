@@ -2,9 +2,8 @@ import 'stay_page_header.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../design/design.dart';
-import '../../../design/extra/ext_stay_owner.dart';
 import '../../../utils/app_toast.dart';
-import 'stay_option_sets.dart';
+import 'stay_rules_form.dart';
 import 'stay_setup_controller.dart';
 
 class StayRulesScreen extends StatefulWidget {
@@ -15,76 +14,27 @@ class StayRulesScreen extends StatefulWidget {
 
 class _StayRulesScreenState extends State<StayRulesScreen> {
   final _ctrl = StaySetupController.ensure();
-  TimeOfDay _checkIn = const TimeOfDay(hour: 12, minute: 0);
-  TimeOfDay _checkOut = const TimeOfDay(hour: 11, minute: 0);
-  bool _pets = false;
-  bool _smoking = false;
-  bool _alcohol = false;
-  bool _couples = false;
-  bool _idProof = false;
-  String? _cancellation;
-  bool _dirty = false;
+  final _form = StayRulesFormController();
 
   @override
   void initState() {
     super.initState();
-    final r = _ctrl.stay.value?.rules;
-    if (r != null) {
-      _checkIn = _parse(r.checkInTime, _checkIn);
-      _checkOut = _parse(r.checkOutTime, _checkOut);
-      _pets = r.petsAllowed;
-      _smoking = r.smokingAllowed;
-      _alcohol = r.alcoholAllowed;
-      _couples = r.unmarriedCouplesAllowed;
-      _idProof = r.idProofRequired;
-      _cancellation = r.cancellationPolicy;
-    }
+    _form.seed(_ctrl.stay.value);
   }
 
-  static TimeOfDay _parse(String hhmm, TimeOfDay fallback) {
-    final p = hhmm.split(':');
-    final h = int.tryParse(p.first);
-    final m = p.length > 1 ? int.tryParse(p[1]) : null;
-    return h == null || m == null ? fallback : TimeOfDay(hour: h, minute: m);
-  }
-
-  static String _hhmm(TimeOfDay t) =>
-      '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
-
-  Future<void> _pickTime(bool checkIn) async {
-    final picked = await TemplateTimePopup.pick(
-      context,
-      initial: checkIn ? _checkIn : _checkOut,
-      label: checkIn ? 'Check-in time' : 'Check-out time',
-      tone: KitTone.stay,
-      art: ListingArt.key,
-    );
-    if (picked == null || !mounted) return;
-    setState(() {
-      if (checkIn) {
-        _checkIn = picked;
-      } else {
-        _checkOut = picked;
-      }
-      _dirty = true;
-    });
+  @override
+  void dispose() {
+    _form.dispose();
+    super.dispose();
   }
 
   Future<void> _save() async {
-    if (_cancellation == null) {
-      AppToast.error('Please select a cancellation policy');
+    final err = _form.validate();
+    if (err != null) {
+      AppToast.error(err);
       return;
     }
-    final ok = await _ctrl.saveRules({
-      'checkInTime': _hhmm(_checkIn),
-      'checkOutTime': _hhmm(_checkOut),
-      'petsAllowed': _pets,
-      'smokingAllowed': _smoking,
-      'alcoholAllowed': _alcohol,
-      'unmarriedCouplesAllowed': _couples,
-      'idProofRequired': _idProof,
-      'cancellationPolicy': _cancellation,
-    });
+    final ok = await _ctrl.saveRules(_form.payload());
     if (!ok || !mounted) return;
     Get.back();
     AppToast.success('Rules saved');
@@ -92,7 +42,7 @@ class _StayRulesScreenState extends State<StayRulesScreen> {
 
   void _onBack() {
     if (_ctrl.isSaving.value) return;
-    if (!_dirty) {
+    if (!_form.dirty) {
       Get.back();
       return;
     }
@@ -131,49 +81,7 @@ class _StayRulesScreenState extends State<StayRulesScreen> {
             Expanded(
               child: ListView(
                 padding: EdgeInsets.only(bottom: DS.s(24)),
-                children: [
-                  FormSectionCard(
-                    tone: _tone,
-                    art: ListingArt.key,
-                    title: 'Check-in and Check-out',
-                    tag: 'Required',
-                    child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Expanded(child: _timeField('Check-in', _checkIn, () => _pickTime(true))),
-                      Gap.h(12),
-                      Expanded(child: _timeField('Check-out', _checkOut, () => _pickTime(false))),
-                    ]),
-                  ),
-                  FormSectionCard(
-                    tone: _tone,
-                    art: ListingArt.clipboard,
-                    title: 'House Rules',
-                    tag: 'Required',
-                    child: Column(children: [
-                      _switchRow('Pets allowed', ListingArt.paw, _pets, (v) => _pets = v),
-                      _switchRow('Smoking allowed', ListingArt.camping, _smoking, (v) => _smoking = v),
-                      _switchRow('Alcohol allowed', ListingArt.star, _alcohol, (v) => _alcohol = v),
-                      _switchRow('Unmarried couples allowed', ListingArt.key, _couples, (v) => _couples = v),
-                      _switchRow('ID proof required', ListingArt.clipboard, _idProof, (v) => _idProof = v),
-                    ]),
-                  ),
-                  FormSectionCard(
-                    tone: _tone,
-                    art: ListingArt.calendar,
-                    title: 'Cancellation',
-                    tag: 'Required',
-                    child: OptionTileGrid(
-                      tone: _tone,
-                      items: [
-                        for (final o in StayOptionSets.cancellation) OptionTileItem(label: o.label, art: StayOwnerArt.cancellation[o.value] ?? ListingArt.star),
-                      ],
-                      isSelected: (i) => _cancellation == StayOptionSets.cancellation[i].value,
-                      onTap: (i) => setState(() {
-                        _cancellation = StayOptionSets.cancellation[i].value;
-                        _dirty = true;
-                      }),
-                    ),
-                  ),
-                ],
+                children: [StayRulesForm(controller: _form, tone: _tone)],
               ),
             ),
           ]),
@@ -188,25 +96,4 @@ class _StayRulesScreenState extends State<StayRulesScreen> {
       ]),
     );
   }
-
-  Widget _timeField(String label, TimeOfDay value, VoidCallback onTap) => PillPickerField(
-        tone: _tone,
-        label: label,
-        value: StayOptionSets.time12(_hhmm(value)),
-        leadingArt: ListingArt.key,
-        trailing: const SizedBox.shrink(),
-        onTap: onTap,
-      );
-
-  Widget _switchRow(String label, String art, bool value, void Function(bool) apply) => ToggleRow(
-        tone: _tone,
-        label: label,
-        art: art,
-        value: value,
-        divider: true,
-        onChanged: (v) => setState(() {
-          apply(v);
-          _dirty = true;
-        }),
-      );
 }

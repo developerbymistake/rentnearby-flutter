@@ -13,8 +13,7 @@ import 'requests/driver_requests_screen.dart';
 import 'requests/driver_ring_screen.dart';
 import '../taxi_driver/hub/taxi_hub_screen.dart';
 import 'setup/taxi_routes_screen.dart';
-import 'setup/taxi_setup_hub_screen.dart';
-import 'setup/taxi_submit_screen.dart';
+import 'setup/taxi_onboarding_screen.dart';
 import 'setup/taxi_vehicle_screen.dart';
 
 String _offerIdOf(Object? args) => args is Map ? (args['offerId']?.toString() ?? '') : '';
@@ -69,7 +68,7 @@ final List<GetPage> driverRequestPages = [
 final List<GetPage> taxiPages = [
   GetPage(
     name: AppRoutes.taxiSetup,
-    page: () => const TaxiSetupHubScreen(),
+    page: () => const TaxiOnboardingScreen(),
     customTransition: TemplateTransition(),
     transitionDuration: templateTransitionDuration,
   ),
@@ -82,12 +81,6 @@ final List<GetPage> taxiPages = [
   GetPage(
     name: AppRoutes.taxiRoutes,
     page: () => const TaxiRoutesScreen(),
-    customTransition: TemplateTransition(),
-    transitionDuration: templateTransitionDuration,
-  ),
-  GetPage(
-    name: AppRoutes.taxiSubmit,
-    page: () => const TaxiSubmitScreen(),
     customTransition: TemplateTransition(),
     transitionDuration: templateTransitionDuration,
   ),

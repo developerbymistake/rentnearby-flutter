@@ -8,13 +8,12 @@ import 'setup/stay_share_details_screen.dart';
 import 'setup/stay_basic_details_screen.dart';
 import 'setup/stay_rooms_screen.dart';
 import 'setup/stay_rules_screen.dart';
-import 'setup/stay_setup_hub_screen.dart';
-import 'setup/stay_submit_screen.dart';
+import 'setup/stay_onboarding_screen.dart';
 
 final List<GetPage> stayPages = [
   GetPage(
     name: AppRoutes.staySetup,
-    page: () => const StaySetupHubScreen(),
+    page: () => const StayOnboardingScreen(),
     customTransition: TemplateTransition(),
     transitionDuration: templateTransitionDuration,
   ),
@@ -33,12 +32,6 @@ final List<GetPage> stayPages = [
   GetPage(
     name: AppRoutes.stayRules,
     page: () => const StayRulesScreen(),
-    customTransition: TemplateTransition(),
-    transitionDuration: templateTransitionDuration,
-  ),
-  GetPage(
-    name: AppRoutes.staySubmit,
-    page: () => const StaySubmitScreen(),
     customTransition: TemplateTransition(),
     transitionDuration: templateTransitionDuration,
   ),

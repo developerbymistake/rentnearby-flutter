@@ -124,20 +124,6 @@ class TaxiOptionSets {
         if (t.seats != null) '${seatsLabel(t.seats!)} seats',
       ].join(' · ');
 
-  static String step1Summary(TaxiOwnerModel t) => [
-        vehicleSummary(t),
-        if (t.plateDisplay != null && t.plateDisplay!.isNotEmpty) t.plateDisplay!,
-      ].join(' · ');
-
-  static String routesSummary(TaxiOwnerModel t) {
-    final n = t.routes.length;
-    final min = t.minFare;
-    final from = min != null ? ' · from ${BrowseItem.inr(min)}' : '';
-    final rate = t.localDayRate;
-    final local = rate != null ? ' · ${BrowseItem.inr(rate)} / day local' : '';
-    return '$n route${n == 1 ? '' : 's'}$from$local';
-  }
-
   static String localRateLabel(int rate) => '${BrowseItem.inr(rate)} / day local';
 
   static String tripReplyLabelText(String label) => switch (label) {

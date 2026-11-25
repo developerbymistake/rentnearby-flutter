@@ -6,6 +6,7 @@ import 'package:get/get.dart';
 import 'package:maplibre_gl/maplibre_gl.dart' show LatLng;
 import 'package:permission_handler/permission_handler.dart';
 import '../../../config/app_routes.dart';
+import '../../../config/app_tabs.dart';
 import '../../../controllers/auth_controller.dart';
 import '../../../design/design.dart';
 import '../../../design/extra/ext_taxi_owner.dart';
@@ -14,11 +15,15 @@ import '../../../models/city_model.dart';
 import '../../../screens/add_listing_location_mixin.dart';
 import '../../../utils/app_toast.dart';
 import '../../../widgets/onboarding_closed_dialog.dart';
+import '../../owner_core/onboarding/onboarding_exit.dart';
+import '../models/taxi_owner_model.dart';
 import '../taxi_option_sets.dart';
 import '../../taxi_driver/hub/taxi_hub_sheets.dart';
 import '../taxi_vehicle_types_controller.dart';
 import 'taxi_identity_validators.dart';
 import 'taxi_photo_pick.dart';
+import 'taxi_rate_form.dart';
+import 'taxi_routes_form.dart';
 import 'taxi_setup_controller.dart';
 import 'taxi_vehicle_type_picker_sheet.dart';
 import '../../taxi_driver/strings/taxi_photo_strings.dart';
@@ -34,7 +39,8 @@ abstract final class TaxiPlateDecode {
 }
 
 class TaxiVehicleScreen extends StatefulWidget {
-  const TaxiVehicleScreen({super.key});
+  const TaxiVehicleScreen({super.key, this.onboarding = false});
+  final bool onboarding;
   @override
   State<TaxiVehicleScreen> createState() => _TaxiVehicleScreenState();
 }
@@ -55,6 +61,10 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
   final _dlFocus = FocusNode();
   final _cardKeys = {for (final r in _Ring.values) r: GlobalKey()};
   final _dlKey = GlobalKey();
+  final _routes = TaxiRoutesFormController(onboarding: true);
+  final _rate = TaxiRateFormController();
+  String? _savedRoutesKey;
+  bool _submitting = false;
 
   String? _vehicleTypeId;
   String? _vehicleTypeName;
@@ -137,6 +147,18 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
     _initDisplayUrl = _remoteDisplayUrl;
     _initPhone = _phoneCtrl.text;
     _initWhatsApp = _effectiveWhatsApp;
+    if (widget.onboarding) {
+      _routes.seed(t);
+      _rate.seed(t);
+      if (t != null && t.routesDone) _savedRoutesKey = _routes.key;
+      _step = _startStep(t);
+      _prevStep = _step;
+    }
+  }
+
+  static int _startStep(TaxiOwnerModel? t) {
+    if (t == null || t.isRejected || !t.step1Done || !t.identityDone) return 0;
+    return t.routesDone ? 4 : 3;
   }
 
   @override
@@ -150,6 +172,8 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
     _whatsAppFocus.dispose();
     _dlCtrl.dispose();
     _dlFocus.dispose();
+    _routes.dispose();
+    _rate.dispose();
     super.dispose();
   }
 
@@ -243,12 +267,8 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
   void _showOnboardingClosed() {
     if (!mounted) return;
     final t = _ctrl.taxi.value;
-    final canCorrect = (t == null || t.isDraft) && (Get.find<AuthController>().user.value?.canCorrectRole ?? false);
-    final percent = t?.percent ?? 0;
-    OnboardingClosedDialog.show(context,
-        onChangeRole: canCorrect
-            ? () => Get.toNamed(AppRoutes.roleSelect, arguments: {'correction': true, 'percent': percent})
-            : null);
+    final canCorrect = (t == null || t.isDraft) && OnboardingExit.canCorrectRole;
+    OnboardingClosedDialog.show(context, onChangeRole: canCorrect ? () => OnboardingExit.openRoleCorrection(hasDraft: t != null) : null);
   }
 
   void _onResolveOnboardingClosed() {
@@ -275,7 +295,22 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
 
   void _onBack() {
     if (_blocked) return;
-    if (_hasChanges) {
+    if (widget.onboarding && _step > 0) {
+      _goTo(_step - 1);
+      return;
+    }
+    if (widget.onboarding && !_ctrl.mainBelow) {
+      final t = _ctrl.taxi.value;
+      OnboardingExit.onBackFromFirstPage(isDraft: t == null || t.isDraft, hasDraft: t != null);
+      return;
+    }
+    final pin = pinnedOrLiveLocation;
+    final basicSaved = widget.onboarding &&
+        _localPhoto == null &&
+        _localDisplay == null &&
+        pin != null &&
+        _savedBasicKey == _basicBody(pin).toString();
+    if ((_hasChanges && !basicSaved) || (widget.onboarding && (_routes.dirty || _rate.dirty))) {
       _confirmDiscard();
     } else {
       Get.back();
@@ -460,8 +495,147 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
       if (_validateContact()) _goTo(2);
       return;
     }
-    _save();
+    if (_step == 2) {
+      _save();
+    } else if (_step == 3) {
+      if (_routes.formOpen) {
+        FocusScope.of(context).unfocus();
+        _routes.saveForm();
+      } else {
+        _saveRoutes();
+      }
+    } else {
+      _submit();
+    }
   }
+
+  Future<void> _recoverStep() async {
+    await _ctrl.load();
+    if (!mounted) return;
+    final t = _ctrl.taxi.value;
+    if (t == null || !t.step1Done) {
+      _goTo(0);
+    } else if (!t.routesDone) {
+      _goTo(3);
+    }
+  }
+
+  Future<void> _saveRoutes() async {
+    if (_blocked) return;
+    FocusScope.of(context).unfocus();
+    if (!_routes.validate()) return;
+    if (_routes.key != _savedRoutesKey) {
+      _busy = true;
+      try {
+        final ok = await _ctrl.saveRoutes(_routes.payload(), quietLimit: true);
+        if (!mounted) return;
+        if (!ok) {
+          final type = _ctrl.lastErrorType;
+          if (type == TaxiSetupController.routeLimitType) {
+            AppToast.info(TaxiSetupStrings.oneRouteOnly);
+          } else if (type == 'TaxiStepLocked') {
+            await _recoverStep();
+          }
+          return;
+        }
+        _routes.seed(_ctrl.taxi.value);
+        _savedRoutesKey = _routes.key;
+      } finally {
+        _busy = false;
+      }
+    }
+    if (mounted) _goTo(4);
+  }
+
+  Future<void> _submit() async {
+    if (_blocked) return;
+    FocusScope.of(context).unfocus();
+    final rateError = _rate.check();
+    if (rateError != null) {
+      AppToast.error(rateError);
+      return;
+    }
+    _busy = true;
+    try {
+      if (_rate.dirty || !_rate.stored) {
+        final saved = await _ctrl.saveLocalRate(dayRate: _rate.dayRate, kmPerDay: _rate.kmPerDay);
+        if (!mounted) return;
+        if (!saved) {
+          if (_ctrl.lastErrorType == 'TaxiStepLocked') await _recoverStep();
+          return;
+        }
+        _rate.seed(_ctrl.taxi.value);
+      }
+      final t = _ctrl.taxi.value;
+      if (t == null || !t.step1Done) {
+        AppToast.warning(TaxiSetupStrings.completeVehicle);
+        _goTo(0);
+        return;
+      }
+      if (!t.identityDone) {
+        AppToast.warning(TaxiSetupStrings.addLicenceFirst);
+        _goTo(1);
+        return;
+      }
+      if (!t.routesDone) {
+        AppToast.warning(TaxiSetupStrings.addOneRoute);
+        _goTo(3);
+        return;
+      }
+      setState(() => _submitting = true);
+      final ok = await _ctrl.submit();
+      if (!mounted) return;
+      setState(() => _submitting = false);
+      void done() {
+        final auth = Get.find<AuthController>();
+        AppToast.success(TaxiSetupStrings.submittedToast);
+        if (_ctrl.mainBelow) {
+          Get.until((r) => r.settings.name == AppRoutes.main);
+          auth.switchToTab(AppTabs.home);
+          return;
+        }
+        Get.offAllNamed(AppRoutes.main);
+        WidgetsBinding.instance.addPostFrameCallback((_) => auth.switchToTab(AppTabs.home));
+      }
+      if (!ok) {
+        final type = _ctrl.lastErrorType;
+        if (type == 'TaxiLocked') {
+          await _ctrl.load();
+          if (!mounted || !(_ctrl.taxi.value?.isPendingReview ?? false)) return;
+          await Get.find<AuthController>().refreshProfile();
+          if (mounted) done();
+        } else if (type == 'OnboardingClosed') {
+          _showOnboardingClosed();
+        } else if (type == 'TaxiBaseOutsideDistrict') {
+          _resolvedPin = null;
+          _goTo(2);
+        } else if (type == 'TaxiIdentityRequired') {
+          _goTo(1);
+        } else if (type == 'TaxiStepLocked') {
+          await _recoverStep();
+        }
+        return;
+      }
+      done();
+    } finally {
+      _busy = false;
+      if (mounted && _submitting) setState(() => _submitting = false);
+    }
+  }
+
+  Map<String, dynamic> _basicBody(LatLng pin) => {
+        'vehicleTypeId': _vehicleTypeId,
+        'seats': _seats,
+        'numberPlate': TaxiOptionSets.normalizePlate(_plateCtrl.text),
+        'contactPhone': _phone,
+        'whatsAppNumber': _effectiveWhatsApp,
+        'latitude': pin.latitude,
+        'longitude': pin.longitude,
+        'districtId': selectedDistrictId,
+        'cityId': resolvedCityId,
+        'drivingLicenceNumber': _dlTyped.isEmpty ? null : _dlTyped,
+        'dateOfBirth': _dob == null ? null : TaxiIdentityValidators.isoDate(_dob!),
+      };
 
   Future<bool> _uploadPendingPhoto() async {
     while (true) {
@@ -543,6 +717,14 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
       return;
     }
     if (!_validateBase()) return;
+    if (widget.onboarding &&
+        _localPhoto == null &&
+        _localDisplay == null &&
+        (_ctrl.taxi.value?.step1Done ?? false) &&
+        _savedBasicKey == _basicBody(pinnedOrLiveLocation!).toString()) {
+      _goTo(3);
+      return;
+    }
     final review = _wasApproved && _needsReview;
     if (review && !await TaxiReviewSheet.ask(context)) return;
     if (!mounted) return;
@@ -554,19 +736,7 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
       if (_localPhoto != null && existing != null && !existing.isApproved) {
         if (!await _uploadPendingPhoto()) return;
       }
-      final body = <String, dynamic>{
-        'vehicleTypeId': _vehicleTypeId,
-        'seats': _seats,
-        'numberPlate': TaxiOptionSets.normalizePlate(_plateCtrl.text),
-        'contactPhone': _phone,
-        'whatsAppNumber': _effectiveWhatsApp,
-        'latitude': pin.latitude,
-        'longitude': pin.longitude,
-        'districtId': selectedDistrictId,
-        'cityId': resolvedCityId,
-        'drivingLicenceNumber': _dlTyped.isEmpty ? null : _dlTyped,
-        'dateOfBirth': _dob == null ? null : TaxiIdentityValidators.isoDate(_dob!),
-      };
+      final body = _basicBody(pin);
       final key = body.toString();
       if (_savedBasicKey != key) {
         final ok = await _ctrl.saveBasic(body);
@@ -607,6 +777,11 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
       setState(() => _isFinalizing = false);
       final status = _ctrl.taxi.value?.status ?? _uploadedStatus;
       TaxiDriverDeps.refreshHome().ignore();
+      if (widget.onboarding) {
+        _routes.refreshDefaultFrom();
+        _goTo(3);
+        return;
+      }
       Get.back();
       if (review && status == TaxiStatus.pendingReview) {
         AppToast.info('Sent back for review');
@@ -642,15 +817,8 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
             child: SafeArea(
               bottom: false,
               child: Column(children: [
-                PageHeader3D(
-                  tone: _tone,
-                  title: TaxiSetupStrings.step1Title,
-                  subtitle: const [TaxiSetupStrings.step1Vehicle, TaxiSetupStrings.step1Licence, TaxiSetupStrings.step1Contact][_step],
-                  art: ListingArt.taxi,
-                  inlineTitle: true,
-                  onBack: _onBack,
-                ),
-                StepProgressHeader(tone: _tone, labels: TaxiSetupStrings.progressLabels, current: _step),
+                _header(),
+                StepProgressHeader(tone: _tone, labels: widget.onboarding ? TaxiSetupStrings.wizardLabels : TaxiSetupStrings.progressLabels, current: _step),
                 Expanded(
                   child: PageTransitionSwitcher(
                     duration: templateTransitionDuration,
@@ -662,11 +830,13 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
                       transitionType: SharedAxisTransitionType.horizontal,
                       child: child,
                     ),
-                    child: _step == 0
-                        ? _vehicleStep()
-                        : _step == 1
-                            ? _contactStep()
-                            : _baseStep(),
+                    child: switch (_step) {
+                      0 => _vehicleStep(),
+                      1 => _contactStep(),
+                      2 => _baseStep(),
+                      3 => _scroll(3, [TaxiRoutesForm(controller: _routes, tone: _tone)]),
+                      _ => _scroll(4, [TaxiLocalRateCard(controller: _rate, tone: _tone)]),
+                    },
                   ),
                 ),
               ]),
@@ -676,26 +846,63 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
         ),
         if (_isUploading) const SetupBusy(message: TaxiPhotoStrings.uploadingPhoto, tone: KitTone.taxi, art: ListingArt.camera),
         Obx(() => _ctrl.isSaving.value
-            ? const SetupBusy(message: 'Saving your taxi...', tone: KitTone.taxi, art: ListingArt.taxi)
+            ? (_submitting
+                ? const SetupBusy(message: TaxiSetupStrings.submitting, tone: KitTone.taxi, art: ListingArt.key)
+                : const SetupBusy(message: 'Saving your taxi...', tone: KitTone.taxi, art: ListingArt.taxi))
             : const SizedBox.shrink()),
         if (_isFinalizing) const SetupBusy(message: 'Please wait...', tone: KitTone.taxi, art: ListingArt.taxi),
       ]),
     );
   }
 
-  Widget _footer() => Obx(() {
-        final saving = _ctrl.isSaving.value;
-        final disabled = saving || _isFinalizing || _isUploading || (_step == 2 && isResolvingDistrict);
-        return FormFooter(
-          tone: _tone,
-          top: const ToastDock(),
-          primaryLabel: _step < 2 ? TaxiSetupStrings.next : TaxiSetupStrings.save,
-          onPrimary: disabled ? null : _handleNext,
-          primaryLoading: saving || _isFinalizing,
-          secondaryLabel: _step > 0 ? 'Back' : null,
-          onSecondary: _blocked ? null : () => _goTo(_step - 1),
-        );
-      });
+  Widget _header() {
+    if (!widget.onboarding) {
+      return PageHeader3D(
+        tone: _tone,
+        title: TaxiSetupStrings.step1Title,
+        subtitle: const [TaxiSetupStrings.step1Vehicle, TaxiSetupStrings.step1Licence, TaxiSetupStrings.step1Contact][_step],
+        art: ListingArt.taxi,
+        inlineTitle: true,
+        onBack: _onBack,
+      );
+    }
+    final menu = _step == 0 && !_ctrl.mainBelow;
+    final t = _ctrl.taxi.value;
+    return PageHeader3D(
+      tone: _tone,
+      title: switch (_step) { 3 => TaxiSetupStrings.routeTitleOne, 4 => TaxiSetupStrings.rateTitle, _ => TaxiSetupStrings.step1Title },
+      subtitle: TaxiSetupStrings.wizardSteps[_step],
+      art: _step == 3 ? ListingArt.compass : ListingArt.taxi,
+      inlineTitle: true,
+      onBack: menu ? null : _onBack,
+      leadingIcon: menu ? Icons.more_vert_rounded : null,
+      leadingSemantics: menu ? 'Menu' : null,
+      onLeading: menu ? () => OnboardingExit.openMenu(context, isDraft: t == null || t.isDraft, hasDraft: t != null) : null,
+    );
+  }
+
+  String get _primaryLabel {
+    if (!widget.onboarding) return _step < 2 ? TaxiSetupStrings.next : TaxiSetupStrings.save;
+    if (_step == 3 && _routes.formOpen) return TaxiSetupStrings.save;
+    return _step < 4 ? TaxiSetupStrings.next : TaxiSetupStrings.submit;
+  }
+
+  Widget _footer() => ListenableBuilder(
+        listenable: _routes,
+        builder: (context, _) => Obx(() {
+          final saving = _ctrl.isSaving.value;
+          final disabled = saving || _isFinalizing || _isUploading || (_step == 2 && isResolvingDistrict);
+          return FormFooter(
+            tone: _tone,
+            top: const ToastDock(),
+            primaryLabel: _primaryLabel,
+            onPrimary: disabled ? null : _handleNext,
+            primaryLoading: saving || _isFinalizing,
+            secondaryLabel: _step > 0 ? 'Back' : null,
+            onSecondary: _blocked ? null : () => _goTo(_step - 1),
+          );
+        }),
+      );
 
   Widget _section({required _Ring? ring, required String art, required String title, String? hint, bool required = true, required Widget child}) => FormSectionCard(
         key: ring == null ? null : _cardKeys[ring],
@@ -720,6 +927,14 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
       );
 
   Widget _vehicleStep() => _scroll(0, [
+        if (widget.onboarding && (_ctrl.taxi.value?.isRejected ?? false))
+          FormNoteCard(
+            tone: ListingTone.cC,
+            art: ListingArt.warning,
+            title: TaxiSetupStrings.notApproved,
+            body: _ctrl.taxi.value?.rejectedReason,
+            titleColor: Form3D.errorText,
+          ),
         _section(
           ring: _Ring.type,
           art: TaxiOwnerArt.car,
@@ -728,7 +943,6 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
             tone: _tone,
             value: _vehicleTypeId == null ? null : (_vehicleTypeName ?? _types.nameOf(_vehicleTypeId)),
             hint: 'Select',
-            leadingArt: ListingArt.taxi,
             errorRing: _ring == _Ring.type,
             helperText: 'Pick from the list. Admin keeps the list updated.',
             onTap: _pickType,
@@ -954,7 +1168,6 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
                   ? 'Saved · Tap to change'
                   : null,
           hint: 'Select date',
-          leadingArt: ListingArt.calendar,
           errorText: _dobError,
           onTap: _pickDob,
         ),
@@ -1041,14 +1254,13 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
           hint: TaxiSetupStrings.pinNear,
           child: Container(
             constraints: BoxConstraints(minHeight: DS.s(52)),
-            padding: DS.insets(l: 4, t: 8, r: 18, b: 8),
+            padding: DS.insets(l: 18, t: 8, r: 18, b: 8),
             decoration: BoxDecoration(
               color: ring ? Form3D.fillError : Form3D.fill,
               borderRadius: DS.circular(26),
               border: Border.all(color: ring ? Form3D.error : Colors.transparent, width: 1.5),
             ),
             child: Row(children: [
-              PillField.art(ListingArt.roundPushpin),
               Expanded(
                 child: Text(value,
                     maxLines: 2,

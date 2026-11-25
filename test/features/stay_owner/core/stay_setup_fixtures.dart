@@ -41,9 +41,24 @@ class FakeStayRepo extends StayRepository {
     return model;
   }
 
+  List<Map<String, dynamic>>? lastRooms;
+
   @override
   Future<StayOwnerModel?> saveRooms(List<Map<String, dynamic>> rooms) async {
     calls.add('rooms');
+    lastRooms = rooms;
+    if (error != null) throw error!;
+    return model;
+  }
+
+  final Set<String> failOnce = {};
+  Map<String, dynamic>? lastRules;
+
+  @override
+  Future<StayOwnerModel?> saveRules(Map<String, dynamic> body) async {
+    calls.add('rules');
+    lastRules = body;
+    if (failOnce.remove('rules')) throw Exception('down');
     if (error != null) throw error!;
     return model;
   }
@@ -85,22 +100,28 @@ StaySetupController setupFor(StayOwnerModel? model, {MyPlanModel plan = OwnerPla
 
 StayOwnerModel stayModel(Map<String, dynamic> json) => StayOwnerModel.fromJson(json);
 
-Map<String, dynamic> draftJson({bool step1 = false, bool rooms = false, bool rules = false, int photos = 2, String status = 'Draft', bool reg = true}) => {
+const _draftRooms = [
+  {'id': 'r0', 'roomIndex': 1, 'roomName': 'Deluxe', 'pricePerNight': 3000, 'maxGuests': 3, 'meals': 'Breakfast'},
+  {'id': 'r1', 'roomIndex': 2, 'roomName': 'Family Room', 'pricePerNight': 4500, 'maxGuests': 4, 'meals': 'AllMeals'},
+];
+
+// Server shape: roomsDone is Rooms.Count >= 1.
+Map<String, dynamic> draftJson({bool step1 = false, bool rooms = false, int? roomCount, bool rules = false, int photos = 2, String status = 'Draft', bool reg = true}) {
+  final count = roomCount ?? (rooms ? 2 : 0);
+  return {
       'id': 's1',
       'status': status,
       'step1Done': step1,
-      'roomsDone': rooms,
+      'roomsDone': count >= 1,
       'rulesDone': rules,
       'name': 'Deodar Heights Homestay',
       'stayTypeName': 'Homestay',
       'registrationTypeId': reg ? 'rt1' : null,
       'hasRegistrationNumber': reg,
       'photos': [for (var i = 0; i < photos; i++) {'id': 'p$i', 'url': '', 'photoOrder': i}],
-      'rooms': [
-        {'id': 'r0', 'roomIndex': 1, 'roomName': 'Deluxe', 'pricePerNight': 3000, 'maxGuests': 3, 'meals': 'Breakfast'},
-        {'id': 'r1', 'roomIndex': 2, 'roomName': 'Family Room', 'pricePerNight': 4500, 'maxGuests': 5, 'meals': 'AllMeals'},
-      ],
+      'rooms': [for (final r in _draftRooms.take(count)) {...r}],
       'rules': {'checkInTime': '12:00:00', 'checkOutTime': '11:00:00', 'cancellationPolicy': 'Flexible'},
       'submittedAt': '2026-11-18T10:00:00Z',
       'createdAt': '2026-11-01T10:00:00Z',
     };
+}

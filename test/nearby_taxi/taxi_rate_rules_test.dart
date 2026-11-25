@@ -36,13 +36,11 @@ void main() {
   });
 
   test('driver form uses the rules and has no optional or clear path', () {
-    final src = File('lib/features/taxi/setup/taxi_routes_screen.dart').readAsStringSync();
+    final src = File('lib/features/taxi/setup/taxi_routes_screen.dart').readAsStringSync() + File('lib/features/taxi/setup/taxi_rate_form.dart').readAsStringSync();
     expect(src.contains('TaxiRateRules.validate'), isTrue);
     expect(src.contains('(optional)'), isFalse);
     expect(src.contains('Clear your day rate'), isFalse);
     expect(src.contains('TaxiRateStrings.kmLabel'), isTrue);
-    final hub = File('lib/features/taxi/setup/taxi_setup_hub_screen.dart').readAsStringSync();
-    expect(hub.contains('hasLocalRate'), isTrue);
   });
 
   test('new taxi v2 files carry no banned text or hardcoded colours', () {

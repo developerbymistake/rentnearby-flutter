@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import '../../../design/design.dart';
 import '../../../design/extra/ext_taxi_owner.dart';
 import '../../../utils/app_toast.dart';
-import '../../../utils/search_fold.dart';
-import '../../../widgets/location_switch_sheet.dart';
 import '../../owner_core/data/owner_args.dart';
 import '../../owner_core/look/owner_look.dart';
 import '../../owner_core/sheets/owner_states.dart';
@@ -27,79 +24,10 @@ import '../../taxi_driver/plan/taxi_plan_strings.dart';
 import '../../taxi_driver/taxi_driver_deps.dart';
 import '../models/taxi_owner_model.dart';
 import '../../taxi_driver/strings/taxi_setup_strings.dart';
-import '../../trip/data/trip_city_catalog.dart';
-import '../../trip/models/trip_city_model.dart';
-import '../../trip/trip_strings_a3.dart';
-import '../guest/v2/taxi_rate_strings.dart';
 import '../taxi_option_sets.dart';
-import 'taxi_rate_rules.dart';
-import 'taxi_route_city_sheet.dart';
-import 'taxi_route_strings.dart';
+import 'taxi_rate_form.dart';
+import 'taxi_routes_form.dart';
 import 'taxi_setup_controller.dart';
-
-class _Place {
-  final String name;
-  final String? label;
-  final double lat;
-  final double lng;
-  final int? cityKey;
-  final bool otherPlace;
-  const _Place({required this.name, this.label, required this.lat, required this.lng, this.cityKey, this.otherPlace = false});
-
-  bool get named => cityKey != null || otherPlace;
-
-  factory _Place.fromPicked(PickedPlace p) => _Place(
-        name: _cut(p.name.trim(), 80),
-        label: p.districtName.trim().isNotEmpty ? _cut(p.districtName.trim(), 160) : null,
-        lat: p.latitude,
-        lng: p.longitude,
-        otherPlace: true,
-      );
-
-  factory _Place.fromCity(TripCityModel c) => _Place(
-        name: _cut(c.name.trim(), 80),
-        label: c.placeLine.isNotEmpty ? _cut(c.placeLine, 160) : null,
-        lat: c.latitude,
-        lng: c.longitude,
-        cityKey: c.cityKey,
-      );
-
-  static String _cut(String s, int max) => s.length > max ? s.substring(0, max) : s;
-}
-
-class _RouteDraft {
-  final String? id;
-  final _Place from;
-  final _Place to;
-  final int fare;
-  final String tripType;
-  const _RouteDraft({this.id, required this.from, required this.to, required this.fare, required this.tripType});
-
-  bool get active => from.cityKey != null && to.cityKey != null;
-
-  Map<String, dynamic> toJson() => {
-        'id': id,
-        'fromName': from.name,
-        'fromLabel': from.label,
-        'fromLatitude': from.lat,
-        'fromLongitude': from.lng,
-        'toName': to.name,
-        'toLabel': to.label,
-        'toLatitude': to.lat,
-        'toLongitude': to.lng,
-        'fare': fare,
-        'tripType': tripType,
-        if (from.named && to.named) ...{
-          'fromCityKey': from.cityKey,
-          'toCityKey': to.cityKey,
-          'fromOtherPlace': from.cityKey == null,
-          'toOtherPlace': to.cityKey == null,
-        },
-      };
-
-  String get key => '${from.lat.toStringAsFixed(3)}|${from.lng.toStringAsFixed(3)}|'
-      '${to.lat.toStringAsFixed(3)}|${to.lng.toStringAsFixed(3)}|$tripType';
-}
 
 class TaxiRoutesScreen extends StatefulWidget {
   const TaxiRoutesScreen({super.key, this.manage});
@@ -109,35 +37,21 @@ class TaxiRoutesScreen extends StatefulWidget {
   State<TaxiRoutesScreen> createState() => _TaxiRoutesScreenState();
 }
 
-enum _Ring { rate, km, from, to, fare, trip }
-
 class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> with TickerProviderStateMixin {
   static final ListingTone _tone = ListingTone.coral;
-  final _rateKey = GlobalKey();
-  final _formKey = GlobalKey();
-  _Ring? _ring;
   late final AnimationController _anim = SetupKit.controller(this);
   final _ctrl = TaxiSetupController.ensure();
-  final _fareCtrl = TextEditingController();
-  final _fareFocusNode = FocusNode();
-  final _rateCtrl = TextEditingController();
-  final _kmCtrl = TextEditingController();
+  final _form = TaxiRoutesFormController(onboarding: false);
+  final _rate = TaxiRateFormController();
   bool _savingRate = false;
-  final List<_RouteDraft> _routes = [];
-  bool _formOpen = false;
-  int? _editingIndex;
-  String? _editingId;
-  _Place? _from;
-  _Place? _to;
-  String? _tripType;
-  bool _dirty = false;
-  bool _picking = false;
 
   static const _max = TaxiOptionSets.maxRoutes;
 
   late final bool _manage = widget.manage ?? OwnerArgs.isManage(Get.arguments);
   TaxiHubController? _hub;
   bool _ownsHub = false;
+
+  List<TaxiRouteDraft> get _routes => _form.routes;
 
   int get _planMax {
     final l = PlanGate.limit(PlanKey.routes);
@@ -182,19 +96,14 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> with TickerProvider
       if (!mounted) return;
       // The blank extra form was opened on the pre-plan limit; close it once the real limit says full.
       setState(() {
-        if (_formOpen && _editingIndex == null && _formBlank && _extraBlocked) _formOpen = false;
+        if (_form.formOpen && _form.editingIndex == null && _form.formBlank && _extraBlocked) _form.formOpen = false;
       });
     });
   }
 
-  static _RouteDraft _draftOf(TaxiRouteModel r) => _RouteDraft(
-        id: r.id,
-        from: _Place(
-            name: r.fromName, label: r.fromLabel, lat: r.fromLatitude, lng: r.fromLongitude, cityKey: r.fromCityKey, otherPlace: r.fromOtherPlace),
-        to: _Place(name: r.toName, label: r.toLabel, lat: r.toLatitude, lng: r.toLongitude, cityKey: r.toCityKey, otherPlace: r.toOtherPlace),
-        fare: r.fare,
-        tripType: r.tripType,
-      );
+  void _changed() {
+    if (mounted) setState(() {});
+  }
 
   @override
   void initState() {
@@ -206,13 +115,12 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> with TickerProvider
         _ownsHub = true;
       }
     }
-    for (final r in _ctrl.taxi.value?.routes ?? const <TaxiRouteModel>[]) {
-      _routes.add(_draftOf(r));
-    }
+    _form.seed(_ctrl.taxi.value);
     _watchPlan();
-    _formOpen = !_manage && _routes.length < _max && !_extraBlocked;
-    _from = _defaultFrom;
-    _syncRateFields();
+    _form.formOpen = !_manage && _routes.length < _max && !_extraBlocked;
+    _rate.seed(_ctrl.taxi.value);
+    _form.addListener(_changed);
+    _rate.addListener(_changed);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) SetupKit.play(_anim, context);
     });
@@ -223,191 +131,25 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> with TickerProvider
     if (_ownsHub && Get.isRegistered<TaxiHubController>(tag: TaxiHubController.tag)) Get.delete<TaxiHubController>(tag: TaxiHubController.tag, force: true);
     _planWorker?.dispose();
     _anim.dispose();
-    _fareCtrl.dispose();
-    _fareFocusNode.dispose();
-    _rateCtrl.dispose();
-    _kmCtrl.dispose();
+    _form.dispose();
+    _rate.dispose();
     super.dispose();
-  }
-
-  String get _storedRate => '${_ctrl.taxi.value?.localDayRate ?? ''}';
-  String get _storedKm => '${_ctrl.taxi.value?.localDayKm ?? ''}';
-  bool get _rateEditable => _ctrl.taxi.value?.canEditSetup ?? true;
-  bool get _rateDirty => _rateCtrl.text.trim() != _storedRate || _kmCtrl.text.trim() != _storedKm;
-
-  void _syncRateFields() {
-    _rateCtrl.text = _storedRate;
-    _kmCtrl.text = _storedKm;
   }
 
   Future<bool> _persistRate({required bool quiet}) async {
     if (_savingRate || _ctrl.isSaving.value) return false;
-    final rateText = _rateCtrl.text.trim();
-    final kmText = _kmCtrl.text.trim();
-    final error = TaxiRateRules.validate(rateText, kmText);
+    final error = _rate.check();
     if (error != null) {
       AppToast.error(error);
-      _markRate();
       return false;
     }
-    final rate = int.parse(rateText);
-    final km = int.parse(kmText);
     setState(() => _savingRate = true);
-    final ok = await _ctrl.saveLocalRate(dayRate: rate, kmPerDay: km);
+    final ok = await _ctrl.saveLocalRate(dayRate: _rate.dayRate, kmPerDay: _rate.kmPerDay);
     if (!mounted) return ok;
-    setState(() {
-      _savingRate = false;
-      if (ok) _syncRateFields();
-    });
+    setState(() => _savingRate = false);
+    if (ok) _rate.seed(_ctrl.taxi.value);
     if (ok && !quiet) AppToast.success('Rate saved');
     return ok;
-  }
-
-  int get _count => _routes.length + (_formOpen ? 1 : 0);
-
-  bool get _fromIsDefault {
-    final from = _from;
-    if (from == null) return true;
-    final d = _defaultFrom;
-    return d != null && d.name == from.name && d.lat == from.lat && d.lng == from.lng;
-  }
-
-  bool get _formBlank => _fromIsDefault && _to == null && _fareCtrl.text.trim().isEmpty && _tripType == null;
-
-  _Place? get _defaultFrom {
-    if (_routes.isNotEmpty) return _routes.last.from;
-    final name = SearchFold.fold(_ctrl.taxi.value?.locality ?? '');
-    if (name.isEmpty || !Get.isRegistered<TripCityCatalog>()) return null;
-    for (final c in Get.find<TripCityCatalog>().search(name)) {
-      if (SearchFold.fold(c.name) == name) return _Place.fromCity(c);
-    }
-    return null;
-  }
-
-  void _clearForm() {
-    _from = _defaultFrom;
-    _to = null;
-    _fareCtrl.clear();
-    _tripType = null;
-    _editingIndex = null;
-    _editingId = null;
-  }
-
-  Future<void> _pickPlace(bool isFrom) async {
-    if (_picking) return;
-    _picking = true;
-    FocusScope.of(context).unfocus();
-    try {
-      final choice = await TaxiRouteCitySheet.pick(context,
-          title: isFrom ? TaxiRouteStrings.fromCity : TaxiRouteStrings.toCity, selectedKey: (isFrom ? _from : _to)?.cityKey);
-      if (choice == null || !mounted) return;
-      final _Place place;
-      switch (choice) {
-        case TaxiRouteCityPicked(:final city):
-          place = _Place.fromCity(city);
-        case TaxiRouteOtherPlace():
-          final picked = await LocationSwitchSheet.pick(context, palette: templateModulePalette, title: TaxiRouteStrings.otherPlace);
-          if (picked == null || !mounted) return;
-          place = _Place.fromPicked(picked);
-      }
-      setState(() {
-        if (isFrom) {
-          _from = place;
-        } else {
-          _to = place;
-        }
-        if (_ring == (isFrom ? _Ring.from : _Ring.to)) _ring = null;
-        _dirty = true;
-      });
-    } finally {
-      _picking = false;
-    }
-  }
-
-  bool _commitForm() {
-    if (!_formOpen) return true;
-    if (_formBlank && _editingIndex == null) {
-      setState(() {
-        _formOpen = false;
-        _clearForm();
-      });
-      return true;
-    }
-    final from = _from, to = _to;
-    if (from == null) {
-      AppToast.error('Pick a From place');
-      _mark(_Ring.from);
-      return false;
-    }
-    if (to == null) {
-      AppToast.error('Pick a To place');
-      _mark(_Ring.to);
-      return false;
-    }
-    if (!from.named || !to.named) {
-      AppToast.error(from.named ? TaxiRouteStrings.chooseToAgain : TaxiRouteStrings.chooseFromAgain);
-      _mark(from.named ? _Ring.to : _Ring.from);
-      return false;
-    }
-    if (TaxiOptionSets.distanceMeters(from.lat, from.lng, to.lat, to.lng) < TaxiOptionSets.minEndpointDistanceMeters) {
-      AppToast.error('From and To must be different places');
-      _mark(_Ring.to);
-      return false;
-    }
-    final fareText = _fareCtrl.text.trim();
-    if (fareText.isEmpty) {
-      AppToast.error('Enter the fare');
-      _mark(_Ring.fare);
-      _fareFocusNode.requestFocus();
-      return false;
-    }
-    final fare = int.tryParse(fareText) ?? 0;
-    if (fare < TaxiOptionSets.minFare || fare > TaxiOptionSets.maxFare) {
-      AppToast.error('Fare must be between ₹100 and ₹99,00,000');
-      _mark(_Ring.fare);
-      _fareFocusNode.requestFocus();
-      return false;
-    }
-    if (_tripType == null) {
-      AppToast.error('Pick One way or Round trip');
-      _mark(_Ring.trip);
-      return false;
-    }
-    final draft = _RouteDraft(id: _editingId, from: from, to: to, fare: fare, tripType: _tripType!);
-    if (_routes.any((r) => r.key == draft.key)) {
-      AppToast.error('This route is already added');
-      _mark(_Ring.to);
-      return false;
-    }
-    setState(() {
-      final at = _editingIndex;
-      if (at != null && at <= _routes.length) {
-        _routes.insert(at, draft);
-      } else {
-        _routes.add(draft);
-      }
-      _formOpen = false;
-      _clearForm();
-      _ring = null;
-    });
-    return true;
-  }
-
-  void _reveal(GlobalKey key) {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final ctx = key.currentContext;
-      if (ctx != null && mounted) Scrollable.ensureVisible(ctx, alignment: 0.1, duration: const Duration(milliseconds: 250));
-    });
-  }
-
-  void _mark(_Ring r) {
-    setState(() => _ring = r);
-    _reveal(_formKey);
-  }
-
-  void _markRate() {
-    setState(() => _ring = TaxiRateRules.rateError(_rateCtrl.text) != null ? _Ring.rate : _Ring.km);
-    _reveal(_rateKey);
   }
 
   void _addAnother() {
@@ -415,76 +157,41 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> with TickerProvider
       if (PlanGate.canUpgrade) PlanGate.showLimit(context, TaxiGateStrings.routeGate());
       return;
     }
-    if (_count >= _max) {
+    if (_form.count >= _max) {
       AppToast.warning('You can add up to 10 routes');
       return;
     }
-    if (_formOpen) {
-      if (_formBlank) {
+    if (_form.formOpen) {
+      if (_form.formBlank) {
         AppToast.info('Fill this route first');
         return;
       }
-      if (!_commitForm()) return;
+      if (!_form.commitForm()) return;
     }
-    setState(() => _formOpen = true);
-  }
-
-  void _editRoute(int i) {
-    final r = _routes[i];
-    if (_formOpen && !_commitForm()) return;
-    final at = _routes.indexOf(r);
-    if (at < 0) return;
-    setState(() {
-      _routes.removeAt(at);
-      _editingIndex = at;
-      _editingId = r.id;
-      _from = r.from;
-      _to = r.to;
-      _fareCtrl.text = '${r.fare}';
-      _tripType = r.tripType;
-      _formOpen = true;
-      _dirty = true;
-    });
-  }
-
-  void _removeRoute(int i) {
-    setState(() {
-      _routes.removeAt(i);
-      final at = _editingIndex;
-      if (at != null && at > i) _editingIndex = at - 1;
-      if (!_formOpen && _routes.isEmpty) _formOpen = true;
-      _dirty = true;
-    });
+    _form.openForm();
   }
 
   Future<void> _save() async {
     if (_ctrl.isSaving.value || _savingRate) return;
     FocusScope.of(context).unfocus();
-    if (!_commitForm()) return;
+    if (!_form.commitForm()) return;
     if (_manage && _manageTaxi == null) {
       await _hub?.reload(force: true);
       if (!mounted || _manageTaxi == null) return;
-      setState(() {
-        final drafts = _routes.where((r) => r.id == null).toList();
-        _routes
-          ..clear()
-          ..addAll(_manageRoutes.map(_draftOf))
-          ..addAll(drafts);
-      });
+      _form.replaceRoutes(_manageRoutes, keepDrafts: true);
       AppToast.info('Routes loaded. Check and save again.');
       return;
     }
-    final rateDirty = _rateEditable && _rateDirty;
+    final rateDirty = _rate.editable && _rate.dirty;
     if (_routes.isEmpty && !rateDirty) {
       AppToast.error('Add at least one route');
-      setState(() => _formOpen = true);
-      _reveal(_formKey);
+      _form.openForm();
+      _form.reveal(_form.formKey);
       return;
     }
-    final rateError = _rateEditable && !_manage ? TaxiRateRules.validate(_rateCtrl.text, _kmCtrl.text) : null;
+    final rateError = _rate.editable && !_manage ? _rate.check() : null;
     if (rateError != null) {
       AppToast.error(rateError);
-      _markRate();
       return;
     }
     if (rateDirty && !await _persistRate(quiet: _routes.isNotEmpty)) return;
@@ -494,7 +201,7 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> with TickerProvider
       return;
     }
     if (!await _planAllowsSave() || !mounted) return;
-    final ok = await _ctrl.saveRoutes([for (final r in _routes) r.toJson()], quietLimit: true);
+    final ok = await _ctrl.saveRoutes(_form.payload(), quietLimit: true);
     if (!mounted) return;
     if (!ok) {
       if (_ctrl.lastErrorType == TaxiSetupController.routeLimitType) await _routeLimitRefused();
@@ -502,7 +209,7 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> with TickerProvider
     }
     if (Get.isRegistered<PlanController>()) Get.find<PlanController>().invalidate().ignore();
     if (_manage) {
-      setState(() => _dirty = false);
+      setState(() => _form.dirty = false);
       await _hub?.reload(force: true);
       TaxiDriverDeps.refreshHome();
       AppToast.success('Routes saved');
@@ -527,7 +234,7 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> with TickerProvider
 
   void _onBack() {
     if (_ctrl.isSaving.value) return;
-    if (_dirty || !_formBlank || _rateDirty) {
+    if (_form.dirty || !_form.formBlank || _rate.dirty) {
       _confirmDiscard();
     } else {
       Get.back();
@@ -555,27 +262,22 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> with TickerProvider
                     padding: EdgeInsets.only(bottom: DS.s(24)),
                     children: [
                       SetupEntrance(controller: _anim, index: 0, count: 5, child: _meterCard()),
-                      SetupEntrance(
-                        controller: _anim,
-                        index: 1,
-                        count: 5,
-                        child: Column(children: [for (var i = 0; i < _routes.length; i++) _summaryCard(i)]),
-                      ),
+                      SetupEntrance(controller: _anim, index: 1, count: 5, child: TaxiRouteSummaries(controller: _form, tone: _tone)),
                       SetupEntrance(
                         controller: _anim,
                         index: 2,
                         count: 5,
-                        child: Column(children: [if (_formOpen) _form(), _addRow()]),
+                        child: Column(children: [TaxiRouteFormCard(controller: _form, tone: _tone), _addRow()]),
                       ),
                       SetupEntrance(controller: _anim, index: 3, count: 5, child: _tipRow()),
-                      SetupEntrance(controller: _anim, index: 4, count: 5, child: _localRateCard()),
+                      SetupEntrance(controller: _anim, index: 4, count: 5, child: TaxiLocalRateCard(controller: _rate, tone: _tone)),
                     ],
                   ),
                 ),
               ]),
             ),
           ),
-          bottomNavigationBar: _manage && !_formOpen ? null : Obx(() => FormFooter(
+          bottomNavigationBar: _manage && !_form.formOpen ? null : Obx(() => FormFooter(
                 tone: _tone,
                 top: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                   const ToastDock(),
@@ -590,7 +292,7 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> with TickerProvider
                       ),
                     ),
                 ]),
-                primaryLabel: _formOpen ? TaxiSetupStrings.saveRoute : TaxiSetupStrings.save,
+                primaryLabel: _form.formOpen ? TaxiSetupStrings.saveRoute : TaxiSetupStrings.save,
                 primaryLoading: _ctrl.isSaving.value,
                 onPrimary: _ctrl.isSaving.value ? null : _save,
               )),
@@ -610,129 +312,6 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> with TickerProvider
         inlineTitle: true,
         onBack: _onBack,
       );
-
-  Widget _summaryCard(int i) {
-    final r = _routes[i];
-    return TaxiRouteCard3D(
-      tone: _tone,
-      tag: '',
-      title: TaxiSetupStrings.routeTitle(r.from.name, r.to.name),
-      subtitle: TaxiSetupStrings.routeLine(i + 1, TaxiOptionSets.tripLabel(r.tripType), r.fare),
-      note: r.active ? TaxiRouteStrings.activeInRequests : TaxiRouteStrings.notActive,
-      noteOk: r.active,
-      onEdit: () => _editRoute(i),
-      onRemove: () => _removeRoute(i),
-    );
-  }
-
-  Widget _placeField({required String label, required bool first, required String asset, required _Place? place, required bool ring, required VoidCallback onTap}) =>
-      PillPickerField(
-        tone: _tone,
-        label: label,
-        value: place?.name,
-        sublabel: place?.label,
-        hint: TaxiRouteStrings.chooseCity,
-        helperText: place != null && place.cityKey == null ? TaxiRouteStrings.otherPlaceNote : null,
-        leadingArt: asset,
-        errorRing: ring,
-        trailing: Image.asset(ListingArt.pushpin, width: DS.s(26), height: DS.s(26)),
-        onTap: onTap,
-      ).withTopGap(first ? 0 : 14);
-
-  Widget _form() {
-    final number = (_editingIndex ?? _routes.length) + 1;
-    return FormSectionCard(
-      key: _formKey,
-      tone: _tone,
-      art: ListingArt.compass,
-      artSide: FormArtSide.right,
-      title: TaxiSetupStrings.routeNumber(number),
-      hint: _editingIndex == null ? TaxiSetupStrings.newRoute : TaxiSetupStrings.editRoute,
-      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        _placeField(
-            label: 'From *', first: true, asset: ListingArt.roundPushpin, place: _from, ring: _ring == _Ring.from, onTap: () => _pickPlace(true)),
-        _placeField(
-            label: 'To *', first: false, asset: ListingArt.worldMap, place: _to, ring: _ring == _Ring.to, onTap: () => _pickPlace(false)),
-        PillField(
-          tone: _tone,
-          label: 'Fare (₹) *',
-          firstLabel: false,
-          controller: _fareCtrl,
-          focusNode: _fareFocusNode,
-          keyboardType: TextInputType.number,
-          inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(7)],
-          prefixText: '₹',
-          hint: 'e.g. 4500',
-          errorRing: _ring == _Ring.fare,
-          onChanged: (_) {
-            _dirty = true;
-            if (_ring == _Ring.fare) setState(() => _ring = null);
-          },
-        ),
-        const FieldLabel('Trip *'),
-        SegmentPills(
-          tone: _tone,
-          labels: [for (final t in TaxiOptionSets.tripTypes) t.label],
-          selected: _tripType == null ? null : TaxiOptionSets.tripTypes.indexWhere((t) => t.value == _tripType),
-          errorRing: _ring == _Ring.trip,
-          onTap: (i) => setState(() {
-            _tripType = TaxiOptionSets.tripTypes[i].value;
-            _dirty = true;
-            if (_ring == _Ring.trip) _ring = null;
-          }),
-        ),
-      ]),
-    );
-  }
-
-  Widget _localRateCard() {
-    final editable = _rateEditable;
-    return FormSectionCard(
-      key: _rateKey,
-      tone: _tone,
-      art: ListingArt.taxi,
-      artSide: FormArtSide.right,
-      title: 'Local sightseeing',
-      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Text(TaxiRateStrings.neededToList, style: FieldMessage.helperStyle.copyWith(fontSize: DS.f(12.5))),
-        PillField(
-          tone: _tone,
-          label: TripStringsA3.driverRateLabel,
-          firstLabel: false,
-          controller: _rateCtrl,
-          readOnly: !editable,
-          keyboardType: TextInputType.number,
-          inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(7)],
-          prefixText: '₹',
-          hint: 'e.g. 2500',
-          errorRing: _ring == _Ring.rate,
-          onChanged: (_) => setState(() {
-            if (_ring == _Ring.rate) _ring = null;
-          }),
-        ),
-        PillField(
-          tone: _tone,
-          label: TaxiRateStrings.kmLabel,
-          firstLabel: false,
-          controller: _kmCtrl,
-          readOnly: !editable,
-          keyboardType: TextInputType.number,
-          inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(4)],
-          hint: 'e.g. 120',
-          suffix: Text('km', style: Ink3D.text(13, FontWeight.w500, Form3D.muted, letterSpacing: 0)),
-          errorRing: _ring == _Ring.km,
-          onChanged: (_) => setState(() {
-            if (_ring == _Ring.km) _ring = null;
-          }),
-        ),
-        Padding(
-          padding: EdgeInsets.only(top: DS.gv(12)),
-          child: Text('Travellers see this rate. You can quote a different fare for a trip after you read the itinerary.',
-              style: FieldMessage.helperStyle.copyWith(fontSize: DS.f(12))),
-        ),
-      ]),
-    );
-  }
 
   Widget _meterCard() {
     if (!PlanGate.loaded) {
@@ -777,19 +356,19 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> with TickerProvider
         Row(children: [
           Expanded(
             child: Text(
-              full && _formOpen ? TaxiGateStrings.lineFree(limit, TaxiGateStrings.plusRoutes) : TaxiSetupStrings.savedLine(used, limit, free: free),
+              full && _form.formOpen ? TaxiGateStrings.lineFree(limit, TaxiGateStrings.plusRoutes) : TaxiSetupStrings.savedLine(used, limit, free: free),
               key: const ValueKey('routes_meter_line'),
               style: FieldMessage.helperStyle.copyWith(fontSize: DS.f(12)),
             ),
           ),
-          if (full && _formOpen) ...[Gap.h(8), SeePlusButton(taxi: true, onPressed: () => PlanGate.showLimit(context, TaxiGateStrings.routeGate()))],
+          if (full && _form.formOpen) ...[Gap.h(8), SeePlusButton(taxi: true, onPressed: () => PlanGate.showLimit(context, TaxiGateStrings.routeGate()))],
         ]),
       ]),
     );
   }
 
   Widget _tipRow() {
-    if (!PlanGate.canUpgrade || !_planFull || _formOpen) return const SizedBox.shrink();
+    if (!PlanGate.canUpgrade || !_planFull || _form.formOpen) return const SizedBox.shrink();
     return Padding(
       padding: EdgeInsets.fromLTRB(DS.s(18), DS.gv(20), DS.s(18), 0),
       child: KeyedSubtree(
@@ -803,7 +382,7 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> with TickerProvider
     );
   }
 
-  bool get _addPlanFull => PlanGate.loaded && _count >= _planMax;
+  bool get _addPlanFull => PlanGate.loaded && _form.count >= _planMax;
 
   TaxiOwnerModel? get _manageTaxi => _hub?.taxi ?? _ctrl.taxi.value;
 
@@ -824,18 +403,14 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> with TickerProvider
       return;
     }
     if (_reviewLocked()) return;
-    if (_formOpen) {
-      _reveal(_formKey);
+    if (_form.formOpen) {
+      _form.reveal(_form.formKey);
       return;
     }
-    setState(() {
-      _routes
-        ..clear()
-        ..addAll(_manageRoutes.map(_draftOf));
-      _clearForm();
-      _formOpen = true;
-    });
-    _reveal(_formKey);
+    _form.replaceRoutes(_manageRoutes);
+    _form.clearForm();
+    _form.openForm();
+    _form.reveal(_form.formKey);
   }
 
   Widget _manageBody() {
@@ -892,7 +467,7 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> with TickerProvider
                 child: TextLink(label: TaxiPlanStrings.chooseYourRoute, tone: KitTone.taxiDriver, onTap: () => TaxiDriverDeps.openChooseRoute()),
               ),
             ),
-          if (_formOpen) _form(),
+          TaxiRouteFormCard(controller: _form, tone: _tone),
           Padding(
             padding: DS.insets(l: 18, t: 18, r: 18),
             child: KeyedSubtree(
@@ -938,7 +513,7 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> with TickerProvider
   }
 
   Widget _addRow() {
-    final n = _count;
+    final n = _form.count;
     final soft = _addPlanFull && PlanGate.canUpgrade;
     final enabled = soft || (!_addPlanFull && n < _max);
     return KeyedSubtree(
@@ -952,8 +527,4 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> with TickerProvider
       ),
     );
   }
-}
-
-extension on Widget {
-  Widget withTopGap(double gap) => gap == 0 ? this : Padding(padding: EdgeInsets.only(top: DS.gv(gap)), child: this);
 }

@@ -24,7 +24,7 @@ class _RoleSelectScreenState extends State<RoleSelectScreen> {
   bool _loading = true;
   String _selectedKey = UserRoleKeys.seeker;
   late final bool _correction;
-  late final int _percent;
+  late final bool _hasDraft;
 
   @override
   void initState() {
@@ -36,9 +36,7 @@ class _RoleSelectScreenState extends State<RoleSelectScreen> {
     }
     final args = Get.arguments;
     _correction = args is Map && args['correction'] == true;
-    _percent = args is Map && args['percent'] is int
-        ? args['percent'] as int
-        : 0;
+    _hasDraft = args is Map && args['hasDraft'] == true;
     _load();
   }
 
@@ -55,7 +53,7 @@ class _RoleSelectScreenState extends State<RoleSelectScreen> {
       final ok = await RoleCorrectionDialog.confirm(
         context,
         kind: kind,
-        percent: _percent,
+        hasDraft: _hasDraft,
       );
       if (!ok || !mounted) return;
     }

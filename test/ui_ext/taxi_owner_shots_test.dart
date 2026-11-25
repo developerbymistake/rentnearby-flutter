@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:io';
 
 import 'package:bakhli/controllers/auth_controller.dart';
@@ -12,14 +11,8 @@ import 'package:bakhli/features/taxi/leads/trip_leads_controller.dart';
 import 'package:bakhli/features/taxi/leads/trip_leads_screen.dart';
 import 'package:bakhli/features/taxi/models/taxi_owner_model.dart';
 import 'package:bakhli/features/taxi/models/taxi_vehicle_type_model.dart';
-import 'package:bakhli/features/taxi/requests/controllers/driver_ready_controller.dart';
-import 'package:bakhli/features/taxi/requests/controllers/driver_requests_controller.dart';
-import 'package:bakhli/features/taxi/requests/strings/driver_entry_strings.dart';
-import 'package:bakhli/features/taxi/setup/my_taxi_screen.dart';
 import 'package:bakhli/features/taxi/setup/taxi_routes_screen.dart';
 import 'package:bakhli/features/taxi/setup/taxi_setup_controller.dart';
-import 'package:bakhli/features/taxi/setup/taxi_setup_hub_screen.dart';
-import 'package:bakhli/features/taxi/setup/taxi_submit_screen.dart';
 import 'package:bakhli/features/taxi/setup/taxi_vehicle_screen.dart';
 import 'package:bakhli/features/taxi/taxi_option_sets.dart';
 import 'package:bakhli/features/taxi/taxi_vehicle_types_controller.dart';
@@ -34,7 +27,6 @@ import 'package:get/get.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 
 import '../e2e_journeys/nearby/nearby_support.dart';
-import '../features/taxi_driver/driver_wiring_fakes.dart';
 import '../support/real_phone.dart';
 
 class _Auth extends JAuth {
@@ -59,21 +51,11 @@ class _Plan extends PlanController {
 }
 
 class _Taxi extends TaxiSetupController {
-  _Taxi(this.model, {this.fail = false, this.hang = false});
+  _Taxi(this.model);
   final TaxiOwnerModel? model;
-  final bool fail;
-  final bool hang;
 
   @override
   Future<bool> load() {
-    if (hang) {
-      isLoading.value = true;
-      return Completer<bool>().future;
-    }
-    if (fail) {
-      loadFailed.value = true;
-      return Future.value(false);
-    }
     taxi.value = model;
     hasLoaded.value = true;
     return Future.value(true);
@@ -339,17 +321,6 @@ Future<void> scrollTo(WidgetTester t, String text) async {
 
 const _sizes = [(1.0, 360.0, ''), (1.3, 360.0, '_1.3'), (1.0, 300.0, '_w300')];
 
-final _hubCases = <String, (TaxiOwnerModel?, bool, bool, bool)>{
-  'hub_new': (taxiModel(), true, false, false),
-  'hub_mid': (taxiModel(percent: 40, step1: true), true, false, false),
-  'hub_ready': (taxiModel(percent: 90, step1: true, identity: true, routes: true, rate: 2500), true, false, false),
-  'hub_review': (taxiModel(status: TaxiStatus.pendingReview, percent: 100, step1: true, identity: true, routes: true, rate: 2500), false, false, false),
-  'hub_live': (taxiModel(status: TaxiStatus.approved, percent: 100, step1: true, identity: true, routes: true), false, false, false),
-  'hub_rejected': (taxiModel(status: TaxiStatus.rejected, percent: 90, step1: true, identity: true, routes: true, rate: 2500, reason: 'The plate is not clear in the photo.'), false, false, false),
-  'hub_loading': (null, true, false, true),
-  'hub_error': (null, true, true, false),
-};
-
 Map<String, List<TripEnquiryModel>> _leadSet({bool noPhone = false, bool noChange = false}) => {
       TripLeadBucket.newOnes: [
         if (noPhone)
@@ -379,41 +350,6 @@ void main() {
     mockPathProvider();
   });
   tearDown(Get.reset);
-
-  group('hub', () {
-    for (final e in _hubCases.entries) {
-      for (final cfg in _sizes) {
-        testWidgets('${e.key}${cfg.$3}', (t) async {
-          base(correct: e.value.$2);
-          Get.put<TaxiSetupController>(_Taxi(e.value.$1, fail: e.value.$3, hang: e.value.$4));
-          final args = e.value.$1 != null && !e.value.$1!.isDraft ? {'fromMyTaxi': true} : null;
-          await snap(t, const TaxiSetupHubScreen(), '${e.key}${cfg.$3}', size: Size(cfg.$2, 800), scale: cfg.$1, args: args);
-          expect(t.takeException(), isNull);
-        });
-      }
-    }
-
-    testWidgets('hub_menu', (t) async {
-      base();
-      Get.put<TaxiSetupController>(_Taxi(taxiModel()));
-      await snap(t, const TaxiSetupHubScreen(), 'hub_menu', after: () async {
-        await t.tap(find.byTooltip('Menu'));
-        await t.pump(const Duration(milliseconds: 300));
-      });
-      expect(find.text('Change role'), findsOneWidget);
-      expect(find.text('Log out'), findsOneWidget);
-    });
-
-    testWidgets('hub full heights', (t) async {
-      for (final k in ['hub_live', 'hub_ready', 'hub_rejected']) {
-        base();
-        Get.put<TaxiSetupController>(_Taxi(_hubCases[k]!.$1));
-        await snap(t, const TaxiSetupHubScreen(), '${k}_full', size: const Size(360, 1500), args: {'fromMyTaxi': true});
-        expect(t.takeException(), isNull);
-        await t.pumpWidget(const SizedBox());
-      }
-    });
-  });
 
   group('vehicle', () {
     Future<void> open(WidgetTester t, TaxiOwnerModel? m, String name,
@@ -670,148 +606,6 @@ void main() {
         await t.pump(const Duration(milliseconds: 300));
       });
       expect(find.text('Saving routes...'), findsOneWidget);
-      Get.find<TaxiSetupController>().isSaving.value = false;
-      await t.pump();
-    });
-  });
-
-  group('submit', () {
-    Future<void> open(WidgetTester t, TaxiOwnerModel m, String name, {bool tap = false, Size size = const Size(360, 800), double scale = 1}) async {
-      base();
-      Get.put<TaxiSetupController>(_Taxi(m)).taxi.value = m;
-      await snap(t, const TaxiSubmitScreen(), name, size: size, scale: scale, after: tap
-          ? () async {
-              await t.tap(find.text('Submit for review'));
-              await t.pump(const Duration(milliseconds: 600));
-            }
-          : null);
-    }
-
-    final ready = taxiModel(percent: 90, step1: true, identity: true, routes: true, rate: 2500);
-    for (final cfg in _sizes) {
-      testWidgets('submit${cfg.$3}', (t) async {
-        await open(t, ready, 'submit${cfg.$3}', size: Size(cfg.$2, 800), scale: cfg.$1);
-        expect(find.text('Check your taxi'), findsOneWidget);
-        expect(t.takeException(), isNull);
-      });
-    }
-
-    testWidgets('submit warnings', (t) async {
-      final cases = {
-        'submit_missing': (taxiModel(step1: true, routes: true, rate: 2500), 'Add your licence and date of birth.'),
-        'submit_step1': (taxiModel(), 'Complete step 1 first.'),
-        'submit_step2': (taxiModel(step1: true, identity: true), 'Complete step 2 first.'),
-      };
-      for (final c in cases.entries) {
-        await open(t, c.value.$1, c.key, tap: true);
-        expect(t.takeException(), isNull);
-        await t.pumpWidget(const SizedBox());
-        await t.pump(const Duration(seconds: 5));
-      }
-    });
-
-    testWidgets('submit_busy', (t) async {
-      base();
-      Get.put<TaxiSetupController>(_Taxi(ready)).taxi.value = ready;
-      Get.find<TaxiSetupController>().isSaving.value = true;
-      await snap(t, const TaxiSubmitScreen(), 'submit_busy');
-      expect(find.text('Submitting...'), findsOneWidget);
-      Get.find<TaxiSetupController>().isSaving.value = false;
-      await t.pump();
-    });
-  });
-
-  group('my taxi', () {
-    Future<void> open(WidgetTester t, TaxiOwnerModel? m, String name,
-        {bool fail = false, bool hang = false, int news = 2, Future<void> Function()? after, Size size = const Size(360, 800), double scale = 1}) async {
-      base();
-      Get.put<TaxiSetupController>(_Taxi(m, fail: fail, hang: hang));
-      Get.put<TripLeadsController>(_Leads(const {}, news: news), permanent: true);
-      Get.put<DriverRequestsController>(WireRequests(news: news));
-      Get.put<DriverReadyController>(WireReady());
-      await snap(t, const MyTaxiScreen(), name, size: size, scale: scale, after: after);
-    }
-
-    tearDown(() => Get.delete<TripLeadsController>(force: true));
-
-    testWidgets('my_driver_rows', (t) async {
-      await open(t, _live, 'my_driver_rows', news: 3, size: const Size(360, 1500));
-      for (final title in [DriverEntryStrings.requests, DriverEntryStrings.bookings, DriverEntryStrings.rating]) {
-        expect(find.text(title), findsOneWidget, reason: title);
-      }
-      expect(find.text('3 new'), findsNWidgets(2));
-      expect(t.takeException(), isNull);
-    });
-
-    testWidgets('my_draft has no driver rows', (t) async {
-      await open(t, taxiModel(step1: true), 'my_draft_rows', news: 0);
-      expect(find.text(DriverEntryStrings.requests), findsNothing);
-      expect(find.text(DriverEntryStrings.bookings), findsNothing);
-      expect(find.text(DriverEntryStrings.rating), findsNothing);
-    });
-
-    for (final cfg in _sizes) {
-      testWidgets('my_live${cfg.$3}', (t) async {
-        await open(t, _live, 'my_live${cfg.$3}', size: Size(cfg.$2, 800), scale: cfg.$1);
-        expect(find.text('VEHICLE'), findsOneWidget);
-        expect(find.text('Available now'), findsOneWidget);
-        expect(t.takeException(), isNull);
-      });
-    }
-
-    final cases = <String, (TaxiOwnerModel?, bool, bool)>{
-      'my_live_full': (_live, false, false),
-      'my_offline': (taxiModel(status: TaxiStatus.approved, step1: true, identity: true, routes: true, available: false, reports: 2), false, false),
-      'my_review': (taxiModel(status: TaxiStatus.pendingReview, step1: true, identity: true, routes: true, rate: 2500), false, false),
-      'my_draft': (taxiModel(step1: true), false, false),
-      'my_rejected': (taxiModel(status: TaxiStatus.rejected, step1: true, identity: true, routes: true, rate: 2500, reason: 'The plate is not clear in the photo'), false, false),
-      'my_empty': (null, false, false),
-      'my_error': (null, true, false),
-      'my_loading': (null, false, true),
-    };
-    for (final c in cases.entries) {
-      testWidgets(c.key, (t) async {
-        await open(t, c.value.$1, c.key, fail: c.value.$2, hang: c.value.$3, news: c.key == 'my_live_full' ? 2 : 0, size: Size(360, c.key.endsWith('full') || c.key == 'my_offline' || c.key == 'my_rejected' ? 1500 : 800));
-        expect(t.takeException(), isNull);
-      });
-    }
-
-    testWidgets('fare_edit', (t) async {
-      await open(t, _live, 'fare_edit', after: () async {
-        await tapText(t, 'Edit fare');
-        await t.pump(const Duration(milliseconds: 600));
-      });
-      expect(find.text('Edit fare'), findsWidgets);
-    });
-
-    testWidgets('fare_edit_empty and range', (t) async {
-      for (final v in [('', 'fare_edit_empty', 'Enter the fare'), ('50', 'fare_edit_range', 'Fare must be between ₹100 and ₹99,00,000')]) {
-        await open(t, _live, v.$2, after: () async {
-          await tapText(t, 'Edit fare');
-          await t.pump(const Duration(milliseconds: 600));
-          await t.enterText(fieldWith('900').last, v.$1);
-          await t.tap(find.text('Save').last);
-          await t.pump(const Duration(milliseconds: 600));
-        });
-        await t.pumpWidget(const SizedBox());
-        await t.pump(const Duration(seconds: 5));
-      }
-    });
-
-    testWidgets('dlg_delete', (t) async {
-      await open(t, _live, 'dlg_delete', after: () async {
-        await tapText(t, 'Delete');
-        await t.pump(const Duration(milliseconds: 600));
-      });
-      expect(find.text('Delete taxi?'), findsOneWidget);
-    });
-
-    testWidgets('busy_update', (t) async {
-      await open(t, _live, 'busy_update', after: () async {
-        Get.find<TaxiSetupController>().isSaving.value = true;
-        await t.pump(const Duration(milliseconds: 300));
-      });
-      expect(find.text('Updating...'), findsOneWidget);
       Get.find<TaxiSetupController>().isSaving.value = false;
       await t.pump();
     });

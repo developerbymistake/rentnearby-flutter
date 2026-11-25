@@ -409,7 +409,7 @@ void main() {
 
     testWidgets('correction', (t) async {
       _base(user: _user(role: UserRoleKeys.stayOwner), role: UserRoleKeys.stayOwner);
-      await _open(t, const RoleSelectScreen(), args: {'correction': true, 'percent': 40});
+      await _open(t, const RoleSelectScreen(), args: {'correction': true, 'hasDraft': true});
       await _snap(t, 'rs_corr');
       await _done(t);
     });
@@ -528,7 +528,7 @@ void main() {
       'login_role': (() => const LoginScreen(), null, () => AppToast.info('Role updated. Please log in again.')),
       'onb_long': (() => const OnboardingScreen(), {'phone': '9876543210'}, () => AppToast.error('Name cannot exceed 100 characters')),
       'pv_resend_max': (() => const PhoneVerifyScreen(), null, () => AppToast.warning('Maximum resends reached. Please try a different number.')),
-      'rs_corr_err': (() => const RoleSelectScreen(), {'correction': true, 'percent': 40}, () => AppToast.error('Could not change role.')),
+      'rs_corr_err': (() => const RoleSelectScreen(), {'correction': true, 'hasDraft': true}, () => AppToast.error('Could not change role.')),
       'onb_fail': (() => const OnboardingScreen(), {'phone': '9876543210'}, () => AppToast.error('Could not complete sign up. Please try again.')),
       'pv_taken': (() => const PhoneVerifyScreen(), null, () => AppToast.warning('This number is already verified by another account.')),
       'rs_unavail': (() => const RoleSelectScreen(), null, () => AppToast.warning('This role is not available right now.')),
@@ -566,7 +566,7 @@ void main() {
 
     testWidgets('rs_corr_dlg0', (t) async {
       _base(user: _user(role: UserRoleKeys.stayOwner), role: UserRoleKeys.stayOwner);
-      await _open(t, const RoleSelectScreen(), args: {'correction': true, 'percent': 0});
+      await _open(t, const RoleSelectScreen(), args: {'correction': true, 'hasDraft': false});
       await _tapText(t, 'Continue');
       await _snap(t, 'rs_corr_dlg0');
       await _done(t);
@@ -574,7 +574,7 @@ void main() {
 
     testWidgets('rs_corr_dlg', (t) async {
       _base(user: _user(role: UserRoleKeys.stayOwner), role: UserRoleKeys.stayOwner);
-      await _open(t, const RoleSelectScreen(), args: {'correction': true, 'percent': 40});
+      await _open(t, const RoleSelectScreen(), args: {'correction': true, 'hasDraft': true});
       await _tapText(t, 'Continue');
       await _snap(t, 'rs_corr_dlg');
       await _done(t);

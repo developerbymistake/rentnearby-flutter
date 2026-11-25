@@ -30,5 +30,4 @@ abstract final class TaxiPhotoStrings {
   static const plateProof = 'Plate proof';
   static const private = 'Private';
   static const couldNotUpload = 'Could not upload photo.';
-  static const deleteBody = 'Your taxi, routes and photos will be deleted.';
 }

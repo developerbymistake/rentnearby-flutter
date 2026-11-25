@@ -36,7 +36,7 @@ class TaxiHomeActions {
     if (!await launchUrl(uri)) AppToast.error(TaxiHomeStrings.supportFailed);
   }
 
-  static void openSetup() => Get.toNamed(AppRoutes.taxiSetup);
+  static void openSetup() => Get.toNamed(AppRoutes.taxiSetup, arguments: {'fromMyTaxi': true});
 
   static void openNotificationSettings() => SystemSettingsChannel.instance.openNotificationSettings();
 
