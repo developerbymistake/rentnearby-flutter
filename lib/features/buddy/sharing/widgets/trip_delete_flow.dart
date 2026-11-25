@@ -5,6 +5,7 @@ import '../../../../design/design.dart';
 import '../../../../utils/app_toast.dart';
 import '../../../trip/controllers/my_trips_controller.dart';
 import '../../../trip/models/trip_model.dart';
+import '../../../trip/models/trip_plan_model.dart';
 import '../../../trip/trip_navigation.dart';
 import '../../../trip/widgets/trip_lifecycle_actions.dart';
 import '../../buddy_error_types.dart';
@@ -27,10 +28,13 @@ abstract final class TripDeleteFlow {
   @visibleForTesting
   static VoidCallback? debugOpenTrips;
 
+  static Future<List<String>?> Function(String tripId) loadAsks = TripLifecycleActions.loadDeleteLines;
+
   @visibleForTesting
   static void debugReset() {
     _busy = false;
     debugOpenTrips = null;
+    loadAsks = (_) async => const [];
   }
 
   static bool usesPlainDelete(TripSharingBlock? s) => s == null || (s.viewerCount == 0 && s.pendingInvites == 0 && !s.expenses.hasExpenses);
@@ -123,8 +127,23 @@ abstract final class TripDeleteFlow {
     }
   }
 
+  static ({int open, int stays, int taxis}) _openAsks(String tripId) {
+    if (!Get.isRegistered<MyTripsController>()) return (open: 0, stays: 0, taxis: 0);
+    final c = MyTripsController.to;
+    final rows = [...c.active, ...c.past].firstWhereOrNull((t) => t.id == tripId)?.progress.rows ?? const <TripEasyRowModel>[];
+    bool done(TripEasyRowModel r, TripEasyRowKind k) => (r.state == TripRowState.confirmed || r.state == TripRowState.booked) && r.key.kind == k;
+    return (
+      open: rows.fold<int>(0, (n, r) => n + r.askedCount),
+      stays: rows.where((r) => done(r, TripEasyRowKind.stay)).length,
+      taxis: rows.where((r) => done(r, TripEasyRowKind.taxi)).length,
+    );
+  }
+
   static Future<bool> _deletePlain(BuildContext context, String tripId) async {
-    if (!await TripLifecycleActions.confirmDelete(context, open: 0, confirmed: 0)) return false;
+    final asks = _openAsks(tripId);
+    final named = await loadAsks(tripId);
+    if (!context.mounted) return false;
+    if (!await TripLifecycleActions.confirmDelete(context, open: asks.open, confirmed: asks.stays, confirmedTaxis: asks.taxis, named: named)) return false;
     if (Get.isRegistered<MyTripsController>()) {
       final done = await MyTripsController.to.delete(tripId);
       if (done) AppToast.success(SharingStrings.tripDeleted);
@@ -211,12 +230,20 @@ class _DeleteBox extends StatefulWidget {
 
 class _DeleteBoxState extends State<_DeleteBox> {
   List<String>? _names;
+  List<String>? _asks;
   bool _busy = false;
 
   @override
   void initState() {
     super.initState();
     _loadNames();
+    _loadAsks();
+  }
+
+  Future<void> _loadAsks() async {
+    final lines = await TripDeleteFlow.loadAsks(widget.tripId);
+    if (!mounted) return;
+    setState(() => _asks = lines ?? const []);
   }
 
   Future<void> _loadNames() async {
@@ -245,12 +272,12 @@ class _DeleteBoxState extends State<_DeleteBox> {
   Widget build(BuildContext context) => BuddyConfirmBox.box(
         art: BuddyArt.warning,
         title: SharingStrings.deleteTitle,
-        body: _names == null ? null : SharingStrings.deleteBody(_names!),
+        body: _names == null || _asks == null ? null : [SharingStrings.deleteBody(_names!), ..._asks!].join('\n'),
         cancelLabel: BuddySharedStrings.cancel,
         confirmLabel: SharingStrings.delete,
         confirmKind: ConfirmKind.danger,
         busy: _busy,
         onCancel: () => Navigator.of(context).pop(),
-        onConfirm: _names == null ? null : _delete,
+        onConfirm: _names == null || _asks == null ? null : _delete,
       );
 }

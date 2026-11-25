@@ -9,7 +9,7 @@ abstract final class SpotPhotoUrl {
   static const String _marker = '/image/upload/';
 
   static const Map<SpotPhotoSize, String> transforms = {
-    SpotPhotoSize.marker: 'c_fill,w_96,h_96,q_auto,f_auto',
+    SpotPhotoSize.marker: 'c_fill,w_288,h_288,q_auto,f_auto',
     SpotPhotoSize.square: 'c_fill,g_auto,w_320,h_320,q_auto,f_auto',
     SpotPhotoSize.card: 'c_fill,g_auto,w_720,h_400,q_auto,f_auto',
     SpotPhotoSize.hero: 'c_fill,g_auto,w_1080,h_640,q_auto,f_auto',
@@ -17,7 +17,7 @@ abstract final class SpotPhotoUrl {
   };
 
   static const Map<SpotPhotoSize, int> _widths = {
-    SpotPhotoSize.marker: 96,
+    SpotPhotoSize.marker: 288,
     SpotPhotoSize.square: 320,
     SpotPhotoSize.card: 720,
     SpotPhotoSize.hero: 1080,

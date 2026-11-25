@@ -2,18 +2,29 @@ import 'stay_page_header.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import '../../../config/app_routes.dart';
 import '../../../controllers/plan_controller.dart';
 import '../../../models/browse_item.dart';
 import '../../../utils/app_toast.dart';
 import '../../../design/design.dart';
 import '../../../design/extra/ext_stay_owner.dart';
+import '../../owner_core/data/owner_args.dart';
+import '../../owner_core/data/owner_result.dart';
+import '../../owner_core/plan/gate_keys.dart';
+import '../../owner_core/plan/owner_inactive.dart';
+import '../../owner_core/plan/owner_manage_card.dart';
 import '../../owner_core/plan/plan_bindings.dart';
 import '../../owner_core/plan/plan_gate.dart';
 import '../../owner_core/plan/plan_keys.dart';
+import '../../owner_core/plan/soft_lock.dart';
+import '../../stay_owner/hub/stay_edit_price_sheet.dart';
+import '../../stay_owner/hub/stay_hub_controller.dart';
+import '../../stay_owner/plan/stay_plan_strings.dart';
 import '../../stay_owner/strings/stay_gate_strings.dart';
 import '../../stay_owner/strings/stay_setup_strings.dart';
-import '../../stay_owner/widgets/stay_widgets.dart';
+import '../models/stay_owner_model.dart';
 import 'stay_option_sets.dart';
+import 'stay_repository.dart';
 import 'stay_setup_controller.dart';
 
 class _RoomDraft {
@@ -26,7 +37,9 @@ class _RoomDraft {
 }
 
 class StayRoomsScreen extends StatefulWidget {
-  const StayRoomsScreen({super.key});
+  const StayRoomsScreen({super.key, this.manage});
+
+  final bool? manage;
   @override
   State<StayRoomsScreen> createState() => _StayRoomsScreenState();
 }
@@ -45,6 +58,9 @@ class _StayRoomsScreenState extends State<StayRoomsScreen> {
   int? _guests;
   String? _meals;
   bool _dirty = false;
+  String? _deletingId;
+
+  bool get _manage => widget.manage ?? OwnerArgs.isManage(Get.arguments);
 
   int get _max {
     final m = _ctrl.stay.value?.meter('RoomTypes')?.limit;
@@ -58,16 +74,42 @@ class _StayRoomsScreenState extends State<StayRoomsScreen> {
     super.initState();
     // Reached from /stay-setup before MainScreen: the plan must exist before its limits are read.
     PlanBindings.ensure();
-    for (final r in _ctrl.stay.value?.rooms ?? const []) {
-      _rooms.add(_RoomDraft(id: r.id, name: r.roomName, price: r.pricePerNight, guests: r.maxGuests, meals: r.meals));
+    _fillRooms();
+    _formOpen = _manage ? _rooms.isEmpty : _rooms.length < _max;
+    if (_manage) _stayWorker = ever<StayOwnerModel?>(_ctrl.stay, (_) => _syncRooms());
+    if (_manage && _ctrl.stay.value == null) {
+      _ctrl.load().then((_) {
+        if (mounted && _ctrl.stay.value != null) setState(_mergeLoaded);
+      });
     }
-    _formOpen = _rooms.length < _max;
     if (!PlanGate.loaded && Get.isRegistered<PlanController>()) {
       _planWorker = once<bool>(Get.find<PlanController>().loaded, (_) => _afterPlan());
     }
   }
 
   Worker? _planWorker;
+  Worker? _stayWorker;
+
+  void _fillRooms() {
+    _rooms.clear();
+    for (final r in _ctrl.stay.value?.rooms ?? const []) {
+      _rooms.add(_RoomDraft(id: r.id, name: r.roomName, price: r.pricePerNight, guests: r.maxGuests, meals: r.meals));
+    }
+  }
+
+  // Cold start: saved rooms first, new unsaved drafts after them.
+  void _mergeLoaded() {
+    final drafts = _rooms.where((r) => r.id == null).toList();
+    _fillRooms();
+    _rooms.addAll(drafts);
+    if (_editingIndex != null) _editingIndex = _rooms.length;
+    if (_editingIndex == null && _formBlank) _formOpen = _rooms.isEmpty;
+  }
+
+  void _syncRooms() {
+    if (!mounted || _dirty || _formOpen) return;
+    setState(_fillRooms);
+  }
 
   // The blank extra form was opened on the pre-plan limit; close it once the real limit says full.
   void _afterPlan() {
@@ -78,6 +120,7 @@ class _StayRoomsScreenState extends State<StayRoomsScreen> {
   @override
   void dispose() {
     _planWorker?.dispose();
+    _stayWorker?.dispose();
     _priceCtrl.dispose();
     _priceFocusNode.dispose();
     super.dispose();
@@ -192,6 +235,13 @@ class _StayRoomsScreenState extends State<StayRoomsScreen> {
 
   Future<void> _save() async {
     if (!_commitForm()) return;
+    if (_manage && _ctrl.stay.value == null) {
+      await _ctrl.load();
+      if (!mounted || _ctrl.stay.value == null) return;
+      setState(_mergeLoaded);
+      AppToast.info('Rooms loaded. Check and save again.');
+      return;
+    }
     if (_rooms.isEmpty) {
       AppToast.error('Add at least one room');
       setState(() {
@@ -209,8 +259,75 @@ class _StayRoomsScreenState extends State<StayRoomsScreen> {
       if (_ctrl.lastErrorType == 'PlanRoomTypeLimit') await _ctrl.showLimitRefusal(context, StayGateStrings.roomGate);
       return;
     }
-    Get.back();
+    if (_manage) {
+      setState(() => _dirty = false);
+      _syncRooms();
+      StayHubController.maybe?.reload();
+    } else {
+      Get.back();
+    }
     AppToast.success('Rooms saved');
+  }
+
+  Future<void> _deleteRoom(int i) async {
+    if (_rooms.length <= 1) {
+      AppToast.info('Keep at least one room');
+      return;
+    }
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (c) => StayConfirmDialog(
+        title: 'Delete this room?',
+        body: 'Guests will not see it any more.',
+        cancelLabel: 'Keep',
+        confirmLabel: 'Delete',
+        destructive: true,
+        art: ListingArt.bed,
+        onCancel: () => Navigator.pop(c, false),
+        onConfirm: () => Navigator.pop(c, true),
+      ),
+    );
+    if (ok != true || !mounted) return;
+    _removeRoom(i);
+    await _save();
+  }
+
+  Future<void> _editPrice(int i) async {
+    final id = _rooms[i].id;
+    final hub = StayHubController.maybe;
+    final room = id == null ? null : _ctrl.stay.value?.rooms.firstWhereOrNull((r) => r.id == id);
+    if (hub == null || room == null || _dirty) {
+      _editRoom(i);
+      return;
+    }
+    await StayEditPriceSheet.show(context, hub, room);
+  }
+
+  Future<void> _deleteHidden(StayRoomModel r) async {
+    if (_deletingId != null) return;
+    setState(() => _deletingId = r.id);
+    final res = await const StayRepository().deleteHiddenRoom(r.id);
+    if (!mounted) return;
+    switch (res) {
+      case OwnerOk<void>():
+        final hub = StayHubController.maybe;
+        if (hub != null) {
+          await hub.reload();
+        } else {
+          await _ctrl.load();
+        }
+      case final OwnerRefused<void> r:
+        if (!PlanGate.handleInactive(r)) AppToast.warning(r.message ?? 'Could not delete the room.');
+        final restored = StayHubController.maybe;
+        if (restored != null) {
+          await restored.reload();
+        } else {
+          await _ctrl.load();
+        }
+      default:
+        AppToast.error('Could not delete the room.');
+    }
+    if (mounted) setState(() => _deletingId = null);
   }
 
   void _confirmDiscard() {
@@ -254,12 +371,20 @@ class _StayRoomsScreenState extends State<StayRoomsScreen> {
             backgroundColor: ListingPalette.forest.page,
             body: Column(
               children: [
-                StayPageHeader(title: 'Rooms', subtitle: StaySetupStrings.roomsSubtitle, onBack: _onBack, asset: SetupAssets.bed),
+                _manage
+                    ? Obx(() {
+                        _ctrl.stay.value;
+                        if (Get.isRegistered<PlanController>()) Get.find<PlanController>().myPlan.value;
+                        return StayPageHeader(title: StayGateStrings.roomsPage, subtitle: StayGateStrings.roomsUsed(_rooms.length, _max), onBack: _onBack, asset: SetupAssets.bed);
+                      })
+                    : StayPageHeader(title: 'Rooms', subtitle: StaySetupStrings.roomsSubtitle, onBack: _onBack, asset: SetupAssets.bed),
                 Expanded(
                   child: ListView(
                     padding: EdgeInsets.only(bottom: DS.s(24)),
                     children: [
-                      for (var i = 0; i < _rooms.length; i++) KeyedSubtree(key: ObjectKey(_rooms[i]), child: _summaryCard(i)),
+                      if (_manage) _strip(),
+                      for (var i = 0; i < _rooms.length; i++) KeyedSubtree(key: ObjectKey(_rooms[i]), child: _manage ? _manageCard(i) : _summaryCard(i)),
+                      if (_manage) _hiddenCards(),
                       if (_formOpen) KeyedSubtree(key: ValueKey('form-$_formSeq'), child: _form()),
                       _addRow(),
                     ],
@@ -267,7 +392,7 @@ class _StayRoomsScreenState extends State<StayRoomsScreen> {
                 ),
               ],
             ),
-            bottomNavigationBar: _footer(),
+            bottomNavigationBar: _manage && !_dirty && !_formOpen ? null : _footer(),
           ),
           Obx(() => _ctrl.isSaving.value ? const StayBusy(message: 'Saving rooms...', art: SetupAssets.bed) : const SizedBox.shrink()),
         ],
@@ -290,6 +415,64 @@ class _StayRoomsScreenState extends State<StayRoomsScreen> {
       onRemove: () => _removeRoom(i),
     );
   }
+
+  Widget _strip() => Obx(() {
+        if (Get.isRegistered<PlanController>()) Get.find<PlanController>().myPlan.value;
+        final free = PlanGate.limit(PlanKey.roomTypes);
+        final plus = PlanKeys.plusSeed[PlanKey.roomTypes] ?? free;
+        if (!PlanGate.canUpgrade) return const SizedBox.shrink();
+        return Padding(
+          padding: DS.insets(l: 18, t: 14, r: 18),
+          child: SoftLock.strip(text: StayGateStrings.roomBanner(free, plus), onTap: () => PlanGate.showLimit(context, StayGateStrings.roomGate())),
+        );
+      });
+
+  Widget _manageCard(int i) {
+    final r = _rooms[i];
+    return OwnerManageCard(
+      eyebrow: 'ROOM ${i + 1}',
+      chip: '${StayOptionSets.guestsLabel(r.guests)} guests',
+      title: r.name.isNotEmpty ? r.name : 'Room ${i + 1}',
+      sub: '${BrowseItem.inr(r.price)} / night',
+      actions: [
+        GradientPillButton(tone: _tone, label: 'Edit price', height: 42, fontSize: 12.5, onTap: () => _editPrice(i)),
+        WhitePillButton(tone: _tone, label: 'Edit room', height: 42, fontSize: 12.5, onTap: () => _editRoom(i)),
+        WhitePillButton(tone: _tone, label: 'Delete', height: 42, fontSize: 12.5, danger: true, onTap: () => _deleteRoom(i)),
+      ],
+    );
+  }
+
+  Widget _hiddenCards() => Obx(() {
+        final hidden = _ctrl.stay.value?.hiddenRooms ?? const <StayRoomModel>[];
+        if (Get.isRegistered<PlanController>()) Get.find<PlanController>().myPlan.value;
+        final free = PlanGate.limit(PlanKey.roomTypes);
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (var k = 0; k < hidden.length; k++)
+              KeyedSubtree(
+                key: ValueKey('hidden-${hidden[k].id}'),
+                child: OwnerInactiveCard(
+                  eyebrow: 'ROOM ${_rooms.length + k + 1}',
+                  title: hidden[k].label,
+                  sub: '${BrowseItem.inr(hidden[k].pricePerNight)} / night · ${StayOptionSets.guestsLabel(hidden[k].maxGuests)} guests',
+                  reason: StayGateStrings.roomInactive(free),
+                  editLabels: const ['Edit price', 'Edit room'],
+                  busy: _deletingId == hidden[k].id,
+                  onDelete: () => _deleteHidden(hidden[k]),
+                ),
+              ),
+            if (hidden.isNotEmpty)
+              Padding(
+                padding: DS.insets(l: 18, t: 10, r: 18),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextLink(label: StayPlanStrings.chooseWhatStays, tone: KitTone.stayOwner, onTap: () => Get.toNamed(AppRoutes.stayPlanVisible)),
+                ),
+              ),
+          ],
+        );
+      });
 
   Widget _form() {
     final number = (_editingIndex ?? _rooms.length) + 1;
@@ -353,22 +536,33 @@ class _StayRoomsScreenState extends State<StayRoomsScreen> {
 
   Widget _addRowNow() {
     final full = _count >= _max;
-    if (full && PlanGate.loaded && PlanGate.canUpgrade) {
-      final plus = PlanKeys.plusSeed[PlanKey.roomTypes] ?? _max;
-      return Column(
-        children: [
-          StayLockedAddRow(label: StayGateStrings.addRoomType, onTap: () => PlanGate.showLimit(context, StayGateStrings.roomGate())),
-          StayPlusBanner(text: StayGateStrings.roomBanner(_max, plus), onTap: () => PlanGate.showLimit(context, StayGateStrings.roomGate())),
-        ],
+    final upsell = full && PlanGate.loaded && PlanGate.canUpgrade;
+    void tap() => PlanGate.addTap(context, full: full, gate: StayGateStrings.roomGate, onAdd: _addAnother);
+    if (_manage) {
+      final button = GradientPillButton(tone: _tone, label: StayGateStrings.addRoomType, enabled: !full || upsell, onTap: tap);
+      return Padding(
+        padding: DS.insets(l: 18, t: 16, r: 18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            upsell ? KeyedSubtree(key: GateKeys.softRow, child: button) : button,
+            if (full && !upsell)
+              Padding(
+                padding: EdgeInsets.only(top: DS.gv(8)),
+                child: Text('$_count of $_max · limit reached', textAlign: TextAlign.center, style: Ink3D.text(11.5, FontWeight.w500, Ink3D.grey, letterSpacing: 0)),
+              ),
+          ],
+        ),
       );
     }
-    return DashedAddRow3D(
+    final row = DashedAddRow3D(
       tone: _tone,
       label: 'Add another room',
-      trailing: full ? '$_count of $_max · limit reached' : '$_count of $_max',
-      enabled: !full,
-      onTap: _addAnother,
+      trailing: full && !upsell ? '$_count of $_max · limit reached' : '$_count of $_max',
+      enabled: !full || upsell,
+      onTap: tap,
     );
+    return upsell ? KeyedSubtree(key: GateKeys.softRow, child: row) : row;
   }
 
   Future<void> _pickRoomType() async {

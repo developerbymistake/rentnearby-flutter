@@ -59,10 +59,10 @@ abstract final class StayAttentionCopy {
         if (n <= 0) return null;
         final by = OwnerJson.time(args['replyBy']);
         return StayRowData(
-          art: ListingArt.speechBalloon,
+          art: ListingArt.clipboard,
           title: StayHomeStrings.enquiriesWaiting(n),
           sub: by == null ? null : StayHomeStrings.replyBefore(StayFormat.clock(by)),
-          trailing: StayPill(label: StayHomeStrings.reply, kind: StayPillKind.indigo, onTap: h.reply),
+          trailing: StayPill(label: StayHomeStrings.reply, kind: StayPillKind.forest, onTap: h.reply),
         );
       case StayAttentionCodes.changeOrCounter:
         final name = OwnerJson.strOrNull(args['travellerName']) ?? '';
@@ -84,7 +84,7 @@ abstract final class StayAttentionCopy {
           art: ListingArt.key,
           title: StayHomeStrings.acceptedOffer(name),
           sub: from == null ? null : StayHomeStrings.bookingConfirmedFor(StayFormat.range(from, to)),
-          trailing: StayPill(label: StayHomeStrings.open, kind: StayPillKind.white, onTap: id == null ? null : () => h.openEnquiry(id)),
+          trailing: StayPill(label: StayHomeStrings.open, kind: StayPillKind.outline, onTap: id == null ? null : () => h.openEnquiry(id)),
         );
       case StayAttentionCodes.paymentIssue:
         return StayRowData(
@@ -117,7 +117,7 @@ abstract final class StayAttentionCopy {
           tint: StayLook.artTintRed,
           title: StayHomeStrings.reports(n),
           sub: OwnerJson.strOrNull(args['firstReason']),
-          trailing: StayPill(label: StayHomeStrings.view, kind: StayPillKind.white, onTap: h.viewReports),
+          trailing: StayPill(label: StayHomeStrings.view, kind: StayPillKind.outline, onTap: h.viewReports),
         );
       case StayAttentionCodes.editRejected:
         final reason = OwnerJson.strOrNull(args['reason']);
@@ -128,7 +128,7 @@ abstract final class StayAttentionCopy {
           art: ListingArt.warning,
           tint: StayLook.artTintRed,
           title: nameOnly ? StayHomeStrings.nameChangeNotApproved(reason) : StayHomeStrings.changeNotApproved(reason),
-          trailing: StayPill(label: StayHomeStrings.view, kind: StayPillKind.white, onTap: h.viewEditRejected),
+          trailing: StayPill(label: StayHomeStrings.view, kind: StayPillKind.outline, onTap: h.viewEditRejected),
         );
       case StayAttentionCodes.festival:
         final name = OwnerJson.strOrNull(args['name']);
@@ -149,12 +149,7 @@ abstract final class StayAttentionCopy {
       case StayAttentionCodes.addShareDetails:
         return addShareRow(h);
       case StayAttentionCodes.shareListing:
-        return StayRowData(
-          art: ListingArt.mobilePhone,
-          title: StayHomeStrings.shareStay,
-          sub: StayHomeStrings.shareStaySub,
-          trailing: StayPill(label: StayHomeStrings.share, kind: StayPillKind.teal, onTap: h.share),
-        );
+        return null;
     }
     return null;
   }

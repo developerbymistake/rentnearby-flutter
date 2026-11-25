@@ -33,7 +33,13 @@ class TaxiHomePlanCard extends StatelessWidget {
     return homeAt != null && !homeAt.isBefore(planChangedAt);
   }
 
-  static Widget _card(OwnerPlanCard? card, String? city, List<PlanModel> catalog) => HomePlanCard(
+  static const _hidden = {PlanCardState.free, PlanCardState.unknown, PlanCardState.paymentOff};
+
+  static bool showsOnHome(OwnerPlanCard? card) => !_hidden.contains(card?.state ?? PlanCardState.unknown);
+
+  static Widget _card(OwnerPlanCard? card, String? city, List<PlanModel> catalog) => !showsOnHome(card)
+      ? const SizedBox.shrink()
+      : HomePlanCard(
         card: card,
         copy: const TaxiPlanCopy(),
         city: city,

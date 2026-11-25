@@ -143,7 +143,7 @@ class TripStringsV2Easy {
   static const String driverUnavailable = 'A driver is not available';
 
   static String stayProblem(String status) => switch (status) {
-        'NotAvailable' => 'Host is full',
+        'NotAvailable' => 'Host not available',
         'Expired' => 'No reply from host',
         'CancelledByOwner' => 'Host cancelled',
         _ => 'Host could not confirm',

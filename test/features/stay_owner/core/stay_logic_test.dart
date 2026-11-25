@@ -1,3 +1,4 @@
+import 'package:bakhli/design/design.dart';
 import 'package:bakhli/features/owner_core/home/owner_home_models.dart';
 import 'package:bakhli/features/stay/models/stay_owner_model.dart';
 import 'package:bakhli/features/stay_owner/home/stay_attention_copy.dart';
@@ -5,6 +6,7 @@ import 'package:bakhli/features/stay_owner/home/stay_home_compose.dart';
 import 'package:bakhli/features/stay_owner/strings/stay_format.dart';
 import 'package:bakhli/features/stay_owner/strings/stay_home_strings.dart';
 import 'package:bakhli/features/stay_owner/strings/stay_setup_strings.dart';
+import 'package:bakhli/features/stay_owner/widgets/stay_widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../../support/owner_fakes.dart';
@@ -165,10 +167,30 @@ void main() {
       expect(StayHomeCompose.attention(d, denied: true, hasShareDetails: true).single.code, 'NotificationsOff');
     });
 
-    test('under review: UPI row first until saved, notifications only while denied', () {
-      final d = _dto(homeJson(status: 'PendingReview', everApproved: false));
-      expect(StayHomeCompose.attention(d, denied: true, hasShareDetails: false).map((r) => r.code), ['AddShareDetails', 'NotificationsOff']);
-      expect(StayHomeCompose.attention(d, denied: false, hasShareDetails: true), isEmpty);
+    test('under review: no UPI row (A10), notifications only while denied', () {
+      final d = _dto(homeJson(status: 'PendingReview', everApproved: false, attention: [att('AddShareDetails', 11)]));
+      expect(StayHomeCompose.attention(d, denied: true, hasShareDetails: false).map((r) => r.code), ['NotificationsOff']);
+      expect(StayHomeCompose.attention(d, denied: false, hasShareDetails: false), isEmpty);
+    });
+
+    test('hero line: Accepting guests on its own line when live, state lines otherwise', () {
+      String? line(Map<String, dynamic> j) {
+        final d = _dto(j);
+        return StayHomeCompose.heroLine(StayHomeCompose.stateOf(d.listing), d.listing);
+      }
+      expect(line(homeJson(statusLine: {'code': 'NewNeedReply', 'args': {'count': 2}})), 'Accepting guests');
+      expect(line(homeJson(switchOn: false)), StayHomeStrings.linePaused);
+      expect(line(homeJson(areaPaused: true)), StayHomeStrings.lineAreaPaused);
+    });
+
+    test('attention pills: Reply filled forest, Open and View outlined, share row hidden', () {
+      StayPillKind? kind(String code, Map<String, dynamic> args) => (StayAttentionCopy.of(OwnerAttention(code: code, args: args), h)?.trailing as StayPill?)?.kind;
+      expect(kind('EnquiriesWaiting', {'count': 2}), StayPillKind.forest);
+      expect(StayAttentionCopy.of(const OwnerAttention(code: 'EnquiriesWaiting', args: {'count': 2}), h)?.art, ListingArt.clipboard);
+      expect(kind('OfferAccepted', {'travellerName': 'Rohit', 'enquiryId': 'q'}), StayPillKind.outline);
+      expect(kind('Reports', {'count': 1}), StayPillKind.outline);
+      expect(kind('EditRejected', {'reason': 'x', 'fields': ['name']}), StayPillKind.outline);
+      expect(StayAttentionCopy.of(const OwnerAttention(code: 'ShareListing'), h), isNull);
     });
 
     test('rejected keeps only the notifications row; taken down has none', () {
@@ -194,7 +216,7 @@ void main() {
       expect(title('EditRejected', {'reason': 'wrong', 'fields': ['location']}), 'Change not approved: wrong');
       expect(title('Festival', {'name': 'Diwali week', 'dateFrom': '2026-11-06', 'dateTo': '2026-11-12'}), 'Diwali week starts 6 Nov');
       expect(title('AddShareDetails'), 'Add UPI and WhatsApp');
-      expect(title('ShareListing'), 'Share your stay');
+      expect(title('ShareListing'), isNull);
       expect(title('SomethingNew'), isNull);
       expect(title('EnquiriesWaiting', {'count': 'x'}), isNull);
       expect(title('OfferAccepted', {}), isNull);

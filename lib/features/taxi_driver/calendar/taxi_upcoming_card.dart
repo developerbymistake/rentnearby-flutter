@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import '../../../config/app_routes.dart';
 import '../../../design/design.dart';
 import '../../owner_core/calendar/models/calendar_models.dart';
+import '../../owner_core/calendar/owner_upcoming_heading.dart';
 import '../../owner_core/home/owner_home_models.dart';
 import '../../owner_core/plan/plan_gate.dart';
 import '../../owner_core/plan/plan_keys.dart';
@@ -12,7 +13,7 @@ import '../../owner_core/sheets/owner_states.dart';
 import '../home/taxi_driver_home_controller.dart';
 import '../strings/taxi_calendar_strings.dart';
 import '../taxi_driver_deps.dart';
-import 'taxi_bookings_tab.dart';
+import '../widgets/taxi_widgets.dart';
 import 'taxi_calendar_controller.dart';
 import 'taxi_calendar_widgets.dart';
 import 'taxi_trip_sheet.dart';
@@ -70,7 +71,7 @@ class TaxiUpcomingCardView extends StatelessWidget {
   Widget build(BuildContext context) {
     final up = load.valueOrNull;
     final windowText = TaxiUpcomingWords.window(labelDays: up?.windowLabelDays);
-    final children = <Widget>[TaxiTitleRow(title: TaxiCalendarStrings.upcoming, sub: windowText, padding: DS.insets(t: 18, b: 10))];
+    final children = <Widget>[];
     if (up == null) {
       if (load is OwnerLoadLoading<OwnerUpcoming>) {
         children.add(Column(children: [
@@ -79,33 +80,13 @@ class TaxiUpcomingCardView extends StatelessWidget {
       }
     } else {
       final rows = up.rows;
-      final more = up.moreInWindowCount;
       final lock = up.beyondWindowAppCount > 0 && PlanGate.canUpgrade;
-      final segments = rows.length + (more > 0 ? 1 : 0) + (lock ? 1 : 0);
+      final segments = rows.length + (lock ? 1 : 0);
       var k = 0;
       bool first() => k == 0;
       bool last() => k == segments - 1;
       for (final e in rows) {
         children.add(TaxiCardSegment(first: first(), last: last(), child: _row(e)));
-        k++;
-      }
-      if (more > 0) {
-        children.add(TaxiCardSegment(
-          first: first(),
-          last: last(),
-          child: Container(
-            color: TaxiCal.softFill,
-            padding: DS.sym(h: 14, v: 10),
-            child: Row(
-              children: [
-                Art3D(asset: ListingArt.calendar, size: 22),
-                Gap.h(10),
-                Expanded(child: Text(TaxiCalendarStrings.moreIn(more, windowText), style: Ink3D.text(12, FontWeight.w600, Ink3D.body, letterSpacing: 0))),
-                TaxiSmallOutline(label: TaxiCalendarStrings.seeAll, onTap: () => Get.toNamed(AppRoutes.taxiUpcoming), semantics: TaxiCalendarStrings.seeAll),
-              ],
-            ),
-          ),
-        ));
         k++;
       }
       if (lock) {
@@ -123,21 +104,22 @@ class TaxiUpcomingCardView extends StatelessWidget {
         k++;
       }
     }
-    children.add(Padding(
-      padding: DS.insets(t: 4),
-      child: Row(
-        children: [
-          Expanded(child: PrimaryButton(label: TaxiCalendarStrings.viewCalendar, tone: TaxiCal.kit, compact: true, onPressed: TaxiCalendarNav.viewCalendar)),
-          Gap.h(8),
-          Expanded(child: SecondaryButton(label: TaxiCalendarStrings.past, tone: TaxiCal.kit, compact: true, onPressed: () => Get.toNamed(AppRoutes.taxiPast))),
-          Gap.h(8),
-          Expanded(child: SecondaryButton(label: TaxiCalendarStrings.addTrip, tone: TaxiCal.kit, compact: true, onPressed: () => TaxiAddTrip.fromAnywhere(context))),
-        ],
-      ),
-    ));
-    return Padding(
-      padding: DS.sym(h: 18),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: children),
+    if (children.isEmpty) return const SizedBox.shrink();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        OwnerUpcomingHeading(
+          title: TaxiCalendarStrings.upcomingBookings,
+          sub: windowText,
+          seeAll: TaxiCalendarStrings.seeAll,
+          onSeeAll: () => Get.toNamed(AppRoutes.taxiUpcoming),
+          linkColor: TaxiLook.accentText,
+        ),
+        Padding(
+          padding: DS.sym(h: 18),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: children),
+        ),
+      ],
     );
   }
 

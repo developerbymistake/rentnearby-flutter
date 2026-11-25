@@ -157,8 +157,9 @@ void main() {
     expect(specs.map((s) => s.id), DiscIds.layers);
     expect(specs[0].sourceId, DiscIds.srcAll);
     expect(specs[0].interactive, isFalse);
+    expect(specs[0].minZoom, DiscTuning.dotsFromZoom);
     expect(specs[1].filter, DiscLayers.badgeTierFilter);
-    expect(specs[1].minZoom, 12);
+    expect(specs[1].minZoom, isNull, reason: 'top-ranked badges show at every zoom');
     expect(specs[2].sourceId, DiscIds.srcPhoto);
     expect(specs.skip(3).every((s) => s.sourceId == DiscIds.srcSel && !s.interactive), isTrue);
   });

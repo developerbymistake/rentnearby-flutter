@@ -38,7 +38,7 @@ class TripRouteStops {
   int _gen = 0;
 
   TripRouteStops({DiscTuning? tuning, TripMarkerImages? images, this.painter = const CanvasMarkerPainter()})
-      : tuning = tuning ?? DiscTuning.trip,
+      : tuning = tuning ?? DiscTuning.tripStops,
         _images = images ?? TripMarkerImages();
 
   List<RouteStop> get stops => _stops;

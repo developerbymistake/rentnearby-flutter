@@ -14,13 +14,16 @@ import 'stay_owner_deps.dart';
 import 'home/stay_owner_home_controller.dart';
 import '../jobs/controllers/my_jobs_controller.dart';
 import '../stay/enquiries/stay_enquiries_controller.dart';
+import '../stay/setup/stay_setup_controller.dart';
 import 'enquiries_tab/stay_quiet_week_banner.dart';
 import 'jobs_tab/stay_jobs_tab.dart';
 import 'notices/stay_notice_copy.dart';
 import 'reminder/stay_reminder_row.dart';
 import 'hub/stay_hub_controller.dart';
 import 'calendar/stay_calendar_controller.dart';
+import 'calendar/stay_list_controller.dart';
 import 'calendar/stay_upcoming_card.dart';
+import 'calendar/stay_upcoming_screen.dart';
 import 'plan_visible/stay_plan_visible_screen.dart';
 import 'special_prices/stay_special_prices_controller.dart';
 
@@ -50,6 +53,10 @@ abstract final class StayOwnerSession {
     OwnerCache.removeListingScoped(_uid());
     StayOwnerHomeController.maybe?.reload();
     StayHubController.maybe?.reload();
+    if (StayHubController.maybe == null && Get.isRegistered<StaySetupController>()) Get.find<StaySetupController>().load();
+    if (Get.isRegistered<StayListController>(tag: StayUpcomingScreen.listTag)) {
+      Get.find<StayListController>(tag: StayUpcomingScreen.listTag).fetch();
+    }
     final cal = StayCalendarController.maybe;
     if (cal != null) {
       cal.clearCache();

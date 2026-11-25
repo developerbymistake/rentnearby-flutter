@@ -1,6 +1,8 @@
 import 'package:dio/dio.dart';
 import '../../../services/api_service.dart';
 import '../../../utils/photo_upload/app_photo_pick.dart';
+import '../../owner_core/data/owner_api.dart';
+import '../../owner_core/data/owner_result.dart';
 import '../../owner_core/data/single_flight.dart';
 import '../models/stay_owner_model.dart';
 
@@ -54,6 +56,10 @@ class StayRepository {
         'upiId': ?upiId,
         'whatsAppNumber': ?whatsAppNumber,
       }));
+
+  Future<OwnerResult<void>> deleteHiddenRoom(String roomId) => OwnerApi.delete('/stays/me/rooms/$roomId');
+
+  Future<OwnerResult<void>> deleteHiddenPhoto(String photoId) => OwnerApi.delete('/stays/me/photos/$photoId');
 
   Future<void> deleteStay() => ApiService.delete('/stays/me');
 }

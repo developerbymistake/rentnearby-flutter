@@ -25,9 +25,10 @@ abstract final class TaxiPhotoStrings {
   static const photoTooLarge = PhotoPickStrings.tooLarge;
   static const photoWrongType = PhotoPickStrings.wrongType;
   static const photoPickFailed = PhotoPickStrings.pickFailed;
-  static const hubRowTitle = 'Taxi photo';
-  static const hubRowSubNone = 'Add a photo travellers will see';
-  static const hubRowSubSet = 'Travellers see this';
+  static const photoCardTitle = 'Taxi photo and plate proof';
+  static const manage = 'Manage';
+  static const plateProof = 'Plate proof';
+  static const private = 'Private';
   static const couldNotUpload = 'Could not upload photo.';
   static const deleteBody = 'Your taxi, routes and photos will be deleted.';
 }

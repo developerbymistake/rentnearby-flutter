@@ -14,6 +14,8 @@ import '../features/taxi/requests/controllers/driver_requests_controller.dart';
 import '../features/trip/controllers/my_trips_controller.dart';
 import '../features/trip/controllers/trip_plan_controller.dart';
 import '../features/trip/controllers/trip_taxi_request_controller.dart';
+import '../features/trip/enquiries/my_enquiries_controller.dart';
+import '../features/trip/enquiries/my_enquiry_count_controller.dart';
 
 class TripPushSync {
   const TripPushSync._();
@@ -21,6 +23,7 @@ class TripPushSync {
   static const _tripRoutes = {
     AppRoutes.tripPlan,
     AppRoutes.tripReplies,
+    AppRoutes.myEnquiries,
     AppRoutes.tripOverview,
     AppRoutes.tripTaxiStatus,
     AppRoutes.taxiRequests,
@@ -123,6 +126,16 @@ class TripPushSync {
     c.focusId.value = enquiryId;
   }
 
+  static Future<void> _focusMine(MyEnquiriesController c, String enquiryId) async {
+    final target = await c.bucketFor(enquiryId);
+    if (target != null && target != c.bucket.value) {
+      await c.selectBucket(target);
+    } else {
+      await c.refreshList();
+    }
+    c.focusId.value = enquiryId;
+  }
+
   static void _run() {
     _debounce = null;
     final journeys = _journeys;
@@ -163,6 +176,17 @@ class TripPushSync {
         if (!c.loading.value) c.refreshList();
       } else {
         c.loadBadge(force: true);
+      }
+    }
+    if (enquiries) {
+      MyEnquiryCountController.maybe?.refresh();
+      if (Get.isRegistered<MyEnquiriesController>()) {
+        final c = Get.find<MyEnquiriesController>();
+        if (focusId != null && focusRoute == AppRoutes.myEnquiries && route == AppRoutes.myEnquiries) {
+          unawaited(_focusMine(c, focusId));
+        } else if (route == AppRoutes.myEnquiries) {
+          c.refreshList();
+        }
       }
     }
     if (Get.isRegistered<TripPlanController>()) {

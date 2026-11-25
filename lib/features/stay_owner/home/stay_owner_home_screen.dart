@@ -8,16 +8,19 @@ import '../../../config/app_routes.dart';
 import '../../../config/app_tabs.dart';
 import '../../../controllers/auth_controller.dart';
 import '../../../design/design.dart';
+import '../../../design/extra/instagram_look.dart';
 import '../../../models/browse_item.dart';
 import '../../../services/listing_share_service.dart';
 import '../../../utils/app_toast.dart';
+import '../../../utils/money_format.dart';
 import '../../../widgets/tab_header.dart';
+import '../../owner_core/data/owner_args.dart';
 import '../../owner_core/home/numbers_row.dart';
 import '../../owner_core/home/owner_home_models.dart';
 import '../../owner_core/sheets/owner_states.dart';
+import '../../stay/models/stay_owner_model.dart';
 import '../../stay/setup/stay_setup_controller.dart';
 import '../stay_owner_deps.dart';
-import '../stay_owner_tabs.dart';
 import '../strings/stay_home_strings.dart';
 import '../strings/stay_hub_strings.dart';
 import '../widgets/stay_widgets.dart';
@@ -213,10 +216,11 @@ class StayHomeBody extends StatelessWidget {
     final live = state == StayHomeState.live || state == StayHomeState.paused || state == StayHomeState.areaPaused;
     final showNumbers = live || state == StayHomeState.takenDown;
     final n = dto.numbers;
+    VoidCallback? open(String bucket) => showNumbers ? () => StayHomeActions._auth()?.openTab(AppTabs.centre, intent: {'bucket': bucket}) : null;
     final tiles = [
-      NumberTile(value: StayHomeStrings.number(showNumbers ? n.newEnquiries : null), label: StayHomeStrings.newEnquiries),
-      NumberTile(value: StayHomeStrings.number(showNumbers ? n.offersWaiting : null), label: StayHomeStrings.offersWaiting),
-      NumberTile(value: StayHomeStrings.number(showNumbers ? n.confirmed : null), label: StayHomeStrings.confirmed),
+      NumberTile(value: StayHomeStrings.number(showNumbers ? n.newEnquiries : null), label: StayHomeStrings.newEnquiries, onTap: open('New')),
+      NumberTile(value: StayHomeStrings.number(showNumbers ? n.offersWaiting : null), label: StayHomeStrings.offersWaiting, onTap: open('Offered')),
+      NumberTile(value: StayHomeStrings.number(showNumbers ? n.confirmed : null), label: StayHomeStrings.confirmed, onTap: open('Confirmed')),
     ];
 
     final children = <Widget>[];
@@ -228,7 +232,7 @@ class StayHomeBody extends StatelessWidget {
         ink: StayLook.amberText,
       ));
     }
-    children.add(_hero(context, state, l));
+    children.add(_hero(context, state, l, live ? hub : null));
     if (state == StayHomeState.takenDown) {
       children.add(const StayStrip(art: ListingArt.shield, text: StayHomeStrings.takenDownStrip, fill: StayLook.tealSoft, ink: StayLook.greenText));
     }
@@ -253,42 +257,60 @@ class StayHomeBody extends StatelessWidget {
     }
     children.add(Padding(padding: DS.insets(l: 18, t: 16, r: 18), child: NumbersRow(tiles: tiles)));
     if (live || state == StayHomeState.takenDown) children.add(StayOwnerDeps.upcomingCard());
-    final planOk = (state == StayHomeState.live || state == StayHomeState.paused) && !l.plannerOff;
-    if (planOk) children.add(StayOwnerDeps.planCard());
     if (state == StayHomeState.live || state == StayHomeState.areaPaused) {
       children.add(const StaySectionTitle(title: StayHomeStrings.quickActions));
       children.add(_quick(context));
     }
-    children.add(const StayInstagramCard(
-      eyebrow: StayHomeStrings.instagram,
-      title: StayHomeStrings.followUs,
-      cta: StayHomeStrings.follow,
-      onTap: StayHomeActions.openInstagram,
+    children.add(Padding(
+      padding: DS.insets(t: 30),
+      child: WorkoutCard(
+        tone: InstagramLook.tone,
+        gradient: InstagramLook.gradient,
+        art: ListingArt.camera,
+        eyebrow: StayHomeStrings.instagram,
+        title: StayHomeStrings.followUs,
+        ctaLabel: StayHomeStrings.follow,
+        minHeight: 112,
+        semanticsLabel: 'Follow us on Instagram',
+        onTap: StayHomeActions.openInstagram,
+      ),
     ));
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: children);
   }
 
-  Widget _hero(BuildContext context, StayHomeState state, OwnerHomeListing l) {
+  Widget _hero(BuildContext context, StayHomeState state, OwnerHomeListing l, StayOwnerModel? hub) {
     final tone = StayHomeCompose.tone(state);
     Widget? extra;
+    Widget? trailing;
+    Widget? body;
     if (StayHomeCompose.showsSwitch(state)) {
-      extra = Obx(() => Row(
-            children: [
-              Flexible(child: Text(StayHomeStrings.acceptingGuests, style: Ink3D.text(13, FontWeight.w700, Colors.white, letterSpacing: 0))),
-              Gap.h(10),
-              Semantics(
-                toggled: controller.switchOn,
-                label: StayHomeStrings.acceptingGuests,
-                excludeSemantics: true,
-                child: Switch3D(
-                  tone: tone,
-                  value: controller.switchOn,
-                  onGradient: true,
-                  onChanged: controller.switchBusy.value ? null : controller.setAccepting,
-                ),
-              ),
-            ],
+      trailing = Obx(() => Semantics(
+            toggled: controller.switchOn,
+            label: StayHomeStrings.acceptingGuests,
+            excludeSemantics: true,
+            child: Switch3D(
+              tone: tone,
+              value: controller.switchOn,
+              onGradient: true,
+              onChanged: controller.switchBusy.value ? null : controller.setAccepting,
+            ),
           ));
+      final min = hub?.minPricePerNight;
+      final facts = [
+        if (hub != null) NumberTile(value: '${hub.rooms.length}', label: StayHomeStrings.rooms),
+        if (min != null) NumberTile(value: Money.exact(min), label: StayHomeStrings.fromPerNight),
+      ];
+      body = Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (facts.isNotEmpty) OwnerFacts(facts: facts, padding: DS.insets(t: 10, b: 4)),
+          if (facts.isNotEmpty) Divider(height: 1, thickness: 1, indent: DS.s(16), endIndent: DS.s(16), color: StayLook.rowLine),
+          Padding(
+            padding: DS.insets(l: 16, t: 10, r: 16, b: 12),
+            child: Text(StayHomeStrings.heroNote, style: Ink3D.text(11.5, FontWeight.w400, Ink3D.grey, height: 1.35, letterSpacing: 0)),
+          ),
+        ],
+      );
     } else if (state == StayHomeState.rejected || state == StayHomeState.takenDown) {
       extra = StayWhitePill(label: StayHomeStrings.fixAndResubmit, color: StayLook.redText, onTap: StayHomeActions.openSetupHub);
     }
@@ -300,8 +322,10 @@ class StayHomeBody extends StatelessWidget {
         art: StayHomeCompose.art(state),
         title: l.name,
         pill: StayHomeCompose.pill(state, l),
-        line: StayHomeCompose.line(state, l),
+        line: StayHomeCompose.heroLine(state, l),
         extra: extra,
+        trailing: trailing,
+        body: body,
       ),
     );
   }
@@ -328,14 +352,9 @@ class StayHomeBody extends StatelessWidget {
         ),
       );
 
-  Widget _quick(BuildContext context) {
-    final jobs = StayOwnerTabs.jobsSlotActive;
-    return StayRail(tiles: [
-      StayRailTile(tone: ListingTone.cE, art: ListingArt.moneyBag, title: StayHomeStrings.editPrices, sub: StayHomeStrings.editPricesSub, onTap: () => StayOwnerDeps.openEditPrices()),
-      StayRailTile(tone: ListingTone.teal, art: ListingArt.mobilePhone, title: StayHomeStrings.shareMyStay, sub: StayHomeStrings.shareMyStaySub, onTap: () => StayHomeActions.share(context)),
-      if (jobs)
-        StayRailTile(tone: StayLook.tealDeep, art: ListingArt.briefcase, title: StayHomeStrings.postJob, sub: StayHomeStrings.postJobSub, add: true, onTap: () => Get.toNamed(AppRoutes.postJob)),
-      StayRailTile(tone: ListingTone.cE, art: ListingArt.key, title: StayHomeStrings.contactDetails, sub: StayHomeStrings.contactDetailsSub, onTap: () => Get.toNamed(AppRoutes.stayShareDetails)),
-    ]);
-  }
+  Widget _quick(BuildContext context) => StayRail(tiles: [
+        StayRailTile(tone: ListingTone.cE, art: ListingArt.bed, title: StayHomeStrings.manageRooms, sub: StayHomeStrings.manageRoomsSub, onTap: () => Get.toNamed(AppRoutes.stayRooms, arguments: OwnerArgs.manage)),
+        StayRailTile(tone: ListingTone.sunrise, art: ListingArt.calendar, title: StayHomeStrings.manageCalendar, sub: StayHomeStrings.manageCalendarSub, onTap: () => Get.toNamed(AppRoutes.stayCalendar)),
+        StayRailTile(tone: ListingTone.indigo, art: ListingArt.key, title: StayHomeStrings.contactDetails, sub: StayHomeStrings.contactDetailsSub, onTap: () => Get.toNamed(AppRoutes.stayShareDetails)),
+      ]);
 }

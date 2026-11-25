@@ -129,6 +129,39 @@ void main() {
       expect(find.byType(Switch), findsNothing);
     });
 
+    testWidgets('no Past button in the header; Past trips link sits in the list', (tester) async {
+      final c = calSetUp(CalFake(months: {'2026-11': monthJson(entries: novEntries())}));
+      await pumpPhone(tester, TaxiBookingsTab(root: true, controller: c));
+      await settle(tester);
+      expect(find.text('Past'), findsNothing);
+      await tester.scrollUntilVisible(find.text('Past trips ›'), 200, scrollable: find.byType(Scrollable).first);
+      expect(find.text('Past trips ›'), findsOneWidget);
+    });
+
+    testWidgets('Add trip at 4 of 4 on Free opens the gate sheet before the form', (tester) async {
+      final c = calSetUp(CalFake(months: {'2026-11': monthJson(entries: novEntries(), used: 4)}));
+      await pumpPhone(tester, TaxiBookingsTab(root: true, controller: c));
+      await settle(tester);
+      final add = find.text('+ Add trip');
+      await tester.scrollUntilVisible(add, 200, scrollable: find.byType(Scrollable).first);
+      await tester.tap(add);
+      await settle(tester);
+      expect(find.byKey(GateKeys.sheet), findsOneWidget);
+      expect(find.text('Save trip'), findsNothing);
+    });
+
+    testWidgets('Add trip at 50 of 50 on Plus is disabled', (tester) async {
+      final c = calSetUp(CalFake(months: {'2026-11': monthJson(entries: novEntries(), plus: true, used: 50, limit: 50)}), plan: OwnerPlans.plus);
+      await pumpPhone(tester, TaxiBookingsTab(root: true, controller: c));
+      await settle(tester);
+      final add = find.text('+ Add trip');
+      await tester.scrollUntilVisible(add, 200, scrollable: find.byType(Scrollable).first);
+      await tester.tap(add, warnIfMissed: false);
+      await settle(tester);
+      expect(find.text('Save trip'), findsNothing);
+      expect(find.byKey(GateKeys.sheet), findsNothing);
+    });
+
     testWidgets('plus (o_tx_29): chips, open card, switch, months ahead', (tester) async {
       final fake = CalFake(months: {'2026-11': monthJson(entries: novEntries(paidExtras: true), plus: true, used: 14)});
       final c = calSetUp(fake, plan: OwnerPlans.plus);
@@ -243,27 +276,23 @@ void main() {
       expect(fake.count('POST'), 0);
     });
 
-    testWidgets('G10 at 4 of 4 on Free, Not now keeps what he typed', (tester) async {
+    testWidgets('G10 at 4 of 4 on Free opens before the form, Not now leaves no form', (tester) async {
       final fake = CalFake(months: {'2026-11': monthJson(entries: novEntries(), used: 4)});
       await openSheet(tester, fake);
-      await tester.enterText(find.byType(TextField).at(0), 'Airport drop');
-      await tester.tap(find.text('Save trip'));
-      await settle(tester);
+      expect(find.byKey(GateKeys.sheet), findsOneWidget);
+      expect(find.text('Save trip'), findsNothing);
       expect(find.text('You have 4 active entries'), findsOneWidget);
       expect(find.text('Free keeps 4 trips you add yourself. Plus keeps 50.'), findsOneWidget);
       expect(find.text('₹150 / month · 7 days free'), findsOneWidget);
       await tester.tap(find.text('Not now'));
       await settle(tester);
-      expect(find.text('Airport drop'), findsOneWidget);
+      expect(find.text('Save trip'), findsNothing);
       expect(fake.count('POST'), 0);
     });
 
     testWidgets('no trial: price line without 7 days free', (tester) async {
       final fake = CalFake(months: {'2026-11': monthJson(entries: novEntries(), used: 4)});
       await openSheet(tester, fake, plan: OwnerPlans.freeNoTrial);
-      await tester.enterText(find.byType(TextField).at(0), 'Airport drop');
-      await tester.tap(find.text('Save trip'));
-      await settle(tester);
       expect(find.text('₹150 / month'), findsOneWidget);
     });
 
@@ -610,16 +639,18 @@ void main() {
       entryOf(tripJson('m25', from: '2026-11-25', time: '09:30', fromPlace: 'Haldwani', toPlace: 'Mukteshwar', label: 'Mehra family', finalAmount: 2200)),
     ];
 
-    testWidgets('free (o_tx_23): rows, more strip, lock line, buttons', (tester) async {
+    testWidgets('free (o_tx_23): Upcoming bookings heading with See all, rows, lock line, no button row', (tester) async {
       calSetUp(CalFake());
       await pumpPhone(tester, card(OwnerUpcoming(rows: rows, moreInWindowCount: 1, beyondWindowAppCount: 1, window: CalendarWindow(upcomingTo: DateTime(2026, 12, 6)))));
+      expect(find.text('Upcoming bookings'), findsOneWidget);
+      expect(find.text('See all ›'), findsOneWidget);
       expect(find.text('Next 15 days'), findsOneWidget);
       expect(find.text('23 Nov, all day · Priya Rawat'), findsOneWidget);
       expect(find.text('₹2,200'), findsOneWidget);
-      expect(find.text('1 more in the next 15 days'), findsOneWidget);
+      expect(find.text('1 more in the next 15 days'), findsNothing);
       expect(find.text('After 6 Dec: 1 booking from the app (see Bookings). Plus shows 6 months ahead.'), findsOneWidget);
-      for (final t in ['View calendar', 'Past', '+ Add trip', 'See all']) {
-        expect(find.text(t), findsOneWidget);
+      for (final t in ['View calendar', 'Past', '+ Add trip']) {
+        expect(find.text(t), findsNothing);
       }
     });
 
@@ -636,9 +667,10 @@ void main() {
     testWidgets('empty and loading states', (tester) async {
       calSetUp(CalFake());
       await pumpPhone(tester, card(const OwnerUpcoming()));
-      expect(find.text('View calendar'), findsOneWidget);
+      expect(find.text('Upcoming bookings'), findsNothing);
+      expect(find.text('See all ›'), findsNothing);
       await pumpPhone(tester, const Scaffold(body: SingleChildScrollView(child: TaxiUpcomingCardView(load: OwnerLoadLoading()))));
-      expect(find.text('Upcoming'), findsOneWidget);
+      expect(find.text('Upcoming bookings'), findsOneWidget);
     });
 
     testWidgets('row tap opens the entry seam', (tester) async {

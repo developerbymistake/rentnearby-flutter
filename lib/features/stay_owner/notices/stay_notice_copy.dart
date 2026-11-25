@@ -92,7 +92,18 @@ abstract final class StayNoticeCopy {
       case StayNoticeKinds.planLimits:
         final hidden = _plan.hidden;
         if (hidden.photos <= 0 && hidden.roomTypes <= 0) {
-          if (hidden.specialPrices <= 0) return null;
+          if (hidden.specialPrices <= 0) {
+            if (_plan.pausedByPlanCount <= 0) return null;
+            return NoticeView(
+              title: StayNoticeStrings.jobsInactiveTitle,
+              body: StayNoticeStrings.jobsInactive,
+              tag: StayNoticeStrings.tagPlan,
+              art: ListingArt.briefcase,
+              tone: NoticeTone.indigo,
+              route: AppRoutes.myJobs,
+              args: const {},
+            );
+          }
           return NoticeView(
             title: StayNoticeStrings.specialPricesPausedTitle,
             body: StayNoticeStrings.specialPricesPaused(hidden.specialPrices),

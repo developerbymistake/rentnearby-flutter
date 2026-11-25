@@ -98,12 +98,11 @@ void main() {
     }
   });
 
-  testWidgets('asked = disabled Asked; with chat = Open chat', (t) async {
+  testWidgets('asked = disabled Asked, never Open chat', (t) async {
     await _pump(t, TripStayRow(stay: _stay('a'), onOpen: () {}, onCall: () {}, status: TripDisplayStatus.asked));
     final second = t.widget<CalmPillButton>(find.byType(CalmPillButton).last).action;
     expect((second.kind, second.label), (CalmActionKind.disabled, TripStringsV2Find.asked));
-    await _pump(t, TripStayRow(stay: _stay('a'), onOpen: () {}, onCall: () {}, status: TripDisplayStatus.asked, onOpenChat: () {}));
-    expect(find.text('Open chat'), findsOneWidget);
+    expect(find.text('Open chat'), findsNothing);
   });
 
   testWidgets('paused: dimmed, no buttons', (t) async {

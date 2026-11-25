@@ -9,7 +9,7 @@ abstract final class TaxiPlanStrings {
   static const requestsBookingsRating = 'Requests, bookings, rating';
   static const routes = 'Routes';
   static String freeMeterNote(int free, int plus) => 'Free plan: ${routesCount(free)}. Plus allows up to $plus.';
-  static const firstRouteStays = 'Your first route stays. Extra routes are hidden, not deleted.';
+  static const lastRouteStays = 'Your last added route stays. Extra routes are hidden, not deleted.';
   static String keepAfter(int n) => 'After that, you keep ${routesCount(n)}.';
   static String keepUntil(int n) => 'Until then, you keep ${routesCount(n)}.';
   static const extraHidden = 'Extra routes are hidden. Nothing is deleted.';

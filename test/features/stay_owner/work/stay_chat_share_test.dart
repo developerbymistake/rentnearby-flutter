@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:bakhli/controllers/chat_controller.dart';
+import 'package:bakhli/features/stay/enquiries/stay_enquiry_actions.dart';
 import 'package:bakhli/features/trip/controllers/trip_enquiry_controller.dart';
 import 'package:bakhli/features/trip/models/trip_enquiry_model.dart';
 import 'package:bakhli/models/message_model.dart';
@@ -16,6 +17,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 
+import '../../../journeys/fake_api.dart' show FakeRoute, installFakeApi;
 import '../../../support/owner_render.dart';
 import '../../../support/real_phone.dart';
 import 'stay_work_fixtures.dart';
@@ -68,10 +70,6 @@ class _Chat extends ChatController {
     if (before != null || after != null) return Future.value((items: <MessageModel>[], status: null, hasMore: false));
     return Future.value((items: _messages.reversed.toList(), status: 'Active', hasMore: false));
   }
-
-  @override
-  Future<MessageModel?> sendMessage(String conversationId, String type, Map<String, dynamic> payload, {String? respondsToMessageId, String? clientMessageId}) =>
-      Future.value(null);
 }
 
 class _Hub extends ChatHubService {
@@ -164,19 +162,16 @@ void main() {
     }
   });
 
-  testWidgets('o_st_40_barButtonOnlyOnConfirmed, Share and Call guest chips', (t) async {
+  testWidgets('o_st_40 share posts share-details, no chat message, no chat opens', (t) async {
     _register(enquiry: _confirmed(), messages: _thread);
-    await pumpPhone(t, const _Launcher(), size: const Size(392, 900));
-    await _settle(t);
-    expect(find.text('Share UPI and WhatsApp'), findsOneWidget);
-    expect(find.text('Call guest'), findsOneWidget);
-  });
-
-  testWidgets('o_st_40 call guest hidden without a phone', (t) async {
-    _register(enquiry: _confirmed(phone: null), messages: _thread);
-    await pumpPhone(t, const _Launcher(), size: const Size(392, 900));
-    await _settle(t);
-    expect(find.text('Call guest'), findsNothing);
+    final api = installFakeApi([
+      FakeRoute.value('POST', '/trips/enquiries/{id}/share-details', enquiryJson(id: 'e4', name: 'Rohit Verma', status: 'ConfirmedByBoth', display: 'confirmedByBoth')),
+    ]);
+    final ok = await t.runAsync(() => StayEnquiryActions.sendShareCard(_confirmed()));
+    expect(ok, isTrue);
+    expect(api.calls('POST', '/trips/enquiries/e4/share-details'), hasLength(1));
+    expect(api.seen.where((o) => o.path.startsWith('/chat/')), isEmpty);
+    expect(Get.currentRoute, isNot(contains('chat')));
   });
 
   testWidgets('o_st_40 card with only a WhatsApp number shows no UPI row', (t) async {

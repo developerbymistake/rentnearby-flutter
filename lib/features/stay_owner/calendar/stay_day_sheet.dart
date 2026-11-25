@@ -190,7 +190,7 @@ class _DayEntry extends StatelessWidget {
               if (e.cancelled) StayKindChip.cancelled,
               ?StayEntryRows.money(e),
             ],
-            dim: e.cancelled,
+            dim: e.cancelled || e.inactiveByPlan,
             semantics: StayEntryText.spoken(e),
             trailing: StayPill(label: StayCalendarStrings.open, kind: StayPillKind.outline, onTap: () => StayEntryRows.open(e)),
             onTap: () => StayEntryRows.open(e),

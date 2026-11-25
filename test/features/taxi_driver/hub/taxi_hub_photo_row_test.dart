@@ -6,7 +6,6 @@ import 'package:bakhli/features/taxi/setup/taxi_owner_card.dart';
 import 'package:bakhli/features/taxi_driver/hub/taxi_hub_screen.dart';
 import 'package:bakhli/features/taxi_driver/hub/taxi_preview_card.dart';
 import 'package:bakhli/features/taxi_driver/strings/taxi_hub_strings.dart';
-import 'package:bakhli/features/taxi_driver/widgets/taxi_widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -36,7 +35,7 @@ Future<void> _close(WidgetTester t) async {
   await t.pump(const Duration(seconds: 6));
 }
 
-Finder _photoRow() => find.ancestor(of: find.text('Taxi photo'), matching: find.byType(TaxiRowTile)).first;
+Finder _photoTile() => find.bySemanticsLabel(RegExp(r'^Taxi photo, '));
 Finder _taxiArt() => find.byWidgetPredicate((w) => w is Art3D && w.asset == ListingArt.taxi);
 
 Future<void> _pumpCard(WidgetTester t, Widget card) async {
@@ -62,37 +61,41 @@ void main() {
       setUp(() => approved ? DS.applyApproved() : DS.debugReset());
       tearDown(DS.debugReset);
 
-      testWidgets('row reads Add when there is no photo', (t) async {
+      testWidgets('photos card: taxi photo reads Add, plate proof is private, one Manage', (t) async {
         await _openHub(t, _json());
-        await t.ensureVisible(find.text('Taxi photo'));
-        expect(find.text('VEHICLE AND CONTACT'), findsOneWidget);
-        expect(find.text('Add a photo travellers will see'), findsOneWidget);
-        expect(find.descendant(of: _photoRow(), matching: find.text('Add')), findsOneWidget);
+        await t.ensureVisible(find.text('Taxi photo and plate proof'));
+        expect(find.text('Photos'), findsOneWidget);
+        expect(find.text('Taxi details'), findsOneWidget);
+        expect(find.text('VEHICLE AND CONTACT'), findsNothing);
+        expect(find.text('Manage'), findsOneWidget);
+        expect(_photoTile(), findsOneWidget);
+        expect(find.bySemanticsLabel('Taxi photo, Add'), findsOneWidget);
+        expect(find.bySemanticsLabel('Plate proof, Private'), findsOneWidget);
         await _close(t);
       });
 
-      testWidgets('row reads Change when the photo is set', (t) async {
+      testWidgets('photos card: taxi photo reads Change and shows the photo when set', (t) async {
         await _openHub(t, _json(display: _display));
-        await t.ensureVisible(find.text('Taxi photo'));
-        expect(find.text('Travellers see this'), findsOneWidget);
-        expect(find.descendant(of: _photoRow(), matching: find.text('Change')), findsOneWidget);
+        await t.ensureVisible(find.text('Taxi photo and plate proof'));
+        expect(find.bySemanticsLabel('Taxi photo, Change'), findsOneWidget);
+        expect(find.byType(PhotoCircle), findsWidgets);
         await _close(t);
       });
 
-      testWidgets('under review the photo row still opens the picker while the vehicle row is locked', (t) async {
+      testWidgets('under review the taxi photo tile still opens the picker', (t) async {
         await _openHub(t, _json(status: 'PendingReview'));
-        await t.ensureVisible(find.text('Taxi photo'));
-        await t.tap(find.text('Add a photo travellers will see'));
+        await t.ensureVisible(find.text('Taxi photo and plate proof'));
+        await t.tap(_photoTile());
         await _settle(t);
         expect(find.text('Take Photo'), findsOneWidget);
         expect(find.text('Choose from Gallery'), findsOneWidget);
         await _close(t);
       });
 
-      testWidgets('under review the Add pill itself opens the picker', (t) async {
+      testWidgets('under review the Manage pill opens the picker', (t) async {
         await _openHub(t, _json(status: 'PendingReview'));
-        await t.ensureVisible(find.text('Taxi photo'));
-        await t.tap(find.descendant(of: _photoRow(), matching: find.text('Add')));
+        await t.ensureVisible(find.text('Manage'));
+        await t.tap(find.text('Manage'));
         await _settle(t);
         expect(find.text('Take Photo'), findsOneWidget);
         await _close(t);
@@ -121,7 +124,7 @@ void main() {
 
       for (final display in [null, _display]) {
         testOwnerSizes('hub with ${display == null ? 'no' : 'a'} taxi photo', () => TaxiHubScreen(root: true, controller: hubFor(_json(display: display))), arrange: _settle, check: (t, size, scale) async {
-          await t.scrollUntilVisible(find.text('Taxi photo'), 300, scrollable: find.byType(Scrollable).first);
+          await t.scrollUntilVisible(find.text('Taxi photo and plate proof'), 300, scrollable: find.byType(Scrollable).first);
           await t.pump();
           expect(t.takeException(), isNull);
           await _close(t);

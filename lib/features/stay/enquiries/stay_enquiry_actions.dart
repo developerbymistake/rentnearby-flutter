@@ -1,7 +1,4 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
-import 'package:uuid/uuid.dart';
 import 'package:get/get.dart';
 import '../../../config/app_routes.dart';
 import 'package:bakhli/design/design.dart';
@@ -15,7 +12,6 @@ import 'stay_cancel_booking_sheet.dart';
 import '../../../models/browse_item.dart';
 import '../../../widgets/trip_report_traveller_sheet.dart';
 import '../../trip/models/trip_enquiry_model.dart';
-import '../../trip/models/trip_offer_model.dart';
 import '../../trip/trip_strings.dart';
 import '../../trip/utils/trip_format.dart';
 import 'stay_enquiry_format.dart';
@@ -44,7 +40,7 @@ class StayEnquiryActions {
   static String? _range(DateTime? a, DateTime? b, int nights) =>
       a == null || b == null ? null : '${TripFormat.dayMonthRange(a, b)} · ${TripStrings.nights(nights)}';
 
-  static Future<bool> sendOffer(BuildContext context, TripEnquiryModel e, {TripOfferModel? counter}) async {
+  static Future<bool> sendOffer(BuildContext context, TripEnquiryModel e) async {
     if (_opening) return false;
     _opening = true;
     try {
@@ -54,23 +50,7 @@ class StayEnquiryActions {
         AppToast.error(TripStrings.couldNotLoad);
         return false;
       }
-      return await TripSendOfferSheet.show(context, enquiry: e, stay: stay, counter: counter);
-    } finally {
-      _opening = false;
-    }
-  }
-
-  static Future<bool> revisedOffer(BuildContext context, TripEnquiryModel e, {TripOfferModel? changeRequest}) async {
-    if (_opening) return false;
-    _opening = true;
-    try {
-      final stay = await StayEnquiriesController.ensure().ensureStay();
-      if (!context.mounted) return false;
-      if (stay == null) {
-        AppToast.error(TripStrings.couldNotLoad);
-        return false;
-      }
-      return await TripSendOfferSheet.show(context, enquiry: e, stay: stay, changeRequest: changeRequest, revised: true);
+      return await TripSendOfferSheet.show(context, enquiry: e, stay: stay);
     } finally {
       _opening = false;
     }
@@ -115,14 +95,9 @@ class StayEnquiryActions {
   }
 
   static Future<bool> sendShareCard(TripEnquiryModel e) async {
-    final id = e.conversationId;
-    if (id == null) return false;
     try {
-      await ApiService.post('/chat/conversations/$id/messages', {
-        'type': 'stay_contact_share',
-        'payloadJson': jsonEncode(const <String, dynamic>{}),
-        'clientMessageId': const Uuid().v4(),
-      });
+      await ApiService.post('/trips/enquiries/${e.id}/share-details', const <String, dynamic>{});
+      await StayEnquiriesController.ensure().afterExternalChange(e.id);
       return true;
     } catch (err) {
       if (DioErrorMapper.errorType(err) == shareDetailsNotSet) {

@@ -45,10 +45,17 @@ class _ChatsListScreenState extends State<ChatsListScreen>
   }
 
   void _maybeFetchMoreForSearch() {
-    if (!mounted || _query.trim().isEmpty) return;
+    if (!mounted) return;
+    // Hidden enquiry-only rows can leave a page nearly empty: fetch on.
+    if (_query.trim().isEmpty) {
+      if (_ctrl.hasMoreConversations.value && !_ctrl.loadingMoreConversations.value && _ctrl.visibleConversations.length < _minFilteredForNoAutoFetch) {
+        _ctrl.loadMoreConversations();
+      }
+      return;
+    }
     if (_autoFetchCount >= _maxAutoFetchPages) return;
     if (!_ctrl.hasMoreConversations.value || _ctrl.loadingMoreConversations.value) return;
-    if (_filtered(_ctrl.conversations).length >= _minFilteredForNoAutoFetch) return;
+    if (_filtered(_ctrl.visibleConversations).length >= _minFilteredForNoAutoFetch) return;
     _autoFetchCount++;
     _ctrl.loadMoreConversations();
   }
@@ -165,7 +172,7 @@ class _ChatsListScreenState extends State<ChatsListScreen>
               Expanded(
                 child: Obx(() {
                   final loading = _ctrl.conversationsLoading.value;
-                  final items = _ctrl.conversations;
+                  final items = _ctrl.visibleConversations;
 
                   if (loading && items.isEmpty) return _buildShimmer();
                   if (items.isEmpty) return _buildEmpty();
@@ -281,8 +288,7 @@ class _ChatsListScreenState extends State<ChatsListScreen>
       ChatStateCard3D(
         tone: _tone,
         art: ListingArt.speechBalloon,
-        title: 'No conversations yet',
-        message: 'Start a chat from any stay.',
+        title: 'No chats yet',
       ),
     ],
   );

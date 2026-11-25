@@ -55,6 +55,8 @@ class MyJobModel {
 
   bool get isActive => status == 'Active';
 
+  bool get isInactive => status == 'Inactive';
+
   String get salaryLabel => jobSalaryLabel(minSalary, maxSalary);
 
   String get salaryUnit => salaryTypeName == 'Monthly' ? '/month' : '';

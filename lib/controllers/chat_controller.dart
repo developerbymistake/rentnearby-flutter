@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 import 'package:get/get.dart';
 import '../models/conversation_model.dart';
 import '../models/message_model.dart';
@@ -70,7 +69,7 @@ class ChatController extends GetxController {
     _unreadFetchInFlight = true;
     _unreadDeltaDuringFetch = false;
     try {
-      final res = await ApiService.get('/chat/unread-count');
+      final res = await ApiService.get('/chat/unread-count', params: {'chatOnly': true});
       final total = (res['data']?['count'] as num?)?.toInt() ?? 0;
       if (seq != _unreadFetchSeq) return; // superseded by a newer fetch — let that one win
       unreadCount.value = total;
@@ -85,6 +84,24 @@ class ChatController extends GetxController {
       // and the next sync point re-anchors it.
     } finally {
       if (seq == _unreadFetchSeq) _unreadFetchInFlight = false;
+    }
+  }
+
+  // Stay enquiry conversations with no real chat message stay out of Chats and the badge.
+  final _enquiryOnlyIds = <String>{};
+
+  List<ConversationModel> get visibleConversations =>
+      conversations.where((c) => !_enquiryOnlyIds.contains(c.id)).toList();
+
+  static const _realChatTypes = {'text', 'quick_reply', 'contact_request', 'contact_response', 'schedule_proposal', 'schedule_response'};
+
+  void _noteEnquiryOnly(Iterable<ConversationModel> items) {
+    for (final c in items) {
+      if (c.enquiryOnly) {
+        _enquiryOnlyIds.add(c.id);
+      } else {
+        _enquiryOnlyIds.remove(c.id);
+      }
     }
   }
 
@@ -107,6 +124,7 @@ class ChatController extends GetxController {
       final page = KeysetPage.parse(res['data'], ConversationModel.fromJson);
       if (gen != _convGen) return;
       final items = page.items;
+      _noteEnquiryOnly(items);
       conversations.value = items;
       _convCursor = page.nextCursor;
       hasMoreConversations.value = page.hasMoreAfter(_conversationsPageSize);
@@ -141,6 +159,7 @@ class ChatController extends GetxController {
       final page = KeysetPage.parse(res['data'], ConversationModel.fromJson);
       if (gen != _convGen) return;
       final items = page.items;
+      _noteEnquiryOnly(items);
       conversations.value = items;
       _convCursor = page.nextCursor;
       hasMoreConversations.value = page.hasMoreAfter(targetCount);
@@ -162,6 +181,7 @@ class ChatController extends GetxController {
           params: KeysetPage.nextParams(cursor: _convCursor, loaded: conversations.length, limit: _conversationsPageSize));
       final page = KeysetPage.parse(res['data'], ConversationModel.fromJson);
       if (gen != _convGen) return;
+      _noteEnquiryOnly(page.items);
       conversations.addAll(KeysetPage.appendNew(conversations, page.items, (c) => c.id));
       _convCursor = page.nextCursor;
       hasMoreConversations.value = page.hasMoreAfter(_conversationsPageSize);
@@ -185,47 +205,6 @@ class ChatController extends GetxController {
     return questionTemplates;
   }
 
-  // Keyed by "listingType:listingId" — a second call for the same listing while one is
-  // already in flight (e.g. a double-tap on "Chat" before the first request resolves) awaits
-  // the same Future instead of firing a duplicate POST and, more importantly, a duplicate
-  // Get.toNamed push from the caller. The backend's own unique-index race handling already
-  // guarantees both requests would resolve to the same conversation anyway — this just stops
-  // the screen from being pushed twice.
-  final _pendingConversationRequests = <String, Future<ConversationModel?>>{};
-
-  Future<ConversationModel?> createOrGetConversation(String listingType, String listingId) {
-    final key = '$listingType:$listingId';
-    final pending = _pendingConversationRequests[key];
-    if (pending != null) return pending;
-
-    final future = _createOrGetConversation(listingType, listingId).whenComplete(() {
-      _pendingConversationRequests.remove(key);
-    });
-    _pendingConversationRequests[key] = future;
-    return future;
-  }
-
-  Future<ConversationModel?> _createOrGetConversation(String listingType, String listingId) async {
-    try {
-      final res = await ApiService.post('/chat/conversations', {
-        'listingType': listingType,
-        'listingId': listingId,
-      });
-      final model = ConversationModel.fromJson(res['data'] as Map<String, dynamic>);
-      if (!conversations.any((c) => c.id == model.id)) {
-        conversations.insert(0, model);
-      }
-      return model;
-    } catch (e) {
-      AppToast.error(DioErrorMapper.toMessage(
-        e,
-        'Could not start chat. Please try again.',
-        showRawMessageForStatusCodes: const {400, 403},
-      ));
-      return null;
-    }
-  }
-
   Future<void> markRead(String conversationId) async {
     final index = conversations.indexWhere((c) => c.id == conversationId);
     if (index != -1 && conversations[index].unreadCount > 0) {
@@ -246,7 +225,7 @@ class ChatController extends GetxController {
       // Exact delta: this row held `c.unreadCount` and was just zeroed. The server's own
       // mark-read push (UnreadCountChanged to user_{id}) then confirms via
       // applyUnreadCountChanged — consistent, because the row is already 0 by then.
-      _applyUnreadDelta(-c.unreadCount);
+      if (!_enquiryOnlyIds.contains(c.id)) _applyUnreadDelta(-c.unreadCount);
     }
     try {
       await ApiService.post('/chat/conversations/$conversationId/read', {});
@@ -281,7 +260,7 @@ class ChatController extends GetxController {
         lastMessagePreview: c.lastMessagePreview, unreadCount: newUnreadCount,
       );
       conversations.sort((a, b) => b.lastMessageAt.compareTo(a.lastMessageAt));
-      _applyUnreadDelta(newUnreadCount - oldUnreadCount);
+      if (!_enquiryOnlyIds.contains(conversationId)) _applyUnreadDelta(newUnreadCount - oldUnreadCount);
     } else {
       // Conversation isn't in the loaded pages — no local row, so no precise delta is
       // knowable. Reload the list for the row AND re-anchor the total from the server.
@@ -295,6 +274,9 @@ class ChatController extends GetxController {
   // message for whichever conversation screen (if any) is currently open.
   void applyIncomingMessage(Map<String, dynamic> data) {
     final message = MessageModel.fromJson(data);
+    if (_realChatTypes.contains(message.type) && _enquiryOnlyIds.remove(message.conversationId)) {
+      unawaited(fetchUnreadCount());
+    }
     final index = conversations.indexWhere((c) => c.id == message.conversationId);
     if (index != -1) {
       final c = conversations[index];
@@ -351,7 +333,7 @@ class ChatController extends GetxController {
     conversationStatusChanged.value = {'conversationId': conversationId, 'status': status, 'isBlockedByMe': isBlockedByMe};
   }
 
-  // ── Message history + sending ───────────────────────────────────────────
+  // ── Message history ───────────────────────────────────────────
 
   // Pass exactly one of before/after — before is normal backward history-scrolling, after is
   // the reconnect catch-up path ("everything since the last message I already have"). hasMore
@@ -376,61 +358,6 @@ class ChatController extends GetxController {
       return (items: items, status: status, hasMore: hasMore);
     } catch (_) {
       return (items: <MessageModel>[], status: null, hasMore: false);
-    }
-  }
-
-  // clientMessageId: pass for a fresh send only (never alongside respondsToMessageId, which
-  // already has its own server-side dedup) — one id generated per compose-attempt by the
-  // caller, so a genuinely-concurrent double-invocation of the same attempt (e.g. a fast
-  // double-tap landing before a sheet visually dismisses) collapses to the one message the
-  // server actually created instead of a real duplicate.
-  Future<MessageModel?> sendMessage(String conversationId, String type, Map<String, dynamic> payload, {String? respondsToMessageId, String? clientMessageId}) async {
-    try {
-      final res = await ApiService.post('/chat/conversations/$conversationId/messages', {
-        'type': type,
-        'payloadJson': jsonEncode(payload),
-        if (respondsToMessageId != null) 'respondsToMessageId': respondsToMessageId,
-        if (clientMessageId != null) 'clientMessageId': clientMessageId,
-      });
-      return MessageModel.fromJson({...res['data'] as Map<String, dynamic>, 'isMine': true});
-    } catch (e) {
-      AppToast.error(DioErrorMapper.toMessage(
-        e,
-        'Could not send that. Please try again.',
-        showRawMessageForStatusCodes: const {400, 403},
-      ));
-      return null;
-    }
-  }
-
-  Future<MessageModel?> respondContact(String messageId, bool approve) async {
-    try {
-      final res = await ApiService.post('/chat/messages/$messageId/contact-response', {'approve': approve});
-      return MessageModel.fromJson({...res['data'] as Map<String, dynamic>, 'isMine': true});
-    } catch (e) {
-      AppToast.error(DioErrorMapper.toMessage(
-        e,
-        'Could not respond. Please try again.',
-        showRawMessageForStatusCodes: const {400, 403},
-      ));
-      return null;
-    }
-  }
-
-  Future<MessageModel?> respondSchedule(String messageId, String action, {List<DateTime>? proposedAts, DateTime? acceptedAt}) async {
-    try {
-      final body = <String, dynamic>{'action': action};
-      if (proposedAts != null) body['proposedAts'] = proposedAts.map((d) => d.toUtc().toIso8601String()).toList();
-      if (acceptedAt != null) body['acceptedAt'] = acceptedAt.toUtc().toIso8601String();
-      final res = await ApiService.post('/chat/messages/$messageId/schedule-response', body);
-      return MessageModel.fromJson({...res['data'] as Map<String, dynamic>, 'isMine': true});
-    } catch (e) {
-      AppToast.error(DioErrorMapper.toMessage(
-        e,
-        'Could not respond. Please try again.',
-        showRawMessageForStatusCodes: const {400, 403},
-      ));
-      return null;
     }
   }
 

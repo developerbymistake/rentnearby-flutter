@@ -1,8 +1,12 @@
 import 'package:dio/dio.dart';
 import '../../../services/api_service.dart';
 import '../../../utils/network_retry.dart';
+import '../enquiries/similar_stays.dart';
 import '../models/trip_enquiry_model.dart';
 import '../models/trip_offer_model.dart';
+import '../models/trip_shortlist_model.dart';
+
+typedef ShortlistWithSteps = ({TripShortlist shortlist, Map<String, TripStepSlots> steps});
 
 class TripEnquiryErrorTypes {
   static const String tripDatesRequired = 'TripDatesRequired';
@@ -31,6 +35,10 @@ class TripEnquiryErrorTypes {
   static const String enquiryLimit = 'EnquiryLimitReached';
   static const String enquiryEnded = 'EnquiryEnded';
   static const String offerOutsideTrip = 'OfferOutsideTrip';
+  static const String stepFull = 'StepFull';
+  static const String undoWindowOver = 'UndoWindowOver';
+  static const String enquiryAlreadyOpen = 'EnquiryAlreadyOpen';
+  static const String notShortlisted = 'NotShortlisted';
 }
 
 class TripEnquiryRepository {
@@ -64,6 +72,7 @@ class TripEnquiryRepository {
         'listingIds': stayIds,
         'allNights': nights > 1,
         'nights': nights,
+        'sharePhone': true,
       });
 
   Future<TripEnquiryModel> taxiBooking(String tripId, Map<String, dynamic> body) async =>
@@ -99,8 +108,32 @@ class TripEnquiryRepository {
   Future<TripEnquiryModel> refreshContext(String enquiryId) async =>
       _one(await ApiService.post('/trips/enquiries/$enquiryId/refresh-context', const {}));
 
-  Future<TripEnquiryModel> withdraw(String enquiryId) async =>
-      _one(await ApiService.post('/trips/enquiries/$enquiryId/withdraw', const {}));
+  Future<TripEnquiryModel> withdraw(String enquiryId, {bool undo = false}) async =>
+      _one(await ApiService.post('/trips/enquiries/$enquiryId/withdraw${undo ? '?undo=true' : ''}', const {}));
+
+  Future<ShortlistWithSteps> shortlistWithSteps(String tripId) async {
+    final res = await ApiService.get('/trips/$tripId/shortlist');
+    final d = res['data'];
+    final data = d is Map<String, dynamic> ? d : res;
+    return (shortlist: TripShortlist.fromJson(data), steps: TripStepSlots.mapOf(data['steps']));
+  }
+
+  Future<TripEnquiryModel> restore(String enquiryId) async =>
+      _one(await ApiService.post('/trips/enquiries/$enquiryId/restore', const {}));
+
+  Future<MyEnquiryPage> mine({required String bucket, String? cursor, bool counts = true, int pageSize = 20}) async =>
+      MyEnquiryPage.fromJson(_data(await withRetry(() => ApiService.get('/trips/enquiries/mine', params: {
+            'bucket': bucket,
+            'pageSize': pageSize,
+            'cursor': ?cursor,
+            if (!counts) 'counts': false,
+          }))));
+
+  Future<SimilarStays> similar({required String tripId, required String stepKey, String? likeListingId, int limit = 3}) async =>
+      SimilarStays.fromJson(_data(await withRetry(() => ApiService.get(
+            '/trips/$tripId/steps/${Uri.encodeComponent(stepKey)}/similar-stays',
+            params: {'like': ?likeListingId, 'limit': limit},
+          ))));
 
   Future<TripEnquiryModel> cancel(String enquiryId, {String? reason}) async =>
       _one(await ApiService.post('/trips/enquiries/$enquiryId/cancel', {'reason': ?reason}));
@@ -149,17 +182,6 @@ class TripEnquiryRepository {
       offer: TripOfferModel.fromJson((data['offer'] as Map<String, dynamic>?) ?? const {}),
     );
   }
-
-  Future<({TripEnquiryModel enquiry, TripOfferModel offer})> counter(String enquiryId,
-          {required int pricePerNight, String? note}) async =>
-      _offerResult(await ApiService.post('/trips/enquiries/$enquiryId/counter', {
-        'pricePerNight': pricePerNight,
-        'note': ?note,
-      }));
-
-  Future<({TripEnquiryModel enquiry, TripOfferModel offer})> changeRequest(
-          String enquiryId, Map<String, dynamic> body) async =>
-      _offerResult(await ApiService.post('/trips/enquiries/$enquiryId/change-request', body));
 
   Future<({TripEnquiryModel enquiry, TripOfferModel offer})> revisedOffer(
           String enquiryId, Map<String, dynamic> body) async =>

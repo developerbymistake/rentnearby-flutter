@@ -83,6 +83,8 @@ abstract final class StayHomeCompose {
     }
   }
 
+  static String? heroLine(StayHomeState s, OwnerHomeListing l) => s == StayHomeState.live ? StayHomeStrings.acceptingGuests : line(s, l);
+
   static StayNotifVariant variant(StayHomeState s) => switch (s) {
         StayHomeState.review => StayNotifVariant.review,
         StayHomeState.rejected => StayNotifVariant.rejected,
@@ -97,10 +99,7 @@ abstract final class StayHomeCompose {
     }
     final rows = [...d.attention];
     if (state == StayHomeState.review) {
-      rows.removeWhere((a) => a.code != StayAttentionCodes.addShareDetails && a.code != StayAttentionCodes.notificationsOff);
-      if (!hasShareDetails && !rows.any((a) => a.code == StayAttentionCodes.addShareDetails)) {
-        rows.insert(0, const OwnerAttention(code: StayAttentionCodes.addShareDetails, priority: 10));
-      }
+      rows.removeWhere((a) => a.code != StayAttentionCodes.notificationsOff);
     }
     rows.removeWhere((a) => a.code == StayAttentionCodes.notificationsOff);
     if (denied) rows.add(const OwnerAttention(code: StayAttentionCodes.notificationsOff, priority: StayAttentionCodes.notificationsPriority));

@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:bakhli/design/design.dart';
+import 'package:get/get.dart';
 import '../../../utils/app_toast.dart';
 import '../../../utils/dio_error_mapper.dart';
 import '../controllers/my_trips_controller.dart';
 import '../controllers/trip_plan_controller.dart';
 import '../data/trip_repository.dart';
 import '../data/trip_today_cache.dart';
+import '../models/trip_enquiry_model.dart';
 import '../models/trip_model.dart';
 import '../trip_navigation.dart';
 import '../trip_strings.dart';
@@ -90,12 +92,39 @@ class TripLifecycleActions {
     }
   }
 
-  static Future<bool> confirmDelete(BuildContext context, {required int open, required int confirmed, int confirmedTaxis = 0}) async {
-    final lines = [
-      if (open > 0) TripStringsV2Plan.openEnquiries(open),
-      if (confirmed > 0) TripStringsV2Plan.confirmedStays(confirmed),
-      if (confirmedTaxis > 0) TripStringsV2Plan.confirmedTaxis(confirmedTaxis),
+  static List<String> deleteLines(List<TripEnquiryModel> rows) {
+    String names(Iterable<TripEnquiryModel> xs) => xs.map((e) => e.listingName.trim()).where((n) => n.isNotEmpty).toSet().join(', ');
+    final open = rows.where((e) => e.isWithdrawable).toList();
+    final stays = rows.where((e) => e.isBooked && !e.isTaxi).toList();
+    final taxis = rows.where((e) => e.isBooked && e.isTaxi).toList();
+    final o = names(open), s = names(stays), t = names(taxis);
+    return [
+      if (open.isNotEmpty) o.isEmpty ? TripStringsV2Plan.openEnquiries(open.length) : TripStringsV2Plan.openNamed(open.length, o),
+      if (stays.isNotEmpty) s.isEmpty ? TripStringsV2Plan.confirmedStays(stays.length) : TripStringsV2Plan.staysNamed(s),
+      if (taxis.isNotEmpty) t.isEmpty ? TripStringsV2Plan.confirmedTaxis(taxis.length) : TripStringsV2Plan.taxisNamed(t),
     ];
+  }
+
+  // Null when the trip's enquiries could not be read; callers then fall back to counts.
+  static Future<List<String>?> loadDeleteLines(String tripId) async {
+    if (Get.isRegistered<TripPlanController>()) {
+      final c = TripPlanController.to;
+      if (c.trip.value?.id == tripId) return deleteLines(c.enquiryList.toList());
+    }
+    try {
+      return deleteLines((await _repo.get(tripId)).enquiries);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static Future<bool> confirmDelete(BuildContext context, {required int open, required int confirmed, int confirmedTaxis = 0, List<String>? named}) async {
+    final lines = named ??
+        [
+          if (open > 0) TripStringsV2Plan.openEnquiries(open),
+          if (confirmed > 0) TripStringsV2Plan.confirmedStays(confirmed),
+          if (confirmedTaxis > 0) TripStringsV2Plan.confirmedTaxis(confirmedTaxis),
+        ];
     final ok = await Dialog3D.show<bool>(
       context,
       builder: (ctx) => Dialog3D(
@@ -140,7 +169,7 @@ class TripLifecycleActions {
     final open = rows.where((e) => e.isWithdrawable).length;
     final stays = rows.where((e) => e.isBooked && !e.isTaxi).length;
     final taxis = rows.where((e) => e.isBooked && e.isTaxi).length;
-    final ok = await confirmDelete(context, open: open, confirmed: stays, confirmedTaxis: taxis);
+    final ok = await confirmDelete(context, open: open, confirmed: stays, confirmedTaxis: taxis, named: deleteLines(rows.toList()));
     if (!ok) return false;
     _busy = true;
     try {

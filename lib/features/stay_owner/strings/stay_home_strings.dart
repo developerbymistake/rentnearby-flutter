@@ -28,7 +28,7 @@ abstract final class StayHomeStrings {
   static String rejectedLine(String? reason) => reason == null ? 'Rejected' : 'Rejected: $reason';
   static String takenDownLine(String? reason) => reason == null ? 'Taken down by Bakhli' : 'Taken down by Bakhli: $reason';
   static const fixAndResubmit = 'Fix and resubmit';
-  static const takenDownStrip = 'Your confirmed bookings still stand. Guests can still reach you in chat.';
+  static const takenDownStrip = 'Your confirmed bookings still stand. Guests can still call you.';
 
   static const acceptingGuests = 'Accepting guests';
   static const toastPaused = 'Paused';
@@ -72,9 +72,6 @@ abstract final class StayHomeStrings {
   static const addShare = 'Add UPI and WhatsApp';
   static const addShareSub = 'Optional. Shared only when you choose';
   static const add = 'Add';
-  static const shareStay = 'Share your stay';
-  static const shareStaySub = 'Send your link to past guests to get first enquiries.';
-  static const share = 'Share';
   static const needHelp = 'Need help? Contact Support';
   static const needHelpSub = 'We reply within a day';
 
@@ -86,14 +83,18 @@ abstract final class StayHomeStrings {
   static String number(int? n) => n == null ? dash : '$n';
 
   static const quickActions = 'Quick actions';
-  static const editPrices = 'Edit prices';
-  static const editPricesSub = 'Rooms and rates';
-  static const shareMyStay = 'Share my stay';
-  static const shareMyStaySub = 'Send your stay link';
-  static const postJob = 'Post a job';
-  static const postJobSub = 'Hire for your stay';
+  static const manageRooms = 'Manage rooms';
+  static const manageRoomsSub = 'Rooms and prices';
+  static const manageCalendar = 'Manage calendar';
+  static const manageCalendarSub = 'Bookings and dates';
   static const contactDetails = 'Contact details';
-  static const contactDetailsSub = 'UPI and WhatsApp, to share';
+  static const contactDetailsSub = 'UPI and WhatsApp';
+
+  static const rooms = 'Rooms';
+  static const fromPerNight = 'From, per night';
+  static const heroNote = 'Turn off to stop new enquiries. Your bookings stay.';
+  static const upcomingBookings = 'Upcoming bookings';
+  static const seeAllLink = 'See all';
 
   static const instagram = 'Instagram';
   static const followUs = 'Follow us';

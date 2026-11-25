@@ -91,12 +91,14 @@ class NotificationTypeKeys {
   static const String planLimitsChangedWire = 'plan_limits_changed';
   static const String ownerMorningReminderWire = 'owner_morning_reminder';
   static const String plansStartingWire = 'plans_starting';
+  static const String ownerBookingTomorrowWire = 'owner_booking_tomorrow';
 
   static const Set<String> ownerShared = {
     festivalReminderWire,
     planLimitsChangedWire,
     ownerMorningReminderWire,
     plansStartingWire,
+    ownerBookingTomorrowWire,
   };
 
   static const Set<String> ownerStay = {

@@ -55,6 +55,25 @@ void main() {
     expect(find.text('Almora'), findsOneWidget);
   });
 
+  TripCityModel empty(int k, String n) => TripCityModel(
+      cityKey: k, name: n, districtName: 'D$k', stateName: 'Uttarakhand', latitude: 1, longitude: 1, status: TripCityStatus.notReady);
+
+  for (final mode in TripCitySheetMode.values) {
+    testWidgets('${mode.name} mode never lists a city with no places', (t) async {
+      Get.put<TripCityCatalog>(_Catalog([empty(30, 'Haldwani'), empty(31, 'Kathgodam')]), permanent: true);
+      setGoldenView(t, const Size(412, 900));
+      await t.pumpWidget(MaterialApp(home: Scaffold(body: TripCitySheet(mode: mode, inTrip: const {1}))));
+      await t.pumpAndSettle();
+      expect(find.text('Haldwani'), findsNothing);
+      expect(find.text('Kathgodam'), findsNothing);
+      expect(find.textContaining('No places yet'), findsNothing);
+      expect(find.text('Almora'), findsOneWidget);
+      await t.enterText(find.byType(TextField).first, 'hald');
+      await t.pumpAndSettle();
+      expect(find.text('Haldwani'), findsNothing);
+    });
+  }
+
   testWidgets('add mode shows no Popular next stops', (t) async {
     final cats = _Catalog();
     cats.list.addAll([_city(4, 'Haridwar', popular: true), _city(5, 'Badrinath', popular: true)]);

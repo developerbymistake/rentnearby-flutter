@@ -52,7 +52,7 @@ class TripStringsV2Find {
   static const pastNight = 'That night has passed';
   static const updateFailed = 'Could not update. Try again.';
   static const updated = 'Ask updated';
-  static String confirmedRow(String name) => '$name is confirmed. You can ask for a change.';
+  static String confirmedRow(String name) => '$name is confirmed. Call the host to change it.';
 
   static String stayIn(String city) => 'Stay in $city';
   static String staySubtitle(int nights, String? range, String? people) =>

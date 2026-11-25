@@ -1,4 +1,6 @@
+import 'package:bakhli/design/design.dart';
 import 'package:bakhli/features/owner_core/data/owner_cache.dart';
+import 'package:bakhli/features/taxi_driver/hub/taxi_hub_controller.dart';
 import 'package:bakhli/features/owner_core/data/owner_result.dart';
 import 'package:bakhli/features/owner_core/home/owner_home_models.dart';
 import 'package:bakhli/features/owner_core/home/numbers_row.dart';
@@ -10,7 +12,10 @@ import 'package:bakhli/features/taxi_driver/home/taxi_attention_copy.dart';
 import 'package:bakhli/features/taxi_driver/home/taxi_driver_home_controller.dart';
 import 'package:bakhli/features/taxi_driver/home/taxi_driver_home_screen.dart';
 import 'package:bakhli/features/taxi_driver/home/taxi_home_compose.dart';
+import 'package:bakhli/features/taxi_driver/plan/taxi_home_plan_card.dart';
 import 'package:bakhli/features/taxi_driver/strings/taxi_home_strings.dart';
+import 'package:bakhli/features/taxi_driver/widgets/taxi_widgets.dart';
+import 'package:bakhli/features/owner_core/plan/plan_card_state.dart';
 import 'package:bakhli/screens/profile/profile_rows_taxi_driver.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -42,14 +47,41 @@ void main() {
       expect(TaxiHomeCompose.stateOf(l(homeJson(status: 'Rejected', takenDown: true))), TaxiHomeState.takenDown);
     });
 
+    test('ring strip follows the switch and the phone notification setting', () {
+      expect(TaxiHomeCompose.shown(TaxiHomeState.live, switchOn: false), TaxiHomeState.offline);
+      expect(TaxiHomeCompose.shown(TaxiHomeState.offline, switchOn: true), TaxiHomeState.live);
+      expect(TaxiHomeCompose.shown(TaxiHomeState.changesReview, switchOn: true), TaxiHomeState.changesReview);
+      expect(TaxiHomeCompose.ringStrip(TaxiHomeState.live, denied: false), TaxiRingStrip.ringing);
+      expect(TaxiHomeCompose.ringStrip(TaxiHomeState.live, denied: true), TaxiRingStrip.muted);
+      expect(TaxiHomeCompose.ringStrip(TaxiHomeState.offline, denied: true), TaxiRingStrip.offline);
+      expect(TaxiHomeCompose.ringStrip(TaxiHomeState.offline, denied: false), TaxiRingStrip.offline);
+      for (final s in [TaxiHomeState.review, TaxiHomeState.changesReview, TaxiHomeState.rejected, TaxiHomeState.takenDown]) {
+        expect(TaxiHomeCompose.ringStrip(s, denied: false), isNull, reason: '$s');
+      }
+      expect(identical(TaxiHomeCompose.tone(TaxiHomeState.live), ListingTone.cE), isTrue);
+      expect(identical(TaxiHomeCompose.tone(TaxiHomeState.offline), TaxiLook.grey), isTrue);
+      expect(TaxiHomeCompose.line(TaxiHomeState.offline, dto(homeJson()).listing), 'Offline · not taking requests');
+    });
+
+    test('home listing parses the photo, car name and seats', () {
+      final l = dto(homeJson(photo: 'https://res.cloudinary.com/x/taxi.jpg', seats: 12)).listing;
+      expect(l.displayPhotoUrl, 'https://res.cloudinary.com/x/taxi.jpg');
+      expect(l.vehicleName, 'Maruti Ertiga');
+      expect(l.seats, 12);
+      expect(TaxiHomeStrings.seats(12), '12+ seats');
+      expect(TaxiHomeStrings.seats(6), '6 seats');
+      final bare = dto(homeJson(vehicleName: null, seats: null)).listing;
+      expect(bare.displayPhotoUrl, isNull);
+      expect(bare.vehicleName, isNull);
+      expect(bare.seats, isNull);
+    });
+
     test('one banner at a time, planner switch wins', () {
       final both = dto(homeJson(areaPaused: true, plannerOff: true)).listing;
       expect(TaxiHomeCompose.banner(TaxiHomeState.live, both), TaxiHomeStrings.plannerPaused);
       final area = dto(homeJson(areaPaused: true)).listing;
       expect(TaxiHomeCompose.banner(TaxiHomeState.live, area), TaxiHomeStrings.areaPaused);
       expect(TaxiHomeCompose.banner(TaxiHomeState.live, dto(homeJson()).listing), isNull);
-      expect(TaxiHomeCompose.showsPlanCard(TaxiHomeState.live, area), isFalse);
-      expect(TaxiHomeCompose.showsPlanCard(TaxiHomeState.offline, dto(homeJson()).listing), isTrue);
     });
 
     test('attention: order by priority, unknown code skipped, client row at position 3, count', () {
@@ -81,6 +113,30 @@ void main() {
       }
       expect(rows.map((r) => r.title), contains('Plus ended. 3 routes are hidden.'));
       expect(rows.map((r) => r.sub), contains('Add popular routes like Haldwani to Badrinath'));
+    });
+
+    test('chose you row: title, countdown line, coral Confirm; other pills are outlined', () {
+      final now = DateTime(2026, 11, 21, 10);
+      final by = now.add(const Duration(minutes: 12, seconds: 36)).toUtc().toIso8601String();
+      final rows = TaxiHomeCompose.rowViews(
+        [OwnerAttention(code: 'TravellerChoseYou', args: {'offerId': 'o', 'confirmBy': by}), const OwnerAttention(code: 'NoPushToken')],
+        TaxiHomeActions.attention('t'),
+        now,
+      );
+      expect(rows.first.title, 'A traveller chose you');
+      expect(rows.first.sub, '12:36 left to confirm');
+      expect((rows.first.trailing as TaxiPill).kind, TaxiPillKind.coral);
+      expect((rows.last.trailing as TaxiPill).kind, TaxiPillKind.outline);
+    });
+
+    test('home plan card: hidden for the Free upsell, kept for the AFTER notices', () {
+      for (final s in [PlanCardState.free, PlanCardState.unknown, PlanCardState.paymentOff]) {
+        expect(TaxiHomePlanCard.showsOnHome(OwnerPlanCard(state: s)), isFalse, reason: '$s');
+      }
+      expect(TaxiHomePlanCard.showsOnHome(null), isFalse);
+      for (final s in [PlanCardState.grace, PlanCardState.onHold, PlanCardState.ended, PlanCardState.cancelled, PlanCardState.plus, PlanCardState.trial]) {
+        expect(TaxiHomePlanCard.showsOnHome(OwnerPlanCard(state: s)), isTrue, reason: '$s');
+      }
     });
 
     test('countdown text', () {
@@ -187,10 +243,11 @@ void main() {
       final h = TaxiHarness.setUp(homeJson(attention: [att('TravellerChoseYou', 1, {'offerId': 'o', 'confirmBy': by})]), clock: () => now);
       await pumpPhone(tester, TaxiDriverHomeScreen(controller: h.home), size: const Size(360, 800));
       await settle(tester);
-      expect(find.text('Traveller chose you. Confirm in 12:40'), findsOneWidget);
+      expect(find.text('A traveller chose you'), findsOneWidget);
+      expect(find.text('12:40 left to confirm'), findsOneWidget);
       now = now.add(const Duration(seconds: 1));
       await tester.pump(const Duration(seconds: 1));
-      expect(find.text('Traveller chose you. Confirm in 12:39'), findsOneWidget);
+      expect(find.text('12:39 left to confirm'), findsOneWidget);
       await finish(tester);
     });
 
@@ -203,7 +260,7 @@ void main() {
       final numbers = tester.widget(find.byType(NumbersRow));
       now = now.add(const Duration(seconds: 1));
       await tester.pump(const Duration(seconds: 1));
-      expect(find.text('Traveller chose you. Confirm in 12:39'), findsOneWidget);
+      expect(find.text('12:39 left to confirm'), findsOneWidget);
       expect(identical(tester.widget(find.byType(NumbersRow)), numbers), isTrue);
       await finish(tester);
     });
@@ -212,13 +269,122 @@ void main() {
       final h = TaxiHarness.setUp(homeJson(switchOn: false, attention: const []));
       await pumpPhone(tester, TaxiDriverHomeScreen(controller: h.home), size: const Size(360, 800));
       await settle(tester);
-      expect(find.text('Off'), findsOneWidget);
+      bool on() => tester.widget<Switch3D>(find.byType(Switch3D)).value;
+      expect(on(), isFalse);
       h.home.switchOverride.value = true;
       await tester.pump();
-      expect(find.text('On'), findsOneWidget);
+      expect(on(), isTrue);
       h.home.switchOverride.value = null;
       await tester.pump();
-      expect(find.text('Off'), findsOneWidget);
+      expect(on(), isFalse);
+      await finish(tester);
+    });
+
+    testWidgets('hero: green band, car row, route and local day facts, ring strip, no Available now row', (tester) async {
+      final h = TaxiHarness.setUp(homeJson(attention: const []));
+      final hub = Get.put(TaxiHubController(userId: () => 'user-a', fetch: () async => {'data': taxiJson()}), tag: TaxiHubController.tag);
+      await hub.reload();
+      await pumpPhone(tester, TaxiDriverHomeScreen(controller: h.home), size: const Size(360, 1400));
+      await settle(tester);
+      final card = tester.widget<TaxiStatusCard>(find.byType(TaxiStatusCard));
+      expect(identical(card.tone, ListingTone.cE), isTrue);
+      expect(card.rows, isEmpty);
+      expect(card.note, isNull);
+      Finder inCard(Finder f) => find.descendant(of: find.byType(TaxiStatusCard), matching: f);
+      expect(inCard(find.byType(OwnerFacts)), findsOneWidget);
+      expect(inCard(find.byType(TaxiCarRow)), findsOneWidget);
+      expect(inCard(find.text('Maruti Ertiga')), findsOneWidget);
+      expect(inCard(find.text('6 seats')), findsOneWidget);
+      expect(find.text('Route'), findsOneWidget);
+      expect(find.text('₹2,500'), findsOneWidget);
+      expect(find.text('Local day rate'), findsOneWidget);
+      expect(inCard(find.text('Requests will ring')), findsOneWidget);
+      expect(inCard(find.text('Notifications are on.')), findsOneWidget);
+      expect(find.textContaining('Going offline'), findsNothing);
+      expect(find.textContaining('Your bookings stay'), findsNothing);
+      expect(inCard(find.textContaining('From')), findsNothing);
+      expect(find.text('Available now'), findsNothing);
+      expect(find.text('Next booking'), findsNothing);
+      expect(find.text('Share my taxi'), findsNothing);
+      await finish(tester);
+    });
+
+    testWidgets('ring strip: switch off turns the band grey and says You are offline', (tester) async {
+      final h = TaxiHarness.setUp(homeJson(switchOn: false, attention: const []));
+      await pumpPhone(tester, TaxiDriverHomeScreen(controller: h.home), size: const Size(360, 1400));
+      await settle(tester);
+      Finder inCard(Finder f) => find.descendant(of: find.byType(TaxiStatusCard), matching: f);
+      final card = tester.widget<TaxiStatusCard>(find.byType(TaxiStatusCard));
+      expect(identical(card.tone, TaxiLook.grey), isTrue);
+      expect(card.line, 'Offline · not taking requests');
+      expect(inCard(find.text('You are offline')), findsOneWidget);
+      expect(inCard(find.text('New requests will not ring.')), findsOneWidget);
+      expect(inCard(find.text('Requests will ring')), findsNothing);
+      expect(inCard(find.text('Turn on')), findsNothing);
+      h.home.switchOverride.value = true;
+      await tester.pump();
+      expect(identical(tester.widget<TaxiStatusCard>(find.byType(TaxiStatusCard)).tone, ListingTone.cE), isTrue);
+      expect(inCard(find.text('Requests will ring')), findsOneWidget);
+      await finish(tester);
+    });
+
+    testWidgets('ring strip: online with phone notifications off shows the amber strip and Turn on', (tester) async {
+      final h = TaxiHarness.setUp(homeJson(attention: const []), denied: true);
+      await pumpPhone(tester, TaxiDriverHomeScreen(controller: h.home), size: const Size(360, 1400));
+      await tester.runAsync(h.home.checkNotifications);
+      await settle(tester);
+      Finder inCard(Finder f) => find.descendant(of: find.byType(TaxiStatusCard), matching: f);
+      expect(identical(tester.widget<TaxiStatusCard>(find.byType(TaxiStatusCard)).tone, ListingTone.cE), isTrue);
+      expect(inCard(find.text('Notifications are off')), findsOneWidget);
+      expect(inCard(find.text('Requests will not ring.')), findsOneWidget);
+      final strip = tester.widget<TaxiRingStripView>(inCard(find.byType(TaxiRingStripView)));
+      expect(strip.fill, TaxiLook.amberSoft);
+      expect(strip.action, 'Turn on');
+      expect(strip.onAction, isNotNull);
+      expect(find.textContaining('Your bookings stay'), findsNothing);
+      await finish(tester);
+    });
+
+    testWidgets('top band shows the taxi photo, else the taxi icon', (tester) async {
+      final h = TaxiHarness.setUp(homeJson(attention: const [], photo: 'https://res.cloudinary.com/x/taxi.jpg'));
+      await pumpPhone(tester, TaxiDriverHomeScreen(controller: h.home), size: const Size(360, 1400));
+      await settle(tester);
+      expect(tester.widget<TaxiStatusCard>(find.byType(TaxiStatusCard)).photoUrl, 'https://res.cloudinary.com/x/taxi.jpg');
+      expect(find.byKey(TaxiStatusCard.photoKey), findsOneWidget);
+      expect(tester.widget<KitPhoto>(find.byKey(TaxiStatusCard.photoKey)).url, 'https://res.cloudinary.com/x/taxi.jpg');
+      await finish(tester);
+
+      final h2 = TaxiHarness.setUp(homeJson(attention: const []));
+      await pumpPhone(tester, TaxiDriverHomeScreen(controller: h2.home), size: const Size(360, 1400));
+      await settle(tester);
+      expect(tester.widget<TaxiStatusCard>(find.byType(TaxiStatusCard)).photoUrl, isNull);
+      expect(find.byKey(TaxiStatusCard.photoKey), findsNothing);
+      await finish(tester);
+    });
+
+    testWidgets('quick actions: Edit fares, Ready check, My rating in one rail, three colours', (tester) async {
+      final h = TaxiHarness.setUp(homeJson(attention: const []));
+      await pumpPhone(tester, TaxiDriverHomeScreen(controller: h.home), size: const Size(360, 1600));
+      await settle(tester);
+      final rail = tester.widget<TaxiRail>(find.byType(TaxiRail));
+      expect([for (final t in rail.tiles) t.title], ['Edit fares', 'Ready check', 'My rating']);
+      expect(identical(rail.tiles[0].tone, ListingTone.coral), isTrue);
+      expect(identical(rail.tiles[1].tone, ListingTone.sunrise), isTrue);
+      expect(identical(rail.tiles[2].tone, ListingTone.indigo), isTrue);
+      expect(find.byType(MealsRail), findsOneWidget);
+      await finish(tester);
+    });
+
+    testWidgets('needs attention: white card, A traveller chose you, filled Confirm', (tester) async {
+      final now = DateTime(2026, 11, 21, 10);
+      final by = now.add(const Duration(minutes: 12, seconds: 36)).toUtc().toIso8601String();
+      final h = TaxiHarness.setUp(homeJson(attention: [att('TravellerChoseYou', 1, {'offerId': 'o', 'confirmBy': by})]), clock: () => now);
+      await pumpPhone(tester, TaxiDriverHomeScreen(controller: h.home), size: const Size(360, 1400));
+      await settle(tester);
+      final card = tester.widget<TaxiRowsCard>(find.ancestor(of: find.text('A traveller chose you'), matching: find.byType(TaxiRowsCard)).first);
+      expect(card.fill, const Color(0xFFFFFFFF));
+      final pill = tester.widget<TaxiPill>(find.ancestor(of: find.text('Confirm'), matching: find.byType(TaxiPill)).first);
+      expect(pill.kind, TaxiPillKind.coral);
       await finish(tester);
     });
   });

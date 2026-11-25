@@ -50,4 +50,7 @@ abstract final class OwnerSharedStrings {
   static String monthTitle(DateTime m) => '${months[m.month - 1]} ${m.year}';
   static String dayMonth(DateTime d) => '${d.day} ${monthsShort[d.month - 1]}';
   static const showMore = 'Show more';
+  static const delete = 'Delete';
+  static const inactive = 'INACTIVE';
+  static const inactiveToast = 'This one is inactive on the Free plan. Get Plus to use it again.';
 }

@@ -1,3 +1,4 @@
+import '../../../utils/photo_url.dart';
 import '../calendar/models/calendar_models.dart';
 import '../json/owner_dates.dart';
 import '../json/owner_json.dart';
@@ -27,6 +28,9 @@ class OwnerHomeListing {
     this.sub,
     this.cityName,
     this.plate,
+    this.vehicleName,
+    this.seats,
+    this.displayPhotoUrl,
     this.switchOn = false,
     this.isFeatured = false,
     this.takenDown = false,
@@ -38,6 +42,7 @@ class OwnerHomeListing {
     this.ringReady,
     this.onTripUntil,
     this.routesMeter,
+    this.localDayRate,
     this.statusLine,
   });
 
@@ -49,6 +54,9 @@ class OwnerHomeListing {
   final String? sub;
   final String? cityName;
   final String? plate;
+  final String? vehicleName;
+  final int? seats;
+  final String? displayPhotoUrl;
   final bool switchOn;
   final bool isFeatured;
   final bool takenDown;
@@ -60,6 +68,7 @@ class OwnerHomeListing {
   final bool? ringReady;
   final DateTime? onTripUntil;
   final Meter? routesMeter;
+  final int? localDayRate;
   final OwnerStatusLine? statusLine;
 
   bool get approved => status == 'Approved';
@@ -75,6 +84,9 @@ class OwnerHomeListing {
         sub: OwnerJson.strOrNull(j['sub']),
         cityName: OwnerJson.strOrNull(j['cityName']),
         plate: OwnerJson.strOrNull(j['plate']),
+        vehicleName: OwnerJson.strOrNull(j['vehicleName']),
+        seats: OwnerJson.intOrNull(j['seats']),
+        displayPhotoUrl: PhotoUrl.parse(j['displayPhotoUrl']),
         switchOn: OwnerJson.boolean(j['switchOn']),
         isFeatured: OwnerJson.boolean(j['isFeatured']),
         takenDown: OwnerJson.boolean(j['takenDown']),
@@ -86,6 +98,7 @@ class OwnerHomeListing {
         ringReady: OwnerJson.boolOrNull(j['ringReady']),
         onTripUntil: OwnerDates.day(j['onTripUntil']),
         routesMeter: Meter.maybe(j['routesMeter']),
+        localDayRate: OwnerJson.intOrNull(j['localDayRate']),
         statusLine: OwnerStatusLine.maybe(j['statusLine']),
       );
 }

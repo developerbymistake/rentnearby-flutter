@@ -121,10 +121,9 @@ void main() {
   // Words a frame draws in the other role's module; each needs the frame id.
   const roleWordExceptions = <String, String>{
     // A8-money
-    'Your first route stays. Extra routes are hidden, not deleted.': 'o_pl_8',
+    'Your last added route stays. Extra routes are hidden, not deleted.': 'o_pl_8',
     // A5-taxi-core
     'Bakhli is checking your new licence details. Your bookings stay.': 'o_tx_42 B',
-    'Bookings stay. A ringing request and unanswered trip leads close.': 'o_tx_11',
     'Shown in trip plans as a local day. Leave empty to stay out of local days.': 'o_tx_41 D',
     'You stop getting requests until Bakhli approves the change. Your bookings stay.': 'o_tx_42 A',
     // A6-taxi-work
@@ -162,9 +161,10 @@ void main() {
     final bad = <String>[];
     for (final dir in ['lib/features/stay_owner', 'lib/features/taxi_driver', 'lib/features/owner_core']) {
       for (final f in _dart(dir)) {
-        final s = f.readAsStringSync();
+        // The taxi number-plate photo (card_photos contract) is a vehicle check, not a payment proof.
+        final s = f.readAsStringSync().toLowerCase().replaceAll('plate proof', '').replaceAll('plateproof', '');
         for (final w in banned) {
-          if (s.toLowerCase().contains(w.toLowerCase())) bad.add('${_norm(f.path)}: $w');
+          if (s.contains(w.toLowerCase())) bad.add('${_norm(f.path)}: $w');
         }
       }
     }

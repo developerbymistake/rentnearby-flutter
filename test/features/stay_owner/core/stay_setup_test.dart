@@ -5,6 +5,7 @@ import 'package:bakhli/features/stay/setup/stay_basic_details_screen.dart';
 import 'package:bakhli/features/stay/setup/stay_rooms_screen.dart';
 import 'package:bakhli/features/stay/setup/stay_setup_hub_screen.dart';
 import 'package:bakhli/features/stay/setup/stay_submit_screen.dart';
+import 'package:bakhli/design/design.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -83,6 +84,15 @@ void main() {
       }
     });
 
+    testWidgets('A10_noUpiRowInOnboarding_draftOrUnderReview', (t) async {
+      setupFor(stayModel(draftJson(step1: true)));
+      await _pump(t, const StaySetupHubScreen());
+      expect(_texts(t).where((s) => s.contains('UPI')), isEmpty);
+      setupFor(stayModel(draftJson(step1: true, rooms: true, rules: true, status: 'PendingReview')), stayStatus: 'PendingReview');
+      await _pump(t, const StaySetupHubScreen(fromMyStays: true));
+      expect(_texts(t).where((s) => s.contains('UPI')), isEmpty);
+    });
+
     testWidgets('o_st_1_stepsUnlockInOrder', (t) async {
       setupFor(null);
       await _pump(t, const StaySetupHubScreen());
@@ -134,12 +144,12 @@ void main() {
   });
 
   group('o_st_4 / o_st_5 rooms and G6', () {
-    testWidgets('o_st_4_free2Rooms_addRowLockedWithChipAndBanner', (t) async {
+    testWidgets('o_st_4_free2Rooms_normalAddRowStaysEnabled_noBanner', (t) async {
       setupFor(stayModel(draftJson(step1: true, rooms: true)), plan: OwnerPlans.free);
       await _pump(t, const StayRoomsScreen());
       expect(find.byKey(GateKeys.softRow), findsOneWidget);
-      expect(find.text('Add room type'), findsOneWidget);
-      expect(find.text('2 room types on Free. Plus lists up to 6.'), findsOneWidget);
+      expect(find.text('Add another room'), findsOneWidget);
+      expect(find.text('2 room types on Free. Plus lists up to 6.'), findsNothing);
       final low = _texts(t).map((e) => e.toLowerCase()).toList();
       expect(low, contains('room 1'));
       expect(low, contains('room 2'));
@@ -201,13 +211,95 @@ void main() {
     });
   });
 
+  group('C3 rooms and prices page (manage mode)', () {
+    Map<String, dynamic> withRooms(int n, {List<Map<String, dynamic>> hidden = const []}) => {
+          ...draftJson(step1: true, rooms: true, rules: true, status: 'Approved'),
+          'rooms': [
+            for (var i = 0; i < n; i++) {'id': 'r$i', 'roomIndex': i + 1, 'roomName': ['Deluxe', 'Family Room', 'Standard', 'Suite', 'Cottage', 'Dormitory'][i], 'pricePerNight': 3000 + i * 500, 'maxGuests': 3, 'meals': 'Breakfast'},
+          ],
+          'hiddenRooms': hidden,
+        };
+
+    GradientPillButton addButton(WidgetTester t) => t.widget<GradientPillButton>(find.widgetWithText(GradientPillButton, 'Add room type'));
+
+    testWidgets('free 2 of 2: header, strip, one card per room with 3 pills, Add opens the Plus sheet', (t) async {
+      setupFor(stayModel(withRooms(2)), plan: OwnerPlans.free, stayStatus: 'Approved');
+      await _pump(t, const StayRoomsScreen(manage: true), size: const Size(360, 1200));
+      expect(find.text('Rooms and prices'), findsOneWidget);
+      expect(find.text('2 of 2 room types used'), findsOneWidget);
+      expect(find.byKey(GateKeys.planStrip), findsOneWidget);
+      expect(find.text('2 room types on Free. Plus lists up to 6.'), findsOneWidget);
+      expect(find.text('ROOM 1'), findsOneWidget);
+      expect(find.text('ROOM 2'), findsOneWidget);
+      expect(find.text('Edit price'), findsNWidgets(2));
+      expect(find.text('Edit room'), findsNWidgets(2));
+      expect(find.text('Delete'), findsNWidgets(2));
+      expect(find.text('Save'), findsNothing);
+      expect(addButton(t).enabled, isTrue);
+      await t.tap(find.text('Add room type'));
+      await t.pump();
+      await t.pump(const Duration(seconds: 1));
+      expect(find.byKey(GateKeys.sheet), findsOneWidget);
+    });
+
+    testWidgets('free 1 of 2: Add opens the room form, no sheet', (t) async {
+      setupFor(stayModel(withRooms(1)), plan: OwnerPlans.free, stayStatus: 'Approved');
+      await _pump(t, const StayRoomsScreen(manage: true), size: const Size(360, 1400));
+      await t.tap(find.text('Add room type'));
+      await t.pump();
+      await t.pump(const Duration(milliseconds: 300));
+      expect(find.byKey(GateKeys.sheet), findsNothing);
+      expect(find.text('Room Type'), findsOneWidget);
+      expect(find.text('Save'), findsOneWidget);
+    });
+
+    testWidgets('plus 6 of 6: no strip, Add greyed with the limit line', (t) async {
+      setupFor(stayModel(withRooms(6)), plan: OwnerPlans.plus, stayStatus: 'Approved');
+      await _pump(t, const StayRoomsScreen(manage: true), size: const Size(360, 2400));
+      expect(find.byKey(GateKeys.planStrip), findsNothing);
+      expect(find.text('6 of 6 room types used'), findsOneWidget);
+      expect(addButton(t).enabled, isFalse);
+      expect(find.text('6 of 6 · limit reached'), findsOneWidget);
+    });
+
+    testWidgets('after Plus: a hidden room is an INACTIVE card, edits greyed, Delete and Choose what stays', (t) async {
+      setupFor(
+        stayModel(withRooms(2, hidden: [{'id': 'h1', 'roomIndex': 1001, 'roomName': 'Suite', 'pricePerNight': 6000, 'maxGuests': 4, 'meals': 'Breakfast'}])),
+        plan: OwnerPlans.free,
+        stayStatus: 'Approved',
+      );
+      await _pump(t, const StayRoomsScreen(manage: true), size: const Size(360, 1600));
+      expect(find.byKey(GateKeys.inactiveRow), findsOneWidget);
+      expect(find.text('Inactive: the Free plan allows 2 room types.'), findsOneWidget);
+      expect(find.text('ROOM 3'), findsOneWidget);
+      final inactive = find.byKey(GateKeys.inactiveRow);
+      expect(find.descendant(of: inactive, matching: find.text('INACTIVE')), findsOneWidget);
+      expect(find.descendant(of: inactive, matching: find.text('Inactive: the Free plan allows 2 room types.')), findsOneWidget);
+      expect(find.descendant(of: inactive, matching: find.text('Delete')), findsOneWidget);
+      for (final label in ['Edit price', 'Edit room']) {
+        final pill = find.descendant(of: inactive, matching: find.widgetWithText(WhitePillButton, label));
+        expect(t.widget<WhitePillButton>(pill).enabled, isFalse, reason: label);
+      }
+      expect(find.text('Choose what stays'), findsOneWidget);
+    });
+
+    testWidgets('setup mode is unchanged: no manage header or strip', (t) async {
+      setupFor(stayModel(withRooms(2)), plan: OwnerPlans.free);
+      await _pump(t, const StayRoomsScreen());
+      expect(find.text('Rooms and prices'), findsNothing);
+      expect(find.byKey(GateKeys.planStrip), findsNothing);
+      expect(find.text('Edit price'), findsNothing);
+      expect(find.text('Save'), findsOneWidget);
+    });
+  });
+
   group('o_st_2 / o_st_3 photos and G5', () {
-    testWidgets('o_st_2_free2Photos_thirdTileLockedWithPlusChip', (t) async {
+    testWidgets('o_st_2_free2Photos_normalAddTileOpensPlus_noBanner', (t) async {
       setupFor(stayModel(draftJson(step1: true)), plan: OwnerPlans.free);
       await _pump(t, const StayBasicDetailsScreen(photosOnly: true));
       expect(find.byKey(GateKeys.softRow), findsOneWidget);
       expect(find.text('2 of 2'), findsOneWidget);
-      expect(find.text('Free plan allows 2 photos. Plus stays can show 8.'), findsOneWidget);
+      expect(find.text('Free plan allows 2 photos. Plus stays can show 8.'), findsNothing);
       expect(find.text('Clear day-time photos help guests choose.'), findsOneWidget);
       expect(find.text('Cover'), findsOneWidget);
       await t.pumpWidget(const SizedBox.shrink());

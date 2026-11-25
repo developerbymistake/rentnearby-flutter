@@ -21,6 +21,7 @@ abstract final class TaxiGateStrings {
   static String chipPlus(int plus) => '$plus routes';
   static const addAnother = 'Add another route';
   static String upTo(int n) => 'You can add up to ${routesCount(n)}.';
+  static String routeInactive(int free) => 'Inactive: the Free plan allows ${routesCount(free)}.';
 
   static int get freeRoutes => PlanGate.limit(PlanKey.routes);
   static int get plusRoutes {

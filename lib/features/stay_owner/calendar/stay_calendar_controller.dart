@@ -96,6 +96,12 @@ class StayCalendarController extends CalendarCoreController {
 
   bool get needsG11 => fullOnFree(StayMeterKeys.blocks);
 
+  bool fullOnPlus(String key) {
+    final m = meter(key);
+    if (m == null || m.limit <= 0) return false;
+    return !PlanGate.canUpgrade && m.full;
+  }
+
   bool get summaryOpen => (data?.summaryAllowed ?? false) || !PlanGate.canUpgrade;
 
   bool get afterPlusSections {
@@ -127,7 +133,7 @@ class StayCalendarController extends CalendarCoreController {
       ..sort(_byDate);
     monthRows.assignAll(rows);
     final t = today;
-    final own = d.entries.where((e) => e.isManual && !e.cancelled && !(e.lastDay ?? t).isBefore(t)).toList()
+    final own = d.entries.where((e) => e.isManual && !e.cancelled && !e.inactiveByPlan && !(e.lastDay ?? t).isBefore(t)).toList()
       ..sort((a, b) => (a.dateFrom ?? t).compareTo(b.dateFrom ?? t));
     ownActive.assignAll(own);
     if (activeBlocks.isEmpty) activeBlocks.assignAll(d.blocks.where((b) => !(b.dateTo ?? t).isBefore(t)));
@@ -179,7 +185,7 @@ class StayCalendarController extends CalendarCoreController {
     if (isClosed || !_ownLatest.isLatest(id)) return;
     if (r is OwnerOk<UpcomingPage>) {
       final t = today;
-      ownActive.assignAll(r.value.items.where((e) => e.isManual && !e.cancelled && !(e.lastDay ?? t).isBefore(t)));
+      ownActive.assignAll(r.value.items.where((e) => e.isManual && !e.cancelled && !e.inactiveByPlan && !(e.lastDay ?? t).isBefore(t)));
     }
   }
 

@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 
 import '../../../config/app_tabs.dart';
 import '../../../controllers/auth_controller.dart';
+import '../../../controllers/plan_controller.dart';
 import '../../../utils/app_toast.dart';
 import '../../owner_core/data/owner_api.dart';
 import '../../owner_core/data/owner_cache.dart';
@@ -13,7 +14,9 @@ import '../../owner_core/json/owner_json.dart';
 import '../../owner_core/session/owner_session_hooks.dart';
 import '../../owner_core/sheets/owner_states.dart';
 import '../../taxi/models/taxi_owner_model.dart';
+import '../../taxi/setup/taxi_repository.dart';
 import '../../taxi/setup/taxi_setup_controller.dart';
+import '../../owner_core/plan/plan_gate.dart';
 import '../strings/taxi_hub_strings.dart';
 import '../calendar/taxi_calendar_controller.dart';
 import '../taxi_driver_deps.dart';
@@ -29,15 +32,18 @@ class TaxiHubController extends GetxController with WidgetsBindingObserver {
     DateTime Function()? clock,
     Future<Map<String, dynamic>> Function()? fetch,
     Future<OwnerResult<void>> Function()? deleteTaxiCall,
+    Future<OwnerResult<void>> Function(String routeId)? deleteRouteCall,
   })  : _userId = userId,
         _clock = clock ?? DateTime.now,
         _fetchOverride = fetch,
-        _deleteTaxiCall = deleteTaxiCall;
+        _deleteTaxiCall = deleteTaxiCall,
+        _deleteRouteCall = deleteRouteCall;
 
   final String? Function()? _userId;
   final DateTime Function() _clock;
   final Future<Map<String, dynamic>> Function()? _fetchOverride;
   final Future<OwnerResult<void>> Function()? _deleteTaxiCall;
+  final Future<OwnerResult<void>> Function(String routeId)? _deleteRouteCall;
 
   final load = Rx<OwnerLoad<TaxiOwnerModel>>(const OwnerLoadLoading());
   final paused = false.obs;
@@ -169,6 +175,7 @@ class TaxiHubController extends GetxController with WidgetsBindingObserver {
       if (isClosed) return ok;
       if (ok) {
         _loadedAt = null;
+        if (Get.isRegistered<PlanController>()) Get.find<PlanController>().invalidate().ignore();
         await reload();
         if (toast != null) AppToast.success(toast);
         TaxiDriverDeps.refreshHome();
@@ -184,6 +191,36 @@ class TaxiHubController extends GetxController with WidgetsBindingObserver {
   Future<bool> saveLocalRate(int? rate, int? km) => _write((c) => c.saveLocalRate(dayRate: rate, kmPerDay: km), TaxiHubStrings.localSaved);
 
   Future<bool> saveRoutes(List<Map<String, dynamic>> routes, String toast) => _write((c) => c.saveRoutes(routes), toast);
+
+  Future<bool> deleteHiddenRoute(String routeId) async {
+    if (busy.value) return false;
+    busy.value = true;
+    try {
+      final call = _deleteRouteCall;
+      final r = call != null ? await call(routeId) : await OwnerApi.run(() => const TaxiRepository().deleteHiddenRoute(routeId));
+      if (isClosed) return false;
+      switch (r) {
+        case OwnerOk<void>():
+          _loadedAt = null;
+          if (Get.isRegistered<PlanController>()) Get.find<PlanController>().invalidate().ignore();
+          await reload(force: true);
+          AppToast.success(TaxiHubStrings.routeDeleted);
+          TaxiDriverDeps.refreshHome();
+          return true;
+        case final OwnerRefused<void> refused:
+          if (!PlanGate.handleInactive(refused)) AppToast.warning(refused.message ?? TaxiHubStrings.noConnection);
+          _loadedAt = null;
+          await reload(force: true);
+        case OwnerOffline<void>():
+          AppToast.error(TaxiHubStrings.noConnection);
+        case OwnerFailed<void>():
+          AppToast.error(TaxiHubStrings.somethingWrong);
+      }
+      return false;
+    } finally {
+      if (!isClosed) busy.value = false;
+    }
+  }
 
   Future<bool> deleteTaxi() async {
     if (deleting.value) return false;

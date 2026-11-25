@@ -1,7 +1,7 @@
 import 'package:bakhli/features/owner_core/data/owner_cache.dart';
 import 'package:bakhli/features/owner_core/plan/plan_gate.dart';
+import 'package:bakhli/features/taxi/setup/taxi_routes_screen.dart';
 import 'package:bakhli/features/taxi_driver/hub/taxi_hub_screen.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../../support/owner_fakes.dart';
@@ -34,7 +34,8 @@ void main() {
 
   testWidgets('render o_tx_19', (tester) async {
     final c = hubFor(taxiJson());
-    await renderOwnerFrame(tester, 'o_tx_19', TaxiHubScreen(root: true, controller: c), arrange: (t) async {
+    await c.reload();
+    await renderOwnerFrame(tester, 'o_tx_19', const TaxiRoutesScreen(manage: true), arrange: (t) async {
       await settle(t);
       await t.tap(find.text('Edit fare').first);
       await settle(t);
@@ -43,33 +44,28 @@ void main() {
 
   testWidgets('render o_tx_41 A', (tester) async {
     final c = hubFor(taxiJson());
-    await renderOwnerFrame(tester, 'o_tx_41', TaxiHubScreen(root: true, controller: c), part: 'A', arrange: (t) async {
+    await c.reload();
+    await renderOwnerFrame(tester, 'o_tx_41', const TaxiRoutesScreen(manage: true), part: 'A', arrange: (t) async {
       await settle(t);
-      await t.tap(find.byIcon(Icons.more_vert_rounded).first);
-      await settle(t);
-      await t.tap(find.text('Edit route'));
+      await t.tap(find.text('Edit route').first);
       await settle(t);
     });
   });
 
   testWidgets('render o_tx_41 B', (tester) async {
     final c = hubFor(taxiJson(routes: 3), plan: OwnerPlans.plus);
-    await renderOwnerFrame(tester, 'o_tx_41', TaxiHubScreen(root: true, controller: c), part: 'B', arrange: (t) async {
+    await c.reload();
+    await renderOwnerFrame(tester, 'o_tx_41', const TaxiRoutesScreen(manage: true), part: 'B', arrange: (t) async {
       await settle(t);
-      await t.tap(find.byIcon(Icons.more_vert_rounded).first);
-      await settle(t);
-      await t.tap(find.text('Delete route'));
+      await t.tap(find.text('Delete').first);
       await settle(t);
     });
   });
 
   testWidgets('render o_tx_41 C', (tester) async {
     final c = hubFor(taxiJson());
-    await renderOwnerFrame(tester, 'o_tx_41', TaxiHubScreen(root: true, controller: c), part: 'C', arrange: (t) async {
-      await settle(t);
-      await t.tap(find.byIcon(Icons.more_vert_rounded).first);
-      await settle(t);
-    });
+    await c.reload();
+    await renderOwnerFrame(tester, 'o_tx_41', const TaxiRoutesScreen(manage: true), part: 'C', arrange: settle);
   });
 
   testWidgets('render o_tx_41 D', (tester) async {

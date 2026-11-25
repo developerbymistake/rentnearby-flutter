@@ -136,7 +136,7 @@ void main() {
       ]),
     );
     final c = workController(repo, now: workNow);
-    await renderOwnerFrame(t, 'o_tx_14', TaxiRequestsTab(requests: c, leadsBody: const SizedBox.shrink()), arrange: settle);
+    await renderOwnerFrame(t, 'o_tx_14', TaxiRequestsTab(requests: c), arrange: settle);
   });
 
   Widget detail(String state, {List<String> manual = const []}) {

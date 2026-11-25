@@ -9,6 +9,7 @@ import 'package:bakhli/features/stay_owner/calendar/stay_calendar_screen.dart';
 import 'package:bakhli/features/stay_owner/calendar/stay_day_sheet.dart';
 import 'package:bakhli/features/stay_owner/calendar/stay_entry_sheet.dart';
 import 'package:bakhli/features/stay_owner/calendar/stay_upcoming_card.dart';
+import 'package:bakhli/features/stay_owner/calendar/widgets/stay_calendar_widgets.dart';
 import 'package:bakhli/features/stay_owner/plan_visible/stay_plan_visible_screen.dart';
 import 'package:bakhli/features/stay_owner/stay_owner_deps.dart';
 import 'package:bakhli/features/stay_owner/special_prices/stay_special_price_sheet.dart';
@@ -113,21 +114,52 @@ void main() {
     expect(find.text('Free allows 1 blocked range'), findsNothing);
   });
 
-  testWidgets('G10 on the 5th active booking keeps the typed values after Not now', (t) async {
+  testWidgets('Add booking at 4 of 4 on Free opens G10 before the form', (t) async {
     final h = CalendarHarness.setUp(month: monthJson(entriesUsed: 4));
     await pumpPhone(t, StayCalendarScreen(controller: h.calendar));
     await settle(t);
-    StayEntrySheet.add(t.element(find.byType(StayCalendarScreen)), h.calendar, from: DateTime(2026, 11, 30), to: DateTime(2026, 12, 1));
+    await t.tap(find.text('+ Add booking'));
     await settle(t);
-    await t.enterText(find.byType(EditableText).first, 'Sharma family');
-    await settle(t);
-    await t.tap(find.text('Save booking'));
-    await settle(t);
+    expect(find.byKey(GateKeys.sheet), findsOneWidget);
     expect(find.text('You have 4 active entries'), findsOneWidget);
+    expect(find.text('Save booking'), findsNothing);
     expect(h.transport.calls.where((c) => c.startsWith('POST')), isEmpty);
     await t.tap(find.text('Not now'));
     await settle(t);
-    expect(find.text('Sharma family'), findsOneWidget);
+    expect(find.byKey(GateKeys.sheet), findsNothing);
+  });
+
+  testWidgets('Plus full: Add booking and Block days are greyed', (t) async {
+    final month = monthJson(plus: true)..['meters'] = [meter('CalendarEntries', 50, 50), meter('BlockedRanges', 10, 10)];
+    final h = CalendarHarness.setUp(plan: OwnerPlans.plus, month: month);
+    await pumpPhone(t, StayCalendarScreen(controller: h.calendar));
+    await settle(t);
+    final bar = t.widget<StayCalBar>(find.byType(StayCalBar));
+    expect(bar.onPrimary, isNull);
+    expect(bar.onSecondary, isNull);
+  });
+
+  testWidgets('Free under the limit: Add booking and Block days stay enabled', (t) async {
+    final h = CalendarHarness.setUp(month: monthJson(blocksUsed: 0));
+    await pumpPhone(t, StayCalendarScreen(controller: h.calendar));
+    await settle(t);
+    final bar = t.widget<StayCalBar>(find.byType(StayCalBar));
+    expect(bar.onPrimary, isNotNull);
+    expect(bar.onSecondary, isNotNull);
+  });
+
+  testWidgets('after Plus: an inactive own booking is greyed with the reason and Delete', (t) async {
+    final month = monthJson(entries: [
+      ...novEntries(),
+      {...entryJson('old1', '2026-11-25', '2026-11-26', 'Older booking'), 'inactiveByPlan': true},
+    ]);
+    final h = CalendarHarness.setUp(month: month);
+    await pumpPhone(t, StayCalendarScreen(controller: h.calendar), size: const Size(360, 4000));
+    await settle(t);
+    expect(find.byKey(GateKeys.inactiveRow), findsOneWidget);
+    expect(find.text('Inactive: the Free plan keeps 4 bookings you add.'), findsOneWidget);
+    expect(find.descendant(of: find.byKey(GateKeys.inactiveRow), matching: find.text('Delete')), findsOneWidget);
+    expect(h.calendar.ownActive.where((e) => e.id == 'old1'), isEmpty);
   });
 
   testWidgets('add booking: name needed, phone guard, received above final', (t) async {
@@ -287,13 +319,19 @@ void main() {
         });
     Widget host(OwnerUpcoming x) => Scaffold(backgroundColor: OwnerLook.stay.page, body: SingleChildScrollView(child: StayUpcomingCard(upcoming: x)));
 
-    testWidgets('Free: 3 rows, more line, amber line with 1 booking', (t) async {
+    testWidgets('Free: 3 rows, heading with See all, no more strip, amber row or buttons', (t) async {
       CalendarHarness.setUp(registerCalendar: false);
       await pumpPhone(t, host(u()));
+      expect(find.text('Upcoming bookings'), findsOneWidget);
       expect(find.text('Next 15 days'), findsOneWidget);
-      expect(find.text('2 more in the next 15 days'), findsOneWidget);
-      expect(find.text('After 6 Dec: 1 booking from the app (see Enquiries). Plus shows 6 months ahead.'), findsOneWidget);
-      expect(find.text('View calendar'), findsOneWidget);
+      expect(find.text('See all ›'), findsOneWidget);
+      expect(find.text('From app'), findsNWidgets(2));
+      expect(find.text('Added by you'), findsOneWidget);
+      expect(find.textContaining('more in the'), findsNothing);
+      expect(find.textContaining('Plus shows 6 months ahead'), findsNothing);
+      for (final gone in ['View calendar', 'Past', 'Add booking']) {
+        expect(find.text(gone), findsNothing, reason: gone);
+      }
     });
     testWidgets('Plus: 6 months, no amber line; zero more hides the line', (t) async {
       CalendarHarness.setUp(registerCalendar: false, plan: OwnerPlans.plus);
@@ -330,6 +368,34 @@ void main() {
       expect(find.text('Plus keeps 5 at a time. Your current one ends on 12 Nov. You can change or remove it now.'), findsNothing);
       expect(find.text('1 special price on Free'), findsOneWidget);
       expect(h.transport.calls.where((c) => c.startsWith('POST')), isEmpty);
+    });
+
+    testWidgets('Free: plan strip on top; a rule paused by the plan has no Edit and a reason line', (t) async {
+      CalendarHarness.setUp(registerCalendar: false, special: specialJson(items: [
+        {'id': 'sp1', 'dateFrom': '2026-11-06', 'dateTo': '2026-11-12', 'nights': 7, 'direction': 'Higher', 'percent': 20, 'label': 'Diwali week', 'live': true, 'version': 1},
+        {'id': 'sp2', 'dateFrom': '2026-12-24', 'dateTo': '2027-01-01', 'nights': 9, 'direction': 'Higher', 'percent': 25, 'label': 'Christmas and New Year', 'pausedByPlan': true, 'version': 1},
+      ]));
+      final sp = put();
+      await pumpPhone(t, StaySpecialPricesScreen(controller: sp), size: const Size(360, 1600));
+      await settle(t);
+      expect(find.byKey(GateKeys.planStrip), findsOneWidget);
+      expect(find.text('Free plan: 1 special price. Plus gives up to 5.'), findsOneWidget);
+      expect(find.byKey(GateKeys.softRow), findsNothing);
+      expect(find.text('Edit'), findsOneWidget);
+      expect(find.text('Delete'), findsNWidgets(2));
+      expect(find.text('Inactive: the Free plan allows 1 special price.'), findsOneWidget);
+    });
+
+    testWidgets('Plus full 5 of 5: Add is greyed, no strip', (t) async {
+      CalendarHarness.setUp(registerCalendar: false, plan: OwnerPlans.plus, special: specialJson(plus: true, items: [
+        ...plusRules(),
+        {'id': 'sp5', 'dateFrom': '2027-03-01', 'dateTo': '2027-03-03', 'nights': 3, 'direction': 'Higher', 'percent': 10, 'live': true, 'version': 1},
+      ]));
+      final sp = put();
+      await pumpPhone(t, StaySpecialPricesScreen(controller: sp));
+      await settle(t);
+      expect(find.byKey(GateKeys.planStrip), findsNothing);
+      expect(t.widget<StayCalBar>(find.byType(StayCalBar)).onPrimary, isNull);
     });
 
     testWidgets('payment OFF: no locked row, no gate key', (t) async {

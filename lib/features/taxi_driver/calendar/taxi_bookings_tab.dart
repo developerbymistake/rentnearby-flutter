@@ -8,11 +8,17 @@ import '../../../design/design.dart';
 import '../../owner_core/calendar/models/calendar_models.dart';
 import '../../owner_core/json/owner_dates.dart';
 import '../../owner_core/plan/plan_gate.dart';
+import '../../owner_core/plan/owner_inactive.dart';
 import '../../owner_core/plan/plan_keys.dart';
 import '../../owner_core/plan/soft_lock.dart';
+import '../../owner_core/sheets/owner_confirm.dart';
 import '../../owner_core/sheets/owner_states.dart';
 import '../../owner_core/strings/owner_shared_strings.dart';
+import '../../../utils/app_toast.dart';
+import '../../owner_core/data/owner_result.dart';
 import '../strings/taxi_calendar_strings.dart';
+import '../strings/taxi_gate_strings_calendar.dart';
+import '../strings/taxi_work_strings.dart';
 import '../taxi_driver_deps.dart';
 import 'models/taxi_calendar_models.dart';
 import 'taxi_calendar_controller.dart';
@@ -105,6 +111,54 @@ class _TaxiBookingsTabState extends State<TaxiBookingsTab> {
     TaxiTripSheet.show(context, controller: _c, date: date);
   }
 
+  VoidCallback? get _addAction => PlanGate.addEnabled(_c.entriesFull) ? _addTrip : null;
+
+  Future<void> _deleteInactive(CalendarEntry e) async {
+    final ok = await OwnerConfirm.ask(
+      context,
+      title: TaxiCalendarStrings.deleteTitle,
+      body: TaxiCalendarStrings.deleteBody,
+      confirm: TaxiCalendarStrings.delete,
+      cancel: TaxiCalendarStrings.keep,
+      destructive: true,
+      art: ListingArt.warning,
+      tone: ListingTone.coral,
+    );
+    if (!ok || !mounted) return;
+    final r = await _c.delete(e.id);
+    if (!mounted) return;
+    final gone = r is OwnerRefused<void> && r.statusCode == 404;
+    if (r is OwnerOk<void> || gone) return;
+    AppToast.error(r is OwnerRefused<void> && r.message != null ? r.message! : OwnerSharedStrings.noConnection);
+  }
+
+  Widget _row(CalendarEntry e, Widget row) {
+    if (!e.inactiveByPlan) return row;
+    return OwnerInactive(
+      reason: TaxiGateStringsCalendar.entryInactive(TaxiGateStringsCalendar.freeEntries),
+      taxi: true,
+      onDelete: () => _deleteInactive(e),
+      child: row,
+    );
+  }
+
+  List<WidgetBuilder> _fullLine() =>
+      _c.entriesFull && !PlanGate.canUpgrade ? [(_) => TaxiPlusFullLine(limit: _c.entriesMeter.limit)] : const [];
+
+  Widget _pastLink() => Padding(
+        padding: DS.insets(t: 10),
+        child: Align(
+          alignment: Alignment.centerRight,
+          child: InkWell(
+            onTap: () => Get.toNamed(AppRoutes.taxiPast),
+            child: Padding(
+              padding: DS.sym(h: 6, v: 8),
+              child: Text(TaxiWorkStrings.pastTrips, style: Ink3D.text(12.5, FontWeight.w600, TaxiCal.accent, letterSpacing: 0)),
+            ),
+          ),
+        ),
+      );
+
   void _tapDay(DateTime d) {
     _selected.value = d;
     TaxiDaySheet.show(context, controller: _c, day: d);
@@ -119,9 +173,6 @@ class _TaxiBookingsTabState extends State<TaxiBookingsTab> {
           Obx(() => TaxiTabHeader(
                 title: TaxiCalendarStrings.bookings,
                 subtitle: OwnerSharedStrings.monthTitle(_c.month.value),
-                trailing: [
-                  TaxiWhitePillButton(label: TaxiCalendarStrings.past, onTap: () => Get.toNamed(AppRoutes.taxiPast)),
-                ],
               )),
           Expanded(
             child: MediaQuery.removePadding(
@@ -194,7 +245,8 @@ class _TaxiBookingsTabState extends State<TaxiBookingsTab> {
               padding: DS.insets(t: 6, b: 12),
               child: TaxiMeterPair(left: ownTile, right: TaxiMeterTile(value: '${view.appCount}', label: TaxiCalendarStrings.fromAppThisMonth)),
             ))
-        ..add((_) => PrimaryButton(label: TaxiCalendarStrings.addTrip, tone: TaxiCal.kit, onPressed: _addTrip))
+        ..add((_) => PrimaryButton(label: TaxiCalendarStrings.addTrip, tone: TaxiCal.kit, onPressed: _addAction))
+        ..addAll(_fullLine())
         ..add((_) => Padding(padding: DS.insets(t: 14), child: TaxiMoneyCard(month: _c.month.value, locked: true)));
       if (view.monthRows.isNotEmpty) {
         out.add((_) => const TaxiTitleRow(title: TaxiCalendarStrings.tripsThisMonth, sub: TaxiCalendarStrings.amountsStayFree));
@@ -205,15 +257,19 @@ class _TaxiBookingsTabState extends State<TaxiBookingsTab> {
           out.add((_) => TaxiCardSegment(
                 first: first,
                 last: last,
-                child: TaxiTripRow(
-                  entry: e,
-                  line: TaxiTripText.monthLine(e),
-                  trailing: TaxiChip(entry: e),
-                  onTap: () => TaxiDriverDeps.openEntry(e.id),
+                child: _row(
+                  e,
+                  TaxiTripRow(
+                    entry: e,
+                    line: TaxiTripText.monthLine(e),
+                    trailing: TaxiChip(entry: e),
+                    onTap: () => TaxiDriverDeps.openEntry(e.id),
+                  ),
                 ),
               ));
         }
       }
+      out.add((_) => _pastLink());
       out.add((_) => Padding(padding: DS.insets(t: 10), child: TaxiReminderRow(controller: _c)));
     } else {
       out
@@ -226,7 +282,9 @@ class _TaxiBookingsTabState extends State<TaxiBookingsTab> {
                 right: TaxiMeterTile(value: TaxiCalendarStrings.monthsAhead(PlanGate.limit(PlanKey.monthsAhead)), label: TaxiCalendarStrings.aheadYouCanSee),
               ),
             ))
-        ..add((_) => PrimaryButton(label: TaxiCalendarStrings.addTrip, tone: TaxiCal.kit, onPressed: _addTrip));
+        ..add((_) => PrimaryButton(label: TaxiCalendarStrings.addTrip, tone: TaxiCal.kit, onPressed: _addAction))
+        ..addAll(_fullLine())
+        ..add((_) => _pastLink());
     }
     if (view.hiddenCount > 0) out.addAll(_downgraded(view));
     out.addAll(_fromApp());
@@ -259,7 +317,7 @@ class _TaxiBookingsTabState extends State<TaxiBookingsTab> {
       out.add((_) => TaxiCardSegment(
             first: first,
             last: false,
-            child: TaxiTripRow(entry: e, line: TaxiTripText.upcomingLine(e), trailing: TaxiChip(entry: e), onTap: () => TaxiDriverDeps.openEntry(e.id)),
+            child: _row(e, TaxiTripRow(entry: e, line: TaxiTripText.upcomingLine(e), trailing: TaxiChip(entry: e), onTap: () => TaxiDriverDeps.openEntry(e.id))),
           ));
     }
     out
@@ -324,4 +382,21 @@ class _FestivalCard extends StatelessWidget {
       ),
     );
   }
+}
+
+class TaxiPlusFullLine extends StatelessWidget {
+  const TaxiPlusFullLine({super.key, required this.limit});
+
+  final int limit;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: DS.insets(t: 8),
+        child: Text(
+          TaxiGateStringsCalendar.plusFull(limit),
+          key: const ValueKey('taxi_plus_full_line'),
+          textAlign: TextAlign.center,
+          style: Ink3D.text(12, FontWeight.w500, Ink3D.grey, letterSpacing: 0),
+        ),
+      );
 }

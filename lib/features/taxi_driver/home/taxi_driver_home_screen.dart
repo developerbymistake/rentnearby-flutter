@@ -8,15 +8,17 @@ import '../../../config/app_tabs.dart';
 import '../../../controllers/auth_controller.dart';
 import '../../../design/design.dart';
 import '../../../design/extra/ext_details.dart';
-import '../../../services/listing_share_service.dart';
-import '../../../models/browse_item.dart';
+import '../../../services/system_settings_channel.dart';
 import '../../../utils/app_toast.dart';
+import '../../../utils/money_format.dart';
 import '../../../widgets/tab_header.dart';
 import '../../owner_core/home/numbers_row.dart';
+import '../../owner_core/data/owner_args.dart';
 import '../../owner_core/home/owner_home_models.dart';
 import '../../owner_core/sheets/owner_states.dart';
 import '../../taxi/setup/taxi_setup_controller.dart';
 import '../strings/taxi_home_strings.dart';
+import '../hub/taxi_hub_controller.dart';
 import '../strings/taxi_hub_strings.dart';
 import '../taxi_driver_deps.dart';
 import '../widgets/taxi_widgets.dart';
@@ -36,31 +38,11 @@ class TaxiHomeActions {
 
   static void openSetup() => Get.toNamed(AppRoutes.taxiSetup);
 
+  static void openNotificationSettings() => SystemSettingsChannel.instance.openNotificationSettings();
+
   static void startSetup() {
     _auth?.setOwnerShellEmpty(false);
     Get.offAllNamed(AppRoutes.taxiSetup);
-  }
-
-  static Future<void> share(BuildContext context) async {
-    final ctrl = TaxiSetupController.ensure();
-    var t = ctrl.taxi.value;
-    if (t == null || t.slug == null) {
-      await ctrl.load();
-      t = ctrl.taxi.value;
-    }
-    if (t == null || t.slug == null || !t.isApproved || !context.mounted) {
-      AppToast.info(TaxiHomeStrings.notLiveYet);
-      return;
-    }
-    await shareListing(
-      context: context,
-      type: 't',
-      slug: t.slug ?? '',
-      photoUrl: t.displayPhotoUrl,
-      priceOrArea: 'From ${BrowseItem.inr(t.minFare ?? 0)}',
-      typeLabel: t.vehicleTypeName ?? 'Taxi',
-      locality: t.locality,
-    );
   }
 
   static TaxiAttentionActions attention(String? listingId) => TaxiAttentionActions(
@@ -279,7 +261,6 @@ class TaxiHomeBody extends StatelessWidget {
             ..add(Obx(() => TaxiRowsCard(
                   rows: TaxiHomeCompose.rowViews(rows, actions, controller.now.value).take(2).toList(),
                   margin: DS.insets(l: 18, t: 8, r: 18),
-                  fill: TaxiLook.accentSoft,
                 )));
         }
         if (banner != null) {
@@ -300,11 +281,6 @@ class TaxiHomeBody extends StatelessWidget {
                 onTap: () => TaxiHomeActions.openTab(AppTabs.centre),
               ),
               NumberTile(
-                value: n.nextBookingDate == null ? NumberTile.missing : TaxiHomeFormat.day(n.nextBookingDate!),
-                label: TaxiHomeStrings.nextBooking,
-                onTap: () => TaxiHomeActions.openTab(AppTabs.fourth),
-              ),
-              NumberTile(
                 value: n.ratingAvg == null || (n.ratingCount ?? 0) == 0 ? NumberTile.missing : n.ratingAvg!.toStringAsFixed(1),
                 label: TaxiHomeStrings.rating,
                 onTap: () => Get.toNamed(AppRoutes.taxiRating),
@@ -313,7 +289,6 @@ class TaxiHomeBody extends StatelessWidget {
           ));
           children.add(TaxiDriverDeps.upcomingCard());
         }
-        if (TaxiHomeCompose.showsPlanCard(state, l)) children.add(TaxiDriverDeps.planCard());
         if (state == TaxiHomeState.live || state == TaxiHomeState.offline) {
           children
             ..add(const TaxiSectionTitle(title: TaxiHomeStrings.quickActions))
@@ -337,25 +312,22 @@ class TaxiHomeBody extends StatelessWidget {
       );
     }
     final showSwitch = TaxiHomeCompose.showsSwitch(state);
-    final rows = <TaxiStatusRow>[
-      if (state == TaxiHomeState.offline || state == TaxiHomeState.live)
-        TaxiStatusRow(label: TaxiHomeStrings.availableNow, value: controller.switchOn ? TaxiHomeStrings.on : TaxiHomeStrings.off),
-      if (TaxiHomeCompose.meterText(l) != null) TaxiStatusRow(label: TaxiHomeStrings.routes, value: TaxiHomeCompose.meterText(l) ?? ''),
-    ];
+    final shown = TaxiHomeCompose.shown(state, switchOn: controller.switchOn);
+    final shownTone = TaxiHomeCompose.tone(shown);
     return TaxiStatusCard(
-      tone: tone,
+      tone: shownTone,
       art: TaxiHomeCompose.art(state),
+      photoUrl: TaxiHomeCompose.art(state) == ListingArt.taxi ? l.displayPhotoUrl : null,
       title: title,
-      line: TaxiHomeCompose.line(state, l),
-      rows: rows,
-      note: state == TaxiHomeState.live && controller.switchOn ? TaxiHomeStrings.switchLine : null,
+      line: TaxiHomeCompose.line(shown, l),
+      body: _body(l, TaxiHomeCompose.ringStrip(shown, denied: controller.notificationsDenied.value)),
       trailing: showSwitch
           ? Semantics(
               toggled: controller.switchOn,
               label: TaxiHomeStrings.availableNow,
               excludeSemantics: true,
               child: Switch3D(
-                tone: tone,
+                tone: shownTone,
                 value: state == TaxiHomeState.changesReview ? false : controller.switchOn,
                 onGradient: true,
                 onChanged: controller.switchBusy.value || state == TaxiHomeState.changesReview ? null : controller.setAvailable,
@@ -365,10 +337,59 @@ class TaxiHomeBody extends StatelessWidget {
     );
   }
 
+  Widget? _body(OwnerHomeListing l, TaxiRingStrip? strip) {
+    final t = TaxiHubController.maybe?.taxi ?? (Get.isRegistered<TaxiSetupController>() ? Get.find<TaxiSetupController>().taxi.value : null);
+    final vehicle = l.vehicleName ?? t?.vehicleTypeName;
+    final seatCount = l.seats ?? t?.seats;
+    final seats = seatCount == null ? null : TaxiHomeStrings.seats(seatCount);
+    final n = t?.routes.length ?? l.routesMeter?.used;
+    final rate = t?.localDayRate ?? l.localDayRate;
+    final children = <Widget>[
+      if (vehicle != null || seats != null) ...[
+        TaxiCarRow(art: ListingArt.taxi, name: vehicle ?? seats!, sub: vehicle == null ? null : seats),
+        Divider(height: 1, thickness: 1, indent: DS.s(16), endIndent: DS.s(16), color: TaxiLook.rowLine),
+      ],
+      if (n != null)
+        Padding(
+          padding: DS.insets(t: 4, b: 4),
+          child: OwnerFacts(facts: [
+            NumberTile(value: '$n', label: TaxiHomeStrings.routeCount(n)),
+            if (rate != null) NumberTile(value: Money.exact(rate), label: TaxiHomeStrings.localDay),
+          ]),
+        ),
+      if (strip != null) _strip(strip),
+    ];
+    if (children.isEmpty) return null;
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: children);
+  }
+
+  Widget _strip(TaxiRingStrip s) => switch (s) {
+        TaxiRingStrip.ringing => const TaxiRingStripView(
+            title: TaxiHomeStrings.ringOnTitle,
+            body: TaxiHomeStrings.ringOnBody,
+            fill: TaxiLook.greenSoft,
+            ink: TaxiLook.greenText,
+          ),
+        TaxiRingStrip.offline => TaxiRingStripView(
+            title: TaxiHomeStrings.ringOffTitle,
+            body: TaxiHomeStrings.ringOffBody,
+            fill: TaxiLook.rowLine,
+            ink: Ink3D.grey,
+            greyArt: true,
+          ),
+        TaxiRingStrip.muted => TaxiRingStripView(
+            title: TaxiHomeStrings.ringMutedTitle,
+            body: TaxiHomeStrings.ringMutedBody,
+            fill: TaxiLook.amberSoft,
+            ink: TaxiLook.amberText,
+            action: TaxiHomeStrings.turnOn,
+            onAction: TaxiHomeActions.openNotificationSettings,
+          ),
+      };
+
   Widget _quick(BuildContext context) => TaxiRail(tiles: [
-        TaxiRailTile(tone: ListingTone.coral, art: ListingArt.moneyBag, title: TaxiHomeStrings.editFares, sub: TaxiHomeStrings.editFaresSub, onTap: () => TaxiDriverDeps.openHub(section: 'routes')),
-        TaxiRailTile(tone: ListingTone.sunrise, art: ListingArt.speechBalloon, title: TaxiHomeStrings.shareMyTaxi, sub: TaxiHomeStrings.shareMyTaxiSub, onTap: () => TaxiHomeActions.share(context)),
+        TaxiRailTile(tone: ListingTone.coral, art: ListingArt.moneyBag, title: TaxiHomeStrings.editFares, sub: TaxiHomeStrings.editFaresSub, onTap: () => Get.toNamed(AppRoutes.taxiRoutes, arguments: OwnerArgs.manage)),
         TaxiRailTile(tone: ListingTone.sunrise, art: ListingArt.alarmClock, title: TaxiHomeStrings.readyCheck, sub: TaxiHomeStrings.readyCheckSub, onTap: () => Get.toNamed(AppRoutes.taxiReady)),
-        TaxiRailTile(tone: ListingTone.coral, art: ListingArt.star, title: TaxiHomeStrings.myRating, sub: TaxiHomeStrings.myRatingSub, onTap: () => Get.toNamed(AppRoutes.taxiRating)),
+        TaxiRailTile(tone: ListingTone.indigo, art: ListingArt.star, title: TaxiHomeStrings.myRating, sub: TaxiHomeStrings.myRatingSub, onTap: () => Get.toNamed(AppRoutes.taxiRating)),
       ]);
 }

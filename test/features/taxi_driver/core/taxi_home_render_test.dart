@@ -93,22 +93,29 @@ void main() {
     await finish(tester);
   });
 
-  for (final width in const [320.0, 430.0]) {
-    testWidgets('o_tx_12 Plus card at ${width.toInt()} wide and text scale 1.3 (FT-09)', (tester) async {
-      final h = TaxiHarness.setUp(homeJson(featured: true, taxi: {...nums, 'newRequests': 3}, routesMeter: {'key': 'Routes', 'used': 5, 'limit': 5}, planCard: plusCard));
-      TaxiHarnessProbe.home = h.home;
-      TaxiDriverDeps.planCard = () => const TaxiHomePlanCard();
-      addTearDown(TaxiDriverDeps.debugReset);
-      for (final scale in const [1.0, 1.3]) {
-        await pumpPhone(tester, const TaxiDriverHomeScreen(), size: Size(width, 900), textScale: scale);
-        await settle(tester);
-        await tester.scrollUntilVisible(find.text('Renews on 21 Dec 2026. Up to 5 routes are open now. Your turn 2x as often.'), 200, scrollable: find.byType(Scrollable).first);
-        expect(tester.takeException(), isNull);
-        expect(find.text('Manage in Google Play'), findsOneWidget);
-      }
-      await finish(tester);
-    });
-  }
+  testWidgets('B1 hero shows the local day rate from the home feed on a cold start', (tester) async {
+    final json = homeJson(taxi: nums);
+    (json['listing'] as Map<String, dynamic>)['localDayRate'] = 2500;
+    final h = TaxiHarness.setUp(json);
+    TaxiHarnessProbe.home = h.home;
+    await pumpPhone(tester, const TaxiDriverHomeScreen(), size: const Size(430, 1600));
+    await settle(tester);
+    expect(find.text('Local day rate'), findsOneWidget);
+    expect(find.textContaining('2,500'), findsOneWidget);
+    await finish(tester);
+  });
+
+  testWidgets('B1 home has no plan card', (tester) async {
+    final h = TaxiHarness.setUp(homeJson(featured: true, taxi: {...nums, 'newRequests': 3}, routesMeter: {'key': 'Routes', 'used': 5, 'limit': 5}, planCard: plusCard));
+    TaxiHarnessProbe.home = h.home;
+    TaxiDriverDeps.planCard = () => const TaxiHomePlanCard();
+    addTearDown(TaxiDriverDeps.debugReset);
+    await pumpPhone(tester, const TaxiDriverHomeScreen(), size: const Size(430, 1600));
+    await settle(tester);
+    expect(find.byType(TaxiHomePlanCard), findsNothing);
+    expect(find.text('Manage in Google Play'), findsNothing);
+    await finish(tester);
+  });
 
   testWidgets('render o_tx_43 B', (tester) async {
     final h = TaxiHarness.setUp(homeJson(taxi: nums, attention: eight, attentionCount: 7), denied: true);

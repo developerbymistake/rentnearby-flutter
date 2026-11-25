@@ -8,18 +8,19 @@ import '../../../utils/app_toast.dart';
 import '../../../utils/money_format.dart';
 import '../../../widgets/tab_header.dart';
 import '../../owner_core/calendar/models/calendar_models.dart';
+import '../../owner_core/data/owner_args.dart';
+import '../../owner_core/data/owner_result.dart';
 import '../../owner_core/look/owner_look.dart';
-import '../../owner_core/plan/gate_keys.dart';
 import '../../owner_core/plan/plan_gate.dart';
 import '../../owner_core/plan/plan_keys.dart';
 import '../../owner_core/sheets/owner_states.dart';
 import '../../stay/models/stay_owner_model.dart';
-import '../home/stay_owner_home_screen.dart';
+import '../../stay/setup/stay_repository.dart';
+import '../plan/stay_plan_strings.dart';
 import '../strings/stay_format.dart';
 import '../strings/stay_gate_strings.dart';
 import '../strings/stay_hub_strings.dart';
 import '../widgets/stay_widgets.dart';
-import 'stay_edit_price_sheet.dart';
 import 'stay_hub_controller.dart';
 import 'stay_preview_card.dart';
 
@@ -37,7 +38,6 @@ class _StayHubScreenState extends State<StayHubScreen> {
   late final StayHubController _c;
   bool _owns = false;
   final _scroll = ScrollController();
-  final _roomsKey = GlobalKey();
 
   @override
   void initState() {
@@ -52,10 +52,7 @@ class _StayHubScreenState extends State<StayHubScreen> {
     ever<String?>(_c.scrollTarget, (t) {
       if (t == null) return;
       _c.scrollTarget.value = null;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        final ctx = _roomsKey.currentContext;
-        if (t == 'rooms' && ctx != null && ctx.mounted) Scrollable.ensureVisible(ctx, duration: const Duration(milliseconds: 250));
-      });
+      if (t == 'rooms') WidgetsBinding.instance.addPostFrameCallback((_) => _openRooms());
     });
   }
 
@@ -69,6 +66,14 @@ class _StayHubScreenState extends State<StayHubScreen> {
   Future<void> _push(String route, {Object? args}) async {
     await Get.toNamed(route, arguments: args);
     if (mounted) _c.reload();
+  }
+
+  void _openRooms() {
+    if (mounted) _push(AppRoutes.stayRooms, args: OwnerArgs.manage);
+  }
+
+  void _rooms(StayOwnerModel s) {
+    if (!_locked(s)) _openRooms();
   }
 
   bool _locked(StayOwnerModel s) {
@@ -133,10 +138,7 @@ class _StayHubScreenState extends State<StayHubScreen> {
   }
 
   Widget _content(BuildContext context, StayOwnerModel s) {
-    final roomLimit = s.meter('RoomTypes')?.limit ?? PlanGate.limit(PlanKey.roomTypes);
     final photoLimit = s.meter('Photos')?.limit ?? PlanGate.limit(PlanKey.photos);
-    final roomsLocked = PlanGate.canUpgrade && s.rooms.length >= roomLimit;
-    final photosLocked = PlanGate.canUpgrade && s.photos.length >= photoLimit;
     final children = <Widget>[];
 
     final strip = _strip(s);
@@ -154,57 +156,25 @@ class _StayHubScreenState extends State<StayHubScreen> {
     children.add(StayPreviewCard(
       stay: s,
       onView: s.isApproved ? () => Get.toNamed(AppRoutes.stayDetail, arguments: {'id': s.id}) : null,
-      onShare: s.isApproved && s.slug != null ? () => StayHomeActions.share(context) : null,
     ));
 
-    children.add(KeyedSubtree(key: _roomsKey, child: StaySectionTitle(title: StayHubStrings.roomsAndPrices, meter: StayHubStrings.meter(s.rooms.length, roomLimit))));
-    final roomRows = <StayRowData>[
-      for (final r in s.rooms)
-        StayRowData(
-          art: ListingArt.bed,
-          title: r.label,
-          sub: StayHubStrings.roomSub(Money.exact(r.pricePerNight), r.maxGuests),
-          onTap: () => _editPrice(context, s, r),
-          trailing: StayPill(label: StayHubStrings.editPrice, kind: StayPillKind.white, onTap: () => _editPrice(context, s, r)),
-        ),
-      for (final r in s.hiddenRooms)
-        StayRowData(
-          art: ListingArt.locked,
-          tint: StayLook.artTintAmber,
-          locked: true,
-          title: r.label,
-          sub: StayHubStrings.hiddenOnFree,
-          onTap: s.isPendingReview ? null : _chooseVisible,
-        ),
-    ];
-    if (!s.isPendingReview) {
-      if (roomsLocked) {
-        roomRows.add(StayRowData(
-          art: ListingArt.locked,
-          tint: StayLook.artTintAmber,
-          locked: true,
-          title: StayHubStrings.addRoomType,
-          sub: StayHubStrings.plusCanList(PlanKeys.plusSeed[PlanKey.roomTypes] ?? roomLimit),
-          onTap: () => PlanGate.showLimit(context, StayGateStrings.roomGate()),
-          trailing: KeyedSubtree(key: GateKeys.softRow, child: StayPill(label: StayHubStrings.seePlus, kind: StayPillKind.indigo, onTap: () => PlanGate.showLimit(context, StayGateStrings.roomGate()))),
-        ));
-      } else if (s.rooms.length < roomLimit) {
-        roomRows.add(StayRowData(
-          art: ListingArt.bed,
-          title: StayHubStrings.addRoomType,
-          sub: s.rooms.length > 1 ? StayHubStrings.usedOf(s.rooms.length, roomLimit) : null,
-          onTap: () => _push(AppRoutes.stayRooms),
-          trailing: StayPill(label: StayHubStrings.add, kind: StayPillKind.outline, onTap: () => _push(AppRoutes.stayRooms)),
-        ));
-      }
-    }
-    children.add(StayRowsCard(rows: roomRows, margin: DS.insets(l: 18, t: 12, r: 18)));
+    final min = s.minPricePerNight;
+    children.add(StaySectionTitle(title: StayHubStrings.roomsAndPrices, meter: StayHubStrings.roomsMeter(s.rooms.length)));
+    children.add(StayRowsCard(margin: DS.insets(l: 18, t: 12, r: 18), rows: [
+      StayRowData(
+        art: ListingArt.bed,
+        title: StayHubStrings.yourRooms,
+        sub: StayHubStrings.roomsLine(s.rooms.map((r) => r.label).join(', '), min == null ? null : Money.exact(min)),
+        trailing: StayPill(label: StayHubStrings.open, kind: StayPillKind.outline, onTap: () => _rooms(s)),
+        onTap: () => _rooms(s),
+      ),
+    ]));
 
     children.add(StaySectionTitle(title: StayHubStrings.specialPrices, meter: _specialMeter(s)));
     children.add(StayRowsCard(rows: [_specialRow(s)], margin: DS.insets(l: 18, t: 12, r: 18)));
 
     children.add(StaySectionTitle(title: StayHubStrings.photos, meter: StayHubStrings.meter(s.photos.length, photoLimit)));
-    children.add(_photosCard(context, s, photoLimit, photosLocked));
+    children.add(_photosCard(context, s, photoLimit));
 
     children.add(StaySectionTitle(title: StayHubStrings.calendar, meter: StayHubStrings.bookingsThisMonth(s.calendarRow?.thisMonthCount ?? 0)));
     children.add(StayRowsCard(rows: [_calendarRow(s)], margin: DS.insets(l: 18, t: 12, r: 18)));
@@ -234,10 +204,7 @@ class _StayHubScreenState extends State<StayHubScreen> {
       ),
     ]));
 
-    children.add(Padding(
-      padding: DS.insets(l: 18, t: 20, r: 18),
-      child: Obx(() => StayPill(label: StayHubStrings.deleteStay, kind: StayPillKind.danger, expand: true, busy: _c.deleting.value, onTap: () => _confirmDelete(s))),
-    ));
+    children.add(Obx(() => StayDeleteRow(title: StayHubStrings.deleteStay, sub: StayHubStrings.removeListing, busy: _c.deleting.value, onDelete: () => _confirmDelete(s))));
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: children);
   }
 
@@ -266,10 +233,9 @@ class _StayHubScreenState extends State<StayHubScreen> {
     );
   }
 
-  String _specialMeter(StayOwnerModel s) {
-    final row = s.specialPricesRow;
-    final limit = row?.limit ?? PlanGate.limit(PlanKey.specialPrices);
-    return StayHubStrings.meter(row?.count ?? 0, limit);
+  String? _specialMeter(StayOwnerModel s) {
+    final n = s.specialPricesRow?.count ?? 0;
+    return n > 0 ? StayHubStrings.specialMeter(n) : null;
   }
 
   StayRowData _specialRow(StayOwnerModel s) {
@@ -282,23 +248,13 @@ class _StayHubScreenState extends State<StayHubScreen> {
     }
     final from = first.dateFrom;
     final range = from == null ? '' : StayFormat.rangeTo(from, first.dateTo);
-    if (row.count == 1) {
-      final p = first.percent;
-      final dir = p == null || first.direction == PriceDirection.unknown ? null : (first.direction == PriceDirection.lower ? StayHubStrings.percentLower(p) : StayHubStrings.percentHigher(p));
-      return StayRowData(
-        art: ListingArt.diyaLamp,
-        tint: StayLook.artTintAmber,
-        title: first.label,
-        sub: [range, ?dir].where((e) => e.isNotEmpty).join(' · '),
-        trailing: open,
-        onTap: tap,
-      );
-    }
+    final p = first.percent;
+    final dir = p == null || first.direction == PriceDirection.unknown ? null : (first.direction == PriceDirection.lower ? StayHubStrings.percentLower(p) : StayHubStrings.percentHigher(p));
     return StayRowData(
       art: ListingArt.diyaLamp,
       tint: StayLook.artTintAmber,
-      title: StayHubStrings.specialCount(row.count),
-      sub: StayHubStrings.specialNext(first.label, range),
+      title: StayHubStrings.yourSpecialPrices,
+      sub: [first.label, dir ?? range].where((e) => e.isNotEmpty).join(' · '),
       trailing: open,
       onTap: tap,
     );
@@ -324,17 +280,15 @@ class _StayHubScreenState extends State<StayHubScreen> {
     );
   }
 
-  Widget _photosCard(BuildContext context, StayOwnerModel s, int limit, bool locked) {
+  Widget _photosCard(BuildContext context, StayOwnerModel s, int limit) {
+    final full = s.photos.length >= limit;
     final tiles = <Widget>[
       for (final p in s.photos) _PhotoTile(url: p.url),
-      for (final p in s.hiddenPhotos) _PhotoTile(url: p.url, hidden: true, onTap: s.isPendingReview ? null : _chooseVisible),
+      for (final p in s.hiddenPhotos) _PhotoTile(url: p.url, hidden: true, onTap: s.isPendingReview ? null : () => _confirmDeleteHidden(p)),
     ];
+    final capped = full && !PlanGate.addEnabled(full);
     if (!s.isPendingReview) {
-      if (locked) {
-        tiles.add(_LockTile(onTap: () => PlanGate.showLimit(context, StayGateStrings.photoGate())));
-      } else if (s.photos.length < limit) {
-        tiles.add(_AddTile(onTap: () => _managePhotos(s)));
-      }
+      tiles.add(_AddTile(onTap: capped ? null : () => PlanGate.addTap(context, full: full, gate: StayGateStrings.photoGate, onAdd: () => _managePhotos(s))));
     }
     return Padding(
       padding: DS.insets(l: 18, t: 12, r: 18),
@@ -360,6 +314,21 @@ class _StayHubScreenState extends State<StayHubScreen> {
                 itemCount: tiles.length,
                 itemBuilder: (_, i) => tiles[i],
               ),
+              if (s.hiddenPhotos.isNotEmpty && !s.isPendingReview) ...[
+                Padding(
+                  padding: EdgeInsets.only(top: DS.gv(8)),
+                  child: Text(StayGateStrings.photoInactive(PlanGate.limit(PlanKey.photos)), style: Ink3D.text(11.5, FontWeight.w500, Ink3D.grey, height: 1.35, letterSpacing: 0)),
+                ),
+                Padding(
+                  padding: EdgeInsets.only(top: DS.gv(6)),
+                  child: Align(alignment: Alignment.centerLeft, child: TextLink(label: StayPlanStrings.chooseWhatStays, tone: KitTone.stayOwner, onTap: _chooseVisible)),
+                ),
+              ],
+              if (capped && !s.isPendingReview)
+                Padding(
+                  padding: EdgeInsets.only(top: DS.gv(8)),
+                  child: Text(StayHubStrings.photosLimitReached(s.photos.length, limit), textAlign: TextAlign.center, style: Ink3D.text(11.5, FontWeight.w500, Ink3D.grey, letterSpacing: 0)),
+                ),
             ],
           ),
         ),
@@ -368,6 +337,37 @@ class _StayHubScreenState extends State<StayHubScreen> {
   }
 
   void _chooseVisible() => _push(AppRoutes.stayPlanVisible);
+
+  Future<void> _confirmDeleteHidden(StayPhotoModel p) async {
+    final ok = await Dialog3D.show<bool>(
+      context,
+      builder: (c) => Dialog3D(
+        tone: ListingTone.forest,
+        art: ListingArt.warning,
+        title: StayHubStrings.deletePhotoTitle,
+        body: StayGateStrings.photoInactive(PlanGate.limit(PlanKey.photos)),
+        familyCorner: true,
+        tight: true,
+        titleSize: 18,
+        actions: [
+          StayPill(label: StayHubStrings.delete, kind: StayPillKind.danger, expand: true, onTap: () => Navigator.of(c).pop(true)),
+          Gap.v(8),
+          StayPill(label: StayHubStrings.keep, kind: StayPillKind.white, expand: true, onTap: () => Navigator.of(c).pop(false)),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    final res = await const StayRepository().deleteHiddenPhoto(p.id);
+    if (!mounted) return;
+    switch (res) {
+      case OwnerOk<void>():
+        await _c.reload();
+      case final OwnerRefused<void> r:
+        if (!PlanGate.handleInactive(r)) AppToast.warning(r.message ?? StayHubStrings.deletePhotoFailed);
+      default:
+        AppToast.error(StayHubStrings.deletePhotoFailed);
+    }
+  }
 
   void _managePhotos(StayOwnerModel s) {
     if (_locked(s)) return;
@@ -382,11 +382,6 @@ class _StayHubScreenState extends State<StayHubScreen> {
   void _editRules(StayOwnerModel s) {
     if (_locked(s)) return;
     _push(AppRoutes.stayRules);
-  }
-
-  Future<void> _editPrice(BuildContext context, StayOwnerModel s, StayRoomModel r) async {
-    if (_locked(s)) return;
-    await StayEditPriceSheet.show(context, _c, r);
   }
 
   Future<void> _confirmDelete(StayOwnerModel s) async {
@@ -467,42 +462,25 @@ class _PhotoTile extends StatelessWidget {
   }
 }
 
-class _LockTile extends StatelessWidget {
-  const _LockTile({required this.onTap});
-
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) => Semantics(
-        button: true,
-        label: '${StayGateStrings.addPhoto}, needs Plus',
-        excludeSemantics: true,
-        child: InkWell(
-          key: GateKeys.softRow,
-          onTap: onTap,
-          child: DecoratedBox(
-            decoration: BoxDecoration(color: StayLook.amberSoft, borderRadius: DS.circular(14), border: Border.all(color: OwnerLook.stay.lockLine, width: DS.s(2))),
-            child: Center(child: Art3D(asset: ListingArt.locked, size: 26)),
-          ),
-        ),
-      );
-}
-
 class _AddTile extends StatelessWidget {
   const _AddTile({required this.onTap});
 
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) => Semantics(
         button: true,
+        enabled: onTap != null,
         label: StayHubStrings.addTile,
         excludeSemantics: true,
-        child: InkWell(
-          onTap: onTap,
-          child: DecoratedBox(
-            decoration: BoxDecoration(color: StayLook.amberSoft, borderRadius: DS.circular(14), border: Border.all(color: OwnerLook.stay.lockLine, width: DS.s(2))),
-            child: Center(child: Text('+ ${StayHubStrings.addTile}', style: Ink3D.text(11, FontWeight.w700, StayLook.amberText, letterSpacing: 0))),
+        child: Opacity(
+          opacity: onTap == null ? Alpha.v40 : Alpha.full,
+          child: InkWell(
+            onTap: onTap,
+            child: DecoratedBox(
+              decoration: BoxDecoration(color: StayLook.amberSoft, borderRadius: DS.circular(14), border: Border.all(color: OwnerLook.stay.lockLine, width: DS.s(2))),
+              child: Center(child: Text('+ ${StayHubStrings.addTile}', style: Ink3D.text(11, FontWeight.w700, StayLook.amberText, letterSpacing: 0))),
+            ),
           ),
         ),
       );

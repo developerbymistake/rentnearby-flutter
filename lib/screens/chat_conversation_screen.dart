@@ -1,38 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:uuid/uuid.dart';
 import 'package:bakhli/design/design.dart';
 import 'package:bakhli/design/extra/chat_kit.dart';
 import 'package:bakhli/design/extra/ext_chat.dart';
 import '../config/app_routes.dart';
 import '../controllers/chat_controller.dart';
-import '../features/stay/enquiries/stay_enquiry_actions.dart';
-import '../features/stay/enquiries/trip_owner_action_bar.dart';
 import '../features/trip/controllers/trip_enquiry_controller.dart';
-import '../features/trip/controllers/trip_plan_controller.dart';
 import '../features/trip/models/trip_enquiry_model.dart';
-import '../features/trip/trip_navigation.dart';
 import '../features/trip/trip_strings.dart';
 import '../features/trip/utils/trip_report.dart';
-import '../features/trip/widgets/trip_accept_sheet.dart';
-import '../features/trip/widgets/trip_cancel_sheet.dart';
-import '../features/trip/widgets/trip_change_request_sheet.dart';
-import '../features/trip/widgets/trip_counter_sheet.dart';
 import '../features/trip/widgets/trip_enquiry_strip.dart';
-import '../features/trip/widgets/trip_withdraw_sheet.dart';
-import '../models/browse_item.dart';
 import '../models/conversation_model.dart';
 import '../models/message_model.dart';
-import '../models/question_template_model.dart';
 import '../services/chat_hub_service.dart';
 import '../services/notification_service.dart';
 import '../utils/app_toast.dart';
 import '../widgets/chat_message_bubble.dart';
-import '../widgets/chat_next_slot_bubble.dart';
-import '../widgets/chat_plus_menu_sheet.dart';
-import '../widgets/chat_schedule_picker_sheet.dart';
-import '../widgets/stay_contact_share_card.dart';
 import '../widgets/trip_chat_cards.dart';
 import '../widgets/trip_offer_cards.dart';
 import '../widgets/trip_report_traveller_sheet.dart';
@@ -51,7 +35,6 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> with Wi
   ChatKindStyle get _kind => ChatKindStyle.of(_listingType);
   Color get _accent => _kind.dark;
   ListingTone get _tone => ChatLook3D.toneFor(_listingType);
-  late final String? _stayTypeId;
   late final String _otherPartyId;
   late final String _otherPartyName;
   late final String? _otherPartyPhotoUrl;
@@ -80,26 +63,6 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> with Wi
   // established about whether older history exists beyond it.
   final _loadingOlder = false.obs;
   final _hasMoreOlder = true.obs;
-  // Dims the inline "next slot" bubble and disables its tap while a plus-menu send (question/
-  // contact-request/schedule-proposal) is in flight — this one IS single-flight, since _send()
-  // is the only caller and it's always awaited sequentially. Responding to an EXISTING message
-  // (answer/approve/decline/accept/counter) is a separate action space with its own per-message
-  // guard below (_pendingActionMessageIds) — those can legitimately overlap with a plus-menu
-  // send or with each other on different messages, so one shared flag isn't enough for them.
-  final _sending = false.obs;
-  // Guards _openPlusMenu's async gap (the retry fetch below) against a rapid double-tap
-  // opening ChatPlusMenuSheet twice — ChatPlusMenuSheet.show has no built-in re-entrancy
-  // guard of its own (plain showModalBottomSheet), and unlike _sending this isn't tied to
-  // a send actually being in flight, so it needs its own flag.
-  bool _openingPlusMenu = false;
-  // Keyed by the ORIGINAL message being responded to (the question/contact-request/schedule-
-  // proposal id), not the not-yet-created response — this is exactly the id _buildBubble()
-  // already keys its per-message callback wiring off. A message id present here means an
-  // answer/response to it is currently in flight; every action method below adds its target's
-  // id on entry and removes it in a finally, so a double-tap on the same message's button is a
-  // no-op instead of firing a second request or (for quick_reply answers specifically) losing
-  // the "paired under its question" render slot to an orphan duplicate.
-  final _pendingActionMessageIds = <String>{}.obs;
   final _scrollCtrl = ScrollController();
   Worker? _incomingWorker;
   Worker? _readWorker;
@@ -127,7 +90,6 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> with Wi
     _conversationId = id ?? '';
     _listingType = text('listingType') ?? known?.listingType ?? '';
     _invalidArgs = id == null || _listingType.isEmpty;
-    _stayTypeId = text('stayTypeId') ?? known?.stayTypeId;
     _otherPartyId = text('otherPartyId') ?? known?.otherPartyId ?? '';
     _otherPartyName = text('otherPartyName') ?? known?.otherPartyName ?? 'User';
     _otherPartyPhotoUrl = ConversationModel.photo(text('otherPartyPhotoUrl')) ?? known?.otherPartyPhotoUrl;
@@ -157,7 +119,6 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> with Wi
     _refreshEnquiry();
     ChatHubService.to.joinConversation(_conversationId);
     _chatCtrl.markRead(_conversationId);
-    _chatCtrl.loadQuestionTemplates();
     // Runs regardless of how this screen was reached (notification tap or a plain manual
     // tap from the Chats list) — the one place that reliably fires every time this
     // conversation is actually opened, so a message already read in-app never resurfaces
@@ -168,12 +129,6 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> with Wi
       if (m == null || m.conversationId != _conversationId || !mounted) return;
       _insertIfNew(m);
       if (_affectsEnquiry(m)) _refreshEnquiry();
-      // The backend pushes this echo to the sender's own SignalR connection before the
-      // sender's own REST call returns — so for our own messages, this is usually the
-      // *first* confirmation of delivery, arriving before _send()'s finally block. Clear
-      // the ghost's disabled state here too instead of only on the slower REST path, or
-      // it stays visibly disabled for a beat after the message has already gone through.
-      if (m.isMine && _sending.value) _sending.value = false;
       if (!m.isMine) _chatCtrl.markRead(_conversationId);
     });
 
@@ -264,39 +219,8 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> with Wi
     return i == -1 ? null : _chatCtrl.conversations[i].listingId;
   }
 
-  Future<void> _openStrip(TripEnquiryModel e) async {
-    if (_isOwner) {
-      Get.toNamed(AppRoutes.stayEnquiries, arguments: {'enquiryId': e.id});
-      return;
-    }
-    await _openReplies(e);
-  }
-
-  Future<void> _openReplies(TripEnquiryModel e) async {
-    final tripId = e.tripId;
-    if (tripId == null) {
-      AppToast.info(TripStrings.closed);
-      return;
-    }
-    final plan = TripPlanController.to;
-    if (plan.trip.value?.id != tripId) await plan.open(tripId);
-    if (!mounted) return;
-    TripNavigation.openReplies(plan.dayOfDate(e.checkIn) ?? e.day ?? 1, enquiryId: e.id);
-  }
-
-  Future<void> _onStripAction(String id, TripEnquiryModel e) async {
-    switch (id) {
-      case TripStripAction.withdraw:
-        if (await TripWithdrawSheet.show(context, enquiry: e)) _refreshEnquiry();
-      case TripStripAction.cancel:
-        if (await TripCancelSheet.show(context, enquiry: e, ownerSide: false)) _refreshEnquiry();
-      case TripStripAction.report:
-        await _reportHost(e.listingId, enquiryId: e.id);
-      case TripStripAction.counter:
-        if (await TripCounterSheet.show(context, enquiry: e)) _refreshEnquiry();
-      case TripStripAction.changeRequest:
-        if (await TripChangeRequestSheet.show(context, enquiry: e)) _refreshEnquiry();
-    }
+  void _openStrip(TripEnquiryModel e) {
+    Get.toNamed(_isOwner ? AppRoutes.stayEnquiries : AppRoutes.myEnquiries, arguments: {'enquiryId': e.id});
   }
 
   Future<void> _reportHost(String? listingId, {String? enquiryId}) async {
@@ -311,157 +235,6 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> with Wi
     final e = _enquiry.value;
     if (e == null) return;
     await TripReportTravellerSheet.show(context, enquiry: e);
-  }
-
-  Future<TripEnquiryModel?> _freshEnquiry(String enquiryId) async {
-    final enq = await TripEnquiryController.to.refreshOne(enquiryId);
-    if (!mounted) return null;
-    if (enq == null) {
-      AppToast.warning(TripStrings.noNetwork);
-      return null;
-    }
-    if (enq.conversationId == _conversationId) _enquiry.value = enq;
-    return enq;
-  }
-
-  void _changed() {
-    AppToast.warning(TripStrings.justChanged);
-    _refreshEnquiry();
-  }
-
-  Future<void> _guardAction(String key, Future<void> Function() run) async {
-    if (!_pendingActionMessageIds.add(key)) return;
-    try {
-      await run();
-    } finally {
-      _pendingActionMessageIds.remove(key);
-    }
-  }
-
-  Future<void> _hostAcceptPrice(String messageId, String enquiryId, String offerId) =>
-      _guardAction(messageId, () async {
-        final enq = await _freshEnquiry(enquiryId);
-        if (enq == null || !mounted) return;
-        final counter = enq.pendingCounter;
-        if (counter == null || counter.id != offerId) {
-          _changed();
-          return;
-        }
-        if (await StayEnquiryActions.sendOffer(context, enq, counter: counter)) _refreshEnquiry();
-      });
-
-  Future<void> _hostDifferentOffer(String messageId, String enquiryId, String offerId) =>
-      _guardAction(messageId, () async {
-        final enq = await _freshEnquiry(enquiryId);
-        if (enq == null || !mounted) return;
-        final change = enq.pendingChange;
-        if (change != null && change.id == offerId) {
-          if (await StayEnquiryActions.revisedOffer(context, enq, changeRequest: change)) {
-            _refreshEnquiry();
-          }
-          return;
-        }
-        final counter = enq.pendingCounter;
-        if (counter == null || counter.id != offerId || !enq.isUnconfirmed) {
-          _changed();
-          return;
-        }
-        if (await StayEnquiryActions.sendOffer(context, enq)) _refreshEnquiry();
-      });
-
-  Future<void> _hostAcceptChange(String messageId, String enquiryId, String offerId) =>
-      _guardAction(messageId, () async {
-        final enq = await _freshEnquiry(enquiryId);
-        if (enq == null || !mounted) return;
-        final change = enq.pendingChange;
-        if (change == null || change.id != offerId) {
-          _changed();
-          return;
-        }
-        if (await StayEnquiryActions.acceptChange(context, enq, offerId)) _refreshEnquiry();
-      });
-
-  Future<void> _acceptNewPrice(String messageId, String enquiryId, String offerId) =>
-      _guardAction(messageId, () async {
-        final enq = await _freshEnquiry(enquiryId);
-        if (enq == null || !mounted) return;
-        final revised = enq.pendingRevised;
-        if (revised == null || revised.id != offerId) {
-          _changed();
-          return;
-        }
-        if (await TripAcceptSheet.show(context, enquiry: enq, offer: revised)) _refreshEnquiry();
-      });
-
-  Future<void> _keepPrice(String messageId, String enquiryId, String offerId) =>
-      _guardAction(messageId, () async {
-        final cached = _enquiry.value;
-        final enq = cached != null && cached.id == enquiryId ? cached : await _freshEnquiry(enquiryId);
-        if (enq == null || !mounted) return;
-        final money = BrowseItem.inr(enq.agreedTotalLocked ?? 0);
-        final ok = await Dialog3D.show<bool>(
-          context,
-          builder: (ctx) => Dialog3D(
-            tone: _tone,
-            art: ListingArt.moneyBag,
-            title: TripStrings.keepPriceQ(money),
-            body: TripStrings.keepPriceBody,
-            secondaryLabel: TripStrings.cancelAction,
-            onSecondary: () => Navigator.pop(ctx, false),
-            primaryLabel: TripStrings.keepPrice(money),
-            onPrimary: () => Navigator.pop(ctx, true),
-          ),
-        );
-        if (ok != true || !mounted) return;
-        if (await TripEnquiryController.to.keepPrice(enquiryId, offerId)) _refreshEnquiry();
-      });
-
-  Future<void> _cancelStay(String messageId, String enquiryId) => _guardAction(messageId, () async {
-    final cached = _enquiry.value;
-    final enq = cached != null && cached.id == enquiryId ? cached : await _freshEnquiry(enquiryId);
-    if (enq == null || !mounted) return;
-    if (await TripCancelSheet.show(context, enquiry: enq, ownerSide: false)) _refreshEnquiry();
-  });
-
-  Future<void> _acceptOffer(String messageId, String enquiryId, String offerId) async {
-    if (!_pendingActionMessageIds.add(messageId)) return;
-    try {
-      final enq = await TripEnquiryController.to.refreshOne(enquiryId);
-      if (!mounted) return;
-      final offer = enq?.openOffer;
-      if (enq == null || offer == null || offer.id != offerId) {
-        AppToast.warning(enq == null ? TripStrings.noNetwork : TripStrings.justChanged);
-        _refreshEnquiry();
-        return;
-      }
-      if (await TripAcceptSheet.show(context, enquiry: enq, offer: offer)) _refreshEnquiry();
-    } finally {
-      _pendingActionMessageIds.remove(messageId);
-    }
-  }
-
-  Future<void> _declineOffer(String messageId, String enquiryId, String offerId) async {
-    if (!_pendingActionMessageIds.add(messageId)) return;
-    try {
-      final ok = await Dialog3D.show<bool>(
-        context,
-        builder: (ctx) => Dialog3D(
-          tone: _tone,
-          art: ListingArt.speechBalloon,
-          title: TripStrings.declineQuestion,
-          body: TripStrings.declineNote,
-          secondaryLabel: TripStrings.keep,
-          onSecondary: () => Navigator.pop(ctx, false),
-          primaryLabel: TripStrings.decline,
-          primaryDanger: true,
-          onPrimary: () => Navigator.pop(ctx, true),
-        ),
-      );
-      if (ok != true || !mounted) return;
-      if (await TripEnquiryController.to.decline(enquiryId, offerId)) _refreshEnquiry();
-    } finally {
-      _pendingActionMessageIds.remove(messageId);
-    }
   }
 
   Future<void> _catchUpAfterReconnect() async {
@@ -533,6 +306,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> with Wi
       final older = result.items.reversed.where((m) => !existingIds.contains(m.id)).toList();
       if (older.isEmpty) return;
       _messages.value = [...older, ..._messages];
+      _loadTemplatesIfNeeded();
       deferred = true;
       // _loadingOlder must stay true for the entire frame in which the list visually grows —
       // clearing it any earlier (e.g. synchronously right after just SCHEDULING this callback,
@@ -602,6 +376,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> with Wi
     final fetchedIds = fetched.map((m) => m.id).toSet();
     final preserved = _messages.where((m) => !fetchedIds.contains(m.id));
     _messages.value = [...fetched, ...preserved]..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+    _loadTemplatesIfNeeded();
     if (result.status != null) _status.value = result.status!;
     if (isFirstLoad) {
       // Only the very first load establishes whether older history exists beyond this page —
@@ -627,10 +402,16 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> with Wi
   void _insertIfNew(MessageModel msg) {
     if (_messages.any((x) => x.id == msg.id)) return;
     _messages.add(msg);
+    _loadTemplatesIfNeeded();
     // Always follow our own messages to the bottom. For messages from the other party,
     // only follow if we're already near the bottom — otherwise someone scrolled up
     // reading history would get yanked back down by an unrelated incoming message.
     if (msg.isMine || _isNearBottom()) _scrollToBottom();
+  }
+
+  // Old quick_reply bubbles need the catalog to print their question text.
+  void _loadTemplatesIfNeeded() {
+    if (_messages.any((m) => m.type == 'quick_reply')) _chatCtrl.loadQuestionTemplates();
   }
 
   bool _isNearBottom() {
@@ -663,147 +444,6 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> with Wi
         _scrollCtrl.jumpTo(target);
       }
     });
-  }
-
-  void _openPlusMenu() async {
-    // A rapid double-tap could otherwise both reach the await below before either resolves,
-    // stacking two ChatPlusMenuSheets — the old synchronous version made this structurally
-    // impossible, so this guard is what restores that guarantee now that there's an async gap.
-    if (_openingPlusMenu) return;
-    _openingPlusMenu = true;
-    try {
-      // Retries the catalog fetch if the initState() load failed (e.g. network contention
-      // with the several other calls firing at screen-open) — loadQuestionTemplates()'s own
-      // _templatesLoaded guard makes this a cheap no-op (no network call) once the catalog
-      // has already loaded successfully, so this is safe to call on every "+" tap.
-      await _chatCtrl.loadQuestionTemplates();
-      if (!mounted) return;
-      // Catalog questions ("Is it available?" etc.) are things a renter asks an owner —
-      // an owner has no reason to ask that about their own listing, so their "+" menu
-      // only offers Contact + Visit.
-      final questions = _isOwner
-          ? const <QuestionTemplateModel>[]
-          : _chatCtrl.questionTemplates
-                .where((t) => t.appliesTo(_listingType, targetStayTypeId: _stayTypeId))
-                .toList();
-      ChatPlusMenuSheet.show(
-        context,
-        questions: questions,
-        onAskQuestion: (q) => _send('quick_reply', {'key': q.key, 'text': q.questionText}),
-        onRequestContact: () => _send('contact_request', {}),
-        onScheduleVisit: _pickAndProposeSchedule,
-        onShareDetails: _canShareDetails ? _shareDetails : null,
-        accent: _accent,
-        tone: _tone,
-      );
-    } finally {
-      _openingPlusMenu = false;
-    }
-  }
-
-  Future<void> _send(String type, Map<String, dynamic> payload) async {
-    // The "single-flight" claim on _sending's own field comment only held because every
-    // CALLER happened to gate its own trigger (ChatNextSlotBubble's sending-disabled tap, the
-    // plus-menu sheet dismissing before firing) — a fast double-tap on the same still-open
-    // sheet item before it's actually removed from the hit-test tree could invoke this twice
-    // concurrently, each minting its own clientMessageId, so the server-side idempotency key
-    // couldn't collapse them into one message. This guard makes the method actually enforce
-    // the invariant instead of trusting every caller to.
-    if (_sending.value) return;
-    _sending.value = true;
-    try {
-      // One id per compose-attempt, generated here (not inside ChatController) so a caller
-      // that retries the exact same _send() invocation reuses it — this is the "one attempt"
-      // boundary the server-side idempotency key is meant to dedup against.
-      final clientMessageId = const Uuid().v4();
-      final msg = await _chatCtrl.sendMessage(
-        _conversationId,
-        type,
-        payload,
-        clientMessageId: clientMessageId,
-      );
-      if (msg != null && mounted) _insertIfNew(msg);
-    } finally {
-      if (mounted) _sending.value = false;
-    }
-  }
-
-  bool get _canShareDetails => _isOwner && _isStay;
-
-  Future<void> _shareDetails() async {
-    if (!await StayEnquiryActions.confirmShare(context) || !mounted) return;
-    await _send(StayContactShareCard.type, const {});
-  }
-
-  Future<void> _pickAndProposeSchedule() async {
-    final picked = await ChatSchedulePickerSheet.show(context, tone: _tone);
-    if (picked == null || picked.isEmpty) return;
-    await _send('schedule_proposal', {
-      'proposedAts': picked.map((d) => d.toUtc().toIso8601String()).toList(),
-      'status': 'pending',
-    });
-  }
-
-  Future<void> _answerQuestion(String questionMessageId, String answerKey, String answerText) async {
-    if (!_pendingActionMessageIds.add(questionMessageId)) return;
-    try {
-      final msg = await _chatCtrl.sendMessage(_conversationId, 'quick_reply', {
-        'key': answerKey,
-        'text': answerText,
-      }, respondsToMessageId: questionMessageId);
-      if (msg != null && mounted) _insertIfNew(msg);
-    } finally {
-      _pendingActionMessageIds.remove(questionMessageId);
-    }
-  }
-
-  Future<void> _respondContact(String messageId, bool approve) async {
-    if (!_pendingActionMessageIds.add(messageId)) return;
-    try {
-      final msg = await _chatCtrl.respondContact(messageId, approve);
-      if (msg != null && mounted) _insertIfNew(msg);
-    } finally {
-      _pendingActionMessageIds.remove(messageId);
-    }
-  }
-
-  Future<void> _acceptScheduleSlot(String messageId, DateTime chosen) async {
-    if (!_pendingActionMessageIds.add(messageId)) return;
-    try {
-      final msg = await _chatCtrl.respondSchedule(messageId, 'accept', acceptedAt: chosen);
-      if (msg != null && mounted) _insertIfNew(msg);
-    } finally {
-      _pendingActionMessageIds.remove(messageId);
-    }
-  }
-
-  Future<void> _declineSchedule(String messageId) async {
-    if (!_pendingActionMessageIds.add(messageId)) return;
-    try {
-      final msg = await _chatCtrl.respondSchedule(messageId, 'decline');
-      if (msg != null && mounted) _insertIfNew(msg);
-    } finally {
-      _pendingActionMessageIds.remove(messageId);
-    }
-  }
-
-  Future<void> _counterSchedule(String messageId) async {
-    // Guarded from entry (before the picker sheet even opens), not just around the send —
-    // otherwise a double-tap on "Counter" could stack two schedule-picker sheets the same way
-    // a double-tapped "+" used to stack two ChatPlusMenuSheets.
-    if (!_pendingActionMessageIds.add(messageId)) return;
-    try {
-      final picked = await ChatSchedulePickerSheet.show(
-        context,
-        title: 'Propose a different time',
-        tone: _tone,
-      );
-      if (picked == null || picked.isEmpty) return;
-      final msg = await _chatCtrl.respondSchedule(messageId, 'counter', proposedAts: picked);
-      if (msg != null && mounted) _insertIfNew(msg);
-    } finally {
-      _pendingActionMessageIds.remove(messageId);
-    }
   }
 
   Future<void> _call(String phone) async {
@@ -879,8 +519,6 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> with Wi
       enquiry: e,
       ownerSide: _isOwner,
       onTap: () => _openStrip(e),
-      actions: _isOwner ? const [] : TripStripAction.forTraveller(e),
-      onAction: _isOwner ? null : (id) => _onStripAction(id, e),
     );
   });
 
@@ -933,39 +571,10 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> with Wi
         continue; // rendered attached to its question below
       }
       final answer = m.type == 'quick_reply' ? answerByQuestionId[m.id] : null;
-      items.add(_animatedBubble(m.id, _buildBubble(m, answered: answer != null)));
+      items.add(_animatedBubble(m.id, _buildBubble(m)));
       if (answer != null) {
         items.add(_animatedBubble(answer.id, _buildBubble(answer)));
       }
-    }
-    // The "next slot" bubble — the inline replacement for the old fixed composer — goes
-    // last, chronologically after every message currently in the thread, for both roles
-    // alike. On a short/new conversation this is what makes it sit right under the last
-    // message near the TOP of the screen (matching chat-live-demo-v4.html's plain
-    // flex-column thread) instead of being glued to the bottom of the screen.
-    if (_status.value == 'Active') {
-      final enquiry = _enquiry.value;
-      if (_isOwner && enquiry != null) {
-        items.add(
-          KeyedSubtree(
-            key: const ValueKey('trip-owner-bar'),
-            child: TripOwnerActionBar(enquiry: enquiry, onChanged: _refreshEnquiry, onShare: _canShareDetails ? _shareDetails : null),
-          ),
-        );
-      }
-      items.add(
-        KeyedSubtree(
-          key: const ValueKey('ghost-slot'),
-          child: Obx(
-            () => ChatNextSlotBubble(
-              onTap: _openPlusMenu,
-              sending: _sending.value,
-              accent: _accent,
-              tone: _tone,
-            ),
-          ),
-        ),
-      );
     }
     return items;
   }
@@ -1119,107 +728,35 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> with Wi
     ],
   );
 
-  Widget _buildBubble(MessageModel m, {bool answered = false}) {
-    final isContactRequest = m.type == 'contact_request';
-    final isScheduleProposal = m.type == 'schedule_proposal';
-    // Reading _pendingActionMessageIds here (inside the top-level Obx this is always called
-    // from) makes it a reactive dependency automatically — no extra Obx wrapper needed. Every
-    // callback below is gated by this too, so a response already in flight for this exact
-    // message immediately disables its buttons (passing null, which the existing
-    // `disabled = onTap == null` pattern in _actionBtn/_ScheduleProposalCard already dims)
-    // instead of leaving them tappable for a full network round-trip.
-    final pending = _pendingActionMessageIds.contains(m.id);
-    // A blocked/inactive conversation must disable every response action, not just show a
-    // notice below the list — the backend now rejects these calls too (see RespondContact/
-    // RespondSchedule's Status check), so a stale-rendered button must never stay tappable.
-    final conversationActive = _status.value == 'Active';
-    // ChatMessageBubble has no case for these card types, so they are built here.
+  Widget _buildBubble(MessageModel m) {
     if (TripOfferCards.handles(m.type)) {
-      return TripChatCards.build(
-        context,
-        m,
-        isOwner: _isOwner,
-        accent: _accent,
-        callbacks: _tripCallbacks(m, pending: pending, active: conversationActive),
-      );
+      return TripChatCards.build(context, m, isOwner: _isOwner, accent: _accent, callbacks: _tripCallbacks());
     }
-    final canAnswer =
-        !answered &&
-        !pending &&
-        conversationActive &&
-        m.type == 'quick_reply' &&
-        (_isOwner || !m.isMine);
-    // A schedule_proposal or contact_request that's already been answered must never
-    // show its action buttons again. The backend links every response back to the
-    // original message via respondsToMessageId (same FK column quick_reply answers
-    // already use), so its presence anywhere in the loaded thread means this request is
-    // done — checked here instead of trusting the original message's own payload, which
-    // the backend never updates in place for either type's plain approve/decline path.
-    final scheduleAlreadyResponded =
-        isScheduleProposal && _messages.any((x) => x.respondsToMessageId == m.id);
-    final contactAlreadyResponded =
-        isContactRequest && _messages.any((x) => x.respondsToMessageId == m.id);
     return ChatMessageBubble(
       message: m,
       tone: _tone,
       accent: _accent,
       gradient: _kind.gradient,
       templates: _chatCtrl.questionTemplates,
-      onAnswerQuestion: canAnswer
-          ? (answerKey, answerText) => _answerQuestion(m.id, answerKey, answerText)
-          : null,
-      // No owner/renter restriction — either side can send a contact request and whoever
-      // receives it can respond, same shape as the schedule gating below.
-      onApproveContact:
-          (isContactRequest && !m.isMine && !contactAlreadyResponded && !pending && conversationActive)
-          ? () => _respondContact(m.id, true)
-          : null,
-      onDeclineContact:
-          (isContactRequest && !m.isMine && !contactAlreadyResponded && !pending && conversationActive)
-          ? () => _respondContact(m.id, false)
-          : null,
-      onAcceptSlot:
-          isScheduleProposal && !m.isMine && !scheduleAlreadyResponded && !pending && conversationActive
-          ? (dt) => _acceptScheduleSlot(m.id, dt)
-          : null,
-      onDeclineSchedule:
-          isScheduleProposal && !m.isMine && !scheduleAlreadyResponded && !pending && conversationActive
-          ? () => _declineSchedule(m.id)
-          : null,
-      onCounterSchedule:
-          isScheduleProposal && !m.isMine && !scheduleAlreadyResponded && !pending && conversationActive
-          ? () => _counterSchedule(m.id)
-          : null,
       onCall: () {
         final phone = m.payload['phone'] as String?;
         if (phone != null) _call(phone);
       },
       isOwner: _isOwner,
-      trip: TripChatCards.handles(m.type)
-          ? _tripCallbacks(m, pending: pending, active: conversationActive)
-          : null,
+      trip: TripChatCards.handles(m.type) ? _tripCallbacks() : null,
     );
   }
 
-  TripChatCallbacks _tripCallbacks(MessageModel m, {required bool pending, required bool active}) {
-    final enabled = active && !pending;
+  TripChatCallbacks _tripCallbacks() {
+    final e = _enquiry.value;
     return TripChatCallbacks(
       listingTitle: _listingTitle,
-      onAccept: enabled && !_isOwner ? (e, o) => _acceptOffer(m.id, e, o) : null,
-      onDecline: enabled && !_isOwner ? (e, o) => _declineOffer(m.id, e, o) : null,
-      onAskNewOffer: active && !_isOwner ? _openPlusMenu : null,
-      onAcceptPrice: enabled && _isOwner ? (e, o) => _hostAcceptPrice(m.id, e, o) : null,
-      onSendDifferentOffer: enabled && _isOwner ? (e, o) => _hostDifferentOffer(m.id, e, o) : null,
-      onAcceptChange: enabled && _isOwner ? (e, o) => _hostAcceptChange(m.id, e, o) : null,
-      onAcceptNewPrice: enabled && !_isOwner ? (e, o) => _acceptNewPrice(m.id, e, o) : null,
-      onKeepPrice: enabled && !_isOwner ? (e, o) => _keepPrice(m.id, e, o) : null,
-      onCancelStay: enabled && !_isOwner ? (e) => _cancelStay(m.id, e) : null,
-      agreedTotal: _enquiry.value?.agreedTotalLocked,
-      guestName: _enquiry.value?.traveller.name ?? (_isOwner ? _otherPartyName : null),
-      guestPhone: _enquiry.value?.traveller.phone,
-      hostPhone: _enquiry.value?.owner.phone,
-      tripId: _enquiry.value?.tripId,
-      day: _enquiry.value?.day,
+      agreedTotal: e?.agreedTotalLocked,
+      guestName: e?.traveller.name ?? (_isOwner ? _otherPartyName : null),
+      guestPhone: e?.traveller.phone,
+      hostPhone: e?.owner.phone,
+      tripId: e?.tripId,
+      day: e?.day,
     );
   }
 

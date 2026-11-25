@@ -118,7 +118,6 @@ class TripStrings {
   static String askedAgo(String t) => 'Asked $t · no reply';
   static String offeredValid(String p, String t) => 'Offered $p · valid $t';
   static String closesIn(String t) => 'Closes in $t (12 h before the trip is the limit)';
-  static const String openChat = 'Open chat';
   static const String cancelBooking = 'Cancel booking';
   static const String cancelBookingQuestion = 'Cancel this booking?';
   static const String cancelHostTold = 'The host is told. Any payment and refund are between you and the host: Bakhli does not hold payment.';
@@ -271,7 +270,6 @@ class TripStrings {
   static const String cancelAction = 'Cancel';
   static const String today = 'Today';
 
-  static const String proposePrice = 'Propose a price';
   static const String listedLabel = 'Listed';
   static const String counterInfo = 'The owner can accept it, send a different offer, or say no. Nothing is confirmed until an Offer is accepted.';
   static const String sendMyPrice = 'Send my price';

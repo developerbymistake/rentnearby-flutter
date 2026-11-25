@@ -70,23 +70,23 @@ abstract final class TaxiAttentionCopy {
         final t = countdown(left);
         return TaxiRowData(
           art: ListingArt.bell,
-          title: compact ? TaxiHomeStrings.confirmIn(t) : TaxiHomeStrings.choseYou,
-          sub: compact ? null : TaxiHomeStrings.confirmInSub(t),
-          trailing: TaxiPill(label: TaxiHomeStrings.confirm, kind: TaxiPillKind.white, onTap: () => h.confirm(OwnerJson.strOrNull(args['offerId']))),
+          title: TaxiHomeStrings.choseYou,
+          sub: TaxiHomeStrings.leftToConfirm(t),
+          trailing: TaxiPill(label: TaxiHomeStrings.confirm, kind: TaxiPillKind.coral, onTap: () => h.confirm(OwnerJson.strOrNull(args['offerId']))),
         );
       case TaxiAttentionCodes.noPushToken:
         return TaxiRowData(
           art: ListingArt.calendar,
           title: compact ? TaxiHomeStrings.phoneCannot : TaxiHomeStrings.phoneCannotList,
           sub: compact ? null : TaxiHomeStrings.phoneCannotSub,
-          trailing: TaxiPill(label: TaxiHomeStrings.checkNow, kind: TaxiPillKind.white, onTap: h.checkReady),
+          trailing: TaxiPill(label: TaxiHomeStrings.checkNow, kind: TaxiPillKind.outline, onTap: h.checkReady),
         );
       case TaxiAttentionCodes.notificationsOff:
         return TaxiRowData(
           art: ListingArt.bell,
           title: TaxiHomeStrings.notifTitle,
           sub: TaxiHomeStrings.notifSub,
-          trailing: TaxiPill(label: TaxiHomeStrings.turnOn, kind: TaxiPillKind.white, onTap: h.openNotificationSettings),
+          trailing: TaxiPill(label: TaxiHomeStrings.turnOn, kind: TaxiPillKind.outline, onTap: h.openNotificationSettings),
         );
       case TaxiAttentionCodes.missedRings:
         final n = OwnerJson.integer(args['count']);
@@ -95,7 +95,7 @@ abstract final class TaxiAttentionCopy {
           art: ListingArt.alarmClock,
           title: compact ? TaxiHomeStrings.missed(n) : TaxiHomeStrings.missedList(n),
           sub: compact ? null : TaxiHomeStrings.missedSub,
-          trailing: TaxiPill(label: compact ? TaxiHomeStrings.runTestRing : TaxiHomeStrings.runTest, kind: TaxiPillKind.white, onTap: h.runTest),
+          trailing: TaxiPill(label: compact ? TaxiHomeStrings.runTestRing : TaxiHomeStrings.runTest, kind: TaxiPillKind.outline, onTap: h.runTest),
         );
       case TaxiAttentionCodes.paymentIssue:
         return TaxiRowData(
@@ -103,7 +103,7 @@ abstract final class TaxiAttentionCopy {
           tint: TaxiLook.artTintAmber,
           title: TaxiHomeStrings.paymentIssue,
           sub: TaxiHomeStrings.paymentIssueSub,
-          trailing: TaxiPill(label: TaxiHomeStrings.fix, kind: TaxiPillKind.white, onTap: h.fixPayment),
+          trailing: TaxiPill(label: TaxiHomeStrings.fix, kind: TaxiPillKind.outline, onTap: h.fixPayment),
         );
       case TaxiAttentionCodes.planHidden:
         final n = OwnerJson.integer(args['routes']);
@@ -114,7 +114,7 @@ abstract final class TaxiAttentionCopy {
           tint: TaxiLook.artTintAmber,
           title: started ? TaxiHomeStrings.plansStarted(n) : TaxiHomeStrings.plusEnded(n),
           sub: TaxiHomeStrings.nothingDeleted,
-          trailing: TaxiPill(label: TaxiHomeStrings.choose, kind: TaxiPillKind.white, onTap: h.choose),
+          trailing: TaxiPill(label: TaxiHomeStrings.choose, kind: TaxiPillKind.outline, onTap: h.choose),
         );
       case TaxiAttentionCodes.reports:
         final n = OwnerJson.integer(args['count']);
@@ -124,13 +124,13 @@ abstract final class TaxiAttentionCopy {
           tint: TaxiLook.artTintRed,
           title: TaxiHomeStrings.reports(n),
           sub: TaxiHomeStrings.reportsSub,
-          trailing: TaxiPill(label: TaxiHomeStrings.view, kind: TaxiPillKind.white, onTap: h.viewReports),
+          trailing: TaxiPill(label: TaxiHomeStrings.view, kind: TaxiPillKind.outline, onTap: h.viewReports),
         );
       case TaxiAttentionCodes.getReady:
         return TaxiRowData(
           art: ListingArt.alarmClock,
           title: TaxiHomeStrings.getReady,
-          trailing: TaxiPill(label: TaxiHomeStrings.checkNow, kind: TaxiPillKind.white, onTap: h.checkReady),
+          trailing: TaxiPill(label: TaxiHomeStrings.checkNow, kind: TaxiPillKind.outline, onTap: h.checkReady),
         );
       case TaxiAttentionCodes.addLocalRate:
         return TaxiRowData(
@@ -138,7 +138,7 @@ abstract final class TaxiAttentionCopy {
           tint: TaxiLook.artTintAmber,
           title: TaxiHomeStrings.addLocalRate,
           sub: TaxiHomeStrings.addLocalRateSub,
-          trailing: TaxiPill(label: TaxiHomeStrings.add, kind: TaxiPillKind.white, onTap: h.addLocalRate),
+          trailing: TaxiPill(label: TaxiHomeStrings.add, kind: TaxiPillKind.outline, onTap: h.addLocalRate),
         );
       case TaxiAttentionCodes.festival:
         final name = OwnerJson.strOrNull(args['name']);
@@ -149,14 +149,14 @@ abstract final class TaxiAttentionCopy {
           tint: TaxiLook.artTintAmber,
           title: TaxiHomeStrings.festivalStarts(name, TaxiHomeFormat.day(from)),
           sub: TaxiHomeStrings.festivalSub,
-          trailing: TaxiPill(label: TaxiHomeStrings.checkFares, kind: TaxiPillKind.white, onTap: h.checkFares),
+          trailing: TaxiPill(label: TaxiHomeStrings.checkFares, kind: TaxiPillKind.outline, onTap: h.checkFares),
         );
       case TaxiAttentionCodes.addRoutes:
         return TaxiRowData(
           art: ListingArt.compass,
           title: TaxiHomeStrings.getMoreCalls,
           sub: TaxiHomeStrings.addRoutes(OwnerJson.strOrNull(args['fromCityName']), OwnerJson.strOrNull(args['toCityName'])),
-          trailing: TaxiPill(label: TaxiHomeStrings.add, kind: TaxiPillKind.white, onTap: h.addRoute),
+          trailing: TaxiPill(label: TaxiHomeStrings.add, kind: TaxiPillKind.outline, onTap: h.addRoute),
         );
     }
     return null;

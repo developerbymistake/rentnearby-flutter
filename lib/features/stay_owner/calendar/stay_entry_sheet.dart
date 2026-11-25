@@ -56,13 +56,24 @@ abstract final class StayEntryRules {
 }
 
 abstract final class StayEntrySheet {
-  static Future<void> add(BuildContext context, StayCalendarController c, {DateTime? from, DateTime? to}) {
+  static Future<void> add(BuildContext context, StayCalendarController c, {DateTime? from, DateTime? to}) async {
     final f = from ?? c.today;
-    return _open(context, c, block: false, from: f, to: to ?? OwnerDates.addDays(f, 1));
+    final t = to ?? OwnerDates.addDays(f, 1);
+    if (c.needsG10(t)) {
+      await PlanGate.showLimit(context, StayGateStringsCalendar.g10(used: c.meter(StayMeterKeys.entries)?.used));
+      return;
+    }
+    if (!context.mounted) return;
+    await _open(context, c, block: false, from: f, to: t);
   }
 
-  static Future<void> edit(BuildContext context, StayCalendarController c, CalendarEntry e) =>
-      _open(context, c, block: false, entry: e, from: e.dateFrom ?? c.today, to: e.dateTo ?? OwnerDates.addDays(e.dateFrom ?? c.today, 1));
+  static Future<void> edit(BuildContext context, StayCalendarController c, CalendarEntry e) async {
+    if (e.inactiveByPlan) {
+      AppToast.info(OwnerSharedStrings.inactiveToast);
+      return;
+    }
+    await _open(context, c, block: false, entry: e, from: e.dateFrom ?? c.today, to: e.dateTo ?? OwnerDates.addDays(e.dateFrom ?? c.today, 1));
+  }
 
   static Future<void> block(BuildContext context, StayCalendarController c, {DateTime? day}) async {
     if (c.needsG11) {

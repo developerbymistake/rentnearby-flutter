@@ -7,7 +7,9 @@ import '../../../config/app_routes.dart';
 import '../../../controllers/plan_controller.dart';
 import '../../../utils/input_formatters.dart';
 import '../../../widgets/app_loading_overlay.dart';
+import '../../owner_core/plan/plan_gate.dart';
 import '../../owner_core/strings/owner_shared_strings.dart';
+import '../../stay_owner/strings/stay_gate_strings_work.dart';
 import '../../stay_owner/strings/stay_work_strings.dart';
 import '../controllers/post_job_controller.dart';
 import '../models/job_lookups_model.dart';
@@ -72,7 +74,12 @@ class _PostJobScreenState extends State<PostJobScreen> {
       return;
     }
     final ok = await _ctrl.submit();
-    if (ok) Get.back(result: true);
+    if (ok) {
+      Get.back(result: true);
+      return;
+    }
+    if (!mounted || !_ctrl.limitReached.value || !_ctrl.canUpgrade.value || !PlanGate.paymentOn) return;
+    await PlanGate.showLimit(context, StayGateStringsWork.jobGate(free: _ctrl.limitFree));
   }
 
   @override

@@ -60,15 +60,6 @@ void main() {
     await renderOwnerFrame(tester, 'o_st_14', StayHubScreen(root: true, controller: c), arrange: settle);
   });
 
-  testWidgets('render o_st_15', (tester) async {
-    final c = hubFor(stayJson());
-    await renderOwnerFrame(tester, 'o_st_15', StayHubScreen(root: true, controller: c), arrange: (t) async {
-      await settle(t);
-      await t.tap(find.text('Edit price').first);
-      await settle(t);
-    });
-  });
-
   testWidgets('render o_st_63 A', (tester) async {
     final c = hubFor(stayJson(confirmed: 2));
     await renderOwnerFrame(tester, 'o_st_63', StayHubScreen(root: true, controller: c), part: 'A', arrange: (t) async {

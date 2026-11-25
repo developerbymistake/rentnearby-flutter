@@ -1,4 +1,5 @@
-import '../trip_constants.dart';
+import 'package:dio/dio.dart';
+import '../../../utils/dio_error_mapper.dart';
 import '../trip_strings.dart';
 import '../trip_strings_algo_aa.dart';
 import '../utils/trip_format.dart';
@@ -48,6 +49,26 @@ class TripFailReasons {
   static const String driverPaused = 'DriverPaused';
 }
 
+class TripEndReasons {
+  static const String withdrawn = 'withdrawn';
+  static const String bookedElsewhere = 'bookedElsewhere';
+  static const String datesChanged = 'datesChanged';
+  static const String tripDeleted = 'tripDeleted';
+  static const String accountDeleted = 'accountDeleted';
+  static const String adminClosed = 'adminClosed';
+  static const String stayRemoved = 'stayRemoved';
+  static const String stayPaused = 'stayPaused';
+  static const String hostBlocked = 'hostBlocked';
+  static const String hostNotAvailable = 'hostNotAvailable';
+  static const String offerExpired = 'offerExpired';
+  static const String noReply = 'noReply';
+  static const String declinedByYou = 'declinedByYou';
+  static const String cancelledByGuest = 'cancelledByGuest';
+  static const String cancelledByHost = 'cancelledByHost';
+  static const String problem = 'problem';
+  static const String closed = 'closed';
+}
+
 class TripEnquiryKinds {
   static const String stay = 'Stay';
   static const String taxi = 'Taxi';
@@ -60,6 +81,8 @@ class TripSkipReasons {
   static const String limitReached = 'LimitReached';
   static const String alreadyBooked = 'AlreadyBooked';
   static const String openInAnotherTrip = 'OpenInAnotherTrip';
+  static const String openForOtherNights = 'OpenForOtherNights';
+  static const String fullOnDates = 'FullOnDates';
 }
 
 class TripContextDay {
@@ -208,6 +231,24 @@ class TripPartyModel {
   }
 }
 
+class TripOwnerShare {
+  final String? upiId;
+  final String? whatsApp;
+  final DateTime? sharedAt;
+
+  const TripOwnerShare({this.upiId, this.whatsApp, this.sharedAt});
+
+  static TripOwnerShare? fromJson(Object? raw) {
+    if (raw is! Map<String, dynamic>) return null;
+    String? text(String k) {
+      final v = (raw[k] as String?)?.trim();
+      return v == null || v.isEmpty ? null : v;
+    }
+
+    return TripOwnerShare(upiId: text('upiId'), whatsApp: text('whatsApp'), sharedAt: tripInstant(raw['sharedAt']));
+  }
+}
+
 class TripEnquiryModel {
   final String id;
   final String? tripId;
@@ -254,6 +295,14 @@ class TripEnquiryModel {
   final String? wrongDayCity;
   final bool outsideTrip;
   final int? cityLeg;
+  final bool isQuiet;
+  final DateTime? quietAt;
+  final String? stepKey;
+  final String? endReason;
+  final DateTime? undoUntil;
+  final int? offersLeft;
+  final int? waitingHours;
+  final TripOwnerShare? ownerShare;
   final bool? _isSegment;
 
   const TripEnquiryModel({
@@ -302,6 +351,14 @@ class TripEnquiryModel {
     this.wrongDayCity,
     this.outsideTrip = false,
     this.cityLeg,
+    this.isQuiet = false,
+    this.quietAt,
+    this.stepKey,
+    this.endReason,
+    this.undoUntil,
+    this.offersLeft,
+    this.waitingHours,
+    this.ownerShare,
     bool? isSegment,
   }) : _isSegment = isSegment;
 
@@ -309,13 +366,9 @@ class TripEnquiryModel {
 
   TripDisplayStatus get display => TripDisplayStatus.parse(displayStatusWire);
 
-  bool get canCounter =>
-      !isTaxi &&
-      (display == TripDisplayStatus.asked || display == TripDisplayStatus.offered) &&
-      counterCount < TripConstants.maxCounters &&
-      conversationId != null;
+  String get stepKeyOrLeg => stepKey ?? 'stay:${cityLeg ?? 1}';
 
-  bool get canChangeRequest => !isTaxi && isConfirmedByBoth && pendingChange == null && acceptedOffer != null;
+  bool canUndoAt(DateTime now) => undoUntil != null && undoUntil!.isAfter(now);
 
   bool get hasPendingRevised => pendingRevised != null;
 
@@ -473,6 +526,14 @@ class TripEnquiryModel {
       wrongDayCity: (json['wrongDayCity'] as String?)?.isEmpty ?? true ? null : json['wrongDayCity'] as String,
       outsideTrip: json['outsideTrip'] == true,
       cityLeg: (json['cityLeg'] as num?)?.toInt(),
+      isQuiet: json['isQuiet'] == true,
+      quietAt: tripInstant(json['quietAt']),
+      stepKey: (json['stepKey'] as String?)?.isEmpty ?? true ? null : json['stepKey'] as String,
+      endReason: (json['endReason'] as String?)?.isEmpty ?? true ? null : json['endReason'] as String,
+      undoUntil: tripInstant(json['undoUntil']),
+      offersLeft: (json['offersLeft'] as num?)?.toInt(),
+      waitingHours: (json['waitingHours'] as num?)?.toInt(),
+      ownerShare: TripOwnerShare.fromJson(json['ownerShare']),
       isSegment: json['isSegment'] is bool ? json['isSegment'] as bool : null,
     );
   }
@@ -496,8 +557,19 @@ class TripSendResult {
   final String status;
   final String? enquiryId;
   final String? reason;
+  final String? otherTripId;
+  final String? otherTripTitle;
+  final String? otherEnquiryId;
 
-  const TripSendResult({required this.listingId, required this.status, this.enquiryId, this.reason});
+  const TripSendResult({
+    required this.listingId,
+    required this.status,
+    this.enquiryId,
+    this.reason,
+    this.otherTripId,
+    this.otherTripTitle,
+    this.otherEnquiryId,
+  });
 
   bool get ok => status == 'Sent' || status == 'AlreadyOpen' || status == 'Replayed';
 
@@ -507,11 +579,16 @@ class TripSendResult {
 
   bool get created => status == 'Sent' || status == 'Replayed';
 
+  bool get fullOnDates => reason == TripSkipReasons.fullOnDates;
+
   factory TripSendResult.fromJson(Map<String, dynamic> j) => TripSendResult(
         listingId: j['listingId'] as String? ?? j['taxiId'] as String? ?? '',
         status: j['status'] as String? ?? 'Failed',
         enquiryId: j['enquiryId'] as String?,
         reason: j['reason'] as String?,
+        otherTripId: j['otherTripId'] as String?,
+        otherTripTitle: j['otherTripTitle'] as String?,
+        otherEnquiryId: j['otherEnquiryId'] as String?,
       );
 
   static List<TripSendResult> parseList(Object? raw) => [
@@ -550,6 +627,8 @@ class TripEnquiryBatch {
         TripSkipReasons.notAvailable => 'NotAvailable',
         TripSkipReasons.blocked => 'Blocked',
         TripSkipReasons.limitReached => 'LimitReached',
+        TripSkipReasons.alreadyBooked => 'AlreadyBooked',
+        TripSkipReasons.openForOtherNights => 'OpenForOtherNights',
         _ => 'Failed',
       };
 
@@ -633,4 +712,137 @@ class TripNightConflict {
   final String listingName;
 
   const TripNightConflict({required this.enquiryId, required this.listingName});
+}
+
+int _int(Object? v) => (v as num?)?.toInt() ?? 0;
+
+class TripStepFullAsk {
+  final String enquiryId;
+  final String listingId;
+  final String? listingName;
+  final DateTime? askedAt;
+
+  const TripStepFullAsk({required this.enquiryId, required this.listingId, this.listingName, this.askedAt});
+
+  factory TripStepFullAsk.fromJson(Map<String, dynamic> j) => TripStepFullAsk(
+        enquiryId: j['enquiryId'] as String? ?? '',
+        listingId: j['listingId'] as String? ?? '',
+        listingName: j['listingName'] as String?,
+        askedAt: tripInstant(j['askedAt']),
+      );
+
+  static List<TripStepFullAsk> listOf(Object? raw) => [
+        for (final m in ((raw as List?) ?? const []).whereType<Map<String, dynamic>>())
+          if ((m['enquiryId'] as String?)?.isNotEmpty ?? false) TripStepFullAsk.fromJson(m),
+      ];
+}
+
+class TripStepFull {
+  static const String errorType = 'StepFull';
+  static const String totalCase = 'total';
+  static const String waitingCase = 'waiting';
+
+  final String kind;
+  final int counted;
+  final int quiet;
+  final int shortlisted;
+  final int free;
+  final DateTime? nextQuietAt;
+  final List<TripStepFullAsk> quietAsks;
+  final List<TripStepFullAsk> waitingAsks;
+
+  const TripStepFull({
+    this.kind = waitingCase,
+    this.counted = 0,
+    this.quiet = 0,
+    this.shortlisted = 0,
+    this.free = 0,
+    this.nextQuietAt,
+    this.quietAsks = const [],
+    this.waitingAsks = const [],
+  });
+
+  bool get totalLimit => kind == totalCase;
+
+  factory TripStepFull.fromJson(Map<String, dynamic>? j) {
+    if (j == null) return const TripStepFull();
+    return TripStepFull(
+      kind: j['case'] == totalCase ? totalCase : waitingCase,
+      counted: _int(j['counted']),
+      quiet: _int(j['quiet']),
+      shortlisted: _int(j['shortlisted']),
+      free: _int(j['free']),
+      nextQuietAt: tripInstant(j['nextQuietAt']),
+      quietAsks: TripStepFullAsk.listOf(j['quietAsks']),
+      waitingAsks: TripStepFullAsk.listOf(j['waitingAsks']),
+    );
+  }
+
+  static TripStepFull? of(Object error) {
+    if (error is! DioException || DioErrorMapper.errorType(error) != errorType) return null;
+    final body = error.response?.data;
+    final data = body is Map<String, dynamic> ? body['data'] : null;
+    return TripStepFull.fromJson(data is Map<String, dynamic> ? data : null);
+  }
+}
+
+class TripStepSlots {
+  final String stepKey;
+  final int counted;
+  final int quiet;
+  final int shortlisted;
+  final int free;
+  final DateTime? nextQuietAt;
+
+  const TripStepSlots({required this.stepKey, this.counted = 0, this.quiet = 0, this.shortlisted = 0, this.free = 3, this.nextQuietAt});
+
+  factory TripStepSlots.fromJson(Map<String, dynamic> j) => TripStepSlots(
+        stepKey: j['stepKey'] as String? ?? '',
+        counted: _int(j['counted']),
+        quiet: _int(j['quiet']),
+        shortlisted: _int(j['shortlisted']),
+        free: (j['free'] as num?)?.toInt() ?? 3,
+        nextQuietAt: tripInstant(j['nextQuietAt']),
+      );
+
+  static Map<String, TripStepSlots> mapOf(Object? raw) => {
+        for (final m in ((raw as List?) ?? const []).whereType<Map<String, dynamic>>())
+          if ((m['stepKey'] as String?)?.isNotEmpty ?? false) m['stepKey'] as String: TripStepSlots.fromJson(m),
+      };
+}
+
+class MyEnquiryCounts {
+  final int waiting;
+  final int offers;
+  final int booked;
+  final int past;
+
+  const MyEnquiryCounts({this.waiting = 0, this.offers = 0, this.booked = 0, this.past = 0});
+
+  factory MyEnquiryCounts.fromJson(Map<String, dynamic> j) => MyEnquiryCounts(
+        waiting: _int(j['waiting']),
+        offers: _int(j['offers']),
+        booked: _int(j['booked']),
+        past: _int(j['past']),
+      );
+}
+
+class MyEnquiryPage {
+  final List<TripEnquiryModel> items;
+  final bool hasMore;
+  final String? nextCursor;
+  final MyEnquiryCounts? counts;
+
+  const MyEnquiryPage({required this.items, required this.hasMore, this.nextCursor, this.counts});
+
+  factory MyEnquiryPage.fromJson(Map<String, dynamic> json) {
+    final c = json['counts'];
+    final cursor = json['nextCursor'] as String?;
+    return MyEnquiryPage(
+      items: _enquiryList(json['items']),
+      hasMore: json['hasMore'] == true,
+      nextCursor: cursor == null || cursor.isEmpty ? null : cursor,
+      counts: c is Map<String, dynamic> ? MyEnquiryCounts.fromJson(c) : null,
+    );
+  }
 }

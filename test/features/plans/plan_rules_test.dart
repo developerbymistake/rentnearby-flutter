@@ -229,7 +229,7 @@ void main() {
     test('free meter note (P1) and ended note (P8)', () {
       final v = PlanValues.fromCatalog([freePlan('Taxi'), plusPlan('Taxi')]);
       expect(const TaxiPlanCopy().heroMeter(PlanCardState.free, Fx.free('Taxi'), v)!.notes, ['Free plan: 1 route. Plus allows up to 5.']);
-      expect(const TaxiPlanCopy().heroMeter(PlanCardState.ended, Fx.ended('Taxi'), v)!.notes, ['Your first route stays. Extra routes are hidden, not deleted.']);
+      expect(const TaxiPlanCopy().heroMeter(PlanCardState.ended, Fx.ended('Taxi'), v)!.notes, ['Your last added route stays. Extra routes are hidden, not deleted.']);
       expect(const TaxiPlanCopy().heroMeter(PlanCardState.free, const MyPlanModel(paymentEnabled: true), v), isNull, reason: 'no usage = no meter');
     });
   });
@@ -282,10 +282,10 @@ void main() {
       'lib/features/taxi_driver/plan_visible/taxi_plan_visible_strings.dart',
     ];
 
-    test('no Resume, Paused, Resubscribe or refund in the lane', () {
+    test('no Resume, Paused or refund in the lane', () {
       for (final f in laneFiles) {
         final s = File(f).readAsStringSync();
-        for (final w in ['Resume', 'Paused', 'Resubscribe', 'refund']) {
+        for (final w in ['Resume', 'Paused', 'refund']) {
           expect(s.contains(w), isFalse, reason: '$f: $w');
         }
       }

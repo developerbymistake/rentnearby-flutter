@@ -10,7 +10,6 @@ import '../taxi/ways/taxi_ways_navigation.dart';
 import 'controllers/my_trips_controller.dart';
 import 'controllers/trip_plan_controller.dart';
 import 'models/trip_city_model.dart';
-import 'models/trip_enquiry_model.dart';
 import 'models/trip_plan_model.dart';
 import 'screens/trip_dates_sheet.dart';
 import 'trip_constants.dart';
@@ -286,24 +285,8 @@ class TripNavigation {
     return Get.toNamed(AppRoutes.tripReplies, arguments: {'tripId': tripId, 'day': day, 'enquiryId': enquiryId});
   }
 
-  static Future<void>? openChatForEnquiry(TripEnquiryModel e) {
-    final id = e.conversationId;
-    if (id == null || id.isEmpty) return null;
-    return Get.toNamed(AppRoutes.chatConversation, arguments: {
-      'conversationId': id,
-      'enquiryId': e.id,
-      'listingType': 'Stay',
-      'listingId': e.listingId,
-      'stayTypeId': null,
-      'otherPartyId': e.owner.id ?? '',
-      'otherPartyName': e.owner.name ?? e.listingName,
-      'listingTitle': e.listingName,
-      'area': null,
-      'isOwner': false,
-      'status': 'Active',
-      'isBlockedByMe': false,
-    });
-  }
+  static Future<void>? openMyEnquiries({String? enquiryId, String? bucket}) =>
+      Get.toNamed(AppRoutes.myEnquiries, arguments: {'enquiryId': ?enquiryId, 'bucket': ?bucket});
 
   static Future<void> openWays(TripStepRole role) async {
     final c = TripPlanController.to;

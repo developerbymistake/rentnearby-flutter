@@ -1,4 +1,10 @@
+import 'package:bakhli/config/app_routes.dart';
+import 'package:bakhli/design/design.dart';
 import 'package:bakhli/features/owner_core/data/owner_api.dart';
+import 'package:bakhli/features/owner_core/data/owner_args.dart';
+import 'package:bakhli/features/stay/models/stay_owner_model.dart';
+import 'package:bakhli/features/stay/setup/stay_setup_controller.dart';
+import 'package:bakhli/features/stay_owner/calendar/stay_upcoming_card.dart';
 import 'package:bakhli/features/owner_core/data/owner_cache.dart';
 import 'package:bakhli/features/owner_core/data/owner_result.dart';
 import 'package:bakhli/features/owner_core/home/owner_home_models.dart';
@@ -67,17 +73,17 @@ void main() {
     testWidgets('live day 1: card, switch, attention, numbers, quick actions, instagram', (t) async {
       await _pump(t, homeJson(attention: [att('ShareListing', 10, {'slug': 'x'}), att('AddShareDetails', 11)]));
       for (final s in [
-        'Hi, Meena', 'Your stay is live', 'Deodar Heights', 'LIVE', 'Guests can find and ask you now.', 'Accepting guests', 'Needs attention',
-        'Share your stay', 'Send your link to past guests to get first enquiries.', 'Share', 'Add UPI and WhatsApp', 'Optional. Shared only when you choose', 'Add',
-        'New enquiries', 'Offers waiting', 'Confirmed', 'Quick actions', 'Edit prices', 'Rooms and rates', 'Instagram', 'Follow us', 'Follow',
+        'Hi, Meena', 'Your stay is live', 'Deodar Heights', 'LIVE', 'Accepting guests', 'Turn off to stop new enquiries. Your bookings stay.', 'Needs attention',
+        'Add UPI and WhatsApp', 'Optional. Shared only when you choose', 'Add',
+        'New enquiries', 'Offers waiting', 'Confirmed', 'Quick actions', 'Manage rooms', 'Rooms and prices', 'Instagram', 'Follow us', 'Follow',
       ]) {
         expect(find.text(s), findsWidgets, reason: s);
       }
       expect(find.text('0'), findsNWidgets(3));
-      expect(find.text('Share your stay').evaluate().length, 1);
-      final share = tester(t).getTopLeft(find.text('Share your stay')).dy;
-      final upi = tester(t).getTopLeft(find.text('Add UPI and WhatsApp')).dy;
-      expect(share, lessThan(upi));
+      for (final gone in ['Share your stay', 'Share', 'Share my stay', 'Guests can find and ask you now.']) {
+        expect(find.text(gone), findsNothing, reason: gone);
+      }
+      expect(find.byType(WorkoutCard), findsOneWidget);
     });
 
     testWidgets('busy: rows, count, reply-by clock, centre badge kept', (t) async {
@@ -85,7 +91,7 @@ void main() {
         t,
         homeJson(statusLine: {'code': 'NewNeedReply', 'args': {'count': 2}}, badge: 2, stay: {'newEnquiries': 2, 'offersWaiting': 1, 'confirmed': 3}, attention: _rows(2)),
       );
-      expect(find.text('2 enquiries need a reply.'), findsOneWidget);
+      expect(find.text('Accepting guests'), findsOneWidget);
       expect(find.text('2 enquiries waiting'), findsOneWidget);
       expect(find.text('Reply before 6:40 pm'), findsOneWidget);
       expect(find.text('Rohit accepted your offer'), findsOneWidget);
@@ -97,7 +103,7 @@ void main() {
 
     testWidgets('more than two rows: two shown and See all (N)', (t) async {
       await _pump(t, homeJson(attention: _rows(9)));
-      expect(find.text('See all (9)'), findsOneWidget);
+      expect(find.text('See all (8)'), findsOneWidget);
       expect(find.text('2 enquiries waiting'), findsOneWidget);
       expect(find.text('Rohit accepted your offer'), findsOneWidget);
       expect(find.text('Payment issue'), findsNothing);
@@ -115,18 +121,76 @@ void main() {
       expect(find.text('1'), findsOneWidget);
     });
 
-    testWidgets('quick actions: four tiles, jobs tile follows the jobs slot', (t) async {
+    testWidgets('quick actions: three tiles, no share and no job tile', (t) async {
       await _pump(t, homeJson());
-      expect(find.text('Share my stay'), findsOneWidget);
-      expect(find.text('Contact details'), findsOneWidget);
+      expect(find.byType(MealsCardV), findsNWidgets(3));
+      for (final s in ['Manage rooms', 'Rooms and prices', 'Manage calendar', 'Bookings and dates', 'Contact details', 'UPI and WhatsApp']) {
+        expect(find.text(s), findsOneWidget, reason: s);
+      }
+      expect(find.text('Share my stay'), findsNothing);
+      expect(find.text('Post a job'), findsNothing);
     });
 
-    testWidgets('upcoming and plan seams are mounted only where the frames draw them', (t) async {
+    testWidgets('quick action targets: Rooms page in manage mode, calendar, contact details', (t) async {
+      StayHarness.setUp(homeJson());
+      t.view.physicalSize = const Size(1080, 7200);
+      t.view.devicePixelRatio = 3;
+      addTearDown(t.view.reset);
+      final routes = [AppRoutes.stayRooms, AppRoutes.stayCalendar, AppRoutes.stayShareDetails];
+      await t.pumpWidget(GetMaterialApp(
+        initialRoute: '/stay-home-test',
+        getPages: [
+          GetPage(name: '/stay-home-test', page: () => const StayOwnerHomeScreen()),
+          for (final r in routes) GetPage(name: r, page: () => const SizedBox.shrink()),
+        ],
+      ));
+      await t.pump(const Duration(milliseconds: 200));
+      final seen = <String, Object?>{};
+      for (final label in ['Manage rooms', 'Manage calendar', 'Contact details']) {
+        await t.tap(find.text(label));
+        await t.pump();
+        await t.pump(const Duration(milliseconds: 400));
+        seen[Get.currentRoute] = Get.arguments;
+        Get.back();
+        await t.pump();
+        await t.pump(const Duration(milliseconds: 400));
+      }
+      expect(seen.keys, containsAll(routes));
+      expect(OwnerArgs.isManage(seen[AppRoutes.stayRooms]), isTrue);
+    });
+
+    testWidgets('hero body: rooms and from price from the stay cache, note under them', (t) async {
+      StayHarness.setUp(homeJson());
+      Get.put(StaySetupController()).stay.value = StayOwnerModel.fromJson(stayJson());
+      await t.pumpWidget(const SizedBox.shrink());
+      await pumpPhone(t, const StayOwnerHomeScreen());
+      await t.pump(const Duration(milliseconds: 100));
+      await t.pump(const Duration(milliseconds: 100));
+      for (final s in ['Rooms', 'From, per night', '₹3,000', 'Turn off to stop new enquiries. Your bookings stay.']) {
+        expect(find.text(s), findsWidgets, reason: s);
+      }
+      final name = t.getTopLeft(find.text('Deodar Heights')).dy;
+      final line = t.getTopLeft(find.text('Accepting guests')).dy;
+      expect(line, greaterThan(name));
+    });
+
+    testWidgets('upcoming list: heading with See all, From app and Added by you notes, no old buttons', (t) async {
+      StayOwnerDeps.upcomingCard = StayUpcomingCard.fromHome;
+      await _pump(t, homeJson());
+      for (final s in ['Upcoming bookings', 'See all ›', 'Neha Joshi', 'Kapoor couple', 'From app', 'Added by you']) {
+        expect(find.text(s), findsWidgets, reason: s);
+      }
+      for (final gone in ['View calendar', 'Past', 'Add booking']) {
+        expect(find.text(gone), findsNothing, reason: gone);
+      }
+    });
+
+    testWidgets('upcoming seam is mounted, no plan card on Home (C1 mock)', (t) async {
       StayOwnerDeps.upcomingCard = () => const Text('UPCOMING-SEAM');
       StayOwnerDeps.planCard = () => const Text('PLAN-SEAM');
       await _pump(t, homeJson());
       expect(find.text('UPCOMING-SEAM'), findsOneWidget);
-      expect(find.text('PLAN-SEAM'), findsOneWidget);
+      expect(find.text('PLAN-SEAM'), findsNothing);
     });
   });
 
@@ -139,7 +203,7 @@ void main() {
       expect(find.text('UNDER REVIEW'), findsOneWidget);
       expect(find.text('We will notify you'), findsOneWidget);
       expect(find.text('While you wait'), findsOneWidget);
-      expect(find.text('Add UPI and WhatsApp'), findsOneWidget);
+      expect(find.textContaining('UPI'), findsNothing);
       expect(find.text('You will miss new enquiries until notifications are on.'), findsOneWidget);
       expect(find.text('–'), findsNWidgets(3));
       expect(find.text('Accepting guests'), findsNothing);
@@ -178,7 +242,7 @@ void main() {
       expect(find.text('TAKEN DOWN'), findsOneWidget);
       expect(find.text('Taken down by Bakhli: guests reported a wrong location.'), findsOneWidget);
       expect(find.text('Fix and resubmit'), findsOneWidget);
-      expect(find.text('Your confirmed bookings still stand. Guests can still reach you in chat.'), findsOneWidget);
+      expect(find.text('Your confirmed bookings still stand. Guests can still call you.'), findsOneWidget);
       expect(find.text('UPCOMING-SEAM'), findsOneWidget);
       expect(find.text('PLAN-SEAM'), findsNothing);
       expect(find.text('Needs attention'), findsNothing);
@@ -186,7 +250,7 @@ void main() {
       expect(find.text('2'), findsOneWidget);
     });
 
-    testWidgets('o_st_52 switch off: grey card, paused line, report row, plan seam still shown', (t) async {
+    testWidgets('o_st_52 switch off: grey card, paused line, report row, no plan card', (t) async {
       StayOwnerDeps.planCard = () => const Text('PLAN-SEAM');
       await _pump(t, homeJson(switchOn: false, attention: [att('Reports', 7, {'count': 1, 'firstReason': 'A guest says the photos do not match'})]), denied: true);
       expect(find.text('Not taking guests'), findsOneWidget);
@@ -196,7 +260,7 @@ void main() {
       final report = tester(t).getTopLeft(find.text('1 report on this stay')).dy;
       expect(notif, lessThan(report));
       expect(find.text('A guest says the photos do not match'), findsOneWidget);
-      expect(find.text('PLAN-SEAM'), findsOneWidget);
+      expect(find.text('PLAN-SEAM'), findsNothing);
       expect(find.text('Quick actions'), findsNothing);
     });
 
@@ -207,7 +271,7 @@ void main() {
       expect(find.text('New enquiries are paused in your area.'), findsOneWidget);
       expect(find.text('LIVE'), findsOneWidget);
       expect(find.text('Your stay stays saved as it is.'), findsOneWidget);
-      expect(find.text('Accepting guests'), findsOneWidget);
+      expect(find.byType(Switch3D), findsOneWidget);
       expect(find.text('PLAN-SEAM'), findsNothing);
       expect(find.text('Quick actions'), findsOneWidget);
     });
@@ -223,7 +287,7 @@ void main() {
     testWidgets('o_st_12 plus: featured chip and first-in-trip-plans line, no See Plus', (t) async {
       await _pump(t, homeJson(featured: true, statusLine: {'code': 'Featured', 'args': {'city': 'Mukteshwar'}}));
       expect(find.text('LIVE · ★ Featured'), findsOneWidget);
-      expect(find.text('First in trip plans for Mukteshwar.'), findsOneWidget);
+      expect(find.text('Accepting guests'), findsOneWidget);
       expect(find.text('See Plus'), findsNothing);
       expect(find.byWidgetPredicate((w) => w.key is GateKey), findsNothing);
     });
@@ -298,11 +362,12 @@ void main() {
 
     testWidgets('E jobs module off: the screen does not depend on it', (t) async {
       final h = await _pump(t, homeJson(statusLine: {'code': 'NewNeedReply', 'args': {'count': 1}}, badge: 1, stay: {'newEnquiries': 1, 'offersWaiting': 0, 'confirmed': 2}));
-      expect(find.text('Post a job'), findsOneWidget);
+      expect(find.text('Manage rooms'), findsOneWidget);
       (Get.find<TabConfigController>() as FakeTabs).setOff({AppTabKeys.jobs});
       h.home.load.refresh();
       await t.pump(const Duration(milliseconds: 100));
-      expect(find.text('1 enquiry needs a reply.'), findsOneWidget);
+      expect(find.text('Accepting guests'), findsOneWidget);
+      expect(find.text('Manage rooms'), findsOneWidget);
       expect(find.text('Post a job'), findsNothing);
     });
   });

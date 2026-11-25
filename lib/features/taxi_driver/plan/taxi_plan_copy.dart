@@ -62,7 +62,7 @@ class TaxiPlanCopy extends PlanRoleCopy {
     if (used == null || limit <= 0) return null;
     final note = switch (s) {
       PlanCardState.free => TaxiPlanStrings.freeMeterNote(limit, v.plus(PlanKey.routes)),
-      PlanCardState.ended => TaxiPlanStrings.firstRouteStays,
+      PlanCardState.ended => TaxiPlanStrings.lastRouteStays,
       PlanCardState.trial || PlanCardState.plus || PlanCardState.adminGrant => null,
       _ => '',
     };

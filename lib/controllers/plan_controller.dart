@@ -478,9 +478,7 @@ class PlanController extends GetxController {
     isPurchasing.value = true;
     try {
       final me = await _repo.startTrial(planId);
-      _planSeq++;
-      isLoadingPlan.value = false;
-      myPlan.value = me;
+      _applyMe(me);
       AppToast.success('Trial started.');
       return true;
     } catch (e) {

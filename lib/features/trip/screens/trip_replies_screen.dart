@@ -3,28 +3,20 @@ import 'package:flutter/material.dart';
 import 'package:bakhli/design/design.dart';
 import 'package:bakhli/design/extra/ext_trip_replies.dart';
 import 'package:get/get.dart';
-import '../../../models/browse_item.dart';
 import '../../../utils/contact_launcher.dart';
 import '../controllers/trip_enquiry_controller.dart';
 import '../controllers/trip_plan_controller.dart';
+import '../controllers/trip_shortlist_controller.dart';
 import '../controllers/trip_supply_controller.dart';
+import '../enquiries/similar_stays.dart';
+import '../enquiries/traveller_enquiry_card.dart';
 import '../models/trip_enquiry_model.dart';
 import '../trip_navigation.dart';
 import '../trip_strings.dart';
-import '../trip_strings_a2.dart';
 import '../trip_strings_a5.dart';
-import '../trip_strings_f2.dart';
-import '../trip_strings_rc.dart';
-import '../utils/trip_enquiry_rules.dart';
 import '../utils/trip_format.dart';
-import '../utils/trip_report.dart';
-import '../widgets/trip_accept_sheet.dart';
-import '../widgets/trip_cancel_sheet.dart';
-import '../widgets/trip_change_request_sheet.dart';
-import '../widgets/trip_counter_sheet.dart';
 import '../widgets/trip_not_found_view.dart';
 import '../widgets/trip_status.dart';
-import '../widgets/trip_withdraw_sheet.dart';
 import 'trip_replies_leg_parts.dart';
 
 class TripRepliesScreen extends StatefulWidget {
@@ -50,9 +42,10 @@ class _TripRepliesScreenState extends State<TripRepliesScreen> with TickerProvid
   String _shown = '';
   late final TripPlanController _c;
   late final int _day;
-  final _menuKeys = <String, GlobalKey>{};
   String? _tripId;
   String? _enquiryId;
+  String? _flashId;
+  Timer? _flashTimer;
   bool _started = false;
   bool _retried = false;
 
@@ -68,6 +61,10 @@ class _TripRepliesScreenState extends State<TripRepliesScreen> with TickerProvid
     _day = (day is num ? day.toInt() : int.tryParse('${day ?? ''}')) ?? 1;
     _tripId = map['tripId']?.toString();
     _enquiryId = map['enquiryId']?.toString();
+    _flashId = _enquiryId;
+    _flashTimer = Timer(const Duration(seconds: 3), () {
+      if (mounted) setState(() => _flashId = null);
+    });
     WidgetsBinding.instance.addPostFrameCallback((_) => _load());
   }
 
@@ -78,6 +75,7 @@ class _TripRepliesScreenState extends State<TripRepliesScreen> with TickerProvid
       if (_c.openPages > 0) unawaited(_c.refreshEnquiries());
       _c.releaseIfIdle();
     }
+    _flashTimer?.cancel();
     _anim.dispose();
     super.dispose();
   }
@@ -172,88 +170,6 @@ class _TripRepliesScreenState extends State<TripRepliesScreen> with TickerProvid
     return null;
   }
 
-  static String _ago(DateTime? t) {
-    if (t == null) return '';
-    final d = DateTime.now().difference(t.toLocal());
-    if (d.inMinutes < 60) return '${d.inMinutes < 1 ? 1 : d.inMinutes} min ago';
-    if (d.inHours < 24) return '${d.inHours} h ago';
-    return '${d.inDays} d ago';
-  }
-
-  static String _dates(TripEnquiryModel e) {
-    final a = e.checkIn;
-    final b = e.checkOut;
-    return a != null && b != null ? TripFormat.dayMonthRange(a, b) : e.datesLabel;
-  }
-
-  static String _inr(int? v) => v == null || v <= 0 ? '' : BrowseItem.inr(v);
-
-  String _label(_Entry x) {
-    final e = x.enquiry;
-    if (e == null) return TripStrings.shortlisted;
-    if (e.display == TripDisplayStatus.cancelled && e.cancelledBy == 'owner') return TripStrings.hostCancelled;
-    if (e.display == TripDisplayStatus.closed) {
-      return switch (e.failReason) {
-        'Withdrawn' => TripStrings.withdrawn,
-        'BookedElsewhere' => TripStrings.bookedAnother,
-        _ => TripStrings.closed,
-      };
-    }
-    return TripStatusVisuals.label(e.display);
-  }
-
-  String _statusLine(_Entry x) => _glue(_statusLineRaw(x));
-
-  static String _glue(String t) => t.replaceAllMapped(RegExp(r'(\d) (h|min|d)(?!\w)'), (m) => '${m[1]} ${m[2]}');
-
-  String _statusLineRaw(_Entry x) {
-    final e = x.enquiry;
-    if (e == null) return '';
-    final now = DateTime.now();
-    final counter = e.pendingCounter;
-    if (counter != null && e.display.isOpen && !e.isBooked) {
-      return TripStringsF2.youProposed(_inr(counter.pricePerNight));
-    }
-    return switch (e.display) {
-      TripDisplayStatus.asked => TripStrings.askedAgo(_ago(e.createdAt)),
-      TripDisplayStatus.offered => e.openOffer == null
-          ? TripStrings.offerReceived
-          : TripStrings.offeredValid(
-              _inr(e.openOffer!.total),
-              e.openOffer!.validUntil == null ? '' : TripEnquiryRules.closesInLabel(e.openOffer!.validUntil!, now)),
-      TripDisplayStatus.confirmedByYou || TripDisplayStatus.confirmedByBoth =>
-        [_dates(e), _inr(e.agreedTotal)].where((s) => s.isNotEmpty).join(' · '),
-      _ => _dates(e),
-    };
-  }
-
-  Future<void> _decline(TripEnquiryModel e) async {
-    final offer = e.openOffer;
-    if (offer == null) return;
-    final ok = await Dialog3D.show<bool>(
-      context,
-      builder: (ctx) => Dialog3D(
-        tone: ListingTone.forest,
-        art: ListingArt.hotel,
-        title: TripStrings.declineQuestion,
-        body: TripStrings.declineNote,
-        content: ReplySummaryStrip(
-          tone: ListingTone.forest,
-          title: e.listingName.isEmpty ? TripStrings.stay : e.listingName,
-          subtitle: [_dates(e), TripStrings.nights(e.nights)].where((s) => s.isNotEmpty).join(' · '),
-          value: _inr(offer.total),
-          margin: EdgeInsets.zero,
-        ),
-        secondaryLabel: TripStrings.keep,
-        onSecondary: () => Navigator.pop(ctx, false),
-        primaryLabel: TripStrings.decline,
-        primaryDanger: true,
-        onPrimary: () => Navigator.pop(ctx, true),
-      ),
-    );
-    if (ok == true) await TripEnquiryController.to.decline(e.id, offer.id);
-  }
-
   @override
   Widget build(BuildContext context) {
     return Obx(() {
@@ -346,6 +262,8 @@ class _TripRepliesScreenState extends State<TripRepliesScreen> with TickerProvid
             onAction: () => TripNavigation.reopenStayShortlist(_legIndex),
           ),
         for (var i = 0; i < entries.length; i++) _card(entries[i], i),
+        if (_similarRef(entries) case final ref?)
+          SimilarStaysCard(reference: ref, onFindAnother: () => TripNavigation.reopenStayShortlist(_legIndex)),
         if (_canAskAnother(entries))
           ArtPillButton(tone: _tone, art: ListingArt.hotel, label: TripStringsA5.askAnotherStay, onTap: () => TripNavigation.reopenStayShortlist(_legIndex)),
       ], 'list');
@@ -363,191 +281,64 @@ class _TripRepliesScreenState extends State<TripRepliesScreen> with TickerProvid
         onAction: onRetry,
       );
 
+  String get _stepKey => 'stay:$_legIndex';
+
+  bool get _editable => !_c.isReadOnly && !_c.isDayPast(_day) && !_c.isCompleted;
+
   bool _canAskAnother(List<_Entry> entries) {
     if (_c.isReadOnly || _c.isDayPast(_day)) return false;
     if (entries.any((x) => x.enquiry?.isBooked ?? false)) return false;
-    return entries.where((x) => x.enquiry?.display.isOpen ?? false).length < _maxOpenAsks;
+    final free = Get.isRegistered<TripShortlistController>() ? TripShortlistController.to.freeOf(_stepKey, tripId: _c.trip.value?.id) : null;
+    if (free != null) return free > 0;
+    return entries.where((x) => (x.enquiry?.display.isOpen ?? false) && !(x.enquiry?.isQuiet ?? false)).length < _maxOpenAsks;
   }
 
-  ({String? cap, String number, String? unit}) _price(_Entry x) {
-    final e = x.enquiry;
-    final offer = e?.openOffer;
-    final nights = e == null ? null : TripStrings.nights(e.nights);
-    final counter = e?.pendingCounter;
-    if (e != null && counter != null && e.display.isOpen && !e.isBooked) {
-      return (cap: TripStringsA5.yourPriceTitle, number: _inr(counter.pricePerNight), unit: TripStringsRc.perRoomNight);
+  TripEnquiryModel? _similarRef(List<_Entry> entries) {
+    if (!_editable || entries.any((x) => x.enquiry?.isBooked ?? false)) return null;
+    TripEnquiryModel? best;
+    for (final x in entries) {
+      final e = x.enquiry;
+      if (e == null || e.tripId == null || e.day == null) continue;
+      final ended = e.isQuiet || e.isRed || (!e.isOpen && !e.isBooked);
+      if (!ended) continue;
+      final at = e.updatedAt ?? e.createdAt;
+      final bestAt = best?.updatedAt ?? best?.createdAt;
+      if (best == null || (at != null && (bestAt == null || at.isAfter(bestAt)))) best = e;
     }
-    if (e != null && e.display == TripDisplayStatus.offered && offer != null) {
-      return (cap: TripStrings.total, number: _inr(offer.total), unit: nights);
-    }
-    final agreed = e?.agreedTotal;
-    if (e != null && agreed != null && agreed > 0) {
-      return (cap: e.isBooked ? TripStrings.agreed : TripStrings.total, number: _inr(agreed), unit: nights);
-    }
-    final listed = _listed(x);
-    if (listed != null && listed > 0) return (cap: TripStrings.listedLabel, number: _inr(listed), unit: TripStringsRc.perNight);
-    return (cap: TripStringsRc.nights, number: '${e?.nights ?? ''}', unit: e?.datesLabel);
+    return best;
   }
 
-  List<ReplyRow> _rows(_Entry x) {
-    final e = x.enquiry;
-    if (e == null) return const [];
-    final status = x.status;
-    final offer = e.openOffer;
-    if (status == TripDisplayStatus.offered && offer != null) {
-      final each = offer.lines.fold<int>(0, (sum, l) => sum + l.perNight);
-      return [
-        ReplyRow(offer.nights > 0 && each > 0 ? '${TripStrings.nights(offer.nights)} · ${_inr(each)} each' : TripStrings.total, _inr(offer.total)),
-      ];
-    }
-    if (status == TripDisplayStatus.confirmedByBoth) {
-      final revised = e.pendingRevised;
-      if (revised != null) {
-        return [
-          const ReplyRow(TripStrings.revisedOffer, TripStrings.notAcceptedYet),
-          ReplyRow(TripStrings.total, _inr(revised.total)),
-          ReplyRow(TripStrings.dates, _dates(e)),
-        ];
-      }
-      final change = e.pendingChange;
-      if (change != null) {
-        final a = change.checkIn;
-        final b = change.checkOut;
-        return [
-          const ReplyRow(TripStrings.changeRequest, TripStrings.notAcceptedYet),
-          if (a != null && b != null) ReplyRow(TripStrings.dates, TripFormat.dayMonthRange(a, b)),
-          ReplyRow(TripStrings.total, _inr(change.total)),
-        ];
-      }
-    }
-    final counter = e.pendingCounter;
-    if (counter != null && e.display.isOpen && !e.isBooked) {
-      return [
-        if (_listed(x) case final l? when l > 0) ReplyRow(TripStrings.listedLabel, '${_inr(l)} ${TripStringsRc.perNight}'),
-        ReplyRow(TripStrings.nights(e.nights), _inr(counter.total)),
-        ReplyRow(TripStrings.dates, _dates(e)),
-      ];
-    }
-    return [
-      ReplyRow(TripStrings.dates, [_dates(e), TripStrings.nights(e.nights)].where((s) => s.isNotEmpty).join(' · ')),
-      if (e.context.peopleLabel case final p?) ReplyRow(TripStrings.people, p),
-      if (e.context.roomsLabel case final r?) ReplyRow(TripStrings.rooms, r),
-    ];
-  }
-
-  (String?, String, ReplyNote?) _note(_Entry x) {
-    final e = x.enquiry;
-    if (e == null) return (null, ListingArt.clipboard, null);
-    final status = x.status;
-    final lines = <String>[];
-    String art = ListingArt.clipboard;
-    void add(String t, String a) {
-      if (lines.isEmpty) art = a;
-      lines.add(t);
-    }
-
-    final wrong = TripRepliesLegParts.wrongCityNote(context, _c, e);
-    if (wrong != null) add(wrong.text, ListingArt.roundPushpin);
-    if (TripRepliesLegParts.oldDatesNote(_c, e) case final o?) add(o.text, ListingArt.calendar);
-    if (status == TripDisplayStatus.confirmedByBoth && e.hasPendingRevised) add('${TripStrings.revisedOffer} · ${TripStrings.notAcceptedYet}', ListingArt.clipboard);
-    if (status == TripDisplayStatus.confirmedByBoth && e.hasPendingChange) add('${TripStrings.changeRequest} · ${TripStrings.notAcceptedYet}', ListingArt.calendar);
-    if (e.display.isOpen && e.expiresAt != null) add(TripStrings.closesIn(TripEnquiryRules.closesInLabel(e.expiresAt!, DateTime.now())), ListingArt.calendar);
-    if (lines.isEmpty) {
-      if (e.display == TripDisplayStatus.closed && e.failReason == 'BookedElsewhere') return (TripStringsRc.closedBookedElsewhere, ListingArt.clipboard, null);
-      if (e.isRed) return (TripStrings.allAsksEnded, ListingArt.roundPushpin, null);
-      return (TripStrings.termsByHost, ListingArt.clipboard, null);
-    }
-    return (lines.join('\n'), art, wrong);
+  String? _legRange() {
+    final days = _c.legDays(_legIndex);
+    if (days.isEmpty) return null;
+    final first = _c.dateOf(days.first);
+    final last = _c.dateOf(days.last);
+    if (first == null || last == null) return null;
+    return TripFormat.dayMonthRange(first, DateTime(last.year, last.month, last.day + 1));
   }
 
   Widget _card(_Entry x, int i) {
     final e = x.enquiry;
-    final status = x.status;
-    final busy = e != null && TripEnquiryController.to.busyIds.contains(e.id);
-    final phone = _phone(x);
-    final offer = e?.openOffer;
-    final price = _price(x);
-    final (noteText, noteArt, noteData) = _note(x);
-    final key = '${x.stayId}-${e?.id}';
-    final menuKey = _menuKeys.putIfAbsent(key, () => GlobalKey());
-    VoidCallback? live(VoidCallback f) => busy ? null : f;
-
-    ReplyAction? primary;
-    var chatPrimary = false;
-    if (status == TripDisplayStatus.offered && offer != null) {
-      primary = ReplyAction(
-        label: [TripStrings.acceptOffer, _inr(offer.total)].where((s) => s.isNotEmpty).join(' · '),
-        onTap: live(() => TripAcceptSheet.show(context, enquiry: e!, offer: offer)),
-      );
-    } else if (status == TripDisplayStatus.offered) {
-      primary = ReplyAction(label: TripStringsA2.refresh, onTap: live(() => _c.refreshEnquiries()));
-    } else if (e != null && e.isRed) {
-      primary = ReplyAction(label: TripStrings.findAnother, onTap: live(() => TripNavigation.reopenStayShortlist(_legIndex)));
-    } else {
-      chatPrimary = true;
-      final chat = e?.conversationId != null;
-      primary = ReplyAction(label: TripStrings.openChat, onTap: chat ? live(() => TripNavigation.openChatForEnquiry(e!)) : null);
-    }
-
-    final call = ReplyAction(label: TripStrings.callHost, onTap: phone == null ? null : live(() => ContactLauncher.call(phone)));
-    final ReplyAction second;
-    final confirmed = status == TripDisplayStatus.confirmedByYou || status == TripDisplayStatus.confirmedByBoth;
-    if (confirmed) {
-      final can = status == TripDisplayStatus.confirmedByBoth && !_c.isReadOnly && TripEnquiryRules.isOutsideTrip(e!, _c.settings, _c.dayCount);
-      second = ReplyAction(label: TripStrings.sendChangeRequest, onTap: can ? live(() => _sendChange(e)) : null);
-    } else {
-      final can = e != null && e.canCounter && !_c.isReadOnly && e.display.isOpen;
-      second = ReplyAction(
-        label: (e?.counterCount ?? 0) > 0 ? TripStringsF2.proposeAgain : TripStrings.proposePrice,
-        onTap: can ? live(() => TripCounterSheet.show(context, enquiry: e)) : null,
-      );
-    }
-
-    final menu = <MenuItem3D>[
-      if (!chatPrimary && e?.conversationId != null)
-        MenuItem3D(label: TripStrings.openChat, art: ListingArt.speechBalloon, onTap: live(() => TripNavigation.openChatForEnquiry(e!))),
-      if (status == TripDisplayStatus.offered && offer != null)
-        MenuItem3D(label: TripStrings.decline, art: ListingArt.stay, danger: true, onTap: live(() => _decline(e!))),
-      if (status == TripDisplayStatus.offered || status == TripDisplayStatus.asked)
-        MenuItem3D(label: TripStrings.withdraw, art: ListingArt.clipboard, danger: true, onTap: live(() => TripWithdrawSheet.show(context, enquiry: e!))),
-      if (confirmed)
-        MenuItem3D(
-          label: TripStrings.cancelBooking,
-          art: ListingArt.calendar,
-          danger: true,
-          onTap: live(() => TripCancelSheet.show(context, enquiry: e!, ownerSide: false)),
-        ),
-      MenuItem3D(label: TripStrings.report, art: ListingArt.warning, danger: true, onTap: () => TripReport.stay(context, x.stayId, tripEnquiryId: e?.id)),
+    if (e == null) return const SizedBox.shrink();
+    final busy = TripEnquiryController.to.busyIds.contains(e.id);
+    final notes = <(ReplyNote, String)>[
+      if (TripRepliesLegParts.wrongCityNote(context, _c, e) case final w?) (w, ListingArt.roundPushpin),
+      if (TripRepliesLegParts.oldDatesNote(_c, e) case final o?) (o, ListingArt.calendar),
     ];
-
-    return ReplyCard3D(
-      key: ValueKey('reply-$key'),
-      status: StatusTone3D.of(status.name),
-      art: ListingArt.stay,
-      pill: _label(x),
-      urgent: e?.isUrgent ?? false,
-      title: x.name.isEmpty ? TripStrings.stay : x.name,
-      statusLine: _statusLine(x),
-      cap: price.cap,
-      number: price.number,
-      unit: price.unit,
-      menuKey: menuKey,
-      onMenu: () => showReplyMenu(menuKey, menu),
-      rows: _rows(x),
-      note: noteText,
-      noteArt: noteArt,
-      noteAction: noteData?.actionLabel,
-      onNoteAction: noteData?.onAction,
-      primary: busy ? ReplyAction(label: primary.label, busy: true) : primary,
-      secondary: [call, second],
+    final canAsk = _editable && e.tripId != null && e.day != null;
+    return TravellerEnquiryCard(
+      key: ValueKey('reply-${x.stayId}-${e.id}'),
+      enquiry: e,
+      phone: _phone(x),
+      listedPerNight: _listed(x),
+      busy: busy,
+      readOnly: _c.isReadOnly,
+      highlighted: _flashId != null && _flashId == e.id,
+      planNotes: notes,
+      tripRange: _legRange(),
+      onRefresh: _c.refreshEnquiries,
+      onSimilar: canAsk ? () => SimilarStaysSheet.show(context, reference: e) : null,
+      onFindAnother: _c.isReadOnly ? null : () => TripNavigation.reopenStayShortlist(_legIndex),
     );
-  }
-
-  Future<void> _sendChange(TripEnquiryModel e) async {
-    final day = e.day;
-    final from = day == null || day > _c.dayCount ? null : _c.dateOf(day);
-    final to = from == null ? null : DateTime(from.year, from.month, from.day + e.nights);
-    final sent = await TripChangeRequestSheet.show(context, enquiry: e, checkIn: from, checkOut: to);
-    if (sent && mounted) await _c.refreshEnquiries();
   }
 }

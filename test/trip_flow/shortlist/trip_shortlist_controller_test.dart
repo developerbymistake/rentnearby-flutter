@@ -133,6 +133,50 @@ void main() {
     expect(toasts, contains(TripStringsShortlist.full));
   });
 
+  test('server 409 StepFull rolls back, raises the step-full sheet data and shows no raw toast', () async {
+    final err = DioException(
+      requestOptions: RequestOptions(path: '/x'),
+      response: Response(requestOptions: RequestOptions(path: '/x'), statusCode: 409, data: {
+        'error': {'type': 'StepFull', 'message': 'raw'},
+        'data': {
+          'case': 'total',
+          'counted': 3,
+          'quiet': 3,
+          'quietAsks': [
+            {'enquiryId': 'q1', 'listingId': 'l1', 'listingName': 'Lakeside', 'askedAt': '2026-11-24T04:30:00Z'},
+          ],
+        },
+      }),
+      type: DioExceptionType.badResponse,
+    );
+    final c = make(_FakeRepo(failWith: err));
+    expect(await add(c, 'a'), isFalse);
+    expect(c.has('stay:1', 'a'), isFalse);
+    expect(toasts, isEmpty);
+    expect(c.stepFull.value?.totalLimit, isTrue);
+    expect(c.stepFull.value?.quietAsks.single.listingName, 'Lakeside');
+    c.clear();
+    expect(c.stepFull.value, isNull);
+  });
+
+  test('free places come from the shortlist steps of the loaded trip only', () async {
+    final c = TripShortlistController(
+      repo: _FakeRepo(),
+      tripId: () async => 't1',
+      offline: () => false,
+      warn: toasts.add,
+      listWithSteps: (id) async => (
+        shortlist: const TripShortlist(),
+        steps: {'stay:1': const TripStepSlots(stepKey: 'stay:1', counted: 1, quiet: 2, free: 2)},
+      ),
+    );
+    await c.load(force: true);
+    expect(c.freeOf('stay:1'), 2);
+    expect(c.freeOf('stay:1', tripId: 't1'), 2);
+    expect(c.freeOf('stay:1', tripId: 'other'), isNull);
+    expect(c.freeOf('stay:2'), isNull);
+  });
+
   test('toggle off removes and calls remove; failure restores the row', () async {
     final repo = _FakeRepo();
     final c = make(repo);
@@ -238,5 +282,7 @@ void main() {
     expect(TripStringsShortlist.statusLabel('Blocked'), "Can't be reached");
     expect(TripStringsShortlist.statusLabel('LimitReached'), 'Limit reached');
     expect(TripStringsShortlist.statusLabel('Failed'), 'Try again');
+    expect(TripStringsShortlist.statusLabel('OpenForOtherNights'), 'Already asked for other nights');
+    expect(TripStringsShortlist.statusLabel('AlreadyBooked'), 'You already booked a stay for these nights');
   });
 }

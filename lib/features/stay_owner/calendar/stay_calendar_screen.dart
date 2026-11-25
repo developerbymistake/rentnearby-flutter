@@ -3,20 +3,26 @@ import 'package:get/get.dart';
 
 import '../../../config/app_routes.dart';
 import '../../../design/design.dart';
+import '../../../utils/app_toast.dart';
 import '../../../utils/money_format.dart';
 import '../../owner_core/calendar/month_grid.dart';
 import '../../owner_core/calendar/month_pager.dart';
 import '../../owner_core/calendar/models/calendar_models.dart';
 import '../../owner_core/data/owner_args.dart';
+import '../../owner_core/data/owner_result.dart';
 import '../../owner_core/json/owner_dates.dart';
 import '../../owner_core/look/owner_look.dart';
 import '../../owner_core/money/money_summary_card.dart';
 import '../../owner_core/plan/gate_keys.dart';
+import '../../owner_core/plan/owner_inactive.dart';
 import '../../owner_core/plan/plan_gate.dart';
+import '../../owner_core/plan/plan_keys.dart';
+import '../../owner_core/sheets/owner_confirm.dart';
 import '../../owner_core/sheets/owner_states.dart';
 import '../../owner_core/strings/owner_shared_strings.dart';
 import '../stay_owner_deps.dart';
 import '../strings/stay_calendar_strings.dart';
+import '../strings/stay_gate_strings_calendar.dart';
 import '../strings/stay_special_price_strings.dart';
 import '../widgets/stay_widgets.dart';
 import 'stay_calendar_controller.dart';
@@ -104,12 +110,15 @@ class _StayCalendarScreenState extends State<StayCalendarScreen> {
               );
             }),
           ),
-          StayCalBar(
-            primary: StayCalendarStrings.addBooking,
-            secondary: StayCalendarStrings.blockDays,
-            onPrimary: () => _add(),
-            onSecondary: () => _block(),
-          ),
+          Obx(() {
+            c.load.value;
+            return StayCalBar(
+              primary: StayCalendarStrings.addBooking,
+              secondary: StayCalendarStrings.blockDays,
+              onPrimary: c.fullOnPlus(StayMeterKeys.entries) ? null : () => _add(),
+              onSecondary: c.fullOnPlus(StayMeterKeys.blocks) ? null : () => _block(),
+            );
+          }),
         ],
       ),
     );
@@ -177,7 +186,7 @@ class _Body extends StatelessWidget {
         itemBuilder: (context, i) => StayCardSegment(
           first: i == 0,
           last: i == rows.length - 1,
-          child: StayEntryRows.month(rows[i]),
+          child: rows[i].inactiveByPlan ? _inactive(context, rows[i], StayEntryRows.month(rows[i])) : StayEntryRows.month(rows[i]),
         ),
       ),
       if (!c.summaryOpen) const SliverToBoxAdapter(child: StaySmallLine(text: StayCalendarStrings.freeEachBookingNote)),
@@ -192,13 +201,20 @@ class _Body extends StatelessWidget {
     final rules = c.priceRules;
     final limit = c.meter(StayMeterKeys.entries)?.limit ?? own.length;
     final live = rules.where((r) => r.live || r.active).length;
+    final t = c.today;
+    final inactive = d.entries.where((e) => e.inactiveByPlan && !e.cancelled && !(e.lastDay ?? t).isBefore(t)).toList();
     return [
       SliverToBoxAdapter(child: StaySectionHeaderRow(title: StayCalendarStrings.hiddenEntriesTitle, meter: StayCalendarStrings.shownCount(own.length, limit))),
       SliverList.builder(
         itemCount: own.length,
-        itemBuilder: (context, i) => StayCardSegment(first: i == 0, last: i == own.length - 1 && d.hiddenCount == 0, child: StayEntryRows.own(own[i])),
+        itemBuilder: (context, i) => StayCardSegment(first: i == 0, last: i == own.length - 1 && d.hiddenCount == 0 && inactive.isEmpty, child: StayEntryRows.own(own[i])),
       ),
-      if (d.hiddenCount > 0)
+      if (inactive.isNotEmpty)
+        SliverList.builder(
+          itemCount: inactive.length,
+          itemBuilder: (context, i) => StayCardSegment(first: own.isEmpty && i == 0, last: i == inactive.length - 1, child: _inactive(context, inactive[i], StayEntryRows.own(inactive[i]))),
+        )
+      else if (d.hiddenCount > 0)
         SliverToBoxAdapter(
           child: StayCardSegment(
             first: own.isEmpty,
@@ -222,6 +238,30 @@ class _Body extends StatelessWidget {
       ],
       const SliverToBoxAdapter(child: StayNote(text: StayCalendarStrings.afterPlusNote)),
     ];
+  }
+
+  Widget _inactive(BuildContext context, CalendarEntry e, Widget row) => Padding(
+        padding: DS.insets(b: 8),
+        child: OwnerInactive(
+          reason: StayGateStringsCalendar.entryInactive(PlanGate.limit(PlanKey.calendarEntries)),
+          busy: c.saving.value,
+          onDelete: () => _deleteInactive(context, e),
+          child: row,
+        ),
+      );
+
+  Future<void> _deleteInactive(BuildContext context, CalendarEntry e) async {
+    final ok = await OwnerConfirm.ask(
+      context,
+      title: StayCalendarStrings.deleteTitle,
+      confirm: StayCalendarStrings.delete,
+      cancel: StayCalendarStrings.cancel,
+      destructive: true,
+      tone: ListingTone.forest,
+    );
+    if (!ok) return;
+    final r = await c.delete(e.id);
+    if (r is! OwnerOk<void>) AppToast.error(r is OwnerRefused<void> ? (r.message ?? OwnerSharedStrings.noConnection) : OwnerSharedStrings.noConnection);
   }
 }
 

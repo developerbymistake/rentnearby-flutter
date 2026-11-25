@@ -6,7 +6,18 @@ import 'taxi_attention_copy.dart';
 
 enum TaxiHomeState { live, offline, review, changesReview, rejected, takenDown }
 
+enum TaxiRingStrip { ringing, offline, muted }
+
 abstract final class TaxiHomeCompose {
+  static TaxiHomeState shown(TaxiHomeState s, {required bool switchOn}) =>
+      s == TaxiHomeState.live || s == TaxiHomeState.offline ? (switchOn ? TaxiHomeState.live : TaxiHomeState.offline) : s;
+
+  static TaxiRingStrip? ringStrip(TaxiHomeState shown, {required bool denied}) => switch (shown) {
+        TaxiHomeState.live => denied ? TaxiRingStrip.muted : TaxiRingStrip.ringing,
+        TaxiHomeState.offline => TaxiRingStrip.offline,
+        _ => null,
+      };
+
   static TaxiHomeState stateOf(OwnerHomeListing l) {
     if (l.underReview) return l.everApproved ? TaxiHomeState.changesReview : TaxiHomeState.review;
     if (l.rejected || l.takenDown) return l.takenDown || l.everApproved ? TaxiHomeState.takenDown : TaxiHomeState.rejected;
@@ -44,8 +55,8 @@ abstract final class TaxiHomeCompose {
       };
 
   static ListingTone tone(TaxiHomeState s) => switch (s) {
-        TaxiHomeState.live || TaxiHomeState.offline => ListingTone.sunrise,
-        TaxiHomeState.changesReview => TaxiLook.grey,
+        TaxiHomeState.live => ListingTone.cE,
+        TaxiHomeState.offline || TaxiHomeState.changesReview => TaxiLook.grey,
         TaxiHomeState.review => ListingTone.sunrise,
         TaxiHomeState.rejected || TaxiHomeState.takenDown => ListingTone.coral,
       };
@@ -59,14 +70,6 @@ abstract final class TaxiHomeCompose {
     if (l.plannerOff) return TaxiHomeStrings.plannerPaused;
     if (l.areaPaused || l.tabOff) return TaxiHomeStrings.areaPaused;
     return null;
-  }
-
-  static bool showsPlanCard(TaxiHomeState s, OwnerHomeListing l) =>
-      (s == TaxiHomeState.live || s == TaxiHomeState.offline) && !l.areaPaused && !l.tabOff && !l.plannerOff;
-
-  static String? meterText(OwnerHomeListing l) {
-    final m = l.routesMeter;
-    return m == null ? null : '${m.used} of ${m.limit}';
   }
 
   static List<OwnerAttention> attention(OwnerHomeDto d, {required bool denied}) {

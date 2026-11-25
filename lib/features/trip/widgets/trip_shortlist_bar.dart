@@ -1,11 +1,13 @@
 import 'dart:async';
 import 'package:bakhli/design/design.dart';
+import 'package:bakhli/design/extra/ext_trip_replies.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../controllers/trip_plan_controller.dart';
 import '../controllers/trip_shortlist_controller.dart';
 import '../models/trip_enquiry_model.dart';
 import '../trip_navigation.dart';
+import '../trip_strings_enquiry_simple.dart';
 import '../trip_strings_shortlist.dart';
 import 'trip_send_result_sheet.dart';
 import 'trip_list_look.dart';
@@ -183,7 +185,12 @@ class _ReviewBody extends StatelessWidget {
       art: art,
       title: TripStringsShortlist.reviewTitle,
       body: TripStringsShortlist.reviewBody(count, taxi: taxi),
-      extra: labels.isEmpty ? null : _ReviewChips(tone: tone, art: art, labels: labels),
+      extra: labels.isEmpty && taxi
+          ? null
+          : Column(mainAxisSize: MainAxisSize.min, children: [
+              if (labels.isNotEmpty) _ReviewChips(tone: tone, art: art, labels: labels),
+              if (!taxi) Padding(padding: EdgeInsets.only(top: DS.gv(10)), child: Text('${TripStringsEnq.phoneShared}.', textAlign: TextAlign.center, style: RepliesLook.foot)),
+            ]),
       primaryLabel: TripStringsShortlist.sendAll,
       onPrimary: () => Navigator.pop(context, true),
       linkLabel: TripStringsShortlist.notNow,

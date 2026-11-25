@@ -41,6 +41,7 @@ Future<void> pumpPhone(
   double devicePixelRatio = 3,
   double textScale = 1.0,
   bool toastHost = false,
+  List<GetPage<dynamic>>? pages,
 }) async {
   await loadRealFonts();
   final view = tester.view;
@@ -66,6 +67,7 @@ Future<void> pumpPhone(
           child: toastHost ? Stack(fit: StackFit.expand, children: [Positioned.fill(child: c!), Overlay(key: AppToast.overlayKey)]) : c!,
         ),
         home: child,
+        getPages: pages,
       ),
     ),
   );

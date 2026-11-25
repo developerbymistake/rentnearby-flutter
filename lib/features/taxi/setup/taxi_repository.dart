@@ -62,4 +62,6 @@ class TaxiRepository {
       _parse(await ApiService.put('/taxis/me/availability', {'isAvailable': available}));
 
   Future<void> deleteTaxi() => ApiService.delete('/taxis/me');
+
+  Future<void> deleteHiddenRoute(String routeId) => ApiService.delete('/taxis/me/routes/$routeId');
 }

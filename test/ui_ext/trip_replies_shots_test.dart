@@ -250,10 +250,13 @@ void main() {
     await t.tap(find.byTooltip('More').first);
     await t.pump(const Duration(milliseconds: 300));
     await _snap(t, 'sr_menu');
-    expect(find.text('Decline'), findsOneWidget);
-    expect(find.text('Withdraw'), findsOneWidget);
+    expect(find.text('Withdraw'), findsWidgets);
     expect(find.text('Report'), findsOneWidget);
-    await t.tap(find.text('Decline'));
+    expect(find.text('Open chat'), findsNothing);
+    expect(find.text('Propose a price'), findsNothing);
+    await t.tapAt(Offset.zero);
+    await t.pump(const Duration(milliseconds: 300));
+    await t.tap(find.text('Decline').first);
     await t.pump(const Duration(milliseconds: 400));
     await _snap(t, 'sr_decline');
     expect(find.text('Decline this offer?'), findsOneWidget);

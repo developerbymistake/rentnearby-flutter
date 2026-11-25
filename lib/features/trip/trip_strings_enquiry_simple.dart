@@ -1,0 +1,56 @@
+import 'trip_strings.dart';
+
+class TripStringsEnq {
+  static const myEnquiries = 'My enquiries';
+  static const staysYouAsked = 'Stays you asked';
+  static const boxWaiting = 'Waiting';
+  static const boxOffers = 'Offers';
+  static const boxBooked = 'Booked';
+  static const pastEnquiries = 'Past enquiries';
+  static const noneWaiting = 'No enquiries waiting';
+  static const noneOffers = 'No offers yet';
+  static const noneBooked = 'No booked stays yet';
+  static const nonePast = 'No past enquiries';
+  static const noneSub = 'Stays you ask show here.';
+  static const quietPill = 'Quiet · can still reply';
+  static String quietLine(String ago) => 'Asked $ago · no reply';
+  static String askedAgo(String ago) => 'Asked $ago';
+  static const seeSimilar = 'See similar stays';
+  static const decline = TripStrings.decline;
+  static const phoneShared = 'Your phone number is shared with the host';
+  static String withdrawnUndo(String name) => 'Withdrawn · $name';
+  static const undo = 'Undo';
+  static const undoTooLate = 'Too late to undo. Ask again from the list.';
+  static const similarTitle = 'Similar stays you may like';
+  static const similarSub = 'Same area, close price, free on your dates';
+  static const similarAfterWithdraw = 'Withdrawn. These look good too: ask them?';
+  static String placesFree(int n) => n == 1 ? '1 place free for this day' : '$n places free for this day';
+  static String askThese(int n) => 'Ask these $n';
+  static const notNow = 'Not now';
+  static const repliesInDay = 'Usually replies within a day';
+  static const noMoreStays = 'No more stays right now. Please try again later';
+  static const tryAgain = 'Try again';
+  static const fullTotalTitle = 'Withdraw quiet asks and choose new ones';
+  static String fullTotalSub(int total, int w, int q) => 'This day has $total asks: $w new, $q quiet';
+  static String fullTotalNote(int w) => 'Your $w new asks stay open';
+  static const fullWaitingTitle = '3 asks are waiting';
+  static const fullWaitingSub = 'They turn quiet 12 h after you asked';
+  static const keep = 'Keep';
+  static const withdraw = 'Withdraw';
+  static const closedDates = 'Closed · dates changed';
+  static String closedDatesLine(String range) => 'Your trip is now $range';
+  static String askAgainFor(String range) => 'Ask again for $range';
+  static const stayRemoved = 'Stay removed';
+  static const stayRemovedLine = 'This stay is no longer listed';
+  static const notTaking = 'Not taking guests now';
+  static const notTakingLine = 'The host paused this stay';
+  static const hostCant = "Host can't take this ask";
+  static const hostShared = 'Host shared';
+  static const upi = 'UPI';
+  static const whatsApp = 'WhatsApp';
+  static String askedOtherTrip(String? trip) =>
+      trip == null || trip.isEmpty ? 'Asked in another trip' : 'Asked in another trip: $trip';
+  static const otherNights = 'Already asked for other nights';
+  static const alreadyBooked = 'You already booked a stay for these nights';
+  static const fullOnDates = 'Full on these dates';
+}

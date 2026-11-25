@@ -5,6 +5,7 @@ import '../models/trip_enquiry_model.dart';
 import '../trip_strings.dart';
 import '../trip_navigation.dart';
 import '../trip_strings_a5.dart';
+import '../trip_strings_enquiry_simple.dart';
 import '../trip_strings_shortlist.dart';
 import '../trip_strings_v2_easy.dart';
 import '../trip_strings_v2_find.dart';
@@ -27,6 +28,8 @@ class TripSendResultSheet {
         TripSkipReasons.blocked => TripStrings.cannotBeAsked,
         TripSkipReasons.limitReached => TripStrings.threeOpen,
         TripSkipReasons.alreadyBooked => TripStringsA5.alreadyBookedOther,
+        TripSkipReasons.openInAnotherTrip => TripStringsEnq.askedOtherTrip(null),
+        TripSkipReasons.openForOtherNights => TripStringsEnq.otherNights,
         'DaysAcrossCities' => TripStringsV2Find.driverOneCity,
         _ => TripStrings.cannotBeAsked,
       };
@@ -68,7 +71,11 @@ class _ResultBody extends StatelessWidget {
           ResultRow3D(
             art: results[i].ok ? ListingArt.star : ListingArt.clipboard,
             title: names[results[i].listingId] ?? byListing[results[i].listingId]?.listingName ?? (taxi ? TripStringsShortlist.taxiFallback : TripStrings.stay),
-            label: TripStringsShortlist.statusLabel(results[i].status),
+            label: results[i].otherTrip
+                ? TripStringsEnq.askedOtherTrip(results[i].otherTripTitle)
+                : results[i].fullOnDates
+                    ? TripStringsEnq.fullOnDates
+                    : TripStringsShortlist.statusLabel(results[i].status),
             ok: results[i].ok,
             divider: i < results.length - 1,
           ),
@@ -80,6 +87,7 @@ class _ResultBody extends StatelessWidget {
   Widget build(BuildContext context) {
     if (shortlist) return _shortlistBody(context);
     final empty = batch.items.isEmpty;
+    final full = {for (final r in batch.results) if (r.fullOnDates) r.listingId};
     final rows = <Widget>[
       for (final e in batch.items)
         ResultRow3D(
@@ -89,7 +97,7 @@ class _ResultBody extends StatelessWidget {
           label: TripStrings.sent,
         ),
       for (final s in batch.skipped)
-        ResultRow3D(art: ListingArt.clipboard, title: names[s.listingId] ?? TripStrings.stay, label: TripSendResultSheet.reasonLabel(s.reason), ok: false),
+        ResultRow3D(art: ListingArt.clipboard, title: names[s.listingId] ?? TripStrings.stay, label: full.contains(s.listingId) ? TripStringsEnq.fullOnDates : TripSendResultSheet.reasonLabel(s.reason), ok: false),
     ];
     return TripSheetFrame(
       tone: _tone,

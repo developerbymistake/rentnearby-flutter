@@ -92,6 +92,7 @@ class DiscMarkerFolderStore implements MarkerDiskStore {
 
 abstract class MarkerPainter {
   Future<Uint8List> badge(String category, DiscTuning t);
+  Future<Uint8List> dot(Color color, DiscTuning t);
   Future<Uint8List?> photo(Uint8List thumb, DiscTuning t);
   Future<bool> valid(Uint8List png);
 }
@@ -100,6 +101,7 @@ class CanvasMarkerPainter implements MarkerPainter {
   const CanvasMarkerPainter();
 
   static const double _ringBadge = 1.5;
+  static const double _ringDot = 1;
   static const double _ringPhoto = 2;
   static const double _shadowPad = 3;
   static const double _glyphRatio = 0.58;
@@ -124,6 +126,20 @@ class CanvasMarkerPainter implements MarkerPainter {
         ..strokeWidth = _ringBadge * t.pxPerDp,
     );
     _glyph(canvas, c, TripSpotCategory.iconOf(category), r * 2 * _glyphRatio);
+    return _png(recorder, size);
+  }
+
+  // Dot drawn at the zoomed-in size with a 1 dp white ring, like the old circle layer, so it can collide as a symbol.
+  @override
+  Future<Uint8List> dot(Color color, DiscTuning t) async {
+    final size = t.px(t.dotDp).toDouble();
+    final r = t.dotDp * t.pxPerDp / 2;
+    final ring = _ringDot * t.pxPerDp;
+    final c = Offset(size / 2, size / 2);
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder, Rect.fromLTWH(0, 0, size, size));
+    canvas.drawCircle(c, r, Paint()..color = FitnessAppTheme.white);
+    canvas.drawCircle(c, r - ring, Paint()..color = color);
     return _png(recorder, size);
   }
 
@@ -324,6 +340,8 @@ class TripMarkerImages {
   static String? markerUrl(DiscoverySpot s) => s.hasThumb ? SpotPhotoUrl.of(s.thumbUrl, SpotPhotoSize.marker) : null;
 
   Future<Uint8List> badge(String category, DiscTuning t) => _painter.badge(category, t);
+
+  Future<Uint8List> dot(Color color, DiscTuning t) => _painter.dot(color, t);
 
   Future<Uint8List?> thumb(DiscoverySpot s) async {
     final url = markerUrl(s);

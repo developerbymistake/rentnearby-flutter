@@ -6,8 +6,10 @@ import 'package:bakhli/features/owner_core/data/owner_result.dart';
 import 'package:bakhli/features/owner_core/home/owner_home_models.dart';
 import 'package:bakhli/features/owner_core/plan/plan_bindings.dart';
 import 'package:bakhli/features/owner_core/plan/plan_gate.dart';
+import 'package:bakhli/features/owner_core/plan/gate_keys.dart';
 import 'package:bakhli/features/owner_core/sheets/owner_states.dart';
 import 'package:bakhli/features/taxi/requests/widgets/driver_withdraw_sheet.dart';
+import 'package:bakhli/features/taxi/setup/taxi_routes_screen.dart';
 import 'package:bakhli/features/taxi/setup/taxi_vehicle_screen.dart';
 import 'package:bakhli/features/taxi_driver/calendar/taxi_calendar_entry_screen.dart';
 import 'package:bakhli/features/taxi_driver/calendar/taxi_trip_sheet.dart';
@@ -203,19 +205,22 @@ void main() {
   });
 
   group('FT-08 / FT-11 My Taxi routes block', () {
-    testWidgets('Free 1 of 1: locked row and pill open Plans & Billing (no G1 sheet)', (t) async {
+    testWidgets('Free 1 of 1: My Taxi shows one Your routes row, no lock row; the Routes page has the plan strip', (t) async {
       final c = hubFor(taxiJson(routesMeter: {'key': 'Routes', 'used': 1, 'limit': 1}));
       await pumpPhone(t, TaxiHubScreen(root: true, controller: c));
       await _settle(t);
-      final row = _row(t, '4 more routes');
-      expect(row, isNotNull);
-      expect(identical(row!.onTap, PlanGate.seePlus), isTrue);
-      expect(find.text('Add up to 5 routes with Plus.'), findsOneWidget);
-      expect(find.text('Add route'), findsNothing);
+      expect(_row(t, 'Your routes'), isNotNull);
+      expect(find.text('4 more routes'), findsNothing);
+      await t.pumpWidget(const SizedBox.shrink());
+      await pumpPhone(t, const TaxiRoutesScreen(manage: true), size: const Size(392, 1400));
+      await _settle(t);
+      expect(find.byKey(GateKeys.planStrip), findsOneWidget);
+      expect(find.text('Free plan: 1 route. Plus allows up to 5 routes.'), findsOneWidget);
     });
 
-    testWidgets('catalog Routes 7 prints 6 more routes', (t) async {
+    testWidgets('catalog Routes 7 prints up to 7 routes on the Routes page strip', (t) async {
       final c = hubFor(taxiJson(routesMeter: {'key': 'Routes', 'used': 1, 'limit': 1}));
+      await c.reload();
       PlanGate.debugPlan = null;
       Get.put<PlanRepository>(FakePlanRepository([
         {'paymentEnabled': true, 'limits': {'routes': 1}},
@@ -227,14 +232,13 @@ void main() {
       pc.catalog.value = PlanCatalogModel({
         'Taxi': [_plan(paid: false, routes: 1), _plan(paid: true, routes: 7)],
       });
-      await pumpPhone(t, TaxiHubScreen(root: true, controller: c));
+      await pumpPhone(t, const TaxiRoutesScreen(manage: true), size: const Size(392, 1400));
       await _settle(t);
-      expect(find.text('6 more routes'), findsOneWidget);
-      expect(find.text('Add up to 7 routes with Plus.'), findsOneWidget);
+      expect(find.text('Free plan: 1 route. Plus allows up to 7 routes.'), findsOneWidget);
       PlanBindings.dispose();
     });
 
-    testWidgets('plan Plus after the hub reload: Add route works, 3 of 5', (t) async {
+    testWidgets('plan Plus after the hub reload: 3 of 5 used, no strip, Add route enabled', (t) async {
       var meter = {'key': 'Routes', 'used': 1, 'limit': 1};
       var routes = 1;
       Get.reset();
@@ -242,18 +246,19 @@ void main() {
       Get.delete<TaxiHubController>(tag: TaxiHubController.tag, force: true);
       final hub = Get.put(TaxiHubController(userId: () => 'user-a', fetch: () async => {'data': taxiJson(routes: routes, routesMeter: meter)}), tag: TaxiHubController.tag);
       expect(c, isNotNull);
-      await pumpPhone(t, TaxiHubScreen(root: true, controller: hub));
+      await hub.reload();
+      await pumpPhone(t, const TaxiRoutesScreen(manage: true), size: const Size(392, 1400));
       await _settle(t);
-      expect(find.text('4 more routes'), findsOneWidget);
+      expect(find.text('1 of 1 routes used'), findsOneWidget);
       PlanGate.debugPlan = OwnerPlans.plus;
       meter = {'key': 'Routes', 'used': 3, 'limit': 5};
       routes = 3;
       await hub.reload(force: true);
       await _settle(t);
-      expect(find.text('Add route'), findsOneWidget);
-      expect(find.text('3 of 5 used'), findsOneWidget);
-      expect(find.text('ROUTES AND FARES · 3 OF 5'), findsOneWidget);
-      expect(find.text('Full'), findsNothing);
+      expect(find.text('3 of 5 routes used'), findsOneWidget);
+      expect(find.byKey(GateKeys.planStrip), findsNothing);
+      final add = t.widget<GradientPillButton>(find.descendant(of: find.byKey(const ValueKey('routes_manage_add')), matching: find.byType(GradientPillButton)));
+      expect(add.enabled, isTrue);
     });
   });
 

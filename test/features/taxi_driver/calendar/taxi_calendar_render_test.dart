@@ -1,6 +1,7 @@
 import 'package:bakhli/design/design.dart';
 import 'package:bakhli/features/owner_core/calendar/models/calendar_models.dart';
 import 'package:bakhli/features/owner_core/home/owner_home_models.dart';
+import 'package:bakhli/features/owner_core/plan/gate_keys.dart';
 import 'package:bakhli/features/owner_core/sheets/owner_states.dart';
 import 'package:bakhli/features/taxi_driver/calendar/taxi_balance_due_screen.dart';
 import 'package:bakhli/features/taxi_driver/calendar/taxi_bookings_tab.dart';
@@ -125,9 +126,7 @@ void main() {
       await settle(t);
       TaxiTripSheet.show(t.element(find.byType(TaxiBookingsTab)), controller: c);
       await settle(t);
-      await t.enterText(find.byType(TextField).first, 'Airport drop');
-      await t.tap(find.text('Save trip'));
-      await settle(t);
+      expect(find.byKey(GateKeys.sheet), findsOneWidget);
     });
   });
 

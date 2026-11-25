@@ -1,5 +1,6 @@
 import 'package:bakhli/features/owner_core/data/owner_cache.dart';
 import 'package:bakhli/features/owner_core/plan/plan_gate.dart';
+import 'package:bakhli/features/taxi/setup/taxi_routes_screen.dart';
 import 'package:bakhli/features/taxi_driver/hub/taxi_hub_screen.dart';
 import 'package:bakhli/features/taxi_driver/hub/taxi_hub_sheets.dart';
 import 'package:flutter/material.dart';
@@ -48,8 +49,8 @@ void main() {
       final label = '${size.width.toInt()}x${size.height.toInt()} @$scale';
 
       testWidgets('Edit fare sheet $label', (t) async {
-        final c = hubFor(taxiJson());
-        await pumpPhone(t, TaxiHubScreen(root: true, controller: c), size: size, textScale: scale, devicePixelRatio: 2);
+        await hubFor(taxiJson()).reload();
+        await pumpPhone(t, const TaxiRoutesScreen(manage: true), size: size, textScale: scale, devicePixelRatio: 2);
         await _settle(t);
         await t.ensureVisible(find.text('Edit fare').first);
         await t.tap(find.text('Edit fare').first);
@@ -65,7 +66,7 @@ void main() {
         final c = hubFor(taxiJson());
         await pumpPhone(t, TaxiHubScreen(root: true, controller: c), size: size, textScale: scale, devicePixelRatio: 2);
         await _settle(t);
-        await t.ensureVisible(find.text('LOCAL SIGHTSEEING'));
+        await t.ensureVisible(find.text('Local sightseeing'));
         await t.pump();
         final edits = find.text('Edit');
         await t.ensureVisible(edits.first);
@@ -79,13 +80,11 @@ void main() {
       }, skip: _waitsForFx07.isNotEmpty);
 
       testWidgets('Edit route sheet $label', (t) async {
-        final c = hubFor(taxiJson(routes: 2), plan: OwnerPlans.plus);
-        await pumpPhone(t, TaxiHubScreen(root: true, controller: c), size: size, textScale: scale, devicePixelRatio: 2);
+        await hubFor(taxiJson(routes: 2), plan: OwnerPlans.plus).reload();
+        await pumpPhone(t, const TaxiRoutesScreen(manage: true), size: size, textScale: scale, devicePixelRatio: 2);
         await _settle(t);
-        await t.ensureVisible(find.byIcon(Icons.more_vert_rounded).first);
-        await t.tap(find.byIcon(Icons.more_vert_rounded).first);
-        await _settle(t);
-        await t.tap(find.text('Edit route'));
+        await t.ensureVisible(find.text('Edit route').first);
+        await t.tap(find.text('Edit route').first);
         await _settle(t);
         final fields = find.byType(EditableText);
         await t.showKeyboard(fields.last);

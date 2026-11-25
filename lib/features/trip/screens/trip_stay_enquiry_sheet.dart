@@ -11,11 +11,13 @@ import '../models/trip_enquiry_model.dart';
 import '../trip_constants.dart';
 import '../trip_strings.dart';
 import '../trip_strings_a2.dart';
+import '../trip_strings_enquiry_simple.dart';
 import '../trip_strings_v2_find.dart';
 import '../utils/trip_enquiry_rules.dart';
 import '../utils/trip_format.dart';
 import '../widgets/trip_send_result_sheet.dart';
 import '../widgets/trip_sheet_frame.dart';
+import '../widgets/trip_step_full_sheet.dart';
 import 'trip_dates_sheet.dart';
 
 class TripStayEnquirySheet {
@@ -26,7 +28,11 @@ class TripStayEnquirySheet {
     required int nights,
   }) async {
     final batch = await TripSheetFrame.show<TripEnquiryBatch>(context, _EnquiryBody(stay: stay, day: day, nights: nights));
-    if (batch == null) return null;
+    if (batch == null) {
+      final full = TripEnquiryController.to.lastStepFull;
+      if (full != null && context.mounted) await TripStepFullSheet.show(context, full);
+      return null;
+    }
     final left = batch.asksLeft;
     if (left != null) TripSupplyController.to.asksLeft.value = left;
     if (context.mounted) {
@@ -67,7 +73,11 @@ class _EnquiryBodyState extends State<_EnquiryBody> {
         _limitMinutes = enquiries.lastRetryAfterMinutes ?? 1;
       }
     });
-    if (batch != null) Navigator.pop(context, batch);
+    if (batch != null) {
+      Navigator.pop(context, batch);
+    } else if (enquiries.lastStepFull != null) {
+      Navigator.pop(context);
+    }
   }
 
   static final ListingTone _tone = ListingTone.forest;
@@ -118,7 +128,7 @@ class _EnquiryBodyState extends State<_EnquiryBody> {
         title: TripStrings.enquiryTitle,
         description: widget.stay.title,
         footnote: asksLeft == null ? TripStrings.noPaymentLine : TripStrings.asksLeft(asksLeft),
-        endNote: [reply, if (asksLeft != null) TripStrings.noPaymentLine].join(' '),
+        endNote: [TripStringsEnq.phoneShared, reply, if (asksLeft != null) TripStrings.noPaymentLine].join(' '),
         footer: GradientPillButton(tone: _tone, label: TripStrings.sendToStays(1), loading: _sending, enabled: limit == null, onTap: limit != null ? null : _send),
         children: [
           Row(

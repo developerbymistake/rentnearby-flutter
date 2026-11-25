@@ -6,14 +6,26 @@ import '../../../design/extra/ext_taxi_owner.dart';
 import '../../../utils/app_toast.dart';
 import '../../../utils/search_fold.dart';
 import '../../../widgets/location_switch_sheet.dart';
+import '../../owner_core/data/owner_args.dart';
+import '../../owner_core/look/owner_look.dart';
+import '../../owner_core/sheets/owner_states.dart';
 import '../../owner_core/plan/gate_keys.dart';
+import '../../owner_core/plan/owner_inactive.dart';
+import '../../owner_core/plan/owner_manage_card.dart';
 import '../../../controllers/plan_controller.dart';
 import '../../owner_core/plan/plan_bindings.dart';
 import '../../owner_core/plan/plan_gate.dart';
 import '../../owner_core/plan/plan_limit_sheet.dart';
 import '../../owner_core/plan/plan_keys.dart';
 import '../../owner_core/plan/soft_lock.dart';
+import '../../../utils/money_format.dart';
+import '../../taxi_driver/hub/taxi_hub_controller.dart';
+import '../../taxi_driver/hub/taxi_hub_sheets.dart';
 import '../../taxi_driver/strings/taxi_gate_strings.dart';
+import '../../taxi_driver/strings/taxi_hub_strings.dart';
+import '../../taxi_driver/plan/taxi_plan_strings.dart';
+import '../../taxi_driver/taxi_driver_deps.dart';
+import '../models/taxi_owner_model.dart';
 import '../../taxi_driver/strings/taxi_setup_strings.dart';
 import '../../trip/data/trip_city_catalog.dart';
 import '../../trip/models/trip_city_model.dart';
@@ -90,7 +102,9 @@ class _RouteDraft {
 }
 
 class TaxiRoutesScreen extends StatefulWidget {
-  const TaxiRoutesScreen({super.key});
+  const TaxiRoutesScreen({super.key, this.manage});
+
+  final bool? manage;
   @override
   State<TaxiRoutesScreen> createState() => _TaxiRoutesScreenState();
 }
@@ -120,6 +134,10 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> with TickerProvider
   bool _picking = false;
 
   static const _max = TaxiOptionSets.maxRoutes;
+
+  late final bool _manage = widget.manage ?? OwnerArgs.isManage(Get.arguments);
+  TaxiHubController? _hub;
+  bool _ownsHub = false;
 
   int get _planMax {
     final l = PlanGate.limit(PlanKey.routes);
@@ -169,21 +187,30 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> with TickerProvider
     });
   }
 
-  @override
-  void initState() {
-    super.initState();
-    for (final r in _ctrl.taxi.value?.routes ?? const []) {
-      _routes.add(_RouteDraft(
+  static _RouteDraft _draftOf(TaxiRouteModel r) => _RouteDraft(
         id: r.id,
         from: _Place(
             name: r.fromName, label: r.fromLabel, lat: r.fromLatitude, lng: r.fromLongitude, cityKey: r.fromCityKey, otherPlace: r.fromOtherPlace),
         to: _Place(name: r.toName, label: r.toLabel, lat: r.toLatitude, lng: r.toLongitude, cityKey: r.toCityKey, otherPlace: r.toOtherPlace),
         fare: r.fare,
         tripType: r.tripType,
-      ));
+      );
+
+  @override
+  void initState() {
+    super.initState();
+    if (_manage) {
+      _hub = TaxiHubController.maybe;
+      if (_hub == null) {
+        _hub = Get.put(TaxiHubController(), tag: TaxiHubController.tag);
+        _ownsHub = true;
+      }
+    }
+    for (final r in _ctrl.taxi.value?.routes ?? const <TaxiRouteModel>[]) {
+      _routes.add(_draftOf(r));
     }
     _watchPlan();
-    _formOpen = _routes.length < _max && !_extraBlocked;
+    _formOpen = !_manage && _routes.length < _max && !_extraBlocked;
     _from = _defaultFrom;
     _syncRateFields();
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -193,6 +220,7 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> with TickerProvider
 
   @override
   void dispose() {
+    if (_ownsHub && Get.isRegistered<TaxiHubController>(tag: TaxiHubController.tag)) Get.delete<TaxiHubController>(tag: TaxiHubController.tag, force: true);
     _planWorker?.dispose();
     _anim.dispose();
     _fareCtrl.dispose();
@@ -433,6 +461,19 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> with TickerProvider
     if (_ctrl.isSaving.value || _savingRate) return;
     FocusScope.of(context).unfocus();
     if (!_commitForm()) return;
+    if (_manage && _manageTaxi == null) {
+      await _hub?.reload(force: true);
+      if (!mounted || _manageTaxi == null) return;
+      setState(() {
+        final drafts = _routes.where((r) => r.id == null).toList();
+        _routes
+          ..clear()
+          ..addAll(_manageRoutes.map(_draftOf))
+          ..addAll(drafts);
+      });
+      AppToast.info('Routes loaded. Check and save again.');
+      return;
+    }
     final rateDirty = _rateEditable && _rateDirty;
     if (_routes.isEmpty && !rateDirty) {
       AppToast.error('Add at least one route');
@@ -440,7 +481,7 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> with TickerProvider
       _reveal(_formKey);
       return;
     }
-    final rateError = _rateEditable ? TaxiRateRules.validate(_rateCtrl.text, _kmCtrl.text) : null;
+    final rateError = _rateEditable && !_manage ? TaxiRateRules.validate(_rateCtrl.text, _kmCtrl.text) : null;
     if (rateError != null) {
       AppToast.error(rateError);
       _markRate();
@@ -457,6 +498,14 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> with TickerProvider
     if (!mounted) return;
     if (!ok) {
       if (_ctrl.lastErrorType == TaxiSetupController.routeLimitType) await _routeLimitRefused();
+      return;
+    }
+    if (Get.isRegistered<PlanController>()) Get.find<PlanController>().invalidate().ignore();
+    if (_manage) {
+      setState(() => _dirty = false);
+      await _hub?.reload(force: true);
+      TaxiDriverDeps.refreshHome();
+      AppToast.success('Routes saved');
       return;
     }
     Get.back();
@@ -500,16 +549,9 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> with TickerProvider
             child: SafeArea(
               bottom: false,
               child: Column(children: [
-                PageHeader3D(
-                  tone: _tone,
-                  title: TaxiSetupStrings.routesTitle,
-                  subtitle: TaxiSetupStrings.routesStep,
-                  art: ListingArt.compass,
-                  inlineTitle: true,
-                  onBack: _onBack,
-                ),
+                _manage ? Obx(() => _header(TaxiHubStrings.usedOfRoutes((_hub?.load.value.valueOrNull ?? _ctrl.taxi.value)?.routes.length ?? 0, _planMax))) : _header(TaxiSetupStrings.routesStep),
                 Expanded(
-                  child: ListView(
+                  child: _manage ? _manageBody() : ListView(
                     padding: EdgeInsets.only(bottom: DS.s(24)),
                     children: [
                       SetupEntrance(controller: _anim, index: 0, count: 5, child: _meterCard()),
@@ -533,7 +575,7 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> with TickerProvider
               ]),
             ),
           ),
-          bottomNavigationBar: Obx(() => FormFooter(
+          bottomNavigationBar: _manage && !_formOpen ? null : Obx(() => FormFooter(
                 tone: _tone,
                 top: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                   const ToastDock(),
@@ -559,6 +601,15 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> with TickerProvider
       ]),
     );
   }
+
+  Widget _header(String subtitle) => PageHeader3D(
+        tone: _tone,
+        title: TaxiSetupStrings.routesTitle,
+        subtitle: subtitle,
+        art: ListingArt.compass,
+        inlineTitle: true,
+        onBack: _onBack,
+      );
 
   Widget _summaryCard(int i) {
     final r = _routes[i];
@@ -753,6 +804,138 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> with TickerProvider
   }
 
   bool get _addPlanFull => PlanGate.loaded && _count >= _planMax;
+
+  TaxiOwnerModel? get _manageTaxi => _hub?.taxi ?? _ctrl.taxi.value;
+
+  List<TaxiRouteModel> get _manageRoutes => _manageTaxi?.routes ?? const [];
+
+  bool get _manageFull => (PlanGate.loaded && _manageRoutes.length >= _planMax) || _manageRoutes.length >= _max;
+
+  bool _reviewLocked() {
+    if (_manageTaxi?.isPendingReview != true) return false;
+    AppToast.info(TaxiHubStrings.underReview);
+    return true;
+  }
+
+  // PUT /taxis/me/routes replaces the whole set: never seed the form from a list that was not loaded.
+  void _openManageForm() {
+    if (_manageTaxi == null) {
+      _hub?.reload(force: true);
+      return;
+    }
+    if (_reviewLocked()) return;
+    if (_formOpen) {
+      _reveal(_formKey);
+      return;
+    }
+    setState(() {
+      _routes
+        ..clear()
+        ..addAll(_manageRoutes.map(_draftOf));
+      _clearForm();
+      _formOpen = true;
+    });
+    _reveal(_formKey);
+  }
+
+  Widget _manageBody() {
+    final hub = _hub;
+    return Obx(() {
+      final t = hub?.load.value.valueOrNull ?? _ctrl.taxi.value;
+      if (t == null) {
+        return ListView(
+          padding: DS.insets(l: 18, t: 12, r: 18, b: 24),
+          children: [
+            OwnerStateView<TaxiOwnerModel>(
+              key: const ValueKey('routes_manage_state'),
+              load: hub?.load.value ?? const OwnerLoadLoading<TaxiOwnerModel>(),
+              look: OwnerLook.taxi,
+              words: const OwnerStateWords(),
+              data: (_, __, ___) => const SizedBox.shrink(),
+              onRetry: () => hub?.reload(force: true),
+            ),
+          ],
+        );
+      }
+      final routes = t.routes;
+      final hidden = t.hiddenRoutes;
+      final full = _manageFull;
+      final free = PlanGate.limit(PlanKey.routes);
+      return ListView(
+        padding: EdgeInsets.only(bottom: DS.s(24)),
+        children: [
+          Padding(
+            padding: DS.insets(l: 18, t: 12, r: 18),
+            child: SoftLock.strip(
+              text: TaxiGateStrings.lineFree(free, TaxiGateStrings.plusRoutes),
+              taxi: true,
+              onTap: () => PlanGate.showLimit(context, TaxiGateStrings.routeGate()),
+            ),
+          ),
+          for (var i = 0; i < routes.length; i++) _manageCard(i + 1, routes[i]),
+          for (var i = 0; i < hidden.length; i++)
+            OwnerInactiveCard(
+              taxi: true,
+              eyebrow: TaxiHubStrings.routeEyebrow(routes.length + i + 1),
+              title: TaxiHubStrings.routeTitleOf(hidden[i].fromName, hidden[i].toName),
+              sub: '${TaxiHubStrings.fareLine(Money.exact(hidden[i].fare))} · ${hidden[i].roundTrip ? TaxiHubStrings.roundTrip : TaxiHubStrings.oneWay}',
+              reason: TaxiGateStrings.routeInactive(free),
+              editLabels: const [TaxiHubStrings.editFare, TaxiHubStrings.editRouteTitle],
+              busy: hub?.busy.value ?? false,
+              onDelete: () => hub?.deleteHiddenRoute(hidden[i].id),
+            ),
+          if (hidden.isNotEmpty)
+            Padding(
+              padding: DS.insets(l: 18, t: 10, r: 18),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: TextLink(label: TaxiPlanStrings.chooseYourRoute, tone: KitTone.taxiDriver, onTap: () => TaxiDriverDeps.openChooseRoute()),
+              ),
+            ),
+          if (_formOpen) _form(),
+          Padding(
+            padding: DS.insets(l: 18, t: 18, r: 18),
+            child: KeyedSubtree(
+              key: const ValueKey('routes_manage_add'),
+              child: GradientPillButton(
+                tone: ListingTone.coral,
+                label: TaxiHubStrings.addRoute,
+                enabled: PlanGate.addEnabled(full),
+                onTap: () => PlanGate.addTap(context, full: full, gate: TaxiGateStrings.routeGate, onAdd: _openManageForm),
+              ),
+            ),
+          ),
+          if (full && !PlanGate.canUpgrade)
+            Padding(
+              padding: DS.insets(l: 18, t: 8, r: 18),
+              child: Text(
+                TaxiGateStrings.upTo(PlanGate.loaded ? _planMax : _max),
+                key: const ValueKey('routes_manage_full_line'),
+                textAlign: TextAlign.center,
+                style: FieldMessage.helperStyle.copyWith(fontSize: DS.f(12)),
+              ),
+            ),
+        ],
+      );
+    });
+  }
+
+  Widget _manageCard(int n, TaxiRouteModel r) {
+    final hub = _hub;
+    return OwnerManageCard(
+      eyebrow: TaxiHubStrings.routeEyebrow(n),
+      chip: r.roundTrip ? TaxiHubStrings.roundTrip : TaxiHubStrings.oneWay,
+      title: TaxiHubStrings.routeTitleOf(r.fromName, r.toName),
+      sub: TaxiHubStrings.fareLine(Money.exact(r.fare)),
+      actions: hub == null
+          ? const []
+          : [
+              GradientPillButton(tone: ListingTone.coral, label: TaxiHubStrings.editFare, height: 42, fontSize: 12.5, onTap: () => TaxiEditFareSheet.show(context, hub, r)),
+              WhitePillButton(tone: ListingTone.coral, label: TaxiHubStrings.editRouteTitle, height: 42, fontSize: 12.5, onTap: () => TaxiEditRouteSheet.show(context, hub, r)),
+              WhitePillButton(tone: ListingTone.coral, label: TaxiHubStrings.delete, height: 42, fontSize: 12.5, danger: true, onTap: () => TaxiRouteActions.delete(context, hub, r)),
+            ],
+    );
+  }
 
   Widget _addRow() {
     final n = _count;

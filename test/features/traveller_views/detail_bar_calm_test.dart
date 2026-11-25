@@ -32,12 +32,11 @@ Widget _host(Widget bar, {Size size = const Size(360, 800), double scale = 1}) =
       ),
     );
 
-DetailActionBar _stay({VoidCallback? onChat, bool reported = false, bool owner = false}) => DetailActionBar(
+DetailActionBar _stay({bool fromTrip = false, bool reported = false, bool owner = false}) => DetailActionBar(
       latitude: 29.39,
       longitude: 79.45,
       ownerPhone: '9876543210',
-      onChat: onChat,
-      whatsAppPhone: onChat == null ? '9876543210' : null,
+      whatsAppPhone: fromTrip ? null : '9876543210',
       isOwner: owner,
       onReport: reported ? null : () {},
       palette: templateModulePalette,
@@ -79,13 +78,12 @@ void main() {
     expect(find.byType(DetailBarButton), findsNothing);
   });
 
-  testWidgets('stay bar from a trip: Chat instead of WhatsApp', (t) async {
-    var chats = 0;
-    await t.pumpWidget(_host(_stay(onChat: () => chats++)));
-    expect(find.text('Chat'), findsOneWidget);
+  testWidgets('stay bar from a trip: Directions and Call, no Chat, no WhatsApp', (t) async {
+    await t.pumpWidget(_host(_stay(fromTrip: true)));
+    expect(find.text('Directions'), findsOneWidget);
+    expect(find.text('Call'), findsOneWidget);
+    expect(find.text('Chat'), findsNothing);
     expect(find.text('WhatsApp'), findsNothing);
-    await t.tap(find.text('Chat'));
-    expect(chats, 1);
   });
 
   testWidgets('taxi bar: safety line above Call and WhatsApp, then Report', (t) async {

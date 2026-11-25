@@ -19,6 +19,7 @@ import '../trip_strings.dart';
 import '../trip_strings_city.dart';
 import '../trip_strings_a2.dart';
 import '../trip_strings_shortlist.dart';
+import '../trip_strings_enquiry_simple.dart';
 import '../trip_strings_fin_b1.dart';
 import '../trip_strings_v2_easy.dart';
 import '../trip_strings_v2_find.dart';
@@ -30,6 +31,7 @@ import '../widgets/trip_list_look.dart';
 import '../widgets/trip_shortlist_bar.dart';
 import '../widgets/trip_sheet_frame.dart';
 import '../widgets/trip_status.dart';
+import '../widgets/trip_step_full_sheet.dart';
 import '../widgets/trip_stay_row.dart';
 import 'trip_stay_enquiry_sheet.dart';
 
@@ -53,6 +55,7 @@ class _TripStayScreenState extends State<TripStayScreen> with TickerProviderStat
   final _expanded = <int>{}.obs;
   List<int> _only = const [];
   Worker? _planWorker;
+  Worker? _fullWorker;
   late final AnimationController _anim = AnimationController(duration: const Duration(milliseconds: 600), vsync: this);
 
   @override
@@ -93,11 +96,17 @@ class _TripStayScreenState extends State<TripStayScreen> with TickerProviderStat
     _supply.setNear((map['nearLat'] as num?)?.toDouble(), (map['nearLng'] as num?)?.toDouble());
     _supply.ensureStays(_leg, onlyDays: _only);
     _planWorker = ever(_plan.plan, (_) => _supply.ensureStays(_leg));
+    _fullWorker = ever(TripShortlistController.to.stepFull, (TripStepFull? full) {
+      if (full == null || !mounted) return;
+      TripShortlistController.to.stepFull.value = null;
+      TripStepFullSheet.show(context, full, leg: _leg);
+    });
   }
 
   @override
   void dispose() {
     _planWorker?.dispose();
+    _fullWorker?.dispose();
     _lifecycle?.dispose();
     _anim.dispose();
     if (Get.isRegistered<TripPlanController>() && identical(Get.find<TripPlanController>(), _plan)) {
@@ -408,6 +417,7 @@ class _TripStayScreenState extends State<TripStayScreen> with TickerProviderStat
     if (e == null) return null;
     final offer = e.openOffer;
     return switch (e.display) {
+      TripDisplayStatus.asked when e.isQuiet => TripStringsEnq.quietLine(_ago(e.createdAt)),
       TripDisplayStatus.asked => TripStringsFinB1.askedWaiting(_ago(e.createdAt)),
       TripDisplayStatus.offered when offer != null => TripStringsFinB1.offeredTotal(BrowseItem.inr(offer.total)),
       _ => null,
@@ -425,7 +435,6 @@ class _TripStayScreenState extends State<TripStayScreen> with TickerProviderStat
           fit: _supply.stayFitOf(s.id),
           status: asked?.display,
           statusLine: _askedLine(asked),
-          onOpenChat: asked?.conversationId == null ? null : () => TripNavigation.openChatForEnquiry(asked!),
           readOnly: _plan.isReadOnly,
           onOpen: () => Get.toNamed(AppRoutes.stayDetail, arguments: {'id': s.id, ...detailArgs})?.then((_) => _reloadIfFailed()),
           onCall: () => TripStayRow.call(context, s, detailArguments: detailArgs),

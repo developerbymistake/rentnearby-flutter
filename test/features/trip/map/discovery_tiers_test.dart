@@ -52,7 +52,7 @@ void main() {
     expect(const DiscArea(30, 78, 0).valid, isFalse);
   });
 
-  test('1,500 rows: 40 photo markers with thumbs only, 120 badges, rest dots', () {
+  test('1,500 rows: 40 photo markers with thumbs only, every other spot a badge', () {
     final p = MapPackParser.parse(MapPackSynthetic.body(rows: 1500, withThumb: 300))!;
     final sw = Stopwatch()..start();
     final t = DiscTiers.assign(p.spots, photoMax: DiscTuning.trip.photoMax, badgeMax: DiscTuning.trip.badgeMax);
@@ -64,8 +64,8 @@ void main() {
     expect(photos.length, 40);
     expect(photos.every((s) => s.hasThumb), isTrue);
     expect(t.values.where((v) => v == DiscTiers.photo).length, 40);
-    expect(t.values.where((v) => v == DiscTiers.badge).length, 120);
-    expect(t.values.where((v) => v == DiscTiers.dot).length, 1340);
+    expect(t.values.where((v) => v == DiscTiers.badge).length, 1460);
+    expect(t.values.where((v) => v == DiscTiers.dot).length, 0);
   });
 
   test('groupOf follows TripSpotCategory colours: 4 groups', () {
@@ -90,9 +90,9 @@ void main() {
 
   test('tuning: trip and stay values', () {
     expect(DiscTuning.trip.photoMax, 40);
-    expect(DiscTuning.trip.photoDp, DS.s(90));
+    expect(DiscTuning.trip.photoDp, DS.s(90 * DiscTuning.markerScale));
     expect(DiscTuning.stay.photoMax, 24);
-    expect(DiscTuning.stay.photoDp, DS.s(90));
+    expect(DiscTuning.stay.photoDp, DS.s(90 * DiscTuning.markerScale));
     expect(DiscTuning.trip.px(44), 44);
   });
 }

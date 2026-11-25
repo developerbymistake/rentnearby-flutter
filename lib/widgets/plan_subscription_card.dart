@@ -108,6 +108,7 @@ class PlanSubscriptionCard extends StatelessWidget {
     final action = switch (s) {
       PlanCardState.grace || PlanCardState.onHold => fix,
       PlanCardState.ended => PlanSubAction(PlanWords.subscribeAgain, onSubscribeAgain),
+      PlanCardState.cancelled => PlanSubAction(PlanWords.resubscribe, plans.openManageSubscription),
       _ => manage,
     };
     final choose = chooseLabel != null && onChoose != null ? PlanSubAction(chooseLabel!, onChoose) : null;

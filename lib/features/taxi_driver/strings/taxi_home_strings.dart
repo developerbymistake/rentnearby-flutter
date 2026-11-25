@@ -17,7 +17,7 @@ abstract final class TaxiHomeStrings {
   static const pillTakenDown = 'TAKEN DOWN';
   static const lineLive = 'LIVE · ready for requests';
   static const lineFeatured = 'LIVE · Featured';
-  static const lineOffline = 'Offline · turn on to get requests';
+  static const lineOffline = 'Offline · not taking requests';
   static const lineReview = 'We will notify you when your taxi is live.';
   static const lineChangesReview = 'UNDER REVIEW · not getting requests';
   static String rejectedLine(String? reason) => reason == null ? 'Rejected' : 'Rejected: $reason';
@@ -28,10 +28,13 @@ abstract final class TaxiHomeStrings {
   static const reviewTip = 'Requests start after approval. Get your phone ready now.';
 
   static const availableNow = 'Available now';
-  static const on = 'On';
-  static const off = 'Off';
-  static const routes = 'Routes';
-  static const switchLine = 'Bookings stay. A ringing request and unanswered trip leads close.';
+  static const ringOnTitle = 'Requests will ring';
+  static const ringOnBody = 'Notifications are on.';
+  static const ringOffTitle = 'You are offline';
+  static const ringOffBody = 'New requests will not ring.';
+  static const ringMutedTitle = 'Notifications are off';
+  static const ringMutedBody = 'Requests will not ring.';
+  static String seats(int n) => n >= 12 ? '12+ seats' : '$n seats';
   static const toastAvailable = 'Available now';
   static const toastHidden = 'Hidden from search';
   static const notLiveYet = 'Your taxi is not live yet.';
@@ -61,8 +64,9 @@ abstract final class TaxiHomeStrings {
 
   static const newRequests = 'New requests';
   static const missedRequests = 'Missed';
-  static const nextBooking = 'Next booking';
   static const rating = 'Rating';
+  static String routeCount(int n) => n == 1 ? 'Route' : 'Routes';
+  static const localDay = 'Local day rate';
   static const none = '-';
   static const dash = '–';
 
@@ -70,13 +74,12 @@ abstract final class TaxiHomeStrings {
   static const editFares = 'Edit fares';
   static const editFaresSub = 'Routes and prices';
   static const shareMyTaxi = 'Share my taxi';
-  static const shareMyTaxiSub = 'Send your link';
   static const readyCheck = 'Ready check';
   static const readyCheckSub = 'Make sure it rings';
   static const myRating = 'My rating';
   static const myRatingSub = 'Your driver record';
 
-  static const areaPaused = 'New leads are paused in your area.';
+  static const areaPaused = 'New requests are paused in your area.';
   static const plannerPaused = 'Requests are paused right now. New requests will come back soon.';
 
   static const couldNotLoad = 'Couldn’t load your taxi';
@@ -84,9 +87,8 @@ abstract final class TaxiHomeStrings {
   static const tryAgain = OwnerSharedStrings.tryAgain;
   static const showingLast = OwnerSharedStrings.showingLast;
 
-  static String confirmIn(String mmss) => 'Traveller chose you. Confirm in $mmss';
-  static const choseYou = 'Traveller chose you';
-  static String confirmInSub(String mmss) => 'Confirm in $mmss';
+  static const choseYou = 'A traveller chose you';
+  static String leftToConfirm(String mmss) => '$mmss left to confirm';
   static const confirm = 'Confirm';
   static const phoneCannot = 'This phone cannot get requests.';
   static const phoneCannotList = 'This phone cannot get requests';

@@ -15,8 +15,6 @@ import 'package:bakhli/features/trip/utils/trip_clock.dart';
 import 'package:bakhli/features/trip/screens/trip_stay_enquiry_sheet.dart';
 import 'package:bakhli/features/trip/widgets/trip_accept_sheet.dart';
 import 'package:bakhli/features/trip/widgets/trip_cancel_sheet.dart';
-import 'package:bakhli/features/trip/widgets/trip_change_request_sheet.dart';
-import 'package:bakhli/features/trip/widgets/trip_counter_sheet.dart';
 import 'package:bakhli/features/trip/widgets/trip_problem_sheet.dart';
 import 'package:bakhli/features/trip/widgets/trip_send_result_sheet.dart';
 import 'package:bakhli/features/trip/widgets/trip_taxi_booking_sheet.dart';
@@ -130,12 +128,10 @@ void main() {
 
   final scenes = <String, Future<Object?> Function(BuildContext)>{
     'sr_accept': (c) => TripAcceptSheet.show(c, enquiry: offered, offer: offered.openOffer!),
-    'sr_counter': (c) => TripCounterSheet.show(c, enquiry: asked),
     'sr_withdraw': (c) => TripWithdrawSheet.show(c, enquiry: asked),
     'sr_withdraw2': (c) => TripWithdrawSheet.showForRemove(c, open: [asked, offered]),
     'sr_withdraw_inline': (c) => TripWithdrawSheet.confirmInline(c),
     'sr_cancel': (c) => TripCancelSheet.show(c, enquiry: confirmed, ownerSide: false),
-    'sr_change': (c) => TripChangeRequestSheet.show(c, enquiry: confirmed, checkIn: journeyStart(), checkOut: journeyStart().add(const Duration(days: 2))),
     'tr_booked': (c) => TripTaxiBookingSheet.show(c, taxi: null, day: 1, enquiry: fareSent, initialFare: 4500),
     'tr_cancel': (c) => TripCancelSheet.show(c, enquiry: booked, ownerSide: true),
     'ua_sheet': (c) => TripUpdateAskSheet.show(c, SettingsSaveResult(saved: true, openAffected: [asked], confirmedAffected: [confirmed], openTaxiAffected: [fareSent])),
@@ -205,13 +201,6 @@ void main() {
   }
 
   final actions = <String, (Future<Object?> Function(BuildContext), Future<void> Function(WidgetTester))>{
-    'sr_counter2': (
-      (c) => TripCounterSheet.show(c, enquiry: asked),
-      (t) async {
-        await t.enterText(find.byType(TextField).first, '50');
-        await t.tap(find.text(TripStrings.sendMyPrice));
-      }
-    ),
     'hi_offer2': (
       (c) => TripSendOfferSheet.show(c, enquiry: asked, stay: _stayOwner),
       (t) async {

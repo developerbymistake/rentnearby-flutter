@@ -120,5 +120,23 @@ abstract final class PlanGate {
     return true;
   }
 
+  static bool addEnabled(bool full) => !full || canUpgrade;
+
+  static Future<void> addTap(BuildContext context, {required bool full, required GateSpec Function() gate, required VoidCallback onAdd}) async {
+    if (!full) {
+      onAdd();
+      return;
+    }
+    await showLimit(context, gate());
+  }
+
+  static bool handleInactive(OwnerRefused<dynamic> r) {
+    if (r.type != OwnerErrorTypes.planRowInactive) return false;
+    if (Get.isRegistered<PlanController>()) Get.find<PlanController>().invalidate().ignore();
+    final msg = r.message;
+    AppToast.info(msg != null && msg.isNotEmpty ? msg : OwnerSharedStrings.inactiveToast);
+    return true;
+  }
+
   static void seePlus() => Get.toNamed(AppRoutes.plansBilling);
 }

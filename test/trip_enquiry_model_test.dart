@@ -1,6 +1,7 @@
 import 'package:bakhli/features/trip/models/trip_enquiry_model.dart';
 import 'package:bakhli/features/trip/models/trip_model.dart';
 import 'package:bakhli/features/trip/models/trip_offer_model.dart';
+import 'package:bakhli/features/trip/widgets/trip_lifecycle_actions.dart';
 import 'package:bakhli/features/trip/widgets/trip_status.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -371,29 +372,64 @@ void main() {
     expect(o.oldTotal, isNull);
   });
 
-  test('canCounter follows status, limit and conversation', () {
-    expect(TripEnquiryModel.fromJson(full()).canCounter, isTrue);
-    expect(TripEnquiryModel.fromJson(full()..['displayStatus'] = 'asked').canCounter, isTrue);
-    expect(TripEnquiryModel.fromJson(full()..['counterCount'] = 3).canCounter, isFalse);
-    expect(TripEnquiryModel.fromJson(full()..['counterCount'] = 2).canCounter, isTrue);
-    expect(TripEnquiryModel.fromJson(full()..['conversationId'] = null).canCounter, isFalse);
-    expect(TripEnquiryModel.fromJson(full()..['displayStatus'] = 'confirmedByBoth').canCounter, isFalse);
-    expect(TripEnquiryModel.fromJson(full()..['displayStatus'] = 'notAvailable').canCounter, isFalse);
+  test('silence fields: isQuiet, stepKey fallback, endReason, undoUntil, offersLeft, ownerShare', () {
+    final plain = TripEnquiryModel.fromJson(full());
+    expect(plain.isQuiet, isFalse);
+    expect(plain.endReason, isNull);
+    expect(plain.undoUntil, isNull);
+    expect(plain.ownerShare, isNull);
+    expect(plain.stepKeyOrLeg, 'stay:1');
+    expect(TripEnquiryModel.fromJson(full()..['cityLeg'] = 2).stepKeyOrLeg, 'stay:2');
+    final e = TripEnquiryModel.fromJson(full()
+      ..['isQuiet'] = true
+      ..['quietAt'] = '2026-10-30T06:30:00Z'
+      ..['stepKey'] = 'stay:3'
+      ..['endReason'] = 'stayPaused'
+      ..['undoUntil'] = '2026-10-30T06:30:10Z'
+      ..['offersLeft'] = 0
+      ..['waitingHours'] = 13
+      ..['ownerShare'] = {'upiId': 'host@upi', 'whatsApp': '9876543210', 'sharedAt': '2026-10-30T07:00:00Z'});
+    expect(e.isQuiet, isTrue);
+    expect(e.quietAt, DateTime.utc(2026, 10, 30, 6, 30));
+    expect(e.stepKeyOrLeg, 'stay:3');
+    expect(e.endReason, TripEndReasons.stayPaused);
+    expect(e.canUndoAt(DateTime.utc(2026, 10, 30, 6, 30, 5)), isTrue);
+    expect(e.canUndoAt(DateTime.utc(2026, 10, 30, 6, 30, 11)), isFalse);
+    expect(e.offersLeft, 0);
+    expect(e.waitingHours, 13);
+    expect(e.ownerShare?.upiId, 'host@upi');
+    expect(e.ownerShare?.whatsApp, '9876543210');
   });
 
-  test('canChangeRequest needs a confirmed stay with an accepted offer and no pending change', () {
-    final confirmed = full()
-      ..['status'] = 'ConfirmedByBoth'
-      ..['displayStatus'] = 'confirmedByBoth'
-      ..['agreedTotal'] = 3800
-      ..['acceptedOffer'] = offerJson('o1', 'Offer', status: 'Accepted');
-    expect(TripEnquiryModel.fromJson(confirmed).canChangeRequest, isTrue);
-    expect(TripEnquiryModel.fromJson(Map<String, dynamic>.from(confirmed)..['acceptedOffer'] = null).canChangeRequest, isFalse);
-    expect(
-      TripEnquiryModel.fromJson(Map<String, dynamic>.from(confirmed)..['pendingChange'] = offerJson('x1', 'ChangeRequest')).canChangeRequest,
-      isFalse,
-    );
-    expect(TripEnquiryModel.fromJson(full()).canChangeRequest, isFalse);
+  test('send result carries the other trip and maps the new skip reasons', () {
+    final r = TripSendResult.fromJson({'listingId': 's1', 'status': 'OpenInAnotherTrip', 'otherTripId': 't9', 'otherTripTitle': 'Goa trip', 'otherEnquiryId': 'e9'});
+    expect((r.otherTrip, r.otherTripId, r.otherTripTitle, r.otherEnquiryId), (true, 't9', 'Goa trip', 'e9'));
+    const batch = TripEnquiryBatch(items: [], skipped: [
+      TripSkipped(listingId: 'a', reason: TripSkipReasons.alreadyBooked),
+      TripSkipped(listingId: 'b', reason: TripSkipReasons.openForOtherNights),
+    ], veryShortNotice: false);
+    expect([for (final x in batch.perRecipient) x.status], ['AlreadyBooked', 'OpenForOtherNights']);
+  });
+
+  test('trip delete lines name the open asks and the bookings', () {
+    TripEnquiryModel row(String id, String name, String status) =>
+        TripEnquiryModel.fromJson({...full(), 'id': id, 'listingId': id, 'listingName': name, 'status': status});
+    final lines = TripLifecycleActions.deleteLines([
+      row('a', 'Deodar Homestay', 'Asked'),
+      row('b', 'Lake View', 'Offered'),
+      row('c', 'Pine Cottage', 'ConfirmedByBoth'),
+      row('d', 'Old Inn', 'Closed'),
+    ]);
+    expect(lines, [
+      'Your enquiries to Deodar Homestay, Lake View will be withdrawn.',
+      'Your booking at Pine Cottage is cancelled and the host is told.',
+    ]);
+  });
+
+  test('a full stay keeps status NotAvailable and reads full on dates', () {
+    final r = TripSendResult.fromJson({'listingId': 's1', 'status': 'NotAvailable', 'reason': 'FullOnDates'});
+    expect((r.gone, r.fullOnDates), (true, true));
+    expect(TripSendResult.fromJson({'listingId': 's2', 'status': 'NotAvailable', 'reason': 'NotAvailable'}).fullOnDates, false);
   });
 
   test('agreedTotalLocked ignores a pending revised total', () {

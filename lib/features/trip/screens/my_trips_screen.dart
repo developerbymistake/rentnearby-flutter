@@ -140,11 +140,14 @@ class _MyTripsScreenState extends State<MyTripsScreen> with TickerProviderStateM
     final rows = t.progress.rows;
     final stays = rows.where((r) => (r.state == TripRowState.confirmed || r.state == TripRowState.booked) && r.key.kind == TripEasyRowKind.stay).length;
     final taxis = rows.where((r) => (r.state == TripRowState.confirmed || r.state == TripRowState.booked) && r.key.kind == TripEasyRowKind.taxi).length;
+    final named = await TripLifecycleActions.loadDeleteLines(t.id);
+    if (!mounted) return;
     final ok = await TripLifecycleActions.confirmDelete(
       context,
       open: rows.fold<int>(0, (n, r) => n + r.askedCount),
       confirmed: stays,
       confirmedTaxis: taxis,
+      named: named,
     );
     if (ok) await _ctrl.delete(t.id);
   }

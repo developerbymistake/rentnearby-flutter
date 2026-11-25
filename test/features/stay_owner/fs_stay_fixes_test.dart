@@ -23,6 +23,7 @@ import 'package:bakhli/features/stay_owner/jobs_tab/stay_jobs_tab.dart';
 import 'package:bakhli/features/stay_owner/stay_owner_deps.dart';
 import 'package:bakhli/features/stay_owner/stay_owner_session.dart';
 import 'package:bakhli/features/stay_owner/strings/stay_home_strings.dart';
+import 'package:bakhli/features/stay_owner/strings/stay_work_strings.dart';
 import 'package:bakhli/features/stay_owner/strings/stay_hub_strings.dart';
 import 'package:bakhli/utils/photo_upload/app_photo_pick.dart';
 import 'package:flutter/material.dart';
@@ -284,7 +285,7 @@ void main() {
 
   group('FS-07 Jobs tab button above the dock', () {
     for (final size in const [Size(320, 568), Size(360, 800)]) {
-      testWidgets('Post a Job is above the floating bar at ${size.width.toInt()}x${size.height.toInt()}', (t) async {
+      testWidgets('Post a job is above the floating bar at ${size.width.toInt()}x${size.height.toInt()}', (t) async {
         Get.reset();
         PlanGate.debugPlan = OwnerPlans.plus;
         Get.put(MyJobsController(repo: _FakeJobsRepo(_jobsOpen)), tag: StayJobsTab.tag);
@@ -298,7 +299,7 @@ void main() {
           size: size,
         );
         await t.pump(const Duration(milliseconds: 300));
-        final button = t.getRect(find.text('Post a Job'));
+        final button = t.getRect(find.text(StayWorkStrings.postAJob));
         expect(button.bottom, lessThanOrEqualTo(dockTop));
       });
     }

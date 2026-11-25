@@ -20,7 +20,12 @@ class TripShortlistController extends GetxController {
     bool Function()? offline,
     void Function(String message)? warn,
     String Function()? newId,
+    Future<ShortlistWithSteps> Function(String tripId)? listWithSteps,
   })  : _repo = repo ?? const TripShortlistRepository(),
+        _listWithSteps = listWithSteps ??
+            (repo == null
+                ? const TripEnquiryRepository().shortlistWithSteps
+                : (String id) async => (shortlist: await repo.list(id), steps: const <String, TripStepSlots>{})),
         _tripIdOf = tripId ?? _planTripId,
         _offline = offline ?? _planOffline,
         _warn = warn ?? AppToast.warning,
@@ -35,6 +40,7 @@ class TripShortlistController extends GetxController {
   final bool Function() _offline;
   final void Function(String) _warn;
   final String Function() _newId;
+  final Future<ShortlistWithSteps> Function(String tripId) _listWithSteps;
 
   final items = <ShortlistItem>[].obs;
   final busy = <String>{}.obs;
@@ -44,6 +50,8 @@ class TripShortlistController extends GetxController {
   final doneHint = <String>{}.obs;
   final loadFailed = false.obs;
   final sendFailed = <String>{}.obs;
+  final steps = <String, TripStepSlots>{}.obs;
+  final stepFull = Rxn<TripStepFull>();
   int max = 3;
 
   String? _loadedTrip;
@@ -76,6 +84,8 @@ class TripShortlistController extends GetxController {
   bool isBusy(String step, String listingId) => busy.contains(_busyKey(step, listingId));
 
   bool isSending(String step) => sending.contains(step);
+
+  int? freeOf(String step, {String? tripId}) => tripId != null && tripId != _loadedTrip ? null : steps[step]?.free;
 
   bool beginSend(String step) {
     if (sending.contains(step)) return false;
@@ -133,6 +143,8 @@ class TripShortlistController extends GetxController {
     doneHint.clear();
     loadFailed.value = false;
     sendFailed.clear();
+    steps.clear();
+    stepFull.value = null;
   }
 
   void _adopt(String tripId) {
@@ -151,10 +163,12 @@ class TripShortlistController extends GetxController {
         return false;
       }
       if (!force && !loadFailed.value && _loadedTrip == tripId && items.isNotEmpty) return true;
-      final res = await _repo.list(tripId);
+      final both = await _listWithSteps(tripId);
+      final res = both.shortlist;
       _adopt(tripId);
       max = res.max;
       items.assignAll(res.items);
+      steps.assignAll(both.steps);
       loadFailed.value = false;
       return true;
     } catch (_) {
@@ -171,6 +185,11 @@ class TripShortlistController extends GetxController {
   }
 
   void _failToast(Object e) {
+    final full = TripStepFull.of(e);
+    if (full != null) {
+      stepFull.value = full;
+      return;
+    }
     if (DioErrorMapper.errorType(e) == TripShortlistErrorTypes.full) {
       _warn(TripStringsShortlist.full);
     } else if (DioErrorMapper.isNetworkError(e)) {
@@ -335,6 +354,8 @@ class TripShortlistController extends GetxController {
       if ((batch.items.isNotEmpty || batch.updated.isNotEmpty) && Get.isRegistered<TripPlanController>()) {
         unawaited(TripPlanController.to.adoptReopenedStay(step));
       }
+    } else if (TripEnquiryController.to.lastStepFull case final full?) {
+      stepFull.value = full;
     } else {
       if (!_noteFailure(step)) sendFailed.add(step);
     }

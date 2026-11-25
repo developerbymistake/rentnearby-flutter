@@ -8,6 +8,7 @@ import 'controllers/trip_taxi_request_controller.dart';
 import 'models/taxi_request_models.dart';
 import 'models/trip_enquiry_model.dart';
 import 'models/trip_plan_result_model.dart';
+import 'enquiries/my_enquiries_screen.dart';
 import 'screens/my_trips_screen.dart';
 import 'screens/trip_customize_screen.dart';
 import 'screens/trip_map_screen.dart';
@@ -109,6 +110,12 @@ final List<GetPage> tripPages = [
   GetPage(
     name: AppRoutes.tripReplies,
     page: () => const TripRepliesScreen(),
+    customTransition: TemplateTransition(),
+    transitionDuration: templateTransitionDuration,
+  ),
+  GetPage(
+    name: AppRoutes.myEnquiries,
+    page: () => const MyEnquiriesScreen(),
     customTransition: TemplateTransition(),
     transitionDuration: templateTransitionDuration,
   ),

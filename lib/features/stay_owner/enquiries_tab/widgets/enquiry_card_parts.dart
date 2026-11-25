@@ -133,6 +133,41 @@ class EnquiryHead extends StatelessWidget {
   }
 }
 
+class EnquiryHeadParts extends StatelessWidget {
+  const EnquiryHeadParts({super.key, required this.eyebrow, required this.left, required this.leftShort, required this.title, required this.priceLine});
+
+  final String eyebrow;
+  final String? left;
+  final bool leftShort;
+  final String title;
+  final String? priceLine;
+
+  @override
+  Widget build(BuildContext context) {
+    final left = this.left;
+    final price = priceLine;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Row(
+          children: [
+            Expanded(child: Text(eyebrow, style: Ink3D.text(11, FontWeight.w700, Ink3D.grey, letterSpacing: 0.6))),
+            if (left != null) StatusPill3D(label: left, color: (leftShort ? EnquiryChipTone.red : EnquiryChipTone.grey).color, onGradient: false),
+          ],
+        ),
+        Gap.v(6),
+        Text(title, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(13.5, FontWeight.w700, Ink3D.title, letterSpacing: 0)),
+        if (price != null)
+          Padding(
+            padding: EdgeInsets.only(top: DS.gv(2)),
+            child: Text(price, style: Ink3D.text(11, FontWeight.w400, Ink3D.grey, height: 1.3, letterSpacing: 0)),
+          ),
+      ],
+    );
+  }
+}
+
 class EnquiryRows extends StatelessWidget {
   const EnquiryRows({super.key, required this.rows});
 
@@ -332,10 +367,11 @@ class EnquiryButtons extends StatelessWidget {
 }
 
 class BucketPill extends StatelessWidget {
-  const BucketPill({super.key, required this.art, required this.label, required this.selected, required this.onTap, this.semantics});
+  const BucketPill({super.key, this.art, required this.label, this.count, required this.selected, required this.onTap, this.semantics});
 
-  final String art;
+  final String? art;
   final String label;
+  final int? count;
   final bool selected;
   final VoidCallback onTap;
   final String? semantics;
@@ -360,11 +396,22 @@ class BucketPill extends StatelessWidget {
             borderRadius: DS.br(CardRadius.tile),
             boxShadow: selected ? tone.glow(blur: 8, dy: 4) : DS.shadows(Ink3D.softShadow),
           ),
-          child: Row(
+          child: count != null
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text('$count', maxLines: 1, style: Ink3D.text(20, FontWeight.w700, selected ? DesignColors.onPrimary : Ink3D.title, letterSpacing: 0)),
+                    Text(label, maxLines: 1, style: Ink3D.text(11.5, FontWeight.w500, selected ? DesignColors.onPrimary : Ink3D.grey, letterSpacing: 0)),
+                  ],
+                )
+              : Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              ExcludeSemantics(child: Art3D(asset: art, size: 22)),
-              Gap.h(8),
+              if (art case final art?) ...[
+                ExcludeSemantics(child: Art3D(asset: art, size: 22)),
+                Gap.h(8),
+              ],
               Flexible(
                 child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(12, FontWeight.w700, selected ? DesignColors.onPrimary : Ink3D.body, letterSpacing: 0)),
               ),

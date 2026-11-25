@@ -9,7 +9,8 @@ import '../../owner_core/data/owner_result.dart';
 import '../../owner_core/json/owner_dates.dart';
 import '../../owner_core/look/owner_look.dart';
 import '../../owner_core/plan/plan_gate.dart';
-import '../../owner_core/plan/gate_keys.dart';
+import '../../owner_core/plan/plan_keys.dart';
+import '../../owner_core/plan/soft_lock.dart';
 import '../../owner_core/sheets/owner_confirm.dart';
 import '../../owner_core/sheets/owner_states.dart';
 import '../../owner_core/strings/owner_shared_strings.dart';
@@ -18,6 +19,7 @@ import '../calendar/stay_entry_rows.dart';
 import '../calendar/widgets/stay_calendar_widgets.dart';
 import '../home/stay_owner_home_controller.dart';
 import '../hub/stay_hub_controller.dart';
+import '../strings/stay_gate_strings.dart';
 import '../strings/stay_gate_strings_calendar.dart';
 import '../strings/stay_hub_strings.dart';
 import '../strings/stay_special_price_strings.dart';
@@ -112,6 +114,7 @@ class _StaySpecialPricesScreenState extends State<StaySpecialPricesScreen> {
   Future<void> _toggle(SpecialPriceBand r) async {
     final res = await c.toggle(r);
     if (!mounted || res is OwnerOk) return;
+    if (res is OwnerRefused && PlanGate.handleInactive(res)) return;
     if (res is OwnerRefused && res.type == _stayLocked) {
       AppToast.info(res.message ?? StayHubStrings.underReview);
     } else if (res is OwnerRefused && res.type == 'SpecialPriceSavesLimit') {
@@ -147,7 +150,11 @@ class _StaySpecialPricesScreenState extends State<StaySpecialPricesScreen> {
               );
             }),
           ),
-          StayCalBar(primary: StaySpecialPriceStrings.addButton, onPrimary: _add),
+          Obx(() {
+            c.load.value;
+            final full = c.meter?.full ?? false;
+            return StayCalBar(primary: StaySpecialPriceStrings.addButton, onPrimary: full && !PlanGate.canUpgrade ? null : _add);
+          }),
         ],
       ),
     );
@@ -162,6 +169,7 @@ class _StaySpecialPricesScreenState extends State<StaySpecialPricesScreen> {
         physics: const AlwaysScrollableScrollPhysics(),
         slivers: [
           if (stale) const SliverToBoxAdapter(child: OwnerStaleLine()),
+          if (PlanGate.canUpgrade) SliverToBoxAdapter(child: _strip()),
           SliverToBoxAdapter(child: _tiles(page, m)),
           SliverList.builder(
             itemCount: rules.length,
@@ -173,19 +181,22 @@ class _StaySpecialPricesScreenState extends State<StaySpecialPricesScreen> {
               onToggle: () => _toggle(rules[i]),
               onEdit: () => StaySpecialPriceSheet.open(context, c, rule: rules[i]),
               onDelete: () => _delete(rules[i]),
+              inactiveReason: rules[i].pausedByPlan ? StayGateStrings.specialInactive(PlanGate.limit(PlanKey.specialPrices)) : null,
             ),
           ),
-          if (c.needsG12)
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: DS.insets(l: 18, t: 14, r: 18),
-                child: StayLockedAddCard(onTap: () => PlanGate.showLimit(context, StayGateStringsCalendar.g12(endsOn: c.soonestEnd))),
-              ),
-            ),
           const SliverToBoxAdapter(child: StayNote(text: StaySpecialPriceStrings.shieldNote)),
           SliverToBoxAdapter(child: Gap.v(24)),
         ],
       ),
+    );
+  }
+
+  Widget _strip() {
+    final free = PlanGate.limit(PlanKey.specialPrices);
+    final plus = PlanKeys.plusSeed[PlanKey.specialPrices] ?? free;
+    return Padding(
+      padding: DS.insets(l: 18, t: 14, r: 18),
+      child: SoftLock.strip(text: StayGateStrings.specialStrip(free, plus), onTap: () => PlanGate.showLimit(context, StayGateStringsCalendar.g12(endsOn: c.soonestEnd))),
     );
   }
 
@@ -226,9 +237,10 @@ class _StaySpecialPricesScreenState extends State<StaySpecialPricesScreen> {
 }
 
 class _RuleCard extends StatelessWidget {
-  const _RuleCard({required this.rule, required this.rooms, required this.busy, required this.onToggle, required this.onEdit, required this.onDelete, this.locked = false});
+  const _RuleCard({required this.rule, required this.rooms, required this.busy, required this.onToggle, required this.onEdit, required this.onDelete, this.locked = false, this.inactiveReason});
 
   final bool locked;
+  final String? inactiveReason;
 
   final SpecialPriceBand rule;
   final List<StayPriceRoom> rooms;
@@ -283,6 +295,11 @@ class _RuleCard extends StatelessWidget {
               ),
             ],
             Gap.v(8),
+            if (inactiveReason != null && !locked)
+              Padding(
+                padding: EdgeInsets.only(bottom: DS.gv(6)),
+                child: Text(inactiveReason!, style: Ink3D.text(11.5, FontWeight.w500, Ink3D.grey, height: 1.35, letterSpacing: 0)),
+              ),
             if (locked)
               Text(StayHubStrings.underReview, style: Ink3D.text(11, FontWeight.w600, Ink3D.grey, letterSpacing: 0))
             else
@@ -300,13 +317,15 @@ class _RuleCard extends StatelessWidget {
                 ]),
               ),
               const Spacer(),
-              Semantics(
-                label: StaySpecialPriceStrings.a11yEdit(name),
-                button: true,
-                excludeSemantics: true,
-                child: StayPill(label: StaySpecialPriceStrings.edit, kind: StayPillKind.outline, onTap: onEdit),
-              ),
-              Gap.h(6),
+              if (!r.pausedByPlan) ...[
+                Semantics(
+                  label: StaySpecialPriceStrings.a11yEdit(name),
+                  button: true,
+                  excludeSemantics: true,
+                  child: StayPill(label: StaySpecialPriceStrings.edit, kind: StayPillKind.outline, onTap: onEdit),
+                ),
+                Gap.h(6),
+              ],
               Semantics(
                 label: StaySpecialPriceStrings.a11yDelete(name),
                 button: true,
@@ -315,41 +334,6 @@ class _RuleCard extends StatelessWidget {
               ),
             ]),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class StayLockedAddCard extends StatelessWidget {
-  const StayLockedAddCard({super.key, required this.onTap});
-
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    if (!PlanGate.canUpgrade) return const SizedBox.shrink();
-    return Semantics(
-      button: true,
-      label: '${StaySpecialPriceStrings.addSpecialPrice}, ${StaySpecialPriceStrings.plusKeeps5}',
-      child: InkWell(
-        key: GateKeys.softRow,
-        onTap: onTap,
-        borderRadius: StayLook.cardRadius(34),
-        child: Container(
-          padding: DS.all(14),
-          decoration: BoxDecoration(color: StayLook.lockedRow, borderRadius: StayLook.cardRadius(34), boxShadow: DS.shadows(ShadowTokens.elev1)),
-          child: Row(children: [
-            ExcludeSemantics(child: Art3D(asset: ListingArt.locked, size: 44)),
-            Gap.h(12),
-            Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(StaySpecialPriceStrings.addSpecialPrice, style: Ink3D.text(13.5, FontWeight.w600, Ink3D.title, letterSpacing: 0)),
-                Text(StaySpecialPriceStrings.plusKeeps5, style: Ink3D.text(10.5, FontWeight.w500, Ink3D.grey, letterSpacing: 0)),
-              ]),
-            ),
-            KeyedSubtree(key: GateKeys.seePlus, child: StayPill(label: OwnerSharedStrings.seePlus, kind: StayPillKind.indigo, onTap: onTap)),
-          ]),
         ),
       ),
     );

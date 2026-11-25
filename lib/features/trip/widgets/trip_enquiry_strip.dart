@@ -8,57 +8,17 @@ import '../utils/trip_enquiry_rules.dart';
 import '../utils/trip_format.dart';
 import 'trip_status.dart';
 
-class TripStripAction {
-  static const withdraw = 'withdraw';
-  static const cancel = 'cancel';
-  static const report = 'report';
-  static const counter = 'counter';
-  static const changeRequest = 'changeRequest';
-
-  final String id;
-  final String label;
-  final bool destructive;
-  final bool enabled;
-
-  const TripStripAction(this.id, this.label, {this.destructive = false, this.enabled = true});
-
-  static List<TripStripAction> forTraveller(TripEnquiryModel e, ) {
-    const reportAction = TripStripAction(report, TripStrings.report);
-    switch (e.display) {
-      case TripDisplayStatus.asked:
-      case TripDisplayStatus.offered:
-        return [
-          if (e.canCounter) const TripStripAction(counter, TripStrings.proposePrice),
-          const TripStripAction(withdraw, TripStrings.withdraw),
-          reportAction,
-        ];
-      case TripDisplayStatus.confirmedByBoth:
-        return [
-          if (e.canChangeRequest) const TripStripAction(changeRequest, TripStrings.changeRequest),
-          const TripStripAction(cancel, TripStrings.cancelBooking, destructive: true),
-          reportAction,
-        ];
-      default:
-        return [reportAction];
-    }
-  }
-}
-
 class TripEnquiryStrip extends StatelessWidget {
   const TripEnquiryStrip({
     super.key,
     required this.enquiry,
     required this.onTap,
     this.ownerSide = false,
-    this.actions = const [],
-    this.onAction,
   });
 
   final TripEnquiryModel enquiry;
   final VoidCallback onTap;
   final bool ownerSide;
-  final List<TripStripAction> actions;
-  final ValueChanged<String>? onAction;
 
   String _title() {
     final parts = <String>[TripStrings.tripEnquiry];
@@ -94,7 +54,6 @@ class TripEnquiryStrip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final status = enquiry.display;
-    final menu = actions.isNotEmpty && onAction != null;
     final revisedNote = status == TripDisplayStatus.confirmedByBoth && enquiry.hasPendingRevised;
     return ChatStripCard3D(
       barColor: TripStatusVisuals.bar(status),
@@ -107,16 +66,6 @@ class TripEnquiryStrip extends StatelessWidget {
         color: status == TripDisplayStatus.asked ? ChatLook3D.askedPill : null,
         onGradient: false,
       ),
-      onMenu: menu
-          ? (rect) => showMenu3D(
-                context,
-                anchor: rect,
-                items: [
-                  for (final a in actions)
-                    MenuItem3D(label: a.label, danger: a.destructive, onTap: a.enabled ? () => onAction!(a.id) : null),
-                ],
-              )
-          : null,
     );
   }
 }

@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:bakhli/controllers/chat_controller.dart';
-import 'package:bakhli/design/design.dart';
 import 'package:bakhli/features/trip/controllers/trip_enquiry_controller.dart';
 import 'package:bakhli/features/trip/models/trip_enquiry_model.dart';
 import 'package:bakhli/models/conversation_model.dart';
@@ -12,7 +11,6 @@ import 'package:bakhli/screens/chat_conversation_screen.dart';
 import 'package:bakhli/screens/chats_list_screen.dart';
 import 'package:bakhli/services/chat_hub_service.dart';
 import 'package:bakhli/services/notification_service.dart';
-import 'package:bakhli/utils/app_toast.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
@@ -54,13 +52,12 @@ final _templates = [
 ];
 
 class _Scene {
-  _Scene({this.messages = const [], this.status = 'Active', this.hasMore = false, this.hang = false, this.enquiry, this.owner = false, this.name = 'Meera Joshi', this.blockedByMe = false, this.hangOlder = false, this.hangSend = false});
+  _Scene({this.messages = const [], this.status = 'Active', this.hasMore = false, this.hang = false, this.enquiry, this.owner = false, this.name = 'Meera Joshi', this.blockedByMe = false, this.hangOlder = false});
   final List<MessageModel> messages;
   final String status;
   final bool hasMore;
   final bool hang;
   final bool hangOlder;
-  final bool hangSend;
   final TripEnquiryModel? enquiry;
   final bool owner;
   final String name;
@@ -87,10 +84,6 @@ class _Chat extends ChatController {
     if (before != null || after != null) return Future.value((items: <MessageModel>[], status: null, hasMore: false));
     return Future.value((items: _scene.messages.reversed.toList(), status: _scene.status, hasMore: _scene.hasMore));
   }
-
-  @override
-  Future<MessageModel?> sendMessage(String conversationId, String type, Map<String, dynamic> payload, {String? respondsToMessageId, String? clientMessageId}) =>
-      _scene.hangSend ? Completer<MessageModel?>().future : Future.value(null);
 }
 
 class _Hub extends ChatHubService {
@@ -343,7 +336,8 @@ void main() {
     testWidgets('list_empty', (t) async {
       await _openList(t, _ListChat(const []));
       await _snap(t, 'list_empty_360_10');
-      expect(find.text('Start a chat from any stay.'), findsOneWidget);
+      expect(find.text('No chats yet'), findsOneWidget);
+      expect(find.text('Start a chat from any stay.'), findsNothing);
       _done(t);
     });
     testWidgets('list_loading', (t) async {
@@ -360,26 +354,31 @@ void main() {
         await _snap(t, 'c_seeker_${_tag(w, s)}');
         expect(find.text('Contact number requested'), findsOneWidget);
         expect(find.text('Call'), findsOneWidget);
-        expect(find.text('Ask something'), findsOneWidget);
+        expect(find.text('Ask something'), findsNothing);
+        expect(find.byTooltip('More'), findsOneWidget);
         _done(t);
       });
       testWidgets('c_visitreq ${_tag(w, s)}', (t) async {
         await _open(t, _Scene(messages: _visitReqThread(), owner: true), w: w, s: s);
         await _snap(t, 'c_visitreq_${_tag(w, s)}');
+        expect(find.text('Confirm visit'), findsNothing);
+        expect(find.text('Propose different time'), findsNothing);
         _done(t);
       });
     }
     testWidgets('c_owner', (t) async {
       await _open(t, _Scene(messages: _ownerThread(), owner: true));
       await _snap(t, 'c_owner_360_10');
-      expect(find.text('No, listed guests only'), findsOneWidget);
-      expect(find.text('Approve'), findsOneWidget);
+      expect(find.text('Wants your contact number'), findsOneWidget);
+      expect(find.text('No, listed guests only'), findsNothing);
+      expect(find.text('Approve'), findsNothing);
       _done(t);
     });
     testWidgets('c_owner_trip', (t) async {
       await _open(t, _Scene(messages: _ownerTripThread(), owner: true, enquiry: _enquiry()));
       await _snap(t, 'c_owner_trip_360_10');
-      expect(find.byKey(const ValueKey('trip-owner-bar')), findsOneWidget);
+      expect(find.byKey(const ValueKey('trip-owner-bar')), findsNothing);
+      expect(find.text('Ask something'), findsNothing);
       _done(t);
     });
     testWidgets('c_visit and c_visitno', (t) async {
@@ -402,7 +401,8 @@ void main() {
     testWidgets('c_new, c_loading', (t) async {
       await _open(t, _Scene());
       await _snap(t, 'c_new_360_10');
-      expect(find.text('Ask something'), findsOneWidget);
+      expect(find.text('No messages in this conversation'), findsOneWidget);
+      expect(find.text('Ask something'), findsNothing);
       _done(t);
     });
     testWidgets('c_loading', (t) async {
@@ -421,20 +421,6 @@ void main() {
       await t.pump(const Duration(milliseconds: 200));
       await _snap(t, 'c_older_360_10');
       expect(find.byType(CircularProgressIndicator), findsWidgets);
-      _done(t);
-    });
-    testWidgets('c_sending with toast slot', (t) async {
-      await _open(t, _Scene(messages: _seekerThread().take(2).toList(), hangSend: true));
-      await t.tap(find.text('Ask something'));
-      await t.pump();
-      await t.pump(const Duration(milliseconds: 600));
-      await t.tap(find.text('Is pickup from the bus stand available?'));
-      await t.pump();
-      await t.pump(const Duration(milliseconds: 600));
-      expect(ToastLane.showInHost(ToastKind.error, 'Could not send that. Please try again.'), isTrue);
-      await t.pump(const Duration(milliseconds: 400));
-      await _snap(t, 'c_sending_360_10');
-      await t.pump(const Duration(seconds: 5));
       _done(t);
     });
     testWidgets('c_menu, c_block', (t) async {
@@ -493,79 +479,5 @@ void main() {
         _done(t);
       });
     }
-  });
-
-  group('sheets', () {
-    for (final (w, s) in _sizes) {
-      testWidgets('s_plus ${_tag(w, s)}', (t) async {
-        await _open(t, _Scene(messages: _seekerThread().take(2).toList(), enquiry: _enquiry()), w: w, s: s);
-        await t.tap(find.text('Ask something'));
-        await t.pump();
-        await t.pump(const Duration(milliseconds: 600));
-        await _snap(t, 's_plus_${_tag(w, s)}');
-        if (w == 360 && s == 1.0) {
-          await t.drag(find.text('Is it free on my dates?').last, const Offset(0, -800));
-          await t.pump(const Duration(milliseconds: 400));
-          await _snap(t, 's_plus_end_360_10');
-          expect(find.text('Request contact number'), findsOneWidget);
-        }
-        _done(t);
-      });
-      testWidgets('s_visit ${_tag(w, s)}', (t) async {
-        await _open(t, _Scene(messages: _seekerThread().take(2).toList(), enquiry: _enquiry()), w: w, s: s);
-        await t.tap(find.text('Ask something'));
-        await t.pump();
-        await t.pump(const Duration(milliseconds: 600));
-        await t.scrollUntilVisible(find.text('Schedule a visit'), 200, scrollable: find.byType(Scrollable).last);
-        await t.tap(find.text('Schedule a visit'));
-        await t.pump();
-        await t.pump(const Duration(milliseconds: 800));
-        expect(find.text('When would you like to visit?'), findsOneWidget);
-        final tomorrow = DateTime.now().add(const Duration(days: 2));
-        await t.tap(find.text('${tomorrow.day}').last);
-        await t.pump(const Duration(milliseconds: 200));
-        await t.tap(find.text('11:00 AM'));
-        await t.tap(find.text('4:00 PM'));
-        await t.pump(const Duration(milliseconds: 300));
-        await _snap(t, 's_visit_${_tag(w, s)}');
-        expect(find.text('Send these times →'), findsOneWidget);
-        _done(t);
-      });
-    }
-    testWidgets('s_plus_host', (t) async {
-      await _open(t, _Scene(messages: _visitReqThread().take(2).toList(), owner: true));
-      await t.tap(find.text('Ask something'));
-      await t.pump();
-      await t.pump(const Duration(milliseconds: 600));
-      await _snap(t, 's_plus_host_360_10');
-      expect(find.text('About this listing'.toUpperCase()), findsNothing);
-      _done(t);
-    });
-    testWidgets('s_counter', (t) async {
-      await _open(t, _Scene(messages: _visitReqThread(), owner: true));
-      await t.tap(find.text('Propose different time'));
-      await t.pump();
-      await t.pump(const Duration(milliseconds: 800));
-      await _snap(t, 's_counter_360_10');
-      expect(find.text('Propose a different time'), findsWidgets);
-      expect(find.text('Send this time →'), findsOneWidget);
-      _done(t);
-    });
-    testWidgets('s_counter_err', (t) async {
-      await _open(t, _Scene(messages: _visitReqThread(), owner: true));
-      await t.tap(find.text('Propose different time'));
-      await t.pump();
-      await t.pump(const Duration(milliseconds: 800));
-      if (find.text('7:00 PM').evaluate().isNotEmpty) await t.tap(find.text('7:00 PM'), warnIfMissed: false);
-      AppToast.error('Those times have passed — please pick a new time');
-      // toastification inserts the item in a post-frame callback; its slide-in starts on the next frame.
-      for (var i = 0; i < 3; i++) {
-        await t.pump(const Duration(milliseconds: 600));
-      }
-      expect(find.text('Those times have passed — please pick a new time'), findsOneWidget);
-      await _snap(t, 's_counter_err_360_10');
-      await t.pump(const Duration(seconds: 6));
-      _done(t);
-    });
   });
 }

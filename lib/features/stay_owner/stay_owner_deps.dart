@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import '../../config/app_routes.dart';
 import '../../config/app_tabs.dart';
 import '../../controllers/auth_controller.dart';
+import '../owner_core/data/owner_args.dart';
 
 abstract final class StayOwnerDeps {
   static Widget _none() => const SizedBox.shrink();
@@ -36,9 +37,7 @@ abstract final class StayOwnerDeps {
     }
   }
 
-  static void _openEditPrices() {
-    if (Get.isRegistered<AuthController>()) Get.find<AuthController>().openTab(AppTabs.hub);
-  }
+  static void _openEditPrices() => Get.toNamed(AppRoutes.stayRooms, arguments: OwnerArgs.manage);
 
   static void debugReset() {
     upcomingCard = _none;

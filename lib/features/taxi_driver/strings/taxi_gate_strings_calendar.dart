@@ -8,7 +8,9 @@ abstract final class TaxiGateStringsCalendar {
   static String body(int free, int plus) => 'Free keeps $free trips you add yourself. Plus keeps $plus.';
   static String freeRow(int free) => '$free trips you add';
   static String plusRow(int plus) => '$plus trips, reminder, month summary';
-  static const tip = 'A slot frees up when a trip date passes, or delete one you do not need.';
+  static String entryInactive(int free) => 'Inactive on Free. Free keeps $free trips you add. Delete it or get Plus.';
+  static String plusFull(int n) => 'You can keep up to $n trips you add.';
+  static const tip ='A slot frees up when a trip date passes, or delete one you do not need.';
 
   static int get freeEntries => PlanGate.limit(PlanKey.calendarEntries);
   static int get plusEntries => PlanKeys.plusSeed[PlanKey.calendarEntries] ?? freeEntries;

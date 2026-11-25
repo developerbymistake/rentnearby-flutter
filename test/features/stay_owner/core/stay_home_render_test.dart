@@ -1,6 +1,11 @@
 import 'package:bakhli/features/owner_core/data/owner_cache.dart';
+import 'package:bakhli/features/stay/models/stay_owner_model.dart';
+import 'package:bakhli/features/stay/setup/stay_setup_controller.dart';
+import 'package:bakhli/features/stay_owner/calendar/stay_upcoming_card.dart';
 import 'package:bakhli/features/stay_owner/home/stay_owner_home_screen.dart';
+import 'package:bakhli/features/stay_owner/stay_owner_deps.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:get/get.dart';
 
 import '../../../support/owner_fakes.dart';
 import '../../../support/owner_render.dart';
@@ -11,8 +16,20 @@ String _replyBy() => DateTime(2026, 11, 21, 18, 40).toUtc().toIso8601String();
 void main() {
   setUpAll(() => initTestStorage('stay_home_render'));
   useOwnerRenderScale();
-  setUp(OwnerCache.clearAll);
-  tearDown(resetOwnerTestState);
+  setUp(() {
+    OwnerCache.clearAll();
+    StayOwnerDeps.upcomingCard = StayUpcomingCard.fromHome;
+  });
+  tearDown(() {
+    StayOwnerDeps.debugReset();
+    resetOwnerTestState();
+  });
+
+  StayHarness harness(Map<String, dynamic> json, {bool denied = false, bool offline = false}) {
+    final h = StayHarness.setUp(json, denied: denied, offline: offline);
+    Get.put(StaySetupController()).stay.value = StayOwnerModel.fromJson(stayJson());
+    return h;
+  }
 
   final share = [att('ShareListing', 10, {'slug': 'x'}), att('AddShareDetails', 11)];
   final busy = [att('EnquiriesWaiting', 1, {'count': 2, 'replyBy': _replyBy(), 'urgent': false})];
@@ -60,7 +77,7 @@ void main() {
 
   for (final e in cases.entries) {
     testWidgets('render ${e.key}', (tester) async {
-      final h = StayHarness.setUp(e.value.$1, denied: e.value.$2);
+      final h = harness(e.value.$1, denied: e.value.$2);
       final id = e.key.startsWith('o_st_67') ? 'o_st_67' : e.key;
       await renderOwnerFrame(tester, id, const StayOwnerHomeScreen(), part: e.value.$3, arrange: (t) async {
         await t.runAsync(() => h.home.checkNotifications());
@@ -70,7 +87,7 @@ void main() {
   }
 
   testWidgets('render o_st_48', (tester) async {
-    final h = StayHarness.setUp(homeJson(
+    final h = harness(homeJson(
       statusLine: {'code': 'NewNeedReply', 'args': {'count': 2}},
       badge: 2,
       stay: {'newEnquiries': 2, 'offersWaiting': 1, 'confirmed': 3},
@@ -84,14 +101,15 @@ void main() {
       await t.runAsync(() => h.home.checkNotifications());
       await t.pump(const Duration(milliseconds: 100));
     });
-    for (final s in ['Needs attention', '2 enquiries waiting', 'Diwali week starts 6 Nov', 'Set your price for those days.', 'Set price', 'See all (3)']) {
+    for (final s in ['Needs attention', '2 enquiries waiting', 'Diwali week starts 6 Nov', 'Set your price for those days.', 'Set price', 'Upcoming bookings', 'See all ›']) {
       expect(find.text(s), findsWidgets, reason: s);
     }
+    expect(find.text('Share your stay'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 
   testWidgets('render o_st_67 A', (tester) async {
-    final h = StayHarness.setUp(homeJson(), offline: true);
+    final h = harness(homeJson(), offline: true);
     await renderOwnerFrame(tester, 'o_st_67', const StayOwnerHomeScreen(), part: 'A', arrange: (t) async {
       await h.home.reload();
       await t.pump(const Duration(milliseconds: 100));

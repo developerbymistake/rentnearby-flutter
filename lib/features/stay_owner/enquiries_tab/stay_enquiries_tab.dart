@@ -15,9 +15,11 @@ import '../../owner_core/look/owner_look.dart';
 import '../../owner_core/sheets/owner_states.dart';
 import '../../owner_core/strings/owner_shared_strings.dart';
 import '../../stay/enquiries/stay_enquiries_controller.dart';
+import '../../stay/enquiries/stay_enquiry_actions.dart';
 import '../../stay/models/stay_owner_model.dart';
 import '../hub/stay_hub_controller.dart';
 import '../../trip/trip_strings.dart';
+import '../../trip/trip_strings_enquiry_simple.dart';
 import '../strings/stay_work_strings.dart';
 import 'stay_owner_enquiry_card.dart';
 import 'stay_quiet_week_banner.dart';
@@ -113,6 +115,9 @@ class _StayEnquiriesTabState extends State<StayEnquiriesTab> with WidgetsBinding
     if (!mounted || id == null || id.isEmpty) return;
     _expanded.value = id;
     _flash(id);
+    if (args['action']?.toString() != 'notAvailable') return;
+    final e = _ctrl.items.firstWhereOrNull((x) => x.id == id);
+    if (e != null && mounted) await StayEnquiryActions.notAvailable(context, e);
   }
 
   void _flash(String id) {
@@ -175,37 +180,41 @@ class _StayEnquiriesTabState extends State<StayEnquiriesTab> with WidgetsBinding
     return Obx(() {
       final c = _ctrl.counts.value;
       final selected = _ctrl.bucket.value;
-      final looks = <String, (String, String, int)>{
-        StayEnquiryBucket.newOnes: (ListingArt.speechBalloon, StayWorkStrings.bucketNew, c.newCount),
-        StayEnquiryBucket.offered: (ListingArt.moneyBag, StayWorkStrings.bucketOffered, c.offered),
-        StayEnquiryBucket.confirmed: (ListingArt.key, StayWorkStrings.bucketConfirmed, c.confirmed),
-        StayEnquiryBucket.closed: (ListingArt.clipboard, StayWorkStrings.bucketClosed, 0),
+      final looks = <String, (String, int)>{
+        StayEnquiryBucket.newOnes: (StayWorkStrings.bucketNew, c.newCount),
+        StayEnquiryBucket.offered: (StayWorkStrings.bucketOffered, c.offered),
+        StayEnquiryBucket.confirmed: (StayWorkStrings.bucketConfirmed, c.confirmed),
       };
       Widget pill(String key) {
-        final (art, label, count) = looks[key]!;
-        final on = selected == key;
-        final text = on ? StayWorkStrings.withCount(label, count) : label;
-        return BucketPill(art: art, label: text, selected: on, semantics: count > 0 ? '$label, $count' : label, onTap: () => _ctrl.selectBucket(key));
+        final (label, count) = looks[key]!;
+        return BucketPill(
+          label: label,
+          count: count,
+          selected: selected == key,
+          semantics: count > 0 ? '$label, $count' : label,
+          onTap: () => _ctrl.selectBucket(key),
+        );
       }
 
-      final keys = StayEnquiryBucket.all;
+      final keys = looks.keys.toList();
       return Padding(
         padding: DS.gapInsets(l: 14, t: 8, r: 14, b: 2),
-        child: Column(
-          children: [
-            for (var r = 0; r < keys.length; r += 2) ...[
-              if (r > 0) Gap.v(10),
-              Row(children: [
-                Expanded(child: pill(keys[r])),
-                Gap.h(12),
-                Expanded(child: pill(keys[r + 1])),
-              ]),
-            ],
+        child: Row(children: [
+          for (var i = 0; i < keys.length; i++) ...[
+            if (i > 0) Gap.h(12),
+            Expanded(child: pill(keys[i])),
           ],
-        ),
+        ]),
       );
     });
   }
+
+  Widget _pastLink() => Padding(
+        padding: DS.gapInsets(t: 8, b: 8),
+        child: Center(
+          child: TextLink(label: '${TripStringsEnq.pastEnquiries} ›', tone: KitTone.stay, onTap: () => _ctrl.selectBucket(StayEnquiryBucket.closed)),
+        ),
+      );
 
   Widget _body() {
     final items = _ctrl.items;
@@ -215,6 +224,7 @@ class _StayEnquiriesTabState extends State<StayEnquiriesTab> with WidgetsBinding
     final views = _ctrl.views;
     final flashTarget = _flashTarget.value;
     final bottom = BarMetrics.bodyBottomOf(context);
+    final showPast = bucket != StayEnquiryBucket.closed;
 
     if (loading && items.isEmpty) return const SingleChildScrollView(physics: NeverScrollableScrollPhysics(), child: OwnerSkeletonList(rows: 3));
     if (items.isEmpty) {
@@ -229,6 +239,7 @@ class _StayEnquiriesTabState extends State<StayEnquiriesTab> with WidgetsBinding
           children: [
             const _EmptyBlock(art: ListingArt.clipboard, title: StayWorkStrings.noEnquiries, message: StayWorkStrings.noEnquiriesSub),
             if (bucket == StayEnquiryBucket.newOnes && (_auth?.staysEnabled ?? true) && (_ctrl.stay.value?.isApproved ?? false)) const StayQuietWeekBanner(),
+            if (showPast) _pastLink(),
           ],
         );
       }
@@ -239,6 +250,7 @@ class _StayEnquiriesTabState extends State<StayEnquiriesTab> with WidgetsBinding
       );
     }
     final footer = _ctrl.loadingMore.value || _ctrl.loadMoreFailed.value ? 1 : 0;
+    final past = showPast && !_ctrl.hasMore.value ? 1 : 0;
     return RefreshIndicator(
       color: ListingTone.forest.g2,
       onRefresh: _ctrl.refreshList,
@@ -246,8 +258,9 @@ class _StayEnquiriesTabState extends State<StayEnquiriesTab> with WidgetsBinding
         controller: _scroll,
         physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
         padding: EdgeInsets.only(bottom: bottom),
-        itemCount: items.length + footer,
+        itemCount: items.length + footer + past,
         itemBuilder: (_, i) {
+          if (i >= items.length + footer) return _pastLink();
           if (i >= items.length) return _footer();
           final e = items[i];
           final view = views[e.id] ?? _ctrl.viewOf(e.id);

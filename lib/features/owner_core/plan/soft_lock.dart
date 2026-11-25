@@ -77,6 +77,8 @@ abstract final class SoftLock {
     unlocked: unlocked,
   );
 
+  static Widget strip({required String text, bool taxi = false, VoidCallback? onTap}) => _PlanStrip(text: text, taxi: taxi, onTap: onTap);
+
   static Widget card({
     required Widget child,
     required String lockedTitle,
@@ -164,6 +166,54 @@ class _SoftLockRow extends StatelessWidget {
             ),
             Gap.h(8),
             SeePlusButton(taxi: taxi, onPressed: onTap),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PlanStrip extends StatelessWidget {
+  const _PlanStrip({required this.text, required this.taxi, this.onTap});
+
+  final String text;
+  final bool taxi;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!PlanGate.canUpgrade) return const SizedBox.shrink();
+    final look = taxi ? OwnerLook.taxi : OwnerLook.stay;
+    final tap = onTap ?? PlanGate.seePlus;
+    return InkWell(
+      key: GateKeys.planStrip,
+      onTap: tap,
+      borderRadius: DS.circular(14),
+      child: Container(
+        padding: DS.sym(h: 14, v: 10),
+        decoration: BoxDecoration(
+          color: look.lockFill,
+          borderRadius: DS.circular(14),
+          border: Border.all(color: look.lockLine),
+        ),
+        child: Row(
+          children: [
+            Art3D(asset: ListingArt.crown, size: 26),
+            Gap.h(10),
+            Expanded(
+              child: Text(
+                text,
+                style: Ink3D.text(
+                  13,
+                  FontWeight.w600,
+                  look.lockText,
+                  height: 1.35,
+                  letterSpacing: 0,
+                ),
+              ),
+            ),
+            Gap.h(8),
+            SeePlusButton(taxi: taxi, onPressed: tap),
           ],
         ),
       ),

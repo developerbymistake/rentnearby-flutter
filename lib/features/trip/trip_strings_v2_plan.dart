@@ -84,6 +84,9 @@ class TripStringsV2Plan {
       n == 1 ? '1 confirmed stay is cancelled and the host is told.' : '$n confirmed stays are cancelled and the host is told.';
   static String confirmedTaxis(int n) =>
       n == 1 ? '1 confirmed taxi is cancelled and the driver is told.' : '$n confirmed taxis are cancelled and the driver is told.';
+  static String openNamed(int n, String names) => n == 1 ? 'Your enquiry to $names will be withdrawn.' : 'Your enquiries to $names will be withdrawn.';
+  static String staysNamed(String names) => 'Your booking at $names is cancelled and the host is told.';
+  static String taxisNamed(String names) => 'Your taxi with $names is cancelled and the driver is told.';
   static const String keepTrip = 'Keep trip';
   static const String delete = 'Delete';
 

@@ -3,7 +3,6 @@ abstract final class StayWorkStrings {
   static const bucketNew = 'New';
   static const bucketOffered = 'Offered';
   static const bucketConfirmed = 'Confirmed';
-  static const bucketClosed = 'Closed';
   static String withCount(String label, int n) => n > 0 ? '$label ($n)' : label;
 
   static String guests(int n) => n == 1 ? '1 guest' : '$n guests';
@@ -13,12 +12,17 @@ abstract final class StayWorkStrings {
   static String roomNights(String room, int nights) => '$room x ${StayWorkStrings.nights(nights)}';
   static const listedWhenAsked = 'Listed when asked';
   static String listedWhenAskedAmount(String amount) => '$listedWhenAsked $amount';
+  static String listedWhenAskedPrice(String amount) => '$listedWhenAsked · $amount';
+  static const newEnquiry = 'NEW ENQUIRY';
+  static String timeLeft(String left) => '$left left';
+  static const datesLabel = 'DATES';
+  static const guestsHead = 'GUESTS';
+  static const roomsLabel = 'ROOMS';
   static const urgentPrefix = 'Urgent: ';
   static String hours(int h) => '$h h';
   static String minutes(int m) => '$m min';
 
   static const chipNew = 'New';
-  static const chipNewPrice = 'New price';
   static const chipOffered = 'Offered';
   static const chipConfirmed = 'Confirmed';
   static const chipChangeRequest = 'Change request';
@@ -28,18 +32,19 @@ abstract final class StayWorkStrings {
   static const validUntil = 'Valid until';
   static const offersSent = 'Offers sent';
   static String nOfThree(int n) => '$n of 3';
-  static const counter = 'Counter';
 
   static const sendOffer = 'Send offer';
   static const sendNewOffer = 'Send new offer';
   static const callGuest = 'Call guest';
+  static const call = 'Call';
+  static String waiting(int h) => 'Waiting $h h';
+  static String waitingMin(int m) => 'Waiting $m min';
+  static const guestAsked = 'Guest asked';
+  static const shared = 'Shared with the guest';
   static const notAvailable = 'Not available';
-  static const acceptPrice = 'Accept price';
-  static const sendDifferentOffer = 'Send a different offer';
   static const acceptChange = 'Accept change';
   static const cancelBooking = 'Cancel booking';
   static const shareUpiWhatsApp = 'Share UPI and WhatsApp';
-  static const openChat = 'Open chat';
   static const calendarEntry = 'Calendar entry';
   static const open = 'Open';
   static const keep = 'Keep';
@@ -49,9 +54,6 @@ abstract final class StayWorkStrings {
   static String tripInDays(int n) => n == 1 ? 'trip in 1 day' : 'trip in $n days';
   static const yourOffer = 'Your offer';
   static String perNight(String amount) => '$amount / night';
-  static String asks(String name) => '$name asks';
-  static const totalAtHisPrice = 'Total at his price';
-  static String acceptPriceLine(String amount) => 'Accept price sends him an offer at $amount a night.';
   static const total = 'Total';
   static String roomPerNight(String room, String amount) => '$room · $amount / night';
 
@@ -78,7 +80,6 @@ abstract final class StayWorkStrings {
   static String cancelledByYouOn(String date) => 'Cancelled by you on $date';
   static String nameDates(String name, String dates) => '$name · $dates';
 
-  static const sendRevisedOffer = 'Send a revised offer';
   static const reportTraveller = 'Report traveller';
   static const block = 'Block';
   static const blockTitle = 'Block this user?';
@@ -118,7 +119,7 @@ abstract final class StayWorkStrings {
   static String aboveListed(String amount) => 'Above your listed price for these dates ($amount).';
   static const offerInfo = 'The guest sees only your offer total. The listed price is your own reference. Payment is settled outside the app.';
 
-  static const shareLine1 = 'You share these from a guest’s chat, one tap. Nobody sees them before that.';
+  static const shareLine1 = 'You share these from a confirmed booking, one tap. Nobody sees them before that.';
   static const shareLine2 = 'The app does not take, hold or track payments. Settle money with the guest directly.';
   static const shareHeaderSub = 'Your contact details';
   static const shareCardTitle = 'Contact details';
@@ -139,7 +140,7 @@ abstract final class StayWorkStrings {
   static const edit = 'Edit';
   static const close = 'Close';
   static const applicantsLine = 'Applicants call or WhatsApp you.';
-  static const postAJob = 'Post a Job';
+  static const postAJob = 'Post a job';
   static const postAJobTitle = 'Post a job';
   static const foodAndStay = 'Food and stay given';
   static const shownOnJobCard = 'Shown on the job card';

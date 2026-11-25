@@ -26,7 +26,6 @@ class TripStayRow extends StatelessWidget {
     required this.onOpen,
     this.status,
     this.statusLine,
-    this.onOpenChat,
     this.readOnly = false,
     this.onCall,
     this.callBusy = false,
@@ -46,7 +45,6 @@ class TripStayRow extends StatelessWidget {
   final TripStayFit? fit;
   final TripDisplayStatus? status;
   final String? statusLine;
-  final VoidCallback? onOpenChat;
   final bool readOnly;
   final VoidCallback onOpen;
   final VoidCallback? onCall;
@@ -183,9 +181,7 @@ class TripStayRow extends StatelessWidget {
     final st = status;
     final call = CalmAction(kind: CalmActionKind.call, label: TripStringsV2Find.call, onTap: onCall, busy: callBusy);
     final CalmAction second;
-    if (st != null && onOpenChat != null) {
-      second = CalmAction(kind: CalmActionKind.plain, icon: Icons.chat_bubble_outline_rounded, label: TripStrings.openChat, onTap: onOpenChat);
-    } else if (st != null) {
+    if (st != null) {
       second = const CalmAction(kind: CalmActionKind.disabled, label: TripStringsV2Find.asked);
     } else if (onShortlist != null && full && !shortlisted) {
       second = const CalmAction(kind: CalmActionKind.disabled, label: TripStringsDatedPrice.full);

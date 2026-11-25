@@ -52,7 +52,7 @@ abstract final class StayOwnerTabs {
       TabSlot(
         index: AppTabs.centre,
         label: StayShellStrings.tabEnquiries,
-        image: '${art}speech_balloon.png',
+        image: '${art}clipboard.png',
         center: true,
         activeColor: look.active,
         rootTag: 'stay-enquiries-tab',

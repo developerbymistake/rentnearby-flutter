@@ -26,5 +26,7 @@ abstract final class StayNoticeStrings {
   }
 
   static const specialPricesPausedTitle = 'Special prices paused';
+  static const jobsInactiveTitle = 'Jobs inactive';
+  static const jobsInactive = 'Some jobs are inactive on Free.';
   static String specialPricesPaused(int n) => '${n == 1 ? '1 special price is' : '$n special prices are'} paused on Free. Nothing is deleted.';
 }

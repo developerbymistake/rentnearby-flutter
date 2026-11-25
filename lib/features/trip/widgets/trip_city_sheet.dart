@@ -278,7 +278,7 @@ class _TripCitySheetState extends State<TripCitySheet> {
 
   void _syncStates() => _states = _add ? TripStateRule.statesOf(widget.inTrip, _catalog.search('')) : const [];
 
-  List<TripCityModel> _find(String q) => TripStateRule.filter(_catalog.search(q), _states);
+  List<TripCityModel> _find(String q) => TripStateRule.filter([for (final c in _catalog.search(q)) if (c.isReady) c], _states);
 
   // FX-08: one scroll view (header, search, picked row, cities); only Continue stays pinned. Sizes are read live.
   @override
@@ -560,20 +560,16 @@ class _TripCitySheetState extends State<TripCitySheet> {
         });
   }
 
-  static String _artOf(TripCityModel c, bool ready) {
-    if (!ready) return ListingArt.tent;
+  static String _artOf(TripCityModel c) {
     const arts = [ListingArt.mountain, ListingArt.camping, ListingArt.beach, ListingArt.sunrise];
     return arts[c.cityKey.abs() % arts.length];
   }
 
   Widget _cityRow(TripCityModel city, {bool divider = false}) {
-    final ready = city.isReady;
     final inTrip = _add && widget.inTrip.contains(city.cityKey);
     final enabled = !inTrip;
     final place = inTrip
         ? TripStringsMcaA2.alreadyAdded
-        : !ready
-        ? TripStringsMcaA2.noPlacesYet
         : (!_add && city.spotCount > 0 ? TripStringsV2Create.cityMeta(city.spotCount) : city.placeLine);
     final picked = !_add && _isPicked(city);
     final open = _add && enabled && _expanded == city.cityKey;
@@ -586,12 +582,11 @@ class _TripCitySheetState extends State<TripCitySheet> {
       trailing = Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (ready)
-            Container(
-              padding: DS.sym(h: 8, v: 2),
-              decoration: BoxDecoration(color: _tone.tint, borderRadius: DS.br(CardRadius.pill)),
-              child: Text(TripStringsA4.ready, style: Ink3D.text(11, FontWeight.w700, _tone.text)),
-            ),
+          Container(
+            padding: DS.sym(h: 8, v: 2),
+            decoration: BoxDecoration(color: _tone.tint, borderRadius: DS.br(CardRadius.pill)),
+            child: Text(TripStringsA4.ready, style: Ink3D.text(11, FontWeight.w700, _tone.text)),
+          ),
           Icon(open ? Icons.expand_less_rounded : Icons.expand_more_rounded, size: DS.s(22), color: _tone.text),
         ],
       );
@@ -601,7 +596,7 @@ class _TripCitySheetState extends State<TripCitySheet> {
       children: [
         SheetListRow(
           tone: _tone,
-          art: _artOf(city, ready),
+          art: _artOf(city),
           title: city.name,
           subtitle: place.isEmpty ? null : place,
           selected: picked,

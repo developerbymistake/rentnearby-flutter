@@ -116,10 +116,10 @@ abstract final class TaxiCalendarStrings {
 
   // Upcoming (o_tx_23, o_tx_48)
   static const upcoming = 'Upcoming';
+  static const upcomingBookings = 'Upcoming bookings';
   static String nextDays(int n) => 'Next $n days';
   static String nextMonths(int n) => 'Next ${monthsAhead(n)}';
   static String until(String window, DateTime d) => '$window, until ${d.day} ${OwnerSharedStrings.months[d.month - 1]} ${d.year}';
-  static String moreIn(int n, String window) => '$n more in the ${window.toLowerCase()}';
   static const seeAll = 'See all';
   static String afterWindow(DateTime d, int count, int plusMonths) =>
       'After ${OwnerSharedStrings.dayMonth(d)}: ${count == 1 ? '1 booking' : '$count bookings'} from the app (see Bookings). Plus shows ${monthsAhead(plusMonths)} ahead.';

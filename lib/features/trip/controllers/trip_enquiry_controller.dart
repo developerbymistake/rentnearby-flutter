@@ -4,9 +4,13 @@ import 'package:get/get.dart';
 import '../../../utils/app_toast.dart';
 import '../../../utils/dio_error_mapper.dart';
 import '../data/trip_enquiry_repository.dart';
+import '../data/trip_shortlist_repository.dart';
+import '../enquiries/my_enquiries_controller.dart';
+import '../enquiries/my_enquiry_count_controller.dart';
 import '../models/trip_enquiry_model.dart';
-import '../models/trip_offer_model.dart';
+import '../models/trip_shortlist_model.dart';
 import '../trip_strings.dart';
+import '../trip_strings_enquiry_simple.dart';
 import '../trip_strings_v2_find.dart';
 import 'trip_plan_controller.dart';
 
@@ -29,6 +33,8 @@ class TripEnquiryController extends GetxController {
   int? lastRetryAfterMinutes;
 
   int? lastAsksLeft;
+
+  TripStepFull? lastStepFull;
 
   bool get lastWasAskLimit => lastErrorType == TripEnquiryErrorTypes.enquiryLimit;
 
@@ -60,6 +66,7 @@ class TripEnquiryController extends GetxController {
     if (conflictOf(e) != null) return;
     final type = DioErrorMapper.errorType(e);
     if (type != null && silent.contains(type)) return;
+    if (type == TripEnquiryErrorTypes.stepFull) return;
     if (type == TripEnquiryErrorTypes.concurrent) {
       AppToast.warning(TripStrings.justChanged);
       if (enquiryId != null) refreshOne(enquiryId);
@@ -97,10 +104,12 @@ class TripEnquiryController extends GetxController {
     lastErrorType = null;
     lastErrorMessage = null;
     lastRetryAfterMinutes = null;
+    lastStepFull = null;
     try {
       return await run();
     } catch (e) {
       _readLimits(e);
+      lastStepFull = TripStepFull.of(e);
       lastConflict = conflictOf(e);
       final network = DioErrorMapper.isNetworkError(e);
       lastErrorType = network ? null : DioErrorMapper.errorType(e);
@@ -153,8 +162,70 @@ class TripEnquiryController extends GetxController {
             day: day, stayIds: stayIds, nights: nights, clientRequestId: clientRequestId, stepKey: stepKey),
         silent: const {TripEnquiryErrorTypes.enquiryLimit});
     _readBatch(batch);
-    if (batch != null) _applyToPlan(batch.items);
+    if (batch != null) {
+      _applyToPlan(batch.items);
+      _changed(batch.items);
+    }
     return batch;
+  }
+
+  // Similar stays: a step send refuses hosts that are not shortlisted, so shortlist first.
+  Future<TripEnquiryBatch?> sendEnquiryFor(
+    String tripId, {
+    required int day,
+    required List<String> stayIds,
+    required Map<String, String> names,
+    required int nights,
+    required String stepKey,
+    String? clientRequestId,
+  }) async {
+    if (stayIds.isEmpty) return null;
+    const shortlist = TripShortlistRepository();
+    final rows = <String>[];
+    Future<void> undoRows() async {
+      for (final id in rows) {
+        try {
+          await shortlist.remove(tripId, stepKey, id);
+        } catch (_) {}
+      }
+    }
+
+    final added = await _guard(null, () async {
+      for (final id in stayIds) {
+        await shortlist.add(tripId, stepKey, id, ShortlistItem(stepKey: stepKey, kind: ShortlistKinds.stay, listingId: id, name: names[id] ?? ''));
+        rows.add(id);
+      }
+      return true;
+    });
+    if (added != true) {
+      await undoRows();
+      return null;
+    }
+    final batch = await _guard(
+        null,
+        () => _repo.create(tripId,
+            day: day, stayIds: stayIds, nights: nights, clientRequestId: clientRequestId, stepKey: stepKey),
+        silent: const {TripEnquiryErrorTypes.enquiryLimit});
+    if (batch == null) await undoRows();
+    _readBatch(batch);
+    if (batch != null) {
+      _applyToPlan(batch.items);
+      _changed(batch.items);
+    }
+    return batch;
+  }
+
+  void _changed(Iterable<TripEnquiryModel> rows) {
+    unawaited(MyEnquiryCountController.maybe?.refresh());
+    final mine = MyEnquiriesController.maybe;
+    if (mine == null) return;
+    for (final r in rows) {
+      mine.onRowChanged(r);
+    }
+  }
+
+  void _one(TripEnquiryModel? row) {
+    if (row != null) _changed([row]);
   }
 
   Map<String, dynamic> _taxiBody({
@@ -272,13 +343,39 @@ class TripEnquiryController extends GetxController {
   Future<bool> withdraw(String enquiryId) async {
     final e = await _guard(enquiryId, () => _repo.withdraw(enquiryId));
     if (e != null) _applyToPlan([e]);
+    _one(e);
     return e != null;
+  }
+
+  Future<TripEnquiryModel?> withdrawWithUndo(String enquiryId) async {
+    final e = await _guard(enquiryId, () => _repo.withdraw(enquiryId, undo: true));
+    if (e != null) _applyToPlan([e]);
+    _one(e);
+    return e;
+  }
+
+  Future<bool> undoWithdraw(String enquiryId) async {
+    final e = await _guard(enquiryId, () => _repo.restore(enquiryId), silent: const {
+      TripEnquiryErrorTypes.undoWindowOver,
+      TripEnquiryErrorTypes.enquiryAlreadyOpen,
+    });
+    if (e == null) {
+      if (lastErrorType == TripEnquiryErrorTypes.undoWindowOver || lastErrorType == TripEnquiryErrorTypes.enquiryAlreadyOpen) {
+        AppToast.warning(TripStringsEnq.undoTooLate);
+        unawaited(refreshOne(enquiryId));
+      }
+      return false;
+    }
+    _applyToPlan([e]);
+    _one(e);
+    return true;
   }
 
   Future<bool> cancel(String enquiryId, {String? reason}) async {
     final trimmed = reason?.trim();
     final e = await _guard(enquiryId, () => _repo.cancel(enquiryId, reason: trimmed == null || trimmed.isEmpty ? null : trimmed));
     if (e != null) _applyToPlan([e]);
+    _one(e);
     return e != null;
   }
 
@@ -316,85 +413,19 @@ class TripEnquiryController extends GetxController {
       _applyToPlan([e]);
       if (closeOthers || replaceEnquiryId != null) unawaited(_plan?.refreshEnquiries());
     }
+    _one(e);
     return e;
   }
 
   Future<bool> decline(String enquiryId, String offerId) async {
     final e = await _guard(enquiryId, () => _repo.declineOffer(enquiryId, offerId));
     if (e != null) _applyToPlan([e]);
+    _one(e);
     return e != null;
-  }
-
-  void _mapped(Map<String, String> copy) {
-    final type = lastErrorType;
-    final text = type == null ? null : copy[type];
-    if (text == null) return;
-    lastErrorMessage = text;
-    AppToast.warning(text);
-  }
-
-  Future<TripOfferModel?> counter(String enquiryId, {required int pricePerNight, String? note}) async {
-    final trimmed = note?.trim();
-    const copy = {TripEnquiryErrorTypes.counterLimit: TripStrings.counterLimit};
-    final res = await _guard(
-      enquiryId,
-      () => _repo.counter(enquiryId, pricePerNight: pricePerNight, note: trimmed == null || trimmed.isEmpty ? null : trimmed),
-      silent: copy.keys.toSet(),
-    );
-    if (res == null) {
-      _mapped(copy);
-      return null;
-    }
-    _applyToPlan([res.enquiry]);
-    return res.offer;
-  }
-
-  Future<TripOfferModel?> changeRequest(
-    String enquiryId, {
-    required DateTime checkIn,
-    required DateTime checkOut,
-    required int adults,
-    required int kids,
-    required int rooms,
-    String? note,
-  }) async {
-    final p = _plan;
-    if (p != null && !await p.flushPendingSave()) {
-      p.toastNotSaved();
-      return null;
-    }
-    final trimmed = note?.trim();
-    const copy = {
-      TripEnquiryErrorTypes.nothingChanged: TripStrings.nothingChanged,
-      TripEnquiryErrorTypes.changeNotAllowed: TripStrings.changeWaiting,
-    };
-    final res = await _guard(
-      enquiryId,
-      () => _repo.changeRequest(enquiryId, {
-        'checkIn': _isoDate(checkIn),
-        'checkOut': _isoDate(checkOut),
-        'adults': adults,
-        'kids': kids,
-        'rooms': rooms,
-        'note': trimmed == null || trimmed.isEmpty ? null : trimmed,
-      }),
-      silent: copy.keys.toSet(),
-    );
-    if (res == null) {
-      _mapped(copy);
-      return null;
-    }
-    _applyToPlan([res.enquiry]);
-    return res.offer;
   }
 
   Future<TripEnquiryModel?> acceptRevised(String enquiryId, String offerId) =>
       accept(enquiryId, offerId, closeOthers: false);
-
-  Future<bool> keepPrice(String enquiryId, String offerId) => decline(enquiryId, offerId);
-
-  static String _isoDate(DateTime d) =>
-      '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 
   Future<TripEnquiryModel?> refreshOne(String enquiryId) async {
     try {

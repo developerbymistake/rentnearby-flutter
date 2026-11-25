@@ -5,6 +5,11 @@ class DriverRequestsStrings {
   static const String title = 'Taxi requests';
   static const String subtitle = 'Today';
 
+  static const String newRequest = 'NEW REQUEST';
+  static const String datesLabel = 'DATES';
+  static const String lengthLabel = 'LENGTH';
+  static const String carLabel = 'CAR';
+
   static const String groupNew = 'New';
   static const String groupBooked = 'Booked';
   static const String groupEarlier = 'Earlier';
@@ -57,6 +62,8 @@ class DriverRequestsStrings {
     }
     return '${from.day} ${_months[from.month - 1]} to ${end.day} ${_months[end.month - 1]}';
   }
+
+  static String daysNights(DriverOffer o) => '${o.dayCount} ${o.dayCount == 1 ? 'day' : 'days'} · ${o.nightCount} ${o.nightCount == 1 ? 'night' : 'nights'}';
 
   static String lengthLine(DriverOffer o) {
     final days = '${o.dayCount} ${o.dayCount == 1 ? 'day' : 'days'}';

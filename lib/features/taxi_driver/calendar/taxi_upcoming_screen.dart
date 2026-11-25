@@ -1,15 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
 import '../../../design/design.dart';
 import '../../owner_core/calendar/models/calendar_models.dart';
 import '../../owner_core/data/owner_page.dart';
 import '../../owner_core/data/owner_result.dart';
 import '../../owner_core/home/owner_home_models.dart';
+import '../../owner_core/plan/owner_inactive.dart';
 import '../../owner_core/plan/plan_gate.dart';
 import '../../owner_core/plan/soft_lock.dart';
+import '../../owner_core/sheets/owner_confirm.dart';
 import '../../owner_core/sheets/owner_states.dart';
+import '../../owner_core/strings/owner_shared_strings.dart';
+import '../../../utils/app_toast.dart';
 import '../home/taxi_driver_home_controller.dart';
 import '../strings/taxi_calendar_strings.dart';
+import '../strings/taxi_gate_strings_calendar.dart';
 import '../taxi_driver_deps.dart';
 import 'taxi_bookings_tab.dart';
 import 'taxi_calendar_controller.dart';
@@ -75,6 +81,42 @@ class _TaxiUpcomingScreenState extends State<TaxiUpcomingScreen> {
     };
   }
 
+  Future<void> _deleteInactive(CalendarEntry e) async {
+    final ok = await OwnerConfirm.ask(
+      context,
+      title: TaxiCalendarStrings.deleteTitle,
+      body: TaxiCalendarStrings.deleteBody,
+      confirm: TaxiCalendarStrings.delete,
+      cancel: TaxiCalendarStrings.keep,
+      destructive: true,
+      art: ListingArt.warning,
+      tone: ListingTone.coral,
+    );
+    if (!ok || !mounted) return;
+    final r = await _c.delete(e.id);
+    if (!mounted) return;
+    final gone = r is OwnerRefused<void> && r.statusCode == 404;
+    if (r is OwnerOk<void> || gone) return;
+    AppToast.error(r is OwnerRefused<void> && r.message != null ? r.message! : OwnerSharedStrings.noConnection);
+  }
+
+  Widget _row(CalendarEntry e) {
+    final inactive = e.inactiveByPlan;
+    final row = TaxiTripRow(
+      entry: e,
+      line: TaxiTripText.upcomingLine(e),
+      trailing: TaxiChip(entry: e),
+      onTap: inactive ? null : () => TaxiDriverDeps.openEntry(e.id),
+    );
+    if (!inactive) return row;
+    return OwnerInactive(
+      reason: TaxiGateStringsCalendar.entryInactive(TaxiGateStringsCalendar.freeEntries),
+      taxi: true,
+      onDelete: () => _deleteInactive(e),
+      child: row,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final window = TaxiUpcomingWords.window();
@@ -93,12 +135,7 @@ class _TaxiUpcomingScreenState extends State<TaxiUpcomingScreen> {
               saving: _c.saving,
               load: _load,
               sectionLabel: TaxiCalendarStrings.sectionMonth,
-              row: (context, e) => TaxiTripRow(
-                entry: e,
-                line: TaxiTripText.upcomingLine(e),
-                trailing: TaxiChip(entry: e),
-                onTap: () => TaxiDriverDeps.openEntry(e.id),
-              ),
+              row: (context, e) => _row(e),
               footer: (context, hasMore) {
                 final d = end ?? _beyondDate;
                 if (hasMore || _beyond <= 0 || d == null || !PlanGate.canUpgrade) return const [];
@@ -106,9 +143,16 @@ class _TaxiUpcomingScreenState extends State<TaxiUpcomingScreen> {
               },
             ),
           ),
+          Obx(() => _c.entriesFull && !PlanGate.canUpgrade
+              ? Padding(padding: DS.sym(h: 16), child: TaxiPlusFullLine(limit: _c.entriesMeter.limit))
+              : const SizedBox.shrink()),
           TaxiBottomActions(children: [
             PrimaryButton(label: TaxiCalendarStrings.viewCalendar, tone: TaxiCal.kit, onPressed: TaxiCalendarNav.viewCalendar),
-            SecondaryButton(label: TaxiCalendarStrings.addTrip, tone: TaxiCal.kit, onPressed: () => TaxiAddTrip.fromAnywhere(context)),
+            Obx(() => SecondaryButton(
+                  label: TaxiCalendarStrings.addTrip,
+                  tone: TaxiCal.kit,
+                  onPressed: PlanGate.addEnabled(_c.entriesFull) ? () => TaxiAddTrip.fromAnywhere(context) : null,
+                )),
           ]),
         ],
       ),

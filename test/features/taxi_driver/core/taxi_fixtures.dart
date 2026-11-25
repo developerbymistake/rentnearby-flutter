@@ -47,6 +47,9 @@ Map<String, dynamic> homeJson({
   Map<String, dynamic>? routesMeter = const {'key': 'Routes', 'used': 1, 'limit': 1},
   String plate = 'UK 04 TA 2231',
   Map<String, dynamic>? planCard,
+  String? vehicleName = 'Maruti Ertiga',
+  int? seats = 6,
+  String? photo,
 }) =>
     {
       'role': 'TAXI_DRIVER',
@@ -59,6 +62,9 @@ Map<String, dynamic> homeJson({
         'everApproved': everApproved,
         'name': plate,
         'plate': plate,
+        'vehicleName': vehicleName,
+        'seats': seats,
+        'displayPhotoUrl': photo,
         'switchOn': switchOn,
         'isFeatured': featured,
         'takenDown': takenDown,
@@ -159,7 +165,7 @@ abstract final class TaxiHarnessProbe {
   static TaxiDriverHomeController? home;
 }
 
-TaxiHubController hubFor(Map<String, dynamic>? taxi, {MyPlanModel plan = OwnerPlans.free, Future<OwnerResult<void>> Function()? deleteTaxiCall}) {
+TaxiHubController hubFor(Map<String, dynamic>? taxi, {MyPlanModel plan = OwnerPlans.free, Future<OwnerResult<void>> Function()? deleteTaxiCall, Future<OwnerResult<void>> Function(String routeId)? deleteRouteCall}) {
   Get.reset();
   Get.testMode = true;
   Get.put<TabConfigController>(FakeTabs());
@@ -167,5 +173,5 @@ TaxiHubController hubFor(Map<String, dynamic>? taxi, {MyPlanModel plan = OwnerPl
   Get.put<AuthController>(auth);
   auth.signIn(role: 'TAXI_DRIVER', taxiStatus: 'Approved');
   PlanGate.debugPlan = plan;
-  return Get.put(TaxiHubController(userId: () => 'user-a', fetch: () async => {'data': taxi}, deleteTaxiCall: deleteTaxiCall), tag: TaxiHubController.tag);
+  return Get.put(TaxiHubController(userId: () => 'user-a', fetch: () async => {'data': taxi}, deleteTaxiCall: deleteTaxiCall, deleteRouteCall: deleteRouteCall), tag: TaxiHubController.tag);
 }

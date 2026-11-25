@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../design/design.dart';
+import '../../../utils/app_toast.dart';
 import '../../owner_core/calendar/day_list.dart';
 import '../../owner_core/calendar/models/calendar_models.dart';
 import '../../owner_core/json/owner_dates.dart';
@@ -24,7 +25,7 @@ abstract final class TaxiDaySheet {
       look: TaxiCal.look,
       title: TaxiCalendarStrings.daySheetTitle(d),
       subtitle: rows.isEmpty ? TaxiCalendarStrings.nothingOnDay : TaxiCalendarStrings.tripsOnDay(rows.length),
-      child: (c) => TaxiDayBody(rows: rows, festival: festival, onOpen: (e) => Navigator.of(c).pop(_DayAction.open(e.id))),
+      child: (c) => TaxiDayBody(rows: rows, festival: festival, onOpen: (e) => e.inactiveByPlan ? AppToast.info(OwnerSharedStrings.inactiveToast) : Navigator.of(c).pop(_DayAction.open(e.id))),
       footer: canAdd
           ? (c) => PrimaryButton(label: TaxiCalendarStrings.addTripOnDay, tone: TaxiCal.kit, onPressed: () => Navigator.of(c).pop(const _DayAction.add()))
           : null,

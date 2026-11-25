@@ -7,7 +7,7 @@ const _raw = 'https://res.cloudinary.com/demo/image/upload/v3/atlas/spots/a.jpg'
 void main() {
   test('each size inserts its exact segment after /image/upload/', () {
     const expected = {
-      SpotPhotoSize.marker: 'c_fill,w_96,h_96,q_auto,f_auto',
+      SpotPhotoSize.marker: 'c_fill,w_288,h_288,q_auto,f_auto',
       SpotPhotoSize.square: 'c_fill,g_auto,w_320,h_320,q_auto,f_auto',
       SpotPhotoSize.card: 'c_fill,g_auto,w_720,h_400,q_auto,f_auto',
       SpotPhotoSize.hero: 'c_fill,g_auto,w_1080,h_640,q_auto,f_auto',
@@ -26,7 +26,7 @@ void main() {
   });
 
   test('pixel widths are fixed', () {
-    expect(SpotPhotoSize.values.map(SpotPhotoUrl.pixelWidth).toList(), [96, 320, 720, 1080, 1280]);
+    expect(SpotPhotoSize.values.map(SpotPhotoUrl.pixelWidth).toList(), [288, 320, 720, 1080, 1280]);
   });
 
   test('non-Cloudinary, no upload marker, already transformed, null and empty stay unchanged', () {
@@ -57,7 +57,8 @@ void main() {
     expect(SpotPhotoUrl.cacheWidth(ctx, 100, SpotPhotoSize.card), 300);
     expect(SpotPhotoUrl.cacheWidth(ctx, 100.2, SpotPhotoSize.card), 301);
     expect(SpotPhotoUrl.cacheWidth(ctx, 400, SpotPhotoSize.card), 720);
-    expect(SpotPhotoUrl.cacheWidth(ctx, 40, SpotPhotoSize.marker), 96);
+    expect(SpotPhotoUrl.cacheWidth(ctx, 40, SpotPhotoSize.marker), 120);
+    expect(SpotPhotoUrl.cacheWidth(ctx, 200, SpotPhotoSize.marker), 288);
     expect(SpotPhotoUrl.cacheWidth(ctx, 0, SpotPhotoSize.square), 1);
     expect(SpotPhotoUrl.cacheWidth(ctx, double.infinity, SpotPhotoSize.hero), 1080);
     expect(SpotPhotoUrl.cacheWidth(ctx, double.nan, SpotPhotoSize.full), 1280);

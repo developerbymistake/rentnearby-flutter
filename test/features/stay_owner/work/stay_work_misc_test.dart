@@ -171,6 +171,16 @@ void main() {
       expect(p.route, '/stay-special-prices');
     });
 
+    test('PlanLimitsChanged with only inactive jobs opens My jobs', () {
+      StayNoticeCopy.debugPlan = const MyPlanModel(paymentEnabled: true, pausedByPlanCount: 1);
+      final p = StayNoticeCopy.of(_n('PlanLimitsChanged'))!;
+      expect(p.title, 'Jobs inactive');
+      expect(p.body, 'Some jobs are inactive on Free.');
+      expect(p.route, '/my-jobs');
+      StayNoticeCopy.debugPlan = const MyPlanModel(paymentEnabled: true, pausedByPlanCount: 3, hidden: PlanHiddenModel(specialPrices: 2));
+      expect(StayNoticeCopy.of(_n('PlanLimitsChanged'))!.route, '/stay-special-prices');
+    });
+
     test('registry: registered kinds render, unknown kind hidden, no money or calendar edit kinds', () {
       StayNoticeCopy.register();
       for (final k in StayNoticeKinds.all) {
@@ -295,7 +305,7 @@ void main() {
       expect(find.text('UPI ID'), findsOneWidget);
       expect(find.text('WhatsApp number'), findsOneWidget);
       expect(find.text('Optional'), findsNWidgets(2));
-      expect(find.text('You share these from a guest’s chat, one tap. Nobody sees them before that.'), findsOneWidget);
+      expect(find.text('You share these from a confirmed booking, one tap. Nobody sees them before that.'), findsOneWidget);
       expect(find.text('The app does not take, hold or track payments. Settle money with the guest directly.'), findsOneWidget);
       expect(find.text('Remove my details'), findsOneWidget);
       expect(find.text('Save'), findsOneWidget);

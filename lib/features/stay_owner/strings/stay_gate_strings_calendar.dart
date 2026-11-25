@@ -10,6 +10,7 @@ abstract final class StayGateStringsCalendar {
 
   static String g10Title(int used) => 'You have $used active entries';
   static String g10Body(int free, int plus) => 'Free keeps $free bookings you add yourself. Plus keeps $plus.';
+  static String entryInactive(int free) => 'Inactive: the Free plan keeps ${bookingsYouAdd(free)}.';
   static const g10Tip = 'A slot frees up when a booking date passes, or delete one you do not need.';
 
   static String g11Title(int free) => 'Free allows ${blockedRanges(free)}';

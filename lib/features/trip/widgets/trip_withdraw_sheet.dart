@@ -4,7 +4,9 @@ import 'package:bakhli/design/extra/ext_trip_replies.dart';
 import '../controllers/trip_enquiry_controller.dart';
 import '../models/trip_enquiry_model.dart';
 import '../trip_strings.dart';
+import '../trip_strings_enquiry_simple.dart';
 import 'trip_sheet_frame.dart';
+import 'trip_step_full_sheet.dart';
 
 class TripTwoButtons extends StatelessWidget {
   const TripTwoButtons({
@@ -39,12 +41,43 @@ class TripTwoButtons extends StatelessWidget {
 }
 
 class TripWithdrawSheet {
-  static Future<bool> show(BuildContext context, {required TripEnquiryModel enquiry}) async {
-    final ok = await TripSheetFrame.show<bool>(
+  static Future<TripEnquiryModel?> show(BuildContext context, {required TripEnquiryModel enquiry}) async {
+    final row = await TripSheetFrame.show<Object>(
       context,
-      _WithdrawBody(enquiries: [enquiry], title: TripStrings.withdrawQuestion, keepLabel: TripStrings.keep),
+      _WithdrawBody(enquiries: [enquiry], title: TripStrings.withdrawQuestion, keepLabel: TripStrings.keep, undo: true),
     );
-    return ok == true;
+    return row is TripEnquiryModel ? row : null;
+  }
+
+  static void showUndo(BuildContext context, TripEnquiryModel row, {VoidCallback? onGone}) {
+    final until = row.undoUntil;
+    final m = ScaffoldMessenger.maybeOf(context);
+    final host = Navigator.of(context, rootNavigator: true).context;
+    if (until == null || m == null || !until.isAfter(DateTime.now())) {
+      onGone?.call();
+      return;
+    }
+    final ms = until.difference(DateTime.now()).inMilliseconds.clamp(3000, 10000);
+    var undone = false;
+    m.hideCurrentSnackBar();
+    m.showSnackBar(
+      SnackBar(
+        content: Text(TripStringsEnq.withdrawnUndo(row.listingName.isEmpty ? TripStrings.stay : row.listingName), style: const TextStyle(fontFamily: FitnessAppTheme.fontName)),
+        duration: Duration(milliseconds: ms),
+        action: SnackBarAction(
+          label: TripStringsEnq.undo,
+          onPressed: () async {
+            undone = true;
+            final ctrl = TripEnquiryController.to;
+            if (await ctrl.undoWithdraw(row.id)) return;
+            final full = ctrl.lastStepFull;
+            if (full != null && host.mounted) await TripStepFullSheet.show(host, full);
+          },
+        ),
+      ),
+    ).closed.then((_) {
+      if (!undone) onGone?.call();
+    });
   }
 
   static Future<bool> confirmInline(BuildContext context) async {
@@ -76,11 +109,12 @@ class TripWithdrawSheet {
 }
 
 class _WithdrawBody extends StatefulWidget {
-  const _WithdrawBody({required this.enquiries, required this.title, required this.keepLabel});
+  const _WithdrawBody({required this.enquiries, required this.title, required this.keepLabel, this.undo = false});
 
   final List<TripEnquiryModel> enquiries;
   final String title;
   final String keepLabel;
+  final bool undo;
 
   @override
   State<_WithdrawBody> createState() => _WithdrawBodyState();
@@ -92,6 +126,13 @@ class _WithdrawBodyState extends State<_WithdrawBody> {
   Future<void> _withdraw() async {
     if (_busy) return;
     setState(() => _busy = true);
+    if (widget.undo && widget.enquiries.length == 1) {
+      final row = await TripEnquiryController.to.withdrawWithUndo(widget.enquiries.first.id);
+      if (!mounted) return;
+      setState(() => _busy = false);
+      if (row != null) Navigator.pop(context, row);
+      return;
+    }
     var all = true;
     for (final e in widget.enquiries) {
       if (!await TripEnquiryController.to.withdraw(e.id)) all = false;

@@ -18,6 +18,7 @@ class DiscIds {
 
   static const String badgePrefix = 'disc-b-';
   static const String photoPrefix = 'disc-p-';
+  static const String dotPrefix = 'disc-d-';
   static const String badgeDefault = 'place';
 
   static const List<String> badgeCategories = [
@@ -31,6 +32,8 @@ class DiscIds {
   static String badgeImage(String category) => '$badgePrefix${badgeKey(category)}';
 
   static String photoImage(String spotId) => '$photoPrefix$spotId';
+
+  static String dotImage(int group) => '$dotPrefix$group';
 
   static String photoSlot(int i) => '${photoPrefix}slot-$i';
 
@@ -66,7 +69,7 @@ class DiscLayers {
   static const List<Object> selIconFilter = ['in', ['get', 'kind'], ['literal', ['photo', 'badge']]];
 
   static List<DiscLayerSpec> specs(DiscTuning t) => [
-        const DiscLayerSpec(id: DiscIds.layerDots, sourceId: DiscIds.srcAll, kind: DiscLayerKind.circle, interactive: false),
+        DiscLayerSpec(id: DiscIds.layerDots, sourceId: DiscIds.srcAll, kind: DiscLayerKind.symbol, minZoom: t.dotMinZoom, interactive: false),
         DiscLayerSpec(
           id: DiscIds.layerBadge,
           sourceId: DiscIds.srcAll,
@@ -94,6 +97,7 @@ class DiscLayers {
 
   static const List<Object> iconImageBadge = ['concat', DiscIds.badgePrefix, ['get', 'cat']];
   static const List<Object> iconImagePhoto = ['get', 'img'];
+  static const List<Object> iconImageDot = ['concat', DiscIds.dotPrefix, ['to-string', ['get', 'grp']]];
   static const List<Object> sortKey = ['get', 'rank'];
 }
 
@@ -104,7 +108,8 @@ class DiscTuning {
   final double pxPerDp;
   final int batch;
   final double hitDp;
-  final double badgeMinZoom;
+  final double? badgeMinZoom;
+  final double? dotMinZoom;
   final int maxDownloads;
   final double dotDp;
   final double selDotDp;
@@ -123,6 +128,7 @@ class DiscTuning {
   final double? dotMidDp;
   final double? selDotMidDp;
   final double? stopBadgeDp;
+  final double plannedHaloScale;
 
   static const double zoomOut = 10;
   static const double zoomMid = 14;
@@ -136,6 +142,7 @@ class DiscTuning {
     this.batch = 8,
     this.hitDp = 44,
     this.badgeMinZoom = 12,
+    this.dotMinZoom,
     this.maxDownloads = 4,
     this.dotDp = 9,
     this.selDotDp = 14,
@@ -154,32 +161,47 @@ class DiscTuning {
     this.dotMidDp,
     this.selDotMidDp,
     this.stopBadgeDp,
+    this.plannedHaloScale = 1,
   });
+
+  static const double markerScale = 3;
+  static const int packMax = 5000;
+  static const double dotsFromZoom = 12;
 
   static DiscTuning get trip => _shared(photoMax: 40);
 
   static DiscTuning get stay => _shared(photoMax: 24);
 
-  // Owner order 2026-11-24: design units (DS gives 80%), so the phone gets photo 44 / 60 / 72, badge 30 / 40 / 48,
-  // dot 18 / 28 / 34, selected dot 26 / 36 / 43 dp at zoom 10 / 14 / 17; the full size is the drawn size.
-  static DiscTuning _shared({required int photoMax}) => DiscTuning(
-        photoMax: photoMax,
-        photoMinDp: DS.s(55),
-        photoMidDp: DS.s(75),
-        photoDp: DS.s(90),
-        badgeMinDp: DS.s(37.5),
-        badgeMidDp: DS.s(50),
-        badgeDp: DS.s(60),
-        dotMinDp: DS.s(22.5),
-        dotMidDp: DS.s(35),
-        dotDp: DS.s(42.5),
-        selDotMinDp: DS.s(32.5),
-        selDotMidDp: DS.s(45),
-        selDotDp: DS.s(53.75),
-        haloPhotoDp: DS.s(127),
-        haloDotDp: DS.s(76),
-        stopBadgeDp: DS.s(54),
-      );
+  static DiscTuning get tripStops => _shared(photoMax: 40, scale: 1);
+
+  // Owner order 2026-11-25: spot markers 3x. Every non-photo spot gets a category badge; badges and dots are symbols that
+  // collide by rank (best first), so a dot shows only where a badge did not fit, from zoom 12.
+  static DiscTuning _shared({required int photoMax, double scale = markerScale}) {
+    double d(double n) => DS.s(n * scale);
+    return DiscTuning(
+      photoMax: photoMax,
+      badgeMax: packMax,
+      badgeMinZoom: null,
+      dotMinZoom: dotsFromZoom,
+      photoMinDp: d(55),
+      photoMidDp: d(75),
+      photoDp: d(90),
+      badgeMinDp: d(37.5),
+      badgeMidDp: d(50),
+      badgeDp: d(60),
+      dotMinDp: d(22.5),
+      dotMidDp: d(35),
+      dotDp: d(42.5),
+      selDotMinDp: d(32.5),
+      selDotMidDp: d(45),
+      selDotDp: d(53.75),
+      haloPhotoDp: d(127),
+      haloDotDp: d(76),
+      stopBadgeDp: d(54),
+      thumbPx: (96 * scale).round(),
+      plannedHaloScale: 1 / scale,
+    );
+  }
 
   int px(double dp) => (dp * pxPerDp).round();
 
@@ -221,6 +243,8 @@ class DiscTuning {
 
   Object dotRadius(double ring) => _byZoom([_dot], (z) => _at(_dot, z) / 2 - ring);
 
+  Object get dotIconSize => _byZoom([_dot], (z) => _at(_dot, z) / dotDp);
+
   Object selDotRadius(double ring) => _byZoom([_selDot], (z) => _at(_selDot, z) / 2 - ring);
 
   Object selIconSize(double scale) => _byZoom([_photo, _badge], (z) {
@@ -229,13 +253,27 @@ class DiscTuning {
         return photo == badge ? photo : ['match', ['get', 'kind'], 'badge', badge, photo];
       });
 
-  Object haloRadius(String dotKind, double photoScale) => _byZoom([_photo, _selDot], (z) => [
+  double _haloDot(double z) => (haloDotDp - (selDotDp - _at(_selDot, z))) / 2;
+
+  double _haloPhoto(double z, double photoScale) => (haloPhotoDp - photoScale * (photoDp - _at(_photo, z))) / 2;
+
+  // A planned stop is drawn at the route-stop size, so its halo is the 1x photo halo.
+  double _haloPlanned(double z) => plannedHaloScale * _haloPhoto(z, 1);
+
+  Object haloRadius(String dotKind, double photoScale, {String? plannedKind}) => _byZoom([_photo, _selDot], (z) => [
         'match',
         ['get', 'kind'],
         dotKind,
-        (haloDotDp - (selDotDp - _at(_selDot, z))) / 2,
-        (haloPhotoDp - photoScale * (photoDp - _at(_photo, z))) / 2,
+        _haloDot(z),
+        if (plannedKind != null) ...[plannedKind, _haloPlanned(z)],
+        _haloPhoto(z, photoScale),
       ]);
+
+  double haloRadiusAt(String kind, double zoom, {required String dotKind, required String plannedKind, required double photoScale}) {
+    if (kind == dotKind) return _haloDot(zoom);
+    if (kind == plannedKind) return _haloPlanned(zoom);
+    return _haloPhoto(zoom, photoScale);
+  }
 
   Object stopIconSize(double minScale) {
     final stop = (low: photoMinDp ?? photoDp * minScale, mid: photoMidDp, high: photoDp);

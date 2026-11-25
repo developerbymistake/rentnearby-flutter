@@ -6,9 +6,8 @@ abstract final class StayHubStrings {
   static const stayDeleted = 'Stay deleted.';
 
   static const view = 'View';
-  static const share = 'Share';
-  static const from = 'FROM';
-  static const perNightUnit = '/ night';
+  static const roomsFact = 'Rooms';
+  static const fromNight = 'From / night';
   static const accepting = 'Accepting guests';
   static const live = 'LIVE';
   static const featuredChip = '★ Featured';
@@ -20,26 +19,22 @@ abstract final class StayHubStrings {
 
   static const roomsAndPrices = 'Rooms and prices';
   static String meter(int used, int limit) => '$used of $limit';
-  static String roomSub(String price, int guests) => '$price / night · $guests ${guests == 1 ? 'guest' : 'guests'}';
-  static const editPrice = 'Edit price';
-  static const addRoomType = 'Add room type';
-  static String plusCanList(int n) => 'Plus stays can list up to $n';
-  static const seePlus = 'See Plus';
-  static String usedOf(int used, int limit) => '$used of $limit used';
-  static const add = 'Add';
+  static const yourRooms = 'Your rooms';
+  static String roomsMeter(int n) => n == 1 ? '1 room' : '$n rooms';
+  static String roomsLine(String names, String? min) => min == null ? names : '$names · from $min';
   static const hiddenOnFree = 'Hidden on Free';
 
   static const specialPrices = 'Special prices';
   static const open = 'Open';
-  static String specialPrice(String label, String range, String direction) => '$range · $direction';
+  static const yourSpecialPrices = 'Your special prices';
+  static String specialMeter(int n) => '$n set';
   static String percentHigher(int p) => '$p% higher';
   static String percentLower(int p) => '$p% lower';
-  static String specialCount(int n) => '$n special prices';
-  static String specialNext(String label, String range) => 'Next: $label, $range';
   static const noSpecialPrices = 'No special prices yet';
 
   static const photos = 'Photos';
   static String photosOf(int used, int limit) => '$used of $limit photos';
+  static String photosLimitReached(int used, int limit) => '$used of $limit · limit reached';
   static const manage = 'Manage';
   static const addTile = 'Add';
 
@@ -60,6 +55,7 @@ abstract final class StayHubStrings {
   static const upiWhatsAppSub = 'Shared with a guest only when you choose';
   static const edit = 'Edit';
   static const deleteStay = 'Delete stay';
+  static const removeListing = 'Remove this listing';
 
   static const underReview = 'Your stay is under review.';
   static String reports(int n) => n == 1 ? '1 report on this stay' : '$n reports on this stay';
@@ -83,6 +79,8 @@ abstract final class StayHubStrings {
       : ' $n confirmed bookings will be cancelled and the guests told.';
   static const delete = 'Delete';
   static const keep = 'Keep';
+  static const deletePhotoTitle = 'Delete this photo?';
+  static const deletePhotoFailed = 'Could not delete the photo.';
 
   static const editPriceTitle = 'Edit price';
   static String priceFor(String room) => '$room · price per night';

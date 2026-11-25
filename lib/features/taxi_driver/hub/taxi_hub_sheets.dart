@@ -430,3 +430,27 @@ abstract final class TaxiReviewSheet {
     return ok == true;
   }
 }
+
+abstract final class TaxiRouteActions {
+  static Future<void> delete(BuildContext context, TaxiHubController ctrl, TaxiRouteModel route) async {
+    final taxi = ctrl.taxi;
+    if (taxi == null) return;
+    if (taxi.isPendingReview) {
+      AppToast.info(TaxiHubStrings.underReview);
+      return;
+    }
+    if (taxi.routes.length <= 1) {
+      AppToast.info(TaxiHubStrings.lastRoute);
+      return;
+    }
+    final ok = await TaxiConfirm.ask(
+      context,
+      title: TaxiHubStrings.deleteRouteTitle,
+      body: TaxiHubStrings.deleteRouteBody,
+      confirm: TaxiHubStrings.deleteRouteConfirm,
+      cancel: TaxiHubStrings.keep,
+    );
+    if (!ok) return;
+    await ctrl.saveRoutes([for (final x in taxi.routes) if (x.id != route.id) x.toPayload()], TaxiHubStrings.routeDeleted);
+  }
+}

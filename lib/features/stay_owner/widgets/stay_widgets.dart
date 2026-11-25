@@ -38,7 +38,7 @@ abstract final class StayLook {
 
   static BorderRadius cardRadius(double topRight) => DS.br(BorderRadius.only(
         topLeft: const Radius.circular(8),
-        topRight: Radius.circular(topRight),
+        topRight: Radius.circular(topRight > 36 ? 36 : topRight),
         bottomLeft: const Radius.circular(8),
         bottomRight: const Radius.circular(8),
       ));
@@ -54,6 +54,8 @@ class StayHeroCard extends StatelessWidget {
     this.line,
     this.extra,
     this.margin,
+    this.trailing,
+    this.body,
   });
 
   final ListingTone tone;
@@ -63,51 +65,75 @@ class StayHeroCard extends StatelessWidget {
   final String? line;
   final Widget? extra;
   final EdgeInsets? margin;
+  final Widget? trailing;
+  final Widget? body;
 
   @override
   Widget build(BuildContext context) {
     const white = Colors.white;
+    final radius = StayLook.cardRadius(54);
+    final band = Padding(
+      padding: DS.insets(l: 16, t: 16, r: 20, b: 16),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          ExcludeSemantics(child: Art3D(asset: art, size: 66, halo: 84, haloColor: white.withValues(alpha: Alpha.v22))),
+          Gap.h(16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Wrap(
+                  spacing: DS.gh(8),
+                  runSpacing: DS.gv(4),
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    Text(title, style: Ink3D.text(19, FontWeight.w700, white, height: 1.2, letterSpacing: 0)),
+                    if (pill != null)
+                      DecoratedBox(
+                        decoration: BoxDecoration(color: white.withValues(alpha: Alpha.v22), borderRadius: DS.circular(8)),
+                        child: Padding(
+                          padding: DS.sym(h: 8, v: 2),
+                          child: Text(pill!, style: Ink3D.text(10, FontWeight.w700, white, letterSpacing: 0)),
+                        ),
+                      ),
+                  ],
+                ),
+                if (line != null)
+                  Padding(
+                    padding: EdgeInsets.only(top: DS.gv(4)),
+                    child: Text(line!, style: Ink3D.text(12.5, FontWeight.w500, white.withValues(alpha: Alpha.v92), height: 1.35, letterSpacing: 0)),
+                  ),
+                if (extra != null) Padding(padding: EdgeInsets.only(top: DS.gv(8)), child: extra),
+              ],
+            ),
+          ),
+          if (trailing != null) ...[Gap.h(8), trailing!],
+        ],
+      ),
+    );
+    if (body == null) {
+      return Padding(
+        padding: margin ?? DS.insets(l: 18, t: 20, r: 18),
+        child: DecoratedBox(
+          decoration: BoxDecoration(borderRadius: radius, gradient: tone.gradient, boxShadow: tone.glow()),
+          child: band,
+        ),
+      );
+    }
     return Padding(
       padding: margin ?? DS.insets(l: 18, t: 20, r: 18),
       child: DecoratedBox(
-        decoration: BoxDecoration(borderRadius: StayLook.cardRadius(54), gradient: tone.gradient, boxShadow: tone.glow()),
-        child: Padding(
-          padding: DS.insets(l: 16, t: 16, r: 20, b: 16),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
+        decoration: BoxDecoration(color: white, borderRadius: radius, boxShadow: DS.shadows(Ink3D.softShadow)),
+        child: ClipRRect(
+          borderRadius: radius,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              ExcludeSemantics(child: Art3D(asset: art, size: 66, halo: 84, haloColor: white.withValues(alpha: Alpha.v22))),
-              Gap.h(16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Wrap(
-                      spacing: DS.gh(8),
-                      runSpacing: DS.gv(4),
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      children: [
-                        Text(title, style: Ink3D.text(19, FontWeight.w700, white, height: 1.2, letterSpacing: 0)),
-                        if (pill != null)
-                          DecoratedBox(
-                            decoration: BoxDecoration(color: white.withValues(alpha: Alpha.v22), borderRadius: DS.circular(8)),
-                            child: Padding(
-                              padding: DS.sym(h: 8, v: 2),
-                              child: Text(pill!, style: Ink3D.text(10, FontWeight.w700, white, letterSpacing: 0)),
-                            ),
-                          ),
-                      ],
-                    ),
-                    if (line != null)
-                      Padding(
-                        padding: EdgeInsets.only(top: DS.gv(4)),
-                        child: Text(line!, style: Ink3D.text(12.5, FontWeight.w500, white.withValues(alpha: Alpha.v92), height: 1.35, letterSpacing: 0)),
-                      ),
-                    if (extra != null) Padding(padding: EdgeInsets.only(top: DS.gv(8)), child: extra),
-                  ],
-                ),
-              ),
+              DecoratedBox(decoration: BoxDecoration(gradient: tone.gradient), child: band),
+              body!,
             ],
           ),
         ),
@@ -149,7 +175,7 @@ class StayWhitePill extends StatelessWidget {
       );
 }
 
-enum StayPillKind { teal, indigo, white, outline, danger, off }
+enum StayPillKind { teal, indigo, forest, white, outline, danger, off }
 
 class StayPill extends StatelessWidget {
   const StayPill({super.key, required this.label, required this.kind, this.onTap, this.busy = false, this.expand = false});
@@ -162,14 +188,15 @@ class StayPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final filled = kind == StayPillKind.teal || kind == StayPillKind.indigo;
+    final filled = kind == StayPillKind.teal || kind == StayPillKind.indigo || kind == StayPillKind.forest;
     final gradient = switch (kind) {
       StayPillKind.teal => StayLook.tealDeep.gradient,
       StayPillKind.indigo => ListingTone.indigo.gradient,
+      StayPillKind.forest => ListingTone.forest.gradient,
       _ => null,
     };
     final fg = switch (kind) {
-      StayPillKind.teal || StayPillKind.indigo => Colors.white,
+      StayPillKind.teal || StayPillKind.indigo || StayPillKind.forest => Colors.white,
       StayPillKind.danger => StayLook.redText,
       StayPillKind.off => Ink3D.grey,
       _ => StayLook.indigoText,
@@ -214,7 +241,7 @@ class StayPill extends StatelessWidget {
 }
 
 class StayRowData {
-  const StayRowData({required this.art, required this.title, this.sub, this.trailing, this.onTap, this.tint = StayLook.artTint, this.locked = false, this.semantics});
+  const StayRowData({required this.art, required this.title, this.sub, this.trailing, this.onTap, this.tint = StayLook.artTint, this.locked = false, this.semantics, this.titleColor});
 
   final String art;
   final String title;
@@ -224,6 +251,7 @@ class StayRowData {
   final Color tint;
   final bool locked;
   final String? semantics;
+  final Color? titleColor;
 }
 
 class StayRowsCard extends StatelessWidget {
@@ -284,7 +312,7 @@ class StayRowTile extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(data.title, style: Ink3D.text(15, FontWeight.w500, Ink3D.title, height: 1.3, letterSpacing: 0)),
+                    Text(data.title, style: Ink3D.text(15, FontWeight.w500, data.titleColor ?? Ink3D.title, height: 1.3, letterSpacing: 0)),
                     if (data.sub != null)
                       Padding(
                         padding: EdgeInsets.only(top: DS.gv(3)),
@@ -305,29 +333,33 @@ class StayRowTile extends StatelessWidget {
 }
 
 class StaySectionTitle extends StatelessWidget {
-  const StaySectionTitle({super.key, required this.title, this.meter});
+  const StaySectionTitle({super.key, required this.title, this.meter, this.trailing});
 
   final String title;
   final String? meter;
+  final Widget? trailing;
 
   @override
-  Widget build(BuildContext context) => Padding(
-        padding: DS.insets(l: 18, t: 22, r: 18),
-        child: Semantics(
-          header: true,
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
-            children: [
-              Flexible(child: Text(title, style: Ink3D.text(19, FontWeight.w600, Ink3D.body, letterSpacing: 0))),
-              if (meter != null) ...[
-                Gap.h(10),
-                Flexible(child: Text(meter!, style: Ink3D.text(13, FontWeight.w400, Ink3D.copy, letterSpacing: 0))),
-              ],
-            ],
-          ),
-        ),
-      );
+  Widget build(BuildContext context) {
+    final head = Semantics(
+      header: true,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.baseline,
+        textBaseline: TextBaseline.alphabetic,
+        children: [
+          Flexible(child: Text(title, style: Ink3D.text(19, FontWeight.w600, Ink3D.body, letterSpacing: 0))),
+          if (meter != null) ...[
+            Gap.h(10),
+            Flexible(child: Text(meter!, style: Ink3D.text(13, FontWeight.w400, Ink3D.copy, letterSpacing: 0))),
+          ],
+        ],
+      ),
+    );
+    return Padding(
+      padding: DS.insets(l: 18, t: 22, r: 18),
+      child: trailing == null ? head : Row(children: [Expanded(child: head), Gap.h(8), trailing!]),
+    );
+  }
 }
 
 class StayStrip extends StatelessWidget {
@@ -553,4 +585,26 @@ class StayPlusBanner extends StatelessWidget {
       ),
     );
   }
+}
+
+class StayDeleteRow extends StatelessWidget {
+  const StayDeleteRow({super.key, required this.title, required this.sub, required this.busy, required this.onDelete});
+
+  final String title;
+  final String sub;
+  final bool busy;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) => StayRowsCard(rows: [
+        StayRowData(
+          art: ListingArt.warning,
+          tint: StayLook.artTintRed,
+          title: title,
+          titleColor: StayLook.redText,
+          sub: sub,
+          trailing: StayPill(label: OwnerSharedStrings.delete, kind: StayPillKind.danger, busy: busy, onTap: onDelete),
+          onTap: busy ? null : onDelete,
+        ),
+      ]);
 }

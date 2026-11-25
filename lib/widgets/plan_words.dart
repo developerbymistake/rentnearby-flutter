@@ -22,6 +22,7 @@ abstract final class PlanWords {
   static const manageInPlay = 'Manage in Google Play';
   static const fix = 'Fix';
   static const subscribeAgain = 'Subscribe again';
+  static const resubscribe = 'Resubscribe';
   static const continueWithPlus = 'Continue with Plus';
   static const currentPlan = 'Current plan';
   static const useSameAccount = 'Use the Google account you subscribed with.';

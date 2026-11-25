@@ -36,6 +36,7 @@ abstract final class OwnerErrorTypes {
   static const announceTooSoon = 'AnnounceTooSoon';
   static const tabInactive = 'TabInactive';
   static const roleMismatch = 'RoleMismatch';
+  static const planRowInactive = 'PlanRowInactive';
 
   static const Set<String> limitTypes = {
     planPhotoLimit,

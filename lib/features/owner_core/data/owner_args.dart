@@ -27,4 +27,8 @@ abstract final class OwnerArgs {
   }
 
   static bool flag(Map<String, dynamic> a, String key) => a[key] == true || a[key] == 'true';
+
+  static const manageKey = 'manage';
+  static const Map<String, dynamic> manage = {manageKey: true};
+  static bool isManage(Object? a) => flag(of(a), manageKey);
 }

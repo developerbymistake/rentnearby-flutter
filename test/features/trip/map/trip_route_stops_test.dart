@@ -49,7 +49,7 @@ void main() {
     expect(last['properties'], {'img': TripRouteStops.imageOf(2), 'op': 0.35, 'n': 3});
   });
 
-  test('size follows the trip photo zoom sizes: 44 / 60 / 72 dp at zoom 10 / 14 / 17', () {
+  test('route stops keep the 2026-11-24 sizes: 44 / 60 / 72 dp at zoom 10 / 14 / 17', () {
     DS.applyApproved();
     addTearDown(DS.debugReset);
     final stops = TripRouteStops();
@@ -59,7 +59,7 @@ void main() {
       ['linear'],
       ['zoom'],
     ]);
-    final t = DiscTuning.trip;
+    final t = DiscTuning.tripStops;
     expect(e[3], DiscTuning.zoomOut);
     expect((e[4] as double) * t.photoDp, closeTo(44, 1e-9));
     expect(e[5], DiscTuning.zoomMid);
@@ -93,7 +93,7 @@ void main() {
   testWidgets('stop marker: photo in the white ring, day colour ring outside, badge on the corner', (tester) async {
     await tester.runAsync(() async {
       const painter = CanvasMarkerPainter();
-      final t = DiscTuning.trip;
+      final t = DiscTuning.tripStops;
       final png = await painter.stop(thumb: await _pngOf(96, 120, const Color(0xFF3366CC)), category: 'temple', ring: _ring, number: 3, t: t);
       final r = await _raw(png);
       final side = t.px(CanvasMarkerPainter.stopCanvasDp(t));
@@ -119,7 +119,7 @@ void main() {
   testWidgets('stop marker without a photo shows the category colour', (tester) async {
     await tester.runAsync(() async {
       const painter = CanvasMarkerPainter();
-      final t = DiscTuning.trip;
+      final t = DiscTuning.tripStops;
       final r = await _raw(await painter.stop(category: 'temple', ring: _ring, number: 1, t: t));
       final c = t.px(CanvasMarkerPainter.stopCanvasDp(t)) / 2;
       final inner = t.photoDp / 2 - 2;

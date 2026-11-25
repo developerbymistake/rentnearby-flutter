@@ -4,8 +4,12 @@ import 'package:dio/dio.dart';
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 import '../../../controllers/auth_controller.dart';
+import '../../../controllers/plan_controller.dart';
 import '../../../utils/app_toast.dart';
 import '../../../utils/dio_error_mapper.dart';
+import '../../owner_core/data/owner_error_types.dart';
+import '../../owner_core/plan/plan_gate.dart';
+import '../../owner_core/strings/owner_shared_strings.dart';
 import '../data/jobs_repository.dart';
 import '../../stay_owner/strings/stay_work_strings.dart';
 import '../models/job_detail_model.dart';
@@ -41,6 +45,7 @@ class PostJobController extends GetxController {
   final step = 0.obs;
   final blockMessage = Rxn<String>();
   final limitReached = false.obs;
+  int? limitFree;
 
   final departmentId = Rxn<String>();
   final roleId = Rxn<String>();
@@ -266,9 +271,26 @@ class PostJobController extends GetxController {
       return true;
     } catch (e) {
       const fallback = 'Could not post the job.';
-      if (e is DioException && _warnTypes.contains(DioErrorMapper.errorType(e))) {
+      final type = DioErrorMapper.errorType(e);
+      if (type == OwnerErrorTypes.planRowInactive) {
+        if (Get.isRegistered<PlanController>()) Get.find<PlanController>().invalidate().ignore();
+        final msg = DioErrorMapper.serverMessage(e);
+        AppToast.info(msg != null && msg.isNotEmpty ? msg : OwnerSharedStrings.inactiveToast);
+        return false;
+      }
+      if (e is DioException && _warnTypes.contains(type)) {
         blockMessage.value = DioErrorMapper.toMessage(e, fallback, showRawMessageForStatusCodes: const {409});
-        limitReached.value = DioErrorMapper.errorType(e) == 'StayJobLimit';
+        limitReached.value = type == 'StayJobLimit';
+        if (limitReached.value) {
+          final data = e.response?.data;
+          final d = data is Map<String, dynamic> ? data['data'] : null;
+          if (d is Map<String, dynamic>) {
+            canUpgrade.value = d['canUpgrade'] == true;
+            final limit = d['limit'];
+            if (limit is int) limitFree = limit;
+          }
+          if (canUpgrade.value && PlanGate.paymentOn) return false;
+        }
       }
       _handleError(e, fallback);
       return false;

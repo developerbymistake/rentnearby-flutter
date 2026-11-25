@@ -62,6 +62,8 @@ class _Painter implements MarkerPainter {
   @override
   Future<Uint8List> badge(String category, DiscTuning t) async => Uint8List.fromList([1]);
   @override
+  Future<Uint8List> dot(Color color, DiscTuning t) async => Uint8List.fromList([1]);
+  @override
   Future<Uint8List?> photo(Uint8List thumb, DiscTuning t) async => null;
   @override
   Future<bool> valid(Uint8List png) async => true;

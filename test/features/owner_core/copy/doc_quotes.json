@@ -645,13 +645,6 @@
  },
  {
   "section": "4.2",
-  "line": 272,
-  "text": "Share your stay",
-  "norm": "share your stay",
-  "placeholder": false
- },
- {
-  "section": "4.2",
   "line": 273,
   "text": "REJECTED: {reason}",
   "norm": "rejected: {}",
@@ -926,13 +919,6 @@
  {
   "section": "4.2",
   "line": 282,
-  "text": "Edit prices",
-  "norm": "edit prices",
-  "placeholder": false
- },
- {
-  "section": "4.2",
-  "line": 282,
   "text": "Price updated",
   "norm": "price updated",
   "placeholder": false
@@ -949,13 +935,6 @@
   "line": 282,
   "text": "Listed when asked",
   "norm": "listed when asked",
-  "placeholder": false
- },
- {
-  "section": "4.2",
-  "line": 283,
-  "text": "Share my stay",
-  "norm": "share my stay",
   "placeholder": false
  },
  {
@@ -1024,34 +1003,6 @@
  {
   "section": "4.3",
   "line": 293,
-  "text": "New price",
-  "norm": "new price",
-  "placeholder": false
- },
- {
-  "section": "4.3",
-  "line": 293,
-  "text": "Rohit asks Rs 2,700 / night",
-  "norm": "rohit asks ₹0,000 / night",
-  "placeholder": false
- },
- {
-  "section": "4.3",
-  "line": 293,
-  "text": "Total at his price",
-  "norm": "total at his price",
-  "placeholder": false
- },
- {
-  "section": "4.3",
-  "line": 293,
-  "text": "Counter 1 of 3",
-  "norm": "counter 0 of 0",
-  "placeholder": false
- },
- {
-  "section": "4.3",
-  "line": 293,
   "text": "Answer within",
   "norm": "answer within",
   "placeholder": false
@@ -1059,29 +1010,8 @@
  {
   "section": "4.3",
   "line": 293,
-  "text": "Accept price",
-  "norm": "accept price",
-  "placeholder": false
- },
- {
-  "section": "4.3",
-  "line": 293,
-  "text": "Send a different offer",
-  "norm": "send a different offer",
-  "placeholder": false
- },
- {
-  "section": "4.3",
-  "line": 293,
   "text": "Not available",
   "norm": "not available",
-  "placeholder": false
- },
- {
-  "section": "4.3",
-  "line": 293,
-  "text": "Accept price sends him an offer at Rs 2,700 a night.",
-  "norm": "accept price sends him an offer at ₹0,000 a night.",
   "placeholder": false
  },
  {
@@ -1103,13 +1033,6 @@
   "line": 296,
   "text": "Share UPI and WhatsApp",
   "norm": "share upi and whatsapp",
-  "placeholder": false
- },
- {
-  "section": "4.3",
-  "line": 296,
-  "text": "Open chat",
-  "norm": "open chat",
   "placeholder": false
  },
  {
@@ -1138,13 +1061,6 @@
   "line": 297,
   "text": "Offer expired",
   "norm": "offer expired",
-  "placeholder": false
- },
- {
-  "section": "4.3",
-  "line": 298,
-  "text": "Send a revised offer",
-  "norm": "send a revised offer",
   "placeholder": false
  },
  {
@@ -1271,13 +1187,6 @@
   "line": 309,
   "text": "Not available right now / New enquiries will come back soon.",
   "norm": "not available right now / new enquiries will come back soon.",
-  "placeholder": false
- },
- {
-  "section": "4.4",
-  "line": 315,
-  "text": "Open chat",
-  "norm": "open chat",
   "placeholder": false
  },
  {
@@ -2368,8 +2277,8 @@
  {
   "section": "5.2",
   "line": 450,
-  "text": "New leads are paused in your area.",
-  "norm": "new leads are paused in your area.",
+  "text": "New requests are paused in your area.",
+  "norm": "new requests are paused in your area.",
   "placeholder": false
  },
  {
@@ -2585,13 +2494,6 @@
  {
   "section": "5.3",
   "line": 463,
-  "text": "Bookings stay. A ringing request and unanswered trip leads close.",
-  "norm": "bookings stay. a ringing request and unanswered trip leads close.",
-  "placeholder": false
- },
- {
-  "section": "5.3",
-  "line": 463,
   "text": "Hidden from search",
   "norm": "hidden from search",
   "placeholder": false
@@ -2795,8 +2697,8 @@
  {
   "section": "5.4",
   "line": 482,
-  "text": "Traveller chose you. Confirm in 12:40",
-  "norm": "traveller chose you. confirm in 00:00",
+  "text": "A traveller chose you",
+  "norm": "a traveller chose you",
   "placeholder": false
  },
  {
@@ -3019,8 +2921,8 @@
  {
   "section": "5.7",
   "line": 518,
-  "text": "New leads are paused in your area.",
-  "norm": "new leads are paused in your area.",
+  "text": "New requests are paused in your area.",
+  "norm": "new requests are paused in your area.",
   "placeholder": false
  },
  {
@@ -3194,8 +3096,8 @@
  {
   "section": "5.8",
   "line": 531,
-  "text": "All 5 used",
-  "norm": "all 0 used",
+  "text": "Your routes",
+  "norm": "your routes",
   "placeholder": false
  },
  {
@@ -3936,8 +3838,8 @@
  {
   "section": "6.9",
   "line": 758,
-  "text": "Traveller chose you. Confirm in 12:40",
-  "norm": "traveller chose you. confirm in 00:00",
+  "text": "A traveller chose you",
+  "norm": "a traveller chose you",
   "placeholder": false
  },
  {
@@ -4092,20 +3994,6 @@
   "line": 767,
   "text": "Diwali week starts 6 Nov. Go online and check your fares.",
   "norm": "diwali week starts 0 nov. go online and check your fares.",
-  "placeholder": false
- },
- {
-  "section": "6.9",
-  "line": 768,
-  "text": "Share your stay",
-  "norm": "share your stay",
-  "placeholder": false
- },
- {
-  "section": "6.9",
-  "line": 768,
-  "text": "Send your link to past guests to get first enquiries.",
-  "norm": "send your link to past guests to get first enquiries.",
   "placeholder": false
  },
  {

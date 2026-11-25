@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:bakhli/features/trip/controllers/trip_enquiry_controller.dart';
 import 'package:bakhli/features/trip/models/trip_enquiry_model.dart';
+import 'package:bakhli/features/trip/trip_strings.dart';
 import 'package:bakhli/models/message_model.dart';
 import 'package:bakhli/widgets/trip_chat_cards.dart';
 import 'package:flutter/material.dart';
@@ -41,15 +42,7 @@ MessageModel _m(String id, String type, bool mine, Map<String, dynamic> p) => Me
 
 final _dates = {'checkIn': '2026-11-13', 'checkOut': '2026-11-15'};
 
-TripChatCallbacks _cb({bool owner = false}) => TripChatCallbacks(
-      onAccept: (_, _) {},
-      onDecline: (_, _) {},
-      onAcceptPrice: owner ? (_, _) {} : null,
-      onSendDifferentOffer: (_, _) {},
-      onAcceptNewPrice: (_, _) {},
-      onKeepPrice: (_, _) {},
-      onCancelStay: (_) {},
-      onAcceptChange: (_, _) {},
+TripChatCallbacks _cb() => const TripChatCallbacks(
       guestName: 'Rahul Sharma',
       hostPhone: '9876543210',
       guestPhone: '9876543210',
@@ -67,7 +60,7 @@ Widget _list(List<Widget> cards) => Scaffold(
     );
 
 Widget _card(BuildContext c, MessageModel m, {bool owner = false}) =>
-    TripChatCards.build(c, m, isOwner: owner, accent: const Color(0xFF2E7D32), callbacks: _cb(owner: owner));
+    TripChatCards.build(c, m, isOwner: owner, accent: const Color(0xFF2E7D32), callbacks: _cb());
 
 final _scenes = <String, List<(MessageModel, bool)>>{
   'ch_offer': [
@@ -149,6 +142,9 @@ void main() {
         await settlePhone(t);
         await shot(t, '${e.key}$tag');
         expect(t.takeException(), isNull);
+        for (final label in [TripStrings.acceptOffer, TripStrings.sendOffer, TripStrings.notAvailableAction]) {
+          expect(find.text(label), findsNothing);
+        }
         await t.pumpWidget(const SizedBox());
         debugDisableShadows = true;
       });

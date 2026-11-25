@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import '../../../config/app_routes.dart';
 import '../../../controllers/auth_controller.dart';
 import '../../../design/design.dart';
+import '../../../utils/app_toast.dart';
 import '../../owner_core/calendar/calendar_api.dart';
 import '../../owner_core/calendar/models/calendar_models.dart';
 import '../../owner_core/data/owner_api.dart';
@@ -12,11 +13,15 @@ import '../../owner_core/data/owner_result.dart';
 import '../../owner_core/json/owner_dates.dart';
 import '../../owner_core/json/owner_json.dart';
 import '../../owner_core/look/owner_look.dart';
+import '../../owner_core/plan/owner_inactive.dart';
 import '../../owner_core/plan/plan_gate.dart';
 import '../../owner_core/plan/plan_keys.dart';
+import '../../owner_core/sheets/owner_confirm.dart';
 import '../../owner_core/sheets/owner_states.dart';
+import '../../owner_core/strings/owner_shared_strings.dart';
 import '../home/stay_owner_home_controller.dart';
 import '../strings/stay_calendar_strings.dart';
+import '../strings/stay_gate_strings_calendar.dart';
 import '../widgets/stay_widgets.dart';
 import 'data/stay_calendar_apis.dart';
 import 'models/stay_calendar_models.dart';
@@ -115,21 +120,26 @@ class StayUpcomingScreen extends StatefulWidget {
   final StayBlockApi? blockApi;
   final DateTime Function()? clock;
 
+  static const String listTag = 'stay-upcoming';
+
   @override
   State<StayUpcomingScreen> createState() => _StayUpcomingScreenState();
 }
 
 class _StayUpcomingScreenState extends State<StayUpcomingScreen> {
-  static const String tag = 'stay-upcoming';
+  static const String tag = StayUpcomingScreen.listTag;
   late final StayListController c;
+  late final CalendarApi _api;
   final meta = StayUpcomingMeta();
+  final _deleting = RxnString();
 
   DateTime get today => OwnerDates.only((widget.clock ?? DateTime.now)());
 
   @override
   void initState() {
     super.initState();
-    final api = widget.api ?? const CalendarApi(CalendarApi.stayPrefix);
+    _api = widget.api ?? const CalendarApi(CalendarApi.stayPrefix);
+    final api = _api;
     final blocks = widget.blockApi ?? const StayBlockApi();
     c = Get.put(
       StayListController(
@@ -153,30 +163,77 @@ class _StayUpcomingScreenState extends State<StayUpcomingScreen> {
     super.dispose();
   }
 
+  Future<void> _deleteInactive(BuildContext context, CalendarEntry e) async {
+    if (_deleting.value != null) return;
+    final ok = await OwnerConfirm.ask(
+      context,
+      title: StayCalendarStrings.deleteTitle,
+      confirm: StayCalendarStrings.delete,
+      cancel: StayCalendarStrings.cancel,
+      destructive: true,
+      tone: ListingTone.forest,
+    );
+    if (!ok || !mounted) return;
+    _deleting.value = e.id;
+    final r = await _api.delete(e.id);
+    if (!mounted) return;
+    _deleting.value = null;
+    if (r is OwnerOk<void>) {
+      await c.fetch();
+      StayOwnerHomeController.maybe?.reload();
+      return;
+    }
+    AppToast.error(r is OwnerRefused<void> ? (r.message ?? OwnerSharedStrings.noConnection) : OwnerSharedStrings.noConnection);
+  }
+
+  Widget _row(BuildContext context, CalendarEntry e) {
+    final row = StayEntryRows.upcoming(e);
+    if (!e.inactiveByPlan) return row;
+    return Padding(
+      padding: DS.insets(b: 8),
+      child: Obx(() => OwnerInactive(
+            reason: StayGateStringsCalendar.entryInactive(PlanGate.limit(PlanKey.calendarEntries)),
+            busy: _deleting.value == e.id,
+            onDelete: () => _deleteInactive(context, e),
+            child: row,
+          )),
+    );
+  }
+
+  ({int days, DateTime until, bool six}) _window() {
+    final raw = PlanGate.limit(PlanKey.upcomingDays);
+    final days = raw <= 0 ? 15 : raw;
+    return (days: days, until: OwnerDates.addDays(today, days), six: raw >= 180);
+  }
+
   @override
   Widget build(BuildContext context) {
-    final days = PlanGate.limit(PlanKey.upcomingDays);
-    final until = OwnerDates.addDays(today, days <= 0 ? 15 : days);
-    final six = days >= 180;
-    final sub = six ? StayCalendarStrings.next6MonthsUntil(until) : StayCalendarStrings.nextDaysUntil(days <= 0 ? 15 : days, until);
-    final plus = PlanGate.paymentOn && !PlanGate.canUpgrade;
     return Scaffold(
       backgroundColor: OwnerLook.stay.page,
       body: Column(
         children: [
-          StayCalHeader(title: StayCalendarStrings.upcoming, subtitle: sub, trailing: plus ? const StayPlusTag() : null),
+          Obx(() {
+            c.load.value;
+            final w = _window();
+            final sub = w.six ? StayCalendarStrings.next6MonthsUntil(w.until) : StayCalendarStrings.nextDaysUntil(w.days, w.until);
+            final plus = PlanGate.paymentOn && !PlanGate.canUpgrade;
+            return StayCalHeader(title: StayCalendarStrings.upcoming, subtitle: sub, trailing: plus ? const StayPlusTag() : null);
+          }),
           Expanded(
             child: StayEntryListView(
               c: c,
-              entryRow: (i) => StayEntryRows.upcoming(i.entry),
-              footer: (items) => [
-                if (c.items.any((e) => e.cancelled)) const StayNote(art: ListingArt.calendar, text: StayCalendarStrings.movedNote),
-                if (!six && PlanGate.canUpgrade && meta.beyondWindowAppCount > 0)
-                  StayAmberRow(
-                    text: StayCalendarStrings.beyondWindow(until, meta.beyondWindowAppCount),
-                    margin: DS.insets(l: 18, t: 14, r: 18),
-                  ),
-              ],
+              entryRow: (i) => _row(context, i.entry),
+              footer: (items) {
+                final w = _window();
+                return [
+                  if (c.items.any((e) => e.cancelled)) const StayNote(art: ListingArt.calendar, text: StayCalendarStrings.movedNote),
+                  if (!w.six && PlanGate.canUpgrade && meta.beyondWindowAppCount > 0)
+                    StayAmberRow(
+                      text: StayCalendarStrings.beyondWindow(w.until, meta.beyondWindowAppCount),
+                      margin: DS.insets(l: 18, t: 14, r: 18),
+                    ),
+                ];
+              },
             ),
           ),
           StayCalBar(

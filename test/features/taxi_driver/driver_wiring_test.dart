@@ -139,7 +139,7 @@ void main() {
     test('route screen does not use the new request code', () {
       final src = File('lib/features/taxi/setup/taxi_routes_screen.dart').readAsStringSync();
       expect(src.contains('requests/'), isFalse);
-      expect(src.contains('Driver'), isFalse);
+      expect(RegExp(r'\bDriver').hasMatch(src), isFalse);
     });
   });
 

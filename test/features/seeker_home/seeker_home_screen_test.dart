@@ -135,7 +135,7 @@ void main() {
       registerHome(feed: fixtureNoTrip());
       await t.pumpWidget(_app(homeHost()));
       await _settle(t);
-      final titles = ['Plan a trip', 'My trips', 'Find a buddy'];
+      final titles = ['Plan a trip', 'My trips', 'Find buddy'];
       final xs = <double>[];
       for (final s in titles) {
         final f = find.byKey(ValueKey('seeker-qa-$s'));
@@ -173,7 +173,7 @@ void main() {
       await _settle(t);
       Get.back();
       await _settle(t);
-      await t.tap(find.byKey(const ValueKey('seeker-qa-Find a buddy')));
+      await t.tap(find.byKey(const ValueKey('seeker-qa-Find buddy')));
       await _settle(t);
       expect(visitedRoutes, [AppRoutes.myTrips, AppRoutes.buddies]);
     });

@@ -9,10 +9,10 @@ import '../models/trip_enquiry_model.dart';
 import '../models/trip_plan_model.dart';
 import '../trip_constants.dart';
 import '../trip_strings.dart';
+import '../trip_strings_enquiry_simple.dart';
 import '../trip_strings_v2_easy.dart';
 import '../trip_strings_v2_find.dart';
 import '../utils/trip_enquiry_rules.dart';
-import 'trip_change_request_sheet.dart';
 import 'trip_sheet_frame.dart';
 
 class TripUpdateAskSheet {
@@ -34,26 +34,10 @@ class TripUpdateAskSheet {
     if (open.isEmpty && confirmed.isEmpty && taxis.isEmpty) return;
     final change = c.lastSettingsChange;
     final peopleOnly = change.people && !change.dates && !change.days;
-    final go = await TripSheetFrame.show<bool>(
+    await TripSheetFrame.show<bool>(
       context,
       _UpdateBody(open: open, confirmed: confirmed, confirmedTaxis: taxis, plan: c, peopleOnly: peopleOnly),
     );
-    if (go != true) return;
-    for (final e in confirmed) {
-      if (!context.mounted) return;
-      final p = c.plan.value;
-      final home = p != null && p.isMultiCity ? TripEnquiryRules.homeLegIndex(e, p) : null;
-      final k = home != null && p?.legAt(home) != null ? home : (p?.legIndexOf(e.day ?? 1) ?? 1);
-      final first = p == null ? null : c.dateOf(p.legStart(k));
-      final nights = p?.legDayCount(k) ?? 1;
-      await TripChangeRequestSheet.show(
-        context,
-        enquiry: e,
-        prefill: c.settings,
-        checkIn: first,
-        checkOut: first == null ? null : DateTime(first.year, first.month, first.day + nights),
-      );
-    }
   }
 }
 
@@ -210,6 +194,7 @@ class _UpdateBodyState extends State<_UpdateBody> {
       title: TripStringsV2Find.updateAskTitle,
       description: _body(first),
       footnote: widget.peopleOnly ? TripStringsV2Find.updatePeopleNote : TripStringsV2Find.updateNote,
+      endNote: widget.open.any((e) => !e.isTaxi) ? TripStringsEnq.phoneShared : null,
       footer: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,

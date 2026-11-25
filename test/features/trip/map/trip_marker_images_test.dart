@@ -59,8 +59,8 @@ void main() {
     expect(TripMarkerImages.thumbHash('abc'), TripMarkerImages.thumbHash('abc'));
   });
 
-  test('marker url uses the 96 px marker transform of the thumbnail helper', () {
-    expect(TripMarkerImages.markerUrl(spot('a')), contains('/image/upload/c_fill,w_96,h_96,q_auto,f_auto/v1/a.jpg'));
+  test('marker url uses the 288 px marker transform of the thumbnail helper', () {
+    expect(TripMarkerImages.markerUrl(spot('a')), contains('/image/upload/c_fill,w_288,h_288,q_auto,f_auto/v1/a.jpg'));
     expect(TripMarkerImages.markerUrl(const DiscoverySpot(id: 'n', lat: 0, lon: 0, category: '', rank: 1, name: '')), isNull);
   });
 
@@ -86,6 +86,22 @@ void main() {
       expect(stay.width, DiscTuning.stay.px(CanvasMarkerPainter.canvasDp(DiscTuning.stay.photoDp)));
       final badge = await decode(await painter.badge('temple', DiscTuning.trip));
       expect(badge.width, trip.px(CanvasMarkerPainter.canvasDp(trip.badgeDp)));
+    });
+  });
+
+  testWidgets('compose: dot of dotDp, its colour in the middle, transparent corner', (tester) async {
+    await tester.runAsync(() async {
+      const painter = CanvasMarkerPainter();
+      final t = DiscTuning.trip;
+      final img = await decode(await painter.dot(const Color(0xFF3366CC), t));
+      final side = t.px(t.dotDp);
+      expect(img.width, side);
+      final bytes = (await img.toByteData(format: ui.ImageByteFormat.rawRgba))!;
+      int at(int x, int y, int ch) => bytes.getUint8((y * img.width + x) * 4 + ch);
+      final c = side ~/ 2;
+      expect(at(c, c, 2), greaterThan(150));
+      expect(at(c, c, 0), lessThan(100));
+      expect(at(0, 0, 3), 0);
     });
   });
 
@@ -199,6 +215,8 @@ void main() {
 class _Painter implements MarkerPainter {
   @override
   Future<Uint8List> badge(String category, DiscTuning t) async => Uint8List(1);
+  @override
+  Future<Uint8List> dot(Color color, DiscTuning t) async => Uint8List(1);
   @override
   Future<Uint8List?> photo(Uint8List thumb, DiscTuning t) async => Uint8List.fromList([7]);
   @override

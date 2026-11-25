@@ -1,11 +1,13 @@
 import 'package:bakhli/controllers/auth_controller.dart';
 import 'package:bakhli/controllers/tab_config_controller.dart';
+import 'package:bakhli/design/design.dart';
 import 'package:bakhli/features/owner_core/data/owner_api.dart';
 import 'package:bakhli/features/owner_core/data/owner_cache.dart';
 import 'package:bakhli/features/owner_core/plan/gate_keys.dart';
 import 'package:bakhli/features/owner_core/plan/plan_gate.dart';
 import 'package:bakhli/features/stay_owner/hub/stay_hub_controller.dart';
 import 'package:bakhli/features/stay_owner/hub/stay_hub_screen.dart';
+import 'package:bakhli/features/stay_owner/hub/stay_preview_card.dart';
 import 'package:bakhli/models/my_plan_model.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -53,11 +55,15 @@ void main() {
     testWidgets('o_st_13_free_structureAndOrder', (t) async {
       await _pump(t, _hub(stayJson()));
       final order = ['Rooms and prices', 'Special prices', 'Photos', 'Calendar', 'Stay details', 'Delete stay'];
-      var last = -1.0;
+      final card = find.descendant(of: find.byType(StayPreviewCard), matching: find.byType(Text));
+      final inCard = card.evaluate().toSet();
+      var last = t.getBottomLeft(find.byType(StayPreviewCard)).dy;
       for (final s in order) {
         final f = find.text(s);
         expect(f, findsWidgets, reason: s);
-        final y = t.getTopLeft(f.first).dy;
+        final outside = f.evaluate().where((e) => !inCard.contains(e)).toList();
+        expect(outside, isNotEmpty, reason: s);
+        final y = t.getTopLeft(find.byElementPredicate((e) => e == outside.first)).dy;
         expect(y, greaterThan(last), reason: s);
         last = y;
       }
@@ -69,15 +75,58 @@ void main() {
       expect(find.text('Add stay'), findsNothing);
     });
 
-    testWidgets('o_st_13_lockedRoomRowAndPhotoTile', (t) async {
+    testWidgets('o_st_13_roomsOneRowOpensRoomsPage_noLockRow', (t) async {
       await _pump(t, _hub(stayJson()));
-      expect(find.byKey(GateKeys.softRow), findsWidgets);
-      expect(find.text('2 of 2'), findsWidgets);
+      expect(find.text('Your rooms'), findsOneWidget);
+      expect(find.text('Deluxe Room, Family Room · from ₹3,000'), findsOneWidget);
+      expect(find.text('2 rooms'), findsOneWidget);
+      expect(find.text('2 of 2'), findsOneWidget);
+      expect(find.byKey(GateKeys.softRow), findsNothing);
+      for (final gone in ['Edit price', 'Add room type', 'See Plus', 'Share']) {
+        expect(find.text(gone), findsNothing, reason: gone);
+      }
     });
 
-    testWidgets('o_st_13_hiddenRowsShowLockAndHiddenOnFree', (t) async {
+    testWidgets('o_st_13_photoAddAtFreeLimitOpensPlusSheet', (t) async {
+      await _pump(t, _hub(stayJson()));
+      await t.tap(find.text('+ Add'));
+      await t.pump();
+      await t.pump(const Duration(seconds: 1));
+      expect(find.byKey(GateKeys.sheet), findsOneWidget);
+    });
+
+    testWidgets('o_st_13_hiddenRoomsLeaveHub_hiddenPhotoKeepsLock', (t) async {
       await _pump(t, _hub(stayJson(hiddenRooms: 1, hiddenPhotos: 1)));
-      expect(find.text('Hidden on Free'), findsWidgets);
+      expect(find.text('Hidden on Free'), findsNothing);
+      expect(find.byWidgetPredicate((w) => w is Art3D && w.asset == ListingArt.locked), findsOneWidget);
+    });
+
+    testWidgets('PHOTOS-AFTER_hiddenPhotoHasReasonAndDelete', (t) async {
+      await _pump(t, _hub(stayJson(hiddenPhotos: 1)));
+      expect(find.text('Inactive: the Free plan allows 2 photos.'), findsOneWidget);
+      expect(find.text('Choose what stays'), findsOneWidget);
+      await t.tap(find.byWidgetPredicate((w) => w is Art3D && w.asset == ListingArt.locked));
+      await t.pump();
+      await t.pump(const Duration(milliseconds: 400));
+      expect(find.text('Delete this photo?'), findsOneWidget);
+      expect(find.text('Keep'), findsOneWidget);
+    });
+
+    testWidgets('o_st_13_specialPricesAndDeleteRows', (t) async {
+      await _pump(t, _hub(stayJson()));
+      expect(find.text('Your special prices'), findsOneWidget);
+      expect(find.text('Diwali week · 20% higher'), findsOneWidget);
+      expect(find.text('1 set'), findsOneWidget);
+      expect(find.text('Remove this listing'), findsOneWidget);
+      expect(find.text('Delete'), findsOneWidget);
+    });
+
+    testWidgets('o_st_13_previewCardThreeParts', (t) async {
+      await _pump(t, _hub(stayJson()));
+      expect(find.text('Mukteshwar, Nainital · Accepting guests'), findsOneWidget);
+      for (final s in ['LIVE', 'Rooms', 'Photos', 'From / night', '₹3,000', 'View']) {
+        expect(find.text(s), findsWidgets, reason: s);
+      }
     });
 
     testWidgets('o_st_13_paymentOff_noLocks_guardKeys', (t) async {
@@ -104,12 +153,16 @@ void main() {
       await _pump(t, _hub(stayJson(rooms: 4, photos: 6, featured: true, meters: [{'key': 'Photos', 'used': 6, 'limit': 8}, {'key': 'RoomTypes', 'used': 4, 'limit': 6}]), plan: OwnerPlans.plus));
       expect(find.text('★ Featured'), findsWidgets);
       expect(find.byKey(GateKeys.softRow), findsNothing);
-      expect(find.text('4 of 6'), findsWidgets);
+      expect(find.text('6 of 8'), findsWidgets);
+      expect(find.text('4 rooms'), findsOneWidget);
     });
 
-    testWidgets('o_st_14_singularGuestText', (t) async {
-      await _pump(t, _hub(stayJson(rooms: 4), plan: OwnerPlans.plus));
-      expect(_texts(t).any((s) => s.endsWith('1 guest')), isTrue);
+    testWidgets('o_st_14_plusFullPhotos_addTileGreyedWithCalmLine', (t) async {
+      await _pump(t, _hub(stayJson(photos: 8, meters: [{'key': 'Photos', 'used': 8, 'limit': 8}, {'key': 'RoomTypes', 'used': 2, 'limit': 6}]), plan: OwnerPlans.plus));
+      expect(find.text('+ Add'), findsOneWidget);
+      final ink = t.widget<InkWell>(find.ancestor(of: find.text('+ Add'), matching: find.byType(InkWell)).first);
+      expect(ink.onTap, isNull);
+      expect(find.text('8 of 8 · limit reached'), findsOneWidget);
     });
   });
 

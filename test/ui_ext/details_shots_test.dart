@@ -347,13 +347,13 @@ void main() {
       await shot(t, 's_owner');
     });
 
-    _tw('s_trip keeps Call and Chat, no WhatsApp', (t) async {
+    _tw('s_trip keeps Call, no Chat, no WhatsApp', (t) async {
       _setup();
       await _stay(t, args: const {'id': 's1', 'fromTrip': true});
       await _toEnd(t);
       expect(find.text('Directions'), findsOneWidget);
       expect(find.text('Call'), findsOneWidget);
-      expect(find.text('Chat'), findsOneWidget);
+      expect(find.text('Chat'), findsNothing);
       expect(find.text('WhatsApp'), findsNothing);
     });
 
@@ -370,7 +370,7 @@ void main() {
       await _stay(t, answer: () async => StayDetailModel.fromJson(_stayJson(phone: false)));
       await _toEnd(t);
       expect(find.text('Call'), findsNothing);
-      expect(find.text('Chat'), findsOneWidget);
+      expect(find.text('Chat'), findsNothing);
       expect(find.text('WhatsApp'), findsNothing);
       await _scrollTo(t, find.text('Facilities'));
       await shot(t, 's_nophone');

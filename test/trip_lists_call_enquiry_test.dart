@@ -86,17 +86,16 @@ void main() {
       expect((taps.shortlist, taps.open, taps.ask), (1, 0, 0));
     });
 
-    testWidgets('asked stay with a chat opens the chat', (t) async {
+    testWidgets('asked stay shows no chat entry', (t) async {
       final taps = _Taps();
       await t.pumpWidget(_host(TripStayRow(
         stay: _stay(),
         status: TripDisplayStatus.asked,
         onOpen: () => taps.open++,
         onCall: () => taps.call++,
-        onOpenChat: () => taps.chat++,
       )));
-      await t.tap(find.byIcon(Icons.chat_bubble_outline_rounded));
-      expect((taps.chat, taps.open), (1, 0));
+      expect(find.byIcon(Icons.chat_bubble_outline_rounded), findsNothing);
+      expect(taps.open, 0);
     });
 
     testWidgets('Call shows a spinner while busy', (t) async {

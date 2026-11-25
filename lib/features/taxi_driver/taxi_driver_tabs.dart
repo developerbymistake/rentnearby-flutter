@@ -36,7 +36,7 @@ abstract final class TaxiDriverTabs {
       TabSlot(
         index: AppTabs.centre,
         label: TaxiShellStrings.tabRequests,
-        image: '${art}bell.png',
+        image: '${art}loudspeaker_3d.png',
         center: true,
         activeColor: look.active,
         rootTag: 'taxi-requests-tab',
@@ -64,6 +64,4 @@ abstract final class TaxiDriverTabs {
     if (route == AppRoutes.taxiBookings) return AppTabs.fourth;
     return null;
   }
-
-  static String segmentFor(String route) => route == AppRoutes.tripLeads ? 'leads' : 'requests';
 }

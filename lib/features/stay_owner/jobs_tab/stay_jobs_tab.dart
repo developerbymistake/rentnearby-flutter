@@ -9,8 +9,7 @@ import '../../../widgets/tab_header.dart';
 import '../../jobs/controllers/my_jobs_controller.dart';
 import '../../jobs/models/my_job_model.dart';
 import '../../owner_core/look/owner_look.dart';
-import '../../owner_core/plan/gate_keys.dart';
-import '../../owner_core/plan/soft_lock.dart';
+import '../../owner_core/plan/plan_gate.dart';
 import '../../owner_core/sheets/owner_confirm.dart';
 import '../../owner_core/sheets/owner_states.dart';
 import '../../owner_core/strings/owner_shared_strings.dart';
@@ -51,6 +50,7 @@ class _StayJobsTabState extends State<StayJobsTab> {
   Future<void> _post() async {
     final page = _ctrl.page.value;
     if (page != null && !page.canPost) {
+      if (page.canUpgrade && page.stayStatus == 'Approved') return PlanGate.showLimit(context, StayGateStringsWork.jobGate(free: page.maxActive));
       final msg = page.blockMessage;
       if (msg != null) AppToast.warning(msg);
       return;
@@ -94,21 +94,15 @@ class _StayJobsTabState extends State<StayJobsTab> {
       color: look.page,
       child: Obx(() {
         final page = _ctrl.page.value;
-        final over = page != null && page.overCap && page.canUpgrade;
-        final subtitle = page == null
-            ? ''
-            : over
-                ? StayGateStringsWork.overCapHeader(page.activeCount, page.maxActive)
-                : StayWorkStrings.activeOf(page.activeCount, page.maxActive);
         return TabHeaderFrame(
           title: StayWorkStrings.myJobs,
-          subtitle: subtitle,
+          subtitle: page == null ? '' : StayWorkStrings.activeOf(page.activeCount, page.maxActive),
           color: look.page,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              _postButton(page),
               Expanded(child: _content(page)),
-              _postBar(page),
             ],
           ),
         );
@@ -123,87 +117,35 @@ class _StayJobsTabState extends State<StayJobsTab> {
       }
       return const SingleChildScrollView(physics: NeverScrollableScrollPhysics(), child: OwnerSkeletonList(rows: 2));
     }
-    final banner = _banner(page);
     final count = page.items.length;
     return RefreshIndicator(
       color: OwnerLook.stay.accent,
       onRefresh: _ctrl.load,
       child: ListView.builder(
         physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
-        padding: EdgeInsets.only(bottom: DS.gv(16)),
-        itemCount: (banner == null ? 0 : 1) + (count == 0 ? 1 : count),
+        padding: EdgeInsets.only(bottom: DS.gv(16) + BarMetrics.bodyBottomOf(context)),
+        itemCount: count == 0 ? 1 : count,
         itemBuilder: (_, i) {
-          if (banner != null) {
-            if (i == 0) return banner;
-            i--;
-          }
           if (count == 0) return const _Empty(title: StayWorkStrings.noJobs, message: StayWorkStrings.noJobsSub);
           final job = page.items[i];
           return StayJobCard(
             key: ValueKey(job.id),
             job: job,
-            onView: () => Get.toNamed(AppRoutes.jobDetail, arguments: {'id': job.id}),
+            onView: job.isInactive ? null : () => Get.toNamed(AppRoutes.jobDetail, arguments: {'id': job.id}),
             onEdit: job.isActive ? () => _openForm(job.id) : null,
-            onClose: job.isActive ? () => _close(job) : null,
+            onClose: job.isActive || job.isInactive ? () => _close(job) : null,
+            inactiveReason: job.isInactive ? StayGateStringsWork.jobInactive(page.maxActive) : null,
           );
         },
       ),
     );
   }
 
-  Widget? _banner(MyJobsPage page) {
-    if (!page.canUpgrade || page.stayStatus != 'Approved') return null;
-    final String text;
-    if (page.overCap) {
-      text = StayGateStringsWork.overCap(page.activeCount, page.maxActive);
-    } else if (page.atCap) {
-      text = StayGateStringsWork.jobsCap(page.maxActive);
-    } else {
-      return null;
-    }
-    return Container(
-      key: GateKeys.of('g7'),
-      margin: DS.gapInsets(l: 14, t: 8, r: 14),
-      padding: DS.insets(l: 14, t: 12, r: 12, b: 12),
-      decoration: BoxDecoration(color: OwnerLook.amberSoft, borderRadius: DS.circular(12)),
-      child: Row(children: [
-        ExcludeSemantics(child: Art3D(asset: ListingArt.briefcase, size: 36)),
-        Gap.h(12),
-        Expanded(
-          child: Semantics(
-            liveRegion: true,
-            child: Text(text, style: Ink3D.text(12.5, FontWeight.w600, OwnerLook.amber, height: 1.35, letterSpacing: 0)),
-          ),
-        ),
-        Gap.h(8),
-        const SeePlusButton(),
-      ]),
-    );
-  }
-
-  Widget _postBar(MyJobsPage? page) {
-    final enabled = page != null && page.canPost;
-    return Container(
-      padding: EdgeInsets.fromLTRB(DS.s(14), DS.gv(10), DS.s(14), DS.gv(10) + BarMetrics.bodyBottomOf(context)),
-      decoration: BoxDecoration(color: DesignColors.surface, borderRadius: DS.br(CardRadius.heroTop), boxShadow: DS.shadows(Ink3D.topEdge)),
-      child: enabled
-          ? GradientPillButton(tone: OwnerLook.stay.tone, label: StayWorkStrings.postAJob, height: 48, fontSize: _postFont, onTap: _post)
-          : Semantics(
-              button: true,
-              enabled: false,
-              label: StayWorkStrings.postAJob,
-              excludeSemantics: true,
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: page == null ? null : _post,
-                child: Container(
-                  height: DS.s(48),
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(color: OwnerLook.hatch, borderRadius: DS.circular(24)),
-                  child: Text(StayWorkStrings.postAJob, style: Ink3D.text(15, FontWeight.w600, Ink3D.sub, letterSpacing: 0)),
-                ),
-              ),
-            ),
+  Widget _postButton(MyJobsPage? page) {
+    final enabled = page != null && !(page.limitReached && !page.canUpgrade);
+    return Padding(
+      padding: DS.gapInsets(l: 14, t: 8, r: 14, b: 4),
+      child: GradientPillButton(tone: OwnerLook.stay.tone, label: StayWorkStrings.postAJob, height: 48, fontSize: _postFont, enabled: enabled, onTap: enabled ? _post : null),
     );
   }
 }

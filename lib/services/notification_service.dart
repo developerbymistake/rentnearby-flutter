@@ -28,6 +28,7 @@ import '../models/notification_model.dart';
 import '../services/api_service.dart';
 import '../services/storage_service.dart';
 import '../features/owner_core/plan/plan_expired_tap.dart';
+import 'enquiry_nudge_push.dart';
 import 'push_token_registrar.dart';
 import 'system_settings_channel.dart';
 import 'taxi_ring_service.dart';
@@ -65,6 +66,17 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
         ?.createNotificationChannel(TaxiRingNotification.ringChannel);
     final result = await TaxiRingService.withPlugin(plugin).handle(message.data);
     await TaxiRingAckClient.within(result.ack);
+    return;
+  }
+
+  final nudge = EnquiryNudgePush.tryParse(message.data, title: message.notification?.title, body: message.notification?.body);
+  if (nudge != null) {
+    // Data-only host nudge: the tray copy needs the Reply and Not available buttons.
+    WidgetsFlutterBinding.ensureInitialized();
+    final plugin = FlutterLocalNotificationsPlugin();
+    await plugin.initialize(settings: const InitializationSettings(android: AndroidInitializationSettings('@mipmap/ic_launcher')));
+    await plugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()?.createNotificationChannel(EnquiryNudgePush.channel);
+    await EnquiryNudgePush.show(plugin, nudge);
     return;
   }
 
@@ -253,6 +265,13 @@ class NotificationService extends GetxService {
     // exact conversation.
     _foregroundMessageSub = FirebaseMessaging.onMessage.listen((message) async {
       if (await _handleForegroundRing(message.data)) return;
+      final nudge = EnquiryNudgePush.tryParse(message.data, title: message.notification?.title, body: message.notification?.body);
+      if (nudge != null) {
+        final type = message.data['notification_type'];
+        TripPushSync.onPush(type is String ? type : null, AppRoutes.stayEnquiries, NotificationModel.parseArguments(message.data['action_args_json']));
+        if (!_targetAlreadyOpen(message.data)) await EnquiryNudgePush.show(_localNotifications, nudge);
+        return;
+      }
       final conversationId = message.data['conversation_id'] as String?;
       if (conversationId != null) {
         if (Get.currentRoute == AppRoutes.chatConversation &&
@@ -360,6 +379,7 @@ class NotificationService extends GetxService {
   }
 
   Map<String, dynamic> _ringTapData(Map<String, dynamic> data, String? actionId) {
+    if (EnquiryNudgePush.isPayload(data)) return EnquiryNudgePush.tapData(data, actionId);
     if (!TaxiRingNotification.isRingPayload(data)) return data;
     if (TaxiRingNotification.stopsOnTap(actionId)) {
       unawaited(_localNotifications
@@ -411,6 +431,7 @@ class NotificationService extends GetxService {
       description: 'Status updates and other alerts',
       importance: Importance.high,
     ));
+    await androidPlugin?.createNotificationChannel(EnquiryNudgePush.channel);
     await androidPlugin?.createNotificationChannel(TaxiRingNotification.ringChannel);
     await androidPlugin?.createNotificationChannel(TaxiRingNotification.updatesChannel);
     unawaited(TaxiRingDevice.refresh());
@@ -519,6 +540,7 @@ class NotificationService extends GetxService {
     // login/splash" — main not in the stack at all).
     AppRoutes.chatsList,
     AppRoutes.chatConversation,
+    AppRoutes.myEnquiries,
     AppRoutes.myStays,
     AppRoutes.stayDetail,
     AppRoutes.stayRooms,
@@ -587,6 +609,7 @@ class NotificationService extends GetxService {
     AppRoutes.savedJourney,
     AppRoutes.tripPlan,
     AppRoutes.tripReplies,
+    AppRoutes.myEnquiries,
     AppRoutes.tripOverview,
     AppRoutes.tripTaxiStatus,
     AppRoutes.taxiRequests,
@@ -762,8 +785,18 @@ class NotificationService extends GetxService {
 
   void openActionRoute(String pushRoute, Map<String, dynamic>? pushArgs) {
     final live = AppRoutes.liveTarget(pushRoute, pushArgs)!;
-    final route = live.route;
+    var route = live.route;
     var args = live.args;
+    final enquiryId = args?['enquiryId']?.toString();
+    if (route == AppRoutes.chatConversation && enquiryId != null && enquiryId.isNotEmpty) {
+      if (!ShellState.isOwner) {
+        route = AppRoutes.myEnquiries;
+        args = {'enquiryId': enquiryId};
+      } else if (Get.isRegistered<AuthController>() && Get.find<AuthController>().canListStays.value) {
+        Get.find<AuthController>().openTab(AppTabs.centre, intent: {'enquiryId': enquiryId});
+        return;
+      }
+    }
     if (ShellState.isOwner && Get.isRegistered<AuthController>()) {
       final tab = TabShell.tabForRoute(ShellState.current.value, route, args);
       if (tab != null) {
@@ -801,6 +834,7 @@ class NotificationService extends GetxService {
 
   bool _isOpenScreen(String route, Map<String, dynamic>? args) {
     if (Get.currentRoute != route || !_refreshInPlaceRoutes.contains(route)) return false;
+    if (route == AppRoutes.myEnquiries) return true;
     final current = Get.arguments;
     final open = current is Map ? current : const <String, dynamic>{};
     for (final key in const ['tripId', 'day', 'journeyId']) {

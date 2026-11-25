@@ -40,6 +40,7 @@ class CalendarEntry {
     this.places = const [],
     this.cancelledBy,
     this.cancelledOn,
+    this.inactiveByPlan = false,
   });
 
   final String id;
@@ -73,6 +74,7 @@ class CalendarEntry {
   final List<String> places;
   final String? cancelledBy;
   final DateTime? cancelledOn;
+  final bool inactiveByPlan;
 
   bool get isAuto => kind == EntryKind.auto;
   bool get isManual => kind == EntryKind.manual;
@@ -115,6 +117,7 @@ class CalendarEntry {
         places: OwnerJson.strings(j['places']),
         cancelledBy: OwnerJson.strOrNull(j['cancelledBy']),
         cancelledOn: OwnerDates.day(j['cancelledOn']),
+        inactiveByPlan: OwnerJson.boolean(j['inactiveByPlan']),
       );
 
   static List<CalendarEntry> listOf(Object? raw) => OwnerJson.list(raw, CalendarEntry.fromJson).where((e) => e.valid).toList();

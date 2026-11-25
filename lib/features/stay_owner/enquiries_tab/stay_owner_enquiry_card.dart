@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../../config/app_routes.dart';
 import '../../../design/design.dart';
+import '../../../utils/app_toast.dart';
 import '../../../design/extra/ext_trip_replies.dart';
 import '../../stay/enquiries/stay_enquiries_controller.dart';
 import '../../stay/enquiries/stay_enquiry_actions.dart';
@@ -10,6 +10,7 @@ import '../../stay/enquiries/stay_enquiry_format.dart';
 import '../../stay/enquiries/stay_enquiry_owner_view.dart';
 import '../../trip/models/trip_enquiry_model.dart';
 import '../../trip/models/trip_offer_model.dart';
+import '../../owner_core/home/numbers_row.dart';
 import '../stay_owner_deps.dart';
 import '../strings/stay_work_strings.dart';
 import 'stay_work_format.dart';
@@ -75,23 +76,6 @@ class _StayOwnerEnquiryCardState extends State<StayOwnerEnquiryCard> {
     return t != null && t > 0 && n > 0 ? (t / n).round() : null;
   }
 
-  void _openChat() {
-    if (e.conversationId == null) return;
-    Get.toNamed(AppRoutes.chatConversation, arguments: {
-      'conversationId': e.conversationId,
-      'enquiryId': e.id,
-      'listingType': 'Stay',
-      'stayTypeId': widget.ctrl.stay.value?.stayTypeId,
-      'otherPartyId': e.traveller.id ?? '',
-      'otherPartyName': _guest,
-      'listingTitle': e.listingName,
-      'area': null,
-      'isOwner': true,
-      'status': 'Active',
-      'isBlockedByMe': false,
-    });
-  }
-
   Future<void> _run(Future<bool> Function() call) async {
     await call();
   }
@@ -110,8 +94,6 @@ class _StayOwnerEnquiryCardState extends State<StayOwnerEnquiryCard> {
   }
 
   Widget _card(BuildContext context, bool busy) {
-    final counter = e.pendingCounter;
-    if (_open2 && counter != null && e.display.isOpen) return _counterCard(context, counter, busy);
     switch (e.status) {
       case TripEnquiryStatuses.asked:
       case TripEnquiryStatuses.countered:
@@ -133,78 +115,54 @@ class _StayOwnerEnquiryCardState extends State<StayOwnerEnquiryCard> {
 
   Widget _tap(Widget child) => GestureDetector(behavior: HitTestBehavior.opaque, onTap: () => setState(() => _open = !_open), child: child);
 
-  Widget _countdownRow(String label, DateTime? until) {
-    final now = StayWorkFormat.now();
-    final left = StayWorkFormat.left(until, now);
-    if (left == null) return const SizedBox.shrink();
-    final hours = until!.difference(now).inHours;
-    return EnquiryInlinePill(
-      label: label,
-      value: left,
-      tone: StayWorkFormat.short(until, now) ? EnquiryChipTone.red : EnquiryChipTone.grey,
-      semantics: label == StayWorkStrings.offerWithin ? StayWorkStrings.offerWithinHours(hours < 1 ? 1 : hours) : '$label $left',
-    );
-  }
+  EnquiryButton _callButton() => EnquiryButton(StayWorkStrings.call, EnquiryButtonKind.plain, () => StayEnquiryActions.callGuest(e));
 
   List<EnquiryButton> _newButtons(BuildContext context, {required String primary}) => [
-        EnquiryButton(primary, EnquiryButtonKind.primary, () => _run(() => StayEnquiryActions.sendOffer(context, e))),
-        if (StayEnquiryActions.canCall(e)) EnquiryButton(StayWorkStrings.callGuest, EnquiryButtonKind.plain, () => StayEnquiryActions.callGuest(e)),
+        if (e.offersLeft != 0) EnquiryButton(primary, EnquiryButtonKind.primary, () => _run(() => StayEnquiryActions.sendOffer(context, e))),
         EnquiryButton(StayWorkStrings.notAvailable, EnquiryButtonKind.danger, () => _run(() => StayEnquiryActions.notAvailable(context, e))),
+        if (StayEnquiryActions.canCall(e)) _callButton(),
       ];
 
   Widget _newCard(BuildContext context, bool busy) {
     final listed = v.listedStayTotal;
-    final line2 = listed == null ? _roomsNights : '$_roomsNights · ${StayWorkStrings.listedWhenAskedAmount(StayWorkFormat.inr(listed))}';
+    final leftText = StayWorkFormat.left(e.expiresAt, StayWorkFormat.now());
     final room = _roomName;
     final city = e.context.city;
     final days = StayWorkFormat.daysUntil(e.tripStartDate ?? e.checkIn, StayWorkFormat.now());
     final trip = [if (city.isNotEmpty) city, if (days != null && days > 0) StayWorkStrings.tripInDays(days)].join(' · ');
+    final asked = e.pendingCounter?.pricePerNight;
     return EnquiryCardFrame(
       semantics: _title,
       children: [
-        _tap(EnquiryHead(name: _title, lines: [StayWorkFormat.datesGuests(e), line2], chip: const EnquiryChip(StayWorkStrings.chipNew, EnquiryChipTone.green))),
+        _tap(EnquiryHeadParts(
+          eyebrow: StayWorkStrings.newEnquiry,
+          left: leftText == null ? null : StayWorkStrings.timeLeft(leftText),
+          leftShort: StayWorkFormat.short(e.expiresAt, StayWorkFormat.now()),
+          title: _title,
+          priceLine: listed == null ? null : StayWorkStrings.listedWhenAskedPrice(StayWorkFormat.inr(listed)),
+        )),
+        _facts(),
         if (_open)
           EnquiryRows(rows: [
             if (room != null) EnquiryKv(StayWorkStrings.room, room),
             if (trip.isNotEmpty) EnquiryKv(StayWorkStrings.trip, trip),
+            if (asked != null && asked > 0) EnquiryKv(StayWorkStrings.guestAsked, StayWorkStrings.perNight(StayWorkFormat.inr(asked))),
           ]),
-        _countdownRow(StayWorkStrings.offerWithin, e.expiresAt),
         EnquiryButtons(busy: busy, buttons: _newButtons(context, primary: StayWorkStrings.sendOffer)),
       ],
     );
   }
 
-  Widget _counterCard(BuildContext context, TripOfferModel counter, bool busy) {
-    final his = counter.pricePerNight;
-    final yourOffer = e.openOffer?.pricePerNight ?? (v.listedBreakdown.isEmpty ? null : v.listedBreakdown.first.perNight);
-    final rooms = counter.rooms > 0 ? counter.rooms : StayWorkFormat.rooms(e);
-    final nights = counter.nights > 0 ? counter.nights : e.nights;
-    final total = counter.total > 0 ? counter.total : (his == null ? null : his * rooms * nights);
-    final room = _roomName;
-    final n = e.counterCount < 1 ? 1 : e.counterCount;
-    return EnquiryCardFrame(
-      semantics: _title,
-      children: [
-        EnquiryHead(
-          name: _title,
-          lines: [StayWorkFormat.datesGuests(e), room == null ? StayWorkStrings.roomsNights(rooms, nights) : '${StayWorkStrings.roomsNights(rooms, nights)} · $room'],
-          chip: const EnquiryChip(StayWorkStrings.chipNewPrice, EnquiryChipTone.amber),
-        ),
-        EnquiryRows(rows: [
-          if (yourOffer != null && yourOffer > 0) EnquiryKv(StayWorkStrings.yourOffer, StayWorkStrings.perNight(StayWorkFormat.inr(yourOffer))),
-          if (his != null) EnquiryKv(StayWorkStrings.asks(_firstName), StayWorkStrings.perNight(StayWorkFormat.inr(his)), valueColor: EnquiryChipTone.indigo.color),
-          if (total != null && total > 0) EnquiryKv(StayWorkStrings.totalAtHisPrice, StayWorkFormat.inr(total)),
-          EnquiryKv(StayWorkStrings.counter, StayWorkStrings.nOfThree(n)),
-          if (StayWorkFormat.left(counter.validUntil ?? e.expiresAt, StayWorkFormat.now()) case final left?)
-            EnquiryKv(StayWorkStrings.answerWithin, left, pill: StayWorkFormat.short(counter.validUntil ?? e.expiresAt, StayWorkFormat.now()) ? EnquiryChipTone.red : EnquiryChipTone.grey),
-        ]),
-        if (his != null) EnquiryNote(text: StayWorkStrings.acceptPriceLine(StayWorkFormat.inr(his)), art: ListingArt.bulb, tone: EnquiryChipTone.grey),
-        EnquiryButtons(busy: busy, buttons: [
-          EnquiryButton(StayWorkStrings.acceptPrice, EnquiryButtonKind.primary, () => _run(() => StayEnquiryActions.sendOffer(context, e, counter: counter))),
-          EnquiryButton(StayWorkStrings.sendDifferentOffer, EnquiryButtonKind.plain, () => _run(() => StayEnquiryActions.sendOffer(context, e))),
-          EnquiryButton(StayWorkStrings.notAvailable, EnquiryButtonKind.danger, () => _run(() => StayEnquiryActions.notAvailable(context, e))),
-        ]),
-      ],
+  Widget _facts() {
+    final g = StayWorkFormat.guests(e);
+    return Container(
+      margin: EdgeInsets.only(top: DS.gv(10)),
+      decoration: const BoxDecoration(border: Border.symmetric(horizontal: BorderSide(color: Ink3D.line))),
+      child: OwnerFacts(labelFirst: true, facts: [
+        NumberTile(label: StayWorkStrings.datesLabel, value: StayWorkFormat.dates(e)),
+        if (g > 0) NumberTile(label: StayWorkStrings.guestsHead, value: StayWorkStrings.guests(g)),
+        NumberTile(label: StayWorkStrings.roomsLabel, value: StayWorkStrings.rooms(StayWorkFormat.rooms(e))),
+      ]),
     );
   }
 
@@ -237,18 +195,8 @@ class _StayOwnerEnquiryCardState extends State<StayOwnerEnquiryCard> {
     );
   }
 
-  bool get _canRevise {
-    final cin = e.checkIn;
-    if (cin == null || e.pendingRevised != null || e.pendingChange != null) return false;
-    final now = StayWorkFormat.now();
-    return !DateTime(cin.year, cin.month, cin.day).isBefore(DateTime(now.year, now.month, now.day));
-  }
-
   void _confirmedMenu(BuildContext context) {
     showReplyMenu(_menuKey, [
-      if (_canRevise && e.isConfirmedByBoth)
-        MenuItem3D(label: StayWorkStrings.sendRevisedOffer, art: ListingArt.moneyBag, onTap: () => StayEnquiryActions.revisedOffer(context, e)),
-      if (e.conversationId != null) MenuItem3D(label: StayWorkStrings.openChat, art: ListingArt.speechBalloon, onTap: _openChat),
       if ((e.traveller.id ?? '').isNotEmpty)
         MenuItem3D(label: StayWorkStrings.reportTraveller, art: ListingArt.warning, onTap: () => StayEnquiryActions.reportTraveller(context, e)),
       MenuItem3D(label: StayWorkStrings.cancelBooking, art: ListingArt.locked, danger: true, onTap: () => StayEnquiryActions.cancel(context, e)),
@@ -297,19 +245,18 @@ class _StayOwnerEnquiryCardState extends State<StayOwnerEnquiryCard> {
               EnquiryKv(StayWorkStrings.inYourCalendar, StayWorkFormat.range(a, b), valueColor: EnquiryChipTone.indigo.color, onTap: () => StayOwnerDeps.openEntry(entry)),
           ]),
           EnquiryNote(text: StayWorkStrings.moneyOutside, art: ListingArt.pushpin, tone: EnquiryChipTone.grey),
-          EnquiryButtons(busy: busy, buttons: [
-            if (e.isConfirmedByBoth) EnquiryButton(StayWorkStrings.shareUpiWhatsApp, EnquiryButtonKind.primary, () => _share(context)),
-            if (StayEnquiryActions.canCall(e)) EnquiryButton(StayWorkStrings.callGuest, EnquiryButtonKind.plain, () => StayEnquiryActions.callGuest(e)),
-            if (e.conversationId != null) EnquiryButton(StayWorkStrings.openChat, EnquiryButtonKind.plain, _openChat),
-          ]),
         ],
+        EnquiryButtons(busy: busy, buttons: [
+          if (e.isConfirmedByBoth) EnquiryButton(StayWorkStrings.shareUpiWhatsApp, EnquiryButtonKind.primary, () => _share(context)),
+          if (StayEnquiryActions.canCall(e)) _callButton(),
+        ]),
       ],
     );
   }
 
   Future<void> _share(BuildContext context) async {
     if (!await StayEnquiryActions.confirmShare(context) || !mounted) return;
-    if (await StayEnquiryActions.sendShareCard(e) && mounted) _openChat();
+    if (await StayEnquiryActions.sendShareCard(e)) AppToast.success(StayWorkStrings.shared);
   }
 
   Widget _changeCard(BuildContext context, TripOfferModel change, bool busy) {
@@ -341,9 +288,9 @@ class _StayOwnerEnquiryCardState extends State<StayOwnerEnquiryCard> {
             EnquiryKv(StayWorkStrings.answerWithin, left, pill: StayWorkFormat.short(until, StayWorkFormat.now()) ? EnquiryChipTone.red : EnquiryChipTone.grey),
         ]),
         EnquiryNote(text: StayWorkStrings.changeInfo, art: ListingArt.calendar, tone: EnquiryChipTone.grey),
+        // Kept on purpose: older app builds can still send a change request.
         EnquiryButtons(busy: busy, buttons: [
           EnquiryButton(StayWorkStrings.acceptChange, EnquiryButtonKind.primary, () => _run(() => StayEnquiryActions.acceptChange(context, e, change.id))),
-          EnquiryButton(StayWorkStrings.sendDifferentOffer, EnquiryButtonKind.plain, () => _run(() => StayEnquiryActions.revisedOffer(context, e, changeRequest: change))),
           EnquiryButton(StayWorkStrings.cancelBooking, EnquiryButtonKind.danger, () => _run(() => StayEnquiryActions.cancel(context, e))),
         ]),
       ],
@@ -373,7 +320,6 @@ class _StayOwnerEnquiryCardState extends State<StayOwnerEnquiryCard> {
 
   void _closedMenu(BuildContext context) {
     showReplyMenu(_menuKey, [
-      if (e.conversationId != null) MenuItem3D(label: StayWorkStrings.openChat, art: ListingArt.speechBalloon, onTap: _openChat),
       if ((e.traveller.id ?? '').isNotEmpty) ...[
         MenuItem3D(label: StayWorkStrings.reportTraveller, art: ListingArt.warning, onTap: () => StayEnquiryActions.reportTraveller(context, e)),
         MenuItem3D(label: StayWorkStrings.block, art: ListingArt.locked, danger: true, onTap: () => StayEnquiryActions.block(context, e)),
@@ -389,7 +335,7 @@ class _StayOwnerEnquiryCardState extends State<StayOwnerEnquiryCard> {
     final when = v.cancelledAt ?? e.updatedAt;
     final reason = e.cancelReason;
     final entry = v.calendarEntryId;
-    final hasMenu = e.conversationId != null || (e.traveller.id ?? '').isNotEmpty;
+    final hasMenu = (e.traveller.id ?? '').isNotEmpty;
     return EnquiryCardFrame(
       semantics: _guest,
       children: [
@@ -408,7 +354,6 @@ class _StayOwnerEnquiryCardState extends State<StayOwnerEnquiryCard> {
         if (_open && cancelledByYou) ...[
           if (reason != null && reason.trim().isNotEmpty) EnquiryRows(rows: [EnquiryKv(StayWorkStrings.reason, reason.trim())]),
           EnquiryButtons(buttons: [
-            if (e.conversationId != null) EnquiryButton(StayWorkStrings.openChat, EnquiryButtonKind.plain, _openChat),
             if (entry != null) EnquiryButton(StayWorkStrings.calendarEntry, EnquiryButtonKind.plain, () => StayOwnerDeps.openEntry(entry)),
           ]),
         ],

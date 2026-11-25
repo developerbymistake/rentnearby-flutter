@@ -235,6 +235,11 @@ class StaySpecialPriceFormState extends State<StaySpecialPriceForm> {
         }
         if (await PlanGate.handleRefusal(context, r, StayGateStringsCalendar.fromRefusal)) return;
         if (!mounted) return;
+        if (PlanGate.handleInactive(r)) {
+          c.fetch();
+          Navigator.of(context).pop();
+          return;
+        }
         setState(() {
           switch (r.type) {
             case OwnerErrorTypes.specialPriceOverlap:

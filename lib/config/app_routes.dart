@@ -84,6 +84,7 @@ class AppRoutes {
   static const String tripMap = '/trip-map';
   static const String myTrips = '/my-trips';
   static const String tripReplies = '/trip-replies';
+  static const String myEnquiries = '/my-enquiries';
   static const String stayEnquiries = '/stay-enquiries';
   static const String tripLeads = '/trip-leads';
   static const String stayShareDetails = '/stay-share-details';
@@ -218,6 +219,17 @@ class AppRoutes {
   // Old pushes name the retired trip taxi pages, or carry a question step into the plan: both land elsewhere.
   static ({String route, Map<String, dynamic>? args})? liveTarget(String? route, [Map<String, dynamic>? args]) {
     if (route == null) return null;
+    if ((route == tripPlan || route == myTrips) && args?['open'] == 'myEnquiries') {
+      return (
+        route: myEnquiries,
+        args: {
+          'enquiryId': ?args!['enquiryId'],
+          'bucket': ?args['bucket'],
+          'stepKey': ?args['stepKey'],
+          'similar': ?args['similar'],
+        },
+      );
+    }
     final deletedTripId = args?['deletedTripId'];
     if (route == myTrips && deletedTripId is String && deletedTripId.isNotEmpty) {
       return (route: tripView, args: {'tripId': deletedTripId, 'deleted': true});

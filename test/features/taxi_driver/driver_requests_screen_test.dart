@@ -136,8 +136,15 @@ void main() {
     expect(find.text('Not selected'), findsOneWidget);
     expect(find.text('Traveller chose another driver'), findsOneWidget);
     expect(find.text('Kathgodam pickup'), findsOneWidget);
-    expect(find.text('4 days · 3 nights · 18 to 21 Dec'), findsOneWidget);
-    expect(find.text('Kathgodam to Nainital, Ranikhet · 4 seater'), findsWidgets);
+    expect(_in(_ringingId, find.text('NEW REQUEST')), findsOneWidget);
+    expect(_in(_ringingId, find.text('18 to 21 Dec')), findsOneWidget);
+    expect(_in(_ringingId, find.text('4 days · 3 nights')), findsOneWidget);
+    expect(_in(_ringingId, find.text('4 seater')), findsOneWidget);
+    for (final l in ['DATES', 'LENGTH', 'CAR']) {
+      expect(_in(_ringingId, find.text(l)), findsOneWidget);
+    }
+    expect(_in(_ringingId, find.text('Traveller')), findsNothing);
+    expect(_in(_ringingId, find.text('Kathgodam to Nainital, Ranikhet')), findsOneWidget);
     expect(_key('request_accept_$_ringingId'), findsOneWidget);
     expect(_key('request_accept_$_bookedId'), findsNothing);
     expect(_key('request_accept_$_missedId'), findsNothing);
@@ -181,7 +188,7 @@ void main() {
   testWidgets('name_hidden_before_accept', (tester) async {
     await _open(tester, size: _tall);
     expect(find.text('Aarav Sharma'), findsOneWidget);
-    expect(find.text('Traveller'), findsNWidgets(3));
+    expect(find.text('Traveller'), findsNWidgets(2));
   });
 
   testWidgets('tap_opens_the_offer', (tester) async {

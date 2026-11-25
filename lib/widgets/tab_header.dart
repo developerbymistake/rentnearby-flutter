@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../config/app_routes.dart';
+import '../config/shell_kind.dart';
+import '../controllers/auth_controller.dart';
 import '../controllers/chat_controller.dart';
 import '../controllers/notification_controller.dart';
 import '../design/design.dart';
+import '../features/trip/enquiries/my_enquiry_count_controller.dart';
 
 double _u(double v) => DS.s(v, scaled: false);
 
@@ -33,6 +36,19 @@ class TabHeaderIcons extends StatelessWidget {
             unread: _count<ChatController>((c) => c.unreadCount),
             onTap: () => Get.toNamed(AppRoutes.chatsList),
           ),
+          if (Get.isRegistered<AuthController>())
+            Obx(() {
+              if (Get.find<AuthController>().shellKind.value != ShellKind.seeker) return const SizedBox.shrink();
+              return Padding(
+                padding: EdgeInsets.only(left: _u(10)),
+                child: _TabHeaderIcon(
+                  asset: ListingArt.clipboard,
+                  label: 'Enquiries',
+                  unread: _count<MyEnquiryCountController>((c) => c.offers),
+                  onTap: () => Get.toNamed(AppRoutes.myEnquiries),
+                ),
+              );
+            }),
         ],
       ),
     );

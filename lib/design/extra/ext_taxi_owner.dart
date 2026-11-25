@@ -18,7 +18,7 @@ abstract final class TaxiOwnerArt {
 }
 
 abstract final class TaxiOwnerLook {
-  static const BorderRadius card = BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(54), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8));
+  static const BorderRadius card = BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(36), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8));
   static const Color lockHalo = Color(0x2EFFFFFF);
   static const Color band = Color(0x1C000000);
   static const Color panel = Color(0x2EFFFFFF);
@@ -817,7 +817,7 @@ class TaxiEmptyCard3D extends StatelessWidget {
             padding: EdgeInsets.fromLTRB(DS.s(24), artS / 2 + DS.s(22), DS.s(24), DS.s(26)),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: DS.br(const BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(68), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8))),
+              borderRadius: DS.br(const BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(36), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8))),
               boxShadow: DS.shadows(const [BoxShadow(color: Color(0x299E9E9E), offset: Offset(2, 4), blurRadius: 12)]),
             ),
             child: Column(

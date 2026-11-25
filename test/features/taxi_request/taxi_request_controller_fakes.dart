@@ -82,7 +82,7 @@ class FakeEnquiries extends TripEnquiryRepository {
   final List<String> cancelled = [];
 
   @override
-  Future<TripEnquiryModel> withdraw(String enquiryId) async {
+  Future<TripEnquiryModel> withdraw(String enquiryId, {bool undo = false}) async {
     if (fail != null) throw fail!;
     withdrawn.add(enquiryId);
     return TripEnquiryModel.fromJson({'id': enquiryId, 'status': 'Withdrawn'});

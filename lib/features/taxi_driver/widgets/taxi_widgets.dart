@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../design/design.dart';
+import '../../owner_core/strings/owner_shared_strings.dart';
 
 abstract final class TaxiLook {
   static const Color greyG1 = Color(0xFF9AA3B5);
@@ -34,7 +35,7 @@ abstract final class TaxiLook {
 
   static BorderRadius cardRadius(double topRight) => DS.br(BorderRadius.only(
         topLeft: const Radius.circular(8),
-        topRight: Radius.circular(topRight),
+        topRight: Radius.circular(topRight > 36 ? 36 : topRight),
         bottomLeft: const Radius.circular(8),
         bottomRight: const Radius.circular(8),
       ));
@@ -210,7 +211,7 @@ class TaxiPill extends StatelessWidget {
 }
 
 class TaxiRowData {
-  const TaxiRowData({required this.art, required this.title, this.sub, this.trailing, this.onTap, this.tint = TaxiLook.artTint, this.locked = false, this.semantics});
+  const TaxiRowData({required this.art, required this.title, this.sub, this.trailing, this.onTap, this.tint = TaxiLook.artTint, this.locked = false, this.semantics, this.titleColor});
 
   final String art;
   final String title;
@@ -220,6 +221,7 @@ class TaxiRowData {
   final Color tint;
   final bool locked;
   final String? semantics;
+  final Color? titleColor;
 }
 
 class TaxiRowsCard extends StatelessWidget {
@@ -281,7 +283,7 @@ class TaxiRowTile extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(data.title, style: Ink3D.text(15, FontWeight.w500, Ink3D.title, height: 1.3, letterSpacing: 0)),
+                    Text(data.title, style: Ink3D.text(15, FontWeight.w500, data.titleColor ?? Ink3D.title, height: 1.3, letterSpacing: 0)),
                     if (data.sub != null)
                       Padding(
                         padding: EdgeInsets.only(top: DS.gv(3)),
@@ -302,29 +304,33 @@ class TaxiRowTile extends StatelessWidget {
 }
 
 class TaxiSectionTitle extends StatelessWidget {
-  const TaxiSectionTitle({super.key, required this.title, this.meter});
+  const TaxiSectionTitle({super.key, required this.title, this.meter, this.trailing});
 
   final String title;
   final String? meter;
+  final Widget? trailing;
 
   @override
-  Widget build(BuildContext context) => Padding(
-        padding: DS.insets(l: 18, t: 22, r: 18),
-        child: Semantics(
-          header: true,
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
-            children: [
-              Flexible(child: Text(title, style: Ink3D.text(19, FontWeight.w600, Ink3D.body, letterSpacing: 0))),
-              if (meter != null) ...[
-                Gap.h(10),
-                Flexible(child: Text(meter!, style: Ink3D.text(13, FontWeight.w400, Ink3D.copy, letterSpacing: 0))),
-              ],
-            ],
-          ),
-        ),
-      );
+  Widget build(BuildContext context) {
+    final head = Semantics(
+      header: true,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.baseline,
+        textBaseline: TextBaseline.alphabetic,
+        children: [
+          Flexible(child: Text(title, style: Ink3D.text(19, FontWeight.w600, Ink3D.body, letterSpacing: 0))),
+          if (meter != null) ...[
+            Gap.h(10),
+            Flexible(child: Text(meter!, style: Ink3D.text(13, FontWeight.w400, Ink3D.copy, letterSpacing: 0))),
+          ],
+        ],
+      ),
+    );
+    return Padding(
+      padding: DS.insets(l: 18, t: 22, r: 18),
+      child: trailing == null ? head : Row(children: [Expanded(child: head), Gap.h(8), trailing!]),
+    );
+  }
 }
 
 class TaxiStrip extends StatelessWidget {
@@ -373,22 +379,21 @@ class TaxiRail extends StatelessWidget {
     if (tiles.isEmpty) return const SizedBox.shrink();
     return Semantics(
       container: true,
-      child: MealsGrid(
-        count: tiles.length,
-        cardBuilder: (context, i, w) {
-          final t = tiles[i];
-          return MealsCardV(
-            tone: t.tone,
-            art: t.art,
-            title: t.title,
-            description: t.sub,
-            goIcon: t.add ? Icons.add : Icons.arrow_forward,
-            onTap: t.onTap,
-            semanticsLabel: t.title,
-            titleLines: 2,
-            width: w,
-          );
-        },
+      child: MealsRail(
+        physics: const BouncingScrollPhysics(),
+        children: [
+          for (final t in tiles)
+            MealsCardV(
+              tone: t.tone,
+              art: t.art,
+              title: t.title,
+              description: t.sub,
+              goIcon: t.add ? Icons.add : Icons.arrow_forward,
+              onTap: t.onTap,
+              semanticsLabel: t.title,
+              titleLines: 2,
+            ),
+        ],
       ),
     );
   }
@@ -454,16 +459,20 @@ class TaxiStatusRow {
 }
 
 class TaxiStatusCard extends StatelessWidget {
-  const TaxiStatusCard({super.key, required this.tone, required this.art, required this.title, required this.line, this.trailing, this.rows = const [], this.note, this.margin});
+  const TaxiStatusCard({super.key, required this.tone, required this.art, required this.title, required this.line, this.trailing, this.rows = const [], this.note, this.margin, this.body, this.photoUrl});
 
   final ListingTone tone;
   final String art;
+  static const photoKey = ValueKey('taxi-status-photo');
+
+  final String? photoUrl;
   final String title;
   final String line;
   final Widget? trailing;
   final List<TaxiStatusRow> rows;
   final String? note;
   final EdgeInsets? margin;
+  final Widget? body;
 
   @override
   Widget build(BuildContext context) {
@@ -488,7 +497,20 @@ class TaxiStatusCard extends StatelessWidget {
                     padding: DS.insets(l: 16, t: 14, r: 16, b: 14),
                     child: Row(
                       children: [
-                        ExcludeSemantics(child: Art3D(asset: art, size: 46, halo: 56, haloColor: white.withValues(alpha: Alpha.v22))),
+                        ExcludeSemantics(
+                          child: photoUrl == null
+                              ? Art3D(asset: art, size: 46, halo: 56, haloColor: white.withValues(alpha: Alpha.v22))
+                              : KitPhoto(
+                                  key: TaxiStatusCard.photoKey,
+                                  url: photoUrl,
+                                  width: DS.s(46),
+                                  height: DS.s(46),
+                                  radius: KitMetrics.tileSmall,
+                                  tone: KitTone.taxiDriver,
+                                  asset: art,
+                                  iconSize: 20,
+                                ),
+                        ),
                         Gap.h(12),
                         Expanded(
                           child: Column(
@@ -521,11 +543,108 @@ class TaxiStatusCard extends StatelessWidget {
                     ),
                   ),
                 ],
+                ?body,
                 if (note != null)
                   Padding(
                     padding: DS.insets(l: 16, t: 0, r: 16, b: 10),
                     child: Text(note!, style: Ink3D.text(11.5, FontWeight.w400, Ink3D.grey, height: 1.35, letterSpacing: 0)),
                   ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class TaxiCarRow extends StatelessWidget {
+  const TaxiCarRow({super.key, required this.art, required this.name, this.sub});
+
+  final String art;
+  final String name;
+  final String? sub;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: DS.insets(l: 16, t: 10, r: 16, b: 10),
+        child: Row(
+          children: [
+            ExcludeSemantics(child: Art3D(asset: art, size: 32, shadowBlur: 3, shadowOffset: const Offset(2, 3))),
+            Gap.h(10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(12.5, FontWeight.w700, Ink3D.title, letterSpacing: 0)),
+                  if (sub != null)
+                    Padding(
+                      padding: EdgeInsets.only(top: DS.gv(2)),
+                      child: Text(sub!, style: Ink3D.text(11.5, FontWeight.w400, Ink3D.grey, height: 1.35, letterSpacing: 0)),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+}
+
+class TaxiRingStripView extends StatelessWidget {
+  const TaxiRingStripView({
+    super.key,
+    required this.title,
+    required this.body,
+    required this.fill,
+    required this.ink,
+    this.greyArt = false,
+    this.action,
+    this.onAction,
+  });
+
+  final String title;
+  final String body;
+  final Color fill;
+  final Color ink;
+  final bool greyArt;
+  final String? action;
+  final VoidCallback? onAction;
+
+  static const _grey = ColorFilter.matrix(<double>[
+    0.2126, 0.7152, 0.0722, 0, 0,
+    0.2126, 0.7152, 0.0722, 0, 0,
+    0.2126, 0.7152, 0.0722, 0, 0,
+    0, 0, 0, 0.7, 0,
+  ]);
+
+  @override
+  Widget build(BuildContext context) {
+    final art = Art3D(asset: ListingArt.bell, size: 32, shadowBlur: 3, shadowOffset: const Offset(2, 3));
+    return Padding(
+      padding: DS.insets(l: 16, t: 4, r: 16, b: 14),
+      child: Semantics(
+        liveRegion: true,
+        container: true,
+        child: DecoratedBox(
+          decoration: BoxDecoration(color: fill, borderRadius: DS.circular(14)),
+          child: Padding(
+            padding: DS.sym(h: 14, v: 10),
+            child: Row(
+              children: [
+                ExcludeSemantics(child: greyArt ? ColorFiltered(colorFilter: _grey, child: art) : art),
+                Gap.h(12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(title, style: Ink3D.text(12.5, FontWeight.w600, ink, height: 1.35, letterSpacing: 0)),
+                      Text(body, style: Ink3D.text(11.5, FontWeight.w400, ink, height: 1.35, letterSpacing: 0)),
+                    ],
+                  ),
+                ),
+                if (action != null) ...[Gap.h(8), TaxiPill(label: action!, kind: TaxiPillKind.coral, onTap: onAction)],
               ],
             ),
           ),
@@ -603,4 +722,26 @@ abstract final class TaxiConfirm {
     );
     return ok == true;
   }
+}
+
+class TaxiDeleteRow extends StatelessWidget {
+  const TaxiDeleteRow({super.key, required this.title, required this.sub, required this.busy, required this.onDelete});
+
+  final String title;
+  final String sub;
+  final bool busy;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) => TaxiRowsCard(rows: [
+        TaxiRowData(
+          art: ListingArt.warning,
+          tint: TaxiLook.artTintRed,
+          title: title,
+          titleColor: TaxiLook.redText,
+          sub: sub,
+          trailing: TaxiPill(label: OwnerSharedStrings.delete, kind: TaxiPillKind.danger, busy: busy, onTap: onDelete),
+          onTap: busy ? null : onDelete,
+        ),
+      ]);
 }

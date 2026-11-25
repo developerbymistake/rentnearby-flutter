@@ -23,6 +23,7 @@ class ConversationModel {
   final String? lastMessagePreview;
   final int unreadCount;
   final TripEnquiryModel? tripEnquiry;
+  final bool hasChat;
 
   ConversationModel({
     required this.id,
@@ -42,9 +43,13 @@ class ConversationModel {
     this.lastMessagePreview,
     required this.unreadCount,
     this.tripEnquiry,
+    this.hasChat = true,
   });
 
   bool get isActive => status == 'Active';
+
+  // Only stay enquiry cards, no real chat message: not shown in Chats.
+  bool get enquiryOnly => tripEnquiry != null && !hasChat;
 
   static String? photo(Object? raw) {
     if (raw is! String) return null;
@@ -72,5 +77,6 @@ class ConversationModel {
         tripEnquiry: json['tripEnquiry'] is Map<String, dynamic>
             ? TripEnquiryModel.fromJson(json['tripEnquiry'] as Map<String, dynamic>)
             : null,
+        hasChat: json['hasChat'] as bool? ?? true,
       );
 }

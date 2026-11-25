@@ -1,3 +1,5 @@
+import 'trip_strings_enquiry_simple.dart';
+
 class TripStringsShortlist {
   static const shortlist = 'Shortlist';
   static const shortlisted = 'Shortlisted';
@@ -53,6 +55,8 @@ class TripStringsShortlist {
         'Blocked' => blocked,
         'LimitReached' => limitReached,
         'OpenInAnotherTrip' => openInAnotherTrip,
+        'OpenForOtherNights' => TripStringsEnq.otherNights,
+        'AlreadyBooked' => TripStringsEnq.alreadyBooked,
         _ => failed,
       };
 }

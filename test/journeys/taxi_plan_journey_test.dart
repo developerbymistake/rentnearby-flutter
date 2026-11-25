@@ -40,7 +40,6 @@ final Map<String, Map<String, dynamic>> _steps = {
 };
 
 final Map<String, List<String>> _homeWords = {
-  'Free': ['Free plan', 'More routes, more requests.'],
   'Trial': ['Free until 28 Nov', 'Trial', 'Up to 5 routes are open now.'],
   'Plus': ['Plus'],
   'Cancelled': ['Plus till 21 Dec 2026', 'After that, you keep 1 route.'],
@@ -86,9 +85,8 @@ void main() {
       await pumpEventQueue();
     });
     await pumpPhone(t, const Scaffold(body: SingleChildScrollView(child: TaxiHomePlanCard())));
-    for (final w in _homeWords['Free']!) {
-      expect(find.text(w), findsOneWidget, reason: 'Free: $w');
-    }
+    expect(find.text('Free plan'), findsNothing, reason: 'Free: the plan card is not on Home');
+    expect(find.text('More routes, more requests.'), findsNothing);
 
     int months() => calFake.calls.where((c) => c == 'GET /taxis/me/calendar').length;
     int summaries() => calFake.calls.where((c) => c == 'GET /taxis/me/calendar/summary').length;

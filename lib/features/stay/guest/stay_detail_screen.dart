@@ -3,9 +3,7 @@ import 'package:bakhli/design/extra/ext_details.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../../../config/app_routes.dart';
 import '../../../controllers/auth_controller.dart';
-import '../../../controllers/chat_controller.dart';
 import '../../../controllers/report_controller.dart';
 import '../../../controllers/tab_config_controller.dart';
 import '../../../models/browse_item.dart';
@@ -384,30 +382,12 @@ class _StayDetailScreenState extends State<StayDetailScreen> {
           ownerPhone: _fromTrip ? raw : phone,
           isOwner: _isOwner,
           onReport: reported ? null : () => ReportListingSheet.show(context, listingId: s.id, listingType: 'Stay', palette: templateModulePalette),
-          onChat: _isOwner || whatsApp != null ? null : () => _openChat(s),
           whatsAppPhone: whatsApp,
           whatsAppMessage: whatsApp == null ? null : ContactMessage.stay(stayName: s.name, customer: ListingContactActions.customer()),
           palette: templateModulePalette,
           calm: true,
           showSafety: false,
         );
-    });
-  }
-
-  Future<void> _openChat(StayDetailModel s) async {
-    final conv = await Get.find<ChatController>().createOrGetConversation('Stay', s.id);
-    if (conv == null) return;
-    Get.toNamed(AppRoutes.chatConversation, arguments: {
-      'conversationId': conv.id,
-      'listingType': conv.listingType,
-      'listingId': conv.listingId,
-      'stayTypeId': conv.stayTypeId,
-      'otherPartyId': conv.otherPartyId,
-      'otherPartyName': conv.otherPartyName,
-      'listingTitle': conv.listingTitle,
-      'isOwner': conv.isOwner,
-      'status': conv.status,
-      'isBlockedByMe': conv.isBlockedByMe,
     });
   }
 }

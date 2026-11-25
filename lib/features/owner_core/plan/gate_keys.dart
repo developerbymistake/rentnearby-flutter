@@ -11,5 +11,7 @@ abstract final class GateKeys {
   static const softArrow = GateKey('gate_soft_arrow');
   static const plusChip = GateKey('gate_plus_chip');
   static const seePlus = GateKey('gate_see_plus');
+  static const planStrip = GateKey('gate_plan_strip');
+  static const inactiveRow = GateKey('gate_inactive_row');
   static GateKey of(String id) => GateKey('gate_$id');
 }

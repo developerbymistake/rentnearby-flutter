@@ -48,9 +48,11 @@ void main() {
   testWidgets('render o_st_4', (tester) async {
     setupFor(stayModel(draftJson(step1: true, rooms: true)));
     await renderOwnerFrame(tester, 'o_st_4', const StayRoomsScreen(), arrange: settle);
-    for (final s in ['Rooms', 'Step 2 of 4', '2 room types on Free. Plus lists up to 6.', 'See Plus', 'Add room type']) {
+    for (final s in ['Rooms', 'Step 2 of 4', 'Add another room', '2 of 2']) {
       expect(find.text(s), findsWidgets, reason: s);
     }
+    expect(find.byKey(GateKeys.softRow), findsOneWidget);
+    expect(find.text('2 room types on Free. Plus lists up to 6.'), findsNothing);
   });
 
   testWidgets('render o_st_6', (tester) async {

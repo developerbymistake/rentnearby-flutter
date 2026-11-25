@@ -12,7 +12,6 @@ import 'package:bakhli/features/taxi/requests/widgets/driver_bookings_section.da
 import 'package:bakhli/features/taxi/requests/widgets/driver_offer_card.dart';
 import 'package:bakhli/features/taxi/requests/widgets/driver_requests_body.dart';
 import 'package:bakhli/features/taxi/requests/widgets/driver_withdraw_sheet.dart';
-import 'package:bakhli/features/taxi_driver/requests_tab/taxi_requests_segments.dart';
 import 'package:bakhli/features/trip/utils/taxi_result.dart';
 import 'package:bakhli/services/taxi_ring_session.dart';
 import 'package:flutter/material.dart';
@@ -226,10 +225,10 @@ void main() {
 
     testWidgets('groups_frame_strings', (t) async {
       await open(t, [fresh, missed]);
-      for (final s in ['New', 'Earlier', 'Kathgodam pickup', '3:12 left', '9 days · 8 nights · 18 to 26 Dec', 'Kathgodam to Nainital, Ranikhet +2 · 4 seater', 'Missed', 'Went to the next drivers', '9 days · Kathgodam to Nainital +3']) {
+      for (final s in ['New', 'Earlier', 'Kathgodam pickup', '3:12 left', 'NEW REQUEST', 'Kathgodam to Nainital, Ranikhet +2', 'DATES', '18 to 26 Dec', 'LENGTH', '9 days · 8 nights', 'CAR', '4 seater', 'Missed', 'Went to the next drivers', '9 days · Kathgodam to Nainital +3']) {
         expect(find.text(s), findsWidgets, reason: s);
       }
-      expect(find.text('Traveller'), findsNWidgets(2));
+      expect(find.text('Traveller'), findsOneWidget);
       expect(find.text('Plus drivers get their turn 2x as often.'), findsOneWidget);
       expect(find.text('See Plus'), findsOneWidget);
     });
@@ -324,20 +323,6 @@ void main() {
         await t.pump();
       });
     }
-  });
-
-  group('segments', () {
-    testWidgets('leads_badge_and_select', (t) async {
-      var picked = -1;
-      await pumpPhone(t, Material(child: TaxiRequestsSegments(selected: 0, leadsBadge: 1, onSelect: (i) => picked = i)));
-      expect(find.text('Requests'), findsOneWidget);
-      expect(find.text('Trip leads'), findsOneWidget);
-      expect(find.text('1'), findsOneWidget);
-      await t.tap(find.text('Trip leads'));
-      expect(picked, 1);
-    });
-
-    testOwnerSizes('segments_sizes', () => Material(child: TaxiRequestsSegments(selected: 1, leadsBadge: 12, onSelect: (_) {})));
   });
 
   group('o_tx_15 / o_tx_37 / o_tx_38 detail', () {

@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:bakhli/design/design.dart';
@@ -9,6 +10,7 @@ import 'package:bakhli/features/trip/map/trip_marker_images.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
+import 'package:maplibre_gl/maplibre_gl.dart' show CircleLayerProperties;
 
 class FakePort implements DiscoveryMapPort {
   final calls = <String>[];
@@ -103,6 +105,8 @@ class FakePainter implements MarkerPainter {
   @override
   Future<Uint8List> badge(String category, DiscTuning t) async => Uint8List.fromList([1]);
   @override
+  Future<Uint8List> dot(Color color, DiscTuning t) async => Uint8List.fromList([1]);
+  @override
   Future<Uint8List?> photo(Uint8List thumb, DiscTuning t) async => Uint8List.fromList([2]);
   @override
   Future<bool> valid(Uint8List png) async => true;
@@ -187,6 +191,8 @@ void main() {
     final layers = [for (final x in c) if (x.startsWith('layer:')) x];
     expect(layers, [for (final id in DiscIds.layers) 'layer:$id:anchor']);
     expect(c.indexOf('layer:disc-dots:anchor'), greaterThan(c.lastIndexOf('image:disc-b-place')));
+    expect([for (final x in c) if (x.startsWith('image:disc-d-')) x], [for (var g = 0; g < 4; g++) 'image:${DiscIds.dotImage(g)}']);
+    expect(c.indexOf('layer:disc-dots:anchor'), greaterThan(c.lastIndexOf('image:disc-d-3')));
     expect(features(port.geo['disc-all']).length, 2);
     expect(l.attached.value, isTrue);
     expect(l.hasSpotsHere.value, isTrue);
@@ -201,7 +207,7 @@ void main() {
     final port = FakePort();
     await l.attach(port);
     expect(port.calls.where((x) => x.startsWith('layer:')).every((x) => x.endsWith(':null')), isTrue);
-    expect(l.tuning.photoDp, DS.s(90));
+    expect(l.tuning.photoDp, DS.s(270));
     expect(l.tuning.photoMax, DiscTuning.stay.photoMax);
   });
 
@@ -453,8 +459,13 @@ void main() {
     port.calls.clear();
     await l.onFeatureTap(DiscIds.layerBadge, 'a');
     expect(port.calls, ['set:disc-sel', 'screen:3', 'animate']);
-    // centre was 30.474 (marker 260 px above it); marker must land at top 100 + card 150 + photo halo
-    final target = 100 + 150 + DiscTuning.trip.haloPhotoDp;
+    // marker 260 px above the centre; it must land at top 100 + card 150 + two halos of its kind at the current zoom
+    final zoom = TripDiscoveryLayer.zoomOf(10000, 30.5);
+    expect(zoom, inInclusiveRange(12, 13));
+    final halo = DiscTuning.trip.haloRadiusAt(l.selectedKind.value!.name, zoom,
+        dotKind: DiscSelKind.dot.name, plannedKind: DiscSelKind.planned.name, photoScale: DiscPaint.selIconScale);
+    expect(halo, lessThan(DiscTuning.trip.haloPhotoDp / 2));
+    final target = 100 + 150 + 2 * halo;
     expect(port.animated!.lat, closeTo(30.5 - (380 - target) / 10000, 1e-9));
     expect(port.animated!.lon, closeTo(78.2, 1e-9));
     port
@@ -462,6 +473,44 @@ void main() {
       ..screen = (pts) => [(x: 180.0, y: 500.0), (x: 180.0, y: 400.0), (x: 280.0, y: 500.0)];
     await l.onFeatureTap(DiscIds.layerBadge, 'a');
     expect(port.calls, ['set:disc-sel', 'screen:3']);
+  });
+
+  test('lift on a small stay map (360x640): the marker never lands under the top header', () async {
+    final l = TripDiscoveryLayer(
+      mode: DiscoveryMode.readOnly,
+      host: DiscoveryHost.readOnly(topInset: () => 176, bottomInset: () => 130),
+      source: FakeSource([spot('a')]),
+      images: images(),
+      viewSize: () => const Size(360, 640),
+      cardHeight: () => 120,
+    );
+    await l.refreshData();
+    final perLat = 512 * math.pow(2, 17) / (360 * math.cos(30.5 * math.pi / 180));
+    final step = perLat * 0.01;
+    final port = FakePort()..screen = (pts) => [(x: 180.0, y: 600.0), (x: 180.0, y: 600.0 - step), (x: 280.0, y: 600.0)];
+    await l.attach(port);
+    await l.select('a');
+    expect(port.calls, contains('animate'));
+    final kind = l.selectedKind.value!;
+    final halo = l.tuning.haloRadiusAt(kind.name, 17,
+        dotKind: DiscSelKind.dot.name, plannedKind: DiscSelKind.planned.name, photoScale: DiscPaint.selIconScale);
+    final target = (port.animated!.lat - 30.5) * perLat + 320;
+    expect(target, greaterThanOrEqualTo(176 + halo - 1e-6));
+    expect(target, lessThan(600));
+  });
+
+  test('planned stop: the halo branch uses the 1x route-stop halo, not the 3x photo halo', () {
+    final t = DiscTuning.trip;
+    final halo = t.haloRadius(DiscSelKind.dot.name, DiscPaint.selIconScale, plannedKind: DiscSelKind.planned.name) as List;
+    final full = halo[halo.length - 1] as List;
+    expect(full.take(5).toList(), ['match', ['get', 'kind'], 'dot', full[3], 'planned']);
+    final planned = full[5] as double;
+    expect(planned, closeTo(DiscTuning.tripStops.haloPhotoDp / 2, 1e-9));
+    expect(planned * DiscTuning.markerScale, closeTo(t.haloPhotoDp / 2, 1e-9));
+    expect(t.haloRadiusAt('planned', DiscTuning.zoomIn, dotKind: 'dot', plannedKind: 'planned', photoScale: DiscPaint.selIconScale),
+        closeTo(planned, 1e-9));
+    final paint = DiscPaint.of(DiscLayers.specs(t).firstWhere((x) => x.id == DiscIds.layerSelHalo), t) as CircleLayerProperties;
+    expect(paint.circleRadius, halo);
   });
 
   test('stay area: photos only within the area, eye hint false when no spot is in the area', () async {

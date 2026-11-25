@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math' show Point;
+import 'dart:math' as math;
 
 import 'package:bakhli/design/design.dart';
 import 'package:flutter/foundation.dart';
@@ -16,7 +17,6 @@ import 'trip_marker_images.dart';
 
 class DiscPaint {
   static const double selIconScale = 1.2;
-  static const double _dotRing = 1;
   static const double _selDotRing = 2;
   static const List<Object> always = ['==', 1, 1];
 
@@ -34,12 +34,20 @@ class DiscPaint {
         TripKit.hexOf(TripTokens.spotOther),
       ];
 
+  static const Map<int, Color> groupColors = {
+    DiscTiers.grpWater: TripTokens.spotWater,
+    DiscTiers.grpNature: TripTokens.spotNature,
+    DiscTiers.grpHeritage: TripTokens.spotHeritage,
+    DiscTiers.grpOther: TripTokens.spotOther,
+  };
+
   static LayerProperties of(DiscLayerSpec spec, DiscTuning t) => switch (spec.id) {
-        DiscIds.layerDots => CircleLayerProperties(
-            circleRadius: t.dotRadius(_dotRing),
-            circleColor: groupColor,
-            circleStrokeColor: _white,
-            circleStrokeWidth: _dotRing,
+        DiscIds.layerDots => SymbolLayerProperties(
+            iconImage: DiscLayers.iconImageDot,
+            iconSize: t.dotIconSize,
+            iconAllowOverlap: false,
+            iconIgnorePlacement: false,
+            symbolSortKey: DiscLayers.sortKey,
           ),
         DiscIds.layerBadge => SymbolLayerProperties(
             iconImage: DiscLayers.iconImageBadge,
@@ -56,7 +64,7 @@ class DiscPaint {
             symbolSortKey: DiscLayers.sortKey,
           ),
         DiscIds.layerSelHalo => CircleLayerProperties(
-            circleRadius: t.haloRadius(DiscSelKind.dot.name, selIconScale),
+            circleRadius: t.haloRadius(DiscSelKind.dot.name, selIconScale, plannedKind: DiscSelKind.planned.name),
             circleColor: TripKit.hexOf(DesignColors.textPrimary),
             circleOpacity: Alpha.v18,
           ),
@@ -262,6 +270,9 @@ class TripDiscoveryLayer implements DiscoveryLayerApi {
       for (final cat in DiscIds.badgeCategories) {
         await port.addImage(DiscIds.badgeImage(cat), await _badge(cat));
       }
+      for (final g in DiscPaint.groupColors.keys) {
+        await port.addImage(DiscIds.dotImage(g), await _dot(g));
+      }
       for (final spec in DiscLayers.specs(tuning)) {
         await port.addLayer(spec, tuning, belowLayerId: below);
       }
@@ -282,6 +293,11 @@ class TripDiscoveryLayer implements DiscoveryLayerApi {
       }
       return false;
     }
+  }
+
+  Future<Uint8List> _dot(int group) async {
+    final key = 'dot_${group}_${tuning.dotDp}_${tuning.pxPerDp}';
+    return _badgeCache[key] ??= await _images.dot(DiscPaint.groupColors[group]!, tuning);
   }
 
   Future<Uint8List> _badge(String cat) async {
@@ -519,11 +535,14 @@ class TripDiscoveryLayer implements DiscoveryLayerApi {
     _selImg = img;
     try {
       await port.setGeoJson(DiscIds.srcSel, DiscGeoJson.sel(s, kind, tier: _tiers[s.id], img: img));
-      if (lift && gen == _gen) await _lift(port, s);
+      if (lift && gen == _gen) await _lift(port, s, kind);
     } catch (_) {}
   }
 
-  Future<void> _lift(DiscoveryMapPort port, DiscoverySpot s) async {
+  // MapLibre world = 512 dp x 2^zoom, so dp per degree of latitude gives the camera zoom.
+  static double zoomOf(double dpPerLat, double lat) => math.log(dpPerLat * 360 * math.cos(lat * math.pi / 180) / 512) / math.ln2;
+
+  Future<void> _lift(DiscoveryMapPort port, DiscoverySpot s, DiscSelKind kind) async {
     final view = viewSize?.call();
     if (view == null || view.isEmpty) return;
     final u = unitsPerDp();
@@ -539,7 +558,11 @@ class TripDiscoveryLayer implements DiscoveryLayerApi {
     if (!(perLat > 0) || !(perLon > 0) || !perLat.isFinite || !perLon.isFinite) return;
     final x = pts[0].x / u, y = pts[0].y / u;
     if (selected.value?.id == s.id) selectedScreenX.value = x;
-    final halo = tuning.haloPhotoDp / 2;
+    final zoom = zoomOf(perLat, s.lat);
+    final halo = zoom.isFinite
+        ? tuning.haloRadiusAt(kind.name,
+            zoom, dotKind: DiscSelKind.dot.name, plannedKind: DiscSelKind.planned.name, photoScale: DiscPaint.selIconScale)
+        : tuning.haloPhotoDp / 2;
     double? target;
     if (mode == DiscoveryMode.full) {
       final top = host.topInset() + cardHeight() + halo;
@@ -549,6 +572,9 @@ class TripDiscoveryLayer implements DiscoveryLayerApi {
       if (y > bottom) target = bottom - halo;
     }
     if (target == null) return;
+    final low = host.topInset() + halo;
+    final high = math.max(low, view.height - host.bottomInset() - halo);
+    target = target.clamp(low, high);
     final centreLat = s.lat + (y - view.height / 2) / perLat;
     final centreLon = s.lon + (view.width / 2 - x) / perLon;
     await port.animateTo(centreLat + (target - y) / perLat, centreLon);

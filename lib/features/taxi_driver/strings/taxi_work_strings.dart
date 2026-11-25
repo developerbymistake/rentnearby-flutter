@@ -46,6 +46,7 @@ abstract final class TaxiWorkStrings {
   static const requests = 'Requests';
   static const today = 'Today';
   static const tripLeads = 'Trip leads';
+  static const pastTrips = 'Past trips ›';
   static const groupNew = 'New';
   static const groupBooked = 'Booked';
   static const groupEarlier = 'Earlier';

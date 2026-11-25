@@ -4,6 +4,7 @@ import 'package:bakhli/features/stay/enquiries/stay_enquiries_controller.dart';
 import 'package:bakhli/features/stay_owner/enquiries_tab/stay_enquiries_tab.dart';
 import 'package:bakhli/features/stay_owner/enquiries_tab/stay_owner_enquiry_card.dart';
 import 'package:bakhli/features/stay_owner/enquiries_tab/stay_quiet_week_banner.dart';
+import 'package:bakhli/features/stay_owner/enquiries_tab/widgets/enquiry_card_parts.dart';
 import 'package:bakhli/models/my_plan_model.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -111,7 +112,7 @@ Future<void> _settle(WidgetTester t) async {
 }
 
 Future<void> _openBucket(WidgetTester t, String label) async {
-  await t.tap(find.text(label).first);
+  await t.tap(find.text(label == 'Closed' ? 'Past enquiries ›' : label).first);
   await _settle(t);
 }
 
@@ -126,17 +127,21 @@ void main() {
       await _settle(t);
       expect(find.text('Enquiries'), findsOneWidget);
       expect(find.text('Deodar Heights Homestay'), findsOneWidget);
-      expect(find.text('New (2)'), findsOneWidget);
+      expect(find.text('New'), findsOneWidget);
+      expect(find.text('2'), findsOneWidget);
       expect(find.text('Offered'), findsOneWidget);
       expect(find.text('Rohit Sharma'), findsOneWidget);
-      expect(find.text('24 – 26 Nov · 3 guests'), findsOneWidget);
-      expect(find.text('1 room x 2 nights · Listed when asked ₹6,000'), findsOneWidget);
-      expect(find.text('2 rooms x 3 nights · Listed when asked ₹27,000'), findsOneWidget);
-      expect(find.text('2 h'), findsOneWidget);
-      expect(find.text('24 h'), findsOneWidget);
+      expect(find.text('NEW ENQUIRY'), findsNWidgets(2));
+      expect(find.text('24 – 26 Nov'), findsOneWidget);
+      expect(find.text('3 guests'), findsOneWidget);
+      expect(find.text('Listed when asked · ₹6,000'), findsOneWidget);
+      expect(find.text('Listed when asked · ₹27,000'), findsOneWidget);
+      expect(find.text('2 h left'), findsOneWidget);
+      expect(find.text('24 h left'), findsOneWidget);
       expect(find.text('Send offer'), findsNWidgets(2));
-      expect(find.text('Call guest'), findsNWidgets(2));
+      expect(find.text('Call'), findsNWidgets(2));
       expect(find.text('Not available'), findsNWidgets(2));
+      expect(find.text('Open chat'), findsNothing);
       expect(find.textContaining('dvance'), findsNothing);
     });
 
@@ -160,9 +165,10 @@ void main() {
       setUpEnquiries({StayEnquiryBucket.newOnes: pageJson([enquiryJson(id: 'x', name: 'Rohit Sharma', listed: null, phone: null)], newCount: 1)});
       await pumpPhone(t, const StayEnquiriesTab());
       await _settle(t);
-      expect(find.text('1 room x 2 nights'), findsOneWidget);
+      expect(find.text('ROOMS'), findsOneWidget);
+      expect(find.text('1 room'), findsOneWidget);
       expect(find.textContaining('Listed when asked'), findsNothing);
-      expect(find.text('Call guest'), findsNothing);
+      expect(find.text('Call'), findsNothing);
     });
 
     testWidgets('o_st_17_under72h_titleStartsUrgent', (t) async {
@@ -172,14 +178,29 @@ void main() {
       expect(find.text('Urgent: Rohit Sharma'), findsOneWidget);
     });
 
-    testWidgets('o_st_17_pillCountOnSelectedOnly and centre badge source', (t) async {
+    testWidgets('o_st_17_threeBoxesAlwaysShowCounts and centre badge source', (t) async {
       final c = setUpEnquiries({StayEnquiryBucket.newOnes: pageJson([_rohitNew], newCount: 2, offered: 1, confirmed: 3)});
       await pumpPhone(t, const StayEnquiriesTab());
       await _settle(t);
-      expect(find.text('New (2)'), findsOneWidget);
+      expect(find.text('New'), findsOneWidget);
+      expect(find.text('2'), findsOneWidget);
       expect(find.text('Offered'), findsOneWidget);
-      expect(find.text('Offered (1)'), findsNothing);
+      expect(find.text('1'), findsOneWidget);
+      expect(find.text('Confirmed'), findsOneWidget);
+      expect(find.text('3'), findsOneWidget);
+      expect(find.text('Closed'), findsNothing);
+      expect(find.text('Past enquiries ›'), findsOneWidget);
       expect(c.newCount.value, 2);
+    });
+
+    testWidgets('o_st_17_pastLink_opensClosedAndHides', (t) async {
+      final c = setUpEnquiries({StayEnquiryBucket.newOnes: pageJson([_rohitNew], newCount: 1), StayEnquiryBucket.closed: pageJson([_closedTen.first])});
+      await pumpPhone(t, const StayEnquiriesTab());
+      await _settle(t);
+      await _openBucket(t, 'Closed');
+      expect(c.bucket.value, StayEnquiryBucket.closed);
+      expect(find.text('Kavya Iyer'), findsOneWidget);
+      expect(find.text('Past enquiries ›'), findsNothing);
     });
 
     testWidgets('o_st_17_noCapOnEnquiries_50Rows_builder', (t) async {
@@ -187,7 +208,7 @@ void main() {
       await pumpPhone(t, const StayEnquiriesTab());
       await _settle(t);
       expect(find.byType(ListView), findsWidgets);
-      expect(find.text('New (50)'), findsOneWidget);
+      expect(find.text('50'), findsOneWidget);
       expect(t.takeException(), isNull);
     });
 
@@ -210,7 +231,6 @@ void main() {
       expect(find.text('Deluxe Room'), findsOneWidget);
       expect(find.text('Trip'), findsOneWidget);
       expect(find.text('Nainital, Mukteshwar · trip in 3 days'), findsOneWidget);
-      expect(find.text('Offer within'), findsOneWidget);
       expect(find.text('Ask advance'), findsNothing);
     });
 
@@ -289,24 +309,20 @@ void main() {
     });
   });
 
-  group('o_st_53 counter', () {
-    testWidgets('o_st_53_counterCard_rowsAndChip', (t) async {
+  group('o_st_53 legacy counter', () {
+    testWidgets('o_st_53_countered_rendersNewCardWithGuestAsked', (t) async {
       setUpEnquiries({StayEnquiryBucket.newOnes: pageJson([_counter], newCount: 1)});
       await pumpPhone(t, const StayEnquiriesTab());
       await _settle(t);
-      expect(find.text('New price'), findsOneWidget);
-      expect(find.text('1 room x 2 nights · Deluxe Room'), findsOneWidget);
-      expect(find.text('Your offer'), findsOneWidget);
-      expect(find.text('₹3,000 / night'), findsOneWidget);
-      expect(find.text('Rohit asks'), findsOneWidget);
+      expect(find.text('New price'), findsNothing);
+      expect(find.text('Accept price'), findsNothing);
+      expect(find.text('Send a different offer'), findsNothing);
+      expect(find.text('Send offer'), findsOneWidget);
+      expect(find.text('Not available'), findsOneWidget);
+      await t.tap(find.text('Rohit Sharma'));
+      await _settle(t);
+      expect(find.text('Guest asked'), findsOneWidget);
       expect(find.text('₹2,700 / night'), findsOneWidget);
-      expect(find.text('Total at his price'), findsOneWidget);
-      expect(find.text('₹5,400'), findsOneWidget);
-      expect(find.text('1 of 3'), findsOneWidget);
-      expect(find.text('5 h'), findsOneWidget);
-      expect(find.text('Accept price sends him an offer at ₹2,700 a night.'), findsOneWidget);
-      expect(find.text('Accept price'), findsOneWidget);
-      expect(find.text('Send a different offer'), findsOneWidget);
     });
   });
 
@@ -316,7 +332,7 @@ void main() {
       await pumpPhone(t, const StayEnquiriesTab());
       await _settle(t);
       await _openBucket(t, 'Offered');
-      expect(find.text('Offered (1)'), findsOneWidget);
+      expect(find.descendant(of: find.widgetWithText(BucketPill, 'Offered'), matching: find.text('1')), findsOneWidget);
       expect(find.text('2 – 5 Dec · 6 guests'), findsOneWidget);
       expect(find.text('2 rooms x 3 nights'), findsOneWidget);
       expect(find.text('Family Room · ₹4,500 / night'), findsOneWidget);
@@ -337,7 +353,7 @@ void main() {
       await t.tap(find.bySemanticsLabel('More actions for Rohit Verma'));
       await _settle(t);
       expect(find.text('Send a revised offer'), findsNothing);
-      expect(find.text('Open chat'), findsOneWidget);
+      expect(find.text('Open chat'), findsNothing);
       expect(find.text('Report traveller'), findsOneWidget);
       expect(find.text('Cancel booking'), findsOneWidget);
     });
@@ -349,7 +365,7 @@ void main() {
       await pumpPhone(t, const StayEnquiriesTab());
       await _settle(t);
       await _openBucket(t, 'Confirmed');
-      expect(find.text('Confirmed (3)'), findsOneWidget);
+      expect(find.descendant(of: find.widgetWithText(BucketPill, 'Confirmed'), matching: find.text('3')), findsOneWidget);
       await t.tap(find.text('Rohit Verma'));
       await _settle(t);
       expect(find.text('1 room x 2 nights · Offer ₹7,200'), findsOneWidget);
@@ -358,7 +374,8 @@ void main() {
       expect(find.text('27 – 29 Nov'), findsOneWidget);
       expect(find.text('Money is settled between you and the guest, outside the app.'), findsOneWidget);
       expect(find.text('Share UPI and WhatsApp'), findsOneWidget);
-      expect(find.text('Open chat'), findsOneWidget);
+      expect(find.text('Call'), findsOneWidget);
+      expect(find.text('Open chat'), findsNothing);
       expect(find.textContaining('dvance'), findsNothing);
     });
 
@@ -391,6 +408,7 @@ void main() {
       expect(find.text('Your calendar moves only when you accept. Money notes stay as they are.'), findsOneWidget);
       expect(find.text('Accept change'), findsOneWidget);
       expect(find.text('Cancel booking'), findsOneWidget);
+      expect(find.text('Send a different offer'), findsNothing);
     });
 
     testWidgets('o_st_54_unchangedGuests_rowHidden', (t) async {
@@ -425,7 +443,7 @@ void main() {
       expect(find.text('Zed'), findsOneWidget);
       await t.tap(find.bySemanticsLabel('More actions for Zed'));
       await _settle(t);
-      expect(find.text('Open chat'), findsOneWidget);
+      expect(find.text('Open chat'), findsNothing);
       expect(find.text('Report traveller'), findsOneWidget);
       expect(find.text('Block'), findsOneWidget);
     });
@@ -440,7 +458,7 @@ void main() {
       expect(find.text('Cancelled by you on 21 Nov'), findsOneWidget);
       expect(find.text('The water supply is down that week.'), findsOneWidget);
       expect(find.text('Calendar entry'), findsOneWidget);
-      expect(find.text('Open chat'), findsOneWidget);
+      expect(find.text('Open chat'), findsNothing);
     });
 
     testWidgets('o_st_57_problemStripOnConfirmedWithOpen', (t) async {

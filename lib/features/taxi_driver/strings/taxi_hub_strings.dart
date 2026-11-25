@@ -21,40 +21,35 @@ abstract final class TaxiHubStrings {
   static const statusRejected = 'REJECTED';
   static const statusDraft = 'DRAFT';
   static const statusOffline = 'OFFLINE';
-  static const from = 'FROM';
+  static const from = 'From';
+  static const localDay = 'Local day';
+  static String routeLabel(int n) => n == 1 ? 'Route' : 'Routes';
   static const view = 'View';
-  static const share = 'Share';
-  static const shareNotLive = 'Your taxi is not live yet.';
   static String vehicleLine(String name, int? seats) => seats == null ? name : '$name · $seats seats';
   static String routeChip(int n) => n == 1 ? '1 route' : '$n routes';
-  static String localChip(String amount) => '$amount local day';
 
-  static String routesHeader(int used, int limit) => 'ROUTES AND FARES · $used OF $limit';
-  static String routesHeaderOff(int used) => 'ROUTES AND FARES · $used';
+  static const routesTitle = 'Routes and fares';
+  static const yourRoutes = 'Your routes';
+  static String routesLine(String first, int more, String? min) =>
+      '$first${more > 0 ? ' and $more more' : ''}${min == null ? '' : ' · from $min'}';
+  static const open = 'Open';
+  static String usedOfRoutes(int used, int limit) => '$used of $limit routes used';
+  static String routeEyebrow(int n) => 'ROUTE $n';
+  static String fareLine(String fare) => 'Fare $fare';
   static String routeTitleOf(String from, String to) => '$from to $to';
-  static String routeSub(bool roundTrip, String fare) => '${roundTrip ? 'Round trip' : 'One way'} · $fare';
   static const editFare = 'Edit fare';
   static const edit = 'Edit';
-  static const hiddenOnFree = 'Hidden on Free';
-  static const hiddenRoute = 'Hidden';
   static const addRoute = 'Add route';
-  static const add = 'Add';
-  static String allUsed(int n) => 'All $n used';
-  static const full = 'Full';
-  static String usedOf(int used, int limit) => '$used of $limit used';
-  static const seePlus = OwnerSharedStrings.seePlus;
-  static const menuEditRoute = 'Edit route';
-  static const menuDeleteRoute = 'Delete route';
-  static const moreOptions = 'More options';
   static const lastRoute = 'Add at least one route.';
 
-  static const localHeader = 'LOCAL SIGHTSEEING';
   static String dayRateLine(String amount) => '$amount a day';
   static String kmLine(int km) => '$km km included';
   static const localNotSet = 'Not set';
   static const localNotSetSub = 'Not in trip planning yet';
 
-  static const vehicleHeader = 'VEHICLE AND CONTACT';
+  static const photosTitle = 'Photos';
+  static const detailsTitle = 'Taxi details';
+  static const removeListing = 'Remove this listing';
   static const vehicleHint = 'Licence or date of birth changes go for review';
   static String reports(int n) => n == 1 ? '1 report on this taxi' : '$n reports on this taxi';
 

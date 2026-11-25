@@ -116,7 +116,7 @@ void main() {
   group('o_pl_5 / o_pl_15 B cancelled', () {
     testWidgets('taxi: one button, no cycles, no bar', (t) async {
       await _pump(t, Fx.cancelled('Taxi'));
-      _has(['Plus till 21 Dec 2026', 'Auto-renew is off.', 'After that, you keep 1 route.', 'Manage in Google Play']);
+      _has(['Plus till 21 Dec 2026', 'Auto-renew is off.', 'After that, you keep 1 route.', 'Resubscribe']);
       expect(find.byType(PlanCycleOption), findsNothing);
       expect(_bar, findsNothing);
       _not(['Change duration', 'Subscribe again', 'Fix']);
@@ -135,9 +135,10 @@ void main() {
       _has(['Auto-renew is off', 'After that, you keep 2 photos and 2 room types.']);
     });
 
-    testWidgets('Manage opens Google Play', (t) async {
+    testWidgets('Resubscribe opens Google Play', (t) async {
       await _pump(t, Fx.cancelled('Taxi'));
-      await t.tap(find.text('Manage in Google Play'));
+      expect(find.text('Manage in Google Play'), findsNothing);
+      await t.tap(find.text('Resubscribe'));
       await t.pump();
       expect(_fake.manageCalls, 1);
     });
@@ -181,7 +182,7 @@ void main() {
   group('o_pl_8 / o_pl_15 D ended', () {
     testWidgets('taxi ended: note, meter, Subscribe again, Choose your route', (t) async {
       await _pump(t, Fx.ended('Taxi'));
-      _has(['Your first route stays. Extra routes are hidden, not deleted.', 'Subscription ended', 'Ended on 21 Dec 2026',
+      _has(['Your last added route stays. Extra routes are hidden, not deleted.', 'Subscription ended', 'Ended on 21 Dec 2026',
         'Extra routes are hidden. Nothing is deleted.', 'Subscribe again', 'Choose your route']);
       expect(find.text('Try free for 7 days'), findsNothing);
       expect(find.text('Subscribe again'), findsNWidgets(2));

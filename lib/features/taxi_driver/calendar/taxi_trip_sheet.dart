@@ -152,6 +152,10 @@ class TaxiTripForm extends ChangeNotifier {
 
 abstract final class TaxiTripSheet {
   static Future<bool> show(BuildContext context, {required TaxiCalendarController controller, DateTime? date, CalendarEntry? editing}) async {
+    if (editing == null && PlanGate.canUpgrade && controller.entriesFull) {
+      await PlanGate.showLimit(context, TaxiGateStringsCalendar.g10(limit: controller.entriesMeter.limit));
+      return false;
+    }
     final form = TaxiTripForm(controller: controller, date: date, editing: editing);
     final saved = await OwnerSheet.show<bool>(
       context,
@@ -186,6 +190,11 @@ abstract final class TaxiTripSheet {
       case OwnerRefused():
         if (r.type == TaxiCalendarStrings.entryEndedType) {
           AppToast.info(TaxiCalendarStrings.entryEnded);
+          c.reload().ignore();
+          Navigator.of(context).pop(false);
+          return;
+        }
+        if (PlanGate.handleInactive(r)) {
           c.reload().ignore();
           Navigator.of(context).pop(false);
           return;

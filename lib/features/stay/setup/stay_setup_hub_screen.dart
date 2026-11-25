@@ -244,7 +244,7 @@ class _StaySetupHubScreenState extends State<StaySetupHubScreen> {
         state: state(u4, d4),
         onTap: () => _open(AppRoutes.staySubmit),
       ),
-      if (d1 && s != null) ..._shareRow(s),
+      if (d1 && s != null && s.isApproved) ..._shareRow(s),
       if (canCorrect) _wrongRoleLink(percent),
     ];
   }

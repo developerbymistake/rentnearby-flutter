@@ -24,13 +24,10 @@ import '../models/stay_registration_type_model.dart';
 import '../stay_registration_types_controller.dart';
 import '../stay_types_controller.dart';
 import '../../owner_core/data/owner_error_types.dart';
-import '../../owner_core/look/owner_look.dart';
 import '../../owner_core/plan/gate_keys.dart';
 import '../../owner_core/plan/plan_bindings.dart';
 import '../../owner_core/plan/plan_gate.dart';
 import '../../owner_core/plan/plan_keys.dart';
-import '../../owner_core/plan/soft_lock.dart';
-import '../../stay_owner/widgets/stay_widgets.dart';
 import '../../stay_owner/strings/stay_gate_strings.dart';
 import '../../stay_owner/strings/stay_setup_strings.dart';
 import 'stay_option_sets.dart';
@@ -1059,16 +1056,51 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
     );
   }
 
+  Widget _hiddenPhotoTile(StayPhotoModel p, String reason) {
+    final decode = (MediaQuery.sizeOf(context).width / 3 * MediaQuery.devicePixelRatioOf(context)).round().clamp(1, KitPhoto.maxDecodePx);
+    return Semantics(
+      key: ValueKey('hidden-photo-${p.id}'),
+      label: reason,
+      child: Opacity(
+        opacity: Alpha.v72,
+        child: ClipRRect(
+          borderRadius: DS.circular(14),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              CachedNetworkImage(
+                imageUrl: p.url,
+                fit: BoxFit.cover,
+                memCacheWidth: decode,
+                placeholder: (_, _) => const TemplatePlaceholder(radius: 0, height: double.infinity),
+                errorWidget: (_, _, _) => const TemplatePlaceholder(radius: 0, height: double.infinity),
+              ),
+              Center(child: ExcludeSemantics(child: Art3D(asset: ListingArt.locked, size: 26))),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _photosStep() {
     _ctrl.stay.value;
     _planTick();
+    final hidden = _ctrl.stay.value?.hiddenPhotos ?? const <StayPhotoModel>[];
+    final hiddenReason = StayGateStrings.photoInactive(PlanGate.limit(PlanKey.photos));
     final max = _maxPhotos;
     final left = max - _photos.length;
-    final locked = left <= 0 && PlanGate.loaded && PlanGate.canUpgrade;
-    final plus = PlanKeys.plusSeed[PlanKey.photos] ?? max;
+    final upsell = left <= 0 && PlanGate.loaded && PlanGate.canUpgrade;
+    final add = PhotoAddTile3D(tone: _tone, label: StaySetupStrings.addPhoto, onTap: () => PlanGate.addTap(context, full: left <= 0, gate: StayGateStrings.photoGate, onAdd: _pickPhoto));
     final tiles = <Widget>[
       for (var i = 0; i < _photos.length; i++) _photoTile(i),
-      if (locked) _lockedPhotoTile() else if (left > 0) PhotoAddTile3D(tone: _tone, label: StaySetupStrings.addPhoto, onTap: _pickPhoto),
+      for (final p in hidden) _hiddenPhotoTile(p, hiddenReason),
+      if (upsell)
+        KeyedSubtree(key: GateKeys.softRow, child: add)
+      else if (left > 0)
+        add
+      else
+        Opacity(opacity: Alpha.v40, child: PhotoAddTile3D(tone: _tone, label: StaySetupStrings.addPhoto, onTap: null)),
     ];
     return SingleChildScrollView(
       padding: EdgeInsets.only(bottom: DS.s(24)),
@@ -1079,7 +1111,7 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             Align(alignment: Alignment.centerRight, child: Text(StaySetupStrings.photoMeter(_photos.length, max), style: Ink3D.text(13, FontWeight.w700, _tone.text))),
             Gap.v(10),
-            if (_photos.isEmpty)
+            if (_photos.isEmpty && hidden.isEmpty)
               PhotoDropZone3D(tone: _tone, title: 'Add Stay Photos', subtitle: 'Camera or Gallery', onTap: _pickPhoto)
             else
               GridView.builder(
@@ -1091,6 +1123,16 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
                 itemCount: tiles.length,
                 itemBuilder: (_, i) => tiles[i],
               ),
+            if (_photos.isNotEmpty && left <= 0 && !upsell)
+              Padding(
+                padding: EdgeInsets.only(top: DS.gv(8)),
+                child: Text('${_photos.length} of $max · limit reached', textAlign: TextAlign.center, style: Ink3D.text(11.5, FontWeight.w500, Ink3D.grey, letterSpacing: 0)),
+              ),
+            if (hidden.isNotEmpty)
+              Padding(
+                padding: EdgeInsets.only(top: DS.gv(8)),
+                child: Text(hiddenReason, style: Ink3D.text(11.5, FontWeight.w500, Ink3D.grey, height: 1.35, letterSpacing: 0)),
+              ),
             if (_photoError != null)
               Padding(
                 padding: EdgeInsets.only(top: DS.gv(6)),
@@ -1100,38 +1142,7 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
             Text(StayGateStrings.photoHint, style: Ink3D.text(12, FontWeight.w400, Ink3D.grey)),
           ]),
         ),
-        if (locked) StayPlusBanner(text: StayGateStrings.photoBanner(max, plus), onTap: () => PlanGate.showLimit(context, StayGateStrings.photoGate())),
       ]),
     );
   }
-
-  Widget _lockedPhotoTile() => Semantics(
-        button: true,
-        label: '${StaySetupStrings.addPhoto}, needs Plus',
-        excludeSemantics: true,
-        child: InkWell(
-          key: GateKeys.softRow,
-          onTap: () => PlanGate.showLimit(context, StayGateStrings.photoGate()),
-          borderRadius: DS.circular(14),
-          child: DecoratedBox(
-            decoration: BoxDecoration(color: OwnerLook.stay.lockFill, borderRadius: DS.circular(14), border: Border.all(color: OwnerLook.stay.lockLine, width: DS.s(1.5))),
-            child: Padding(
-              padding: DS.all(4),
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Art3D(asset: ListingArt.locked, size: 26),
-                    Gap.v(4),
-                    Text(StaySetupStrings.addPhoto, textAlign: TextAlign.center, style: Ink3D.text(11, FontWeight.w700, OwnerLook.stay.lockText, letterSpacing: 0)),
-                    Gap.v(2),
-                    const PlusChip(),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-      );
 }

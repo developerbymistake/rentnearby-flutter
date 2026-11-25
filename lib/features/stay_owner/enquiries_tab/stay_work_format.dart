@@ -74,4 +74,12 @@ abstract final class StayWorkFormat {
     final b = DateTime(start.year, start.month, start.day);
     return b.difference(a).inDays;
   }
+
+  static String? waiting(TripEnquiryModel e, DateTime now) {
+    final at = e.createdAt;
+    final mins = at == null ? null : now.difference(at).inMinutes;
+    if (mins != null && mins < 60) return StayWorkStrings.waitingMin(mins < 1 ? 1 : mins);
+    final h = e.waitingHours ?? (mins == null ? null : mins ~/ 60);
+    return h == null ? null : StayWorkStrings.waiting(h);
+  }
 }

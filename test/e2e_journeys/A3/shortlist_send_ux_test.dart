@@ -172,6 +172,7 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(seconds: 1));
       expect(find.text('Send to all'), findsOneWidget);
+      expect(find.textContaining('Your phone number is shared with the host'), findsOneWidget);
       await TripShortlistFlow.done(ctx, step: 'stay:1', taxi: false, send: () async => null);
       await tester.pump();
       expect(find.text('Send to all'), findsOneWidget);

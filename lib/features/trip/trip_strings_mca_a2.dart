@@ -20,7 +20,6 @@ class TripStringsMcaA2 {
   static const String popularNextStops = 'Popular next stops';
   static const String inThisTrip = 'In this trip';
   static const String alreadyAdded = 'Already added';
-  static const String noPlacesYet = 'No places yet · stay and taxi only';
 
   static String taxisGoFrom(String city) => 'Taxis go from $city';
 

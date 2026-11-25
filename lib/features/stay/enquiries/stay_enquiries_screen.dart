@@ -3,9 +3,9 @@ import 'package:bakhli/design/extra/ext_trip_replies.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../config/app_insets.dart';
-import '../../../config/app_routes.dart';
 import '../../../controllers/auth_controller.dart';
 import '../../../models/browse_item.dart';
+import '../../stay_owner/strings/stay_work_strings.dart';
 import '../../trip/models/trip_enquiry_model.dart';
 import '../../trip/trip_strings.dart';
 import '../../trip/trip_strings_h4.dart';
@@ -283,13 +283,6 @@ class _EnquiryCard extends StatelessWidget {
 
   static String _inr(int? v) => v == null || v <= 0 ? '' : BrowseItem.inr(v);
 
-  static bool _checkInOpen(TripEnquiryModel e) {
-    final cin = e.checkIn;
-    if (cin == null) return false;
-    final now = DateTime.now();
-    return !DateTime(cin.year, cin.month, cin.day).isBefore(DateTime(now.year, now.month, now.day));
-  }
-
   ({String? cap, String number, String? unit}) _price(TripEnquiryModel e) {
     final nights = TripStrings.nights(e.nights);
     final counter = e.pendingCounter?.pricePerNight;
@@ -362,11 +355,8 @@ class _EnquiryCard extends StatelessWidget {
       final busy = ctrl.busyIds.contains(e.id);
       ReplyAction a(String label, Future<bool> Function() run) => ReplyAction(label: label, onTap: busy ? null : () => run());
       ReplyAction off(String label) => ReplyAction(label: label);
-      final chatOk = e.conversationId != null &&
-          (e.display == TripDisplayStatus.asked ||
-              e.display == TripDisplayStatus.offered ||
-              e.display == TripDisplayStatus.confirmedByBoth);
-      final chat = ReplyAction(label: TripStrings.chat, onTap: chatOk ? () => _openChat(e) : null);
+      final callOk = StayEnquiryActions.canCall(e) && (e.display.isOpen || e.display == TripDisplayStatus.confirmedByBoth);
+      final call = ReplyAction(label: StayWorkStrings.call, onTap: callOk ? () => StayEnquiryActions.callGuest(e) : null);
       final menu = <MenuItem3D>[];
       ReplyAction? primary;
       ReplyAction second = off(TripStrings.notAvailableAction);
@@ -374,27 +364,13 @@ class _EnquiryCard extends StatelessWidget {
       switch (e.display) {
         case TripDisplayStatus.asked:
         case TripDisplayStatus.offered:
-          final counter = e.pendingCounter;
-          if (counter != null) {
-            primary = a(TripStrings.acceptPrice, () => StayEnquiryActions.sendOffer(context, e, counter: counter));
-            second = a(TripStrings.sendDifferentOffer, () => StayEnquiryActions.sendOffer(context, e));
-            menu.add(MenuItem3D(label: TripStrings.notAvailableAction, art: ListingArt.clipboard, danger: true, onTap: busy ? null : () => StayEnquiryActions.notAvailable(context, e)));
-          } else {
-            primary = a(e.display == TripDisplayStatus.asked ? TripStrings.sendOffer : TripStrings.sendNewOffer, () => StayEnquiryActions.sendOffer(context, e));
-            second = a(TripStrings.notAvailableAction, () => StayEnquiryActions.notAvailable(context, e));
-          }
+          primary = e.offersLeft == 0 ? null : a(e.display == TripDisplayStatus.asked ? TripStrings.sendOffer : TripStrings.sendNewOffer, () => StayEnquiryActions.sendOffer(context, e));
+          second = a(TripStrings.notAvailableAction, () => StayEnquiryActions.notAvailable(context, e));
         case TripDisplayStatus.confirmedByBoth:
           final change = e.pendingChange;
-          final canRevise = e.pendingRevised == null && change == null && _checkInOpen(e);
-          if (change != null) {
-            primary = a(TripStrings.acceptChange, () => StayEnquiryActions.acceptChange(context, e, change.id));
-            second = a(TripStrings.revisedOffer, () => StayEnquiryActions.revisedOffer(context, e, changeRequest: change));
-          } else {
-            second = canRevise ? a(TripStrings.revisedOffer, () => StayEnquiryActions.revisedOffer(context, e)) : off(TripStrings.revisedOffer);
-          }
-          if (!StayEnquiryBucket.hasEnded(e)) {
-            menu.add(MenuItem3D(label: TripStrings.cancelBooking, art: ListingArt.calendar, danger: true, onTap: busy ? null : () => StayEnquiryActions.cancel(context, e)));
-          }
+          final ended = StayEnquiryBucket.hasEnded(e);
+          if (change != null) primary = a(TripStrings.acceptChange, () => StayEnquiryActions.acceptChange(context, e, change.id));
+          second = ended ? off(TripStrings.cancelBooking) : a(TripStrings.cancelBooking, () => StayEnquiryActions.cancel(context, e));
         default:
           primary = off(TripStrings.sendOffer);
       }
@@ -427,26 +403,10 @@ class _EnquiryCard extends StatelessWidget {
             note: noteText ?? (ended ? TripStringsRc.enquiryClosed : null),
             noteArt: noteArt,
             primary: busy && primary != null ? ReplyAction(label: primary.label, busy: true) : primary,
-            secondary: [chat, second],
+            secondary: [call, second],
           ),
         ],
       );
-    });
-  }
-
-  void _openChat(TripEnquiryModel e) {
-    Get.toNamed(AppRoutes.chatConversation, arguments: {
-      'conversationId': e.conversationId,
-      'enquiryId': e.id,
-      'listingType': 'Stay',
-      'stayTypeId': ctrl.stay.value?.stayTypeId,
-      'otherPartyId': e.traveller.id ?? '',
-      'otherPartyName': StayEnquiryFormat.guest(e),
-      'listingTitle': e.listingName,
-      'area': null,
-      'isOwner': true,
-      'status': 'Active',
-      'isBlockedByMe': false,
     });
   }
 }
