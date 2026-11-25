@@ -150,9 +150,6 @@ class TaxiWaysStrings {
   static const String taxisOff = 'Taxis are not available right now';
   static const String journeyLimit = 'Up to 20 saved journeys';
 
-  static const String nudgeTitle = 'Get more calls';
-  static const String nudgeBody = 'Add popular routes like Haridwar to Badrinath';
-
   static String ago(DateTime at, {DateTime? now}) {
     final d = (now ?? DateTime.now()).difference(at);
     if (d.inMinutes < 1) return 'just now';

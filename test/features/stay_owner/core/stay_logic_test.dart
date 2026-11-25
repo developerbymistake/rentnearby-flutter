@@ -165,9 +165,9 @@ void main() {
       expect(StayHomeCompose.attention(d, denied: true, hasShareDetails: true).single.code, 'NotificationsOff');
     });
 
-    test('under review: UPI row first until saved, notifications only while denied', () {
+    test('under review: no UPI row, notifications only while denied', () {
       final d = _dto(homeJson(status: 'PendingReview', everApproved: false));
-      expect(StayHomeCompose.attention(d, denied: true, hasShareDetails: false).map((r) => r.code), ['AddShareDetails', 'NotificationsOff']);
+      expect(StayHomeCompose.attention(d, denied: true, hasShareDetails: false).map((r) => r.code), ['NotificationsOff']);
       expect(StayHomeCompose.attention(d, denied: false, hasShareDetails: true), isEmpty);
     });
 
@@ -214,15 +214,6 @@ void main() {
   });
 
   group('Setup strings', () {
-    test('summary lines of the submit frame', () {
-      expect(StaySetupStrings.rulesSummary('12:00:00', '11:00', 'Flexible'), 'Check-in 12 pm · Check-out 11 am · Free cancellation 3 days before');
-      expect(StaySetupStrings.rulesSummary('09:30', '11:00', null), 'Check-in 9:30 am · Check-out 11 am');
-      expect(StaySetupStrings.roomsSummary([('Deluxe Room', '₹3,000'), ('Family Room', '₹4,500')]), 'Deluxe Room ₹3,000 · Family Room ₹4,500');
-      expect(StaySetupStrings.basicSummary('Deodar Heights Homestay', 'Homestay', 2), 'Deodar Heights Homestay · Homestay · 2 photos');
-      expect(StaySetupStrings.fixThis(true, true), 'Fix this: photos and registration');
-      expect(StaySetupStrings.fixThis(false, true), 'Fix this: registration');
-    });
-
     test('o_st_65_c_outsideDistrict uses its own server text, closed area keeps the frame text', () {
       expect(StaySetupStrings.notOpenBodyFor('OnboardingClosed', 'x'), 'We are not taking new stays in this area yet. We will tell you when it opens.');
       expect(StaySetupStrings.notOpenBodyFor(null, null), StaySetupStrings.notOpenBody);

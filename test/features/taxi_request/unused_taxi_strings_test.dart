@@ -49,7 +49,6 @@ const _baselineBeforeTaxiRequest = <String, int>{
   'lib/features/taxi/journeys/widgets/journey_rail_row.dart': 1,
   'lib/features/taxi/journeys/widgets/journey_status_banner.dart': 1,
   'lib/features/taxi/leads/trip_leads_screen.dart': 1,
-  'lib/features/taxi/setup/my_taxi_screen.dart': 2,
   'lib/features/taxi/ways/journey_road_screen.dart': 1,
   'lib/features/taxi/ways/taxi_ways_feed_screen.dart': 4,
   'lib/features/taxi/ways/widgets/best_way_mark.dart': 1,

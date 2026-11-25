@@ -139,7 +139,7 @@ void main() {
       expect(find.text('UNDER REVIEW'), findsOneWidget);
       expect(find.text('We will notify you'), findsOneWidget);
       expect(find.text('While you wait'), findsOneWidget);
-      expect(find.text('Add UPI and WhatsApp'), findsOneWidget);
+      expect(find.text('Add UPI and WhatsApp'), findsNothing);
       expect(find.text('You will miss new enquiries until notifications are on.'), findsOneWidget);
       expect(find.text('–'), findsNWidgets(3));
       expect(find.text('Accepting guests'), findsNothing);

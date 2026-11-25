@@ -1,9 +1,6 @@
 class StayShareStrings {
   static const String title = 'UPI and WhatsApp';
   static const String sub = 'Shared with a guest only when you choose';
-  static const String notSet = 'Not set';
-  static const String isSet = 'UPI ID and WhatsApp set';
-  static const String eyebrow = 'Contact';
   static const String yourWhatsApp = 'Your WhatsApp number';
   static const String footer = 'Both are optional. Clear a field and save to remove it.';
   static const String saved = 'Saved';

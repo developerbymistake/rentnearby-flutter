@@ -206,8 +206,6 @@ class TripStrings {
   static const String accepted = 'Accepted';
   static const String declined = 'Declined';
 
-  static const String optionalLabel = 'OPTIONAL';
-  static const String add = 'Add';
   static const String edit = 'Edit';
   static const String yourUpiId = 'Your UPI ID';
   static const String upiHint = 'name@bank';
@@ -261,10 +259,6 @@ class TripStrings {
   static const String pausedTaxiHere = 'New leads are paused in your area.';
   static const String localSightseeing = 'Local sightseeing';
   static const String addLocalRate = 'Add local rate';
-  static const String notInTripPlanning = 'Not in trip planning yet';
-  static const String addRateHint = 'Add a local rate per day in Routes and fares.';
-  static const String rateMissing = 'rate missing';
-  static const String addRate = 'Add rate';
 
   static const String driver = 'Driver';
   static const String copy = 'Copy';

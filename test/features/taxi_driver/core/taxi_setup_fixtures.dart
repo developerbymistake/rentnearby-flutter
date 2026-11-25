@@ -22,8 +22,12 @@ class SetupAuth extends JAuth {
     return true;
   }
 
+  int refreshes = 0;
+
   @override
-  Future<void> refreshProfile() async {}
+  Future<void> refreshProfile() async {
+    refreshes++;
+  }
 }
 
 class SetupPlan extends PlanController {

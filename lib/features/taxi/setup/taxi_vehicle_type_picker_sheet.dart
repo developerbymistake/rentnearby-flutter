@@ -126,8 +126,6 @@ class _TaxiVehicleTypePickerSheetState extends State<TaxiVehicleTypePickerSheet>
     final selected = t.id == widget.selectedId;
     return SheetListRow(
       tone: _tone,
-      art: ListingArt.taxi,
-      roundArt: true,
       title: t.name,
       selected: selected,
       divider: divider,

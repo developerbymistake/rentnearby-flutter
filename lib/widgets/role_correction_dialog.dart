@@ -4,10 +4,10 @@ import '../design/design.dart';
 class RoleCorrectionDialog {
   const RoleCorrectionDialog._();
 
-  static Future<bool> confirm(BuildContext context, {required String kind, required int percent}) async {
-    final body = percent <= 0
-        ? 'Nothing filled yet. You can do this only once.'
-        : '$kind draft, $percent% filled, will be deleted. You can do this only once.';
+  static Future<bool> confirm(BuildContext context, {required String kind, required bool hasDraft}) async {
+    final body = hasDraft
+        ? '$kind draft will be deleted. You can do this only once.'
+        : 'Nothing filled yet. You can do this only once.';
     final ok = await Dialog3D.show<bool>(
       context,
       builder: (ctx) => Dialog3D(

@@ -6,9 +6,6 @@ import 'package:bakhli/controllers/tab_config_controller.dart';
 import 'package:bakhli/config/app_theme.dart';
 import 'package:bakhli/config/notification_types.dart';
 import 'package:bakhli/controllers/auth_controller.dart';
-import 'package:bakhli/features/taxi/leads/trip_leads_controller.dart';
-import 'package:bakhli/features/taxi/models/taxi_owner_model.dart';
-import 'package:bakhli/features/taxi/taxi_option_sets.dart';
 import 'package:bakhli/features/taxi/requests/controllers/driver_bookings_controller.dart';
 import 'package:bakhli/features/taxi/requests/controllers/driver_rating_controller.dart';
 import 'package:bakhli/features/taxi/requests/controllers/driver_ready_controller.dart';
@@ -21,9 +18,6 @@ import 'package:bakhli/features/taxi/requests/driver_requests_screen.dart';
 import 'package:bakhli/features/taxi/requests/driver_ring_screen.dart';
 import 'package:bakhli/features/taxi/requests/strings/driver_ready_strings.dart';
 import 'package:bakhli/features/taxi/requests/widgets/driver_ready_strip.dart';
-import 'package:bakhli/features/taxi/setup/my_taxi_screen.dart';
-import 'package:bakhli/features/taxi/setup/taxi_owner_card.dart';
-import 'package:bakhli/features/taxi/setup/taxi_setup_controller.dart';
 import 'package:bakhli/features/taxi/taxi_routes.dart';
 import 'package:bakhli/models/notification_model.dart';
 import 'package:bakhli/services/notification_service.dart';
@@ -265,102 +259,10 @@ void main() {
     }
   });
 
-  group('online switch', () {
-    Future<WireTaxi> open(WidgetTester t, {required bool denied}) async {
-      wireBase();
-      Get.put<NotificationService>(WireNotif(denied: denied));
-      final taxi = Get.put<TaxiSetupController>(WireTaxi(wireTaxi(available: false))) as WireTaxi;
-      Get.put<TripLeadsController>(WireLeads());
-      Get.put<DriverRequestsController>(WireRequests());
-      Get.put<DriverReadyController>(WireReady(notificationsOn: !denied));
-      await t.pumpWidget(GetMaterialApp(
-        theme: AppTheme.theme,
-        initialRoute: AppRoutes.myTaxi,
-        getPages: [
-          GetPage(name: AppRoutes.myTaxi, page: () => const MyTaxiScreen()),
-          GetPage(name: AppRoutes.taxiReady, page: () => const Scaffold(body: Text('CHECKLIST'))),
-        ],
-      ));
-      await _settle(t);
-      return taxi;
-    }
-
-    Future<void> switchOn(WidgetTester t) async {
-      t.widget<TaxiOwnerCard>(find.byType(TaxiOwnerCard)).onAvailableChanged!(true);
-      await _settle(t);
-    }
-
-    Future<void> drain(WidgetTester t) async {
-      await t.pumpWidget(const SizedBox.shrink());
-      await t.pump(const Duration(seconds: 6));
-    }
-
-    testWidgets('online_with_notifications_off_opens_the_checklist', (t) async {
-      final taxi = await open(t, denied: true);
-      expect(find.text(NotificationOffBanner.requestsBody), findsOneWidget);
-      await switchOn(t);
-      expect(taxi.availableCalls, [true]);
-      expect((Get.find<DriverReadyController>() as WireReady).onlineReports, 1);
-      expect(Get.currentRoute, AppRoutes.taxiReady);
-      expect(find.text('CHECKLIST'), findsOneWidget);
-      await drain(t);
-    });
-
-    testWidgets('online with notifications on stays on My Taxi', (t) async {
-      final taxi = await open(t, denied: false);
-      await switchOn(t);
-      expect(taxi.availableCalls, [true]);
-      expect(Get.currentRoute, AppRoutes.myTaxi);
-      expect(find.text('CHECKLIST'), findsNothing);
-      await drain(t);
-    });
-
-    testWidgets('going offline never opens the checklist', (t) async {
-      await open(t, denied: true);
-      t.widget<TaxiOwnerCard>(find.byType(TaxiOwnerCard)).onAvailableChanged!(false);
-      await _settle(t);
-      expect(Get.currentRoute, AppRoutes.myTaxi);
-      await drain(t);
-    });
-  });
-
-  group('requests badge load on My Taxi', () {
-    Future<int> openWith(WidgetTester t, TaxiOwnerModel? model) async {
-      wireBase();
-      Get.put<NotificationService>(WireNotif(denied: false));
-      Get.put<TaxiSetupController>(WireTaxi(model));
-      Get.put<TripLeadsController>(WireLeads());
-      final requests = Get.put<DriverRequestsController>(WireRequests()) as WireRequests;
-      Get.put<DriverReadyController>(WireReady());
-      await t.pumpWidget(GetMaterialApp(
-        theme: AppTheme.theme,
-        initialRoute: AppRoutes.myTaxi,
-        getPages: [GetPage(name: AppRoutes.myTaxi, page: () => const MyTaxiScreen())],
-      ));
-      await _settle(t);
-      final n = requests.reloads;
-      await t.pumpWidget(const SizedBox.shrink());
-      await t.pump(const Duration(seconds: 6));
-      return n;
-    }
-
-    testWidgets('live_taxi_loads_the_requests_once', (t) async {
-      expect(await openWith(t, wireTaxi()), 1);
-    });
-
-    testWidgets('draft_taxi_skips_the_requests_call', (t) async {
-      expect(await openWith(t, wireTaxi(status: TaxiStatus.draft)), 0);
-    });
-
-    testWidgets('no_taxi_skips_the_requests_call', (t) async {
-      expect(await openWith(t, null), 0);
-    });
-  });
-
-  test('banner copy says requests on My Taxi and enquiries elsewhere', () {
+  test('banner copy says requests on the driver requests tab and enquiries elsewhere', () {
     expect(NotificationOffBanner.requestsBody, 'You will miss new requests until notifications are on.');
     expect(const NotificationOffBanner().body, NotificationOffBanner.enquiriesBody);
-    final src = File('lib/features/taxi/setup/my_taxi_screen.dart').readAsStringSync();
+    final src = File('lib/features/taxi_driver/requests_tab/taxi_requests_tab.dart').readAsStringSync();
     expect(src.contains('NotificationOffBanner(body: NotificationOffBanner.requestsBody)'), isTrue);
   });
 

@@ -11,6 +11,9 @@ class StayPageHeader extends StatelessWidget {
     this.trailing,
     this.asset = SetupAssets.hotel,
     this.animation,
+    this.leadingIcon,
+    this.onLeading,
+    this.leadingSemantics,
   });
 
   final String title;
@@ -20,6 +23,9 @@ class StayPageHeader extends StatelessWidget {
   final Widget? trailing;
   final String asset;
   final Animation<double>? animation;
+  final IconData? leadingIcon;
+  final VoidCallback? onLeading;
+  final String? leadingSemantics;
 
   @override
   Widget build(BuildContext context) {
@@ -32,7 +38,10 @@ class StayPageHeader extends StatelessWidget {
         subtitle: keyboard ? null : subtitle,
         art: asset,
         artSize: keyboard ? 40 : 65,
-        onBack: showBack ? (onBack ?? () => Navigator.maybePop(context)) : null,
+        onBack: showBack && leadingIcon == null ? (onBack ?? () => Navigator.maybePop(context)) : null,
+        leadingIcon: leadingIcon,
+        onLeading: onLeading,
+        leadingSemantics: leadingSemantics,
         trailing: trailing,
       ),
     );

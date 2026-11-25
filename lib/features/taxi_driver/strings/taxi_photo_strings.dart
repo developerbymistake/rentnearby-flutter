@@ -29,5 +29,4 @@ abstract final class TaxiPhotoStrings {
   static const hubRowSubNone = 'Add a photo travellers will see';
   static const hubRowSubSet = 'Travellers see this';
   static const couldNotUpload = 'Could not upload photo.';
-  static const deleteBody = 'Your taxi, routes and photos will be deleted.';
 }

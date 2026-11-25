@@ -17,6 +17,23 @@ abstract final class TaxiSetupStrings {
   static const next = 'Next';
   static const save = 'Save';
 
+  static const wizardSteps = [
+    'Step 1 of 5 · Vehicle',
+    'Step 2 of 5 · Licence',
+    'Step 3 of 5 · Contact and base',
+    'Step 4 of 5 · Route',
+    'Step 5 of 5 · Local sightseeing',
+  ];
+  static const wizardLabels = [...progressLabels, 'Route', 'Rate'];
+  static const routeTitleOne = 'Route and fare';
+  static const rateTitle = 'Local sightseeing';
+  static const addOneRoute = 'Add 1 route.';
+  static const oneRouteOnly = 'You can add 1 route.';
+  static const completeVehicle = 'Complete your vehicle and contact first.';
+  static const addLicenceFirst = 'Add your licence and date of birth.';
+  static const submit = 'Submit';
+  static const notApproved = 'Not approved';
+
   static const routesTitle = 'Routes and fares';
   static const routesStep = 'Step 2 of 3';
   static const routes = 'Routes';
@@ -33,26 +50,8 @@ abstract final class TaxiSetupStrings {
   static const seePlus = 'See Plus';
   static const plus = 'Plus';
 
-  static const submitTitle = 'Final Submit';
-  static const submitStep = 'Step 3 of 3';
-  static const checkYourTaxi = 'Check your taxi';
-  static const afterApproval = 'Travellers see this after approval.';
-  static const vehicle = 'Vehicle';
-  static const seats = 'Seats';
-  static const plate = 'Plate';
   static const phone = 'Phone';
   static const base = 'Base';
-  static String phoneDisplay(String raw) {
-    final d = raw.replaceAll(RegExp(r'\D'), '');
-    final ten = d.length == 12 && d.startsWith('91') ? d.substring(2) : d;
-    return ten.length == 10 ? '+91 ${ten.substring(0, 5)} ${ten.substring(5)}' : raw;
-  }
-  static const localDayRate = 'Local day rate';
-  static String dayRate(int rate, int? km) => km == null ? Money.exact(rate) : '${Money.exact(rate)} · $km km';
-  static const submitForReview = 'Submit for review';
   static const submitting = 'Submitting...';
   static const submittedToast = 'Submitted for review';
-  static const addLicence = 'Add licence and date of birth';
-  static const edit = 'Edit';
-  static const missing = '–';
 }

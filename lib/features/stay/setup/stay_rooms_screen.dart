@@ -1,29 +1,17 @@
 import 'stay_page_header.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import '../../../controllers/plan_controller.dart';
-import '../../../models/browse_item.dart';
 import '../../../utils/app_toast.dart';
 import '../../../design/design.dart';
-import '../../../design/extra/ext_stay_owner.dart';
 import '../../owner_core/plan/plan_bindings.dart';
 import '../../owner_core/plan/plan_gate.dart';
 import '../../owner_core/plan/plan_keys.dart';
 import '../../stay_owner/strings/stay_gate_strings.dart';
 import '../../stay_owner/strings/stay_setup_strings.dart';
 import '../../stay_owner/widgets/stay_widgets.dart';
-import 'stay_option_sets.dart';
+import 'stay_rooms_form.dart';
 import 'stay_setup_controller.dart';
-
-class _RoomDraft {
-  final String? id;
-  final String name;
-  final int price;
-  final int guests;
-  final String meals;
-  const _RoomDraft({this.id, required this.name, required this.price, required this.guests, required this.meals});
-}
 
 class StayRoomsScreen extends StatefulWidget {
   const StayRoomsScreen({super.key});
@@ -34,176 +22,32 @@ class StayRoomsScreen extends StatefulWidget {
 class _StayRoomsScreenState extends State<StayRoomsScreen> {
   final _ctrl = StaySetupController.ensure();
   static final _tone = ListingTone.forest;
-  int _formSeq = 0;
-  final _priceCtrl = TextEditingController();
-  final _priceFocusNode = FocusNode();
-  final List<_RoomDraft> _rooms = [];
-  bool _formOpen = false;
-  int? _editingIndex;
-  String? _editingId;
-  String? _roomName;
-  int? _guests;
-  String? _meals;
-  bool _dirty = false;
-
-  int get _max {
-    final m = _ctrl.stay.value?.meter('RoomTypes')?.limit;
-    if (m != null && m > 0) return m;
-    if (!PlanGate.loaded) return PlanKeys.plusSeed[PlanKey.roomTypes] ?? PlanGate.limit(PlanKey.roomTypes);
-    return PlanGate.limit(PlanKey.roomTypes);
-  }
+  late final StayRoomsFormController _form;
+  Worker? _planWorker;
 
   @override
   void initState() {
     super.initState();
     // Reached from /stay-setup before MainScreen: the plan must exist before its limits are read.
     PlanBindings.ensure();
-    for (final r in _ctrl.stay.value?.rooms ?? const []) {
-      _rooms.add(_RoomDraft(id: r.id, name: r.roomName, price: r.pricePerNight, guests: r.maxGuests, meals: r.meals));
-    }
-    _formOpen = _rooms.length < _max;
+    _form = StayRoomsFormController(onboarding: false, ctrl: _ctrl)..seed(_ctrl.stay.value);
     if (!PlanGate.loaded && Get.isRegistered<PlanController>()) {
-      _planWorker = once<bool>(Get.find<PlanController>().loaded, (_) => _afterPlan());
+      _planWorker = once<bool>(Get.find<PlanController>().loaded, (_) {
+        if (mounted) _form.closeBlankIfFull();
+      });
     }
-  }
-
-  Worker? _planWorker;
-
-  // The blank extra form was opened on the pre-plan limit; close it once the real limit says full.
-  void _afterPlan() {
-    if (!mounted || !_formOpen || _editingIndex != null || !_formBlank || _rooms.length < _max) return;
-    setState(() => _formOpen = false);
   }
 
   @override
   void dispose() {
     _planWorker?.dispose();
-    _priceCtrl.dispose();
-    _priceFocusNode.dispose();
+    _form.dispose();
     super.dispose();
   }
 
-  int get _count => _rooms.length + (_formOpen ? 1 : 0);
-
-  bool get _formBlank => _roomName == null && _priceCtrl.text.trim().isEmpty && _guests == null && _meals == null;
-
-  void _clearForm() {
-    _roomName = null;
-    _priceCtrl.clear();
-    _guests = null;
-    _meals = null;
-    _editingIndex = null;
-    _editingId = null;
-  }
-
-  bool _commitForm() {
-    if (!_formOpen) return true;
-    if (_formBlank && _editingIndex == null) {
-      setState(() {
-        _formOpen = false;
-        _clearForm();
-      });
-      return true;
-    }
-    if (_roomName == null) {
-      AppToast.error('Please select a room type');
-      return false;
-    }
-    final priceText = _priceCtrl.text.trim();
-    if (priceText.isEmpty) {
-      AppToast.error('Please enter the price per night');
-      _priceFocusNode.requestFocus();
-      return false;
-    }
-    final price = int.tryParse(priceText) ?? 0;
-    if (price < StayOptionSets.minPrice || price > StayOptionSets.maxPrice) {
-      AppToast.error('Price per night must be between ₹100 and ₹99,00,000');
-      _priceFocusNode.requestFocus();
-      return false;
-    }
-    if (_guests == null) {
-      AppToast.error('Please select max guests');
-      return false;
-    }
-    if (_meals == null) {
-      AppToast.error('Please select meals');
-      return false;
-    }
-    final draft = _RoomDraft(id: _editingId, name: _roomName!, price: price, guests: _guests!, meals: _meals!);
-    setState(() {
-      final at = _editingIndex;
-      if (at != null && at <= _rooms.length) {
-        _rooms.insert(at, draft);
-      } else {
-        _rooms.add(draft);
-      }
-      _formOpen = false;
-      _clearForm();
-    });
-    return true;
-  }
-
-  void _addAnother() {
-    if (_count >= _max) return;
-    if (_formOpen) {
-      if (_formBlank) {
-        AppToast.info('Fill this room first');
-        return;
-      }
-      if (!_commitForm()) return;
-    }
-    setState(() {
-      _formOpen = true;
-      _formSeq++;
-    });
-  }
-
-  void _editRoom(int i) {
-    final r = _rooms[i];
-    if (_formOpen && !_commitForm()) return;
-    final at = _rooms.indexOf(r);
-    if (at < 0) return;
-    setState(() {
-      _rooms.removeAt(at);
-      _editingIndex = at;
-      _editingId = r.id;
-      _roomName = r.name.isEmpty ? null : r.name;
-      _priceCtrl.text = '${r.price}';
-      _guests = r.guests;
-      _meals = r.meals;
-      _formOpen = true;
-      _formSeq++;
-      _dirty = true;
-    });
-  }
-
-  void _removeRoom(int i) {
-    setState(() {
-      _rooms.removeAt(i);
-      final at = _editingIndex;
-      if (at != null && at > i) _editingIndex = at - 1;
-      if (!_formOpen && _rooms.isEmpty) {
-        _formOpen = true;
-        _formSeq++;
-      }
-      _dirty = true;
-    });
-  }
-
   Future<void> _save() async {
-    if (!_commitForm()) return;
-    if (_rooms.isEmpty) {
-      AppToast.error('Add at least one room');
-      setState(() {
-        _formOpen = true;
-        _formSeq++;
-      });
-      return;
-    }
-    final ok = await _ctrl.saveRooms([
-      for (final r in _rooms)
-        {'id': r.id, 'roomName': r.name, 'pricePerNight': r.price, 'maxGuests': r.guests, 'meals': r.meals},
-    ]);
+    if (!_form.validate()) return;
+    final ok = await _ctrl.saveRooms(_form.payload());
     if (!mounted) return;
     if (!ok) {
       if (_ctrl.lastErrorType == 'PlanRoomTypeLimit') await _ctrl.showLimitRefusal(context, StayGateStrings.roomGate);
@@ -234,7 +78,7 @@ class _StayRoomsScreenState extends State<StayRoomsScreen> {
 
   void _onBack() {
     if (_ctrl.isSaving.value) return;
-    if (_dirty || !_formBlank) {
+    if (_form.dirty || !_form.formBlank) {
       _confirmDiscard();
     } else {
       Get.back();
@@ -258,11 +102,7 @@ class _StayRoomsScreenState extends State<StayRoomsScreen> {
                 Expanded(
                   child: ListView(
                     padding: EdgeInsets.only(bottom: DS.s(24)),
-                    children: [
-                      for (var i = 0; i < _rooms.length; i++) KeyedSubtree(key: ObjectKey(_rooms[i]), child: _summaryCard(i)),
-                      if (_formOpen) KeyedSubtree(key: ValueKey('form-$_formSeq'), child: _form()),
-                      _addRow(),
-                    ],
+                    children: [StayRoomsForm(controller: _form, tone: _tone, after: _addRow)],
                   ),
                 ),
               ],
@@ -275,76 +115,6 @@ class _StayRoomsScreenState extends State<StayRoomsScreen> {
     );
   }
 
-  Widget _summaryCard(int i) {
-    final r = _rooms[i];
-    final at = _editingIndex;
-    final number = at != null && i >= at ? i + 2 : i + 1;
-    final name = r.name.isNotEmpty ? r.name : 'Room $number';
-    return RoomCard3D(
-      tone: _tone,
-      eyebrow: 'Room $number',
-      title: name,
-      line1: '${BrowseItem.inr(r.price)} / night',
-      line2: '${StayOptionSets.guestsLabel(r.guests)} guests · ${StayOptionSets.labelOf(StayOptionSets.meals, r.meals)}',
-      onEdit: () => _editRoom(i),
-      onRemove: () => _removeRoom(i),
-    );
-  }
-
-  Widget _form() {
-    final number = (_editingIndex ?? _rooms.length) + 1;
-    final value = _roomName == null ? null : StayOptionSets.labelOf(StayOptionSets.roomNames, _roomName);
-    return FormSectionCard(
-      tone: _tone,
-      art: ListingArt.bed,
-      title: 'Room $number',
-      tag: 'Required',
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          PillPickerField(tone: _tone, label: 'Room Type', value: value, hint: 'Select', leadingArt: ListingArt.bed, onTap: _pickRoomType),
-          PillField(
-            tone: _tone,
-            label: 'Price per Night (₹)',
-            firstLabel: false,
-            controller: _priceCtrl,
-            focusNode: _priceFocusNode,
-            keyboardType: TextInputType.number,
-            inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(7)],
-            onChanged: (_) => _dirty = true,
-            prefixText: '₹',
-            hint: 'e.g. 1500',
-          ),
-          const FieldLabel('Max Guests'),
-          OptionTileGrid(
-            tone: _tone,
-            columns: 4,
-            items: [
-              for (final g in StayOptionSets.maxGuests) OptionTileItem(label: 'guests', art: ListingArt.panda, big: StayOptionSets.guestsLabel(g)),
-            ],
-            isSelected: (i) => _guests == StayOptionSets.maxGuests[i],
-            onTap: (i) => setState(() {
-              _guests = StayOptionSets.maxGuests[i];
-              _dirty = true;
-            }),
-          ),
-          const FieldLabel('Meals'),
-          OptionTileGrid(
-            tone: _tone,
-            items: [
-              for (final o in StayOptionSets.meals) OptionTileItem(label: o.label, art: StayOwnerArt.meals[o.value] ?? ListingArt.star),
-            ],
-            isSelected: (i) => _meals == StayOptionSets.meals[i].value,
-            onTap: (i) => setState(() {
-              _meals = StayOptionSets.meals[i].value;
-              _dirty = true;
-            }),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _addRow() => Obx(() {
         _ctrl.stay.value;
         if (Get.isRegistered<PlanController>()) Get.find<PlanController>().myPlan.value;
@@ -352,59 +122,25 @@ class _StayRoomsScreenState extends State<StayRoomsScreen> {
       });
 
   Widget _addRowNow() {
-    final full = _count >= _max;
+    final count = _form.count;
+    final max = _form.max;
+    final full = count >= max;
     if (full && PlanGate.loaded && PlanGate.canUpgrade) {
-      final plus = PlanKeys.plusSeed[PlanKey.roomTypes] ?? _max;
+      final plus = PlanKeys.plusSeed[PlanKey.roomTypes] ?? max;
       return Column(
         children: [
           StayLockedAddRow(label: StayGateStrings.addRoomType, onTap: () => PlanGate.showLimit(context, StayGateStrings.roomGate())),
-          StayPlusBanner(text: StayGateStrings.roomBanner(_max, plus), onTap: () => PlanGate.showLimit(context, StayGateStrings.roomGate())),
+          StayPlusBanner(text: StayGateStrings.roomBanner(max, plus), onTap: () => PlanGate.showLimit(context, StayGateStrings.roomGate())),
         ],
       );
     }
     return DashedAddRow3D(
       tone: _tone,
       label: 'Add another room',
-      trailing: full ? '$_count of $_max · limit reached' : '$_count of $_max',
+      trailing: full ? '$count of $max · limit reached' : '$count of $max',
       enabled: !full,
-      onTap: _addAnother,
+      onTap: _form.addAnother,
     );
-  }
-
-  Future<void> _pickRoomType() async {
-    FocusScope.of(context).unfocus();
-    final options = [
-      for (final o in StayOptionSets.roomNames)
-        if (o.value == _roomName || (!_rooms.any((r) => r.name == o.value) && !(_ctrl.stay.value?.hiddenRooms.any((h) => h.roomName == o.value) ?? false))) o,
-    ];
-    final picked = await Sheet3D.show<String>(
-      context,
-      builder: (sheetCtx) => Sheet3D(
-        tone: _tone,
-        art: ListingArt.bed,
-        title: 'Room Type',
-        padding: EdgeInsets.zero,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            for (var i = 0; i < options.length; i++)
-              SheetListRow(
-                tone: _tone,
-                compact: true,
-                title: options[i].label,
-                selected: options[i].value == _roomName,
-                divider: i > 0,
-                onTap: () => Navigator.pop(sheetCtx, options[i].value),
-              ),
-          ],
-        ),
-      ),
-    );
-    if (picked == null || !mounted || picked == _roomName) return;
-    setState(() {
-      _roomName = picked;
-      _dirty = true;
-    });
   }
 
   Widget _footer() => Obx(

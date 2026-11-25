@@ -99,6 +99,7 @@ mixin AddListingLocationMixin<T extends StatefulWidget> on State<T> {
   bool get showAddressResolveOverlay => _showAddressResolveOverlay;
   String get trimmedAddress => _addressCtrl.text.trim();
   bool get hasAddressText => _addressCtrl.text.trim().isNotEmpty;
+  int? get addressMaxLength => null;
   bool get hasLocationOrAddressChanges =>
       _selectedLocation != null || _addressCtrl.text.isNotEmpty;
 
@@ -568,6 +569,7 @@ mixin AddListingLocationMixin<T extends StatefulWidget> on State<T> {
           tone: _tone,
           controller: _addressCtrl,
           focusNode: _addressFocusNode,
+          maxLength: addressMaxLength,
           inputFormatters: noEmojiInputFormatters,
           hint: 'Street, landmark, nearby place...',
           leadingArt: _coral ? ListingArt.taxi : ListingArt.stay,

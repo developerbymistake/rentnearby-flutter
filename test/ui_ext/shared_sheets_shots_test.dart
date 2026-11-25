@@ -517,7 +517,7 @@ void main() {
   for (final p in [40, 0]) {
     _shots(p == 40 ? 'dl_rolefix' : 'dl_rolefix0', _one, (t, z) async {
       _base();
-      await _open(t, z, ListingTone.forest, (c) => RoleCorrectionDialog.confirm(c, kind: 'Stay', percent: p));
+      await _open(t, z, ListingTone.forest, (c) => RoleCorrectionDialog.confirm(c, kind: 'Stay', hasDraft: p > 0));
     });
   }
   for (final v in ['1.0.1', '']) {

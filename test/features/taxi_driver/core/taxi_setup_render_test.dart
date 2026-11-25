@@ -1,7 +1,5 @@
 import 'package:bakhli/features/taxi/setup/taxi_routes_screen.dart';
-import 'package:bakhli/features/taxi/setup/taxi_setup_hub_screen.dart';
 import 'package:bakhli/features/taxi/models/taxi_vehicle_type_model.dart';
-import 'package:bakhli/features/taxi/setup/taxi_submit_screen.dart';
 import 'package:bakhli/features/taxi/setup/taxi_vehicle_screen.dart';
 import 'package:bakhli/features/taxi/taxi_vehicle_types_controller.dart';
 import 'package:get/get.dart';
@@ -39,14 +37,6 @@ void main() {
   setUpAll(() => initTestStorage('taxi_setup_render'));
   useOwnerRenderScale();
   tearDown(tearDownTaxiSetup);
-
-  testWidgets('render o_tx_1', (t) async {
-    setUpTaxiSetup(setupTaxi(), canCorrect: true);
-    await renderOwnerFrame(t, 'o_tx_1', const TaxiSetupHubScreen(), arrange: _settle);
-    for (final s in ['Set up your taxi', 'Finish 3 steps to open your dashboard', 'Profile 0% complete', 'Vehicle and contact', 'Routes and fares', 'Final submit', 'Wrong role? Change it']) {
-      expect(find.text(s), findsWidgets, reason: s);
-    }
-  });
 
   testWidgets('render o_tx_4', (t) async {
     setUpTaxiSetup(_saved);
@@ -107,26 +97,6 @@ void main() {
     }
   });
 
-  testWidgets('render o_tx_5', (t) async {
-    setUpTaxiSetup(_saved);
-    await renderOwnerFrame(t, 'o_tx_5', const TaxiSubmitScreen(), arrange: _settle);
-    for (final s in ['Final Submit', 'Step 3 of 3', 'Check your taxi', 'Travellers see this after approval.', 'Vehicle and contact', 'Vehicle', 'Maruti Ertiga', 'Seats', '6', 'Plate', 'UK 04 TA 2231', 'Phone', '+91 98765 11223', 'Base', 'Haldwani', 'Routes and fares', 'Routes', '1', 'Local day rate', '₹2,500 · 120 km', 'Submit for review']) {
-      expect(find.text(s), findsWidgets, reason: s);
-    }
-    expect(find.text('Dashboard opens after submit'), findsNothing);
-  });
-
-  testWidgets('o_tx_5 refusals before submit', (t) async {
-    setUpTaxiSetup(setupTaxi(percent: 40, step1: true, identity: false, routes: [_route1], rate: 2500, km: 120));
-    await pumpPhone(t, const TaxiSubmitScreen(), size: const Size(360, 800));
-    await _settle(t);
-    expect(find.text('Add licence and date of birth'), findsOneWidget);
-    await t.tap(find.text('Submit for review'));
-    await _settle(t);
-    expect(find.text('Add your licence and date of birth.'), findsOneWidget);
-    await t.pump(const Duration(seconds: 8));
-  });
-
   testWidgets('render o_tx_35 A vehicle step', (t) async {
     setUpTaxiSetup(_step1);
     Get.put<TaxiVehicleTypesController>(_Types());
@@ -138,16 +108,9 @@ void main() {
     await t.pump(const Duration(seconds: 11));
   });
 
-  testWidgets('render o_tx_1 step 1 done', (t) async {
-    setUpTaxiSetup(_step1);
-    await renderOwnerFrame(t, 'o_tx_1', const TaxiSetupHubScreen(), part: 'X', arrange: _settle);
-  });
-
   for (final rows in [0, 1, 5]) {
     testOwnerSizes('routes screen with $rows routes', () => const TaxiRoutesScreen(), setUpEach: () {
       setUpTaxiSetup(setupTaxi(percent: 60, step1: true, identity: true, routes: [for (var i = 0; i < rows; i++) setupRoute('r$i', 'Haldwani', 'City $i', 1800 + i * 100)]));
     }, arrange: _settle);
   }
-
-  testOwnerSizes('submit screen', () => const TaxiSubmitScreen(), setUpEach: () => setUpTaxiSetup(_saved), arrange: _settle);
 }

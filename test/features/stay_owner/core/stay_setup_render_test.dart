@@ -5,8 +5,6 @@ import 'package:bakhli/features/stay/setup/stay_basic_details_screen.dart';
 import 'package:bakhli/features/stay/setup/stay_rooms_screen.dart';
 import 'package:bakhli/features/stay_owner/strings/stay_setup_strings.dart';
 import 'package:bakhli/widgets/onboarding_closed_dialog.dart';
-import 'package:bakhli/features/stay/setup/stay_setup_hub_screen.dart';
-import 'package:bakhli/features/stay/setup/stay_submit_screen.dart';
 import 'package:bakhli/features/stay_owner/live_edit/stay_live_edit_screen.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -30,32 +28,12 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
   }
 
-  testWidgets('render o_st_1', (tester) async {
-    setupFor(null);
-    await renderOwnerFrame(tester, 'o_st_1', const StaySetupHubScreen(), arrange: settle);
-  });
-
-  testWidgets('render o_st_65 A', (tester) async {
-    setupFor(stayModel(draftJson(step1: true)));
-    await renderOwnerFrame(tester, 'o_st_65', const StaySetupHubScreen(), part: 'A', arrange: settle);
-  });
-
-  testWidgets('render o_st_65 B', (tester) async {
-    setupFor(stayModel({...draftJson(step1: true, rooms: true, rules: true, status: 'Rejected', photos: 0, reg: false), 'rejectedReason': 'photos are not clear. Add day-time photos of the rooms.'}), stayStatus: 'Rejected');
-    await renderOwnerFrame(tester, 'o_st_65', const StaySetupHubScreen(fromMyStays: true), part: 'B', arrange: settle);
-  });
-
   testWidgets('render o_st_4', (tester) async {
     setupFor(stayModel(draftJson(step1: true, rooms: true)));
     await renderOwnerFrame(tester, 'o_st_4', const StayRoomsScreen(), arrange: settle);
     for (final s in ['Rooms', 'Step 2 of 4', '2 room types on Free. Plus lists up to 6.', 'See Plus', 'Add room type']) {
       expect(find.text(s), findsWidgets, reason: s);
     }
-  });
-
-  testWidgets('render o_st_6', (tester) async {
-    setupFor(stayModel(draftJson(step1: true, rooms: true, rules: true)));
-    await renderOwnerFrame(tester, 'o_st_6', const StaySubmitScreen(), arrange: settle);
   });
 
   testWidgets('render o_st_16', (tester) async {

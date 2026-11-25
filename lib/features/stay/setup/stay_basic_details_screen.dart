@@ -8,6 +8,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:maplibre_gl/maplibre_gl.dart' show LatLng;
 import 'package:permission_handler/permission_handler.dart';
 import '../../../config/app_routes.dart';
+import '../../../config/app_tabs.dart';
 import '../../../controllers/auth_controller.dart';
 import '../../../controllers/plan_controller.dart';
 import '../../../models/city_model.dart';
@@ -25,16 +26,21 @@ import '../stay_registration_types_controller.dart';
 import '../stay_types_controller.dart';
 import '../../owner_core/data/owner_error_types.dart';
 import '../../owner_core/look/owner_look.dart';
+import '../../owner_core/onboarding/onboarding_exit.dart';
 import '../../owner_core/plan/gate_keys.dart';
 import '../../owner_core/plan/plan_bindings.dart';
 import '../../owner_core/plan/plan_gate.dart';
 import '../../owner_core/plan/plan_keys.dart';
 import '../../owner_core/plan/soft_lock.dart';
+import '../../stay_owner/stay_owner_deps.dart';
 import '../../stay_owner/widgets/stay_widgets.dart';
 import '../../stay_owner/strings/stay_gate_strings.dart';
 import '../../stay_owner/strings/stay_setup_strings.dart';
 import 'stay_option_sets.dart';
+import 'stay_option_tiles.dart';
 import 'stay_registration_validators.dart';
+import 'stay_rooms_form.dart';
+import 'stay_rules_form.dart';
 import 'stay_setup_controller.dart';
 
 class _PhotoEntry {
@@ -50,9 +56,10 @@ class _PhotoEntry {
 typedef _PhotoJob = ({File file, String? replaceId, String? oldUrl});
 
 class StayBasicDetailsScreen extends StatefulWidget {
-  const StayBasicDetailsScreen({super.key, this.photosOnly = false});
+  const StayBasicDetailsScreen({super.key, this.photosOnly = false, this.onboarding = false});
 
   final bool photosOnly;
+  final bool onboarding;
   @override
   State<StayBasicDetailsScreen> createState() => _StayBasicDetailsScreenState();
 }
@@ -86,6 +93,7 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
   final Set<String> _facilities = {};
   final List<_PhotoEntry> _photos = [];
   final List<String> _removedPhotoIds = [];
+  final Set<String> _sentPaths = {};
   bool _dirty = false;
   bool _isUploading = false;
   bool _askingRetry = false;
@@ -96,11 +104,26 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
   int _step = 0;
   bool _photosOnly = false;
   String? _photoError;
+  late final StayRoomsFormController _rooms = StayRoomsFormController(onboarding: true, ctrl: _ctrl);
+  final _rules = StayRulesFormController();
+  String? _savedBasicKey;
+  String? _savedRoomsKey;
+  String? _savedRulesKey;
+  bool _submitting = false;
+
+  @override
+  int? get addressMaxLength => 500;
+
+  bool get _onboarding => widget.onboarding;
+  int get _lastStep => _onboarding ? 5 : 3;
+  bool get _busy => _isUploading || _isFinalizing || _submitting || _ctrl.isSaving.value;
+
   static void _planTick() {
     if (Get.isRegistered<PlanController>()) Get.find<PlanController>().myPlan.value;
   }
 
   int get _maxPhotos {
+    if (_onboarding) return PlanKeys.freeSeed[PlanKey.photos]!;
     final m = _ctrl.stay.value?.meter('Photos')?.limit;
     if (m != null && m > 0) return m;
     if (!PlanGate.loaded) return PlanKeys.plusSeed[PlanKey.photos] ?? PlanGate.limit(PlanKey.photos);
@@ -118,13 +141,16 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
     pinHintNoun: 'stay',
   );
 
-  bool get _hasChanges => _dirty || (!_photosOnly && _step > 0);
+  bool get _hasChanges =>
+      _dirty ||
+      (!_photosOnly && _step > 0) ||
+      (_onboarding && (_rooms.changedSince(_savedRoomsKey) || _rules.changedSince(_savedRulesKey)));
 
   @override
   void initState() {
     super.initState();
     // Reached from /stay-setup before MainScreen: the plan must exist before its limits are read.
-    PlanBindings.ensure();
+    if (!widget.onboarding) PlanBindings.ensure();
     initLocationTracking(
       style: _locationStyle,
       onLocationStale: _handleLocationStale,
@@ -133,7 +159,7 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
     );
     _types.ensureLoaded();
     _regTypes.ensureLoaded();
-    final args = Get.arguments;
+    final args = _onboarding ? null : Get.arguments;
     if (widget.photosOnly || (args is Map && args['section'] == 'photos')) {
       _photosOnly = true;
       _step = 3;
@@ -154,6 +180,19 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
       final lat = s.latitude, lng = s.longitude;
       if (lat != null && lng != null) prefillLocation(LatLng(lat, lng), s.address);
     }
+    if (_onboarding) {
+      _rooms.seed(s);
+      _rules.seed(s);
+      if (s != null && s.roomsDone) _savedRoomsKey = _rooms.key;
+      if (s != null && s.rulesDone) _savedRulesKey = _rules.key;
+      if (s != null && s.isDraft && s.step1Done) {
+        _step = s.rooms.length >= _rooms.max ? 5 : 4;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) resolveAddressIfNeeded();
+        });
+      }
+      _prevStep = _step;
+    }
     _nameCtrl.addListener(_markDirty);
     _descCtrl.addListener(_markDirty);
     _regNumCtrl.addListener(_markDirty);
@@ -164,6 +203,8 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
   @override
   void dispose() {
     disposeLocationTracking();
+    _rooms.dispose();
+    _rules.dispose();
     _nameCtrl.dispose();
     _nameFocusNode.dispose();
     _descCtrl.dispose();
@@ -290,24 +331,22 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
   }
 
   void _onResolveOnboardingClosed() {
-    if (_step < 1) return;
+    if (_step < 1 || (_onboarding && _step > 3)) return;
     _showOnboardingClosed();
   }
 
   void _showOnboardingClosed({String? errorType, String? serverMessage}) {
     if (!mounted) return;
     final s = _ctrl.stay.value;
-    final canCorrect = (s == null || s.isDraft) && (Get.find<AuthController>().user.value?.canCorrectRole ?? false);
-    final percent = s?.setupPercent ?? 0;
+    final canCorrect = (s == null || s.isDraft) && OnboardingExit.canCorrectRole;
     OnboardingClosedDialog.show(context,
         body: StaySetupStrings.notOpenBodyFor(errorType, serverMessage),
-        onChangeRole: canCorrect
-            ? () => Get.toNamed(AppRoutes.roleSelect, arguments: {'correction': true, 'percent': percent})
-            : null);
+        onChangeRole: canCorrect ? () => OnboardingExit.openRoleCorrection(hasDraft: s != null) : null);
   }
 
   void _handleLocationStale() {
     if (!mounted || _step <= 1) return;
+    if (_onboarding && _step > 3) return;
     setState(() => _step = 1);
     AppToast.info('Your location may have changed — please recheck your pin.');
   }
@@ -518,12 +557,123 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
     if (_step < 3) {
       setState(() => _step++);
       if (_step == 2) resolveAddressIfNeeded();
-    } else {
+    } else if (_step == 3) {
       _save();
+    } else if (_step == 4) {
+      _roomsPrimary();
+    } else {
+      _submit();
+    }
+  }
+
+  Future<void> _afterLateLock() async {
+    if (_ctrl.lastErrorType != 'StayStepLocked') return;
+    await _ctrl.load();
+    if (!mounted) return;
+    final s = _ctrl.stay.value;
+    if (s == null || !s.step1Done) {
+      setState(() => _step = 3);
+    } else if (!s.roomsDone) {
+      setState(() => _step = 4);
+    }
+  }
+
+  void _roomsPrimary() {
+    switch (_rooms.action) {
+      case StayRoomsAction.add:
+        _rooms.openForm();
+      case StayRoomsAction.save:
+        FocusScope.of(context).unfocus();
+        _rooms.commitForm();
+      case StayRoomsAction.next:
+        _saveRoomsPage();
+    }
+  }
+
+  Future<void> _saveRoomsPage() async {
+    if (_busy || !_rooms.validate()) return;
+    if (_rooms.key != _savedRoomsKey) {
+      final ok = await _ctrl.saveRooms(_rooms.payload());
+      if (!mounted) return;
+      if (!ok) {
+        if (_ctrl.lastErrorType == 'PlanRoomTypeLimit') {
+          AppToast.info(StayRoomsFormController.onboardingLimit);
+        } else {
+          await _afterLateLock();
+        }
+        return;
+      }
+      _rooms.seed(_ctrl.stay.value);
+      _savedRoomsKey = _rooms.key;
+    }
+    setState(() => _step = 5);
+  }
+
+  Future<void> _submit() async {
+    if (_busy) return;
+    final err = _rules.validate();
+    if (err != null) {
+      AppToast.error(err);
+      return;
+    }
+    final s = _ctrl.stay.value;
+    if (s != null && !s.registrationDone) {
+      AppToast.warning('Add your registration details.');
+      setState(() {
+        _showRegRequired = true;
+        _step = 0;
+      });
+      return;
+    }
+    setState(() => _submitting = true);
+    try {
+      if (_rules.key != _savedRulesKey) {
+        final ok = await _ctrl.saveRules(_rules.payload());
+        if (!mounted) return;
+        if (!ok) {
+          await _afterLateLock();
+          return;
+        }
+        _savedRulesKey = _rules.key;
+      }
+      final ok = await _ctrl.submit();
+      if (!mounted) return;
+      final auth = Get.find<AuthController>();
+      if (!ok) {
+        final type = _ctrl.lastErrorType;
+        if (type == 'OnboardingClosed' || type == 'StayOutsideDistrict') {
+          _showOnboardingClosed(errorType: type, serverMessage: _ctrl.lastErrorMessage);
+          return;
+        } else if (type == 'StayRegistrationRequired') {
+          _showServerRegistrationError();
+          return;
+        } else if (type == 'StayLocked') {
+          // A retry after a lost Submit response: the stay is already under review.
+          final loaded = await _ctrl.load();
+          if (!mounted || !loaded || !(_ctrl.stay.value?.isPendingReview ?? false)) return;
+          await auth.refreshProfile();
+          if (!mounted) return;
+        } else {
+          await _afterLateLock();
+          return;
+        }
+      }
+      AppToast.success(StaySetupStrings.submittedToast);
+      if (_ctrl.mainBelow) {
+        StayOwnerDeps.refreshHome().ignore();
+        Get.until((r) => r.settings.name == AppRoutes.main);
+        auth.switchToTab(AppTabs.home);
+        return;
+      }
+      Get.offAllNamed(AppRoutes.main);
+      WidgetsBinding.instance.addPostFrameCallback((_) => auth.switchToTab(AppTabs.home));
+    } finally {
+      if (mounted) setState(() => _submitting = false);
     }
   }
 
   Future<void> _save() async {
+    if (_busy) return;
     if (_photosOnly && _ctrl.stay.value != null) {
       await _finishPhotos();
       return;
@@ -546,7 +696,7 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
     }
     final regNumber = _regNumCtrl.text.trim();
     final gstin = _gstinCtrl.text.trim();
-    final ok = await _ctrl.saveBasic({
+    final body = <String, dynamic>{
       'name': _nameCtrl.text.trim(),
       'stayTypeId': _stayTypeId,
       'registrationTypeId': regType.id,
@@ -566,12 +716,28 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
       'address': trimmedAddress,
       'districtId': districtId,
       'cityId': resolvedCityId,
-    });
+    };
+    final bodyKey = body.toString();
+    if (_onboarding &&
+        bodyKey == _savedBasicKey &&
+        _removedPhotoIds.isEmpty &&
+        _photos.every((p) => p.local == null) &&
+        (_ctrl.stay.value?.step1Done ?? false)) {
+      _dirty = false;
+      setState(() => _step = 4);
+      return;
+    }
+    final ok = await _ctrl.saveBasic(body);
     if (!mounted) return;
+    if (ok) _savedBasicKey = bodyKey;
     if (!ok) {
       if (_ctrl.lastErrorType == 'OnboardingClosed' || _ctrl.lastErrorType == 'StayOutsideDistrict') {
         setState(() => _step = 1);
         _showOnboardingClosed(errorType: _ctrl.lastErrorType, serverMessage: _ctrl.lastErrorMessage);
+        return;
+      }
+      if (_ctrl.lastErrorType == OwnerErrorTypes.phoneNotAllowed) {
+        setState(() => _step = 0);
         return;
       }
       _showServerRegistrationError();
@@ -582,20 +748,27 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
 
   Future<void> _finishPhotos() async {
     setState(() => _isFinalizing = true);
+    final failedIds = <String>[];
     for (final id in _removedPhotoIds) {
-      await _ctrl.deletePhoto(id);
+      if (!await _ctrl.deletePhoto(id) && _ctrl.lastNetwork) failedIds.add(id);
     }
-    _removedPhotoIds.clear();
+    _removedPhotoIds
+      ..clear()
+      ..addAll(failedIds);
     if (mounted) setState(() => _isFinalizing = false);
+    if (failedIds.isNotEmpty || !mounted) return;
 
     final jobs = <_PhotoJob>[
       for (final p in _photos)
-        if (p.local != null) (file: p.local!, replaceId: p.remote?.id, oldUrl: p.remote?.url),
+        if (p.local != null && !_sentPaths.contains(p.local!.path))
+          (file: p.local!, replaceId: p.remote?.id, oldUrl: p.remote?.url),
     ];
     final failed = jobs.isNotEmpty && mounted ? await _uploadAll(jobs) : const <_PhotoJob>[];
     for (final j in jobs) {
+      if (failed.contains(j)) continue;
+      _sentPaths.add(j.file.path);
       final old = j.oldUrl;
-      if (j.replaceId != null && old != null && !failed.contains(j)) {
+      if (j.replaceId != null && old != null) {
         CachedNetworkImage.evictFromCache(old).catchError((_) => false);
       }
     }
@@ -609,10 +782,11 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
           ? serverPhotos.map(_PhotoEntry.remote).toList()
           : [for (final p in _photos) if (p.remote != null) _PhotoEntry.remote(p.remote!)];
       final added = <_PhotoEntry>[];
+      final full = serverPhotos != null && serverPhotos.length >= _maxPhotos;
       for (final j in failed) {
         final id = j.replaceId;
         if (id == null) {
-          added.add(_PhotoEntry.local(j.file));
+          if (!full) added.add(_PhotoEntry.local(j.file));
           continue;
         }
         final at = kept.indexWhere((e) => e.remote?.id == id);
@@ -624,8 +798,25 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
           ..clear()
           ..addAll(kept)
           ..addAll(added);
+        if (serverPhotos != null) _sentPaths.clear();
       });
       if (failed.isEmpty) AppToast.error('Please add at least 1 photo of your stay');
+      return;
+    }
+    if (_onboarding) {
+      if (serverPhotos == null) {
+        setState(() => _isFinalizing = false);
+        return;
+      }
+      setState(() {
+        _isFinalizing = false;
+        _photos
+          ..clear()
+          ..addAll(serverPhotos.map(_PhotoEntry.remote));
+        _sentPaths.clear();
+        _dirty = false;
+        _step = 4;
+      });
       return;
     }
     setState(() => _isFinalizing = false);
@@ -687,7 +878,9 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
 
     if (mounted) setState(() => _isUploading = false);
     if (failed.isNotEmpty && mounted) {
-      if (_ctrl.lastErrorType == OwnerErrorTypes.planPhotoLimit) {
+      if (_ctrl.lastErrorType == OwnerErrorTypes.planPhotoLimit && _onboarding) {
+        AppToast.info('You can add up to $_maxPhotos photos.');
+      } else if (_ctrl.lastErrorType == OwnerErrorTypes.planPhotoLimit) {
         await _ctrl.showLimitRefusal(context, StayGateStrings.photoGate);
       } else {
         AppToast.error(_ctrl.lastNetwork ? StaySetupStrings.noConnection : StaySetupStrings.photoUploadFailed);
@@ -696,13 +889,75 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
     return [for (final i in failed) files[i]];
   }
 
+  void _goBackPage() {
+    if (_step == 1) setLocationStepActive(false);
+    setState(() => _step--);
+  }
+
   void _handleBack() {
+    if (_onboarding) {
+      if (_busy) return;
+      if (_step > 0) {
+        _goBackPage();
+        return;
+      }
+      if (!_ctrl.mainBelow) {
+        final s = _ctrl.stay.value;
+        OnboardingExit.onBackFromFirstPage(isDraft: s == null || s.isDraft, hasDraft: s != null);
+        return;
+      }
+    }
     if (_hasChanges) {
       _confirmDiscard();
     } else {
       Get.back();
     }
   }
+
+  bool get _gatedFirstPage => _onboarding && _step == 0 && !_ctrl.mainBelow;
+
+  void _openMenu() {
+    final s = _ctrl.stay.value;
+    OnboardingExit.openMenu(context, isDraft: s == null || s.isDraft, hasDraft: s != null);
+  }
+
+  String get _title => !_onboarding || _step < 4 ? 'Basic Details' : (_step == 4 ? 'Rooms' : 'Rules');
+
+  String get _asset => !_onboarding || _step < 4 ? SetupAssets.hotel : (_step == 4 ? SetupAssets.bed : SetupAssets.clipboard);
+
+  String get _primaryLabel => switch (_step) {
+        0 => 'Next: Location',
+        1 => 'Next: Address',
+        2 => 'Next: Photos',
+        3 => _onboarding ? 'Next: Rooms' : 'Save',
+        4 => switch (_rooms.action) {
+            StayRoomsAction.add => StayRoomsFormController.addLabel,
+            StayRoomsAction.save => StayRoomsFormController.saveLabel,
+            StayRoomsAction.next => 'Next: Rules',
+          },
+        _ => StaySetupStrings.submit,
+      };
+
+  Widget _pageScroll(int step, Widget child) => SingleChildScrollView(
+        key: ValueKey(step),
+        padding: EdgeInsets.only(bottom: DS.s(24)),
+        child: child,
+      );
+
+  Widget _page() => switch (_step) {
+        0 => _detailsStep(),
+        1 => _pageScroll(1, locationStepWidget()),
+        2 => addressStepWidget(),
+        3 => Obx(key: const ValueKey(3), () => _photosStep()),
+        4 => _pageScroll(4, StayRoomsForm(controller: _rooms, tone: _tone)),
+        _ => _pageScroll(5, StayRulesForm(controller: _rules, tone: _tone)),
+      };
+
+  StayBusy _savingBusy() => switch (_step) {
+        4 => const StayBusy(message: 'Saving rooms...', art: SetupAssets.bed),
+        5 => const StayBusy(message: 'Submitting...', art: SetupAssets.key),
+        _ => const StayBusy(message: 'Saving your stay...'),
+      };
 
   @override
   Widget build(BuildContext context) {
@@ -713,7 +968,7 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
-        if (didPop || _isUploading || _isFinalizing || _ctrl.isSaving.value) return;
+        if (didPop || _busy) return;
         _handleBack();
       },
       child: Stack(children: [
@@ -721,12 +976,19 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
           backgroundColor: ListingPalette.forest.page,
           body: Column(children: [
             StayPageHeader(
-              title: 'Basic Details',
-              subtitle: 'Step 1 of 4',
+              title: _title,
+              subtitle: _onboarding ? 'Step ${_step + 1} of 6' : 'Step 1 of 4',
               onBack: _isUploading ? null : _handleBack,
-              asset: SetupAssets.hotel,
+              asset: _asset,
+              leadingIcon: _gatedFirstPage ? Icons.more_vert_rounded : null,
+              onLeading: _gatedFirstPage ? _openMenu : null,
+              leadingSemantics: _gatedFirstPage ? StaySetupStrings.menuLabel : null,
             ),
-            StepProgressHeader(tone: _tone, labels: const ['Details', 'Location', 'Address', 'Photos'], current: _step),
+            StepProgressHeader(
+              tone: _tone,
+              labels: _onboarding ? const ['Details', 'Location', 'Address', 'Photos', 'Rooms', 'Rules'] : const ['Details', 'Location', 'Address', 'Photos'],
+              current: _step,
+            ),
             Expanded(
               child: PageTransitionSwitcher(
                 duration: templateTransitionDuration,
@@ -739,41 +1001,30 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
                   transitionType: SharedAxisTransitionType.horizontal,
                   child: child,
                 ),
-                child: _step == 0
-                    ? _detailsStep()
-                    : _step == 1
-                        ? SingleChildScrollView(key: const ValueKey(1), padding: EdgeInsets.only(bottom: DS.s(24)), child: locationStepWidget())
-                        : _step == 2
-                            ? addressStepWidget()
-                            : Obx(key: const ValueKey(3), () => _photosStep()),
+                child: _page(),
               ),
             ),
           ]),
-          bottomNavigationBar: Obx(() {
-            final saving = _ctrl.isSaving.value;
-            final disabled = saving ||
-                _isFinalizing ||
-                (_step == 2 && (isResolvingDistrict || selectedDistrictId == null || !hasAddressText));
-            return FormFooter(
-              tone: _tone,
-              primaryLabel: _step == 0
-                  ? 'Next: Location'
-                  : _step == 1
-                      ? 'Next: Address'
-                      : _step == 2
-                          ? 'Next: Photos'
-                          : 'Save',
-              onPrimary: disabled ? null : _handleNext,
-              primaryLoading: saving || _isFinalizing || (_isUploading && !_askingRetry),
-              secondaryLabel: _step > 0 && !_photosOnly ? 'Back' : null,
-              onSecondary: _step > 0 && !_photosOnly
-                  ? () {
-                      if (_step == 1) setLocationStepActive(false);
-                      setState(() => _step--);
-                    }
-                  : null,
-            );
-          }),
+          bottomNavigationBar: ListenableBuilder(
+            listenable: _rooms,
+            builder: (context, _) => Obx(() {
+              final saving = _ctrl.isSaving.value;
+              final disabled = saving ||
+                  _isFinalizing ||
+                  _isUploading ||
+                  _submitting ||
+                  (_step == 2 && (isResolvingDistrict || selectedDistrictId == null || !hasAddressText));
+              return FormFooter(
+                tone: _tone,
+                primaryLabel: _primaryLabel,
+                onPrimary: disabled ? null : _handleNext,
+                primaryLoading: saving || _isFinalizing || _submitting || (_isUploading && !_askingRetry),
+                note: _onboarding && _step == _lastStep ? StaySetupStrings.dashboardOpens : null,
+                secondaryLabel: _step > 0 && !_photosOnly ? 'Back' : null,
+                onSecondary: _step > 0 && !_photosOnly && !_submitting ? _goBackPage : null,
+              );
+            }),
+          ),
         ),
         if (_isUploading && !_askingRetry)
           StayBusy(
@@ -782,7 +1033,7 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
             progress: overall,
             caption: percent >= 95 ? 'Almost done!' : '${_uploadDone.length} of $_uploadTotal uploaded',
           ),
-        Obx(() => _ctrl.isSaving.value ? const StayBusy(message: 'Saving your stay...') : const SizedBox.shrink()),
+        Obx(() => _ctrl.isSaving.value || _submitting ? _savingBusy() : const SizedBox.shrink()),
         if (_isFinalizing) const StayBusy(message: 'Please wait...'),
         if (_step == 2 && showAddressResolveOverlay) const StayBusy(message: 'Please wait...', art: ListingArt.compass),
       ]),
@@ -802,6 +1053,14 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
         key: const ValueKey(0),
         padding: EdgeInsets.only(bottom: DS.s(24)),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          if (_onboarding && (_ctrl.stay.value?.isRejected ?? false))
+            StayStrip(
+              art: ListingArt.warning,
+              text: StaySetupStrings.notApproved(_ctrl.stay.value?.rejectedReason),
+              fill: StayLook.redSoft,
+              ink: StayLook.redText,
+              margin: DS.insets(l: 18, t: 14, r: 18),
+            ),
           _card(
             art: ListingArt.stay,
             title: 'Stay Name',
@@ -826,7 +1085,7 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
               }
               return OptionTileGrid(
                 tone: _tone,
-                items: [for (var i = 0; i < types.length; i++) OptionTileItem(label: types[i].name, art: StayOwnerArt.stayType(types[i].name, i))],
+                items: StayOptionTiles.stayTypes([for (final t in types) t.name]),
                 isSelected: (i) => _stayTypeId == types[i].id,
                 onTap: (i) => setState(() {
                   _stayTypeId = types[i].id;
@@ -842,9 +1101,7 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
             title: 'Vehicle Access',
             child: OptionTileGrid(
               tone: _tone,
-              items: [
-                for (final o in StayOptionSets.vehicleAccess) OptionTileItem(label: o.label, art: StayOwnerArt.vehicle[o.value] ?? ListingArt.taxi),
-              ],
+              items: StayOptionTiles.vehicleAccess,
               isSelected: (i) => _vehicleAccess == StayOptionSets.vehicleAccess[i].value,
               onTap: (i) => setState(() {
                 _vehicleAccess = StayOptionSets.vehicleAccess[i].value;
@@ -858,7 +1115,7 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
             child: OptionTileGrid(
               tone: _tone,
               columns: 2,
-              items: const [OptionTileItem(label: 'Yes', art: ListingArt.key), OptionTileItem(label: 'No', art: ListingArt.luggage)],
+              items: StayOptionTiles.hostLivesHere,
               isSelected: (i) => _hostLivesHere == (i == 0),
               onTap: (i) => setState(() {
                 _hostLivesHere = i == 0;
@@ -1061,10 +1318,10 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
 
   Widget _photosStep() {
     _ctrl.stay.value;
-    _planTick();
+    if (!_onboarding) _planTick();
     final max = _maxPhotos;
     final left = max - _photos.length;
-    final locked = left <= 0 && PlanGate.loaded && PlanGate.canUpgrade;
+    final locked = !_onboarding && left <= 0 && PlanGate.loaded && PlanGate.canUpgrade;
     final plus = PlanKeys.plusSeed[PlanKey.photos] ?? max;
     final tiles = <Widget>[
       for (var i = 0; i < _photos.length; i++) _photoTile(i),

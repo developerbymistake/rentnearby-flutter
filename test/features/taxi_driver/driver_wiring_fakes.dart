@@ -2,20 +2,15 @@ import 'package:bakhli/controllers/auth_controller.dart';
 import 'package:bakhli/controllers/location_controller.dart';
 import 'package:bakhli/controllers/plan_controller.dart';
 import 'package:bakhli/controllers/tab_config_controller.dart';
-import 'package:bakhli/features/taxi/leads/trip_leads_controller.dart';
-import 'package:bakhli/features/taxi/models/taxi_owner_model.dart';
 import 'package:bakhli/features/taxi/requests/controllers/driver_bookings_controller.dart';
 import 'package:bakhli/features/taxi/requests/controllers/driver_rating_controller.dart';
 import 'package:bakhli/features/taxi/requests/controllers/driver_ready_controller.dart';
 import 'package:bakhli/features/taxi/requests/controllers/driver_requests_controller.dart';
 import 'package:bakhli/features/taxi/requests/data/driver_request_repository.dart';
 import 'package:bakhli/features/taxi/requests/models/driver_request_models.dart';
-import 'package:bakhli/features/taxi/setup/taxi_setup_controller.dart';
-import 'package:bakhli/features/taxi/taxi_option_sets.dart';
 import 'package:bakhli/features/trip/utils/taxi_result.dart';
 import 'package:bakhli/models/my_plan_model.dart';
 import 'package:bakhli/models/user_model.dart';
-import 'package:bakhli/services/notification_service.dart';
 import 'package:bakhli/services/taxi_ring_service.dart';
 import 'package:get/get.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
@@ -48,40 +43,6 @@ class WirePlan extends PlanController {
   void onInit() {
     myPlan.value = const MyPlanModel(paymentEnabled: true, featureKey: 'Taxi');
   }
-}
-
-class WireTaxi extends TaxiSetupController {
-  WireTaxi(this.model);
-  final TaxiOwnerModel? model;
-  final List<bool> availableCalls = [];
-
-  @override
-  Future<bool> load() {
-    taxi.value = model;
-    hasLoaded.value = true;
-    return Future.value(true);
-  }
-
-  @override
-  Future<bool> setAvailable(bool available) async {
-    availableCalls.add(available);
-    return true;
-  }
-}
-
-class WireLeads extends TripLeadsController {
-  WireLeads({int news = 0}) {
-    newCount.value = news;
-  }
-
-  @override
-  void reset() {}
-  @override
-  Future<void> loadBadge({bool force = false}) async {}
-  @override
-  Future<void> refreshList() async {}
-  @override
-  Future<void> load() async {}
 }
 
 class WireRequests extends DriverRequestsController {
@@ -172,22 +133,6 @@ class WireReady extends DriverReadyController {
   }
 }
 
-class WireNotif extends GetxService implements NotificationService {
-  WireNotif({this.denied = false});
-  bool denied;
-
-  @override
-  Future<void> onInit() async {
-    super.onInit();
-  }
-
-  @override
-  Future<bool> isPermissionDenied() async => denied;
-
-  @override
-  dynamic noSuchMethod(Invocation i) => super.noSuchMethod(i);
-}
-
 void wireBase({bool driver = true}) {
   Get.reset();
   Get.testMode = true;
@@ -197,31 +142,3 @@ void wireBase({bool driver = true}) {
   Get.put<TabConfigController>(JTabs());
   Get.put<PlanController>(WirePlan());
 }
-
-TaxiOwnerModel wireTaxi({String status = TaxiStatus.approved, bool available = true}) => TaxiOwnerModel(
-      id: 'o1',
-      status: status,
-      percent: 100,
-      step1Done: true,
-      routesDone: true,
-      vehicleTypeId: 'v1',
-      vehicleTypeName: 'Innova Crysta',
-      seats: 7,
-      plateDisplay: 'UK 07 TA 1234',
-      platePhotoUrl: null,
-      contactPhone: '9876543210',
-      latitude: 29.2,
-      longitude: 79.5,
-      cityName: 'Haldwani',
-      districtName: 'Nainital',
-      minFare: 900,
-      isAvailable: available,
-      slug: 'uk07',
-      pendingReportCount: 0,
-      createdAt: DateTime.now().toUtc().subtract(const Duration(days: 2)),
-      hasDrivingLicence: true,
-      hasDateOfBirth: true,
-      localDayRate: 2500,
-      localDayKm: 120,
-      routes: const [],
-    );

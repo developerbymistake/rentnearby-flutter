@@ -37,8 +37,8 @@ abstract final class StayOwnerInk {
   static const List<BoxShadow> pill = [BoxShadow(color: Color(0x33000000), offset: Offset(0, 2), blurRadius: 8)];
 }
 
-const BorderRadius _card54Raw = BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(54), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8));
-const BorderRadius _card68Raw = BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(68), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8));
+const BorderRadius _card54Raw = BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(36), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8));
+const BorderRadius _card68Raw = BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(36), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8));
 const BorderRadius _tile24Raw = BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(24), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8));
 
 BorderRadius get _card54 => DS.br(_card54Raw);

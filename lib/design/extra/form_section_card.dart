@@ -18,7 +18,7 @@ class FormSectionCard extends StatelessWidget {
     this.requiredMark = false,
     this.hint,
     this.artSide = FormArtSide.left,
-    this.corner = 68,
+    this.corner = 36,
     this.trailing,
     this.margin,
   });
