@@ -7,8 +7,8 @@ import 'package:get/get.dart';
 
 import '../support/fake_map_pack_api.dart';
 
-const _uttarakhand = '211c567a-9db1-4db9-ade1-1060aa572b33';
-const _himachal = '93c6b3fc-5770-409d-9ca9-bf347c4c0be8';
+const _uttarakhand = 'f24fcce0-f7b2-4f98-8ab2-4ce4f99e9f0d';
+const _himachal = 'f9b210df-e2d0-4a1b-a7ce-4e3352009d4e';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
