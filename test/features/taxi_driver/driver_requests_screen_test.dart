@@ -313,7 +313,10 @@ void main() {
   testWidgets('show_more_pages_earlier', (tester) async {
     final repo = _FakeRepo()..listJson = () => {..._json('driver_offer_list.json'), 'nextCursor': 'c2'};
     await _open(tester, repo: repo);
-    await tester.scrollUntilVisible(_key('requests_more'), 300, scrollable: find.byType(Scrollable).first);
+    final list = find.descendant(of: _key('requests_list'), matching: find.byType(Scrollable)).first;
+    await tester.scrollUntilVisible(_key('requests_more'), 300, scrollable: list);
+    await tester.ensureVisible(_key('requests_more'));
+    await tester.pump();
     await tester.tap(_key('requests_more'));
     await tester.pump();
     await tester.pump();

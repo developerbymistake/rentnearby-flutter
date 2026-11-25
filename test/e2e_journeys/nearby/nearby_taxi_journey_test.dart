@@ -327,10 +327,19 @@ void main() {
     });
 
     test('the form validates through the rules and offers no way to skip', () {
-      final src = File('lib/features/taxi/setup/taxi_routes_screen.dart').readAsStringSync();
-      expect(src.contains('TaxiRateRules.validate'), isTrue);
-      expect(src.contains('(optional)'), isFalse);
-      expect(src.toLowerCase().contains('ask for a price'), isFalse);
+      final form = File('lib/features/taxi/setup/taxi_rate_form.dart').readAsStringSync();
+      expect(form.contains('TaxiRateRules.validate'), isTrue);
+      for (final word in ['(optional)', 'ask for a price', 'skip', 'add later']) {
+        expect(form.toLowerCase().contains(word), isFalse, reason: word);
+      }
+      final wizard = File('lib/features/taxi/setup/taxi_vehicle_screen.dart').readAsStringSync();
+      final submit = wizard.substring(wizard.indexOf('Future<void> _submit()'));
+      final check = submit.indexOf('_rate.check()');
+      expect(check, isNonNegative);
+      expect(check, lessThan(submit.indexOf('saveLocalRate')));
+      expect(submit.substring(check, submit.indexOf('saveLocalRate')).contains('return;'), isTrue);
+      expect(wizard.contains('(optional)'), isFalse);
+      expect(wizard.toLowerCase().contains('ask for a price'), isFalse);
     });
 
     test('no screen anywhere says Ask for a price', () {

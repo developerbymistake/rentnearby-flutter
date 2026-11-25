@@ -147,6 +147,8 @@ void main() {
       await t.pump(const Duration(milliseconds: 200));
       final seen = <String, Object?>{};
       for (final label in ['Manage rooms', 'Manage calendar', 'Contact details']) {
+        await t.ensureVisible(find.text(label));
+        await t.pump(const Duration(milliseconds: 300));
         await t.tap(find.text(label));
         await t.pump();
         await t.pump(const Duration(milliseconds: 400));
