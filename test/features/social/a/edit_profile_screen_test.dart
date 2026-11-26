@@ -171,6 +171,21 @@ void main() {
     await drain(t);
   });
 
+  testWidgets('identity card follows mock B5: photo with links, then labelled name and locked rows', (t) async {
+    await open(t);
+    final photo = t.getRect(find.byType(ProfilePhotoCircle));
+    final change = t.getRect(find.text(SocialStringsA.changePhoto));
+    expect(change.left, greaterThan(photo.right));
+    final nameLabel = t.getRect(find.text(SocialStringsA.fullName));
+    final name = t.getRect(find.byKey(EditProfileScreen.nameKey));
+    expect(nameLabel.top, greaterThan(photo.bottom));
+    expect(name.top, greaterThan(nameLabel.bottom));
+    final lockLabel = t.getRect(find.text(SocialStringsA.genderAndBirth));
+    expect(lockLabel.top, greaterThan(name.bottom));
+    expect(t.getRect(find.byKey(const ValueKey('edit_locked_gender'))).top, greaterThan(lockLabel.bottom));
+    await drain(t);
+  });
+
   testWidgets('the photo shows the camera badge', (t) async {
     await open(t);
     expect(find.byType(ProfileRoundButton), findsOneWidget);

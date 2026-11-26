@@ -15,7 +15,6 @@ import '../features/social/a/onboarding/onboarding_steps.dart';
 import '../features/social/a/social_strings_a.dart';
 import '../features/social/shared/social_formats.dart';
 import '../utils/app_toast.dart';
-import 'profile_screen.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -87,12 +86,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     Get.offAllNamed(_auth.postLoginRoute);
   }
 
-  Widget? _bottomLink(int step) {
+  Widget? _bottomLink() {
     if (_created && _uploadFailed) {
       return AuthTextLink(tone: ListingTone.indigo, label: SocialStringsA.skipForNow, onTap: _photo.busy.value ? null : _skipPhoto);
-    }
-    if (step == 0 && _c.existing && !_created && !Navigator.of(context).canPop()) {
-      return AuthTextLink(tone: ListingTone.indigo, label: ProfilePhotoStrings.logOut, onTap: () => ProfileActions.confirmLogout(context));
     }
     return null;
   }
@@ -209,7 +205,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         loading: _c.submitting.value || _auth.isLoading.value || _photo.busy.value,
                         hint: _created ? null : _c.missingHint,
                         onTap: _primary,
-                        link: _bottomLink(step),
+                        link: _bottomLink(),
                       )),
                 ],
               );

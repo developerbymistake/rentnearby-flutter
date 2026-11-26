@@ -32,6 +32,7 @@ import '../../shared/social_strings.dart';
 import '../../a/people/people_widgets.dart';
 import '../../a/widgets/social_chips_a.dart';
 import '../../shared/widgets/plus_widgets.dart';
+import '../../shared/widgets/safety_guidelines_sheet.dart';
 import '../../shared/widgets/social_avatar_stack.dart';
 import '../social_strings_c.dart';
 import '../widgets/chat_room_header.dart';
@@ -82,6 +83,29 @@ class _DmRoomScreenState extends State<DmRoomScreen> {
     final id = widget.roomId;
     if (id != null) _track(null, id: id);
     _scroll.addListener(_onScroll);
+    _c.guidelinesPrompt = _promptGuidelines;
+    if (_c.isTrip) WidgetsBinding.instance.addPostFrameCallback((_) => _askOnEntry());
+    _workers.add(ever<RoomView>(_c.view, (v) {
+      if (v == RoomView.ready && _c.isTrip) _askOnEntry();
+    }));
+  }
+
+  bool _entryAsked = false;
+
+  void _askOnEntry() {
+    if (_entryAsked || !mounted || SocialMeController.maybe?.me.value == null) return;
+    _entryAsked = true;
+    unawaited(_c.ensureGuidelinesOnEntry());
+  }
+
+  Future<bool> _promptGuidelines(bool group) async {
+    if (!mounted) return false;
+    return SafetyGuidelinesSheet.ask(
+      context,
+      firstName: _peerFirst,
+      group: group,
+      accept: () async => await (SocialMeController.maybe?.acceptGuidelines() ?? Future<String?>.value(SocialStrings.failed)),
+    );
   }
 
   void _onScroll() {
@@ -140,7 +164,7 @@ class _DmRoomScreenState extends State<DmRoomScreen> {
     if (r == null || !mounted) return;
     _c.refusal.value = null;
     final type = r.type;
-    if (type == SocialErrorTypes.awaitingReply) return;
+    if (type == SocialErrorTypes.awaitingReply || type == SocialErrorTypes.guidelinesNotAccepted) return;
     if (PlusSheets.handles(type)) {
       PlusSheets.limitReached(context, errorType: type!, data: r.data, from: 'chat');
       return;
@@ -158,6 +182,8 @@ class _DmRoomScreenState extends State<DmRoomScreen> {
   Future<void> _send() async {
     final text = _input.text;
     if (text.trim().isEmpty) return;
+    if (_c.needsGuidelines && !await _c.askGuidelines()) return;
+    if (!mounted) return;
     _input.clear();
     final ok = await _c.send(text);
     if (!ok && _input.text.isEmpty) _input.text = text;
@@ -217,7 +243,7 @@ class _DmRoomScreenState extends State<DmRoomScreen> {
       tone: _tone,
       initial: _peer?.initial.isNotEmpty == true ? _peer!.initial : ChatLook3D.initialOf(_peerName),
       name: SocialFormats.shortName(_peerName),
-      nameTrailing: GenderGlyph(gender: _peer?.gender ?? ''),
+      nameTrailing: GenderGlyph(gender: _peer?.gender ?? '', color: GenderGlyph.inkOf(_peer?.gender ?? ''), size: 14, badge: true),
       avatarGradient: BuddyLook.avatarGradient(_peer?.userId ?? widget.userId ?? _peerName),
       subtitle: subtitle,
       onBack: () => Get.back(),
@@ -397,7 +423,7 @@ class _DmRoomScreenState extends State<DmRoomScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          _link(SocialStringsC.delete, BuddyLook.subText, BuddyLook.closeBg, _deleteRequest, const ValueKey('dm_receiver_delete')),
+          _link(SocialStringsC.delete, BuddyLook.subText, BuddyLook.subText.withValues(alpha: Alpha.v10), _deleteRequest, const ValueKey('dm_receiver_delete')),
           if (peer != null) ...[
             Gap.h(10),
             _link(SocialStrings.report, BuddyLook.dangerText, BuddyLook.note[NoteToneColor.danger]!.$1, () => _report(), const ValueKey('dm_receiver_report')),
@@ -495,7 +521,7 @@ class _DmRoomScreenState extends State<DmRoomScreen> {
 
   String? get _noticeText {
     final p = _c.preflight.value;
-    if (_c.room.value == null && p != null && !p.canMessage) return SocialStringsC.cannotMessage;
+    if (_c.cannotMessageNow.value || _c.room.value == null && p != null && !p.canMessage) return SocialStringsC.cannotMessage;
     if (_c.lock == RoomLock.left) return _c.isTrip ? SocialStringsC.leftTrip : SocialStringsC.cannotMessage;
     return null;
   }

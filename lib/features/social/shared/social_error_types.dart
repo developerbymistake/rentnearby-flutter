@@ -39,4 +39,5 @@ abstract final class SocialErrorTypes {
   static const String buddyLimit = 'BuddyLimit';
   static const String tooManyRequests = 'TooManyRequests';
   static const String seekerOnly = 'SeekerOnly';
+  static const String guidelinesNotAccepted = 'GuidelinesNotAccepted';
 }

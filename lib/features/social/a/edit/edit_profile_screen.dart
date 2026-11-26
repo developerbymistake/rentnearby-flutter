@@ -319,104 +319,60 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     final month = SocialFormats.monthName(p.birthMonth);
     final birth = '${month.length >= 3 ? month.substring(0, 3) : month} ${p.birthYear}';
     return Container(
-      margin: DS.gapInsets(l: 18, t: 4, r: 18),
+      margin: DS.gapInsets(l: 18, t: 14, r: 18),
       padding: DS.all(16),
       decoration: BoxDecoration(
         color: DesignColors.surface,
         borderRadius: SocialSectionCard.radius,
         boxShadow: BuddyLook.cardShadows(DS.size),
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Obx(() {
-            final busy = photo.busy.value;
-            final failed = photo.failed.value && photo.localPath.value != null;
-            return Tap3D(
-              onTap: busy ? null : () => failed ? photo.retryChange() : photo.change(context),
-              label: SocialStringsA.changePhoto,
-              exclude: true,
-              child: SizedBox.square(
-                dimension: DS.s(96),
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    ProfilePhotoCircle(
-                      size: DS.s(96),
-                      url: auth.user.value?.profilePhotoUrl,
-                      localPath: busy ? photo.localPath.value : null,
-                      placeholderPath: photo.placeholderPath,
-                      busy: busy,
-                      failed: failed,
-                      ringColor: ListingTone.indigo.g2.withValues(alpha: Alpha.v25),
-                      ringWidth: DS.s(3),
-                      failColor: ListingTone.coral.g1,
-                      fallback: ColoredBox(
-                        color: TagChip.colorsOf(TagKind.interest).$1,
-                        child: Center(child: Text(p.initial, style: Ink3D.text(28, FontWeight.w700, BuddyLook.indigoText, letterSpacing: 0))),
-                      ),
+          Row(
+            children: [
+              Obx(() {
+                final busy = photo.busy.value;
+                final failed = photo.failed.value && photo.localPath.value != null;
+                return Tap3D(
+                  onTap: busy ? null : () => failed ? photo.retryChange() : photo.change(context),
+                  label: SocialStringsA.changePhoto,
+                  exclude: true,
+                  child: SizedBox.square(
+                    dimension: DS.s(96),
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        ProfilePhotoCircle(
+                          size: DS.s(96),
+                          url: auth.user.value?.profilePhotoUrl,
+                          localPath: busy ? photo.localPath.value : null,
+                          placeholderPath: photo.placeholderPath,
+                          busy: busy,
+                          failed: failed,
+                          ringColor: ListingTone.indigo.g2.withValues(alpha: Alpha.v25),
+                          ringWidth: DS.s(3),
+                          failColor: ListingTone.coral.g1,
+                          fallback: ColoredBox(
+                            color: TagChip.colorsOf(TagKind.interest).$1,
+                            child: Center(child: Text(p.initial, style: Ink3D.text(28, FontWeight.w700, BuddyLook.indigoText, letterSpacing: 0))),
+                          ),
+                        ),
+                        if (!busy && !failed)
+                          Positioned(right: -DS.s(2), bottom: -DS.s(2), child: ProfileRoundButton(icon: Icons.photo_camera_rounded, color: ListingTone.indigo.g2)),
+                      ],
                     ),
-                    if (!busy && !failed)
-                      Positioned(right: -DS.s(2), bottom: -DS.s(2), child: ProfileRoundButton(icon: Icons.photo_camera_rounded, color: ListingTone.indigo.g2)),
-                  ],
-                ),
-              ),
-            );
-          }),
-          Gap.h(16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Obx(() {
-                  final until = c.nameLockedUntil.value;
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Container(
-                        height: DS.s(50),
-                        padding: DS.sym(h: 16),
-                        alignment: Alignment.centerLeft,
-                        decoration: BoxDecoration(color: until == null ? Form3D.fill : BuddyLook.pillOff, borderRadius: DS.circular(25)),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: TextField(
-                                key: EditProfileScreen.nameKey,
-                                controller: _nameCtrl,
-                                readOnly: until != null,
-                                maxLength: ProfileRules.nameMax,
-                                textCapitalization: TextCapitalization.words,
-                                inputFormatters: noEmojiInputFormatters,
-                                style: Ink3D.text(16, FontWeight.w600, until == null ? Ink3D.body : Ink3D.grey, letterSpacing: 0),
-                                decoration: AuthPillInput.decoration(SocialStringsA.fullNameHint).copyWith(hintStyle: Ink3D.text(16, FontWeight.w400, Form3D.hint, letterSpacing: 0)),
-                                onChanged: (v) => c.name.value = v,
-                              ),
-                            ),
-                            if (until != null) Icon(Icons.lock_rounded, size: DS.s(14), color: Form3D.hint),
-                          ],
-                        ),
-                      ),
-                      Padding(
-                        padding: EdgeInsets.fromLTRB(DS.s(4), DS.gv(6), DS.s(4), 0),
-                        child: Text(
-                          until == null ? SocialStringsA.nameRule : SocialStringsA.nameAgainOn(SocialFormats.dayMonth(until)),
-                          key: EditProfileScreen.nameRuleKey,
-                          style: Ink3D.text(12, FontWeight.w400, Ink3D.grey, height: 1.4, letterSpacing: 0),
-                        ),
-                      ),
-                    ],
-                  );
-                }),
-                Gap.v(10),
-                _lockedPills(p, birth),
-                Gap.v(6),
-                Text(SocialStringsA.lockedNote, style: Ink3D.text(12, FontWeight.w400, Ink3D.grey, height: 1.4, letterSpacing: 0)),
-                Obx(() {
+                  ),
+                );
+              }),
+              Gap.h(16),
+              Expanded(
+                child: Obx(() {
                   final busy = photo.busy.value;
                   final hasPhoto = auth.user.value?.profilePhotoUrl != null;
-                  return Wrap(
-                    spacing: DS.gh(14),
+                  return Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       _textLink(SocialStringsA.changePhoto, busy ? null : () => photo.change(context),
                           Ink3D.text(13, FontWeight.w600, BuddyLook.indigoText, letterSpacing: 0)),
@@ -427,11 +383,61 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     ],
                   );
                 }),
-              ],
-            ),
+              ),
+            ],
           ),
+          _fieldLabel(SocialStringsA.fullName),
+          Obx(() {
+            final until = c.nameLockedUntil.value;
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Container(
+                  height: DS.s(50),
+                  padding: DS.sym(h: 16),
+                  alignment: Alignment.centerLeft,
+                  decoration: BoxDecoration(color: until == null ? Form3D.fill : BuddyLook.pillOff, borderRadius: DS.circular(25)),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          key: EditProfileScreen.nameKey,
+                          controller: _nameCtrl,
+                          readOnly: until != null,
+                          maxLength: ProfileRules.nameMax,
+                          textCapitalization: TextCapitalization.words,
+                          inputFormatters: noEmojiInputFormatters,
+                          style: Ink3D.text(16, FontWeight.w600, until == null ? Ink3D.body : Ink3D.grey, letterSpacing: 0),
+                          decoration: AuthPillInput.decoration(SocialStringsA.fullNameHint).copyWith(hintStyle: Ink3D.text(16, FontWeight.w400, Form3D.hint, letterSpacing: 0)),
+                          onChanged: (v) => c.name.value = v,
+                        ),
+                      ),
+                      if (until != null) Icon(Icons.lock_rounded, size: DS.s(14), color: Form3D.hint),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: EdgeInsets.fromLTRB(DS.s(4), DS.gv(6), DS.s(4), 0),
+                  child: Text(
+                    until == null ? SocialStringsA.nameRule : SocialStringsA.nameAgainOn(SocialFormats.dayMonth(until)),
+                    key: EditProfileScreen.nameRuleKey,
+                    style: Ink3D.text(12, FontWeight.w400, Ink3D.grey, height: 1.4, letterSpacing: 0),
+                  ),
+                ),
+              ],
+            );
+          }),
+          _fieldLabel(SocialStringsA.genderAndBirth),
+          _lockedPills(p, birth),
+          Gap.v(6),
+          Text(SocialStringsA.lockedNote, style: Ink3D.text(12, FontWeight.w400, Ink3D.grey, height: 1.4, letterSpacing: 0)),
         ],
       ),
     );
   }
+
+  Widget _fieldLabel(String text) => Padding(
+        padding: EdgeInsets.fromLTRB(DS.s(4), DS.gv(16), DS.s(4), DS.gv(8)),
+        child: Text(text, style: Ink3D.text(13, FontWeight.w600, Ink3D.sub)),
+      );
 }

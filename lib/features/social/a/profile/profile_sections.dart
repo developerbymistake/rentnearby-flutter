@@ -164,20 +164,25 @@ class ProfileChipsSection extends StatelessWidget {
   static const Key placesKey = ValueKey('profile_places_card');
   static const Key skillsKey = ValueKey('profile_skills_card');
 
-  static Widget wrap(List<String> items, TagKind kind) => Wrap(
+  static Widget wrap(List<String> items, TagKind kind, {String Function(String)? art}) => Wrap(
         spacing: DS.gh(8),
         runSpacing: DS.gv(8),
-        children: [for (final t in items) TagChip(text: t, kind: kind)],
+        children: [for (final t in items) TagChip(text: t, kind: kind, art: art?.call(t))],
       );
+
+  static Widget count(int n) => Text('· $n', style: Ink3D.text(12.5, FontWeight.w500, Ink3D.grey, letterSpacing: 0));
+
+  static String _pin(String _) => ListingArt.roundPushpin;
 
   @override
   Widget build(BuildContext context) {
     final cards = <Widget>[
       if (interests.isNotEmpty)
-        SocialSectionCard(key: interestsKey, art: ListingArt.mountain, title: SocialStringsA.interests, child: wrap(interests, TagKind.interest)),
+        SocialSectionCard(key: interestsKey, art: ListingArt.mountain, title: SocialStringsA.interests, hint: count(interests.length), child: wrap(interests, TagKind.interest, art: SocialArtA.interest)),
       if (places.isNotEmpty)
-        SocialSectionCard(key: placesKey, art: ListingArt.roundPushpin, title: SocialStringsA.placesVisited, child: wrap(places, TagKind.place)),
-      if (skills.isNotEmpty) SocialSectionCard(key: skillsKey, art: ListingArt.camera, title: SocialStringsA.skills, child: wrap(skills, TagKind.skill)),
+        SocialSectionCard(key: placesKey, art: ListingArt.roundPushpin, title: SocialStringsA.placesVisited, hint: count(places.length), child: wrap(places, TagKind.place, art: _pin)),
+      if (skills.isNotEmpty)
+        SocialSectionCard(key: skillsKey, art: ListingArt.camera, title: SocialStringsA.skills, hint: count(skills.length), child: wrap(skills, TagKind.skill, art: SocialArtA.skill)),
     ];
     if (cards.isEmpty) return const SizedBox.shrink();
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: cards);

@@ -5,6 +5,7 @@ import 'package:bakhli/features/social/b/post/join_request_sheet.dart';
 import 'package:bakhli/features/social/b/social_strings_b.dart';
 import 'package:bakhli/features/social/shared/social_strings.dart';
 import 'package:bakhli/features/social/shared/widgets/plus_widgets.dart';
+import 'package:bakhli/features/social/shared/widgets/public_trip_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
@@ -179,6 +180,7 @@ void main() {
       expect(b.enabled, isFalse);
       expect(b.onTap, isNull);
       expect(b.offLabelColor, isNotNull);
+      expect(b.icon, Icons.lock_rounded);
       expect(find.byKey(const ValueKey('feed_request_w-1'), skipOffstage: false), findsNothing);
       expect(find.byKey(const ValueKey('feed_request_a-1'), skipOffstage: false), findsOneWidget);
       await drain(t);
@@ -194,6 +196,41 @@ void main() {
     expect(find.byKey(const ValueKey('feed_only_for_w-1'), skipOffstage: false), findsNothing);
     expect(find.byKey(const ValueKey('feed_only_for_m-1'), skipOffstage: false), findsOneWidget);
     expect(find.text('This trip is for men only', skipOffstage: false), findsOneWidget);
+    await drain(t);
+  });
+
+  testWidgets('mock D10g: my own post keeps the ⋮ next to Your post; Remove takes it off Travel buddies', (t) async {
+    final server = installServer();
+    putSocialMe(server, socialMeWith());
+    server.on('GET', _feed, _page(mine: [publicTripJson(id: 'mine-1', ownerId: 'me', ownerName: 'Rahul Verma', cities: ['Manali'], isMine: true, waitingRequests: 0)]));
+    server.on('DELETE', '/social/trips/mine-1/post', {});
+    await pumpSocial(t, const TravelBuddiesScreen(), pages: _pages);
+    expect(find.text(SocialStringsB.yourPost), findsOneWidget);
+    final menu = find.byKey(PublicTripCard.menuKey);
+    expect(menu, findsOneWidget);
+    expect((t.getCenter(menu).dy - t.getCenter(find.text(SocialStringsB.yourPost)).dy).abs(), lessThan(DS.s(16)));
+    expect(t.getCenter(menu).dx, greaterThan(t.getCenter(find.text(SocialStringsB.yourPost)).dx));
+    await t.tap(menu);
+    await settle(t);
+    expect(find.text(SocialStringsB.removePost), findsOneWidget);
+    expect(find.text(SocialStringsB.reportTrip), findsNothing);
+    server.on('GET', _feed, _page());
+    await t.tap(find.text(SocialStringsB.removePost));
+    await settle(t);
+    expect(server.calls('DELETE', '/social/trips/mine-1/post'), hasLength(1));
+    expect(find.text(SocialStringsB.yourPost), findsNothing);
+    await drain(t);
+  });
+
+  testWidgets('mock D9b: the header bell is the 3D bell art and opens Notifications', (t) async {
+    final server = installServer();
+    putSocialMe(server, socialMeWith());
+    server.on('GET', _feed, _page());
+    await pumpSocial(t, const TravelBuddiesScreen(), pages: _pages);
+    final bell = find.byKey(TravelBuddiesScreen.bellKey);
+    expect(bell, findsOneWidget);
+    expect(find.descendant(of: bell, matching: find.byWidgetPredicate((w) => w is Art3D && w.asset == ListingArt.bell)), findsOneWidget);
+    expect(find.byIcon(Icons.notifications_none_rounded), findsNothing);
     await drain(t);
   });
 }

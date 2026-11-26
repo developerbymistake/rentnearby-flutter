@@ -1,9 +1,13 @@
 import 'package:bakhli/config/app_routes.dart';
+import 'package:bakhli/design/design.dart';
 import 'package:bakhli/controllers/auth_controller.dart';
 import 'package:bakhli/features/buddy/buddies/controllers/buddy_summary_controller.dart';
 import 'package:bakhli/features/social/a/settings/settings_screen.dart';
 import 'package:bakhli/features/social/a/social_strings_a.dart';
 import 'package:bakhli/features/social/shared/social_me_controller.dart';
+import 'package:bakhli/features/social/shared/social_models.dart';
+import 'package:bakhli/features/social/shared/social_safety_strings.dart';
+import 'package:bakhli/features/social/shared/widgets/safety_guidelines_sheet.dart';
 import 'package:bakhli/features/social/shared/social_strings.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -160,6 +164,104 @@ void main() {
   testWidgets('no blocked people: no count line', (t) async {
     await open(t);
     expect(find.text(SocialStringsA.blockedCount(0)), findsNothing);
+    await drain(t);
+  });
+
+  testWidgets('Safety tips row opens the read-only rows with only Close', (t) async {
+    await open(t);
+    expect(find.text(SocialSafetyStrings.tipsRow), findsOneWidget);
+    await t.tap(find.byKey(SettingsScreen.safetyKey));
+    await settle(t);
+    expect(find.byKey(SafetyGuidelinesSheet.rowsKey), findsOneWidget);
+    expect(find.text(SocialSafetyStrings.moneyTitle), findsOneWidget);
+    expect(find.byKey(SafetyGuidelinesSheet.understoodKey), findsNothing);
+    await t.tap(find.byKey(SafetyGuidelinesSheet.closeKey));
+    await settle(t);
+    expect(find.byKey(SafetyGuidelinesSheet.rowsKey), findsNothing);
+    await drain(t);
+  });
+
+  testWidgets('a refused private switch shows the error and the switch stays at the saved value', (t) async {
+    final server = await open(t);
+    server.refuse('PUT', '/social/me/privacy', status: 400, type: 'InvalidProfile', message: 'Could not save.');
+    await t.tap(find.byKey(SettingsScreen.privateKey));
+    await settle(t);
+    expect(find.text('Could not save.'), findsOneWidget);
+    expect(SocialMeController.to.profile!.isPrivate, isFalse);
+    expect(t.widget<Switch3D>(find.byKey(SettingsScreen.privateKey)).value, isFalse);
+    await drain(t);
+  });
+
+  testWidgets('a server error on save keeps the saved state', (t) async {
+    final server = await open(t);
+    server.on('PUT', '/social/me/privacy', {'error': {'type': 'Server', 'message': 'Down'}}, status: 500);
+    await t.tap(find.byKey(SettingsScreen.privateKey));
+    await settle(t);
+    expect(SocialMeController.to.profile!.isPrivate, isFalse);
+    expect(t.widget<Switch3D>(find.byKey(SettingsScreen.privateKey)).value, isFalse);
+    await drain(t);
+  });
+
+  for (final c in [
+    ('notifyMessages', SocialStringsA.notifyMessages),
+    ('notifyFollows', SocialStringsA.notifyFollows),
+    ('notifyFollowedTrips', SocialStringsA.notifyTrips),
+  ]) {
+    testWidgets('notification switch ${c.$1} sends only its key and shows the saved value', (t) async {
+      final server = await open(t);
+      final saved = {...myProfileJson(), c.$1: false};
+      server.on('PUT', '/social/me/privacy', saved);
+      final row = find.ancestor(of: find.text(c.$2), matching: find.byType(IconRow3D)).first;
+      await t.tap(find.descendant(of: row, matching: find.byType(Switch3D)));
+      await settle(t);
+      expect((server.calls('PUT', '/social/me/privacy').single.data as Map), {c.$1: false});
+      expect(t.widget<Switch3D>(find.descendant(of: row, matching: find.byType(Switch3D))).value, isFalse);
+      await drain(t);
+    });
+  }
+
+  testWidgets('a refused policy save keeps the old policy and shows the error', (t) async {
+    final server = await open(t);
+    server.refuse('PUT', '/social/me/privacy', status: 400, type: 'InvalidProfile', message: 'Could not save.');
+    await t.tap(find.byKey(SettingsScreen.policyKey));
+    await settle(t);
+    await t.tap(find.byKey(const ValueKey('policy_Buddies')));
+    await t.pump();
+    await t.tap(find.byKey(const ValueKey('policy_save')));
+    await settle(t);
+    expect(find.text('Could not save.'), findsOneWidget);
+    expect(SocialMeController.to.profile!.messagePolicy, 'Everyone');
+    expect(find.text(SocialStringsA.everyone), findsOneWidget);
+    await drain(t);
+  });
+
+  testWidgets('leaving and reopening Settings shows the server state, not a stale copy', (t) async {
+    final server = installServer();
+    server.on('GET', '/social/me', socialMeJson(profile: myProfileJson(isPrivate: true, policy: 'Buddies')));
+    Get.put(SocialMeController(), permanent: true);
+    await pumpSocial(t, const SettingsScreen(), size: const Size(392, 3400), pages: _pages);
+    await settle(t);
+    expect(t.widget<Switch3D>(find.byKey(SettingsScreen.privateKey)).value, isTrue);
+    expect(find.text(SocialStringsA.buddiesOnly), findsOneWidget);
+    await t.pumpWidget(const SizedBox.shrink());
+    server.on('GET', '/social/me', socialMeJson(profile: myProfileJson(isPrivate: false, policy: 'Following')));
+    await pumpSocial(t, const SettingsScreen(), size: const Size(392, 3400), pages: _pages);
+    await settle(t);
+    expect(t.widget<Switch3D>(find.byKey(SettingsScreen.privateKey)).value, isFalse);
+    expect(find.text(SocialStringsA.peopleIFollow), findsOneWidget);
+    await drain(t);
+  });
+
+  testWidgets('a save that lands while a refresh is in flight is not overwritten by the older answer', (t) async {
+    await open(t);
+    final me = SocialMeController.to;
+    await t.runAsync(() async {
+      final f = me.refreshQuiet();
+      me.applyProfile(MyProfile.fromJson(myProfileJson(isPrivate: true)));
+      await f;
+    });
+    await settle(t);
+    expect(me.profile!.isPrivate, isTrue);
     await drain(t);
   });
 }

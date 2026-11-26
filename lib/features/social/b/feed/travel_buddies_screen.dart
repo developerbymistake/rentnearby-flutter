@@ -9,6 +9,7 @@ import '../../../../controllers/notification_controller.dart';
 import '../../../../design/design.dart';
 import '../../../../utils/input_formatters.dart';
 import '../../../buddy/shared/buddy_look.dart';
+import '../../../buddy/shared/buddy_result.dart';
 import '../../../buddy/shared/widgets/buddy_page.dart';
 import '../../../buddy/shared/widgets/buddy_snack.dart';
 import '../../shared/social_me_controller.dart';
@@ -197,7 +198,19 @@ class _TravelBuddiesScreenState extends State<TravelBuddiesScreen> {
 
   Widget _bell() {
     final ctrl = Get.isRegistered<NotificationController>() ? Get.find<NotificationController>() : null;
-    final button = KitRoundButton(key: TravelBuddiesScreen.bellKey, icon: Icons.notifications_none_rounded, onTap: () => Get.toNamed(AppRoutes.notifications));
+    // Same 3D header icon as the Trip overview chat button on a gradient band (mock D9b: coloured 3D bell, not a grey glyph).
+    final button = Tap3D(
+      tapKey: TravelBuddiesScreen.bellKey,
+      onTap: () => Get.toNamed(AppRoutes.notifications),
+      label: SocialStringsB.notificationsLabel,
+      child: Container(
+        width: DS.s(44),
+        height: DS.s(44),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(color: DesignColors.tint(DesignColors.onPrimary, Alpha.v22), shape: BoxShape.circle),
+        child: const ExcludeSemantics(child: Art3D(asset: ListingArt.bell, size: 28, shadowBlur: 2, shadowOffset: Offset(1, 2))),
+      ),
+    );
     if (ctrl == null) return button;
     return Obx(() {
       final n = ctrl.unreadCount.value;
@@ -343,6 +356,7 @@ class _TravelBuddiesScreenState extends State<TravelBuddiesScreen> {
       return GradientPillButton(
         key: ValueKey('feed_only_for_${t.tripId}'),
         tone: teal,
+        icon: Icons.lock_rounded,
         label: SocialStringsB.onlyFor(t.joinGender),
         enabled: false,
         offColor: Form3D.fillOff,
@@ -365,6 +379,25 @@ class _TravelBuddiesScreenState extends State<TravelBuddiesScreen> {
     );
   }
 
+  // Mock D10g: the own post card keeps the ⋮ next to 'Your post', same Remove item as the Trip post page.
+  List<TripPostMenuItem> _ownMenu(PublicTrip t) => [
+        TripPostMenuItem(
+          art: ListingArt.locked,
+          title: SocialStringsB.removePost,
+          subtitle: SocialStringsB.removePostLine,
+          danger: true,
+          onSelected: () async {
+            final r = await c.removeMyPost(t.tripId);
+            if (!mounted) return;
+            if (r.isOk) {
+              BuddySnack.show(context, SocialStringsB.postRemoved);
+            } else if (r is BuddyFailed<void> && r.message.isNotEmpty) {
+              BuddySnack.show(context, r.message, danger: true);
+            }
+          },
+        ),
+      ];
+
   Widget _card(PublicTrip t) => Padding(
         padding: DS.gapInsets(l: 18, r: 18, b: 16),
         child: PublicTripCard(
@@ -372,7 +405,7 @@ class _TravelBuddiesScreenState extends State<TravelBuddiesScreen> {
           trip: t,
           onTap: () => SocialNav.openTripPost(t.tripId),
           footer: _footer(t),
-          onMenu: t.isMine ? null : () => TripPostActions.showMenu(context, trip: t, onBlocked: () => c.removeOwner(t.owner.userId)),
+          onMenu: () => TripPostActions.showMenu(context, trip: t, onBlocked: () => c.removeOwner(t.owner.userId), own: _ownMenu(t)),
         ),
       );
 

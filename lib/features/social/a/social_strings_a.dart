@@ -92,7 +92,8 @@ abstract final class SocialStringsA {
   static const String nameRule = 'You can change your name once every 14 days';
   static String nameAgainOn(String day) => 'You can change it again on $day';
   static const String nameTooSoon = 'You changed your name recently.';
-  static const String lockedNote = 'Gender and birth date cannot be changed. Contact support if they are wrong.';
+  static const String genderAndBirth = 'Gender and birth date';
+  static const String lockedNote = 'These cannot be changed. Contact support if they are wrong.';
   static const String placesCard = 'Places you have been';
   static const String addPlace = 'Add place';
   static const String homeCity = 'Home city';

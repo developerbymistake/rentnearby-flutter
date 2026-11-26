@@ -710,6 +710,8 @@ class ProfilePreviewCard extends StatelessWidget {
 class OnboardingStepAbout extends StatelessWidget {
   const OnboardingStepAbout({super.key, required this.c, required this.aboutCtrl, this.photoUrl});
 
+  static const Key counterKey = ValueKey('ob_about_counter');
+
   final OnboardingController c;
   final TextEditingController aboutCtrl;
   final String? photoUrl;
@@ -718,7 +720,15 @@ class OnboardingStepAbout extends StatelessWidget {
   Widget build(BuildContext context) {
     return OnboardingCard(
       children: [
-        const _FieldLabel(SocialStringsA.aboutYou, top: false),
+        Obx(() => Padding(
+              padding: EdgeInsets.fromLTRB(DS.s(4), 0, DS.s(4), DS.gv(10)),
+              child: Row(
+                children: [
+                  Expanded(child: Text(SocialStringsA.aboutYou, style: Ink3D.text(13, FontWeight.w600, Ink3D.sub))),
+                  Text('${c.about.value.length}/${ProfileRules.aboutMax}', key: OnboardingStepAbout.counterKey, style: Ink3D.text(12, FontWeight.w500, Ink3D.grey, letterSpacing: 0)),
+                ],
+              ),
+            )),
         Obx(() {
           final filled = c.about.value.trim().isNotEmpty;
           return Container(
@@ -741,15 +751,12 @@ class OnboardingStepAbout extends StatelessWidget {
             ),
           );
         }),
-        Obx(() => Padding(
-              padding: EdgeInsets.fromLTRB(DS.s(4), DS.gv(6), DS.s(4), 0),
-              child: Row(
-                children: [
-                  Expanded(child: Text(c.about.value.trim().isEmpty ? SocialStringsA.needed : '', style: Ink3D.text(12, FontWeight.w500, AuthInk.warn, letterSpacing: 0))),
-                  Text('${c.about.value.length}/${ProfileRules.aboutMax}', style: Ink3D.text(12, FontWeight.w500, Ink3D.grey, letterSpacing: 0)),
-                ],
-              ),
-            )),
+        Obx(() => c.about.value.trim().isEmpty
+            ? Padding(
+                padding: EdgeInsets.fromLTRB(DS.s(4), DS.gv(6), DS.s(4), 0),
+                child: Text(SocialStringsA.needed, style: Ink3D.text(12, FontWeight.w500, AuthInk.warn, letterSpacing: 0)),
+              )
+            : const SizedBox.shrink()),
         Padding(
           padding: EdgeInsets.fromLTRB(DS.s(4), DS.gv(10), DS.s(4), 0),
           child: Text(SocialStringsA.tapToStart, style: Ink3D.text(12.5, FontWeight.w600, Ink3D.sub, letterSpacing: 0)),

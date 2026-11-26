@@ -108,6 +108,7 @@ void main() {
     expect(only.enabled, isFalse);
     expect(only.onTap, isNull);
     expect(only.offLabelColor, BuddyLook.subText);
+    expect(only.icon, Icons.lock_rounded);
     await drain(t);
   });
 

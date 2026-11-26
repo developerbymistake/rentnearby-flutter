@@ -96,7 +96,7 @@ class PostWhenStep extends StatelessWidget {
       children: [
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
-          padding: DS.insets(l: 18, t: 14, r: 18, b: 4),
+          padding: DS.insets(l: 18, t: 2, r: 18, b: 4),
           clipBehavior: Clip.none,
           child: Row(
             children: [
@@ -152,41 +152,53 @@ class PostWhenStep extends StatelessWidget {
   }
 
   // One row family for both dropdown choices of the step (Within the next, How long?): same card, width, edge and gaps.
-  Widget _pickRow({required Key key, required String title, required String sub, required String value, required VoidCallback onTap}) => Container(
-        margin: DS.gapInsets(l: 18, t: 16, r: 18),
+  // Mock D10c: Roughly shows both rows in ONE card with a divider; Exact keeps How long? in its own card.
+  Widget _pickCard(List<Widget> rows, {double top = 16}) => Container(
+        margin: DS.gapInsets(l: 18, t: top, r: 18),
+        clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(color: DesignColors.surface, borderRadius: DS.br(CardRadius.card), boxShadow: DS.shadows(Form3D.cardShadow)),
-        child: Tap3D(
-          tapKey: key,
-          onTap: onTap,
-          label: '$title $value',
-          exclude: true,
-          child: Padding(
-            padding: DS.insets(l: 16, t: 12, r: 12, b: 12),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(title, style: Ink3D.text(15, FontWeight.w600, Ink3D.title, letterSpacing: 0)),
-                      Text(sub, style: Ink3D.text(12.5, FontWeight.w400, Ink3D.grey, letterSpacing: 0)),
-                    ],
-                  ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (var i = 0; i < rows.length; i++) ...[
+              if (i > 0) Divider(height: DS.s(1), thickness: DS.s(1), color: Form3D.fill),
+              rows[i],
+            ],
+          ],
+        ),
+      );
+
+  Widget _pickRow({required Key key, required String title, required String sub, required String value, required VoidCallback onTap}) => Tap3D(
+        tapKey: key,
+        onTap: onTap,
+        label: '$title $value',
+        exclude: true,
+        child: Padding(
+          padding: DS.insets(l: 16, t: 12, r: 12, b: 12),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: Ink3D.text(15, FontWeight.w600, Ink3D.title, letterSpacing: 0)),
+                    Text(sub, style: Ink3D.text(12.5, FontWeight.w400, Ink3D.grey, letterSpacing: 0)),
+                  ],
                 ),
-                Container(
-                  padding: DS.sym(h: 14, v: 8),
-                  decoration: BoxDecoration(color: Form3D.fill, borderRadius: DS.br(CardRadius.card)),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(value, style: Ink3D.text(15, FontWeight.w600, Ink3D.title, letterSpacing: 0)),
-                      Gap.h(6),
-                      Icon(Icons.expand_more_rounded, size: DS.s(20), color: Ink3D.sub),
-                    ],
-                  ),
+              ),
+              Container(
+                padding: DS.sym(h: 14, v: 8),
+                decoration: BoxDecoration(color: Form3D.fill, borderRadius: DS.br(CardRadius.card)),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(value, style: Ink3D.text(15, FontWeight.w600, Ink3D.title, letterSpacing: 0)),
+                    Gap.h(6),
+                    Icon(Icons.expand_more_rounded, size: DS.s(20), color: Ink3D.sub),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       );
@@ -247,17 +259,25 @@ class PostWhenStep extends StatelessWidget {
             onTap: (i) => c.setWhenKind(i == 1 ? PostDraft.exact : PostDraft.within),
           ),
           if (!d.isExact) ...[
-            _pickRow(
-              key: withinKey,
-              title: SocialStringsB.withinTheNext,
-              sub: SocialStringsB.withinSub(PostDraft.maxMonths),
-              value: SocialStringsB.monthsChip(d.withinMonths),
-              onTap: () => _pickMonths(context),
-            ),
-            WizardNote(text: SocialStringsB.windowNote),
-          ] else
+            _label(SocialStringsB.whenAndHowLong),
+            _pickCard([
+              _pickRow(
+                key: withinKey,
+                title: SocialStringsB.withinTheNext,
+                sub: SocialStringsB.withinRowSub,
+                value: SocialStringsB.monthsChip(d.withinMonths),
+                onTap: () => _pickMonths(context),
+              ),
+              _pickRow(key: howLongKey, title: SocialStringsB.howLong, sub: SocialStringsB.howLongSub, value: SocialFormats.days(d.days), onTap: () => _pickDays(context)),
+            ], top: 0),
+            WizardNote(text: SocialStringsB.windowNote(d.withinMonths)),
+          ] else ...[
+            _label(SocialStringsB.startDate),
             _dateStrip(context, d.startDate),
-          _pickRow(key: howLongKey, title: SocialStringsB.howLong, sub: SocialStringsB.howLongSub, value: SocialFormats.days(d.days), onTap: () => _pickDays(context)),
+            _pickCard([
+              _pickRow(key: howLongKey, title: SocialStringsB.howLong, sub: SocialStringsB.howLongSub, value: SocialFormats.days(d.days), onTap: () => _pickDays(context)),
+            ]),
+          ],
           _label(SocialStringsB.whoCanJoin),
           SegmentTabs(
             key: whoKey,

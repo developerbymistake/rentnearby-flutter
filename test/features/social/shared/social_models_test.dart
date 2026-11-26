@@ -30,6 +30,16 @@ void main() {
     expect(SocialMe.fromJson(const {}).profile, isNull);
   });
 
+  test('SocialMe reads guidelinesAccepted from the answer, null when the server says nothing', () {
+    expect(SocialMe.fromJson(socialMeJson(profile: myProfileJson())).guidelinesAccepted, isNull);
+    expect(SocialMe.fromJson(socialMeJson(profile: myProfileJson(), guidelinesAccepted: false)).guidelinesAccepted, isFalse);
+    expect(SocialMe.fromJson(socialMeJson(profile: myProfileJson(), guidelinesAccepted: true)).guidelinesAccepted, isTrue);
+    expect(SocialMe.fromJson(socialMeJson(profile: {...myProfileJson(), 'guidelinesAccepted': true})).guidelinesAccepted, isTrue);
+    final me = SocialMe.fromJson(socialMeJson(profile: myProfileJson(), guidelinesAccepted: false));
+    expect(me.copyWith(followRequests: 1).guidelinesAccepted, isFalse);
+    expect(me.copyWith(guidelinesAccepted: true).guidelinesAccepted, isTrue);
+  });
+
   test('SocialMe reads profile, counters, limits, counts and catalog', () {
     final me = SocialMe.fromJson(socialMeJson(profile: myProfileJson()));
     expect(me.profile!.followers, 128);

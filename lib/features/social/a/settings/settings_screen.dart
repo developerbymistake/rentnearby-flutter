@@ -18,7 +18,9 @@ import '../../shared/social_formats.dart';
 import '../../shared/social_me_controller.dart';
 import '../../shared/social_models.dart';
 import '../../shared/social_nav.dart';
+import '../../shared/social_safety_strings.dart';
 import '../../shared/social_strings.dart';
+import '../../shared/widgets/safety_guidelines_sheet.dart';
 import '../social_strings_a.dart';
 import '../widgets/social_chips_a.dart';
 import 'settings_controller.dart';
@@ -30,6 +32,7 @@ class SettingsScreen extends StatefulWidget {
   static const Key policyKey = ValueKey('settings_policy');
   static const Key blockedKey = ValueKey('settings_blocked');
   static const Key plusKey = ValueKey('settings_plus');
+  static const Key safetyKey = ValueKey('settings_safety_tips');
   static const Key logoutKey = ValueKey('settings_logout');
   static const Key deleteKey = ValueKey('settings_delete');
   static const Key verifiedPillKey = ValueKey('settings_phone_verified');
@@ -50,6 +53,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     super.initState();
     SeekerPlanKeys.plans?.refreshPlan();
     BuddySummaryController.maybe?.load();
+    SocialMeController.maybe?.refreshQuiet();
   }
 
   @override
@@ -223,6 +227,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 divider: true,
                 trailing: chevron,
                 onTap: () => Get.toNamed(AppRoutes.buddiesBlocked),
+              ),
+              IconRow3D(
+                key: SettingsScreen.safetyKey,
+                art: ListingArt.bulb,
+                title: SocialSafetyStrings.tipsRow,
+                divider: true,
+                trailing: chevron,
+                onTap: () => SafetyGuidelinesSheet.showReadOnly(context),
               ),
             ]),
             if (p != null)

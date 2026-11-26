@@ -108,13 +108,15 @@ abstract final class SocialStringsB {
   static const String withinTheNext = 'Within the next';
   static String monthsChip(int n) => n == 1 ? '1 month' : '$n months';
   static String withinSub(int max) => 'Up to $max months ahead';
-  static const String windowNote = 'Travellers see a window, like “within 2 months”.';
+  static const String whenAndHowLong = 'When and how long';
+  static const String withinRowSub = 'Travellers see a window';
+  static String windowNote(int months) => 'Your post shows “within ${monthsChip(months)}”, never a date.';
   static const String today = 'Today';
   static const String pickFromCalendar = 'Pick from calendar';
   static const String startDate = 'Start date';
   static const String howLong = 'How long?';
   static const String howLongSub = 'Up to 10 days, or 10+';
-  static const String whoCanJoin = 'Who can join?';
+  static const String whoCanJoin = 'Who can join';
   static const String genderLockTitle = 'Women-only trips are a Plus feature.';
   static const String genderLockBody = 'Your post stays open to anyone for now.';
   static const String seePlus = 'See Plus';
@@ -192,6 +194,7 @@ abstract final class SocialStringsB {
   static const String postRemoved = 'Removed from Travel buddies';
   static const String requestCancelled = 'Request cancelled';
   static const String moreOptions = 'More options';
+  static const String notificationsLabel = 'Notifications';
 
   // Request sheet
   static String sheetSummary(PublicTrip t) => '${SocialFormats.cities(t.cityNames)} · ${SocialFormats.days(t.days)}';
@@ -229,7 +232,7 @@ abstract final class SocialStringsB {
   static const String requestGone = 'This request is no longer waiting.';
 
   // Trip overview seam
-  static const String postToFindBuddies = 'Post this trip';
+  static const String postToFindBuddies = 'Post your trip';
   static const String openJoinRequests = 'Join requests';
   static const String tripChat = 'Trip chat';
   static const String detailsLocked = 'Stay, taxi and money details open when the trip starts.';

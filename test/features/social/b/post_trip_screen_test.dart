@@ -133,6 +133,13 @@ void main() {
     expect(find.descendant(of: find.byKey(PostWhenStep.withinKey), matching: find.text('2 months')), findsOneWidget);
     expect(t.getTopLeft(find.byKey(PostWhenStep.withinKey)).dx, t.getTopLeft(find.byKey(PostWhenStep.howLongKey)).dx);
     expect(t.getSize(find.byKey(PostWhenStep.withinKey)).width, t.getSize(find.byKey(PostWhenStep.howLongKey)).width);
+    // Mock D10c: one 'When and how long' card holds both rows (divider only between them), the window note sits below it.
+    expect(find.text(SocialStringsB.whenAndHowLong), findsOneWidget);
+    expect(find.descendant(of: find.byKey(PostWhenStep.withinKey), matching: find.text(SocialStringsB.withinRowSub)), findsOneWidget);
+    expect(t.getTopLeft(find.byKey(PostWhenStep.howLongKey)).dy - t.getBottomLeft(find.byKey(PostWhenStep.withinKey)).dy, lessThan(3));
+    expect(find.text(SocialStringsB.windowNote(2)), findsOneWidget);
+    expect(t.getTopLeft(find.text(SocialStringsB.windowNote(2))).dy, greaterThan(t.getBottomLeft(find.byKey(PostWhenStep.howLongKey)).dy));
+    expect(find.text('Who can join'), findsOneWidget);
     await t.tap(find.byKey(PostWhenStep.withinKey));
     await settle(t);
     for (var n = 1; n <= PostDraft.maxMonths; n++) {
@@ -147,6 +154,9 @@ void main() {
     await t.tap(find.text(SocialStringsB.exactDate));
     await settle(t);
     expect(find.byKey(PostWhenStep.withinKey), findsNothing);
+    expect(find.text(SocialStringsB.startDate), findsOneWidget);
+    expect(find.byKey(PostWhenStep.howLongKey), findsOneWidget);
+    expect(find.text(SocialStringsB.whenAndHowLong), findsNothing);
     await drain(t);
   });
 

@@ -119,13 +119,13 @@ class _FeedFilterSheetState extends State<FeedFilterSheet> {
     return Sheet3D(
       tone: tone,
       title: SocialStringsB.trips,
+      kicker: SocialStringsB.filtersKicker,
       centerTitle: false,
       size: SheetSize.form,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(SocialStringsB.filtersKicker, style: Ink3D.text(12, FontWeight.w700, tone.g2, letterSpacing: 1)),
           _card(children: [
             _head(SocialStringsB.where, _f.q.trim().isEmpty ? SocialStringsB.anywhere : _f.q.trim()),
             Gap.v(10),

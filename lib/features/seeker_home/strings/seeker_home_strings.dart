@@ -43,7 +43,7 @@ abstract final class SeekerHomeStrings {
   static const String tilePlanBody = 'Pick a city and go';
   static const String tileTripsTitle = 'My trips';
   static const String tileTripsBody = 'Continue or review';
-  static const String tileBuddyTitle = 'Find buddies';
+  static const String tileBuddyTitle = 'Buddies';
   static const String tileBuddyBody = 'Travel together';
 
   static const String railsErrorTitle = 'Couldn’t load';

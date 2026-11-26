@@ -165,9 +165,10 @@ class PlaceTile extends StatelessWidget {
 enum TagKind { interest, place, skill }
 
 class TagChip extends StatelessWidget {
-  const TagChip({super.key, required this.text, required this.kind, this.onRemove, this.small = false});
+  const TagChip({super.key, required this.text, required this.kind, this.onRemove, this.small = false, this.art});
 
   final String text;
+  final String? art;
   final TagKind kind;
   final VoidCallback? onRemove;
   final bool small;
@@ -188,6 +189,7 @@ class TagChip extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
+          if (art != null) ...[ExcludeSemantics(child: Art3D(asset: art!, size: 16, shadowBlur: 2, shadowOffset: const Offset(1, 2))), Gap.h(5)],
           Flexible(child: Text(text, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(small ? 11.5 : 13.5, FontWeight.w600, fg, letterSpacing: 0))),
           if (remove != null) Padding(padding: DS.insets(l: 6, r: 2), child: Icon(Icons.close_rounded, size: DS.s(15), color: fg)),
         ],

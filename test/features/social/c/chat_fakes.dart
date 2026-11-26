@@ -9,7 +9,7 @@ import 'package:bakhli/features/social/shared/social_models.dart';
 const String myId = 'u-me';
 const String peerId = 'u-peer';
 
-Map<String, dynamic> personJson(String id, String name) => {'userId': id, 'name': name, 'username': 'Bakhli#1', 'initial': name[0]};
+Map<String, dynamic> personJson(String id, String name, {String? gender}) => {'userId': id, 'name': name, 'username': 'Bakhli#1', 'initial': name[0], 'gender': ?gender};
 
 Map<String, dynamic> roomJson({
   String roomId = 'r1',
@@ -22,13 +22,14 @@ Map<String, dynamic> roomJson({
   int unread = 0,
   String? preview,
   Map<String, dynamic>? trip,
+  String? peerGender,
 }) =>
     {
       'roomId': roomId,
       'kind': kind,
       'status': status,
       'iStarted': iStarted,
-      'peer': kind == 'D' ? personJson(peerId, 'Kavya Sharma') : null,
+      'peer': kind == 'D' ? personJson(peerId, 'Kavya Sharma', gender: peerGender) : null,
       'trip': trip,
       'peerFollowsMe': false,
       'iFollowPeer': false,
@@ -53,8 +54,8 @@ Map<String, dynamic> messageJson(int seq, {String sender = peerId, String text =
       'clientMessageId': cid,
     };
 
-ChatRoomModel roomOf({String roomId = 'r1', String kind = 'D', String status = 'Active', bool iStarted = true, String lock = 'none', bool canSend = true, Map<String, dynamic>? trip, int unread = 0, String? preview}) =>
-    ChatRoomModel.fromJson(roomJson(roomId: roomId, kind: kind, status: status, iStarted: iStarted, lock: lock, canSend: canSend, trip: trip, unread: unread, preview: preview));
+ChatRoomModel roomOf({String roomId = 'r1', String kind = 'D', String status = 'Active', bool iStarted = true, String lock = 'none', bool canSend = true, Map<String, dynamic>? trip, int unread = 0, String? preview, String? peerGender}) =>
+    ChatRoomModel.fromJson(roomJson(roomId: roomId, kind: kind, status: status, iStarted: iStarted, lock: lock, canSend: canSend, trip: trip, unread: unread, preview: preview, peerGender: peerGender));
 
 ChatMessageModel msgOf(int seq, {String sender = peerId, String text = 'Hi', String? cid, bool masked = false, String? system, String? senderName, String expires = '2099-01-01T00:00:00Z'}) =>
     ChatMessageModel.fromJson(messageJson(seq, sender: sender, text: text, cid: cid, masked: masked, system: system, senderName: senderName, expires: expires));

@@ -142,11 +142,15 @@ void main() {
     await drain(t);
   });
 
-  testWidgets('as the login gate step 1 has no back but offers Log out', (t) async {
+  testWidgets('as the login gate step 1 has no back; Log out sits only in the menu', (t) async {
     installServer();
     await pumpSocial(t, const OnboardingScreen(), pages: _pages);
     expect(find.byIcon(Icons.chevron_left_rounded), findsNothing);
+    expect(find.text(ProfilePhotoStrings.logOut), findsNothing, reason: 'mock A1: no bottom Log out link');
+    expect(find.byKey(OnboardingHeader.menuKey), findsOneWidget);
+    await _tap(t, find.byKey(OnboardingHeader.menuKey));
     expect(find.text(ProfilePhotoStrings.logOut), findsOneWidget);
+    expect(find.text('Change role'), findsOneWidget);
     await drain(t);
   });
 
@@ -196,6 +200,9 @@ void main() {
     await settle(t);
     expect((find.byKey(const ValueKey('ob_about')).evaluate().single.widget as TextField).controller!.text, 'Hills over beaches.');
     expect(find.text('19/150'), findsOneWidget);
+    final counter = t.getRect(find.byKey(OnboardingStepAbout.counterKey));
+    expect(counter.bottom, lessThanOrEqualTo(t.getRect(find.byKey(const ValueKey('ob_about'))).top), reason: 'mock A3: counter on the About label row');
+    expect(find.text(SocialStringsA.needed), findsNothing);
     await drain(t);
   });
 

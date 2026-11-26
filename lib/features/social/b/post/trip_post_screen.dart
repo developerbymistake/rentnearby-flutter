@@ -276,6 +276,7 @@ class _TripPostScreenState extends State<TripPostScreen> {
         _ when JoinGenderRule.blocks(t) => GradientPillButton(
             key: TripPostScreen.onlyForKey,
             tone: teal,
+            icon: Icons.lock_rounded,
             label: SocialStringsB.onlyFor(t.joinGender),
             enabled: false,
             onTap: null,

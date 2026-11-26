@@ -117,7 +117,16 @@ class TravelBuddiesController extends GetxController {
     if (i != -1) items[i] = items[i].copyWith(myJoin: myJoin);
   }
 
-  void removeOwner(String userId) {
+  Future<BuddyResult<void>> removeMyPost(String tripId) async {
+    final r = await _api.unpublish(tripId);
+    if (r.isOk) {
+      mine.removeWhere((t) => t.tripId == tripId);
+      SocialLive.posts.value++;
+    }
+    return r;
+  }
+
+    void removeOwner(String userId) {
     items.removeWhere((t) => t.owner.userId == userId);
   }
 

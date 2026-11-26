@@ -103,16 +103,19 @@ void main() {
 
   test('posting copy never says buddies (spec 23.7 / 24); the Find buddies browse label stays', () {
     expect(SocialStringsB.wizardTitle, 'Post your trip');
-    expect(SocialStringsB.postToFindBuddies, 'Post this trip');
+    expect(SocialStringsB.postToFindBuddies, 'Post your trip');
     expect(SocialStringsB.feedEmptyBody, 'Post your trip and travellers can ask to join.');
-    expect(SocialStringsB.windowNote, 'Travellers see a window, like “within 2 months”.');
+    expect(SocialStringsB.windowNote(2), 'Your post shows “within 2 months”, never a date.');
+    expect(SocialStringsB.withinRowSub, 'Travellers see a window');
     expect(SocialStringsB.aboutTitle, 'Tell travellers about it');
     for (final s in [
       SocialStringsB.wizardTitle,
       SocialStringsB.postToFindBuddies,
       SocialStringsB.postToFindBuddiesLine,
       SocialStringsB.feedEmptyBody,
-      SocialStringsB.windowNote,
+      SocialStringsB.windowNote(2),
+      SocialStringsB.withinRowSub,
+      SocialStringsB.whenAndHowLong,
       SocialStringsB.aboutTitle,
       SocialStringsB.homePostEyebrow,
       SocialStringsB.homePostTitle,
@@ -133,9 +136,10 @@ void main() {
     expect(card, lessThan(src.indexOf('_buildBody(context),')));
   });
 
-  test('the trip menu row Post to find buddies carries a 3D icon and the grey second line', () {
+  test('the trip menu row Post your trip carries the same 3D backpack as the other Post your trip entries and the grey second line', () {
     final seam = File('lib/features/buddy/sharing/widgets/owner_overview_seam.dart').readAsStringSync();
-    expect(seam, contains('art: HubArt.womanRaising'));
+    expect(seam, contains('art: ListingArt.backpack'));
+    expect(seam, isNot(contains('HubArt.womanRaising')));
     final overview = File('lib/features/trip/screens/trip_overview_screen.dart').readAsStringSync();
     expect(overview, contains('Art3D(asset: extraMenuItems[i].art!'));
   });

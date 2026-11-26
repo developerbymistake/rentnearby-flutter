@@ -5,6 +5,7 @@ import 'package:bakhli/design/design.dart';
 import 'package:bakhli/features/social/a/profile/profile_sections.dart';
 import 'package:bakhli/features/social/a/profile/seeker_profile_screen.dart';
 import 'package:bakhli/features/social/a/social_strings_a.dart';
+import 'package:bakhli/features/social/a/widgets/social_chips_a.dart';
 import 'package:bakhli/features/social/a/widgets/social_section_card.dart';
 import 'package:bakhli/features/social/shared/social_me_controller.dart';
 import 'package:bakhli/models/my_plan_model.dart';
@@ -121,6 +122,11 @@ void main() {
     final cards = [ProfileChipsSection.interestsKey, ProfileChipsSection.placesKey, ProfileChipsSection.skillsKey];
     for (final k in cards) {
       expect(find.descendant(of: find.byKey(k), matching: find.byType(SocialSectionHeader)), findsOneWidget);
+      final chips = find.descendant(of: find.byKey(k), matching: find.byType(TagChip));
+      final n = chips.evaluate().length;
+      expect(n, greaterThan(0));
+      expect(find.descendant(of: find.byKey(k), matching: find.text('· $n')), findsOneWidget, reason: 'mock B4: count beside each section title');
+      expect(find.descendant(of: chips.first, matching: find.byType(Art3D)), findsOneWidget, reason: 'mock B4: 3D icon on every profile chip');
     }
     // Visible card box (the keyed Container's rect also covers its top margin).
     final rects = [for (final k in cards) t.getRect(find.descendant(of: find.byKey(k), matching: find.byType(DecoratedBox)).first)];

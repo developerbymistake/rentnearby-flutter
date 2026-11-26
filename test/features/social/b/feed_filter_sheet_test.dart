@@ -1,3 +1,4 @@
+import 'package:bakhli/design/design.dart';
 import 'package:bakhli/features/buddy/shared/widgets/segment_tabs.dart';
 import 'package:bakhli/features/social/b/feed/feed_filter_sheet.dart';
 import 'package:bakhli/features/social/b/social_strings_b.dart';
@@ -67,6 +68,10 @@ void main() {
       testWidgets('free seeker: Near me shows the Plus lock, no switch; Who can join is one SegmentTabs Anyone | Men | Women ($size, $scale)', (t) async {
         await _open(t, _host(limits: _freeLimits), size: size, scale: scale);
         expect(find.text(SocialStringsB.filtersKicker), findsOneWidget);
+        // Mock D9c: the FILTERS kicker sits above the sheet title, one left edge.
+        final title = find.descendant(of: find.byType(Sheet3D), matching: find.text(SocialStringsB.trips)).first;
+        expect(t.getTopLeft(find.text(SocialStringsB.filtersKicker)).dy, lessThan(t.getTopLeft(title).dy));
+        expect(t.getTopLeft(find.text(SocialStringsB.filtersKicker)).dx, t.getTopLeft(title).dx);
         expect(find.text(SocialStringsB.anywhere), findsOneWidget);
         for (final p in SocialStringsB.popularPlaces) {
           expect(find.text(p), findsOneWidget);

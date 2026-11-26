@@ -141,8 +141,9 @@ Map<String, dynamic> myProfileJson({bool isPrivate = false, String policy = 'Eve
       'publicTrips': [],
     };
 
-Map<String, dynamic> socialMeJson({Map<String, dynamic>? profile, bool isPlus = false}) => {
+Map<String, dynamic> socialMeJson({Map<String, dynamic>? profile, bool isPlus = false, bool? guidelinesAccepted}) => {
       'profile': profile,
+      'guidelinesAccepted': ?guidelinesAccepted,
       'limits': {
         'isPlus': isPlus,
         'canUpgrade': true,

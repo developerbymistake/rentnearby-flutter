@@ -2,6 +2,7 @@ import 'package:bakhli/design/design.dart';
 import 'package:bakhli/design/extra/ext_chat.dart';
 import 'package:bakhli/features/buddy/shared/buddy_look.dart';
 import 'package:bakhli/features/buddy/shared/buddy_result.dart';
+import 'package:bakhli/features/social/a/widgets/social_chips_a.dart';
 import 'package:bakhli/features/social/c/chat/dm_room_screen.dart';
 import 'package:bakhli/features/social/c/chat/models/chat_models.dart';
 import 'package:bakhli/features/social/c/chat/room_controller.dart';
@@ -140,6 +141,34 @@ void main() {
     await pumpSocial(t, DmRoomScreen(controller: controller(api)));
     expectCompactRow(t, find.byKey(const ValueKey('chat_room_header_avatar')));
     expect(find.descendant(of: find.byKey(const ValueKey('dm_room_header')), matching: find.text('Kavya S.')), findsOneWidget);
+    expect(t.takeException(), isNull);
+    await disposeSocial(t);
+  });
+
+  testWidgets('direct chat header shows a visible coloured gender badge next to the name', (t) async {
+    final api = FakeChatApi()
+      ..roomResult = BuddyOk(roomOf(peerGender: 'Female'))
+      ..messagesResult = BuddyOk(MessagesPage(items: [msgOf(1, text: 'Hi')], lastSeq: 1));
+    await pumpSocial(t, DmRoomScreen(controller: controller(api)));
+    final glyph = find.descendant(of: find.byKey(const ValueKey('dm_room_header')), matching: find.byType(GenderGlyph));
+    expect(glyph, findsOneWidget);
+    final g = t.widget<GenderGlyph>(glyph);
+    expect(g.badge, isTrue);
+    expect(g.color, GenderGlyph.inkOf('Female'));
+    expect(t.widget<Icon>(find.descendant(of: glyph, matching: find.byType(Icon))).color, GenderGlyph.inkOf('Female'));
+    expect(t.takeException(), isNull);
+    await disposeSocial(t);
+  });
+
+  testWidgets('receiver Delete is a visible pill, not the screen background colour', (t) async {
+    final api = FakeChatApi()
+      ..roomResult = BuddyOk(roomOf(status: 'Request', iStarted: false))
+      ..messagesResult = BuddyOk(MessagesPage(items: [msgOf(1, text: 'Hi')], lastSeq: 1));
+    await pumpSocial(t, DmRoomScreen(controller: controller(api)));
+    final box = t.widget<Container>(find.descendant(of: find.byKey(const ValueKey('dm_receiver_delete')), matching: find.byType(Container)).first);
+    final bg = (box.decoration! as BoxDecoration).color;
+    expect(bg, BuddyLook.subText.withValues(alpha: Alpha.v10));
+    expect(bg, isNot(BuddyLook.closeBg));
     expect(t.takeException(), isNull);
     await disposeSocial(t);
   });

@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 
 import '../../../../controllers/auth_controller.dart';
+import '../../../../design/tokens/listing_palette.dart';
 import '../../../../utils/app_toast.dart';
 import '../../../social/b/social_strings_b.dart';
 import '../../../social/shared/social_error_types.dart';
@@ -9,7 +10,6 @@ import '../../../social/shared/social_me_controller.dart';
 import '../../../social/shared/social_nav.dart';
 import '../../../social/shared/widgets/plus_widgets.dart';
 import '../../../trip/models/trip_model.dart';
-import '../../../trip/widgets/hub/hub_art.dart';
 import '../../buddy_navigation.dart';
 import '../controllers/owner_sharing_controller.dart';
 import '../models/sharing_models.dart';
@@ -134,7 +134,7 @@ abstract final class OwnerOverviewSeam {
     return OverviewMenuItem(
       label: SocialStringsB.postToFindBuddies,
       subtitle: SocialStringsB.postToFindBuddiesLine,
-      art: HubArt.womanRaising,
+      art: ListingArt.backpack,
       onTap: () {
         final limits = SocialMeController.maybe?.me.value?.limits;
         if (limits != null && limits.publicTrips.reached) {

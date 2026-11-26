@@ -529,7 +529,7 @@ class TravellerProfile {
 }
 
 class SocialMe {
-  const SocialMe({this.profile, required this.limits, this.followRequests = 0, this.chatUnread = ChatUnread.zero, this.catalog = SocialCatalogData.empty});
+  const SocialMe({this.profile, required this.limits, this.followRequests = 0, this.chatUnread = ChatUnread.zero, this.catalog = SocialCatalogData.empty, this.guidelinesAccepted});
 
   final MyProfile? profile;
   final SocialLimits limits;
@@ -537,12 +537,16 @@ class SocialMe {
   final ChatUnread chatUnread;
   final SocialCatalogData catalog;
 
-  SocialMe copyWith({MyProfile? profile, ChatUnread? chatUnread, int? followRequests}) => SocialMe(
+  /// null = the server did not say (older answer): never block on it, the server enforces.
+  final bool? guidelinesAccepted;
+
+  SocialMe copyWith({MyProfile? profile, ChatUnread? chatUnread, int? followRequests, bool? guidelinesAccepted}) => SocialMe(
         profile: profile ?? this.profile,
         limits: limits,
         followRequests: followRequests ?? this.followRequests,
         chatUnread: chatUnread ?? this.chatUnread,
         catalog: catalog,
+        guidelinesAccepted: guidelinesAccepted ?? this.guidelinesAccepted,
       );
 
   factory SocialMe.fromJson(Map<String, dynamic> j) {
@@ -554,6 +558,7 @@ class SocialMe {
       followRequests: BuddyJson.integer(counts['followRequests']),
       chatUnread: ChatUnread.fromJson(BuddyJson.mapOrNull(counts['chatUnread'])),
       catalog: SocialCatalogData.fromJson(BuddyJson.mapOrNull(j['catalog'])),
+      guidelinesAccepted: j['guidelinesAccepted'] is bool ? j['guidelinesAccepted'] as bool : (p != null && p['guidelinesAccepted'] is bool ? p['guidelinesAccepted'] as bool : null),
     );
   }
 }

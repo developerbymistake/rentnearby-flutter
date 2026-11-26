@@ -20,6 +20,7 @@ class Sheet3D extends StatelessWidget {
     required this.child,
     this.art,
     this.title,
+    this.kicker,
     this.subtitle,
     this.centerTitle = true,
     this.onBack,
@@ -40,6 +41,8 @@ class Sheet3D extends StatelessWidget {
   final Widget child;
   final String? art;
   final String? title;
+  // Optional small caps line ABOVE a left-aligned title (e.g. 'FILTERS'); centred headers ignore it.
+  final String? kicker;
   final String? subtitle;
   final bool centerTitle;
   final VoidCallback? onBack;
@@ -166,8 +169,9 @@ class Sheet3D extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
+                if (kicker != null) Text(kicker!, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(12, FontWeight.w700, tone.g2, letterSpacing: 1)),
                 Container(
-                  constraints: BoxConstraints(minHeight: DS.s(40)),
+                  constraints: BoxConstraints(minHeight: DS.s(kicker != null ? 32 : 40)),
                   padding: EdgeInsets.only(right: artRight && art != null ? DS.s(128) + artRightInset - DS.s(18) : 0),
                   child: Align(
                     alignment: Alignment.centerLeft,

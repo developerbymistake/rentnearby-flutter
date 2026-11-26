@@ -59,6 +59,9 @@ class RoomController extends GetxController {
   final view = RoomView.loading.obs;
   final peerLastReadSeq = 0.obs;
   final refusal = Rxn<BuddyRefused<Object?>>();
+  final cannotMessageNow = false.obs;
+  Future<bool> Function(bool group)? guidelinesPrompt;
+  Completer<bool>? _guidelinesAsk;
   final bounced = Rxn<String>();
   final repliedFree = false.obs;
   final hasOlder = false.obs;
@@ -94,11 +97,38 @@ class RoomController extends GetxController {
   bool get canMessage => room.value != null || (preflight.value?.canMessage ?? false);
 
   bool get canSend {
-    if (view.value != RoomView.ready || !canMessage) return false;
+    if (view.value != RoomView.ready || !canMessage || cannotMessageNow.value) return false;
     final r = room.value;
     if (r != null) return r.canSend && r.lock == RoomLock.none && r.status != RoomStatus.declined;
     return lock == RoomLock.none;
   }
+
+  bool get needsGuidelines => SocialMeController.maybe?.guidelinesMissing ?? false;
+
+  /// Shows the community guidelines once. Resolves true when the server holds the acceptance,
+  /// false when there is no screen to ask on or the person closed the sheet.
+  Future<bool> askGuidelines() {
+    final running = _guidelinesAsk;
+    if (running != null) return running.future;
+    final prompt = guidelinesPrompt;
+    if (prompt == null) return Future.value(false);
+    final done = Completer<bool>();
+    _guidelinesAsk = done;
+    prompt(isTrip).then((ok) => ok, onError: (_) => false).then((ok) {
+      _guidelinesAsk = null;
+      done.complete(ok);
+    });
+    return done.future;
+  }
+
+  /// First entry to a trip chat: ask once, then open the room if the server had refused the entry.
+  Future<void> ensureGuidelinesOnEntry() async {
+    if (!needsGuidelines) return;
+    final ok = await askGuidelines();
+    if (ok && view.value == RoomView.failed) unawaited(open());
+  }
+
+  static bool _isGuidelines(BuddyResult<Object?> r) => r is BuddyRefused<Object?> && r.type == SocialErrorTypes.guidelinesNotAccepted;
 
   bool isMine(ChatMessageModel m) => m.senderId != null && m.senderId == _myId();
 
@@ -130,19 +160,25 @@ class RoomController extends GetxController {
     _lifecycle?.dispose();
     _plusWorker?.dispose();
     _topWorker?.dispose();
+    guidelinesPrompt = null;
     super.onClose();
   }
 
   Future<void> open() async {
     final gen = ++_gen;
     view.value = RoomView.loading;
+    cannotMessageNow.value = false;
     final id = roomId;
     final trip = tripId;
     final user = userId;
     if (id != null) {
-      _onRoom(await _api.room(id), gen);
+      final r = await _roomOrGuidelines(() => _api.room(id), gen);
+      if (r == null) return;
+      _onRoom(r, gen);
     } else if (trip != null) {
-      _onRoom(await _api.tripRoom(trip), gen);
+      final r = await _roomOrGuidelines(() => _api.tripRoom(trip), gen);
+      if (r == null) return;
+      _onRoom(r, gen);
     } else if (user != null) {
       final r = await _api.withUser(user);
       if (gen != _gen) return;
@@ -165,6 +201,22 @@ class RoomController extends GetxController {
       return;
     }
     if (gen == _gen && room.value != null) await loadMessages();
+  }
+
+  /// A group entry the server refuses until the guidelines are accepted: ask once, then fetch again.
+  /// Returns null when this open was replaced meanwhile.
+  Future<BuddyResult<ChatRoomModel>?> _roomOrGuidelines(Future<BuddyResult<ChatRoomModel>> Function() fetch, int gen) async {
+    var r = await fetch();
+    if (gen != _gen) return null;
+    if (_isGuidelines(r)) {
+      SocialMeController.maybe?.applyGuidelinesAccepted(false);
+      if (await askGuidelines()) {
+        if (gen != _gen) return null;
+        r = await fetch();
+        if (gen != _gen) return null;
+      }
+    }
+    return r;
   }
 
   void _onRoom(BuddyResult<ChatRoomModel> r, int gen) {
@@ -221,6 +273,8 @@ class RoomController extends GetxController {
   Future<bool> send(String raw) async {
     final text = raw.trim();
     if (text.isEmpty || text.length > maxLength || !canSend) return false;
+    if (needsGuidelines && guidelinesPrompt != null && !await askGuidelines()) return false;
+    if (!canSend) return false;
     final cid = _newId();
     messages.add(ChatMessageModel(seq: 0, senderId: _myId(), text: text, createdAt: _now(), clientMessageId: cid, sending: true));
     await _deliver(cid, text);
@@ -236,7 +290,7 @@ class RoomController extends GetxController {
     await _deliver(clientMessageId, m.text);
   }
 
-  Future<void> _deliver(String cid, String text) async {
+  Future<void> _deliver(String cid, String text, {bool retried = false}) async {
     final gen = _gen;
     final current = room.value;
     final user = userId;
@@ -249,6 +303,10 @@ class RoomController extends GetxController {
           room.value = value.room;
           _confirm(value.message);
         case BuddyRefused():
+          if (await _askAgain(r, retried) && gen == _gen) {
+            await _deliver(cid, text, retried: true);
+            return;
+          }
           _refused(cid, text, r);
         default:
           _markFailed(cid);
@@ -261,11 +319,13 @@ class RoomController extends GetxController {
       if (BuddyJson.boolean(hub['ok'])) {
         _sent(current, ChatMessageModel.fromJson(BuddyJson.map(hub['message'])));
       } else {
-        _refused(
-            cid,
-            text,
-            BuddyRefused<Object?>(
-                type: BuddyJson.strOrNull(hub['type']), statusCode: _statusOf(BuddyJson.strOrNull(hub['type'])), message: BuddyJson.strOrNull(hub['message']), data: BuddyJson.map(hub['data'])));
+        final refused = BuddyRefused<Object?>(
+            type: BuddyJson.strOrNull(hub['type']), statusCode: _statusOf(BuddyJson.strOrNull(hub['type'])), message: BuddyJson.strOrNull(hub['message']), data: BuddyJson.map(hub['data']));
+        if (await _askAgain(refused, retried) && gen == _gen) {
+          await _deliver(cid, text, retried: true);
+          return;
+        }
+        _refused(cid, text, refused);
       }
       return;
     }
@@ -275,16 +335,28 @@ class RoomController extends GetxController {
       case BuddyOk(:final value):
         _sent(current, value);
       case BuddyRefused():
+        if (await _askAgain(r, retried) && gen == _gen) {
+          await _deliver(cid, text, retried: true);
+          return;
+        }
         _refused(cid, text, r);
       default:
         _markFailed(cid);
     }
   }
 
+  /// The server refused because the guidelines are not accepted yet: show the sheet and, once accepted,
+  /// send the same message again (once). Declined: the caller bounces the text back to the composer.
+  Future<bool> _askAgain(BuddyRefused<Object?> r, bool retried) async {
+    if (retried || !_isGuidelines(r)) return false;
+    SocialMeController.maybe?.applyGuidelinesAccepted(false);
+    return askGuidelines();
+  }
+
   static int _statusOf(String? type) => switch (type) {
         SocialErrorTypes.newChatLimit || SocialErrorTypes.tooManyRequests => 429,
         SocialErrorTypes.roomNotFound || SocialErrorTypes.personNotFound => 404,
-        SocialErrorTypes.cannotMessage || SocialErrorTypes.seekerOnly => 403,
+        SocialErrorTypes.cannotMessage || SocialErrorTypes.seekerOnly || SocialErrorTypes.guidelinesNotAccepted => 403,
         SocialErrorTypes.textTooLong => 400,
         _ => 409,
       };
@@ -351,6 +423,7 @@ class RoomController extends GetxController {
     final bounce = type == SocialErrorTypes.awaitingReply ||
         type == SocialErrorTypes.newChatLimit ||
         type == SocialErrorTypes.cannotMessage ||
+        type == SocialErrorTypes.guidelinesNotAccepted ||
         type == SocialErrorTypes.textTooLong ||
         type == SocialErrorTypes.roomNotFound ||
         type == SocialErrorTypes.personNotFound;
@@ -368,6 +441,7 @@ class RoomController extends GetxController {
       final p = preflight.value;
       if (p != null) preflight.value = ChatPreflight(room: p.room, peer: p.peer, canMessage: p.canMessage, lock: RoomLock.limit, newChats: p.newChats, isFree: p.isFree);
     } else if (type == SocialErrorTypes.cannotMessage) {
+      cannotMessageNow.value = true;
       final p = preflight.value;
       if (p != null) preflight.value = ChatPreflight(room: p.room, peer: p.peer, canMessage: false, lock: p.lock, newChats: p.newChats, isFree: p.isFree);
     } else if (type == SocialErrorTypes.roomNotFound || type == SocialErrorTypes.personNotFound) {
