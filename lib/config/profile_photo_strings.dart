@@ -8,6 +8,9 @@ abstract final class ProfilePhotoStrings {
   static const offline = 'You are offline. Try again when connected.';
   static const updated = 'Photo updated';
   static const updateFailed = 'Could not update photo. Tap retry on the picture.';
+  static const remove = 'Remove';
+  static const removed = 'Photo removed';
+  static const removeFailed = 'Could not remove photo. Try again.';
   static const cropTitle = 'Crop photo';
   static const removedSubtitle = 'Your old photo was removed';
   static const continueLabel = 'Continue';

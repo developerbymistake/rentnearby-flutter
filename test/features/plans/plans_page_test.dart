@@ -13,8 +13,9 @@ import '../../support/owner_sizes.dart';
 import '../../support/real_phone.dart';
 import 'plans_harness.dart';
 
-Future<void> _pump(WidgetTester t, MyPlanModel me, {bool trialOffer = true, double h = 3200, double w = 392, Map<String, int>? plusFeatures}) async {
-  installPlans(me, trialOffer_: trialOffer, plusFeatures: plusFeatures);
+Future<void> _pump(WidgetTester t, MyPlanModel me,
+    {bool trialOffer = true, double h = 3200, double w = 392, Map<String, int>? plusFeatures, int plusTrialDays = 7}) async {
+  installPlans(me, trialOffer_: trialOffer, plusFeatures: plusFeatures, plusTrialDays: plusTrialDays);
   await pumpPhone(t, const PlansBillingScreen(), size: Size(w, h));
   await settlePhone(t);
   await settlePhone(t);
@@ -73,6 +74,15 @@ void main() {
       await _pump(t, Fx.free('Taxi', trial: false));
       expect(find.text('Try free for 7 days'), findsNothing);
     });
+
+    // 2026-11-27: plans carry no trial days. The server catalog is the switch, even if Google still lists an old offer.
+    for (final key in ['Taxi', 'Stay']) {
+      testWidgets('no trial days on the plan: no trial button or words ($key)', (t) async {
+        await _pump(t, Fx.free(key), plusTrialDays: 0);
+        _not(['Try free', 'Free for ', 'days free']);
+        _has(['Continue with Plus']);
+      });
+    }
   });
 
   group('o_pl_2 stay Free', () {

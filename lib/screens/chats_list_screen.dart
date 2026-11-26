@@ -4,7 +4,14 @@ import 'package:bakhli/design/design.dart';
 import 'package:bakhli/design/extra/ext_chat.dart';
 import '../config/app_insets.dart';
 import '../config/app_routes.dart';
+import '../config/shell_kind.dart';
+import '../controllers/auth_controller.dart';
 import '../controllers/chat_controller.dart';
+import '../features/social/c/chat/models/chat_models.dart';
+import '../features/social/c/chat/rooms_controller.dart';
+import '../features/social/c/chat/social_rooms_tabs.dart';
+import '../features/social/c/social_strings_c.dart';
+import '../features/social/shared/social_nav.dart';
 import '../models/conversation_model.dart';
 import '../utils/input_formatters.dart';
 import '../utils/listing_kind_visuals.dart';
@@ -29,6 +36,14 @@ class _ChatsListScreenState extends State<ChatsListScreen>
   int _autoFetchCount = 0;
   static const _minFilteredForNoAutoFetch = 8;
   static const _maxAutoFetchPages = 5;
+  late final RoomsController? _rooms = _socialRooms();
+
+  static RoomsController? _socialRooms() {
+    if (!Get.isRegistered<AuthController>()) return null;
+    final auth = Get.find<AuthController>();
+    if (auth.shellKind.value != ShellKind.seeker || !auth.canUseTravellerFeatures) return null;
+    return RoomsController.maybe;
+  }
 
   @override
   void initState() {
@@ -39,6 +54,7 @@ class _ChatsListScreenState extends State<ChatsListScreen>
       if (_scrollCtrl.position.pixels >=
           _scrollCtrl.position.maxScrollExtent - 200) {
         _ctrl.loadMoreConversations();
+        _rooms?.loadMore(RoomBucket.people);
       }
     });
     _searchAutoFetchWorker = ever<List<ConversationModel>>(_ctrl.conversations, (_) => _maybeFetchMoreForSearch());
@@ -64,6 +80,7 @@ class _ChatsListScreenState extends State<ChatsListScreen>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       _ctrl.loadConversations();
+      _rooms?.reloadAll();
     }
   }
 
@@ -170,39 +187,7 @@ class _ChatsListScreenState extends State<ChatsListScreen>
                 ),
               ),
               Expanded(
-                child: Obx(() {
-                  final loading = _ctrl.conversationsLoading.value;
-                  final items = _ctrl.visibleConversations;
-
-                  if (loading && items.isEmpty) return _buildShimmer();
-                  if (items.isEmpty) return _buildEmpty();
-
-                  final filtered = _filtered(items);
-                  if (filtered.isEmpty) return _buildNoMatches();
-
-                  final loadingMore = _ctrl.loadingMoreConversations.value;
-                  return RefreshIndicator(
-                    color: _tone.g2,
-                    backgroundColor: DesignColors.surface,
-                    onRefresh: _refresh,
-                    child: ListView.builder(
-                      controller: _scrollCtrl,
-                      physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
-                      padding: EdgeInsets.only(bottom: DS.s(KitMetrics.gutter) + AppInsets.bottomViewPadding(context)),
-                      itemCount: filtered.length + (loadingMore ? 1 : 0),
-                      itemBuilder: (_, i) {
-                        if (i >= filtered.length) {
-                          return _buildLoadMoreSpinner();
-                        }
-                        return EntranceOnce(
-                          key: ValueKey(filtered[i].id),
-                          index: i < 6 ? i : 6,
-                          child: _conversationCard(filtered[i]),
-                        );
-                      },
-                    ),
-                  );
-                }),
+                child: _body(),
               ),
             ],
           ),
@@ -210,6 +195,87 @@ class _ChatsListScreenState extends State<ChatsListScreen>
       ),
     );
   }
+
+  Widget _body() {
+    final rooms = _rooms;
+    if (rooms == null) return _listingList();
+    return SocialRoomsTabs(rooms: rooms, people: (_, r) => _peopleList(r));
+  }
+
+  Widget _peopleList(RoomsController rooms) => Obx(() {
+        final convs = _filtered(_ctrl.visibleConversations);
+        final q = _query.trim().toLowerCase();
+        final social = rooms.people.items.where((r) => q.isEmpty || (r.peer?.name.toLowerCase().contains(q) ?? false)).toList();
+        final state = rooms.people.state.value;
+        final loading = (_ctrl.conversationsLoading.value || state == RoomsLoad.loading || state == RoomsLoad.idle) && convs.isEmpty && social.isEmpty;
+        if (loading) return _buildShimmer();
+        if (convs.isEmpty && social.isEmpty) return q.isEmpty ? _buildSocialEmpty() : _buildNoMatches();
+        final entries = <(DateTime, Widget)>[
+          for (var i = 0; i < social.length; i++) (social[i].lastMessageAt ?? DateTime.fromMillisecondsSinceEpoch(0, isUtc: true), KeyedSubtree(key: ValueKey('room_${social[i].roomId}'), child: SocialPersonRoomRow(room: social[i], index: i))),
+          for (final c in convs) (c.lastMessageAt, KeyedSubtree(key: ValueKey('conv_${c.id}'), child: _conversationCard(c))),
+        ]..sort((a, b) => b.$1.compareTo(a.$1));
+        final loadingMore = _ctrl.loadingMoreConversations.value || rooms.people.loadingMore.value;
+        return RefreshIndicator(
+          color: _tone.g2,
+          backgroundColor: DesignColors.surface,
+          onRefresh: () => Future.wait([_refresh(), rooms.load(RoomBucket.people)]),
+          child: ListView.builder(
+            controller: _scrollCtrl,
+            physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+            padding: EdgeInsets.only(bottom: DS.s(KitMetrics.gutter) + AppInsets.bottomViewPadding(context)),
+            itemCount: entries.length + (loadingMore ? 1 : 0),
+            itemBuilder: (_, i) {
+              if (i >= entries.length) return _buildLoadMoreSpinner();
+              return EntranceOnce(key: entries[i].$2.key, index: i < 6 ? i : 6, child: entries[i].$2);
+            },
+          ),
+        );
+      });
+
+  Widget _buildSocialEmpty() => ListView(
+        physics: const NeverScrollableScrollPhysics(),
+        children: [
+          ChatStateCard3D(tone: _tone, art: ListingArt.speechBalloon, title: SocialStringsC.noChats, message: SocialStringsC.noChatsLine),
+          Padding(
+            padding: DS.gapInsets(l: 60, t: 18, r: 60),
+            child: GradientPillButton(tone: ListingTone.indigo, label: SocialStringsC.findBuddies, onTap: SocialNav.openTravelBuddies),
+          ),
+        ],
+      );
+
+  Widget _listingList() => Obx(() {
+      final loading = _ctrl.conversationsLoading.value;
+      final items = _ctrl.visibleConversations;
+
+      if (loading && items.isEmpty) return _buildShimmer();
+      if (items.isEmpty) return _buildEmpty();
+
+      final filtered = _filtered(items);
+      if (filtered.isEmpty) return _buildNoMatches();
+
+      final loadingMore = _ctrl.loadingMoreConversations.value;
+      return RefreshIndicator(
+        color: _tone.g2,
+        backgroundColor: DesignColors.surface,
+        onRefresh: _refresh,
+        child: ListView.builder(
+          controller: _scrollCtrl,
+          physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+          padding: EdgeInsets.only(bottom: DS.s(KitMetrics.gutter) + AppInsets.bottomViewPadding(context)),
+          itemCount: filtered.length + (loadingMore ? 1 : 0),
+          itemBuilder: (_, i) {
+            if (i >= filtered.length) {
+              return _buildLoadMoreSpinner();
+            }
+            return EntranceOnce(
+              key: ValueKey(filtered[i].id),
+              index: i < 6 ? i : 6,
+              child: _conversationCard(filtered[i]),
+            );
+          },
+        ),
+      );
+      });
 
   Widget _buildSearchBox() {
     return SearchPill(

@@ -7,6 +7,7 @@ import '../../shared/buddy_look.dart';
 import '../models/notice_models.dart';
 import '../../../owner_core/session/owner_notice_registry.dart';
 import '../notice_copy.dart';
+import 'social_notice_row.dart';
 
 class NoticeRow extends StatelessWidget {
   const NoticeRow({super.key, required this.notice, required this.onTap, this.now});
@@ -19,6 +20,9 @@ class NoticeRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final view = OwnerNoticeRegistry.viewOf(notice);
     if (view == null) return const SizedBox.shrink();
+    if (view.social) {
+      return SocialNoticeCard(view: view, time: BuddyFormat.ago(notice.updatedAt ?? notice.createdAt, now: now), isRead: notice.isRead, onTap: onTap);
+    }
     final (time, unit) = BuddyFormat.agoParts(notice.updatedAt ?? notice.createdAt, now: now);
     return NoticeCard(view: view, time: time, unit: unit, isRead: notice.isRead, onTap: onTap);
   }

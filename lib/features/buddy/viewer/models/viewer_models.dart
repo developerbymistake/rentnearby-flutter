@@ -301,12 +301,14 @@ class ViewerTrip {
     required this.progressPercent,
     required this.expenses,
     this.updatedAt,
+    this.detailsLocked = false,
   });
 
   final String tripId;
   final String title;
   final String status;
   final String role;
+  final bool detailsLocked;
   final TripOwnerRef owner;
   final List<String> legCities;
   final int dayCount;
@@ -345,6 +347,7 @@ class ViewerTrip {
         progressPercent: BuddyJson.integer(j['progressPercent']),
         expenses: TripExpenseCard.fromJson(BuddyJson.map(j['expenses'])),
         updatedAt: BuddyJson.time(j['updatedAt']),
+        detailsLocked: BuddyJson.boolean(j['detailsLocked']),
       );
 
   Map<String, dynamic> toJson() => {
@@ -367,6 +370,7 @@ class ViewerTrip {
         'progressPercent': progressPercent,
         'expenses': expenses.toJson(),
         'updatedAt': BuddyJson.timeText(updatedAt),
+        'detailsLocked': detailsLocked,
       };
 }
 

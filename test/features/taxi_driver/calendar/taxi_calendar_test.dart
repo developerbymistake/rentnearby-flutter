@@ -283,7 +283,8 @@ void main() {
       expect(find.text('Save trip'), findsNothing);
       expect(find.text('You have 4 active entries'), findsOneWidget);
       expect(find.text('Free keeps 4 trips you add yourself. Plus keeps 50.'), findsOneWidget);
-      expect(find.text('₹150 / month · 7 days free'), findsOneWidget);
+      expect(find.text('₹300 / month'), findsOneWidget);
+      expect(find.textContaining('days free'), findsNothing);
       await tester.tap(find.text('Not now'));
       await settle(tester);
       expect(find.text('Save trip'), findsNothing);
@@ -293,7 +294,7 @@ void main() {
     testWidgets('no trial: price line without 7 days free', (tester) async {
       final fake = CalFake(months: {'2026-11': monthJson(entries: novEntries(), used: 4)});
       await openSheet(tester, fake, plan: OwnerPlans.freeNoTrial);
-      expect(find.text('₹150 / month'), findsOneWidget);
+      expect(find.text('₹300 / month'), findsOneWidget);
     });
 
     testWidgets('payment off at the cap: no gate, server refusal is a toast and the sheet stays', (tester) async {

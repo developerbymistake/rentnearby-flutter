@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../../../design/design.dart';
+import '../../../social/c/chat/trip_chat_badge.dart';
+import '../../../social/b/social_strings_b.dart';
+import '../../../social/shared/social_nav.dart';
 import '../../../trip/widgets/trip_hero_card.dart';
 import '../../buddy_navigation.dart';
 import '../../ledger/data/ledger_api.dart';
@@ -111,8 +114,8 @@ class _ViewerTripScreenState extends State<ViewerTripScreen> {
         onTap: () => BuddyNavigation.openDayPlan(t.tripId),
         compact: true,
       ),
-      _taxiCard(t.taxi),
-      _stayCard(t.stay),
+      if (!t.detailsLocked) _taxiCard(t.taxi),
+      if (!t.detailsLocked) _stayCard(t.stay),
       TripHeroCard(
         key: const ValueKey('viewer_travellers_card'),
         tone: BuddyLook.teal,
@@ -127,6 +130,9 @@ class _ViewerTripScreenState extends State<ViewerTripScreen> {
         onTap: () => BuddyNavigation.openTravellers(t.tripId),
         compact: true,
       ),
+      if (t.detailsLocked)
+        NoteBanner(key: const ValueKey('viewer_details_locked'), art: BuddyArt.locked, text: SocialStringsB.detailsLocked, margin: EdgeInsets.zero)
+      else
       TripHeroCard(
         key: const ValueKey('viewer_expenses_card'),
         tone: BuddyLook.rose,
@@ -146,7 +152,25 @@ class _ViewerTripScreenState extends State<ViewerTripScreen> {
         title: ViewerStrings.overviewTitle,
         subtitle: ViewerStrings.sharedBy(t.owner.name),
         onBack: _back,
-        trailing: const [ViewOnlyChip()],
+        trailing: [
+          if (t.travellerCount > 1)
+            TripChatBadge(
+              tripId: t.tripId,
+              child: Tap3D(
+                tapKey: const ValueKey('viewer_trip_chat'),
+                onTap: () => SocialNav.openTripChat(t.tripId),
+                label: SocialStringsB.tripChat,
+                child: Container(
+                  width: DS.s(40),
+                  height: DS.s(40),
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(color: DesignColors.tint(DesignColors.surface, Alpha.v22), shape: BoxShape.circle),
+                  child: const ExcludeSemantics(child: Art3D(asset: ListingArt.speechBalloon, size: 26, shadowBlur: 2, shadowOffset: Offset(1, 2))),
+                ),
+              ),
+            ),
+          const ViewOnlyChip(),
+        ],
         tripTitle: t.title,
         tripLine: ViewerStrings.tripLine(t.legCities.isEmpty ? t.legs.length : t.legCities.length, t.dayCount, t.travellerCount),
       ),

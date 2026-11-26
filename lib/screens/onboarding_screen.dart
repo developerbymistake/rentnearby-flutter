@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import '../config/profile_photo_strings.dart';
 import '../controllers/auth_controller.dart';
@@ -8,9 +9,12 @@ import '../design/extra/ext_auth.dart';
 import '../design/extra/ext_buddy.dart';
 import '../features/buddy/buddy_strings.dart';
 import '../features/buddy/username_actions.dart';
+import '../features/social/a/onboarding/onboarding_controller.dart';
+import '../features/social/a/onboarding/onboarding_steps.dart';
+import '../features/social/a/social_strings_a.dart';
+import '../features/social/shared/social_formats.dart';
 import '../utils/app_toast.dart';
-import '../utils/input_formatters.dart';
-import '../widgets/profile_photo_circle.dart';
+import 'profile_screen.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -18,96 +22,109 @@ class OnboardingScreen extends StatefulWidget {
   State<OnboardingScreen> createState() => _OnboardingScreenState();
 }
 
-class _OnboardingScreenState extends State<OnboardingScreen> with TickerProviderStateMixin {
+class _OnboardingScreenState extends State<OnboardingScreen> {
   final _auth = Get.find<AuthController>();
   final _photo = ProfilePhotoController.ensure();
   final _nameCtrl = TextEditingController();
   final _nameFocus = FocusNode();
-  static final ListingTone _tone = ListingTone.indigo;
-  bool _nameBad = false;
+  final _aboutCtrl = TextEditingController();
+  final _scroll = ScrollController();
+  late final String _tag = 'onboarding-${identityHashCode(this)}';
+  late final OnboardingController _c;
   bool _created = false;
   bool _uploadFailed = false;
-  bool _submitting = false;
-  late final String _phone;
-  late final AnimationController _enter =
-      AnimationController(duration: const Duration(milliseconds: 600), vsync: this);
+  Worker? _aboutWorker;
 
   @override
   void initState() {
     super.initState();
-    final args = Get.arguments as Map<String, dynamic>;
-    _phone = args['phone'] as String;
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (KitMotion.reduce(context)) {
-      _enter.value = 1;
-    } else if (!_enter.isAnimating && _enter.value == 0) {
-      _enter.forward();
-    }
+    final raw = Get.arguments;
+    final args = raw is Map ? raw : const {};
+    final phone = args['phone'];
+    final existing = args['existing'] == true || phone is! String;
+    _c = Get.put(OnboardingController(existing: existing, phone: phone is String ? phone : null), tag: _tag);
+    _nameCtrl.text = _c.name.value;
+    _aboutCtrl.text = _c.about.value;
+    _aboutWorker = ever<String>(_c.about, (v) {
+      if (_aboutCtrl.text != v) _aboutCtrl.text = v;
+    });
   }
 
   @override
   void dispose() {
-    _enter.dispose();
+    _aboutWorker?.dispose();
+    Get.delete<OnboardingController>(tag: _tag);
     _nameCtrl.dispose();
     _nameFocus.dispose();
+    _aboutCtrl.dispose();
+    _scroll.dispose();
     super.dispose();
   }
 
-  Future<void> _pickPhoto() async {
-    if (_created && _photo.failed.value && _photo.localPath.value != null) {
-      await _submit();
-      return;
+  void _top() {
+    if (_scroll.hasClients) _scroll.jumpTo(0);
+  }
+
+  // Opened from Profile (pushed over another page): step 1 Back leaves. As the login gate nothing is below.
+  bool get _canLeave => _c.existing && !_created && Navigator.of(context).canPop();
+
+  void _back() {
+    FocusScope.of(context).unfocus();
+    if (_c.back()) {
+      _top();
+    } else if (_canLeave && !_c.submitting.value) {
+      Navigator.of(context).pop();
     }
+  }
+
+  Future<void> _pickPhoto() async {
     await _photo.choose(context);
   }
 
-  Future<void> _submit() async {
-    if (_submitting || _auth.isLoading.value || _photo.active) return;
-    _submitting = true;
-    try {
-      await _submitOnce();
-    } finally {
-      _submitting = false;
-    }
+  void _skipPhoto() {
+    if (_photo.active) return;
+    Get.offAllNamed(_auth.postLoginRoute);
   }
 
-  Future<void> _submitOnce() async {
+  Widget? _bottomLink(int step) {
+    if (_created && _uploadFailed) {
+      return AuthTextLink(tone: ListingTone.indigo, label: SocialStringsA.skipForNow, onTap: _photo.busy.value ? null : _skipPhoto);
+    }
+    if (step == 0 && _c.existing && !_created && !Navigator.of(context).canPop()) {
+      return AuthTextLink(tone: ListingTone.indigo, label: ProfilePhotoStrings.logOut, onTap: () => ProfileActions.confirmLogout(context));
+    }
+    return null;
+  }
+
+  Future<void> _primary() async {
     FocusScope.of(context).unfocus();
+    if (!_c.isLast) {
+      if (_c.next()) _top();
+      return;
+    }
+    if (_c.submitting.value || _auth.isLoading.value || _photo.active) return;
     if (_created) {
-      if (_photo.localPath.value == null) {
-        Get.offAllNamed(_auth.postLoginRoute);
-      } else if (await _photo.online()) {
-        await _upload();
-      }
-      return;
-    }
-    final name = _nameCtrl.text.trim();
-    if (name.isEmpty) {
-      setState(() => _nameBad = true);
-      AppToast.error('Please enter your full name');
-      return;
-    }
-    if (name.length > 100) {
-      setState(() => _nameBad = true);
-      AppToast.error('Name cannot exceed 100 characters');
+      await _uploadThenGo();
       return;
     }
     if (_photo.localPath.value != null && !await _photo.online()) return;
-    final ok = await _auth.createOnboardingAccount(phone: _phone, name: name);
-    if (!ok || !mounted) return;
-    setState(() => _created = true);
-    if (_photo.localPath.value == null) {
-      Get.offAllNamed(_auth.postLoginRoute);
-    } else {
-      await _upload();
+    final ok = await _c.finish();
+    if (!mounted) return;
+    if (!ok) {
+      final e = _c.error.value;
+      if (e != null) AppToast.error(e);
+      return;
     }
+    setState(() => _created = true);
+    await _uploadThenGo();
   }
 
-  Future<void> _upload() async {
+  Future<void> _uploadThenGo() async {
+    if (_photo.localPath.value == null) {
+      Get.offAllNamed(_auth.postLoginRoute);
+      return;
+    }
+    if (!await _photo.online()) return;
     final ok = await _photo.upload();
     if (!mounted) return;
     if (ok) {
@@ -117,79 +134,82 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
     }
   }
 
+  Widget? _phoneLine() {
+    final phone = _c.existing ? _auth.profilePhone.value : (_c.phone ?? '');
+    if (phone.isEmpty) return null;
+    return AuthVerifiedRow(art: ListingArt.key, text: '+91 ${SocialFormats.maskPhone(phone)}');
+  }
+
+  Widget _idPill() => Obx(() {
+        final username = _c.existing ? _auth.user.value?.username : _auth.signupUsername.value;
+        return UsernameLockedPill(
+          username: username,
+          art: ListingArt.key,
+          copyLabel: BuddyStrings.copyUsername,
+          loadingLabel: BuddyStrings.usernameLoading,
+          onCopy: () => UsernameActions.copy(username!),
+        );
+      });
+
   @override
   Widget build(BuildContext context) {
     return PopScope(
       canPop: false,
-      child: AuthHeroScaffold(
-        hero: TemplateEntrance(
-          animation: templateInterval(_enter, 0, 2),
-          animationController: _enter,
-          child: AuthHero(tone: _tone, art: ListingArt.profile, title: 'Complete your profile', subtitle: 'Just one more step', smallTitle: true),
-        ),
-        card: TemplateEntrance(
-          animation: templateInterval(_enter, 1, 2),
-          animationController: _enter,
-          child: AuthCard(
-            children: [
-              ProfilePhotoBlock(controller: _photo, bad: false, onTap: _pickPhoto, optional: true),
-              Gap.v(20),
-              AuthVerifiedRow(art: ListingArt.key, text: '+91 $_phone'),
-              Gap.v(20),
-              const AuthFieldLabel(BuddyStrings.usernameLabel),
-              Obx(() {
-                final username = _auth.signupUsername.value;
-                return UsernameLockedPill(
-                  username: username,
-                  art: ListingArt.key,
-                  copyLabel: BuddyStrings.copyUsername,
-                  loadingLabel: BuddyStrings.usernameLoading,
-                  onCopy: () => UsernameActions.copy(username!),
-                );
-              }),
-              Padding(
-                padding: DS.insets(l: 6, t: 6),
-                child: Text(BuddyStrings.usernameHelper, style: Ink3D.text(12, FontWeight.w400, Ink3D.grey, letterSpacing: 0)),
-              ),
-              Gap.v(18),
-              const AuthFieldLabel('Full Name'),
-              AuthPillInput(
-                tone: _tone,
-                focusNode: _nameFocus,
-                bad: _nameBad,
-                locked: _created,
-                leadingArt: ListingArt.profile,
-                child: TextFormField(
-                  controller: _nameCtrl,
-                  focusNode: _nameFocus,
-                  readOnly: _created,
-                  textCapitalization: TextCapitalization.words,
-                  maxLength: 100,
-                  inputFormatters: noEmojiInputFormatters,
-                  style: _created ? AuthPillInput.nameStyle.copyWith(color: Ink3D.sub) : AuthPillInput.nameStyle,
-                  cursorColor: _tone.g2,
-                  decoration: AuthPillInput.decoration('Your full name'),
-                  onChanged: (_) {
-                    if (_nameBad) setState(() => _nameBad = false);
-                  },
-                  onFieldSubmitted: (_) => _submit(),
-                ),
-              ),
-              Gap.v(28),
-              ValueListenableBuilder<TextEditingValue>(
-                valueListenable: _nameCtrl,
-                builder: (_, v, _) {
-                  final name = v.text.trim();
-                  return Obx(() => ProfilePhotoSubmitButton(
-                        tone: _tone,
-                        label: _uploadFailed ? ProfilePhotoStrings.tryAgain : 'Get Started',
-                        ready: _created || (name.isNotEmpty && name.length <= 100),
-                        loading: _auth.isLoading.value || _photo.busy.value,
-                        onTap: _submit,
-                      ));
-                },
-              ),
-            ],
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _back();
+      },
+      child: AnnotatedRegion<SystemUiOverlayStyle>(
+        value: SystemUiOverlayStyle.light.copyWith(statusBarColor: Colors.transparent),
+        child: Scaffold(
+          backgroundColor: AuthInk.page,
+          body: MediaQuery.withClampedTextScaling(
+            maxScaleFactor: 1.3,
+            child: Obx(() {
+              final step = _c.step.value;
+              final last = step == OnboardingController.stepCount - 1;
+              return Column(
+                children: [
+                  Expanded(
+                    child: SingleChildScrollView(
+                      controller: _scroll,
+                      physics: const BouncingScrollPhysics(),
+                      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+                      padding: EdgeInsets.only(bottom: DS.s(16)),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          OnboardingHeader(step: step, onBack: step > 0 || _canLeave ? _back : null),
+                          Transform.translate(
+                            offset: Offset(0, -DS.s(38)),
+                            child: switch (step) {
+                              0 => OnboardingStepYou(
+                                  c: _c,
+                                  photo: _photo,
+                                  onPhoto: _pickPhoto,
+                                  nameCtrl: _nameCtrl,
+                                  nameFocus: _nameFocus,
+                                  phoneLine: _phoneLine(),
+                                  idPill: _idPill(),
+                                ),
+                              1 => OnboardingStepStyle(c: _c),
+                              _ => OnboardingStepAbout(c: _c, aboutCtrl: _aboutCtrl, photoUrl: _auth.user.value?.profilePhotoUrl),
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  Obx(() => OnboardingBottom(
+                        label: last ? (_uploadFailed ? ProfilePhotoStrings.tryAgain : SocialStringsA.finish) : SocialStringsA.next,
+                        enabled: _created || _c.canNext,
+                        loading: _c.submitting.value || _auth.isLoading.value || _photo.busy.value,
+                        hint: _created ? null : _c.missingHint,
+                        onTap: _primary,
+                        link: _bottomLink(step),
+                      )),
+                ],
+              );
+            }),
           ),
         ),
       ),

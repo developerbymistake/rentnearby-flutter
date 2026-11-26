@@ -146,6 +146,11 @@ class TripCitySheet extends StatefulWidget {
 
   const TripCitySheet({super.key, this.mode = TripCitySheetMode.start, this.afterCity, this.inTrip = const {}});
 
+  static String artOf(TripCityModel c) {
+    const arts = [ListingArt.mountain, ListingArt.camping, ListingArt.beach, ListingArt.sunrise];
+    return arts[c.cityKey.abs() % arts.length];
+  }
+
   static Future<TripCityPick?> pick(
     BuildContext context, {
     TripCitySheetMode mode = TripCitySheetMode.start,
@@ -560,11 +565,6 @@ class _TripCitySheetState extends State<TripCitySheet> {
         });
   }
 
-  static String _artOf(TripCityModel c) {
-    const arts = [ListingArt.mountain, ListingArt.camping, ListingArt.beach, ListingArt.sunrise];
-    return arts[c.cityKey.abs() % arts.length];
-  }
-
   Widget _cityRow(TripCityModel city, {bool divider = false}) {
     final inTrip = _add && widget.inTrip.contains(city.cityKey);
     final enabled = !inTrip;
@@ -596,7 +596,7 @@ class _TripCitySheetState extends State<TripCitySheet> {
       children: [
         SheetListRow(
           tone: _tone,
-          art: _artOf(city),
+          art: TripCitySheet.artOf(city),
           title: city.name,
           subtitle: place.isEmpty ? null : place,
           selected: picked,

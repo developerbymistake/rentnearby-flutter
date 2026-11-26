@@ -1,4 +1,5 @@
 import 'package:get/get.dart';
+import '../features/social/c/chat/dm_hub_bridge.dart';
 import 'banner_hub_service.dart';
 import 'chat_hub_service.dart';
 import 'notification_hub_service.dart';
@@ -22,6 +23,7 @@ bool get isHubSessionLoggingOut => _loggingOut;
 /// only needs wiring here once instead of being added to every call site individually.
 Future<void> disconnectAllHubs() async {
   _loggingOut = true;
+  DmHubBridge.detach();
   // Concurrent, not sequential — a `for` + `await` loop here would make the whole call take
   // the SUM of all 3 WebSocket-close latencies instead of the max, visibly delaying the
   // "session expired" redirect on a forced 401. Each disconnect is still independently

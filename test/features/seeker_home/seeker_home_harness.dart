@@ -163,6 +163,7 @@ List<GetPage<dynamic>> routeStubs() => [
         AppRoutes.myTrips,
         AppRoutes.tripExpenses,
         AppRoutes.buddies,
+        AppRoutes.travelBuddies,
         AppRoutes.tripOverview,
         AppRoutes.tripReplies,
         AppRoutes.tripDayPlan,

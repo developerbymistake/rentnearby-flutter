@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../../../design/design.dart';
+import '../../social/c/plus/seeker_plan_keys.dart';
+import '../../social/c/social_strings_c.dart';
+import '../../social/shared/social_me_controller.dart';
+import '../../social/shared/widgets/plus_widgets.dart';
 import '../../trip/utils/trip_clock.dart';
 import '../shared/buddy_look.dart';
 import '../shared/widgets/buddy_badge.dart';
@@ -102,12 +106,18 @@ class _BodyState extends State<_Body> {
     );
   }
 
+  int get _plusTrips {
+    if (SocialMeController.maybe?.limits.canUpgrade != true) return 0;
+    return SeekerPlanKeys.plusPlan(SeekerPlanKeys.plans?.catalog.value)?.feature(SeekerPlanKeys.activeTrips) ?? 0;
+  }
+
   @override
   Widget build(BuildContext context) => Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           for (var i = 0; i < _slots.trips.length; i++) _row(_slots.trips[i], first: i == 0),
+          if (_plusTrips > _slots.limit) PlusLockLine(key: const ValueKey('trip_limit_plus'), text: SocialStringsC.tripLimitPlus(_plusTrips), from: 'trip_limit'),
           if (widget.reason == TripLimitReason.invite)
             Padding(
               padding: DS.insets(t: 10),

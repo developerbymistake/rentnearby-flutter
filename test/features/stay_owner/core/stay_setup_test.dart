@@ -64,7 +64,7 @@ void main() {
       expect(find.text('2 room types'), findsOneWidget);
       expect(find.text('6 room types'), findsOneWidget);
       expect(find.text('Plus price'), findsOneWidget);
-      expect(find.textContaining('7 days free'), findsOneWidget);
+      expect(find.textContaining('days free'), findsNothing);
       expect(find.text('See Plus'), findsWidgets);
       expect(find.text('Not now'), findsOneWidget);
     });
@@ -76,7 +76,7 @@ void main() {
       await t.pump();
       await t.pump(const Duration(seconds: 1));
       expect(find.textContaining('7 days free'), findsNothing);
-      expect(find.textContaining('₹400 / month'), findsOneWidget);
+      expect(find.textContaining('₹500 / month'), findsOneWidget);
     });
 
     testWidgets('o_st_5_notNowKeepsRoomsTyped', (t) async {
@@ -226,8 +226,8 @@ void main() {
       expect(find.text('Plus stays can show 8 photos.'), findsOneWidget);
       expect(find.text('2 photos'), findsOneWidget);
       expect(find.text('8 photos'), findsOneWidget);
-      expect(find.textContaining('₹400 / month'), findsOneWidget);
-      expect(find.textContaining('7 days free'), findsOneWidget);
+      expect(find.textContaining('₹500 / month'), findsOneWidget);
+      expect(find.textContaining('days free'), findsNothing);
       await t.tap(find.text('Not now'));
       await t.pump();
       await t.pump(const Duration(seconds: 1));

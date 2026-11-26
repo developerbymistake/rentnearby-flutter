@@ -181,6 +181,7 @@ abstract final class ListingArt {
   static const String camera = '${_dir}camera.png';
   static const String sunrise = '${_dir}sunrise.png';
   static const String bell = '${_dir}bell.png';
+  static const String gear = '${_dir}gear.png';
 
   static String forVehicle(String? name) {
     final v = (name ?? '').toLowerCase();

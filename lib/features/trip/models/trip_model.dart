@@ -124,6 +124,8 @@ class TripModel {
   final TripTaxiRequestRef? taxiRequest;
   final bool nameChosen;
   final TripSharingBlock? sharing;
+  final bool inactiveByPlan;
+  final bool isPublic;
 
   const TripModel({
     required this.id,
@@ -155,6 +157,8 @@ class TripModel {
     this.taxiRequest,
     this.nameChosen = false,
     this.sharing,
+    this.inactiveByPlan = false,
+    this.isPublic = false,
   }) : _legCities = legCities;
 
   List<String> get legCities => _legCities ?? [cityName];
@@ -208,6 +212,8 @@ class TripModel {
     bool clearTaxiRequest = false,
     bool? nameChosen,
     TripSharingBlock? sharing,
+    bool? inactiveByPlan,
+    bool? isPublic,
   }) =>
       TripModel(
         id: id,
@@ -239,6 +245,8 @@ class TripModel {
         taxiRequest: clearTaxiRequest ? null : (taxiRequest ?? this.taxiRequest),
         nameChosen: nameChosen ?? this.nameChosen,
         sharing: sharing ?? this.sharing,
+        inactiveByPlan: inactiveByPlan ?? this.inactiveByPlan,
+        isPublic: isPublic ?? this.isPublic,
       );
 
   factory TripModel.fromJson(Map<String, dynamic> json) => TripModel(
@@ -278,6 +286,8 @@ class TripModel {
         taxiRequest: TripTaxiRequestRef.tryParse(json['taxiRequest']),
         nameChosen: json['nameChosen'] == true,
         sharing: _sharingOf(json['sharing']),
+        inactiveByPlan: json['inactiveByPlan'] == true,
+        isPublic: json['isPublic'] == true,
       );
 }
 
@@ -420,6 +430,7 @@ class TripSummaryModel {
   final int legCount;
   final List<String>? _legCities;
   final TripProgress progress;
+  final bool inactiveByPlan;
 
   const TripSummaryModel({
     required this.id,
@@ -441,6 +452,7 @@ class TripSummaryModel {
     this.legCount = 1,
     List<String>? legCities,
     this.progress = const TripProgress(),
+    this.inactiveByPlan = false,
   }) : _legCities = legCities;
 
   List<String> get legCities => _legCities ?? [cityName];
@@ -498,6 +510,7 @@ class TripSummaryModel {
         legCount: legCount,
         legCities: _legCities,
         progress: progress,
+        inactiveByPlan: inactiveByPlan,
       );
 
   TripSummaryModel withMuted(DateTime? at) => _with(mutedAt: at, completedAt: completedAt);
@@ -525,6 +538,7 @@ class TripSummaryModel {
         legCount: _legCountOf(json['legCount'], _legCitiesOf(json['legCities'])),
         legCities: _legCitiesOf(json['legCities']),
         progress: TripProgress.tryParse(json['progress']) ?? const TripProgress(),
+        inactiveByPlan: json['inactiveByPlan'] == true,
       );
 }
 

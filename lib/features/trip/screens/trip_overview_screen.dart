@@ -12,6 +12,12 @@ import '../trip_strings_mca_a1.dart';
 import '../trip_strings_overview.dart';
 import '../utils/trip_parts.dart';
 import '../../buddy/sharing/widgets/owner_overview_seam.dart';
+import '../../social/b/social_strings_b.dart';
+import '../../social/c/chat/trip_chat_badge.dart';
+import '../../social/c/social_strings_c.dart';
+import '../../social/shared/social_me_controller.dart';
+import '../../social/shared/social_nav.dart';
+import '../../social/shared/widgets/plus_widgets.dart';
 import '../widgets/trip_hero_card.dart';
 import '../widgets/trip_overview_progress.dart';
 import '../widgets/trip_plan_header.dart';
@@ -170,7 +176,15 @@ class TripOverviewScreen extends StatelessWidget {
             PopupMenuItem<int>(
               key: ValueKey('overview_menu_extra_$i'),
               value: i + 1,
-              child: Text(extraMenuItems[i].label, style: Ink3D.text(13, FontWeight.w600, extraMenuItems[i].danger ? DesignColors.error : Ink3D.title)),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(extraMenuItems[i].label, style: Ink3D.text(13, FontWeight.w600, extraMenuItems[i].danger ? DesignColors.error : Ink3D.title)),
+                  if (extraMenuItems[i].subtitle != null)
+                    Text(extraMenuItems[i].subtitle!, style: Ink3D.text(12, FontWeight.w400, Ink3D.grey, letterSpacing: 0)),
+                ],
+              ),
             ),
         ],
         child: TripMenuDots.box(),
@@ -180,7 +194,8 @@ class TripOverviewScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final taxi = TripOverviewTaxi.of(trip.taxiRequest, canRate: taxiCanRate);
     // Paused blocks only a new request; an existing request or booking can still be opened.
-    final taxiBlocked = paused && !taxi.hasRequest;
+    final inactive = trip.inactiveByPlan;
+    final taxiBlocked = (paused || inactive) && !taxi.hasRequest;
     final indigo = ListingTone.indigo;
     const gap = 12.0;
     return Scaffold(
@@ -193,6 +208,8 @@ class TripOverviewScreen extends StatelessWidget {
               onBack: onBack ?? () => Navigator.maybePop(context),
               menu: _menu(),
               subtitle: subtitle,
+              tripId: trip.id,
+              onChat: (travellerCount ?? 0) > 1 ? () => SocialNav.openTripChat(trip.id) : null,
             ),
           ),
           Expanded(
@@ -220,6 +237,14 @@ class TripOverviewScreen extends StatelessWidget {
                             status: progressLine,
                             showProgress: showProgress,
                           ),
+                          if (inactive) ...[
+                            Gap.v(10),
+                            PlusLockLine(
+                              key: const ValueKey('overview_inactive_line'),
+                              text: SocialStringsC.inactiveTripOf(SocialMeController.maybe?.me.value?.limits.activeTrips.limit),
+                              from: 'trip',
+                            ),
+                          ],
                           Gap.v(gap),
                           TripHeroCard(
                             key: const ValueKey('overview_itinerary_card'),
@@ -268,7 +293,7 @@ class TripOverviewScreen extends StatelessWidget {
                               line: stay.line,
                               button: stay.button,
                               highlight: highlight == TripPart.stay,
-                              onTap: onStay == null ? null : () => onStay!(stay),
+                              onTap: onStay == null || inactive && !stay.added ? null : () => onStay!(stay),
                               wholeCard: true,
                             ),
                           ],
@@ -297,9 +322,11 @@ class TripOverviewScreen extends StatelessWidget {
 }
 
 class _OverviewHeader extends StatelessWidget {
-  const _OverviewHeader({required this.onBack, required this.menu, this.subtitle});
+  const _OverviewHeader({required this.onBack, required this.menu, required this.tripId, this.subtitle, this.onChat});
 
+  final String tripId;
   final String? subtitle;
+  final VoidCallback? onChat;
   final VoidCallback onBack;
   final Widget menu;
 
@@ -346,6 +373,24 @@ class _OverviewHeader extends StatelessWidget {
                       ],
                     ),
                   ),
+                  if (onChat != null) ...[
+                    TripChatBadge(
+                      tripId: tripId,
+                      child: Tap3D(
+                        tapKey: const ValueKey('overview_trip_chat'),
+                        onTap: onChat,
+                        label: SocialStringsB.tripChat,
+                        child: Container(
+                          width: DS.s(44),
+                          height: DS.s(44),
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(color: DesignColors.tint(white, Alpha.v22), shape: BoxShape.circle),
+                          child: const ExcludeSemantics(child: Art3D(asset: ListingArt.speechBalloon, size: 28, shadowBlur: 2, shadowOffset: Offset(1, 2))),
+                        ),
+                      ),
+                    ),
+                    Gap.h(4),
+                  ],
                   menu,
                 ],
               ),

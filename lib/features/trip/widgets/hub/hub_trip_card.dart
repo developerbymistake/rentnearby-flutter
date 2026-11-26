@@ -10,6 +10,8 @@ import '../trip_card.dart';
 import 'hub_tokens.dart';
 import 'hub_trip_body.dart';
 import '../../trip_strings_hub_trips.dart';
+import '../../../social/c/social_strings_c.dart';
+import '../../../social/shared/social_me_controller.dart';
 
 class HubTripCard extends StatelessWidget {
   final TripSummaryModel trip;
@@ -70,20 +72,20 @@ class HubTripCard extends StatelessWidget {
           if (v == 'delete') onDelete();
         },
         itemBuilder: (_) => [
-          if (onShare != null)
+          if (onShare != null && !trip.inactiveByPlan)
             PopupMenuItem(
               value: 'share',
               height: DS.s(44),
               child: Text(TripStringsA5.share, style: TypeTokens.style(14, FontWeight.w500)),
             ),
-          if (onCompletePlan != null)
+          if (onCompletePlan != null && !trip.inactiveByPlan)
             PopupMenuItem(
               key: const ValueKey('menu-complete-plan'),
               value: 'plan',
               height: DS.s(44),
               child: Text(TripStringsHubTrips.completePlan, style: TypeTokens.style(14, FontWeight.w500)),
             ),
-          if (onMarkComplete != null)
+          if (onMarkComplete != null && !trip.inactiveByPlan)
             PopupMenuItem(
               value: 'complete',
               height: DS.s(44),
@@ -96,6 +98,15 @@ class HubTripCard extends StatelessWidget {
           ),
         ],
       );
+
+  Widget _inactiveLine() {
+    final limit = SocialMeController.maybe?.me.value?.limits.activeTrips.limit;
+    return Text(
+      SocialStringsC.inactiveTripOf(limit),
+      key: const ValueKey('hub-card-inactive'),
+      style: Ink3D.text(12, FontWeight.w400, HubTokens.grey, height: 1.5, letterSpacing: 0),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -136,7 +147,7 @@ class HubTripCard extends StatelessWidget {
                             style: Ink3D.text(12, FontWeight.w400, HubTokens.grey, height: 1.5, letterSpacing: 0),
                           ),
                         ),
-                        HubTripBody(trip: trip, onNext: onAction, past: past),
+                        if (trip.inactiveByPlan) _inactiveLine() else HubTripBody(trip: trip, onNext: onAction, past: past),
                       ],
                     ),
                   ),

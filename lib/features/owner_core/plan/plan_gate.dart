@@ -42,10 +42,13 @@ class GateSpec {
 }
 
 abstract final class PlanGate {
-  static const int stayMonthlyInr = 400;
-  static const int taxiMonthlyInr = 150;
+  static const int stayMonthlyInr = 500;
+  static const int taxiMonthlyInr = 300;
 
   static MyPlanModel? debugPlan;
+
+  /// Test hook beside [debugPlan]: the trial length the catalog would give (0 = no trial).
+  static int? debugTrialDays;
 
   static MyPlanModel get _plan {
     final d = debugPlan;
@@ -62,6 +65,25 @@ abstract final class PlanGate {
   static bool get canUpgrade => _plan.paymentEnabled && _plan.canUpgrade;
 
   static bool get trialAvailable => _plan.trialAvailable;
+
+  /// Days of the trial the catalog really offers (the Play trial offer, else the plan's trial days); null when no paid plan
+  /// carries one. Never a guessed number: no known trial means no trial words anywhere.
+  static int? trialDays() {
+    final d = debugTrialDays;
+    if (d != null) return d > 0 ? d : null;
+    if (debugPlan != null || !Get.isRegistered<PlanController>()) return null;
+    final c = Get.find<PlanController>();
+    for (final p in c.plans) {
+      if (p.isDefault) continue;
+      final offer = c.trialOfferFor(p);
+      if (offer != null && offer.trialDays > 0) return offer.trialDays;
+      if (p.trialDays > 0) return p.trialDays;
+    }
+    return null;
+  }
+
+  /// A trial is shown only when the server says it is unused AND the catalog carries one.
+  static int? offeredTrialDays() => trialAvailable ? trialDays() : null;
 
   static int limit(PlanKey key) => PlanKeys.valueOf(_plan.limits, key);
 
@@ -87,7 +109,8 @@ abstract final class PlanGate {
 
   static String priceLine({required bool taxi}) {
     final amount = _monthlyAmount(taxi);
-    return '$amount${OwnerSharedStrings.perMonth}${trialAvailable ? OwnerSharedStrings.trialSuffix : ''}';
+    final days = offeredTrialDays();
+    return '$amount${OwnerSharedStrings.perMonth}${days != null ? OwnerSharedStrings.trialSuffix(days) : ''}';
   }
 
   static Future<void> showLimit(BuildContext context, GateSpec spec) async {

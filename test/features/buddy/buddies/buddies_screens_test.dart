@@ -706,11 +706,11 @@ void main() {
       expect(ProfileBuddiesRow.subtitleOf(const BuddySummary()), 'Friends you travel with');
     });
 
-    testWidgets('row badge and tap opens Requests', (t) async {
+    testWidgets('row badge and tap opens People on Requests', (t) async {
       Get.put(BuddySummaryController(api: api..summaryResult = const BuddyOk(BuddySummary(receivedPending: 1, buddies: 2))), permanent: true);
       Map<dynamic, dynamic>? args;
       await pump(t, const Scaffold(body: Column(children: [ProfileBuddiesRow()])), pages: [
-        GetPage(name: AppRoutes.buddies, page: () {
+        GetPage(name: AppRoutes.people, page: () {
           args = Get.arguments as Map?;
           return const Scaffold();
         }),
@@ -723,11 +723,11 @@ void main() {
       expect(args?['tab'], 'requests');
     });
 
-    testWidgets('Bug 8: row with no pending request still opens My buddies, not the new Find default', (t) async {
+    testWidgets('Bug 8: row with no pending request opens People on My Buddies', (t) async {
       Get.put(BuddySummaryController(api: api..summaryResult = const BuddyOk(BuddySummary(buddies: 2))), permanent: true);
       Map<dynamic, dynamic>? args;
       await pump(t, const Scaffold(body: Column(children: [ProfileBuddiesRow()])), pages: [
-        GetPage(name: AppRoutes.buddies, page: () {
+        GetPage(name: AppRoutes.people, page: () {
           args = Get.arguments as Map?;
           return const Scaffold();
         }),

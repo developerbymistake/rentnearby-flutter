@@ -6,15 +6,29 @@ import '../controllers/auth_controller.dart';
 import '../controllers/chat_controller.dart';
 import '../controllers/notification_controller.dart';
 import '../design/design.dart';
+import '../features/social/c/chat/rooms_controller.dart';
 import '../features/trip/enquiries/my_enquiry_count_controller.dart';
 
 double _u(double v) => DS.s(v, scaled: false);
 
 class TabHeaderIcons extends StatelessWidget {
-  const TabHeaderIcons({super.key});
+  const TabHeaderIcons({super.key, this.onSettings});
+
+  static const Key settingsKey = ValueKey('tab_header_settings');
+
+  final VoidCallback? onSettings;
 
   static RxInt? _count<T extends GetxController>(RxInt Function(T) read) =>
       Get.isRegistered<T>() ? read(Get.find<T>()) : null;
+
+  static int Function()? _read(RxInt? rx) => rx == null ? null : () => rx.value;
+
+  static int Function()? _chatCount() {
+    final listing = _count<ChatController>((c) => c.unreadCount);
+    final rooms = RoomsController.maybe;
+    if (rooms == null) return _read(listing);
+    return () => (listing?.value ?? 0) + rooms.unread.value.total;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -26,14 +40,14 @@ class TabHeaderIcons extends StatelessWidget {
           _TabHeaderIcon(
             asset: ListingArt.bell,
             label: 'Notifications',
-            unread: _count<NotificationController>((c) => c.unreadCount),
+            unread: _read(_count<NotificationController>((c) => c.unreadCount)),
             onTap: () => Get.toNamed(AppRoutes.notifications),
           ),
           SizedBox(width: _u(10)),
           _TabHeaderIcon(
             asset: ListingArt.speechBalloon,
             label: 'Chats',
-            unread: _count<ChatController>((c) => c.unreadCount),
+            unread: _chatCount(),
             onTap: () => Get.toNamed(AppRoutes.chatsList),
           ),
           if (Get.isRegistered<AuthController>())
@@ -45,11 +59,16 @@ class TabHeaderIcons extends StatelessWidget {
                 child: _TabHeaderIcon(
                   asset: ListingArt.clipboard,
                   label: 'Enquiries',
-                  unread: _count<MyEnquiryCountController>((c) => c.offers),
+                  unread: _read(_count<MyEnquiryCountController>((c) => c.offers)),
                   onTap: () => Get.toNamed(AppRoutes.myEnquiries),
                 ),
               );
             }),
+          if (onSettings != null)
+            Padding(
+              padding: EdgeInsets.only(left: _u(10)),
+              child: _TabHeaderIcon(key: settingsKey, asset: ListingArt.gear, label: 'Settings', unread: null, onTap: onSettings!),
+            ),
         ],
       ),
     );
@@ -57,11 +76,11 @@ class TabHeaderIcons extends StatelessWidget {
 }
 
 class _TabHeaderIcon extends StatelessWidget {
-  const _TabHeaderIcon({required this.asset, required this.label, required this.unread, required this.onTap});
+  const _TabHeaderIcon({super.key, required this.asset, required this.label, required this.unread, required this.onTap});
 
   final String asset;
   final String label;
-  final RxInt? unread;
+  final int Function()? unread;
   final VoidCallback onTap;
 
   @override
@@ -76,7 +95,7 @@ class _TabHeaderIcon extends StatelessWidget {
           ? null
           : IgnorePointer(
               child: Obx(() {
-                final n = count.value;
+                final n = count();
                 if (n <= 0) return const SizedBox.shrink();
                 return RoundIconButton3D.count(n > 99 ? '99+' : '$n', scaled: false);
               }),
@@ -86,11 +105,12 @@ class _TabHeaderIcon extends StatelessWidget {
 }
 
 class TabHeader extends StatelessWidget {
-  const TabHeader({super.key, required this.title, required this.subtitle, required this.color});
+  const TabHeader({super.key, required this.title, required this.subtitle, required this.color, this.onSettings});
 
   final String title;
   final String subtitle;
   final Color color;
+  final VoidCallback? onSettings;
 
   @override
   Widget build(BuildContext context) {
@@ -124,7 +144,7 @@ class TabHeader extends StatelessWidget {
                 ),
               ),
               SizedBox(width: _u(10)),
-              const TabHeaderIcons(),
+              TabHeaderIcons(onSettings: onSettings),
             ],
           ),
         ),
@@ -140,12 +160,14 @@ class TabHeaderFrame extends StatelessWidget {
     required this.subtitle,
     required this.color,
     required this.child,
+    this.onSettings,
   });
 
   final String title;
   final String subtitle;
   final Color color;
   final Widget child;
+  final VoidCallback? onSettings;
 
   @override
   Widget build(BuildContext context) {
@@ -153,7 +175,7 @@ class TabHeaderFrame extends StatelessWidget {
       lightIcons: false,
       child: Column(
         children: [
-          TabHeader(title: title, subtitle: subtitle, color: color),
+          TabHeader(title: title, subtitle: subtitle, color: color, onSettings: onSettings),
           Expanded(child: MediaQuery.removePadding(context: context, removeTop: true, child: child)),
         ],
       ),

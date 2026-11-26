@@ -12,6 +12,9 @@ import '../../../utils/input_formatters.dart';
 import '../controllers/trip_plan_controller.dart';
 import '../models/trip_plan_model.dart';
 import '../trip_navigation.dart';
+import '../../social/c/social_strings_c.dart';
+import '../../social/shared/social_me_controller.dart';
+import '../../social/shared/widgets/plus_widgets.dart';
 import '../trip_strings.dart';
 import '../trip_strings_dayplan.dart';
 import '../trip_strings_name.dart';
@@ -485,6 +488,15 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
               padding: EdgeInsets.only(bottom: _note == null ? DS.s(20) : DS.gv(40) + DS.s(48)),
               children: [
                 _buildLocked(),
+                if (_c.isInactiveByPlan)
+                  Padding(
+                    padding: DS.gapInsets(l: 18, t: 4, r: 18),
+                    child: PlusLockLine(
+                      key: const ValueKey('plan_inactive_line'),
+                      text: SocialStringsC.inactiveTripOf(SocialMeController.maybe?.me.value?.limits.activeTrips.limit),
+                      from: 'trip',
+                    ),
+                  ),
                 MediaQuery.withClampedTextScaling(maxScaleFactor: 1.3, child: _buildLegChips()),
                 if (_c.planFailed.value)
                   w(StateCard.error(
@@ -651,7 +663,10 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
         title: TripStringsV2Plan.noPlanTitle,
         message: TripStringsV2Plan.noPlanSub,
         actionLabel: TripStringsV2Plan.addPlace,
-        onAction: () => TripLegActions.addPlaces(1, pickDay: 1),
+        onAction: () {
+          _c.layOutPostedDays();
+          TripLegActions.addPlaces(1, pickDay: 1);
+        },
       );
 
   Widget _skeletons() => ListView(

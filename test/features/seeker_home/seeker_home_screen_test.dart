@@ -135,7 +135,7 @@ void main() {
       registerHome(feed: fixtureNoTrip());
       await t.pumpWidget(_app(homeHost()));
       await _settle(t);
-      final titles = ['Plan a trip', 'My trips', 'Find buddy'];
+      final titles = ['Plan a trip', 'My trips', 'Find buddies'];
       final xs = <double>[];
       for (final s in titles) {
         final f = find.byKey(ValueKey('seeker-qa-$s'));
@@ -164,7 +164,7 @@ void main() {
       expect(tileRect.bottom - t.getRect(go).bottom, lessThan(DS.s(40)));
     });
 
-    testWidgets('o_sk_1_tapMyTrips_pushesMyTrips, o_sk_1_tapFindABuddy_pushesBuddies', (t) async {
+    testWidgets('o_sk_1_tapMyTrips_pushesMyTrips, o_sk_1_tapFindBuddies_pushesTravelBuddies', (t) async {
       _tall(t, h: 1600);
       registerHome(feed: fixtureNoTrip());
       await t.pumpWidget(_app(homeHost()));
@@ -173,9 +173,9 @@ void main() {
       await _settle(t);
       Get.back();
       await _settle(t);
-      await t.tap(find.byKey(const ValueKey('seeker-qa-Find buddy')));
+      await t.tap(find.byKey(const ValueKey('seeker-qa-Find buddies')));
       await _settle(t);
-      expect(visitedRoutes, [AppRoutes.myTrips, AppRoutes.buddies]);
+      expect(visitedRoutes, [AppRoutes.myTrips, AppRoutes.travelBuddies]);
     });
 
     testWidgets('o_sk_1_noOwnerTilesNoPlanNudge', (t) async {

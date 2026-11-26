@@ -19,6 +19,8 @@ import '../controllers/plan_controller.dart';
 import '../controllers/tab_config_controller.dart';
 import '../design/design.dart';
 import '../features/buddy/buddy_live.dart';
+import '../features/social/c/chat/open_room_tracker.dart';
+import '../features/social/shared/social_live.dart';
 import '../features/owner_core/session/owner_push_sync.dart';
 import '../features/stay/stay_status_sync.dart';
 import '../features/taxi/taxi_status_sync.dart';
@@ -315,7 +317,11 @@ class NotificationService extends GetxService {
       // is a combined Notification+data payload — the OS auto-renders it while
       // backgrounded/killed, but NOT while foregrounded, and onMessage is the only delivery
       // path in that state. Without this branch the user gets zero signal at all.
-      if (_targetAlreadyOpen(message.data)) return;
+      if (_targetAlreadyOpen(message.data)) {
+        final route = liveRouteData(message.data)['action_route'];
+        if (route is String) _bumpSocial(route);
+        return;
+      }
       final title = message.notification?.title ?? message.data['title'] as String?;
       if (title == null) return;
       final body = message.notification?.body ?? message.data['body'] as String? ?? '';
@@ -528,6 +534,19 @@ class NotificationService extends GetxService {
   // Screens pushed ON TOP of main screen — main is underneath in the stack
   static const _routesOnTopOfMain = {
     AppRoutes.plansBilling,
+    AppRoutes.seekerPlus,
+    AppRoutes.settings,
+    AppRoutes.editProfile,
+    AppRoutes.traveller,
+    AppRoutes.people,
+    AppRoutes.addBuddies,
+    AppRoutes.travelBuddies,
+    AppRoutes.tripPost,
+    AppRoutes.postTrip,
+    AppRoutes.joinRequests,
+    AppRoutes.dmRoom,
+    AppRoutes.buddies,
+    AppRoutes.tripView,
     AppRoutes.listingReports,
     AppRoutes.reportDetail,
     AppRoutes.myFiledReports,
@@ -620,6 +639,10 @@ class NotificationService extends GetxService {
     AppRoutes.staySpecialPrices,
     AppRoutes.stayPlanVisible,
     AppRoutes.taxiPlanVisible,
+    AppRoutes.tripPost,
+    AppRoutes.joinRequests,
+    AppRoutes.travelBuddies,
+    AppRoutes.people,
   };
 
   // A gated Stay Owner's stack is rooted at staySetup, so main is not underneath. MainScreen puts
@@ -648,6 +671,15 @@ class NotificationService extends GetxService {
     'Stay': AppTabKeys.stays,
     'Taxi': AppTabKeys.taxi,
   };
+
+  @visibleForTesting
+  static bool isOnTopOfMain(String route) => _routesOnTopOfMain.contains(route);
+
+  @visibleForTesting
+  static bool refreshesInPlace(String route) => _refreshInPlaceRoutes.contains(route);
+
+  @visibleForTesting
+  static void bumpSocialFor(String route) => _bumpSocial(route);
 
   static bool _mainIsBelow(String route) =>
       _routesOnTopOfMain.contains(route) &&
@@ -690,6 +722,7 @@ class NotificationService extends GetxService {
     if (actionRoute is String && _isOpenChat(actionRoute, actionArgs)) return;
     if (actionRoute is String && _isOpenScreen(actionRoute, actionArgs)) {
       TripPushSync.refreshNow(actionRoute, enquiryId: actionArgs?['enquiryId']?.toString());
+      _bumpSocial(actionRoute);
       return;
     }
     final currentRoute = Get.currentRoute;
@@ -815,7 +848,19 @@ class NotificationService extends GetxService {
     Get.toNamed(route, arguments: args);
   }
 
+  static void _bumpSocial(String route) {
+    switch (route) {
+      case AppRoutes.joinRequests || AppRoutes.tripPost:
+        SocialLive.joinRequests.value++;
+      case AppRoutes.travelBuddies:
+        SocialLive.posts.value++;
+      case AppRoutes.people:
+        SocialLive.followers.value++;
+    }
+  }
+
   bool _isOpenChat(String route, Map<String, dynamic>? args) {
+    if (OpenRoomTracker.isOpen(route, args)) return true;
     if (route != AppRoutes.chatConversation || Get.currentRoute != route) return false;
     final id = args?['conversationId']?.toString();
     final current = Get.arguments;
@@ -835,7 +880,7 @@ class NotificationService extends GetxService {
     if (route == AppRoutes.myEnquiries) return true;
     final current = Get.arguments;
     final open = current is Map ? current : const <String, dynamic>{};
-    for (final key in const ['tripId', 'day', 'journeyId']) {
+    for (final key in const ['tripId', 'day', 'journeyId', 'tab']) {
       final want = args?[key];
       if (want == null) continue;
       var have = open[key];

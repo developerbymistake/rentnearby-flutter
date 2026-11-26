@@ -3,7 +3,7 @@ import 'package:get/get.dart';
 import '../../config/app_routes.dart';
 import '../../design/design.dart';
 import 'buddies/screens/blocked_people_screen.dart';
-import 'buddies/screens/buddies_screen.dart';
+import '../social/a/people/people_screen.dart';
 import 'expenses/screens/expense_detail_screen.dart';
 import 'expenses/screens/trip_expenses_screen.dart';
 import 'ledger/screens/money_summary_screen.dart';
@@ -44,10 +44,7 @@ GetPage<dynamic> _page(String name, GetPageBuilder page) =>
     GetPage(name: name, page: page, customTransition: TemplateTransition(), transitionDuration: templateTransitionDuration);
 
 final List<GetPage<dynamic>> buddyPages = [
-  _page(AppRoutes.buddies, () {
-    final a = BuddyArgs.current;
-    return BuddiesScreen(tab: BuddyArgs.textOrNull(a, 'tab') ?? 'find', query: BuddyArgs.textOrNull(a, 'query'), source: BuddyArgs.textOrNull(a, 'source'));
-  }),
+  _page(AppRoutes.buddies, () => const PeopleScreen(tab: 'buddies')),
   _page(AppRoutes.buddiesBlocked, () => const BlockedPeopleScreen()),
   _page(AppRoutes.buddyScan, () => const ScanQrScreen()),
   _page(AppRoutes.tripInvite, () => TripInviteScreen(memberId: BuddyArgs.text(BuddyArgs.current, 'memberId'))),

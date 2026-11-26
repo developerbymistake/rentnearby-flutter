@@ -57,7 +57,8 @@ abstract final class PlanWords {
   static String plusTill(DateTime d) => 'Plus till ${date(d)}';
   static String endedOn(DateTime d) => 'Ended on ${date(d)}';
   static String freeUntil(DateTime d) => 'Free until ${dayMonth(d)}';
-  static String tryFree(int days) => 'Try free for $days days';
+  static String tryFree(int days) => 'Try free for ${days == 1 ? '1 day' : '$days days'}';
+  static String freeFor(int days) => 'Free for ${days == 1 ? '1 day' : '$days days'}';
   static String cycle(int months) => months == 1 ? '1 month' : '$months months';
   static String planCycle(String plan, int months) => '$plan · ${cycle(months)}';
   static String of(int used, int limit) => '$used of $limit';

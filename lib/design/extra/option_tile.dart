@@ -335,8 +335,16 @@ class DashedAddRow3D extends StatelessWidget {
   Widget build(BuildContext context) {
     final live = enabled && onTap != null;
     final t = trailing;
+    final u = DS.s(1);
     final row = CustomPaint(
-      painter: _DashPainter(Form3D.wash(tone, 0.5), Form3D.wash(tone, 0.06), DS.s(1)),
+      painter: DashedRRectPainter(
+        line: Form3D.wash(tone, 0.5),
+        fill: Form3D.wash(tone, 0.06),
+        radius: BorderRadius.only(topLeft: Radius.circular(8 * u), topRight: Radius.circular(28 * u), bottomLeft: Radius.circular(8 * u), bottomRight: Radius.circular(8 * u)),
+        stroke: 2 * u,
+        dash: 7 * u,
+        gap: 5 * u,
+      ),
       child: Container(
         constraints: BoxConstraints(minHeight: DS.s(58)),
         padding: DS.sym(h: 16, v: 8),
@@ -369,37 +377,35 @@ class DashedAddRow3D extends StatelessWidget {
   }
 }
 
-class _DashPainter extends CustomPainter {
-  const _DashPainter(this.line, this.fill, this.unit);
+class DashedRRectPainter extends CustomPainter {
+  const DashedRRectPainter({required this.line, required this.fill, required this.radius, required this.stroke, required this.dash, required this.gap});
 
   final Color line;
   final Color fill;
-  final double unit;
+  final BorderRadius radius;
+  final double stroke;
+  final double dash;
+  final double gap;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final box = RRect.fromRectAndCorners(
-      (Offset.zero & size).deflate(unit),
-      topLeft: Radius.circular(8 * unit),
-      topRight: Radius.circular(28 * unit),
-      bottomLeft: Radius.circular(8 * unit),
-      bottomRight: Radius.circular(8 * unit),
-    );
-    canvas.drawRRect(box, Paint()..color = fill);
+    final box = radius.toRRect((Offset.zero & size).deflate(stroke / 2));
+    if (fill.a > 0) canvas.drawRRect(box, Paint()..color = fill);
     final pen = Paint()
       ..color = line
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 2 * unit;
+      ..strokeWidth = stroke;
     final path = Path()..addRRect(box);
     for (final ui.PathMetric m in path.computeMetrics()) {
       var d = 0.0;
       while (d < m.length) {
-        canvas.drawPath(m.extractPath(d, d + 7 * unit), pen);
-        d += 12 * unit;
+        canvas.drawPath(m.extractPath(d, d + dash), pen);
+        d += dash + gap;
       }
     }
   }
 
   @override
-  bool shouldRepaint(_DashPainter old) => old.line != line || old.fill != fill || old.unit != unit;
+  bool shouldRepaint(DashedRRectPainter old) =>
+      old.line != line || old.fill != fill || old.radius != radius || old.stroke != stroke || old.dash != dash || old.gap != gap;
 }

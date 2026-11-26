@@ -253,7 +253,7 @@ Widget app(Widget home) => GetMaterialApp(
       debugShowCheckedModeBanner: false,
       theme: AppTheme.theme,
       getPages: [
-        for (final r in [AppRoutes.tripTravellers, AppRoutes.tripExpenses, AppRoutes.tripSettle, AppRoutes.tripMoneySummary, AppRoutes.buddies, AppRoutes.myTrips])
+        for (final r in [AppRoutes.tripTravellers, AppRoutes.tripExpenses, AppRoutes.tripSettle, AppRoutes.tripMoneySummary, AppRoutes.buddies, AppRoutes.people, AppRoutes.myTrips])
           _stub(r),
       ],
       builder: (context, c) => Stack(fit: StackFit.expand, children: [Positioned.fill(child: c!), Overlay(key: AppToast.overlayKey)]),

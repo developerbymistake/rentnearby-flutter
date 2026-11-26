@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../controllers/auth_controller.dart';
+import '../features/social/a/profile/seeker_profile_screen.dart';
 import '../screens/profile_screen.dart';
+import 'shell_kind.dart';
 import 'app_tabs.dart';
 
 class TabSlot {
@@ -51,7 +53,7 @@ abstract final class TabSlots {
         label: label,
         image: '${art}fox.png',
         rootTag: 'profile',
-        root: () => const ProfileScreen(),
+        root: () => ShellState.current.value == ShellKind.seeker ? const SeekerProfileScreen() : const ProfileScreen(),
         active: active ?? () => true,
         onTap: (wasSelected) {
           if (!wasSelected && Get.isRegistered<AuthController>()) Get.find<AuthController>().profileTabTrigger.value++;

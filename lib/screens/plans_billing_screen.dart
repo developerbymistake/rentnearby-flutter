@@ -498,11 +498,14 @@ class _PlansBillingScreenState extends State<PlansBillingScreen> {
     final ownedCycle = isPlay && _isOwnedCycle(plan, cycle);
     final holdBlocked = isPlay && PlanStateCopy.blocksPurchase(me);
     final trialOffer = isPlay ? _plans.trialOfferFor(plan) : null;
+    // The server catalog is the switch: no trial days on the plan = no trial, even if Google still lists an offer.
+    final trialDays = trialOffer != null && trialOffer.trialDays > 0 ? trialOffer.trialDays : plan.trialDays;
     final canTrial = cycle == 1 &&
         state == PlanCardState.free &&
-        (isPlay
-            ? me.trialAvailable && trialOffer != null && !me.hasPaidPlan && !holdBlocked && !notConfigured
-            : me.trialAvailable && plan.trialDays > 0);
+        me.trialAvailable &&
+        plan.trialDays > 0 &&
+        trialDays > 0 &&
+        (isPlay ? trialOffer != null && !me.hasPaidPlan && !holdBlocked && !notConfigured : true);
     final ctaDisabled =
         purchasing || quoteLoading || notConfigured || storeLoading || priceUnavailable || holdBlocked || ownedCycle;
 
@@ -517,7 +520,7 @@ class _PlansBillingScreenState extends State<PlansBillingScreen> {
     } else if (priceUnavailable) {
       right = PlanBar3D.price('Price unavailable', muted: true);
     } else if (quote != null && quote.isTrial) {
-      right = PlanBar3D.price('Free for ${trialOffer?.trialDays ?? plan.trialDays} days', good: true);
+      right = PlanBar3D.price(PlanWords.freeFor(trialDays), good: true);
     } else if (quote != null && !quote.requiresPayment) {
       right = PlanBar3D.price('₹0 today');
     } else if (quote != null && quote.storePriceRequired) {
@@ -561,7 +564,6 @@ class _PlansBillingScreenState extends State<PlansBillingScreen> {
         : _ctaLabel(plan, state, selected, quote, ownedCycle: ownedCycle, notConfigured: notConfigured, holdBlocked: holdBlocked);
 
     final tone = PlanLook.toneOf(me.featureKey);
-    final trialDays = isPlay ? (trialOffer?.trialDays ?? plan.trialDays) : plan.trialDays;
     final monthly = isPlay ? _plans.storePriceFor(plan, 1) : null;
     return PlanBar3D(
       tone: tone,

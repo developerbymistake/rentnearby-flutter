@@ -1,0 +1,523 @@
+import '../../buddy/shared/buddy_json.dart';
+import '../../buddy/shared/models/person_models.dart';
+import 'social_formats.dart';
+
+class SocialPerson {
+  const SocialPerson({required this.userId, required this.name, this.username, this.photoUrl, required this.initial, this.homeCity, this.gender = ''});
+
+  final String userId;
+  final String name;
+  final String? username;
+  final String? photoUrl;
+  final String initial;
+  final String? homeCity;
+  final String gender;
+
+  String get shortName => SocialFormats.shortName(name);
+
+  BuddyPerson get asBuddyPerson => BuddyPerson(userId: userId, name: name, username: username, initial: initial, photoUrl: photoUrl);
+
+  factory SocialPerson.fromJson(Map<String, dynamic> j) {
+    final name = BuddyJson.str(j['name']);
+    final initial = BuddyJson.str(j['initial']);
+    return SocialPerson(
+      userId: BuddyJson.str(j['userId']),
+      name: name,
+      username: BuddyJson.strOrNull(j['username']),
+      photoUrl: BuddyJson.photo(j['photoUrl']),
+      initial: initial.isNotEmpty ? initial : (name.trim().isEmpty ? '' : name.trim().substring(0, 1).toUpperCase()),
+      homeCity: BuddyJson.strOrNull(j['homeCity']),
+      gender: BuddyJson.str(j['gender']),
+    );
+  }
+}
+
+class PersonRow {
+  const PersonRow({
+    required this.person,
+    this.followsMe = false,
+    this.iFollow = false,
+    this.followRequested = false,
+    this.isBuddy = false,
+    this.mutualCount = 0,
+    this.mutualName,
+    this.requestedAt,
+  });
+
+  final SocialPerson person;
+  final bool followsMe;
+  final bool iFollow;
+  final bool followRequested;
+  final bool isBuddy;
+  final int mutualCount;
+  final String? mutualName;
+  final DateTime? requestedAt;
+
+  PersonRow copyWith({bool? iFollow, bool? followRequested, bool? isBuddy}) => PersonRow(
+        person: person,
+        followsMe: followsMe,
+        iFollow: iFollow ?? this.iFollow,
+        followRequested: followRequested ?? this.followRequested,
+        isBuddy: isBuddy ?? this.isBuddy,
+        mutualCount: mutualCount,
+        mutualName: mutualName,
+        requestedAt: requestedAt,
+      );
+
+  factory PersonRow.fromJson(Map<String, dynamic> j) => PersonRow(
+        person: SocialPerson.fromJson(j),
+        followsMe: BuddyJson.boolean(j['followsMe']),
+        iFollow: BuddyJson.boolean(j['iFollow']),
+        followRequested: BuddyJson.boolean(j['followRequested']),
+        isBuddy: BuddyJson.boolean(j['isBuddy']),
+        mutualCount: BuddyJson.integer(j['mutualCount']),
+        mutualName: BuddyJson.strOrNull(j['mutualName']),
+        requestedAt: BuddyJson.time(j['requestedAt']),
+      );
+}
+
+class Mutuals {
+  const Mutuals({required this.count, this.names = const [], this.photoUrls = const []});
+
+  final int count;
+  final List<String> names;
+  final List<String> photoUrls;
+
+  static const Mutuals none = Mutuals(count: 0);
+
+  bool get isEmpty => count <= 0;
+
+  factory Mutuals.fromJson(Map<String, dynamic>? j) {
+    if (j == null) return none;
+    return Mutuals(count: BuddyJson.integer(j['count']), names: BuddyJson.strings(j['names']), photoUrls: BuddyJson.strings(j['photoUrls']));
+  }
+}
+
+class TripWhen {
+  const TripWhen({required this.kind, this.months = 0, this.month = 0});
+
+  static const String within = 'within';
+  static const String monthKind = 'month';
+
+  final String kind;
+  final int months;
+  final int month;
+
+  factory TripWhen.fromJson(Map<String, dynamic>? j) {
+    if (j == null) return const TripWhen(kind: within);
+    final kind = BuddyJson.str(j['kind'], within);
+    return TripWhen(kind: kind == monthKind ? monthKind : within, months: BuddyJson.integer(j['months']), month: BuddyJson.integer(j['month']));
+  }
+}
+
+class PublicTrip {
+  const PublicTrip({
+    required this.tripId,
+    required this.owner,
+    this.ownerInterests = const [],
+    this.isMine = false,
+    this.cityKey = 0,
+    this.cityNames = const [],
+    this.stateName,
+    required this.when,
+    this.days = 0,
+    this.joinGender = 'A',
+    this.seats = 0,
+    this.seatsLeft = 0,
+    this.text = '',
+    this.publishedAt,
+    this.myJoin = 'none',
+    this.waitingRequests,
+    this.iFollowOwner = false,
+    this.mutuals = Mutuals.none,
+    this.sample = false,
+    this.notOpen = false,
+  });
+
+  final String tripId;
+  final SocialPerson owner;
+  final List<String> ownerInterests;
+  final bool isMine;
+  final int cityKey;
+  final List<String> cityNames;
+  final String? stateName;
+  final TripWhen when;
+  final int days;
+  final String joinGender;
+  final int seats;
+  final int seatsLeft;
+  final String text;
+  final DateTime? publishedAt;
+  final String myJoin;
+  final int? waitingRequests;
+  final bool iFollowOwner;
+  final Mutuals mutuals;
+  final bool sample;
+  final bool notOpen;
+
+  PublicTrip copyWith({String? myJoin, bool? iFollowOwner, int? seatsLeft, int? waitingRequests}) => PublicTrip(
+        tripId: tripId,
+        owner: owner,
+        ownerInterests: ownerInterests,
+        isMine: isMine,
+        cityKey: cityKey,
+        cityNames: cityNames,
+        stateName: stateName,
+        when: when,
+        days: days,
+        joinGender: joinGender,
+        seats: seats,
+        seatsLeft: seatsLeft ?? this.seatsLeft,
+        text: text,
+        publishedAt: publishedAt,
+        myJoin: myJoin ?? this.myJoin,
+        waitingRequests: waitingRequests ?? this.waitingRequests,
+        iFollowOwner: iFollowOwner ?? this.iFollowOwner,
+        mutuals: mutuals,
+        sample: sample,
+        notOpen: notOpen,
+      );
+
+  factory PublicTrip.fromJson(Map<String, dynamic> j) => PublicTrip(
+        tripId: BuddyJson.str(j['tripId']),
+        owner: SocialPerson.fromJson(BuddyJson.map(j['owner'])),
+        ownerInterests: BuddyJson.strings(j['ownerInterests']),
+        isMine: BuddyJson.boolean(j['isMine']),
+        cityKey: BuddyJson.integer(j['cityKey']),
+        cityNames: BuddyJson.strings(j['cityNames']),
+        stateName: BuddyJson.strOrNull(j['stateName']),
+        when: TripWhen.fromJson(BuddyJson.mapOrNull(j['when'])),
+        days: BuddyJson.integer(j['days']),
+        joinGender: BuddyJson.str(j['joinGender'], 'A'),
+        seats: BuddyJson.integer(j['seats']),
+        seatsLeft: BuddyJson.integer(j['seatsLeft']),
+        text: BuddyJson.str(j['text']),
+        publishedAt: BuddyJson.time(j['publishedAt']),
+        myJoin: BuddyJson.str(j['myJoin'], 'none'),
+        waitingRequests: BuddyJson.intOrNull(j['waitingRequests']),
+        iFollowOwner: BuddyJson.boolean(j['iFollowOwner']),
+        mutuals: Mutuals.fromJson(BuddyJson.mapOrNull(j['mutuals'])),
+        sample: BuddyJson.boolean(j['sample']),
+        notOpen: BuddyJson.boolean(j['notOpen']),
+      );
+}
+
+class LimitUse {
+  const LimitUse({required this.limit, required this.used});
+
+  final int limit;
+  final int used;
+
+  int get left => used >= limit ? 0 : limit - used;
+  bool get reached => used >= limit;
+
+  static const LimitUse none = LimitUse(limit: 0, used: 0);
+
+  factory LimitUse.fromJson(Map<String, dynamic>? j, {int fallbackLimit = 0}) =>
+      j == null ? LimitUse(limit: fallbackLimit, used: 0) : LimitUse(limit: BuddyJson.integer(j['limit'], fallbackLimit), used: BuddyJson.integer(j['used']));
+}
+
+class SocialLimits {
+  const SocialLimits({
+    required this.isPlus,
+    required this.canUpgrade,
+    this.resetsAt,
+    required this.activeTrips,
+    required this.publicTrips,
+    required this.joinRequests,
+    required this.newChats,
+    required this.genderOnlyTrips,
+    required this.nearMe,
+    this.inactiveTrips = 0,
+    this.pausedPosts = 0,
+  });
+
+  final bool isPlus;
+  final bool canUpgrade;
+  final DateTime? resetsAt;
+  final LimitUse activeTrips;
+  final LimitUse publicTrips;
+  final LimitUse joinRequests;
+  final LimitUse newChats;
+  final bool genderOnlyTrips;
+  final bool nearMe;
+  final int inactiveTrips;
+  final int pausedPosts;
+
+  int get pausedTotal => inactiveTrips + pausedPosts;
+
+  static const SocialLimits free = SocialLimits(
+    isPlus: false,
+    canUpgrade: false,
+    activeTrips: LimitUse(limit: 1, used: 0),
+    publicTrips: LimitUse(limit: 1, used: 0),
+    joinRequests: LimitUse(limit: 1, used: 0),
+    newChats: LimitUse(limit: 3, used: 0),
+    genderOnlyTrips: false,
+    nearMe: false,
+  );
+
+  factory SocialLimits.fromJson(Map<String, dynamic>? j) {
+    if (j == null) return free;
+    return SocialLimits(
+      isPlus: BuddyJson.boolean(j['isPlus']),
+      canUpgrade: BuddyJson.boolean(j['canUpgrade']),
+      resetsAt: BuddyJson.time(j['resetsAt']),
+      activeTrips: LimitUse.fromJson(BuddyJson.mapOrNull(j['activeTrips']), fallbackLimit: free.activeTrips.limit),
+      publicTrips: LimitUse.fromJson(BuddyJson.mapOrNull(j['publicTrips']), fallbackLimit: free.publicTrips.limit),
+      joinRequests: LimitUse.fromJson(BuddyJson.mapOrNull(j['joinRequests']), fallbackLimit: free.joinRequests.limit),
+      newChats: LimitUse.fromJson(BuddyJson.mapOrNull(j['newChats']), fallbackLimit: free.newChats.limit),
+      genderOnlyTrips: BuddyJson.boolean(j['genderOnlyTrips']),
+      nearMe: BuddyJson.boolean(j['nearMe']),
+      inactiveTrips: BuddyJson.integer(j['inactiveTrips']),
+      pausedPosts: BuddyJson.integer(j['pausedPosts']),
+    );
+  }
+}
+
+class ChatUnread {
+  const ChatUnread({required this.people, required this.trips, required this.requests, required this.total});
+
+  final int people;
+  final int trips;
+  final int requests;
+  final int total;
+
+  static const ChatUnread zero = ChatUnread(people: 0, trips: 0, requests: 0, total: 0);
+
+  factory ChatUnread.fromJson(Map<String, dynamic>? j) {
+    if (j == null) return zero;
+    return ChatUnread(
+      people: BuddyJson.integer(j['people']),
+      trips: BuddyJson.integer(j['trips']),
+      requests: BuddyJson.integer(j['requests']),
+      total: BuddyJson.integer(j['total']),
+    );
+  }
+}
+
+class SocialCatalogData {
+  const SocialCatalogData({this.interests = const [], this.skills = const [], this.aboutExamples = const [], this.postChips = const []});
+
+  final List<String> interests;
+  final List<String> skills;
+  final List<String> aboutExamples;
+  final List<String> postChips;
+
+  static const SocialCatalogData empty = SocialCatalogData();
+
+  factory SocialCatalogData.fromJson(Map<String, dynamic>? j) {
+    if (j == null) return empty;
+    return SocialCatalogData(
+      interests: BuddyJson.strings(j['interests']),
+      skills: BuddyJson.strings(j['skills']),
+      aboutExamples: BuddyJson.strings(j['aboutExamples']),
+      postChips: BuddyJson.strings(j['postChips']),
+    );
+  }
+}
+
+class MyProfile {
+  const MyProfile({
+    required this.userId,
+    required this.name,
+    this.username,
+    this.photoUrl,
+    required this.initial,
+    required this.gender,
+    required this.birthMonth,
+    required this.birthYear,
+    this.homeCity,
+    this.homeState,
+    this.about = '',
+    this.interests = const [],
+    this.skills = const [],
+    this.places = const [],
+    this.isPrivate = false,
+    this.messagePolicy = 'Everyone',
+    this.notifyMessages = true,
+    this.notifyFollows = true,
+    this.notifyFollowedTrips = true,
+    this.trips = 0,
+    this.followers = 0,
+    this.following = 0,
+    this.buddies = 0,
+    this.publicTrips = const [],
+  });
+
+  final String userId;
+  final String name;
+  final String? username;
+  final String? photoUrl;
+  final String initial;
+  final String gender;
+  final int birthMonth;
+  final int birthYear;
+  final String? homeCity;
+  final String? homeState;
+  final String about;
+  final List<String> interests;
+  final List<String> skills;
+  final List<String> places;
+  final bool isPrivate;
+  final String messagePolicy;
+  final bool notifyMessages;
+  final bool notifyFollows;
+  final bool notifyFollowedTrips;
+  final int trips;
+  final int followers;
+  final int following;
+  final int buddies;
+  final List<PublicTrip> publicTrips;
+
+  SocialPerson get person => SocialPerson(userId: userId, name: name, username: username, photoUrl: photoUrl, initial: initial, homeCity: homeCity);
+
+  factory MyProfile.fromJson(Map<String, dynamic> j) {
+    final c = BuddyJson.map(j['counters']);
+    final p = SocialPerson.fromJson(j);
+    return MyProfile(
+      userId: p.userId,
+      name: p.name,
+      username: p.username,
+      photoUrl: p.photoUrl,
+      initial: p.initial,
+      gender: BuddyJson.str(j['gender']),
+      birthMonth: BuddyJson.integer(j['birthMonth']),
+      birthYear: BuddyJson.integer(j['birthYear']),
+      homeCity: BuddyJson.strOrNull(j['homeCity']),
+      homeState: BuddyJson.strOrNull(j['homeState']),
+      about: BuddyJson.str(j['about']),
+      interests: BuddyJson.strings(j['interests']),
+      skills: BuddyJson.strings(j['skills']),
+      places: BuddyJson.strings(j['places']),
+      isPrivate: BuddyJson.boolean(j['isPrivate']),
+      messagePolicy: BuddyJson.str(j['messagePolicy'], 'Everyone'),
+      notifyMessages: BuddyJson.boolean(j['notifyMessages'], true),
+      notifyFollows: BuddyJson.boolean(j['notifyFollows'], true),
+      notifyFollowedTrips: BuddyJson.boolean(j['notifyFollowedTrips'], true),
+      trips: BuddyJson.integer(c['trips']),
+      followers: BuddyJson.integer(c['followers']),
+      following: BuddyJson.integer(c['following']),
+      buddies: BuddyJson.integer(c['buddies']),
+      publicTrips: BuddyJson.list(j['publicTrips'], PublicTrip.fromJson),
+    );
+  }
+}
+
+class TravellerProfile {
+  const TravellerProfile({
+    required this.person,
+    this.gender = '',
+    this.about = '',
+    this.interests = const [],
+    this.skills = const [],
+    this.places = const [],
+    this.trips = 0,
+    this.followers = 0,
+    this.following = 0,
+    this.iFollow = false,
+    this.followRequested = false,
+    this.followsMe = false,
+    this.isBuddy = false,
+    this.canAddBuddy = false,
+    this.canMessage = false,
+    this.mutuals = Mutuals.none,
+    this.privateLocked = false,
+    this.publicTrips = const [],
+  });
+
+  final SocialPerson person;
+  final String gender;
+  final String about;
+  final List<String> interests;
+  final List<String> skills;
+  final List<String> places;
+  final int trips;
+  final int followers;
+  final int following;
+  final bool iFollow;
+  final bool followRequested;
+  final bool followsMe;
+  final bool isBuddy;
+  final bool canAddBuddy;
+  final bool canMessage;
+  final Mutuals mutuals;
+  final bool privateLocked;
+  final List<PublicTrip> publicTrips;
+
+  TravellerProfile copyWith({bool? iFollow, bool? followRequested, bool? isBuddy, int? followers}) => TravellerProfile(
+        person: person,
+        gender: gender,
+        about: about,
+        interests: interests,
+        skills: skills,
+        places: places,
+        trips: trips,
+        followers: followers ?? this.followers,
+        following: following,
+        iFollow: iFollow ?? this.iFollow,
+        followRequested: followRequested ?? this.followRequested,
+        followsMe: followsMe,
+        isBuddy: isBuddy ?? this.isBuddy,
+        canAddBuddy: followsMe && !(isBuddy ?? this.isBuddy),
+        canMessage: canMessage,
+        mutuals: mutuals,
+        privateLocked: privateLocked,
+        publicTrips: publicTrips,
+      );
+
+  factory TravellerProfile.fromJson(Map<String, dynamic> j) {
+    final c = BuddyJson.map(j['counters']);
+    final r = BuddyJson.map(j['relation']);
+    return TravellerProfile(
+      person: SocialPerson.fromJson(BuddyJson.map(j['person'])),
+      gender: BuddyJson.str(j['gender']),
+      about: BuddyJson.str(j['about']),
+      interests: BuddyJson.strings(j['interests']),
+      skills: BuddyJson.strings(j['skills']),
+      places: BuddyJson.strings(j['places']),
+      trips: BuddyJson.integer(c['trips']),
+      followers: BuddyJson.integer(c['followers']),
+      following: BuddyJson.integer(c['following']),
+      iFollow: BuddyJson.boolean(r['iFollow']),
+      followRequested: BuddyJson.boolean(r['followRequested']),
+      followsMe: BuddyJson.boolean(r['followsMe']),
+      isBuddy: BuddyJson.boolean(r['isBuddy']),
+      canAddBuddy: BuddyJson.boolean(r['canAddBuddy']),
+      canMessage: BuddyJson.boolean(r['canMessage']),
+      mutuals: Mutuals.fromJson(BuddyJson.mapOrNull(j['mutuals'])),
+      privateLocked: BuddyJson.boolean(j['privateLocked']),
+      publicTrips: BuddyJson.list(j['publicTrips'], PublicTrip.fromJson),
+    );
+  }
+}
+
+class SocialMe {
+  const SocialMe({this.profile, required this.limits, this.followRequests = 0, this.chatUnread = ChatUnread.zero, this.catalog = SocialCatalogData.empty});
+
+  final MyProfile? profile;
+  final SocialLimits limits;
+  final int followRequests;
+  final ChatUnread chatUnread;
+  final SocialCatalogData catalog;
+
+  SocialMe copyWith({MyProfile? profile, ChatUnread? chatUnread, int? followRequests}) => SocialMe(
+        profile: profile ?? this.profile,
+        limits: limits,
+        followRequests: followRequests ?? this.followRequests,
+        chatUnread: chatUnread ?? this.chatUnread,
+        catalog: catalog,
+      );
+
+  factory SocialMe.fromJson(Map<String, dynamic> j) {
+    final counts = BuddyJson.map(j['counts']);
+    final p = BuddyJson.mapOrNull(j['profile']);
+    return SocialMe(
+      profile: p == null ? null : MyProfile.fromJson(p),
+      limits: SocialLimits.fromJson(BuddyJson.mapOrNull(j['limits'])),
+      followRequests: BuddyJson.integer(counts['followRequests']),
+      chatUnread: ChatUnread.fromJson(BuddyJson.mapOrNull(counts['chatUnread'])),
+      catalog: SocialCatalogData.fromJson(BuddyJson.mapOrNull(j['catalog'])),
+    );
+  }
+}

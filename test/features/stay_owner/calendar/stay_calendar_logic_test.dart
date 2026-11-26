@@ -152,9 +152,9 @@ void main() {
       final g12 = StayGateStringsCalendar.g12(endsOn: DateTime(2026, 11, 12));
       expect(g12.title, '1 special price on Free');
       expect(g12.body, 'Plus keeps 5 at a time. Your current one ends on 12 Nov. You can change or remove it now.');
-      expect(PlanGate.priceLine(taxi: false), '₹400 / month · 7 days free');
+      expect(PlanGate.priceLine(taxi: false), '₹500 / month');
       PlanGate.debugPlan = OwnerPlans.freeNoTrial;
-      expect(PlanGate.priceLine(taxi: false), '₹400 / month');
+      expect(PlanGate.priceLine(taxi: false), '₹500 / month');
     });
   });
 

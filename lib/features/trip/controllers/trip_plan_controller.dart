@@ -16,6 +16,8 @@ import '../../../services/storage_service.dart';
 import '../../../utils/app_toast.dart';
 import '../../../utils/dio_error_mapper.dart';
 import '../../buddy/buddy_error_types.dart';
+import '../../social/shared/social_error_types.dart';
+import '../../social/shared/widgets/plus_widgets.dart';
 import '../../buddy/triplimit/trip_limit_models.dart';
 import '../../taxi/guest/traveller_city.dart';
 import '../../taxi/journeys/journey_models.dart';
@@ -864,7 +866,9 @@ class TripPlanController extends GetxController {
   List<TripEnquiryModel> problemStayRows(int day) =>
       todayDay == null ? const [] : [for (final e in enquiriesForNight(day)) if (e.isBooked) e];
 
-  bool get isReadOnly => isCompleted || isPastTrip;
+  bool get isInactiveByPlan => trip.value?.inactiveByPlan ?? false;
+
+  bool get isReadOnly => isCompleted || isPastTrip || isInactiveByPlan;
 
   bool isDayPast(int day) {
     final d = dateOf(day);
@@ -2046,6 +2050,10 @@ class TripPlanController extends GetxController {
       }
     } else if (type == TripErrorTypes.citiesUnavailable) {
       AppToast.error(TripStrings.citiesFailed);
+    } else if (type == SocialErrorTypes.tripInactiveByPlan) {
+      unawaited(reloadFromServer());
+      final ctx = Get.context;
+      if (ctx != null) unawaited(PlusSheets.limitReached(ctx, errorType: SocialErrorTypes.tripLimitReached, from: 'trip'));
     } else {
       if (_status(e) == 400 || _status(e) == 409) {
         _rejectedPlan = p;
@@ -3002,6 +3010,21 @@ class TripPlanController extends GetxController {
   }
 
   bool get canAddDay => addDayBlock() == TripDayAddBlock.none;
+
+  // A trip posted from the buddies feed starts with legs and no days.
+  bool layOutPostedDays() {
+    final p = plan.value;
+    if (p == null || p.days.isNotEmpty || p.legs.isEmpty || isReadOnly || isPlanLocked) return false;
+    final legs = p.legCount;
+    final want = (p.settings.maxDays ?? legs).clamp(legs, TripConstants.maxDaysCap);
+    final per = want ~/ legs;
+    final extra = want % legs;
+    _applyEdit([
+      for (var k = 1; k <= legs; k++)
+        for (var i = 0; i < per + (k <= extra ? 1 : 0); i++) TripDay(day: -1, leg: k),
+    ], keepEmptyDays: true);
+    return true;
+  }
 
   TripDayAddBlock addDayBlock({int? afterDay}) {
     final p = plan.value;

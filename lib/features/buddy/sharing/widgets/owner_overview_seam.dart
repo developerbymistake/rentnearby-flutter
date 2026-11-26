@@ -3,6 +3,11 @@ import 'package:get/get.dart';
 
 import '../../../../controllers/auth_controller.dart';
 import '../../../../utils/app_toast.dart';
+import '../../../social/b/social_strings_b.dart';
+import '../../../social/shared/social_error_types.dart';
+import '../../../social/shared/social_me_controller.dart';
+import '../../../social/shared/social_nav.dart';
+import '../../../social/shared/widgets/plus_widgets.dart';
 import '../../../trip/models/trip_model.dart';
 import '../../buddy_navigation.dart';
 import '../controllers/owner_sharing_controller.dart';
@@ -14,11 +19,12 @@ import 'overview_travellers_card.dart';
 import 'trip_delete_flow.dart';
 
 class OverviewMenuItem {
-  const OverviewMenuItem({required this.label, required this.onTap, this.danger = false});
+  const OverviewMenuItem({required this.label, required this.onTap, this.danger = false, this.subtitle});
 
   final String label;
   final VoidCallback onTap;
   final bool danger;
+  final String? subtitle;
 }
 
 class OwnerOverviewExtras {
@@ -83,6 +89,10 @@ abstract final class OwnerOverviewSeam {
         OverviewTravellersCard(
           sharing: s,
           onInvite: () {
+            if (trip.inactiveByPlan) {
+              PlusSheets.limitReached(context, errorType: SocialErrorTypes.tripLimitReached, from: 'trip');
+              return;
+            }
             if (trip.spotCount <= 0) {
               AppToast.error(SharingStrings.addPlacesFirst);
               return;
@@ -108,8 +118,28 @@ abstract final class OwnerOverviewSeam {
         ),
       ],
       extraMenuItems: [
+        ?_socialItem(context, trip),
         OverviewMenuItem(label: SharingStrings.deleteTrip, danger: true, onTap: () => TripDeleteFlow.start(context, trip, s)),
       ],
+    );
+  }
+
+  static OverviewMenuItem? _socialItem(BuildContext context, TripModel trip) {
+    final auth = Get.isRegistered<AuthController>() ? Get.find<AuthController>() : null;
+    if (auth == null || !auth.canUseTravellerFeatures || trip.isCompleted || trip.inactiveByPlan || trip.id.isEmpty) return null;
+    final live = trip.isPublic || (SocialMeController.maybe?.profile?.publicTrips.any((t) => t.tripId == trip.id) ?? false);
+    if (live) return OverviewMenuItem(label: SocialStringsB.openJoinRequests, onTap: () => SocialNav.openJoinRequests(trip.id));
+    return OverviewMenuItem(
+      label: SocialStringsB.postToFindBuddies,
+      subtitle: SocialStringsB.postToFindBuddiesLine,
+      onTap: () {
+        final limits = SocialMeController.maybe?.me.value?.limits;
+        if (limits != null && limits.publicTrips.reached) {
+          PlusSheets.limitReached(context, errorType: SocialErrorTypes.publicTripLimit, data: {'limit': limits.publicTrips.limit}, from: 'post');
+          return;
+        }
+        SocialNav.openPostTrip(tripId: trip.id);
+      },
     );
   }
 
